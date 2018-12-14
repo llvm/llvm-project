@@ -3275,6 +3275,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (TLI.expandFunnelShift(Node, Tmp1, DAG))
       Results.push_back(Tmp1);
     break;
+  case ISD::ROTL:
+  case ISD::ROTR:
+    if (TLI.expandROT(Node, Tmp1, DAG))
+      Results.push_back(Tmp1);
+    break;
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -3725,46 +3730,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     ReplaceNode(SDValue(Node, 0), Result);
     break;
   }
-  case ISD::ROTL:
-  case ISD::ROTR: {
-    bool IsLeft = Node->getOpcode() == ISD::ROTL;
-    SDValue Op0 = Node->getOperand(0), Op1 = Node->getOperand(1);
-    EVT ResVT = Node->getValueType(0);
-    EVT OpVT = Op0.getValueType();
-    assert(OpVT == ResVT &&
-           "The result and the operand types of rotate should match");
-    EVT ShVT = Op1.getValueType();
-    SDValue Width = DAG.getConstant(OpVT.getScalarSizeInBits(), dl, ShVT);
-
-    // If a rotate in the other direction is legal, use it.
-    unsigned RevRot = IsLeft ? ISD::ROTR : ISD::ROTL;
-    if (TLI.isOperationLegal(RevRot, ResVT)) {
-      SDValue Sub = DAG.getNode(ISD::SUB, dl, ShVT, Width, Op1);
-      Results.push_back(DAG.getNode(RevRot, dl, ResVT, Op0, Sub));
-      break;
-    }
-
-    // Otherwise,
-    //   (rotl x, c) -> (or (shl x, (and c, w-1)), (srl x, (and w-c, w-1)))
-    //   (rotr x, c) -> (or (srl x, (and c, w-1)), (shl x, (and w-c, w-1)))
-    //
-    assert(isPowerOf2_32(OpVT.getScalarSizeInBits()) &&
-           "Expecting the type bitwidth to be a power of 2");
-    unsigned ShOpc = IsLeft ? ISD::SHL : ISD::SRL;
-    unsigned HsOpc = IsLeft ? ISD::SRL : ISD::SHL;
-    SDValue Width1 = DAG.getNode(ISD::SUB, dl, ShVT,
-                                 Width, DAG.getConstant(1, dl, ShVT));
-    SDValue NegOp1 = DAG.getNode(ISD::SUB, dl, ShVT, Width, Op1);
-    SDValue And0 = DAG.getNode(ISD::AND, dl, ShVT, Op1, Width1);
-    SDValue And1 = DAG.getNode(ISD::AND, dl, ShVT, NegOp1, Width1);
-
-    SDValue Or = DAG.getNode(ISD::OR, dl, ResVT,
-                             DAG.getNode(ShOpc, dl, ResVT, Op0, And0),
-                             DAG.getNode(HsOpc, dl, ResVT, Op0, And1));
-    Results.push_back(Or);
-    break;
-  }
-
   case ISD::GLOBAL_OFFSET_TABLE:
   case ISD::GlobalAddress:
   case ISD::GlobalTLSAddress:

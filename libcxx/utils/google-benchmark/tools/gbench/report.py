@@ -1,3 +1,4 @@
+import unittest
 """report.py - Utilities for reporting statistics about benchmark results
 """
 import os
@@ -270,9 +271,6 @@ def generate_difference_report(
 # Unit tests
 
 
-import unittest
-
-
 class TestGetUniqueBenchmarkNames(unittest.TestCase):
     def load_results(self):
         import json
@@ -290,7 +288,7 @@ class TestGetUniqueBenchmarkNames(unittest.TestCase):
             'BM_One',
             'BM_Two',
             'short',  # These two are not sorted
-            'medium', # These two are not sorted
+            'medium',  # These two are not sorted
         ]
         json = self.load_results()
         output_lines = get_unique_benchmark_names(json)
@@ -299,6 +297,7 @@ class TestGetUniqueBenchmarkNames(unittest.TestCase):
         self.assertEqual(len(output_lines), len(expect_lines))
         for i in range(0, len(output_lines)):
             self.assertEqual(expect_lines[i], output_lines[i])
+
 
 class TestReportDifference(unittest.TestCase):
     def load_results(self):

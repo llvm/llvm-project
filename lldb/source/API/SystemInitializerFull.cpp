@@ -40,6 +40,7 @@
 #include "Plugins/ABI/SysV-s390x/ABISysV_s390x.h"
 #include "Plugins/ABI/SysV-x86_64/ABISysV_x86_64.h"
 #include "Plugins/Architecture/Arm/ArchitectureArm.h"
+#include "Plugins/Architecture/Mips/ArchitectureMips.h"
 #include "Plugins/Architecture/PPC64/ArchitecturePPC64.h"
 #include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
 #include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOS.h"
@@ -326,6 +327,7 @@ SystemInitializerFull::Initialize(const InitializerOptions &options) {
   ABISysV_s390x::Initialize();
 
   ArchitectureArm::Initialize();
+  ArchitectureMips::Initialize();
   ArchitecturePPC64::Initialize();
 
   DisassemblerLLVMC::Initialize();
@@ -439,6 +441,10 @@ void SystemInitializerFull::Terminate() {
   PluginManager::Terminate();
 
   ClangASTContext::Terminate();
+
+  ArchitectureArm::Terminate();
+  ArchitectureMips::Terminate();
+  ArchitecturePPC64::Terminate();
 
   ABIMacOSX_i386::Terminate();
   ABIMacOSX_arm::Terminate();

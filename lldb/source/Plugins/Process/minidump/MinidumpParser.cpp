@@ -274,36 +274,45 @@ llvm::ArrayRef<MinidumpModule> MinidumpParser::GetModuleList() {
 
 std::vector<const MinidumpModule *> MinidumpParser::GetFilteredModuleList() {
   llvm::ArrayRef<MinidumpModule> modules = GetModuleList();
-  // map module_name -> pair(load_address, pointer to module struct in memory)
-  llvm::StringMap<std::pair<uint64_t, const MinidumpModule *>> lowest_addr;
+  // map module_name -> filtered_modules index
+  typedef llvm::StringMap<size_t> MapType;
+  MapType module_name_to_filtered_index;
 
   std::vector<const MinidumpModule *> filtered_modules;
-
+  
   llvm::Optional<std::string> name;
   std::string module_name;
 
   for (const auto &module : modules) {
     name = GetMinidumpString(module.module_name_rva);
-
+    
     if (!name)
       continue;
-
+    
     module_name = name.getValue();
+    
+    MapType::iterator iter;
+    bool inserted;
+    // See if we have inserted this module aready into filtered_modules. If we
+    // haven't insert an entry into module_name_to_filtered_index with the
+    // index where we will insert it if it isn't in the vector already.
+    std::tie(iter, inserted) = module_name_to_filtered_index.try_emplace(
+        module_name, filtered_modules.size());
 
-    auto iter = lowest_addr.end();
-    bool exists;
-    std::tie(iter, exists) = lowest_addr.try_emplace(
-        module_name, std::make_pair(module.base_of_image, &module));
-
-    if (exists && module.base_of_image < iter->second.first)
-      iter->second = std::make_pair(module.base_of_image, &module);
+    if (inserted) {
+      // This module has not been seen yet, insert it into filtered_modules at
+      // the index that was inserted into module_name_to_filtered_index using
+      // "filtered_modules.size()" above.
+      filtered_modules.push_back(&module);
+    } else {
+      // This module has been seen. Modules are sometimes mentioned multiple
+      // times when they are mapped discontiguously, so find the module with
+      // the lowest "base_of_image" and use that as the filtered module.
+      auto dup_module = filtered_modules[iter->second];
+      if (module.base_of_image < dup_module->base_of_image)
+        filtered_modules[iter->second] = &module;
+    }
   }
-
-  filtered_modules.reserve(lowest_addr.size());
-  for (const auto &module : lowest_addr) {
-    filtered_modules.push_back(module.second.second);
-  }
-
   return filtered_modules;
 }
 

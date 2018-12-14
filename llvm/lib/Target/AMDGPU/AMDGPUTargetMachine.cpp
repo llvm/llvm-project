@@ -683,9 +683,6 @@ void AMDGPUPassConfig::addIRPasses() {
 }
 
 void AMDGPUPassConfig::addCodeGenPrepare() {
-  if (TM->getTargetTriple().getArch() == Triple::amdgcn)
-    addPass(createAMDGPUAnnotateKernelFeaturesPass());
-
   if (TM->getTargetTriple().getArch() == Triple::amdgcn &&
       EnableLowerKernelArguments)
     addPass(createAMDGPULowerKernelArgumentsPass());
@@ -773,6 +770,7 @@ bool GCNPassConfig::addPreISel() {
 
   // FIXME: We need to run a pass to propagate the attributes when calls are
   // supported.
+  addPass(createAMDGPUAnnotateKernelFeaturesPass());
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.

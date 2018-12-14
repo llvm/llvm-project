@@ -3252,7 +3252,29 @@ static void __kmp_stg_print_proc_bind(kmp_str_buf_t *buffer, char const *name,
 #endif /* OMP_40_ENABLED */
 
 #if OMP_50_ENABLED
-
+static void __kmp_stg_parse_display_affinity(char const *name,
+                                             char const *value, void *data) {
+  __kmp_stg_parse_bool(name, value, &__kmp_display_affinity);
+}
+static void __kmp_stg_print_display_affinity(kmp_str_buf_t *buffer,
+                                             char const *name, void *data) {
+  __kmp_stg_print_bool(buffer, name, __kmp_display_affinity);
+}
+static void __kmp_stg_parse_affinity_format(char const *name, char const *value,
+                                            void *data) {
+  size_t length = KMP_STRLEN(value);
+  __kmp_strncpy_truncate(__kmp_affinity_format, KMP_AFFINITY_FORMAT_SIZE, value,
+                         length);
+}
+static void __kmp_stg_print_affinity_format(kmp_str_buf_t *buffer,
+                                            char const *name, void *data) {
+  if (__kmp_env_format) {
+    KMP_STR_BUF_PRINT_NAME_EX(name);
+  } else {
+    __kmp_str_buf_print(buffer, "   %s='", name);
+  }
+  __kmp_str_buf_print(buffer, "%s'\n", __kmp_affinity_format);
+}
 // OMP_ALLOCATOR sets default allocator
 static void __kmp_stg_parse_allocator(char const *name, char const *value,
                                       void *data) {
@@ -4879,7 +4901,12 @@ static kmp_setting_t __kmp_stg_table[] = {
 #endif
 
 #endif // KMP_AFFINITY_SUPPORTED
-
+#if OMP_50_ENABLED
+    {"OMP_DISPLAY_AFFINITY", __kmp_stg_parse_display_affinity,
+     __kmp_stg_print_display_affinity, NULL, 0, 0},
+    {"OMP_AFFINITY_FORMAT", __kmp_stg_parse_affinity_format,
+     __kmp_stg_print_affinity_format, NULL, 0, 0},
+#endif
     {"KMP_INIT_AT_FORK", __kmp_stg_parse_init_at_fork,
      __kmp_stg_print_init_at_fork, NULL, 0, 0},
     {"KMP_SCHEDULE", __kmp_stg_parse_schedule, __kmp_stg_print_schedule, NULL,
@@ -5408,6 +5435,21 @@ void __kmp_env_initialize(char const *string) {
 #endif
   }
 #endif /* OMP_40_ENABLED */
+
+#if OMP_50_ENABLED
+  // Set up the affinity format ICV
+  // Grab the default affinity format string from the message catalog
+  kmp_msg_t m =
+      __kmp_msg_format(kmp_i18n_msg_AffFormatDefault, "%P", "%i", "%n", "%A");
+  KMP_DEBUG_ASSERT(KMP_STRLEN(m.str) < KMP_AFFINITY_FORMAT_SIZE);
+
+  if (__kmp_affinity_format == NULL) {
+    __kmp_affinity_format =
+        (char *)KMP_INTERNAL_MALLOC(sizeof(char) * KMP_AFFINITY_FORMAT_SIZE);
+  }
+  KMP_STRCPY_S(__kmp_affinity_format, KMP_AFFINITY_FORMAT_SIZE, m.str);
+  __kmp_str_free(&m.str);
+#endif
 
   // Now process all of the settings.
   for (i = 0; i < block.count; ++i) {

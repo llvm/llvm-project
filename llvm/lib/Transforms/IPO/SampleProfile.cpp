@@ -123,6 +123,12 @@ static cl::opt<bool> NoWarnSampleUnused(
     cl::desc("Use this option to turn off/on warnings about function with "
              "samples but without debug information to use those samples. "));
 
+static cl::opt<bool> ProfileSampleAccurate(
+    "profile-sample-accurate", cl::Hidden, cl::init(false),
+    cl::desc("If the sample profile is accurate, we will mark all un-sampled "
+             "callsite and function as having 0 samples. Otherwise, treat "
+             "un-sampled callsites and functions conservatively as unknown. "));
+
 namespace {
 
 using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
@@ -1604,10 +1610,18 @@ bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
 }
 
 bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) {
-  // Initialize the entry count to -1, which will be treated conservatively
-  // by getEntryCount as the same as unknown (None). If we have samples this
-  // will be overwritten in emitAnnotations.
-  F.setEntryCount(ProfileCount(-1, Function::PCT_Real));
+  // By default the entry count is initialized to -1, which will be treated
+  // conservatively by getEntryCount as the same as unknown (None). This is
+  // to avoid newly added code to be treated as cold. If we have samples
+  // this will be overwritten in emitAnnotations.
+  // If ProfileSampleAccurate is true or F has profile-sample-accurate
+  // attribute, initialize the entry count to 0 so callsites or functions
+  // unsampled will be treated as cold.
+  uint64_t initialEntryCount =
+      (ProfileSampleAccurate || F.hasFnAttribute("profile-sample-accurate"))
+          ? 0
+          : -1;
+  F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));
   std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
   if (AM) {
     auto &FAM =

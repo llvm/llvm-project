@@ -1225,6 +1225,53 @@ TEST(FindReferences, WithinAST) {
   }
 }
 
+TEST(FindReferences, ExplicitSymbols) {
+  const char *Tests[] = {
+      R"cpp(
+      struct Foo { Foo* [self]() const; };
+      void f() {
+        if (Foo* T = foo.[^self]()) {} // Foo member call expr.
+      }
+      )cpp",
+
+      R"cpp(
+      struct Foo { Foo(int); };
+      Foo f() {
+        int [b];
+        return [^b]; // Foo constructor expr.
+      }
+      )cpp",
+
+      R"cpp(
+      struct Foo {};
+      void g(Foo);
+      Foo [f]();
+      void call() {
+        g([^f]());  // Foo constructor expr.
+      }
+      )cpp",
+
+      R"cpp(
+      void [foo](int);
+      void [foo](double);
+
+      namespace ns {
+      using ::[fo^o];
+      }
+      )cpp",
+  };
+  for (const char *Test : Tests) {
+    Annotations T(Test);
+    auto AST = TestTU::withCode(T.code()).build();
+    std::vector<Matcher<Location>> ExpectedLocations;
+    for (const auto &R : T.ranges())
+      ExpectedLocations.push_back(RangeIs(R));
+    EXPECT_THAT(findReferences(AST, T.point()),
+                ElementsAreArray(ExpectedLocations))
+        << Test;
+  }
+}
+
 TEST(FindReferences, NeedsIndex) {
   const char *Header = "int foo();";
   Annotations Main("int main() { [[f^oo]](); }");

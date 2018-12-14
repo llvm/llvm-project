@@ -44,17 +44,11 @@ private:
     auto VFS = FS.getFileSystem();
     VFS->setCurrentWorkingDirectory(Cmd->Directory);
 
-    std::vector<const char *> Argv;
-    for (const auto &S : Cmd->CommandLine)
-      Argv.push_back(S.c_str());
-    auto CI = clang::createInvocationFromCommandLine(
-        Argv,
-        CompilerInstance::createDiagnostics(new DiagnosticOptions(),
-                                            &IgnoreDiags, false),
-        VFS);
+    ParseInputs PI;
+    PI.CompileCommand = *Cmd;
+    PI.FS = VFS;
+    auto CI = buildCompilerInvocation(PI);
     EXPECT_TRUE(static_cast<bool>(CI));
-    CI->getFrontendOpts().DisableFree = false;
-
     // The diagnostic options must be set before creating a CompilerInstance.
     CI->getDiagnosticOpts().IgnoreWarnings = true;
     auto Clang = prepareCompilerInstance(

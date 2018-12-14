@@ -126,6 +126,7 @@ struct MIToken {
     md_noalias,
     md_range,
     md_diexpr,
+    md_dilocation,
 
     // Identifier tokens
     Identifier,

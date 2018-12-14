@@ -343,6 +343,10 @@ def err_expected_parentheses_around_typename : Error<
 def err_expected_case_before_expression: Error<
   "expected 'case' keyword before expression">;
 
+def ext_warn_gnu_final : ExtWarn<
+  "__final is a GNU extension, consider using C++11 final">,
+  InGroup<GccCompat>;
+
 // Declarations.
 def err_typename_requires_specqual : Error<
   "type name requires a specifier or qualifier">;
@@ -370,6 +374,12 @@ def ext_c11_static_assert : Extension<
 def warn_cxx98_compat_static_assert : Warning<
   "static_assert declarations are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+def ext_static_assert_no_message : ExtWarn<
+  "static_assert with no message is a C++17 extension">, InGroup<CXX17>;
+def warn_cxx14_compat_static_assert_no_message : Warning<
+  "static_assert with no message is incompatible with C++ standards before "
+  "C++17">,
+  DefaultIgnore, InGroup<CXXPre17Compat>;
 def err_function_definition_not_allowed : Error<
   "function definition is not allowed here">;
 def err_expected_end_of_enumerator : Error<
@@ -500,6 +510,13 @@ def err_dynamic_and_noexcept_specification : Error<
   "cannot have both throw() and noexcept() clause on the same function">;
 def err_except_spec_unparsed : Error<
   "unexpected end of exception specification">;
+def ext_dynamic_exception_spec : ExtWarn<
+  "ISO C++17 does not allow dynamic exception specifications">,
+  InGroup<DynamicExceptionSpec>, DefaultError;
+def warn_exception_spec_deprecated : Warning<
+  "dynamic exception specifications are deprecated">,
+  InGroup<DeprecatedDynamicExceptionSpec>, DefaultIgnore;
+def note_exception_spec_deprecated : Note<"use '%0' instead">;
 def warn_cxx98_compat_noexcept_decl : Warning<
   "noexcept specifications are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;

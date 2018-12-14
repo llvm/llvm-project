@@ -82,6 +82,16 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     return;
   }
 
+  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
+      .legalForCartesianProduct({s32}, {s1, s8, s16});
+
+  getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
+      .legalFor({s32})
+      .minScalar(0, s32);
+
+  getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, s32}});
+  getActionDefinitionsBuilder(G_PTRTOINT).legalFor({{s32, p0}});
+
   // We're keeping these builders around because we'll want to add support for
   // floating point to them.
   auto &LoadStoreBuilder =
@@ -103,10 +113,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({p0});
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
-  getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
-      .legalFor({s32})
-      .minScalar(0, s32);
-
   if (ST.hasDivideInARMMode())
     getActionDefinitionsBuilder({G_SDIV, G_UDIV})
         .legalFor({s32})
@@ -125,12 +131,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     else
       setAction({Op, s32}, Libcall);
   }
-
-  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
-      .legalForCartesianProduct({s32}, {s1, s8, s16});
-
-  getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, s32}});
-  getActionDefinitionsBuilder(G_PTRTOINT).legalFor({{s32, p0}});
 
   getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL}).legalFor({s32});
 

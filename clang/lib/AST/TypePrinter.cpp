@@ -801,10 +801,8 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
 
   printFunctionAfter(Info, OS);
 
-  if (unsigned quals = T->getTypeQuals()) {
-    OS << ' ';
-    AppendTypeQualList(OS, quals, Policy.Restrict);
-  }
+  if (!T->getTypeQuals().empty())
+    OS << " " << T->getTypeQuals().getAsString();
 
   switch (T->getRefQualifier()) {
   case RQ_None:

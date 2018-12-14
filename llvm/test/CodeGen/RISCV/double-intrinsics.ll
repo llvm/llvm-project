@@ -4,7 +4,7 @@
 
 declare double @llvm.sqrt.f64(double)
 
-define double @sqrt_f64(double %a) {
+define double @sqrt_f64(double %a) nounwind {
 ; RV32IFD-LABEL: sqrt_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -18,12 +18,12 @@ define double @sqrt_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.sqrt.f64(double %a)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.powi.f64(double, i32)
 
-define double @powi_f64(double %a, i32 %b) {
+define double @powi_f64(double %a, i32 %b) nounwind {
 ; RV32IFD-LABEL: powi_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -33,12 +33,12 @@ define double @powi_f64(double %a, i32 %b) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.powi.f64(double %a, i32 %b)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.sin.f64(double)
 
-define double @sin_f64(double %a) {
+define double @sin_f64(double %a) nounwind {
 ; RV32IFD-LABEL: sin_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -48,12 +48,12 @@ define double @sin_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.sin.f64(double %a)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.cos.f64(double)
 
-define double @cos_f64(double %a) {
+define double @cos_f64(double %a) nounwind {
 ; RV32IFD-LABEL: cos_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -63,11 +63,11 @@ define double @cos_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.cos.f64(double %a)
-	ret double %1
+  ret double %1
 }
 
 ; The sin+cos combination results in an FSINCOS SelectionDAG node.
-define double @sincos_f64(double %a) {
+define double @sincos_f64(double %a) nounwind {
 ; RV32IFD-LABEL: sincos_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -32
@@ -104,12 +104,12 @@ define double @sincos_f64(double %a) {
   %1 = call double @llvm.sin.f64(double %a)
   %2 = call double @llvm.cos.f64(double %a)
   %3 = fadd double %1, %2
-	ret double %3
+  ret double %3
 }
 
 declare double @llvm.pow.f64(double, double)
 
-define double @pow_f64(double %a, double %b) {
+define double @pow_f64(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: pow_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -119,12 +119,12 @@ define double @pow_f64(double %a, double %b) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.pow.f64(double %a, double %b)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.exp.f64(double)
 
-define double @exp_f64(double %a) {
+define double @exp_f64(double %a) nounwind {
 ; RV32IFD-LABEL: exp_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -134,12 +134,12 @@ define double @exp_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.exp.f64(double %a)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.exp2.f64(double)
 
-define double @exp2_f64(double %a) {
+define double @exp2_f64(double %a) nounwind {
 ; RV32IFD-LABEL: exp2_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -149,12 +149,12 @@ define double @exp2_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.exp2.f64(double %a)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.log.f64(double)
 
-define double @log_f64(double %a) {
+define double @log_f64(double %a) nounwind {
 ; RV32IFD-LABEL: log_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -164,12 +164,12 @@ define double @log_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.log.f64(double %a)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.log10.f64(double)
 
-define double @log10_f64(double %a) {
+define double @log10_f64(double %a) nounwind {
 ; RV32IFD-LABEL: log10_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -179,12 +179,12 @@ define double @log10_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.log10.f64(double %a)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.log2.f64(double)
 
-define double @log2_f64(double %a) {
+define double @log2_f64(double %a) nounwind {
 ; RV32IFD-LABEL: log2_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -194,28 +194,64 @@ define double @log2_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.log2.f64(double %a)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.fma.f64(double, double, double)
 
-; TODO: Select RISC-V FMA instruction.
-define double @fma_f64(double %a, double %b, double %c) {
+define double @fma_f64(double %a, double %b, double %c) nounwind {
 ; RV32IFD-LABEL: fma_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp)
-; RV32IFD-NEXT:    call fma
-; RV32IFD-NEXT:    lw ra, 12(sp)
+; RV32IFD-NEXT:    sw a4, 8(sp)
+; RV32IFD-NEXT:    sw a5, 12(sp)
+; RV32IFD-NEXT:    fld ft0, 8(sp)
+; RV32IFD-NEXT:    sw a2, 8(sp)
+; RV32IFD-NEXT:    sw a3, 12(sp)
+; RV32IFD-NEXT:    fld ft1, 8(sp)
+; RV32IFD-NEXT:    sw a0, 8(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    fld ft2, 8(sp)
+; RV32IFD-NEXT:    fmadd.d ft0, ft2, ft1, ft0
+; RV32IFD-NEXT:    fsd ft0, 8(sp)
+; RV32IFD-NEXT:    lw a0, 8(sp)
+; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.fma.f64(double %a, double %b, double %c)
-	ret double %1
+  ret double %1
+}
+
+declare double @llvm.fmuladd.f64(double, double, double)
+
+define double @fmuladd_f64(double %a, double %b, double %c) nounwind {
+; Use of fmadd depends on TargetLowering::isFMAFasterthanFMulAndFAdd
+; RV32IFD-LABEL: fmuladd_f64:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    sw a2, 8(sp)
+; RV32IFD-NEXT:    sw a3, 12(sp)
+; RV32IFD-NEXT:    fld ft0, 8(sp)
+; RV32IFD-NEXT:    sw a0, 8(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    fld ft1, 8(sp)
+; RV32IFD-NEXT:    fmul.d ft0, ft1, ft0
+; RV32IFD-NEXT:    sw a4, 8(sp)
+; RV32IFD-NEXT:    sw a5, 12(sp)
+; RV32IFD-NEXT:    fld ft1, 8(sp)
+; RV32IFD-NEXT:    fadd.d ft0, ft0, ft1
+; RV32IFD-NEXT:    fsd ft0, 8(sp)
+; RV32IFD-NEXT:    lw a0, 8(sp)
+; RV32IFD-NEXT:    lw a1, 12(sp)
+; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    ret
+  %1 = call double @llvm.fmuladd.f64(double %a, double %b, double %c)
+  ret double %1
 }
 
 declare double @llvm.fabs.f64(double)
 
-define double @fabs_f64(double %a) {
+define double @fabs_f64(double %a) nounwind {
 ; RV32IFD-LABEL: fabs_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -229,7 +265,7 @@ define double @fabs_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.fabs.f64(double %a)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.minnum.f64(double, double)
@@ -317,7 +353,7 @@ define double @copysign_f64(double %a, double %b) nounwind {
 
 declare double @llvm.floor.f64(double)
 
-define double @floor_f64(double %a) {
+define double @floor_f64(double %a) nounwind {
 ; RV32IFD-LABEL: floor_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -327,12 +363,12 @@ define double @floor_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.floor.f64(double %a)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.ceil.f64(double)
 
-define double @ceil_f64(double %a) {
+define double @ceil_f64(double %a) nounwind {
 ; RV32IFD-LABEL: ceil_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -342,12 +378,12 @@ define double @ceil_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.ceil.f64(double %a)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.trunc.f64(double)
 
-define double @trunc_f64(double %a) {
+define double @trunc_f64(double %a) nounwind {
 ; RV32IFD-LABEL: trunc_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -357,12 +393,12 @@ define double @trunc_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.trunc.f64(double %a)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.rint.f64(double)
 
-define double @rint_f64(double %a) {
+define double @rint_f64(double %a) nounwind {
 ; RV32IFD-LABEL: rint_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -372,12 +408,12 @@ define double @rint_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.rint.f64(double %a)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.nearbyint.f64(double)
 
-define double @nearbyint_f64(double %a) {
+define double @nearbyint_f64(double %a) nounwind {
 ; RV32IFD-LABEL: nearbyint_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -387,12 +423,12 @@ define double @nearbyint_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.nearbyint.f64(double %a)
-	ret double %1
+  ret double %1
 }
 
 declare double @llvm.round.f64(double)
 
-define double @round_f64(double %a) {
+define double @round_f64(double %a) nounwind {
 ; RV32IFD-LABEL: round_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
@@ -402,5 +438,5 @@ define double @round_f64(double %a) {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.round.f64(double %a)
-	ret double %1
+  ret double %1
 }

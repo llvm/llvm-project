@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/GlobalISel/LegalizationArtifactCombiner.h --===========//
+//===-- llvm/CodeGen/GlobalISel/LegalizationArtifactCombiner.h -----*- C++ -*-//
 //
 //                     The LLVM Compiler Infrastructure
 //

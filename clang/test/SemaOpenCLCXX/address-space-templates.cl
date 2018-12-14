@@ -4,7 +4,9 @@ template <typename T>
 struct S {
   T a;        // expected-error{{field may not be qualified with an address space}}
   T f1();     // expected-error{{function type may not be qualified with an address space}}
-  void f2(T); // expected-error{{parameter may not be qualified with an address space}}
+  // FIXME: Should only get the error message once.
+  void f2(T); // expected-error{{parameter may not be qualified with an address space}} expected-error{{parameter may not be qualified with an address space}}
+
 };
 
 template <typename T>

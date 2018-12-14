@@ -1193,6 +1193,11 @@ OPTIONS:
 
    Display the description of defects in the list
 
+ -sarif
+
+  By default the output of scan-build is a set of HTML files. This option
+  outputs the results in SARIF format.
+ 
  -plist
 
    By default the output of scan-build is a set of HTML files. This option
@@ -1665,6 +1670,12 @@ sub ProcessArgs {
       next;
     }
 
+    if ($arg eq "-sarif") {
+      shift @$Args;
+      $Options{OutputFormat} = "sarif";
+      next;
+    }
+
     if ($arg eq "-plist") {
       shift @$Args;
       $Options{OutputFormat} = "plist";
@@ -1888,9 +1899,12 @@ my $ExitStatus = RunBuildCommand(\@ARGV, $Options{IgnoreErrors}, $Options{KeepCC
 	                        $Cmd, $CmdCXX, \%EnvVars);
 
 if (defined $Options{OutputFormat}) {
-  if ($Options{OutputFormat} =~ /plist/) {
+  if ($Options{OutputFormat} =~ /plist/ ||
+      $Options{OutputFormat} =~ /sarif/) {
     Diag "Analysis run complete.\n";
-    Diag "Analysis results (plist files) deposited in '$Options{OutputDir}'\n";
+    Diag "Analysis results (" .
+      ($Options{OutputFormat} =~ /plist/ ? "plist" : "sarif") .
+      " files) deposited in '$Options{OutputDir}'\n";
   }
   if ($Options{OutputFormat} =~ /html/) {
     # Postprocess the HTML directory.

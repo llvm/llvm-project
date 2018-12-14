@@ -58,7 +58,10 @@ import shutil
 import sys
 import threading
 import time
-import Queue
+try:
+    import queue
+except ImportError:
+    import Queue as queue
 
 ###############################################################################
 # Helper functions.
@@ -742,7 +745,7 @@ def multiThreadedTestAll(Args, ProjectsToTest, Jobs):
 
     :return: whether tests have passed.
     """
-    TasksQueue = Queue.Queue()
+    TasksQueue = queue.Queue()
 
     for ProjArgs in ProjectsToTest:
         TasksQueue.put(ProjArgs)

@@ -133,6 +133,7 @@ class VectorLegalizer {
   SDValue ExpandCTLZ(SDValue Op);
   SDValue ExpandCTTZ(SDValue Op);
   SDValue ExpandFunnelShift(SDValue Op);
+  SDValue ExpandROT(SDValue Op);
   SDValue ExpandFMINNUM_FMAXNUM(SDValue Op);
   SDValue ExpandStrictFPOp(SDValue Op);
 
@@ -759,6 +760,9 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
   case ISD::FSHL:
   case ISD::FSHR:
     return ExpandFunnelShift(Op);
+  case ISD::ROTL:
+  case ISD::ROTR:
+    return ExpandROT(Op);
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
     return ExpandFMINNUM_FMAXNUM(Op);
@@ -1162,6 +1166,14 @@ SDValue VectorLegalizer::ExpandCTTZ(SDValue Op) {
 SDValue VectorLegalizer::ExpandFunnelShift(SDValue Op) {
   SDValue Result;
   if (TLI.expandFunnelShift(Op.getNode(), Result, DAG))
+    return Result;
+
+  return DAG.UnrollVectorOp(Op.getNode());
+}
+
+SDValue VectorLegalizer::ExpandROT(SDValue Op) {
+  SDValue Result;
+  if (TLI.expandROT(Op.getNode(), Result, DAG))
     return Result;
 
   return DAG.UnrollVectorOp(Op.getNode());

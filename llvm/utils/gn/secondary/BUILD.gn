@@ -1,8 +1,37 @@
 group("default") {
   deps = [
-    "//lld/tools/lld",
+    ":lld",
     "//llvm/tools/llc",
     "//llvm/tools/llvm-undname",
+  ]
+}
+
+# Symlink handling.
+# On POSIX, symlinks to the target can be created before the target exist,
+# and the target can depend on the symlink targets, so that building the
+# target ensures the symlinks exist.
+# However, symlinks didn't exist on Windows until recently, so there the
+# binary needs to be copied -- which requires it to exist. So the symlink step
+# needs to run after the target that creates the binary.
+# In the cmake build, this is done via a "postbuild" on the target, which just
+# tacks on "&& copy out.exe out2.exe" to the link command.
+# GN doesn't have a way to express postbuild commands.  It could probably be
+# emulated by having the link command in the toolchain be a wrapper script that
+# reads a ".symlinks" file next to the target, and have an action write that
+# and make the target depend on that, but then every single link has to use the
+# wrapper (unless we do further acrobatics to use a different toolchain for
+# targets that need symlinks) even though most links don't need symlinks.
+# Instead, have a top-level target for each target that needs symlinks, and
+# make that depend on the symlinks. Then the symlinks can depend on the
+# executable.  This has the effect that `ninja lld` builds lld and then creates
+# symlinks (via this target), while `ninja bin/lld` only builds lld and doesn't
+# update symlinks (in particular, on Windows it doesn't copy the new lld to its
+# new locations); also `ninja lld-link` will build lld and copy it (on Windows)
+# to lld-link, but it won't copy it to ld.lld.
+# That seems simpler, more explicit, and good enough.
+group("lld") {
+  deps = [
+    "//lld/tools/lld:symlinks",
   ]
 }
 

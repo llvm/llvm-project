@@ -424,6 +424,27 @@
           integer (kind=omp_allocator_kind) omp_get_default_allocator
         end function omp_get_default_allocator
 
+        subroutine omp_set_affinity_format(format)
+          character (len=*) :: format
+        end subroutine omp_set_affinity_format
+
+        function omp_get_affinity_format(buffer)
+          import
+          character (len=*) :: buffer
+          integer (kind=kmp_size_t_kind) :: omp_get_affinity_format
+        end function omp_get_affinity_format
+
+        subroutine omp_display_affinity(format)
+          character (len=*) :: format
+        end subroutine omp_display_affinity
+
+        function omp_capture_affinity(buffer, format)
+          import
+          character (len=*) :: format
+          character (len=*) :: buffer
+          integer (kind=kmp_size_t_kind) :: omp_capture_affinity
+        end function omp_capture_affinity
+
 !       ***
 !       *** kmp_* entry points
 !       ***
@@ -637,6 +658,10 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_unset_nest_lock
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_test_nest_lock
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_max_task_priority
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_affinity_format
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_affinity_format
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_display_affinity
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_capture_affinity
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_stacksize
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_stacksize_s
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_blocktime
@@ -710,6 +735,10 @@
 !$omp declare target(omp_unset_nest_lock )
 !$omp declare target(omp_test_nest_lock )
 !$omp declare target(omp_get_max_task_priority )
+!$omp declare target(omp_set_affinity_format )
+!$omp declare target(omp_get_affinity_format )
+!$omp declare target(omp_display_affinity )
+!$omp declare target(omp_capture_affinity )
 !$omp declare target(kmp_set_stacksize )
 !$omp declare target(kmp_set_stacksize_s )
 !$omp declare target(kmp_set_blocktime )

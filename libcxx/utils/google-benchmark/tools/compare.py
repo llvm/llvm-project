@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import unittest
 """
 compare.py - versatile benchmark output compare tool
 """
@@ -244,9 +245,6 @@ def main():
         print(ln)
 
 
-import unittest
-
-
 class TestParser(unittest.TestCase):
     def setUp(self):
         self.parser = create_parser()
@@ -402,7 +400,7 @@ class TestParser(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #unittest.main()
+    # unittest.main()
     main()
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

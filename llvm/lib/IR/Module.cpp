@@ -46,6 +46,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/VersionTuple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -545,6 +546,45 @@ bool Module::getRtLibUseGOT() const {
 
 void Module::setRtLibUseGOT() {
   addModuleFlag(ModFlagBehavior::Max, "RtLibUseGOT", 1);
+}
+
+void Module::setSDKVersion(const VersionTuple &V) {
+  SmallVector<unsigned, 3> Entries;
+  Entries.push_back(V.getMajor());
+  if (auto Minor = V.getMinor()) {
+    Entries.push_back(*Minor);
+    if (auto Subminor = V.getSubminor())
+      Entries.push_back(*Subminor);
+    // Ignore the 'build' component as it can't be represented in the object
+    // file.
+  }
+  addModuleFlag(ModFlagBehavior::Warning, "SDK Version",
+                ConstantDataArray::get(Context, Entries));
+}
+
+VersionTuple Module::getSDKVersion() const {
+  auto *CM = dyn_cast_or_null<ConstantAsMetadata>(getModuleFlag("SDK Version"));
+  if (!CM)
+    return {};
+  auto *Arr = dyn_cast_or_null<ConstantDataArray>(CM->getValue());
+  if (!Arr)
+    return {};
+  auto getVersionComponent = [&](unsigned Index) -> Optional<unsigned> {
+    if (Index >= Arr->getNumElements())
+      return None;
+    return (unsigned)Arr->getElementAsInteger(Index);
+  };
+  auto Major = getVersionComponent(0);
+  if (!Major)
+    return {};
+  VersionTuple Result = VersionTuple(*Major);
+  if (auto Minor = getVersionComponent(1)) {
+    Result = VersionTuple(*Major, *Minor);
+    if (auto Subminor = getVersionComponent(2)) {
+      Result = VersionTuple(*Major, *Minor, *Subminor);
+    }
+  }
+  return Result;
 }
 
 GlobalVariable *llvm::collectUsedGlobalVariables(

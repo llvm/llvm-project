@@ -5491,12 +5491,10 @@ static bool FindOptimalMemOpLowering(std::vector<EVT> &MemOps,
 
       // If the new VT cannot cover all of the remaining bits, then consider
       // issuing a (or a pair of) unaligned and overlapping load / store.
-      // FIXME: Only does this for 64-bit or more since we don't have proper
-      // cost model for unaligned load / store.
       bool Fast;
-      if (NumMemOps && AllowOverlap &&
-          VTSize >= 8 && NewVTSize < Size &&
-          TLI.allowsMisalignedMemoryAccesses(VT, DstAS, DstAlign, &Fast) && Fast)
+      if (NumMemOps && AllowOverlap && NewVTSize < Size &&
+          TLI.allowsMisalignedMemoryAccesses(VT, DstAS, DstAlign, &Fast) &&
+          Fast)
         VTSize = Size;
       else {
         VT = NewVT;

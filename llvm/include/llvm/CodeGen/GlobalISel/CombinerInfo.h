@@ -43,6 +43,17 @@ public:
   /// illegal ops that are created.
   bool LegalizeIllegalOps; // TODO: Make use of this.
   const LegalizerInfo *LInfo;
+
+  /// Attempt to combine instructions using MI as the root.
+  ///
+  /// Use Observer to report the creation, modification, and erasure of
+  /// instructions. GISelChangeObserver will automatically report certain
+  /// kinds of operations. These operations are:
+  /// * Instructions that are newly inserted into the MachineFunction
+  /// * Instructions that are erased from the MachineFunction.
+  ///
+  /// However, it is important to report instruction modification and this is
+  /// not automatic.
   virtual bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
                        MachineIRBuilder &B) const = 0;
 };

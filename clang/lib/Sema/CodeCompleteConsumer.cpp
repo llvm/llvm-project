@@ -539,9 +539,12 @@ void PrintingCodeCompleteConsumer::ProcessCodeCompleteResults(
     unsigned NumResults) {
   std::stable_sort(Results, Results + NumResults);
 
-  StringRef Filter = SemaRef.getPreprocessor().getCodeCompletionFilter();
+  if (!Context.getPreferredType().isNull())
+    OS << "PREFERRED-TYPE: " << Context.getPreferredType().getAsString()
+       << "\n";
 
-  // Print the results.
+  StringRef Filter = SemaRef.getPreprocessor().getCodeCompletionFilter();
+  // Print the completions.
   for (unsigned I = 0; I != NumResults; ++I) {
     if (!Filter.empty() && isResultFilteredOut(Filter, Results[I]))
       continue;

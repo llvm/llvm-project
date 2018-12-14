@@ -39,11 +39,6 @@ static cl::opt<int> ProfileSummaryCutoffCold(
     cl::desc("A count is cold if it is below the minimum count"
              " to reach this percentile of total counts."));
 
-static cl::opt<bool> ProfileSampleAccurate(
-    "profile-sample-accurate", cl::Hidden, cl::init(false),
-    cl::desc("If the sample profile is accurate, we will mark all un-sampled "
-             "callsite as cold. Otherwise, treat un-sampled callsites as if "
-             "we have no profile."));
 static cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold(
     "profile-summary-huge-working-set-size-threshold", cl::Hidden,
     cl::init(15000), cl::ZeroOrMore,
@@ -261,14 +256,7 @@ bool ProfileSummaryInfo::isHotBlock(const BasicBlock *BB, BlockFrequencyInfo *BF
 bool ProfileSummaryInfo::isColdBlock(const BasicBlock *BB,
                                   BlockFrequencyInfo *BFI) {
   auto Count = BFI->getBlockProfileCount(BB);
-  if (Count)
-    return isColdCount(*Count);
-  if (!hasSampleProfile())
-    return false;
-
-  const Function *F = BB->getParent();
-  return ProfileSampleAccurate ||
-         (F && F->hasFnAttribute("profile-sample-accurate"));
+  return Count && isColdCount(*Count);
 }
 
 bool ProfileSummaryInfo::isHotCallSite(const CallSite &CS,
@@ -285,11 +273,7 @@ bool ProfileSummaryInfo::isColdCallSite(const CallSite &CS,
 
   // In SamplePGO, if the caller has been sampled, and there is no profile
   // annotated on the callsite, we consider the callsite as cold.
-  // If there is no profile for the caller, and we know the profile is
-  // accurate, we consider the callsite as cold.
-  return (hasSampleProfile() &&
-          (CS.getCaller()->hasProfileData() || ProfileSampleAccurate ||
-           CS.getCaller()->hasFnAttribute("profile-sample-accurate")));
+  return hasSampleProfile() && CS.getCaller()->hasProfileData();
 }
 
 INITIALIZE_PASS(ProfileSummaryInfoWrapperPass, "profile-summary-info",

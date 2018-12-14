@@ -81,7 +81,7 @@ public:
   LegalizerWorkListManager(InstListTy &Insts, ArtifactListTy &Arts)
       : InstList(Insts), ArtifactList(Arts) {}
 
-  void createdInstr(MachineInstr &MI) override {
+  void createdInstr(const MachineInstr &MI) override {
     // Only legalize pre-isel generic instructions.
     // Legalization process could generate Target specific pseudo
     // instructions with generic types. Don't record them
@@ -94,17 +94,17 @@ public:
     LLVM_DEBUG(dbgs() << ".. .. New MI: " << MI);
   }
 
-  void erasingInstr(MachineInstr &MI) override {
+  void erasingInstr(const MachineInstr &MI) override {
     LLVM_DEBUG(dbgs() << ".. .. Erasing: " << MI);
     InstList.remove(&MI);
     ArtifactList.remove(&MI);
   }
 
-  void changingInstr(MachineInstr &MI) override {
+  void changingInstr(const MachineInstr &MI) override {
     LLVM_DEBUG(dbgs() << ".. .. Changing MI: " << MI);
   }
 
-  void changedInstr(MachineInstr &MI) override {
+  void changedInstr(const MachineInstr &MI) override {
     // When insts change, we want to revisit them to legalize them again.
     // We'll consider them the same as created.
     LLVM_DEBUG(dbgs() << ".. .. Changed MI: " << MI);
@@ -126,8 +126,8 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // Populate Insts
-  InstListTy InstList;
-  ArtifactListTy ArtifactList;
+  InstListTy InstList(&MF);
+  ArtifactListTy ArtifactList(&MF);
   ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
   // Perform legalization bottom up so we can DCE as we legalize.
   // Traverse BB in RPOT and within each basic block, add insts top down,

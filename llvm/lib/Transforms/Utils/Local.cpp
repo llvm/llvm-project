@@ -1970,6 +1970,7 @@ static void changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr) {
   NewCall->setCallingConv(II->getCallingConv());
   NewCall->setAttributes(II->getAttributes());
   NewCall->setDebugLoc(II->getDebugLoc());
+  NewCall->copyMetadata(*II);
   II->replaceAllUsesWith(NewCall);
 
   // Follow the call by a branch to the normal destination.

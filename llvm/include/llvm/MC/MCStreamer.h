@@ -28,6 +28,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/TargetParser.h"
+#include "llvm/Support/VersionTuple.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -452,14 +453,17 @@ public:
 
   /// Specify the Mach-O minimum deployment target version.
   virtual void EmitVersionMin(MCVersionMinType Type, unsigned Major,
-                              unsigned Minor, unsigned Update) {}
+                              unsigned Minor, unsigned Update,
+                              VersionTuple SDKVersion) {}
 
   /// Emit/Specify Mach-O build version command.
   /// \p Platform should be one of MachO::PlatformType.
   virtual void EmitBuildVersion(unsigned Platform, unsigned Major,
-                                unsigned Minor, unsigned Update) {}
+                                unsigned Minor, unsigned Update,
+                                VersionTuple SDKVersion) {}
 
-  void EmitVersionForTarget(const Triple &Target);
+  void EmitVersionForTarget(const Triple &Target,
+                            const VersionTuple &SDKVersion);
 
   /// Note in the output that the specified \p Func is a Thumb mode
   /// function (ARM target only).

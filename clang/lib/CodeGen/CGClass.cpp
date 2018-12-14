@@ -16,6 +16,7 @@
 #include "CGDebugInfo.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
+#include "TargetInfo.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
@@ -2012,8 +2013,19 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                                              bool NewPointerIsChecked) {
   CallArgList Args;
 
+  LangAS SlotAS = E->getType().getAddressSpace();
+  QualType ThisType = D->getThisType(getContext());
+  LangAS ThisAS = ThisType.getTypePtr()->getPointeeType().getAddressSpace();
+  llvm::Value *ThisPtr = This.getPointer();
+  if (SlotAS != ThisAS) {
+    unsigned TargetThisAS = getContext().getTargetAddressSpace(ThisAS);
+    llvm::Type *NewType =
+        ThisPtr->getType()->getPointerElementType()->getPointerTo(TargetThisAS);
+    ThisPtr = getTargetHooks().performAddrSpaceCast(*this, This.getPointer(),
+                                                    ThisAS, SlotAS, NewType);
+  }
   // Push the this ptr.
-  Args.add(RValue::get(This.getPointer()), D->getThisType(getContext()));
+  Args.add(RValue::get(ThisPtr), D->getThisType(getContext()));
 
   // If this is a trivial constructor, emit a memcpy now before we lose
   // the alignment information on the argument.

@@ -9,12 +9,20 @@
 
 #include "DurationRewriter.h"
 #include "clang/Tooling/FixIt.h"
+#include "llvm/ADT/IndexedMap.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
 namespace abseil {
+
+struct DurationScale2IndexFunctor {
+  using argument_type = DurationScale;
+  unsigned operator()(DurationScale Scale) const {
+    return static_cast<unsigned>(Scale);
+  }
+};
 
 /// Returns an integer if the fractional part of a `FloatingLiteral` is `0`.
 static llvm::Optional<llvm::APSInt>
@@ -26,6 +34,55 @@ truncateIfIntegral(const FloatingLiteral &FloatLiteral) {
 
     return llvm::APSInt::get(static_cast<int64_t>(Value));
   }
+  return llvm::None;
+}
+
+/// Given a `Scale` return the inverse functions for it.
+static const std::pair<llvm::StringRef, llvm::StringRef> &
+getInverseForScale(DurationScale Scale) {
+  static const llvm::IndexedMap<std::pair<llvm::StringRef, llvm::StringRef>,
+                                DurationScale2IndexFunctor>
+      InverseMap = []() {
+        // TODO: Revisit the immediately invoked lamba technique when
+        // IndexedMap gets an initializer list constructor.
+        llvm::IndexedMap<std::pair<llvm::StringRef, llvm::StringRef>,
+                         DurationScale2IndexFunctor>
+            InverseMap;
+        InverseMap.resize(6);
+        InverseMap[DurationScale::Hours] =
+            std::make_pair("::absl::ToDoubleHours", "::absl::ToInt64Hours");
+        InverseMap[DurationScale::Minutes] =
+            std::make_pair("::absl::ToDoubleMinutes", "::absl::ToInt64Minutes");
+        InverseMap[DurationScale::Seconds] =
+            std::make_pair("::absl::ToDoubleSeconds", "::absl::ToInt64Seconds");
+        InverseMap[DurationScale::Milliseconds] = std::make_pair(
+            "::absl::ToDoubleMilliseconds", "::absl::ToInt64Milliseconds");
+        InverseMap[DurationScale::Microseconds] = std::make_pair(
+            "::absl::ToDoubleMicroseconds", "::absl::ToInt64Microseconds");
+        InverseMap[DurationScale::Nanoseconds] = std::make_pair(
+            "::absl::ToDoubleNanoseconds", "::absl::ToInt64Nanoseconds");
+        return InverseMap;
+      }();
+
+  return InverseMap[Scale];
+}
+
+/// If `Node` is a call to the inverse of `Scale`, return that inverse's
+/// argument, otherwise None.
+static llvm::Optional<std::string>
+rewriteInverseDurationCall(const MatchFinder::MatchResult &Result,
+                           DurationScale Scale, const Expr &Node) {
+  const std::pair<llvm::StringRef, llvm::StringRef> &InverseFunctions =
+      getInverseForScale(Scale);
+  if (const auto *MaybeCallArg = selectFirst<const Expr>(
+          "e",
+          match(callExpr(callee(functionDecl(hasAnyName(
+                             InverseFunctions.first, InverseFunctions.second))),
+                         hasArgument(0, expr().bind("e"))),
+                Node, *Result.Context))) {
+    return tooling::fixit::getText(*MaybeCallArg, *Result.Context).str();
+  }
+
   return llvm::None;
 }
 
@@ -102,6 +159,49 @@ std::string simplifyDurationFactoryArg(const MatchFinder::MatchResult &Result,
 
   // We couldn't simplify any further, so return the argument text.
   return tooling::fixit::getText(Node, *Result.Context).str();
+}
+
+llvm::Optional<DurationScale> getScaleForInverse(llvm::StringRef Name) {
+  static const llvm::StringMap<DurationScale> ScaleMap(
+      {{"ToDoubleHours", DurationScale::Hours},
+       {"ToInt64Hours", DurationScale::Hours},
+       {"ToDoubleMinutes", DurationScale::Minutes},
+       {"ToInt64Minutes", DurationScale::Minutes},
+       {"ToDoubleSeconds", DurationScale::Seconds},
+       {"ToInt64Seconds", DurationScale::Seconds},
+       {"ToDoubleMilliseconds", DurationScale::Milliseconds},
+       {"ToInt64Milliseconds", DurationScale::Milliseconds},
+       {"ToDoubleMicroseconds", DurationScale::Microseconds},
+       {"ToInt64Microseconds", DurationScale::Microseconds},
+       {"ToDoubleNanoseconds", DurationScale::Nanoseconds},
+       {"ToInt64Nanoseconds", DurationScale::Nanoseconds}});
+
+  auto ScaleIter = ScaleMap.find(std::string(Name));
+  if (ScaleIter == ScaleMap.end())
+    return llvm::None;
+
+  return ScaleIter->second;
+}
+
+llvm::Optional<std::string> rewriteExprFromNumberToDuration(
+    const ast_matchers::MatchFinder::MatchResult &Result, DurationScale Scale,
+    const Expr *Node) {
+  const Expr &RootNode = *Node->IgnoreParenImpCasts();
+
+  if (RootNode.getBeginLoc().isMacroID())
+    return llvm::None;
+
+  // First check to see if we can undo a complimentary function call.
+  if (llvm::Optional<std::string> MaybeRewrite =
+          rewriteInverseDurationCall(Result, Scale, RootNode))
+    return *MaybeRewrite;
+
+  if (IsLiteralZero(Result, RootNode))
+    return std::string("absl::ZeroDuration()");
+
+  return (llvm::Twine(getFactoryForScale(Scale)) + "(" +
+          simplifyDurationFactoryArg(Result, RootNode) + ")")
+      .str();
 }
 
 } // namespace abseil

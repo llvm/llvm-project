@@ -2131,6 +2131,9 @@ SHA2_CONST(384);
 SHA2_CONST(512);
 
 #undef SHA2_CONST
+
+const int unvis_valid = UNVIS_VALID;
+const int unvis_validpush = UNVIS_VALIDPUSH;
 }  // namespace __sanitizer
 
 using namespace __sanitizer;
