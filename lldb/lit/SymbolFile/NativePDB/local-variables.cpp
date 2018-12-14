@@ -151,7 +151,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: Process {{.*}} exited with status = 18 (0x00000012)
 
 // CHECK:      (lldb) target modules dump ast
-// CHECK-NEXT: Dumping clang ast for 7 modules.
+// CHECK-NEXT: Dumping clang ast for {{.*}} modules.
 // CHECK-NEXT: TranslationUnitDecl
 // CHECK-NEXT: |-FunctionDecl {{.*}} main 'int (int, char **)'
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} argc 'int'
