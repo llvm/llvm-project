@@ -39,17 +39,18 @@ SubMap& GetSubstitutions() {
   // Don't use 'dec_re' from header because it may not yet be initialized.
   // clang-format off
   static std::string safe_dec_re = "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?";
+  static std::string time_re = "([0-9]+[.])?[0-9]+";
   static SubMap map = {
       {"%float", "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?"},
       // human-readable float
       {"%hrfloat", "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?[kMGTPEZYmunpfazy]?"},
       {"%int", "[ ]*[0-9]+"},
       {" %s ", "[ ]+"},
-      {"%time", "[ ]*[0-9]+ ns"},
-      {"%console_report", "[ ]*[0-9]+ ns [ ]*[0-9]+ ns [ ]*[0-9]+"},
-      {"%console_time_only_report", "[ ]*[0-9]+ ns [ ]*[0-9]+ ns"},
-      {"%console_us_report", "[ ]*[0-9]+ us [ ]*[0-9]+ us [ ]*[0-9]+"},
-      {"%console_us_time_only_report", "[ ]*[0-9]+ us [ ]*[0-9]+ us"},
+      {"%time", "[ ]*" + time_re + "[ ]+ns"},
+      {"%console_report", "[ ]*" + time_re + "[ ]+ns [ ]*" + time_re + "[ ]+ns [ ]*[0-9]+"},
+      {"%console_time_only_report", "[ ]*" + time_re + "[ ]+ns [ ]*" + time_re + "[ ]+ns"},
+      {"%console_us_report", "[ ]*" + time_re + "[ ]+us [ ]*" + time_re + "[ ]+us [ ]*[0-9]+"},
+      {"%console_us_time_only_report", "[ ]*" + time_re + "[ ]+us [ ]*" + time_re + "[ ]+us"},
       {"%csv_header",
        "name,iterations,real_time,cpu_time,time_unit,bytes_per_second,"
        "items_per_second,label,error_occurred,error_message"},
