@@ -53,8 +53,8 @@ public:
   ProgramStateRef
   checkRegionChanges(ProgramStateRef State,
                      const InvalidatedSymbols *Invalidated,
-                     ArrayRef<const MemRegion *> ExplicitRegions,
-                     ArrayRef<const MemRegion *> Regions,
+                     ArrayRef<const MemRegion *> RequestedRegions,
+                     ArrayRef<const MemRegion *> InvalidatedRegions,
                      const LocationContext *LCtx, const CallEvent *Call) const;
   void printState(raw_ostream &Out, ProgramStateRef State,
                   const char *NL, const char *Sep) const override;
@@ -525,19 +525,35 @@ void MoveChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 
 ProgramStateRef MoveChecker::checkRegionChanges(
     ProgramStateRef State, const InvalidatedSymbols *Invalidated,
-    ArrayRef<const MemRegion *> ExplicitRegions,
-    ArrayRef<const MemRegion *> Regions, const LocationContext *LCtx,
-    const CallEvent *Call) const {
-  // In case of an InstanceCall don't remove the ThisRegion from the GDM since
-  // it is handled in checkPreCall and checkPostCall.
-  const MemRegion *ThisRegion = nullptr;
-  if (const auto *IC = dyn_cast_or_null<CXXInstanceCall>(Call)) {
-    ThisRegion = IC->getCXXThisVal().getAsRegion();
-  }
+    ArrayRef<const MemRegion *> RequestedRegions,
+    ArrayRef<const MemRegion *> InvalidatedRegions,
+    const LocationContext *LCtx, const CallEvent *Call) const {
+  if (Call) {
+    // Relax invalidation upon function calls: only invalidate parameters
+    // that are passed directly via non-const pointers or non-const references
+    // or rvalue references.
+    // In case of an InstanceCall don't invalidate the this-region since
+    // it is fully handled in checkPreCall and checkPostCall.
+    const MemRegion *ThisRegion = nullptr;
+    if (const auto *IC = dyn_cast<CXXInstanceCall>(Call))
+      ThisRegion = IC->getCXXThisVal().getAsRegion();
 
-  for (const auto *Region : ExplicitRegions) {
-    if (ThisRegion != Region)
-      State = removeFromState(State, Region);
+    // Requested ("explicit") regions are the regions passed into the call
+    // directly, but not all of them end up being invalidated.
+    // But when they do, they appear in the InvalidatedRegions array as well.
+    for (const auto *Region : RequestedRegions) {
+      if (ThisRegion != Region) {
+        if (llvm::find(InvalidatedRegions, Region) !=
+            std::end(InvalidatedRegions)) {
+          State = removeFromState(State, Region);
+        }
+      }
+    }
+  } else {
+    // For invalidations that aren't caused by calls, assume nothing. In
+    // particular, direct write into an object's field invalidates the status.
+    for (const auto *Region : InvalidatedRegions)
+      State = removeFromState(State, Region->getBaseRegion());
   }
 
   return State;

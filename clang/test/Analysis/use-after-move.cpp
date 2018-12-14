@@ -116,6 +116,19 @@ public:
   bool empty() const;
   bool isEmpty() const;
   operator bool() const;
+
+  void testUpdateField() {
+    A a;
+    A b = std::move(a);
+    a.i = 1;
+    a.foo(); // no-warning
+  }
+  void testUpdateFieldDouble() {
+    A a;
+    A b = std::move(a);
+    a.d = 1.0;
+    a.foo(); // no-warning
+  }
 };
 
 int bignum();
@@ -594,23 +607,49 @@ void paramEvaluateOrderTest() {
   foobar(a.getI(), std::move(a)); //no-warning
 }
 
-void not_known(A &a);
-void not_known(A *a);
+void not_known_pass_by_ref(A &a);
+void not_known_pass_by_const_ref(const A &a);
+void not_known_pass_by_rvalue_ref(A &&a);
+void not_known_pass_by_ptr(A *a);
+void not_known_pass_by_const_ptr(const A *a);
 
 void regionAndPointerEscapeTest() {
   {
     A a;
     A b;
     b = std::move(a);
-    not_known(a);
-    a.foo(); //no-warning
+    not_known_pass_by_ref(a);
+    a.foo(); // no-warning
+  }
+  {
+    A a;
+    A b;
+    b = std::move(a); // expected-note{{Object 'a' is moved}}
+    not_known_pass_by_const_ref(a);
+    a.foo(); // expected-warning{{Method called on moved-from object 'a'}}
+             // expected-note@-1{{Method called on moved-from object 'a'}}
   }
   {
     A a;
     A b;
     b = std::move(a);
-    not_known(&a);
+    not_known_pass_by_rvalue_ref(std::move(a));
     a.foo(); // no-warning
+  }
+  {
+    A a;
+    A b;
+    b = std::move(a);
+    not_known_pass_by_ptr(&a);
+    a.foo(); // no-warning
+  }
+  {
+    A a;
+    A b;
+    b = std::move(a); // expected-note{{Object 'a' is moved}}
+    not_known_pass_by_const_ptr(&a);
+    a.foo(); // expected-warning{{Method called on moved-from object 'a'}}
+             // expected-note@-1{{Method called on moved-from object 'a'}}
   }
 }
 
