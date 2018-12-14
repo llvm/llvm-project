@@ -382,6 +382,14 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
   if (!Action->Execute())
     return createStringError(inconvertibleErrorCode(), "Execute() failed");
   Action->EndSourceFile();
+  if (Clang->hasDiagnostics() &&
+      Clang->getDiagnostics().hasUncompilableErrorOccurred()) {
+    return createStringError(inconvertibleErrorCode(),
+                             "IndexingAction failed: has uncompilable errors");
+  }
+
+  assert(Index.Symbols && Index.Refs && Index.Sources
+     && "Symbols, Refs and Sources must be set.");
 
   log("Indexed {0} ({1} symbols, {2} refs, {3} files)",
       Inputs.CompileCommand.Filename, Index.Symbols->size(),
