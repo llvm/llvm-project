@@ -85,22 +85,22 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
 
   RelocMap Relocs;
   if (ObjFile.getBinary()->isELF()) {
-    uint32_t RelrRelocationType = [](object::ObjectFile *ObjFile) {
+    uint32_t RelativeRelocation = [](object::ObjectFile *ObjFile) {
       if (const auto *ELFObj = dyn_cast<object::ELF32LEObjectFile>(ObjFile))
-        return ELFObj->getELFFile()->getRelrRelocationType();
+        return ELFObj->getELFFile()->getRelativeRelocationType();
       else if (const auto *ELFObj = dyn_cast<object::ELF32BEObjectFile>(ObjFile))
-        return ELFObj->getELFFile()->getRelrRelocationType();
+        return ELFObj->getELFFile()->getRelativeRelocationType();
       else if (const auto *ELFObj = dyn_cast<object::ELF64LEObjectFile>(ObjFile))
-        return ELFObj->getELFFile()->getRelrRelocationType();
+        return ELFObj->getELFFile()->getRelativeRelocationType();
       else if (const auto *ELFObj = dyn_cast<object::ELF64BEObjectFile>(ObjFile))
-        return ELFObj->getELFFile()->getRelrRelocationType();
+        return ELFObj->getELFFile()->getRelativeRelocationType();
       else
         return static_cast<uint32_t>(0);
     }(ObjFile.getBinary());
 
     for (const object::SectionRef &Section : Sections) {
       for (const object::RelocationRef &Reloc : Section.relocations()) {
-        if (Reloc.getType() != RelrRelocationType)
+        if (Reloc.getType() != RelativeRelocation)
           continue;
         if (auto AddendOrErr = object::ELFRelocationRef(Reloc).getAddend())
           Relocs.insert({Reloc.getOffset(), *AddendOrErr});

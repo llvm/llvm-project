@@ -39108,6 +39108,22 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
   EVT InVT = N0.getValueType();
   EVT InSVT = InVT.getScalarType();
 
+  // FIXME: Generic DAGCombiner previously had a bug that would cause a
+  // sign_extend of setcc to sometimes return the original node and tricked it
+  // into thinking CombineTo was used which prevented the target combines from
+  // running.
+  // Earlying out here to avoid regressions like this
+  //  (v4i32 (sext (v4i1 (setcc (v4i16)))))
+  // Becomes
+  //  (v4i32 (sext_invec (v8i16 (concat (v4i16 (setcc (v4i16))), undef))))
+  // Type legalized to
+  //  (v4i32 (sext_invec (v8i16 (trunc_invec (v4i32 (setcc (v4i32)))))))
+  // Leading to a packssdw+pmovsxwd
+  // We could write a DAG combine to fix this, but really we shouldn't be
+  // creating sext_invec that's forcing v8i16 into the DAG.
+  if (N0.getOpcode() == ISD::SETCC)
+    return SDValue();
+
   // Input type must be a vector and we must be extending legal integer types.
   if (!VT.isVector() || VT.getVectorNumElements() < 2)
     return SDValue();

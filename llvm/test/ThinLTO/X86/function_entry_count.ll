@@ -15,7 +15,7 @@
 ; RUN: llvm-dis %t3.0.3.imported.bc -o - | FileCheck %s
 
 ; CHECK: define void @h() !prof ![[PROF2:[0-9]+]]
-; CHECK: define void @f(i32 %n) !prof ![[PROF1:[0-9]+]]
+; CHECK: define void @f(i32{{.*}}) !prof ![[PROF1:[0-9]+]]
 ; CHECK: define available_externally void @g() !prof ![[PROF2]]
 ; CHECK-DAG: ![[PROF1]] = !{!"synthetic_function_entry_count", i64 10}
 ; CHECK-DAG: ![[PROF2]] = !{!"synthetic_function_entry_count", i64 198}
