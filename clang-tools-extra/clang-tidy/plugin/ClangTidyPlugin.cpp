@@ -10,7 +10,6 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyForceLinker.h"
 #include "../ClangTidyModule.h"
-#include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/MultiplexConsumer.h"
