@@ -416,7 +416,6 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
 
   // Cache the results.
   auto It = DIFileCache.find(FileName.data());
-
   if (It != DIFileCache.end()) {
     // Verify that the information still exists.
     if (llvm::Metadata *V = It->second)
@@ -595,22 +594,27 @@ void CGDebugInfo::CreateCompileUnit() {
     break;
   }
 
+  uint64_t DwoId = 0;
+  auto &CGOpts = CGM.getCodeGenOpts();
+  // The DIFile used by the CU is distinct from the main source
+  // file. Its directory part specifies what becomes the
+  // DW_AT_comp_dir (the compilation directory), even if the source
+  // file was specified with an absolute path.
   if (CSKind)
     CSInfo.emplace(*CSKind, Checksum);
+  llvm::DIFile *CUFile = DBuilder.createFile(
+      remapDIPath(MainFileName), remapDIPath(getCurrentDirname()), CSInfo,
+      getSource(SM, SM.getMainFileID()));
 
   // Create new compile unit.
-  // FIXME - Eliminate TheCU.
-  auto &CGOpts = CGM.getCodeGenOpts();
   TheCU = DBuilder.createCompileUnit(
-      LangTag,
-      createFile(MainFileName, CSInfo, getSource(SM, SM.getMainFileID())),
-      CGOpts.EmitVersionIdentMetadata ? Producer : "",
+      LangTag, CUFile, CGOpts.EmitVersionIdentMetadata ? Producer : "",
       LO.Optimize || CGOpts.PrepareForLTO || CGOpts.PrepareForThinLTO,
       CGOpts.DwarfDebugFlags, RuntimeVers,
       (CGOpts.getSplitDwarfMode() != CodeGenOptions::NoFission)
           ? ""
           : CGOpts.SplitDwarfFile,
-      EmissionKind, 0 /* DWOid */, CGOpts.SplitDwarfInlining,
+      EmissionKind, DwoId, CGOpts.SplitDwarfInlining,
       CGOpts.DebugInfoForProfiling,
       CGM.getTarget().getTriple().isNVPTX()
           ? llvm::DICompileUnit::DebugNameTableKind::None

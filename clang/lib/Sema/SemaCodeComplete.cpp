@@ -3478,7 +3478,7 @@ static void HandleCodeCompleteResults(Sema *S,
     CodeCompleter->ProcessCodeCompleteResults(*S, Context, Results, NumResults);
 }
 
-static enum CodeCompletionContext::Kind
+static CodeCompletionContext
 mapCodeCompletionContext(Sema &S, Sema::ParserCompletionContext PCC) {
   switch (PCC) {
   case Sema::PCC_Namespace:
@@ -3515,8 +3515,10 @@ mapCodeCompletionContext(Sema &S, Sema::ParserCompletionContext PCC) {
       return CodeCompletionContext::CCC_Expression;
 
   case Sema::PCC_Expression:
-  case Sema::PCC_Condition:
     return CodeCompletionContext::CCC_Expression;
+  case Sema::PCC_Condition:
+    return CodeCompletionContext(CodeCompletionContext::CCC_Expression,
+                                 S.getASTContext().BoolTy);
 
   case Sema::PCC_Statement:
     return CodeCompletionContext::CCC_Statement;
@@ -4834,9 +4836,87 @@ void Sema::CodeCompleteAfterIf(Scope *S) {
                             Results.data(), Results.size());
 }
 
-void Sema::CodeCompleteAssignmentRHS(Scope *S, Expr *LHS) {
-  if (LHS)
-    CodeCompleteExpression(S, static_cast<Expr *>(LHS)->getType());
+static QualType getPreferredTypeOfBinaryRHS(Sema &S, Expr *LHS,
+                                            tok::TokenKind Op) {
+  if (!LHS)
+    return QualType();
+
+  QualType LHSType = LHS->getType();
+  if (LHSType->isPointerType()) {
+    if (Op == tok::plus || Op == tok::plusequal || Op == tok::minusequal)
+      return S.getASTContext().getPointerDiffType();
+    // Pointer difference is more common than subtracting an int from a pointer.
+    if (Op == tok::minus)
+      return LHSType;
+  }
+
+  switch (Op) {
+  // No way to infer the type of RHS from LHS.
+  case tok::comma:
+    return QualType();
+  // Prefer the type of the left operand for all of these.
+  // Arithmetic operations.
+  case tok::plus:
+  case tok::plusequal:
+  case tok::minus:
+  case tok::minusequal:
+  case tok::percent:
+  case tok::percentequal:
+  case tok::slash:
+  case tok::slashequal:
+  case tok::star:
+  case tok::starequal:
+  // Assignment.
+  case tok::equal:
+  // Comparison operators.
+  case tok::equalequal:
+  case tok::exclaimequal:
+  case tok::less:
+  case tok::lessequal:
+  case tok::greater:
+  case tok::greaterequal:
+  case tok::spaceship:
+    return LHS->getType();
+  // Binary shifts are often overloaded, so don't try to guess those.
+  case tok::greatergreater:
+  case tok::greatergreaterequal:
+  case tok::lessless:
+  case tok::lesslessequal:
+    if (LHSType->isIntegralOrEnumerationType())
+      return S.getASTContext().IntTy;
+    return QualType();
+  // Logical operators, assume we want bool.
+  case tok::ampamp:
+  case tok::pipepipe:
+  case tok::caretcaret:
+    return S.getASTContext().BoolTy;
+  // Operators often used for bit manipulation are typically used with the type
+  // of the left argument.
+  case tok::pipe:
+  case tok::pipeequal:
+  case tok::caret:
+  case tok::caretequal:
+  case tok::amp:
+  case tok::ampequal:
+    if (LHSType->isIntegralOrEnumerationType())
+      return LHSType;
+    return QualType();
+  // RHS should be a pointer to a member of the 'LHS' type, but we can't give
+  // any particular type here.
+  case tok::periodstar:
+  case tok::arrowstar:
+    return QualType();
+  default:
+    // FIXME(ibiryukov): handle the missing op, re-add the assertion.
+    // assert(false && "unhandled binary op");
+    return QualType();
+  }
+}
+
+void Sema::CodeCompleteBinaryRHS(Scope *S, Expr *LHS, tok::TokenKind Op) {
+  auto PreferredType = getPreferredTypeOfBinaryRHS(*this, LHS, Op);
+  if (!PreferredType.isNull())
+    CodeCompleteExpression(S, PreferredType);
   else
     CodeCompleteOrdinaryName(S, PCC_Expression);
 }
