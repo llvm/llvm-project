@@ -306,6 +306,8 @@ public:
   virtual TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                          ValueObject &static_value) override;
 
+  virtual bool FixupReference(lldb::addr_t &addr, CompilerType type) override;
+
   bool IsRuntimeSupportValue(ValueObject &valobj) override;
 
   virtual CompilerType DoArchetypeBindingForType(StackFrame &stack_frame,
