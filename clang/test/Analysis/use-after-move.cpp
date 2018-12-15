@@ -13,47 +13,7 @@
 // RUN:  -analyzer-config exploration_strategy=dfs -DDFS=1\
 // RUN:  -analyzer-config alpha.cplusplus.Move:Aggressive=true -DAGGRESSIVE
 
-namespace std {
-
-typedef __typeof(sizeof(int)) size_t;
-
-template <typename>
-struct remove_reference;
-
-template <typename _Tp>
-struct remove_reference { typedef _Tp type; };
-
-template <typename _Tp>
-struct remove_reference<_Tp &> { typedef _Tp type; };
-
-template <typename _Tp>
-struct remove_reference<_Tp &&> { typedef _Tp type; };
-
-template <typename _Tp>
-typename remove_reference<_Tp>::type &&move(_Tp &&__t) {
-  return static_cast<typename remove_reference<_Tp>::type &&>(__t);
-}
-
-template <typename _Tp>
-_Tp &&forward(typename remove_reference<_Tp>::type &__t) noexcept {
-  return static_cast<_Tp &&>(__t);
-}
-
-template <class T>
-void swap(T &a, T &b) {
-  T c(std::move(a));
-  a = std::move(b);
-  b = std::move(c);
-}
-
-template <typename T>
-class vector {
-public:
-  vector();
-  void push_back(const T &t);
-};
-
-} // namespace std
+#include "Inputs/system-header-simulator-cxx.h"
 
 class B {
 public:
@@ -116,6 +76,19 @@ public:
   bool empty() const;
   bool isEmpty() const;
   operator bool() const;
+
+  void testUpdateField() {
+    A a;
+    A b = std::move(a);
+    a.i = 1;
+    a.foo(); // no-warning
+  }
+  void testUpdateFieldDouble() {
+    A a;
+    A b = std::move(a);
+    a.d = 1.0;
+    a.foo(); // no-warning
+  }
 };
 
 int bignum();
@@ -594,23 +567,49 @@ void paramEvaluateOrderTest() {
   foobar(a.getI(), std::move(a)); //no-warning
 }
 
-void not_known(A &a);
-void not_known(A *a);
+void not_known_pass_by_ref(A &a);
+void not_known_pass_by_const_ref(const A &a);
+void not_known_pass_by_rvalue_ref(A &&a);
+void not_known_pass_by_ptr(A *a);
+void not_known_pass_by_const_ptr(const A *a);
 
 void regionAndPointerEscapeTest() {
   {
     A a;
     A b;
     b = std::move(a);
-    not_known(a);
-    a.foo(); //no-warning
+    not_known_pass_by_ref(a);
+    a.foo(); // no-warning
+  }
+  {
+    A a;
+    A b;
+    b = std::move(a); // expected-note{{Object 'a' is moved}}
+    not_known_pass_by_const_ref(a);
+    a.foo(); // expected-warning{{Method called on moved-from object 'a'}}
+             // expected-note@-1{{Method called on moved-from object 'a'}}
   }
   {
     A a;
     A b;
     b = std::move(a);
-    not_known(&a);
+    not_known_pass_by_rvalue_ref(std::move(a));
     a.foo(); // no-warning
+  }
+  {
+    A a;
+    A b;
+    b = std::move(a);
+    not_known_pass_by_ptr(&a);
+    a.foo(); // no-warning
+  }
+  {
+    A a;
+    A b;
+    b = std::move(a); // expected-note{{Object 'a' is moved}}
+    not_known_pass_by_const_ptr(&a);
+    a.foo(); // expected-warning{{Method called on moved-from object 'a'}}
+             // expected-note@-1{{Method called on moved-from object 'a'}}
   }
 }
 
@@ -793,12 +792,25 @@ MoveOnlyWithDestructor foo() {
 
 class HasSTLField {
   std::vector<int> V;
-  void foo() {
+  void testVector() {
     // Warn even in non-aggressive mode when it comes to STL, because
     // in STL the object is left in "valid but unspecified state" after move.
     std::vector<int> W = std::move(V); // expected-note{{Object 'V' of type 'std::vector' is left in a valid but unspecified state after move}}
     V.push_back(123); // expected-warning{{Method called on moved-from object 'V'}}
                       // expected-note@-1{{Method called on moved-from object 'V'}}
+  }
+
+  std::unique_ptr<int> P;
+  void testUniquePtr() {
+    // unique_ptr remains in a well-defined state after move.
+    std::unique_ptr<int> Q = std::move(P);
+    P.get();
+#ifdef AGGRESSIVE
+    // expected-warning@-2{{Method called on moved-from object 'P'}}
+    // expected-note@-4{{Object 'P' is moved}}
+    // expected-note@-4{{Method called on moved-from object 'P'}}
+#endif
+    *P += 1; // FIXME: Should warn that the pointer is null.
   }
 };
 
@@ -806,4 +818,12 @@ void localRValueMove(A &&a) {
   A b = std::move(a); // expected-note{{Object 'a' is moved}}
   a.foo(); // expected-warning{{Method called on moved-from object 'a'}}
            // expected-note@-1{{Method called on moved-from object 'a'}}
+}
+
+void localUniquePtr(std::unique_ptr<int> P) {
+  // Even though unique_ptr is safe to use after move,
+  // reusing a local variable this way usually indicates a bug.
+  std::unique_ptr<int> Q = std::move(P); // expected-note{{Object 'P' is moved}}
+  P.get(); // expected-warning{{Method called on moved-from object 'P'}}
+           // expected-note@-1{{Method called on moved-from object 'P'}}
 }

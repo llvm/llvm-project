@@ -1,9 +1,9 @@
 {
-  "$schema": "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2018-10-10",
+  "$schema": "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2018-11-28",
   "runs": [
     {
-      "files": {
-        "file:sarif-multi-diagnostic-test.c": {
+      "files": [      
+        {
           "fileLocation": {
             "uri": "file:sarif-multi-diagnostic-test.c"
           },
@@ -13,34 +13,37 @@
             "resultFile"
           ]
         }
-      },
+      ],
       "resources": {
-        "rules": {
-          "core.CallAndMessage": {
+        "rules": [
+          {
+            "fullDescription": {
+              "text": "Mark tainted symbols as such."
+            },
+            "id": "debug.TaintTest",
+            "name": {
+              "text": "debug.TaintTest"
+            }
+          },        
+          {
             "fullDescription": {
               "text": "Check for logical errors for function calls and Objective-C message expressions (e.g., uninitialized arguments, null function pointers)"
             },
+            "id": "core.CallAndMessage",
             "name": {
               "text": "core.CallAndMessage"
             }
           },
-          "core.DivideZero": {
+          {
             "fullDescription": {
               "text": "Check for division by zero"
             },
+            "id": "core.DivideZero",
             "name": {
               "text": "core.DivideZero"
             }
-          },
-          "debug.TaintTest": {
-            "fullDescription": {
-              "text": "Mark tainted symbols as such."
-            },
-            "name": {
-              "text": "debug.TaintTest"
-            }
           }
-        }
+        ]
       },
       "results": [
         {
@@ -57,6 +60,7 @@
                         },
                         "physicalLocation": {
                           "fileLocation": {
+                            "fileIndex": 0,
                             "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
@@ -76,6 +80,7 @@
                         },
                         "physicalLocation": {
                           "fileLocation": {
+                            "fileIndex": 0,
                             "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
@@ -96,6 +101,7 @@
             {
               "physicalLocation": {
                 "fileLocation": {
+                  "fileIndex": 0,
                   "uri": "file:sarif-multi-diagnostic-test.c"
                 },
                 "region": {
@@ -110,7 +116,8 @@
           "message": {
             "text": "tainted"
           },
-          "ruleId": "debug.TaintTest"
+          "ruleId": "debug.TaintTest",
+          "ruleIndex": 0
         },
         {
           "codeFlows": [
@@ -126,6 +133,7 @@
                         },
                         "physicalLocation": {
                           "fileLocation": {
+                            "fileIndex": 0,
                             "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
@@ -145,6 +153,7 @@
                         },
                         "physicalLocation": {
                           "fileLocation": {
+                            "fileIndex": 0,
                             "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
@@ -164,6 +173,7 @@
                         },
                         "physicalLocation": {
                           "fileLocation": {
+                            "fileIndex": 0,
                             "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
@@ -184,6 +194,7 @@
             {
               "physicalLocation": {
                 "fileLocation": {
+                  "fileIndex": 0,
                   "uri": "file:sarif-multi-diagnostic-test.c"
                 },
                 "region": {
@@ -198,7 +209,8 @@
           "message": {
             "text": "Called function pointer is an uninitialized pointer value"
           },
-          "ruleId": "core.CallAndMessage"
+          "ruleId": "core.CallAndMessage",
+          "ruleIndex": 1
         },
         {
           "codeFlows": [
@@ -214,6 +226,7 @@
                         },
                         "physicalLocation": {
                           "fileLocation": {
+                            "fileIndex": 0,
                             "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
@@ -233,6 +246,7 @@
                         },
                         "physicalLocation": {
                           "fileLocation": {
+                            "fileIndex": 0,
                             "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
@@ -252,6 +266,7 @@
                         },
                         "physicalLocation": {
                           "fileLocation": {
+                            "fileIndex": 0,
                             "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
@@ -272,6 +287,7 @@
             {
               "physicalLocation": {
                 "fileLocation": {
+                  "fileIndex": 0,
                   "uri": "file:sarif-multi-diagnostic-test.c"
                 },
                 "region": {
@@ -286,7 +302,8 @@
           "message": {
             "text": "Division by zero"
           },
-          "ruleId": "core.DivideZero"
+          "ruleId": "core.DivideZero",
+          "ruleIndex": 2
         }
       ],
       "tool": {
@@ -297,5 +314,5 @@
       }
     }
   ],
-  "version": "2.0.0-csd.2.beta.2018-10-10"
+  "version": "2.0.0-csd.2.beta.2018-11-28"
 }

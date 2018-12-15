@@ -17,8 +17,8 @@
 #include "CXSourceLocation.h"
 #include "CXString.h"
 
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/Twine.h"
 
 using namespace clang;

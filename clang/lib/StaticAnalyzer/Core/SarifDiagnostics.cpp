@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 
@@ -77,7 +78,7 @@ static std::string fileNameToURI(StringRef Filename) {
   if (Root.startswith("//")) {
     // There is an authority, so add it to the URI.
     Ret += Root.drop_front(2).str();
-  } else {
+  } else if (!Root.empty()) {
     // There is no authority, so end the component and add the root to the URI.
     Ret += Twine("/" + Root).str();
   }
@@ -118,12 +119,28 @@ static json::Object createFile(const FileEntry &FE) {
 }
 
 static json::Object createFileLocation(const FileEntry &FE,
-                                       json::Object &Files) {
+                                       json::Array &Files) {
   std::string FileURI = fileNameToURI(getFileName(FE));
-  if (!Files.get(FileURI))
-    Files[FileURI] = createFile(FE);
 
-  return json::Object{{"uri", FileURI}};
+  // See if the Files array contains this URI already. If it does not, create
+  // a new file object to add to the array.
+  auto I = llvm::find_if(Files, [&](const json::Value &File) {
+    if (const json::Object *Obj = File.getAsObject()) {
+      if (const json::Object *FileLoc = Obj->getObject("fileLocation")) {
+        Optional<StringRef> URI = FileLoc->getString("uri");
+        return URI && URI->equals(FileURI);
+      }
+    }
+    return false;
+  });
+
+  // Calculate the index within the file location array so it can be stored in
+  // the JSON object.
+  auto Index = static_cast<unsigned>(std::distance(Files.begin(), I));
+  if (I == Files.end())
+    Files.push_back(createFile(FE));
+
+  return json::Object{{"uri", FileURI}, {"fileIndex", Index}};
 }
 
 static json::Object createTextRegion(SourceRange R, const SourceManager &SM) {
@@ -136,7 +153,7 @@ static json::Object createTextRegion(SourceRange R, const SourceManager &SM) {
 
 static json::Object createPhysicalLocation(SourceRange R, const FileEntry &FE,
                                            const SourceManager &SMgr,
-                                           json::Object &Files) {
+                                           json::Array &Files) {
   return json::Object{{{"fileLocation", createFileLocation(FE, Files)},
                        {"region", createTextRegion(R, SMgr)}}};
 }
@@ -190,7 +207,7 @@ static Importance calculateImportance(const PathDiagnosticPiece &Piece) {
 }
 
 static json::Object createThreadFlow(const PathPieces &Pieces,
-                                     json::Object &Files) {
+                                     json::Array &Files) {
   const SourceManager &SMgr = Pieces.front()->getLocation().getManager();
   json::Array Locations;
   for (const auto &Piece : Pieces) {
@@ -206,7 +223,7 @@ static json::Object createThreadFlow(const PathPieces &Pieces,
 }
 
 static json::Object createCodeFlow(const PathPieces &Pieces,
-                                   json::Object &Files) {
+                                   json::Array &Files) {
   return json::Object{
       {"threadFlows", json::Array{createThreadFlow(Pieces, Files)}}};
 }
@@ -218,10 +235,13 @@ static json::Object createTool() {
                       {"version", getClangFullVersion()}};
 }
 
-static json::Object createResult(const PathDiagnostic &Diag,
-                                 json::Object &Files) {
+static json::Object createResult(const PathDiagnostic &Diag, json::Array &Files,
+                                 const StringMap<unsigned> &RuleMapping) {
   const PathPieces &Path = Diag.path.flatten(false);
   const SourceManager &SMgr = Path.front()->getLocation().getManager();
+
+  auto Iter = RuleMapping.find(Diag.getCheckName());
+  assert(Iter != RuleMapping.end() && "Rule ID is not in the array index map?");
 
   return json::Object{
       {"message", createMessage(Diag.getVerboseDescription())},
@@ -230,6 +250,7 @@ static json::Object createResult(const PathDiagnostic &Diag,
        json::Array{createLocation(createPhysicalLocation(
            Diag.getLocation().asRange(),
            *Diag.getLocation().asLocation().getFileEntry(), SMgr, Files))}},
+      {"ruleIndex", Iter->getValue()},
       {"ruleId", Diag.getCheckName()}};
 }
 
@@ -248,38 +269,43 @@ static json::Object createRule(const PathDiagnostic &Diag) {
   StringRef CheckName = Diag.getCheckName();
   return json::Object{
       {"fullDescription", createMessage(getRuleDescription(CheckName))},
-      {"name", createMessage(CheckName)}};
+      {"name", createMessage(CheckName)},
+      {"id", CheckName}};
 }
 
-static json::Object createRules(std::vector<const PathDiagnostic *> &Diags) {
-  json::Object Rules;
+static json::Array createRules(std::vector<const PathDiagnostic *> &Diags,
+                               StringMap<unsigned> &RuleMapping) {
+  json::Array Rules;
   llvm::StringSet<> Seen;
 
   llvm::for_each(Diags, [&](const PathDiagnostic *D) {
     StringRef RuleID = D->getCheckName();
     std::pair<llvm::StringSet<>::iterator, bool> P = Seen.insert(RuleID);
-    if (P.second)
-      Rules[RuleID] = createRule(*D);
+    if (P.second) {
+      RuleMapping[RuleID] = Rules.size(); // Maps RuleID to an Array Index.
+      Rules.push_back(createRule(*D));
+    }
   });
 
   return Rules;
 }
 
-static json::Object
-createResources(std::vector<const PathDiagnostic *> &Diags) {
-  return json::Object{{"rules", createRules(Diags)}};
+static json::Object createResources(std::vector<const PathDiagnostic *> &Diags,
+                                    StringMap<unsigned> &RuleMapping) {
+  return json::Object{{"rules", createRules(Diags, RuleMapping)}};
 }
 
 static json::Object createRun(std::vector<const PathDiagnostic *> &Diags) {
-  json::Array Results;
-  json::Object Files;
-
+  json::Array Results, Files;
+  StringMap<unsigned> RuleMapping;
+  json::Object Resources = createResources(Diags, RuleMapping);
+  
   llvm::for_each(Diags, [&](const PathDiagnostic *D) {
-    Results.push_back(createResult(*D, Files));
+    Results.push_back(createResult(*D, Files, RuleMapping));
   });
 
   return json::Object{{"tool", createTool()},
-                      {"resources", createResources(Diags)},
+                      {"resources", std::move(Resources)},
                       {"results", std::move(Results)},
                       {"files", std::move(Files)}};
 }
@@ -299,8 +325,8 @@ void SarifDiagnostics::FlushDiagnosticsImpl(
   }
   json::Object Sarif{
       {"$schema",
-       "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2018-10-10"},
-      {"version", "2.0.0-csd.2.beta.2018-10-10"},
+       "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2018-11-28"},
+      {"version", "2.0.0-csd.2.beta.2018-11-28"},
       {"runs", json::Array{createRun(Diags)}}};
   OS << llvm::formatv("{0:2}", json::Value(std::move(Sarif)));
 }

@@ -148,6 +148,10 @@ public:
   /// non-empty.
   std::string DwarfDebugFlags;
 
+  /// The string containing the commandline for the llvm.commandline metadata,
+  /// if non-empty.
+  std::string RecordCommandLine;
+
   std::map<std::string, std::string> DebugPrefixMap;
 
   /// The ABI to use for passing floating point arguments.

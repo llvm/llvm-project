@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyze -analyzer-checker=core,osx -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -fblocks -analyze -analyzer-output=text\
+// RUN:                    -analyzer-checker=core,osx -verify %s
 
 struct OSMetaClass;
 
@@ -399,3 +400,11 @@ unsigned int ok_release_with_unknown_source(ArrayOwner *owner) {
   arr->release(); // +0
   return arr->getCount();
 }
+
+OSObject *getObject();
+typedef bool (^Blk)(OSObject *);
+
+void test_escape_to_unknown_block(Blk blk) {
+  blk(getObject()); // no-crash
+}
+
