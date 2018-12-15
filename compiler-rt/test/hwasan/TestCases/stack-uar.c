@@ -27,7 +27,7 @@ int main() {
   // CHECK: READ of size 1 at
   // CHECK: #0 {{.*}} in main{{.*}}stack-uar.c:[[@LINE-2]]
   // CHECK: is located in stack of thread
-  // CHECK: Previosly allocated frames:
+  // CHECK: Previously allocated frames:
   // CHECK: Unrelated3
   // CHECK: 16 CCC
   // CHECK: Unrelated2

@@ -5528,6 +5528,9 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
     // declaration.
     return;
 
+  if (S.Context.getTargetInfo().getTriple().isWindowsGNUEnvironment())
+    S.MarkVTableUsed(Class->getLocation(), Class, true);
+
   for (Decl *Member : Class->decls()) {
     // Defined static variables that are members of an exported base
     // class must be marked export too.

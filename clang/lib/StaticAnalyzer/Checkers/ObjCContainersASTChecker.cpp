@@ -11,7 +11,7 @@
 // 'CFDictionary', 'CFSet' APIs.
 //
 //===----------------------------------------------------------------------===//
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/TargetInfo.h"

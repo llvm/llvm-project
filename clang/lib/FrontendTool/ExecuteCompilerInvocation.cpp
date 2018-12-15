@@ -246,7 +246,8 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   if (Clang->getAnalyzerOpts()->ShowEnabledCheckerList) {
     ento::printEnabledCheckerList(llvm::outs(),
                                   Clang->getFrontendOpts().Plugins,
-                                  *Clang->getAnalyzerOpts());
+                                  *Clang->getAnalyzerOpts(),
+                                  Clang->getDiagnostics());
   }
 
   // Honor -analyzer-config-help.

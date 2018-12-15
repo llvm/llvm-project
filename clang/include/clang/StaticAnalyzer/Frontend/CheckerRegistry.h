@@ -95,6 +95,7 @@ public:
   };
 
   using CheckerInfoList = std::vector<CheckerInfo>;
+  using CheckerInfoSet = llvm::SetVector<const CheckerRegistry::CheckerInfo *>;
 
 private:
   template <typename T>
@@ -131,9 +132,13 @@ public:
   /// Prints the name and description of all checkers in this registry.
   /// This output is not intended to be machine-parseable.
   void printHelp(raw_ostream &out, size_t maxNameChars = 30) const;
-  void printList(raw_ostream &out, const AnalyzerOptions &opts) const;
+  void printList(raw_ostream &out, const AnalyzerOptions &opts,
+                 DiagnosticsEngine &diags) const;
 
 private:
+  CheckerInfoSet getEnabledCheckers(const AnalyzerOptions &Opts,
+                                    DiagnosticsEngine &diags) const;
+
   mutable CheckerInfoList Checkers;
   mutable llvm::StringMap<size_t> Packages;
 };

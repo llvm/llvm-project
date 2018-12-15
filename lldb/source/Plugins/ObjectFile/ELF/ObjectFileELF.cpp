@@ -1735,7 +1735,7 @@ lldb::user_id_t ObjectFileELF::GetSectionIndexByName(const char *name) {
   return 0;
 }
 
-static SectionType getSectionType(llvm::StringRef Name) {
+static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
   return llvm::StringSwitch<SectionType>(Name)
       .Case(".ARM.exidx", eSectionTypeARMexidx)
       .Case(".ARM.extab", eSectionTypeARMextab)
@@ -1774,16 +1774,85 @@ static SectionType getSectionType(llvm::StringRef Name) {
       .Default(eSectionTypeOther);
 }
 
+SectionType ObjectFileELF::GetSectionType(const ELFSectionHeaderInfo &H) const {
+  switch (H.sh_type) {
+  case SHT_PROGBITS:
+    if (H.sh_flags & SHF_EXECINSTR)
+      return eSectionTypeCode;
+    break;
+  case SHT_SYMTAB:
+    return eSectionTypeELFSymbolTable;
+  case SHT_DYNSYM:
+    return eSectionTypeELFDynamicSymbols;
+  case SHT_RELA:
+  case SHT_REL:
+    return eSectionTypeELFRelocationEntries;
+  case SHT_DYNAMIC:
+    return eSectionTypeELFDynamicLinkInfo;
+  }
+  SectionType Type = GetSectionTypeFromName(H.section_name.GetStringRef());
+  if (Type == eSectionTypeOther) {
+    // the kalimba toolchain assumes that ELF section names are free-form.
+    // It does support linkscripts which (can) give rise to various
+    // arbitrarily named sections being "Code" or "Data".
+    Type = kalimbaSectionType(m_header, H);
+  }
+  return Type;
+}
+
+static uint32_t GetTargetByteSize(SectionType Type, const ArchSpec &arch) {
+  switch (Type) {
+  case eSectionTypeData:
+  case eSectionTypeZeroFill:
+    return arch.GetDataByteSize();
+  case eSectionTypeCode:
+    return arch.GetCodeByteSize();
+  default:
+    return 1;
+  }
+}
+
+static Permissions GetPermissions(const ELFSectionHeader &H) {
+  Permissions Perm = Permissions(0);
+  if (H.sh_flags & SHF_ALLOC)
+    Perm |= ePermissionsReadable;
+  if (H.sh_flags & SHF_WRITE)
+    Perm |= ePermissionsWritable;
+  if (H.sh_flags & SHF_EXECINSTR)
+    Perm |= ePermissionsExecutable;
+  return Perm;
+}
+
+namespace {
+// (Unlinked) ELF object files usually have 0 for every section address, meaning
+// we need to compute synthetic addresses in order for "file addresses" from
+// different sections to not overlap. This class handles that logic.
+class VMAddressProvider {
+  bool m_synthesizing;
+  addr_t m_next;
+
+public:
+  VMAddressProvider(ObjectFile::Type Type)
+      : m_synthesizing(Type == ObjectFile::Type::eTypeObjectFile), m_next(0) {}
+
+  std::pair<addr_t, addr_t> GetAddressAndSize(const ELFSectionHeader &H) {
+    addr_t address = H.sh_addr;
+    addr_t size = H.sh_flags & SHF_ALLOC ? H.sh_size : 0;
+    if (m_synthesizing && (H.sh_flags & SHF_ALLOC)) {
+      m_next = llvm::alignTo(m_next, std::max<addr_t>(H.sh_addralign, 1));
+      address = m_next;
+      m_next += size;
+    }
+    return {address, size};
+  }
+};
+}
+
 void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
   if (!m_sections_ap.get() && ParseSectionHeaders()) {
     m_sections_ap.reset(new SectionList());
 
-    // Object files frequently have 0 for every section address, meaning we
-    // need to compute synthetic addresses in order for "file addresses" from
-    // different sections to not overlap
-    bool synthaddrs = (CalculateType() == ObjectFile::Type::eTypeObjectFile);
-    uint64_t nextaddr = 0;
-
+    VMAddressProvider address_provider(CalculateType());
     for (SectionHeaderCollIter I = m_section_headers.begin();
          I != m_section_headers.end(); ++I) {
       const ELFSectionHeaderInfo &header = *I;
@@ -1791,68 +1860,17 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
       ConstString &name = I->section_name;
       const uint64_t file_size =
           header.sh_type == SHT_NOBITS ? 0 : header.sh_size;
-      const uint64_t vm_size = header.sh_flags & SHF_ALLOC ? header.sh_size : 0;
 
-      SectionType sect_type = getSectionType(name.GetStringRef());
+      addr_t vm_addr, vm_size;
+      std::tie(vm_addr, vm_size) = address_provider.GetAddressAndSize(header);
 
-      bool is_thread_specific = header.sh_flags & SHF_TLS;
-      const uint32_t permissions =
-          ((header.sh_flags & SHF_ALLOC) ? ePermissionsReadable : 0u) |
-          ((header.sh_flags & SHF_WRITE) ? ePermissionsWritable : 0u) |
-          ((header.sh_flags & SHF_EXECINSTR) ? ePermissionsExecutable : 0u);
-      switch (header.sh_type) {
-      case SHT_SYMTAB:
-        assert(sect_type == eSectionTypeOther);
-        sect_type = eSectionTypeELFSymbolTable;
-        break;
-      case SHT_DYNSYM:
-        assert(sect_type == eSectionTypeOther);
-        sect_type = eSectionTypeELFDynamicSymbols;
-        break;
-      case SHT_RELA:
-      case SHT_REL:
-        assert(sect_type == eSectionTypeOther);
-        sect_type = eSectionTypeELFRelocationEntries;
-        break;
-      case SHT_DYNAMIC:
-        assert(sect_type == eSectionTypeOther);
-        sect_type = eSectionTypeELFDynamicLinkInfo;
-        break;
-      }
-
-      if (eSectionTypeOther == sect_type) {
-        // the kalimba toolchain assumes that ELF section names are free-form.
-        // It does support linkscripts which (can) give rise to various
-        // arbitrarily named sections being "Code" or "Data".
-        sect_type = kalimbaSectionType(m_header, header);
-      }
-
-      // In common case ELF code section can have arbitrary name (for example,
-      // we can specify it using section attribute for particular function) so
-      // assume that section is a code section if it has SHF_EXECINSTR flag set
-      // and has SHT_PROGBITS type.
-      if (eSectionTypeOther == sect_type &&
-          llvm::ELF::SHT_PROGBITS == header.sh_type &&
-          (header.sh_flags & SHF_EXECINSTR)) {
-        sect_type = eSectionTypeCode;
-      }
+      SectionType sect_type = GetSectionType(header);
 
       const uint32_t target_bytes_size =
-          (eSectionTypeData == sect_type || eSectionTypeZeroFill == sect_type)
-              ? m_arch_spec.GetDataByteSize()
-              : eSectionTypeCode == sect_type ? m_arch_spec.GetCodeByteSize()
-                                              : 1;
+          GetTargetByteSize(sect_type, m_arch_spec);
+
       elf::elf_xword log2align =
           (header.sh_addralign == 0) ? 0 : llvm::Log2_64(header.sh_addralign);
-
-      uint64_t addr = header.sh_addr;
-
-      if ((header.sh_flags & SHF_ALLOC) && synthaddrs) {
-          nextaddr =
-              (nextaddr + header.sh_addralign - 1) & ~(header.sh_addralign - 1);
-          addr = nextaddr;
-          nextaddr += vm_size;
-      }
 
       SectionSP section_sp(new Section(
           GetModule(), // Module to which this section belongs.
@@ -1861,7 +1879,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
           SectionIndex(I),     // Section ID.
           name,                // Section name.
           sect_type,           // Section type.
-          addr,                // VM address.
+          vm_addr,             // VM address.
           vm_size,             // VM size in bytes of this section.
           header.sh_offset,    // Offset of this section in the file.
           file_size,           // Size of the section as found in the file.
@@ -1869,9 +1887,8 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
           header.sh_flags,     // Flags for this section.
           target_bytes_size)); // Number of host bytes per target byte
 
-      section_sp->SetPermissions(permissions);
-      if (is_thread_specific)
-        section_sp->SetIsThreadSpecific(is_thread_specific);
+      section_sp->SetPermissions(GetPermissions(header));
+      section_sp->SetIsThreadSpecific(header.sh_flags & SHF_TLS);
       m_sections_ap->AddSection(section_sp);
     }
   }

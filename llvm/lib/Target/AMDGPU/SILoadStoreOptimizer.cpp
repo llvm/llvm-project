@@ -1112,6 +1112,7 @@ SILoadStoreOptimizer::createRegOrImm(int32_t Val, MachineInstr &MI) {
   BuildMI(*MI.getParent(), MI.getIterator(), MI.getDebugLoc(),
           TII->get(AMDGPU::S_MOV_B32), Reg)
     .addImm(Val);
+  (void)Mov;
   LLVM_DEBUG(dbgs() << "    "; Mov->dump());
   return MachineOperand::CreateReg(Reg, false);
 }
@@ -1146,6 +1147,7 @@ unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
       .addReg(CarryReg, RegState::Define)
       .addReg(Addr.Base.LoReg, 0, Addr.Base.LoSubReg)
     .add(OffsetLo);
+  (void)LoHalf;
   LLVM_DEBUG(dbgs() << "    "; LoHalf->dump(););
 
   MachineInstr *HiHalf =
@@ -1154,6 +1156,7 @@ unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
     .addReg(Addr.Base.HiReg, 0, Addr.Base.HiSubReg)
     .add(OffsetHi)
     .addReg(CarryReg, RegState::Kill);
+  (void)HiHalf;
   LLVM_DEBUG(dbgs() << "    "; HiHalf->dump(););
 
   unsigned FullDestReg = MRI->createVirtualRegister(&AMDGPU::VReg_64RegClass);
@@ -1163,6 +1166,7 @@ unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
       .addImm(AMDGPU::sub0)
       .addReg(DestSub1)
       .addImm(AMDGPU::sub1);
+  (void)FullBase;
   LLVM_DEBUG(dbgs() << "    "; FullBase->dump(); dbgs() << "\n";);
 
   return FullDestReg;

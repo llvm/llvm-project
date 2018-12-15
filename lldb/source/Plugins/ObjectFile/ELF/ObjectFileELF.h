@@ -246,6 +246,8 @@ private:
   /// Returns the number of headers parsed.
   size_t ParseSectionHeaders();
 
+  lldb::SectionType GetSectionType(const ELFSectionHeaderInfo &H) const;
+
   static void ParseARMAttributes(lldb_private::DataExtractor &data,
                                  uint64_t length,
                                  lldb_private::ArchSpec &arch_spec);
