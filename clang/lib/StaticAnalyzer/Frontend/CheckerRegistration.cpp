@@ -14,10 +14,10 @@
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistration.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
-#include "clang/StaticAnalyzer/Checkers/ClangCheckers.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/CheckerRegistry.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -47,7 +47,12 @@ public:
 
 ClangCheckerRegistry::ClangCheckerRegistry(ArrayRef<std::string> plugins,
                                            DiagnosticsEngine *diags) {
-  registerBuiltinCheckers(*this);
+#define GET_CHECKERS
+#define CHECKER(FULLNAME, CLASS, HELPTEXT)                                     \
+  addChecker(register##CLASS, FULLNAME, HELPTEXT);
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER
+#undef GET_CHECKERS
 
   for (ArrayRef<std::string>::iterator i = plugins.begin(), e = plugins.end();
        i != e; ++i) {
@@ -130,10 +135,11 @@ void ento::printCheckerHelp(raw_ostream &out, ArrayRef<std::string> plugins) {
 
 void ento::printEnabledCheckerList(raw_ostream &out,
                                    ArrayRef<std::string> plugins,
-                                   const AnalyzerOptions &opts) {
+                                   const AnalyzerOptions &opts,
+                                   DiagnosticsEngine &diags) {
   out << "OVERVIEW: Clang Static Analyzer Enabled Checkers List\n\n";
 
-  ClangCheckerRegistry(plugins).printList(out, opts);
+  ClangCheckerRegistry(plugins).printList(out, opts, diags);
 }
 
 void ento::printAnalyzerConfigList(raw_ostream &out) {

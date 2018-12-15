@@ -1,6 +1,6 @@
 # RUN: not llvm-mc %s -triple mips-unknown-linux-gnu -mcpu=mips32 \
 # RUN:                --position-independent -filetype=obj -o /dev/null 2>&1 \
-# RUN;  | FileCheck %s -check-prefix=O32
+# RUN:  | FileCheck %s -check-prefix=O32
 
 # RUN: llvm-mc %s -triple mips64-unknown-linux-gnu -filetype=obj \
 # RUN:            -o /dev/null 2>&1 \

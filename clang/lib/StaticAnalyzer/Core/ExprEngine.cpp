@@ -2951,8 +2951,8 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
   DOTGraphTraits (bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
   static bool nodeHasBugReport(const ExplodedNode *N) {
-    BugReporter &BR = static_cast<ExprEngine *>(
-      N->getState()->getStateManager().getOwningEngine())->getBugReporter();
+    BugReporter &BR = static_cast<ExprEngine &>(
+      N->getState()->getStateManager().getOwningEngine()).getBugReporter();
 
     const auto EQClasses =
         llvm::make_range(BR.EQClasses_begin(), BR.EQClasses_end());

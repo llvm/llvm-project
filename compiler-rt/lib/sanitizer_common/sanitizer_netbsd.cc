@@ -202,7 +202,7 @@ void internal__exit(int exitcode) {
 
 unsigned int internal_sleep(unsigned int seconds) {
   struct timespec ts;
-  ts.tv_sec = 1;
+  ts.tv_sec = seconds;
   ts.tv_nsec = 0;
   CHECK(&_sys___nanosleep50);
   int res = _sys___nanosleep50(&ts, &ts);
