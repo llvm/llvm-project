@@ -3359,7 +3359,7 @@ static void __kmp_init_nested_futex_lock_with_checks(kmp_futex_lock_t *lck) {
 #endif
 
 static int __kmp_is_ticket_lock_initialized(kmp_ticket_lock_t *lck) {
-  return lck == lck->lk.initialized;
+  return lck == lck->lk.self;
 }
 
 static void __kmp_init_ticket_lock_with_checks(kmp_ticket_lock_t *lck) {

@@ -811,8 +811,10 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
                               kmp_taskdata_t *resumed_task) {
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
   kmp_info_t *thread = __kmp_threads[gtid];
+#if OMP_45_ENABLED
   kmp_task_team_t *task_team =
       thread->th.th_task_team; // might be NULL for serial teams...
+#endif // OMP_45_ENABLED
   kmp_int32 children = 0;
 
   KA_TRACE(10, ("__kmp_task_finish(enter): T#%d finishing task %p and resuming "

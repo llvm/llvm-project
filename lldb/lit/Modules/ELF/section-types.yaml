@@ -25,11 +25,11 @@
 
 # CHECK-LABEL: Name: .tdata
 # CHECK-NEXT: Type: data
-# CHECK-NEXT: Thread specific: yes
+# CHECK: Thread specific: yes
 
 # CHECK-LABEL: Name: .tbss
 # CHECK-NEXT: Type: zero-fill
-# CHECK-NEXT: Thread specific: yes
+# CHECK: Thread specific: yes
 
 --- !ELF
 FileHeader:

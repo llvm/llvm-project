@@ -66,7 +66,7 @@
 // making an assumption e.g. `S1 + n == S2 + m` we store `S1 - S2 == m - n` as
 // a constraint which we later retrieve when doing an actual comparison.
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"

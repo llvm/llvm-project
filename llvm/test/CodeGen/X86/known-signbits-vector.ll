@@ -88,9 +88,7 @@ define float @signbits_ashr_extract_sitofp_1(<2 x i64> %a0) nounwind {
 ; X32-LABEL: signbits_ashr_extract_sitofp_1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:    vpsrlq $63, %xmm0, %xmm1
 ; X32-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,32768,0,0,1,0,0,0]
 ; X32-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
@@ -103,9 +101,7 @@ define float @signbits_ashr_extract_sitofp_1(<2 x i64> %a0) nounwind {
 ;
 ; X64-LABEL: signbits_ashr_extract_sitofp_1:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsrlq $63, %xmm0, %xmm1
 ; X64-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [2147483648,1]
 ; X64-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
@@ -122,9 +118,7 @@ define float @signbits_ashr_shl_extract_sitofp(<2 x i64> %a0) nounwind {
 ; X32-LABEL: signbits_ashr_shl_extract_sitofp:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:    vpsrlq $60, %xmm0, %xmm1
 ; X32-NEXT:    vpsrlq $61, %xmm0, %xmm0
-; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,0,0,0,8,0,0,0]
 ; X32-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
@@ -138,9 +132,7 @@ define float @signbits_ashr_shl_extract_sitofp(<2 x i64> %a0) nounwind {
 ;
 ; X64-LABEL: signbits_ashr_shl_extract_sitofp:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsrlq $60, %xmm0, %xmm1
 ; X64-NEXT:    vpsrlq $61, %xmm0, %xmm0
-; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,8]
 ; X64-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
@@ -249,9 +241,7 @@ define float @signbits_ashr_sext_sextinreg_and_extract_sitofp(<2 x i64> %a0, <2 
 ; X32-LABEL: signbits_ashr_sext_sextinreg_and_extract_sitofp:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:    vpsrlq $60, %xmm0, %xmm1
 ; X32-NEXT:    vpsrlq $61, %xmm0, %xmm0
-; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,0,0,0,8,0,0,0]
 ; X32-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
@@ -266,9 +256,7 @@ define float @signbits_ashr_sext_sextinreg_and_extract_sitofp(<2 x i64> %a0, <2 
 ;
 ; X64-LABEL: signbits_ashr_sext_sextinreg_and_extract_sitofp:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsrlq $60, %xmm0, %xmm1
 ; X64-NEXT:    vpsrlq $61, %xmm0, %xmm0
-; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,8]
 ; X64-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
@@ -346,15 +334,11 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X32-NEXT:    vpmovsxdq 16(%ebp), %xmm3
 ; X32-NEXT:    vpmovsxdq 8(%ebp), %xmm4
 ; X32-NEXT:    vextractf128 $1, %ymm2, %xmm5
-; X32-NEXT:    vpsrlq $63, %xmm5, %xmm6
 ; X32-NEXT:    vpsrlq $33, %xmm5, %xmm5
-; X32-NEXT:    vpblendw {{.*#+}} xmm5 = xmm5[0,1,2,3],xmm6[4,5,6,7]
 ; X32-NEXT:    vmovdqa {{.*#+}} xmm6 = [0,16384,0,0,1,0,0,0]
 ; X32-NEXT:    vpxor %xmm6, %xmm5, %xmm5
 ; X32-NEXT:    vpsubq %xmm6, %xmm5, %xmm5
-; X32-NEXT:    vpsrlq $63, %xmm2, %xmm7
 ; X32-NEXT:    vpsrlq $33, %xmm2, %xmm2
-; X32-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm7[4,5,6,7]
 ; X32-NEXT:    vpxor %xmm6, %xmm2, %xmm2
 ; X32-NEXT:    vpsubq %xmm6, %xmm2, %xmm2
 ; X32-NEXT:    vinsertf128 $1, %xmm5, %ymm2, %ymm2
@@ -377,15 +361,11 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X64-LABEL: signbits_ashr_sext_select_shuffle_sitofp:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; X64-NEXT:    vpsrlq $63, %xmm4, %xmm5
 ; X64-NEXT:    vpsrlq $33, %xmm4, %xmm4
-; X64-NEXT:    vpblendw {{.*#+}} xmm4 = xmm4[0,1,2,3],xmm5[4,5,6,7]
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm5 = [1073741824,1]
 ; X64-NEXT:    vpxor %xmm5, %xmm4, %xmm4
 ; X64-NEXT:    vpsubq %xmm5, %xmm4, %xmm4
-; X64-NEXT:    vpsrlq $63, %xmm2, %xmm6
 ; X64-NEXT:    vpsrlq $33, %xmm2, %xmm2
-; X64-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm6[4,5,6,7]
 ; X64-NEXT:    vpxor %xmm5, %xmm2, %xmm2
 ; X64-NEXT:    vpsubq %xmm5, %xmm2, %xmm2
 ; X64-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2

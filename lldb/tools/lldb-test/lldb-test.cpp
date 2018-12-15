@@ -30,6 +30,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/ADT/IntervalMap.h"
@@ -733,7 +734,9 @@ static void dumpSectionList(LinePrinter &Printer, const SectionList &List, bool 
     Printer.formatLine("Index: {0}", I);
     Printer.formatLine("Name: {0}", S->GetName().GetStringRef());
     Printer.formatLine("Type: {0}", S->GetTypeAsCString());
+    Printer.formatLine("Permissions: {0}", GetPermissionsAsCString(S->GetPermissions()));
     Printer.formatLine("Thread specific: {0:y}", S->IsThreadSpecific());
+    Printer.formatLine("VM address: {0:x}", S->GetFileAddress());
     Printer.formatLine("VM size: {0}", S->GetByteSize());
     Printer.formatLine("File size: {0}", S->GetFileSize());
 

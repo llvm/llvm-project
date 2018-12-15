@@ -1769,6 +1769,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownUndef = SrcUndef.zextOrTrunc(NumElts);
     break;
   }
+  case ISD::OR:
+  case ISD::XOR:
   case ISD::ADD:
   case ISD::SUB:
   case ISD::FADD:
