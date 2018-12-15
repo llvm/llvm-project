@@ -240,7 +240,7 @@ bool ValueObject::UpdateValueIfNeeded(bool update_format) {
 
       if (first_update)
         SetValueDidChange(false);
-      else if (!m_value_did_change && success == false) {
+      else if (!m_value_did_change && !success) {
         // The value wasn't gotten successfully, so we mark this as changed if
         // the value used to be valid and now isn't
         SetValueDidChange(value_was_valid);
@@ -521,10 +521,7 @@ bool ValueObject::IsLogicalTrue(Status &error) {
   }
 
   bool ret;
-  if (scalar_value.ULongLong(1) == 0)
-    ret = false;
-  else
-    ret = true;
+  ret = scalar_value.ULongLong(1) != 0;
   error.Clear();
   return ret;
 }
@@ -722,7 +719,7 @@ ValueObject *ValueObject::CreateChildAtIndex(size_t idx,
   bool child_is_deref_of_parent = false;
   uint64_t language_flags = 0;
 
-  const bool transparent_pointers = synthetic_array_member == false;
+  const bool transparent_pointers = !synthetic_array_member;
   CompilerType child_compiler_type;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -2031,11 +2028,11 @@ ValueObject::GetSyntheticExpressionPathChild(const char *expression,
 }
 
 void ValueObject::CalculateSyntheticValue(bool use_synthetic) {
-  if (use_synthetic == false)
+  if (!use_synthetic)
     return;
 
   TargetSP target_sp(GetTargetSP());
-  if (target_sp && target_sp->GetEnableSyntheticValue() == false) {
+  if (target_sp && !target_sp->GetEnableSyntheticValue()) {
     m_synthetic_value = NULL;
     return;
   }
@@ -2086,7 +2083,7 @@ ValueObjectSP ValueObject::GetStaticValue() { return GetSP(); }
 lldb::ValueObjectSP ValueObject::GetNonSyntheticValue() { return GetSP(); }
 
 ValueObjectSP ValueObject::GetSyntheticValue(bool use_synthetic) {
-  if (use_synthetic == false)
+  if (!use_synthetic)
     return ValueObjectSP();
 
   CalculateSyntheticValue(use_synthetic);
@@ -2105,10 +2102,7 @@ bool ValueObject::HasSyntheticValue() {
 
   CalculateSyntheticValue(true);
 
-  if (m_synthetic_value)
-    return true;
-  else
-    return false;
+  return m_synthetic_value != nullptr;
 }
 
 bool ValueObject::GetBaseClassPath(Stream &s) {
@@ -3306,7 +3300,7 @@ ValueObject *
 ValueObject::FollowParentChain(std::function<bool(ValueObject *)> f) {
   ValueObject *vo = this;
   while (vo) {
-    if (f(vo) == false)
+    if (!f(vo))
       break;
     vo = vo->m_parent;
   }
@@ -3375,8 +3369,7 @@ bool ValueObject::CanProvideValue() {
   // board debugging scenarios have no notion of types, but still manage to
   // have raw numeric values for things like registers. sigh.
   const CompilerType &type(GetCompilerType());
-  return (false == type.IsValid()) ||
-         (0 != (type.GetTypeInfo() & eTypeHasValue));
+  return (!type.IsValid()) || (0 != (type.GetTypeInfo() & eTypeHasValue));
 }
 
 bool ValueObject::IsChecksumEmpty() { return m_value_checksum.empty(); }

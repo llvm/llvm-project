@@ -76,7 +76,7 @@ PlatformSP PlatformiOSSimulator::CreateInstance(bool force,
   }
 
   bool create = force;
-  if (create == false && arch && arch->IsValid()) {
+  if (!create && arch && arch->IsValid()) {
     switch (arch->GetMachine()) {
     case llvm::Triple::x86_64:
     case llvm::Triple::x86: {

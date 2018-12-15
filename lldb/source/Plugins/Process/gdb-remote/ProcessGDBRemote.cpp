@@ -1528,7 +1528,7 @@ Status ProcessGDBRemote::DoResume() {
           new EventDataBytes(continue_packet.GetString().data(),
                              continue_packet.GetSize()));
 
-      if (listener_sp->GetEvent(event_sp, std::chrono::seconds(5)) == false) {
+      if (!listener_sp->GetEvent(event_sp, std::chrono::seconds(5))) {
         error.SetErrorString("Resume timed out.");
         if (log)
           log->Printf("ProcessGDBRemote::DoResume: Resume timed out.");
@@ -1984,7 +1984,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
             }
           }
 
-          if (!handled && signo && did_exec == false) {
+          if (!handled && signo && !did_exec) {
             if (signo == SIGTRAP) {
               // Currently we are going to assume SIGTRAP means we are either
               // hitting a breakpoint or hardware single stepping.
@@ -2698,7 +2698,7 @@ void ProcessGDBRemote::SetLastStopPacket(
 
     // We are are not using non-stop mode, there can only be one last stop
     // reply packet, so clear the list.
-    if (GetTarget().GetNonStopModeEnabled() == false)
+    if (!GetTarget().GetNonStopModeEnabled())
       m_stop_packet_stack.clear();
 
     // Add this stop packet to the stop packet stack This stack will get popped

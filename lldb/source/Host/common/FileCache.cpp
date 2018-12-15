@@ -32,7 +32,7 @@ lldb::user_id_t FileCache::OpenFile(const FileSpec &file_spec, uint32_t flags,
   }
   FileSP file_sp(new File());
   error = FileSystem::Instance().Open(*file_sp, file_spec, flags, mode);
-  if (file_sp->IsValid() == false)
+  if (!file_sp->IsValid())
     return UINT64_MAX;
   lldb::user_id_t fd = file_sp->GetDescriptor();
   m_cache[fd] = file_sp;

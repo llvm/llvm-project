@@ -889,10 +889,7 @@ bool DNBArchImplI386::RollbackTransForHWP() {
       LOG_WATCHPOINTS,
       "DNBArchImplI386::RollbackTransForHWP() SetDBGState() => 0x%8.8x.", kret);
 
-  if (kret == KERN_SUCCESS)
-    return true;
-  else
-    return false;
+  return kret == KERN_SUCCESS;
 }
 bool DNBArchImplI386::FinishTransForHWP() {
   m_2pc_trans_state = Trans_Done;
@@ -918,7 +915,7 @@ uint32_t DNBArchImplI386::EnableHardwareWatchpoint(nub_addr_t addr,
     return INVALID_NUB_HW_INDEX;
 
   // We must watch for either read or write
-  if (read == false && write == false)
+  if (!read && !write)
     return INVALID_NUB_HW_INDEX;
 
   // Read the debug state

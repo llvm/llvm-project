@@ -1440,10 +1440,7 @@ bool ABISysV_arm::PrepareTrivialCall(Thread &thread, addr_t sp,
       ~1ull; // clear bit zero since the CPSR will take care of the mode for us
 
   // Set "pc" to the address requested
-  if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_num, function_addr))
-    return false;
-
-  return true;
+  return reg_ctx->WriteRegisterFromUnsigned(pc_reg_num, function_addr);
 }
 
 bool ABISysV_arm::GetArgumentValues(Thread &thread, ValueList &values) const {

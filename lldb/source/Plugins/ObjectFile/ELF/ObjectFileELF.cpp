@@ -1141,7 +1141,7 @@ size_t ObjectFileELF::GetProgramHeaderInfo(ProgramHeaderColl &program_headers,
   uint32_t idx;
   lldb::offset_t offset;
   for (idx = 0, offset = 0; idx < header.e_phnum; ++idx) {
-    if (program_headers[idx].Parse(data, &offset) == false)
+    if (!program_headers[idx].Parse(data, &offset))
       break;
   }
 
@@ -1553,7 +1553,7 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
   uint32_t idx;
   lldb::offset_t offset;
   for (idx = 0, offset = 0; idx < header.e_shnum; ++idx) {
-    if (section_headers[idx].Parse(sh_data, &offset) == false)
+    if (!section_headers[idx].Parse(sh_data, &offset))
       break;
   }
   if (idx < section_headers.size())
@@ -1957,7 +1957,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
   unsigned i;
   for (i = 0; i < num_symbols; ++i) {
-    if (symbol.Parse(symtab_data, &offset) == false)
+    if (!symbol.Parse(symtab_data, &offset))
       break;
 
     const char *symbol_name = strtab_data.PeekCStr(symbol.st_name);
@@ -2430,7 +2430,7 @@ static unsigned ParsePLTRelocations(
   unsigned slot_type = hdr->GetRelocationJumpSlotType();
   unsigned i;
   for (i = 0; i < num_relocations; ++i) {
-    if (rel.Parse(rel_data, &offset) == false)
+    if (!rel.Parse(rel_data, &offset))
       break;
 
     if (reloc_type(rel) != slot_type)
@@ -2563,7 +2563,7 @@ unsigned ObjectFileELF::ApplyRelocations(
   }
 
   for (unsigned i = 0; i < num_relocations; ++i) {
-    if (rel.Parse(rel_data, &offset) == false)
+    if (!rel.Parse(rel_data, &offset))
       break;
 
     Symbol *symbol = NULL;

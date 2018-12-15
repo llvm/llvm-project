@@ -141,10 +141,7 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
   }
 
   // We processed all characters. It is a vaild basename.
-  if (idx == basename.size())
-    return true;
-
-  return false;
+  return idx == basename.size();
 }
 
 bool CPlusPlusLanguage::MethodName::TrySimplifiedParse() {

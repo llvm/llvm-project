@@ -117,7 +117,7 @@ void DynamicLoaderPOSIXDYLD::DidAttach() {
   EvalSpecialModulesStatus();
 
   // if we dont have a load address we cant re-base
-  bool rebase_exec = (load_offset == LLDB_INVALID_ADDRESS) ? false : true;
+  bool rebase_exec = load_offset != LLDB_INVALID_ADDRESS;
 
   // if we have a valid executable
   if (executable_sp.get()) {

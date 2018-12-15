@@ -3413,10 +3413,7 @@ static bool RNBRemoteShouldCancelCallback(void *not_used) {
   RNBRemoteSP remoteSP(g_remoteSP);
   if (remoteSP.get() != NULL) {
     RNBRemote *remote = remoteSP.get();
-    if (remote->Comm().IsConnected())
-      return false;
-    else
-      return true;
+    return !remote->Comm().IsConnected();
   }
   return true;
 }
@@ -3817,7 +3814,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
             attach_failed_due_to_sip = true;
           }
 
-          if (attach_failed_due_to_sip == false) {
+          if (!attach_failed_due_to_sip) {
             int csops_flags = 0;
             int retval = ::csops(pid_attaching_to, CS_OPS_STATUS, &csops_flags,
                                  sizeof(csops_flags));
@@ -5300,7 +5297,7 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
 
       thread_dict_sp->AddStringItem("reason", reason_value);
 
-      if (threads_with_valid_stop_info_only == false) {
+      if (!threads_with_valid_stop_info_only) {
         const char *thread_name = DNBThreadGetName(pid, tid);
         if (thread_name && thread_name[0])
           thread_dict_sp->AddStringItem("name", thread_name);
@@ -5488,7 +5485,7 @@ rnb_err_t RNBRemote::HandlePacket_jThreadExtendedInfo(const char *p) {
 
       bool need_to_print_comma = false;
 
-      if (thread_activity_sp && timed_out == false) {
+      if (thread_activity_sp && !timed_out) {
         const Genealogy::Activity *activity =
             &thread_activity_sp->current_activity;
         bool need_vouchers_comma_sep = false;

@@ -259,7 +259,7 @@ void CompactUnwindInfo::ScanIndex(const ProcessSP &process_sp) {
     m_objfile.GetModule()->LogMessage(
         log, "Reading compact unwind first-level indexes");
 
-  if (m_unwindinfo_data_computed == false) {
+  if (!m_unwindinfo_data_computed) {
     if (m_section_sp->IsEncrypted()) {
       // Can't get section contents of a protected/encrypted section until we
       // have a live process and can read them out of memory.
@@ -529,7 +529,7 @@ bool CompactUnwindInfo::GetCompactUnwindInfoForFunction(
       --it;
   }
 
-  if (it->sentinal_entry == true) {
+  if (it->sentinal_entry) {
     return false;
   }
 
@@ -925,7 +925,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_x86_64(Target &target,
       for (uint32_t i = 0; i < register_count; i++) {
         int renum = 0;
         for (int j = 1; j < 7; j++) {
-          if (used[j] == false) {
+          if (!used[j]) {
             if (renum == permunreg[i]) {
               registers[i] = j;
               used[j] = true;
@@ -1187,7 +1187,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_i386(Target &target,
       for (uint32_t i = 0; i < register_count; i++) {
         int renum = 0;
         for (int j = 1; j < 7; j++) {
-          if (used[j] == false) {
+          if (!used[j]) {
             if (renum == permunreg[i]) {
               registers[i] = j;
               used[j] = true;

@@ -656,7 +656,7 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
     // Size of packet before it is decompressed, for logging purposes
     size_t original_packet_size = m_bytes.size();
     if (CompressionIsEnabled()) {
-      if (DecompressPacket() == false) {
+      if (!DecompressPacket()) {
         packet.Clear();
         return GDBRemoteCommunication::PacketType::Standard;
       }

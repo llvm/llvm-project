@@ -294,7 +294,7 @@ FormatManager::GetFormatForType(lldb::TypeNameSpecifierImplSP type_sp) {
   uint32_t prio_category = UINT32_MAX;
   for (uint32_t category_id = 0; category_id < num_categories; category_id++) {
     category_sp = GetCategoryAtIndex(category_id);
-    if (category_sp->IsEnabled() == false)
+    if (!category_sp->IsEnabled())
       continue;
     lldb::TypeFormatImplSP format_current_sp =
         category_sp->GetFormatForType(type_sp);
@@ -318,7 +318,7 @@ FormatManager::GetSummaryForType(lldb::TypeNameSpecifierImplSP type_sp) {
   uint32_t prio_category = UINT32_MAX;
   for (uint32_t category_id = 0; category_id < num_categories; category_id++) {
     category_sp = GetCategoryAtIndex(category_id);
-    if (category_sp->IsEnabled() == false)
+    if (!category_sp->IsEnabled())
       continue;
     lldb::TypeSummaryImplSP summary_current_sp =
         category_sp->GetSummaryForType(type_sp);
@@ -342,7 +342,7 @@ FormatManager::GetFilterForType(lldb::TypeNameSpecifierImplSP type_sp) {
   uint32_t prio_category = UINT32_MAX;
   for (uint32_t category_id = 0; category_id < num_categories; category_id++) {
     category_sp = GetCategoryAtIndex(category_id);
-    if (category_sp->IsEnabled() == false)
+    if (!category_sp->IsEnabled())
       continue;
     lldb::TypeFilterImplSP filter_current_sp(
         (TypeFilterImpl *)category_sp->GetFilterForType(type_sp).get());
@@ -367,7 +367,7 @@ FormatManager::GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp) {
   uint32_t prio_category = UINT32_MAX;
   for (uint32_t category_id = 0; category_id < num_categories; category_id++) {
     category_sp = GetCategoryAtIndex(category_id);
-    if (category_sp->IsEnabled() == false)
+    if (!category_sp->IsEnabled())
       continue;
     lldb::ScriptedSyntheticChildrenSP synth_current_sp(
         (ScriptedSyntheticChildren *)category_sp->GetSyntheticForType(type_sp)
@@ -407,7 +407,7 @@ FormatManager::GetValidatorForType(lldb::TypeNameSpecifierImplSP type_sp) {
   uint32_t prio_category = UINT32_MAX;
   for (uint32_t category_id = 0; category_id < num_categories; category_id++) {
     category_sp = GetCategoryAtIndex(category_id);
-    if (category_sp->IsEnabled() == false)
+    if (!category_sp->IsEnabled())
       continue;
     lldb::TypeValidatorImplSP validator_current_sp(
         category_sp->GetValidatorForType(type_sp).get());
@@ -480,7 +480,7 @@ lldb::Format FormatManager::GetSingleItemFormat(lldb::Format vector_format) {
 bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
   // if settings say no oneline whatsoever
   if (valobj.GetTargetSP().get() &&
-      valobj.GetTargetSP()->GetDebugger().GetAutoOneLineSummaries() == false)
+      !valobj.GetTargetSP()->GetDebugger().GetAutoOneLineSummaries())
     return false; // then don't oneline
 
   // if this object has a summary, then ask the summary
@@ -536,7 +536,7 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
       if (!synth_sp)
         return false;
       // but if we only have them to provide a value, keep going
-      if (synth_sp->MightHaveChildren() == false &&
+      if (!synth_sp->MightHaveChildren() &&
           synth_sp->DoesProvideSyntheticValue())
         is_synth_val = true;
       else

@@ -158,10 +158,7 @@ bool CMICmdArgValFile::IsFilePath(const CMIUtilString &vrFileNamePath) const {
     return false;
 
   const bool bValidChars = IsValidChars(vrFileNamePath);
-  if (bValidChars || bHavePosSlash || bHaveBckSlash)
-    return true;
-
-  return false;
+  return bValidChars || bHavePosSlash || bHaveBckSlash;
 }
 
 //++

@@ -746,10 +746,7 @@ void TypeAndOrName::SetCompilerType(CompilerType compiler_type) {
 }
 
 bool TypeAndOrName::IsEmpty() const {
-  if ((bool)m_type_name || (bool)m_type_pair)
-    return false;
-  else
-    return true;
+  return !((bool)m_type_name || (bool)m_type_pair);
 }
 
 void TypeAndOrName::Clear() {

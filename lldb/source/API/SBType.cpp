@@ -47,20 +47,20 @@ SBType::SBType(const SBType &rhs) : m_opaque_sp() {
 //{}
 //
 bool SBType::operator==(SBType &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return !rhs.IsValid();
 
-  if (rhs.IsValid() == false)
+  if (!rhs.IsValid())
     return false;
 
   return *m_opaque_sp.get() == *rhs.m_opaque_sp.get();
 }
 
 bool SBType::operator!=(SBType &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return rhs.IsValid();
 
-  if (rhs.IsValid() == false)
+  if (!rhs.IsValid())
     return true;
 
   return *m_opaque_sp.get() != *rhs.m_opaque_sp.get();

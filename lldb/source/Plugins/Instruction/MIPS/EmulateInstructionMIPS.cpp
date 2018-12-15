@@ -220,10 +220,8 @@ EmulateInstructionMIPS::CreateInstance(const ArchSpec &arch,
 }
 
 bool EmulateInstructionMIPS::SetTargetTriple(const ArchSpec &arch) {
-  if (arch.GetTriple().getArch() == llvm::Triple::mips ||
-      arch.GetTriple().getArch() == llvm::Triple::mipsel)
-    return true;
-  return false;
+  return arch.GetTriple().getArch() == llvm::Triple::mips ||
+         arch.GetTriple().getArch() == llvm::Triple::mipsel;
 }
 
 const char *EmulateInstructionMIPS::GetRegisterName(unsigned reg_num,
@@ -1353,10 +1351,7 @@ bool EmulateInstructionMIPS::Emulate_LW(llvm::MCInst &insn) {
     context.type = eContextPopRegisterOffStack;
     context.SetAddress(address);
 
-    if (!WriteRegister(context, &reg_info_src, data_src))
-      return false;
-
-    return true;
+    return WriteRegister(context, &reg_info_src, data_src);
   }
 
   return false;
@@ -1456,11 +1451,8 @@ bool EmulateInstructionMIPS::Emulate_LUI(llvm::MCInst &insn) {
   context.SetImmediateSigned(imm);
   context.type = eContextImmediate;
 
-  if (WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_zero_mips + rt,
-                            imm))
-    return true;
-
-  return false;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF,
+                               dwarf_zero_mips + rt, imm);
 }
 
 bool EmulateInstructionMIPS::Emulate_ADDIUSP(llvm::MCInst &insn) {
@@ -1703,10 +1695,7 @@ bool EmulateInstructionMIPS::Emulate_LWSP(llvm::MCInst &insn) {
     context.type = eContextPopRegisterOffStack;
     context.SetAddress(base_address);
 
-    if (!WriteRegister(context, &reg_info_src, data_src))
-      return false;
-
-    return true;
+    return WriteRegister(context, &reg_info_src, data_src);
   }
 
   return false;
@@ -1813,11 +1802,8 @@ bool EmulateInstructionMIPS::Emulate_JRADDIUSP(llvm::MCInst &insn) {
   context.type = eContextAdjustStackPointer;
 
   // update SP
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_sp_mips,
-                             result))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_sp_mips,
+                               result);
 }
 
 static int IsAdd64bitOverflow(int32_t a, int32_t b) {
@@ -1872,11 +1858,8 @@ bool EmulateInstructionMIPS::Emulate_BXX_3ops(llvm::MCInst &insn) {
   context.type = eContextRelativeBranchImmediate;
   context.SetImmediate(offset);
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
-                             target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+                               target);
 }
 
 /*
@@ -1959,11 +1942,8 @@ bool EmulateInstructionMIPS::Emulate_BXX_3ops_C(llvm::MCInst &insn) {
   context.type = eContextRelativeBranchImmediate;
   context.SetImmediate(current_inst_size + offset);
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
-                             target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+                               target);
 }
 
 /*
@@ -2140,11 +2120,8 @@ bool EmulateInstructionMIPS::Emulate_BXX_2ops(llvm::MCInst &insn) {
   context.type = eContextRelativeBranchImmediate;
   context.SetImmediate(offset);
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
-                             target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+                               target);
 }
 
 /*
@@ -2209,11 +2186,8 @@ bool EmulateInstructionMIPS::Emulate_BXX_2ops_C(llvm::MCInst &insn) {
   context.type = eContextRelativeBranchImmediate;
   context.SetImmediate(current_inst_size + offset);
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
-                             target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+                               target);
 }
 
 bool EmulateInstructionMIPS::Emulate_B16_MM(llvm::MCInst &insn) {
@@ -2234,11 +2208,8 @@ bool EmulateInstructionMIPS::Emulate_B16_MM(llvm::MCInst &insn) {
   context.type = eContextRelativeBranchImmediate;
   context.SetImmediate(current_inst_size + offset);
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
-                             target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+                               target);
 }
 
 /*
@@ -2555,11 +2526,8 @@ bool EmulateInstructionMIPS::Emulate_BC(llvm::MCInst &insn) {
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
-                             target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+                               target);
 }
 
 bool EmulateInstructionMIPS::Emulate_J(llvm::MCInst &insn) {
@@ -2582,10 +2550,7 @@ bool EmulateInstructionMIPS::Emulate_J(llvm::MCInst &insn) {
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips, pc))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips, pc);
 }
 
 bool EmulateInstructionMIPS::Emulate_JAL(llvm::MCInst &insn) {
@@ -2714,11 +2679,8 @@ bool EmulateInstructionMIPS::Emulate_JIC(llvm::MCInst &insn) {
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
-                             target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+                               target);
 }
 
 bool EmulateInstructionMIPS::Emulate_JR(llvm::MCInst &insn) {
@@ -2739,11 +2701,8 @@ bool EmulateInstructionMIPS::Emulate_JR(llvm::MCInst &insn) {
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
-                             rs_val))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+                               rs_val);
 }
 
 /*
@@ -2786,11 +2745,8 @@ bool EmulateInstructionMIPS::Emulate_FP_branch(llvm::MCInst &insn) {
   }
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
-                             target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+                               target);
 }
 
 bool EmulateInstructionMIPS::Emulate_BC1EQZ(llvm::MCInst &insn) {
@@ -2825,11 +2781,8 @@ bool EmulateInstructionMIPS::Emulate_BC1EQZ(llvm::MCInst &insn) {
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
-                             target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+                               target);
 }
 
 bool EmulateInstructionMIPS::Emulate_BC1NEZ(llvm::MCInst &insn) {
@@ -2864,11 +2817,8 @@ bool EmulateInstructionMIPS::Emulate_BC1NEZ(llvm::MCInst &insn) {
 
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
-                             target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+                               target);
 }
 
 /*
@@ -2928,11 +2878,8 @@ bool EmulateInstructionMIPS::Emulate_3D_branch(llvm::MCInst &insn) {
   }
   Context context;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
-                             target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+                               target);
 }
 
 bool EmulateInstructionMIPS::Emulate_BNZB(llvm::MCInst &insn) {
@@ -3023,11 +2970,8 @@ bool EmulateInstructionMIPS::Emulate_MSA_Branch_DF(llvm::MCInst &insn,
   Context context;
   context.type = eContextRelativeBranchImmediate;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
-                             target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+                               target);
 }
 
 bool EmulateInstructionMIPS::Emulate_BNZV(llvm::MCInst &insn) {
@@ -3069,11 +3013,8 @@ bool EmulateInstructionMIPS::Emulate_MSA_Branch_V(llvm::MCInst &insn,
   Context context;
   context.type = eContextRelativeBranchImmediate;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
-                             target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindDWARF, dwarf_pc_mips,
+                               target);
 }
 
 bool EmulateInstructionMIPS::Emulate_LDST_Imm(llvm::MCInst &insn) {
