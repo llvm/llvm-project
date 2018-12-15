@@ -14,6 +14,11 @@
 using namespace lldb_private;
 using namespace llvm;
 
+LinePrinter::Line::~Line() {
+  if (P)
+    P->NewLine();
+}
+
 LinePrinter::LinePrinter(int Indent, llvm::raw_ostream &Stream)
     : OS(Stream), IndentSpaces(Indent), CurrentIndent(0) {}
 
@@ -31,39 +36,31 @@ void LinePrinter::Unindent(uint32_t Amount) {
 
 void LinePrinter::NewLine() {
   OS << "\n";
-  OS.indent(CurrentIndent);
-}
-
-void LinePrinter::print(const Twine &T) { OS << T; }
-
-void LinePrinter::printLine(const Twine &T) {
-  NewLine();
-  OS << T;
 }
 
 void LinePrinter::formatBinary(StringRef Label, ArrayRef<uint8_t> Data,
                                uint32_t StartOffset) {
-  NewLine();
-  OS << Label << " (";
-  if (!Data.empty()) {
-    OS << "\n";
-    OS << format_bytes_with_ascii(Data, StartOffset, 32, 4,
-                                  CurrentIndent + IndentSpaces, true);
-    NewLine();
+  if (Data.empty()) {
+    line() << Label << " ()";
+    return;
   }
-  OS << ")";
+  line() << Label << " (";
+  OS << format_bytes_with_ascii(Data, StartOffset, 32, 4,
+                                CurrentIndent + IndentSpaces, true);
+  NewLine();
+  line() << ")";
 }
 
 void LinePrinter::formatBinary(StringRef Label, ArrayRef<uint8_t> Data,
                                uint64_t Base, uint32_t StartOffset) {
-  NewLine();
-  OS << Label << " (";
-  if (!Data.empty()) {
-    OS << "\n";
-    Base += StartOffset;
-    OS << format_bytes_with_ascii(Data, Base, 32, 4,
-                                  CurrentIndent + IndentSpaces, true);
-    NewLine();
+  if (Data.empty()) {
+    line() << Label << " ()";
+    return;
   }
-  OS << ")";
+  line() << Label << " (";
+  Base += StartOffset;
+  OS << format_bytes_with_ascii(Data, Base, 32, 4, CurrentIndent + IndentSpaces,
+                                true);
+  NewLine();
+  line() << ")";
 }
