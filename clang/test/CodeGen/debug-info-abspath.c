@@ -11,8 +11,6 @@
 
 // RUN: cd %t/UNIQUEISH_SENTINEL
 // RUN: %clang_cc1 -debug-info-kind=limited -triple %itanium_abi_triple \
-// RUN:   debug-info-abspath.c -emit-obj -o /tmp/t.o
-// RUN: %clang_cc1 -debug-info-kind=limited -triple %itanium_abi_triple \
 // RUN:   debug-info-abspath.c -emit-llvm -o - \
 // RUN:   | FileCheck %s --check-prefix=CURDIR
 // RUN: %clang_cc1 -debug-info-kind=limited -triple %itanium_abi_triple \

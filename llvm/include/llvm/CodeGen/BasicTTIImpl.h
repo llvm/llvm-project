@@ -1435,14 +1435,24 @@ public:
       Ty = SubTy;
       ++LongVectorCount;
     }
+
+    NumReduxLevels -= LongVectorCount;
+
     // The minimal length of the vector is limited by the real length of vector
     // operations performed on the current platform. That's why several final
     // reduction operations are performed on the vectors with the same
     // architecture-dependent length.
-    ShuffleCost += (NumReduxLevels - LongVectorCount) * (IsPairwise + 1) *
+
+    // Non pairwise reductions need one shuffle per reduction level. Pairwise
+    // reductions need two shuffles on every level, but the last one. On that
+    // level one of the shuffles is <0, u, u, ...> which is identity.
+    unsigned NumShuffles = NumReduxLevels;
+    if (IsPairwise && NumReduxLevels >= 1)
+      NumShuffles += NumReduxLevels - 1;
+    ShuffleCost += NumShuffles *
                    ConcreteTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
                                                0, Ty);
-    ArithCost += (NumReduxLevels - LongVectorCount) *
+    ArithCost += NumReduxLevels *
                  ConcreteTTI->getArithmeticInstrCost(Opcode, Ty);
     return ShuffleCost + ArithCost +
            ConcreteTTI->getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
@@ -1489,15 +1499,25 @@ public:
       Ty = SubTy;
       ++LongVectorCount;
     }
+
+    NumReduxLevels -= LongVectorCount;
+
     // The minimal length of the vector is limited by the real length of vector
     // operations performed on the current platform. That's why several final
     // reduction opertions are perfomed on the vectors with the same
     // architecture-dependent length.
-    ShuffleCost += (NumReduxLevels - LongVectorCount) * (IsPairwise + 1) *
+
+    // Non pairwise reductions need one shuffle per reduction level. Pairwise
+    // reductions need two shuffles on every level, but the last one. On that
+    // level one of the shuffles is <0, u, u, ...> which is identity.
+    unsigned NumShuffles = NumReduxLevels;
+    if (IsPairwise && NumReduxLevels >= 1)
+      NumShuffles += NumReduxLevels - 1;
+    ShuffleCost += NumShuffles *
                    ConcreteTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
                                                0, Ty);
     MinMaxCost +=
-        (NumReduxLevels - LongVectorCount) *
+        NumReduxLevels *
         (ConcreteTTI->getCmpSelInstrCost(CmpOpcode, Ty, CondTy, nullptr) +
          ConcreteTTI->getCmpSelInstrCost(Instruction::Select, Ty, CondTy,
                                          nullptr));

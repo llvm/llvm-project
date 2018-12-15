@@ -59,8 +59,8 @@
 ; SPLIT:      DW_TAG_compile_unit
 ; SPLIT-NOT:  {{DW_TAG|contents:}}
 ; SPLIT:      DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
-; SPLIT:      DW_AT_GNU_dwo_name [DW_FORM_strx1] ( indexed (00000000) string = "foo.dwo")
-; SPLIT:      DW_AT_comp_dir [DW_FORM_strx1] ( indexed (00000001) string = "/home/test")
+; SPLIT:      DW_AT_comp_dir [DW_FORM_strx1] ( indexed (00000000) string = "/home/test")
+; SPLIT:      DW_AT_GNU_dwo_name [DW_FORM_strx1] ( indexed (00000001) string = "foo.dwo")
 
 ; Check for the split CU in .debug_info.dwo.
 ; SPLIT:      .debug_info.dwo contents:
@@ -73,18 +73,18 @@
 ; SPLIT-NOT:  contents:
 ; SPLIT:      DW_TAG_enumerator
 ; SPLIT-NOT:  {{DW_TAG|NULL}}
-; SPLIT:      DW_AT_name [DW_FORM_strx1]    ( indexed (00000004) string = "a")
+; SPLIT:      DW_AT_name [DW_FORM_strx1]    ( indexed (00000001) string = "a")
 ; SPLIT-NOT:  contents:
 ; SPLIT:      DW_TAG_enumerator
 ; SPLIT-NOT:  {{DW_TAG|NULL}}
-; SPLIT:      DW_AT_name [DW_FORM_strx1]    ( indexed (00000005) string = "b")
+; SPLIT:      DW_AT_name [DW_FORM_strx1]    ( indexed (00000002) string = "b")
 ;
 ; Extract the string offsets referenced in the main file by the skeleton unit.
 ; SPLIT:      .debug_str contents:
-; SPLIT-NEXT: 0x00000000: "foo.dwo"
-; SPLIT-NEXT: 0x[[STRING2SPLIT:[0-9a-f]*]]: "/home/test"
-; SPLIT-NEXT: 0x[[STRING3SPLIT:[0-9a-f]*]]: "E"
-; SPLIT-NEXT: 0x[[STRING4SPLIT:[0-9a-f]*]]: "glob"
+; SPLIT-NEXT: 0x[[STRHOMETESTSPLIT:[0-9a-f]*]]: "/home/test"
+; SPLIT-NEXT: 0x[[STRESPLIT:[0-9a-f]*]]: "E"
+; SPLIT-NEXT: 0x[[STRGLOBSPLIT:[0-9a-f]*]]: "glob"
+; SPLIT-NEXT: 0x[[STRFOODWOSPLIT:[0-9a-f]*]]: "foo.dwo"
 ;
 ; Extract the string offsets referenced in the .dwo file by the split unit.
 ; SPLIT:      .debug_str.dwo contents:
@@ -98,8 +98,8 @@
 ; referenced by the debug info.
 ; SPLIT:      .debug_str_offsets contents:
 ; SPLIT-NEXT: 0x00000000: Contribution size = 12, Format = DWARF32, Version = 5
-; SPLIT-NEXT: 0x00000008: 00000000 "foo.dwo"
-; SPLIT-NEXT: 0x0000000c: [[STRING2SPLIT]] "/home/test"
+; SPLIT-NEXT: 0x00000008: [[STRHOMETESTSPLIT]] "/home/test"
+; SPLIT-NEXT: 0x0000000c: [[STRFOODWOSPLIT]] "foo.dwo"
 ; SPLIT-EMPTY:
 
 ; SPLIT:      .debug_str_offsets.dwo contents:

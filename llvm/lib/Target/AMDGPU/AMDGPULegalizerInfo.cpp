@@ -45,6 +45,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   const LLT FlatPtr = GetAddrSpacePtr(AMDGPUAS::FLAT_ADDRESS);
   const LLT PrivatePtr = GetAddrSpacePtr(AMDGPUAS::PRIVATE_ADDRESS);
 
+  const LLT CodePtr = FlatPtr;
+
   const LLT AddrSpaces[] = {
     GlobalPtr,
     ConstantPtr,
@@ -119,6 +121,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     setAction({G_GEP, PtrTy}, Legal);
     setAction({G_GEP, 1, IdxTy}, Legal);
   }
+
+  setAction({G_BLOCK_ADDR, CodePtr}, Legal);
 
   setAction({G_ICMP, S1}, Legal);
   setAction({G_ICMP, 1, S32}, Legal);

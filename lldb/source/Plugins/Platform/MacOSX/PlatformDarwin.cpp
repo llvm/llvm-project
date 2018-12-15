@@ -489,10 +489,7 @@ bool PlatformDarwin::ModuleIsExcludedForUnconstrainedSearches(
     return false;
 
   ObjectFile::Type obj_type = obj_file->GetType();
-  if (obj_type == ObjectFile::eTypeDynamicLinker)
-    return true;
-  else
-    return false;
+  return obj_type == ObjectFile::eTypeDynamicLinker;
 }
 
 bool PlatformDarwin::x86GetSupportedArchitectureAtIndex(uint32_t idx,

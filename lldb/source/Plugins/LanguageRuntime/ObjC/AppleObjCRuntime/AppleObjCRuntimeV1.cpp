@@ -58,7 +58,7 @@ bool AppleObjCRuntimeV1::GetDynamicTypeAndAddress(
       class_type_or_name.SetName(class_descriptor->GetClassName());
     }
   }
-  return class_type_or_name.IsEmpty() == false;
+  return !class_type_or_name.IsEmpty();
 }
 
 //------------------------------------------------------------------

@@ -168,12 +168,12 @@ private:
                           Visibility symbol_visibility) const {
     switch (symbol_debug_type) {
     case eDebugNo:
-      if (m_symbols[idx].IsDebug() == true)
+      if (m_symbols[idx].IsDebug())
         return false;
       break;
 
     case eDebugYes:
-      if (m_symbols[idx].IsDebug() == false)
+      if (!m_symbols[idx].IsDebug())
         return false;
       break;
 

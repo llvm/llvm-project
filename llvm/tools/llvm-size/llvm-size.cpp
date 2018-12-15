@@ -457,8 +457,8 @@ static void printObjectSectionSizes(ObjectFile *Obj) {
     // Make one pass over the section table to calculate sizes.
     for (const SectionRef &Section : Obj->sections()) {
       uint64_t size = Section.getSize();
-      bool isText = Section.isText();
-      bool isData = Section.isData();
+      bool isText = Section.isBerkeleyText();
+      bool isData = Section.isBerkeleyData();
       bool isBSS = Section.isBSS();
       if (isText)
         total_text += size;

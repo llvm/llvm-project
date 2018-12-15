@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYFORCELINKER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYFORCELINKER_H
+
+#include "clang/Config/config.h"
 #include "llvm/Support/Compiler.h"
 
 namespace clang {
@@ -106,3 +110,5 @@ static int LLVM_ATTRIBUTE_UNUSED ZirconModuleAnchorDestination =
 
 } // namespace tidy
 } // namespace clang
+
+#endif

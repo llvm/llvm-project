@@ -20,6 +20,26 @@
 // ==>
 //  s_buffer_load_dwordx2 s[4:5], s[0:3], 4
 //
+// This pass also tries to promote constant offset to the immediate by
+// adjusting the base. It tries to use a base from the nearby instructions that
+// allows it to have a 13bit constant offset and then promotes the 13bit offset
+// to the immediate.
+// E.g.
+//  s_movk_i32 s0, 0x1800
+//  v_add_co_u32_e32 v0, vcc, s0, v2
+//  v_addc_co_u32_e32 v1, vcc, 0, v6, vcc
+//
+//  s_movk_i32 s0, 0x1000
+//  v_add_co_u32_e32 v5, vcc, s0, v2
+//  v_addc_co_u32_e32 v6, vcc, 0, v6, vcc
+//  global_load_dwordx2 v[5:6], v[5:6], off
+//  global_load_dwordx2 v[0:1], v[0:1], off
+// =>
+//  s_movk_i32 s0, 0x1000
+//  v_add_co_u32_e32 v5, vcc, s0, v2
+//  v_addc_co_u32_e32 v6, vcc, 0, v6, vcc
+//  global_load_dwordx2 v[5:6], v[5:6], off
+//  global_load_dwordx2 v[0:1], v[5:6], off offset:2048
 //
 // Future improvements:
 //
@@ -116,6 +136,21 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
     SmallVector<MachineInstr *, 8> InstsToMove;
   };
 
+  struct BaseRegisters {
+    unsigned LoReg = 0;
+    unsigned HiReg = 0;
+
+    unsigned LoSubReg = 0;
+    unsigned HiSubReg = 0;
+  };
+
+  struct MemAddress {
+    BaseRegisters Base;
+    int64_t Offset = 0;
+  };
+
+  using MemInfoMap = DenseMap<MachineInstr *, MemAddress>;
+
 private:
   const GCNSubtarget *STM = nullptr;
   const SIInstrInfo *TII = nullptr;
@@ -145,6 +180,19 @@ private:
   MachineBasicBlock::iterator mergeSBufferLoadImmPair(CombineInfo &CI);
   MachineBasicBlock::iterator mergeBufferLoadPair(CombineInfo &CI);
   MachineBasicBlock::iterator mergeBufferStorePair(CombineInfo &CI);
+
+  void updateBaseAndOffset(MachineInstr &I, unsigned NewBase,
+                           int32_t NewOffset);
+  unsigned computeBase(MachineInstr &MI, const MemAddress &Addr);
+  MachineOperand createRegOrImm(int32_t Val, MachineInstr &MI);
+  Optional<int32_t> extractConstOffset(const MachineOperand &Op);
+  void processBaseWithConstOffset(const MachineOperand &Base, MemAddress &Addr);
+  /// Promotes constant offset to the immediate by adjusting the base. It
+  /// tries to use a base from the nearby instructions that allows it to have
+  /// a 13bit constant offset which gets promoted to the immediate.
+  bool promoteConstantOffsetToImm(MachineInstr &CI,
+                                  MemInfoMap &Visited,
+                                  SmallPtrSet<MachineInstr *, 4> &Promoted);
 
 public:
   static char ID;
@@ -1053,14 +1101,327 @@ SILoadStoreOptimizer::mergeBufferStorePair(CombineInfo &CI) {
   return Next;
 }
 
+MachineOperand
+SILoadStoreOptimizer::createRegOrImm(int32_t Val, MachineInstr &MI) {
+  APInt V(32, Val, true);
+  if (TII->isInlineConstant(V))
+    return MachineOperand::CreateImm(Val);
+
+  unsigned Reg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  MachineInstr *Mov =
+  BuildMI(*MI.getParent(), MI.getIterator(), MI.getDebugLoc(),
+          TII->get(AMDGPU::S_MOV_B32), Reg)
+    .addImm(Val);
+  LLVM_DEBUG(dbgs() << "    "; Mov->dump());
+  return MachineOperand::CreateReg(Reg, false);
+}
+
+// Compute base address using Addr and return the final register.
+unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
+                                           const MemAddress &Addr) {
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineBasicBlock::iterator MBBI = MI.getIterator();
+  DebugLoc DL = MI.getDebugLoc();
+
+  assert((TRI->getRegSizeInBits(Addr.Base.LoReg, *MRI) == 32 ||
+          Addr.Base.LoSubReg) &&
+         "Expected 32-bit Base-Register-Low!!");
+
+  assert((TRI->getRegSizeInBits(Addr.Base.HiReg, *MRI) == 32 ||
+          Addr.Base.HiSubReg) &&
+         "Expected 32-bit Base-Register-Hi!!");
+
+  LLVM_DEBUG(dbgs() << "  Re-Computed Anchor-Base:\n");
+  MachineOperand OffsetLo = createRegOrImm(static_cast<int32_t>(Addr.Offset), MI);
+  MachineOperand OffsetHi =
+    createRegOrImm(static_cast<int32_t>(Addr.Offset >> 32), MI);
+  unsigned CarryReg = MRI->createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
+  unsigned DeadCarryReg =
+    MRI->createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
+
+  unsigned DestSub0 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  unsigned DestSub1 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MachineInstr *LoHalf =
+    BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADD_I32_e64), DestSub0)
+      .addReg(CarryReg, RegState::Define)
+      .addReg(Addr.Base.LoReg, 0, Addr.Base.LoSubReg)
+    .add(OffsetLo);
+  LLVM_DEBUG(dbgs() << "    "; LoHalf->dump(););
+
+  MachineInstr *HiHalf =
+  BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADDC_U32_e64), DestSub1)
+    .addReg(DeadCarryReg, RegState::Define | RegState::Dead)
+    .addReg(Addr.Base.HiReg, 0, Addr.Base.HiSubReg)
+    .add(OffsetHi)
+    .addReg(CarryReg, RegState::Kill);
+  LLVM_DEBUG(dbgs() << "    "; HiHalf->dump(););
+
+  unsigned FullDestReg = MRI->createVirtualRegister(&AMDGPU::VReg_64RegClass);
+  MachineInstr *FullBase =
+    BuildMI(*MBB, MBBI, DL, TII->get(TargetOpcode::REG_SEQUENCE), FullDestReg)
+      .addReg(DestSub0)
+      .addImm(AMDGPU::sub0)
+      .addReg(DestSub1)
+      .addImm(AMDGPU::sub1);
+  LLVM_DEBUG(dbgs() << "    "; FullBase->dump(); dbgs() << "\n";);
+
+  return FullDestReg;
+}
+
+// Update base and offset with the NewBase and NewOffset in MI.
+void SILoadStoreOptimizer::updateBaseAndOffset(MachineInstr &MI,
+                                               unsigned NewBase,
+                                               int32_t NewOffset) {
+  TII->getNamedOperand(MI, AMDGPU::OpName::vaddr)->setReg(NewBase);
+  TII->getNamedOperand(MI, AMDGPU::OpName::offset)->setImm(NewOffset);
+}
+
+Optional<int32_t>
+SILoadStoreOptimizer::extractConstOffset(const MachineOperand &Op) {
+  if (Op.isImm())
+    return Op.getImm();
+
+  if (!Op.isReg())
+    return None;
+
+  MachineInstr *Def = MRI->getUniqueVRegDef(Op.getReg());
+  if (!Def || Def->getOpcode() != AMDGPU::S_MOV_B32 ||
+      !Def->getOperand(1).isImm())
+    return None;
+
+  return Def->getOperand(1).getImm();
+}
+
+// Analyze Base and extracts:
+//  - 32bit base registers, subregisters
+//  - 64bit constant offset
+// Expecting base computation as:
+//   %OFFSET0:sgpr_32 = S_MOV_B32 8000
+//   %LO:vgpr_32, %c:sreg_64_xexec =
+//       V_ADD_I32_e64 %BASE_LO:vgpr_32, %103:sgpr_32,
+//   %HI:vgpr_32, = V_ADDC_U32_e64 %BASE_HI:vgpr_32, 0, killed %c:sreg_64_xexec
+//   %Base:vreg_64 =
+//       REG_SEQUENCE %LO:vgpr_32, %subreg.sub0, %HI:vgpr_32, %subreg.sub1
+void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base,
+                                                      MemAddress &Addr) {
+  if (!Base.isReg())
+    return;
+
+  MachineInstr *Def = MRI->getUniqueVRegDef(Base.getReg());
+  if (!Def || Def->getOpcode() != AMDGPU::REG_SEQUENCE
+      || Def->getNumOperands() != 5)
+    return;
+
+  MachineOperand BaseLo = Def->getOperand(1);
+  MachineOperand BaseHi = Def->getOperand(3);
+  if (!BaseLo.isReg() || !BaseHi.isReg())
+    return;
+
+  MachineInstr *BaseLoDef = MRI->getUniqueVRegDef(BaseLo.getReg());
+  MachineInstr *BaseHiDef = MRI->getUniqueVRegDef(BaseHi.getReg());
+
+  if (!BaseLoDef || BaseLoDef->getOpcode() != AMDGPU::V_ADD_I32_e64 ||
+      !BaseHiDef || BaseHiDef->getOpcode() != AMDGPU::V_ADDC_U32_e64)
+    return;
+
+  const auto *Src0 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src0);
+  const auto *Src1 = TII->getNamedOperand(*BaseLoDef, AMDGPU::OpName::src1);
+
+  auto Offset0P = extractConstOffset(*Src0);
+  if (Offset0P)
+    BaseLo = *Src1;
+  else {
+    if (!(Offset0P = extractConstOffset(*Src1)))
+      return;
+    BaseLo = *Src0;
+  }
+
+  Src0 = TII->getNamedOperand(*BaseHiDef, AMDGPU::OpName::src0);
+  Src1 = TII->getNamedOperand(*BaseHiDef, AMDGPU::OpName::src1);
+
+  if (Src0->isImm())
+    std::swap(Src0, Src1);
+
+  if (!Src1->isImm())
+    return;
+
+  assert(isInt<32>(*Offset0P) && isInt<32>(Src1->getImm())
+         && "Expected 32bit immediate!!!");
+  uint64_t Offset1 = Src1->getImm();
+  BaseHi = *Src0;
+
+  Addr.Base.LoReg = BaseLo.getReg();
+  Addr.Base.HiReg = BaseHi.getReg();
+  Addr.Base.LoSubReg = BaseLo.getSubReg();
+  Addr.Base.HiSubReg = BaseHi.getSubReg();
+  Addr.Offset = (*Offset0P & 0x00000000ffffffff) | (Offset1 << 32);
+}
+
+bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
+    MachineInstr &MI,
+    MemInfoMap &Visited,
+    SmallPtrSet<MachineInstr *, 4> &AnchorList) {
+
+  // TODO: Support flat and scratch.
+  if (AMDGPU::getGlobalSaddrOp(MI.getOpcode()) < 0 ||
+      TII->getNamedOperand(MI, AMDGPU::OpName::vdata) != NULL)
+    return false;
+
+  // TODO: Support Store.
+  if (!MI.mayLoad())
+    return false;
+
+  if (AnchorList.count(&MI))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "\nTryToPromoteConstantOffsetToImmFor "; MI.dump());
+
+  if (TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm()) {
+    LLVM_DEBUG(dbgs() << "  Const-offset is already promoted.\n";);
+    return false;
+  }
+
+  // Step1: Find the base-registers and a 64bit constant offset.
+  MachineOperand &Base = *TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
+  MemAddress MAddr;
+  if (Visited.find(&MI) == Visited.end()) {
+    processBaseWithConstOffset(Base, MAddr);
+    Visited[&MI] = MAddr;
+  } else
+    MAddr = Visited[&MI];
+
+  if (MAddr.Offset == 0) {
+    LLVM_DEBUG(dbgs() << "  Failed to extract constant-offset or there are no"
+                         " constant offsets that can be promoted.\n";);
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "  BASE: {" << MAddr.Base.HiReg << ", "
+             << MAddr.Base.LoReg << "} Offset: " << MAddr.Offset << "\n\n";);
+
+  // Step2: Traverse through MI's basic block and find an anchor(that has the
+  // same base-registers) with the highest 13bit distance from MI's offset.
+  // E.g. (64bit loads)
+  // bb:
+  //   addr1 = &a + 4096;   load1 = load(addr1,  0)
+  //   addr2 = &a + 6144;   load2 = load(addr2,  0)
+  //   addr3 = &a + 8192;   load3 = load(addr3,  0)
+  //   addr4 = &a + 10240;  load4 = load(addr4,  0)
+  //   addr5 = &a + 12288;  load5 = load(addr5,  0)
+  //
+  // Starting from the first load, the optimization will try to find a new base
+  // from which (&a + 4096) has 13 bit distance. Both &a + 6144 and &a + 8192
+  // has 13bit distance from &a + 4096. The heuristic considers &a + 8192
+  // as the new-base(anchor) because of the maximum distance which can
+  // accomodate more intermediate bases presumeably.
+  //
+  // Step3: move (&a + 8192) above load1. Compute and promote offsets from
+  // (&a + 8192) for load1, load2, load4.
+  //   addr = &a + 8192
+  //   load1 = load(addr,       -4096)
+  //   load2 = load(addr,       -2048)
+  //   load3 = load(addr,       0)
+  //   load4 = load(addr,       2048)
+  //   addr5 = &a + 12288;  load5 = load(addr5,  0)
+  //
+  MachineInstr *AnchorInst = nullptr;
+  MemAddress AnchorAddr;
+  uint32_t MaxDist = std::numeric_limits<uint32_t>::min();
+  SmallVector<std::pair<MachineInstr *, int64_t>, 4> InstsWCommonBase;
+
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineBasicBlock::iterator E = MBB->end();
+  MachineBasicBlock::iterator MBBI = MI.getIterator();
+  ++MBBI;
+  const SITargetLowering *TLI =
+    static_cast<const SITargetLowering *>(STM->getTargetLowering());
+
+  for ( ; MBBI != E; ++MBBI) {
+    MachineInstr &MINext = *MBBI;
+    // TODO: Support finding an anchor(with same base) from store addresses or
+    // any other load addresses where the opcodes are different.
+    if (MINext.getOpcode() != MI.getOpcode() ||
+        TII->getNamedOperand(MINext, AMDGPU::OpName::offset)->getImm())
+      continue;
+
+    const MachineOperand &BaseNext =
+      *TII->getNamedOperand(MINext, AMDGPU::OpName::vaddr);
+    MemAddress MAddrNext;
+    if (Visited.find(&MINext) == Visited.end()) {
+      processBaseWithConstOffset(BaseNext, MAddrNext);
+      Visited[&MINext] = MAddrNext;
+    } else
+      MAddrNext = Visited[&MINext];
+
+    if (MAddrNext.Base.LoReg != MAddr.Base.LoReg ||
+        MAddrNext.Base.HiReg != MAddr.Base.HiReg ||
+        MAddrNext.Base.LoSubReg != MAddr.Base.LoSubReg ||
+        MAddrNext.Base.HiSubReg != MAddr.Base.HiSubReg)
+      continue;
+
+    InstsWCommonBase.push_back(std::make_pair(&MINext, MAddrNext.Offset));
+
+    int64_t Dist = MAddr.Offset - MAddrNext.Offset;
+    TargetLoweringBase::AddrMode AM;
+    AM.HasBaseReg = true;
+    AM.BaseOffs = Dist;
+    if (TLI->isLegalGlobalAddressingMode(AM) &&
+        (uint32_t)abs(Dist) > MaxDist) {
+      MaxDist = abs(Dist);
+
+      AnchorAddr = MAddrNext;
+      AnchorInst = &MINext;
+    }
+  }
+
+  if (AnchorInst) {
+    LLVM_DEBUG(dbgs() << "  Anchor-Inst(with max-distance from Offset): ";
+               AnchorInst->dump());
+    LLVM_DEBUG(dbgs() << "  Anchor-Offset from BASE: "
+               <<  AnchorAddr.Offset << "\n\n");
+
+    // Instead of moving up, just re-compute anchor-instruction's base address.
+    unsigned Base = computeBase(MI, AnchorAddr);
+
+    updateBaseAndOffset(MI, Base, MAddr.Offset - AnchorAddr.Offset);
+    LLVM_DEBUG(dbgs() << "  After promotion: "; MI.dump(););
+
+    for (auto P : InstsWCommonBase) {
+      TargetLoweringBase::AddrMode AM;
+      AM.HasBaseReg = true;
+      AM.BaseOffs = P.second - AnchorAddr.Offset;
+
+      if (TLI->isLegalGlobalAddressingMode(AM)) {
+        LLVM_DEBUG(dbgs() << "  Promote Offset(" << P.second;
+                   dbgs() << ")"; P.first->dump());
+        updateBaseAndOffset(*P.first, Base, P.second - AnchorAddr.Offset);
+        LLVM_DEBUG(dbgs() << "     After promotion: "; P.first->dump());
+      }
+    }
+    AnchorList.insert(AnchorInst);
+    return true;
+  }
+
+  return false;
+}
+
 // Scan through looking for adjacent LDS operations with constant offsets from
 // the same base register. We rely on the scheduler to do the hard work of
 // clustering nearby loads, and assume these are all adjacent.
 bool SILoadStoreOptimizer::optimizeBlock(MachineBasicBlock &MBB) {
   bool Modified = false;
 
+  // Contain the list
+  MemInfoMap Visited;
+  // Contains the list of instructions for which constant offsets are being
+  // promoted to the IMM.
+  SmallPtrSet<MachineInstr *, 4> AnchorList;
+
   for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;) {
     MachineInstr &MI = *I;
+
+    if (promoteConstantOffsetToImm(MI, Visited, AnchorList))
+      Modified = true;
 
     // Don't combine if volatile.
     if (MI.hasOrderedMemoryRef()) {

@@ -275,9 +275,6 @@ public:
   /// Add the DW_AT_loclists_base attribute to the unit DIE.
   void addLoclistsBase();
 
-  /// Add the DW_AT_addr_base attribute to the unit DIE.
-  void addAddrTableBase();
-
   virtual DwarfCompileUnit &getCU() = 0;
 
   void constructTypeDIE(DIE &Buffer, const DICompositeType *CTy);

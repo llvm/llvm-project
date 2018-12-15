@@ -134,13 +134,13 @@ void ForEachMappedRegion(link_map *map, void (*cb)(const void *, uptr));
 #error "Unsupported architecture."
 #endif
 
-// The Android Bionic team has allocated a TLS slot for sanitizers starting
-// with Q, given that Android currently doesn't support ELF TLS. It is used to
-// store sanitizer thread specific data.
-static const int TLS_SLOT_SANITIZER = 6;
+// The Android Bionic team has allocated a TLS slot for TSan starting with N,
+// given that Android currently doesn't support ELF TLS. It is used to store
+// Sanitizers thread specific data.
+static const int TLS_SLOT_TSAN = 8;
 
 ALWAYS_INLINE uptr *get_android_tls_ptr() {
-  return reinterpret_cast<uptr *>(&__get_tls()[TLS_SLOT_SANITIZER]);
+  return reinterpret_cast<uptr *>(&__get_tls()[TLS_SLOT_TSAN]);
 }
 
 #endif  // SANITIZER_ANDROID

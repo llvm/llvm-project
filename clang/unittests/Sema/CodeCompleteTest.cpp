@@ -213,7 +213,9 @@ TEST(PreferredTypeTest, BinaryExpr) {
       ptr += ^10;
       ptr -= ^10;
     })cpp";
-  EXPECT_THAT(collectPreferredTypes(Code), Each("long")); // long is normalized 'ptrdiff_t'.
+  // Expect the normalized ptrdiff_t type, which is typically long or long long.
+  const char *PtrDiff = sizeof(void *) == sizeof(long) ? "long" : "long long";
+  EXPECT_THAT(collectPreferredTypes(Code), Each(PtrDiff));
 
   // Comparison operators.
   Code = R"cpp(

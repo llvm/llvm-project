@@ -792,6 +792,16 @@ Don't use blacklist file for sanitizers
 
 .. option:: -fparse-all-comments
 
+.. option:: -frecord-command-line, -frecord-gcc-switches, -fno-record-command-line, -fno-record-gcc-switches
+
+Generate a section named ".GCC.command.line" containing the clang driver
+command-line. After linking, the section may contain multiple command lines,
+which will be individually terminated by null bytes. Separate arguments within
+a command line are combined with spaces; spaces and backslashes within an
+argument are escaped with backslashes. This format differs from the format of
+the equivalent section produced by GCC with the -frecord-gcc-switches flag.
+This option is currently only supported on ELF targets.
+
 .. option:: -fsanitize-address-field-padding=<arg>
 
 Level of field padding for AddressSanitizer
@@ -2831,7 +2841,7 @@ Embed source text in DWARF debug sections
 
 .. option:: -gpubnames, -gno-pubnames
 
-.. option:: -grecord-gcc-switches, -gno-record-gcc-switches
+.. option:: -grecord-command-line, -grecord-gcc-switches, -gno-record-command-line, -gno-record-gcc-switches
 
 .. option:: -gsplit-dwarf
 

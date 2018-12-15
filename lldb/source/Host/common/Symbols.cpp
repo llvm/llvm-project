@@ -215,7 +215,7 @@ FileSpec LocateExecutableSymbolFileDsym(const ModuleSpec &module_spec) {
   ModuleSpec dsym_module_spec;
   // First try and find the dSYM in the same directory as the executable or in
   // an appropriate parent directory
-  if (LocateDSYMInVincinityOfExecutable(module_spec, symbol_fspec) == false) {
+  if (!LocateDSYMInVincinityOfExecutable(module_spec, symbol_fspec)) {
     // We failed to easily find the dSYM above, so use DebugSymbols
     LocateMacOSXFilesUsingDebugSymbols(module_spec, dsym_module_spec);
   } else {

@@ -1679,7 +1679,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
     DWARFUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
 
     const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
-    if (die && die.HasChildren() == false) {
+    if (die && !die.HasChildren()) {
       const char *name = die.GetAttributeValueAsString(DW_AT_name, nullptr);
 
       if (name) {
@@ -2265,7 +2265,7 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
       sc.block = function_block.FindBlockByID(inlined_die.GetID());
       if (sc.block == NULL)
         sc.block = function_block.FindBlockByID(inlined_die.GetOffset());
-      if (sc.block == NULL || sc.block->GetStartAddress(addr) == false)
+      if (sc.block == NULL || !sc.block->GetStartAddress(addr))
         addr.Clear();
     } else {
       sc.block = NULL;

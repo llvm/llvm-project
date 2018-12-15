@@ -40,7 +40,7 @@ static bool g_initialized = false;
 void PlatformRemoteGDBServer::Initialize() {
   Platform::Initialize();
 
-  if (g_initialized == false) {
+  if (!g_initialized) {
     g_initialized = true;
     PluginManager::RegisterPlugin(
         PlatformRemoteGDBServer::GetPluginNameStatic(),

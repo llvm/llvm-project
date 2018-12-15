@@ -176,7 +176,7 @@ RNBRunLoopMode HandleProcessStateChange(RNBRemoteSP &remote, bool initialize) {
   case eStateSuspended:
   case eStateCrashed:
   case eStateStopped:
-    if (initialize == false) {
+    if (!initialize) {
       // Compare the last stop count to our current notion of a stop count
       // to make sure we don't notify more than once for a given stop.
       nub_size_t prev_pid_stop_count = ctx.GetProcessStopCount();

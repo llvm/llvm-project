@@ -386,6 +386,7 @@ public:
 
     visitModuleFlags(M);
     visitModuleIdents(M);
+    visitModuleCommandLines(M);
 
     verifyCompileUnits();
 
@@ -408,6 +409,7 @@ private:
   void visitValueAsMetadata(const ValueAsMetadata &MD, Function *F);
   void visitComdat(const Comdat &C);
   void visitModuleIdents(const Module &M);
+  void visitModuleCommandLines(const Module &M);
   void visitModuleFlags(const Module &M);
   void visitModuleFlag(const MDNode *Op,
                        DenseMap<const MDString *, const MDNode *> &SeenIDs,
@@ -1308,6 +1310,24 @@ void Verifier::visitModuleIdents(const Module &M) {
            "incorrect number of operands in llvm.ident metadata", N);
     Assert(dyn_cast_or_null<MDString>(N->getOperand(0)),
            ("invalid value for llvm.ident metadata entry operand"
+            "(the operand should be a string)"),
+           N->getOperand(0));
+  }
+}
+
+void Verifier::visitModuleCommandLines(const Module &M) {
+  const NamedMDNode *CommandLines = M.getNamedMetadata("llvm.commandline");
+  if (!CommandLines)
+    return;
+
+  // llvm.commandline takes a list of metadata entry. Each entry has only one
+  // string. Scan each llvm.commandline entry and make sure that this
+  // requirement is met.
+  for (const MDNode *N : CommandLines->operands()) {
+    Assert(N->getNumOperands() == 1,
+           "incorrect number of operands in llvm.commandline metadata", N);
+    Assert(dyn_cast_or_null<MDString>(N->getOperand(0)),
+           ("invalid value for llvm.commandline metadata entry operand"
             "(the operand should be a string)"),
            N->getOperand(0));
   }

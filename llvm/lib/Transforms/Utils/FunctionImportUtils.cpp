@@ -203,11 +203,26 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
 
 void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
 
-  // Check the summaries to see if the symbol gets resolved to a known local
-  // definition.
   ValueInfo VI;
   if (GV.hasName()) {
     VI = ImportIndex.getValueInfo(GV.getGUID());
+    // Set synthetic function entry counts.
+    if (VI && ImportIndex.hasSyntheticEntryCounts()) {
+      if (Function *F = dyn_cast<Function>(&GV)) {
+        if (!F->isDeclaration()) {
+          for (auto &S : VI.getSummaryList()) {
+            FunctionSummary *FS = dyn_cast<FunctionSummary>(S->getBaseObject());
+            if (FS->modulePath() == M.getModuleIdentifier()) {
+              F->setEntryCount(Function::ProfileCount(FS->entryCount(),
+                                                      Function::PCT_Synthetic));
+              break;
+            }
+          }
+        }
+      }
+    }
+    // Check the summaries to see if the symbol gets resolved to a known local
+    // definition.
     if (VI && VI.isDSOLocal()) {
       GV.setDSOLocal(true);
       if (GV.hasDLLImportStorageClass())

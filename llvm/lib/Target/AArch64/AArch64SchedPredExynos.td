@@ -12,6 +12,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Auxiliary predicates.
+
+// Check the shift in arithmetic and logic instructions.
+def ExynosCheckShift : CheckAny<[CheckShiftBy0,
+                                 CheckAll<
+                                   [CheckShiftLSL,
+                                    CheckAny<
+                                      [CheckShiftBy1,
+                                       CheckShiftBy2,
+                                       CheckShiftBy3]>]>]>;
+
+// Exynos predicates.
+
 // Identify BLR specifying the LR register as the indirect target register.
 def ExynosBranchLinkLRPred : MCSchedPredicate<
                                CheckAll<[CheckOpcode<[BLR]>,
@@ -22,27 +35,33 @@ def ExynosExtFn   : TIIPredicate<
                       "isExynosExtFast",
                       MCOpcodeSwitchStatement<
                         [MCOpcodeSwitchCase<
-                           IsArithExt32Op.ValidOpcodes,
+                           IsArithExtOp.ValidOpcodes,
                            MCReturnStatement<
                              CheckAny<[CheckExtBy0,
                                        CheckAll<
-                                         [CheckExtUXTW,
-                                          CheckAny<
-                                            [CheckExtBy1,
-                                             CheckExtBy2,
-                                             CheckExtBy3]>]>]>>>,
-                         MCOpcodeSwitchCase<
-                           IsArithExt64Op.ValidOpcodes,
-                           MCReturnStatement<
-                             CheckAny<[CheckExtBy0,
-                                       CheckAll<
-                                         [CheckExtUXTX,
+                                         [CheckAny<
+                                           [CheckExtUXTW,
+                                            CheckExtUXTX]>,
                                           CheckAny<
                                             [CheckExtBy1,
                                              CheckExtBy2,
                                              CheckExtBy3]>]>]>>>],
                         MCReturnStatement<FalsePred>>>;
 def ExynosExtPred : MCSchedPredicate<ExynosExtFn>;
+
+// Identify a load or store using the register offset addressing mode
+// with a scaled non-extended register.
+def ExynosScaledIdxFn   : TIIPredicate<"isExynosScaledAddr",
+                                       MCOpcodeSwitchStatement<
+                                         [MCOpcodeSwitchCase<
+                                            IsLoadStoreRegOffsetOp.ValidOpcodes,
+                                            MCReturnStatement<
+                                              CheckAny<
+                                                [CheckMemExtSXTW,
+                                                 CheckMemExtUXTW,
+                                                 CheckMemScaled]>>>],
+                                         MCReturnStatement<FalsePred>>>;
+def ExynosScaledIdxPred : MCSchedPredicate<ExynosScaledIdxFn>;
 
 // Identify FP instructions.
 def ExynosFPPred : MCSchedPredicate<CheckAny<[CheckDForm, CheckQForm]>>;
@@ -82,35 +101,31 @@ def ExynosRotateRightImmPred : MCSchedPredicate<
                                  CheckAll<[CheckOpcode<[EXTRWrri, EXTRXrri]>,
                                            CheckSameRegOperand<1, 2>]>>;
 
-// Identify arithmetic and logic instructions without or with limited shift.
+// Identify arithmetic and logic instructions with limited shift.
 def ExynosShiftFn   : TIIPredicate<
                         "isExynosShiftFast",
                         MCOpcodeSwitchStatement<
                           [MCOpcodeSwitchCase<
                              IsArithLogicShiftOp.ValidOpcodes,
-                             MCReturnStatement<
-                               CheckAny<[CheckShiftBy0,
-                                         CheckAll<
-                                           [CheckShiftLSL,
-                                            CheckAny<
-                                              [CheckShiftBy1,
-                                               CheckShiftBy2,
-                                               CheckShiftBy3]>]>]>>>],
+                             MCReturnStatement<ExynosCheckShift>>],
                           MCReturnStatement<FalsePred>>>;
 def ExynosShiftPred : MCSchedPredicate<ExynosShiftFn>;
 
-// Identify more arithmetic and logic instructions without or limited shift.
+// Identify more arithmetic and logic instructions with limited shift.
 def ExynosShiftExFn   : TIIPredicate<
                           "isExynosShiftExFast",
                           MCOpcodeSwitchStatement<
                             [MCOpcodeSwitchCase<
                                IsArithLogicShiftOp.ValidOpcodes,
                                MCReturnStatement<
-                                 CheckAll<
-                                   [CheckShiftLSL,
-                                    CheckShiftBy8]>>>],
-                            MCReturnStatement<ExynosShiftFn>>>;
+                                 CheckAny<
+                                   [CheckAll<
+                                     [CheckShiftLSL,
+                                      CheckShiftBy8]>,
+                                    ExynosCheckShift]>>>],
+                            MCReturnStatement<FalsePred>>>;
 def ExynosShiftExPred : MCSchedPredicate<ExynosShiftExFn>;
+
 
 // Identify arithmetic and logic immediate instructions.
 def ExynosCheapFn : TIIPredicate<

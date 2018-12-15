@@ -17,7 +17,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyForceLinker.h"
-#include "clang/Config/config.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"

@@ -77,6 +77,8 @@ bool JSONReporter::ReportContext(const Context& context) {
   std::string walltime_value = LocalDateTimeString();
   out << indent << FormatKV("date", walltime_value) << ",\n";
 
+  out << indent << FormatKV("host_name", context.sys_info.name) << ",\n";
+
   if (Context::executable_name) {
     // windows uses backslash for its path separator,
     // which must be escaped in JSON otherwise it blows up conforming JSON

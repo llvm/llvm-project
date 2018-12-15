@@ -12,7 +12,7 @@ define void @test_alloca(i8* %result) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    [[B:%.*]] = bitcast %T* [[A]] to i8*
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[B]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[B]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[RESULT:%.*]], i8 0, i64 12, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca %T, align 8
@@ -28,7 +28,7 @@ define void @test_alloca_with_lifetimes(i8* %result) {
 ; CHECK-NEXT:    [[B:%.*]] = bitcast %T* [[A]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[B]])
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[B]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[B]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[RESULT:%.*]], i8 0, i64 12, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[B]])
 ; CHECK-NEXT:    ret void
 ;
@@ -46,7 +46,7 @@ define void @test_malloc_with_lifetimes(i8* %result) {
 ; CHECK-NEXT:    [[A:%.*]] = call i8* @malloc(i64 16)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[A]])
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[A]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[A]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[RESULT:%.*]], i8 0, i64 12, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[A]])
 ; CHECK-NEXT:    call void @free(i8* [[A]])
 ; CHECK-NEXT:    ret void
@@ -98,7 +98,7 @@ define void @test_volatile_memset(i8* %result) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    [[B:%.*]] = bitcast %T* [[A]] to i8*
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[B]], i8 0, i64 12, i1 true)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[B]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[RESULT:%.*]], i8 0, i64 12, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca %T, align 8
@@ -138,6 +138,67 @@ define void @test_write_between(i8* %result) {
   %b = bitcast %T* %a to i8*
   call void @llvm.memset.p0i8.i64(i8* align 8 %b, i8 0, i64 12, i1 false)
   store i8 -1, i8* %b
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %result, i8* align 8 %b, i64 16, i1 false)
+  ret void
+}
+
+; A write prior to the memset, which is part of the memset region.
+; We could optimize this, but currently don't, because the used memory location is imprecise.
+define void @test_write_before_memset_in_memset_region(i8* %result) {
+; CHECK-LABEL: @test_write_before_memset_in_memset_region(
+; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
+; CHECK-NEXT:    [[B:%.*]] = bitcast %T* [[A]] to i8*
+; CHECK-NEXT:    store i8 -1, i8* [[B]]
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[B]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[B]], i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %a = alloca %T, align 8
+  %b = bitcast %T* %a to i8*
+  store i8 -1, i8* %b
+  call void @llvm.memset.p0i8.i64(i8* align 8 %b, i8 0, i64 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %result, i8* align 8 %b, i64 16, i1 false)
+  ret void
+}
+
+; A write prior to the memset, which is part of the memcpy (but not memset) region.
+; This cannot be optimized.
+define void @test_write_before_memset_in_memcpy_region(i8* %result) {
+; CHECK-LABEL: @test_write_before_memset_in_memcpy_region(
+; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
+; CHECK-NEXT:    [[B:%.*]] = bitcast %T* [[A]] to i8*
+; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[T]], %T* [[A]], i64 0, i32 2
+; CHECK-NEXT:    store i32 -1, i32* [[C]]
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[B]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[B]], i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %a = alloca %T, align 8
+  %b = bitcast %T* %a to i8*
+  %c = getelementptr inbounds %T, %T* %a, i64 0, i32 2
+  store i32 -1, i32* %c
+  call void @llvm.memset.p0i8.i64(i8* align 8 %b, i8 0, i64 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %result, i8* align 8 %b, i64 16, i1 false)
+  ret void
+}
+
+; A write prior to the memset, which is part of both the memset and memcpy regions.
+; This cannot be optimized.
+define void @test_write_before_memset_in_both_regions(i8* %result) {
+; CHECK-LABEL: @test_write_before_memset_in_both_regions(
+; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
+; CHECK-NEXT:    [[B:%.*]] = bitcast %T* [[A]] to i8*
+; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[T]], %T* [[A]], i64 0, i32 1
+; CHECK-NEXT:    store i32 -1, i32* [[C]]
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[B]], i8 0, i64 10, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[B]], i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %a = alloca %T, align 8
+  %b = bitcast %T* %a to i8*
+  %c = getelementptr inbounds %T, %T* %a, i64 0, i32 1
+  store i32 -1, i32* %c
+  call void @llvm.memset.p0i8.i64(i8* align 8 %b, i8 0, i64 10, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %result, i8* align 8 %b, i64 16, i1 false)
   ret void
 }

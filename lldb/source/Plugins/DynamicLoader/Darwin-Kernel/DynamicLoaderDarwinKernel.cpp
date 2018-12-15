@@ -387,8 +387,8 @@ DynamicLoaderDarwinKernel::ReadMachHeader(addr_t addr, Process *process, llvm::M
     if (::memcmp (&header.magic, &magicks[i], sizeof (uint32_t)) == 0)
         found_matching_pattern = true;
 
-  if (found_matching_pattern == false)
-      return false;
+  if (!found_matching_pattern)
+    return false;
 
   if (header.magic == llvm::MachO::MH_CIGAM ||
       header.magic == llvm::MachO::MH_CIGAM_64) {
@@ -424,7 +424,7 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
 
   llvm::MachO::mach_header header;
 
-  if (ReadMachHeader (addr, process, header) == false)
+  if (!ReadMachHeader(addr, process, header))
     return UUID();
 
   // First try a quick test -- read the first 4 bytes and see if there is a
@@ -604,16 +604,10 @@ void DynamicLoaderDarwinKernel::KextImageInfo::SetProcessStopId(
 bool DynamicLoaderDarwinKernel::KextImageInfo::
 operator==(const KextImageInfo &rhs) {
   if (m_uuid.IsValid() || rhs.GetUUID().IsValid()) {
-    if (m_uuid == rhs.GetUUID()) {
-      return true;
-    }
-    return false;
+    return m_uuid == rhs.GetUUID();
   }
 
-  if (m_name == rhs.GetName() && m_load_address == rhs.GetLoadAddress())
-    return true;
-
-  return false;
+  return m_name == rhs.GetName() && m_load_address == rhs.GetLoadAddress();
 }
 
 void DynamicLoaderDarwinKernel::KextImageInfo::SetName(const char *name) {
@@ -731,7 +725,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
 }
 
 bool DynamicLoaderDarwinKernel::KextImageInfo::IsKernel() const {
-  return m_kernel_image == true;
+  return m_kernel_image;
 }
 
 void DynamicLoaderDarwinKernel::KextImageInfo::SetIsKernel(bool is_kernel) {
@@ -1280,7 +1274,7 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
 
     const uint32_t num_of_new_kexts = kext_summaries.size();
     for (uint32_t new_kext = 0; new_kext < num_of_new_kexts; new_kext++) {
-      if (to_be_added[new_kext] == true) {
+      if (to_be_added[new_kext]) {
         KextImageInfo &image_info = kext_summaries[new_kext];
         if (load_kexts) {
           if (!image_info.LoadImageUsingMemoryModule(m_process)) {

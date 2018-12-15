@@ -10,21 +10,21 @@
 #ifndef liblldb_CommandInterpreter_h_
 #define liblldb_CommandInterpreter_h_
 
-#include <mutex>
-#include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Event.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Interpreter/CommandAlias.h"
 #include "lldb/Interpreter/CommandHistory.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/CompletionRequest.h"
+#include "lldb/Utility/Event.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
+#include <mutex>
 
 namespace lldb_private {
 

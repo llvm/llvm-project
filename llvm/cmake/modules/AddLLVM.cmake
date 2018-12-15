@@ -584,7 +584,7 @@ function(llvm_add_library name)
 
   if(ARG_SHARED OR ARG_MODULE)
     llvm_externalize_debuginfo(${name})
-    llvm_codesign(TARGET ${name})
+    llvm_codesign(${name})
   endif()
 endfunction()
 
@@ -796,7 +796,7 @@ macro(add_llvm_executable name)
     target_link_libraries(${name} PRIVATE ${LLVM_PTHREAD_LIB})
   endif()
 
-  llvm_codesign(TARGET ${name} ENTITLEMENTS ${ARG_ENTITLEMENTS})
+  llvm_codesign(${name} ENTITLEMENTS ${ARG_ENTITLEMENTS})
 endmacro(add_llvm_executable name)
 
 function(export_executable_symbols target)
@@ -1635,13 +1635,9 @@ function(llvm_externalize_debuginfo name)
   endif()
 endfunction()
 
-# Usage: llvm_codesign(TARGET name [ENTITLEMENTS file])
-#
-# Code-sign the given TARGET with the global LLVM_CODESIGNING_IDENTITY or skip
-# if undefined. Customize capabilities by passing a file path to ENTITLEMENTS.
-#
-function(llvm_codesign)
-  cmake_parse_arguments(ARG "" "TARGET;ENTITLEMENTS" "" ${ARGN})
+# Usage: llvm_codesign(name [ENTITLEMENTS file])
+function(llvm_codesign name)
+  cmake_parse_arguments(ARG "" "ENTITLEMENTS" "" ${ARGN})
 
   if(NOT LLVM_CODESIGNING_IDENTITY)
     return()
@@ -1659,15 +1655,20 @@ function(llvm_codesign)
       )
     endif()
     if(DEFINED ARG_ENTITLEMENTS)
-      set(PASS_ENTITLEMENTS --entitlements ${ARG_ENTITLEMENTS})
+      set(pass_entitlements --entitlements ${ARG_ENTITLEMENTS})
+    endif()
+    if(CMAKE_GENERATOR STREQUAL "Xcode")
+      # Avoid double-signing error: Since output overwrites input, Xcode runs
+      # the post-build rule even if the actual build-step was skipped.
+      set(pass_force --force)
     endif()
 
     add_custom_command(
-      TARGET ${ARG_TARGET} POST_BUILD
+      TARGET ${name} POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E
               env CODESIGN_ALLOCATE=${CMAKE_CODESIGN_ALLOCATE}
               ${CMAKE_CODESIGN} -s ${LLVM_CODESIGNING_IDENTITY}
-              ${PASS_ENTITLEMENTS} $<TARGET_FILE:${ARG_TARGET}>
+              ${pass_entitlements} ${pass_force} $<TARGET_FILE:${name}>
     )
   endif()
 endfunction()

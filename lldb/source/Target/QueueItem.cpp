@@ -94,7 +94,7 @@ std::string QueueItem::GetQueueLabel() {
 ProcessSP QueueItem::GetProcessSP() { return m_process_wp.lock(); }
 
 void QueueItem::FetchEntireItem() {
-  if (m_have_fetched_entire_item == true)
+  if (m_have_fetched_entire_item)
     return;
   ProcessSP process_sp = m_process_wp.lock();
   if (process_sp) {
