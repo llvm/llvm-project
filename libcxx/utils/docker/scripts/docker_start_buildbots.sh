@@ -5,4 +5,4 @@ set -x
 # run_buildbots.sh
 cd /libcxx
 git pull
-/libcxx/utils/docker/scripts/run_buildbots.sh "$@"
+/libcxx/utils/docker/scripts/run_buildbot.sh "$@"
