@@ -13,11 +13,11 @@
 
 ; CHECK: .debug_info contents:
 ; CHECK:   DW_TAG_compile_unit
-; CHECK:     DW_AT_comp_dir [DW_FORM_strx1] ( indexed (00000001) string = "X3")
+; CHECK:     DW_AT_comp_dir [DW_FORM_strx1] ( indexed (00000000) string = "X3")
 ; CHECK:   DW_TAG_compile_unit
-; CHECK:     DW_AT_comp_dir [DW_FORM_strx1] ( indexed (00000002) string = "X2")
+; CHECK:     DW_AT_comp_dir [DW_FORM_strx1] ( indexed (00000001) string = "X2")
 ; CHECK:   DW_TAG_compile_unit
-; CHECK:     DW_AT_comp_dir [DW_FORM_strx1] ( indexed (00000003) string = "X1")
+; CHECK:     DW_AT_comp_dir [DW_FORM_strx1] ( indexed (00000002) string = "X1")
 ; CHECK: .debug_info.dwo contents:
 
 ; CHECK: .debug_str contents:
@@ -27,10 +27,10 @@
 
 ; CHECK: .debug_str_offsets contents:
 ; CHECK: Format = DWARF32, Version = 5
-; CHECK-NEXT: 00000000 "foo.dwo"
 ; CHECK-NEXT: [[X3]] "X3"
 ; CHECK-NEXT: [[X2]] "X2"
 ; CHECK-NEXT: [[X1]] "X1"
+; CHECK-NEXT: "foo.dwo"
 ; CHECK-EMPTY:
 
 

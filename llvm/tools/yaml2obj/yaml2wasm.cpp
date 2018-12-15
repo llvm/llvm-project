@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 //
 
+#include "llvm/Object/Wasm.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
@@ -516,7 +517,15 @@ int WasmWriter::writeWasm(raw_ostream &OS) {
   writeUint32(OS, Obj.Header.Version);
 
   // Write each section
+  llvm::object::WasmSectionOrderChecker Checker;
   for (const std::unique_ptr<WasmYAML::Section> &Sec : Obj.Sections) {
+    StringRef SecName = "";
+    if (auto S = dyn_cast<WasmYAML::CustomSection>(Sec.get()))
+      SecName = S->Name;
+    if (!Checker.isValidSectionOrder(Sec->Type, SecName)) {
+      errs() << "Out of order section type: " << Sec->Type << "\n";
+      return 1;
+    }
     encodeULEB128(Sec->Type, OS);
     std::string OutString;
     raw_string_ostream StringStream(OutString);

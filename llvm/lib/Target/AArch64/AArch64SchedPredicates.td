@@ -132,12 +132,10 @@ def CheckQForm             : CheckAll<[CheckIsRegOperand<0>,
                                                  CheckRegOperand<0, Q31>]>]>;
 
 // Identify arithmetic instructions with extend.
-def IsArithExt32Op         : CheckOpcode<[ADDWrx, ADDXrx, ADDSWrx, ADDSXrx,
-                                          SUBWrx, SUBXrx, SUBSWrx, SUBSXrx]>;
-def IsArithExt64Op         : CheckOpcode<[ADDXrx64, ADDSXrx64,
+def IsArithExtOp           : CheckOpcode<[ADDWrx, ADDXrx, ADDSWrx, ADDSXrx,
+                                          SUBWrx, SUBXrx, SUBSWrx, SUBSXrx,
+                                          ADDXrx64, ADDSXrx64,
                                           SUBXrx64, SUBSXrx64]>;
-def IsArithExtOp           : CheckOpcode<!listconcat(IsArithExt32Op.ValidOpcodes,
-                                                     IsArithExt64Op.ValidOpcodes)>;
 
 // Identify arithmetic immediate instructions.
 def IsArithImmOp           : CheckOpcode<[ADDWri, ADDXri, ADDSWri, ADDSXri,
