@@ -134,6 +134,12 @@ RelExpr ARM::getRelExpr(RelType Type, const Symbol &S,
     return R_NONE;
   case R_ARM_TLS_LE32:
     return R_TLS;
+  case R_ARM_V4BX:
+    // V4BX is just a marker to indicate there's a "bx rN" instruction at the
+    // given address. It can be used to implement a special linker mode which
+    // rewrites ARMv4T inputs to ARMv4. Since we support only ARMv4 input and
+    // not ARMv4 output, we can just ignore it.
+    return R_HINT;
   default:
     return R_ABS;
   }
@@ -513,12 +519,6 @@ void ARM::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
               (read16le(Loc + 2) & 0x8f00) | // opcode
                   ((Val << 4) & 0x7000) |    // imm3
                   (Val & 0x00ff));           // imm8
-    break;
-  case R_ARM_V4BX:
-    // V4BX is just a marker to indicate there's a "bx rN" instruction at the
-    // given address. It can be used to implement a special linker mode which
-    // rewrites ARMv4T inputs to ARMv4. Since we support only ARMv4 input and
-    // not ARMv4 output, we can just ignore it.
     break;
   default:
     error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
