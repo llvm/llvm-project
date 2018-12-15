@@ -52,9 +52,11 @@ private:
   llvm::StringMap<Stmt *> &Bodies;
 };
 
-void printCheckerHelp(raw_ostream &OS, ArrayRef<std::string> plugins);
+void printCheckerHelp(raw_ostream &OS, ArrayRef<std::string> plugins,
+                      DiagnosticsEngine &diags);
 void printEnabledCheckerList(raw_ostream &OS, ArrayRef<std::string> plugins,
-                             const AnalyzerOptions &opts);
+                             const AnalyzerOptions &opts,
+                             DiagnosticsEngine &diags);
 void printAnalyzerConfigList(raw_ostream &OS);
 
 } // end GR namespace

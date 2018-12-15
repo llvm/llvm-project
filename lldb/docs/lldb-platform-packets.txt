@@ -303,7 +303,9 @@ for the lldb testsuite to be run on a remote target device/system.
 //
 //  request packet has the fields:
 //     1. ASCII hex encoded filename
-//     2. oflags to be passed to open(2), base 16
+//     2. flags passed to the open call, base 16.
+//        Note that these are not the oflags that open(2) takes, but
+//        are the constant values in enum OpenOptions from lldb's File.h
 //     3. mode bits, base 16
 //  
 //  response is F followed by the opened file descriptor in base 10.
