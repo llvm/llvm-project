@@ -189,13 +189,6 @@ enum MachineConfiguration : unsigned {
   SharedMemorySize = 128,
 };
 
-enum NamedBarrier : unsigned {
-  /// Synchronize on this barrier #ID using a named barrier primitive.
-  /// Only the subset of active threads in a parallel region arrive at the
-  /// barrier.
-  NB_Parallel = 1,
-};
-
 static const ValueDecl *getPrivateItem(const Expr *RefExpr) {
   RefExpr = RefExpr->IgnoreParens();
   if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(RefExpr)) {
@@ -655,25 +648,8 @@ static void getNVPTXCTABarrier(CodeGenFunction &CGF) {
   CGF.EmitRuntimeCall(F);
 }
 
-/// Get barrier #ID to synchronize selected (multiple of warp size) threads in
-/// a CTA.
-static void getNVPTXBarrier(CodeGenFunction &CGF, int ID,
-                            llvm::Value *NumThreads) {
-  CGBuilderTy &Bld = CGF.Builder;
-  llvm::Value *Args[] = {Bld.getInt32(ID), NumThreads};
-  llvm::Function *F = llvm::Intrinsic::getDeclaration(
-      &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_barrier);
-  F->addFnAttr(llvm::Attribute::Convergent);
-  CGF.EmitRuntimeCall(F, Args);
-}
-
 /// Synchronize all GPU threads in a block.
 static void syncCTAThreads(CodeGenFunction &CGF) { getNVPTXCTABarrier(CGF); }
-
-/// Synchronize worker threads in a parallel region.
-static void syncParallelThreads(CodeGenFunction &CGF, llvm::Value *NumThreads) {
-  return getNVPTXBarrier(CGF, NB_Parallel, NumThreads);
-}
 
 /// Get the value of the thread_limit clause in the teams directive.
 /// For the 'generic' execution mode, the runtime encodes thread_limit in
@@ -3272,14 +3248,10 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
 
       CGF.EmitBlock(MergeBB);
 
-      Address AddrNumWarpsArg = CGF.GetAddrOfLocalVar(&NumWarpsArg);
-      llvm::Value *NumWarpsVal = CGF.EmitLoadOfScalar(
-          AddrNumWarpsArg, /*Volatile=*/false, C.IntTy, Loc);
-
-      llvm::Value *NumActiveThreads = Bld.CreateNSWMul(
-          NumWarpsVal, getNVPTXWarpSize(CGF), "num_active_threads");
-      // named_barrier_sync(ParallelBarrierID, num_active_threads)
-      syncParallelThreads(CGF, NumActiveThreads);
+      // kmpc_barrier.
+      CGM.getOpenMPRuntime().emitBarrierCall(CGF, Loc, OMPD_unknown,
+                                             /*EmitChecks=*/false,
+                                             /*ForceSimpleCall=*/true);
 
       //
       // Warp 0 copies reduce element from transfer medium.
@@ -3287,6 +3259,10 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
       llvm::BasicBlock *W0ThenBB = CGF.createBasicBlock("then");
       llvm::BasicBlock *W0ElseBB = CGF.createBasicBlock("else");
       llvm::BasicBlock *W0MergeBB = CGF.createBasicBlock("ifcont");
+
+      Address AddrNumWarpsArg = CGF.GetAddrOfLocalVar(&NumWarpsArg);
+      llvm::Value *NumWarpsVal = CGF.EmitLoadOfScalar(
+          AddrNumWarpsArg, /*Volatile=*/false, C.IntTy, Loc);
 
       // Up to 32 threads in warp 0 are active.
       llvm::Value *IsActiveThread =
@@ -3329,7 +3305,10 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
 
       // While warp 0 copies values from transfer medium, all other warps must
       // wait.
-      syncParallelThreads(CGF, NumActiveThreads);
+      // kmpc_barrier.
+      CGM.getOpenMPRuntime().emitBarrierCall(CGF, Loc, OMPD_unknown,
+                                             /*EmitChecks=*/false,
+                                             /*ForceSimpleCall=*/true);
       if (NumIters > 1) {
         Cnt = Bld.CreateNSWAdd(Cnt, llvm::ConstantInt::get(CGM.IntTy, /*V=*/1));
         CGF.EmitStoreOfScalar(Cnt, CntAddr, /*Volatile=*/false, C.IntTy);
