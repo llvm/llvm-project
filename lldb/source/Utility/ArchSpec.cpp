@@ -610,10 +610,8 @@ const char *ArchSpec::GetArchitectureName() const {
 
 bool ArchSpec::IsMIPS() const {
   const llvm::Triple::ArchType machine = GetMachine();
-  if (machine == llvm::Triple::mips || machine == llvm::Triple::mipsel ||
-      machine == llvm::Triple::mips64 || machine == llvm::Triple::mips64el)
-    return true;
-  return false;
+  return machine == llvm::Triple::mips || machine == llvm::Triple::mipsel ||
+         machine == llvm::Triple::mips64 || machine == llvm::Triple::mips64el;
 }
 
 std::string ArchSpec::GetTargetABI() const {
@@ -1096,9 +1094,7 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
     const llvm::Triple::EnvironmentType rhs_triple_env =
         rhs_triple.getEnvironment();
 
-    if (!IsCompatibleEnvironment(lhs_triple_env, rhs_triple_env))
-      return false;
-    return true;
+    return IsCompatibleEnvironment(lhs_triple_env, rhs_triple_env);
   }
   return false;
 }

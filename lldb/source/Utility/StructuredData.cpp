@@ -226,7 +226,7 @@ void StructuredData::Float::Dump(Stream &s, bool pretty_print) const {
 }
 
 void StructuredData::Boolean::Dump(Stream &s, bool pretty_print) const {
-  if (m_value == true)
+  if (m_value)
     s.PutCString("true");
   else
     s.PutCString("false");

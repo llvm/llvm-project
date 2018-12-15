@@ -280,7 +280,7 @@ public:
   /// message).
   //------------------------------------------------------------------
   StructuredData::ObjectSP GetExtendedInfo() {
-    if (m_extended_info_fetched == false) {
+    if (!m_extended_info_fetched) {
       m_extended_info = FetchThreadExtendedInfo();
       m_extended_info_fetched = true;
     }

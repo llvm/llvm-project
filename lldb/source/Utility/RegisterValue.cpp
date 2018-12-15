@@ -475,7 +475,7 @@ bool RegisterValue::SignExtend(uint32_t sign_bitpos) {
 
 bool RegisterValue::CopyValue(const RegisterValue &rhs) {
   if (this == &rhs)
-    return rhs.m_type == eTypeInvalid ? false : true;
+    return rhs.m_type != eTypeInvalid;
 
   m_type = rhs.m_type;
   switch (m_type) {

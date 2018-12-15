@@ -12,11 +12,13 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/Support/Debug.h"
 
 namespace llvm {
 
-class MachineInstr;
+class MachineFunction;
 
 // Worklist which mostly works similar to InstCombineWorkList, but on
 // MachineInstrs. The main difference with something like a SetVector is that

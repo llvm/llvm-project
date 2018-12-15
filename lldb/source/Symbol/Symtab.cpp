@@ -740,7 +740,7 @@ uint32_t Symtab::AppendSymbolIndexesMatchingRegExAndType(
   for (uint32_t i = 0; i < sym_end; i++) {
     if (symbol_type == eSymbolTypeAny ||
         m_symbols[i].GetType() == symbol_type) {
-      if (CheckSymbolAtIndex(i, symbol_debug_type, symbol_visibility) == false)
+      if (!CheckSymbolAtIndex(i, symbol_debug_type, symbol_visibility))
         continue;
 
       const char *name = m_symbols[i].GetName().AsCString();

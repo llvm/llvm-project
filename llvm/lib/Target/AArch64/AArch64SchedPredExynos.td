@@ -35,27 +35,33 @@ def ExynosExtFn   : TIIPredicate<
                       "isExynosExtFast",
                       MCOpcodeSwitchStatement<
                         [MCOpcodeSwitchCase<
-                           IsArithExt32Op.ValidOpcodes,
+                           IsArithExtOp.ValidOpcodes,
                            MCReturnStatement<
                              CheckAny<[CheckExtBy0,
                                        CheckAll<
-                                         [CheckExtUXTW,
-                                          CheckAny<
-                                            [CheckExtBy1,
-                                             CheckExtBy2,
-                                             CheckExtBy3]>]>]>>>,
-                         MCOpcodeSwitchCase<
-                           IsArithExt64Op.ValidOpcodes,
-                           MCReturnStatement<
-                             CheckAny<[CheckExtBy0,
-                                       CheckAll<
-                                         [CheckExtUXTX,
+                                         [CheckAny<
+                                           [CheckExtUXTW,
+                                            CheckExtUXTX]>,
                                           CheckAny<
                                             [CheckExtBy1,
                                              CheckExtBy2,
                                              CheckExtBy3]>]>]>>>],
                         MCReturnStatement<FalsePred>>>;
 def ExynosExtPred : MCSchedPredicate<ExynosExtFn>;
+
+// Identify a load or store using the register offset addressing mode
+// with a scaled non-extended register.
+def ExynosScaledIdxFn   : TIIPredicate<"isExynosScaledAddr",
+                                       MCOpcodeSwitchStatement<
+                                         [MCOpcodeSwitchCase<
+                                            IsLoadStoreRegOffsetOp.ValidOpcodes,
+                                            MCReturnStatement<
+                                              CheckAny<
+                                                [CheckMemExtSXTW,
+                                                 CheckMemExtUXTW,
+                                                 CheckMemScaled]>>>],
+                                         MCReturnStatement<FalsePred>>>;
+def ExynosScaledIdxPred : MCSchedPredicate<ExynosScaledIdxFn>;
 
 // Identify FP instructions.
 def ExynosFPPred : MCSchedPredicate<CheckAny<[CheckDForm, CheckQForm]>>;

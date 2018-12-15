@@ -987,16 +987,16 @@ bool CommandInterpreter::AddUserCommand(llvm::StringRef name,
   if (!name.empty()) {
     // do not allow replacement of internal commands
     if (CommandExists(name)) {
-      if (can_replace == false)
+      if (!can_replace)
         return false;
-      if (m_command_dict[name]->IsRemovable() == false)
+      if (!m_command_dict[name]->IsRemovable())
         return false;
     }
 
     if (UserCommandExists(name)) {
-      if (can_replace == false)
+      if (!can_replace)
         return false;
-      if (m_user_dict[name]->IsRemovable() == false)
+      if (!m_user_dict[name]->IsRemovable())
         return false;
     }
 
@@ -2131,7 +2131,7 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
     profilePath.AppendPathComponent(".lldbinit");
     std::string init_file_path = profilePath.GetPath();
 
-    if (m_skip_app_init_files == false) {
+    if (!m_skip_app_init_files) {
       FileSpec program_file_spec(HostInfo::GetProgramFileSpec());
       const char *program_name = program_file_spec.GetFilename().AsCString();
 
@@ -2769,7 +2769,7 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
       return;
 
   const bool is_interactive = io_handler.GetIsInteractive();
-  if (is_interactive == false) {
+  if (!is_interactive) {
     // When we are not interactive, don't execute blank lines. This will happen
     // sourcing a commands file. We don't want blank lines to repeat the
     // previous command and cause any errors to occur (like redefining an
@@ -3018,8 +3018,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
       bool is_alias = GetAliasFullName(next_word, full_name);
       cmd_obj = GetCommandObject(next_word, &matches);
       bool is_real_command =
-          (is_alias == false) ||
-          (cmd_obj != nullptr && cmd_obj->IsAlias() == false);
+          (!is_alias) || (cmd_obj != nullptr && !cmd_obj->IsAlias());
       if (!is_real_command) {
         matches.Clear();
         std::string alias_result;

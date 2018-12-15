@@ -72,8 +72,7 @@ from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
 
 # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
-# LLDB_COMMAND_TRACE and LLDB_DO_CLEANUP are set from '-t' and '-r dir'
-# options.
+# LLDB_COMMAND_TRACE is set from '-t' option.
 
 # By default, traceAlways is False.
 if "LLDB_COMMAND_TRACE" in os.environ and os.environ[

@@ -624,12 +624,12 @@ define <4 x float> @stack_fold_dpps(<4 x float> %a0, <4 x float> %a1) {
 }
 declare <4 x float> @llvm.x86.sse41.dpps(<4 x float>, <4 x float>, i8) nounwind readnone
 
-define i32 @stack_fold_extractps(<4 x float> %a0) {
+define i32 @stack_fold_extractps(<4 x float> %a0, <4 x float> %a1) {
   ;CHECK-LABEL: stack_fold_extractps
   ;CHECK:       extractps $1, {{%xmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 4-byte Folded Spill
   ;CHECK:       movl    {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Reload
   ; fadd forces execution domain
-  %1 = fadd <4 x float> %a0, <float 1.0, float 2.0, float 3.0, float 4.0>
+  %1 = fadd <4 x float> %a0, %a1
   %2 = extractelement <4 x float> %1, i32 1
   %3 = bitcast float %2 to i32
   %4 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()

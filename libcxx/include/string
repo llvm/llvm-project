@@ -437,6 +437,11 @@ template<class charT, class traits, class Allocator>
 basic_istream<charT, traits>&
 getline(basic_istream<charT, traits>& is, basic_string<charT, traits, Allocator>& str);
 
+template<class charT, class traits, class Allocator, class U>
+void erase(basic_string<charT, traits, Allocator>& c, const U& value); // C++20
+template<class charT, class traits, class Allocator, class Predicate>
+void erase_if(basic_string<charT, traits, Allocator>& c, Predicate pred); // C++20
+
 typedef basic_string<char>    string;
 typedef basic_string<wchar_t> wstring;
 typedef basic_string<char16_t> u16string;
@@ -4275,6 +4280,18 @@ getline(basic_istream<_CharT, _Traits>&& __is,
         basic_string<_CharT, _Traits, _Allocator>& __str);
 
 #endif  // _LIBCPP_CXX03_LANG
+
+#if _LIBCPP_STD_VER > 17
+template<class _CharT, class _Traits, class _Allocator, class _Up>
+inline _LIBCPP_INLINE_VISIBILITY
+void erase(basic_string<_CharT, _Traits, _Allocator>& __str, const _Up& __v)
+{ __str.erase(_VSTD::remove(__str.begin(), __str.end(), __v), __str.end()); }
+
+template<class _CharT, class _Traits, class _Allocator, class _Predicate>
+inline _LIBCPP_INLINE_VISIBILITY
+void erase_if(basic_string<_CharT, _Traits, _Allocator>& __str, _Predicate __pred)
+{ __str.erase(_VSTD::remove_if(__str.begin(), __str.end(), __pred), __str.end()); }
+#endif
 
 #if _LIBCPP_DEBUG_LEVEL >= 2
 

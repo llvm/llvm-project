@@ -3,6 +3,8 @@
 # RUN:   -debug-only=aarch64-prelegalizer-combiner,gi-combiner 2>&1 >/dev/null \
 # RUN:   | FileCheck %s --check-prefix=CHECK-WORKLIST
 
+# REQUIRES: asserts
+
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64--"
