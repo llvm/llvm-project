@@ -251,9 +251,7 @@ public:
         return false;
     }
 
-    if (m_event_type_mask == 0 || m_event_type_mask & event_sp->GetType())
-      return true;
-    return false;
+    return m_event_type_mask == 0 || m_event_type_mask & event_sp->GetType();
   }
 
 private:

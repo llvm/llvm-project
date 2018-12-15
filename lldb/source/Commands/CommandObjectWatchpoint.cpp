@@ -138,11 +138,9 @@ bool CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
       return false;
     wp_ids.push_back(beg);
   }
-  // It is an error if after the loop, we're still in_range.
-  if (in_range)
-    return false;
 
-  return true; // Success!
+  // It is an error if after the loop, we're still in_range.
+  return !in_range;
 }
 
 //-------------------------------------------------------------------------

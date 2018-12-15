@@ -302,36 +302,38 @@ Status ProcessMachCore::DoLoadCore() {
   // LC_IDENT is very obsolete and should not be used in new code, but if the
   // load command is present, let's use the contents.
   std::string corefile_identifier = core_objfile->GetIdentifierString();
-  if (found_main_binary_definitively == false 
-      && corefile_identifier.find("Darwin Kernel") != std::string::npos) {
-      UUID uuid;
-      addr_t addr = LLDB_INVALID_ADDRESS;
-      if (corefile_identifier.find("UUID=") != std::string::npos) {
-          size_t p = corefile_identifier.find("UUID=") + strlen("UUID=");
-          std::string uuid_str = corefile_identifier.substr(p, 36);
-          uuid.SetFromStringRef(uuid_str);
+  if (!found_main_binary_definitively &&
+      corefile_identifier.find("Darwin Kernel") != std::string::npos) {
+    UUID uuid;
+    addr_t addr = LLDB_INVALID_ADDRESS;
+    if (corefile_identifier.find("UUID=") != std::string::npos) {
+      size_t p = corefile_identifier.find("UUID=") + strlen("UUID=");
+      std::string uuid_str = corefile_identifier.substr(p, 36);
+      uuid.SetFromStringRef(uuid_str);
+    }
+    if (corefile_identifier.find("stext=") != std::string::npos) {
+      size_t p = corefile_identifier.find("stext=") + strlen("stext=");
+      if (corefile_identifier[p] == '0' && corefile_identifier[p + 1] == 'x') {
+        errno = 0;
+        addr = ::strtoul(corefile_identifier.c_str() + p, NULL, 16);
+        if (errno != 0 || addr == 0)
+          addr = LLDB_INVALID_ADDRESS;
       }
-      if (corefile_identifier.find("stext=") != std::string::npos) {
-          size_t p = corefile_identifier.find("stext=") + strlen("stext=");
-          if (corefile_identifier[p] == '0' && corefile_identifier[p + 1] == 'x') {
-              errno = 0;
-              addr = ::strtoul(corefile_identifier.c_str() + p, NULL, 16);
-              if (errno != 0 || addr == 0)
-                  addr = LLDB_INVALID_ADDRESS;
-          }
-      }
-      if (uuid.IsValid() && addr != LLDB_INVALID_ADDRESS) {
-          m_mach_kernel_addr = addr;
-          found_main_binary_definitively = true;
-          if (log)
-            log->Printf("ProcessMachCore::DoLoadCore: Using the kernel address 0x%" PRIx64
-                        " from LC_IDENT/LC_NOTE 'kern ver str' string: '%s'", addr, corefile_identifier.c_str());
-      }
+    }
+    if (uuid.IsValid() && addr != LLDB_INVALID_ADDRESS) {
+      m_mach_kernel_addr = addr;
+      found_main_binary_definitively = true;
+      if (log)
+        log->Printf(
+            "ProcessMachCore::DoLoadCore: Using the kernel address 0x%" PRIx64
+            " from LC_IDENT/LC_NOTE 'kern ver str' string: '%s'",
+            addr, corefile_identifier.c_str());
+    }
   }
 
-  if (found_main_binary_definitively == false
-      && (m_dyld_addr == LLDB_INVALID_ADDRESS
-          || m_mach_kernel_addr == LLDB_INVALID_ADDRESS)) {
+  if (!found_main_binary_definitively &&
+      (m_dyld_addr == LLDB_INVALID_ADDRESS ||
+       m_mach_kernel_addr == LLDB_INVALID_ADDRESS)) {
     // We need to locate the main executable in the memory ranges we have in
     // the core file.  We need to search for both a user-process dyld binary
     // and a kernel binary in memory; we must look at all the pages in the
@@ -352,16 +354,15 @@ Status ProcessMachCore::DoLoadCore() {
     }
   }
 
-  if (found_main_binary_definitively == false 
-       && m_mach_kernel_addr != LLDB_INVALID_ADDRESS) {
+  if (!found_main_binary_definitively &&
+      m_mach_kernel_addr != LLDB_INVALID_ADDRESS) {
     // In the case of multiple kernel images found in the core file via
     // exhaustive search, we may not pick the correct one.  See if the
     // DynamicLoaderDarwinKernel's search heuristics might identify the correct
     // one. Most of the time, I expect the address from SearchForDarwinKernel()
     // will be the same as the address we found via exhaustive search.
 
-    if (GetTarget().GetArchitecture().IsValid() == false &&
-        m_core_module_sp.get()) {
+    if (!GetTarget().GetArchitecture().IsValid() && m_core_module_sp.get()) {
       GetTarget().SetArchitecture(m_core_module_sp->GetArchitecture());
     }
 

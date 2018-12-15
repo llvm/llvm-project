@@ -71,7 +71,7 @@ PlatformSP PlatformRemoteiOS::CreateInstance(bool force, const ArchSpec *arch) {
   }
 
   bool create = force;
-  if (create == false && arch && arch->IsValid()) {
+  if (!create && arch && arch->IsValid()) {
     switch (arch->GetMachine()) {
     case llvm::Triple::arm:
     case llvm::Triple::aarch64:

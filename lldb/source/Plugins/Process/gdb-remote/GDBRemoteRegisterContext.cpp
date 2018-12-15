@@ -458,7 +458,7 @@ bool GDBRemoteRegisterContext::ReadAllRegisterValues(
       ((ProcessGDBRemote *)process)->GetGDBRemote());
 
   const bool use_g_packet =
-      gdb_comm.AvoidGPackets((ProcessGDBRemote *)process) == false;
+      !gdb_comm.AvoidGPackets((ProcessGDBRemote *)process);
 
   GDBRemoteClientBase::Lock lock(gdb_comm, false);
   if (lock) {
@@ -521,7 +521,7 @@ bool GDBRemoteRegisterContext::WriteAllRegisterValues(
       ((ProcessGDBRemote *)process)->GetGDBRemote());
 
   const bool use_g_packet =
-      gdb_comm.AvoidGPackets((ProcessGDBRemote *)process) == false;
+      !gdb_comm.AvoidGPackets((ProcessGDBRemote *)process);
 
   GDBRemoteClientBase::Lock lock(gdb_comm, false);
   if (lock) {

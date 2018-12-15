@@ -57,10 +57,7 @@ bool ThreadPlanBase::ValidatePlan(Stream *error) { return true; }
 bool ThreadPlanBase::DoPlanExplainsStop(Event *event_ptr) {
   // The base plan should defer to its tracer, since by default it always
   // handles the stop.
-  if (TracerExplainsStop())
-    return false;
-  else
-    return true;
+  return !TracerExplainsStop();
 }
 
 Vote ThreadPlanBase::ShouldReportStop(Event *event_ptr) {

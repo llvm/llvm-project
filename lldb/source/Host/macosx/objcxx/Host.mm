@@ -486,11 +486,9 @@ static bool GetMacOSXProcessCPUType(ProcessInstanceInfo &process_info) {
         bool host_cpu_is_64bit;
         uint32_t is64bit_capable;
         size_t is64bit_capable_len = sizeof(is64bit_capable);
-        if (sysctlbyname("hw.cpu64bit_capable", &is64bit_capable,
-                         &is64bit_capable_len, NULL, 0) == 0)
-          host_cpu_is_64bit = true;
-        else
-          host_cpu_is_64bit = false;
+        host_cpu_is_64bit =
+            sysctlbyname("hw.cpu64bit_capable", &is64bit_capable,
+                         &is64bit_capable_len, NULL, 0) == 0;
 
         // if the host is an armv8 device, its cpusubtype will be in
         // CPU_SUBTYPE_ARM64 numbering
@@ -660,7 +658,7 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
     if (our_uid == 0)
       kinfo_user_matches = true;
 
-    if (kinfo_user_matches == false || // Make sure the user is acceptable
+    if (!kinfo_user_matches || // Make sure the user is acceptable
         static_cast<lldb::pid_t>(kinfo.kp_proc.p_pid) ==
             our_pid ||                   // Skip this process
         kinfo.kp_proc.p_pid == 0 ||      // Skip kernel (kernel pid is zero)

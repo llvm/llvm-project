@@ -163,10 +163,7 @@ bool TypeCategoryImpl::Get(ValueObject &valobj,
 
   else /*if (filter_sp.get() && synth.get())*/
   {
-    if (filter_sp->GetRevision() > synth->GetRevision())
-      pick_synth = false;
-    else
-      pick_synth = true;
+    pick_synth = filter_sp->GetRevision() <= synth->GetRevision();
   }
   if (pick_synth) {
     if (regex_synth && reason)

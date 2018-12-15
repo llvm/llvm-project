@@ -161,7 +161,7 @@ bool DWARFCallFrameInfo::GetUnwindPlan(Address addr, UnwindPlan &unwind_plan) {
       module_sp->GetObjectFile() != &m_objfile)
     return false;
 
-  if (GetFDEEntryByFileAddress(addr.GetFileAddress(), fde_entry) == false)
+  if (!GetFDEEntryByFileAddress(addr.GetFileAddress(), fde_entry))
     return false;
   return FDEToUnwindPlan(fde_entry.data, addr, unwind_plan);
 }
@@ -243,7 +243,7 @@ DWARFCallFrameInfo::CIESP
 DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
   CIESP cie_sp(new CIE(cie_offset));
   lldb::offset_t offset = cie_offset;
-  if (m_cfi_data_initialized == false)
+  if (!m_cfi_data_initialized)
     GetCFIData();
   uint32_t length = m_cfi_data.GetU32(&offset);
   dw_offset_t cie_id, end_offset;
@@ -394,7 +394,7 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
 }
 
 void DWARFCallFrameInfo::GetCFIData() {
-  if (m_cfi_data_initialized == false) {
+  if (!m_cfi_data_initialized) {
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
     if (log)
       m_objfile.GetModule()->LogMessage(log, "Reading EH frame info");
@@ -431,7 +431,7 @@ void DWARFCallFrameInfo::GetFDEIndex() {
   }
 
   lldb::offset_t offset = 0;
-  if (m_cfi_data_initialized == false)
+  if (!m_cfi_data_initialized)
     GetCFIData();
   while (m_cfi_data.ValidOffsetForDataOfSize(offset, 8)) {
     const dw_offset_t current_entry = offset;
@@ -533,7 +533,7 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
   if (m_section_sp.get() == nullptr || m_section_sp->IsEncrypted())
     return false;
 
-  if (m_cfi_data_initialized == false)
+  if (!m_cfi_data_initialized)
     GetCFIData();
 
   uint32_t length = m_cfi_data.GetU32(&offset);

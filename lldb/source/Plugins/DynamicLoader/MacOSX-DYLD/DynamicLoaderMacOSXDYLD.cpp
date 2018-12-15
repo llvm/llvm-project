@@ -85,7 +85,7 @@ DynamicLoader *DynamicLoaderMacOSXDYLD::CreateInstance(Process *process,
     }
   }
 
-  if (UseDYLDSPI(process) == true) {
+  if (UseDYLDSPI(process)) {
     create = false;
   }
 
@@ -122,12 +122,12 @@ bool DynamicLoaderMacOSXDYLD::ProcessDidExec() {
       // value differs from the Process' image info address. When a process
       // execs itself it might cause a change if ASLR is enabled.
       const addr_t shlib_addr = m_process->GetImageInfoAddress();
-      if (m_process_image_addr_is_all_images_infos == true &&
+      if (m_process_image_addr_is_all_images_infos &&
           shlib_addr != m_dyld_all_image_infos_addr) {
         // The image info address from the process is the
         // 'dyld_all_image_infos' address and it has changed.
         did_exec = true;
-      } else if (m_process_image_addr_is_all_images_infos == false &&
+      } else if (!m_process_image_addr_is_all_images_infos &&
                  shlib_addr == m_dyld.address) {
         // The image info address from the process is the mach_header address
         // for dyld and it has changed.

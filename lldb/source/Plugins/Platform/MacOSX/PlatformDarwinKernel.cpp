@@ -91,7 +91,7 @@ PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
   // ArchSpec for normal userland debugging.  It is only useful in kernel debug
   // sessions and the DynamicLoaderDarwinPlugin (or a user doing 'platform
   // select') will force the creation of this Platform plugin.
-  if (force == false) {
+  if (!force) {
     if (log)
       log->Printf("PlatformDarwinKernel::%s() aborting creation of platform "
                   "because force == false",
@@ -102,7 +102,7 @@ PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
   bool create = force;
   LazyBool is_ios_debug_session = eLazyBoolCalculate;
 
-  if (create == false && arch && arch->IsValid()) {
+  if (!create && arch && arch->IsValid()) {
     const llvm::Triple &triple = arch->GetTriple();
     switch (triple.getVendor()) {
     case llvm::Triple::Apple:
@@ -640,10 +640,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
   shallow_bundle_str += ".dSYM";
   dsym_fspec.SetFile(shallow_bundle_str, FileSpec::Style::native);
   FileSystem::Instance().Resolve(dsym_fspec);
-  if (FileSystem::Instance().IsDirectory(dsym_fspec)) {
-    return true;
-  }
-  return false;
+  return FileSystem::Instance().IsDirectory(dsym_fspec);
 }
 
 // Given a FileSpec of /dir/dir/mach.development.t7004 Return true if a dSYM
@@ -654,10 +651,7 @@ bool PlatformDarwinKernel::KernelHasdSYMSibling(const FileSpec &kernel_binary) {
   std::string filename = kernel_binary.GetFilename().AsCString();
   filename += ".dSYM";
   kernel_dsym.GetFilename() = ConstString(filename);
-  if (FileSystem::Instance().IsDirectory(kernel_dsym)) {
-    return true;
-  }
-  return false;
+  return FileSystem::Instance().IsDirectory(kernel_dsym);
 }
 
 Status PlatformDarwinKernel::GetSharedModule(
