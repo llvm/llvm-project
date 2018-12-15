@@ -38,7 +38,7 @@ bool lldb_private::formatters::CXXFunctionPointerSummaryProvider(
 
       Address so_addr;
       Target *target = exe_ctx.GetTargetPtr();
-      if (target && target->GetSectionLoadList().IsEmpty() == false) {
+      if (target && !target->GetSectionLoadList().IsEmpty()) {
         if (target->GetSectionLoadList().ResolveLoadAddress(func_ptr_address,
                                                             so_addr)) {
           so_addr.Dump(&sstr, exe_ctx.GetBestExecutionContextScope(),

@@ -2648,13 +2648,8 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_C:
     return "";
 
-  case CC_X86StdCall:
-  case CC_X86FastCall:
-  case CC_X86ThisCall:
   case CC_X86VectorCall:
   case CC_X86Pascal:
-  case CC_Win64:
-  case CC_X86_64SysV:
   case CC_X86RegCall:
   case CC_AAPCS:
   case CC_AAPCS_VFP:
@@ -2667,6 +2662,16 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
     // FIXME: we should be mangling all of the above.
     return "";
 
+  case CC_X86StdCall:
+    return "stdcall";
+  case CC_X86FastCall:
+    return "fastcall";
+  case CC_X86ThisCall:
+    return "thiscall";
+  case CC_X86_64SysV:
+    return "sysv_abi";
+  case CC_Win64:
+    return "ms_abi";
   case CC_Swift:
     return "swiftcall";
   }

@@ -89,7 +89,7 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
            idx < oso_end_idx; ++idx) {
         Symbol *exe_symbol = exe_symtab->SymbolAtIndex(idx);
         if (exe_symbol) {
-          if (exe_symbol->IsDebug() == false)
+          if (!exe_symbol->IsDebug())
             continue;
 
           switch (exe_symbol->GetType()) {
@@ -179,7 +179,7 @@ public:
   GetSymbolVendor(bool can_create = true,
                   lldb_private::Stream *feedback_strm = NULL) override {
     // Scope for locker
-    if (m_symfile_ap.get() || can_create == false)
+    if (m_symfile_ap.get() || !can_create)
       return m_symfile_ap.get();
 
     ModuleSP exe_module_sp(m_exe_module_wp.lock());
@@ -1155,7 +1155,7 @@ TypeSP SymbolFileDWARFDebugMap::FindCompleteObjCDefinitionTypeForDIE(
   // Only search all .o files for the definition if we don't need the
   // implementation because otherwise, with a valid debug map we should have
   // the ObjC class symbol and the code above should have found it.
-  if (must_be_implementation == false) {
+  if (!must_be_implementation) {
     TypeSP type_sp;
 
     ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
@@ -1190,10 +1190,7 @@ uint32_t SymbolFileDWARFDebugMap::FindTypes(
     ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
       oso_dwarf->FindTypes(sc, name, parent_decl_ctx, append, max_matches,
                            searched_symbol_files, types);
-      if (types.GetSize() >= max_matches)
-        return true;
-      else
-        return false;
+      return types.GetSize() >= max_matches;
     });
   }
 

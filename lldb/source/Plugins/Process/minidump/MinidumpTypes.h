@@ -256,25 +256,6 @@ struct MinidumpMemoryInfoListHeader {
 static_assert(sizeof(MinidumpMemoryInfoListHeader) == 16,
               "sizeof MinidumpMemoryInfoListHeader is not correct!");
 
-// Reference:
-// https://msdn.microsoft.com/en-us/library/windows/desktop/ms680386(v=vs.85).aspx
-struct MinidumpMemoryInfo {
-  llvm::support::ulittle64_t base_address;
-  llvm::support::ulittle64_t allocation_base;
-  llvm::support::ulittle32_t allocation_protect;
-  llvm::support::ulittle32_t alignment1;
-  llvm::support::ulittle64_t region_size;
-  llvm::support::ulittle32_t state;
-  llvm::support::ulittle32_t protect;
-  llvm::support::ulittle32_t type;
-  llvm::support::ulittle32_t alignment2;
-
-  static std::vector<const MinidumpMemoryInfo *>
-  ParseMemoryInfoList(llvm::ArrayRef<uint8_t> &data);
-};
-static_assert(sizeof(MinidumpMemoryInfo) == 48,
-              "sizeof MinidumpMemoryInfo is not correct!");
-
 enum class MinidumpMemoryInfoState : uint32_t {
   MemCommit = 0x1000,
   MemFree = 0x10000,
@@ -309,6 +290,45 @@ enum class MinidumpMemoryProtectionContants : uint32_t {
                    PageExecuteWriteCopy,
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ PageTargetsInvalid)
 };
+
+// Reference:
+// https://msdn.microsoft.com/en-us/library/windows/desktop/ms680386(v=vs.85).aspx
+struct MinidumpMemoryInfo {
+  llvm::support::ulittle64_t base_address;
+  llvm::support::ulittle64_t allocation_base;
+  llvm::support::ulittle32_t allocation_protect;
+  llvm::support::ulittle32_t alignment1;
+  llvm::support::ulittle64_t region_size;
+  llvm::support::ulittle32_t state;
+  llvm::support::ulittle32_t protect;
+  llvm::support::ulittle32_t type;
+  llvm::support::ulittle32_t alignment2;
+
+  static std::vector<const MinidumpMemoryInfo *>
+  ParseMemoryInfoList(llvm::ArrayRef<uint8_t> &data);
+
+  bool isReadable() const {
+    const auto mask = MinidumpMemoryProtectionContants::PageNoAccess;
+    return (static_cast<uint32_t>(mask) & protect) == 0;
+  }
+
+  bool isWritable() const {
+    const auto mask = MinidumpMemoryProtectionContants::PageWritable;
+    return (static_cast<uint32_t>(mask) & protect) != 0;
+  }
+
+  bool isExecutable() const {
+    const auto mask = MinidumpMemoryProtectionContants::PageExecutable;
+    return (static_cast<uint32_t>(mask) & protect) != 0;
+  }
+  
+  bool isMapped() const {
+    return state != static_cast<uint32_t>(MinidumpMemoryInfoState::MemFree);
+  }
+};
+
+static_assert(sizeof(MinidumpMemoryInfo) == 48,
+              "sizeof MinidumpMemoryInfo is not correct!");
 
 // Reference:
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms680517(v=vs.85).aspx

@@ -419,9 +419,7 @@ bool Mangled::NameMatches(const RegularExpression &regex,
     return true;
 
   ConstString demangled = GetDemangledName(language);
-  if (demangled && regex.Execute(demangled.AsCString()))
-    return true;
-  return false;
+  return demangled && regex.Execute(demangled.AsCString());
 }
 
 //----------------------------------------------------------------------

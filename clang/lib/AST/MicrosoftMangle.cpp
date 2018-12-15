@@ -311,6 +311,7 @@ public:
   void mangleTagTypeKind(TagTypeKind TK);
   void mangleArtificialTagType(TagTypeKind TK, StringRef UnqualifiedName,
                               ArrayRef<StringRef> NestedNames = None);
+  void mangleAddressSpaceType(QualType T, Qualifiers Quals, SourceRange Range);
   void mangleType(QualType T, SourceRange Range,
                   QualifierMangleMode QMM = QMM_Mangle);
   void mangleFunctionType(const FunctionType *T,
@@ -1777,12 +1778,77 @@ void MicrosoftCXXNameMangler::manglePassObjectSizeArg(
   }
 }
 
+void MicrosoftCXXNameMangler::mangleAddressSpaceType(QualType T,
+                                                     Qualifiers Quals,
+                                                     SourceRange Range) {
+  // Address space is mangled as an unqualified templated type in the __clang
+  // namespace. The demangled version of this is:
+  // In the case of a language specific address space:
+  // __clang::struct _AS[language_addr_space]<Type>
+  // where:
+  //  <language_addr_space> ::= <OpenCL-addrspace> | <CUDA-addrspace>
+  //    <OpenCL-addrspace> ::= "CL" [ "global" | "local" | "constant" |
+  //                                "private"| "generic" ]
+  //    <CUDA-addrspace> ::= "CU" [ "device" | "constant" | "shared" ]
+  //    Note that the above were chosen to match the Itanium mangling for this.
+  //
+  // In the case of a non-language specific address space:
+  //  __clang::struct _AS<TargetAS, Type>
+  assert(Quals.hasAddressSpace() && "Not valid without address space");
+  llvm::SmallString<32> ASMangling;
+  llvm::raw_svector_ostream Stream(ASMangling);
+  MicrosoftCXXNameMangler Extra(Context, Stream);
+  Stream << "?$";
+
+  LangAS AS = Quals.getAddressSpace();
+  if (Context.getASTContext().addressSpaceMapManglingFor(AS)) {
+    unsigned TargetAS = Context.getASTContext().getTargetAddressSpace(AS);
+    Extra.mangleSourceName("_AS");
+    Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(TargetAS),
+                               /*IsBoolean*/ false);
+  } else {
+    switch (AS) {
+    default:
+      llvm_unreachable("Not a language specific address space");
+    case LangAS::opencl_global:
+      Extra.mangleSourceName("_ASCLglobal");
+      break;
+    case LangAS::opencl_local:
+      Extra.mangleSourceName("_ASCLlocal");
+      break;
+    case LangAS::opencl_constant:
+      Extra.mangleSourceName("_ASCLconstant");
+      break;
+    case LangAS::opencl_private:
+      Extra.mangleSourceName("_ASCLprivate");
+      break;
+    case LangAS::opencl_generic:
+      Extra.mangleSourceName("_ASCLgeneric");
+      break;
+    case LangAS::cuda_device:
+      Extra.mangleSourceName("_ASCUdevice");
+      break;
+    case LangAS::cuda_constant:
+      Extra.mangleSourceName("_ASCUconstant");
+      break;
+    case LangAS::cuda_shared:
+      Extra.mangleSourceName("_ASCUshared");
+      break;
+    }
+  }
+
+  Extra.mangleType(T, Range, QMM_Escape);
+  mangleQualifiers(Qualifiers(), false);
+  mangleArtificialTagType(TTK_Struct, ASMangling, {"__clang"});
+}
+
 void MicrosoftCXXNameMangler::mangleType(QualType T, SourceRange Range,
                                          QualifierMangleMode QMM) {
   // Don't use the canonical types.  MSVC includes things like 'const' on
   // pointer arguments to function pointers that canonicalization strips away.
   T = T.getDesugaredType(getASTContext());
   Qualifiers Quals = T.getLocalQualifiers();
+
   if (const ArrayType *AT = getASTContext().getAsArrayType(T)) {
     // If there were any Quals, getAsArrayType() pushed them onto the array
     // element type.
@@ -2488,7 +2554,11 @@ void MicrosoftCXXNameMangler::mangleType(const PointerType *T, Qualifiers Quals,
   QualType PointeeType = T->getPointeeType();
   manglePointerCVQualifiers(Quals);
   manglePointerExtQualifiers(Quals, PointeeType);
-  mangleType(PointeeType, Range);
+
+  if (PointeeType.getQualifiers().hasAddressSpace())
+    mangleAddressSpaceType(PointeeType, PointeeType.getQualifiers(), Range);
+  else
+    mangleType(PointeeType, Range);
 }
 
 void MicrosoftCXXNameMangler::mangleType(const ObjCObjectPointerType *T,

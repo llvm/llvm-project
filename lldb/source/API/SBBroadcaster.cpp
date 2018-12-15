@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Broadcaster.h"
+#include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Log.h"
 
 #include "lldb/API/SBBroadcaster.h"

@@ -108,11 +108,11 @@ define <4 x i32> @stack_fold_movd_load(i32 %a0) {
   ret <4 x i32> %3
 }
 
-define i32 @stack_fold_movd_store(<4 x i32> %a0) {
+define i32 @stack_fold_movd_store(<4 x i32> %a0, <4 x i32> %a1) {
   ;CHECK-LABEL: stack_fold_movd_store
   ;CHECK:       movd {{%xmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 4-byte Folded Spill
   ; add forces execution domain
-  %1 = add <4 x i32> %a0, <i32 1, i32 1, i32 1, i32 1>
+  %1 = add <4 x i32> %a0, %a1
   %2 = extractelement <4 x i32> %1, i32 0
   %3 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   ret i32 %2
@@ -128,11 +128,11 @@ define <2 x i64> @stack_fold_movq_load(<2 x i64> %a0) {
   ret <2 x i64> %3
 }
 
-define i64 @stack_fold_movq_store(<2 x i64> %a0) {
+define i64 @stack_fold_movq_store(<2 x i64> %a0, <2 x i64> %a1) {
   ;CHECK-LABEL: stack_fold_movq_store
   ;CHECK:       movq {{%xmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 8-byte Folded Spill
   ; add forces execution domain
-  %1 = add <2 x i64> %a0, <i64 1, i64 1>
+  %1 = add <2 x i64> %a0, %a1
   %2 = extractelement <2 x i64> %1, i32 0
   %3 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   ret i64 %2
@@ -487,12 +487,12 @@ entry:
   ret i16 %extract
 }
 
-define i32 @stack_fold_pextrd(<4 x i32> %a0) {
+define i32 @stack_fold_pextrd(<4 x i32> %a0, <4 x i32> %a1) {
   ;CHECK-LABEL: stack_fold_pextrd
   ;CHECK:       pextrd $1, {{%xmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 4-byte Folded Spill
   ;CHECK:       movl    {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Reload
   ; add forces execution domain
-  %1 = add <4 x i32> %a0, <i32 1, i32 2, i32 3, i32 4>
+  %1 = add <4 x i32> %a0, %a1
   %2 = extractelement <4 x i32> %1, i32 1
   %3 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   ret i32 %2

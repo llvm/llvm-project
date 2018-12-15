@@ -1079,9 +1079,9 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
             m_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
                 exe_ctx.GetTargetPtr());
 
-      if (m_sc.function->GetFrameBaseExpression().Evaluate(
+      if (!m_sc.function->GetFrameBaseExpression().Evaluate(
               &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr,
-              expr_value, &m_frame_base_error) == false) {
+              expr_value, &m_frame_base_error)) {
         // We should really have an error if evaluate returns, but in case we
         // don't, lets set the error to something at least.
         if (m_frame_base_error.Success())

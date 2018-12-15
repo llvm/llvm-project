@@ -652,6 +652,10 @@ void InstrEmitter::EmitRegSequence(SDNode *Node,
   const MCInstrDesc &II = TII->get(TargetOpcode::REG_SEQUENCE);
   MachineInstrBuilder MIB = BuildMI(*MF, Node->getDebugLoc(), II, NewVReg);
   unsigned NumOps = Node->getNumOperands();
+  // REG_SEQUENCE can "inherit" a chain from a subnode.
+  if (NumOps && Node->getOperand(NumOps-1).getValueType() == MVT::Other)
+    --NumOps; // Ignore chain if it exists.
+
   assert((NumOps & 1) == 1 &&
          "REG_SEQUENCE must have an odd number of operands!");
   for (unsigned i = 1; i != NumOps; ++i) {

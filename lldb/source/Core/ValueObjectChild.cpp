@@ -124,7 +124,7 @@ bool ValueObjectChild::UpdateValue() {
 
       Flags parent_type_flags(parent_type.GetTypeInfo());
       const bool is_instance_ptr_base =
-          ((m_is_base_class == true) &&
+          ((m_is_base_class) &&
            (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
 
       if (parent->GetCompilerType().ShouldTreatScalarValueAsAddress()) {
@@ -142,7 +142,7 @@ bool ValueObjectChild::UpdateValue() {
           switch (addr_type) {
           case eAddressTypeFile: {
             lldb::ProcessSP process_sp(GetProcessSP());
-            if (process_sp && process_sp->IsAlive() == true)
+            if (process_sp && process_sp->IsAlive())
               m_value.SetValueType(Value::eValueTypeLoadAddress);
             else
               m_value.SetValueType(Value::eValueTypeFileAddress);

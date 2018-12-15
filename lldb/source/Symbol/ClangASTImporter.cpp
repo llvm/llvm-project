@@ -1002,7 +1002,7 @@ clang::Decl *ClangASTImporter::Minion::Imported(clang::Decl *from,
         if (isa<TagDecl>(to) || isa<ObjCInterfaceDecl>(to)) {
           RecordDecl *from_record_decl = dyn_cast<RecordDecl>(from);
           if (from_record_decl == nullptr ||
-              from_record_decl->isInjectedClassName() == false) {
+              !from_record_decl->isInjectedClassName()) {
             NamedDecl *to_named_decl = dyn_cast<NamedDecl>(to);
 
             if (!m_decls_already_deported->count(to_named_decl))

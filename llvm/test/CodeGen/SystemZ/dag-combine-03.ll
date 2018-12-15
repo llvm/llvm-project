@@ -10,9 +10,12 @@ entry:
 lab0:
   %phi = phi i64 [ %sel, %lab0 ], [ 0, %entry ]
   %add = add nuw nsw i64 %phi, 1
+  %add2 = add nuw nsw i64 %phi, 2
   %cmp = icmp eq i64 %add, undef
+  %cmp2 = icmp eq i64 %add2, undef
   %ins = insertelement <2 x i1> undef, i1 %cmp, i32 0
-  %xor = xor <2 x i1> %ins, <i1 true, i1 true>
+  %ins2 = insertelement <2 x i1> undef, i1 %cmp2, i32 0
+  %xor = xor <2 x i1> %ins, %ins2
   %extr = extractelement <2 x i1> %xor, i32 0
 ; The EXTRACT_VECTOR_ELT is done first into an i32, and then AND:ed with
 ; 1. The AND is not actually necessary since the element contains a CC (i1)

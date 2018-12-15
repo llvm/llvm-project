@@ -91,14 +91,14 @@ lldb::SBTypeFilter &SBTypeFilter::operator=(const lldb::SBTypeFilter &rhs) {
 }
 
 bool SBTypeFilter::operator==(lldb::SBTypeFilter &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return !rhs.IsValid();
 
   return m_opaque_sp == rhs.m_opaque_sp;
 }
 
 bool SBTypeFilter::IsEqualTo(lldb::SBTypeFilter &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return !rhs.IsValid();
 
   if (GetNumberOfExpressionPaths() != rhs.GetNumberOfExpressionPaths())
@@ -113,7 +113,7 @@ bool SBTypeFilter::IsEqualTo(lldb::SBTypeFilter &rhs) {
 }
 
 bool SBTypeFilter::operator!=(lldb::SBTypeFilter &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return !rhs.IsValid();
 
   return m_opaque_sp != rhs.m_opaque_sp;

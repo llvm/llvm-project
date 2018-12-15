@@ -527,7 +527,7 @@ bool ObjectFilePECOFF::ParseSectionHeaders(
     }
   }
 
-  return m_sect_headers.empty() == false;
+  return !m_sect_headers.empty();
 }
 
 bool ObjectFilePECOFF::GetSectionName(std::string &sect_name,
