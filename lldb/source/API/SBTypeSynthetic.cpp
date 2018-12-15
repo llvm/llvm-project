@@ -106,13 +106,13 @@ operator=(const lldb::SBTypeSynthetic &rhs) {
 }
 
 bool SBTypeSynthetic::operator==(lldb::SBTypeSynthetic &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return !rhs.IsValid();
   return m_opaque_sp == rhs.m_opaque_sp;
 }
 
 bool SBTypeSynthetic::IsEqualTo(lldb::SBTypeSynthetic &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return !rhs.IsValid();
 
   if (m_opaque_sp->IsScripted() != rhs.m_opaque_sp->IsScripted())
@@ -128,7 +128,7 @@ bool SBTypeSynthetic::IsEqualTo(lldb::SBTypeSynthetic &rhs) {
 }
 
 bool SBTypeSynthetic::operator!=(lldb::SBTypeSynthetic &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return !rhs.IsValid();
   return m_opaque_sp != rhs.m_opaque_sp;
 }

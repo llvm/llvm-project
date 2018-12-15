@@ -378,10 +378,7 @@ bool CMIUtilString::IsNumber() const {
     return false;
 
   const size_t nPos = find_first_not_of("-.0123456789");
-  if (nPos != std::string::npos)
-    return false;
-
-  return true;
+  return nPos == std::string::npos;
 }
 
 //++
@@ -399,10 +396,7 @@ bool CMIUtilString::IsHexadecimalNumber() const {
 
   // Skip '0x..' prefix
   const size_t nPos = find_first_not_of("01234567890ABCDEFabcedf", 2);
-  if (nPos != std::string::npos)
-    return false;
-
-  return true;
+  return nPos == std::string::npos;
 }
 
 //++
@@ -419,10 +413,7 @@ bool CMIUtilString::ExtractNumber(MIint64 &vwrNumber) const {
   vwrNumber = 0;
 
   if (!IsNumber()) {
-    if (ExtractNumberFromHexadecimal(vwrNumber))
-      return true;
-
-    return false;
+    return ExtractNumberFromHexadecimal(vwrNumber);
   }
 
   std::stringstream ss(const_cast<CMIUtilString &>(*this));
@@ -639,10 +630,7 @@ bool CMIUtilString::IsQuoted() const {
     return false;
 
   const size_t nLen = length();
-  if ((nLen > 0) && (at(nLen - 1) != cQuote))
-    return false;
-
-  return true;
+  return !((nLen > 0) && (at(nLen - 1) != cQuote));
 }
 
 //++

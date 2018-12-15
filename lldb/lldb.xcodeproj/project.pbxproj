@@ -3580,12 +3580,14 @@
 		2321F9421BDD343A00BA9A93 /* Utility */ = {
 			isa = PBXGroup;
 			children = (
+				23CB14E61D66CC0E00EDDDE1 /* BroadcasterTest.cpp */,
 				7F94D7172040A13A006EE3EA /* CleanUpTest.cpp */,
 				23E2E5161D903689006F38BB /* ArchSpecTest.cpp */,
 				9A3D43C81F3150D200EB767C /* ConstStringTest.cpp */,
 				AFA1B62B219E0ED900A8AB7E /* DataExtractorTest.cpp */,
 				23CB14FD1D66CD2400EDDDE1 /* FileSpecTest.cpp */,
 				8C3BD99F1EF5D1B50016C343 /* JSONTest.cpp */,
+				9A3D43E31F3237D500EB767C /* ListenerTest.cpp */,
 				9A3D43C71F3150D200EB767C /* LogTest.cpp */,
 				9A3D43CB1F3150D200EB767C /* NameMatchesTest.cpp */,
 				23CB14E91D66CC0E00EDDDE1 /* ScalarTest.cpp */,
@@ -3745,10 +3747,8 @@
 		23CB14E51D66CBEB00EDDDE1 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				23CB14E61D66CC0E00EDDDE1 /* BroadcasterTest.cpp */,
 				23CB14E71D66CC0E00EDDDE1 /* CMakeLists.txt */,
 				58A080B12112AB2200D5580F /* HighlighterTest.cpp */,
-				9A3D43E31F3237D500EB767C /* ListenerTest.cpp */,
 				4F29D3CD21010F84003B549A /* MangledTest.cpp */,
 				4FBC04F3211A0F0F0015A814 /* RichManglingContextTest.cpp */,
 				9A3D43E11F3237D500EB767C /* StreamCallbackTest.cpp */,

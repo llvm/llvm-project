@@ -109,5 +109,7 @@ RUN apt-get install -y --no-install-recommends \
     python \
     buildbot-slave
 
-ADD scripts /libcxx-scripts/
-RUN /libcxx-scripts/install_clang_packages.sh
+ADD scripts/install_clang_packages.sh /tmp/install_clang_packages.sh
+RUN /tmp/install_clang_packages.sh && rm /tmp/install_clang_packages.sh
+
+RUN git clone https://git.llvm.org/git/libcxx.git /libcxx

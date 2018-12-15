@@ -376,7 +376,7 @@ RegisterContextPOSIX_x86::FPRType RegisterContextPOSIX_x86::GetFPRType() {
   if (m_fpr_type == eNotValid) {
     // TODO: Use assembly to call cpuid on the inferior and query ebx or ecx
     m_fpr_type = eXSAVE; // extended floating-point registers, if available
-    if (false == ReadFPR())
+    if (!ReadFPR())
       m_fpr_type = eFXSAVE; // assume generic floating-point registers
   }
   return m_fpr_type;

@@ -252,10 +252,7 @@ bool GDBRemoteCommunicationClient::GetVAttachOrWaitSupported() {
         m_attach_or_wait_reply = eLazyBoolYes;
     }
   }
-  if (m_attach_or_wait_reply == eLazyBoolYes)
-    return true;
-  else
-    return false;
+  return m_attach_or_wait_reply == eLazyBoolYes;
 }
 
 bool GDBRemoteCommunicationClient::GetSyncThreadStateSupported() {
@@ -269,14 +266,11 @@ bool GDBRemoteCommunicationClient::GetSyncThreadStateSupported() {
         m_prepare_for_reg_writing_reply = eLazyBoolYes;
     }
   }
-  if (m_prepare_for_reg_writing_reply == eLazyBoolYes)
-    return true;
-  else
-    return false;
+  return m_prepare_for_reg_writing_reply == eLazyBoolYes;
 }
 
 void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
-  if (did_exec == false) {
+  if (!did_exec) {
     // Hard reset everything, this is when we first connect to a GDB server
     m_supports_not_sending_acks = eLazyBoolCalculate;
     m_supports_thread_suffix = eLazyBoolCalculate;
@@ -745,7 +739,7 @@ lldb::pid_t GDBRemoteCommunicationClient::GetCurrentProcessID(bool allow_lazy) {
       bool sequence_mutex_unavailable;
       size_t size;
       size = GetCurrentThreadIDs(thread_ids, sequence_mutex_unavailable);
-      if (size && sequence_mutex_unavailable == false) {
+      if (size && !sequence_mutex_unavailable) {
         m_curr_pid = thread_ids.front();
         m_curr_pid_is_valid = eLazyBoolYes;
         return m_curr_pid;
@@ -839,8 +833,8 @@ int GDBRemoteCommunicationClient::SendEnvironmentPacket(
   if (name_equal_value && name_equal_value[0]) {
     StreamString packet;
     bool send_hex_encoding = false;
-    for (const char *p = name_equal_value;
-         *p != '\0' && send_hex_encoding == false; ++p) {
+    for (const char *p = name_equal_value; *p != '\0' && !send_hex_encoding;
+         ++p) {
       if (isprint(*p)) {
         switch (*p) {
         case '$':
@@ -1693,7 +1687,7 @@ Status GDBRemoteCommunicationClient::GetWatchpointSupportInfo(uint32_t &num) {
           found_num_field = true;
         }
       }
-      if (found_num_field == false) {
+      if (!found_num_field) {
         m_supports_watchpoint_support_info = eLazyBoolNo;
       }
     } else {
@@ -1728,12 +1722,10 @@ GDBRemoteCommunicationClient::GetWatchpointsTriggerAfterInstruction(
     // On targets like MIPS and ppc64le, watchpoint exceptions are always
     // generated before the instruction is executed. The connected target may
     // not support qHostInfo or qWatchpointSupportInfo packets.
-    if (atype == llvm::Triple::mips || atype == llvm::Triple::mipsel ||
-        atype == llvm::Triple::mips64 || atype == llvm::Triple::mips64el ||
-        atype == llvm::Triple::ppc64le)
-      after = false;
-    else
-      after = true;
+    after =
+        !(atype == llvm::Triple::mips || atype == llvm::Triple::mipsel ||
+          atype == llvm::Triple::mips64 || atype == llvm::Triple::mips64el ||
+          atype == llvm::Triple::ppc64le);
   } else {
     // For MIPS and ppc64le, set m_watchpoints_trigger_after_instruction to
     // eLazyBoolNo if it is not calculated before.
@@ -3776,7 +3768,7 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
   // Is this the initial qSymbol:: packet?
   bool first_qsymbol_query = true;
 
-  if (m_supports_qSymbol && m_qSymbol_requests_done == false) {
+  if (m_supports_qSymbol && !m_qSymbol_requests_done) {
     Lock lock(*this, false);
     if (lock) {
       StreamString packet;

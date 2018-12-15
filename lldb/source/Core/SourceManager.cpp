@@ -486,7 +486,7 @@ uint32_t SourceManager::File::GetLineLength(uint32_t line,
 
   if (end_offset > start_offset) {
     uint32_t length = end_offset - start_offset;
-    if (include_newline_chars == false) {
+    if (!include_newline_chars) {
       const char *line_start =
           (const char *)m_data_sp->GetBytes() + start_offset;
       while (length > 0) {

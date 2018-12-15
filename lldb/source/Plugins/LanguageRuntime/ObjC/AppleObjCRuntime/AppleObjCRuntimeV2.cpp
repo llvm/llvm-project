@@ -454,7 +454,7 @@ bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
       }
     }
   }
-  return class_type_or_name.IsEmpty() == false;
+  return !class_type_or_name.IsEmpty();
 }
 
 //------------------------------------------------------------------
@@ -1852,8 +1852,8 @@ void AppleObjCRuntimeV2::UpdateISAToDescriptorMapIfNeeded() {
       // warn if:
       // - we could not run either expression
       // - we found fewer than num_classes_to_warn_at classes total
-      if ((false == shared_cache_update_result.m_update_ran) ||
-          (false == dynamic_update_result.m_update_ran))
+      if ((!shared_cache_update_result.m_update_ran) ||
+          (!dynamic_update_result.m_update_ran))
         WarnIfNoClassesCached(
             SharedCacheWarningReason::eExpressionExecutionFailure);
       else if (dynamic_update_result.m_num_found +
@@ -2428,7 +2428,7 @@ AppleObjCRuntimeV2::NonPointerISACache::NonPointerISACache(
 ObjCLanguageRuntime::ClassDescriptorSP
 AppleObjCRuntimeV2::NonPointerISACache::GetClassDescriptor(ObjCISA isa) {
   ObjCISA real_isa = 0;
-  if (EvaluateNonPointerISA(isa, real_isa) == false)
+  if (!EvaluateNonPointerISA(isa, real_isa))
     return ObjCLanguageRuntime::ClassDescriptorSP();
   auto cache_iter = m_cache.find(real_isa);
   if (cache_iter != m_cache.end())

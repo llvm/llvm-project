@@ -237,8 +237,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                 // object is DBGSourcePath
                                 std::string DBGSourcePath =
                                     object->GetStringValue();
-                                if (new_style_source_remapping_dictionary ==
-                                        false &&
+                                if (!new_style_source_remapping_dictionary &&
                                     !original_DBGSourcePath_value.empty()) {
                                   DBGSourcePath = original_DBGSourcePath_value;
                                 }

@@ -200,10 +200,7 @@ bool AppleThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
 // The base class MischiefManaged does some cleanup - so you have to call it in
 // your MischiefManaged derived class.
 bool AppleThreadPlanStepThroughObjCTrampoline::MischiefManaged() {
-  if (IsPlanComplete())
-    return true;
-  else
-    return false;
+  return IsPlanComplete();
 }
 
 bool AppleThreadPlanStepThroughObjCTrampoline::WillStop() { return true; }

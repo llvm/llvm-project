@@ -455,14 +455,10 @@ static bool isLoadBiasIncorrect(Target &target, const std::string &file_path) {
   // On Android L (API 21, 22) the load address of the "/system/bin/linker"
   // isn't filled in correctly.
   unsigned os_major = target.GetPlatform()->GetOSVersion().getMajor();
-  if (target.GetArchitecture().GetTriple().isAndroid() &&
-      (os_major == 21 || os_major == 22) &&
-      (file_path == "/system/bin/linker" ||
-       file_path == "/system/bin/linker64")) {
-    return true;
-  }
-
-  return false;
+  return target.GetArchitecture().GetTriple().isAndroid() &&
+         (os_major == 21 || os_major == 22) &&
+         (file_path == "/system/bin/linker" ||
+          file_path == "/system/bin/linker64");
 }
 
 void DYLDRendezvous::UpdateBaseAddrIfNecessary(SOEntry &entry,

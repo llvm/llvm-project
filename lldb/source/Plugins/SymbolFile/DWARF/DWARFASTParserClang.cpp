@@ -657,7 +657,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         }
 
         if (byte_size_valid && byte_size == 0 && type_name_cstr &&
-            die.HasChildren() == false &&
+            !die.HasChildren() &&
             sc.comp_unit->GetLanguage() == eLanguageTypeObjC) {
           // Work around an issue with clang at the moment where forward
           // declarations for objective C classes are emitted as:
@@ -895,7 +895,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           // has child classes or types that require the class to be created
           // for use as their decl contexts the class will be ready to accept
           // these child definitions.
-          if (die.HasChildren() == false) {
+          if (!die.HasChildren()) {
             // No children for this struct/union/class, lets finish it
             if (ClangASTContext::StartTagDeclarationDefinition(clang_type)) {
               ClangASTContext::CompleteTagDeclarationDefinition(clang_type);
@@ -1746,7 +1746,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                 element_type->GetForwardCompilerType();
 
             if (ClangASTContext::IsCXXClassType(array_element_type) &&
-                array_element_type.GetCompleteType() == false) {
+                !array_element_type.GetCompleteType()) {
               ModuleSP module_sp = die.GetModule();
               if (module_sp) {
                 if (die.GetCU()->GetProducer() == eProducerClang)
@@ -2269,7 +2269,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
             if (type_source_info) {
               CompilerType base_class_type(
                   &m_ast, type_source_info->getType().getAsOpaquePtr());
-              if (base_class_type.GetCompleteType() == false) {
+              if (!base_class_type.GetCompleteType()) {
                 auto module = dwarf->GetObjectFile()->GetModule();
                 module->ReportError(":: Class '%s' has a base class '%s' which "
                                     "does not have a complete definition.",
@@ -2885,7 +2885,7 @@ bool DWARFASTParserClang::ParseChildMembers(
           break;
         }
 
-        if (is_artificial == false) {
+        if (!is_artificial) {
           Type *member_type = die.ResolveTypeUID(DIERef(encoding_form));
 
           clang::FieldDecl *field_decl = NULL;
@@ -3083,7 +3083,7 @@ bool DWARFASTParserClang::ParseChildMembers(
               }
 
               if (ClangASTContext::IsCXXClassType(member_clang_type) &&
-                  member_clang_type.GetCompleteType() == false) {
+                  !member_clang_type.GetCompleteType()) {
                 if (die.GetCU()->GetProducer() == eProducerClang)
                   module_sp->ReportError(
                       "DWARF DIE at 0x%8.8x (class %s) has a member variable "

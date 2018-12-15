@@ -344,7 +344,7 @@ public:
   bool IsEnabled() const { return m_enabled; }
 
   uint32_t GetEnabledPosition() {
-    if (m_enabled == false)
+    if (!m_enabled)
       return UINT32_MAX;
     else
       return m_enabled_position;

@@ -100,10 +100,10 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
     return false;
   }
   UnwindPlan::Row::RegisterLocation first_row_pc_loc;
-  if (first_row->GetRegisterInfo(
+  if (!first_row->GetRegisterInfo(
           pc_regnum.GetAsKind(unwind_plan.GetRegisterKind()),
-          first_row_pc_loc) == false ||
-      first_row_pc_loc.IsAtCFAPlusOffset() == false ||
+          first_row_pc_loc) ||
+      !first_row_pc_loc.IsAtCFAPlusOffset() ||
       first_row_pc_loc.GetOffset() != -wordsize) {
     return false;
   }

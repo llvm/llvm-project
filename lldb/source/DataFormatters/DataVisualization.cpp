@@ -145,7 +145,7 @@ void DataVisualization::Categories::Enable(lldb::LanguageType lang_type) {
 }
 
 void DataVisualization::Categories::Disable(const ConstString &category) {
-  if (GetFormatManager().GetCategory(category)->IsEnabled() == true)
+  if (GetFormatManager().GetCategory(category)->IsEnabled())
     GetFormatManager().DisableCategory(category);
 }
 
@@ -166,7 +166,7 @@ void DataVisualization::Categories::Enable(
 
 void DataVisualization::Categories::Disable(
     const lldb::TypeCategoryImplSP &category) {
-  if (category.get() && category->IsEnabled() == true)
+  if (category.get() && category->IsEnabled())
     GetFormatManager().DisableCategory(category);
 }
 
