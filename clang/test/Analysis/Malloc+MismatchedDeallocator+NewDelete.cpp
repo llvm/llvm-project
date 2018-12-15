@@ -46,7 +46,7 @@ void testMismatchedDeallocator() {
 void testNewDoubleFree() {
   int *p = new int;
   delete p;
-  delete p; // expected-warning{{Attempt to free released memory}}
+  delete p; // expected-warning{{Attempt to delete released memory}}
 }
 
 void testNewLeak() {

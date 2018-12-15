@@ -20,7 +20,6 @@ add_clang_library(clangStaticAnalyzerCore
   CheckerContext.cpp
   CheckerHelpers.cpp
   CheckerManager.cpp
-  CheckerRegistry.cpp
   CommonBugCategories.cpp
   ConstraintManager.cpp
   CoreEngine.cpp
