@@ -261,7 +261,7 @@ lldb::SBTypeSummary &SBTypeSummary::operator=(const lldb::SBTypeSummary &rhs) {
 }
 
 bool SBTypeSummary::operator==(lldb::SBTypeSummary &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return !rhs.IsValid();
   return m_opaque_sp == rhs.m_opaque_sp;
 }
@@ -305,7 +305,7 @@ bool SBTypeSummary::IsEqualTo(lldb::SBTypeSummary &rhs) {
 }
 
 bool SBTypeSummary::operator!=(lldb::SBTypeSummary &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return !rhs.IsValid();
   return m_opaque_sp != rhs.m_opaque_sp;
 }

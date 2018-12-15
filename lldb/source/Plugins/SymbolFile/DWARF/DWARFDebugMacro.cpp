@@ -25,7 +25,7 @@ DWARFDebugMacroHeader::ParseHeader(const DWARFDataExtractor &debug_macro_data,
   header.m_version = debug_macro_data.GetU16(offset);
 
   uint8_t flags = debug_macro_data.GetU8(offset);
-  header.m_offset_is_64_bit = flags & OFFSET_SIZE_MASK ? true : false;
+  header.m_offset_is_64_bit = (flags & OFFSET_SIZE_MASK) != 0;
 
   if (flags & DEBUG_LINE_OFFSET_MASK) {
     if (header.m_offset_is_64_bit)

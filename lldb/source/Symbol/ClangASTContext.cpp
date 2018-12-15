@@ -992,9 +992,7 @@ TargetInfo *ClangASTContext::getTargetInfo() {
 static inline bool QualTypeMatchesBitSize(const uint64_t bit_size,
                                           ASTContext *ast, QualType qual_type) {
   uint64_t qual_type_bit_size = ast->getTypeSize(qual_type);
-  if (qual_type_bit_size == bit_size)
-    return true;
-  return false;
+  return qual_type_bit_size == bit_size;
 }
 
 CompilerType
@@ -1866,8 +1864,7 @@ CompilerType ClangASTContext::CreateObjCClass(const char *name,
 }
 
 static inline bool BaseSpecifierIsEmpty(const CXXBaseSpecifier *b) {
-  return ClangASTContext::RecordHasFields(b->getType()->getAsCXXRecordDecl()) ==
-         false;
+  return !ClangASTContext::RecordHasFields(b->getType()->getAsCXXRecordDecl());
 }
 
 uint32_t
@@ -3936,9 +3933,7 @@ bool ClangASTContext::IsCXXClassType(const CompilerType &type) {
     return false;
 
   clang::QualType qual_type(ClangUtil::GetCanonicalQualType(type));
-  if (!qual_type.isNull() && qual_type->getAsCXXRecordDecl() != nullptr)
-    return true;
-  return false;
+  return !qual_type.isNull() && qual_type->getAsCXXRecordDecl() != nullptr;
 }
 
 bool ClangASTContext::IsBeingDefined(lldb::opaque_compiler_type_t type) {
@@ -5593,7 +5588,7 @@ uint32_t ClangASTContext::GetNumChildren(lldb::opaque_compiler_type_t type,
                         ->getDecl());
 
             // Skip empty base classes
-            if (ClangASTContext::RecordHasFields(base_class_decl) == false)
+            if (!ClangASTContext::RecordHasFields(base_class_decl))
               continue;
 
             num_children++;
@@ -6655,7 +6650,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
           if (omit_empty_base_classes) {
             base_class_decl = llvm::cast<clang::CXXRecordDecl>(
                 base_class->getType()->getAs<clang::RecordType>()->getDecl());
-            if (ClangASTContext::RecordHasFields(base_class_decl) == false)
+            if (!ClangASTContext::RecordHasFields(base_class_decl))
               continue;
           }
 
@@ -7450,7 +7445,7 @@ ClangASTContext::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                         ->getAs<clang::RecordType>()
                         ->getDecl());
             if (omit_empty_base_classes &&
-                ClangASTContext::RecordHasFields(base_class_decl) == false)
+                !ClangASTContext::RecordHasFields(base_class_decl))
               continue;
 
             CompilerType base_class_clang_type(getASTContext(),
@@ -9105,8 +9100,7 @@ void ClangASTContext::DumpValue(
                   base_class->getType()->getAs<clang::RecordType>()->getDecl());
 
           // Skip empty base classes
-          if (verbose == false &&
-              ClangASTContext::RecordHasFields(base_class_decl) == false)
+          if (!verbose && !ClangASTContext::RecordHasFields(base_class_decl))
             continue;
 
           if (base_class->isVirtual())

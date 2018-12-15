@@ -131,10 +131,7 @@ void Watchpoint::IncrementFalseAlarmsAndReviseHitCount() {
 bool Watchpoint::ShouldStop(StoppointCallbackContext *context) {
   IncrementHitCount();
 
-  if (!IsEnabled())
-    return false;
-
-  return true;
+  return IsEnabled();
 }
 
 void Watchpoint::GetDescription(Stream *s, lldb::DescriptionLevel level) {

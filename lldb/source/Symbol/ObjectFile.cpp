@@ -588,9 +588,7 @@ bool ObjectFile::SplitArchivePathWithObject(const char *path_with_object,
         regex_match.GetMatchAtIndex(path_with_object, 2, obj)) {
       archive_file.SetFile(path, FileSpec::Style::native);
       archive_object.SetCString(obj.c_str());
-      if (must_exist && !FileSystem::Instance().Exists(archive_file))
-        return false;
-      return true;
+      return !(must_exist && !FileSystem::Instance().Exists(archive_file));
     }
   }
   return false;

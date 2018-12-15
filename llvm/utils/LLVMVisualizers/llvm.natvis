@@ -85,10 +85,10 @@ For later versions of Visual Studio, no setup is required.
   </Type>
 
   <Type Name="llvm::PointerIntPair&lt;*,*,*,*&gt;">
-    <DisplayString>{IntMask}: {($T1)(Value &amp; PointerBitMask)} [{($T3)((Value &gt;&gt; IntShift) &amp; IntMask)}]</DisplayString>
+    <DisplayString>{$T5::IntMask}: {($T1)(Value &amp; $T5::PointerBitMask)} [{($T3)((Value &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)}]</DisplayString>
     <Expand>
-      <Item Name="[ptr]">($T1)(Value &amp; PointerBitMask)</Item>
-      <Item Name="[int]">($T3)((Value &gt;&gt; IntShift) &amp; IntMask)</Item>
+      <Item Name="[ptr]">($T1)(Value &amp; $T5::PointerBitMask)</Item>
+      <Item Name="[int]">($T3)((Value &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)</Item>
     </Expand>
   </Type>
 

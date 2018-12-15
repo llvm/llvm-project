@@ -1,6 +1,6 @@
 ; Checks that llvm.dbg.declare -> llvm.dbg.value conversion utility
-; (here exposed through the SROA) pass, properly inserts bit_piece expressions
-; if it only describes part of the variable.
+; (here exposed through the SROA) pass refers to [s|z]exts of values (as
+; opposed to the operand of a [s|z]ext).
 ; RUN: opt -S -sroa %s | FileCheck %s
 
 ; Built from:
@@ -21,8 +21,8 @@
 
 ; CHECK: call void @llvm.dbg.value(metadata i8 %g.coerce0, metadata ![[VAR_STRUCT:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 8))
 ; CHECK: call void @llvm.dbg.value(metadata i64 %g.coerce1, metadata ![[VAR_STRUCT]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 64))
-; CHECK: call void @llvm.dbg.value(metadata i1 %b, metadata ![[VAR_BOOL:[0-9]+]], metadata !DIExpression())
-; CHECK: call void @llvm.dbg.value(metadata i1 %frag, metadata ![[VAR_FRAG:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 1))
+; CHECK: call void @llvm.dbg.value(metadata i8 %frombool, metadata ![[VAR_BOOL:[0-9]+]], metadata !DIExpression())
+; CHECK: call void @llvm.dbg.value(metadata i8 %frombool1, metadata ![[VAR_FRAG:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 4))
 
 %struct.foo = type { i8, i64 }
 
@@ -40,12 +40,16 @@ entry:
   %frombool = zext i1 %b to i8
   store i8 %frombool, i8* %b.addr, align 1
   call void @llvm.dbg.declare(metadata i8* %b.addr, metadata !15, metadata !16), !dbg !17
-  %frombool1 = zext i1 %frag to i8
+  %frombool1 = sext i1 %frag to i8
   store i8 %frombool1, i8* %frag.addr, align 1
   call void @llvm.dbg.declare(metadata i8* %frag.addr, metadata !18, metadata !23), !dbg !19
   call void @llvm.dbg.declare(metadata %struct.foo* %g, metadata !20, metadata !16), !dbg !21
   ret void, !dbg !22
 }
+
+; CHECK: ![[VAR_STRUCT]] = !DILocalVariable(name: "g"
+; CHECK: ![[VAR_BOOL]] = !DILocalVariable(name: "b"
+; CHECK: ![[VAR_FRAG]] = !DILocalVariable(name: "frag"
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1

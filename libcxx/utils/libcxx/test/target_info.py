@@ -144,12 +144,12 @@ class DarwinLocalTI(DefaultTargetInfo):
     def configure_env(self, env):
         library_paths = []
         # Configure the library path for libc++
-        if self.full_config.use_system_cxx_lib:
+        if self.full_config.cxx_runtime_root:
+            library_paths += [self.full_config.cxx_runtime_root]
+        elif self.full_config.use_system_cxx_lib:
             if (os.path.isdir(str(self.full_config.use_system_cxx_lib))):
                 library_paths += [self.full_config.use_system_cxx_lib]
-            pass
-        elif self.full_config.cxx_runtime_root:
-            library_paths += [self.full_config.cxx_runtime_root]
+
         # Configure the abi library path
         if self.full_config.abi_library_root:
             library_paths += [self.full_config.abi_library_root]

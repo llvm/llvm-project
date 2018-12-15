@@ -1297,33 +1297,6 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
     return;
   }
 
-  // If an argument is zero extended then use argument directly. The ZExt
-  // may be zapped by an optimization pass in future.
-  Argument *ExtendedArg = nullptr;
-  if (ZExtInst *ZExt = dyn_cast<ZExtInst>(SI->getOperand(0)))
-    ExtendedArg = dyn_cast<Argument>(ZExt->getOperand(0));
-  if (SExtInst *SExt = dyn_cast<SExtInst>(SI->getOperand(0)))
-    ExtendedArg = dyn_cast<Argument>(SExt->getOperand(0));
-  if (ExtendedArg) {
-    // If this DII was already describing only a fragment of a variable, ensure
-    // that fragment is appropriately narrowed here.
-    // But if a fragment wasn't used, describe the value as the original
-    // argument (rather than the zext or sext) so that it remains described even
-    // if the sext/zext is optimized away. This widens the variable description,
-    // leaving it up to the consumer to know how the smaller value may be
-    // represented in a larger register.
-    if (auto Fragment = DIExpr->getFragmentInfo()) {
-      unsigned FragmentOffset = Fragment->OffsetInBits;
-      SmallVector<uint64_t, 3> Ops(DIExpr->elements_begin(),
-                                   DIExpr->elements_end() - 3);
-      Ops.push_back(dwarf::DW_OP_LLVM_fragment);
-      Ops.push_back(FragmentOffset);
-      const DataLayout &DL = DII->getModule()->getDataLayout();
-      Ops.push_back(DL.getTypeSizeInBits(ExtendedArg->getType()));
-      DIExpr = Builder.createExpression(Ops);
-    }
-    DV = ExtendedArg;
-  }
   if (!LdStHasDebugValue(DIVar, DIExpr, SI))
     Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, DII->getDebugLoc(),
                                     SI);

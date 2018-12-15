@@ -880,6 +880,66 @@ static bool SemaOpenCLBuiltinToAddr(Sema &S, unsigned BuiltinID,
   return false;
 }
 
+static ExprResult SemaBuiltinLaunder(Sema &S, CallExpr *TheCall) {
+  if (checkArgCount(S, TheCall, 1))
+    return ExprError();
+
+  // Compute __builtin_launder's parameter type from the argument.
+  // The parameter type is:
+  //  * The type of the argument if it's not an array or function type,
+  //  Otherwise,
+  //  * The decayed argument type.
+  QualType ParamTy = [&]() {
+    QualType ArgTy = TheCall->getArg(0)->getType();
+    if (const ArrayType *Ty = ArgTy->getAsArrayTypeUnsafe())
+      return S.Context.getPointerType(Ty->getElementType());
+    if (ArgTy->isFunctionType()) {
+      return S.Context.getPointerType(ArgTy);
+    }
+    return ArgTy;
+  }();
+
+  TheCall->setType(ParamTy);
+
+  auto DiagSelect = [&]() -> llvm::Optional<unsigned> {
+    if (!ParamTy->isPointerType())
+      return 0;
+    if (ParamTy->isFunctionPointerType())
+      return 1;
+    if (ParamTy->isVoidPointerType())
+      return 2;
+    return llvm::Optional<unsigned>{};
+  }();
+  if (DiagSelect.hasValue()) {
+    S.Diag(TheCall->getBeginLoc(), diag::err_builtin_launder_invalid_arg)
+        << DiagSelect.getValue() << TheCall->getSourceRange();
+    return ExprError();
+  }
+
+  // We either have an incomplete class type, or we have a class template
+  // whose instantiation has not been forced. Example:
+  //
+  //   template <class T> struct Foo { T value; };
+  //   Foo<int> *p = nullptr;
+  //   auto *d = __builtin_launder(p);
+  if (S.RequireCompleteType(TheCall->getBeginLoc(), ParamTy->getPointeeType(),
+                            diag::err_incomplete_type))
+    return ExprError();
+
+  assert(ParamTy->getPointeeType()->isObjectType() &&
+         "Unhandled non-object pointer case");
+
+  InitializedEntity Entity =
+      InitializedEntity::InitializeParameter(S.Context, ParamTy, false);
+  ExprResult Arg =
+      S.PerformCopyInitialization(Entity, SourceLocation(), TheCall->getArg(0));
+  if (Arg.isInvalid())
+    return ExprError();
+  TheCall->setArg(0, Arg.get());
+
+  return TheCall;
+}
+
 // Emit an error and return true if the current architecture is not in the list
 // of supported architectures.
 static bool
@@ -1042,6 +1102,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (checkArgCount(*this, TheCall, 1)) return true;
     TheCall->setType(Context.IntTy);
     break;
+  case Builtin::BI__builtin_launder:
+    return SemaBuiltinLaunder(*this, TheCall);
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:

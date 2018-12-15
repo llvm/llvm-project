@@ -243,6 +243,9 @@ public:
 
   void emitHeader(bool UseOffsets) override;
 
+  /// Add the DW_AT_addr_base attribute to the unit DIE.
+  void addAddrTableBase();
+
   MCSymbol *getLabelBegin() const {
     assert(getSection());
     return LabelBegin;

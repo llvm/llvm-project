@@ -225,10 +225,10 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     options.SetStream(&stream);
     options.SetQuote('"');
     options.SetSourceSize(explicit_length);
-    options.SetNeedsZeroTermination(has_explicit_length == false);
+    options.SetNeedsZeroTermination(!has_explicit_length);
     options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                TypeSummaryCapping::eTypeSummaryUncapped);
-    options.SetBinaryZeroIsTerminator(has_explicit_length == false);
+    options.SetBinaryZeroIsTerminator(!has_explicit_length);
     options.SetLanguage(summary_options.GetLanguage());
     return StringPrinter::ReadStringAndDumpToStream<
         StringPrinter::StringElementType::UTF16>(options);
@@ -245,10 +245,10 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     options.SetStream(&stream);
     options.SetQuote('"');
     options.SetSourceSize(explicit_length);
-    options.SetNeedsZeroTermination(has_explicit_length == false);
+    options.SetNeedsZeroTermination(!has_explicit_length);
     options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                TypeSummaryCapping::eTypeSummaryUncapped);
-    options.SetBinaryZeroIsTerminator(has_explicit_length == false);
+    options.SetBinaryZeroIsTerminator(!has_explicit_length);
     options.SetLanguage(summary_options.GetLanguage());
     return StringPrinter::ReadStringAndDumpToStream<
         StringPrinter::StringElementType::UTF16>(options);
@@ -260,10 +260,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       Status error;
       explicit_length =
           process_sp->ReadUnsignedIntegerFromMemory(location, 1, 0, error);
-      if (error.Fail() || explicit_length == 0)
-        has_explicit_length = false;
-      else
-        has_explicit_length = true;
+      has_explicit_length = !(error.Fail() || explicit_length == 0);
       location++;
     }
     options.SetLocation(location);

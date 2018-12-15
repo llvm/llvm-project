@@ -302,8 +302,17 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// Returns an end label for use with endCVSubsection when the subsection is
   /// finished.
   MCSymbol *beginCVSubsection(codeview::DebugSubsectionKind Kind);
-
   void endCVSubsection(MCSymbol *EndLabel);
+
+  /// Opens a symbol record of the given kind. Returns an end label for use with
+  /// endSymbolRecord.
+  MCSymbol *beginSymbolRecord(codeview::SymbolKind Kind);
+  void endSymbolRecord(MCSymbol *SymEnd);
+
+  /// Emits an S_END, S_INLINESITE_END, or S_PROC_ID_END record. These records
+  /// are empty, so we emit them with a simpler assembly sequence that doesn't
+  /// involve labels.
+  void emitEndSymbolRecord(codeview::SymbolKind EndKind);
 
   void emitInlinedCallSite(const FunctionInfo &FI, const DILocation *InlinedAt,
                            const InlineSite &Site);

@@ -379,7 +379,7 @@ void GDBRemoteClientBase::Lock::SyncWithContinueThread(bool interrupt) {
         log->PutCString("GDBRemoteClientBase::Lock::Lock sent packet: \\x03");
       m_comm.m_interrupt_time = steady_clock::now();
     }
-    m_comm.m_cv.wait(lock, [this] { return m_comm.m_is_running == false; });
+    m_comm.m_cv.wait(lock, [this] { return !m_comm.m_is_running; });
     m_did_interrupt = true;
   }
   m_acquired = true;

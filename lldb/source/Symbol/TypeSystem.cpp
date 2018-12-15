@@ -193,7 +193,7 @@ void TypeSystemMap::ForEach(std::function<bool(TypeSystem *)> const &callback) {
     TypeSystem *type_system = pair.second.get();
     if (type_system && !visited.count(type_system)) {
       visited.insert(type_system);
-      if (callback(type_system) == false)
+      if (!callback(type_system))
         break;
     }
   }

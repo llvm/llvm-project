@@ -103,6 +103,14 @@ static lto::Config createConfig() {
   C.DebugPassManager = Config->LTODebugPassManager;
   C.DwoDir = Config->DwoDir;
 
+  if (Config->EmitLLVM) {
+    C.PostInternalizeModuleHook = [](size_t Task, const Module &M) {
+      if (std::unique_ptr<raw_fd_ostream> OS = openFile(Config->OutputFile))
+        WriteBitcodeToFile(M, *OS, false);
+      return false;
+    };
+  }
+
   if (Config->SaveTemps)
     checkError(C.addSaveTemps(Config->OutputFile.str() + ".",
                               /*UseInputModulePath*/ true));

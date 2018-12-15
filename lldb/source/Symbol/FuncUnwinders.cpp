@@ -255,7 +255,7 @@ UnwindPlanSP FuncUnwinders::GetAssemblyUnwindPlan(Target &target,
                                                   int current_offset) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_assembly_sp.get() || m_tried_unwind_plan_assembly ||
-      m_unwind_table.GetAllowAssemblyEmulationUnwindPlans() == false) {
+      !m_unwind_table.GetAllowAssemblyEmulationUnwindPlans()) {
     return m_unwind_plan_assembly_sp;
   }
 

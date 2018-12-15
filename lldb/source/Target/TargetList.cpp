@@ -234,7 +234,7 @@ Status TargetList::CreateTargetInternal(
             // All platforms for all modules in the executable match, so we can
             // select this platform
             platform_sp = platforms.front();
-          } else if (more_than_one_platforms == false) {
+          } else if (!more_than_one_platforms) {
             // No platforms claim to support this file
             error.SetErrorString("No matching platforms found for this file, "
                                  "specify one with the --platform option");

@@ -44,6 +44,7 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/ContinuationRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
+#include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
@@ -731,14 +732,7 @@ static Version parseVersion(StringRef Name) {
 }
 
 void CodeViewDebug::emitCompilerInformation() {
-  MCContext &Context = MMI->getContext();
-  MCSymbol *CompilerBegin = Context.createTempSymbol(),
-           *CompilerEnd = Context.createTempSymbol();
-  OS.AddComment("Record length");
-  OS.emitAbsoluteSymbolDiff(CompilerEnd, CompilerBegin, 2);
-  OS.EmitLabel(CompilerBegin);
-  OS.AddComment("Record kind: S_COMPILE3");
-  OS.EmitIntValue(SymbolKind::S_COMPILE3, 2);
+  MCSymbol *CompilerEnd = beginSymbolRecord(SymbolKind::S_COMPILE3);
   uint32_t Flags = 0;
 
   NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
@@ -777,7 +771,7 @@ void CodeViewDebug::emitCompilerInformation() {
   OS.AddComment("Null-terminated compiler version string");
   emitNullTerminatedSymbolName(OS, CompilerVersion);
 
-  OS.EmitLabel(CompilerEnd);
+  endSymbolRecord(CompilerEnd);
 }
 
 static TypeIndex getStringIdTypeIdx(GlobalTypeTableBuilder &TypeTable,
@@ -813,14 +807,12 @@ void CodeViewDebug::emitBuildInfo() {
 
   // Make a new .debug$S subsection for the S_BUILDINFO record, which points
   // from the module symbols into the type stream.
-  MCSymbol *BuildInfoEnd = beginCVSubsection(DebugSubsectionKind::Symbols);
-  OS.AddComment("Record length");
-  OS.EmitIntValue(6, 2);
-  OS.AddComment("Record kind: S_BUILDINFO");
-  OS.EmitIntValue(unsigned(SymbolKind::S_BUILDINFO), 2);
+  MCSymbol *BISubsecEnd = beginCVSubsection(DebugSubsectionKind::Symbols);
+  MCSymbol *BIEnd = beginSymbolRecord(SymbolKind::S_BUILDINFO);
   OS.AddComment("LF_BUILDINFO index");
   OS.EmitIntValue(BuildInfoIndex.getIndex(), 4);
-  endCVSubsection(BuildInfoEnd);
+  endSymbolRecord(BIEnd);
+  endCVSubsection(BISubsecEnd);
 }
 
 void CodeViewDebug::emitInlineeLinesSubsection() {
@@ -860,18 +852,11 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
 void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
                                         const DILocation *InlinedAt,
                                         const InlineSite &Site) {
-  MCSymbol *InlineBegin = MMI->getContext().createTempSymbol(),
-           *InlineEnd = MMI->getContext().createTempSymbol();
-
   assert(TypeIndices.count({Site.Inlinee, nullptr}));
   TypeIndex InlineeIdx = TypeIndices[{Site.Inlinee, nullptr}];
 
   // SymbolRecord
-  OS.AddComment("Record length");
-  OS.emitAbsoluteSymbolDiff(InlineEnd, InlineBegin, 2);   // RecordLength
-  OS.EmitLabel(InlineBegin);
-  OS.AddComment("Record kind: S_INLINESITE");
-  OS.EmitIntValue(SymbolKind::S_INLINESITE, 2); // RecordKind
+  MCSymbol *InlineEnd = beginSymbolRecord(SymbolKind::S_INLINESITE);
 
   OS.AddComment("PtrParent");
   OS.EmitIntValue(0, 4);
@@ -886,7 +871,7 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   OS.EmitCVInlineLinetableDirective(Site.SiteFuncId, FileId, StartLineNum,
                                     FI.Begin, FI.End);
 
-  OS.EmitLabel(InlineEnd);
+  endSymbolRecord(InlineEnd);
 
   emitLocalVariableList(FI, Site.InlinedLocals);
 
@@ -899,10 +884,7 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   }
 
   // Close the scope.
-  OS.AddComment("Record length");
-  OS.EmitIntValue(2, 2);                                  // RecordLength
-  OS.AddComment("Record kind: S_INLINESITE_END");
-  OS.EmitIntValue(SymbolKind::S_INLINESITE_END, 2); // RecordKind
+  emitEndSymbolRecord(SymbolKind::S_INLINESITE_END);
 }
 
 void CodeViewDebug::switchToDebugSectionForSymbol(const MCSymbol *GVSym) {
@@ -937,13 +919,7 @@ void CodeViewDebug::emitDebugInfoForThunk(const Function *GV,
   MCSymbol *SymbolsEnd = beginCVSubsection(DebugSubsectionKind::Symbols);
 
   // Emit S_THUNK32
-  MCSymbol *ThunkRecordBegin = MMI->getContext().createTempSymbol(),
-           *ThunkRecordEnd   = MMI->getContext().createTempSymbol();
-  OS.AddComment("Record length");
-  OS.emitAbsoluteSymbolDiff(ThunkRecordEnd, ThunkRecordBegin, 2);
-  OS.EmitLabel(ThunkRecordBegin);
-  OS.AddComment("Record kind: S_THUNK32");
-  OS.EmitIntValue(unsigned(SymbolKind::S_THUNK32), 2);
+  MCSymbol *ThunkRecordEnd = beginSymbolRecord(SymbolKind::S_THUNK32);
   OS.AddComment("PtrParent");
   OS.EmitIntValue(0, 4);
   OS.AddComment("PtrEnd");
@@ -961,17 +937,13 @@ void CodeViewDebug::emitDebugInfoForThunk(const Function *GV,
   OS.AddComment("Function name");
   emitNullTerminatedSymbolName(OS, FuncName);
   // Additional fields specific to the thunk ordinal would go here.
-  OS.EmitLabel(ThunkRecordEnd);
+  endSymbolRecord(ThunkRecordEnd);
 
   // Local variables/inlined routines are purposely omitted here.  The point of
   // marking this as a thunk is so Visual Studio will NOT stop in this routine.
 
   // Emit S_PROC_ID_END
-  const unsigned RecordLengthForSymbolEnd = 2;
-  OS.AddComment("Record length");
-  OS.EmitIntValue(RecordLengthForSymbolEnd, 2);
-  OS.AddComment("Record kind: S_PROC_ID_END");
-  OS.EmitIntValue(unsigned(SymbolKind::S_PROC_ID_END), 2);
+  emitEndSymbolRecord(SymbolKind::S_PROC_ID_END);
 
   endCVSubsection(SymbolsEnd);
 }
@@ -1014,19 +986,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
   OS.AddComment("Symbol subsection for " + Twine(FuncName));
   MCSymbol *SymbolsEnd = beginCVSubsection(DebugSubsectionKind::Symbols);
   {
-    MCSymbol *ProcRecordBegin = MMI->getContext().createTempSymbol(),
-             *ProcRecordEnd = MMI->getContext().createTempSymbol();
-    OS.AddComment("Record length");
-    OS.emitAbsoluteSymbolDiff(ProcRecordEnd, ProcRecordBegin, 2);
-    OS.EmitLabel(ProcRecordBegin);
-
-    if (GV->hasLocalLinkage()) {
-      OS.AddComment("Record kind: S_LPROC32_ID");
-      OS.EmitIntValue(unsigned(SymbolKind::S_LPROC32_ID), 2);
-    } else {
-      OS.AddComment("Record kind: S_GPROC32_ID");
-      OS.EmitIntValue(unsigned(SymbolKind::S_GPROC32_ID), 2);
-    }
+    SymbolKind ProcKind = GV->hasLocalLinkage() ? SymbolKind::S_LPROC32_ID
+                                                : SymbolKind::S_GPROC32_ID;
+    MCSymbol *ProcRecordEnd = beginSymbolRecord(ProcKind);
 
     // These fields are filled in by tools like CVPACK which run after the fact.
     OS.AddComment("PtrParent");
@@ -1055,15 +1017,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.AddComment("Function name");
     // Truncate the name so we won't overflow the record length field.
     emitNullTerminatedSymbolName(OS, FuncName);
-    OS.EmitLabel(ProcRecordEnd);
+    endSymbolRecord(ProcRecordEnd);
 
-    MCSymbol *FrameProcBegin = MMI->getContext().createTempSymbol(),
-             *FrameProcEnd = MMI->getContext().createTempSymbol();
-    OS.AddComment("Record length");
-    OS.emitAbsoluteSymbolDiff(FrameProcEnd, FrameProcBegin, 2);
-    OS.EmitLabel(FrameProcBegin);
-    OS.AddComment("Record kind: S_FRAMEPROC");
-    OS.EmitIntValue(unsigned(SymbolKind::S_FRAMEPROC), 2);
+    MCSymbol *FrameProcEnd = beginSymbolRecord(SymbolKind::S_FRAMEPROC);
     // Subtract out the CSR size since MSVC excludes that and we include it.
     OS.AddComment("FrameSize");
     OS.EmitIntValue(FI.FrameSize - FI.CSRSize, 4);
@@ -1079,7 +1035,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.EmitIntValue(0, 2);
     OS.AddComment("Flags (defines frame register)");
     OS.EmitIntValue(uint32_t(FI.FrameProcOpts), 4);
-    OS.EmitLabel(FrameProcEnd);
+    endSymbolRecord(FrameProcEnd);
 
     emitLocalVariableList(FI, FI.Locals);
     emitLexicalBlockList(FI.ChildBlocks, FI);
@@ -1097,13 +1053,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     for (auto Annot : FI.Annotations) {
       MCSymbol *Label = Annot.first;
       MDTuple *Strs = cast<MDTuple>(Annot.second);
-      MCSymbol *AnnotBegin = MMI->getContext().createTempSymbol(),
-               *AnnotEnd = MMI->getContext().createTempSymbol();
-      OS.AddComment("Record length");
-      OS.emitAbsoluteSymbolDiff(AnnotEnd, AnnotBegin, 2);
-      OS.EmitLabel(AnnotBegin);
-      OS.AddComment("Record kind: S_ANNOTATION");
-      OS.EmitIntValue(SymbolKind::S_ANNOTATION, 2);
+      MCSymbol *AnnotEnd = beginSymbolRecord(SymbolKind::S_ANNOTATION);
       OS.EmitCOFFSecRel32(Label, /*Offset=*/0);
       // FIXME: Make sure we don't overflow the max record size.
       OS.EmitCOFFSectionIndex(Label);
@@ -1115,17 +1065,14 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
         assert(Str.data()[Str.size()] == '\0' && "non-nullterminated MDString");
         OS.EmitBytes(StringRef(Str.data(), Str.size() + 1));
       }
-      OS.EmitLabel(AnnotEnd);
+      endSymbolRecord(AnnotEnd);
     }
 
     if (SP != nullptr)
       emitDebugInfoForUDTs(LocalUDTs);
 
     // We're done with this function.
-    OS.AddComment("Record length");
-    OS.EmitIntValue(0x0002, 2);
-    OS.AddComment("Record kind: S_PROC_ID_END");
-    OS.EmitIntValue(unsigned(SymbolKind::S_PROC_ID_END), 2);
+    emitEndSymbolRecord(SymbolKind::S_PROC_ID_END);
   }
   endCVSubsection(SymbolsEnd);
 
@@ -2595,14 +2542,7 @@ static void copyBytesForDefRange(SmallString<20> &BytePrefix,
 void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
                                       const LocalVariable &Var) {
   // LocalSym record, see SymbolRecord.h for more info.
-  MCSymbol *LocalBegin = MMI->getContext().createTempSymbol(),
-           *LocalEnd = MMI->getContext().createTempSymbol();
-  OS.AddComment("Record length");
-  OS.emitAbsoluteSymbolDiff(LocalEnd, LocalBegin, 2);
-  OS.EmitLabel(LocalBegin);
-
-  OS.AddComment("Record kind: S_LOCAL");
-  OS.EmitIntValue(unsigned(SymbolKind::S_LOCAL), 2);
+  MCSymbol *LocalEnd = beginSymbolRecord(SymbolKind::S_LOCAL);
 
   LocalSymFlags Flags = LocalSymFlags::None;
   if (Var.DIVar->isParameter())
@@ -2619,7 +2559,7 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
   OS.EmitIntValue(static_cast<uint16_t>(Flags), 2);
   // Truncate the name so we won't overflow the record length field.
   emitNullTerminatedSymbolName(OS, Var.DIVar->getName());
-  OS.EmitLabel(LocalEnd);
+  endSymbolRecord(LocalEnd);
 
   // Calculate the on disk prefix of the appropriate def range record. The
   // records and on disk formats are described in SymbolRecords.h. BytePrefix
@@ -2691,15 +2631,7 @@ void CodeViewDebug::emitLexicalBlockList(ArrayRef<LexicalBlock *> Blocks,
 /// lexical block scope.
 void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
                                      const FunctionInfo& FI) {
-  MCSymbol *RecordBegin = MMI->getContext().createTempSymbol(),
-           *RecordEnd   = MMI->getContext().createTempSymbol();
-
-  // Lexical block symbol record.
-  OS.AddComment("Record length");
-  OS.emitAbsoluteSymbolDiff(RecordEnd, RecordBegin, 2);   // Record Length
-  OS.EmitLabel(RecordBegin);
-  OS.AddComment("Record kind: S_BLOCK32");
-  OS.EmitIntValue(SymbolKind::S_BLOCK32, 2);              // Record Kind
+  MCSymbol *RecordEnd = beginSymbolRecord(SymbolKind::S_BLOCK32);
   OS.AddComment("PtrParent");
   OS.EmitIntValue(0, 4);                                  // PtrParent
   OS.AddComment("PtrEnd");
@@ -2712,7 +2644,7 @@ void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
   OS.EmitCOFFSectionIndex(FI.Begin);                      // Func Symbol
   OS.AddComment("Lexical block name");
   emitNullTerminatedSymbolName(OS, Block.Name);           // Name
-  OS.EmitLabel(RecordEnd);
+  endSymbolRecord(RecordEnd);
 
   // Emit variables local to this lexical block.
   emitLocalVariableList(FI, Block.Locals);
@@ -2721,10 +2653,7 @@ void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
   emitLexicalBlockList(Block.Children, FI);
 
   // Close the lexical block scope.
-  OS.AddComment("Record length");
-  OS.EmitIntValue(2, 2);                                  // Record Length
-  OS.AddComment("Record kind: S_END");
-  OS.EmitIntValue(SymbolKind::S_END, 2);                  // Record Kind
+  emitEndSymbolRecord(SymbolKind::S_END);
 }
 
 /// Convenience routine for collecting lexical block information for a list
@@ -2882,26 +2811,50 @@ void CodeViewDebug::endCVSubsection(MCSymbol *EndLabel) {
   OS.EmitValueToAlignment(4);
 }
 
+static StringRef getSymbolName(SymbolKind SymKind) {
+  for (const EnumEntry<SymbolKind> &EE : getSymbolTypeNames())
+    if (EE.Value == SymKind)
+      return EE.Name;
+  return "";
+}
+
+MCSymbol *CodeViewDebug::beginSymbolRecord(SymbolKind SymKind) {
+  MCSymbol *BeginLabel = MMI->getContext().createTempSymbol(),
+           *EndLabel = MMI->getContext().createTempSymbol();
+  OS.AddComment("Record length");
+  OS.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 2);
+  OS.EmitLabel(BeginLabel);
+  if (OS.isVerboseAsm())
+    OS.AddComment("Record kind: " + getSymbolName(SymKind));
+  OS.EmitIntValue(unsigned(SymKind), 2);
+  return EndLabel;
+}
+
+void CodeViewDebug::endSymbolRecord(MCSymbol *SymEnd) {
+  // Symbol records in object files are not aligned, although we are considering
+  // it for linker performance reasons.
+  OS.EmitLabel(SymEnd);
+}
+
+void CodeViewDebug::emitEndSymbolRecord(SymbolKind EndKind) {
+  OS.AddComment("Record length");
+  OS.EmitIntValue(2, 2);
+  if (OS.isVerboseAsm())
+    OS.AddComment("Record kind: " + getSymbolName(EndKind));
+  OS.EmitIntValue(unsigned(EndKind), 2); // Record Kind
+}
+
 void CodeViewDebug::emitDebugInfoForUDTs(
     ArrayRef<std::pair<std::string, const DIType *>> UDTs) {
   for (const auto &UDT : UDTs) {
     const DIType *T = UDT.second;
     assert(shouldEmitUdt(T));
 
-    MCSymbol *UDTRecordBegin = MMI->getContext().createTempSymbol(),
-             *UDTRecordEnd = MMI->getContext().createTempSymbol();
-    OS.AddComment("Record length");
-    OS.emitAbsoluteSymbolDiff(UDTRecordEnd, UDTRecordBegin, 2);
-    OS.EmitLabel(UDTRecordBegin);
-
-    OS.AddComment("Record kind: S_UDT");
-    OS.EmitIntValue(unsigned(SymbolKind::S_UDT), 2);
-
+    MCSymbol *UDTRecordEnd = beginSymbolRecord(SymbolKind::S_UDT);
     OS.AddComment("Type");
     OS.EmitIntValue(getCompleteTypeIndex(T).getIndex(), 4);
-
     emitNullTerminatedSymbolName(OS, UDT.first);
-    OS.EmitLabel(UDTRecordEnd);
+    endSymbolRecord(UDTRecordEnd);
   }
 }
 
@@ -2972,31 +2925,14 @@ void CodeViewDebug::emitDebugInfoForRetainedTypes() {
 void CodeViewDebug::emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
                                            const GlobalVariable *GV,
                                            MCSymbol *GVSym) {
-  // DataSym record, see SymbolRecord.h for more info.
-  // FIXME: Thread local data, etc
-  MCSymbol *DataBegin = MMI->getContext().createTempSymbol(),
-           *DataEnd = MMI->getContext().createTempSymbol();
-  const unsigned FixedLengthOfThisRecord = 12;
-  OS.AddComment("Record length");
-  OS.emitAbsoluteSymbolDiff(DataEnd, DataBegin, 2);
-  OS.EmitLabel(DataBegin);
-  if (DIGV->isLocalToUnit()) {
-    if (GV->isThreadLocal()) {
-      OS.AddComment("Record kind: S_LTHREAD32");
-      OS.EmitIntValue(unsigned(SymbolKind::S_LTHREAD32), 2);
-    } else {
-      OS.AddComment("Record kind: S_LDATA32");
-      OS.EmitIntValue(unsigned(SymbolKind::S_LDATA32), 2);
-    }
-  } else {
-    if (GV->isThreadLocal()) {
-      OS.AddComment("Record kind: S_GTHREAD32");
-      OS.EmitIntValue(unsigned(SymbolKind::S_GTHREAD32), 2);
-    } else {
-      OS.AddComment("Record kind: S_GDATA32");
-      OS.EmitIntValue(unsigned(SymbolKind::S_GDATA32), 2);
-    }
-  }
+  // DataSym record, see SymbolRecord.h for more info. Thread local data
+  // happens to have the same format as global data.
+  SymbolKind DataSym = GV->isThreadLocal()
+                           ? (DIGV->isLocalToUnit() ? SymbolKind::S_LTHREAD32
+                                                    : SymbolKind::S_GTHREAD32)
+                           : (DIGV->isLocalToUnit() ? SymbolKind::S_LDATA32
+                                                    : SymbolKind::S_GDATA32);
+  MCSymbol *DataEnd = beginSymbolRecord(DataSym);
   OS.AddComment("Type");
   OS.EmitIntValue(getCompleteTypeIndex(DIGV->getType()).getIndex(), 4);
   OS.AddComment("DataOffset");
@@ -3004,6 +2940,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
   OS.AddComment("Segment");
   OS.EmitCOFFSectionIndex(GVSym);
   OS.AddComment("Name");
-  emitNullTerminatedSymbolName(OS, DIGV->getName(), FixedLengthOfThisRecord);
-  OS.EmitLabel(DataEnd);
+  const unsigned LengthOfDataRecord = 12;
+  emitNullTerminatedSymbolName(OS, DIGV->getName(), LengthOfDataRecord);
+  endSymbolRecord(DataEnd);
 }

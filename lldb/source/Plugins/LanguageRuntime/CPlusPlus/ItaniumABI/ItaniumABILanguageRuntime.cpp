@@ -309,10 +309,7 @@ bool ItaniumABILanguageRuntime::IsVTableName(const char *name) {
     return false;
 
   // Can we maybe ask Clang about this?
-  if (strstr(name, "_vptr$") == name)
-    return true;
-  else
-    return false;
+  return strstr(name, "_vptr$") == name;
 }
 
 //------------------------------------------------------------------

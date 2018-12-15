@@ -74,7 +74,7 @@ PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
   }
 
   bool create = force;
-  if (create == false && arch && arch->IsValid()) {
+  if (!create && arch && arch->IsValid()) {
     const llvm::Triple &triple = arch->GetTriple();
     switch (triple.getVendor()) {
     case llvm::Triple::PC:

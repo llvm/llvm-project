@@ -776,6 +776,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->DynamicLinker = getDynamicLinker(Args);
   Config->EhFrameHdr =
       Args.hasFlag(OPT_eh_frame_hdr, OPT_no_eh_frame_hdr, false);
+  Config->EmitLLVM = Args.hasArg(OPT_plugin_opt_emit_llvm, false);
   Config->EmitRelocs = Args.hasArg(OPT_emit_relocs);
   Config->CallGraphProfileSort = Args.hasFlag(
       OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
@@ -1579,6 +1580,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // files" and not object files. Index file creation is already done
   // in addCombinedLTOObject, so we are done if that's the case.
   if (Config->ThinLTOIndexOnly)
+    return;
+
+  // Likewise, --plugin-opt=emit-llvm is an option to make LTO create
+  // an output file in bitcode and exit, so that you can just get a
+  // combined bitcode file.
+  if (Config->EmitLLVM)
     return;
 
   // Apply symbol renames for -wrap.

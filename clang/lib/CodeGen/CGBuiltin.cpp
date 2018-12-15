@@ -25,6 +25,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
@@ -1409,6 +1410,42 @@ static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
   return Res;
 }
 
+static bool
+TypeRequiresBuiltinLaunderImp(const ASTContext &Ctx, QualType Ty,
+                              llvm::SmallPtrSetImpl<const Decl *> &Seen) {
+  if (const auto *Arr = Ctx.getAsArrayType(Ty))
+    Ty = Ctx.getBaseElementType(Arr);
+
+  const auto *Record = Ty->getAsCXXRecordDecl();
+  if (!Record)
+    return false;
+
+  // We've already checked this type, or are in the process of checking it.
+  if (!Seen.insert(Record).second)
+    return false;
+
+  assert(Record->hasDefinition() &&
+         "Incomplete types should already be diagnosed");
+
+  if (Record->isDynamicClass())
+    return true;
+
+  for (FieldDecl *F : Record->fields()) {
+    if (TypeRequiresBuiltinLaunderImp(Ctx, F->getType(), Seen))
+      return true;
+  }
+  return false;
+}
+
+/// Determine if the specified type requires laundering by checking if it is a
+/// dynamic class type or contains a subobject which is a dynamic class type.
+static bool TypeRequiresBuiltinLaunder(CodeGenModule &CGM, QualType Ty) {
+  if (!CGM.getCodeGenOpts().StrictVTablePointers)
+    return false;
+  llvm::SmallPtrSet<const Decl *, 16> Seen;
+  return TypeRequiresBuiltinLaunderImp(CGM.getContext(), Ty, Seen);
+}
+
 RValue CodeGenFunction::emitRotate(const CallExpr *E, bool IsRotateRight) {
   llvm::Value *Src = EmitScalarExpr(E->getArg(0));
   llvm::Value *ShiftAmt = EmitScalarExpr(E->getArg(1));
@@ -2473,6 +2510,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitBlock(createBasicBlock("longjmp.cont"));
 
     return RValue::get(nullptr);
+  }
+  case Builtin::BI__builtin_launder: {
+    const Expr *Arg = E->getArg(0);
+    QualType ArgTy = Arg->getType()->getPointeeType();
+    Value *Ptr = EmitScalarExpr(Arg);
+    if (TypeRequiresBuiltinLaunder(CGM, ArgTy))
+      Ptr = Builder.CreateLaunderInvariantGroup(Ptr);
+
+    return RValue::get(Ptr);
   }
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:

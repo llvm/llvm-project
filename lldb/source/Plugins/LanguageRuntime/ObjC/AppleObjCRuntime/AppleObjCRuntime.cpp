@@ -441,13 +441,10 @@ bool AppleObjCRuntime::CalculateHasNewLiteralsAndIndexing() {
 
   SymbolContextList sc_list;
 
-  if (target.GetImages().FindSymbolsWithNameAndType(s_method_signature,
-                                                    eSymbolTypeCode, sc_list) ||
-      target.GetImages().FindSymbolsWithNameAndType(s_arclite_method_signature,
-                                                    eSymbolTypeCode, sc_list))
-    return true;
-  else
-    return false;
+  return target.GetImages().FindSymbolsWithNameAndType(
+             s_method_signature, eSymbolTypeCode, sc_list) ||
+         target.GetImages().FindSymbolsWithNameAndType(
+             s_arclite_method_signature, eSymbolTypeCode, sc_list);
 }
 
 lldb::SearchFilterSP AppleObjCRuntime::CreateExceptionSearchFilter() {

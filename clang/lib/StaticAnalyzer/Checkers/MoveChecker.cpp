@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/ADT/StringSet.h"
 
 using namespace clang;
 using namespace ento;
@@ -53,8 +54,8 @@ public:
   ProgramStateRef
   checkRegionChanges(ProgramStateRef State,
                      const InvalidatedSymbols *Invalidated,
-                     ArrayRef<const MemRegion *> ExplicitRegions,
-                     ArrayRef<const MemRegion *> Regions,
+                     ArrayRef<const MemRegion *> RequestedRegions,
+                     ArrayRef<const MemRegion *> InvalidatedRegions,
                      const LocationContext *LCtx, const CallEvent *Call) const;
   void printState(raw_ostream &Out, ProgramStateRef State,
                   const char *NL, const char *Sep) const override;
@@ -67,20 +68,57 @@ private:
     bool STL : 1; // Is this an object of a standard type?
   };
 
+  // Not all of these are entirely move-safe, but they do provide *some*
+  // guarantees, and it means that somebody is using them after move
+  // in a valid manner.
+  // TODO: We can still try to identify *unsafe* use after move, such as
+  // dereference of a moved-from smart pointer (which is guaranteed to be null).
+  const llvm::StringSet<> StandardMoveSafeClasses = {
+      "basic_filebuf",
+      "basic_ios",
+      "future",
+      "optional",
+      "packaged_task"
+      "promise",
+      "shared_future",
+      "shared_lock",
+      "shared_ptr",
+      "thread",
+      "unique_ptr",
+      "unique_lock",
+      "weak_ptr",
+  };
+
+  // Should we bother tracking the state of the object?
+  bool shouldBeTracked(ObjectKind OK) const {
+    // In non-aggressive mode, only warn on use-after-move of local variables
+    // (or local rvalue references) and of STL objects. The former is possible
+    // because local variables (or local rvalue references) are not tempting
+    // their user to re-use the storage. The latter is possible because STL
+    // objects are known to end up in a valid but unspecified state after the
+    // move and their state-reset methods are also known, which allows us to
+    // predict precisely when use-after-move is invalid. In aggressive mode,
+    // warn on any use-after-move because the user has intentionally asked us
+    // to completely eliminate use-after-move in his code.
+    return IsAggressive || OK.Local || OK.STL;
+  }
+
   // Obtains ObjectKind of an object. Because class declaration cannot always
   // be easily obtained from the memory region, it is supplied separately.
-  static ObjectKind classifyObject(const MemRegion *MR,
-                                   const CXXRecordDecl *RD);
+  ObjectKind classifyObject(const MemRegion *MR, const CXXRecordDecl *RD) const;
 
   // Classifies the object and dumps a user-friendly description string to
   // the stream. Return value is equivalent to classifyObject.
-  static ObjectKind explainObject(llvm::raw_ostream &OS,
-                                  const MemRegion *MR, const CXXRecordDecl *RD);
+  ObjectKind explainObject(llvm::raw_ostream &OS,
+                           const MemRegion *MR, const CXXRecordDecl *RD) const;
+
+  bool isStandardMoveSafeClass(const CXXRecordDecl *RD) const;
 
   class MovedBugVisitor : public BugReporterVisitor {
   public:
-    MovedBugVisitor(const MemRegion *R, const CXXRecordDecl *RD)
-        : Region(R), RD(RD), Found(false) {}
+    MovedBugVisitor(const MoveChecker &Chk,
+                    const MemRegion *R, const CXXRecordDecl *RD)
+        : Chk(Chk), Region(R), RD(RD), Found(false) {}
 
     void Profile(llvm::FoldingSetNodeID &ID) const override {
       static int X = 0;
@@ -97,6 +135,7 @@ private:
                                                    BugReport &BR) override;
 
   private:
+    const MoveChecker &Chk;
     // The tracked region.
     const MemRegion *Region;
     // The class of the tracked object.
@@ -111,8 +150,20 @@ public:
 
 private:
   mutable std::unique_ptr<BugType> BT;
+
+  // Check if the given form of potential misuse of a given object
+  // should be reported. If so, get it reported. The callback from which
+  // this function was called should immediately return after the call
+  // because this function adds one or two transitions.
+  void modelUse(ProgramStateRef State, const MemRegion *Region,
+                const CXXRecordDecl *RD, MisuseKind MK,
+                CheckerContext &C) const;
+
+  // Returns the exploded node against which the report was emitted.
+  // The caller *must* add any further transitions against this node.
   ExplodedNode *reportBug(const MemRegion *Region, const CXXRecordDecl *RD,
                           CheckerContext &C, MisuseKind MK) const;
+
   bool isInMoveSafeContext(const LocationContext *LC) const;
   bool isStateResetMethod(const CXXMethodDecl *MethodDec) const;
   bool isMoveSafeMethod(const CXXMethodDecl *MethodDec) const;
@@ -157,7 +208,7 @@ static const MemRegion *unwrapRValueReferenceIndirection(const MemRegion *MR) {
 
 std::shared_ptr<PathDiagnosticPiece>
 MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
-                                        BugReporterContext &BRC, BugReport &) {
+                                        BugReporterContext &BRC, BugReport &BR) {
   // We need only the last move of the reported object's region.
   // The visitor walks the ExplodedGraph backwards.
   if (Found)
@@ -182,7 +233,7 @@ MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
   llvm::raw_svector_ostream OS(Str);
 
   OS << "Object";
-  ObjectKind OK = explainObject(OS, Region, RD);
+  ObjectKind OK = Chk.explainObject(OS, Region, RD);
   if (OK.STL)
     OS << " is left in a valid but unspecified state after move";
   else
@@ -209,6 +260,25 @@ const ExplodedNode *MoveChecker::getMoveLocation(const ExplodedNode *N,
     N = N->pred_empty() ? nullptr : *(N->pred_begin());
   }
   return MoveNode;
+}
+
+void MoveChecker::modelUse(ProgramStateRef State, const MemRegion *Region,
+                           const CXXRecordDecl *RD, MisuseKind MK,
+                           CheckerContext &C) const {
+  assert(!C.isDifferent() && "No transitions should have been made by now");
+  const RegionState *RS = State->get<TrackedRegionMap>(Region);
+
+  if (!RS || isAnyBaseRegionReported(State, Region)
+          || isInMoveSafeContext(C.getLocationContext())) {
+    // Finalize changes made by the caller.
+    C.addTransition(State);
+    return;
+  }
+
+  ExplodedNode *N = reportBug(Region, RD, C, MK);
+
+  State = State->set<TrackedRegionMap>(Region, RegionState::getReported());
+  C.addTransition(State, N);
 }
 
 ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
@@ -251,7 +321,7 @@ ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
     auto R =
         llvm::make_unique<BugReport>(*BT, OS.str(), N, LocUsedForUniqueing,
                                      MoveNode->getLocationContext()->getDecl());
-    R->addVisitor(llvm::make_unique<MovedBugVisitor>(Region, RD));
+    R->addVisitor(llvm::make_unique<MovedBugVisitor>(*this, Region, RD));
     C.emitReport(std::move(R));
     return N;
   }
@@ -269,12 +339,10 @@ void MoveChecker::checkPostCall(const CallEvent &Call,
   if (!MethodDecl)
     return;
 
-  const auto *ConstructorDecl = dyn_cast<CXXConstructorDecl>(MethodDecl);
-
-  const auto *CC = dyn_cast_or_null<CXXConstructorCall>(&Call);
   // Check if an object became moved-from.
   // Object can become moved from after a call to move assignment operator or
   // move constructor .
+  const auto *ConstructorDecl = dyn_cast<CXXConstructorDecl>(MethodDecl);
   if (ConstructorDecl && !ConstructorDecl->isMoveConstructor())
     return;
 
@@ -285,23 +353,11 @@ void MoveChecker::checkPostCall(const CallEvent &Call,
   if (!ArgRegion)
     return;
 
-  // In non-aggressive mode, only warn on use-after-move of local variables (or
-  // local rvalue references) and of STL objects. The former is possible because
-  // local variables (or local rvalue references) are not tempting their user to
-  // re-use the storage. The latter is possible because STL objects are known
-  // to end up in a valid but unspecified state after the move and their
-  // state-reset methods are also known, which allows us to predict
-  // precisely when use-after-move is invalid.
-  // In aggressive mode, warn on any use-after-move because the user
-  // has intentionally asked us to completely eliminate use-after-move
-  // in his code.
-  ObjectKind OK = classifyObject(ArgRegion, MethodDecl->getParent());
-  if (!IsAggressive && !OK.Local && !OK.STL)
-    return;
-
   // Skip moving the object to itself.
+  const auto *CC = dyn_cast_or_null<CXXConstructorCall>(&Call);
   if (CC && CC->getCXXThisVal().getAsRegion() == ArgRegion)
     return;
+
   if (const auto *IC = dyn_cast<CXXInstanceCall>(AFC))
     if (IC->getCXXThisVal().getAsRegion() == ArgRegion)
       return;
@@ -315,9 +371,16 @@ void MoveChecker::checkPostCall(const CallEvent &Call,
 
   if (State->get<TrackedRegionMap>(ArgRegion))
     return;
-  // Mark object as moved-from.
-  State = State->set<TrackedRegionMap>(ArgRegion, RegionState::getMoved());
-  C.addTransition(State);
+
+  const CXXRecordDecl *RD = MethodDecl->getParent();
+  ObjectKind OK = classifyObject(ArgRegion, RD);
+  if (shouldBeTracked(OK)) {
+    // Mark object as moved-from.
+    State = State->set<TrackedRegionMap>(ArgRegion, RegionState::getMoved());
+    C.addTransition(State);
+    return;
+  }
+  assert(!C.isDifferent() && "Should not have made transitions on this path!");
 }
 
 bool MoveChecker::isMoveSafeMethod(const CXXMethodDecl *MethodDec) const {
@@ -370,20 +433,30 @@ bool MoveChecker::isInMoveSafeContext(const LocationContext *LC) const {
   return false;
 }
 
-MoveChecker::ObjectKind MoveChecker::classifyObject(const MemRegion *MR,
-                                                    const CXXRecordDecl *RD) {
+bool MoveChecker::isStandardMoveSafeClass(const CXXRecordDecl *RD) const {
+  const IdentifierInfo *II = RD->getIdentifier();
+  return II && StandardMoveSafeClasses.count(II->getName());
+}
+
+MoveChecker::ObjectKind
+MoveChecker::classifyObject(const MemRegion *MR,
+                            const CXXRecordDecl *RD) const {
+  // Local variables and local rvalue references are classified as "Local".
+  // For the purposes of this checker, we classify move-safe STL types
+  // as not-"STL" types, because that's how the checker treats them.
   MR = unwrapRValueReferenceIndirection(MR);
   return {
     /*Local=*/
         MR && isa<VarRegion>(MR) && isa<StackSpaceRegion>(MR->getMemorySpace()),
     /*STL=*/
-        RD && RD->getDeclContext()->isStdNamespace()
+        RD && RD->getDeclContext()->isStdNamespace() &&
+        !isStandardMoveSafeClass(RD)
   };
 }
 
-MoveChecker::ObjectKind MoveChecker::explainObject(llvm::raw_ostream &OS,
-                                                   const MemRegion *MR,
-                                                   const CXXRecordDecl *RD) {
+MoveChecker::ObjectKind
+MoveChecker::explainObject(llvm::raw_ostream &OS, const MemRegion *MR,
+                           const CXXRecordDecl *RD) const {
   // We may need a leading space every time we actually explain anything,
   // and we never know if we are to explain anything until we try.
   if (const auto DR =
@@ -400,8 +473,6 @@ MoveChecker::ObjectKind MoveChecker::explainObject(llvm::raw_ostream &OS,
 
 void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  const LocationContext *LC = C.getLocationContext();
-  ExplodedNode *N = nullptr;
 
   // Remove the MemRegions from the map on which a ctor/dtor call or assignment
   // happened.
@@ -413,21 +484,11 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
     // Check for copying a moved-from object and report the bug.
     if (CtorDec && CtorDec->isCopyOrMoveConstructor()) {
       const MemRegion *ArgRegion = CC->getArgSVal(0).getAsRegion();
-      const RegionState *ArgState = State->get<TrackedRegionMap>(ArgRegion);
-      if (ArgState && ArgState->isMoved()) {
-        if (!isInMoveSafeContext(LC)) {
-          const CXXRecordDecl *RD = CtorDec->getParent();
-          if(CtorDec->isMoveConstructor())
-            N = reportBug(ArgRegion, RD, C, MK_Move);
-          else
-            N = reportBug(ArgRegion, RD, C, MK_Copy);
-          State = State->set<TrackedRegionMap>(ArgRegion,
-                                               RegionState::getReported());
-        }
-      }
+      const CXXRecordDecl *RD = CtorDec->getParent();
+      MisuseKind MK = CtorDec->isMoveConstructor() ? MK_Move : MK_Copy;
+      modelUse(State, ArgRegion, RD, MK, C);
+      return;
     }
-    C.addTransition(State, N);
-    return;
   }
 
   const auto IC = dyn_cast<CXXInstanceCall>(&Call);
@@ -442,47 +503,14 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
   if (!ThisRegion)
     return;
 
+  // The remaining part is check only for method call on a moved-from object.
   const auto MethodDecl = dyn_cast_or_null<CXXMethodDecl>(IC->getDecl());
   if (!MethodDecl)
     return;
 
-  // Store class declaration as well, for bug reporting purposes.
-  const CXXRecordDecl *RD = MethodDecl->getParent();
-
-  // Checking assignment operators.
-  bool OperatorEq = MethodDecl->isOverloadedOperator() &&
-                    MethodDecl->getOverloadedOperator() == OO_Equal;
-  // Remove the tracked object for every assignment operator, but report bug
-  // only for move or copy assignment's argument.
-  if (OperatorEq) {
-    State = removeFromState(State, ThisRegion);
-    if (MethodDecl->isCopyAssignmentOperator() ||
-        MethodDecl->isMoveAssignmentOperator()) {
-      const RegionState *ArgState =
-          State->get<TrackedRegionMap>(IC->getArgSVal(0).getAsRegion());
-      if (ArgState && ArgState->isMoved() && !isInMoveSafeContext(LC)) {
-        const MemRegion *ArgRegion = IC->getArgSVal(0).getAsRegion();
-        if(MethodDecl->isMoveAssignmentOperator())
-          N = reportBug(ArgRegion, RD, C, MK_Move);
-        else
-          N = reportBug(ArgRegion, RD, C, MK_Copy);
-        State =
-            State->set<TrackedRegionMap>(ArgRegion, RegionState::getReported());
-      }
-    }
-    C.addTransition(State, N);
-    return;
-  }
-
-  // The remaining part is check only for method call on a moved-from object.
-
   // We want to investigate the whole object, not only sub-object of a parent
   // class in which the encountered method defined.
-  while (const auto *BR = dyn_cast<CXXBaseObjectRegion>(ThisRegion))
-    ThisRegion = BR->getSuperRegion();
-
-  if (isMoveSafeMethod(MethodDecl))
-    return;
+  ThisRegion = ThisRegion->getMostDerivedObjectRegion();
 
   if (isStateResetMethod(MethodDecl)) {
     State = removeFromState(State, ThisRegion);
@@ -490,21 +518,34 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
     return;
   }
 
-  // If it is already reported then we don't report the bug again.
-  const RegionState *ThisState = State->get<TrackedRegionMap>(ThisRegion);
-  if (!(ThisState && ThisState->isMoved()))
+  if (isMoveSafeMethod(MethodDecl))
     return;
 
-  // Don't report it in case if any base region is already reported
-  if (isAnyBaseRegionReported(State, ThisRegion))
-    return;
+  // Store class declaration as well, for bug reporting purposes.
+  const CXXRecordDecl *RD = MethodDecl->getParent();
 
-  if (isInMoveSafeContext(LC))
-    return;
+  if (MethodDecl->isOverloadedOperator()) {
+    OverloadedOperatorKind OOK = MethodDecl->getOverloadedOperator();
 
-  N = reportBug(ThisRegion, RD, C, MK_FunCall);
-  State = State->set<TrackedRegionMap>(ThisRegion, RegionState::getReported());
-  C.addTransition(State, N);
+    if (OOK == OO_Equal) {
+      // Remove the tracked object for every assignment operator, but report bug
+      // only for move or copy assignment's argument.
+      State = removeFromState(State, ThisRegion);
+
+      if (MethodDecl->isCopyAssignmentOperator() ||
+          MethodDecl->isMoveAssignmentOperator()) {
+        const MemRegion *ArgRegion = IC->getArgSVal(0).getAsRegion();
+        MisuseKind MK =
+            MethodDecl->isMoveAssignmentOperator() ? MK_Move : MK_Copy;
+        modelUse(State, ArgRegion, RD, MK, C);
+        return;
+      }
+      C.addTransition(State);
+      return;
+    }
+  }
+
+  modelUse(State, ThisRegion, RD, MK_FunCall, C);
 }
 
 void MoveChecker::checkDeadSymbols(SymbolReaper &SymReaper,
@@ -525,19 +566,35 @@ void MoveChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 
 ProgramStateRef MoveChecker::checkRegionChanges(
     ProgramStateRef State, const InvalidatedSymbols *Invalidated,
-    ArrayRef<const MemRegion *> ExplicitRegions,
-    ArrayRef<const MemRegion *> Regions, const LocationContext *LCtx,
-    const CallEvent *Call) const {
-  // In case of an InstanceCall don't remove the ThisRegion from the GDM since
-  // it is handled in checkPreCall and checkPostCall.
-  const MemRegion *ThisRegion = nullptr;
-  if (const auto *IC = dyn_cast_or_null<CXXInstanceCall>(Call)) {
-    ThisRegion = IC->getCXXThisVal().getAsRegion();
-  }
+    ArrayRef<const MemRegion *> RequestedRegions,
+    ArrayRef<const MemRegion *> InvalidatedRegions,
+    const LocationContext *LCtx, const CallEvent *Call) const {
+  if (Call) {
+    // Relax invalidation upon function calls: only invalidate parameters
+    // that are passed directly via non-const pointers or non-const references
+    // or rvalue references.
+    // In case of an InstanceCall don't invalidate the this-region since
+    // it is fully handled in checkPreCall and checkPostCall.
+    const MemRegion *ThisRegion = nullptr;
+    if (const auto *IC = dyn_cast<CXXInstanceCall>(Call))
+      ThisRegion = IC->getCXXThisVal().getAsRegion();
 
-  for (const auto *Region : ExplicitRegions) {
-    if (ThisRegion != Region)
-      State = removeFromState(State, Region);
+    // Requested ("explicit") regions are the regions passed into the call
+    // directly, but not all of them end up being invalidated.
+    // But when they do, they appear in the InvalidatedRegions array as well.
+    for (const auto *Region : RequestedRegions) {
+      if (ThisRegion != Region) {
+        if (llvm::find(InvalidatedRegions, Region) !=
+            std::end(InvalidatedRegions)) {
+          State = removeFromState(State, Region);
+        }
+      }
+    }
+  } else {
+    // For invalidations that aren't caused by calls, assume nothing. In
+    // particular, direct write into an object's field invalidates the status.
+    for (const auto *Region : InvalidatedRegions)
+      State = removeFromState(State, Region->getBaseRegion());
   }
 
   return State;

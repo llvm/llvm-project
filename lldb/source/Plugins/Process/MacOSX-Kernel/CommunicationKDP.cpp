@@ -463,19 +463,13 @@ lldb_private::UUID CommunicationKDP::GetUUID() {
 bool CommunicationKDP::RemoteIsEFI() {
   if (GetKernelVersion() == NULL)
     return false;
-  if (strncmp(m_kernel_version.c_str(), "EFI", 3) == 0)
-    return true;
-  else
-    return false;
+  return strncmp(m_kernel_version.c_str(), "EFI", 3) == 0;
 }
 
 bool CommunicationKDP::RemoteIsDarwinKernel() {
   if (GetKernelVersion() == NULL)
     return false;
-  if (m_kernel_version.find("Darwin Kernel") != std::string::npos)
-    return true;
-  else
-    return false;
+  return m_kernel_version.find("Darwin Kernel") != std::string::npos;
 }
 
 lldb::addr_t CommunicationKDP::GetLoadAddress() {
@@ -1258,9 +1252,7 @@ bool CommunicationKDP::SendRequestResume() {
   request_packet.PutHex32(GetCPUMask());
 
   DataExtractor reply_packet;
-  if (SendRequestAndGetReply(command, request_packet, reply_packet))
-    return true;
-  return false;
+  return SendRequestAndGetReply(command, request_packet, reply_packet);
 }
 
 bool CommunicationKDP::SendRequestBreakpoint(bool set, addr_t addr) {
@@ -1293,7 +1285,5 @@ bool CommunicationKDP::SendRequestSuspend() {
   const uint32_t command_length = 8;
   MakeRequestPacketHeader(command, request_packet, command_length);
   DataExtractor reply_packet;
-  if (SendRequestAndGetReply(command, request_packet, reply_packet))
-    return true;
-  return false;
+  return SendRequestAndGetReply(command, request_packet, reply_packet);
 }
