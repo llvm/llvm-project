@@ -795,6 +795,14 @@ const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
       MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
 }
 
+MCSection *TargetLoweringObjectFileELF::getSectionForCommandLines() const {
+  // Use ".GCC.command.line" since this feature is to support clang's
+  // -frecord-gcc-switches which in turn attempts to mimic GCC's switch of the
+  // same name.
+  return getContext().getELFSection(".GCC.command.line", ELF::SHT_PROGBITS,
+                                    ELF::SHF_MERGE | ELF::SHF_STRINGS, 1, "");
+}
+
 void
 TargetLoweringObjectFileELF::InitializeELF(bool UseInitArray_) {
   UseInitArray = UseInitArray_;

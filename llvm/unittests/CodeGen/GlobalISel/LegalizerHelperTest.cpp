@@ -13,10 +13,10 @@ namespace {
 
 class DummyGISelObserver : public GISelChangeObserver {
 public:
-  void changingInstr(MachineInstr &MI) override {}
-  void changedInstr(MachineInstr &MI) override {}
-  void createdInstr(MachineInstr &MI) override {}
-  void erasingInstr(MachineInstr &MI) override {}
+  void changingInstr(const MachineInstr &MI) override {}
+  void changedInstr(const MachineInstr &MI) override {}
+  void createdInstr(const MachineInstr &MI) override {}
+  void erasingInstr(const MachineInstr &MI) override {}
 };
 
 // Test CTTZ expansion when CTTZ_ZERO_UNDEF is legal or custom,

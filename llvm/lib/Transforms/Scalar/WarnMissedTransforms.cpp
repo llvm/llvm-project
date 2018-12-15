@@ -91,6 +91,11 @@ static void warnAboutLeftoverTransformations(Function *F, LoopInfo *LI,
 // New pass manager boilerplate
 PreservedAnalyses
 WarnMissedTransformationsPass::run(Function &F, FunctionAnalysisManager &AM) {
+  // Do not warn about not applied transformations if optimizations are
+  // disabled.
+  if (F.hasFnAttribute(Attribute::OptimizeNone))
+    return PreservedAnalyses::all();
+
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
 

@@ -1,5 +1,6 @@
 // RUN: %libomp-compile-and-run
 // RUN: %libomp-compile && env KMP_TASKLOOP_MIN_TASKS=1 %libomp-run
+// REQUIRES: openmp-4.5
 
 // These compilers don't support the taskloop construct
 // UNSUPPORTED: gcc-4, gcc-5, icc-16
