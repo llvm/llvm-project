@@ -1,5 +1,15 @@
-Here is a brief overview of the packets that an lldb platform server needs to implement
-for the lldb testsuite to be run on a remote target device/system.
+Here is a brief overview of the packets that an lldb platform server
+needs to implement for the lldb testsuite to be run on a remote
+target device/system.
+
+These are almost all lldb extensions to the gdb-remote serial
+protocol.  Many of the vFile: packets are described to the "Host
+I/O Packets" detailed in the gdb-remote protocol documentation,
+although the lldb platform extensions include packets that are not
+defined there (vFile:size:, vFile:mode:, vFile:symlink, vFile:chmod:).
+Most importantly, the flags that lldb passes to vFile:open: are 
+incompatible with the flags that gdb specifies.
+
 
 //----------------------------------------------------------------------
 // QStartNoAckMode
@@ -311,7 +321,12 @@ for the lldb testsuite to be run on a remote target device/system.
 //  
 //  response is F followed by the opened file descriptor in base 10.
 //  "F-1,errno" with the errno if an error occurs.
-
+//
+//  COMPATABILITY
+//    The gdb-remote serial protocol documentatio defines a vFile:open:
+//    packet which uses incompatible flag values, e.g. 1 means O_WRONLY
+//    in gdb's vFile:open:, but it means eOpenOptionRead to lldb's
+//    implementation.
 
 //----------------------------------------------------------------------
 // vFile:close:
