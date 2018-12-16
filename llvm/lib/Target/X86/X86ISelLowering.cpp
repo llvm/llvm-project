@@ -17047,9 +17047,9 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Op1 = Op.getOperand(1);
   SDValue Amt = Op.getOperand(2);
 
-  // Expand slow SHLD/SHRD cases.
-  // TODO - can we be more selective here: OptSize/RMW etc.?
-  if (Subtarget.isSHLDSlow())
+  // Expand slow SHLD/SHRD cases if we are not optimizing for size.
+  bool OptForSize = DAG.getMachineFunction().getFunction().optForSize();
+  if (!OptForSize && Subtarget.isSHLDSlow())
     return SDValue();
 
   bool IsFSHR = Op.getOpcode() == ISD::FSHR;
@@ -36531,10 +36531,10 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   // OR( SRL( X, C ), SHL( Y, 32 - C ) ) -> SHRD( X, Y, C )
   // OR( SHL( X, C ), SRL( SRL( Y, 1 ), XOR( C, 31 ) ) ) -> SHLD( X, Y, C )
   // OR( SRL( X, C ), SHL( SHL( Y, 1 ), XOR( C, 31 ) ) ) -> SHRD( X, Y, C )
-  unsigned Bits = VT.getSizeInBits();
+  unsigned Bits = VT.getScalarSizeInBits();
   if (ShAmt1.getOpcode() == ISD::SUB) {
     SDValue Sum = ShAmt1.getOperand(0);
-    if (ConstantSDNode *SumC = dyn_cast<ConstantSDNode>(Sum)) {
+    if (auto *SumC = dyn_cast<ConstantSDNode>(Sum)) {
       SDValue ShAmt1Op1 = ShAmt1.getOperand(1);
       if (ShAmt1Op1.getOpcode() == ISD::TRUNCATE)
         ShAmt1Op1 = ShAmt1Op1.getOperand(0);
@@ -36544,8 +36544,8 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
                            DAG.getNode(ISD::TRUNCATE, DL,
                                        MVT::i8, ShAmt0));
     }
-  } else if (ConstantSDNode *ShAmt1C = dyn_cast<ConstantSDNode>(ShAmt1)) {
-    ConstantSDNode *ShAmt0C = dyn_cast<ConstantSDNode>(ShAmt0);
+  } else if (auto *ShAmt1C = dyn_cast<ConstantSDNode>(ShAmt1)) {
+    auto *ShAmt0C = dyn_cast<ConstantSDNode>(ShAmt0);
     if (ShAmt0C && (ShAmt0C->getSExtValue() + ShAmt1C->getSExtValue()) == Bits)
       return DAG.getNode(Opc, DL, VT,
                          N0.getOperand(0), N1.getOperand(0),
@@ -36553,7 +36553,7 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
                                        MVT::i8, ShAmt0));
   } else if (ShAmt1.getOpcode() == ISD::XOR) {
     SDValue Mask = ShAmt1.getOperand(1);
-    if (ConstantSDNode *MaskC = dyn_cast<ConstantSDNode>(Mask)) {
+    if (auto *MaskC = dyn_cast<ConstantSDNode>(Mask)) {
       unsigned InnerShift = (X86ISD::SHLD == Opc ? ISD::SRL : ISD::SHL);
       SDValue ShAmt1Op0 = ShAmt1.getOperand(0);
       if (ShAmt1Op0.getOpcode() == ISD::TRUNCATE)
