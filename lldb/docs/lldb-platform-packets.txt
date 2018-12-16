@@ -100,7 +100,7 @@ for the lldb testsuite to be run on a remote target device/system.
 //  request packet has the fields:
 //     1. shell command ascii-hex encoded
 //     2. timeout 
-//     3. {optional} working directory
+//     3. {optional} working directory ascii-hex encoded
 //
 //  Response is F followed by the return value of the command (base 16),
 //  followed by a another number, followed by the output of the command
@@ -118,8 +118,8 @@ for the lldb testsuite to be run on a remote target device/system.
 //  receive: qLaunchGDBServer;host:<HOSTNAME_LLDB_IS_ON>;
 //  send:    pid:1337;port:43001;
 //
-//  request packet hostname field is not ascii-hex encoded.  Hopefully
-//  hostnames don't have $ or # characters in them.
+//  request packet hostname field is not ascii-hex encoded. Hostnames 
+//  don't have $ or # characters in them.
 //
 //  response to the packet is the pid of the newly launched gdbserver,
 //  and the port it is listening for a connection on.
@@ -272,7 +272,8 @@ for the lldb testsuite to be run on a remote target device/system.
 //  ascii-hex encoding.
 //  Response is "F" plus the return value of chmod(), base 10 encoding.
 //
-//  I don't know why there are two packets for the same thing.
+//  I don't know why there are two packets for the same thing, v.
+//  vFile:chmod:.
 
 //----------------------------------------------------------------------
 // vFile:chmod:
@@ -343,8 +344,8 @@ for the lldb testsuite to be run on a remote target device/system.
 //     2. number of bytes to be read, base 10
 //     3. offset into file to start from, base 10
 //
-//  Response is F, followed by the numbe rof bytes read (base 10), followed
-//  by the data in the binary-escaped-data scheme.
+//  Response is F, followed by the number of bytes read (base 10), a
+//  semicolon, followed by the data in the binary-escaped-data encoding.
 
 
 //----------------------------------------------------------------------
@@ -363,7 +364,7 @@ for the lldb testsuite to be run on a remote target device/system.
 //     2. offset into file to start from, base 10
 //     3. binary-escaped-data to be written
 //
-//  Response is F, followed by the numbe rof bytes written (base 10)
+//  Response is F, followed by the number of bytes written (base 10)
 
 
 
