@@ -528,7 +528,7 @@ struct NonTrivial {
     return *this;
   }
   ~NonTrivial() {
-    delete[] p; // expected-warning {{free released memory}}
+    delete[] p; // expected-warning {{delete released memory}}
   }
 };
 

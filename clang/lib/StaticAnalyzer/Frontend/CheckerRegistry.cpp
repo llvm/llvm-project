@@ -10,17 +10,74 @@
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
 using namespace clang;
 using namespace ento;
+using llvm::sys::DynamicLibrary;
+
+using RegisterCheckersFn = void (*)(CheckerRegistry &);
+
+static bool isCompatibleAPIVersion(const char *versionString) {
+  // If the version string is null, it's not an analyzer plugin.
+  if (!versionString)
+    return false;
+
+  // For now, none of the static analyzer API is considered stable.
+  // Versions must match exactly.
+  return strcmp(versionString, CLANG_ANALYZER_API_VERSION_STRING) == 0;
+}
+
+CheckerRegistry::CheckerRegistry(ArrayRef<std::string> plugins,
+                                 DiagnosticsEngine &diags) : Diags(diags) {
+#define GET_CHECKERS
+#define CHECKER(FULLNAME, CLASS, HELPTEXT)                                     \
+  addChecker(register##CLASS, FULLNAME, HELPTEXT);
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER
+#undef GET_CHECKERS
+
+  for (ArrayRef<std::string>::iterator i = plugins.begin(), e = plugins.end();
+       i != e; ++i) {
+    // Get access to the plugin.
+    std::string err;
+    DynamicLibrary lib = DynamicLibrary::getPermanentLibrary(i->c_str(), &err);
+    if (!lib.isValid()) {
+      diags.Report(diag::err_fe_unable_to_load_plugin) << *i << err;
+      continue;
+    }
+
+    // See if it's compatible with this build of clang.
+    const char *pluginAPIVersion =
+      (const char *) lib.getAddressOfSymbol("clang_analyzerAPIVersionString");
+    if (!isCompatibleAPIVersion(pluginAPIVersion)) {
+      Diags.Report(diag::warn_incompatible_analyzer_plugin_api)
+          << llvm::sys::path::filename(*i);
+      Diags.Report(diag::note_incompatible_analyzer_plugin_api)
+          << CLANG_ANALYZER_API_VERSION_STRING
+          << pluginAPIVersion;
+      continue;
+    }
+
+    // Register its checkers.
+    RegisterCheckersFn registerPluginCheckers =
+      (RegisterCheckersFn) (intptr_t) lib.getAddressOfSymbol(
+                                                      "clang_registerCheckers");
+    if (registerPluginCheckers)
+      registerPluginCheckers(*this);
+  }
+}
 
 static constexpr char PackageSeparator = '.';
 
@@ -47,8 +104,7 @@ static bool isInPackage(const CheckerRegistry::CheckerInfo &checker,
 }
 
 CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers(
-                                              const AnalyzerOptions &Opts,
-                                              DiagnosticsEngine &diags) const {
+                                            const AnalyzerOptions &Opts) const {
 
   assert(std::is_sorted(Checkers.begin(), Checkers.end(), checkerNameLT) &&
          "In order to efficiently gather checkers, this function expects them "
@@ -65,8 +121,8 @@ CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers(
 
     if (firstRelatedChecker == end ||
         !isInPackage(*firstRelatedChecker, opt.first)) {
-      diags.Report(diag::err_unknown_analyzer_checker) << opt.first;
-      diags.Report(diag::note_suggest_disabling_all_checkers);
+      Diags.Report(diag::err_unknown_analyzer_checker) << opt.first;
+      Diags.Report(diag::note_suggest_disabling_all_checkers);
       return {};
     }
 
@@ -105,13 +161,12 @@ void CheckerRegistry::addChecker(InitializationFunction fn, StringRef name,
 }
 
 void CheckerRegistry::initializeManager(CheckerManager &checkerMgr,
-                                        const AnalyzerOptions &Opts,
-                                        DiagnosticsEngine &diags) const {
+                                        const AnalyzerOptions &Opts) const {
   // Sort checkers for efficient collection.
   llvm::sort(Checkers, checkerNameLT);
 
   // Collect checkers enabled by the options.
-  CheckerInfoSet enabledCheckers = getEnabledCheckers(Opts, diags);
+  CheckerInfoSet enabledCheckers = getEnabledCheckers(Opts);
 
   // Initialize the CheckerManager with all enabled checkers.
   for (const auto *i : enabledCheckers) {
@@ -120,8 +175,8 @@ void CheckerRegistry::initializeManager(CheckerManager &checkerMgr,
   }
 }
 
-void CheckerRegistry::validateCheckerOptions(const AnalyzerOptions &opts,
-                                             DiagnosticsEngine &diags) const {
+void CheckerRegistry::validateCheckerOptions(
+                                            const AnalyzerOptions &opts) const {
   for (const auto &config : opts.Config) {
     size_t pos = config.getKey().find(':');
     if (pos == StringRef::npos)
@@ -137,7 +192,7 @@ void CheckerRegistry::validateCheckerOptions(const AnalyzerOptions &opts,
       }
     }
     if (!hasChecker)
-      diags.Report(diag::err_unknown_analyzer_checker) << checkerName;
+      Diags.Report(diag::err_unknown_analyzer_checker) << checkerName;
   }
 }
 
@@ -180,13 +235,12 @@ void CheckerRegistry::printHelp(raw_ostream &out,
 }
 
 void CheckerRegistry::printList(raw_ostream &out,
-                                const AnalyzerOptions &opts,
-                                DiagnosticsEngine &diags) const {
+                                const AnalyzerOptions &opts) const {
   // Sort checkers for efficient collection.
   llvm::sort(Checkers, checkerNameLT);
 
   // Collect checkers enabled by the options.
-  CheckerInfoSet enabledCheckers = getEnabledCheckers(opts, diags);
+  CheckerInfoSet enabledCheckers = getEnabledCheckers(opts);
 
   for (const auto *i : enabledCheckers)
     out << i->FullName << '\n';
