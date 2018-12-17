@@ -7827,11 +7827,7 @@ clang::RecordDecl *ClangASTContext::GetAsRecordDecl(const CompilerType &type) {
 }
 
 clang::TagDecl *ClangASTContext::GetAsTagDecl(const CompilerType &type) {
-  clang::QualType qual_type = ClangUtil::GetCanonicalQualType(type);
-  if (qual_type.isNull())
-    return nullptr;
-  else
-    return qual_type->getAsTagDecl();
+  return ClangUtil::GetAsTagDecl(type);
 }
 
 clang::TypedefNameDecl *
@@ -8937,7 +8933,7 @@ bool ClangASTContext::CompleteTagDeclarationDefinition(
 
 clang::EnumConstantDecl *ClangASTContext::AddEnumerationValueToEnumerationType(
     const CompilerType &enum_type, const Declaration &decl, const char *name,
-    int64_t enum_value, uint32_t enum_value_bit_size) {
+    const llvm::APSInt &value) {
 
   if (!enum_type || ConstString(name).IsEmpty())
     return nullptr;
@@ -8950,14 +8946,9 @@ clang::EnumConstantDecl *ClangASTContext::AddEnumerationValueToEnumerationType(
   if (!enum_opaque_compiler_type)
     return nullptr;
 
-  CompilerType underlying_type =
-      GetEnumerationIntegerType(enum_type.GetOpaqueQualType());
-
   clang::QualType enum_qual_type(
       GetCanonicalQualType(enum_opaque_compiler_type));
 
-  bool is_signed = false;
-  underlying_type.IsIntegerType(is_signed);
   const clang::Type *clang_type = enum_qual_type.getTypePtr();
 
   if (!clang_type)
@@ -8968,12 +8959,10 @@ clang::EnumConstantDecl *ClangASTContext::AddEnumerationValueToEnumerationType(
   if (!enutype)
     return nullptr;
 
-  llvm::APSInt enum_llvm_apsint(enum_value_bit_size, is_signed);
-  enum_llvm_apsint = enum_value;
   clang::EnumConstantDecl *enumerator_decl = clang::EnumConstantDecl::Create(
       *getASTContext(), enutype->getDecl(), clang::SourceLocation(),
       name ? &getASTContext()->Idents.get(name) : nullptr, // Identifier
-      clang::QualType(enutype, 0), nullptr, enum_llvm_apsint);
+      clang::QualType(enutype, 0), nullptr, value);
 
   if (!enumerator_decl)
     return nullptr;
@@ -8985,6 +8974,20 @@ clang::EnumConstantDecl *ClangASTContext::AddEnumerationValueToEnumerationType(
 #endif
 
   return enumerator_decl;
+}
+
+clang::EnumConstantDecl *ClangASTContext::AddEnumerationValueToEnumerationType(
+    const CompilerType &enum_type, const Declaration &decl, const char *name,
+    int64_t enum_value, uint32_t enum_value_bit_size) {
+  CompilerType underlying_type =
+      GetEnumerationIntegerType(enum_type.GetOpaqueQualType());
+  bool is_signed = false;
+  underlying_type.IsIntegerType(is_signed);
+
+  llvm::APSInt value(enum_value_bit_size, is_signed);
+  value = enum_value;
+
+  return AddEnumerationValueToEnumerationType(enum_type, decl, name, value);
 }
 
 CompilerType
