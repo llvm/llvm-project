@@ -488,6 +488,7 @@ void AArch64Err843419Patcher::insertPatches(
   uint64_t ISLimit;
   uint64_t PrevISLimit = ISD.Sections.front()->OutSecOff;
   uint64_t PatchUpperBound = PrevISLimit + Target->getThunkSectionSpacing();
+  uint64_t OutSecAddr = ISD.Sections.front()->getParent()->Addr;
 
   // Set the OutSecOff of patches to the place where we want to insert them.
   // We use a similar strategy to Thunk placement. Place patches roughly
@@ -498,7 +499,7 @@ void AArch64Err843419Patcher::insertPatches(
     ISLimit = IS->OutSecOff + IS->getSize();
     if (ISLimit > PatchUpperBound) {
       while (PatchIt != PatchEnd) {
-        if ((*PatchIt)->getLDSTAddr() >= PrevISLimit)
+        if ((*PatchIt)->getLDSTAddr() - OutSecAddr >= PrevISLimit)
           break;
         (*PatchIt)->OutSecOff = PrevISLimit;
         ++PatchIt;
