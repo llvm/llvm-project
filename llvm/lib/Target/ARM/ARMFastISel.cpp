@@ -2951,7 +2951,8 @@ bool ARMFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   unsigned ResultReg = MI->getOperand(0).getReg();
   if (!ARMEmitLoad(VT, ResultReg, Addr, LI->getAlignment(), isZExt, false))
     return false;
-  MI->eraseFromParent();
+  MachineBasicBlock::iterator I(MI);
+  removeDeadCode(I, std::next(I));
   return true;
 }
 
