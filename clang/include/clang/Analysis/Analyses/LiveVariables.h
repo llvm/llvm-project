@@ -88,9 +88,13 @@ public:
   ///  before the given block-level expression (see runOnAllBlocks).
   bool isLive(const Stmt *Loc, const Stmt *StmtVal);
 
-  /// Print to stderr the liveness information associated with
+  /// Print to stderr the variable liveness information associated with
   /// each basic block.
-  void dumpBlockLiveness(const SourceManager& M);
+  void dumpBlockLiveness(const SourceManager &M);
+
+  /// Print to stderr the statement liveness information associated with
+  /// each basic block.
+  void dumpStmtLiveness(const SourceManager &M);
 
   void runOnAllBlocks(Observer &obs);
 
