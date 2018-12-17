@@ -49,6 +49,9 @@ public:
     bool      isSignalFrame;
     bool      fdesHaveAugmentationData;
     uint8_t   returnAddressRegister;
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+    bool      addressesSignedWithBKey;
+#endif
   };
 
   /// Information about an FDE (Frame Description Entry)
@@ -263,6 +266,9 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
   cieInfo->dataAlignFactor = 0;
   cieInfo->isSignalFrame = false;
   cieInfo->fdesHaveAugmentationData = false;
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+  cieInfo->addressesSignedWithBKey = false;
+#endif
   cieInfo->cieStart = cie;
   pint_t p = cie;
   pint_t cieLength = (pint_t)addressSpace.get32(p);
@@ -326,6 +332,11 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
       case 'S':
         cieInfo->isSignalFrame = true;
         break;
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+      case 'B':
+        cieInfo->addressesSignedWithBKey = true;
+        break;
+#endif
       default:
         // ignore unknown letters
         break;

@@ -7,7 +7,7 @@ void f() {
   int *p = new int(42);
   delete p;
   delete p;
-  // CHECK: warning: Attempt to delete released memory [clang-analyzer-cplusplus.NewDelete]
+  // CHECK: warning: Attempt to free released memory [clang-analyzer-cplusplus.NewDelete]
 }
 
 void g() {
