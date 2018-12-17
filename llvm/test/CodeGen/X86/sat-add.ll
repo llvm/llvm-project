@@ -526,11 +526,9 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_notval(<4 x i32> %x) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [42,42,42,42]
 ; SSE41-NEXT:    paddd %xmm0, %xmm1
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [4294967253,4294967253,4294967253,4294967253]
-; SSE41-NEXT:    pminud %xmm0, %xmm2
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [4294967254,4294967254,4294967254,4294967254]
+; SSE41-NEXT:    pmaxud %xmm0, %xmm2
 ; SSE41-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    retq
   %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42>

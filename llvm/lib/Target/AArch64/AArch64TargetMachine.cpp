@@ -556,6 +556,12 @@ void AArch64PassConfig::addPreSched2() {
 }
 
 void AArch64PassConfig::addPreEmitPass() {
+  // Machine Block Placement might have created new opportunities when run
+  // at O3, where the Tail Duplication Threshold is set to 4 instructions.
+  // Run the load/store optimizer once more.
+  if (TM->getOptLevel() >= CodeGenOpt::Aggressive && EnableLoadStoreOpt)
+    addPass(createAArch64LoadStoreOptimizationPass());
+
   if (EnableA53Fix835769)
     addPass(createAArch64A53Fix835769());
   // Relax conditional branch instructions if they're otherwise out of
