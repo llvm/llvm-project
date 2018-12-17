@@ -113,6 +113,14 @@ static void outputCallingConvention(OutputStream &OS, CallingConv CC) {
   }
 }
 
+std::string Node::toString() const {
+  OutputStream OS;
+  initializeOutputStream(nullptr, nullptr, OS, 1024);
+  this->output(OS, llvm::ms_demangle::OF_Default);
+  OS << '\0';
+  return {OS.getBuffer()};
+}
+
 void TypeNode::outputQuals(bool SpaceBefore, bool SpaceAfter) const {}
 
 void PrimitiveTypeNode::outputPre(OutputStream &OS, OutputFlags Flags) const {

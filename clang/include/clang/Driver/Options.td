@@ -1639,11 +1639,18 @@ def fno_signed_char : Flag<["-"], "fno-signed-char">, Group<f_Group>,
     Flags<[CC1Option]>, HelpText<"Char is unsigned">;
 def fsplit_stack : Flag<["-"], "fsplit-stack">, Group<f_Group>;
 def fstack_protector_all : Flag<["-"], "fstack-protector-all">, Group<f_Group>,
-  HelpText<"Force the usage of stack protectors for all functions">;
+  HelpText<"Enable stack protectors for all functions">;
 def fstack_protector_strong : Flag<["-"], "fstack-protector-strong">, Group<f_Group>,
-  HelpText<"Use a strong heuristic to apply stack protectors to functions">;
+  HelpText<"Enable stack protectors for some functions vulnerable to stack smashing. "
+           "Compared to -fstack-protector, this uses a stronger heuristic "
+           "that includes functions containing arrays of any size (and any type), "
+           "as well as any calls to alloca or the taking of an address from a local variable">;
 def fstack_protector : Flag<["-"], "fstack-protector">, Group<f_Group>,
-  HelpText<"Enable stack protectors for functions potentially vulnerable to stack smashing">;
+  HelpText<"Enable stack protectors for some functions vulnerable to stack smashing. "
+           "This uses a loose heuristic which considers functions vulnerable "
+           "if they contain a char (or 8bit integer) array or constant sized calls to "
+           "alloca, which are of greater size than ssp-buffer-size (default: 8 bytes). "
+           "All variable sized calls to alloca are considered vulnerable">;
 def fstandalone_debug : Flag<["-"], "fstandalone-debug">, Group<f_Group>, Flags<[CoreOption]>,
   HelpText<"Emit full debug info for all types used by the program">;
 def fno_standalone_debug : Flag<["-"], "fno-standalone-debug">, Group<f_Group>, Flags<[CoreOption]>,

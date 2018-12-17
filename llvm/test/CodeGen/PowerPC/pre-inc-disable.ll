@@ -19,20 +19,20 @@ define signext i32 @test_pre_inc_disable_1(i8* nocapture readonly %pix1, i32 sig
 ; CHECK:    lxvx v2, 0, r5
 ; CHECK:    lxvx v3, 0, r6
 ; CHECK:    xxpermdi v5, f0, f0, 2
-; CHECK:    vperm v0, v4, v5, v2
-; CHECK:    vperm v5, v5, v4, v3
-; CHECK:    xvnegsp v5, v5
-; CHECK:    xvnegsp v0, v0
+; CHECK-DAG: vperm v[[VR1:[0-9]+]], v4, v5, v2
+; CHECK-DAG: vperm v[[VR2:[0-9]+]], v5, v4, v3
+; CHECK-DAG: xvnegsp v[[VR3:[0-9]+]], v[[VR1]]
+; CHECK-DAG: xvnegsp v[[VR4:[0-9]+]], v[[VR2]]
 
 ; CHECK:  .LBB0_1: # %for.cond1.preheader
 ; CHECK:    lfd f0, 0(r3)
 ; CHECK:    xxpermdi v1, f0, f0, 2
 ; CHECK:    vperm v6, v1, v4, v3
 ; CHECK:    vperm v1, v4, v1, v2
-; CHECK:    xvnegsp v6, v6
-; CHECK:    xvnegsp v1, v1
-; CHECK:    vabsduw v1, v1, v0
-; CHECK:    vabsduw v6, v6, v5
+; CHECK-DAG:    xvnegsp v6, v6
+; CHECK-DAG:    xvnegsp v1, v1
+; CHECK-DAG: vabsduw v1, v1, v[[VR3]]
+; CHECK-DAG: vabsduw v6, v6, v[[VR4]]
 ; CHECK:    vadduwm v1, v6, v1
 ; CHECK:    xxswapd v6, v1
 ; CHECK:    vadduwm v1, v1, v6
@@ -46,10 +46,10 @@ define signext i32 @test_pre_inc_disable_1(i8* nocapture readonly %pix1, i32 sig
 ; CHECK:    xxswapd v1, vs0
 ; CHECK:    vperm v6, v1, v4, v3
 ; CHECK:    vperm v1, v4, v1, v2
-; CHECK:    xvnegsp v6, v6
-; CHECK:    xvnegsp v1, v1
-; CHECK:    vabsduw v1, v1, v0
-; CHECK:    vabsduw v6, v6, v5
+; CHECK-DAG: xvnegsp v6, v6
+; CHECK-DAG: xvnegsp v1, v1
+; CHECK-DAG: vabsduw v1, v1, v[[VR3]]
+; CHECK-DAG: vabsduw v6, v6, v[[VR4]]
 ; CHECK:    vadduwm v1, v6, v1
 ; CHECK:    xxswapd v6, v1
 ; CHECK:    vadduwm v1, v1, v6
@@ -72,36 +72,36 @@ define signext i32 @test_pre_inc_disable_1(i8* nocapture readonly %pix1, i32 sig
 ; P9BE:    lxvx v3, 0, r6
 ; P9BE:    xxlor v5, vs0, vs0
 ; P9BE:    li r6, 0
-; P9BE:    vperm v0, v4, v5, v2
-; P9BE:    vperm v5, v4, v5, v3
-; P9BE:    xvnegsp v5, v5
-; P9BE:    xvnegsp v0, v0
+; P9BE-DAG: vperm v[[VR1:[0-9]+]], v4, v5, v2
+; P9BE-DAG: vperm v[[VR2:[0-9]+]], v4, v5, v3
+; P9BE-DAG: xvnegsp v[[VR3:[0-9]+]], v[[VR1]]
+; P9BE-DAG: xvnegsp v[[VR4:[0-9]+]], v[[VR2]]
 
 ; P9BE:  .LBB0_1: # %for.cond1.preheader
 ; P9BE:    lfd f0, 0(r3)
 ; P9BE:    xxlor v1, vs0, vs0
 ; P9BE:    vperm v6, v4, v1, v3
 ; P9BE:    vperm v1, v4, v1, v2
-; P9BE:    xvnegsp v6, v6
-; P9BE:    xvnegsp v1, v1
-; P9BE:    vabsduw v1, v1, v0
-; P9BE:    vabsduw v6, v6, v5
+; P9BE-DAG: xvnegsp v6, v6
+; P9BE-DAG: xvnegsp v1, v1
+; P9BE-DAG: vabsduw v1, v1, v[[VR3]]
+; P9BE-DAG: vabsduw v6, v6, v[[VR4]]
 ; P9BE:    vadduwm v1, v6, v1
 ; P9BE:    xxswapd v6, v1
 ; P9BE:    vadduwm v1, v1, v6
 ; P9BE:    xxspltw v6, v1, 1
 ; P9BE:    vadduwm v1, v1, v6
-; P9BE:    vextuwlx r7, r6, v1
-; P9BE:    ldux r8, r3, r4
+; P9BE:    vextuwlx r[[GR1:[0-9]+]], r6, v1
+; P9BE:    ldux r[[GR2:[0-9]+]], r3, r4
 ; P9BE:    add r3, r3, r4
-; P9BE:    add r5, r7, r5
-; P9BE:    mtvsrd v1, r8
+; P9BE:    add r5, r[[GR1]], r5
+; P9BE:    mtvsrd v1, r[[GR2]]
 ; P9BE:    vperm v6, v4, v1, v3
 ; P9BE:    vperm v1, v4, v1, v2
-; P9BE:    xvnegsp v6, v6
-; P9BE:    xvnegsp v1, v1
-; P9BE:    vabsduw v1, v1, v0
-; P9BE:    vabsduw v6, v6, v5
+; P9BE-DAG: xvnegsp v6, v6
+; P9BE-DAG: xvnegsp v1, v1
+; P9BE-DAG: vabsduw v1, v1, v[[VR3]]
+; P9BE-DAG: vabsduw v6, v6, v[[VR4]]
 ; P9BE:    vadduwm v1, v6, v1
 ; P9BE:    xxswapd v6, v1
 ; P9BE:    vadduwm v1, v1, v6

@@ -316,9 +316,10 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
                                   SourceRange Range) {
   switch (A.getKind()) {
   case ParsedAttr::UnknownAttribute:
-    S.Diag(A.getLoc(), A.isDeclspecAttribute() ?
-           diag::warn_unhandled_ms_attribute_ignored :
-           diag::warn_unknown_attribute_ignored) << A.getName();
+    S.Diag(A.getLoc(), A.isDeclspecAttribute()
+                           ? (unsigned)diag::warn_unhandled_ms_attribute_ignored
+                           : (unsigned)diag::warn_unknown_attribute_ignored)
+        << A.getName();
     return nullptr;
   case ParsedAttr::AT_FallThrough:
     return handleFallThroughAttr(S, St, A, Range);
