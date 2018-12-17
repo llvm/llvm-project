@@ -2016,8 +2016,9 @@ bool AArch64FastISel::selectLoad(const Instruction *I) {
       if (RetVT == MVT::i64 && VT <= MVT::i32) {
         if (WantZExt) {
           // Delete the last emitted instruction from emitLoad (SUBREG_TO_REG).
-          std::prev(FuncInfo.InsertPt)->eraseFromParent();
-          ResultReg = std::prev(FuncInfo.InsertPt)->getOperand(0).getReg();
+          MachineBasicBlock::iterator I(std::prev(FuncInfo.InsertPt));
+          ResultReg = std::prev(I)->getOperand(0).getReg();
+          removeDeadCode(I, std::next(I));
         } else
           ResultReg = fastEmitInst_extractsubreg(MVT::i32, ResultReg,
                                                  /*IsKill=*/true,
@@ -2038,7 +2039,8 @@ bool AArch64FastISel::selectLoad(const Instruction *I) {
           break;
         }
       }
-      MI->eraseFromParent();
+      MachineBasicBlock::iterator I(MI);
+      removeDeadCode(I, std::next(I));
       MI = nullptr;
       if (Reg)
         MI = MRI.getUniqueVRegDef(Reg);
@@ -4508,7 +4510,8 @@ bool AArch64FastISel::optimizeIntExtLoad(const Instruction *I, MVT RetVT,
             MI->getOperand(1).getSubReg() == AArch64::sub_32) &&
            "Expected copy instruction");
     Reg = MI->getOperand(1).getReg();
-    MI->eraseFromParent();
+    MachineBasicBlock::iterator I(MI);
+    removeDeadCode(I, std::next(I));
   }
   updateValueMap(I, Reg);
   return true;

@@ -334,6 +334,8 @@ struct InstrDesc {
   bool MayLoad;
   bool MayStore;
   bool HasSideEffects;
+  bool BeginGroup;
+  bool EndGroup;
 
   // A zero latency instruction doesn't consume any scheduler resources.
   bool isZeroLatency() const { return !MaxLatency && Resources.empty(); }

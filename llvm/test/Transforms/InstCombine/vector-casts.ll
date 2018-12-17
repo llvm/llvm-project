@@ -163,8 +163,8 @@ define void @convert(<2 x i32>* %dst.addr, <2 x i64> %src) {
 
 define <2 x i65> @foo(<2 x i64> %t) {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[T:%.*]], <i64 4294967295, i64 4294967295>
-; CHECK-NEXT:    [[B:%.*]] = zext <2 x i64> [[TMP1]] to <2 x i65>
+; CHECK-NEXT:    [[A_MASK:%.*]] = and <2 x i64> [[T:%.*]], <i64 4294967295, i64 4294967295>
+; CHECK-NEXT:    [[B:%.*]] = zext <2 x i64> [[A_MASK]] to <2 x i65>
 ; CHECK-NEXT:    ret <2 x i65> [[B]]
 ;
   %a = trunc <2 x i64> %t to <2 x i32>
@@ -174,8 +174,8 @@ define <2 x i65> @foo(<2 x i64> %t) {
 
 define <2 x i64> @bar(<2 x i65> %t) {
 ; CHECK-LABEL: @bar(
-; CHECK-NEXT:    [[A:%.*]] = trunc <2 x i65> [[T:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i64> [[A]], <i64 4294967295, i64 4294967295>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i65> [[T:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i64> [[TMP1]], <i64 4294967295, i64 4294967295>
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = trunc <2 x i65> %t to <2 x i32>
@@ -185,9 +185,8 @@ define <2 x i64> @bar(<2 x i65> %t) {
 
 define <2 x i64> @bars(<2 x i65> %t) {
 ; CHECK-LABEL: @bars(
-; CHECK-NEXT:    [[A:%.*]] = trunc <2 x i65> [[T:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i64> [[A]], <i64 32, i64 32>
-; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i64> [[SEXT]], <i64 32, i64 32>
+; CHECK-NEXT:    [[A:%.*]] = trunc <2 x i65> [[T:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[B:%.*]] = sext <2 x i32> [[A]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = trunc <2 x i65> %t to <2 x i32>
@@ -197,8 +196,8 @@ define <2 x i64> @bars(<2 x i65> %t) {
 
 define <2 x i64> @quxs(<2 x i64> %t) {
 ; CHECK-LABEL: @quxs(
-; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i64> [[T:%.*]], <i64 32, i64 32>
-; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i64> [[SEXT]], <i64 32, i64 32>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[T:%.*]], <i64 32, i64 32>
+; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i64> [[TMP1]], <i64 32, i64 32>
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = trunc <2 x i64> %t to <2 x i32>
@@ -384,9 +383,10 @@ define <3 x float> @fptrunc_inselt2(<3 x double> %x) {
 
 define <2 x i64> @sext_less_casting_with_wideop(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @sext_less_casting_with_wideop(
-; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i64> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i64> [[MUL]], <i64 32, i64 32>
-; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i64> [[SEXT]], <i64 32, i64 32>
+; CHECK-NEXT:    [[XNARROW:%.*]] = trunc <2 x i64> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[YNARROW:%.*]] = trunc <2 x i64> [[Y:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i32> [[XNARROW]], [[YNARROW]]
+; CHECK-NEXT:    [[R:%.*]] = sext <2 x i32> [[MUL]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %xnarrow = trunc <2 x i64> %x to <2 x i32>
@@ -398,8 +398,10 @@ define <2 x i64> @sext_less_casting_with_wideop(<2 x i64> %x, <2 x i64> %y) {
 
 define <2 x i64> @zext_less_casting_with_wideop(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @zext_less_casting_with_wideop(
-; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i64> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i64> [[MUL]], <i64 4294967295, i64 4294967295>
+; CHECK-NEXT:    [[XNARROW:%.*]] = trunc <2 x i64> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[YNARROW:%.*]] = trunc <2 x i64> [[Y:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i32> [[XNARROW]], [[YNARROW]]
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i32> [[MUL]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %xnarrow = trunc <2 x i64> %x to <2 x i32>

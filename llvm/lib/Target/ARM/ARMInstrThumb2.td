@@ -4451,13 +4451,13 @@ def : T2Pat<(atomic_store_32 t2addrmode_negimm8:$addr, GPR:$val),
 def : T2Pat<(atomic_store_32 t2addrmode_so_reg:$addr, GPR:$val),
             (t2STRs     GPR:$val, t2addrmode_so_reg:$addr)>;
 
-let AddedComplexity = 8 in {
-  def : T2Pat<(atomic_load_acquire_8 addr_offset_none:$addr),  (t2LDAB addr_offset_none:$addr)>;
-  def : T2Pat<(atomic_load_acquire_16 addr_offset_none:$addr), (t2LDAH addr_offset_none:$addr)>;
-  def : T2Pat<(atomic_load_acquire_32 addr_offset_none:$addr), (t2LDA  addr_offset_none:$addr)>;
-  def : T2Pat<(atomic_store_release_8 addr_offset_none:$addr, GPR:$val),  (t2STLB GPR:$val, addr_offset_none:$addr)>;
-  def : T2Pat<(atomic_store_release_16 addr_offset_none:$addr, GPR:$val), (t2STLH GPR:$val, addr_offset_none:$addr)>;
-  def : T2Pat<(atomic_store_release_32 addr_offset_none:$addr, GPR:$val), (t2STL  GPR:$val, addr_offset_none:$addr)>;
+let AddedComplexity = 8, Predicates = [IsThumb, HasAcquireRelease, HasV7Clrex] in {
+  def : Pat<(atomic_load_acquire_8 addr_offset_none:$addr),  (t2LDAB addr_offset_none:$addr)>;
+  def : Pat<(atomic_load_acquire_16 addr_offset_none:$addr), (t2LDAH addr_offset_none:$addr)>;
+  def : Pat<(atomic_load_acquire_32 addr_offset_none:$addr), (t2LDA  addr_offset_none:$addr)>;
+  def : Pat<(atomic_store_release_8 addr_offset_none:$addr, GPR:$val),  (t2STLB GPR:$val, addr_offset_none:$addr)>;
+  def : Pat<(atomic_store_release_16 addr_offset_none:$addr, GPR:$val), (t2STLH GPR:$val, addr_offset_none:$addr)>;
+  def : Pat<(atomic_store_release_32 addr_offset_none:$addr, GPR:$val), (t2STL  GPR:$val, addr_offset_none:$addr)>;
 }
 
 
