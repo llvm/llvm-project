@@ -1,0 +1,10 @@
+# REQUIRES: system-darwin
+# RUN: %clang %p/Inputs/cstr.c -g -o %t
+# RUN: %lldb -b -s %s -f %t | FileCheck %s
+
+br set -p return
+command script import lldb.macosx.heap
+run
+cstr "patatino"
+
+# CHECK: {{.*}}: malloc(    16) -> {{.*}}
