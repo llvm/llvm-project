@@ -17,9 +17,9 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H
 #define LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H
 
-#include "Pipeline.h"
 #include "Views/View.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/MCA/Pipeline.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "llvm-mca"

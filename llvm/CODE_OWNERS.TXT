@@ -71,7 +71,7 @@ D: Loop Strength Reduction, Register allocators
 N: Andrea Di Biagio
 E: andrea.dibiagio@sony.com
 E: andrea.dibiagio@gmail.com
-D: llvm-mca
+D: MCA, llvm-mca
 
 N: Duncan P. N. Exon Smith
 E: dexonsmith@apple.com

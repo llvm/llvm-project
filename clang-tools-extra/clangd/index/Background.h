@@ -13,6 +13,7 @@
 #include "Context.h"
 #include "FSProvider.h"
 #include "GlobalCompilationDatabase.h"
+#include "Threading.h"
 #include "index/FileIndex.h"
 #include "index/Index.h"
 #include "index/Serialization.h"
@@ -110,14 +111,14 @@ private:
   // queue management
   using Task = std::function<void()>;
   void run(); // Main loop executed by Thread. Runs tasks from Queue.
-  void enqueueTask(Task T);
+  void enqueueTask(Task T, ThreadPriority Prioirty);
   void enqueueLocked(tooling::CompileCommand Cmd,
                      BackgroundIndexStorage *IndexStorage);
   std::mutex QueueMu;
   unsigned NumActiveTasks = 0; // Only idle when queue is empty *and* no tasks.
   std::condition_variable QueueCV;
   bool ShouldStop = false;
-  std::deque<Task> Queue;
+  std::deque<std::pair<Task, ThreadPriority>> Queue;
   std::vector<std::thread> ThreadPool; // FIXME: Abstract this away.
   GlobalCompilationDatabase::CommandChanged::Subscription CommandsChanged;
 };

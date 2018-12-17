@@ -39933,7 +39933,7 @@ static bool needCarryOrOverflowFlag(SDValue Flags) {
       CC = (X86::CondCode)User->getConstantOperandVal(2);
       break;
     case X86ISD::CMOV:
-      CC = (X86::CondCode)User->getConstantOperandVal(3);
+      CC = (X86::CondCode)User->getConstantOperandVal(2);
       break;
     }
 
