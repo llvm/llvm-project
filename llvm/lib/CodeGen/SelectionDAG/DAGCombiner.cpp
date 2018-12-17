@@ -3755,11 +3755,8 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
     // instructions without eliminating anything.
     if (!N0.hasOneUse() && !N1.hasOneUse())
       return SDValue();
-    // We need matching integer source types.
-    // Do not hoist logic op inside of a vector extend, since it may combine
-    // into a vsetcc.
-    // TODO: Should the vector check apply to truncate though?
-    if (VT.isVector() || XVT != Y.getValueType())
+    // We need matching source types.
+    if (XVT != Y.getValueType())
       return SDValue();
     // Don't create an illegal op during or after legalization.
     if (LegalOperations && !TLI.isOperationLegal(LogicOpcode, XVT))
@@ -6966,8 +6963,10 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
 
   // fold (fshl N0, N1, 0) -> N0
   // fold (fshr N0, N1, 0) -> N1
-  if (DAG.MaskedValueIsZero(N2, APInt::getAllOnesValue(BitWidth)))
-    return IsFSHL ? N0 : N1;
+  if (isPowerOf2_32(BitWidth))
+    if (DAG.MaskedValueIsZero(
+            N2, APInt(N2.getScalarValueSizeInBits(), BitWidth - 1)))
+      return IsFSHL ? N0 : N1;
 
   // fold (fsh* N0, N1, c) -> (fsh* N0, N1, c % BitWidth)
   if (ConstantSDNode *Cst = isConstOrConstSplat(N2)) {

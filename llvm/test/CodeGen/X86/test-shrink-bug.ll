@@ -68,7 +68,7 @@ define void @fail(i16 %a, <2 x i8> %b) {
 ; CHECK-X64:       # %bb.0:
 ; CHECK-X64-NEXT:    pushq %rax
 ; CHECK-X64-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-X64-NEXT:    testw $263, %di # imm = 0x107
+; CHECK-X64-NEXT:    testl $263, %edi # imm = 0x107
 ; CHECK-X64-NEXT:    je .LBB1_2
 ; CHECK-X64-NEXT:  # %bb.1:
 ; CHECK-X64-NEXT:    pand {{.*}}(%rip), %xmm0

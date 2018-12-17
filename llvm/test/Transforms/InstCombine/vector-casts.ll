@@ -377,3 +377,35 @@ define <3 x float> @fptrunc_inselt2(<3 x double> %x) {
   ret <3 x float> %trunc
 }
 
+; Converting to a wide type might reduce instruction count,
+; but we can not do that unless the backend can recover from
+; the creation of a potentially illegal op (like a 64-bit vmul).
+; PR40032 - https://bugs.llvm.org/show_bug.cgi?id=40032
+
+define <2 x i64> @sext_less_casting_with_wideop(<2 x i64> %x, <2 x i64> %y) {
+; CHECK-LABEL: @sext_less_casting_with_wideop(
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i64> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEXT:%.*]] = shl <2 x i64> [[MUL]], <i64 32, i64 32>
+; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i64> [[SEXT]], <i64 32, i64 32>
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %xnarrow = trunc <2 x i64> %x to <2 x i32>
+  %ynarrow = trunc <2 x i64> %y to <2 x i32>
+  %mul = mul <2 x i32> %xnarrow, %ynarrow
+  %r = sext <2 x i32> %mul to <2 x i64>
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @zext_less_casting_with_wideop(<2 x i64> %x, <2 x i64> %y) {
+; CHECK-LABEL: @zext_less_casting_with_wideop(
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i64> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i64> [[MUL]], <i64 4294967295, i64 4294967295>
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %xnarrow = trunc <2 x i64> %x to <2 x i32>
+  %ynarrow = trunc <2 x i64> %y to <2 x i32>
+  %mul = mul <2 x i32> %xnarrow, %ynarrow
+  %r = zext <2 x i32> %mul to <2 x i64>
+  ret <2 x i64> %r
+}
+

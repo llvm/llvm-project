@@ -1,50 +1,19 @@
 RUN: llvm-rtdyld -printline %p/Inputs/test-inline.o \
-RUN:   | FileCheck %s -check-prefix TEST_INLINE
+RUN:   | FileCheck %s
 RUN: llvm-rtdyld -printdebugline %p/Inputs/test-inline.o \
-RUN:   | FileCheck %s -check-prefix TEST_INLINE
+RUN:   | FileCheck %s
 RUN: llvm-rtdyld -printline %p/Inputs/test-parameters.o \
-RUN:   | FileCheck %s -check-prefix TEST_PARAMETERS
+RUN:   | FileCheck %s
 RUN: llvm-rtdyld -printdebugline %p/Inputs/test-parameters.o \
-RUN:   | FileCheck %s -check-prefix TEST_PARAMETERS
+RUN:   | FileCheck %s
 
 ; This test verifies that relocations are correctly applied to the
 ; .debug_line section and exercises DIContext::getLineInfoForAddressRange().
-; If relocations are not applied the first two functions will be reported as
-; both starting at address zero in the; line number table.
-TEST_INLINE:      Function: _Z15test_parametersPfPA2_dR11char_structPPitm, Size = 170
-TEST_INLINE-NEXT: Line info @ 0: test-inline.cpp, line:33
-TEST_INLINE-NEXT: Line info @ 35: test-inline.cpp, line:34
-TEST_INLINE-NEXT: Line info @ 165: test-inline.cpp, line:35
-TEST_INLINE-NEXT: Function: _Z3foov, Size = 3
-TEST_INLINE-NEXT: Line info @ 0: test-inline.cpp, line:28
-TEST_INLINE-NEXT: Line info @ 2: test-inline.cpp, line:29
-TEST_INLINE-NEXT: Function: main, Size = 146
-TEST_INLINE-NEXT: Line info @ 0: test-inline.cpp, line:39
-TEST_INLINE-NEXT: Line info @ 21: test-inline.cpp, line:41
-TEST_INLINE-NEXT: Line info @ 39: test-inline.cpp, line:42
-TEST_INLINE-NEXT: Line info @ 60: test-inline.cpp, line:44
-TEST_INLINE-NEXT: Line info @ 80: test-inline.cpp, line:48
-TEST_INLINE-NEXT: Line info @ 90: test-inline.cpp, line:45
-TEST_INLINE-NEXT: Line info @ 95: test-inline.cpp, line:46
-TEST_INLINE-NEXT: Line info @ 114: test-inline.cpp, line:48 
-TEST_INLINE-NEXT: Line info @ 141: test-inline.cpp, line:49
 
-; This test checks the case where all code is in a single section.
-TEST_PARAMETERS:      Function: _Z15test_parametersPfPA2_dR11char_structPPitm, Size = 170
-TEST_PARAMETERS-NEXT: Line info @ 0: test-parameters.cpp, line:33
-TEST_PARAMETERS-NEXT: Line info @ 35: test-parameters.cpp, line:34
-TEST_PARAMETERS-NEXT: Line info @ 165: test-parameters.cpp, line:35
-TEST_PARAMETERS-NEXT: Function: _Z3foov, Size = 3
-TEST_PARAMETERS-NEXT: Line info @ 0: test-parameters.cpp, line:28
-TEST_PARAMETERS-NEXT: Line info @ 2: test-parameters.cpp, line:29
-TEST_PARAMETERS-NEXT: Function: main, Size = 146
-TEST_PARAMETERS-NEXT: Line info @ 0: test-parameters.cpp, line:39
-TEST_PARAMETERS-NEXT: Line info @ 21: test-parameters.cpp, line:41
-TEST_PARAMETERS-NEXT: Line info @ 39: test-parameters.cpp, line:42
-TEST_PARAMETERS-NEXT: Line info @ 60: test-parameters.cpp, line:44
-TEST_PARAMETERS-NEXT: Line info @ 80: test-parameters.cpp, line:48
-TEST_PARAMETERS-NEXT: Line info @ 90: test-parameters.cpp, line:45
-TEST_PARAMETERS-NEXT: Line info @ 95: test-parameters.cpp, line:46
-TEST_PARAMETERS-NEXT: Line info @ 114: test-parameters.cpp, line:48 
-TEST_PARAMETERS-NEXT: Line info @ 141: test-parameters.cpp, line:49
-
+CHECK:      Function: _Z2f1v, Size = 6
+CHECK-NEXT:   Line info @ 0: test-inline.cpp, line:1
+CHECK-NEXT:   Line info @ 4: test-inline.cpp, line:1
+CHECK-NEXT: Function: _Z2f2v, Size = 11
+CHECK-NEXT:   Line info @ 0: test-inline.cpp, line:2
+CHECK-NEXT:   Line info @ 4: test-inline.cpp, line:2
+CHECK-NEXT:   Line info @ 9: test-inline.cpp, line:2
