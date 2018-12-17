@@ -26,7 +26,6 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-
 struct RegionState {
 private:
   enum Kind { Moved, Reported } K;
@@ -42,7 +41,9 @@ public:
   bool operator==(const RegionState &X) const { return K == X.K; }
   void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddInteger(K); }
 };
+} // end of anonymous namespace
 
+namespace {
 class MoveChecker
     : public Checker<check::PreCall, check::PostCall,
                      check::DeadSymbols, check::RegionChanges> {
@@ -62,7 +63,17 @@ public:
 
 private:
   enum MisuseKind { MK_FunCall, MK_Copy, MK_Move, MK_Dereference };
+  // This needs to be unsigned in order to avoid undefined behavior
+  // when putting it into a tight bitfield.
   enum StdObjectKind : unsigned { SK_NonStd, SK_Unsafe, SK_Safe, SK_SmartPtr };
+
+  enum AggressivenessKind { // In any case, don't warn after a reset.
+    AK_Invalid = -1,
+    AK_KnownsOnly = 0,      // Warn only about known move-unsafe classes.
+    AK_KnownsAndLocals = 1, // Also warn about all local objects.
+    AK_All = 2,             // Warn on any use-after-move.
+    AK_NumKinds = AK_All
+  };
 
   static bool misuseCausesCrash(MisuseKind MK) {
     return MK == MK_Dereference;
@@ -117,8 +128,9 @@ private:
     // In aggressive mode, warn on any use-after-move because the user has
     // intentionally asked us to completely eliminate use-after-move
     // in his code.
-    return IsAggressive || OK.IsLocal
-                        || OK.StdKind == SK_Unsafe || OK.StdKind == SK_SmartPtr;
+    return (Aggressiveness == AK_All) ||
+           (Aggressiveness >= AK_KnownsAndLocals && OK.IsLocal) ||
+           OK.StdKind == SK_Unsafe || OK.StdKind == SK_SmartPtr;
   }
 
   // Some objects only suffer from some kinds of misuses, but we need to track
@@ -127,8 +139,9 @@ private:
     // Additionally, only warn on smart pointers when they are dereferenced (or
     // local or we are aggressive).
     return shouldBeTracked(OK) &&
-           (IsAggressive || OK.IsLocal
-                         || OK.StdKind != SK_SmartPtr || MK == MK_Dereference);
+           ((Aggressiveness == AK_All) ||
+            (Aggressiveness >= AK_KnownsAndLocals && OK.IsLocal) ||
+            OK.StdKind != SK_SmartPtr || MK == MK_Dereference);
   }
 
   // Obtains ObjectKind of an object. Because class declaration cannot always
@@ -173,10 +186,17 @@ private:
     bool Found;
   };
 
-  bool IsAggressive = false;
+  AggressivenessKind Aggressiveness;
 
 public:
-  void setAggressiveness(bool Aggressive) { IsAggressive = Aggressive; }
+  void setAggressiveness(StringRef Str) {
+    Aggressiveness =
+        llvm::StringSwitch<AggressivenessKind>(Str)
+            .Case("KnownsOnly", AK_KnownsOnly)
+            .Case("KnownsAndLocals", AK_KnownsAndLocals)
+            .Case("All", AK_All)
+            .Default(AK_KnownsAndLocals); // A sane default.
+  };
 
 private:
   mutable std::unique_ptr<BugType> BT;
@@ -717,6 +737,6 @@ void MoveChecker::printState(raw_ostream &Out, ProgramStateRef State,
 }
 void ento::registerMoveChecker(CheckerManager &mgr) {
   MoveChecker *chk = mgr.registerChecker<MoveChecker>();
-  chk->setAggressiveness(mgr.getAnalyzerOptions().getCheckerBooleanOption(
-      "Aggressive", false, chk));
+  chk->setAggressiveness(
+      mgr.getAnalyzerOptions().getCheckerStringOption("WarnOn", "", chk));
 }
