@@ -2354,7 +2354,8 @@ bool PPCFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
         PPCSubTarget->hasSPE() ? PPC::EVLDD : PPC::LFD))
     return false;
 
-  MI->eraseFromParent();
+  MachineBasicBlock::iterator I(MI);
+  removeDeadCode(I, std::next(I));
   return true;
 }
 
