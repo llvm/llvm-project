@@ -3419,6 +3419,11 @@ Status Process::PrivateResume() {
           m_thread_list.DidResume();
           if (log)
             log->Printf("Process thinks the process has resumed.");
+        } else {
+          if (log)
+            log->Printf(
+                "Process::PrivateResume() DoResume failed.");
+          return error;
         }
       }
     } else {

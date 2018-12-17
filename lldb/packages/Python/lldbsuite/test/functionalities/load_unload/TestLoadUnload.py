@@ -158,6 +158,7 @@ class LoadUnloadTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @expectedFailureAndroid  # wrong source file shows up for hidden library
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    @skipIfDarwinEmbedded
     def test_dyld_library_path(self):
         """Test (DY)LD_LIBRARY_PATH after moving libd.dylib, which defines d_function, somewhere else."""
         self.copy_shlibs_to_remote(hidden_dir=True)

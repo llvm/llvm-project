@@ -267,10 +267,14 @@ class TestQueues(TestBase):
         self.assertTrue(break1, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
+        libbtr_path = "/Applications/Xcode.app/Contents/Developer/usr/lib/libBacktraceRecording.dylib"
+        if self.getArchitecture() in ['arm', 'arm64', 'arm64e', 'arm64_32', 'armv7', 'armv7k']:
+            libbtr_path = "/Developer/usr/lib/libBacktraceRecording.dylib"
+
         process = target.LaunchSimple(
             None,
             [
-                'DYLD_INSERT_LIBRARIES=/Applications/Xcode.app/Contents/Developer/usr/lib/libBacktraceRecording.dylib',
+                'DYLD_INSERT_LIBRARIES=%s' % (libbtr_path),
                 'DYLD_LIBRARY_PATH=/usr/lib/system/introspection'],
             self.get_process_working_directory())
 
