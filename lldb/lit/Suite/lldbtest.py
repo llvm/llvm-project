@@ -96,6 +96,10 @@ class LLDBTest(TestFormat):
         if exitCode:
             return lit.Test.FAIL, out + err
 
+        unexpected_test_line = 'XPASS'
+        if unexpected_test_line in out or unexpected_test_line in err:
+            return lit.Test.XPASS, ''
+
         passing_test_line = 'RESULT: PASSED'
         if passing_test_line not in out and passing_test_line not in err:
             msg = ('Unable to find %r in dotest output:\n\n%s%s' %
