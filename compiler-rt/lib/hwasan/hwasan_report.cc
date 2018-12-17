@@ -233,7 +233,7 @@ void PrintAddressDescription(
       t->Announce();
 
       // Temporary report section, needs to be improved.
-      Printf("Previosly allocated frames:\n");
+      Printf("Previously allocated frames:\n");
       auto *sa = (t == GetCurrentThread() && current_stack_allocations)
                      ? current_stack_allocations
                      : t->stack_allocations();

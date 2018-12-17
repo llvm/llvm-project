@@ -283,6 +283,49 @@ private:
   uint32_t EventSection = 0;
 };
 
+class WasmSectionOrderChecker {
+public:
+  // We define orders for all core wasm sections and known custom sections.
+  enum : int {
+    // Core sections
+    // The order of standard sections is precisely given by the spec.
+    WASM_SEC_ORDER_TYPE = 1,
+    WASM_SEC_ORDER_IMPORT = 2,
+    WASM_SEC_ORDER_FUNCTION = 3,
+    WASM_SEC_ORDER_TABLE = 4,
+    WASM_SEC_ORDER_MEMORY = 5,
+    WASM_SEC_ORDER_GLOBAL = 6,
+    WASM_SEC_ORDER_EVENT = 7,
+    WASM_SEC_ORDER_EXPORT = 8,
+    WASM_SEC_ORDER_START = 9,
+    WASM_SEC_ORDER_ELEM = 10,
+    WASM_SEC_ORDER_DATACOUNT = 11,
+    WASM_SEC_ORDER_CODE = 12,
+    WASM_SEC_ORDER_DATA = 13,
+
+    // Custom sections
+    // "dylink" should be the very first section in the module
+    WASM_SEC_ORDER_DYLINK = 0,
+    // "linking" section requires DATA section in order to validate data symbols
+    WASM_SEC_ORDER_LINKING = 100,
+    // Must come after "linking" section in order to validate reloc indexes.
+    WASM_SEC_ORDER_RELOC = 101,
+    // "name" section must appear after DATA. Comes after "linking" to allow
+    // symbol table to set default function name.
+    WASM_SEC_ORDER_NAME = 102,
+    // "producers" section must appear after "name" section.
+    WASM_SEC_ORDER_PRODUCERS = 103
+  };
+
+  bool isValidSectionOrder(unsigned ID, StringRef CustomSectionName = "");
+
+private:
+  int LastOrder = -1; // Lastly seen known section's order
+
+  // Returns -1 for unknown sections.
+  int getSectionOrder(unsigned ID, StringRef CustomSectionName = "");
+};
+
 } // end namespace object
 
 inline raw_ostream &operator<<(raw_ostream &OS, const object::WasmSymbol &Sym) {

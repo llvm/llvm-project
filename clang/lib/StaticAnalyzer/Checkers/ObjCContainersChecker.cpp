@@ -16,7 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -57,6 +57,9 @@ public:
                                      const InvalidatedSymbols &Escaped,
                                      const CallEvent *Call,
                                      PointerEscapeKind Kind) const;
+
+  void printState(raw_ostream &OS, ProgramStateRef State,
+                  const char *NL, const char *Sep) const;
 };
 } // end anonymous namespace
 
@@ -144,6 +147,8 @@ void ObjCContainersChecker::checkPreStmt(const CallExpr *CE,
       initBugType();
       auto R = llvm::make_unique<BugReport>(*BT, "Index is out of bounds", N);
       R->addRange(IdxExpr->getSourceRange());
+      bugreporter::trackExpressionValue(N, IdxExpr, *R,
+                                        /*EnableNullFPSuppression=*/false);
       C.emitReport(std::move(R));
       return;
     }
@@ -164,6 +169,18 @@ ObjCContainersChecker::checkPointerEscape(ProgramStateRef State,
     State = State->remove<ArraySizeMap>(Sym);
   }
   return State;
+}
+
+void ObjCContainersChecker::printState(raw_ostream &OS, ProgramStateRef State,
+                                       const char *NL, const char *Sep) const {
+  ArraySizeMapTy Map = State->get<ArraySizeMap>();
+  if (Map.isEmpty())
+    return;
+
+  OS << Sep << "ObjC container sizes :" << NL;
+  for (auto I : Map) {
+    OS << I.first << " : " << I.second << NL;
+  }
 }
 
 /// Register checker.

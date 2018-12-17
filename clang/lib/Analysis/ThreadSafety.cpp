@@ -42,6 +42,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -890,28 +891,51 @@ public:
 
 class ScopedLockableFactEntry : public FactEntry {
 private:
-  SmallVector<const til::SExpr *, 4> UnderlyingMutexes;
+  enum UnderlyingCapabilityKind {
+    UCK_Acquired,          ///< Any kind of acquired capability.
+    UCK_ReleasedShared,    ///< Shared capability that was released.
+    UCK_ReleasedExclusive, ///< Exclusive capability that was released.
+  };
+
+  using UnderlyingCapability =
+      llvm::PointerIntPair<const til::SExpr *, 2, UnderlyingCapabilityKind>;
+
+  SmallVector<UnderlyingCapability, 4> UnderlyingMutexes;
 
 public:
-  ScopedLockableFactEntry(const CapabilityExpr &CE, SourceLocation Loc,
-                          const CapExprSet &Excl, const CapExprSet &Shrd)
-      : FactEntry(CE, LK_Exclusive, Loc, false) {
-    for (const auto &M : Excl)
-      UnderlyingMutexes.push_back(M.sexpr());
-    for (const auto &M : Shrd)
-      UnderlyingMutexes.push_back(M.sexpr());
+  ScopedLockableFactEntry(const CapabilityExpr &CE, SourceLocation Loc)
+      : FactEntry(CE, LK_Exclusive, Loc, false) {}
+
+  void addExclusiveLock(const CapabilityExpr &M) {
+    UnderlyingMutexes.emplace_back(M.sexpr(), UCK_Acquired);
+  }
+
+  void addSharedLock(const CapabilityExpr &M) {
+    UnderlyingMutexes.emplace_back(M.sexpr(), UCK_Acquired);
+  }
+
+  void addExclusiveUnlock(const CapabilityExpr &M) {
+    UnderlyingMutexes.emplace_back(M.sexpr(), UCK_ReleasedExclusive);
+  }
+
+  void addSharedUnlock(const CapabilityExpr &M) {
+    UnderlyingMutexes.emplace_back(M.sexpr(), UCK_ReleasedShared);
   }
 
   void
   handleRemovalFromIntersection(const FactSet &FSet, FactManager &FactMan,
                                 SourceLocation JoinLoc, LockErrorKind LEK,
                                 ThreadSafetyHandler &Handler) const override {
-    for (const auto *UnderlyingMutex : UnderlyingMutexes) {
-      if (FSet.findLock(FactMan, CapabilityExpr(UnderlyingMutex, false))) {
+    for (const auto &UnderlyingMutex : UnderlyingMutexes) {
+      const auto *Entry = FSet.findLock(
+          FactMan, CapabilityExpr(UnderlyingMutex.getPointer(), false));
+      if ((UnderlyingMutex.getInt() == UCK_Acquired && Entry) ||
+          (UnderlyingMutex.getInt() != UCK_Acquired && !Entry)) {
         // If this scoped lock manages another mutex, and if the underlying
-        // mutex is still held, then warn about the underlying mutex.
+        // mutex is still/not held, then warn about the underlying mutex.
         Handler.handleMutexHeldEndOfScope(
-            "mutex", sx::toString(UnderlyingMutex), loc(), JoinLoc, LEK);
+            "mutex", sx::toString(UnderlyingMutex.getPointer()), loc(), JoinLoc,
+            LEK);
       }
     }
   }
@@ -919,17 +943,14 @@ public:
   void handleLock(FactSet &FSet, FactManager &FactMan, const FactEntry &entry,
                   ThreadSafetyHandler &Handler,
                   StringRef DiagKind) const override {
-    for (const auto *UnderlyingMutex : UnderlyingMutexes) {
-      CapabilityExpr UnderCp(UnderlyingMutex, false);
+    for (const auto &UnderlyingMutex : UnderlyingMutexes) {
+      CapabilityExpr UnderCp(UnderlyingMutex.getPointer(), false);
 
-      // We're relocking the underlying mutexes. Warn on double locking.
-      if (FSet.findLock(FactMan, UnderCp)) {
-        Handler.handleDoubleLock(DiagKind, UnderCp.toString(), entry.loc());
-      } else {
-        FSet.removeLock(FactMan, !UnderCp);
-        FSet.addLock(FactMan, llvm::make_unique<LockableFactEntry>(
-                                  UnderCp, entry.kind(), entry.loc()));
-      }
+      if (UnderlyingMutex.getInt() == UCK_Acquired)
+        lock(FSet, FactMan, UnderCp, entry.kind(), entry.loc(), &Handler,
+             DiagKind);
+      else
+        unlock(FSet, FactMan, UnderCp, entry.loc(), &Handler, DiagKind);
     }
   }
 
@@ -938,31 +959,48 @@ public:
                     bool FullyRemove, ThreadSafetyHandler &Handler,
                     StringRef DiagKind) const override {
     assert(!Cp.negative() && "Managing object cannot be negative.");
-    for (const auto *UnderlyingMutex : UnderlyingMutexes) {
-      CapabilityExpr UnderCp(UnderlyingMutex, false);
-      auto UnderEntry = llvm::make_unique<LockableFactEntry>(
-          !UnderCp, LK_Exclusive, UnlockLoc);
+    for (const auto &UnderlyingMutex : UnderlyingMutexes) {
+      CapabilityExpr UnderCp(UnderlyingMutex.getPointer(), false);
 
-      if (FullyRemove) {
-        // We're destroying the managing object.
-        // Remove the underlying mutex if it exists; but don't warn.
-        if (FSet.findLock(FactMan, UnderCp)) {
-          FSet.removeLock(FactMan, UnderCp);
-          FSet.addLock(FactMan, std::move(UnderEntry));
-        }
+      // Remove/lock the underlying mutex if it exists/is still unlocked; warn
+      // on double unlocking/locking if we're not destroying the scoped object.
+      ThreadSafetyHandler *TSHandler = FullyRemove ? nullptr : &Handler;
+      if (UnderlyingMutex.getInt() == UCK_Acquired) {
+        unlock(FSet, FactMan, UnderCp, UnlockLoc, TSHandler, DiagKind);
       } else {
-        // We're releasing the underlying mutex, but not destroying the
-        // managing object.  Warn on dual release.
-        if (!FSet.findLock(FactMan, UnderCp)) {
-          Handler.handleUnmatchedUnlock(DiagKind, UnderCp.toString(),
-                                        UnlockLoc);
-        }
-        FSet.removeLock(FactMan, UnderCp);
-        FSet.addLock(FactMan, std::move(UnderEntry));
+        LockKind kind = UnderlyingMutex.getInt() == UCK_ReleasedShared
+                            ? LK_Shared
+                            : LK_Exclusive;
+        lock(FSet, FactMan, UnderCp, kind, UnlockLoc, TSHandler, DiagKind);
       }
     }
     if (FullyRemove)
       FSet.removeLock(FactMan, Cp);
+  }
+
+private:
+  void lock(FactSet &FSet, FactManager &FactMan, const CapabilityExpr &Cp,
+            LockKind kind, SourceLocation loc, ThreadSafetyHandler *Handler,
+            StringRef DiagKind) const {
+    if (!FSet.findLock(FactMan, Cp)) {
+      FSet.removeLock(FactMan, !Cp);
+      FSet.addLock(FactMan,
+                   llvm::make_unique<LockableFactEntry>(Cp, kind, loc));
+    } else if (Handler) {
+      Handler->handleDoubleLock(DiagKind, Cp.toString(), loc);
+    }
+  }
+
+  void unlock(FactSet &FSet, FactManager &FactMan, const CapabilityExpr &Cp,
+              SourceLocation loc, ThreadSafetyHandler *Handler,
+              StringRef DiagKind) const {
+    if (FSet.findLock(FactMan, Cp)) {
+      FSet.removeLock(FactMan, Cp);
+      FSet.addLock(FactMan, llvm::make_unique<LockableFactEntry>(
+                                !Cp, LK_Exclusive, loc));
+    } else if (Handler) {
+      Handler->handleUnmatchedUnlock(DiagKind, Cp.toString(), loc);
+    }
   }
 };
 
@@ -1905,14 +1943,20 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
     // FIXME: does this store a pointer to DRE?
     CapabilityExpr Scp = Analyzer->SxBuilder.translateAttrExpr(&DRE, nullptr);
 
-    std::copy(ScopedExclusiveReqs.begin(), ScopedExclusiveReqs.end(),
-              std::back_inserter(ExclusiveLocksToAdd));
-    std::copy(ScopedSharedReqs.begin(), ScopedSharedReqs.end(),
-              std::back_inserter(SharedLocksToAdd));
-    Analyzer->addLock(FSet,
-                      llvm::make_unique<ScopedLockableFactEntry>(
-                          Scp, MLoc, ExclusiveLocksToAdd, SharedLocksToAdd),
-                      CapDiagKind);
+    auto ScopedEntry = llvm::make_unique<ScopedLockableFactEntry>(Scp, MLoc);
+    for (const auto &M : ExclusiveLocksToAdd)
+      ScopedEntry->addExclusiveLock(M);
+    for (const auto &M : ScopedExclusiveReqs)
+      ScopedEntry->addExclusiveLock(M);
+    for (const auto &M : SharedLocksToAdd)
+      ScopedEntry->addSharedLock(M);
+    for (const auto &M : ScopedSharedReqs)
+      ScopedEntry->addSharedLock(M);
+    for (const auto &M : ExclusiveLocksToRemove)
+      ScopedEntry->addExclusiveUnlock(M);
+    for (const auto &M : SharedLocksToRemove)
+      ScopedEntry->addSharedUnlock(M);
+    Analyzer->addLock(FSet, std::move(ScopedEntry), CapDiagKind);
   }
 }
 

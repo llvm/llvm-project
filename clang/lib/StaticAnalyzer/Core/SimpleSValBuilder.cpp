@@ -454,7 +454,7 @@ static Optional<NonLoc> tryRearrange(ProgramStateRef State,
   QualType SingleTy;
 
   auto &Opts =
-    StateMgr.getOwningEngine()->getAnalysisManager().getAnalyzerOptions();
+    StateMgr.getOwningEngine().getAnalysisManager().getAnalyzerOptions();
 
   // FIXME: After putting complexity threshold to the symbols we can always
   //        rearrange additive operations but rearrange comparisons only if

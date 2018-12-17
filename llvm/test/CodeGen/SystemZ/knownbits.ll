@@ -35,16 +35,16 @@ define void @f1() {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    clhhsi 0, 0
-; CHECK-NEXT:    lhi %r1, 0
-; CHECK-NEXT:    lochie %r1, 1
-; CHECK-NEXT:    lghi %r2, 1
-; CHECK-NEXT:    vlvgp %v0, %r1, %r2
+; CHECK-NEXT:    lhi %r0, 0
+; CHECK-NEXT:    lochie %r0, 1
+; CHECK-NEXT:    lghi %r1, 1
+; CHECK-NEXT:    vlvgp %v0, %r0, %r1
 ; CHECK-NEXT:    vrepig %v1, 1
 ; CHECK-NEXT:    vx %v0, %v0, %v1
-; CHECK-NEXT:    vlgvf %r1, %v0, 1
-; CHECK-NEXT:    lhi %r0, 0
-; CHECK-NEXT:    cijlh %r1, 0, .LBB1_3
+; CHECK-NEXT:    vlgvf %r0, %v0, 1
+; CHECK-NEXT:    cijlh %r0, 0, .LBB1_3
 ; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    vlgvf %r0, %v0, 3
 ; CHECK-NEXT:    cijlh %r0, 0, .LBB1_3
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:  .LBB1_3:
@@ -54,8 +54,9 @@ define void @f1() {
   %4 = insertelement <2 x i1> %3, i1 true, i32 1
   %5 = xor <2 x i1> %4, <i1 true, i1 true>
   %6 = extractelement <2 x i1> %5, i32 0
-  %7 = or i1 %6, undef
-  br i1 %7, label %9, label %8
+  %7 = extractelement <2 x i1> %5, i32 1
+  %8 = or i1 %6, %7
+  br i1 %8, label %10, label %9
 
 ; <label>:8:                                      ; preds = %0
   unreachable

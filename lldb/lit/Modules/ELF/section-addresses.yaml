@@ -1,0 +1,58 @@
+# RUN: yaml2obj %s > %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+# CHECK-LABEL: Name: .one
+# CHECK: VM address: 0x0
+
+# CHECK-LABEL: Name: .nonalloc
+# CHECK: VM address: 0x0
+
+# CHECK-LABEL: Name: .two
+# CHECK: VM address: 0x8
+
+# CHECK-LABEL: Name: .three
+# CHECK: VM address: 0xc
+
+# CHECK-LABEL: Name: .four
+# CHECK: VM address: 0xc
+
+# CHECK-LABEL: Name: .five
+# CHECK: VM address: 0x1000
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  Entry:           0x00000000000007A0
+Sections:
+  - Name:            .one
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x0000000000000004
+    Content:         DEADBEEFBAADF00D
+  - Name:            .nonalloc
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000004
+    Content:         DEADBEEFBAADF00D
+  - Name:            .two
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x0000000000000004
+    Content:         DE
+  - Name:            .three
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x0000000000000004
+  - Name:            .four
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x0000000000000004
+    Content:         DEADBEEFBAADF00D
+  - Name:            .five
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x0000000000001000
+    Content:         DEADBEEFBAADF00D
+...

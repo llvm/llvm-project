@@ -28,7 +28,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
@@ -715,6 +715,10 @@ bool ObjCDeallocChecker::diagnoseExtraRelease(SymbolRef ReleasedValue,
 bool ObjCDeallocChecker::diagnoseMistakenDealloc(SymbolRef DeallocedValue,
                                                  const ObjCMethodCall &M,
                                                  CheckerContext &C) const {
+  // TODO: Apart from unknown/undefined receivers, this may happen when
+  // dealloc is called as a class method. Should we warn?
+  if (!DeallocedValue)
+    return false;
 
   // Find the property backing the instance variable that M
   // is dealloc'ing.

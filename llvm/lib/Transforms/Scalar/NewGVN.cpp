@@ -4093,10 +4093,13 @@ bool NewGVN::eliminateInstructions(Function &F) {
           // It's about to be alive again.
           if (LeaderUseCount == 0 && isa<Instruction>(DominatingLeader))
             ProbablyDead.erase(cast<Instruction>(DominatingLeader));
-          // Copy instructions, however, are still dead because we use their
-          // operand as the leader.
-          if (LeaderUseCount == 0 && isSSACopy)
-            ProbablyDead.insert(II);
+          // For copy instructions, we use their operand as a leader,
+          // which means we remove a user of the copy and it may become dead.
+          if (isSSACopy) {
+            unsigned &IIUseCount = UseCounts[II];
+            if (--IIUseCount == 0)
+              ProbablyDead.insert(II);
+          }
           ++LeaderUseCount;
           AnythingReplaced = true;
         }
