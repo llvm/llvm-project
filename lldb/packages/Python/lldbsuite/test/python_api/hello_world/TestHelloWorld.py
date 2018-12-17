@@ -35,7 +35,7 @@ class HelloWorldTestCase(TestBase):
     def test_with_process_launch_api(self):
         """Create target, breakpoint, launch a process, and then kill it."""
         # Get the full path to our executable to be attached/debugged.
-        exe = self.getBuildArtifact(self.testMethodName)
+        exe = '%s_%d'%(self.getBuildArtifact(self.testMethodName), os.getpid())
         d = {'EXE': exe}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
@@ -82,7 +82,7 @@ class HelloWorldTestCase(TestBase):
     @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], bugnumber="<rdar://problem/34538611>") # old lldb-server has race condition, launching an inferior and then launching debugserver in quick succession sometimes fails
     def test_with_attach_to_process_with_id_api(self):
         """Create target, spawn a process, and attach to it with process id."""
-        exe = self.getBuildArtifact(self.testMethodName)
+        exe = '%s_%d'%(self.getBuildArtifact(self.testMethodName), os.getpid())
         d = {'EXE': exe}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
@@ -91,9 +91,6 @@ class HelloWorldTestCase(TestBase):
         # Spawn a new process
         popen = self.spawnSubprocess(exe, ["abc", "xyz"])
         self.addTearDownHook(self.cleanupSubprocesses)
-
-        # Give the subprocess time to start and wait for user input
-        time.sleep(0.25)
 
         listener = lldb.SBListener("my.attach.listener")
         error = lldb.SBError()
@@ -114,7 +111,7 @@ class HelloWorldTestCase(TestBase):
     @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], bugnumber="<rdar://problem/34538611>") # old lldb-server has race condition, launching an inferior and then launching debugserver in quick succession sometimes fails
     def test_with_attach_to_process_with_name_api(self):
         """Create target, spawn a process, and attach to it with process name."""
-        exe = self.getBuildArtifact(self.testMethodName)
+        exe = '%s_%d'%(self.getBuildArtifact(self.testMethodName), os.getpid())
         d = {'EXE': exe}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
@@ -123,9 +120,6 @@ class HelloWorldTestCase(TestBase):
         # Spawn a new process
         popen = self.spawnSubprocess(exe, ["abc", "xyz"])
         self.addTearDownHook(self.cleanupSubprocesses)
-
-        # Give the subprocess time to start and wait for user input
-        time.sleep(0.25)
 
         listener = lldb.SBListener("my.attach.listener")
         error = lldb.SBError()
