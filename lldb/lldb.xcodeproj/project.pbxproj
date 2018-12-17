@@ -579,6 +579,7 @@
 		4CA0C6CC20F929C700CFE6BB /* PDBLocationToDWARFExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CA0C6CA20F929C600CFE6BB /* PDBLocationToDWARFExpression.cpp */; };
 		268900EE13353E6F00698AC0 /* PathMappingList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 495BBACB119A0DBE00418BEA /* PathMappingList.cpp */; };
 		2668A2EE20AF417D00D94111 /* PathMappingListTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2668A2ED20AF417D00D94111 /* PathMappingListTest.cpp */; };
+		AF815DF921C855B400023A34 /* PdbAstBuilder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF815DF721C855B400023A34 /* PdbAstBuilder.cpp */; };
 		AFD966BA217140B6006714AC /* PdbIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFD966B6217140B6006714AC /* PdbIndex.cpp */; };
 		AF0F459E219FA1C800C1E612 /* PdbSymUid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0F459D219FA1C800C1E612 /* PdbSymUid.cpp */; };
 		AFD966B9217140B6006714AC /* PdbUtil.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFD966B5217140B6006714AC /* PdbUtil.cpp */; };
@@ -2403,6 +2404,8 @@
 		495BBACB119A0DBE00418BEA /* PathMappingList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PathMappingList.cpp; path = source/Target/PathMappingList.cpp; sourceTree = "<group>"; };
 		495BBACF119A0DE700418BEA /* PathMappingList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PathMappingList.h; path = include/lldb/Target/PathMappingList.h; sourceTree = "<group>"; };
 		2668A2ED20AF417D00D94111 /* PathMappingListTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PathMappingListTest.cpp; path = Target/PathMappingListTest.cpp; sourceTree = "<group>"; };
+		AF815DF721C855B400023A34 /* PdbAstBuilder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbAstBuilder.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbAstBuilder.cpp; sourceTree = SOURCE_ROOT; };
+		AF815DF821C855B400023A34 /* PdbAstBuilder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PdbAstBuilder.h; path = source/Plugins/SymbolFile/NativePDB/PdbAstBuilder.h; sourceTree = SOURCE_ROOT; };
 		AFD966B6217140B6006714AC /* PdbIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbIndex.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbIndex.cpp; sourceTree = SOURCE_ROOT; };
 		AFD966BF217140C8006714AC /* PdbIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PdbIndex.h; path = source/Plugins/SymbolFile/NativePDB/PdbIndex.h; sourceTree = SOURCE_ROOT; };
 		AF0F459D219FA1C800C1E612 /* PdbSymUid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbSymUid.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbSymUid.cpp; sourceTree = SOURCE_ROOT; };
@@ -6823,6 +6826,8 @@
 				AFD966BD217140C8006714AC /* CompileUnitIndex.h */,
 				4C38996221B9AECC002BAEF4 /* DWARFLocationExpression.cpp */,
 				4C38996321B9AECC002BAEF4 /* DWARFLocationExpression.h */,
+				AF815DF721C855B400023A34 /* PdbAstBuilder.cpp */,
+				AF815DF821C855B400023A34 /* PdbAstBuilder.h */,
 				AFD966B6217140B6006714AC /* PdbIndex.cpp */,
 				AFD966BF217140C8006714AC /* PdbIndex.h */,
 				AF0F459D219FA1C800C1E612 /* PdbSymUid.cpp */,
@@ -7842,6 +7847,7 @@
 				964463EC1A330C0500154ED8 /* CompactUnwindInfo.cpp in Sources */,
 				94B638531B8F8E6C004FE1E4 /* Language.cpp in Sources */,
 				AF395C03219254F300894EC3 /* MSVCUndecoratedNameParser.cpp in Sources */,
+				AF815DF921C855B400023A34 /* PdbAstBuilder.cpp in Sources */,
 				2689001D13353DDE00698AC0 /* CommandObjectLog.cpp in Sources */,
 				262173A318395D4600C52091 /* SectionLoadHistory.cpp in Sources */,
 				2689001E13353DDE00698AC0 /* CommandObjectMemory.cpp in Sources */,
