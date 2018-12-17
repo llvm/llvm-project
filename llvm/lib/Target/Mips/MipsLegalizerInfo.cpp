@@ -20,14 +20,16 @@ using namespace llvm;
 MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   using namespace TargetOpcode;
 
+  const LLT s1 = LLT::scalar(1);
   const LLT s32 = LLT::scalar(32);
-  const LLT s64 = LLT::scalar(64);
   const LLT p0 = LLT::pointer(0, 32);
 
   getActionDefinitionsBuilder(G_ADD)
       .legalFor({s32})
-      .minScalar(0, s32)
-      .customFor({s64});
+      .clampScalar(0, s32, s32);
+
+  getActionDefinitionsBuilder(G_UADDE)
+      .lowerFor({{s32, s1}});
 
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
       .legalForCartesianProduct({p0, s32}, {p0});
@@ -65,37 +67,5 @@ bool MipsLegalizerInfo::legalizeCustom(MachineInstr &MI,
 
   MIRBuilder.setInstr(MI);
 
-  switch (MI.getOpcode()) {
-  case G_ADD: {
-    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-
-    const LLT sHalf = LLT::scalar(Size / 2);
-
-    unsigned RHSLow = MRI.createGenericVirtualRegister(sHalf);
-    unsigned RHSHigh = MRI.createGenericVirtualRegister(sHalf);
-    unsigned LHSLow = MRI.createGenericVirtualRegister(sHalf);
-    unsigned LHSHigh = MRI.createGenericVirtualRegister(sHalf);
-    unsigned ResLow = MRI.createGenericVirtualRegister(sHalf);
-    unsigned ResHigh = MRI.createGenericVirtualRegister(sHalf);
-    unsigned Carry = MRI.createGenericVirtualRegister(sHalf);
-    unsigned TmpResHigh = MRI.createGenericVirtualRegister(sHalf);
-
-    MIRBuilder.buildUnmerge({RHSLow, RHSHigh}, MI.getOperand(2).getReg());
-    MIRBuilder.buildUnmerge({LHSLow, LHSHigh}, MI.getOperand(1).getReg());
-
-    MIRBuilder.buildAdd(TmpResHigh, LHSHigh, RHSHigh);
-    MIRBuilder.buildAdd(ResLow, LHSLow, RHSLow);
-    MIRBuilder.buildICmp(CmpInst::ICMP_ULT, Carry, ResLow, LHSLow);
-    MIRBuilder.buildAdd(ResHigh, TmpResHigh, Carry);
-
-    MIRBuilder.buildMerge(MI.getOperand(0).getReg(), {ResLow, ResHigh});
-
-    MI.eraseFromParent();
-    break;
-  }
-  default:
-    return false;
-  }
-
-  return true;
+  return false;
 }

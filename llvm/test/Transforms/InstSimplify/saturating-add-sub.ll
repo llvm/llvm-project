@@ -406,19 +406,37 @@ define <2 x i8> @ssub_vector_same(<2 x i8> %a) {
   ret <2 x i8> %y6v
 }
 
-define i1 @uadd_icmp_known(i8 %a) {
-; CHECK-LABEL: @uadd_icmp_known(
-; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 10)
-; CHECK-NEXT:    [[C:%.*]] = icmp uge i8 [[B]], 10
+define i1 @uadd_icmp_op0_known(i8 %a) {
+; CHECK-LABEL: @uadd_icmp_op0_known(
+; CHECK-NEXT:    ret i1 true
+;
+  %b = call i8 @llvm.uadd.sat.i8(i8 10, i8 %a)
+  %c = icmp uge i8 %b, 10
+  ret i1 %c
+}
+
+define i1 @uadd_icmp_op0_unknown(i8 %a) {
+; CHECK-LABEL: @uadd_icmp_op0_unknown(
+; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.uadd.sat.i8(i8 10, i8 [[A:%.*]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[B]], 10
 ; CHECK-NEXT:    ret i1 [[C]]
+;
+  %b = call i8 @llvm.uadd.sat.i8(i8 10, i8 %a)
+  %c = icmp ugt i8 %b, 10
+  ret i1 %c
+}
+
+define i1 @uadd_icmp_op1_known(i8 %a) {
+; CHECK-LABEL: @uadd_icmp_op1_known(
+; CHECK-NEXT:    ret i1 true
 ;
   %b = call i8 @llvm.uadd.sat.i8(i8 %a, i8 10)
   %c = icmp uge i8 %b, 10
   ret i1 %c
 }
 
-define i1 @uadd_icmp_unknown(i8 %a) {
-; CHECK-LABEL: @uadd_icmp_unknown(
+define i1 @uadd_icmp_op1_unknown(i8 %a) {
+; CHECK-LABEL: @uadd_icmp_op1_unknown(
 ; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 10)
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[B]], 10
 ; CHECK-NEXT:    ret i1 [[C]]
@@ -428,19 +446,57 @@ define i1 @uadd_icmp_unknown(i8 %a) {
   ret i1 %c
 }
 
-define i1 @sadd_icmp_pos_known(i8 %a) {
-; CHECK-LABEL: @sadd_icmp_pos_known(
-; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 10)
-; CHECK-NEXT:    [[C:%.*]] = icmp sge i8 [[B]], -118
+define i1 @sadd_icmp_op0_pos_known(i8 %a) {
+; CHECK-LABEL: @sadd_icmp_op0_pos_known(
+; CHECK-NEXT:    ret i1 true
+;
+  %b = call i8 @llvm.sadd.sat.i8(i8 10, i8 %a)
+  %c = icmp sge i8 %b, -118
+  ret i1 %c
+}
+
+define i1 @sadd_icmp_op0_pos_unknown(i8 %a) {
+; CHECK-LABEL: @sadd_icmp_op0_pos_unknown(
+; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.sadd.sat.i8(i8 10, i8 [[A:%.*]])
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[B]], -118
 ; CHECK-NEXT:    ret i1 [[C]]
+;
+  %b = call i8 @llvm.sadd.sat.i8(i8 10, i8 %a)
+  %c = icmp sgt i8 %b, -118
+  ret i1 %c
+}
+
+define i1 @sadd_icmp_op0_neg_known(i8 %a) {
+; CHECK-LABEL: @sadd_icmp_op0_neg_known(
+; CHECK-NEXT:    ret i1 true
+;
+  %b = call i8 @llvm.sadd.sat.i8(i8 -10, i8 %a)
+  %c = icmp sle i8 %b, 117
+  ret i1 %c
+}
+
+define i1 @sadd_icmp_op0_neg_unknown(i8 %a) {
+; CHECK-LABEL: @sadd_icmp_op0_neg_unknown(
+; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.sadd.sat.i8(i8 -10, i8 [[A:%.*]])
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[B]], 117
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %b = call i8 @llvm.sadd.sat.i8(i8 -10, i8 %a)
+  %c = icmp slt i8 %b, 117
+  ret i1 %c
+}
+
+define i1 @sadd_icmp_op1_pos_known(i8 %a) {
+; CHECK-LABEL: @sadd_icmp_op1_pos_known(
+; CHECK-NEXT:    ret i1 true
 ;
   %b = call i8 @llvm.sadd.sat.i8(i8 %a, i8 10)
   %c = icmp sge i8 %b, -118
   ret i1 %c
 }
 
-define i1 @sadd_icmp_pos_unknown(i8 %a) {
-; CHECK-LABEL: @sadd_icmp_pos_unknown(
+define i1 @sadd_icmp_op1_pos_unknown(i8 %a) {
+; CHECK-LABEL: @sadd_icmp_op1_pos_unknown(
 ; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 10)
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[B]], -118
 ; CHECK-NEXT:    ret i1 [[C]]
@@ -450,19 +506,17 @@ define i1 @sadd_icmp_pos_unknown(i8 %a) {
   ret i1 %c
 }
 
-define i1 @sadd_icmp_neg_known(i8 %a) {
-; CHECK-LABEL: @sadd_icmp_neg_known(
-; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 -10)
-; CHECK-NEXT:    [[C:%.*]] = icmp sle i8 [[B]], 117
-; CHECK-NEXT:    ret i1 [[C]]
+define i1 @sadd_icmp_op1_neg_known(i8 %a) {
+; CHECK-LABEL: @sadd_icmp_op1_neg_known(
+; CHECK-NEXT:    ret i1 true
 ;
   %b = call i8 @llvm.sadd.sat.i8(i8 %a, i8 -10)
   %c = icmp sle i8 %b, 117
   ret i1 %c
 }
 
-define i1 @sadd_icmp_neg_unknown(i8 %a) {
-; CHECK-LABEL: @sadd_icmp_neg_unknown(
+define i1 @sadd_icmp_op1_neg_unknown(i8 %a) {
+; CHECK-LABEL: @sadd_icmp_op1_neg_unknown(
 ; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 -10)
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[B]], 117
 ; CHECK-NEXT:    ret i1 [[C]]
@@ -474,9 +528,7 @@ define i1 @sadd_icmp_neg_unknown(i8 %a) {
 
 define i1 @usub_icmp_op0_known(i8 %a) {
 ; CHECK-LABEL: @usub_icmp_op0_known(
-; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.usub.sat.i8(i8 10, i8 [[A:%.*]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ule i8 [[B]], 10
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %b = call i8 @llvm.usub.sat.i8(i8 10, i8 %a)
   %c = icmp ule i8 %b, 10
@@ -496,9 +548,7 @@ define i1 @usub_icmp_op0_unknown(i8 %a) {
 
 define i1 @usub_icmp_op1_known(i8 %a) {
 ; CHECK-LABEL: @usub_icmp_op1_known(
-; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 10)
-; CHECK-NEXT:    [[C:%.*]] = icmp ule i8 [[B]], -11
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %b = call i8 @llvm.usub.sat.i8(i8 %a, i8 10)
   %c = icmp ule i8 %b, 245
@@ -518,9 +568,7 @@ define i1 @usub_icmp_op1_unknown(i8 %a) {
 
 define i1 @ssub_icmp_op0_pos_known(i8 %a) {
 ; CHECK-LABEL: @ssub_icmp_op0_pos_known(
-; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.ssub.sat.i8(i8 10, i8 [[A:%.*]])
-; CHECK-NEXT:    [[C:%.*]] = icmp sge i8 [[B]], -117
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %b = call i8 @llvm.ssub.sat.i8(i8 10, i8 %a)
   %c = icmp sge i8 %b, -117
@@ -540,9 +588,7 @@ define i1 @ssub_icmp_op0_pos_unknown(i8 %a) {
 
 define i1 @ssub_icmp_op0_neg_known(i8 %a) {
 ; CHECK-LABEL: @ssub_icmp_op0_neg_known(
-; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.ssub.sat.i8(i8 -10, i8 [[A:%.*]])
-; CHECK-NEXT:    [[C:%.*]] = icmp sle i8 [[B]], 118
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %b = call i8 @llvm.ssub.sat.i8(i8 -10, i8 %a)
   %c = icmp sle i8 %b, 118
@@ -563,11 +609,58 @@ define i1 @ssub_icmp_op0_neg_unknown(i8 %a) {
 ; Peculiar case: ssub.sat(0, x) is never signed min.
 define i1 @ssub_icmp_op0_zero(i8 %a) {
 ; CHECK-LABEL: @ssub_icmp_op0_zero(
-; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.ssub.sat.i8(i8 0, i8 [[A:%.*]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[B]], -128
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %b = call i8 @llvm.ssub.sat.i8(i8 0, i8 %a)
   %c = icmp ne i8 %b, -128
+  ret i1 %c
+}
+
+define i1 @ssub_icmp_op1_pos_known(i8 %a) {
+; CHECK-LABEL: @ssub_icmp_op1_pos_known(
+; CHECK-NEXT:    ret i1 true
+;
+  %b = call i8 @llvm.ssub.sat.i8(i8 %a, i8 10)
+  %c = icmp sle i8 %b, 117
+  ret i1 %c
+}
+
+define i1 @ssub_icmp_op1_pos_unknown(i8 %a) {
+; CHECK-LABEL: @ssub_icmp_op1_pos_unknown(
+; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[A:%.*]], i8 10)
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[B]], 117
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %b = call i8 @llvm.ssub.sat.i8(i8 %a, i8 10)
+  %c = icmp slt i8 %b, 117
+  ret i1 %c
+}
+
+define i1 @ssub_icmp_op1_neg_known(i8 %a) {
+; CHECK-LABEL: @ssub_icmp_op1_neg_known(
+; CHECK-NEXT:    ret i1 true
+;
+  %b = call i8 @llvm.ssub.sat.i8(i8 %a, i8 -10)
+  %c = icmp sge i8 %b, -118
+  ret i1 %c
+}
+
+define i1 @ssub_icmp_op1_neg_unknown(i8 %a) {
+; CHECK-LABEL: @ssub_icmp_op1_neg_unknown(
+; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[A:%.*]], i8 -10)
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[B]], -118
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %b = call i8 @llvm.ssub.sat.i8(i8 %a, i8 -10)
+  %c = icmp sgt i8 %b, -118
+  ret i1 %c
+}
+
+define i1 @ssub_icmp_op1_smin(i8 %a) {
+; CHECK-LABEL: @ssub_icmp_op1_smin(
+; CHECK-NEXT:    ret i1 true
+;
+  %b = call i8 @llvm.ssub.sat.i8(i8 %a, i8 -128)
+  %c = icmp sge i8 %b, 0
   ret i1 %c
 }

@@ -235,6 +235,8 @@ struct Node {
 
   virtual void output(OutputStream &OS, OutputFlags Flags) const = 0;
 
+  std::string toString() const;
+
 private:
   NodeKind Kind;
 };

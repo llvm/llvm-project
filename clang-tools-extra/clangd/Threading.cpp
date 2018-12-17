@@ -112,13 +112,13 @@ void wait(std::unique_lock<std::mutex> &Lock, std::condition_variable &CV,
 
 static std::atomic<bool> AvoidThreadStarvation = {false};
 
-void setThreadPriority(std::thread &T, ThreadPriority Priority) {
+void setCurrentThreadPriority(ThreadPriority Priority) {
   // Some *really* old glibcs are missing SCHED_IDLE.
 #if defined(__linux__) && defined(SCHED_IDLE)
   sched_param priority;
   priority.sched_priority = 0;
   pthread_setschedparam(
-      T.native_handle(),
+      pthread_self(),
       Priority == ThreadPriority::Low && !AvoidThreadStarvation ? SCHED_IDLE
                                                                 : SCHED_OTHER,
       &priority);

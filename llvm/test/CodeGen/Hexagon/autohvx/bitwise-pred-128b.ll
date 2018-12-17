@@ -1,7 +1,7 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: t00
-; CHECK: and(q{{[0-3]}},q{{[0-3]}})
+; CHECK: vand(v{{[0-9:]+}},v{{[0-9:]+}})
 define <128 x i8> @t00(<128 x i8> %a0, <128 x i8> %a1) #0 {
   %q0 = trunc <128 x i8> %a0 to <128 x i1>
   %q1 = trunc <128 x i8> %a1 to <128 x i1>
@@ -13,7 +13,7 @@ define <128 x i8> @t00(<128 x i8> %a0, <128 x i8> %a1) #0 {
 declare <1024 x i1> @llvm.hexagon.vandvrt.128B(<128 x i8>, i32)
 
 ; CHECK-LABEL: t01
-; CHECK: or(q{{[0-3]}},q{{[0-3]}})
+; CHECK: vor(v{{[0-9:]+}},v{{[0-9:]+}})
 define <128 x i8> @t01(<128 x i8> %a0, <128 x i8> %a1) #0 {
   %q0 = trunc <128 x i8> %a0 to <128 x i1>
   %q1 = trunc <128 x i8> %a1 to <128 x i1>
@@ -23,7 +23,7 @@ define <128 x i8> @t01(<128 x i8> %a0, <128 x i8> %a1) #0 {
 }
 
 ; CHECK-LABEL: t02
-; CHECK: xor(q{{[0-3]}},q{{[0-3]}})
+; CHECK: vxor(v{{[0-9:]+}},v{{[0-9:]+}})
 define <128 x i8> @t02(<128 x i8> %a0, <128 x i8> %a1) #0 {
   %q0 = trunc <128 x i8> %a0 to <128 x i1>
   %q1 = trunc <128 x i8> %a1 to <128 x i1>
@@ -33,7 +33,7 @@ define <128 x i8> @t02(<128 x i8> %a0, <128 x i8> %a1) #0 {
 }
 
 ; CHECK-LABEL: t10
-; CHECK: and(q{{[0-3]}},q{{[0-3]}})
+; CHECK: vand(v{{[0-9:]+}},v{{[0-9:]+}})
 define <64 x i16> @t10(<64 x i16> %a0, <64 x i16> %a1) #0 {
   %q0 = trunc <64 x i16> %a0 to <64 x i1>
   %q1 = trunc <64 x i16> %a1 to <64 x i1>
@@ -43,7 +43,7 @@ define <64 x i16> @t10(<64 x i16> %a0, <64 x i16> %a1) #0 {
 }
 
 ; CHECK-LABEL: t11
-; CHECK: or(q{{[0-3]}},q{{[0-3]}})
+; CHECK: vor(v{{[0-9:]+}},v{{[0-9:]+}})
 define <64 x i16> @t11(<64 x i16> %a0, <64 x i16> %a1) #0 {
   %q0 = trunc <64 x i16> %a0 to <64 x i1>
   %q1 = trunc <64 x i16> %a1 to <64 x i1>
@@ -53,7 +53,7 @@ define <64 x i16> @t11(<64 x i16> %a0, <64 x i16> %a1) #0 {
 }
 
 ; CHECK-LABEL: t12
-; CHECK: xor(q{{[0-3]}},q{{[0-3]}})
+; CHECK: vxor(v{{[0-9:]+}},v{{[0-9:]+}})
 define <64 x i16> @t12(<64 x i16> %a0, <64 x i16> %a1) #0 {
   %q0 = trunc <64 x i16> %a0 to <64 x i1>
   %q1 = trunc <64 x i16> %a1 to <64 x i1>
@@ -63,7 +63,7 @@ define <64 x i16> @t12(<64 x i16> %a0, <64 x i16> %a1) #0 {
 }
 
 ; CHECK-LABEL: t20
-; CHECK: and(q{{[0-3]}},q{{[0-3]}})
+; CHECK: vand(v{{[0-9:]+}},v{{[0-9:]+}})
 define <32 x i32> @t20(<32 x i32> %a0, <32 x i32> %a1) #0 {
   %q0 = trunc <32 x i32> %a0 to <32 x i1>
   %q1 = trunc <32 x i32> %a1 to <32 x i1>
@@ -73,7 +73,7 @@ define <32 x i32> @t20(<32 x i32> %a0, <32 x i32> %a1) #0 {
 }
 
 ; CHECK-LABEL: t21
-; CHECK: or(q{{[0-3]}},q{{[0-3]}})
+; CHECK: vor(v{{[0-9:]+}},v{{[0-9:]+}})
 define <32 x i32> @t21(<32 x i32> %a0, <32 x i32> %a1) #0 {
   %q0 = trunc <32 x i32> %a0 to <32 x i1>
   %q1 = trunc <32 x i32> %a1 to <32 x i1>
@@ -83,7 +83,7 @@ define <32 x i32> @t21(<32 x i32> %a0, <32 x i32> %a1) #0 {
 }
 
 ; CHECK-LABEL: t22
-; CHECK: xor(q{{[0-3]}},q{{[0-3]}})
+; CHECK: vxor(v{{[0-9:]+}},v{{[0-9:]+}})
 define <32 x i32> @t22(<32 x i32> %a0, <32 x i32> %a1) #0 {
   %q0 = trunc <32 x i32> %a0 to <32 x i1>
   %q1 = trunc <32 x i32> %a1 to <32 x i1>

@@ -81,6 +81,8 @@ namespace ento {
 /// "core.builtin", or the full name "core.builtin.NoReturnFunctionChecker".
 class CheckerRegistry {
 public:
+  CheckerRegistry(ArrayRef<std::string> plugins, DiagnosticsEngine &diags);
+
   /// Initialization functions perform any necessary setup for a checker.
   /// They should include a call to CheckerManager::registerChecker.
   using InitializationFunction = void (*)(CheckerManager &);
@@ -122,25 +124,23 @@ public:
   /// all checkers specified by the given CheckerOptInfo list. The order of this
   /// list is significant; later options can be used to reverse earlier ones.
   /// This can be used to exclude certain checkers in an included package.
-  void initializeManager(CheckerManager &mgr, const AnalyzerOptions &Opts,
-                         DiagnosticsEngine &diags) const;
+  void initializeManager(CheckerManager &mgr,
+                         const AnalyzerOptions &Opts) const;
 
   /// Check if every option corresponds to a specific checker or package.
-  void validateCheckerOptions(const AnalyzerOptions &opts,
-                              DiagnosticsEngine &diags) const;
+  void validateCheckerOptions(const AnalyzerOptions &opts) const;
 
   /// Prints the name and description of all checkers in this registry.
   /// This output is not intended to be machine-parseable.
   void printHelp(raw_ostream &out, size_t maxNameChars = 30) const;
-  void printList(raw_ostream &out, const AnalyzerOptions &opts,
-                 DiagnosticsEngine &diags) const;
+  void printList(raw_ostream &out, const AnalyzerOptions &opts) const;
 
 private:
-  CheckerInfoSet getEnabledCheckers(const AnalyzerOptions &Opts,
-                                    DiagnosticsEngine &diags) const;
+  CheckerInfoSet getEnabledCheckers(const AnalyzerOptions &Opts) const;
 
   mutable CheckerInfoList Checkers;
   mutable llvm::StringMap<size_t> Packages;
+  DiagnosticsEngine &Diags;
 };
 
 } // namespace ento

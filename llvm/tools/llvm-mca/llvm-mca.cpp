@@ -24,8 +24,6 @@
 #include "CodeRegion.h"
 #include "CodeRegionGenerator.h"
 #include "PipelinePrinter.h"
-#include "Stages/EntryStage.h"
-#include "Stages/InstructionTables.h"
 #include "Views/DispatchStatistics.h"
 #include "Views/InstructionInfoView.h"
 #include "Views/RegisterFileStatistics.h"
@@ -34,13 +32,15 @@
 #include "Views/SchedulerStatistics.h"
 #include "Views/SummaryView.h"
 #include "Views/TimelineView.h"
-#include "include/Context.h"
-#include "include/Pipeline.h"
-#include "include/Support.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MCA/Context.h"
+#include "llvm/MCA/Pipeline.h"
+#include "llvm/MCA/Stages/EntryStage.h"
+#include "llvm/MCA/Stages/InstructionTables.h"
+#include "llvm/MCA/Support.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
@@ -378,7 +378,7 @@ int main(int argc, char **argv) {
     Width = DispatchWidth;
 
   // Create an instruction builder.
-  mca::InstrBuilder IB(*STI, *MCII, *MRI, *MCIA);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get());
 
   // Create a context to control ownership of the pipeline hardware.
   mca::Context MCA(*MRI, *STI);

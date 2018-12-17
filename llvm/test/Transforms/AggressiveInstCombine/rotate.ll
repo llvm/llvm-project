@@ -96,6 +96,43 @@ end:
   ret i32 %cond
 }
 
+; Verify that the intrinsic is inserted into a valid position.
+
+define i32 @rotl_insert_valid_location(i32 %a, i32 %b) {
+; CHECK-LABEL: @rotl_insert_valid_location(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[ROTBB:%.*]]
+; CHECK:       rotbb:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[B]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[A:%.*]], [[SUB]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A]], [[B]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[OR]], [[ROTBB]] ], [ [[A]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[OTHER:%.*]] = phi i32 [ 1, [[ROTBB]] ], [ 2, [[ENTRY]] ]
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[COND]], [[OTHER]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %cmp = icmp eq i32 %b, 0
+  br i1 %cmp, label %end, label %rotbb
+
+rotbb:
+  %sub = sub i32 32, %b
+  %shr = lshr i32 %a, %sub
+  %shl = shl i32 %a, %b
+  %or = or i32 %shr, %shl
+  br label %end
+
+end:
+  %cond = phi i32 [ %or, %rotbb ], [ %a, %entry ]
+  %other = phi i32 [ 1, %rotbb ], [ 2, %entry ]
+  %res = or i32 %cond, %other
+  ret i32 %res
+}
+
 define i32 @rotr(i32 %a, i32 %b) {
 ; CHECK-LABEL: @rotr(
 ; CHECK-NEXT:  entry:

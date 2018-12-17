@@ -44,6 +44,8 @@ public:
   symbols(bool *HadError) const;
 
   const codeview::CVSymbolArray &getSymbolArray() const { return SymbolArray; }
+  const codeview::CVSymbolArray
+  getSymbolArrayForScope(uint32_t ScopeBegin) const;
 
   BinarySubstreamRef getSymbolsSubstream() const;
   BinarySubstreamRef getC11LinesSubstream() const;

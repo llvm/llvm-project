@@ -465,3 +465,22 @@ entry:
   ret i32 %ret
 
 }
+
+define { i64, i64 } @pr39968(i64, i64, i32) {
+; CHECK-LABEL: pr39968:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl $64, %edx # encoding: [0x83,0xe2,0x40]
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    shrl $6, %edx # encoding: [0xc1,0xea,0x06]
+; CHECK-NEXT:    cmovneq %rdi, %rsi # encoding: [0x48,0x0f,0x45,0xf7]
+; CHECK-NEXT:    cmovneq %rdi, %rax # encoding: [0x48,0x0f,0x45,0xc7]
+; CHECK-NEXT:    movq %rsi, %rdx # encoding: [0x48,0x89,0xf2]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %4 = and i32 %2, 64
+  %5 = icmp ne i32 %4, 0
+  %6 = select i1 %5, i64 %0, i64 %1
+  %7 = select i1 %5, i64 %0, i64 0
+  %8 = insertvalue { i64, i64 } undef, i64 %7, 0
+  %9 = insertvalue { i64, i64 } %8, i64 %6, 1
+  ret { i64, i64 } %9
+}

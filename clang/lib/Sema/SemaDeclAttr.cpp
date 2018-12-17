@@ -6103,9 +6103,10 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   // though they were unknown attributes.
   if (AL.getKind() == ParsedAttr::UnknownAttribute ||
       !AL.existsInTarget(S.Context.getTargetInfo())) {
-    S.Diag(AL.getLoc(), AL.isDeclspecAttribute()
-                            ? diag::warn_unhandled_ms_attribute_ignored
-                            : diag::warn_unknown_attribute_ignored)
+    S.Diag(AL.getLoc(),
+           AL.isDeclspecAttribute()
+               ? (unsigned)diag::warn_unhandled_ms_attribute_ignored
+               : (unsigned)diag::warn_unknown_attribute_ignored)
         << AL;
     return;
   }

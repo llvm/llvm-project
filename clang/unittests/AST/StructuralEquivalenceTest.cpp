@@ -597,6 +597,77 @@ TEST_F(StructuralEquivalenceRecordTest, UnnamedRecordsShouldBeInequivalent) {
   EXPECT_FALSE(testStructuralMatch(R0, R1));
 }
 
+TEST_F(StructuralEquivalenceRecordTest, AnonymousRecordsShouldBeInequivalent) {
+  auto t = makeTuDecls(
+      R"(
+      struct X {
+        struct {
+          int a;
+        };
+        struct {
+          int b;
+        };
+      };
+      )",
+      "", Lang_C);
+  auto *TU = get<0>(t);
+  auto *A = FirstDeclMatcher<IndirectFieldDecl>().match(
+      TU, indirectFieldDecl(hasName("a")));
+  auto *FA = cast<FieldDecl>(A->chain().front());
+  RecordDecl *RA = cast<RecordType>(FA->getType().getTypePtr())->getDecl();
+  auto *B = FirstDeclMatcher<IndirectFieldDecl>().match(
+      TU, indirectFieldDecl(hasName("b")));
+  auto *FB = cast<FieldDecl>(B->chain().front());
+  RecordDecl *RB = cast<RecordType>(FB->getType().getTypePtr())->getDecl();
+
+  ASSERT_NE(RA, RB);
+  EXPECT_TRUE(testStructuralMatch(RA, RA));
+  EXPECT_TRUE(testStructuralMatch(RB, RB));
+  EXPECT_FALSE(testStructuralMatch(RA, RB));
+}
+
+TEST_F(StructuralEquivalenceRecordTest,
+       RecordsAreInequivalentIfOrderOfAnonRecordsIsDifferent) {
+  auto t = makeTuDecls(
+      R"(
+      struct X {
+        struct { int a; };
+        struct { int b; };
+      };
+      )",
+      R"(
+      struct X { // The order is reversed.
+        struct { int b; };
+        struct { int a; };
+      };
+      )",
+      Lang_C);
+
+  auto *TU = get<0>(t);
+  auto *A = FirstDeclMatcher<IndirectFieldDecl>().match(
+      TU, indirectFieldDecl(hasName("a")));
+  auto *FA = cast<FieldDecl>(A->chain().front());
+  RecordDecl *RA = cast<RecordType>(FA->getType().getTypePtr())->getDecl();
+
+  auto *TU1 = get<1>(t);
+  auto *A1 = FirstDeclMatcher<IndirectFieldDecl>().match(
+      TU1, indirectFieldDecl(hasName("a")));
+  auto *FA1 = cast<FieldDecl>(A1->chain().front());
+  RecordDecl *RA1 = cast<RecordType>(FA1->getType().getTypePtr())->getDecl();
+
+  RecordDecl *X =
+      FirstDeclMatcher<RecordDecl>().match(TU, recordDecl(hasName("X")));
+  RecordDecl *X1 =
+      FirstDeclMatcher<RecordDecl>().match(TU1, recordDecl(hasName("X")));
+  ASSERT_NE(X, X1);
+  EXPECT_FALSE(testStructuralMatch(X, X1));
+
+  ASSERT_NE(RA, RA1);
+  EXPECT_TRUE(testStructuralMatch(RA, RA));
+  EXPECT_TRUE(testStructuralMatch(RA1, RA1));
+  EXPECT_FALSE(testStructuralMatch(RA1, RA));
+}
+
 TEST_F(StructuralEquivalenceRecordTest,
        UnnamedRecordsShouldBeInequivalentEvenIfTheSecondIsBeingDefined) {
   auto Code =

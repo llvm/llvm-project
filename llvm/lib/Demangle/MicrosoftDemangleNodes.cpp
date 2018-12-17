@@ -15,6 +15,7 @@
 #include "llvm/Demangle/Compiler.h"
 #include "llvm/Demangle/Utility.h"
 #include <cctype>
+#include <string>
 
 using namespace llvm;
 using namespace ms_demangle;
@@ -111,6 +112,14 @@ static void outputCallingConvention(OutputStream &OS, CallingConv CC) {
   default:
     break;
   }
+}
+
+std::string Node::toString() const {
+  OutputStream OS;
+  initializeOutputStream(nullptr, nullptr, OS, 1024);
+  this->output(OS, llvm::ms_demangle::OF_Default);
+  OS << '\0';
+  return {OS.getBuffer()};
 }
 
 void TypeNode::outputQuals(bool SpaceBefore, bool SpaceAfter) const {}

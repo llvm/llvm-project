@@ -17047,9 +17047,9 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Op1 = Op.getOperand(1);
   SDValue Amt = Op.getOperand(2);
 
-  // Expand slow SHLD/SHRD cases.
-  // TODO - can we be more selective here: OptSize/RMW etc.?
-  if (Subtarget.isSHLDSlow())
+  // Expand slow SHLD/SHRD cases if we are not optimizing for size.
+  bool OptForSize = DAG.getMachineFunction().getFunction().optForSize();
+  if (!OptForSize && Subtarget.isSHLDSlow())
     return SDValue();
 
   bool IsFSHR = Op.getOpcode() == ISD::FSHR;
@@ -18581,27 +18581,7 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
   unsigned Opcode = 0;
   unsigned NumOperands = 0;
 
-  // Truncate operations may prevent the merge of the SETCC instruction
-  // and the arithmetic instruction before it. Attempt to truncate the operands
-  // of the arithmetic instruction and use a reduced bit-width instruction.
-  bool NeedTruncation = false;
   SDValue ArithOp = Op;
-  if (Op->getOpcode() == ISD::TRUNCATE && Op->hasOneUse()) {
-    SDValue Arith = Op->getOperand(0);
-    // Both the trunc and the arithmetic op need to have one user each.
-    if (Arith->hasOneUse())
-      switch (Arith.getOpcode()) {
-        default: break;
-        case ISD::ADD:
-        case ISD::SUB:
-        case ISD::AND:
-        case ISD::OR:
-        case ISD::XOR: {
-          NeedTruncation = true;
-          ArithOp = Arith;
-        }
-      }
-  }
 
   // Sometimes flags can be set either with an AND or with an SRL/SHL
   // instruction. SRL/SHL variant should be preferred for masks longer than this
@@ -18767,36 +18747,6 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
   default:
   default_case:
     break;
-  }
-
-  // If we found that truncation is beneficial, perform the truncation and
-  // update 'Op'.
-  if (NeedTruncation) {
-    EVT VT = Op.getValueType();
-    SDValue WideVal = Op->getOperand(0);
-    EVT WideVT = WideVal.getValueType();
-    unsigned ConvertedOp = 0;
-    // Use a target machine opcode to prevent further DAGCombine
-    // optimizations that may separate the arithmetic operations
-    // from the setcc node.
-    switch (WideVal.getOpcode()) {
-      default: break;
-      case ISD::ADD: ConvertedOp = X86ISD::ADD; break;
-      case ISD::SUB: ConvertedOp = X86ISD::SUB; break;
-      case ISD::AND: ConvertedOp = X86ISD::AND; break;
-      case ISD::OR:  ConvertedOp = X86ISD::OR;  break;
-      case ISD::XOR: ConvertedOp = X86ISD::XOR; break;
-    }
-
-    if (ConvertedOp) {
-      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-      if (TLI.isOperationLegal(WideVal.getOpcode(), WideVT)) {
-        SDValue V0 = DAG.getNode(ISD::TRUNCATE, dl, VT, WideVal.getOperand(0));
-        SDValue V1 = DAG.getNode(ISD::TRUNCATE, dl, VT, WideVal.getOperand(1));
-        SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
-        Op = DAG.getNode(ConvertedOp, dl, VTs, V0, V1);
-      }
-    }
   }
 
   if (Opcode == 0) {
@@ -19383,13 +19333,26 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   bool FlipSigns = ISD::isUnsignedIntSetCC(Cond) &&
                    !(DAG.SignBitIsZero(Op0) && DAG.SignBitIsZero(Op1));
 
-  // Special case: Use min/max operations for unsigned compares. We only want
-  // to do this for unsigned compares if we need to flip signs or if it allows
-  // use to avoid an invert.
+  // Special case: Use min/max operations for unsigned compares.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (ISD::isUnsignedIntSetCC(Cond) &&
       (FlipSigns || ISD::isTrueWhenEqual(Cond)) &&
       TLI.isOperationLegal(ISD::UMIN, VT)) {
+    // If we have a constant operand, increment/decrement it and change the
+    // condition to avoid an invert.
+    // TODO: This could be extended to handle a non-splat constant by checking
+    // that each element of the constant is not the max/null value.
+    APInt C;
+    if (Cond == ISD::SETUGT && isConstantSplat(Op1, C) && !C.isMaxValue()) {
+      // X > C --> X >= (C+1) --> X == umax(X, C+1)
+      Op1 = DAG.getConstant(C + 1, dl, VT);
+      Cond = ISD::SETUGE;
+    }
+    if (Cond == ISD::SETULT && isConstantSplat(Op1, C) && !C.isNullValue()) {
+      // X < C --> X <= (C-1) --> X == umin(X, C-1)
+      Op1 = DAG.getConstant(C - 1, dl, VT);
+      Cond = ISD::SETULE;
+    }
     bool Invert = false;
     unsigned Opc;
     switch (Cond) {
@@ -24764,21 +24727,31 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Amt = Op.getOperand(1);
   unsigned Opcode = Op.getOpcode();
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  int NumElts = VT.getVectorNumElements();
+
+  // Check for constant splat rotation amount.
+  APInt UndefElts;
+  SmallVector<APInt, 32> EltBits;
+  int CstSplatIndex = -1;
+  if (getTargetConstantBitsFromNode(Amt, EltSizeInBits, UndefElts, EltBits))
+    for (int i = 0; i != NumElts; ++i)
+      if (!UndefElts[i]) {
+        if (CstSplatIndex < 0 || EltBits[i] == EltBits[CstSplatIndex]) {
+          CstSplatIndex = i;
+          continue;
+        }
+        CstSplatIndex = -1;
+        break;
+      }
 
   // AVX512 implicitly uses modulo rotation amounts.
   if (Subtarget.hasAVX512() && 32 <= EltSizeInBits) {
     // Attempt to rotate by immediate.
-    APInt UndefElts;
-    SmallVector<APInt, 16> EltBits;
-    if (getTargetConstantBitsFromNode(Amt, EltSizeInBits, UndefElts, EltBits)) {
-      if (!UndefElts && llvm::all_of(EltBits, [EltBits](APInt &V) {
-            return EltBits[0] == V;
-          })) {
-        unsigned Op = (Opcode == ISD::ROTL ? X86ISD::VROTLI : X86ISD::VROTRI);
-        uint64_t RotateAmt = EltBits[0].urem(EltSizeInBits);
-        return DAG.getNode(Op, DL, VT, R,
-                           DAG.getConstant(RotateAmt, DL, MVT::i8));
-      }
+    if (0 <= CstSplatIndex) {
+      unsigned Op = (Opcode == ISD::ROTL ? X86ISD::VROTLI : X86ISD::VROTRI);
+      uint64_t RotateAmt = EltBits[CstSplatIndex].urem(EltSizeInBits);
+      return DAG.getNode(Op, DL, VT, R,
+                         DAG.getConstant(RotateAmt, DL, MVT::i8));
     }
 
     // Else, fall-back on VPROLV/VPRORV.
@@ -24796,12 +24769,10 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     assert(VT.is128BitVector() && "Only rotate 128-bit vectors!");
 
     // Attempt to rotate by immediate.
-    if (auto *BVAmt = dyn_cast<BuildVectorSDNode>(Amt)) {
-      if (auto *RotateConst = BVAmt->getConstantSplatNode()) {
-        uint64_t RotateAmt = RotateConst->getAPIntValue().urem(EltSizeInBits);
-        return DAG.getNode(X86ISD::VROTLI, DL, VT, R,
-                           DAG.getConstant(RotateAmt, DL, MVT::i8));
-      }
+    if (0 <= CstSplatIndex) {
+      uint64_t RotateAmt = EltBits[CstSplatIndex].urem(EltSizeInBits);
+      return DAG.getNode(X86ISD::VROTLI, DL, VT, R,
+                         DAG.getConstant(RotateAmt, DL, MVT::i8));
     }
 
     // Use general rotate by variable (per-element).
@@ -24818,15 +24789,14 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
          "Only vXi32/vXi16/vXi8 vector rotates supported");
 
   // Rotate by an uniform constant - expand back to shifts.
-  if (auto *BVAmt = dyn_cast<BuildVectorSDNode>(Amt))
-    if (BVAmt->getConstantSplatNode())
-      return SDValue();
+  if (0 <= CstSplatIndex)
+    return SDValue();
 
   // v16i8/v32i8: Split rotation into rot4/rot2/rot1 stages and select by
   // the amount bit.
   if (EltSizeInBits == 8) {
     // We don't need ModuloAmt here as we just peek at individual bits.
-    MVT ExtVT = MVT::getVectorVT(MVT::i16, VT.getVectorNumElements() / 2);
+    MVT ExtVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
 
     auto SignBitSelect = [&](MVT SelVT, SDValue Sel, SDValue V0, SDValue V1) {
       if (Subtarget.hasSSE41()) {
@@ -36531,10 +36501,10 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   // OR( SRL( X, C ), SHL( Y, 32 - C ) ) -> SHRD( X, Y, C )
   // OR( SHL( X, C ), SRL( SRL( Y, 1 ), XOR( C, 31 ) ) ) -> SHLD( X, Y, C )
   // OR( SRL( X, C ), SHL( SHL( Y, 1 ), XOR( C, 31 ) ) ) -> SHRD( X, Y, C )
-  unsigned Bits = VT.getSizeInBits();
+  unsigned Bits = VT.getScalarSizeInBits();
   if (ShAmt1.getOpcode() == ISD::SUB) {
     SDValue Sum = ShAmt1.getOperand(0);
-    if (ConstantSDNode *SumC = dyn_cast<ConstantSDNode>(Sum)) {
+    if (auto *SumC = dyn_cast<ConstantSDNode>(Sum)) {
       SDValue ShAmt1Op1 = ShAmt1.getOperand(1);
       if (ShAmt1Op1.getOpcode() == ISD::TRUNCATE)
         ShAmt1Op1 = ShAmt1Op1.getOperand(0);
@@ -36544,8 +36514,8 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
                            DAG.getNode(ISD::TRUNCATE, DL,
                                        MVT::i8, ShAmt0));
     }
-  } else if (ConstantSDNode *ShAmt1C = dyn_cast<ConstantSDNode>(ShAmt1)) {
-    ConstantSDNode *ShAmt0C = dyn_cast<ConstantSDNode>(ShAmt0);
+  } else if (auto *ShAmt1C = dyn_cast<ConstantSDNode>(ShAmt1)) {
+    auto *ShAmt0C = dyn_cast<ConstantSDNode>(ShAmt0);
     if (ShAmt0C && (ShAmt0C->getSExtValue() + ShAmt1C->getSExtValue()) == Bits)
       return DAG.getNode(Opc, DL, VT,
                          N0.getOperand(0), N1.getOperand(0),
@@ -36553,7 +36523,7 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
                                        MVT::i8, ShAmt0));
   } else if (ShAmt1.getOpcode() == ISD::XOR) {
     SDValue Mask = ShAmt1.getOperand(1);
-    if (ConstantSDNode *MaskC = dyn_cast<ConstantSDNode>(Mask)) {
+    if (auto *MaskC = dyn_cast<ConstantSDNode>(Mask)) {
       unsigned InnerShift = (X86ISD::SHLD == Opc ? ISD::SRL : ISD::SHL);
       SDValue ShAmt1Op0 = ShAmt1.getOperand(0);
       if (ShAmt1Op0.getOpcode() == ISD::TRUNCATE)
@@ -39943,6 +39913,110 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static bool needCarryOrOverflowFlag(SDValue Flags) {
+  assert(Flags.getValueType() == MVT::i32 && "Unexpected VT!");
+
+  for (SDNode::use_iterator UI = Flags->use_begin(), UE = Flags->use_end();
+         UI != UE; ++UI) {
+    SDNode *User = *UI;
+
+    X86::CondCode CC;
+    switch (User->getOpcode()) {
+    default:
+      // Be conservative.
+      return true;
+    case X86ISD::SETCC:
+    case X86ISD::SETCC_CARRY:
+      CC = (X86::CondCode)User->getConstantOperandVal(0);
+      break;
+    case X86ISD::BRCOND:
+      CC = (X86::CondCode)User->getConstantOperandVal(2);
+      break;
+    case X86ISD::CMOV:
+      CC = (X86::CondCode)User->getConstantOperandVal(2);
+      break;
+    }
+
+    switch (CC) {
+    default: break;
+    case X86::COND_A: case X86::COND_AE:
+    case X86::COND_B: case X86::COND_BE:
+    case X86::COND_O: case X86::COND_NO:
+    case X86::COND_G: case X86::COND_GE:
+    case X86::COND_L: case X86::COND_LE:
+      return true;
+    }
+  }
+
+  return false;
+}
+
+static SDValue combineCMP(SDNode *N, SelectionDAG &DAG) {
+  // Only handle test patterns.
+  if (!isNullConstant(N->getOperand(1)))
+    return SDValue();
+
+  // If we have a CMP of a truncated binop, see if we can make a smaller binop
+  // and use its flags directly.
+  // TODO: Maybe we should try promoting compares that only use the zero flag
+  // first if we can prove the upper bits with computeKnownBits?
+  SDValue Op = N->getOperand(0);
+  EVT VT = Op.getValueType();
+
+  // Look for a truncate with a single use.
+  if (Op.getOpcode() != ISD::TRUNCATE || !Op.hasOneUse())
+    return SDValue();
+
+  Op = Op.getOperand(0);
+
+  // Arithmetic op can only have one use.
+  if (!Op.hasOneUse())
+    return SDValue();
+
+  unsigned NewOpc;
+  switch (Op.getOpcode()) {
+  default: return SDValue();
+  case ISD::AND:
+    // Skip and with constant. We have special handling for and with immediate
+    // during isel to generate test instructions.
+    if (isa<ConstantSDNode>(Op.getOperand(1)))
+      return SDValue();
+    NewOpc = X86ISD::AND;
+    break;
+  case ISD::OR:  NewOpc = X86ISD::OR;  break;
+  case ISD::XOR: NewOpc = X86ISD::XOR; break;
+  case ISD::ADD:
+    // If the carry or overflow flag is used, we can't truncate.
+    if (needCarryOrOverflowFlag(SDValue(N, 0)))
+      return SDValue();
+    NewOpc = X86ISD::ADD;
+    break;
+  case ISD::SUB:
+    // If the carry or overflow flag is used, we can't truncate.
+    if (needCarryOrOverflowFlag(SDValue(N, 0)))
+      return SDValue();
+    NewOpc = X86ISD::SUB;
+    break;
+  }
+
+  // We found an op we can narrow. Truncate its inputs.
+  SDLoc dl(N);
+  SDValue Op0 = DAG.getNode(ISD::TRUNCATE, dl, VT, Op.getOperand(0));
+  SDValue Op1 = DAG.getNode(ISD::TRUNCATE, dl, VT, Op.getOperand(1));
+
+  // Use a X86 specific opcode to avoid DAG combine messing with it.
+  SDVTList VTs = DAG.getVTList(VT, MVT::i32);
+  Op = DAG.getNode(NewOpc, dl, VTs, Op0, Op1);
+
+  // For AND, keep a CMP so that we can match the test pattern.
+  if (NewOpc == X86ISD::AND)
+    return DAG.getNode(X86ISD::CMP, dl, MVT::i32, Op,
+                       DAG.getConstant(0, dl, VT));
+
+  // Return the flags.
+  return Op.getValue(1);
+}
+
 static SDValue combineSBB(SDNode *N, SelectionDAG &DAG) {
   if (SDValue Flags = combineCarryThroughADD(N->getOperand(2))) {
     MVT VT = N->getSimpleValueType(0);
@@ -41056,6 +41130,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SHRUNKBLEND: return combineSelect(N, DAG, DCI, Subtarget);
   case ISD::BITCAST:        return combineBitcast(N, DAG, DCI, Subtarget);
   case X86ISD::CMOV:        return combineCMov(N, DAG, DCI, Subtarget);
+  case X86ISD::CMP:         return combineCMP(N, DAG);
   case ISD::ADD:            return combineAdd(N, DAG, Subtarget);
   case ISD::SUB:            return combineSub(N, DAG, Subtarget);
   case X86ISD::SBB:         return combineSBB(N, DAG);

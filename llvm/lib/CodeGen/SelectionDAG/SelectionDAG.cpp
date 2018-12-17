@@ -2679,6 +2679,39 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known.One.ashrInPlace(Shift);
     }
     break;
+  case ISD::FSHL:
+  case ISD::FSHR:
+    if (ConstantSDNode *C =
+            isConstOrDemandedConstSplat(Op.getOperand(2), DemandedElts)) {
+      unsigned Amt = C->getAPIntValue().urem(BitWidth);
+
+      // For fshl, 0-shift returns the 1st arg.
+      // For fshr, 0-shift returns the 2nd arg.
+      if (Amt == 0) {
+        Known = computeKnownBits(Op.getOperand(Opcode == ISD::FSHL ? 0 : 1),
+                                 DemandedElts, Depth + 1);
+        break;
+      }
+
+      // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+      // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+      Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+      Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+      if (Opcode == ISD::FSHL) {
+        Known.One <<= Amt;
+        Known.Zero <<= Amt;
+        Known2.One.lshrInPlace(BitWidth - Amt);
+        Known2.Zero.lshrInPlace(BitWidth - Amt);
+      } else {
+        Known.One <<= BitWidth - Amt;
+        Known.Zero <<= BitWidth - Amt;
+        Known2.One.lshrInPlace(Amt);
+        Known2.Zero.lshrInPlace(Amt);
+      }
+      Known.One |= Known2.One;
+      Known.Zero |= Known2.Zero;
+    }
+    break;
   case ISD::SIGN_EXTEND_INREG: {
     EVT EVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
     unsigned EBits = EVT.getScalarSizeInBits();

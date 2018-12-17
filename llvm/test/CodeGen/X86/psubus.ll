@@ -936,19 +936,16 @@ define <8 x i16> @test15(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; AVX1-NEXT:    vpminud %xmm3, %xmm2, %xmm4
 ; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm2, %xmm4
-; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm5, %xmm5
-; AVX1-NEXT:    vpxor %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vpminud %xmm1, %xmm0, %xmm6
-; AVX1-NEXT:    vpcmpeqd %xmm6, %xmm0, %xmm6
-; AVX1-NEXT:    vpxor %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vpackssdw %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vpminud %xmm1, %xmm0, %xmm5
+; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm0, %xmm5
 ; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpandn %xmm0, %xmm5, %xmm0
 ; AVX1-NEXT:    vpsubd %xmm3, %xmm2, %xmm1
+; AVX1-NEXT:    vpandn %xmm1, %xmm4, %xmm1
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX1-NEXT:    vpand %xmm0, %xmm4, %xmm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -957,14 +954,11 @@ define <8 x i16> @test15(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX2-NEXT:    vpminud %ymm1, %ymm0, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm0, %ymm2
-; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm2
-; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpandn %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    vpand %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -1067,22 +1061,19 @@ define <8 x i16> @test16(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
 ; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vpmaxud %xmm2, %xmm3, %xmm4
-; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm3, %xmm4
-; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm5, %xmm5
-; AVX1-NEXT:    vpxor %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vpmaxud %xmm0, %xmm1, %xmm6
-; AVX1-NEXT:    vpcmpeqd %xmm6, %xmm1, %xmm6
-; AVX1-NEXT:    vpxor %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vpackssdw %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vpmaxud %xmm0, %xmm1, %xmm3
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm1, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
+; AVX1-NEXT:    vpmaxud %xmm2, %xmm4, %xmm5
+; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm4, %xmm5
 ; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubd %xmm3, %xmm2, %xmm1
+; AVX1-NEXT:    vpandn %xmm0, %xmm3, %xmm0
+; AVX1-NEXT:    vpsubd %xmm4, %xmm2, %xmm1
+; AVX1-NEXT:    vpandn %xmm1, %xmm5, %xmm1
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX1-NEXT:    vpand %xmm0, %xmm4, %xmm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -1091,14 +1082,11 @@ define <8 x i16> @test16(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX2-NEXT:    vpmaxud %ymm0, %ymm1, %ymm2
 ; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm1, %ymm2
-; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm2
-; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpandn %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    vpand %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
