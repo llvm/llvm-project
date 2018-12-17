@@ -7,7 +7,7 @@
 // RUN: mkdir -p %t/SDKs/MacOSX10.10.sdk
 // RUN: %clang -isysroot %t/SDKs/MacOSX10.10.sdk -c -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=INFER_SDK_VERSION %s
-// RUN: cp %S/Inputs/MacOSX10.14.sdk/SDKSettings.json %t/SDKs/MacOSX10.10.sdk
+// RUN: sed -e 's/10\.14/10\.8/g' %S/Inputs/MacOSX10.14.sdk/SDKSettings.json > %t/SDKs/MacOSX10.10.sdk/SDKSettings.json
 // RUN: %clang -isysroot %t/SDKs/MacOSX10.10.sdk -c -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=INFER_DEPLOYMENT_TARGET_VERSION %s
 // REQUIRES: system-darwin && native
@@ -32,6 +32,6 @@
 // CHECK: -target-sdk-version=10.14
 // INFER_SDK_VERSION: "-triple" "x86_64-apple-macosx10.10.0"
 // INFER_SDK_VERSION-SAME: -target-sdk-version=10.10
-// INFER_DEPLOYMENT_TARGET_VERSION: "-triple" "x86_64-apple-macosx10.14.0"
+// INFER_DEPLOYMENT_TARGET_VERSION: "-triple" "x86_64-apple-macosx10.8.0"
 // NO_VERSION-NOT: target-sdk-version
 // ERROR: warning: SDK settings were ignored as 'SDKSettings.json' could not be parsed
