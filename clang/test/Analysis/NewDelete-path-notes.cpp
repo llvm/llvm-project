@@ -11,8 +11,8 @@ void test() {
     delete p;
     // expected-note@-1 {{Memory is released}}
 
-  delete p; // expected-warning {{Attempt to delete released memory}}
-  // expected-note@-1 {{Attempt to delete released memory}}
+  delete p; // expected-warning {{Attempt to free released memory}}
+  // expected-note@-1 {{Attempt to free released memory}}
 }
 
 struct Odd {
@@ -24,7 +24,7 @@ struct Odd {
 void test(Odd *odd) {
 	odd->kill(); // expected-note{{Calling 'Odd::kill'}}
                // expected-note@-1 {{Returning; memory was released}}
-	delete odd; // expected-warning {{Attempt to delete released memory}}
-              // expected-note@-1 {{Attempt to delete released memory}}
+	delete odd; // expected-warning {{Attempt to free released memory}}
+              // expected-note@-1 {{Attempt to free released memory}}
 }
 

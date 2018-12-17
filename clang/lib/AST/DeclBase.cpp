@@ -1463,7 +1463,9 @@ void DeclContext::removeDecl(Decl *D) {
       if (Map) {
         StoredDeclsMap::iterator Pos = Map->find(ND->getDeclName());
         assert(Pos != Map->end() && "no lookup entry for decl");
-        if (Pos->second.getAsVector() || Pos->second.getAsDecl() == ND)
+        // Remove the decl only if it is contained.
+        StoredDeclsList::DeclsTy *Vec = Pos->second.getAsVector();
+        if ((Vec && is_contained(*Vec, ND)) || Pos->second.getAsDecl() == ND)
           Pos->second.remove(ND);
       }
     } while (DC->isTransparentContext() && (DC = DC->getParent()));
