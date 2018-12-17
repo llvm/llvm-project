@@ -94,11 +94,9 @@ class CrashLog(symbolication.Symbolicator):
     thread_regex = re.compile('^Thread ([0-9]+)([^:]*):(.*)')
     app_backtrace_regex = re.compile(
         '^Application Specific Backtrace ([0-9]+)([^:]*):(.*)')
-    frame_regex = re.compile('^([0-9]+)\s+([^ ]+)\s+(0x[0-9a-fA-F]+) +(.*)')
+    frame_regex = re.compile('^([0-9]+)\s+(.+?)\s+(0x[0-9a-fA-F]{7}[0-9a-fA-F]+) +(.*)')
     image_regex_uuid = re.compile(
-        '(0x[0-9a-fA-F]+)[- ]+(0x[0-9a-fA-F]+) +[+]?([^ ]+) +([^<]+)<([-0-9a-fA-F]+)> (.*)')
-    image_regex_no_uuid = re.compile(
-        '(0x[0-9a-fA-F]+)[- ]+(0x[0-9a-fA-F]+) +[+]?([^ ]+) +([^/]+)/(.*)')
+        '(0x[0-9a-fA-F]+)[-\s]+(0x[0-9a-fA-F]+)\s+[+]?(.+?)\s+(\(.+\))?\s?(<([-0-9a-fA-F]+)>)? (.*)')
     empty_line_regex = re.compile('^$')
 
     class Thread:
@@ -477,25 +475,16 @@ class CrashLog(symbolication.Symbolicator):
             elif parse_mode == PARSE_MODE_IMAGES:
                 image_match = self.image_regex_uuid.search(line)
                 if image_match:
-                    image = CrashLog.DarwinImage(int(image_match.group(1), 0),
-                                                 int(image_match.group(2), 0),
-                                                 image_match.group(3).strip(),
-                                                 image_match.group(4).strip(),
-                                                 uuid.UUID(image_match.group(5)),
-                                                 image_match.group(6))
+                    (img_lo, img_hi, img_name, img_version,
+                     _, img_uuid, img_path) = image_match.groups()
+                    image = CrashLog.DarwinImage(int(img_lo, 0), int(img_hi, 0),
+                                                 img_name.strip(),
+                                                 img_version.strip()
+                                                 if img_version else "",
+                                                 uuid.UUID(img_uuid), img_path)
                     self.images.append(image)
                 else:
-                    image_match = self.image_regex_no_uuid.search(line)
-                    if image_match:
-                        image = CrashLog.DarwinImage(int(image_match.group(1), 0),
-                                                     int(image_match.group(2), 0),
-                                                     image_match.group(3).strip(),
-                                                     image_match.group(4).strip(),
-                                                     None,
-                                                     image_match.group(5))
-                        self.images.append(image)
-                    else:
-                        print "error: image regex failed for: %s" % line
+                    print "error: image regex failed for: %s" % line
 
             elif parse_mode == PARSE_MODE_THREGS:
                 stripped_line = line.strip()
