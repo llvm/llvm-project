@@ -183,7 +183,10 @@ bool InstCombiner::shouldChangeType(unsigned FromWidth,
 /// a fundamental type in IR, and there are many specialized optimizations for
 /// i1 types.
 bool InstCombiner::shouldChangeType(Type *From, Type *To) const {
-  assert(From->isIntegerTy() && To->isIntegerTy());
+  // TODO: This could be extended to allow vectors. Datalayout changes might be
+  // needed to properly support that.
+  if (!From->isIntegerTy() || !To->isIntegerTy())
+    return false;
 
   unsigned FromWidth = From->getPrimitiveSizeInBits();
   unsigned ToWidth = To->getPrimitiveSizeInBits();

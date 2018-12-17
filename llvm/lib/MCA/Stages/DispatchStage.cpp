@@ -99,6 +99,10 @@ Error DispatchStage::dispatch(InstRef IR) {
     AvailableEntries -= NumMicroOps;
   }
 
+  // Check if this instructions ends the dispatch group.
+  if (Desc.EndGroup)
+    AvailableEntries = 0;
+
   // Check if this is an optimizable reg-reg move.
   bool IsEliminated = false;
   if (IS.isOptimizableMove()) {
@@ -164,6 +168,10 @@ bool DispatchStage::isAvailable(const InstRef &IR) const {
   unsigned Required = std::min(Desc.NumMicroOps, DispatchWidth);
   if (Required > AvailableEntries)
     return false;
+
+  if (Desc.BeginGroup && AvailableEntries != DispatchWidth)
+    return false;
+
   // The dispatch logic doesn't internally buffer instructions.  It only accepts
   // instructions that can be successfully moved to the next stage during this
   // same cycle.

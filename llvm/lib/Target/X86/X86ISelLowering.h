@@ -871,6 +871,7 @@ namespace llvm {
 
     bool SimplifyDemandedBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedBits,
+                                           const APInt &DemandedElts,
                                            KnownBits &Known,
                                            TargetLoweringOpt &TLO,
                                            unsigned Depth) const override;

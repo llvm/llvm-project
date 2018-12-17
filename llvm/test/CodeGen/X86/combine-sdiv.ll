@@ -3002,7 +3002,6 @@ define <16 x i8> @pr38658(<16 x i8> %x) {
 ; SSE2-NEXT:    packuswb %xmm0, %xmm2
 ; SSE2-NEXT:    psrlw $7, %xmm1
 ; SSE2-NEXT:    pand {{.*}}(%rip), %xmm1
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm1
 ; SSE2-NEXT:    paddb %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -3033,7 +3032,6 @@ define <16 x i8> @pr38658(<16 x i8> %x) {
 ; SSE41-NEXT:    packuswb %xmm1, %xmm2
 ; SSE41-NEXT:    psrlw $7, %xmm0
 ; SSE41-NEXT:    pand {{.*}}(%rip), %xmm0
-; SSE41-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE41-NEXT:    paddb %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -3059,7 +3057,6 @@ define <16 x i8> @pr38658(<16 x i8> %x) {
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpsrlw $7, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -3078,7 +3075,6 @@ define <16 x i8> @pr38658(<16 x i8> %x) {
 ; AVX2-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpsrlw $7, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -3092,7 +3088,6 @@ define <16 x i8> @pr38658(<16 x i8> %x) {
 ; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
 ; AVX512F-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX512F-NEXT:    vpsrlw $7, %xmm0, %xmm1
-; AVX512F-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
 ; AVX512F-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
 ; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512F-NEXT:    vpsravd {{.*}}(%rip), %zmm0, %zmm0
@@ -3109,7 +3104,6 @@ define <16 x i8> @pr38658(<16 x i8> %x) {
 ; AVX512BW-NEXT:    vpmovwb %ymm1, %xmm1
 ; AVX512BW-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX512BW-NEXT:    vpsrlw $7, %xmm0, %xmm1
-; AVX512BW-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpmovsxbw %xmm0, %ymm0
 ; AVX512BW-NEXT:    vpsravw {{.*}}(%rip), %ymm0, %ymm0

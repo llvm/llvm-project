@@ -581,6 +581,27 @@ void DWARFUnit::collectAddressRanges(DWARFAddressRangesVector &CURanges) {
   } else
     WithColor::error() << "decoding address ranges: "
                        << toString(CUDIERangesOrError.takeError()) << '\n';
+
+  // This function is usually called if there in no .debug_aranges section
+  // in order to produce a compile unit level set of address ranges that
+  // is accurate. If the DIEs weren't parsed, then we don't want all dies for
+  // all compile units to stay loaded when they weren't needed. So we can end
+  // up parsing the DWARF and then throwing them all away to keep memory usage
+  // down.
+  const bool ClearDIEs = extractDIEsIfNeeded(false) > 1;
+  getUnitDIE().collectChildrenAddressRanges(CURanges);
+
+  // Collect address ranges from DIEs in .dwo if necessary.
+  bool DWOCreated = parseDWO();
+  if (DWO)
+    DWO->collectAddressRanges(CURanges);
+  if (DWOCreated)
+    DWO.reset();
+
+  // Keep memory down by clearing DIEs if this generate function
+  // caused them to be parsed.
+  if (ClearDIEs)
+    clearDIEs(true);
 }
 
 void DWARFUnit::updateAddressDieMap(DWARFDie Die) {

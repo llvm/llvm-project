@@ -90,14 +90,73 @@ entry:
 define i64 @add_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: add_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    addu $5, $7, $5
+; MIPS32-NEXT:    lui $1, 0
+; MIPS32-NEXT:    ori $1, $1, 0
 ; MIPS32-NEXT:    addu $4, $6, $4
-; MIPS32-NEXT:    sltu $6, $4, $6
-; MIPS32-NEXT:    addu $3, $5, $6
-; MIPS32-NEXT:    move $2, $4
+; MIPS32-NEXT:    lui $2, 0
+; MIPS32-NEXT:    ori $2, $2, 1
+; MIPS32-NEXT:    and $1, $1, $2
+; MIPS32-NEXT:    addu $1, $4, $1
+; MIPS32-NEXT:    sltu $2, $1, $6
+; MIPS32-NEXT:    addu $4, $7, $5
+; MIPS32-NEXT:    lui $5, 0
+; MIPS32-NEXT:    ori $5, $5, 1
+; MIPS32-NEXT:    and $2, $2, $5
+; MIPS32-NEXT:    addu $3, $4, $2
+; MIPS32-NEXT:    move $2, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
   %add = add i64 %b, %a
   ret i64 %add
+}
+
+define i128 @add_i128(i128 %a, i128 %b) {
+; MIPS32-LABEL: add_i128:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addiu $sp, $sp, -8
+; MIPS32-NEXT:    .cfi_def_cfa_offset 8
+; MIPS32-NEXT:    addiu $1, $sp, 24
+; MIPS32-NEXT:    lw $1, 0($1)
+; MIPS32-NEXT:    addiu $2, $sp, 28
+; MIPS32-NEXT:    lw $2, 0($2)
+; MIPS32-NEXT:    addiu $3, $sp, 32
+; MIPS32-NEXT:    lw $3, 0($3)
+; MIPS32-NEXT:    addiu $8, $sp, 36
+; MIPS32-NEXT:    lw $8, 0($8)
+; MIPS32-NEXT:    lui $9, 0
+; MIPS32-NEXT:    ori $9, $9, 0
+; MIPS32-NEXT:    addu $4, $1, $4
+; MIPS32-NEXT:    lui $10, 0
+; MIPS32-NEXT:    ori $10, $10, 1
+; MIPS32-NEXT:    and $9, $9, $10
+; MIPS32-NEXT:    addu $4, $4, $9
+; MIPS32-NEXT:    sltu $1, $4, $1
+; MIPS32-NEXT:    addu $5, $2, $5
+; MIPS32-NEXT:    lui $9, 0
+; MIPS32-NEXT:    ori $9, $9, 1
+; MIPS32-NEXT:    and $1, $1, $9
+; MIPS32-NEXT:    addu $1, $5, $1
+; MIPS32-NEXT:    sltu $2, $1, $2
+; MIPS32-NEXT:    addu $5, $3, $6
+; MIPS32-NEXT:    lui $6, 0
+; MIPS32-NEXT:    ori $6, $6, 1
+; MIPS32-NEXT:    and $2, $2, $6
+; MIPS32-NEXT:    addu $2, $5, $2
+; MIPS32-NEXT:    sltu $3, $2, $3
+; MIPS32-NEXT:    addu $5, $8, $7
+; MIPS32-NEXT:    lui $6, 0
+; MIPS32-NEXT:    ori $6, $6, 1
+; MIPS32-NEXT:    and $3, $3, $6
+; MIPS32-NEXT:    addu $5, $5, $3
+; MIPS32-NEXT:    sw $2, 4($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    move $2, $4
+; MIPS32-NEXT:    move $3, $1
+; MIPS32-NEXT:    lw $4, 4($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    addiu $sp, $sp, 8
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %add = add i128 %b, %a
+  ret i128 %add
 }
