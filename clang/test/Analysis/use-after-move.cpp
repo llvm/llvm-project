@@ -778,6 +778,45 @@ void checkLoopZombies() {
   }
 }
 
+void checkMoreLoopZombies1(bool flag) {
+  while (flag) {
+    Empty e{};
+    if (true)
+      e; // expected-warning {{expression result unused}}
+    Empty f = std::move(e); // no-warning
+  }
+}
+
+bool coin();
+
+void checkMoreLoopZombies2(bool flag) {
+  while (flag) {
+    Empty e{};
+    while (coin())
+      e; // expected-warning {{expression result unused}}
+    Empty f = std::move(e); // no-warning
+  }
+}
+
+void checkMoreLoopZombies3(bool flag) {
+  while (flag) {
+    Empty e{};
+    do
+      e; // expected-warning {{expression result unused}}
+    while (coin());
+    Empty f = std::move(e); // no-warning
+  }
+}
+
+void checkMoreLoopZombies4(bool flag) {
+  while (flag) {
+    Empty e{};
+    for (; coin();)
+      e; // expected-warning {{expression result unused}}
+    Empty f = std::move(e); // no-warning
+  }
+}
+
 struct MoveOnlyWithDestructor {
   MoveOnlyWithDestructor();
   ~MoveOnlyWithDestructor();
