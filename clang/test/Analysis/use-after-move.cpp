@@ -1,30 +1,30 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
+// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.Move -verify %s\
 // RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
 // RUN:  -analyzer-config exploration_strategy=unexplored_first_queue\
 // RUN:  -analyzer-checker debug.ExprInspection
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
+// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.Move -verify %s\
 // RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
 // RUN:  -analyzer-config exploration_strategy=dfs -DDFS=1\
 // RUN:  -analyzer-checker debug.ExprInspection
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
+// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.Move -verify %s\
 // RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
 // RUN:  -analyzer-config exploration_strategy=unexplored_first_queue\
-// RUN:  -analyzer-config alpha.cplusplus.Move:WarnOn=KnownsOnly -DPEACEFUL\
+// RUN:  -analyzer-config cplusplus.Move:WarnOn=KnownsOnly -DPEACEFUL\
 // RUN:  -analyzer-checker debug.ExprInspection
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
+// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.Move -verify %s\
 // RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
 // RUN:  -analyzer-config exploration_strategy=dfs -DDFS=1\
-// RUN:  -analyzer-config alpha.cplusplus.Move:WarnOn=KnownsOnly -DPEACEFUL\
+// RUN:  -analyzer-config cplusplus.Move:WarnOn=KnownsOnly -DPEACEFUL\
 // RUN:  -analyzer-checker debug.ExprInspection
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
+// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.Move -verify %s\
 // RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
 // RUN:  -analyzer-config exploration_strategy=unexplored_first_queue\
-// RUN:  -analyzer-config alpha.cplusplus.Move:WarnOn=All -DAGGRESSIVE\
+// RUN:  -analyzer-config cplusplus.Move:WarnOn=All -DAGGRESSIVE\
 // RUN:  -analyzer-checker debug.ExprInspection
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
+// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.Move -verify %s\
 // RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
 // RUN:  -analyzer-config exploration_strategy=dfs -DDFS=1\
-// RUN:  -analyzer-config alpha.cplusplus.Move:WarnOn=All -DAGGRESSIVE\
+// RUN:  -analyzer-config cplusplus.Move:WarnOn=All -DAGGRESSIVE\
 // RUN:  -analyzer-checker debug.ExprInspection
 
 #include "Inputs/system-header-simulator-cxx.h"
