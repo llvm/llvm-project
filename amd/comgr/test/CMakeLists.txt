@@ -118,6 +118,11 @@ add_executable(get_data_isa_name_test get_data_isa_name_test.c)
 target_link_libraries(get_data_isa_name_test amd_comgr)
 add_test(NAME get_data_isa_name_test COMMAND get_data_isa_name_test)
 
+# Test : Include subdirectory
+add_executable(include_subdirectory_test include_subdirectory_test.c)
+target_link_libraries(include_subdirectory_test amd_comgr)
+add_test(NAME include_subdirectory_test COMMAND include_subdirectory_test)
+
 # Windows binaries have no equivalent to -rpath, so we must set their PATH to
 # include the .lib/.dll directory.
 if (NOT(UNIX))
@@ -139,5 +144,6 @@ if (NOT(UNIX))
     link_test
     isa_name_parsing_test
     get_data_isa_name_test
+    include_subdirectory_test
     PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>")
 endif()
