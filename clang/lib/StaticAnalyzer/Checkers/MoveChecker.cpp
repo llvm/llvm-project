@@ -61,19 +61,35 @@ public:
                   const char *NL, const char *Sep) const override;
 
 private:
-  enum MisuseKind { MK_FunCall, MK_Copy, MK_Move };
+  enum MisuseKind { MK_FunCall, MK_Copy, MK_Move, MK_Dereference };
+  enum StdObjectKind : unsigned { SK_NonStd, SK_Unsafe, SK_Safe, SK_SmartPtr };
+
+  static bool misuseCausesCrash(MisuseKind MK) {
+    return MK == MK_Dereference;
+  }
 
   struct ObjectKind {
-    bool Local : 1; // Is this a local variable or a local rvalue reference?
-    bool STL : 1; // Is this an object of a standard type?
+    // Is this a local variable or a local rvalue reference?
+    bool IsLocal : 1;
+    // Is this an STL object? If so, of what kind?
+    StdObjectKind StdKind : 2;
+  };
+
+  // STL smart pointers are automatically re-initialized to null when moved
+  // from. So we can't warn on many methods, but we can warn when it is
+  // dereferenced, which is UB even if the resulting lvalue never gets read.
+  const llvm::StringSet<> StdSmartPtrClasses = {
+      "shared_ptr",
+      "unique_ptr",
+      "weak_ptr",
   };
 
   // Not all of these are entirely move-safe, but they do provide *some*
   // guarantees, and it means that somebody is using them after move
   // in a valid manner.
-  // TODO: We can still try to identify *unsafe* use after move, such as
-  // dereference of a moved-from smart pointer (which is guaranteed to be null).
-  const llvm::StringSet<> StandardMoveSafeClasses = {
+  // TODO: We can still try to identify *unsafe* use after move,
+  // like we did with smart pointers.
+  const llvm::StringSet<> StdSafeClasses = {
       "basic_filebuf",
       "basic_ios",
       "future",
@@ -82,11 +98,8 @@ private:
       "promise",
       "shared_future",
       "shared_lock",
-      "shared_ptr",
       "thread",
-      "unique_ptr",
       "unique_lock",
-      "weak_ptr",
   };
 
   // Should we bother tracking the state of the object?
@@ -97,10 +110,25 @@ private:
     // their user to re-use the storage. The latter is possible because STL
     // objects are known to end up in a valid but unspecified state after the
     // move and their state-reset methods are also known, which allows us to
-    // predict precisely when use-after-move is invalid. In aggressive mode,
-    // warn on any use-after-move because the user has intentionally asked us
-    // to completely eliminate use-after-move in his code.
-    return IsAggressive || OK.Local || OK.STL;
+    // predict precisely when use-after-move is invalid.
+    // Some STL objects are known to conform to additional contracts after move,
+    // so they are not tracked. However, smart pointers specifically are tracked
+    // because we can perform extra checking over them.
+    // In aggressive mode, warn on any use-after-move because the user has
+    // intentionally asked us to completely eliminate use-after-move
+    // in his code.
+    return IsAggressive || OK.IsLocal
+                        || OK.StdKind == SK_Unsafe || OK.StdKind == SK_SmartPtr;
+  }
+
+  // Some objects only suffer from some kinds of misuses, but we need to track
+  // them anyway because we cannot know in advance what misuse will we find.
+  bool shouldWarnAbout(ObjectKind OK, MisuseKind MK) const {
+    // Additionally, only warn on smart pointers when they are dereferenced (or
+    // local or we are aggressive).
+    return shouldBeTracked(OK) &&
+           (IsAggressive || OK.IsLocal
+                         || OK.StdKind != SK_SmartPtr || MK == MK_Dereference);
   }
 
   // Obtains ObjectKind of an object. Because class declaration cannot always
@@ -108,17 +136,17 @@ private:
   ObjectKind classifyObject(const MemRegion *MR, const CXXRecordDecl *RD) const;
 
   // Classifies the object and dumps a user-friendly description string to
-  // the stream. Return value is equivalent to classifyObject.
-  ObjectKind explainObject(llvm::raw_ostream &OS,
-                           const MemRegion *MR, const CXXRecordDecl *RD) const;
+  // the stream.
+  void explainObject(llvm::raw_ostream &OS, const MemRegion *MR,
+                     const CXXRecordDecl *RD, MisuseKind MK) const;
 
-  bool isStandardMoveSafeClass(const CXXRecordDecl *RD) const;
+  bool belongsTo(const CXXRecordDecl *RD, const llvm::StringSet<> &Set) const;
 
   class MovedBugVisitor : public BugReporterVisitor {
   public:
-    MovedBugVisitor(const MoveChecker &Chk,
-                    const MemRegion *R, const CXXRecordDecl *RD)
-        : Chk(Chk), Region(R), RD(RD), Found(false) {}
+    MovedBugVisitor(const MoveChecker &Chk, const MemRegion *R,
+                    const CXXRecordDecl *RD, MisuseKind MK)
+        : Chk(Chk), Region(R), RD(RD), MK(MK), Found(false) {}
 
     void Profile(llvm::FoldingSetNodeID &ID) const override {
       static int X = 0;
@@ -140,6 +168,8 @@ private:
     const MemRegion *Region;
     // The class of the tracked object.
     const CXXRecordDecl *RD;
+    // How exactly the object was misused.
+    const MisuseKind MK;
     bool Found;
   };
 
@@ -232,18 +262,37 @@ MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
   SmallString<128> Str;
   llvm::raw_svector_ostream OS(Str);
 
-  OS << "Object";
-  ObjectKind OK = Chk.explainObject(OS, Region, RD);
-  if (OK.STL)
-    OS << " is left in a valid but unspecified state after move";
-  else
-    OS << " is moved";
+  ObjectKind OK = Chk.classifyObject(Region, RD);
+  switch (OK.StdKind) {
+    case SK_SmartPtr:
+      if (MK == MK_Dereference) {
+        OS << "Smart pointer";
+        Chk.explainObject(OS, Region, RD, MK);
+        OS << " is reset to null when moved from";
+        break;
+      }
+
+      // If it's not a dereference, we don't care if it was reset to null
+      // or that it is even a smart pointer.
+      LLVM_FALLTHROUGH;
+    case SK_NonStd:
+    case SK_Safe:
+      OS << "Object";
+      Chk.explainObject(OS, Region, RD, MK);
+      OS << " is moved";
+      break;
+    case SK_Unsafe:
+      OS << "Object";
+      Chk.explainObject(OS, Region, RD, MK);
+      OS << " is left in a valid but unspecified state after move";
+      break;
+  }
 
   // Generate the extra diagnostic.
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
                              N->getLocationContext());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true);
-  }
+}
 
 const ExplodedNode *MoveChecker::getMoveLocation(const ExplodedNode *N,
                                                  const MemRegion *Region,
@@ -267,25 +316,48 @@ void MoveChecker::modelUse(ProgramStateRef State, const MemRegion *Region,
                            CheckerContext &C) const {
   assert(!C.isDifferent() && "No transitions should have been made by now");
   const RegionState *RS = State->get<TrackedRegionMap>(Region);
+  ObjectKind OK = classifyObject(Region, RD);
 
-  if (!RS || isAnyBaseRegionReported(State, Region)
+  // Just in case: if it's not a smart pointer but it does have operator *,
+  // we shouldn't call the bug a dereference.
+  if (MK == MK_Dereference && OK.StdKind != SK_SmartPtr)
+    MK = MK_FunCall;
+
+  if (!RS || !shouldWarnAbout(OK, MK)
           || isInMoveSafeContext(C.getLocationContext())) {
     // Finalize changes made by the caller.
     C.addTransition(State);
     return;
   }
 
+  // Don't report it in case if any base region is already reported.
+  // But still generate a sink in case of UB.
+  // And still finalize changes made by the caller.
+  if (isAnyBaseRegionReported(State, Region)) {
+    if (misuseCausesCrash(MK)) {
+      C.generateSink(State, C.getPredecessor());
+    } else {
+      C.addTransition(State);
+    }
+    return;
+  }
+
   ExplodedNode *N = reportBug(Region, RD, C, MK);
+
+  // If the program has already crashed on this path, don't bother.
+  if (N->isSink())
+    return;
 
   State = State->set<TrackedRegionMap>(Region, RegionState::getReported());
   C.addTransition(State, N);
 }
 
 ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
-                                     const CXXRecordDecl *RD,
-                                     CheckerContext &C,
+                                     const CXXRecordDecl *RD, CheckerContext &C,
                                      MisuseKind MK) const {
-  if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
+  if (ExplodedNode *N = misuseCausesCrash(MK) ? C.generateErrorNode()
+                                              : C.generateNonFatalErrorNode()) {
+
     if (!BT)
       BT.reset(new BugType(this, "Use-after-move",
                            "C++ move semantics"));
@@ -304,24 +376,28 @@ ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
     switch(MK) {
       case MK_FunCall:
         OS << "Method called on moved-from object";
-        explainObject(OS, Region, RD);
+        explainObject(OS, Region, RD, MK);
         break;
       case MK_Copy:
         OS << "Moved-from object";
-        explainObject(OS, Region, RD);
+        explainObject(OS, Region, RD, MK);
         OS << " is copied";
         break;
       case MK_Move:
         OS << "Moved-from object";
-        explainObject(OS, Region, RD);
+        explainObject(OS, Region, RD, MK);
         OS << " is moved";
+        break;
+      case MK_Dereference:
+        OS << "Dereference of null smart pointer";
+        explainObject(OS, Region, RD, MK);
         break;
     }
 
     auto R =
         llvm::make_unique<BugReport>(*BT, OS.str(), N, LocUsedForUniqueing,
                                      MoveNode->getLocationContext()->getDecl());
-    R->addVisitor(llvm::make_unique<MovedBugVisitor>(*this, Region, RD));
+    R->addVisitor(llvm::make_unique<MovedBugVisitor>(*this, Region, RD, MK));
     C.emitReport(std::move(R));
     return N;
   }
@@ -433,9 +509,10 @@ bool MoveChecker::isInMoveSafeContext(const LocationContext *LC) const {
   return false;
 }
 
-bool MoveChecker::isStandardMoveSafeClass(const CXXRecordDecl *RD) const {
+bool MoveChecker::belongsTo(const CXXRecordDecl *RD,
+                            const llvm::StringSet<> &Set) const {
   const IdentifierInfo *II = RD->getIdentifier();
-  return II && StandardMoveSafeClasses.count(II->getName());
+  return II && Set.count(II->getName());
 }
 
 MoveChecker::ObjectKind
@@ -445,18 +522,23 @@ MoveChecker::classifyObject(const MemRegion *MR,
   // For the purposes of this checker, we classify move-safe STL types
   // as not-"STL" types, because that's how the checker treats them.
   MR = unwrapRValueReferenceIndirection(MR);
-  return {
-    /*Local=*/
-        MR && isa<VarRegion>(MR) && isa<StackSpaceRegion>(MR->getMemorySpace()),
-    /*STL=*/
-        RD && RD->getDeclContext()->isStdNamespace() &&
-        !isStandardMoveSafeClass(RD)
-  };
+  bool IsLocal =
+      MR && isa<VarRegion>(MR) && isa<StackSpaceRegion>(MR->getMemorySpace());
+
+  if (!RD || !RD->getDeclContext()->isStdNamespace())
+    return { IsLocal, SK_NonStd };
+
+  if (belongsTo(RD, StdSmartPtrClasses))
+    return { IsLocal, SK_SmartPtr };
+
+  if (belongsTo(RD, StdSafeClasses))
+    return { IsLocal, SK_Safe };
+
+  return { IsLocal, SK_Unsafe };
 }
 
-MoveChecker::ObjectKind
-MoveChecker::explainObject(llvm::raw_ostream &OS, const MemRegion *MR,
-                           const CXXRecordDecl *RD) const {
+void MoveChecker::explainObject(llvm::raw_ostream &OS, const MemRegion *MR,
+                                const CXXRecordDecl *RD, MisuseKind MK) const {
   // We may need a leading space every time we actually explain anything,
   // and we never know if we are to explain anything until we try.
   if (const auto DR =
@@ -464,11 +546,22 @@ MoveChecker::explainObject(llvm::raw_ostream &OS, const MemRegion *MR,
     const auto *RegionDecl = cast<NamedDecl>(DR->getDecl());
     OS << " '" << RegionDecl->getNameAsString() << "'";
   }
+
   ObjectKind OK = classifyObject(MR, RD);
-  if (OK.STL) {
-    OS << " of type '" << RD->getQualifiedNameAsString() << "'";
-  }
-  return OK;
+  switch (OK.StdKind) {
+    case SK_NonStd:
+    case SK_Safe:
+      break;
+    case SK_SmartPtr:
+      if (MK != MK_Dereference)
+        break;
+
+      // We only care about the type if it's a dereference.
+      LLVM_FALLTHROUGH;
+    case SK_Unsafe:
+      OS << " of type '" << RD->getQualifiedNameAsString() << "'";
+      break;
+  };
 }
 
 void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
@@ -541,6 +634,11 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
         return;
       }
       C.addTransition(State);
+      return;
+    }
+
+    if (OOK == OO_Star || OOK == OO_Arrow) {
+      modelUse(State, ThisRegion, RD, MK_Dereference, C);
       return;
     }
   }

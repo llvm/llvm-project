@@ -1,19 +1,25 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
 // RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
-// RUN:  -analyzer-config exploration_strategy=unexplored_first_queue
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
-// RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
-// RUN:  -analyzer-config exploration_strategy=dfs -DDFS=1
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
-// RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
 // RUN:  -analyzer-config exploration_strategy=unexplored_first_queue\
-// RUN:  -analyzer-config alpha.cplusplus.Move:Aggressive=true -DAGGRESSIVE
+// RUN:  -analyzer-checker debug.ExprInspection
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
 // RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
 // RUN:  -analyzer-config exploration_strategy=dfs -DDFS=1\
-// RUN:  -analyzer-config alpha.cplusplus.Move:Aggressive=true -DAGGRESSIVE
+// RUN:  -analyzer-checker debug.ExprInspection
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
+// RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
+// RUN:  -analyzer-config exploration_strategy=unexplored_first_queue\
+// RUN:  -analyzer-config alpha.cplusplus.Move:Aggressive=true -DAGGRESSIVE\
+// RUN:  -analyzer-checker debug.ExprInspection
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
+// RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
+// RUN:  -analyzer-config exploration_strategy=dfs -DDFS=1\
+// RUN:  -analyzer-config alpha.cplusplus.Move:Aggressive=true -DAGGRESSIVE\
+// RUN:  -analyzer-checker debug.ExprInspection
 
 #include "Inputs/system-header-simulator-cxx.h"
+
+void clang_analyzer_warnIfReached();
 
 class B {
 public:
@@ -849,7 +855,19 @@ class HasSTLField {
     // expected-note@-4{{Object 'P' is moved}}
     // expected-note@-4{{Method called on moved-from object 'P'}}
 #endif
-    *P += 1; // FIXME: Should warn that the pointer is null.
+
+    // Because that well-defined state is null, dereference is still UB.
+    // Note that in aggressive mode we already warned about 'P',
+    // so no extra warning is generated.
+    *P += 1;
+#ifndef AGGRESSIVE
+    // expected-warning@-2{{Dereference of null smart pointer 'P' of type 'std::unique_ptr'}}
+    // expected-note@-14{{Smart pointer 'P' of type 'std::unique_ptr' is reset to null when moved from}}
+    // expected-note@-4{{Dereference of null smart pointer 'P' of type 'std::unique_ptr'}}
+#endif
+
+    // The program should have crashed by now.
+    clang_analyzer_warnIfReached(); // no-warning
   }
 };
 
@@ -865,4 +883,10 @@ void localUniquePtr(std::unique_ptr<int> P) {
   std::unique_ptr<int> Q = std::move(P); // expected-note{{Object 'P' is moved}}
   P.get(); // expected-warning{{Method called on moved-from object 'P'}}
            // expected-note@-1{{Method called on moved-from object 'P'}}
+}
+
+void localUniquePtrWithArrow(std::unique_ptr<A> P) {
+  std::unique_ptr<A> Q = std::move(P); // expected-note{{Smart pointer 'P' of type 'std::unique_ptr' is reset to null when moved from}}
+  P->foo(); // expected-warning{{Dereference of null smart pointer 'P' of type 'std::unique_ptr'}}
+            // expected-note@-1{{Dereference of null smart pointer 'P' of type 'std::unique_ptr'}}
 }
