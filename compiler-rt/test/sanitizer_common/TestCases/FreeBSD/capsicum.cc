@@ -49,6 +49,12 @@ void test_cap_rights() {
   rv = cap_rights_get(STDIN_FILENO, &grights);
   assert(rv == 0);
   assert(memcmp(&grights, &rights, sizeof(grights)) == 0);
+  cap_rights_t *iptr = cap_rights_set(&rights, CAP_IOCTL);
+  assert(iptr);
+  cap_rights_t *eptr = cap_rights_clear(&rights, CAP_READ);
+  assert(eptr);
+  hasit = cap_rights_is_set(&rights, CAP_IOCTL);
+  assert(hasit == true);
   printf("rights test: %d\n", rv);
 }
 
