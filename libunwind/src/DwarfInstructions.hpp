@@ -211,9 +211,13 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
         register unsigned long long x17 __asm("x17") = returnAddress;
         register unsigned long long x16 __asm("x16") = cfa;
 
-        // This is the autia1716 instruction. The hint instruction is used here
-        // as gcc does not assemble autia1716 for pre armv8.3a targets.
-        asm("hint 0xc": "+r"(x17): "r"(x16));
+        // These are the autia1716/autib1716 instructions. The hint instructions
+        // are used here as gcc does not assemble autia1716/autib1716 for pre
+        // armv8.3a targets.
+        if (cieInfo.addressesSignedWithBKey)
+          asm("hint 0xe" : "+r"(x17) : "r"(x16)); // autib1716
+        else
+          asm("hint 0xc" : "+r"(x17) : "r"(x16)); // autia1716
         returnAddress = x17;
 #endif
       }
