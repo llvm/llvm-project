@@ -11,6 +11,11 @@ struct S {
     int A = 0;
     int B = 1;
   };
+
+  enum class NestedEnum {
+    EnumValue1 = 0,
+    EnumValue2 = 1,
+  };
   int C = 2;
   int D = 3;
   using VoidPtrT = void *;
@@ -70,6 +75,7 @@ constexpr T::U GlobalE;
 constexpr U<int> GlobalF;
 constexpr U<int>::V<int> GlobalG;
 constexpr U<int>::W GlobalH;
+constexpr S::NestedEnum GlobalEnum = S::NestedEnum::EnumValue1;
 
 
 int main(int argc, char **argv) {
@@ -113,6 +119,8 @@ int main(int argc, char **argv) {
 // CHECK:   (int) I = 8
 // CHECK:   (int) J = 9
 // CHECK: }
+// CHECK: (lldb) target variable -T GlobalEnum
+// CHECK: (const S::NestedEnum) GlobalEnum = EnumValue1
 // CHECK: (lldb) target modules dump ast
 // CHECK: Dumping clang ast for 1 modules.
 // CHECK: TranslationUnitDecl {{.*}}
@@ -120,9 +128,12 @@ int main(int argc, char **argv) {
 // CHECK: | |-FieldDecl {{.*}} C 'int'
 // CHECK: | |-FieldDecl {{.*}} D 'int'
 // CHECK: | |-FieldDecl {{.*}} DD 'void *'
-// CHECK: | `-CXXRecordDecl {{.*}} struct NestedStruct definition
-// CHECK: |   |-FieldDecl {{.*}} A 'int'
-// CHECK: |   `-FieldDecl {{.*}} B 'int'
+// CHECK: | |-CXXRecordDecl {{.*}} struct NestedStruct definition
+// CHECK: | | |-FieldDecl {{.*}} A 'int'
+// CHECK: | | `-FieldDecl {{.*}} B 'int'
+// CHECK: | `-EnumDecl {{.*}} NestedEnum
+// CHECK: |   |-EnumConstantDecl {{.*}} EnumValue1 'S::NestedEnum'
+// CHECK: |   `-EnumConstantDecl {{.*}} EnumValue2 'S::NestedEnum'
 // CHECK: |-CXXRecordDecl {{.*}} struct T definition
 // CHECK: | |-FieldDecl {{.*}} NT 'int'
 // CHECK: | |-CXXRecordDecl {{.*}} struct NestedStruct definition

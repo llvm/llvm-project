@@ -224,7 +224,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     return;
   }
   case file_magic::elf_shared_object:
-    if (Config->Relocatable) {
+    if (Config->Static || Config->Relocatable) {
       error("attempted static link of dynamic object " + Path);
       return;
     }
