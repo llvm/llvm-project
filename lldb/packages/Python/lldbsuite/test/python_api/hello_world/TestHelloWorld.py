@@ -79,7 +79,6 @@ class HelloWorldTestCase(TestBase):
     @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24600")
     @skipIfiOSSimulator
-    @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], bugnumber="<rdar://problem/34538611>") # old lldb-server has race condition, launching an inferior and then launching debugserver in quick succession sometimes fails
     def test_with_attach_to_process_with_id_api(self):
         """Create target, spawn a process, and attach to it with process id."""
         exe = '%s_%d'%(self.getBuildArtifact(self.testMethodName), os.getpid())
@@ -108,7 +107,6 @@ class HelloWorldTestCase(TestBase):
     @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24600")
     @skipIfiOSSimulator
-    @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], bugnumber="<rdar://problem/34538611>") # old lldb-server has race condition, launching an inferior and then launching debugserver in quick succession sometimes fails
     def test_with_attach_to_process_with_name_api(self):
         """Create target, spawn a process, and attach to it with process name."""
         exe = '%s_%d'%(self.getBuildArtifact(self.testMethodName), os.getpid())
