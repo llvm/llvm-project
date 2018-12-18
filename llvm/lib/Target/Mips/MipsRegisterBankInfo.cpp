@@ -93,6 +93,10 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_SHL:
   case G_ASHR:
   case G_LSHR:
+  case G_SDIV:
+  case G_UDIV:
+  case G_SREM:
+  case G_UREM:
     OperandsMapping = &Mips::ValueMappings[Mips::GPRIdx];
     break;
   case G_CONSTANT:

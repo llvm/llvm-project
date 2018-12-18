@@ -590,7 +590,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSAT(SDNode *N) {
   SDLoc dl(N);
   SDValue Op1 = N->getOperand(0);
   SDValue Op2 = N->getOperand(1);
-  unsigned OldBits = Op1.getValueSizeInBits();
+  unsigned OldBits = Op1.getScalarValueSizeInBits();
 
   unsigned Opcode = N->getOpcode();
   unsigned ShiftOp;
@@ -612,7 +612,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSAT(SDNode *N) {
   SDValue Op2Promoted = GetPromotedInteger(Op2);
 
   EVT PromotedType = Op1Promoted.getValueType();
-  unsigned NewBits = Op1Promoted.getValueSizeInBits();
+  unsigned NewBits = PromotedType.getScalarSizeInBits();
   unsigned SHLAmount = NewBits - OldBits;
   EVT SHVT = TLI.getShiftAmountTy(PromotedType, DAG.getDataLayout());
   SDValue ShiftAmount = DAG.getConstant(SHLAmount, dl, SHVT);

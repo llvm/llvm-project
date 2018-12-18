@@ -1173,12 +1173,12 @@ define void @test_constant_float(float* %addr) {
 ; CHECK: [[BOOLADDR:%[0-9]+]]:_(p0) = COPY $x2
 ; CHECK: [[LHS:%[0-9]+]]:_(s32) = G_LOAD [[LHSADDR]](p0)
 ; CHECK: [[RHS:%[0-9]+]]:_(s32) = G_LOAD [[RHSADDR]](p0)
-; CHECK: [[TST:%[0-9]+]]:_(s1) = G_FCMP floatpred(oge), [[LHS]](s32), [[RHS]]
+; CHECK: [[TST:%[0-9]+]]:_(s1) = nnan ninf nsz arcp contract afn reassoc G_FCMP floatpred(oge), [[LHS]](s32), [[RHS]]
 ; CHECK: G_STORE [[TST]](s1), [[BOOLADDR]](p0)
 define void @float_comparison(float* %a.addr, float* %b.addr, i1* %bool.addr) {
   %a = load float, float* %a.addr
   %b = load float, float* %b.addr
-  %res = fcmp oge float %a, %b
+  %res = fcmp nnan ninf nsz arcp contract afn reassoc oge float %a, %b
   store i1 %res, i1* %bool.addr
   ret void
 }
@@ -1338,9 +1338,9 @@ define float @test_pow_intrin(float %l, float %r) {
 ; CHECK-LABEL: name: test_pow_intrin
 ; CHECK: [[LHS:%[0-9]+]]:_(s32) = COPY $s0
 ; CHECK: [[RHS:%[0-9]+]]:_(s32) = COPY $s1
-; CHECK: [[RES:%[0-9]+]]:_(s32) = G_FPOW [[LHS]], [[RHS]]
+; CHECK: [[RES:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FPOW [[LHS]], [[RHS]]
 ; CHECK: $s0 = COPY [[RES]]
-  %res = call float @llvm.pow.f32(float %l, float %r)
+  %res = call nnan ninf nsz arcp contract afn reassoc float @llvm.pow.f32(float %l, float %r)
   ret float %res
 }
 
@@ -1350,9 +1350,9 @@ define float @test_fma_intrin(float %a, float %b, float %c) {
 ; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
 ; CHECK: [[B:%[0-9]+]]:_(s32) = COPY $s1
 ; CHECK: [[C:%[0-9]+]]:_(s32) = COPY $s2
-; CHECK: [[RES:%[0-9]+]]:_(s32) = G_FMA [[A]], [[B]], [[C]]
+; CHECK: [[RES:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FMA [[A]], [[B]], [[C]]
 ; CHECK: $s0 = COPY [[RES]]
-  %res = call float @llvm.fma.f32(float %a, float %b, float %c)
+  %res = call nnan ninf nsz arcp contract afn reassoc float @llvm.fma.f32(float %a, float %b, float %c)
   ret float %res
 }
 
@@ -1360,9 +1360,9 @@ declare float @llvm.exp.f32(float)
 define float @test_exp_intrin(float %a) {
 ; CHECK-LABEL: name: test_exp_intrin
 ; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
-; CHECK: [[RES:%[0-9]+]]:_(s32) = G_FEXP [[A]]
+; CHECK: [[RES:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FEXP [[A]]
 ; CHECK: $s0 = COPY [[RES]]
-  %res = call float @llvm.exp.f32(float %a)
+  %res = call nnan ninf nsz arcp contract afn reassoc float @llvm.exp.f32(float %a)
   ret float %res
 }
 
@@ -1370,9 +1370,9 @@ declare float @llvm.exp2.f32(float)
 define float @test_exp2_intrin(float %a) {
 ; CHECK-LABEL: name: test_exp2_intrin
 ; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
-; CHECK: [[RES:%[0-9]+]]:_(s32) = G_FEXP2 [[A]]
+; CHECK: [[RES:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FEXP2 [[A]]
 ; CHECK: $s0 = COPY [[RES]]
-  %res = call float @llvm.exp2.f32(float %a)
+  %res = call nnan ninf nsz arcp contract afn reassoc float @llvm.exp2.f32(float %a)
   ret float %res
 }
 
@@ -1380,9 +1380,9 @@ declare float @llvm.log.f32(float)
 define float @test_log_intrin(float %a) {
 ; CHECK-LABEL: name: test_log_intrin
 ; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
-; CHECK: [[RES:%[0-9]+]]:_(s32) = G_FLOG [[A]]
+; CHECK: [[RES:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FLOG [[A]]
 ; CHECK: $s0 = COPY [[RES]]
-  %res = call float @llvm.log.f32(float %a)
+  %res = call nnan ninf nsz arcp contract afn reassoc float @llvm.log.f32(float %a)
   ret float %res
 }
 
@@ -1400,9 +1400,9 @@ declare float @llvm.log10.f32(float)
 define float @test_log10_intrin(float %a) {
 ; CHECK-LABEL: name: test_log10_intrin
 ; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
-; CHECK: [[RES:%[0-9]+]]:_(s32) = G_FLOG10 [[A]]
+; CHECK: [[RES:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FLOG10 [[A]]
 ; CHECK: $s0 = COPY [[RES]]
-  %res = call float @llvm.log10.f32(float %a)
+  %res = call nnan ninf nsz arcp contract afn reassoc float @llvm.log10.f32(float %a)
   ret float %res
 }
 
@@ -1410,9 +1410,9 @@ declare float @llvm.fabs.f32(float)
 define float @test_fabs_intrin(float %a) {
 ; CHECK-LABEL: name: test_fabs_intrin
 ; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
-; CHECK: [[RES:%[0-9]+]]:_(s32) = G_FABS [[A]]
+; CHECK: [[RES:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FABS [[A]]
 ; CHECK: $s0 = COPY [[RES]]
-  %res = call float @llvm.fabs.f32(float %a)
+  %res = call nnan ninf nsz arcp contract afn reassoc float @llvm.fabs.f32(float %a)
   ret float %res
 }
 

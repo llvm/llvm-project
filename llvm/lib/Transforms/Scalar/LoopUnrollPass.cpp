@@ -965,19 +965,26 @@ static LoopUnrollResult tryToUnrollLoop(
     Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     const TargetTransformInfo &TTI, AssumptionCache &AC,
     OptimizationRemarkEmitter &ORE, bool PreserveLCSSA, int OptLevel,
-    Optional<unsigned> ProvidedCount, Optional<unsigned> ProvidedThreshold,
-    Optional<bool> ProvidedAllowPartial, Optional<bool> ProvidedRuntime,
-    Optional<bool> ProvidedUpperBound, Optional<bool> ProvidedAllowPeeling) {
+    bool OnlyWhenForced, Optional<unsigned> ProvidedCount,
+    Optional<unsigned> ProvidedThreshold, Optional<bool> ProvidedAllowPartial,
+    Optional<bool> ProvidedRuntime, Optional<bool> ProvidedUpperBound,
+    Optional<bool> ProvidedAllowPeeling) {
   LLVM_DEBUG(dbgs() << "Loop Unroll: F["
                     << L->getHeader()->getParent()->getName() << "] Loop %"
                     << L->getHeader()->getName() << "\n");
-  if (hasUnrollTransformation(L) & TM_Disable)
+  TransformationMode TM = hasUnrollTransformation(L);
+  if (TM & TM_Disable)
     return LoopUnrollResult::Unmodified;
   if (!L->isLoopSimplifyForm()) {
     LLVM_DEBUG(
         dbgs() << "  Not unrolling loop which is not in loop-simplify form.\n");
     return LoopUnrollResult::Unmodified;
   }
+
+  // When automtatic unrolling is disabled, do not unroll unless overridden for
+  // this loop.
+  if (OnlyWhenForced && !(TM & TM_Enable))
+    return LoopUnrollResult::Unmodified;
 
   unsigned NumInlineCandidates;
   bool NotDuplicatable;
@@ -1119,6 +1126,12 @@ public:
   static char ID; // Pass ID, replacement for typeid
 
   int OptLevel;
+
+  /// If false, use a cost model to determine whether unrolling of a loop is
+  /// profitable. If true, only loops that explicitly request unrolling via
+  /// metadata are considered. All other loops are skipped.
+  bool OnlyWhenForced;
+
   Optional<unsigned> ProvidedCount;
   Optional<unsigned> ProvidedThreshold;
   Optional<bool> ProvidedAllowPartial;
@@ -1126,15 +1139,16 @@ public:
   Optional<bool> ProvidedUpperBound;
   Optional<bool> ProvidedAllowPeeling;
 
-  LoopUnroll(int OptLevel = 2, Optional<unsigned> Threshold = None,
+  LoopUnroll(int OptLevel = 2, bool OnlyWhenForced = false,
+             Optional<unsigned> Threshold = None,
              Optional<unsigned> Count = None,
              Optional<bool> AllowPartial = None, Optional<bool> Runtime = None,
              Optional<bool> UpperBound = None,
              Optional<bool> AllowPeeling = None)
-      : LoopPass(ID), OptLevel(OptLevel), ProvidedCount(std::move(Count)),
-        ProvidedThreshold(Threshold), ProvidedAllowPartial(AllowPartial),
-        ProvidedRuntime(Runtime), ProvidedUpperBound(UpperBound),
-        ProvidedAllowPeeling(AllowPeeling) {
+      : LoopPass(ID), OptLevel(OptLevel), OnlyWhenForced(OnlyWhenForced),
+        ProvidedCount(std::move(Count)), ProvidedThreshold(Threshold),
+        ProvidedAllowPartial(AllowPartial), ProvidedRuntime(Runtime),
+        ProvidedUpperBound(UpperBound), ProvidedAllowPeeling(AllowPeeling) {
     initializeLoopUnrollPass(*PassRegistry::getPassRegistry());
   }
 
@@ -1157,8 +1171,8 @@ public:
     bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
     LoopUnrollResult Result = tryToUnrollLoop(
-        L, DT, LI, SE, TTI, AC, ORE, PreserveLCSSA, OptLevel, ProvidedCount,
-        ProvidedThreshold, ProvidedAllowPartial, ProvidedRuntime,
+        L, DT, LI, SE, TTI, AC, ORE, PreserveLCSSA, OptLevel, OnlyWhenForced,
+        ProvidedCount, ProvidedThreshold, ProvidedAllowPartial, ProvidedRuntime,
         ProvidedUpperBound, ProvidedAllowPeeling);
 
     if (Result == LoopUnrollResult::FullyUnrolled)
@@ -1188,14 +1202,16 @@ INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
 
-Pass *llvm::createLoopUnrollPass(int OptLevel, int Threshold, int Count,
-                                 int AllowPartial, int Runtime, int UpperBound,
+Pass *llvm::createLoopUnrollPass(int OptLevel, bool OnlyWhenForced,
+                                 int Threshold, int Count, int AllowPartial,
+                                 int Runtime, int UpperBound,
                                  int AllowPeeling) {
   // TODO: It would make more sense for this function to take the optionals
   // directly, but that's dangerous since it would silently break out of tree
   // callers.
   return new LoopUnroll(
-      OptLevel, Threshold == -1 ? None : Optional<unsigned>(Threshold),
+      OptLevel, OnlyWhenForced,
+      Threshold == -1 ? None : Optional<unsigned>(Threshold),
       Count == -1 ? None : Optional<unsigned>(Count),
       AllowPartial == -1 ? None : Optional<bool>(AllowPartial),
       Runtime == -1 ? None : Optional<bool>(Runtime),
@@ -1203,8 +1219,8 @@ Pass *llvm::createLoopUnrollPass(int OptLevel, int Threshold, int Count,
       AllowPeeling == -1 ? None : Optional<bool>(AllowPeeling));
 }
 
-Pass *llvm::createSimpleLoopUnrollPass(int OptLevel) {
-  return createLoopUnrollPass(OptLevel, -1, -1, 0, 0, 0, 0);
+Pass *llvm::createSimpleLoopUnrollPass(int OptLevel, bool OnlyWhenForced) {
+  return createLoopUnrollPass(OptLevel, OnlyWhenForced, -1, -1, 0, 0, 0, 0);
 }
 
 PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
@@ -1234,7 +1250,8 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
 
   bool Changed =
       tryToUnrollLoop(&L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, *ORE,
-                      /*PreserveLCSSA*/ true, OptLevel, /*Count*/ None,
+                      /*PreserveLCSSA*/ true, OptLevel, OnlyWhenForced,
+                      /*Count*/ None,
                       /*Threshold*/ None, /*AllowPartial*/ false,
                       /*Runtime*/ false, /*UpperBound*/ false,
                       /*AllowPeeling*/ false) != LoopUnrollResult::Unmodified;
@@ -1371,7 +1388,8 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     // flavors of unrolling during construction time (by setting UnrollOpts).
     LoopUnrollResult Result = tryToUnrollLoop(
         &L, DT, &LI, SE, TTI, AC, ORE,
-        /*PreserveLCSSA*/ true, UnrollOpts.OptLevel, /*Count*/ None,
+        /*PreserveLCSSA*/ true, UnrollOpts.OptLevel, UnrollOpts.OnlyWhenForced,
+        /*Count*/ None,
         /*Threshold*/ None, UnrollOpts.AllowPartial, UnrollOpts.AllowRuntime,
         UnrollOpts.AllowUpperBound, LocalAllowPeeling);
     Changed |= Result != LoopUnrollResult::Unmodified;

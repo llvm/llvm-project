@@ -145,6 +145,33 @@ bool MipsInstructionSelector::select(MachineInstr &I,
              .addMemOperand(*I.memoperands_begin());
     break;
   }
+  case G_UDIV:
+  case G_UREM:
+  case G_SDIV:
+  case G_SREM: {
+    unsigned HILOReg = MRI.createVirtualRegister(&Mips::ACC64RegClass);
+    bool IsSigned = I.getOpcode() == G_SREM || I.getOpcode() == G_SDIV;
+    bool IsDiv = I.getOpcode() == G_UDIV || I.getOpcode() == G_SDIV;
+
+    MachineInstr *PseudoDIV, *PseudoMove;
+    PseudoDIV = BuildMI(MBB, I, I.getDebugLoc(),
+                        TII.get(IsSigned ? Mips::PseudoSDIV : Mips::PseudoUDIV))
+                    .addDef(HILOReg)
+                    .add(I.getOperand(1))
+                    .add(I.getOperand(2));
+    if (!constrainSelectedInstRegOperands(*PseudoDIV, TII, TRI, RBI))
+      return false;
+
+    PseudoMove = BuildMI(MBB, I, I.getDebugLoc(),
+                         TII.get(IsDiv ? Mips::PseudoMFLO : Mips::PseudoMFHI))
+                     .addDef(I.getOperand(0).getReg())
+                     .addUse(HILOReg);
+    if (!constrainSelectedInstRegOperands(*PseudoMove, TII, TRI, RBI))
+      return false;
+
+    I.eraseFromParent();
+    return true;
+  }
   case G_CONSTANT: {
     int Imm = I.getOperand(1).getCImm()->getValue().getLimitedValue();
     unsigned LUiReg = MRI.createVirtualRegister(&Mips::GPR32RegClass);
