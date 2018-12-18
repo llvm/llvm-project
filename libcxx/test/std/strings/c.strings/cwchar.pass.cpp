@@ -10,6 +10,7 @@
 // <cwchar>
 
 #include <cwchar>
+#include <ctime>
 #include <cstdarg>
 #include <type_traits>
 

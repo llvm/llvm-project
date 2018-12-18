@@ -8712,8 +8712,7 @@
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
-				LLDB_COMPRESSION_LDFLAGS = "-weak-lcompression";
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_COVERAGE_CFLAGS = "$(LLDB_COVERAGE_CFLAGS_$(LLDB_ENABLE_COVERAGE))";
 				LLDB_COVERAGE_CFLAGS_1 = "-fprofile-instr-generate -fcoverage-mapping";
 				LLDB_COVERAGE_LDFLAGS = "$(LLDB_COVERAGE_LDFLAGS_$(LLDB_ENABLE_COVERAGE))";
@@ -8734,12 +8733,11 @@
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = (
-					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"-lcompression",
 					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COVERAGE_LDFLAGS)",
 				);
@@ -8802,8 +8800,7 @@
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
-				LLDB_COMPRESSION_LDFLAGS = "-weak-lcompression";
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_COVERAGE_CFLAGS = "$(LLDB_COVERAGE_CFLAGS_$(LLDB_ENABLE_COVERAGE))";
 				LLDB_COVERAGE_CFLAGS_1 = "-fprofile-instr-generate -fcoverage-mapping";
 				LLDB_COVERAGE_LDFLAGS = "$(LLDB_COVERAGE_LDFLAGS_$(LLDB_ENABLE_COVERAGE))";
@@ -8824,12 +8821,11 @@
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = (
-					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"-lcompression",
 					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COVERAGE_LDFLAGS)",
 				);
@@ -8965,7 +8961,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9007,7 +9002,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9049,7 +9043,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9091,7 +9084,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9133,7 +9125,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9177,7 +9168,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9221,7 +9211,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9265,7 +9254,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9357,10 +9345,7 @@
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
 					"$(inherited)",
 				);
-				LLDB_COMPRESSION_CFLAGS = "";
-				"LLDB_COMPRESSION_CFLAGS[sdk=macosx10.11]" = "-DHAVE_LIBCOMPRESSION=1";
-				LLDB_COMPRESSION_LDFLAGS = "";
-				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				OTHER_CPLUSPLUSFLAGS = (
@@ -9430,10 +9415,7 @@
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
 					"$(inherited)",
 				);
-				LLDB_COMPRESSION_CFLAGS = "";
-				"LLDB_COMPRESSION_CFLAGS[sdk=macosx10.11]" = "-DHAVE_LIBCOMPRESSION=1";
-				LLDB_COMPRESSION_LDFLAGS = "";
-				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				OTHER_CPLUSPLUSFLAGS = (
@@ -9765,10 +9747,7 @@
 					"LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}",
 				);
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
-				LLDB_COMPRESSION_CFLAGS = "";
-				"LLDB_COMPRESSION_CFLAGS[sdk=macosx10.11]" = "-DHAVE_LIBCOMPRESSION=1";
-				LLDB_COMPRESSION_LDFLAGS = "";
-				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACH_O_TYPE = staticlib;
@@ -9822,10 +9801,7 @@
 					"LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}",
 				);
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
-				LLDB_COMPRESSION_CFLAGS = "";
-				"LLDB_COMPRESSION_CFLAGS[sdk=macosx10.11]" = "-DHAVE_LIBCOMPRESSION=1";
-				LLDB_COMPRESSION_LDFLAGS = "";
-				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACH_O_TYPE = staticlib;
@@ -9879,10 +9855,7 @@
 					"LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}",
 				);
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
-				LLDB_COMPRESSION_CFLAGS = "";
-				"LLDB_COMPRESSION_CFLAGS[sdk=macosx10.11]" = "-DHAVE_LIBCOMPRESSION=1";
-				LLDB_COMPRESSION_LDFLAGS = "";
-				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACH_O_TYPE = staticlib;
@@ -9958,8 +9931,7 @@
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
-				LLDB_COMPRESSION_LDFLAGS = "-weak-lcompression";
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_COVERAGE_CFLAGS = "$(LLDB_COVERAGE_CFLAGS_$(LLDB_ENABLE_COVERAGE))";
 				LLDB_COVERAGE_CFLAGS_1 = "-fprofile-instr-generate -fcoverage-mapping";
 				LLDB_COVERAGE_LDFLAGS = "$(LLDB_COVERAGE_LDFLAGS_$(LLDB_ENABLE_COVERAGE))";
@@ -9981,13 +9953,12 @@
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 					"-DNDEBUG",
 				);
 				OTHER_LDFLAGS = (
-					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"-lcompression",
 					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COVERAGE_LDFLAGS)",
 				);
@@ -10020,7 +9991,6 @@
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 					"-fno-rtti",
@@ -10089,10 +10059,7 @@
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
 					"$(inherited)",
 				);
-				LLDB_COMPRESSION_CFLAGS = "";
-				"LLDB_COMPRESSION_CFLAGS[sdk=macosx10.11]" = "-DHAVE_LIBCOMPRESSION=1";
-				LLDB_COMPRESSION_LDFLAGS = "";
-				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				OTHER_CPLUSPLUSFLAGS = (
@@ -10598,7 +10565,6 @@
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 					"-fno-rtti",
@@ -10639,7 +10605,6 @@
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 					"-fno-rtti",
@@ -10713,8 +10678,7 @@
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
-				LLDB_COMPRESSION_LDFLAGS = "-weak-lcompression";
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_COVERAGE_CFLAGS = "$(LLDB_COVERAGE_CFLAGS_$(LLDB_ENABLE_COVERAGE))";
 				LLDB_COVERAGE_CFLAGS_1 = "-fprofile-instr-generate -fcoverage-mapping";
 				LLDB_COVERAGE_LDFLAGS = "$(LLDB_COVERAGE_LDFLAGS_$(LLDB_ENABLE_COVERAGE))";
@@ -10735,12 +10699,11 @@
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = (
-					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"-lcompression",
 					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COVERAGE_LDFLAGS)",
 				);
@@ -10797,7 +10760,6 @@
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 					"-fno-rtti",
@@ -10848,10 +10810,7 @@
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
 					"$(inherited)",
 				);
-				LLDB_COMPRESSION_CFLAGS = "";
-				"LLDB_COMPRESSION_CFLAGS[sdk=macosx10.11]" = "-DHAVE_LIBCOMPRESSION=1";
-				LLDB_COMPRESSION_LDFLAGS = "";
-				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				OTHER_CPLUSPLUSFLAGS = (
@@ -10934,10 +10893,7 @@
 					"LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}",
 				);
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
-				LLDB_COMPRESSION_CFLAGS = "";
-				"LLDB_COMPRESSION_CFLAGS[sdk=macosx10.11]" = "-DHAVE_LIBCOMPRESSION=1";
-				LLDB_COMPRESSION_LDFLAGS = "";
-				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11]" = "-weak-lcompression";
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACH_O_TYPE = staticlib;

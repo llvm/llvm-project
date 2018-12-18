@@ -159,7 +159,6 @@ if(LLDB_INCLUDE_TESTS)
     list(APPEND LLDB_TEST_DEPS clang)
     if(APPLE)
       list(APPEND LLDB_TEST_DEPS cxx)
-      list(APPEND LLDB_TEST_DEPS cxxabi)
     endif()
   endif()
 
