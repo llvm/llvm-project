@@ -199,7 +199,7 @@ class ThreadStateTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint in the main thread.
-        lldbutil.run_break_set_by_file_and_line(
+        bpno = lldbutil.run_break_set_by_file_and_line(
             self, "main.cpp", self.break_1, num_expected_locations=1)
 
         # Run the program.
@@ -212,6 +212,10 @@ class ThreadStateTestCase(TestBase):
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
+
+        # Remove the breakpoint to avoid the single-step-over-bkpt dance in the
+        # "continue" below
+        self.assertTrue(target.BreakpointDelete(bpno))
 
         # Continue, the inferior will go into an infinite loop waiting for
         # 'g_test' to change.
