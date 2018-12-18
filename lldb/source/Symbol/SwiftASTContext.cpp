@@ -3850,7 +3850,7 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
     error.SetErrorStringWithFormat(
         "typename '%s' is not a valid Swift mangled name",
         mangled_typename);
-    return CompilerType();
+    return {};
   }
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
@@ -3865,7 +3865,7 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
                   "-- null Swift AST Context",
                   this, mangled_typename);
     error.SetErrorString("null Swift AST Context");
-    return CompilerType();
+    return {};
   }
 
   error.Clear();
@@ -3881,7 +3881,8 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
       log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
                   "-- found in the positive cache",
                   this, mangled_typename);
-    return CompilerType(ast_ctx, found_type);
+    assert(&found_type->getASTContext() == ast_ctx);
+    return {ast_ctx, found_type};
   }
 
   if (m_negative_type_cache.Lookup(mangled_name.GetCString())) {
@@ -3889,7 +3890,7 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
       log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
                   "-- found in the negative cache",
                   this, mangled_typename);
-    return CompilerType();
+    return {};
   }
 
   if (log)
@@ -3905,6 +3906,7 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
   if (found_type) {
     CacheDemangledType(mangled_name.GetCString(), found_type);
     CompilerType result_type(ast_ctx, found_type);
+    assert(&found_type->getASTContext() == ast_ctx);
     if (log)
       log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
                   "-- found %s",
@@ -3920,13 +3922,13 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
   error.SetErrorStringWithFormat("type for typename '%s' was not found",
                                  mangled_typename);
   CacheDemangledTypeFailure(mangled_name.GetCString());
-  return CompilerType();
+  return {};
 }
 
 CompilerType SwiftASTContext::GetAnyObjectType() {
   VALID_OR_RETURN(CompilerType());
   swift::ASTContext *ast = GetASTContext();
-  return CompilerType(ast, ast->getAnyObjectType());
+  return {ast, ast->getAnyObjectType()};
 }
 
 CompilerType SwiftASTContext::GetVoidFunctionType() {
@@ -3998,14 +4000,14 @@ CompilerType SwiftASTContext::FindQualifiedType(const char *qualified_name) {
       }
     }
   }
-  return CompilerType();
+  return {};
 }
 
 static CompilerType DeclToType(swift::Decl *decl, swift::ASTContext *ast) {
   if (swift::ValueDecl *value_decl =
           swift::dyn_cast_or_null<swift::ValueDecl>(decl))
     return ValueDeclToType(value_decl, ast);
-  return CompilerType();
+  return {};
 }
 
 static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
@@ -4114,7 +4116,7 @@ CompilerType SwiftASTContext::FindType(const char *name,
   FindTypes(name, swift_module, search_results, false);
 
   if (search_results.empty())
-    return CompilerType();
+    return {};
   else
     return *search_results.begin();
 }
@@ -4257,7 +4259,7 @@ CompilerType SwiftASTContext::FindFirstType(const char *name,
         return *types.begin();
     }
   }
-  return CompilerType();
+  return {};
 }
 
 CompilerType SwiftASTContext::ImportType(CompilerType &type, Status &error) {
@@ -4474,10 +4476,10 @@ CompilerType SwiftASTContext::GetErrorType() {
     swift::NominalTypeDecl *error_type_decl = GetASTContext()->getErrorDecl();
     if (error_type_decl) {
       auto error_type = error_type_decl->getDeclaredType().getPointer();
-      return CompilerType(GetASTContext(), error_type);
+      return {GetASTContext(), error_type};
     }
   }
-  return CompilerType();
+  return {};
 }
 
 CompilerType SwiftASTContext::GetNSErrorType(Status &error) {
@@ -4493,10 +4495,10 @@ CompilerType SwiftASTContext::CreateMetatypeType(CompilerType instance_type) {
   VALID_OR_RETURN(CompilerType());
 
   if (llvm::dyn_cast_or_null<SwiftASTContext>(instance_type.GetTypeSystem()))
-    return CompilerType(GetASTContext(),
-                        swift::MetatypeType::get(GetSwiftType(instance_type),
-                                                 *GetASTContext()));
-  return CompilerType();
+    return {GetASTContext(),
+            swift::MetatypeType::get(GetSwiftType(instance_type),
+                                     *GetASTContext())};
+  return {};
 }
 
 SwiftASTContext *SwiftASTContext::GetSwiftASTContext(swift::ASTContext *ast) {
@@ -4884,9 +4886,7 @@ CompilerType SwiftASTContext::GetFunctionArgumentAtIndex(void *type,
 
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-    auto func =
-        swift::dyn_cast<swift::AnyFunctionType>(
-            swift_can_type);
+    auto func = swift::dyn_cast<swift::AnyFunctionType>(swift_can_type);
     if (func) {
       auto params = func.getParams();
       if (index < params.size()) {
@@ -4894,12 +4894,11 @@ CompilerType SwiftASTContext::GetFunctionArgumentAtIndex(void *type,
         if (param.isInOut())
           return CompilerType(this,
                               swift::InOutType::get(param.getParameterType()));
-        return CompilerType(this,
-                            param.getParameterType().getPointer());
+        return {this, param.getParameterType().getPointer()};
       }
     }
   }
-  return CompilerType();
+  return {};
 }
 
 bool SwiftASTContext::IsFunctionPointerType(void *type) {
@@ -5561,8 +5560,11 @@ CompilerType SwiftASTContext::GetArrayElementType(void *type,
           decl->getModuleContext()->isStdlibModule()) {
         const char *declname = decl->getName().get();
         if (0 == strcmp(declname, "NativeArray") ||
-            0 == strcmp(declname, "Array") || 0 == strcmp(declname, "ArraySlice"))
+            0 == strcmp(declname, "Array") ||
+            0 == strcmp(declname, "ArraySlice")) {
+          assert(GetASTContext() == &args[0].getPointer()->getASTContext());
           element_type = CompilerType(GetASTContext(), args[0].getPointer());
+        }
       }
     }
   }
@@ -5573,8 +5575,7 @@ CompilerType SwiftASTContext::GetCanonicalType(void *type) {
   VALID_OR_RETURN(CompilerType());
 
   if (type)
-    return CompilerType(GetASTContext(),
-                        GetCanonicalSwiftType(type).getPointer());
+    return {GetASTContext(), GetCanonicalSwiftType(type).getPointer()};
   return CompilerType();
 }
 
@@ -5585,27 +5586,29 @@ CompilerType SwiftASTContext::GetInstanceType(void *type) {
     return CompilerType();
 
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+  assert((&swift_can_type->getASTContext() == GetASTContext()) &&
+         "input type belongs to different SwiftASTContext");
   switch (swift_can_type->getKind()) {
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype: {
     auto metatype_type =
         swift::dyn_cast<swift::AnyMetatypeType>(swift_can_type);
     if (metatype_type)
-      return CompilerType(GetASTContext(),
-                          metatype_type.getInstanceType().getPointer());
-    return CompilerType();
+      return {GetASTContext(),
+              metatype_type.getInstanceType().getPointer()};
+    return {};
   }
   default:
     break;
   }
 
-  return CompilerType(GetASTContext(), GetSwiftType(type));
+  return {GetASTContext(), GetSwiftType(type)};
 }
 
 CompilerType SwiftASTContext::GetFullyUnqualifiedType(void *type) {
   VALID_OR_RETURN(CompilerType());
 
-  return CompilerType(GetASTContext(), GetSwiftType(type));
+  return {GetASTContext(), GetSwiftType(type)};
 }
 
 int SwiftASTContext::GetFunctionArgumentCount(void *type) {
@@ -5624,9 +5627,9 @@ CompilerType SwiftASTContext::GetFunctionReturnType(void *type) {
     auto func = swift::dyn_cast<swift::AnyFunctionType>(
         GetCanonicalSwiftType(type));
     if (func)
-      return CompilerType(GetASTContext(), func.getResult().getPointer());
+      return {GetASTContext(), func.getResult().getPointer()};
   }
-  return CompilerType();
+  return {};
 }
 
 size_t SwiftASTContext::GetNumMemberFunctions(void *type) {
@@ -5732,13 +5735,12 @@ CompilerType SwiftASTContext::GetLValueReferenceType(void *type) {
   VALID_OR_RETURN(CompilerType());
 
   if (type)
-    return CompilerType(GetASTContext(),
-                        swift::LValueType::get(GetSwiftType(type)));
-  return CompilerType();
+    return {GetASTContext(), swift::LValueType::get(GetSwiftType(type))};
+  return {};
 }
 
 CompilerType SwiftASTContext::GetRValueReferenceType(void *type) {
-  return CompilerType();
+  return {};
 }
 
 CompilerType SwiftASTContext::GetNonReferenceType(void *type) {
@@ -5749,18 +5751,16 @@ CompilerType SwiftASTContext::GetNonReferenceType(void *type) {
 
     swift::LValueType *lvalue = swift_can_type->getAs<swift::LValueType>();
     if (lvalue)
-      return CompilerType(GetASTContext(),
-                          lvalue->getObjectType().getPointer());
+      return {GetASTContext(), lvalue->getObjectType().getPointer()};
     swift::InOutType *inout = swift_can_type->getAs<swift::InOutType>();
     if (inout)
-        return CompilerType(GetASTContext(),
-                            inout->getObjectType().getPointer());
+      return {GetASTContext(), inout->getObjectType().getPointer()};
   }
-  return CompilerType();
+  return {};
 }
 
 CompilerType SwiftASTContext::GetPointeeType(void *type) {
-  return CompilerType();
+  return {};
 }
 
 CompilerType SwiftASTContext::GetPointerType(void *type) {
@@ -5783,12 +5783,11 @@ CompilerType SwiftASTContext::GetTypedefedType(void *type) {
     swift::NameAliasType *name_alias_type =
         swift::dyn_cast<swift::NameAliasType>(swift_type.getPointer());
     if (name_alias_type) {
-      return CompilerType(GetASTContext(),
-                          name_alias_type->getSinglyDesugaredType());
+      return {GetASTContext(), name_alias_type->getSinglyDesugaredType()};
     }
   }
 
-  return CompilerType();
+  return {};
 }
 
 CompilerType
@@ -5802,29 +5801,30 @@ SwiftASTContext::GetUnboundType(lldb::opaque_compiler_type_t type) {
     if (bound_generic_type) {
       swift::NominalTypeDecl *nominal_type_decl = bound_generic_type->getDecl();
       if (nominal_type_decl)
-        return CompilerType(GetASTContext(),
-                            nominal_type_decl->getDeclaredType());
+        return {GetASTContext(), nominal_type_decl->getDeclaredType()};
     }
   }
 
-  return CompilerType(GetASTContext(), GetSwiftType(type));
+  return {GetASTContext(), GetSwiftType(type)};
 }
 
 CompilerType SwiftASTContext::MapIntoContext(lldb::StackFrameSP &frame_sp,
                                              lldb::opaque_compiler_type_t type) {
   VALID_OR_RETURN(CompilerType());
   if (!type)
-    return CompilerType(GetASTContext(), nullptr);
+    return {};
   if (!frame_sp)
     return CompilerType(GetASTContext(), GetSwiftType(type));
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+  assert(&swift_can_type->getASTContext() == GetASTContext());
+
   const SymbolContext &sc(frame_sp->GetSymbolContext(eSymbolContextFunction));
   if (!sc.function || (swift_can_type && !swift_can_type->hasTypeParameter()))
     return CompilerType(GetASTContext(), GetSwiftType(type));
   auto *ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
        sc.function->GetCompilerType().GetTypeSystem());
   if (!ctx)
-    return CompilerType(GetASTContext(), GetSwiftType(type));
+    return {GetASTContext(), GetSwiftType(type)};
 
   // FIXME: we need the innermost non-inlined function.
   auto function_name = sc.GetFunctionName(Mangled::ePreferMangled);
@@ -5842,7 +5842,7 @@ CompilerType SwiftASTContext::MapIntoContext(lldb::StackFrameSP &frame_sp,
   
   if (auto *dc = llvm::dyn_cast_or_null<swift::DeclContext>(func_decl))
     return {GetASTContext(), dc->mapTypeIntoContext(swift_can_type)};
-  return CompilerType(GetASTContext(), GetSwiftType(type));
+  return {GetASTContext(), GetSwiftType(type)};
 }
 
 //----------------------------------------------------------------------
@@ -5850,7 +5850,7 @@ CompilerType SwiftASTContext::MapIntoContext(lldb::StackFrameSP &frame_sp,
 //----------------------------------------------------------------------
 
 CompilerType SwiftASTContext::GetBasicTypeFromAST(lldb::BasicType basic_type) {
-  return CompilerType();
+  return {};
 }
 
 //----------------------------------------------------------------------
@@ -6441,9 +6441,10 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
   VALID_OR_RETURN(CompilerType());
 
   if (!type)
-    return CompilerType();
+    return {};
 
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+  
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
@@ -6823,8 +6824,9 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     return CompilerType();
 
   language_flags = 0;
-
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+  assert(&swift_can_type->getASTContext() == GetASTContext());
+
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
   case swift::TypeKind::Error:
@@ -7388,14 +7390,14 @@ CompilerType SwiftASTContext::GetBoundGenericType(void *type, size_t idx) {
 
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+    assert(&swift_can_type->getASTContext() == GetASTContext());
     if (auto *bound_generic_type =
             swift_can_type->getAs<swift::BoundGenericType>())
       if (idx < bound_generic_type->getGenericArgs().size())
-        return CompilerType(
-            GetASTContext(),
-            bound_generic_type->getGenericArgs()[idx].getPointer());
+        return {GetASTContext(),
+                bound_generic_type->getGenericArgs()[idx].getPointer()};
   }
-  return CompilerType();
+  return {};
 }
 
 CompilerType SwiftASTContext::GetUnboundGenericType(void *type, size_t idx) {
@@ -7403,18 +7405,18 @@ CompilerType SwiftASTContext::GetUnboundGenericType(void *type, size_t idx) {
 
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+    assert(&swift_can_type->getASTContext() == GetASTContext());
     if (auto *unbound_generic_type =
           swift_can_type->getAs<swift::UnboundGenericType>()) {
       auto *nominal_type_decl = unbound_generic_type->getDecl();
       swift::GenericSignature *generic_sig =
           nominal_type_decl->getGenericSignature();
       auto depTy = generic_sig->getGenericParams()[idx];
-      return CompilerType(GetASTContext(),
-                          nominal_type_decl->mapTypeIntoContext(depTy)
-                              ->castTo<swift::ArchetypeType>());
+      return {GetASTContext(), nominal_type_decl->mapTypeIntoContext(depTy)
+                                   ->castTo<swift::ArchetypeType>()};
     }
   }
-  return CompilerType();
+  return {};
 }
 
 CompilerType SwiftASTContext::GetGenericArgumentType(void *type, size_t idx) {
@@ -7428,7 +7430,7 @@ CompilerType SwiftASTContext::GetGenericArgumentType(void *type, size_t idx) {
   default:
     break;
   }
-  return CompilerType();
+  return {};
 }
 
 CompilerType SwiftASTContext::GetTypeForFormatters(void *type) {
@@ -7436,9 +7438,10 @@ CompilerType SwiftASTContext::GetTypeForFormatters(void *type) {
 
   if (type) {
     swift::Type swift_type(GetSwiftType(type));
-    return CompilerType(GetASTContext(), swift_type);
+    assert(&swift_type->getASTContext() == GetASTContext());
+    return {GetASTContext(), swift_type};
   }
-  return CompilerType();
+  return {};
 }
 
 LazyBool SwiftASTContext::ShouldPrintAsOneLiner(void *type,
