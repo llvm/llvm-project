@@ -16,9 +16,6 @@
 
 // REQUIRES: locale.en_US.UTF-8
 
-// XFAIL: with_system_cxx_lib=macosx10.7
-// XFAIL: with_system_cxx_lib=macosx10.8
-
 #include <regex>
 #include <cassert>
 
