@@ -20,7 +20,7 @@ This operand may be specified as:
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   offset = 30
   s_branch loop_end

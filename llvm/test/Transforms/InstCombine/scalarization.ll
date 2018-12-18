@@ -45,15 +45,70 @@ for.end:
   ret void
 }
 
-define float @extract_element_constant_index(<4 x float> %x) {
-; CHECK-LABEL: @extract_element_constant_index(
+define float @extract_element_binop_splat_constant_index(<4 x float> %x) {
+; CHECK-LABEL: @extract_element_binop_splat_constant_index(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i32 2
 ; CHECK-NEXT:    [[R:%.*]] = fadd float [[TMP1]], 0x4002A3D700000000
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %add = fadd <4 x float> %x, <float 0x4002A3D700000000, float 0x4002A3D700000000, float 0x4002A3D700000000, float 0x4002A3D700000000>
-  %r = extractelement <4 x float> %add, i32 2
+  %b = fadd <4 x float> %x, <float 0x4002A3D700000000, float 0x4002A3D700000000, float 0x4002A3D700000000, float 0x4002A3D700000000>
+  %r = extractelement <4 x float> %b, i32 2
   ret float %r
+}
+
+define double @extract_element_binop_splat_with_undef_constant_index(<2 x double> %x) {
+; CHECK-LABEL: @extract_element_binop_splat_with_undef_constant_index(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = fdiv double 4.200000e+01, [[TMP1]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %b = fdiv <2 x double> <double 42.0, double undef>, %x
+  %r = extractelement <2 x double> %b, i32 0
+  ret double %r
+}
+
+define float @extract_element_binop_nonsplat_constant_index(<2 x float> %x) {
+; CHECK-LABEL: @extract_element_binop_nonsplat_constant_index(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X:%.*]], i32 1
+; CHECK-NEXT:    [[R:%.*]] = fmul float [[TMP1]], 4.300000e+01
+; CHECK-NEXT:    ret float [[R]]
+;
+  %b = fmul <2 x float> %x, <float 42.0, float 43.0>
+  %r = extractelement <2 x float> %b, i32 1
+  ret float %r
+}
+
+define i8 @extract_element_binop_splat_variable_index(<4 x i8> %x, i32 %y) {
+; CHECK-LABEL: @extract_element_binop_splat_variable_index(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i8> [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[TMP1]], 42
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = sdiv <4 x i8> %x, <i8 42, i8 42, i8 42, i8 42>
+  %r = extractelement <4 x i8> %b, i32 %y
+  ret i8 %r
+}
+
+define i8 @extract_element_binop_splat_with_undef_variable_index(<4 x i8> %x, i32 %y) {
+; CHECK-LABEL: @extract_element_binop_splat_with_undef_variable_index(
+; CHECK-NEXT:    [[B:%.*]] = mul <4 x i8> [[X:%.*]], <i8 42, i8 42, i8 undef, i8 42>
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = mul <4 x i8> %x, <i8 42, i8 42, i8 undef, i8 42>
+  %r = extractelement <4 x i8> %b, i32 %y
+  ret i8 %r
+}
+
+define i8 @extract_element_binop_nonsplat_variable_index(<4 x i8> %x, i32 %y) {
+; CHECK-LABEL: @extract_element_binop_nonsplat_variable_index(
+; CHECK-NEXT:    [[B:%.*]] = lshr <4 x i8> [[X:%.*]], <i8 4, i8 3, i8 undef, i8 2>
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[B]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %b = lshr <4 x i8> %x, <i8 4, i8 3, i8 undef, i8 2>
+  %r = extractelement <4 x i8> %b, i32 %y
+  ret i8 %r
 }
 
 define float @extract_element_load(<4 x float> %x, <4 x float>* %ptr) {

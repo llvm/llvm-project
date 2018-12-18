@@ -4842,8 +4842,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(!EVT.isVector() &&
            "AssertSExt/AssertZExt type should be the vector element type "
            "rather than the vector type!");
-    assert(EVT.bitsLE(VT) && "Not extending!");
-    if (VT == EVT) return N1; // noop assertion.
+    assert(EVT.bitsLE(VT.getScalarType()) && "Not extending!");
+    if (VT.getScalarType() == EVT) return N1; // noop assertion.
     break;
   }
   case ISD::SIGN_EXTEND_INREG: {

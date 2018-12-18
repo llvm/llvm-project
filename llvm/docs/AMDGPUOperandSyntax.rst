@@ -63,7 +63,7 @@ Note. *N* and *K* must satisfy the following conditions:
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   v255
   v[0]
@@ -127,7 +127,7 @@ Note. *N* and *K* must satisfy the following conditions:
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   s0
   s[0]
@@ -141,7 +141,7 @@ Examples:
 
 Examples of *scalar* registers with an invalid alignment:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   s[1:2]
   s[2:5]
@@ -210,7 +210,7 @@ Note. *N* and *K* must satisfy the following conditions:
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   ttmp0
   ttmp[0]
@@ -224,7 +224,7 @@ Examples:
 
 Examples of *ttmp* registers with an invalid alignment:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   ttmp[1:2]
   ttmp[2:5]
@@ -645,7 +645,7 @@ They may be specified in binary, octal, hexadecimal and decimal formats:
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   -1234
   0b1010
@@ -671,7 +671,7 @@ Floating-point numbers may be specified in hexadecimal and decimal formats:
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
  -1.234
  234e2
@@ -700,7 +700,7 @@ such as labels.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     x = -1
     y = x + 10
@@ -719,7 +719,7 @@ Addition information about relocation may be found :ref:`here<amdgpu-relocation-
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     y = x + 10 // x is not yet defined. Undefined symbols are assumed to be PC-relative.
     z = .
@@ -736,7 +736,7 @@ No conversion from floating-point to integer is performed.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     x = 0.1    // x is assigned an integer 4591870180066957722 which is a binary representation of 0.1.
     y = x + x  // y is a sum of two integer values; it is not equal to 0.2!
@@ -897,7 +897,7 @@ No data type conversions are performed.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     // GFX9
 
@@ -920,7 +920,7 @@ when used as operands they are converted to a floating-point number of
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     // GFX9
 
@@ -969,7 +969,7 @@ There are two cases when the conversion is possible:
 
 Examples of valid literals:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     // GFX9
 
@@ -983,7 +983,7 @@ Examples of valid literals:
 
 Examples of invalid literals:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     // GFX9
 
@@ -1021,7 +1021,7 @@ Precision lost is allowed.
 
 Examples of valid literals:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     // GFX9
 
@@ -1033,7 +1033,7 @@ Examples of valid literals:
 
 Examples of invalid literals:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     // GFX9
 
@@ -1052,7 +1052,7 @@ No data type conversions are performed.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     // GFX9
 

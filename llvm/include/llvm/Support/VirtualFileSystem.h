@@ -374,6 +374,9 @@ public:
                               SmallVectorImpl<char> &Output) const override {
     return FS->getRealPath(Path, Output);
   }
+  std::error_code isLocal(const Twine &Path, bool &Result) override {
+    return FS->isLocal(Path, Result);
+  }
 
 protected:
   FileSystem &getUnderlyingFS() { return *FS; }

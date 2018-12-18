@@ -45,7 +45,7 @@ These helpers may be specified in any order. Ampersands and commas may be used a
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     s_waitcnt 0
     s_waitcnt vmcnt(1)

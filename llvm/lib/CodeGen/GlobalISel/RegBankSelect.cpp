@@ -116,7 +116,7 @@ bool RegBankSelect::assignmentMatch(
   OnlyAssign = false;
   // Each part of a break down needs to end up in a different register.
   // In other word, Reg assignement does not match.
-  if (ValMapping.NumBreakDowns > 1)
+  if (ValMapping.NumBreakDowns != 1)
     return false;
 
   const RegisterBank *CurRegBank = RBI->getRegBank(Reg, *MRI, *TRI);

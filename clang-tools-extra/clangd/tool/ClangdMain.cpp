@@ -170,6 +170,14 @@ static cl::opt<bool> EnableBackgroundIndex(
              "Experimental"),
     cl::init(false), cl::Hidden);
 
+static cl::opt<int> BackgroundIndexRebuildPeriod(
+    "background-index-rebuild-period",
+    cl::desc(
+        "If set to non-zero, the background index rebuilds the symbol index "
+        "periodically every X milliseconds; otherwise, the "
+        "symbol index will be updated for each indexed file."),
+    cl::init(5000), cl::Hidden);
+
 enum CompileArgsFrom { LSPCompileArgs, FilesystemCompileArgs };
 static cl::opt<CompileArgsFrom> CompileArgsFrom(
     "compile_args_from", cl::desc("The source of compile commands"),
@@ -352,6 +360,7 @@ int main(int argc, char *argv[]) {
   Opts.BuildDynamicSymbolIndex = EnableIndex;
   Opts.HeavyweightDynamicSymbolIndex = UseDex;
   Opts.BackgroundIndex = EnableBackgroundIndex;
+  Opts.BackgroundIndexRebuildPeriodMs = BackgroundIndexRebuildPeriod;
   std::unique_ptr<SymbolIndex> StaticIdx;
   std::future<void> AsyncIndexLoad; // Block exit while loading the index.
   if (EnableIndex && !IndexFile.empty()) {

@@ -4,6 +4,7 @@
 #  1) Update the 'decls' list below with your fuzzing configuration.
 #  2) Run with the clang binary as the command-line argument.
 
+from __future__ import absolute_import, division, print_function
 import random
 import subprocess
 import sys
@@ -97,7 +98,7 @@ def generate():
     if not model.fails():
       return
   except KeyboardInterrupt:
-    print
+    print()
     return True
 
   sys.stdout.write('\nReducing:\n')
@@ -106,7 +107,7 @@ def generate():
   try:
     while True:
       assert m, 'got a failure with no steps; broken clang binary?'
-      i = random.choice(range(len(m)))
+      i = random.choice(list(range(len(m))))
       x = m[0:i] + m[i+1:]
       m2 = CodeModel()
       for d in x:

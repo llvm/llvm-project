@@ -108,10 +108,10 @@ auto incomplete = &three<Incomplete*, Incomplete**, const Incomplete*>;
 // CHECK: (Incomplete *(*)(Incomplete **, const Incomplete *)) incomplete = {{.*}}
 
 // CHECK: TranslationUnitDecl {{.*}}
-// CHECK: |-CXXRecordDecl {{.*}} class C definition
-// CHECK: |-CXXRecordDecl {{.*}} union U definition
+// CHECK: |-CXXRecordDecl {{.*}} class C
+// CHECK: |-CXXRecordDecl {{.*}} union U
 // CHECK: |-EnumDecl {{.*}} E
-// CHECK: |-CXXRecordDecl {{.*}} struct S definition
+// CHECK: |-CXXRecordDecl {{.*}} struct S
 // CHECK: |-CXXRecordDecl {{.*}} struct B
 // CHECK: | |-CXXRecordDecl {{.*}} struct A
 // CHECK: | | |-CXXRecordDecl {{.*}} struct S
@@ -119,11 +119,11 @@ auto incomplete = &three<Incomplete*, Incomplete**, const Incomplete*>;
 // CHECK: | |-CXXRecordDecl {{.*}} struct C
 // CHECK: | | |-CXXRecordDecl {{.*}} struct S
 // CHECK: | `-NamespaceDecl {{.*}} B
-// CHECK: |   `-CXXRecordDecl {{.*}} struct S definition
-// CHECK: |-CXXRecordDecl {{.*}} struct TC<int> definition
-// CHECK: |-CXXRecordDecl {{.*}} struct TC<struct TC<int>> definition
-// CHECK: |-CXXRecordDecl {{.*}} struct TC<struct A::B::S> definition
-// CHECK: |-CXXRecordDecl {{.*}} struct TC<void> definition
+// CHECK: |   `-CXXRecordDecl {{.*}} struct S
+// CHECK: |-CXXRecordDecl {{.*}} struct TC<int>
+// CHECK: |-CXXRecordDecl {{.*}} struct TC<struct TC<int>>
+// CHECK: |-CXXRecordDecl {{.*}} struct TC<struct A::B::S>
+// CHECK: |-CXXRecordDecl {{.*}} struct TC<void>
 // CHECK: |-CXXRecordDecl {{.*}} struct Incomplete
 
 int main(int argc, char **argv) {

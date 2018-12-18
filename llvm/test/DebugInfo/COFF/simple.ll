@@ -58,6 +58,7 @@
 ; X86-NEXT: .secidx _f
 ; X86-NEXT: .byte   0
 ; X86-NEXT: .asciz "f"
+; X86-NEXT: .p2align 2
 ; X86-NEXT: [[PROC_SEGMENT_END]]:
 ; X86-NEXT: .short  [[FPROC_END:[^ ]*]]-[[FPROC_BEG:[^ ]*]]           # Record length
 ; X86-NEXT: [[FPROC_BEG]]:
@@ -69,6 +70,7 @@
 ; X86-NEXT: .long   0                       # Exception handler offset
 ; X86-NEXT: .short  0                       # Exception handler section
 ; X86-NEXT: .long   0                       # Flags (defines frame register)
+; X86-NEXT: .p2align 2
 ; X86-NEXT: [[FPROC_END]]:
 ; X86-NEXT: .short  2
 ; X86-NEXT: .short  4431
@@ -89,8 +91,8 @@
 ; OBJ32-NEXT:   0x44 IMAGE_REL_I386_DIR32NB _f
 ; OBJ32-NEXT:   0x90 IMAGE_REL_I386_SECREL _f
 ; OBJ32-NEXT:   0x94 IMAGE_REL_I386_SECTION _f
-; OBJ32-NEXT:   0xC4 IMAGE_REL_I386_SECREL _f
-; OBJ32-NEXT:   0xC8 IMAGE_REL_I386_SECTION _f
+; OBJ32-NEXT:   0xC8 IMAGE_REL_I386_SECREL _f
+; OBJ32-NEXT:   0xCC IMAGE_REL_I386_SECTION _f
 ; OBJ32-NEXT: ]
 ; OBJ32:      Subsection [
 ; OBJ32-NEXT:   SubSectionType: Symbols (0xF1)
@@ -184,6 +186,7 @@
 ; X64-NEXT: .secidx f
 ; X64-NEXT: .byte   0
 ; X64-NEXT: .asciz "f"
+; X64-NEXT: .p2align 2
 ; X64-NEXT: [[PROC_SEGMENT_END]]:
 ; X64-NEXT: .short  [[FPROC_END:[^ ]*]]-[[FPROC_BEG:[^ ]*]]           # Record length
 ; X64-NEXT: [[FPROC_BEG]]:
@@ -195,6 +198,7 @@
 ; X64-NEXT: .long   0                       # Exception handler offset
 ; X64-NEXT: .short  0                       # Exception handler section
 ; X64-NEXT: .long   81920                       # Flags (defines frame register)
+; X64-NEXT: .p2align 2
 ; X64-NEXT: [[FPROC_END]]:
 ; X64-NEXT: .short  2
 ; X64-NEXT: .short  4431
@@ -214,8 +218,8 @@
 ; OBJ64:      Relocations [
 ; OBJ64-NEXT:   0x64 IMAGE_REL_AMD64_SECREL f
 ; OBJ64-NEXT:   0x68 IMAGE_REL_AMD64_SECTION f
-; OBJ64-NEXT:   0x98 IMAGE_REL_AMD64_SECREL f
-; OBJ64-NEXT:   0x9C IMAGE_REL_AMD64_SECTION f
+; OBJ64-NEXT:   0x9C IMAGE_REL_AMD64_SECREL f
+; OBJ64-NEXT:   0xA0 IMAGE_REL_AMD64_SECTION f
 ; OBJ64-NEXT: ]
 ; OBJ64:      Subsection [
 ; OBJ64-NEXT:   SubSectionType: Symbols (0xF1)

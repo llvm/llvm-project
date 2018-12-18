@@ -557,3 +557,12 @@
 // CHECK-RECORD-GCC-SWITCHES: "-record-command-line"
 // CHECK-NO-RECORD-GCC-SWITCHES-NOT: "-record-command-line"
 // CHECK-RECORD-GCC-SWITCHES-ERROR: error: unsupported option '-frecord-command-line' for target
+
+// RUN: %clang -### -S -ftrivial-auto-var-init=uninitialized %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-UNINIT %s
+// RUN: %clang -### -S -ftrivial-auto-var-init=pattern %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN %s
+// RUN: %clang -### -S -ftrivial-auto-var-init=zero -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO-GOOD %s
+// RUN: %clang -### -S -ftrivial-auto-var-init=zero %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO-BAD %s
+// CHECK-TRIVIAL-UNINIT-NOT: hasn't been enabled
+// CHECK-TRIVIAL-PATTERN-NOT: hasn't been enabled
+// CHECK-TRIVIAL-ZERO-GOOD-NOT: hasn't been enabled
+// CHECK-TRIVIAL-ZERO-BAD: hasn't been enabled

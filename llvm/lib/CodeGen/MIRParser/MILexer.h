@@ -89,6 +89,7 @@ struct MIToken {
     kw_cfi_restore_state,
     kw_cfi_undefined,
     kw_cfi_window_save,
+    kw_cfi_aarch64_negate_ra_sign_state,
     kw_blockaddress,
     kw_intrinsic,
     kw_target_index,

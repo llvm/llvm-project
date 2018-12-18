@@ -767,7 +767,7 @@ const DWARFDebugFrame *DWARFContext::getDebugFrame() {
   // http://lists.dwarfstd.org/htdig.cgi/dwarf-discuss-dwarfstd.org/2011-December/001173.html
   DWARFDataExtractor debugFrameData(DObj->getDebugFrameSection(),
                                     isLittleEndian(), DObj->getAddressSize());
-  DebugFrame.reset(new DWARFDebugFrame(false /* IsEH */));
+  DebugFrame.reset(new DWARFDebugFrame(getArch(), false /* IsEH */));
   DebugFrame->parse(debugFrameData);
   return DebugFrame.get();
 }
@@ -778,7 +778,7 @@ const DWARFDebugFrame *DWARFContext::getEHFrame() {
 
   DWARFDataExtractor debugFrameData(DObj->getEHFrameSection(), isLittleEndian(),
                                     DObj->getAddressSize());
-  DebugFrame.reset(new DWARFDebugFrame(true /* IsEH */));
+  DebugFrame.reset(new DWARFDebugFrame(getArch(), true /* IsEH */));
   DebugFrame->parse(debugFrameData);
   return DebugFrame.get();
 }

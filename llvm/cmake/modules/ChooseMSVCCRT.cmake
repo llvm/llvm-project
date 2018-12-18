@@ -66,6 +66,15 @@ variables (LLVM_USE_CRT_DEBUG, etc) instead.")
       get_current_crt(LLVM_USE_CRT_${build}
         MSVC_CRT_REGEX
         CMAKE_CXX_FLAGS_${build})
+
+      # Make /MT the default in Release builds to make them faster
+      # and avoid the DLL function thunking.
+      if ((${build} STREQUAL "MINSIZEREL") OR
+          (${build} STREQUAL "RELEASE") OR
+          (${build} STREQUAL "RELWITHDEBINFO"))
+          set(LLVM_USE_CRT_${build} "MT")
+      endif()
+
       set(LLVM_USE_CRT_${build}
         "${LLVM_USE_CRT_${build}}"
         CACHE STRING "Specify VC++ CRT to use for ${build_type} configurations."

@@ -181,12 +181,8 @@ define signext i32 @test_pre_inc_disable_2(i8* nocapture readonly %pix1, i8* noc
 ; CHECK:    vperm v4, v0, v4, v3
 ; CHECK:    vperm v2, v5, v0, v2
 ; CHECK:    vperm v3, v0, v5, v3
-; CHECK:    xvnegsp v5, v1
-; CHECK:    xvnegsp v4, v4
-; CHECK:    xvnegsp v2, v2
-; CHECK:    xvnegsp v3, v3
 ; CHECK:    vabsduw v3, v4, v3
-; CHECK:    vabsduw v2, v5, v2
+; CHECK:    vabsduw v2, v1, v2
 ; CHECK:    vadduwm v2, v2, v3
 ; CHECK:    xxswapd v3, v2
 ; CHECK:    vadduwm v2, v2, v3
@@ -212,12 +208,8 @@ define signext i32 @test_pre_inc_disable_2(i8* nocapture readonly %pix1, i8* noc
 ; P9BE:    vperm v4, v5, v4, v3
 ; P9BE:    vperm v2, v5, v0, v2
 ; P9BE:    vperm v3, v5, v0, v3
-; P9BE:    xvnegsp v5, v1
-; P9BE:    xvnegsp v4, v4
-; P9BE:    xvnegsp v2, v2
-; P9BE:    xvnegsp v3, v3
 ; P9BE:    vabsduw v3, v4, v3
-; P9BE:    vabsduw v2, v5, v2
+; P9BE:    vabsduw v2, v1, v2
 ; P9BE:    vadduwm v2, v2, v3
 ; P9BE:    xxswapd v3, v2
 ; P9BE:    vadduwm v2, v2, v3

@@ -23,7 +23,7 @@ Interpolation attribute and channel:
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     v_interp_p1_f32 v1, v0, attr0.x
     v_interp_p1_f32 v1, v0, attr32.w

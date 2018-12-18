@@ -41,7 +41,7 @@ template <size_t Index> struct SerializerImpl {
                 Index >= std::tuple_size<typename std::remove_reference<
                              Tuple>::type>::value,
                 int>::type = 0>
-  static void serializeTo(char *, Tuple &&){};
+  static void serializeTo(char *, Tuple &&) {}
 };
 
 using Serializer = SerializerImpl<0>;

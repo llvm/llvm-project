@@ -4467,7 +4467,7 @@ static Decl *findInDeclListOfDC(DeclContext *DC, DeclarationName Name) {
         return ND;
   }
   return nullptr;
-};
+}
 
 TEST_P(ASTImporterLookupTableTest,
     FriendWhichIsnotFoundByNormalLookupShouldBeFoundByImporterSpecificLookup) {

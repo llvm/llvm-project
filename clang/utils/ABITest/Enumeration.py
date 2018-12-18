@@ -1,5 +1,6 @@
 """Utilities for enumeration of finite and countably infinite sets.
 """
+from __future__ import absolute_import, division, print_function
 ###
 # Countable iteration
 
@@ -199,7 +200,7 @@ def getNthPairVariableBounds(N, bounds):
         raise ValueError("Invalid input (out of bounds)")
 
     level = 0
-    active = range(len(bounds))
+    active = list(range(len(bounds)))
     active.sort(key=lambda i: bounds[i])
     prevLevel = 0
     for i,index in enumerate(active):
@@ -234,18 +235,18 @@ def testPairs():
     for i in range(min(W*H,40)):
         x,y = getNthPairBounded(i,W,H)
         x2,y2 = getNthPairBounded(i,W,H,useDivmod=True)
-        print i,(x,y),(x2,y2)
+        print(i,(x,y),(x2,y2))
         a[y][x] = '%2d'%i
         b[y2][x2] = '%2d'%i
 
-    print '-- a --'
+    print('-- a --')
     for ln in a[::-1]:
         if ''.join(ln).strip():
-            print '  '.join(ln)
-    print '-- b --'
+            print('  '.join(ln))
+    print('-- b --')
     for ln in b[::-1]:
         if ''.join(ln).strip():
-            print '  '.join(ln)
+            print('  '.join(ln))
 
 def testPairsVB():
     bounds = [2,2,4,aleph0,5,aleph0]
@@ -253,13 +254,13 @@ def testPairsVB():
     b = [['  ' for x in range(15)] for y in range(15)]
     for i in range(min(sum(bounds),40)):
         x,y = getNthPairVariableBounds(i, bounds)
-        print i,(x,y)
+        print(i,(x,y))
         a[y][x] = '%2d'%i
 
-    print '-- a --'
+    print('-- a --')
     for ln in a[::-1]:
         if ''.join(ln).strip():
-            print '  '.join(ln)
+            print('  '.join(ln))
 
 ###
 

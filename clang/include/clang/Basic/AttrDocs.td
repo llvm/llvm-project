@@ -3704,6 +3704,18 @@ invoking clang with -fno-c++-static-destructors.
   }];
 }
 
+def UninitializedDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The command-line parameter ``-ftrivial-auto-var-init=*`` can be used to
+initialize trivial automatic stack variables. By default, trivial automatic
+stack variables are uninitialized. This attribute is used to override the
+command-line parameter, forcing variables to remain uninitialized. It has no
+semantic meaning in that using uninitialized values is undefined behavior,
+it rather documents the programmer's intent.
+  }];
+}
+
 def GnuInlineDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

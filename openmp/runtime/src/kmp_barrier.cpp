@@ -1253,7 +1253,7 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
     // It is OK to report the barrier state after the barrier begin callback.
     // According to the OMPT specification, a compliant implementation may
     // even delay reporting this state until the barrier begins to wait.
-    this_thr->th.ompt_thread_info.state = omp_state_wait_barrier;
+    this_thr->th.ompt_thread_info.state = ompt_state_wait_barrier;
   }
 #endif
 
@@ -1502,7 +1502,7 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
           my_task_data, return_address);
     }
 #endif
-    this_thr->th.ompt_thread_info.state = omp_state_work_parallel;
+    this_thr->th.ompt_thread_info.state = ompt_state_work_parallel;
   }
 #endif
   ANNOTATE_BARRIER_END(&team->t.t_bar);
@@ -1624,7 +1624,7 @@ void __kmp_join_barrier(int gtid) {
     if (!KMP_MASTER_TID(ds_tid))
       this_thr->th.ompt_thread_info.task_data = *OMPT_CUR_TASK_DATA(this_thr);
 #endif
-    this_thr->th.ompt_thread_info.state = omp_state_wait_barrier_implicit;
+    this_thr->th.ompt_thread_info.state = ompt_state_wait_barrier_implicit;
   }
 #endif
 
@@ -1887,12 +1887,12 @@ void __kmp_fork_barrier(int gtid, int tid) {
 
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled &&
-      this_thr->th.ompt_thread_info.state == omp_state_wait_barrier_implicit) {
+      this_thr->th.ompt_thread_info.state == ompt_state_wait_barrier_implicit) {
     int ds_tid = this_thr->th.th_info.ds.ds_tid;
     ompt_data_t *task_data = (team)
                                  ? OMPT_CUR_TASK_DATA(this_thr)
                                  : &(this_thr->th.ompt_thread_info.task_data);
-    this_thr->th.ompt_thread_info.state = omp_state_overhead;
+    this_thr->th.ompt_thread_info.state = ompt_state_overhead;
 #if OMPT_OPTIONAL
     void *codeptr = NULL;
     if (KMP_MASTER_TID(ds_tid) &&

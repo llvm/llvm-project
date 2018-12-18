@@ -718,7 +718,7 @@ bool X86InstrInfo::hasLiveCondCodeDef(MachineInstr &MI) const {
 }
 
 /// Check whether the shift count for a machine operand is non-zero.
-inline static unsigned getTruncatedShiftCount(MachineInstr &MI,
+inline static unsigned getTruncatedShiftCount(const MachineInstr &MI,
                                               unsigned ShiftAmtOperandIdx) {
   // The shift count is six bits with the REX.W prefix and five bits without.
   unsigned ShiftCountMask = (MI.getDesc().TSFlags & X86II::REX_W) ? 63 : 31;
@@ -3421,9 +3421,10 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
 /// This function can be extended later on.
 /// SrcReg, SrcRegs: register operands for FlagI.
 /// ImmValue: immediate for FlagI if it takes an immediate.
-inline static bool isRedundantFlagInstr(MachineInstr &FlagI, unsigned SrcReg,
-                                        unsigned SrcReg2, int ImmMask,
-                                        int ImmValue, MachineInstr &OI) {
+inline static bool isRedundantFlagInstr(const MachineInstr &FlagI,
+                                        unsigned SrcReg, unsigned SrcReg2,
+                                        int ImmMask, int ImmValue,
+                                        const MachineInstr &OI) {
   if (((FlagI.getOpcode() == X86::CMP64rr && OI.getOpcode() == X86::SUB64rr) ||
        (FlagI.getOpcode() == X86::CMP32rr && OI.getOpcode() == X86::SUB32rr) ||
        (FlagI.getOpcode() == X86::CMP16rr && OI.getOpcode() == X86::SUB16rr) ||
@@ -3454,7 +3455,7 @@ inline static bool isRedundantFlagInstr(MachineInstr &FlagI, unsigned SrcReg,
 
 /// Check whether the definition can be converted
 /// to remove a comparison against zero.
-inline static bool isDefConvertible(MachineInstr &MI) {
+inline static bool isDefConvertible(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default: return false;
 
@@ -3554,12 +3555,16 @@ inline static bool isDefConvertible(MachineInstr &MI) {
   case X86::BLSFILL64rr: case X86::BLSFILL64rm:
   case X86::BLSIC32rr:   case X86::BLSIC32rm:
   case X86::BLSIC64rr:   case X86::BLSIC64rm:
+  case X86::T1MSKC32rr:  case X86::T1MSKC32rm:
+  case X86::T1MSKC64rr:  case X86::T1MSKC64rm:
+  case X86::TZMSK32rr:   case X86::TZMSK32rm:
+  case X86::TZMSK64rr:   case X86::TZMSK64rm:
     return true;
   }
 }
 
 /// Check whether the use can be converted to remove a comparison against zero.
-static X86::CondCode isUseDefConvertible(MachineInstr &MI) {
+static X86::CondCode isUseDefConvertible(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default: return X86::COND_INVALID;
   case X86::LZCNT16rr: case X86::LZCNT16rm:

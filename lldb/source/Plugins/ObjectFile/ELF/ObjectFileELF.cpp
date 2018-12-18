@@ -889,11 +889,11 @@ AddressClass ObjectFileELF::GetAddressClass(addr_t file_addr) {
 }
 
 size_t ObjectFileELF::SectionIndex(const SectionHeaderCollIter &I) {
-  return std::distance(m_section_headers.begin(), I) + 1u;
+  return std::distance(m_section_headers.begin(), I);
 }
 
 size_t ObjectFileELF::SectionIndex(const SectionHeaderCollConstIter &I) const {
-  return std::distance(m_section_headers.begin(), I) + 1u;
+  return std::distance(m_section_headers.begin(), I);
 }
 
 bool ObjectFileELF::ParseHeader() {
@@ -1081,7 +1081,7 @@ size_t ObjectFileELF::ParseDependentModules() {
     return 0;
   // sh_link: section header index of string table used by entries in the
   // section.
-  Section *dynstr = section_list->FindSectionByID(header->sh_link + 1).get();
+  Section *dynstr = section_list->FindSectionByID(header->sh_link).get();
   if (!dynstr)
     return 0;
 
@@ -1717,10 +1717,10 @@ size_t ObjectFileELF::ParseSectionHeaders() {
 
 const ObjectFileELF::ELFSectionHeaderInfo *
 ObjectFileELF::GetSectionHeaderByIndex(lldb::user_id_t id) {
-  if (!id || !ParseSectionHeaders())
+  if (!ParseSectionHeaders())
     return NULL;
 
-  if (--id < m_section_headers.size())
+  if (id < m_section_headers.size())
     return &m_section_headers[id];
 
   return NULL;
@@ -1853,7 +1853,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     m_sections_ap.reset(new SectionList());
 
     VMAddressProvider address_provider(CalculateType());
-    for (SectionHeaderCollIter I = m_section_headers.begin();
+    for (SectionHeaderCollIter I = std::next(m_section_headers.begin());
          I != m_section_headers.end(); ++I) {
       const ELFSectionHeaderInfo &header = *I;
 
@@ -1990,9 +1990,9 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     SectionSP symbol_section_sp;
     SymbolType symbol_type = eSymbolTypeInvalid;
-    Elf64_Half section_idx = symbol.st_shndx;
+    Elf64_Half shndx = symbol.st_shndx;
 
-    switch (section_idx) {
+    switch (shndx) {
     case SHN_ABS:
       symbol_type = eSymbolTypeAbsolute;
       break;
@@ -2000,7 +2000,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
       symbol_type = eSymbolTypeUndefined;
       break;
     default:
-      symbol_section_sp = section_list->GetSectionAtIndex(section_idx);
+      symbol_section_sp = section_list->FindSectionByID(shndx);
       break;
     }
 
@@ -2169,7 +2169,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     // symbols. See above for more details.
     uint64_t symbol_value = symbol.st_value + symbol_value_offset;
 
-    if (symbol_section_sp == nullptr && section_idx == SHN_ABS &&
+    if (symbol_section_sp == nullptr && shndx == SHN_ABS &&
         symbol.st_size != 0) {
       // We don't have a section for a symbol with non-zero size. Create a new
       // section for it so the address range covered by the symbol is also
@@ -2282,9 +2282,8 @@ unsigned ObjectFileELF::ParseSymbolTable(Symtab *symbol_table,
   assert(symtab_hdr->sh_type == SHT_SYMTAB ||
          symtab_hdr->sh_type == SHT_DYNSYM);
 
-  // sh_link: section header index of associated string table. Section ID's are
-  // ones based.
-  user_id_t strtab_id = symtab_hdr->sh_link + 1;
+  // sh_link: section header index of associated string table.
+  user_id_t strtab_id = symtab_hdr->sh_link;
   Section *strtab = section_list->FindSectionByID(strtab_id).get();
 
   if (symtab && strtab) {
@@ -2494,10 +2493,6 @@ ObjectFileELF::ParseTrampolineSymbols(Symtab *symbol_table, user_id_t start_id,
   if (!symtab_id || !plt_id)
     return 0;
 
-  // Section ID's are ones based;
-  symtab_id++;
-  plt_id++;
-
   const ELFSectionHeaderInfo *plt_hdr = GetSectionHeaderByIndex(plt_id);
   if (!plt_hdr)
     return 0;
@@ -2523,7 +2518,7 @@ ObjectFileELF::ParseTrampolineSymbols(Symtab *symbol_table, user_id_t start_id,
     return 0;
 
   // sh_link points to associated string table.
-  Section *strtab = section_list->FindSectionByID(sym_hdr->sh_link + 1).get();
+  Section *strtab = section_list->FindSectionByID(sym_hdr->sh_link).get();
   if (!strtab)
     return 0;
 
@@ -2651,9 +2646,8 @@ unsigned ObjectFileELF::RelocateDebugSections(const ELFSectionHeader *rel_hdr,
   if (!section_list)
     return 0;
 
-  // Section ID's are ones based.
-  user_id_t symtab_id = rel_hdr->sh_link + 1;
-  user_id_t debug_id = rel_hdr->sh_info + 1;
+  user_id_t symtab_id = rel_hdr->sh_link;
+  user_id_t debug_id = rel_hdr->sh_info;
 
   const ELFSectionHeader *symtab_hdr = GetSectionHeaderByIndex(symtab_id);
   if (!symtab_hdr)

@@ -7771,6 +7771,30 @@ shouldNotPrintDirectly(const ASTContext &Context,
   return std::make_pair(QualType(), StringRef());
 }
 
+/// Return true if \p ICE is an implicit argument promotion of an arithmetic
+/// type. Bit-field 'promotions' from a higher ranked type to a lower ranked
+/// type do not count.
+static bool
+isArithmeticArgumentPromotion(Sema &S, const ImplicitCastExpr *ICE) {
+  QualType From = ICE->getSubExpr()->getType();
+  QualType To = ICE->getType();
+  // It's an integer promotion if the destination type is the promoted
+  // source type.
+  if (ICE->getCastKind() == CK_IntegralCast &&
+      From->isPromotableIntegerType() &&
+      S.Context.getPromotedIntegerType(From) == To)
+    return true;
+  // Look through vector types, since we do default argument promotion for
+  // those in OpenCL.
+  if (const auto *VecTy = From->getAs<ExtVectorType>())
+    From = VecTy->getElementType();
+  if (const auto *VecTy = To->getAs<ExtVectorType>())
+    To = VecTy->getElementType();
+  // It's a floating promotion if the source type is a lower rank.
+  return ICE->getCastKind() == CK_FloatingCast &&
+         S.Context.getFloatingTypeOrder(From, To) < 0;
+}
+
 bool
 CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
                                     const char *StartSpecifier,
@@ -7798,11 +7822,11 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
 
   // Look through argument promotions for our error message's reported type.
   // This includes the integral and floating promotions, but excludes array
-  // and function pointer decay; seeing that an argument intended to be a
-  // string has type 'char [6]' is probably more confusing than 'char *'.
+  // and function pointer decay (seeing that an argument intended to be a
+  // string has type 'char [6]' is probably more confusing than 'char *') and
+  // certain bitfield promotions (bitfields can be 'demoted' to a lesser type).
   if (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    if (ICE->getCastKind() == CK_IntegralCast ||
-        ICE->getCastKind() == CK_FloatingCast) {
+    if (isArithmeticArgumentPromotion(S, ICE)) {
       E = ICE->getSubExpr();
       ExprTy = E->getType();
 

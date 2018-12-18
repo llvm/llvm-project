@@ -18,7 +18,8 @@
     defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_DEFAULTED ||             \
     defined HANDLE_DW_CC || defined HANDLE_DW_LNS || defined HANDLE_DW_LNE ||  \
     defined HANDLE_DW_LNCT || defined HANDLE_DW_MACRO ||                       \
-    defined HANDLE_DW_RLE || defined HANDLE_DW_CFA ||                          \
+    defined HANDLE_DW_RLE ||                                                   \
+    (defined HANDLE_DW_CFA && defined HANDLE_DW_CFA_PRED) ||                   \
     defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||                \
     defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                   \
     defined HANDLE_DW_END)
@@ -83,6 +84,10 @@
 
 #ifndef HANDLE_DW_CFA
 #define HANDLE_DW_CFA(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_CFA_PRED
+#define HANDLE_DW_CFA_PRED(ID, NAME, PRED)
 #endif
 
 #ifndef HANDLE_DW_APPLE_PROPERTY
@@ -831,9 +836,10 @@ HANDLE_DW_CFA(0x14, val_offset)
 HANDLE_DW_CFA(0x15, val_offset_sf)
 HANDLE_DW_CFA(0x16, val_expression)
 // Vendor extensions:
-HANDLE_DW_CFA(0x1d, MIPS_advance_loc8)
-HANDLE_DW_CFA(0x2d, GNU_window_save)
-HANDLE_DW_CFA(0x2e, GNU_args_size)
+HANDLE_DW_CFA_PRED(0x1d, MIPS_advance_loc8, SELECT_MIPS64)
+HANDLE_DW_CFA_PRED(0x2d, GNU_window_save, SELECT_SPARC)
+HANDLE_DW_CFA_PRED(0x2d, AARCH64_negate_ra_state, SELECT_AARCH64)
+HANDLE_DW_CFA_PRED(0x2e, GNU_args_size, SELECT_X86)
 
 // Apple Objective-C Property Attributes.
 // Keep this list in sync with clang's DeclSpec.h ObjCPropertyAttributeKind!
@@ -916,6 +922,7 @@ HANDLE_DW_IDX(0x05, type_hash)
 #undef HANDLE_DW_MACRO
 #undef HANDLE_DW_RLE
 #undef HANDLE_DW_CFA
+#undef HANDLE_DW_CFA_PRED
 #undef HANDLE_DW_APPLE_PROPERTY
 #undef HANDLE_DW_UT
 #undef HANDLE_DWARF_SECTION

@@ -51,7 +51,7 @@ Defined register *names* include:
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     s_getreg_b32 s2, 0x6
     s_getreg_b32 s2, hwreg(15)
