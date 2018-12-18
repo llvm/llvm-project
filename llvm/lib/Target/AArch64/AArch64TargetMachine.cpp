@@ -177,6 +177,7 @@ extern "C" void LLVMInitializeAArch64Target() {
   initializeFalkorHWPFFixPass(*PR);
   initializeFalkorMarkStridedAccessesLegacyPass(*PR);
   initializeLDTLSCleanupPass(*PR);
+  initializeAArch64SpeculationHardeningPass(*PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -550,6 +551,16 @@ void AArch64PassConfig::addPreSched2() {
   if (TM->getOptLevel() != CodeGenOpt::None) {
     if (EnableLoadStoreOpt)
       addPass(createAArch64LoadStoreOptimizationPass());
+  }
+
+  // The AArch64SpeculationHardeningPass destroys dominator tree and natural
+  // loop info, which is needed for the FalkorHWPFFixPass and also later on.
+  // Therefore, run the AArch64SpeculationHardeningPass before the
+  // FalkorHWPFFixPass to avoid recomputing dominator tree and natural loop
+  // info.
+  addPass(createAArch64SpeculationHardeningPass());
+
+  if (TM->getOptLevel() != CodeGenOpt::None) {
     if (EnableFalkorHWPFFix)
       addPass(createFalkorHWPFFixPass());
   }

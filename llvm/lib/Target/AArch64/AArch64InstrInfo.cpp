@@ -964,6 +964,13 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
                                             const MachineFunction &MF) const {
   if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
     return true;
+  switch (MI.getOpcode()) {
+  case AArch64::DSB:
+  case AArch64::ISB:
+    // DSB and ISB also are scheduling barriers.
+    return true;
+  default:;
+  }
   return isSEHInstruction(MI);
 }
 

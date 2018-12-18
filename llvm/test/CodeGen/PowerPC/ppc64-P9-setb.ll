@@ -13,13 +13,14 @@ define i64 @setb1(i64 %a, i64 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb1
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: addic
-; CHECK-DAG: subfe
-; CHECK: isel
+; CHECK-LABEL: setb1:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: addic
+; CHECK-NOT: subfe
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb1
 ; CHECK-PWR8-DAG: xor
@@ -38,13 +39,14 @@ define i64 @setb2(i64 %a, i64 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb2
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: addic
-; CHECK-DAG: subfe
-; CHECK: isel
+; CHECK-LABEL: setb2:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: addic
+; CHECK-NOT: subfe
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb2
 ; CHECK-PWR8-DAG: xor
@@ -63,13 +65,14 @@ define i64 @setb3(i64 %a, i64 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb3
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: addic
-; CHECK-DAG: subfe
-; CHECK: isel
+; CHECK-LABEL: setb3:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: addic
+; CHECK-NOT: subfe
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb3
 ; CHECK-PWR8-DAG: xor
@@ -88,13 +91,14 @@ define i64 @setb4(i64 %a, i64 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb4
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: addic
-; CHECK-DAG: subfe
-; CHECK: isel
+; CHECK-LABEL: setb4:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: addic
+; CHECK-NOT: subfe
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb4
 ; CHECK-PWR8-DAG: xor
@@ -113,15 +117,16 @@ define i64 @setb5(i64 %a, i64 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb5
-; CHECK-DAG: sradi
-; CHECK-DAG: rldicl
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: subfc
-; CHECK-DAG: adde
-; CHECK-DAG: xori
-; CHECK: isel
+; CHECK-LABEL: setb5:
+; CHECK-NOT: sradi
+; CHECK-NOT: rldicl
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfc
+; CHECK-NOT: adde
+; CHECK-NOT: xori
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb5
 ; CHECK-PWR8-DAG: sradi
@@ -142,15 +147,16 @@ define i64 @setb6(i64 %a, i64 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb6
-; CHECK-DAG: sradi
-; CHECK-DAG: rldicl
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: subfc
-; CHECK-DAG: adde
-; CHECK-DAG: xori
-; CHECK: isel
+; CHECK-LABEL: setb6:
+; CHECK-NOT: sradi
+; CHECK-NOT: rldicl
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfc
+; CHECK-NOT: adde
+; CHECK-NOT: xori
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb6
 ; CHECK-PWR8-DAG: sradi
@@ -171,15 +177,16 @@ define i64 @setb7(i64 %a, i64 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb7
-; CHECK-DAG: sradi
-; CHECK-DAG: rldicl
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: subfc
-; CHECK-DAG: adde
-; CHECK-DAG: xori
-; CHECK: isel
+; CHECK-LABEL: setb7:
+; CHECK-NOT: sradi
+; CHECK-NOT: rldicl
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfc
+; CHECK-NOT: adde
+; CHECK-NOT: xori
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb7
 ; CHECK-PWR8-DAG: sradi
@@ -200,15 +207,16 @@ define i64 @setb8(i64 %a, i64 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb8
-; CHECK-DAG: sradi
-; CHECK-DAG: rldicl
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: subfc
-; CHECK-DAG: adde
-; CHECK-DAG: xori
-; CHECK: isel
+; CHECK-LABEL: setb8:
+; CHECK-NOT: sradi
+; CHECK-NOT: rldicl
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfc
+; CHECK-NOT: adde
+; CHECK-NOT: xori
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb8
 ; CHECK-PWR8-DAG: sradi
@@ -229,13 +237,14 @@ define i64 @setb9(i64 %a, i64 %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb9
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: subfic
-; CHECK-DAG: subfe
-; CHECK-DAG: isel
+; CHECK-LABEL: setb9:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfic
+; CHECK-NOT: subfe
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb9
 ; CHECK-PWR8-DAG: xor
@@ -254,13 +263,14 @@ define i64 @setb10(i64 %a, i64 %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb10
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: subfic
-; CHECK-DAG: subfe
-; CHECK-DAG: isel
+; CHECK-LABEL: setb10:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfic
+; CHECK-NOT: subfe
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb10
 ; CHECK-PWR8-DAG: xor
@@ -279,13 +289,14 @@ define i64 @setb11(i64 %a, i64 %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb11
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: subfic
-; CHECK-DAG: subfe
-; CHECK-DAG: isel
+; CHECK-LABEL: setb11:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfic
+; CHECK-NOT: subfe
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb11
 ; CHECK-PWR8-DAG: xor
@@ -304,13 +315,14 @@ define i64 @setb12(i64 %a, i64 %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb12
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: subfic
-; CHECK-DAG: subfe
-; CHECK-DAG: isel
+; CHECK-LABEL: setb12:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfic
+; CHECK-NOT: subfe
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb12
 ; CHECK-PWR8-DAG: xor
@@ -329,16 +341,17 @@ define i64 @setb13(i64 %a, i64 %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb13
-; CHECK-DAG: sradi
-; CHECK-DAG: rldicl
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: subfc
-; CHECK-DAG: adde
-; CHECK-DAG: xori
-; CHECK-DAG: neg
-; CHECK: isel
+; CHECK-LABEL: setb13:
+; CHECK-NOT: sradi
+; CHECK-NOT: rldicl
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfc
+; CHECK-NOT: adde
+; CHECK-NOT: xori
+; CHECK-NOT: neg
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb13
 ; CHECK-PWR8-DAG: sradi
@@ -360,16 +373,17 @@ define i64 @setb14(i64 %a, i64 %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb14
-; CHECK-DAG: sradi
-; CHECK-DAG: rldicl
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: subfc
-; CHECK-DAG: adde
-; CHECK-DAG: xori
-; CHECK-DAG: neg
-; CHECK: isel
+; CHECK-LABEL: setb14:
+; CHECK-NOT: sradi
+; CHECK-NOT: rldicl
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfc
+; CHECK-NOT: adde
+; CHECK-NOT: xori
+; CHECK-NOT: neg
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb14
 ; CHECK-PWR8-DAG: sradi
@@ -391,16 +405,17 @@ define i64 @setb15(i64 %a, i64 %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb15
-; CHECK-DAG: sradi
-; CHECK-DAG: rldicl
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: subfc
-; CHECK-DAG: adde
-; CHECK-DAG: xori
-; CHECK-DAG: neg
-; CHECK: isel
+; CHECK-LABEL: setb15:
+; CHECK-NOT: sradi
+; CHECK-NOT: rldicl
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfc
+; CHECK-NOT: adde
+; CHECK-NOT: xori
+; CHECK-NOT: neg
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb15
 ; CHECK-PWR8-DAG: sradi
@@ -422,16 +437,17 @@ define i64 @setb16(i64 %a, i64 %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb16
-; CHECK-DAG: sradi
-; CHECK-DAG: rldicl
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: subfc
-; CHECK-DAG: adde
-; CHECK-DAG: xori
-; CHECK-DAG: neg
-; CHECK: isel
+; CHECK-LABEL: setb16:
+; CHECK-NOT: sradi
+; CHECK-NOT: rldicl
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfc
+; CHECK-NOT: adde
+; CHECK-NOT: xori
+; CHECK-NOT: neg
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb16
 ; CHECK-PWR8-DAG: sradi
@@ -453,13 +469,13 @@ define i64 @setb17(i64 %a, i64 %b) {
   %t3 = select i1 %t2, i64 1, i64 -1
   %t4 = select i1 %t1, i64 0, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb17
-; CHECK-DAG: li
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK: isel
-; CHECK: cmpld
-; CHECK: isel
+; CHECK-LABEL: setb17:
+; CHECK-NOT: li
+; CHECK-NOT: cmpld
+; CHECK-NOT: isel
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb17
 ; CHECK-PWR8: cmpd
@@ -476,13 +492,13 @@ define i64 @setb18(i64 %a, i64 %b) {
   %t3 = select i1 %t2, i64 1, i64 -1
   %t4 = select i1 %t1, i64 0, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb18
-; CHECK-DAG: li
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK: isel
-; CHECK: cmpld
-; CHECK: isel
+; CHECK-LABEL: setb18:
+; CHECK-NOT: li
+; CHECK-NOT: cmpld
+; CHECK-NOT: isel
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb18
 ; CHECK-PWR8: cmpd
@@ -499,13 +515,13 @@ define i64 @setb19(i64 %a, i64 %b) {
   %t3 = select i1 %t2, i64 1, i64 -1
   %t4 = select i1 %t1, i64 0, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb19
-; CHECK-DAG: li
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK: isel
-; CHECK: cmpld
-; CHECK: isel
+; CHECK-LABEL: setb19:
+; CHECK-NOT: li
+; CHECK-NOT: cmpld
+; CHECK-NOT: isel
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb19
 ; CHECK-PWR8: cmpd
@@ -522,13 +538,13 @@ define i64 @setb20(i64 %a, i64 %b) {
   %t3 = select i1 %t2, i64 1, i64 -1
   %t4 = select i1 %t1, i64 0, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb20
-; CHECK-DAG: li
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK: isel
-; CHECK: cmpld
-; CHECK: isel
+; CHECK-LABEL: setb20:
+; CHECK-NOT: li
+; CHECK-NOT: cmpld
+; CHECK-NOT: isel
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb20
 ; CHECK-PWR8: cmpd
@@ -545,13 +561,13 @@ define i64 @setb21(i64 %a, i64 %b) {
   %t3 = select i1 %t2, i64 -1, i64 1
   %t4 = select i1 %t1, i64 0, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb21
-; CHECK-DAG: li
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK: isel
-; CHECK: cmpld
-; CHECK: isel
+; CHECK-LABEL: setb21:
+; CHECK-NOT: li
+; CHECK-NOT: cmpld
+; CHECK-NOT: isel
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb21
 ; CHECK-PWR8: cmpd
@@ -568,13 +584,13 @@ define i64 @setb22(i64 %a, i64 %b) {
   %t3 = select i1 %t2, i64 -1, i64 1
   %t4 = select i1 %t1, i64 0, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb22
-; CHECK-DAG: li
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: isel
-; CHECK-DAG: cmpld
-; CHECK: isel
+; CHECK-LABEL: setb22:
+; CHECK-NOT: li
+; CHECK-NOT: cmpld
+; CHECK-NOT: isel
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb22
 ; CHECK-PWR8: cmpd
@@ -591,13 +607,13 @@ define i64 @setb23(i64 %a, i64 %b) {
   %t3 = select i1 %t2, i64 -1, i64 1
   %t4 = select i1 %t1, i64 0, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb23
-; CHECK-DAG: li
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK: isel
-; CHECK: cmpld
-; CHECK: isel
+; CHECK-LABEL: setb23:
+; CHECK-NOT: li
+; CHECK-NOT: cmpld
+; CHECK-NOT: isel
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb23
 ; CHECK-PWR8: cmpd
@@ -614,13 +630,13 @@ define i64 @setb24(i64 %a, i64 %b) {
   %t3 = select i1 %t2, i64 -1, i64 1
   %t4 = select i1 %t1, i64 0, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb24
-; CHECK-DAG: li
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK: isel
-; CHECK: cmpld
-; CHECK: isel
+; CHECK-LABEL: setb24:
+; CHECK-NOT: li
+; CHECK-NOT: cmpld
+; CHECK-NOT: isel
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb24
 ; CHECK-PWR8: cmpd
@@ -640,13 +656,15 @@ define i64 @setb25(i64 %a, i64 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb25
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: addic
-; CHECK-DAG: subfe
-; CHECK: isel
+; CHECK-LABEL: setb25:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK-NOT: cmpd
+; CHECK: cmpd {{c?r?(0, )?}}r4, r3
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: addic
+; CHECK-NOT: subfe
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb25
 ; CHECK-PWR8-DAG: cmpd
@@ -663,13 +681,14 @@ define i64 @setb26(i64 %a, i64 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setb26
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: addic
-; CHECK-DAG: subfe
-; CHECK: isel
+; CHECK-LABEL: setb26:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r4, r3
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: addic
+; CHECK-NOT: subfe
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb26
 ; CHECK-PWR8-DAG: cmpd
@@ -690,13 +709,14 @@ define i64 @setb27(i64 %a, i64 %b) {
   %t4 = select i1 %t1, i32 -1, i32 %t3
   %t5 = sext i32 %t4 to i64
   ret i64 %t5
-; CHECK-LABEL: setb27
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: addic
-; CHECK-DAG: subfe
-; CHECK: isel
+; CHECK-LABEL: setb27:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: addic
+; CHECK-NOT: subfe
+; CHECK-NOT: isel
 ; CHECK: extsw
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb27
@@ -716,13 +736,14 @@ define i64 @setb28(i64 %a, i64 %b) {
   %t4 = select i1 %t1, i16 -1, i16 %t3
   %t5 = sext i16 %t4 to i64
   ret i64 %t5
-; CHECK-LABEL: setb28
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: addic
-; CHECK-DAG: subfe
-; CHECK: isel
+; CHECK-LABEL: setb28:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: addic
+; CHECK-NOT: subfe
+; CHECK-NOT: isel
 ; CHECK: extsh
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb28
@@ -742,15 +763,16 @@ define i64 @setb29(i64 %a, i64 %b) {
   %t4 = select i1 %t1, i8 -1, i8 %t3
   %t5 = zext i8 %t4 to i64
   ret i64 %t5
-; CHECK-LABEL: setb29
-; CHECK-DAG: sradi
-; CHECK-DAG: rldicl
-; CHECK-DAG: li
-; CHECK-DAG: cmpd
-; CHECK-DAG: subfc
-; CHECK-DAG: adde
-; CHECK-DAG: xori
-; CHECK-DAG: isel
+; CHECK-LABEL: setb29:
+; CHECK-NOT: sradi
+; CHECK-NOT: rldicl
+; CHECK-NOT: li
+; CHECK: cmpd {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfc
+; CHECK-NOT: adde
+; CHECK-NOT: xori
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb29
 ; CHECK-PWR8-DAG: cmpd
@@ -770,14 +792,15 @@ define i64 @setbsw1(i32 %a, i32 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbsw1
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpw
-; CHECK-DAG: cntlzw
-; CHECK-DAG: srwi
-; CHECK-DAG: xori
-; CHECK: isel
+; CHECK-LABEL: setbsw1:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpw {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: cntlzw
+; CHECK-NOT: srwi
+; CHECK-NOT: xori
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbsw1
 ; CHECK-PWR8-DAG: cntlzw
@@ -795,14 +818,15 @@ define i64 @setbsw2(i32 %a, i32 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbsw2
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpw
-; CHECK-DAG: cntlzw
-; CHECK-DAG: srwi
-; CHECK-DAG: xori
-; CHECK: isel
+; CHECK-LABEL: setbsw2:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpw {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: cntlzw
+; CHECK-NOT: srwi
+; CHECK-NOT: xori
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbsw2
 ; CHECK-PWR8-DAG: cntlzw
@@ -820,13 +844,13 @@ define i64 @setbsw3(i32 %a, i32 %b) {
   %t3 = select i1 %t2, i64 -1, i64 1
   %t4 = select i1 %t1, i64 0, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbsw3
-; CHECK-DAG: li
-; CHECK-DAG: li
-; CHECK-DAG: cmpw
-; CHECK: isel
-; CHECK: cmplw
-; CHECK: isel
+; CHECK-LABEL: setbsw3:
+; CHECK-NOT: li
+; CHECK: cmpw {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: isel
+; CHECK-NOT: cmplw
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbsw3
 ; CHECK-PWR8: cmpw
@@ -843,14 +867,15 @@ define i64 @setbsh1(i16 signext %a, i16 signext %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbsh1
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpw
-; CHECK-DAG: cntlzw
-; CHECK-DAG: srwi
-; CHECK-DAG: xori
-; CHECK: isel
+; CHECK-LABEL: setbsh1:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpw {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: cntlzw
+; CHECK-NOT: srwi
+; CHECK-NOT: xori
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbsh1
 ; CHECK-PWR8-DAG: cntlzw
@@ -868,14 +893,15 @@ define i64 @setbsh2(i16 signext %a, i16 signext %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbsh2
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmpw
-; CHECK-DAG: cntlzw
-; CHECK-DAG: srwi
-; CHECK-DAG: xori
-; CHECK: isel
+; CHECK-LABEL: setbsh2:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpw {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: cntlzw
+; CHECK-NOT: srwi
+; CHECK-NOT: xori
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbsh2
 ; CHECK-PWR8-DAG: cmpw
@@ -893,14 +919,15 @@ define i64 @setbsc1(i8 %a, i8 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbsc1
+; CHECK-LABEL: setbsc1:
 ; CHECK-DAG: extsb [[RA:r[0-9]+]], r3
 ; CHECK-DAG: extsb [[RB:r[0-9]+]], r4
-; CHECK-DAG: li
-; CHECK-DAG: sub
-; CHECK-DAG: cmpw {{c?r?(0, )?}}[[RA]], [[RB]]
-; CHECK-DAG: rldicl
-; CHECK: isel
+; CHECK-NOT: li
+; CHECK-NOT: sub
+; CHECK: cmpw {{c?r?(0, )?}}[[RA]], [[RB]]
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: rldicl
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbsc1
 ; CHECK-PWR8-DAG: extsb
@@ -920,14 +947,15 @@ define i64 @setbsc2(i8 %a, i8 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbsc2
+; CHECK-LABEL: setbsc2:
 ; CHECK-DAG: extsb [[RA:r[0-9]+]], r3
 ; CHECK-DAG: extsb [[RB:r[0-9]+]], r4
-; CHECK-DAG: li
-; CHECK-DAG: sub
-; CHECK-DAG: cmpw
-; CHECK-DAG: rldicl
-; CHECK: isel
+; CHECK-NOT: li
+; CHECK-NOT: sub
+; CHECK: cmpw {{c?r?(0, )?}}[[RA]], [[RB]]
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: rldicl
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbsc2
 ; CHECK-PWR8-DAG: extsb
@@ -947,16 +975,17 @@ define i64 @setbsc3(i4 %a, i4 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbsc3
+; CHECK-LABEL: setbsc3:
 ; CHECK-DAG: slwi [[RA:r[0-9]+]], r3, 28
 ; CHECK-DAG: slwi [[RB:r[0-9]+]], r4, 28
-; CHECK-DAG: li
+; CHECK-NOT: li
 ; CHECK-DAG: srawi [[RA1:r[0-9]+]], [[RA]], 28
 ; CHECK-DAG: srawi [[RB1:r[0-9]+]], [[RB]], 28
-; CHECK-DAG: sub
-; CHECK-DAG: cmpw
-; CHECK-DAG: rldicl
-; CHECK: isel
+; CHECK-NOT: sub
+; CHECK: cmpw {{c?r?(0, )?}}[[RA1]], [[RB1]]
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: rldicl
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbsc3
 ; CHECK-PWR8-DAG: slwi
@@ -980,13 +1009,14 @@ define i64 @setbud1(i64 %a, i64 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbud1
-; CHECK-DAG: li
-; CHECK-DAG: cmpld
-; CHECK-DAG: subfc
-; CHECK-DAG: subfe
-; CHECK-DAG: neg
-; CHECK: isel
+; CHECK-LABEL: setbud1:
+; CHECK-NOT: li
+; CHECK: cmpld {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfc
+; CHECK-NOT: subfe
+; CHECK-NOT: neg
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbud1
 ; CHECK-PWR8-DAG: subfc
@@ -1004,13 +1034,14 @@ define i64 @setbud2(i64 %a, i64 %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbud2
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK: cmpld
-; CHECK-DAG: subfic
-; CHECK-DAG: subfe
-; CHECK: isel
+; CHECK-LABEL: setbud2:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmpld {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: subfic
+; CHECK-NOT: subfe
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbud2
 ; CHECK-PWR8-DAG: cmpld
@@ -1027,12 +1058,12 @@ define i64 @setbud3(i64 %a, i64 %b) {
   %t3 = select i1 %t2, i64 -1, i64 1
   %t4 = select i1 %t1, i64 0, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbud3
-; CHECK-DAG: li
-; CHECK: cmpld
-; CHECK-DAG: li
-; CHECK: isel
-; CHECK: isel
+; CHECK-LABEL: setbud3:
+; CHECK-NOT: li
+; CHECK: cmpld {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: li
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbud3
 ; CHECK-PWR8-DAG: cmpld
@@ -1050,15 +1081,16 @@ define i64 @setbuw1(i32 %a, i32 %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbuw1
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmplw
-; CHECK-DAG: cntlzw
-; CHECK-DAG: srwi
-; CHECK-DAG: xori
-; CHECK-DAG: neg
-; CHECK: isel
+; CHECK-LABEL: setbuw1:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmplw {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: cntlzw
+; CHECK-NOT: srwi
+; CHECK-NOT: xori
+; CHECK-NOT: neg
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbuw1
 ; CHECK-PWR8-DAG: cntlzw
@@ -1077,15 +1109,16 @@ define i64 @setbuw2(i32 %a, i32 %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbuw2
-; CHECK-DAG: xor
-; CHECK-DAG: li
-; CHECK-DAG: cmplw
-; CHECK-DAG: cntlzw
-; CHECK-DAG: srwi
-; CHECK-DAG: xori
-; CHECK-DAG: neg
-; CHECK: isel
+; CHECK-LABEL: setbuw2:
+; CHECK-NOT: xor
+; CHECK-NOT: li
+; CHECK: cmplw {{c?r?(0, )?}}r3, r4
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: cntlzw
+; CHECK-NOT: srwi
+; CHECK-NOT: xori
+; CHECK-NOT: neg
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbuw2
 ; CHECK-PWR8-DAG: cntlzw
@@ -1104,17 +1137,18 @@ define i64 @setbuh(i16 %a, i16 %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbuh
+; CHECK-LABEL: setbuh:
 ; CHECK-DAG: rlwinm [[RA:r[0-9]+]], r3, 0, 16, 31
 ; CHECK-DAG: rlwinm [[RB:r[0-9]+]], r4, 0, 16, 31
-; CHECK-DAG: li
-; CHECK-DAG: xor
-; CHECK-DAG: cmplw
-; CHECK-DAG: cntlzw
-; CHECK-DAG: srwi
-; CHECK-DAG: xori
-; CHECK-DAG: neg
-; CHECK: isel
+; CHECK-NOT: li
+; CHECK-NOT: xor
+; CHECK: cmplw {{c?r?(0, )?}}[[RA]], [[RB]]
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: cntlzw
+; CHECK-NOT: srwi
+; CHECK-NOT: xori
+; CHECK-NOT: neg
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbuh
 ; CHECK-PWR8: rlwinm
@@ -1135,16 +1169,16 @@ define i64 @setbuc(i8 %a, i8 %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbuc
+; CHECK-LABEL: setbuc:
 ; CHECK-DAG: rlwinm [[RA:r[0-9]+]], r3, 0, 24, 31
 ; CHECK-DAG: rlwinm [[RB:r[0-9]+]], r4, 0, 24, 31
-; CHECK-DAG: li
-; CHECK-DAG: clrldi
-; CHECK-DAG: clrldi
-; CHECK-DAG: cmplw
-; CHECK-DAG: sub
-; CHECK-DAG: sradi
-; CHECK: isel
+; CHECK-NOT: li
+; CHECK-NOT: clrldi
+; CHECK: cmplw {{c?r?(0, )?}}[[RA]], [[RB]]
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: sub
+; CHECK-NOT: sradi
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbuc
 ; CHECK-PWR8: rlwinm
@@ -1166,14 +1200,12 @@ define i64 @setbf1(float %a, float %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbf1
-; CHECK: fcmpu
-; CHECK-DAG: li
-; CHECK-DAG: li
-; CHECK-DAG: fcmpu
-; CHECK: isel
-; CHECK: li
-; CHECK: isel
+; CHECK-LABEL: setbf1:
+; CHECK-NOT: li
+; CHECK: fcmpu cr0, f1, f2
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: isel
+; CHECK-NOT: li
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbf1
 ; CHECK-PWR8: isel
@@ -1188,13 +1220,12 @@ define i64 @setbf2(float %a, float %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbf2
-; CHECK-DAG: li
-; CHECK-DAG: li
-; CHECK-DAG: fcmpu
-; CHECK-DAG: isel
-; CHECK-DAG: li
-; CHECK: isel
+; CHECK-LABEL: setbf2:
+; CHECK-NOT: li
+; CHECK: fcmpu cr0, f1, f2
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: isel
+; CHECK-NOT: li
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbf2
 ; CHECK-PWR8: isel
@@ -1209,12 +1240,11 @@ define i64 @setbdf1(double %a, double %b) {
   %t3 = select i1 %t2, i64 -1, i64 1
   %t4 = select i1 %t1, i64 0, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbdf1
-; CHECK-DAG: xscmpudp
-; CHECK-DAG: li
-; CHECK-DAG: li
-; CHECK: isel
-; CHECK: isel
+; CHECK-LABEL: setbdf1:
+; CHECK: xscmpudp cr0, f1, f2
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: li
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbdf1
 ; CHECK-PWR8: isel
@@ -1229,14 +1259,13 @@ define i64 @setbdf2(double %a, double %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbdf2
-; CHECK-DAG: fcmpu
-; CHECK-DAG: li
-; CHECK-DAG: li
-; CHECK-DAG: xscmpudp
-; CHECK-DAG: isel
-; CHECK-DAG: li
-; CHECK: isel
+; CHECK-LABEL: setbdf2:
+; CHECK-NOT: fcmpu
+; CHECK-NOT: li
+; CHECK: xscmpudp cr0, f1, f2
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: li
+; CHECK-NOT: isel
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbdf2
 ; CHECK-PWR8: isel
@@ -1250,13 +1279,12 @@ define i64 @setbf128(fp128 %a, fp128 %b) {
   %t3 = sext i1 %t2 to i64
   %t4 = select i1 %t1, i64 1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbf128
-; CHECK-DAG: li
-; CHECK-DAG: li
-; CHECK-DAG: xscmpuqp
-; CHECK-DAG: isel
-; CHECK-DAG: li
-; CHECK: isel
+; CHECK-LABEL: setbf128:
+; CHECK-NOT: li
+; CHECK: xscmpuqp cr0, v2, v3
+; CHECK-NEXT: setb r3, cr0
+; CHECK-NOT: isel
+; CHECK-NOT: li
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setbf128
 ; CHECK-PWR8: isel
@@ -1271,7 +1299,7 @@ define i64 @setbn1(i64 %a, i64 %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbn1
+; CHECK-LABEL: setbn1:
 ; CHECK-NOT: {{\<setb\>}}
 ; CHECK: isel
 ; CHECK: blr
@@ -1283,7 +1311,7 @@ define i64 @setbn2(double %a, double %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbn2
+; CHECK-LABEL: setbn2:
 ; CHECK-NOT: {{\<setb\>}}
 ; CHECK: isel
 ; CHECK: blr
@@ -1295,7 +1323,7 @@ define i64 @setbn3(float %a, float %b) {
   %t3 = zext i1 %t2 to i64
   %t4 = select i1 %t1, i64 -1, i64 %t3
   ret i64 %t4
-; CHECK-LABEL: setbn3
+; CHECK-LABEL: setbn3:
 ; CHECK-NOT: {{\<setb\>}}
 ; CHECK: isel
 ; CHECK: blr

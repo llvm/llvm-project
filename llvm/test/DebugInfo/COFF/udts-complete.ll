@@ -31,7 +31,7 @@
 ; CHECK:                           Symbols
 ; CHECK: ============================================================
 ; CHECK:   Mod 0000 | `.debug$S`:
-; CHECK:        0 | S_GDATA32 [size = 17] `gv`
+; CHECK:        0 | S_GDATA32 [size = 20] `gv`
 ; CHECK:            type = 0x1002 (Foo), addr = 0000:0000
 ; CHECK:        0 | S_UDT [size = 12] `Bar`
 ; CHECK:            original type = 0x1002

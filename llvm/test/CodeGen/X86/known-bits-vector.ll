@@ -499,14 +499,12 @@ declare <4 x i32> @llvm.x86.sse41.pminud(<4 x i32>, <4 x i32>) nounwind readnone
 define <4 x i32> @knownbits_umax_shuffle_ashr(<4 x i32> %a0) {
 ; X32-LABEL: knownbits_umax_shuffle_ashr:
 ; X32:       # %bb.0:
-; X32-NEXT:    vpmaxud {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,2]
+; X32-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_umax_shuffle_ashr:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmaxud {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,2]
+; X64-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = call <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32> %a0, <4 x i32> <i32 65535, i32 -1, i32 -1, i32 262143>)
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 2>

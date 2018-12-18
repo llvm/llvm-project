@@ -83,14 +83,6 @@ enum OperandType {
 } // end namespace WebAssembly
 
 namespace WebAssemblyII {
-enum {
-  // For variadic instructions, this flag indicates whether an operand
-  // in the variable_ops range is an immediate value.
-  VariableOpIsImmediate = (1 << 0),
-  // For immediate values in the variable_ops range, this flag indicates
-  // whether the value represents a control-flow label.
-  VariableOpImmediateIsLabel = (1 << 1)
-};
 
 /// Target Operand Flag enum.
 enum TOF {

@@ -361,9 +361,9 @@ int FTN_STDCALL FTN_CONTROL_TOOL(int command, int modifier, void *arg) {
   }
   kmp_info_t *this_thr = __kmp_threads[__kmp_entry_gtid()];
   ompt_task_info_t *parent_task_info = OMPT_CUR_TASK_INFO(this_thr);
-  parent_task_info->frame.enter_frame = OMPT_GET_FRAME_ADDRESS(1);
+  parent_task_info->frame.enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
   int ret = __kmp_control_tool(command, modifier, arg);
-  parent_task_info->frame.enter_frame = 0;
+  parent_task_info->frame.enter_frame.ptr = 0;
   return ret;
 #endif
 }

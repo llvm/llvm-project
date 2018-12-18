@@ -154,7 +154,8 @@ void simplifyExternals(Module &M) {
       continue;
 
     Function *NewF =
-        Function::Create(EmptyFT, GlobalValue::ExternalLinkage, "", &M);
+        Function::Create(EmptyFT, GlobalValue::ExternalLinkage,
+                         F.getAddressSpace(), "", &M);
     NewF->setVisibility(F.getVisibility());
     NewF->takeName(&F);
     F.replaceAllUsesWith(ConstantExpr::getBitCast(NewF, F.getType()));

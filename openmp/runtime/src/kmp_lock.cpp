@@ -1108,7 +1108,7 @@ __kmp_acquire_queuing_lock_timed_template(kmp_queuing_lock_t *lck,
   kmp_int32 need_mf = 1;
 
 #if OMPT_SUPPORT
-  omp_state_t prev_state = omp_state_undefined;
+  ompt_state_t prev_state = ompt_state_undefined;
 #endif
 
   KA_TRACE(1000,
@@ -1216,7 +1216,7 @@ __kmp_acquire_queuing_lock_timed_template(kmp_queuing_lock_t *lck,
 #endif
 
 #if OMPT_SUPPORT
-        if (ompt_enabled.enabled && prev_state != omp_state_undefined) {
+        if (ompt_enabled.enabled && prev_state != ompt_state_undefined) {
           /* change the state before clearing wait_id */
           this_thr->th.ompt_thread_info.state = prev_state;
           this_thr->th.ompt_thread_info.wait_id = 0;
@@ -1231,11 +1231,11 @@ __kmp_acquire_queuing_lock_timed_template(kmp_queuing_lock_t *lck,
     }
 
 #if OMPT_SUPPORT
-    if (ompt_enabled.enabled && prev_state == omp_state_undefined) {
+    if (ompt_enabled.enabled && prev_state == ompt_state_undefined) {
       /* this thread will spin; set wait_id before entering wait state */
       prev_state = this_thr->th.ompt_thread_info.state;
       this_thr->th.ompt_thread_info.wait_id = (uint64_t)lck;
-      this_thr->th.ompt_thread_info.state = omp_state_wait_lock;
+      this_thr->th.ompt_thread_info.state = ompt_state_wait_lock;
     }
 #endif
 

@@ -49,6 +49,9 @@ protected:
   /// Target of Dwarf emission.
   AsmPrinter *Asm;
 
+  /// Emitted at the end of the CU and used to compute the CU Length field.
+  MCSymbol *EndLabel = nullptr;
+
   // Holders for some common dwarf information.
   DwarfDebug *DD;
   DwarfFile *DU;
@@ -82,6 +85,7 @@ protected:
 public:
   // Accessors.
   AsmPrinter* getAsmPrinter() const { return Asm; }
+  MCSymbol *getEndLabel() const { return EndLabel; }
   uint16_t getLanguage() const { return CUNode->getSourceLanguage(); }
   const DICompileUnit *getCUNode() const { return CUNode; }
 

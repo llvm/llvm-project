@@ -309,15 +309,24 @@ bool HWAddressSanitizer::doInitialization(Module &M) {
                                             kHwasanInitName,
                                             /*InitArgTypes=*/{},
                                             /*InitArgs=*/{});
-    appendToGlobalCtors(M, HwasanCtorFunction, 0);
-  }
+    Comdat *CtorComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
+    HwasanCtorFunction->setComdat(CtorComdat);
+    appendToGlobalCtors(M, HwasanCtorFunction, 0, HwasanCtorFunction);
 
-  // Create a call to __hwasan_init_frames.
-  if (HwasanCtorFunction) {
-    // Create a dummy frame description for the CTOR function.
-    // W/o it we would have to create the call to __hwasan_init_frames after
-    // all functions are instrumented (i.e. need to have a ModulePass).
-    createFrameGlobal(*HwasanCtorFunction, "");
+    // Create a zero-length global in __hwasan_frame so that the linker will
+    // always create start and stop symbols.
+    //
+    // N.B. If we ever start creating associated metadata in this pass this
+    // global will need to be associated with the ctor.
+    Type *Int8Arr0Ty = ArrayType::get(Int8Ty, 0);
+    auto GV =
+        new GlobalVariable(M, Int8Arr0Ty, /*isConstantGlobal*/ true,
+                           GlobalVariable::PrivateLinkage,
+                           Constant::getNullValue(Int8Arr0Ty), "__hwasan");
+    GV->setSection(getFrameSection());
+    GV->setComdat(CtorComdat);
+    appendToCompilerUsed(M, GV);
+
     IRBuilder<> IRBCtor(HwasanCtorFunction->getEntryBlock().getTerminator());
     IRBCtor.CreateCall(
         declareSanitizerInitFunction(M, "__hwasan_init_frames",
@@ -742,10 +751,9 @@ void HWAddressSanitizer::createFrameGlobal(Function &F,
   GV->setSection(getFrameSection());
   appendToCompilerUsed(M, GV);
   // Put GV into the F's Comadat so that if F is deleted GV can be deleted too.
-  if (&F != HwasanCtorFunction)
-    if (auto Comdat =
-            GetOrCreateFunctionComdat(F, TargetTriple, CurModuleUniqueId))
-      GV->setComdat(Comdat);
+  if (auto Comdat =
+          GetOrCreateFunctionComdat(F, TargetTriple, CurModuleUniqueId))
+    GV->setComdat(Comdat);
 }
 
 Value *HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB,
