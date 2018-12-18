@@ -1984,38 +1984,15 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
     class_type_or_name.SetCompilerType(promise_sp->FulfillTypePromise());
     if (error.Fail())
       return false;
-    // the choices made here affect dynamic type resolution
-    // for an inline protocol object, e.g.:
-    // (P) $R1 = {
-    //     (Builtin.RawPointer) payload_data_0 = 0x0000000000000001
-    //     (Builtin.RawPointer) payload_data_1 = 0x0000000000000002
-    //     (Builtin.RawPointer) payload_data_2 = 0x0000000000000000
-    //     (Builtin.RawPointer) instance_type = 0x000000010054c2f8
-    //     (Builtin.RawPointer) witness_table_Proto = 0x000000010054c100
-    // }
-    // pick &payload_data_0
-    // for a pointed-to protocol object, e.g.:
-    // (Q) $R2 = {
-    //     (Builtin.RawPointer) payload_data_0 = 0x00000001006079b0
-    //     (Builtin.RawPointer) payload_data_1 = 0x0000000000000000
-    //     (Builtin.RawPointer) payload_data_2 = 0x0000000000000000
-    //     (Builtin.RawPointer) instance_type = 0x000000010054c648
-    //     (Builtin.RawPointer) witness_table_Proto = 0x000000010054c7b0
-    // }
-    // pick the value of payload_data_0
+    // Project the payload.
     switch (SwiftASTContext::GetAllocationStrategy(
         class_type_or_name.GetCompilerType())) {
     case SwiftASTContext::TypeAllocationStrategy::eInline:
-      // FIXME: we should not have to do this - but we are getting confused
-      // w.r.t.
-      // frozen-dried vs. live versions of objects, so hack around it for now
-      if (in_value.GetValue().GetValueAddressType() == eAddressTypeHost)
-        address.SetRawAddress(in_value.GetValue().GetScalar().ULongLong());
-      else
-        address.SetRawAddress(in_value.GetAddressOf());
+      address.SetRawAddress(in_value.GetValue().GetScalar().ULongLong());
       return true;
     case SwiftASTContext::TypeAllocationStrategy::ePointer:
-      address.SetRawAddress(payload0_sp->GetValueAsUnsigned(0));
+      address.SetRawAddress(payload0_sp->GetValueAsUnsigned(0) +
+                            (sizeof(lldb::addr_t) * 2));
       return true;
     default:
       // TODO we don't know how to deal with the dynamic case quite yet
