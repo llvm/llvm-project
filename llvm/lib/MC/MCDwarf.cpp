@@ -1332,6 +1332,10 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
     Streamer.EmitIntValue(dwarf::DW_CFA_GNU_window_save, 1);
     return;
 
+  case MCCFIInstruction::OpNegateRAState:
+    Streamer.EmitIntValue(dwarf::DW_CFA_AARCH64_negate_ra_state, 1);
+    return;
+
   case MCCFIInstruction::OpUndefined: {
     unsigned Reg = Instr.getRegister();
     Streamer.EmitIntValue(dwarf::DW_CFA_undefined, 1);

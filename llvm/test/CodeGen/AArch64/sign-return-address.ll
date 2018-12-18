@@ -24,17 +24,17 @@ define i32 @leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
 ; CHECK-LABEL: @leaf_sign_all
 ; CHECK: paciasp
 ; CHECK: autiasp
-; CHECK-NEXT: ret
+; CHECK: ret
 define i32 @leaf_sign_all(i32 %x) "sign-return-address"="all" {
   ret i32 %x
 }
 
 ; CHECK: @leaf_clobbers_lr
 ; CHECK: paciasp
-; CHECK-NEXT: str x30, [sp, #-16]!
+; CHECK: str x30, [sp, #-16]!
 ; CHECK: ldr  x30, [sp], #16
 ; CHECK-NEXT: autiasp
-; CHECK-NEXT: ret
+; CHECK: ret
 define i64 @leaf_clobbers_lr(i64 %x) "sign-return-address"="non-leaf"  {
   call void asm sideeffect "mov x30, $0", "r,~{lr}"(i64 %x) #1
   ret i64 %x
@@ -45,7 +45,7 @@ declare i32 @foo(i32)
 ; CHECK: @non_leaf_sign_all
 ; CHECK: paciasp
 ; CHECK: autiasp
-; CHECK-NEXT: ret
+; CHECK: ret
 define i32 @non_leaf_sign_all(i32 %x) "sign-return-address"="all" {
   %call = call i32 @foo(i32 %x)
   ret i32 %call
@@ -53,10 +53,10 @@ define i32 @non_leaf_sign_all(i32 %x) "sign-return-address"="all" {
 
 ; CHECK: @non_leaf_sign_non_leaf
 ; CHECK: paciasp
-; CHECK-NEXT: str x30, [sp, #-16]!
+; CHECK: str x30, [sp, #-16]!
 ; CHECK: ldr  x30, [sp], #16
-; CHECK-NEXT: autiasp
-; CHECK-NEXT: ret
+; CHECK: autiasp
+; CHECK: ret
 define i32 @non_leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
   %call = call i32 @foo(i32 %x)
   ret i32 %call
@@ -65,7 +65,7 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
 ; CHECK-LABEL: @leaf_sign_all_v83
 ; CHECK: paciasp
 ; CHECK-NOT: ret
-; CHECK-NEXT: retaa
+; CHECK: retaa
 ; CHECK-NOT: ret
 define i32 @leaf_sign_all_v83(i32 %x) "sign-return-address"="all" "target-features"="+v8.3a" {
   ret i32 %x
@@ -75,10 +75,10 @@ declare fastcc i64 @bar(i64)
 
 ; CHECK-LABEL: @spill_lr_and_tail_call
 ; CHECK: paciasp
-; CHECK-NEXT: str x30, [sp, #-16]!
+; CHECK: str x30, [sp, #-16]!
 ; CHECK: ldr  x30, [sp], #16
-; CHECK-NEXT: autiasp
-; CHECK-NEXT: b  bar
+; CHECK: autiasp
+; CHECK: b  bar
 define fastcc void @spill_lr_and_tail_call(i64 %x) "sign-return-address"="all" {
   call void asm sideeffect "mov x30, $0", "r,~{lr}"(i64 %x) #1
   tail call fastcc i64 @bar(i64 %x)

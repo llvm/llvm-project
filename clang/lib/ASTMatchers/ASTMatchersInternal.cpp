@@ -606,6 +606,8 @@ const internal::VariadicDynCastAllOfMatcher<Decl, CXXConversionDecl>
     cxxConversionDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, VarDecl> varDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, FieldDecl> fieldDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, IndirectFieldDecl>
+    indirectFieldDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, FunctionDecl> functionDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, FunctionTemplateDecl>
     functionTemplateDecl;

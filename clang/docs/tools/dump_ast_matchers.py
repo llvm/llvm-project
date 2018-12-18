@@ -41,7 +41,7 @@ def esc(text):
     url = 'https://clang.llvm.org/doxygen/classclang_1_1%s.html' % name
     if url not in doxygen_probes:
       try:
-        print 'Probing %s...' % url
+        print('Probing %s...' % url)
         urllib2.urlopen(url)
         doxygen_probes[url] = True
       except:
@@ -307,14 +307,14 @@ def act_on_decl(declaration, comment, allowed_types):
       if not result_types:
         if not comment:
           # Only overloads don't have their own doxygen comments; ignore those.
-          print 'Ignoring "%s"' % name
+          print('Ignoring "%s"' % name)
         else:
-          print 'Cannot determine result type for "%s"' % name
+          print('Cannot determine result type for "%s"' % name)
       else:
         for result_type in result_types:
           add_matcher(result_type, name, args, comment)
     else:
-      print '*** Unparsable: "' + declaration + '" ***'
+      print('*** Unparsable: "' + declaration + '" ***')
 
 def sort_table(matcher_type, matcher_map):
   """Returns the sorted html table for the given row map."""

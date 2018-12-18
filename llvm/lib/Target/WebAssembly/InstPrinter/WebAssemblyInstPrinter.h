@@ -43,6 +43,7 @@ public:
 
   // Used by tblegen code.
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printBrList(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printWebAssemblyP2AlignOperand(const MCInst *MI, unsigned OpNo,
                                       raw_ostream &O);
   void printWebAssemblySignatureOperand(const MCInst *MI, unsigned OpNo,

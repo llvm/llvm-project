@@ -788,16 +788,36 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     const unsigned CondReg = I.getOperand(0).getReg();
     MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
 
-    if (selectCompareBranch(I, MF, MRI))
+    // Speculation tracking/SLH assumes that optimized TB(N)Z/CB(N)Z
+    // instructions will not be produced, as they are conditional branch
+    // instructions that do not set flags.
+    bool ProduceNonFlagSettingCondBr =
+        !MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening);
+    if (ProduceNonFlagSettingCondBr && selectCompareBranch(I, MF, MRI))
       return true;
 
-    auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::TBNZW))
-                   .addUse(CondReg)
-                   .addImm(/*bit offset=*/0)
-                   .addMBB(DestMBB);
+    if (ProduceNonFlagSettingCondBr) {
+      auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::TBNZW))
+                     .addUse(CondReg)
+                     .addImm(/*bit offset=*/0)
+                     .addMBB(DestMBB);
 
-    I.eraseFromParent();
-    return constrainSelectedInstRegOperands(*MIB.getInstr(), TII, TRI, RBI);
+      I.eraseFromParent();
+      return constrainSelectedInstRegOperands(*MIB.getInstr(), TII, TRI, RBI);
+    } else {
+      auto CMP = BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::ANDSWri))
+                     .addDef(AArch64::WZR)
+                     .addUse(CondReg)
+                     .addImm(1);
+      constrainSelectedInstRegOperands(*CMP.getInstr(), TII, TRI, RBI);
+      auto Bcc =
+          BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::Bcc))
+              .addImm(AArch64CC::EQ)
+              .addMBB(DestMBB);
+
+      I.eraseFromParent();
+      return constrainSelectedInstRegOperands(*Bcc.getInstr(), TII, TRI, RBI);
+    }
   }
 
   case TargetOpcode::G_BRINDIRECT: {

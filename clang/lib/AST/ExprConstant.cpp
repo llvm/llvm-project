@@ -3439,19 +3439,31 @@ struct CompoundAssignSubobjectHandler {
     if (!checkConst(SubobjType))
       return false;
 
-    if (!SubobjType->isIntegerType() || !RHS.isInt()) {
+    if (!SubobjType->isIntegerType()) {
       // We don't support compound assignment on integer-cast-to-pointer
       // values.
       Info.FFDiag(E);
       return false;
     }
 
-    APSInt LHS = HandleIntToIntCast(Info, E, PromotedLHSType,
-                                    SubobjType, Value);
-    if (!handleIntIntBinOp(Info, E, LHS, Opcode, RHS.getInt(), LHS))
-      return false;
-    Value = HandleIntToIntCast(Info, E, SubobjType, PromotedLHSType, LHS);
-    return true;
+    if (RHS.isInt()) {
+      APSInt LHS =
+          HandleIntToIntCast(Info, E, PromotedLHSType, SubobjType, Value);
+      if (!handleIntIntBinOp(Info, E, LHS, Opcode, RHS.getInt(), LHS))
+        return false;
+      Value = HandleIntToIntCast(Info, E, SubobjType, PromotedLHSType, LHS);
+      return true;
+    } else if (RHS.isFloat()) {
+      APFloat FValue(0.0);
+      return HandleIntToFloatCast(Info, E, SubobjType, Value, PromotedLHSType,
+                                  FValue) &&
+             handleFloatFloatBinOp(Info, E, FValue, Opcode, RHS.getFloat()) &&
+             HandleFloatToIntCast(Info, E, PromotedLHSType, FValue, SubobjType,
+                                  Value);
+    }
+
+    Info.FFDiag(E);
+    return false;
   }
   bool found(APFloat &Value, QualType SubobjType) {
     return checkConst(SubobjType) &&

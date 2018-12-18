@@ -220,6 +220,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("undefined", MIToken::kw_cfi_undefined)
       .Case("register", MIToken::kw_cfi_register)
       .Case("window_save", MIToken::kw_cfi_window_save)
+      .Case("negate_ra_sign_state", MIToken::kw_cfi_aarch64_negate_ra_sign_state)
       .Case("blockaddress", MIToken::kw_blockaddress)
       .Case("intrinsic", MIToken::kw_intrinsic)
       .Case("target-index", MIToken::kw_target_index)

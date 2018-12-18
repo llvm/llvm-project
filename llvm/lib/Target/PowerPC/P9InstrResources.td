@@ -111,11 +111,11 @@ def : InstRW<[P9_ALU_3C, IP_EXEC_1C, DISP_1C, DISP_1C],
     (instregex "CNT(L|T)Z(D|W)(8)?(o)?$"),
     (instregex "POPCNT(D|W)$"),
     (instregex "CMPB(8)?$"),
+    (instregex "SETB(8)?$"),
     XSTDIVDP,
     XSTSQRTDP,
     XSXSIGDP,
     XSCVSPDPN,
-    SETB,
     BPERMD
 )>;
 

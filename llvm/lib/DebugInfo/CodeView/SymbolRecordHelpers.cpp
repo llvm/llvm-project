@@ -21,8 +21,7 @@ template <typename RecordT> RecordT createRecord(const CVSymbol &sym) {
   return record;
 }
 
-uint32_t
-llvm::codeview::getScopeEndOffset(const llvm::codeview::CVSymbol &Sym) {
+uint32_t llvm::codeview::getScopeEndOffset(const CVSymbol &Sym) {
   assert(symbolOpensScope(Sym.kind()));
   switch (Sym.kind()) {
   case SymbolKind::S_GPROC32:
@@ -45,6 +44,37 @@ llvm::codeview::getScopeEndOffset(const llvm::codeview::CVSymbol &Sym) {
   case SymbolKind::S_INLINESITE: {
     InlineSiteSym Site = createRecord<InlineSiteSym>(Sym);
     return Site.End;
+  }
+  default:
+    assert(false && "Unknown record type");
+    return 0;
+  }
+}
+
+uint32_t
+llvm::codeview::getScopeParentOffset(const llvm::codeview::CVSymbol &Sym) {
+  assert(symbolOpensScope(Sym.kind()));
+  switch (Sym.kind()) {
+  case SymbolKind::S_GPROC32:
+  case SymbolKind::S_LPROC32:
+  case SymbolKind::S_GPROC32_ID:
+  case SymbolKind::S_LPROC32_ID:
+  case SymbolKind::S_LPROC32_DPC:
+  case SymbolKind::S_LPROC32_DPC_ID: {
+    ProcSym Proc = createRecord<ProcSym>(Sym);
+    return Proc.Parent;
+  }
+  case SymbolKind::S_BLOCK32: {
+    BlockSym Block = createRecord<BlockSym>(Sym);
+    return Block.Parent;
+  }
+  case SymbolKind::S_THUNK32: {
+    Thunk32Sym Thunk = createRecord<Thunk32Sym>(Sym);
+    return Thunk.Parent;
+  }
+  case SymbolKind::S_INLINESITE: {
+    InlineSiteSym Site = createRecord<InlineSiteSym>(Sym);
+    return Site.Parent;
   }
   default:
     assert(false && "Unknown record type");

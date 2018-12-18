@@ -31,6 +31,9 @@ const char TestCCName[] = "test.cc";
 struct CompletionContext {
   std::vector<std::string> VisitedNamespaces;
   std::string PreferredType;
+  // String representation of std::ptrdiff_t on a given platform. This is a hack
+  // to properly account for different configurations of clang.
+  std::string PtrDiffType;
 };
 
 class VisitedContextFinder : public CodeCompleteConsumer {
@@ -47,6 +50,8 @@ public:
     ResultCtx.VisitedNamespaces =
         getVisitedNamespace(Context.getVisitedContexts());
     ResultCtx.PreferredType = Context.getPreferredType().getAsString();
+    ResultCtx.PtrDiffType =
+        S.getASTContext().getPointerDiffType().getAsString();
   }
 
   CodeCompletionAllocator &getAllocator() override {
@@ -133,11 +138,19 @@ CompletionContext runCodeCompleteOnCode(StringRef AnnotatedCode) {
   return runCompletion(P.Code, P.Points.front());
 }
 
-std::vector<std::string> collectPreferredTypes(StringRef AnnotatedCode) {
+std::vector<std::string>
+collectPreferredTypes(StringRef AnnotatedCode,
+                      std::string *PtrDiffType = nullptr) {
   ParsedAnnotations P = parseAnnotations(AnnotatedCode);
   std::vector<std::string> Types;
-  for (size_t Point : P.Points)
-    Types.push_back(runCompletion(P.Code, Point).PreferredType);
+  for (size_t Point : P.Points) {
+    auto Results = runCompletion(P.Code, Point);
+    if (PtrDiffType) {
+      assert(PtrDiffType->empty() || *PtrDiffType == Results.PtrDiffType);
+      *PtrDiffType = Results.PtrDiffType;
+    }
+    Types.push_back(Results.PreferredType);
+  }
   return Types;
 }
 
@@ -213,9 +226,11 @@ TEST(PreferredTypeTest, BinaryExpr) {
       ptr += ^10;
       ptr -= ^10;
     })cpp";
-  // Expect the normalized ptrdiff_t type, which is typically long or long long.
-  const char *PtrDiff = sizeof(void *) == sizeof(long) ? "long" : "long long";
-  EXPECT_THAT(collectPreferredTypes(Code), Each(PtrDiff));
+  {
+    std::string PtrDiff;
+    auto Types = collectPreferredTypes(Code, &PtrDiff);
+    EXPECT_THAT(Types, Each(PtrDiff));
+  }
 
   // Comparison operators.
   Code = R"cpp(

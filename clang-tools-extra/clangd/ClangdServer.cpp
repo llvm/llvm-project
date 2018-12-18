@@ -139,7 +139,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
   if (Opts.BackgroundIndex) {
     BackgroundIdx = llvm::make_unique<BackgroundIndex>(
         Context::current().clone(), ResourceDir, FSProvider, CDB,
-        BackgroundIndexStorage::createDiskBackedStorageFactory());
+        BackgroundIndexStorage::createDiskBackedStorageFactory(),
+        Opts.BackgroundIndexRebuildPeriodMs);
     AddIndex(BackgroundIdx.get());
   }
   if (DynamicIdx)

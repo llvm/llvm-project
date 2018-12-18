@@ -129,6 +129,8 @@ private:
     case ELF::R_X86_64_NONE:
       return 0;
     case ELF::R_X86_64_64:
+    case ELF::R_X86_64_DTPOFF32:
+    case ELF::R_X86_64_DTPOFF64:
       return Value + getELFAddend(R);
     case ELF::R_X86_64_PC32:
       return Value + getELFAddend(R) - R.getOffset();

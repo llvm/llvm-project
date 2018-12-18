@@ -984,7 +984,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
 
     // On v8, we have particularly efficient implementations of atomic fences
     // if they can be combined with nearby atomic loads and stores.
-    if (!Subtarget->hasV8Ops() || getTargetMachine().getOptLevel() == 0) {
+    if (!Subtarget->hasAcquireRelease() ||
+        getTargetMachine().getOptLevel() == 0) {
       // Automatically insert fences (dmb ish) around ATOMIC_SWAP etc.
       InsertFencesForAtomic = true;
     }

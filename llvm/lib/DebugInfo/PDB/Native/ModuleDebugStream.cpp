@@ -11,7 +11,9 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
+#include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecordHelpers.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -75,6 +77,11 @@ Error ModuleDebugStreamRef::reload() {
                                 "Unexpected bytes in module stream.");
 
   return Error::success();
+}
+
+const codeview::CVSymbolArray
+ModuleDebugStreamRef::getSymbolArrayForScope(uint32_t ScopeBegin) const {
+  return limitSymbolArrayToScope(SymbolArray, ScopeBegin);
 }
 
 BinarySubstreamRef ModuleDebugStreamRef::getSymbolsSubstream() const {

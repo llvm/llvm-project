@@ -356,6 +356,14 @@ namespace compound_assign {
     if (a != 13) return false;
     a &= 14;
     if (a != 12) return false;
+    a += -1.2;
+    if (a != 10) return false;
+    a -= 3.1;
+    if (a != 6) return false;
+    a *= 2.2;
+    if (a != 13) return false;
+    if (&(a /= 1.5) != &a) return false;
+    if (a != 8) return false;
     return true;
   }
   static_assert(test_int(), "");

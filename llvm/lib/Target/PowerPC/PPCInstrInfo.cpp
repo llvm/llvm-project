@@ -3488,6 +3488,7 @@ static bool isSignExtendingOp(const MachineInstr &MI) {
       Opcode == PPC::EXTSH  || Opcode == PPC::EXTSHo  ||
       Opcode == PPC::EXTSB8 || Opcode == PPC::EXTSH8  ||
       Opcode == PPC::EXTSW  || Opcode == PPC::EXTSWo  ||
+      Opcode == PPC::SETB   || Opcode == PPC::SETB8   ||
       Opcode == PPC::EXTSH8_32_64 || Opcode == PPC::EXTSW_32_64 ||
       Opcode == PPC::EXTSB8_32_64)
     return true;

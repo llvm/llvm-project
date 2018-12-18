@@ -220,10 +220,10 @@ private:
   /// The address class for each symbol in the elf file
   FileAddressToAddressClassMap m_address_class_map;
 
-  /// Returns a 1 based index of the given section header.
+  /// Returns the index of the given section header.
   size_t SectionIndex(const SectionHeaderCollIter &I);
 
-  /// Returns a 1 based index of the given section header.
+  /// Returns the index of the given section header.
   size_t SectionIndex(const SectionHeaderCollConstIter &I) const;
 
   // Parses the ELF program headers.

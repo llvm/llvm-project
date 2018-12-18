@@ -134,11 +134,19 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
     unsigned NumFixedOperands = Desc.NumOperands;
     SmallSet<uint64_t, 8> Printed;
     for (unsigned i = 0, e = MI->getNumOperands(); i < e; ++i) {
-      if (!(i < NumFixedOperands
-                ? (Desc.OpInfo[i].OperandType ==
-                   WebAssembly::OPERAND_BASIC_BLOCK)
-                : (Desc.TSFlags & WebAssemblyII::VariableOpImmediateIsLabel)))
-        continue;
+      // See if this operand denotes a basic block target.
+      if (i < NumFixedOperands) {
+        // A non-variable_ops operand, check its type.
+        if (Desc.OpInfo[i].OperandType != WebAssembly::OPERAND_BASIC_BLOCK)
+          continue;
+      } else {
+        // A variable_ops operand, which currently can be immediates (used in
+        // br_table) which are basic block targets, or for call instructions
+        // when using -wasm-keep-registers (in which case they are registers,
+        // and should not be processed).
+        if (!MI->getOperand(i).isImm())
+          continue;
+      }
       uint64_t Depth = MI->getOperand(i).getImm();
       if (!Printed.insert(Depth).second)
         continue;
@@ -194,9 +202,6 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                           raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    assert((OpNo < MII.get(MI->getOpcode()).getNumOperands() ||
-            MII.get(MI->getOpcode()).TSFlags == 0) &&
-           "WebAssembly variable_ops register ops don't use TSFlags");
     unsigned WAReg = Op.getReg();
     if (int(WAReg) >= 0)
       printRegName(O, WAReg);
@@ -210,23 +215,9 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     if (OpNo < MII.get(MI->getOpcode()).getNumDefs())
       O << '=';
   } else if (Op.isImm()) {
-    const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-    assert((OpNo < Desc.getNumOperands() ||
-            (Desc.TSFlags & WebAssemblyII::VariableOpIsImmediate)) &&
-           "WebAssemblyII::VariableOpIsImmediate should be set for "
-           "variable_ops immediate ops");
-    (void)Desc;
-    // TODO: (MII.get(MI->getOpcode()).TSFlags &
-    //        WebAssemblyII::VariableOpImmediateIsLabel)
-    // can tell us whether this is an immediate referencing a label in the
-    // control flow stack, and it may be nice to pretty-print.
     O << Op.getImm();
   } else if (Op.isFPImm()) {
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-    assert(OpNo < Desc.getNumOperands() &&
-           "Unexpected floating-point immediate as a non-fixed operand");
-    assert(Desc.TSFlags == 0 &&
-           "WebAssembly variable_ops floating point ops don't use TSFlags");
     const MCOperandInfo &Info = Desc.OpInfo[OpNo];
     if (Info.OperandType == WebAssembly::OPERAND_F32IMM) {
       // TODO: MC converts all floating point immediate operands to double.
@@ -237,14 +228,20 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       O << ::toString(APFloat(Op.getFPImm()));
     }
   } else {
-    assert((OpNo < MII.get(MI->getOpcode()).getNumOperands() ||
-            (MII.get(MI->getOpcode()).TSFlags &
-             WebAssemblyII::VariableOpIsImmediate)) &&
-           "WebAssemblyII::VariableOpIsImmediate should be set for "
-           "variable_ops expr ops");
     assert(Op.isExpr() && "unknown operand kind in printOperand");
     Op.getExpr()->print(O, &MAI);
   }
+}
+
+void WebAssemblyInstPrinter::printBrList(const MCInst *MI, unsigned OpNo,
+                                         raw_ostream &O) {
+  O << "{";
+  for (unsigned I = OpNo, E = MI->getNumOperands(); I != E; ++I) {
+    if (I != OpNo)
+      O << ", ";
+    O << MI->getOperand(I).getImm();
+  }
+  O << "}";
 }
 
 void WebAssemblyInstPrinter::printWebAssemblyP2AlignOperand(const MCInst *MI,

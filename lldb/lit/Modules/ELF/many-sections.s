@@ -7,7 +7,7 @@
 ## aaaaaaaa..dddddddd, plus a couple of standard ones (.strtab, etc.)
 ## Check the number is correct plus the names of a couple of chosen sections.
 
-# CHECK: Showing 65541 sections
+# CHECK: Showing 65540 sections
 # CHECK: Name: aaaaaaaa
 # CHECK: Name: bbbbbbbb
 # CHECK: Name: cccccccc

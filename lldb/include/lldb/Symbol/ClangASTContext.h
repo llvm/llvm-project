@@ -24,6 +24,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ExternalASTMerger.h"
 #include "clang/AST/TemplateBase.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
@@ -902,6 +903,9 @@ public:
   clang::EnumConstantDecl *AddEnumerationValueToEnumerationType(
       const CompilerType &enum_type, const Declaration &decl, const char *name,
       int64_t enum_value, uint32_t enum_value_bit_size);
+  clang::EnumConstantDecl *AddEnumerationValueToEnumerationType(
+      const CompilerType &enum_type, const Declaration &decl, const char *name,
+      const llvm::APSInt &value);
 
   CompilerType GetEnumerationIntegerType(lldb::opaque_compiler_type_t type);
 

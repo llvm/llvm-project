@@ -469,9 +469,8 @@ entry:
 define { i64, i64 } @pr39968(i64, i64, i32) {
 ; CHECK-LABEL: pr39968:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $64, %edx # encoding: [0x83,0xe2,0x40]
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    shrl $6, %edx # encoding: [0xc1,0xea,0x06]
+; CHECK-NEXT:    testb $64, %dl # encoding: [0xf6,0xc2,0x40]
 ; CHECK-NEXT:    cmovneq %rdi, %rsi # encoding: [0x48,0x0f,0x45,0xf7]
 ; CHECK-NEXT:    cmovneq %rdi, %rax # encoding: [0x48,0x0f,0x45,0xc7]
 ; CHECK-NEXT:    movq %rsi, %rdx # encoding: [0x48,0x89,0xf2]

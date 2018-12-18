@@ -3,6 +3,7 @@ import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/libs/pthread/enable.gni")
 import("//llvm/utils/gn/build/libs/terminfo/enable.gni")
+import("//llvm/utils/gn/build/libs/xar/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/version.gni")
@@ -182,7 +183,6 @@ action("config") {
       "HAVE_MACH_MACH_H=1",
       "HAVE_MALLOC_MALLOC_H=1",
       "HAVE_MALLOC_ZONE_STATISTICS=1",
-      "HAVE_LIBXAR=1",
       "HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC=1",
     ]
   } else {
@@ -195,7 +195,6 @@ action("config") {
       "HAVE_MALLOC_H=1",
       "HAVE_MALLOC_MALLOC_H=",
       "HAVE_MALLOC_ZONE_STATISTICS=",
-      "HAVE_LIBXAR=",
       "HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC=",
     ]
   }
@@ -291,6 +290,12 @@ action("config") {
     args += [ "LTDL_SHLIB_EXT=.dylib" ]
   } else if (host_os == "win") {
     args += [ "LTDL_SHLIB_EXT=.dll" ]
+  }
+
+  if (llvm_enable_libxar) {
+    args += [ "HAVE_LIBXAR=1" ]
+  } else {
+    args += [ "HAVE_LIBXAR=" ]
   }
 
   if (llvm_enable_terminfo) {
