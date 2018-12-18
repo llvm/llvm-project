@@ -3,6 +3,7 @@
 
 #CHECK:     Showing 2 sections
 #CHECK-NEXT:  Index: 0
+#CHECK-NEXT:  ID: 0x100
 #CHECK-NEXT:  Name: __PAGEZERO
 #CHECK-NEXT:  Type: container
 #CHECK-NEXT:  Permissions: ---
@@ -13,6 +14,7 @@
 #CHECK-NEXT:  There are no subsections
 #CHECK-EMPTY:
 #CHECK-NEXT:  Index: 1
+#CHECK-NEXT:  ID: 0x200
 #CHECK-NEXT:  Name: __TEXT
 #CHECK-NEXT:  Type: container
 #CHECK-NEXT:  Permissions: r-x
@@ -22,6 +24,7 @@
 #CHECK-NEXT:  File size: 4096
 #CHECK-NEXT:  Showing 3 subsections
 #CHECK-NEXT:    Index: 0
+#CHECK-NEXT:    ID: 0x1
 #CHECK-NEXT:    Name: __text
 #CHECK-NEXT:    Type: code
 #CHECK-NEXT:    Permissions: r-x
@@ -31,6 +34,7 @@
 #CHECK-NEXT:    File size: 22
 #CHECK-EMPTY:
 #CHECK-NEXT:    Index: 1
+#CHECK-NEXT:    ID: 0x2
 #CHECK-NEXT:    Name: __unwind_info
 #CHECK-NEXT:    Type: compact-unwind
 #CHECK-NEXT:    Permissions: r-x
@@ -40,6 +44,7 @@
 #CHECK-NEXT:    File size: 76
 #CHECK-EMPTY:
 #CHECK-NEXT:    Index: 2
+#CHECK-NEXT:    ID: 0x3
 #CHECK-NEXT:    Name: __eh_frame
 #CHECK-NEXT:    Type: eh-frame
 #CHECK-NEXT:    Permissions: r-x
