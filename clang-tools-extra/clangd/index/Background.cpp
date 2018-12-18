@@ -27,11 +27,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SHA1.h"
 
+#include <chrono>
 #include <memory>
 #include <numeric>
 #include <queue>
 #include <random>
 #include <string>
+#include <thread>
 
 using namespace llvm;
 namespace clang {
@@ -125,10 +127,13 @@ createFileFilter(const llvm::StringMap<FileDigest> &FileDigests,
 BackgroundIndex::BackgroundIndex(
     Context BackgroundContext, StringRef ResourceDir,
     const FileSystemProvider &FSProvider, const GlobalCompilationDatabase &CDB,
-    BackgroundIndexStorage::Factory IndexStorageFactory, size_t ThreadPoolSize)
+    BackgroundIndexStorage::Factory IndexStorageFactory,
+    size_t BuildIndexPeriodMs, size_t ThreadPoolSize)
     : SwapIndex(make_unique<MemIndex>()), ResourceDir(ResourceDir),
       FSProvider(FSProvider), CDB(CDB),
       BackgroundContext(std::move(BackgroundContext)),
+      BuildIndexPeriodMs(BuildIndexPeriodMs),
+      SymbolsUpdatedSinceLastIndex(false),
       IndexStorageFactory(std::move(IndexStorageFactory)),
       CommandsChanged(
           CDB.watch([&](const std::vector<std::string> &ChangedFiles) {
@@ -138,6 +143,11 @@ BackgroundIndex::BackgroundIndex(
   assert(this->IndexStorageFactory && "Storage factory can not be null!");
   while (ThreadPoolSize--)
     ThreadPool.emplace_back([this] { run(); });
+  if (BuildIndexPeriodMs > 0) {
+    log("BackgroundIndex: build symbol index periodically every {0} ms.",
+        BuildIndexPeriodMs);
+    ThreadPool.emplace_back([this] { buildIndex(); });
+  }
 }
 
 BackgroundIndex::~BackgroundIndex() {
@@ -148,10 +158,12 @@ BackgroundIndex::~BackgroundIndex() {
 
 void BackgroundIndex::stop() {
   {
-    std::lock_guard<std::mutex> Lock(QueueMu);
+    std::lock_guard<std::mutex> QueueLock(QueueMu);
+    std::lock_guard<std::mutex> IndexLock(IndexMu);
     ShouldStop = true;
   }
   QueueCV.notify_all();
+  IndexCV.notify_all();
 }
 
 void BackgroundIndex::run() {
@@ -332,6 +344,30 @@ void BackgroundIndex::update(StringRef MainFile, IndexFileIn Index,
   }
 }
 
+void BackgroundIndex::buildIndex() {
+  assert(BuildIndexPeriodMs > 0);
+  while (true) {
+    {
+      std::unique_lock<std::mutex> Lock(IndexMu);
+      if (ShouldStop)  // Avoid waiting if stopped.
+        break;
+      // Wait until this is notified to stop or `BuildIndexPeriodMs` has past.
+      IndexCV.wait_for(Lock, std::chrono::milliseconds(BuildIndexPeriodMs));
+      if (ShouldStop)  // Avoid rebuilding index if stopped.
+        break;
+    }
+    if (!SymbolsUpdatedSinceLastIndex.exchange(false))
+      continue;
+    // There can be symbol update right after the flag is reset above and before
+    // index is rebuilt below. The new index would contain the updated symbols
+    // but the flag would still be true. This is fine as we would simply run an
+    // extra index build.
+    reset(
+        IndexedSymbols.buildIndex(IndexType::Heavy, DuplicateHandling::Merge));
+    log("BackgroundIndex: rebuilt symbol index.");
+  }
+}
+
 Error BackgroundIndex::index(tooling::CompileCommand Cmd,
                              BackgroundIndexStorage *IndexStorage) {
   trace::Span Tracer("BackgroundIndex");
@@ -362,7 +398,7 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
     DigestsSnapshot = IndexedFileDigests;
   }
 
-  log("Indexing {0}", Cmd.Filename, toHex(Hash));
+  log("Indexing {0} (digest:={1})", Cmd.Filename, toHex(Hash));
   ParseInputs Inputs;
   Inputs.FS = std::move(FS);
   Inputs.FS->setCurrentWorkingDirectory(Cmd.Directory);
@@ -424,10 +460,11 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
     IndexedFileDigests[AbsolutePath] = Hash;
   }
 
-  // FIXME: this should rebuild once-in-a-while, not after every file.
-  //       At that point we should use Dex, too.
-  vlog("Rebuilding automatic index");
-  reset(IndexedSymbols.buildIndex(IndexType::Light, DuplicateHandling::Merge));
+  if (BuildIndexPeriodMs > 0)
+    SymbolsUpdatedSinceLastIndex = true;
+  else
+    reset(
+        IndexedSymbols.buildIndex(IndexType::Light, DuplicateHandling::Merge));
 
   return Error::success();
 }
