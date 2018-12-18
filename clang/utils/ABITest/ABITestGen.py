@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 from pprint import pprint
 import random, atexit, time
 from random import randrange
@@ -148,7 +148,7 @@ class TypePrinter(object):
                 retvalTests = None
             else:
                 retvalTests = self.getTestValuesArray(FT.returnType)
-            tests = map(self.getTestValuesArray, FT.argTypes)
+            tests = [self.getTestValuesArray(ty) for ty in FT.argTypes]
             print('void test_%s(void) {'%(fnName,), file=self.outputTests)
 
             if retvalTests is not None:
@@ -231,10 +231,10 @@ class TypePrinter(object):
                     yield '{ %s }' % v
                 return
 
-            fieldValues = map(list, map(self.getTestValues, nonPadding))
+            fieldValues = [list(v) for v in map(self.getTestValues, nonPadding)]
             for i,values in enumerate(fieldValues):
                 for v in values:
-                    elements = map(random.choice,fieldValues)
+                    elements = [random.choice(fv) for fv in fieldValues]
                     elements[i] = v
                     yield '{ %s }'%(', '.join(elements))
 

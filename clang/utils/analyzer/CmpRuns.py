@@ -298,10 +298,10 @@ def deriveStats(results):
             combined_data['PathsLength'].append(diagnostic.getPathLength())
 
     for stat in results.stats:
-        for key, value in stat.iteritems():
+        for key, value in stat.items():
             combined_data[key].append(value)
     combined_stats = {}
-    for key, values in combined_data.iteritems():
+    for key, values in combined_data.items():
         combined_stats[str(key)] = {
             "max": max(values),
             "min": min(values),

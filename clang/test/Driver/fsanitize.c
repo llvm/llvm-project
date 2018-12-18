@@ -753,6 +753,10 @@
 // CHECK-ASAN-PS4: --dependent-lib=libSceDbgAddressSanitizer_stub_weak.a
 // CHECK-ASAN-PS4-NOT: {{(\.(o|bc)"? |-l).*-lSceDbgAddressSanitizer_stub_weak}}
 // CHECK-ASAN-PS4: -lSceDbgAddressSanitizer_stub_weak
+// RUN: %clang -target x86_64-scei-ps4 -fsanitize=address -nostdlib %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-NOLIB-PS4
+// RUN: %clang -target x86_64-scei-ps4 -fsanitize=address -nodefaultlibs %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-NOLIB-PS4
+// RUN: %clang -target x86_64-scei-ps4 -fsanitize=address -nodefaultlibs -nostdlib  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-NOLIB-PS4
+// CHECK-ASAN-NOLIB-PS4-NOT: SceDbgAddressSanitizer_stub_weak
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-MINIMAL
 // CHECK-ASAN-MINIMAL: error: invalid argument '-fsanitize-minimal-runtime' not allowed with '-fsanitize=address'

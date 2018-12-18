@@ -3135,25 +3135,19 @@ bool CursorVisitor::RunVisitorWorkList(VisitorWorkList &WL) {
             return true;
         }
         
+        TypeLoc TL = E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
         // Visit parameters and return type, if present.
-        if (E->hasExplicitParameters() || E->hasExplicitResultType()) {
-          TypeLoc TL = E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
-          if (E->hasExplicitParameters() && E->hasExplicitResultType()) {
-            // Visit the whole type.
-            if (Visit(TL))
-              return true;
-          } else if (FunctionProtoTypeLoc Proto =
-                         TL.getAs<FunctionProtoTypeLoc>()) {
-            if (E->hasExplicitParameters()) {
-              // Visit parameters.
-              for (unsigned I = 0, N = Proto.getNumParams(); I != N; ++I)
-                if (Visit(MakeCXCursor(Proto.getParam(I), TU)))
-                  return true;
-            } else {
-              // Visit result type.
-              if (Visit(Proto.getReturnLoc()))
+        if (FunctionTypeLoc Proto = TL.getAs<FunctionProtoTypeLoc>()) {
+          if (E->hasExplicitParameters()) {
+            // Visit parameters.
+            for (unsigned I = 0, N = Proto.getNumParams(); I != N; ++I)
+              if (Visit(MakeCXCursor(Proto.getParam(I), TU)))
                 return true;
-            }
+          }
+          if (E->hasExplicitResultType()) {
+            // Visit result type.
+            if (Visit(Proto.getReturnLoc()))
+              return true;
           }
         }
         break;

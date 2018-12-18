@@ -9,8 +9,8 @@ void test19() {
 // CHECK-UNOPT: [[X2:%.*]] = getelementptr inbounds [[BYREF_T:%.*]], [[BYREF_T:%.*]]* [[VAR1:%.*]], i32 0, i32 6
 // CHECK-UNOPT-NEXT: [[SIX:%.*]] = load i8*, i8** [[X2]], align 8
 // CHECK-UNOPT-NEXT: store i8* null, i8** [[X]], align 8
-// CHECK-UNOPT-NEXT: call void @objc_storeStrong(i8** [[X]], i8* [[SIX]]) [[NUW:#[0-9]+]]
-// CHECK-UNOPT-NEXT: call void @objc_storeStrong(i8** [[X2]], i8* null) [[NUW]]
+// CHECK-UNOPT-NEXT: call void @llvm.objc.storeStrong(i8** [[X]], i8* [[SIX]]) [[NUW:#[0-9]+]]
+// CHECK-UNOPT-NEXT: call void @llvm.objc.storeStrong(i8** [[X2]], i8* null) [[NUW]]
 // CHECK-UNOPT-NEXT: ret void
 }
 

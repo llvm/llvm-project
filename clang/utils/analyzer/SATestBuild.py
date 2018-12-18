@@ -583,8 +583,7 @@ def runCmpResults(Dir, Strictness=0):
 
     # Iterate and find the differences.
     NumDiffs = 0
-    PairList = zip(RefList, NewList)
-    for P in PairList:
+    for P in zip(RefList, NewList):
         RefDir = P[0]
         NewDir = P[1]
 

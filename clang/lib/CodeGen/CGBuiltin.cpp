@@ -1235,7 +1235,7 @@ static bool isSpecialMixedSignMultiply(unsigned BuiltinID,
                                        WidthAndSignedness Op2Info,
                                        WidthAndSignedness ResultInfo) {
   return BuiltinID == Builtin::BI__builtin_mul_overflow &&
-         Op1Info.Width == Op2Info.Width && Op1Info.Width >= ResultInfo.Width &&
+         std::max(Op1Info.Width, Op2Info.Width) >= ResultInfo.Width &&
          Op1Info.Signed != Op2Info.Signed;
 }
 
@@ -1256,11 +1256,20 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
   const clang::Expr *UnsignedOp = Op1Info.Signed ? Op2 : Op1;
   llvm::Value *Signed = CGF.EmitScalarExpr(SignedOp);
   llvm::Value *Unsigned = CGF.EmitScalarExpr(UnsignedOp);
+  unsigned SignedOpWidth = Op1Info.Signed ? Op1Info.Width : Op2Info.Width;
+  unsigned UnsignedOpWidth = Op1Info.Signed ? Op2Info.Width : Op1Info.Width;
+
+  // One of the operands may be smaller than the other. If so, [s|z]ext it.
+  if (SignedOpWidth < UnsignedOpWidth)
+    Signed = CGF.Builder.CreateSExt(Signed, Unsigned->getType(), "op.sext");
+  if (UnsignedOpWidth < SignedOpWidth)
+    Unsigned = CGF.Builder.CreateZExt(Unsigned, Signed->getType(), "op.zext");
 
   llvm::Type *OpTy = Signed->getType();
   llvm::Value *Zero = llvm::Constant::getNullValue(OpTy);
   Address ResultPtr = CGF.EmitPointerWithAlignment(ResultArg);
   llvm::Type *ResTy = ResultPtr.getElementType();
+  unsigned OpWidth = std::max(Op1Info.Width, Op2Info.Width);
 
   // Take the absolute value of the signed operand.
   llvm::Value *IsNegative = CGF.Builder.CreateICmpSLT(Signed, Zero);
@@ -1278,8 +1287,8 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
   if (ResultInfo.Signed) {
     // Signed overflow occurs if the result is greater than INT_MAX or lesser
     // than INT_MIN, i.e when |Result| > (INT_MAX + IsNegative).
-    auto IntMax = llvm::APInt::getSignedMaxValue(ResultInfo.Width)
-                      .zextOrSelf(Op1Info.Width);
+    auto IntMax =
+        llvm::APInt::getSignedMaxValue(ResultInfo.Width).zextOrSelf(OpWidth);
     llvm::Value *MaxResult =
         CGF.Builder.CreateAdd(llvm::ConstantInt::get(OpTy, IntMax),
                               CGF.Builder.CreateZExt(IsNegative, OpTy));
@@ -1297,9 +1306,9 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
     llvm::Value *Underflow = CGF.Builder.CreateAnd(
         IsNegative, CGF.Builder.CreateIsNotNull(UnsignedResult));
     Overflow = CGF.Builder.CreateOr(UnsignedOverflow, Underflow);
-    if (ResultInfo.Width < Op1Info.Width) {
+    if (ResultInfo.Width < OpWidth) {
       auto IntMax =
-          llvm::APInt::getMaxValue(ResultInfo.Width).zext(Op1Info.Width);
+          llvm::APInt::getMaxValue(ResultInfo.Width).zext(OpWidth);
       llvm::Value *TruncOverflow = CGF.Builder.CreateICmpUGT(
           UnsignedResult, llvm::ConstantInt::get(OpTy, IntMax));
       Overflow = CGF.Builder.CreateOr(Overflow, TruncOverflow);

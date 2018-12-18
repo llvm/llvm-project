@@ -1,19 +1,19 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-arc -fobjc-runtime-has-weak %s -emit-llvm -o - | FileCheck %s
 
 // CHECK: bitcast {{.*}} %self_weak_s_w_s
-// CHECK-NEXT: objc_destroyWeak
+// CHECK-NEXT: llvm.objc.destroyWeak
 // CHECK-NEXT: bitcast {{.*}} %self_strong_w_s
-// CHECK-NEXT: objc_storeStrong
+// CHECK-NEXT: llvm.objc.storeStrong
 // CHECK-NEXT: bitcast {{.*}} %self_weak_s
-// CHECK-NEXT: objc_destroyWeak
+// CHECK-NEXT: llvm.objc.destroyWeak
 // CHECK-NEXT: bitcast {{.*}} %self_weak_s3
-// CHECK-NEXT: objc_destroyWeak
+// CHECK-NEXT: llvm.objc.destroyWeak
 // CHECK-NEXT: bitcast {{.*}} %self_strong3
-// CHECK-NEXT: objc_storeStrong
+// CHECK-NEXT: llvm.objc.storeStrong
 // CHECK-NEXT: bitcast {{.*}} %self_strong2
-// CHECK-NEXT: objc_storeStrong
+// CHECK-NEXT: llvm.objc.storeStrong
 // CHECK-NEXT: bitcast {{.*}} %self_strong
-// CHECK-NEXT: objc_storeStrong
+// CHECK-NEXT: llvm.objc.storeStrong
 @interface NSObject
 @end
 @interface A : NSObject

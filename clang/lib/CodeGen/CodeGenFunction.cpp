@@ -2243,7 +2243,7 @@ Address CodeGenFunction::EmitFieldAnnotations(const FieldDecl *D,
     // annotation on the first field of a struct and annotation on the struct
     // itself.
     if (VTy != CGM.Int8PtrTy)
-      V = Builder.Insert(new llvm::BitCastInst(V, CGM.Int8PtrTy));
+      V = Builder.CreateBitCast(V, CGM.Int8PtrTy);
     V = EmitAnnotationCall(F, V, I->getAnnotation(), D->getLocation());
     V = Builder.CreateBitCast(V, VTy);
   }

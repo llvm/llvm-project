@@ -110,7 +110,7 @@ class RecordType(Type):
                                                t.getBitFieldSize())
             else:
                 return '%s field%d;'%(printer.getTypeName(t),i)
-        fields = map(getField, enumerate(self.fields))
+        fields = [getField(f) for f in enumerate(self.fields)]
         # Name the struct for more readable LLVM IR.
         return 'typedef %s %s { %s } %s;'%(('struct','union')[self.isUnion],
                                            name, ' '.join(fields), name)
@@ -372,7 +372,7 @@ class RecordTypeGenerator(TypeGenerator):
         isUnion,I = False,N
         if self.useUnion:
             isUnion,I = (I&1),I>>1
-        fields = map(self.typeGen.get,getNthTuple(I,self.maxSize,self.typeGen.cardinality))
+        fields = [self.typeGen.get(f) for f in getNthTuple(I,self.maxSize,self.typeGen.cardinality)]
         return RecordType(N, isUnion, fields)
 
 class FunctionTypeGenerator(TypeGenerator):
@@ -405,7 +405,7 @@ class FunctionTypeGenerator(TypeGenerator):
         else:
             retTy = None
             argIndices = getNthTuple(N, self.maxSize, self.typeGen.cardinality)
-        args = map(self.typeGen.get, argIndices)
+        args = [self.typeGen.get(i) for i in argIndices]
         return FunctionType(N, retTy, args)
 
 class AnyTypeGenerator(TypeGenerator):

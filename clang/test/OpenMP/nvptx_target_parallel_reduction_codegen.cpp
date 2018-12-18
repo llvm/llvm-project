@@ -190,6 +190,7 @@ int bar(int n){
   // CHECK: [[CNT:%.+]] = load i32, i32* [[CNT_ADDR]],
   // CHECK: [[DONE_COPY:%.+]] = icmp ult i32 [[CNT]], 2
   // CHECK: br i1 [[DONE_COPY]], label
+  // CHECK: call void @__kmpc_barrier(%struct.ident_t* @
   // CHECK: [[IS_WARP_MASTER:%.+]] = icmp eq i32 [[LANEID]], 0
   // CHECK: br i1 [[IS_WARP_MASTER]], label {{%?}}[[DO_COPY:.+]], label {{%?}}[[COPY_ELSE:.+]]
   //
@@ -427,6 +428,7 @@ int bar(int n){
   // CHECK-DAG: [[LANEID:%.+]] = and i32 {{.+}}, 31
   // CHECK-DAG: [[WARPID:%.+]] = ashr i32 {{.+}}, 5
   // CHECK-DAG: [[RED_LIST:%.+]] = bitcast i8* {{.+}} to [[RLT]]*
+  // CHECK: call void @__kmpc_barrier(%struct.ident_t* @
   // CHECK: [[IS_WARP_MASTER:%.+]] = icmp eq i32 [[LANEID]], 0
   // CHECK: br i1 [[IS_WARP_MASTER]], label {{%?}}[[DO_COPY:.+]], label {{%?}}[[COPY_ELSE:.+]]
   //
@@ -465,6 +467,7 @@ int bar(int n){
   // CHECK: br label {{%?}}[[READ_CONT]]
   //
   // CHECK: [[READ_CONT]]
+  // CHECK: call void @__kmpc_barrier(%struct.ident_t* @
   // CHECK: call void @__kmpc_barrier(%struct.ident_t* @
   // CHECK: [[IS_WARP_MASTER:%.+]] = icmp eq i32 [[LANEID]], 0
   // CHECK: br i1 [[IS_WARP_MASTER]], label {{%?}}[[DO_COPY:.+]], label {{%?}}[[COPY_ELSE:.+]]
@@ -740,6 +743,7 @@ int bar(int n){
   // CHECK-DAG: [[LANEID:%.+]] = and i32 {{.+}}, 31
   // CHECK-DAG: [[WARPID:%.+]] = ashr i32 {{.+}}, 5
   // CHECK-DAG: [[RED_LIST:%.+]] = bitcast i8* {{.+}} to [[RLT]]*
+  // CHECK: call void @__kmpc_barrier(%struct.ident_t* @
   // CHECK: [[IS_WARP_MASTER:%.+]] = icmp eq i32 [[LANEID]], 0
   // CHECK: br i1 [[IS_WARP_MASTER]], label {{%?}}[[DO_COPY:.+]], label {{%?}}[[COPY_ELSE:.+]]
   //

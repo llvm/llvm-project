@@ -6,7 +6,7 @@ Script to Summarize statistics in the scan-build output.
 Statistics are enabled by passing '-internal-stats' option to scan-build
 (or '-analyzer-stats' to the analyzer).
 """
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import sys
 

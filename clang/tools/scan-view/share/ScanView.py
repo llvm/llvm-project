@@ -192,7 +192,7 @@ class ScanViewServer(HTTPServer):
 def parse_query(qs, fields=None):
     if fields is None:
         fields = {}
-    for chunk in filter(None, qs.split('&')):
+    for chunk in (_f for _f in qs.split('&') if _f):
         if '=' not in chunk:
             name = chunk
             value = ''

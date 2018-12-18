@@ -730,17 +730,17 @@ static bool isRelroSection(const OutputSection *Sec) {
 // * It is easy two see how similar two ranks are (see getRankProximity).
 enum RankFlags {
   RF_NOT_ADDR_SET = 1 << 18,
-  RF_NOT_INTERP = 1 << 17,
-  RF_NOT_ALLOC = 1 << 16,
-  RF_WRITE = 1 << 15,
-  RF_EXEC_WRITE = 1 << 14,
-  RF_EXEC = 1 << 13,
-  RF_RODATA = 1 << 12,
-  RF_NON_TLS_BSS = 1 << 11,
-  RF_NON_TLS_BSS_RO = 1 << 10,
-  RF_NOT_TLS = 1 << 9,
-  RF_BSS = 1 << 8,
-  RF_NOTE = 1 << 7,
+  RF_NOT_ALLOC = 1 << 17,
+  RF_NOT_INTERP = 1 << 16,
+  RF_NOT_NOTE = 1 << 15,
+  RF_WRITE = 1 << 14,
+  RF_EXEC_WRITE = 1 << 13,
+  RF_EXEC = 1 << 12,
+  RF_RODATA = 1 << 11,
+  RF_NON_TLS_BSS = 1 << 10,
+  RF_NON_TLS_BSS_RO = 1 << 9,
+  RF_NOT_TLS = 1 << 8,
+  RF_BSS = 1 << 7,
   RF_PPC_NOT_TOCBSS = 1 << 6,
   RF_PPC_TOCL = 1 << 5,
   RF_PPC_TOC = 1 << 4,
@@ -759,16 +759,24 @@ static unsigned getSectionRank(const OutputSection *Sec) {
     return Rank;
   Rank |= RF_NOT_ADDR_SET;
 
+  // Allocatable sections go first to reduce the total PT_LOAD size and
+  // so debug info doesn't change addresses in actual code.
+  if (!(Sec->Flags & SHF_ALLOC))
+    return Rank | RF_NOT_ALLOC;
+
   // Put .interp first because some loaders want to see that section
   // on the first page of the executable file when loaded into memory.
   if (Sec->Name == ".interp")
     return Rank;
   Rank |= RF_NOT_INTERP;
 
-  // Allocatable sections go first to reduce the total PT_LOAD size and
-  // so debug info doesn't change addresses in actual code.
-  if (!(Sec->Flags & SHF_ALLOC))
-    return Rank | RF_NOT_ALLOC;
+  // Put .note sections (which make up one PT_NOTE) at the beginning so that
+  // they are likely to be included in a core file even if core file size is
+  // limited. In particular, we want a .note.gnu.build-id and a .note.tag to be
+  // included in a core to match core files with executables.
+  if (Sec->Type == SHT_NOTE)
+    return Rank;
+  Rank |= RF_NOT_NOTE;
 
   // Sort sections based on their access permission in the following
   // order: R, RX, RWX, RW.  This order is based on the following
@@ -831,12 +839,6 @@ static unsigned getSectionRank(const OutputSection *Sec) {
   // first.
   if (IsNoBits)
     Rank |= RF_BSS;
-
-  // We create a NOTE segment for contiguous .note sections, so make
-  // them contigous if there are more than one .note section with the
-  // same attributes.
-  if (Sec->Type == SHT_NOTE)
-    Rank |= RF_NOTE;
 
   // Some architectures have additional ordering restrictions for sections
   // within the same PT_LOAD.

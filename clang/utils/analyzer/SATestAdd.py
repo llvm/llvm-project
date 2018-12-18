@@ -42,7 +42,7 @@ the Repository Directory.
                                           diff -ur CachedSource PatchedSource \
                                               > changes_for_analyzer.patch
 """
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 import SATestBuild
 
 import os
