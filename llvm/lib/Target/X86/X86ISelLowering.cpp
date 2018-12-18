@@ -829,6 +829,23 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::UMIN, VT, VT == MVT::v16i8 ? Legal : Custom);
     }
 
+    setOperationAction(ISD::UADDSAT,            MVT::v16i8, Legal);
+    setOperationAction(ISD::SADDSAT,            MVT::v16i8, Legal);
+    setOperationAction(ISD::USUBSAT,            MVT::v16i8, Legal);
+    setOperationAction(ISD::SSUBSAT,            MVT::v16i8, Legal);
+    setOperationAction(ISD::UADDSAT,            MVT::v8i16, Legal);
+    setOperationAction(ISD::SADDSAT,            MVT::v8i16, Legal);
+    setOperationAction(ISD::USUBSAT,            MVT::v8i16, Legal);
+    setOperationAction(ISD::SSUBSAT,            MVT::v8i16, Legal);
+    // Use widening instead of promotion.
+    for (auto VT : { MVT::v8i8, MVT::v4i8, MVT::v2i8,
+                     MVT::v4i16, MVT::v2i16 }) {
+      setOperationAction(ISD::UADDSAT, VT, Custom);
+      setOperationAction(ISD::SADDSAT, VT, Custom);
+      setOperationAction(ISD::USUBSAT, VT, Custom);
+      setOperationAction(ISD::SSUBSAT, VT, Custom);
+    }
+
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v8i16, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v4i32, Custom);
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v4f32, Custom);
@@ -1200,6 +1217,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SMIN,      MVT::v4i64,  Custom);
     setOperationAction(ISD::UMIN,      MVT::v4i64,  Custom);
 
+    setOperationAction(ISD::UADDSAT,   MVT::v32i8,  HasInt256 ? Legal : Custom);
+    setOperationAction(ISD::SADDSAT,   MVT::v32i8,  HasInt256 ? Legal : Custom);
+    setOperationAction(ISD::USUBSAT,   MVT::v32i8,  HasInt256 ? Legal : Custom);
+    setOperationAction(ISD::SSUBSAT,   MVT::v32i8,  HasInt256 ? Legal : Custom);
+    setOperationAction(ISD::UADDSAT,   MVT::v16i16, HasInt256 ? Legal : Custom);
+    setOperationAction(ISD::SADDSAT,   MVT::v16i16, HasInt256 ? Legal : Custom);
+    setOperationAction(ISD::USUBSAT,   MVT::v16i16, HasInt256 ? Legal : Custom);
+    setOperationAction(ISD::SSUBSAT,   MVT::v16i16, HasInt256 ? Legal : Custom);
+
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32 }) {
       setOperationAction(ISD::ABS,  VT, HasInt256 ? Legal : Custom);
       setOperationAction(ISD::SMAX, VT, HasInt256 ? Legal : Custom);
@@ -1317,6 +1343,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SETCC,            VT, Custom);
       setOperationAction(ISD::SELECT,           VT, Custom);
       setOperationAction(ISD::TRUNCATE,         VT, Custom);
+      setOperationAction(ISD::UADDSAT,          VT, Custom);
+      setOperationAction(ISD::SADDSAT,          VT, Custom);
+      setOperationAction(ISD::USUBSAT,          VT, Custom);
+      setOperationAction(ISD::SSUBSAT,          VT, Custom);
 
       setOperationAction(ISD::BUILD_VECTOR,     VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
@@ -1577,6 +1607,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SUB,                VT, Custom);
       setOperationAction(ISD::MUL,                VT, Custom);
       setOperationAction(ISD::VSELECT,            VT, Expand);
+      setOperationAction(ISD::UADDSAT,            VT, Custom);
+      setOperationAction(ISD::SADDSAT,            VT, Custom);
+      setOperationAction(ISD::USUBSAT,            VT, Custom);
+      setOperationAction(ISD::SSUBSAT,            VT, Custom);
 
       setOperationAction(ISD::TRUNCATE,           VT, Custom);
       setOperationAction(ISD::SETCC,              VT, Custom);
@@ -1657,6 +1691,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SMIN,         VT, Legal);
       setOperationAction(ISD::UMIN,         VT, Legal);
       setOperationAction(ISD::SETCC,        VT, Custom);
+      setOperationAction(ISD::UADDSAT,      VT, Legal);
+      setOperationAction(ISD::SADDSAT,      VT, Legal);
+      setOperationAction(ISD::USUBSAT,      VT, Legal);
+      setOperationAction(ISD::SSUBSAT,      VT, Legal);
 
       // The condition codes aren't legal in SSE/AVX and under AVX512 we use
       // setcc all the way to isel and prefer SETGT in some isel patterns.
@@ -19147,7 +19185,7 @@ static SDValue LowerVSETCCWithSUBUS(SDValue Op0, SDValue Op1, MVT VT,
     break;
   }
 
-  SDValue Result = DAG.getNode(X86ISD::SUBUS, dl, VT, Op0, Op1);
+  SDValue Result = DAG.getNode(ISD::USUBSAT, dl, VT, Op0, Op1);
   return DAG.getNode(X86ISD::PCMPEQ, dl, VT, Result,
                      DAG.getConstant(0, dl, VT));
 }
@@ -23366,6 +23404,28 @@ static SDValue LowerADD_SUB(SDValue Op, SelectionDAG &DAG) {
   return split256IntArith(Op, DAG);
 }
 
+static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG) {
+  MVT VT = Op.getSimpleValueType();
+  if (VT.getScalarType() == MVT::i1) {
+    SDLoc dl(Op);
+    switch (Op.getOpcode()) {
+    default: llvm_unreachable("Expected saturated arithmetic opcode");
+    case ISD::UADDSAT:
+    case ISD::SADDSAT:
+      return DAG.getNode(ISD::OR, dl, VT, Op.getOperand(0), Op.getOperand(1));
+    case ISD::USUBSAT:
+    case ISD::SSUBSAT:
+      return DAG.getNode(ISD::AND, dl, VT, Op.getOperand(0),
+                         DAG.getNOT(dl, Op.getOperand(1), VT));
+    }
+  }
+
+  assert(Op.getSimpleValueType().is256BitVector() &&
+         Op.getSimpleValueType().isInteger() &&
+         "Only handle AVX 256-bit vector integer operation");
+  return split256IntArith(Op, DAG);
+}
+
 static SDValue LowerABS(SDValue Op, SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
   if (VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) {
@@ -24771,9 +24831,14 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   if (0 <= CstSplatIndex)
     return SDValue();
 
+  bool IsSplatAmt = DAG.isSplatValue(Amt);
+
   // v16i8/v32i8: Split rotation into rot4/rot2/rot1 stages and select by
   // the amount bit.
-  if (EltSizeInBits == 8) {
+  if (EltSizeInBits == 8 && !IsSplatAmt) {
+    if (ISD::isBuildVectorOfConstantSDNodes(Amt.getNode()))
+      return SDValue();
+
     // We don't need ModuloAmt here as we just peek at individual bits.
     MVT ExtVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
 
@@ -24840,8 +24905,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
 
   // Fallback for splats + all supported variable shifts.
   // Fallback for non-constants AVX2 vXi16 as well.
-  if (LegalVarShifts || (Subtarget.hasAVX2() && !ConstantAmt) ||
-      DAG.isSplatValue(Amt)) {
+  if (IsSplatAmt || LegalVarShifts || (Subtarget.hasAVX2() && !ConstantAmt)) {
     SDValue AmtR = DAG.getConstant(EltSizeInBits, DL, VT);
     AmtR = DAG.getNode(ISD::SUB, DL, VT, AmtR, Amt);
     SDValue SHL = DAG.getNode(ISD::SHL, DL, VT, R, Amt);
@@ -26147,6 +26211,10 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SUBCARRY:           return LowerADDSUBCARRY(Op, DAG);
   case ISD::ADD:
   case ISD::SUB:                return LowerADD_SUB(Op, DAG);
+  case ISD::UADDSAT:
+  case ISD::SADDSAT:
+  case ISD::USUBSAT:
+  case ISD::SSUBSAT:            return LowerADDSAT_SUBSAT(Op, DAG);
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:
@@ -26228,11 +26296,14 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     }
     return;
   }
+  case ISD::UADDSAT:
+  case ISD::SADDSAT:
+  case ISD::USUBSAT:
+  case ISD::SSUBSAT:
   case X86ISD::VPMADDWD:
-  case X86ISD::ADDUS:
-  case X86ISD::SUBUS:
   case X86ISD::AVG: {
-    // Legalize types for X86ISD::AVG/ADDUS/SUBUS/VPMADDWD by widening.
+    // Legalize types for ISD::UADDSAT/SADDSAT/USUBSAT/SSUBSAT and
+    // X86ISD::AVG/VPMADDWD by widening.
     assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
 
     EVT VT = N->getValueType(0);
@@ -26966,8 +27037,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::ANDNP:              return "X86ISD::ANDNP";
   case X86ISD::BLENDI:             return "X86ISD::BLENDI";
   case X86ISD::SHRUNKBLEND:        return "X86ISD::SHRUNKBLEND";
-  case X86ISD::ADDUS:              return "X86ISD::ADDUS";
-  case X86ISD::SUBUS:              return "X86ISD::SUBUS";
   case X86ISD::HADD:               return "X86ISD::HADD";
   case X86ISD::HSUB:               return "X86ISD::HSUB";
   case X86ISD::FHADD:              return "X86ISD::FHADD";
@@ -27181,8 +27250,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::FGETEXPS_RND:       return "X86ISD::FGETEXPS_RND";
   case X86ISD::SCALEF:             return "X86ISD::SCALEF";
   case X86ISD::SCALEFS:            return "X86ISD::SCALEFS";
-  case X86ISD::ADDS:               return "X86ISD::ADDS";
-  case X86ISD::SUBS:               return "X86ISD::SUBS";
   case X86ISD::AVG:                return "X86ISD::AVG";
   case X86ISD::MULHRS:             return "X86ISD::MULHRS";
   case X86ISD::SINT_TO_FP_RND:     return "X86ISD::SINT_TO_FP_RND";
@@ -34043,33 +34110,27 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       SDValue OpLHS = Other->getOperand(0), OpRHS = Other->getOperand(1);
       SDValue CondRHS = Cond->getOperand(1);
 
-      auto SUBUSBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
-                             ArrayRef<SDValue> Ops) {
-        return DAG.getNode(X86ISD::SUBUS, DL, Ops[0].getValueType(), Ops);
-      };
-
       // Look for a general sub with unsigned saturation first.
       // x >= y ? x-y : 0 --> subus x, y
       // x >  y ? x-y : 0 --> subus x, y
       if ((CC == ISD::SETUGE || CC == ISD::SETUGT) &&
           Other->getOpcode() == ISD::SUB && OpRHS == CondRHS)
-        return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
-                                SUBUSBuilder);
+        return DAG.getNode(ISD::USUBSAT, DL, VT, OpLHS, OpRHS);
 
       if (auto *OpRHSBV = dyn_cast<BuildVectorSDNode>(OpRHS)) {
         if (isa<BuildVectorSDNode>(CondRHS)) {
           // If the RHS is a constant we have to reverse the const
           // canonicalization.
           // x > C-1 ? x+-C : 0 --> subus x, C
-          auto MatchSUBUS = [](ConstantSDNode *Op, ConstantSDNode *Cond) {
+          // TODO: Handle build_vectors with undef elements.
+          auto MatchUSUBSAT = [](ConstantSDNode *Op, ConstantSDNode *Cond) {
             return Cond->getAPIntValue() == (-Op->getAPIntValue() - 1);
           };
           if (CC == ISD::SETUGT && Other->getOpcode() == ISD::ADD &&
-              ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchSUBUS)) {
+              ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchUSUBSAT)) {
             OpRHS = DAG.getNode(ISD::SUB, DL, VT,
                                 DAG.getConstant(0, DL, VT), OpRHS);
-            return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
-                                    SUBUSBuilder);
+            return DAG.getNode(ISD::USUBSAT, DL, VT, OpLHS, OpRHS);
           }
 
           // Another special case: If C was a sign bit, the sub has been
@@ -34081,11 +34142,10 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
             if (CC == ISD::SETLT && Other.getOpcode() == ISD::XOR &&
                 ISD::isBuildVectorAllZeros(CondRHS.getNode()) &&
                 OpRHSConst->getAPIntValue().isSignMask()) {
-              OpRHS = DAG.getConstant(OpRHSConst->getAPIntValue(), DL, VT);
               // Note that we have to rebuild the RHS constant here to ensure we
               // don't rely on particular values of undef lanes.
-              return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
-                                      SUBUSBuilder);
+              OpRHS = DAG.getConstant(OpRHSConst->getAPIntValue(), DL, VT);
+              return DAG.getNode(ISD::USUBSAT, DL, VT, OpLHS, OpRHS);
             }
           }
         }
@@ -34118,11 +34178,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     if (Other.getNode() && Other.getOpcode() == ISD::ADD) {
       SDValue OpLHS = Other.getOperand(0), OpRHS = Other.getOperand(1);
 
-      auto ADDUSBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
-                             ArrayRef<SDValue> Ops) {
-        return DAG.getNode(X86ISD::ADDUS, DL, Ops[0].getValueType(), Ops);
-      };
-
       // Canonicalize condition operands.
       if (CC == ISD::SETUGE) {
         std::swap(CondLHS, CondRHS);
@@ -34134,21 +34189,19 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       // x+y >= x ? x+y : ~0 --> addus x, y
       if (CC == ISD::SETULE && Other == CondRHS &&
           (OpLHS == CondLHS || OpRHS == CondLHS))
-        return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
-                                ADDUSBuilder);
+        return DAG.getNode(ISD::UADDSAT, DL, VT, OpLHS, OpRHS);
 
       if (isa<BuildVectorSDNode>(OpRHS) && isa<BuildVectorSDNode>(CondRHS) &&
           CondLHS == OpLHS) {
         // If the RHS is a constant we have to reverse the const
         // canonicalization.
         // x > ~C ? x+C : ~0 --> addus x, C
-        auto MatchADDUS = [](ConstantSDNode *Op, ConstantSDNode *Cond) {
+        auto MatchUADDSAT = [](ConstantSDNode *Op, ConstantSDNode *Cond) {
           return Cond->getAPIntValue() == ~Op->getAPIntValue();
         };
         if (CC == ISD::SETULE &&
-            ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchADDUS))
-          return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
-                                  ADDUSBuilder);
+            ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchUADDSAT))
+          return DAG.getNode(ISD::UADDSAT, DL, VT, OpLHS, OpRHS);
       }
     }
   }
@@ -40564,6 +40617,39 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDValue Op0, SDValue Op1,
                           PMADDBuilder);
 }
 
+// Try to turn (add (umax X, C), -C) into (psubus X, C)
+static SDValue combineAddToSUBUS(SDNode *N, SelectionDAG &DAG,
+                                 const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasSSE2())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+
+  // psubus is available in SSE2 for i8 and i16 vectors.
+  if (!VT.isVector() || VT.getVectorNumElements() < 2 ||
+      !isPowerOf2_32(VT.getVectorNumElements()) ||
+      !(VT.getVectorElementType() == MVT::i8 ||
+        VT.getVectorElementType() == MVT::i16))
+    return SDValue();
+
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  if (Op0.getOpcode() != ISD::UMAX)
+    return SDValue();
+
+  // The add should have a constant that is the negative of the max.
+  // TODO: Handle build_vectors with undef elements.
+  auto MatchUSUBSAT = [](ConstantSDNode *Max, ConstantSDNode *Op) {
+    return Max->getAPIntValue() == (-Op->getAPIntValue());
+  };
+  if (!ISD::matchBinaryPredicate(Op0.getOperand(1), Op1, MatchUSUBSAT))
+    return SDValue();
+
+  SDLoc DL(N);
+  return DAG.getNode(ISD::USUBSAT, DL, VT, Op0.getOperand(0),
+                     Op0.getOperand(1));
+}
+
 // Attempt to turn this pattern into PMADDWD.
 // (mul (add (zext (build_vector)), (zext (build_vector))),
 //      (add (zext (build_vector)), (zext (build_vector)))
@@ -40719,6 +40805,9 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineIncDecVector(N, DAG))
     return V;
 
+  if (SDValue V = combineAddToSUBUS(N, DAG, Subtarget))
+    return V;
+
   return combineAddOrSubToADCOrSBB(N, DAG);
 }
 
@@ -40764,16 +40853,16 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   } else
     return SDValue();
 
-  auto SUBUSBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
-                         ArrayRef<SDValue> Ops) {
-    return DAG.getNode(X86ISD::SUBUS, DL, Ops[0].getValueType(), Ops);
+  auto USUBSATBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
+                           ArrayRef<SDValue> Ops) {
+    return DAG.getNode(ISD::USUBSAT, DL, Ops[0].getValueType(), Ops);
   };
 
   // PSUBUS doesn't support v8i32/v8i64/v16i32, but it can be enabled with
   // special preprocessing in some cases.
   if (VT != MVT::v8i32 && VT != MVT::v16i32 && VT != MVT::v8i64)
     return SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT,
-                            { SubusLHS, SubusRHS }, SUBUSBuilder);
+                            { SubusLHS, SubusRHS }, USUBSATBuilder);
 
   // Special preprocessing case can be only applied
   // if the value was zero extended from 16 bit,
@@ -40805,7 +40894,7 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   SDValue NewSubusRHS = DAG.getZExtOrTrunc(UMin, SDLoc(SubusRHS), ShrinkedType);
   SDValue Psubus =
       SplitOpsAndApply(DAG, Subtarget, SDLoc(N), ShrinkedType,
-                       { NewSubusLHS, NewSubusRHS }, SUBUSBuilder);
+                       { NewSubusLHS, NewSubusRHS }, USUBSATBuilder);
   // Zero extend the result, it may be used somewhere as 32 bit,
   // if not zext and following trunc will shrink.
   return DAG.getZExtOrTrunc(Psubus, SDLoc(N), ExtType);

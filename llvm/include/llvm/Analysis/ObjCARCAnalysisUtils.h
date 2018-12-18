@@ -51,25 +51,25 @@ extern bool EnableARCOpts;
 /// on.
 inline bool ModuleHasARC(const Module &M) {
   return
-    M.getNamedValue("objc_retain") ||
-    M.getNamedValue("objc_release") ||
-    M.getNamedValue("objc_autorelease") ||
-    M.getNamedValue("objc_retainAutoreleasedReturnValue") ||
-    M.getNamedValue("objc_unsafeClaimAutoreleasedReturnValue") ||
-    M.getNamedValue("objc_retainBlock") ||
-    M.getNamedValue("objc_autoreleaseReturnValue") ||
-    M.getNamedValue("objc_autoreleasePoolPush") ||
-    M.getNamedValue("objc_loadWeakRetained") ||
-    M.getNamedValue("objc_loadWeak") ||
-    M.getNamedValue("objc_destroyWeak") ||
-    M.getNamedValue("objc_storeWeak") ||
-    M.getNamedValue("objc_initWeak") ||
-    M.getNamedValue("objc_moveWeak") ||
-    M.getNamedValue("objc_copyWeak") ||
-    M.getNamedValue("objc_retainedObject") ||
-    M.getNamedValue("objc_unretainedObject") ||
-    M.getNamedValue("objc_unretainedPointer") ||
-    M.getNamedValue("clang.arc.use");
+    M.getNamedValue("llvm.objc.retain") ||
+    M.getNamedValue("llvm.objc.release") ||
+    M.getNamedValue("llvm.objc.autorelease") ||
+    M.getNamedValue("llvm.objc.retainAutoreleasedReturnValue") ||
+    M.getNamedValue("llvm.objc.unsafeClaimAutoreleasedReturnValue") ||
+    M.getNamedValue("llvm.objc.retainBlock") ||
+    M.getNamedValue("llvm.objc.autoreleaseReturnValue") ||
+    M.getNamedValue("llvm.objc.autoreleasePoolPush") ||
+    M.getNamedValue("llvm.objc.loadWeakRetained") ||
+    M.getNamedValue("llvm.objc.loadWeak") ||
+    M.getNamedValue("llvm.objc.destroyWeak") ||
+    M.getNamedValue("llvm.objc.storeWeak") ||
+    M.getNamedValue("llvm.objc.initWeak") ||
+    M.getNamedValue("llvm.objc.moveWeak") ||
+    M.getNamedValue("llvm.objc.copyWeak") ||
+    M.getNamedValue("llvm.objc.retainedObject") ||
+    M.getNamedValue("llvm.objc.unretainedObject") ||
+    M.getNamedValue("llvm.objc.unretainedPointer") ||
+    M.getNamedValue("llvm.objc.clang.arc.use");
 }
 
 /// This is a wrapper around getUnderlyingObject which also knows how to

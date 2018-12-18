@@ -91,8 +91,10 @@ ResourceStateEvent ResourceState::isBufferAvailable() const {
 
 #ifndef NDEBUG
 void ResourceState::dump() const {
-  dbgs() << "MASK: " << ResourceMask << ", SIZE_MASK: " << ResourceSizeMask
-         << ", RDYMASK: " << ReadyMask << ", BufferSize=" << BufferSize
+  dbgs() << "MASK=" << format_hex(ResourceMask, 8)
+         << ", SZMASK=" << format_hex(ResourceSizeMask, 8)
+         << ", RDYMASK=" << format_hex(ReadyMask, 8)
+         << ", BufferSize=" << BufferSize
          << ", AvailableSlots=" << AvailableSlots
          << ", Reserved=" << Unavailable << '\n';
 }

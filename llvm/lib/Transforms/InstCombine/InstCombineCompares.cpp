@@ -2765,6 +2765,7 @@ Instruction *InstCombiner::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
 
   // Handle icmp {eq|ne} <intrinsic>, Constant.
   Type *Ty = II->getType();
+  unsigned BitWidth = C.getBitWidth();
   switch (II->getIntrinsicID()) {
   case Intrinsic::bswap:
     Worklist.Add(II);
@@ -2773,21 +2774,39 @@ Instruction *InstCombiner::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
     return &Cmp;
 
   case Intrinsic::ctlz:
-  case Intrinsic::cttz:
+  case Intrinsic::cttz: {
     // ctz(A) == bitwidth(A)  ->  A == 0 and likewise for !=
-    if (C == C.getBitWidth()) {
+    if (C == BitWidth) {
       Worklist.Add(II);
       Cmp.setOperand(0, II->getArgOperand(0));
       Cmp.setOperand(1, ConstantInt::getNullValue(Ty));
       return &Cmp;
     }
+
+    // ctz(A) == C -> A & Mask1 == Mask2, where Mask2 only has bit C set
+    // and Mask1 has bits 0..C+1 set. Similar for ctl, but for high bits.
+    // Limit to one use to ensure we don't increase instruction count.
+    unsigned Num = C.getLimitedValue(BitWidth);
+    if (Num != BitWidth && II->hasOneUse()) {
+      bool IsTrailing = II->getIntrinsicID() == Intrinsic::cttz;
+      APInt Mask1 = IsTrailing ? APInt::getLowBitsSet(BitWidth, Num + 1)
+                               : APInt::getHighBitsSet(BitWidth, Num + 1);
+      APInt Mask2 = IsTrailing
+        ? APInt::getOneBitSet(BitWidth, Num)
+        : APInt::getOneBitSet(BitWidth, BitWidth - Num - 1);
+      Cmp.setOperand(0, Builder.CreateAnd(II->getArgOperand(0), Mask1));
+      Cmp.setOperand(1, ConstantInt::get(Ty, Mask2));
+      Worklist.Add(II);
+      return &Cmp;
+    }
     break;
+  }
 
   case Intrinsic::ctpop: {
     // popcount(A) == 0  ->  A == 0 and likewise for !=
     // popcount(A) == bitwidth(A)  ->  A == -1 and likewise for !=
     bool IsZero = C.isNullValue();
-    if (IsZero || C == C.getBitWidth()) {
+    if (IsZero || C == BitWidth) {
       Worklist.Add(II);
       Cmp.setOperand(0, II->getArgOperand(0));
       auto *NewOp =
