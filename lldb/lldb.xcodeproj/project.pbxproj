@@ -9171,7 +9171,6 @@
 				LLDB_BUILDBOT_BUILD_CFLAGS = "$(LLDB_BUILDBOT_BUILD_CFLAGS_$(LLDB_IS_BUILDBOT_BUILD))";
 				LLDB_BUILDBOT_BUILD_CFLAGS_0 = "-DLLDB_IS_BUILDBOT_BUILD=0";
 				LLDB_BUILDBOT_BUILD_CFLAGS_1 = "-DLLDB_IS_BUILDBOT_BUILD=1";
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_COVERAGE_CFLAGS = "$(LLDB_COVERAGE_CFLAGS_$(LLDB_ENABLE_COVERAGE))";
 				LLDB_COVERAGE_CFLAGS_1 = "-fprofile-instr-generate -fcoverage-mapping";
@@ -9217,7 +9216,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
@@ -9226,6 +9224,7 @@
 					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = (
+					"-lcompression",
 					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
@@ -9299,7 +9298,6 @@
 				LLDB_BUILDBOT_BUILD_CFLAGS = "$(LLDB_BUILDBOT_BUILD_CFLAGS_$(LLDB_IS_BUILDBOT_BUILD))";
 				LLDB_BUILDBOT_BUILD_CFLAGS_0 = "-DLLDB_IS_BUILDBOT_BUILD=0";
 				LLDB_BUILDBOT_BUILD_CFLAGS_1 = "-DLLDB_IS_BUILDBOT_BUILD=1";
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_COVERAGE_CFLAGS = "$(LLDB_COVERAGE_CFLAGS_$(LLDB_ENABLE_COVERAGE))";
 				LLDB_COVERAGE_CFLAGS_1 = "-fprofile-instr-generate -fcoverage-mapping";
@@ -9345,7 +9343,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
@@ -9354,6 +9351,7 @@
 					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = (
+					"-lcompression",
 					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
@@ -9483,7 +9481,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9511,6 +9508,40 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+				);
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+				OTHER_CFLAGS = (
+					"-fno-rtti",
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_GTESTS_CFLAGS)",
+					"-DGTEST_HAS_RTTI=0",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-framework",
+					Foundation,
+					"-framework",
+					DebugSymbols,
+					"-framework",
+					Security,
+					"-framework",
+					CoreServices,
+					"-framework",
+					ApplicationServices,
+					"$(LLDB_GTESTS_LDFLAGS)",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = "CustomSwift-RelWithDebInfo";
@@ -9563,7 +9594,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9620,6 +9650,10 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_GTESTS_CFLAGS)",
+					"-DGTEST_HAS_RTTI=0",
 				);
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
@@ -9717,6 +9751,10 @@
 					"$(OTHER_CFLAGS)",
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_GTESTS_CFLAGS)",
+					"-DGTEST_HAS_RTTI=0",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = (
 					"-fno-rtti",
@@ -10036,6 +10074,9 @@
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"$(inherited)",
+					"-fno-rtti",
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 				);
 				OTHER_LDFLAGS = (
@@ -10076,7 +10117,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -10118,7 +10158,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -10164,6 +10203,20 @@
 					"$(inherited)",
 					"$(LLDB_GTESTS_CFLAGS)",
 				);
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
+				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
+				LLDB_ZLIB_LDFLAGS = "-lz";
+				OTHER_CPLUSPLUSFLAGS = (
+					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
+					"-fno-rtti",
+					"-Wglobal-constructors",
+					"$(OTHER_CFLAGS)",
+				);
+				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = (
+					"-fno-rtti",
+					"-Wglobal-constructors",
+					"$(OTHER_CFLAGS)",
+				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-filelist",
@@ -10205,6 +10258,20 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"$(LLDB_GTESTS_CFLAGS)",
+				);
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
+				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
+				LLDB_ZLIB_LDFLAGS = "-lz";
+				OTHER_CPLUSPLUSFLAGS = (
+					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
+					"-fno-rtti",
+					"-Wglobal-constructors",
+					"$(OTHER_CFLAGS)",
+				);
+				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = (
+					"-fno-rtti",
+					"-Wglobal-constructors",
+					"$(OTHER_CFLAGS)",
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -13160,6 +13227,11 @@
 				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
+				HEADER_SEARCH_PATHS = /usr/include/libxml2;
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
+				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
+				LLDB_ZLIB_LDFLAGS = "-lz";
+				MACH_O_TYPE = staticlib;
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-fno-rtti",
@@ -13241,8 +13313,9 @@
 				GCC_PREPROCESSOR_DEFINITIONS = "LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}";
 				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = "LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}";
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
+				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
+				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -13380,6 +13453,36 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
+					__STDC_CONSTANT_MACROS,
+					__STDC_LIMIT_MACROS,
+					LLDB_CONFIGURATION_BUILD_AND_INTEGRATION,
+					"LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}",
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = (
+					__STDC_CONSTANT_MACROS,
+					__STDC_LIMIT_MACROS,
+					LLDB_CONFIGURATION_BUILD_AND_INTEGRATION,
+					LLDB_DISABLE_PYTHON,
+					NO_XPC_SERVICES,
+					"LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}",
+				);
+				HEADER_SEARCH_PATHS = /usr/include/libxml2;
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
+				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
+				LLDB_ZLIB_LDFLAGS = "-lz";
+				MACH_O_TYPE = staticlib;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
+					"-fno-rtti",
+					"-Wglobal-constructors",
+					"$(OTHER_CFLAGS)",
+					"-DLIBXML2_DEFINED",
+				);
+				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = (
+					"-fno-rtti",
+					"-Wglobal-constructors",
+					"$(OTHER_CFLAGS)",
+					"-DLIBXML2_DEFINED",
 				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -13420,8 +13523,7 @@
 				GCC_WARN_UNUSED_VALUE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "${REPL_SWIFT_RPATH}";
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
-				LLDB_COMPRESSION_LDFLAGS = "-weak-lcompression";
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_COVERAGE_CFLAGS = "$(LLDB_COVERAGE_CFLAGS_$(LLDB_ENABLE_COVERAGE))";
 				LLDB_COVERAGE_CFLAGS_1 = "-fprofile-instr-generate -fcoverage-mapping";
 				LLDB_COVERAGE_LDFLAGS = "$(LLDB_COVERAGE_LDFLAGS_$(LLDB_ENABLE_COVERAGE))";
@@ -13443,13 +13545,12 @@
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 					"-DNDEBUG",
 				);
 				OTHER_LDFLAGS = (
-					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"-lcompression",
 					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COVERAGE_LDFLAGS)",
 				);
@@ -13501,7 +13602,6 @@
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 					"-fno-rtti",
@@ -13572,12 +13672,14 @@
 				MTL_ENABLE_DEBUG_INFO = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
-					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-flimit-debug-info",
 					"-Wparentheses",
 				);
-				"OTHER_CFLAGS[sdk=iphoneos*]" = (
-					"$(inherited)",
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
+				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
+				LLDB_ZLIB_LDFLAGS = "-lz";
+				OTHER_CPLUSPLUSFLAGS = (
+					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-flimit-debug-info",
 					"-Wparentheses",
 				);
@@ -14468,7 +14570,6 @@
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 					"-fno-rtti",
@@ -14528,6 +14629,9 @@
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-flimit-debug-info",
 					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_COVERAGE_CFLAGS)",
+					"-Wimplicit-fallthrough",
 					"-fno-rtti",
 					"-fno-exceptions",
 				);
@@ -14625,7 +14729,6 @@
 				LLDB_BUILDBOT_BUILD_CFLAGS = "$(LLDB_BUILDBOT_BUILD_CFLAGS_$(LLDB_IS_BUILDBOT_BUILD))";
 				LLDB_BUILDBOT_BUILD_CFLAGS_0 = "-DLLDB_IS_BUILDBOT_BUILD=0";
 				LLDB_BUILDBOT_BUILD_CFLAGS_1 = "-DLLDB_IS_BUILDBOT_BUILD=1";
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_COVERAGE_CFLAGS = "$(LLDB_COVERAGE_CFLAGS_$(LLDB_ENABLE_COVERAGE))";
 				LLDB_COVERAGE_CFLAGS_1 = "-fprofile-instr-generate -fcoverage-mapping";
@@ -14672,7 +14775,6 @@
 					"-fno-rtti",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_LDFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
@@ -14681,6 +14783,7 @@
 					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = (
+					"-lcompression",
 					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
@@ -14742,7 +14845,6 @@
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 					"-fno-rtti",
@@ -14791,12 +14893,18 @@
 				INSTALL_PATH = "$(LLDB_FRAMEWORK_INSTALL_DIR)";
 				LD_DYLIB_INSTALL_NAME = "@rpath/LLDB.framework/LLDB";
 				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
-				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_TOOLS_INSTALL_DIR = "";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
+				LIBRARY_SEARCH_PATHS = (
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
+					"$(inherited)",
+				);
+				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
+				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
+				LLDB_ZLIB_LDFLAGS = "-lz";
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-fno-rtti",
@@ -14884,8 +14992,9 @@
 				GCC_PREPROCESSOR_DEFINITIONS = "LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}";
 				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = "LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}";
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
+				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
+				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
 					"$(inherited)",
