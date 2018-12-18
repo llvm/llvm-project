@@ -122,7 +122,7 @@ if 'CC' in os.environ:
 else:
     Clang = SATestUtils.which("clang", os.environ['PATH'])
 if not Clang:
-    print "Error: cannot find 'clang' in PATH"
+    print("Error: cannot find 'clang' in PATH")
     sys.exit(1)
 
 # Number of jobs.
@@ -570,8 +570,8 @@ def runCmpResults(Dir, Strictness=0):
     NewList.remove(os.path.join(NewDir, LogFolderName))
 
     if len(RefList) != len(NewList):
-        print "Mismatch in number of results folders: %s vs %s" % (
-            RefList, NewList)
+        print("Mismatch in number of results folders: %s vs %s" % (
+            RefList, NewList))
         sys.exit(1)
 
     # There might be more then one folder underneath - one per each scan-build
@@ -583,8 +583,7 @@ def runCmpResults(Dir, Strictness=0):
 
     # Iterate and find the differences.
     NumDiffs = 0
-    PairList = zip(RefList, NewList)
-    for P in PairList:
+    for P in zip(RefList, NewList):
         RefDir = P[0]
         NewDir = P[1]
 
@@ -719,11 +718,11 @@ def validateProjectFile(PMapFile):
     """
     for I in iterateOverProjects(PMapFile):
         if len(I) != 2:
-            print "Error: Rows in the ProjectMapFile should have 2 entries."
+            print("Error: Rows in the ProjectMapFile should have 2 entries.")
             raise Exception()
         if I[1] not in ('0', '1', '2'):
-            print "Error: Second entry in the ProjectMapFile should be 0" \
-                  " (single file), 1 (project), or 2(single file c++11)."
+            print("Error: Second entry in the ProjectMapFile should be 0" \
+                  " (single file), 1 (project), or 2(single file c++11).")
             raise Exception()
 
 def singleThreadedTestAll(Args, ProjectsToTest):
@@ -806,5 +805,5 @@ if __name__ == '__main__':
 
     TestsPassed = testAll(Args)
     if not TestsPassed:
-        print "ERROR: Tests failed."
+        print("ERROR: Tests failed.")
         sys.exit(42)

@@ -25,6 +25,7 @@ Usage:
     diff = compareResults(resultsA, resultsB)
 
 """
+from __future__ import division, print_function
 
 from collections import defaultdict
 
@@ -297,17 +298,17 @@ def deriveStats(results):
             combined_data['PathsLength'].append(diagnostic.getPathLength())
 
     for stat in results.stats:
-        for key, value in stat.iteritems():
+        for key, value in stat.items():
             combined_data[key].append(value)
     combined_stats = {}
-    for key, values in combined_data.iteritems():
+    for key, values in combined_data.items():
         combined_stats[str(key)] = {
             "max": max(values),
             "min": min(values),
             "mean": sum(values) / len(values),
             "90th %tile": computePercentile(values, 0.9),
             "95th %tile": computePercentile(values, 0.95),
-            "median": sorted(values)[len(values) / 2],
+            "median": sorted(values)[len(values) // 2],
             "total": sum(values)
         }
     return combined_stats
@@ -318,7 +319,7 @@ def compareStats(resultsA, resultsB):
     statsB = deriveStats(resultsB)
     keys = sorted(statsA.keys())
     for key in keys:
-        print key
+        print(key)
         for kkey in statsA[key]:
             valA = float(statsA[key][kkey])
             valB = float(statsB[key][kkey])
@@ -331,7 +332,7 @@ def compareStats(resultsA, resultsB):
                         report = Colors.GREEN + report + Colors.CLEAR
                     elif ratio > 0.2:
                         report = Colors.RED + report + Colors.CLEAR
-            print "\t %s %s" % (kkey, report)
+            print("\t %s %s" % (kkey, report))
 
 def dumpScanBuildResultsDiff(dirA, dirB, opts, deleteEmpty=True,
                              Stdout=sys.stdout):

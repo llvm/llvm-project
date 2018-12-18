@@ -12,6 +12,7 @@ earlier.)
 It also implements basic validation methods, related to the command.
 Validations are mostly calling specific help methods, or mangling values.
 """
+from __future__ import absolute_import, division, print_function
 
 import os
 import sys

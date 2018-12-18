@@ -42,10 +42,7 @@ class NamespaceLookupTestCase(TestBase):
                              'stop reason = breakpoint'])
 
     @expectedFailureAll(
-        oslist=[
-            "windows",
-            "linux",
-            "freebsd"],
+        oslist=["windows", "freebsd"],
         bugnumber="llvm.org/pr25819")
     def test_scope_lookup_with_run_command(self):
         """Test scope lookup of functions in lldb."""
@@ -230,10 +227,7 @@ class NamespaceLookupTestCase(TestBase):
         oslist=["linux"],
         debug_info=["dwo"])  # Skip to avoid crash
     @expectedFailureAll(
-        oslist=[
-            "windows",
-            "linux",
-            "freebsd"],
+        oslist=["windows", "freebsd"],
         bugnumber="llvm.org/pr25819")
     def test_scope_after_using_directive_lookup_with_run_command(self):
         """Test scope lookup after using directive in lldb."""
@@ -297,10 +291,7 @@ class NamespaceLookupTestCase(TestBase):
         self.expect("expr -- func()", startstr="error")
 
     @expectedFailureAll(
-        oslist=[
-            "windows",
-            "linux",
-            "freebsd"],
+        oslist=["windows", "freebsd"],
         bugnumber="llvm.org/pr25819")
     def test_scope_lookup_shadowed_by_using_with_run_command(self):
         """Test scope lookup shadowed by using in lldb."""

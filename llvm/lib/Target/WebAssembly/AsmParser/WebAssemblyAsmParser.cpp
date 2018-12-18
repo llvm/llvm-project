@@ -38,7 +38,7 @@ namespace {
 /// WebAssemblyOperand - Instances of this class represent the operands in a
 /// parsed WASM machine instruction.
 struct WebAssemblyOperand : public MCParsedAsmOperand {
-  enum KindTy { Token, Integer, Float, Symbol } Kind;
+  enum KindTy { Token, Integer, Float, Symbol, BrList } Kind;
 
   SMLoc StartLoc, EndLoc;
 
@@ -58,11 +58,16 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
     const MCExpr *Exp;
   };
 
+  struct BrLOp {
+    std::vector<unsigned> List;
+  };
+
   union {
     struct TokOp Tok;
     struct IntOp Int;
     struct FltOp Flt;
     struct SymOp Sym;
+    struct BrLOp BrL;
   };
 
   WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End, TokOp T)
@@ -73,6 +78,13 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
       : Kind(K), StartLoc(Start), EndLoc(End), Flt(F) {}
   WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End, SymOp S)
       : Kind(K), StartLoc(Start), EndLoc(End), Sym(S) {}
+  WebAssemblyOperand(KindTy K, SMLoc Start, SMLoc End)
+      : Kind(K), StartLoc(Start), EndLoc(End), BrL() {}
+
+  ~WebAssemblyOperand() {
+    if (isBrList())
+      BrL.~BrLOp();
+  }
 
   bool isToken() const override { return Kind == Token; }
   bool isImm() const override {
@@ -80,6 +92,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
   }
   bool isMem() const override { return false; }
   bool isReg() const override { return false; }
+  bool isBrList() const { return Kind == BrList; }
 
   unsigned getReg() const override {
     llvm_unreachable("Assembly inspects a register operand");
@@ -111,6 +124,12 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
       llvm_unreachable("Should be immediate or symbol!");
   }
 
+  void addBrListOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && isBrList() && "Invalid BrList!");
+    for (auto Br : BrL.List)
+      Inst.addOperand(MCOperand::createImm(Br));
+  }
+
   void print(raw_ostream &OS) const override {
     switch (Kind) {
     case Token:
@@ -124,6 +143,9 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
       break;
     case Symbol:
       OS << "Sym:" << Sym.Exp;
+      break;
+    case BrList:
+      OS << "BrList:" << BrL.List.size();
       break;
     }
   }
@@ -338,6 +360,21 @@ public:
             WebAssemblyOperand::Float, Tok.getLoc(), Tok.getEndLoc(),
             WebAssemblyOperand::FltOp{Val}));
         Parser.Lex();
+        break;
+      }
+      case AsmToken::LCurly: {
+        Parser.Lex();
+        auto Op = make_unique<WebAssemblyOperand>(
+            WebAssemblyOperand::BrList, Tok.getLoc(), Tok.getEndLoc());
+        if (!Lexer.is(AsmToken::RCurly))
+          for (;;) {
+            Op->BrL.List.push_back(Lexer.getTok().getIntVal());
+            expect(AsmToken::Integer, "integer");
+            if (!isNext(AsmToken::Comma))
+              break;
+          }
+        expect(AsmToken::RCurly, "}");
+        Operands.push_back(std::move(Op));
         break;
       }
       default:

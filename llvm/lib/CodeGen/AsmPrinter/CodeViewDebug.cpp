@@ -2831,8 +2831,11 @@ MCSymbol *CodeViewDebug::beginSymbolRecord(SymbolKind SymKind) {
 }
 
 void CodeViewDebug::endSymbolRecord(MCSymbol *SymEnd) {
-  // Symbol records in object files are not aligned, although we are considering
-  // it for linker performance reasons.
+  // MSVC does not pad out symbol records to four bytes, but LLVM does to avoid
+  // an extra copy of every symbol record in LLD. This increases object file
+  // size by less than 1% in the clang build, and is compatible with the Visual
+  // C++ linker.
+  OS.EmitValueToAlignment(4);
   OS.EmitLabel(SymEnd);
 }
 

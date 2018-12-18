@@ -96,7 +96,10 @@ enum class MinidumpStreamType : uint32_t {
   LinuxEnviron = 0x47670007,    /* /proc/$x/environ   */
   LinuxAuxv = 0x47670008,       /* /proc/$x/auxv      */
   LinuxMaps = 0x47670009,       /* /proc/$x/maps      */
-  LinuxDSODebug = 0x4767000A
+  LinuxDSODebug = 0x4767000A,
+  LinuxProcStat = 0x4767000B,   /* /proc/$x/stat      */
+  LinuxProcUptime = 0x4767000C, /* uptime             */
+  LinuxProcFD = 0x4767000D,     /* /proc/$x/fb        */
 };
 
 // for MinidumpSystemInfo.processor_arch

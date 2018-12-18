@@ -15,6 +15,7 @@
 #include "llvm/Demangle/Compiler.h"
 #include "llvm/Demangle/Utility.h"
 #include <cctype>
+#include <string>
 
 using namespace llvm;
 using namespace ms_demangle;

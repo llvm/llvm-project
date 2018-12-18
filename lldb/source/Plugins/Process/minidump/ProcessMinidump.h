@@ -49,6 +49,8 @@ public:
   bool CanDebug(lldb::TargetSP target_sp,
                 bool plugin_specified_by_name) override;
 
+  CommandObject *GetPluginCommandObject() override;
+
   Status DoLoadCore() override;
 
   DynamicLoader *GetDynamicLoader() override { return nullptr; }
@@ -104,6 +106,7 @@ private:
   FileSpec m_core_file;
   llvm::ArrayRef<MinidumpThread> m_thread_list;
   const MinidumpExceptionStream *m_active_exception;
+  lldb::CommandObjectSP m_command_sp;
   bool m_is_wow64;
 };
 

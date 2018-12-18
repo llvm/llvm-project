@@ -864,10 +864,13 @@ void DevirtModule::tryICallBranchFunnel(
   Function *JT;
   if (isa<MDString>(Slot.TypeID)) {
     JT = Function::Create(FT, Function::ExternalLinkage,
+                          M.getDataLayout().getProgramAddressSpace(),
                           getGlobalName(Slot, {}, "branch_funnel"), &M);
     JT->setVisibility(GlobalValue::HiddenVisibility);
   } else {
-    JT = Function::Create(FT, Function::InternalLinkage, "branch_funnel", &M);
+    JT = Function::Create(FT, Function::InternalLinkage,
+                          M.getDataLayout().getProgramAddressSpace(),
+                          "branch_funnel", &M);
   }
   JT->addAttribute(1, Attribute::Nest);
 

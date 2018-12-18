@@ -181,3 +181,50 @@ entry:
   ret void
 ; CHECK: ret void
 }
+
+define void @test8() {
+; CHECK-LABEL: @test8(
+; CHECK: load i32, {{.*}}, align 1
+; CHECK: load i32, {{.*}}, align 1
+; CHECK: load i32, {{.*}}, align 1
+; CHECK: load i32, {{.*}}, align 1
+; CHECK: load i32, {{.*}}, align 1
+
+  %ptr = alloca [5 x i32], align 1
+  %ptr.8 = bitcast [5 x i32]* %ptr to i8*
+  call void @populate(i8* %ptr.8)
+  %val = load [5 x i32], [5 x i32]* %ptr, align 1
+  ret void
+}
+
+define void @test9() {
+; CHECK-LABEL: @test9(
+; CHECK: load i32, {{.*}}, align 8
+; CHECK: load i32, {{.*}}, align 4
+; CHECK: load i32, {{.*}}, align 8
+; CHECK: load i32, {{.*}}, align 4
+; CHECK: load i32, {{.*}}, align 8
+
+  %ptr = alloca [5 x i32], align 8
+  %ptr.8 = bitcast [5 x i32]* %ptr to i8*
+  call void @populate(i8* %ptr.8)
+  %val = load [5 x i32], [5 x i32]* %ptr, align 8
+  ret void
+}
+
+define void @test10() {
+; CHECK-LABEL: @test10(
+; CHECK: load i32, {{.*}}, align 2
+; CHECK: load i8, {{.*}}, align 2
+; CHECK: load i8, {{.*}}, align 1
+; CHECK: load i8, {{.*}}, align 2
+; CHECK: load i16, {{.*}}, align 2
+
+  %ptr = alloca {i32, i8, i8, {i8, i16}}, align 2
+  %ptr.8 = bitcast {i32, i8, i8, {i8, i16}}* %ptr to i8*
+  call void @populate(i8* %ptr.8)
+  %val = load {i32, i8, i8, {i8, i16}}, {i32, i8, i8, {i8, i16}}* %ptr, align 2
+  ret void
+}
+
+declare void @populate(i8*)

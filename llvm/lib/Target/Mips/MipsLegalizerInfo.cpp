@@ -22,6 +22,7 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
 
   const LLT s1 = LLT::scalar(1);
   const LLT s32 = LLT::scalar(32);
+  const LLT s64 = LLT::scalar(64);
   const LLT p0 = LLT::pointer(0, 32);
 
   getActionDefinitionsBuilder(G_ADD)
@@ -34,8 +35,17 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
       .legalForCartesianProduct({p0, s32}, {p0});
 
-  getActionDefinitionsBuilder({G_AND, G_OR, G_XOR, G_SHL, G_ASHR, G_LSHR})
+  getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
+      .legalFor({s32})
+      .clampScalar(0, s32, s32);
+
+  getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
       .legalFor({s32});
+
+  getActionDefinitionsBuilder({G_SDIV, G_SREM, G_UREM, G_UDIV})
+      .legalFor({s32})
+      .minScalar(0, s32)
+      .libcallFor({s64});
 
   getActionDefinitionsBuilder(G_ICMP)
       .legalFor({{s32, s32}})

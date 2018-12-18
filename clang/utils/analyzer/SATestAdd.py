@@ -42,6 +42,7 @@ the Repository Directory.
                                           diff -ur CachedSource PatchedSource \
                                               > changes_for_analyzer.patch
 """
+from __future__ import absolute_import, division, print_function
 import SATestBuild
 
 import os
@@ -66,7 +67,7 @@ def addNewProject(ID, BuildMode):
     CurDir = os.path.abspath(os.curdir)
     Dir = SATestBuild.getProjectDir(ID)
     if not os.path.exists(Dir):
-        print "Error: Project directory is missing: %s" % Dir
+        print("Error: Project directory is missing: %s" % Dir)
         sys.exit(-1)
 
     # Build the project.
@@ -78,30 +79,30 @@ def addNewProject(ID, BuildMode):
     if os.path.exists(ProjectMapPath):
         FileMode = "r+b"
     else:
-        print "Warning: Creating the Project Map file!!"
+        print("Warning: Creating the Project Map file!!")
         FileMode = "w+b"
 
     with open(ProjectMapPath, FileMode) as PMapFile:
         if (isExistingProject(PMapFile, ID)):
-            print >> sys.stdout, 'Warning: Project with ID \'', ID, \
-                                 '\' already exists.'
-            print >> sys.stdout, "Reference output has been regenerated."
+            print('Warning: Project with ID \'', ID, \
+                                 '\' already exists.', file=sys.stdout)
+            print("Reference output has been regenerated.", file=sys.stdout)
         else:
             PMapWriter = csv.writer(PMapFile)
             PMapWriter.writerow((ID, int(BuildMode)))
-            print "The project map is updated: ", ProjectMapPath
+            print("The project map is updated: ", ProjectMapPath)
 
 
 # TODO: Add an option not to build.
 # TODO: Set the path to the Repository directory.
 if __name__ == '__main__':
     if len(sys.argv) < 2 or sys.argv[1] in ('-h', '--help'):
-        print >> sys.stderr, 'Add a new project for testing to the analyzer'\
+        print('Add a new project for testing to the analyzer'\
                              '\nUsage: ', sys.argv[0],\
                              'project_ID <mode>\n' \
                              'mode: 0 for single file project, ' \
                              '1 for scan_build, ' \
-                             '2 for single file c++11 project'
+                             '2 for single file c++11 project', file=sys.stderr)
         sys.exit(-1)
 
     BuildMode = 1
