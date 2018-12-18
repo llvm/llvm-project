@@ -56,7 +56,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import ConfigParser
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 import io
 
 import obj_diff
@@ -318,7 +321,7 @@ if __name__ == '__main__':
     for c in checks:
         default_config += "{} = false\n".format(c)
 
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     config.readfp(io.BytesIO(default_config))
     scriptdir = get_main_dir()
     config_path = os.path.join(scriptdir, 'check_cfc.cfg')

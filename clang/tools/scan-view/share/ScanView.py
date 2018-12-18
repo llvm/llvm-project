@@ -1,3 +1,4 @@
+from __future__ import print_function
 try:
     from http.server import HTTPServer, SimpleHTTPRequestHandler
 except ImportError:
@@ -16,7 +17,10 @@ import socket
 import itertools
 
 import Reporter
-import ConfigParser
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 ###
 # Various patterns matched or replaced by server.
@@ -99,20 +103,20 @@ class ReporterThread(threading.Thread):
         result = None
         try:
             if self.server.options.debug:
-                print >>sys.stderr, "%s: SERVER: submitting bug."%(sys.argv[0],)
+                print("%s: SERVER: submitting bug."%(sys.argv[0],), file=sys.stderr)
             self.status = self.reporter.fileReport(self.report, self.parameters)
             self.success = True
             time.sleep(3)
             if self.server.options.debug:
-                print >>sys.stderr, "%s: SERVER: submission complete."%(sys.argv[0],)
+                print("%s: SERVER: submission complete."%(sys.argv[0],), file=sys.stderr)
         except Reporter.ReportFailure as e:
             self.status = e.value
         except Exception as e:
             s = StringIO.StringIO()
             import traceback
-            print >>s,'<b>Unhandled Exception</b><br><pre>'
-            traceback.print_exc(e,file=s)
-            print >>s,'</pre>'
+            print('<b>Unhandled Exception</b><br><pre>', file=s)
+            traceback.print_exc(file=s)
+            print('</pre>', file=s)
             self.status = s.getvalue()
 
 class ScanViewServer(HTTPServer):
@@ -126,7 +130,7 @@ class ScanViewServer(HTTPServer):
         self.load_config()
 
     def load_config(self):
-        self.config = ConfigParser.RawConfigParser()
+        self.config = configparser.RawConfigParser()
 
         # Add defaults
         self.config.add_section('ScanView')
@@ -158,16 +162,16 @@ class ScanViewServer(HTTPServer):
     def halt(self):
         self.halted = True
         if self.options.debug:
-            print >>sys.stderr, "%s: SERVER: halting." % (sys.argv[0],)
+            print("%s: SERVER: halting." % (sys.argv[0],), file=sys.stderr)
 
     def serve_forever(self):
         while not self.halted:
             if self.options.debug > 1:
-                print >>sys.stderr, "%s: SERVER: waiting..." % (sys.argv[0],)
+                print("%s: SERVER: waiting..." % (sys.argv[0],), file=sys.stderr)
             try:
                 self.handle_request()
             except OSError as e:
-                print 'OSError',e.errno
+                print('OSError',e.errno)
 
     def finish_request(self, request, client_address):
         if self.options.autoReload:
@@ -180,7 +184,7 @@ class ScanViewServer(HTTPServer):
         info = sys.exc_info()
         if info and isinstance(info[1], socket.error):
             if self.options.debug > 1:
-                print >>sys.stderr, "%s: SERVER: ignored socket error." % (sys.argv[0],)
+                print("%s: SERVER: ignored socket error." % (sys.argv[0],), file=sys.stderr)
             return
         HTTPServer.handle_error(self, request, client_address)
 
@@ -267,8 +271,8 @@ class ScanViewRequestHandler(SimpleHTTPRequestHandler):
     def handle_exception(self, exc):
         import traceback
         s = StringIO.StringIO()
-        print >>s, "INTERNAL ERROR\n"
-        traceback.print_exc(exc, s)
+        print("INTERNAL ERROR\n", file=s)
+        traceback.print_exc(file=s)
         f = self.send_string(s.getvalue(), 'text/plain')
         if f:
             self.copyfile(f, self.wfile)
@@ -413,8 +417,8 @@ Submit</h3>
 
         import startfile
         if self.server.options.debug:
-            print >>sys.stderr, '%s: SERVER: opening "%s"'%(sys.argv[0],
-                                                            file)
+            print('%s: SERVER: opening "%s"'%(sys.argv[0],
+                                                            file), file=sys.stderr)
 
         status = startfile.open(file)
         if status:
@@ -693,8 +697,8 @@ File Bug</h3>
         path = posixpath.join(self.server.root, relpath)
 
         if self.server.options.debug > 1:
-            print >>sys.stderr, '%s: SERVER: sending path "%s"'%(sys.argv[0],
-                                                                 path)
+            print('%s: SERVER: sending path "%s"'%(sys.argv[0],
+                                                                 path), file=sys.stderr)
         return self.send_path(path)
 
     def send_404(self):

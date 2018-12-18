@@ -2864,22 +2864,15 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
       log->Printf("Target::%s asking the platform to debug the process",
                   __FUNCTION__);
 
-    // Get a weak pointer to the previous process if we have one
-    ProcessWP process_wp;
-    if (m_process_sp)
-      process_wp = m_process_sp;
+    // If there was a previous process, delete it before we make the new one.
+    // One subtle point, we delete the process before we release the reference
+    // to m_process_sp.  That way even if we are the last owner, the process
+    // will get Finalized before it gets destroyed.
+    DeleteCurrentProcess();
+    
     m_process_sp =
         GetPlatform()->DebugProcess(launch_info, debugger, this, error);
 
-    // Cleanup the old process since someone might still have a strong
-    // reference to this process and we would like to allow it to cleanup as
-    // much as it can without the object being destroyed. We try to lock the
-    // shared pointer and if that works, then someone else still has a strong
-    // reference to the process.
-
-    ProcessSP old_process_sp(process_wp.lock());
-    if (old_process_sp)
-      old_process_sp->Finalize();
   } else {
     if (log)
       log->Printf("Target::%s the platform doesn't know how to debug a "

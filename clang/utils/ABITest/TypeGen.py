@@ -1,4 +1,5 @@
 """Flexible enumeration of C types."""
+from __future__ import division, print_function
 
 from Enumeration import *
 
@@ -234,7 +235,7 @@ def fact(n):
 
 # Compute the number of combinations (n choose k)
 def num_combinations(n, k): 
-    return fact(n) / (fact(k) * fact(n - k))
+    return fact(n) // (fact(k) * fact(n - k))
 
 # Enumerate the combinations choosing k elements from the list of values
 def combinations(values, k):
@@ -242,7 +243,7 @@ def combinations(values, k):
     # combinations, selections of a sequence
     if k==0: yield []
     else:
-        for i in xrange(len(values)-k+1):
+        for i in range(len(values)-k+1):
             for cc in combinations(values[i+1:],k-1):
                 yield [values[i]]+cc
 
@@ -462,7 +463,7 @@ def test():
     atg.addGenerator( btg )
     atg.addGenerator( RecordTypeGenerator(fields0, False, 4) )
     atg.addGenerator( etg )
-    print 'Cardinality:',atg.cardinality
+    print('Cardinality:',atg.cardinality)
     for i in range(100):
         if i == atg.cardinality:
             try:
@@ -470,7 +471,7 @@ def test():
                 raise RuntimeError("Cardinality was wrong")
             except AssertionError:
                 break
-        print '%4d: %s'%(i, atg.get(i))
+        print('%4d: %s'%(i, atg.get(i)))
 
 if __name__ == '__main__':
     test()

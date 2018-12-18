@@ -316,7 +316,8 @@ public:
                   QualifierMangleMode QMM = QMM_Mangle);
   void mangleFunctionType(const FunctionType *T,
                           const FunctionDecl *D = nullptr,
-                          bool ForceThisQuals = false);
+                          bool ForceThisQuals = false,
+                          bool MangleExceptionSpec = true);
   void mangleNestedName(const NamedDecl *ND);
 
 private:
@@ -513,7 +514,7 @@ void MicrosoftCXXNameMangler::mangleFunctionEncoding(const FunctionDecl *FD,
 
     mangleFunctionClass(FD);
 
-    mangleFunctionType(FT, FD);
+    mangleFunctionType(FT, FD, false, false);
   } else {
     Out << '9';
   }
@@ -2127,7 +2128,8 @@ void MicrosoftCXXNameMangler::mangleType(const FunctionNoProtoType *T,
 
 void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
                                                  const FunctionDecl *D,
-                                                 bool ForceThisQuals) {
+                                                 bool ForceThisQuals,
+                                                 bool MangleExceptionSpec) {
   // <function-type> ::= <this-cvr-qualifiers> <calling-convention>
   //                     <return-type> <argument-list> <throw-spec>
   const FunctionProtoType *Proto = dyn_cast<FunctionProtoType>(T);
@@ -2260,7 +2262,12 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
       Out << '@';
   }
 
-  mangleThrowSpecification(Proto);
+  if (MangleExceptionSpec && getASTContext().getLangOpts().CPlusPlus17 &&
+      getASTContext().getLangOpts().isCompatibleWithMSVC(
+          LangOptions::MSVC2017_5))
+    mangleThrowSpecification(Proto);
+  else
+    Out << 'Z';
 }
 
 void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
@@ -2365,15 +2372,15 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC) {
 void MicrosoftCXXNameMangler::mangleCallingConvention(const FunctionType *T) {
   mangleCallingConvention(T->getCallConv());
 }
+
 void MicrosoftCXXNameMangler::mangleThrowSpecification(
                                                 const FunctionProtoType *FT) {
-  // <throw-spec> ::= Z # throw(...) (default)
-  //              ::= @ # throw() or __declspec/__attribute__((nothrow))
-  //              ::= <type>+
-  // NOTE: Since the Microsoft compiler ignores throw specifications, they are
-  // all actually mangled as 'Z'. (They're ignored because their associated
-  // functionality isn't implemented, and probably never will be.)
-  Out << 'Z';
+  // <throw-spec> ::= Z # (default)
+  //              ::= _E # noexcept
+  if (FT->canThrow())
+    Out << 'Z';
+  else
+    Out << "_E";
 }
 
 void MicrosoftCXXNameMangler::mangleType(const UnresolvedUsingType *T,
