@@ -412,6 +412,13 @@ void PPC64::relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
 RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
                           const uint8_t *Loc) const {
   switch (Type) {
+  case R_PPC64_GOT16:
+  case R_PPC64_GOT16_DS:
+  case R_PPC64_GOT16_HA:
+  case R_PPC64_GOT16_HI:
+  case R_PPC64_GOT16_LO:
+  case R_PPC64_GOT16_LO_DS:
+    return R_GOT_OFF;
   case R_PPC64_TOC16:
   case R_PPC64_TOC16_DS:
   case R_PPC64_TOC16_HA:
@@ -526,30 +533,36 @@ static std::pair<RelType, uint64_t> toAddr16Rel(RelType Type, uint64_t Val) {
 
   switch (Type) {
   // TOC biased relocation.
+  case R_PPC64_GOT16:
   case R_PPC64_GOT_TLSGD16:
   case R_PPC64_GOT_TLSLD16:
   case R_PPC64_TOC16:
     return {R_PPC64_ADDR16, TocBiasedVal};
+  case R_PPC64_GOT16_DS:
   case R_PPC64_TOC16_DS:
   case R_PPC64_GOT_TPREL16_DS:
   case R_PPC64_GOT_DTPREL16_DS:
     return {R_PPC64_ADDR16_DS, TocBiasedVal};
+  case R_PPC64_GOT16_HA:
   case R_PPC64_GOT_TLSGD16_HA:
   case R_PPC64_GOT_TLSLD16_HA:
   case R_PPC64_GOT_TPREL16_HA:
   case R_PPC64_GOT_DTPREL16_HA:
   case R_PPC64_TOC16_HA:
     return {R_PPC64_ADDR16_HA, TocBiasedVal};
+  case R_PPC64_GOT16_HI:
   case R_PPC64_GOT_TLSGD16_HI:
   case R_PPC64_GOT_TLSLD16_HI:
   case R_PPC64_GOT_TPREL16_HI:
   case R_PPC64_GOT_DTPREL16_HI:
   case R_PPC64_TOC16_HI:
     return {R_PPC64_ADDR16_HI, TocBiasedVal};
+  case R_PPC64_GOT16_LO:
   case R_PPC64_GOT_TLSGD16_LO:
   case R_PPC64_GOT_TLSLD16_LO:
   case R_PPC64_TOC16_LO:
     return {R_PPC64_ADDR16_LO, TocBiasedVal};
+  case R_PPC64_GOT16_LO_DS:
   case R_PPC64_TOC16_LO_DS:
   case R_PPC64_GOT_TPREL16_LO_DS:
   case R_PPC64_GOT_DTPREL16_LO_DS:
@@ -590,9 +603,11 @@ static bool isTocRelType(RelType Type) {
 }
 
 void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
-  // For a TOC-relative relocation, proceed in terms of the corresponding
-  // ADDR16 relocation type.
+  // We need to save the original relocation type to determine if we should
+  // toc-optimize the instructions being relocated.
   bool IsTocRelType = isTocRelType(Type);
+  // For TOC-relative and GOT-indirect relocations, proceed in terms of the
+  // corresponding ADDR16 relocation type.
   std::tie(Type, Val) = toAddr16Rel(Type, Val);
 
   switch (Type) {

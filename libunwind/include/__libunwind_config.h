@@ -57,7 +57,11 @@
 # elif defined(__aarch64__)
 #  define _LIBUNWIND_TARGET_AARCH64 1
 #  define _LIBUNWIND_CONTEXT_SIZE 66
-#  define _LIBUNWIND_CURSOR_SIZE 78
+#  if defined(__SEH__)
+#    define _LIBUNWIND_CURSOR_SIZE 164
+#  else
+#    define _LIBUNWIND_CURSOR_SIZE 78
+#  endif
 #  define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64
 # elif defined(__arm__)
 #  define _LIBUNWIND_TARGET_ARM 1
