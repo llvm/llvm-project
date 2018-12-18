@@ -80,7 +80,7 @@ class EmailReporter(object):
         return 'Email'
 
     def getParameters(self):
-        return map(lambda x:TextParameter(x),['To', 'From', 'SMTP Server', 'SMTP Port'])
+        return [TextParameter(x) for x in ['To', 'From', 'SMTP Server', 'SMTP Port']]
 
     # Lifted from python email module examples.
     def attachFile(self, outer, path):
@@ -148,7 +148,7 @@ class BugzillaReporter(object):
         return 'Bugzilla'
     
     def getParameters(self):
-        return map(lambda x:TextParameter(x),['URL','Product'])
+        return [TextParameter(x) for x in ['URL','Product']]
 
     def fileReport(self, report, parameters):
         raise NotImplementedError
@@ -211,7 +211,7 @@ class RadarReporter(object):
 
         script = os.path.join(os.path.dirname(__file__),'../share/scan-view/FileRadar.scpt')
         args = ['osascript', script, component, componentVersion, classification, personID, report.title,
-                report.description, diagnosis, config] + map(os.path.abspath, report.files)
+                report.description, diagnosis, config] + [os.path.abspath(f) for f in report.files]
 #        print >>sys.stderr, args
         try:
           p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

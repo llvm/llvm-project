@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 def pcall(f, N):
     if N == 0:
         print('    f(0)', file=f)

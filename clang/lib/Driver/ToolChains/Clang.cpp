@@ -4097,7 +4097,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     ABICompatArg->render(Args, CmdArgs);
 
   // Add runtime flag for PS4 when PGO, coverage, or sanitizers are enabled.
-  if (RawTriple.isPS4CPU()) {
+  if (RawTriple.isPS4CPU() &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     PS4cpu::addProfileRTArgs(TC, Args, CmdArgs);
     PS4cpu::addSanitizerArgs(TC, CmdArgs);
   }

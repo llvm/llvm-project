@@ -1,6 +1,6 @@
 """Utilities for enumeration of finite and countably infinite sets.
 """
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 ###
 # Countable iteration
 

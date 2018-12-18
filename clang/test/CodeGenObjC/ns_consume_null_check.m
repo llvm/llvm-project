@@ -17,7 +17,7 @@ void test0(void) {
   [x isEqual : obj];
 }
 // CHECK-LABEL:     define void @test0()
-// CHECK:       [[FIVE:%.*]] = call i8* @objc_retain
+// CHECK:       [[FIVE:%.*]] = call i8* @llvm.objc.retain
 // CHECK-NEXT:  [[SIX:%.*]] = bitcast
 // CHECK-NEXT:  [[SEVEN:%.*]]  = icmp eq i8* [[SIX]], null
 // CHECK-NEXT:  br i1 [[SEVEN]], label [[NULLINIT:%.*]], label [[CALL_LABEL:%.*]]
@@ -25,7 +25,7 @@ void test0(void) {
 // CHECK-NEXT:  [[EIGHT:%.*]] = bitcast i8* [[FN]]
 // CHECK-NEXT:  [[CALL:%.*]] = call signext i8 [[EIGHT]]
 // CHECK-NEXT:  br label [[CONT:%.*]]
-// CHECK:       call void @objc_release(i8* [[FIVE]]) [[NUW:#[0-9]+]]
+// CHECK:       call void @llvm.objc.release(i8* [[FIVE]]) [[NUW:#[0-9]+]]
 // CHECK-NEXT:  br label [[CONT]]
 // CHECK:       phi i8 [ [[CALL]], {{%.*}} ], [ 0, {{%.*}} ]
 
@@ -44,11 +44,11 @@ void test1(void) {
 // CHECK:      [[T0:%.*]] = call i8* bitcast (
 // CHECK-NEXT: store i8* [[T0]], i8** [[OBJ]]
 // CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[OBJ]]
-// CHECK-NEXT: call i8* @objc_initWeak(i8** [[WEAKOBJ]], i8* [[T0]]) [[NUW]]
+// CHECK-NEXT: call i8* @llvm.objc.initWeak(i8** [[WEAKOBJ]], i8* [[T0]]) [[NUW]]
 //   Okay, start the message-send.
 // CHECK-NEXT: [[T0:%.*]] = load [[MYOBJECT:%.*]]*, [[MYOBJECT:%.*]]** @x
 // CHECK-NEXT: [[ARG:%.*]] = load i8*, i8** [[OBJ]]
-// CHECK-NEXT: [[ARG_RETAINED:%.*]] = call i8* @objc_retain(i8* [[ARG]])
+// CHECK-NEXT: [[ARG_RETAINED:%.*]] = call i8* @llvm.objc.retain(i8* [[ARG]])
 // CHECK-NEXT: load i8*, i8** @
 // CHECK-NEXT: [[SELF:%.*]] = bitcast [[MYOBJECT]]* [[T0]] to i8*
 //   Null check.
@@ -65,7 +65,7 @@ void test1(void) {
 // CHECK-NEXT: [[IMAGCALL:%.*]] = load float, float* [[T0]]
 // CHECK-NEXT: br label [[CONT:%.*]]{{$}}
 //   Null path.
-// CHECK:      call void @objc_release(i8* [[ARG_RETAINED]]) [[NUW]]
+// CHECK:      call void @llvm.objc.release(i8* [[ARG_RETAINED]]) [[NUW]]
 // CHECK-NEXT: br label [[CONT]]
 //   Join point.
 // CHECK:      [[REAL:%.*]] = phi float [ [[REALCALL]], [[INVOKE_CONT]] ], [ 0.000000e+00, [[FORNULL]] ]
@@ -75,11 +75,11 @@ void test1(void) {
 // CHECK-NEXT: store float [[REAL]], float* [[T0]]
 // CHECK-NEXT: store float [[IMAG]], float* [[T1]]
 //   Epilogue.
-// CHECK-NEXT: call void @objc_destroyWeak(i8** [[WEAKOBJ]]) [[NUW]]
-// CHECK-NEXT: call void @objc_storeStrong(i8** [[OBJ]], i8* null) [[NUW]]
+// CHECK-NEXT: call void @llvm.objc.destroyWeak(i8** [[WEAKOBJ]]) [[NUW]]
+// CHECK-NEXT: call void @llvm.objc.storeStrong(i8** [[OBJ]], i8* null) [[NUW]]
 // CHECK-NEXT: ret void
 //   Cleanup.
 // CHECK:      landingpad
-// CHECK:      call void @objc_destroyWeak(i8** [[WEAKOBJ]]) [[NUW]]
+// CHECK:      call void @llvm.objc.destroyWeak(i8** [[WEAKOBJ]]) [[NUW]]
 
 // CHECK: attributes [[NUW]] = { nounwind }
