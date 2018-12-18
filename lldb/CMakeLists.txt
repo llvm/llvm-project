@@ -158,6 +158,9 @@ if(LLDB_INCLUDE_TESTS)
 
   if(TARGET clang)
     list(APPEND LLDB_TEST_DEPS clang)
+    if(APPLE)
+      list(APPEND LLDB_TEST_DEPS cxx)
+    endif()
   endif()
 
   if(TARGET dsymutil)
