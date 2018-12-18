@@ -67,6 +67,10 @@ def SDT_PPCxxswapd : SDTypeProfile<1, 1, [
 def SDTVecConv : SDTypeProfile<1, 2, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisPtrTy<2>
 ]>;
+def SDTVabsd : SDTypeProfile<1, 3, [
+  SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<3, i32>
+]>;
+
 
 def PPClxvd2x  : SDNode<"PPCISD::LXVD2X", SDT_PPClxvd2x,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
@@ -79,6 +83,7 @@ def PPCmtvsrz : SDNode<"PPCISD::MTVSRZ", SDTUnaryOp, []>;
 def PPCsvec2fp : SDNode<"PPCISD::SINT_VEC_TO_FP", SDTVecConv, []>;
 def PPCuvec2fp: SDNode<"PPCISD::UINT_VEC_TO_FP", SDTVecConv, []>;
 def PPCswapNoChain : SDNode<"PPCISD::SWAP_NO_CHAIN", SDT_PPCxxswapd>;
+def PPCvabsd : SDNode<"PPCISD::VABSD", SDTVabsd, []>;
 
 multiclass XX3Form_Rcr<bits<6> opcode, bits<7> xo, string asmbase,
                     string asmstr, InstrItinClass itin, Intrinsic Int,
@@ -4017,3 +4022,21 @@ let AddedComplexity = 400 in {
   }
 }
 
+// Put this P9Altivec related definition here since it's possible to be 
+// selected to VSX instruction xvnegsp, avoid possible undef.
+let Predicates = [HasP9Altivec] in {
+
+  def : Pat<(v4i32 (PPCvabsd v4i32:$A, v4i32:$B, (i32 0))),
+            (v4i32 (VABSDUW $A, $B))>;
+
+  def : Pat<(v8i16 (PPCvabsd v8i16:$A, v8i16:$B, (i32 0))),
+            (v8i16 (VABSDUH $A, $B))>;
+
+  def : Pat<(v16i8 (PPCvabsd v16i8:$A, v16i8:$B, (i32 0))),
+            (v16i8 (VABSDUB $A, $B))>;
+
+  // As PPCVABSD description, the last operand indicates whether do the
+  // sign bit flip.
+  def : Pat<(v4i32 (PPCvabsd v4i32:$A, v4i32:$B, (i32 1))),
+            (v4i32 (VABSDUW (XVNEGSP $A), (XVNEGSP $B)))>;
+}

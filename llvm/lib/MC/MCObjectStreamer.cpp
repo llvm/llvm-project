@@ -497,7 +497,11 @@ void MCObjectStreamer::EmitCVInlineLinetableDirective(
 void MCObjectStreamer::EmitCVDefRangeDirective(
     ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
     StringRef FixedSizePortion) {
-  getContext().getCVContext().emitDefRange(*this, Ranges, FixedSizePortion);
+  MCFragment *Frag =
+      getContext().getCVContext().emitDefRange(*this, Ranges, FixedSizePortion);
+  // Attach labels that were pending before we created the defrange fragment to
+  // the beginning of the new fragment.
+  flushPendingLabels(Frag, 0);
   this->MCStreamer::EmitCVDefRangeDirective(Ranges, FixedSizePortion);
 }
 

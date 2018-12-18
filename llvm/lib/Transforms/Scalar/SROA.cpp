@@ -3164,7 +3164,12 @@ class AggLoadStoreRewriter : public InstVisitor<AggLoadStoreRewriter, bool> {
   /// value (as opposed to the user).
   Use *U;
 
+  /// Used to calculate offsets, and hence alignment, of subobjects.
+  const DataLayout &DL;
+
 public:
+  AggLoadStoreRewriter(const DataLayout &DL) : DL(DL) {}
+
   /// Rewrite loads and stores through a pointer and all pointers derived from
   /// it.
   bool rewrite(Instruction &I) {
@@ -3208,10 +3213,22 @@ private:
     /// split operations.
     Value *Ptr;
 
+    /// The base pointee type being GEPed into.
+    Type *BaseTy;
+
+    /// Known alignment of the base pointer.
+    unsigned BaseAlign;
+
+    /// To calculate offset of each component so we can correctly deduce
+    /// alignments.
+    const DataLayout &DL;
+
     /// Initialize the splitter with an insertion point, Ptr and start with a
     /// single zero GEP index.
-    OpSplitter(Instruction *InsertionPoint, Value *Ptr)
-        : IRB(InsertionPoint), GEPIndices(1, IRB.getInt32(0)), Ptr(Ptr) {}
+    OpSplitter(Instruction *InsertionPoint, Value *Ptr, Type *BaseTy,
+               unsigned BaseAlign, const DataLayout &DL)
+        : IRB(InsertionPoint), GEPIndices(1, IRB.getInt32(0)), Ptr(Ptr),
+          BaseTy(BaseTy), BaseAlign(BaseAlign), DL(DL) {}
 
   public:
     /// Generic recursive split emission routine.
@@ -3228,8 +3245,11 @@ private:
     /// \param Agg The aggregate value being built up or stored, depending on
     /// whether this is splitting a load or a store respectively.
     void emitSplitOps(Type *Ty, Value *&Agg, const Twine &Name) {
-      if (Ty->isSingleValueType())
-        return static_cast<Derived *>(this)->emitFunc(Ty, Agg, Name);
+      if (Ty->isSingleValueType()) {
+        unsigned Offset = DL.getIndexedOffsetInType(BaseTy, GEPIndices);
+        return static_cast<Derived *>(this)->emitFunc(
+            Ty, Agg, MinAlign(BaseAlign, Offset), Name);
+      }
 
       if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
         unsigned OldSize = Indices.size();
@@ -3268,17 +3288,19 @@ private:
   struct LoadOpSplitter : public OpSplitter<LoadOpSplitter> {
     AAMDNodes AATags;
 
-    LoadOpSplitter(Instruction *InsertionPoint, Value *Ptr, AAMDNodes AATags)
-        : OpSplitter<LoadOpSplitter>(InsertionPoint, Ptr), AATags(AATags) {}
+    LoadOpSplitter(Instruction *InsertionPoint, Value *Ptr, Type *BaseTy,
+                   AAMDNodes AATags, unsigned BaseAlign, const DataLayout &DL)
+        : OpSplitter<LoadOpSplitter>(InsertionPoint, Ptr, BaseTy, BaseAlign,
+                                     DL), AATags(AATags) {}
 
     /// Emit a leaf load of a single value. This is called at the leaves of the
     /// recursive emission to actually load values.
-    void emitFunc(Type *Ty, Value *&Agg, const Twine &Name) {
+    void emitFunc(Type *Ty, Value *&Agg, unsigned Align, const Twine &Name) {
       assert(Ty->isSingleValueType());
       // Load the single value and insert it using the indices.
       Value *GEP =
           IRB.CreateInBoundsGEP(nullptr, Ptr, GEPIndices, Name + ".gep");
-      LoadInst *Load = IRB.CreateLoad(GEP, Name + ".load");
+      LoadInst *Load = IRB.CreateAlignedLoad(GEP, Align, Name + ".load");
       if (AATags)
         Load->setAAMetadata(AATags);
       Agg = IRB.CreateInsertValue(Agg, Load, Indices, Name + ".insert");
@@ -3295,7 +3317,8 @@ private:
     LLVM_DEBUG(dbgs() << "    original: " << LI << "\n");
     AAMDNodes AATags;
     LI.getAAMetadata(AATags);
-    LoadOpSplitter Splitter(&LI, *U, AATags);
+    LoadOpSplitter Splitter(&LI, *U, LI.getType(), AATags,
+                            getAdjustedAlignment(&LI, 0, DL), DL);
     Value *V = UndefValue::get(LI.getType());
     Splitter.emitSplitOps(LI.getType(), V, LI.getName() + ".fca");
     LI.replaceAllUsesWith(V);
@@ -3304,13 +3327,15 @@ private:
   }
 
   struct StoreOpSplitter : public OpSplitter<StoreOpSplitter> {
-    StoreOpSplitter(Instruction *InsertionPoint, Value *Ptr, AAMDNodes AATags)
-        : OpSplitter<StoreOpSplitter>(InsertionPoint, Ptr), AATags(AATags) {}
+    StoreOpSplitter(Instruction *InsertionPoint, Value *Ptr, Type *BaseTy,
+                    AAMDNodes AATags, unsigned BaseAlign, const DataLayout &DL)
+        : OpSplitter<StoreOpSplitter>(InsertionPoint, Ptr, BaseTy, BaseAlign,
+                                      DL),
+          AATags(AATags) {}
     AAMDNodes AATags;
-
     /// Emit a leaf store of a single value. This is called at the leaves of the
     /// recursive emission to actually produce stores.
-    void emitFunc(Type *Ty, Value *&Agg, const Twine &Name) {
+    void emitFunc(Type *Ty, Value *&Agg, unsigned Align, const Twine &Name) {
       assert(Ty->isSingleValueType());
       // Extract the single value and store it using the indices.
       //
@@ -3320,7 +3345,8 @@ private:
           IRB.CreateExtractValue(Agg, Indices, Name + ".extract");
       Value *InBoundsGEP =
           IRB.CreateInBoundsGEP(nullptr, Ptr, GEPIndices, Name + ".gep");
-      StoreInst *Store = IRB.CreateStore(ExtractValue, InBoundsGEP);
+      StoreInst *Store =
+          IRB.CreateAlignedStore(ExtractValue, InBoundsGEP, Align);
       if (AATags)
         Store->setAAMetadata(AATags);
       LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
@@ -3338,7 +3364,8 @@ private:
     LLVM_DEBUG(dbgs() << "    original: " << SI << "\n");
     AAMDNodes AATags;
     SI.getAAMetadata(AATags);
-    StoreOpSplitter Splitter(&SI, *U, AATags);
+    StoreOpSplitter Splitter(&SI, *U, V->getType(), AATags,
+                             getAdjustedAlignment(&SI, 0, DL), DL);
     Splitter.emitSplitOps(V->getType(), V, V->getName() + ".fca");
     SI.eraseFromParent();
     return true;
@@ -4356,7 +4383,7 @@ bool SROA::runOnAlloca(AllocaInst &AI) {
 
   // First, split any FCA loads and stores touching this alloca to promote
   // better splitting and promotion opportunities.
-  AggLoadStoreRewriter AggRewriter;
+  AggLoadStoreRewriter AggRewriter(DL);
   Changed |= AggRewriter.rewrite(AI);
 
   // Build the slices using a recursive instruction-visiting builder.

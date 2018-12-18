@@ -153,6 +153,9 @@ def format_text(lines, indent_0, indent_n):
     return result
 
 def print_environment(env):
+    if env is None:
+        print('    Inherited')
+        return
     for e in env:
         value = env[e]
         lines = value.split(os.pathsep)
@@ -633,7 +636,7 @@ class GccBuilder(Builder):
         args.extend(['-o', obj])
         args.append(source)
 
-        return ('compiling', [source], obj, {}, args)
+        return ('compiling', [source], obj, None, args)
 
     def _get_link_command(self):
         args = []
@@ -649,7 +652,7 @@ class GccBuilder(Builder):
         args.extend(['-o', self._exe_file_name()])
         args.extend(self._obj_file_names())
 
-        return ('linking', self._obj_file_names(), self._exe_file_name(), {}, args)
+        return ('linking', self._obj_file_names(), self._exe_file_name(), None, args)
 
 
     def output_files(self):

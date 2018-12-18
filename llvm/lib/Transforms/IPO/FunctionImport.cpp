@@ -911,7 +911,8 @@ bool llvm::convertToDeclaration(GlobalValue &GV) {
     if (GV.getValueType()->isFunctionTy())
       NewGV =
           Function::Create(cast<FunctionType>(GV.getValueType()),
-                           GlobalValue::ExternalLinkage, "", GV.getParent());
+                           GlobalValue::ExternalLinkage, GV.getAddressSpace(),
+                           "", GV.getParent());
     else
       NewGV =
           new GlobalVariable(*GV.getParent(), GV.getValueType(),

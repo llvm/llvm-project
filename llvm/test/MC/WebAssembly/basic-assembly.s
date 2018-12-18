@@ -45,6 +45,20 @@ test0:
     end_block                       # label0:
     get_local   4
     get_local   5
+    block
+    block
+    block
+    block
+    br_table {0, 1, 2}   # 2 entries, default
+    end_block            # first entry jumps here.
+    i32.const 1
+    br 2
+    end_block            # second entry jumps here.
+    i32.const 2
+    br 1
+    end_block            # default jumps here.
+    i32.const 3
+    end_block            # "switch" exit.
     f32x4.add
     # Test correct parsing of instructions with / and : in them:
     # TODO: enable once instruction has been added.
@@ -100,6 +114,21 @@ test0:
 # CHECK-NEXT:      end_block                       # label0:
 # CHECK-NEXT:      get_local   4
 # CHECK-NEXT:      get_local   5
+# CHECK-NEXT:      block
+# CHECK-NEXT:      block
+# CHECK-NEXT:      block
+# CHECK-NEXT:      block
+# CHECK-NEXT:      br_table {0, 1, 2}  # 1: down to label4
+# CHECK-NEXT:                          # 2: down to label3
+# CHECK-NEXT:      end_block           # label5:
+# CHECK-NEXT:      i32.const 1
+# CHECK-NEXT:      br 2                # 2: down to label2
+# CHECK-NEXT:      end_block           # label4:
+# CHECK-NEXT:      i32.const 2
+# CHECK-NEXT:      br 1                # 1: down to label2
+# CHECK-NEXT:      end_block           # label3:
+# CHECK-NEXT:      i32.const 3
+# CHECK-NEXT:      end_block           # label2:
 # CHECK-NEXT:      f32x4.add
 # CHECK-NEXT:      i32.trunc_s/f32
 # CHECK-NEXT:      try

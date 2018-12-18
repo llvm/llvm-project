@@ -1894,10 +1894,17 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       return true;
     break;
   default: {
-    if (Op.getOpcode() >= ISD::BUILTIN_OP_END)
+    if (Op.getOpcode() >= ISD::BUILTIN_OP_END) {
       if (SimplifyDemandedVectorEltsForTargetNode(Op, DemandedElts, KnownUndef,
                                                   KnownZero, TLO, Depth))
         return true;
+    } else {
+      KnownBits Known;
+      APInt DemandedBits = APInt::getAllOnesValue(EltSizeInBits);
+      if (SimplifyDemandedBits(Op, DemandedBits, DemandedEltMask, Known, TLO,
+                               Depth, AssumeSingleUse))
+        return true;
+    }
     break;
   }
   }

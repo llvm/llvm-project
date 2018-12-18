@@ -32379,6 +32379,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     SDValue Op, const APInt &OriginalDemandedBits,
     const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,
     unsigned Depth) const {
+  EVT VT = Op.getValueType();
   unsigned BitWidth = OriginalDemandedBits.getBitWidth();
   unsigned Opc = Op.getOpcode();
   switch(Opc) {
@@ -32401,12 +32402,19 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       if (ShiftImm->getAPIntValue().uge(BitWidth))
         break;
 
-      KnownBits KnownOp;
       unsigned ShAmt = ShiftImm->getZExtValue();
       APInt DemandedMask = OriginalDemandedBits.lshr(ShAmt);
+
       if (SimplifyDemandedBits(Op.getOperand(0), DemandedMask,
-                               OriginalDemandedElts, KnownOp, TLO, Depth + 1))
+                               OriginalDemandedElts, Known, TLO, Depth + 1))
         return true;
+
+      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
+      Known.Zero <<= ShAmt;
+      Known.One <<= ShAmt;
+
+      // Low bits known zero.
+      Known.Zero.setLowBits(ShAmt);
     }
     break;
   }
@@ -32415,39 +32423,74 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       if (ShiftImm->getAPIntValue().uge(BitWidth))
         break;
 
-      KnownBits KnownOp;
       unsigned ShAmt = ShiftImm->getZExtValue();
       APInt DemandedMask = OriginalDemandedBits << ShAmt;
 
       if (SimplifyDemandedBits(Op.getOperand(0), DemandedMask,
-                               OriginalDemandedElts, KnownOp, TLO, Depth + 1))
+                               OriginalDemandedElts, Known, TLO, Depth + 1))
         return true;
+
+      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
+      Known.Zero.lshrInPlace(ShAmt);
+      Known.One.lshrInPlace(ShAmt);
+
+      // High bits known zero.
+      Known.Zero.setHighBits(ShAmt);
     }
     break;
   }
   case X86ISD::VSRAI: {
-    if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
+    if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op1)) {
       if (ShiftImm->getAPIntValue().uge(BitWidth))
         break;
 
-      KnownBits KnownOp;
       unsigned ShAmt = ShiftImm->getZExtValue();
       APInt DemandedMask = OriginalDemandedBits << ShAmt;
+
+      // If we just want the sign bit then we don't need to shift it.
+      if (OriginalDemandedBits.isSignMask())
+        return TLO.CombineTo(Op, Op0);
+
+      // fold (VSRAI (VSHLI X, C1), C1) --> X iff NumSignBits(X) > C1
+      if (Op0.getOpcode() == X86ISD::VSHLI && Op1 == Op0.getOperand(1)) {
+        SDValue Op00 = Op0.getOperand(0);
+        unsigned NumSignBits =
+            TLO.DAG.ComputeNumSignBits(Op00, OriginalDemandedElts);
+        if (ShAmt < NumSignBits)
+          return TLO.CombineTo(Op, Op00);
+      }
 
       // If any of the demanded bits are produced by the sign extension, we also
       // demand the input sign bit.
       if (OriginalDemandedBits.countLeadingZeros() < ShAmt)
         DemandedMask.setSignBit();
 
-      if (SimplifyDemandedBits(Op.getOperand(0), DemandedMask,
-                               OriginalDemandedElts, KnownOp, TLO, Depth + 1))
+      if (SimplifyDemandedBits(Op0, DemandedMask, OriginalDemandedElts, Known,
+                               TLO, Depth + 1))
         return true;
+
+      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
+      Known.Zero.lshrInPlace(ShAmt);
+      Known.One.lshrInPlace(ShAmt);
+
+      // If the input sign bit is known to be zero, or if none of the top bits
+      // are demanded, turn this into an unsigned shift right.
+      if (Known.Zero[BitWidth - ShAmt - 1] ||
+          OriginalDemandedBits.countLeadingZeros() >= ShAmt)
+        return TLO.CombineTo(
+            Op, TLO.DAG.getNode(X86ISD::VSRLI, SDLoc(Op), VT, Op0, Op1));
+
+      // High bits are known one.
+      if (Known.One[BitWidth - ShAmt - 1])
+        Known.One.setHighBits(ShAmt);
     }
     break;
   }
   case X86ISD::MOVMSK: {
     SDValue Src = Op.getOperand(0);
-    MVT VT = Op.getSimpleValueType();
     MVT SrcVT = Src.getSimpleValueType();
     unsigned SrcBits = SrcVT.getScalarSizeInBits();
     unsigned NumElts = SrcVT.getVectorNumElements();
@@ -32477,7 +32520,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     else if (KnownSrc.Zero[SrcBits - 1])
       Known.Zero.setLowBits(NumElts);
     return false;
-   }
+  }
   }
 
   return TargetLowering::SimplifyDemandedBitsForTargetNode(
@@ -35531,22 +35574,6 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
   // Shift zero -> zero.
   if (ISD::isBuildVectorAllZeros(N0.getNode()))
     return DAG.getConstant(0, SDLoc(N), VT);
-
-  // fold (VSRLI (VSRAI X, Y), 31) -> (VSRLI X, 31).
-  // This VSRLI only looks at the sign bit, which is unmodified by VSRAI.
-  // TODO - support other sra opcodes as needed.
-  if (Opcode == X86ISD::VSRLI && (ShiftVal + 1) == NumBitsPerElt &&
-      N0.getOpcode() == X86ISD::VSRAI)
-    return DAG.getNode(X86ISD::VSRLI, SDLoc(N), VT, N0.getOperand(0), N1);
-
-  // fold (VSRAI (VSHLI X, C1), C1) --> X iff NumSignBits(X) > C1
-  if (Opcode == X86ISD::VSRAI && N0.getOpcode() == X86ISD::VSHLI &&
-      N1 == N0.getOperand(1)) {
-    SDValue N00 = N0.getOperand(0);
-    unsigned NumSignBits = DAG.ComputeNumSignBits(N00);
-    if (ShiftVal < NumSignBits)
-      return N00;
-  }
 
   // Fold (VSRAI (VSRAI X, C1), C2) --> (VSRAI X, (C1 + C2)) with (C1 + C2)
   // clamped to (NumBitsPerElt - 1).

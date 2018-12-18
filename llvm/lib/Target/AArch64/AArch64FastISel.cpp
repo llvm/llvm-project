@@ -2258,6 +2258,13 @@ static AArch64CC::CondCode getCompareCC(CmpInst::Predicate Pred) {
 
 /// Try to emit a combined compare-and-branch instruction.
 bool AArch64FastISel::emitCompareAndBranch(const BranchInst *BI) {
+  // Speculation tracking/SLH assumes that optimized TB(N)Z/CB(N)Z instructions
+  // will not be produced, as they are conditional branch instructions that do
+  // not set flags.
+  if (FuncInfo.MF->getFunction().hasFnAttribute(
+          Attribute::SpeculativeLoadHardening))
+    return false;
+
   assert(isa<CmpInst>(BI->getCondition()) && "Expected cmp instruction");
   const CmpInst *CI = cast<CmpInst>(BI->getCondition());
   CmpInst::Predicate Predicate = optimizeCmpPredicate(CI);
