@@ -21,6 +21,7 @@ Example usage for git/svn users:
   svn diff --diff-cmd=diff -x-U0 | clang-format-diff.py -i
 
 """
+from __future__ import print_function
 
 import argparse
 import difflib

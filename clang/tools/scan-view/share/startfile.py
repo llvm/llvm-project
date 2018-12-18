@@ -189,7 +189,7 @@ else:
             return _controllers[controller_name].open
 
         except KeyError:
-            if _controllers.has_key('xdg-open'):
+            if 'xdg-open' in _controllers:
                 return _controllers['xdg-open'].open
             else:
                 return webbrowser.open

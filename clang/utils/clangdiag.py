@@ -9,6 +9,7 @@
 #   (lldb) command script import /path/to/clandiag.py
 #----------------------------------------------------------------------
 
+from __future__ import print_function
 import lldb
 import argparse
 import commands
@@ -189,4 +190,4 @@ def __lldb_init_module(debugger, dict):
     # Add any commands contained in this module to LLDB
     debugger.HandleCommand(
         'command script add -f clangdiag.the_diag_command clangdiag')
-    print 'The "clangdiag" command has been installed, type "help clangdiag" or "clangdiag --help" for detailed help.'
+    print('The "clangdiag" command has been installed, type "help clangdiag" or "clangdiag --help" for detailed help.')
