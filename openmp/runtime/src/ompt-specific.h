@@ -41,7 +41,7 @@ int __ompt_get_parallel_info_internal(int ancestor_level,
 
 int __ompt_get_task_info_internal(int ancestor_level, int *type,
                                   ompt_data_t **task_data,
-                                  omp_frame_t **task_frame,
+                                  ompt_frame_t **task_frame,
                                   ompt_data_t **parallel_data, int *thread_num);
 
 ompt_data_t *__ompt_get_thread_data_internal();
@@ -93,7 +93,7 @@ inline kmp_info_t *ompt_get_thread() {
   return ompt_get_thread_gtid(gtid);
 }
 
-inline void ompt_set_thread_state(kmp_info_t *thread, omp_state_t state) {
+inline void ompt_set_thread_state(kmp_info_t *thread, ompt_state_t state) {
   thread->th.ompt_thread_info.state = state;
 }
 

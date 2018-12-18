@@ -22,7 +22,7 @@ int main()
 
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: __builtin_frame_address({{.}})=[[EXIT_FRAME:0x[0-f]*]]
   // CHECK: {{^}}[[MASTER_ID]]: __builtin_frame_address(0)=[[REENTER_FRAME:0x[0-f]*]]
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_control_tool: command=3, modifier=1, arg=[[NULL]], codeptr_ra=[[RETURN_ADDRESS:0x[0-f]*]], current_task_frame.exit=[[EXIT_FRAME]], current_task_frame.reenter=[[REENTER_FRAME]]
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_control_tool: command=3, modifier=1, arg=[[NULL]], codeptr_ra=[[RETURN_ADDRESS:0x[0-f]*]], current_task_frame.exit=[[EXIT_FRAME]], current_task_frame.reenter={{0x[0-f]*}}
   // CHECK-NEXT: {{^}}[[MASTER_ID]]: current_address={{.*}}[[RETURN_ADDRESS]]
 
   return 0;
