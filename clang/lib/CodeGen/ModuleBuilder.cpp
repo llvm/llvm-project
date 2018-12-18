@@ -132,6 +132,9 @@ namespace {
 
       M->setTargetTriple(Ctx->getTargetInfo().getTriple().getTriple());
       M->setDataLayout(Ctx->getTargetInfo().getDataLayout());
+      const auto &SDKVersion = Ctx->getTargetInfo().getSDKVersion();
+      if (!SDKVersion.empty())
+        M->setSDKVersion(SDKVersion);
       Builder.reset(new CodeGen::CodeGenModule(Context, HeaderSearchOpts,
                                                PreprocessorOpts, CodeGenOpts,
                                                *M, Diags, CoverageInfo));

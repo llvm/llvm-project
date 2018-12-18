@@ -50,6 +50,19 @@ define <4 x i32> @combine_vec_ashr_outofrange1(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
+define <4 x i32> @combine_vec_ashr_outofrange2(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_ashr_outofrange2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_ashr_outofrange2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = ashr <4 x i32> %x, <i32 33, i32 34, i32 35, i32 undef>
+  ret <4 x i32> %1
+}
+
 ; fold (sra x, 0) -> x
 define <4 x i32> @combine_vec_ashr_by_zero(<4 x i32> %x) {
 ; CHECK-LABEL: combine_vec_ashr_by_zero:

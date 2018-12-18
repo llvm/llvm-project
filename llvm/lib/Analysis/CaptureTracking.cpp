@@ -170,7 +170,7 @@ bool llvm::PointerMayBeCaptured(const Value *V,
   (void)StoreCaptures;
 
   SimpleCaptureTracker SCT(ReturnCaptures);
-  PointerMayBeCaptured(V, &SCT);
+  PointerMayBeCaptured(V, &SCT, MaxUsesToExplore);
   return SCT.Captured;
 }
 
@@ -194,7 +194,8 @@ bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
   bool UseNewOBB = OBB == nullptr;
 
   if (!DT)
-    return PointerMayBeCaptured(V, ReturnCaptures, StoreCaptures);
+    return PointerMayBeCaptured(V, ReturnCaptures, StoreCaptures,
+                                MaxUsesToExplore);
   if (UseNewOBB)
     OBB = new OrderedBasicBlock(I->getParent());
 
@@ -202,7 +203,7 @@ bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
   // with StoreCaptures.
 
   CapturesBefore CB(ReturnCaptures, I, DT, IncludeI, OBB);
-  PointerMayBeCaptured(V, &CB);
+  PointerMayBeCaptured(V, &CB, MaxUsesToExplore);
 
   if (UseNewOBB)
     delete OBB;

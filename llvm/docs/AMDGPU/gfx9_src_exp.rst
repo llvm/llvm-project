@@ -19,7 +19,7 @@ Data to copy to export buffers. This is an optional operand. Must be specified a
 
 An example:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   exp mrtz v3, v3, off, off compr
 

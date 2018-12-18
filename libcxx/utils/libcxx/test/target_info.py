@@ -182,6 +182,18 @@ class FreeBSDLocalTI(DefaultTargetInfo):
         flags += ['-lc', '-lm', '-lpthread', '-lgcc_s', '-lcxxrt']
 
 
+class NetBSDLocalTI(DefaultTargetInfo):
+    def __init__(self, full_config):
+        super(NetBSDLocalTI, self).__init__(full_config)
+
+    def add_locale_features(self, features):
+        add_common_locales(features, self.full_config.lit_config)
+
+    def add_cxx_link_flags(self, flags):
+        flags += ['-lc', '-lm', '-lpthread', '-lgcc_s', '-lc++abi',
+                  '-lunwind']
+
+
 class LinuxLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(LinuxLocalTI, self).__init__(full_config)
@@ -280,6 +292,7 @@ def make_target_info(full_config):
     target_system = platform.system()
     if target_system == 'Darwin':  return DarwinLocalTI(full_config)
     if target_system == 'FreeBSD': return FreeBSDLocalTI(full_config)
+    if target_system == 'NetBSD':  return NetBSDLocalTI(full_config)
     if target_system == 'Linux':   return LinuxLocalTI(full_config)
     if target_system == 'Windows': return WindowsLocalTI(full_config)
     return DefaultTargetInfo(full_config)

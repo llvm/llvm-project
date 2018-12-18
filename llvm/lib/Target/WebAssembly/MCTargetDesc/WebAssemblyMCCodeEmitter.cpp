@@ -89,8 +89,6 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
 
     } else if (MO.isImm()) {
       if (i < Desc.getNumOperands()) {
-        assert(Desc.TSFlags == 0 &&
-               "WebAssembly non-variable_ops don't use TSFlags");
         const MCOperandInfo &Info = Desc.OpInfo[i];
         LLVM_DEBUG(dbgs() << "Encoding immediate: type="
                           << int(Info.OperandType) << "\n");
@@ -125,16 +123,10 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           encodeULEB128(uint64_t(MO.getImm()), OS);
         }
       } else {
-        assert(Desc.TSFlags == (WebAssemblyII::VariableOpIsImmediate |
-                                WebAssemblyII::VariableOpImmediateIsLabel));
         encodeULEB128(uint64_t(MO.getImm()), OS);
       }
 
     } else if (MO.isFPImm()) {
-      assert(i < Desc.getNumOperands() &&
-             "Unexpected floating-point immediate as a non-fixed operand");
-      assert(Desc.TSFlags == 0 &&
-             "WebAssembly variable_ops floating point ops don't use TSFlags");
       const MCOperandInfo &Info = Desc.OpInfo[i];
       if (Info.OperandType == WebAssembly::OPERAND_F32IMM) {
         // TODO: MC converts all floating point immediate operands to double.

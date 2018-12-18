@@ -229,8 +229,8 @@ static InternalMmapVectorNoCtor<FrameDescriptionArray> AllFrames;
 void InitFrameDescriptors(uptr b, uptr e) {
   FrameDescription *beg = reinterpret_cast<FrameDescription *>(b);
   FrameDescription *end = reinterpret_cast<FrameDescription *>(e);
-  // Must have at least one entry, which we can use for a linked list.
-  CHECK_GE(end - beg, 1U);
+  if (beg == end)
+    return;
   AllFrames.push_back({beg, end});
   if (Verbosity())
     for (FrameDescription *frame_descr = beg; frame_descr < end; frame_descr++)

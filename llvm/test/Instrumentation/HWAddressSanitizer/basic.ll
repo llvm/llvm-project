@@ -5,6 +5,9 @@
 ; RUN: opt < %s -hwasan -hwasan-recover=0 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT,ZERO-BASED-SHADOW
 ; RUN: opt < %s -hwasan -hwasan-recover=1 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,RECOVER,ZERO-BASED-SHADOW
 
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @hwasan.module_ctor, i8* bitcast (void ()* @hwasan.module_ctor to i8*) }]
+; CHECK: @__hwasan = private constant [0 x i8] zeroinitializer, section "__hwasan_frames", comdat($hwasan.module_ctor)
+
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
 
@@ -352,7 +355,7 @@ entry:
 
 ; CHECK: declare void @__hwasan_init()
 
-; CHECK:      define internal void @hwasan.module_ctor() {
+; CHECK:      define internal void @hwasan.module_ctor() comdat {
 ; CHECK-NEXT:   call void @__hwasan_init()
 ; CHECK-NEXT:   call void @__hwasan_init_frames(
 ; CHECK-NEXT:   ret void

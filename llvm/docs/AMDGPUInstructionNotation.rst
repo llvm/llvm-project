@@ -81,7 +81,7 @@ Where:
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     src1:m             // src1 operand may be used with operand modifiers
     vdata:dst          // vdata operand may be used as both source and destination

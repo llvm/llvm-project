@@ -271,7 +271,7 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
 
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be:
-    return aarch64::getAArch64TargetCPU(Args, A);
+    return aarch64::getAArch64TargetCPU(Args, T, A);
 
   case llvm::Triple::arm:
   case llvm::Triple::armeb:

@@ -1107,12 +1107,9 @@ Instruction *InstCombiner::visitZExt(ZExtInst &CI) {
   Value *Src = CI.getOperand(0);
   Type *SrcTy = Src->getType(), *DestTy = CI.getType();
 
-  // Attempt to extend the entire input expression tree to the destination
-  // type.   Only do this if the dest type is a simple type, don't convert the
-  // expression tree to something weird like i93 unless the source is also
-  // strange.
+  // Try to extend the entire expression tree to the wide destination type.
   unsigned BitsToClear;
-  if ((DestTy->isVectorTy() || shouldChangeType(SrcTy, DestTy)) &&
+  if (shouldChangeType(SrcTy, DestTy) &&
       canEvaluateZExtd(Src, DestTy, BitsToClear, *this, &CI)) {
     assert(BitsToClear <= SrcTy->getScalarSizeInBits() &&
            "Can't clear more bits than in SrcTy");
@@ -1389,12 +1386,8 @@ Instruction *InstCombiner::visitSExt(SExtInst &CI) {
     return replaceInstUsesWith(CI, ZExt);
   }
 
-  // Attempt to extend the entire input expression tree to the destination
-  // type.   Only do this if the dest type is a simple type, don't convert the
-  // expression tree to something weird like i93 unless the source is also
-  // strange.
-  if ((DestTy->isVectorTy() || shouldChangeType(SrcTy, DestTy)) &&
-      canEvaluateSExtd(Src, DestTy)) {
+  // Try to extend the entire expression tree to the wide destination type.
+  if (shouldChangeType(SrcTy, DestTy) && canEvaluateSExtd(Src, DestTy)) {
     // Okay, we can transform this!  Insert the new expression now.
     LLVM_DEBUG(
         dbgs() << "ICE: EvaluateInDifferentType converting expression type"

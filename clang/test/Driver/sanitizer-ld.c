@@ -673,6 +673,13 @@
 // CHECK-AUBSAN-PS4: "{{.*}}ld{{(.gold)?(.exe)?}}"
 // CHECK-AUBSAN-PS4: -lSceDbgAddressSanitizer_stub_weak
 
+// RUN: %clang -fsanitize=address,undefined %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-scei-ps4 -fuse-ld=ld \
+// RUN:     -shared \
+// RUN:     -nostdlib \
+// RUN:   | FileCheck --check-prefix=CHECK-NOLIB-PS4 %s
+// CHECK-NOLIB-PS4-NOT: SceDbgAddressSanitizer_stub_weak
+
 // RUN: %clang -fsanitize=efficiency-cache-frag %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-unknown-linux -fuse-ld=ld \
 // RUN:   | FileCheck --check-prefix=CHECK-ESAN-LINUX %s

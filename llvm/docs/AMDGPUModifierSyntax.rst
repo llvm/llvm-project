@@ -43,7 +43,7 @@ Used with DS instructions which have 2 addresses.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   offset:255
   offset:0xff
@@ -66,7 +66,7 @@ Used with DS instructions which have 1 address.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   offset:65535
   offset:0xffff
@@ -133,7 +133,7 @@ Numeric parameters may be specified as either :ref:`integer numbers<amdgpu_synid
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   offset:255
   offset:0xffff
@@ -221,7 +221,7 @@ Cannot be used with *global/scratch* opcodes. GFX9 only.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   offset:4095
   offset:0xff
@@ -244,7 +244,7 @@ Can be used with *global/scratch* opcodes only. GFX9 only.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   offset:-4000
   offset:0x10
@@ -309,7 +309,7 @@ This modifier has some limitations depending on instruction kind:
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   dmask:0xf
   dmask:0b1111
@@ -559,7 +559,7 @@ Specifies an immediate unsigned 12-bit offset, in bytes. The default value is 0.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   offset:0
   offset:0x10
@@ -674,7 +674,7 @@ Note: Numeric parameters may be specified as either
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   quad_perm:[0, 1, 2, 3]
   row_shl:3
@@ -700,7 +700,7 @@ Note. The lanes of a wavefront are organized in four banks and four rows.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   row_mask:0xf
   row_mask:0b1010
@@ -727,7 +727,7 @@ Note. The lanes of a wavefront are organized in four banks and four rows.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   bank_mask:0x3
   bank_mask:0b0011
@@ -879,7 +879,7 @@ Valid for integer operands only.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   sext(v4)
   sext(v255)
@@ -915,7 +915,7 @@ GFX9 only.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   op_sel:[0,0]
   op_sel:[0,1]
@@ -994,10 +994,10 @@ Valid for floating point operands only.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   abs(v36)
-  |v36|
+  \|v36|
 
 .. _amdgpu_synid_neg:
 
@@ -1016,7 +1016,7 @@ Valid for floating point operands only.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   neg(v[0])
   -v4
@@ -1055,7 +1055,7 @@ The value 0 selects the low bits, while 1 selects the high bits.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   op_sel:[0,0]
   op_sel:[0,1,0]
@@ -1084,7 +1084,7 @@ The value 0 selects the low bits, while 1 selects the high bits.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   op_sel_hi:[0,0]
   op_sel_hi:[0,0,1]
@@ -1118,7 +1118,7 @@ This modifier is valid for floating point operands only.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   neg_lo:[0]
   neg_lo:[0,1]
@@ -1152,7 +1152,7 @@ This modifier is valid for floating point operands only.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   neg_hi:[1,0]
   neg_hi:[0,1,1]
@@ -1200,7 +1200,7 @@ By default, low bits are used for all operands.
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   op_sel:[0,1]
 
@@ -1228,7 +1228,7 @@ The location of 16 bits in the operand may be specified by
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
   op_sel_hi:[1,1,1]
 

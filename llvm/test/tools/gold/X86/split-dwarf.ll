@@ -10,8 +10,8 @@
 ; CHECK: DW_AT_GNU_dwo_name{{.*}}dwo_dir/1.dwo
 ; CHECK-NOT: DW_TAG_subprogram
 ; RUN: llvm-dwarfdump -debug-info %t/dwo_dir/1.dwo | FileCheck --check-prefix DWOCHECK %s
-; DWOCHECK: DW_AT_GNU_dwo_name{{.*}}dwo_dir/1.dwo
 ; DWOCHECK: DW_AT_name{{.*}}split-dwarf.c
+; DWOCHECK: DW_AT_GNU_dwo_name{{.*}}dwo_dir/1.dwo
 ; DWOCHECK: DW_TAG_subprogram
 
 ; RUN:rm -rf %t/dwo_dir
@@ -26,8 +26,8 @@
 ; LTOCHECK: DW_AT_GNU_dwo_name{{.*}}dwo_dir/0.dwo
 ; LTOCHECK-NOT: DW_TAG_subprogram
 ; RUN: llvm-dwarfdump -debug-info %t/dwo_dir/0.dwo | FileCheck --check-prefix LTODWOCHECK %s
-; LTODWOCHECK: DW_AT_GNU_dwo_name{{.*}}dwo_dir/0.dwo
 ; LTODWOCHECK: DW_AT_name{{.*}}split-dwarf.c
+; LTODWOCHECK: DW_AT_GNU_dwo_name{{.*}}dwo_dir/0.dwo
 ; LTODWOCHECK: DW_TAG_subprogram
 
 ; ModuleID = 'split-dwarf.c'

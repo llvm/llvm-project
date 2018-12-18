@@ -53,44 +53,44 @@
     macro(ompt_get_target_info)             \
     macro(ompt_get_num_devices)
 
-#define FOREACH_OMP_STATE(macro)                                                                \
+#define FOREACH_OMPT_STATE(macro)                                                                \
                                                                                                 \
     /* first available state */                                                                 \
-    macro (omp_state_undefined, 0x102)      /* undefined thread state */                        \
+    macro (ompt_state_undefined, 0x102)      /* undefined thread state */                        \
                                                                                                 \
     /* work states (0..15) */                                                                   \
-    macro (omp_state_work_serial, 0x000)    /* working outside parallel */                      \
-    macro (omp_state_work_parallel, 0x001)  /* working within parallel */                       \
-    macro (omp_state_work_reduction, 0x002) /* performing a reduction */                        \
+    macro (ompt_state_work_serial, 0x000)    /* working outside parallel */                      \
+    macro (ompt_state_work_parallel, 0x001)  /* working within parallel */                       \
+    macro (ompt_state_work_reduction, 0x002) /* performing a reduction */                        \
                                                                                                 \
     /* barrier wait states (16..31) */                                                          \
-    macro (omp_state_wait_barrier, 0x010)   /* waiting at a barrier */                          \
-    macro (omp_state_wait_barrier_implicit_parallel, 0x011)                                     \
+    macro (ompt_state_wait_barrier, 0x010)   /* waiting at a barrier */                          \
+    macro (ompt_state_wait_barrier_implicit_parallel, 0x011)                                     \
                                             /* implicit barrier at the end of parallel region */\
-    macro (omp_state_wait_barrier_implicit_workshare, 0x012)                                    \
+    macro (ompt_state_wait_barrier_implicit_workshare, 0x012)                                    \
                                             /* implicit barrier at the end of worksharing */    \
-    macro (omp_state_wait_barrier_implicit, 0x013)  /* implicit barrier */                      \
-    macro (omp_state_wait_barrier_explicit, 0x014)  /* explicit barrier */                      \
+    macro (ompt_state_wait_barrier_implicit, 0x013)  /* implicit barrier */                      \
+    macro (ompt_state_wait_barrier_explicit, 0x014)  /* explicit barrier */                      \
                                                                                                 \
     /* task wait states (32..63) */                                                             \
-    macro (omp_state_wait_taskwait, 0x020)  /* waiting at a taskwait */                         \
-    macro (omp_state_wait_taskgroup, 0x021) /* waiting at a taskgroup */                        \
+    macro (ompt_state_wait_taskwait, 0x020)  /* waiting at a taskwait */                         \
+    macro (ompt_state_wait_taskgroup, 0x021) /* waiting at a taskgroup */                        \
                                                                                                 \
     /* mutex wait states (64..127) */                                                           \
-    macro (omp_state_wait_mutex, 0x040)                                                         \
-    macro (omp_state_wait_lock, 0x041)      /* waiting for lock */                              \
-    macro (omp_state_wait_critical, 0x042)  /* waiting for critical */                          \
-    macro (omp_state_wait_atomic, 0x043)    /* waiting for atomic */                            \
-    macro (omp_state_wait_ordered, 0x044)   /* waiting for ordered */                           \
+    macro (ompt_state_wait_mutex, 0x040)                                                         \
+    macro (ompt_state_wait_lock, 0x041)      /* waiting for lock */                              \
+    macro (ompt_state_wait_critical, 0x042)  /* waiting for critical */                          \
+    macro (ompt_state_wait_atomic, 0x043)    /* waiting for atomic */                            \
+    macro (ompt_state_wait_ordered, 0x044)   /* waiting for ordered */                           \
                                                                                                 \
     /* target wait states (128..255) */                                                         \
-    macro (omp_state_wait_target, 0x080)        /* waiting for target region */                 \
-    macro (omp_state_wait_target_map, 0x081)    /* waiting for target data mapping operation */ \
-    macro (omp_state_wait_target_update, 0x082) /* waiting for target update operation */       \
+    macro (ompt_state_wait_target, 0x080)        /* waiting for target region */                 \
+    macro (ompt_state_wait_target_map, 0x081)    /* waiting for target data mapping operation */ \
+    macro (ompt_state_wait_target_update, 0x082) /* waiting for target update operation */       \
                                                                                                 \
     /* misc (256..511) */                                                                       \
-    macro (omp_state_idle, 0x100)           /* waiting for work */                              \
-    macro (omp_state_overhead, 0x101)       /* overhead excluding wait states */                \
+    macro (ompt_state_idle, 0x100)           /* waiting for work */                              \
+    macro (ompt_state_overhead, 0x101)       /* overhead excluding wait states */                \
                                                                                                 \
     /* implementation-specific states (512..) */
 
@@ -178,19 +178,10 @@ typedef union ompt_data_t {
 
 static const ompt_data_t ompt_data_none = {0};
 
-typedef uint64_t omp_wait_id_t;
-static const omp_wait_id_t omp_wait_id_none = 0;
+typedef uint64_t ompt_wait_id_t;
+static const ompt_wait_id_t omp_wait_id_none = 0;
 
 typedef void ompt_device_t;
-
-/*---------------------
- * omp_frame_t
- *---------------------*/
-
-typedef struct omp_frame_t {
-    void *exit_frame;    /* next frame is user code     */
-    void *enter_frame;   /* previous frame is user code */
-} omp_frame_t;
 
 
 /*---------------------
@@ -220,10 +211,18 @@ typedef struct ompt_task_dependence_t {
  *---------------------*/
 
 typedef enum {
-#define omp_state_macro(state, code) state = code,
-    FOREACH_OMP_STATE(omp_state_macro)
-#undef omp_state_macro
-} omp_state_t;
+#define ompt_state_macro(state, code) state = code,
+    FOREACH_OMPT_STATE(ompt_state_macro)
+#undef ompt_state_macro
+} ompt_state_t;
+
+typedef enum ompt_frame_flag_t {
+  ompt_frame_runtime        = 0x00,
+  ompt_frame_application    = 0x01,
+  ompt_frame_cfa            = 0x10,
+  ompt_frame_framepointer   = 0x20,
+  ompt_frame_stackaddress   = 0x30
+} ompt_frame_flag_t; 
 
 
 /*---------------------
@@ -278,6 +277,12 @@ typedef enum ompt_thread_t {
     ompt_thread_unknown = 4
 } ompt_thread_t;
 
+typedef struct ompt_frame_t {
+  ompt_data_t exit_frame;
+  ompt_data_t enter_frame;
+  int exit_frame_flags;
+  int enter_frame_flags;
+} ompt_frame_t;
 typedef enum ompt_parallel_flag_t {
     ompt_parallel_invoker_program = 0x00000001,   /* program invokes master task */
     ompt_parallel_invoker_runtime = 0x00000002,   /* runtime invokes master task */
@@ -295,7 +300,7 @@ typedef void (*ompt_callback_thread_end_t) (
 );
 
 typedef void (*ompt_wait_callback_t) (
-    omp_wait_id_t wait_id                /* wait data                           */
+    ompt_wait_id_t wait_id                /* wait data                           */
 );
 
 /* parallel and workshares */
@@ -316,7 +321,7 @@ typedef void (*ompt_callback_implicit_task_t) (
 
 typedef void (*ompt_callback_parallel_begin_t) (
     ompt_data_t *encountering_task_data,         /* data of encountering task           */
-    const omp_frame_t *encountering_task_frame,  /* frame data of encountering task     */
+    const ompt_frame_t *encountering_task_frame,  /* frame data of encountering task     */
     ompt_data_t *parallel_data,                  /* data of parallel region             */
     unsigned int requested_team_size,            /* requested number of threads in team */
     int flag,                                    /* flag for additional information     */
@@ -358,7 +363,7 @@ typedef void (*ompt_callback_task_schedule_t) (
 
 typedef void (*ompt_callback_task_create_t) (
     ompt_data_t *encountering_task_data,         /* data of parent task                 */
-    const omp_frame_t *encountering_task_frame,  /* frame data for parent task          */
+    const ompt_frame_t *encountering_task_frame,  /* frame data for parent task          */
     ompt_data_t *new_task_data,                  /* data of created task                */
     int flag,                                    /* type of created task                */
     int has_dependences,                         /* created task has dependences        */
@@ -479,19 +484,19 @@ typedef void (*ompt_callback_mutex_acquire_t) (
     ompt_mutex_t kind,                    /* mutex kind                          */
     unsigned int hint,                    /* mutex hint                          */
     unsigned int impl,                    /* mutex implementation                */
-    omp_wait_id_t wait_id,                /* id of object being awaited          */
+    ompt_wait_id_t wait_id,                /* id of object being awaited          */
     const void *codeptr_ra                /* return address of runtime call      */
 );
 
 typedef void (*ompt_callback_mutex_t) (
     ompt_mutex_t kind,                    /* mutex kind                          */
-    omp_wait_id_t wait_id,                /* id of object being awaited          */
+    ompt_wait_id_t wait_id,                /* id of object being awaited          */
     const void *codeptr_ra                /* return address of runtime call      */
 );
 
 typedef void (*ompt_callback_nest_lock_t) (
     ompt_scope_endpoint_t endpoint,       /* endpoint of nested lock             */
-    omp_wait_id_t wait_id,                /* id of object being awaited          */
+    ompt_wait_id_t wait_id,                /* id of object being awaited          */
     const void *codeptr_ra                /* return address of runtime call      */
 );
 
@@ -592,8 +597,8 @@ extern "C" {
  ***************************************************************************/
 
 /* state */
-OMPT_API_FUNCTION(omp_state_t, ompt_get_state, (
-    omp_wait_id_t *wait_id
+OMPT_API_FUNCTION(ompt_state_t, ompt_get_state, (
+    ompt_wait_id_t *wait_id
 ));
 
 /* thread */
@@ -611,7 +616,7 @@ OMPT_API_FUNCTION(int, ompt_get_task_info, (
     int ancestor_level,
     int *type,
     ompt_data_t **task_data,
-    omp_frame_t **task_frame,
+    ompt_frame_t **task_frame,
     ompt_data_t **parallel_data,
     int *thread_num
 ));

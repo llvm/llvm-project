@@ -90,21 +90,21 @@ The size of data is specified by size suffices:
 
 Examples of instructions with different types of source and destination operands:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     s_bcnt0_i32_b64
     v_cvt_f32_u32
 
 Examples of instructions with one data type:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     v_max3_f32
     v_max3_i16
 
 Examples of instructions which operate with packed data:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     v_pk_add_u16
     v_pk_add_i16
@@ -112,7 +112,7 @@ Examples of instructions which operate with packed data:
 
 Examples of typeless instructions which operate on b128 data:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     buffer_store_dwordx4
     flat_load_dwordx4

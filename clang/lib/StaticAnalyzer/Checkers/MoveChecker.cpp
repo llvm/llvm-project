@@ -63,9 +63,7 @@ public:
 
 private:
   enum MisuseKind { MK_FunCall, MK_Copy, MK_Move, MK_Dereference };
-  // This needs to be unsigned in order to avoid undefined behavior
-  // when putting it into a tight bitfield.
-  enum StdObjectKind : unsigned { SK_NonStd, SK_Unsafe, SK_Safe, SK_SmartPtr };
+  enum StdObjectKind { SK_NonStd, SK_Unsafe, SK_Safe, SK_SmartPtr };
 
   enum AggressivenessKind { // In any case, don't warn after a reset.
     AK_Invalid = -1,
@@ -81,9 +79,9 @@ private:
 
   struct ObjectKind {
     // Is this a local variable or a local rvalue reference?
-    bool IsLocal : 1;
+    bool IsLocal;
     // Is this an STL object? If so, of what kind?
-    StdObjectKind StdKind : 2;
+    StdObjectKind StdKind;
   };
 
   // STL smart pointers are automatically re-initialized to null when moved

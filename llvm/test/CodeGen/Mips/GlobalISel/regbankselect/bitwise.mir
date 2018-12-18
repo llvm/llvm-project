@@ -3,9 +3,9 @@
 --- |
 
 
-  define void @and(i32, i32) {entry: ret void}
-  define void @or(i32, i32) {entry: ret void}
-  define void @xor(i32, i32) {entry: ret void}
+  define void @and_i32() {entry: ret void}
+  define void @or_i32() {entry: ret void}
+  define void @xor_i32() {entry: ret void}
   define void @shl(i32) {entry: ret void}
   define void @ashr(i32) {entry: ret void}
   define void @lshr(i32) {entry: ret void}
@@ -15,7 +15,7 @@
 
 ...
 ---
-name:            and
+name:            and_i32
 alignment:       2
 legalized:       true
 tracksRegLiveness: true
@@ -23,7 +23,7 @@ body:             |
   bb.1.entry:
     liveins: $a0, $a1
 
-    ; MIPS32-LABEL: name: and
+    ; MIPS32-LABEL: name: and_i32
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
@@ -38,7 +38,7 @@ body:             |
 
 ...
 ---
-name:            or
+name:            or_i32
 alignment:       2
 legalized:       true
 tracksRegLiveness: true
@@ -46,7 +46,7 @@ body:             |
   bb.1.entry:
     liveins: $a0, $a1
 
-    ; MIPS32-LABEL: name: or
+    ; MIPS32-LABEL: name: or_i32
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
@@ -61,7 +61,7 @@ body:             |
 
 ...
 ---
-name:            xor
+name:            xor_i32
 alignment:       2
 legalized:       true
 tracksRegLiveness: true
@@ -69,7 +69,7 @@ body:             |
   bb.1.entry:
     liveins: $a0, $a1
 
-    ; MIPS32-LABEL: name: xor
+    ; MIPS32-LABEL: name: xor_i32
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1

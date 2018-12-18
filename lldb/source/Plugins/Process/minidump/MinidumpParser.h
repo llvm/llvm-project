@@ -90,6 +90,13 @@ public:
   // Perform consistency checks and initialize internal data structures
   Status Initialize();
 
+  static llvm::StringRef GetStreamTypeAsString(uint32_t stream_type);
+
+  const llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> &
+  GetDirectoryMap() const {
+    return m_directory_map;
+  }
+
 private:
   MinidumpParser(const lldb::DataBufferSP &data_buf_sp);
 

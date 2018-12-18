@@ -373,13 +373,14 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
     }
   }
 
-  if (auto *arg = args.getLastArg(OPT_repl)) {
-    auto arg_value = arg->getValue();
+  if (args.hasArg(OPT_repl)) {
     m_option_data.m_repl = true;
-    if (arg_value && arg_value[0])
+  }
+
+  if (auto *arg = args.getLastArg(OPT_repl_)) {
+    m_option_data.m_repl = true;
+    if (auto arg_value = arg->getValue())
       m_option_data.m_repl_options = arg_value;
-    else
-      m_option_data.m_repl_options.clear();
   }
 
   // We need to process the options below together as their relative order

@@ -592,9 +592,11 @@ define i64 @test46(i64 %A) {
 
 define <2 x i64> @test46vec(<2 x i64> %A) {
 ; CHECK-LABEL: @test46vec(
-; CHECK-NEXT:    [[C:%.*]] = shl <2 x i64> [[A:%.*]], <i64 8, i64 8>
-; CHECK-NEXT:    [[D:%.*]] = and <2 x i64> [[C]], <i64 10752, i64 10752>
-; CHECK-NEXT:    ret <2 x i64> [[D]]
+; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = shl <2 x i32> [[B]], <i32 8, i32 8>
+; CHECK-NEXT:    [[D:%.*]] = and <2 x i32> [[C]], <i32 10752, i32 10752>
+; CHECK-NEXT:    [[E:%.*]] = zext <2 x i32> [[D]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[E]]
 ;
   %B = trunc <2 x i64> %A to <2 x i32>
   %C = and <2 x i32> %B, <i32 42, i32 42>
@@ -749,9 +751,9 @@ define i64 @test56(i16 %A) {
 
 define <2 x i64> @test56vec(<2 x i16> %A) {
 ; CHECK-LABEL: @test56vec(
-; CHECK-NEXT:    [[P353:%.*]] = sext <2 x i16> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[P354:%.*]] = lshr <2 x i64> [[P353]], <i64 5, i64 5>
-; CHECK-NEXT:    [[P355:%.*]] = and <2 x i64> [[P354]], <i64 134217727, i64 134217727>
+; CHECK-NEXT:    [[P353:%.*]] = sext <2 x i16> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[P354:%.*]] = lshr <2 x i32> [[P353]], <i32 5, i32 5>
+; CHECK-NEXT:    [[P355:%.*]] = zext <2 x i32> [[P354]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[P355]]
 ;
   %p353 = sext <2 x i16> %A to <2 x i32>
@@ -774,8 +776,9 @@ define i64 @test57(i64 %A) {
 
 define <2 x i64> @test57vec(<2 x i64> %A) {
 ; CHECK-LABEL: @test57vec(
-; CHECK-NEXT:    [[C:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 8, i64 8>
-; CHECK-NEXT:    [[E:%.*]] = and <2 x i64> [[C]], <i64 16777215, i64 16777215>
+; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 8, i32 8>
+; CHECK-NEXT:    [[E:%.*]] = zext <2 x i32> [[C]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[E]]
 ;
   %B = trunc <2 x i64> %A to <2 x i32>

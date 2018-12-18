@@ -60,7 +60,7 @@ Each message type supports specific operations:
 
 Examples:
 
-.. code-block:: nasm
+.. parsed-literal::
 
     s_sendmsg 0x12
     s_sendmsg sendmsg(MSG_INTERRUPT)

@@ -2,11 +2,14 @@
 #include "TestFS.h"
 #include "index/Background.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/Threading.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <thread>
 
 using testing::_;
 using testing::AllOf;
+using testing::ElementsAre;
 using testing::Not;
 using testing::UnorderedElementsAre;
 
@@ -238,6 +241,40 @@ TEST_F(BackgroundIndexTest, DirectIncludesTest) {
             FileDigest{{0}});
   EXPECT_THAT(ShardHeader->Sources->lookup("unittest:///root/B.h"),
               EmptyIncludeNode());
+}
+
+TEST_F(BackgroundIndexTest, PeriodicalIndex) {
+  MockFSProvider FS;
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+  OverlayCDB CDB(/*Base=*/nullptr);
+  BackgroundIndex Idx(
+      Context::empty(), "", FS, CDB, [&](llvm::StringRef) { return &MSS; },
+      /*BuildIndexPeriodMs=*/100);
+
+  FS.Files[testPath("root/A.cc")] = "#include \"A.h\"";
+
+  tooling::CompileCommand Cmd;
+  FS.Files[testPath("root/A.h")] = "class X {};";
+  Cmd.Filename = testPath("root/A.cc");
+  Cmd.CommandLine = {"clang++", Cmd.Filename};
+  CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
+
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
+  EXPECT_THAT(runFuzzyFind(Idx, ""), ElementsAre());
+  std::this_thread::sleep_for(std::chrono::milliseconds(150));
+  EXPECT_THAT(runFuzzyFind(Idx, ""), ElementsAre(Named("X")));
+
+  FS.Files[testPath("root/A.h")] = "class Y {};";
+  FS.Files[testPath("root/A.cc")] += " "; // Force reindex the file.
+  Cmd.CommandLine = {"clang++", "-DA=1", testPath("root/A.cc")};
+  CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
+
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
+  EXPECT_THAT(runFuzzyFind(Idx, ""), ElementsAre(Named("X")));
+  std::this_thread::sleep_for(std::chrono::milliseconds(150));
+  EXPECT_THAT(runFuzzyFind(Idx, ""), ElementsAre(Named("Y")));
 }
 
 } // namespace clangd

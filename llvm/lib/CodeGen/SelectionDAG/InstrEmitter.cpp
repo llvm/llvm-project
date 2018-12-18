@@ -652,7 +652,9 @@ void InstrEmitter::EmitRegSequence(SDNode *Node,
   const MCInstrDesc &II = TII->get(TargetOpcode::REG_SEQUENCE);
   MachineInstrBuilder MIB = BuildMI(*MF, Node->getDebugLoc(), II, NewVReg);
   unsigned NumOps = Node->getNumOperands();
-  // REG_SEQUENCE can "inherit" a chain from a subnode.
+  // If the input pattern has a chain, then the root of the corresponding
+  // output pattern will get a chain as well. This can happen to be a
+  // REG_SEQUENCE (which is not "guarded" by countOperands/CountResults).
   if (NumOps && Node->getOperand(NumOps-1).getValueType() == MVT::Other)
     --NumOps; // Ignore chain if it exists.
 
