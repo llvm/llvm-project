@@ -12,6 +12,8 @@
 // T5 setprecision(int n);
 
 #include <iomanip>
+#include <istream>
+#include <ostream>
 #include <cassert>
 
 template <class CharT>

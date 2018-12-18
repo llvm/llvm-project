@@ -12,6 +12,8 @@
 // T6 setw(int n);
 
 #include <iomanip>
+#include <istream>
+#include <ostream>
 #include <cassert>
 
 template <class CharT>
