@@ -707,6 +707,9 @@ def DominatorsTreeDumper : Checker<"DumpDominators">,
 def LiveVariablesDumper : Checker<"DumpLiveVars">,
   HelpText<"Print results of live variable analysis">;
 
+def LiveStatementsDumper : Checker<"DumpLiveStmts">,
+  HelpText<"Print results of live statement analysis">;
+
 def CFGViewer : Checker<"ViewCFG">,
   HelpText<"View Control-Flow Graphs using GraphViz">;
 
