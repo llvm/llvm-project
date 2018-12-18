@@ -45,9 +45,9 @@ DictionaryConfig::DictionaryConfig()
   // still used to name classes in the ObjC runtime.
 
   m_nativeStorageRoot_mangled =
-    ConstString("_TtCs21_RawDictionaryStorage");
+    ConstString("_TtCs22__RawDictionaryStorage");
   m_nativeStorageRoot_demangled =
-    ConstString("Swift._RawDictionaryStorage");
+    ConstString("Swift.__RawDictionaryStorage");
 
   // Native storage class
   m_nativeStorage_mangledRegex_ObjC =
@@ -59,9 +59,9 @@ DictionaryConfig::DictionaryConfig()
 
   // Type-punned empty dictionary
   m_emptyStorage_mangled_ObjC =
-    ConstString("_TtCs25_EmptyDictionarySingleton");
+    ConstString("_TtCs26__EmptyDictionarySingleton");
   m_emptyStorage_demangled
-    = ConstString("Swift._EmptyDictionarySingleton");
+    = ConstString("Swift.__EmptyDictionarySingleton");
 
   // Deferred non-verbatim bridged dictionary
   m_deferredBridgedStorage_mangledRegex_ObjC

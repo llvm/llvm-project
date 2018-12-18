@@ -339,7 +339,7 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     //
     //   struct InlineSlice {
     //       var slice: Range<HalfInt>
-    //       var storage: _DataStorage
+    //       var storage: __DataStorage
     //   }
     static ConstString g_slice("slice");
     ValueObjectSP slice_storage_sp = slice_data_sp->GetChildAtNamePath(g_slice);
@@ -400,7 +400,7 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     //
     //   struct LargeSlice {
     //       var slice: RangeReference
-    //       var storage: _DataStorage
+    //       var storage: __DataStorage
     //   }
     static ConstString g_slice("slice");
     ValueObjectSP slice_ref_sp = large_data_sp->GetChildAtNamePath(g_slice);
