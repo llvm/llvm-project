@@ -146,11 +146,10 @@ __builtin_logger_initialize()
       wrapped_stream.Printf("%s#sourceLocation(file: \"%s\", line: %u)\n%s\n",
                             playground_prefix, pound_file, pound_line,
                             orig_text);
-      first_body_line = 1;
     } else {
       wrapped_stream.Printf("%s%s", playground_prefix, orig_text);
-      first_body_line = 7;
     }
+    first_body_line = 1;
     return;
   } else if (repl) { // repl but not playground.
     if (pound_file && pound_line) {
