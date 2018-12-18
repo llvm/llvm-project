@@ -21,8 +21,10 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/Threading.h"
+#include <atomic>
 #include <condition_variable>
 #include <deque>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -63,11 +65,15 @@ public:
 // FIXME: it should watch for changes to files on disk.
 class BackgroundIndex : public SwapIndex {
 public:
+  /// If BuildIndexPeriodMs is greater than 0, the symbol index will only be
+  /// rebuilt periodically (one per \p BuildIndexPeriodMs); otherwise, index is
+  /// rebuilt for each indexed file.
   // FIXME: resource-dir injection should be hoisted somewhere common.
   BackgroundIndex(Context BackgroundContext, llvm::StringRef ResourceDir,
                   const FileSystemProvider &,
                   const GlobalCompilationDatabase &CDB,
                   BackgroundIndexStorage::Factory IndexStorageFactory,
+                  size_t BuildIndexPeriodMs = 0,
                   size_t ThreadPoolSize = llvm::hardware_concurrency());
   ~BackgroundIndex(); // Blocks while the current task finishes.
 
@@ -101,6 +107,11 @@ private:
   // index state
   llvm::Error index(tooling::CompileCommand,
                     BackgroundIndexStorage *IndexStorage);
+  void buildIndex(); // Rebuild index periodically every BuildIndexPeriodMs.
+  const size_t BuildIndexPeriodMs;
+  std::atomic<bool> SymbolsUpdatedSinceLastIndex;
+  std::mutex IndexMu;
+  std::condition_variable IndexCV;
 
   FileSymbols IndexedSymbols;
   llvm::StringMap<FileDigest> IndexedFileDigests; // Key is absolute file path.
