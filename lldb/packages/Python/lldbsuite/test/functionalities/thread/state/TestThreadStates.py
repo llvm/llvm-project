@@ -52,17 +52,6 @@ class ThreadStateTestCase(TestBase):
         self.thread_state_after_expression_test()
 
     # thread states not properly maintained
-    @unittest2.expectedFailure("llvm.org/pr16712")
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
-    @skipIfDarwin # llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>
-    def test_process_interrupt(self):
-        """Test process interrupt."""
-        self.build(dictionary=self.getBuildFlags(use_cpp11=False))
-        self.process_interrupt_test()
-
-    # thread states not properly maintained
     @unittest2.expectedFailure("llvm.org/pr15824 and <rdar://problem/28557237>")
     @expectedFailureAll(
         oslist=["windows"],
@@ -198,8 +187,14 @@ class ThreadStateTestCase(TestBase):
         # Let the process run to completion
         self.runCmd("process continue")
 
-    def process_interrupt_test(self):
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
+    @skipIfDarwin # llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>
+    @no_debug_info_test
+    def test_process_interrupt(self):
         """Test process interrupt and continue."""
+        self.build(dictionary=self.getBuildFlags(use_cpp11=False))
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
