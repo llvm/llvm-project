@@ -1,4 +1,4 @@
-breakpoint set -f hello.c -p Hello
+breakpoint set -f hello.cpp -p Hello
 run
 script print(lldb.debugger)
 script print(lldb.target)
