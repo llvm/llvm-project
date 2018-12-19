@@ -315,11 +315,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   endif()
 endif()
 
-if (NOT LIBXML2_FOUND AND NOT (CMAKE_SYSTEM_NAME MATCHES "Windows"))
-  # Skip Libxml2 on Windows.  In CMake 3.4 and higher, the algorithm for
-  # finding libxml2 got "smarter", and it can now locate the version which is
-  # in gnuwin32, even though that version does not contain the headers that
-  # LLDB uses.
+if (NOT LIBXML2_FOUND)
   find_package(LibXml2)
 endif()
 
@@ -348,12 +344,10 @@ if (APPLE)
        ${SECURITY_LIBRARY}
        ${DEBUG_SYMBOLS_LIBRARY})
   include_directories(${LIBXML2_INCLUDE_DIR})
-else()
-  if (LIBXML2_FOUND)
-    add_definitions( -DLIBXML2_DEFINED )
-    list(APPEND system_libs ${LIBXML2_LIBRARIES})
-    include_directories(${LIBXML2_INCLUDE_DIR})
-  endif()
+elseif(LIBXML2_FOUND AND LIBXML2_VERSION_STRING VERSION_GREATER 2.8)
+  add_definitions( -DLIBXML2_DEFINED )
+  list(APPEND system_libs ${LIBXML2_LIBRARIES})
+  include_directories(${LIBXML2_INCLUDE_DIR})
 endif()
 
 if( WIN32 AND NOT CYGWIN )

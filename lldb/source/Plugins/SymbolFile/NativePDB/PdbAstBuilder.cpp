@@ -188,7 +188,10 @@ GetNestedTagRecord(const NestedTypeRecord &Record, const CVTagRecord &parent,
   // inner tag type is not necessarily the same as the outer tag type, re-write
   // it to match the inner tag type.
   qname[3] = child.asTag().getUniqueName()[3];
-  std::string piece = Record.Name;
+  std::string piece;
+  if (qname[3] == 'W')
+    piece = "4";
+  piece += Record.Name;
   piece.push_back('@');
   qname.insert(4, std::move(piece));
   if (qname != child.asTag().UniqueName)

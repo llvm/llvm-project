@@ -40,7 +40,7 @@ void calleeWeak(Weak);
 // ARM64: %[[V1:.*]] = bitcast i8** %[[V0]] to i8*
 // ARM64: %[[V2:.*]] = getelementptr inbounds i8, i8* %[[V1]], i64 8
 // ARM64: %[[V3:.*]] = bitcast i8* %[[V2]] to i8**
-// ARM64: call void @objc_destroyWeak(i8** %[[V3]])
+// ARM64: call void @llvm.objc.destroyWeak(i8** %[[V3]])
 
 void test_constructor_destructor_Weak(void) {
   Weak t;
@@ -67,7 +67,7 @@ void test_constructor_destructor_Weak(void) {
 // ARM64: %[[V8:.*]] = bitcast i8** %[[V1]] to i8*
 // ARM64: %[[V9:.*]] = getelementptr inbounds i8, i8* %[[V8]], i64 8
 // ARM64: %[[V10:.*]] = bitcast i8* %[[V9]] to i8**
-// ARM64: call void @objc_copyWeak(i8** %[[V7]], i8** %[[V10]])
+// ARM64: call void @llvm.objc.copyWeak(i8** %[[V7]], i8** %[[V10]])
 
 void test_copy_constructor_Weak(Weak *s) {
   Weak t = *s;
@@ -93,9 +93,9 @@ void test_copy_constructor_Weak(Weak *s) {
 // ARM64: %[[V8:.*]] = bitcast i8** %[[V1]] to i8*
 // ARM64: %[[V9:.*]] = getelementptr inbounds i8, i8* %[[V8]], i64 8
 // ARM64: %[[V10:.*]] = bitcast i8* %[[V9]] to i8**
-// ARM64: %[[V11:.*]] = call i8* @objc_loadWeakRetained(i8** %[[V10]])
-// ARM64: %[[V12:.*]] = call i8* @objc_storeWeak(i8** %[[V7]], i8* %[[V11]])
-// ARM64: call void @objc_release(i8* %[[V11]])
+// ARM64: %[[V11:.*]] = call i8* @llvm.objc.loadWeakRetained(i8** %[[V10]])
+// ARM64: %[[V12:.*]] = call i8* @llvm.objc.storeWeak(i8** %[[V7]], i8* %[[V11]])
+// ARM64: call void @llvm.objc.release(i8* %[[V11]])
 
 void test_copy_assignment_Weak(Weak *d, Weak *s) {
   *d = *s;
@@ -121,7 +121,7 @@ void test_copy_assignment_Weak(Weak *d, Weak *s) {
 // ARM64: %[[V8:.*]] = bitcast i8** %[[V1]] to i8*
 // ARM64: %[[V9:.*]] = getelementptr inbounds i8, i8* %[[V8]], i64 8
 // ARM64: %[[V10:.*]] = bitcast i8* %[[V9]] to i8**
-// ARM64: call void @objc_moveWeak(i8** %[[V7]], i8** %[[V10]])
+// ARM64: call void @llvm.objc.moveWeak(i8** %[[V7]], i8** %[[V10]])
 
 void test_move_constructor_Weak(void) {
   __block Weak t;
@@ -148,10 +148,10 @@ void test_move_constructor_Weak(void) {
 // ARM64: %[[V8:.*]] = bitcast i8** %[[V1]] to i8*
 // ARM64: %[[V9:.*]] = getelementptr inbounds i8, i8* %[[V8]], i64 8
 // ARM64: %[[V10:.*]] = bitcast i8* %[[V9]] to i8**
-// ARM64: %[[V11:.*]] = call i8* @objc_loadWeakRetained(i8** %[[V10]])
-// ARM64: %[[V12:.*]] = call i8* @objc_storeWeak(i8** %[[V7]], i8* %[[V11]])
-// ARM64: call void @objc_destroyWeak(i8** %[[V10]])
-// ARM64: call void @objc_release(i8* %[[V11]])
+// ARM64: %[[V11:.*]] = call i8* @llvm.objc.loadWeakRetained(i8** %[[V10]])
+// ARM64: %[[V12:.*]] = call i8* @llvm.objc.storeWeak(i8** %[[V7]], i8* %[[V11]])
+// ARM64: call void @llvm.objc.destroyWeak(i8** %[[V10]])
+// ARM64: call void @llvm.objc.release(i8* %[[V11]])
 
 void test_move_assignment_Weak(Weak *p) {
   *p = getWeak();

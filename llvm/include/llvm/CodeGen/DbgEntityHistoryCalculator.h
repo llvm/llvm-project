@@ -1,4 +1,4 @@
-//===- llvm/CodeGen/AsmPrinter/DbgEntityHistoryCalculator.h -----*- C++ -*-===//
+//===- llvm/CodeGen/DbgEntityHistoryCalculator.h ----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_ASMPRINTER_DBGVALUEHISTORYCALCULATOR_H
-#define LLVM_LIB_CODEGEN_ASMPRINTER_DBGVALUEHISTORYCALCULATOR_H
+#ifndef LLVM_CODEGEN_DBGVALUEHISTORYCALCULATOR_H
+#define LLVM_CODEGEN_DBGVALUEHISTORYCALCULATOR_H
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -84,4 +84,4 @@ void calculateDbgEntityHistory(const MachineFunction *MF,
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_ASMPRINTER_DBGVALUEHISTORYCALCULATOR_H
+#endif // LLVM_CODEGEN_DBGVALUEHISTORYCALCULATOR_H

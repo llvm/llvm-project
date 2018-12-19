@@ -441,8 +441,11 @@ public:
     for (auto MDN : Globals->operands()) {
       // Metadata node contains the global and the fields of "Entry".
       assert(MDN->getNumOperands() == 5);
-      auto *GV = mdconst::extract_or_null<GlobalVariable>(MDN->getOperand(0));
+      auto *V = mdconst::extract_or_null<Constant>(MDN->getOperand(0));
       // The optimizer may optimize away a global entirely.
+      if (!V) continue;
+      auto *StrippedV = V->stripPointerCasts();
+      auto *GV = dyn_cast<GlobalVariable>(StrippedV);
       if (!GV) continue;
       // We can already have an entry for GV if it was merged with another
       // global.
@@ -2196,8 +2199,8 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
 
     // ODR check is not useful for the following, but we see false reports
     // caused by linker optimizations.
-    if (NewGlobal->hasLocalLinkage() || NewGlobal->hasGlobalUnnamedAddr() ||
-        NewGlobal->hasLinkOnceODRLinkage() || NewGlobal->hasWeakODRLinkage()) {
+    if (NewGlobal->hasLocalLinkage() || NewGlobal->hasLinkOnceODRLinkage() ||
+        NewGlobal->hasWeakODRLinkage()) {
       ODRIndicator = ConstantExpr::getIntToPtr(ConstantInt::get(IntptrTy, -1),
                                                IRB.getInt8PtrTy());
     } else if (UseOdrIndicator) {

@@ -8,7 +8,7 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK: [[MAP_TY:%.+]] = type { [16 x i8] }
+// CHECK: [[MAP_TY:%.+]] = type { [128 x i8] }
 
 // CHECK-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
 // CHECK-DAG: [[KERNEL_SHARED1:@.+]] = internal unnamed_addr constant i16 1

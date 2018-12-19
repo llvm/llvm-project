@@ -354,13 +354,9 @@ define i1 @cttz_knownbits3(i32 %arg) {
   ret i1 %res
 }
 
-; TODO: The icmp is unnecessary given the known bits of the input.
 define <2 x i1> @cttz_knownbits3_vec(<2 x i32> %arg) {
 ; CHECK-LABEL: @cttz_knownbits3_vec(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ARG:%.*]], <i32 4, i32 4>
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[OR]], i1 true)
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i32> [[CNT]], <i32 3, i32 3>
-; CHECK-NEXT:    ret <2 x i1> [[RES]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %or = or <2 x i32> %arg, <i32 4, i32 4>
   %cnt = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %or, i1 true) nounwind readnone
@@ -450,13 +446,9 @@ define i1 @ctlz_knownbits3(i8 %arg) {
   ret i1 %res
 }
 
-; TODO: The icmp is unnecessary given the known bits of the input.
 define <2 x i1> @ctlz_knownbits3_vec(<2 x i8> %arg) {
 ; CHECK-LABEL: @ctlz_knownbits3_vec(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[ARG:%.*]], <i8 32, i8 32>
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[OR]], i1 true)
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i8> [[CNT]], <i8 3, i8 3>
-; CHECK-NEXT:    ret <2 x i1> [[RES]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %or = or <2 x i8> %arg, <i8 32, i8 32>
   %cnt = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %or, i1 true) nounwind readnone

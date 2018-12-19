@@ -1,5 +1,6 @@
-int puts(const char*);
+int printf(const char *format, ...);
+
 int main(int argc, char **argv) {
-  puts("Hello World\n");
+  printf("Hello World\n");
   return 0;
 }

@@ -158,6 +158,12 @@ macro(add_tablegen target project)
       llvm_ExternalProject_BuildCmd(tblgen_build_cmd ${target}
                                     ${LLVM_NATIVE_BUILD}
                                     CONFIGURATION Release)
+      # Create an artificial dependency between tablegen projects, because they
+      # compile the same dependencies, thus using the same build folders.
+      # FIXME: A proper fix requires sequentially chaining tablegens.
+      if (NOT ${project} STREQUAL LLVM AND TARGET ${project}-tablegen-host)
+        add_dependencies(${project}-tablegen-host LLVM-tablegen-host)
+      endif()
       add_custom_command(OUTPUT ${${project}_TABLEGEN_EXE}
         COMMAND ${tblgen_build_cmd}
         DEPENDS CONFIGURE_LLVM_NATIVE ${target}

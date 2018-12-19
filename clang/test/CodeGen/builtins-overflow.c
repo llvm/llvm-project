@@ -339,6 +339,27 @@ long long test_smulll_overflow(long long x, long long y) {
   return result;
 }
 
+int test_mixed_sign_mul_overflow_sext_signed_op(int x, unsigned long long y) {
+// CHECK: @test_mixed_sign_mul_overflow_sext_signed_op
+// CHECK: [[SignedOp:%.*]] = sext i32 %0 to i64
+// CHECK: [[IsNeg:%.*]] = icmp slt i64 [[SignedOp]], 0
+  int result;
+  if (__builtin_mul_overflow(x, y, &result))
+    return LongErrorCode;
+  return result;
+}
+
+int test_mixed_sign_mul_overflow_zext_unsigned_op(long long x, unsigned y) {
+// CHECK: @test_mixed_sign_mul_overflow_zext_unsigned_op
+// CHECK: [[UnsignedOp:%.*]] = zext i32 %1 to i64
+// CHECK: [[IsNeg:%.*]] = icmp slt i64 %0, 0
+// CHECK: @llvm.umul.with.overflow.i64({{.*}}, i64 [[UnsignedOp]])
+  int result;
+  if (__builtin_mul_overflow(x, y, &result))
+    return LongErrorCode;
+  return result;
+}
+
 int test_mixed_sign_mull_overflow(int x, unsigned y) {
 // CHECK: @test_mixed_sign_mull_overflow
 // CHECK:       [[IsNeg:%.*]] = icmp slt i32 [[Op1:%.*]], 0

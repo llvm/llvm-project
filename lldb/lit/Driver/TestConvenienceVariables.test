@@ -1,4 +1,4 @@
-RUN: %clang %p/Inputs/hello.c -g -o %t
+RUN: %build %p/Inputs/hello.c -o %t
 RUN: %lldb %t -s %p/Inputs/convenience.in -o quit | FileCheck %s
 
 script print(lldb.debugger)
@@ -15,7 +15,7 @@ CHECK-SAME:       executable = TestConvenienceVariables.test
 CHECK: script print(lldb.thread.GetStopDescription(100))
 CHECK: breakpoint 1.1
 CHECK: script lldb.frame.GetLineEntry().GetLine()
-CHECK: 3
+CHECK: 4
 CHECK: script lldb.frame.GetLineEntry().GetFileSpec().GetFilename()
 CHECK: hello.c
 CHECK: script lldb.frame.GetFunctionName()

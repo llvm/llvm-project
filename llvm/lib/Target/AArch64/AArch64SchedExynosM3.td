@@ -162,8 +162,8 @@ def M3WriteLE : SchedWriteRes<[M3UnitA,
                                            let NumMicroOps = 2; }
 def M3WriteLH : SchedWriteRes<[]>        { let Latency = 5;
                                            let NumMicroOps = 0; }
-def M3WriteLX : SchedWriteVariant<[SchedVar<ScaledIdxPred, [M3WriteLB]>,
-                                   SchedVar<NoSchedPred,   [M3WriteL5]>]>;
+def M3WriteLX : SchedWriteVariant<[SchedVar<ScaledIdxPred, [M3WriteL5]>,
+                                   SchedVar<NoSchedPred,   [M3WriteL4]>]>;
 
 def M3WriteS1 : SchedWriteRes<[M3UnitS]>   { let Latency = 1; }
 def M3WriteSA : SchedWriteRes<[M3UnitA,
@@ -173,8 +173,6 @@ def M3WriteSA : SchedWriteRes<[M3UnitA,
 def M3WriteSB : SchedWriteRes<[M3UnitA,
                                M3UnitS]>   { let Latency = 2;
                                              let NumMicroOps = 2; }
-def M3WriteSX : SchedWriteVariant<[SchedVar<ScaledIdxPred, [M3WriteSB]>,
-                                   SchedVar<NoSchedPred,   [M3WriteS1]>]>;
 
 def M3ReadAdrBase : SchedReadVariant<[SchedVar<ScaledIdxPred, [ReadDefault]>,
                                       SchedVar<NoSchedPred,   [ReadDefault]>]>;
@@ -215,13 +213,13 @@ def : SchedAlias<ReadAdrBase, M3ReadAdrBase>;
 def : SchedAlias<WriteLD, M3WriteL4>;
 def : WriteRes<WriteLDHi, []> { let Latency = 4;
                                 let NumMicroOps = 0; }
-def : SchedAlias<WriteLDIdx, M3WriteLX>;
+def : SchedAlias<WriteLDIdx, M3WriteLB>;
 
 // Store instructions.
 def : SchedAlias<WriteST,    M3WriteS1>;
 def : SchedAlias<WriteSTP,   M3WriteS1>;
 def : SchedAlias<WriteSTX,   M3WriteS1>;
-def : SchedAlias<WriteSTIdx, M3WriteSX>;
+def : SchedAlias<WriteSTIdx, M3WriteSB>;
 
 // FP data instructions.
 def : WriteRes<WriteF,    [M3UnitFADD]>  { let Latency = 2; }
@@ -231,7 +229,6 @@ def : WriteRes<WriteFDiv, [M3UnitFDIV]>  { let Latency = 12;
 def : WriteRes<WriteFMul, [M3UnitFMAC]>  { let Latency = 4; }
 
 // FP miscellaneous instructions.
-// TODO: Conversion between register files is much different.
 def : WriteRes<WriteFCvt,  [M3UnitFCVT]> { let Latency = 3; }
 def : WriteRes<WriteFImm,  [M3UnitNALU]> { let Latency = 1; }
 def : WriteRes<WriteFCopy, [M3UnitNALU]> { let Latency = 1; }
@@ -503,16 +500,16 @@ def : InstRW<[M3WriteZ0],   (instregex "^MOV[NZ][WX]i")>;
 // Miscellaneous instructions.
 
 // Load instructions.
-def : InstRW<[M3WriteLB,
-              ReadAdrBase], (instregex "^LDR(BB|HH|SBW|SBX|SHW|SWX|SW|W|X)roW")>;
-def : InstRW<[M3WriteL5,
-              ReadAdrBase], (instregex "^LDR(BB|HH|SBW|SBX|SHW|SWX|SW|W|X)roX")>;
 def : InstRW<[M3WriteLD,
               WriteLDHi,
               WriteAdr],    (instregex "^LDP(SW|W|X)(post|pre)")>;
 def : InstRW<[M3WriteLB,
+              ReadAdrBase], (instregex "^LDR(BB|SBW|SBX|HH|SHW|SHX|SW|W|X)roW")>;
+def : InstRW<[M3WriteLX,
+              ReadAdrBase], (instregex "^LDR(BB|SBW|SBX|HH|SHW|SHX|SW|W|X)roX")>;
+def : InstRW<[M3WriteLB,
               ReadAdrBase], (instrs PRFMroW)>;
-def : InstRW<[M3WriteL5,
+def : InstRW<[M3WriteLX,
               ReadAdrBase], (instrs PRFMroX)>;
 
 // Store instructions.
