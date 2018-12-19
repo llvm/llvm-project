@@ -1297,8 +1297,7 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
                                  name_parts.size() == 1 &&
                                  name_parts.front() == module->getName().str())
                         results.insert(
-                            CompilerType(ast_ctx->GetASTContext(),
-                                         swift::ModuleType::get(module)));
+                            CompilerType(swift::ModuleType::get(module)));
                       return true;
                     });
 
