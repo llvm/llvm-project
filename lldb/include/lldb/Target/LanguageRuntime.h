@@ -132,8 +132,6 @@ public:
   static lldb::LanguageType
   GuessLanguageForSymbolByName(Target &target, const char *symbol_name);
 
-  virtual bool IsSymbolARuntimeThunk(const Symbol &symbol) { return false; }
-
   Target &GetTargetRef() { return m_process->GetTarget(); }
 
   virtual lldb::BreakpointResolverSP
@@ -163,9 +161,8 @@ public:
   virtual bool GetIRPasses(LLVMUserExpression::IRPasses &custom_passes) {
     return false;
   }
-  
-  static bool
-  IsSymbolAnyRuntimeThunk(lldb::ProcessSP process, Symbol &symbol);
+
+  static bool IsSymbolAnyRuntimeThunk(Symbol &symbol);
 
 protected:
   //------------------------------------------------------------------

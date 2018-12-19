@@ -43,6 +43,7 @@
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "swift/Driver/Util.h"
+#include "swift/DWARFImporter/DWARFImporter.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Frontend/PrintingDiagnosticConsumer.h"
 #include "swift/IDE/Utils.h"
@@ -2900,38 +2901,40 @@ swift::SerializedModuleLoader *SwiftASTContext::GetSerializeModuleLoader() {
 swift::ClangImporter *SwiftASTContext::GetClangImporter() {
   VALID_OR_RETURN(nullptr);
 
-  if (m_clang_importer == NULL) {
+  const bool is_clang = true;
+  auto &clang_importer_options = GetClangImporterOptions();
+
+  if (!m_clang_importer) {
     swift::ASTContext *ast_ctx = GetASTContext();
-
-    if (!ast_ctx) {
-      return nullptr;
-    }
-
-    // Install the Clang module loader
-    TargetSP target_sp(m_target_wp.lock());
-    if (true /*target_sp*/) {
-      // PlatformSP platform_sp = target_sp->GetPlatform();
-      if (true /*platform_sp*/) {
-        if (!ast_ctx->SearchPathOpts.SDKPath.empty() || TargetHasNoSDK()) {
-          swift::ClangImporterOptions &clang_importer_options =
-              GetClangImporterOptions();
-          if (!clang_importer_options.OverrideResourceDir.empty()) {
-            std::unique_ptr<swift::ModuleLoader> clang_importer_ap(
-                swift::ClangImporter::create(*m_ast_context_ap,
-                                             clang_importer_options));
-
-            if (clang_importer_ap) {
-              const bool isClang = true;
-              m_clang_importer =
-                  (swift::ClangImporter *)clang_importer_ap.get();
-              m_ast_context_ap->addModuleLoader(std::move(clang_importer_ap),
-                                                isClang);
-            }
-          }
+    // Install the Clang module loader.
+    if (ast_ctx &&
+        (!ast_ctx->SearchPathOpts.SDKPath.empty() || TargetHasNoSDK())) {
+      if (!clang_importer_options.OverrideResourceDir.empty()) {
+        auto clang_importer_ap = swift::ClangImporter::create(
+            *m_ast_context_ap, clang_importer_options);
+        if (clang_importer_ap) {
+          m_clang_importer = (swift::ClangImporter *)clang_importer_ap.get();
+          m_ast_context_ap->addModuleLoader(std::move(clang_importer_ap),
+                                            is_clang);
         }
       }
     }
   }
+
+  if (!m_dwarf_importer) {
+    // Install the DWARF importer fallback loader.
+    auto props = ModuleList::GetGlobalModuleListProperties();
+    if (props.GetUseDWARFImporter()) {
+      auto dwarf_importer_ap = swift::DWARFImporter::create(
+          *m_ast_context_ap, clang_importer_options);
+      if (dwarf_importer_ap) {
+        m_dwarf_importer = dwarf_importer_ap.get();
+        m_ast_context_ap->addModuleLoader(std::move(dwarf_importer_ap),
+                                          is_clang);
+      }
+    }
+  }
+
   return m_clang_importer;
 }
 
@@ -4891,9 +4894,6 @@ CompilerType SwiftASTContext::GetFunctionArgumentAtIndex(void *type,
       auto params = func.getParams();
       if (index < params.size()) {
         auto param = params[index];
-        if (param.isInOut())
-          return CompilerType(this,
-                              swift::InOutType::get(param.getParameterType()));
         return CompilerType(this,
                             param.getParameterType().getPointer());
       }
@@ -4951,7 +4951,6 @@ bool SwiftASTContext::IsReferenceType(void *type, CompilerType *pointee_type,
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
     const swift::TypeKind type_kind = swift_can_type->getKind();
     switch (type_kind) {
-    case swift::TypeKind::InOut:
     case swift::TypeKind::LValue:
       if (pointee_type)
         *pointee_type = GetNonReferenceType(type);
@@ -5305,7 +5304,9 @@ SwiftASTContext::GetTypeInfo(void *type,
   const swift::TypeKind type_kind = swift_can_type->getKind();
   uint32_t swift_flags = eTypeIsSwift;
   switch (type_kind) {
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Error:
   case swift::TypeKind::Module:
   case swift::TypeKind::TypeVariable:
@@ -5410,7 +5411,6 @@ SwiftASTContext::GetTypeInfo(void *type,
       *pointee_or_element_clang_type = GetNonReferenceType(type);
     swift_flags |= eTypeHasChildren | eTypeIsReference | eTypeHasValue;
     break;
-  case swift::TypeKind::InOut:
   case swift::TypeKind::DynamicSelf:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
@@ -5487,7 +5487,9 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
     return lldb::eTypeClassOther;
   case swift::TypeKind::Module:
     return lldb::eTypeClassOther;
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
     return lldb::eTypeClassOther;
   case swift::TypeKind::Function:
     return lldb::eTypeClassFunction;
@@ -5516,8 +5518,6 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
   case swift::TypeKind::SILFunction:
     return lldb::eTypeClassFunction;
   case swift::TypeKind::SILBlockStorage:
-    return lldb::eTypeClassOther;
-  case swift::TypeKind::InOut:
     return lldb::eTypeClassOther;
   case swift::TypeKind::Unresolved:
     return lldb::eTypeClassOther;
@@ -5751,10 +5751,6 @@ CompilerType SwiftASTContext::GetNonReferenceType(void *type) {
     if (lvalue)
       return CompilerType(GetASTContext(),
                           lvalue->getObjectType().getPointer());
-    swift::InOutType *inout = swift_can_type->getAs<swift::InOutType>();
-    if (inout)
-        return CompilerType(GetASTContext(),
-                            inout->getObjectType().getPointer());
   }
   return CompilerType();
 }
@@ -5946,7 +5942,9 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
   case swift::TypeKind::BuiltinFloat:
     return lldb::eEncodingIEEE754; // TODO: detect if an integer is unsigned
 
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::BuiltinRawPointer:
   case swift::TypeKind::BuiltinNativeObject:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
@@ -5996,7 +5994,6 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::InOut:
   case swift::TypeKind::Unresolved:
     break;
 
@@ -6034,7 +6031,9 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
   case swift::TypeKind::BuiltinUnknownObject:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinBridgeObject:
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
     return eFormatAddressInfo;
@@ -6080,7 +6079,6 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::InOut:
   case swift::TypeKind::Unresolved:
     break;
 
@@ -6125,7 +6123,6 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
   case swift::TypeKind::DynamicSelf:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
-  case swift::TypeKind::InOut:
     break;
   case swift::TypeKind::UnmanagedStorage:
   case swift::TypeKind::UnownedStorage:
@@ -6167,7 +6164,9 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
 
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype:
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
     return 0;
 
   case swift::TypeKind::LValue: {
@@ -6289,7 +6288,9 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
     return 0;
 
   case swift::TypeKind::Module:
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::LValue:
@@ -6299,7 +6300,6 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::InOut:
   case swift::TypeKind::Unresolved:
     break;
 
@@ -6589,7 +6589,9 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
     break;
 
   case swift::TypeKind::Module:
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::LValue:
@@ -6599,7 +6601,6 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::InOut:
   case swift::TypeKind::Unresolved:
     break;
 
@@ -6671,7 +6672,9 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
     return 0;
   case swift::TypeKind::Module:
     return 0;
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
     return 0;
   case swift::TypeKind::Function:
     return 0;
@@ -6700,8 +6703,6 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
   case swift::TypeKind::SILFunction:
     return 0;
   case swift::TypeKind::SILBlockStorage:
-    return 0;
-  case swift::TypeKind::InOut:
     return 0;
   case swift::TypeKind::Unresolved:
     return 0;
@@ -7020,7 +7021,9 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     break;
 
   case swift::TypeKind::Module:
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
     break;
@@ -7053,7 +7056,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::InOut:
   case swift::TypeKind::Unresolved:
     break;
 
@@ -7247,11 +7249,12 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
       break;
 
     case swift::TypeKind::Module:
-    case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
       break;
-    case swift::TypeKind::InOut:
     case swift::TypeKind::LValue: {
       CompilerType pointee_clang_type(GetNonReferenceType(type));
 
@@ -7520,7 +7523,9 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinUnknownObject:
   case swift::TypeKind::BuiltinBridgeObject:
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::GenericTypeParam:
@@ -7643,7 +7648,6 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILBlockStorage:
-  case swift::TypeKind::InOut:
   case swift::TypeKind::Unresolved:
     break;
 
