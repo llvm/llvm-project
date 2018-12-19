@@ -1741,7 +1741,7 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
       // access.  Nothing can write to constant memory, so just check the local
       // base object.
       if (!PossibleRaceByCapture(const_cast<Value *>(WriteLoc.Ptr),
-                                        DL, TI, &LI)) {
+                                 DL, TI, &LI)) {
           // The variable is addressable but not captured, so it cannot be
           // referenced from a different strand and participate in a race (see
           // llvm/Analysis/CaptureTracking.h for details).
