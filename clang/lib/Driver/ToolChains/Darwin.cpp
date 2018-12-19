@@ -1965,12 +1965,8 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
     else if (Name == "pentIIm3")
       DAL->AddJoinedArg(nullptr, MArch, "pentium2");
 
-    else if (Name == "x86_64")
+    else if (Name == "x86_64" || Name == "x86_64h")
       DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_m64));
-    else if (Name == "x86_64h") {
-      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_m64));
-      DAL->AddJoinedArg(nullptr, MArch, "x86_64h");
-    }
 
     else if (Name == "arm")
       DAL->AddJoinedArg(nullptr, MArch, "armv4t");
