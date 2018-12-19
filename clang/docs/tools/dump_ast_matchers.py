@@ -5,7 +5,10 @@
 
 import collections
 import re
-import urllib2
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib2 import urlopen
 
 MATCHERS_FILE = '../../include/clang/ASTMatchers/ASTMatchers.h'
 
@@ -42,7 +45,7 @@ def esc(text):
     if url not in doxygen_probes:
       try:
         print('Probing %s...' % url)
-        urllib2.urlopen(url)
+        urlopen(url)
         doxygen_probes[url] = True
       except:
         doxygen_probes[url] = False
