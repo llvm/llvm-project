@@ -1085,6 +1085,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   if (Subtarget.hasP9Altivec()) {
     setTargetDAGCombine(ISD::ABS);
+    setTargetDAGCombine(ISD::VSELECT);
   }
 
   // Darwin long double math library functions have $LDBL128 appended.
@@ -13267,6 +13268,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     return DAGCombineBuildVector(N, DCI);
   case ISD::ABS: 
     return combineABS(N, DCI);
+  case ISD::VSELECT: 
+    return combineVSelect(N, DCI);
   }
 
   return SDValue();
@@ -14597,3 +14600,65 @@ SDValue PPCTargetLowering::combineABS(SDNode *N, DAGCombinerInfo &DCI) const {
   return SDValue();
 }
 
+// For type v4i32/v8ii16/v16i8, transform
+// from (vselect (setcc a, b, setugt), (sub a, b), (sub b, a)) to (vabsd a, b)
+// from (vselect (setcc a, b, setuge), (sub a, b), (sub b, a)) to (vabsd a, b)
+// from (vselect (setcc a, b, setult), (sub b, a), (sub a, b)) to (vabsd a, b)
+// from (vselect (setcc a, b, setule), (sub b, a), (sub a, b)) to (vabsd a, b)
+SDValue PPCTargetLowering::combineVSelect(SDNode *N,
+                                          DAGCombinerInfo &DCI) const {
+  assert((N->getOpcode() == ISD::VSELECT) && "Need VSELECT node here");
+  assert(Subtarget.hasP9Altivec() &&
+         "Only combine this when P9 altivec supported!");
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc dl(N);
+  SDValue Cond = N->getOperand(0);
+  SDValue TrueOpnd = N->getOperand(1);
+  SDValue FalseOpnd = N->getOperand(2);
+  EVT VT = N->getOperand(1).getValueType();
+
+  if (Cond.getOpcode() != ISD::SETCC || TrueOpnd.getOpcode() != ISD::SUB ||
+      FalseOpnd.getOpcode() != ISD::SUB)
+    return SDValue();
+
+  // ABSD only available for type v4i32/v8i16/v16i8
+  if (VT != MVT::v4i32 && VT != MVT::v8i16 && VT != MVT::v16i8)
+    return SDValue();
+
+  // At least to save one more dependent computation
+  if (!(Cond.hasOneUse() || TrueOpnd.hasOneUse() || FalseOpnd.hasOneUse()))
+    return SDValue();
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+
+  // Can only handle unsigned comparison here
+  switch (CC) {
+  default:
+    return SDValue();
+  case ISD::SETUGT:
+  case ISD::SETUGE:
+    break;
+  case ISD::SETULT:
+  case ISD::SETULE:
+    std::swap(TrueOpnd, FalseOpnd);
+    break;
+  }
+
+  SDValue CmpOpnd1 = Cond.getOperand(0);
+  SDValue CmpOpnd2 = Cond.getOperand(1);
+
+  // SETCC CmpOpnd1 CmpOpnd2 cond
+  // TrueOpnd = CmpOpnd1 - CmpOpnd2
+  // FalseOpnd = CmpOpnd2 - CmpOpnd1
+  if (TrueOpnd.getOperand(0) == CmpOpnd1 &&
+      TrueOpnd.getOperand(1) == CmpOpnd2 &&
+      FalseOpnd.getOperand(0) == CmpOpnd2 &&
+      FalseOpnd.getOperand(1) == CmpOpnd1) {
+    return DAG.getNode(PPCISD::VABSD, dl, N->getOperand(1).getValueType(),
+                       CmpOpnd1, CmpOpnd2,
+                       DAG.getTargetConstant(0, dl, MVT::i32));
+  }
+
+  return SDValue();
+}

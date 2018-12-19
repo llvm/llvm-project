@@ -20,8 +20,8 @@ fp f() { auto x = []{ return 3; }; return x; }
 // ARC-LABEL: define internal i32 ()* @"_ZZ1fvENK3$_0cvU13block_pointerFivEEv"
 // ARC: store i8* bitcast (i8** @_NSConcreteStackBlock to i8*)
 // ARC: store i8* bitcast (i32 (i8*)* @"___ZZ1fvENK3$_0cvU13block_pointerFivEEv_block_invoke" to i8*)
-// ARC: call i8* @objc_retainBlock
-// ARC: call i8* @objc_autoreleaseReturnValue
+// ARC: call i8* @llvm.objc.retainBlock
+// ARC: call i8* @llvm.objc.autoreleaseReturnValue
 
 typedef int (^fp)();
 fp global;
@@ -35,8 +35,8 @@ void f2() { global = []{ return 3; }; }
 
 // ARC: define void @_Z2f2v() [[NUW:#[0-9]+]] {
 // ARC: store i8* bitcast (i32 (i8*)* @___Z2f2v_block_invoke to i8*),
-// ARC: call i8* @objc_retainBlock
-// ARC: call void @objc_release
+// ARC: call i8* @llvm.objc.retainBlock
+// ARC: call void @llvm.objc.release
 // ARC-LABEL: define internal i32 @___Z2f2v_block_invoke
 // ARC: call i32 @"_ZZ2f2vENK3$_1clEv
 
@@ -72,7 +72,7 @@ void take_block(void (^block)()) { block(); }
 // ARC:   store i32 %{{.*}}, i32* %[[CAPTURE1]]
 
 // ARC-LABEL: define internal void @"_ZZ10-[Foo foo]ENK3$_4clEv"(
-// ARC-NOT: @objc_storeStrong(
+// ARC-NOT: @llvm.objc.storeStrong(
 // ARC: ret void
 
 // ARC: define internal void @"___ZZN13LambdaCapture4foo1ERiENK3$_3clEv_block_invoke"

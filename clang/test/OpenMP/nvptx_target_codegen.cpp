@@ -18,7 +18,7 @@
 // CHECK-DAG: {{@__omp_offloading_.+l362}}_exec_mode = weak constant i8 1
 // CHECK-DAG: {{@__omp_offloading_.+l380}}_exec_mode = weak constant i8 1
 // CHECK-DAG: {{@__omp_offloading_.+l345}}_exec_mode = weak constant i8 1
-// CHECK-DAG: [[MAP_TY:%.+]] = type { [{{8|4}} x i8] }
+// CHECK-DAG: [[MAP_TY:%.+]] = type { [128 x i8] }
 // CHECK-DAG: [[GLOB_TY:%.+]] = type { i32* }
 
 __thread int id;

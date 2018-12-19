@@ -1,4 +1,4 @@
-//===-- llvm/lib/CodeGen/AsmPrinter/DebugHandlerBase.h --------*- C++ -*--===//
+//===-- llvm/CodeGen/DebugHandlerBase.h -----------------------*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,12 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_ASMPRINTER_DEBUGHANDLERBASE_H
-#define LLVM_LIB_CODEGEN_ASMPRINTER_DEBUGHANDLERBASE_H
+#ifndef LLVM_CODEGEN_DEBUGHANDLERBASE_H
+#define LLVM_CODEGEN_DEBUGHANDLERBASE_H
 
-#include "AsmPrinterHandler.h"
-#include "DbgEntityHistoryCalculator.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/CodeGen/AsmPrinterHandler.h"
+#include "llvm/CodeGen/DbgEntityHistoryCalculator.h"
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/DebugInfoMetadata.h"

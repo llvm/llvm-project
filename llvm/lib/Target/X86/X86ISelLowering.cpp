@@ -34110,18 +34110,12 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       SDValue OpLHS = Other->getOperand(0), OpRHS = Other->getOperand(1);
       SDValue CondRHS = Cond->getOperand(1);
 
-      auto USUBSATBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
-                               ArrayRef<SDValue> Ops) {
-        return DAG.getNode(ISD::USUBSAT, DL, Ops[0].getValueType(), Ops);
-      };
-
       // Look for a general sub with unsigned saturation first.
       // x >= y ? x-y : 0 --> subus x, y
       // x >  y ? x-y : 0 --> subus x, y
       if ((CC == ISD::SETUGE || CC == ISD::SETUGT) &&
           Other->getOpcode() == ISD::SUB && OpRHS == CondRHS)
-        return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
-                                USUBSATBuilder);
+        return DAG.getNode(ISD::USUBSAT, DL, VT, OpLHS, OpRHS);
 
       if (auto *OpRHSBV = dyn_cast<BuildVectorSDNode>(OpRHS)) {
         if (isa<BuildVectorSDNode>(CondRHS)) {
@@ -34136,8 +34130,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
               ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchUSUBSAT)) {
             OpRHS = DAG.getNode(ISD::SUB, DL, VT,
                                 DAG.getConstant(0, DL, VT), OpRHS);
-            return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
-                                    USUBSATBuilder);
+            return DAG.getNode(ISD::USUBSAT, DL, VT, OpLHS, OpRHS);
           }
 
           // Another special case: If C was a sign bit, the sub has been
@@ -34149,11 +34142,10 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
             if (CC == ISD::SETLT && Other.getOpcode() == ISD::XOR &&
                 ISD::isBuildVectorAllZeros(CondRHS.getNode()) &&
                 OpRHSConst->getAPIntValue().isSignMask()) {
-              OpRHS = DAG.getConstant(OpRHSConst->getAPIntValue(), DL, VT);
               // Note that we have to rebuild the RHS constant here to ensure we
               // don't rely on particular values of undef lanes.
-              return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
-                                      USUBSATBuilder);
+              OpRHS = DAG.getConstant(OpRHSConst->getAPIntValue(), DL, VT);
+              return DAG.getNode(ISD::USUBSAT, DL, VT, OpLHS, OpRHS);
             }
           }
         }
@@ -34186,11 +34178,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     if (Other.getNode() && Other.getOpcode() == ISD::ADD) {
       SDValue OpLHS = Other.getOperand(0), OpRHS = Other.getOperand(1);
 
-      auto UADDSATBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
-                               ArrayRef<SDValue> Ops) {
-        return DAG.getNode(ISD::UADDSAT, DL, Ops[0].getValueType(), Ops);
-      };
-
       // Canonicalize condition operands.
       if (CC == ISD::SETUGE) {
         std::swap(CondLHS, CondRHS);
@@ -34202,8 +34189,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       // x+y >= x ? x+y : ~0 --> addus x, y
       if (CC == ISD::SETULE && Other == CondRHS &&
           (OpLHS == CondLHS || OpRHS == CondLHS))
-        return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
-                                UADDSATBuilder);
+        return DAG.getNode(ISD::UADDSAT, DL, VT, OpLHS, OpRHS);
 
       if (isa<BuildVectorSDNode>(OpRHS) && isa<BuildVectorSDNode>(CondRHS) &&
           CondLHS == OpLHS) {
@@ -34215,8 +34201,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         };
         if (CC == ISD::SETULE &&
             ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchUADDSAT))
-          return SplitOpsAndApply(DAG, Subtarget, DL, VT, { OpLHS, OpRHS },
-                                  UADDSATBuilder);
+          return DAG.getNode(ISD::UADDSAT, DL, VT, OpLHS, OpRHS);
       }
     }
   }
@@ -40660,16 +40645,9 @@ static SDValue combineAddToSUBUS(SDNode *N, SelectionDAG &DAG,
   if (!ISD::matchBinaryPredicate(Op0.getOperand(1), Op1, MatchUSUBSAT))
     return SDValue();
 
-  auto USUBSATBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
-                           ArrayRef<SDValue> Ops) {
-    return DAG.getNode(ISD::USUBSAT, DL, Ops[0].getValueType(), Ops);
-  };
-
-  // Take both operands from the umax node.
   SDLoc DL(N);
-  return SplitOpsAndApply(DAG, Subtarget, DL, VT,
-                          { Op0.getOperand(0), Op0.getOperand(1) },
-                          USUBSATBuilder);
+  return DAG.getNode(ISD::USUBSAT, DL, VT, Op0.getOperand(0),
+                     Op0.getOperand(1));
 }
 
 // Attempt to turn this pattern into PMADDWD.

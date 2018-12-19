@@ -128,11 +128,15 @@ struct SampleProfTest : ::testing::Test {
 
     FunctionSamples *ReadFooSamples = Reader->getSamplesFor(FooName);
     ASSERT_TRUE(ReadFooSamples != nullptr);
+    if (Format != SampleProfileFormat::SPF_Compact_Binary)
+      ASSERT_EQ("_Z3fooi", ReadFooSamples->getName());
     ASSERT_EQ(7711u, ReadFooSamples->getTotalSamples());
     ASSERT_EQ(610u, ReadFooSamples->getHeadSamples());
 
     FunctionSamples *ReadBarSamples = Reader->getSamplesFor(BarName);
     ASSERT_TRUE(ReadBarSamples != nullptr);
+    if (Format != SampleProfileFormat::SPF_Compact_Binary)
+      ASSERT_EQ("_Z3bari", ReadBarSamples->getName());
     ASSERT_EQ(20301u, ReadBarSamples->getTotalSamples());
     ASSERT_EQ(1437u, ReadBarSamples->getHeadSamples());
     ErrorOr<SampleRecord::CallTargetMap> CTMap =

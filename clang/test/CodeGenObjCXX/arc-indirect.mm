@@ -19,4 +19,4 @@ struct S {
 // CHECK-DARWIN: define internal void @"\01-[C object:struct:]"(<{ %0*, i8*, i8*, %struct.S, [3 x i8] }>* inalloca)
 // CHECK: %obj = getelementptr inbounds <{ %0*, i8*, i8*, %struct.S, [3 x i8] }>, <{ %0*, i8*, i8*, %struct.S, [3 x i8] }>* %0, i32 0, i32 2
 // CHECK: %[[INSTANCE:[0-9]+]] = load i8*, i8** %obj, align 4
-// CHECK: call void @objc_storeStrong(i8** %obj, i8* %[[INSTANCE]])
+// CHECK: call void @llvm.objc.storeStrong(i8** %obj, i8* %[[INSTANCE]])

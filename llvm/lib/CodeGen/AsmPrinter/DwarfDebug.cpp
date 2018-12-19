@@ -573,9 +573,6 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   DIE &Die = NewCU.getUnitDie();
   StringRef FN = DIUnit->getFilename();
 
-  for (auto *IE : DIUnit->getImportedEntities())
-    NewCU.addImportedEntity(IE);
-
   // LTO with assembly output shares a single line table amongst multiple CUs.
   // To avoid the compilation directory being ambiguous, let the line table
   // explicitly describe the directory of all files, never relying on the
@@ -648,6 +645,9 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
       InfoHolder.getUnits().size(), DIUnit, Asm, this, &InfoHolder);
   DwarfCompileUnit &NewCU = *OwnedUnit;
   InfoHolder.addUnit(std::move(OwnedUnit));
+
+  for (auto *IE : DIUnit->getImportedEntities())
+    NewCU.addImportedEntity(IE);
 
   if (useSplitDwarf()) {
     NewCU.setSkeleton(constructSkeletonCU(NewCU));

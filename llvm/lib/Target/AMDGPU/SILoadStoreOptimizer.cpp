@@ -1249,8 +1249,6 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   if (!Src1->isImm())
     return;
 
-  assert(isInt<32>(*Offset0P) && isInt<32>(Src1->getImm())
-         && "Expected 32bit immediate!!!");
   uint64_t Offset1 = Src1->getImm();
   BaseHi = *Src0;
 

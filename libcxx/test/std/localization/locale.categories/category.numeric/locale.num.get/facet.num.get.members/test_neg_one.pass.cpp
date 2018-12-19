@@ -14,6 +14,7 @@
 // iter_type get(iter_type in, iter_type end, ios_base&,
 //               ios_base::iostate& err, unsigned int& v) const;
 
+#include <limits>
 #include <locale>
 #include <ios>
 #include <cassert>

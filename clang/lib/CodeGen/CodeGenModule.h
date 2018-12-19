@@ -128,6 +128,10 @@ struct ObjCEntrypoints {
   /// void objc_autoreleasePoolPop(void*);
   llvm::Constant *objc_autoreleasePoolPop;
 
+  /// void objc_autoreleasePoolPop(void*);
+  /// Note this method is used when we are using exception handling
+  llvm::Constant *objc_autoreleasePoolPopInvoke;
+
   /// void *objc_autoreleasePoolPush(void);
   llvm::Constant *objc_autoreleasePoolPush;
 

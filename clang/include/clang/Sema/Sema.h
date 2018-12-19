@@ -9233,7 +9233,9 @@ public:
       SourceLocation ColonLoc, SourceLocation EndLoc,
       CXXScopeSpec &ReductionIdScopeSpec,
       const DeclarationNameInfo &ReductionId, OpenMPDependClauseKind DepKind,
-      OpenMPLinearClauseKind LinKind, OpenMPMapClauseKind MapTypeModifier,
+      OpenMPLinearClauseKind LinKind,
+      ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
+      ArrayRef<SourceLocation> MapTypeModifiersLoc,
       OpenMPMapClauseKind MapType, bool IsMapTypeImplicit,
       SourceLocation DepLinMapLoc);
   /// Called on well-formed 'private' clause.
@@ -9317,7 +9319,8 @@ public:
                                      SourceLocation EndLoc);
   /// Called on well-formed 'map' clause.
   OMPClause *
-  ActOnOpenMPMapClause(OpenMPMapClauseKind MapTypeModifier,
+  ActOnOpenMPMapClause(ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
+                       ArrayRef<SourceLocation> MapTypeModifiersLoc,
                        OpenMPMapClauseKind MapType, bool IsMapTypeImplicit,
                        SourceLocation MapLoc, SourceLocation ColonLoc,
                        ArrayRef<Expr *> VarList, SourceLocation StartLoc,

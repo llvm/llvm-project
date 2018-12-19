@@ -14,4 +14,4 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: @__asan_global_c = private global { i64, i64, i64, i64, i64, i64, i64, i64 } { i64 ptrtoint ({ [2 x i32], [56 x i8] }* @c to i64), i64 8, i64 64, i64 ptrtoint ([2 x i8]* @___asan_gen_.3 to i64), i64 ptrtoint ([8 x i8]* @___asan_gen_ to i64), i64 0, i64 0, i64 -1 }
 
-; CHECK: @__asan_global_d = private global { i64, i64, i64, i64, i64, i64, i64, i64 } { i64 ptrtoint ({ [2 x i32], [56 x i8] }* @d to i64), i64 8, i64 64, i64 ptrtoint ([2 x i8]* @___asan_gen_.4 to i64), i64 ptrtoint ([8 x i8]* @___asan_gen_ to i64), i64 0, i64 0, i64 -1 }
+; CHECK: @__asan_global_d = private global { i64, i64, i64, i64, i64, i64, i64, i64 } { i64 ptrtoint ({ [2 x i32], [56 x i8] }* @d to i64), i64 8, i64 64, i64 ptrtoint ([2 x i8]* @___asan_gen_.4 to i64), i64 ptrtoint ([8 x i8]* @___asan_gen_ to i64), i64 0, i64 0, i64 0 }

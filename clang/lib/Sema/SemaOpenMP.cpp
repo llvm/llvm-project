@@ -3336,9 +3336,10 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     }
     if (!ImplicitMaps.empty()) {
       if (OMPClause *Implicit = ActOnOpenMPMapClause(
-              OMPC_MAP_unknown, OMPC_MAP_tofrom, /*IsMapTypeImplicit=*/true,
-              SourceLocation(), SourceLocation(), ImplicitMaps,
-              SourceLocation(), SourceLocation(), SourceLocation())) {
+              llvm::None, llvm::None, OMPC_MAP_tofrom,
+              /*IsMapTypeImplicit=*/true, SourceLocation(), SourceLocation(),
+              ImplicitMaps, SourceLocation(), SourceLocation(),
+              SourceLocation())) {
         ClausesWithImplicit.emplace_back(Implicit);
         ErrorFound |=
             cast<OMPMapClause>(Implicit)->varlist_size() != ImplicitMaps.size();
@@ -9535,7 +9536,9 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation ColonLoc,
     SourceLocation EndLoc, CXXScopeSpec &ReductionIdScopeSpec,
     const DeclarationNameInfo &ReductionId, OpenMPDependClauseKind DepKind,
-    OpenMPLinearClauseKind LinKind, OpenMPMapClauseKind MapTypeModifier,
+    OpenMPLinearClauseKind LinKind,
+    ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
+    ArrayRef<SourceLocation> MapTypeModifiersLoc,
     OpenMPMapClauseKind MapType, bool IsMapTypeImplicit,
     SourceLocation DepLinMapLoc) {
   OMPClause *Res = nullptr;
@@ -9588,9 +9591,9 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
                                   StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_map:
-    Res = ActOnOpenMPMapClause(MapTypeModifier, MapType, IsMapTypeImplicit,
-                               DepLinMapLoc, ColonLoc, VarList, StartLoc,
-                               LParenLoc, EndLoc);
+    Res = ActOnOpenMPMapClause(MapTypeModifiers, MapTypeModifiersLoc, MapType,
+                               IsMapTypeImplicit, DepLinMapLoc, ColonLoc,
+                               VarList, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_to:
     Res = ActOnOpenMPToClause(VarList, StartLoc, LParenLoc, EndLoc);
@@ -12957,7 +12960,8 @@ checkMappableExpressionList(Sema &SemaRef, DSAStackTy *DSAS,
 }
 
 OMPClause *
-Sema::ActOnOpenMPMapClause(OpenMPMapClauseKind MapTypeModifier,
+Sema::ActOnOpenMPMapClause(ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
+                           ArrayRef<SourceLocation> MapTypeModifiersLoc,
                            OpenMPMapClauseKind MapType, bool IsMapTypeImplicit,
                            SourceLocation MapLoc, SourceLocation ColonLoc,
                            ArrayRef<Expr *> VarList, SourceLocation StartLoc,
@@ -12966,12 +12970,31 @@ Sema::ActOnOpenMPMapClause(OpenMPMapClauseKind MapTypeModifier,
   checkMappableExpressionList(*this, DSAStack, OMPC_map, MVLI, StartLoc,
                               MapType, IsMapTypeImplicit);
 
+  OpenMPMapModifierKind Modifiers[] = { OMPC_MAP_MODIFIER_unknown,
+                                        OMPC_MAP_MODIFIER_unknown };
+  SourceLocation ModifiersLoc[OMPMapClause::NumberOfModifiers];
+
+  // Process map-type-modifiers, flag errors for duplicate modifiers.
+  unsigned Count = 0;
+  for (unsigned I = 0, E = MapTypeModifiers.size(); I < E; ++I) {
+    if (MapTypeModifiers[I] != OMPC_MAP_MODIFIER_unknown &&
+        llvm::find(Modifiers, MapTypeModifiers[I]) != std::end(Modifiers)) {
+      Diag(MapTypeModifiersLoc[I], diag::err_omp_duplicate_map_type_modifier);
+      continue;
+    }
+    assert(Count < OMPMapClause::NumberOfModifiers &&
+           "Modifiers exceed the allowed number of map type modifiers"); 
+    Modifiers[Count] = MapTypeModifiers[I];
+    ModifiersLoc[Count] = MapTypeModifiersLoc[I];
+    ++Count;
+  }
+
   // We need to produce a map clause even if we don't have variables so that
   // other diagnostics related with non-existing map clauses are accurate.
   return OMPMapClause::Create(Context, StartLoc, LParenLoc, EndLoc,
                               MVLI.ProcessedVarList, MVLI.VarBaseDeclarations,
-                              MVLI.VarComponents, MapTypeModifier, MapType,
-                              IsMapTypeImplicit, MapLoc);
+                              MVLI.VarComponents, Modifiers, ModifiersLoc,
+                              MapType, IsMapTypeImplicit, MapLoc);
 }
 
 QualType Sema::ActOnOpenMPDeclareReductionType(SourceLocation TyLoc,

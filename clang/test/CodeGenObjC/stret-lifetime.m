@@ -27,7 +27,7 @@ void foo(id o, id p) {
   // CHECK: @llvm.lifetime.end
   // ARC: br label
 
-  // ARC: call void @objc_release
+  // ARC: call void @llvm.objc.release
   // ARC: br label
 
   // CHECK-NOT: call void @llvm.memset
