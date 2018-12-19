@@ -50,7 +50,7 @@ class Symbol;
 
 // If -reproduce option is given, all input files are written
 // to this tar archive.
-extern llvm::TarWriter *Tar;
+extern std::unique_ptr<llvm::TarWriter> Tar;
 
 // Opens a given file.
 llvm::Optional<MemoryBufferRef> readFile(StringRef Path);
