@@ -51,37 +51,17 @@ const NamedDecl &getTemplateOrThis(const NamedDecl &ND) {
 //
 // The Path can be a path relative to the build directory, or retrieved from
 // the SourceManager.
-Optional<std::string> toURI(const SourceManager &SM, StringRef Path,
-                            const SymbolCollector::Options &Opts) {
-  SmallString<128> AbsolutePath(Path);
-  if (std::error_code EC =
-          SM.getFileManager().getVirtualFileSystem()->makeAbsolute(
-              AbsolutePath))
-    log("Warning: could not make absolute file: {0}", EC.message());
-  if (sys::path::is_absolute(AbsolutePath)) {
-    // Handle the symbolic link path case where the current working directory
-    // (getCurrentWorkingDirectory) is a symlink./ We always want to the real
-    // file path (instead of the symlink path) for the  C++ symbols.
-    //
-    // Consider the following example:
-    //
-    //   src dir: /project/src/foo.h
-    //   current working directory (symlink): /tmp/build -> /project/src/
-    //
-    // The file path of Symbol is "/project/src/foo.h" instead of
-    // "/tmp/build/foo.h"
-    if (const DirectoryEntry *Dir = SM.getFileManager().getDirectory(
-            sys::path::parent_path(AbsolutePath.str()))) {
-      StringRef DirName = SM.getFileManager().getCanonicalName(Dir);
-      SmallString<128> AbsoluteFilename;
-      sys::path::append(AbsoluteFilename, DirName,
-                        sys::path::filename(AbsolutePath.str()));
-      AbsolutePath = AbsoluteFilename;
-    }
-  } else if (!Opts.FallbackDir.empty()) {
-    sys::fs::make_absolute(Opts.FallbackDir, AbsolutePath);
+std::string toURI(const SourceManager &SM, llvm::StringRef Path,
+                  const SymbolCollector::Options &Opts) {
+  llvm::SmallString<128> AbsolutePath(Path);
+  if (auto CanonPath =
+          getCanonicalPath(SM.getFileManager().getFile(Path), SM)) {
+    AbsolutePath = *CanonPath;
   }
-
+  // We don't perform is_absolute check in an else branch because makeAbsolute
+  // might return a relative path on some InMemoryFileSystems.
+  if (!sys::path::is_absolute(AbsolutePath) && !Opts.FallbackDir.empty())
+    sys::fs::make_absolute(Opts.FallbackDir, AbsolutePath);
   sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
   return URI::create(AbsolutePath).toString();
 }
@@ -211,17 +191,17 @@ Optional<SymbolLocation> getTokenLocation(SourceLocation TokLoc,
                                           const SymbolCollector::Options &Opts,
                                           const clang::LangOptions &LangOpts,
                                           std::string &FileURIStorage) {
-  auto U = toURI(SM, SM.getFilename(TokLoc), Opts);
-  if (!U)
+  auto Path = SM.getFilename(TokLoc);
+  if (Path.empty())
     return None;
-  FileURIStorage = std::move(*U);
+  FileURIStorage = toURI(SM, Path, Opts);
   SymbolLocation Result;
   Result.FileURI = FileURIStorage.c_str();
   auto Range = getTokenRange(TokLoc, SM, LangOpts);
   Result.Start = Range.first;
   Result.End = Range.second;
 
-  return std::move(Result);
+  return Result;
 }
 
 // Checks whether \p ND is a definition of a TagDecl (class/struct/enum/union)
@@ -487,11 +467,7 @@ void SymbolCollector::finish() {
     if (Found == URICache.end()) {
       if (auto *FileEntry = SM.getFileEntryForID(FID)) {
         auto FileURI = toURI(SM, FileEntry->getName(), Opts);
-        if (!FileURI) {
-          log("Failed to create URI for file: {0}\n", FileEntry);
-          FileURI = ""; // reset to empty as we also want to cache this case.
-        }
-        Found = URICache.insert({FID, *FileURI}).first;
+        Found = URICache.insert({FID, FileURI}).first;
       } else {
         // Ignore cases where we can not find a corresponding file entry
         // for the loc, thoses are not interesting, e.g. symbols formed

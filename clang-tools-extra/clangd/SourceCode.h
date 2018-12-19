@@ -78,17 +78,18 @@ std::vector<TextEdit> replacementsToEdits(StringRef Code,
 TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
                     const LangOptions &L);
 
-/// Get the real/canonical path of \p F.  This means:
+/// Get the canonical path of \p F.  This means:
 ///
 ///   - Absolute path
 ///   - Symlinks resolved
 ///   - No "." or ".." component
 ///   - No duplicate or trailing directory separator
 ///
-/// This function should be used when sending paths to clients, so that paths
-/// are normalized as much as possible.
-llvm::Optional<std::string> getRealPath(const FileEntry *F,
-                                        const SourceManager &SourceMgr);
+/// This function should be used when paths needs to be used outside the
+/// component that generate it, so that paths are normalized as much as
+/// possible.
+llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
+                                             const SourceManager &SourceMgr);
 
 bool IsRangeConsecutive(const Range &Left, const Range &Right);
 } // namespace clangd
