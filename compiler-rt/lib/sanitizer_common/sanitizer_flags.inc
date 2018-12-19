@@ -103,7 +103,7 @@ COMMON_FLAG(bool, allow_user_segv_handler, true,
             "handle_*=1 will be upgraded to handle_*=2.")
 COMMON_FLAG(bool, use_sigaltstack, true,
             "If set, uses alternate stack for signal handling.")
-COMMON_FLAG(bool, detect_deadlocks, false,
+COMMON_FLAG(bool, detect_deadlocks, true,
             "If set, deadlock detection is enabled.")
 COMMON_FLAG(
     uptr, clear_shadow_mmap_threshold, 64 * 1024,

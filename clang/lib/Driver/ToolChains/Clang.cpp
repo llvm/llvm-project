@@ -5273,7 +5273,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_faddrsig, options::OPT_fno_addrsig,
                    (TC.getTriple().isOSBinFormatELF() ||
                     TC.getTriple().isOSBinFormatCOFF()) &&
-                       TC.useIntegratedAs()))
+                       TC.useIntegratedAs() &&
+                       RawTriple.getOS() != llvm::Triple::NetBSD))
     CmdArgs.push_back("-faddrsig");
 
   // Finally add the compile command to the compilation.

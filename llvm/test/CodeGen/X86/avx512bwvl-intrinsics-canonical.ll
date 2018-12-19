@@ -9,11 +9,10 @@ define <8 x i16> @test_mask_adds_epu16_rr_128(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpaddusw %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdd,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %1 = add <8 x i16> %a, %b
-  %2 = icmp ugt <8 x i16> %a, %1
-  %3 = select <8 x i1> %2, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> %1
-  ret <8 x i16> %3
+  %1 = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> %a, <8 x i16> %b)
+  ret <8 x i16> %1
 }
+declare <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16>, <8 x i16>)
 
 define <8 x i16> @test_mask_adds_epu16_rrk_128(<8 x i16> %a, <8 x i16> %b, <8 x i16> %passThru, i8 %mask) {
 ; CHECK-LABEL: test_mask_adds_epu16_rrk_128:
@@ -22,12 +21,10 @@ define <8 x i16> @test_mask_adds_epu16_rrk_128(<8 x i16> %a, <8 x i16> %b, <8 x 
 ; CHECK-NEXT:    vpaddusw %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0xdd,0xd1]
 ; CHECK-NEXT:    vmovdqa %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %1 = add <8 x i16> %a, %b
-  %2 = icmp ugt <8 x i16> %a, %1
-  %3 = select <8 x i1> %2, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> %1
-  %4 = bitcast i8 %mask to <8 x i1>
-  %5 = select <8 x i1> %4, <8 x i16> %3, <8 x i16> %passThru
-  ret <8 x i16> %5
+  %1 = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> %a, <8 x i16> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> %passThru
+  ret <8 x i16> %3
 }
 
 define <8 x i16> @test_mask_adds_epu16_rrkz_128(<8 x i16> %a, <8 x i16> %b, i8 %mask) {
@@ -36,12 +33,10 @@ define <8 x i16> @test_mask_adds_epu16_rrkz_128(<8 x i16> %a, <8 x i16> %b, i8 %
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpaddusw %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0xdd,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %1 = add <8 x i16> %a, %b
-  %2 = icmp ugt <8 x i16> %a, %1
-  %3 = select <8 x i1> %2, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> %1
-  %4 = bitcast i8 %mask to <8 x i1>
-  %5 = select <8 x i1> %4, <8 x i16> %3, <8 x i16> zeroinitializer
-  ret <8 x i16> %5
+  %1 = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> %a, <8 x i16> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> zeroinitializer
+  ret <8 x i16> %3
 }
 
 define <8 x i16> @test_mask_adds_epu16_rm_128(<8 x i16> %a, <8 x i16>* %ptr_b) {
@@ -50,10 +45,8 @@ define <8 x i16> @test_mask_adds_epu16_rm_128(<8 x i16> %a, <8 x i16>* %ptr_b) {
 ; CHECK-NEXT:    vpaddusw (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdd,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i16>, <8 x i16>* %ptr_b
-  %1 = add <8 x i16> %a, %b
-  %2 = icmp ugt <8 x i16> %a, %1
-  %3 = select <8 x i1> %2, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> %1
-  ret <8 x i16> %3
+  %1 = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> %a, <8 x i16> %b)
+  ret <8 x i16> %1
 }
 
 define <8 x i16> @test_mask_adds_epu16_rmk_128(<8 x i16> %a, <8 x i16>* %ptr_b, <8 x i16> %passThru, i8 %mask) {
@@ -64,12 +57,10 @@ define <8 x i16> @test_mask_adds_epu16_rmk_128(<8 x i16> %a, <8 x i16>* %ptr_b, 
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i16>, <8 x i16>* %ptr_b
-  %1 = add <8 x i16> %a, %b
-  %2 = icmp ugt <8 x i16> %a, %1
-  %3 = select <8 x i1> %2, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> %1
-  %4 = bitcast i8 %mask to <8 x i1>
-  %5 = select <8 x i1> %4, <8 x i16> %3, <8 x i16> %passThru
-  ret <8 x i16> %5
+  %1 = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> %a, <8 x i16> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> %passThru
+  ret <8 x i16> %3
 }
 
 define <8 x i16> @test_mask_adds_epu16_rmkz_128(<8 x i16> %a, <8 x i16>* %ptr_b, i8 %mask) {
@@ -79,12 +70,10 @@ define <8 x i16> @test_mask_adds_epu16_rmkz_128(<8 x i16> %a, <8 x i16>* %ptr_b,
 ; CHECK-NEXT:    vpaddusw (%rdi), %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0xdd,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i16>, <8 x i16>* %ptr_b
-  %1 = add <8 x i16> %a, %b
-  %2 = icmp ugt <8 x i16> %a, %1
-  %3 = select <8 x i1> %2, <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <8 x i16> %1
-  %4 = bitcast i8 %mask to <8 x i1>
-  %5 = select <8 x i1> %4, <8 x i16> %3, <8 x i16> zeroinitializer
-  ret <8 x i16> %5
+  %1 = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> %a, <8 x i16> %b)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i16> %1, <8 x i16> zeroinitializer
+  ret <8 x i16> %3
 }
 
 define <16 x i16> @test_mask_adds_epu16_rr_256(<16 x i16> %a, <16 x i16> %b) {
@@ -92,11 +81,10 @@ define <16 x i16> @test_mask_adds_epu16_rr_256(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpaddusw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xdd,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %1 = add <16 x i16> %a, %b
-  %2 = icmp ugt <16 x i16> %a, %1
-  %3 = select <16 x i1> %2, <16 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <16 x i16> %1
-  ret <16 x i16> %3
+  %1 = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> %a, <16 x i16> %b)
+  ret <16 x i16> %1
 }
+declare <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16>, <16 x i16>)
 
 define <16 x i16> @test_mask_adds_epu16_rrk_256(<16 x i16> %a, <16 x i16> %b, <16 x i16> %passThru, i16 %mask) {
 ; CHECK-LABEL: test_mask_adds_epu16_rrk_256:
@@ -105,12 +93,10 @@ define <16 x i16> @test_mask_adds_epu16_rrk_256(<16 x i16> %a, <16 x i16> %b, <1
 ; CHECK-NEXT:    vpaddusw %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0xdd,0xd1]
 ; CHECK-NEXT:    vmovdqa %ymm2, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %1 = add <16 x i16> %a, %b
-  %2 = icmp ugt <16 x i16> %a, %1
-  %3 = select <16 x i1> %2, <16 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <16 x i16> %1
-  %4 = bitcast i16 %mask to <16 x i1>
-  %5 = select <16 x i1> %4, <16 x i16> %3, <16 x i16> %passThru
-  ret <16 x i16> %5
+  %1 = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> %a, <16 x i16> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> %passThru
+  ret <16 x i16> %3
 }
 
 define <16 x i16> @test_mask_adds_epu16_rrkz_256(<16 x i16> %a, <16 x i16> %b, i16 %mask) {
@@ -119,12 +105,10 @@ define <16 x i16> @test_mask_adds_epu16_rrkz_256(<16 x i16> %a, <16 x i16> %b, i
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpaddusw %ymm1, %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0xdd,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %1 = add <16 x i16> %a, %b
-  %2 = icmp ugt <16 x i16> %a, %1
-  %3 = select <16 x i1> %2, <16 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <16 x i16> %1
-  %4 = bitcast i16 %mask to <16 x i1>
-  %5 = select <16 x i1> %4, <16 x i16> %3, <16 x i16> zeroinitializer
-  ret <16 x i16> %5
+  %1 = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> %a, <16 x i16> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> zeroinitializer
+  ret <16 x i16> %3
 }
 
 define <16 x i16> @test_mask_adds_epu16_rm_256(<16 x i16> %a, <16 x i16>* %ptr_b) {
@@ -133,10 +117,8 @@ define <16 x i16> @test_mask_adds_epu16_rm_256(<16 x i16> %a, <16 x i16>* %ptr_b
 ; CHECK-NEXT:    vpaddusw (%rdi), %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xdd,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i16>, <16 x i16>* %ptr_b
-  %1 = add <16 x i16> %a, %b
-  %2 = icmp ugt <16 x i16> %a, %1
-  %3 = select <16 x i1> %2, <16 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <16 x i16> %1
-  ret <16 x i16> %3
+  %1 = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> %a, <16 x i16> %b)
+  ret <16 x i16> %1
 }
 
 define <16 x i16> @test_mask_adds_epu16_rmk_256(<16 x i16> %a, <16 x i16>* %ptr_b, <16 x i16> %passThru, i16 %mask) {
@@ -147,12 +129,10 @@ define <16 x i16> @test_mask_adds_epu16_rmk_256(<16 x i16> %a, <16 x i16>* %ptr_
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i16>, <16 x i16>* %ptr_b
-  %1 = add <16 x i16> %a, %b
-  %2 = icmp ugt <16 x i16> %a, %1
-  %3 = select <16 x i1> %2, <16 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <16 x i16> %1
-  %4 = bitcast i16 %mask to <16 x i1>
-  %5 = select <16 x i1> %4, <16 x i16> %3, <16 x i16> %passThru
-  ret <16 x i16> %5
+  %1 = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> %a, <16 x i16> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> %passThru
+  ret <16 x i16> %3
 }
 
 define <16 x i16> @test_mask_adds_epu16_rmkz_256(<16 x i16> %a, <16 x i16>* %ptr_b, i16 %mask) {
@@ -162,12 +142,10 @@ define <16 x i16> @test_mask_adds_epu16_rmkz_256(<16 x i16> %a, <16 x i16>* %ptr
 ; CHECK-NEXT:    vpaddusw (%rdi), %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0xdd,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i16>, <16 x i16>* %ptr_b
-  %1 = add <16 x i16> %a, %b
-  %2 = icmp ugt <16 x i16> %a, %1
-  %3 = select <16 x i1> %2, <16 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <16 x i16> %1
-  %4 = bitcast i16 %mask to <16 x i1>
-  %5 = select <16 x i1> %4, <16 x i16> %3, <16 x i16> zeroinitializer
-  ret <16 x i16> %5
+  %1 = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> %a, <16 x i16> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i16> %1, <16 x i16> zeroinitializer
+  ret <16 x i16> %3
 }
 
 define <8 x i16> @test_mask_subs_epu16_rr_128(<8 x i16> %a, <8 x i16> %b) {
@@ -175,11 +153,10 @@ define <8 x i16> @test_mask_subs_epu16_rr_128(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsubusw %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xd9,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %cmp = icmp ugt <8 x i16> %a, %b
-  %sel = select <8 x i1> %cmp, <8 x i16> %a, <8 x i16> %b
-  %sub = sub <8 x i16> %sel, %b
+  %sub = call <8 x i16> @llvm.usub.sat.v8i16(<8 x i16> %a, <8 x i16> %b)
   ret <8 x i16> %sub
 }
+declare <8 x i16> @llvm.usub.sat.v8i16(<8 x i16>, <8 x i16>)
 
 define <8 x i16> @test_mask_subs_epu16_rrk_128(<8 x i16> %a, <8 x i16> %b, <8 x i16> %passThru, i8 %mask) {
 ; CHECK-LABEL: test_mask_subs_epu16_rrk_128:
@@ -188,9 +165,7 @@ define <8 x i16> @test_mask_subs_epu16_rrk_128(<8 x i16> %a, <8 x i16> %b, <8 x 
 ; CHECK-NEXT:    vpsubusw %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0xd9,0xd1]
 ; CHECK-NEXT:    vmovdqa %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %cmp = icmp ugt <8 x i16> %a, %b
-  %sel = select <8 x i1> %cmp, <8 x i16> %a, <8 x i16> %b
-  %sub = sub <8 x i16> %sel, %b
+  %sub = call <8 x i16> @llvm.usub.sat.v8i16(<8 x i16> %a, <8 x i16> %b)
   %bc = bitcast i8 %mask to <8 x i1>
   %res = select <8 x i1> %bc, <8 x i16> %sub, <8 x i16> %passThru
   ret <8 x i16> %res
@@ -202,9 +177,7 @@ define <8 x i16> @test_mask_subs_epu16_rrkz_128(<8 x i16> %a, <8 x i16> %b, i8 %
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpsubusw %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0xd9,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %cmp = icmp ugt <8 x i16> %a, %b
-  %sel = select <8 x i1> %cmp, <8 x i16> %a, <8 x i16> %b
-  %sub = sub <8 x i16> %sel, %b
+  %sub = call <8 x i16> @llvm.usub.sat.v8i16(<8 x i16> %a, <8 x i16> %b)
   %bc = bitcast i8 %mask to <8 x i1>
   %res = select <8 x i1> %bc, <8 x i16> %sub, <8 x i16> zeroinitializer
   ret <8 x i16> %res
@@ -216,9 +189,7 @@ define <8 x i16> @test_mask_subs_epu16_rm_128(<8 x i16> %a, <8 x i16>* %ptr_b) {
 ; CHECK-NEXT:    vpsubusw (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xd9,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i16>, <8 x i16>* %ptr_b
-  %cmp = icmp ugt <8 x i16> %a, %b
-  %sel = select <8 x i1> %cmp, <8 x i16> %a, <8 x i16> %b
-  %sub = sub <8 x i16> %sel, %b
+  %sub = call <8 x i16> @llvm.usub.sat.v8i16(<8 x i16> %a, <8 x i16> %b)
   ret <8 x i16> %sub
 }
 
@@ -230,9 +201,7 @@ define <8 x i16> @test_mask_subs_epu16_rmk_128(<8 x i16> %a, <8 x i16>* %ptr_b, 
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i16>, <8 x i16>* %ptr_b
-  %cmp = icmp ugt <8 x i16> %a, %b
-  %sel = select <8 x i1> %cmp, <8 x i16> %a, <8 x i16> %b
-  %sub = sub <8 x i16> %sel, %b
+  %sub = call <8 x i16> @llvm.usub.sat.v8i16(<8 x i16> %a, <8 x i16> %b)
   %bc = bitcast i8 %mask to <8 x i1>
   %res = select <8 x i1> %bc, <8 x i16> %sub, <8 x i16> %passThru
   ret <8 x i16> %res
@@ -245,9 +214,7 @@ define <8 x i16> @test_mask_subs_epu16_rmkz_128(<8 x i16> %a, <8 x i16>* %ptr_b,
 ; CHECK-NEXT:    vpsubusw (%rdi), %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0xd9,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <8 x i16>, <8 x i16>* %ptr_b
-  %cmp = icmp ugt <8 x i16> %a, %b
-  %sel = select <8 x i1> %cmp, <8 x i16> %a, <8 x i16> %b
-  %sub = sub <8 x i16> %sel, %b
+  %sub = call <8 x i16> @llvm.usub.sat.v8i16(<8 x i16> %a, <8 x i16> %b)
   %bc = bitcast i8 %mask to <8 x i1>
   %res = select <8 x i1> %bc, <8 x i16> %sub, <8 x i16> zeroinitializer
   ret <8 x i16> %res
@@ -258,11 +225,10 @@ define <16 x i16> @test_mask_subs_epu16_rr_256(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsubusw %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xd9,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %cmp = icmp ugt <16 x i16> %a, %b
-  %sel = select <16 x i1> %cmp, <16 x i16> %a, <16 x i16> %b
-  %sub = sub <16 x i16> %sel, %b
+  %sub = call <16 x i16> @llvm.usub.sat.v16i16(<16 x i16> %a, <16 x i16> %b)
   ret <16 x i16> %sub
 }
+declare <16 x i16> @llvm.usub.sat.v16i16(<16 x i16>, <16 x i16>)
 
 define <16 x i16> @test_mask_subs_epu16_rrk_256(<16 x i16> %a, <16 x i16> %b, <16 x i16> %passThru, i16 %mask) {
 ; CHECK-LABEL: test_mask_subs_epu16_rrk_256:
@@ -271,9 +237,7 @@ define <16 x i16> @test_mask_subs_epu16_rrk_256(<16 x i16> %a, <16 x i16> %b, <1
 ; CHECK-NEXT:    vpsubusw %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0xd9,0xd1]
 ; CHECK-NEXT:    vmovdqa %ymm2, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %cmp = icmp ugt <16 x i16> %a, %b
-  %sel = select <16 x i1> %cmp, <16 x i16> %a, <16 x i16> %b
-  %sub = sub <16 x i16> %sel, %b
+  %sub = call <16 x i16> @llvm.usub.sat.v16i16(<16 x i16> %a, <16 x i16> %b)
   %bc = bitcast i16 %mask to <16 x i1>
   %res = select <16 x i1> %bc, <16 x i16> %sub, <16 x i16> %passThru
   ret <16 x i16> %res
@@ -285,9 +249,7 @@ define <16 x i16> @test_mask_subs_epu16_rrkz_256(<16 x i16> %a, <16 x i16> %b, i
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpsubusw %ymm1, %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0xd9,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %cmp = icmp ugt <16 x i16> %a, %b
-  %sel = select <16 x i1> %cmp, <16 x i16> %a, <16 x i16> %b
-  %sub = sub <16 x i16> %sel, %b
+  %sub = call <16 x i16> @llvm.usub.sat.v16i16(<16 x i16> %a, <16 x i16> %b)
   %bc = bitcast i16 %mask to <16 x i1>
   %res = select <16 x i1> %bc, <16 x i16> %sub, <16 x i16> zeroinitializer
   ret <16 x i16> %res
@@ -299,9 +261,7 @@ define <16 x i16> @test_mask_subs_epu16_rm_256(<16 x i16> %a, <16 x i16>* %ptr_b
 ; CHECK-NEXT:    vpsubusw (%rdi), %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xd9,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i16>, <16 x i16>* %ptr_b
-  %cmp = icmp ugt <16 x i16> %a, %b
-  %sel = select <16 x i1> %cmp, <16 x i16> %a, <16 x i16> %b
-  %sub = sub <16 x i16> %sel, %b
+  %sub = call <16 x i16> @llvm.usub.sat.v16i16(<16 x i16> %a, <16 x i16> %b)
   ret <16 x i16> %sub
 }
 
@@ -313,9 +273,7 @@ define <16 x i16> @test_mask_subs_epu16_rmk_256(<16 x i16> %a, <16 x i16>* %ptr_
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i16>, <16 x i16>* %ptr_b
-  %cmp = icmp ugt <16 x i16> %a, %b
-  %sel = select <16 x i1> %cmp, <16 x i16> %a, <16 x i16> %b
-  %sub = sub <16 x i16> %sel, %b
+  %sub = call <16 x i16> @llvm.usub.sat.v16i16(<16 x i16> %a, <16 x i16> %b)
   %bc = bitcast i16 %mask to <16 x i1>
   %res = select <16 x i1> %bc, <16 x i16> %sub, <16 x i16> %passThru
   ret <16 x i16> %res
@@ -328,9 +286,7 @@ define <16 x i16> @test_mask_subs_epu16_rmkz_256(<16 x i16> %a, <16 x i16>* %ptr
 ; CHECK-NEXT:    vpsubusw (%rdi), %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0xd9,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i16>, <16 x i16>* %ptr_b
-  %cmp = icmp ugt <16 x i16> %a, %b
-  %sel = select <16 x i1> %cmp, <16 x i16> %a, <16 x i16> %b
-  %sub = sub <16 x i16> %sel, %b
+  %sub = call <16 x i16> @llvm.usub.sat.v16i16(<16 x i16> %a, <16 x i16> %b)
   %bc = bitcast i16 %mask to <16 x i1>
   %res = select <16 x i1> %bc, <16 x i16> %sub, <16 x i16> zeroinitializer
   ret <16 x i16> %res
@@ -341,11 +297,10 @@ define <16 x i8> @test_mask_adds_epu8_rr_128(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpaddusb %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdc,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %1 = add <16 x i8> %a, %b
-  %2 = icmp ugt <16 x i8> %a, %1
-  %3 = select <16 x i1> %2, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> %1
-  ret <16 x i8> %3
+  %1 = call <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8> %a, <16 x i8> %b)
+  ret <16 x i8> %1
 }
+declare <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8>, <16 x i8>)
 
 define <16 x i8> @test_mask_adds_epu8_rrk_128(<16 x i8> %a, <16 x i8> %b, <16 x i8> %passThru, i16 %mask) {
 ; CHECK-LABEL: test_mask_adds_epu8_rrk_128:
@@ -354,12 +309,10 @@ define <16 x i8> @test_mask_adds_epu8_rrk_128(<16 x i8> %a, <16 x i8> %b, <16 x 
 ; CHECK-NEXT:    vpaddusb %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0xdc,0xd1]
 ; CHECK-NEXT:    vmovdqa %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %1 = add <16 x i8> %a, %b
-  %2 = icmp ugt <16 x i8> %a, %1
-  %3 = select <16 x i1> %2, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> %1
-  %4 = bitcast i16 %mask to <16 x i1>
-  %5 = select <16 x i1> %4, <16 x i8> %3, <16 x i8> %passThru
-  ret <16 x i8> %5
+  %1 = call <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8> %a, <16 x i8> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i8> %1, <16 x i8> %passThru
+  ret <16 x i8> %3
 }
 
 define <16 x i8> @test_mask_adds_epu8_rrkz_128(<16 x i8> %a, <16 x i8> %b, i16 %mask) {
@@ -368,12 +321,10 @@ define <16 x i8> @test_mask_adds_epu8_rrkz_128(<16 x i8> %a, <16 x i8> %b, i16 %
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpaddusb %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0xdc,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %1 = add <16 x i8> %a, %b
-  %2 = icmp ugt <16 x i8> %a, %1
-  %3 = select <16 x i1> %2, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> %1
-  %4 = bitcast i16 %mask to <16 x i1>
-  %5 = select <16 x i1> %4, <16 x i8> %3, <16 x i8> zeroinitializer
-  ret <16 x i8> %5
+  %1 = call <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8> %a, <16 x i8> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i8> %1, <16 x i8> zeroinitializer
+  ret <16 x i8> %3
 }
 
 define <16 x i8> @test_mask_adds_epu8_rm_128(<16 x i8> %a, <16 x i8>* %ptr_b) {
@@ -382,10 +333,8 @@ define <16 x i8> @test_mask_adds_epu8_rm_128(<16 x i8> %a, <16 x i8>* %ptr_b) {
 ; CHECK-NEXT:    vpaddusb (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdc,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i8>, <16 x i8>* %ptr_b
-  %1 = add <16 x i8> %a, %b
-  %2 = icmp ugt <16 x i8> %a, %1
-  %3 = select <16 x i1> %2, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> %1
-  ret <16 x i8> %3
+  %1 = call <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8> %a, <16 x i8> %b)
+  ret <16 x i8> %1
 }
 
 define <16 x i8> @test_mask_adds_epu8_rmk_128(<16 x i8> %a, <16 x i8>* %ptr_b, <16 x i8> %passThru, i16 %mask) {
@@ -396,12 +345,10 @@ define <16 x i8> @test_mask_adds_epu8_rmk_128(<16 x i8> %a, <16 x i8>* %ptr_b, <
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i8>, <16 x i8>* %ptr_b
-  %1 = add <16 x i8> %a, %b
-  %2 = icmp ugt <16 x i8> %a, %1
-  %3 = select <16 x i1> %2, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> %1
-  %4 = bitcast i16 %mask to <16 x i1>
-  %5 = select <16 x i1> %4, <16 x i8> %3, <16 x i8> %passThru
-  ret <16 x i8> %5
+  %1 = call <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8> %a, <16 x i8> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i8> %1, <16 x i8> %passThru
+  ret <16 x i8> %3
 }
 
 define <16 x i8> @test_mask_adds_epu8_rmkz_128(<16 x i8> %a, <16 x i8>* %ptr_b, i16 %mask) {
@@ -411,12 +358,10 @@ define <16 x i8> @test_mask_adds_epu8_rmkz_128(<16 x i8> %a, <16 x i8>* %ptr_b, 
 ; CHECK-NEXT:    vpaddusb (%rdi), %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0xdc,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i8>, <16 x i8>* %ptr_b
-  %1 = add <16 x i8> %a, %b
-  %2 = icmp ugt <16 x i8> %a, %1
-  %3 = select <16 x i1> %2, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> %1
-  %4 = bitcast i16 %mask to <16 x i1>
-  %5 = select <16 x i1> %4, <16 x i8> %3, <16 x i8> zeroinitializer
-  ret <16 x i8> %5
+  %1 = call <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8> %a, <16 x i8> %b)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i8> %1, <16 x i8> zeroinitializer
+  ret <16 x i8> %3
 }
 
 define <32 x i8> @test_mask_adds_epu8_rr_256(<32 x i8> %a, <32 x i8> %b) {
@@ -424,11 +369,10 @@ define <32 x i8> @test_mask_adds_epu8_rr_256(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpaddusb %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xdc,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %1 = add <32 x i8> %a, %b
-  %2 = icmp ugt <32 x i8> %a, %1
-  %3 = select <32 x i1> %2, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> %1
-  ret <32 x i8> %3
+  %1 = call <32 x i8> @llvm.uadd.sat.v32i8(<32 x i8> %a, <32 x i8> %b)
+  ret <32 x i8> %1
 }
+declare <32 x i8> @llvm.uadd.sat.v32i8(<32 x i8>, <32 x i8>)
 
 define <32 x i8> @test_mask_adds_epu8_rrk_256(<32 x i8> %a, <32 x i8> %b, <32 x i8> %passThru, i32 %mask) {
 ; CHECK-LABEL: test_mask_adds_epu8_rrk_256:
@@ -437,12 +381,10 @@ define <32 x i8> @test_mask_adds_epu8_rrk_256(<32 x i8> %a, <32 x i8> %b, <32 x 
 ; CHECK-NEXT:    vpaddusb %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0xdc,0xd1]
 ; CHECK-NEXT:    vmovdqa %ymm2, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %1 = add <32 x i8> %a, %b
-  %2 = icmp ugt <32 x i8> %a, %1
-  %3 = select <32 x i1> %2, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> %1
-  %4 = bitcast i32 %mask to <32 x i1>
-  %5 = select <32 x i1> %4, <32 x i8> %3, <32 x i8> %passThru
-  ret <32 x i8> %5
+  %1 = call <32 x i8> @llvm.uadd.sat.v32i8(<32 x i8> %a, <32 x i8> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i8> %1, <32 x i8> %passThru
+  ret <32 x i8> %3
 }
 
 define <32 x i8> @test_mask_adds_epu8_rrkz_256(<32 x i8> %a, <32 x i8> %b, i32 %mask) {
@@ -451,12 +393,10 @@ define <32 x i8> @test_mask_adds_epu8_rrkz_256(<32 x i8> %a, <32 x i8> %b, i32 %
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpaddusb %ymm1, %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0xdc,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %1 = add <32 x i8> %a, %b
-  %2 = icmp ugt <32 x i8> %a, %1
-  %3 = select <32 x i1> %2, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> %1
-  %4 = bitcast i32 %mask to <32 x i1>
-  %5 = select <32 x i1> %4, <32 x i8> %3, <32 x i8> zeroinitializer
-  ret <32 x i8> %5
+  %1 = call <32 x i8> @llvm.uadd.sat.v32i8(<32 x i8> %a, <32 x i8> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i8> %1, <32 x i8> zeroinitializer
+  ret <32 x i8> %3
 }
 
 define <32 x i8> @test_mask_adds_epu8_rm_256(<32 x i8> %a, <32 x i8>* %ptr_b) {
@@ -465,10 +405,8 @@ define <32 x i8> @test_mask_adds_epu8_rm_256(<32 x i8> %a, <32 x i8>* %ptr_b) {
 ; CHECK-NEXT:    vpaddusb (%rdi), %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xdc,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <32 x i8>, <32 x i8>* %ptr_b
-  %1 = add <32 x i8> %a, %b
-  %2 = icmp ugt <32 x i8> %a, %1
-  %3 = select <32 x i1> %2, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> %1
-  ret <32 x i8> %3
+  %1 = call <32 x i8> @llvm.uadd.sat.v32i8(<32 x i8> %a, <32 x i8> %b)
+  ret <32 x i8> %1
 }
 
 define <32 x i8> @test_mask_adds_epu8_rmk_256(<32 x i8> %a, <32 x i8>* %ptr_b, <32 x i8> %passThru, i32 %mask) {
@@ -479,12 +417,10 @@ define <32 x i8> @test_mask_adds_epu8_rmk_256(<32 x i8> %a, <32 x i8>* %ptr_b, <
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <32 x i8>, <32 x i8>* %ptr_b
-  %1 = add <32 x i8> %a, %b
-  %2 = icmp ugt <32 x i8> %a, %1
-  %3 = select <32 x i1> %2, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> %1
-  %4 = bitcast i32 %mask to <32 x i1>
-  %5 = select <32 x i1> %4, <32 x i8> %3, <32 x i8> %passThru
-  ret <32 x i8> %5
+  %1 = call <32 x i8> @llvm.uadd.sat.v32i8(<32 x i8> %a, <32 x i8> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i8> %1, <32 x i8> %passThru
+  ret <32 x i8> %3
 }
 
 define <32 x i8> @test_mask_adds_epu8_rmkz_256(<32 x i8> %a, <32 x i8>* %ptr_b, i32 %mask) {
@@ -494,12 +430,10 @@ define <32 x i8> @test_mask_adds_epu8_rmkz_256(<32 x i8> %a, <32 x i8>* %ptr_b, 
 ; CHECK-NEXT:    vpaddusb (%rdi), %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0xdc,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <32 x i8>, <32 x i8>* %ptr_b
-  %1 = add <32 x i8> %a, %b
-  %2 = icmp ugt <32 x i8> %a, %1
-  %3 = select <32 x i1> %2, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> %1
-  %4 = bitcast i32 %mask to <32 x i1>
-  %5 = select <32 x i1> %4, <32 x i8> %3, <32 x i8> zeroinitializer
-  ret <32 x i8> %5
+  %1 = call <32 x i8> @llvm.uadd.sat.v32i8(<32 x i8> %a, <32 x i8> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i8> %1, <32 x i8> zeroinitializer
+  ret <32 x i8> %3
 }
 
 define <16 x i8> @test_mask_subs_epu8_rr_128(<16 x i8> %a, <16 x i8> %b) {
@@ -507,11 +441,10 @@ define <16 x i8> @test_mask_subs_epu8_rr_128(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xd8,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %cmp = icmp ugt <16 x i8> %a, %b
-  %sel = select <16 x i1> %cmp, <16 x i8> %a, <16 x i8> %b
-  %sub = sub <16 x i8> %sel, %b
+  %sub = call <16 x i8> @llvm.usub.sat.v16i8(<16 x i8> %a, <16 x i8> %b)
   ret <16 x i8> %sub
 }
+declare <16 x i8> @llvm.usub.sat.v16i8(<16 x i8>, <16 x i8>)
 
 define <16 x i8> @test_mask_subs_epu8_rrk_128(<16 x i8> %a, <16 x i8> %b, <16 x i8> %passThru, i16 %mask) {
 ; CHECK-LABEL: test_mask_subs_epu8_rrk_128:
@@ -520,9 +453,7 @@ define <16 x i8> @test_mask_subs_epu8_rrk_128(<16 x i8> %a, <16 x i8> %b, <16 x 
 ; CHECK-NEXT:    vpsubusb %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0xd8,0xd1]
 ; CHECK-NEXT:    vmovdqa %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %cmp = icmp ugt <16 x i8> %a, %b
-  %sel = select <16 x i1> %cmp, <16 x i8> %a, <16 x i8> %b
-  %sub = sub <16 x i8> %sel, %b
+  %sub = call <16 x i8> @llvm.usub.sat.v16i8(<16 x i8> %a, <16 x i8> %b)
   %bc = bitcast i16 %mask to <16 x i1>
   %res = select <16 x i1> %bc, <16 x i8> %sub, <16 x i8> %passThru
   ret <16 x i8> %res
@@ -534,9 +465,7 @@ define <16 x i8> @test_mask_subs_epu8_rrkz_128(<16 x i8> %a, <16 x i8> %b, i16 %
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpsubusb %xmm1, %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0xd8,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %cmp = icmp ugt <16 x i8> %a, %b
-  %sel = select <16 x i1> %cmp, <16 x i8> %a, <16 x i8> %b
-  %sub = sub <16 x i8> %sel, %b
+  %sub = call <16 x i8> @llvm.usub.sat.v16i8(<16 x i8> %a, <16 x i8> %b)
   %bc = bitcast i16 %mask to <16 x i1>
   %res = select <16 x i1> %bc, <16 x i8> %sub, <16 x i8> zeroinitializer
   ret <16 x i8> %res
@@ -548,9 +477,7 @@ define <16 x i8> @test_mask_subs_epu8_rm_128(<16 x i8> %a, <16 x i8>* %ptr_b) {
 ; CHECK-NEXT:    vpsubusb (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xd8,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i8>, <16 x i8>* %ptr_b
-  %cmp = icmp ugt <16 x i8> %a, %b
-  %sel = select <16 x i1> %cmp, <16 x i8> %a, <16 x i8> %b
-  %sub = sub <16 x i8> %sel, %b
+  %sub = call <16 x i8> @llvm.usub.sat.v16i8(<16 x i8> %a, <16 x i8> %b)
   ret <16 x i8> %sub
 }
 
@@ -562,9 +489,7 @@ define <16 x i8> @test_mask_subs_epu8_rmk_128(<16 x i8> %a, <16 x i8>* %ptr_b, <
 ; CHECK-NEXT:    vmovdqa %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i8>, <16 x i8>* %ptr_b
-  %cmp = icmp ugt <16 x i8> %a, %b
-  %sel = select <16 x i1> %cmp, <16 x i8> %a, <16 x i8> %b
-  %sub = sub <16 x i8> %sel, %b
+  %sub = call <16 x i8> @llvm.usub.sat.v16i8(<16 x i8> %a, <16 x i8> %b)
   %bc = bitcast i16 %mask to <16 x i1>
   %res = select <16 x i1> %bc, <16 x i8> %sub, <16 x i8> %passThru
   ret <16 x i8> %res
@@ -577,9 +502,7 @@ define <16 x i8> @test_mask_subs_epu8_rmkz_128(<16 x i8> %a, <16 x i8>* %ptr_b, 
 ; CHECK-NEXT:    vpsubusb (%rdi), %xmm0, %xmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0xd8,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <16 x i8>, <16 x i8>* %ptr_b
-  %cmp = icmp ugt <16 x i8> %a, %b
-  %sel = select <16 x i1> %cmp, <16 x i8> %a, <16 x i8> %b
-  %sub = sub <16 x i8> %sel, %b
+  %sub = call <16 x i8> @llvm.usub.sat.v16i8(<16 x i8> %a, <16 x i8> %b)
   %bc = bitcast i16 %mask to <16 x i1>
   %res = select <16 x i1> %bc, <16 x i8> %sub, <16 x i8> zeroinitializer
   ret <16 x i8> %res
@@ -590,11 +513,10 @@ define <32 x i8> @test_mask_subs_epu8_rr_256(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsubusb %ymm1, %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xd8,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %cmp = icmp ugt <32 x i8> %a, %b
-  %sel = select <32 x i1> %cmp, <32 x i8> %a, <32 x i8> %b
-  %sub = sub <32 x i8> %sel, %b
+  %sub = call <32 x i8> @llvm.usub.sat.v32i8(<32 x i8> %a, <32 x i8> %b)
   ret <32 x i8> %sub
 }
+declare <32 x i8> @llvm.usub.sat.v32i8(<32 x i8>, <32 x i8>)
 
 define <32 x i8> @test_mask_subs_epu8_rrk_256(<32 x i8> %a, <32 x i8> %b, <32 x i8> %passThru, i32 %mask) {
 ; CHECK-LABEL: test_mask_subs_epu8_rrk_256:
@@ -603,9 +525,7 @@ define <32 x i8> @test_mask_subs_epu8_rrk_256(<32 x i8> %a, <32 x i8> %b, <32 x 
 ; CHECK-NEXT:    vpsubusb %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0xd8,0xd1]
 ; CHECK-NEXT:    vmovdqa %ymm2, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc2]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %cmp = icmp ugt <32 x i8> %a, %b
-  %sel = select <32 x i1> %cmp, <32 x i8> %a, <32 x i8> %b
-  %sub = sub <32 x i8> %sel, %b
+  %sub = call <32 x i8> @llvm.usub.sat.v32i8(<32 x i8> %a, <32 x i8> %b)
   %bc = bitcast i32 %mask to <32 x i1>
   %res = select <32 x i1> %bc, <32 x i8> %sub, <32 x i8> %passThru
   ret <32 x i8> %res
@@ -617,9 +537,7 @@ define <32 x i8> @test_mask_subs_epu8_rrkz_256(<32 x i8> %a, <32 x i8> %b, i32 %
 ; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
 ; CHECK-NEXT:    vpsubusb %ymm1, %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0xd8,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %cmp = icmp ugt <32 x i8> %a, %b
-  %sel = select <32 x i1> %cmp, <32 x i8> %a, <32 x i8> %b
-  %sub = sub <32 x i8> %sel, %b
+  %sub = call <32 x i8> @llvm.usub.sat.v32i8(<32 x i8> %a, <32 x i8> %b)
   %bc = bitcast i32 %mask to <32 x i1>
   %res = select <32 x i1> %bc, <32 x i8> %sub, <32 x i8> zeroinitializer
   ret <32 x i8> %res
@@ -631,9 +549,7 @@ define <32 x i8> @test_mask_subs_epu8_rm_256(<32 x i8> %a, <32 x i8>* %ptr_b) {
 ; CHECK-NEXT:    vpsubusb (%rdi), %ymm0, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xd8,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <32 x i8>, <32 x i8>* %ptr_b
-  %cmp = icmp ugt <32 x i8> %a, %b
-  %sel = select <32 x i1> %cmp, <32 x i8> %a, <32 x i8> %b
-  %sub = sub <32 x i8> %sel, %b
+  %sub = call <32 x i8> @llvm.usub.sat.v32i8(<32 x i8> %a, <32 x i8> %b)
   ret <32 x i8> %sub
 }
 
@@ -645,9 +561,7 @@ define <32 x i8> @test_mask_subs_epu8_rmk_256(<32 x i8> %a, <32 x i8>* %ptr_b, <
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <32 x i8>, <32 x i8>* %ptr_b
-  %cmp = icmp ugt <32 x i8> %a, %b
-  %sel = select <32 x i1> %cmp, <32 x i8> %a, <32 x i8> %b
-  %sub = sub <32 x i8> %sel, %b
+  %sub = call <32 x i8> @llvm.usub.sat.v32i8(<32 x i8> %a, <32 x i8> %b)
   %bc = bitcast i32 %mask to <32 x i1>
   %res = select <32 x i1> %bc, <32 x i8> %sub, <32 x i8> %passThru
   ret <32 x i8> %res
@@ -660,9 +574,7 @@ define <32 x i8> @test_mask_subs_epu8_rmkz_256(<32 x i8> %a, <32 x i8>* %ptr_b, 
 ; CHECK-NEXT:    vpsubusb (%rdi), %ymm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0xd8,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <32 x i8>, <32 x i8>* %ptr_b
-  %cmp = icmp ugt <32 x i8> %a, %b
-  %sel = select <32 x i1> %cmp, <32 x i8> %a, <32 x i8> %b
-  %sub = sub <32 x i8> %sel, %b
+  %sub = call <32 x i8> @llvm.usub.sat.v32i8(<32 x i8> %a, <32 x i8> %b)
   %bc = bitcast i32 %mask to <32 x i1>
   %res = select <32 x i1> %bc, <32 x i8> %sub, <32 x i8> zeroinitializer
   ret <32 x i8> %res

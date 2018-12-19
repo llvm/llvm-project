@@ -183,13 +183,10 @@ llvm::Optional<DurationScale> getScaleForInverse(llvm::StringRef Name) {
   return ScaleIter->second;
 }
 
-llvm::Optional<std::string> rewriteExprFromNumberToDuration(
+std::string rewriteExprFromNumberToDuration(
     const ast_matchers::MatchFinder::MatchResult &Result, DurationScale Scale,
     const Expr *Node) {
   const Expr &RootNode = *Node->IgnoreParenImpCasts();
-
-  if (RootNode.getBeginLoc().isMacroID())
-    return llvm::None;
 
   // First check to see if we can undo a complimentary function call.
   if (llvm::Optional<std::string> MaybeRewrite =

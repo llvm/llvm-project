@@ -269,15 +269,24 @@ bool ISD::allOperandsUndef(const SDNode *N) {
 }
 
 bool ISD::matchUnaryPredicate(SDValue Op,
-                              std::function<bool(ConstantSDNode *)> Match) {
+                              std::function<bool(ConstantSDNode *)> Match,
+                              bool AllowUndefs) {
+  // FIXME: Add support for scalar UNDEF cases?
   if (auto *Cst = dyn_cast<ConstantSDNode>(Op))
     return Match(Cst);
 
+  // FIXME: Add support for vector UNDEF cases?
   if (ISD::BUILD_VECTOR != Op.getOpcode())
     return false;
 
   EVT SVT = Op.getValueType().getScalarType();
   for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
+    if (AllowUndefs && Op.getOperand(i).isUndef()) {
+      if (!Match(nullptr))
+        return false;
+      continue;
+    }
+
     auto *Cst = dyn_cast<ConstantSDNode>(Op.getOperand(i));
     if (!Cst || Cst->getValueType(0) != SVT || !Match(Cst))
       return false;
@@ -287,26 +296,33 @@ bool ISD::matchUnaryPredicate(SDValue Op,
 
 bool ISD::matchBinaryPredicate(
     SDValue LHS, SDValue RHS,
-    std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match) {
+    std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match,
+    bool AllowUndefs) {
   if (LHS.getValueType() != RHS.getValueType())
     return false;
 
+  // TODO: Add support for scalar UNDEF cases?
   if (auto *LHSCst = dyn_cast<ConstantSDNode>(LHS))
     if (auto *RHSCst = dyn_cast<ConstantSDNode>(RHS))
       return Match(LHSCst, RHSCst);
 
+  // TODO: Add support for vector UNDEF cases?
   if (ISD::BUILD_VECTOR != LHS.getOpcode() ||
       ISD::BUILD_VECTOR != RHS.getOpcode())
     return false;
 
   EVT SVT = LHS.getValueType().getScalarType();
   for (unsigned i = 0, e = LHS.getNumOperands(); i != e; ++i) {
-    auto *LHSCst = dyn_cast<ConstantSDNode>(LHS.getOperand(i));
-    auto *RHSCst = dyn_cast<ConstantSDNode>(RHS.getOperand(i));
-    if (!LHSCst || !RHSCst)
+    SDValue LHSOp = LHS.getOperand(i);
+    SDValue RHSOp = RHS.getOperand(i);
+    bool LHSUndef = AllowUndefs && LHSOp.isUndef();
+    bool RHSUndef = AllowUndefs && RHSOp.isUndef();
+    auto *LHSCst = dyn_cast<ConstantSDNode>(LHSOp);
+    auto *RHSCst = dyn_cast<ConstantSDNode>(RHSOp);
+    if ((!LHSCst && !LHSUndef) || (!RHSCst && !RHSUndef))
       return false;
-    if (LHSCst->getValueType(0) != SVT ||
-        LHSCst->getValueType(0) != RHSCst->getValueType(0))
+    if (LHSOp.getValueType() != SVT ||
+        LHSOp.getValueType() != RHSOp.getValueType())
       return false;
     if (!Match(LHSCst, RHSCst))
       return false;
@@ -6967,11 +6983,11 @@ SDValue SelectionDAG::simplifyShift(SDValue X, SDValue Y) {
     return X;
 
   // shift X, C >= bitwidth(X) --> undef
-  // All vector elements must be too big to avoid partial undefs.
+  // All vector elements must be too big (or undef) to avoid partial undefs.
   auto isShiftTooBig = [X](ConstantSDNode *Val) {
-    return Val->getAPIntValue().uge(X.getScalarValueSizeInBits());
+    return !Val || Val->getAPIntValue().uge(X.getScalarValueSizeInBits());
   };
-  if (ISD::matchUnaryPredicate(Y, isShiftTooBig))
+  if (ISD::matchUnaryPredicate(Y, isShiftTooBig, true))
     return getUNDEF(X.getValueType());
 
   return SDValue();

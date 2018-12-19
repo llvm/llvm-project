@@ -229,7 +229,7 @@ Optional<Location> makeLocation(ParsedAST &AST, SourceLocation TokLoc,
   const FileEntry *F = SourceMgr.getFileEntryForID(SourceMgr.getFileID(TokLoc));
   if (!F)
     return None;
-  auto FilePath = getRealPath(F, SourceMgr);
+  auto FilePath = getCanonicalPath(F, SourceMgr);
   if (!FilePath) {
     log("failed to get path!");
     return None;
@@ -245,7 +245,8 @@ Optional<Location> makeLocation(ParsedAST &AST, SourceLocation TokLoc,
 std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
                                       const SymbolIndex *Index) {
   const auto &SM = AST.getASTContext().getSourceManager();
-  auto MainFilePath = getRealPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
+  auto MainFilePath =
+      getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
   if (!MainFilePath) {
     elog("Failed to get a path for the main file, so no references");
     return {};
@@ -337,7 +338,7 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
     std::string TUPath;
     const FileEntry *FE =
         SM.getFileEntryForID(SM.getMainFileID());
-    if (auto Path = getRealPath(FE, SM))
+    if (auto Path = getCanonicalPath(FE, SM))
       TUPath = *Path;
     // Query the index and populate the empty slot.
     Index->lookup(QueryRequest, [&TUPath, &ResultCandidates,
@@ -708,7 +709,8 @@ std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
                                      const SymbolIndex *Index) {
   std::vector<Location> Results;
   const SourceManager &SM = AST.getASTContext().getSourceManager();
-  auto MainFilePath = getRealPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
+  auto MainFilePath =
+      getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
   if (!MainFilePath) {
     elog("Failed to get a path for the main file, so no references");
     return Results;

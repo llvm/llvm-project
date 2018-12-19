@@ -378,12 +378,12 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                          << InputExpr->getSourceRange());
     } else if (Info.requiresImmediateConstant() && !Info.allowsRegister()) {
       if (!InputExpr->isValueDependent()) {
-        llvm::SmallVector<PartialDiagnosticAt, 1> Diags;
-        llvm::APSInt Result = InputExpr->EvaluateKnownConstInt(Context, &Diags);
-        if (!Diags.empty())
+        Expr::EvalResult EVResult;
+        if (!InputExpr->EvaluateAsRValue(EVResult, Context, true))
           return StmtError(
               Diag(InputExpr->getBeginLoc(), diag::err_asm_immediate_expected)
               << Info.getConstraintStr() << InputExpr->getSourceRange());
+        llvm::APSInt Result = EVResult.Val.getInt();
         if (!Info.isValidAsmImmediate(Result))
           return StmtError(Diag(InputExpr->getBeginLoc(),
                                 diag::err_invalid_asm_value_for_constraint)

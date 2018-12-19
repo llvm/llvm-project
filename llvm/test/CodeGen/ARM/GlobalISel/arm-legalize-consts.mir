@@ -1,0 +1,57 @@
+# RUN: llc -mtriple arm-- -run-pass=legalizer %s -o - | FileCheck %s
+# RUN: llc -mtriple thumb-- -mattr=+v6t2 -run-pass=legalizer %s -o - | FileCheck %s
+--- |
+  define void @test_constants() { ret void }
+...
+---
+name:            test_constants
+# CHECK-LABEL: name: test_constants
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %4(p0) = COPY $r0
+
+    %0(s32) = G_CONSTANT 42
+    ; CHECK: {{%[0-9]+}}:_(s32) = G_CONSTANT 42
+
+    %1(s16) = G_CONSTANT i16 21
+    G_STORE %1(s16), %4(p0) :: (store 2)
+    ; CHECK-NOT: G_CONSTANT i16
+    ; CHECK: [[EXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 21
+    ; CHECK: {{%[0-9]+}}:_(s16) = G_TRUNC [[EXT]](s32)
+    ; CHECK-NOT: G_CONSTANT i16
+
+    %2(s8) = G_CONSTANT i8 10
+    G_STORE %2(s8), %4(p0) :: (store 1)
+    ; CHECK-NOT: G_CONSTANT i8
+    ; CHECK: [[EXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
+    ; CHECK: {{%[0-9]+}}:_(s8) = G_TRUNC [[EXT]](s32)
+    ; CHECK-NOT: G_CONSTANT i8
+
+    %3(s1) = G_CONSTANT i1 1
+    G_STORE %3(s1), %4(p0) :: (store 1)
+    ; CHECK-NOT: G_CONSTANT i1
+    ; CHECK: [[EXT:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK: {{%[0-9]+}}:_(s1) = G_TRUNC [[EXT]](s32)
+    ; CHECK-NOT: G_CONSTANT i1
+
+    %5(p0) = G_CONSTANT 0
+    G_STORE %5(p0), %4(p0) :: (store 4)
+    ; CHECK: {{%[0-9]+}}:_(p0) = G_CONSTANT 0
+
+    $r0 = COPY %0(s32)
+    BX_RET 14, $noreg, implicit $r0
+...

@@ -2390,13 +2390,9 @@ public:
   void VisitStmt(Stmt *S) {
     for (Stmt *C : S->children()) {
       if (C) {
-        if (auto *OED = dyn_cast<OMPExecutableDirective>(C)) {
-          // Check implicitly captured variables in the task-based directives to
-          // check if they must be firstprivatized.
-          VisitSubCaptures(OED);
-        } else {
-          Visit(C);
-        }
+        // Check implicitly captured variables in the task-based directives to
+        // check if they must be firstprivatized.
+        Visit(C);
       }
     }
   }
