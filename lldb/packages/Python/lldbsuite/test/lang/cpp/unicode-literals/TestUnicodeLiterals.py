@@ -31,25 +31,16 @@ class UnicodeLiteralsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_expr1(self):
         """Test that the expression parser returns proper Unicode strings."""
         self.build()
         self.rdar12991846(expr=1)
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_expr2(self):
         """Test that the expression parser returns proper Unicode strings."""
         self.build()
         self.rdar12991846(expr=2)
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_expr3(self):
         """Test that the expression parser returns proper Unicode strings."""
         self.build()
