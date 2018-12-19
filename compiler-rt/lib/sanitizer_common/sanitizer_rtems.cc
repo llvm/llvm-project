@@ -200,7 +200,7 @@ fd_t OpenFile(const char *filename, FileAccessMode mode, error_t *errno_p) {
   fd_t res = open(filename, flags, 0660);
   if (internal_iserror(res, errno_p))
     return kInvalidFd;
-  return res;
+  return ReserveStandardFds(res);
 }
 
 void CloseFile(fd_t fd) {

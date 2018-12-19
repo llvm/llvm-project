@@ -166,7 +166,7 @@ fd_t OpenFile(const char *filename, FileAccessMode mode, error_t *errno_p) {
   fd_t res = internal_open(filename, flags, 0660);
   if (internal_iserror(res, errno_p))
     return kInvalidFd;
-  return res;
+  return ReserveStandardFds(res);
 }
 
 void CloseFile(fd_t fd) {
@@ -269,13 +269,8 @@ bool IsAbsolutePath(const char *path) {
 
 void ReportFile::Write(const char *buffer, uptr length) {
   SpinMutexLock l(mu);
-  static const char *kWriteError =
-      "ReportFile::Write() can't output requested buffer!\n";
   ReopenIfNecessary();
-  if (length != internal_write(fd, buffer, length)) {
-    internal_write(fd, kWriteError, internal_strlen(kWriteError));
-    Die();
-  }
+  internal_write(fd, buffer, length);
 }
 
 bool GetCodeRangeForFile(const char *module, uptr *start, uptr *end) {
@@ -321,6 +316,21 @@ const char *SignalContext::Describe() const {
       return "BUS";
   }
   return "UNKNOWN SIGNAL";
+}
+
+fd_t ReserveStandardFds(fd_t fd) {
+  CHECK_GE(fd, 0);
+  if (fd > 2)
+    return fd;
+  bool used[3] = {false, false, false};
+  while (fd <= 2) {
+    used[fd] = true;
+    fd = internal_dup(fd);
+  }
+  for (int i = 0; i <= 2; ++i)
+    if (used[i])
+      internal_close(i);
+  return fd;
 }
 
 } // namespace __sanitizer

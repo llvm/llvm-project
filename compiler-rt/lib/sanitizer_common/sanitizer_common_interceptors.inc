@@ -8511,9 +8511,10 @@ INTERCEPTOR(char *, MD2Data, const unsigned char *data, unsigned int len,
     if (context) \
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, context, SHA##LEN##_CTX_sz); \
   } \
-  INTERCEPTOR(void, SHA##LEN##_Final, u8 digest[SHA##LEN##_digest_length], \
+  INTERCEPTOR(void, SHA##LEN##_Final, u8 digest[LEN/8], \
   void *context) { \
     void *ctx; \
+    CHECK_EQ(SHA##LEN##_digest_length, LEN/8); \
     COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_Final, digest, context); \
     if (context) \
       COMMON_INTERCEPTOR_READ_RANGE(ctx, context, SHA##LEN##_CTX_sz); \

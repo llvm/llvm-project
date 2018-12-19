@@ -494,18 +494,23 @@ void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> &File,
 
   // An undefined symbol with non default visibility must be satisfied
   // in the same DSO.
-  if (WasInserted ||
-      ((S->isUndefined() || S->isLazy()) && S->Visibility == STV_DEFAULT)) {
+  if (WasInserted) {
+    replaceSymbol<SharedSymbol>(S, File, Name, Sym.getBinding(), Sym.st_other,
+                                Sym.getType(), Sym.st_value, Sym.st_size,
+                                Alignment, VerdefIndex);
+    return;
+  }
+
+  if ((S->isUndefined() || S->isLazy()) && S->Visibility == STV_DEFAULT) {
     uint8_t Binding = S->Binding;
     bool WasUndefined = S->isUndefined();
     replaceSymbol<SharedSymbol>(S, File, Name, Sym.getBinding(), Sym.st_other,
                                 Sym.getType(), Sym.st_value, Sym.st_size,
                                 Alignment, VerdefIndex);
-    if (!WasInserted) {
-      S->Binding = Binding;
-      if (!S->isWeak() && !Config->GcSections && WasUndefined)
-        File.IsNeeded = true;
-    }
+
+    S->Binding = Binding;
+    if (!S->isWeak() && !Config->GcSections && WasUndefined)
+      File.IsNeeded = true;
   }
 }
 
