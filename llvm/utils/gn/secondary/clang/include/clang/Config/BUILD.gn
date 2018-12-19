@@ -1,0 +1,84 @@
+import("//clang/lib/ARCMigrate/enable.gni")
+import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
+import("//llvm/utils/gn/build/libs/xml/enable.gni")
+import("//llvm/version.gni")
+
+config("Config_config") {
+  visibility = [ ":Config" ]
+  include_dirs = [ "$target_gen_dir/clang/include" ]
+}
+
+action("Config") {
+  script = "//llvm/utils/gn/build/write_cmake_config.py"
+
+  sources = [
+    "config.h.cmake",
+  ]
+  outputs = [
+    "$target_gen_dir/config.h",
+  ]
+  args = [
+    "-o",
+    rebase_path(outputs[0], root_out_dir),
+    rebase_path(sources[0], root_out_dir),
+
+    "BUG_REPORT_URL=https://bugs.llvm.org/",
+    "CLANG_DEFAULT_LINKER=",
+    "CLANG_DEFAULT_STD_C=",
+    "CLANG_DEFAULT_STD_CXX=",
+    "CLANG_DEFAULT_CXX_STDLIB=",
+    "CLANG_DEFAULT_RTLIB=",
+    "CLANG_DEFAULT_OBJCOPY=objcopy",
+    "CLANG_DEFAULT_OPENMP_RUNTIME=libomp",
+    "CLANG_OPENMP_NVPTX_DEFAULT_ARCH=sm_35",
+    "CLANG_LIBDIR_SUFFIX=",
+    "CLANG_RESOURCE_DIR=",
+    "C_INCLUDE_DIRS=",
+    "CLANG_CONFIG_FILE_SYSTEM_DIR=",
+    "CLANG_CONFIG_FILE_USER_DIR=",
+    "DEFAULT_SYSROOT=",
+    "GCC_INSTALL_PREFIX=",
+    "CLANG_ANALYZER_WITH_Z3=",
+    "BACKEND_PACKAGE_STRING=LLVM ${llvm_version}svn",
+    "ENABLE_LINKER_BUILD_ID=",
+    "ENABLE_X86_RELAX_RELOCATIONS=",
+    "ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER=",
+    "CLANG_ENABLE_OBJC_REWRITER=1",  # FIXME: flag?
+  ]
+
+  if (clang_enable_arcmt) {
+    args += [ "CLANG_ENABLE_ARCMT=1" ]
+  } else {
+    args += [ "CLANG_ENABLE_ARCMT=" ]
+  }
+
+  if (clang_enable_static_analyzer) {
+    args += [ "CLANG_ENABLE_STATIC_ANALYZER=1" ]
+  } else {
+    args += [ "CLANG_ENABLE_STATIC_ANALYZER=" ]
+  }
+
+  if (host_os != "win") {
+    args += [ "CLANG_HAVE_RLIMITS=1" ]
+  } else {
+    args += [ "CLANG_HAVE_RLIMITS=" ]
+  }
+
+  if (llvm_enable_libxml2) {
+    args += [ "CLANG_HAVE_LIBXML=1" ]
+  } else {
+    args += [ "CLANG_HAVE_LIBXML=" ]
+  }
+
+  if (host_os == "mac") {
+    # FIXME: Hardcoding this isn't great, but assuming that the host ld version
+    # has anything to do with the ld version where the built clang will run
+    # isn't either. Probably want to make this a declare_args.
+    args += [ "HOST_LINK_VERSION=305" ]
+  } else {
+    args += [ "HOST_LINK_VERSION=" ]
+  }
+
+  # Let targets depending on this find the generated file.
+  public_configs = [ ":Config_config" ]
+}

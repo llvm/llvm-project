@@ -162,8 +162,8 @@ def M3WriteLE : SchedWriteRes<[M3UnitA,
                                            let NumMicroOps = 2; }
 def M3WriteLH : SchedWriteRes<[]>        { let Latency = 5;
                                            let NumMicroOps = 0; }
-def M3WriteLX : SchedWriteVariant<[SchedVar<ScaledIdxPred, [M3WriteL5]>,
-                                   SchedVar<NoSchedPred,   [M3WriteL4]>]>;
+def M3WriteLX : SchedWriteVariant<[SchedVar<ExynosScaledIdxPred, [M3WriteL5]>,
+                                   SchedVar<NoSchedPred,         [M3WriteL4]>]>;
 
 def M3WriteS1 : SchedWriteRes<[M3UnitS]>   { let Latency = 1; }
 def M3WriteSA : SchedWriteRes<[M3UnitA,
@@ -174,8 +174,8 @@ def M3WriteSB : SchedWriteRes<[M3UnitA,
                                M3UnitS]>   { let Latency = 2;
                                              let NumMicroOps = 2; }
 
-def M3ReadAdrBase : SchedReadVariant<[SchedVar<ScaledIdxPred, [ReadDefault]>,
-                                      SchedVar<NoSchedPred,   [ReadDefault]>]>;
+def M3ReadAdrBase : SchedReadVariant<[SchedVar<ExynosScaledIdxPred, [ReadDefault]>,
+                                      SchedVar<NoSchedPred,         [ReadDefault]>]>;
 
 // Branch instructions.
 def : SchedAlias<WriteBr, M3WriteZ0>;

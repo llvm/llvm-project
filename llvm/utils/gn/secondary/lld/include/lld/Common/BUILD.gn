@@ -12,7 +12,6 @@ action("version") {
   args = [
     "-o",
     rebase_path(outputs[0], root_out_dir),
-
     rebase_path(sources[0], root_out_dir),
 
     "LLD_VERSION=$llvm_version",

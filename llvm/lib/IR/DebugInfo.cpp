@@ -697,8 +697,9 @@ void Instruction::applyMergedLocation(const DILocation *LocA,
 
 static unsigned map_from_llvmDWARFsourcelanguage(LLVMDWARFSourceLanguage lang) {
   switch (lang) {
-#define HANDLE_DW_LANG(ID, NAME, VERSION, VENDOR) \
-case LLVMDWARFSourceLanguage##NAME: return ID;
+#define HANDLE_DW_LANG(ID, NAME, LOWER_BOUND, VERSION, VENDOR)                 \
+  case LLVMDWARFSourceLanguage##NAME:                                          \
+    return ID;
 #include "llvm/BinaryFormat/Dwarf.def"
 #undef HANDLE_DW_LANG
   }

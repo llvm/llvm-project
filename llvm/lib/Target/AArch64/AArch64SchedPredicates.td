@@ -295,9 +295,7 @@ def IsCopyIdiomFn     : TIIPredicate<"isCopyIdiom",
                                                CheckIsRegOperand<2>,
                                                CheckAny<
                                                  [CheckRegOperand<1, WZR>,
-                                                  CheckRegOperand<1, XZR>,
-                                                  CheckRegOperand<2, WZR>,
-                                                  CheckRegOperand<2, XZR>]>,
+                                                  CheckRegOperand<1, XZR>]>,
                                                CheckShiftBy0]>>>],
                                        MCReturnStatement<FalsePred>>>;
 def IsCopyIdiomPred   : MCSchedPredicate<IsCopyIdiomFn>;

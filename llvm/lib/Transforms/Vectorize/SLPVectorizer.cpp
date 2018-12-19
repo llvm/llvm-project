@@ -2164,7 +2164,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
                 // extractelement/ext pair.
                 DeadCost -= TTI->getExtractWithExtendCost(
                     Ext->getOpcode(), Ext->getType(), VecTy, i);
-                // Add back the cost of s|zext which is subtracted seperately.
+                // Add back the cost of s|zext which is subtracted separately.
                 DeadCost += TTI->getCastInstrCost(
                     Ext->getOpcode(), Ext->getType(), E->getType(), Ext);
                 continue;
@@ -2536,13 +2536,13 @@ int BoUpSLP::getTreeCost() {
     // uses. However, we should not compute the cost of duplicate sequences.
     // For example, if we have a build vector (i.e., insertelement sequence)
     // that is used by more than one vector instruction, we only need to
-    // compute the cost of the insertelement instructions once. The redundent
+    // compute the cost of the insertelement instructions once. The redundant
     // instructions will be eliminated by CSE.
     //
     // We should consider not creating duplicate tree entries for gather
     // sequences, and instead add additional edges to the tree representing
     // their uses. Since such an approach results in fewer total entries,
-    // existing heuristics based on tree size may yeild different results.
+    // existing heuristics based on tree size may yield different results.
     //
     if (TE.NeedToGather &&
         std::any_of(std::next(VectorizableTree.begin(), I + 1),
@@ -4269,7 +4269,7 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
     Worklist.push_back(I);
 
   // Traverse the expression tree in bottom-up order looking for loads. If we
-  // encounter an instruciton we don't yet handle, we give up.
+  // encounter an instruction we don't yet handle, we give up.
   auto MaxWidth = 0u;
   auto FoundUnknownInst = false;
   while (!Worklist.empty() && !FoundUnknownInst) {
