@@ -518,6 +518,9 @@ HANDLE_TARGET_OPCODE(G_CTPOP)
 /// Generic byte swap.
 HANDLE_TARGET_OPCODE(G_BSWAP)
 
+/// Floating point ceil.
+HANDLE_TARGET_OPCODE(G_FCEIL)
+
 /// Generic AddressSpaceCast.
 HANDLE_TARGET_OPCODE(G_ADDRSPACE_CAST)
 

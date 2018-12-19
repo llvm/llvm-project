@@ -7934,12 +7934,12 @@ define <16 x i8> @test_paddsb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; ZNVER1-NEXT:    vpaddsb %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpaddsb (%rdi), %xmm0, %xmm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
-  %1 = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %a0, <16 x i8> %a1)
+  %1 = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> %a0, <16 x i8> %a1)
   %2 = load <16 x i8>, <16 x i8> *%a2, align 16
-  %3 = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %1, <16 x i8> %2)
+  %3 = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> %1, <16 x i8> %2)
   ret <16 x i8> %3
 }
-declare <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8>, <16 x i8>) nounwind readnone
+declare <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8>, <16 x i8>) nounwind readnone
 
 define <8 x i16> @test_paddsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; GENERIC-LABEL: test_paddsw:
@@ -8059,12 +8059,12 @@ define <8 x i16> @test_paddsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; ZNVER1-NEXT:    vpaddsw %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpaddsw (%rdi), %xmm0, %xmm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
-  %1 = call <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16> %a0, <8 x i16> %a1)
+  %1 = call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> %a0, <8 x i16> %a1)
   %2 = load <8 x i16>, <8 x i16> *%a2, align 16
-  %3 = call <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16> %1, <8 x i16> %2)
+  %3 = call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> %1, <8 x i16> %2)
   ret <8 x i16> %3
 }
-declare <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16>, <8 x i16>) nounwind readnone
+declare <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <16 x i8> @test_paddusb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; GENERIC-LABEL: test_paddusb:
@@ -13870,12 +13870,12 @@ define <16 x i8> @test_psubsb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; ZNVER1-NEXT:    vpsubsb %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpsubsb (%rdi), %xmm0, %xmm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
-  %1 = call <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8> %a0, <16 x i8> %a1)
+  %1 = call <16 x i8> @llvm.ssub.sat.v16i8(<16 x i8> %a0, <16 x i8> %a1)
   %2 = load <16 x i8>, <16 x i8> *%a2, align 16
-  %3 = call <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8> %1, <16 x i8> %2)
+  %3 = call <16 x i8> @llvm.ssub.sat.v16i8(<16 x i8> %1, <16 x i8> %2)
   ret <16 x i8> %3
 }
-declare <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8>, <16 x i8>) nounwind readnone
+declare <16 x i8> @llvm.ssub.sat.v16i8(<16 x i8>, <16 x i8>) nounwind readnone
 
 define <8 x i16> @test_psubsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; GENERIC-LABEL: test_psubsw:
@@ -13995,12 +13995,12 @@ define <8 x i16> @test_psubsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; ZNVER1-NEXT:    vpsubsw %xmm1, %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpsubsw (%rdi), %xmm0, %xmm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
-  %1 = call <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16> %a0, <8 x i16> %a1)
+  %1 = call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> %a0, <8 x i16> %a1)
   %2 = load <8 x i16>, <8 x i16> *%a2, align 16
-  %3 = call <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16> %1, <8 x i16> %2)
+  %3 = call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> %1, <8 x i16> %2)
   ret <8 x i16> %3
 }
-declare <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16>, <8 x i16>) nounwind readnone
+declare <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <16 x i8> @test_psubusb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; GENERIC-LABEL: test_psubusb:

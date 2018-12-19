@@ -301,7 +301,7 @@ StringRef llvm::dwarf::LanguageString(unsigned Language) {
   switch (Language) {
   default:
     return StringRef();
-#define HANDLE_DW_LANG(ID, NAME, VERSION, VENDOR)                              \
+#define HANDLE_DW_LANG(ID, NAME, LOWER_BOUND, VERSION, VENDOR)                 \
   case DW_LANG_##NAME:                                                         \
     return "DW_LANG_" #NAME;
 #include "llvm/BinaryFormat/Dwarf.def"
@@ -310,7 +310,7 @@ StringRef llvm::dwarf::LanguageString(unsigned Language) {
 
 unsigned llvm::dwarf::getLanguage(StringRef LanguageString) {
   return StringSwitch<unsigned>(LanguageString)
-#define HANDLE_DW_LANG(ID, NAME, VERSION, VENDOR)                              \
+#define HANDLE_DW_LANG(ID, NAME, LOWER_BOUND, VERSION, VENDOR)                 \
   .Case("DW_LANG_" #NAME, DW_LANG_##NAME)
 #include "llvm/BinaryFormat/Dwarf.def"
       .Default(0);
@@ -320,7 +320,7 @@ unsigned llvm::dwarf::LanguageVersion(dwarf::SourceLanguage Lang) {
   switch (Lang) {
   default:
     return 0;
-#define HANDLE_DW_LANG(ID, NAME, VERSION, VENDOR)                              \
+#define HANDLE_DW_LANG(ID, NAME, LOWER_BOUND, VERSION, VENDOR)                 \
   case DW_LANG_##NAME:                                                         \
     return VERSION;
 #include "llvm/BinaryFormat/Dwarf.def"
@@ -331,9 +331,20 @@ unsigned llvm::dwarf::LanguageVendor(dwarf::SourceLanguage Lang) {
   switch (Lang) {
   default:
     return 0;
-#define HANDLE_DW_LANG(ID, NAME, VERSION, VENDOR)                              \
+#define HANDLE_DW_LANG(ID, NAME, LOWER_BOUND, VERSION, VENDOR)                 \
   case DW_LANG_##NAME:                                                         \
     return DWARF_VENDOR_##VENDOR;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
+}
+
+Optional<unsigned> llvm::dwarf::LanguageLowerBound(dwarf::SourceLanguage Lang) {
+  switch (Lang) {
+  default:
+    return None;
+#define HANDLE_DW_LANG(ID, NAME, LOWER_BOUND, VERSION, VENDOR)                 \
+  case DW_LANG_##NAME:                                                         \
+    return LOWER_BOUND;
 #include "llvm/BinaryFormat/Dwarf.def"
   }
 }

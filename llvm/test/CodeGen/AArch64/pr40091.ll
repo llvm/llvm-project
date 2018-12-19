@@ -4,7 +4,7 @@
 define i64 @test(i64 %aa) {
 ; CHECK-LABEL: test:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-NEXT:    movi v0.8b, #137
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:

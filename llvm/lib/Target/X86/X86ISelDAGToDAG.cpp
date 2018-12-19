@@ -898,9 +898,30 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
       continue;
     }
 
-    // Attempt to remove vectors moves that were inserted to zero upper bits.
+    // Look for a TESTrr+ANDrr pattern where both operands of the test are
+    // the same. Rewrite to remove the AND.
+    unsigned Opc = N->getMachineOpcode();
+    if ((Opc == X86::TEST8rr || Opc == X86::TEST16rr ||
+         Opc == X86::TEST32rr || Opc == X86::TEST64rr) &&
+        N->getOperand(0) == N->getOperand(1) &&
+        N->isOnlyUserOf(N->getOperand(0).getNode()) &&
+        N->getOperand(0).isMachineOpcode()) {
+      SDValue And = N->getOperand(0);
+      unsigned N0Opc = And.getMachineOpcode();
+      if (N0Opc == X86::AND8rr || N0Opc == X86::AND16rr ||
+          N0Opc == X86::AND32rr || N0Opc == X86::AND64rr) {
+        MachineSDNode *Test = CurDAG->getMachineNode(Opc, SDLoc(N),
+                                                     MVT::i32,
+                                                     And.getOperand(0),
+                                                     And.getOperand(1));
+        ReplaceUses(N, Test);
+        MadeChange = true;
+        continue;
+      }
+    }
 
-    if (N->getMachineOpcode() != TargetOpcode::SUBREG_TO_REG)
+    // Attempt to remove vectors moves that were inserted to zero upper bits.
+    if (Opc != TargetOpcode::SUBREG_TO_REG)
       continue;
 
     unsigned SubRegIdx = N->getConstantOperandVal(2);

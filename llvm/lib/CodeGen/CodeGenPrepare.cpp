@@ -5160,11 +5160,11 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
       }
 
       // Generate a new GEP to replace the current one.
-      IRBuilder<> Builder(GEP);
+      LLVMContext &Ctx = GEP->getContext();
       Type *IntPtrTy = DL->getIntPtrType(GEP->getType());
       Type *I8PtrTy =
-          Builder.getInt8PtrTy(GEP->getType()->getPointerAddressSpace());
-      Type *I8Ty = Builder.getInt8Ty();
+          Type::getInt8PtrTy(Ctx, GEP->getType()->getPointerAddressSpace());
+      Type *I8Ty = Type::getInt8Ty(Ctx);
 
       if (!NewBaseGEP) {
         // Create a new base if we don't have one yet.  Find the insertion
@@ -5200,6 +5200,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
         NewGEPBases.insert(NewBaseGEP);
       }
 
+      IRBuilder<> Builder(GEP);
       Value *NewGEP = NewBaseGEP;
       if (Offset == BaseOffset) {
         if (GEP->getType() != I8PtrTy)
