@@ -73,7 +73,7 @@ int main()
       std::aligned_storage<sizeof(VT)>::type store;
       std::allocator_traits<Alloc>::destroy(a, (VT*)&store);
     }
-#if TEST_STD_VER >= 11
+#if defined(_LIBCPP_VERSION) || TEST_STD_VER >= 11
     {
         A0::count = 0;
         b_destroy = 0;
