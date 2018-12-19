@@ -130,68 +130,16 @@ add_subdirectory(yaml-cpp EXCLUDE_FROM_ALL)
 include_directories(./yaml-cpp/include)
 
 set(CLANG_LIBS
-  clangFrontendTool
-  clangARCMigrate
-  clangRewriteFrontend
-  clangStaticAnalyzerFrontend
-  clangRewrite
-  clangStaticAnalyzerCheckers
-  clangStaticAnalyzerCore
-  clangCrossTU
-  clangASTMatchers
-  clangIndex
-  clangDriver
-  clangCodeGen
-  clangFrontend
-  clangSerialization
-  clangParse
-  clangSema
-  clangEdit
-  clangLex
-  clangAnalysis
-  clangAST
-  clangBasic)
+  clangFrontendTool)
 
 set(LLD_LIBS
   lldELF
-  lldCore
   lldCommon)
 
 llvm_map_components_to_libnames(LLVM_LIBS
   ${LLVM_TARGETS_TO_BUILD}
-  AsmPrinter
-  SelectionDAG
-  GlobalISel
-  CodeGen
-  ipo
-  Instrumentation
-  ScalarOpts
-  Vectorize
-  InstCombine
-  IRReader
-  AsmParser
-  Target
-  Analysis
-  Symbolize
   DebugInfoDWARF
-  DebugInfoPDB
-  DebugInfoCodeView
-  DebugInfoMSF
-  MCDisassembler
-  Object
-  MCParser
-  MC
-  TransformUtils
-  BitReader
-  Core
-  BinaryFormat
-  Support
-  Demangle
-  Option
-  ProfileData
-  Coverage
-  LTO
-  Coroutines)
+  Symbolize)
 
 target_link_libraries(amd_comgr
   PUBLIC
