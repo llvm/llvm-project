@@ -1221,18 +1221,19 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
   return X == PtrSCEVB;
 }
 
-bool MemoryDepChecker::Dependence::isSafeForVectorization(DepType Type) {
+MemoryDepChecker::VectorizationSafetyStatus
+MemoryDepChecker::Dependence::isSafeForVectorization(DepType Type) {
   switch (Type) {
   case NoDep:
   case Forward:
   case BackwardVectorizable:
-    return true;
+    return VectorizationSafetyStatus::Safe;
 
   case Unknown:
   case ForwardButPreventsForwarding:
   case Backward:
   case BackwardVectorizableButPreventsForwarding:
-    return false;
+    return VectorizationSafetyStatus::Unsafe;
   }
   llvm_unreachable("unexpected DepType!");
 }
@@ -1315,6 +1316,11 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
           VectorizerParams::MaxVectorWidth * TypeByteSize)
     MaxSafeDepDistBytes = MaxVFWithoutSLForwardIssues;
   return false;
+}
+
+void MemoryDepChecker::mergeInStatus(VectorizationSafetyStatus S) {
+  if (Status < S)
+    Status = S;
 }
 
 /// Given a non-constant (unknown) dependence-distance \p Dist between two
@@ -1652,7 +1658,7 @@ bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
 
             Dependence::DepType Type =
                 isDependent(*A.first, A.second, *B.first, B.second, Strides);
-            SafeForVectorization &= Dependence::isSafeForVectorization(Type);
+            mergeInStatus(Dependence::isSafeForVectorization(Type));
 
             // Gather dependences unless we accumulated MaxDependences
             // dependences.  In that case return as soon as we find the first
@@ -1669,7 +1675,7 @@ bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
                            << "Too many dependences, stopped recording\n");
               }
             }
-            if (!RecordDependences && !SafeForVectorization)
+            if (!RecordDependences && !isSafeForVectorization())
               return false;
           }
         ++OI;
@@ -1679,7 +1685,7 @@ bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
   }
 
   LLVM_DEBUG(dbgs() << "Total Dependences: " << Dependences.size() << "\n");
-  return SafeForVectorization;
+  return isSafeForVectorization();
 }
 
 SmallVector<Instruction *, 4>

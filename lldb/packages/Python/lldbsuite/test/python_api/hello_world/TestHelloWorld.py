@@ -10,8 +10,7 @@ import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-
+import lldbsuite.test.lldbutil as lldbutil
 
 class HelloWorldTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
@@ -88,8 +87,12 @@ class HelloWorldTestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
 
         # Spawn a new process
-        popen = self.spawnSubprocess(exe, ["abc", "xyz"])
+        token = exe+'.token'
+        if os.path.exists(token):
+            os.remove(token)
+        popen = self.spawnSubprocess(exe, [token])
         self.addTearDownHook(self.cleanupSubprocesses)
+        lldbutil.wait_for_file_on_target(self, token)
 
         listener = lldb.SBListener("my.attach.listener")
         error = lldb.SBError()
@@ -98,11 +101,10 @@ class HelloWorldTestCase(TestBase):
         self.assertTrue(error.Success() and process, PROCESS_IS_VALID)
 
         # Let's check the stack traces of the attached process.
-        import lldbsuite.test.lldbutil as lldbutil
         stacktraces = lldbutil.print_stacktraces(process, string_buffer=True)
         self.expect(stacktraces, exe=False,
                     substrs=['main.c:%d' % self.line2,
-                             '(int)argc=3'])
+                             '(int)argc=2'])
 
     @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24600")
@@ -115,9 +117,13 @@ class HelloWorldTestCase(TestBase):
         self.setTearDownCleanup(dictionary=d)
         target = self.dbg.CreateTarget(exe)
 
-        # Spawn a new process
-        popen = self.spawnSubprocess(exe, ["abc", "xyz"])
+        # Spawn a new process.
+        token = exe+'.token'
+        if os.path.exists(token):
+            os.remove(token)
+        popen = self.spawnSubprocess(exe, [token])
         self.addTearDownHook(self.cleanupSubprocesses)
+        lldbutil.wait_for_file_on_target(self, token)
 
         listener = lldb.SBListener("my.attach.listener")
         error = lldb.SBError()
@@ -132,7 +138,6 @@ class HelloWorldTestCase(TestBase):
         target.ConnectRemote(listener, None, None, error)
 
         process = target.AttachToProcessWithName(listener, name, False, error)
-
         self.assertTrue(error.Success() and process, PROCESS_IS_VALID)
 
         # Verify that after attach, our selected target indeed matches name.
@@ -142,8 +147,7 @@ class HelloWorldTestCase(TestBase):
             startstr=name)
 
         # Let's check the stack traces of the attached process.
-        import lldbsuite.test.lldbutil as lldbutil
         stacktraces = lldbutil.print_stacktraces(process, string_buffer=True)
         self.expect(stacktraces, exe=False,
                     substrs=['main.c:%d' % self.line2,
-                             '(int)argc=3'])
+                             '(int)argc=2'])

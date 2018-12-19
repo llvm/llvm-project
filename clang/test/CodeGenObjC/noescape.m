@@ -94,7 +94,7 @@ void test5(BlockTy2 b, int *p) {
 // CHECK: %[[BLOCK:.*]] = alloca <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, align 8
 // CHECK-NOARC: store i8* %[[B]], i8** %[[B_ADDR]], align 8
 // CHECK-ARC: store i8* null, i8** %[[B_ADDR]], align 8
-// CHECK-ARC: call void @objc_storeStrong(i8** %[[B_ADDR]], i8* %[[B]])
+// CHECK-ARC: call void @llvm.objc.storeStrong(i8** %[[B_ADDR]], i8* %[[B]])
 // CHECK-ARC: %[[V0:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %[[BLOCK]], i32 0, i32 5
 // CHECK: %[[BLOCK_ISA:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %[[BLOCK]], i32 0, i32 0
 // CHECK: store i8* bitcast (i8** @_NSConcreteGlobalBlock to i8*), i8** %[[BLOCK_ISA]], align 8
@@ -106,11 +106,11 @@ void test5(BlockTy2 b, int *p) {
 // CHECK-NOARC: %[[V1:.*]] = load i8*, i8** %[[B_ADDR]], align 8
 // CHECK-NOARC: store i8* %[[V1]], i8** %[[BLOCK_CAPTURED]], align 8
 // CHECK-ARC: %[[V2:.*]] = load i8*, i8** %[[B_ADDR]], align 8
-// CHECK-ARC: %[[V3:.*]] = call i8* @objc_retain(i8* %[[V2]])
+// CHECK-ARC: %[[V3:.*]] = call i8* @llvm.objc.retain(i8* %[[V2]])
 // CHECK-ARC: store i8* %[[V3]], i8** %[[BLOCK_CAPTURED]], align 8
 // CHECK: call void @noescapeFunc0(
-// CHECK-ARC: call void @objc_storeStrong(i8** %[[V0]], i8* null)
-// CHECK-ARC: call void @objc_storeStrong(i8** %[[B_ADDR]], i8* null)
+// CHECK-ARC: call void @llvm.objc.storeStrong(i8** %[[V0]], i8* null)
+// CHECK-ARC: call void @llvm.objc.storeStrong(i8** %[[B_ADDR]], i8* null)
 
 // Non-escaping blocks don't need copy/dispose helper functions.
 

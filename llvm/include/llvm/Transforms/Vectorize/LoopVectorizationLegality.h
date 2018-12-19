@@ -95,7 +95,7 @@ public:
     FK_Enabled = 1,    ///< Forcing enabled.
   };
 
-  LoopVectorizeHints(const Loop *L, bool DisableInterleaving,
+  LoopVectorizeHints(const Loop *L, bool InterleaveOnlyWhenForced,
                      OptimizationRemarkEmitter &ORE);
 
   /// Mark the loop L as already vectorized by setting the width to 1.
@@ -105,7 +105,8 @@ public:
     writeHintsToMetadata(Hints);
   }
 
-  bool allowVectorization(Function *F, Loop *L, bool AlwaysVectorize) const;
+  bool allowVectorization(Function *F, Loop *L,
+                          bool VectorizeOnlyWhenForced) const;
 
   /// Dumps all the hint information.
   void emitRemarkWithHints() const;

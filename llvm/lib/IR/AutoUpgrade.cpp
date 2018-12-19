@@ -926,26 +926,13 @@ static Value *UpgradeX86ALIGNIntrinsics(IRBuilder<> &Builder, Value *Op0,
 
 static Value *UpgradeX86AddSubSatIntrinsics(IRBuilder<> &Builder, CallInst &CI,
                                             bool IsAddition) {
+  Type *Ty = CI.getType();
   Value *Op0 = CI.getOperand(0);
   Value *Op1 = CI.getOperand(1);
 
-  // Collect vector elements and type data.
-  Type *ResultType = CI.getType();
-
-  Value *Res;
-  if (IsAddition) {
-    // ADDUS: a > (a+b) ? ~0 : (a+b)
-    // If Op0 > Add, overflow occured.
-    Value *Add = Builder.CreateAdd(Op0, Op1);
-    Value *ICmp = Builder.CreateICmp(ICmpInst::ICMP_UGT, Op0, Add);
-    Value *Max = llvm::Constant::getAllOnesValue(ResultType);
-    Res = Builder.CreateSelect(ICmp, Max, Add);
-  } else {
-    // SUBUS: max(a, b) - b
-    Value *ICmp = Builder.CreateICmp(ICmpInst::ICMP_UGT, Op0, Op1);
-    Value *Select = Builder.CreateSelect(ICmp, Op0, Op1);
-    Res = Builder.CreateSub(Select, Op1);
-  }
+  Intrinsic::ID IID = IsAddition ? Intrinsic::uadd_sat : Intrinsic::usub_sat;
+  Function *Intrin = Intrinsic::getDeclaration(CI.getModule(), IID, Ty);
+  Value *Res = Builder.CreateCall(Intrin, {Op0, Op1});
 
   if (CI.getNumArgOperands() == 4) { // For masked intrinsics.
     Value *VecSrc = CI.getOperand(2);

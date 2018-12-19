@@ -1,6 +1,6 @@
 #                                                                 -*- python -*-
+# REQUIRES: system-darwin
 # RUN: cd %S/../../examples/python && %lldb -S %s | FileCheck %s
-# REQUIRES : system-darwin
 # CHECK-LABEL: {{S}}KIP BEYOND CHECKS
 script
 import crashlog

@@ -12,6 +12,8 @@
 // T3 setbase(int base);
 
 #include <iomanip>
+#include <istream>
+#include <ostream>
 #include <cassert>
 
 template <class CharT>

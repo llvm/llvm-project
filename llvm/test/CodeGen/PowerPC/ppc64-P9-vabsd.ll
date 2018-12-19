@@ -526,9 +526,10 @@ define <4 x i32> @absd_int32_ugt(<4 x i32>, <4 x i32>) {
   %6 = select <4 x i1> %3, <4 x i32> %4, <4 x i32> %5
   ret <4 x i32> %6
 ; CHECK-LABEL: absd_int32_ugt
-; CHECK: vcmpgtuw
-; CHECK: xxsel
-; CHECK: blr
+; CHECK-NOT: vcmpgtuw
+; CHECK-NOT: xxsel
+; CHECK: vabsduw v2, v2, v3
+; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: absd_int32_ugt
 ; CHECK-PWR8: vcmpgtuw
 ; CHECK-PWR8: xxsel
@@ -542,9 +543,10 @@ define <4 x i32> @absd_int32_uge(<4 x i32>, <4 x i32>) {
   %6 = select <4 x i1> %3, <4 x i32> %4, <4 x i32> %5
   ret <4 x i32> %6
 ; CHECK-LABEL: absd_int32_uge
-; CHECK: vcmpgtuw
-; CHECK: xxsel
-; CHECK: blr
+; CHECK-NOT: vcmpgtuw
+; CHECK-NOT: xxsel
+; CHECK: vabsduw v2, v2, v3
+; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: absd_int32_uge
 ; CHECK-PWR8: vcmpgtuw
 ; CHECK-PWR8: xxsel
@@ -558,9 +560,10 @@ define <4 x i32> @absd_int32_ult(<4 x i32>, <4 x i32>) {
   %6 = select <4 x i1> %3, <4 x i32> %5, <4 x i32> %4
   ret <4 x i32> %6
 ; CHECK-LABEL: absd_int32_ult
-; CHECK: vcmpgtuw
-; CHECK: xxsel
-; CHECK: blr
+; CHECK-NOT: vcmpgtuw
+; CHECK-NOT: xxsel
+; CHECK: vabsduw v2, v2, v3
+; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: absd_int32_ult
 ; CHECK-PWR8: vcmpgtuw
 ; CHECK-PWR8: xxsel
@@ -574,9 +577,10 @@ define <4 x i32> @absd_int32_ule(<4 x i32>, <4 x i32>) {
   %6 = select <4 x i1> %3, <4 x i32> %5, <4 x i32> %4
   ret <4 x i32> %6
 ; CHECK-LABEL: absd_int32_ule
-; CHECK: vcmpgtuw
-; CHECK: xxsel
-; CHECK: blr
+; CHECK-NOT: vcmpgtuw
+; CHECK-NOT: xxsel
+; CHECK: vabsduw v2, v2, v3
+; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: absd_int32_ule
 ; CHECK-PWR8: vcmpgtuw
 ; CHECK-PWR8: xxsel
@@ -590,9 +594,10 @@ define <8 x i16> @absd_int16_ugt(<8 x i16>, <8 x i16>) {
   %6 = select <8 x i1> %3, <8 x i16> %4, <8 x i16> %5
   ret <8 x i16> %6
 ; CHECK-LABEL: absd_int16_ugt
-; CHECK: vcmpgtuh
-; CHECK: xxsel
-; CHECK: blr
+; CHECK-NOT: vcmpgtuh
+; CHECK-NOT: xxsel
+; CHECK: vabsduh v2, v2, v3
+; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: absd_int16_ugt
 ; CHECK-PWR8: vcmpgtuh
 ; CHECK-PWR8: xxsel
@@ -606,9 +611,10 @@ define <8 x i16> @absd_int16_uge(<8 x i16>, <8 x i16>) {
   %6 = select <8 x i1> %3, <8 x i16> %4, <8 x i16> %5
   ret <8 x i16> %6
 ; CHECK-LABEL: absd_int16_uge
-; CHECK: vcmpgtuh
-; CHECK: xxsel
-; CHECK: blr
+; CHECK-NOT: vcmpgtuh
+; CHECK-NOT: xxsel
+; CHECK: vabsduh v2, v2, v3
+; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: absd_int16_uge
 ; CHECK-PWR8: vcmpgtuh
 ; CHECK-PWR8: xxsel
@@ -622,9 +628,10 @@ define <8 x i16> @absd_int16_ult(<8 x i16>, <8 x i16>) {
   %6 = select <8 x i1> %3, <8 x i16> %5, <8 x i16> %4
   ret <8 x i16> %6
 ; CHECK-LABEL: absd_int16_ult
-; CHECK: vcmpgtuh
-; CHECK: xxsel
-; CHECK: blr
+; CHECK-NOT: vcmpgtuh
+; CHECK-NOT: xxsel
+; CHECK: vabsduh v2, v2, v3
+; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: absd_int16_ult
 ; CHECK-PWR8: vcmpgtuh
 ; CHECK-PWR8: xxsel
@@ -638,9 +645,10 @@ define <8 x i16> @absd_int16_ule(<8 x i16>, <8 x i16>) {
   %6 = select <8 x i1> %3, <8 x i16> %5, <8 x i16> %4
   ret <8 x i16> %6
 ; CHECK-LABEL: absd_int16_ule
-; CHECK: vcmpgtuh
-; CHECK: xxsel
-; CHECK: blr
+; CHECK-NOT: vcmpgtuh
+; CHECK-NOT: xxsel
+; CHECK: vabsduh v2, v2, v3
+; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: absd_int16_ule
 ; CHECK-PWR8: vcmpgtuh
 ; CHECK-PWR8: xxsel
@@ -654,9 +662,10 @@ define <16 x i8> @absd_int8_ugt(<16 x i8>, <16 x i8>) {
   %6 = select <16 x i1> %3, <16 x i8> %4, <16 x i8> %5
   ret <16 x i8> %6
 ; CHECK-LABEL: absd_int8_ugt
-; CHECK: vcmpgtub
-; CHECK: xxsel
-; CHECK: blr
+; CHECK-NOT: vcmpgtub
+; CHECK-NOT: xxsel
+; CHECK: vabsdub v2, v2, v3
+; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: absd_int8_ugt
 ; CHECK-PWR8: vcmpgtub
 ; CHECK-PWR8: xxsel
@@ -670,9 +679,10 @@ define <16 x i8> @absd_int8_uge(<16 x i8>, <16 x i8>) {
   %6 = select <16 x i1> %3, <16 x i8> %4, <16 x i8> %5
   ret <16 x i8> %6
 ; CHECK-LABEL: absd_int8_uge
-; CHECK: vcmpgtub
-; CHECK: xxsel
-; CHECK: blr
+; CHECK-NOT: vcmpgtub
+; CHECK-NOT: xxsel
+; CHECK: vabsdub v2, v2, v3
+; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: absd_int8_uge
 ; CHECK-PWR8: vcmpgtub
 ; CHECK-PWR8: xxsel
@@ -686,9 +696,10 @@ define <16 x i8> @absd_int8_ult(<16 x i8>, <16 x i8>) {
   %6 = select <16 x i1> %3, <16 x i8> %5, <16 x i8> %4
   ret <16 x i8> %6
 ; CHECK-LABEL: absd_int8_ult
-; CHECK: vcmpgtub
-; CHECK: xxsel
-; CHECK: blr
+; CHECK-NOT: vcmpgtub
+; CHECK-NOT: xxsel
+; CHECK: vabsdub v2, v2, v3
+; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: absd_int8_ult
 ; CHECK-PWR8: vcmpgtub
 ; CHECK-PWR8: xxsel
@@ -702,11 +713,48 @@ define <16 x i8> @absd_int8_ule(<16 x i8>, <16 x i8>) {
   %6 = select <16 x i1> %3, <16 x i8> %5, <16 x i8> %4
   ret <16 x i8> %6
 ; CHECK-LABEL: absd_int8_ule
-; CHECK: vcmpgtub
-; CHECK: xxsel
-; CHECK: blr
+; CHECK-NOT: vcmpgtub
+; CHECK-NOT: xxsel
+; CHECK: vabsdub v2, v2, v3
+; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: absd_int8_ule
 ; CHECK-PWR8: vcmpgtub
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+; some cases we are unable to optimize
+; check whether goes beyond the scope
+define <4 x i32> @absd_int32_ugt_opp(<4 x i32>, <4 x i32>) {
+  %3 = icmp ugt <4 x i32> %0, %1
+  %4 = sub <4 x i32> %0, %1
+  %5 = sub <4 x i32> %1, %0
+  %6 = select <4 x i1> %3, <4 x i32> %5, <4 x i32> %4
+  ret <4 x i32> %6
+; CHECK-LABEL: absd_int32_ugt_opp
+; CHECK-NOT: vabsduw
+; CHECK: vcmpgtuw
+; CHECK: xxsel
+; CHECK: blr
+; CHECK-PWR8-LABEL: absd_int32_ugt_opp
+; CHECK-PWR8: vcmpgtuw
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+define <2 x i64> @absd_int64_ugt(<2 x i64>, <2 x i64>) {
+  %3 = icmp ugt <2 x i64> %0, %1
+  %4 = sub <2 x i64> %0, %1
+  %5 = sub <2 x i64> %1, %0
+  %6 = select <2 x i1> %3, <2 x i64> %4, <2 x i64> %5
+  ret <2 x i64> %6
+; CHECK-LABEL: absd_int64_ugt
+; CHECK-NOT: vabsduw
+; CHECK: vcmpgtud
+; CHECK: xxsel
+; CHECK: blr
+; CHECK-PWR8-LABEL: absd_int64_ugt
+; CHECK-PWR8: vcmpgtud
 ; CHECK-PWR8: xxsel
 ; CHECK-PWR8: blr
 }

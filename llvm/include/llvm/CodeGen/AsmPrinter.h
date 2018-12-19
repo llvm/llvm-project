@@ -138,6 +138,9 @@ private:
 
   static char ID;
 
+protected:
+  /// Protected struct HandlerInfo and Handlers permit target extended
+  /// AsmPrinter adds their own handlers.
   struct HandlerInfo {
     AsmPrinterHandler *Handler;
     const char *TimerName;

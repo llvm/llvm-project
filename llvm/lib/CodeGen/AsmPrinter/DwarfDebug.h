@@ -15,8 +15,6 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DWARFDEBUG_H
 
 #include "AddressPool.h"
-#include "DbgEntityHistoryCalculator.h"
-#include "DebugHandlerBase.h"
 #include "DebugLocStream.h"
 #include "DwarfFile.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -31,6 +29,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AccelTable.h"
+#include "llvm/CodeGen/DbgEntityHistoryCalculator.h"
+#include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"

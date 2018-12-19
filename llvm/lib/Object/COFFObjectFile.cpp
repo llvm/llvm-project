@@ -938,6 +938,18 @@ iterator_range<base_reloc_iterator> COFFObjectFile::base_relocs() const {
   return make_range(base_reloc_begin(), base_reloc_end());
 }
 
+std::error_code
+COFFObjectFile::getCOFFHeader(const coff_file_header *&Res) const {
+  Res = COFFHeader;
+  return std::error_code();
+}
+
+std::error_code
+COFFObjectFile::getCOFFBigObjHeader(const coff_bigobj_file_header *&Res) const {
+  Res = COFFBigObjHeader;
+  return std::error_code();
+}
+
 std::error_code COFFObjectFile::getPE32Header(const pe32_header *&Res) const {
   Res = PE32Header;
   return std::error_code();

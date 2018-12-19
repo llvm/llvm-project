@@ -3089,6 +3089,7 @@ static void emitReductionListCopy(
 /// void inter_warp_copy_func(void* reduce_data, num_warps)
 ///   shared smem[warp_size];
 ///   For all data entries D in reduce_data:
+///     sync
 ///     If (I am the first lane in each warp)
 ///       Copy my local D to smem[warp_id]
 ///     sync
@@ -3203,6 +3204,10 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
         Bld.CreateCondBr(Cmp, BodyBB, ExitBB);
         CGF.EmitBlock(BodyBB);
       }
+      // kmpc_barrier.
+      CGM.getOpenMPRuntime().emitBarrierCall(CGF, Loc, OMPD_unknown,
+                                             /*EmitChecks=*/false,
+                                             /*ForceSimpleCall=*/true);
       llvm::BasicBlock *ThenBB = CGF.createBasicBlock("then");
       llvm::BasicBlock *ElseBB = CGF.createBasicBlock("else");
       llvm::BasicBlock *MergeBB = CGF.createBasicBlock("ifcont");
@@ -4512,6 +4517,22 @@ void CGOpenMPRuntimeNVPTX::clear() {
       Records.RecSize->setInitializer(llvm::ConstantInt::get(CGM.SizeTy, Size));
       Records.UseSharedMemory->setInitializer(
           llvm::ConstantInt::get(CGM.Int16Ty, UseSharedMemory ? 1 : 0));
+    }
+    // Allocate SharedMemorySize buffer for the shared memory.
+    // FIXME: nvlink does not handle weak linkage correctly (object with the
+    // different size are reported as erroneous).
+    // Restore this code as sson as nvlink is fixed.
+    if (!SharedStaticRD->field_empty()) {
+      llvm::APInt ArySize(/*numBits=*/64, SharedMemorySize);
+      QualType SubTy = C.getConstantArrayType(
+          C.CharTy, ArySize, ArrayType::Normal, /*IndexTypeQuals=*/0);
+      auto *Field = FieldDecl::Create(
+          C, SharedStaticRD, SourceLocation(), SourceLocation(), nullptr, SubTy,
+          C.getTrivialTypeSourceInfo(SubTy, SourceLocation()),
+          /*BW=*/nullptr, /*Mutable=*/false,
+          /*InitStyle=*/ICIS_NoInit);
+      Field->setAccess(AS_public);
+      SharedStaticRD->addDecl(Field);
     }
     SharedStaticRD->completeDefinition();
     if (!SharedStaticRD->field_empty()) {

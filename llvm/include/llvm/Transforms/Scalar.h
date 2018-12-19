@@ -183,11 +183,12 @@ Pass *createLoopInstSimplifyPass();
 //
 // LoopUnroll - This pass is a simple loop unrolling pass.
 //
-Pass *createLoopUnrollPass(int OptLevel = 2, int Threshold = -1, int Count = -1,
+Pass *createLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
+                           int Threshold = -1, int Count = -1,
                            int AllowPartial = -1, int Runtime = -1,
                            int UpperBound = -1, int AllowPeeling = -1);
 // Create an unrolling pass for full unrolling that uses exact trip count only.
-Pass *createSimpleLoopUnrollPass(int OptLevel = 2);
+Pass *createSimpleLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false);
 
 //===----------------------------------------------------------------------===//
 //

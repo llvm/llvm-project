@@ -199,7 +199,7 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
   return false;
 }
 
-FileSpec LocateExecutableSymbolFileDsym(const ModuleSpec &module_spec) {
+static FileSpec LocateExecutableSymbolFileDsym(const ModuleSpec &module_spec) {
   const FileSpec *exec_fspec = module_spec.GetFileSpecPtr();
   const ArchSpec *arch = module_spec.GetArchitecturePtr();
   const UUID *uuid = module_spec.GetUUIDPtr();

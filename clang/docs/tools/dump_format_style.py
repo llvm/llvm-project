@@ -6,7 +6,6 @@
 import collections
 import os
 import re
-import urllib2
 
 CLANG_DIR = os.path.join(os.path.dirname(__file__), '../..')
 FORMAT_STYLE_FILE = os.path.join(CLANG_DIR, 'include/clang/Format/Format.h')

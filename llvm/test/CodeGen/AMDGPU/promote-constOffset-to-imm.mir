@@ -152,3 +152,39 @@ body:             |
     %44:vreg_64 = REG_SEQUENCE %40, %subreg.sub0, %42, %subreg.sub1
     %45:vreg_64 = GLOBAL_LOAD_DWORDX2 %44, 0, 0, 0, implicit $exec
 ...
+---
+
+# Tests for a successful compilation.
+name: assert_hit
+body:             |
+    bb.0.entry:
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
+    %3:sreg_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %4:sreg_32_xm0 = COPY $sgpr101
+    %5:sreg_32_xm0 = S_MOV_B32 0
+    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3
+    $sgpr4 = COPY %4
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    %6:vreg_64 = COPY $vgpr0_vgpr1
+    %7:vgpr_32 = V_AND_B32_e32 255, %6.sub0, implicit $exec
+    %8:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %9:vreg_64 = REG_SEQUENCE killed %7, %subreg.sub0, %8, %subreg.sub1
+    %10:vgpr_32 = V_LSHLREV_B32_e64 7, %6.sub0, implicit $exec
+    %11:vgpr_32 = V_AND_B32_e32 -32768, killed %10, implicit $exec
+    %12:sgpr_32 = COPY %1.sub1
+    %13:vgpr_32 = COPY %5
+    %14:vgpr_32, %15:sreg_64_xexec = V_ADD_I32_e64 %1.sub0, %11, implicit $exec
+    %16:vgpr_32 = COPY %12
+    %17:vgpr_32, dead %18:sreg_64_xexec = V_ADDC_U32_e64 %16, %13, killed %15, implicit $exec
+    %19:vreg_64 = REG_SEQUENCE %14, %subreg.sub0, %17, %subreg.sub1
+    %20:vreg_64 = V_LSHLREV_B64 3, %9, implicit $exec
+    %21:vgpr_32, %22:sreg_64_xexec = V_ADD_I32_e64 %14, %20.sub0, implicit $exec
+    %23:vgpr_32, dead %24:sreg_64_xexec = V_ADDC_U32_e64 %17, %20.sub1, killed %22, implicit $exec
+
+    %25:sgpr_32 = S_MOV_B32 6144
+    %26:vgpr_32, %27:sreg_64_xexec = V_ADD_I32_e64 %21, %25, implicit $exec
+    %28:vgpr_32, dead %29:sreg_64_xexec = V_ADDC_U32_e64 %23, 4294967295, killed %27, implicit $exec
+    %30:vreg_64 = REG_SEQUENCE %26, %subreg.sub0, %28, %subreg.sub1
+    %31:vreg_64 = GLOBAL_LOAD_DWORDX2 %30, 0, 0, 0, implicit $exec
+...

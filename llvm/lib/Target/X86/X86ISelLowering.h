@@ -226,10 +226,6 @@ namespace llvm {
       SCALEF,
       SCALEFS,
 
-      // Integer add/sub with signed saturation.
-      ADDS,
-      SUBS,
-
       // Unsigned Integer average.
       AVG,
 
