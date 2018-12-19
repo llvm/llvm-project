@@ -9626,7 +9626,6 @@
 				INSTALL_PATH = "$(LLDB_FRAMEWORK_INSTALL_DIR)";
 				LD_DYLIB_INSTALL_NAME = "@rpath/LLDB.framework/LLDB";
 				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_GTESTS_CFLAGS = "-I unittests -I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include  -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
@@ -9721,7 +9720,6 @@
 				);
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_GTESTS_CFLAGS = "-I unittests -I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
@@ -10294,7 +10292,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -10341,7 +10338,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -10444,7 +10440,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -10531,7 +10526,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -10702,7 +10696,6 @@
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
 					"$(inherited)",
 				);
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
@@ -10786,7 +10779,6 @@
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
 					"$(inherited)",
 				);
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
@@ -11119,7 +11111,6 @@
 				);
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
@@ -11169,7 +11160,6 @@
 				);
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
@@ -11219,7 +11209,6 @@
 				);
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
@@ -11309,7 +11298,6 @@
 				LLDB_BUILDBOT_BUILD_CFLAGS = "$(LLDB_BUILDBOT_BUILD_CFLAGS_$(LLDB_IS_BUILDBOT_BUILD))";
 				LLDB_BUILDBOT_BUILD_CFLAGS_0 = "-DLLDB_IS_BUILDBOT_BUILD=0";
 				LLDB_BUILDBOT_BUILD_CFLAGS_1 = "-DLLDB_IS_BUILDBOT_BUILD=1";
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
 				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
@@ -11349,7 +11337,6 @@
 					"-fno-rtti",
 					"-flimit-debug-info",
 					"-Wparentheses",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
@@ -11449,7 +11436,6 @@
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
 					"$(inherited)",
 				);
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
@@ -12308,7 +12294,6 @@
 				LLDB_BUILDBOT_BUILD_CFLAGS = "$(LLDB_BUILDBOT_BUILD_CFLAGS_$(LLDB_IS_BUILDBOT_BUILD))";
 				LLDB_BUILDBOT_BUILD_CFLAGS_0 = "-DLLDB_IS_BUILDBOT_BUILD=0";
 				LLDB_BUILDBOT_BUILD_CFLAGS_1 = "-DLLDB_IS_BUILDBOT_BUILD=1";
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
 				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
@@ -12347,7 +12332,6 @@
 					"-fno-rtti",
 					"-flimit-debug-info",
 					"-Wparentheses",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
@@ -12454,7 +12438,6 @@
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
 					"$(inherited)",
 				);
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
@@ -12538,7 +12521,6 @@
 				);
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
@@ -12716,7 +12698,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -12757,7 +12738,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -12984,7 +12964,6 @@
 				LLDB_BUILDBOT_BUILD_CFLAGS = "$(LLDB_BUILDBOT_BUILD_CFLAGS_$(LLDB_IS_BUILDBOT_BUILD))";
 				LLDB_BUILDBOT_BUILD_CFLAGS_0 = "-DLLDB_IS_BUILDBOT_BUILD=0";
 				LLDB_BUILDBOT_BUILD_CFLAGS_1 = "-DLLDB_IS_BUILDBOT_BUILD=1";
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_COVERAGE_CFLAGS = "$(LLDB_COVERAGE_CFLAGS_$(LLDB_ENABLE_COVERAGE))";
 				LLDB_COVERAGE_CFLAGS_1 = "-fprofile-instr-generate -fcoverage-mapping";
@@ -13028,7 +13007,6 @@
 					"-fno-rtti",
 					"-flimit-debug-info",
 					"-Wparentheses",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
@@ -14010,7 +13988,6 @@
 				LLDB_BUILDBOT_BUILD_CFLAGS = "$(LLDB_BUILDBOT_BUILD_CFLAGS_$(LLDB_IS_BUILDBOT_BUILD))";
 				LLDB_BUILDBOT_BUILD_CFLAGS_0 = "-DLLDB_IS_BUILDBOT_BUILD=0";
 				LLDB_BUILDBOT_BUILD_CFLAGS_1 = "-DLLDB_IS_BUILDBOT_BUILD=1";
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
 				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
@@ -14050,7 +14027,6 @@
 					"-fno-rtti",
 					"-flimit-debug-info",
 					"-Wparentheses",
-					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
@@ -14253,7 +14229,6 @@
 				);
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
