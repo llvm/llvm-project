@@ -1634,7 +1634,7 @@ bool SwiftLanguageRuntime::IsValidErrorValue(
     ValueObject &in_value, SwiftErrorDescriptor *out_error_descriptor) {
   // see GetDynamicTypeAndAddress_ErrorType for details
 
-  CompilerType var_type(in_value.GetStaticValue()->GetCompilerType());
+  CompilerType var_type = in_value.GetStaticValue()->GetCompilerType();
   SwiftASTContext::ProtocolInfo protocol_info;
   if (!SwiftASTContext::GetProtocolTypeInfo(var_type, protocol_info))
     return false;
@@ -2068,8 +2068,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
     if (!result.isSuccess())
       return false;
     auto type_and_address = result.getValue();
-    CompilerType dynamic_type(scratch_ctx->GetASTContext(),
-                              type_and_address.first);
+    CompilerType dynamic_type(type_and_address.first);
     class_type_or_name.SetCompilerType(dynamic_type);
     address.SetLoadAddress(type_and_address.second.getAddressData(),
                            &m_process->GetTarget());
@@ -2150,7 +2149,7 @@ SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
           return candidate_type;
         });
 
-    return {scratch_ctx->GetASTContext(), target_swift_type.getPointer()};
+    return {target_swift_type.getPointer()};
   }
   return base_type;
 }

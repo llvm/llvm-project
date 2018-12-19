@@ -39,7 +39,7 @@ public:
   //----------------------------------------------------------------------
   CompilerType(TypeSystem *type_system, lldb::opaque_compiler_type_t type);
   CompilerType(clang::ASTContext *ast_context, clang::QualType qual_type);
-  CompilerType(swift::ASTContext *ast_context, swift::Type qual_type);
+  CompilerType(swift::Type qual_type);
 
   CompilerType(const CompilerType &rhs)
       : m_type(rhs.m_type), m_type_system(rhs.m_type_system) {}
