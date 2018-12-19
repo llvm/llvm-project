@@ -20,9 +20,9 @@ int main(int argc, char** argv) {
 }
 
 // CHECK-LABEL: define internal{{.*}} void @__cxx_global_var_init()
-// CHECK-NOT: call void @__csi_func_entry
+// CHECK: call void @__csi_func_entry
 // CHECK: ret void
 
 // CHECK-LABEL: define internal{{.*}} void @_GLOBAL__sub_I_ctor_test.cpp()
-// CHECK-NOT: call void @__csi_func_entry
+// CHECK: call void @__csi_func_entry
 // CHECK: ret void
