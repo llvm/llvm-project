@@ -45,10 +45,10 @@ CompilerType::CompilerType(clang::ASTContext *ast, clang::QualType qual_type)
 #endif
 }
 
-CompilerType::CompilerType(swift::ASTContext *ast_context,
-                           swift::Type qual_type)
+CompilerType::CompilerType(swift::Type qual_type)
     : m_type(qual_type.getPointer()),
-      m_type_system(SwiftASTContext::GetSwiftASTContext(ast_context)) {}
+      m_type_system(
+          SwiftASTContext::GetSwiftASTContext(&qual_type->getASTContext())) {}
 
 CompilerType::~CompilerType() {}
 
