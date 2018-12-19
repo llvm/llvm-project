@@ -1820,11 +1820,14 @@ llvm::Value* CodeGenFunction::EmitAsmInput(
   // If this can't be a register or memory, i.e., has to be a constant
   // (immediate or symbolic), try to emit it as such.
   if (!Info.allowsRegister() && !Info.allowsMemory()) {
+    if (Info.requiresImmediateConstant()) {
+      llvm::APSInt AsmConst = InputExpr->EvaluateKnownConstInt(getContext());
+      return llvm::ConstantInt::get(getLLVMContext(), AsmConst);
+    }
+
     Expr::EvalResult Result;
     if (InputExpr->EvaluateAsInt(Result, getContext()))
       return llvm::ConstantInt::get(getLLVMContext(), Result.Val.getInt());
-    assert(!Info.requiresImmediateConstant() &&
-           "Required-immediate inlineasm arg isn't constant?");
   }
 
   if (Info.allowsRegister() || !Info.allowsMemory())

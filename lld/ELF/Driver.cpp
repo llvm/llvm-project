@@ -402,13 +402,11 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     Expected<std::unique_ptr<TarWriter>> ErrOrWriter =
         TarWriter::create(Path, path::stem(Path));
     if (ErrOrWriter) {
-      Tar = ErrOrWriter->get();
+      Tar = std::move(*ErrOrWriter);
       Tar->append("response.txt", createResponseFile(Args));
       Tar->append("version.txt", getLLDVersion() + "\n");
-      make<std::unique_ptr<TarWriter>>(std::move(*ErrOrWriter));
     } else {
-      error(Twine("--reproduce: failed to open ") + Path + ": " +
-            toString(ErrOrWriter.takeError()));
+      error("--reproduce: " + toString(ErrOrWriter.takeError()));
     }
   }
 
