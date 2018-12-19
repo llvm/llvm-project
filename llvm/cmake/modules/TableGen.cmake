@@ -161,7 +161,7 @@ macro(add_tablegen target project)
       # Create an artificial dependency between tablegen projects, because they
       # compile the same dependencies, thus using the same build folders.
       # FIXME: A proper fix requires sequentially chaining tablegens.
-      if (NOT ${project} STREQUAL LLVM)
+      if (NOT ${project} STREQUAL LLVM AND TARGET ${project}-tablegen-host)
         add_dependencies(${project}-tablegen-host LLVM-tablegen-host)
       endif()
       add_custom_command(OUTPUT ${${project}_TABLEGEN_EXE}

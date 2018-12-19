@@ -2487,8 +2487,10 @@ namespace ISD {
 
   /// Attempt to match a unary predicate against a scalar/splat constant or
   /// every element of a constant BUILD_VECTOR.
+  /// If AllowUndef is true, then UNDEF element will pass nullptr to Match.
   bool matchUnaryPredicate(SDValue Op,
-                           std::function<bool(ConstantSDNode *)> Match);
+                           std::function<bool(ConstantSDNode *)> Match,
+                           bool AllowUndefs = false);
 
   /// Attempt to match a binary predicate against a pair of scalar/splat
   /// constants or every element of a pair of constant BUILD_VECTORs.

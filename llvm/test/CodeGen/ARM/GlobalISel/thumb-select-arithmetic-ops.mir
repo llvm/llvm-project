@@ -1,0 +1,251 @@
+# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  define void @test_add_regs() { ret void }
+  define void @test_add_fold_imm() { ret void }
+  define void @test_add_fold_imm12() { ret void }
+  define void @test_add_no_fold_imm() { ret void }
+
+  define void @test_sub_imm_lhs() { ret void }
+  define void @test_sub_imm_rhs() { ret void }
+
+  define void @test_mul() { ret void }
+  define void @test_mla() { ret void }
+...
+---
+name:            test_add_regs
+# CHECK-LABEL: name: test_add_regs
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREGY:%[0-9]+]]:rgpr = COPY $r1
+
+    %2(s32) = G_ADD %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = t2ADDrr [[VREGX]], [[VREGY]], 14, $noreg, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_add_fold_imm
+# CHECK-LABEL: name: test_add_fold_imm
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY $r0
+
+    %1(s32) = G_CONSTANT i32 786444 ; 0x000c000c
+    %2(s32) = G_ADD %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = t2ADDri [[VREGX]], 786444, 14, $noreg, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_add_fold_imm12
+# CHECK-LABEL: name: test_add_fold_imm12
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s32) = G_CONSTANT i32 4093
+    %2(s32) = G_ADD %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = t2ADDri12 [[VREGX]], 4093, 14, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_add_no_fold_imm
+# CHECK-LABEL: name: test_add_no_fold_imm
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY $r0
+
+    %1(s32) = G_CONSTANT i32 185470479 ; 0x0b0e0e0f
+    ; CHECK: [[VREGY:%[0-9]+]]:rgpr = t2MOVi32imm 185470479
+
+    %2(s32) = G_ADD %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = t2ADDrr [[VREGX]], [[VREGY]], 14, $noreg, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_sub_imm_lhs
+# CHECK-LABEL: name: test_sub_imm_lhs
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+
+    %1(s32) = G_CONSTANT i32 786444 ; 0x000c000c
+    %2(s32) = G_SUB %1, %0
+    ; CHECK: [[VREGRES:%[0-9]+]]:rgpr = t2RSBri [[VREGX]], 786444, 14, $noreg, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_sub_imm_rhs
+# CHECK-LABEL: name: test_sub_imm_rhs
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gprnopc = COPY $r0
+
+    %1(s32) = G_CONSTANT i32 786444 ; 0x000c000c
+    %2(s32) = G_SUB %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]]:gprnopc = t2SUBri [[VREGX]], 786444, 14, $noreg, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_mul
+# CHECK-LABEL: name: test_mul
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREGY:%[0-9]+]]:rgpr = COPY $r1
+
+    %2(s32) = G_MUL %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]]:rgpr = t2MUL [[VREGX]], [[VREGY]], 14, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_mla
+# CHECK-LABEL: name: test_mla
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREGY:%[0-9]+]]:rgpr = COPY $r1
+
+    %2(s32) = COPY $r2
+    ; CHECK: [[VREGZ:%[0-9]+]]:rgpr = COPY $r2
+
+    %3(s32) = G_MUL %0, %1
+    %4(s32) = G_ADD %3, %2
+    ; CHECK: [[VREGRES:%[0-9]+]]:rgpr = t2MLA [[VREGX]], [[VREGY]], [[VREGZ]], 14, $noreg
+
+    $r0 = COPY %4(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...

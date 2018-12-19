@@ -1,4 +1,4 @@
-//===-- lib/CodeGen/AsmPrinter/AsmPrinterHandler.h -------------*- C++ -*--===//
+//===-- llvm/CodeGen/AsmPrinterHandler.h -----------------------*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_ASMPRINTER_ASMPRINTERHANDLER_H
-#define LLVM_LIB_CODEGEN_ASMPRINTER_ASMPRINTERHANDLER_H
+#ifndef LLVM_CODEGEN_ASMPRINTERHANDLER_H
+#define LLVM_CODEGEN_ASMPRINTERHANDLER_H
 
 #include "llvm/Support/DataTypes.h"
 
