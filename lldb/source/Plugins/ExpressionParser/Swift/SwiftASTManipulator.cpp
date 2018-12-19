@@ -820,8 +820,7 @@ void SwiftASTManipulator::FindVariableDeclarations(
     auto type = var_decl->getDeclContext()->mapTypeIntoContext(
         var_decl->getInterfaceType());
     persistent_info.m_name = name;
-    persistent_info.m_type = CompilerType(&var_decl->getASTContext(),
-                                          type.getPointer());
+    persistent_info.m_type = {type.getPointer()};
     persistent_info.m_decl = var_decl;
 
     m_variables.push_back(persistent_info);
@@ -887,7 +886,7 @@ void SwiftASTManipulator::InsertResult(
     SwiftASTManipulator::ResultLocationInfo &result_info) {
   swift::ASTContext &ast_context = m_source_file.getASTContext();
 
-  CompilerType return_ast_type(&ast_context, result_type.getPointer());
+  CompilerType return_ast_type(result_type.getPointer());
 
   result_var->overwriteAccess(swift::AccessLevel::Public);
   result_var->overwriteSetterAccess(swift::AccessLevel::Public);
@@ -928,7 +927,7 @@ void SwiftASTManipulator::InsertError(swift::VarDecl *error_var,
 
   swift::ASTContext &ast_context = m_source_file.getASTContext();
 
-  CompilerType error_ast_type(&ast_context, error_type.getPointer());
+  CompilerType error_ast_type(error_type.getPointer());
 
   error_var->overwriteAccess(swift::AccessLevel::Public);
   error_var->overwriteSetterAccess(swift::AccessLevel::Public);
@@ -1028,7 +1027,7 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
 
   swift::ASTContext &ast_context = m_source_file.getASTContext();
 
-  CompilerType return_ast_type(&ast_context, result_type.getPointer());
+  CompilerType return_ast_type(result_type.getPointer());
   swift::Identifier result_var_name =
       ast_context.getIdentifier(GetResultName());
   SwiftASTManipulatorBase::VariableMetadataSP metadata_sp(
@@ -1072,7 +1071,7 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
               continue;
 
             swift::Type error_type = var_decl->getInterfaceType();
-            CompilerType error_ast_type(&ast_context, error_type.getPointer());
+            CompilerType error_ast_type(error_type.getPointer());
             SwiftASTManipulatorBase::VariableMetadataSP error_metadata_sp(
                 new VariableMetadataError());
 

@@ -130,8 +130,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
                              // its name from the AST.
       swift::ASTContext *swift_ast_ctx = m_ast.GetASTContext();
       if (swift_ast_ctx)
-        compiler_type =
-            CompilerType(swift_ast_ctx, swift_ast_ctx->TheRawPointerType);
+        compiler_type = {swift_ast_ctx->TheRawPointerType};
       else {
         if (log) {
           const char *file_name = "<unknown>";
