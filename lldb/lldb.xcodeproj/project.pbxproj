@@ -9201,8 +9201,6 @@
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
 				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(SRCROOT)/llvm-build";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64";
@@ -9215,7 +9213,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
@@ -9225,7 +9222,6 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lcompression",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
@@ -9328,8 +9324,6 @@
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
 				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(SRCROOT)/llvm-build";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
@@ -9342,7 +9336,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
@@ -9352,7 +9345,6 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lcompression",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
@@ -9480,7 +9472,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9522,7 +9513,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9593,7 +9583,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9651,7 +9640,6 @@
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9670,7 +9658,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
@@ -9690,7 +9677,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
@@ -9752,7 +9738,6 @@
 					"-DLIBXML2_DEFINED",
 					"-DDT_VARIANT_$(DT_VARIANT)",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -9828,7 +9813,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"$(inherited)",
@@ -9846,7 +9830,6 @@
 					"-framework",
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
@@ -10076,7 +10059,6 @@
 					"$(inherited)",
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 				);
 				OTHER_LDFLAGS = (
@@ -10116,7 +10098,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -10157,7 +10138,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
@@ -10204,8 +10184,6 @@
 					"$(LLDB_GTESTS_CFLAGS)",
 				);
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-fno-rtti",
@@ -10260,8 +10238,6 @@
 					"$(LLDB_GTESTS_CFLAGS)",
 				);
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-fno-rtti",
@@ -10318,7 +10294,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
@@ -10338,7 +10313,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PATH = /opt/local/bin;
@@ -10367,7 +10341,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
@@ -10387,7 +10360,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-gtest";
@@ -10427,7 +10399,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-gtest";
@@ -10473,7 +10444,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
@@ -10493,7 +10463,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-gtest";
@@ -10539,7 +10508,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-gtest";
@@ -10563,7 +10531,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
@@ -10583,7 +10550,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-gtest";
@@ -10622,7 +10588,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-gtest";
@@ -10662,7 +10627,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-gtest";
@@ -10740,8 +10704,6 @@
 				);
 				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
@@ -10766,7 +10728,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
@@ -10786,7 +10747,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
@@ -10828,8 +10788,6 @@
 				);
 				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
@@ -10854,7 +10812,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
@@ -10874,7 +10831,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
@@ -11165,8 +11121,6 @@
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -11217,8 +11171,6 @@
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -11269,8 +11221,6 @@
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -11387,8 +11337,6 @@
 				"LLDB_TOOLS_INSTALL_DIR[sdk=iphoneos*]" = "/$(DT_VARIANT)/usr/local/bin";
 				LLDB_USE_OSS_VERSION_SCHEME = 0;
 				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(OBJROOT)/llvm-build";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
@@ -11401,7 +11349,6 @@
 					"-fno-rtti",
 					"-flimit-debug-info",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
@@ -11410,7 +11357,6 @@
 					"-DNDEBUG",
 				);
 				OTHER_LDFLAGS = (
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
@@ -11505,8 +11451,6 @@
 				);
 				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
@@ -11531,7 +11475,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
@@ -11551,7 +11494,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
@@ -11851,7 +11793,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"$(inherited)",
@@ -11869,7 +11810,6 @@
 					"-framework",
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
@@ -11939,7 +11879,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"$(inherited)",
@@ -11957,7 +11896,6 @@
 					"-framework",
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
@@ -12023,7 +11961,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"$(inherited)",
@@ -12041,7 +11978,6 @@
 					"-framework",
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
@@ -12398,8 +12334,6 @@
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
 				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(SRCROOT)/llvm-build";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
@@ -12413,7 +12347,6 @@
 					"-fno-rtti",
 					"-flimit-debug-info",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
@@ -12421,7 +12354,6 @@
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
 				OTHER_LDFLAGS = (
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
@@ -12524,8 +12456,6 @@
 				);
 				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
@@ -12550,7 +12480,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
@@ -12570,7 +12499,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
@@ -12612,8 +12540,6 @@
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -12705,7 +12631,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"$(inherited)",
@@ -12723,7 +12648,6 @@
 					"-framework",
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
@@ -12792,7 +12716,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
@@ -12834,7 +12757,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
@@ -13093,8 +13015,6 @@
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
 				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(SRCROOT)/llvm-build";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
@@ -13108,7 +13028,6 @@
 					"-fno-rtti",
 					"-flimit-debug-info",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
@@ -13117,7 +13036,6 @@
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
 				OTHER_LDFLAGS = (
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
@@ -13229,8 +13147,6 @@
 				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACH_O_TYPE = staticlib;
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
@@ -13251,7 +13167,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
@@ -13271,7 +13186,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
@@ -13314,8 +13228,6 @@
 				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = "LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}";
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -13408,7 +13320,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COVERAGE_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
@@ -13427,7 +13338,6 @@
 					"-framework",
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
@@ -13468,8 +13378,6 @@
 				);
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACH_O_TYPE = staticlib;
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
@@ -13535,8 +13443,6 @@
 				"LLDB_FRAMEWORK_INSTALL_DIR[sdk=iphoneos*]" = /System/Library/PrivateFrameworks;
 				LLDB_TOOLS_INSTALL_DIR = /Applications/Xcode.app/Contents/Developer/usr/bin;
 				"LLDB_TOOLS_INSTALL_DIR[sdk=iphoneos*]" = /usr/local/bin;
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(OBJROOT)/llvm";
 				LLVM_BUILD_DIRTREE = "$(OBJROOT)/llvm-build";
 				LLVM_BUILD_DIR_ARCH = x86_64/;
@@ -13544,14 +13450,12 @@
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				OTHER_CFLAGS = (
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 					"-DNDEBUG",
 				);
 				OTHER_LDFLAGS = (
 					"-lcompression",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COVERAGE_LDFLAGS)",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -13601,7 +13505,6 @@
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				OTHER_CFLAGS = (
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 					"-fno-rtti",
@@ -13676,8 +13579,6 @@
 					"-Wparentheses",
 				);
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-flimit-debug-info",
@@ -14135,8 +14036,6 @@
 				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
 				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLDB_PATH_TO_LLVM_BUILD)";
 				LLVM_BUILD_DIRTREE = "$(PREBUILT_SWIFTLANG)/..";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
@@ -14151,7 +14050,6 @@
 					"-fno-rtti",
 					"-flimit-debug-info",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
@@ -14159,7 +14057,6 @@
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
 				);
 				OTHER_LDFLAGS = (
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
@@ -14297,7 +14194,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
@@ -14317,7 +14213,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
@@ -14445,7 +14340,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"$(inherited)",
@@ -14463,7 +14357,6 @@
 					"-framework",
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
@@ -14569,7 +14462,6 @@
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				OTHER_CFLAGS = (
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 					"-fno-rtti",
@@ -14629,7 +14521,6 @@
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-flimit-debug-info",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 					"-fno-rtti",
@@ -14759,8 +14650,6 @@
 				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
 				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLDB_PATH_TO_LLVM_BUILD)";
 				LLVM_BUILD_DIRTREE = "$(PREBUILT_SWIFTLANG)/..";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
@@ -14774,7 +14663,6 @@
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COVERAGE_LDFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
@@ -14784,7 +14672,6 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lcompression",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PYTHON_FRAMEWORK_PATH = "$(SDKROOT)/System/Library/Frameworks/Python.framework";
@@ -14844,7 +14731,6 @@
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				OTHER_CFLAGS = (
 					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 					"-fno-rtti",
@@ -14903,8 +14789,6 @@
 					"$(inherited)",
 				);
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-fno-rtti",
@@ -14925,7 +14809,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
@@ -14945,7 +14828,6 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
@@ -14993,8 +14875,6 @@
 				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphoneos*][arch=*]" = "LLDB_VERSION_STRING=lldb-${CURRENT_PROJECT_VERSION}";
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -15078,7 +14958,6 @@
 					"-framework",
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"$(inherited)",
@@ -15096,7 +14975,6 @@
 					"-framework",
 					Security,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-server";
