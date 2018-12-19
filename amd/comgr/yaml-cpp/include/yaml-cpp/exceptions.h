@@ -15,7 +15,9 @@
 
 // This is here for compatibility with older versions of Visual Studio
 // which don't support noexcept
-#ifdef _MSC_VER
+// VS2017 version information here
+// https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=vs-2017
+#if defined(_MSC_VER) && (_MSC_VER < 1916)
     #define YAML_CPP_NOEXCEPT _NOEXCEPT
 #else
     #define YAML_CPP_NOEXCEPT noexcept
