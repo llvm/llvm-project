@@ -2627,6 +2627,26 @@ bool SwiftLanguageRuntime::FixupReference(lldb::addr_t &addr,
     }
   }
   default:
+    // Adjust the pointer to strip away the spare bits.
+    Target &target = m_process->GetTarget();
+    llvm::Triple triple = target.GetArchitecture().GetTriple();
+    switch (triple.getArch()) {
+    case llvm::Triple::ArchType::aarch64:
+      addr &= ~SWIFT_ABI_ARM64_SWIFT_SPARE_BITS_MASK;
+      break;
+    case llvm::Triple::ArchType::arm:
+      addr &= ~SWIFT_ABI_ARM_SWIFT_SPARE_BITS_MASK;
+      break;
+    case llvm::Triple::ArchType::x86:
+      addr &= ~SWIFT_ABI_I386_SWIFT_SPARE_BITS_MASK;
+      break;
+    case llvm::Triple::ArchType::x86_64:
+      addr &= ~SWIFT_ABI_X86_64_SWIFT_SPARE_BITS_MASK;
+      break;
+    default:
+      llvm_unreachable("unsupported arch");
+      break;
+    }
     break;
   }
   return true;
