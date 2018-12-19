@@ -127,6 +127,33 @@ void f() {
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: perform comparison in the duration domain [abseil-duration-comparison]
   // CHECK-FIXES: absl::Milliseconds((y + 5) * 10) > d1;
 
+  // We should still transform the expression inside this macro invocation
+#define VALUE_IF(v, e) v ? (e) : 0
+  int a = VALUE_IF(1, 5 > absl::ToDoubleSeconds(d1));
+  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: perform comparison in the duration domain [abseil-duration-comparison]
+  // CHECK-FIXES: VALUE_IF(1, absl::Seconds(5) > d1);
+#undef VALUE_IF
+
+#define VALUE_IF_2(e) (e)
+#define VALUE_IF(v, e) v ? VALUE_IF_2(e) : VALUE_IF_2(0)
+  int a2 = VALUE_IF(1, 5 > absl::ToDoubleSeconds(d1));
+  // CHECK-MESSAGES: [[@LINE-1]]:24: warning: perform comparison in the duration domain [abseil-duration-comparison]
+  // CHECK-FIXES: VALUE_IF(1, absl::Seconds(5) > d1);
+#undef VALUE_IF
+#undef VALUE_IF_2
+
+#define VALUE_IF_2(e) (e)
+#define VALUE_IF(v, e, type) (v ? VALUE_IF_2(absl::To##type##Seconds(e)) : 0)
+  int a3 = VALUE_IF(1, d1, Double);
+#undef VALUE_IF
+#undef VALUE_IF_2
+
+#define VALUE_IF_2(e) (e)
+#define VALUE_IF(v, e, type) (v ? (5 > VALUE_IF_2(absl::To##type##Seconds(e))) : 0)
+  int a4 = VALUE_IF(1, d1, Double);
+#undef VALUE_IF
+#undef VALUE_IF_2
+
   // These should not match
   b = 6 < 4;
 

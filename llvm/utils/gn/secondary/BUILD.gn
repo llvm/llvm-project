@@ -9,6 +9,7 @@ group("default") {
     "//llvm/tools/llvm-dwarfdump",
     "//llvm/tools/llvm-mc",
     "//llvm/tools/llvm-nm:symlinks",
+    "//llvm/tools/llvm-objcopy:symlinks",
     "//llvm/tools/llvm-objdump:symlinks",
     "//llvm/tools/llvm-pdbutil",
     "//llvm/tools/llvm-readobj:symlinks",
@@ -57,6 +58,11 @@ group("llvm-ar") {
 group("llvm-nm") {
   deps = [
     "//llvm/tools/llvm-nm:symlinks",
+  ]
+}
+group("llvm-objcopy") {
+  deps = [
+    "//llvm/tools/llvm-objcopy:symlinks",
   ]
 }
 group("llvm-objdump") {

@@ -36,14 +36,9 @@ define <4 x i32> @combine_vec_lshr_outofrange1(<4 x i32> %x) {
 }
 
 define <4 x i32> @combine_vec_lshr_outofrange2(<4 x i32> %x) {
-; SSE-LABEL: combine_vec_lshr_outofrange2:
-; SSE:       # %bb.0:
-; SSE-NEXT:    retq
-;
-; AVX-LABEL: combine_vec_lshr_outofrange2:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    retq
+; CHECK-LABEL: combine_vec_lshr_outofrange2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
   %1 = lshr <4 x i32> %x, <i32 33, i32 34, i32 35, i32 undef>
   ret <4 x i32> %1
 }

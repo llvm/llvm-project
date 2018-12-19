@@ -5236,21 +5236,16 @@ static bool isMatchingOps(const Value *ALHS, const Value *ARHS,
   return IsMatchingOps || IsSwappedOps;
 }
 
-/// Return true if "icmp1 APred ALHS ARHS" implies "icmp2 BPred BLHS BRHS" is
-/// true.  Return false if "icmp1 APred ALHS ARHS" implies "icmp2 BPred BLHS
-/// BRHS" is false.  Otherwise, return None if we can't infer anything.
+/// Return true if "icmp1 APred X, Y" implies "icmp2 BPred X, Y" is true.
+/// Return false if "icmp1 APred X, Y" implies "icmp2 BPred X, Y" is false.
+/// Otherwise, return None if we can't infer anything.
 static Optional<bool> isImpliedCondMatchingOperands(CmpInst::Predicate APred,
-                                                    const Value *ALHS,
-                                                    const Value *ARHS,
                                                     CmpInst::Predicate BPred,
-                                                    const Value *BLHS,
-                                                    const Value *BRHS,
-                                                    bool IsSwappedOps) {
-  // Canonicalize the operands so they're matching.
-  if (IsSwappedOps) {
-    std::swap(BLHS, BRHS);
+                                                    bool AreSwappedOps) {
+  // Canonicalize the predicate as if the operands were not commuted.
+  if (AreSwappedOps)
     BPred = ICmpInst::getSwappedPredicate(BPred);
-  }
+
   if (CmpInst::isImpliedTrueByMatchingCmp(APred, BPred))
     return true;
   if (CmpInst::isImpliedFalseByMatchingCmp(APred, BPred))
@@ -5259,15 +5254,14 @@ static Optional<bool> isImpliedCondMatchingOperands(CmpInst::Predicate APred,
   return None;
 }
 
-/// Return true if "icmp1 APred ALHS C1" implies "icmp2 BPred BLHS C2" is
-/// true.  Return false if "icmp1 APred ALHS C1" implies "icmp2 BPred BLHS
-/// C2" is false.  Otherwise, return None if we can't infer anything.
+/// Return true if "icmp APred X, C1" implies "icmp BPred X, C2" is true.
+/// Return false if "icmp APred X, C1" implies "icmp BPred X, C2" is false.
+/// Otherwise, return None if we can't infer anything.
 static Optional<bool>
-isImpliedCondMatchingImmOperands(CmpInst::Predicate APred, const Value *ALHS,
+isImpliedCondMatchingImmOperands(CmpInst::Predicate APred,
                                  const ConstantInt *C1,
                                  CmpInst::Predicate BPred,
-                                 const Value *BLHS, const ConstantInt *C2) {
-  assert(ALHS == BLHS && "LHS operands must match.");
+                                 const ConstantInt *C2) {
   ConstantRange DomCR =
       ConstantRange::makeExactICmpRegion(APred, C1->getValue());
   ConstantRange CR =
@@ -5299,10 +5293,10 @@ static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
   ICmpInst::Predicate BPred = RHS->getPredicate();
 
   // Can we infer anything when the two compares have matching operands?
-  bool IsSwappedOps;
-  if (isMatchingOps(ALHS, ARHS, BLHS, BRHS, IsSwappedOps)) {
+  bool AreSwappedOps;
+  if (isMatchingOps(ALHS, ARHS, BLHS, BRHS, AreSwappedOps)) {
     if (Optional<bool> Implication = isImpliedCondMatchingOperands(
-            APred, ALHS, ARHS, BPred, BLHS, BRHS, IsSwappedOps))
+            APred, BPred, AreSwappedOps))
       return Implication;
     // No amount of additional analysis will infer the second condition, so
     // early exit.
@@ -5313,8 +5307,7 @@ static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
   // constants (not necessarily matching)?
   if (ALHS == BLHS && isa<ConstantInt>(ARHS) && isa<ConstantInt>(BRHS)) {
     if (Optional<bool> Implication = isImpliedCondMatchingImmOperands(
-            APred, ALHS, cast<ConstantInt>(ARHS), BPred, BLHS,
-            cast<ConstantInt>(BRHS)))
+            APred, cast<ConstantInt>(ARHS), BPred, cast<ConstantInt>(BRHS)))
       return Implication;
     // No amount of additional analysis will infer the second condition, so
     // early exit.

@@ -273,7 +273,7 @@ TEST_F(WorkspaceSymbolsTest, Enums) {
 TEST_F(WorkspaceSymbolsTest, Ranking) {
   addFile("foo.h", R"cpp(
       namespace ns{}
-      function func();
+      void func();
       )cpp");
   addFile("foo.cpp", R"cpp(
       #include "foo.h"

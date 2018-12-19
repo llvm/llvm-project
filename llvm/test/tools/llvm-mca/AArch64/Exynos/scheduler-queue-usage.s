@@ -2,7 +2,7 @@
 # RUN: llvm-mca -march=aarch64 -mcpu=exynos-m1 -iterations=1 -scheduler-stats -resource-pressure=false -instruction-info=false < %s | FileCheck %s -check-prefixes=ALL,M1
 # RUN: llvm-mca -march=aarch64 -mcpu=exynos-m3 -iterations=1 -scheduler-stats -resource-pressure=false -instruction-info=false < %s | FileCheck %s -check-prefixes=ALL,M3
 
-  b   t
+  b	main
 
 # ALL:      Iterations:        1
 # ALL-NEXT: Instructions:      1

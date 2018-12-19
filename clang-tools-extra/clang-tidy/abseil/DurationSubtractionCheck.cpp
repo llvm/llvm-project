@@ -42,10 +42,8 @@ void DurationSubtractionCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Scale)
     return;
 
-  llvm::Optional<std::string> RhsReplacement =
+  std::string RhsReplacement =
       rewriteExprFromNumberToDuration(Result, *Scale, Binop->getRHS());
-  if (!RhsReplacement)
-    return;
 
   const Expr *LhsArg = Result.Nodes.getNodeAs<Expr>("lhs_arg");
 
@@ -54,7 +52,7 @@ void DurationSubtractionCheck::check(const MatchFinder::MatchResult &Result) {
              Binop->getSourceRange(),
              (llvm::Twine("absl::") + FuncDecl->getName() + "(" +
               tooling::fixit::getText(*LhsArg, *Result.Context) + " - " +
-              *RhsReplacement + ")")
+              RhsReplacement + ")")
                  .str());
 }
 

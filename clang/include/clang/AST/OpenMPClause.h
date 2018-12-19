@@ -4061,8 +4061,19 @@ class OMPMapClause final : public OMPMappableExprListClause<OMPMapClause>,
     return getUniqueDeclarationsNum() + getTotalComponentListNum();
   }
 
-  /// Map type modifier for the 'map' clause.
-  OpenMPMapClauseKind MapTypeModifier = OMPC_MAP_unknown;
+public:
+  /// Number of allowed map-type-modifiers.
+  static constexpr unsigned NumberOfModifiers =
+      OMPC_MAP_MODIFIER_last - OMPC_MAP_MODIFIER_unknown - 1;
+
+private:
+  /// Map-type-modifiers for the 'map' clause.
+  OpenMPMapModifierKind MapTypeModifiers[NumberOfModifiers] = {
+    OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown
+  };
+  
+  /// Location of map-type-modifiers for the 'map' clause.
+  SourceLocation MapTypeModifiersLoc[NumberOfModifiers];
 
   /// Map type for the 'map' clause.
   OpenMPMapClauseKind MapType = OMPC_MAP_unknown;
@@ -4080,7 +4091,8 @@ class OMPMapClause final : public OMPMappableExprListClause<OMPMapClause>,
   /// NumUniqueDeclarations declarations, \a NumComponentLists total component
   /// lists, and \a NumComponents total expression components.
   ///
-  /// \param MapTypeModifier Map type modifier.
+  /// \param MapModifiers Map-type-modifiers.
+  /// \param MapModifiersLoc Locations of map-type-modifiers.
   /// \param MapType Map type.
   /// \param MapTypeIsImplicit Map type is inferred implicitly.
   /// \param MapLoc Location of the map type.
@@ -4091,7 +4103,8 @@ class OMPMapClause final : public OMPMappableExprListClause<OMPMapClause>,
   /// clause.
   /// \param NumComponentLists Number of component lists in this clause.
   /// \param NumComponents Total number of expression components in the clause.
-  explicit OMPMapClause(OpenMPMapClauseKind MapTypeModifier,
+  explicit OMPMapClause(ArrayRef<OpenMPMapModifierKind> MapModifiers,
+                        ArrayRef<SourceLocation> MapModifiersLoc,
                         OpenMPMapClauseKind MapType, bool MapTypeIsImplicit,
                         SourceLocation MapLoc, SourceLocation StartLoc,
                         SourceLocation LParenLoc, SourceLocation EndLoc,
@@ -4100,8 +4113,17 @@ class OMPMapClause final : public OMPMappableExprListClause<OMPMapClause>,
       : OMPMappableExprListClause(OMPC_map, StartLoc, LParenLoc, EndLoc,
                                   NumVars, NumUniqueDeclarations,
                                   NumComponentLists, NumComponents),
-        MapTypeModifier(MapTypeModifier), MapType(MapType),
-        MapTypeIsImplicit(MapTypeIsImplicit), MapLoc(MapLoc) {}
+        MapType(MapType), MapTypeIsImplicit(MapTypeIsImplicit),
+        MapLoc(MapLoc) {
+          assert(llvm::array_lengthof(MapTypeModifiers) == MapModifiers.size()
+                 && "Unexpected number of map type modifiers.");
+          llvm::copy(MapModifiers, std::begin(MapTypeModifiers));
+
+          assert(llvm::array_lengthof(MapTypeModifiersLoc) ==
+                     MapModifiersLoc.size() &&
+                 "Unexpected number of map type modifier locations.");
+          llvm::copy(MapModifiersLoc, std::begin(MapTypeModifiersLoc));
+  }
 
   /// Build an empty clause.
   ///
@@ -4116,10 +4138,25 @@ class OMPMapClause final : public OMPMappableExprListClause<OMPMapClause>,
             OMPC_map, SourceLocation(), SourceLocation(), SourceLocation(),
             NumVars, NumUniqueDeclarations, NumComponentLists, NumComponents) {}
 
-  /// Set type modifier for the clause.
+  /// Set map-type-modifier for the clause.
   ///
-  /// \param T Type Modifier for the clause.
-  void setMapTypeModifier(OpenMPMapClauseKind T) { MapTypeModifier = T; }
+  /// \param I index for map-type-modifier.
+  /// \param T map-type-modifier for the clause.
+  void setMapTypeModifier(unsigned I, OpenMPMapModifierKind T) {
+    assert(I < NumberOfModifiers &&
+           "Unexpected index to store map type modifier, exceeds array size.");
+    MapTypeModifiers[I] = T;
+  }
+
+  /// Set location for the map-type-modifier.
+  ///
+  /// \param I index for map-type-modifier location.
+  /// \param TLoc map-type-modifier location.
+  void setMapTypeModifierLoc(unsigned I, SourceLocation TLoc) {
+    assert(I < NumberOfModifiers &&
+           "Index to store map type modifier location exceeds array size.");
+    MapTypeModifiersLoc[I] = TLoc;
+  }
 
   /// Set type for the clause.
   ///
@@ -4143,7 +4180,8 @@ public:
   /// \param Vars The original expression used in the clause.
   /// \param Declarations Declarations used in the clause.
   /// \param ComponentLists Component lists used in the clause.
-  /// \param TypeModifier Map type modifier.
+  /// \param MapModifiers Map-type-modifiers.
+  /// \param MapModifiersLoc Location of map-type-modifiers.
   /// \param Type Map type.
   /// \param TypeIsImplicit Map type is inferred implicitly.
   /// \param TypeLoc Location of the map type.
@@ -4152,7 +4190,8 @@ public:
                               ArrayRef<Expr *> Vars,
                               ArrayRef<ValueDecl *> Declarations,
                               MappableExprComponentListsRef ComponentLists,
-                              OpenMPMapClauseKind TypeModifier,
+                              ArrayRef<OpenMPMapModifierKind> MapModifiers,
+                              ArrayRef<SourceLocation> MapModifiersLoc,
                               OpenMPMapClauseKind Type, bool TypeIsImplicit,
                               SourceLocation TypeLoc);
 
@@ -4182,9 +4221,33 @@ public:
   /// messages for some target directives.
   bool isImplicitMapType() const LLVM_READONLY { return MapTypeIsImplicit; }
 
-  /// Fetches the map type modifier for the clause.
-  OpenMPMapClauseKind getMapTypeModifier() const LLVM_READONLY {
-    return MapTypeModifier;
+  /// Fetches the map-type-modifier at 'Cnt' index of array of modifiers.
+  ///
+  /// \param Cnt index for map-type-modifier.
+  OpenMPMapModifierKind getMapTypeModifier(unsigned Cnt) const LLVM_READONLY {
+    assert(Cnt < NumberOfModifiers &&
+           "Requested modifier exceeds the total number of modifiers.");
+    return MapTypeModifiers[Cnt];
+  }
+
+  /// Fetches the map-type-modifier location at 'Cnt' index of array of
+  /// modifiers' locations.
+  ///
+  /// \param Cnt index for map-type-modifier location.  
+  SourceLocation getMapTypeModifierLoc(unsigned Cnt) const LLVM_READONLY {
+    assert(Cnt < NumberOfModifiers &&
+           "Requested modifier location exceeds total number of modifiers.");
+    return MapTypeModifiersLoc[Cnt];
+  }
+
+  /// Fetches ArrayRef of map-type-modifiers.
+  ArrayRef<OpenMPMapModifierKind> getMapTypeModifiers() const LLVM_READONLY {
+    return llvm::makeArrayRef(MapTypeModifiers);
+  }
+  
+  /// Fetches ArrayRef of location of map-type-modifiers.
+  ArrayRef<SourceLocation> getMapTypeModifiersLoc() const LLVM_READONLY {
+    return llvm::makeArrayRef(MapTypeModifiersLoc);
   }
 
   /// Fetches location of clause mapping kind.

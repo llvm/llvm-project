@@ -218,6 +218,9 @@ private:
   HostThread m_listen_thread;
   std::string m_listen_url;
 
+  CompressionType m_decompression_scratch_type;
+  void *m_decompression_scratch;
+
   DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunication);
 };
 

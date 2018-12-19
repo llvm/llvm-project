@@ -14,7 +14,7 @@ void foo() {}
 
 template <typename T, int C>
 T tmain(T argc, T *argv) {
-  T i, j, a[20], always;
+  T i, j, a[20], always, close;
 #pragma omp target
   foo();
 #pragma omp target if (target:argc > 0)
@@ -35,6 +35,14 @@ T tmain(T argc, T *argv) {
   {always++;}
 #pragma omp target map(always,i)
   {always++;i++;}
+#pragma omp target map(close,alloc: i)
+  foo();
+#pragma omp target map(close from: i)
+  foo();
+#pragma omp target map(close)
+  {close++;}
+#pragma omp target map(close,i)
+  {close++;i++;}
 #pragma omp target nowait
   foo();
 #pragma omp target depend(in : argc, argv[i:argc], a[:])
@@ -71,6 +79,19 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: always++;
 // CHECK-NEXT: i++;
 // CHECK-NEXT: }
+// CHECK-NEXT: #pragma omp target map(close,alloc: i)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target map(close,from: i)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target map(tofrom: close)
+// CHECK-NEXT: {
+// CHECK-NEXT: close++;
+// CHECK-NEXT: }
+// CHECK-NEXT: #pragma omp target map(tofrom: close,i)
+// CHECK-NEXT: {
+// CHECK-NEXT: close++;
+// CHECK-NEXT: i++;
+// CHECK-NEXT: }
 // CHECK-NEXT: #pragma omp target nowait
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target depend(in : argc,argv[i:argc],a[:])
@@ -102,6 +123,19 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: #pragma omp target map(tofrom: always,i)
 // CHECK-NEXT: {
 // CHECK-NEXT: always++;
+// CHECK-NEXT: i++;
+// CHECK-NEXT: }
+// CHECK-NEXT: #pragma omp target map(close,alloc: i)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target map(close,from: i)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target map(tofrom: close)
+// CHECK-NEXT: {
+// CHECK-NEXT: close++;
+// CHECK-NEXT: }
+// CHECK-NEXT: #pragma omp target map(tofrom: close,i)
+// CHECK-NEXT: {
+// CHECK-NEXT: close++;
 // CHECK-NEXT: i++;
 // CHECK-NEXT: }
 // CHECK-NEXT: #pragma omp target nowait
@@ -137,6 +171,19 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: always++;
 // CHECK-NEXT: i++;
 // CHECK-NEXT: }
+// CHECK-NEXT: #pragma omp target map(close,alloc: i)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target map(close,from: i)
+// CHECK-NEXT: foo()
+// CHECK-NEXT: #pragma omp target map(tofrom: close)
+// CHECK-NEXT: {
+// CHECK-NEXT: close++;
+// CHECK-NEXT: }
+// CHECK-NEXT: #pragma omp target map(tofrom: close,i)
+// CHECK-NEXT: {
+// CHECK-NEXT: close++;
+// CHECK-NEXT: i++;
+// CHECK-NEXT: }
 // CHECK-NEXT: #pragma omp target nowait
 // CHECK-NEXT: foo()
 // CHECK-NEXT: #pragma omp target depend(in : argc,argv[i:argc],a[:])
@@ -146,7 +193,7 @@ T tmain(T argc, T *argv) {
 
 // CHECK-LABEL: int main(int argc, char **argv) {
 int main (int argc, char **argv) {
-  int i, j, a[20], always;
+  int i, j, a[20], always, close;
 // CHECK-NEXT: int i, j, a[20]
 #pragma omp target
 // CHECK-NEXT: #pragma omp target
@@ -199,6 +246,31 @@ int main (int argc, char **argv) {
   {always++;i++;}
 // CHECK-NEXT: {
 // CHECK-NEXT: always++;
+// CHECK-NEXT: i++;
+// CHECK-NEXT: }
+
+#pragma omp target map(close,alloc: i)
+// CHECK-NEXT: #pragma omp target map(close,alloc: i)
+  foo();
+// CHECK-NEXT: foo();
+
+#pragma omp target map(close from: i)
+// CHECK-NEXT: #pragma omp target map(close,from: i)
+  foo();
+// CHECK-NEXT: foo();
+
+#pragma omp target map(close)
+// CHECK-NEXT: #pragma omp target map(tofrom: close)
+  {close++;}
+// CHECK-NEXT: {
+// CHECK-NEXT: close++;
+// CHECK-NEXT: }
+
+#pragma omp target map(close,i)
+// CHECK-NEXT: #pragma omp target map(tofrom: close,i)
+  {close++;i++;}
+// CHECK-NEXT: {
+// CHECK-NEXT: close++;
 // CHECK-NEXT: i++;
 // CHECK-NEXT: }
 

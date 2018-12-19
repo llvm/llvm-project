@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_PARSE_PARSER_H
 #define LLVM_CLANG_PARSE_PARSER_H
 
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Availability.h"
 #include "clang/Basic/BitmaskEnum.h"
 #include "clang/Basic/OpenMPKinds.h"
@@ -2876,7 +2877,10 @@ public:
     DeclarationNameInfo ReductionId;
     OpenMPDependClauseKind DepKind = OMPC_DEPEND_unknown;
     OpenMPLinearClauseKind LinKind = OMPC_LINEAR_val;
-    OpenMPMapClauseKind MapTypeModifier = OMPC_MAP_unknown;
+    SmallVector<OpenMPMapModifierKind, OMPMapClause::NumberOfModifiers>
+    MapTypeModifiers;
+    SmallVector<SourceLocation, OMPMapClause::NumberOfModifiers>
+    MapTypeModifiersLoc;
     OpenMPMapClauseKind MapType = OMPC_MAP_unknown;
     bool IsMapTypeImplicit = false;
     SourceLocation DepLinMapLoc;

@@ -37,7 +37,8 @@
 
 #include "llvm/ADT/StringSwitch.h"
 
-#if defined(HAVE_LIBCOMPRESSION)
+#if defined(__APPLE__)
+#define HAVE_LIBCOMPRESSION
 #include <compression.h>
 #endif
 

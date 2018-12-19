@@ -440,13 +440,13 @@ def : InstRW<[M1WriteCOPY], (instrs COPY)>;
 // Miscellaneous instructions.
 
 // Load instructions.
-def : InstRW<[M1WriteLC,
-              ReadAdrBase], (instregex "^LDR(BB|HH|SBW|SBX|SHW|SWX|SW|W|X)roW")>;
-def : InstRW<[M1WriteL5,
-              ReadAdrBase], (instregex "^LDR(BB|HH|SBW|SBX|SHW|SWX|SW|W|X)roX")>;
 def : InstRW<[M1WriteLB,
               WriteLDHi,
               WriteAdr],    (instregex "^LDP(SW|W|X)(post|pre)")>;
+def : InstRW<[M1WriteLC,
+              ReadAdrBase], (instregex "^LDR(BB|SBW|SBX|HH|SHW|SHX|SW|W|X)roW")>;
+def : InstRW<[M1WriteL5,
+              ReadAdrBase], (instregex "^LDR(BB|SBW|SBX|HH|SHW|SHX|SW|W|X)roX")>;
 def : InstRW<[M1WriteLC,
               ReadAdrBase], (instrs PRFMroW)>;
 def : InstRW<[M1WriteL5,

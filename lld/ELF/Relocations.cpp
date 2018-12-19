@@ -66,6 +66,14 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
+static Optional<std::string> getLinkerScriptLocation(const Symbol &Sym) {
+  for (BaseCommand *Base : Script->SectionCommands)
+    if (auto *Cmd = dyn_cast<SymbolAssignment>(Base))
+      if (Cmd->Sym == &Sym)
+        return Cmd->Location;
+  return None;
+}
+
 // Construct a message in the following format.
 //
 // >>> defined in /home/alice/src/foo.o
@@ -73,8 +81,13 @@ using namespace lld::elf;
 // >>>               /home/alice/src/bar.o:(.text+0x1)
 static std::string getLocation(InputSectionBase &S, const Symbol &Sym,
                                uint64_t Off) {
-  std::string Msg =
-      "\n>>> defined in " + toString(Sym.File) + "\n>>> referenced by ";
+  std::string Msg = "\n>>> defined in ";
+  if (Sym.File)
+    Msg += toString(Sym.File);
+  else if (Optional<std::string> Loc = getLinkerScriptLocation(Sym))
+    Msg += *Loc;
+
+  Msg += "\n>>> referenced by ";
   std::string Src = S.getSrcMsg(Sym, Off);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";

@@ -65,7 +65,7 @@ llvm::Optional<DurationScale> getScaleForInverse(llvm::StringRef Name);
 
 /// Assuming `Node` has type `double` or `int` representing a time interval of
 /// `Scale`, return the expression to make it a suitable `Duration`.
-llvm::Optional<std::string> rewriteExprFromNumberToDuration(
+std::string rewriteExprFromNumberToDuration(
     const ast_matchers::MatchFinder::MatchResult &Result, DurationScale Scale,
     const Expr *Node);
 

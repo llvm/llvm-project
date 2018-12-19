@@ -5175,12 +5175,12 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
     return ROR;
 
   // Canonicalize (or (and X, c1), c2) -> (and (or X, c2), c1|c2)
-  // iff (c1 & c2) != 0.
-  auto MatchIntersect = [](ConstantSDNode *LHS, ConstantSDNode *RHS) {
-    return LHS->getAPIntValue().intersects(RHS->getAPIntValue());
+  // iff (c1 & c2) != 0 or c1/c2 are undef.
+  auto MatchIntersect = [](ConstantSDNode *C1, ConstantSDNode *C2) {
+    return !C1 || !C2 || C1->getAPIntValue().intersects(C2->getAPIntValue());
   };
   if (N0.getOpcode() == ISD::AND && N0.getNode()->hasOneUse() &&
-      ISD::matchBinaryPredicate(N0.getOperand(1), N1, MatchIntersect)) {
+      ISD::matchBinaryPredicate(N0.getOperand(1), N1, MatchIntersect, true)) {
     if (SDValue COR = DAG.FoldConstantArithmetic(
             ISD::OR, SDLoc(N1), VT, N1.getNode(), N0.getOperand(1).getNode())) {
       SDValue IOR = DAG.getNode(ISD::OR, SDLoc(N0), VT, N0.getOperand(0), N1);
@@ -8064,10 +8064,15 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const TargetLowering &TLI,
   unsigned NumElts = VT.getVectorNumElements();
   SDLoc DL(N);
 
-  for (unsigned i=0; i != NumElts; ++i) {
-    SDValue Op = N0->getOperand(i);
-    if (Op->isUndef()) {
-      Elts.push_back(DAG.getUNDEF(SVT));
+  // For zero-extensions, UNDEF elements still guarantee to have the upper
+  // bits set to zero.
+  bool IsZext =
+      Opcode == ISD::ZERO_EXTEND || Opcode == ISD::ZERO_EXTEND_VECTOR_INREG;
+
+  for (unsigned i = 0; i != NumElts; ++i) {
+    SDValue Op = N0.getOperand(i);
+    if (Op.isUndef()) {
+      Elts.push_back(IsZext ? DAG.getConstant(0, DL, SVT) : DAG.getUNDEF(SVT));
       continue;
     }
 
