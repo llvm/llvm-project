@@ -394,13 +394,27 @@ SVal StoreManager::attemptDownCast(SVal Base, QualType TargetType,
   return UnknownVal();
 }
 
+static bool isScalarEnoughToAttemptACast(QualType T) {
+  return T->isIntegralOrEnumerationType() || T->isAnyPointerType() ||
+         T->isReferenceType();
+}
+
 /// CastRetrievedVal - Used by subclasses of StoreManager to implement
 ///  implicit casts that arise from loads from regions that are reinterpreted
 ///  as another region.
 SVal StoreManager::CastRetrievedVal(SVal V, const TypedValueRegion *R,
-                                    QualType castTy) {
-  if (castTy.isNull() || V.isUnknownOrUndef())
+                                    QualType CastTy) {
+  if (CastTy.isNull() || V.isUnknownOrUndef())
     return V;
+
+  QualType OrigTy = R->getValueType();
+
+  if (!isScalarEnoughToAttemptACast(OrigTy) ||
+      !isScalarEnoughToAttemptACast(CastTy)) {
+    if (OrigTy.getUnqualifiedType() == CastTy.getUnqualifiedType())
+      return V;
+    return UnknownVal();
+  }
 
   // When retrieving symbolic pointer and expecting a non-void pointer,
   // wrap them into element regions of the expected type if necessary.
@@ -410,13 +424,13 @@ SVal StoreManager::CastRetrievedVal(SVal V, const TypedValueRegion *R,
   // We might need to do that for non-void pointers as well.
   // FIXME: We really need a single good function to perform casts for us
   // correctly every time we need it.
-  if (castTy->isPointerType() && !castTy->isVoidPointerType())
+  if (CastTy->isPointerType() && !CastTy->isVoidPointerType())
     if (const auto *SR = dyn_cast_or_null<SymbolicRegion>(V.getAsRegion()))
       if (SR->getSymbol()->getType().getCanonicalType() !=
-          castTy.getCanonicalType())
-        return loc::MemRegionVal(castRegion(SR, castTy));
+          CastTy.getCanonicalType())
+        return loc::MemRegionVal(castRegion(SR, CastTy));
 
-  return svalBuilder.dispatchCast(V, castTy);
+  return svalBuilder.dispatchCast(V, CastTy);
 }
 
 SVal StoreManager::getLValueFieldOrIvar(const Decl *D, SVal Base) {

@@ -9487,31 +9487,14 @@ static Value *EmitX86SExtMask(CodeGenFunction &CGF, Value *Op,
   return CGF.Builder.CreateSExt(Mask, DstTy, "vpmovm2");
 }
 
-// Emit addition or subtraction with saturation.
-// Handles both signed and unsigned intrinsics.
-static Value *EmitX86AddSubSatExpr(CodeGenFunction &CGF, const CallExpr *E,
+// Emit addition or subtraction with unsigned saturation.
+// TODO: Handle signed intrinsics.
+static Value *EmitX86AddSubSatExpr(CodeGenFunction &CGF,
                                    SmallVectorImpl<Value *> &Ops,
                                    bool IsAddition) {
-
-  // Collect vector elements and type data.
-  llvm::Type *ResultType = CGF.ConvertType(E->getType());
-
-  Value *Res;
-  if (IsAddition) {
-    // ADDUS: a > (a+b) ? ~0 : (a+b)
-    // If Ops[0] > Add, overflow occurred.
-    Value *Add = CGF.Builder.CreateAdd(Ops[0], Ops[1]);
-    Value *ICmp = CGF.Builder.CreateICmp(ICmpInst::ICMP_UGT, Ops[0], Add);
-    Value *Max = llvm::Constant::getAllOnesValue(ResultType);
-    Res = CGF.Builder.CreateSelect(ICmp, Max, Add);
-  } else {
-    // SUBUS: max(a, b) - b
-    Value *ICmp = CGF.Builder.CreateICmp(ICmpInst::ICMP_UGT, Ops[0], Ops[1]);
-    Value *Select = CGF.Builder.CreateSelect(ICmp, Ops[0], Ops[1]);
-    Res = CGF.Builder.CreateSub(Select, Ops[1]);
-  }
-
-  return Res;
+  Intrinsic::ID IID = IsAddition ? Intrinsic::uadd_sat : Intrinsic::usub_sat;
+  llvm::Function *F = CGF.CGM.getIntrinsic(IID, Ops[0]->getType());
+  return CGF.Builder.CreateCall(F, {Ops[0], Ops[1]});
 }
 
 Value *CodeGenFunction::EmitX86CpuIs(const CallExpr *E) {
@@ -11382,14 +11365,14 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_paddusw256:
   case X86::BI__builtin_ia32_paddusb128:
   case X86::BI__builtin_ia32_paddusw128:
-    return EmitX86AddSubSatExpr(*this, E, Ops, true /* IsAddition */);
+    return EmitX86AddSubSatExpr(*this, Ops, true /* IsAddition */);
   case X86::BI__builtin_ia32_psubusb512:
   case X86::BI__builtin_ia32_psubusw512:
   case X86::BI__builtin_ia32_psubusb256:
   case X86::BI__builtin_ia32_psubusw256:
   case X86::BI__builtin_ia32_psubusb128:
   case X86::BI__builtin_ia32_psubusw128:
-    return EmitX86AddSubSatExpr(*this, E, Ops, false /* IsAddition */);
+    return EmitX86AddSubSatExpr(*this, Ops, false /* IsAddition */);
   }
 }
 

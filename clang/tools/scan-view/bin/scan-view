@@ -11,7 +11,10 @@ import os
 import posixpath
 import threading
 import time
-import urllib
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib2 import urlopen
 import webbrowser
 
 # How long to wait for server to start.
@@ -29,7 +32,7 @@ kMaxPortsToTry = 100
 
 def url_is_up(url):
     try:
-        o = urllib.urlopen(url)
+        o = urlopen(url)
     except IOError:
         return False
     o.close()
@@ -37,7 +40,6 @@ def url_is_up(url):
 
 
 def start_browser(port, options):
-    import urllib
     import webbrowser
 
     url = 'http://%s:%d' % (options.host, port)
