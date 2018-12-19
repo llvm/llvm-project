@@ -275,6 +275,9 @@ def NewDeleteLeaksChecker : Checker<"NewDeleteLeaks">,
 def CXXSelfAssignmentChecker : Checker<"SelfAssignment">,
   HelpText<"Checks C++ copy and move assignment operators for self assignment">;
 
+def MoveChecker: Checker<"Move">,
+   HelpText<"Find use-after-move bugs in C++">;
+
 } // end: "cplusplus"
 
 let ParentPackage = CplusplusOptIn in {
@@ -302,9 +305,6 @@ def IteratorRangeChecker : Checker<"IteratorRange">,
 def MismatchedIteratorChecker : Checker<"MismatchedIterator">,
   HelpText<"Check for use of iterators of different containers where iterators "
            "of the same container are expected">;
-
-def MoveChecker: Checker<"Move">,
-     HelpText<"Find use-after-move bugs in C++">;
 
 def UninitializedObjectChecker: Checker<"UninitializedObject">,
      HelpText<"Reports uninitialized fields after object construction">;
