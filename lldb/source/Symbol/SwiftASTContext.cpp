@@ -8167,19 +8167,25 @@ bool SwiftASTContext::PerformAutoImport(SwiftASTContext &swift_ast_context,
   llvm::SmallVector<swift::SourceFile::ImportedModuleDesc, 2>
       additional_imports;
 
-    if (!LoadOneModule(ConstString("Swift"), swift_ast_context, stack_frame_wp,
-                       additional_imports, error))
-      return false;
-    const std::vector<ConstString> *cu_modules = nullptr;
-    CompileUnit *compile_unit = sc.comp_unit;
-    if (compile_unit && compile_unit->GetLanguage() == lldb::eLanguageTypeSwift)
-      cu_modules = &compile_unit->GetImportedModules();
-    if (cu_modules) {
-      for (const ConstString &module_name : *cu_modules) {
-        if (!LoadOneModule(module_name, swift_ast_context, stack_frame_wp,
-                           additional_imports, error))
-          return false;
-      }
+  // Import the Swift standard library and its dependecies.
+  if (!LoadOneModule(ConstString("Swift"), swift_ast_context, stack_frame_wp,
+                     additional_imports, error))
+    return false;
+
+  CompileUnit *compile_unit = sc.comp_unit;
+  if (compile_unit && compile_unit->GetLanguage() == lldb::eLanguageTypeSwift)
+    for (const auto &module_name : compile_unit->GetImportedModules()) {
+      // When building the Swift stdlib with debug info these will
+      // show up in "Swift.o", but we already imported them and
+      // manually importing them will fail.
+      if (llvm::StringSwitch<bool>(module_name.GetStringRef())
+          .Cases("Swift", "SwiftShims", "Builtin", true)
+              .Default(false))
+        continue;
+
+      if (!LoadOneModule(module_name, swift_ast_context, stack_frame_wp,
+                         additional_imports, error))
+        return false;
     }
   // source_file might be NULL outside of the expression parser, where
   // we don't need to notify the source file of additional imports.
