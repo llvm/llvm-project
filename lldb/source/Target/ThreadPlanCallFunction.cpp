@@ -540,24 +540,25 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
         ConstString persistent_variable_name(
             persistent_state->GetNextPersistentVariableName(GetTarget(),
                                                             prefix));
-        m_return_valobj_sp = SwiftLanguageRuntime::CalculateErrorValue(
-            frame_sp, persistent_variable_name);
+        if (m_return_valobj_sp = SwiftLanguageRuntime::CalculateErrorValue(
+                frame_sp, persistent_variable_name)) {
 
-        DataExtractor data;
-        Status data_error;
-        size_t data_size =
-            m_return_valobj_sp->GetStaticValue()->GetData(data, data_error);
+          DataExtractor data;
+          Status data_error;
+          uint64_t data_size =
+              m_return_valobj_sp->GetStaticValue()->GetData(data, data_error);
 
-        if (data_size == data.GetAddressByteSize()) {
-          lldb::offset_t offset = 0;
-          lldb::addr_t addr = data.GetAddress(&offset);
+          if (data_size == data.GetAddressByteSize()) {
+            lldb::offset_t offset = 0;
+            lldb::addr_t addr = data.GetAddress(&offset);
 
-          SwiftLanguageRuntime::RegisterGlobalError(
-              GetTarget(), persistent_variable_name, addr);
+            SwiftLanguageRuntime::RegisterGlobalError(
+                GetTarget(), persistent_variable_name, addr);
+          }
+
+          m_hit_error_backstop = true;
+          return true;
         }
-
-        m_hit_error_backstop = true;
-        return true;
       }
     }
   }
