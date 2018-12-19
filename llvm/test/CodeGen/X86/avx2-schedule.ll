@@ -1215,12 +1215,12 @@ define <32 x i8> @test_paddusb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; ZNVER1-NEXT:    vpaddusb %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpaddusb (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
-  %1 = call <32 x i8> @llvm.x86.avx2.paddus.b(<32 x i8> %a0, <32 x i8> %a1)
+  %1 = call <32 x i8> @llvm.uadd.sat.v32i8(<32 x i8> %a0, <32 x i8> %a1)
   %2 = load <32 x i8>, <32 x i8> *%a2, align 32
-  %3 = call <32 x i8> @llvm.x86.avx2.paddus.b(<32 x i8> %1, <32 x i8> %2)
+  %3 = call <32 x i8> @llvm.uadd.sat.v32i8(<32 x i8> %1, <32 x i8> %2)
   ret <32 x i8> %3
 }
-declare <32 x i8> @llvm.x86.avx2.paddus.b(<32 x i8>, <32 x i8>) nounwind readnone
+declare <32 x i8> @llvm.uadd.sat.v32i8(<32 x i8>, <32 x i8>) nounwind readnone
 
 define <16 x i16> @test_paddusw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) {
 ; GENERIC-LABEL: test_paddusw:
@@ -1258,12 +1258,12 @@ define <16 x i16> @test_paddusw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; ZNVER1-NEXT:    vpaddusw %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpaddusw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
-  %1 = call <16 x i16> @llvm.x86.avx2.paddus.w(<16 x i16> %a0, <16 x i16> %a1)
+  %1 = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> %a0, <16 x i16> %a1)
   %2 = load <16 x i16>, <16 x i16> *%a2, align 32
-  %3 = call <16 x i16> @llvm.x86.avx2.paddus.w(<16 x i16> %1, <16 x i16> %2)
+  %3 = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> %1, <16 x i16> %2)
   ret <16 x i16> %3
 }
-declare <16 x i16> @llvm.x86.avx2.paddus.w(<16 x i16>, <16 x i16>) nounwind readnone
+declare <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <16 x i16> @test_paddw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) {
 ; GENERIC-LABEL: test_paddw:
@@ -6591,12 +6591,12 @@ define <32 x i8> @test_psubusb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; ZNVER1-NEXT:    vpsubusb %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpsubusb (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
-  %1 = call <32 x i8> @llvm.x86.avx2.psubus.b(<32 x i8> %a0, <32 x i8> %a1)
+  %1 = call <32 x i8> @llvm.usub.sat.v32i8(<32 x i8> %a0, <32 x i8> %a1)
   %2 = load <32 x i8>, <32 x i8> *%a2, align 32
-  %3 = call <32 x i8> @llvm.x86.avx2.psubus.b(<32 x i8> %1, <32 x i8> %2)
+  %3 = call <32 x i8> @llvm.usub.sat.v32i8(<32 x i8> %1, <32 x i8> %2)
   ret <32 x i8> %3
 }
-declare <32 x i8> @llvm.x86.avx2.psubus.b(<32 x i8>, <32 x i8>) nounwind readnone
+declare <32 x i8> @llvm.usub.sat.v32i8(<32 x i8>, <32 x i8>) nounwind readnone
 
 define <16 x i16> @test_psubusw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) {
 ; GENERIC-LABEL: test_psubusw:
@@ -6634,12 +6634,12 @@ define <16 x i16> @test_psubusw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; ZNVER1-NEXT:    vpsubusw %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    vpsubusw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
-  %1 = call <16 x i16> @llvm.x86.avx2.psubus.w(<16 x i16> %a0, <16 x i16> %a1)
+  %1 = call <16 x i16> @llvm.usub.sat.v16i16(<16 x i16> %a0, <16 x i16> %a1)
   %2 = load <16 x i16>, <16 x i16> *%a2, align 32
-  %3 = call <16 x i16> @llvm.x86.avx2.psubus.w(<16 x i16> %1, <16 x i16> %2)
+  %3 = call <16 x i16> @llvm.usub.sat.v16i16(<16 x i16> %1, <16 x i16> %2)
   ret <16 x i16> %3
 }
-declare <16 x i16> @llvm.x86.avx2.psubus.w(<16 x i16>, <16 x i16>) nounwind readnone
+declare <16 x i16> @llvm.usub.sat.v16i16(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <16 x i16> @test_psubw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) {
 ; GENERIC-LABEL: test_psubw:

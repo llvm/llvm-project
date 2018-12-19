@@ -1216,6 +1216,9 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
       StrictDom = true;
   }
 
+  VgprUB = std::max(getMaxVGPR(), Other.getMaxVGPR());
+  SgprUB = std::max(getMaxSGPR(), Other.getMaxSGPR());
+
   return StrictDom;
 }
 
