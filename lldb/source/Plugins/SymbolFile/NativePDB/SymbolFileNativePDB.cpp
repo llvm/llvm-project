@@ -419,7 +419,7 @@ SymbolFileNativePDB::CreateCompileUnit(const CompilandIndexItem &cci) {
   if (cci.m_compile_opts && cci.m_compile_opts->hasOptimizations())
     optimized = eLazyBoolYes;
 
-  llvm::StringRef source_file_name =
+  llvm::SmallString<64> source_file_name =
       m_index->compilands().GetMainSourceFile(cci);
   FileSpec fs(source_file_name);
 
