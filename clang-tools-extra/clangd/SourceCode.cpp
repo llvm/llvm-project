@@ -183,34 +183,49 @@ std::vector<TextEdit> replacementsToEdits(StringRef Code,
   return Edits;
 }
 
-Optional<std::string> getRealPath(const FileEntry *F,
-                                  const SourceManager &SourceMgr) {
+Optional<std::string> getCanonicalPath(const FileEntry *F,
+                                       const SourceManager &SourceMgr) {
+  if (!F)
+    return None;
   // Ideally, we get the real path from the FileEntry object.
   SmallString<128> FilePath = F->tryGetRealPathName();
-  if (!FilePath.empty()) {
+  if (!FilePath.empty() && sys::path::is_absolute(FilePath))
     return FilePath.str().str();
-  }
 
   // Otherwise, we try to compute ourselves.
-  vlog("FileEntry for {0} did not contain the real path.", F->getName());
+  FilePath = F->getName();
+  vlog("FileEntry for {0} did not contain the real path.", FilePath);
 
-  SmallString<128> Path = F->getName();
-
-  if (!sys::path::is_absolute(Path)) {
-    if (!SourceMgr.getFileManager().makeAbsolutePath(Path)) {
-      log("Could not turn relative path to absolute: {0}", Path);
+  if (!sys::path::is_absolute(FilePath)) {
+    if (auto EC =
+            SourceMgr.getFileManager().getVirtualFileSystem()->makeAbsolute(
+                FilePath)) {
+      elog("Could not turn relative path '{0}' to absolute: {1}", FilePath,
+           EC.message());
       return None;
     }
   }
 
-  SmallString<128> RealPath;
-  if (SourceMgr.getFileManager().getVirtualFileSystem()->getRealPath(
-          Path, RealPath)) {
-    log("Could not compute real path: {0}", Path);
-    return Path.str().str();
+  // Handle the symbolic link path case where the current working directory
+  // (getCurrentWorkingDirectory) is a symlink./ We always want to the real
+  // file path (instead of the symlink path) for the  C++ symbols.
+  //
+  // Consider the following example:
+  //
+  //   src dir: /project/src/foo.h
+  //   current working directory (symlink): /tmp/build -> /project/src/
+  //
+  //  The file path of Symbol is "/project/src/foo.h" instead of
+  //  "/tmp/build/foo.h"
+  if (const DirectoryEntry *Dir = SourceMgr.getFileManager().getDirectory(
+          sys::path::parent_path(FilePath))) {
+    SmallString<128> RealPath;
+    StringRef DirName = SourceMgr.getFileManager().getCanonicalName(Dir);
+    sys::path::append(RealPath, DirName, sys::path::filename(FilePath));
+    return RealPath.str().str();
   }
 
-  return RealPath.str().str();
+  return FilePath.str().str();
 }
 
 TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
