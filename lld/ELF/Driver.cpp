@@ -407,8 +407,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
       Tar->append("version.txt", getLLDVersion() + "\n");
       make<std::unique_ptr<TarWriter>>(std::move(*ErrOrWriter));
     } else {
-      error(Twine("--reproduce: failed to open ") + Path + ": " +
-            toString(ErrOrWriter.takeError()));
+      error("--reproduce: " + toString(ErrOrWriter.takeError()));
     }
   }
 

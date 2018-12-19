@@ -81,6 +81,9 @@ GDBRemoteCommunication::~GDBRemoteCommunication() {
     Disconnect();
   }
 
+  if (m_decompression_scratch)
+    free (m_decompression_scratch);
+
   // Stop the communications read thread which is used to parse all incoming
   // packets.  This function will block until the read thread returns.
   if (m_read_thread_enabled)
