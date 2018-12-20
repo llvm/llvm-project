@@ -65,6 +65,7 @@
 #include <term.h>
 #include <utmpx.h>
 #include <wchar.h>
+#include <vis.h>
 
 #define _KERNEL  // to declare 'shminfo' structure
 # include <sys/shm.h>
@@ -338,6 +339,8 @@ namespace __sanitizer {
 
   const int si_SEGV_MAPERR = SEGV_MAPERR;
   const int si_SEGV_ACCERR = SEGV_ACCERR;
+  const int unvis_valid = UNVIS_VALID;
+  const int unvis_validpush = UNVIS_VALIDPUSH;
 } // namespace __sanitizer
 
 using namespace __sanitizer;
