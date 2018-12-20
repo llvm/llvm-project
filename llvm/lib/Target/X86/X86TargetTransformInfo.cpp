@@ -1886,7 +1886,7 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::FSQRT,      MVT::v4f32,  56 }, // Pentium III from http://www.agner.org/
   };
   static const CostTblEntry X64CostTbl[] = { // 64-bit targets
-    { ISD::BITREVERSE, MVT::i64,    14 } 
+    { ISD::BITREVERSE, MVT::i64,    14 }
   };
   static const CostTblEntry X86CostTbl[] = { // 32 or 64-bit targets
     { ISD::BITREVERSE, MVT::i32,    14 },
@@ -2899,6 +2899,9 @@ X86TTIImpl::enableMemCmpExpansion(bool IsZeroCmp) const {
     Options.LoadSizes.push_back(4);
     Options.LoadSizes.push_back(2);
     Options.LoadSizes.push_back(1);
+    // All GPR and vector loads can be unaligned. SIMD compare requires integer
+    // vectors (SSE2/AVX2).
+    Options.AllowOverlappingLoads = true;
     return Options;
   }();
   return IsZeroCmp ? &EqZeroOptions : &ThreeWayOptions;

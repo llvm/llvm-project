@@ -151,11 +151,11 @@ define <2 x i64> @test_mm_adds_epi8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %res = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %arg0, <16 x i8> %arg1)
+  %res = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> %arg0, <16 x i8> %arg1)
   %bc = bitcast <16 x i8> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8>, <16 x i8>) nounwind readnone
+declare <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8>, <16 x i8>) nounwind readnone
 
 define <2 x i64> @test_mm_adds_epi16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; SSE-LABEL: test_mm_adds_epi16:
@@ -174,11 +174,11 @@ define <2 x i64> @test_mm_adds_epi16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16> %arg0, <8 x i16> %arg1)
+  %res = call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> %arg0, <8 x i16> %arg1)
   %bc = bitcast <8 x i16> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16>, <8 x i16>) nounwind readnone
+declare <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_adds_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; SSE-LABEL: test_mm_adds_epu8:
@@ -6174,11 +6174,11 @@ define <2 x i64> @test_mm_subs_epi8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %res = call <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8> %arg0, <16 x i8> %arg1)
+  %res = call <16 x i8> @llvm.ssub.sat.v16i8(<16 x i8> %arg0, <16 x i8> %arg1)
   %bc = bitcast <16 x i8> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8>, <16 x i8>) nounwind readnone
+declare <16 x i8> @llvm.ssub.sat.v16i8(<16 x i8>, <16 x i8>) nounwind readnone
 
 define <2 x i64> @test_mm_subs_epi16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; SSE-LABEL: test_mm_subs_epi16:
@@ -6197,11 +6197,11 @@ define <2 x i64> @test_mm_subs_epi16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16> %arg0, <8 x i16> %arg1)
+  %res = call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> %arg0, <8 x i16> %arg1)
   %bc = bitcast <8 x i16> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16>, <8 x i16>) nounwind readnone
+declare <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_subs_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; SSE-LABEL: test_mm_subs_epu8:

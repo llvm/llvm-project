@@ -16,14 +16,7 @@ declare <64 x i8> @llvm.fshl.v64i8(<64 x i8>, <64 x i8>, <64 x i8>)
 define <8 x i64> @var_funnnel_v8i64(<8 x i64> %x, <8 x i64> %amt) nounwind {
 ; AVX512-LABEL: var_funnnel_v8i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [63,63,63,63,63,63,63,63]
-; AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm3
-; AVX512-NEXT:    vpsllvq %zmm3, %zmm0, %zmm3
-; AVX512-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX512-NEXT:    vpsubq %zmm1, %zmm4, %zmm1
-; AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm1
-; AVX512-NEXT:    vpsrlvq %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vporq %zmm0, %zmm3, %zmm0
+; AVX512-NEXT:    vprolvq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %res = call <8 x i64> @llvm.fshl.v8i64(<8 x i64> %x, <8 x i64> %x, <8 x i64> %amt)
   ret <8 x i64> %res
@@ -32,14 +25,7 @@ define <8 x i64> @var_funnnel_v8i64(<8 x i64> %x, <8 x i64> %amt) nounwind {
 define <16 x i32> @var_funnnel_v16i32(<16 x i32> %x, <16 x i32> %amt) nounwind {
 ; AVX512-LABEL: var_funnnel_v16i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [31,31,31,31,31,31,31,31,31,31,31,31,31,31,31,31]
-; AVX512-NEXT:    vpandd %zmm2, %zmm1, %zmm3
-; AVX512-NEXT:    vpsllvd %zmm3, %zmm0, %zmm3
-; AVX512-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX512-NEXT:    vpsubd %zmm1, %zmm4, %zmm1
-; AVX512-NEXT:    vpandd %zmm2, %zmm1, %zmm1
-; AVX512-NEXT:    vpsrlvd %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpord %zmm0, %zmm3, %zmm0
+; AVX512-NEXT:    vprolvd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %res = call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %x, <16 x i32> %x, <16 x i32> %amt)
   ret <16 x i32> %res
@@ -313,14 +299,7 @@ define <8 x i64> @splatvar_funnnel_v8i64(<8 x i64> %x, <8 x i64> %amt) nounwind 
 ; AVX512-LABEL: splatvar_funnnel_v8i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpbroadcastq %xmm1, %zmm1
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm2 = [63,63]
-; AVX512-NEXT:    vpand %xmm2, %xmm1, %xmm3
-; AVX512-NEXT:    vpsllq %xmm3, %zmm0, %zmm3
-; AVX512-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX512-NEXT:    vpsubq %xmm1, %xmm4, %xmm1
-; AVX512-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpsrlq %xmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vporq %zmm0, %zmm3, %zmm0
+; AVX512-NEXT:    vprolvq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %splat = shufflevector <8 x i64> %amt, <8 x i64> undef, <8 x i32> zeroinitializer
   %res = call <8 x i64> @llvm.fshl.v8i64(<8 x i64> %x, <8 x i64> %x, <8 x i64> %splat)
@@ -331,16 +310,7 @@ define <16 x i32> @splatvar_funnnel_v16i32(<16 x i32> %x, <16 x i32> %amt) nounw
 ; AVX512-LABEL: splatvar_funnnel_v16i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpbroadcastd %xmm1, %zmm1
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [31,31,31,31]
-; AVX512-NEXT:    vpand %xmm2, %xmm1, %xmm3
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero
-; AVX512-NEXT:    vpslld %xmm3, %zmm0, %zmm3
-; AVX512-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX512-NEXT:    vpsubd %xmm1, %xmm4, %xmm1
-; AVX512-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; AVX512-NEXT:    vpsrld %xmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpord %zmm0, %zmm3, %zmm0
+; AVX512-NEXT:    vprolvd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %splat = shufflevector <16 x i32> %amt, <16 x i32> undef, <16 x i32> zeroinitializer
   %res = call <16 x i32> @llvm.fshl.v16i32(<16 x i32> %x, <16 x i32> %x, <16 x i32> %splat)
