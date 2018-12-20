@@ -73,6 +73,7 @@ private:
                           MachineBasicBlock::iterator MBBI,
                           MachineRegisterInfo &MRI) const;
   bool selectBuildVector(MachineInstr &I, MachineRegisterInfo &MRI) const;
+  bool selectMergeValues(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
   ComplexRendererFns selectArithImmed(MachineOperand &Root) const;
 
@@ -1553,6 +1554,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
   }
   case TargetOpcode::G_BUILD_VECTOR:
     return selectBuildVector(I, MRI);
+  case TargetOpcode::G_MERGE_VALUES:
+    return selectMergeValues(I, MRI);
   }
 
   return false;
@@ -1588,6 +1591,52 @@ bool AArch64InstructionSelector::emitScalarToVector(
   default:
     return false;
   }
+}
+
+bool AArch64InstructionSelector::selectMergeValues(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_MERGE_VALUES && "unexpected opcode");
+  const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
+  const LLT SrcTy = MRI.getType(I.getOperand(1).getReg());
+  assert(!DstTy.isVector() && !SrcTy.isVector() && "invalid merge operation");
+
+  // At the moment we only support merging two s32s into an s64.
+  if (I.getNumOperands() != 3)
+    return false;
+  if (DstTy.getSizeInBits() != 64 || SrcTy.getSizeInBits() != 32)
+    return false;
+  const RegisterBank &RB = *RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI);
+  if (RB.getID() != AArch64::GPRRegBankID)
+    return false;
+
+  auto *DstRC = &AArch64::GPR64RegClass;
+  unsigned SubToRegDef = MRI.createVirtualRegister(DstRC);
+  MachineInstr &SubRegMI = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                    TII.get(TargetOpcode::SUBREG_TO_REG))
+                                .addDef(SubToRegDef)
+                                .addImm(0)
+                                .addUse(I.getOperand(1).getReg())
+                                .addImm(AArch64::sub_32);
+  unsigned SubToRegDef2 = MRI.createVirtualRegister(DstRC);
+  // Need to anyext the second scalar before we can use bfm
+  MachineInstr &SubRegMI2 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                    TII.get(TargetOpcode::SUBREG_TO_REG))
+                                .addDef(SubToRegDef2)
+                                .addImm(0)
+                                .addUse(I.getOperand(2).getReg())
+                                .addImm(AArch64::sub_32);
+  MachineInstr &BFM =
+      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AArch64::BFMXri))
+           .addDef(I.getOperand(0).getReg())
+           .addUse(SubToRegDef)
+           .addUse(SubToRegDef2)
+           .addImm(32)
+           .addImm(31);
+  constrainSelectedInstRegOperands(SubRegMI, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(SubRegMI2, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(BFM, TII, TRI, RBI);
+  I.eraseFromParent();
+  return true;
 }
 
 bool AArch64InstructionSelector::selectBuildVector(

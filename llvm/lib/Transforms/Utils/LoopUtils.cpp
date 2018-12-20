@@ -187,44 +187,14 @@ void llvm::initializeLoopPassPass(PassRegistry &Registry) {
   INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 }
 
-static Optional<MDNode *> findOptionMDForLoopID(MDNode *LoopID,
-                                                StringRef Name) {
-  // Return none if LoopID is false.
-  if (!LoopID)
-    return None;
-
-  // First operand should refer to the loop id itself.
-  assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
-  assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
-
-  // Iterate over LoopID operands and look for MDString Metadata
-  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
-    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
-    if (!MD)
-      continue;
-    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-    if (!S)
-      continue;
-    // Return true if MDString holds expected MetaData.
-    if (Name.equals(S->getString()))
-      return MD;
-  }
-  return None;
-}
-
-static Optional<MDNode *> findOptionMDForLoop(const Loop *TheLoop,
-                                              StringRef Name) {
-  return findOptionMDForLoopID(TheLoop->getLoopID(), Name);
-}
-
 /// Find string metadata for loop
 ///
 /// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
 /// operand or null otherwise.  If the string metadata is not found return
 /// Optional's not-a-value.
-Optional<const MDOperand *> llvm::findStringMetadataForLoop(Loop *TheLoop,
+Optional<const MDOperand *> llvm::findStringMetadataForLoop(const Loop *TheLoop,
                                                             StringRef Name) {
-  auto MD = findOptionMDForLoop(TheLoop, Name).getValueOr(nullptr);
+  MDNode *MD = findOptionMDForLoop(TheLoop, Name);
   if (!MD)
     return None;
   switch (MD->getNumOperands()) {
@@ -239,19 +209,15 @@ Optional<const MDOperand *> llvm::findStringMetadataForLoop(Loop *TheLoop,
 
 static Optional<bool> getOptionalBoolLoopAttribute(const Loop *TheLoop,
                                                    StringRef Name) {
-  Optional<MDNode *> MD = findOptionMDForLoop(TheLoop, Name);
-  if (!MD.hasValue())
+  MDNode *MD = findOptionMDForLoop(TheLoop, Name);
+  if (!MD)
     return None;
-  MDNode *OptionNode = MD.getValue();
-  if (OptionNode == nullptr)
-    return None;
-  switch (OptionNode->getNumOperands()) {
+  switch (MD->getNumOperands()) {
   case 1:
     // When the value is absent it is interpreted as 'attribute set'.
     return true;
   case 2:
-    return mdconst::extract_or_null<ConstantInt>(
-        OptionNode->getOperand(1).get());
+    return mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get());
   }
   llvm_unreachable("unexpected number of options");
 }
@@ -325,8 +291,7 @@ Optional<MDNode *> llvm::makeFollowupLoopID(
 
   bool HasAnyFollowup = false;
   for (StringRef OptionName : FollowupOptions) {
-    MDNode *FollowupNode =
-        findOptionMDForLoopID(OrigLoopID, OptionName).getValueOr(nullptr);
+    MDNode *FollowupNode = findOptionMDForLoopID(OrigLoopID, OptionName);
     if (!FollowupNode)
       continue;
 

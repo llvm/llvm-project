@@ -578,7 +578,7 @@ template <class ELFT> void ELFDumper<ELFT>::LoadVersionMap() const {
     return;
 
   // Has the VersionMap already been loaded?
-  if (VersionMap.size() > 0)
+  if (!VersionMap.empty())
     return;
 
   // The first two version indexes are reserved.

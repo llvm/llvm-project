@@ -99,9 +99,8 @@
 /// also possible that the arguments only indicate the offset for a base taken
 /// from a segment register, so it's dangerous to treat any asm() arguments as
 /// pointers. We take a conservative approach generating calls to
-///   __msan_instrument_asm_load(ptr, size) and
 ///   __msan_instrument_asm_store(ptr, size)
-/// , which defer the memory checking/unpoisoning to the runtime library.
+/// , which defer the memory unpoisoning to the runtime library.
 /// The latter can perform more complex address checks to figure out whether
 /// it's safe to touch the shadow memory.
 /// Like with atomic operations, we call __msan_instrument_asm_store() before
@@ -570,7 +569,7 @@ private:
   Value *MsanMetadataPtrForLoadN, *MsanMetadataPtrForStoreN;
   Value *MsanMetadataPtrForLoad_1_8[4];
   Value *MsanMetadataPtrForStore_1_8[4];
-  Value *MsanInstrumentAsmStoreFn, *MsanInstrumentAsmLoadFn;
+  Value *MsanInstrumentAsmStoreFn;
 
   /// Helper to choose between different MsanMetadataPtrXxx().
   Value *getKmsanShadowOriginAccessFn(bool isStore, int size);
@@ -779,9 +778,6 @@ void MemorySanitizer::initializeCallbacks(Module &M) {
                             StringRef(""), StringRef(""),
                             /*hasSideEffects=*/true);
 
-  MsanInstrumentAsmLoadFn =
-      M.getOrInsertFunction("__msan_instrument_asm_load", IRB.getVoidTy(),
-                            PointerType::get(IRB.getInt8Ty(), 0), IntptrTy);
   MsanInstrumentAsmStoreFn =
       M.getOrInsertFunction("__msan_instrument_asm_store", IRB.getVoidTy(),
                             PointerType::get(IRB.getInt8Ty(), 0), IntptrTy);
@@ -3482,19 +3478,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Type *OpType = Operand->getType();
     // Check the operand value itself.
     insertShadowCheck(Operand, &I);
-    if (!OpType->isPointerTy()) {
+    if (!OpType->isPointerTy() || !isOutput) {
       assert(!isOutput);
       return;
     }
-    Value *Hook =
-        isOutput ? MS.MsanInstrumentAsmStoreFn : MS.MsanInstrumentAsmLoadFn;
     Type *ElType = OpType->getPointerElementType();
     if (!ElType->isSized())
       return;
     int Size = DL.getTypeStoreSize(ElType);
     Value *Ptr = IRB.CreatePointerCast(Operand, IRB.getInt8PtrTy());
     Value *SizeVal = ConstantInt::get(MS.IntptrTy, Size);
-    IRB.CreateCall(Hook, {Ptr, SizeVal});
+    IRB.CreateCall(MS.MsanInstrumentAsmStoreFn, {Ptr, SizeVal});
   }
 
   /// Get the number of output arguments returned by pointers.
