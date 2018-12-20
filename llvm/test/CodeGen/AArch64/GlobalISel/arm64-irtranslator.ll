@@ -2242,3 +2242,44 @@ define void @test_invariant_intrin() {
   call void @llvm.invariant.end.p0i8({}* %inv, i64 8, i8* %y)
   ret void
 }
+
+declare float @llvm.ceil.f32(float)
+define float @test_ceil_f32(float %x) {
+  ; CHECK-LABEL: name:            test_ceil_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FCEIL %{{[0-9]+}}
+  %y = call float @llvm.ceil.f32(float %x)
+  ret float %y
+}
+
+declare double @llvm.ceil.f64(double)
+define double @test_ceil_f64(double %x) {
+  ; CHECK-LABEL: name:            test_ceil_f64
+  ; CHECK: %{{[0-9]+}}:_(s64) = G_FCEIL %{{[0-9]+}}
+  %y = call double @llvm.ceil.f64(double %x)
+  ret double %y
+}
+
+declare <2 x float> @llvm.ceil.v2f32(<2 x float>)
+define <2 x float> @test_ceil_v2f32(<2 x float> %x) {
+  ; CHECK-LABEL: name:            test_ceil_v2f32
+  ; CHECK: %{{[0-9]+}}:_(<2 x s32>) = G_FCEIL %{{[0-9]+}}
+  %y = call <2 x float> @llvm.ceil.v2f32(<2 x float> %x)
+  ret <2 x float> %y
+}
+
+declare <4 x float> @llvm.ceil.v4f32(<4 x float>)
+define <4 x float> @test_ceil_v4f32(<4 x float> %x) {
+  ; CHECK-LABEL: name:            test_ceil_v4f32
+  ; CHECK: %{{[0-9]+}}:_(<4 x s32>) = G_FCEIL %{{[0-9]+}}
+  ; SELECT: %{{[0-9]+}}:fpr128 = FRINTPv4f32 %{{[0-9]+}}
+  %y = call <4 x float> @llvm.ceil.v4f32(<4 x float> %x)
+  ret <4 x float> %y
+}
+
+declare <2 x double> @llvm.ceil.v2f64(<2 x double>)
+define <2 x double> @test_ceil_v2f64(<2 x double> %x) {
+  ; CHECK-LABEL: name:            test_ceil_v2f64
+  ; CHECK: %{{[0-9]+}}:_(<2 x s64>) = G_FCEIL %{{[0-9]+}}
+  %y = call <2 x double> @llvm.ceil.v2f64(<2 x double> %x)
+  ret <2 x double> %y
+}

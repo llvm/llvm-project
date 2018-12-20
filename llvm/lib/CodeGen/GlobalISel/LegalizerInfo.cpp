@@ -585,7 +585,7 @@ const MachineInstr *llvm::machineFunctionIsIllegal(const MachineFunction &MF) {
     for (const MachineBasicBlock &MBB : MF)
       for (const MachineInstr &MI : MBB)
         if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI, MRI))
-	  return &MI;
+          return &MI;
   }
   return nullptr;
 }

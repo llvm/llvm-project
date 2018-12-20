@@ -293,15 +293,49 @@ bool Loop::isAnnotatedParallel() const {
   if (!DesiredLoopIdMetadata)
     return false;
 
+  MDNode *ParallelAccesses =
+      findOptionMDForLoop(this, "llvm.loop.parallel_accesses");
+  SmallPtrSet<MDNode *, 4>
+      ParallelAccessGroups; // For scalable 'contains' check.
+  if (ParallelAccesses) {
+    for (const MDOperand &MD : drop_begin(ParallelAccesses->operands(), 1)) {
+      MDNode *AccGroup = cast<MDNode>(MD.get());
+      assert(isValidAsAccessGroup(AccGroup) &&
+             "List item must be an access group");
+      ParallelAccessGroups.insert(AccGroup);
+    }
+  }
+
   // The loop branch contains the parallel loop metadata. In order to ensure
   // that any parallel-loop-unaware optimization pass hasn't added loop-carried
   // dependencies (thus converted the loop back to a sequential loop), check
-  // that all the memory instructions in the loop contain parallelism metadata
-  // that point to the same unique "loop id metadata" the loop branch does.
+  // that all the memory instructions in the loop belong to an access group that
+  // is parallel to this loop.
   for (BasicBlock *BB : this->blocks()) {
     for (Instruction &I : *BB) {
       if (!I.mayReadOrWriteMemory())
         continue;
+
+      if (MDNode *AccessGroup = I.getMetadata(LLVMContext::MD_access_group)) {
+        auto ContainsAccessGroup = [&ParallelAccessGroups](MDNode *AG) -> bool {
+          if (AG->getNumOperands() == 0) {
+            assert(isValidAsAccessGroup(AG) && "Item must be an access group");
+            return ParallelAccessGroups.count(AG);
+          }
+
+          for (const MDOperand &AccessListItem : AG->operands()) {
+            MDNode *AccGroup = cast<MDNode>(AccessListItem.get());
+            assert(isValidAsAccessGroup(AccGroup) &&
+                   "List item must be an access group");
+            if (ParallelAccessGroups.count(AccGroup))
+              return true;
+          }
+          return false;
+        };
+
+        if (ContainsAccessGroup(AccessGroup))
+          continue;
+      }
 
       // The memory instruction can refer to the loop identifier metadata
       // directly or indirectly through another list metadata (in case of
@@ -691,6 +725,40 @@ void llvm::printLoop(Loop &L, raw_ostream &OS, const std::string &Banner) {
       else
         OS << "Printing <null> block";
   }
+}
+
+MDNode *llvm::findOptionMDForLoopID(MDNode *LoopID, StringRef Name) {
+  // No loop metadata node, no loop properties.
+  if (!LoopID)
+    return nullptr;
+
+  // First operand should refer to the metadata node itself, for legacy reasons.
+  assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
+  assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
+
+  // Iterate over the metdata node operands and look for MDString metadata.
+  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
+    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+    if (!MD || MD->getNumOperands() < 1)
+      continue;
+    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+    if (!S)
+      continue;
+    // Return the operand node if MDString holds expected metadata.
+    if (Name.equals(S->getString()))
+      return MD;
+  }
+
+  // Loop property not found.
+  return nullptr;
+}
+
+MDNode *llvm::findOptionMDForLoop(const Loop *TheLoop, StringRef Name) {
+  return findOptionMDForLoopID(TheLoop->getLoopID(), Name);
+}
+
+bool llvm::isValidAsAccessGroup(MDNode *Node) {
+  return Node->getNumOperands() == 0 && Node->isDistinct();
 }
 
 //===----------------------------------------------------------------------===//

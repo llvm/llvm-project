@@ -88,18 +88,23 @@ while_end:
 }
 
 declare %struct_type* @foo()
+declare void @foo2()
 
 define void @test4(i32 %n) personality i32 (...)* @__FrameHandler {
 ; CHECK-LABEL: test4
 entry:
-  %struct = invoke %struct_type* @foo() to label %while_cond unwind label %cleanup
+  br label %while_cond
 
 while_cond:
   %phi = phi i32 [ 0, %entry ], [ %i, %while_body ]
+  %struct = invoke %struct_type* @foo() to label %while_cond_x unwind label %cleanup
+
+while_cond_x:
 ; CHECK:     mov     w{{[0-9]+}}, #40000
 ; CHECK-NOT: mov     w{{[0-9]+}}, #40004
   %gep0 = getelementptr %struct_type, %struct_type* %struct, i64 0, i32 1
   %gep1 = getelementptr %struct_type, %struct_type* %struct, i64 0, i32 2
+  store i32 0, i32* %gep0
   %cmp = icmp slt i32 %phi, %n
   br i1 %cmp, label %while_body, label %while_end
 
@@ -114,8 +119,10 @@ while_end:
   ret void
 
 cleanup:
-  landingpad { i8*, i32 } cleanup
-  unreachable
+  %x10 = landingpad { i8*, i32 }
+          cleanup
+  call void @foo2()
+  resume { i8*, i32 } %x10
 }
 
 declare i32 @__FrameHandler(...)

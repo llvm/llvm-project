@@ -34,9 +34,6 @@ class ConditionalBreakTestCase(TestBase):
         self.build()
         self.simulate_conditional_break_by_user()
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr26265: args in frames other than #0 are not evaluated correctly")
     def do_conditional_break(self):
         """Exercise some thread and frame APIs to break if c() is called by a()."""
         exe = self.getBuildArtifact("a.out")

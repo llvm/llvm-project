@@ -16,6 +16,9 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectMemory.h"
+#include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/Expression/DiagnosticManager.h"
+#include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -547,6 +550,61 @@ bool ItaniumABILanguageRuntime::ExceptionBreakpointsExplainStop(
   uint64_t break_site_id = stop_reason->GetValue();
   return m_process->GetBreakpointSiteList().BreakpointSiteContainsBreakpoint(
       break_site_id, m_cxx_exception_bp_sp->GetID());
+}
+
+ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
+    ThreadSP thread_sp) {
+  ClangASTContext *clang_ast_context =
+      m_process->GetTarget().GetScratchClangASTContext();
+  CompilerType voidstar =
+      clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+
+  DiagnosticManager diagnostics;
+  ExecutionContext exe_ctx;
+  EvaluateExpressionOptions options;
+
+  options.SetUnwindOnError(true);
+  options.SetIgnoreBreakpoints(true);
+  options.SetStopOthers(true);
+  options.SetTimeout(std::chrono::milliseconds(500));
+  options.SetTryAllThreads(false);
+  thread_sp->CalculateExecutionContext(exe_ctx);
+
+  const ModuleList &modules = m_process->GetTarget().GetImages();
+  SymbolContextList contexts;
+  SymbolContext context;
+
+  modules.FindSymbolsWithNameAndType(
+      ConstString("__cxa_current_exception_type"), eSymbolTypeCode, contexts);
+  contexts.GetContextAtIndex(0, context);
+  Address addr = context.symbol->GetAddress();
+
+  Status error;
+  FunctionCaller *function_caller =
+      m_process->GetTarget().GetFunctionCallerForLanguage(
+          eLanguageTypeC, voidstar, addr, ValueList(), "caller", error);
+
+  ExpressionResults func_call_ret;
+  Value results;
+  func_call_ret = function_caller->ExecuteFunction(exe_ctx, nullptr, options,
+                                                   diagnostics, results);
+  if (func_call_ret != eExpressionCompleted || !error.Success()) {
+    return ValueObjectSP();
+  }
+
+  size_t ptr_size = m_process->GetAddressByteSize();
+  addr_t result_ptr = results.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+  addr_t exception_addr =
+      m_process->ReadPointerFromMemory(result_ptr - ptr_size, error);
+
+  lldb_private::formatters::InferiorSizedWord exception_isw(exception_addr,
+                                                            *m_process);
+  ValueObjectSP exception = ValueObject::CreateValueObjectFromData(
+      "exception", exception_isw.GetAsData(m_process->GetByteOrder()), exe_ctx,
+      voidstar);
+  exception = exception->GetDynamicValue(eDynamicDontRunTarget);
+
+  return exception;
 }
 
 TypeAndOrName ItaniumABILanguageRuntime::GetDynamicTypeInfo(

@@ -578,7 +578,7 @@ static void printFileSectionSizes(StringRef file) {
   } else if (MachOUniversalBinary *UB =
                  dyn_cast<MachOUniversalBinary>(&Bin)) {
     // If we have a list of architecture flags specified dump only those.
-    if (!ArchAll && ArchFlags.size() != 0) {
+    if (!ArchAll && !ArchFlags.empty()) {
       // Look for a slice in the universal binary that matches each ArchFlag.
       bool ArchFound;
       for (unsigned i = 0; i < ArchFlags.size(); ++i) {
