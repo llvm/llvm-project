@@ -87,9 +87,7 @@ operator=(const SBVariablesOptions &options) {
 
 SBVariablesOptions::~SBVariablesOptions() = default;
 
-bool SBVariablesOptions::IsValid() const {
-  return m_opaque_ap.get() != nullptr;
-}
+bool SBVariablesOptions::IsValid() const { return m_opaque_ap != nullptr; }
 
 bool SBVariablesOptions::GetIncludeArguments() const {
   return m_opaque_ap->GetIncludeArguments();

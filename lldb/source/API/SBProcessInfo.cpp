@@ -36,7 +36,7 @@ SBProcessInfo &SBProcessInfo::operator=(const SBProcessInfo &rhs) {
 }
 
 ProcessInstanceInfo &SBProcessInfo::ref() {
-  if (m_opaque_ap.get() == nullptr) {
+  if (m_opaque_ap == nullptr) {
     m_opaque_ap.reset(new ProcessInstanceInfo());
   }
   return *m_opaque_ap;
@@ -46,7 +46,7 @@ void SBProcessInfo::SetProcessInfo(const ProcessInstanceInfo &proc_info_ref) {
   ref() = proc_info_ref;
 }
 
-bool SBProcessInfo::IsValid() const { return m_opaque_ap.get() != nullptr; }
+bool SBProcessInfo::IsValid() const { return m_opaque_ap != nullptr; }
 
 const char *SBProcessInfo::GetName() {
   const char *name = nullptr;
