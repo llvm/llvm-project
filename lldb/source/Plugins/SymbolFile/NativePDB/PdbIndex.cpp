@@ -202,3 +202,7 @@ CVSymbol PdbIndex::ReadSymbolRecord(PdbCompilandSymId cu_sym) const {
   lldbassert(iter != cci->m_debug_stream.getSymbolArray().end());
   return *iter;
 }
+
+CVSymbol PdbIndex::ReadSymbolRecord(PdbGlobalSymId global) const {
+  return symrecords().readRecord(global.offset);
+}
