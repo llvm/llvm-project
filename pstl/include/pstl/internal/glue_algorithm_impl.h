@@ -179,7 +179,7 @@ adjacent_find(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardItera
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Tp>
 __pstl::internal::enable_if_execution_policy<_ExecutionPolicy,
-                                           typename iterator_traits<_ForwardIterator>::difference_type>
+                                             typename iterator_traits<_ForwardIterator>::difference_type>
 count(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value)
 {
     typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
@@ -192,7 +192,7 @@ count(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __la
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
 __pstl::internal::enable_if_execution_policy<_ExecutionPolicy,
-                                           typename iterator_traits<_ForwardIterator>::difference_type>
+                                             typename iterator_traits<_ForwardIterator>::difference_type>
 count_if(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 {
     using namespace __pstl;
