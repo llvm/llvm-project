@@ -639,17 +639,33 @@ define i32 @length24(i8* %X, i8* %Y) nounwind optsize {
 }
 
 define i1 @length24_eq(i8* %x, i8* %y) nounwind optsize {
-; X86-LABEL: length24_eq:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl $0
-; X86-NEXT:    pushl $24
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    calll memcmp
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    sete %al
-; X86-NEXT:    retl
+; X86-NOSSE-LABEL: length24_eq:
+; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    pushl $0
+; X86-NOSSE-NEXT:    pushl $24
+; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    calll memcmp
+; X86-NOSSE-NEXT:    addl $16, %esp
+; X86-NOSSE-NEXT:    testl %eax, %eax
+; X86-NOSSE-NEXT:    sete %al
+; X86-NOSSE-NEXT:    retl
+;
+; X86-SSE2-LABEL: length24_eq:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
+; X86-SSE2-NEXT:    movdqu 8(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu (%eax), %xmm2
+; X86-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
+; X86-SSE2-NEXT:    movdqu 8(%eax), %xmm0
+; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
+; X86-SSE2-NEXT:    pand %xmm2, %xmm0
+; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
+; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
+; X86-SSE2-NEXT:    sete %al
+; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: length24_eq:
 ; X64-SSE2:       # %bb.0:
@@ -683,17 +699,30 @@ define i1 @length24_eq(i8* %x, i8* %y) nounwind optsize {
 }
 
 define i1 @length24_eq_const(i8* %X) nounwind optsize {
-; X86-LABEL: length24_eq_const:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl $0
-; X86-NEXT:    pushl $24
-; X86-NEXT:    pushl $.L.str
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    calll memcmp
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    setne %al
-; X86-NEXT:    retl
+; X86-NOSSE-LABEL: length24_eq_const:
+; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    pushl $0
+; X86-NOSSE-NEXT:    pushl $24
+; X86-NOSSE-NEXT:    pushl $.L.str
+; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    calll memcmp
+; X86-NOSSE-NEXT:    addl $16, %esp
+; X86-NOSSE-NEXT:    testl %eax, %eax
+; X86-NOSSE-NEXT:    setne %al
+; X86-NOSSE-NEXT:    retl
+;
+; X86-SSE2-LABEL: length24_eq_const:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE2-NEXT:    movdqu 8(%eax), %xmm1
+; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI.*}}, %xmm1
+; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI.*}}, %xmm0
+; X86-SSE2-NEXT:    pand %xmm1, %xmm0
+; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
+; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
+; X86-SSE2-NEXT:    setne %al
+; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: length24_eq_const:
 ; X64-SSE2:       # %bb.0:

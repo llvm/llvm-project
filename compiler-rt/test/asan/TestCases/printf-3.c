@@ -6,6 +6,10 @@
 // FIXME: printf is not intercepted on Windows yet.
 // XFAIL: windows-msvc
 
+// New Bionic rejects %n
+// https://android.googlesource.com/platform/bionic/+/41398d03b7e8e0dfb951660ae713e682e9fc0336
+// UNSUPPORTED: android
+
 #include <stdio.h>
 int main() {
 #ifdef _MSC_VER

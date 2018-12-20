@@ -174,6 +174,9 @@ Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
     MI->getMetadata(LLVMContext::MD_mem_parallel_loop_access);
   if (LoopMemParallelMD)
     L->setMetadata(LLVMContext::MD_mem_parallel_loop_access, LoopMemParallelMD);
+  MDNode *AccessGroupMD = MI->getMetadata(LLVMContext::MD_access_group);
+  if (AccessGroupMD)
+    L->setMetadata(LLVMContext::MD_access_group, AccessGroupMD);
 
   StoreInst *S = Builder.CreateStore(L, Dest);
   // Alignment from the mem intrinsic will be better, so use it.
@@ -182,6 +185,8 @@ Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
     S->setMetadata(LLVMContext::MD_tbaa, CopyMD);
   if (LoopMemParallelMD)
     S->setMetadata(LLVMContext::MD_mem_parallel_loop_access, LoopMemParallelMD);
+  if (AccessGroupMD)
+    S->setMetadata(LLVMContext::MD_access_group, AccessGroupMD);
 
   if (auto *MT = dyn_cast<MemTransferInst>(MI)) {
     // non-atomics can be volatile

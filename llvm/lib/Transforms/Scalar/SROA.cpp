@@ -2593,7 +2593,8 @@ private:
     }
     V = convertValue(DL, IRB, V, NewAllocaTy);
     StoreInst *Store = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlignment());
-    Store->copyMetadata(SI, LLVMContext::MD_mem_parallel_loop_access);
+    Store->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
+                             LLVMContext::MD_access_group});
     if (AATags)
       Store->setAAMetadata(AATags);
     Pass.DeadInsts.insert(&SI);
@@ -2662,7 +2663,8 @@ private:
       NewSI = IRB.CreateAlignedStore(V, NewPtr, getSliceAlign(V->getType()),
                                      SI.isVolatile());
     }
-    NewSI->copyMetadata(SI, LLVMContext::MD_mem_parallel_loop_access);
+    NewSI->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
+                             LLVMContext::MD_access_group});
     if (AATags)
       NewSI->setAAMetadata(AATags);
     if (SI.isVolatile())
@@ -3799,7 +3801,8 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
                          PartPtrTy, BasePtr->getName() + "."),
           getAdjustedAlignment(LI, PartOffset, DL), /*IsVolatile*/ false,
           LI->getName());
-      PLoad->copyMetadata(*LI, LLVMContext::MD_mem_parallel_loop_access);
+      PLoad->copyMetadata(*LI, {LLVMContext::MD_mem_parallel_loop_access,
+                                LLVMContext::MD_access_group});
 
       // Append this load onto the list of split loads so we can find it later
       // to rewrite the stores.
@@ -3855,7 +3858,8 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
                            APInt(DL.getIndexSizeInBits(AS), PartOffset),
                            PartPtrTy, StoreBasePtr->getName() + "."),
             getAdjustedAlignment(SI, PartOffset, DL), /*IsVolatile*/ false);
-        PStore->copyMetadata(*LI, LLVMContext::MD_mem_parallel_loop_access);
+        PStore->copyMetadata(*LI, {LLVMContext::MD_mem_parallel_loop_access,
+                                   LLVMContext::MD_access_group});
         LLVM_DEBUG(dbgs() << "      +" << PartOffset << ":" << *PStore << "\n");
       }
 

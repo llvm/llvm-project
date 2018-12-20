@@ -94,7 +94,8 @@ def : StorePatExternSymOffOnly<vec_t, store, !cast<NI>("STORE_"#vec_t)>;
 
 // Constant: v128.const
 multiclass ConstVec<ValueType vec_t, dag ops, dag pat, string args> {
-  let isMoveImm = 1, isReMaterializable = 1 in
+  let isMoveImm = 1, isReMaterializable = 1,
+    Predicates = [HasSIMD128, HasUnimplementedSIMD] in
   defm CONST_V128_#vec_t : SIMD_I<(outs V128:$dst), ops, (outs), ops,
                                   [(set V128:$dst, (vec_t pat))],
                                   "v128.const\t$dst, "#args,
@@ -276,17 +277,19 @@ multiclass ExtractLaneExtended<string sign, bits<32> baseInst> {
 }
 
 defm "" : ExtractLaneExtended<"_s", 5>;
+let Predicates = [HasSIMD128, HasUnimplementedSIMD] in
 defm "" : ExtractLaneExtended<"_u", 6>;
 defm "" : ExtractLane<v4i32, "i32x4", LaneIdx4, I32, 13>;
 defm "" : ExtractLane<v2i64, "i64x2", LaneIdx2, I64, 16>;
 defm "" : ExtractLane<v4f32, "f32x4", LaneIdx4, F32, 19>;
 defm "" : ExtractLane<v2f64, "f64x2", LaneIdx2, F64, 22>;
 
-// Follow convention of making implicit expansions unsigned
+// It would be more conventional to use unsigned extracts, but v8
+// doesn't implement them yet
 def : Pat<(i32 (vector_extract (v16i8 V128:$vec), (i32 LaneIdx16:$idx))),
-          (EXTRACT_LANE_v16i8_u V128:$vec, (i32 LaneIdx16:$idx))>;
+          (EXTRACT_LANE_v16i8_s V128:$vec, (i32 LaneIdx16:$idx))>;
 def : Pat<(i32 (vector_extract (v8i16 V128:$vec), (i32 LaneIdx8:$idx))),
-          (EXTRACT_LANE_v8i16_u V128:$vec, (i32 LaneIdx8:$idx))>;
+          (EXTRACT_LANE_v8i16_s V128:$vec, (i32 LaneIdx8:$idx))>;
 
 // Lower undef lane indices to zero
 def : Pat<(and (i32 (vector_extract (v16i8 V128:$vec), undef)), (i32 0xff)),
@@ -725,6 +728,7 @@ defm ABS : SIMDUnaryFP<fabs, "abs", 149>;
 defm NEG : SIMDUnaryFP<fneg, "neg", 150>;
 
 // Square root: sqrt
+let Predicates = [HasSIMD128, HasUnimplementedSIMD] in
 defm SQRT : SIMDUnaryFP<fsqrt, "sqrt", 151>;
 
 //===----------------------------------------------------------------------===//
@@ -748,6 +752,7 @@ let isCommutable = 1 in
 defm MUL : SIMDBinaryFP<fmul, "mul", 156>;
 
 // Division: div
+let Predicates = [HasSIMD128, HasUnimplementedSIMD] in
 defm DIV : SIMDBinaryFP<fdiv, "div", 157>;
 
 // NaN-propagating minimum: min

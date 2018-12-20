@@ -86,7 +86,7 @@ def main():
 
     if unused_values:
         print('unused values args:', file=sys.stderr)
-        print('    ', '\n    '.join(unused_values), file=sys.stderr)
+        print('    ' + '\n    '.join(unused_values), file=sys.stderr)
         return 1
 
     output = ''.join(out_lines)

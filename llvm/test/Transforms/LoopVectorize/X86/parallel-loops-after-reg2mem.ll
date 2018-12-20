@@ -19,19 +19,19 @@ entry:
 for.body:                                         ; preds = %for.body.for.body_crit_edge, %entry
   %indvars.iv.reload = load i64, i64* %indvars.iv.reg2mem
   %arrayidx = getelementptr inbounds i32, i32* %b, i64 %indvars.iv.reload
-  %0 = load i32, i32* %arrayidx, align 4, !llvm.mem.parallel_loop_access !3
+  %0 = load i32, i32* %arrayidx, align 4, !llvm.access.group !4
   %arrayidx2 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv.reload
-  %1 = load i32, i32* %arrayidx2, align 4, !llvm.mem.parallel_loop_access !3
+  %1 = load i32, i32* %arrayidx2, align 4, !llvm.access.group !4
   %idxprom3 = sext i32 %1 to i64
   %arrayidx4 = getelementptr inbounds i32, i32* %a, i64 %idxprom3
-  store i32 %0, i32* %arrayidx4, align 4, !llvm.mem.parallel_loop_access !3
+  store i32 %0, i32* %arrayidx4, align 4, !llvm.access.group !4
   %indvars.iv.next = add i64 %indvars.iv.reload, 1
   ; A new store without the parallel metadata here:
   store i64 %indvars.iv.next, i64* %indvars.iv.next.reg2mem
   %indvars.iv.next.reload1 = load i64, i64* %indvars.iv.next.reg2mem
   %arrayidx6 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv.next.reload1
-  %2 = load i32, i32* %arrayidx6, align 4, !llvm.mem.parallel_loop_access !3
-  store i32 %2, i32* %arrayidx2, align 4, !llvm.mem.parallel_loop_access !3
+  %2 = load i32, i32* %arrayidx6, align 4, !llvm.access.group !4
+  store i32 %2, i32* %arrayidx2, align 4, !llvm.access.group !4
   %indvars.iv.next.reload = load i64, i64* %indvars.iv.next.reg2mem
   %lftr.wideiv = trunc i64 %indvars.iv.next.reload to i32
   %exitcond = icmp eq i32 %lftr.wideiv, 512
@@ -46,4 +46,5 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-!3 = !{!3}
+!3 = !{!3, !{!"llvm.loop.parallel_accesses", !4}}
+!4 = distinct !{}

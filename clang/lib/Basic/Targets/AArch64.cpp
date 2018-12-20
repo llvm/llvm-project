@@ -37,11 +37,11 @@ const Builtin::Info AArch64TargetInfo::BuiltinInfo[] = {
 AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
                                      const TargetOptions &Opts)
     : TargetInfo(Triple), ABI("aapcs") {
-  if (getTriple().getOS() == llvm::Triple::OpenBSD) {
+  if (getTriple().isOSOpenBSD()) {
     Int64Type = SignedLongLong;
     IntMaxType = SignedLongLong;
   } else {
-    if (!getTriple().isOSDarwin() && getTriple().getOS() != llvm::Triple::NetBSD)
+    if (!getTriple().isOSDarwin() && !getTriple().isOSNetBSD())
       WCharType = UnsignedInt;
 
     Int64Type = SignedLong;

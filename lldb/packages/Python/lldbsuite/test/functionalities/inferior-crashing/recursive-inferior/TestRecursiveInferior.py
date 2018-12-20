@@ -29,13 +29,11 @@ class CrashingRecursiveInferiorTestCase(TestBase):
         self.recursive_inferior_crashing_registers()
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_recursive_inferior_crashing_python(self):
         """Test that lldb reliably catches the inferior crashing (Python API)."""
         self.build()
         self.recursive_inferior_crashing_python()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_recursive_inferior_crashing_expr(self):
         """Test that the lldb expression interpreter can read from the inferior after crashing (command)."""
         self.build()
@@ -47,8 +45,8 @@ class CrashingRecursiveInferiorTestCase(TestBase):
         self.build()
         self.recursive_inferior_crashing_step()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @skipIfTargetAndroid()  # debuggerd interferes with this test on Android
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_recursive_inferior_crashing_step_after_break(self):
         """Test that lldb functions correctly after stepping through a crash."""
         self.build()
@@ -58,7 +56,6 @@ class CrashingRecursiveInferiorTestCase(TestBase):
     # intended IMHO.
     @skipIfLinux
     @skipIfFreeBSD
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_recursive_inferior_crashing_expr_step_and_expr(self):
         """Test that lldb expressions work before and after stepping after a crash."""
         self.build()

@@ -597,15 +597,23 @@ static std::pair<RelType, uint64_t> toAddr16Rel(RelType Type, uint64_t Val) {
   }
 }
 
-static bool isTocRelType(RelType Type) {
-  return Type == R_PPC64_TOC16_HA || Type == R_PPC64_TOC16_LO_DS ||
-         Type == R_PPC64_TOC16_LO;
+static bool isTocOptType(RelType Type) {
+  switch (Type) {
+  case R_PPC64_GOT16_HA:
+  case R_PPC64_GOT16_LO_DS:
+  case R_PPC64_TOC16_HA:
+  case R_PPC64_TOC16_LO_DS:
+  case R_PPC64_TOC16_LO:
+    return true;
+  default:
+    return false;
+  }
 }
 
 void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   // We need to save the original relocation type to determine if we should
   // toc-optimize the instructions being relocated.
-  bool IsTocRelType = isTocRelType(Type);
+  bool ShouldTocOptimize =  isTocOptType(Type);
   // For TOC-relative and GOT-indirect relocations, proceed in terms of the
   // corresponding ADDR16 relocation type.
   std::tie(Type, Val) = toAddr16Rel(Type, Val);
@@ -635,7 +643,7 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_PPC64_ADDR16_HA:
   case R_PPC64_REL16_HA:
   case R_PPC64_TPREL16_HA:
-    if (Config->TocOptimize && IsTocRelType && ha(Val) == 0)
+    if (Config->TocOptimize && ShouldTocOptimize && ha(Val) == 0)
       writeInstrFromHalf16(Loc, 0x60000000);
     else
       write16(Loc, ha(Val));
@@ -667,7 +675,7 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     // When the high-adjusted part of a toc relocation evalutes to 0, it is
     // changed into a nop. The lo part then needs to be updated to use the
     // toc-pointer register r2, as the base register.
-    if (Config->TocOptimize && IsTocRelType && ha(Val) == 0) {
+    if (Config->TocOptimize && ShouldTocOptimize && ha(Val) == 0) {
       uint32_t Instr = readInstrFromHalf16(Loc);
       if (isInstructionUpdateForm(Instr))
         error(getErrorLocation(Loc) +
@@ -685,7 +693,7 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     uint32_t Inst = readInstrFromHalf16(Loc);
     uint16_t Mask = isDQFormInstruction(Inst) ? 0xF : 0x3;
     checkAlignment(Loc, lo(Val), Mask + 1, Type);
-    if (Config->TocOptimize && IsTocRelType && ha(Val) == 0) {
+    if (Config->TocOptimize && ShouldTocOptimize && ha(Val) == 0) {
       // When the high-adjusted part of a toc relocation evalutes to 0, it is
       // changed into a nop. The lo part then needs to be updated to use the toc
       // pointer register r2, as the base register.

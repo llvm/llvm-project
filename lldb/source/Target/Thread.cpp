@@ -23,6 +23,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrameRecognizer.h"
@@ -2202,16 +2203,30 @@ Status Thread::StepOut() {
 }
 
 ValueObjectSP Thread::GetCurrentException() {
-  StackFrameSP frame_sp(GetStackFrameAtIndex(0));
-  if (!frame_sp) return ValueObjectSP();
+  if (auto frame_sp = GetStackFrameAtIndex(0))
+    if (auto recognized_frame = frame_sp->GetRecognizedFrame())
+      if (auto e = recognized_frame->GetExceptionObject())
+        return e;
 
-  RecognizedStackFrameSP recognized_frame(frame_sp->GetRecognizedFrame());
-  if (!recognized_frame) return ValueObjectSP();
+  // FIXME: For now, only ObjC exceptions are supported. This should really
+  // iterate over all language runtimes and ask them all to give us the current
+  // exception.
+  if (auto runtime = GetProcess()->GetObjCLanguageRuntime())
+    if (auto e = runtime->GetExceptionObjectForThread(shared_from_this()))
+      return e;
 
-  return recognized_frame->GetExceptionObject();
+  return ValueObjectSP();
 }
 
-/* TODO(kubamracek)
 ThreadSP Thread::GetCurrentExceptionBacktrace() {
-  return ThreadSP();
-}*/
+  ValueObjectSP exception = GetCurrentException();
+  if (!exception) return ThreadSP();
+
+  // FIXME: For now, only ObjC exceptions are supported. This should really
+  // iterate over all language runtimes and ask them all to give us the current
+  // exception.
+  auto runtime = GetProcess()->GetObjCLanguageRuntime();
+  if (!runtime) return ThreadSP();
+
+  return runtime->GetBacktraceThreadFromException(exception);
+}

@@ -8,6 +8,14 @@
 # RUN: ld.lld -shared --no-toc-optimize %t.o -o %t
 # RUN: llvm-objdump -d %t | FileCheck %s
 
+# RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
+# RUN: ld.lld -shared %t.o -o %t
+# RUN: llvm-objdump -d %t | FileCheck --check-prefix=OPT %s
+
+# RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
+# RUN: ld.lld -shared %t.o -o %t
+# RUN: llvm-objdump -d %t | FileCheck --check-prefix=OPT %s
+
         .abiversion 2
         .section ".text"
 
@@ -37,6 +45,15 @@ func:
 # CHECK-NEXT:    ori 5, 5, 32776
 # CHECK-NEXT:    li  6, 0
 # CHECK-NEXT:    ori 6, 6, 32776
+
+# OPT-LABEL: func
+# OPT:         nop
+# OPT-NEXT:    ld 3, -32760(2)
+# OPT-NEXT:    ld 4, -32760(2)
+# OPT-NEXT:    lis 5, -1
+# OPT-NEXT:    ori 5, 5, 32776
+# OPT-NEXT:    li  6, 0
+# OPT-NEXT:    ori 6, 6, 32776
 
 # Since the got entry for a is .got[1] and the TOC base points to
 # .got + 0x8000, the offset for a@got is -0x7FF8 --> -32760

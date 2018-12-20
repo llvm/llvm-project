@@ -179,8 +179,6 @@ entry:
 }
 
 ; CHECK-LABEL: @f_2i_2o_mem
-; CHECK-CONS: call void @__msan_instrument_asm_load({{.*}}@is1{{.*}}, i64 4)
-; CHECK-CONS: call void @__msan_instrument_asm_load({{.*}}@is2{{.*}}, i64 4)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@id1{{.*}}, i64 4)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@id2{{.*}}, i64 4)
 ; CHECK: call void asm "", "=*m,=*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* @id1, i32* @id2, i32* @is1, i32* @is2)
@@ -198,7 +196,6 @@ entry:
 
 ; CHECK-LABEL: @f_1i_1o_memreg
 ; CHECK: [[IS1_F7:%.*]] = load i32, i32* @is1, align 4
-; CHECK-CONS: call void @__msan_instrument_asm_load({{.*}}@is1{{.*}}, i64 4)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@id1{{.*}}, i64 4)
 ; CHECK: call void @__msan_warning
 ; CHECK: call i32 asm "", "=r,=*m,r,*m,~{dirflag},~{fpsr},~{flags}"(i32* @id1, i32 [[IS1_F7]], i32* @is1)
@@ -257,9 +254,6 @@ entry:
 }
 
 ; CHECK-LABEL: @f_3i_3o_complex_mem
-; CHECK-CONS: call void @__msan_instrument_asm_load({{.*}}@pair1{{.*}}, i64 8)
-; CHECK-CONS: call void @__msan_instrument_asm_load(i8* @c1, i64 1)
-; CHECK-CONS: call void @__msan_instrument_asm_load({{.*}}@memcpy_s1{{.*}}, i64 8)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@pair2{{.*}}, i64 8)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@c2{{.*}}, i64 1)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@memcpy_d1{{.*}}, i64 8)

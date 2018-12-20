@@ -1,0 +1,19 @@
+executable("MachOTests") {
+  # test/Unit/lit.cfg expects unittests in LLD_BINARY_DIR/unittest
+  output_dir = target_out_dir
+
+  configs += [ "//llvm/utils/gn/build:lld_code" ]
+  deps = [
+    "//lld/lib/Driver",
+    "//lld/lib/ReaderWriter/MachO",
+    "//lld/lib/ReaderWriter/YAML",
+    "//llvm/utils/unittest/UnitTestMain",
+  ]
+  sources = [
+    "MachONormalizedFileBinaryReaderTests.cpp",
+    "MachONormalizedFileBinaryWriterTests.cpp",
+    "MachONormalizedFileToAtomsTests.cpp",
+    "MachONormalizedFileYAMLTests.cpp",
+  ]
+  testonly = true
+}

@@ -1491,13 +1491,12 @@ SBValue SBThread::GetCurrentException() {
   return SBValue(thread_sp->GetCurrentException());
 }
 
-/* TODO(kubamracek)
 SBThread SBThread::GetCurrentExceptionBacktrace() {
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (!thread_sp) return SBThread();
 
   return SBThread(thread_sp->GetCurrentExceptionBacktrace());
-}*/
+}
 
 bool SBThread::SafeToCallFunctions() {
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());

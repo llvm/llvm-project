@@ -603,19 +603,19 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   if (TC.getTriple().getOS() != llvm::Triple::RTEMS &&
       !TC.getTriple().isAndroid()) {
     CmdArgs.push_back("-lpthread");
-    if (TC.getTriple().getOS() != llvm::Triple::OpenBSD)
+    if (!TC.getTriple().isOSOpenBSD())
       CmdArgs.push_back("-lrt");
   }
   CmdArgs.push_back("-lm");
   // There's no libdl on all OSes.
-  if (TC.getTriple().getOS() != llvm::Triple::FreeBSD &&
-      TC.getTriple().getOS() != llvm::Triple::NetBSD &&
-      TC.getTriple().getOS() != llvm::Triple::OpenBSD &&
-      TC.getTriple().getOS() != llvm::Triple::RTEMS)
+  if (!TC.getTriple().isOSFreeBSD() &&
+      !TC.getTriple().isOSNetBSD() &&
+      !TC.getTriple().isOSOpenBSD() &&
+       TC.getTriple().getOS() != llvm::Triple::RTEMS)
     CmdArgs.push_back("-ldl");
   // Required for backtrace on some OSes
-  if (TC.getTriple().getOS() == llvm::Triple::NetBSD ||
-      TC.getTriple().getOS() == llvm::Triple::FreeBSD)
+  if (TC.getTriple().isOSFreeBSD() ||
+      TC.getTriple().isOSNetBSD())
     CmdArgs.push_back("-lexecinfo");
 }
 
@@ -790,13 +790,13 @@ bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args, ArgStringLis
 void tools::linkXRayRuntimeDeps(const ToolChain &TC, ArgStringList &CmdArgs) {
   CmdArgs.push_back("--no-as-needed");
   CmdArgs.push_back("-lpthread");
-  if (TC.getTriple().getOS() != llvm::Triple::OpenBSD)
+  if (!TC.getTriple().isOSOpenBSD())
     CmdArgs.push_back("-lrt");
   CmdArgs.push_back("-lm");
 
-  if (TC.getTriple().getOS() != llvm::Triple::FreeBSD &&
-      TC.getTriple().getOS() != llvm::Triple::NetBSD &&
-      TC.getTriple().getOS() != llvm::Triple::OpenBSD)
+  if (!TC.getTriple().isOSFreeBSD() &&
+      !TC.getTriple().isOSNetBSD() &&
+      !TC.getTriple().isOSOpenBSD())
     CmdArgs.push_back("-ldl");
 }
 
@@ -933,7 +933,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   }
 
   // OpenBSD-specific defaults for PIE
-  if (Triple.getOS() == llvm::Triple::OpenBSD) {
+  if (Triple.isOSOpenBSD()) {
     switch (ToolChain.getArch()) {
     case llvm::Triple::arm:
     case llvm::Triple::aarch64:

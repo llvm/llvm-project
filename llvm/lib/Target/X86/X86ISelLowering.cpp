@@ -837,13 +837,16 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SADDSAT,            MVT::v8i16, Legal);
     setOperationAction(ISD::USUBSAT,            MVT::v8i16, Legal);
     setOperationAction(ISD::SSUBSAT,            MVT::v8i16, Legal);
-    // Use widening instead of promotion.
-    for (auto VT : { MVT::v8i8, MVT::v4i8, MVT::v2i8,
-                     MVT::v4i16, MVT::v2i16 }) {
-      setOperationAction(ISD::UADDSAT, VT, Custom);
-      setOperationAction(ISD::SADDSAT, VT, Custom);
-      setOperationAction(ISD::USUBSAT, VT, Custom);
-      setOperationAction(ISD::SSUBSAT, VT, Custom);
+
+    if (!ExperimentalVectorWideningLegalization) {
+      // Use widening instead of promotion.
+      for (auto VT : { MVT::v8i8, MVT::v4i8, MVT::v2i8,
+                       MVT::v4i16, MVT::v2i16 }) {
+        setOperationAction(ISD::UADDSAT, VT, Custom);
+        setOperationAction(ISD::SADDSAT, VT, Custom);
+        setOperationAction(ISD::USUBSAT, VT, Custom);
+        setOperationAction(ISD::SSUBSAT, VT, Custom);
+      }
     }
 
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v8i16, Custom);
@@ -1003,8 +1006,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ROTL,               MVT::v4i32, Custom);
     setOperationAction(ISD::ROTL,               MVT::v8i16, Custom);
 
-    // With BWI, expanding (and promoting the shifts) is the better.
-    if (!Subtarget.hasBWI())
+    // With AVX512, expanding (and promoting the shifts) is better.
+    if (!Subtarget.hasAVX512())
       setOperationAction(ISD::ROTL,             MVT::v16i8, Custom);
   }
 

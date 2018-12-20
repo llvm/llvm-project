@@ -294,7 +294,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   SupportsCodeAction = Params.capabilities.CodeActionStructure;
   SupportsHierarchicalDocumentSymbol =
       Params.capabilities.HierarchicalDocumentSymbol;
-
+  SupportFileStatus = Params.initializationOptions.FileStatus;
   Reply(json::Object{
       {{"capabilities",
         json::Object{
@@ -800,6 +800,19 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File,
              {"uri", URI},
              {"diagnostics", std::move(LSPDiagnostics)},
          });
+}
+
+void ClangdLSPServer::onFileUpdated(PathRef File, const TUStatus &Status) {
+  if (!SupportFileStatus)
+    return;
+  // FIXME: we don't emit "BuildingFile" and `RunningAction`, as these
+  // two statuses are running faster in practice, which leads the UI constantly
+  // changing, and doesn't provide much value. We may want to emit status at a
+  // reasonable time interval (e.g. 0.5s).
+  if (Status.Action.S == TUAction::BuildingFile ||
+      Status.Action.S == TUAction::RunningAction)
+    return;
+  notify("textDocument/clangd.fileStatus", Status.render(File));
 }
 
 void ClangdLSPServer::reparseOpenedFiles() {
