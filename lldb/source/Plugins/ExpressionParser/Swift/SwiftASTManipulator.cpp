@@ -147,7 +147,12 @@ __builtin_logger_initialize()
                             playground_prefix, pound_file, pound_line,
                             orig_text);
     } else {
-      wrapped_stream.Printf("%s%s", playground_prefix, orig_text);
+      // In 2017+, xcode playgrounds send orig_text that starts with a module loading prefix (not the above prefix), then a sourceLocation specifier that indicates the page name, and then the page body text.
+      // The first_body_line mechanism in this function cannot be used to compensate for the playground_prefix added here, since it incorrectly continues to apply even after sourceLocation directives are read frmo the orig_text.
+      // To make sure playgrounds work correctly whether or not they supply their own sourceLocation, create a dummy sourceLocation here with a fake filename that starts counting the first line of orig_text as line 1.
+      wrapped_stream.Printf("%s#sourceLocation(file: \"%s\", line: %u)\n%s\n",
+                            playground_prefix, "Playground.swift", 1,
+                            orig_text);
     }
     first_body_line = 1;
     return;
