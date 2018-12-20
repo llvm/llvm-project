@@ -251,7 +251,7 @@ TEST_F(BackgroundIndexTest, PeriodicalIndex) {
   OverlayCDB CDB(/*Base=*/nullptr);
   BackgroundIndex Idx(
       Context::empty(), "", FS, CDB, [&](llvm::StringRef) { return &MSS; },
-      /*BuildIndexPeriodMs=*/100);
+      /*BuildIndexPeriodMs=*/500);
 
   FS.Files[testPath("root/A.cc")] = "#include \"A.h\"";
 
@@ -263,7 +263,7 @@ TEST_F(BackgroundIndexTest, PeriodicalIndex) {
 
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
   EXPECT_THAT(runFuzzyFind(Idx, ""), ElementsAre());
-  std::this_thread::sleep_for(std::chrono::milliseconds(150));
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   EXPECT_THAT(runFuzzyFind(Idx, ""), ElementsAre(Named("X")));
 
   FS.Files[testPath("root/A.h")] = "class Y {};";
@@ -273,7 +273,7 @@ TEST_F(BackgroundIndexTest, PeriodicalIndex) {
 
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
   EXPECT_THAT(runFuzzyFind(Idx, ""), ElementsAre(Named("X")));
-  std::this_thread::sleep_for(std::chrono::milliseconds(150));
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   EXPECT_THAT(runFuzzyFind(Idx, ""), ElementsAre(Named("Y")));
 }
 

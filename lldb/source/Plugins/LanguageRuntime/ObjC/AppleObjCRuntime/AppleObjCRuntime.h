@@ -89,6 +89,12 @@ public:
   
   static std::tuple<FileSpec, ConstString> GetExceptionThrowLocation();
 
+  lldb::ValueObjectSP GetExceptionObjectForThread(
+      lldb::ThreadSP thread_sp) override;
+
+  lldb::ThreadSP GetBacktraceThreadFromException(
+      lldb::ValueObjectSP thread_sp) override;
+
   uint32_t GetFoundationVersion();
 
   virtual void GetValuesForGlobalCFBooleans(lldb::addr_t &cf_true,

@@ -493,6 +493,7 @@ static LoadInst *combineLoadToNewType(InstCombiner &IC, LoadInst &LI, Type *NewT
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_nontemporal:
     case LLVMContext::MD_mem_parallel_loop_access:
+    case LLVMContext::MD_access_group:
       // All of these directly apply.
       NewLoad->setMetadata(ID, N);
       break;
@@ -552,10 +553,10 @@ static StoreInst *combineStoreToNewValue(InstCombiner &IC, StoreInst &SI, Value 
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_nontemporal:
     case LLVMContext::MD_mem_parallel_loop_access:
+    case LLVMContext::MD_access_group:
       // All of these directly apply.
       NewStore->setMetadata(ID, N);
       break;
-
     case LLVMContext::MD_invariant_load:
     case LLVMContext::MD_nonnull:
     case LLVMContext::MD_range:

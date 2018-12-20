@@ -6035,7 +6035,7 @@ Process::AdvanceAddressToNextBranchInstruction(Address default_stop_addr,
 }
 
 Status
-Process::GetMemoryRegions(std::vector<lldb::MemoryRegionInfoSP> &region_list) {
+Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {
 
   Status error;
 
@@ -6043,17 +6043,17 @@ Process::GetMemoryRegions(std::vector<lldb::MemoryRegionInfoSP> &region_list) {
 
   region_list.clear();
   do {
-    lldb::MemoryRegionInfoSP region_info(new lldb_private::MemoryRegionInfo());
-    error = GetMemoryRegionInfo(range_end, *region_info);
+    lldb_private::MemoryRegionInfo region_info;
+    error = GetMemoryRegionInfo(range_end, region_info);
     // GetMemoryRegionInfo should only return an error if it is unimplemented.
     if (error.Fail()) {
       region_list.clear();
       break;
     }
 
-    range_end = region_info->GetRange().GetRangeEnd();
-    if (region_info->GetMapped() == MemoryRegionInfo::eYes) {
-      region_list.push_back(region_info);
+    range_end = region_info.GetRange().GetRangeEnd();
+    if (region_info.GetMapped() == MemoryRegionInfo::eYes) {
+      region_list.push_back(std::move(region_info));
     }
   } while (range_end != LLDB_INVALID_ADDRESS);
 

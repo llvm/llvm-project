@@ -17,6 +17,7 @@
 
 #include <unordered_map>
 #include <string>
+#include <set>
 #include <cassert>
 
 #include "min_allocator.h"
@@ -48,14 +49,17 @@ int main()
         r = c.equal_range(5);
         assert(std::distance(r.first, r.second) == 0);
         r = c.equal_range(50);
-        assert(r.first->first == 50);
-        assert(r.first->second == "fifty");
-        ++r.first;
-        assert(r.first->first == 50);
-        assert(r.first->second == "fiftyA");
-        ++r.first;
-        assert(r.first->first == 50);
-        assert(r.first->second == "fiftyB");
+        std::set<std::string> s;
+        s.insert("fifty");
+        s.insert("fiftyA");
+        s.insert("fiftyB");
+        for ( int i = 0; i < 3; ++i )
+        {
+            assert(r.first->first == 50);
+            assert(s.find(r.first->second) != s.end());
+            s.erase(s.find(r.first->second));
+            ++r.first;
+        }
     }
 #if TEST_STD_VER >= 11
     {
@@ -84,14 +88,17 @@ int main()
         r = c.equal_range(5);
         assert(std::distance(r.first, r.second) == 0);
         r = c.equal_range(50);
-        assert(r.first->first == 50);
-        assert(r.first->second == "fifty");
-        ++r.first;
-        assert(r.first->first == 50);
-        assert(r.first->second == "fiftyA");
-        ++r.first;
-        assert(r.first->first == 50);
-        assert(r.first->second == "fiftyB");
+        std::set<std::string> s;
+        s.insert("fifty");
+        s.insert("fiftyA");
+        s.insert("fiftyB");
+        for ( int i = 0; i < 3; ++i )
+        {
+            assert(r.first->first == 50);
+            assert(s.find(r.first->second) != s.end());
+            s.erase(s.find(r.first->second));
+            ++r.first;
+        }
     }
 #endif
 }

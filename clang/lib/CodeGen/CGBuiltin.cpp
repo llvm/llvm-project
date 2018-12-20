@@ -9487,12 +9487,13 @@ static Value *EmitX86SExtMask(CodeGenFunction &CGF, Value *Op,
   return CGF.Builder.CreateSExt(Mask, DstTy, "vpmovm2");
 }
 
-// Emit addition or subtraction with unsigned saturation.
-// TODO: Handle signed intrinsics.
+// Emit addition or subtraction with signed/unsigned saturation.
 static Value *EmitX86AddSubSatExpr(CodeGenFunction &CGF,
-                                   SmallVectorImpl<Value *> &Ops,
+                                   ArrayRef<Value *> Ops, bool IsSigned,
                                    bool IsAddition) {
-  Intrinsic::ID IID = IsAddition ? Intrinsic::uadd_sat : Intrinsic::usub_sat;
+  Intrinsic::ID IID =
+      IsSigned ? (IsAddition ? Intrinsic::sadd_sat : Intrinsic::ssub_sat)
+               : (IsAddition ? Intrinsic::uadd_sat : Intrinsic::usub_sat);
   llvm::Function *F = CGF.CGM.getIntrinsic(IID, Ops[0]->getType());
   return CGF.Builder.CreateCall(F, {Ops[0], Ops[1]});
 }
@@ -11359,20 +11360,34 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Load->setVolatile(true);
     return Load;
   }
+  case X86::BI__builtin_ia32_paddsb512:
+  case X86::BI__builtin_ia32_paddsw512:
+  case X86::BI__builtin_ia32_paddsb256:
+  case X86::BI__builtin_ia32_paddsw256:
+  case X86::BI__builtin_ia32_paddsb128:
+  case X86::BI__builtin_ia32_paddsw128:
+    return EmitX86AddSubSatExpr(*this, Ops, true, true);
   case X86::BI__builtin_ia32_paddusb512:
   case X86::BI__builtin_ia32_paddusw512:
   case X86::BI__builtin_ia32_paddusb256:
   case X86::BI__builtin_ia32_paddusw256:
   case X86::BI__builtin_ia32_paddusb128:
   case X86::BI__builtin_ia32_paddusw128:
-    return EmitX86AddSubSatExpr(*this, Ops, true /* IsAddition */);
+    return EmitX86AddSubSatExpr(*this, Ops, false, true);
+  case X86::BI__builtin_ia32_psubsb512:
+  case X86::BI__builtin_ia32_psubsw512:
+  case X86::BI__builtin_ia32_psubsb256:
+  case X86::BI__builtin_ia32_psubsw256:
+  case X86::BI__builtin_ia32_psubsb128:
+  case X86::BI__builtin_ia32_psubsw128:
+    return EmitX86AddSubSatExpr(*this, Ops, true, false);
   case X86::BI__builtin_ia32_psubusb512:
   case X86::BI__builtin_ia32_psubusw512:
   case X86::BI__builtin_ia32_psubusb256:
   case X86::BI__builtin_ia32_psubusw256:
   case X86::BI__builtin_ia32_psubusb128:
   case X86::BI__builtin_ia32_psubusw128:
-    return EmitX86AddSubSatExpr(*this, Ops, false /* IsAddition */);
+    return EmitX86AddSubSatExpr(*this, Ops, false, false);
   }
 }
 

@@ -77,6 +77,8 @@ struct TUStatus {
     /// Indicates whether we reused the prebuilt AST.
     bool ReuseAST = false;
   };
+  /// Serialize this to an LSP file status item.
+  FileStatus render(PathRef File) const;
 
   TUAction Action;
   BuildDetails Details;

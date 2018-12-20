@@ -1306,7 +1306,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
   // Package up features to be passed to target/subtarget
   SubtargetFeatures Features = Obj->getFeatures();
-  if (MAttrs.size()) {
+  if (!MAttrs.empty()) {
     for (unsigned i = 0; i != MAttrs.size(); ++i)
       Features.AddFeature(MAttrs[i]);
   }
@@ -2456,7 +2456,7 @@ int main(int argc, char **argv) {
   ToolName = argv[0];
 
   // Defaults to a.out if no filenames specified.
-  if (InputFilenames.size() == 0)
+  if (InputFilenames.empty())
     InputFilenames.push_back("a.out");
 
   if (AllHeaders)
@@ -2490,7 +2490,7 @@ int main(int argc, char **argv) {
       && !(DylibsUsed && MachOOpt)
       && !(DylibId && MachOOpt)
       && !(ObjcMetaData && MachOOpt)
-      && !(FilterSections.size() != 0 && MachOOpt)
+      && !(!FilterSections.empty() && MachOOpt)
       && !PrintFaultMaps
       && DwarfDumpType == DIDT_Null) {
     cl::PrintHelpMessage();

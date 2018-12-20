@@ -2081,7 +2081,7 @@ public:
   ///     An error value.
   //------------------------------------------------------------------
   virtual Status
-  GetMemoryRegions(std::vector<lldb::MemoryRegionInfoSP> &region_list);
+  GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list);
 
   virtual Status GetWatchpointSupportInfo(uint32_t &num) {
     Status error;

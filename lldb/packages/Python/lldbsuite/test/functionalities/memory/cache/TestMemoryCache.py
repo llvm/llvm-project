@@ -24,9 +24,6 @@ class MemoryCacheTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    # The test is actually flakey on Windows, failing every dozen or so runs, but even with the flakey
-    # decorator it still fails
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr38373")
     def test_memory_cache(self):
         """Test the MemoryCache class with a sequence of 'memory read' and 'memory write' operations."""
         self.build()

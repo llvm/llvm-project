@@ -168,7 +168,7 @@ SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);
 /// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
 /// operand or null otherwise.  If the string metadata is not found return
 /// Optional's not-a-value.
-Optional<const MDOperand *> findStringMetadataForLoop(Loop *TheLoop,
+Optional<const MDOperand *> findStringMetadataForLoop(const Loop *TheLoop,
                                                       StringRef Name);
 
 /// Find named metadata for a loop with an integer value.

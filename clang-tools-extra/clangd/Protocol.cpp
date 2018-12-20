@@ -716,6 +716,12 @@ json::Value toJSON(const DocumentHighlight &DH) {
   };
 }
 
+llvm::json::Value toJSON(const FileStatus &FStatus) {
+  return json::Object{
+      {"uri", FStatus.uri}, {"state", FStatus.state},
+  };
+}
+
 raw_ostream &operator<<(raw_ostream &O, const DocumentHighlight &V) {
   O << V.range;
   if (V.kind == DocumentHighlightKind::Read)
@@ -752,6 +758,7 @@ bool fromJSON(const json::Value &Params, InitializationOptions &Opts) {
   fromJSON(Params, Opts.ConfigSettings);
   O.map("compilationDatabasePath", Opts.compilationDatabasePath);
   O.map("fallbackFlags", Opts.fallbackFlags);
+  O.map("clangdFileStatus", Opts.FileStatus);
   return true;
 }
 

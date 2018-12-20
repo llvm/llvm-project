@@ -681,7 +681,7 @@ int main(int argc, const char *argv[]) {
   }
 
   // Default to stdin if no filename is specified.
-  if (opts::InputFilenames.size() == 0)
+  if (opts::InputFilenames.empty())
     opts::InputFilenames.push_back("-");
 
   llvm::for_each(opts::InputFilenames, dumpInput);

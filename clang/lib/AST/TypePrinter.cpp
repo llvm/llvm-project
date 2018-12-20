@@ -117,9 +117,7 @@ namespace {
     void spaceBeforePlaceHolder(raw_ostream &OS);
     void printTypeSpec(NamedDecl *D, raw_ostream &OS);
 
-    void printBefore(const Type *ty, Qualifiers qs, raw_ostream &OS);
     void printBefore(QualType T, raw_ostream &OS);
-    void printAfter(const Type *ty, Qualifiers qs, raw_ostream &OS);
     void printAfter(QualType T, raw_ostream &OS);
     void AppendScope(DeclContext *DC, raw_ostream &OS);
     void printTag(TagDecl *T, raw_ostream &OS);
@@ -129,6 +127,10 @@ namespace {
     void print##CLASS##Before(const CLASS##Type *T, raw_ostream &OS); \
     void print##CLASS##After(const CLASS##Type *T, raw_ostream &OS);
 #include "clang/AST/TypeNodes.def"
+
+  private:
+    void printBefore(const Type *ty, Qualifiers qs, raw_ostream &OS);
+    void printAfter(const Type *ty, Qualifiers qs, raw_ostream &OS);
   };
 
 } // namespace
@@ -160,8 +162,15 @@ void TypePrinter::spaceBeforePlaceHolder(raw_ostream &OS) {
     OS << ' ';
 }
 
+static SplitQualType splitAccordingToPolicy(QualType QT,
+                                            const PrintingPolicy &Policy) {
+  if (Policy.PrintCanonicalTypes)
+    QT = QT.getCanonicalType();
+  return QT.split();
+}
+
 void TypePrinter::print(QualType t, raw_ostream &OS, StringRef PlaceHolder) {
-  SplitQualType split = t.split();
+  SplitQualType split = splitAccordingToPolicy(t, Policy);
   print(split.Ty, split.Quals, OS, PlaceHolder);
 }
 
@@ -260,7 +269,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
 }
 
 void TypePrinter::printBefore(QualType T, raw_ostream &OS) {
-  SplitQualType Split = T.split();
+  SplitQualType Split = splitAccordingToPolicy(T, Policy);
 
   // If we have cv1 T, where T is substituted for cv2 U, only print cv1 - cv2
   // at this level.
@@ -320,7 +329,7 @@ void TypePrinter::printBefore(const Type *T,Qualifiers Quals, raw_ostream &OS) {
 }
 
 void TypePrinter::printAfter(QualType t, raw_ostream &OS) {
-  SplitQualType split = t.split();
+  SplitQualType split = splitAccordingToPolicy(t, Policy);
   printAfter(split.Ty, split.Quals, OS);
 }
 
@@ -1815,6 +1824,12 @@ std::string QualType::getAsString(const Type *ty, Qualifiers qs,
   return buffer;
 }
 
+void QualType::print(raw_ostream &OS, const PrintingPolicy &Policy,
+                     const Twine &PlaceHolder, unsigned Indentation) const {
+  print(splitAccordingToPolicy(*this, Policy), OS, Policy, PlaceHolder,
+        Indentation);
+}
+
 void QualType::print(const Type *ty, Qualifiers qs,
                      raw_ostream &OS, const PrintingPolicy &policy,
                      const Twine &PlaceHolder, unsigned Indentation) {
@@ -1822,6 +1837,12 @@ void QualType::print(const Type *ty, Qualifiers qs,
   StringRef PH = PlaceHolder.toStringRef(PHBuf);
 
   TypePrinter(policy, Indentation).print(ty, qs, OS, PH);
+}
+
+void QualType::getAsStringInternal(std::string &Str,
+                                   const PrintingPolicy &Policy) const {
+  return getAsStringInternal(splitAccordingToPolicy(*this, Policy), Str,
+                             Policy);
 }
 
 void QualType::getAsStringInternal(const Type *ty, Qualifiers qs,

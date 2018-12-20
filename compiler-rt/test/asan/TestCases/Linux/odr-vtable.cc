@@ -1,9 +1,6 @@
-// FIXME: Same as test/asan/TestCases/Linux/odr-violation.cc ?
-// XFAIL: android
-
-// RUN: %clangxx_asan -fno-rtti -DBUILD_SO1 -fPIC -shared %s -o %t1.so
-// RUN: %clangxx_asan -fno-rtti -DBUILD_SO2 -fPIC -shared %s -o %t2.so
-// RUN: %clangxx_asan -fno-rtti %t1.so %t2.so %s -Wl,-R. -o %t
+// RUN: %clangxx_asan -fno-rtti -DBUILD_SO1 -fPIC -shared %s -o %dynamiclib1
+// RUN: %clangxx_asan -fno-rtti -DBUILD_SO2 -fPIC -shared %s -o %dynamiclib2
+// RUN: %clangxx_asan -fno-rtti %s %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t
 // RUN: %env_asan_opts=fast_unwind_on_malloc=0:detect_odr_violation=2 not %run %t 2>&1 | FileCheck %s
 
 struct XYZ {
