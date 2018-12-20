@@ -703,7 +703,7 @@ static bool compareSegmentsByPAddr(const Segment *A, const Segment *B) {
 template <class ELFT> void BinaryELFBuilder<ELFT>::initFileHeader() {
   Obj->Flags = 0x0;
   Obj->Type = ET_REL;
-  Obj->OSABI = 0;
+  Obj->OSABI = ELFOSABI_NONE;
   Obj->ABIVersion = 0;
   Obj->Entry = 0x0;
   Obj->Machine = EMachine;

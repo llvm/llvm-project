@@ -1147,7 +1147,7 @@ bool SystemZDAGToDAGISel::tryGather(SDNode *N, unsigned Opcode) {
     return false;
 
   auto *Load = dyn_cast<LoadSDNode>(N->getOperand(1));
-  if (!Load || !Load->hasOneUse())
+  if (!Load || !Load->hasNUsesOfValue(1, 0))
     return false;
   if (Load->getMemoryVT().getSizeInBits() !=
       Load->getValueType(0).getSizeInBits())

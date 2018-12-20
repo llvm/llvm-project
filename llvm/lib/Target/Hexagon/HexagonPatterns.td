@@ -177,6 +177,11 @@ def UDEC32: SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(V-32, SDLoc(N), MVT::i32);
 }]>;
 
+class Subi<int From>: SDNodeXForm<imm,
+  "int32_t V = " # From # " - N->getSExtValue();" #
+  "return CurDAG->getTargetConstant(V, SDLoc(N), MVT::i32);"
+>;
+
 def Log2_32: SDNodeXForm<imm, [{
   uint32_t V = N->getZExtValue();
   return CurDAG->getTargetConstant(Log2_32(V), SDLoc(N), MVT::i32);
@@ -995,10 +1000,90 @@ def: OpR_RR_pat<S2_asr_r_p, Sra, i64, I64, I32>;
 def: OpR_RR_pat<S2_lsr_r_p, Srl, i64, I64, I32>;
 def: OpR_RR_pat<S2_asl_r_p, Shl, i64, I64, I32>;
 
-let Predicates = [HasV60] in {
+// Funnel shifts.
+def IsMul8_U3: PatLeaf<(i32 imm), [{
+  uint64_t V = N->getZExtValue();
+  return V % 8 == 0 && isUInt<3>(V / 8);
+}]>;
+
+def Divu8: SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() / 8, SDLoc(N), MVT::i32);
+}]>;
+
+// Funnel shift-left.
+def FShl32i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
+  (HiReg (S2_asl_i_p (Combinew $Rs, $Rt), $S))>;
+def FShl32r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
+  (HiReg (S2_asl_r_p (Combinew $Rs, $Rt), $Ru))>;
+
+def FShl64i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
+  (S2_lsr_i_p_or (S2_asl_i_p $Rt, $S),  $Rs, (Subi<64> $S))>;
+def FShl64r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
+  (S2_lsr_r_p_or (S2_asl_r_p $Rt, $Ru), $Rs, (A2_subri 64, $Ru))>;
+
+// Combined SDNodeXForm: (Divu8 (Subi<64> $S))
+def Divu64_8: SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant((64 - N->getSExtValue()) / 8,
+                                   SDLoc(N), MVT::i32);
+}]>;
+
+// Special cases:
+let AddedComplexity = 100 in {
+  def: Pat<(fshl I32:$Rs, I32:$Rt, (i32 16)),
+           (A2_combine_hl I32:$Rs, I32:$Rt)>;
+  def: Pat<(fshl I64:$Rs, I64:$Rt, IsMul8_U3:$S),
+           (S2_valignib I64:$Rs, I64:$Rt, (Divu64_8 $S))>;
+}
+
+let Predicates = [HasV60], AddedComplexity = 50 in {
   def: OpR_RI_pat<S6_rol_i_r, Rol, i32, I32, u5_0ImmPred>;
   def: OpR_RI_pat<S6_rol_i_p, Rol, i64, I64, u6_0ImmPred>;
 }
+let AddedComplexity = 30 in {
+  def: Pat<(rotl I32:$Rs, u5_0ImmPred:$S),          (FShl32i $Rs, $Rs, imm:$S)>;
+  def: Pat<(rotl I64:$Rs, u6_0ImmPred:$S),          (FShl64i $Rs, $Rs, imm:$S)>;
+  def: Pat<(fshl I32:$Rs, I32:$Rt, u5_0ImmPred:$S), (FShl32i $Rs, $Rt, imm:$S)>;
+  def: Pat<(fshl I64:$Rs, I64:$Rt, u6_0ImmPred:$S), (FShl64i $Rs, $Rt, imm:$S)>;
+}
+def: Pat<(rotl I32:$Rs, I32:$Rt),           (FShl32r $Rs, $Rs, $Rt)>;
+def: Pat<(rotl I64:$Rs, I32:$Rt),           (FShl64r $Rs, $Rs, $Rt)>;
+def: Pat<(fshl I32:$Rs, I32:$Rt, I32:$Ru),  (FShl32r $Rs, $Rt, $Ru)>;
+def: Pat<(fshl I64:$Rs, I64:$Rt, I32:$Ru),  (FShl64r $Rs, $Rt, $Ru)>;
+
+// Funnel shift-right.
+def FShr32i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
+  (LoReg (S2_lsr_i_p (Combinew $Rs, $Rt), $S))>;
+def FShr32r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
+  (LoReg (S2_lsr_r_p (Combinew $Rs, $Rt), $Ru))>;
+
+def FShr64i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
+  (S2_asl_i_p_or (S2_lsr_i_p $Rt, $S),  $Rs, (Subi<64> $S))>;
+def FShr64r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
+  (S2_asl_r_p_or (S2_lsr_r_p $Rt, $Ru), $Rs, (A2_subri 64, $Ru))>;
+
+// Special cases:
+let AddedComplexity = 100 in {
+  def: Pat<(fshr I32:$Rs, I32:$Rt, (i32 16)),
+           (A2_combine_hl I32:$Rs, I32:$Rt)>;
+  def: Pat<(fshr I64:$Rs, I64:$Rt, IsMul8_U3:$S),
+           (S2_valignib I64:$Rs, I64:$Rt, (Divu8 $S))>;
+}
+
+let Predicates = [HasV60], AddedComplexity = 50 in {
+  def: Pat<(rotr I32:$Rs, u5_0ImmPred:$S), (S6_rol_i_r I32:$Rs, (Subi<32> $S))>;
+  def: Pat<(rotr I64:$Rs, u6_0ImmPred:$S), (S6_rol_i_p I64:$Rs, (Subi<64> $S))>;
+}
+let AddedComplexity = 30 in {
+  def: Pat<(rotr I32:$Rs, u5_0ImmPred:$S),          (FShr32i $Rs, $Rs, imm:$S)>;
+  def: Pat<(rotr I64:$Rs, u6_0ImmPred:$S),          (FShr64i $Rs, $Rs, imm:$S)>;
+  def: Pat<(fshr I32:$Rs, I32:$Rt, u5_0ImmPred:$S), (FShr32i $Rs, $Rt, imm:$S)>;
+  def: Pat<(fshr I64:$Rs, I64:$Rt, u6_0ImmPred:$S), (FShr64i $Rs, $Rt, imm:$S)>;
+}
+def: Pat<(rotr I32:$Rs, I32:$Rt),           (FShr32r $Rs, $Rs, $Rt)>;
+def: Pat<(rotr I64:$Rs, I32:$Rt),           (FShr64r $Rs, $Rs, $Rt)>;
+def: Pat<(fshr I32:$Rs, I32:$Rt, I32:$Ru),  (FShr32r $Rs, $Rt, $Ru)>;
+def: Pat<(fshr I64:$Rs, I64:$Rt, I32:$Ru),  (FShr64r $Rs, $Rt, $Ru)>;
+
 
 def: Pat<(sra (add (sra I32:$Rs, u5_0ImmPred:$u5), 1), (i32 1)),
          (S2_asr_i_r_rnd I32:$Rs, imm:$u5)>;
@@ -1182,6 +1267,7 @@ def: Pat<(HexagonVASL V2I16:$Rs, I32:$Rt),
          (LoReg (S2_asl_i_vh (ToAext64 $Rs), I32:$Rt))>;
 def: Pat<(HexagonVLSR V2I16:$Rs, I32:$Rt),
          (LoReg (S2_lsr_i_vh (ToAext64 $Rs), I32:$Rt))>;
+
 
 // --(9) Arithmetic/bitwise ----------------------------------------------
 //

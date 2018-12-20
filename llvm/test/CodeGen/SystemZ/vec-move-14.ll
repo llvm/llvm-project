@@ -94,3 +94,45 @@ define <2 x double> @f9(double *%ptr) {
   %ret = insertelement <2 x double> zeroinitializer, double %val, i32 0
   ret <2 x double> %ret
 }
+
+; Test VLLEZF with a float when the result is stored to memory.
+define void @f10(float *%ptr, <4 x float> *%res) {
+; CHECK-LABEL: f10:
+; CHECK: vllezf [[REG:%v[0-9]+]], 0(%r2)
+; CHECK: vst [[REG]], 0(%r3)
+; CHECK: br %r14
+  %val = load float, float *%ptr
+  %ret = insertelement <4 x float> zeroinitializer, float %val, i32 1
+  store <4 x float> %ret, <4 x float> *%res
+  ret void
+}
+
+; Test VLLEZG with a double when the result is stored to memory.
+define void @f11(double *%ptr, <2 x double> *%res) {
+; CHECK-LABEL: f11:
+; CHECK: vllezg [[REG:%v[0-9]+]], 0(%r2)
+; CHECK: vst [[REG]], 0(%r3)
+; CHECK: br %r14
+  %val = load double, double *%ptr
+  %ret = insertelement <2 x double> zeroinitializer, double %val, i32 0
+  store <2 x double> %ret, <2 x double> *%res
+  ret void
+}
+
+; Test VLLEZG when the zeroinitializer is shared.
+define void @f12(i64 *%ptr, <2 x i64> *%res) {
+; CHECK-LABEL: f12:
+; CHECK: vllezg [[REG:%v[0-9]+]], 0(%r2)
+; CHECK: vst [[REG]], 0(%r3)
+; CHECK: vllezg [[REG1:%v[0-9]+]], 0(%r2)
+; CHECK: vst [[REG1]], 0(%r3)
+; CHECK: br %r14
+  %val = load volatile i64, i64 *%ptr
+  %ret = insertelement <2 x i64> zeroinitializer, i64 %val, i32 0
+  store volatile <2 x i64> %ret, <2 x i64> *%res
+  %val1 = load volatile i64, i64 *%ptr
+  %ret1 = insertelement <2 x i64> zeroinitializer, i64 %val1, i32 0
+  store volatile <2 x i64> %ret1, <2 x i64> *%res
+  ret void
+}
+

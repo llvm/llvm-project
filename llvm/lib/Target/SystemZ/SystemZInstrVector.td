@@ -151,13 +151,13 @@ let Predicates = [FeatureVector] in {
   def VLLEZH : UnaryVRX<"vllezh", 0xE704, z_vllezi16, v128h, 2, 1>;
   def VLLEZF : UnaryVRX<"vllezf", 0xE704, z_vllezi32, v128f, 4, 2>;
   def VLLEZG : UnaryVRX<"vllezg", 0xE704, z_vllezi64, v128g, 8, 3>;
-  def : Pat<(v4f32 (z_vllezf32 bdxaddr12only:$addr)),
+  def : Pat<(z_vllezf32 bdxaddr12only:$addr),
             (VLLEZF bdxaddr12only:$addr)>;
-  def : Pat<(v2f64 (z_vllezf64 bdxaddr12only:$addr)),
+  def : Pat<(z_vllezf64 bdxaddr12only:$addr),
             (VLLEZG bdxaddr12only:$addr)>;
   let Predicates = [FeatureVectorEnhancements1] in {
     def VLLEZLF : UnaryVRX<"vllezlf", 0xE704, z_vllezli32, v128f, 4, 6>;
-    def : Pat<(v4f32 (z_vllezlf32 bdxaddr12only:$addr)),
+    def : Pat<(z_vllezlf32 bdxaddr12only:$addr),
               (VLLEZLF bdxaddr12only:$addr)>;
   }
 
