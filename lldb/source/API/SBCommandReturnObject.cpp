@@ -48,9 +48,7 @@ operator=(const SBCommandReturnObject &rhs) {
   return *this;
 }
 
-bool SBCommandReturnObject::IsValid() const {
-  return m_opaque_ap.get() != nullptr;
-}
+bool SBCommandReturnObject::IsValid() const { return m_opaque_ap != nullptr; }
 
 const char *SBCommandReturnObject::GetOutput() {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
