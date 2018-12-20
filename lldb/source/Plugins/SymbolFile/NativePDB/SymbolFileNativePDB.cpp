@@ -759,6 +759,8 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
       std::make_shared<SymbolFileType>(*this, toOpaqueUid(tid));
   Variable::RangeList ranges;
 
+  m_ast->GetOrCreateGlobalVariableDecl(var_id);
+
   DWARFExpression location = MakeGlobalLocationExpression(
       section, offset, GetObjectFile()->GetModule());
 

@@ -5434,10 +5434,16 @@ AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
   // Check that it looks like a symbol + an addend
   MCValue Res;
   bool Relocatable = Expr->evaluateAsRelocatable(Res, nullptr, nullptr);
-  if (!Relocatable || !Res.getSymA() || Res.getSymB())
+  if (!Relocatable || Res.getSymB())
     return false;
 
-  DarwinRefKind = Res.getSymA()->getKind();
+  // Treat expressions with an ELFRefKind (like ":abs_g1:3", or
+  // ":abs_g1:x" where x is constant) as symbolic even if there is no symbol.
+  if (!Res.getSymA() && ELFRefKind == AArch64MCExpr::VK_INVALID)
+    return false;
+
+  if (Res.getSymA())
+    DarwinRefKind = Res.getSymA()->getKind();
   Addend = Res.getConstant();
 
   // It's some symbol reference + a constant addend, but really

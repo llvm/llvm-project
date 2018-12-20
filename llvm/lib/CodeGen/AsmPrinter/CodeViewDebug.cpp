@@ -124,6 +124,8 @@ CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
   TheCPU =
       mapArchToCVCPUType(Triple(MMI->getModule()->getTargetTriple()).getArch());
 
+  collectGlobalVariableInfo();
+
   // Check if we should emit type record hashes.
   ConstantInt *GH = mdconst::extract_or_null<ConstantInt>(
       MMI->getModule()->getModuleFlag("CodeViewGHash"));
@@ -1038,6 +1040,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     endSymbolRecord(FrameProcEnd);
 
     emitLocalVariableList(FI, FI.Locals);
+    emitGlobalVariableList(FI.Globals);
     emitLexicalBlockList(FI.ChildBlocks, FI);
 
     // Emit inlined call site information. Only emit functions inlined directly
@@ -2046,6 +2049,7 @@ void CodeViewDebug::clear() {
   GlobalUDTs.clear();
   TypeIndices.clear();
   CompleteTypeIndices.clear();
+  ScopeGlobals.clear();
 }
 
 void CodeViewDebug::collectMemberInfo(ClassInfo &Info,
@@ -2648,6 +2652,7 @@ void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
 
   // Emit variables local to this lexical block.
   emitLocalVariableList(FI, Block.Locals);
+  emitGlobalVariableList(Block.Globals);
 
   // Emit lexical blocks contained within this block.
   emitLexicalBlockList(Block.Children, FI);
@@ -2661,9 +2666,10 @@ void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
 void CodeViewDebug::collectLexicalBlockInfo(
         SmallVectorImpl<LexicalScope *> &Scopes,
         SmallVectorImpl<LexicalBlock *> &Blocks,
-        SmallVectorImpl<LocalVariable> &Locals) {
+        SmallVectorImpl<LocalVariable> &Locals,
+        SmallVectorImpl<CVGlobalVariable> &Globals) {
   for (LexicalScope *Scope : Scopes)
-    collectLexicalBlockInfo(*Scope, Blocks, Locals);
+    collectLexicalBlockInfo(*Scope, Blocks, Locals, Globals);
 }
 
 /// Populate the lexical blocks and local variable lists of the parent with
@@ -2671,45 +2677,58 @@ void CodeViewDebug::collectLexicalBlockInfo(
 void CodeViewDebug::collectLexicalBlockInfo(
     LexicalScope &Scope,
     SmallVectorImpl<LexicalBlock *> &ParentBlocks,
-    SmallVectorImpl<LocalVariable> &ParentLocals) {
+    SmallVectorImpl<LocalVariable> &ParentLocals,
+    SmallVectorImpl<CVGlobalVariable> &ParentGlobals) {
   if (Scope.isAbstractScope())
     return;
 
-  auto LocalsIter = ScopeVariables.find(&Scope);
-  if (LocalsIter == ScopeVariables.end()) {
-    // This scope does not contain variables and can be eliminated.
-    collectLexicalBlockInfo(Scope.getChildren(), ParentBlocks, ParentLocals);
-    return;
-  }
-  SmallVectorImpl<LocalVariable> &Locals = LocalsIter->second;
-
+  // Gather information about the lexical scope including local variables,
+  // global variables, and address ranges.
+  bool IgnoreScope = false;
+  auto LI = ScopeVariables.find(&Scope);
+  SmallVectorImpl<LocalVariable> *Locals =
+      LI != ScopeVariables.end() ? &LI->second : nullptr;
+  auto GI = ScopeGlobals.find(Scope.getScopeNode());
+  SmallVectorImpl<CVGlobalVariable> *Globals =
+      GI != ScopeGlobals.end() ? GI->second.get() : nullptr;
   const DILexicalBlock *DILB = dyn_cast<DILexicalBlock>(Scope.getScopeNode());
-  if (!DILB) {
-    // This scope is not a lexical block and can be eliminated, but keep any
-    // local variables it contains.
-    ParentLocals.append(Locals.begin(), Locals.end());
-    collectLexicalBlockInfo(Scope.getChildren(), ParentBlocks, ParentLocals);
-    return;
-  }
-
   const SmallVectorImpl<InsnRange> &Ranges = Scope.getRanges();
-  if (Ranges.size() != 1 || !getLabelAfterInsn(Ranges.front().second)) {
-    // This lexical block scope has too many address ranges to represent in the
-    // current CodeView format or does not have a valid address range.
-    // Eliminate this lexical scope and promote any locals it contains to the
-    // parent scope.
-    //
-    // For lexical scopes with multiple address ranges you may be tempted to
-    // construct a single range covering every instruction where the block is
-    // live and everything in between.  Unfortunately, Visual Studio only
-    // displays variables from the first matching lexical block scope.  If the
-    // first lexical block contains exception handling code or cold code which
-    // is moved to the bottom of the routine creating a single range covering
-    // nearly the entire routine, then it will hide all other lexical blocks
-    // and the variables they contain.
-    //
-    ParentLocals.append(Locals.begin(), Locals.end());
-    collectLexicalBlockInfo(Scope.getChildren(), ParentBlocks, ParentLocals);
+
+  // Ignore lexical scopes which do not contain variables.
+  if (!Locals && !Globals)
+    IgnoreScope = true;
+
+  // Ignore lexical scopes which are not lexical blocks.
+  if (!DILB)
+    IgnoreScope = true;
+
+  // Ignore scopes which have too many address ranges to represent in the
+  // current CodeView format or do not have a valid address range.
+  //
+  // For lexical scopes with multiple address ranges you may be tempted to
+  // construct a single range covering every instruction where the block is
+  // live and everything in between.  Unfortunately, Visual Studio only
+  // displays variables from the first matching lexical block scope.  If the
+  // first lexical block contains exception handling code or cold code which
+  // is moved to the bottom of the routine creating a single range covering
+  // nearly the entire routine, then it will hide all other lexical blocks
+  // and the variables they contain.
+  if (Ranges.size() != 1 || !getLabelAfterInsn(Ranges.front().second))
+    IgnoreScope = true;
+
+  if (IgnoreScope) {
+    // This scope can be safely ignored and eliminating it will reduce the
+    // size of the debug information. Be sure to collect any variable and scope
+    // information from the this scope or any of its children and collapse them
+    // into the parent scope.
+    if (Locals)
+      ParentLocals.append(Locals->begin(), Locals->end());
+    if (Globals)
+      ParentGlobals.append(Globals->begin(), Globals->end());
+    collectLexicalBlockInfo(Scope.getChildren(),
+                            ParentBlocks,
+                            ParentLocals,
+                            ParentGlobals);
     return;
   }
 
@@ -2720,8 +2739,8 @@ void CodeViewDebug::collectLexicalBlockInfo(
   if (!BlockInsertion.second)
     return;
 
-  // Create a lexical block containing the local variables and collect the
-  // the lexical block information for the children.
+  // Create a lexical block containing the variables and collect the the
+  // lexical block information for the children.
   const InsnRange &Range = Ranges.front();
   assert(Range.first && Range.second);
   LexicalBlock &Block = BlockInsertion.first->second;
@@ -2730,9 +2749,15 @@ void CodeViewDebug::collectLexicalBlockInfo(
   assert(Block.Begin && "missing label for scope begin");
   assert(Block.End && "missing label for scope end");
   Block.Name = DILB->getName();
-  Block.Locals = std::move(Locals);
+  if (Locals)
+    Block.Locals = std::move(*Locals);
+  if (Globals)
+    Block.Globals = std::move(*Globals);
   ParentBlocks.push_back(&Block);
-  collectLexicalBlockInfo(Scope.getChildren(), Block.Children, Block.Locals);
+  collectLexicalBlockInfo(Scope.getChildren(),
+                          Block.Children,
+                          Block.Locals,
+                          Block.Globals);
 }
 
 void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
@@ -2744,7 +2769,10 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
 
   // Build the lexical block structure to emit for this routine.
   if (LexicalScope *CFS = LScopes.getCurrentFunctionScope())
-    collectLexicalBlockInfo(*CFS, CurFn->ChildBlocks, CurFn->Locals);
+    collectLexicalBlockInfo(*CFS,
+                            CurFn->ChildBlocks,
+                            CurFn->Locals,
+                            CurFn->Globals);
 
   // Clear the scope and variable information from the map which will not be
   // valid after we have finished processing this routine.  This also prepares
@@ -2861,7 +2889,7 @@ void CodeViewDebug::emitDebugInfoForUDTs(
   }
 }
 
-void CodeViewDebug::emitDebugInfoForGlobals() {
+void CodeViewDebug::collectGlobalVariableInfo() {
   DenseMap<const DIGlobalVariableExpression *, const GlobalVariable *>
       GlobalMap;
   for (const GlobalVariable &GV : MMI->getModule()->globals()) {
@@ -2874,42 +2902,56 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
   NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
   for (const MDNode *Node : CUs->operands()) {
     const auto *CU = cast<DICompileUnit>(Node);
-
-    // First, emit all globals that are not in a comdat in a single symbol
-    // substream. MSVC doesn't like it if the substream is empty, so only open
-    // it if we have at least one global to emit.
-    switchToDebugSectionForSymbol(nullptr);
-    MCSymbol *EndLabel = nullptr;
     for (const auto *GVE : CU->getGlobalVariables()) {
-      if (const auto *GV = GlobalMap.lookup(GVE))
-        if (!GV->hasComdat() && !GV->isDeclarationForLinker()) {
-          if (!EndLabel) {
-            OS.AddComment("Symbol subsection for globals");
-            EndLabel = beginCVSubsection(DebugSubsectionKind::Symbols);
-          }
-          // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
-          emitDebugInfoForGlobal(GVE->getVariable(), GV, Asm->getSymbol(GV));
-        }
+      const auto *GV = GlobalMap.lookup(GVE);
+      if (!GV || GV->isDeclarationForLinker())
+        continue;
+      const DIGlobalVariable *DIGV = GVE->getVariable();
+      DIScope *Scope = DIGV->getScope();
+      SmallVector<CVGlobalVariable, 1> *VariableList;
+      if (Scope && isa<DILocalScope>(Scope)) {
+        // Locate a global variable list for this scope, creating one if
+        // necessary.
+        auto Insertion = ScopeGlobals.insert(
+            {Scope, std::unique_ptr<GlobalVariableList>()});
+        if (Insertion.second)
+          Insertion.first->second = llvm::make_unique<GlobalVariableList>();
+        VariableList = Insertion.first->second.get();
+      } else if (GV->hasComdat())
+        // Emit this global variable into a COMDAT section.
+        VariableList = &ComdatVariables;
+      else
+        // Emit this globla variable in a single global symbol section.
+        VariableList = &GlobalVariables;
+      CVGlobalVariable CVGV = {DIGV, GV};
+      VariableList->emplace_back(std::move(CVGV));
     }
-    if (EndLabel)
-      endCVSubsection(EndLabel);
+  }
+}
 
-    // Second, emit each global that is in a comdat into its own .debug$S
-    // section along with its own symbol substream.
-    for (const auto *GVE : CU->getGlobalVariables()) {
-      if (const auto *GV = GlobalMap.lookup(GVE)) {
-        if (GV->hasComdat()) {
-          MCSymbol *GVSym = Asm->getSymbol(GV);
-          OS.AddComment("Symbol subsection for " +
-                        Twine(GlobalValue::dropLLVMManglingEscape(GV->getName())));
-          switchToDebugSectionForSymbol(GVSym);
-          EndLabel = beginCVSubsection(DebugSubsectionKind::Symbols);
-          // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
-          emitDebugInfoForGlobal(GVE->getVariable(), GV, GVSym);
-          endCVSubsection(EndLabel);
-        }
-      }
-    }
+void CodeViewDebug::emitDebugInfoForGlobals() {
+  // First, emit all globals that are not in a comdat in a single symbol
+  // substream. MSVC doesn't like it if the substream is empty, so only open
+  // it if we have at least one global to emit.
+  switchToDebugSectionForSymbol(nullptr);
+  if (!GlobalVariables.empty()) {
+    OS.AddComment("Symbol subsection for globals");
+    MCSymbol *EndLabel = beginCVSubsection(DebugSubsectionKind::Symbols);
+    emitGlobalVariableList(GlobalVariables);
+    endCVSubsection(EndLabel);
+  }
+
+  // Second, emit each global that is in a comdat into its own .debug$S
+  // section along with its own symbol substream.
+  for (const CVGlobalVariable &CVGV : ComdatVariables) {
+    MCSymbol *GVSym = Asm->getSymbol(CVGV.GV);
+    OS.AddComment("Symbol subsection for " +
+            Twine(GlobalValue::dropLLVMManglingEscape(CVGV.GV->getName())));
+    switchToDebugSectionForSymbol(GVSym);
+    MCSymbol *EndLabel = beginCVSubsection(DebugSubsectionKind::Symbols);
+    // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
+    emitDebugInfoForGlobal(CVGV.DIGV, CVGV.GV, GVSym);
+    endCVSubsection(EndLabel);
   }
 }
 
@@ -2922,6 +2964,15 @@ void CodeViewDebug::emitDebugInfoForRetainedTypes() {
         // FIXME: Add to global/local DTU list.
       }
     }
+  }
+}
+
+// Emit each global variable in the specified array.
+void CodeViewDebug::emitGlobalVariableList(ArrayRef<CVGlobalVariable> Globals) {
+  for (const CVGlobalVariable &CVGV : Globals) {
+    MCSymbol *GVSym = Asm->getSymbol(CVGV.GV);
+    // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
+    emitDebugInfoForGlobal(CVGV.DIGV, CVGV.GV, GVSym);
   }
 }
 

@@ -573,15 +573,6 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   DIE &Die = NewCU.getUnitDie();
   StringRef FN = DIUnit->getFilename();
 
-  // LTO with assembly output shares a single line table amongst multiple CUs.
-  // To avoid the compilation directory being ambiguous, let the line table
-  // explicitly describe the directory of all files, never relying on the
-  // compilation directory.
-  if (!Asm->OutStreamer->hasRawTextSupport() || SingleCU)
-    Asm->OutStreamer->emitDwarfFile0Directive(
-        CompilationDir, FN, NewCU.getMD5AsBytes(DIUnit->getFile()),
-        DIUnit->getSource(), NewCU.getUniqueID());
-
   StringRef Producer = DIUnit->getProducer();
   StringRef Flags = DIUnit->getFlags();
   if (!Flags.empty() && !useAppleExtensionAttributes()) {
@@ -648,6 +639,16 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
 
   for (auto *IE : DIUnit->getImportedEntities())
     NewCU.addImportedEntity(IE);
+
+  // LTO with assembly output shares a single line table amongst multiple CUs.
+  // To avoid the compilation directory being ambiguous, let the line table
+  // explicitly describe the directory of all files, never relying on the
+  // compilation directory.
+  if (!Asm->OutStreamer->hasRawTextSupport() || SingleCU)
+    Asm->OutStreamer->emitDwarfFile0Directive(
+        CompilationDir, DIUnit->getFilename(),
+        NewCU.getMD5AsBytes(DIUnit->getFile()), DIUnit->getSource(),
+        NewCU.getUniqueID());
 
   if (useSplitDwarf()) {
     NewCU.setSkeleton(constructSkeletonCU(NewCU));

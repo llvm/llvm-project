@@ -774,7 +774,7 @@ Contents of ``<project dir>/<pass name>/CMakeLists.txt``:
 
 Note if you intend for this pass to be merged into the LLVM source tree at some
 point in the future it might make more sense to use LLVM's internal
-``add_llvm_loadable_module`` function instead by...
+``add_llvm_library`` function with he MODULE argument instead by...
 
 
 Adding the following to ``<project dir>/CMakeLists.txt`` (after
@@ -789,7 +789,7 @@ And then changing ``<project dir>/<pass name>/CMakeLists.txt`` to
 
 .. code-block:: cmake
 
-  add_llvm_loadable_module(LLVMPassname
+  add_llvm_library(LLVMPassname MODULE
     Pass.cpp
     )
 
