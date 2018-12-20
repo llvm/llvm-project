@@ -11,7 +11,6 @@
 #include "NtStructures.h"
 #include "RegisterContextMinidump_x86_32.h"
 
-#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "Plugins/Process/Utility/LinuxProcMaps.h"
 
@@ -537,6 +536,12 @@ MinidumpParser::FindMemoryRegion(lldb::addr_t load_addr) const {
 
 MemoryRegionInfo
 MinidumpParser::GetMemoryRegionInfo(lldb::addr_t load_addr) {
+  if (!m_parsed_regions)
+    GetMemoryRegions();
+  return FindMemoryRegion(load_addr);
+}
+
+const MemoryRegionInfos &MinidumpParser::GetMemoryRegions() {
   if (!m_parsed_regions) {
     m_parsed_regions = true;
     // We haven't cached our memory regions yet we will create the region cache
@@ -552,7 +557,7 @@ MinidumpParser::GetMemoryRegionInfo(lldb::addr_t load_addr) {
           CreateRegionsCacheFromMemory64List(*this, m_regions);
     std::sort(m_regions.begin(), m_regions.end());
   }
-  return FindMemoryRegion(load_addr);
+  return m_regions;
 }
 
 Status MinidumpParser::Initialize() {
