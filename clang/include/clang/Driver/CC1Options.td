@@ -108,7 +108,7 @@ def analyzer_checker : Separate<["-"], "analyzer-checker">,
   ValuesCode<[{
     const char *Values =
     #define GET_CHECKERS
-    #define CHECKER(FULLNAME, CLASS, HT)  FULLNAME ","
+    #define CHECKER(FULLNAME, CLASS, HT, DOC_URI)  FULLNAME ","
     #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
     #undef GET_CHECKERS
     #define GET_PACKAGES

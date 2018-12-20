@@ -12379,8 +12379,17 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
       BaseExpr->getType()->getPointeeOrArrayElementType();
   BaseExpr = BaseExpr->IgnoreParenCasts();
   const ConstantArrayType *ArrayTy =
-    Context.getAsConstantArrayType(BaseExpr->getType());
+      Context.getAsConstantArrayType(BaseExpr->getType());
+
   if (!ArrayTy)
+    return;
+
+  const Type *BaseType = ArrayTy->getElementType().getTypePtr();
+  // It is possible that the type of the base expression after IgnoreParenCasts
+  // is incomplete, even though the type of the base expression before
+  // IgnoreParenCasts is complete (see PR39746 for an example). In this case we
+  // have no information about whether the array access is out-of-bounds.
+  if (BaseType->isIncompleteType())
     return;
 
   Expr::EvalResult Result;
@@ -12402,7 +12411,6 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     if (!size.isStrictlyPositive())
       return;
 
-    const Type *BaseType = BaseExpr->getType()->getPointeeOrArrayElementType();
     if (BaseType != EffectiveType) {
       // Make sure we're comparing apples to apples when comparing index to size
       uint64_t ptrarith_typesize = Context.getTypeSize(EffectiveType);

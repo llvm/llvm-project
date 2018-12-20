@@ -1139,6 +1139,7 @@ struct PragmaAttributeInfo {
   enum ActionType { Push, Pop, Attribute };
   ParsedAttributes &Attributes;
   ActionType Action;
+  const IdentifierInfo *Namespace = nullptr;
   ArrayRef<Token> Tokens;
 
   PragmaAttributeInfo(ParsedAttributes &Attributes) : Attributes(Attributes) {}
@@ -1393,7 +1394,7 @@ void Parser::HandlePragmaAttribute() {
   auto *Info = static_cast<PragmaAttributeInfo *>(Tok.getAnnotationValue());
   if (Info->Action == PragmaAttributeInfo::Pop) {
     ConsumeAnnotationToken();
-    Actions.ActOnPragmaAttributePop(PragmaLoc);
+    Actions.ActOnPragmaAttributePop(PragmaLoc, Info->Namespace);
     return;
   }
   // Parse the actual attribute with its arguments.
@@ -1403,7 +1404,7 @@ void Parser::HandlePragmaAttribute() {
 
   if (Info->Action == PragmaAttributeInfo::Push && Info->Tokens.empty()) {
     ConsumeAnnotationToken();
-    Actions.ActOnPragmaAttributeEmptyPush(PragmaLoc);
+    Actions.ActOnPragmaAttributeEmptyPush(PragmaLoc, Info->Namespace);
     return;
   }
 
@@ -1555,7 +1556,7 @@ void Parser::HandlePragmaAttribute() {
 
   // Handle a mixed push/attribute by desurging to a push, then an attribute.
   if (Info->Action == PragmaAttributeInfo::Push)
-    Actions.ActOnPragmaAttributeEmptyPush(PragmaLoc);
+    Actions.ActOnPragmaAttributeEmptyPush(PragmaLoc, Info->Namespace);
 
   Actions.ActOnPragmaAttributeAttribute(Attribute, PragmaLoc,
                                         std::move(SubjectMatchRules));
@@ -3118,10 +3119,20 @@ void PragmaForceCUDAHostDeviceHandler::HandlePragma(
 ///
 /// The syntax is:
 /// \code
-///  #pragma clang attribute push(attribute, subject-set)
+///  #pragma clang attribute push (attribute, subject-set)
 ///  #pragma clang attribute push
 ///  #pragma clang attribute (attribute, subject-set)
 ///  #pragma clang attribute pop
+/// \endcode
+///
+/// There are also 'namespace' variants of push and pop directives. The bare
+/// '#pragma clang attribute (attribute, subject-set)' version doesn't require a
+/// namespace, since it always applies attributes to the most recently pushed
+/// group, regardless of namespace.
+/// \code
+///  #pragma clang attribute namespace.push (attribute, subject-set)
+///  #pragma clang attribute namespace.push
+///  #pragma clang attribute namespace.pop
 /// \endcode
 ///
 /// The subject-set clause defines the set of declarations which receive the
@@ -3139,6 +3150,22 @@ void PragmaAttributeHandler::HandlePragma(Preprocessor &PP,
   auto *Info = new (PP.getPreprocessorAllocator())
       PragmaAttributeInfo(AttributesForPragmaAttribute);
 
+  // Parse the optional namespace followed by a period.
+  if (Tok.is(tok::identifier)) {
+    IdentifierInfo *II = Tok.getIdentifierInfo();
+    if (!II->isStr("push") && !II->isStr("pop")) {
+      Info->Namespace = II;
+      PP.Lex(Tok);
+
+      if (!Tok.is(tok::period)) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_attribute_expected_period)
+            << II;
+        return;
+      }
+      PP.Lex(Tok);
+    }
+  }
+
   if (!Tok.isOneOf(tok::identifier, tok::l_paren)) {
     PP.Diag(Tok.getLocation(),
             diag::err_pragma_attribute_expected_push_pop_paren);
@@ -3146,9 +3173,16 @@ void PragmaAttributeHandler::HandlePragma(Preprocessor &PP,
   }
 
   // Determine what action this pragma clang attribute represents.
-  if (Tok.is(tok::l_paren))
+  if (Tok.is(tok::l_paren)) {
+    if (Info->Namespace) {
+      PP.Diag(Tok.getLocation(),
+              diag::err_pragma_attribute_namespace_on_attribute);
+      PP.Diag(Tok.getLocation(),
+              diag::note_pragma_attribute_namespace_on_attribute);
+      return;
+    }
     Info->Action = PragmaAttributeInfo::Attribute;
-  else {
+  } else {
     const IdentifierInfo *II = Tok.getIdentifierInfo();
     if (II->isStr("push"))
       Info->Action = PragmaAttributeInfo::Push;
