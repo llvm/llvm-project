@@ -28,8 +28,8 @@ void ARMTargetInfo::setABIAAPCS() {
   DoubleAlign = LongLongAlign = LongDoubleAlign = SuitableAlign = 64;
   const llvm::Triple &T = getTriple();
 
-  bool IsNetBSD = T.getOS() == llvm::Triple::NetBSD;
-  bool IsOpenBSD = T.getOS() == llvm::Triple::OpenBSD;
+  bool IsNetBSD = T.isOSNetBSD();
+  bool IsOpenBSD = T.isOSOpenBSD();
   if (!T.isOSWindows() && !IsNetBSD && !IsOpenBSD)
     WCharType = UnsignedInt;
 
@@ -217,8 +217,8 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
                              const TargetOptions &Opts)
     : TargetInfo(Triple), FPMath(FP_Default), IsAAPCS(true), LDREX(0),
       HW_FP(0) {
-  bool IsOpenBSD = Triple.getOS() == llvm::Triple::OpenBSD;
-  bool IsNetBSD = Triple.getOS() == llvm::Triple::NetBSD;
+  bool IsOpenBSD = Triple.isOSOpenBSD();
+  bool IsNetBSD = Triple.isOSNetBSD();
 
   // FIXME: the isOSBinFormatMachO is a workaround for identifying a Darwin-like
   // environment where size_t is `unsigned long` rather than `unsigned int`
@@ -282,9 +282,9 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
       setABI("apcs-gnu");
       break;
     default:
-      if (Triple.getOS() == llvm::Triple::NetBSD)
+      if (IsNetBSD)
         setABI("apcs-gnu");
-      else if (Triple.getOS() == llvm::Triple::OpenBSD)
+      else if (IsOpenBSD)
         setABI("aapcs-linux");
       else
         setABI("aapcs");

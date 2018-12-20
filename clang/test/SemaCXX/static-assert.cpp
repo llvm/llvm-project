@@ -76,6 +76,8 @@ struct integral_constant {
   static const Tp value = v;
   typedef Tp value_type;
   typedef integral_constant type;
+  constexpr operator value_type() const noexcept { return value; }
+  constexpr value_type operator()() const noexcept { return value; }
 };
 
 template <class Tp, Tp v>
@@ -103,6 +105,7 @@ struct is_same<T, T> {
 } // namespace std
 
 struct ExampleTypes {
+  explicit ExampleTypes(int);
   using T = int;
   using U = float;
 };
@@ -119,6 +122,18 @@ static_assert(std::is_const<const ExampleTypes::T>::value == false, "message");
 // expected-error@-1{{static_assert failed due to requirement 'std::is_const<const int>::value == false' "message"}}
 static_assert(!(std::is_const<const ExampleTypes::T>::value == true), "message");
 // expected-error@-1{{static_assert failed due to requirement '!(std::is_const<const int>::value == true)' "message"}}
+static_assert(std::is_const<ExampleTypes::T>(), "message");
+// expected-error@-1{{static_assert failed due to requirement 'std::is_const<int>()' "message"}}
+static_assert(!(std::is_const<const ExampleTypes::T>()()), "message");
+// expected-error@-1{{static_assert failed due to requirement '!(std::is_const<const int>()())' "message"}}
+static_assert(std::is_same<decltype(std::is_const<const ExampleTypes::T>()), int>::value, "message");
+// expected-error@-1{{static_assert failed due to requirement 'std::is_same<std::is_const<const int>, int>::value' "message"}}
+static_assert(std::is_const<decltype(ExampleTypes::T(3))>::value, "message");
+// expected-error@-1{{static_assert failed due to requirement 'std::is_const<int>::value' "message"}}
+static_assert(std::is_const<decltype(ExampleTypes::T())>::value, "message");
+// expected-error@-1{{static_assert failed due to requirement 'std::is_const<int>::value' "message"}}
+static_assert(std::is_const<decltype(ExampleTypes(3))>::value, "message");
+// expected-error@-1{{static_assert failed due to requirement 'std::is_const<ExampleTypes>::value' "message"}}
 
 struct BI_tag {};
 struct RAI_tag : BI_tag {};
