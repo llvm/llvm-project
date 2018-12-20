@@ -9,13 +9,37 @@
 
 #import <Foundation/Foundation.h>
 
-void foo()
+#import <exception>
+#import <stdexcept>
+
+@interface MyCustomException: NSException
+@end
+@implementation MyCustomException
+@end
+
+void foo(int n)
 {
     NSDictionary *info = [NSDictionary dictionaryWithObjectsAndKeys:@"some_value", @"some_key", nil];
-    @throw [[NSException alloc] initWithName:@"ThrownException" reason:@"SomeReason" userInfo:info];
+    switch (n) {
+        case 0:
+            @throw [[NSException alloc] initWithName:@"ThrownException" reason:@"SomeReason" userInfo:info];
+        case 1:
+            @throw [[MyCustomException alloc] initWithName:@"ThrownException" reason:@"SomeReason" userInfo:info];
+        case 2:
+            throw std::runtime_error("C++ exception");
+    }
 }
 
-int main (int argc, const char * argv[])
+void rethrow(int n)
+{
+    @try {
+        foo(n);
+    } @catch(NSException *e) {
+        @throw;
+    }
+}
+
+int main(int argc, const char * argv[])
 {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
@@ -24,12 +48,15 @@ int main (int argc, const char * argv[])
     NSException *e2;
 
     @try {
-        foo();
+        foo(atoi(argv[1]));
     } @catch(NSException *e) {
         e2 = e;
     }
 
     NSLog(@"1"); // Set break point at this line.
+
+    rethrow(atoi(argv[1]));
+
     [pool drain];
     return 0;
 }
