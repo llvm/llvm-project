@@ -68,6 +68,7 @@ public:
   clang::BlockDecl *GetOrCreateBlockDecl(PdbCompilandSymId block_id);
   clang::VarDecl *GetOrCreateLocalVariableDecl(PdbCompilandSymId scope_id,
                                                PdbCompilandSymId var_id);
+  clang::VarDecl *GetOrCreateGlobalVariableDecl(PdbGlobalSymId var_id);
 
   clang::QualType GetBasicType(lldb::BasicType type);
   clang::QualType GetOrCreateType(PdbTypeSymId type);
@@ -106,6 +107,9 @@ private:
                                 clang::FunctionDecl &function_decl,
                                 uint32_t param_count);
   clang::Decl *GetOrCreateSymbolForId(PdbCompilandSymId id);
+  clang::VarDecl *CreateVariableDecl(PdbSymUid uid,
+                                     llvm::codeview::CVSymbol sym,
+                                     clang::DeclContext &scope);
 
   void BuildParentMap();
   std::pair<clang::DeclContext *, std::string>

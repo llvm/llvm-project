@@ -216,5 +216,7 @@ target variable CRC32_42
 target variable CRWC1
 target variable CRWCP
 
+target modules dump ast
+
 
 quit
