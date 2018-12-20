@@ -1,3 +1,6 @@
+// FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
+// XFAIL: android
+//
 // We use fast_unwind_on_malloc=0 to have full unwinding even w/o frame
 // pointers. This setting is not on by default because it's too expensive.
 //

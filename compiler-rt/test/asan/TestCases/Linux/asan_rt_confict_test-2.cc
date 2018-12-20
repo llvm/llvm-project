@@ -6,6 +6,7 @@
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: asan-dynamic-runtime
+// XFAIL: android
 
 #if BUILD_SO
 char dummy;
