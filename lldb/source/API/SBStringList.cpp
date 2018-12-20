@@ -47,7 +47,7 @@ const lldb_private::StringList &SBStringList::operator*() const {
   return *m_opaque_ap;
 }
 
-bool SBStringList::IsValid() const { return (m_opaque_ap.get() != NULL); }
+bool SBStringList::IsValid() const { return (m_opaque_ap != NULL); }
 
 void SBStringList::AppendString(const char *str) {
   if (str != NULL) {

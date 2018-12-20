@@ -62,7 +62,7 @@ bool lldb::operator==(const SBAddress &lhs, const SBAddress &rhs) {
 }
 
 bool SBAddress::IsValid() const {
-  return m_opaque_ap.get() != NULL && m_opaque_ap->IsValid();
+  return m_opaque_ap != NULL && m_opaque_ap->IsValid();
 }
 
 void SBAddress::Clear() { m_opaque_ap.reset(new Address()); }
@@ -156,7 +156,7 @@ Address *SBAddress::operator->() { return m_opaque_ap.get(); }
 const Address *SBAddress::operator->() const { return m_opaque_ap.get(); }
 
 Address &SBAddress::ref() {
-  if (m_opaque_ap.get() == NULL)
+  if (m_opaque_ap == NULL)
     m_opaque_ap.reset(new Address());
   return *m_opaque_ap;
 }
