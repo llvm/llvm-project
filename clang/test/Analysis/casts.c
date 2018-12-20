@@ -213,3 +213,14 @@ void no_crash_on_symsym_cast_to_long() {
 }
 
 #endif
+
+char no_crash_SymbolCast_of_float_type_aux(int *p) {
+  *p += 1;
+  return *p;
+}
+
+void no_crash_SymbolCast_of_float_type() {
+  extern float x;
+  char (*f)() = no_crash_SymbolCast_of_float_type_aux;
+  f(&x);
+}

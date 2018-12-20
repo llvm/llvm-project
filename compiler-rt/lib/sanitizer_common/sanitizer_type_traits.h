@@ -39,6 +39,6 @@ struct is_same : public false_type {};
 template <typename T>
 struct is_same<T, T> : public true_type {};
 
-};  // namespace __sanitizer
+}  // namespace __sanitizer
 
 #endif

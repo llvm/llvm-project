@@ -1,6 +1,7 @@
 group("default") {
   deps = [
     ":lld",
+    "//clang/lib/Basic",
     "//llvm/tools/llc",
     "//llvm/tools/llvm-ar:symlinks",
     "//llvm/tools/llvm-as",

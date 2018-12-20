@@ -1040,6 +1040,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   }
   case Intrinsic::invariant_end:
     return true;
+  case Intrinsic::ceil:
+    MIRBuilder.buildInstr(TargetOpcode::G_FCEIL)
+        .addDef(getOrCreateVReg(CI))
+        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
   }
   return false;
 }

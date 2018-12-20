@@ -188,7 +188,7 @@ public:
                                         const Expr *Buf,
                                         const char *message = nullptr,
                                         bool WarnAboutSize = false) const {
-    // This is a convenience override.
+    // This is a convenience overload.
     return CheckBufferAccess(C, state, Size, Buf, nullptr, message, nullptr,
                              WarnAboutSize);
   }
@@ -2254,64 +2254,86 @@ static bool isCPPStdLibraryFunction(const FunctionDecl *FD, StringRef Name) {
 // The driver method, and other Checker callbacks.
 //===----------------------------------------------------------------------===//
 
-bool CStringChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
+static CStringChecker::FnCheck identifyCall(const CallExpr *CE,
+                                            CheckerContext &C) {
   const FunctionDecl *FDecl = C.getCalleeDecl(CE);
-
   if (!FDecl)
-    return false;
+    return nullptr;
+
+  // Pro-actively check that argument types are safe to do arithmetic upon.
+  // We do not want to crash if someone accidentally passes a structure
+  // into, say, a C++ overload of any of these functions.
+  if (isCPPStdLibraryFunction(FDecl, "copy")) {
+    if (CE->getNumArgs() < 3 || !CE->getArg(2)->getType()->isPointerType())
+      return nullptr;
+    return &CStringChecker::evalStdCopy;
+  } else if (isCPPStdLibraryFunction(FDecl, "copy_backward")) {
+    if (CE->getNumArgs() < 3 || !CE->getArg(2)->getType()->isPointerType())
+      return nullptr;
+    return &CStringChecker::evalStdCopyBackward;
+  } else {
+    // An umbrella check for all C library functions.
+    for (auto I: CE->arguments()) {
+      QualType T = I->getType();
+      if (!T->isIntegralOrEnumerationType() && !T->isPointerType())
+        return nullptr;
+    }
+  }
 
   // FIXME: Poorly-factored string switches are slow.
-  FnCheck evalFunction = nullptr;
   if (C.isCLibraryFunction(FDecl, "memcpy"))
-    evalFunction =  &CStringChecker::evalMemcpy;
+    return &CStringChecker::evalMemcpy;
   else if (C.isCLibraryFunction(FDecl, "mempcpy"))
-    evalFunction =  &CStringChecker::evalMempcpy;
+    return &CStringChecker::evalMempcpy;
   else if (C.isCLibraryFunction(FDecl, "memcmp"))
-    evalFunction =  &CStringChecker::evalMemcmp;
+    return &CStringChecker::evalMemcmp;
   else if (C.isCLibraryFunction(FDecl, "memmove"))
-    evalFunction =  &CStringChecker::evalMemmove;
-  else if (C.isCLibraryFunction(FDecl, "memset") || 
-    C.isCLibraryFunction(FDecl, "explicit_memset"))
-    evalFunction =  &CStringChecker::evalMemset;
+    return &CStringChecker::evalMemmove;
+  else if (C.isCLibraryFunction(FDecl, "memset") ||
+           C.isCLibraryFunction(FDecl, "explicit_memset"))
+    return &CStringChecker::evalMemset;
   else if (C.isCLibraryFunction(FDecl, "strcpy"))
-    evalFunction =  &CStringChecker::evalStrcpy;
+    return &CStringChecker::evalStrcpy;
   else if (C.isCLibraryFunction(FDecl, "strncpy"))
-    evalFunction =  &CStringChecker::evalStrncpy;
+    return &CStringChecker::evalStrncpy;
   else if (C.isCLibraryFunction(FDecl, "stpcpy"))
-    evalFunction =  &CStringChecker::evalStpcpy;
+    return &CStringChecker::evalStpcpy;
   else if (C.isCLibraryFunction(FDecl, "strlcpy"))
-    evalFunction =  &CStringChecker::evalStrlcpy;
+    return &CStringChecker::evalStrlcpy;
   else if (C.isCLibraryFunction(FDecl, "strcat"))
-    evalFunction =  &CStringChecker::evalStrcat;
+    return &CStringChecker::evalStrcat;
   else if (C.isCLibraryFunction(FDecl, "strncat"))
-    evalFunction =  &CStringChecker::evalStrncat;
+    return &CStringChecker::evalStrncat;
   else if (C.isCLibraryFunction(FDecl, "strlcat"))
-    evalFunction =  &CStringChecker::evalStrlcat;
+    return &CStringChecker::evalStrlcat;
   else if (C.isCLibraryFunction(FDecl, "strlen"))
-    evalFunction =  &CStringChecker::evalstrLength;
+    return &CStringChecker::evalstrLength;
   else if (C.isCLibraryFunction(FDecl, "strnlen"))
-    evalFunction =  &CStringChecker::evalstrnLength;
+    return &CStringChecker::evalstrnLength;
   else if (C.isCLibraryFunction(FDecl, "strcmp"))
-    evalFunction =  &CStringChecker::evalStrcmp;
+    return &CStringChecker::evalStrcmp;
   else if (C.isCLibraryFunction(FDecl, "strncmp"))
-    evalFunction =  &CStringChecker::evalStrncmp;
+    return &CStringChecker::evalStrncmp;
   else if (C.isCLibraryFunction(FDecl, "strcasecmp"))
-    evalFunction =  &CStringChecker::evalStrcasecmp;
+    return &CStringChecker::evalStrcasecmp;
   else if (C.isCLibraryFunction(FDecl, "strncasecmp"))
-    evalFunction =  &CStringChecker::evalStrncasecmp;
+    return &CStringChecker::evalStrncasecmp;
   else if (C.isCLibraryFunction(FDecl, "strsep"))
-    evalFunction =  &CStringChecker::evalStrsep;
+    return &CStringChecker::evalStrsep;
   else if (C.isCLibraryFunction(FDecl, "bcopy"))
-    evalFunction =  &CStringChecker::evalBcopy;
+    return &CStringChecker::evalBcopy;
   else if (C.isCLibraryFunction(FDecl, "bcmp"))
-    evalFunction =  &CStringChecker::evalMemcmp;
-  else if (isCPPStdLibraryFunction(FDecl, "copy"))
-    evalFunction =  &CStringChecker::evalStdCopy;
-  else if (isCPPStdLibraryFunction(FDecl, "copy_backward"))
-    evalFunction =  &CStringChecker::evalStdCopyBackward;
+    return &CStringChecker::evalMemcmp;
   else if (C.isCLibraryFunction(FDecl, "bzero") ||
-    C.isCLibraryFunction(FDecl, "explicit_bzero"))
-    evalFunction =  &CStringChecker::evalBzero;
+           C.isCLibraryFunction(FDecl, "explicit_bzero"))
+    return &CStringChecker::evalBzero;
+
+  return nullptr;
+}
+
+bool CStringChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
+
+  FnCheck evalFunction = identifyCall(CE, C);
 
   // If the callee isn't a string function, let another checker handle it.
   if (!evalFunction)

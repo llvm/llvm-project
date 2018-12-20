@@ -381,6 +381,10 @@ uptr internal_filesize(fd_t fd) {
   return (uptr)st.st_size;
 }
 
+uptr internal_dup(int oldfd) {
+  return internal_syscall(SYSCALL(dup), oldfd);
+}
+
 uptr internal_dup2(int oldfd, int newfd) {
 #if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(dup3), oldfd, newfd, 0);

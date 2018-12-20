@@ -268,14 +268,12 @@ static void printMemberHeader(raw_ostream &Out, uint64_t Pos,
     NamePos = StringTable.tell();
     addToStringTable(StringTable, ArcName, M, Thin);
   } else {
-    StringMap<uint64_t>::const_iterator it = MemberNames.find(M.MemberName);
-    if (it == MemberNames.end()) {
-      NamePos = StringTable.tell();
+    auto Insertion = MemberNames.insert({M.MemberName, uint64_t(0)});
+    if (Insertion.second) {
+      Insertion.first->second = StringTable.tell();
       addToStringTable(StringTable, ArcName, M, Thin);
-      MemberNames[M.MemberName] = NamePos;
-    } else {
-      NamePos = it->second;
     }
+    NamePos = Insertion.first->second;
   }
   printWithSpacePadding(Out, NamePos, 15);
   printRestOfMemberHeader(Out, ModTime, M.UID, M.GID, M.Perms, Size);
