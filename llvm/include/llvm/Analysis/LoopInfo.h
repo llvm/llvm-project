@@ -408,6 +408,12 @@ public:
   /// Verify loop structure of this loop and all nested loops.
   void verifyLoopNest(DenseSet<const LoopT *> *Loops) const;
 
+  /// Returns true if the loop is annotated parallel.
+  ///
+  /// Derived classes can override this method using static template
+  /// polymorphism.
+  bool isAnnotatedParallel() const { return false; }
+
   /// Print loop with all the BBs inside it.
   void print(raw_ostream &OS, unsigned Depth = 0, bool Verbose = false) const;
 
@@ -988,6 +994,26 @@ public:
 
 /// Function to print a loop's contents as LLVM's text IR assembly.
 void printLoop(Loop &L, raw_ostream &OS, const std::string &Banner = "");
+
+/// Find and return the loop attribute node for the attribute @p Name in
+/// @p LoopID. Return nullptr if there is no such attribute.
+MDNode *findOptionMDForLoopID(MDNode *LoopID, StringRef Name);
+
+/// Find string metadata for a loop.
+///
+/// Returns the MDNode where the first operand is the metadata's name. The
+/// following operands are the metadata's values. If no metadata with @p Name is
+/// found, return nullptr.
+MDNode *findOptionMDForLoop(const Loop *TheLoop, StringRef Name);
+
+/// Return whether an MDNode might represent an access group.
+///
+/// Access group metadata nodes have to be distinct and empty. Being
+/// always-empty ensures that it never needs to be changed (which -- because
+/// MDNodes are designed immutable -- would require creating a new MDNode). Note
+/// that this is not a sufficient condition: not every distinct and empty NDNode
+/// is representing an access group.
+bool isValidAsAccessGroup(MDNode *AccGroup);
 
 } // End llvm namespace
 

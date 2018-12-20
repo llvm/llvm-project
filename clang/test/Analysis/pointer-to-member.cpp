@@ -253,11 +253,10 @@ void test() {
   clang_analyzer_eval(&A::y); // expected-warning{{TRUE}}
   clang_analyzer_eval(&A::z); // expected-warning{{TRUE}}
 
-  // FIXME: These should be true.
   int A::*l = &A::x, A::*m = &A::y, A::*n = &A::z;
-  clang_analyzer_eval(l); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(m); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(n); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(l); // expected-warning{{TRUE}}
+  clang_analyzer_eval(m); // expected-warning{{TRUE}}
+  clang_analyzer_eval(n); // expected-warning{{TRUE}}
 
   // FIXME: These should be true as well.
   A a;

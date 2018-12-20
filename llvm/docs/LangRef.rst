@@ -5140,7 +5140,7 @@ vectorization width and interleave count. These metadata should be used in
 conjunction with ``llvm.loop`` loop identification metadata. The
 ``llvm.loop.vectorize`` and ``llvm.loop.interleave`` metadata are only
 optimization hints and the optimizer will only interleave and vectorize loops if
-it believes it is safe to do so. The ``llvm.mem.parallel_loop_access`` metadata
+it believes it is safe to do so. The ``llvm.loop.parallel_accesses`` metadata
 which contains information about loop-carried memory dependencies can be helpful
 in determining the safety of these transformations.
 
@@ -5443,89 +5443,119 @@ Thes attributes in this metdata is added to all followup loops of the
 loop distribution pass. See
 :ref:`Transformation Metadata <transformation-metadata>` for details.
 
-'``llvm.mem``'
-^^^^^^^^^^^^^^^
+'``llvm.access.group``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Metadata types used to annotate memory accesses with information helpful
-for optimizations are prefixed with ``llvm.mem``.
+``llvm.access.group`` metadata can be attached to any instruction that
+potentially accesses memory. It can point to a single distinct metadata
+node, which we call access group. This node represents all memory access
+instructions referring to it via ``llvm.access.group``. When an
+instruction belongs to multiple access groups, it can also point to a
+list of accesses groups, illustrated by the following example.
 
-'``llvm.mem.parallel_loop_access``' Metadata
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. code-block:: llvm
 
-The ``llvm.mem.parallel_loop_access`` metadata refers to a loop identifier,
-or metadata containing a list of loop identifiers for nested loops.
-The metadata is attached to memory accessing instructions and denotes that
-no loop carried memory dependence exist between it and other instructions denoted
-with the same loop identifier. The metadata on memory reads also implies that
-if conversion (i.e. speculative execution within a loop iteration) is safe.
+   %val = load i32, i32* %arrayidx, !llvm.access.group !0
+   ...
+   !0 = !{!1, !2}
+   !1 = distinct !{}
+   !2 = distinct !{}
 
-Precisely, given two instructions ``m1`` and ``m2`` that both have the
-``llvm.mem.parallel_loop_access`` metadata, with ``L1`` and ``L2`` being the
-set of loops associated with that metadata, respectively, then there is no loop
-carried dependence between ``m1`` and ``m2`` for loops in both ``L1`` and
-``L2``.
+It is illegal for the list node to be empty since it might be confused
+with an access group.
 
-As a special case, if all memory accessing instructions in a loop have
-``llvm.mem.parallel_loop_access`` metadata that refers to that loop, then the
-loop has no loop carried memory dependences and is considered to be a parallel
-loop.
+The access group metadata node must be 'distinct' to avoid collapsing
+multiple access groups by content. A access group metadata node must
+always be empty which can be used to distinguish an access group
+metadata node from a list of access groups. Being empty avoids the
+situation that the content must be updated which, because metadata is
+immutable by design, would required finding and updating all references
+to the access group node.
 
-Note that if not all memory access instructions have such metadata referring to
-the loop, then the loop is considered not being trivially parallel. Additional
+The access group can be used to refer to a memory access instruction
+without pointing to it directly (which is not possible in global
+metadata). Currently, the only metadata making use of it is
+``llvm.loop.parallel_accesses``.
+
+'``llvm.loop.parallel_accesses``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``llvm.loop.parallel_accesses`` metadata refers to one or more
+access group metadata nodes (see ``llvm.access.group``). It denotes that
+no loop-carried memory dependence exist between it and other instructions
+in the loop with this metadata.
+
+Let ``m1`` and ``m2`` be two instructions that both have the
+``llvm.access.group`` metadata to the access group ``g1``, respectively
+``g2`` (which might be identical). If a loop contains both access groups
+in its ``llvm.loop.parallel_accesses`` metadata, then the compiler can
+assume that there is no dependency between ``m1`` and ``m2`` carried by
+this loop. Instructions that belong to multiple access groups are
+considered having this property if at least one of the access groups
+matches the ``llvm.loop.parallel_accesses`` list.
+
+If all memory-accessing instructions in a loop have
+``llvm.loop.parallel_accesses`` metadata that refers to that loop, then the
+loop has no loop carried memory dependences and is considered to be a
+parallel loop.
+
+Note that if not all memory access instructions belong to an access
+group referred to by ``llvm.loop.parallel_accesses``, then the loop must
+not be considered trivially parallel. Additional
 memory dependence analysis is required to make that determination. As a fail
 safe mechanism, this causes loops that were originally parallel to be considered
 sequential (if optimization passes that are unaware of the parallel semantics
 insert new memory instructions into the loop body).
 
 Example of a loop that is considered parallel due to its correct use of
-both ``llvm.loop`` and ``llvm.mem.parallel_loop_access``
-metadata types that refer to the same loop identifier metadata.
+both ``llvm.access.group`` and ``llvm.loop.parallel_accesses``
+metadata types.
 
 .. code-block:: llvm
 
    for.body:
      ...
-     %val0 = load i32, i32* %arrayidx, !llvm.mem.parallel_loop_access !0
+     %val0 = load i32, i32* %arrayidx, !llvm.access.group !1
      ...
-     store i32 %val0, i32* %arrayidx1, !llvm.mem.parallel_loop_access !0
+     store i32 %val0, i32* %arrayidx1, !llvm.access.group !1
      ...
      br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !0
 
    for.end:
    ...
-   !0 = !{!0}
+   !0 = distinct !{!0, !{!"llvm.loop.parallel_accesses", !1}}
+   !1 = distinct !{}
 
-It is also possible to have nested parallel loops. In that case the
-memory accesses refer to a list of loop identifier metadata nodes instead of
-the loop identifier metadata node directly:
+It is also possible to have nested parallel loops:
 
 .. code-block:: llvm
 
    outer.for.body:
      ...
-     %val1 = load i32, i32* %arrayidx3, !llvm.mem.parallel_loop_access !2
+     %val1 = load i32, i32* %arrayidx3, !llvm.access.group !4
      ...
      br label %inner.for.body
 
    inner.for.body:
      ...
-     %val0 = load i32, i32* %arrayidx1, !llvm.mem.parallel_loop_access !0
+     %val0 = load i32, i32* %arrayidx1, !llvm.access.group !3
      ...
-     store i32 %val0, i32* %arrayidx2, !llvm.mem.parallel_loop_access !0
+     store i32 %val0, i32* %arrayidx2, !llvm.access.group !3
      ...
      br i1 %exitcond, label %inner.for.end, label %inner.for.body, !llvm.loop !1
 
    inner.for.end:
      ...
-     store i32 %val1, i32* %arrayidx4, !llvm.mem.parallel_loop_access !2
+     store i32 %val1, i32* %arrayidx4, !llvm.access.group !4
      ...
      br i1 %exitcond, label %outer.for.end, label %outer.for.body, !llvm.loop !2
 
    outer.for.end:                                          ; preds = %for.body
    ...
-   !0 = !{!1, !2} ; a list of loop identifiers
-   !1 = !{!1} ; an identifier for the inner loop
-   !2 = !{!2} ; an identifier for the outer loop
+   !1 = distinct !{!1, !{!"llvm.loop.parallel_accesses", !3}}     ; metadata for the inner loop
+   !2 = distinct !{!2, !{!"llvm.loop.parallel_accesses", !3, !4}} ; metadata for the outer loop
+   !3 = distinct !{} ; access group for instructions in the inner loop (which are implicitly contained in outer loop as well)
+   !4 = distinct !{} ; access group for instructions in the outer, but not the inner loop
 
 '``irr_loop``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -6941,7 +6971,7 @@ Arguments:
 
 The argument to the '``fneg``' instruction must be a
 :ref:`floating-point <t_floating>` or :ref:`vector <t_vector>` of
-floating-point values. 
+floating-point values.
 
 Semantics:
 """"""""""
@@ -14957,13 +14987,13 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.maxnum``' intrinsic returns the maximum 
+The '``llvm.experimental.constrained.maxnum``' intrinsic returns the maximum
 of the two arguments.
 
 Arguments:
 """"""""""
 
-The first two arguments and the return value are floating-point numbers 
+The first two arguments and the return value are floating-point numbers
 of the same type.
 
 The third and forth arguments specify the rounding mode and exception
@@ -15031,7 +15061,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.ceil``' intrinsic returns the ceiling of the 
+The '``llvm.experimental.constrained.ceil``' intrinsic returns the ceiling of the
 first operand.
 
 Arguments:
@@ -15067,7 +15097,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.floor``' intrinsic returns the floor of the 
+The '``llvm.experimental.constrained.floor``' intrinsic returns the floor of the
 first operand.
 
 Arguments:
@@ -15084,7 +15114,7 @@ Semantics:
 """"""""""
 
 This function returns the same values as the libm ``floor`` functions
-would and handles error conditions in the same way. 
+would and handles error conditions in the same way.
 
 
 '``llvm.experimental.constrained.round``' Intrinsic
@@ -15103,7 +15133,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.round``' intrinsic returns the first 
+The '``llvm.experimental.constrained.round``' intrinsic returns the first
 operand rounded to the nearest integer.
 
 Arguments:
@@ -15139,8 +15169,8 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.trunc``' intrinsic returns the first 
-operand rounded to the nearest integer not larger in magnitude than the 
+The '``llvm.experimental.constrained.trunc``' intrinsic returns the first
+operand rounded to the nearest integer not larger in magnitude than the
 operand.
 
 Arguments:

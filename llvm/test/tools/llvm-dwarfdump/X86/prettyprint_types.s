@@ -19,13 +19,41 @@
 # CHECK:   DW_AT_type{{.*}}"int foo::*"
 
 # array_type
-# Testing lower_bound, upper_bound, lower and upper, lower and count, and count separately.
-# CHECK:   DW_AT_type{{.*}}"int[1-][2][1-2][1-3][2]"
+# CHECK:   DW_AT_type{{.*}}"int
+# Testing with a default lower bound of 0 and the following explicit bounds:
+#   lower_bound(1)
+# CHECK-NOT: {{.}}
+# CHECK-SAME: {{\[}}[1, ?)]
+#   upper_bound(2)
+# CHECK-NOT: {{.}}
+# CHECK-SAME: [3]
+#   lower(1) and upper(2)
+# CHECK-NOT: {{.}}
+# CHECK-SAME: {{\[}}[1, 3)]
+#   lower(1) and count(3)
+# CHECK-NOT: {{.}}
+# CHECK-SAME: {{\[}}[1, 4)]
+#   lower(0) and count(4) - testing that the lower bound matching language
+#   default is not rendered
+# CHECK-NOT: {{.}}
+# CHECK-SAME: [4]
+#   count(2)
+# CHECK-SAME: [2]
+#   no attributes
+# CHECK-NOT: {{.}}
+# CHECK-SAME: []{{"\)$}}
+
 
 # subroutine types
 # CHECK:   DW_AT_type{{.*}}"int()"
 # CHECK:   DW_AT_type{{.*}}"void(int)"
 # CHECK:   DW_AT_type{{.*}}"void(int, int)"
+
+# array_type with a language with a default lower bound of 1 instead of 0 and
+# an upper bound of 2. This describes an array with 2 elements (whereas with a
+# default lower bound of 0 it would be an array of 3 elements)
+# CHECK: DW_AT_type{{.*}}"int[2]"
+
 	.section	.debug_str,"MS",@progbits,1
 .Lint_name:
 	.asciz	"int"
@@ -155,6 +183,11 @@
 	.byte	19                      # DW_FORM_ref4
 	.byte	0                       # EOM(1)
 	.byte	0                       # EOM(2)
+	.byte	18                      # Abbreviation Code
+	.byte	0x21                    # DW_TAG_subrange_type
+	.byte	0                       # DW_CHILDREN_no
+	.byte	0                       # EOM(1)
+	.byte	0                       # EOM(2)
 	.byte	0                       # EOM(3)
 	.section	.debug_info,"",@progbits
 .Lcu_begin:
@@ -196,9 +229,13 @@
 	.byte   2                       #     DW_AT_upper_bound
 	.byte	12                      #   DW_AT_subrange_type
 	.byte   1                       #     DW_AT_lower_bound
-	.byte   2                       #     DW_AT_count
+	.byte   3                       #     DW_AT_count
+	.byte	12                      #   DW_AT_subrange_type
+	.byte   0                       #     DW_AT_lower_bound
+	.byte   4                       #     DW_AT_count
 	.byte	13                      #   DW_AT_subrange_type
 	.byte   2                       #     DW_AT_count
+	.byte	18                      #   DW_AT_subrange_type
 	.byte	0                       # End Of Children Mark
 .Lsub_int_empty_type:
 	.byte	15                      # DW_TAG_subroutine_type
@@ -236,3 +273,22 @@
 	.long	.Lsub_void_int_int_type - .Lcu_begin #   DW_AT_type
 	.byte	0                       # End Of Children Mark
 .Lunit_end:
+.Lcu2_begin:
+	.long	.Lcu2_unit_end - .Lcu2_unit_start # Length of Unit
+.Lcu2_unit_start:
+	.short	4                       # DWARF version number
+	.long	.debug_abbrev           # Offset Into Abbrev. Section
+	.byte	8                       # Address Size (in bytes)
+	.byte	1                       # DW_TAG_compile_unit
+	.short	13                      #   DW_AT_language
+.Lcu2_int_type:
+	.byte	2                       # DW_TAG_base_type
+	.long	.Lint_name              #   DW_AT_name
+.Lcu2_array_type:
+	.byte	8                       # DW_TAG_array_type
+	.long	.Lcu2_int_type - .Lcu2_begin #   DW_AT_type
+	.byte	10                      #   DW_AT_subrange_type
+	.byte   2                       #     DW_AT_upper_bound
+	.byte	3                       # DW_TAG_variable
+	.long	.Lcu2_array_type - .Lcu2_begin #   DW_AT_type
+.Lcu2_unit_end:

@@ -88,12 +88,19 @@ def ExynosResetFn   : TIIPredicate<
                              [ADR, ADRP,
                               MOVNWi, MOVNXi,
                               MOVZWi, MOVZXi],
-                             MCReturnStatement<TruePred>>],
+                             MCReturnStatement<TruePred>>,
+                           MCOpcodeSwitchCase<
+                             [ORRWri, ORRXri],
+                             MCReturnStatement<
+                               CheckAll<
+                                 [CheckIsRegOperand<1>,
+                                  CheckAny<
+                                    [CheckRegOperand<1, WZR>,
+                                     CheckRegOperand<1, XZR>]>]>>>],
                           MCReturnStatement<
                             CheckAny<
                               [IsCopyIdiomFn,
-                               IsZeroFPIdiomFn,
-                               IsZeroIdiomFn]>>>>;
+                               IsZeroFPIdiomFn]>>>>;
 def ExynosResetPred : MCSchedPredicate<ExynosResetFn>;
 
 // Identify EXTR as the alias for ROR (immediate).

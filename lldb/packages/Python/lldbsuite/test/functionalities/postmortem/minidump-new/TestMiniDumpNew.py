@@ -88,6 +88,36 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(self.process.GetProcessID(), self._linux_x86_64_pid)
         self.check_state()
 
+    def test_memory_region_name(self):
+        self.dbg.CreateTarget(None)
+        self.target = self.dbg.GetSelectedTarget()
+        self.process = self.target.LoadCore("regions-linux-map.dmp")
+        result = lldb.SBCommandReturnObject()
+        addr_region_name_pairs = [
+            ("0x400d9000", "/system/bin/app_process"),
+            ("0x400db000", "/system/bin/app_process"),
+            ("0x400dd000", "/system/bin/linker"),
+            ("0x400ed000", "/system/bin/linker"),
+            ("0x400ee000", "/system/bin/linker"),
+            ("0x400fb000", "/system/lib/liblog.so"),
+            ("0x400fc000", "/system/lib/liblog.so"),
+            ("0x400fd000", "/system/lib/liblog.so"),
+            ("0x400ff000", "/system/lib/liblog.so"),
+            ("0x40100000", "/system/lib/liblog.so"),
+            ("0x40101000", "/system/lib/libc.so"),
+            ("0x40122000", "/system/lib/libc.so"),
+            ("0x40123000", "/system/lib/libc.so"),
+            ("0x40167000", "/system/lib/libc.so"),
+            ("0x40169000", "/system/lib/libc.so"),
+        ]
+        ci = self.dbg.GetCommandInterpreter()
+        for (addr, region_name) in addr_region_name_pairs:
+            command = 'memory region ' + addr
+            ci.HandleCommand(command, result, False)
+            message = 'Ensure memory "%s" shows up in output for "%s"' % (
+                region_name, command)
+            self.assertTrue(region_name in result.GetOutput(), message)
+
     def test_modules_in_mini_dump(self):
         """Test that lldb can read the list of modules from the minidump."""
         # target create -c linux-x86_64.dmp

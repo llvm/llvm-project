@@ -184,7 +184,8 @@ enum DefaultedMemberAttribute {
 };
 
 enum SourceLanguage {
-#define HANDLE_DW_LANG(ID, NAME, VERSION, VENDOR) DW_LANG_##NAME = ID,
+#define HANDLE_DW_LANG(ID, NAME, LOWER_BOUND, VERSION, VENDOR)                 \
+  DW_LANG_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_LANG_lo_user = 0x8000,
   DW_LANG_hi_user = 0xffff
@@ -489,6 +490,8 @@ unsigned OperationVendor(LocationAtom O);
 unsigned AttributeEncodingVendor(TypeKind E);
 unsigned LanguageVendor(SourceLanguage L);
 /// @}
+
+Optional<unsigned> LanguageLowerBound(SourceLanguage L);
 
 /// A helper struct providing information about the byte size of DW_FORM
 /// values that vary in size depending on the DWARF version, address byte

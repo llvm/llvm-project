@@ -996,7 +996,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
   // handled here, but combineMetadata doesn't support them yet
   unsigned KnownIDs[] = {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
                          LLVMContext::MD_noalias,
-                         LLVMContext::MD_invariant_group};
+                         LLVMContext::MD_invariant_group,
+                         LLVMContext::MD_access_group};
   combineMetadata(C, cpy, KnownIDs, true);
 
   // Remove the memcpy.

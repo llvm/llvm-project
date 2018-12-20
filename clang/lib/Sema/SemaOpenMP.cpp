@@ -4649,6 +4649,7 @@ void Sema::ActOnOpenMPLoopInitialization(SourceLocation ForLoc, Stmt *Init) {
   unsigned AssociatedLoops = DSAStack->getAssociatedLoops();
   if (AssociatedLoops > 0 &&
       isOpenMPLoopDirective(DSAStack->getCurrentDirective())) {
+    DSAStack->loopStart();
     OpenMPIterationSpaceChecker ISC(*this, ForLoc);
     if (!ISC.checkAndSetInit(Init, /*EmitDiags=*/false)) {
       if (ValueDecl *D = ISC.getLoopDecl()) {

@@ -23,7 +23,6 @@ class TestExprLookupAnonStructTypedef(TestBase):
         # Find the breakpoint
         self.line = line_number('main.cpp', '// lldb testsuite break')
 
-    @expectedFailureAll(oslist=["windows"])
     @expectedFailureAll(
         oslist=['linux'],
         archs=['arm'],

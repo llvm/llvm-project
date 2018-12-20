@@ -464,16 +464,100 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
   return MinBWs;
 }
 
+/// Add all access groups in @p AccGroups to @p List.
+template <typename ListT>
+static void addToAccessGroupList(ListT &List, MDNode *AccGroups) {
+  // Interpret an access group as a list containing itself.
+  if (AccGroups->getNumOperands() == 0) {
+    assert(isValidAsAccessGroup(AccGroups) && "Node must be an access group");
+    List.insert(AccGroups);
+    return;
+  }
+
+  for (auto &AccGroupListOp : AccGroups->operands()) {
+    auto *Item = cast<MDNode>(AccGroupListOp.get());
+    assert(isValidAsAccessGroup(Item) && "List item must be an access group");
+    List.insert(Item);
+  }
+};
+
+MDNode *llvm::uniteAccessGroups(MDNode *AccGroups1, MDNode *AccGroups2) {
+  if (!AccGroups1)
+    return AccGroups2;
+  if (!AccGroups2)
+    return AccGroups1;
+  if (AccGroups1 == AccGroups2)
+    return AccGroups1;
+
+  SmallSetVector<Metadata *, 4> Union;
+  addToAccessGroupList(Union, AccGroups1);
+  addToAccessGroupList(Union, AccGroups2);
+
+  if (Union.size() == 0)
+    return nullptr;
+  if (Union.size() == 1)
+    return cast<MDNode>(Union.front());
+
+  LLVMContext &Ctx = AccGroups1->getContext();
+  return MDNode::get(Ctx, Union.getArrayRef());
+}
+
+MDNode *llvm::intersectAccessGroups(const Instruction *Inst1,
+                                    const Instruction *Inst2) {
+  bool MayAccessMem1 = Inst1->mayReadOrWriteMemory();
+  bool MayAccessMem2 = Inst2->mayReadOrWriteMemory();
+
+  if (!MayAccessMem1 && !MayAccessMem2)
+    return nullptr;
+  if (!MayAccessMem1)
+    return Inst2->getMetadata(LLVMContext::MD_access_group);
+  if (!MayAccessMem2)
+    return Inst1->getMetadata(LLVMContext::MD_access_group);
+
+  MDNode *MD1 = Inst1->getMetadata(LLVMContext::MD_access_group);
+  MDNode *MD2 = Inst2->getMetadata(LLVMContext::MD_access_group);
+  if (!MD1 || !MD2)
+    return nullptr;
+  if (MD1 == MD2)
+    return MD1;
+
+  // Use set for scalable 'contains' check.
+  SmallPtrSet<Metadata *, 4> AccGroupSet2;
+  addToAccessGroupList(AccGroupSet2, MD2);
+
+  SmallVector<Metadata *, 4> Intersection;
+  if (MD1->getNumOperands() == 0) {
+    assert(isValidAsAccessGroup(MD1) && "Node must be an access group");
+    if (AccGroupSet2.count(MD1))
+      Intersection.push_back(MD1);
+  } else {
+    for (const MDOperand &Node : MD1->operands()) {
+      auto *Item = cast<MDNode>(Node.get());
+      assert(isValidAsAccessGroup(Item) && "List item must be an access group");
+      if (AccGroupSet2.count(Item))
+        Intersection.push_back(Item);
+    }
+  }
+
+  if (Intersection.size() == 0)
+    return nullptr;
+  if (Intersection.size() == 1)
+    return cast<MDNode>(Intersection.front());
+
+  LLVMContext &Ctx = Inst1->getContext();
+  return MDNode::get(Ctx, Intersection);
+}
+
 /// \returns \p I after propagating metadata from \p VL.
 Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   Instruction *I0 = cast<Instruction>(VL[0]);
   SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
   I0->getAllMetadataOtherThanDebugLoc(Metadata);
 
-  for (auto Kind :
-       {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
-        LLVMContext::MD_noalias, LLVMContext::MD_fpmath,
-        LLVMContext::MD_nontemporal, LLVMContext::MD_invariant_load}) {
+  for (auto Kind : {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
+                    LLVMContext::MD_noalias, LLVMContext::MD_fpmath,
+                    LLVMContext::MD_nontemporal, LLVMContext::MD_invariant_load,
+                    LLVMContext::MD_access_group}) {
     MDNode *MD = I0->getMetadata(Kind);
 
     for (int J = 1, E = VL.size(); MD && J != E; ++J) {
@@ -493,6 +577,9 @@ Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
       case LLVMContext::MD_nontemporal:
       case LLVMContext::MD_invariant_load:
         MD = MDNode::intersect(MD, IMD);
+        break;
+      case LLVMContext::MD_access_group:
+        MD = intersectAccessGroups(Inst, IJ);
         break;
       default:
         llvm_unreachable("unhandled metadata");

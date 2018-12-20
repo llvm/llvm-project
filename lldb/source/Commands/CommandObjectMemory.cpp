@@ -1723,6 +1723,7 @@ protected:
         error = process_sp->GetMemoryRegionInfo(load_addr, range_info);
         if (error.Success()) {
           lldb_private::Address addr;
+          ConstString name = range_info.GetName();
           ConstString section_name;
           if (process_sp->GetTarget().ResolveLoadAddress(load_addr, addr)) {
             SectionSP section_sp(addr.GetSection());
@@ -1734,13 +1735,14 @@ protected:
             }
           }
           result.AppendMessageWithFormat(
-              "[0x%16.16" PRIx64 "-0x%16.16" PRIx64 ") %c%c%c%s%s\n",
+              "[0x%16.16" PRIx64 "-0x%16.16" PRIx64 ") %c%c%c%s%s%s%s\n",
               range_info.GetRange().GetRangeBase(),
               range_info.GetRange().GetRangeEnd(),
               range_info.GetReadable() ? 'r' : '-',
               range_info.GetWritable() ? 'w' : '-',
-              range_info.GetExecutable() ? 'x' : '-', section_name ? " " : "",
-              section_name ? section_name.AsCString() : "");
+              range_info.GetExecutable() ? 'x' : '-',
+              name ? " " : "", name.AsCString(""),
+              section_name ? " " : "", section_name.AsCString(""));
           m_prev_end_addr = range_info.GetRange().GetRangeEnd();
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {

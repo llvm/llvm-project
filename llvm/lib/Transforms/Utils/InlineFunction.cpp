@@ -31,6 +31,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -770,14 +771,16 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
   UnwindDest->removePredecessor(InvokeBB);
 }
 
-/// When inlining a call site that has !llvm.mem.parallel_loop_access metadata,
-/// that metadata should be propagated to all memory-accessing cloned
-/// instructions.
+/// When inlining a call site that has !llvm.mem.parallel_loop_access or
+/// llvm.access.group metadata, that metadata should be propagated to all
+/// memory-accessing cloned instructions.
 static void PropagateParallelLoopAccessMetadata(CallSite CS,
                                                 ValueToValueMapTy &VMap) {
   MDNode *M =
     CS.getInstruction()->getMetadata(LLVMContext::MD_mem_parallel_loop_access);
-  if (!M)
+  MDNode *CallAccessGroup =
+      CS.getInstruction()->getMetadata(LLVMContext::MD_access_group);
+  if (!M && !CallAccessGroup)
     return;
 
   for (ValueToValueMapTy::iterator VMI = VMap.begin(), VMIE = VMap.end();
@@ -789,11 +792,20 @@ static void PropagateParallelLoopAccessMetadata(CallSite CS,
     if (!NI)
       continue;
 
-    if (MDNode *PM = NI->getMetadata(LLVMContext::MD_mem_parallel_loop_access)) {
+    if (M) {
+      if (MDNode *PM =
+              NI->getMetadata(LLVMContext::MD_mem_parallel_loop_access)) {
         M = MDNode::concatenate(PM, M);
       NI->setMetadata(LLVMContext::MD_mem_parallel_loop_access, M);
-    } else if (NI->mayReadOrWriteMemory()) {
-      NI->setMetadata(LLVMContext::MD_mem_parallel_loop_access, M);
+      } else if (NI->mayReadOrWriteMemory()) {
+        NI->setMetadata(LLVMContext::MD_mem_parallel_loop_access, M);
+      }
+    }
+
+    if (NI->mayReadOrWriteMemory()) {
+      MDNode *UnitedAccGroups = uniteAccessGroups(
+          NI->getMetadata(LLVMContext::MD_access_group), CallAccessGroup);
+      NI->setMetadata(LLVMContext::MD_access_group, UnitedAccGroups);
     }
   }
 }

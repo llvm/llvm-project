@@ -44,6 +44,8 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "wasm-fastisel"
 
+extern cl::opt<bool> EnableUnimplementedWasmSIMDInstrs;
+
 namespace {
 
 class WebAssemblyFastISel final : public FastISel {

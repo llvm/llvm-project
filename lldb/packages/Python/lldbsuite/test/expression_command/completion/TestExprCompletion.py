@@ -18,7 +18,6 @@ class CommandLineExprCompletionTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     def test_expr_completion(self):
         self.build()
         self.main_source = "main.cpp"
@@ -195,7 +194,6 @@ class CommandLineExprCompletionTestCase(TestBase):
         self.complete_exactly('expr some_expr.Self(). FooNoArgs',
                               'expr some_expr.Self(). FooNoArgsBar()')
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     def test_expr_completion_with_descriptions(self):
         self.build()
         self.main_source = "main.cpp"
@@ -226,7 +224,6 @@ class CommandLineExprCompletionTestCase(TestBase):
             # FieldDecls have their type as description.
             ["some_expr.MemberVariableBar", "int"],
         ])
-
 
     def assume_no_completions(self, str_input, cursor_pos = None):
         interp = self.dbg.GetCommandInterpreter()
