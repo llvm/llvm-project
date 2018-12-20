@@ -10432,6 +10432,18 @@ ARMTargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
   return false;
 }
 
+bool
+ARMTargetLowering::shouldFoldShiftPairToMask(const SDNode *N,
+                                             CombineLevel Level) const {
+  if (!Subtarget->isThumb1Only())
+    return true;
+
+  if (Level == BeforeLegalizeTypes)
+    return true;
+
+  return false;
+}
+
 static SDValue PerformSHLSimplify(SDNode *N,
                                 TargetLowering::DAGCombinerInfo &DCI,
                                 const ARMSubtarget *ST) {
@@ -10735,6 +10747,12 @@ static SDValue CombineANDShift(SDNode *N,
   if (!C2 || C2 >= 32)
     return SDValue();
 
+  // Clear irrelevant bits in the mask.
+  if (LeftShift)
+    C1 &= (-1U << C2);
+  else
+    C1 &= (-1U >> C2);
+
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
 
@@ -10742,9 +10760,7 @@ static SDValue CombineANDShift(SDNode *N,
   // "(and (srl x, c2) c1)", where c1 is a shifted mask. Try to
   // transform to a pair of shifts, to save materializing c1.
 
-  // First pattern: right shift, and c1+1 is a power of two.
-  // FIXME: Also check reversed pattern (left shift, and ~c1+1 is a power
-  // of two).
+  // First pattern: right shift, then mask off leading bits.
   // FIXME: Use demanded bits?
   if (!LeftShift && isMask_32(C1)) {
     uint32_t C3 = countLeadingZeros(C1);
@@ -10756,17 +10772,40 @@ static SDValue CombineANDShift(SDNode *N,
     }
   }
 
-  // Second pattern: left shift, and (c1>>c2)+1 is a power of two.
-  // FIXME: Also check reversed pattern (right shift, and ~(c1<<c2)+1
-  // is a power of two).
+  // First pattern, reversed: left shift, then mask off trailing bits.
+  if (LeftShift && isMask_32(~C1)) {
+    uint32_t C3 = countTrailingZeros(C1);
+    if (C2 < C3) {
+      SDValue SHL = DAG.getNode(ISD::SRL, DL, MVT::i32, N0->getOperand(0),
+                                DAG.getConstant(C3 - C2, DL, MVT::i32));
+      return DAG.getNode(ISD::SHL, DL, MVT::i32, SHL,
+                         DAG.getConstant(C3, DL, MVT::i32));
+    }
+  }
+
+  // Second pattern: left shift, then mask off leading bits.
   // FIXME: Use demanded bits?
   if (LeftShift && isShiftedMask_32(C1)) {
+    uint32_t Trailing = countTrailingZeros(C1);
     uint32_t C3 = countLeadingZeros(C1);
-    if (C2 + C3 < 32 && C1 == ((-1U << (C2 + C3)) >> C3)) {
+    if (Trailing == C2 && C2 + C3 < 32) {
       SDValue SHL = DAG.getNode(ISD::SHL, DL, MVT::i32, N0->getOperand(0),
                                 DAG.getConstant(C2 + C3, DL, MVT::i32));
       return DAG.getNode(ISD::SRL, DL, MVT::i32, SHL,
                         DAG.getConstant(C3, DL, MVT::i32));
+    }
+  }
+
+  // Second pattern, reversed: right shift, then mask off trailing bits.
+  // FIXME: Handle other patterns of known/demanded bits.
+  if (!LeftShift && isShiftedMask_32(C1)) {
+    uint32_t Leading = countLeadingZeros(C1);
+    uint32_t C3 = countTrailingZeros(C1);
+    if (Leading == C2 && C2 + C3 < 32) {
+      SDValue SHL = DAG.getNode(ISD::SRL, DL, MVT::i32, N0->getOperand(0),
+                                DAG.getConstant(C2 + C3, DL, MVT::i32));
+      return DAG.getNode(ISD::SHL, DL, MVT::i32, SHL,
+                         DAG.getConstant(C3, DL, MVT::i32));
     }
   }
 

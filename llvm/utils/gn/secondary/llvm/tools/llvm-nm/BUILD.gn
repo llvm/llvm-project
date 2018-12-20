@@ -13,10 +13,11 @@ if (llvm_install_binutils_symlinks) {
 
 # //:llvm-nm depends on this symlink target, see comment in //BUILD.gn.
 group("symlinks") {
+  deps = [
+    ":llvm-nm",
+  ]
   if (llvm_install_binutils_symlinks) {
-    deps = [
-      ":nm",
-    ]
+    deps += [ ":nm" ]
   }
 }
 

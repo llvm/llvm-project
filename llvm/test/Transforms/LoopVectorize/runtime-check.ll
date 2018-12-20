@@ -117,7 +117,9 @@ loopexit:
   ret void
 }
 
-; Check we do generate unnecessary runtime checks. They will always fail.
+; Check we do not generate runtime checks if we found a known dependence preventing
+; vectorization. In this case, it is a read of c[i-1] followed by a write of c[i].
+; The runtime checks would always fail.
 
 ; void test_runtime_check2(float *a, float b, unsigned offset, unsigned offset2, unsigned n, float *c) {
 ;   for (unsigned i = 1; i < n; i++) {
@@ -127,7 +129,7 @@ loopexit:
 ; }
 ;
 ; CHECK-LABEL: test_runtime_check2
-; CHECK:      <4 x float>
+; CHECK-NOT:      <4 x float>
 define void @test_runtime_check2(float* %a, float %b, i64 %offset, i64 %offset2, i64 %n, float* %c) {
 entry:
   br label %for.body

@@ -1,11 +1,12 @@
 group("default") {
   deps = [
-    "//clang/lib/AST",
-    "//clang/lib/Analysis",
-    "//clang/lib/Basic",
-    "//clang/lib/Edit",
-    "//clang/lib/Lex",
-    "//clang/lib/Sema",
+    "//clang/lib/CodeGen",
+    "//clang/lib/Driver",
+    "//clang/lib/Frontend",
+    "//clang/lib/Frontend/Rewrite",
+    "//clang/lib/Parse",
+    "//clang/lib/Serialization",
+    "//clang/tools/clang-format",
     "//lld/test",
     "//llvm/tools/llvm-undname",
   ]

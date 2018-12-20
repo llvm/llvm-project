@@ -104,7 +104,9 @@ public:
     // Can vectorize safely without RT checks. All dependences are known to be
     // safe.
     Safe,
-    // Cannot vectorize due to unsafe or unknown dependencies.
+    // Can possibly vectorize with RT checks to overcome unknown dependencies.
+    PossiblySafeWithRtChecks,
+    // Cannot vectorize due to known unsafe dependencies.
     Unsafe,
   };
 
@@ -175,7 +177,7 @@ public:
 
   MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L)
       : PSE(PSE), InnermostLoop(L), AccessIdx(0), MaxSafeRegisterWidth(-1U),
-        ShouldRetryWithRuntimeCheck(false),
+        FoundNonConstantDistanceDependence(false),
         Status(VectorizationSafetyStatus::Safe), RecordDependences(true) {}
 
   /// Register the location (instructions are given increasing numbers)
@@ -218,7 +220,10 @@ public:
 
   /// In same cases when the dependency check fails we can still
   /// vectorize the loop with a dynamic array access check.
-  bool shouldRetryWithRuntimeCheck() { return ShouldRetryWithRuntimeCheck; }
+  bool shouldRetryWithRuntimeCheck() const {
+    return FoundNonConstantDistanceDependence &&
+           Status == VectorizationSafetyStatus::PossiblySafeWithRtChecks;
+  }
 
   /// Returns the memory dependences.  If null is returned we exceeded
   /// the MaxDependences threshold and this information is not
@@ -280,10 +285,11 @@ private:
 
   /// If we see a non-constant dependence distance we can still try to
   /// vectorize this loop with runtime checks.
-  bool ShouldRetryWithRuntimeCheck;
+  bool FoundNonConstantDistanceDependence;
 
   /// Result of the dependence checks, indicating whether the checked
-  /// dependences are safe for vectorization or not.
+  /// dependences are safe for vectorization, require RT checks or are known to
+  /// be unsafe.
   VectorizationSafetyStatus Status;
 
   //// True if Dependences reflects the dependences in the
@@ -319,7 +325,8 @@ private:
   bool couldPreventStoreLoadForward(uint64_t Distance, uint64_t TypeByteSize);
 
   /// Updates the current safety status with \p S. We can go from Safe to
-  /// to Unsafe.
+  /// either PossiblySafeWithRtChecks or Unsafe and from
+  /// PossiblySafeWithRtChecks to Unsafe.
   void mergeInStatus(VectorizationSafetyStatus S);
 };
 

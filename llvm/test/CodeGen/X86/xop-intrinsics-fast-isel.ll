@@ -388,11 +388,11 @@ define <2 x i64> @test_mm_rot_epi8(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %res = call <16 x i8> @llvm.x86.xop.vprotb(<16 x i8> %arg0, <16 x i8> %arg1)
+  %res = call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %arg0, <16 x i8> %arg0, <16 x i8> %arg1)
   %bc = bitcast <16 x i8> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <16 x i8> @llvm.x86.xop.vprotb(<16 x i8>, <16 x i8>) nounwind readnone
+declare <16 x i8> @llvm.fshl.v16i8(<16 x i8>, <16 x i8>, <16 x i8>) nounwind readnone
 
 define <2 x i64> @test_mm_rot_epi16(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-LABEL: test_mm_rot_epi16:
@@ -401,11 +401,11 @@ define <2 x i64> @test_mm_rot_epi16(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.xop.vprotw(<8 x i16> %arg0, <8 x i16> %arg1)
+  %res = call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %arg0, <8 x i16> %arg0, <8 x i16> %arg1)
   %bc = bitcast <8 x i16> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.xop.vprotw(<8 x i16>, <8 x i16>) nounwind readnone
+declare <8 x i16> @llvm.fshl.v8i16(<8 x i16>, <8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_rot_epi32(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-LABEL: test_mm_rot_epi32:
@@ -414,21 +414,21 @@ define <2 x i64> @test_mm_rot_epi32(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
   %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
-  %res = call <4 x i32> @llvm.x86.xop.vprotd(<4 x i32> %arg0, <4 x i32> %arg1)
+  %res = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %arg0, <4 x i32> %arg0, <4 x i32> %arg1)
   %bc = bitcast <4 x i32> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <4 x i32> @llvm.x86.xop.vprotd(<4 x i32>, <4 x i32>) nounwind readnone
+declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>) nounwind readnone
 
 define <2 x i64> @test_mm_rot_epi64(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-LABEL: test_mm_rot_epi64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vprotq %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    ret{{[l|q]}}
-  %res = call <2 x i64> @llvm.x86.xop.vprotq(<2 x i64> %a0, <2 x i64> %a1)
+  %res = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %a0, <2 x i64> %a0, <2 x i64> %a1)
   ret <2 x i64> %res
 }
-declare <2 x i64> @llvm.x86.xop.vprotq(<2 x i64>, <2 x i64>) nounwind readnone
+declare <2 x i64> @llvm.fshl.v2i64(<2 x i64>, <2 x i64>, <2 x i64>) nounwind readnone
 
 define <2 x i64> @test_mm_roti_epi8(<2 x i64> %a0) {
 ; ALL-LABEL: test_mm_roti_epi8:
@@ -436,45 +436,41 @@ define <2 x i64> @test_mm_roti_epi8(<2 x i64> %a0) {
 ; ALL-NEXT:    vprotb $1, %xmm0, %xmm0
 ; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
-  %res = call <16 x i8> @llvm.x86.xop.vprotbi(<16 x i8> %arg0, i8 1)
+  %res = call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %arg0, <16 x i8> %arg0, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
   %bc = bitcast <16 x i8> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <16 x i8> @llvm.x86.xop.vprotbi(<16 x i8>, i8) nounwind readnone
 
 define <2 x i64> @test_mm_roti_epi16(<2 x i64> %a0) {
 ; ALL-LABEL: test_mm_roti_epi16:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vprotw $50, %xmm0, %xmm0
+; ALL-NEXT:    vprotw $2, %xmm0, %xmm0
 ; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.xop.vprotwi(<8 x i16> %arg0, i8 50)
+  %res = call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %arg0, <8 x i16> %arg0, <8 x i16> <i16 50, i16 50, i16 50, i16 50, i16 50, i16 50, i16 50, i16 50>)
   %bc = bitcast <8 x i16> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.xop.vprotwi(<8 x i16>, i8) nounwind readnone
 
 define <2 x i64> @test_mm_roti_epi32(<2 x i64> %a0) {
 ; ALL-LABEL: test_mm_roti_epi32:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vprotd $226, %xmm0, %xmm0
+; ALL-NEXT:    vprotd $2, %xmm0, %xmm0
 ; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
-  %res = call <4 x i32> @llvm.x86.xop.vprotdi(<4 x i32> %arg0, i8 -30)
+  %res = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %arg0, <4 x i32> %arg0, <4 x i32> <i32 -30, i32 -30, i32 -30, i32 -30>)
   %bc = bitcast <4 x i32> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <4 x i32> @llvm.x86.xop.vprotdi(<4 x i32>, i8) nounwind readnone
 
 define <2 x i64> @test_mm_roti_epi64(<2 x i64> %a0) {
 ; ALL-LABEL: test_mm_roti_epi64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vprotq $100, %xmm0, %xmm0
+; ALL-NEXT:    vprotq $36, %xmm0, %xmm0
 ; ALL-NEXT:    ret{{[l|q]}}
-  %res = call <2 x i64> @llvm.x86.xop.vprotqi(<2 x i64> %a0, i8 100)
+  %res = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %a0, <2 x i64> %a0, <2 x i64> <i64 100, i64 100>)
   ret <2 x i64> %res
 }
-declare <2 x i64> @llvm.x86.xop.vprotqi(<2 x i64>, i8) nounwind readnone
 
 define <2 x i64> @test_mm_shl_epi8(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-LABEL: test_mm_shl_epi8:
@@ -773,20 +769,3 @@ define <4 x double> @test_mm256_frcz_pd(<4 x double> %a0) {
   ret <4 x double> %res
 }
 declare <4 x double> @llvm.x86.xop.vfrcz.pd.256(<4 x double>) nounwind readnone
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
