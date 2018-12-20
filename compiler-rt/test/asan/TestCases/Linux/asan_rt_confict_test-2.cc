@@ -1,12 +1,11 @@
 // Test that mixed static/dynamic sanitization of program objects
 // is prohibited.
 //
-// RUN: %clangxx_asan -DBUILD_SO=1 -fPIC -shared %s -o %t.so
-// RUN: %clangxx_asan_static %s %t.so -o %t
+// RUN: %clangxx_asan -DBUILD_SO=1 -fPIC -shared %s -o %dynamiclib
+// RUN: %clangxx_asan_static %s %ld_flags_rpath_exe -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: asan-dynamic-runtime
-// XFAIL: android
 
 #if BUILD_SO
 char dummy;
