@@ -7,6 +7,7 @@ set(HWASAN_RTL_SOURCES
   hwasan_dynamic_shadow.cc
   hwasan_interceptors.cc
   hwasan_linux.cc
+  hwasan_memintrinsics.cc
   hwasan_poisoning.cc
   hwasan_report.cc
   hwasan_thread.cc

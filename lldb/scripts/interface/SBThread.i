@@ -397,6 +397,24 @@ public:
     ") GetExtendedBacktraceOriginatingIndexID;
     uint32_t
     GetExtendedBacktraceOriginatingIndexID();
+    
+    %feature("autodoc","
+    Returns an SBValue object represeting the current exception for the thread,
+    if there is any. Currently, this works for Obj-C code and returns an SBValue
+    representing the NSException object at the throw site or that's currently
+    being processes.
+    ") GetCurrentException;
+    lldb::SBValue
+    GetCurrentException();
+
+    %feature("autodoc","
+    Returns a historical (fake) SBThread representing the stack trace of an
+    exception, if there is one for the thread. Currently, this works for Obj-C
+    code, and can retrieve the throw-site backtrace of an NSException object
+    even when the program is no longer at the throw site.
+    ") GetCurrentExceptionBacktrace;
+    lldb::SBThread
+    GetCurrentExceptionBacktrace();
 
     %feature("autodoc","
     Takes no arguments, returns a bool.
