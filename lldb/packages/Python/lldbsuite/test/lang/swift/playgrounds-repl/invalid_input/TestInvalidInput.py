@@ -46,7 +46,8 @@ class TestInvalidInput(repl.PlaygroundREPLTest):
         is_error = self.is_compile_or_runtime_error(result)
         self.assertTrue(is_error)
         error = self.get_stream_data(result)
-        self.assertTrue("left side of mutating operator" in error)
+        self.assertIn("left side of mutating operator", error, "Error messages do not match")
+        self.assertIn(":15:3: error: left side of mutating operator", error, "Error line number does not match")
 
         # Execute revised block
         result, output = self.execute_code("Input3.swift")
