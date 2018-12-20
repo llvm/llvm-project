@@ -138,19 +138,18 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
   if (ptrSize == 8) {
     // On 64-bit platforms, we simply need to get the raw integer
     // values of the two stored properties.
-    static ConstString g__countAndFlags("_countAndFlags");
+    static ConstString g__countAndFlagsBits("_countAndFlagsBits");
 
-    auto countAndFlags =
-        object_sp->GetChildAtNamePath({g__countAndFlags, g__storage, g__value});
-    if (!countAndFlags)
+    auto countAndFlagsBits = object_sp->GetChildAtNamePath(
+      {g__countAndFlagsBits, g__value});
+    if (!countAndFlagsBits)
       return false;
-    raw0 = countAndFlags->GetValueAsUnsigned(0);
+    raw0 = countAndFlagsBits->GetValueAsUnsigned(0);
 
     auto object = object_sp->GetChildMemberWithName(g__object, true);
     if (!object)
       return false;
     raw1 = object->GetValueAsUnsigned(0);
-
   } else if (ptrSize == 4) {
     // On 32-bit platforms, we emulate what `_StringObject.rawBits`
     // does. It involves inspecting the variant and rearranging bits
@@ -204,7 +203,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
         return false;
       payload_sp = anyobject_sp->GetChildAtIndex(0, true); // "instance"
     } else {
-      lldbassert("Uknown variant");
+      lldbassert(false && "Uknown variant");
       return false;
     }
     if (!payload_sp)
@@ -222,7 +221,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
       raw1 = pointerBits | (discriminator << 56);
     }
   } else {
-    lldbassert("Unsupported arch?");
+    lldbassert(false && "Unsupported arch?");
     return false;
   }
 
@@ -231,34 +230,66 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
   // TODO: Hyperlink to final set of documentation diagrams instead
   //
   /*
-  ┌─────────────────────╥─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
-  │ Form                ║  7  │  6  │  5  │  4  │  3  │  2  │  1  │  0  │
-  ╞═════════════════════╬═════╪═════╪═════╪═════╪═════╧═════╧═════╧═════╡
-  │ Immortal, Small     ║  1  │ASCII│  1  │  0  │      small count      │
-  ├─────────────────────╫─────┼─────┼─────┼─────┼─────┬─────┬─────┬─────┤
-  │ Immortal, Large     ║  1  │  0  │  0  │  0  │  0  │ TBD │ TBD │ TBD │
-  ╞═════════════════════╬═════╪═════╪═════╪═════╪═════╪═════╪═════╪═════╡
-  │ Native              ║  0  │  0  │  0  │  0  │  0  │ TBD │ TBD │ TBD │
-  ├─────────────────────╫─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤
-  │ Shared              ║  x  │  0  │  0  │  0  │  1  │ TBD │ TBD │ TBD │
-  ├─────────────────────╫─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤
-  │ Shared, Bridged     ║  0  │  1  │  0  │  0  │  1  │ TBD │ TBD │ TBD │
-  ╞═════════════════════╬═════╪═════╪═════╪═════╪═════╪═════╪═════╪═════╡
-  │ Foreign             ║  x  │  0  │  0  │  1  │  1  │ TBD │ TBD │ TBD │
-  ├─────────────────────╫─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤
-  │ Foreign, Bridged    ║  0  │  1  │  0  │  1  │  1  │ TBD │ TBD │ TBD │
-  └─────────────────────╨─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+  On 64-bit platforms, the discriminator is the most significant 4 bits of the
+  bridge object.
 
-  b7: isImmortal: Should the Swift runtime skip ARC
+  ┌─────────────────────╥─────┬─────┬─────┬─────┐
+  │ Form                ║ b63 │ b62 │ b61 │ b60 │
+  ╞═════════════════════╬═════╪═════╪═════╪═════╡
+  │ Immortal, Small     ║  1  │ASCII│  1  │  0  │
+  ├─────────────────────╫─────┼─────┼─────┼─────┤
+  │ Immortal, Large     ║  1  │  0  │  0  │  0  │
+  ╞═════════════════════╬═════╪═════╪═════╪═════╡
+  │ Native              ║  0  │  0  │  0  │  0  │
+  ├─────────────────────╫─────┼─────┼─────┼─────┤
+  │ Shared              ║  x  │  0  │  0  │  0  │
+  ├─────────────────────╫─────┼─────┼─────┼─────┤
+  │ Shared, Bridged     ║  0  │  1  │  0  │  0  │
+  ╞═════════════════════╬═════╪═════╪═════╪═════╡
+  │ Foreign             ║  x  │  0  │  0  │  1  │
+  ├─────────────────────╫─────┼─────┼─────┼─────┤
+  │ Foreign, Bridged    ║  0  │  1  │  0  │  1  │
+  └─────────────────────╨─────┴─────┴─────┴─────┘
+
+  b63: isImmortal: Should the Swift runtime skip ARC
     - Small strings are just values, always immortal
     - Large strings can sometimes be immortal, e.g. literals
-  b6: (large) isBridged / (small) isASCII
+  b62: (large) isBridged / (small) isASCII
     - For large strings, this means lazily-bridged NSString: perform ObjC ARC
     - Small strings repurpose this as a dedicated bit to remember ASCII-ness
-  b5: isSmall: Dedicated bit to denote small strings
-  b4: isForeign: aka isSlow, cannot provide access to contiguous UTF-8
-  b3: (large) not isTailAllocated: payload isn't a biased pointer
-    - Shared strings provide contiguous UTF-8 through extra level of indirection
+  b61: isSmall: Dedicated bit to denote small strings
+  b60: isForeign: aka isSlow, cannot provide access to contiguous UTF-8
+
+ All non-small forms share the same structure for the other half of the bits
+ (i.e. non-object bits) as a word containing code unit count and various
+ performance flags. The top 16 bits are for performance flags, which are not
+ semantically relevant but communicate that some operations can be done more
+ efficiently on this particular string, and the lower 48 are the code unit
+ count (aka endIndex).
+
+┌─────────┬───────┬──────────────────┬─────────────────┬────────┬───────┐
+│   b63   │  b62  │       b61        │       b60       │ b59:48 │ b47:0 │
+├─────────┼───────┼──────────────────┼─────────────────┼────────┼───────┤
+│ isASCII │ isNFC │ isNativelyStored │ isTailAllocated │  TBD   │ count │
+└─────────┴───────┴──────────────────┴─────────────────┴────────┴───────┘
+
+ isASCII: set when all code units are known to be ASCII, enabling:
+   - Trivial Unicode scalars, they're just the code units
+   - Trivial UTF-16 transcoding (just bit-extend)
+   - Also, isASCII always implies isNFC
+ isNFC: set when the contents are in normal form C
+   - Enables trivial lexicographical comparisons: just memcmp
+   - `isASCII` always implies `isNFC`, but not vice versa
+ isNativelyStored: set for native stored strings
+   - `largeAddressBits` holds an instance of `_StringStorage`.
+   - I.e. the start of the code units is at the stored address + `nativeBias`
+ isTailAllocated: start of the code units is at the stored address + `nativeBias`
+   - `isNativelyStored` always implies `isTailAllocated`, but not vice versa
+      (e.g. literals)
+ TBD: Reserved for future usage
+   - Setting a TBD bit to 1 must be semantically equivalent to 0
+   - I.e. it can only be used to "cache" fast-path information in the future
+ count: stores the number of code units, corresponds to `endIndex`.
   */
 
   uint8_t discriminator = raw1 >> 56;
@@ -282,49 +313,59 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     return StringPrinter::ReadBufferAndDumpToStream<
         StringPrinter::StringElementType::UTF8>(options);
 
-  } else if ((discriminator & 0x78) == 0x00) { // x0000xxx: Biased address
+  }
+
+  uint64_t count = raw0 & 0x0000FFFFFFFFFFFF;
+  uint16_t flags = raw0 >> 48;
+  lldb::addr_t objectAddress = (raw1 & 0x0FFFFFFFFFFFFFFF);
+  if ((flags & 0x1000) != 0) { // Tail-allocated / biased address
+    lldbassert((discriminator & 0x70) == 0 &&
+      "tail-allocation is only for natively stored or literals");
     uint64_t bias = (ptrSize == 8 ? 32 : 20);
-    lldb::addr_t address = (raw1 & 0x00FFFFFFFFFFFFFF) + bias;
-    uint64_t count = raw0 & 0x0000FFFFFFFFFFFF;
+    auto address = objectAddress + bias;
     return readStringFromAddress(
       address, count, process, stream, summary_options, read_options);
+  }
 
-  } else if ((discriminator & 0xF8) == 0x08) { // 00001xxx: Shared
-    lldb::addr_t address = (raw1 & 0x00FFFFFFFFFFFFFF);
+  if ((discriminator & 0xF0) == 0x00) { // Shared string
     // FIXME: Verify that there is a _SharedStringStorage instance at `address`.
+    lldbassert((flags & 0x3000) == 0);
     uint64_t startOffset = (ptrSize == 8 ? 24 : 12);
-
-    lldb::addr_t start =
-        process->ReadPointerFromMemory(address + startOffset, error);
+    auto address = objectAddress + startOffset;
+    lldb::addr_t start = process->ReadPointerFromMemory(address, error);
     if (error.Fail())
       return false;
 
-    uint64_t count = raw0 & 0x0000FFFFFFFFFFFF;
     return readStringFromAddress(
       start, count, process, stream, summary_options, read_options);
+  }
 
-  } else if ((discriminator & 0xE8) == 0x48) { // 010x1xxx: Bridged
+  lldbassert((discriminator & 0x70) != 0 &&
+    "native/shared strings already handled");
+
+  if ((discriminator & 0xE0) == 0x40) { // 010xxxxx: Bridged
     CompilerType id_type =
         process->GetTarget().GetScratchClangASTContext()->GetBasicType(
             lldb::eBasicTypeObjCID);
 
     // We may have an NSString pointer inline, so try formatting it directly.
-    lldb::addr_t address = (raw1 & 0x00FFFFFFFFFFFFFF);
-    DataExtractor DE(&address, ptrSize, process->GetByteOrder(), ptrSize);
+    DataExtractor DE(&objectAddress, ptrSize, process->GetByteOrder(), ptrSize);
     auto nsstring = ValueObject::CreateValueObjectFromData(
         "nsstring", DE, valobj.GetExecutionContextRef(), id_type);
     if (!nsstring || nsstring->GetError().Fail())
       return false;
 
     return NSStringSummaryProvider(*nsstring.get(), stream, summary_options);
+  }
 
-  } else if ((discriminator & 0xF8) == 0x18) { // 00011xxx: Foreign
+  if ((discriminator & 0xF8) == 0x18) { // 0001xxxx: Foreign
     // Not currently generated
-    lldbassert("Foreign non-bridged strings are not currently used in Swift");
+    lldbassert(
+      false && "Foreign non-bridged strings are not currently used in Swift");
     return false;
   }
 
-  lldbassert("Invalid discriminator");
+  lldbassert(false && "Invalid discriminator");
   return false;
 }
 
@@ -464,7 +505,7 @@ bool lldb_private::formatters::swift::Bool_SummaryProvider(
   ValueObjectSP value_child(valobj.GetChildMemberWithName(g_value, true));
   if (!value_child)
     return false;
-    
+
   // Swift Bools are stored in a byte, but only the LSB of the byte is
   // significant.  The swift::irgen::FixedTypeInfo structure represents
   // this information by providing a mask of the "extra bits" for the type.
