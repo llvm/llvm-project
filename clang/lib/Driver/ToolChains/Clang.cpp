@@ -526,7 +526,7 @@ static bool useFramePointerForTargetByDefault(const ArgList &Args,
     break;
   }
 
-  if (Triple.getOS() == llvm::Triple::NetBSD) {
+  if (Triple.isOSNetBSD()) {
     return !areOptimizationsEnabled(Args);
   }
 
@@ -2848,8 +2848,8 @@ static void RenderCharacterOptions(const ArgList &Args, const llvm::Triple &T,
     } else {
       bool IsARM = T.isARM() || T.isThumb() || T.isAArch64();
       CmdArgs.push_back("-fwchar-type=int");
-      if (IsARM && !(T.isOSWindows() || T.getOS() == llvm::Triple::NetBSD ||
-                     T.getOS() == llvm::Triple::OpenBSD))
+      if (IsARM && !(T.isOSWindows() || T.isOSNetBSD() ||
+                     T.isOSOpenBSD()))
         CmdArgs.push_back("-fno-signed-wchar");
       else
         CmdArgs.push_back("-fsigned-wchar");
@@ -5274,8 +5274,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    (TC.getTriple().isOSBinFormatELF() ||
                     TC.getTriple().isOSBinFormatCOFF()) &&
                       !TC.getTriple().isPS4() &&
-                       TC.useIntegratedAs() &&
-                       RawTriple.getOS() != llvm::Triple::NetBSD))
+                      !TC.getTriple().isOSNetBSD() &&
+                       TC.useIntegratedAs()))
     CmdArgs.push_back("-faddrsig");
 
   // Finally add the compile command to the compilation.

@@ -527,6 +527,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::STORE);
   setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
   setTargetDAGCombine(ISD::FP_ROUND);
+  setTargetDAGCombine(ISD::FP_EXTEND);
   setTargetDAGCombine(ISD::BSWAP);
   setTargetDAGCombine(ISD::SDIV);
   setTargetDAGCombine(ISD::UDIV);
@@ -5485,7 +5486,7 @@ SDValue SystemZTargetLowering::combineFP_ROUND(
   // (fpround (extract_vector_elt X 0))
   // (fpround (extract_vector_elt X 1)) ->
   // (extract_vector_elt (VROUND X) 0)
-  // (extract_vector_elt (VROUND X) 1)
+  // (extract_vector_elt (VROUND X) 2)
   //
   // This is a special case since the target doesn't really support v2f32s.
   SelectionDAG &DAG = DCI.DAG;
@@ -5519,6 +5520,53 @@ SDValue SystemZTargetLowering::combineFP_ROUND(
           SDValue Extract0 =
             DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(Op0), MVT::f32,
                         VRound, DAG.getConstant(0, SDLoc(Op0), MVT::i32));
+          return Extract0;
+        }
+      }
+    }
+  }
+  return SDValue();
+}
+
+SDValue SystemZTargetLowering::combineFP_EXTEND(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  // (fpextend (extract_vector_elt X 0))
+  // (fpextend (extract_vector_elt X 2)) ->
+  // (extract_vector_elt (VEXTEND X) 0)
+  // (extract_vector_elt (VEXTEND X) 1)
+  //
+  // This is a special case since the target doesn't really support v2f32s.
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Op0 = N->getOperand(0);
+  if (N->getValueType(0) == MVT::f64 &&
+      Op0.hasOneUse() &&
+      Op0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+      Op0.getOperand(0).getValueType() == MVT::v4f32 &&
+      Op0.getOperand(1).getOpcode() == ISD::Constant &&
+      cast<ConstantSDNode>(Op0.getOperand(1))->getZExtValue() == 0) {
+    SDValue Vec = Op0.getOperand(0);
+    for (auto *U : Vec->uses()) {
+      if (U != Op0.getNode() &&
+          U->hasOneUse() &&
+          U->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          U->getOperand(0) == Vec &&
+          U->getOperand(1).getOpcode() == ISD::Constant &&
+          cast<ConstantSDNode>(U->getOperand(1))->getZExtValue() == 2) {
+        SDValue OtherExtend = SDValue(*U->use_begin(), 0);
+        if (OtherExtend.getOpcode() == ISD::FP_EXTEND &&
+            OtherExtend.getOperand(0) == SDValue(U, 0) &&
+            OtherExtend.getValueType() == MVT::f64) {
+          SDValue VExtend = DAG.getNode(SystemZISD::VEXTEND, SDLoc(N),
+                                        MVT::v2f64, Vec);
+          DCI.AddToWorklist(VExtend.getNode());
+          SDValue Extract1 =
+            DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(U), MVT::f64,
+                        VExtend, DAG.getConstant(1, SDLoc(U), MVT::i32));
+          DCI.AddToWorklist(Extract1.getNode());
+          DAG.ReplaceAllUsesOfValueWith(OtherExtend, Extract1);
+          SDValue Extract0 =
+            DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(Op0), MVT::f64,
+                        VExtend, DAG.getConstant(0, SDLoc(Op0), MVT::i32));
           return Extract0;
         }
       }
@@ -5745,6 +5793,7 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::EXTRACT_VECTOR_ELT: return combineEXTRACT_VECTOR_ELT(N, DCI);
   case SystemZISD::JOIN_DWORDS: return combineJOIN_DWORDS(N, DCI);
   case ISD::FP_ROUND:           return combineFP_ROUND(N, DCI);
+  case ISD::FP_EXTEND:          return combineFP_EXTEND(N, DCI);
   case ISD::BSWAP:              return combineBSWAP(N, DCI);
   case SystemZISD::BR_CCMASK:   return combineBR_CCMASK(N, DCI);
   case SystemZISD::SELECT_CCMASK: return combineSELECT_CCMASK(N, DCI);

@@ -83,8 +83,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (getTriple().getArch() == llvm::Triple::ppc64le) {
     Builder.defineMacro("_LITTLE_ENDIAN");
   } else {
-    if (getTriple().getOS() != llvm::Triple::NetBSD &&
-        getTriple().getOS() != llvm::Triple::OpenBSD)
+    if (!getTriple().isOSNetBSD() &&
+        !getTriple().isOSOpenBSD())
       Builder.defineMacro("_BIG_ENDIAN");
   }
 

@@ -980,9 +980,7 @@ public:
 
   void print(raw_ostream &OS, const PrintingPolicy &Policy,
              const Twine &PlaceHolder = Twine(),
-             unsigned Indentation = 0) const {
-    print(split(), OS, Policy, PlaceHolder, Indentation);
-  }
+             unsigned Indentation = 0) const;
 
   static void print(SplitQualType split, raw_ostream &OS,
                     const PrintingPolicy &policy, const Twine &PlaceHolder,
@@ -996,9 +994,7 @@ public:
                     unsigned Indentation = 0);
 
   void getAsStringInternal(std::string &Str,
-                           const PrintingPolicy &Policy) const {
-    return getAsStringInternal(split(), Str, Policy);
-  }
+                           const PrintingPolicy &Policy) const;
 
   static void getAsStringInternal(SplitQualType split, std::string &out,
                                   const PrintingPolicy &policy) {

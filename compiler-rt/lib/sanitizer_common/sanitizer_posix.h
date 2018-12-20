@@ -49,7 +49,6 @@ uptr internal_filesize(fd_t fd);  // -1 on error.
 uptr internal_stat(const char *path, void *buf);
 uptr internal_lstat(const char *path, void *buf);
 uptr internal_fstat(fd_t fd, void *buf);
-uptr internal_dup(int oldfd);
 uptr internal_dup2(int oldfd, int newfd);
 uptr internal_readlink(const char *path, char *buf, uptr bufsize);
 uptr internal_unlink(const char *path);
@@ -99,9 +98,6 @@ uptr internal_execve(const char *filename, char *const argv[],
                      char *const envp[]);
 
 bool IsStateDetached(int state);
-
-// Move the fd out of {0, 1, 2} range.
-fd_t ReserveStandardFds(fd_t fd);
 
 }  // namespace __sanitizer
 

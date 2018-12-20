@@ -479,7 +479,7 @@ static void addToAccessGroupList(ListT &List, MDNode *AccGroups) {
     assert(isValidAsAccessGroup(Item) && "List item must be an access group");
     List.insert(Item);
   }
-};
+}
 
 MDNode *llvm::uniteAccessGroups(MDNode *AccGroups1, MDNode *AccGroups2) {
   if (!AccGroups1)

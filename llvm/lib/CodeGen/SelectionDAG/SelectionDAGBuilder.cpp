@@ -5762,17 +5762,15 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     // avoid the select that is necessary in the general case to filter out
     // the 0-shift possibility that leads to UB.
     if (X == Y && isPowerOf2_32(VT.getScalarSizeInBits())) {
-      // TODO: This should also be done if the operation is custom, but we have
-      // to make sure targets are handling the modulo shift amount as expected.
       auto RotateOpcode = IsFSHL ? ISD::ROTL : ISD::ROTR;
-      if (TLI.isOperationLegal(RotateOpcode, VT)) {
+      if (TLI.isOperationLegalOrCustom(RotateOpcode, VT)) {
         setValue(&I, DAG.getNode(RotateOpcode, sdl, VT, X, Z));
         return nullptr;
       }
 
       // Some targets only rotate one way. Try the opposite direction.
       RotateOpcode = IsFSHL ? ISD::ROTR : ISD::ROTL;
-      if (TLI.isOperationLegal(RotateOpcode, VT)) {
+      if (TLI.isOperationLegalOrCustom(RotateOpcode, VT)) {
         // Negate the shift amount because it is safe to ignore the high bits.
         SDValue NegShAmt = DAG.getNode(ISD::SUB, sdl, VT, Zero, Z);
         setValue(&I, DAG.getNode(RotateOpcode, sdl, VT, X, NegShAmt));

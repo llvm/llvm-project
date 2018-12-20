@@ -554,9 +554,9 @@ certain user-defined criteria. For example:
 
 .. code-block:: c
 
-  void abs(int a)
+  int abs(int a)
     __attribute__((diagnose_if(a >= 0, "Redundant abs call", "warning")));
-  void must_abs(int a)
+  int must_abs(int a)
     __attribute__((diagnose_if(a >= 0, "Redundant abs call", "error")));
 
   int val = abs(1); // warning: Redundant abs call

@@ -39,9 +39,13 @@ action("BuildVariables.inc") {
     l = "-l"
     lib = ""
   }
+
   # Windows doesn't use any of libxml2,terminfo, zlib by default.
   # Make GN not warn about these variables being unused.
-  not_needed(["l", "lib"])
+  not_needed([
+               "l",
+               "lib",
+             ])
 
   system_libs = ""
   if (host_os == "win") {

@@ -3122,8 +3122,10 @@ Sema::findFailedBooleanCondition(Expr *Cond) {
   std::string Description;
   {
     llvm::raw_string_ostream Out(Description);
-    FailedBooleanConditionPrinterHelper Helper(getPrintingPolicy());
-    FailedCond->printPretty(Out, &Helper, getPrintingPolicy());
+    PrintingPolicy Policy = getPrintingPolicy();
+    Policy.PrintCanonicalTypes = true;
+    FailedBooleanConditionPrinterHelper Helper(Policy);
+    FailedCond->printPretty(Out, &Helper, Policy, 0, "\n", nullptr);
   }
   return { FailedCond, Description };
 }

@@ -7,7 +7,7 @@
 # REQUIRES: asserts
 
 # The main purpose of this test is to make sure we don't over-relax
-# LegalizerInfo validation and loose its ability to catch bugs.
+# LegalizerInfo validation and lose its ability to catch bugs.
 #
 # Watch out for every "SKIPPED: user-defined predicate detected" in the
 # check-lines below and keep each and every one of them justified.
