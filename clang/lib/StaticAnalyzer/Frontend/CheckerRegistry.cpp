@@ -42,8 +42,8 @@ static bool isCompatibleAPIVersion(const char *versionString) {
 CheckerRegistry::CheckerRegistry(ArrayRef<std::string> plugins,
                                  DiagnosticsEngine &diags) : Diags(diags) {
 #define GET_CHECKERS
-#define CHECKER(FULLNAME, CLASS, HELPTEXT)                                     \
-  addChecker(register##CLASS, FULLNAME, HELPTEXT);
+#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI)                            \
+  addChecker(register##CLASS, FULLNAME, HELPTEXT, DOC_URI);
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER
 #undef GET_CHECKERS
@@ -115,7 +115,7 @@ CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers(
 
   for (const std::pair<std::string, bool> &opt : Opts.CheckersControlList) {
     // Use a binary search to find the possible start of the package.
-    CheckerRegistry::CheckerInfo packageInfo(nullptr, opt.first, "");
+    CheckerRegistry::CheckerInfo packageInfo(nullptr, opt.first, "", "");
     auto firstRelatedChecker =
       std::lower_bound(Checkers.cbegin(), end, packageInfo, checkerNameLT);
 
@@ -147,13 +147,13 @@ CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers(
   return enabledCheckers;
 }
 
-void CheckerRegistry::addChecker(InitializationFunction fn, StringRef name,
-                                 StringRef desc) {
-  Checkers.push_back(CheckerInfo(fn, name, desc));
+void CheckerRegistry::addChecker(InitializationFunction Fn, StringRef Name,
+                                 StringRef Desc, StringRef DocsUri) {
+  Checkers.emplace_back(Fn, Name, Desc, DocsUri);
 
   // Record the presence of the checker in its packages.
   StringRef packageName, leafName;
-  std::tie(packageName, leafName) = name.rsplit(PackageSeparator);
+  std::tie(packageName, leafName) = Name.rsplit(PackageSeparator);
   while (!leafName.empty()) {
     Packages[packageName] += 1;
     std::tie(packageName, leafName) = packageName.rsplit(PackageSeparator);

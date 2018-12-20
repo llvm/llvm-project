@@ -33,7 +33,7 @@ void *test_builtin_os_log(void *buf) {
   // CHECK: %[[ARGDATA_I:.*]] = getelementptr i8, i8* %[[BUF]], i64 4
   // CHECK: %[[ARGDATACAST_I:.*]] = bitcast i8* %[[ARGDATA_I]] to i64*
   // CHECK: store i64 %[[V2]], i64* %[[ARGDATACAST_I]], align 1
-  // CHECK: tail call void (...) @clang.arc.use(%[[TY0]]* %[[CALL]])
+  // CHECK: tail call void (...) @llvm.objc.clang.arc.use(%[[TY0]]* %[[CALL]])
   // CHECK: tail call void @llvm.objc.release(i8* %[[V0]])
   // CHECK: ret i8* %[[BUF]]
 
@@ -50,7 +50,7 @@ void *test_builtin_os_log(void *buf) {
   // CHECK-O0: %[[V4:.*]] = ptrtoint %[[TY0]]* %[[V3]] to i64
   // CHECK-O0: call void @__os_log_helper_1_2_1_8_64(i8* %[[V0]], i64 %[[V4]])
   // CHECK-O0: %[[V5:.*]] = bitcast %[[TY0]]* %[[V3]] to i8*
-  // CHECK-O0-NOT call void (...) @clang.arc.use({{.*}}
+  // CHECK-O0-NOT call void (...) @llvm.objc.clang.arc.use({{.*}}
   // CHECK-O0: call void @llvm.objc.release(i8* %[[V5]])
   // CHECK-O0: ret i8* %[[V0]]
 }

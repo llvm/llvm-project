@@ -73,11 +73,11 @@ void test0(NSArray *array) {
 // CHECK-LP64-NEXT: [[BLOCK1:%.*]] = bitcast [[BLOCK_T]]* [[BLOCK]]
 // CHECK-LP64-NEXT: call void @use_block(void ()* [[BLOCK1]])
 // CHECK-LP64-NEXT: call void @llvm.objc.storeStrong(i8** [[D0]], i8* null)
-// CHECK-LP64-NOT:  call void (...) @clang.arc.use(i8* [[CAPTURE]])
+// CHECK-LP64-NOT:  call void (...) @llvm.objc.clang.arc.use(i8* [[CAPTURE]])
 
 // CHECK-LP64-OPT: [[D0:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i64 0, i32 5
 // CHECK-LP64-OPT: [[CAPTURE:%.*]] = load i8*, i8** [[D0]]
-// CHECK-LP64-OPT: call void (...) @clang.arc.use(i8* [[CAPTURE]])
+// CHECK-LP64-OPT: call void (...) @llvm.objc.clang.arc.use(i8* [[CAPTURE]])
 
 // CHECK-LP64:      [[T0:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
 // CHECK-LP64-NEXT: [[T1:%.*]] = bitcast [[ARRAY_T]]* [[SAVED_ARRAY]] to i8*
@@ -220,14 +220,14 @@ NSArray *array4;
 
 // CHECK-LP64:         [[T5:%.*]] = bitcast [[TY]]** [[T0]] to i8**
 // CHECK-LP64:         call void @llvm.objc.storeStrong(i8** [[T5]], i8* null)
-// CHECK-LP64-NOT:     call void (...) @clang.arc.use([[TY]]* [[T5]])
+// CHECK-LP64-NOT:     call void (...) @llvm.objc.clang.arc.use([[TY]]* [[T5]])
 // CHECK-LP64:         switch i32 {{%.*}}, label %[[UNREACHABLE:.*]] [
 // CHECK-LP64-NEXT:      i32 0, label %[[CLEANUP_CONT:.*]]
 // CHECK-LP64-NEXT:      i32 2, label %[[FORCOLL_END:.*]]
 // CHECK-LP64-NEXT:    ]
 
 // CHECK-LP64-OPT: [[T5:%.*]] = load [[TY]]*, [[TY]]** [[T0]]
-// CHECK-LP64-OPT: call void (...) @clang.arc.use([[TY]]* [[T5]])
+// CHECK-LP64-OPT: call void (...) @llvm.objc.clang.arc.use([[TY]]* [[T5]])
 
 // CHECK-LP64:       {{^|:}}[[CLEANUP_CONT]]
 // CHECK-LP64-NEXT:    br label %[[FORCOLL_END]]

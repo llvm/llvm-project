@@ -75,7 +75,7 @@ void test1(int cond) {
   // CHECK-NEXT: br i1 [[T0]],
   // CHECK:      [[T0:%.*]] = load i8*, i8** [[TEMP1]]
   // CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retain(i8* [[T0]])
-  // CHECK-NEXT: call void (...) @clang.arc.use(i8* [[W]]) [[NUW]]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.use(i8* [[W]]) [[NUW]]
   // CHECK-NEXT: [[T2:%.*]] = load i8*, i8** [[ARG]]
   // CHECK-NEXT: store i8* [[T1]], i8** [[ARG]]
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T2]])

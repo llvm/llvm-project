@@ -91,9 +91,12 @@ public:
     InitializationFunction Initialize;
     StringRef FullName;
     StringRef Desc;
+    StringRef DocumentationUri;
 
-    CheckerInfo(InitializationFunction fn, StringRef name, StringRef desc)
-        : Initialize(fn), FullName(name), Desc(desc) {}
+    CheckerInfo(InitializationFunction Fn, StringRef Name, StringRef Desc,
+                StringRef DocsUri)
+        : Initialize(Fn), FullName(Name), Desc(Desc),
+          DocumentationUri(DocsUri) {}
   };
 
   using CheckerInfoList = std::vector<CheckerInfo>;
@@ -108,16 +111,16 @@ private:
 public:
   /// Adds a checker to the registry. Use this non-templated overload when your
   /// checker requires custom initialization.
-  void addChecker(InitializationFunction fn, StringRef fullName,
-                  StringRef desc);
+  void addChecker(InitializationFunction Fn, StringRef FullName, StringRef Desc,
+                  StringRef DocsUri);
 
   /// Adds a checker to the registry. Use this templated overload when your
   /// checker does not require any custom initialization.
   template <class T>
-  void addChecker(StringRef fullName, StringRef desc) {
+  void addChecker(StringRef FullName, StringRef Desc, StringRef DocsUri) {
     // Avoid MSVC's Compiler Error C2276:
     // http://msdn.microsoft.com/en-us/library/850cstw1(v=VS.80).aspx
-    addChecker(&CheckerRegistry::initializeManager<T>, fullName, desc);
+    addChecker(&CheckerRegistry::initializeManager<T>, FullName, Desc, DocsUri);
   }
 
   /// Initializes a CheckerManager by calling the initialization functions for

@@ -1862,11 +1862,8 @@ llvm::Value *CodeGenFunction::EmitObjCExtendObjectLifetime(QualType type,
 /// being intrinsically used up until this point in the program.
 void CodeGenFunction::EmitARCIntrinsicUse(ArrayRef<llvm::Value*> values) {
   llvm::Constant *&fn = CGM.getObjCEntrypoints().clang_arc_use;
-  if (!fn) {
-    llvm::FunctionType *fnType =
-      llvm::FunctionType::get(CGM.VoidTy, None, true);
-    fn = CGM.CreateRuntimeFunction(fnType, "clang.arc.use");
-  }
+  if (!fn)
+    fn = CGM.getIntrinsic(llvm::Intrinsic::objc_clang_arc_use);
 
   // This isn't really a "runtime" function, but as an intrinsic it
   // doesn't really matter as long as we align things up.
