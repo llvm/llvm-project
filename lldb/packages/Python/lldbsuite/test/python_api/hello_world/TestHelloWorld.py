@@ -76,7 +76,6 @@ class HelloWorldTestCase(TestBase):
         self.assertEqual(breakpoint.GetHitCount(), 1, BREAKPOINT_HIT_ONCE)
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24600")
     @skipIfiOSSimulator
     def test_with_attach_to_process_with_id_api(self):
         """Create target, spawn a process, and attach to it with process id."""
@@ -107,7 +106,6 @@ class HelloWorldTestCase(TestBase):
                              '(int)argc=2'])
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24600")
     @skipIfiOSSimulator
     def test_with_attach_to_process_with_name_api(self):
         """Create target, spawn a process, and attach to it with process name."""
