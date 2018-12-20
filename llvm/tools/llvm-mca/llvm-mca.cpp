@@ -149,15 +149,13 @@ static cl::opt<bool>
                   cl::desc("If set, assume that loads and stores do not alias"),
                   cl::cat(ToolOptions), cl::init(true));
 
-static cl::opt<unsigned>
-    LoadQueueSize("lqueue",
-                  cl::desc("Size of the load queue"),
-                  cl::cat(ToolOptions), cl::init(0));
+static cl::opt<unsigned> LoadQueueSize("lqueue",
+                                       cl::desc("Size of the load queue"),
+                                       cl::cat(ToolOptions), cl::init(0));
 
-static cl::opt<unsigned>
-    StoreQueueSize("squeue",
-                   cl::desc("Size of the store queue"),
-                   cl::cat(ToolOptions), cl::init(0));
+static cl::opt<unsigned> StoreQueueSize("squeue",
+                                        cl::desc("Size of the store queue"),
+                                        cl::cat(ToolOptions), cl::init(0));
 
 static cl::opt<bool>
     PrintInstructionTables("instruction-tables",
@@ -339,8 +337,14 @@ int main(int argc, char **argv) {
   // Parse the input and create CodeRegions that llvm-mca can analyze.
   mca::AsmCodeRegionGenerator CRG(*TheTarget, SrcMgr, Ctx, *MAI, *STI, *MCII);
   Expected<const mca::CodeRegions &> RegionsOrErr = CRG.parseCodeRegions();
-  if (auto Err = RegionsOrErr.takeError()) {
-    WithColor::error() << Err << "\n";
+  if (!RegionsOrErr) {
+    if (auto Err =
+            handleErrors(RegionsOrErr.takeError(), [](const StringError &E) {
+              WithColor::error() << E.getMessage() << '\n';
+            })) {
+      // Default case.
+      WithColor::error() << toString(std::move(Err)) << '\n';
+    }
     return 1;
   }
   const mca::CodeRegions &Regions = *RegionsOrErr;

@@ -7,6 +7,7 @@
 ; RUN: llc -mcpu=pwr8 -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names \
 ; RUN:    -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s --check-prefix=P8BE
 
+
 ; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @s2v_test1(i64* nocapture readonly %int64, <2 x i64> %vec) {
 ; P9LE-LABEL: s2v_test1:

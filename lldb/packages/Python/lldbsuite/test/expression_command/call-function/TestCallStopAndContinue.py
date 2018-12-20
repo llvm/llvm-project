@@ -25,9 +25,6 @@ class ExprCommandCallStopContinueTestCase(TestBase):
         self.func_line = line_number('main.cpp', '{5, "five"}')
 
     @expectedFlakeyDarwin("llvm.org/pr20274")
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test(self):
         """Test gathering result from interrupted function call."""
         self.build()

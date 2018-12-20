@@ -98,26 +98,20 @@ decltype(SymbolCollector::Options::FileFilter)
 createFileFilter(const llvm::StringMap<FileDigest> &FileDigests,
                  llvm::StringMap<FileDigest> &FilesToUpdate) {
   return [&FileDigests, &FilesToUpdate](const SourceManager &SM, FileID FID) {
-    StringRef Path;
-    if (const auto *F = SM.getFileEntryForID(FID))
-      Path = F->getName();
-    if (Path.empty())
+    const auto *F = SM.getFileEntryForID(FID);
+    if (!F)
       return false; // Skip invalid files.
-    SmallString<128> AbsPath(Path);
-    if (std::error_code EC =
-            SM.getFileManager().getVirtualFileSystem()->makeAbsolute(AbsPath)) {
-      elog("Warning: could not make absolute file: {0}", EC.message());
+    auto AbsPath = getCanonicalPath(F, SM);
+    if (!AbsPath)
       return false; // Skip files without absolute path.
-    }
-    sys::path::remove_dots(AbsPath, /*remove_dot_dot=*/true);
     auto Digest = digestFile(SM, FID);
     if (!Digest)
       return false;
-    auto D = FileDigests.find(AbsPath);
+    auto D = FileDigests.find(*AbsPath);
     if (D != FileDigests.end() && D->second == Digest)
       return false; // Skip files that haven't changed.
 
-    FilesToUpdate[AbsPath] = *Digest;
+    FilesToUpdate[*AbsPath] = *Digest;
     return true;
   };
 }

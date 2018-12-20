@@ -2390,13 +2390,9 @@ public:
   void VisitStmt(Stmt *S) {
     for (Stmt *C : S->children()) {
       if (C) {
-        if (auto *OED = dyn_cast<OMPExecutableDirective>(C)) {
-          // Check implicitly captured variables in the task-based directives to
-          // check if they must be firstprivatized.
-          VisitSubCaptures(OED);
-        } else {
-          Visit(C);
-        }
+        // Check implicitly captured variables in the task-based directives to
+        // check if they must be firstprivatized.
+        Visit(C);
       }
     }
   }
@@ -4653,6 +4649,7 @@ void Sema::ActOnOpenMPLoopInitialization(SourceLocation ForLoc, Stmt *Init) {
   unsigned AssociatedLoops = DSAStack->getAssociatedLoops();
   if (AssociatedLoops > 0 &&
       isOpenMPLoopDirective(DSAStack->getCurrentDirective())) {
+    DSAStack->loopStart();
     OpenMPIterationSpaceChecker ISC(*this, ForLoc);
     if (!ISC.checkAndSetInit(Init, /*EmitDiags=*/false)) {
       if (ValueDecl *D = ISC.getLoopDecl()) {

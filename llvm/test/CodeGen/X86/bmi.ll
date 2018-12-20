@@ -519,10 +519,7 @@ define i32 @blsi32_z(i32 %a, i32 %b) nounwind {
 define i32 @blsi32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; X86-LABEL: blsi32_z2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    negl %ecx
-; X86-NEXT:    testl %eax, %ecx
+; X86-NEXT:    blsil {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmovel %eax, %ecx
@@ -532,9 +529,7 @@ define i32 @blsi32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; X64-LABEL: blsi32_z2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    negl %ecx
-; X64-NEXT:    testl %edi, %ecx
+; X64-NEXT:    blsil %edi, %ecx
 ; X64-NEXT:    cmovnel %edx, %eax
 ; X64-NEXT:    retq
   %t0 = sub i32 0, %a
@@ -629,9 +624,7 @@ define i64 @blsi64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 ; X64-LABEL: blsi64_z2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rsi, %rax
-; X64-NEXT:    movq %rdi, %rcx
-; X64-NEXT:    negq %rcx
-; X64-NEXT:    testq %rdi, %rcx
+; X64-NEXT:    blsiq %rdi, %rcx
 ; X64-NEXT:    cmovneq %rdx, %rax
 ; X64-NEXT:    retq
   %t0 = sub i64 0, %a
@@ -875,9 +868,7 @@ define i32 @blsr32_z(i32 %a, i32 %b) nounwind {
 define i32 @blsr32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; X86-LABEL: blsr32_z2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal -1(%eax), %ecx
-; X86-NEXT:    testl %eax, %ecx
+; X86-NEXT:    blsrl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmovel %eax, %ecx
@@ -887,9 +878,7 @@ define i32 @blsr32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; X64-LABEL: blsr32_z2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal -1(%rdi), %ecx
-; X64-NEXT:    testl %edi, %ecx
+; X64-NEXT:    blsrl %edi, %ecx
 ; X64-NEXT:    cmovnel %edx, %eax
 ; X64-NEXT:    retq
   %t0 = sub i32 %a, 1
@@ -984,8 +973,7 @@ define i64 @blsr64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 ; X64-LABEL: blsr64_z2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rsi, %rax
-; X64-NEXT:    leaq -1(%rdi), %rcx
-; X64-NEXT:    testq %rdi, %rcx
+; X64-NEXT:    blsrq %rdi, %rcx
 ; X64-NEXT:    cmovneq %rdx, %rax
 ; X64-NEXT:    retq
   %t0 = sub i64 %a, 1
