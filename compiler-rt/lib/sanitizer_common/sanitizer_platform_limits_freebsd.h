@@ -62,6 +62,8 @@ namespace __sanitizer {
   extern unsigned struct_rlimit_sz;
   extern unsigned struct_utimbuf_sz;
   extern unsigned struct_timespec_sz;
+  extern const int unvis_valid;
+  extern const int unvis_validpush;
 
   struct __sanitizer_iocb {
     u64   aio_data;

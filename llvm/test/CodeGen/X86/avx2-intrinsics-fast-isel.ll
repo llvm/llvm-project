@@ -98,11 +98,11 @@ define <4 x i64> @test_mm256_adds_epi8(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <32 x i8>
   %arg1 = bitcast <4 x i64> %a1 to <32 x i8>
-  %res = call <32 x i8> @llvm.x86.avx2.padds.b(<32 x i8> %arg0, <32 x i8> %arg1)
+  %res = call <32 x i8> @llvm.sadd.sat.v32i8(<32 x i8> %arg0, <32 x i8> %arg1)
   %bc = bitcast <32 x i8> %res to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <32 x i8> @llvm.x86.avx2.padds.b(<32 x i8>, <32 x i8>) nounwind readnone
+declare <32 x i8> @llvm.sadd.sat.v32i8(<32 x i8>, <32 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_adds_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_adds_epi16:
@@ -111,11 +111,11 @@ define <4 x i64> @test_mm256_adds_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <16 x i16>
   %arg1 = bitcast <4 x i64> %a1 to <16 x i16>
-  %res = call <16 x i16> @llvm.x86.avx2.padds.w(<16 x i16> %arg0, <16 x i16> %arg1)
+  %res = call <16 x i16> @llvm.sadd.sat.v16i16(<16 x i16> %arg0, <16 x i16> %arg1)
   %bc = bitcast <16 x i16> %res to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <16 x i16> @llvm.x86.avx2.padds.w(<16 x i16>, <16 x i16>) nounwind readnone
+declare <16 x i16> @llvm.sadd.sat.v16i16(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_adds_epu8(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_adds_epu8:
@@ -2527,11 +2527,11 @@ define <4 x i64> @test_mm256_subs_epi8(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <32 x i8>
   %arg1 = bitcast <4 x i64> %a1 to <32 x i8>
-  %res = call <32 x i8> @llvm.x86.avx2.psubs.b(<32 x i8> %arg0, <32 x i8> %arg1)
+  %res = call <32 x i8> @llvm.ssub.sat.v32i8(<32 x i8> %arg0, <32 x i8> %arg1)
   %bc = bitcast <32 x i8> %res to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <32 x i8> @llvm.x86.avx2.psubs.b(<32 x i8>, <32 x i8>) nounwind readnone
+declare <32 x i8> @llvm.ssub.sat.v32i8(<32 x i8>, <32 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_subs_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_subs_epi16:
@@ -2540,11 +2540,11 @@ define <4 x i64> @test_mm256_subs_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <4 x i64> %a0 to <16 x i16>
   %arg1 = bitcast <4 x i64> %a1 to <16 x i16>
-  %res = call <16 x i16> @llvm.x86.avx2.psubs.w(<16 x i16> %arg0, <16 x i16> %arg1)
+  %res = call <16 x i16> @llvm.ssub.sat.v16i16(<16 x i16> %arg0, <16 x i16> %arg1)
   %bc = bitcast <16 x i16> %res to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <16 x i16> @llvm.x86.avx2.psubs.w(<16 x i16>, <16 x i16>) nounwind readnone
+declare <16 x i16> @llvm.ssub.sat.v16i16(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_subs_epu8(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_subs_epu8:

@@ -733,6 +733,8 @@ public:
   Segment ElfHdrSegment;
   Segment ProgramHdrSegment;
 
+  uint8_t OSABI;
+  uint8_t ABIVersion;
   uint64_t Entry;
   uint64_t SHOffset;
   uint32_t Type;

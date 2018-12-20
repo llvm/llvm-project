@@ -397,6 +397,9 @@ struct InitializationOptions {
   // the compilation database doesn't describe an opened file.
   // The command used will be approximately `clang $FILE $fallbackFlags`.
   std::vector<std::string> fallbackFlags;
+
+  /// Clients supports show file status for textDocument/clangd.fileStatus.
+  bool FileStatus = false;
 };
 bool fromJSON(const llvm::json::Value &, InitializationOptions &);
 
@@ -972,6 +975,18 @@ struct ReferenceParams : public TextDocumentPositionParams {
   // For now, no options like context.includeDeclaration are supported.
 };
 bool fromJSON(const llvm::json::Value &, ReferenceParams &);
+
+/// Clangd extension: indicates the current state of the file in clangd,
+/// sent from server via the `textDocument/clangd.fileStatus` notification.
+struct FileStatus {
+  /// The text document's URI.
+  URIForFile uri;
+  /// The human-readable string presents the current state of the file, can be
+  /// shown in the UI (e.g. status bar).
+  std::string state;
+  // FIXME: add detail messages.
+};
+llvm::json::Value toJSON(const FileStatus &FStatus);
 
 } // namespace clangd
 } // namespace clang

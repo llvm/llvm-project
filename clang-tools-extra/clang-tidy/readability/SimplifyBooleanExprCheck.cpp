@@ -319,8 +319,6 @@ bool containsDiscardedTokens(const MatchFinder::MatchResult &Result,
 } // namespace
 
 class SimplifyBooleanExprCheck::Visitor : public RecursiveASTVisitor<Visitor> {
-  using Base = RecursiveASTVisitor<Visitor>;
-
  public:
   Visitor(SimplifyBooleanExprCheck *Check,
           const MatchFinder::MatchResult &Result)
@@ -507,16 +505,8 @@ void SimplifyBooleanExprCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 ChainedConditionalAssignment);
 }
 
-// This is a silly hack to let us run a RecursiveASTVisitor on the Context.
-// We want to match exactly one node in the AST, doesn't matter which.
-AST_MATCHER_P(Decl, matchOnce, bool *, Matched) {
-  if (*Matched)
-    return false;
-  return *Matched = true;
-}
-
 void SimplifyBooleanExprCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(matchOnce(&MatchedOnce), this);
+  Finder->addMatcher(translationUnitDecl().bind("top"), this);
 
   matchBoolCondition(Finder, true, ConditionThenStmtId);
   matchBoolCondition(Finder, false, ConditionElseStmtId);
@@ -535,8 +525,10 @@ void SimplifyBooleanExprCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void SimplifyBooleanExprCheck::check(const MatchFinder::MatchResult &Result) {
-  if (const CXXBoolLiteralExpr *TrueConditionRemoved =
-          getBoolLiteral(Result, ConditionThenStmtId))
+  if (const auto *TU = Result.Nodes.getNodeAs<TranslationUnitDecl>("top"))
+    Visitor(this, Result).TraverseAST(*Result.Context);
+  else if (const CXXBoolLiteralExpr *TrueConditionRemoved =
+               getBoolLiteral(Result, ConditionThenStmtId))
     replaceWithThenStatement(Result, TrueConditionRemoved);
   else if (const CXXBoolLiteralExpr *FalseConditionRemoved =
                getBoolLiteral(Result, ConditionElseStmtId))
@@ -564,10 +556,6 @@ void SimplifyBooleanExprCheck::check(const MatchFinder::MatchResult &Result) {
   else if (const auto *Compound =
                Result.Nodes.getNodeAs<CompoundStmt>(CompoundNotBoolId))
     replaceCompoundReturnWithCondition(Result, Compound, true);
-  else { // MatchOnce matcher
-    assert(MatchedOnce);
-    Visitor(this, Result).TraverseAST(*Result.Context);
-  }
 }
 
 void SimplifyBooleanExprCheck::issueDiag(

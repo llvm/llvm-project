@@ -13,20 +13,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "hwasan.h"
-#include "hwasan_mapping.h"
+#include "hwasan_checks.h"
 #include "hwasan_poisoning.h"
 #include "hwasan_report.h"
 #include "hwasan_thread.h"
 #include "hwasan_thread_list.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
+#include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
-#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "ubsan/ubsan_flags.h"
 #include "ubsan/ubsan_init.h"
 
@@ -363,63 +363,6 @@ void __sanitizer_unaligned_store32(uu32 *p, u32 x) {
 }
 void __sanitizer_unaligned_store64(uu64 *p, u64 x) {
   *p = x;
-}
-
-template<unsigned X>
-__attribute__((always_inline))
-static void SigTrap(uptr p) {
-#if defined(__aarch64__)
-  (void)p;
-  // 0x900 is added to do not interfere with the kernel use of lower values of
-  // brk immediate.
-  // FIXME: Add a constraint to put the pointer into x0, the same as x86 branch.
-  asm("brk %0\n\t" ::"n"(0x900 + X));
-#elif defined(__x86_64__)
-  // INT3 + NOP DWORD ptr [EAX + X] to pass X to our signal handler, 5 bytes
-  // total. The pointer is passed via rdi.
-  // 0x40 is added as a safeguard, to help distinguish our trap from others and
-  // to avoid 0 offsets in the command (otherwise it'll be reduced to a
-  // different nop command, the three bytes one).
-  asm volatile(
-      "int3\n"
-      "nopl %c0(%%rax)\n"
-      :: "n"(0x40 + X), "D"(p));
-#else
-  // FIXME: not always sigill.
-  __builtin_trap();
-#endif
-  // __builtin_unreachable();
-}
-
-enum class ErrorAction { Abort, Recover };
-enum class AccessType { Load, Store };
-
-template <ErrorAction EA, AccessType AT, unsigned LogSize>
-__attribute__((always_inline, nodebug)) static void CheckAddress(uptr p) {
-  tag_t ptr_tag = GetTagFromPointer(p);
-  uptr ptr_raw = p & ~kAddressTagMask;
-  tag_t mem_tag = *(tag_t *)MemToShadow(ptr_raw);
-  if (UNLIKELY(ptr_tag != mem_tag)) {
-    SigTrap<0x20 * (EA == ErrorAction::Recover) +
-           0x10 * (AT == AccessType::Store) + LogSize>(p);
-    if (EA == ErrorAction::Abort) __builtin_unreachable();
-  }
-}
-
-template <ErrorAction EA, AccessType AT>
-__attribute__((always_inline, nodebug)) static void CheckAddressSized(uptr p,
-                                                                      uptr sz) {
-  CHECK_NE(0, sz);
-  tag_t ptr_tag = GetTagFromPointer(p);
-  uptr ptr_raw = p & ~kAddressTagMask;
-  tag_t *shadow_first = (tag_t *)MemToShadow(ptr_raw);
-  tag_t *shadow_last = (tag_t *)MemToShadow(ptr_raw + sz - 1);
-  for (tag_t *t = shadow_first; t <= shadow_last; ++t)
-    if (UNLIKELY(ptr_tag != *t)) {
-      SigTrap<0x20 * (EA == ErrorAction::Recover) +
-             0x10 * (AT == AccessType::Store) + 0xf>(p);
-      if (EA == ErrorAction::Abort) __builtin_unreachable();
-    }
 }
 
 void __hwasan_loadN(uptr p, uptr sz) {
