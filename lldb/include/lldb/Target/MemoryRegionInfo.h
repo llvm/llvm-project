@@ -123,6 +123,12 @@ inline bool operator<(lldb::addr_t lhs, const MemoryRegionInfo &rhs) {
   return lhs < rhs.GetRange().GetRangeBase();
 }
 
+// Forward-declarable wrapper.
+class MemoryRegionInfos : public std::vector<lldb_private::MemoryRegionInfo> {
+public:
+  using std::vector<lldb_private::MemoryRegionInfo>::vector;
+};
+
 }
 
 namespace llvm {

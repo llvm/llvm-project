@@ -52,6 +52,7 @@ public:
 private:
   // Implement DiagnosticsConsumer.
   void onDiagnosticsReady(PathRef File, std::vector<Diag> Diagnostics) override;
+  void onFileUpdated(PathRef File, const TUStatus &Status) override;
 
   // LSP methods. Notifications have signature void(const Params&).
   // Calls have signature void(const Params&, Callback<Response>).
@@ -132,11 +133,12 @@ private:
   SymbolKindBitset SupportedSymbolKinds;
   /// The supported completion item kinds of the client.
   CompletionItemKindBitset SupportedCompletionItemKinds;
-  // Whether the client supports CodeAction response objects.
+  /// Whether the client supports CodeAction response objects.
   bool SupportsCodeAction = false;
   /// From capabilities of textDocument/documentSymbol.
   bool SupportsHierarchicalDocumentSymbol = false;
-
+  /// Whether the client supports showing file status.
+  bool SupportFileStatus = false;
   // Store of the current versions of the open documents.
   DraftStore DraftMgr;
 

@@ -12,6 +12,7 @@
 
 #include "MinidumpTypes.h"
 
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Status.h"
@@ -87,6 +88,8 @@ public:
 
   MemoryRegionInfo GetMemoryRegionInfo(lldb::addr_t load_addr);
 
+  const MemoryRegionInfos &GetMemoryRegions();
+
   // Perform consistency checks and initialize internal data structures
   Status Initialize();
 
@@ -106,7 +109,7 @@ private:
   lldb::DataBufferSP m_data_sp;
   llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> m_directory_map;
   ArchSpec m_arch;
-  std::vector<MemoryRegionInfo> m_regions;
+  MemoryRegionInfos m_regions;
   bool m_parsed_regions = false;
 };
 

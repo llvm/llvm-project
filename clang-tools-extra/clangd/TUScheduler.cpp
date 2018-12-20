@@ -729,6 +729,33 @@ bool ASTWorker::blockUntilIdle(Deadline Timeout) const {
   return wait(Lock, RequestsCV, Timeout, [&] { return Requests.empty(); });
 }
 
+// Render a TUAction to a user-facing string representation.
+// TUAction represents clangd-internal states, we don't intend to expose them
+// to users (say C++ programmers) directly to avoid confusion, we use terms that
+// are familiar by C++ programmers.
+std::string renderTUAction(const TUAction &Action) {
+  std::string Result;
+  raw_string_ostream OS(Result);
+  switch (Action.S) {
+  case TUAction::Queued:
+    OS << "file is queued";
+    break;
+  case TUAction::RunningAction:
+    OS << "running " << Action.Name;
+    break;
+  case TUAction::BuildingPreamble:
+    OS << "parsing includes";
+    break;
+  case TUAction::BuildingFile:
+    OS << "parsing main file";
+    break;
+  case TUAction::Idle:
+    OS << "idle";
+    break;
+  }
+  return OS.str();
+}
+
 } // namespace
 
 unsigned getDefaultAsyncThreadsCount() {
@@ -739,6 +766,13 @@ unsigned getDefaultAsyncThreadsCount() {
   if (HardwareConcurrency == 0)
     return 1;
   return HardwareConcurrency;
+}
+
+FileStatus TUStatus::render(PathRef File) const {
+  FileStatus FStatus;
+  FStatus.uri = URIForFile::canonicalize(File, /*TUPath=*/File);
+  FStatus.state = renderTUAction(Action);
+  return FStatus;
 }
 
 struct TUScheduler::FileData {
