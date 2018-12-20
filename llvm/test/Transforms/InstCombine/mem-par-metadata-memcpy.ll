@@ -1,6 +1,6 @@
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 ;
-; Make sure the llvm.mem.parallel_loop_access meta-data is preserved
+; Make sure the llvm.access.group meta-data is preserved
 ; when a memcpy is replaced with a load+store by instcombine
 ;
 ; #include <string.h>
@@ -13,8 +13,8 @@
 ; }
 
 ; CHECK: for.body:
-; CHECK:  %{{.*}} = load i16, i16* %{{.*}}, align 1, !llvm.mem.parallel_loop_access !1
-; CHECK:  store i16 %{{.*}}, i16* %{{.*}}, align 1, !llvm.mem.parallel_loop_access !1
+; CHECK:  %{{.*}} = load i16, i16* %{{.*}}, align 1, !llvm.access.group !1
+; CHECK:  store i16 %{{.*}}, i16* %{{.*}}, align 1, !llvm.access.group !1
 
 
 ; ModuleID = '<stdin>'
@@ -36,7 +36,7 @@ for.body:                                         ; preds = %for.cond
   %arrayidx = getelementptr inbounds i8, i8* %out, i64 %i.0
   %add = add nsw i64 %i.0, %size
   %arrayidx1 = getelementptr inbounds i8, i8* %out, i64 %add
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %arrayidx, i8* %arrayidx1, i64 2, i1 false), !llvm.mem.parallel_loop_access !1
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %arrayidx, i8* %arrayidx1, i64 2, i1 false), !llvm.access.group !4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -56,6 +56,7 @@ attributes #1 = { argmemonly nounwind }
 !llvm.ident = !{!0}
 
 !0 = !{!"clang version 4.0.0 (cfe/trunk 277751)"}
-!1 = distinct !{!1, !2, !3}
+!1 = distinct !{!1, !2, !3, !{!"llvm.loop.parallel_accesses", !4}}
 !2 = distinct !{!2, !3}
 !3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!4 = distinct !{} ; access group

@@ -1,27 +1,10 @@
 group("default") {
   deps = [
-    ":lld",
     "//clang/lib/Basic",
-    "//llvm/tools/llc",
-    "//llvm/tools/llvm-ar:symlinks",
-    "//llvm/tools/llvm-as",
-    "//llvm/tools/llvm-bcanalyzer",
-    "//llvm/tools/llvm-dis",
-    "//llvm/tools/llvm-dwarfdump",
-    "//llvm/tools/llvm-mc",
-    "//llvm/tools/llvm-nm:symlinks",
-    "//llvm/tools/llvm-objcopy:symlinks",
-    "//llvm/tools/llvm-objdump:symlinks",
-    "//llvm/tools/llvm-pdbutil",
-    "//llvm/tools/llvm-readobj:symlinks",
+    "//lld/test",
     "//llvm/tools/llvm-undname",
-    "//llvm/tools/obj2yaml",
-    "//llvm/tools/opt",
-    "//llvm/tools/yaml2obj",
-    "//llvm/utils/FileCheck",
-    "//llvm/utils/count",
-    "//llvm/utils/not",
   ]
+  testonly = true
 }
 
 # Symlink handling.

@@ -183,7 +183,7 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
                                Object &Obj) {
   for (auto &Sec : Obj.sections()) {
     if (Sec.Name == SecName) {
-      if (Sec.OriginalData.size() == 0)
+      if (Sec.OriginalData.empty())
         return make_error<StringError>("Can't dump section \"" + SecName +
                                            "\": it has no contents",
                                        object_error::parse_failed);

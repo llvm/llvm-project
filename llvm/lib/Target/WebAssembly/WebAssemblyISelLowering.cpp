@@ -224,6 +224,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     }
   }
 
+  // Expand additional SIMD ops that V8 hasn't implemented yet
+  if (Subtarget->hasSIMD128() && !EnableUnimplementedWasmSIMDInstrs) {
+    setOperationAction(ISD::FSQRT, MVT::v4f32, Expand);
+    setOperationAction(ISD::FDIV, MVT::v4f32, Expand);
+  }
+
   // Custom lower lane accesses to expand out variable indices
   if (Subtarget->hasSIMD128()) {
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32}) {

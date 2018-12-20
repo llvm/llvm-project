@@ -2,17 +2,72 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -O0 -run-pass=legalizer %s -o - | FileCheck %s
 
 ---
-name: test_xor
+name: test_xor_i32
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
 
-    ; CHECK-LABEL: name: test_xor
+    ; CHECK-LABEL: name: test_xor_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK: $vgpr0 = COPY [[XOR]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = G_XOR %0, %1
     $vgpr0 = COPY %2
+...
+
+---
+name: test_xor_i1
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: test_xor_i1
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK: S_NOP 0, implicit [[XOR]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s32) = G_CONSTANT i64 0
+    %3:_(s1) = G_ICMP intpred(ne), %0, %2
+    %4:_(s1) = G_ICMP intpred(ne), %1, %2
+    %5:_(s32) = G_XOR %0, %1
+    S_NOP 0, implicit %5
+...
+
+---
+name: test_xor_i64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_xor_i64
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK: $vgpr0_vgpr1 = COPY [[XOR]](s64)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = COPY $vgpr2_vgpr3
+    %2:_(s64) = G_XOR %0, %1
+    $vgpr0_vgpr1 = COPY %2
+...
+
+---
+name: test_xor_v2i32
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_xor_v2i32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s32>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK: $vgpr0_vgpr1 = COPY [[XOR]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    %2:_(<2 x s32>) = G_XOR %0, %1
+    $vgpr0_vgpr1 = COPY %2
 ...

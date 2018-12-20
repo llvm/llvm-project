@@ -37,22 +37,22 @@ for.cond:                                         ; preds = %for.body, %entry
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  call void @Body(i32* %res, i32* undef, i32* %d, i32* %p, i32 %i.0), !llvm.mem.parallel_loop_access !0
+  call void @Body(i32* %res, i32* undef, i32* %d, i32* %p, i32 %i.0), !llvm.access.group !0
   %inc = add nsw i32 %i.0, 1
-  br label %for.cond, !llvm.loop !0
+  br label %for.cond, !llvm.loop !1
 
 for.end:                                          ; preds = %for.cond
   ret void
 }
 
 ; CHECK-LABEL: @Test
-; CHECK: load i32,{{.*}}, !llvm.mem.parallel_loop_access !0
-; CHECK: load i32,{{.*}}, !llvm.mem.parallel_loop_access !0
-; CHECK: load i32,{{.*}}, !llvm.mem.parallel_loop_access !0
-; CHECK: store i32{{.*}}, !llvm.mem.parallel_loop_access !0
-; CHECK: br label %for.cond, !llvm.loop !0
+; CHECK: load i32,{{.*}}, !llvm.access.group !0
+; CHECK: load i32,{{.*}}, !llvm.access.group !0
+; CHECK: load i32,{{.*}}, !llvm.access.group !0
+; CHECK: store i32{{.*}}, !llvm.access.group !0
+; CHECK: br label %for.cond, !llvm.loop !1
 
 attributes #0 = { norecurse nounwind uwtable }
 
-!0 = distinct !{!0}
-
+!0 = distinct !{}
+!1 = distinct !{!0, !{!"llvm.loop.parallel_accesses", !0}}

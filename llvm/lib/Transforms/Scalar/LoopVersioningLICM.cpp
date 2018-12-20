@@ -633,6 +633,8 @@ bool LoopVersioningLICM::runOnLoop(Loop *L, LPPassManager &LPM) {
     // Set Loop Versioning metaData for version loop.
     addStringMetadataToLoop(LVer.getVersionedLoop(), LICMVersioningMetaData);
     // Set "llvm.mem.parallel_loop_access" metaData to versioned loop.
+    // FIXME: "llvm.mem.parallel_loop_access" annotates memory access
+    // instructions, not loops.
     addStringMetadataToLoop(LVer.getVersionedLoop(),
                             "llvm.mem.parallel_loop_access");
     // Update version loop with aggressive aliasing assumption.

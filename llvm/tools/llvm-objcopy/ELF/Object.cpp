@@ -703,6 +703,8 @@ static bool compareSegmentsByPAddr(const Segment *A, const Segment *B) {
 template <class ELFT> void BinaryELFBuilder<ELFT>::initFileHeader() {
   Obj->Flags = 0x0;
   Obj->Type = ET_REL;
+  Obj->OSABI = 0;
+  Obj->ABIVersion = 0;
   Obj->Entry = 0x0;
   Obj->Machine = EMachine;
   Obj->Version = 1;
@@ -1086,6 +1088,8 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
 template <class ELFT> void ELFBuilder<ELFT>::build() {
   const auto &Ehdr = *ElfFile.getHeader();
 
+  Obj.OSABI = Ehdr.e_ident[EI_OSABI];
+  Obj.ABIVersion = Ehdr.e_ident[EI_ABIVERSION];
   Obj.Type = Ehdr.e_type;
   Obj.Machine = Ehdr.e_machine;
   Obj.Version = Ehdr.e_version;
@@ -1162,8 +1166,8 @@ template <class ELFT> void ELFWriter<ELFT>::writeEhdr() {
   Ehdr.e_ident[EI_DATA] =
       ELFT::TargetEndianness == support::big ? ELFDATA2MSB : ELFDATA2LSB;
   Ehdr.e_ident[EI_VERSION] = EV_CURRENT;
-  Ehdr.e_ident[EI_OSABI] = ELFOSABI_NONE;
-  Ehdr.e_ident[EI_ABIVERSION] = 0;
+  Ehdr.e_ident[EI_OSABI] = Obj.OSABI;
+  Ehdr.e_ident[EI_ABIVERSION] = Obj.ABIVersion;
 
   Ehdr.e_type = Obj.Type;
   Ehdr.e_machine = Obj.Machine;

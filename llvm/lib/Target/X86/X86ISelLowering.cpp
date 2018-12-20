@@ -837,13 +837,16 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SADDSAT,            MVT::v8i16, Legal);
     setOperationAction(ISD::USUBSAT,            MVT::v8i16, Legal);
     setOperationAction(ISD::SSUBSAT,            MVT::v8i16, Legal);
-    // Use widening instead of promotion.
-    for (auto VT : { MVT::v8i8, MVT::v4i8, MVT::v2i8,
-                     MVT::v4i16, MVT::v2i16 }) {
-      setOperationAction(ISD::UADDSAT, VT, Custom);
-      setOperationAction(ISD::SADDSAT, VT, Custom);
-      setOperationAction(ISD::USUBSAT, VT, Custom);
-      setOperationAction(ISD::SSUBSAT, VT, Custom);
+
+    if (!ExperimentalVectorWideningLegalization) {
+      // Use widening instead of promotion.
+      for (auto VT : { MVT::v8i8, MVT::v4i8, MVT::v2i8,
+                       MVT::v4i16, MVT::v2i16 }) {
+        setOperationAction(ISD::UADDSAT, VT, Custom);
+        setOperationAction(ISD::SADDSAT, VT, Custom);
+        setOperationAction(ISD::USUBSAT, VT, Custom);
+        setOperationAction(ISD::SSUBSAT, VT, Custom);
+      }
     }
 
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v8i16, Custom);
