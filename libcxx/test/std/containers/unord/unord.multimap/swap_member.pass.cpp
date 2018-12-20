@@ -17,6 +17,7 @@
 
 #include <unordered_map>
 #include <string>
+#include <set>
 #include <cassert>
 #include <cstddef>
 
@@ -136,10 +137,22 @@ int main()
 
         assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
-        assert(c2.find(1)->second == "one");
-        assert(next(c2.find(1))->second == "four");
-        assert(c2.find(2)->second == "two");
-        assert(next(c2.find(2))->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("one");
+            s.insert("four");
+            assert(s.find(c2.find(1)->second) != s.end());
+            s.erase(s.find(c2.find(1)->second));
+            assert(s.find(next(c2.find(1))->second) != s.end());
+        }
+        {
+            std::set<std::string> s;
+            s.insert("two");
+            s.insert("four");
+            assert(s.find(c2.find(2)->second) != s.end());
+            s.erase(s.find(c2.find(2)->second));
+            assert(s.find(next(c2.find(2))->second) != s.end());
+        }
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
         assert(c2.hash_function() == Hash(1));
@@ -199,10 +212,22 @@ int main()
 
         assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
-        assert(c2.find(1)->second == "one");
-        assert(next(c2.find(1))->second == "four");
-        assert(c2.find(2)->second == "two");
-        assert(next(c2.find(2))->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("one");
+            s.insert("four");
+            assert(s.find(c2.find(1)->second) != s.end());
+            s.erase(s.find(c2.find(1)->second));
+            assert(s.find(next(c2.find(1))->second) != s.end());
+        }
+        {
+            std::set<std::string> s;
+            s.insert("two");
+            s.insert("four");
+            assert(s.find(c2.find(2)->second) != s.end());
+            s.erase(s.find(c2.find(2)->second));
+            assert(s.find(next(c2.find(2))->second) != s.end());
+        }
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
         assert(c2.hash_function() == Hash(1));
@@ -320,10 +345,22 @@ int main()
 
         assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
-        assert(c2.find(1)->second == "one");
-        assert(next(c2.find(1))->second == "four");
-        assert(c2.find(2)->second == "two");
-        assert(next(c2.find(2))->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("one");
+            s.insert("four");
+            assert(s.find(c2.find(1)->second) != s.end());
+            s.erase(s.find(c2.find(1)->second));
+            assert(s.find(next(c2.find(1))->second) != s.end());
+        }
+        {
+            std::set<std::string> s;
+            s.insert("two");
+            s.insert("four");
+            assert(s.find(c2.find(2)->second) != s.end());
+            s.erase(s.find(c2.find(2)->second));
+            assert(s.find(next(c2.find(2))->second) != s.end());
+        }
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
         assert(c2.hash_function() == Hash(1));
@@ -383,10 +420,22 @@ int main()
 
         assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
-        assert(c2.find(1)->second == "one");
-        assert(next(c2.find(1))->second == "four");
-        assert(c2.find(2)->second == "two");
-        assert(next(c2.find(2))->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("one");
+            s.insert("four");
+            assert(s.find(c2.find(1)->second) != s.end());
+            s.erase(s.find(c2.find(1)->second));
+            assert(s.find(next(c2.find(1))->second) != s.end());
+        }
+        {
+            std::set<std::string> s;
+            s.insert("two");
+            s.insert("four");
+            assert(s.find(c2.find(2)->second) != s.end());
+            s.erase(s.find(c2.find(2)->second));
+            assert(s.find(next(c2.find(2))->second) != s.end());
+        }
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
         assert(c2.hash_function() == Hash(1));
@@ -504,10 +553,22 @@ int main()
 
         assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
-        assert(c2.find(1)->second == "one");
-        assert(next(c2.find(1))->second == "four");
-        assert(c2.find(2)->second == "two");
-        assert(next(c2.find(2))->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("one");
+            s.insert("four");
+            assert(s.find(c2.find(1)->second) != s.end());
+            s.erase(s.find(c2.find(1)->second));
+            assert(s.find(next(c2.find(1))->second) != s.end());
+        }
+        {
+            std::set<std::string> s;
+            s.insert("two");
+            s.insert("four");
+            assert(s.find(c2.find(2)->second) != s.end());
+            s.erase(s.find(c2.find(2)->second));
+            assert(s.find(next(c2.find(2))->second) != s.end());
+        }
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
         assert(c2.hash_function() == Hash(1));
@@ -567,10 +628,22 @@ int main()
 
         assert(c2.bucket_count() >= 6);
         assert(c2.size() == 6);
-        assert(c2.find(1)->second == "one");
-        assert(next(c2.find(1))->second == "four");
-        assert(c2.find(2)->second == "two");
-        assert(next(c2.find(2))->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("one");
+            s.insert("four");
+            assert(s.find(c2.find(1)->second) != s.end());
+            s.erase(s.find(c2.find(1)->second));
+            assert(s.find(next(c2.find(1))->second) != s.end());
+        }
+        {
+            std::set<std::string> s;
+            s.insert("two");
+            s.insert("four");
+            assert(s.find(c2.find(2)->second) != s.end());
+            s.erase(s.find(c2.find(2)->second));
+            assert(s.find(next(c2.find(2))->second) != s.end());
+        }
         assert(c2.find(3)->second == "three");
         assert(c2.find(4)->second == "four");
         assert(c2.hash_function() == Hash(1));
