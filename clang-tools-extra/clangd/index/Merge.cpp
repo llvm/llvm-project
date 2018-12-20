@@ -134,6 +134,8 @@ Symbol mergeSymbol(const Symbol &L, const Symbol &R) {
     S.Documentation = O.Documentation;
   if (S.ReturnType == "")
     S.ReturnType = O.ReturnType;
+  if (S.Type == "")
+    S.Type = O.Type;
   for (const auto &OI : O.IncludeHeaders) {
     bool Found = false;
     for (auto &SI : S.IncludeHeaders) {

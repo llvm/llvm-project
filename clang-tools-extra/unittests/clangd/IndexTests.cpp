@@ -219,6 +219,7 @@ TEST(MergeTest, Merge) {
   R.Documentation = "--doc--";
   L.Origin = SymbolOrigin::Dynamic;
   R.Origin = SymbolOrigin::Static;
+  R.Type = "expectedType";
 
   Symbol M = mergeSymbol(L, R);
   EXPECT_EQ(M.Name, "Foo");
@@ -227,6 +228,7 @@ TEST(MergeTest, Merge) {
   EXPECT_EQ(M.Signature, "()");
   EXPECT_EQ(M.CompletionSnippetSuffix, "{$1:0}");
   EXPECT_EQ(M.Documentation, "--doc--");
+  EXPECT_EQ(M.Type, "expectedType");
   EXPECT_EQ(M.Origin,
             SymbolOrigin::Dynamic | SymbolOrigin::Static | SymbolOrigin::Merge);
 }
