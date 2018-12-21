@@ -167,10 +167,13 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
       }
 
       sub_cmd_obj->GenerateHelpText(result);
-
-      if (m_interpreter.AliasExists(command_name)) {
+      std::string alias_full_name;
+      // Don't use AliasExists here, that only checks exact name matches.  If
+      // the user typed a shorter unique alias name, we should still tell them
+      // it was an alias.
+      if (m_interpreter.GetAliasFullName(command_name, alias_full_name)) {
         StreamString sstr;
-        m_interpreter.GetAlias(command_name)->GetAliasExpansion(sstr);
+        m_interpreter.GetAlias(alias_full_name)->GetAliasExpansion(sstr);
         result.GetOutputStream().Printf("\n'%s' is an abbreviation for %s\n",
                                         command[0].c_str(), sstr.GetData());
       }
