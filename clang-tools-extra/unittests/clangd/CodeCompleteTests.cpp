@@ -195,7 +195,7 @@ struct ClassWithMembers {
   int AAA();
   int BBB();
   int CCC();
-}
+};
 int main() { ClassWithMembers().^ }
       )cpp",
                              /*IndexSymbols=*/{}, Opts);
@@ -628,7 +628,7 @@ TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
                              R"cpp(
           namespace ns {
             class X;
-            class Y {}
+            class Y {};
           }
           int main() { ns::^ }
       )cpp",
@@ -651,7 +651,7 @@ TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
       #include "bar.h"
       namespace ns { int local; }
       void f() { ns::^; }
-      void f() { ns::preamble().$2^; }
+      void f2() { ns::preamble().$2^; }
   )cpp");
   runAddDocument(Server, File, Test.code());
   clangd::CodeCompleteOptions Opts = {};
@@ -1927,7 +1927,7 @@ TEST(CompletionTest, EnableSpeculativeIndexRequest) {
       namespace ns1 { int abc; }
       namespace ns2 { int abc; }
       void f() { ns1::ab$1^; ns1::ab$2^; }
-      void f() { ns2::ab$3^; }
+      void f2() { ns2::ab$3^; }
   )cpp");
   runAddDocument(Server, File, Test.code());
   clangd::CodeCompleteOptions Opts = {};
