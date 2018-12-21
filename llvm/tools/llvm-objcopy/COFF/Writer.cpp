@@ -215,7 +215,7 @@ void COFFWriter::writeHeaders(bool IsBigObj) {
 void COFFWriter::writeSections() {
   for (const auto &S : Obj.Sections) {
     uint8_t *Ptr = Buf.getBufferStart() + S.Header.PointerToRawData;
-    memcpy(Ptr, S.Contents.data(), S.Contents.size());
+    std::copy(S.Contents.begin(), S.Contents.end(), Ptr);
 
     // For executable sections, pad the remainder of the raw data size with
     // 0xcc, which is int3 on x86.
@@ -225,7 +225,8 @@ void COFFWriter::writeSections() {
              S.Header.SizeOfRawData - S.Contents.size());
 
     Ptr += S.Header.SizeOfRawData;
-    memcpy(Ptr, S.Relocs.data(), S.Relocs.size() * sizeof(coff_relocation));
+    std::copy(S.Relocs.begin(), S.Relocs.end(),
+              reinterpret_cast<coff_relocation *>(Ptr));
   }
 }
 
@@ -236,7 +237,7 @@ template <class SymbolTy> void COFFWriter::writeSymbolStringTables() {
     copySymbol<SymbolTy, coff_symbol32>(*reinterpret_cast<SymbolTy *>(Ptr),
                                         S.Sym);
     Ptr += sizeof(SymbolTy);
-    memcpy(Ptr, S.AuxData.data(), S.AuxData.size());
+    std::copy(S.AuxData.begin(), S.AuxData.end(), Ptr);
     Ptr += S.AuxData.size();
   }
   if (StrTabBuilder.getSize() > 4 || !Obj.IsPE) {

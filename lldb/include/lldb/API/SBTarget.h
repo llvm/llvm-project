@@ -903,6 +903,7 @@ protected:
   friend class SBSourceManager;
   friend class SBSymbol;
   friend class SBValue;
+  friend class SBVariablesOptions;
 
   //------------------------------------------------------------------
   // Constructors are private, use static Target::Create function to create an

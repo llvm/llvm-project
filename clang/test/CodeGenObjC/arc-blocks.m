@@ -96,7 +96,7 @@ void test3(void (^sink)(id*)) {
   // CHECK-NEXT: call void [[F1]](i8* [[BLOCK]], i8** [[TEMP]])
   // CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[TEMP]]
   // CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retain(i8* [[T0]])
-  // CHECK-NEXT: call void (...) @clang.arc.use(i8* [[V]]) [[NUW]]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.use(i8* [[V]]) [[NUW]]
   // CHECK-NEXT: [[T2:%.*]] = load i8*, i8** [[STRONG]]
   // CHECK-NEXT: store i8* [[T1]], i8** [[STRONG]]
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T2]])
@@ -303,7 +303,7 @@ void test7(void) {
 // CHECK-NEXT: bitcast [[BLOCK_T]]* [[BLOCK]] to
 // CHECK: call void @test8_helper(
 // CHECK-NEXT: [[T2:%.*]] = load [[TEST8]]*, [[TEST8]]** [[D0]]
-// CHECK-NEXT: call void (...) @clang.arc.use([[TEST8]]* [[T2]])
+// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.use([[TEST8]]* [[T2]])
 // CHECK: ret void
 
   extern void test8_helper(void (^)(void));
@@ -712,7 +712,7 @@ void test19(void (^b)(void)) {
 // CHECK: [[CAPTURED:%.*]] = load i8*, i8** [[XADDR]]
 // CHECK: store i8* [[CAPTURED]], i8** [[BLOCKCAPTURED]]
 // CHECK: [[CAPTURE:%.*]] = load i8*, i8** [[CAPTUREFIELD]]
-// CHECK-NEXT: call void (...) @clang.arc.use(i8* [[CAPTURE]])
+// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.use(i8* [[CAPTURE]])
 // CHECK-NEXT: [[X:%.*]] = load i8*, i8** [[XADDR]]
 // CHECK-NEXT: call void @llvm.objc.release(i8* [[X]])
 // CHECK-NEXT: ret void

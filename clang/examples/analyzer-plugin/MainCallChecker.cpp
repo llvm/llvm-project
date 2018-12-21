@@ -45,7 +45,9 @@ void MainCallChecker::checkPreStmt(const CallExpr *CE, CheckerContext &C) const 
 // Register plugin!
 extern "C"
 void clang_registerCheckers (CheckerRegistry &registry) {
-  registry.addChecker<MainCallChecker>("example.MainCallChecker", "Disallows calls to functions called main");
+  registry.addChecker<MainCallChecker>(
+      "example.MainCallChecker", "Disallows calls to functions called main",
+      "");
 }
 
 extern "C"

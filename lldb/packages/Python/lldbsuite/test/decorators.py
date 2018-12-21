@@ -806,3 +806,10 @@ def skipUnlessFeature(feature):
             except subprocess.CalledProcessError:
                 return "%s is not supported on this system." % feature
     return skipTestIfFn(is_feature_enabled)
+
+def skipIfSanitized(func):
+    """Skip this test if the environment is set up to run LLDB itself under ASAN."""
+    def is_sanitized():
+        return (('DYLD_INSERT_LIBRARIES' in os.env) and
+                'libclang_rt.asan' in os.env['DYLD_INSERT_LIBRARIES'])
+    return skipTestIfFn(is_sanitized)(func)

@@ -2697,6 +2697,36 @@ The ``__declspec`` style syntax is also supported:
 A single push directive accepts only one attribute regardless of the syntax
 used.
 
+Because multiple push directives can be nested, if you're writing a macro that
+expands to ``_Pragma("clang attribute")`` it's good hygiene (though not
+required) to add a namespace to your push/pop directives. A pop directive with a
+namespace will pop the innermost push that has that same namespace. This will
+ensure that another macro's ``pop`` won't inadvertently pop your attribute. Note
+that an ``pop`` without a namespace will pop the innermost ``push`` without a
+namespace. ``push``es with a namespace can only be popped by ``pop`` with the
+same namespace. For instance:
+
+.. code-block:: c++
+
+   #define ASSUME_NORETURN_BEGIN _Pragma("clang attribute AssumeNoreturn.push ([[noreturn]], apply_to = function)")
+   #define ASSUME_NORETURN_END   _Pragma("clang attribute AssumeNoreturn.pop")
+
+   #define ASSUME_UNAVAILABLE_BEGIN _Pragma("clang attribute Unavailable.push (__attribute__((unavailable)), apply_to=function)")
+   #define ASSUME_UNAVAILABLE_END   _Pragma("clang attribute Unavailable.pop")
+
+
+   ASSUME_NORETURN_BEGIN
+   ASSUME_UNAVAILABLE_BEGIN
+   void function(); // function has [[noreturn]] and __attribute__((unavailable))
+   ASSUME_NORETURN_END
+   void other_function(); // function has __attribute__((unavailable))
+   ASSUME_UNAVAILABLE_END
+
+Without the namespaces on the macros, ``other_function`` will be annotated with
+``[[noreturn]]`` instead of ``__attribute__((unavailable))``. This may seem like
+a contrived example, but its very possible for this kind of situation to appear
+in real code if the pragmas are spread out accross a large file.
+
 Subject Match Rules
 -------------------
 

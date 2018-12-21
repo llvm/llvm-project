@@ -957,7 +957,8 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
 
   const bool statics = options.GetIncludeStatics();
   const bool arguments = options.GetIncludeArguments();
-  const bool recognized_arguments = options.GetIncludeRecognizedArguments();
+  const bool recognized_arguments =
+        options.GetIncludeRecognizedArguments(SBTarget(exe_ctx.GetTargetSP()));
   const bool locals = options.GetIncludeLocals();
   const bool in_scope_only = options.GetInScopeOnly();
   const bool include_runtime_support_values =
