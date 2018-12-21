@@ -2,6 +2,10 @@ module HeaderLib {
   header "HeaderLib.h"
 }
 
+module InstancetypeModule {
+  header "InstancetypeModule.h"
+}
+
 module BrokenTypes {
   header "BrokenTypes.h"
 }
