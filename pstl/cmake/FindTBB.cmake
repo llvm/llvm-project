@@ -9,17 +9,6 @@
 
 include(FindPackageHandleStandardArgs)
 
-# Firstly search for TBB in config mode (i.e. search for TBBConfig.cmake).
-find_package(TBB QUIET CONFIG)
-if (TBB_FOUND)
-    find_package_handle_standard_args(TBB
-                                      REQUIRED_VARS TBB_IMPORTED_TARGETS
-                                      HANDLE_COMPONENTS
-                                      VERSION_VAR TBB_VERSION
-                                      CONFIG_MODE)
-    return()
-endif()
-
 if (NOT TBB_FIND_COMPONENTS)
     set(TBB_FIND_COMPONENTS tbb tbbmalloc)
     foreach (_tbb_component ${TBB_FIND_COMPONENTS})

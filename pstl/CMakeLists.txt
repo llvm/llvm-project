@@ -6,10 +6,10 @@
 # Source Licenses. See LICENSE.TXT for details.
 #
 #===----------------------------------------------------------------------===##
+cmake_minimum_required(VERSION 3.4.3)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-cmake_minimum_required(VERSION 3.1)
-
-set(PARALLELSTL_VERSION_FILE "include/pstl/internal/pstl_config.h")
+set(PARALLELSTL_VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/pstl/internal/pstl_config.h")
 file(STRINGS "${PARALLELSTL_VERSION_FILE}" PARALLELSTL_VERSION_SOURCE REGEX "#define PSTL_VERSION .*$")
 string(REGEX MATCH "#define PSTL_VERSION (.*)$" PARALLELSTL_VERSION_SOURCE "${PARALLELSTL_VERSION_SOURCE}")
 math(EXPR VERSION_MAJOR "${PARALLELSTL_VERSION_SOURCE} / 100")
@@ -29,8 +29,6 @@ if (NOT TBB_DIR)
         get_filename_component(TBB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${TBB_DIR_NAME}/cmake" ABSOLUTE)
     endif()
 endif()
-
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 add_library(ParallelSTL INTERFACE)
 add_library(pstl::ParallelSTL ALIAS ParallelSTL)
@@ -54,7 +52,7 @@ endif()
 
 target_include_directories(ParallelSTL
     INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
 write_basic_package_version_file(
@@ -69,3 +67,6 @@ configure_file(
 
 export(TARGETS ParallelSTL NAMESPACE pstl:: FILE ParallelSTLTargets.cmake)
 export(PACKAGE ParallelSTL)
+
+enable_testing()
+add_subdirectory(test)
