@@ -44,6 +44,7 @@ class NamespaceLookupTestCase(TestBase):
     @expectedFailureAll(
         oslist=["freebsd"],
         bugnumber="llvm.org/pr25819")
+    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test_scope_lookup_with_run_command(self):
         """Test scope lookup of functions in lldb."""
         self.build()
@@ -201,6 +202,7 @@ class NamespaceLookupTestCase(TestBase):
         # finds the global ::func().
         self.expect("expr -- func()", startstr="(int) $0 = 2")
 
+    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test_scope_lookup_before_using_with_run_command(self):
         """Test scope lookup before using in lldb."""
         self.build()
