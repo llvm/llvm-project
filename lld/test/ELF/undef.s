@@ -20,6 +20,9 @@
 # CHECK: >>> referenced by undef.s
 # CHECK: >>>               {{.*}}:(.text+0x10)
 
+# CHECK: error: undefined symbol: vtable for Foo
+# CHECK: the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeymethod)
+
 # CHECK: error: undefined symbol: zed2
 # CHECK: >>> referenced by {{.*}}.o:(.text+0x0) in archive {{.*}}2.a
 
@@ -60,3 +63,4 @@ _start:
   call bar
   call zed1
   call _Z3fooi
+  call _ZTV3Foo
