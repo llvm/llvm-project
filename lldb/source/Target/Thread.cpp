@@ -1038,9 +1038,11 @@ void Thread::PushPlan(ThreadPlanSP &thread_plan_sp) {
   if (thread_plan_sp) {
     // If the thread plan doesn't already have a tracer, give it its parent's
     // tracer:
-    if (!thread_plan_sp->GetThreadPlanTracer())
+    if (!thread_plan_sp->GetThreadPlanTracer()) {
+      assert(!m_plan_stack.empty());
       thread_plan_sp->SetThreadPlanTracer(
           m_plan_stack.back()->GetThreadPlanTracer());
+    }
     m_plan_stack.push_back(thread_plan_sp);
 
     thread_plan_sp->DidPush();
