@@ -627,7 +627,7 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
   int mib[3] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL};
 
   size_t pid_data_size = 0;
-  if (::sysctl(mib, 4, NULL, &pid_data_size, NULL, 0) != 0)
+  if (::sysctl(mib, 3, NULL, &pid_data_size, NULL, 0) != 0)
     return 0;
 
   // Add a few extra in case a few more show up
