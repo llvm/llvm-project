@@ -1478,7 +1478,7 @@ static int DetermineLexicalElementCount(PathParser PP) {
     auto Elem = *PP;
     if (Elem == "..")
       --Count;
-    else if (Elem != ".")
+    else if (Elem != "." && Elem != "")
       ++Count;
   }
   return Count;
@@ -1492,8 +1492,7 @@ path path::lexically_relative(const path& base) const {
       return PP.State != PPBase.State &&
              (PP.inRootPath() || PPBase.inRootPath());
     };
-    if (PP.State == PathParser::PS_InRootName &&
-        PPBase.State == PathParser::PS_InRootName) {
+    if (PP.inRootName() && PPBase.inRootName()) {
       if (*PP != *PPBase)
         return {};
     } else if (CheckIterMismatchAtBase())
@@ -1524,6 +1523,10 @@ path path::lexically_relative(const path& base) const {
   int ElemCount = DetermineLexicalElementCount(PPBase);
   if (ElemCount < 0)
     return {};
+
+  // if n == 0 and (a == end() || a->empty()), returns path("."); otherwise
+  if (ElemCount == 0 && (PP.atEnd() || *PP == ""))
+    return ".";
 
   // return a path constructed with 'n' dot-dot elements, followed by the the
   // elements of '*this' after the mismatch.
