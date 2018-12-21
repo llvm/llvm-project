@@ -495,6 +495,7 @@ private:
     DK_CFI_UNDEFINED,
     DK_CFI_REGISTER,
     DK_CFI_WINDOW_SAVE,
+    DK_CFI_B_KEY_FRAME,
     DK_MACROS_ON,
     DK_MACROS_OFF,
     DK_ALTMACRO,
@@ -5293,6 +5294,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".cfi_undefined"] = DK_CFI_UNDEFINED;
   DirectiveKindMap[".cfi_register"] = DK_CFI_REGISTER;
   DirectiveKindMap[".cfi_window_save"] = DK_CFI_WINDOW_SAVE;
+  DirectiveKindMap[".cfi_b_key_frame"] = DK_CFI_B_KEY_FRAME;
   DirectiveKindMap[".macros_on"] = DK_MACROS_ON;
   DirectiveKindMap[".macros_off"] = DK_MACROS_OFF;
   DirectiveKindMap[".macro"] = DK_MACRO;

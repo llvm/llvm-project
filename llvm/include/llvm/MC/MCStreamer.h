@@ -806,6 +806,8 @@ public:
                                        Optional<StringRef> Source,
                                        unsigned CUID = 0);
 
+  virtual void EmitCFIBKeyFrame();
+
   /// This implements the DWARF2 '.loc fileno lineno ...' assembler
   /// directive.
   virtual void EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
