@@ -251,10 +251,6 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
   if (S->isShared() || S->isLazy() || (S->isUndefined() && Binding != STB_WEAK))
     S->Binding = Binding;
 
-  if (!Config->GcSections && Binding != STB_WEAK)
-    if (auto *SS = dyn_cast<SharedSymbol>(S))
-      SS->getFile<ELFT>().IsNeeded = true;
-
   if (S->isLazy()) {
     // An undefined weak will not fetch archive members. See comment on Lazy in
     // Symbols.h for the details.
