@@ -192,6 +192,8 @@ protected:
   void SanitizeSegmentCommand(llvm::MachO::segment_command_64 &seg_cmd,
                               uint32_t cmd_idx);
 
+  bool SectionIsLoadable(const lldb_private::Section *section);
+
   llvm::MachO::mach_header m_header;
   static const lldb_private::ConstString &GetSegmentNameTEXT();
   static const lldb_private::ConstString &GetSegmentNameDATA();
@@ -199,6 +201,7 @@ protected:
   static const lldb_private::ConstString &GetSegmentNameDATA_CONST();
   static const lldb_private::ConstString &GetSegmentNameOBJC();
   static const lldb_private::ConstString &GetSegmentNameLINKEDIT();
+  static const lldb_private::ConstString &GetSegmentNameDWARF();
   static const lldb_private::ConstString &GetSectionNameEHFrame();
 
   llvm::MachO::dysymtab_command m_dysymtab;
