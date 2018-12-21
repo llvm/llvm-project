@@ -2176,6 +2176,8 @@ void GnuHashTableSection::writeTo(uint8_t *Buf) {
 void GnuHashTableSection::writeBloomFilter(uint8_t *Buf) {
   unsigned C = Config->Is64 ? 64 : 32;
   for (const Entry &Sym : Symbols) {
+    // When C = 64, we choose a word with bits [6:...] and set 1 to two bits in
+    // the word using bits [0:5] and [26:31].
     size_t I = (Sym.Hash / C) & (MaskWords - 1);
     uint64_t Val = readUint(Buf + I * Config->Wordsize);
     Val |= uint64_t(1) << (Sym.Hash % C);
