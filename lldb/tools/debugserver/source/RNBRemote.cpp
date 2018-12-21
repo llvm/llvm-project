@@ -1825,18 +1825,18 @@ rnb_err_t RNBRemote::HandlePacket_qRcmd(const char *p) {
   }
   if (*c == '\0') {
     std::string command = get_identifier(line);
-    if (command.compare("set") == 0) {
+    if (command == "set") {
       std::string variable = get_identifier(line);
       std::string op = get_operator(line);
       std::string value = get_value(line);
-      if (variable.compare("logfile") == 0) {
+      if (variable == "logfile") {
         FILE *log_file = fopen(value.c_str(), "w");
         if (log_file) {
           DNBLogSetLogCallback(FileLogCallback, log_file);
           return SendPacket("OK");
         }
         return SendPacket("E71");
-      } else if (variable.compare("logmask") == 0) {
+      } else if (variable == "logmask") {
         char *end;
         errno = 0;
         uint32_t logmask =
@@ -4231,7 +4231,7 @@ rnb_err_t RNBRemote::HandlePacket_GetProfileData(const char *p) {
   std::string name;
   std::string value;
   while (packet.GetNameColonValue(name, value)) {
-    if (name.compare("scan_type") == 0) {
+    if (name == "scan_type") {
       std::istringstream iss(value);
       uint32_t int_value = 0;
       if (iss >> std::hex >> int_value) {
@@ -4261,11 +4261,11 @@ rnb_err_t RNBRemote::HandlePacket_SetEnableAsyncProfiling(const char *p) {
   std::string name;
   std::string value;
   while (packet.GetNameColonValue(name, value)) {
-    if (name.compare("enable") == 0) {
+    if (name == "enable") {
       enable = strtoul(value.c_str(), NULL, 10) > 0;
-    } else if (name.compare("interval_usec") == 0) {
+    } else if (name == "interval_usec") {
       interval_usec = strtoul(value.c_str(), NULL, 10);
-    } else if (name.compare("scan_type") == 0) {
+    } else if (name == "scan_type") {
       std::istringstream iss(value);
       uint32_t int_value = 0;
       if (iss >> std::hex >> int_value) {
