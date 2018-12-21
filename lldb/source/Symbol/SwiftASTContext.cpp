@@ -2971,7 +2971,8 @@ bool SwiftASTContext::AddFrameworkSearchPath(const char *path) {
     }
 
     if (add_search_path) {
-      ast->SearchPathOpts.FrameworkSearchPaths.push_back({path, /*isSystem=*/false});
+      ast->SearchPathOpts.FrameworkSearchPaths.push_back(
+          {path, /*isSystem=*/false});
       return true;
     }
   }
@@ -2979,26 +2980,18 @@ bool SwiftASTContext::AddFrameworkSearchPath(const char *path) {
 }
 
 bool SwiftASTContext::AddClangArgument(std::string clang_arg, bool force) {
-  if (!clang_arg.empty()) {
-    swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
+  if (clang_arg.empty())
+    return false;
 
-    bool add_hmap = true;
+  swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
+  // Avoid inserting the same option twice.
+  if (!force)
+    for (std::string &arg : importer_options.ExtraArgs)
+      if (arg == clang_arg)
+        return false;
 
-    if (!force) {
-      for (std::string &arg : importer_options.ExtraArgs) {
-        if (!arg.compare(clang_arg)) {
-          add_hmap = false;
-          break;
-        }
-      }
-    }
-
-    if (add_hmap) {
-      importer_options.ExtraArgs.push_back(clang_arg);
-      return true;
-    }
-  }
-  return false;
+  importer_options.ExtraArgs.push_back(clang_arg);
+  return true;
 }
 
 bool SwiftASTContext::AddClangArgumentPair(const char *clang_arg_1,
