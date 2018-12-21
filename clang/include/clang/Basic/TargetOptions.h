@@ -70,7 +70,7 @@ public:
   bool NVPTXUseShortPointers = false;
 
   /// The version of the SDK which was used during the compilation.
-  VersionTuple SDKVersion;
+  llvm::VersionTuple SDKVersion;
 };
 
 }  // end namespace clang
