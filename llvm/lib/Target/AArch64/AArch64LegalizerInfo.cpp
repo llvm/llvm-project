@@ -97,9 +97,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
 
   getActionDefinitionsBuilder({G_FREM, G_FPOW}).libcallFor({s32, s64});
 
-  // TODO: Handle s16.
   getActionDefinitionsBuilder(G_FCEIL)
-      .legalFor({s32, s64, v2s32, v4s32, v2s64});
+      // If we don't have full FP16 support, then widen s16 to s32 if we
+      // encounter it.
+      .widenScalarIf(
+          [=, &ST](const LegalityQuery &Query) {
+            return Query.Types[0] == s16 && !ST.hasFullFP16();
+          },
+          [=](const LegalityQuery &Query) { return std::make_pair(0, s32); })
+      .legalFor({s16, s32, s64, v2s32, v4s32, v2s64});
 
   getActionDefinitionsBuilder(G_INSERT)
       .unsupportedIf([=](const LegalityQuery &Query) {

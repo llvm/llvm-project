@@ -268,7 +268,7 @@ annotateConsumedSummaryMismatch(const ExplodedNode *N,
     const ParmVarDecl *PVD = Parameters[I];
 
     if (!PVD->hasAttr<OSConsumedAttr>())
-      return nullptr;
+      continue;
 
     if (SymbolRef SR = Call->getArgSVal(I).getAsLocSymbol()) {
       const RefVal *CountBeforeCall = getRefBinding(CN->getState(), SR);
@@ -311,10 +311,9 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N,
                               BugReporterContext &BRC, BugReport &BR) {
   const SourceManager &SM = BRC.getSourceManager();
   CallEventManager &CEMgr = BRC.getStateManager().getCallEventManager();
-  if (auto CE = N->getLocationAs<CallExitBegin>()) {
+  if (auto CE = N->getLocationAs<CallExitBegin>())
     if (auto PD = annotateConsumedSummaryMismatch(N, *CE, SM, CEMgr))
       return PD;
-  }
 
   // FIXME: We will eventually need to handle non-statement-based events
   // (__attribute__((cleanup))).

@@ -488,6 +488,30 @@ VariableInfo lldb_private::npdb::GetVariableNameInfo(CVSymbol sym) {
     return result;
   }
 
+  if (sym.kind() == S_GDATA32 || sym.kind() == S_LDATA32) {
+    DataSym data(SymbolRecordKind::DataSym);
+    cantFail(SymbolDeserializer::deserializeAs<DataSym>(sym, data));
+    result.type = data.Type;
+    result.name = data.Name;
+    return result;
+  }
+
+  if (sym.kind() == S_GTHREAD32 || sym.kind() == S_LTHREAD32) {
+    ThreadLocalDataSym data(SymbolRecordKind::ThreadLocalDataSym);
+    cantFail(SymbolDeserializer::deserializeAs<ThreadLocalDataSym>(sym, data));
+    result.type = data.Type;
+    result.name = data.Name;
+    return result;
+  }
+
+  if (sym.kind() == S_CONSTANT) {
+    ConstantSym constant(SymbolRecordKind::ConstantSym);
+    cantFail(SymbolDeserializer::deserializeAs<ConstantSym>(sym, constant));
+    result.type = constant.Type;
+    result.name = constant.Name;
+    return result;
+  }
+
   lldbassert(false && "Invalid variable record kind!");
   return {};
 }

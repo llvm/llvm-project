@@ -2208,6 +2208,7 @@ void CodeGenFunction::EmitInlinedInheritingCXXConstructorCall(
   GlobalDecl GD(Ctor, CtorType);
   InlinedInheritingConstructorScope Scope(*this, GD);
   ApplyInlineDebugLocation DebugScope(*this, GD);
+  RunCleanupsScope RunCleanups(*this);
 
   // Save the arguments to be passed to the inherited constructor.
   CXXInheritedCtorInitExprArgs = Args;

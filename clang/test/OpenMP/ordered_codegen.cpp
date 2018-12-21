@@ -44,7 +44,7 @@ void static_not_chunked(float *a, float *b, float *c, float *d) {
 // ... loop body ...
 // End of body: store into a[i]:
 // CHECK: store float [[RESULT:%.+]], float* {{%.+}}
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
 // CHECK-NEXT: call void @__kmpc_end_ordered([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
 // ... end of ordered region ...
     #pragma omp ordered
@@ -93,7 +93,7 @@ void dynamic1(float *a, float *b, float *c, float *d) {
 // ... loop body ...
 // End of body: store into a[i]:
 // CHECK: store float [[RESULT:%.+]], float* {{%.+}}
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
 // CHECK-NEXT: call void @__kmpc_end_ordered([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
 // ... end of ordered region ...
     #pragma omp ordered threads
@@ -147,7 +147,7 @@ void test_auto(float *a, float *b, float *c, float *d) {
 // ... loop body ...
 // End of body: store into a[i]:
 // CHECK: store float [[RESULT:%.+]], float* {{%.+}}
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
 // CHECK-NEXT: call void @__kmpc_end_ordered([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
 // ... end of ordered region ...
     #pragma omp ordered
@@ -198,7 +198,7 @@ void runtime(float *a, float *b, float *c, float *d) {
 // ... loop body ...
 // End of body: store into a[i]:
 // CHECK: store float [[RESULT:%.+]], float* {{%.+}}
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
 // CHECK-NEXT: call void @__kmpc_end_ordered([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
 // ... end of ordered region ...
     #pragma omp ordered threads
@@ -220,8 +220,8 @@ void runtime(float *a, float *b, float *c, float *d) {
 float f[10];
 // CHECK-LABEL: foo_simd
 void foo_simd(int low, int up) {
-  // CHECK: store float 0.000000e+00, float* %{{.+}}, align {{[0-9]+}}, !llvm.mem.parallel_loop_access !
-  // CHECK-NEXT: call void [[CAP_FUNC:@.+]](i32* %{{.+}}), !llvm.mem.parallel_loop_access !
+  // CHECK: store float 0.000000e+00, float* %{{.+}}, align {{[0-9]+}}, !llvm.access.group !
+  // CHECK-NEXT: call void [[CAP_FUNC:@.+]](i32* %{{.+}}), !llvm.access.group !
 #pragma omp simd
   for (int i = low; i < up; ++i) {
     f[i] = 0.0;

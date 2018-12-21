@@ -54,10 +54,10 @@ UnrollRuntimeEpilog("unroll-runtime-epilog", cl::init(false), cl::Hidden,
 static cl::opt<bool>
 UnrollVerifyDomtree("unroll-verify-domtree", cl::Hidden,
                     cl::desc("Verify domtree after unrolling"),
-#ifdef NDEBUG
-    cl::init(false)
-#else
+#ifdef EXPENSIVE_CHECKS
     cl::init(true)
+#else
+    cl::init(false)
 #endif
                     );
 

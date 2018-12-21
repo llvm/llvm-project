@@ -189,36 +189,6 @@ define {i8, i1} @test_smul4(i8 %V) {
   ret {i8, i1} %x
 }
 
-declare i256 @llvm.cttz.i256(i256 %src, i1 %is_zero_undef)
-
-define i256 @test_cttz() {
-; CHECK-LABEL: @test_cttz(
-; CHECK-NEXT:    ret i256 1
-;
-  %x = call i256 @llvm.cttz.i256(i256 10, i1 false)
-  ret i256 %x
-}
-
-declare <2 x i256> @llvm.cttz.v2i256(<2 x i256> %src, i1 %is_zero_undef)
-
-define <2 x i256> @test_cttz_vec() {
-; CHECK-LABEL: @test_cttz_vec(
-; CHECK-NEXT:    ret <2 x i256> <i256 1, i256 1>
-;
-  %x = call <2 x i256> @llvm.cttz.v2i256(<2 x i256> <i256 10, i256 10>, i1 false)
-  ret <2 x i256> %x
-}
-
-declare i256 @llvm.ctpop.i256(i256 %src)
-
-define i256 @test_ctpop() {
-; CHECK-LABEL: @test_ctpop(
-; CHECK-NEXT:    ret i256 2
-;
-  %x = call i256 @llvm.ctpop.i256(i256 10)
-  ret i256 %x
-}
-
 ; Test a non-intrinsic that we know about as a library call.
 declare float @fabs(float %x)
 

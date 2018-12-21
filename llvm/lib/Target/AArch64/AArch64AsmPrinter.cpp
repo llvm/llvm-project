@@ -716,6 +716,19 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       OutStreamer->EmitRawText(StringRef(OS.str()));
     }
     return;
+
+  case AArch64::EMITBKEY: {
+      ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
+      if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
+          ExceptionHandlingType != ExceptionHandling::ARM)
+        return;
+
+      if (needsCFIMoves() == CFI_M_None)
+        return;
+
+      OutStreamer->EmitCFIBKeyFrame();
+      return;
+    }
   }
 
   // Tail calls use pseudo instructions so they have the proper code-gen

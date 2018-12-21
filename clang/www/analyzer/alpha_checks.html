@@ -43,10 +43,10 @@ Patches welcome!
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.clone.CloneChecker"><div class="namedescr expandable"><span class="name">
 alpha.clone.CloneChecker</span><span class="lang">
 (C, C++, ObjC)</span><div class="descr">
-Reports similar pieces of code.</div></div></td>
+Reports similar pieces of code.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void log();
@@ -74,10 +74,10 @@ int maxClone(int x, int y) { // similar code here
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.core.BoolAssignment"><div class="namedescr expandable"><span class="name">
 alpha.core.BoolAssignment</span><span class="lang">
 (ObjC)</span><div class="descr">
-Warn about assigning non-{0,1} values to boolean variables.</div></div></td>
+Warn about assigning non-{0,1} values to boolean variables.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -86,11 +86,11 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.core.CallAndMessageUnInitRefArg"><div class="namedescr expandable"><span class="name">
 alpha.core.CallAndMessageUnInitRefArg</span><span class="lang">
 (C, C++)</span><div class="descr">
-Check for uninitialized arguments in function calls and Objective-C 
-message expressions.</div></div></td>
+Check for uninitialized arguments in function calls and Objective-C
+message expressions.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test(void) {
@@ -109,13 +109,13 @@ void test(void) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.core.CastSize"><div class="namedescr expandable"><span class="name">
 alpha.core.CastSize</span><span class="lang">
 (C)</span><div class="descr">
-Check when casting a malloc'ed type T, whether the size is a multiple of the 
+Check when casting a malloc'ed type T, whether the size is a multiple of the
 size of T (Works only with <span class="name">unix.Malloc</span>
-or <span class="name">alpha.unix.MallocWithAnnotations</span> 
-checks enabled).</div></div></td>
+or <span class="name">alpha.unix.MallocWithAnnotations</span>
+checks enabled).</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -124,10 +124,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.core.CastToStruct"><div class="namedescr expandable"><span class="name">
 alpha.core.CastToStruct</span><span class="lang">
 (C, C++)</span><div class="descr">
-Check for cast from non-struct pointer to struct pointer.</div></div></td>
+Check for cast from non-struct pointer to struct pointer.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 // C
@@ -147,10 +147,10 @@ void test(int *p) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.core.Conversion"><div class="namedescr expandable"><span class="name">
 alpha.core.Conversion</span><span class="lang">
 (C, C++, ObjC)</span><div class="descr">
-Loss of sign or precision in implicit conversions</div></div></td>
+Loss of sign or precision in implicit conversions</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test(unsigned U, signed S) {
@@ -172,26 +172,26 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.core.DynamicTypeChecker"><div class="namedescr expandable"><span class="name">
 alpha.core.DynamicTypeChecker</span><span class="lang">
 (ObjC)</span><div class="descr">
-Check for cases where the dynamic and the static type of an 
-object are unrelated.</div></div></td>
+Check for cases where the dynamic and the static type of an
+object are unrelated.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 id date = [NSDate date];
 
-// Warning: Object has a dynamic type 'NSDate *' which is 
+// Warning: Object has a dynamic type 'NSDate *' which is
 // incompatible with static type 'NSNumber *'"
 NSNumber *number = date;
 [number doubleValue];
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.core.FixedAddr"><div class="namedescr expandable"><span class="name">
 alpha.core.FixedAddr</span><span class="lang">
 (C)</span><div class="descr">
-Check for assignment of a fixed address to a pointer.</div></div></td>
+Check for assignment of a fixed address to a pointer.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -201,10 +201,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.core.IdenticalExpr"><div class="namedescr expandable"><span class="name">
 alpha.core.IdenticalExpr</span><span class="lang">
 (C, C++)</span><div class="descr">
-Warn about suspicious uses of identical expressions.</div></div></td>
+Warn about suspicious uses of identical expressions.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 // C
@@ -232,11 +232,11 @@ void test(bool b) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.core.PointerArithm"><div class="namedescr expandable"><span class="name">
 alpha.core.PointerArithm</span><span class="lang">
 (C)</span><div class="descr">
-Check for pointer arithmetic on locations other than array 
-elements.</div></div></td>
+Check for pointer arithmetic on locations other than array
+elements.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -247,11 +247,11 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.core.PointerSub"><div class="namedescr expandable"><span class="name">
 alpha.core.PointerSub</span><span class="lang">
 (C)</span><div class="descr">
-Check for pointer subtractions on two pointers pointing to different memory 
-chunks.</div></div></td>
+Check for pointer subtractions on two pointers pointing to different memory
+chunks.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -261,60 +261,60 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.core.SizeofPtr"><div class="namedescr expandable"><span class="name">
 alpha.core.SizeofPtr</span><span class="lang">
 (C)</span><div class="descr">
-Warn about unintended use of <code>sizeof()</code> on pointer 
-expressions.</div></div></td>
+Warn about unintended use of <code>sizeof()</code> on pointer
+expressions.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 struct s {};
 
 int test(struct s *p) {
-  return sizeof(p); 
+  return sizeof(p);
     // warn: sizeof(ptr) can produce an unexpected result
 }
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.core.StackAddressAsyncEscape"><div class="namedescr expandable"><span class="name">
 alpha.core.StackAddressAsyncEscape</span><span class="lang">
 (C)</span><div class="descr">
 Check that addresses to stack memory do not escape the function that involves
 <code>dispatch_after</code> or <code>dispatch_async</code>. This checker is
 a part of core.StackAddressEscape, but is
 <a href=https://reviews.llvm.org/D41042>temporarily disabled</a> until some
-false positives are fixed.</div></div></td>
+false positives are fixed.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 dispatch_block_t test_block_inside_block_async_leak() {
   int x = 123;
   void (^inner)(void) = ^void(void) {
     int y = x;
-    ++y; 
+    ++y;
   };
   void (^outer)(void) = ^void(void) {
     int z = x;
     ++z;
-    inner(); 
-  }; 
+    inner();
+  };
   return outer; // warn: address of stack-allocated block is captured by a
                 //       returned block
 }
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.core.TestAfterDivZero"><div class="namedescr expandable"><span class="name">
 alpha.core.TestAfterDivZero</span><span class="lang">
 (C, C++, ObjC)</span><div class="descr">
-Check for division by variable that is later compared against 0. 
+Check for division by variable that is later compared against 0.
 Either the comparison is useless or there is division by zero.
-</div></div></td>
+</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test(int x) {
   var = 77 / x;
-  if (x == 0) { } // warn 
+  if (x == 0) { } // warn
 }
 </pre></div></div></td></tr>
 
@@ -329,12 +329,12 @@ void test(int x) {
 <tbody>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.cplusplus.DeleteWithNonVirtualDtor"><div class="namedescr expandable"><span class="name">
 alpha.cplusplus.DeleteWithNonVirtualDtor</span><span class="lang">
 (C++)</span><div class="descr">
 Reports destructions of polymorphic objects with a non-virtual destructor in
 their base class
-</div></div></td>
+</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 NonVirtual *create() {
@@ -349,11 +349,11 @@ void sink(NonVirtual *x) {
 }
 </pre></div></div></td></tr>
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.cplusplus.EnumCastOutOfRange"><div class="namedescr expandable"><span class="name">
 alpha.cplusplus.EnumCastOutOfRange</span><span class="lang">
 (C++)</span><div class="descr">
   Check for integer to enumeration casts that could result in undefined values.
-</div></div></td>
+</div></div></a></td>
   <td><div class="exampleContainer expandable">
     <div class="example"><pre>
 enum TestEnum {
@@ -368,11 +368,11 @@ void foo() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.cplusplus.InvalidatedIterator"><div class="namedescr expandable"><span class="name">
 alpha.cplusplus.InvalidatedIterator</span><span class="lang">
 (C++)</span><div class="descr">
 Check for use of invalidated iterators.
-</div></div></td>
+</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void bad_copy_assign_operator_list1(std::list<int> &L1,
@@ -384,11 +384,11 @@ void bad_copy_assign_operator_list1(std::list<int> &L1,
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.cplusplus.IteratorRange"><div class="namedescr expandable"><span class="name">
 alpha.cplusplus.IteratorRange</span><span class="lang">
 (C++)</span><div class="descr">
 Check for iterators used outside their valid ranges.
-</div></div></td>
+</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void simple_bad_end(const std::vector<int> &v) {
@@ -398,12 +398,12 @@ void simple_bad_end(const std::vector<int> &v) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.cplusplus.MismatchedIterator"><div class="namedescr expandable"><span class="name">
 alpha.cplusplus.MismatchedIterator</span><span class="lang">
 (C++)</span><div class="descr">
 Check for use of iterators of different containers where iterators of the same
 container are expected.
-</div></div></td>
+</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void bad_insert3(std::vector<int> &v1, std::vector<int> &v2) {
@@ -424,12 +424,12 @@ void bad_insert3(std::vector<int> &v1, std::vector<int> &v2) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
-alpha.cplusplus.MisusedMovedObject</span><span class="lang">
+<tr><td><a id="alpha.cplusplus.Move"><div class="namedescr expandable"><span class="name">
+alpha.cplusplus.Move</span><span class="lang">
 (C++)</span><div class="descr">
 Method calls on a moved-from object and copying a moved-from object will be
 reported.
-</div></div></td>
+</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 struct A {
@@ -444,7 +444,7 @@ void f() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.cplusplus.UninitializedObject"><div class="namedescr expandable"><span class="name">
 alpha.cplusplus.UninitializedObject</span><span class="lang">
 (C++)</span><div class="descr">
 This checker reports uninitialized fields in objects created after a constructor
@@ -481,7 +481,7 @@ It has several options:
 
     <code>-analyzer-config alpha.cplusplus.UninitializedObject:IgnoreRecordsWithField="[Tt]ag|[Kk]ind"</code>.
   </li>
-</ul></div></div></td>
+</ul></div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 // With Pedantic and CheckPointeeInitialization set to true
@@ -568,10 +568,10 @@ void f() {
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.deadcode.UnreachableCode"><div class="namedescr expandable"><span class="name">
 alpha.deadcode.UnreachableCode</span><span class="lang">
 (C, C++, ObjC)</span><div class="descr">
-Check unreachable code.</div></div></td>
+Check unreachable code.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 // C
@@ -609,7 +609,7 @@ void test(id x) {
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.llvm.Conventions"><div class="namedescr expandable"><span class="name">
 alpha.llvm.Conventions</span><span class="lang">
 (C)</span><div class="descr">
 Check code for LLVM codebase conventions:
@@ -618,7 +618,7 @@ Check code for LLVM codebase conventions:
   whose lifetime is shorter than the <code>StringRef</code>'s.</li>
   <li>Clang AST nodes should not have fields that can allocate memory.</li>
 </ul>
-</div></div></td>
+</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 <!-- TODO: Add examples, as currently it's hard to get this checker working. -->
@@ -634,11 +634,11 @@ Check code for LLVM codebase conventions:
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.osx.cocoa.DirectIvarAssignment"><div class="namedescr expandable"><span class="name">
 alpha.osx.cocoa.DirectIvarAssignment</span><span class="lang">
 (ObjC)</span><div class="descr">
-Check that Objective C properties follow the following rule: the property 
-should be set with the setter, not though a direct assignment.</div></div></td>
+Check that Objective C properties follow the following rule: the property
+should be set with the setter, not though a direct assignment.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 @interface MyClass : NSObject {}
@@ -654,11 +654,11 @@ should be set with the setter, not though a direct assignment.</div></div></td>
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.osx.cocoa.DirectIvarAssignmentForAnnotatedFunctions"><div class="namedescr expandable"><span class="name">
 alpha.osx.cocoa.DirectIvarAssignmentForAnnotatedFunctions</span><span class="lang">
 (ObjC)</span><div class="descr">
-Check for direct assignments to instance variables in the methods annotated 
-with <code>objc_no_direct_instance_variable_assignment</code>.</div></div></td>
+Check for direct assignments to instance variables in the methods annotated
+with <code>objc_no_direct_instance_variable_assignment</code>.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 @interface MyClass : NSObject {}
@@ -679,17 +679,17 @@ with <code>objc_no_direct_instance_variable_assignment</code>.</div></div></td>
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.osx.cocoa.InstanceVariableInvalidation"><div class="namedescr expandable"><span class="name">
 alpha.osx.cocoa.InstanceVariableInvalidation</span><span class="lang">
 (ObjC)</span><div class="descr">
 Check that the invalidatable instance variables are invalidated in the methods
-annotated with <code>objc_instance_variable_invalidator</code>.</div></div></td>
+annotated with <code>objc_instance_variable_invalidator</code>.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 @protocol Invalidation &lt;NSObject&gt;
-- (void) invalidate 
+- (void) invalidate
   __attribute__((annotate("objc_instance_variable_invalidator")));
-@end 
+@end
 
 @interface InvalidationImpObj : NSObject &lt;Invalidation&gt;
 @end
@@ -707,15 +707,15 @@ annotated with <code>objc_instance_variable_invalidator</code>.</div></div></td>
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.osx.cocoa.MissingInvalidationMethod"><div class="namedescr expandable"><span class="name">
 alpha.osx.cocoa.MissingInvalidationMethod</span><span class="lang">
 (ObjC)</span><div class="descr">
-Check that the invalidation methods are present in classes that contain 
-invalidatable instance variables.</div></div></td>
+Check that the invalidation methods are present in classes that contain
+invalidatable instance variables.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 @protocol Invalidation &lt;NSObject&gt;
-- (void)invalidate 
+- (void)invalidate
   __attribute__((annotate("objc_instance_variable_invalidator")));
 @end
 
@@ -732,25 +732,25 @@ invalidatable instance variables.</div></div></td>
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.osx.cocoa.localizability.PluralMisuseChecker"><div class="namedescr expandable"><span class="name">
 alpha.osx.cocoa.localizability.PluralMisuseChecker</span><span class="lang">
 (ObjC)</span><div class="descr">
-Warns against using one vs. many plural pattern in code 
+Warns against using one vs. many plural pattern in code
 when generating localized strings.
-</div></div></td>
+</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
-NSString *reminderText = 
+NSString *reminderText =
   NSLocalizedString(@"None", @"Indicates no reminders");
 if (reminderCount == 1) {
   // Warning: Plural cases are not supported across all languages.
   // Use a .stringsdict file instead
-  reminderText = 
+  reminderText =
     NSLocalizedString(@"1 Reminder", @"Indicates single reminder");
 } else if (reminderCount >= 2) {
   // Warning: Plural cases are not supported across all languages.
   // Use a .stringsdict file instead
-  reminderText = 
+  reminderText =
     [NSString stringWithFormat:
       NSLocalizedString(@"%@ Reminders", @"Indicates multiple reminders"),
         reminderCount];
@@ -766,10 +766,10 @@ if (reminderCount == 1) {
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.security.ArrayBound"><div class="namedescr expandable"><span class="name">
 alpha.security.ArrayBound</span><span class="lang">
 (C)</span><div class="descr">
-Warn about buffer overflows (older checker).</div></div></td>
+Warn about buffer overflows (older checker).</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -791,7 +791,7 @@ void test() {
 }
 </pre></div><div class="separator"></div>
 <div class="example"><pre>
-// note: requires unix.Malloc or 
+// note: requires unix.Malloc or
 // alpha.unix.MallocWithAnnotations checks enabled.
 void test() {
   int *p = malloc(12);
@@ -807,10 +807,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.security.ArrayBoundV2"><div class="namedescr expandable"><span class="name">
 alpha.security.ArrayBoundV2</span><span class="lang">
 (C)</span><div class="descr">
-Warn about buffer overflows (newer checker).</div></div></td>
+Warn about buffer overflows (newer checker).</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -844,10 +844,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.security.MallocOverflow"><div class="namedescr expandable"><span class="name">
 alpha.security.MallocOverflow</span><span class="lang">
 (C)</span><div class="descr">
-Check for overflows in the arguments to <code>malloc()</code>.</div></div></td>
+Check for overflows in the arguments to <code>malloc()</code>.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test(int n) {
@@ -856,11 +856,11 @@ void test(int n) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.security.MmapWriteExec"><div class="namedescr expandable"><span class="name">
 alpha.security.MmapWriteExec</span><span class="lang">
 (C)</span><div class="descr">
 Warn on <code>mmap()<code> calls that are both writable and executable.
-</div></div></td>
+</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test(int n) {
@@ -873,10 +873,10 @@ void test(int n) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.security.ReturnPtrRange"><div class="namedescr expandable"><span class="name">
 alpha.security.ReturnPtrRange</span><span class="lang">
 (C)</span><div class="descr">
-Check for an out-of-bound pointer being returned to callers.</div></div></td>
+Check for an out-of-bound pointer being returned to callers.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 static int A[10];
@@ -894,10 +894,10 @@ int test(void) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.security.taint.TaintPropagation"><div class="namedescr expandable"><span class="name">
 alpha.security.taint.TaintPropagation</span><span class="lang">
 (C)</span><div class="descr">
-Generate taint information used by other checkers.</div></div></td>
+Generate taint information used by other checkers.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -907,7 +907,7 @@ void test() {
 </pre></div><div class="separator"></div>
 <div class="example"><pre>
 // note: compiler internally checks if the second param to
-// sprintf is a string literal or not. 
+// sprintf is a string literal or not.
 // Use -Wno-format-security to suppress compiler warning.
 void test() {
   char s[10], buf[10];
@@ -920,7 +920,7 @@ void test() {
 void test() {
   size_t ts;
   scanf("%zd", &ts); // 'ts' marked as tainted
-  int *p = (int *)malloc(ts * sizeof(int)); 
+  int *p = (int *)malloc(ts * sizeof(int));
     // warn: untrusted data as buffer size
 }
 </pre></div></div></td></tr>
@@ -935,7 +935,7 @@ void test() {
 <tbody>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.unix.BlockInCriticalSection"><div class="namedescr expandable"><span class="name">
 alpha.unix.BlockInCriticalSection</span><span class="lang">
 (C)</span><div class="descr">
 Check for calls to blocking functions inside a critical section. Applies to:
@@ -955,7 +955,7 @@ mtx_trylock<br>
 mtx_unlock<br>
 lock_guard<br>
 unique_lock</div>
-</div></div></td>
+</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -968,10 +968,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.unix.Chroot"><div class="namedescr expandable"><span class="name">
 alpha.unix.Chroot</span><span class="lang">
 (C)</span><div class="descr">
-Check improper use of <code>chroot</code>.</div></div></td>
+Check improper use of <code>chroot</code>.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void f();
@@ -983,7 +983,7 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.unix.PthreadLock"><div class="namedescr expandable"><span class="name">
 alpha.unix.PthreadLock</span><span class="lang">
 (C)</span><div class="descr">
 Simple lock -> unlock checker; applies to:<div class=functions>
@@ -1002,14 +1002,14 @@ lck_rw_try_lock_shared<br>
 pthread_mutex_unlock<br>
 pthread_rwlock_unlock<br>
 lck_mtx_unlock<br>
-lck_rw_done</div></div></div></td>
+lck_rw_done</div></div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 pthread_mutex_t mtx;
 
 void test() {
   pthread_mutex_lock(&mtx);
-  pthread_mutex_lock(&mtx); 
+  pthread_mutex_lock(&mtx);
     // warn: this lock has already been acquired
 }
 </pre></div><div class="separator"></div>
@@ -1019,7 +1019,7 @@ lck_mtx_t lck1, lck2;
 void test() {
   lck_mtx_lock(&lck1);
   lck_mtx_lock(&lck2);
-  lck_mtx_unlock(&lck1); 
+  lck_mtx_unlock(&lck1);
     // warn: this was not the most recently acquired lock
 }
 </pre></div><div class="separator"></div>
@@ -1037,7 +1037,7 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.unix.SimpleStream"><div class="namedescr expandable"><span class="name">
 alpha.unix.SimpleStream</span><span class="lang">
 (C)</span><div class="descr">
 Check for misuses of stream APIs:<div class=functions>
@@ -1046,7 +1046,7 @@ fclose</div>(demo checker, the subject of the demo
 (<a href="http://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf">Slides</a>
 ,<a href="https://youtu.be/kdxlsP5QVPw">Video</a>)
 by Anna Zaks and Jordan Rose presented at the <a href="http://llvm.org/devmtg/2012-11/">
-2012 LLVM Developers' Meeting).</a></div></div></td>
+2012 LLVM Developers' Meeting).</a></div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1065,7 +1065,7 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.unix.Stream"><div class="namedescr expandable"><span class="name">
 alpha.unix.Stream</span><span class="lang">
 (C)</span><div class="descr">
 Check stream handling functions:<div class=functions>fopen<br>
@@ -1081,7 +1081,7 @@ fsetpos<br>
 clearerr<br>
 feof<br>
 ferror<br>
-fileno</div></div></div></td>
+fileno</div></div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1092,7 +1092,7 @@ void test() {
 void test() {
   FILE *p = fopen("foo", "r");
   fseek(p, 1, SEEK_SET); // warn: stream pointer might be NULL
-  fclose(p); 
+  fclose(p);
 }
 </pre></div><div class="separator"></div>
 <div class="example"><pre>
@@ -1103,13 +1103,13 @@ void test() {
     fseek(p, 1, 3);
      // warn: third arg should be SEEK_SET, SEEK_END, or SEEK_CUR
 
-  fclose(p); 
+  fclose(p);
 }
 </pre></div><div class="separator"></div>
 <div class="example"><pre>
 void test() {
   FILE *p = fopen("foo", "r");
-  fclose(p); 
+  fclose(p);
   fclose(p); // warn: already closed
 }
 </pre></div><div class="separator"></div>
@@ -1122,12 +1122,12 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.unix.cstring.BufferOverlap"><div class="namedescr expandable"><span class="name">
 alpha.unix.cstring.BufferOverlap</span><span class="lang">
 (C)</span><div class="descr">
 Checks for overlap in two buffer arguments; applies to:<div class=functions>
 memcpy<br>
-mempcpy</div></div></div></td>
+mempcpy</div></div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1137,7 +1137,7 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.unix.cstring.NotNullTerminated"><div class="namedescr expandable"><span class="name">
 alpha.unix.cstring.NotNullTerminated</span><span class="lang">
 (C)</span><div class="descr">
 Check for arguments which are not null-terminated strings; applies
@@ -1153,16 +1153,16 @@ strncat</div></div></div></td>
 void test() {
   int y = strlen((char *)&test); // warn
 }
-</pre></div></div></td></tr>
+</pre></div></div></a></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="alpha.unix.cstring.OutOfBounds"><div class="namedescr expandable"><span class="name">
 alpha.unix.cstring.OutOfBounds</span><span class="lang">
 (C)</span><div class="descr">
 Check for out-of-bounds access in string functions; applies
 to:<div class=functions>
 strncopy<br>
-strncat</div></div></div></td>
+strncat</div></div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test(char *y) {

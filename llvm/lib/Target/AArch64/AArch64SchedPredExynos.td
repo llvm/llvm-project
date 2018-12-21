@@ -126,13 +126,12 @@ def ExynosShiftExFn   : TIIPredicate<
                                IsArithLogicShiftOp.ValidOpcodes,
                                MCReturnStatement<
                                  CheckAny<
-                                   [CheckAll<
+                                   [ExynosCheckShift,
+                                    CheckAll<
                                      [CheckShiftLSL,
-                                      CheckShiftBy8]>,
-                                    ExynosCheckShift]>>>],
+                                      CheckShiftBy8]>]>>>],
                             MCReturnStatement<FalsePred>>>;
 def ExynosShiftExPred : MCSchedPredicate<ExynosShiftExFn>;
-
 
 // Identify arithmetic and logic immediate instructions.
 def ExynosCheapFn : TIIPredicate<

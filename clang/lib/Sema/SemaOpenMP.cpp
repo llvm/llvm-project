@@ -11231,8 +11231,8 @@ static bool actOnOMPReductionKindClause(
           ELoc, Context.getPointerType(FnTy), VK_RValue, OK_Ordinary,
           S.DefaultLvalueConversion(DeclareReductionRef.get()).get());
       Expr *Args[] = {LHS.get(), RHS.get()};
-      ReductionOp = new (Context)
-          CallExpr(Context, OVE, Args, Context.VoidTy, VK_RValue, ELoc);
+      ReductionOp =
+          CallExpr::Create(Context, OVE, Args, Context.VoidTy, VK_RValue, ELoc);
     } else {
       ReductionOp = S.BuildBinOp(
           Stack->getCurScope(), ReductionId.getBeginLoc(), BOK, LHSDRE, RHSDRE);

@@ -80,7 +80,6 @@ class MiniDumpTestCase(TestBase):
             self.assertEqual(module.file.fullpath, expected['filename'])
             self.assertEqual(module.GetUUIDString(), expected['uuid'])
 
-    @expectedFailureAll(bugnumber="llvm.org/pr35193", hostoslist=["windows"])
     def test_stack_info_in_mini_dump(self):
         """Test that we can see a trivial stack in a VS-generate mini dump."""
         # target create -c fizzbuzz_no_heap.dmp
