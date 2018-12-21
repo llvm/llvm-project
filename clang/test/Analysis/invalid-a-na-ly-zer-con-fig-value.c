@@ -1,3 +1,7 @@
+// Same as invalid-analyzer-config-value.c but without -analyzer-config
+// in the file name, so that argument string pattern matching
+// didn't accidentally match it.
+
 // RUN: not %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-config notes-as-events=yesplease \
