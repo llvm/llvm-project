@@ -663,6 +663,10 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
     Msg += Src + "\n>>>               ";
   Msg += Sec.getObjMsg(Offset);
 
+  if (Sym.getName().startswith("_ZTV"))
+    Msg += "\nthe vtable symbol may be undefined because the class is missing "
+           "its key function (see https://lld.llvm.org/missingkeymethod)";
+
   if ((Config->UnresolvedSymbols == UnresolvedPolicy::Warn && CanBeExternal) ||
       Config->NoinhibitExec) {
     warn(Msg);
