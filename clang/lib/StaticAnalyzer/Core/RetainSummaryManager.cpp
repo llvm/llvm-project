@@ -204,6 +204,11 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
     AllowAnnotations = false;
     return RetTy->isObjCIdType() ? getUnarySummary(FT, cfmakecollectable)
                                  : getPersistentStopSummary();
+  } else if (FName == "CMBufferQueueDequeueAndRetain" ||
+             FName == "CMBufferQueueDequeueIfDataReadyAndRetain") {
+    // Part of: <rdar://problem/39390714>.
+    return getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF), DoNothing,
+                                DoNothing);
   } else if (FName == "CFPlugInInstanceCreate") {
     return getPersistentSummary(RetEffect::MakeNoRet());
   } else if (FName == "IORegistryEntrySearchCFProperty" ||
@@ -591,6 +596,12 @@ RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
     // Handle: (CF|CG|CV)Retain
     //         CFAutorelease
     // It's okay to be a little sloppy here.
+    if (FName == "CMBufferQueueDequeueAndRetain" ||
+        FName == "CMBufferQueueDequeueIfDataReadyAndRetain") {
+      // Part of: <rdar://problem/39390714>.
+      // These are not retain. They just return something and retain it.
+      return None;
+    }
     if (cocoa::isRefType(ResultTy, "CF", FName) ||
         cocoa::isRefType(ResultTy, "CG", FName) ||
         cocoa::isRefType(ResultTy, "CV", FName))

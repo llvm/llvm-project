@@ -21,7 +21,7 @@ using namespace llvm;
 
 static MDNode *createMetadata(LLVMContext &Ctx, const LoopAttributes &Attrs,
                               const llvm::DebugLoc &StartLoc,
-                              const llvm::DebugLoc &EndLoc) {
+                              const llvm::DebugLoc &EndLoc, MDNode *&AccGroup) {
 
   if (!Attrs.IsParallel && Attrs.VectorizeWidth == 0 &&
       Attrs.InterleaveCount == 0 && Attrs.UnrollCount == 0 &&
@@ -122,6 +122,12 @@ static MDNode *createMetadata(LLVMContext &Ctx, const LoopAttributes &Attrs,
     Args.push_back(MDNode::get(Ctx, Vals));
   }
 
+  if (Attrs.IsParallel) {
+    AccGroup = MDNode::getDistinct(Ctx, {});
+    Args.push_back(MDNode::get(
+        Ctx, {MDString::get(Ctx, "llvm.loop.parallel_accesses"), AccGroup}));
+  }
+
   // Set the first operand to itself.
   MDNode *LoopID = MDNode::get(Ctx, Args);
   LoopID->replaceOperandWith(0, LoopID);
@@ -150,7 +156,8 @@ void LoopAttributes::clear() {
 LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
                    const llvm::DebugLoc &StartLoc, const llvm::DebugLoc &EndLoc)
     : LoopID(nullptr), Header(Header), Attrs(Attrs) {
-  LoopID = createMetadata(Header->getContext(), Attrs, StartLoc, EndLoc);
+  LoopID =
+      createMetadata(Header->getContext(), Attrs, StartLoc, EndLoc, AccGroup);
 }
 
 void LoopInfoStack::push(BasicBlock *Header, const llvm::DebugLoc &StartLoc,
@@ -328,6 +335,21 @@ void LoopInfoStack::pop() {
 }
 
 void LoopInfoStack::InsertHelper(Instruction *I) const {
+  if (I->mayReadOrWriteMemory()) {
+    SmallVector<Metadata *, 4> AccessGroups;
+    for (const LoopInfo &AL : Active) {
+      // Here we assume that every loop that has an access group is parallel.
+      if (MDNode *Group = AL.getAccessGroup())
+        AccessGroups.push_back(Group);
+    }
+    MDNode *UnionMD = nullptr;
+    if (AccessGroups.size() == 1)
+      UnionMD = cast<MDNode>(AccessGroups[0]);
+    else if (AccessGroups.size() >= 2)
+      UnionMD = MDNode::get(I->getContext(), AccessGroups);
+    I->setMetadata("llvm.access.group", UnionMD);
+  }
+
   if (!hasInfo())
     return;
 
@@ -342,19 +364,5 @@ void LoopInfoStack::InsertHelper(Instruction *I) const {
         break;
       }
     return;
-  }
-
-  if (I->mayReadOrWriteMemory()) {
-    SmallVector<Metadata *, 2> ParallelLoopIDs;
-    for (const LoopInfo &AL : Active)
-      if (AL.getAttributes().IsParallel)
-        ParallelLoopIDs.push_back(AL.getLoopID());
-
-    MDNode *ParallelMD = nullptr;
-    if (ParallelLoopIDs.size() == 1)
-      ParallelMD = cast<MDNode>(ParallelLoopIDs[0]);
-    else if (ParallelLoopIDs.size() >= 2)
-      ParallelMD = MDNode::get(I->getContext(), ParallelLoopIDs);
-    I->setMetadata("llvm.mem.parallel_loop_access", ParallelMD);
   }
 }

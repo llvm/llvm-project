@@ -32,6 +32,18 @@ class ParentPackage<Package P> { Package ParentPackage = P; }
 /// a '-help'-like command line option.
 class HelpText<string text> { string HelpText = text; }
 
+/// Describes what kind of documentation exists for the checker.
+class DocumentationEnum<bits<2> val> {
+  bits<2> Documentation = val;
+}
+def NotDocumented : DocumentationEnum<0>;
+def HasDocumentation : DocumentationEnum<1>;
+def HasAlphaDocumentation : DocumentationEnum<2>;
+
+class Documentation<DocumentationEnum val> {
+  bits<2> Documentation = val.Documentation;
+}
+
 /// Describes a checker. Every builtin checker has to be registered with the use
 /// of this class (out-of-trunk checkers loaded from plugins obviously don't).
 /// Note that a checker has a name (e.g.: 'NullDereference'), and a fullname,
@@ -40,5 +52,6 @@ class HelpText<string text> { string HelpText = text; }
 class Checker<string name = ""> {
   string      CheckerName = name;
   string      HelpText;
+  bits<2>     Documentation;
   Package ParentPackage;
 }

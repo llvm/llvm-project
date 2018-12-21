@@ -33,12 +33,41 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   };
 
   const LLT S1 = LLT::scalar(1);
-  const LLT V2S16 = LLT::vector(2, 16);
-  const LLT V2S32 = LLT::vector(2, 32);
-
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
   const LLT S512 = LLT::scalar(512);
+
+  const LLT V2S16 = LLT::vector(2, 16);
+
+  const LLT V2S32 = LLT::vector(2, 32);
+  const LLT V3S32 = LLT::vector(3, 32);
+  const LLT V4S32 = LLT::vector(4, 32);
+  const LLT V5S32 = LLT::vector(5, 32);
+  const LLT V6S32 = LLT::vector(6, 32);
+  const LLT V7S32 = LLT::vector(7, 32);
+  const LLT V8S32 = LLT::vector(8, 32);
+  const LLT V9S32 = LLT::vector(9, 32);
+  const LLT V10S32 = LLT::vector(10, 32);
+  const LLT V11S32 = LLT::vector(11, 32);
+  const LLT V12S32 = LLT::vector(12, 32);
+  const LLT V13S32 = LLT::vector(13, 32);
+  const LLT V14S32 = LLT::vector(14, 32);
+  const LLT V15S32 = LLT::vector(15, 32);
+  const LLT V16S32 = LLT::vector(16, 32);
+
+  const LLT V2S64 = LLT::vector(2, 64);
+  const LLT V3S64 = LLT::vector(3, 64);
+  const LLT V4S64 = LLT::vector(4, 64);
+  const LLT V5S64 = LLT::vector(5, 64);
+  const LLT V6S64 = LLT::vector(6, 64);
+  const LLT V7S64 = LLT::vector(7, 64);
+  const LLT V8S64 = LLT::vector(8, 64);
+
+  std::initializer_list<LLT> AllS32Vectors =
+    {V2S32, V3S32, V4S32, V5S32, V6S32, V7S32, V8S32,
+     V9S32, V10S32, V11S32, V12S32, V13S32, V14S32, V15S32, V16S32};
+  std::initializer_list<LLT> AllS64Vectors =
+    {V2S64, V3S64, V4S64, V5S64, V6S64, V7S64, V8S64};
 
   const LLT GlobalPtr = GetAddrSpacePtr(AMDGPUAS::GLOBAL_ADDRESS);
   const LLT ConstantPtr = GetAddrSpacePtr(AMDGPUAS::CONSTANT_ADDRESS);
@@ -131,6 +160,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
   setAction({G_FPTOUI, S32}, Legal);
   setAction({G_FPTOUI, 1, S32}, Legal);
+
+  setAction({G_FPOW, S32}, Legal);
+  setAction({G_FEXP2, S32}, Legal);
+  setAction({G_FLOG2, S32}, Legal);
+
+  getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND})
+    .legalFor({S32, S64});
 
   for (LLT PtrTy : AddrSpaces) {
     LLT IdxTy = LLT::scalar(PtrTy.getSizeInBits());
@@ -231,13 +267,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
       });
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
-      .legalIf([=](const LegalityQuery &Query) {
-        const LLT &VecTy = Query.Types[0];
-        const LLT &ScalarTy = Query.Types[1];
-        return VecTy.getSizeInBits() % 32 == 0 &&
-               ScalarTy.getSizeInBits() % 32 == 0 &&
-               VecTy.getSizeInBits() <= 512;
-      });
+    .legalForCartesianProduct(AllS32Vectors, {S32})
+    .legalForCartesianProduct(AllS64Vectors, {S64})
+    .clampNumElements(0, V16S32, V16S32)
+    .clampNumElements(0, V2S64, V8S64)
+    .minScalarSameAs(1, 0);
+
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;

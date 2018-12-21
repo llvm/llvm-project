@@ -257,8 +257,19 @@ static json::Object createResult(const PathDiagnostic &Diag, json::Array &Files,
 static StringRef getRuleDescription(StringRef CheckName) {
   return llvm::StringSwitch<StringRef>(CheckName)
 #define GET_CHECKERS
-#define CHECKER(FULLNAME, CLASS, HELPTEXT)                                     \
+#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI)                            \
   .Case(FULLNAME, HELPTEXT)
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER
+#undef GET_CHECKERS
+      ;
+}
+
+static StringRef getRuleHelpURIStr(StringRef CheckName) {
+  return llvm::StringSwitch<StringRef>(CheckName)
+#define GET_CHECKERS
+#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI)                            \
+  .Case(FULLNAME, DOC_URI)
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER
 #undef GET_CHECKERS
@@ -267,10 +278,16 @@ static StringRef getRuleDescription(StringRef CheckName) {
 
 static json::Object createRule(const PathDiagnostic &Diag) {
   StringRef CheckName = Diag.getCheckName();
-  return json::Object{
+  json::Object Ret{
       {"fullDescription", createMessage(getRuleDescription(CheckName))},
       {"name", createMessage(CheckName)},
       {"id", CheckName}};
+
+  std::string RuleURI = getRuleHelpURIStr(CheckName);
+  if (!RuleURI.empty())
+    Ret["helpURI"] = RuleURI;
+
+  return Ret;
 }
 
 static json::Array createRules(std::vector<const PathDiagnostic *> &Diags,

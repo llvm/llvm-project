@@ -206,8 +206,20 @@ public:
     return *this;
   }
 
+  bool atEnd() const noexcept {
+    return State == PS_AtEnd;
+  }
+
+  bool inRootDir() const noexcept {
+    return State == PS_InRootDir;
+  }
+
+  bool inRootName() const noexcept {
+    return State == PS_InRootName;
+  }
+
   bool inRootPath() const noexcept {
-    return State == PS_InRootDir || State == PS_InRootName;
+    return inRootName() || inRootDir();
   }
 
 private:
@@ -1294,7 +1306,19 @@ string_view_t path::__root_path_raw() const {
   return {};
 }
 
+static bool ConsumeRootName(PathParser *PP) {
+  static_assert(PathParser::PS_BeforeBegin == 1 &&
+      PathParser::PS_InRootName == 2,
+      "Values for enums are incorrect");
+  while (PP->State <= PathParser::PS_InRootName)
+    ++(*PP);
+  return PP->State == PathParser::PS_AtEnd;
+}
+
 static bool ConsumeRootDir(PathParser* PP) {
+  static_assert(PathParser::PS_BeforeBegin == 1 &&
+                PathParser::PS_InRootName == 2 &&
+                PathParser::PS_InRootDir == 3, "Values for enums are incorrect");
   while (PP->State <= PathParser::PS_InRootDir)
     ++(*PP);
   return PP->State == PathParser::PS_AtEnd;
@@ -1514,21 +1538,68 @@ path path::lexically_relative(const path& base) const {
 
 ////////////////////////////////////////////////////////////////////////////
 // path.comparisons
-int path::__compare(string_view_t __s) const {
-  auto PP = PathParser::CreateBegin(__pn_);
-  auto PP2 = PathParser::CreateBegin(__s);
-  while (PP && PP2) {
-    int res = (*PP).compare(*PP2);
-    if (res != 0)
-      return res;
-    ++PP;
-    ++PP2;
-  }
-  if (PP.State == PP2.State && !PP)
+static int CompareRootName(PathParser *LHS, PathParser *RHS) {
+  if (!LHS->inRootName() && !RHS->inRootName())
     return 0;
-  if (!PP)
+
+  auto GetRootName = [](PathParser *Parser) -> string_view_t {
+    return Parser->inRootName() ? **Parser : "";
+  };
+  int res = GetRootName(LHS).compare(GetRootName(RHS));
+  ConsumeRootName(LHS);
+  ConsumeRootName(RHS);
+  return res;
+}
+
+static int CompareRootDir(PathParser *LHS, PathParser *RHS) {
+  if (!LHS->inRootDir() && RHS->inRootDir())
     return -1;
-  return 1;
+  else if (LHS->inRootDir() && !RHS->inRootDir())
+    return 1;
+  else {
+    ConsumeRootDir(LHS);
+    ConsumeRootDir(RHS);
+    return 0;
+  }
+}
+
+static int CompareRelative(PathParser *LHSPtr, PathParser *RHSPtr) {
+  auto &LHS = *LHSPtr;
+  auto &RHS = *RHSPtr;
+  
+  int res;
+  while (LHS && RHS) {
+    if ((res = (*LHS).compare(*RHS)) != 0)
+      return res;
+    ++LHS;
+    ++RHS;
+  }
+  return 0;
+}
+
+static int CompareEndState(PathParser *LHS, PathParser *RHS) {
+  if (LHS->atEnd() && !RHS->atEnd())
+    return -1;
+  else if (!LHS->atEnd() && RHS->atEnd())
+    return 1;
+  return 0;
+}
+
+int path::__compare(string_view_t __s) const {
+  auto LHS = PathParser::CreateBegin(__pn_);
+  auto RHS = PathParser::CreateBegin(__s);
+  int res;
+
+  if ((res = CompareRootName(&LHS, &RHS)) != 0)
+    return res;
+
+  if ((res = CompareRootDir(&LHS, &RHS)) != 0)
+    return res;
+
+  if ((res = CompareRelative(&LHS, &RHS)) != 0)
+    return res;
+
+  return CompareEndState(&LHS, &RHS);
 }
 
 ////////////////////////////////////////////////////////////////////////////

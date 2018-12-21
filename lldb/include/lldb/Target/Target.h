@@ -188,6 +188,10 @@ public:
 
   void SetDisplayRuntimeSupportValues(bool b);
 
+  bool GetDisplayRecognizedArguments() const;
+
+  void SetDisplayRecognizedArguments(bool b);
+
   const ProcessLaunchInfo &GetProcessLaunchInfo();
 
   void SetProcessLaunchInfo(const ProcessLaunchInfo &launch_info);

@@ -59,7 +59,8 @@ public:
     Compiler.getAnalyzerOpts()->CheckersControlList = {
         {"custom.CustomChecker", true}};
     AnalysisConsumer->AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-      Registry.addChecker<CustomChecker>("custom.CustomChecker", "Description");
+      Registry.addChecker<CustomChecker>("custom.CustomChecker", "Description",
+                                         "");
     });
     return std::move(AnalysisConsumer);
   }

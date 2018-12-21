@@ -107,7 +107,7 @@ size_t SBSourceManager::DisplaySourceLinesWithLineNumbersAndColumn(
     const SBFileSpec &file, uint32_t line, uint32_t column,
     uint32_t context_before, uint32_t context_after,
     const char *current_line_cstr, SBStream &s) {
-  if (m_opaque_ap.get() == NULL)
+  if (m_opaque_ap == NULL)
     return 0;
 
   return m_opaque_ap->DisplaySourceLinesWithLineNumbers(

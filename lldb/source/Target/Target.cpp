@@ -3356,6 +3356,8 @@ static constexpr PropertyDefinition g_properties[] = {
     {"display-runtime-support-values", OptionValue::eTypeBoolean, false, false,
      nullptr, {}, "If true, LLDB will show variables that are meant to "
                   "support the operation of a language's runtime support."},
+    {"display-recognized-arguments", OptionValue::eTypeBoolean, false, false,
+     nullptr, {}, "Show recognized arguments in variable listings by default."},
     {"non-stop-mode", OptionValue::eTypeBoolean, false, 0, nullptr, {},
      "Disable lock-step debugging, instead control threads independently."},
     {"require-hardware-breakpoint", OptionValue::eTypeBoolean, false, 0,
@@ -3404,6 +3406,7 @@ enum {
   ePropertyDisplayExpressionsInCrashlogs,
   ePropertyTrapHandlerNames,
   ePropertyDisplayRuntimeSupportValues,
+  ePropertyDisplayRecognizedArguments,
   ePropertyNonStopModeEnabled,
   ePropertyRequireHardwareBreakpoints,
   ePropertyExperimental,
@@ -3960,6 +3963,16 @@ bool TargetProperties::GetDisplayRuntimeSupportValues() const {
 
 void TargetProperties::SetDisplayRuntimeSupportValues(bool b) {
   const uint32_t idx = ePropertyDisplayRuntimeSupportValues;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+}
+
+bool TargetProperties::GetDisplayRecognizedArguments() const {
+  const uint32_t idx = ePropertyDisplayRecognizedArguments;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx, false);
+}
+
+void TargetProperties::SetDisplayRecognizedArguments(bool b) {
+  const uint32_t idx = ePropertyDisplayRecognizedArguments;
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
 }
 

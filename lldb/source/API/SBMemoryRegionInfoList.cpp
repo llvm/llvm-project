@@ -129,5 +129,5 @@ const MemoryRegionInfoListImpl *SBMemoryRegionInfoList::operator->() const {
 
 const MemoryRegionInfoListImpl &SBMemoryRegionInfoList::operator*() const {
   assert(m_opaque_ap.get());
-  return *m_opaque_ap.get();
+  return *m_opaque_ap;
 }
