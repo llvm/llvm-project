@@ -608,7 +608,8 @@ ClangModulesDeclVendor::Create(Target &target) {
                                                  new StoringDiagnosticConsumer);
 
   std::vector<const char *> compiler_invocation_argument_cstrs;
-
+  compiler_invocation_argument_cstrs.reserve(
+      compiler_invocation_arguments.size());
   for (const std::string &arg : compiler_invocation_arguments) {
     compiler_invocation_argument_cstrs.push_back(arg.c_str());
   }
