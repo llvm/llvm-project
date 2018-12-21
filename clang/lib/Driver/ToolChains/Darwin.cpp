@@ -1579,7 +1579,7 @@ Optional<DarwinPlatform> getDeploymentTargetFromTargetArg(
                                           Args.getLastArg(options::OPT_target));
 }
 
-Optional<DarwinSDKInfo> parseSDKSettings(llvm::vfs::FileSystem &VFS,
+Optional<DarwinSDKInfo> parseSDKSettings(vfs::FileSystem &VFS,
                                          const ArgList &Args,
                                          const Driver &TheDriver) {
   const Arg *A = Args.getLastArg(options::OPT_isysroot);
