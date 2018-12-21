@@ -808,9 +808,11 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
+#ifndef _LIBCPP_CXX03_LANG
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 struct _FilesystemClock;
 _LIBCPP_END_NAMESPACE_FILESYSTEM
+#endif // !_LIBCPP_CXX03_LANG
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
