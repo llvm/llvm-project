@@ -180,9 +180,13 @@ public:
 
   bool AddFrameworkSearchPath(const char *path);
 
-  bool AddClangArgument(std::string arg, bool force = false);
+  bool AddClangArgument(std::string arg, bool unique = true);
 
   bool AddClangArgumentPair(const char *arg1, const char *arg2);
+
+  /// Add a list of Clang arguments to the ClangImporter options and
+  /// apply the working directory to any relative paths.
+  void AddExtraClangArgs(std::vector<std::string> ExtraArgs);
 
   const char *GetPlatformSDKPath() const {
     if (m_platform_sdk_path.empty())
