@@ -209,9 +209,8 @@ public:
 
   const char *GetFrameworkSearchPathAtIndex(size_t idx) const;
 
-  size_t GetNumClangArguments();
-
-  const char *GetClangArgumentAtIndex(size_t idx);
+  /// \return the ExtraArgs of the ClangImporterOptions.
+  const std::vector<std::string> &GetClangArguments();
 
   swift::ModuleDecl *CreateModule(const ConstString &module_basename,
                                   Status &error);

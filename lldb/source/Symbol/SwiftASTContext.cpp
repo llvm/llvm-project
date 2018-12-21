@@ -1904,10 +1904,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
             }
 
             std::string clang_argument;
-            for (size_t osi = 0, ose = ast_context->GetNumClangArguments();
-                 osi < ose; ++osi) {
+            for (const std::string &arg : ast_context->GetClangArguments()) {
               // Join multi-arg -D and -U options for uniquing.
-              clang_argument += ast_context->GetClangArgumentAtIndex(osi);
+              clang_argument += arg;
               if (clang_argument == "-D" || clang_argument == "-U")
                 continue;
 
@@ -3052,24 +3051,14 @@ const char *SwiftASTContext::GetFrameworkSearchPathAtIndex(size_t idx) const {
 
   if (m_ast_context_ap.get()) {
     if (idx < m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths.size())
-      return m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths[idx].Path.c_str();
+      return m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths[idx]
+          .Path.c_str();
   }
   return NULL;
 }
 
-size_t SwiftASTContext::GetNumClangArguments() {
-  swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
-
-  return importer_options.ExtraArgs.size();
-}
-
-const char *SwiftASTContext::GetClangArgumentAtIndex(size_t idx) {
-  swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
-
-  if (idx < importer_options.ExtraArgs.size())
-    return importer_options.ExtraArgs[idx].c_str();
-
-  return NULL;
+const std::vector<std::string> &SwiftASTContext::GetClangArguments() {
+  return GetClangImporterOptions().ExtraArgs;
 }
 
 swift::ModuleDecl *
