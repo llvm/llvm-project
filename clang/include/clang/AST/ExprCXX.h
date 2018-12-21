@@ -75,47 +75,46 @@ class TemplateParameterList;
 /// function itself will be a (possibly empty) set of functions and
 /// function templates that were found by name lookup at template
 /// definition time.
-class CXXOperatorCallExpr : public CallExpr {
-  /// The overloaded operator.
-  OverloadedOperatorKind Operator;
-
-  SourceRange Range;
-
-  // Only meaningful for floating point types.
-  FPOptions FPFeatures;
-
-  SourceRange getSourceRangeImpl() const LLVM_READONLY;
-
-public:
+class CXXOperatorCallExpr final : public CallExpr {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
-  CXXOperatorCallExpr(ASTContext &C, OverloadedOperatorKind Op, Expr *fn,
-                      ArrayRef<Expr *> args, QualType t, ExprValueKind VK,
-                      SourceLocation operatorloc, FPOptions FPFeatures,
-                      ADLCallKind UsesADL = NotADL)
-      : CallExpr(C, CXXOperatorCallExprClass, fn, args, t, VK, operatorloc,
-                 /*MinNumArgs=*/0, UsesADL),
-        Operator(Op), FPFeatures(FPFeatures) {
-    Range = getSourceRangeImpl();
+  SourceRange Range;
+
+  // CXXOperatorCallExpr has some trailing objects belonging
+  // to CallExpr. See CallExpr for the details.
+
+  SourceRange getSourceRangeImpl() const LLVM_READONLY;
+
+  CXXOperatorCallExpr(OverloadedOperatorKind OpKind, Expr *Fn,
+                      ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
+                      SourceLocation OperatorLoc, FPOptions FPFeatures,
+                      ADLCallKind UsesADL);
+
+  CXXOperatorCallExpr(unsigned NumArgs, EmptyShell Empty);
+
+public:
+  static CXXOperatorCallExpr *
+  Create(const ASTContext &Ctx, OverloadedOperatorKind OpKind, Expr *Fn,
+         ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
+         SourceLocation OperatorLoc, FPOptions FPFeatures,
+         ADLCallKind UsesADL = NotADL);
+
+  static CXXOperatorCallExpr *CreateEmpty(const ASTContext &Ctx,
+                                          unsigned NumArgs, EmptyShell Empty);
+
+  /// Returns the kind of overloaded operator that this expression refers to.
+  OverloadedOperatorKind getOperator() const {
+    return static_cast<OverloadedOperatorKind>(
+        CXXOperatorCallExprBits.OperatorKind);
   }
 
-  explicit CXXOperatorCallExpr(ASTContext &C, unsigned NumArgs,
-                               EmptyShell Empty)
-      : CallExpr(C, CXXOperatorCallExprClass, /*NumPreArgs=*/0, NumArgs,
-                 Empty) {}
-
-  /// Returns the kind of overloaded operator that this
-  /// expression refers to.
-  OverloadedOperatorKind getOperator() const { return Operator; }
-
   static bool isAssignmentOp(OverloadedOperatorKind Opc) {
-    return Opc == OO_Equal || Opc == OO_StarEqual ||
-           Opc == OO_SlashEqual || Opc == OO_PercentEqual ||
-           Opc == OO_PlusEqual || Opc == OO_MinusEqual ||
-           Opc == OO_LessLessEqual || Opc == OO_GreaterGreaterEqual ||
-           Opc == OO_AmpEqual || Opc == OO_CaretEqual ||
-           Opc == OO_PipeEqual;
+    return Opc == OO_Equal || Opc == OO_StarEqual || Opc == OO_SlashEqual ||
+           Opc == OO_PercentEqual || Opc == OO_PlusEqual ||
+           Opc == OO_MinusEqual || Opc == OO_LessLessEqual ||
+           Opc == OO_GreaterGreaterEqual || Opc == OO_AmpEqual ||
+           Opc == OO_CaretEqual || Opc == OO_PipeEqual;
   }
   bool isAssignmentOp() const { return isAssignmentOp(getOperator()); }
 
@@ -130,14 +129,15 @@ public:
   SourceLocation getOperatorLoc() const { return getRParenLoc(); }
 
   SourceLocation getExprLoc() const LLVM_READONLY {
+    OverloadedOperatorKind Operator = getOperator();
     return (Operator < OO_Plus || Operator >= OO_Arrow ||
             Operator == OO_PlusPlus || Operator == OO_MinusMinus)
                ? getBeginLoc()
                : getOperatorLoc();
   }
 
-  SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
-  SourceLocation getEndLoc() const LLVM_READONLY { return Range.getEnd(); }
+  SourceLocation getBeginLoc() const { return Range.getBegin(); }
+  SourceLocation getEndLoc() const { return Range.getEnd(); }
   SourceRange getSourceRange() const { return Range; }
 
   static bool classof(const Stmt *T) {
@@ -146,14 +146,17 @@ public:
 
   // Set the FP contractability status of this operator. Only meaningful for
   // operations on floating point types.
-  void setFPFeatures(FPOptions F) { FPFeatures = F; }
-
-  FPOptions getFPFeatures() const { return FPFeatures; }
+  void setFPFeatures(FPOptions F) {
+    CXXOperatorCallExprBits.FPFeatures = F.getInt();
+  }
+  FPOptions getFPFeatures() const {
+    return FPOptions(CXXOperatorCallExprBits.FPFeatures);
+  }
 
   // Get the FP contractability status of this operator. Only meaningful for
   // operations on floating point types.
   bool isFPContractableWithinStatement() const {
-    return FPFeatures.allowFPContractWithinStatement();
+    return getFPFeatures().allowFPContractWithinStatement();
   }
 };
 
@@ -165,16 +168,23 @@ public:
 /// both the object argument and the member function, while the
 /// arguments are the arguments within the parentheses (not including
 /// the object argument).
-class CXXMemberCallExpr : public CallExpr {
-public:
-  CXXMemberCallExpr(ASTContext &C, Expr *fn, ArrayRef<Expr *> args, QualType t,
-                    ExprValueKind VK, SourceLocation RP,
-                    unsigned MinNumArgs = 0)
-      : CallExpr(C, CXXMemberCallExprClass, fn, args, t, VK, RP, MinNumArgs,
-                 NotADL) {}
+class CXXMemberCallExpr final : public CallExpr {
+  // CXXMemberCallExpr has some trailing objects belonging
+  // to CallExpr. See CallExpr for the details.
 
-  CXXMemberCallExpr(ASTContext &C, unsigned NumArgs, EmptyShell Empty)
-      : CallExpr(C, CXXMemberCallExprClass, /*NumPreArgs=*/0, NumArgs, Empty) {}
+  CXXMemberCallExpr(Expr *Fn, ArrayRef<Expr *> Args, QualType Ty,
+                    ExprValueKind VK, SourceLocation RP, unsigned MinNumArgs);
+
+  CXXMemberCallExpr(unsigned NumArgs, EmptyShell Empty);
+
+public:
+  static CXXMemberCallExpr *Create(const ASTContext &Ctx, Expr *Fn,
+                                   ArrayRef<Expr *> Args, QualType Ty,
+                                   ExprValueKind VK, SourceLocation RP,
+                                   unsigned MinNumArgs = 0);
+
+  static CXXMemberCallExpr *CreateEmpty(const ASTContext &Ctx, unsigned NumArgs,
+                                        EmptyShell Empty);
 
   /// Retrieves the implicit object argument for the member call.
   ///
@@ -206,20 +216,26 @@ public:
 };
 
 /// Represents a call to a CUDA kernel function.
-class CUDAKernelCallExpr : public CallExpr {
-private:
+class CUDAKernelCallExpr final : public CallExpr {
   enum { CONFIG, END_PREARG };
 
-public:
-  CUDAKernelCallExpr(ASTContext &C, Expr *fn, CallExpr *Config,
-                     ArrayRef<Expr *> args, QualType t, ExprValueKind VK,
-                     SourceLocation RP, unsigned MinNumArgs = 0)
-      : CallExpr(C, CUDAKernelCallExprClass, fn, Config, args, t, VK, RP,
-                 MinNumArgs, NotADL) {}
+  // CUDAKernelCallExpr has some trailing objects belonging
+  // to CallExpr. See CallExpr for the details.
 
-  CUDAKernelCallExpr(ASTContext &C, unsigned NumArgs, EmptyShell Empty)
-      : CallExpr(C, CUDAKernelCallExprClass, /*NumPreArgs=*/END_PREARG, NumArgs,
-                 Empty) {}
+  CUDAKernelCallExpr(Expr *Fn, CallExpr *Config, ArrayRef<Expr *> Args,
+                     QualType Ty, ExprValueKind VK, SourceLocation RP,
+                     unsigned MinNumArgs);
+
+  CUDAKernelCallExpr(unsigned NumArgs, EmptyShell Empty);
+
+public:
+  static CUDAKernelCallExpr *Create(const ASTContext &Ctx, Expr *Fn,
+                                    CallExpr *Config, ArrayRef<Expr *> Args,
+                                    QualType Ty, ExprValueKind VK,
+                                    SourceLocation RP, unsigned MinNumArgs = 0);
+
+  static CUDAKernelCallExpr *CreateEmpty(const ASTContext &Ctx,
+                                         unsigned NumArgs, EmptyShell Empty);
 
   const CallExpr *getConfig() const {
     return cast_or_null<CallExpr>(getPreArg(CONFIG));
@@ -482,25 +498,30 @@ public:
 ///
 /// Since literal operators are never found by ADL and can only be declared at
 /// namespace scope, a user-defined literal is never dependent.
-class UserDefinedLiteral : public CallExpr {
-  /// The location of a ud-suffix within the literal.
-  SourceLocation UDSuffixLoc;
-
-public:
+class UserDefinedLiteral final : public CallExpr {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
-  UserDefinedLiteral(const ASTContext &C, Expr *Fn, ArrayRef<Expr *> Args,
-                     QualType T, ExprValueKind VK, SourceLocation LitEndLoc,
-                     SourceLocation SuffixLoc)
-      : CallExpr(C, UserDefinedLiteralClass, Fn, Args, T, VK, LitEndLoc,
-                 /*MinNumArgs=*/0, NotADL),
-        UDSuffixLoc(SuffixLoc) {}
+  /// The location of a ud-suffix within the literal.
+  SourceLocation UDSuffixLoc;
 
-  explicit UserDefinedLiteral(const ASTContext &C, unsigned NumArgs,
-                              EmptyShell Empty)
-      : CallExpr(C, UserDefinedLiteralClass, /*NumPreArgs=*/0, NumArgs, Empty) {
-  }
+  // UserDefinedLiteral has some trailing objects belonging
+  // to CallExpr. See CallExpr for the details.
+
+  UserDefinedLiteral(Expr *Fn, ArrayRef<Expr *> Args, QualType Ty,
+                     ExprValueKind VK, SourceLocation LitEndLoc,
+                     SourceLocation SuffixLoc);
+
+  UserDefinedLiteral(unsigned NumArgs, EmptyShell Empty);
+
+public:
+  static UserDefinedLiteral *Create(const ASTContext &Ctx, Expr *Fn,
+                                    ArrayRef<Expr *> Args, QualType Ty,
+                                    ExprValueKind VK, SourceLocation LitEndLoc,
+                                    SourceLocation SuffixLoc);
+
+  static UserDefinedLiteral *CreateEmpty(const ASTContext &Ctx,
+                                         unsigned NumArgs, EmptyShell Empty);
 
   /// The kind of literal operator which is invoked.
   enum LiteralOperatorKind {

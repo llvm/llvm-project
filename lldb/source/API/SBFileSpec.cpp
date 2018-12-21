@@ -148,12 +148,10 @@ const lldb_private::FileSpec *SBFileSpec::get() const {
 }
 
 const lldb_private::FileSpec &SBFileSpec::operator*() const {
-  return *m_opaque_ap.get();
+  return *m_opaque_ap;
 }
 
-const lldb_private::FileSpec &SBFileSpec::ref() const {
-  return *m_opaque_ap.get();
-}
+const lldb_private::FileSpec &SBFileSpec::ref() const { return *m_opaque_ap; }
 
 void SBFileSpec::SetFileSpec(const lldb_private::FileSpec &fs) {
   *m_opaque_ap = fs;

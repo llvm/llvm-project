@@ -266,6 +266,7 @@ public:
   void EmitCVFPOData(const MCSymbol *ProcSym, SMLoc L) override;
 
   void EmitIdent(StringRef IdentString) override;
+  void EmitCFIBKeyFrame() override;
   void EmitCFISections(bool EH, bool Debug) override;
   void EmitCFIDefCfa(int64_t Register, int64_t Offset) override;
   void EmitCFIDefCfaOffset(int64_t Offset) override;
@@ -1599,6 +1600,12 @@ void MCAsmStreamer::EmitCFINegateRAState() {
 void MCAsmStreamer::EmitCFIReturnColumn(int64_t Register) {
   MCStreamer::EmitCFIReturnColumn(Register);
   OS << "\t.cfi_return_column " << Register;
+  EmitEOL();
+}
+
+void MCAsmStreamer::EmitCFIBKeyFrame() {
+  MCStreamer::EmitCFIBKeyFrame();
+  OS << "\t.cfi_b_key_frame";
   EmitEOL();
 }
 

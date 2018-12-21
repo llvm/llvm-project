@@ -176,6 +176,7 @@ private:
   bool parseDirectiveReq(StringRef Name, SMLoc L);
   bool parseDirectiveUnreq(SMLoc L);
   bool parseDirectiveCFINegateRAState();
+  bool parseDirectiveCFIBKeyFrame();
 
   bool validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                            SmallVectorImpl<SMLoc> &Loc);
@@ -5030,6 +5031,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveInst(Loc);
   else if (IDVal == ".cfi_negate_ra_state")
     parseDirectiveCFINegateRAState();
+  else if (IDVal == ".cfi_b_key_frame")
+    parseDirectiveCFIBKeyFrame();
   else if (IsMachO) {
     if (IDVal == MCLOHDirectiveName())
       parseDirectiveLOH(IDVal, Loc);
@@ -5410,6 +5413,16 @@ bool AArch64AsmParser::parseDirectiveCFINegateRAState() {
   return false;
 }
 
+/// parseDirectiveCFIBKeyFrame
+/// ::= .cfi_b_key
+bool AArch64AsmParser::parseDirectiveCFIBKeyFrame() {
+  if (parseToken(AsmToken::EndOfStatement,
+                 "unexpected token in '.cfi_b_key_frame'"))
+    return true;
+  getStreamer().EmitCFIBKeyFrame();
+  return false;
+}
+
 bool
 AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
                                     AArch64MCExpr::VariantKind &ELFRefKind,
@@ -5434,10 +5447,16 @@ AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
   // Check that it looks like a symbol + an addend
   MCValue Res;
   bool Relocatable = Expr->evaluateAsRelocatable(Res, nullptr, nullptr);
-  if (!Relocatable || !Res.getSymA() || Res.getSymB())
+  if (!Relocatable || Res.getSymB())
     return false;
 
-  DarwinRefKind = Res.getSymA()->getKind();
+  // Treat expressions with an ELFRefKind (like ":abs_g1:3", or
+  // ":abs_g1:x" where x is constant) as symbolic even if there is no symbol.
+  if (!Res.getSymA() && ELFRefKind == AArch64MCExpr::VK_INVALID)
+    return false;
+
+  if (Res.getSymA())
+    DarwinRefKind = Res.getSymA()->getKind();
   Addend = Res.getConstant();
 
   // It's some symbol reference + a constant addend, but really

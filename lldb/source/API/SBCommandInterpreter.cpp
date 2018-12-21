@@ -98,7 +98,7 @@ SBCommandInterpreterRunOptions::get() const {
 
 lldb_private::CommandInterpreterRunOptions &
 SBCommandInterpreterRunOptions::ref() const {
-  return *m_opaque_up.get();
+  return *m_opaque_up;
 }
 
 class CommandPluginInterfaceImplementation : public CommandObjectParsed {

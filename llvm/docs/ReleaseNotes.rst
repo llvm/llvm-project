@@ -43,6 +43,11 @@ Non-comprehensive list of changes in this release
 * The **llvm-cov** tool can now export lcov trace files using the
   `-format=lcov` option of the `export` command.
 
+* The add_llvm_loadable_module CMake macro has been removed.  The
+  add_llvm_library macro with the MODULE argument now provides the same
+  functionality.  See `Writing an LLVM Pass
+  <WritingAnLLVMPass.html#setting-up-the-build-environment>`_.
+
 .. NOTE
    If you would like to document a larger change, then you can add a
    subsection about it right here. You can copy the following boilerplate

@@ -9,7 +9,7 @@
 ; INL: IR Dump After {{InlinerPass .*scc: .tester}}
 
 ; INL-MOD: IR Dump Before {{InlinerPass .*scc: .tester, foo}}
-; INL-MOD-NOT: IR Dump After {{InlinerPass}}
+; INL-MOD: IR Dump After {{InlinerPass .*invalidated: .*scc: .tester, foo}}
 ; INL-MOD: IR Dump Before {{InlinerPass .*scc: .tester}}
 ; INL-MOD: IR Dump After {{InlinerPass .*scc: .tester}}
 

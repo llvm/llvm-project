@@ -55,7 +55,7 @@ copy the following into ``CMakeLists.txt``:
 
 .. code-block:: cmake
 
-  add_llvm_loadable_module( LLVMHello
+  add_llvm_library( LLVMHello MODULE
     Hello.cpp
   
     PLUGIN_TOOL

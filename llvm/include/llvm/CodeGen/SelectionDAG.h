@@ -1432,18 +1432,6 @@ public:
   KnownBits computeKnownBits(SDValue Op, const APInt &DemandedElts,
                              unsigned Depth = 0) const;
 
-  /// \copydoc SelectionDAG::computeKnownBits(SDValue,unsigned)
-  void computeKnownBits(SDValue Op, KnownBits &Known,
-                        unsigned Depth = 0) const {
-    Known = computeKnownBits(Op, Depth);
-  }
-
-  /// \copydoc SelectionDAG::computeKnownBits(SDValue,const APInt&,unsigned)
-  void computeKnownBits(SDValue Op, KnownBits &Known, const APInt &DemandedElts,
-                        unsigned Depth = 0) const {
-    Known = computeKnownBits(Op, DemandedElts, Depth);
-  }
-
   /// Used to represent the possible overflow behavior of an operation.
   /// Never: the operation cannot overflow.
   /// Always: the operation will always overflow.

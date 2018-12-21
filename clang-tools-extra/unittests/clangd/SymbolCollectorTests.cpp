@@ -131,7 +131,7 @@ TEST_F(ShouldCollectSymbolTest, ShouldCollectSymbol) {
     namespace nx {
     class X{};
     auto f() { int Local; } // auto ensures function body is parsed.
-    struct { int x } var;
+    struct { int x; } var;
     namespace { class InAnonymous {}; }
     }
   )",

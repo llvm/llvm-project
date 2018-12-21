@@ -57,6 +57,9 @@ def main():
                       default='')
   parser.add_argument('-path', dest='build_path',
                       help='Path used to read a compile command database.')
+  parser.add_argument('-export-fixes', metavar='FILE', dest='export_fixes',
+                      help='Create a yaml file to store suggested fixes in, '
+                      'which can be applied with clang-apply-replacements.')
   parser.add_argument('-extra-arg', dest='extra_arg',
                       action='append', default=[],
                       help='Additional argument to append to the compiler '
@@ -122,6 +125,8 @@ def main():
   command.append('-line-filter=' + quote + line_filter_json + quote)
   if args.fix:
     command.append('-fix')
+  if args.export_fixes:
+    command.append('-export-fixes=' + args.export_fixes)
   if args.checks != '':
     command.append('-checks=' + quote + args.checks + quote)
   if args.quiet:

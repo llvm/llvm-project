@@ -1,3 +1,3 @@
-add_llvm_loadable_module(LLVMSelectAcceleratorCode SelectAcceleratorCode.cpp)
+add_llvm_library(LLVMSelectAcceleratorCode SelectAcceleratorCode.cpp)
 
 add_dependencies(LLVMSelectAcceleratorCode intrinsics_gen)

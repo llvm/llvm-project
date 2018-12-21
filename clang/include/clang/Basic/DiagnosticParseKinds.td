@@ -1100,6 +1100,13 @@ def err_pragma_attribute_unknown_subject_sub_rule : Error<
   "sub-rules: %3}2">;
 def err_pragma_attribute_duplicate_subject : Error<
   "duplicate attribute subject matcher '%0'">;
+def err_pragma_attribute_expected_period : Error<
+  "expected '.' after pragma attribute namespace %0">;
+def err_pragma_attribute_namespace_on_attribute : Error<
+  "namespace can only apply to 'push' or 'pop' directives">;
+def note_pragma_attribute_namespace_on_attribute : Note<
+  "omit the namespace to add attributes to the most-recently"
+  " pushed attribute group">;
 
 def err_opencl_unroll_hint_on_non_loop : Error<
   "OpenCL only supports 'opencl_unroll_hint' attribute on for, while, and do statements">;

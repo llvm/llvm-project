@@ -508,54 +508,6 @@ define <4 x i32> @test_buildvector_v4i32_splat_zext_i8(i8 %in) {
   ret <4 x i32> %splat
 }
 
-define <4 x float> @movddup_load_fold(float %x, float %y) {
-; SSE2-32-LABEL: movddup_load_fold:
-; SSE2-32:       # %bb.0:
-; SSE2-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-32-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
-; SSE2-32-NEXT:    retl
-;
-; SSE2-64-LABEL: movddup_load_fold:
-; SSE2-64:       # %bb.0:
-; SSE2-64-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
-; SSE2-64-NEXT:    retq
-;
-; SSE41-32-LABEL: movddup_load_fold:
-; SSE41-32:       # %bb.0:
-; SSE41-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE41-32-NEXT:    movddup {{.*#+}} xmm0 = xmm0[0,0]
-; SSE41-32-NEXT:    retl
-;
-; SSE41-64-LABEL: movddup_load_fold:
-; SSE41-64:       # %bb.0:
-; SSE41-64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; SSE41-64-NEXT:    movddup {{.*#+}} xmm0 = xmm0[0,0]
-; SSE41-64-NEXT:    retq
-;
-; AVX-32-LABEL: movddup_load_fold:
-; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX-32-NEXT:    retl
-;
-; AVX1-64-LABEL: movddup_load_fold:
-; AVX1-64:       # %bb.0:
-; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; AVX1-64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX1-64-NEXT:    retq
-;
-; AVX2-64-LABEL: movddup_load_fold:
-; AVX2-64:       # %bb.0:
-; AVX2-64-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX2-64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX2-64-NEXT:    retq
-  %i0 = insertelement <4 x float> zeroinitializer, float %x, i32 0
-  %i1 = insertelement <4 x float> %i0, float %y, i32 1
-  %dup = shufflevector <4 x float> %i1, <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-  ret <4 x float> %dup
-}
-
 ; PR37502 - https://bugs.llvm.org/show_bug.cgi?id=37502
 ; Don't use a series of insertps when movddup will do.
 

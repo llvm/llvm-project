@@ -107,6 +107,7 @@ class HelloWorldTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @skipIfiOSSimulator
+    @skipIfSanitized # FIXME: Hangs indefinitely.
     def test_with_attach_to_process_with_name_api(self):
         """Create target, spawn a process, and attach to it with process name."""
         exe = '%s_%d'%(self.getBuildArtifact(self.testMethodName), os.getpid())

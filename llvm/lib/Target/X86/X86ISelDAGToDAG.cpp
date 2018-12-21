@@ -1377,8 +1377,7 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
   }
   APInt MaskedHighBits =
     APInt::getHighBitsSet(X.getSimpleValueType().getSizeInBits(), MaskLZ);
-  KnownBits Known;
-  DAG.computeKnownBits(X, Known);
+  KnownBits Known = DAG.computeKnownBits(X);
   if (MaskedHighBits != Known.Zero) return true;
 
   // We've identified a pattern that can be transformed into a single shift
@@ -2212,6 +2211,18 @@ bool X86DAGToDAGISel::isSExtAbsoluteSymbolRef(unsigned Width, SDNode *N) const {
          CR->getSignedMax().slt(1ull << Width);
 }
 
+static X86::CondCode getCondFromOpc(unsigned Opc) {
+  X86::CondCode CC = X86::COND_INVALID;
+  if (CC == X86::COND_INVALID)
+    CC = X86::getCondFromBranchOpc(Opc);
+  if (CC == X86::COND_INVALID)
+    CC = X86::getCondFromSETOpc(Opc);
+  if (CC == X86::COND_INVALID)
+    CC = X86::getCondFromCMovOpc(Opc);
+
+  return CC;
+}
+
 /// Test whether the given X86ISD::CMP node has any uses which require the SF
 /// flag to be accurate.
 static bool hasNoSignFlagUses(SDValue Flags) {
@@ -2232,48 +2243,20 @@ static bool hasNoSignFlagUses(SDValue Flags) {
       if (FlagUI.getUse().getResNo() != 1) continue;
       // Anything unusual: assume conservatively.
       if (!FlagUI->isMachineOpcode()) return false;
-      // Examine the opcode of the user.
-      switch (FlagUI->getMachineOpcode()) {
-      // These comparisons don't treat the most significant bit specially.
-      case X86::SETAr: case X86::SETAEr: case X86::SETBr: case X86::SETBEr:
-      case X86::SETEr: case X86::SETNEr: case X86::SETOr: case X86::SETNOr:
-      case X86::SETPr: case X86::SETNPr:
-      case X86::SETAm: case X86::SETAEm: case X86::SETBm: case X86::SETBEm:
-      case X86::SETEm: case X86::SETNEm: case X86::SETOm: case X86::SETNOm:
-      case X86::SETPm: case X86::SETNPm:
-      case X86::JA_1: case X86::JAE_1: case X86::JB_1: case X86::JBE_1:
-      case X86::JE_1: case X86::JNE_1: case X86::JO_1: case X86::JNO_1:
-      case X86::JP_1: case X86::JNP_1:
-      case X86::CMOVA16rr: case X86::CMOVA16rm:
-      case X86::CMOVA32rr: case X86::CMOVA32rm:
-      case X86::CMOVA64rr: case X86::CMOVA64rm:
-      case X86::CMOVAE16rr: case X86::CMOVAE16rm:
-      case X86::CMOVAE32rr: case X86::CMOVAE32rm:
-      case X86::CMOVAE64rr: case X86::CMOVAE64rm:
-      case X86::CMOVB16rr: case X86::CMOVB16rm:
-      case X86::CMOVB32rr: case X86::CMOVB32rm:
-      case X86::CMOVB64rr: case X86::CMOVB64rm:
-      case X86::CMOVBE16rr: case X86::CMOVBE16rm:
-      case X86::CMOVBE32rr: case X86::CMOVBE32rm:
-      case X86::CMOVBE64rr: case X86::CMOVBE64rm:
-      case X86::CMOVE16rr: case X86::CMOVE16rm:
-      case X86::CMOVE32rr: case X86::CMOVE32rm:
-      case X86::CMOVE64rr: case X86::CMOVE64rm:
-      case X86::CMOVNE16rr: case X86::CMOVNE16rm:
-      case X86::CMOVNE32rr: case X86::CMOVNE32rm:
-      case X86::CMOVNE64rr: case X86::CMOVNE64rm:
-      case X86::CMOVNP16rr: case X86::CMOVNP16rm:
-      case X86::CMOVNP32rr: case X86::CMOVNP32rm:
-      case X86::CMOVNP64rr: case X86::CMOVNP64rm:
-      case X86::CMOVO16rr: case X86::CMOVO16rm:
-      case X86::CMOVO32rr: case X86::CMOVO32rm:
-      case X86::CMOVO64rr: case X86::CMOVO64rm:
-      case X86::CMOVP16rr: case X86::CMOVP16rm:
-      case X86::CMOVP32rr: case X86::CMOVP32rm:
-      case X86::CMOVP64rr: case X86::CMOVP64rm:
+      // Examine the condition code of the user.
+      X86::CondCode CC = getCondFromOpc(FlagUI->getMachineOpcode());
+
+      switch (CC) {
+      // Comparisons which don't examine the SF flag.
+      case X86::COND_A: case X86::COND_AE:
+      case X86::COND_B: case X86::COND_BE:
+      case X86::COND_E: case X86::COND_NE:
+      case X86::COND_O: case X86::COND_NO:
+      case X86::COND_P: case X86::COND_NP:
         continue;
       // Anything else: assume conservatively.
-      default: return false;
+      default:
+        return false;
       }
     }
   }
@@ -2302,39 +2285,17 @@ static bool hasNoCarryFlagUses(SDValue Flags) {
       // Anything unusual: assume conservatively.
       if (!FlagUI->isMachineOpcode())
         return false;
-      // Examine the opcode of the user.
-      switch (FlagUI->getMachineOpcode()) {
+      // Examine the condition code of the user.
+      X86::CondCode CC = getCondFromOpc(FlagUI->getMachineOpcode());
+
+      switch (CC) {
       // Comparisons which don't examine the CF flag.
-      case X86::SETOr: case X86::SETNOr: case X86::SETEr: case X86::SETNEr:
-      case X86::SETSr: case X86::SETNSr: case X86::SETPr: case X86::SETNPr:
-      case X86::SETLr: case X86::SETGEr: case X86::SETLEr: case X86::SETGr:
-      case X86::JO_1: case X86::JNO_1: case X86::JE_1: case X86::JNE_1:
-      case X86::JS_1: case X86::JNS_1: case X86::JP_1: case X86::JNP_1:
-      case X86::JL_1: case X86::JGE_1: case X86::JLE_1: case X86::JG_1:
-      case X86::CMOVO16rr: case X86::CMOVO32rr: case X86::CMOVO64rr:
-      case X86::CMOVO16rm: case X86::CMOVO32rm: case X86::CMOVO64rm:
-      case X86::CMOVNO16rr: case X86::CMOVNO32rr: case X86::CMOVNO64rr:
-      case X86::CMOVNO16rm: case X86::CMOVNO32rm: case X86::CMOVNO64rm:
-      case X86::CMOVE16rr: case X86::CMOVE32rr: case X86::CMOVE64rr:
-      case X86::CMOVE16rm: case X86::CMOVE32rm: case X86::CMOVE64rm:
-      case X86::CMOVNE16rr: case X86::CMOVNE32rr: case X86::CMOVNE64rr:
-      case X86::CMOVNE16rm: case X86::CMOVNE32rm: case X86::CMOVNE64rm:
-      case X86::CMOVS16rr: case X86::CMOVS32rr: case X86::CMOVS64rr:
-      case X86::CMOVS16rm: case X86::CMOVS32rm: case X86::CMOVS64rm:
-      case X86::CMOVNS16rr: case X86::CMOVNS32rr: case X86::CMOVNS64rr:
-      case X86::CMOVNS16rm: case X86::CMOVNS32rm: case X86::CMOVNS64rm:
-      case X86::CMOVP16rr: case X86::CMOVP32rr: case X86::CMOVP64rr:
-      case X86::CMOVP16rm: case X86::CMOVP32rm: case X86::CMOVP64rm:
-      case X86::CMOVNP16rr: case X86::CMOVNP32rr: case X86::CMOVNP64rr:
-      case X86::CMOVNP16rm: case X86::CMOVNP32rm: case X86::CMOVNP64rm:
-      case X86::CMOVL16rr: case X86::CMOVL32rr: case X86::CMOVL64rr:
-      case X86::CMOVL16rm: case X86::CMOVL32rm: case X86::CMOVL64rm:
-      case X86::CMOVGE16rr: case X86::CMOVGE32rr: case X86::CMOVGE64rr:
-      case X86::CMOVGE16rm: case X86::CMOVGE32rm: case X86::CMOVGE64rm:
-      case X86::CMOVLE16rr: case X86::CMOVLE32rr: case X86::CMOVLE64rr:
-      case X86::CMOVLE16rm: case X86::CMOVLE32rm: case X86::CMOVLE64rm:
-      case X86::CMOVG16rr: case X86::CMOVG32rr: case X86::CMOVG64rr:
-      case X86::CMOVG16rm: case X86::CMOVG32rm: case X86::CMOVG64rm:
+      case X86::COND_O: case X86::COND_NO:
+      case X86::COND_E: case X86::COND_NE:
+      case X86::COND_S: case X86::COND_NS:
+      case X86::COND_P: case X86::COND_NP:
+      case X86::COND_L: case X86::COND_GE:
+      case X86::COND_G: case X86::COND_LE:
         continue;
       // Anything else: assume conservatively.
       default:

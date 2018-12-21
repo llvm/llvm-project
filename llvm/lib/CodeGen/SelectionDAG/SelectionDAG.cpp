@@ -3187,11 +3187,9 @@ SelectionDAG::OverflowKind SelectionDAG::computeOverflowKind(SDValue N0,
   if (isNullConstant(N1))
     return OFK_Never;
 
-  KnownBits N1Known;
-  computeKnownBits(N1, N1Known);
+  KnownBits N1Known = computeKnownBits(N1);
   if (N1Known.Zero.getBoolValue()) {
-    KnownBits N0Known;
-    computeKnownBits(N0, N0Known);
+    KnownBits N0Known = computeKnownBits(N0);
 
     bool overflow;
     (void)(~N0Known.Zero).uadd_ov(~N1Known.Zero, overflow);
@@ -3205,8 +3203,7 @@ SelectionDAG::OverflowKind SelectionDAG::computeOverflowKind(SDValue N0,
     return OFK_Never;
 
   if (N1.getOpcode() == ISD::UMUL_LOHI && N1.getResNo() == 1) {
-    KnownBits N0Known;
-    computeKnownBits(N0, N0Known);
+    KnownBits N0Known = computeKnownBits(N0);
 
     if ((~N0Known.Zero & 0x01) == ~N0Known.Zero)
       return OFK_Never;

@@ -3090,6 +3090,15 @@ public:
     return true;
   }
 
+  /// Return true if it is profitable to fold a pair of shifts into a mask.
+  /// This is usually true on most targets. But some targets, like Thumb1,
+  /// have immediate shift instructions, but no immediate "and" instruction;
+  /// this makes the fold unprofitable.
+  virtual bool shouldFoldShiftPairToMask(const SDNode *N,
+                                         CombineLevel Level) const {
+    return true;
+  }
+
   // Return true if it is profitable to combine a BUILD_VECTOR with a stride-pattern
   // to a shuffle and a truncate.
   // Example of such a combine:

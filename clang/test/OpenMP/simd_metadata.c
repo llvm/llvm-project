@@ -49,8 +49,8 @@ void h1(float *c, float *a, double b[], int size)
     c[i] = a[i] * a[i] + b[i] * b[t];
     ++t;
   }
-// do not emit parallel_loop_access metadata due to usage of safelen clause.
-// CHECK-NOT: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.mem.parallel_loop_access {{![0-9]+}}
+// do not emit llvm.access.group metadata due to usage of safelen clause.
+// CHECK-NOT: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.access.group {{![0-9]+}}
 #pragma omp simd safelen(16) linear(t) aligned(c:32) aligned(a,b) simdlen(8)
 // CHECK:         [[C_PTRINT:%.+]] = ptrtoint
 // CHECK-NEXT:    [[C_MASKEDPTR:%.+]] = and i{{[0-9]+}} [[C_PTRINT]], 31
@@ -80,8 +80,8 @@ void h1(float *c, float *a, double b[], int size)
     c[i] = a[i] * a[i] + b[i] * b[t];
     ++t;
   }
-// do not emit parallel_loop_access metadata due to usage of safelen clause.
-// CHECK-NOT: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.mem.parallel_loop_access {{![0-9]+}}
+// do not emit llvm.access.group metadata due to usage of safelen clause.
+// CHECK-NOT: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.access.group {{![0-9]+}}
 #pragma omp simd linear(t) aligned(c:32) aligned(a,b) simdlen(8)
 // CHECK:         [[C_PTRINT:%.+]] = ptrtoint
 // CHECK-NEXT:    [[C_MASKEDPTR:%.+]] = and i{{[0-9]+}} [[C_PTRINT]], 31
@@ -110,7 +110,7 @@ void h1(float *c, float *a, double b[], int size)
   for (int i = 0; i < size; ++i) {
     c[i] = a[i] * a[i] + b[i] * b[t];
     ++t;
-// CHECK: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.mem.parallel_loop_access {{![0-9]+}}
+// CHECK: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.access.group ![[ACCESS_GROUP_7:[0-9]+]]
   }
 }
 
@@ -122,8 +122,9 @@ void h2(float *c, float *a, float *b, int size)
   for (int i = 0; i < size; ++i) {
     c[i] = a[i] * a[i] + b[i] * b[t];
     ++t;
-// CHECK: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.mem.parallel_loop_access [[LOOP_H2_HEADER:![0-9]+]]
+// CHECK: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.access.group ![[ACCESS_GROUP_10:[0-9]+]]
   }
+// CHECK: br label %{{.+}}, !llvm.loop [[LOOP_H2_HEADER:![0-9]+]]
 }
 
 void h3(float *c, float *a, float *b, int size)
@@ -134,9 +135,9 @@ void h3(float *c, float *a, float *b, int size)
     for (int j = 0; j < size; ++j) {
       c[j*i] = a[i] * b[j];
     }
+// CHECK: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.access.group ![[ACCESS_GROUP_13:[0-9]+]]
   }
-// do not emit parallel_loop_access for nested loop.
-// CHECK-NOT: store float {{.+}}, float* {{.+}}, align {{.+}}, !llvm.mem.parallel_loop_access {{![0-9]+}}
+// CHECK: br label %{{.+}}, !llvm.loop [[LOOP_H3_HEADER:![0-9]+]]
 }
 
 // Metadata for h1:
@@ -145,11 +146,17 @@ void h3(float *c, float *a, float *b, int size)
 // CHECK: [[LOOP_VEC_ENABLE]] = !{!"llvm.loop.vectorize.enable", i1 true}
 // CHECK: [[LOOP_H1_HEADER:![0-9]+]] = distinct !{[[LOOP_H1_HEADER]], [[LOOP_WIDTH_8:![0-9]+]], [[LOOP_VEC_ENABLE]]}
 // CHECK: [[LOOP_WIDTH_8]] = !{!"llvm.loop.vectorize.width", i32 8}
-// CHECK: [[LOOP_H1_HEADER:![0-9]+]] = distinct !{[[LOOP_H1_HEADER]], [[LOOP_WIDTH_8]], [[LOOP_VEC_ENABLE]]}
+// CHECK: ![[ACCESS_GROUP_7]] = distinct !{}
+// CHECK: [[LOOP_H1_HEADER:![0-9]+]] = distinct !{[[LOOP_H1_HEADER]], [[LOOP_WIDTH_8]], [[LOOP_VEC_ENABLE]], ![[PARALLEL_ACCESSES_9:[0-9]+]]}
+// CHECK: ![[PARALLEL_ACCESSES_9]] = !{!"llvm.loop.parallel_accesses", ![[ACCESS_GROUP_7]]}
 //
 // Metadata for h2:
-// CHECK: [[LOOP_H2_HEADER]] = distinct !{[[LOOP_H2_HEADER]], [[LOOP_VEC_ENABLE]]}
+// CHECK: ![[ACCESS_GROUP_10]] = distinct !{}
+// CHECK: [[LOOP_H2_HEADER]] = distinct !{[[LOOP_H2_HEADER]], [[LOOP_VEC_ENABLE]], ![[PARALLEL_ACCESSES_12:[0-9]+]]}
+// CHECK: ![[PARALLEL_ACCESSES_12]] = !{!"llvm.loop.parallel_accesses", ![[ACCESS_GROUP_10]]}
 //
 // Metadata for h3:
-// CHECK: [[LOOP_H3_HEADER:![0-9]+]] = distinct !{[[LOOP_H3_HEADER]], [[LOOP_VEC_ENABLE]]}
+// CHECK: ![[ACCESS_GROUP_13]] = distinct !{}
+// CHECK: [[LOOP_H3_HEADER]] = distinct !{[[LOOP_H3_HEADER]], [[LOOP_VEC_ENABLE]], ![[PARALLEL_ACCESSES_15:[0-9]+]]}
+// CHECK: ![[PARALLEL_ACCESSES_15]] = !{!"llvm.loop.parallel_accesses", ![[ACCESS_GROUP_13]]}
 //

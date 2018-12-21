@@ -611,6 +611,50 @@ TEST(IntervalMapTest, RandomCoalescing) {
 
 }
 
+TEST(IntervalMapTest, Overlaps) {
+  UUMap::Allocator allocator;
+  UUMap map(allocator);
+  map.insert(10, 20, 0);
+  map.insert(30, 40, 0);
+  map.insert(50, 60, 0);
+
+  EXPECT_FALSE(map.overlaps(0, 9));
+  EXPECT_TRUE(map.overlaps(0, 10));
+  EXPECT_TRUE(map.overlaps(0, 15));
+  EXPECT_TRUE(map.overlaps(0, 25));
+  EXPECT_TRUE(map.overlaps(0, 45));
+  EXPECT_TRUE(map.overlaps(10, 45));
+  EXPECT_TRUE(map.overlaps(30, 45));
+  EXPECT_TRUE(map.overlaps(35, 36));
+  EXPECT_TRUE(map.overlaps(40, 45));
+  EXPECT_FALSE(map.overlaps(45, 45));
+  EXPECT_TRUE(map.overlaps(60, 60));
+  EXPECT_TRUE(map.overlaps(60, 66));
+  EXPECT_FALSE(map.overlaps(66, 66));
+}
+
+TEST(IntervalMapTest, OverlapsHalfOpen) {
+  UUHalfOpenMap::Allocator allocator;
+  UUHalfOpenMap map(allocator);
+  map.insert(10, 20, 0);
+  map.insert(30, 40, 0);
+  map.insert(50, 60, 0);
+
+  EXPECT_FALSE(map.overlaps(0, 9));
+  EXPECT_FALSE(map.overlaps(0, 10));
+  EXPECT_TRUE(map.overlaps(0, 15));
+  EXPECT_TRUE(map.overlaps(0, 25));
+  EXPECT_TRUE(map.overlaps(0, 45));
+  EXPECT_TRUE(map.overlaps(10, 45));
+  EXPECT_TRUE(map.overlaps(30, 45));
+  EXPECT_TRUE(map.overlaps(35, 36));
+  EXPECT_FALSE(map.overlaps(40, 45));
+  EXPECT_FALSE(map.overlaps(45, 46));
+  EXPECT_FALSE(map.overlaps(60, 61));
+  EXPECT_FALSE(map.overlaps(60, 66));
+  EXPECT_FALSE(map.overlaps(66, 67));
+}
+
 TEST(IntervalMapOverlapsTest, SmallMaps) {
   typedef IntervalMapOverlaps<UUMap,UUMap> UUOverlaps;
   UUMap::Allocator allocator;
