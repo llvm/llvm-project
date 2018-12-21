@@ -17,7 +17,6 @@ void __attribute__((thiscall)) f_thiscall(int, int);
 int as_cdecl() { return func_as_ptr(f_cdecl); }
 int as_stdcall() { return func_as_ptr(f_stdcall); }
 int as_fastcall() { return func_as_ptr(f_fastcall); }
-int as_thiscall() { return func_as_ptr(f_thiscall); }
 
 // CHECK: define dso_local i32 @_Z8as_cdeclv()
 // CHECK:   call i32 @_ZL11func_as_ptrIPFviiEEiT_(void (i32, i32)* @_Z7f_cdeclii)
@@ -28,16 +27,26 @@ int as_thiscall() { return func_as_ptr(f_thiscall); }
 // CHECK: define dso_local i32 @_Z11as_fastcallv()
 // CHECK:   call i32 @_ZL11func_as_ptrIPU8fastcallFviiEEiT_(void (i32, i32)* @"\01@_Z10f_fastcallii@8")
 
-// CHECK: define dso_local i32 @_Z11as_thiscallv()
-// CHECK:   call i32 @_ZL11func_as_ptrIPU8thiscallFviiEEiT_(void (i32, i32)* @_Z10f_thiscallii)
+// PR40107: We should mangle thiscall here but we don't because we can't
+// disambiguate it from the member pointer case below where it shouldn't be
+// mangled.
+//int as_thiscall() { return func_as_ptr(f_thiscall); }
+// CHECKX: define dso_local i32 @_Z11as_thiscallv()
+// CHECKX:   call i32 @_ZL11func_as_ptrIPU8thiscallFviiEEiT_(void (i32, i32)* @_Z10f_thiscallii)
 
 // CHECK: define dso_local void @_Z11funcRefTypeRU8fastcallFviiE(void (i32, i32)* %fr)
 void funcRefType(void(__attribute__((fastcall)) & fr)(int, int)) {
   fr(1, 2);
 }
 
-// CHECK: define dso_local void @_Z12memptrCCTypeR3FooMS_U8fastcallFviiE(%struct.Foo* {{.*}}, { i32, i32 }* byval{{.*}})
 struct Foo { void bar(int, int); };
+
+// PR40107: In this case, the member function pointer uses the thiscall
+// convention, but GCC doesn't mangle it, so we don't either.
+// CHECK: define dso_local void @_Z15memptr_thiscallP3FooMS_FvvE(%struct.Foo* {{.*}})
+void memptr_thiscall(Foo *o, void (Foo::*mp)()) { (o->*mp)(); }
+
+// CHECK: define dso_local void @_Z12memptrCCTypeR3FooMS_U8fastcallFviiE(%struct.Foo* {{.*}}, { i32, i32 }* byval{{.*}})
 void memptrCCType(Foo &o, void (__attribute__((fastcall)) Foo::*mp)(int, int)) {
   (o.*mp)(1, 2);
 }

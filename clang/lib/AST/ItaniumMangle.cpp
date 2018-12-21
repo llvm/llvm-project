@@ -2662,12 +2662,18 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
     // FIXME: we should be mangling all of the above.
     return "";
 
+  case CC_X86ThisCall:
+    // FIXME: To match mingw GCC, thiscall should only be mangled in when it is
+    // used explicitly. At this point, we don't have that much information in
+    // the AST, since clang tends to bake the convention into the canonical
+    // function type. thiscall only rarely used explicitly, so don't mangle it
+    // for now.
+    return "";
+
   case CC_X86StdCall:
     return "stdcall";
   case CC_X86FastCall:
     return "fastcall";
-  case CC_X86ThisCall:
-    return "thiscall";
   case CC_X86_64SysV:
     return "sysv_abi";
   case CC_Win64:
