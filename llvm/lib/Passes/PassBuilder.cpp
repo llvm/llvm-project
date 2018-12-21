@@ -1026,6 +1026,10 @@ PassBuilder::buildTapirLoweringPipeline(OptimizationLevel Level,
       createModuleToFunctionPassAdaptor(
           buildFunctionSimplificationPipeline(Level, Phase, DebugLogging)));
 
+  // Add passes to run just after Tapir loops are processed.
+  for (auto &C : TapirLoopEndEPCallbacks)
+    C(MPM, Level);
+
   // Lower Tapir to target runtime calls.
   MPM.addPass(TapirToTargetPass());
 
