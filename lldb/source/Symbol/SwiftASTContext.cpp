@@ -1957,7 +1957,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                   swift_ast_sp->GetDiagnosticEngine());
   }
 
-  // Apply source path remappings ofund in the target settings.
+  // Apply source path remappings found in the target settings.
   swift_ast_sp->RemapClangImporterOptions(target.GetSourcePathMap());
 
   // This needs to happen once all the import paths are set, or
