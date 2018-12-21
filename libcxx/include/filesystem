@@ -1151,6 +1151,31 @@ public:
     return __is;
   }
 
+  friend _LIBCPP_INLINE_VISIBILITY bool operator==(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.compare(__rhs) == 0;
+  }
+  friend _LIBCPP_INLINE_VISIBILITY bool operator!=(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.compare(__rhs) != 0;
+  }
+  friend _LIBCPP_INLINE_VISIBILITY bool operator<(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.compare(__rhs) < 0;
+  }
+  friend _LIBCPP_INLINE_VISIBILITY bool operator<=(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.compare(__rhs) <= 0;
+  }
+  friend _LIBCPP_INLINE_VISIBILITY bool operator>(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.compare(__rhs) > 0;
+  }
+  friend _LIBCPP_INLINE_VISIBILITY bool operator>=(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.compare(__rhs) >= 0;
+  }
+
+  friend _LIBCPP_INLINE_VISIBILITY path operator/(const path& __lhs,
+                                                  const path& __rhs) {
+    path __result(__lhs);
+    __result /= __rhs;
+    return __result;
+  }
 private:
   inline _LIBCPP_INLINE_VISIBILITY path&
   __assign_view(__string_view const& __s) noexcept {
@@ -1166,43 +1191,6 @@ inline _LIBCPP_INLINE_VISIBILITY void swap(path& __lhs, path& __rhs) noexcept {
 
 _LIBCPP_FUNC_VIS
 size_t hash_value(const path& __p) noexcept;
-
-inline _LIBCPP_INLINE_VISIBILITY bool operator==(const path& __lhs,
-                                                 const path& __rhs) noexcept {
-  return __lhs.compare(__rhs) == 0;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY bool operator!=(const path& __lhs,
-                                                 const path& __rhs) noexcept {
-  return __lhs.compare(__rhs) != 0;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY bool operator<(const path& __lhs,
-                                                const path& __rhs) noexcept {
-  return __lhs.compare(__rhs) < 0;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY bool operator<=(const path& __lhs,
-                                                 const path& __rhs) noexcept {
-  return __lhs.compare(__rhs) <= 0;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY bool operator>(const path& __lhs,
-                                                const path& __rhs) noexcept {
-  return __lhs.compare(__rhs) > 0;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY bool operator>=(const path& __lhs,
-                                                 const path& __rhs) noexcept {
-  return __lhs.compare(__rhs) >= 0;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY path operator/(const path& __lhs,
-                                                const path& __rhs) {
-  path __result(__lhs);
-  __result /= __rhs;
-  return __result;
-}
 
 template <class _Source>
 _LIBCPP_INLINE_VISIBILITY

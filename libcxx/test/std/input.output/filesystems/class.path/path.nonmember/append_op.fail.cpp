@@ -11,24 +11,17 @@
 
 // <filesystem>
 
-// path operator/(path const&, path const&);
-
 #include "filesystem_include.hpp"
-#include <type_traits>
-#include <cassert>
 
-#include "test_macros.h"
-#include "filesystem_test_helper.hpp"
+using namespace fs;
 
-// This is mainly tested via the member append functions.
-int main()
-{
-  using namespace fs;
-  path p1("abc");
-  path p2("def");
-  path p3 = p1 / p2;
-  assert(p3 == "abc/def");
+struct ConvToPath {
+  operator fs::path() const {
+    return "";
+  }
+};
 
-  path p4 = p1 / "def";
-  assert(p4 == "abc/def");
+int main() {
+  ConvToPath LHS, RHS;
+  (void)(LHS / RHS); // expected-error {{invalid operands to binary expression}}
 }
