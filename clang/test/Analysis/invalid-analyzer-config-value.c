@@ -70,6 +70,10 @@
 // even if -analyze isn't specified.
 // RUN: %clang -fsyntax-only -Xclang -analyzer-config\
 // RUN:                      -Xclang remember=TheVasa %s
+// RUN: %clang -fsyntax-only -Xanalyzer -analyzer-config\
+// RUN:                      -Xanalyzer remember=TheVasa %s
+// RUN: %clang --analyze -Xanalyzer -analyzer-config\
+// RUN:                  -Xanalyzer remember=TheVasa %s
 
 // expected-no-diagnostics
 
