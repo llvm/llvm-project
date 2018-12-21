@@ -6,12 +6,12 @@ If your build failed with a linker error something like this::
   foo.cc:28: error: undefined reference to 'vtable for C'
   the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeymethod)
 
-it's likely that your class C has a key method (defined by the ABI as the first
+it's likely that your class C has a key function (defined by the ABI as the first
 non-pure, non-inline, virtual method), but you haven't actually defined it.
 
-When a class has a key method, the compiler emits the vtable (and some other
-things as well) only in the translation unit that defines that key method. Thus,
-if you're missing the key method, you'll also be missing the vtable. If no other
+When a class has a key function, the compiler emits the vtable (and some other
+things as well) only in the translation unit that defines that key function. Thus,
+if you're missing the key function, you'll also be missing the vtable. If no other
 function calls your missing method, you won't see any undefined reference errors
 for it, but you will see undefined references to the vtable symbol.
 
@@ -20,7 +20,7 @@ method, and the compiler is forced to emit the vtable in every translation unit
 that references the class. In this case, it is emitted in a COMDAT section,
 which allows the linker to eliminate all duplicate copies. This is still
 wasteful in terms of object file size and link time, so it's always advisable to
-ensure there is at least one eligible method that can serve as the key method.
+ensure there is at least one eligible method that can serve as the key function.
 
 Here are the most common mistakes that lead to this error:
 
@@ -42,8 +42,8 @@ not emit the vtable for ``B``, and you'll get an undefined reference to "vtable
 for B".
 
 This is just an example of the more general mistake of forgetting to define the
-key method, but it's quite common because virtual destructors are likely to be
-the first eligible key method and it's easy to forget to implement them. It's
+key function, but it's quite common because virtual destructors are likely to be
+the first eligible key function and it's easy to forget to implement them. It's
 also more likely that you won't have any direct references to the destructor, so
 you won't see any undefined reference errors that point directly to the problem.
 
@@ -65,7 +65,7 @@ Say you have an abstract base class declared in a header file::
   };
 
 This base class is intended to be abstract, but you forgot to mark one of the
-methods pure. Here, ``A::bar``, being non-pure, is nominated as the key method,
+methods pure. Here, ``A::bar``, being non-pure, is nominated as the key function,
 and as a result, the vtable for ``A`` is not emitted, because the compiler is
 waiting for a translation unit that defines ``A::bar``.
 
@@ -75,10 +75,10 @@ The solution in this case is to add the missing ``= 0`` to the declaration of
 Key method is defined, but the linker doesn't see it
 ----------------------------------------------------
 
-It's also possible that you have defined the key method somewhere, but the
+It's also possible that you have defined the key function somewhere, but the
 object file containing the definition of that method isn't being linked into
 your application.
 
 The solution in this case is to check your dependencies to make sure that
-the object file or the library file containing the key method is given to
+the object file or the library file containing the key function is given to
 the linker.
