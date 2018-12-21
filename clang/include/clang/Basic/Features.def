@@ -90,7 +90,7 @@ FEATURE(dataflow_sanitizer, LangOpts.Sanitize.has(SanitizerKind::DataFlow))
 FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
 FEATURE(cilk_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Cilk))
 FEATURE(comprehensive_static_instrumentation,
-        LangOpts.ComprehensiveStaticInstrumentation)
+        LangOpts.getComprehensiveStaticInstrumentation())
 // Objective-C features
 FEATURE(objc_arr, LangOpts.ObjCAutoRefCount) // FIXME: REMOVE?
 FEATURE(objc_arc, LangOpts.ObjCAutoRefCount)

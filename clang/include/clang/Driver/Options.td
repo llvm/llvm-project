@@ -1090,6 +1090,11 @@ def fsanitize_undefined_strip_path_components_EQ : Joined<["-"], "fsanitize-unde
 def fcsi : Flag<["-"], "fcsi">, Group<f_clang_Group>,
            MetaVarName<"<check>">,
            HelpText<"Turn on Comprehensive Static Instrumentation.">;
+def fcsi_EQ : Joined<["-"], "fcsi=">, Group<f_clang_Group>,
+              MetaVarName<"<check>">,
+              HelpText<"Turn on Comprehensive Static Instrumentation at the "
+                       "specified point in the optimizer: first, early, "
+                       "tapirlate, aftertapirloops, last">;
 
 } // end -f[no-]sanitize* flags
 
