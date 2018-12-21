@@ -1377,8 +1377,7 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
   }
   APInt MaskedHighBits =
     APInt::getHighBitsSet(X.getSimpleValueType().getSizeInBits(), MaskLZ);
-  KnownBits Known;
-  DAG.computeKnownBits(X, Known);
+  KnownBits Known = DAG.computeKnownBits(X);
   if (MaskedHighBits != Known.Zero) return true;
 
   // We've identified a pattern that can be transformed into a single shift

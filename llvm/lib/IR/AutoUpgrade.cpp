@@ -77,10 +77,18 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name == "addcarry.u64" || // Added in 8.0
       Name == "subborrow.u32" || // Added in 8.0
       Name == "subborrow.u64" || // Added in 8.0
+      Name.startswith("sse2.padds.") || // Added in 8.0
+      Name.startswith("sse2.psubs.") || // Added in 8.0
       Name.startswith("sse2.paddus.") || // Added in 8.0
       Name.startswith("sse2.psubus.") || // Added in 8.0
+      Name.startswith("avx2.padds.") || // Added in 8.0
+      Name.startswith("avx2.psubs.") || // Added in 8.0
       Name.startswith("avx2.paddus.") || // Added in 8.0
       Name.startswith("avx2.psubus.") || // Added in 8.0
+      Name.startswith("avx512.padds.") || // Added in 8.0
+      Name.startswith("avx512.psubs.") || // Added in 8.0
+      Name.startswith("avx512.mask.padds.") || // Added in 8.0
+      Name.startswith("avx512.mask.psubs.") || // Added in 8.0
       Name.startswith("avx512.mask.paddus.") || // Added in 8.0
       Name.startswith("avx512.mask.psubus.") || // Added in 8.0
       Name=="ssse3.pabs.b.128" || // Added in 6.0
@@ -284,8 +292,6 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.max.p") || // Added in 7.0. 128/256 in 5.0
       Name.startswith("avx512.mask.min.p") || // Added in 7.0. 128/256 in 5.0
       Name.startswith("avx512.mask.fpclass.p") || // Added in 7.0
-      Name.startswith("avx512.mask.padds.") || // Added in 8.0
-      Name.startswith("avx512.mask.psubs.") || // Added in 8.0
       Name == "sse.cvtsi2ss" || // Added in 7.0
       Name == "sse.cvtsi642ss" || // Added in 7.0
       Name == "sse2.cvtsi2sd" || // Added in 7.0
@@ -928,12 +934,14 @@ static Value *UpgradeX86ALIGNIntrinsics(IRBuilder<> &Builder, Value *Op0,
 }
 
 static Value *UpgradeX86AddSubSatIntrinsics(IRBuilder<> &Builder, CallInst &CI,
-                                            bool IsAddition) {
+                                            bool IsSigned, bool IsAddition) {
   Type *Ty = CI.getType();
   Value *Op0 = CI.getOperand(0);
   Value *Op1 = CI.getOperand(1);
 
-  Intrinsic::ID IID = IsAddition ? Intrinsic::uadd_sat : Intrinsic::usub_sat;
+  Intrinsic::ID IID =
+      IsSigned ? (IsAddition ? Intrinsic::sadd_sat : Intrinsic::ssub_sat)
+               : (IsAddition ? Intrinsic::uadd_sat : Intrinsic::usub_sat);
   Function *Intrin = Intrinsic::getDeclaration(CI.getModule(), IID, Ty);
   Value *Res = Builder.CreateCall(Intrin, {Op0, Op1});
 
@@ -1378,36 +1386,6 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
       IID = Intrinsic::x86_avx512_vpshrd_d_512;
     else if (VecWidth == 512 && Name[7] == 'w')
       IID = Intrinsic::x86_avx512_vpshrd_w_512;
-    else
-      llvm_unreachable("Unexpected intrinsic");
-  } else if (Name.startswith("padds.")) {
-    if (VecWidth == 128 && EltWidth == 8)
-      IID = Intrinsic::x86_sse2_padds_b;
-    else if (VecWidth == 256 && EltWidth == 8)
-      IID = Intrinsic::x86_avx2_padds_b;
-    else if (VecWidth == 512 && EltWidth == 8)
-      IID = Intrinsic::x86_avx512_padds_b_512;
-    else if (VecWidth == 128 && EltWidth == 16)
-      IID = Intrinsic::x86_sse2_padds_w;
-    else if (VecWidth == 256 && EltWidth == 16)
-      IID = Intrinsic::x86_avx2_padds_w;
-    else if (VecWidth == 512 && EltWidth == 16)
-      IID = Intrinsic::x86_avx512_padds_w_512;
-    else
-      llvm_unreachable("Unexpected intrinsic");
-  } else if (Name.startswith("psubs.")) {
-    if (VecWidth == 128 && EltWidth == 8)
-      IID = Intrinsic::x86_sse2_psubs_b;
-    else if (VecWidth == 256 && EltWidth == 8)
-      IID = Intrinsic::x86_avx2_psubs_b;
-    else if (VecWidth == 512 && EltWidth == 8)
-      IID = Intrinsic::x86_avx512_psubs_b_512;
-    else if (VecWidth == 128 && EltWidth == 16)
-      IID = Intrinsic::x86_sse2_psubs_w;
-    else if (VecWidth == 256 && EltWidth == 16)
-      IID = Intrinsic::x86_avx2_psubs_w;
-    else if (VecWidth == 512 && EltWidth == 16)
-      IID = Intrinsic::x86_avx512_psubs_w_512;
     else
       llvm_unreachable("Unexpected intrinsic");
   } else
@@ -2093,6 +2071,16 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       if (CI->getNumArgOperands() == 3)
         Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
                             CI->getArgOperand(1));
+    } else if (IsX86 && (Name.startswith("sse2.padds.") ||
+                         Name.startswith("sse2.psubs.") ||
+                         Name.startswith("avx2.padds.") ||
+                         Name.startswith("avx2.psubs.") ||
+                         Name.startswith("avx512.padds.") ||
+                         Name.startswith("avx512.psubs.") ||
+                         Name.startswith("avx512.mask.padds.") ||
+                         Name.startswith("avx512.mask.psubs."))) {
+      bool IsAdd = Name.contains(".padds");
+      Rep = UpgradeX86AddSubSatIntrinsics(Builder, *CI, true, IsAdd);
     } else if (IsX86 && (Name.startswith("sse2.paddus.") ||
                          Name.startswith("sse2.psubus.") ||
                          Name.startswith("avx2.paddus.") ||
@@ -2100,7 +2088,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          Name.startswith("avx512.mask.paddus.") ||
                          Name.startswith("avx512.mask.psubus."))) {
       bool IsAdd = Name.contains(".paddus");
-      Rep = UpgradeX86AddSubSatIntrinsics(Builder, *CI, IsAdd);
+      Rep = UpgradeX86AddSubSatIntrinsics(Builder, *CI, false, IsAdd);
     } else if (IsX86 && Name.startswith("avx512.mask.palignr.")) {
       Rep = UpgradeX86ALIGNIntrinsics(Builder, CI->getArgOperand(0),
                                       CI->getArgOperand(1),

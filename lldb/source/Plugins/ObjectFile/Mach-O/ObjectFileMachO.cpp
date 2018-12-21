@@ -958,6 +958,11 @@ const ConstString &ObjectFileMachO::GetSegmentNameLINKEDIT() {
   return g_section_name_LINKEDIT;
 }
 
+const ConstString &ObjectFileMachO::GetSegmentNameDWARF() {
+  static ConstString g_section_name("__DWARF");
+  return g_section_name;
+}
+
 const ConstString &ObjectFileMachO::GetSectionNameEHFrame() {
   static ConstString g_section_name_eh_frame("__eh_frame");
   return g_section_name_eh_frame;
@@ -5979,51 +5984,52 @@ Section *ObjectFileMachO::GetMachHeaderSection() {
   // the mach-o file which can be subtracted from the vmaddr of the other
   // segments found in memory and added to the load address
   ModuleSP module_sp = GetModule();
-  if (module_sp) {
-    SectionList *section_list = GetSectionList();
-    if (section_list) {
-      lldb::addr_t mach_base_file_addr = LLDB_INVALID_ADDRESS;
-      const size_t num_sections = section_list->GetSize();
-
-      for (size_t sect_idx = 0; sect_idx < num_sections &&
-                                mach_base_file_addr == LLDB_INVALID_ADDRESS;
-           ++sect_idx) {
-        Section *section = section_list->GetSectionAtIndex(sect_idx).get();
-        if (section && section->GetFileSize() > 0 &&
-            section->GetFileOffset() == 0 && !section->IsThreadSpecific() &&
-            module_sp.get() == section->GetModule().get()) {
-          return section;
-        }
-      }
-    }
+  if (!module_sp)
+    return nullptr;
+  SectionList *section_list = GetSectionList();
+  if (!section_list)
+    return nullptr;
+  const size_t num_sections = section_list->GetSize();
+  for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
+    Section *section = section_list->GetSectionAtIndex(sect_idx).get();
+    if (section->GetFileOffset() == 0 && SectionIsLoadable(section))
+      return section;
   }
   return nullptr;
 }
 
+bool ObjectFileMachO::SectionIsLoadable(const Section *section) {
+  if (!section)
+    return false;
+  const bool is_dsym = (m_header.filetype == MH_DSYM);
+  if (section->GetFileSize() == 0 && !is_dsym)
+    return false;
+  if (section->IsThreadSpecific())
+    return false;
+  if (GetModule().get() != section->GetModule().get())
+    return false;
+  // Be careful with __LINKEDIT and __DWARF segments
+  if (section->GetName() == GetSegmentNameLINKEDIT() ||
+      section->GetName() == GetSegmentNameDWARF()) {
+    // Only map __LINKEDIT and __DWARF if we have an in memory image and
+    // this isn't a kernel binary like a kext or mach_kernel.
+    const bool is_memory_image = (bool)m_process_wp.lock();
+    const Strata strata = GetStrata();
+    if (is_memory_image == false || strata == eStrataKernel)
+      return false;
+  }
+  return true;
+}
+
 lldb::addr_t ObjectFileMachO::CalculateSectionLoadAddressForMemoryImage(
-    lldb::addr_t mach_header_load_address, const Section *mach_header_section,
+    lldb::addr_t header_load_address, const Section *header_section,
     const Section *section) {
   ModuleSP module_sp = GetModule();
-  if (module_sp && mach_header_section && section &&
-      mach_header_load_address != LLDB_INVALID_ADDRESS) {
-    lldb::addr_t mach_header_file_addr = mach_header_section->GetFileAddress();
-    if (mach_header_file_addr != LLDB_INVALID_ADDRESS) {
-      if (section && section->GetFileSize() > 0 &&
-          !section->IsThreadSpecific() &&
-          module_sp.get() == section->GetModule().get()) {
-        // Ignore __LINKEDIT and __DWARF segments
-        if (section->GetName() == GetSegmentNameLINKEDIT()) {
-          // Only map __LINKEDIT if we have an in memory image and this isn't a
-          // kernel binary like a kext or mach_kernel.
-          const bool is_memory_image = (bool)m_process_wp.lock();
-          const Strata strata = GetStrata();
-          if (!is_memory_image || strata == eStrataKernel)
-            return LLDB_INVALID_ADDRESS;
-        }
-        return section->GetFileAddress() - mach_header_file_addr +
-               mach_header_load_address;
-      }
-    }
+  if (module_sp && header_section && section &&
+      header_load_address != LLDB_INVALID_ADDRESS) {
+    lldb::addr_t file_addr = header_section->GetFileAddress();
+    if (file_addr != LLDB_INVALID_ADDRESS && SectionIsLoadable(section))
+      return section->GetFileAddress() - file_addr + header_load_address;
   }
   return LLDB_INVALID_ADDRESS;
 }
@@ -6043,22 +6049,10 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
           // Iterate through the object file sections to find all of the
           // sections that size on disk (to avoid __PAGEZERO) and load them
           SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
-          if (section_sp && section_sp->GetFileSize() > 0 &&
-              !section_sp->IsThreadSpecific() &&
-              module_sp.get() == section_sp->GetModule().get()) {
-            // Ignore __LINKEDIT and __DWARF segments
-            if (section_sp->GetName() == GetSegmentNameLINKEDIT()) {
-              // Only map __LINKEDIT if we have an in memory image and this
-              // isn't a kernel binary like a kext or mach_kernel.
-              const bool is_memory_image = (bool)m_process_wp.lock();
-              const Strata strata = GetStrata();
-              if (!is_memory_image || strata == eStrataKernel)
-                continue;
-            }
+          if (SectionIsLoadable(section_sp.get()))
             if (target.GetSectionLoadList().SetSectionLoadAddress(
                     section_sp, section_sp->GetFileAddress() + value))
               ++num_loaded_sections;
-          }
         }
       } else {
         // "value" is the new base address of the mach_header, adjust each

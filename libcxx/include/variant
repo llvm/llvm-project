@@ -1066,7 +1066,7 @@ public:
 #ifndef _LIBCPP_NO_EXCEPTIONS
       // EXTENSION: When the move construction of `__lhs` into `__rhs` throws
       // and `__tmp` is nothrow move constructible then we move `__tmp` back
-      // into `__rhs` and provide the strong exception safety guarentee.
+      // into `__rhs` and provide the strong exception safety guarantee.
       try {
         this->__generic_construct(*__rhs, _VSTD::move(*__lhs));
       } catch (...) {

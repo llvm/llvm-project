@@ -353,7 +353,7 @@ public:
       if (VD->isLocalVarDeclOrParm())
         continue;
 
-      DeclRefExpr DRE(const_cast<VarDecl *>(VD),
+      DeclRefExpr DRE(CGF.getContext(), const_cast<VarDecl *>(VD),
                       /*RefersToEnclosingVariableOrCapture=*/false,
                       VD->getType().getNonReferenceType(), VK_LValue,
                       C.getLocation());

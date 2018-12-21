@@ -446,6 +446,11 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
               StartAugmentationOffset = Offset;
               EndAugmentationOffset = Offset +
                 static_cast<uint32_t>(*AugmentationLength);
+              break;
+            case 'B':
+              // B-Key is used for signing functions associated with this
+              // augmentation string
+              break;
           }
         }
 

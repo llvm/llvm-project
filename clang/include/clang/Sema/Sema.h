@@ -5202,6 +5202,15 @@ public:
                          SourceRange DirectInitRange,
                          Expr *Initializer);
 
+  /// Determine whether \p FD is an aligned allocation or deallocation
+  /// function that is unavailable.
+  bool isUnavailableAlignedAllocationFunction(const FunctionDecl &FD) const;
+
+  /// Produce diagnostics if \p FD is an aligned allocation or deallocation
+  /// function that is unavailable.
+  void diagnoseUnavailableAlignedAllocation(const FunctionDecl &FD,
+                                            SourceLocation Loc);
+
   bool CheckAllocatedType(QualType AllocType, SourceLocation Loc,
                           SourceRange R);
 

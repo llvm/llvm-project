@@ -688,9 +688,8 @@ bool PPCDAGToDAGISel::tryBitfieldInsert(SDNode *N) {
   SDValue Op1 = N->getOperand(1);
   SDLoc dl(N);
 
-  KnownBits LKnown, RKnown;
-  CurDAG->computeKnownBits(Op0, LKnown);
-  CurDAG->computeKnownBits(Op1, RKnown);
+  KnownBits LKnown = CurDAG->computeKnownBits(Op0);
+  KnownBits RKnown = CurDAG->computeKnownBits(Op1);
 
   unsigned TargetMask = LKnown.Zero.getZExtValue();
   unsigned InsertMask = RKnown.Zero.getZExtValue();
@@ -734,8 +733,7 @@ bool PPCDAGToDAGISel::tryBitfieldInsert(SDNode *N) {
        // The AND mask might not be a constant, and we need to make sure that
        // if we're going to fold the masking with the insert, all bits not
        // know to be zero in the mask are known to be one.
-        KnownBits MKnown;
-        CurDAG->computeKnownBits(Op1.getOperand(1), MKnown);
+        KnownBits MKnown = CurDAG->computeKnownBits(Op1.getOperand(1));
         bool CanFoldMask = InsertMask == MKnown.One.getZExtValue();
 
         unsigned SHOpc = Op1.getOperand(0).getOpcode();
@@ -4613,8 +4611,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     int16_t Imm;
     if (N->getOperand(0)->getOpcode() == ISD::FrameIndex &&
         isIntS16Immediate(N->getOperand(1), Imm)) {
-      KnownBits LHSKnown;
-      CurDAG->computeKnownBits(N->getOperand(0), LHSKnown);
+      KnownBits LHSKnown = CurDAG->computeKnownBits(N->getOperand(0));
 
       // If this is equivalent to an add, then we can fold it with the
       // FrameIndex calculation.

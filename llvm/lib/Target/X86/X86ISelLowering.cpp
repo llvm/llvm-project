@@ -18134,8 +18134,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   // Truncate with PACKUS if we are truncating a vector with leading zero bits
   // that extend all the way to the packed/truncated value.
   // Pre-SSE41 we can only use PACKUSWB.
-  KnownBits Known;
-  DAG.computeKnownBits(In, Known);
+  KnownBits Known = DAG.computeKnownBits(In);
   if ((InNumEltBits - NumPackedZeroBits) <= Known.countMinLeadingZeros())
     if (SDValue V =
             truncateVectorWithPACK(X86ISD::PACKUS, VT, In, DL, DAG, Subtarget))
@@ -18982,8 +18981,7 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
       unsigned BitWidth = Op0.getValueSizeInBits();
       unsigned AndBitWidth = And.getValueSizeInBits();
       if (BitWidth > AndBitWidth) {
-        KnownBits Known;
-        DAG.computeKnownBits(Op0, Known);
+        KnownBits Known = DAG.computeKnownBits(Op0);
         if (Known.countMinLeadingZeros() < BitWidth - AndBitWidth)
           return SDValue();
       }
@@ -23597,9 +23595,8 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
   //
   //  Hi = psllqi(AloBhi + AhiBlo, 32);
   //  return AloBlo + Hi;
-  KnownBits AKnown, BKnown;
-  DAG.computeKnownBits(A, AKnown);
-  DAG.computeKnownBits(B, BKnown);
+  KnownBits AKnown = DAG.computeKnownBits(A);
+  KnownBits BKnown = DAG.computeKnownBits(B);
 
   APInt LowerBitsMask = APInt::getLowBitsSet(64, 32);
   bool ALoIsZero = LowerBitsMask.isSubsetOf(AKnown.Zero);
@@ -29996,7 +29993,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     EVT SrcVT = Src.getValueType();
     APInt DemandedElt = APInt::getOneBitSet(SrcVT.getVectorNumElements(),
                                             Op.getConstantOperandVal(1));
-    DAG.computeKnownBits(Src, Known, DemandedElt, Depth + 1);
+    Known = DAG.computeKnownBits(Src, DemandedElt, Depth + 1);
     Known = Known.zextOrTrunc(BitWidth);
     Known.Zero.setBitsFrom(SrcVT.getScalarSizeInBits());
     break;
@@ -30009,7 +30006,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
         break;
       }
 
-      DAG.computeKnownBits(Op.getOperand(0), Known, DemandedElts, Depth + 1);
+      Known = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
       unsigned ShAmt = ShiftImm->getZExtValue();
       if (Opc == X86ISD::VSHLI) {
         Known.Zero <<= ShAmt;
@@ -30035,12 +30032,12 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
 
     KnownBits Known2;
     if (!!DemandedLHS) {
-      DAG.computeKnownBits(Op.getOperand(0), Known2, DemandedLHS, Depth + 1);
+      Known2 = DAG.computeKnownBits(Op.getOperand(0), DemandedLHS, Depth + 1);
       Known.One &= Known2.One;
       Known.Zero &= Known2.Zero;
     }
     if (!!DemandedRHS) {
-      DAG.computeKnownBits(Op.getOperand(1), Known2, DemandedRHS, Depth + 1);
+      Known2 = DAG.computeKnownBits(Op.getOperand(1), DemandedRHS, Depth + 1);
       Known.One &= Known2.One;
       Known.Zero &= Known2.Zero;
     }
@@ -30051,12 +30048,11 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     break;
   }
   case X86ISD::CMOV: {
-    DAG.computeKnownBits(Op.getOperand(1), Known, Depth+1);
+    Known = DAG.computeKnownBits(Op.getOperand(1), Depth+1);
     // If we don't know any bits, early out.
     if (Known.isUnknown())
       break;
-    KnownBits Known2;
-    DAG.computeKnownBits(Op.getOperand(0), Known2, Depth+1);
+    KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(0), Depth+1);
 
     // Only known if known in both the LHS and RHS.
     Known.One &= Known2.One;
@@ -30107,8 +30103,8 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
         for (unsigned i = 0; i != NumOps && !Known.isUnknown(); ++i) {
           if (!DemandedOps[i])
             continue;
-          KnownBits Known2;
-          DAG.computeKnownBits(Ops[i], Known2, DemandedOps[i], Depth + 1);
+          KnownBits Known2 =
+              DAG.computeKnownBits(Ops[i], DemandedOps[i], Depth + 1);
           Known.One &= Known2.One;
           Known.Zero &= Known2.Zero;
         }
@@ -38120,8 +38116,7 @@ static SDValue combineVectorSignBitsTruncation(SDNode *N, const SDLoc &DL,
 
   // Use PACKUS if the input has zero-bits that extend all the way to the
   // packed/truncated value. e.g. masks, zext_in_reg, etc.
-  KnownBits Known;
-  DAG.computeKnownBits(In, Known);
+  KnownBits Known = DAG.computeKnownBits(In);
   unsigned NumLeadingZeroBits = Known.countMinLeadingZeros();
   if (NumLeadingZeroBits >= (InSVT.getSizeInBits() - NumPackedZeroBits))
     return truncateVectorWithPACK(X86ISD::PACKUS, VT, In, DL, DAG, Subtarget);
@@ -40869,8 +40864,7 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   // if the value was zero extended from 16 bit,
   // so we require first 16 bits to be zeros for 32 bit
   // values, or first 48 bits for 64 bit values.
-  KnownBits Known;
-  DAG.computeKnownBits(SubusLHS, Known);
+  KnownBits Known = DAG.computeKnownBits(SubusLHS);
   unsigned NumZeros = Known.countMinLeadingZeros();
   if ((VT == MVT::v8i64 && NumZeros < 48) || NumZeros < 16)
     return SDValue();

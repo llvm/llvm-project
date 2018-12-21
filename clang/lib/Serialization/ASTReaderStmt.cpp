@@ -1346,9 +1346,9 @@ void ASTStmtReader::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
 
 void ASTStmtReader::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   VisitCallExpr(E);
-  E->Operator = (OverloadedOperatorKind)Record.readInt();
+  E->CXXOperatorCallExprBits.OperatorKind = Record.readInt();
+  E->CXXOperatorCallExprBits.FPFeatures = Record.readInt();
   E->Range = Record.readSourceRange();
-  E->setFPFeatures(FPOptions(Record.readInt()));
 }
 
 void ASTStmtReader::VisitCXXConstructExpr(CXXConstructExpr *E) {
@@ -2481,9 +2481,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_CALL:
-      S = new (Context) CallExpr(
-          Context, /* NumArgs=*/Record[ASTStmtReader::NumExprFields],
-          Empty);
+      S = CallExpr::CreateEmpty(
+          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields], Empty);
       break;
 
     case EXPR_MEMBER: {
@@ -3073,15 +3072,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     }
 
     case EXPR_CXX_OPERATOR_CALL:
-      S = new (Context) CXXOperatorCallExpr(
-          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields],
-          Empty);
+      S = CXXOperatorCallExpr::CreateEmpty(
+          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields], Empty);
       break;
 
     case EXPR_CXX_MEMBER_CALL:
-      S = new (Context) CXXMemberCallExpr(
-          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields],
-          Empty);
+      S = CXXMemberCallExpr::CreateEmpty(
+          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields], Empty);
       break;
 
     case EXPR_CXX_CONSTRUCT:
@@ -3121,7 +3118,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_USER_DEFINED_LITERAL:
-      S = new (Context) UserDefinedLiteral(
+      S = UserDefinedLiteral::CreateEmpty(
           Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields], Empty);
       break;
 
@@ -3292,7 +3289,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_CUDA_KERNEL_CALL:
-      S = new (Context) CUDAKernelCallExpr(
+      S = CUDAKernelCallExpr::CreateEmpty(
           Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields], Empty);
       break;
 

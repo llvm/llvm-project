@@ -6990,9 +6990,8 @@ ExpectedStmt ASTNodeImporter::VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
   if (Error Err = ImportContainerChecked(E->arguments(), ToArgs))
     return std::move(Err);
 
-  return new (Importer.getToContext()) CXXMemberCallExpr(
-      Importer.getToContext(), ToCallee, ToArgs, ToType, E->getValueKind(),
-      ToRParenLoc);
+  return CXXMemberCallExpr::Create(Importer.getToContext(), ToCallee, ToArgs,
+                                   ToType, E->getValueKind(), ToRParenLoc);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXThisExpr(CXXThisExpr *E) {
@@ -7317,15 +7316,15 @@ ExpectedStmt ASTNodeImporter::VisitCallExpr(CallExpr *E) {
      return std::move(Err);
 
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
-    return new (Importer.getToContext()) CXXOperatorCallExpr(
+    return CXXOperatorCallExpr::Create(
         Importer.getToContext(), OCE->getOperator(), ToCallee, ToArgs, ToType,
         OCE->getValueKind(), ToRParenLoc, OCE->getFPFeatures(),
         OCE->getADLCallKind());
   }
 
-  return new (Importer.getToContext()) CallExpr(
-      Importer.getToContext(), ToCallee, ToArgs, ToType, E->getValueKind(),
-      ToRParenLoc, /*MinNumArgs=*/0, E->getADLCallKind());
+  return CallExpr::Create(Importer.getToContext(), ToCallee, ToArgs, ToType,
+                          E->getValueKind(), ToRParenLoc, /*MinNumArgs=*/0,
+                          E->getADLCallKind());
 }
 
 ExpectedStmt ASTNodeImporter::VisitLambdaExpr(LambdaExpr *E) {

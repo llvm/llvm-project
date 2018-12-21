@@ -2219,8 +2219,7 @@ static void adjustForRedundantAnd(SelectionDAG &DAG, const SDLoc &DL,
   auto *Mask = dyn_cast<ConstantSDNode>(C.Op0.getOperand(1));
   if (!Mask)
     return;
-  KnownBits Known;
-  DAG.computeKnownBits(C.Op0.getOperand(0), Known);
+  KnownBits Known = DAG.computeKnownBits(C.Op0.getOperand(0));
   if ((~Known.Zero).getZExtValue() & ~Mask->getZExtValue())
     return;
 
@@ -3166,10 +3165,9 @@ SDValue SystemZTargetLowering::lowerOR(SDValue Op, SelectionDAG &DAG) const {
   assert(Op.getValueType() == MVT::i64 && "Should be 64-bit operation");
 
   // Get the known-zero masks for each operand.
-  SDValue Ops[] = { Op.getOperand(0), Op.getOperand(1) };
-  KnownBits Known[2];
-  DAG.computeKnownBits(Ops[0], Known[0]);
-  DAG.computeKnownBits(Ops[1], Known[1]);
+  SDValue Ops[] = {Op.getOperand(0), Op.getOperand(1)};
+  KnownBits Known[2] = {DAG.computeKnownBits(Ops[0]),
+                        DAG.computeKnownBits(Ops[1])};
 
   // See if the upper 32 bits of one operand and the lower 32 bits of the
   // other are known zero.  They are the low and high operands respectively.
@@ -3352,8 +3350,7 @@ SDValue SystemZTargetLowering::lowerCTPOP(SDValue Op,
   }
 
   // Get the known-zero mask for the operand.
-  KnownBits Known;
-  DAG.computeKnownBits(Op, Known);
+  KnownBits Known = DAG.computeKnownBits(Op);
   unsigned NumSignificantBits = (~Known.Zero).getActiveBits();
   if (NumSignificantBits == 0)
     return DAG.getConstant(0, DL, VT);
@@ -5912,10 +5909,10 @@ static void computeKnownBitsBinOp(const SDValue Op, KnownBits &Known,
                                   unsigned OpNo) {
   APInt Src0DemE = getDemandedSrcElements(Op, DemandedElts, OpNo);
   APInt Src1DemE = getDemandedSrcElements(Op, DemandedElts, OpNo + 1);
-  unsigned SrcBitWidth = Op.getOperand(OpNo).getScalarValueSizeInBits();
-  KnownBits LHSKnown(SrcBitWidth), RHSKnown(SrcBitWidth);
-  DAG.computeKnownBits(Op.getOperand(OpNo), LHSKnown, Src0DemE, Depth + 1);
-  DAG.computeKnownBits(Op.getOperand(OpNo + 1), RHSKnown, Src1DemE, Depth + 1);
+  KnownBits LHSKnown =
+      DAG.computeKnownBits(Op.getOperand(OpNo), Src0DemE, Depth + 1);
+  KnownBits RHSKnown =
+      DAG.computeKnownBits(Op.getOperand(OpNo + 1), Src1DemE, Depth + 1);
   Known.Zero = LHSKnown.Zero & RHSKnown.Zero;
   Known.One = LHSKnown.One & RHSKnown.One;
 }
@@ -5981,9 +5978,8 @@ SystemZTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     case Intrinsic::s390_vuplf: {
       SDValue SrcOp = Op.getOperand(1);
       unsigned SrcBitWidth = SrcOp.getScalarValueSizeInBits();
-      Known = KnownBits(SrcBitWidth);
       APInt SrcDemE = getDemandedSrcElements(Op, DemandedElts, 0);
-      DAG.computeKnownBits(SrcOp, Known, SrcDemE, Depth + 1);
+      Known = DAG.computeKnownBits(SrcOp, SrcDemE, Depth + 1);
       if (IsLogical) {
         Known = Known.zext(BitWidth);
         Known.Zero.setBitsFrom(SrcBitWidth);
@@ -6002,7 +5998,7 @@ SystemZTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       break;
     case SystemZISD::REPLICATE: {
       SDValue SrcOp = Op.getOperand(0);
-      DAG.computeKnownBits(SrcOp, Known, Depth + 1);
+      Known = DAG.computeKnownBits(SrcOp, Depth + 1);
       if (Known.getBitWidth() < BitWidth && isa<ConstantSDNode>(SrcOp))
         Known = Known.sext(BitWidth); // VREPI sign extends the immedate.
       break;

@@ -90,10 +90,7 @@ struct OSMetaClassBase {
   static OSObject *safeMetaCast(const OSObject *inst, const OSMetaClass *meta);
 };
 
-typedef unsigned long MYTYPE;
-
 void escape(void *);
-void escape_with_source(MYTYPE p) {}
 bool coin();
 
 bool os_consume_violation_two_args(OS_CONSUME OSObject *obj, bool extra) {
@@ -140,13 +137,6 @@ void use_os_consume_ok() {
 void test_escaping_into_voidstar() {
   OSObject *obj = new OSObject;
   escape(obj);
-}
-
-void test_escape_has_source() {
-  OSObject *obj = new OSObject;
-  if (obj)
-    escape_with_source((MYTYPE)obj);
-  return;
 }
 
 void test_no_infinite_check_recursion(MyArray *arr) {
