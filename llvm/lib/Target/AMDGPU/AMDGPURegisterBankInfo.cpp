@@ -388,6 +388,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_SITOFP:
   case AMDGPU::G_UITOFP:
   case AMDGPU::G_FPTRUNC:
+  case AMDGPU::G_FEXP2:
+  case AMDGPU::G_FLOG2:
+  case AMDGPU::G_INTRINSIC_TRUNC:
+  case AMDGPU::G_INTRINSIC_ROUND:
     return getDefaultMappingVOP(MI);
   case AMDGPU::G_IMPLICIT_DEF: {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
@@ -585,6 +589,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_kernarg_segment_ptr: {
       unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
+      break;
+    }
+    case Intrinsic::amdgcn_wqm_vote: {
+      unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+      OpdsMapping[0] = OpdsMapping[2]
+        = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
       break;
     }
     }

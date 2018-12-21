@@ -176,6 +176,7 @@ private:
   bool parseDirectiveReq(StringRef Name, SMLoc L);
   bool parseDirectiveUnreq(SMLoc L);
   bool parseDirectiveCFINegateRAState();
+  bool parseDirectiveCFIBKeyFrame();
 
   bool validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                            SmallVectorImpl<SMLoc> &Loc);
@@ -5030,6 +5031,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveInst(Loc);
   else if (IDVal == ".cfi_negate_ra_state")
     parseDirectiveCFINegateRAState();
+  else if (IDVal == ".cfi_b_key_frame")
+    parseDirectiveCFIBKeyFrame();
   else if (IsMachO) {
     if (IDVal == MCLOHDirectiveName())
       parseDirectiveLOH(IDVal, Loc);
@@ -5407,6 +5410,16 @@ bool AArch64AsmParser::parseDirectiveCFINegateRAState() {
   if (parseToken(AsmToken::EndOfStatement, "unexpected token in directive"))
     return true;
   getStreamer().EmitCFINegateRAState();
+  return false;
+}
+
+/// parseDirectiveCFIBKeyFrame
+/// ::= .cfi_b_key
+bool AArch64AsmParser::parseDirectiveCFIBKeyFrame() {
+  if (parseToken(AsmToken::EndOfStatement,
+                 "unexpected token in '.cfi_b_key_frame'"))
+    return true;
+  getStreamer().EmitCFIBKeyFrame();
   return false;
 }
 
