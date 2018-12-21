@@ -3350,9 +3350,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Enable compatilibily mode to avoid analyzer-config related errors.
   // Since we can't access frontend flags through hasArg, let's manually iterate
   // through them.
+  bool FoundAnalyzerConfig = false;
   for (auto Arg : Args.filtered(options::OPT_Xclang))
-    if (StringRef(Arg->getValue()) == "-analyzer-config")
-      CmdArgs.push_back("-analyzer-config-compatibility-mode=true");
+    if (StringRef(Arg->getValue()) == "-analyzer-config") {
+      FoundAnalyzerConfig = true;
+      break;
+    }
+  if (!FoundAnalyzerConfig)
+    for (auto Arg : Args.filtered(options::OPT_Xanalyzer))
+      if (StringRef(Arg->getValue()) == "-analyzer-config") {
+        FoundAnalyzerConfig = true;
+        break;
+      }
+  if (FoundAnalyzerConfig)
+    CmdArgs.push_back("-analyzer-config-compatibility-mode=true");
 
   CheckCodeGenerationOptions(D, Args);
 
