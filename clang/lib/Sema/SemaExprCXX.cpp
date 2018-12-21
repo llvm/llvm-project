@@ -1744,7 +1744,7 @@ static void diagnoseUnavailableAlignedAllocation(const FunctionDecl &FD,
     S.Diag(Loc, diag::err_aligned_allocation_unavailable)
         << IsDelete << FD.getType().getAsString() << OSName
         << alignedAllocMinVersion(T.getOS()).getAsString();
-    S.Diag(Loc, diag::note_silence_unligned_allocation_unavailable);
+    S.Diag(Loc, diag::note_silence_aligned_allocation_unavailable);
   }
 }
 
