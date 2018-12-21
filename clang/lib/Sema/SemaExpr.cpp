@@ -66,6 +66,12 @@ bool Sema::CanUseDecl(NamedDecl *D, bool TreatUnavailableAsInvalid) {
     if (getLangOpts().CPlusPlus14 && FD->getReturnType()->isUndeducedType() &&
         DeduceReturnType(FD, SourceLocation(), /*Diagnose*/ false))
       return false;
+
+    // See if this is an aligned allocation/deallocation function that is
+    // unavailable.
+    if (TreatUnavailableAsInvalid &&
+        isUnavailableAlignedAllocationFunction(*FD))
+      return false;
   }
 
   // See if this function is unavailable.
@@ -228,6 +234,8 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
     //   The function 'main' shall not be used within a program.
     if (cast<FunctionDecl>(D)->isMain())
       Diag(Loc, diag::ext_main_used);
+
+    diagnoseUnavailableAlignedAllocation(*cast<FunctionDecl>(D), Loc);
   }
 
   // See if this is an auto-typed variable whose initializer we are parsing.
