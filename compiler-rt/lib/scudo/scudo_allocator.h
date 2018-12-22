@@ -81,6 +81,7 @@ struct AP64 {
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags =
       SizeClassAllocator64FlagMasks::kRandomShuffleChunks;
+  using AddressSpaceView = LocalAddressSpaceView;
 };
 typedef SizeClassAllocator64<AP64> PrimaryT;
 #else
