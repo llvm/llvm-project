@@ -62,6 +62,8 @@ namespace __sanitizer {
   extern unsigned struct_rlimit_sz;
   extern unsigned struct_utimbuf_sz;
   extern unsigned struct_timespec_sz;
+  extern unsigned struct_regmatch_sz;
+  extern unsigned struct_regex_sz;
   extern const int unvis_valid;
   extern const int unvis_validpush;
 

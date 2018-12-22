@@ -7421,6 +7421,16 @@ INTERCEPTOR(void, regfree, const void *preg) {
     COMMON_INTERCEPTOR_READ_RANGE(ctx, preg, struct_regex_sz);
   REAL(regfree)(preg);
 }
+#define INIT_REGEX                                                             \
+  COMMON_INTERCEPT_FUNCTION(regcomp);                                          \
+  COMMON_INTERCEPT_FUNCTION(regexec);                                          \
+  COMMON_INTERCEPT_FUNCTION(regerror);                                         \
+  COMMON_INTERCEPT_FUNCTION(regfree);
+#else
+#define INIT_REGEX
+#endif
+
+#if SANITIZER_INTERCEPT_REGEXSUB
 INTERCEPTOR(SSIZE_T, regnsub, char *buf, SIZE_T bufsiz, const char *sub,
             const struct __sanitizer_regmatch *rm, const char *str) {
   void *ctx;
@@ -7455,15 +7465,12 @@ INTERCEPTOR(SSIZE_T, regasub, char **buf, const char *sub,
   }
   return res;
 }
-#define INIT_REGEX                                                             \
-  COMMON_INTERCEPT_FUNCTION(regcomp);                                          \
-  COMMON_INTERCEPT_FUNCTION(regexec);                                          \
-  COMMON_INTERCEPT_FUNCTION(regerror);                                         \
-  COMMON_INTERCEPT_FUNCTION(regfree);                                          \
+
+#define INIT_REGEXSUB                                                          \
   COMMON_INTERCEPT_FUNCTION(regnsub);                                          \
   COMMON_INTERCEPT_FUNCTION(regasub);
 #else
-#define INIT_REGEX
+#define INIT_REGEXSUB
 #endif
 
 #if SANITIZER_INTERCEPT_FTS
@@ -9297,6 +9304,7 @@ static void InitializeCommonInterceptors() {
   INIT_SETVBUF;
   INIT_GETVFSSTAT;
   INIT_REGEX;
+  INIT_REGEXSUB;
   INIT_FTS;
   INIT_SYSCTL;
   INIT_ASYSCTL;
