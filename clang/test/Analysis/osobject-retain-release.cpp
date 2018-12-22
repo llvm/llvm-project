@@ -91,6 +91,7 @@ struct OSMetaClassBase {
 };
 
 void escape(void *);
+void escape_with_source(void *p) {}
 bool coin();
 
 bool os_consume_violation_two_args(OS_CONSUME OSObject *obj, bool extra) {
@@ -99,7 +100,7 @@ bool os_consume_violation_two_args(OS_CONSUME OSObject *obj, bool extra) {
     escape(obj);
     return true;
   }
-  return false; // expected-note{{Parameter 'obj' is marked as consuming, but the function does not consume the reference}}
+  return false; // expected-note{{Parameter 'obj' is marked as consuming, but the function did not consume the reference}}
 }
 
 bool os_consume_violation(OS_CONSUME OSObject *obj) {
@@ -108,7 +109,7 @@ bool os_consume_violation(OS_CONSUME OSObject *obj) {
     escape(obj);
     return true;
   }
-  return false; // expected-note{{Parameter 'obj' is marked as consuming, but the function does not consume the reference}}
+  return false; // expected-note{{Parameter 'obj' is marked as consuming, but the function did not consume the reference}}
 }
 
 void os_consume_ok(OS_CONSUME OSObject *obj) {
@@ -137,6 +138,13 @@ void use_os_consume_ok() {
 void test_escaping_into_voidstar() {
   OSObject *obj = new OSObject;
   escape(obj);
+}
+
+void test_escape_has_source() {
+  OSObject *obj = new OSObject;
+  if (obj)
+    escape_with_source(obj);
+  return;
 }
 
 void test_no_infinite_check_recursion(MyArray *arr) {

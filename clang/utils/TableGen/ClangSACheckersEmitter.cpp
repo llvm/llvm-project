@@ -63,8 +63,11 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B) {
 
   uint64_t Value = 0;
   for (unsigned i = 0, e = B->getNumBits(); i != e; ++i) {
-    const auto *Bit = cast<BitInit>(B->getBit(i));
-    Value |= uint64_t(Bit->getValue()) << i;
+    const auto *Bit = dyn_cast<BitInit>(B->getBit(i));
+    if (Bit)
+      Value |= uint64_t(Bit->getValue()) << i;
+    else
+      PrintFatalError("Invalid bits");
   }
   return Value;
 }

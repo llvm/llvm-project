@@ -1421,7 +1421,8 @@ static void checkEscapingByref(VarDecl *VD, Sema &S) {
   EnterExpressionEvaluationContext scope(
       S, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
   SourceLocation Loc = VD->getLocation();
-  Expr *VarRef = new (S.Context) DeclRefExpr(VD, false, T, VK_LValue, Loc);
+  Expr *VarRef =
+      new (S.Context) DeclRefExpr(S.Context, VD, false, T, VK_LValue, Loc);
   ExprResult Result = S.PerformMoveOrCopyInitialization(
       InitializedEntity::InitializeBlock(Loc, T, false), VD, VD->getType(),
       VarRef, /*AllowNRVO=*/true);

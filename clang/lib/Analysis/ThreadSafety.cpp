@@ -1939,7 +1939,8 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
   if (isScopedVar) {
     // Add the managing object as a dummy mutex, mapped to the underlying mutex.
     SourceLocation MLoc = VD->getLocation();
-    DeclRefExpr DRE(VD, false, VD->getType(), VK_LValue, VD->getLocation());
+    DeclRefExpr DRE(VD->getASTContext(), VD, false, VD->getType(), VK_LValue,
+                    VD->getLocation());
     // FIXME: does this store a pointer to DRE?
     CapabilityExpr Scp = Analyzer->SxBuilder.translateAttrExpr(&DRE, nullptr);
 
@@ -2475,8 +2476,9 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
 
           // Create a dummy expression,
           auto *VD = const_cast<VarDecl *>(AD.getVarDecl());
-          DeclRefExpr DRE(VD, false, VD->getType().getNonReferenceType(),
-                          VK_LValue, AD.getTriggerStmt()->getEndLoc());
+          DeclRefExpr DRE(VD->getASTContext(), VD, false,
+                          VD->getType().getNonReferenceType(), VK_LValue,
+                          AD.getTriggerStmt()->getEndLoc());
           LocksetBuilder.handleCall(&DRE, DD);
           break;
         }

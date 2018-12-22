@@ -3404,6 +3404,7 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
     case ObjCPropertyImplDecl::Synthesize:
       return CXCursor_ObjCSynthesizeDecl;
     }
+    llvm_unreachable("Unexpected Kind!");
 
   case Decl::Import:
     return CXCursor_ModuleImportDecl;
