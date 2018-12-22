@@ -46,6 +46,7 @@ struct SizeClassAllocator64FlagMasks {  //  Bit masks.
 template <class Params>
 class SizeClassAllocator64 {
  public:
+  using AddressSpaceView = typename Params::AddressSpaceView;
   static const uptr kSpaceBeg = Params::kSpaceBeg;
   static const uptr kSpaceSize = Params::kSpaceSize;
   static const uptr kMetadataSize = Params::kMetadataSize;
@@ -294,8 +295,10 @@ class SizeClassAllocator64 {
       RegionInfo *region = GetRegionInfo(class_id);
       uptr chunk_size = ClassIdToSize(class_id);
       uptr region_beg = SpaceBeg() + class_id * kRegionSize;
+      uptr region_allocated_user_size =
+          AddressSpaceView::Load(region)->allocated_user;
       for (uptr chunk = region_beg;
-           chunk < region_beg + region->allocated_user;
+           chunk < region_beg + region_allocated_user_size;
            chunk += chunk_size) {
         // Too slow: CHECK_EQ((void *)chunk, GetBlockBegin((void *)chunk));
         callback(chunk, arg);

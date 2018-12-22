@@ -1882,7 +1882,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           bool handled = false;
           bool did_exec = false;
           if (!reason.empty()) {
-            if (reason.compare("trace") == 0) {
+            if (reason == "trace") {
               addr_t pc = thread_sp->GetRegisterContext()->GetPC();
               lldb::BreakpointSiteSP bp_site_sp = thread_sp->GetProcess()
                                                       ->GetBreakpointSiteList()
@@ -1900,7 +1900,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
                 thread_sp->SetStopInfo(
                     StopInfo::CreateStopReasonToTrace(*thread_sp));
               handled = true;
-            } else if (reason.compare("breakpoint") == 0) {
+            } else if (reason == "breakpoint") {
               addr_t pc = thread_sp->GetRegisterContext()->GetPC();
               lldb::BreakpointSiteSP bp_site_sp = thread_sp->GetProcess()
                                                       ->GetBreakpointSiteList()
@@ -1921,9 +1921,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
                   thread_sp->SetStopInfo(invalid_stop_info_sp);
                 }
               }
-            } else if (reason.compare("trap") == 0) {
+            } else if (reason == "trap") {
               // Let the trap just use the standard signal stop reason below...
-            } else if (reason.compare("watchpoint") == 0) {
+            } else if (reason == "watchpoint") {
               StringExtractor desc_extractor(description.c_str());
               addr_t wp_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
               uint32_t wp_index = desc_extractor.GetU32(LLDB_INVALID_INDEX32);
@@ -1955,11 +1955,11 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
               thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithWatchpointID(
                   *thread_sp, watch_id, wp_hit_addr));
               handled = true;
-            } else if (reason.compare("exception") == 0) {
+            } else if (reason == "exception") {
               thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithException(
                   *thread_sp, description.c_str()));
               handled = true;
-            } else if (reason.compare("exec") == 0) {
+            } else if (reason == "exec") {
               did_exec = true;
               thread_sp->SetStopInfo(
                   StopInfo::CreateStopReasonWithExec(*thread_sp));

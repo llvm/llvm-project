@@ -1320,16 +1320,10 @@ static Value *HandleByValArgument(Value *Arg, Instruction *TheCall,
 
 // Check whether this Value is used by a lifetime intrinsic.
 static bool isUsedByLifetimeMarker(Value *V) {
-  for (User *U : V->users()) {
-    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
-      switch (II->getIntrinsicID()) {
-      default: break;
-      case Intrinsic::lifetime_start:
-      case Intrinsic::lifetime_end:
+  for (User *U : V->users())
+    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U))
+      if (II->isLifetimeStartOrEnd())
         return true;
-      }
-    }
-  }
   return false;
 }
 

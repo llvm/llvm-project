@@ -79,6 +79,7 @@ struct MsanMapUnmapCallback {
     typedef DefaultSizeClassMap SizeClassMap;
     typedef MsanMapUnmapCallback MapUnmapCallback;
     static const uptr kFlags = 0;
+    using AddressSpaceView = LocalAddressSpaceView;
   };
 
   typedef SizeClassAllocator64<AP64> PrimaryAllocator;
@@ -93,6 +94,7 @@ struct MsanMapUnmapCallback {
     typedef DefaultSizeClassMap SizeClassMap;
     typedef MsanMapUnmapCallback MapUnmapCallback;
     static const uptr kFlags = 0;
+    using AddressSpaceView = LocalAddressSpaceView;
   };
 
   typedef SizeClassAllocator64<AP64> PrimaryAllocator;

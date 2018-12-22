@@ -332,8 +332,7 @@ bool CodeExtractor::isLegalToShrinkwrapLifetimeMarkers(
       default: {
         IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(&II);
         if (IntrInst) {
-          if (IntrInst->getIntrinsicID() == Intrinsic::lifetime_start ||
-              IntrInst->getIntrinsicID() == Intrinsic::lifetime_end)
+          if (IntrInst->isLifetimeStartOrEnd())
             break;
           return false;
         }

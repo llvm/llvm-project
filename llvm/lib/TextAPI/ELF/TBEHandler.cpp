@@ -105,6 +105,7 @@ template <> struct MappingTraits<ELFSymbol> {
       IO.mapRequired("Size", Symbol.Size);
     }
     IO.mapOptional("Undefined", Symbol.Undefined, false);
+    IO.mapOptional("Weak", Symbol.Weak, false);
     IO.mapOptional("Warning", Symbol.Warning);
   }
 

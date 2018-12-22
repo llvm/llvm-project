@@ -3798,6 +3798,11 @@ public:
   llvm::Value *EmitARCRetainAutoreleasedReturnValue(llvm::Value *value);
   llvm::Value *EmitARCUnsafeClaimAutoreleasedReturnValue(llvm::Value *value);
 
+  llvm::Value *EmitObjCAutorelease(llvm::Value *value, llvm::Type *returnType);
+  llvm::Value *EmitObjCRetainNonBlock(llvm::Value *value,
+                                      llvm::Type *returnType);
+  void EmitObjCRelease(llvm::Value *value, ARCPreciseLifetime_t precise);
+
   std::pair<LValue,llvm::Value*>
   EmitARCStoreAutoreleasing(const BinaryOperator *e);
   std::pair<LValue,llvm::Value*>

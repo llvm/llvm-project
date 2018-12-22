@@ -20,6 +20,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 
+#include <numeric>
+
 using namespace llvm;
 
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
@@ -112,6 +114,47 @@ const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
     S = LocA->getScope();
   return DILocation::get(Result->getContext(), 0, 0, S, L);
 }
+
+Optional<unsigned> DILocation::encodeDiscriminator(unsigned BD, unsigned DF, unsigned CI) {
+  SmallVector<unsigned, 3> Components = {BD, DF, CI};
+  uint64_t RemainingWork = 0U;
+  // We use RemainingWork to figure out if we have no remaining components to
+  // encode. For example: if BD != 0 but DF == 0 && CI == 0, we don't need to
+  // encode anything for the latter 2.
+  // Since any of the input components is at most 32 bits, their sum will be
+  // less than 34 bits, and thus RemainingWork won't overflow.
+  RemainingWork = std::accumulate(Components.begin(), Components.end(), RemainingWork);
+
+  int I = 0;
+  unsigned Ret = 0;
+  unsigned NextBitInsertionIndex = 0;
+  while (RemainingWork > 0) {
+    unsigned C = Components[I++];
+    RemainingWork -= C;
+    unsigned EC = encodeComponent(C);
+    Ret |= (EC << NextBitInsertionIndex);
+    NextBitInsertionIndex += encodingBits(C);
+  }
+
+  // Encoding may be unsuccessful because of overflow. We determine success by
+  // checking equivalence of components before & after encoding. Alternatively,
+  // we could determine Success during encoding, but the current alternative is
+  // simpler.
+  unsigned TBD, TDF, TCI = 0;
+  decodeDiscriminator(Ret, TBD, TDF, TCI);
+  if (TBD == BD && TDF == DF && TCI == CI)
+    return Ret;
+  return None;
+}
+
+void DILocation::decodeDiscriminator(unsigned D, unsigned &BD, unsigned &DF,
+                                     unsigned &CI) {
+  BD = getUnsignedFromPrefixEncoding(D);
+  DF = getUnsignedFromPrefixEncoding(getNextComponentInDiscriminator(D));
+  CI = getUnsignedFromPrefixEncoding(
+      getNextComponentInDiscriminator(getNextComponentInDiscriminator(D)));
+}
+
 
 DINode::DIFlags DINode::getFlag(StringRef Flag) {
   return StringSwitch<DIFlags>(Flag)

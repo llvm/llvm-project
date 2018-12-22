@@ -1430,6 +1430,9 @@ class DILocation : public MDNode {
 
   /// Reverse transformation as getPrefixEncodingFromUnsigned.
   static unsigned getUnsignedFromPrefixEncoding(unsigned U) {
+    if (U & 1)
+      return 0;
+    U >>= 1;
     return (U & 0x20) ? (((U >> 1) & 0xfe0) | (U & 0x1f)) : (U & 0x1f);
   }
 
@@ -1446,6 +1449,14 @@ class DILocation : public MDNode {
     // a DILocation containing temporary metadata.
     return getTemporary(getContext(), getLine(), getColumn(), getRawScope(),
                         getRawInlinedAt(), isImplicitCode());
+  }
+
+  static unsigned encodeComponent(unsigned C) {
+    return (C == 0) ? 1U : (getPrefixEncodingFromUnsigned(C) << 1);
+  }
+
+  static unsigned encodingBits(unsigned C) {
+    return (C == 0) ? 1 : (C > 0x1f ? 14 : 7);
   }
 
 public:
@@ -1518,20 +1529,35 @@ public:
   /// order. If the lowest bit is 1, the current component is empty, and the
   /// next component will start in the next bit. Otherwise, the current
   /// component is non-empty, and its content starts in the next bit. The
-  /// length of each components is either 5 bit or 12 bit: if the 7th bit
+  /// value of each components is either 5 bit or 12 bit: if the 7th bit
   /// is 0, the bit 2~6 (5 bits) are used to represent the component; if the
   /// 7th bit is 1, the bit 2~6 (5 bits) and 8~14 (7 bits) are combined to
-  /// represent the component.
+  /// represent the component. Thus, the number of bits used for a component
+  /// is either 0 (if it and all the next components are empty); 1 - if it is
+  /// empty; 7 - if its value is up to and including 0x1f (lsb and msb are both
+  /// 0); or 14, if its value is up to and including 0x1ff. Note that the last
+  /// component is also capped at 0x1ff, even in the case when both first
+  /// components are 0, and we'd technically have 29 bits available.
+  ///
+  /// For precise control over the data being encoded in the discriminator,
+  /// use encodeDiscriminator/decodeDiscriminator.
+  ///
+  /// Use {get|set}BaseDiscriminator and cloneWithDuplicationFactor after reading
+  /// their documentation, as their behavior has side-effects.
 
   inline unsigned getDiscriminator() const;
 
   /// Returns a new DILocation with updated \p Discriminator.
   inline const DILocation *cloneWithDiscriminator(unsigned Discriminator) const;
 
-  /// Returns a new DILocation with updated base discriminator \p BD.
-  inline const DILocation *setBaseDiscriminator(unsigned BD) const;
+  /// Returns a new DILocation with updated base discriminator \p BD. Only the
+  /// base discriminator is set in the new DILocation, the other encoded values
+  /// are elided.
+  /// If the discriminator cannot be encoded, the function returns None.
+  inline Optional<const DILocation *> setBaseDiscriminator(unsigned BD) const;
 
-  /// Returns the duplication factor stored in the discriminator.
+  /// Returns the duplication factor stored in the discriminator, or 1 if no
+  /// duplication factor (or 0) is encoded.
   inline unsigned getDuplicationFactor() const;
 
   /// Returns the copy identifier stored in the discriminator.
@@ -1540,9 +1566,11 @@ public:
   /// Returns the base discriminator stored in the discriminator.
   inline unsigned getBaseDiscriminator() const;
 
-  /// Returns a new DILocation with duplication factor \p DF encoded in the
-  /// discriminator.
-  inline const DILocation *cloneWithDuplicationFactor(unsigned DF) const;
+  /// Returns a new DILocation with duplication factor \p DF * current
+  /// duplication factor encoded in the discriminator. The current duplication
+  /// factor is as defined by getDuplicationFactor().
+  /// Returns None if encoding failed.
+  inline Optional<const DILocation *> cloneWithDuplicationFactor(unsigned DF) const;
 
   /// When two instructions are combined into a single instruction we also
   /// need to combine the original locations into a single location.
@@ -1563,19 +1591,31 @@ public:
 
   /// Returns the base discriminator for a given encoded discriminator \p D.
   static unsigned getBaseDiscriminatorFromDiscriminator(unsigned D) {
-    if ((D & 1) == 0)
-      return getUnsignedFromPrefixEncoding(D >> 1);
-    else
-      return 0;
+    return getUnsignedFromPrefixEncoding(D);
   }
 
-  /// Returns the duplication factor for a given encoded discriminator \p D.
+  /// Raw encoding of the discriminator. APIs such as setBaseDiscriminator or
+  /// cloneWithDuplicationFactor have certain side-effects. This API, in
+  /// conjunction with cloneWithDiscriminator, may be used to encode precisely
+  /// the values provided. \p BD: base discriminator \p DF: duplication factor
+  /// \p CI: copy index
+  /// The return is None if the values cannot be encoded in 32 bits - for
+  /// example, values for BD or DF larger than 12 bits. Otherwise, the return
+  /// is the encoded value.
+  static Optional<unsigned> encodeDiscriminator(unsigned BD, unsigned DF, unsigned CI);
+
+  /// Raw decoder for values in an encoded discriminator D.
+  static void decodeDiscriminator(unsigned D, unsigned &BD, unsigned &DF,
+                                  unsigned &CI);
+
+  /// Returns the duplication factor for a given encoded discriminator \p D, or
+  /// 1 if no value or 0 is encoded.
   static unsigned getDuplicationFactorFromDiscriminator(unsigned D) {
     D = getNextComponentInDiscriminator(D);
-    if (D == 0 || (D & 1))
+    unsigned Ret = getUnsignedFromPrefixEncoding(D);
+    if (Ret == 0)
       return 1;
-    else
-      return getUnsignedFromPrefixEncoding(D >> 1);
+    return Ret;
   }
 
   /// Returns the copy identifier for a given encoded discriminator \p D.
@@ -1999,28 +2039,24 @@ unsigned DILocation::getCopyIdentifier() const {
   return getCopyIdentifierFromDiscriminator(getDiscriminator());
 }
 
-const DILocation *DILocation::setBaseDiscriminator(unsigned D) const {
+Optional<const DILocation *> DILocation::setBaseDiscriminator(unsigned D) const {
   if (D == 0)
     return this;
-  else
-    return cloneWithDiscriminator(getPrefixEncodingFromUnsigned(D) << 1);
+  if (D > 0xfff)
+    return None;
+  return cloneWithDiscriminator(encodeComponent(D));
 }
 
-const DILocation *DILocation::cloneWithDuplicationFactor(unsigned DF) const {
+Optional<const DILocation *> DILocation::cloneWithDuplicationFactor(unsigned DF) const {
   DF *= getDuplicationFactor();
   if (DF <= 1)
     return this;
 
   unsigned BD = getBaseDiscriminator();
-  unsigned CI = getCopyIdentifier() << (DF > 0x1f ? 14 : 7);
-  unsigned D = CI | (getPrefixEncodingFromUnsigned(DF) << 1);
-
-  if (BD == 0)
-    D = (D << 1) | 1;
-  else
-    D = (D << (BD > 0x1f ? 14 : 7)) | (getPrefixEncodingFromUnsigned(BD) << 1);
-
-  return cloneWithDiscriminator(D);
+  unsigned CI = getCopyIdentifier();
+  if (Optional<unsigned> D = encodeDiscriminator(BD, DF, CI))
+    return cloneWithDiscriminator(*D);
+  return None;
 }
 
 class DINamespace : public DIScope {

@@ -111,7 +111,7 @@ TEST_F(FileManagerTest, NoVirtualDirectoryExistsBeforeAVirtualFileIsAdded) {
   // FileManager to report "file/directory doesn't exist".  This
   // avoids the possibility of the result of this test being affected
   // by what's in the real file system.
-  manager.addStatCache(llvm::make_unique<FakeStatCache>());
+  manager.setStatCache(llvm::make_unique<FakeStatCache>());
 
   EXPECT_EQ(nullptr, manager.getDirectory("virtual/dir/foo"));
   EXPECT_EQ(nullptr, manager.getDirectory("virtual/dir"));
@@ -121,7 +121,7 @@ TEST_F(FileManagerTest, NoVirtualDirectoryExistsBeforeAVirtualFileIsAdded) {
 // When a virtual file is added, all of its ancestors should be created.
 TEST_F(FileManagerTest, getVirtualFileCreatesDirectoryEntriesForAncestors) {
   // Fake an empty real file system.
-  manager.addStatCache(llvm::make_unique<FakeStatCache>());
+  manager.setStatCache(llvm::make_unique<FakeStatCache>());
 
   manager.getVirtualFile("virtual/dir/bar.h", 100, 0);
   EXPECT_EQ(nullptr, manager.getDirectory("virtual/dir/foo"));
@@ -149,7 +149,7 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingRealFile) {
   statCache->InjectFile(FileName, 45);
 #endif
 
-  manager.addStatCache(std::move(statCache));
+  manager.setStatCache(std::move(statCache));
 
   const FileEntry *file = manager.getFile("/tmp/test");
   ASSERT_TRUE(file != nullptr);
@@ -173,7 +173,7 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingRealFile) {
 // getFile() returns non-NULL if a virtual file exists at the given path.
 TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingVirtualFile) {
   // Fake an empty real file system.
-  manager.addStatCache(llvm::make_unique<FakeStatCache>());
+  manager.setStatCache(llvm::make_unique<FakeStatCache>());
 
   manager.getVirtualFile("virtual/dir/bar.h", 100, 0);
   const FileEntry *file = manager.getFile("virtual/dir/bar.h");
@@ -195,7 +195,7 @@ TEST_F(FileManagerTest, getFileReturnsDifferentFileEntriesForDifferentFiles) {
   statCache->InjectDirectory(".", 41);
   statCache->InjectFile("foo.cpp", 42);
   statCache->InjectFile("bar.cpp", 43);
-  manager.addStatCache(std::move(statCache));
+  manager.setStatCache(std::move(statCache));
 
   const FileEntry *fileFoo = manager.getFile("foo.cpp");
   const FileEntry *fileBar = manager.getFile("bar.cpp");
@@ -213,7 +213,7 @@ TEST_F(FileManagerTest, getFileReturnsNULLForNonexistentFile) {
   auto statCache = llvm::make_unique<FakeStatCache>();
   statCache->InjectDirectory(".", 41);
   statCache->InjectFile("foo.cpp", 42);
-  manager.addStatCache(std::move(statCache));
+  manager.setStatCache(std::move(statCache));
 
   // Create a virtual bar.cpp file.
   manager.getVirtualFile("bar.cpp", 200, 0);
@@ -260,7 +260,7 @@ TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedRealFiles) {
   statCache->InjectDirectory("abc", 41);
   statCache->InjectFile("abc/foo.cpp", 42);
   statCache->InjectFile("abc/bar.cpp", 42);
-  manager.addStatCache(std::move(statCache));
+  manager.setStatCache(std::move(statCache));
 
   EXPECT_EQ(manager.getFile("abc/foo.cpp"), manager.getFile("abc/bar.cpp"));
 }
@@ -273,21 +273,12 @@ TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedVirtualFiles) {
   statCache->InjectDirectory("abc", 41);
   statCache->InjectFile("abc/foo.cpp", 42);
   statCache->InjectFile("abc/bar.cpp", 42);
-  manager.addStatCache(std::move(statCache));
+  manager.setStatCache(std::move(statCache));
 
   ASSERT_TRUE(manager.getVirtualFile("abc/foo.cpp", 100, 0)->isValid());
   ASSERT_TRUE(manager.getVirtualFile("abc/bar.cpp", 200, 0)->isValid());
 
   EXPECT_EQ(manager.getFile("abc/foo.cpp"), manager.getFile("abc/bar.cpp"));
-}
-
-TEST_F(FileManagerTest, addRemoveStatCache) {
-  manager.addStatCache(llvm::make_unique<FakeStatCache>());
-  auto statCacheOwner = llvm::make_unique<FakeStatCache>();
-  auto *statCache = statCacheOwner.get();
-  manager.addStatCache(std::move(statCacheOwner));
-  manager.addStatCache(llvm::make_unique<FakeStatCache>());
-  manager.removeStatCache(statCache);
 }
 
 // getFile() Should return the same entry as getVirtualFile if the file actually
@@ -300,7 +291,7 @@ TEST_F(FileManagerTest, getVirtualFileWithDifferentName) {
   statCache->InjectDirectory("c:\\tmp", 42);
   statCache->InjectFile("c:\\tmp\\test", 43);
 
-  manager.addStatCache(std::move(statCache));
+  manager.setStatCache(std::move(statCache));
 
   // Inject the virtual file:
   const FileEntry *file1 = manager.getVirtualFile("c:\\tmp\\test", 123, 1);
@@ -371,7 +362,7 @@ TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
   statCache->InjectDirectory("/tmp", 42);
   statCache->InjectFile("/tmp/test", 43);
 
-  Manager.addStatCache(std::move(statCache));
+  Manager.setStatCache(std::move(statCache));
 
   // Check for real path.
   const FileEntry *file = Manager.getVirtualFile("/tmp/test", 123, 1);

@@ -3360,9 +3360,12 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
     }
   }
 
-  if (FileNumber == -1)
+  if (FileNumber == -1) {
+    if (!getContext().getAsmInfo()->hasSingleParameterDotFile())
+      return Error(DirectiveLoc,
+                   "target does not support '.file' without a number");
     getStreamer().EmitFileDirective(Filename);
-  else {
+  } else {
     // In case there is a -g option as well as debug info from directive .file,
     // we turn off the -g option, directly use the existing debug info instead.
     // Also reset any implicit ".file 0" for the assembler source.

@@ -2598,37 +2598,7 @@ bool lldb_private::operator==(const Scalar &lhs, const Scalar &rhs) {
 }
 
 bool lldb_private::operator!=(const Scalar &lhs, const Scalar &rhs) {
-  // If either entry is void then we can just compare the types
-  if (lhs.m_type == Scalar::e_void || rhs.m_type == Scalar::e_void)
-    return lhs.m_type != rhs.m_type;
-
-  Scalar
-      temp_value; // A temp value that might get a copy of either promoted value
-  const Scalar *a;
-  const Scalar *b;
-  llvm::APFloat::cmpResult result;
-  switch (PromoteToMaxType(lhs, rhs, temp_value, a, b)) {
-  case Scalar::e_void:
-    break;
-  case Scalar::e_sint:
-  case Scalar::e_uint:
-  case Scalar::e_slong:
-  case Scalar::e_ulong:
-  case Scalar::e_slonglong:
-  case Scalar::e_ulonglong:
-  case Scalar::e_sint128:
-  case Scalar::e_uint128:
-  case Scalar::e_sint256:
-  case Scalar::e_uint256:
-    return a->m_integer != b->m_integer;
-  case Scalar::e_float:
-  case Scalar::e_double:
-  case Scalar::e_long_double:
-    result = a->m_float.compare(b->m_float);
-    if (result != llvm::APFloat::cmpEqual)
-      return true;
-  }
-  return true;
+  return !(lhs == rhs);
 }
 
 bool lldb_private::operator<(const Scalar &lhs, const Scalar &rhs) {

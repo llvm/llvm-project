@@ -53,6 +53,7 @@ static const u64 kAddressSpaceSize = 1ULL << 47;
 typedef DefaultSizeClassMap SizeClassMap;
 #endif
 
+template <typename AddressSpaceViewTy>
 struct AP64 {  // Allocator Params. Short name for shorter demangled names..
   static const uptr kSpaceBeg = kAllocatorSpace;
   static const uptr kSpaceSize = kAllocatorSize;
@@ -60,8 +61,10 @@ struct AP64 {  // Allocator Params. Short name for shorter demangled names..
   typedef ::SizeClassMap SizeClassMap;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
+  using AddressSpaceView = AddressSpaceViewTy;
 };
 
+template <typename AddressSpaceViewTy>
 struct AP64Dyn {
   static const uptr kSpaceBeg = ~(uptr)0;
   static const uptr kSpaceSize = kAllocatorSize;
@@ -69,8 +72,10 @@ struct AP64Dyn {
   typedef ::SizeClassMap SizeClassMap;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
+  using AddressSpaceView = AddressSpaceViewTy;
 };
 
+template <typename AddressSpaceViewTy>
 struct AP64Compact {
   static const uptr kSpaceBeg = ~(uptr)0;
   static const uptr kSpaceSize = kAllocatorSize;
@@ -78,8 +83,10 @@ struct AP64Compact {
   typedef CompactSizeClassMap SizeClassMap;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
+  using AddressSpaceView = AddressSpaceViewTy;
 };
 
+template <typename AddressSpaceViewTy>
 struct AP64VeryCompact {
   static const uptr kSpaceBeg = ~(uptr)0;
   static const uptr kSpaceSize = 1ULL << 37;
@@ -87,8 +94,10 @@ struct AP64VeryCompact {
   typedef VeryCompactSizeClassMap SizeClassMap;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
+  using AddressSpaceView = AddressSpaceViewTy;
 };
 
+template <typename AddressSpaceViewTy>
 struct AP64Dense {
   static const uptr kSpaceBeg = kAllocatorSpace;
   static const uptr kSpaceSize = kAllocatorSize;
@@ -96,13 +105,32 @@ struct AP64Dense {
   typedef DenseSizeClassMap SizeClassMap;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
+  using AddressSpaceView = AddressSpaceViewTy;
 };
 
-typedef SizeClassAllocator64<AP64> Allocator64;
-typedef SizeClassAllocator64<AP64Dyn> Allocator64Dynamic;
-typedef SizeClassAllocator64<AP64Compact> Allocator64Compact;
-typedef SizeClassAllocator64<AP64VeryCompact> Allocator64VeryCompact;
-typedef SizeClassAllocator64<AP64Dense> Allocator64Dense;
+template <typename AddressSpaceView>
+using Allocator64ASVT = SizeClassAllocator64<AP64<AddressSpaceView>>;
+using Allocator64 = Allocator64ASVT<LocalAddressSpaceView>;
+
+template <typename AddressSpaceView>
+using Allocator64DynamicASVT = SizeClassAllocator64<AP64Dyn<AddressSpaceView>>;
+using Allocator64Dynamic = Allocator64DynamicASVT<LocalAddressSpaceView>;
+
+template <typename AddressSpaceView>
+using Allocator64CompactASVT =
+    SizeClassAllocator64<AP64Compact<AddressSpaceView>>;
+using Allocator64Compact = Allocator64CompactASVT<LocalAddressSpaceView>;
+
+template <typename AddressSpaceView>
+using Allocator64VeryCompactASVT =
+    SizeClassAllocator64<AP64VeryCompact<AddressSpaceView>>;
+using Allocator64VeryCompact =
+    Allocator64VeryCompactASVT<LocalAddressSpaceView>;
+
+template <typename AddressSpaceView>
+using Allocator64DenseASVT = SizeClassAllocator64<AP64Dense<AddressSpaceView>>;
+using Allocator64Dense = Allocator64DenseASVT<LocalAddressSpaceView>;
+
 #elif defined(__mips64)
 static const u64 kAddressSpaceSize = 1ULL << 40;
 #elif defined(__aarch64__)
@@ -404,6 +432,7 @@ int TestMapUnmapCallback::unmap_count;
 // to run them all at the same time. FIXME: Make them not flaky and reenable.
 #if !SANITIZER_WINDOWS
 
+template <typename AddressSpaceViewTy = LocalAddressSpaceView>
 struct AP64WithCallback {
   static const uptr kSpaceBeg = kAllocatorSpace;
   static const uptr kSpaceSize = kAllocatorSize;
@@ -411,12 +440,13 @@ struct AP64WithCallback {
   typedef ::SizeClassMap SizeClassMap;
   typedef TestMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
+  using AddressSpaceView = AddressSpaceViewTy;
 };
 
 TEST(SanitizerCommon, SizeClassAllocator64MapUnmapCallback) {
   TestMapUnmapCallback::map_count = 0;
   TestMapUnmapCallback::unmap_count = 0;
-  typedef SizeClassAllocator64<AP64WithCallback> Allocator64WithCallBack;
+  typedef SizeClassAllocator64<AP64WithCallback<>> Allocator64WithCallBack;
   Allocator64WithCallBack *a = new Allocator64WithCallBack;
   a->Init(kReleaseToOSIntervalNever);
   EXPECT_EQ(TestMapUnmapCallback::map_count, 1);  // Allocator state.
@@ -1003,6 +1033,7 @@ TEST(SanitizerCommon, LargeMmapAllocatorBlockBegin) {
 // machine to OOM.
 #if SANITIZER_CAN_USE_ALLOCATOR64 && !SANITIZER_WINDOWS64 && !SANITIZER_ANDROID
 typedef SizeClassMap<3, 4, 8, 63, 128, 16> SpecialSizeClassMap;
+template <typename AddressSpaceViewTy = LocalAddressSpaceView>
 struct AP64_SpecialSizeClassMap {
   static const uptr kSpaceBeg = kAllocatorSpace;
   static const uptr kSpaceSize = kAllocatorSize;
@@ -1010,12 +1041,13 @@ struct AP64_SpecialSizeClassMap {
   typedef SpecialSizeClassMap SizeClassMap;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
+  using AddressSpaceView = AddressSpaceViewTy;
 };
 
 // Regression test for out-of-memory condition in PopulateFreeList().
 TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
   // In a world where regions are small and chunks are huge...
-  typedef SizeClassAllocator64<AP64_SpecialSizeClassMap> SpecialAllocator64;
+  typedef SizeClassAllocator64<AP64_SpecialSizeClassMap<>> SpecialAllocator64;
   const uptr kRegionSize =
       kAllocatorSize / SpecialSizeClassMap::kNumClassesRounded;
   SpecialAllocator64 *a = new SpecialAllocator64;

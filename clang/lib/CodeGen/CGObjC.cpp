@@ -396,6 +396,29 @@ tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
     }
     break;
 
+  case OMF_autorelease:
+    if (ResultType->isObjCObjectPointerType() &&
+        CGM.getLangOpts().getGC() == LangOptions::NonGC &&
+        Runtime.shouldUseARCFunctionsForRetainRelease())
+      return CGF.EmitObjCAutorelease(Receiver, CGF.ConvertType(ResultType));
+    break;
+
+  case OMF_retain:
+    if (ResultType->isObjCObjectPointerType() &&
+        CGM.getLangOpts().getGC() == LangOptions::NonGC &&
+        Runtime.shouldUseARCFunctionsForRetainRelease())
+      return CGF.EmitObjCRetainNonBlock(Receiver, CGF.ConvertType(ResultType));
+    break;
+
+  case OMF_release:
+    if (ResultType->isVoidType() &&
+        CGM.getLangOpts().getGC() == LangOptions::NonGC &&
+        Runtime.shouldUseARCFunctionsForRetainRelease()) {
+      CGF.EmitObjCRelease(Receiver, ARCPreciseLifetime);
+      return nullptr;
+    }
+    break;
+
   default:
     break;
   }
@@ -2006,6 +2029,11 @@ static llvm::Value *emitObjCValueOperation(CodeGenFunction &CGF,
     llvm::FunctionType *fnType =
       llvm::FunctionType::get(CGF.Int8PtrTy, CGF.Int8PtrTy, false);
     fn = CGF.CGM.CreateRuntimeFunction(fnType, fnName);
+
+    // We have Native ARC, so set nonlazybind attribute for performance
+    if (llvm::Function *f = dyn_cast<llvm::Function>(fn))
+      if (fnName == "objc_retain")
+        f->addFnAttr(llvm::Attribute::NonLazyBind);
   }
 
   // Cast the argument to 'id'.
@@ -2508,6 +2536,55 @@ void CodeGenFunction::emitARCIntrinsicUse(CodeGenFunction &CGF, Address addr,
                                           QualType type) {
   llvm::Value *value = CGF.Builder.CreateLoad(addr);
   CGF.EmitARCIntrinsicUse(value);
+}
+
+/// Autorelease the given object.
+///   call i8* \@objc_autorelease(i8* %value)
+llvm::Value *CodeGenFunction::EmitObjCAutorelease(llvm::Value *value,
+                                                  llvm::Type *returnType) {
+  return emitObjCValueOperation(*this, value, returnType,
+                      CGM.getObjCEntrypoints().objc_autoreleaseRuntimeFunction,
+                                "objc_autorelease");
+}
+
+/// Retain the given object, with normal retain semantics.
+///   call i8* \@objc_retain(i8* %value)
+llvm::Value *CodeGenFunction::EmitObjCRetainNonBlock(llvm::Value *value,
+                                                     llvm::Type *returnType) {
+  return emitObjCValueOperation(*this, value, returnType,
+                          CGM.getObjCEntrypoints().objc_retainRuntimeFunction,
+                                "objc_retain");
+}
+
+/// Release the given object.
+///   call void \@objc_release(i8* %value)
+void CodeGenFunction::EmitObjCRelease(llvm::Value *value,
+                                      ARCPreciseLifetime_t precise) {
+  if (isa<llvm::ConstantPointerNull>(value)) return;
+
+  llvm::Constant *&fn = CGM.getObjCEntrypoints().objc_release;
+  if (!fn) {
+    if (!fn) {
+      llvm::FunctionType *fnType =
+        llvm::FunctionType::get(Builder.getVoidTy(), Int8PtrTy, false);
+      fn = CGM.CreateRuntimeFunction(fnType, "objc_release");
+      setARCRuntimeFunctionLinkage(CGM, fn);
+      // We have Native ARC, so set nonlazybind attribute for performance
+      if (llvm::Function *f = dyn_cast<llvm::Function>(fn))
+        f->addFnAttr(llvm::Attribute::NonLazyBind);
+    }
+  }
+
+  // Cast the argument to 'id'.
+  value = Builder.CreateBitCast(value, Int8PtrTy);
+
+  // Call objc_release.
+  llvm::CallInst *call = EmitNounwindRuntimeCall(fn, value);
+
+  if (precise == ARCImpreciseLifetime) {
+    call->setMetadata("clang.imprecise_release",
+                      llvm::MDNode::get(Builder.getContext(), None));
+  }
 }
 
 namespace {

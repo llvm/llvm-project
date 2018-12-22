@@ -353,10 +353,9 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     const DWARFObject &Obj = Die.getDwarfUnit()->getContext().getDWARFObj();
     // For DW_FORM_rnglistx we need to dump the offset separately, since
     // we have only dumped the index so far.
-    Optional<DWARFFormValue> Value = Die.find(DW_AT_ranges);
-    if (Value && Value->getForm() == DW_FORM_rnglistx)
+    if (formValue.getForm() == DW_FORM_rnglistx)
       if (auto RangeListOffset =
-              U->getRnglistOffset(*Value->getAsSectionOffset())) {
+              U->getRnglistOffset(*formValue.getAsSectionOffset())) {
         DWARFFormValue FV(dwarf::DW_FORM_sec_offset);
         FV.setUValue(*RangeListOffset);
         FV.dump(OS, DumpOpts);

@@ -527,38 +527,26 @@ define <4 x float> @PR37502(float %x, float %y) {
 ; SSE41-32-LABEL: PR37502:
 ; SSE41-32:       # %bb.0:
 ; SSE41-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE41-32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; SSE41-32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; SSE41-32-NEXT:    movddup {{.*#+}} xmm0 = xmm0[0,0]
 ; SSE41-32-NEXT:    retl
 ;
 ; SSE41-64-LABEL: PR37502:
 ; SSE41-64:       # %bb.0:
-; SSE41-64-NEXT:    movaps %xmm0, %xmm2
-; SSE41-64-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[2,3]
-; SSE41-64-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,1],xmm0[0],xmm2[3]
-; SSE41-64-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm1[0]
-; SSE41-64-NEXT:    movaps %xmm2, %xmm0
+; SSE41-64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; SSE41-64-NEXT:    movddup {{.*#+}} xmm0 = xmm0[0,0]
 ; SSE41-64-NEXT:    retq
 ;
-; AVX1-32-LABEL: PR37502:
-; AVX1-32:       # %bb.0:
-; AVX1-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX1-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; AVX1-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
-; AVX1-32-NEXT:    retl
+; AVX-32-LABEL: PR37502:
+; AVX-32:       # %bb.0:
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX-32-NEXT:    retl
 ;
 ; AVX1-64-LABEL: PR37502:
 ; AVX1-64:       # %bb.0:
-; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[2,3]
-; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1],xmm0[0],xmm2[3]
-; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; AVX1-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX1-64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX1-64-NEXT:    retq
-;
-; AVX2-32-LABEL: PR37502:
-; AVX2-32:       # %bb.0:
-; AVX2-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX2-32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX2-32-NEXT:    retl
 ;
 ; AVX2-64-LABEL: PR37502:
 ; AVX2-64:       # %bb.0:

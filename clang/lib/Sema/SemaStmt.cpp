@@ -469,11 +469,9 @@ Sema::ActOnCaseStmt(SourceLocation CaseLoc, ExprResult LHSVal,
 }
 
 /// ActOnCaseStmtBody - This installs a statement as the body of a case.
-void Sema::ActOnCaseStmtBody(Stmt *caseStmt, Stmt *SubStmt) {
+void Sema::ActOnCaseStmtBody(Stmt *S, Stmt *SubStmt) {
   DiagnoseUnusedExprResult(SubStmt);
-
-  auto *CS = static_cast<CaseStmt *>(caseStmt);
-  CS->setSubStmt(SubStmt);
+  cast<CaseStmt>(S)->setSubStmt(SubStmt);
 }
 
 StmtResult

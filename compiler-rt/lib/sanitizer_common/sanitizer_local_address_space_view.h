@@ -12,7 +12,7 @@
 // provides a simple interface to load memory from another process (i.e.
 // out-of-process)
 //
-// The `AddressSpaveView` interface requires that the type can be used as a
+// The `AddressSpaceView` interface requires that the type can be used as a
 // template parameter to objects that wish to be able to operate in an
 // out-of-process manner. In normal usage, objects are in-process and are thus
 // instantiated with the `LocalAddressSpaceView` type. This type is used to
