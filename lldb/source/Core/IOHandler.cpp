@@ -1052,7 +1052,7 @@ public:
     Windows::iterator pos, end = m_subwindows.end();
     size_t i = 0;
     for (pos = m_subwindows.begin(); pos != end; ++pos, ++i) {
-      if ((*pos)->m_name.compare(name) == 0)
+      if ((*pos)->m_name == name)
         return *pos;
     }
     return WindowSP();

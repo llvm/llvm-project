@@ -128,7 +128,8 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   // Hack to handle constructors, where self cannot be recovered from
   // the expression.
   if (SelfDecl && !Ctx.SelfArg) {
-    DeclRefExpr SelfDRE(SelfDecl, false, SelfDecl->getType(), VK_LValue,
+    DeclRefExpr SelfDRE(SelfDecl->getASTContext(), SelfDecl, false,
+                        SelfDecl->getType(), VK_LValue,
                         SelfDecl->getLocation());
     Ctx.SelfArg = &SelfDRE;
 

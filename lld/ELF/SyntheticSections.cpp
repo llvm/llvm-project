@@ -2176,6 +2176,8 @@ void GnuHashTableSection::writeTo(uint8_t *Buf) {
 void GnuHashTableSection::writeBloomFilter(uint8_t *Buf) {
   unsigned C = Config->Is64 ? 64 : 32;
   for (const Entry &Sym : Symbols) {
+    // When C = 64, we choose a word with bits [6:...] and set 1 to two bits in
+    // the word using bits [0:5] and [26:31].
     size_t I = (Sym.Hash / C) & (MaskWords - 1);
     uint64_t Val = readUint(Buf + I * Config->Wordsize);
     Val |= uint64_t(1) << (Sym.Hash % C);
@@ -2406,17 +2408,18 @@ static std::vector<GdbIndexSection::CuEntry> readCuList(DWARFContext &Dwarf) {
   return Ret;
 }
 
-static std::vector<GdbIndexSection::AddressEntry>
+static Expected<std::vector<GdbIndexSection::AddressEntry>>
 readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
   std::vector<GdbIndexSection::AddressEntry> Ret;
 
   uint32_t CuIdx = 0;
   for (std::unique_ptr<DWARFUnit> &Cu : Dwarf.compile_units()) {
-    DWARFAddressRangesVector Ranges;
-    Cu->collectAddressRanges(Ranges);
+    Expected<DWARFAddressRangesVector> Ranges = Cu->collectAddressRanges();
+    if (!Ranges)
+      return Ranges.takeError();
 
     ArrayRef<InputSectionBase *> Sections = Sec->File->getSections();
-    for (DWARFAddressRange &R : Ranges) {
+    for (DWARFAddressRange &R : *Ranges) {
       InputSectionBase *S = Sections[R.SectionIndex];
       if (!S || S == &InputSection::Discarded || !S->Live)
         continue;
@@ -2429,7 +2432,8 @@ readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
     }
     ++CuIdx;
   }
-  return Ret;
+
+  return std::move(Ret);
 }
 
 template <class ELFT>
@@ -2561,7 +2565,17 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
 
     Chunks[I].Sec = Sections[I];
     Chunks[I].CompilationUnits = readCuList(Dwarf);
-    Chunks[I].AddressAreas = readAddressAreas(Dwarf, Sections[I]);
+    Expected<std::vector<GdbIndexSection::AddressEntry>> AddressAreas =
+        readAddressAreas(Dwarf, Sections[I]);
+    if (!AddressAreas) {
+      std::string Msg = File->getName();
+      Msg += ": ";
+      if (!File->ArchiveName.empty())
+        Msg += "in archive " + File->ArchiveName + ": ";
+      Msg += toString(AddressAreas.takeError());
+      fatal(Msg);
+    }
+    Chunks[I].AddressAreas = *AddressAreas;
     NameAttrs[I] = readPubNamesAndTypes<ELFT>(
         static_cast<const LLDDwarfObj<ELFT> &>(Dwarf.getDWARFObj()),
         Chunks[I].CompilationUnits);

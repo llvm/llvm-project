@@ -7452,7 +7452,7 @@ ClangASTContext::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                                                base_class->getType());
             std::string base_class_type_name(
                 base_class_clang_type.GetTypeName().AsCString(""));
-            if (base_class_type_name.compare(name) == 0)
+            if (base_class_type_name == name)
               return child_idx;
             ++child_idx;
           }

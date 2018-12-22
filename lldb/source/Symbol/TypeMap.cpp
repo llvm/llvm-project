@@ -223,8 +223,7 @@ void TypeMap::RemoveMismatchedTypes(const std::string &type_scope,
       } else {
         // The type we are currently looking at doesn't exists in a namespace
         // or class, so it only matches if there is no type scope...
-        keep_match =
-            type_scope.empty() && type_basename.compare(match_type_name) == 0;
+        keep_match = type_scope.empty() && type_basename == match_type_name;
       }
     }
 
