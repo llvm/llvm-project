@@ -472,6 +472,9 @@ namespace {
                                 SDValue &InFlag);
 
     bool tryOptimizeRem8Extend(SDNode *N);
+
+    bool hasNoSignFlagUses(SDValue Flags) const;
+    bool hasNoCarryFlagUses(SDValue Flags) const;
   };
 }
 
@@ -1377,8 +1380,7 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
   }
   APInt MaskedHighBits =
     APInt::getHighBitsSet(X.getSimpleValueType().getSizeInBits(), MaskLZ);
-  KnownBits Known;
-  DAG.computeKnownBits(X, Known);
+  KnownBits Known = DAG.computeKnownBits(X);
   if (MaskedHighBits != Known.Zero) return true;
 
   // We've identified a pattern that can be transformed into a single shift
@@ -2226,7 +2228,7 @@ static X86::CondCode getCondFromOpc(unsigned Opc) {
 
 /// Test whether the given X86ISD::CMP node has any uses which require the SF
 /// flag to be accurate.
-static bool hasNoSignFlagUses(SDValue Flags) {
+bool X86DAGToDAGISel::hasNoSignFlagUses(SDValue Flags) const {
   // Examine each user of the node.
   for (SDNode::use_iterator UI = Flags->use_begin(), UE = Flags->use_end();
          UI != UE; ++UI) {
@@ -2266,7 +2268,7 @@ static bool hasNoSignFlagUses(SDValue Flags) {
 
 /// Test whether the given node which sets flags has any uses which require the
 /// CF flag to be accurate.
-static bool hasNoCarryFlagUses(SDValue Flags) {
+ bool X86DAGToDAGISel::hasNoCarryFlagUses(SDValue Flags) const {
   // Examine each user of the node.
   for (SDNode::use_iterator UI = Flags->use_begin(), UE = Flags->use_end();
          UI != UE; ++UI) {

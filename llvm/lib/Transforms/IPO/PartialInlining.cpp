@@ -851,12 +851,8 @@ int PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB) {
       break;
     }
 
-    IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(&I);
-    if (IntrInst) {
-      if (IntrInst->getIntrinsicID() == Intrinsic::lifetime_start ||
-          IntrInst->getIntrinsicID() == Intrinsic::lifetime_end)
-        continue;
-    }
+    if (I.isLifetimeStartOrEnd())
+      continue;
 
     if (CallInst *CI = dyn_cast<CallInst>(&I)) {
       InlineCost += getCallsiteCost(CallSite(CI), DL);

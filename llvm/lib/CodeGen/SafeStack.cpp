@@ -324,11 +324,8 @@ bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
       case Instruction::Invoke: {
         ImmutableCallSite CS(I);
 
-        if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-          if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-              II->getIntrinsicID() == Intrinsic::lifetime_end)
-            continue;
-        }
+        if (I->isLifetimeStartOrEnd())
+          continue;
 
         if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
           if (!IsMemIntrinsicSafe(MI, UI, AllocaPtr, AllocaSize)) {

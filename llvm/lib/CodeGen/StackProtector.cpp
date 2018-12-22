@@ -157,14 +157,6 @@ bool StackProtector::ContainsProtectableArray(Type *Ty, bool &IsLarge,
   return NeedsProtector;
 }
 
-static bool isLifetimeInst(const Instruction *I) {
-  if (const auto Intrinsic = dyn_cast<IntrinsicInst>(I)) {
-    const auto Id = Intrinsic->getIntrinsicID();
-    return Id == Intrinsic::lifetime_start || Id == Intrinsic::lifetime_end;
-  }
-  return false;
-}
-
 bool StackProtector::HasAddressTaken(const Instruction *AI) {
   for (const User *U : AI->users()) {
     if (const StoreInst *SI = dyn_cast<StoreInst>(U)) {
@@ -175,7 +167,7 @@ bool StackProtector::HasAddressTaken(const Instruction *AI) {
         return true;
     } else if (const CallInst *CI = dyn_cast<CallInst>(U)) {
       // Ignore intrinsics that are not calls. TODO: Use isLoweredToCall().
-      if (!isa<DbgInfoIntrinsic>(CI) && !isLifetimeInst(CI))
+      if (!isa<DbgInfoIntrinsic>(CI) && !CI->isLifetimeStartOrEnd())
         return true;
     } else if (isa<InvokeInst>(U)) {
       return true;

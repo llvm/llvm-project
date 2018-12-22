@@ -71,15 +71,7 @@ static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
     OS.indent(Indent);
     R.dump(OS, AddressSize);
 
-    if (SectionNames.empty() || R.SectionIndex == -1ULL)
-      continue;
-
-    StringRef Name = SectionNames[R.SectionIndex].Name;
-    OS << " \"" << Name << '\"';
-
-    // Print section index if name is not unique.
-    if (!SectionNames[R.SectionIndex].IsNameUnique)
-      OS << format(" [%" PRIu64 "]", R.SectionIndex);
+    DWARFFormValue::dumpAddressSection(Obj, OS, DumpOpts, R.SectionIndex);
   }
 }
 
@@ -353,10 +345,9 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     const DWARFObject &Obj = Die.getDwarfUnit()->getContext().getDWARFObj();
     // For DW_FORM_rnglistx we need to dump the offset separately, since
     // we have only dumped the index so far.
-    Optional<DWARFFormValue> Value = Die.find(DW_AT_ranges);
-    if (Value && Value->getForm() == DW_FORM_rnglistx)
+    if (formValue.getForm() == DW_FORM_rnglistx)
       if (auto RangeListOffset =
-              U->getRnglistOffset(*Value->getAsSectionOffset())) {
+              U->getRnglistOffset(*formValue.getAsSectionOffset())) {
         DWARFFormValue FV(dwarf::DW_FORM_sec_offset);
         FV.setUValue(*RangeListOffset);
         FV.dump(OS, DumpOpts);

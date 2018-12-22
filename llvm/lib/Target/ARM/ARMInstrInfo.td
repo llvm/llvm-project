@@ -4908,7 +4908,7 @@ let usesCustomInserter = 1, Defs = [CPSR] in {
   def ABS : ARMPseudoInst<(outs GPR:$dst), (ins GPR:$src), 8, NoItinerary, []>;
 }
 
-let usesCustomInserter = 1 in {
+let usesCustomInserter = 1, Defs = [CPSR] in {
     def COPY_STRUCT_BYVAL_I32 : PseudoInst<
       (outs), (ins GPR:$dst, GPR:$src, i32imm:$size, i32imm:$alignment),
       NoItinerary,

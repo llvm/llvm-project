@@ -1005,7 +1005,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     if (ID == Intrinsic::localescape) LocalEscapeCall = &II;
     if (!ASan.UseAfterScope)
       return;
-    if (ID != Intrinsic::lifetime_start && ID != Intrinsic::lifetime_end)
+    if (!II.isLifetimeStartOrEnd())
       return;
     // Found lifetime intrinsic, add ASan instrumentation if necessary.
     ConstantInt *Size = dyn_cast<ConstantInt>(II.getArgOperand(0));

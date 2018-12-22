@@ -116,13 +116,10 @@ isOnlyCopiedFromConstantGlobal(Value *V, MemTransferInst *&TheCopy,
       }
 
       // Lifetime intrinsics can be handled by the caller.
-      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-        if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-            II->getIntrinsicID() == Intrinsic::lifetime_end) {
-          assert(II->use_empty() && "Lifetime markers have no result to use!");
-          ToDelete.push_back(II);
-          continue;
-        }
+      if (I->isLifetimeStartOrEnd()) {
+        assert(I->use_empty() && "Lifetime markers have no result to use!");
+        ToDelete.push_back(I);
+        continue;
       }
 
       // If this is isn't our memcpy/memmove, reject it as something we can't

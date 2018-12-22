@@ -5,10 +5,14 @@
 ; RUN:     -passes=loop-instsimplify -print-after-all  2>&1 | FileCheck %s -check-prefix=SIMPLIFY
 ; RUN: opt < %s -disable-output \
 ; RUN:     -passes=loop-deletion,loop-instsimplify -print-after-all  2>&1 | FileCheck %s -check-prefix=DELETED
+; RUN: opt < %s -disable-output \
+; RUN:     -passes=loop-deletion,loop-instsimplify -print-after-all -print-module-scope  2>&1 | FileCheck %s -check-prefix=DELETED-BUT-PRINTED
 ;
 ; SIMPLIFY: IR Dump {{.*}} LoopInstSimplifyPass
 ; DELETED-NOT: IR Dump {{.*}}LoopInstSimplifyPass
 ; DELETED-NOT: IR Dump {{.*}}LoopDeletionPass
+; DELETED-BUT-PRINTED: IR Dump {{.*}}LoopDeletionPass {{.*invalidated:}}
+; DELETED-BUT-PRINTED-NOT: IR Dump {{.*}}LoopInstSimplifyPass
 
 define void @deleteme() {
 entry:

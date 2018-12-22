@@ -206,10 +206,8 @@ const Instruction* BasicBlock::getFirstNonPHIOrDbgOrLifetime() const {
     if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
       continue;
 
-    if (auto *II = dyn_cast<IntrinsicInst>(&I))
-      if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-          II->getIntrinsicID() == Intrinsic::lifetime_end)
-        continue;
+    if (I.isLifetimeStartOrEnd())
+      continue;
 
     return &I;
   }

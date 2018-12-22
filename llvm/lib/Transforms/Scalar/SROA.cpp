@@ -913,8 +913,7 @@ private:
     if (!IsOffsetKnown)
       return PI.setAborted(&II);
 
-    if (II.getIntrinsicID() == Intrinsic::lifetime_start ||
-        II.getIntrinsicID() == Intrinsic::lifetime_end) {
+    if (II.isLifetimeStartOrEnd()) {
       ConstantInt *Length = cast<ConstantInt>(II.getArgOperand(0));
       uint64_t Size = std::min(AllocSize - Offset.getLimitedValue(),
                                Length->getLimitedValue());
@@ -1807,8 +1806,7 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
     if (!S.isSplittable())
       return false; // Skip any unsplittable intrinsics.
   } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U->getUser())) {
-    if (II->getIntrinsicID() != Intrinsic::lifetime_start &&
-        II->getIntrinsicID() != Intrinsic::lifetime_end)
+    if (!II->isLifetimeStartOrEnd())
       return false;
   } else if (U->get()->getType()->getPointerElementType()->isStructTy()) {
     // Disable vector promotion when there are loads or stores of an FCA.
@@ -2029,8 +2027,7 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
     if (!S.isSplittable())
       return false; // Skip any unsplittable intrinsics.
   } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U->getUser())) {
-    if (II->getIntrinsicID() != Intrinsic::lifetime_start &&
-        II->getIntrinsicID() != Intrinsic::lifetime_end)
+    if (!II->isLifetimeStartOrEnd())
       return false;
   } else {
     return false;
@@ -3013,8 +3010,7 @@ private:
   }
 
   bool visitIntrinsicInst(IntrinsicInst &II) {
-    assert(II.getIntrinsicID() == Intrinsic::lifetime_start ||
-           II.getIntrinsicID() == Intrinsic::lifetime_end);
+    assert(II.isLifetimeStartOrEnd());
     LLVM_DEBUG(dbgs() << "    original: " << II << "\n");
     assert(II.getArgOperand(1) == OldPtr);
 

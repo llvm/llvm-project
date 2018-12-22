@@ -1354,10 +1354,8 @@ def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
   if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N->getOperand(1)))
     return CurDAG->MaskedValueIsZero(N->getOperand(0), CN->getAPIntValue());
 
-  KnownBits Known0;
-  CurDAG->computeKnownBits(N->getOperand(0), Known0, 0);
-  KnownBits Known1;
-  CurDAG->computeKnownBits(N->getOperand(1), Known1, 0);
+  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
+  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
   return (~Known0.Zero & ~Known1.Zero) == 0;
 }]>;
 
@@ -1424,8 +1422,7 @@ def ADD64ri32_DB : I<0, Pseudo,
 
 def sub_is_xor : PatFrag<(ops node:$lhs, node:$rhs), (sub node:$lhs, node:$rhs),[{
   if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
-    KnownBits Known;
-    CurDAG->computeKnownBits(N->getOperand(1), Known);
+    KnownBits Known = CurDAG->computeKnownBits(N->getOperand(1));
 
     // If all possible ones in the RHS are set in the LHS then there can't be
     // a borrow and we can use xor.

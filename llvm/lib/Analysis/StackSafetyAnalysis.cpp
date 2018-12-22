@@ -323,11 +323,8 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(const Value *Ptr, UseInfo &US) {
       case Instruction::Invoke: {
         ImmutableCallSite CS(I);
 
-        if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-          if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-              II->getIntrinsicID() == Intrinsic::lifetime_end)
-            break;
-        }
+        if (I->isLifetimeStartOrEnd())
+          break;
 
         if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
           US.updateRange(getMemIntrinsicAccessRange(MI, UI, Ptr));
