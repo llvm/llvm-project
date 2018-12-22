@@ -6,8 +6,7 @@ SWIFT_SOURCES := main.swift
 all: module.modulemap conflict.h a.out
 
 include $(LEVEL)/Makefile.rules
-# $(PWD) is not what we want because VPATH changes it
-SWIFTFLAGS += -Xcc -F$(SRCDIR) -I$(SRCDIR) -I$(shell pwd)
+SWIFTFLAGS += -Xcc -F$(SRCDIR) -I$(SRCDIR) -I$(BUILDDIR)
 
 # Create a nonmodular include by removing the modulemap after building.
 all:

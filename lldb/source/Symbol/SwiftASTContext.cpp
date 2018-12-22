@@ -1376,6 +1376,63 @@ bool HasSwiftModules(Module &module) {
   return !ast_file_datas.empty();
 }
 
+namespace {
+/// Turn relative paths in clang options into absolute paths based on
+/// \c cur_working_dir.
+template <typename SmallString>
+void ApplyWorkingDir(SmallString &clang_argument,
+                     StringRef cur_working_dir) {
+  StringRef arg = clang_argument.str();
+  StringRef prefix;
+  // Ignore the option part of a double-arg include option.
+  if (arg == "-I" || arg == "-F")
+    return;
+  if (arg.consume_front("-I"))
+    prefix = "-I";
+  else if (arg.consume_front("-F"))
+    prefix = "-F";
+  else if (arg.startswith("-"))
+    // Assume this is a compiler arg and not a path starting with "-".
+    return;
+  // There is most probably a path in arg now.
+  if (!llvm::sys::path::is_relative(arg))
+    return;
+  SmallString rel_path = arg;
+  clang_argument = prefix;
+  llvm::sys::path::append(clang_argument, cur_working_dir, rel_path);
+  llvm::sys::path::remove_dots(clang_argument);
+}
+}
+
+void SwiftASTContext::AddExtraClangArgs(std::vector<std::string> ExtraArgs) {
+  llvm::SmallString<128> cur_working_dir;
+  llvm::SmallString<128> clang_argument;
+  for (const std::string &arg : ExtraArgs) {
+    // Join multi-arg -D and -U options for uniquing.
+    clang_argument += arg;
+    if (clang_argument == "-D" || clang_argument == "-U" ||
+        clang_argument == "-working-directory")
+      continue;
+
+    // Enable uniquing for -D and -U options.
+    bool is_macro = (clang_argument.size() >= 2 && clang_argument[0] == '-' &&
+                     (clang_argument[1] == 'D' || clang_argument[1] == 'U'));
+    bool unique = is_macro;
+
+    // Consume any -working-directory arguments.
+    StringRef cwd(clang_argument);
+    if (cwd.consume_front("-working-directory"))
+      cur_working_dir = cwd;
+    else {
+      // Otherwise add the argument to the list.
+      if (!is_macro)
+        ApplyWorkingDir(clang_argument, cur_working_dir);
+      AddClangArgument(clang_argument.str(), unique);
+    }
+    clang_argument.clear();
+  }
+}
+
 void SwiftASTContext::RemapClangImporterOptions(
     const PathMappingList &path_map) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
@@ -1392,6 +1449,8 @@ void SwiftASTContext::RemapClangImporterOptions(
     StringRef arg = arg_string;
     if (arg.consume_front("-I"))
       prefix = "-I";
+    else if (arg.consume_front("-F"))
+      prefix = "-F";
     if (path_map.RemapPath(arg, remapped)) {
       if (log)
         log->Printf("remapped %s -> %s%s", arg.str().c_str(),
@@ -1600,6 +1659,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(),
                         FileSpec(resource_dir), triple);
 
+  // Apply the working directory to all relative paths.
+  std::vector<std::string> DeserializedArgs = swift_ast_sp->GetClangArguments();
+  swift_ast_sp->GetClangImporterOptions().ExtraArgs.clear();
+  swift_ast_sp->AddExtraClangArgs(DeserializedArgs);
   // Apply source path remappings found in the module's dSYM.
   swift_ast_sp->RemapClangImporterOptions(module.GetSourceMappingList());
   
@@ -1907,24 +1970,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                   ast_context->GetFrameworkSearchPathAtIndex(fsi);
               swift_ast_sp->AddFrameworkSearchPath(search_path);
             }
-
-            std::string clang_argument;
-            for (size_t osi = 0, ose = ast_context->GetNumClangArguments();
-                 osi < ose; ++osi) {
-              // Join multi-arg -D and -U options for uniquing.
-              clang_argument += ast_context->GetClangArgumentAtIndex(osi);
-              if (clang_argument == "-D" || clang_argument == "-U")
-                continue;
-
-              // Enable uniquing for -D and -U options.
-              bool force = true;
-              if (clang_argument.size() >= 2 && clang_argument[0] == '-' &&
-                  (clang_argument[1] == 'D' || clang_argument[1] == 'U'))
-                force = false;
-
-              swift_ast_sp->AddClangArgument(clang_argument, force);
-              clang_argument.clear();
-            }
+            swift_ast_sp->AddExtraClangArgs(ast_context->GetClangArguments());
           }
 
           swift_ast_sp->RegisterSectionModules(*module_sp, module_names);
@@ -1962,7 +2008,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                                   swift_ast_sp->GetDiagnosticEngine());
   }
 
-  // Apply source path remappings ofund in the target settings.
+  // Apply source path remappings found in the target settings.
   swift_ast_sp->RemapClangImporterOptions(target.GetSourcePathMap());
 
   // This needs to happen once all the import paths are set, or
@@ -2981,34 +3027,27 @@ bool SwiftASTContext::AddFrameworkSearchPath(const char *path) {
     }
 
     if (add_search_path) {
-      ast->SearchPathOpts.FrameworkSearchPaths.push_back({path, /*isSystem=*/false});
+      ast->SearchPathOpts.FrameworkSearchPaths.push_back(
+          {path, /*isSystem=*/false});
       return true;
     }
   }
   return false;
 }
 
-bool SwiftASTContext::AddClangArgument(std::string clang_arg, bool force) {
-  if (!clang_arg.empty()) {
-    swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
+bool SwiftASTContext::AddClangArgument(std::string clang_arg, bool unique) {
+  if (clang_arg.empty())
+    return false;
 
-    bool add_hmap = true;
+  swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
+  // Avoid inserting the same option twice.
+  if (unique)
+    for (std::string &arg : importer_options.ExtraArgs)
+      if (arg == clang_arg)
+        return false;
 
-    if (!force) {
-      for (std::string &arg : importer_options.ExtraArgs) {
-        if (!arg.compare(clang_arg)) {
-          add_hmap = false;
-          break;
-        }
-      }
-    }
-
-    if (add_hmap) {
-      importer_options.ExtraArgs.push_back(clang_arg);
-      return true;
-    }
-  }
-  return false;
+  importer_options.ExtraArgs.push_back(clang_arg);
+  return true;
 }
 
 bool SwiftASTContext::AddClangArgumentPair(const char *clang_arg_1,
@@ -3069,24 +3108,14 @@ const char *SwiftASTContext::GetFrameworkSearchPathAtIndex(size_t idx) const {
 
   if (m_ast_context_ap.get()) {
     if (idx < m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths.size())
-      return m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths[idx].Path.c_str();
+      return m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths[idx]
+          .Path.c_str();
   }
   return NULL;
 }
 
-size_t SwiftASTContext::GetNumClangArguments() {
-  swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
-
-  return importer_options.ExtraArgs.size();
-}
-
-const char *SwiftASTContext::GetClangArgumentAtIndex(size_t idx) {
-  swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
-
-  if (idx < importer_options.ExtraArgs.size())
-    return importer_options.ExtraArgs[idx].c_str();
-
-  return NULL;
+const std::vector<std::string> &SwiftASTContext::GetClangArguments() {
+  return GetClangImporterOptions().ExtraArgs;
 }
 
 swift::ModuleDecl *
