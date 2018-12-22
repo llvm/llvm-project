@@ -1,10 +1,10 @@
 // RUN: %libomp-compile
-// RUN: env OMP_DISPLAY_AFFINITY=false %libomp-run | python %S/check.py -c 'NOTHING' %s
-// RUN: env OMP_DISPLAY_AFFINITY=true OMP_NUM_THREADS=1 %libomp-run | python %S/check.py -c 'CHECK' %s
-// RUN: env OMP_DISPLAY_AFFINITY=true OMP_NUM_THREADS=2 %libomp-run | python %S/check.py -c 'CHECK-2' %s
-// RUN: env OMP_DISPLAY_AFFINITY=true OMP_NUM_THREADS=3 %libomp-run | python %S/check.py -c 'CHECK-3' %s
-// RUN: env OMP_DISPLAY_AFFINITY=true OMP_NUM_THREADS=4 %libomp-run | python %S/check.py -c 'CHECK-4' %s
-// RUN: env OMP_DISPLAY_AFFINITY=true OMP_NUM_THREADS=8 %libomp-run | python %S/check.py -c 'CHECK-8' %s
+// RUN: env OMP_DISPLAY_AFFINITY=false %libomp-run | %python %S/check.py -c 'NOTHING' %s
+// RUN: env OMP_DISPLAY_AFFINITY=true OMP_NUM_THREADS=1 %libomp-run | %python %S/check.py -c 'CHECK' %s
+// RUN: env OMP_DISPLAY_AFFINITY=true OMP_NUM_THREADS=2 %libomp-run | %python %S/check.py -c 'CHECK-2' %s
+// RUN: env OMP_DISPLAY_AFFINITY=true OMP_NUM_THREADS=3 %libomp-run | %python %S/check.py -c 'CHECK-3' %s
+// RUN: env OMP_DISPLAY_AFFINITY=true OMP_NUM_THREADS=4 %libomp-run | %python %S/check.py -c 'CHECK-4' %s
+// RUN: env OMP_DISPLAY_AFFINITY=true OMP_NUM_THREADS=8 %libomp-run | %python %S/check.py -c 'CHECK-8' %s
 
 #include <stdio.h>
 #include <stdlib.h>

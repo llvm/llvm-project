@@ -1,5 +1,5 @@
 // RUN: %libomp-compile
-// RUN: env OMP_DISPLAY_AFFINITY=TRUE OMP_NUM_THREADS=4 OMP_PLACES='{0,1},{2,3},{4,5},{6,7}' %libomp-run | python %S/check.py -c 'CHECK' %s
+// RUN: env OMP_DISPLAY_AFFINITY=TRUE OMP_NUM_THREADS=4 OMP_PLACES='{0,1},{2,3},{4,5},{6,7}' %libomp-run | %python %S/check.py -c 'CHECK' %s
 
 // Affinity Display examples
 #include <stdio.h>
