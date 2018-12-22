@@ -6816,7 +6816,7 @@ ASTNodeImporter::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *E) {
   if (Error Err = ImportContainerChecked(E->arguments(), ToArgs))
     return std::move(Err);
 
-  return new (Importer.getToContext()) CXXTemporaryObjectExpr(
+  return CXXTemporaryObjectExpr::Create(
       Importer.getToContext(), ToConstructor, ToType, ToTypeSourceInfo, ToArgs,
       ToParenOrBraceRange, E->hadMultipleCandidates(),
       E->isListInitialization(), E->isStdInitListInitialization(),

@@ -232,6 +232,64 @@ define i64 @bextr64_a4_commutative(i64 %val, i64 %numskipbits, i64 %numlowbits) 
   ret i64 %masked
 }
 
+; 64-bit, but with 32-bit output
+
+; Everything done in 64-bit, truncation happens last.
+define i32 @bextr64_32_a0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind {
+; CHECK-LABEL: bextr64_32_a0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w9, wzr, #0x1
+; CHECK-NEXT:    lsl x9, x9, x2
+; CHECK-NEXT:    lsr x8, x0, x1
+; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    ret
+  %shifted = lshr i64 %val, %numskipbits
+  %onebit = shl i64 1, %numlowbits
+  %mask = add nsw i64 %onebit, -1
+  %masked = and i64 %mask, %shifted
+  %res = trunc i64 %masked to i32
+  ret i32 %res
+}
+
+; Shifting happens in 64-bit, then truncation. Masking is 32-bit.
+define i32 @bextr64_32_a1(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind {
+; CHECK-LABEL: bextr64_32_a1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w9, wzr, #0x1
+; CHECK-NEXT:    lsl w9, w9, w2
+; CHECK-NEXT:    lsr x8, x0, x1
+; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    ret
+  %shifted = lshr i64 %val, %numskipbits
+  %truncshifted = trunc i64 %shifted to i32
+  %onebit = shl i32 1, %numlowbits
+  %mask = add nsw i32 %onebit, -1
+  %masked = and i32 %mask, %truncshifted
+  ret i32 %masked
+}
+
+; Shifting happens in 64-bit. Mask is 32-bit, but extended to 64-bit.
+; Masking is 64-bit. Then truncation.
+define i32 @bextr64_32_a2(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind {
+; CHECK-LABEL: bextr64_32_a2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w9, wzr, #0x1
+; CHECK-NEXT:    lsl w9, w9, w2
+; CHECK-NEXT:    lsr x8, x0, x1
+; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    ret
+  %shifted = lshr i64 %val, %numskipbits
+  %onebit = shl i32 1, %numlowbits
+  %mask = add nsw i32 %onebit, -1
+  %zextmask = zext i32 %mask to i64
+  %masked = and i64 %zextmask, %shifted
+  %truncmasked = trunc i64 %masked to i32
+  ret i32 %truncmasked
+}
+
 ; ---------------------------------------------------------------------------- ;
 ; Pattern b. 32-bit
 ; ---------------------------------------------------------------------------- ;
@@ -406,6 +464,67 @@ define i64 @bextr64_b4_commutative(i64 %val, i64 %numskipbits, i64 %numlowbits) 
   %mask = xor i64 %notmask, -1
   %masked = and i64 %shifted, %mask ; swapped order
   ret i64 %masked
+}
+
+; 64-bit, but with 32-bit output
+
+; Everything done in 64-bit, truncation happens last.
+define i32 @bextr64_32_b0(i64 %val, i64 %numskipbits, i8 %numlowbits) nounwind {
+; CHECK-LABEL: bextr64_32_b0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x9, #-1
+; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-NEXT:    lsr x8, x0, x1
+; CHECK-NEXT:    lsl x9, x9, x2
+; CHECK-NEXT:    bic w0, w8, w9
+; CHECK-NEXT:    ret
+  %shiftedval = lshr i64 %val, %numskipbits
+  %widenumlowbits = zext i8 %numlowbits to i64
+  %notmask = shl nsw i64 -1, %widenumlowbits
+  %mask = xor i64 %notmask, -1
+  %wideres = and i64 %shiftedval, %mask
+  %res = trunc i64 %wideres to i32
+  ret i32 %res
+}
+
+; Shifting happens in 64-bit, then truncation. Masking is 32-bit.
+define i32 @bextr64_32_b1(i64 %val, i64 %numskipbits, i8 %numlowbits) nounwind {
+; CHECK-LABEL: bextr64_32_b1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w9, #-1
+; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-NEXT:    lsr x8, x0, x1
+; CHECK-NEXT:    lsl w9, w9, w2
+; CHECK-NEXT:    bic w0, w8, w9
+; CHECK-NEXT:    ret
+  %shiftedval = lshr i64 %val, %numskipbits
+  %truncshiftedval = trunc i64 %shiftedval to i32
+  %widenumlowbits = zext i8 %numlowbits to i32
+  %notmask = shl nsw i32 -1, %widenumlowbits
+  %mask = xor i32 %notmask, -1
+  %res = and i32 %truncshiftedval, %mask
+  ret i32 %res
+}
+
+; Shifting happens in 64-bit. Mask is 32-bit, but extended to 64-bit.
+; Masking is 64-bit. Then truncation.
+define i32 @bextr64_32_b2(i64 %val, i64 %numskipbits, i8 %numlowbits) nounwind {
+; CHECK-LABEL: bextr64_32_b2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w9, #-1
+; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-NEXT:    lsr x8, x0, x1
+; CHECK-NEXT:    lsl w9, w9, w2
+; CHECK-NEXT:    bic w0, w8, w9
+; CHECK-NEXT:    ret
+  %shiftedval = lshr i64 %val, %numskipbits
+  %widenumlowbits = zext i8 %numlowbits to i32
+  %notmask = shl nsw i32 -1, %widenumlowbits
+  %mask = xor i32 %notmask, -1
+  %zextmask = zext i32 %mask to i64
+  %wideres = and i64 %shiftedval, %zextmask
+  %res = trunc i64 %wideres to i32
+  ret i32 %res
 }
 
 ; ---------------------------------------------------------------------------- ;
@@ -598,6 +717,64 @@ define i64 @bextr64_c4_commutative(i64 %val, i64 %numskipbits, i64 %numlowbits) 
   ret i64 %masked
 }
 
+; 64-bit, but with 32-bit output
+
+; Everything done in 64-bit, truncation happens last.
+define i32 @bextr64_32_c0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind {
+; CHECK-LABEL: bextr64_32_c0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg x9, x2
+; CHECK-NEXT:    mov x10, #-1
+; CHECK-NEXT:    lsr x8, x0, x1
+; CHECK-NEXT:    lsr x9, x10, x9
+; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    ret
+  %shifted = lshr i64 %val, %numskipbits
+  %numhighbits = sub i64 64, %numlowbits
+  %mask = lshr i64 -1, %numhighbits
+  %masked = and i64 %mask, %shifted
+  %res = trunc i64 %masked to i32
+  ret i32 %res
+}
+
+; Shifting happens in 64-bit, then truncation. Masking is 32-bit.
+define i32 @bextr64_32_c1(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind {
+; CHECK-LABEL: bextr64_32_c1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w9, w2
+; CHECK-NEXT:    mov w10, #-1
+; CHECK-NEXT:    lsr x8, x0, x1
+; CHECK-NEXT:    lsr w9, w10, w9
+; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    ret
+  %shifted = lshr i64 %val, %numskipbits
+  %truncshifted = trunc i64 %shifted to i32
+  %numhighbits = sub i32 32, %numlowbits
+  %mask = lshr i32 -1, %numhighbits
+  %masked = and i32 %mask, %truncshifted
+  ret i32 %masked
+}
+
+; Shifting happens in 64-bit. Mask is 32-bit, but extended to 64-bit.
+; Masking is 64-bit. Then truncation.
+define i32 @bextr64_32_c2(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind {
+; CHECK-LABEL: bextr64_32_c2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w9, w2
+; CHECK-NEXT:    mov w10, #-1
+; CHECK-NEXT:    lsr x8, x0, x1
+; CHECK-NEXT:    lsr w9, w10, w9
+; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    ret
+  %shifted = lshr i64 %val, %numskipbits
+  %numhighbits = sub i32 32, %numlowbits
+  %mask = lshr i32 -1, %numhighbits
+  %zextmask = zext i32 %mask to i64
+  %masked = and i64 %zextmask, %shifted
+  %truncmasked = trunc i64 %masked to i32
+  ret i32 %truncmasked
+}
+
 ; ---------------------------------------------------------------------------- ;
 ; Pattern d. 32-bit.
 ; ---------------------------------------------------------------------------- ;
@@ -748,12 +925,49 @@ define i64 @bextr64_d3_load_indexzext(i64* %w, i8 %numskipbits, i8 %numlowbits) 
   ret i64 %masked
 }
 
+; 64-bit, but with 32-bit output
+
+; Everything done in 64-bit, truncation happens last.
+define i32 @bextr64_32_d0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind {
+; CHECK-LABEL: bextr64_32_d0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr x8, x0, x1
+; CHECK-NEXT:    neg x9, x2
+; CHECK-NEXT:    lsl x8, x8, x9
+; CHECK-NEXT:    lsr x0, x8, x9
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %shifted = lshr i64 %val, %numskipbits
+  %numhighbits = sub i64 64, %numlowbits
+  %highbitscleared = shl i64 %shifted, %numhighbits
+  %masked = lshr i64 %highbitscleared, %numhighbits
+  %res = trunc i64 %masked to i32
+  ret i32 %res
+}
+
+; Shifting happens in 64-bit, then truncation. Masking is 32-bit.
+define i32 @bextr64_32_d1(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind {
+; CHECK-LABEL: bextr64_32_d1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr x8, x0, x1
+; CHECK-NEXT:    neg w9, w2
+; CHECK-NEXT:    lsl w8, w8, w9
+; CHECK-NEXT:    lsr w0, w8, w9
+; CHECK-NEXT:    ret
+  %shifted = lshr i64 %val, %numskipbits
+  %truncshifted = trunc i64 %shifted to i32
+  %numhighbits = sub i32 32, %numlowbits
+  %highbitscleared = shl i32 %truncshifted, %numhighbits
+  %masked = lshr i32 %highbitscleared, %numhighbits
+  ret i32 %masked
+}
+
 ; ---------------------------------------------------------------------------- ;
 ; Constant
 ; ---------------------------------------------------------------------------- ;
 
 ; https://bugs.llvm.org/show_bug.cgi?id=38938
-define void @pr38938(i32* %a0, i64* %a1) {
+define void @pr38938(i32* %a0, i64* %a1) nounwind {
 ; CHECK-LABEL: pr38938:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x8, [x1]
@@ -774,7 +988,7 @@ define void @pr38938(i32* %a0, i64* %a1) {
 }
 
 ; The most canonical variant
-define i32 @c0_i32(i32 %arg) {
+define i32 @c0_i32(i32 %arg) nounwind {
 ; CHECK-LABEL: c0_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ubfx w0, w0, #19, #10
@@ -785,7 +999,7 @@ define i32 @c0_i32(i32 %arg) {
 }
 
 ; Should be still fine, but the mask is shifted
-define i32 @c1_i32(i32 %arg) {
+define i32 @c1_i32(i32 %arg) nounwind {
 ; CHECK-LABEL: c1_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr w8, w0, #19
@@ -797,7 +1011,7 @@ define i32 @c1_i32(i32 %arg) {
 }
 
 ; Should be still fine, but the result is shifted left afterwards
-define i32 @c2_i32(i32 %arg) {
+define i32 @c2_i32(i32 %arg) nounwind {
 ; CHECK-LABEL: c2_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ubfx w8, w0, #19, #10
@@ -810,7 +1024,7 @@ define i32 @c2_i32(i32 %arg) {
 }
 
 ; The mask covers newly shifted-in bit
-define i32 @c4_i32_bad(i32 %arg) {
+define i32 @c4_i32_bad(i32 %arg) nounwind {
 ; CHECK-LABEL: c4_i32_bad:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr w8, w0, #19
@@ -824,7 +1038,7 @@ define i32 @c4_i32_bad(i32 %arg) {
 ; i64
 
 ; The most canonical variant
-define i64 @c0_i64(i64 %arg) {
+define i64 @c0_i64(i64 %arg) nounwind {
 ; CHECK-LABEL: c0_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ubfx x0, x0, #51, #10
@@ -835,7 +1049,7 @@ define i64 @c0_i64(i64 %arg) {
 }
 
 ; Should be still fine, but the mask is shifted
-define i64 @c1_i64(i64 %arg) {
+define i64 @c1_i64(i64 %arg) nounwind {
 ; CHECK-LABEL: c1_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x8, x0, #51
@@ -847,7 +1061,7 @@ define i64 @c1_i64(i64 %arg) {
 }
 
 ; Should be still fine, but the result is shifted left afterwards
-define i64 @c2_i64(i64 %arg) {
+define i64 @c2_i64(i64 %arg) nounwind {
 ; CHECK-LABEL: c2_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ubfx x8, x0, #51, #10
@@ -860,7 +1074,7 @@ define i64 @c2_i64(i64 %arg) {
 }
 
 ; The mask covers newly shifted-in bit
-define i64 @c4_i64_bad(i64 %arg) {
+define i64 @c4_i64_bad(i64 %arg) nounwind {
 ; CHECK-LABEL: c4_i64_bad:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x8, x0, #51
@@ -878,7 +1092,7 @@ define i64 @c4_i64_bad(i64 %arg) {
 ; i32
 
 ; The most canonical variant
-define void @c5_i32(i32 %arg, i32* %ptr) {
+define void @c5_i32(i32 %arg, i32* %ptr) nounwind {
 ; CHECK-LABEL: c5_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ubfx w8, w0, #19, #10
@@ -891,7 +1105,7 @@ define void @c5_i32(i32 %arg, i32* %ptr) {
 }
 
 ; Should be still fine, but the mask is shifted
-define void @c6_i32(i32 %arg, i32* %ptr) {
+define void @c6_i32(i32 %arg, i32* %ptr) nounwind {
 ; CHECK-LABEL: c6_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ubfx w8, w0, #19, #12
@@ -904,7 +1118,7 @@ define void @c6_i32(i32 %arg, i32* %ptr) {
 }
 
 ; Should be still fine, but the result is shifted left afterwards
-define void @c7_i32(i32 %arg, i32* %ptr) {
+define void @c7_i32(i32 %arg, i32* %ptr) nounwind {
 ; CHECK-LABEL: c7_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ubfx w8, w0, #19, #10
@@ -921,7 +1135,7 @@ define void @c7_i32(i32 %arg, i32* %ptr) {
 ; i64
 
 ; The most canonical variant
-define void @c5_i64(i64 %arg, i64* %ptr) {
+define void @c5_i64(i64 %arg, i64* %ptr) nounwind {
 ; CHECK-LABEL: c5_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ubfx x8, x0, #51, #10
@@ -934,7 +1148,7 @@ define void @c5_i64(i64 %arg, i64* %ptr) {
 }
 
 ; Should be still fine, but the mask is shifted
-define void @c6_i64(i64 %arg, i64* %ptr) {
+define void @c6_i64(i64 %arg, i64* %ptr) nounwind {
 ; CHECK-LABEL: c6_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ubfx x8, x0, #51, #12
@@ -947,7 +1161,7 @@ define void @c6_i64(i64 %arg, i64* %ptr) {
 }
 
 ; Should be still fine, but the result is shifted left afterwards
-define void @c7_i64(i64 %arg, i64* %ptr) {
+define void @c7_i64(i64 %arg, i64* %ptr) nounwind {
 ; CHECK-LABEL: c7_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ubfx x8, x0, #51, #10

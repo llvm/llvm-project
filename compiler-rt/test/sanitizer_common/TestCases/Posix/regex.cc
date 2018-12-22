@@ -1,9 +1,15 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
+//
+// UNSUPPORTED: linux, darwin, solaris
 
 #include <assert.h>
 #include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifndef __arraycount
+#define __arraycount(a) ((sizeof(a) / sizeof(a[0])))
+#endif
 
 void test_matched(const regex_t *preg, const char *string) {
   int rv = regexec(preg, string, 0, NULL, 0);
@@ -33,37 +39,6 @@ void test_print_matches(const regex_t *preg, const char *string) {
     abort();
 }
 
-void test_nsub(const regex_t *preg, const char *string) {
-  regmatch_t rm[10];
-  int rv = regexec(preg, string, __arraycount(rm), rm, 0);
-  if (!rv) {
-    char buf[1024];
-    ssize_t ss = regnsub(buf, __arraycount(buf), "\\1xyz", rm, string);
-    assert(ss != -1);
-
-    printf("'%s' -> '%s'\n", string, buf);
-  } else if (rv == REG_NOMATCH)
-    printf("%s: not-matched\n", string);
-  else
-    abort();
-}
-
-void test_asub(const regex_t *preg, const char *string) {
-  regmatch_t rm[10];
-  int rv = regexec(preg, string, __arraycount(rm), rm, 0);
-  if (!rv) {
-    char *buf;
-    ssize_t ss = regasub(&buf, "\\1xyz", rm, string);
-    assert(ss != -1);
-
-    printf("'%s' -> '%s'\n", string, buf);
-    free(buf);
-  } else if (rv == REG_NOMATCH)
-    printf("%s: not-matched\n", string);
-  else
-    abort();
-}
-
 int main(void) {
   printf("regex\n");
 
@@ -75,9 +50,6 @@ int main(void) {
   test_matched(&regex, "ABC");
 
   test_print_matches(&regex, "ABC");
-
-  test_nsub(&regex, "ABC DEF");
-  test_asub(&regex, "GHI JKL");
 
   regfree(&regex);
 
@@ -93,8 +65,6 @@ int main(void) {
   // CHECK: ABC: matched
   // CHECK: matched[0]='AB'
   // CHECK: matched[1]='B'
-  // CHECK: 'ABC DEF' -> 'Bxyz'
-  // CHECK: 'GHI JKL' -> 'Hxyz'
   // CHECK: error:{{.*}}
 
   return 0;
