@@ -27,11 +27,11 @@
 ; MONOLITHIC-NOT:      contents:
 ; MONOLITHIC:          DW_TAG_compile_unit
 ; MONOLITHIC-NOT:      {{DW_TAG|NULL}}
-; MONOLITHIC:          DW_AT_producer [DW_FORM_strx1] ( indexed (00000000) string = "clang{{.*}}")
+; MONOLITHIC:          DW_AT_producer [DW_FORM_strx1] (indexed (00000000) string = "clang{{.*}}")
 ; MONOLITHIC-NOT:      {{DW_TAG|NULL}}
 ; MONOLITHIC:          DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
 ; MONOLITHIC-NOT:      {{DW_TAG|NULL}}
-; MONOLITHIC:          DW_AT_comp_dir [DW_FORM_strx1] ( indexed (00000002) string = "/home/{{.*}}")
+; MONOLITHIC:          DW_AT_comp_dir [DW_FORM_strx1] (indexed (00000002) string = "/home/{{.*}}")
 
 ; Extract the string offsets from the .debug_str section so we can check that 
 ; they are referenced correctly in the .debug_str_offsets section.
@@ -59,8 +59,8 @@
 ; SPLIT:      DW_TAG_compile_unit
 ; SPLIT-NOT:  {{DW_TAG|contents:}}
 ; SPLIT:      DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
-; SPLIT:      DW_AT_comp_dir [DW_FORM_strx1] ( indexed (00000000) string = "/home/test")
-; SPLIT:      DW_AT_GNU_dwo_name [DW_FORM_strx1] ( indexed (00000001) string = "foo.dwo")
+; SPLIT:      DW_AT_comp_dir [DW_FORM_strx1] (indexed (00000000) string = "/home/test")
+; SPLIT:      DW_AT_GNU_dwo_name [DW_FORM_strx1] (indexed (00000001) string = "foo.dwo")
 
 ; Check for the split CU in .debug_info.dwo.
 ; SPLIT:      .debug_info.dwo contents:
@@ -73,11 +73,11 @@
 ; SPLIT-NOT:  contents:
 ; SPLIT:      DW_TAG_enumerator
 ; SPLIT-NOT:  {{DW_TAG|NULL}}
-; SPLIT:      DW_AT_name [DW_FORM_strx1]    ( indexed (00000001) string = "a")
+; SPLIT:      DW_AT_name [DW_FORM_strx1]    (indexed (00000001) string = "a")
 ; SPLIT-NOT:  contents:
 ; SPLIT:      DW_TAG_enumerator
 ; SPLIT-NOT:  {{DW_TAG|NULL}}
-; SPLIT:      DW_AT_name [DW_FORM_strx1]    ( indexed (00000002) string = "b")
+; SPLIT:      DW_AT_name [DW_FORM_strx1]    (indexed (00000002) string = "b")
 ;
 ; Extract the string offsets referenced in the main file by the skeleton unit.
 ; SPLIT:      .debug_str contents:

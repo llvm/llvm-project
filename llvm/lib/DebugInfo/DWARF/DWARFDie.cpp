@@ -71,15 +71,7 @@ static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
     OS.indent(Indent);
     R.dump(OS, AddressSize);
 
-    if (SectionNames.empty() || R.SectionIndex == -1ULL)
-      continue;
-
-    StringRef Name = SectionNames[R.SectionIndex].Name;
-    OS << " \"" << Name << '\"';
-
-    // Print section index if name is not unique.
-    if (!SectionNames[R.SectionIndex].IsNameUnique)
-      OS << format(" [%" PRIu64 "]", R.SectionIndex);
+    DWARFFormValue::dumpAddressSection(Obj, OS, DumpOpts, R.SectionIndex);
   }
 }
 

@@ -1,4 +1,4 @@
-// RUN: %libomp-compile && env OMP_DISPLAY_AFFINITY=true %libomp-run | python %S/check.py -c 'CHECK' %s
+// RUN: %libomp-compile && env OMP_DISPLAY_AFFINITY=true %libomp-run | %python %S/check.py -c 'CHECK' %s
 
 #include <stdio.h>
 #include <stdlib.h>

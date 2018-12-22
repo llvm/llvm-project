@@ -25,6 +25,7 @@
 #include <poll.h>
 #include <pthread.h>
 #include <pwd.h>
+#include <regex.h>
 #include <signal.h>
 #include <stddef.h>
 #include <sys/mman.h>
@@ -125,6 +126,8 @@ namespace __sanitizer {
   unsigned struct_statvfs_sz = sizeof(struct statvfs);
   unsigned struct_shminfo_sz = sizeof(struct shminfo);
   unsigned struct_shm_info_sz = sizeof(struct shm_info);
+  unsigned struct_regmatch_sz = sizeof(regmatch_t);
+  unsigned struct_regex_sz = sizeof(regex_t);
 
   const uptr sig_ign = (uptr)SIG_IGN;
   const uptr sig_dfl = (uptr)SIG_DFL;

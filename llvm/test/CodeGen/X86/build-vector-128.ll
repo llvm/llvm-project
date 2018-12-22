@@ -526,8 +526,7 @@ define <4 x float> @PR37502(float %x, float %y) {
 ;
 ; SSE41-32-LABEL: PR37502:
 ; SSE41-32:       # %bb.0:
-; SSE41-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE41-32-NEXT:    movddup {{.*#+}} xmm0 = xmm0[0,0]
+; SSE41-32-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
 ; SSE41-32-NEXT:    retl
 ;
 ; SSE41-64-LABEL: PR37502:
@@ -538,8 +537,7 @@ define <4 x float> @PR37502(float %x, float %y) {
 ;
 ; AVX-32-LABEL: PR37502:
 ; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX-32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX-32-NEXT:    retl
 ;
 ; AVX1-64-LABEL: PR37502:
