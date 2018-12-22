@@ -1412,9 +1412,9 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
       // FIXME. Eventually we want to do this for Objective-C as well.
       SynthesizedFunctionScope Scope(*this, getterMethod);
       ImplicitParamDecl *SelfDecl = getterMethod->getSelfDecl();
-      DeclRefExpr *SelfExpr =
-        new (Context) DeclRefExpr(SelfDecl, false, SelfDecl->getType(),
-                                  VK_LValue, PropertyDiagLoc);
+      DeclRefExpr *SelfExpr = new (Context)
+          DeclRefExpr(Context, SelfDecl, false, SelfDecl->getType(), VK_LValue,
+                      PropertyDiagLoc);
       MarkDeclRefReferenced(SelfExpr);
       Expr *LoadSelfExpr =
         ImplicitCastExpr::Create(Context, SelfDecl->getType(),
@@ -1464,9 +1464,9 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
       // FIXME. Eventually we want to do this for Objective-C as well.
       SynthesizedFunctionScope Scope(*this, setterMethod);
       ImplicitParamDecl *SelfDecl = setterMethod->getSelfDecl();
-      DeclRefExpr *SelfExpr =
-        new (Context) DeclRefExpr(SelfDecl, false, SelfDecl->getType(),
-                                  VK_LValue, PropertyDiagLoc);
+      DeclRefExpr *SelfExpr = new (Context)
+          DeclRefExpr(Context, SelfDecl, false, SelfDecl->getType(), VK_LValue,
+                      PropertyDiagLoc);
       MarkDeclRefReferenced(SelfExpr);
       Expr *LoadSelfExpr =
         ImplicitCastExpr::Create(Context, SelfDecl->getType(),
@@ -1481,8 +1481,8 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
       ObjCMethodDecl::param_iterator P = setterMethod->param_begin();
       ParmVarDecl *Param = (*P);
       QualType T = Param->getType().getNonReferenceType();
-      DeclRefExpr *rhs = new (Context) DeclRefExpr(Param, false, T,
-                                                   VK_LValue, PropertyDiagLoc);
+      DeclRefExpr *rhs = new (Context)
+          DeclRefExpr(Context, Param, false, T, VK_LValue, PropertyDiagLoc);
       MarkDeclRefReferenced(rhs);
       ExprResult Res = BuildBinOp(S, PropertyDiagLoc,
                                   BO_Assign, lhs, rhs);

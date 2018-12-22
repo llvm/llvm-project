@@ -1619,6 +1619,10 @@ def TLSDESCCALL : Pseudo<(outs), (ins i64imm:$sym), []>, Sched<[]> {
   let AsmString = ".tlsdesccall $sym";
 }
 
+// Pseudo instruction to tell the streamer to emit a 'B' character into the
+// augmentation string.
+def EMITBKEY : Pseudo<(outs), (ins), []>, Sched<[]> {}
+
 // FIXME: maybe the scratch register used shouldn't be fixed to X1?
 // FIXME: can "hasSideEffects be dropped?
 let isCall = 1, Defs = [LR, X0, X1], hasSideEffects = 1,

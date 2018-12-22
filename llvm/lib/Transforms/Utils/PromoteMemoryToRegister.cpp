@@ -82,8 +82,7 @@ bool llvm::isAllocaPromotable(const AllocaInst *AI) {
       if (SI->isVolatile())
         return false;
     } else if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
-      if (II->getIntrinsicID() != Intrinsic::lifetime_start &&
-          II->getIntrinsicID() != Intrinsic::lifetime_end)
+      if (!II->isLifetimeStartOrEnd())
         return false;
     } else if (const BitCastInst *BCI = dyn_cast<BitCastInst>(U)) {
       if (BCI->getType() != Type::getInt8PtrTy(U->getContext(), AS))

@@ -16,6 +16,13 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT ANDROID)
   list(APPEND SUPPORTED_TOOLS lsan)
 endif()
 
+# FIXME(dliew): Remove this.
+# Temporary helper for https://reviews.llvm.org/D55740
+message(
+  STATUS
+  "sanitizer_common tests on \"${CMAKE_SYSTEM_NAME}\" will run against "
+  "\"${SUPPORTED_TOOLS}\"")
+
 # Create a separate config for each tool we support.
 foreach(tool ${SUPPORTED_TOOLS})
   string(TOUPPER ${tool} tool_toupper)

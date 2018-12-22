@@ -221,6 +221,13 @@ void MCStreamer::emitDwarfFile0Directive(StringRef Directory,
                                       Source);
 }
 
+void MCStreamer::EmitCFIBKeyFrame() {
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->IsBKeyFrame = true;
+}
+
 void MCStreamer::EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                        unsigned Column, unsigned Flags,
                                        unsigned Isa,

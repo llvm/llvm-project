@@ -525,7 +525,7 @@ void SimplifyBooleanExprCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void SimplifyBooleanExprCheck::check(const MatchFinder::MatchResult &Result) {
-  if (const auto *TU = Result.Nodes.getNodeAs<TranslationUnitDecl>("top"))
+  if (Result.Nodes.getNodeAs<TranslationUnitDecl>("top"))
     Visitor(this, Result).TraverseAST(*Result.Context);
   else if (const CXXBoolLiteralExpr *TrueConditionRemoved =
                getBoolLiteral(Result, ConditionThenStmtId))

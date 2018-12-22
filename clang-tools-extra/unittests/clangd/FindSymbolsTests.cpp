@@ -439,7 +439,7 @@ TEST_F(DocumentSymbolsTest, DeclarationDefinition) {
 TEST_F(DocumentSymbolsTest, ExternSymbol) {
   std::string FilePath = testPath("foo.cpp");
   addFile(testPath("foo.h"), R"cpp(
-      extern int var = 2;
+      extern int var;
       )cpp");
   addFile(FilePath, R"cpp(
       #include "foo.h"

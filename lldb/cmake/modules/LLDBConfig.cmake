@@ -243,6 +243,7 @@ if( MSVC )
     -wd4018 # Suppress 'warning C4018: '>=' : signed/unsigned mismatch'
     -wd4068 # Suppress 'warning C4068: unknown pragma'
     -wd4150 # Suppress 'warning C4150: deletion of pointer to incomplete type'
+    -wd4201 # Suppress 'warning C4201: nonstandard extension used: nameless struct/union'
     -wd4251 # Suppress 'warning C4251: T must have dll-interface to be used by clients of class U.'
     -wd4521 # Suppress 'warning C4521: 'type' : multiple copy constructors specified'
     -wd4530 # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'

@@ -5148,8 +5148,6 @@ Sema::SemaBuiltinAtomicOverloaded(ExprResult TheCallResult) {
     TheCall->setArg(i+1, Arg.get());
   }
 
-  ASTContext& Context = this->getASTContext();
-
   // Create a new DeclRefExpr to refer to the new decl.
   DeclRefExpr* NewDRE = DeclRefExpr::Create(
       Context,

@@ -919,8 +919,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
       continue;
     }
     if (const IntrinsicInst *IT = dyn_cast<IntrinsicInst>(U))
-      if (IT->getIntrinsicID() == Intrinsic::lifetime_start ||
-          IT->getIntrinsicID() == Intrinsic::lifetime_end)
+      if (IT->isLifetimeStartOrEnd())
         continue;
 
     if (U != C && U != cpy)
@@ -1060,6 +1059,8 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     UseMemMove = true;
 
   // If all checks passed, then we can transform M.
+  LLVM_DEBUG(dbgs() << "MemCpyOptPass: Forwarding memcpy->memcpy src:\n"
+                    << *MDep << '\n' << *M << '\n');
 
   // TODO: Is this worth it if we're creating a less aligned memcpy? For
   // example we could be moving from movaps -> movq on x86.

@@ -438,7 +438,7 @@ XMLNode ApplePropertyList::GetValueNode(const char *key) const {
         "key", [key, &value_node](const XMLNode &key_node) -> bool {
           std::string key_name;
           if (key_node.GetElementText(key_name)) {
-            if (key_name.compare(key) == 0) {
+            if (key_name == key) {
               value_node = key_node.GetSibling();
               while (value_node && !value_node.IsElement())
                 value_node = value_node.GetSibling();

@@ -2216,11 +2216,10 @@ bool PPCTargetLowering::SelectAddressRegReg(SDValue N, SDValue &Base,
     // If this is an or of disjoint bitfields, we can codegen this as an add
     // (for better address arithmetic) if the LHS and RHS of the OR are provably
     // disjoint.
-    KnownBits LHSKnown, RHSKnown;
-    DAG.computeKnownBits(N.getOperand(0), LHSKnown);
+    KnownBits LHSKnown = DAG.computeKnownBits(N.getOperand(0));
 
     if (LHSKnown.Zero.getBoolValue()) {
-      DAG.computeKnownBits(N.getOperand(1), RHSKnown);
+      KnownBits RHSKnown = DAG.computeKnownBits(N.getOperand(1));
       // If all of the bits are known zero on the LHS or RHS, the add won't
       // carry.
       if (~(LHSKnown.Zero | RHSKnown.Zero) == 0) {
@@ -2319,8 +2318,7 @@ bool PPCTargetLowering::SelectAddressRegImm(SDValue N, SDValue &Disp,
       // If this is an or of disjoint bitfields, we can codegen this as an add
       // (for better address arithmetic) if the LHS and RHS of the OR are
       // provably disjoint.
-      KnownBits LHSKnown;
-      DAG.computeKnownBits(N.getOperand(0), LHSKnown);
+      KnownBits LHSKnown = DAG.computeKnownBits(N.getOperand(0));
 
       if ((LHSKnown.Zero.getZExtValue()|~(uint64_t)imm) == ~0ULL) {
         // If all of the bits are known zero on the LHS or RHS, the add won't
@@ -11316,9 +11314,8 @@ SDValue PPCTargetLowering::DAGCombineTruncBoolExt(SDNode *N,
     } else {
       // This is neither a signed nor an unsigned comparison, just make sure
       // that the high bits are equal.
-      KnownBits Op1Known, Op2Known;
-      DAG.computeKnownBits(N->getOperand(0), Op1Known);
-      DAG.computeKnownBits(N->getOperand(1), Op2Known);
+      KnownBits Op1Known = DAG.computeKnownBits(N->getOperand(0));
+      KnownBits Op2Known = DAG.computeKnownBits(N->getOperand(1));
 
       // We don't really care about what is known about the first bit (if
       // anything), so clear it in all masks prior to comparing them.

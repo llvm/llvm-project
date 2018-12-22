@@ -57,6 +57,10 @@ class SizeClassAllocator32 {
   typedef typename Params::ByteMap ByteMap;
   typedef typename Params::MapUnmapCallback MapUnmapCallback;
 
+  static_assert(
+      is_same<typename ByteMap::AddressSpaceView, AddressSpaceView>::value,
+      "AddressSpaceView type mismatch");
+
   static const bool kRandomShuffleChunks = Params::kFlags &
       SizeClassAllocator32FlagMasks::kRandomShuffleChunks;
   static const bool kUseSeparateSizeClassForBatch = Params::kFlags &
@@ -109,9 +113,6 @@ class SizeClassAllocator32 {
   typedef SizeClassAllocator32LocalCache<ThisT> AllocatorCache;
 
   void Init(s32 release_to_os_interval_ms) {
-    static_assert(
-        is_same<typename ByteMap::AddressSpaceView, AddressSpaceView>::value,
-        "AddressSpaceView type mismatch");
     possible_regions.Init();
     internal_memset(size_class_info_array, 0, sizeof(size_class_info_array));
   }

@@ -248,67 +248,6 @@ Instruction *InstCombiner::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   return nullptr;
 }
 
-static Value *simplifyX86AddsSubs(const IntrinsicInst &II,
-                                  InstCombiner::BuilderTy &Builder) {
-  bool IsAddition;
-
-  switch (II.getIntrinsicID()) {
-  default: llvm_unreachable("Unexpected intrinsic!");
-  case Intrinsic::x86_sse2_padds_b:
-  case Intrinsic::x86_sse2_padds_w:
-  case Intrinsic::x86_avx2_padds_b:
-  case Intrinsic::x86_avx2_padds_w:
-  case Intrinsic::x86_avx512_padds_b_512:
-  case Intrinsic::x86_avx512_padds_w_512:
-    IsAddition = true;
-    break;
-  case Intrinsic::x86_sse2_psubs_b:
-  case Intrinsic::x86_sse2_psubs_w:
-  case Intrinsic::x86_avx2_psubs_b:
-  case Intrinsic::x86_avx2_psubs_w:
-  case Intrinsic::x86_avx512_psubs_b_512:
-  case Intrinsic::x86_avx512_psubs_w_512:
-    IsAddition = false;
-    break;
-  }
-
-  auto *Arg0 = dyn_cast<Constant>(II.getOperand(0));
-  auto *Arg1 = dyn_cast<Constant>(II.getOperand(1));
-  auto VT = cast<VectorType>(II.getType());
-  auto SVT = VT->getElementType();
-  unsigned NumElems = VT->getNumElements();
-
-  if (!Arg0 || !Arg1)
-    return nullptr;
-
-  SmallVector<Constant *, 64> Result;
-
-  APInt MaxValue = APInt::getSignedMaxValue(SVT->getIntegerBitWidth());
-  APInt MinValue = APInt::getSignedMinValue(SVT->getIntegerBitWidth());
-  for (unsigned i = 0; i < NumElems; ++i) {
-    auto *Elt0 = Arg0->getAggregateElement(i);
-    auto *Elt1 = Arg1->getAggregateElement(i);
-    if (isa<UndefValue>(Elt0) || isa<UndefValue>(Elt1)) {
-      Result.push_back(UndefValue::get(SVT));
-      continue;
-    }
-
-    if (!isa<ConstantInt>(Elt0) || !isa<ConstantInt>(Elt1))
-      return nullptr;
-
-    const APInt &Val0 = cast<ConstantInt>(Elt0)->getValue();
-    const APInt &Val1 = cast<ConstantInt>(Elt1)->getValue();
-    bool Overflow = false;
-    APInt ResultElem = IsAddition ? Val0.sadd_ov(Val1, Overflow)
-                                  : Val0.ssub_ov(Val1, Overflow);
-    if (Overflow)
-      ResultElem = Val0.isNegative() ? MinValue : MaxValue;
-    Result.push_back(Constant::getIntegerValue(SVT, ResultElem));
-  }
-
-  return ConstantVector::get(Result);
-}
-
 static Value *simplifyX86immShift(const IntrinsicInst &II,
                                   InstCombiner::BuilderTy &Builder) {
   bool LogicalShift = false;
@@ -2788,23 +2727,6 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(*II, V);
     break;
   }
-
-  // Constant fold add/sub with saturation intrinsics.
-  case Intrinsic::x86_sse2_padds_b:
-  case Intrinsic::x86_sse2_padds_w:
-  case Intrinsic::x86_sse2_psubs_b:
-  case Intrinsic::x86_sse2_psubs_w:
-  case Intrinsic::x86_avx2_padds_b:
-  case Intrinsic::x86_avx2_padds_w:
-  case Intrinsic::x86_avx2_psubs_b:
-  case Intrinsic::x86_avx2_psubs_w:
-  case Intrinsic::x86_avx512_padds_b_512:
-  case Intrinsic::x86_avx512_padds_w_512:
-  case Intrinsic::x86_avx512_psubs_b_512:
-  case Intrinsic::x86_avx512_psubs_w_512:
-    if (Value *V = simplifyX86AddsSubs(*II, Builder))
-      return replaceInstUsesWith(*II, V);
-    break;
 
   // Constant fold ashr( <A x Bi>, Ci ).
   // Constant fold lshr( <A x Bi>, Ci ).

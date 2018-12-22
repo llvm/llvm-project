@@ -69,9 +69,10 @@ typedef LargeMmapAllocatorPtrArrayDynamic DefaultLargeMmapAllocatorPtrArray;
 // sizes not covered by more efficient allocators (e.g. SizeClassAllocator64).
 template <class MapUnmapCallback = NoOpMapUnmapCallback,
           class PtrArrayT = DefaultLargeMmapAllocatorPtrArray,
-          class AddressSpaceView = LocalAddressSpaceView>
+          class AddressSpaceViewTy = LocalAddressSpaceView>
 class LargeMmapAllocator {
  public:
+  using AddressSpaceView = AddressSpaceViewTy;
   void InitLinkerInitialized() {
     page_size_ = GetPageSizeCached();
     chunks_ = reinterpret_cast<Header**>(ptr_array_.Init());

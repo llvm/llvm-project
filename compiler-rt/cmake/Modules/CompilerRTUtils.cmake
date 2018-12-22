@@ -239,7 +239,7 @@ macro(load_llvm_config)
     # Detect if we have the LLVMXRay and TestingSupport library installed and
     # available from llvm-config.
     execute_process(
-      COMMAND ${LLVM_CONFIG_PATH} "--ldflags" "--libs" "xray" "testingsupport"
+      COMMAND ${LLVM_CONFIG_PATH} "--ldflags" "--libs" "xray"
       RESULT_VARIABLE HAD_ERROR
       OUTPUT_VARIABLE CONFIG_OUTPUT)
     if (HAD_ERROR)
@@ -252,6 +252,26 @@ macro(load_llvm_config)
       set(LLVM_XRAY_LDFLAGS ${LDFLAGS} CACHE STRING "Linker flags for LLVMXRay library")
       set(LLVM_XRAY_LIBLIST ${LIBLIST} CACHE STRING "Library list for LLVMXRay")
       set(COMPILER_RT_HAS_LLVMXRAY TRUE)
+    endif()
+
+    set(COMPILER_RT_HAS_LLVMTESTINGSUPPORT FALSE)
+    execute_process(
+      COMMAND ${LLVM_CONFIG_PATH} "--ldflags" "--libs" "testingsupport"
+      RESULT_VARIABLE HAD_ERROR
+      OUTPUT_VARIABLE CONFIG_OUTPUT)
+    if (HAD_ERROR)
+      message(WARNING "llvm-config finding testingsupport failed with status ${HAD_ERROR}")
+    else()
+      string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";" CONFIG_OUTPUT ${CONFIG_OUTPUT})
+      list(GET CONFIG_OUTPUT 0 LDFLAGS)
+      list(GET CONFIG_OUTPUT 1 LIBLIST)
+      if (LIBLIST STREQUAL "")
+        message(WARNING "testingsupport library not installed, some tests will be skipped")
+      else()
+        set(LLVM_TESTINGSUPPORT_LDFLAGS ${LDFLAGS} CACHE STRING "Linker flags for LLVMTestingSupport library")
+        set(LLVM_TESTINGSUPPORT_LIBLIST ${LIBLIST} CACHE STRING "Library list for LLVMTestingSupport")
+        set(COMPILER_RT_HAS_LLVMTESTINGSUPPORT TRUE)
+      endif()
     endif()
 
     # Make use of LLVM CMake modules.

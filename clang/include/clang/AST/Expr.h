@@ -1086,20 +1086,10 @@ class DeclRefExpr final
   void computeDependence(const ASTContext &Ctx);
 
 public:
-  DeclRefExpr(ValueDecl *D, bool RefersToEnclosingVariableOrCapture, QualType T,
+  DeclRefExpr(const ASTContext &Ctx, ValueDecl *D,
+              bool RefersToEnclosingVariableOrCapture, QualType T,
               ExprValueKind VK, SourceLocation L,
-              const DeclarationNameLoc &LocInfo = DeclarationNameLoc())
-      : Expr(DeclRefExprClass, T, VK, OK_Ordinary, false, false, false, false),
-        D(D), DNLoc(LocInfo) {
-    DeclRefExprBits.HasQualifier = false;
-    DeclRefExprBits.HasTemplateKWAndArgsInfo = false;
-    DeclRefExprBits.HasFoundDecl = false;
-    DeclRefExprBits.HadMultipleCandidates = false;
-    DeclRefExprBits.RefersToEnclosingVariableOrCapture =
-        RefersToEnclosingVariableOrCapture;
-    DeclRefExprBits.Loc = L;
-    computeDependence(D->getASTContext());
-  }
+              const DeclarationNameLoc &LocInfo = DeclarationNameLoc());
 
   static DeclRefExpr *
   Create(const ASTContext &Context, NestedNameSpecifierLoc QualifierLoc,
@@ -2405,12 +2395,50 @@ public:
 /// a subclass for overloaded operator calls that use operator syntax, e.g.,
 /// "str1 + str2" to resolve to a function call.
 class CallExpr : public Expr {
-  enum { FN=0, PREARGS_START=1 };
-  Stmt **SubExprs;
+  enum { FN = 0, PREARGS_START = 1 };
+
+  /// The number of arguments in the call expression.
   unsigned NumArgs;
+
+  /// The location of the right parenthese. This has a different meaning for
+  /// the derived classes of CallExpr.
   SourceLocation RParenLoc;
 
   void updateDependenciesFromArg(Expr *Arg);
+
+  // CallExpr store some data in trailing objects. However since CallExpr
+  // is used a base of other expression classes we cannot use
+  // llvm::TrailingObjects. Instead we manually perform the pointer arithmetic
+  // and casts.
+  //
+  // The trailing objects are in order:
+  //
+  // * A single "Stmt *" for the callee expression.
+  //
+  // * An array of getNumPreArgs() "Stmt *" for the pre-argument expressions.
+  //
+  // * An array of getNumArgs() "Stmt *" for the argument expressions.
+  //
+  // Note that we store the offset in bytes from the this pointer to the start
+  // of the trailing objects. It would be perfectly possible to compute it
+  // based on the dynamic kind of the CallExpr. However 1.) we have plenty of
+  // space in the bit-fields of Stmt. 2.) It was benchmarked to be faster to
+  // compute this once and then load the offset from the bit-fields of Stmt,
+  // instead of re-computing the offset each time the trailing objects are
+  // accessed.
+
+  /// Return a pointer to the start of the trailing array of "Stmt *".
+  Stmt **getTrailingStmts() {
+    return reinterpret_cast<Stmt **>(reinterpret_cast<char *>(this) +
+                                     CallExprBits.OffsetToTrailingObjects);
+  }
+  Stmt *const *getTrailingStmts() const {
+    return const_cast<CallExpr *>(this)->getTrailingStmts();
+  }
+
+  /// Map a statement class to the appropriate offset in bytes from the
+  /// this pointer to the trailing objects.
+  static unsigned offsetToTrailingObjects(StmtClass SC);
 
 public:
   enum class ADLCallKind : bool { NotADL, UsesADL };
@@ -2418,46 +2446,75 @@ public:
   static constexpr ADLCallKind UsesADL = ADLCallKind::UsesADL;
 
 protected:
-  // These versions of the constructor are for derived classes.
-  CallExpr(const ASTContext &C, StmtClass SC, Expr *fn,
-           ArrayRef<Expr *> preargs, ArrayRef<Expr *> args, QualType t,
-           ExprValueKind VK, SourceLocation rparenloc, unsigned MinNumArgs = 0,
-           ADLCallKind UsesADL = NotADL);
-  CallExpr(const ASTContext &C, StmtClass SC, Expr *fn, ArrayRef<Expr *> args,
-           QualType t, ExprValueKind VK, SourceLocation rparenloc,
-           unsigned MinNumArgs = 0, ADLCallKind UsesADL = NotADL);
-  CallExpr(const ASTContext &C, StmtClass SC, unsigned NumPreArgs,
-           unsigned NumArgs, EmptyShell Empty);
+  /// Build a call expression, assuming that appropriate storage has been
+  /// allocated for the trailing objects.
+  CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
+           ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
+           SourceLocation RParenLoc, unsigned MinNumArgs, ADLCallKind UsesADL);
 
-  Stmt *getPreArg(unsigned i) {
-    assert(i < getNumPreArgs() && "Prearg access out of range!");
-    return SubExprs[PREARGS_START+i];
+  /// Build an empty call expression, for deserialization.
+  CallExpr(StmtClass SC, unsigned NumPreArgs, unsigned NumArgs,
+           EmptyShell Empty);
+
+  /// Return the size in bytes needed for the trailing objects.
+  /// Used by the derived classes to allocate the right amount of storage.
+  static unsigned sizeOfTrailingObjects(unsigned NumPreArgs, unsigned NumArgs) {
+    return (1 + NumPreArgs + NumArgs) * sizeof(Stmt *);
   }
-  const Stmt *getPreArg(unsigned i) const {
-    assert(i < getNumPreArgs() && "Prearg access out of range!");
-    return SubExprs[PREARGS_START+i];
+
+  Stmt *getPreArg(unsigned I) {
+    assert(I < getNumPreArgs() && "Prearg access out of range!");
+    return getTrailingStmts()[PREARGS_START + I];
   }
-  void setPreArg(unsigned i, Stmt *PreArg) {
-    assert(i < getNumPreArgs() && "Prearg access out of range!");
-    SubExprs[PREARGS_START+i] = PreArg;
+  const Stmt *getPreArg(unsigned I) const {
+    assert(I < getNumPreArgs() && "Prearg access out of range!");
+    return getTrailingStmts()[PREARGS_START + I];
+  }
+  void setPreArg(unsigned I, Stmt *PreArg) {
+    assert(I < getNumPreArgs() && "Prearg access out of range!");
+    getTrailingStmts()[PREARGS_START + I] = PreArg;
   }
 
   unsigned getNumPreArgs() const { return CallExprBits.NumPreArgs; }
 
 public:
-  /// Build a call expression. MinNumArgs specifies the minimum number of
-  /// arguments. The actual number of arguments will be the greater of
-  /// args.size() and MinNumArgs.
-  CallExpr(const ASTContext &C, Expr *fn, ArrayRef<Expr *> args, QualType t,
-           ExprValueKind VK, SourceLocation rparenloc, unsigned MinNumArgs = 0,
-           ADLCallKind UsesADL = NotADL);
+  /// Create a call expression. Fn is the callee expression, Args is the
+  /// argument array, Ty is the type of the call expression (which is *not*
+  /// the return type in general), VK is the value kind of the call expression
+  /// (lvalue, rvalue, ...), and RParenLoc is the location of the right
+  /// parenthese in the call expression. MinNumArgs specifies the minimum
+  /// number of arguments. The actual number of arguments will be the greater
+  /// of Args.size() and MinNumArgs. This is used in a few places to allocate
+  /// enough storage for the default arguments. UsesADL specifies whether the
+  /// callee was found through argument-dependent lookup.
+  ///
+  /// Note that you can use CreateTemporary if you need a temporary call
+  /// expression on the stack.
+  static CallExpr *Create(const ASTContext &Ctx, Expr *Fn,
+                          ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
+                          SourceLocation RParenLoc, unsigned MinNumArgs = 0,
+                          ADLCallKind UsesADL = NotADL);
 
-  /// Build an empty call expression.
-  CallExpr(const ASTContext &C, unsigned NumArgs, EmptyShell Empty);
+  /// Create a temporary call expression with no arguments in the memory
+  /// pointed to by Mem. Mem must points to at least sizeof(CallExpr)
+  /// + sizeof(Stmt *) bytes of storage, aligned to alignof(CallExpr):
+  ///
+  /// \code{.cpp}
+  ///   llvm::AlignedCharArray<alignof(CallExpr),
+  ///                          sizeof(CallExpr) + sizeof(Stmt *)> Buffer;
+  ///   CallExpr *TheCall = CallExpr::CreateTemporary(Buffer.buffer, etc);
+  /// \endcode
+  static CallExpr *CreateTemporary(void *Mem, Expr *Fn, QualType Ty,
+                                   ExprValueKind VK, SourceLocation RParenLoc,
+                                   ADLCallKind UsesADL = NotADL);
 
-  const Expr *getCallee() const { return cast<Expr>(SubExprs[FN]); }
-  Expr *getCallee() { return cast<Expr>(SubExprs[FN]); }
-  void setCallee(Expr *F) { SubExprs[FN] = F; }
+  /// Create an empty call expression, for deserialization.
+  static CallExpr *CreateEmpty(const ASTContext &Ctx, unsigned NumArgs,
+                               EmptyShell Empty);
+
+  Expr *getCallee() { return cast<Expr>(getTrailingStmts()[FN]); }
+  const Expr *getCallee() const { return cast<Expr>(getTrailingStmts()[FN]); }
+  void setCallee(Expr *F) { getTrailingStmts()[FN] = F; }
 
   ADLCallKind getADLCallKind() const {
     return static_cast<ADLCallKind>(CallExprBits.UsesADL);
@@ -2467,55 +2524,56 @@ public:
   }
   bool usesADL() const { return getADLCallKind() == UsesADL; }
 
-  Decl *getCalleeDecl();
+  Decl *getCalleeDecl() { return getCallee()->getReferencedDeclOfCallee(); }
   const Decl *getCalleeDecl() const {
-    return const_cast<CallExpr*>(this)->getCalleeDecl();
+    return getCallee()->getReferencedDeclOfCallee();
   }
 
-  /// If the callee is a FunctionDecl, return it. Otherwise return 0.
-  FunctionDecl *getDirectCallee();
+  /// If the callee is a FunctionDecl, return it. Otherwise return null.
+  FunctionDecl *getDirectCallee() {
+    return dyn_cast_or_null<FunctionDecl>(getCalleeDecl());
+  }
   const FunctionDecl *getDirectCallee() const {
-    return const_cast<CallExpr*>(this)->getDirectCallee();
+    return dyn_cast_or_null<FunctionDecl>(getCalleeDecl());
   }
 
   /// getNumArgs - Return the number of actual arguments to this call.
-  ///
   unsigned getNumArgs() const { return NumArgs; }
 
   /// Retrieve the call arguments.
   Expr **getArgs() {
-    return reinterpret_cast<Expr **>(SubExprs+getNumPreArgs()+PREARGS_START);
+    return reinterpret_cast<Expr **>(getTrailingStmts() + PREARGS_START +
+                                     getNumPreArgs());
   }
   const Expr *const *getArgs() const {
-    return reinterpret_cast<Expr **>(SubExprs + getNumPreArgs() +
-                                     PREARGS_START);
+    return reinterpret_cast<const Expr *const *>(
+        getTrailingStmts() + PREARGS_START + getNumPreArgs());
   }
 
   /// getArg - Return the specified argument.
   Expr *getArg(unsigned Arg) {
-    assert(Arg < NumArgs && "Arg access out of range!");
-    return cast_or_null<Expr>(SubExprs[Arg + getNumPreArgs() + PREARGS_START]);
+    assert(Arg < getNumArgs() && "Arg access out of range!");
+    return getArgs()[Arg];
   }
   const Expr *getArg(unsigned Arg) const {
-    assert(Arg < NumArgs && "Arg access out of range!");
-    return cast_or_null<Expr>(SubExprs[Arg + getNumPreArgs() + PREARGS_START]);
+    assert(Arg < getNumArgs() && "Arg access out of range!");
+    return getArgs()[Arg];
   }
 
   /// setArg - Set the specified argument.
   void setArg(unsigned Arg, Expr *ArgExpr) {
-    assert(Arg < NumArgs && "Arg access out of range!");
-    SubExprs[Arg+getNumPreArgs()+PREARGS_START] = ArgExpr;
+    assert(Arg < getNumArgs() && "Arg access out of range!");
+    getArgs()[Arg] = ArgExpr;
   }
 
   /// Reduce the number of arguments in this call expression. This is used for
   /// example during error recovery to drop extra arguments. There is no way
   /// to perform the opposite because: 1.) We don't track how much storage
   /// we have for the argument array 2.) This would potentially require growing
-  /// the argument array, something we cannot support since the arguments will
-  /// be stored in a trailing array in the future.
-  /// (TODO: update this comment when this is done).
+  /// the argument array, something we cannot support since the arguments are
+  /// stored in a trailing array.
   void shrinkNumArgs(unsigned NewNumArgs) {
-    assert((NewNumArgs <= NumArgs) &&
+    assert((NewNumArgs <= getNumArgs()) &&
            "shrinkNumArgs cannot increase the number of arguments!");
     NumArgs = NewNumArgs;
   }
@@ -2530,29 +2588,28 @@ public:
     return const_arg_range(arg_begin(), arg_end());
   }
 
-  arg_iterator arg_begin() { return SubExprs+PREARGS_START+getNumPreArgs(); }
-  arg_iterator arg_end() {
-    return SubExprs+PREARGS_START+getNumPreArgs()+getNumArgs();
+  arg_iterator arg_begin() {
+    return getTrailingStmts() + PREARGS_START + getNumPreArgs();
   }
+  arg_iterator arg_end() { return arg_begin() + getNumArgs(); }
+
   const_arg_iterator arg_begin() const {
-    return SubExprs+PREARGS_START+getNumPreArgs();
+    return getTrailingStmts() + PREARGS_START + getNumPreArgs();
   }
-  const_arg_iterator arg_end() const {
-    return SubExprs+PREARGS_START+getNumPreArgs()+getNumArgs();
-  }
+  const_arg_iterator arg_end() const { return arg_begin() + getNumArgs(); }
 
   /// This method provides fast access to all the subexpressions of
   /// a CallExpr without going through the slower virtual child_iterator
   /// interface.  This provides efficient reverse iteration of the
   /// subexpressions.  This is currently used for CFG construction.
-  ArrayRef<Stmt*> getRawSubExprs() {
-    return llvm::makeArrayRef(SubExprs,
-                              getNumPreArgs() + PREARGS_START + getNumArgs());
+  ArrayRef<Stmt *> getRawSubExprs() {
+    return llvm::makeArrayRef(getTrailingStmts(),
+                              PREARGS_START + getNumPreArgs() + getNumArgs());
   }
 
   /// getNumCommas - Return the number of commas that must have been present in
   /// this function call.
-  unsigned getNumCommas() const { return NumArgs ? NumArgs - 1 : 0; }
+  unsigned getNumCommas() const { return getNumArgs() ? getNumArgs() - 1 : 0; }
 
   /// getBuiltinCallee - If this is a call to a builtin, return the builtin ID
   /// of the callee. If not, return 0.
@@ -2578,7 +2635,7 @@ public:
   bool isBuiltinAssumeFalse(const ASTContext &Ctx) const;
 
   bool isCallToStdMove() const {
-    const FunctionDecl* FD = getDirectCallee();
+    const FunctionDecl *FD = getDirectCallee();
     return getNumArgs() == 1 && FD && FD->isInStdNamespace() &&
            FD->getIdentifier() && FD->getIdentifier()->isStr("move");
   }
@@ -2590,13 +2647,14 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(&SubExprs[0],
-                       &SubExprs[0]+NumArgs+getNumPreArgs()+PREARGS_START);
+    return child_range(getTrailingStmts(), getTrailingStmts() + PREARGS_START +
+                                               getNumPreArgs() + getNumArgs());
   }
 
   const_child_range children() const {
-    return const_child_range(&SubExprs[0], &SubExprs[0] + NumArgs +
-                                               getNumPreArgs() + PREARGS_START);
+    return const_child_range(getTrailingStmts(),
+                             getTrailingStmts() + PREARGS_START +
+                                 getNumPreArgs() + getNumArgs());
   }
 };
 

@@ -627,7 +627,7 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
   int mib[3] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL};
 
   size_t pid_data_size = 0;
-  if (::sysctl(mib, 3, NULL, &pid_data_size, NULL, 0) != 0)
+  if (::sysctl(mib, 3, nullptr, &pid_data_size, nullptr, 0) != 0)
     return 0;
 
   // Add a few extra in case a few more show up
@@ -637,7 +637,7 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
   kinfos.resize(estimated_pid_count);
   pid_data_size = kinfos.size() * sizeof(struct kinfo_proc);
 
-  if (::sysctl(mib, 4, &kinfos[0], &pid_data_size, NULL, 0) != 0)
+  if (::sysctl(mib, 3, &kinfos[0], &pid_data_size, nullptr, 0) != 0)
     return 0;
 
   const size_t actual_pid_count = (pid_data_size / sizeof(struct kinfo_proc));

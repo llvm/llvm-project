@@ -369,7 +369,7 @@ bool FrontendActionFactory::runInvocation(
 
   const bool Success = Compiler.ExecuteAction(*ScopedToolAction);
 
-  Files->clearStatCaches();
+  Files->clearStatCache();
   return Success;
 }
 
