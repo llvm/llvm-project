@@ -36,6 +36,7 @@
 #include "comgr.h"
 #include "libraries.inc"
 #include "comgr-device-libs.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -96,8 +97,8 @@ add_device_libraries(DataAction *action_info, DataSet *result_set) {
     return Status;
   if (!Ident.Processor.consume_front("gfx"))
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  uint GFXIP;
-  if (Ident.Processor.getAsInteger<uint>(10, GFXIP))
+  uint32_t GFXIP;
+  if (Ident.Processor.getAsInteger<uint32_t>(10, GFXIP))
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   if (auto Status = add_oclc_object(result_set, get_oclc_isa_version(GFXIP)))
     return Status;
