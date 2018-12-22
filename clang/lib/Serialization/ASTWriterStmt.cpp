@@ -1315,18 +1315,21 @@ void ASTStmtWriter::VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
 
 void ASTStmtWriter::VisitCXXConstructExpr(CXXConstructExpr *E) {
   VisitExpr(E);
+
   Record.push_back(E->getNumArgs());
-  for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
-    Record.AddStmt(E->getArg(I));
-  Record.AddDeclRef(E->getConstructor());
-  Record.AddSourceLocation(E->getLocation());
   Record.push_back(E->isElidable());
   Record.push_back(E->hadMultipleCandidates());
   Record.push_back(E->isListInitialization());
   Record.push_back(E->isStdInitListInitialization());
   Record.push_back(E->requiresZeroInitialization());
   Record.push_back(E->getConstructionKind()); // FIXME: stable encoding
+  Record.AddSourceLocation(E->getLocation());
+  Record.AddDeclRef(E->getConstructor());
   Record.AddSourceRange(E->getParenOrBraceRange());
+
+  for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
+    Record.AddStmt(E->getArg(I));
+
   Code = serialization::EXPR_CXX_CONSTRUCT;
 }
 
