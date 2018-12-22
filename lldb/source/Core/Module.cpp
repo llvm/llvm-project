@@ -783,7 +783,7 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
               qualified_name = cpp_method.GetBasename().str();
             else
               qualified_name = cpp_method.GetScopeQualifiedName();
-            if (qualified_name.compare(m_name.GetCString()) != 0) {
+            if (qualified_name != m_name.GetCString()) {
               sc_list.RemoveContextAtIndex(i);
               continue;
             }

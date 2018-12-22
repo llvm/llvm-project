@@ -285,7 +285,7 @@ annotateConsumedSummaryMismatch(const ExplodedNode *N,
         os << "Parameter '";
         PVD->getNameForDiagnostic(os, PVD->getASTContext().getPrintingPolicy(),
                                   /*Qualified=*/false);
-        os << "' is marked as consuming, but the function does not consume "
+        os << "' is marked as consuming, but the function did not consume "
            << "the reference\n";
       }
     }

@@ -65,7 +65,7 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
                       "  foo: { Type: Func, Warning: \"Deprecated!\" }\n"
                       "  nor: { Type: NoType, Undefined: true }\n"
                       "  not: { Type: File, Undefined: true, Size: 111, "
-                      "Warning: \'All fields populated!\' }\n"
+                      "Weak: true, Warning: \'All fields populated!\' }\n"
                       "...\n";
   Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
   ASSERT_THAT_ERROR(StubOrErr.takeError(), Succeeded());
@@ -81,6 +81,7 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
   EXPECT_EQ(SymBar.Size, 42u);
   EXPECT_EQ(SymBar.Type, ELFSymbolType::Object);
   EXPECT_FALSE(SymBar.Undefined);
+  EXPECT_FALSE(SymBar.Weak);
   EXPECT_FALSE(SymBar.Warning.hasValue());
 
   ELFSymbol const &SymBaz = *Iterator++;
@@ -88,6 +89,7 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
   EXPECT_EQ(SymBaz.Size, 3u);
   EXPECT_EQ(SymBaz.Type, ELFSymbolType::TLS);
   EXPECT_FALSE(SymBaz.Undefined);
+  EXPECT_FALSE(SymBaz.Weak);
   EXPECT_FALSE(SymBaz.Warning.hasValue());
 
   ELFSymbol const &SymFoo = *Iterator++;
@@ -95,6 +97,7 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
   EXPECT_EQ(SymFoo.Size, 0u);
   EXPECT_EQ(SymFoo.Type, ELFSymbolType::Func);
   EXPECT_FALSE(SymFoo.Undefined);
+  EXPECT_FALSE(SymFoo.Weak);
   EXPECT_TRUE(SymFoo.Warning.hasValue());
   EXPECT_STREQ(SymFoo.Warning->c_str(), "Deprecated!");
 
@@ -103,6 +106,7 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
   EXPECT_EQ(SymNor.Size, 0u);
   EXPECT_EQ(SymNor.Type, ELFSymbolType::NoType);
   EXPECT_TRUE(SymNor.Undefined);
+  EXPECT_FALSE(SymNor.Weak);
   EXPECT_FALSE(SymNor.Warning.hasValue());
 
   ELFSymbol const &SymNot = *Iterator++;
@@ -110,6 +114,7 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
   EXPECT_EQ(SymNot.Size, 111u);
   EXPECT_EQ(SymNot.Type, ELFSymbolType::Unknown);
   EXPECT_TRUE(SymNot.Undefined);
+  EXPECT_TRUE(SymNot.Weak);
   EXPECT_TRUE(SymNot.Warning.hasValue());
   EXPECT_STREQ(SymNot.Warning->c_str(), "All fields populated!");
 }
@@ -146,6 +151,7 @@ TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
       "TbeVersion:      1.0\n"
       "Arch:            AArch64\n"
       "Symbols:         \n"
+      "  bar:             { Type: Func, Weak: true }\n"
       "  foo:             { Type: NoType, Size: 99, Warning: Does nothing }\n"
       "  nor:             { Type: Func, Undefined: true }\n"
       "  not:             { Type: Unknown, Size: 12345678901234 }\n"
@@ -158,19 +164,30 @@ TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
   SymFoo.Size = 99u;
   SymFoo.Type = ELFSymbolType::NoType;
   SymFoo.Undefined = false;
+  SymFoo.Weak = false;
   SymFoo.Warning = "Does nothing";
 
+  ELFSymbol SymBar("bar");
+  SymBar.Size = 128u;
+  SymBar.Type = ELFSymbolType::Func;
+  SymBar.Undefined = false;
+  SymBar.Weak = true;
+
   ELFSymbol SymNor("nor");
+  SymNor.Size = 1234u;
   SymNor.Type = ELFSymbolType::Func;
   SymNor.Undefined = true;
+  SymNor.Weak = false;
 
   ELFSymbol SymNot("not");
   SymNot.Size = 12345678901234u;
   SymNot.Type = ELFSymbolType::Unknown;
   SymNot.Undefined = false;
+  SymNot.Weak = false;
 
   // Deliberately not in order to check that result is sorted.
   Stub.Symbols.insert(SymNot);
+  Stub.Symbols.insert(SymBar);
   Stub.Symbols.insert(SymFoo);
   Stub.Symbols.insert(SymNor);
 

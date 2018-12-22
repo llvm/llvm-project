@@ -42,12 +42,19 @@ int host_var;
 // ALL-DAG: @ext_host_var = external global i32
 extern int ext_host_var;
 
-// Shadows for external device-side variables are *definitions* of
-// those variables.
-// ALL-DAG: @ext_device_var = internal global i32
+// external device-side variables -> extern references to their shadows.
+// ALL-DAG: @ext_device_var = external global i32
 extern __device__ int ext_device_var;
-// ALL-DAG: @ext_device_var = internal global i32
+// ALL-DAG: @ext_device_var = external global i32
 extern __constant__ int ext_constant_var;
+
+// external device-side variables with definitions should generate
+// definitions for the shadows.
+// ALL-DAG: @ext_device_var_def = internal global i32 undef,
+extern __device__ int ext_device_var_def;
+__device__ int ext_device_var_def = 1;
+// ALL-DAG: @ext_device_var_def = internal global i32 undef,
+__constant__ int ext_constant_var_def = 2;
 
 void use_pointers() {
   int *p;
@@ -114,8 +121,8 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // ALL: call{{.*}}[[PREFIX]]RegisterFunction(i8** %0, {{.*}}kernelfunc
 // ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}device_var{{.*}}i32 0, i32 4, i32 0, i32 0
 // ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}constant_var{{.*}}i32 0, i32 4, i32 1, i32 0
-// ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_device_var{{.*}}i32 1, i32 4, i32 0, i32 0
-// ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_constant_var{{.*}}i32 1, i32 4, i32 1, i32 0
+// ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_device_var_def{{.*}}i32 0, i32 4, i32 0, i32 0
+// ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_constant_var_def{{.*}}i32 0, i32 4, i32 1, i32 0
 // ALL: ret void
 
 // Test that we've built a constructor.

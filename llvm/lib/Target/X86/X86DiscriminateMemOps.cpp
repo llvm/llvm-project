@@ -21,6 +21,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ProfileData/SampleProfReader.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/IPO/SampleProfile.h"
 using namespace llvm;
 
@@ -107,27 +108,37 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
       if (!DI) {
         DI = ReferenceDI;
       }
-      DenseSet<unsigned> &Set = Seen[diToLocation(DI)];
+      Location L = diToLocation(DI);
+      DenseSet<unsigned> &Set = Seen[L];
       const std::pair<DenseSet<unsigned>::iterator, bool> TryInsert =
           Set.insert(DI->getBaseDiscriminator());
       if (!TryInsert.second) {
-        DI = DI->setBaseDiscriminator(++MemOpDiscriminators[diToLocation(DI)]);
-        updateDebugInfo(&MI, DI);
-        Changed = true;
-        const std::pair<DenseSet<unsigned>::iterator, bool> MustInsert =
-            Set.insert(DI->getBaseDiscriminator());
-        // FIXME (mtrofin): check if the to-be inserted base discriminator can
-        // be added. This requires a new API on DILocation.
-        // The assumption is that this scenario is infrequent/OK not to support.
-        // If evidence points otherwise, we can explore synthesize unique DIs by
-        // adding fake line numbers.
-        if (!MustInsert.second) {
-          LLVM_DEBUG(dbgs()
-                     << "Unable to create a unique discriminator in "
+        unsigned BF, DF, CI = 0;
+        DILocation::decodeDiscriminator(DI->getDiscriminator(), BF, DF, CI);
+        Optional<unsigned> EncodedDiscriminator = DILocation::encodeDiscriminator(
+            MemOpDiscriminators[L] + 1, DF, CI);
+
+        if (!EncodedDiscriminator) {
+          // FIXME(mtrofin): The assumption is that this scenario is infrequent/OK
+          // not to support. If evidence points otherwise, we can explore synthesizeing
+          // unique DIs by adding fake line numbers, or by constructing 64 bit
+          // discriminators.
+          LLVM_DEBUG(dbgs() << "Unable to create a unique discriminator "
+                     "for instruction with memory operand in: "
                      << DI->getFilename() << " Line: " << DI->getLine()
                      << " Column: " << DI->getColumn()
-                     << ". This is likely due to a large macro expansion.\n");
+                     << ". This is likely due to a large macro expansion. \n");
+          continue;
         }
+        // Since we were able to encode, bump the MemOpDiscriminators.
+        ++MemOpDiscriminators[L];
+        DI = DI->cloneWithDiscriminator(EncodedDiscriminator.getValue());
+        updateDebugInfo(&MI, DI);
+        Changed = true;
+        std::pair<DenseSet<unsigned>::iterator, bool> MustInsert =
+            Set.insert(DI->getBaseDiscriminator());
+        (void)MustInsert; // Silence warning in release build.
+        assert(MustInsert.second && "New discriminator shouldn't be present in set");
       }
 
       // Bump the reference DI to avoid cramming discriminators on line 0.

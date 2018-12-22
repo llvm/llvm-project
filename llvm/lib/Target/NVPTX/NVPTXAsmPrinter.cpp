@@ -788,11 +788,8 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   // Construct a default subtarget off of the TargetMachine defaults. The
   // rest of NVPTX isn't friendly to change subtargets per function and
   // so the default TargetMachine will have all of the options.
-  const Triple &TT = TM.getTargetTriple();
-  StringRef CPU = TM.getTargetCPU();
-  StringRef FS = TM.getTargetFeatureString();
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  const NVPTXSubtarget STI(TT, CPU, FS, NTM);
+  const auto* STI = static_cast<const NVPTXSubtarget*>(NTM.getSubtargetImpl());
 
   if (M.alias_size()) {
     report_fatal_error("Module has aliases, which NVPTX does not support.");
@@ -816,7 +813,7 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   bool Result = AsmPrinter::doInitialization(M);
 
   // Emit header before any dwarf directives are emitted below.
-  emitHeader(M, OS1, STI);
+  emitHeader(M, OS1, *STI);
   OutStreamer->EmitRawText(OS1.str());
 
   // Emit module-level inline asm if it exists.

@@ -15734,14 +15734,13 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     ExtVT = BCVT.getVectorElementType();
   }
 
-  // (vextract (vN[if]M load $addr), i) -> ([if]M load $addr + i * size)
+  // extract (vector load $addr), i --> load $addr + i * size
   if (!LegalOperations && !IndexC && VecOp.hasOneUse() &&
       ISD::isNormalLoad(VecOp.getNode()) &&
-      !N->getOperand(1)->hasPredecessor(VecOp.getNode())) {
-    SDValue Index = N->getOperand(1);
-    if (auto *OrigLoad = dyn_cast<LoadSDNode>(VecOp))
-      if (!OrigLoad->isVolatile())
-        return scalarizeExtractedVectorLoad(N, VecVT, Index, OrigLoad);
+      !Index->hasPredecessor(VecOp.getNode())) {
+    auto *VecLoad = dyn_cast<LoadSDNode>(VecOp);
+    if (VecLoad && !VecLoad->isVolatile())
+      return scalarizeExtractedVectorLoad(N, VecVT, Index, VecLoad);
   }
 
   // Perform only after legalization to ensure build_vector / vector_shuffle

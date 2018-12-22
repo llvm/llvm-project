@@ -710,8 +710,7 @@ Status PlatformDarwinKernel::GetSharedModule(
     }
   }
 
-  if (kext_bundle_id.compare("mach_kernel") == 0 &&
-      module_spec.GetUUID().IsValid()) {
+  if (kext_bundle_id == "mach_kernel" && module_spec.GetUUID().IsValid()) {
     // First try all kernel binaries that have a dSYM next to them
     for (auto possible_kernel : m_kernel_binaries_with_dsyms) {
       if (FileSystem::Instance().Exists(possible_kernel)) {

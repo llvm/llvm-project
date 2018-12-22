@@ -1,0 +1,10 @@
+executable("llvm-profdata") {
+  deps = [
+    "//llvm/lib/IR",
+    "//llvm/lib/ProfileData",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "llvm-profdata.cpp",
+  ]
+}

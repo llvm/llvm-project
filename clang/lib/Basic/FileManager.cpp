@@ -63,44 +63,12 @@ FileManager::FileManager(const FileSystemOptions &FSO,
 
 FileManager::~FileManager() = default;
 
-void FileManager::addStatCache(std::unique_ptr<FileSystemStatCache> statCache,
-                               bool AtBeginning) {
+void FileManager::setStatCache(std::unique_ptr<FileSystemStatCache> statCache) {
   assert(statCache && "No stat cache provided?");
-  if (AtBeginning || !StatCache.get()) {
-    statCache->setNextStatCache(std::move(StatCache));
-    StatCache = std::move(statCache);
-    return;
-  }
-
-  FileSystemStatCache *LastCache = StatCache.get();
-  while (LastCache->getNextStatCache())
-    LastCache = LastCache->getNextStatCache();
-
-  LastCache->setNextStatCache(std::move(statCache));
+  StatCache = std::move(statCache);
 }
 
-void FileManager::removeStatCache(FileSystemStatCache *statCache) {
-  if (!statCache)
-    return;
-
-  if (StatCache.get() == statCache) {
-    // This is the first stat cache.
-    StatCache = StatCache->takeNextStatCache();
-    return;
-  }
-
-  // Find the stat cache in the list.
-  FileSystemStatCache *PrevCache = StatCache.get();
-  while (PrevCache && PrevCache->getNextStatCache() != statCache)
-    PrevCache = PrevCache->getNextStatCache();
-
-  assert(PrevCache && "Stat cache not found for removal");
-  PrevCache->setNextStatCache(statCache->takeNextStatCache());
-}
-
-void FileManager::clearStatCaches() {
-  StatCache.reset();
-}
+void FileManager::clearStatCache() { StatCache.reset(); }
 
 /// Retrieve the directory that the given file name resides in.
 /// Filename can point to either a real file or a virtual file.

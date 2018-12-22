@@ -300,8 +300,15 @@ LoopUnrollResult llvm::UnrollAndJamLoop(
     for (BasicBlock *BB : L->getBlocks())
       for (Instruction &I : *BB)
         if (!isa<DbgInfoIntrinsic>(&I))
-          if (const DILocation *DIL = I.getDebugLoc())
-            I.setDebugLoc(DIL->cloneWithDuplicationFactor(Count));
+          if (const DILocation *DIL = I.getDebugLoc()) {
+            auto NewDIL = DIL->cloneWithDuplicationFactor(Count);
+            if (NewDIL)
+              I.setDebugLoc(NewDIL.getValue());
+            else
+              LLVM_DEBUG(dbgs()
+                         << "Failed to create new discriminator: "
+                         << DIL->getFilename() << " Line: " << DIL->getLine());
+          }
 
   // Copy all blocks
   for (unsigned It = 1; It != Count; ++It) {

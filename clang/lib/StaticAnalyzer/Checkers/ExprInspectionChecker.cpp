@@ -321,11 +321,6 @@ void ExprInspectionChecker::analyzerDenote(const CallExpr *CE,
     return;
   }
 
-  if (!isa<SymbolData>(Sym)) {
-    reportBug("Not an atomic symbol", C);
-    return;
-  }
-
   const auto *E = dyn_cast<StringLiteral>(CE->getArg(1)->IgnoreParenCasts());
   if (!E) {
     reportBug("Not a string literal", C);
@@ -345,7 +340,7 @@ class SymbolExpressor
 public:
   SymbolExpressor(ProgramStateRef State) : State(State) {}
 
-  Optional<std::string> VisitSymExpr(const SymExpr *S) {
+  Optional<std::string> lookup(const SymExpr *S) {
     if (const StringLiteral *const *SLPtr = State->get<DenotedSymbols>(S)) {
       const StringLiteral *SL = *SLPtr;
       return std::string(SL->getBytes());
@@ -353,8 +348,14 @@ public:
     return None;
   }
 
+  Optional<std::string> VisitSymExpr(const SymExpr *S) {
+    return lookup(S);
+  }
+
   Optional<std::string> VisitSymIntExpr(const SymIntExpr *S) {
-    if (auto Str = Visit(S->getLHS()))
+    if (Optional<std::string> Str = lookup(S))
+      return Str;
+    if (Optional<std::string> Str = Visit(S->getLHS()))
       return (*Str + " " + BinaryOperator::getOpcodeStr(S->getOpcode()) + " " +
               std::to_string(S->getRHS().getLimitedValue()) +
               (S->getRHS().isUnsigned() ? "U" : ""))
@@ -363,10 +364,20 @@ public:
   }
 
   Optional<std::string> VisitSymSymExpr(const SymSymExpr *S) {
-    if (auto Str1 = Visit(S->getLHS()))
-      if (auto Str2 = Visit(S->getRHS()))
+    if (Optional<std::string> Str = lookup(S))
+      return Str;
+    if (Optional<std::string> Str1 = Visit(S->getLHS()))
+      if (Optional<std::string> Str2 = Visit(S->getRHS()))
         return (*Str1 + " " + BinaryOperator::getOpcodeStr(S->getOpcode()) +
                 " " + *Str2).str();
+    return None;
+  }
+
+  Optional<std::string> VisitSymbolCast(const SymbolCast *S) {
+    if (Optional<std::string> Str = lookup(S))
+      return Str;
+    if (Optional<std::string> Str = Visit(S->getOperand()))
+      return (Twine("(") + S->getType().getAsString() + ")" + *Str).str();
     return None;
   }
 };

@@ -123,6 +123,10 @@ void DurationFactoryScaleCheck::registerMatchers(MatchFinder *Finder) {
           hasArgument(
               0,
               ignoringImpCasts(anyOf(
+                  cxxFunctionalCastExpr(
+                      hasDestinationType(
+                          anyOf(isInteger(), realFloatingPointType())),
+                      hasSourceExpression(initListExpr())),
                   integerLiteral(equals(0)), floatLiteral(equals(0.0)),
                   binaryOperator(hasOperatorName("*"),
                                  hasEitherOperand(ignoringImpCasts(

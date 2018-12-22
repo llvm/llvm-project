@@ -393,8 +393,7 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
       return true;
 
     // Lifetime intrinsics are dead when their right-hand is undef.
-    if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-        II->getIntrinsicID() == Intrinsic::lifetime_end)
+    if (II->isLifetimeStartOrEnd())
       return isa<UndefValue>(II->getArgOperand(1));
 
     // Assumptions are dead if their condition is trivially true.  Guards on

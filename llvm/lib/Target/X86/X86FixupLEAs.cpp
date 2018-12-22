@@ -333,13 +333,12 @@ static inline int getADDriFromLEA(int LEAOpcode, const MachineOperand &Offset) {
 static inline bool isLEASimpleIncOrDec(MachineInstr &LEA) {
   unsigned SrcReg = LEA.getOperand(1 + X86::AddrBaseReg).getReg();
   unsigned DstReg = LEA.getOperand(0).getReg();
-  unsigned AddrDispOp = 1 + X86::AddrDisp;
+  const MachineOperand &AddrDisp = LEA.getOperand(1 + X86::AddrDisp);
   return SrcReg == DstReg &&
          LEA.getOperand(1 + X86::AddrIndexReg).getReg() == 0 &&
          LEA.getOperand(1 + X86::AddrSegmentReg).getReg() == 0 &&
-         LEA.getOperand(AddrDispOp).isImm() &&
-         (LEA.getOperand(AddrDispOp).getImm() == 1 ||
-          LEA.getOperand(AddrDispOp).getImm() == -1);
+         AddrDisp.isImm() &&
+         (AddrDisp.getImm() == 1 || AddrDisp.getImm() == -1);
 }
 
 bool FixupLEAPass::fixupIncDec(MachineBasicBlock::iterator &I,
@@ -351,7 +350,7 @@ bool FixupLEAPass::fixupIncDec(MachineBasicBlock::iterator &I,
 
   if (isLEASimpleIncOrDec(MI) && TII->isSafeToClobberEFLAGS(*MFI, I)) {
     int NewOpcode;
-    bool isINC = MI.getOperand(4).getImm() == 1;
+    bool isINC = MI.getOperand(1 + X86::AddrDisp).getImm() == 1;
     switch (Opcode) {
     case X86::LEA16r:
       NewOpcode = isINC ? X86::INC16r : X86::DEC16r;
@@ -368,7 +367,7 @@ bool FixupLEAPass::fixupIncDec(MachineBasicBlock::iterator &I,
     MachineInstr *NewMI =
         BuildMI(*MFI, I, MI.getDebugLoc(), TII->get(NewOpcode))
             .add(MI.getOperand(0))
-            .add(MI.getOperand(1));
+            .add(MI.getOperand(1 + X86::AddrBaseReg));
     MFI->erase(I);
     I = static_cast<MachineBasicBlock::iterator>(NewMI);
     return true;
@@ -420,15 +419,23 @@ void FixupLEAPass::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
   const int Opcode = MI.getOpcode();
   if (!isLEA(Opcode))
     return;
-  if (MI.getOperand(5).getReg() != 0 || !MI.getOperand(4).isImm() ||
+
+  const MachineOperand &Dst =     MI.getOperand(0);
+  const MachineOperand &Base =    MI.getOperand(1 + X86::AddrBaseReg);
+  const MachineOperand &Scale =   MI.getOperand(1 + X86::AddrScaleAmt);
+  const MachineOperand &Index =   MI.getOperand(1 + X86::AddrIndexReg);
+  const MachineOperand &Offset =  MI.getOperand(1 + X86::AddrDisp);
+  const MachineOperand &Segment = MI.getOperand(1 + X86::AddrSegmentReg);
+
+  if (Segment.getReg() != 0 || !Offset.isImm() ||
       !TII->isSafeToClobberEFLAGS(*MFI, I))
     return;
-  const unsigned DstR = MI.getOperand(0).getReg();
-  const unsigned SrcR1 = MI.getOperand(1).getReg();
-  const unsigned SrcR2 = MI.getOperand(3).getReg();
+  const unsigned DstR = Dst.getReg();
+  const unsigned SrcR1 = Base.getReg();
+  const unsigned SrcR2 = Index.getReg();
   if ((SrcR1 == 0 || SrcR1 != DstR) && (SrcR2 == 0 || SrcR2 != DstR))
     return;
-  if (MI.getOperand(2).getImm() > 1)
+  if (Scale.getImm() > 1)
     return;
   LLVM_DEBUG(dbgs() << "FixLEA: Candidate to replace:"; I->dump(););
   LLVM_DEBUG(dbgs() << "FixLEA: Replaced by: ";);
@@ -436,19 +443,19 @@ void FixupLEAPass::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
   // Make ADD instruction for two registers writing to LEA's destination
   if (SrcR1 != 0 && SrcR2 != 0) {
     const MCInstrDesc &ADDrr = TII->get(getADDrrFromLEA(Opcode));
-    const MachineOperand &Src = MI.getOperand(SrcR1 == DstR ? 3 : 1);
+    const MachineOperand &Src = SrcR1 == DstR ? Index : Base;
     NewMI =
         BuildMI(*MFI, I, MI.getDebugLoc(), ADDrr, DstR).addReg(DstR).add(Src);
     LLVM_DEBUG(NewMI->dump(););
   }
   // Make ADD instruction for immediate
-  if (MI.getOperand(4).getImm() != 0) {
+  if (Offset.getImm() != 0) {
     const MCInstrDesc &ADDri =
-        TII->get(getADDriFromLEA(Opcode, MI.getOperand(4)));
-    const MachineOperand &SrcR = MI.getOperand(SrcR1 == DstR ? 1 : 3);
+        TII->get(getADDriFromLEA(Opcode, Offset));
+    const MachineOperand &SrcR = SrcR1 == DstR ? Base : Index;
     NewMI = BuildMI(*MFI, I, MI.getDebugLoc(), ADDri, DstR)
                 .add(SrcR)
-                .addImm(MI.getOperand(4).getImm());
+                .addImm(Offset.getImm());
     LLVM_DEBUG(NewMI->dump(););
   }
   if (NewMI) {
@@ -465,12 +472,12 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
   if (!isLEA(LEAOpcode))
     return nullptr;
 
-  const MachineOperand &Dst = MI.getOperand(0);
-  const MachineOperand &Base = MI.getOperand(1);
-  const MachineOperand &Scale = MI.getOperand(2);
-  const MachineOperand &Index = MI.getOperand(3);
-  const MachineOperand &Offset = MI.getOperand(4);
-  const MachineOperand &Segment = MI.getOperand(5);
+  const MachineOperand &Dst =     MI.getOperand(0);
+  const MachineOperand &Base =    MI.getOperand(1 + X86::AddrBaseReg);
+  const MachineOperand &Scale =   MI.getOperand(1 + X86::AddrScaleAmt);
+  const MachineOperand &Index =   MI.getOperand(1 + X86::AddrIndexReg);
+  const MachineOperand &Offset =  MI.getOperand(1 + X86::AddrDisp);
+  const MachineOperand &Segment = MI.getOperand(1 + X86::AddrSegmentReg);
 
   if (!(TII->isThreeOperandsLEA(MI) ||
         hasInefficientLEABaseReg(Base, Index)) ||

@@ -6951,6 +6951,26 @@ static SDValue LowerBuildVectorv8i16(SDValue Op, unsigned NonZeros,
 /// Custom lower build_vector of v4i32 or v4f32.
 static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
+  // If this is a splat of a pair of elements, use MOVDDUP (unless the target
+  // has XOP; in that case defer lowering to potentially use VPERMIL2PS).
+  // Because we're creating a less complicated build vector here, we may enable
+  // further folding of the MOVDDUP via shuffle transforms.
+  if (Subtarget.hasSSE3() && !Subtarget.hasXOP() &&
+      Op.getOperand(0) == Op.getOperand(2) &&
+      Op.getOperand(1) == Op.getOperand(3) &&
+      Op.getOperand(0) != Op.getOperand(1)) {
+    SDLoc DL(Op);
+    MVT VT = Op.getSimpleValueType();
+    MVT EltVT = VT.getVectorElementType();
+    // Create a new build vector with the first 2 elements followed by undef
+    // padding, bitcast to v2f64, duplicate, and bitcast back.
+    SDValue Ops[4] = { Op.getOperand(0), Op.getOperand(1),
+                       DAG.getUNDEF(EltVT), DAG.getUNDEF(EltVT) };
+    SDValue NewBV = DAG.getBitcast(MVT::v2f64, DAG.getBuildVector(VT, DL, Ops));
+    SDValue Dup = DAG.getNode(X86ISD::MOVDDUP, DL, MVT::v2f64, NewBV);
+    return DAG.getBitcast(VT, Dup);
+  }
+
   // Find all zeroable elements.
   std::bitset<4> Zeroable;
   for (int i=0; i < 4; ++i) {
