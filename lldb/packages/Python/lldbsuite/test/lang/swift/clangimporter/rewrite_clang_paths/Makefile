@@ -23,7 +23,12 @@ libFoo.dylib: Foo.swift
             -module-name $(shell basename $< .swift) -emit-module \
             -Xlinker -install_name -Xlinker @executable_path/$@ \
             -Xcc -I$(BOTDIR)/Foo $(SWIFTFLAGS) -emit-objc-header-path Foo.h \
-            -sdk "$(SWIFTSDKROOT)" -import-objc-header $(BOTDIR)/Foo/bridge.h
+	    -Xcc -iquote -Xcc ./buildbot/iquote-path \
+	    -Xcc -I -Xcc ./buildbot/I-double \
+	    -Xcc -I./buildbot/I-single \
+	    -Xcc -F./buildbot/Frameworks \
+	    -Xcc -F -Xcc buildbot/Frameworks \
+	    -sdk "$(SWIFTSDKROOT)" -import-objc-header $(BOTDIR)/Foo/bridge.h
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
