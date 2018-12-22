@@ -94,13 +94,34 @@ class TestSwiftRewriteClangPaths(TestBase):
             self.expect("fr var bar", comment, substrs=["y", "42"])
             self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
 
+        # Scan through the types log.
         errs = 0
+        found_iquote = 0
+        found_f = 0
+        found_i1 = 0
+        found_i2 = 0
+        found_rel = 0
         logfile = open(log, "r")
         for line in logfile:
+            if " remapped " in line: continue
             if "error: missing required module 'CFoo'" in line:
                 errs += 1
+                continue
+            if 'user/iquote-path' in line: found_iquote += 1; continue
+            if 'user/I-single'    in line: found_i1 += 1;     continue
+            if 'user/I-double'    in line: found_i2 += 1;     continue
+            if './iquote-path'    in line: found_rel += 1;    continue
+            if './I-'             in line: found_rel += 1;    continue
+            if '/user/Frameworks' in line: found_f += 1;      continue
+
         if remap:
-            self.assertTrue(errs == 0, "expected no module import error")
+            self.assertEqual(errs, 0, "expected no module import error")
+            # Module context + scratch context.
+            self.assertEqual(found_iquote, 2)
+            self.assertEqual(found_i1, 2)
+            self.assertEqual(found_i2, 2)
+            self.assertEqual(found_f, 4)
+            self.assertEqual(found_rel, 0)
         else:
             self.assertTrue(errs > 0, "expected module import error")
         
