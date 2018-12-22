@@ -7966,6 +7966,7 @@ Sema::CheckSpecializationInstantiationRedecl(SourceLocation NewLoc,
       HasNoEffect = true;
       return false;
     }
+    llvm_unreachable("Unexpected TemplateSpecializationKind!");
 
   case TSK_ExplicitInstantiationDefinition:
     switch (PrevTSK) {

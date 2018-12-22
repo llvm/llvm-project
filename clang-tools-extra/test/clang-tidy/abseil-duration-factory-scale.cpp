@@ -2,6 +2,9 @@
 
 #include "absl/time/time.h"
 
+namespace std { typedef long long int64_t; }
+using int64_t = std::int64_t;
+
 void ScaleTest() {
   absl::Duration d;
 
@@ -28,6 +31,15 @@ void ScaleTest() {
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use ZeroDuration() for zero-length time intervals [abseil-duration-factory-scale]
   // CHECK-FIXES: absl::ZeroDuration();
   d = absl::Seconds(0x0.000001p-126f);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use ZeroDuration() for zero-length time intervals [abseil-duration-factory-scale]
+  // CHECK-FIXES: absl::ZeroDuration();
+  d = absl::Seconds(int{0});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use ZeroDuration() for zero-length time intervals [abseil-duration-factory-scale]
+  // CHECK-FIXES: absl::ZeroDuration();
+  d = absl::Seconds(int64_t{0});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use ZeroDuration() for zero-length time intervals [abseil-duration-factory-scale]
+  // CHECK-FIXES: absl::ZeroDuration();
+  d = absl::Seconds(float{0});
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use ZeroDuration() for zero-length time intervals [abseil-duration-factory-scale]
   // CHECK-FIXES: absl::ZeroDuration();
 
@@ -83,6 +95,8 @@ void ScaleTest() {
 
   // None of these should trigger the check
   d = absl::Seconds(60);
+  d = absl::Seconds(int{60});
+  d = absl::Seconds(float{60});
   d = absl::Seconds(60 + 30);
   d = absl::Seconds(60 - 30);
   d = absl::Seconds(50 * 30);

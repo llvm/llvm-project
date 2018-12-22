@@ -691,9 +691,7 @@ define i32 @blsmsk32_z(i32 %a, i32 %b) nounwind {
 define i32 @blsmsk32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; X86-LABEL: blsmsk32_z2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal -1(%eax), %ecx
-; X86-NEXT:    xorl %eax, %ecx
+; X86-NEXT:    blsmskl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmovel %eax, %ecx
@@ -703,9 +701,7 @@ define i32 @blsmsk32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; X64-LABEL: blsmsk32_z2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal -1(%rdi), %ecx
-; X64-NEXT:    xorl %edi, %ecx
+; X64-NEXT:    blsmskl %edi, %ecx
 ; X64-NEXT:    cmovnel %edx, %eax
 ; X64-NEXT:    retq
   %t0 = sub i32 %a, 1
@@ -800,8 +796,7 @@ define i64 @blsmsk64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 ; X64-LABEL: blsmsk64_z2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rsi, %rax
-; X64-NEXT:    leaq -1(%rdi), %rcx
-; X64-NEXT:    xorq %rdi, %rcx
+; X64-NEXT:    blsmskq %rdi, %rcx
 ; X64-NEXT:    cmovneq %rdx, %rax
 ; X64-NEXT:    retq
   %t0 = sub i64 %a, 1
@@ -1032,6 +1027,7 @@ define void @pr40060(i32, i32) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bextrl %eax, {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    js .LBB45_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    jmp bar # TAILCALL
@@ -1041,6 +1037,7 @@ define void @pr40060(i32, i32) {
 ; X64-LABEL: pr40060:
 ; X64:       # %bb.0:
 ; X64-NEXT:    bextrl %esi, %edi, %eax
+; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    js .LBB45_1
 ; X64-NEXT:  # %bb.2:
 ; X64-NEXT:    jmp bar # TAILCALL

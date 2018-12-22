@@ -26,6 +26,7 @@ class ThreadExitTestCase(TestBase):
         self.break_3 = line_number('main.cpp', '// Set third breakpoint here')
         self.break_4 = line_number('main.cpp', '// Set fourth breakpoint here')
 
+    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test(self):
         """Test thread exit handling."""
         self.build(dictionary=self.getBuildFlags())

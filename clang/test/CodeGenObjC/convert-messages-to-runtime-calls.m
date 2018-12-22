@@ -14,16 +14,28 @@
 + (id)alloc;
 + (id)allocWithZone:(void*)zone;
 + (id)alloc2;
+- (id)retain;
+- (void)release;
+- (id)autorelease;
 @end
 
 // CHECK-LABEL: define {{.*}}void @test1
 void test1(id x) {
   // MSGS: {{call.*@objc_msgSend}}
   // MSGS: {{call.*@objc_msgSend}}
+  // MSGS: {{call.*@objc_msgSend}}
+  // MSGS: {{call.*@objc_msgSend}}
+  // MSGS: {{call.*@objc_msgSend}}
   // CALLS: {{call.*@objc_alloc}}
   // CALLS: {{call.*@objc_allocWithZone}}
+  // CALLS: {{call.*@objc_retain}}
+  // CALLS: {{call.*@objc_release}}
+  // CALLS: {{call.*@objc_autorelease}}
   [NSObject alloc];
   [NSObject allocWithZone:nil];
+  [x retain];
+  [x release];
+  [x autorelease];
 }
 
 // CHECK-LABEL: define {{.*}}void @test2
@@ -43,6 +55,8 @@ void test2(void* x) {
 @interface B
 + (A*) alloc;
 + (A*)allocWithZone:(void*)zone;
+- (A*) retain;
+- (A*) autorelease;
 @end
 
 // Make sure we get a bitcast on the return type as the
@@ -65,9 +79,30 @@ A* test_allocWithZone_class_ptr() {
   return [B allocWithZone:nil];
 }
 
+// Make sure we get a bitcast on the return type as the
+// call will return i8* which we have to cast to A*
+// CHECK-LABEL: define {{.*}}void @test_retain_class_ptr
+A* test_retain_class_ptr(B *b) {
+  // CALLS: {{call.*@objc_retain}}
+  // CALLS-NEXT: bitcast i8*
+  // CALLS-NEXT: ret
+  return [b retain];
+}
+
+// Make sure we get a bitcast on the return type as the
+// call will return i8* which we have to cast to A*
+// CHECK-LABEL: define {{.*}}void @test_autorelease_class_ptr
+A* test_autorelease_class_ptr(B *b) {
+  // CALLS: {{call.*@objc_autorelease}}
+  // CALLS-NEXT: bitcast i8*
+  // CALLS-NEXT: ret
+  return [b autorelease];
+}
+
 
 @interface C
 + (id)allocWithZone:(int)intArg;
+- (float) retain;
 @end
 
 // Make sure we only accept pointer types
@@ -77,4 +112,38 @@ C* test_allocWithZone_int() {
   // CALLS: {{call.*@objc_msgSend}}
   return [C allocWithZone:3];
 }
+
+// Make sure we use a message and not a call as the return type is
+// not a pointer type.
+// CHECK-LABEL: define {{.*}}void @test_cannot_message_return_float
+float test_cannot_message_return_float(C *c) {
+  // MSGS: {{call.*@objc_msgSend}}
+  // CALLS: {{call.*@objc_msgSend}}
+  return [c retain];
+}
+
+@interface NSString : NSObject
++ (void)retain_self;
+- (void)retain_super;
+@end
+
+@implementation NSString
+
+// Make sure we can convert a message to a dynamic receiver to a call
+// CHECK-LABEL: define {{.*}}void @retain_self
++ (void)retain_self {
+  // MSGS: {{call.*@objc_msgSend}}
+  // CALLS: {{call.*@objc_retain}}
+  [self retain];
+}
+
+// Make sure we never convert a message to super to a call
+// CHECK-LABEL: define {{.*}}void @retain_super
+- (void)retain_super {
+  // MSGS: {{call.*@objc_msgSend}}
+  // CALLS: {{call.*@objc_msgSend}}
+  [super retain];
+}
+
+@end
 

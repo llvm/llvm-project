@@ -582,6 +582,10 @@ public:
     }
   }
 
+  /// Return true if the instruction is a llvm.lifetime.start or
+  /// llvm.lifetime.end marker.
+  bool isLifetimeStartOrEnd() const;
+
   /// Return a pointer to the next non-debug instruction in the same basic
   /// block as 'this', or nullptr if no such instruction exists.
   const Instruction *getNextNonDebugInstruction() const;

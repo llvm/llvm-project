@@ -3979,12 +3979,11 @@ define <2 x i64> @test_mm_set1_epi64x(i64 %a0) nounwind {
 ;
 ; X86-AVX1-LABEL: test_mm_set1_epi64x:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
-; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x04]
-; X86-AVX1-NEXT:    vmovd %ecx, %xmm0 # encoding: [0xc5,0xf9,0x6e,0xc1]
-; X86-AVX1-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x22,0xc0,0x01]
-; X86-AVX1-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x22,0xc1,0x02]
-; X86-AVX1-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x22,0xc0,0x03]
+; X86-AVX1-NEXT:    vmovd {{[0-9]+}}(%esp), %xmm0 # encoding: [0xc5,0xf9,0x6e,0x44,0x24,0x04]
+; X86-AVX1-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; X86-AVX1-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x22,0x44,0x24,0x08,0x01]
+; X86-AVX1-NEXT:    vpshufd $68, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0x70,0xc0,0x44]
+; X86-AVX1-NEXT:    # xmm0 = xmm0[0,1,0,1]
 ; X86-AVX1-NEXT:    retl # encoding: [0xc3]
 ;
 ; X86-AVX512-LABEL: test_mm_set1_epi64x:

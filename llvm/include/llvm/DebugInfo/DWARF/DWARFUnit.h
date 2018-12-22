@@ -410,7 +410,7 @@ public:
     return None;
   }
 
-  void collectAddressRanges(DWARFAddressRangesVector &CURanges);
+  Expected<DWARFAddressRangesVector> collectAddressRanges();
 
   /// Returns subprogram DIE with address range encompassing the provided
   /// address. The pointer is alive as long as parsed compile unit DIEs are not

@@ -192,18 +192,10 @@ public:
   ///
   /// \param statCache the new stat cache to install. Ownership of this
   /// object is transferred to the FileManager.
-  ///
-  /// \param AtBeginning whether this new stat cache must be installed at the
-  /// beginning of the chain of stat caches. Otherwise, it will be added to
-  /// the end of the chain.
-  void addStatCache(std::unique_ptr<FileSystemStatCache> statCache,
-                    bool AtBeginning = false);
+  void setStatCache(std::unique_ptr<FileSystemStatCache> statCache);
 
-  /// Removes the specified FileSystemStatCache object from the manager.
-  void removeStatCache(FileSystemStatCache *statCache);
-
-  /// Removes all FileSystemStatCache objects from the manager.
-  void clearStatCaches();
+  /// Removes the FileSystemStatCache object from the manager.
+  void clearStatCache();
 
   /// Lookup, cache, and verify the specified directory (real or
   /// virtual).

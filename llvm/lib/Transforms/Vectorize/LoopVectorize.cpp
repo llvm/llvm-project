@@ -759,8 +759,15 @@ void InnerLoopVectorizer::setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr) 
   if (const Instruction *Inst = dyn_cast_or_null<Instruction>(Ptr)) {
     const DILocation *DIL = Inst->getDebugLoc();
     if (DIL && Inst->getFunction()->isDebugInfoForProfiling() &&
-        !isa<DbgInfoIntrinsic>(Inst))
-      B.SetCurrentDebugLocation(DIL->cloneWithDuplicationFactor(UF * VF));
+        !isa<DbgInfoIntrinsic>(Inst)) {
+      auto NewDIL = DIL->cloneWithDuplicationFactor(UF * VF);
+      if (NewDIL)
+        B.SetCurrentDebugLocation(NewDIL.getValue());
+      else
+        LLVM_DEBUG(dbgs()
+                   << "Failed to create new discriminator: "
+                   << DIL->getFilename() << " Line: " << DIL->getLine());
+    }
     else
       B.SetCurrentDebugLocation(DIL);
   } else

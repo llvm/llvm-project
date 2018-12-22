@@ -2188,15 +2188,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   } else {
     const auto *VD = cast<VarDecl>(Global);
     assert(VD->isFileVarDecl() && "Cannot emit local var decl as global.");
-    // We need to emit device-side global CUDA variables even if a
-    // variable does not have a definition -- we still need to define
-    // host-side shadow for it.
-    bool MustEmitForCuda = LangOpts.CUDA && !LangOpts.CUDAIsDevice &&
-                           !VD->hasDefinition() &&
-                           (VD->hasAttr<CUDAConstantAttr>() ||
-                            VD->hasAttr<CUDADeviceAttr>());
-    if (!MustEmitForCuda &&
-        VD->isThisDeclarationADefinition() != VarDecl::Definition &&
+    if (VD->isThisDeclarationADefinition() != VarDecl::Definition &&
         !Context.isMSStaticDataMemberInlineDefinition(VD)) {
       if (LangOpts.OpenMP) {
         // Emit declaration of the must-be-emitted declare target variable.
@@ -3616,7 +3608,10 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
           Flags |= CGCUDARuntime::ExternDeviceVar;
         if (D->hasAttr<CUDAConstantAttr>())
           Flags |= CGCUDARuntime::ConstantDeviceVar;
-        getCUDARuntime().registerDeviceVar(*GV, Flags);
+        // Extern global variables will be registered in the TU where they are
+        // defined.
+        if (!D->hasExternalStorage())
+          getCUDARuntime().registerDeviceVar(*GV, Flags);
       } else if (D->hasAttr<CUDASharedAttr>())
         // __shared__ variables are odd. Shadows do get created, but
         // they are not registered with the CUDA runtime, so they

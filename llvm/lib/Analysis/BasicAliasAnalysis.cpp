@@ -812,6 +812,12 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS,
           !CI->getAttributes().hasAttrSomewhere(Attribute::ByVal))
         return ModRefInfo::NoModRef;
 
+  // Stack restore is able to modify unescaped dynamic allocas. Assume it may
+  // modify them even though the alloca is not escaped.
+  if (auto *AI = dyn_cast<AllocaInst>(Object))
+    if (!AI->isStaticAlloca() && isIntrinsicCall(CS, Intrinsic::stackrestore))
+      return ModRefInfo::Mod;
+
   // If the pointer is to a locally allocated object that does not escape,
   // then the call can not mod/ref the pointer unless the call takes the pointer
   // as an argument, and itself doesn't capture it.

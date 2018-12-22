@@ -3822,8 +3822,7 @@ bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
     const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U);
     if (!II) return false;
 
-    if (II->getIntrinsicID() != Intrinsic::lifetime_start &&
-        II->getIntrinsicID() != Intrinsic::lifetime_end)
+    if (!II->isLifetimeStartOrEnd())
       return false;
   }
   return true;
