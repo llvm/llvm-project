@@ -919,8 +919,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
       continue;
     }
     if (const IntrinsicInst *IT = dyn_cast<IntrinsicInst>(U))
-      if (IT->getIntrinsicID() == Intrinsic::lifetime_start ||
-          IT->getIntrinsicID() == Intrinsic::lifetime_end)
+      if (IT->isLifetimeStartOrEnd())
         continue;
 
     if (U != C && U != cpy)

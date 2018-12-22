@@ -70,6 +70,17 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
                           BasicBlock *PreHeader, BasicBlock *NewPreHeader,
                           ValueToValueMapTy &VMap, DominatorTree *DT,
                           LoopInfo *LI, bool PreserveLCSSA) {
+  // Loop structure should be the following:
+  // Preheader
+  //  PrologPreHeader
+  //  ...
+  //  PrologLatch
+  //  PrologExit
+  //   NewPreheader
+  //    Header
+  //    ...
+  //    Latch
+  //      LatchExit
   BasicBlock *Latch = L->getLoopLatch();
   assert(Latch && "Loop must have a latch");
   BasicBlock *PrologLatch = cast<BasicBlock>(VMap[Latch]);
@@ -83,14 +94,21 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
     for (PHINode &PN : Succ->phis()) {
       // Add a new PHI node to the prolog end block and add the
       // appropriate incoming values.
+      // TODO: This code assumes that the PrologExit (or the LatchExit block for
+      // prolog loop) contains only one predecessor from the loop, i.e. the
+      // PrologLatch. When supporting multiple-exiting block loops, we can have
+      // two or more blocks that have the LatchExit as the target in the
+      // original loop.
       PHINode *NewPN = PHINode::Create(PN.getType(), 2, PN.getName() + ".unr",
                                        PrologExit->getFirstNonPHI());
       // Adding a value to the new PHI node from the original loop preheader.
       // This is the value that skips all the prolog code.
       if (L->contains(&PN)) {
+        // Succ is loop header.
         NewPN->addIncoming(PN.getIncomingValueForBlock(NewPreHeader),
                            PreHeader);
       } else {
+        // Succ is LatchExit
         NewPN->addIncoming(UndefValue::get(PN.getType()), PreHeader);
       }
 

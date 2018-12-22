@@ -12576,8 +12576,7 @@ SDValue ARMTargetLowering::PerformCMOVToBFICombine(SDNode *CMOV, SelectionDAG &D
 
   // Lastly, can we determine that the bits defined by OrCI
   // are zero in Y?
-  KnownBits Known;
-  DAG.computeKnownBits(Y, Known);
+  KnownBits Known = DAG.computeKnownBits(Y);
   if ((OrCI & Known.Zero) != OrCI)
     return SDValue();
 
@@ -12807,8 +12806,7 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
   }
 
   if (Res.getNode()) {
-    KnownBits Known;
-    DAG.computeKnownBits(SDValue(N,0), Known);
+    KnownBits Known = DAG.computeKnownBits(SDValue(N,0));
     // Capture demanded bits information that would be otherwise lost.
     if (Known.Zero == 0xfffffffe)
       Res = DAG.getNode(ISD::AssertZext, dl, MVT::i32, Res,
@@ -13599,12 +13597,11 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     break;
   case ARMISD::CMOV: {
     // Bits are known zero/one if known on the LHS and RHS.
-    DAG.computeKnownBits(Op.getOperand(0), Known, Depth+1);
+    Known = DAG.computeKnownBits(Op.getOperand(0), Depth+1);
     if (Known.isUnknown())
       return;
 
-    KnownBits KnownRHS;
-    DAG.computeKnownBits(Op.getOperand(1), KnownRHS, Depth+1);
+    KnownBits KnownRHS = DAG.computeKnownBits(Op.getOperand(1), Depth+1);
     Known.Zero &= KnownRHS.Zero;
     Known.One  &= KnownRHS.One;
     return;
@@ -13626,7 +13623,7 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case ARMISD::BFI: {
     // Conservatively, we can recurse down the first operand
     // and just mask out all affected bits.
-    DAG.computeKnownBits(Op.getOperand(0), Known, Depth + 1);
+    Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
 
     // The operand to BFI is already a mask suitable for removing the bits it
     // sets.

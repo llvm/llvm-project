@@ -1,13 +1,14 @@
 group("default") {
   deps = [
-    "//clang/lib/CodeGen",
-    "//clang/lib/Driver",
-    "//clang/lib/Frontend",
-    "//clang/lib/Frontend/Rewrite",
-    "//clang/lib/Parse",
-    "//clang/lib/Serialization",
+    ":clang",
     "//clang/tools/clang-format",
     "//lld/test",
+    "//llvm/tools/llvm-cat",
+    "//llvm/tools/llvm-lto",
+    "//llvm/tools/llvm-lto2",
+    "//llvm/tools/llvm-modextract",
+    "//llvm/tools/llvm-profdata",
+    "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/llvm-undname",
   ]
   testonly = true
@@ -35,6 +36,11 @@ group("default") {
 # update symlinks (in particular, on Windows it doesn't copy the new lld to its
 # new locations).
 # That seems simpler, more explicit, and good enough.
+group("clang") {
+  deps = [
+    "//clang/tools/driver:symlinks",
+  ]
+}
 group("lld") {
   deps = [
     "//lld/tools/lld:symlinks",
@@ -63,6 +69,11 @@ group("llvm-objdump") {
 group("llvm-readobj") {
   deps = [
     "//llvm/tools/llvm-readobj:symlinks",
+  ]
+}
+group("llvm-symbolizer") {
+  deps = [
+    "//llvm/tools/llvm-symbolizer:symlinks",
   ]
 }
 
