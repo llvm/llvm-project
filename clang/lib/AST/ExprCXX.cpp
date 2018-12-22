@@ -453,7 +453,7 @@ DependentScopeDeclRefExpr::CreateEmpty(const ASTContext &C,
 SourceLocation CXXConstructExpr::getBeginLoc() const {
   if (isa<CXXTemporaryObjectExpr>(this))
     return cast<CXXTemporaryObjectExpr>(this)->getBeginLoc();
-  return Loc;
+  return getLocation();
 }
 
 SourceLocation CXXConstructExpr::getEndLoc() const {
@@ -463,7 +463,7 @@ SourceLocation CXXConstructExpr::getEndLoc() const {
   if (ParenOrBraceRange.isValid())
     return ParenOrBraceRange.getEnd();
 
-  SourceLocation End = Loc;
+  SourceLocation End = getLocation();
   for (unsigned I = getNumArgs(); I > 0; --I) {
     const Expr *Arg = getArg(I-1);
     if (!Arg->isDefaultArgument()) {
@@ -892,25 +892,47 @@ CXXBindTemporaryExpr *CXXBindTemporaryExpr::Create(const ASTContext &C,
   return new (C) CXXBindTemporaryExpr(Temp, SubExpr);
 }
 
-CXXTemporaryObjectExpr::CXXTemporaryObjectExpr(const ASTContext &C,
-                                               CXXConstructorDecl *Cons,
-                                               QualType Type,
-                                               TypeSourceInfo *TSI,
-                                               ArrayRef<Expr*> Args,
-                                               SourceRange ParenOrBraceRange,
-                                               bool HadMultipleCandidates,
-                                               bool ListInitialization,
-                                               bool StdInitListInitialization,
-                                               bool ZeroInitialization)
-    : CXXConstructExpr(C, CXXTemporaryObjectExprClass, Type,
-                       TSI->getTypeLoc().getBeginLoc(), Cons, false, Args,
-                       HadMultipleCandidates, ListInitialization,
-                       StdInitListInitialization,  ZeroInitialization,
-                       CXXConstructExpr::CK_Complete, ParenOrBraceRange),
-      Type(TSI) {}
+CXXTemporaryObjectExpr::CXXTemporaryObjectExpr(
+    CXXConstructorDecl *Cons, QualType Ty, TypeSourceInfo *TSI,
+    ArrayRef<Expr *> Args, SourceRange ParenOrBraceRange,
+    bool HadMultipleCandidates, bool ListInitialization,
+    bool StdInitListInitialization, bool ZeroInitialization)
+    : CXXConstructExpr(
+          CXXTemporaryObjectExprClass, Ty, TSI->getTypeLoc().getBeginLoc(),
+          Cons, /* Elidable=*/false, Args, HadMultipleCandidates,
+          ListInitialization, StdInitListInitialization, ZeroInitialization,
+          CXXConstructExpr::CK_Complete, ParenOrBraceRange),
+      TSI(TSI) {}
+
+CXXTemporaryObjectExpr::CXXTemporaryObjectExpr(EmptyShell Empty,
+                                               unsigned NumArgs)
+    : CXXConstructExpr(CXXTemporaryObjectExprClass, Empty, NumArgs) {}
+
+CXXTemporaryObjectExpr *CXXTemporaryObjectExpr::Create(
+    const ASTContext &Ctx, CXXConstructorDecl *Cons, QualType Ty,
+    TypeSourceInfo *TSI, ArrayRef<Expr *> Args, SourceRange ParenOrBraceRange,
+    bool HadMultipleCandidates, bool ListInitialization,
+    bool StdInitListInitialization, bool ZeroInitialization) {
+  unsigned SizeOfTrailingObjects = sizeOfTrailingObjects(Args.size());
+  void *Mem =
+      Ctx.Allocate(sizeof(CXXTemporaryObjectExpr) + SizeOfTrailingObjects,
+                   alignof(CXXTemporaryObjectExpr));
+  return new (Mem) CXXTemporaryObjectExpr(
+      Cons, Ty, TSI, Args, ParenOrBraceRange, HadMultipleCandidates,
+      ListInitialization, StdInitListInitialization, ZeroInitialization);
+}
+
+CXXTemporaryObjectExpr *
+CXXTemporaryObjectExpr::CreateEmpty(const ASTContext &Ctx, unsigned NumArgs) {
+  unsigned SizeOfTrailingObjects = sizeOfTrailingObjects(NumArgs);
+  void *Mem =
+      Ctx.Allocate(sizeof(CXXTemporaryObjectExpr) + SizeOfTrailingObjects,
+                   alignof(CXXTemporaryObjectExpr));
+  return new (Mem) CXXTemporaryObjectExpr(EmptyShell(), NumArgs);
+}
 
 SourceLocation CXXTemporaryObjectExpr::getBeginLoc() const {
-  return Type->getTypeLoc().getBeginLoc();
+  return getTypeSourceInfo()->getTypeLoc().getBeginLoc();
 }
 
 SourceLocation CXXTemporaryObjectExpr::getEndLoc() const {
@@ -920,63 +942,67 @@ SourceLocation CXXTemporaryObjectExpr::getEndLoc() const {
   return Loc;
 }
 
-CXXConstructExpr *CXXConstructExpr::Create(const ASTContext &C, QualType T,
-                                           SourceLocation Loc,
-                                           CXXConstructorDecl *Ctor,
-                                           bool Elidable,
-                                           ArrayRef<Expr*> Args,
-                                           bool HadMultipleCandidates,
-                                           bool ListInitialization,
-                                           bool StdInitListInitialization,
-                                           bool ZeroInitialization,
-                                           ConstructionKind ConstructKind,
-                                           SourceRange ParenOrBraceRange) {
-  return new (C) CXXConstructExpr(C, CXXConstructExprClass, T, Loc,
-                                  Ctor, Elidable, Args,
-                                  HadMultipleCandidates, ListInitialization,
-                                  StdInitListInitialization,
-                                  ZeroInitialization, ConstructKind,
-                                  ParenOrBraceRange);
+CXXConstructExpr *CXXConstructExpr::Create(
+    const ASTContext &Ctx, QualType Ty, SourceLocation Loc,
+    CXXConstructorDecl *Ctor, bool Elidable, ArrayRef<Expr *> Args,
+    bool HadMultipleCandidates, bool ListInitialization,
+    bool StdInitListInitialization, bool ZeroInitialization,
+    ConstructionKind ConstructKind, SourceRange ParenOrBraceRange) {
+  unsigned SizeOfTrailingObjects = sizeOfTrailingObjects(Args.size());
+  void *Mem = Ctx.Allocate(sizeof(CXXConstructExpr) + SizeOfTrailingObjects,
+                           alignof(CXXConstructExpr));
+  return new (Mem) CXXConstructExpr(
+      CXXConstructExprClass, Ty, Loc, Ctor, Elidable, Args,
+      HadMultipleCandidates, ListInitialization, StdInitListInitialization,
+      ZeroInitialization, ConstructKind, ParenOrBraceRange);
 }
 
-CXXConstructExpr::CXXConstructExpr(const ASTContext &C, StmtClass SC,
-                                   QualType T, SourceLocation Loc,
-                                   CXXConstructorDecl *Ctor,
-                                   bool Elidable,
-                                   ArrayRef<Expr*> Args,
-                                   bool HadMultipleCandidates,
-                                   bool ListInitialization,
-                                   bool StdInitListInitialization,
-                                   bool ZeroInitialization,
-                                   ConstructionKind ConstructKind,
-                                   SourceRange ParenOrBraceRange)
-    : Expr(SC, T, VK_RValue, OK_Ordinary,
-           T->isDependentType(), T->isDependentType(),
-           T->isInstantiationDependentType(),
-           T->containsUnexpandedParameterPack()),
-      Constructor(Ctor), Loc(Loc), ParenOrBraceRange(ParenOrBraceRange),
-      NumArgs(Args.size()), Elidable(Elidable),
-      HadMultipleCandidates(HadMultipleCandidates),
-      ListInitialization(ListInitialization),
-      StdInitListInitialization(StdInitListInitialization),
-      ZeroInitialization(ZeroInitialization), ConstructKind(ConstructKind) {
-  if (NumArgs) {
-    this->Args = new (C) Stmt*[Args.size()];
+CXXConstructExpr *CXXConstructExpr::CreateEmpty(const ASTContext &Ctx,
+                                                unsigned NumArgs) {
+  unsigned SizeOfTrailingObjects = sizeOfTrailingObjects(NumArgs);
+  void *Mem = Ctx.Allocate(sizeof(CXXConstructExpr) + SizeOfTrailingObjects,
+                           alignof(CXXConstructExpr));
+  return new (Mem)
+      CXXConstructExpr(CXXConstructExprClass, EmptyShell(), NumArgs);
+}
 
-    for (unsigned i = 0; i != Args.size(); ++i) {
-      assert(Args[i] && "NULL argument in CXXConstructExpr");
+CXXConstructExpr::CXXConstructExpr(
+    StmtClass SC, QualType Ty, SourceLocation Loc, CXXConstructorDecl *Ctor,
+    bool Elidable, ArrayRef<Expr *> Args, bool HadMultipleCandidates,
+    bool ListInitialization, bool StdInitListInitialization,
+    bool ZeroInitialization, ConstructionKind ConstructKind,
+    SourceRange ParenOrBraceRange)
+    : Expr(SC, Ty, VK_RValue, OK_Ordinary, Ty->isDependentType(),
+           Ty->isDependentType(), Ty->isInstantiationDependentType(),
+           Ty->containsUnexpandedParameterPack()),
+      Constructor(Ctor), ParenOrBraceRange(ParenOrBraceRange),
+      NumArgs(Args.size()) {
+  CXXConstructExprBits.Elidable = Elidable;
+  CXXConstructExprBits.HadMultipleCandidates = HadMultipleCandidates;
+  CXXConstructExprBits.ListInitialization = ListInitialization;
+  CXXConstructExprBits.StdInitListInitialization = StdInitListInitialization;
+  CXXConstructExprBits.ZeroInitialization = ZeroInitialization;
+  CXXConstructExprBits.ConstructionKind = ConstructKind;
+  CXXConstructExprBits.Loc = Loc;
 
-      if (Args[i]->isValueDependent())
-        ExprBits.ValueDependent = true;
-      if (Args[i]->isInstantiationDependent())
-        ExprBits.InstantiationDependent = true;
-      if (Args[i]->containsUnexpandedParameterPack())
-        ExprBits.ContainsUnexpandedParameterPack = true;
+  Stmt **TrailingArgs = getTrailingArgs();
+  for (unsigned I = 0, N = Args.size(); I != N; ++I) {
+    assert(Args[I] && "NULL argument in CXXConstructExpr!");
 
-      this->Args[i] = Args[i];
-    }
+    if (Args[I]->isValueDependent())
+      ExprBits.ValueDependent = true;
+    if (Args[I]->isInstantiationDependent())
+      ExprBits.InstantiationDependent = true;
+    if (Args[I]->containsUnexpandedParameterPack())
+      ExprBits.ContainsUnexpandedParameterPack = true;
+
+    TrailingArgs[I] = Args[I];
   }
 }
+
+CXXConstructExpr::CXXConstructExpr(StmtClass SC, EmptyShell Empty,
+                                   unsigned NumArgs)
+    : Expr(SC, Empty), NumArgs(NumArgs) {}
 
 LambdaCapture::LambdaCapture(SourceLocation Loc, bool Implicit,
                              LambdaCaptureKind Kind, VarDecl *Var,

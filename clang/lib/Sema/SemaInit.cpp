@@ -6199,7 +6199,7 @@ PerformConstructorInitialization(Sema &S,
     }
     S.MarkFunctionReferenced(Loc, Constructor);
 
-    CurInit = new (S.Context) CXXTemporaryObjectExpr(
+    CurInit = CXXTemporaryObjectExpr::Create(
         S.Context, Constructor,
         Entity.getType().getNonLValueExprType(S.Context), TSInfo,
         ConstructorArgs, ParenOrBraceRange, HadMultipleCandidates,

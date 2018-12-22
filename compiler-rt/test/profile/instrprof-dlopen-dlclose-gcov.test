@@ -1,3 +1,6 @@
+# atexit(3) not supported in dlopen(3)ed+dlclose(3)d DSO
+XFAIL: netbsd
+
 RUN: mkdir -p %t.d
 RUN: cd %t.d
 

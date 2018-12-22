@@ -58,7 +58,7 @@ static std::string getStringValue(const Record &R, StringRef field) {
 }
 
 // Calculates the integer value representing the BitsInit object
-static inline uint64_t getValueFromBitsInit(const BitsInit *B) {
+static inline uint64_t getValueFromBitsInit(const BitsInit *B, const Record &R) {
   assert(B->getNumBits() <= sizeof(uint64_t) * 8 && "BitInits' too long!");
 
   uint64_t Value = 0;
@@ -67,7 +67,8 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B) {
     if (Bit)
       Value |= uint64_t(Bit->getValue()) << i;
     else
-      PrintFatalError("Invalid bits");
+      PrintFatalError(R.getLoc(),
+                      "missing Documentation for " + getCheckerFullName(&R));
   }
   return Value;
 }
@@ -75,7 +76,7 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B) {
 static std::string getCheckerDocs(const Record &R) {
   StringRef LandingPage;
   if (BitsInit *BI = R.getValueAsBitsInit("Documentation")) {
-    uint64_t V = getValueFromBitsInit(BI);
+    uint64_t V = getValueFromBitsInit(BI, R);
     if (V == 1)
       LandingPage = "available_checks.html";
     else if (V == 2)

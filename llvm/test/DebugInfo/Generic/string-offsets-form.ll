@@ -16,7 +16,7 @@
 ;
 ; CHECK:     .debug_info contents:
 ; CHECK-NOT: DW_FORM_strx2
-; CHECK:     DW_AT_name [DW_FORM_strx2] ( indexed (00000100) string =
+; CHECK:     DW_AT_name [DW_FORM_strx2] (indexed (00000100) string =
 
 ; ModuleID = 'enum.cpp'
 source_filename = "enum.cpp"
