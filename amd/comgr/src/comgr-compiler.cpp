@@ -513,6 +513,10 @@ static amd_comgr_status_t InputFromFile(DataObject *Object, StringRef Path) {
 }
 
 static amd_comgr_status_t OutputToFile(DataObject *Object, StringRef Path) {
+  SmallString<128> DirPath = Path;
+  path::remove_filename(DirPath);
+  if (fs::create_directories(DirPath))
+    return AMD_COMGR_STATUS_ERROR;
   std::error_code EC;
   raw_fd_ostream OS(Path, EC, fs::F_None);
   if (EC)
