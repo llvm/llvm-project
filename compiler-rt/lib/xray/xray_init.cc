@@ -67,6 +67,9 @@ void __xray_init() XRAY_NEVER_INSTRUMENT {
   if (atomic_load(&XRayInitialized, memory_order_acquire))
     return;
 
+  // XRAY is not compatible with PaX MPROTECT
+  CheckMPROTECT();
+
   if (!atomic_load(&XRayFlagsInitialized, memory_order_acquire)) {
     initializeFlags();
     atomic_store(&XRayFlagsInitialized, true, memory_order_release);
