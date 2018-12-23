@@ -24,7 +24,7 @@ void foo(int x, unsigned y) {
   clang_analyzer_denote(1, "$z");     // expected-warning{{Not a symbol}}
   clang_analyzer_express(1);     // expected-warning{{Not a symbol}}
 
-  clang_analyzer_denote(x + 1, "$w"); // expected-warning{{Not an atomic symbol}}
-  clang_analyzer_express(x + 1); // expected-warning{{$x + 1}}
+  clang_analyzer_denote(x + 1, "$w");
+  clang_analyzer_express(x + 1); // expected-warning{{$w}}
   clang_analyzer_express(y + 1); // expected-warning{{$y + 1U}}
 }

@@ -658,6 +658,10 @@ macro(add_llvm_library name)
         set(install_type ARCHIVE)
       endif()
 
+      if (ARG_MODULE)
+        set(install_type LIBRARY)
+      endif()
+
       if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
           NOT LLVM_DISTRIBUTION_COMPONENTS)
         set(export_to_llvmexports EXPORT LLVMExports)

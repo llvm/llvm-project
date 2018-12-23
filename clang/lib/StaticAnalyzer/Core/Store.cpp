@@ -402,6 +402,17 @@ SVal StoreManager::CastRetrievedVal(SVal V, const TypedValueRegion *R,
   if (castTy.isNull() || V.isUnknownOrUndef())
     return V;
 
+  // The dispatchCast() call below would convert the int into a float.
+  // What we want, however, is a bit-by-bit reinterpretation of the int
+  // as a float, which usually yields nothing garbage. For now skip casts
+  // from ints to floats.
+  // TODO: What other combinations of types are affected?
+  if (castTy->isFloatingType()) {
+    SymbolRef Sym = V.getAsSymbol();
+    if (Sym && !Sym->getType()->isFloatingType())
+      return UnknownVal();
+  }
+
   // When retrieving symbolic pointer and expecting a non-void pointer,
   // wrap them into element regions of the expected type if necessary.
   // SValBuilder::dispatchCast() doesn't do that, but it is necessary to

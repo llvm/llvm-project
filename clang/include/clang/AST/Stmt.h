@@ -655,6 +655,22 @@ protected:
     unsigned NumArgs : 32 - 8 - 1 - NumExprBits;
   };
 
+  class CXXConstructExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXConstructExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned Elidable : 1;
+    unsigned HadMultipleCandidates : 1;
+    unsigned ListInitialization : 1;
+    unsigned StdInitListInitialization : 1;
+    unsigned ZeroInitialization : 1;
+    unsigned ConstructionKind : 3;
+
+    SourceLocation Loc;
+  };
+
   class ExprWithCleanupsBitfields {
     friend class ASTStmtReader; // deserialization
     friend class ExprWithCleanups;
@@ -746,6 +762,7 @@ protected:
     CXXDefaultInitExprBitfields CXXDefaultInitExprBits;
     CXXDeleteExprBitfields CXXDeleteExprBits;
     TypeTraitExprBitfields TypeTraitExprBits;
+    CXXConstructExprBitfields CXXConstructExprBits;
     ExprWithCleanupsBitfields ExprWithCleanupsBits;
 
     // C++ Coroutines TS expressions

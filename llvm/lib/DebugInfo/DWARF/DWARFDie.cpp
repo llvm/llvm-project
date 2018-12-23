@@ -71,15 +71,7 @@ static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
     OS.indent(Indent);
     R.dump(OS, AddressSize);
 
-    if (SectionNames.empty() || R.SectionIndex == -1ULL)
-      continue;
-
-    StringRef Name = SectionNames[R.SectionIndex].Name;
-    OS << " \"" << Name << '\"';
-
-    // Print section index if name is not unique.
-    if (!SectionNames[R.SectionIndex].IsNameUnique)
-      OS << format(" [%" PRIu64 "]", R.SectionIndex);
+    DWARFFormValue::dumpAddressSection(Obj, OS, DumpOpts, R.SectionIndex);
   }
 }
 
@@ -353,10 +345,9 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     const DWARFObject &Obj = Die.getDwarfUnit()->getContext().getDWARFObj();
     // For DW_FORM_rnglistx we need to dump the offset separately, since
     // we have only dumped the index so far.
-    Optional<DWARFFormValue> Value = Die.find(DW_AT_ranges);
-    if (Value && Value->getForm() == DW_FORM_rnglistx)
+    if (formValue.getForm() == DW_FORM_rnglistx)
       if (auto RangeListOffset =
-              U->getRnglistOffset(*Value->getAsSectionOffset())) {
+              U->getRnglistOffset(*formValue.getAsSectionOffset())) {
         DWARFFormValue FV(dwarf::DW_FORM_sec_offset);
         FV.setUValue(*RangeListOffset);
         FV.dump(OS, DumpOpts);
@@ -475,13 +466,13 @@ Optional<uint64_t> DWARFDie::getHighPC(uint64_t LowPC) const {
 bool DWARFDie::getLowAndHighPC(uint64_t &LowPC, uint64_t &HighPC,
                                uint64_t &SectionIndex) const {
   auto F = find(DW_AT_low_pc);
-  auto LowPcAddr = toAddress(F);
+  auto LowPcAddr = toSectionedAddress(F);
   if (!LowPcAddr)
     return false;
-  if (auto HighPcAddr = getHighPC(*LowPcAddr)) {
-    LowPC = *LowPcAddr;
+  if (auto HighPcAddr = getHighPC(LowPcAddr->Address)) {
+    LowPC = LowPcAddr->Address;
     HighPC = *HighPcAddr;
-    SectionIndex = F->getSectionIndex();
+    SectionIndex = LowPcAddr->SectionIndex;
     return true;
   }
   return false;

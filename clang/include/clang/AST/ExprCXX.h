@@ -1280,6 +1280,8 @@ public:
 
 /// Represents a call to a C++ constructor.
 class CXXConstructExpr : public Expr {
+  friend class ASTStmtReader;
+
 public:
   enum ConstructionKind {
     CK_Complete,
@@ -1289,98 +1291,119 @@ public:
   };
 
 private:
-  CXXConstructorDecl *Constructor = nullptr;
-  SourceLocation Loc;
-  SourceRange ParenOrBraceRange;
-  unsigned NumArgs : 16;
-  unsigned Elidable : 1;
-  unsigned HadMultipleCandidates : 1;
-  unsigned ListInitialization : 1;
-  unsigned StdInitListInitialization : 1;
-  unsigned ZeroInitialization : 1;
-  unsigned ConstructKind : 2;
-  Stmt **Args = nullptr;
+  /// A pointer to the constructor which will be ultimately called.
+  CXXConstructorDecl *Constructor;
 
-  void setConstructor(CXXConstructorDecl *C) { Constructor = C; }
+  SourceRange ParenOrBraceRange;
+
+  /// The number of arguments.
+  unsigned NumArgs;
+
+  // We would like to stash the arguments of the constructor call after
+  // CXXConstructExpr. However CXXConstructExpr is used as a base class of
+  // CXXTemporaryObjectExpr which makes the use of llvm::TrailingObjects
+  // impossible.
+  //
+  // Instead we manually stash the trailing object after the full object
+  // containing CXXConstructExpr (that is either CXXConstructExpr or
+  // CXXTemporaryObjectExpr).
+  //
+  // The trailing objects are:
+  //
+  // * An array of getNumArgs() "Stmt *" for the arguments of the
+  //   constructor call.
+
+  /// Return a pointer to the start of the trailing arguments.
+  /// Defined just after CXXTemporaryObjectExpr.
+  inline Stmt **getTrailingArgs();
+  const Stmt *const *getTrailingArgs() const {
+    return const_cast<CXXConstructExpr *>(this)->getTrailingArgs();
+  }
 
 protected:
-  CXXConstructExpr(const ASTContext &C, StmtClass SC, QualType T,
-                   SourceLocation Loc,
-                   CXXConstructorDecl *Ctor,
-                   bool Elidable,
-                   ArrayRef<Expr *> Args,
-                   bool HadMultipleCandidates,
-                   bool ListInitialization,
-                   bool StdInitListInitialization,
-                   bool ZeroInitialization,
-                   ConstructionKind ConstructKind,
+  /// Build a C++ construction expression.
+  CXXConstructExpr(StmtClass SC, QualType Ty, SourceLocation Loc,
+                   CXXConstructorDecl *Ctor, bool Elidable,
+                   ArrayRef<Expr *> Args, bool HadMultipleCandidates,
+                   bool ListInitialization, bool StdInitListInitialization,
+                   bool ZeroInitialization, ConstructionKind ConstructKind,
                    SourceRange ParenOrBraceRange);
 
-  /// Construct an empty C++ construction expression.
-  CXXConstructExpr(StmtClass SC, EmptyShell Empty)
-      : Expr(SC, Empty), NumArgs(0), Elidable(false),
-        HadMultipleCandidates(false), ListInitialization(false),
-        ZeroInitialization(false), ConstructKind(0) {}
+  /// Build an empty C++ construction expression.
+  CXXConstructExpr(StmtClass SC, EmptyShell Empty, unsigned NumArgs);
+
+  /// Return the size in bytes of the trailing objects. Used by
+  /// CXXTemporaryObjectExpr to allocate the right amount of storage.
+  static unsigned sizeOfTrailingObjects(unsigned NumArgs) {
+    return NumArgs * sizeof(Stmt *);
+  }
 
 public:
-  friend class ASTStmtReader;
+  /// Create a C++ construction expression.
+  static CXXConstructExpr *
+  Create(const ASTContext &Ctx, QualType Ty, SourceLocation Loc,
+         CXXConstructorDecl *Ctor, bool Elidable, ArrayRef<Expr *> Args,
+         bool HadMultipleCandidates, bool ListInitialization,
+         bool StdInitListInitialization, bool ZeroInitialization,
+         ConstructionKind ConstructKind, SourceRange ParenOrBraceRange);
 
-  /// Construct an empty C++ construction expression.
-  explicit CXXConstructExpr(EmptyShell Empty)
-      : CXXConstructExpr(CXXConstructExprClass, Empty) {}
-
-  static CXXConstructExpr *Create(const ASTContext &C, QualType T,
-                                  SourceLocation Loc,
-                                  CXXConstructorDecl *Ctor,
-                                  bool Elidable,
-                                  ArrayRef<Expr *> Args,
-                                  bool HadMultipleCandidates,
-                                  bool ListInitialization,
-                                  bool StdInitListInitialization,
-                                  bool ZeroInitialization,
-                                  ConstructionKind ConstructKind,
-                                  SourceRange ParenOrBraceRange);
+  /// Create an empty C++ construction expression.
+  static CXXConstructExpr *CreateEmpty(const ASTContext &Ctx, unsigned NumArgs);
 
   /// Get the constructor that this expression will (ultimately) call.
   CXXConstructorDecl *getConstructor() const { return Constructor; }
 
-  SourceLocation getLocation() const { return Loc; }
-  void setLocation(SourceLocation Loc) { this->Loc = Loc; }
+  SourceLocation getLocation() const { return CXXConstructExprBits.Loc; }
+  void setLocation(SourceLocation Loc) { CXXConstructExprBits.Loc = Loc; }
 
   /// Whether this construction is elidable.
-  bool isElidable() const { return Elidable; }
-  void setElidable(bool E) { Elidable = E; }
+  bool isElidable() const { return CXXConstructExprBits.Elidable; }
+  void setElidable(bool E) { CXXConstructExprBits.Elidable = E; }
 
   /// Whether the referred constructor was resolved from
   /// an overloaded set having size greater than 1.
-  bool hadMultipleCandidates() const { return HadMultipleCandidates; }
-  void setHadMultipleCandidates(bool V) { HadMultipleCandidates = V; }
+  bool hadMultipleCandidates() const {
+    return CXXConstructExprBits.HadMultipleCandidates;
+  }
+  void setHadMultipleCandidates(bool V) {
+    CXXConstructExprBits.HadMultipleCandidates = V;
+  }
 
   /// Whether this constructor call was written as list-initialization.
-  bool isListInitialization() const { return ListInitialization; }
-  void setListInitialization(bool V) { ListInitialization = V; }
+  bool isListInitialization() const {
+    return CXXConstructExprBits.ListInitialization;
+  }
+  void setListInitialization(bool V) {
+    CXXConstructExprBits.ListInitialization = V;
+  }
 
   /// Whether this constructor call was written as list-initialization,
   /// but was interpreted as forming a std::initializer_list<T> from the list
   /// and passing that as a single constructor argument.
   /// See C++11 [over.match.list]p1 bullet 1.
-  bool isStdInitListInitialization() const { return StdInitListInitialization; }
-  void setStdInitListInitialization(bool V) { StdInitListInitialization = V; }
+  bool isStdInitListInitialization() const {
+    return CXXConstructExprBits.StdInitListInitialization;
+  }
+  void setStdInitListInitialization(bool V) {
+    CXXConstructExprBits.StdInitListInitialization = V;
+  }
 
   /// Whether this construction first requires
   /// zero-initialization before the initializer is called.
-  bool requiresZeroInitialization() const { return ZeroInitialization; }
+  bool requiresZeroInitialization() const {
+    return CXXConstructExprBits.ZeroInitialization;
+  }
   void setRequiresZeroInitialization(bool ZeroInit) {
-    ZeroInitialization = ZeroInit;
+    CXXConstructExprBits.ZeroInitialization = ZeroInit;
   }
 
   /// Determine whether this constructor is actually constructing
   /// a base class (rather than a complete object).
   ConstructionKind getConstructionKind() const {
-    return (ConstructionKind)ConstructKind;
+    return static_cast<ConstructionKind>(CXXConstructExprBits.ConstructionKind);
   }
   void setConstructionKind(ConstructionKind CK) {
-    ConstructKind = CK;
+    CXXConstructExprBits.ConstructionKind = CK;
   }
 
   using arg_iterator = ExprIterator;
@@ -1393,31 +1416,33 @@ public:
     return const_arg_range(arg_begin(), arg_end());
   }
 
-  arg_iterator arg_begin() { return Args; }
-  arg_iterator arg_end() { return Args + NumArgs; }
-  const_arg_iterator arg_begin() const { return Args; }
-  const_arg_iterator arg_end() const { return Args + NumArgs; }
+  arg_iterator arg_begin() { return getTrailingArgs(); }
+  arg_iterator arg_end() { return arg_begin() + getNumArgs(); }
+  const_arg_iterator arg_begin() const { return getTrailingArgs(); }
+  const_arg_iterator arg_end() const { return arg_begin() + getNumArgs(); }
 
-  Expr **getArgs() { return reinterpret_cast<Expr **>(Args); }
+  Expr **getArgs() { return reinterpret_cast<Expr **>(getTrailingArgs()); }
   const Expr *const *getArgs() const {
-    return const_cast<CXXConstructExpr *>(this)->getArgs();
+    return reinterpret_cast<const Expr *const *>(getTrailingArgs());
   }
+
+  /// Return the number of arguments to the constructor call.
   unsigned getNumArgs() const { return NumArgs; }
 
   /// Return the specified argument.
   Expr *getArg(unsigned Arg) {
-    assert(Arg < NumArgs && "Arg access out of range!");
-    return cast<Expr>(Args[Arg]);
+    assert(Arg < getNumArgs() && "Arg access out of range!");
+    return getArgs()[Arg];
   }
   const Expr *getArg(unsigned Arg) const {
-    assert(Arg < NumArgs && "Arg access out of range!");
-    return cast<Expr>(Args[Arg]);
+    assert(Arg < getNumArgs() && "Arg access out of range!");
+    return getArgs()[Arg];
   }
 
   /// Set the specified argument.
   void setArg(unsigned Arg, Expr *ArgExpr) {
-    assert(Arg < NumArgs && "Arg access out of range!");
-    Args[Arg] = ArgExpr;
+    assert(Arg < getNumArgs() && "Arg access out of range!");
+    getArgs()[Arg] = ArgExpr;
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY;
@@ -1427,12 +1452,12 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXConstructExprClass ||
-      T->getStmtClass() == CXXTemporaryObjectExprClass;
+           T->getStmtClass() == CXXTemporaryObjectExprClass;
   }
 
   // Iterators
   child_range children() {
-    return child_range(&Args[0], &Args[0]+NumArgs);
+    return child_range(getTrailingArgs(), getTrailingArgs() + getNumArgs());
   }
 };
 
@@ -1578,26 +1603,36 @@ public:
 ///   return X(1, 3.14f); // creates a CXXTemporaryObjectExpr
 /// };
 /// \endcode
-class CXXTemporaryObjectExpr : public CXXConstructExpr {
-  TypeSourceInfo *Type = nullptr;
-
-public:
+class CXXTemporaryObjectExpr final : public CXXConstructExpr {
   friend class ASTStmtReader;
 
-  CXXTemporaryObjectExpr(const ASTContext &C,
-                         CXXConstructorDecl *Cons,
-                         QualType Type,
-                         TypeSourceInfo *TSI,
-                         ArrayRef<Expr *> Args,
+  // CXXTemporaryObjectExpr has some trailing objects belonging
+  // to CXXConstructExpr. See the comment inside CXXConstructExpr
+  // for more details.
+
+  TypeSourceInfo *TSI;
+
+  CXXTemporaryObjectExpr(CXXConstructorDecl *Cons, QualType Ty,
+                         TypeSourceInfo *TSI, ArrayRef<Expr *> Args,
                          SourceRange ParenOrBraceRange,
-                         bool HadMultipleCandidates,
-                         bool ListInitialization,
+                         bool HadMultipleCandidates, bool ListInitialization,
                          bool StdInitListInitialization,
                          bool ZeroInitialization);
-  explicit CXXTemporaryObjectExpr(EmptyShell Empty)
-      : CXXConstructExpr(CXXTemporaryObjectExprClass, Empty) {}
 
-  TypeSourceInfo *getTypeSourceInfo() const { return Type; }
+  CXXTemporaryObjectExpr(EmptyShell Empty, unsigned NumArgs);
+
+public:
+  static CXXTemporaryObjectExpr *
+  Create(const ASTContext &Ctx, CXXConstructorDecl *Cons, QualType Ty,
+         TypeSourceInfo *TSI, ArrayRef<Expr *> Args,
+         SourceRange ParenOrBraceRange, bool HadMultipleCandidates,
+         bool ListInitialization, bool StdInitListInitialization,
+         bool ZeroInitialization);
+
+  static CXXTemporaryObjectExpr *CreateEmpty(const ASTContext &Ctx,
+                                             unsigned NumArgs);
+
+  TypeSourceInfo *getTypeSourceInfo() const { return TSI; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY;
   SourceLocation getEndLoc() const LLVM_READONLY;
@@ -1606,6 +1641,14 @@ public:
     return T->getStmtClass() == CXXTemporaryObjectExprClass;
   }
 };
+
+Stmt **CXXConstructExpr::getTrailingArgs() {
+  if (auto *E = dyn_cast<CXXTemporaryObjectExpr>(this))
+    return reinterpret_cast<Stmt **>(E + 1);
+  assert((getStmtClass() == CXXConstructExprClass) &&
+         "Unexpected class deriving from CXXConstructExpr!");
+  return reinterpret_cast<Stmt **>(this + 1);
+}
 
 /// A C++ lambda expression, which produces a function object
 /// (of unspecified type) that can be invoked later.

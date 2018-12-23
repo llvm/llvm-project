@@ -102,3 +102,15 @@ void foo(VeryOpaqueRef ORef) {
   castToDerived(reinterpret_cast<Transparent *>(ORef))->getNotInt();
 }
 } // namespace base_to_derived_opaque_class
+
+namespace bool_to_nullptr {
+struct S {
+  int *a[1];
+  bool b;
+};
+void foo(S s) {
+  s.b = true;
+  for (int i = 0; i < 2; ++i)
+    (void)(s.a[i] != nullptr); // no-crash
+}
+} // namespace bool_to_nullptr
