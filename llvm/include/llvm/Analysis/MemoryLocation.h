@@ -135,6 +135,9 @@ public:
     return (Value & ImpreciseBit) == 0;
   }
 
+  // Convenience method to check if this LocationSize's value is 0.
+  bool isZero() const { return hasValue() && getValue() == 0; }
+
   bool operator==(const LocationSize &Other) const {
     return Value == Other.Value;
   }
