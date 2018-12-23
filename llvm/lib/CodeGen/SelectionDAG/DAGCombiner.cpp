@@ -9825,8 +9825,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   // because targets may prefer a wider type during later combines and invert
   // this transform.
   switch (N0.getOpcode()) {
-  // TODO: Add case for ADD - that will likely require a change in logic here
-  // or target-specific changes to avoid regressions.
+  case ISD::ADD:
   case ISD::SUB:
   case ISD::MUL:
   case ISD::AND:
