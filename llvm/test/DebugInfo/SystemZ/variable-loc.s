@@ -11,8 +11,8 @@
 #
 # A couple of R_390_64s similarly:
 #
-# CHECK: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
-# CHECK: DW_AT_high_pc [DW_FORM_addr] (0x0000000000000050)
+# CHECK: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000 ".text")
+# CHECK: DW_AT_high_pc [DW_FORM_addr] (0x0000000000000050 ".text")
 
 
 	.file	"test/DebugInfo/SystemZ/variable-loc.ll"

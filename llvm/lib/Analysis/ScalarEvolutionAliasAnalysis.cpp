@@ -27,7 +27,7 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
   // If either of the memory references is empty, it doesn't matter what the
   // pointer values are. This allows the code below to ignore this special
   // case.
-  if (LocA.Size == 0 || LocB.Size == 0)
+  if (LocA.Size.isZero() || LocB.Size.isZero())
     return NoAlias;
 
   // This is SCEVAAResult. Get the SCEVs!
@@ -82,10 +82,10 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
   Value *BO = GetBaseValue(BS);
   if ((AO && AO != LocA.Ptr) || (BO && BO != LocB.Ptr))
     if (alias(MemoryLocation(AO ? AO : LocA.Ptr,
-                             AO ? +MemoryLocation::UnknownSize : LocA.Size,
+                             AO ? LocationSize::unknown() : LocA.Size,
                              AO ? AAMDNodes() : LocA.AATags),
               MemoryLocation(BO ? BO : LocB.Ptr,
-                             BO ? +MemoryLocation::UnknownSize : LocB.Size,
+                             BO ? LocationSize::unknown() : LocB.Size,
                              BO ? AAMDNodes() : LocB.AATags)) == NoAlias)
       return NoAlias;
 

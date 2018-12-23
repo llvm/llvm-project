@@ -1644,7 +1644,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
                                       const Value *O1, const Value *O2) {
   // If either of the memory references is empty, it doesn't matter what the
   // pointer values are.
-  if (V1Size == 0 || V2Size == 0)
+  if (V1Size.isZero() || V2Size.isZero())
     return NoAlias;
 
   // Strip off any casts if they exist.

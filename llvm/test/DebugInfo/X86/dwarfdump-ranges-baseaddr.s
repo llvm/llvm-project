@@ -4,7 +4,7 @@
 
 # CHECK: .debug_info contents:
 # CHECK: 0x0000000b: DW_TAG_compile_unit [1]
-# CHECK:             DW_AT_low_pc [DW_FORM_addr]       (0x0000000000000000)
+# CHECK:             DW_AT_low_pc [DW_FORM_addr]       (0x0000000000000000 ".text")
 # CHECK-NEXT:        DW_AT_ranges [DW_FORM_sec_offset] (0x00000000
 # CHECK-NEXT:    [0x0000000000000000, 0x0000000000000001) ".text"
 # CHECK-NEXT:    [0x0000000000000003, 0x0000000000000006) ".text"
