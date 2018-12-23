@@ -11217,6 +11217,8 @@ def : Pat<(v2f64 (X86VBroadcast f64:$src)),
           (VMOVDDUPZ128rr (v2f64 (COPY_TO_REGCLASS FR64X:$src, VR128X)))>;
 def : Pat<(v2f64 (X86VBroadcast (loadv2f64 addr:$src))),
           (VMOVDDUPZ128rm addr:$src)>;
+def : Pat<(v2f64 (X86VBroadcast (v2f64 (X86vzload addr:$src)))),
+          (VMOVDDUPZ128rm addr:$src)>;
 
 def : Pat<(vselect (v2i1 VK2WM:$mask), (v2f64 (X86VBroadcast f64:$src)),
                    (v2f64 VR128X:$src0)),

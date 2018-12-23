@@ -662,12 +662,11 @@ def : Pat<(v8f64 (X86cmov VR512:$t, VR512:$f, imm:$cond, EFLAGS)),
 
 // Memory barriers
 
-// TODO: Get this to fold the constant into the instruction.
 let isCodeGenOnly = 1, Defs = [EFLAGS] in
-def OR32mrLocked  : I<0x09, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$zero),
-                      "or{l}\t{$zero, $dst|$dst, $zero}", []>,
-                      Requires<[Not64BitMode]>, OpSize32, LOCK,
-                      Sched<[WriteALURMW]>;
+def OR32mi8Locked  : Ii8<0x83, MRM1m, (outs), (ins i32mem:$dst, i32i8imm:$zero),
+                         "or{l}\t{$zero, $dst|$dst, $zero}", []>,
+                         Requires<[Not64BitMode]>, OpSize32, LOCK,
+                         Sched<[WriteALURMW]>;
 
 let hasSideEffects = 1 in
 def Int_MemBarrier : I<0, Pseudo, (outs), (ins),

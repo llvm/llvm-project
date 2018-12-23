@@ -944,10 +944,10 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpy, Value *cpyDest,
   // the use analysis, we also need to know that it does not sneakily
   // access dest.  We rely on AA to figure this out for us.
   AliasAnalysis &AA = LookupAliasAnalysis();
-  ModRefInfo MR = AA.getModRefInfo(C, cpyDest, srcSize);
+  ModRefInfo MR = AA.getModRefInfo(C, cpyDest, LocationSize::precise(srcSize));
   // If necessary, perform additional analysis.
   if (isModOrRefSet(MR))
-    MR = AA.callCapturesBefore(C, cpyDest, srcSize, &DT);
+    MR = AA.callCapturesBefore(C, cpyDest, LocationSize::precise(srcSize), &DT);
   if (isModOrRefSet(MR))
     return false;
 
@@ -1343,7 +1343,7 @@ bool MemCpyOptPass::processByValArgument(CallSite CS, unsigned ArgNo) {
   Type *ByValTy = cast<PointerType>(ByValArg->getType())->getElementType();
   uint64_t ByValSize = DL.getTypeAllocSize(ByValTy);
   MemDepResult DepInfo = MD->getPointerDependencyFrom(
-      MemoryLocation(ByValArg, ByValSize), true,
+      MemoryLocation(ByValArg, LocationSize::precise(ByValSize)), true,
       CS.getInstruction()->getIterator(), CS.getInstruction()->getParent());
   if (!DepInfo.isClobber())
     return false;

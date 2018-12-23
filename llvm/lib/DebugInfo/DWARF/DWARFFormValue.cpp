@@ -362,7 +362,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
                             : nulls();
   switch (Form) {
   case DW_FORM_addr:
-    AddrOS << format("0x%016" PRIx64, UValue);
+    dumpSectionedAddress(AddrOS, DumpOpts, {Value.uval, Value.SectionIndex});
     break;
   case DW_FORM_addrx:
   case DW_FORM_addrx1:

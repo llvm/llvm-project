@@ -466,13 +466,13 @@ Optional<uint64_t> DWARFDie::getHighPC(uint64_t LowPC) const {
 bool DWARFDie::getLowAndHighPC(uint64_t &LowPC, uint64_t &HighPC,
                                uint64_t &SectionIndex) const {
   auto F = find(DW_AT_low_pc);
-  auto LowPcAddr = toAddress(F);
+  auto LowPcAddr = toSectionedAddress(F);
   if (!LowPcAddr)
     return false;
-  if (auto HighPcAddr = getHighPC(*LowPcAddr)) {
-    LowPC = *LowPcAddr;
+  if (auto HighPcAddr = getHighPC(LowPcAddr->Address)) {
+    LowPC = LowPcAddr->Address;
     HighPC = *HighPcAddr;
-    SectionIndex = F->getSectionIndex();
+    SectionIndex = LowPcAddr->SectionIndex;
     return true;
   }
   return false;
