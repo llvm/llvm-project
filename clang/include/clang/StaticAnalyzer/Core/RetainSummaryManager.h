@@ -508,9 +508,6 @@ class RetainSummaryManager {
   /// AF - A factory for ArgEffects objects.
   ArgEffects::Factory AF;
 
-  /// ScratchArgs - A holding buffer for construct ArgEffects.
-  ArgEffects ScratchArgs;
-
   /// ObjCAllocRetE - Default return effect for methods returning Objective-C
   ///  objects.
   RetEffect ObjCAllocRetE;
@@ -522,10 +519,6 @@ class RetainSummaryManager {
   /// SimpleSummaries - Used for uniquing summaries that don't have special
   /// effects.
   llvm::FoldingSet<CachedSummaryNode> SimpleSummaries;
-
-  /// getArgEffects - Returns a persistent ArgEffects object based on the
-  ///  data in ScratchArgs.
-  ArgEffects getArgEffects();
 
   /// Create an OS object at +1.
   const RetainSummary *getOSSummaryCreateRule(const FunctionDecl *FD);
@@ -554,25 +547,30 @@ class RetainSummaryManager {
   const RetainSummary *getPersistentSummary(const RetainSummary &OldSumm);
 
   const RetainSummary *getPersistentSummary(RetEffect RetEff,
+                                            ArgEffects ScratchArgs,
                                             ArgEffect ReceiverEff = DoNothing,
                                             ArgEffect DefaultEff = MayEscape,
                                             ArgEffect ThisEff = DoNothing) {
-    RetainSummary Summ(getArgEffects(), RetEff, DefaultEff, ReceiverEff,
+    RetainSummary Summ(ScratchArgs, RetEff, DefaultEff, ReceiverEff,
                        ThisEff);
     return getPersistentSummary(Summ);
   }
 
   const RetainSummary *getDoNothingSummary() {
-    return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+    return getPersistentSummary(RetEffect::MakeNoRet(),
+                                ArgEffects(AF.getEmptyMap()),
+                                DoNothing, DoNothing);
   }
 
   const RetainSummary *getDefaultSummary() {
     return getPersistentSummary(RetEffect::MakeNoRet(),
+                                ArgEffects(AF.getEmptyMap()),
                                 DoNothing, MayEscape);
   }
 
   const RetainSummary *getPersistentStopSummary() {
     return getPersistentSummary(RetEffect::MakeNoRet(),
+                                ArgEffects(AF.getEmptyMap()),
                                 StopTracking, StopTracking);
   }
 
@@ -649,7 +647,6 @@ class RetainSummaryManager {
   bool applyFunctionParamAnnotationEffect(const ParmVarDecl *pd,
                                         unsigned parm_idx,
                                         const FunctionDecl *FD,
-                                        ArgEffects::Factory &AF,
                                         RetainSummaryTemplate &Template);
 
 public:
@@ -661,7 +658,7 @@ public:
      ARCEnabled(usesARC),
      TrackObjCAndCFObjects(trackObjCAndCFObjects),
      TrackOSObjects(trackOSObjects),
-     AF(BPAlloc), ScratchArgs(AF.getEmptyMap()),
+     AF(BPAlloc),
      ObjCAllocRetE(usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
                                : RetEffect::MakeOwned(RetEffect::ObjC)),
      ObjCInitRetE(usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
