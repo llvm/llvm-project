@@ -49,3 +49,8 @@ Given a list `L;uL`:
 * ``uL`` will be kept as is.
 * ``ull`` will be kept as is, since it is not in the list
 * and so on.
+
+.. option:: IgnoreMacros
+
+   If this option is set to non-zero (default is `1`), the check will not warn
+   about literal suffixes inside macros.
