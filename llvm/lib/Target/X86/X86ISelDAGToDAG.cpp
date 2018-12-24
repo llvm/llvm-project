@@ -473,6 +473,7 @@ namespace {
 
     bool tryOptimizeRem8Extend(SDNode *N);
 
+    bool onlyUsesZeroFlag(SDValue Flags) const;
     bool hasNoSignFlagUses(SDValue Flags) const;
     bool hasNoCarryFlagUses(SDValue Flags) const;
   };
@@ -917,6 +918,30 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
                                                      MVT::i32,
                                                      And.getOperand(0),
                                                      And.getOperand(1));
+        ReplaceUses(N, Test);
+        MadeChange = true;
+        continue;
+      }
+      if (N0Opc == X86::AND8rm || N0Opc == X86::AND16rm ||
+          N0Opc == X86::AND32rm || N0Opc == X86::AND64rm) {
+        unsigned NewOpc;
+        switch (N0Opc) {
+        case X86::AND8rm:  NewOpc = X86::TEST8mr; break;
+        case X86::AND16rm: NewOpc = X86::TEST16mr; break;
+        case X86::AND32rm: NewOpc = X86::TEST32mr; break;
+        case X86::AND64rm: NewOpc = X86::TEST64mr; break;
+        }
+
+        // Need to swap the memory and register operand.
+        SDValue Ops[] = { And.getOperand(1),
+                          And.getOperand(2),
+                          And.getOperand(3),
+                          And.getOperand(4),
+                          And.getOperand(5),
+                          And.getOperand(0),
+                          And.getOperand(6)  /* Chain */ };
+        MachineSDNode *Test = CurDAG->getMachineNode(NewOpc, SDLoc(N),
+                                                     MVT::i32, MVT::Other, Ops);
         ReplaceUses(N, Test);
         MadeChange = true;
         continue;
@@ -2224,6 +2249,42 @@ static X86::CondCode getCondFromOpc(unsigned Opc) {
     CC = X86::getCondFromCMovOpc(Opc);
 
   return CC;
+}
+
+/// Test whether the given X86ISD::CMP node has any users that use a flag
+/// other than ZF.
+bool X86DAGToDAGISel::onlyUsesZeroFlag(SDValue Flags) const {
+  // Examine each user of the node.
+  for (SDNode::use_iterator UI = Flags->use_begin(), UE = Flags->use_end();
+         UI != UE; ++UI) {
+    // Only check things that use the flags.
+    if (UI.getUse().getResNo() != Flags.getResNo())
+      continue;
+    // Only examine CopyToReg uses that copy to EFLAGS.
+    if (UI->getOpcode() != ISD::CopyToReg ||
+        cast<RegisterSDNode>(UI->getOperand(1))->getReg() != X86::EFLAGS)
+      return false;
+    // Examine each user of the CopyToReg use.
+    for (SDNode::use_iterator FlagUI = UI->use_begin(),
+           FlagUE = UI->use_end(); FlagUI != FlagUE; ++FlagUI) {
+      // Only examine the Flag result.
+      if (FlagUI.getUse().getResNo() != 1) continue;
+      // Anything unusual: assume conservatively.
+      if (!FlagUI->isMachineOpcode()) return false;
+      // Examine the condition code of the user.
+      X86::CondCode CC = getCondFromOpc(FlagUI->getMachineOpcode());
+
+      switch (CC) {
+      // Comparisons which only use the zero flag.
+      case X86::COND_E: case X86::COND_NE:
+        continue;
+      // Anything else: assume conservatively.
+      default:
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 /// Test whether the given X86ISD::CMP node has any uses which require the SF
@@ -3661,6 +3722,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
 
+    // Optimizations for TEST compares.
+    if (!isNullConstant(N1))
+      break;
+
     // Save the original VT of the compare.
     MVT CmpVT = N0.getSimpleValueType();
 
@@ -3668,7 +3733,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     // by a test instruction. The test should be removed later by
     // analyzeCompare if we are using only the zero flag.
     // TODO: Should we check the users and use the BEXTR flags directly?
-    if (isNullConstant(N1) && N0.getOpcode() == ISD::AND && N0.hasOneUse()) {
+    if (N0.getOpcode() == ISD::AND && N0.hasOneUse()) {
       if (MachineSDNode *NewNode = matchBEXTRFromAndImm(N0.getNode())) {
         unsigned TestOpc = CmpVT == MVT::i64 ? X86::TEST64rr
                                              : X86::TEST32rr;
@@ -3689,11 +3754,39 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     // Look past the truncate if CMP is the only use of it.
     if (N0.getOpcode() == ISD::AND &&
         N0.getNode()->hasOneUse() &&
-        N0.getValueType() != MVT::i8 &&
-        isNullConstant(N1)) {
+        N0.getValueType() != MVT::i8) {
       ConstantSDNode *C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
       if (!C) break;
       uint64_t Mask = C->getZExtValue();
+
+      // Check if we can replace AND+IMM64 with a shift. This is possible for
+      // masks/ like 0xFF000000 or 0x00FFFFFF and if we care only about the zero
+      // flag.
+      if (CmpVT == MVT::i64 && !isInt<32>(Mask) &&
+          onlyUsesZeroFlag(SDValue(Node, 0))) {
+        if (isMask_64(~Mask)) {
+          unsigned TrailingZeros = countTrailingZeros(Mask);
+          SDValue Imm = CurDAG->getTargetConstant(TrailingZeros, dl, MVT::i64);
+          SDValue Shift =
+            SDValue(CurDAG->getMachineNode(X86::SHR64ri, dl, MVT::i64,
+                                           N0.getOperand(0), Imm), 0);
+          MachineSDNode *Test = CurDAG->getMachineNode(X86::TEST64rr, dl,
+                                                       MVT::i32, Shift, Shift);
+          ReplaceNode(Node, Test);
+          return;
+        }
+        if (isMask_64(Mask)) {
+          unsigned LeadingZeros = countLeadingZeros(Mask);
+          SDValue Imm = CurDAG->getTargetConstant(LeadingZeros, dl, MVT::i64);
+          SDValue Shift =
+            SDValue(CurDAG->getMachineNode(X86::SHL64ri, dl, MVT::i64,
+                                           N0.getOperand(0), Imm), 0);
+          MachineSDNode *Test = CurDAG->getMachineNode(X86::TEST64rr, dl,
+                                                       MVT::i32, Shift, Shift);
+          ReplaceNode(Node, Test);
+          return;
+        }
+      }
 
       MVT VT;
       int SubRegOp;
