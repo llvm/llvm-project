@@ -48,6 +48,8 @@ STATISTIC(NumTerminatorsFolded,
           "Number of terminators folded to unconditional branches");
 STATISTIC(NumLoopBlocksDeleted,
           "Number of loop blocks deleted");
+STATISTIC(NumLoopExitsDeleted,
+          "Number of loop exiting edges deleted");
 
 /// If \p BB is a switch or a conditional branch, but only one of its successors
 /// can be reached from this block in runtime, return this successor. Otherwise,
@@ -271,6 +273,114 @@ private:
            "All blocks that stay in loop should be live!");
   }
 
+  /// We need to preserve static reachibility of all loop exit blocks (this is)
+  /// required by loop pass manager. In order to do it, we make the following
+  /// trick:
+  ///
+  ///  preheader:
+  ///    <preheader code>
+  ///    br label %loop_header
+  ///
+  ///  loop_header:
+  ///    ...
+  ///    br i1 false, label %dead_exit, label %loop_block
+  ///    ...
+  ///
+  /// We cannot simply remove edge from the loop to dead exit because in this
+  /// case dead_exit (and its successors) may become unreachable. To avoid that,
+  /// we insert the following fictive preheader:
+  ///
+  ///  preheader:
+  ///    <preheader code>
+  ///    switch i32 0, label %preheader-split,
+  ///                  [i32 1, label %dead_exit_1],
+  ///                  [i32 2, label %dead_exit_2],
+  ///                  ...
+  ///                  [i32 N, label %dead_exit_N],
+  ///
+  ///  preheader-split:
+  ///    br label %loop_header
+  ///
+  ///  loop_header:
+  ///    ...
+  ///    br i1 false, label %dead_exit_N, label %loop_block
+  ///    ...
+  ///
+  /// Doing so, we preserve static reachibility of all dead exits and can later
+  /// remove edges from the loop to these blocks.
+  void handleDeadExits() {
+    // If no dead exits, nothing to do.
+    if (DeadExitBlocks.empty())
+      return;
+
+    // Construct split preheader and the dummy switch to thread edges from it to
+    // dead exits.
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+    BasicBlock *Preheader = L.getLoopPreheader();
+    BasicBlock *NewPreheader = Preheader->splitBasicBlock(
+        Preheader->getTerminator(),
+        Twine(Preheader->getName()).concat("-split"));
+    DTU.deleteEdge(Preheader, L.getHeader());
+    DTU.insertEdge(NewPreheader, L.getHeader());
+    DTU.insertEdge(Preheader, NewPreheader);
+    IRBuilder<> Builder(Preheader->getTerminator());
+    SwitchInst *DummySwitch =
+        Builder.CreateSwitch(Builder.getInt32(0), NewPreheader);
+    Preheader->getTerminator()->eraseFromParent();
+
+    unsigned DummyIdx = 1;
+    for (BasicBlock *BB : DeadExitBlocks) {
+      SmallVector<Instruction *, 4> DeadPhis;
+      for (auto &PN : BB->phis())
+        DeadPhis.push_back(&PN);
+
+      // Eliminate all Phis from dead exits.
+      for (Instruction *PN : DeadPhis) {
+        PN->replaceAllUsesWith(UndefValue::get(PN->getType()));
+        PN->eraseFromParent();
+      }
+      assert(DummyIdx != 0 && "Too many dead exits!");
+      DummySwitch->addCase(Builder.getInt32(DummyIdx++), BB);
+      DTU.insertEdge(Preheader, BB);
+      ++NumLoopExitsDeleted;
+    }
+
+    assert(L.getLoopPreheader() == NewPreheader && "Malformed CFG?");
+    if (Loop *OuterLoop = LI.getLoopFor(Preheader)) {
+      OuterLoop->addBasicBlockToLoop(NewPreheader, LI);
+
+      // When we break dead edges, the outer loop may become unreachable from
+      // the current loop. We need to fix loop info accordingly. For this, we
+      // find the most nested loop that still contains L and remove L from all
+      // loops that are inside of it.
+      Loop *StillReachable = nullptr;
+      for (BasicBlock *BB : LiveExitBlocks) {
+        Loop *BBL = LI.getLoopFor(BB);
+        if (BBL && BBL->contains(L.getHeader()))
+          if (!StillReachable ||
+              BBL->getLoopDepth() > StillReachable->getLoopDepth())
+            StillReachable = BBL;
+      }
+
+      // Okay, our loop is no longer in the outer loop (and maybe not in some of
+      // its parents as well). Make the fixup.
+      if (StillReachable != OuterLoop) {
+        LI.changeLoopFor(NewPreheader, StillReachable);
+        for (Loop *NotContaining = OuterLoop; NotContaining != StillReachable;
+             NotContaining = NotContaining->getParentLoop()) {
+          NotContaining->removeBlockFromLoop(NewPreheader);
+          for (auto *BB : L.blocks())
+            NotContaining->removeBlockFromLoop(BB);
+        }
+        OuterLoop->removeChildLoop(&L);
+        if (StillReachable)
+          StillReachable->addChildLoop(&L);
+        else
+          LI.addTopLevelLoop(&L);
+      }
+    }
+  }
+
   /// Delete loop blocks that have become unreachable after folding. Make all
   /// relevant updates to DT and LI.
   void deleteDeadLoopBlocks() {
@@ -381,14 +491,6 @@ public:
       return false;
     }
 
-    // TODO: Support dead loop exits.
-    if (!DeadExitBlocks.empty()) {
-      LLVM_DEBUG(dbgs() << "Give up constant terminator folding in loop "
-                        << L.getHeader()->getName()
-                        << ": we don't currently support dead loop exits.\n");
-      return false;
-    }
-
     // TODO: Support blocks that are not dead, but also not in loop after the
     // folding.
     if (BlocksInLoopAfterFolding.size() + DeadLoopBlocks.size() !=
@@ -410,6 +512,7 @@ public:
                       << "\n");
 
     // Make the actual transforms.
+    handleDeadExits();
     foldTerminators();
 
     if (!DeadLoopBlocks.empty()) {

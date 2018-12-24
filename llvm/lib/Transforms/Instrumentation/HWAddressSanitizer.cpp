@@ -155,7 +155,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     ClInstrumentMemIntrinsics("hwasan-instrument-mem-intrinsics",
                               cl::desc("instrument memory intrinsics"),
-                              cl::Hidden, cl::init(false));
+                              cl::Hidden, cl::init(true));
 namespace {
 
 /// An instrumentation pass implementing detection of addressability bugs
