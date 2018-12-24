@@ -370,13 +370,14 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   case DW_FORM_addrx3:
   case DW_FORM_addrx4:
   case DW_FORM_GNU_addr_index: {
-    AddrOS << format("indexed (%8.8x) address = ", (uint32_t)UValue);
+    Optional<SectionedAddress> A = U->getAddrOffsetSectionItem(UValue);
+    if (!A || DumpOpts.Verbose)
+      AddrOS << format("indexed (%8.8x) address = ", (uint32_t)UValue);
     if (U == nullptr)
       OS << "<invalid dwarf unit>";
-    else if (Optional<SectionedAddress> A =
-                 U->getAddrOffsetSectionItem(UValue)) {
+    else if (A)
       dumpSectionedAddress(AddrOS, DumpOpts, *A);
-    } else
+    else
       OS << "<no .debug_addr section>";
     break;
   }
