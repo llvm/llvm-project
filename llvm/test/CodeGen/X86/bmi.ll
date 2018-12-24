@@ -157,15 +157,15 @@ define i1 @and_cmp_const(i32 %x) {
 ; X86-LABEL: and_cmp_const:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    notl %eax
 ; X86-NEXT:    andl $43, %eax
+; X86-NEXT:    cmpl $43, %eax
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_cmp_const:
 ; X64:       # %bb.0:
-; X64-NEXT:    notl %edi
 ; X64-NEXT:    andl $43, %edi
+; X64-NEXT:    cmpl $43, %edi
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
   %and = and i32 %x, 43

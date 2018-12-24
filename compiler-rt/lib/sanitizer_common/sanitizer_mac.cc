@@ -377,6 +377,10 @@ void CheckASLR() {
   // Do nothing
 }
 
+void CheckMPROTECT() {
+  // Do nothing
+}
+
 uptr GetPageSize() {
   return sysconf(_SC_PAGESIZE);
 }
