@@ -45,6 +45,11 @@ tool_patterns = [
 
 llvm_config.add_tool_substitutions(tool_patterns)
 
+# LLD tests tend to be flaky on NetBSD, so add some retries.
+# We don't do this on other platforms because it's slower.
+if platform.system() in ['NetBSD']:
+    config.test_retry_attempts = 2
+
 # When running under valgrind, we mangle '-vg' onto the end of the triple so we
 # can check it with XFAIL and XTARGET.
 if lit_config.useValgrind:

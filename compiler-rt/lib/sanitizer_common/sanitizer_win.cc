@@ -1016,6 +1016,10 @@ void CheckASLR() {
   // Do nothing
 }
 
+void CheckMPROTECT() {
+  // Do nothing
+}
+
 char **GetArgv() {
   // FIXME: Actually implement this function.
   return 0;

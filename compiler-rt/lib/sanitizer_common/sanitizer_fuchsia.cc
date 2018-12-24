@@ -89,6 +89,7 @@ void GetThreadStackTopAndBottom(bool, uptr *stack_top, uptr *stack_bottom) {
 void InitializePlatformEarly() {}
 void MaybeReexec() {}
 void CheckASLR() {}
+void CheckMPROTECT() {}
 void PlatformPrepareForSandboxing(__sanitizer_sandbox_arguments *args) {}
 void DisableCoreDumperIfNecessary() {}
 void InstallDeadlySignalHandlers(SignalHandlerType handler) {}
