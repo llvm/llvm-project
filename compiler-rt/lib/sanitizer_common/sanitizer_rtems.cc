@@ -98,6 +98,7 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
 void InitializePlatformEarly() {}
 void MaybeReexec() {}
 void CheckASLR() {}
+void CheckMPROTECT() {}
 void DisableCoreDumperIfNecessary() {}
 void InstallDeadlySignalHandlers(SignalHandlerType handler) {}
 void SetAlternateSignalStack() {}

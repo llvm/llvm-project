@@ -35,6 +35,7 @@ private:
   bool checkBoundMatch(const ast_matchers::MatchFinder::MatchResult &Result);
 
   const std::vector<std::string> NewSuffixes;
+  const bool IgnoreMacros;
 };
 
 } // namespace readability
