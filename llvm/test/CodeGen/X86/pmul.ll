@@ -1369,3 +1369,49 @@ define <8 x i64> @mul_v8i64_sext(<8 x i16> %val1, <8 x i32> %val2) {
   %3 = mul <8 x i64> %1, %2
   ret <8 x i64> %3
 }
+
+define <2 x i64> @pmuldq_square(<2 x i64> %x) {
+; SSE2-LABEL: pmuldq_square:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    psllq $32, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,3,2,3]
+; SSE2-NEXT:    psrad $31, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,3,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; SSE2-NEXT:    psrlq $32, %xmm0
+; SSE2-NEXT:    pmuludq %xmm1, %xmm0
+; SSE2-NEXT:    paddq %xmm0, %xmm0
+; SSE2-NEXT:    psllq $32, %xmm0
+; SSE2-NEXT:    pmuludq %xmm1, %xmm1
+; SSE2-NEXT:    paddq %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: pmuldq_square:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmuldq %xmm0, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: pmuldq_square:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmuldq %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = shl <2 x i64> %x, <i64 32, i64 32>
+  %2 = ashr exact <2 x i64> %1, <i64 32, i64 32>
+  %3 = mul nsw <2 x i64> %2, %2
+  ret <2 x i64> %3
+}
+
+define <2 x i64> @pmuludq_square(<2 x i64> %x) {
+; SSE-LABEL: pmuludq_square:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmuludq %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: pmuludq_square:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmuludq %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = and <2 x i64> %x, <i64 4294967295, i64 4294967295>
+  %2 = mul nuw <2 x i64> %1, %1
+  ret <2 x i64> %2
+}

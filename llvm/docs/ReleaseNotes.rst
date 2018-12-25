@@ -82,7 +82,8 @@ Changes to the PowerPC Target
 Changes to the X86 Target
 -------------------------
 
- During this release ...
+* Machine model for AMD bdver2 (Piledriver) CPU was added. It is used to support
+  instruction scheduling and other instruction cost heuristics.
 
 Changes to the AMDGPU Target
 -----------------------------

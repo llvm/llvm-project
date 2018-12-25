@@ -1823,12 +1823,6 @@ declare <16 x i16> @llvm.x86.avx2.mpsadbw(<32 x i8>, <32 x i8>, i8) nounwind rea
 define <4 x i64> @test_mm256_mul_epi32(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_mul_epi32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsllq $32, %ymm0, %ymm2
-; CHECK-NEXT:    vpsrad $31, %ymm2, %ymm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
-; CHECK-NEXT:    vpsllq $32, %ymm1, %ymm2
-; CHECK-NEXT:    vpsrad $31, %ymm2, %ymm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]
 ; CHECK-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %A = shl <4 x i64> %a0, <i64 32, i64 32, i64 32, i64 32>
@@ -1843,9 +1837,6 @@ declare <4 x i64> @llvm.x86.avx2.pmul.dq(<8 x i32>, <8 x i32>) nounwind readnone
 define <4 x i64> @test_mm256_mul_epu32(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_mm256_mul_epu32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]
 ; CHECK-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %A = and <4 x i64> %a0, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
