@@ -172,6 +172,15 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     I.eraseFromParent();
     return true;
   }
+  case G_SELECT: {
+    // Handle operands with pointer type.
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::MOVN_I_I))
+             .add(I.getOperand(0))
+             .add(I.getOperand(2))
+             .add(I.getOperand(1))
+             .add(I.getOperand(3));
+    break;
+  }
   case G_CONSTANT: {
     int Imm = I.getOperand(1).getCImm()->getValue().getLimitedValue();
     unsigned LUiReg = MRI.createVirtualRegister(&Mips::GPR32RegClass);
