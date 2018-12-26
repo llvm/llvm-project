@@ -111,6 +111,13 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                             &Mips::ValueMappings[Mips::GPRIdx],
                             &Mips::ValueMappings[Mips::GPRIdx]});
     break;
+  case G_SELECT:
+    OperandsMapping =
+        getOperandsMapping({&Mips::ValueMappings[Mips::GPRIdx],
+                            &Mips::ValueMappings[Mips::GPRIdx],
+                            &Mips::ValueMappings[Mips::GPRIdx],
+                            &Mips::ValueMappings[Mips::GPRIdx]});
+    break;
   default:
     return getInvalidInstructionMapping();
   }
