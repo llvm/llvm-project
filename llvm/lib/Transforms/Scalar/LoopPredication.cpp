@@ -180,6 +180,7 @@
 #include "llvm/Transforms/Scalar/LoopPredication.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -820,9 +821,8 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
   SmallVector<IntrinsicInst *, 4> Guards;
   for (const auto BB : L->blocks())
     for (auto &I : *BB)
-      if (auto *II = dyn_cast<IntrinsicInst>(&I))
-        if (II->getIntrinsicID() == Intrinsic::experimental_guard)
-          Guards.push_back(II);
+      if (isGuard(&I))
+        Guards.push_back(cast<IntrinsicInst>(&I));
 
   if (Guards.empty())
     return false;

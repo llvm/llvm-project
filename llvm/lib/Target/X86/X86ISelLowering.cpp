@@ -41212,6 +41212,15 @@ static SDValue combinePMULDQ(SDNode *N, SelectionDAG &DAG,
   if (ISD::isBuildVectorAllZeros(RHS.getNode()))
     return RHS;
 
+  // Aggressively peek through ops to get at the demanded low bits.
+  APInt DemandedMask = APInt::getLowBitsSet(64, 32);
+  SDValue DemandedLHS = DAG.GetDemandedBits(LHS, DemandedMask);
+  SDValue DemandedRHS = DAG.GetDemandedBits(RHS, DemandedMask);
+  if (DemandedLHS || DemandedRHS)
+    return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
+                       DemandedLHS ? DemandedLHS : LHS,
+                       DemandedRHS ? DemandedRHS : RHS);
+
   // PMULDQ/PMULUDQ only uses lower 32 bits from each vector element.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.SimplifyDemandedBits(SDValue(N, 0), APInt::getAllOnesValue(64), DCI))

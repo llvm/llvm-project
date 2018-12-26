@@ -777,15 +777,18 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
 
   case TargetOpcode::G_SELECT:
-    if (TypeIdx != 0)
-      return UnableToLegalize;
-    // Perform operation at larger width (any extension is fine here, high bits
-    // don't affect the result) and then truncate the result back to the
-    // original type.
     Observer.changingInstr(MI);
-    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ANYEXT);
-    widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_ANYEXT);
-    widenScalarDst(MI, WideTy);
+    if (TypeIdx == 0) {
+      // Perform operation at larger width (any extension is fine here, high
+      // bits don't affect the result) and then truncate the result back to the
+      // original type.
+      widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ANYEXT);
+      widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_ANYEXT);
+      widenScalarDst(MI, WideTy);
+    } else {
+      // Explicit extension is required here since high bits affect the result.
+      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ZEXT);
+    }
     Observer.changedInstr(MI);
     return Legalized;
 
