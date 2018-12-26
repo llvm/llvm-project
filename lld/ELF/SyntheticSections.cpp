@@ -2408,15 +2408,17 @@ static std::vector<GdbIndexSection::CuEntry> readCuList(DWARFContext &Dwarf) {
   return Ret;
 }
 
-static Expected<std::vector<GdbIndexSection::AddressEntry>>
+static std::vector<GdbIndexSection::AddressEntry>
 readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
   std::vector<GdbIndexSection::AddressEntry> Ret;
 
   uint32_t CuIdx = 0;
   for (std::unique_ptr<DWARFUnit> &Cu : Dwarf.compile_units()) {
     Expected<DWARFAddressRangesVector> Ranges = Cu->collectAddressRanges();
-    if (!Ranges)
-      return Ranges.takeError();
+    if (!Ranges) {
+      error(toString(Sec) + ": " + toString(Ranges.takeError()));
+      return {};
+    }
 
     ArrayRef<InputSectionBase *> Sections = Sec->File->getSections();
     for (DWARFAddressRange &R : *Ranges) {
@@ -2433,7 +2435,7 @@ readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
     ++CuIdx;
   }
 
-  return std::move(Ret);
+  return Ret;
 }
 
 template <class ELFT>
@@ -2565,17 +2567,7 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
 
     Chunks[I].Sec = Sections[I];
     Chunks[I].CompilationUnits = readCuList(Dwarf);
-    Expected<std::vector<GdbIndexSection::AddressEntry>> AddressAreas =
-        readAddressAreas(Dwarf, Sections[I]);
-    if (!AddressAreas) {
-      std::string Msg = File->getName();
-      Msg += ": ";
-      if (!File->ArchiveName.empty())
-        Msg += "in archive " + File->ArchiveName + ": ";
-      Msg += toString(AddressAreas.takeError());
-      fatal(Msg);
-    }
-    Chunks[I].AddressAreas = *AddressAreas;
+    Chunks[I].AddressAreas = readAddressAreas(Dwarf, Sections[I]);
     NameAttrs[I] = readPubNamesAndTypes<ELFT>(
         static_cast<const LLDDwarfObj<ELFT> &>(Dwarf.getDWARFObj()),
         Chunks[I].CompilationUnits);

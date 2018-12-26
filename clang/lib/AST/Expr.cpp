@@ -2596,6 +2596,10 @@ Expr* Expr::IgnoreParens() {
         continue;
       }
     }
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
+      E = CE->getSubExpr();
+      continue;
+    }
     return E;
   }
 }
@@ -2716,10 +2720,6 @@ Expr *Expr::IgnoreParenImpCasts() {
     if (SubstNonTypeTemplateParmExpr *NTTP
                                   = dyn_cast<SubstNonTypeTemplateParmExpr>(E)) {
       E = NTTP->getReplacement();
-      continue;
-    }
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
-      E = CE->getSubExpr();
       continue;
     }
     return E;
