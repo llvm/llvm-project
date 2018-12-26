@@ -472,8 +472,7 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
       return false;
     // TODO: diamond, triangle cases
     if (!PDT) return true;
-    return !PDT->dominates(DominatedGuard->getParent(),
-                           DominatingGuard->getParent());
+    return !PDT->dominates(DominatedBlock, DominatingBlock);
   };
 
   return MaybeHoistingOutOfIf() ? WS_IllegalOrNegative : WS_Neutral;
