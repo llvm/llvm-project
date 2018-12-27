@@ -414,7 +414,6 @@ static bool OneUseDominatesOtherUses(unsigned Reg, const MachineOperand &OneUse,
     if (UseVNI != OneUseVNI)
       continue;
 
-    const MachineInstr *OneUseInst = OneUse.getParent();
     if (UseInst == OneUseInst) {
       // Another use in the same instruction. We need to ensure that the one
       // selected use happens "before" it.
@@ -755,9 +754,9 @@ public:
 /// tried for the current instruction and didn't work.
 class CommutingState {
   /// There are effectively three states: the initial state where we haven't
-  /// started commuting anything and we don't know anything yet, the tenative
+  /// started commuting anything and we don't know anything yet, the tentative
   /// state where we've commuted the operands of the current instruction and are
-  /// revisting it, and the declined state where we've reverted the operands
+  /// revisiting it, and the declined state where we've reverted the operands
   /// back to their original order and will no longer commute it further.
   bool TentativelyCommuting;
   bool Declined;
