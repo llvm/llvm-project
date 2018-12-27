@@ -1,5 +1,5 @@
 // RUN: %libomp-compile
-// RUN: env OMP_DISPLAY_AFFINITY=true OMP_AFFINITY_FORMAT='TESTER-ENV: tl:%L tn:%n nt:%N' OMP_NUM_THREADS=8 %libomp-run | python %S/check.py -c 'CHECK-8' %s
+// RUN: env OMP_DISPLAY_AFFINITY=true OMP_AFFINITY_FORMAT='TESTER-ENV: tl:%L tn:%n nt:%N' OMP_NUM_THREADS=8 %libomp-run | %python %S/check.py -c 'CHECK-8' %s
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -2414,11 +2414,14 @@ readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
 
   uint32_t CuIdx = 0;
   for (std::unique_ptr<DWARFUnit> &Cu : Dwarf.compile_units()) {
-    DWARFAddressRangesVector Ranges;
-    Cu->collectAddressRanges(Ranges);
+    Expected<DWARFAddressRangesVector> Ranges = Cu->collectAddressRanges();
+    if (!Ranges) {
+      error(toString(Sec) + ": " + toString(Ranges.takeError()));
+      return {};
+    }
 
     ArrayRef<InputSectionBase *> Sections = Sec->File->getSections();
-    for (DWARFAddressRange &R : Ranges) {
+    for (DWARFAddressRange &R : *Ranges) {
       InputSectionBase *S = Sections[R.SectionIndex];
       if (!S || S == &InputSection::Discarded || !S->Live)
         continue;
@@ -2431,6 +2434,7 @@ readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
     }
     ++CuIdx;
   }
+
   return Ret;
 }
 
