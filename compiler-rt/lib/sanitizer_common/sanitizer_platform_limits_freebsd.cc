@@ -18,6 +18,7 @@
 
 #include <arpa/inet.h>
 #include <dirent.h>
+#include <fts.h>
 #include <grp.h>
 #include <limits.h>
 #include <net/if.h>
@@ -128,6 +129,8 @@ namespace __sanitizer {
   unsigned struct_shm_info_sz = sizeof(struct shm_info);
   unsigned struct_regmatch_sz = sizeof(regmatch_t);
   unsigned struct_regex_sz = sizeof(regex_t);
+  unsigned struct_FTS_sz = sizeof(FTS);
+  unsigned struct_FTSENT_sz = sizeof(FTSENT);
 
   const uptr sig_ign = (uptr)SIG_IGN;
   const uptr sig_dfl = (uptr)SIG_DFL;

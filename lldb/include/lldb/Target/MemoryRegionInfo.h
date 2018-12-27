@@ -14,7 +14,6 @@
 #include "lldb/Core/RangeMap.h"
 #include "llvm/Support/FormatProviders.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Range.h"
 
 namespace lldb_private {
 class MemoryRegionInfo {

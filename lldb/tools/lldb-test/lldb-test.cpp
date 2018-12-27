@@ -209,7 +209,6 @@ struct IRMemoryMapTestState {
       : Target(Target), Map(Target), Allocations(IntervalMapAllocator) {}
 };
 
-bool areAllocationsOverlapping(const AllocationT &L, const AllocationT &R);
 bool evalMalloc(StringRef Line, IRMemoryMapTestState &State);
 bool evalFree(StringRef Line, IRMemoryMapTestState &State);
 int evaluateMemoryMapCommands(Debugger &Dbg);
@@ -808,13 +807,6 @@ static int dumpObjectFiles(Debugger &Dbg) {
   return HadErrors;
 }
 
-/// Check if two half-open intervals intersect:
-///   http://world.std.com/~swmcd/steven/tech/interval.html
-bool opts::irmemorymap::areAllocationsOverlapping(const AllocationT &L,
-                                                  const AllocationT &R) {
-  return R.first < L.second && L.first < R.second;
-}
-
 bool opts::irmemorymap::evalMalloc(StringRef Line,
                                    IRMemoryMapTestState &State) {
   // ::= <label> = malloc <size> <alignment>
@@ -861,28 +853,21 @@ bool opts::irmemorymap::evalMalloc(StringRef Line,
     exit(1);
   }
 
-  // Check that the allocation does not overlap another allocation. Do so by
-  // testing each allocation which may cover the interval [Addr, EndOfRegion).
-  addr_t EndOfRegion = Addr + Size;
-  auto Probe = State.Allocations.begin();
-  Probe.advanceTo(Addr); //< First interval s.t stop >= Addr.
-  AllocationT NewAllocation = {Addr, EndOfRegion};
-  while (Probe != State.Allocations.end() && Probe.start() < EndOfRegion) {
-    AllocationT ProbeAllocation = {Probe.start(), Probe.stop()};
-    if (areAllocationsOverlapping(ProbeAllocation, NewAllocation)) {
-      outs() << "Malloc error: overlapping allocation detected"
-             << formatv(", previous allocation at [{0:x}, {1:x})\n",
-                        Probe.start(), Probe.stop());
-      exit(1);
-    }
-    ++Probe;
+  // In case of Size == 0, we still expect the returned address to be unique and
+  // non-overlapping.
+  addr_t EndOfRegion = Addr + std::max<size_t>(Size, 1);
+  if (State.Allocations.overlaps(Addr, EndOfRegion)) {
+    auto I = State.Allocations.find(Addr);
+    outs() << "Malloc error: overlapping allocation detected"
+           << formatv(", previous allocation at [{0:x}, {1:x})\n", I.start(),
+                      I.stop());
+    exit(1);
   }
 
   // Insert the new allocation into the interval map. Use unique allocation
   // IDs to inhibit interval coalescing.
   static unsigned AllocationID = 0;
-  if (Size)
-    State.Allocations.insert(Addr, EndOfRegion, AllocationID++);
+  State.Allocations.insert(Addr, EndOfRegion, AllocationID++);
 
   // Store the label -> address mapping.
   State.Label2AddrMap[Label] = Addr;
