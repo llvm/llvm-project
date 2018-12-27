@@ -1838,9 +1838,19 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
   SmallVector<TypeIndex, 8> ArgTypeIndices;
   TypeIndex ReturnTypeIndex = getTypeIndex(ReturnAndArgs[Index++]);
 
+  // If the first argument is a pointer type and this isn't a static method,
+  // treat it as the special 'this' parameter, which is encoded separately from
+  // the arguments.
   TypeIndex ThisTypeIndex;
-  if (!IsStaticMethod && ReturnAndArgs.size() > 1)
-    ThisTypeIndex = getTypeIndexForThisPtr(ReturnAndArgs[Index++], Ty);
+  if (!IsStaticMethod && ReturnAndArgs.size() > Index) {
+    if (const DIDerivedType *PtrTy =
+            dyn_cast_or_null<DIDerivedType>(ReturnAndArgs[Index].resolve())) {
+      if (PtrTy->getTag() == dwarf::DW_TAG_pointer_type) {
+        ThisTypeIndex = getTypeIndexForThisPtr(PtrTy, Ty);
+        Index++;
+      }
+    }
+  }
 
   while (Index < ReturnAndArgs.size())
     ArgTypeIndices.push_back(getTypeIndex(ReturnAndArgs[Index++]));
@@ -2396,9 +2406,10 @@ TypeIndex CodeViewDebug::getTypeIndex(DITypeRef TypeRef, DITypeRef ClassTyRef) {
 }
 
 codeview::TypeIndex
-CodeViewDebug::getTypeIndexForThisPtr(DITypeRef TypeRef,
+CodeViewDebug::getTypeIndexForThisPtr(const DIDerivedType *PtrTy,
                                       const DISubroutineType *SubroutineTy) {
-  const DIType *Ty = TypeRef.resolve();
+  assert(PtrTy->getTag() == dwarf::DW_TAG_pointer_type &&
+         "this type must be a pointer type");
 
   PointerOptions Options = PointerOptions::None;
   if (SubroutineTy->getFlags() & DINode::DIFlags::FlagLValueReference)
@@ -2411,13 +2422,13 @@ CodeViewDebug::getTypeIndexForThisPtr(DITypeRef TypeRef,
   // so that the TypeIndex for the this pointer can be shared with the type
   // index for other pointers to this class type.  If there is a ref qualifier
   // then we lookup the pointer using the subroutine as the parent type.
-  auto I = TypeIndices.find({Ty, SubroutineTy});
+  auto I = TypeIndices.find({PtrTy, SubroutineTy});
   if (I != TypeIndices.end())
     return I->second;
 
   TypeLoweringScope S(*this);
-  TypeIndex TI = lowerTypePointer(cast<DIDerivedType>(Ty), Options);
-  return recordTypeIndexForDINode(Ty, TI, SubroutineTy);
+  TypeIndex TI = lowerTypePointer(PtrTy, Options);
+  return recordTypeIndexForDINode(PtrTy, TI, SubroutineTy);
 }
 
 TypeIndex CodeViewDebug::getTypeIndexForReferenceTo(DITypeRef TypeRef) {
