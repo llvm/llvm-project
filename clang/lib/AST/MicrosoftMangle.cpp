@@ -2939,14 +2939,14 @@ void MicrosoftMangleContextImpl::mangleCXXName(const NamedDecl *D,
 // <vtordisp-shift>     ::= <offset-to-vtordisp>
 // <vtordispex-shift>   ::= <offset-to-vbptr> <vbase-offset-offset>
 //                          <offset-to-vtordisp>
-static void mangleThunkThisAdjustment(const CXXMethodDecl *MD,
+static void mangleThunkThisAdjustment(AccessSpecifier AS,
                                       const ThisAdjustment &Adjustment,
                                       MicrosoftCXXNameMangler &Mangler,
                                       raw_ostream &Out) {
   if (!Adjustment.Virtual.isEmpty()) {
     Out << '$';
     char AccessSpec;
-    switch (MD->getAccess()) {
+    switch (AS) {
     case AS_none:
       llvm_unreachable("Unsupported access specifier");
     case AS_private:
@@ -2974,7 +2974,7 @@ static void mangleThunkThisAdjustment(const CXXMethodDecl *MD,
       Mangler.mangleNumber(-static_cast<uint32_t>(Adjustment.NonVirtual));
     }
   } else if (Adjustment.NonVirtual != 0) {
-    switch (MD->getAccess()) {
+    switch (AS) {
     case AS_none:
       llvm_unreachable("Unsupported access specifier");
     case AS_private:
@@ -2988,7 +2988,7 @@ static void mangleThunkThisAdjustment(const CXXMethodDecl *MD,
     }
     Mangler.mangleNumber(-static_cast<uint32_t>(Adjustment.NonVirtual));
   } else {
-    switch (MD->getAccess()) {
+    switch (AS) {
     case AS_none:
       llvm_unreachable("Unsupported access specifier");
     case AS_private:
@@ -3019,7 +3019,13 @@ void MicrosoftMangleContextImpl::mangleThunk(const CXXMethodDecl *MD,
   MicrosoftCXXNameMangler Mangler(*this, MHO);
   Mangler.getStream() << '?';
   Mangler.mangleName(MD);
-  mangleThunkThisAdjustment(MD, Thunk.This, Mangler, MHO);
+
+  // Usually the thunk uses the access specifier of the new method, but if this
+  // is a covariant return thunk, then MSVC always uses the public access
+  // specifier, and we do the same.
+  AccessSpecifier AS = Thunk.Return.isEmpty() ? MD->getAccess() : AS_public;
+  mangleThunkThisAdjustment(AS, Thunk.This, Mangler, MHO);
+
   if (!Thunk.Return.isEmpty())
     assert(Thunk.Method != nullptr &&
            "Thunk info should hold the overridee decl");
@@ -3040,7 +3046,7 @@ void MicrosoftMangleContextImpl::mangleCXXDtorThunk(
   MicrosoftCXXNameMangler Mangler(*this, MHO, DD, Type);
   Mangler.getStream() << "??_E";
   Mangler.mangleName(DD->getParent());
-  mangleThunkThisAdjustment(DD, Adjustment, Mangler, MHO);
+  mangleThunkThisAdjustment(DD->getAccess(), Adjustment, Mangler, MHO);
   Mangler.mangleFunctionType(DD->getType()->castAs<FunctionProtoType>(), DD);
 }
 
