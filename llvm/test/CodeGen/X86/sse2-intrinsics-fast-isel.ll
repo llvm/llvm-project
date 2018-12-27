@@ -2758,23 +2758,13 @@ define i32 @test_mm_movemask_pd(<2 x double> %a0) nounwind {
 declare i32 @llvm.x86.sse2.movmsk.pd(<2 x double>) nounwind readnone
 
 define <2 x i64> @test_mm_mul_epu32(<2 x i64> %a0, <2 x i64> %a1) nounwind {
-; X86-SSE-LABEL: test_mm_mul_epu32:
-; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [4294967295,0,4294967295,0]
-; X86-SSE-NEXT:    # encoding: [0x66,0x0f,0x6f,0x15,A,A,A,A]
-; X86-SSE-NEXT:    # fixup A - offset: 4, value: {{\.LCPI.*}}, kind: FK_Data_4
-; X86-SSE-NEXT:    pand %xmm2, %xmm0 # encoding: [0x66,0x0f,0xdb,0xc2]
-; X86-SSE-NEXT:    pand %xmm2, %xmm1 # encoding: [0x66,0x0f,0xdb,0xca]
-; X86-SSE-NEXT:    pmuludq %xmm1, %xmm0 # encoding: [0x66,0x0f,0xf4,0xc1]
-; X86-SSE-NEXT:    retl # encoding: [0xc3]
+; SSE-LABEL: test_mm_mul_epu32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmuludq %xmm1, %xmm0 # encoding: [0x66,0x0f,0xf4,0xc1]
+; SSE-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX1-LABEL: test_mm_mul_epu32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2 # encoding: [0xc5,0xe9,0xef,0xd2]
-; AVX1-NEXT:    vpblendw $204, %xmm2, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x0e,0xc2,0xcc]
-; AVX1-NEXT:    # xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; AVX1-NEXT:    vpblendw $204, %xmm2, %xmm1, %xmm1 # encoding: [0xc4,0xe3,0x71,0x0e,0xca,0xcc]
-; AVX1-NEXT:    # xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xf4,0xc1]
 ; AVX1-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
@@ -2787,16 +2777,6 @@ define <2 x i64> @test_mm_mul_epu32(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; AVX512-NEXT:    # xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
 ; AVX512-NEXT:    vpmullq %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf2,0xfd,0x08,0x40,0xc1]
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-;
-; X64-SSE-LABEL: test_mm_mul_epu32:
-; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [4294967295,0,4294967295,0]
-; X64-SSE-NEXT:    # encoding: [0x66,0x0f,0x6f,0x15,A,A,A,A]
-; X64-SSE-NEXT:    # fixup A - offset: 4, value: {{\.LCPI.*}}-4, kind: reloc_riprel_4byte
-; X64-SSE-NEXT:    pand %xmm2, %xmm0 # encoding: [0x66,0x0f,0xdb,0xc2]
-; X64-SSE-NEXT:    pand %xmm2, %xmm1 # encoding: [0x66,0x0f,0xdb,0xca]
-; X64-SSE-NEXT:    pmuludq %xmm1, %xmm0 # encoding: [0x66,0x0f,0xf4,0xc1]
-; X64-SSE-NEXT:    retq # encoding: [0xc3]
   %A = and <2 x i64> %a0, <i64 4294967295, i64 4294967295>
   %B = and <2 x i64> %a1, <i64 4294967295, i64 4294967295>
   %res = mul nuw <2 x i64> %A, %B

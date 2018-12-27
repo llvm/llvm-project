@@ -4,6 +4,7 @@ import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 group("default") {
   deps = [
     ":clang",
+    "//clang/tools/c-index-test",
     "//clang/tools/clang-diff",
     "//clang/tools/clang-format",
     "//clang/tools/clang-import-test",
@@ -21,7 +22,10 @@ group("default") {
     "//llvm/tools/llvm-undname",
   ]
   if (clang_enable_arcmt) {
-    deps += [ "//clang/tools/arcmt-test" ]
+    deps += [
+      "//clang/tools/arcmt-test",
+      "//clang/tools/c-arcmt-test",
+    ]
   }
   if (clang_enable_static_analyzer) {
     deps += [

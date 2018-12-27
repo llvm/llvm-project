@@ -236,6 +236,10 @@ Improvements to clang-tidy
   <clang-tidy/checks/readability-redundant-smartptr-get>` check does not warn
   about calls inside macros anymore by default.
 
+- The :doc:`readability-uppercase-literal-suffix
+  <clang-tidy/checks/readability-uppercase-literal-suffix>` check does not warn
+  about literal suffixes inside macros anymore by default.
+
 - The :doc:`cppcoreguidelines-narrowing-conversions
   <clang-tidy/checks/cppcoreguidelines-narrowing-conversions>` check now
   detects more narrowing conversions:

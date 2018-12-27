@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -- -I %S
+// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- \
+// RUN:   -config="{CheckOptions: [{key: readability-uppercase-literal-suffix.IgnoreMacros, value: 0}]}" \
+// RUN:   -- -I %S
 
 void macros() {
 #define INMACRO(X) 1.f

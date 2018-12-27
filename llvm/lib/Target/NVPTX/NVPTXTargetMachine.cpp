@@ -68,6 +68,7 @@ void initializeNVPTXAssignValidGlobalNamesPass(PassRegistry&);
 void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
 void initializeNVPTXLowerArgsPass(PassRegistry &);
 void initializeNVPTXLowerAllocaPass(PassRegistry &);
+void initializeNVPTXProxyRegErasurePass(PassRegistry &);
 
 } // end namespace llvm
 
@@ -87,6 +88,7 @@ extern "C" void LLVMInitializeNVPTXTarget() {
   initializeNVPTXLowerArgsPass(PR);
   initializeNVPTXLowerAllocaPass(PR);
   initializeNVPTXLowerAggrCopiesPass(PR);
+  initializeNVPTXProxyRegErasurePass(PR);
 }
 
 static std::string computeDataLayout(bool is64Bit, bool UseShortPointers) {
@@ -160,6 +162,7 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
+  void addPreRegAlloc() override;
   void addPostRegAlloc() override;
   void addMachineSSAOptimization() override;
 
@@ -299,6 +302,11 @@ bool NVPTXPassConfig::addInstSelector() {
     addPass(createNVPTXReplaceImageHandlesPass());
 
   return false;
+}
+
+void NVPTXPassConfig::addPreRegAlloc() {
+  // Remove Proxy Register pseudo instructions used to keep `callseq_end` alive.
+  addPass(createNVPTXProxyRegErasurePass());
 }
 
 void NVPTXPassConfig::addPostRegAlloc() {
