@@ -377,7 +377,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
                                    DITypeRef ClassTyRef = DITypeRef());
 
   codeview::TypeIndex
-  getTypeIndexForThisPtr(DITypeRef TypeRef,
+  getTypeIndexForThisPtr(const DIDerivedType *PtrTy,
                          const DISubroutineType *SubroutineTy);
 
   codeview::TypeIndex getTypeIndexForReferenceTo(DITypeRef TypeRef);

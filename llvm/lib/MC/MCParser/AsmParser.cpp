@@ -899,6 +899,9 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
       eatToEndOfStatement();
   }
 
+  getTargetParser().onEndOfFile();
+  printPendingErrors();
+
   // All errors should have been emitted.
   assert(!hasPendingError() && "unexpected error from parseStatement");
 
