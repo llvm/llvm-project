@@ -579,7 +579,7 @@ public:
       s.Printf("\n");
     }
     auto DumpTextStream = [&](MinidumpStreamType stream_type,
-        llvm::StringRef label = llvm::StringRef()) -> void {
+                              llvm::StringRef label) -> void {
       auto bytes = minidump.GetStream(stream_type);
       if (!bytes.empty()) {
         if (label.empty())
@@ -588,7 +588,7 @@ public:
       }
     };
     auto DumpBinaryStream = [&](MinidumpStreamType stream_type,
-        llvm::StringRef label = llvm::StringRef()) -> void {
+                                llvm::StringRef label) -> void {
       auto bytes = minidump.GetStream(stream_type);
       if (!bytes.empty()) {
         if (label.empty())
