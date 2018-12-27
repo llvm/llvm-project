@@ -63,7 +63,6 @@ add_lldb_library(lldbUtility
   Log.cpp
   Logging.cpp
   NameMatches.cpp
-  Range.cpp
   RegisterValue.cpp
   RegularExpression.cpp
   Reproducer.cpp
