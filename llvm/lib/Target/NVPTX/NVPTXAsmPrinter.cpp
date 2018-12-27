@@ -730,6 +730,11 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
   for (Module::const_iterator FI = M.begin(), FE = M.end(); FI != FE; ++FI) {
     const Function *F = &*FI;
 
+    if (F->getAttributes().hasFnAttribute("nvptx-libcall-callee")) {
+      emitDeclaration(F, O);
+      continue;
+    }
+
     if (F->isDeclaration()) {
       if (F->use_empty())
         continue;

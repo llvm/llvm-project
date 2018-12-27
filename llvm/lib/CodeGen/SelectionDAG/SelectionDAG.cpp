@@ -8464,6 +8464,32 @@ SDValue SelectionDAG::makeEquivalentMemoryOrdering(LoadSDNode *OldLoad,
   return TokenFactor;
 }
 
+SDValue SelectionDAG::getSymbolFunctionGlobalAddress(SDValue Op,
+                                                     Function **OutFunction) {
+  assert(isa<ExternalSymbolSDNode>(Op) && "Node should be an ExternalSymbol");
+
+  auto *Symbol = cast<ExternalSymbolSDNode>(Op)->getSymbol();
+  auto *Module = MF->getFunction().getParent();
+  auto *Function = Module->getFunction(Symbol);
+
+  if (OutFunction != nullptr)
+      *OutFunction = Function;
+
+  if (Function != nullptr) {
+    auto PtrTy = TLI->getPointerTy(getDataLayout(), Function->getAddressSpace());
+    return getGlobalAddress(Function, SDLoc(Op), PtrTy);
+  }
+
+  std::string ErrorStr;
+  raw_string_ostream ErrorFormatter(ErrorStr);
+
+  ErrorFormatter << "Undefined external symbol ";
+  ErrorFormatter << '"' << Symbol << '"';
+  ErrorFormatter.flush();
+
+  report_fatal_error(ErrorStr);
+}
+
 //===----------------------------------------------------------------------===//
 //                              SDNode Class
 //===----------------------------------------------------------------------===//
