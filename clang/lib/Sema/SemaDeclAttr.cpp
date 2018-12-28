@@ -6280,6 +6280,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_Flatten:
     handleSimpleAttribute<FlattenAttr>(S, D, AL);
     break;
+  case ParsedAttr::AT_SYCLKernel:
+    handleSimpleAttribute<SYCLKernelAttr>(S, D, AL);
+    break;
   case ParsedAttr::AT_Format:
     handleFormatAttr(S, D, AL);
     break;

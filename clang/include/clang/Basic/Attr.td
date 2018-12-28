@@ -991,6 +991,13 @@ def SYCLDevice : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def SYCLKernel : InheritableAttr {
+  let Spellings = [GNU<"sycl_kernel">];
+  let Subjects = SubjectList<[Function]>;
+  let LangOpts = [SYCL];
+  let Documentation = [Undocumented];
+}
+
 def C11NoReturn : InheritableAttr {
   let Spellings = [Keyword<"_Noreturn">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
