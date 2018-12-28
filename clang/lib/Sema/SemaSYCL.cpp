@@ -160,7 +160,8 @@ CompoundStmt *CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelHelper,
                                 SourceLocation(), *TargetFuncParam, false,
                                 DeclarationNameInfo(), ParamType, VK_LValue);
 
-        CXXRecordDecl *CRD = Field->getType()->getAsCXXRecordDecl();
+        QualType FieldType = Field->getType();
+        CXXRecordDecl *CRD = FieldType->getAsCXXRecordDecl();
         if (CRD) {
           llvm::SmallVector<Expr *, 16> ParamStmts;
           DeclAccessPair FieldDAP = DeclAccessPair::make(Field, AS_none);
@@ -205,6 +206,22 @@ CompoundStmt *CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelHelper,
               BodyStmts.push_back(Call);
             }
           }
+        } else if (FieldType->isBuiltinType()) {
+          // If field have built-in type just initialize this field
+          // with corresponding kernel argument using '=' binary operator.
+          DeclAccessPair FieldDAP = DeclAccessPair::make(Field, AS_none);
+          auto Lhs = MemberExpr::Create(
+              S.Context, LambdaDRE, false, SourceLocation(),
+              NestedNameSpecifierLoc(), SourceLocation(), Field, FieldDAP,
+              DeclarationNameInfo(Field->getDeclName(), SourceLocation()),
+              nullptr, Field->getType(), VK_LValue, OK_Ordinary);
+          auto Rhs = ImplicitCastExpr::Create(
+              S.Context, ParamType, CK_LValueToRValue, DRE, nullptr, VK_RValue);
+          // lambda.field = kernel_parameter
+          Expr *Res = new (S.Context)
+              BinaryOperator(Lhs, Rhs, BO_Assign, FieldType, VK_LValue,
+                             OK_Ordinary, SourceLocation(), FPOptions());
+          BodyStmts.push_back(Res);
         }
         TargetFuncParam++;
       }
