@@ -9880,17 +9880,14 @@ PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI, MachineBasicBlock *BB,
   return BB;
 }
 
-MachineBasicBlock *
-PPCTargetLowering::EmitPartwordAtomicBinary(MachineInstr &MI,
-                                            MachineBasicBlock *BB,
-                                            bool is8bit, // operation
-                                            unsigned BinOpcode,
-                                            unsigned CmpOpcode,
-                                            unsigned CmpPred) const {
+MachineBasicBlock *PPCTargetLowering::EmitPartwordAtomicBinary(
+    MachineInstr &MI, MachineBasicBlock *BB,
+    bool is8bit, // operation
+    unsigned BinOpcode, unsigned CmpOpcode, unsigned CmpPred) const {
   // If we support part-word atomic mnemonics, just use them
   if (Subtarget.hasPartwordAtomics())
-    return EmitAtomicBinary(MI, BB, is8bit ? 1 : 2, BinOpcode,
-                            CmpOpcode, CmpPred);
+    return EmitAtomicBinary(MI, BB, is8bit ? 1 : 2, BinOpcode, CmpOpcode,
+                            CmpPred);
 
   // This also handles ATOMIC_SWAP, indicated by BinOpcode==0.
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
@@ -9914,7 +9911,7 @@ PPCTargetLowering::EmitPartwordAtomicBinary(MachineInstr &MI,
 
   MachineBasicBlock *loopMBB = F->CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *loop2MBB =
-    CmpOpcode ? F->CreateMachineBasicBlock(LLVM_BB) : nullptr;
+      CmpOpcode ? F->CreateMachineBasicBlock(LLVM_BB) : nullptr;
   MachineBasicBlock *exitMBB = F->CreateMachineBasicBlock(LLVM_BB);
   F->insert(It, loopMBB);
   if (CmpOpcode)
@@ -9925,22 +9922,25 @@ PPCTargetLowering::EmitPartwordAtomicBinary(MachineInstr &MI,
   exitMBB->transferSuccessorsAndUpdatePHIs(BB);
 
   MachineRegisterInfo &RegInfo = F->getRegInfo();
-  const TargetRegisterClass *RC = is64bit ? &PPC::G8RCRegClass
-                                          : &PPC::GPRCRegClass;
+  const TargetRegisterClass *RC =
+      is64bit ? &PPC::G8RCRegClass : &PPC::GPRCRegClass;
+  const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
+
   unsigned PtrReg = RegInfo.createVirtualRegister(RC);
-  unsigned Shift1Reg = RegInfo.createVirtualRegister(RC);
+  unsigned Shift1Reg = RegInfo.createVirtualRegister(GPRC);
   unsigned ShiftReg =
-    isLittleEndian ? Shift1Reg : RegInfo.createVirtualRegister(RC);
-  unsigned Incr2Reg = RegInfo.createVirtualRegister(RC);
-  unsigned MaskReg = RegInfo.createVirtualRegister(RC);
-  unsigned Mask2Reg = RegInfo.createVirtualRegister(RC);
-  unsigned Mask3Reg = RegInfo.createVirtualRegister(RC);
-  unsigned Tmp2Reg = RegInfo.createVirtualRegister(RC);
-  unsigned Tmp3Reg = RegInfo.createVirtualRegister(RC);
-  unsigned Tmp4Reg = RegInfo.createVirtualRegister(RC);
-  unsigned TmpDestReg = RegInfo.createVirtualRegister(RC);
+      isLittleEndian ? Shift1Reg : RegInfo.createVirtualRegister(GPRC);
+  unsigned Incr2Reg = RegInfo.createVirtualRegister(GPRC);
+  unsigned MaskReg = RegInfo.createVirtualRegister(GPRC);
+  unsigned Mask2Reg = RegInfo.createVirtualRegister(GPRC);
+  unsigned Mask3Reg = RegInfo.createVirtualRegister(GPRC);
+  unsigned Tmp2Reg = RegInfo.createVirtualRegister(GPRC);
+  unsigned Tmp3Reg = RegInfo.createVirtualRegister(GPRC);
+  unsigned Tmp4Reg = RegInfo.createVirtualRegister(GPRC);
+  unsigned TmpDestReg = RegInfo.createVirtualRegister(GPRC);
   unsigned Ptr1Reg;
-  unsigned TmpReg = (!BinOpcode) ? Incr2Reg : RegInfo.createVirtualRegister(RC);
+  unsigned TmpReg =
+      (!BinOpcode) ? Incr2Reg : RegInfo.createVirtualRegister(GPRC);
 
   //  thisMBB:
   //   ...
@@ -9969,82 +9969,107 @@ PPCTargetLowering::EmitPartwordAtomicBinary(MachineInstr &MI,
   if (ptrA != ZeroReg) {
     Ptr1Reg = RegInfo.createVirtualRegister(RC);
     BuildMI(BB, dl, TII->get(is64bit ? PPC::ADD8 : PPC::ADD4), Ptr1Reg)
-      .addReg(ptrA).addReg(ptrB);
+        .addReg(ptrA)
+        .addReg(ptrB);
   } else {
     Ptr1Reg = ptrB;
   }
-  BuildMI(BB, dl, TII->get(PPC::RLWINM), Shift1Reg).addReg(Ptr1Reg)
-      .addImm(3).addImm(27).addImm(is8bit ? 28 : 27);
+  // We need use 32-bit subregister to avoid mismatch register class in 64-bit
+  // mode.
+  BuildMI(BB, dl, TII->get(PPC::RLWINM), Shift1Reg)
+      .addReg(Ptr1Reg, 0, is64bit ? PPC::sub_32 : 0)
+      .addImm(3)
+      .addImm(27)
+      .addImm(is8bit ? 28 : 27);
   if (!isLittleEndian)
-    BuildMI(BB, dl, TII->get(is64bit ? PPC::XORI8 : PPC::XORI), ShiftReg)
-        .addReg(Shift1Reg).addImm(is8bit ? 24 : 16);
+    BuildMI(BB, dl, TII->get(PPC::XORI), ShiftReg)
+        .addReg(Shift1Reg)
+        .addImm(is8bit ? 24 : 16);
   if (is64bit)
     BuildMI(BB, dl, TII->get(PPC::RLDICR), PtrReg)
-      .addReg(Ptr1Reg).addImm(0).addImm(61);
+        .addReg(Ptr1Reg)
+        .addImm(0)
+        .addImm(61);
   else
     BuildMI(BB, dl, TII->get(PPC::RLWINM), PtrReg)
-      .addReg(Ptr1Reg).addImm(0).addImm(0).addImm(29);
-  BuildMI(BB, dl, TII->get(PPC::SLW), Incr2Reg)
-      .addReg(incr).addReg(ShiftReg);
+        .addReg(Ptr1Reg)
+        .addImm(0)
+        .addImm(0)
+        .addImm(29);
+  BuildMI(BB, dl, TII->get(PPC::SLW), Incr2Reg).addReg(incr).addReg(ShiftReg);
   if (is8bit)
     BuildMI(BB, dl, TII->get(PPC::LI), Mask2Reg).addImm(255);
   else {
     BuildMI(BB, dl, TII->get(PPC::LI), Mask3Reg).addImm(0);
-    BuildMI(BB, dl, TII->get(PPC::ORI),Mask2Reg).addReg(Mask3Reg).addImm(65535);
+    BuildMI(BB, dl, TII->get(PPC::ORI), Mask2Reg)
+        .addReg(Mask3Reg)
+        .addImm(65535);
   }
   BuildMI(BB, dl, TII->get(PPC::SLW), MaskReg)
-      .addReg(Mask2Reg).addReg(ShiftReg);
+      .addReg(Mask2Reg)
+      .addReg(ShiftReg);
 
   BB = loopMBB;
   BuildMI(BB, dl, TII->get(PPC::LWARX), TmpDestReg)
-    .addReg(ZeroReg).addReg(PtrReg);
+      .addReg(ZeroReg)
+      .addReg(PtrReg);
   if (BinOpcode)
     BuildMI(BB, dl, TII->get(BinOpcode), TmpReg)
-      .addReg(Incr2Reg).addReg(TmpDestReg);
-  BuildMI(BB, dl, TII->get(is64bit ? PPC::ANDC8 : PPC::ANDC), Tmp2Reg)
-    .addReg(TmpDestReg).addReg(MaskReg);
-  BuildMI(BB, dl, TII->get(is64bit ? PPC::AND8 : PPC::AND), Tmp3Reg)
-    .addReg(TmpReg).addReg(MaskReg);
+        .addReg(Incr2Reg)
+        .addReg(TmpDestReg);
+  BuildMI(BB, dl, TII->get(PPC::ANDC), Tmp2Reg)
+      .addReg(TmpDestReg)
+      .addReg(MaskReg);
+  BuildMI(BB, dl, TII->get(PPC::AND), Tmp3Reg).addReg(TmpReg).addReg(MaskReg);
   if (CmpOpcode) {
     // For unsigned comparisons, we can directly compare the shifted values.
     // For signed comparisons we shift and sign extend.
-    unsigned SReg = RegInfo.createVirtualRegister(RC);
-    BuildMI(BB, dl, TII->get(is64bit ? PPC::AND8 : PPC::AND), SReg)
-      .addReg(TmpDestReg).addReg(MaskReg);
+    unsigned SReg = RegInfo.createVirtualRegister(GPRC);
+    BuildMI(BB, dl, TII->get(PPC::AND), SReg)
+        .addReg(TmpDestReg)
+        .addReg(MaskReg);
     unsigned ValueReg = SReg;
     unsigned CmpReg = Incr2Reg;
     if (CmpOpcode == PPC::CMPW) {
-      ValueReg = RegInfo.createVirtualRegister(RC);
+      ValueReg = RegInfo.createVirtualRegister(GPRC);
       BuildMI(BB, dl, TII->get(PPC::SRW), ValueReg)
-        .addReg(SReg).addReg(ShiftReg);
-      unsigned ValueSReg = RegInfo.createVirtualRegister(RC);
+          .addReg(SReg)
+          .addReg(ShiftReg);
+      unsigned ValueSReg = RegInfo.createVirtualRegister(GPRC);
       BuildMI(BB, dl, TII->get(is8bit ? PPC::EXTSB : PPC::EXTSH), ValueSReg)
-        .addReg(ValueReg);
+          .addReg(ValueReg);
       ValueReg = ValueSReg;
       CmpReg = incr;
     }
     BuildMI(BB, dl, TII->get(CmpOpcode), PPC::CR0)
-      .addReg(CmpReg).addReg(ValueReg);
+        .addReg(CmpReg)
+        .addReg(ValueReg);
     BuildMI(BB, dl, TII->get(PPC::BCC))
-      .addImm(CmpPred).addReg(PPC::CR0).addMBB(exitMBB);
+        .addImm(CmpPred)
+        .addReg(PPC::CR0)
+        .addMBB(exitMBB);
     BB->addSuccessor(loop2MBB);
     BB->addSuccessor(exitMBB);
     BB = loop2MBB;
   }
-  BuildMI(BB, dl, TII->get(is64bit ? PPC::OR8 : PPC::OR), Tmp4Reg)
-    .addReg(Tmp3Reg).addReg(Tmp2Reg);
+  BuildMI(BB, dl, TII->get(PPC::OR), Tmp4Reg).addReg(Tmp3Reg).addReg(Tmp2Reg);
   BuildMI(BB, dl, TII->get(PPC::STWCX))
-    .addReg(Tmp4Reg).addReg(ZeroReg).addReg(PtrReg);
+      .addReg(Tmp4Reg)
+      .addReg(ZeroReg)
+      .addReg(PtrReg);
   BuildMI(BB, dl, TII->get(PPC::BCC))
-    .addImm(PPC::PRED_NE).addReg(PPC::CR0).addMBB(loopMBB);
+      .addImm(PPC::PRED_NE)
+      .addReg(PPC::CR0)
+      .addMBB(loopMBB);
   BB->addSuccessor(loopMBB);
   BB->addSuccessor(exitMBB);
 
   //  exitMBB:
   //   ...
   BB = exitMBB;
-  BuildMI(*BB, BB->begin(), dl, TII->get(PPC::SRW), dest).addReg(TmpDestReg)
-    .addReg(ShiftReg);
+  BuildMI(*BB, BB->begin(), dl, TII->get(PPC::SRW), dest)
+      .addReg(TmpDestReg)
+      .addReg(ShiftReg);
   return BB;
 }
 
@@ -10329,8 +10354,8 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   MachineFunction *F = BB->getParent();
 
   if (MI.getOpcode() == PPC::SELECT_CC_I4 ||
-       MI.getOpcode() == PPC::SELECT_CC_I8 ||
-       MI.getOpcode() == PPC::SELECT_I4 || MI.getOpcode() == PPC::SELECT_I8) {
+      MI.getOpcode() == PPC::SELECT_CC_I8 || MI.getOpcode() == PPC::SELECT_I4 ||
+      MI.getOpcode() == PPC::SELECT_I8) {
     SmallVector<MachineOperand, 2> Cond;
     if (MI.getOpcode() == PPC::SELECT_CC_I4 ||
         MI.getOpcode() == PPC::SELECT_CC_I8)
@@ -10475,9 +10500,12 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned CmpReg = RegInfo.createVirtualRegister(&PPC::CRRCRegClass);
 
     BuildMI(BB, dl, TII->get(PPC::CMPW), CmpReg)
-      .addReg(HiReg).addReg(ReadAgainReg);
+        .addReg(HiReg)
+        .addReg(ReadAgainReg);
     BuildMI(BB, dl, TII->get(PPC::BCC))
-      .addImm(PPC::PRED_NE).addReg(CmpReg).addMBB(readMBB);
+        .addImm(PPC::PRED_NE)
+        .addReg(CmpReg)
+        .addMBB(readMBB);
 
     BB->addSuccessor(readMBB);
     BB->addSuccessor(sinkMBB);
@@ -10647,27 +10675,35 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     //   st[bhwd]cx. dest, ptr
     // exitBB:
     BB = loop1MBB;
-    BuildMI(BB, dl, TII->get(LoadMnemonic), dest)
-      .addReg(ptrA).addReg(ptrB);
+    BuildMI(BB, dl, TII->get(LoadMnemonic), dest).addReg(ptrA).addReg(ptrB);
     BuildMI(BB, dl, TII->get(is64bit ? PPC::CMPD : PPC::CMPW), PPC::CR0)
-      .addReg(oldval).addReg(dest);
+        .addReg(oldval)
+        .addReg(dest);
     BuildMI(BB, dl, TII->get(PPC::BCC))
-      .addImm(PPC::PRED_NE).addReg(PPC::CR0).addMBB(midMBB);
+        .addImm(PPC::PRED_NE)
+        .addReg(PPC::CR0)
+        .addMBB(midMBB);
     BB->addSuccessor(loop2MBB);
     BB->addSuccessor(midMBB);
 
     BB = loop2MBB;
     BuildMI(BB, dl, TII->get(StoreMnemonic))
-      .addReg(newval).addReg(ptrA).addReg(ptrB);
+        .addReg(newval)
+        .addReg(ptrA)
+        .addReg(ptrB);
     BuildMI(BB, dl, TII->get(PPC::BCC))
-      .addImm(PPC::PRED_NE).addReg(PPC::CR0).addMBB(loop1MBB);
+        .addImm(PPC::PRED_NE)
+        .addReg(PPC::CR0)
+        .addMBB(loop1MBB);
     BuildMI(BB, dl, TII->get(PPC::B)).addMBB(exitMBB);
     BB->addSuccessor(loop1MBB);
     BB->addSuccessor(exitMBB);
 
     BB = midMBB;
     BuildMI(BB, dl, TII->get(StoreMnemonic))
-      .addReg(dest).addReg(ptrA).addReg(ptrB);
+        .addReg(dest)
+        .addReg(ptrA)
+        .addReg(ptrB);
     BB->addSuccessor(exitMBB);
 
     //  exitMBB:
@@ -10702,24 +10738,26 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     exitMBB->transferSuccessorsAndUpdatePHIs(BB);
 
     MachineRegisterInfo &RegInfo = F->getRegInfo();
-    const TargetRegisterClass *RC = is64bit ? &PPC::G8RCRegClass
-                                            : &PPC::GPRCRegClass;
+    const TargetRegisterClass *RC =
+        is64bit ? &PPC::G8RCRegClass : &PPC::GPRCRegClass;
+    const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
+
     unsigned PtrReg = RegInfo.createVirtualRegister(RC);
-    unsigned Shift1Reg = RegInfo.createVirtualRegister(RC);
+    unsigned Shift1Reg = RegInfo.createVirtualRegister(GPRC);
     unsigned ShiftReg =
-      isLittleEndian ? Shift1Reg : RegInfo.createVirtualRegister(RC);
-    unsigned NewVal2Reg = RegInfo.createVirtualRegister(RC);
-    unsigned NewVal3Reg = RegInfo.createVirtualRegister(RC);
-    unsigned OldVal2Reg = RegInfo.createVirtualRegister(RC);
-    unsigned OldVal3Reg = RegInfo.createVirtualRegister(RC);
-    unsigned MaskReg = RegInfo.createVirtualRegister(RC);
-    unsigned Mask2Reg = RegInfo.createVirtualRegister(RC);
-    unsigned Mask3Reg = RegInfo.createVirtualRegister(RC);
-    unsigned Tmp2Reg = RegInfo.createVirtualRegister(RC);
-    unsigned Tmp4Reg = RegInfo.createVirtualRegister(RC);
-    unsigned TmpDestReg = RegInfo.createVirtualRegister(RC);
+        isLittleEndian ? Shift1Reg : RegInfo.createVirtualRegister(GPRC);
+    unsigned NewVal2Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned NewVal3Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned OldVal2Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned OldVal3Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned MaskReg = RegInfo.createVirtualRegister(GPRC);
+    unsigned Mask2Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned Mask3Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned Tmp2Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned Tmp4Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned TmpDestReg = RegInfo.createVirtualRegister(GPRC);
     unsigned Ptr1Reg;
-    unsigned TmpReg = RegInfo.createVirtualRegister(RC);
+    unsigned TmpReg = RegInfo.createVirtualRegister(GPRC);
     unsigned ZeroReg = is64bit ? PPC::ZERO8 : PPC::ZERO;
     //  thisMBB:
     //   ...
@@ -10756,74 +10794,107 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     if (ptrA != ZeroReg) {
       Ptr1Reg = RegInfo.createVirtualRegister(RC);
       BuildMI(BB, dl, TII->get(is64bit ? PPC::ADD8 : PPC::ADD4), Ptr1Reg)
-        .addReg(ptrA).addReg(ptrB);
+          .addReg(ptrA)
+          .addReg(ptrB);
     } else {
       Ptr1Reg = ptrB;
     }
-    BuildMI(BB, dl, TII->get(PPC::RLWINM), Shift1Reg).addReg(Ptr1Reg)
-        .addImm(3).addImm(27).addImm(is8bit ? 28 : 27);
+
+    // We need use 32-bit subregister to avoid mismatch register class in 64-bit
+    // mode.
+    BuildMI(BB, dl, TII->get(PPC::RLWINM), Shift1Reg)
+        .addReg(Ptr1Reg, 0, is64bit ? PPC::sub_32 : 0)
+        .addImm(3)
+        .addImm(27)
+        .addImm(is8bit ? 28 : 27);
     if (!isLittleEndian)
-      BuildMI(BB, dl, TII->get(is64bit ? PPC::XORI8 : PPC::XORI), ShiftReg)
-          .addReg(Shift1Reg).addImm(is8bit ? 24 : 16);
+      BuildMI(BB, dl, TII->get(PPC::XORI), ShiftReg)
+          .addReg(Shift1Reg)
+          .addImm(is8bit ? 24 : 16);
     if (is64bit)
       BuildMI(BB, dl, TII->get(PPC::RLDICR), PtrReg)
-        .addReg(Ptr1Reg).addImm(0).addImm(61);
+          .addReg(Ptr1Reg)
+          .addImm(0)
+          .addImm(61);
     else
       BuildMI(BB, dl, TII->get(PPC::RLWINM), PtrReg)
-        .addReg(Ptr1Reg).addImm(0).addImm(0).addImm(29);
+          .addReg(Ptr1Reg)
+          .addImm(0)
+          .addImm(0)
+          .addImm(29);
     BuildMI(BB, dl, TII->get(PPC::SLW), NewVal2Reg)
-        .addReg(newval).addReg(ShiftReg);
+        .addReg(newval)
+        .addReg(ShiftReg);
     BuildMI(BB, dl, TII->get(PPC::SLW), OldVal2Reg)
-        .addReg(oldval).addReg(ShiftReg);
+        .addReg(oldval)
+        .addReg(ShiftReg);
     if (is8bit)
       BuildMI(BB, dl, TII->get(PPC::LI), Mask2Reg).addImm(255);
     else {
       BuildMI(BB, dl, TII->get(PPC::LI), Mask3Reg).addImm(0);
       BuildMI(BB, dl, TII->get(PPC::ORI), Mask2Reg)
-        .addReg(Mask3Reg).addImm(65535);
+          .addReg(Mask3Reg)
+          .addImm(65535);
     }
     BuildMI(BB, dl, TII->get(PPC::SLW), MaskReg)
-        .addReg(Mask2Reg).addReg(ShiftReg);
+        .addReg(Mask2Reg)
+        .addReg(ShiftReg);
     BuildMI(BB, dl, TII->get(PPC::AND), NewVal3Reg)
-        .addReg(NewVal2Reg).addReg(MaskReg);
+        .addReg(NewVal2Reg)
+        .addReg(MaskReg);
     BuildMI(BB, dl, TII->get(PPC::AND), OldVal3Reg)
-        .addReg(OldVal2Reg).addReg(MaskReg);
+        .addReg(OldVal2Reg)
+        .addReg(MaskReg);
 
     BB = loop1MBB;
     BuildMI(BB, dl, TII->get(PPC::LWARX), TmpDestReg)
-        .addReg(ZeroReg).addReg(PtrReg);
-    BuildMI(BB, dl, TII->get(PPC::AND),TmpReg)
-        .addReg(TmpDestReg).addReg(MaskReg);
+        .addReg(ZeroReg)
+        .addReg(PtrReg);
+    BuildMI(BB, dl, TII->get(PPC::AND), TmpReg)
+        .addReg(TmpDestReg)
+        .addReg(MaskReg);
     BuildMI(BB, dl, TII->get(PPC::CMPW), PPC::CR0)
-        .addReg(TmpReg).addReg(OldVal3Reg);
+        .addReg(TmpReg)
+        .addReg(OldVal3Reg);
     BuildMI(BB, dl, TII->get(PPC::BCC))
-        .addImm(PPC::PRED_NE).addReg(PPC::CR0).addMBB(midMBB);
+        .addImm(PPC::PRED_NE)
+        .addReg(PPC::CR0)
+        .addMBB(midMBB);
     BB->addSuccessor(loop2MBB);
     BB->addSuccessor(midMBB);
 
     BB = loop2MBB;
-    BuildMI(BB, dl, TII->get(PPC::ANDC),Tmp2Reg)
-        .addReg(TmpDestReg).addReg(MaskReg);
-    BuildMI(BB, dl, TII->get(PPC::OR),Tmp4Reg)
-        .addReg(Tmp2Reg).addReg(NewVal3Reg);
-    BuildMI(BB, dl, TII->get(PPC::STWCX)).addReg(Tmp4Reg)
-        .addReg(ZeroReg).addReg(PtrReg);
+    BuildMI(BB, dl, TII->get(PPC::ANDC), Tmp2Reg)
+        .addReg(TmpDestReg)
+        .addReg(MaskReg);
+    BuildMI(BB, dl, TII->get(PPC::OR), Tmp4Reg)
+        .addReg(Tmp2Reg)
+        .addReg(NewVal3Reg);
+    BuildMI(BB, dl, TII->get(PPC::STWCX))
+        .addReg(Tmp4Reg)
+        .addReg(ZeroReg)
+        .addReg(PtrReg);
     BuildMI(BB, dl, TII->get(PPC::BCC))
-      .addImm(PPC::PRED_NE).addReg(PPC::CR0).addMBB(loop1MBB);
+        .addImm(PPC::PRED_NE)
+        .addReg(PPC::CR0)
+        .addMBB(loop1MBB);
     BuildMI(BB, dl, TII->get(PPC::B)).addMBB(exitMBB);
     BB->addSuccessor(loop1MBB);
     BB->addSuccessor(exitMBB);
 
     BB = midMBB;
-    BuildMI(BB, dl, TII->get(PPC::STWCX)).addReg(TmpDestReg)
-      .addReg(ZeroReg).addReg(PtrReg);
+    BuildMI(BB, dl, TII->get(PPC::STWCX))
+        .addReg(TmpDestReg)
+        .addReg(ZeroReg)
+        .addReg(PtrReg);
     BB->addSuccessor(exitMBB);
 
     //  exitMBB:
     //   ...
     BB = exitMBB;
-    BuildMI(*BB, BB->begin(), dl, TII->get(PPC::SRW),dest).addReg(TmpReg)
-      .addReg(ShiftReg);
+    BuildMI(*BB, BB->begin(), dl, TII->get(PPC::SRW), dest)
+        .addReg(TmpReg)
+        .addReg(ShiftReg);
   } else if (MI.getOpcode() == PPC::FADDrtz) {
     // This pseudo performs an FADD with rounding mode temporarily forced
     // to round-to-zero.  We emit this via custom inserter since the FPSCR
@@ -10860,9 +10931,8 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                  MI.getOpcode() == PPC::ANDIo_1_EQ_BIT8);
 
     MachineRegisterInfo &RegInfo = F->getRegInfo();
-    unsigned Dest = RegInfo.createVirtualRegister(Opcode == PPC::ANDIo ?
-                                                  &PPC::GPRCRegClass :
-                                                  &PPC::G8RCRegClass);
+    unsigned Dest = RegInfo.createVirtualRegister(
+        Opcode == PPC::ANDIo ? &PPC::GPRCRegClass : &PPC::G8RCRegClass);
 
     DebugLoc dl = MI.getDebugLoc();
     BuildMI(*BB, MI, dl, TII->get(Opcode), Dest)
