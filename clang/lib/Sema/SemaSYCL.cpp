@@ -84,7 +84,7 @@ private:
   Sema &SemaRef;
 };
 
-CXXRecordDecl* getBodyAsLambda(FunctionDecl *FD) {
+CXXRecordDecl *getBodyAsLambda(FunctionDecl *FD) {
   auto FirstArg = (*FD->param_begin());
   if (FirstArg)
     if (FirstArg->getType()->getAsCXXRecordDecl()->isLambda())
@@ -215,9 +215,9 @@ CompoundStmt *CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelHelper,
     // to replace all refs to this lambda with our vardecl.
     // I used TreeTransform here, but I'm not sure that it is good solution
     // Also I used map and I'm not sure about it too.
-    Stmt* FunctionBody = KernelHelper->getBody();
+    Stmt *FunctionBody = KernelHelper->getBody();
     DeclMap DMap;
-    ParmVarDecl* LambdaParam = *(KernelHelper->param_begin());
+    ParmVarDecl *LambdaParam = *(KernelHelper->param_begin());
     // DeclRefExpr with valid source location but with decl which is not marked
     // as used is invalid.
     LambdaVD->setIsUsed();
@@ -225,9 +225,8 @@ CompoundStmt *CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelHelper,
     // Without PushFunctionScope I had segfault. Maybe we also need to do pop.
     S.PushFunctionScope();
     KernelBodyTransform KBT(DMap, S);
-    Stmt* NewBody = KBT.TransformStmt(FunctionBody).get();
+    Stmt *NewBody = KBT.TransformStmt(FunctionBody).get();
     BodyStmts.push_back(NewBody);
-
   }
   return CompoundStmt::Create(S.Context, BodyStmts, SourceLocation(),
                               SourceLocation());
@@ -323,11 +322,19 @@ void Sema::ConstructSYCLKernel(FunctionDecl *KernelHelper) {
         Name += "_" + ParamType.getAsString() + "_";
       }
     }
+    const std::string ToBeErased[2] = {"class ", "struct "};
+    for (size_t i = 0; i < 2; ++i) {
+      for (size_t pos = Name.find(ToBeErased[i]); pos != std::string::npos;
+           pos = Name.find(ToBeErased[i])) {
+        Name.erase(pos, ToBeErased[i].length());
+      }
+    }
 
     FunctionDecl *SYCLKernel =
         CreateSYCLKernelFunction(getASTContext(), Name, ArgTys, NewArgDecls);
 
-    CompoundStmt *SYCLKernelBody = CreateSYCLKernelBody(*this, KernelHelper, SYCLKernel);
+    CompoundStmt *SYCLKernelBody =
+        CreateSYCLKernelBody(*this, KernelHelper, SYCLKernel);
     SYCLKernel->setBody(SYCLKernelBody);
 
     AddSyclKernel(SYCLKernel);
@@ -337,4 +344,3 @@ void Sema::ConstructSYCLKernel(FunctionDecl *KernelHelper) {
     Marker.TraverseStmt(SYCLKernelBody);
   }
 }
-
