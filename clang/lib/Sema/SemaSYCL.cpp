@@ -9,11 +9,11 @@
 // This implements Semantic Analysis for SYCL constructs.
 //===----------------------------------------------------------------------===//
 
+#include "TreeTransform.h"
 #include "clang/AST/AST.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallVector.h"
-#include "TreeTransform.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 
 using namespace clang;
 
@@ -43,9 +43,9 @@ public:
         if (!Def->hasAttr<SYCLDeviceAttr>()) {
           Def->addAttr(SYCLDeviceAttr::CreateImplicit(SemaRef.Context));
           this->TraverseStmt(Def->getBody());
-          // But because parser works with top level decls and codegen
+          // But because parser works with top level declarations and CodeGen
           // already saw and ignored our function without device attribute we
-          // need to add this function into sycl kernels array to show it
+          // need to add this function into SYCL kernels array to show it
           // this function again.
           SemaRef.AddSyclKernel(Def);
         }
@@ -101,29 +101,28 @@ FunctionDecl *CreateSYCLKernelFunction(ASTContext &Context, StringRef Name,
   QualType RetTy = Context.VoidTy;
   QualType FuncTy = Context.getFunctionType(RetTy, ArgTys, Info);
   DeclarationName DN = DeclarationName(&Context.Idents.get(Name));
-  FunctionDecl *Result = FunctionDecl::Create(
+  FunctionDecl *SYCLKernel = FunctionDecl::Create(
       Context, DC, SourceLocation(), SourceLocation(), DN, FuncTy,
       Context.getTrivialTypeSourceInfo(RetTy), SC_None);
   llvm::SmallVector<ParmVarDecl *, 16> Params;
   int i = 0;
   for (auto ArgTy : ArgTys) {
-    auto P =
-        ParmVarDecl::Create(Context, Result, SourceLocation(), SourceLocation(),
-                            ArgDecls[i]->getIdentifier(), ArgTy,
-                            ArgDecls[i]->getTypeSourceInfo(), SC_None, 0);
+    auto P = ParmVarDecl::Create(Context, SYCLKernel, SourceLocation(),
+                                 SourceLocation(), ArgDecls[i]->getIdentifier(),
+                                 ArgTy, ArgDecls[i]->getTypeSourceInfo(),
+                                 SC_None, 0);
     P->setScopeInfo(0, i++);
     P->setIsUsed();
     Params.push_back(P);
   }
-  Result->setParams(Params);
-  // TODO: Add SYCL specific attribute for kernel and all functions called
-  // by kernel.
-  Result->addAttr(SYCLDeviceAttr::CreateImplicit(Context));
-  Result->addAttr(OpenCLKernelAttr::CreateImplicit(Context));
-  Result->addAttr(AsmLabelAttr::CreateImplicit(Context, Name));
-  // To see kernel in ast-dump.
-  DC->addDecl(Result);
-  return Result;
+  SYCLKernel->setParams(Params);
+
+  SYCLKernel->addAttr(SYCLDeviceAttr::CreateImplicit(Context));
+  SYCLKernel->addAttr(OpenCLKernelAttr::CreateImplicit(Context));
+  SYCLKernel->addAttr(AsmLabelAttr::CreateImplicit(Context, Name));
+  // To see kernel in AST-dump.
+  DC->addDecl(SYCLKernel);
+  return SYCLKernel;
 }
 
 CompoundStmt *CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelHelper,
@@ -147,7 +146,7 @@ CompoundStmt *CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelHelper,
         S.Context, NestedNameSpecifierLoc(), SourceLocation(), LambdaVD, false,
         DeclarationNameInfo(), QualType(LC->getTypeForDecl(), 0), VK_LValue);
 
-    // Init Lambda fields
+    // Initialize Lambda fields
     llvm::SmallVector<Expr *, 16> InitCaptures;
 
     auto TargetFunc = dyn_cast<FunctionDecl>(DC);
@@ -191,7 +190,7 @@ CompoundStmt *CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelHelper,
               // __set_pointer needs one parameter
               QualType paramTy = (*(Method->param_begin()))->getOriginalType();
 
-              // C++ address space attribute != opencl address space attribute
+              // C++ address space attribute != OpenCL address space attribute
               Expr *qualifiersCast = ImplicitCastExpr::Create(
                   S.Context, paramTy, CK_NoOp, DRE, nullptr, VK_LValue);
               Expr *Res = ImplicitCastExpr::Create(
