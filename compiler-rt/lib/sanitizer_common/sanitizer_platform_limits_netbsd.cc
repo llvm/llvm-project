@@ -218,6 +218,7 @@
 #include <ttyent.h>
 #include <fts.h>
 #include <regex.h>
+#include <fstab.h>
 // clang-format on
 
 // Include these after system headers to avoid name clashes and ambiguities.
@@ -257,6 +258,7 @@ unsigned struct_FTS_sz = sizeof(FTS);
 unsigned struct_FTSENT_sz = sizeof(FTSENT);
 unsigned struct_regex_sz = sizeof(regex_t);
 unsigned struct_regmatch_sz = sizeof(regmatch_t);
+unsigned struct_fstab_sz = sizeof(struct fstab);
 unsigned struct_utimbuf_sz = sizeof(struct utimbuf);
 unsigned struct_itimerspec_sz = sizeof(struct itimerspec);
 unsigned struct_timex_sz = sizeof(struct timex);

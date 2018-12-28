@@ -1547,7 +1547,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
             sectionName<CategorySection>());
       if (!EmittedClass) {
         createNullGlobal(".objc_null_cls_init_ref", NULLPtr,
-            sectionName<ClassReferenceSection>());
+            sectionName<ClassSection>());
         createNullGlobal(".objc_null_class_ref", { NULLPtr, NULLPtr },
             sectionName<ClassReferenceSection>());
       }

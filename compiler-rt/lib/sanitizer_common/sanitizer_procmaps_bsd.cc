@@ -45,6 +45,10 @@
 
 namespace __sanitizer {
 
+bool IsProcMapsAvailable() {
+  return true;
+}
+
 void ReadProcMaps(ProcSelfMapsBuff *proc_maps) {
   const int Mib[] = {
 #if SANITIZER_FREEBSD

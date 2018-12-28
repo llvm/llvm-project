@@ -131,7 +131,8 @@ llvm::Expected<std::vector<uint8_t>> FakeMemory::Read(addr_t Addr,
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Address out of range.");
   Size = std::min(Size, Data.size() - (size_t)Addr);
-  return std::vector<uint8_t>(&Data[Addr], &Data[Addr + Size]);
+  auto Begin = std::next(Data.begin(), Addr);
+  return std::vector<uint8_t>(Begin, std::next(Begin, Size));
 }
 
 llvm::Expected<size_t> FakeMemory::Write(addr_t Addr,

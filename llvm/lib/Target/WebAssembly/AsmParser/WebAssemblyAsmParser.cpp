@@ -172,6 +172,18 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
     Instructions,
   } CurrentState = FileStart;
 
+  // For ensuring blocks are properly nested.
+  enum NestingType {
+    Function,
+    Block,
+    Loop,
+    Try,
+    If,
+    Else,
+    Undefined,
+  };
+  std::vector<NestingType> NestingStack;
+
   // We track this to see if a .functype following a label is the same,
   // as this is how we recognize the start of a function.
   MCSymbol *LastLabel = nullptr;
@@ -184,10 +196,6 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
 
-  void addSignature(std::unique_ptr<wasm::WasmSignature> &&Sig) {
-    Signatures.push_back(std::move(Sig));
-  }
-
 #define GET_ASSEMBLER_HEADER
 #include "WebAssemblyGenAsmMatcher.inc"
 
@@ -197,8 +205,58 @@ public:
     llvm_unreachable("ParseRegister is not implemented.");
   }
 
-  bool error(const StringRef &Msg, const AsmToken &Tok) {
+  bool error(const Twine &Msg, const AsmToken &Tok) {
     return Parser.Error(Tok.getLoc(), Msg + Tok.getString());
+  }
+
+  bool error(const Twine &Msg) {
+    return Parser.Error(Lexer.getTok().getLoc(), Msg);
+  }
+
+  void addSignature(std::unique_ptr<wasm::WasmSignature> &&Sig) {
+    Signatures.push_back(std::move(Sig));
+  }
+
+  std::pair<StringRef, StringRef> nestingString(NestingType NT) {
+    switch (NT) {
+    case Function:
+      return {"function", "end_function"};
+    case Block:
+      return {"block", "end_block"};
+    case Loop:
+      return {"loop", "end_loop"};
+    case Try:
+      return {"try", "end_try"};
+    case If:
+      return {"if", "end_if"};
+    case Else:
+      return {"else", "end_if"};
+    default:
+      llvm_unreachable("unknown NestingType");
+    }
+  }
+
+  void push(NestingType NT) { NestingStack.push_back(NT); }
+
+  bool pop(StringRef Ins, NestingType NT1, NestingType NT2 = Undefined) {
+    if (NestingStack.empty())
+      return error(Twine("End of block construct with no start: ") + Ins);
+    auto Top = NestingStack.back();
+    if (Top != NT1 && Top != NT2)
+      return error(Twine("Block construct type mismatch, expected: ") +
+                   nestingString(Top).second + ", instead got: " + Ins);
+    NestingStack.pop_back();
+    return false;
+  }
+
+  bool ensureEmptyNestingStack() {
+    auto err = !NestingStack.empty();
+    while (!NestingStack.empty()) {
+      error(Twine("Unmatched block construct(s) at function end: ") +
+            nestingString(NestingStack.back()).first);
+      NestingStack.pop_back();
+    }
+    return err;
   }
 
   bool isNext(AsmToken::TokenKind Kind) {
@@ -327,6 +385,45 @@ public:
     // If no '.', there is no type prefix.
     auto BaseName = NamePair.second.empty() ? NamePair.first : NamePair.second;
 
+    // If this instruction is part of a control flow structure, ensure
+    // proper nesting.
+    if (BaseName == "block") {
+      push(Block);
+    } else if (BaseName == "loop") {
+      push(Loop);
+    } else if (BaseName == "try") {
+      push(Try);
+    } else if (BaseName == "if") {
+      push(If);
+    } else if (BaseName == "else") {
+      if (pop(BaseName, If))
+        return true;
+      push(Else);
+    } else if (BaseName == "catch") {
+      if (pop(BaseName, Try))
+        return true;
+      push(Try);
+    } else if (BaseName == "catch_all") {
+      if (pop(BaseName, Try))
+        return true;
+      push(Try);
+    } else if (BaseName == "end_if") {
+      if (pop(BaseName, If, Else))
+        return true;
+    } else if (BaseName == "end_try") {
+      if (pop(BaseName, Try))
+        return true;
+    } else if (BaseName == "end_loop") {
+      if (pop(BaseName, Loop))
+        return true;
+    } else if (BaseName == "end_block") {
+      if (pop(BaseName, Block))
+        return true;
+    } else if (BaseName == "end_function") {
+      if (pop(BaseName, Function) || ensureEmptyNestingStack())
+        return true;
+    }
+
     while (Lexer.isNot(AsmToken::EndOfStatement)) {
       auto &Tok = Lexer.getTok();
       switch (Tok.getKind()) {
@@ -391,7 +488,8 @@ public:
     // assembly, so we add a dummy one explicitly (since we have no control
     // over signature tables here, we assume these will be regenerated when
     // the wasm module is generated).
-    if (BaseName == "block" || BaseName == "loop" || BaseName == "try") {
+    if (BaseName == "block" || BaseName == "loop" || BaseName == "try" ||
+        BaseName == "if") {
       Operands.push_back(make_unique<WebAssemblyOperand>(
           WebAssemblyOperand::Integer, NameLoc, NameLoc,
           WebAssemblyOperand::IntOp{-1}));
@@ -476,7 +574,10 @@ public:
           TOut.getStreamer().getContext().getOrCreateSymbol(SymName));
       if (CurrentState == Label && WasmSym == LastLabel) {
         // This .functype indicates a start of a function.
+        if (ensureEmptyNestingStack())
+          return true;
         CurrentState = FunctionStart;
+        push(Function);
       }
       auto Signature = make_unique<wasm::WasmSignature>();
       if (parseSignature(Signature.get()))
@@ -565,6 +666,8 @@ public:
     }
     llvm_unreachable("Implement any new match types added!");
   }
+
+  void onEndOfFile() override { ensureEmptyNestingStack(); }
 };
 } // end anonymous namespace
 

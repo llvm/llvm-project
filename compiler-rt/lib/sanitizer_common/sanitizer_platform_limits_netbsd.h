@@ -66,6 +66,8 @@ extern unsigned struct_FTSENT_sz;
 extern unsigned struct_regex_sz;
 extern unsigned struct_regmatch_sz;
 
+extern unsigned struct_fstab_sz;
+
 struct __sanitizer_regmatch {
   OFF_T rm_so;
   OFF_T rm_eo;

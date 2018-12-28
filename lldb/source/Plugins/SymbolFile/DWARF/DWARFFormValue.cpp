@@ -604,7 +604,7 @@ dw_addr_t DWARFFormValue::Address() const {
 }
 
 uint64_t DWARFFormValue::Reference() const {
-  uint64_t die_offset = m_value.value.uval;
+  uint64_t value = m_value.value.uval;
   switch (m_form) {
   case DW_FORM_ref1:
   case DW_FORM_ref2:
@@ -613,32 +613,36 @@ uint64_t DWARFFormValue::Reference() const {
   case DW_FORM_ref_udata:
     assert(m_cu); // CU must be valid for DW_FORM_ref forms that are compile
                   // unit relative or we will get this wrong
-    die_offset += m_cu->GetOffset();
-    break;
+    return value + m_cu->GetOffset();
+
+  case DW_FORM_ref_addr:
+  case DW_FORM_ref_sig8:
+  case DW_FORM_GNU_ref_alt:
+    return value;
 
   default:
-    break;
+    return DW_INVALID_OFFSET;
   }
-
-  return die_offset;
 }
 
 uint64_t DWARFFormValue::Reference(dw_offset_t base_offset) const {
-  uint64_t die_offset = m_value.value.uval;
+  uint64_t value = m_value.value.uval;
   switch (m_form) {
   case DW_FORM_ref1:
   case DW_FORM_ref2:
   case DW_FORM_ref4:
   case DW_FORM_ref8:
   case DW_FORM_ref_udata:
-    die_offset += base_offset;
-    break;
+    return value + base_offset;
+
+  case DW_FORM_ref_addr:
+  case DW_FORM_ref_sig8:
+  case DW_FORM_GNU_ref_alt:
+    return value;
 
   default:
-    break;
+    return DW_INVALID_OFFSET;
   }
-
-  return die_offset;
 }
 
 const uint8_t *DWARFFormValue::BlockData() const { return m_value.data; }

@@ -453,6 +453,8 @@ uptr internal_execve(const char *filename, char *const argv[],
 
 // ----------------- sanitizer_common.h
 bool FileExists(const char *filename) {
+  if (ShouldMockFailureToOpen(filename))
+    return false;
   struct stat st;
 #if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   if (internal_syscall(SYSCALL(newfstatat), AT_FDCWD, filename, &st, 0))
@@ -1003,6 +1005,8 @@ ThreadLister::~ThreadLister() {
 // Take care of unusable kernel area in top gigabyte.
 static uptr GetKernelAreaSize() {
 #if SANITIZER_LINUX && !SANITIZER_X32
+  if (!MemoryMappingLayout::IsAvailable())
+    return 0;
   const uptr gbyte = 1UL << 30;
 
   // Firstly check if there are writable segments

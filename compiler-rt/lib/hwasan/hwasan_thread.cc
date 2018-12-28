@@ -44,7 +44,7 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size) {
   ScopedTaggingDisabler disabler;
 
   // If this process is "init" (pid 1), /proc may not be mounted yet.
-  if (IsMainThread() && !FileExists("/proc/self/maps")) {
+  if (IsMainThread() && !MemoryMappingLayout::IsAvailable()) {
     stack_top_ = stack_bottom_ = 0;
     tls_begin_ = tls_end_ = 0;
   } else {
