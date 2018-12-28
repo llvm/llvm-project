@@ -3417,7 +3417,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsWindowsCygnus = RawTriple.isWindowsCygwinEnvironment();
   bool IsWindowsMSVC = RawTriple.isWindowsMSVCEnvironment();
   bool IsIAMCU = RawTriple.isOSIAMCU();
-  bool IsSYCL = Args.hasArg(options::OPT_sycl);
+  bool IsSYCLDevice = (RawTriple.getEnvironment() == llvm::Triple::SYCLDevice);
 
   // Adjust IsWindowsXYZ for CUDA/HIP compilations.  Even when compiling in
   // device mode (i.e., getToolchain().getTriple() is NVPTX/AMDGCN, not
@@ -3466,10 +3466,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
   }
 
-  if (IsSYCL) {
+  if (IsSYCLDevice) {
     // We want to compile sycl kernels.
     CmdArgs.push_back("-std=c++11");
     CmdArgs.push_back("-fsycl-is-device");
+    // Pass the triple of host when doing SYCL
+    std::string NormalizedTriple =
+        llvm::Triple(llvm::sys::getProcessTriple()).normalize();
+    CmdArgs.push_back("-aux-triple");
+    CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
   }
 
   if (IsOpenMPDevice) {
@@ -3555,6 +3560,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_RewrittenLegacyObjC) {
       CmdArgs.push_back("-rewrite-objc");
       rewriteKind = RK_Fragile;
+    } else if (JA.getType() == types::TY_SPIRV) {
+      CmdArgs.push_back("-emit-spirv");
     } else {
       assert(JA.getType() == types::TY_PP_Asm && "Unexpected output type!");
     }

@@ -911,8 +911,9 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   if (!hasTarget())
     return false;
 
-  // Create TargetInfo for the other side of CUDA and OpenMP compilation.
-  if ((getLangOpts().CUDA || getLangOpts().OpenMPIsDevice) &&
+  // Create TargetInfo for the other side of CUDA, SYCL and OpenMP compilation.
+  if ((getLangOpts().CUDA || getLangOpts().OpenMPIsDevice ||
+       getLangOpts().SYCL) &&
       !getFrontendOpts().AuxTriple.empty()) {
     auto TO = std::make_shared<TargetOptions>();
     TO->Triple = llvm::Triple::normalize(getFrontendOpts().AuxTriple);

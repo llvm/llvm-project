@@ -1022,6 +1022,17 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     T.setObjectFormat(llvm::Triple::COFF);
     TargetTriple = T.str();
   }
+  if (Args.hasArg(options::OPT_sycl)) {
+    // --sycl implies spir arch and SYCL Device
+    llvm::Triple T(TargetTriple);
+    // FIXME: defaults to spir64, should probably have a way to set spir
+    // possibly new -sycl-target option
+    T.setArch(llvm::Triple::spir64);
+    T.setVendor(llvm::Triple::UnknownVendor);
+    T.setOS(llvm::Triple(llvm::sys::getProcessTriple()).getOS());
+    T.setEnvironment(llvm::Triple::SYCLDevice);
+    TargetTriple = T.str();
+  }
   if (const Arg *A = Args.getLastArg(options::OPT_target))
     TargetTriple = A->getValue();
   if (const Arg *A = Args.getLastArg(options::OPT_ccc_install_dir))
@@ -3422,6 +3433,9 @@ Action *Driver::ConstructPhaseAction(
       types::ID Output =
           Args.hasArg(options::OPT_S) ? types::TY_LLVM_IR : types::TY_LLVM_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
+    }
+    if (Args.hasArg(options::OPT_sycl)) {
+      return C.MakeAction<BackendJobAction>(Input, types::TY_SPIRV);
     }
     return C.MakeAction<BackendJobAction>(Input, types::TY_PP_Asm);
   }

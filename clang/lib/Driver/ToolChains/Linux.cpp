@@ -215,7 +215,12 @@ static void addMultilibsFilePaths(const Driver &D, const MultilibSet &Multilibs,
 
 Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
-  GCCInstallation.init(Triple, Args);
+  // for SYCL device targets, we rely on the host GCC for proper compilation
+  if (Triple.getEnvironment() == llvm::Triple::SYCLDevice) {
+    GCCInstallation.init(llvm::Triple(llvm::sys::getProcessTriple()), Args);
+  } else {
+    GCCInstallation.init(Triple, Args);
+  }
   Multilibs = GCCInstallation.getMultilibs();
   SelectedMultilib = GCCInstallation.getMultilib();
   llvm::Triple::ArchType Arch = Triple.getArch();
@@ -839,6 +844,13 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   const StringRef AndroidMultiarchIncludeDirs[] = {AndroidMultiarchIncludeDir};
   if (getTriple().isAndroid())
     MultiarchIncludeDirs = AndroidMultiarchIncludeDirs;
+
+  // SYCL Device uses Host includes
+  if (getTriple().getEnvironment() == llvm::Triple::SYCLDevice) {
+    llvm::Triple HostTriple = llvm::Triple(llvm::sys::getProcessTriple());
+    if (HostTriple.getArch() == llvm::Triple::x86_64)
+      MultiarchIncludeDirs = X86_64MultiarchIncludeDirs;
+  }
 
   for (StringRef Dir : MultiarchIncludeDirs) {
     if (D.getVFS().exists(SysRoot + Dir)) {
