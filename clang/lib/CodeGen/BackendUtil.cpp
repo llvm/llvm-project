@@ -63,6 +63,11 @@
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include "LLVMSPIRVLib.h"
 #include <memory>
+
+namespace SPIRV {
+  extern llvm::cl::opt<bool> SPIRVNoDerefAttr;
+}
+
 using namespace clang;
 using namespace llvm;
 
@@ -835,7 +840,8 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
 
 
   case Backend_EmitSPIRV:
-
+    if (LangOpts.SYCL)
+      SPIRV::SPIRVNoDerefAttr = true;
     PerModulePasses.add(createSPIRVWriterPass(*OS));
 
     break;
