@@ -636,8 +636,8 @@ TEST_F(MinidumpParserTest, MinidumpDuplicateModuleMinAddress) {
   // one time, we pick the one with the lowest base_of_image.
   std::vector<const MinidumpModule *> filtered_modules =
       parser->GetFilteredModuleList();
-  EXPECT_EQ(1, filtered_modules.size());
-  EXPECT_EQ(0x0000000000001000, filtered_modules[0]->base_of_image);
+  EXPECT_EQ(1u, filtered_modules.size());
+  EXPECT_EQ(0x0000000000001000u, filtered_modules[0]->base_of_image);
 }
 
 TEST_F(MinidumpParserTest, MinidumpModuleOrder) {
@@ -652,12 +652,12 @@ TEST_F(MinidumpParserTest, MinidumpModuleOrder) {
   std::vector<const MinidumpModule *> filtered_modules =
       parser->GetFilteredModuleList();
   llvm::Optional<std::string> name;
-  EXPECT_EQ(2, filtered_modules.size());
-  EXPECT_EQ(0x0000000000002000, filtered_modules[0]->base_of_image);
+  EXPECT_EQ(2u, filtered_modules.size());
+  EXPECT_EQ(0x0000000000002000u, filtered_modules[0]->base_of_image);
   name = parser->GetMinidumpString(filtered_modules[0]->module_name_rva);
   ASSERT_TRUE((bool)name);
   EXPECT_EQ(std::string("/tmp/a"), *name);
-  EXPECT_EQ(0x0000000000001000, filtered_modules[1]->base_of_image);
+  EXPECT_EQ(0x0000000000001000u, filtered_modules[1]->base_of_image);
   name = parser->GetMinidumpString(filtered_modules[1]->module_name_rva);
   ASSERT_TRUE((bool)name);
   EXPECT_EQ(std::string("/tmp/b"), *name);
