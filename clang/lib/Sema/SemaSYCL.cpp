@@ -412,7 +412,7 @@ static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
                               QualType NameType, CXXRecordDecl *Lambda) {
   ASTContext &Ctx = Lambda->getASTContext();
   const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(Lambda);
-  KernelParamKind Knd = SYCLIntegrationHeader::kind_none;
+  KernelParamKind Knd = SYCLIntegrationHeader::kind_last;
   H.startKernel(Name, NameType);
   unsigned Offset = 0;
   int Info = 0;
@@ -420,8 +420,9 @@ static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
   auto Vis = std::make_tuple(
       // pre_visit
       [&](int CaptureN, VarDecl *CapturedVar, FieldDecl *CapturedVal) {
+        // Set offset in bytes
         Offset = static_cast<unsigned>(
-            Layout.getFieldOffset(CapturedVal->getFieldIndex()));
+            Layout.getFieldOffset(CapturedVal->getFieldIndex()))/8;
       },
       // visit_accessor
       [&](int CaptureN, target AccTrg, QualType PointeeType,
@@ -516,7 +517,6 @@ static const char *paramKind2Str(KernelParamKind K) {
   case SYCLIntegrationHeader::kind_##x:                                        \
     return "kind_" #x
   switch (K) {
-    CASE(none);
     CASE(accessor);
     CASE(scalar);
     CASE(struct);
@@ -664,37 +664,15 @@ void SYCLIntegrationHeader::emit(raw_ostream &O) {
   }
   O << "\n";
 
+  O << "#include <CL/sycl/detail/kernel_desc.hpp>\n";
+
+  O << "\n";
+
   O << "namespace cl {\n";
   O << "namespace sycl {\n";
   O << "namespace detail {\n";
 
-  O << "// kernel parameter kinds\n";
-  O << "enum kernel_param_kind_t {\n";
-
-  for (int I = SYCLIntegrationHeader::kind_first;
-       I <= SYCLIntegrationHeader::kind_last; I++) {
-    KernelParamKind It = static_cast<KernelParamKind>(I);
-    O << "  " << std::string(paramKind2Str(It));
-    if (I < SYCLIntegrationHeader::kind_last)
-      O << ",";
-    O << "\n";
-  }
-  O << "};\n";
   O << "\n";
-  O << "// describes a kernel parameter\n";
-  O << "struct kernel_param_desc_t {\n";
-  O << "  // parameter kind\n";
-  O << "  kernel_param_kind_t kind;\n";
-  O << "  // kind == kind_scalar, kind_struct\n";
-  O << "  //   parameter size in bytes (includes padding for structs)\n";
-  O << "  // kind == kind_accessor\n";
-  O << "  //   access target; possible access targets are defined in "
-       "access/access.hpp\n";
-  O << "  int                 info;\n";
-  O << "  // offset of the captured value of the parameter in the lambda or "
-       "function object\n";
-  O << "  int                 offs;\n";
-  O << "};\n\n";
 
   O << "// names of all kernels defined in the corresponding source\n";
   O << "static constexpr\n";
@@ -720,11 +698,9 @@ void SYCLIntegrationHeader::emit(raw_ostream &O) {
 
     for (const auto &P : K.Params) {
       std::string TyStr = paramKind2Str(P.Kind);
-      O << "  { " << TyStr << ", " << P.Info << ", " << P.Offset << " },\n";
+      O << "  { kernel_param_kind_t::" << TyStr << ", ";
+      O << P.Info << ", " << P.Offset << " },\n";
     }
-    O << "  { kind_none, 0, 0 }";
-    if (I < KernelDescs.size() - 1)
-      O << ",";
     O << "\n";
   }
   O << "};\n\n";
@@ -772,7 +748,7 @@ void SYCLIntegrationHeader::emit(raw_ostream &O) {
     O << "    return kernel_signatures[i+" << CurStart << "];\n";
     O << "  }\n";
     O << "};\n";
-    CurStart += N + 1;
+    CurStart += N;
   }
   O << "\n";
   O << "} // namespace detail\n";

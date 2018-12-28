@@ -298,8 +298,7 @@ public:
   // kernel lambda or function object
   enum kernel_param_kind_t {
     kind_first,
-    kind_none = kind_first,
-    kind_accessor,
+    kind_accessor = kind_first,
     kind_scalar,
     kind_struct,
     kind_sampler,
@@ -333,7 +332,7 @@ private:
   // Kernel actual parameter descriptor.
   struct KernelParamDesc {
     // Represents a parameter kind.
-    kernel_param_kind_t Kind = kind_none;
+    kernel_param_kind_t Kind = kind_last;
     // If Kind is kind_scalar or kind_struct, then
     //   denotes parameter size in bytes (includes padding for structs)
     // If Kind is kind_accessor
