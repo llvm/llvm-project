@@ -122,6 +122,11 @@ set(cuda_wrapper_files
   cuda_wrappers/new
 )
 
+set(sycl_wrapper_files
+  sycl_wrappers/algorithm
+  sycl_wrappers/random
+)
+
 set(output_dir ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION}/include)
 
 # Generate arm_neon.h
@@ -134,7 +139,7 @@ clang_tablegen(arm_fp16.h -gen-arm-fp16
   SOURCE ${CLANG_SOURCE_DIR}/include/clang/Basic/arm_fp16.td)
 
 set(out_files)
-foreach( f ${files} ${cuda_wrapper_files} )
+foreach( f ${files} ${cuda_wrapper_files} ${sycl_wrapper_files} )
   set( src ${CMAKE_CURRENT_SOURCE_DIR}/${f} )
   set( dst ${output_dir}/${f} )
   add_custom_command(OUTPUT ${dst}
