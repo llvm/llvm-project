@@ -240,10 +240,8 @@ void BuildArgTys(ASTContext &Context,
   for (auto V : ArgDecls) {
     QualType ArgTy = V->getType();
     QualType ActualArgType = ArgTy;
-    StringRef Name = ArgTy.getBaseTypeIdentifier()->getName();
-    // TODO: harden this check with additional validation that this class is
-    // declared in cl::sycl namespace
-    if (std::string(Name) == "accessor") {
+    std::string Name = ArgTy.getCanonicalType().getAsString();
+    if (Name.find("class cl::sycl::accessor") != std::string::npos) {
       if (const auto *RecordDecl = ArgTy->getAsCXXRecordDecl()) {
         const auto *TemplateDecl =
             dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl);
@@ -251,22 +249,23 @@ void BuildArgTys(ASTContext &Context,
           // First parameter - data type
           QualType PointeeType = TemplateDecl->getTemplateArgs()[0].getAsType();
           // Fourth parameter - access target
-          auto AccessQualifier = TemplateDecl->getTemplateArgs()[3].getAsIntegral();
+          auto AccessQualifier =
+              TemplateDecl->getTemplateArgs()[3].getAsIntegral();
           int64_t AccessTarget = AccessQualifier.getExtValue();
           Qualifiers Quals = PointeeType.getQualifiers();
           // TODO: Support all access targets
           switch (AccessTarget) {
-            case target::global_buffer:
+          case target::global_buffer:
             Quals.setAddressSpace(LangAS::opencl_global);
-              break;
-            case target::constant_buffer:
+            break;
+          case target::constant_buffer:
             Quals.setAddressSpace(LangAS::opencl_constant);
-              break;
-            case target::local:
+            break;
+          case target::local:
             Quals.setAddressSpace(LangAS::opencl_local);
-              break;
-            default:
-              llvm_unreachable("Unsupported access target");
+            break;
+          default:
+            llvm_unreachable("Unsupported access target");
           }
           // TODO: get address space from accessor template parameter.
           PointeeType =
