@@ -863,6 +863,9 @@ amd_comgr_status_t AMDGPUCompiler::CompileToBitcode() {
 }
 
 amd_comgr_status_t AMDGPUCompiler::LinkBitcodeToBitcode() {
+  if (auto Status = CreateTmpDirs())
+    return Status;
+
   LLVMContext Context;
   Context.setDiagnosticHandler(
       llvm::make_unique<AMDGPUCompilerDiagnosticHandler>(this), true);
@@ -876,8 +879,10 @@ amd_comgr_status_t AMDGPUCompiler::LinkBitcodeToBitcode() {
       continue;
 
     SMDiagnostic SMDiag;
-    auto Mod = parseIR(MemoryBufferRef(StringRef(Input->data, Input->size),
-                                       Input->name), SMDiag, Context);
+    auto InputPath = GetFilePath(Input, InputDir);
+    if (auto Status = OutputToFile(Input, InputPath))
+      return Status;
+    auto Mod = getLazyIRFileModule(InputPath, SMDiag, Context);
     if (!Mod) {
       SMDiag.print(Input->name, LogS, /* ShowColors */ false);
       return AMD_COMGR_STATUS_ERROR;
