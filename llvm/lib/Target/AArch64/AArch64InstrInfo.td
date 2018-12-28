@@ -114,8 +114,8 @@ def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,
                        AssemblerPredicate<"FeatureAltFPCmp", "altnzcv">;
 def HasFRInt3264     : Predicate<"Subtarget->hasFRInt3264()">,
                        AssemblerPredicate<"FeatureFRInt3264", "frint3264">;
-def HasSpecCtrl      : Predicate<"Subtarget->hasSpecCtrl()">,
-                       AssemblerPredicate<"FeatureSpecCtrl", "specctrl">;
+def HasSB            : Predicate<"Subtarget->hasSB()">,
+                       AssemblerPredicate<"FeatureSB", "sb">;
 def HasPredCtrl      : Predicate<"Subtarget->hasPredCtrl()">,
                        AssemblerPredicate<"FeaturePredCtrl", "predctrl">;
 def HasCCDP          : Predicate<"Subtarget->hasCCDP()">,
@@ -733,7 +733,7 @@ def AXFLAG : PstateWriteSimple<(ins), "axflag", "">, Sched<[WriteSys]> {
 def SB : SimpleSystemI<0, (ins), "sb", "">, Sched<[]> {
   let Inst{20-5} = 0b0001100110000111;
   let Unpredictable{11-8} = 0b1111;
-  let Predicates = [HasSpecCtrl];
+  let Predicates = [HasSB];
   let hasSideEffects = 1;
 }
 
