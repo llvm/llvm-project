@@ -25,7 +25,7 @@ FunctionDecl *CreateSYCLKernelFunction(ASTContext &Context, StringRef Name,
                                        ArrayRef<DeclaratorDecl *> ArgDecls) {
 
   DeclContext *DC = Context.getTranslationUnitDecl();
-  FunctionProtoType::ExtProtoInfo Info;
+  FunctionProtoType::ExtProtoInfo Info(CC_OpenCLKernel);
   QualType RetTy = Context.VoidTy;
   QualType FuncTy = Context.getFunctionType(RetTy, ArgTys, Info);
   DeclarationName DN = DeclarationName(&Context.Idents.get(Name));
@@ -161,6 +161,7 @@ void BuildArgTys(ASTContext &Context,
         if (TemplateDecl) {
           QualType PointeeType = TemplateDecl->getTemplateArgs()[0].getAsType();
           Qualifiers Quals = PointeeType.getQualifiers();
+          // TODO: get address space from accessor template parameter.
           Quals.setAddressSpace(LangAS::opencl_global);
           PointeeType =
               Context.getQualifiedType(PointeeType.getUnqualifiedType(), Quals);

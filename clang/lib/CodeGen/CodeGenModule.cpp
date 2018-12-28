@@ -552,6 +552,23 @@ void CodeGenModule::Release() {
     }
   }
 
+  // Emit SYCL specific module metadata: OpenCL/SPIR version.
+  if (LangOpts.SYCL) {
+    llvm::Metadata *OCLVerElts[] = {
+        llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 1)),
+        llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 2))};
+    llvm::NamedMDNode *OCLVerMD =
+        TheModule.getOrInsertNamedMetadata("opencl.ocl.version");
+    llvm::LLVMContext &Ctx = TheModule.getContext();
+    OCLVerMD->addOperand(llvm::MDNode::get(Ctx, OCLVerElts));
+    llvm::Metadata *SPIRVerElts[] = {
+        llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 1)),
+        llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 2))};
+    llvm::NamedMDNode *SPIRVerMD =
+        TheModule.getOrInsertNamedMetadata("opencl.spir.version");
+    SPIRVerMD->addOperand(llvm::MDNode::get(Ctx, SPIRVerElts));
+  }
+
   if (uint32_t PLevel = Context.getLangOpts().PICLevel) {
     assert(PLevel < 3 && "Invalid PIC Level");
     getModule().setPICLevel(static_cast<llvm::PICLevel::Level>(PLevel));

@@ -9933,7 +9933,7 @@ void ASTContext::forEachMultiversionedFunctionVersion(
 CallingConv ASTContext::getDefaultCallingConvention(bool IsVariadic,
                                                     bool IsCXXMethod) const {
   // Pass through to the C++ ABI object
-  if (IsCXXMethod)
+  if (IsCXXMethod && !LangOpts.SYCL)
     return ABI->getDefaultMethodCallConv(IsVariadic);
 
   switch (LangOpts.getDefaultCallingConv()) {
