@@ -13,6 +13,7 @@
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallVector.h"
 #include "TreeTransform.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 
 using namespace clang;
 
@@ -26,6 +27,35 @@ enum target {
   host_buffer,
   host_image,
   image_array
+};
+
+class MarkDeviceFunction : public RecursiveASTVisitor<MarkDeviceFunction> {
+public:
+  MarkDeviceFunction(Sema &S)
+      : RecursiveASTVisitor<MarkDeviceFunction>(), SemaRef(S) {}
+  bool VisitCallExpr(CallExpr *e) {
+    if (FunctionDecl *Callee = e->getDirectCallee()) {
+      // Remember that all SYCL kernel functions have deferred
+      // instantiation as template functions. It means that
+      // all functions used by kernel have already been parsed and have
+      // definitions.
+      if (FunctionDecl *Def = Callee->getDefinition()) {
+        if (!Def->hasAttr<SYCLDeviceAttr>()) {
+          Def->addAttr(SYCLDeviceAttr::CreateImplicit(SemaRef.Context));
+          this->TraverseStmt(Def->getBody());
+          // But because parser works with top level decls and codegen
+          // already saw and ignored our function without device attribute we
+          // need to add this function into sycl kernels array to show it
+          // this function again.
+          SemaRef.AddSyclKernel(Def);
+        }
+      }
+    }
+    return true;
+  }
+
+private:
+  Sema &SemaRef;
 };
 
 class KernelBodyTransform : public TreeTransform<KernelBodyTransform> {
@@ -302,6 +332,10 @@ void Sema::ConstructSYCLKernel(FunctionDecl *KernelHelper) {
     SYCLKernel->setBody(SYCLKernelBody);
 
     AddSyclKernel(SYCLKernel);
+
+    // Let's mark all called functions with SYCL Device attribute.
+    MarkDeviceFunction Marker(*this);
+    Marker.TraverseStmt(SYCLKernelBody);
   }
 }
 
