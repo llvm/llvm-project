@@ -15,8 +15,10 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h" // used in integration header creation
+#include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 
@@ -402,15 +404,16 @@ static void BuildArgTys(ASTContext &Context, CXXRecordDecl *Lambda,
 }
 
 /// Adds necessary data describing given kernel to the integration header.
-/// \param H      the integration header object
-/// \param Name   kernel name
-/// \param Lambda kernel lambda object
+/// \param H        the integration header object
+/// \param Name     kernel name
+/// \param NameType user-specified type representing kernel name
+/// \param Lambda   kernel lambda object
 static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
-                              CXXRecordDecl *Lambda) {
+                              QualType NameType, CXXRecordDecl *Lambda) {
   ASTContext &Ctx = Lambda->getASTContext();
   const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(Lambda);
   KernelParamKind Knd = SYCLIntegrationHeader::kind_none;
-  H.startKernel(Name);
+  H.startKernel(Name, NameType);
   unsigned Offset = 0;
   int Info = 0;
 
@@ -443,6 +446,35 @@ static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
   visitKernelLambdaCaptures(Lambda, Vis);
 }
 
+// Creates a kernel name for given kernel name type which is unique across all
+// instantiations of the type if it is templated. If it is not templated,
+// uniqueueness is prescribed by the SYCL spec. 'class' and 'struct' keywords
+// are removed to make the name shorter. Non-alphanumeric characters in a kernel
+// name are OK - SPIRV and runtimes allow that.
+static std::string constructKernelName(QualType KernelNameType) {
+  static const std::string Kwds[] = {
+    std::string("class"),
+    std::string("struct")
+  };
+  std::string TStr = KernelNameType.getAsString();
+
+  for (const std::string &Kwd : Kwds) {
+    for (size_t Pos = TStr.find(Kwd);
+         Pos != StringRef::npos;
+         Pos = TStr.find(Kwd, Pos)) {
+
+      size_t EndPos = Pos + Kwd.length();
+      if ((!llvm::isAlnum(TStr[Pos - 1])) &&
+          (EndPos == TStr.length() || !llvm::isAlnum(TStr[EndPos]))) {
+        // keyword is a separate word - erase
+        TStr.erase(Pos, Kwd.length());
+      } else
+        Pos = EndPos;
+    }
+  }
+  return StringRef(TStr).trim().str();
+}
+
 void Sema::ConstructSYCLKernel(FunctionDecl *KernelCallerFunc) {
   // TODO: Case when kernel is functor
   CXXRecordDecl *LE = getKernelCallerLambdaArg(KernelCallerFunc);
@@ -455,24 +487,8 @@ void Sema::ConstructSYCLKernel(FunctionDecl *KernelCallerFunc) {
     const TemplateArgumentList *TemplateArgs =
         KernelCallerFunc->getTemplateSpecializationArgs();
     QualType KernelNameType = TemplateArgs->get(0).getAsType();
-    std::string Name = KernelNameType.getBaseTypeIdentifier()->getName().str();
-
-    if (const auto *RecordDecl = KernelNameType->getAsCXXRecordDecl()) {
-      const auto *TemplateDecl =
-          dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl);
-      if (TemplateDecl) {
-        QualType ParamType = TemplateDecl->getTemplateArgs()[0].getAsType();
-        Name += "_" + ParamType.getAsString() + "_";
-      }
-    }
-    const std::string ToBeErased[2] = {"class ", "struct "};
-    for (size_t i = 0; i < 2; ++i) {
-      for (size_t pos = Name.find(ToBeErased[i]); pos != std::string::npos;
-           pos = Name.find(ToBeErased[i])) {
-        Name.erase(pos, ToBeErased[i].length());
-      }
-    }
-    populateIntHeader(getSyclIntegrationHeader(), Name, LE);
+    std::string Name = constructKernelName(KernelNameType);
+    populateIntHeader(getSyclIntegrationHeader(), Name, KernelNameType, LE);
 
     FunctionDecl *SYCLKernel =
         CreateSYCLKernelFunction(getASTContext(), Name, ArgTys, NewArgDecls);
@@ -512,64 +528,146 @@ static const char *paramKind2Str(KernelParamKind K) {
 #undef CASE
 }
 
-// // Integration header structure:
+// Prints a declaration
+static void printDecl(raw_ostream &O, const Decl *D) {
+  PrintingPolicy P(D->getASTContext().getLangOpts());
+  // print declaration into a string:
+  P.TerseOutput = true; // prints declaration plus " {}" in the end
+  P.PolishForDeclaration = true;
+  std::string S;
+  llvm::raw_string_ostream SO(S);
+  D->print(SO, P);
+  // print the declaration w/o the trailing " {}":
+  StringRef SR = SO.str();
+  size_t Pos = SR.find_first_of('{');
+
+  if (Pos != StringRef::npos) {
+    // can be npos if the type is incomplete
+    SR = SR.take_front(Pos);
+  }
+  O << SR;
+}
+
+// Emits forward declarations of classes and template classes on which
+// declaration of given type depends. For example, consider SimpleVadd
+// class specialization in parallel_for below:
 //
-// // kernel parameter kinds
-// enum kernel_param_kind_t {
-//   kind_none,
-//   kind_accessor,
-//   kind_scalar,
-//   kind_struct,
-//   kind_sampler,
-//   kind_struct_padding
-// };
+//   template <typename T1, unsigned int N, typename ... T2>
+//   class SimpleVadd;
+//   ...
+//   template <unsigned int N, typename T1, typename ... T2>
+//   void simple_vadd(const std::array<T1, N>& VA, const std::array<T1, N>& VB,
+//     std::array<T1, N>& VC, int param, T2 ... varargs) {
+//     ...
+//     deviceQueue.submit([&](cl::sycl::handler& cgh) {
+//       ...
+//       cgh.parallel_for<class SimpleVadd<T1, N, T2...>>(...)
+//       ...
+//     }
+//     ...
+//   }
+//   ...
+//   class MyClass {...};
+//   template <typename T> class MyInnerTmplClass { ... }
+//   template <typename T> class MyTmplClass { ... }
+//   ...
+//   MyClass *c = new MyClass();
+//   MyInnerTmplClass<MyClass**> c1(&c);
+//   simple_vadd(A, B, C, 5, 'a', 1.f,
+//     new MyTmplClass<MyInnerTmplClass<MyClass**>>(c1));
 //
-// // names of all kernels defined in the corresponding source
-// const char* kernel_names[] = {
-//   "SimpleVadd1",
-//   "SimpleVadd2"
-// };
+// it will generate the following forward declarations:
+//   class MyClass;
+//   template <typename T> class MyInnerTmplClass;
+//   template <typename T> class MyTmplClass;
+//   template <typename T1, unsigned int N, typename ...T2> class SimpleVadd;
 //
-// // describes a kernel parameter
-// struct kernel_param_desc_t {
-//   // parameter kind
-//   kernel_param_kind_t kind;
-//   // kind == kind_scalar, kind_struct
-//   //   parameter size in bytes (includes padding for structs)
-//   // kind == kind_accessor
-//   //   access target; possible access targets are defined in
-//   //   access/access.hpp
-//   int                 info;
-//   // offset of the captured value of the parameter in the lambda or function
-//   // object
-//   int                 offs;
-// };
+// TODO FIXME handle the case when kernel typename is declared in a namespace
 //
-// // array representing signatures of all kernels defined in the
-// // corresponding source
-// kernel_param_desc_t kernel_signatures[] = {
-//   // SimpleVadd1
-//   { kind_accessor, 0, 0   }, // accessorC
-//   { kind_accessor, 0, 64  }, // accessorA
-//   { kind_accessor, 0, 128 }, // accessorB
-//   { kind_scalar,   4, 132 }, // param
-//   { kind_none,     0, 0   }, // terminator
-//   // SimpleVadd2
-//   { kind_accessor, 0, 0  }, // accessorC
-//   { kind_scalar,   4, 68 }, // param
-//   { kind_none,     0, 0  }  // terminator
-// };
+// \param O
+//     stream to print to
+// \param T
+//     type to emit forward declarations for
+// \param Printed
+//     a set of type pointers forward declrations has been printed for already
+// \param Depth
+//     recursion depth
 //
-// // indices into the kernel_signatures array, each representing a start of
-// // kernel signature descriptor subarray of the kernel_signature array;
-// // the index order in this array corresponds to the kernel name order in the
-// // kernel_names array
-// unsigned kernel_signature_start[] = {
-//   0, // SimpleVadd1
-//   5  // SimpleVadd2
-// };
-//
+static void emitForwardClassDecls(raw_ostream &O,
+                                  QualType T,
+                                  llvm::SmallPtrSetImpl<const void*> &Printed) {
+
+  // peel off the pointer types and get the class/struct type:
+  for (; T->isPointerType(); T = T->getPointeeType());
+  const CXXRecordDecl *RD = T->getAsCXXRecordDecl();
+
+  if (!RD)
+    return;
+
+  // see if this is a template specialization ...
+  if (const auto *TSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+    // ... yes, it is template specialization:
+    // - first, recurse into template parameters and emit needed forward
+    //   declarations
+    const TemplateArgumentList &Args = TSD->getTemplateArgs();
+
+    for (unsigned I = 0; I < Args.size(); I++) {
+      const TemplateArgument &Arg = Args[I];
+
+      switch (Arg.getKind()) {
+      case TemplateArgument::ArgKind::Type:
+        emitForwardClassDecls(O, Arg.getAsType(), Printed);
+        break;
+      case TemplateArgument::ArgKind::Pack: {
+        ArrayRef<TemplateArgument> Pack = Arg.getPackAsArray();
+
+        for (const auto &T : Pack) {
+          if (T.getKind() == TemplateArgument::ArgKind::Type) {
+            emitForwardClassDecls(O, T.getAsType(), Printed);
+          }
+        }
+        break;
+      }
+      case TemplateArgument::ArgKind::Template:
+        llvm_unreachable("template template arguments not supported");
+      default:
+        break; // nop
+      }
+    }
+    // - second, emit forward declaration for the template class being
+    //   specialized
+    ClassTemplateDecl *CTD = TSD->getSpecializedTemplate();
+    assert(CTD && "template declaration must be available");
+
+    if (Printed.insert(CTD).second) {
+      printDecl(O, CTD);
+      O << ";\n";
+    }
+  } else if (Printed.insert(RD).second) {
+    // emit forward declarations for "leaf" classes in the template parameter
+    // tree; Depth > 0: don't print forward decl for top level non-templated
+    // class
+    printDecl(O, RD);
+    O << ";\n";
+  }
+}
+
 void SYCLIntegrationHeader::emit(raw_ostream &O) {
+  O << "// This is auto-generated SYCL integration header.\n";
+  O << "\n";
+  O << "// Forward declarations of templated kernel function types:\n";
+
+  llvm::SmallPtrSet<const void*, 4> Printed;
+
+  for (const KernelDesc &K : KernelDescs) {
+    emitForwardClassDecls(O, K.NameType, Printed);
+  }
+  O << "\n";
+
+  O << "namespace cl {\n";
+  O << "namespace sycl {\n";
+  O << "namespace detail {\n";
+
   O << "// kernel parameter kinds\n";
   O << "enum kernel_param_kind_t {\n";
 
@@ -583,18 +681,6 @@ void SYCLIntegrationHeader::emit(raw_ostream &O) {
   }
   O << "};\n";
   O << "\n";
-  O << "// names of all kernels defined in the corresponding source\n";
-  O << "const char* kernel_names[] = {\n";
-
-  for (unsigned I = 0; I < KernelDescs.size(); I++) {
-    O << "  \"" << KernelDescs[I].Name << "\"";
-
-    if (I < KernelDescs.size() - 1)
-      O << ",";
-    O << "\n";
-  }
-  O << "};\n\n";
-
   O << "// describes a kernel parameter\n";
   O << "struct kernel_param_desc_t {\n";
   O << "  // parameter kind\n";
@@ -610,9 +696,23 @@ void SYCLIntegrationHeader::emit(raw_ostream &O) {
   O << "  int                 offs;\n";
   O << "};\n\n";
 
+  O << "// names of all kernels defined in the corresponding source\n";
+  O << "static constexpr\n";
+  O << "const char* const kernel_names[] = {\n";
+
+  for (unsigned I = 0; I < KernelDescs.size(); I++) {
+    O << "  \"" << KernelDescs[I].Name << "\"";
+
+    if (I < KernelDescs.size() - 1)
+      O << ",";
+    O << "\n";
+  }
+  O << "};\n\n";
+
   O << "// array representing signatures of all kernels defined in the\n";
   O << "// corresponding source\n";
-  O << "kernel_param_desc_t kernel_signatures[] = {\n";
+  O << "static constexpr\n";
+  O << "const kernel_param_desc_t kernel_signatures[] = {\n";
 
   for (unsigned I = 0; I < KernelDescs.size(); I++) {
     auto &K = KernelDescs[I];
@@ -636,7 +736,8 @@ void SYCLIntegrationHeader::emit(raw_ostream &O) {
   O << "// the index order in this array corresponds to the kernel name order"
        " in the\n";
   O << "// kernel_names array\n";
-  O << "unsigned kernel_signature_start[] = {\n";
+  O << "static constexpr\n";
+  O << "const unsigned kernel_signature_start[] = {\n";
   unsigned CurStart = 0;
 
   for (unsigned I = 0; I < KernelDescs.size(); I++) {
@@ -648,7 +749,38 @@ void SYCLIntegrationHeader::emit(raw_ostream &O) {
     CurStart += K.Params.size() + 1;
   }
   O << "};\n\n";
+
+  O << "// Specializations of this template class encompasses information\n";
+  O << "// about a kernel. The kernel is identified by the template\n";
+  O << "// parameter type.\n";
+  O << "template <class KernelNameType> struct KernelInfo;\n";
+  O << "\n";
+
+  O << "// Specializations of KernelInfo for kernel function types:\n";
+  CurStart = 0;
+
+  for (const KernelDesc &K : KernelDescs) {
+    const size_t N = K.Params.size();
+    O << "template <> struct KernelInfo<" <<
+      K.NameType.getAsString() << "> {\n";
+    O << "  static constexpr const char* getName() { return \""
+      << K.Name << "\"; }\n";
+    O << "  static constexpr unsigned getNumParams() { return "
+      << N << "; }\n";
+    O << "  static constexpr const kernel_param_desc_t& ";
+    O << "getParamDesc(unsigned i) {\n";
+    O << "    return kernel_signatures[i+" << CurStart << "];\n";
+    O << "  }\n";
+    O << "};\n";
+    CurStart += N + 1;
+  }
+  O << "\n";
+  O << "} // namespace detail\n";
+  O << "} // namespace sycl\n";
+  O << "} // namespace cl\n";
+  O << "\n";
 }
+
 
 bool SYCLIntegrationHeader::emit(const StringRef &IntHeaderName) {
   if (IntHeaderName.empty())
@@ -666,16 +798,22 @@ bool SYCLIntegrationHeader::emit(const StringRef &IntHeaderName) {
   return true;
 }
 
-void SYCLIntegrationHeader::startKernel(StringRef KernelName) {
+void SYCLIntegrationHeader::startKernel(StringRef KernelName,
+                                        QualType KernelNameType) {
   KernelDescs.resize(KernelDescs.size() + 1);
   KernelDescs.back().Name = KernelName;
+  KernelDescs.back().NameType = KernelNameType;
 }
 
 void SYCLIntegrationHeader::addParamDesc(kernel_param_kind_t Kind, int Info,
                                          unsigned Offset) {
   auto *K = getCurKernelDesc();
   assert(K && "no kernels");
-  K->Params.push_back(KernelParamDesc{Kind, Info, Offset});
+  K->Params.push_back(KernelParamDesc());
+  KernelParamDesc &PD = K->Params.back();
+  PD.Kind = Kind;
+  PD.Info = Info;
+  PD.Offset = Offset;
 }
 
 void SYCLIntegrationHeader::endKernel() {

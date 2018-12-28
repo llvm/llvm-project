@@ -294,8 +294,8 @@ public:
 // - SYCL kernel parameters and offsets of corresponding actual arguments
 class SYCLIntegrationHeader {
 public:
-  // Kind of kernel's lambda parameters as captured by the compiler in the
-  // kernel lambda object
+  // Kind of kernel's parameters as captured by the compiler in the
+  // kernel lambda or function object
   enum kernel_param_kind_t {
     kind_first,
     kind_none = kind_first,
@@ -319,7 +319,7 @@ public:
 
   ///  Signals that subsequent parameter descriptor additions will go to
   ///  the kernel with given name. Starts new kernel invocation descriptor.
-  void startKernel(StringRef KernelName);
+  void startKernel(StringRef KernelName, QualType KernelNameType);
 
   /// Adds a kernel parameter descriptor to current kernel invocation
   /// descriptor.
@@ -333,15 +333,15 @@ private:
   // Kernel actual parameter descriptor.
   struct KernelParamDesc {
     // Represents a parameter kind.
-    kernel_param_kind_t Kind;
+    kernel_param_kind_t Kind = kind_none;
     // If Kind is kind_scalar or kind_struct, then
     //   denotes parameter size in bytes (includes padding for structs)
     // If Kind is kind_accessor
     //   denotes access target; possible access targets are defined in
     //   access/access.hpp
-    int Info;
+    int Info = 0;
     // Offset of the captured parameter value in the lambda or function object.
-    unsigned Offset;
+    unsigned Offset = 0;
 
     KernelParamDesc() = default;
   };
@@ -350,6 +350,10 @@ private:
   struct KernelDesc {
     /// Kernel name.
     std::string Name;
+
+    /// Kernel name type.
+    QualType NameType;
+
     /// Descriptor of kernel actual parameters.
     SmallVector<KernelParamDesc, 8> Params;
 
