@@ -473,7 +473,13 @@ public:
         // Otherwise in OpenCLC v2.0 s6.5.5: every address space except
         // for __constant can be used as __generic.
         (getAddressSpace() == LangAS::opencl_generic &&
-         other.getAddressSpace() != LangAS::opencl_constant);
+         other.getAddressSpace() != LangAS::opencl_constant) ||
+        (!hasAddressSpace() &&
+         (other.getAddressSpace() == LangAS::sycl_private ||
+          other.getAddressSpace() == LangAS::sycl_local ||
+          other.getAddressSpace() == LangAS::sycl_global ||
+          other.getAddressSpace() == LangAS::sycl_constant ||
+          other.getAddressSpace() == LangAS::sycl_generic));
   }
 
   /// Determines if these qualifiers compatibly include another set.

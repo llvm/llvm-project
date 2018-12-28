@@ -5785,14 +5785,35 @@ QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
     llvm::APSInt max(addrSpace.getBitWidth());
     max =
         Qualifiers::MaxAddressSpace - (unsigned)LangAS::FirstTargetAddressSpace;
+
     if (addrSpace > max) {
       Diag(AttrLoc, diag::err_attribute_address_space_too_high)
           << (unsigned)max.getZExtValue() << AddrSpace->getSourceRange();
       return QualType();
     }
 
-    LangAS ASIdx =
-        getLangASFromTargetAS(static_cast<unsigned>(addrSpace.getZExtValue()));
+    if (LangOpts.SYCL && (addrSpace == 4 || addrSpace > 5)) {
+      Diag(AttrLoc, diag::err_sycl_attribute_address_space_invalid)
+          << AddrSpace->getSourceRange();
+      return QualType();
+    }
+
+    LangAS ASIdx = getLangASFromTargetAS(
+                             static_cast<unsigned>(addrSpace.getZExtValue()));
+
+    if (LangOpts.SYCL) {
+      ASIdx =
+          [](unsigned AS) {
+            switch (AS) {
+            case 5: case 0: return LangAS::sycl_private;
+            case 1: return LangAS::sycl_global;
+            case 2: return LangAS::sycl_constant;
+            case 3: return LangAS::sycl_local;
+            case 4: default: llvm_unreachable("Invalid SYCL AS");
+            }
+          }(static_cast<unsigned>(ASIdx) -
+            static_cast<unsigned>(LangAS::FirstTargetAddressSpace));
+    }
 
     // If this type is already address space qualified with a different
     // address space, reject it.
@@ -5886,15 +5907,23 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
     // The keyword-based type attributes imply which address space to use.
     switch (Attr.getKind()) {
     case ParsedAttr::AT_OpenCLGlobalAddressSpace:
-      ASIdx = LangAS::opencl_global; break;
+      ASIdx =
+          S.getLangOpts().SYCL ? LangAS::sycl_global : LangAS::opencl_global;
+      break;
     case ParsedAttr::AT_OpenCLLocalAddressSpace:
-      ASIdx = LangAS::opencl_local; break;
+      ASIdx = S.getLangOpts().SYCL ? LangAS::sycl_local : LangAS::opencl_local;
+      break;
     case ParsedAttr::AT_OpenCLConstantAddressSpace:
-      ASIdx = LangAS::opencl_constant; break;
+      ASIdx = S.getLangOpts().SYCL ? LangAS::sycl_constant
+                                   : LangAS::opencl_constant;
+      break;
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
-      ASIdx = LangAS::opencl_generic; break;
+      ASIdx = LangAS::opencl_generic;
+      break;
     case ParsedAttr::AT_OpenCLPrivateAddressSpace:
-      ASIdx = LangAS::opencl_private; break;
+      ASIdx =
+          S.getLangOpts().SYCL ? LangAS::sycl_private : LangAS::opencl_private;
+      break;
     default:
       llvm_unreachable("Invalid address space");
     }

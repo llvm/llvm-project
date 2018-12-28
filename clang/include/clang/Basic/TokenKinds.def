@@ -248,6 +248,7 @@ PUNCTUATOR(caretcaret,            "^^")
 //               MSVC <= v18.
 //   KEYOPENCLC   - This is a keyword in OpenCL C
 //   KEYOPENCLCXX - This is a keyword in OpenCL C++
+//   KEYSYCL      - This is a keyword in SYCL C++
 //   KEYNOOPENCL  - This is a keyword that is not supported in OpenCL C
 //                  nor in OpenCL C++.
 //   KEYALTIVEC - This is a keyword in AltiVec
@@ -530,10 +531,10 @@ KEYWORD(__unaligned                 , KEYMS)
 KEYWORD(__super                     , KEYMS)
 
 // OpenCL address space qualifiers
-KEYWORD(__global                    , KEYOPENCLC | KEYOPENCLCXX)
-KEYWORD(__local                     , KEYOPENCLC | KEYOPENCLCXX)
-KEYWORD(__constant                  , KEYOPENCLC | KEYOPENCLCXX)
-KEYWORD(__private                   , KEYOPENCLC | KEYOPENCLCXX)
+KEYWORD(__global                    , KEYOPENCLC | KEYOPENCLCXX | KEYSYCL)
+KEYWORD(__local                     , KEYOPENCLC | KEYOPENCLCXX | KEYSYCL)
+KEYWORD(__constant                  , KEYOPENCLC | KEYOPENCLCXX | KEYSYCL)
+KEYWORD(__private                   , KEYOPENCLC | KEYOPENCLCXX | KEYSYCL)
 KEYWORD(__generic                   , KEYOPENCLC | KEYOPENCLCXX)
 ALIAS("global", __global            , KEYOPENCLC)
 ALIAS("local", __local              , KEYOPENCLC)

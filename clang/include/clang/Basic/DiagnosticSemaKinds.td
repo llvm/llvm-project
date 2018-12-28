@@ -9482,4 +9482,7 @@ def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
 
+def err_sycl_attribute_address_space_invalid : Error<
+  "address space is outside the valid range of values">;
+
 } // end of sema component.

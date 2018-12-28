@@ -43,6 +43,13 @@ enum class LangAS : unsigned {
   cuda_constant,
   cuda_shared,
 
+  sycl_global,
+  sycl_local,
+  sycl_constant,
+  sycl_private,
+  // Likely never used, but useful in the future to reserve the spot in the
+  // enum.
+  sycl_generic,
   // This denotes the count of language-specific address spaces and also
   // the offset added to the target-specific address spaces, which are usually
   // specified by address space attributes __attribute__(address_space(n))).

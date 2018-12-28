@@ -4043,6 +4043,17 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             V->getType()->isIntegerTy())
           V = Builder.CreateZExt(V, ArgInfo.getCoerceToType());
 
+        if (FirstIRArg < IRFuncTy->getNumParams()) {
+          const auto *LHSPtrTy =
+              dyn_cast_or_null<llvm::PointerType>(V->getType());
+          const auto *RHSPtrTy = dyn_cast_or_null<llvm::PointerType>(
+              IRFuncTy->getParamType(FirstIRArg));
+          if (LHSPtrTy && RHSPtrTy &&
+              LHSPtrTy->getAddressSpace() != RHSPtrTy->getAddressSpace())
+            V = Builder.CreateAddrSpaceCast(V,
+                                            IRFuncTy->getParamType(FirstIRArg));
+        }
+
         // If the argument doesn't match, perform a bitcast to coerce it.  This
         // can happen due to trivial type mismatches.
         if (FirstIRArg < IRFuncTy->getNumParams() &&

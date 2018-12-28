@@ -1,5 +1,4 @@
 // RUN: %clang -S --sycl -I /sycl_include_path -I /opencl_include_path -Xclang -ast-dump %s | FileCheck %s
-// XFAIL: *
 #include <CL/sycl.hpp>
 
 
