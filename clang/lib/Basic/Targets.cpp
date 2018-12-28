@@ -558,17 +558,29 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     }
 
   case llvm::Triple::spir: {
-    if (Triple.getOS() != llvm::Triple::UnknownOS ||
-        Triple.getEnvironment() != llvm::Triple::UnknownEnvironment)
-      return nullptr;
+    if (Triple.getEnvironment() == llvm::Triple::SYCLDevice) {
+      switch (os) {
+      case llvm::Triple::Linux:
+        return new LinuxTargetInfo<SPIR32SYCLDeviceTargetInfo>(Triple, Opts);
+      default:
+        return new SPIR32SYCLDeviceTargetInfo(Triple, Opts);
+      }
+    }
     return new SPIR32TargetInfo(Triple, Opts);
   }
+
   case llvm::Triple::spir64: {
-    if (Triple.getOS() != llvm::Triple::UnknownOS ||
-        Triple.getEnvironment() != llvm::Triple::UnknownEnvironment)
-      return nullptr;
+    if (Triple.getEnvironment() == llvm::Triple::SYCLDevice) {
+      switch (os) {
+      case llvm::Triple::Linux:
+        return new LinuxTargetInfo<SPIR64SYCLDeviceTargetInfo>(Triple, Opts);
+      default:
+        return new SPIR64SYCLDeviceTargetInfo(Triple, Opts);
+      }
+    }
     return new SPIR64TargetInfo(Triple, Opts);
   }
+
   case llvm::Triple::wasm32:
     if (Triple.getSubArch() != llvm::Triple::NoSubArch ||
         Triple.getVendor() != llvm::Triple::UnknownVendor ||
