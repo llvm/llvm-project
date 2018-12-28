@@ -3417,6 +3417,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsWindowsCygnus = RawTriple.isWindowsCygwinEnvironment();
   bool IsWindowsMSVC = RawTriple.isWindowsMSVCEnvironment();
   bool IsIAMCU = RawTriple.isOSIAMCU();
+  bool IsSYCL = Args.hasArg(options::OPT_sycl);
 
   // Adjust IsWindowsXYZ for CUDA/HIP compilations.  Even when compiling in
   // device mode (i.e., getToolchain().getTriple() is NVPTX/AMDGCN, not
@@ -3463,6 +3464,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
     CmdArgs.push_back("-aux-triple");
     CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
+  }
+
+  if (IsSYCL) {
+    // We want to compile sycl kernels.
+    CmdArgs.push_back("-std=c++11");
+    CmdArgs.push_back("-fsycl-is-device");
   }
 
   if (IsOpenMPDevice) {

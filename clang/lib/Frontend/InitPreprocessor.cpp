@@ -1056,6 +1056,10 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__CLANG_CUDA_APPROX_TRANSCENDENTALS__");
   }
 
+  if (LangOpts.SYCL) {
+    Builder.defineMacro("__SYCL_DEVICE_ONLY__");
+  }
+
   // OpenCL definitions.
   if (LangOpts.OpenCL) {
 #define OPENCLEXT(Ext) \

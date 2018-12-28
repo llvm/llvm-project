@@ -3122,6 +3122,8 @@ defm stack_arrays : BooleanFFlag<"stack-arrays">, Group<gfortran_Group>;
 defm underscoring : BooleanFFlag<"underscoring">, Group<gfortran_Group>;
 defm whole_file : BooleanFFlag<"whole-file">, Group<gfortran_Group>;
 
+def sycl : Flag<["--"], "sycl">,
+  HelpText<"Compile SYCL kernels for device">;
 
 include "CC1Options.td"
 
