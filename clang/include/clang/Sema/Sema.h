@@ -10852,7 +10852,7 @@ public:
   void AddSyclKernel(Decl * d) { SyclKernel.push_back(d); }
   SmallVector<Decl*, 4> &SyclKernels() { return SyclKernel; }
 
-  void ConstructSYCLKernel(CXXMemberCallExpr* e);
+  void ConstructSYCLKernel(FunctionDecl* KernelHelper);
 };
 
 /// RAII object that enters a new expression evaluation context.

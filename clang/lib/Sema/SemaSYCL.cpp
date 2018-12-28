@@ -12,12 +12,44 @@
 #include "clang/AST/AST.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallVector.h"
+#include "TreeTransform.h"
 
 using namespace clang;
 
-LambdaExpr *getBodyAsLambda(CXXMemberCallExpr *e) {
-  auto LastArg = e->getArg(e->getNumArgs() - 1);
-  return dyn_cast<LambdaExpr>(LastArg);
+typedef llvm::DenseMap<DeclaratorDecl *, DeclaratorDecl *> DeclMap;
+
+class KernelBodyTransform : public TreeTransform<KernelBodyTransform> {
+public:
+  KernelBodyTransform(llvm::DenseMap<DeclaratorDecl *, DeclaratorDecl *> &Map,
+                      Sema &S)
+      : TreeTransform<KernelBodyTransform>(S), DMap(Map), SemaRef(S) {}
+  bool AlwaysRebuild() { return true; }
+
+  ExprResult TransformDeclRefExpr(DeclRefExpr *DRE) {
+    auto Ref = dyn_cast<DeclaratorDecl>(DRE->getDecl());
+    if (Ref) {
+      auto NewDecl = DMap[Ref];
+      if (NewDecl) {
+        return DeclRefExpr::Create(
+            SemaRef.getASTContext(), DRE->getQualifierLoc(),
+            DRE->getTemplateKeywordLoc(), NewDecl, false, DRE->getNameInfo(),
+            NewDecl->getType(), DRE->getValueKind());
+      }
+    }
+    return DRE;
+  }
+
+private:
+  DeclMap DMap;
+  Sema &SemaRef;
+};
+
+CXXRecordDecl* getBodyAsLambda(FunctionDecl *FD) {
+  auto FirstArg = (*FD->param_begin());
+  if (FirstArg)
+    if (FirstArg->getType()->getAsCXXRecordDecl()->isLambda())
+      return FirstArg->getType()->getAsCXXRecordDecl();
+  return nullptr;
 }
 
 FunctionDecl *CreateSYCLKernelFunction(ASTContext &Context, StringRef Name,
@@ -54,17 +86,16 @@ FunctionDecl *CreateSYCLKernelFunction(ASTContext &Context, StringRef Name,
   return Result;
 }
 
-CompoundStmt *CreateSYCLKernelBody(Sema &S, CXXMemberCallExpr *e,
+CompoundStmt *CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelHelper,
                                    DeclContext *DC) {
 
   llvm::SmallVector<Stmt *, 16> BodyStmts;
 
   // TODO: case when kernel is functor
   // TODO: possible refactoring when functor case will be completed
-  LambdaExpr *LE = getBodyAsLambda(e);
-  if (LE) {
+  CXXRecordDecl *LC = getBodyAsLambda(KernelHelper);
+  if (LC) {
     // Create Lambda object
-    CXXRecordDecl *LC = LE->getLambdaClass();
     auto LambdaVD = VarDecl::Create(
         S.Context, DC, SourceLocation(), SourceLocation(), LC->getIdentifier(),
         QualType(LC->getTypeForDecl(), 0), LC->getLambdaTypeInfo(), SC_None);
@@ -137,43 +168,23 @@ CompoundStmt *CreateSYCLKernelBody(Sema &S, CXXMemberCallExpr *e,
       TargetFuncParam++;
     }
 
-    // Create Lambda operator () call
-    FunctionDecl *LO = LE->getCallOperator();
-    ArrayRef<ParmVarDecl *> Args = LO->parameters();
-    llvm::SmallVector<Expr *, 16> ParamStmts(1);
-    ParamStmts[0] = dyn_cast<Expr>(LambdaDRE);
+    // In function from headers lambda is function parameter, we need
+    // to replace all refs to this lambda with our vardecl.
+    // I used TreeTransform here, but I'm not sure that it is good solution
+    // Also I used map and I'm not sure about it too.
+    Stmt* FunctionBody = KernelHelper->getBody();
+    DeclMap DMap;
+    ParmVarDecl* LambdaParam = *(KernelHelper->param_begin());
+    // DeclRefExpr with valid source location but with decl which is not marked
+    // as used is invalid.
+    LambdaVD->setIsUsed();
+    DMap[LambdaParam] = LambdaVD;
+    // Without PushFunctionScope I had segfault. Maybe we also need to do pop.
+    S.PushFunctionScope();
+    KernelBodyTransform KBT(DMap, S);
+    Stmt* NewBody = KBT.TransformStmt(FunctionBody).get();
+    BodyStmts.push_back(NewBody);
 
-    // Collect arguments for () operator
-    for (auto Arg : Args) {
-      QualType ArgType = Arg->getOriginalType();
-      // Declare variable for parameter and pass it to call
-      auto param_VD =
-          VarDecl::Create(S.Context, DC, SourceLocation(), SourceLocation(),
-                          Arg->getIdentifier(), ArgType,
-                          S.Context.getTrivialTypeSourceInfo(ArgType), SC_None);
-      Stmt *param_DS = new (S.Context)
-          DeclStmt(DeclGroupRef(param_VD), SourceLocation(), SourceLocation());
-      BodyStmts.push_back(param_DS);
-      auto DRE = DeclRefExpr::Create(S.Context, NestedNameSpecifierLoc(),
-                                     SourceLocation(), param_VD, false,
-                                     DeclarationNameInfo(), ArgType, VK_LValue);
-      Expr *Res = ImplicitCastExpr::Create(
-          S.Context, ArgType, CK_LValueToRValue, DRE, nullptr, VK_RValue);
-      ParamStmts.push_back(Res);
-    }
-
-    // Create ref for call operator
-    DeclRefExpr *DRE = new (S.Context)
-        DeclRefExpr(S.Context, LO, false, LO->getType(), VK_LValue,
-                    SourceLocation());
-    QualType ResultTy = LO->getReturnType();
-    ExprValueKind VK = Expr::getValueKindForType(ResultTy);
-    ResultTy = ResultTy.getNonLValueExprType(S.Context);
-
-    CXXOperatorCallExpr *TheCall = CXXOperatorCallExpr::Create(
-        S.Context, OO_Call, DRE, ParamStmts, ResultTy, VK, SourceLocation(), 
-        FPOptions(), clang::CallExpr::ADLCallKind::NotADL );
-    BodyStmts.push_back(TheCall);
   }
   return CompoundStmt::Create(S.Context, BodyStmts, SourceLocation(),
                               SourceLocation());
@@ -222,9 +233,9 @@ void BuildArgTys(ASTContext &Context,
   }
 }
 
-void Sema::ConstructSYCLKernel(CXXMemberCallExpr *e) {
+void Sema::ConstructSYCLKernel(FunctionDecl *KernelHelper) {
   // TODO: Case when kernel is functor
-  LambdaExpr *LE = getBodyAsLambda(e);
+  CXXRecordDecl *LE = getBodyAsLambda(KernelHelper);
   if (LE) {
 
     llvm::SmallVector<DeclaratorDecl *, 16> ArgDecls;
@@ -238,9 +249,8 @@ void Sema::ConstructSYCLKernel(CXXMemberCallExpr *e) {
     BuildArgTys(getASTContext(), ArgDecls, NewArgDecls, ArgTys);
 
     // Get Name for our kernel.
-    FunctionDecl *FuncDecl = e->getMethodDecl();
     const TemplateArgumentList *TemplateArgs =
-        FuncDecl->getTemplateSpecializationArgs();
+        KernelHelper->getTemplateSpecializationArgs();
     QualType KernelNameType = TemplateArgs->get(0).getAsType();
     std::string Name = KernelNameType.getBaseTypeIdentifier()->getName().str();
 
@@ -256,7 +266,7 @@ void Sema::ConstructSYCLKernel(CXXMemberCallExpr *e) {
     FunctionDecl *SYCLKernel =
         CreateSYCLKernelFunction(getASTContext(), Name, ArgTys, NewArgDecls);
 
-    CompoundStmt *SYCLKernelBody = CreateSYCLKernelBody(*this, e, SYCLKernel);
+    CompoundStmt *SYCLKernelBody = CreateSYCLKernelBody(*this, KernelHelper, SYCLKernel);
     SYCLKernel->setBody(SYCLKernelBody);
 
     AddSyclKernel(SYCLKernel);

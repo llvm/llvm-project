@@ -16,10 +16,9 @@ int main() {
 
   deviceQueue.submit([&](cl::sycl::handler &cgh) {
     auto accessorA = bufferA.template get_access<cl::sycl::access::mode::read_write>(cgh);
-// CHECK: %wiID = alloca %"struct.cl::sycl::id", align 8
 // CHECK: call spir_func void @_ZN2cl4sycl8accessorIiLi1ELNS0_6access4modeE1026ELNS2_6targetE2014ELNS2_11placeholderE0EE13__set_pointerEPU3AS1i(%"class.cl::sycl::accessor"* %1, i32 addrspace(1)* %2)
-// CHECK: call spir_func void @"_ZZZ4mainENK3$_0clERN2cl4sycl7handlerEENKUlNS1_2idILm1EEEE_clES5_"(%class.anon* %0, %"struct.cl::sycl::id"* byval align 8 %wiID)
-// CHECK: %call = call spir_func i64 @_Z13get_global_idj(i32 0)
+// CHECK: %call = call spir_func i64 @_Z13get_global_idj(i32 %{{.*}})
+// CHECK: call spir_func void @"_ZZZ4mainENK3$_0clERN2cl4sycl7handlerEENKUlNS1_2idILm1EEEE_clES5_"(%class.anon* %0, %"struct.cl::sycl::id"* byval align 8 %{{.*}})
     cgh.parallel_for<class kernel_function>(numOfItems,
       [=](cl::sycl::id<1> wiID) {
         accessorA[wiID] = accessorA[wiID] * accessorA[wiID];
