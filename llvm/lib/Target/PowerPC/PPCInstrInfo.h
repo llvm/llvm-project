@@ -413,6 +413,8 @@ public:
   bool convertToImmediateForm(MachineInstr &MI,
                               MachineInstr **KilledDef = nullptr) const;
   void replaceInstrWithLI(MachineInstr &MI, const LoadImmediateInfo &LII) const;
+  void replaceInstrOperandWithImm(MachineInstr &MI, unsigned OpNo,
+                                  int64_t Imm) const;
 
   bool instrHasImmForm(const MachineInstr &MI, ImmInstrInfo &III,
                        bool PostRA) const;
