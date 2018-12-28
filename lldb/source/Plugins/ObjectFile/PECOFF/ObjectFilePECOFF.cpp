@@ -702,142 +702,142 @@ bool ObjectFilePECOFF::IsStripped() {
 }
 
 void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
-  if (!m_sections_ap.get()) {
-    m_sections_ap.reset(new SectionList());
+  if (m_sections_ap)
+    return;
+  m_sections_ap.reset(new SectionList());
 
+  ModuleSP module_sp(GetModule());
+  if (module_sp) {
+    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+    const uint32_t nsects = m_sect_headers.size();
     ModuleSP module_sp(GetModule());
-    if (module_sp) {
-      std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-      const uint32_t nsects = m_sect_headers.size();
-      ModuleSP module_sp(GetModule());
-      for (uint32_t idx = 0; idx < nsects; ++idx) {
-        std::string sect_name;
-        GetSectionName(sect_name, m_sect_headers[idx]);
-        ConstString const_sect_name(sect_name.c_str());
-        static ConstString g_code_sect_name(".code");
-        static ConstString g_CODE_sect_name("CODE");
-        static ConstString g_data_sect_name(".data");
-        static ConstString g_DATA_sect_name("DATA");
-        static ConstString g_bss_sect_name(".bss");
-        static ConstString g_BSS_sect_name("BSS");
-        static ConstString g_debug_sect_name(".debug");
-        static ConstString g_reloc_sect_name(".reloc");
-        static ConstString g_stab_sect_name(".stab");
-        static ConstString g_stabstr_sect_name(".stabstr");
-        static ConstString g_sect_name_dwarf_debug_abbrev(".debug_abbrev");
-        static ConstString g_sect_name_dwarf_debug_aranges(".debug_aranges");
-        static ConstString g_sect_name_dwarf_debug_frame(".debug_frame");
-        static ConstString g_sect_name_dwarf_debug_info(".debug_info");
-        static ConstString g_sect_name_dwarf_debug_line(".debug_line");
-        static ConstString g_sect_name_dwarf_debug_loc(".debug_loc");
-        static ConstString g_sect_name_dwarf_debug_loclists(".debug_loclists");
-        static ConstString g_sect_name_dwarf_debug_macinfo(".debug_macinfo");
-        static ConstString g_sect_name_dwarf_debug_names(".debug_names");
-        static ConstString g_sect_name_dwarf_debug_pubnames(".debug_pubnames");
-        static ConstString g_sect_name_dwarf_debug_pubtypes(".debug_pubtypes");
-        static ConstString g_sect_name_dwarf_debug_ranges(".debug_ranges");
-        static ConstString g_sect_name_dwarf_debug_str(".debug_str");
-        static ConstString g_sect_name_dwarf_debug_types(".debug_types");
-        static ConstString g_sect_name_eh_frame(".eh_frame");
-        static ConstString g_sect_name_go_symtab(".gosymtab");
-        SectionType section_type = eSectionTypeOther;
-        if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE &&
-            ((const_sect_name == g_code_sect_name) ||
-             (const_sect_name == g_CODE_sect_name))) {
-          section_type = eSectionTypeCode;
-        } else if (m_sect_headers[idx].flags &
-                       llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA &&
-                   ((const_sect_name == g_data_sect_name) ||
-                    (const_sect_name == g_DATA_sect_name))) {
-          if (m_sect_headers[idx].size == 0 && m_sect_headers[idx].offset == 0)
-            section_type = eSectionTypeZeroFill;
-          else
-            section_type = eSectionTypeData;
-        } else if (m_sect_headers[idx].flags &
-                       llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA &&
-                   ((const_sect_name == g_bss_sect_name) ||
-                    (const_sect_name == g_BSS_sect_name))) {
-          if (m_sect_headers[idx].size == 0)
-            section_type = eSectionTypeZeroFill;
-          else
-            section_type = eSectionTypeData;
-        } else if (const_sect_name == g_debug_sect_name) {
-          section_type = eSectionTypeDebug;
-        } else if (const_sect_name == g_stabstr_sect_name) {
-          section_type = eSectionTypeDataCString;
-        } else if (const_sect_name == g_reloc_sect_name) {
-          section_type = eSectionTypeOther;
-        } else if (const_sect_name == g_sect_name_dwarf_debug_abbrev)
-          section_type = eSectionTypeDWARFDebugAbbrev;
-        else if (const_sect_name == g_sect_name_dwarf_debug_aranges)
-          section_type = eSectionTypeDWARFDebugAranges;
-        else if (const_sect_name == g_sect_name_dwarf_debug_frame)
-          section_type = eSectionTypeDWARFDebugFrame;
-        else if (const_sect_name == g_sect_name_dwarf_debug_info)
-          section_type = eSectionTypeDWARFDebugInfo;
-        else if (const_sect_name == g_sect_name_dwarf_debug_line)
-          section_type = eSectionTypeDWARFDebugLine;
-        else if (const_sect_name == g_sect_name_dwarf_debug_loc)
-          section_type = eSectionTypeDWARFDebugLoc;
-        else if (const_sect_name == g_sect_name_dwarf_debug_loclists)
-          section_type = eSectionTypeDWARFDebugLocLists;
-        else if (const_sect_name == g_sect_name_dwarf_debug_macinfo)
-          section_type = eSectionTypeDWARFDebugMacInfo;
-        else if (const_sect_name == g_sect_name_dwarf_debug_names)
-          section_type = eSectionTypeDWARFDebugNames;
-        else if (const_sect_name == g_sect_name_dwarf_debug_pubnames)
-          section_type = eSectionTypeDWARFDebugPubNames;
-        else if (const_sect_name == g_sect_name_dwarf_debug_pubtypes)
-          section_type = eSectionTypeDWARFDebugPubTypes;
-        else if (const_sect_name == g_sect_name_dwarf_debug_ranges)
-          section_type = eSectionTypeDWARFDebugRanges;
-        else if (const_sect_name == g_sect_name_dwarf_debug_str)
-          section_type = eSectionTypeDWARFDebugStr;
-        else if (const_sect_name == g_sect_name_dwarf_debug_types)
-          section_type = eSectionTypeDWARFDebugTypes;
-        else if (const_sect_name == g_sect_name_eh_frame)
-          section_type = eSectionTypeEHFrame;
-        else if (const_sect_name == g_sect_name_go_symtab)
-          section_type = eSectionTypeGoSymtab;
-        else if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE) {
-          section_type = eSectionTypeCode;
-        } else if (m_sect_headers[idx].flags &
-                   llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA) {
-          section_type = eSectionTypeData;
-        } else if (m_sect_headers[idx].flags &
-                   llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA) {
-          if (m_sect_headers[idx].size == 0)
-            section_type = eSectionTypeZeroFill;
-          else
-            section_type = eSectionTypeData;
-        }
-
-        // Use a segment ID of the segment index shifted left by 8 so they
-        // never conflict with any of the sections.
-        SectionSP section_sp(new Section(
-            module_sp, // Module to which this section belongs
-            this,      // Object file to which this section belongs
-            idx + 1, // Section ID is the 1 based segment index shifted right by
-                     // 8 bits as not to collide with any of the 256 section IDs
-                     // that are possible
-            const_sect_name, // Name of this section
-            section_type,    // This section is a container of other sections.
-            m_coff_header_opt.image_base +
-                m_sect_headers[idx].vmaddr, // File VM address == addresses as
-                                            // they are found in the object file
-            m_sect_headers[idx].vmsize,     // VM size in bytes of this section
-            m_sect_headers[idx]
-                .offset, // Offset to the data for this section in the file
-            m_sect_headers[idx]
-                .size, // Size in bytes of this section as found in the file
-            m_coff_header_opt.sect_alignment, // Section alignment
-            m_sect_headers[idx].flags));      // Flags for this section
-
-        // section_sp->SetIsEncrypted (segment_is_encrypted);
-
-        unified_section_list.AddSection(section_sp);
-        m_sections_ap->AddSection(section_sp);
+    for (uint32_t idx = 0; idx < nsects; ++idx) {
+      std::string sect_name;
+      GetSectionName(sect_name, m_sect_headers[idx]);
+      ConstString const_sect_name(sect_name.c_str());
+      static ConstString g_code_sect_name(".code");
+      static ConstString g_CODE_sect_name("CODE");
+      static ConstString g_data_sect_name(".data");
+      static ConstString g_DATA_sect_name("DATA");
+      static ConstString g_bss_sect_name(".bss");
+      static ConstString g_BSS_sect_name("BSS");
+      static ConstString g_debug_sect_name(".debug");
+      static ConstString g_reloc_sect_name(".reloc");
+      static ConstString g_stab_sect_name(".stab");
+      static ConstString g_stabstr_sect_name(".stabstr");
+      static ConstString g_sect_name_dwarf_debug_abbrev(".debug_abbrev");
+      static ConstString g_sect_name_dwarf_debug_aranges(".debug_aranges");
+      static ConstString g_sect_name_dwarf_debug_frame(".debug_frame");
+      static ConstString g_sect_name_dwarf_debug_info(".debug_info");
+      static ConstString g_sect_name_dwarf_debug_line(".debug_line");
+      static ConstString g_sect_name_dwarf_debug_loc(".debug_loc");
+      static ConstString g_sect_name_dwarf_debug_loclists(".debug_loclists");
+      static ConstString g_sect_name_dwarf_debug_macinfo(".debug_macinfo");
+      static ConstString g_sect_name_dwarf_debug_names(".debug_names");
+      static ConstString g_sect_name_dwarf_debug_pubnames(".debug_pubnames");
+      static ConstString g_sect_name_dwarf_debug_pubtypes(".debug_pubtypes");
+      static ConstString g_sect_name_dwarf_debug_ranges(".debug_ranges");
+      static ConstString g_sect_name_dwarf_debug_str(".debug_str");
+      static ConstString g_sect_name_dwarf_debug_types(".debug_types");
+      static ConstString g_sect_name_eh_frame(".eh_frame");
+      static ConstString g_sect_name_go_symtab(".gosymtab");
+      SectionType section_type = eSectionTypeOther;
+      if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE &&
+	  ((const_sect_name == g_code_sect_name) ||
+	   (const_sect_name == g_CODE_sect_name))) {
+	section_type = eSectionTypeCode;
+      } else if (m_sect_headers[idx].flags &
+		     llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA &&
+		 ((const_sect_name == g_data_sect_name) ||
+		  (const_sect_name == g_DATA_sect_name))) {
+	if (m_sect_headers[idx].size == 0 && m_sect_headers[idx].offset == 0)
+	  section_type = eSectionTypeZeroFill;
+	else
+	  section_type = eSectionTypeData;
+      } else if (m_sect_headers[idx].flags &
+		     llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA &&
+		 ((const_sect_name == g_bss_sect_name) ||
+		  (const_sect_name == g_BSS_sect_name))) {
+	if (m_sect_headers[idx].size == 0)
+	  section_type = eSectionTypeZeroFill;
+	else
+	  section_type = eSectionTypeData;
+      } else if (const_sect_name == g_debug_sect_name) {
+	section_type = eSectionTypeDebug;
+      } else if (const_sect_name == g_stabstr_sect_name) {
+	section_type = eSectionTypeDataCString;
+      } else if (const_sect_name == g_reloc_sect_name) {
+	section_type = eSectionTypeOther;
+      } else if (const_sect_name == g_sect_name_dwarf_debug_abbrev)
+	section_type = eSectionTypeDWARFDebugAbbrev;
+      else if (const_sect_name == g_sect_name_dwarf_debug_aranges)
+	section_type = eSectionTypeDWARFDebugAranges;
+      else if (const_sect_name == g_sect_name_dwarf_debug_frame)
+	section_type = eSectionTypeDWARFDebugFrame;
+      else if (const_sect_name == g_sect_name_dwarf_debug_info)
+	section_type = eSectionTypeDWARFDebugInfo;
+      else if (const_sect_name == g_sect_name_dwarf_debug_line)
+	section_type = eSectionTypeDWARFDebugLine;
+      else if (const_sect_name == g_sect_name_dwarf_debug_loc)
+	section_type = eSectionTypeDWARFDebugLoc;
+      else if (const_sect_name == g_sect_name_dwarf_debug_loclists)
+	section_type = eSectionTypeDWARFDebugLocLists;
+      else if (const_sect_name == g_sect_name_dwarf_debug_macinfo)
+	section_type = eSectionTypeDWARFDebugMacInfo;
+      else if (const_sect_name == g_sect_name_dwarf_debug_names)
+	section_type = eSectionTypeDWARFDebugNames;
+      else if (const_sect_name == g_sect_name_dwarf_debug_pubnames)
+	section_type = eSectionTypeDWARFDebugPubNames;
+      else if (const_sect_name == g_sect_name_dwarf_debug_pubtypes)
+	section_type = eSectionTypeDWARFDebugPubTypes;
+      else if (const_sect_name == g_sect_name_dwarf_debug_ranges)
+	section_type = eSectionTypeDWARFDebugRanges;
+      else if (const_sect_name == g_sect_name_dwarf_debug_str)
+	section_type = eSectionTypeDWARFDebugStr;
+      else if (const_sect_name == g_sect_name_dwarf_debug_types)
+	section_type = eSectionTypeDWARFDebugTypes;
+      else if (const_sect_name == g_sect_name_eh_frame)
+	section_type = eSectionTypeEHFrame;
+      else if (const_sect_name == g_sect_name_go_symtab)
+	section_type = eSectionTypeGoSymtab;
+      else if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE) {
+	section_type = eSectionTypeCode;
+      } else if (m_sect_headers[idx].flags &
+		 llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA) {
+	section_type = eSectionTypeData;
+      } else if (m_sect_headers[idx].flags &
+		 llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA) {
+	if (m_sect_headers[idx].size == 0)
+	  section_type = eSectionTypeZeroFill;
+	else
+	  section_type = eSectionTypeData;
       }
+
+      // Use a segment ID of the segment index shifted left by 8 so they
+      // never conflict with any of the sections.
+      SectionSP section_sp(new Section(
+	  module_sp, // Module to which this section belongs
+	  this,      // Object file to which this section belongs
+	  idx + 1, // Section ID is the 1 based segment index shifted right by
+		   // 8 bits as not to collide with any of the 256 section IDs
+		   // that are possible
+	  const_sect_name, // Name of this section
+	  section_type,    // This section is a container of other sections.
+	  m_coff_header_opt.image_base +
+	      m_sect_headers[idx].vmaddr, // File VM address == addresses as
+					  // they are found in the object file
+	  m_sect_headers[idx].vmsize,     // VM size in bytes of this section
+	  m_sect_headers[idx]
+	      .offset, // Offset to the data for this section in the file
+	  m_sect_headers[idx]
+	      .size, // Size in bytes of this section as found in the file
+	  m_coff_header_opt.sect_alignment, // Section alignment
+	  m_sect_headers[idx].flags));      // Flags for this section
+
+      // section_sp->SetIsEncrypted (segment_is_encrypted);
+
+      unified_section_list.AddSection(section_sp);
+      m_sections_ap->AddSection(section_sp);
     }
   }
 }
