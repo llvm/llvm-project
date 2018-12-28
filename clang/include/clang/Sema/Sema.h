@@ -274,6 +274,101 @@ public:
   }
 };
 
+// TODO SYCL Integration header approach relies on an assumption that kernel
+// lambda objects created by the host compiler and any of the device compilers
+// will be identical wrt to field types, order and offsets. Some verification
+// mechanism should be developed to enforce that.
+
+// TODO FIXME SYCL Support for SYCL in FE should be refactored:
+// - kernel indentification and generation should be made a separate pass over
+// AST. RecursiveASTVisitor + VisitFunctionTemplateDecl +
+// FunctionTemplateDecl::getSpecializations() mechanism could be used for that.
+// - All SYCL stuff on Sema level should be encapsulated into a single Sema
+// field
+// - Move SYCL stuff into a separate header
+
+// Represents contents of a SYCL integration header file produced by a SYCL
+// device compiler and used by SYCL host compiler (via forced inclusion into
+// compiled SYCL source):
+// - SYCL kernel names
+// - SYCL kernel parameters and offsets of corresponding actual arguments
+class SYCLIntegrationHeader {
+public:
+  // Kind of kernel's lambda parameters as captured by the compiler in the
+  // kernel lambda object
+  enum kernel_param_kind_t {
+    kind_first,
+    kind_none = kind_first,
+    kind_accessor,
+    kind_scalar,
+    kind_struct,
+    kind_sampler,
+    kind_struct_padding, // can be added by the compiler to enforce alignment
+    kind_last = kind_struct_padding
+  };
+
+public:
+  SYCLIntegrationHeader();
+
+  /// Emits contents of the header into given stream.
+  void emit(raw_ostream &Out);
+
+  /// Emits contents of the header into a file with given name.
+  /// Returns true/false on success/failure.
+  bool emit(const StringRef &MainSrc);
+
+  ///  Signals that subsequent parameter descriptor additions will go to
+  ///  the kernel with given name. Starts new kernel invocation descriptor.
+  void startKernel(StringRef KernelName);
+
+  /// Adds a kernel parameter descriptor to current kernel invocation
+  /// descriptor.
+  void addParamDesc(kernel_param_kind_t Kind, int Info, unsigned Offset);
+
+  /// Signals that addition of parameter descriptors to current kernel
+  /// invocation descriptor has finished.
+  void endKernel();
+
+private:
+  // Kernel actual parameter descriptor.
+  struct KernelParamDesc {
+    // Represents a parameter kind.
+    kernel_param_kind_t Kind;
+    // If Kind is kind_scalar or kind_struct, then
+    //   denotes parameter size in bytes (includes padding for structs)
+    // If Kind is kind_accessor
+    //   denotes access target; possible access targets are defined in
+    //   access/access.hpp
+    int Info;
+    // Offset of the captured parameter value in the lambda or function object.
+    unsigned Offset;
+
+    KernelParamDesc() = default;
+  };
+
+  // Kernel invocation descriptor
+  struct KernelDesc {
+    /// Kernel name.
+    std::string Name;
+    /// Descriptor of kernel actual parameters.
+    SmallVector<KernelParamDesc, 8> Params;
+
+    KernelDesc() = default;
+  };
+
+  /// Returns the latest invocation descriptor started by
+  /// SYCLIntegrationHeader::startKernel
+  KernelDesc *getCurKernelDesc() {
+    return KernelDescs.size() > 0 ? &KernelDescs[KernelDescs.size() - 1]
+                                  : nullptr;
+  }
+
+private:
+  /// Keeps invocation descriptors for each kernel invocation started by
+  /// SYCLIntegrationHeader::startKernel
+  SmallVector<KernelDesc, 4> KernelDescs;
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 class Sema {
   Sema(const Sema &) = delete;
@@ -10847,12 +10942,22 @@ private:
   // We store SYCL Kernels here and handle separately -- which is a hack.
   // FIXME: It would be best to refactor this.
   SmallVector<Decl*, 4> SyclKernel;
+  // SYCL integratrion header instance for current compilation unit this Sema
+  // is associated with.
+  std::unique_ptr<SYCLIntegrationHeader> SyclIntHeader;
 
 public:
   void AddSyclKernel(Decl * d) { SyclKernel.push_back(d); }
   SmallVector<Decl*, 4> &SyclKernels() { return SyclKernel; }
 
-  void ConstructSYCLKernel(FunctionDecl* KernelHelper);
+  /// Lazily creates and returns SYCL integratrion header instance.
+  SYCLIntegrationHeader &getSyclIntegrationHeader() {
+    if (SyclIntHeader == nullptr)
+      SyclIntHeader = llvm::make_unique<SYCLIntegrationHeader>();
+    return *SyclIntHeader.get();
+  }
+
+  void ConstructSYCLKernel(FunctionDecl *KernelCallerFunc);
 };
 
 /// RAII object that enters a new expression evaluation context.

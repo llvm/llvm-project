@@ -145,7 +145,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       CurrentInstantiationScope(nullptr), DisableTypoCorrection(false),
       TyposCorrected(0), AnalysisWarnings(*this),
       ThreadSafetyDeclCache(nullptr), VarDataSharingAttributesStack(nullptr),
-      CurScope(nullptr), Ident_super(nullptr), Ident___float128(nullptr) {
+      CurScope(nullptr), Ident_super(nullptr), Ident___float128(nullptr),
+      SyclIntHeader(nullptr) {
   TUScope = nullptr;
 
   LoadedExternalKnownNamespaces = false;
@@ -915,6 +916,11 @@ void Sema::ActOnEndOfTranslationUnit() {
     }
 
     PerformPendingInstantiations();
+
+    // Emit SYCL integration header for current translation unit if needed
+    if (getLangOpts().SYCL && SyclIntHeader != nullptr) {
+      SyclIntHeader->emit(getLangOpts().SYCLIntHeader);
+    }
 
     assert(LateParsedInstantiations.empty() &&
            "end of TU template instantiation should not create more "

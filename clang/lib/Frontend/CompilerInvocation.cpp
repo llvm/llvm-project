@@ -2398,6 +2398,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.GPURelocatableDeviceCode = Args.hasArg(OPT_fgpu_rdc);
 
+  Opts.SYCLIntHeader = Args.getLastArgValue(OPT_fsycl_int_header);
+
   if (Opts.ObjC) {
     if (Arg *arg = Args.getLastArg(OPT_fobjc_runtime_EQ)) {
       StringRef value = arg->getValue();

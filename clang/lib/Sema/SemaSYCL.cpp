@@ -11,13 +11,18 @@
 
 #include "TreeTransform.h"
 #include "clang/AST/AST.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h" // used in integration header creation
 
 using namespace clang;
 
 typedef llvm::DenseMap<DeclaratorDecl *, DeclaratorDecl *> DeclMap;
+
+using KernelParamKind = SYCLIntegrationHeader::kernel_param_kind_t;
 
 enum target {
   global_buffer = 2014,
@@ -28,6 +33,14 @@ enum target {
   host_image,
   image_array
 };
+
+static CXXRecordDecl *getKernelCallerLambdaArg(FunctionDecl *FD) {
+  auto FirstArg = (*FD->param_begin());
+  if (FirstArg)
+    if (FirstArg->getType()->getAsCXXRecordDecl()->isLambda())
+      return FirstArg->getType()->getAsCXXRecordDecl();
+  return nullptr;
+}
 
 class MarkDeviceFunction : public RecursiveASTVisitor<MarkDeviceFunction> {
 public:
@@ -84,17 +97,10 @@ private:
   Sema &SemaRef;
 };
 
-CXXRecordDecl *getBodyAsLambda(FunctionDecl *FD) {
-  auto FirstArg = (*FD->param_begin());
-  if (FirstArg)
-    if (FirstArg->getType()->getAsCXXRecordDecl()->isLambda())
-      return FirstArg->getType()->getAsCXXRecordDecl();
-  return nullptr;
-}
-
-FunctionDecl *CreateSYCLKernelFunction(ASTContext &Context, StringRef Name,
-                                       ArrayRef<QualType> ArgTys,
-                                       ArrayRef<DeclaratorDecl *> ArgDecls) {
+static FunctionDecl *
+CreateSYCLKernelFunction(ASTContext &Context, StringRef Name,
+                         ArrayRef<QualType> ArgTys,
+                         ArrayRef<DeclaratorDecl *> ArgDecls) {
 
   DeclContext *DC = Context.getTranslationUnitDecl();
   FunctionProtoType::ExtProtoInfo Info(CC_OpenCLKernel);
@@ -125,14 +131,14 @@ FunctionDecl *CreateSYCLKernelFunction(ASTContext &Context, StringRef Name,
   return SYCLKernel;
 }
 
-CompoundStmt *CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelHelper,
-                                   DeclContext *DC) {
+static CompoundStmt *
+CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
 
   llvm::SmallVector<Stmt *, 16> BodyStmts;
 
   // TODO: case when kernel is functor
   // TODO: possible refactoring when functor case will be completed
-  CXXRecordDecl *LC = getBodyAsLambda(KernelHelper);
+  CXXRecordDecl *LC = getKernelCallerLambdaArg(KernelCallerFunc);
   if (LC) {
     // Create Lambda object
     auto LambdaVD = VarDecl::Create(
@@ -231,9 +237,10 @@ CompoundStmt *CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelHelper,
     // to replace all refs to this lambda with our vardecl.
     // I used TreeTransform here, but I'm not sure that it is good solution
     // Also I used map and I'm not sure about it too.
-    Stmt *FunctionBody = KernelHelper->getBody();
+    // TODO SYCL review the above design concerns
+    Stmt *FunctionBody = KernelCallerFunc->getBody();
     DeclMap DMap;
-    ParmVarDecl *LambdaParam = *(KernelHelper->param_begin());
+    ParmVarDecl *LambdaParam = *(KernelCallerFunc->param_begin());
     // DeclRefExpr with valid source location but with decl which is not marked
     // as used is invalid.
     LambdaVD->setIsUsed();
@@ -248,85 +255,205 @@ CompoundStmt *CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelHelper,
                               SourceLocation());
 }
 
-void BuildArgTys(ASTContext &Context,
-                 llvm::SmallVector<DeclaratorDecl *, 16> &ArgDecls,
-                 llvm::SmallVector<DeclaratorDecl *, 16> &NewArgDecls,
-                 llvm::SmallVector<QualType, 16> &ArgTys) {
-  for (auto V : ArgDecls) {
-    QualType ArgTy = V->getType();
-    QualType ActualArgType = ArgTy;
-    std::string Name = ArgTy.getCanonicalType().getAsString();
-    if (Name.find("class cl::sycl::accessor") != std::string::npos) {
-      if (const auto *RecordDecl = ArgTy->getAsCXXRecordDecl()) {
-        const auto *TemplateDecl =
-            dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl);
-        if (TemplateDecl) {
-          // First parameter - data type
-          QualType PointeeType = TemplateDecl->getTemplateArgs()[0].getAsType();
-          // Fourth parameter - access target
-          auto AccessQualifier =
-              TemplateDecl->getTemplateArgs()[3].getAsIntegral();
-          int64_t AccessTarget = AccessQualifier.getExtValue();
-          Qualifiers Quals = PointeeType.getQualifiers();
-          // TODO: Support all access targets
-          switch (AccessTarget) {
-          case target::global_buffer:
-            Quals.setAddressSpace(LangAS::opencl_global);
-            break;
-          case target::constant_buffer:
-            Quals.setAddressSpace(LangAS::opencl_constant);
-            break;
-          case target::local:
-            Quals.setAddressSpace(LangAS::opencl_local);
-            break;
-          default:
-            llvm_unreachable("Unsupported access target");
-          }
-          // TODO: get address space from accessor template parameter.
-          PointeeType =
-              Context.getQualifiedType(PointeeType.getUnqualifiedType(), Quals);
-          QualType PointerType = Context.getPointerType(PointeeType);
-          ActualArgType =
-              Context.getQualifiedType(PointerType.getUnqualifiedType(), Quals);
-        }
-      }
-    } else if (std::string(Name) == "stream") {
-      continue;
-    }
-    DeclContext *DC = Context.getTranslationUnitDecl();
+/// Various utilities.
+class Util {
+public:
+  // TODO SYCL use AST infrastructure instead of string matching
 
-    IdentifierInfo *VarName = 0;
-    SmallString<8> Str;
-    llvm::raw_svector_ostream OS(Str);
-    OS << "_arg_" << V->getIdentifier()->getName();
-    VarName = &Context.Idents.get(OS.str());
-
-    auto NewVarDecl = VarDecl::Create(
-        Context, DC, SourceLocation(), SourceLocation(), VarName, ActualArgType,
-        Context.getTrivialTypeSourceInfo(ActualArgType), SC_None);
-    ArgTys.push_back(ActualArgType);
-    NewArgDecls.push_back(NewVarDecl);
+  /// Checks whether given clang type is a sycl accessor class.
+  static bool isSyclAccessorType(QualType Ty) {
+    std::string Name = Ty.getCanonicalType().getAsString();
+    return Name.find("class cl::sycl::accessor") != std::string::npos;
   }
+
+  /// Checks whether given clang type is a sycl stream class.
+  static bool isSyclStreamType(QualType Ty) {
+    std::string Name = Ty.getCanonicalType().getAsString();
+    return Name == "stream";
+  }
+};
+
+/// Identifies context of kernel lambda capture visitor function
+/// invocation.
+enum VisitorContext {
+  pre_visit,
+  visit_accessor,
+  visit_scalar,
+  visit_stream,
+  post_visit,
+};
+
+/// Implements visitor design pattern for lambda captures.
+///
+/// Iterates over captured parameters of given lambda and invokes given
+/// visitor functions at appropriate context providing information of interest.
+/// \param Lambda  the kernel lambda object
+/// \param Vis     a tuple of visitor functions, each corresponds to and is
+///     invoked at a specific context. @see VisitorContext.
+///
+template <typename VisitorTupleTy>
+static void visitKernelLambdaCaptures(const CXXRecordDecl *Lambda,
+                                      VisitorTupleTy &Vis) {
+  const LambdaCapture *Cpt = Lambda->captures_begin();
+  RecordDecl::field_iterator Fld = Lambda->field_begin();
+  const LambdaCapture *CptEnd = Lambda->captures_end();
+  const RecordDecl::field_iterator FldEnd = Lambda->field_end();
+
+  for (; (Cpt != CptEnd) && (Fld != FldEnd); Cpt++, Fld++) {
+    // pre-visit context
+    unsigned Cnt = static_cast<unsigned>(std::distance(Cpt, CptEnd));
+    VarDecl *V = Cpt->getCapturedVar();
+    QualType ArgTy = V->getType();
+    auto F1 = std::get<pre_visit>(Vis);
+    F1(Cnt, V, *Fld);
+
+    if (Util::isSyclAccessorType(ArgTy)) {
+      // accessor parameter context
+      const auto *RecordDecl = ArgTy->getAsCXXRecordDecl();
+      assert(RecordDecl && "accessor must be of a record type");
+      const auto *TemplateDecl =
+          dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl);
+      assert(TemplateDecl && "templated accessor type expected");
+
+      // First accessor template parameter - data type
+      QualType PointeeType = TemplateDecl->getTemplateArgs()[0].getAsType();
+      // Fourth parameter - access target
+      auto AccessQualifier = TemplateDecl->getTemplateArgs()[3].getAsIntegral();
+      int64_t AccessTarget = AccessQualifier.getExtValue();
+      auto F = std::get<visit_accessor>(Vis);
+      F(Cnt, static_cast<target>(AccessTarget), PointeeType, V, *Fld);
+    } else if (Util::isSyclStreamType(ArgTy)) {
+      // stream parameter context
+      auto F = std::get<visit_stream>(Vis);
+      F(Cnt, V, *Fld);
+    } else if (ArgTy->isScalarType()) {
+      // scalar typed parameter context
+      auto F = std::get<visit_scalar>(Vis);
+      F(Cnt, V, *Fld);
+    } else {
+      llvm_unreachable("unsupported kernel parameter type");
+    }
+    // pos-visit context
+    auto F2 = std::get<post_visit>(Vis);
+    F2(Cnt, V, *Fld);
+  }
+  assert((Cpt == CptEnd) && (Fld == FldEnd) &&
+         "captures inconsistent with fields");
 }
 
-void Sema::ConstructSYCLKernel(FunctionDecl *KernelHelper) {
+static void BuildArgTys(ASTContext &Context, CXXRecordDecl *Lambda,
+                        llvm::SmallVector<DeclaratorDecl *, 16> &NewArgDecls,
+                        llvm::SmallVector<QualType, 16> &ArgTys) {
+  QualType ActualArgType; // serves to transfer info between visitor lambdas
+  auto Vis = std::make_tuple(
+      // pre_visit
+      [&](int, VarDecl *, FieldDecl *) {},
+      // visit_accessor
+      [&](int CaptureN, target AccTrg, QualType PointeeType,
+          DeclaratorDecl *CapturedVar, FieldDecl *CapturedVal) {
+        Qualifiers Quals = PointeeType.getQualifiers();
+        // TODO: Support all access targets
+        switch (AccTrg) {
+        case target::global_buffer:
+          Quals.setAddressSpace(LangAS::opencl_global);
+          break;
+        case target::constant_buffer:
+          Quals.setAddressSpace(LangAS::opencl_constant);
+          break;
+        case target::local:
+          Quals.setAddressSpace(LangAS::opencl_local);
+          break;
+        default:
+          llvm_unreachable("Unsupported access target");
+        }
+        // TODO: get address space from accessor template parameter.
+        PointeeType =
+            Context.getQualifiedType(PointeeType.getUnqualifiedType(), Quals);
+        QualType PointerType = Context.getPointerType(PointeeType);
+        ActualArgType =
+            Context.getQualifiedType(PointerType.getUnqualifiedType(), Quals);
+      },
+      // visit_scalar
+      [&](int CaptureN, VarDecl *CapturedVar, FieldDecl *CapturedVal) {
+        ActualArgType = CapturedVal->getType();
+      },
+      // visit_stream
+      [&](int CaptureN, VarDecl *CapturedVar, FieldDecl *CapturedVal) {
+        llvm_unreachable("streams not supported yet");
+      },
+      // post_visit
+      [&](int CaptureN, VarDecl *CapturedVar, FieldDecl *CapturedVal) {
+        DeclContext *DC = Context.getTranslationUnitDecl();
+
+        IdentifierInfo *VarName = 0;
+        SmallString<8> Str;
+        llvm::raw_svector_ostream OS(Str);
+        OS << "_arg_" << CapturedVar->getIdentifier()->getName();
+        VarName = &Context.Idents.get(OS.str());
+
+        auto NewVarDecl = VarDecl::Create(
+            Context, DC, SourceLocation(), SourceLocation(), VarName,
+            ActualArgType, Context.getTrivialTypeSourceInfo(ActualArgType),
+            SC_None);
+        ArgTys.push_back(ActualArgType);
+        NewArgDecls.push_back(NewVarDecl);
+      });
+  visitKernelLambdaCaptures(Lambda, Vis);
+}
+
+/// Adds necessary data describing given kernel to the integration header.
+/// \param H      the integration header object
+/// \param Name   kernel name
+/// \param Lambda kernel lambda object
+static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
+                              CXXRecordDecl *Lambda) {
+  ASTContext &Ctx = Lambda->getASTContext();
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(Lambda);
+  KernelParamKind Knd = SYCLIntegrationHeader::kind_none;
+  H.startKernel(Name);
+  unsigned Offset = 0;
+  int Info = 0;
+
+  auto Vis = std::make_tuple(
+      // pre_visit
+      [&](int CaptureN, VarDecl *CapturedVar, FieldDecl *CapturedVal) {
+        Offset = static_cast<unsigned>(
+            Layout.getFieldOffset(CapturedVal->getFieldIndex()));
+      },
+      // visit_accessor
+      [&](int CaptureN, target AccTrg, QualType PointeeType,
+          DeclaratorDecl *CapturedVar, FieldDecl *CapturedVal) {
+        Knd = SYCLIntegrationHeader::kind_accessor;
+        Info = static_cast<int>(AccTrg);
+      },
+      // visit_scalar
+      [&](int CaptureN, VarDecl *CapturedVar, FieldDecl *CapturedVal) {
+        Knd = SYCLIntegrationHeader::kind_scalar;
+        Info = static_cast<unsigned>(
+            Ctx.getTypeSizeInChars(CapturedVal->getType()).getQuantity());
+      },
+      // visit_stream
+      [&](int CaptureN, VarDecl *CapturedVar, FieldDecl *CapturedVal) {
+        llvm_unreachable("streams not supported yet");
+      },
+      // post_visit
+      [&](int CaptureN, VarDecl *CapturedVar, FieldDecl *CapturedVal) {
+        H.addParamDesc(Knd, Info, Offset);
+      });
+  visitKernelLambdaCaptures(Lambda, Vis);
+}
+
+void Sema::ConstructSYCLKernel(FunctionDecl *KernelCallerFunc) {
   // TODO: Case when kernel is functor
-  CXXRecordDecl *LE = getBodyAsLambda(KernelHelper);
+  CXXRecordDecl *LE = getKernelCallerLambdaArg(KernelCallerFunc);
   if (LE) {
-
-    llvm::SmallVector<DeclaratorDecl *, 16> ArgDecls;
-
-    for (const auto &V : LE->captures()) {
-      ArgDecls.push_back(V.getCapturedVar());
-    }
-
     llvm::SmallVector<QualType, 16> ArgTys;
     llvm::SmallVector<DeclaratorDecl *, 16> NewArgDecls;
-    BuildArgTys(getASTContext(), ArgDecls, NewArgDecls, ArgTys);
+    BuildArgTys(getASTContext(), LE, NewArgDecls, ArgTys);
 
     // Get Name for our kernel.
     const TemplateArgumentList *TemplateArgs =
-        KernelHelper->getTemplateSpecializationArgs();
+        KernelCallerFunc->getTemplateSpecializationArgs();
     QualType KernelNameType = TemplateArgs->get(0).getAsType();
     std::string Name = KernelNameType.getBaseTypeIdentifier()->getName().str();
 
@@ -345,12 +472,13 @@ void Sema::ConstructSYCLKernel(FunctionDecl *KernelHelper) {
         Name.erase(pos, ToBeErased[i].length());
       }
     }
+    populateIntHeader(getSyclIntegrationHeader(), Name, LE);
 
     FunctionDecl *SYCLKernel =
         CreateSYCLKernelFunction(getASTContext(), Name, ArgTys, NewArgDecls);
 
     CompoundStmt *SYCLKernelBody =
-        CreateSYCLKernelBody(*this, KernelHelper, SYCLKernel);
+        CreateSYCLKernelBody(*this, KernelCallerFunc, SYCLKernel);
     SYCLKernel->setBody(SYCLKernelBody);
 
     AddSyclKernel(SYCLKernel);
@@ -360,3 +488,198 @@ void Sema::ConstructSYCLKernel(FunctionDecl *KernelHelper) {
     Marker.TraverseStmt(SYCLKernelBody);
   }
 }
+
+// -----------------------------------------------------------------------------
+// Integration header functionality implementation
+// -----------------------------------------------------------------------------
+
+/// Returns a string ID of given parameter kind - used in header
+/// emission.
+static const char *paramKind2Str(KernelParamKind K) {
+#define CASE(x)                                                                \
+  case SYCLIntegrationHeader::kind_##x:                                        \
+    return "kind_" #x
+  switch (K) {
+    CASE(none);
+    CASE(accessor);
+    CASE(scalar);
+    CASE(struct);
+    CASE(sampler);
+    CASE(struct_padding);
+  default:
+    return "<ERROR>";
+  }
+#undef CASE
+}
+
+// // Integration header structure:
+//
+// // kernel parameter kinds
+// enum kernel_param_kind_t {
+//   kind_none,
+//   kind_accessor,
+//   kind_scalar,
+//   kind_struct,
+//   kind_sampler,
+//   kind_struct_padding
+// };
+//
+// // names of all kernels defined in the corresponding source
+// const char* kernel_names[] = {
+//   "SimpleVadd1",
+//   "SimpleVadd2"
+// };
+//
+// // describes a kernel parameter
+// struct kernel_param_desc_t {
+//   // parameter kind
+//   kernel_param_kind_t kind;
+//   // kind == kind_scalar, kind_struct
+//   //   parameter size in bytes (includes padding for structs)
+//   // kind == kind_accessor
+//   //   access target; possible access targets are defined in
+//   //   access/access.hpp
+//   int                 info;
+//   // offset of the captured value of the parameter in the lambda or function
+//   // object
+//   int                 offs;
+// };
+//
+// // array representing signatures of all kernels defined in the
+// // corresponding source
+// kernel_param_desc_t kernel_signatures[] = {
+//   // SimpleVadd1
+//   { kind_accessor, 0, 0   }, // accessorC
+//   { kind_accessor, 0, 64  }, // accessorA
+//   { kind_accessor, 0, 128 }, // accessorB
+//   { kind_scalar,   4, 132 }, // param
+//   { kind_none,     0, 0   }, // terminator
+//   // SimpleVadd2
+//   { kind_accessor, 0, 0  }, // accessorC
+//   { kind_scalar,   4, 68 }, // param
+//   { kind_none,     0, 0  }  // terminator
+// };
+//
+// // indices into the kernel_signatures array, each representing a start of
+// // kernel signature descriptor subarray of the kernel_signature array;
+// // the index order in this array corresponds to the kernel name order in the
+// // kernel_names array
+// unsigned kernel_signature_start[] = {
+//   0, // SimpleVadd1
+//   5  // SimpleVadd2
+// };
+//
+void SYCLIntegrationHeader::emit(raw_ostream &O) {
+  O << "// kernel parameter kinds\n";
+  O << "enum kernel_param_kind_t {\n";
+
+  for (int I = SYCLIntegrationHeader::kind_first;
+       I <= SYCLIntegrationHeader::kind_last; I++) {
+    KernelParamKind It = static_cast<KernelParamKind>(I);
+    O << "  " << std::string(paramKind2Str(It));
+    if (I < SYCLIntegrationHeader::kind_last)
+      O << ",";
+    O << "\n";
+  }
+  O << "};\n";
+  O << "\n";
+  O << "// names of all kernels defined in the corresponding source\n";
+  O << "const char* kernel_names[] = {\n";
+
+  for (unsigned I = 0; I < KernelDescs.size(); I++) {
+    O << "  \"" << KernelDescs[I].Name << "\"";
+
+    if (I < KernelDescs.size() - 1)
+      O << ",";
+    O << "\n";
+  }
+  O << "};\n\n";
+
+  O << "// describes a kernel parameter\n";
+  O << "struct kernel_param_desc_t {\n";
+  O << "  // parameter kind\n";
+  O << "  kernel_param_kind_t kind;\n";
+  O << "  // kind == kind_scalar, kind_struct\n";
+  O << "  //   parameter size in bytes (includes padding for structs)\n";
+  O << "  // kind == kind_accessor\n";
+  O << "  //   access target; possible access targets are defined in "
+       "access/access.hpp\n";
+  O << "  int                 info;\n";
+  O << "  // offset of the captured value of the parameter in the lambda or "
+       "function object\n";
+  O << "  int                 offs;\n";
+  O << "};\n\n";
+
+  O << "// array representing signatures of all kernels defined in the\n";
+  O << "// corresponding source\n";
+  O << "kernel_param_desc_t kernel_signatures[] = {\n";
+
+  for (unsigned I = 0; I < KernelDescs.size(); I++) {
+    auto &K = KernelDescs[I];
+    O << "  //--- " << K.Name << "\n";
+
+    for (const auto &P : K.Params) {
+      std::string TyStr = paramKind2Str(P.Kind);
+      O << "  { " << TyStr << ", " << P.Info << ", " << P.Offset << " },\n";
+    }
+    O << "  { kind_none, 0, 0 }";
+    if (I < KernelDescs.size() - 1)
+      O << ",";
+    O << "\n";
+  }
+  O << "};\n\n";
+
+  O << "// indices into the kernel_signatures array, each representing a start"
+       " of\n";
+  O << "// kernel signature descriptor subarray of the kernel_signatures"
+       " array;\n";
+  O << "// the index order in this array corresponds to the kernel name order"
+       " in the\n";
+  O << "// kernel_names array\n";
+  O << "unsigned kernel_signature_start[] = {\n";
+  unsigned CurStart = 0;
+
+  for (unsigned I = 0; I < KernelDescs.size(); I++) {
+    auto &K = KernelDescs[I];
+    O << "  " << CurStart;
+    if (I < KernelDescs.size() - 1)
+      O << ",";
+    O << " // " << K.Name << "\n";
+    CurStart += K.Params.size() + 1;
+  }
+  O << "};\n\n";
+}
+
+bool SYCLIntegrationHeader::emit(const StringRef &IntHeaderName) {
+  if (IntHeaderName.empty())
+    return false;
+  int IntHeaderFD = 0;
+  std::error_code EC =
+      llvm::sys::fs::openFileForWrite(IntHeaderName, IntHeaderFD);
+  if (EC) {
+    llvm::errs() << "Error: " << EC.message() << "\n";
+    // compilation will fail on absent include file - don't need to fail here
+    return false;
+  }
+  llvm::raw_fd_ostream Out(IntHeaderFD, true /*close in destructor*/);
+  emit(Out);
+  return true;
+}
+
+void SYCLIntegrationHeader::startKernel(StringRef KernelName) {
+  KernelDescs.resize(KernelDescs.size() + 1);
+  KernelDescs.back().Name = KernelName;
+}
+
+void SYCLIntegrationHeader::addParamDesc(kernel_param_kind_t Kind, int Info,
+                                         unsigned Offset) {
+  auto *K = getCurKernelDesc();
+  assert(K && "no kernels");
+  K->Params.push_back(KernelParamDesc{Kind, Info, Offset});
+}
+
+void SYCLIntegrationHeader::endKernel() {
+  // nop for now
+}
+
+SYCLIntegrationHeader::SYCLIntegrationHeader() {}
