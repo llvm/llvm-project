@@ -113,59 +113,62 @@ CompoundStmt *CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelHelper,
     auto TargetFunc = dyn_cast<FunctionDecl>(DC);
     auto TargetFuncParam =
         TargetFunc->param_begin(); // Iterator to ParamVarDecl (VarDecl)
-    for (auto Field : LC->fields()) {
-      QualType ParamType = (*TargetFuncParam)->getOriginalType();
-      auto DRE = DeclRefExpr::Create(
-          S.Context, NestedNameSpecifierLoc(), SourceLocation(),
-          *TargetFuncParam, false, DeclarationNameInfo(), ParamType, VK_LValue);
+    if (TargetFuncParam) {
+      for (auto Field : LC->fields()) {
+        QualType ParamType = (*TargetFuncParam)->getOriginalType();
+        auto DRE =
+            DeclRefExpr::Create(S.Context, NestedNameSpecifierLoc(),
+                                SourceLocation(), *TargetFuncParam, false,
+                                DeclarationNameInfo(), ParamType, VK_LValue);
 
-      CXXRecordDecl *CRD = Field->getType()->getAsCXXRecordDecl();
-      if (CRD) {
-        llvm::SmallVector<Expr *, 16> ParamStmts;
-        DeclAccessPair FieldDAP = DeclAccessPair::make(Field, AS_none);
-        auto AccessorME = MemberExpr::Create(
-            S.Context, LambdaDRE, false, SourceLocation(),
-            NestedNameSpecifierLoc(), SourceLocation(), Field, FieldDAP,
-            DeclarationNameInfo(Field->getDeclName(), SourceLocation()),
-            nullptr, Field->getType(), VK_LValue, OK_Ordinary);
+        CXXRecordDecl *CRD = Field->getType()->getAsCXXRecordDecl();
+        if (CRD) {
+          llvm::SmallVector<Expr *, 16> ParamStmts;
+          DeclAccessPair FieldDAP = DeclAccessPair::make(Field, AS_none);
+          auto AccessorME = MemberExpr::Create(
+              S.Context, LambdaDRE, false, SourceLocation(),
+              NestedNameSpecifierLoc(), SourceLocation(), Field, FieldDAP,
+              DeclarationNameInfo(Field->getDeclName(), SourceLocation()),
+              nullptr, Field->getType(), VK_LValue, OK_Ordinary);
 
-        for (auto Method : CRD->methods()) {
-          if (Method->getNameInfo().getName().getAsString() ==
-              "__set_pointer") {
-            DeclAccessPair MethodDAP = DeclAccessPair::make(Method, AS_none);
-            auto ME = MemberExpr::Create(
-                S.Context, AccessorME, false, SourceLocation(),
-                NestedNameSpecifierLoc(), SourceLocation(), Method, MethodDAP,
-                Method->getNameInfo(), nullptr, Method->getType(), VK_LValue,
-                OK_Ordinary);
+          for (auto Method : CRD->methods()) {
+            if (Method->getNameInfo().getName().getAsString() ==
+                "__set_pointer") {
+              DeclAccessPair MethodDAP = DeclAccessPair::make(Method, AS_none);
+              auto ME = MemberExpr::Create(
+                  S.Context, AccessorME, false, SourceLocation(),
+                  NestedNameSpecifierLoc(), SourceLocation(), Method, MethodDAP,
+                  Method->getNameInfo(), nullptr, Method->getType(), VK_LValue,
+                  OK_Ordinary);
 
-            // Not referenced -> not emitted
-            S.MarkFunctionReferenced(SourceLocation(), Method, true);
+              // Not referenced -> not emitted
+              S.MarkFunctionReferenced(SourceLocation(), Method, true);
 
-            QualType ResultTy = Method->getReturnType();
-            ExprValueKind VK = Expr::getValueKindForType(ResultTy);
-            ResultTy = ResultTy.getNonLValueExprType(S.Context);
+              QualType ResultTy = Method->getReturnType();
+              ExprValueKind VK = Expr::getValueKindForType(ResultTy);
+              ResultTy = ResultTy.getNonLValueExprType(S.Context);
 
-            // __set_pointer needs one parameter
-            QualType paramTy = (*(Method->param_begin()))->getOriginalType();
+              // __set_pointer needs one parameter
+              QualType paramTy = (*(Method->param_begin()))->getOriginalType();
 
-            // C++ address space attribute != opencl address space attribute
-            Expr *qualifiersCast = ImplicitCastExpr::Create(
-                S.Context, paramTy, CK_NoOp, DRE, nullptr, VK_LValue);
-            Expr *Res =
-                ImplicitCastExpr::Create(S.Context, paramTy, CK_LValueToRValue,
-                                         qualifiersCast, nullptr, VK_RValue);
+              // C++ address space attribute != opencl address space attribute
+              Expr *qualifiersCast = ImplicitCastExpr::Create(
+                  S.Context, paramTy, CK_NoOp, DRE, nullptr, VK_LValue);
+              Expr *Res = ImplicitCastExpr::Create(
+                  S.Context, paramTy, CK_LValueToRValue, qualifiersCast,
+                  nullptr, VK_RValue);
 
-            ParamStmts.push_back(Res);
+              ParamStmts.push_back(Res);
 
-            // lambda.accessor.__set_pointer(kernel_parameter)
-            CXXMemberCallExpr *Call = CXXMemberCallExpr::Create(
-                S.Context, ME, ParamStmts, ResultTy, VK, SourceLocation());
-            BodyStmts.push_back(Call);
+              // lambda.accessor.__set_pointer(kernel_parameter)
+              CXXMemberCallExpr *Call = new (S.Context) CXXMemberCallExpr(
+                  S.Context, ME, ParamStmts, ResultTy, VK, SourceLocation());
+              BodyStmts.push_back(Call);
+            }
           }
         }
+        TargetFuncParam++;
       }
-      TargetFuncParam++;
     }
 
     // In function from headers lambda is function parameter, we need
@@ -216,6 +219,8 @@ void BuildArgTys(ASTContext &Context,
               Context.getQualifiedType(PointerType.getUnqualifiedType(), Quals);
         }
       }
+    } else if (std::string(Name) == "stream") {
+      continue;
     }
     DeclContext *DC = Context.getTranslationUnitDecl();
 
