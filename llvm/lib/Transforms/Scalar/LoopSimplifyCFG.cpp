@@ -106,7 +106,7 @@ private:
   SmallPtrSet<BasicBlock *, 8> LiveLoopBlocks;
   // The blocks of the original loop that will become unreachable from entry
   // after the constant folding.
-  SmallPtrSet<BasicBlock *, 8> DeadLoopBlocks;
+  SmallVector<BasicBlock *, 8> DeadLoopBlocks;
   // The exits of the original loop that will still be reachable from entry
   // after the constant folding.
   SmallPtrSet<BasicBlock *, 8> LiveExitBlocks;
@@ -141,7 +141,7 @@ private:
     PrintOutVector("Blocks in which we can constant-fold terminator:",
                    FoldCandidates);
     PrintOutSet("Live blocks from the original loop:", LiveLoopBlocks);
-    PrintOutSet("Dead blocks from the original loop:", DeadLoopBlocks);
+    PrintOutVector("Dead blocks from the original loop:", DeadLoopBlocks);
     PrintOutSet("Live exit blocks:", LiveExitBlocks);
     PrintOutVector("Dead exit blocks:", DeadExitBlocks);
     if (!DeleteCurrentLoop)
@@ -196,7 +196,7 @@ private:
 
       // If a loop block wasn't marked as live so far, then it's dead.
       if (!LiveLoopBlocks.count(BB)) {
-        DeadLoopBlocks.insert(BB);
+        DeadLoopBlocks.push_back(BB);
         continue;
       }
 
@@ -385,8 +385,11 @@ private:
   /// relevant updates to DT and LI.
   void deleteDeadLoopBlocks() {
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-    if (MSSAU)
-      MSSAU->removeBlocks(DeadLoopBlocks);
+    if (MSSAU) {
+      SmallPtrSet<BasicBlock *, 8> DeadLoopBlocksSet(DeadLoopBlocks.begin(),
+                                                     DeadLoopBlocks.end());
+      MSSAU->removeBlocks(DeadLoopBlocksSet);
+    }
     for (auto *BB : DeadLoopBlocks) {
       assert(BB != L.getHeader() &&
              "Header of the current loop cannot be dead!");

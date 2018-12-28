@@ -175,6 +175,51 @@ void InstallAtExitHandler() {
 
 // ---------------------- TSD ---------------- {{{1
 
+#if SANITIZER_NETBSD || SANITIZER_FREEBSD
+// Thread Static Data cannot be used in early init on NetBSD and FreeBSD.
+// Reuse the MSan TSD API for compatibility with existing code
+// with an alternative implementation.
+
+static void (*tsd_destructor)(void *tsd) = nullptr;
+
+struct tsd_key {
+  tsd_key() : key(nullptr) {}
+  ~tsd_key() {
+    CHECK(tsd_destructor);
+    if (key)
+      (*tsd_destructor)(key);
+  }
+  MsanThread *key;
+};
+
+static thread_local struct tsd_key key;
+
+void MsanTSDInit(void (*destructor)(void *tsd)) {
+  CHECK(!tsd_destructor);
+  tsd_destructor = destructor;
+}
+
+MsanThread *GetCurrentThread() {
+  CHECK(tsd_destructor);
+  return key.key;
+}
+
+void SetCurrentThread(MsanThread *tsd) {
+  CHECK(tsd_destructor);
+  CHECK(tsd);
+  CHECK(!key.key);
+  key.key = tsd;
+}
+
+void MsanTSDDtor(void *tsd) {
+  CHECK(tsd_destructor);
+  CHECK_EQ(key.key, tsd);
+  key.key = nullptr;
+  // Make sure that signal handler can not see a stale current thread pointer.
+  atomic_signal_fence(memory_order_seq_cst);
+  MsanThread::TSDDtor(tsd);
+}
+#else
 static pthread_key_t tsd_key;
 static bool tsd_key_inited = false;
 
@@ -211,6 +256,7 @@ void MsanTSDDtor(void *tsd) {
   atomic_signal_fence(memory_order_seq_cst);
   MsanThread::TSDDtor(tsd);
 }
+#endif
 
 } // namespace __msan
 

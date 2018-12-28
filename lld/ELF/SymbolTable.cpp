@@ -94,8 +94,20 @@ template <class ELFT> void SymbolTable::addFile(InputFile *File) {
   if (auto *F = dyn_cast<SharedFile<ELFT>>(File)) {
     // DSOs are uniquified not by filename but by soname.
     F->parseSoName();
-    if (errorCount() || !SoNames.insert(F->SoName).second)
+    if (errorCount())
       return;
+
+    // If a DSO appears more than once on the command line with and without
+    // --as-needed, --no-as-needed takes precedence over --as-needed because a
+    // user can add an extra DSO with --no-as-needed to force it to be added to
+    // the dependency list.
+    DenseMap<StringRef, InputFile *>::iterator It;
+    bool WasInserted;
+    std::tie(It, WasInserted) = SoNames.try_emplace(F->SoName, F);
+    cast<SharedFile<ELFT>>(It->second)->IsNeeded |= F->IsNeeded;
+    if (!WasInserted)
+      return;
+
     SharedFiles.push_back(F);
     F->parseRest();
     return;

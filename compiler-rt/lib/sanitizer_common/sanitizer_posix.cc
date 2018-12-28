@@ -322,7 +322,8 @@ fd_t ReserveStandardFds(fd_t fd) {
   CHECK_GE(fd, 0);
   if (fd > 2)
     return fd;
-  bool used[3] = {false, false, false};
+  bool used[3];
+  internal_memset(used, 0, sizeof(used));
   while (fd <= 2) {
     used[fd] = true;
     fd = internal_dup(fd);
