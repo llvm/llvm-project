@@ -2148,7 +2148,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     return emitIFuncDefinition(GD);
 
   if (LangOpts.SYCL) {
-    if (!Global->hasAttr<OpenCLKernelAttr>())
+    if (!Global->hasAttr<SYCLDeviceAttr>())
       return;
   }
 

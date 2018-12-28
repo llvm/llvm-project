@@ -294,6 +294,7 @@ class LangOpt<string name, bit negated = 0> {
 def MicrosoftExt : LangOpt<"MicrosoftExt">;
 def Borland : LangOpt<"Borland">;
 def CUDA : LangOpt<"CUDA">;
+def SYCL : LangOpt<"SYCL">;
 def COnly : LangOpt<"CPlusPlus", 1>;
 def CPlusPlus : LangOpt<"CPlusPlus">;
 def OpenCL : LangOpt<"OpenCL">;
@@ -980,6 +981,13 @@ def CUDAShared : InheritableAttr {
   let Spellings = [GNU<"shared">, Declspec<"__shared__">];
   let Subjects = SubjectList<[Var]>;
   let LangOpts = [CUDA];
+  let Documentation = [Undocumented];
+}
+
+def SYCLDevice : InheritableAttr {
+  let Spellings = [GNU<"sycl_device">];
+  let Subjects = SubjectList<[Function, Var]>;
+  let LangOpts = [SYCL];
   let Documentation = [Undocumented];
 }
 

@@ -46,8 +46,11 @@ FunctionDecl *CreateSYCLKernelFunction(ASTContext &Context, StringRef Name,
   Result->setParams(Params);
   // TODO: Add SYCL specific attribute for kernel and all functions called
   // by kernel.
+  Result->addAttr(SYCLDeviceAttr::CreateImplicit(Context));
   Result->addAttr(OpenCLKernelAttr::CreateImplicit(Context));
   Result->addAttr(AsmLabelAttr::CreateImplicit(Context, Name));
+  // To see kernel in ast-dump.
+  DC->addDecl(Result);
   return Result;
 }
 
