@@ -1,0 +1,61 @@
+119734787 65536 458752 28 0 
+2 Capability Addresses 
+2 Capability Linkage 
+2 Capability Kernel 
+2 Capability Float64 
+3 MemoryModel 2 2 
+8 EntryPoint 6 1 "vector_times_scalar"
+3 Source 3 102000 
+3 Name 2 "res"
+3 Name 3 "lhs"
+3 Name 4 "rhs"
+4 Decorate 5 FuncParamAttr 5 
+2 DecorationGroup 5 
+4 Decorate 6 BuiltIn 28 
+3 Decorate 6 Constant 
+11 Decorate 6 LinkageAttributes "__spirv_GlobalInvocationId" Import 
+5 GroupDecorate 5 2 3 4 
+4 TypeInt 7 64 0 
+5 Constant 7 10 32 0 
+4 TypeVector 8 7 3 
+4 TypePointer 9 0 8 
+2 TypeVoid 11 
+3 TypeFloat 12 64 
+4 TypePointer 13 5 12 
+4 TypeVector 14 12 4 
+4 TypePointer 15 5 14 
+6 TypeFunction 16 11 15 15 13 
+4 Variable 9 6 0 
+
+5 Function 11 1 0 16 
+3 FunctionParameter 15 2 
+3 FunctionParameter 15 3 
+3 FunctionParameter 13 4 
+
+2 Label 17 
+6 Load 8 18 6 2 0 
+5 CompositeExtract 7 19 18 0 
+5 ShiftLeftLogical 7 20 19 10 
+5 ShiftRightArithmetic 7 21 20 10 
+5 InBoundsPtrAccessChain 15 22 3 21 
+6 Load 14 23 22 2 32 
+5 InBoundsPtrAccessChain 13 24 4 21 
+6 Load 12 25 24 2 8 
+5 VectorTimesScalar 14 26 23 25 
+5 InBoundsPtrAccessChain 15 27 2 21 
+5 Store 27 26 2 32 
+1 Return 
+
+1 FunctionEnd 
+
+; FIXME: LIT comments/commands are moved at the end because llvm-spirv stops
+; reading the file after first ';' symbol
+
+; RUN: llvm-spirv %s -to-binary -o %t.spv
+; RUN: llvm-spirv -r %t.spv -o %t.bc
+; RUN: llvm-dis < %t.bc | FileCheck %s --check-prefix=CHECK-LLVM
+
+; CHECK-LLVM: %.splatinsert = insertelement <4 x double> undef, double %{{[0-9]*}}, i32 0
+; CHECK-LLVM: %[[shufflevector:[0-9]+]] = shufflevector <4 x double> %.splatinsert, <4 x double> undef, <4 x i32> zeroinitializer
+; CHECK-LLVM: %scale = fmul <4 x double> %{{[0-9]*}}, %[[shufflevector]]
+

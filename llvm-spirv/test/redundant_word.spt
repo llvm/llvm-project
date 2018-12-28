@@ -1,0 +1,36 @@
+119734787 65536 393230 11 0 
+2 Capability Addresses 
+0 Capability 
+2 Capability Kernel 
+5 ExtInstImport 1 "OpenCL.std"
+3 MemoryModel 2 2 
+6 EntryPoint 6 5 "fmod_kernel"
+3 Source 3 200000 
+3 Name 6 "out"
+3 Name 7 "in1"
+3 Name 8 "in2"
+4 Name 9 "entry"
+4 Name 10 "call"
+2 TypeVoid 2 
+3 TypeFloat 3 32 
+6 TypeFunction 4 2 3 3 3 
+0 Nop 
+
+5 Function 2 5 0 4 
+3 FunctionParameter 3 6 
+3 FunctionParameter 3 7 
+3 FunctionParameter 3 8 
+
+2 Label 9 
+7 ExtInst 3 10 1 fmod 7 8 
+1 Return 
+
+1 FunctionEnd 
+
+
+; FIXME: LIT comments/commands are moved at the end because llvm-spirv stops
+; reading the file after first ';' symbol
+
+; RUN: llvm-spirv %s -to-binary -o %t.spv
+; RUN: llvm-spirv -r %t.spv -o %t.bc
+

@@ -1,0 +1,49 @@
+119734787 65536 458752 30 0
+2 Capability Addresses
+2 Capability Linkage
+2 Capability Kernel
+2 Capability Int64
+3 MemoryModel 2 2
+10 EntryPoint 6 1 "shift_right_arithmetic"
+3 Source 3 102000
+3 Name 2 "in"
+4 Decorate 3 BuiltIn 28
+3 Decorate 3 Constant
+4 Decorate 2 FuncParamAttr 5
+11 Decorate 3 LinkageAttributes "__spirv_GlobalInvocationId" Import
+4 TypeInt 4 64 0
+4 TypeInt 8 32 1
+5 Constant 4 12 10 0
+5 Constant 4 25 5 0
+4 Constant 8 13 5
+4 Constant 8 14 6
+4 Constant 8 15 7
+4 Constant 8 16 8
+4 TypeVector 5 4 3
+4 TypePointer 6 0 5
+2 TypeVoid 7
+4 TypeVector 9 8 4
+4 TypePointer 10 5 9
+4 TypeFunction 11 7 10
+4 Variable 6 3 0
+
+5 Function 7 1 0 11
+3 FunctionParameter 10 2
+
+2 Label 17
+6 Load 5 18 3 2 0
+5 CompositeExtract 4 19 18 0
+5 ShiftRightArithmetic 4 20 19 12
+5 ShiftLeftLogical 4 21 20 25
+7 CompositeConstruct 9 22 13 14 15 16
+5 InBoundsPtrAccessChain 10 23 2 21
+3 Store 23 22
+1 Return
+
+1 FunctionEnd
+
+; RUN: llvm-spirv %s -to-binary -o %t.spv
+; RUN: llvm-spirv -r %t.spv -o %t.bc
+; RUN: llvm-dis < %t.bc | FileCheck %s --check-prefix=CHECK-LLVM
+
+; CHECK-LLVM: %{{[0-9]*}} = ashr i64 %{{[0-9]*}}, 10

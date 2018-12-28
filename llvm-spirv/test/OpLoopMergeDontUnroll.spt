@@ -1,0 +1,91 @@
+119734787 65536 458752 46 0
+2 Capability Addresses
+2 Capability Linkage
+2 Capability Kernel
+2 Capability Int64
+3 MemoryModel 2 2
+11 EntryPoint 6 1 "loop_merge_branch_dont_unroll"
+3 Source 3 102000
+3 Name 2 "res"
+3 Name 3 "in"
+3 Name 4 "rep"
+3 Name 5 "num"
+4 Decorate 6 FuncParamAttr 5
+2 DecorationGroup 6
+4 Decorate 7 BuiltIn 28
+3 Decorate 7 Constant
+11 Decorate 7 LinkageAttributes "__spirv_GlobalInvocationId" Import
+4 GroupDecorate 6 2 3
+4 TypeInt 8 64 0
+4 TypeInt 14 32 1
+5 Constant 8 11 32 0
+4 Constant 14 15 0
+4 Constant 14 16 1
+4 TypeVector 9 8 3
+4 TypePointer 10 0 9
+2 TypeBool 12
+2 TypeVoid 13
+4 TypePointer 17 5 14
+4 TypePointer 18 7 14
+7 TypeFunction 19 13 17 17 14 14
+4 Variable 10 7 0
+
+5 Function 13 1 0 19
+3 FunctionParameter 17 2
+3 FunctionParameter 17 3
+3 FunctionParameter 14 4
+3 FunctionParameter 14 5
+
+2 Label 20
+6 Load 9 21 7 2 0
+5 CompositeExtract 8 22 21 0
+5 ShiftLeftLogical 8 23 22 11
+5 ShiftRightArithmetic 8 24 23 11
+4 SConvert 14 25 24
+4 Variable 18 26 7
+4 Variable 18 27 7
+5 Store 26 15 2 4
+5 Store 27 15 2 4
+2 Branch 28
+
+2 Label 28
+4 LoopMerge 29 30 2
+2 Branch 31
+
+2 Label 31
+4 Load 14 32 27
+5 SLessThan 12 33 32 4
+4 BranchConditional 33 34 29
+
+2 Label 34
+4 Load 14 35 27
+5 IMul 14 36 35 5
+5 IAdd 14 37 25 36
+5 InBoundsPtrAccessChain 17 38 3 37
+4 Load 14 39 38
+4 Load 14 40 26
+5 IAdd 14 41 40 39
+5 Store 26 41 2 4
+2 Branch 30
+
+2 Label 30
+4 Load 14 42 27
+5 IAdd 14 43 42 16
+3 Store 27 43
+2 Branch 28
+
+2 Label 29
+4 Load 14 44 26
+5 InBoundsPtrAccessChain 17 45 2 24
+5 Store 45 44 2 4
+1 Return
+
+1 FunctionEnd
+
+; RUN: llvm-spirv %s -to-binary -o %t.spv
+; RUN: llvm-spirv -r %t.spv -o %t.bc
+; RUN: llvm-dis < %t.bc | FileCheck %s --check-prefix=CHECK-LLVM
+
+; CHECK-LLVM: br label %{{[0-9]+}}, !llvm.loop ![[MD:[0-9]+]]
+; CHECK-LLVM: ![[MD]] = distinct !{![[MD]], ![[MD_unroll_disable:[0-9]+]]}
+; CHECK-LLVM: ![[MD_unroll_disable]] = !{!"llvm.loop.unroll.disable"}

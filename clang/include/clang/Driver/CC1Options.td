@@ -572,6 +572,8 @@ def emit_llvm_bc : Flag<["-"], "emit-llvm-bc">,
   HelpText<"Build ASTs then convert to LLVM, emit .bc file">;
 def emit_llvm_only : Flag<["-"], "emit-llvm-only">,
   HelpText<"Build ASTs and convert to LLVM, discarding output">;
+def emit_spirv : Flag<["-"], "emit-spirv">,
+  HelpText<"Build ASTs then convert to LLVM then convert to SPIR-V, emit .spv file">;
 def emit_codegen_only : Flag<["-"], "emit-codegen-only">,
   HelpText<"Generate machine code, but discard output">;
 def emit_obj : Flag<["-"], "emit-obj">,

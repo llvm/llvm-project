@@ -1,0 +1,34 @@
+119734787 65536 393230 10 0
+2 Capability Addresses
+2 Capability Linkage
+2 Capability Kernel
+5 ExtInstImport 1 "OpenCL.std"
+3 MemoryModel 1 2
+3 Source 3 200000
+4 Name 9 "entry"
+5 Decorate 5 LinkageAttributes "var" Export
+6 Decorate 8 LinkageAttributes "func" Export
+4 Decorate 5 Alignment 4
+4 TypeInt 2 32 0
+4 Constant 2 3 42
+4 TypePointer 4 5 2
+2 TypeVoid 6
+3 TypeFunction 7 6
+5 Variable 4 5 5 3
+
+5 Function 6 8 0 7
+
+2 Label 9
+1 Return
+
+1 FunctionEnd
+
+; FIXME: LIT comments/commands are moved at the end because llvm-spirv stops
+; reading the file after first ';' symbol
+
+; RUN: llvm-spirv %s -to-binary -o %t.spv
+; RUN: llvm-spirv -r %t.spv -o %t.bc
+; RUN: llvm-dis < %t.bc | FileCheck %s
+
+; CHECK: @var =
+; CHECK: define spir_func void @func()

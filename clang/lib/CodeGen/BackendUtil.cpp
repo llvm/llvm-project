@@ -61,6 +61,7 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
+#include "LLVMSPIRVLib.h"
 #include <memory>
 using namespace clang;
 using namespace llvm;
@@ -777,6 +778,7 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
 
   bool UsesCodeGen = (Action != Backend_EmitNothing &&
                       Action != Backend_EmitBC &&
+                      Action != Backend_EmitSPIRV &&
                       Action != Backend_EmitLL);
   CreateTargetMachine(UsesCodeGen);
 
@@ -829,6 +831,13 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
           createBitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists,
                                   EmitLTOSummary));
     }
+    break;
+
+
+  case Backend_EmitSPIRV:
+
+    PerModulePasses.add(createSPIRVWriterPass(*OS));
+
     break;
 
   case Backend_EmitLL:
@@ -1064,6 +1073,10 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       MPM.addPass(BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists,
                                     EmitLTOSummary));
     }
+    break;
+
+  case Backend_EmitSPIRV:
+    CodeGenPasses.add(createSPIRVWriterPass(*OS));
     break;
 
   case Backend_EmitLL:

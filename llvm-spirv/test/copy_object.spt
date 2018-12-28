@@ -1,0 +1,50 @@
+119734787 65536 458752 20 0
+2 Capability Addresses
+2 Capability Linkage
+2 Capability Kernel
+2 Capability Int64
+3 MemoryModel 2 2
+8 EntryPoint 6 1 "copy_object"
+3 Source 3 102000
+3 Name 2 "in"
+4 Decorate 3 BuiltIn 28
+3 Decorate 3 Constant
+4 Decorate 2 FuncParamAttr 5
+11 Decorate 3 LinkageAttributes "__spirv_GlobalInvocationId" Import
+4 TypeInt 4 64 0
+4 TypeInt 8 8 1
+5 Constant 4 11 32 0
+4 Constant 8 12 -20
+4 TypeVector 5 4 3
+4 TypePointer 6 0 5
+2 TypeVoid 7
+4 TypePointer 9 5 8
+4 TypeFunction 10 7 9
+4 Variable 6 3 0
+
+5 Function 7 1 0 10
+3 FunctionParameter 9 2
+
+2 Label 13
+6 Load 5 14 3 2 0
+5 CompositeExtract 4 15 14 0
+5 ShiftLeftLogical 4 16 15 11
+5 ShiftRightArithmetic 4 17 16 11
+5 InBoundsPtrAccessChain 9 18 2 17
+4 CopyObject 8 19 12
+3 Store 18 19
+1 Return
+
+1 FunctionEnd
+
+; FIXME: LIT comments/commands are moved at the end because llvm-spirv stops
+; reading the file after first ';' symbol
+
+; RUN: llvm-spirv %s -to-binary -o %t.spv
+; RUN: llvm-spirv -r %t.spv -o %t.bc
+; RUN: llvm-dis < %t.bc | FileCheck %s --check-prefix=CHECK-LLVM
+
+; CHECK-LLVM-NOT: CopyObject
+; CHECK-LLVM: %[[char:[0-9]+]] = alloca i8
+; CHECK-LLVM: store i8 -20, i8* %[[char]]
+; CHECK-LLVM: %{{[0-9]*}} = load i8, i8* %[[char]]

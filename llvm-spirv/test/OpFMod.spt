@@ -1,0 +1,65 @@
+119734787 65536 458752 27 0
+2 Capability Addresses
+2 Capability Linkage
+2 Capability Kernel
+2 Capability Float64
+2 Capability Int64
+5 ExtInstImport 1 "OpenCL.std"
+3 MemoryModel 2 2
+6 EntryPoint 6 2 "fmath_spv"
+3 Source 3 102000
+3 Name 3 "res"
+3 Name 4 "lhs"
+3 Name 5 "rhs"
+4 Name 6 "entry"
+9 Name 8 "__spirv_GlobalInvocationId"
+4 Decorate 7 FuncParamAttr 5
+2 DecorationGroup 7
+4 Decorate 8 BuiltIn 28
+3 Decorate 8 Constant
+11 Decorate 8 LinkageAttributes "__spirv_GlobalInvocationId" Import
+5 GroupDecorate 7 3 4 5
+4 TypeInt 9 64 0
+5 Constant 9 16 32 0
+4 TypeVector 10 9 3
+4 TypePointer 11 0 10
+2 TypeVoid 12
+3 TypeFloat 13 64
+4 TypePointer 14 5 13
+6 TypeFunction 15 12 14 14 14
+4 Variable 11 8 0
+
+5 Function 12 2 0 15
+3 FunctionParameter 14 3
+3 FunctionParameter 14 4
+3 FunctionParameter 14 5
+
+2 Label 6
+6 Load 10 17 8 2 0
+5 CompositeExtract 9 18 17 0
+5 ShiftLeftLogical 9 19 18 16
+5 ShiftRightArithmetic 9 20 19 16
+5 InBoundsPtrAccessChain 14 21 4 20
+6 Load 13 22 21 2 8
+5 InBoundsPtrAccessChain 14 23 5 20
+6 Load 13 24 23 2 8
+5 FMod 13 25 22 24
+5 InBoundsPtrAccessChain 14 26 3 20
+5 Store 26 25 2 8
+1 Return
+
+1 FunctionEnd
+
+; RUN: llvm-spirv %s -to-binary -o %t.spv
+; RUN: llvm-spirv %t.spv -to-text -o %t.spt
+; RUN: FileCheck < %t.spt %s --check-prefix=CHECK-SPIRV
+; RUN: llvm-spirv -r %t.spv -o %t.bc
+; RUN: llvm-dis < %t.bc | FileCheck %s --check-prefix=CHECK-LLVM
+
+; CHECK-SPIRV: 5 FMod {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} {{[0-9]*}}
+
+; CHECK-LLVM: %frem.res = frem double %[[dividend:[0-9]+]], %[[divisor:[0-9]+]]
+; CHECK-LLVM: %copysign = call spir_func double @_Z8copysigndd(double %frem.res, double %[[divisor]]) #0
+; CHECK-LLVM: %[[ptr:[0-9]+]] = getelementptr inbounds double, double addrspace(1)* %res, i64 %{{[0-9]*}}
+; CHECK-LLVM: store double %copysign, double addrspace(1)* %[[ptr]], align 8
+  

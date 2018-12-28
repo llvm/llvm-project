@@ -1,0 +1,136 @@
+language: cpp
+
+os:
+  - linux
+
+# Use Ubuntu 16.04 LTS (Xenial) as the Linux testing environment.
+dist: xenial
+sudo: false
+
+git:
+  depth: 1
+
+branches:
+  only:
+    - master
+
+addons:
+  apt:
+    sources:
+    - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main'
+      key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
+    - ubuntu-toolchain-r-test
+    packages:
+    - llvm-8-tools
+    - llvm-8-dev
+    - clang-format-8
+    - clang-tidy-8
+
+compiler:
+  - gcc
+  - clang
+
+env:
+  global:
+    - MAKEFLAGS="-j2"
+    - CHECK_FORMAT=0
+    - CHECK_TIDY=0
+  matrix:
+    - BUILD_TYPE=Release BUILD_EXTERNAL=1 SHARED_LIBS=ON  MAKE_TARGETS=""           MAKE_TEST_TARGET="test"
+    - BUILD_TYPE=Debug   BUILD_EXTERNAL=1 SHARED_LIBS=ON  MAKE_TARGETS=""           MAKE_TEST_TARGET="test"
+    - BUILD_TYPE=Release BUILD_EXTERNAL=0 SHARED_LIBS=ON  MAKE_TARGETS="llvm-spirv" MAKE_TEST_TARGET="check-llvm-spirv"
+    - BUILD_TYPE=Debug   BUILD_EXTERNAL=0 SHARED_LIBS=ON  MAKE_TARGETS="llvm-spirv" MAKE_TEST_TARGET="check-llvm-spirv"
+    - BUILD_TYPE=Release BUILD_EXTERNAL=1 SHARED_LIBS=OFF MAKE_TARGETS=""           MAKE_TEST_TARGET="test"
+    - BUILD_TYPE=Debug   BUILD_EXTERNAL=1 SHARED_LIBS=OFF MAKE_TARGETS=""           MAKE_TEST_TARGET="test"
+    - BUILD_TYPE=Release BUILD_EXTERNAL=0 SHARED_LIBS=OFF MAKE_TARGETS="llvm-spirv" MAKE_TEST_TARGET="check-llvm-spirv"
+    - BUILD_TYPE=Debug   BUILD_EXTERNAL=0 SHARED_LIBS=OFF MAKE_TARGETS="llvm-spirv" MAKE_TEST_TARGET="check-llvm-spirv"
+  # some bug inside clang-5.0.0, works with 5.0.1
+
+matrix:
+  include:
+    - os: osx
+      env: BUILD_TYPE=Release BUILD_EXTERNAL=0 MAKE_TARGETS="llvm-spirv" MAKE_TEST_TARGET="check-llvm-spirv"
+      osx_image: xcode9.3
+
+    - os: osx
+      env: BUILD_TYPE=Debug BUILD_EXTERNAL=0 MAKE_TARGETS="llvm-spirv" MAKE_TEST_TARGET="check-llvm-spirv"
+      osx_image: xcode9.3
+
+    - env: BUILD_EXTERNAL=1 CHECK_FORMAT=1
+
+    - env: BUILD_EXTERNAL=1 CHECK_TIDY=1
+  allow_failures:
+    - compiler: clang
+    - os: osx
+  fast_finish: true
+
+script:
+  - |
+    if [ $BUILD_EXTERNAL == "0" ]; then
+      mkdir llvm-spirv
+      mv * llvm-spirv
+      git clone https://git.llvm.org/git/llvm.git/ --depth 1
+      mv llvm-spirv llvm/tools/llvm-spirv
+    fi
+  - mkdir build && cd build
+  - |
+    if [ $BUILD_EXTERNAL == "1" ]; then
+      if [ $CHECK_FORMAT != "1" ]; then
+        cmake .. \
+          -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+          -DBUILD_SHARED_LIBS=${SHARED_LIBS} \
+          -DLLVM_BUILD_TOOLS=ON \
+          -DLLVM_EXTERNAL_LIT="/usr/lib/llvm-8/build/utils/lit/lit.py" \
+          -DLLVM_INCLUDE_TESTS=ON \
+          -DCMAKE_INSTALL_PREFIX=../install/ \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+          -G "Unix Makefiles"
+      fi
+    else
+      cmake ../llvm/ \
+        -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+        -DBUILD_SHARED_LIBS=${SHARED_LIBS} \
+        -DLLVM_BUILD_TOOLS=ON \
+        -DLLVM_BUILD_TESTS=ON \
+        -DLLVM_INCLUDE_TESTS=ON \
+        -DSKIP_SPIRV_DEBUG_INFO_TESTS=ON \
+        -DLLVM_LIT_ARGS="-sv --no-progress-bar" \
+        -G "Unix Makefiles"
+    fi
+  - if [ $CHECK_FORMAT == "1" ]; then
+      cd ..;
+      ln -s /usr/share/clang/clang-format-8/clang-format-diff.py utils/;
+      ./utils/check_code_format.sh;
+    elif [ $CHECK_TIDY == "1" ]; then
+      cd ..;
+      ln -s build/compile_commands.json;
+      ./utils/check_code_tidyness.sh;
+    else
+      make $MAKE_TARGETS && make $MAKE_TEST_TARGET && if [ $BUILD_EXTERNAL == "1" ]; then make install; fi
+    fi
+
+after_success:
+  # Create tarball for deployment
+  - if [[ "${BUILD_EXTERNAL}" == "1" && "${SHARED_LIBS}" == "ON" && "${repo_token}" != "" ]]; then
+      export TARBALL=SPIRV-LLVM-Translator-$(date +%F)-${TRAVIS_OS_NAME}-${BUILD_TYPE}.zip;
+      cd ../install && find . -print | zip -@ ${TARBALL};
+    fi
+
+before_deploy:
+  # Tag the current master top of the tree as "latest".
+  # Travis CI relies on the tag name to push to the correct release.
+  - git config --global user.name "Travis CI"
+  - git config --global user.email "builds@travis-ci.org"
+  - git tag -f latest_build
+  - git push -f https://${repo_token}@github.com/${TRAVIS_REPO_SLUG} --tags
+
+deploy:
+  provider: releases
+  api_key: ${repo_token}
+  on:
+    branch: master
+    condition: ${BUILD_EXTERNAL} == 1 && ${SHARED_LIBS} == ON && ${repo_token}
+  file: ${TARBALL}
+  skip_cleanup: true
+  overwrite: true
+  prerelease: true

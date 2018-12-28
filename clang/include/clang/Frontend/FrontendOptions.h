@@ -58,6 +58,9 @@ enum ActionKind {
   /// Emit a .bc file.
   EmitBC,
 
+  /// Emit a .spv file.
+  EmitSPIRV,
+
   /// Translate input source into HTML.
   EmitHTML,
 

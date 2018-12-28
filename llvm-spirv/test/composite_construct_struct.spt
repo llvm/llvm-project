@@ -1,0 +1,56 @@
+119734787 65536 458752 29 0
+2 Capability Addresses
+2 Capability Linkage
+2 Capability Kernel
+2 Capability Int64
+3 MemoryModel 2 2
+10 EntryPoint 6 1 "composite_construct_struct"
+3 Source 3 102000
+3 Name 2 "in"
+4 Decorate 3 BuiltIn 28
+3 Decorate 3 Constant
+4 Decorate 2 FuncParamAttr 5
+11 Decorate 3 LinkageAttributes "__spirv_GlobalInvocationId" Import
+4 TypeInt 4 64 0
+4 TypeInt 8 32 1
+4 TypeInt 10 8 1
+5 Constant 4 15 32 0
+4 Constant 8 16 2194483696
+4 Constant 10 17 4294967168
+4 Constant 8 18 2194487296
+4 Constant 8 19 2100480000
+4 TypeVector 5 4 3
+4 TypePointer 6 0 5
+2 TypeVoid 7
+4 TypeVector 9 8 2
+4 TypeStruct 11 8 10
+4 TypeStruct 12 9 11
+4 TypePointer 13 5 12
+4 TypeFunction 14 7 13
+5 ConstantComposite 9 20 18 19
+4 Variable 6 3 0
+
+5 Function 7 1 0 14
+3 FunctionParameter 13 2
+
+2 Label 21
+5 CompositeConstruct 11 22 16 17
+5 CompositeConstruct 12 23 20 22
+6 Load 5 24 3 2 0
+5 CompositeExtract 4 25 24 0
+5 ShiftLeftLogical 4 26 25 15
+5 ShiftRightArithmetic 4 27 26 15
+5 InBoundsPtrAccessChain 13 28 2 27
+3 Store 28 23
+1 Return
+
+1 FunctionEnd
+
+; RUN: llvm-spirv %s -to-binary -o %t.spv
+; RUN: llvm-spirv -r %t.spv -o %t.bc
+; RUN: llvm-dis < %t.bc | FileCheck %s --check-prefix=CHECK-LLVM
+
+; CHECK-LLVM: %[[struct0_type:[0-9]+]] = type { <2 x i32>, %[[struct1_type:[0-9]+]] }
+; CHECK-LLVM: %[[struct1_type]] = type { i32, i8 }
+; CHECK-LLVM: %[[struct:[0-9]+]] = getelementptr inbounds %[[struct0_type]], %[[struct0_type]] addrspace(1)* %in, i64 %{{[0-9]*}}
+; CHECK-LLVM: store %[[struct0_type]] { <2 x i32> <i32 -2100480000, i32 2100480000>, %[[struct1_type]] { i32 -2100483600, i8 -128 } }, %[[struct0_type]] addrspace(1)* %[[struct]]

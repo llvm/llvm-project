@@ -1,0 +1,72 @@
+119734787 65536 393230 34 0
+2 Capability Addresses
+2 Capability Linkage
+2 Capability Kernel
+2 Capability Int64
+2 Capability ImageBasic
+5 ExtInstImport 1 "OpenCL.std"
+3 MemoryModel 2 2
+6 EntryPoint 6 13 "image_test"
+3 Source 3 200000
+11 Name 5 "__spirv_BuiltInGlobalInvocationId"
+4 Name 14 "srcImg"
+4 Name 15 "samp"
+4 Name 16 "result"
+4 Name 17 "entry"
+4 Name 19 "call"
+4 Name 21 "call1"
+4 Name 22 "conv"
+4 Name 25 "vecinit"
+4 Name 26 "conv2"
+5 Name 27 "vecinit3"
+7 Name 29 "TempSampledImage"
+5 Name 30 "call4.old"
+5 Name 33 "arrayidx"
+4 Decorate 5 BuiltIn 28
+3 Decorate 5 Constant
+13 Decorate 5 LinkageAttributes "__spirv_BuiltInGlobalInvocationId" Import
+4 TypeInt 2 64 0
+4 TypeInt 9 32 0
+4 TypeVector 3 2 3
+4 TypePointer 4 0 3
+2 TypeVoid 6
+9 TypeImage 7 6 1 0 0 0 0 0
+2 TypeSampler 8
+4 TypeVector 10 9 4
+4 TypePointer 11 5 10
+6 TypeFunction 12 6 7 8 11
+4 TypeVector 23 9 2
+3 TypeSampledImage 28 7
+3 TypeFloat 31 32
+4 Variable 4 5 0
+3 Undef 23 24
+4 Constant 31 32 0
+
+5 Function 6 13 0 12
+3 FunctionParameter 7 14
+3 FunctionParameter 8 15
+3 FunctionParameter 11 16
+
+2 Label 17
+4 Load 3 18 5
+5 CompositeExtract 2 19 18 0
+4 Load 3 20 5
+5 CompositeExtract 2 21 20 1
+4 UConvert 9 22 19
+6 CompositeInsert 23 25 22 24 0
+4 UConvert 9 26 21
+6 CompositeInsert 23 27 26 25 1
+5 SampledImage 28 29 14 15
+7 ImageSampleExplicitLod 10 30 29 27 2 32
+5 InBoundsPtrAccessChain 11 33 16 19
+5 Store 33 30 2 16
+1 Return
+
+1 FunctionEnd
+
+; RUN: llvm-spirv %s -to-binary -o %t.spv
+; RUN: llvm-spirv -r %t.spv -o %t.bc
+; RUN: llvm-dis < %t.bc | FileCheck %s --check-prefix=CHECK-LLVM
+
+; CHECK-LLVM: %opencl.image2d_t = type opaque
+; CHECK-LLVM: !{{[0-9]*}} = !{!"read_only", !"none", !"none"}
