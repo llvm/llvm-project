@@ -18,6 +18,16 @@ using namespace clang;
 
 typedef llvm::DenseMap<DeclaratorDecl *, DeclaratorDecl *> DeclMap;
 
+enum target {
+  global_buffer = 2014,
+  constant_buffer,
+  local,
+  image,
+  host_buffer,
+  host_image,
+  image_array
+};
+
 class KernelBodyTransform : public TreeTransform<KernelBodyTransform> {
 public:
   KernelBodyTransform(llvm::DenseMap<DeclaratorDecl *, DeclaratorDecl *> &Map,
@@ -161,7 +171,7 @@ CompoundStmt *CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelHelper,
               ParamStmts.push_back(Res);
 
               // lambda.accessor.__set_pointer(kernel_parameter)
-              CXXMemberCallExpr *Call = new (S.Context) CXXMemberCallExpr(
+              CXXMemberCallExpr *Call = CXXMemberCallExpr::Create(
                   S.Context, ME, ParamStmts, ResultTy, VK, SourceLocation());
               BodyStmts.push_back(Call);
             }
@@ -208,10 +218,27 @@ void BuildArgTys(ASTContext &Context,
         const auto *TemplateDecl =
             dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl);
         if (TemplateDecl) {
+          // First parameter - data type
           QualType PointeeType = TemplateDecl->getTemplateArgs()[0].getAsType();
+          // Fourth parameter - access target
+          auto AccessQualifier = TemplateDecl->getTemplateArgs()[3].getAsIntegral();
+          int64_t AccessTarget = AccessQualifier.getExtValue();
           Qualifiers Quals = PointeeType.getQualifiers();
+          // TODO: Support all access targets
+          switch (AccessTarget) {
+            case target::global_buffer:
+            Quals.setAddressSpace(LangAS::opencl_global);
+              break;
+            case target::constant_buffer:
+            Quals.setAddressSpace(LangAS::opencl_constant);
+              break;
+            case target::local:
+            Quals.setAddressSpace(LangAS::opencl_local);
+              break;
+            default:
+              llvm_unreachable("Unsupported access target");
+          }
           // TODO: get address space from accessor template parameter.
-          Quals.setAddressSpace(LangAS::opencl_global);
           PointeeType =
               Context.getQualifiedType(PointeeType.getUnqualifiedType(), Quals);
           QualType PointerType = Context.getPointerType(PointeeType);
