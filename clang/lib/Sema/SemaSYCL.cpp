@@ -124,7 +124,9 @@ CompoundStmt *CreateSYCLKernelBody(Sema &S, CXXMemberCallExpr *e,
       auto DRE = DeclRefExpr::Create(S.Context, NestedNameSpecifierLoc(),
                                      SourceLocation(), param_VD, false,
                                      DeclarationNameInfo(), ArgType, VK_LValue);
-      ParamStmts.push_back(DRE);
+      Expr *Res = ImplicitCastExpr::Create(
+          S.Context, ArgType, CK_LValueToRValue, DRE, nullptr, VK_RValue);
+      ParamStmts.push_back(Res);
     }
 
     // Create ref for call operator
