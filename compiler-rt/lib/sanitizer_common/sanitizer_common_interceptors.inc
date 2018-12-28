@@ -9045,6 +9045,70 @@ INTERCEPTOR(void, cdbw_close, struct __sanitizer_cdbw *cdbw) {
 #define INIT_CDB
 #endif
 
+#if SANITIZER_INTERCEPT_GETFSENT
+INTERCEPTOR(void *, getfsent) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getfsent);
+  void *ret = REAL(getfsent)();
+  if (ret)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, struct_fstab_sz);
+  return ret;
+}
+
+INTERCEPTOR(void *, getfsspec, const char *spec) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getfsspec, spec);
+  if (spec)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, spec, REAL(strlen)(spec) + 1);
+  void *ret = REAL(getfsspec)(spec);
+  if (ret)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, struct_fstab_sz);
+  return ret;
+}
+
+INTERCEPTOR(void *, getfsfile, const char *file) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getfsfile, file);
+  if (file)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, file, REAL(strlen)(file) + 1);
+  void *ret = REAL(getfsfile)(file);
+  if (ret)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, struct_fstab_sz);
+  return ret;
+}
+
+#define INIT_GETFSENT \
+  COMMON_INTERCEPT_FUNCTION(getfsent); \
+  COMMON_INTERCEPT_FUNCTION(getfsspec); \
+  COMMON_INTERCEPT_FUNCTION(getfsfile);
+#else
+#define INIT_GETFSENT
+#endif
+
+#if SANITIZER_INTERCEPT_ARC4RANDOM
+INTERCEPTOR(void, arc4random_buf, void *buf, SIZE_T len) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, arc4random_buf, buf, len);
+  REAL(arc4random_buf)(buf, len);
+  if (buf && len)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, len);
+}
+
+INTERCEPTOR(void, arc4random_addrandom, u8 *dat, int datlen) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, arc4random_addrandom, dat, datlen);
+  if (dat && datlen)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, dat, datlen);
+  REAL(arc4random_addrandom)(dat, datlen);
+}
+
+#define INIT_ARC4RANDOM \
+  COMMON_INTERCEPT_FUNCTION(arc4random_buf); \
+  COMMON_INTERCEPT_FUNCTION(arc4random_addrandom);
+#else
+#define INIT_ARC4RANDOM
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map =
@@ -9325,6 +9389,8 @@ static void InitializeCommonInterceptors() {
   INIT_SHA2;
   INIT_VIS;
   INIT_CDB;
+  INIT_GETFSENT;
+  INIT_ARC4RANDOM;
 
   INIT___PRINTF_CHK;
 }

@@ -3,22 +3,8 @@ import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 
 group("default") {
   deps = [
-    ":clang",
-    "//clang/tools/c-index-test",
-    "//clang/tools/clang-diff",
-    "//clang/tools/clang-format",
-    "//clang/tools/clang-import-test",
-    "//clang/tools/clang-refactor",
-    "//clang/tools/clang-rename",
-    "//clang/tools/diagtool",
-    "//clang/utils/hmaptool",
+    "//clang/test",
     "//lld/test",
-    "//llvm/tools/llvm-cat",
-    "//llvm/tools/llvm-lto",
-    "//llvm/tools/llvm-lto2",
-    "//llvm/tools/llvm-modextract",
-    "//llvm/tools/llvm-profdata",
-    "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/llvm-undname",
   ]
   if (clang_enable_arcmt) {

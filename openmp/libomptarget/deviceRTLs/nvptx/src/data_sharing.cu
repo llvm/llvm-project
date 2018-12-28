@@ -390,8 +390,9 @@ INLINE void* data_sharing_push_stack_common(size_t PushSize) {
   PushSize = (PushSize + (Alignment - 1)) / Alignment * Alignment;
 
   // Frame pointer must be visible to all workers in the same warp.
-  unsigned WID = getWarpId();
-  void *volatile &FrameP = DataSharingState.FramePtr[WID];
+  const unsigned WID = getWarpId();
+  void *FrameP = 0;
+  const int32_t CurActive = getActiveThreadsMask();
 
   if (IsWarpMaster) {
     // SlotP will point to either the shared memory slot or an existing
@@ -434,17 +435,19 @@ INLINE void* data_sharing_push_stack_common(size_t PushSize) {
       // The stack pointer always points to the next free stack frame.
       StackP = &NewSlot->Data[0] + PushSize;
       // The frame pointer always points to the beginning of the frame.
-      FrameP = &NewSlot->Data[0];
+      FrameP = DataSharingState.FramePtr[WID] = &NewSlot->Data[0];
     } else {
       // Add the data chunk to the current slot. The frame pointer is set to
       // point to the start of the new frame held in StackP.
-      FrameP = StackP;
+      FrameP = DataSharingState.FramePtr[WID] = StackP;
       // Reset stack pointer to the requested address.
       StackP = (void *)RequestedEndAddress;
     }
-  } else {
-    while (!FrameP);
   }
+  // Get address from lane 0.
+  ((int *)&FrameP)[0] = __SHFL_SYNC(CurActive, ((int *)&FrameP)[0], 0);
+  if (sizeof(FrameP) == 8)
+    ((int *)&FrameP)[1] = __SHFL_SYNC(CurActive, ((int *)&FrameP)[1], 0);
 
   return FrameP;
 }

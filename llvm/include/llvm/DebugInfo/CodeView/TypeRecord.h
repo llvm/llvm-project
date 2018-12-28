@@ -95,6 +95,11 @@ struct MemberAttributes {
     return MP == MethodKind::IntroducingVirtual ||
            MP == MethodKind::PureIntroducingVirtual;
   }
+
+  /// Is this method static.
+  bool isStatic() const {
+    return getMethodKind() == MethodKind::Static;
+  }
 };
 
 // Does not correspond to any tag, this is the tail of an LF_POINTER record

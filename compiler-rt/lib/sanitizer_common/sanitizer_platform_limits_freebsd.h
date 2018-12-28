@@ -628,6 +628,8 @@ namespace __sanitizer {
 
   typedef struct __sanitizer_cap_rights __sanitizer_cap_rights_t;
   extern unsigned struct_cap_rights_sz;
+
+  extern unsigned struct_fstab_sz;
 } // namespace __sanitizer
 
 #define CHECK_TYPE_SIZE(TYPE) \
