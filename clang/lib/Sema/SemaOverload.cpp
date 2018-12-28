@@ -13012,6 +13012,15 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
       CXXMemberCallExpr::Create(Context, MemExprE, Args, ResultType, VK,
                                 RParenLoc, Proto->getNumParams());
 
+  if (getLangOpts().SYCL) {
+    auto Func = TheCall->getMethodDecl();
+    auto Name = Func->getQualifiedNameAsString();
+    if (Name == "cl::sycl::handler::parallel_for" ||
+        Name == "cl::sycl::handler::single_task") {
+      ConstructSYCLKernel(TheCall);
+    }
+  }
+
   // Check for a valid return type.
   if (CheckCallReturnType(Method->getReturnType(), MemExpr->getMemberLoc(),
                           TheCall, Method))

@@ -2128,6 +2128,11 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   if (Global->hasAttr<IFuncAttr>())
     return emitIFuncDefinition(GD);
 
+  if (LangOpts.SYCL) {
+    if (!Global->hasAttr<OpenCLKernelAttr>())
+      return;
+  }
+
   // If this is a cpu_dispatch multiversion function, emit the resolver.
   if (Global->hasAttr<CPUDispatchAttr>())
     return emitCPUDispatchDefinition(GD);

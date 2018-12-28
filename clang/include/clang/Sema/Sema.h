@@ -10842,6 +10842,17 @@ public:
       Expr *E,
       llvm::function_ref<void(Expr *, RecordDecl *, FieldDecl *, CharUnits)>
           Action);
+
+private:
+  // We store SYCL Kernels here and handle separately -- which is a hack.
+  // FIXME: It would be best to refactor this.
+  SmallVector<Decl*, 4> SyclKernel;
+
+public:
+  void AddSyclKernel(Decl * d) { SyclKernel.push_back(d); }
+  SmallVector<Decl*, 4> &SyclKernels() { return SyclKernel; }
+
+  void ConstructSYCLKernel(CXXMemberCallExpr* e);
 };
 
 /// RAII object that enters a new expression evaluation context.
