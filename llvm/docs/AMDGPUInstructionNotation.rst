@@ -73,7 +73,7 @@ Where:
     :dst           An input operand which may also serve as a destination
                    if :ref:`glc<amdgpu_synid_glc>` modifier is specified.
     :fx            This is an *f32* or *f16* operand depending on
-                   :ref:`mad_mix_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>` modifier.
+                   :ref:`m_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>` modifier.
     :<type>        Operand *type* differs from *type*
                    :ref:`implied by the opcode name<amdgpu_syn_instruction_type>`.
                    This tag specifies actual operand *type*.

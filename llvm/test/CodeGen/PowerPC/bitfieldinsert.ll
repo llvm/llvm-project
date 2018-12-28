@@ -60,3 +60,61 @@ entry:
   ret void
 }
 
+; test cases which include ISD::TRUNCATE
+; equivalent C code
+;   struct s64b {
+;     int a:4;
+;     int b:16;
+;     int c:24;
+;   };
+;   void bitfieldinsert64b(struct s64b *p, unsigned char v) {
+;     p->b = v;
+;   }
+
+%struct.s64b = type { i24, i24 }
+
+define void @bitfieldinsert64b(%struct.s64b* nocapture %p, i8 zeroext %v) {
+; CHECK-LABEL: @bitfieldinsert64b
+; CHECK: lwz [[REG1:[0-9]+]], 0(3)
+; CHECK-NEXT: rlwimi [[REG1]], 4, 4, 12, 27
+; CHECK-NEXT: stw [[REG1]], 0(3)
+; CHECK-NEXT: blr
+entry:
+  %conv = zext i8 %v to i32
+  %0 = bitcast %struct.s64b* %p to i32*
+  %bf.load = load i32, i32* %0, align 4
+  %bf.shl = shl nuw nsw i32 %conv, 4
+  %bf.clear = and i32 %bf.load, -1048561
+  %bf.set = or i32 %bf.clear, %bf.shl
+  store i32 %bf.set, i32* %0, align 4
+  ret void
+}
+
+; equivalent C code
+;   struct s64c {
+;     int a:5;
+;     int b:16;
+;     long c:10;
+;   };
+;   void bitfieldinsert64c(struct s64c *p, unsigned short v) {
+;     p->b = v;
+;   }
+
+%struct.s64c = type { i32, [4 x i8] }
+
+define void @bitfieldinsert64c(%struct.s64c* nocapture %p, i16 zeroext %v) {
+; CHECK-LABEL: @bitfieldinsert64c
+; CHECK: lwz [[REG1:[0-9]+]], 0(3)
+; CHECK-NEXT: rlwimi [[REG1]], 4, 5, 11, 26
+; CHECK-NEXT: stw [[REG1]], 0(3)
+; CHECK-NEXT: blr
+entry:
+  %conv = zext i16 %v to i32
+  %0 = getelementptr inbounds %struct.s64c, %struct.s64c* %p, i64 0, i32 0
+  %bf.load = load i32, i32* %0, align 8
+  %bf.shl = shl nuw nsw i32 %conv, 5
+  %bf.clear = and i32 %bf.load, -2097121
+  %bf.set = or i32 %bf.clear, %bf.shl
+  store i32 %bf.set, i32* %0, align 8
+  ret void
+}
