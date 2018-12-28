@@ -552,21 +552,23 @@ void CodeGenModule::Release() {
     }
   }
 
-  // Emit SYCL specific module metadata: OpenCL/SPIR version.
+  // Emit SYCL specific module metadata: OpenCL/SPIR version, OpenCL language.
   if (LangOpts.SYCL) {
-    llvm::Metadata *OCLVerElts[] = {
-        llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 1)),
-        llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 2))};
-    llvm::NamedMDNode *OCLVerMD =
-        TheModule.getOrInsertNamedMetadata("opencl.ocl.version");
     llvm::LLVMContext &Ctx = TheModule.getContext();
-    OCLVerMD->addOperand(llvm::MDNode::get(Ctx, OCLVerElts));
     llvm::Metadata *SPIRVerElts[] = {
         llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 1)),
         llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 2))};
     llvm::NamedMDNode *SPIRVerMD =
         TheModule.getOrInsertNamedMetadata("opencl.spir.version");
     SPIRVerMD->addOperand(llvm::MDNode::get(Ctx, SPIRVerElts));
+    // We are trying to look like OpenCL C++ for SPIR-V translator.
+    // 4 - OpenCL_CPP, 100000 - OpenCL C++ version 1.0
+    llvm::Metadata *SPIRVSourceElts[] = {
+        llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 4)),
+        llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 100000))};
+    llvm::NamedMDNode *SPIRVSourceMD =
+        TheModule.getOrInsertNamedMetadata("spirv.Source");
+    SPIRVSourceMD->addOperand(llvm::MDNode::get(Ctx, SPIRVSourceElts));
   }
 
   if (uint32_t PLevel = Context.getLangOpts().PICLevel) {

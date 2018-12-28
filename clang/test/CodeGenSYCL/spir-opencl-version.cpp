@@ -20,6 +20,7 @@ int main() {
 }
 
 
-// CHECK: !opencl.ocl.version = !{[[VER:![0-9]+]]}
-// CHECK: !opencl.spir.version = !{[[VER]]}
-// CHECK: [[VER]] = !{i32 1, i32 2}
+// CHECK: !opencl.spir.version = !{[[SPIR:![0-9]+]]}
+// CHECK: !spirv.Source = !{[[LANG:![0-9]+]]}
+// CHECK: [[SPIR]] = !{i32 1, i32 2}
+// CHECK: [[LANG]] = !{i32 4, i32 100000}
