@@ -793,32 +793,7 @@ bool RegisterValue::operator==(const RegisterValue &rhs) const {
 }
 
 bool RegisterValue::operator!=(const RegisterValue &rhs) const {
-  if (m_type != rhs.m_type)
-    return true;
-  switch (m_type) {
-  case eTypeInvalid:
-    return false;
-  case eTypeUInt8:
-  case eTypeUInt16:
-  case eTypeUInt32:
-  case eTypeUInt64:
-  case eTypeUInt128:
-  case eTypeFloat:
-  case eTypeDouble:
-  case eTypeLongDouble:
-    return m_scalar != rhs.m_scalar;
-  case eTypeBytes:
-    if (buffer.length != rhs.buffer.length) {
-      return true;
-    } else {
-      uint8_t length = buffer.length;
-      if (length > kMaxRegisterByteSize)
-        length = kMaxRegisterByteSize;
-      return memcmp(buffer.bytes, rhs.buffer.bytes, length) != 0;
-    }
-    break;
-  }
-  return true;
+  return !(*this == rhs);
 }
 
 bool RegisterValue::ClearBit(uint32_t bit) {
