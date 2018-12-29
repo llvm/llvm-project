@@ -950,13 +950,13 @@ When used as operands they are converted to
     ============== ============== =============== ====================================================================
     Expected type  Condition      Result          Note
     ============== ============== =============== ====================================================================
-    i16, u16, b16  cond(num, 16)  num.u16         Truncate to 16 bits.
-    i32, u32, b32  cond(num, 32)  num.u32         Truncate to 32 bits.
-    i64            cond(num, 32)  {-1, num.i32}   Truncate to 32 bits and then sign-extend the result to 64 bits.
-    u64, b64       cond(num, 32)  { 0, num.u32}   Truncate to 32 bits and then zero-extend the result to 64 bits.
-    f16            cond(num, 16)  num.u16         Use low 16 bits as an f16 value.
-    f32            cond(num, 32)  num.u32         Use low 32 bits as an f32 value.
-    f64            cond(num, 32)  {num.u32, 0}    Use low 32 bits of the number as high 32 bits
+    i16, u16, b16  cond(num,16)   num.u16         Truncate to 16 bits.
+    i32, u32, b32  cond(num,32)   num.u32         Truncate to 32 bits.
+    i64            cond(num,32)   {-1,num.i32}    Truncate to 32 bits and then sign-extend the result to 64 bits.
+    u64, b64       cond(num,32)   { 0,num.u32}    Truncate to 32 bits and then zero-extend the result to 64 bits.
+    f16            cond(num,16)   num.u16         Use low 16 bits as an f16 value.
+    f32            cond(num,32)   num.u32         Use low 32 bits as an f32 value.
+    f64            cond(num,32)   {num.u32,0}     Use low 32 bits of the number as high 32 bits
                                                   of the result; low 32 bits of the result are zeroed.
     ============== ============== =============== ====================================================================
 
@@ -972,14 +972,14 @@ Examples of valid literals:
 .. parsed-literal::
 
     // GFX9
-
-    v_add_u16 v0, 0xff00, v0                     // value after conversion: 0xff00
-    v_add_u16 v0, 0xffffffffffffff00, v0         // value after conversion: 0xff00
-    v_add_u16 v0, -256, v0                       // value after conversion: 0xff00
-
-    s_bfe_i64 s[0:1], 0xffefffff, s3             // value after conversion: 0xffffffffffefffff
-    s_bfe_u64 s[0:1], 0xffefffff, s3             // value after conversion: 0x00000000ffefffff
-    v_ceil_f64_e32 v[0:1], 0xffefffff            // value after conversion: 0xffefffff00000000 (-1.7976922776554302e308)
+                                             // Literal value after conversion:
+    v_add_u16 v0, 0xff00, v0                 //   0xff00
+    v_add_u16 v0, 0xffffffffffffff00, v0     //   0xff00
+    v_add_u16 v0, -256, v0                   //   0xff00
+                                             // Literal value after conversion:
+    s_bfe_i64 s[0:1], 0xffefffff, s3         //   0xffffffffffefffff
+    s_bfe_u64 s[0:1], 0xffefffff, s3         //   0x00000000ffefffff
+    v_ceil_f64_e32 v[0:1], 0xffefffff        //   0xffefffff00000000 (-1.7976922776554302e308)
 
 Examples of invalid literals:
 
@@ -987,8 +987,8 @@ Examples of invalid literals:
 
     // GFX9
 
-    v_add_u16 v0, 0x1ff00, v0               // conversion is not possible as truncated bits are not all 0 or 1
-    v_add_u16 v0, 0xffffffffffff00ff, v0    // conversion is not possible as truncated bits do not match MSB of the result
+    v_add_u16 v0, 0x1ff00, v0               // truncated bits are not all 0 or 1
+    v_add_u16 v0, 0xffffffffffff00ff, v0    // truncated bits do not match MSB of the result
 
 .. _amdgpu_synid_fp_lit_conv:
 
@@ -1004,12 +1004,12 @@ When used as operands they are converted to
     ============== ============== ================= =================================================================
     Expected type  Condition      Result            Note
     ============== ============== ================= =================================================================
-    i16, u16, b16  cond(num, 16)  f16(num)          Convert to f16 and use bits of the result as an integer value.
-    i32, u32, b32  cond(num, 32)  f32(num)          Convert to f32 and use bits of the result as an integer value.
+    i16, u16, b16  cond(num,16)   f16(num)          Convert to f16 and use bits of the result as an integer value.
+    i32, u32, b32  cond(num,32)   f32(num)          Convert to f32 and use bits of the result as an integer value.
     i64, u64, b64  false          \-                Conversion disabled because of an unclear semantics.
-    f16            cond(num, 16)  f16(num)          Convert to f16.
-    f32            cond(num, 32)  f32(num)          Convert to f32.
-    f64            true           {num.u32.hi, 0}   Use high 32 bits of the number as high 32 bits of the result;
+    f16            cond(num,16)   f16(num)          Convert to f16.
+    f32            cond(num,32)   f32(num)          Convert to f32.
+    f64            true           {num.u32.hi,0}    Use high 32 bits of the number as high 32 bits of the result;
                                                     zero-fill low 32 bits of the result.
 
                                                     Note that the result may differ from the original number.
@@ -1028,8 +1028,9 @@ Examples of valid literals:
     v_add_f16 v1, 65500.0, v2
     v_add_f32 v1, 65600.0, v2
 
-                                                 // value before conversion: 0x7fefffffffffffff (1.7976931348623157e308)
-    v_ceil_f64 v[0:1], 1.7976931348623157e308    // value after conversion:  0x7fefffff00000000 (1.7976922776554302e308)
+    // Literal value before conversion: 1.7976931348623157e308 (0x7fefffffffffffff)
+    // Literal value after conversion:  1.7976922776554302e308 (0x7fefffff00000000)
+    v_ceil_f64 v[0:1], 1.7976931348623157e308
 
 Examples of invalid literals:
 
@@ -1037,7 +1038,7 @@ Examples of invalid literals:
 
     // GFX9
 
-    v_add_f16 v1, 65600.0, v2                    // cannot be converted to f16 because of overflow
+    v_add_f16 v1, 65600.0, v2    // overflow
 
 .. _amdgpu_synid_exp_conv:
 
