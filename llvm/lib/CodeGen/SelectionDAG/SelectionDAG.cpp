@@ -87,6 +87,8 @@ static SDVTList makeVTList(const EVT *VTs, unsigned NumVTs) {
 void SelectionDAG::DAGUpdateListener::NodeDeleted(SDNode*, SDNode*) {}
 void SelectionDAG::DAGUpdateListener::NodeUpdated(SDNode*) {}
 
+void SelectionDAG::DAGNodeDeletedListener::anchor() {}
+
 #define DEBUG_TYPE "selectiondag"
 
 static cl::opt<bool> EnableMemCpyDAGOpt("enable-memcpy-dag-opt",

@@ -63,6 +63,12 @@ simplifyDurationFactoryArg(const ast_matchers::MatchFinder::MatchResult &Result,
 /// return its `DurationScale`, or `None` if a match is not found.
 llvm::Optional<DurationScale> getScaleForInverse(llvm::StringRef Name);
 
+/// Given a `Scale` return the fully qualified inverse functions for it.
+/// The first returned value is the inverse for `double`, and the second
+/// returned value is the inverse for `int64`.
+const std::pair<llvm::StringRef, llvm::StringRef> &
+getInverseForScale(DurationScale Scale);
+
 /// Assuming `Node` has type `double` or `int` representing a time interval of
 /// `Scale`, return the expression to make it a suitable `Duration`.
 std::string rewriteExprFromNumberToDuration(
