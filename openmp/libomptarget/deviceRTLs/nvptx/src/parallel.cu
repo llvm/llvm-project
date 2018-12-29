@@ -284,8 +284,10 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
   *WorkFn = omptarget_nvptx_workFn;
 
   // If this is the termination signal from the master, quit early.
-  if (!*WorkFn)
+  if (!*WorkFn) {
+    PRINT0(LD_IO | LD_PAR, "call to __kmpc_kernel_parallel finished\n");
     return false;
+  }
 
   // Only the worker threads call this routine and the master warp
   // never arrives here.  Therefore, use the nvptx thread id.

@@ -383,6 +383,13 @@ void PrintAddressSpaceLayout() {
           kHighShadowBeg > kMidMemEnd);
 }
 
+static bool UNUSED __local_asan_dyninit = [] {
+  MaybeStartBackgroudThread();
+  SetSoftRssLimitExceededCallback(AsanSoftRssLimitExceededCallback);
+
+  return false;
+}();
+
 static void AsanInitInternal() {
   if (LIKELY(asan_inited)) return;
   SanitizerToolName = "AddressSanitizer";
@@ -456,9 +463,6 @@ static void AsanInitInternal() {
   AllocatorOptions allocator_options;
   allocator_options.SetFrom(flags(), common_flags());
   InitializeAllocator(allocator_options);
-
-  MaybeStartBackgroudThread();
-  SetSoftRssLimitExceededCallback(AsanSoftRssLimitExceededCallback);
 
   // On Linux AsanThread::ThreadStart() calls malloc() that's why asan_inited
   // should be set to 1 prior to initializing the threads.

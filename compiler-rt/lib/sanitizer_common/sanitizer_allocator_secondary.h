@@ -204,10 +204,10 @@ class LargeMmapAllocator {
 
   void EnsureSortedChunks() {
     if (chunks_sorted_) return;
-    Header **chunks = AddressSpaceView::Load(chunks_, n_chunks_);
+    Header **chunks = AddressSpaceView::LoadWritable(chunks_, n_chunks_);
     Sort(reinterpret_cast<uptr *>(chunks), n_chunks_);
     for (uptr i = 0; i < n_chunks_; i++)
-      AddressSpaceView::Load(chunks[i])->chunk_idx = i;
+      AddressSpaceView::LoadWritable(chunks[i])->chunk_idx = i;
     chunks_sorted_ = true;
   }
 
@@ -275,9 +275,9 @@ class LargeMmapAllocator {
   // The allocator must be locked when calling this function.
   void ForEachChunk(ForEachChunkCallback callback, void *arg) {
     EnsureSortedChunks();  // Avoid doing the sort while iterating.
-    Header **chunks = AddressSpaceView::Load(chunks_, n_chunks_);
+    const Header *const *chunks = AddressSpaceView::Load(chunks_, n_chunks_);
     for (uptr i = 0; i < n_chunks_; i++) {
-      Header *t = chunks[i];
+      const Header *t = chunks[i];
       callback(reinterpret_cast<uptr>(GetUser(t)), arg);
       // Consistency check: verify that the array did not change.
       CHECK_EQ(chunks[i], t);
@@ -301,7 +301,7 @@ class LargeMmapAllocator {
     return GetHeader(reinterpret_cast<uptr>(p));
   }
 
-  void *GetUser(Header *h) {
+  void *GetUser(const Header *h) {
     CHECK(IsAligned((uptr)h, page_size_));
     return reinterpret_cast<void*>(reinterpret_cast<uptr>(h) + page_size_);
   }
