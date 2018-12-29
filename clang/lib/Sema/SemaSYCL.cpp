@@ -14,8 +14,8 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Sema/Sema.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -154,14 +154,28 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
         S.Context, NestedNameSpecifierLoc(), SourceLocation(), LambdaVD, false,
         DeclarationNameInfo(), QualType(LC->getTypeForDecl(), 0), VK_LValue);
 
-    // Initialize Lambda fields
-    llvm::SmallVector<Expr *, 16> InitCaptures;
-
     auto TargetFunc = dyn_cast<FunctionDecl>(DC);
     auto TargetFuncParam =
         TargetFunc->param_begin(); // Iterator to ParamVarDecl (VarDecl)
     if (TargetFuncParam) {
       for (auto Field : LC->fields()) {
+        auto getExprForPointer = [](Sema &S, const QualType &paramTy,
+                                    DeclRefExpr *DRE) {
+          // C++ address space attribute != OpenCL address space attribute
+          Expr *qualifiersCast = ImplicitCastExpr::Create(
+              S.Context, paramTy, CK_NoOp, DRE, nullptr, VK_LValue);
+          Expr *Res =
+              ImplicitCastExpr::Create(S.Context, paramTy, CK_LValueToRValue,
+                                       qualifiersCast, nullptr, VK_RValue);
+          return Res;
+        };
+        auto getExprForRange = [](Sema &S, const QualType &paramTy,
+                                  DeclRefExpr *DRE) {
+          Expr *Res = ImplicitCastExpr::Create(S.Context, paramTy, CK_NoOp, DRE,
+                                               nullptr, VK_RValue);
+          return Res;
+        };
+
         QualType ParamType = (*TargetFuncParam)->getOriginalType();
         auto DRE =
             DeclRefExpr::Create(S.Context, NestedNameSpecifierLoc(),
@@ -171,18 +185,20 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
         QualType FieldType = Field->getType();
         CXXRecordDecl *CRD = FieldType->getAsCXXRecordDecl();
         if (CRD) {
-          llvm::SmallVector<Expr *, 16> ParamStmts;
           DeclAccessPair FieldDAP = DeclAccessPair::make(Field, AS_none);
+          // lambda.accessor
           auto AccessorME = MemberExpr::Create(
               S.Context, LambdaDRE, false, SourceLocation(),
               NestedNameSpecifierLoc(), SourceLocation(), Field, FieldDAP,
               DeclarationNameInfo(Field->getDeclName(), SourceLocation()),
               nullptr, Field->getType(), VK_LValue, OK_Ordinary);
-
+          bool PointerOfAccesorWasSet = false;
           for (auto Method : CRD->methods()) {
+            llvm::SmallVector<Expr *, 16> ParamStmts;
             if (Method->getNameInfo().getName().getAsString() ==
                 "__set_pointer") {
               DeclAccessPair MethodDAP = DeclAccessPair::make(Method, AS_none);
+              // lambda.accessor.__set_pointer
               auto ME = MemberExpr::Create(
                   S.Context, AccessorME, false, SourceLocation(),
                   NestedNameSpecifierLoc(), SourceLocation(), Method, MethodDAP,
@@ -199,19 +215,75 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
               // __set_pointer needs one parameter
               QualType paramTy = (*(Method->param_begin()))->getOriginalType();
 
-              // C++ address space attribute != OpenCL address space attribute
-              Expr *qualifiersCast = ImplicitCastExpr::Create(
-                  S.Context, paramTy, CK_NoOp, DRE, nullptr, VK_LValue);
-              Expr *Res = ImplicitCastExpr::Create(
-                  S.Context, paramTy, CK_LValueToRValue, qualifiersCast,
-                  nullptr, VK_RValue);
+              Expr *Res = getExprForPointer(S, paramTy, DRE);
 
+              // kernel_parameter
               ParamStmts.push_back(Res);
-
               // lambda.accessor.__set_pointer(kernel_parameter)
               CXXMemberCallExpr *Call = CXXMemberCallExpr::Create(
                   S.Context, ME, ParamStmts, ResultTy, VK, SourceLocation());
               BodyStmts.push_back(Call);
+              PointerOfAccesorWasSet = true;
+            }
+          }
+          if (PointerOfAccesorWasSet) {
+            TargetFuncParam++;
+
+            ParamType = (*TargetFuncParam)->getOriginalType();
+            DRE = DeclRefExpr::Create(S.Context, NestedNameSpecifierLoc(),
+                                      SourceLocation(), *TargetFuncParam, false,
+                                      DeclarationNameInfo(), ParamType,
+                                      VK_LValue);
+
+            FieldType = Field->getType();
+            CRD = FieldType->getAsCXXRecordDecl();
+            if (CRD) {
+              FieldDAP = DeclAccessPair::make(Field, AS_none);
+              // lambda.accessor
+              AccessorME = MemberExpr::Create(
+                  S.Context, LambdaDRE, false, SourceLocation(),
+                  NestedNameSpecifierLoc(), SourceLocation(), Field, FieldDAP,
+                  DeclarationNameInfo(Field->getDeclName(), SourceLocation()),
+                  nullptr, Field->getType(), VK_LValue, OK_Ordinary);
+
+              for (auto Method : CRD->methods()) {
+                llvm::SmallVector<Expr *, 16> ParamStmts;
+                if (Method->getNameInfo().getName().getAsString() ==
+                    "__set_range") {
+                  // lambda.accessor.__set_range
+                  DeclAccessPair MethodDAP =
+                      DeclAccessPair::make(Method, AS_none);
+                  auto ME = MemberExpr::Create(
+                      S.Context, AccessorME, false, SourceLocation(),
+                      NestedNameSpecifierLoc(), SourceLocation(), Method,
+                      MethodDAP, Method->getNameInfo(), nullptr,
+                      Method->getType(), VK_LValue, OK_Ordinary);
+
+                  // Not referenced -> not emitted
+                  S.MarkFunctionReferenced(SourceLocation(), Method, true);
+
+                  QualType ResultTy = Method->getReturnType();
+                  ExprValueKind VK = Expr::getValueKindForType(ResultTy);
+                  ResultTy = ResultTy.getNonLValueExprType(S.Context);
+
+                  // __set_range needs one parameter
+                  QualType paramTy =
+                      (*(Method->param_begin()))->getOriginalType();
+
+                  Expr *Res = getExprForRange(S, paramTy, DRE);
+
+                  // kernel_parameter
+                  ParamStmts.push_back(Res);
+                  // lambda.accessor.__set_range(kernel_parameter)
+                  CXXMemberCallExpr *Call = CXXMemberCallExpr::Create(
+                                        S.Context, ME, ParamStmts, ResultTy, VK,
+                                        SourceLocation());
+                  BodyStmts.push_back(Call);
+                }
+              }
+            } else {
+              llvm_unreachable(
+                  "unsupported accessor and without initialized range");
             }
           }
         } else if (FieldType->isBuiltinType()) {
@@ -279,6 +351,7 @@ public:
 /// invocation.
 enum VisitorContext {
   pre_visit,
+  pre_visit_class_field,
   visit_accessor,
   visit_scalar,
   visit_stream,
@@ -308,7 +381,7 @@ static void visitKernelLambdaCaptures(const CXXRecordDecl *Lambda,
     QualType ArgTy = V->getType();
     auto F1 = std::get<pre_visit>(Vis);
     F1(Cnt, V, *Fld);
-
+    FieldDecl *AccessorRangeField = nullptr;
     if (Util::isSyclAccessorType(ArgTy)) {
       // accessor parameter context
       const auto *RecordDecl = ArgTy->getAsCXXRecordDecl();
@@ -316,6 +389,26 @@ static void visitKernelLambdaCaptures(const CXXRecordDecl *Lambda,
       const auto *TemplateDecl =
           dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl);
       assert(TemplateDecl && "templated accessor type expected");
+
+      auto getFieldByName = [](const CXXRecordDecl *RecordDecl,
+                               std::string Name) {
+        FieldDecl *result = nullptr;
+        for (auto jt = RecordDecl->field_begin(); jt != RecordDecl->field_end();
+             ++jt) {
+          if (jt->getNameAsString() == Name) {
+            result = *jt;
+            break;
+          }
+        }
+        return result;
+      };
+      FieldDecl *AccessorImplField = getFieldByName(RecordDecl, "__impl");
+      assert(AccessorImplField && "no __impl found in accessor");
+      const auto *AccessorImplRecord =
+          AccessorImplField->getType()->getAsCXXRecordDecl();
+      assert(AccessorImplRecord && "accessor __impl must be of a record type");
+      AccessorRangeField = getFieldByName(AccessorImplRecord, "Range");
+      assert(AccessorRangeField && "no Range found in __impl of accessor");
 
       // First accessor template parameter - data type
       QualType PointeeType = TemplateDecl->getTemplateArgs()[0].getAsType();
@@ -335,9 +428,20 @@ static void visitKernelLambdaCaptures(const CXXRecordDecl *Lambda,
     } else {
       llvm_unreachable("unsupported kernel parameter type");
     }
-    // pos-visit context
+    // post-visit context
     auto F2 = std::get<post_visit>(Vis);
     F2(Cnt, V, *Fld);
+
+    if (AccessorRangeField) {
+      // pre-visit context the same like for accessor
+      auto F1Range = std::get<pre_visit_class_field>(Vis);
+      F1Range(Cnt, V, *Fld, AccessorRangeField);
+      auto FRange = std::get<visit_scalar>(Vis);
+      FRange(Cnt, V, AccessorRangeField);
+      // post-visit context
+      auto F2Range = std::get<post_visit>(Vis);
+      F2Range(Cnt, nullptr, AccessorRangeField);
+    }
   }
   assert((Cpt == CptEnd) && (Fld == FldEnd) &&
          "captures inconsistent with fields");
@@ -350,6 +454,8 @@ static void BuildArgTys(ASTContext &Context, CXXRecordDecl *Lambda,
   auto Vis = std::make_tuple(
       // pre_visit
       [&](int, VarDecl *, FieldDecl *) {},
+      // pre_visit_class_field
+      [&](int, VarDecl *, FieldDecl *, FieldDecl *) {},
       // visit_accessor
       [&](int CaptureN, target AccTrg, QualType PointeeType,
           DeclaratorDecl *CapturedVar, FieldDecl *CapturedVal) {
@@ -390,7 +496,10 @@ static void BuildArgTys(ASTContext &Context, CXXRecordDecl *Lambda,
         IdentifierInfo *VarName = 0;
         SmallString<8> Str;
         llvm::raw_svector_ostream OS(Str);
-        OS << "_arg_" << CapturedVar->getIdentifier()->getName();
+        IdentifierInfo *Identifier = (CapturedVar != nullptr)
+                                         ? CapturedVar->getIdentifier()
+                                         : CapturedVal->getIdentifier();
+        OS << "_arg_" << Identifier->getName();
         VarName = &Context.Idents.get(OS.str());
 
         auto NewVarDecl = VarDecl::Create(
@@ -422,7 +531,24 @@ static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
       [&](int CaptureN, VarDecl *CapturedVar, FieldDecl *CapturedVal) {
         // Set offset in bytes
         Offset = static_cast<unsigned>(
-            Layout.getFieldOffset(CapturedVal->getFieldIndex()))/8;
+                     Layout.getFieldOffset(CapturedVal->getFieldIndex())) /
+                 8;
+      },
+      // pre_visit_class_field
+      [&](int CaptureN, VarDecl *CapturedVar, FieldDecl *CapturedVal,
+          FieldDecl *MemberVal) {
+        // Set offset of parent in bytes
+        Offset = static_cast<unsigned>(
+                     Layout.getFieldOffset(CapturedVal->getFieldIndex())) /
+                 8;
+        const RecordDecl *parent = MemberVal->getParent();
+        ASTContext &CtxMember = parent->getASTContext();
+        const ASTRecordLayout &LayoutMember =
+            CtxMember.getASTRecordLayout(parent);
+        // Add offset relative to parent in bytes
+        Offset += static_cast<unsigned>(
+                      LayoutMember.getFieldOffset(MemberVal->getFieldIndex())) /
+                  8;
       },
       // visit_accessor
       [&](int CaptureN, target AccTrg, QualType PointeeType,
@@ -453,15 +579,12 @@ static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
 // are removed to make the name shorter. Non-alphanumeric characters in a kernel
 // name are OK - SPIRV and runtimes allow that.
 static std::string constructKernelName(QualType KernelNameType) {
-  static const std::string Kwds[] = {
-    std::string("class"),
-    std::string("struct")
-  };
+  static const std::string Kwds[] = {std::string("class"),
+                                     std::string("struct")};
   std::string TStr = KernelNameType.getAsString();
 
   for (const std::string &Kwd : Kwds) {
-    for (size_t Pos = TStr.find(Kwd);
-         Pos != StringRef::npos;
+    for (size_t Pos = TStr.find(Kwd); Pos != StringRef::npos;
          Pos = TStr.find(Kwd, Pos)) {
 
       size_t EndPos = Pos + Kwd.length();
@@ -593,12 +716,13 @@ static void printDecl(raw_ostream &O, const Decl *D) {
 // \param Depth
 //     recursion depth
 //
-static void emitForwardClassDecls(raw_ostream &O,
-                                  QualType T,
-                                  llvm::SmallPtrSetImpl<const void*> &Printed) {
+static void
+emitForwardClassDecls(raw_ostream &O, QualType T,
+                      llvm::SmallPtrSetImpl<const void *> &Printed) {
 
   // peel off the pointer types and get the class/struct type:
-  for (; T->isPointerType(); T = T->getPointeeType());
+  for (; T->isPointerType(); T = T->getPointeeType())
+    ;
   const CXXRecordDecl *RD = T->getAsCXXRecordDecl();
 
   if (!RD)
@@ -657,7 +781,7 @@ void SYCLIntegrationHeader::emit(raw_ostream &O) {
   O << "\n";
   O << "// Forward declarations of templated kernel function types:\n";
 
-  llvm::SmallPtrSet<const void*, 4> Printed;
+  llvm::SmallPtrSet<const void *, 4> Printed;
 
   for (const KernelDesc &K : KernelDescs) {
     emitForwardClassDecls(O, K.NameType, Printed);
@@ -737,12 +861,11 @@ void SYCLIntegrationHeader::emit(raw_ostream &O) {
 
   for (const KernelDesc &K : KernelDescs) {
     const size_t N = K.Params.size();
-    O << "template <> struct KernelInfo<" <<
-      K.NameType.getAsString() << "> {\n";
-    O << "  static constexpr const char* getName() { return \""
-      << K.Name << "\"; }\n";
-    O << "  static constexpr unsigned getNumParams() { return "
-      << N << "; }\n";
+    O << "template <> struct KernelInfo<" << K.NameType.getAsString()
+      << "> {\n";
+    O << "  static constexpr const char* getName() { return \"" << K.Name
+      << "\"; }\n";
+    O << "  static constexpr unsigned getNumParams() { return " << N << "; }\n";
     O << "  static constexpr const kernel_param_desc_t& ";
     O << "getParamDesc(unsigned i) {\n";
     O << "    return kernel_signatures[i+" << CurStart << "];\n";
@@ -756,7 +879,6 @@ void SYCLIntegrationHeader::emit(raw_ostream &O) {
   O << "} // namespace cl\n";
   O << "\n";
 }
-
 
 bool SYCLIntegrationHeader::emit(const StringRef &IntHeaderName) {
   if (IntHeaderName.empty())

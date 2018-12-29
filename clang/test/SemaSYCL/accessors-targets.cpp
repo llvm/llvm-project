@@ -24,4 +24,4 @@ int main() {
 
   myQueue.wait();
 }
-// CHECK: kernel_function 'void (__local int *__local, __global int *__global)'
+// CHECK: kernel_function 'void (__local int *__local, range<1>, __global int *__global, range<1>)'

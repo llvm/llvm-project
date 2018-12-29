@@ -1,4 +1,4 @@
-// RUN: %clang -cc1 -triple spir64-unknown-linux-sycldevice  -std=c++11 -fsycl-is-device -emit-llvm -x c++ %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple spir64-unknown-linux-sycldevice  -std=c++11 -fsycl-is-device -disable-llvm-passes -emit-llvm -x c++ %s -o - | opt -asfix -S -o - | FileCheck %s
 void bar(int & Data) {}
 // CHECK: define spir_func void @[[RAW_REF:[a-zA-Z0-9_]+]](i32* dereferenceable(4) %
 void bar2(int & Data) {}
@@ -144,13 +144,13 @@ void usages2() {
   // CHECK: call spir_func void @new.[[RAW_REF2]](i32 addrspace(4)* [[LOCAL_CAST]])
 }
 
-// CHECK: define spir_func void @new.[[RAW_REF]](i32 addrspace(4)* dereferenceable(4)
+// CHECK-DAG: define spir_func void @new.[[RAW_REF]](i32 addrspace(4)* dereferenceable(4)
 
-// CHECK: define spir_func void @new.[[RAW_REF2]](i32 addrspace(4)* dereferenceable(4)
+// CHECK-DAG: define spir_func void @new.[[RAW_REF2]](i32 addrspace(4)* dereferenceable(4)
 
-// CHECK: define spir_func void @new.[[RAW_PTR2]](i32 addrspace(4)*
+// CHECK-DAG: define spir_func void @new.[[RAW_PTR]](i32 addrspace(4)*
 
-// CHECK: define spir_func void @new.[[RAW_PTR]](i32 addrspace(4)*
+// CHECK-DAG: define spir_func void @new.[[RAW_PTR2]](i32 addrspace(4)*
 
 template <typename name, typename Func>
 __attribute__((sycl_kernel)) void kernel_single_task(Func kernelFunc) {

@@ -15,4 +15,4 @@ int main() {
   });
   return 0;
 }
-// CHECK: kernel_function 'void (__global int *__global, int)
+// CHECK: kernel_function 'void (__global int *__global, range<1>, int)

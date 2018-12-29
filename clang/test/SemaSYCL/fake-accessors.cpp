@@ -50,6 +50,6 @@ int main() {
   });
   return 0;
 }
-// CHECK: fake_accessors 'void (__global int *__global, foo::cl::sycl::accessor, accessor)
-// CHECK: accessor_typedef 'void (__global int *__global, foo::cl::sycl::accessor, accessor)
-// CHECK: accessor_alias 'void (__global int *__global, foo::cl::sycl::accessor, accessor)
+// CHECK: fake_accessors 'void (__global int *__global, range<1>, foo::cl::sycl::accessor, accessor)
+// CHECK: accessor_typedef 'void (__global int *__global, range<1>, foo::cl::sycl::accessor, accessor)
+// CHECK: accessor_alias 'void (__global int *__global, range<1>, foo::cl::sycl::accessor, accessor)
