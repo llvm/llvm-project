@@ -61,9 +61,10 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
-#include "LLVMSPIRVLib.h"
+#include "llvm/SYCL/ASFixer.h"
 #include <memory>
 
+#include "LLVMSPIRVLib.h"
 namespace SPIRV {
   extern llvm::cl::opt<bool> SPIRVNoDerefAttr;
 }
@@ -702,6 +703,9 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
 
   if (!CodeGenOpts.SampleProfileFile.empty())
     PMBuilder.PGOSampleUse = CodeGenOpts.SampleProfileFile;
+
+  if (LangOpts.SYCL)
+    MPM.add(createASFixerPass());
 
   PMBuilder.populateFunctionPassManager(FPM);
   PMBuilder.populateModulePassManager(MPM);
