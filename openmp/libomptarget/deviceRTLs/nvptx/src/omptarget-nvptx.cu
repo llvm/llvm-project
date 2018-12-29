@@ -81,6 +81,7 @@ EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
 }
 
 EXTERN void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized) {
+  PRINT0(LD_IO, "call to __kmpc_kernel_deinit\n");
   ASSERT0(LT_FUSSY, IsOMPRuntimeInitialized,
           "Generic always requires initialized runtime.");
   // Enqueue omp state object for use by another team.
@@ -190,5 +191,6 @@ EXTERN void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime) {
 
 // Return true if the current target region is executed in SPMD mode.
 EXTERN int8_t __kmpc_is_spmd_exec_mode() {
+  PRINT0(LD_IO | LD_PAR, "call to __kmpc_is_spmd_exec_mode\n");
   return isSPMDMode();
 }
