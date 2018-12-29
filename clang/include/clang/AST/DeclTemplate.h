@@ -751,6 +751,7 @@ class RedeclarableTemplateDecl : public TemplateDecl,
     return getMostRecentDecl();
   }
 
+  void anchor() override;
 protected:
   template <typename EntryType> struct SpecEntryTraits {
     using DeclType = EntryType;

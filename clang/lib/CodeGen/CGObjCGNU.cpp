@@ -277,6 +277,8 @@ protected:
     Fields.addInt(Int8Ty, 0);
   }
 
+  virtual llvm::Constant *GenerateCategoryProtocolList(const
+      ObjCCategoryDecl *OCD);
   virtual ConstantArrayBuilder PushPropertyListHeader(ConstantStructBuilder &Fields,
       int count) {
       // int count;
@@ -1163,6 +1165,15 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     MethodArray.finishAndAddTo(MethodList);
     return MethodList.finishAndCreateGlobal(".objc_protocol_method_list",
                                             CGM.getPointerAlign());
+  }
+  llvm::Constant *GenerateCategoryProtocolList(const ObjCCategoryDecl *OCD)
+    override {
+    SmallVector<llvm::Constant*, 16> Protocols;
+    for (const auto *PI : OCD->getReferencedProtocols())
+      Protocols.push_back(
+          llvm::ConstantExpr::getBitCast(GenerateProtocolRef(PI),
+            ProtocolPtrTy));
+    return GenerateProtocolList(Protocols);
   }
 
   llvm::Value *LookupIMPSuper(CodeGenFunction &CGF, Address ObjCSuper,
@@ -3099,18 +3110,21 @@ llvm::Constant *CGObjCGNU::MakeBitField(ArrayRef<bool> bits) {
   return ptr;
 }
 
+llvm::Constant *CGObjCGNU::GenerateCategoryProtocolList(const
+    ObjCCategoryDecl *OCD) {
+  SmallVector<std::string, 16> Protocols;
+  for (const auto *PD : OCD->getReferencedProtocols())
+    Protocols.push_back(PD->getNameAsString());
+  return GenerateProtocolList(Protocols);
+}
+
 void CGObjCGNU::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
   const ObjCInterfaceDecl *Class = OCD->getClassInterface();
   std::string ClassName = Class->getNameAsString();
   std::string CategoryName = OCD->getNameAsString();
 
   // Collect the names of referenced protocols
-  SmallVector<std::string, 16> Protocols;
   const ObjCCategoryDecl *CatDecl = OCD->getCategoryDecl();
-  const ObjCList<ObjCProtocolDecl> &Protos = CatDecl->getReferencedProtocols();
-  for (ObjCList<ObjCProtocolDecl>::iterator I = Protos.begin(),
-       E = Protos.end(); I != E; ++I)
-    Protocols.push_back((*I)->getNameAsString());
 
   ConstantInitBuilder Builder(CGM);
   auto Elements = Builder.beginStruct();
@@ -3132,7 +3146,7 @@ void CGObjCGNU::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
           GenerateMethodList(ClassName, CategoryName, ClassMethods, true),
           PtrTy);
   // Protocol list
-  Elements.addBitCast(GenerateProtocolList(Protocols), PtrTy);
+  Elements.addBitCast(GenerateCategoryProtocolList(CatDecl), PtrTy);
   if (isRuntime(ObjCRuntime::GNUstep, 2)) {
     const ObjCCategoryDecl *Category =
       Class->FindCategoryDeclaration(OCD->getIdentifier());

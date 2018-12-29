@@ -238,8 +238,8 @@ INLINE unsigned long PadBytes(unsigned long size,
 INLINE void *SafeMalloc(size_t size, const char *msg) // check if success
 {
   void *ptr = malloc(size);
-  PRINT(LD_MEM, "malloc data of size %zu for %s: 0x%llx\n", size, msg,
-        (unsigned long long)ptr);
+  PRINT(LD_MEM, "malloc data of size %llu for %s: 0x%llx\n",
+        (unsigned long long)size, msg, (unsigned long long)ptr);
   return ptr;
 }
 

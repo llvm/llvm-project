@@ -1179,10 +1179,13 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D,
         RD->hasMutableFields())) {
     // Variables with const-qualified type having no mutable member may be
     // listed in a firstprivate clause, even if they are static data members.
-    DSAVarData DVarTemp =
-        hasDSA(D, [](OpenMPClauseKind C) { return C == OMPC_firstprivate; },
-               MatchesAlways, FromParent);
-    if (DVarTemp.CKind == OMPC_firstprivate && DVarTemp.RefExpr)
+    DSAVarData DVarTemp = hasInnermostDSA(
+        D,
+        [](OpenMPClauseKind C) {
+          return C == OMPC_firstprivate || C == OMPC_shared;
+        },
+        MatchesAlways, FromParent);
+    if (DVarTemp.CKind != OMPC_unknown && DVarTemp.RefExpr)
       return DVarTemp;
 
     DVar.CKind = OMPC_shared;
