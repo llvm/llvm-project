@@ -149,6 +149,8 @@ void *allocateDefaultArgStorageChain(const ASTContext &C) {
 // RedeclarableTemplateDecl Implementation
 //===----------------------------------------------------------------------===//
 
+void RedeclarableTemplateDecl::anchor() {}
+
 RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() const {
   if (Common)
     return Common;
