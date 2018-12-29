@@ -308,6 +308,9 @@ public:
         : DAGUpdateListener(DAG), Callback(std::move(Callback)) {}
 
     void NodeDeleted(SDNode *N, SDNode *E) override { Callback(N, E); }
+
+   private:
+    virtual void anchor();
   };
 
   /// When true, additional steps are taken to
