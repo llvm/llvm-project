@@ -234,7 +234,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       // Replace tee instructions with tee_local. The difference is that tee
-      // instructins have two defs, while tee_local instructions have one def
+      // instructions have two defs, while tee_local instructions have one def
       // and an index of a local to write to.
       if (WebAssembly::isTee(MI)) {
         assert(MFI.isVRegStackified(MI.getOperand(0).getReg()));
@@ -296,8 +296,9 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
                 .addReg(NewReg);
           }
           MI.getOperand(0).setReg(NewReg);
-          // This register operand is now being used by the inserted drop
-          // instruction, so make it undead.
+          // This register operand of the original instruction is now being used
+          // by the inserted drop or set_local instruction, so make it not dead
+          // yet.
           MI.getOperand(0).setIsDead(false);
           MFI.stackifyVReg(NewReg);
           Changed = true;

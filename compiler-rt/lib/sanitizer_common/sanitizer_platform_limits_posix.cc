@@ -25,6 +25,7 @@
 #endif
 #include <arpa/inet.h>
 #include <dirent.h>
+#include <fstab.h>
 #include <grp.h>
 #include <limits.h>
 #include <net/if.h>
@@ -192,6 +193,7 @@ namespace __sanitizer {
   unsigned struct_sched_param_sz = sizeof(struct sched_param);
   unsigned struct_regex_sz = sizeof(regex_t);
   unsigned struct_regmatch_sz = sizeof(regmatch_t);
+  unsigned struct_fstab_sz = sizeof(struct fstab);
 
 
 #if SANITIZER_MAC && !SANITIZER_IOS

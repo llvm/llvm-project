@@ -72,7 +72,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
                           LoopInfo *LI, bool PreserveLCSSA) {
   // Loop structure should be the following:
   // Preheader
-  //  PrologPreHeader
+  //  PrologHeader
   //  ...
   //  PrologLatch
   //  PrologExit
@@ -108,7 +108,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
         NewPN->addIncoming(PN.getIncomingValueForBlock(NewPreHeader),
                            PreHeader);
       } else {
-        // Succ is LatchExit
+        // Succ is LatchExit.
         NewPN->addIncoming(UndefValue::get(PN.getType()), PreHeader);
       }
 
