@@ -94,7 +94,6 @@ const char *SYCL::Linker::constructOffloadWrapperCommand(
   WrapperArgs.push_back(C.getArgs().MakeArgString(TmpTargetOpt));
 
   // For SYCL, do not emit entry tables
-  WrapperArgs.push_back("-emit-reg-funcs=0");
   WrapperArgs.push_back("-emit-entry-table=0");
 
   SmallString<128> WrapperPath(C.getDriver().Dir);
