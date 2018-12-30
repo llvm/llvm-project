@@ -21,21 +21,21 @@
 // CHECK: static constexpr
 // CHECK-NEXT: const kernel_param_desc_t kernel_signatures[] = {
 // CHECK-NEXT:   //--- first_kernel
-// CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 4, 0 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2014, 4 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 1, 4 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 4 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 5 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 1, 5 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 5 },
 // CHECK-EMPTY:
 // CHECK-NEXT:   //--- ::second_namespace::second_kernel<char>
-// CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 4, 0 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 4 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 1, 4 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 4 },
 // CHECK-EMPTY:
 // CHECK-NEXT:   //--- ::third_kernel<1, int, ::point<X> >
-// CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 4, 0 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 4 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 1, 4 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 4 },
 // CHECK-EMPTY:
 // CHECK-NEXT: };
 //

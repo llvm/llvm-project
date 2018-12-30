@@ -37,6 +37,24 @@ enum target {
   image_array
 };
 
+/// Various utilities.
+class Util {
+public:
+  // TODO SYCL use AST infrastructure instead of string matching
+
+  /// Checks whether given clang type is a sycl accessor class.
+  static bool isSyclAccessorType(QualType Ty) {
+    std::string Name = Ty.getCanonicalType().getAsString();
+    return Name.find("class cl::sycl::accessor") != std::string::npos;
+  }
+
+  /// Checks whether given clang type is a sycl stream class.
+  static bool isSyclStreamType(QualType Ty) {
+    std::string Name = Ty.getCanonicalType().getAsString();
+    return Name == "stream";
+  }
+};
+
 static CXXRecordDecl *getKernelCallerLambdaArg(FunctionDecl *FD) {
   auto FirstArg = (*FD->param_begin());
   if (FirstArg)
@@ -271,7 +289,7 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
 
         QualType FieldType = Field->getType();
         CXXRecordDecl *CRD = FieldType->getAsCXXRecordDecl();
-        if (CRD) {
+        if (CRD && Util::isSyclAccessorType(FieldType)) {
           DeclAccessPair FieldDAP = DeclAccessPair::make(Field, AS_none);
           // lambda.accessor
           auto AccessorME = MemberExpr::Create(
@@ -373,9 +391,11 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
                   "unsupported accessor and without initialized range");
             }
           }
-        } else if (FieldType->isBuiltinType()) {
-          // If field have built-in type just initialize this field
-          // with corresponding kernel argument using '=' binary operator.
+        } else if (CRD || FieldType->isBuiltinType()) {
+          // If field have built-in or a structure/class type just initialize
+          // this field with corresponding kernel argument using '=' binary
+          // operator. The structure/class type must be copy assignable - this
+          // holds because SYCL kernel lambdas capture arguments by copy.
           DeclAccessPair FieldDAP = DeclAccessPair::make(Field, AS_none);
           auto Lhs = MemberExpr::Create(
               S.Context, LambdaDRE, false, SourceLocation(),
@@ -416,31 +436,13 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
                               SourceLocation());
 }
 
-/// Various utilities.
-class Util {
-public:
-  // TODO SYCL use AST infrastructure instead of string matching
-
-  /// Checks whether given clang type is a sycl accessor class.
-  static bool isSyclAccessorType(QualType Ty) {
-    std::string Name = Ty.getCanonicalType().getAsString();
-    return Name.find("class cl::sycl::accessor") != std::string::npos;
-  }
-
-  /// Checks whether given clang type is a sycl stream class.
-  static bool isSyclStreamType(QualType Ty) {
-    std::string Name = Ty.getCanonicalType().getAsString();
-    return Name == "stream";
-  }
-};
-
 /// Identifies context of kernel lambda capture visitor function
 /// invocation.
 enum VisitorContext {
   pre_visit,
   pre_visit_class_field,
   visit_accessor,
-  visit_scalar,
+  visit_std_layout,
   visit_stream,
   post_visit,
 };
@@ -508,9 +510,16 @@ static void visitKernelLambdaCaptures(const CXXRecordDecl *Lambda,
       // stream parameter context
       auto F = std::get<visit_stream>(Vis);
       F(Cnt, V, *Fld);
+    } else if (ArgTy->isStructureOrClassType()) {
+      if (!ArgTy->isStandardLayoutType())
+        Lambda->getASTContext().getDiagnostics().Report(V->getLocation(),
+          diag::err_sycl_non_std_layout_type);
+      // structure or class typed parameter - the same handling as a scalar
+      auto F = std::get<visit_std_layout>(Vis);
+      F(Cnt, V, *Fld);
     } else if (ArgTy->isScalarType()) {
       // scalar typed parameter context
-      auto F = std::get<visit_scalar>(Vis);
+      auto F = std::get<visit_std_layout>(Vis);
       F(Cnt, V, *Fld);
     } else {
       llvm_unreachable("unsupported kernel parameter type");
@@ -523,7 +532,7 @@ static void visitKernelLambdaCaptures(const CXXRecordDecl *Lambda,
       // pre-visit context the same like for accessor
       auto F1Range = std::get<pre_visit_class_field>(Vis);
       F1Range(Cnt, V, *Fld, AccessorRangeField);
-      auto FRange = std::get<visit_scalar>(Vis);
+      auto FRange = std::get<visit_std_layout>(Vis);
       FRange(Cnt, V, AccessorRangeField);
       // post-visit context
       auto F2Range = std::get<post_visit>(Vis);
@@ -568,7 +577,7 @@ static void BuildArgTys(ASTContext &Context, CXXRecordDecl *Lambda,
         ActualArgType =
             Context.getQualifiedType(PointerType.getUnqualifiedType(), Quals);
       },
-      // visit_scalar
+      // visit_std_layout
       [&](int CaptureN, VarDecl *CapturedVar, FieldDecl *CapturedVal) {
         ActualArgType = CapturedVal->getType();
       },
@@ -643,9 +652,12 @@ static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
         Knd = SYCLIntegrationHeader::kind_accessor;
         Info = static_cast<int>(AccTrg);
       },
-      // visit_scalar
+      // visit_std_layout
       [&](int CaptureN, VarDecl *CapturedVar, FieldDecl *CapturedVal) {
-        Knd = SYCLIntegrationHeader::kind_scalar;
+        // TODO this code (when used to handle a structure-typed scalar) relies
+        // on the host and device structure layouts and sizes to be the same.
+        // Need SYCL spec clarification on passing structures as parameters.
+        Knd = SYCLIntegrationHeader::kind_std_layout;
         Info = static_cast<unsigned>(
             Ctx.getTypeSizeInChars(CapturedVal->getType()).getQuantity());
       },
@@ -740,10 +752,8 @@ static const char *paramKind2Str(KernelParamKind K) {
     return "kind_" #x
   switch (K) {
     CASE(accessor);
-    CASE(scalar);
-    CASE(struct);
+    CASE(std_layout);
     CASE(sampler);
-    CASE(struct_padding);
   default:
     return "<ERROR>";
   }
@@ -766,7 +776,7 @@ void SYCLIntegrationHeader::emitFwdDecl(raw_ostream &O, const Decl *D) {
           cast<ClassTemplateDecl>(D)->getTemplatedDecl() : dyn_cast<TagDecl>(D);
 
         if (TD && TD->isCompleteDefinition()) {
-          // defied class constituting the kernel name is not globally
+          // defined class constituting the kernel name is not globally
           // accessible - contradicts the spec
           Diag.Report(D->getSourceRange().getBegin(),
             diag::err_sycl_kernel_name_class_not_top_level);

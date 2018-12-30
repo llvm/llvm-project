@@ -9491,4 +9491,6 @@ def err_sycl_kernel_name_class_not_top_level : Error<
 def err_sycl_virtual_types : Error<
   "No class with a vtable can be used in a SYCL kernel or any code included in the kernel">;
 def note_sycl_used_here : Note<"used here">;
+def err_sycl_non_std_layout_type : Error<
+  "kernel parameter has non-standard layout class/struct type">;
 } // end of sema component.

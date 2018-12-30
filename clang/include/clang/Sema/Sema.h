@@ -299,11 +299,9 @@ public:
   enum kernel_param_kind_t {
     kind_first,
     kind_accessor = kind_first,
-    kind_scalar,
-    kind_struct,
+    kind_std_layout,
     kind_sampler,
-    kind_struct_padding, // can be added by the compiler to enforce alignment
-    kind_last = kind_struct_padding
+    kind_last = kind_sampler
   };
 
 public:
