@@ -1014,7 +1014,8 @@ void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params) {
 
       Out << *TTP;
 
-      if (TTP->hasDefaultArgument()) {
+      if (TTP->hasDefaultArgument()
+          && !Policy.SuppressDefaultTemplateArguments ) {
         Out << " = ";
         Out << TTP->getDefaultArgument().getAsString(Policy);
       };
@@ -1024,7 +1025,8 @@ void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params) {
         Name = II->getName();
       printDeclType(NTTP->getType(), Name, NTTP->isParameterPack());
 
-      if (NTTP->hasDefaultArgument()) {
+      if (NTTP->hasDefaultArgument()
+          && !Policy.SuppressDefaultTemplateArguments ) {
         Out << " = ";
         NTTP->getDefaultArgument()->printPretty(Out, nullptr, Policy,
                                                 Indentation);

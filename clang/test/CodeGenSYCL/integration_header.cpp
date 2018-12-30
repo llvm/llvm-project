@@ -117,7 +117,7 @@ struct x {};
 template <typename T>
 struct point {};
 namespace second_namespace {
-template <typename T>
+template <typename T = int>
 class second_kernel;
 }
 

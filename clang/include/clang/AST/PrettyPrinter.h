@@ -52,7 +52,7 @@ struct PrintingPolicy {
         MSVCFormatting(false), ConstantsAsWritten(false),
         SuppressImplicitBase(false), FullyQualifiedName(false),
         RemapFilePaths(false), PrintCanonicalTypes(false),
-        SuppressDefinition(false) {}
+        SuppressDefinition(false), SuppressDefaultTemplateArguments (false) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -69,6 +69,7 @@ struct PrintingPolicy {
   void adjustForCPlusPlusFwdDecl() {
     PolishForDeclaration = true;
     SuppressDefinition = true;
+    SuppressDefaultTemplateArguments = true;
   }
 
   /// The number of spaces to use to indent each line.
@@ -252,6 +253,15 @@ struct PrintingPolicy {
   ///   \endcode
   unsigned SuppressDefinition : 1;
 
+  /// When true, suppresses printing default template arguments of a type. E.g.
+  ///   \code
+  ///   template<typename T = void> class A
+  ///   \endcode
+  /// will be printed as
+  ///   \code
+  ///   template<typename T> class A
+  ///   \endcode
+  unsigned SuppressDefaultTemplateArguments : 1;
 };
 
 } // end namespace clang
