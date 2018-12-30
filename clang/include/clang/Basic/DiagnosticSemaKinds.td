@@ -9482,7 +9482,10 @@ def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
 
+// SYCL-specific diagnostics
 def err_sycl_attribute_address_space_invalid : Error<
   "address space is outside the valid range of values">;
-
+def err_sycl_kernel_name_class_not_top_level : Error<
+ "kernel name class and its template argument classes' declarations can only "
+ "nest in a namespace: %0">;
 } // end of sema component.

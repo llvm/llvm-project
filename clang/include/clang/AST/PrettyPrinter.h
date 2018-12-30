@@ -51,7 +51,8 @@ struct PrintingPolicy {
         MSWChar(LO.MicrosoftExt && !LO.WChar), IncludeNewlines(true),
         MSVCFormatting(false), ConstantsAsWritten(false),
         SuppressImplicitBase(false), FullyQualifiedName(false),
-        RemapFilePaths(false), PrintCanonicalTypes(false) {}
+        RemapFilePaths(false), PrintCanonicalTypes(false),
+        SuppressDefinition(false) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -61,6 +62,13 @@ struct PrintingPolicy {
     SuppressTagKeyword = true;
     Bool = true;
     UseVoidForZeroParams = false;
+  }
+
+  /// Adjust this printing policy to print C++ forward declaration for a given
+  /// Decl.
+  void adjustForCPlusPlusFwdDecl() {
+    PolishForDeclaration = true;
+    SuppressDefinition = true;
   }
 
   /// The number of spaces to use to indent each line.
@@ -233,6 +241,17 @@ struct PrintingPolicy {
 
   /// When RemapFilePaths is true, this function performs the action.
   std::function<std::string(StringRef)> remapPath;
+
+  /// When true does not print definition of a type. E.g.
+  ///   \code
+  ///   template<typename T> class C0 : public C1 {...}
+  ///   \endcode
+  /// will be printed as
+  ///   \code
+  ///   template<typename T> class C0
+  ///   \endcode
+  unsigned SuppressDefinition : 1;
+
 };
 
 } // end namespace clang

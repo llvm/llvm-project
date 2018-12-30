@@ -1,18 +1,25 @@
-// RUN: %clang -S --sycl -Xclang -ast-dump %s | FileCheck %s
-#include <CL/sycl.hpp>
+// RUN: %clang_cc1 -I %S/Inputs -fsycl-is-device -ast-dump %s | FileCheck %s
+
+#include <sycl.hpp>
+
+template <typename name, typename Func>
+__attribute__((sycl_kernel)) void kernel(Func kernelFunc) {
+  kernelFunc();
+}
 
 int main() {
-  int data = 5;
-  cl::sycl::queue deviceQueue;
-  cl::sycl::buffer<int, 1> bufferA(&data, cl::sycl::range<1>(1));
-
-  deviceQueue.submit([&](cl::sycl::handler &cgh) {
-    auto accessorA = bufferA.template get_access<cl::sycl::access::mode::read_write>(cgh);
-    cgh.single_task<class kernel_function>(
+  cl::sycl::accessor<int, 1, cl::sycl::access::mode::read_write> acc1;
+  kernel<class kernel_function>(
       [=]() {
-        accessorA[0] += data;
+        acc1.use();
       });
-  });
+  cl::sycl::accessor<int, 1, cl::sycl::access::mode::read_write,
+    cl::sycl::access::target::local> tile;
+  kernel<class kernel_local_acc>(
+      [=]() {
+        tile.use();
+      });
   return 0;
 }
-// CHECK: kernel_function 'void (__global int *__global, range<1>, int)
+// CHECK: kernel_function 'void (__global int *__global, range<1>)
+// CHECK: kernel_local_acc 'void (__local int *__local, range<1>)

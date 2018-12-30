@@ -588,7 +588,7 @@ static std::string constructKernelName(QualType KernelNameType) {
          Pos = TStr.find(Kwd, Pos)) {
 
       size_t EndPos = Pos + Kwd.length();
-      if ((!llvm::isAlnum(TStr[Pos - 1])) &&
+      if ((Pos == 0 || !llvm::isAlnum(TStr[Pos - 1])) &&
           (EndPos == TStr.length() || !llvm::isAlnum(TStr[EndPos]))) {
         // keyword is a separate word - erase
         TStr.erase(Pos, Kwd.length());
@@ -651,28 +651,55 @@ static const char *paramKind2Str(KernelParamKind K) {
 #undef CASE
 }
 
-// Prints a declaration
-static void printDecl(raw_ostream &O, const Decl *D) {
-  PrintingPolicy P(D->getASTContext().getLangOpts());
+// Emits a forward declaration
+void SYCLIntegrationHeader::emitFwdDecl(raw_ostream &O, const Decl *D) {
+  // wrap the declaration into namespaces if needed
+  unsigned NamespaceCnt = 0;
+  std::string NSStr = "";
+  const DeclContext *DC = D->getDeclContext();
+
+  while (DC) {
+    auto *NS = dyn_cast_or_null<NamespaceDecl>(DC);
+
+    if (!NS) {
+      if (!DC->isTranslationUnit()) {
+        const TagDecl *TD = isa<ClassTemplateDecl>(D) ?
+          cast<ClassTemplateDecl>(D)->getTemplatedDecl() : dyn_cast<TagDecl>(D);
+
+        if (TD && TD->isCompleteDefinition()) {
+          // defied class constituting the kernel name is not globally
+          // accessible - contradicts the spec
+          Diag.Report(D->getSourceRange().getBegin(),
+            diag::err_sycl_kernel_name_class_not_top_level);
+        }
+      }
+      break;
+    }
+    ++NamespaceCnt;
+    NSStr.insert(0, Twine("namespace " + Twine(NS->getName()) + " { ").str());
+    DC = NS->getDeclContext();
+  }
+  O << NSStr;
+  if (NamespaceCnt > 0)
+    O << "\n";
   // print declaration into a string:
-  P.TerseOutput = true; // prints declaration plus " {}" in the end
-  P.PolishForDeclaration = true;
+  PrintingPolicy P(D->getASTContext().getLangOpts());
+  P.adjustForCPlusPlusFwdDecl();
   std::string S;
   llvm::raw_string_ostream SO(S);
   D->print(SO, P);
-  // print the declaration w/o the trailing " {}":
-  StringRef SR = SO.str();
-  size_t Pos = SR.find_first_of('{');
+  O << SO.str() << ";\n";
 
-  if (Pos != StringRef::npos) {
-    // can be npos if the type is incomplete
-    SR = SR.take_front(Pos);
-  }
-  O << SR;
+  // print closing braces for namespaces if needed
+  for (unsigned I = 0; I < NamespaceCnt; ++I)
+    O << "}";
+  if (NamespaceCnt > 0)
+    O << "\n";
 }
 
 // Emits forward declarations of classes and template classes on which
-// declaration of given type depends. For example, consider SimpleVadd
+// declaration of given type depends.
+// For example, consider SimpleVadd
 // class specialization in parallel_for below:
 //
 //   template <typename T1, unsigned int N, typename ... T2>
@@ -705,20 +732,9 @@ static void printDecl(raw_ostream &O, const Decl *D) {
 //   template <typename T> class MyTmplClass;
 //   template <typename T1, unsigned int N, typename ...T2> class SimpleVadd;
 //
-// TODO FIXME handle the case when kernel typename is declared in a namespace
-//
-// \param O
-//     stream to print to
-// \param T
-//     type to emit forward declarations for
-// \param Printed
-//     a set of type pointers forward declrations has been printed for already
-// \param Depth
-//     recursion depth
-//
-static void
-emitForwardClassDecls(raw_ostream &O, QualType T,
-                      llvm::SmallPtrSetImpl<const void *> &Printed) {
+void SYCLIntegrationHeader::emitForwardClassDecls(raw_ostream &O,
+                                  QualType T,
+                                  llvm::SmallPtrSetImpl<const void*> &Printed) {
 
   // peel off the pointer types and get the class/struct type:
   for (; T->isPointerType(); T = T->getPointeeType())
@@ -764,15 +780,13 @@ emitForwardClassDecls(raw_ostream &O, QualType T,
     assert(CTD && "template declaration must be available");
 
     if (Printed.insert(CTD).second) {
-      printDecl(O, CTD);
-      O << ";\n";
+      emitFwdDecl(O, CTD);
     }
-  } else if (Printed.insert(RD).second) {
+  }
+  else if (Printed.insert(RD).second) {
     // emit forward declarations for "leaf" classes in the template parameter
-    // tree; Depth > 0: don't print forward decl for top level non-templated
-    // class
-    printDecl(O, RD);
-    O << ";\n";
+    // tree;
+    emitFwdDecl(O, RD);
   }
 }
 
@@ -918,4 +932,6 @@ void SYCLIntegrationHeader::endKernel() {
   // nop for now
 }
 
-SYCLIntegrationHeader::SYCLIntegrationHeader() {}
+SYCLIntegrationHeader::SYCLIntegrationHeader(DiagnosticsEngine &_Diag)
+  : Diag(_Diag) {}
+

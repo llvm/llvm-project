@@ -307,7 +307,7 @@ public:
   };
 
 public:
-  SYCLIntegrationHeader();
+  SYCLIntegrationHeader(DiagnosticsEngine &Diag);
 
   /// Emits contents of the header into given stream.
   void emit(raw_ostream &Out);
@@ -366,10 +366,28 @@ private:
                                   : nullptr;
   }
 
+  /// Emits a forward declaration for given declaration.
+  void emitFwdDecl(raw_ostream &O, const Decl *D);
+
+  /// Emits forward declarations of classes and template classes on which
+  /// declaration of given type depends. See example in the comments for the
+  /// implementation.
+  /// \param O
+  ///     stream to emit to
+  /// \param T
+  ///     type to emit forward declarations for
+  /// \param Emitted
+  ///     a set of declarations forward declrations has been emitted for already
+  void emitForwardClassDecls(raw_ostream &O, QualType T,
+                             llvm::SmallPtrSetImpl<const void*> &Emitted);
+
 private:
   /// Keeps invocation descriptors for each kernel invocation started by
   /// SYCLIntegrationHeader::startKernel
   SmallVector<KernelDesc, 4> KernelDescs;
+
+  /// Used for emitting diagnostics.
+  DiagnosticsEngine &Diag;
 };
 
 /// Sema - This implements semantic analysis and AST building for C.
@@ -10956,7 +10974,8 @@ public:
   /// Lazily creates and returns SYCL integratrion header instance.
   SYCLIntegrationHeader &getSyclIntegrationHeader() {
     if (SyclIntHeader == nullptr)
-      SyclIntHeader = llvm::make_unique<SYCLIntegrationHeader>();
+      SyclIntHeader = llvm::make_unique<SYCLIntegrationHeader>(
+        getDiagnostics());
     return *SyclIntHeader.get();
   }
 

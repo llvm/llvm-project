@@ -1,5 +1,6 @@
-// RUN: %clang -S --sycl -Xclang -ast-dump %s | FileCheck %s
-#include <CL/sycl.hpp>
+// RUN: %clang_cc1 -I %S/Inputs -fsycl-is-device -ast-dump %s | FileCheck %s
+
+#include <sycl.hpp>
 
 namespace foo {
 namespace cl {
@@ -24,30 +25,30 @@ typedef cl::sycl::accessor<int, 1, cl::sycl::access::mode::read_write,
 using MyAccessorA = cl::sycl::accessor<int, 1, cl::sycl::access::mode::read_write,
                                        cl::sycl::access::target::global_buffer>;
 
+template <typename name, typename Func>
+__attribute__((sycl_kernel)) void kernel(Func kernelFunc) {
+  kernelFunc();
+}
+
 int main() {
-  int data = 5;
-  cl::sycl::queue deviceQueue;
-  cl::sycl::buffer<int, 1> bufferA(&data, cl::sycl::range<1>(1));
   foo::cl::sycl::accessor acc = {1};
   accessor acc1 = {1};
 
-  deviceQueue.submit([&](cl::sycl::handler &cgh) {
-    auto accessorA = bufferA.template get_access<cl::sycl::access::mode::read_write>(cgh);
-    MyAccessorTD accessorB = bufferA.template get_access<cl::sycl::access::mode::read_write>(cgh);
-    MyAccessorA accessorC = bufferA.template get_access<cl::sycl::access::mode::read_write>(cgh);
-    cgh.single_task<class fake_accessors>(
+  cl::sycl::accessor<int, 1, cl::sycl::access::mode::read_write> accessorA;
+  cl::sycl::accessor<int, 1, cl::sycl::access::mode::read_write> accessorB;
+  cl::sycl::accessor<int, 1, cl::sycl::access::mode::read_write> accessorC;
+    kernel<class fake_accessors>(
         [=]() {
-          accessorA[0] = acc.field + acc1.field;
+          accessorA.use((void*)(acc.field + acc1.field));
         });
-    cgh.single_task<class accessor_typedef>(
+    kernel<class accessor_typedef>(
         [=]() {
-          accessorB[0] = acc.field + acc1.field;
+          accessorB.use((void*)(acc.field + acc1.field));
         });
-    cgh.single_task<class accessor_alias>(
+    kernel<class accessor_alias>(
         [=]() {
-          accessorC[0] = acc.field + acc1.field;
+          accessorC.use((void*)(acc.field + acc1.field));
         });
-  });
   return 0;
 }
 // CHECK: fake_accessors 'void (__global int *__global, range<1>, foo::cl::sycl::accessor, accessor)

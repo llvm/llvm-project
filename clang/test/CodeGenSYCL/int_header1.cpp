@@ -2,11 +2,9 @@
 // RUN: FileCheck -input-file=%t.h %s
 //
 // CHECK: class first_kernel;
-// CHECK-NEXT: namespace second_namespace {
 // CHECK-NEXT: template <typename T> class second_kernel;
-// CHECK-NEXT: }
 // CHECK-NEXT: struct X;
-// CHECK-NEXT: template <typename T> struct point;
+// CHECK-NEXT: template <typename T> struct point ;
 // CHECK-NEXT: template <int a, typename T1, typename T2> class third_kernel;
 //
 // CHECK: #include <CL/sycl/detail/kernel_desc.hpp>
@@ -18,24 +16,19 @@
 // CHECK-NEXT:   "third_kernel<1, int,  point< X> >"
 // CHECK-NEXT: };
 //
-// CHECK: static constexpr
-// CHECK-NEXT: const kernel_param_desc_t kernel_signatures[] = {
+// CHECK: const kernel_param_desc_t kernel_signatures[] = {
 // CHECK-NEXT:   //--- first_kernel
 // CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2014, 4 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 1, 4 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 5 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 1, 5 },
 // CHECK-EMPTY:
 // CHECK-NEXT:   //--- second_namespace::second_kernel<char>
 // CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 4 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 1, 4 },
 // CHECK-EMPTY:
 // CHECK-NEXT:   //--- third_kernel<1, int,  point< X> >
 // CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 4 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 1, 4 },
 // CHECK-EMPTY:
 // CHECK-NEXT: };
 //
@@ -77,14 +70,6 @@ enum class address_space : int {
   local_space
 };
 } // namespace access
-
-struct range {
-};
-
-struct _ImplT {
-  range Range;
-};
-
 template <typename dataT, int dimensions, access::mode accessmode,
           access::target accessTarget = access::target::global_buffer,
           access::placeholder isPlaceholder = access::placeholder::false_t>
@@ -92,9 +77,6 @@ class accessor {
 
 public:
   void use(void) const {}
-
-  _ImplT __impl; // compiler looks for this field
-
 };
 } // namespace sycl
 } // namespace cl
@@ -150,4 +132,3 @@ int main() {
 
   return 0;
 }
-

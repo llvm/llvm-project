@@ -514,6 +514,9 @@ void DeclPrinter::VisitEnumDecl(EnumDecl *D) {
 
   Out << ' ' << *D;
 
+  if (Policy.SuppressDefinition)
+    return;
+
   if (D->isFixed() && D->getASTContext().getLangOpts().CPlusPlus11)
     Out << " : " << D->getIntegerType().stream(Policy);
 
@@ -533,6 +536,9 @@ void DeclPrinter::VisitRecordDecl(RecordDecl *D) {
 
   if (D->getIdentifier())
     Out << ' ' << *D;
+
+  if (Policy.SuppressDefinition)
+    return;
 
   if (D->isCompleteDefinition()) {
     Out << " {\n";
@@ -715,7 +721,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     Out << " = delete";
   else if (D->isExplicitlyDefaulted())
     Out << " = default";
-  else if (D->doesThisDeclarationHaveABody()) {
+  else if (D->doesThisDeclarationHaveABody() && !Policy.SuppressDefinition) {
     if (!Policy.TerseOutput) {
       if (!D->hasPrototype() && D->getNumParams()) {
         // This is a K&R function definition, so we need to print the
@@ -931,7 +937,7 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
       printTemplateArguments(S->getTemplateArgs());
   }
 
-  if (D->isCompleteDefinition()) {
+  if (D->isCompleteDefinition() && !Policy.SuppressDefinition) {
     // Print the base classes
     if (D->getNumBases()) {
       Out << " : ";
