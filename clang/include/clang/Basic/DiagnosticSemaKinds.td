@@ -9488,6 +9488,15 @@ def err_sycl_attribute_address_space_invalid : Error<
 def err_sycl_kernel_name_class_not_top_level : Error<
  "kernel name class and its template argument classes' declarations can only "
  "nest in a namespace: %0">;
+def err_sycl_restrict : Error<
+  "SYCL kernel cannot "
+"%select{use a global variable"
+  "|use rtti"
+  "|use a non-const static data variable"
+  "|call a virtual function"
+  "|call through a function pointer"
+  "|allocate storage"
+  "|use exceptions}0">;
 def err_sycl_virtual_types : Error<
   "No class with a vtable can be used in a SYCL kernel or any code included in the kernel">;
 def note_sycl_used_here : Note<"used here">;

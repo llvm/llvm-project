@@ -39,6 +39,16 @@ enum target {
   image_array
 };
 
+enum RestrictKind {
+  KernelGlobalVariable,
+  KernelRTTI,
+  KernelNonConstStaticDataVariable,
+  KernelCallVirtualFunction,
+  KernelCallFunctionPointer,
+  KernelAllocateStorage,
+  KernelUseExceptions
+};
+
 using ParamDesc = std::tuple<QualType, IdentifierInfo *, TypeSourceInfo *>;
 
 /// Various utilities.
@@ -70,6 +80,7 @@ class MarkDeviceFunction : public RecursiveASTVisitor<MarkDeviceFunction> {
 public:
   MarkDeviceFunction(Sema &S)
       : RecursiveASTVisitor<MarkDeviceFunction>(), SemaRef(S) {}
+
   bool VisitCallExpr(CallExpr *e) {
     for (const auto &Arg : e->arguments())
       CheckTypeForVirtual(Arg->getType(), Arg->getSourceRange());
@@ -80,6 +91,11 @@ public:
       // all functions used by kernel have already been parsed and have
       // definitions.
 
+      if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Callee))
+        if (Method->isVirtual())
+          SemaRef.Diag(e->getExprLoc(), diag::err_sycl_restrict) <<
+                       KernelCallVirtualFunction;
+
       CheckTypeForVirtual(Callee->getReturnType(), Callee->getSourceRange());
 
       if (FunctionDecl *Def = Callee->getDefinition()) {
@@ -89,6 +105,9 @@ public:
           SemaRef.AddSyclKernel(Def);
         }
       }
+    } else {
+      SemaRef.Diag(e->getExprLoc(), diag::err_sycl_restrict) <<
+                   KernelCallFunctionPointer;
     }
     return true;
   }
@@ -118,6 +137,16 @@ public:
     return true;
   }
 
+  bool VisitCXXTypeidExpr(CXXTypeidExpr *E) {
+    SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict) << KernelRTTI;
+    return true;
+  }
+
+  bool VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) {
+    SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict) << KernelRTTI;
+    return true;
+  }
+
   bool VisitTypedefNameDecl(TypedefNameDecl *TD) {
     CheckTypeForVirtual(TD->getUnderlyingType(), TD->getLocation());
     return true;
@@ -138,8 +167,67 @@ public:
     return true;
   }
 
+  bool VisitMemberExpr(MemberExpr *E) {
+    if (VarDecl *VD = dyn_cast<VarDecl>(E->getMemberDecl())) {
+      bool IsConst = VD->getType().getNonReferenceType().isConstQualified();
+      if (VD->isStaticDataMember() && !IsConst)
+        SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict) <<
+                     KernelNonConstStaticDataVariable;
+    }
+    return true;
+  }
+
   bool VisitDeclRefExpr(DeclRefExpr *E) {
     CheckTypeForVirtual(E->getType(), E->getSourceRange());
+    if (VarDecl *VD = dyn_cast<VarDecl>(E->getDecl())) {
+      bool IsConst = VD->getType().getNonReferenceType().isConstQualified();
+      if (!IsConst && VD->hasGlobalStorage() && !VD->isStaticLocal() &&
+          !VD->isStaticDataMember() && !isa<ParmVarDecl>(VD))
+        SemaRef.Diag(E->getLocation(), diag::err_sycl_restrict) <<
+                     KernelGlobalVariable;
+    }
+    return true;
+  }
+
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+  // Memory storage allocation is not allowed in kernels.
+  // All memory allocation for the device is done on
+  // the host using accessor classes. Consequently, the default
+  // allocation operator new overloads that allocate
+  // storage are disallowed in a SYCL kernel. The placement
+  // new operator and any user-defined overloads that
+  // do not allocate storage are permitted.
+    const FunctionDecl *FD = E->getOperatorNew();
+    if (FD && !FD->isReservedGlobalPlacementOperator()) {
+      OverloadedOperatorKind Kind = FD->getOverloadedOperator();
+      if (Kind == OO_New || Kind == OO_Array_New)
+        SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict) <<
+                     KernelAllocateStorage;
+    }
+    return true;
+  }
+
+  bool VisitCXXThrowExpr(CXXThrowExpr *E) {
+    SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict) <<
+                 KernelUseExceptions;
+    return true;
+  }
+
+  bool VisitCXXCatchStmt(CXXCatchStmt *S) {
+    SemaRef.Diag(S->getBeginLoc(), diag::err_sycl_restrict) <<
+                 KernelUseExceptions;
+    return true;
+  }
+
+  bool VisitCXXTryStmt(CXXTryStmt *S) {
+    SemaRef.Diag(S->getBeginLoc(), diag::err_sycl_restrict) <<
+                 KernelUseExceptions;
+    return true;
+  }
+
+  bool VisitSEHTryStmt(SEHTryStmt *S) {
+    SemaRef.Diag(S->getBeginLoc(), diag::err_sycl_restrict) <<
+                 KernelUseExceptions;
     return true;
   }
 

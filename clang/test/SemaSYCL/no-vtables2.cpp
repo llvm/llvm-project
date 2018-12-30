@@ -29,6 +29,7 @@ Inherit usage() {
   using foo = Inherit;
   // expected-note@+1{{used here}}
   typedef Inherit bar;
+  // expected-error@+2 {{SYCL kernel cannot call a virtual function}}
   // expected-note@+1{{used here}}
   IH.f();
 
