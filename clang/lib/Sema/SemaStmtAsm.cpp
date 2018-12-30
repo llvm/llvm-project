@@ -263,6 +263,15 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     return NS;
   }
 
+  // Skip all the checks if we are compiling SYCL device code, but the function
+  // is not marked to be used on device, this code won't be codegen'ed anyway.
+  if (getLangOpts().SYCL) {
+    GCCAsmStmt *NS = new (Context) GCCAsmStmt(
+        Context, AsmLoc, IsSimple, IsVolatile, NumOutputs, NumInputs, Names,
+        Constraints, Exprs.data(), AsmString, NumClobbers, Clobbers, RParenLoc);
+    return NS;
+  }
+
   for (unsigned i = 0; i != NumOutputs; i++) {
     StringLiteral *Literal = Constraints[i];
     assert(Literal->isAscii());

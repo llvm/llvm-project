@@ -46,7 +46,8 @@ enum RestrictKind {
   KernelCallVirtualFunction,
   KernelCallFunctionPointer,
   KernelAllocateStorage,
-  KernelUseExceptions
+  KernelUseExceptions,
+  KernelUseAssembly
 };
 
 using ParamDesc = std::tuple<QualType, IdentifierInfo *, TypeSourceInfo *>;
@@ -231,6 +232,18 @@ public:
     return true;
   }
 
+  bool VisitGCCAsmStmt(GCCAsmStmt *S) {
+    SemaRef.Diag(S->getBeginLoc(), diag::err_sycl_restrict)
+        << KernelUseAssembly;
+    return true;
+  }
+
+  bool VisitMSAsmStmt(MSAsmStmt *S) {
+    SemaRef.Diag(S->getBeginLoc(), diag::err_sycl_restrict)
+        << KernelUseAssembly;
+    return true;
+  }
+
 private:
   bool CheckTypeForVirtual(QualType Ty, SourceRange Loc) {
     while (Ty->isAnyPointerType() || Ty->isArrayType())
@@ -378,7 +391,7 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
         // Since this is an accessor next 3 TargetFuncParams including current
         // should be set in __init method: _ValueType*, range<int>, id<int>
         const size_t NumParams = 3;
-        llvm::SmallVector<DeclRefExpr *, NumParams> ParamDREs;
+        llvm::SmallVector<DeclRefExpr *, NumParams> ParamDREs(NumParams);
         auto TFP = TargetFuncParam;
         for (size_t I = 0; I < NumParams; ++TFP, ++I) {
           QualType ParamType = (*TFP)->getOriginalType();
