@@ -14,8 +14,8 @@
 // CHECK: static constexpr
 // CHECK-NEXT: const char* const kernel_names[] = {
 // CHECK-NEXT:   "first_kernel",
-// CHECK-NEXT:   "second_namespace::second_kernel<char>",
-// CHECK-NEXT:   "third_kernel<1, int,  point< X> >"
+// CHECK-NEXT:   "::second_namespace::second_kernel<char>",
+// CHECK-NEXT:   "::third_kernel<1, int,  ::point<X> >"
 // CHECK-NEXT: };
 //
 // CHECK: static constexpr
@@ -27,12 +27,12 @@
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 5 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 1, 5 },
 // CHECK-EMPTY:
-// CHECK-NEXT:   //--- second_namespace::second_kernel<char>
+// CHECK-NEXT:   //--- ::second_namespace::second_kernel<char>
 // CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 4 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 1, 4 },
 // CHECK-EMPTY:
-// CHECK-NEXT:   //--- third_kernel<1, int,  point< X> >
+// CHECK-NEXT:   //--- ::third_kernel<1, int, ::point<X> >
 // CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 4 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_scalar, 1, 4 },
@@ -41,8 +41,8 @@
 //
 // CHECK: template <class KernelNameType> struct KernelInfo;
 // CHECK: template <> struct KernelInfo<class first_kernel> {
-// CHECK: template <> struct KernelInfo<class second_namespace::second_kernel<char>> {
-// CHECK: template <> struct KernelInfo<class third_kernel<1, int, struct point<struct X> >> {
+// CHECK: template <> struct KernelInfo<::second_namespace::second_kernel<char>> {
+// CHECK: template <> struct KernelInfo<::third_kernel<1, int, ::point<X> >> {
 
 namespace cl {
 namespace sycl {

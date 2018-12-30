@@ -11,6 +11,7 @@
 
 #include "TreeTransform.h"
 #include "clang/AST/AST.h"
+#include "clang/AST/QualTypeNames.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Sema/Sema.h"
@@ -705,7 +706,10 @@ void Sema::ConstructSYCLKernel(FunctionDecl *KernelCallerFunc) {
     // Get Name for our kernel.
     const TemplateArgumentList *TemplateArgs =
         KernelCallerFunc->getTemplateSpecializationArgs();
-    QualType KernelNameType = TemplateArgs->get(0).getAsType();
+    QualType KernelNameType = TypeName::getFullyQualifiedType(
+                                TemplateArgs->get(0).getAsType(),
+                                getASTContext(),
+                                true);
     std::string Name = constructKernelName(KernelNameType);
     populateIntHeader(getSyclIntegrationHeader(), Name, KernelNameType, LE);
 
