@@ -1,13 +1,5 @@
 #pragma once
 
-#include <exception>
-#include <functional>
-#include <memory>
-#include <mutex>
-#include <string>
-#include <type_traits>
-#include <vector>
-
 #ifndef __SYCL_DEVICE_ONLY__
 #define __global
 #endif
@@ -17,33 +9,6 @@
 // Dummy runtime classes to model SYCL API.
 namespace cl {
 namespace sycl {
-
-template < class T, class Alloc = std::allocator<T> >
-using vector_class = std::vector<T, Alloc>;
-
-using string_class = std::string;
-
-template<class R, class... ArgTypes>
-using function_class = std::function<R(ArgTypes...)>;
-
-using mutex_class = std::mutex;
-
-template <class T>
-using unique_ptr_class = std::unique_ptr<T>;
-
-template <class T>
-using shared_ptr_class = std::shared_ptr<T>;
-
-template <class T>
-using weak_ptr_class = std::weak_ptr<T>;
-
-template <class T>
-using hash_class = std::hash<T>;
-
-using exception_ptr_class = std::exception_ptr;
-
-template <class T>
-using buffer_allocator = std::allocator<T>;
 
 namespace access {
 
@@ -94,20 +59,9 @@ struct property_base {
 };
 } // namespace property
 
-namespace detail {
-template <typename... tail> struct allProperties : std::true_type {};
-template <typename T, typename... tail>
-struct allProperties<T, tail...>
-    : std::conditional<
-          std::is_base_of<cl::sycl::property::property_base, T>::value,
-          allProperties<tail...>, std::false_type>::type {};
-} // namespace detail
-
 class property_list {
 public:
-  template <typename... propertyTN,
-            typename = typename std::enable_if<
-                detail::allProperties<propertyTN...>::value>::type>
+  template <typename... propertyTN>
   property_list(propertyTN... props) {}
 
   template <typename propertyT> bool has_property() const { return true; }
@@ -183,9 +137,6 @@ public:
   void parallel_for(nd_range<dimensions> executionRange,
                     KernelType kernelFunc) {}
 
-  ATTR_SYCL_KERNEL
-  void single_task(kernel syclKernel) {}
-
   template <int dimensions>
   ATTR_SYCL_KERNEL
   void parallel_for(range<dimensions> numWorkItems, kernel syclKernel) {}
@@ -196,7 +147,7 @@ public:
 
   template <typename KernelName, typename KernelType>
   ATTR_SYCL_KERNEL
-  void single_task(kernel syclKernel, KernelType kernelFunc) {}
+  void single_task(KernelType kernelFunc) {}
 
   template <typename KernelType>
   ATTR_SYCL_KERNEL
@@ -218,7 +169,7 @@ public:
 };
 
 template <typename T, int dimensions = 1,
-          typename AllocatorT = cl::sycl::buffer_allocator<T>>
+          typename AllocatorT = int /*fake type as AllocatorT is not used*/>
 class buffer {
 public:
   using value_type = T;
@@ -237,10 +188,6 @@ public:
   buffer(const T *hostData, const range<dimensions> &bufferRange,
          const property_list &propList = {}) {}
 
-  buffer(const shared_ptr_class<T> &hostData,
-         const range<dimensions> &bufferRange,
-         const property_list &propList = {}) {}
-
   buffer(const buffer &rhs) = default;
 
   buffer(buffer &&rhs) = default;
@@ -252,10 +199,6 @@ public:
   ~buffer() = default;
 
   range<dimensions> get_range() const { return range<dimensions>{}; }
-
-  size_t get_count() const { return 0; }
-
-  size_t get_size() const { return 0; }
 
   template <access::mode mode,
             access::target target = access::target::global_buffer>
@@ -272,7 +215,7 @@ public:
              access::placeholder::false_t>{};
   }
 
-  template <typename Destination = std::nullptr_t>
+  template <typename Destination>
   void set_final_data(Destination finalData = nullptr) {}
 };
 

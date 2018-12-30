@@ -1,19 +1,9 @@
-// RUN: %clang -I %S/Inputs -std=c++11 --sycl -Xclang -fsycl-int-header=%t.h %s -c -o kernel.spv
-// RUN: %clang -I %S/Inputs -std=c++11 -include %t.h -g %s -o %t.out -lstdc++
-// RUN: %t.out | FileCheck %s
-
-// Note: short version 'clang -fsycl x.cpp' is not possible as it will require
-// linking with sycl.so, which we don't want to do in codegen tests.
-
-// CHECK: Functor1
-// CHECK: ::ns::Functor2
-// CHECK: TmplFunctor<int>
-// CHECK: TmplConstFunctor<int>
+// RUN: %clang -I %S/Inputs -std=c++11 --sycl -Xclang -fsycl-int-header=%t.h %s -c -o %t.spv
+// RUN: FileCheck %s --input-file=%t.h
 
 // Checks that functors are supported as SYCL kernels.
 
-#include <sycl.hpp>
-#include <iostream>
+#include "sycl.hpp"
 
 constexpr auto sycl_read_write = cl::sycl::access::mode::read_write;
 constexpr auto sycl_global_buffer = cl::sycl::access::target::global_buffer;
@@ -168,10 +158,6 @@ template <typename T> T bar(T X) {
   return res;
 }
 
-#ifndef __SYCL_DEVICE_ONLY__
-using namespace cl::sycl::detail;
-#endif // __SYCL_DEVICE_ONLY__
-
 int main() {
   const int Res1 = foo(10);
   const int Res2 = bar(10);
@@ -179,12 +165,15 @@ int main() {
   const int Gold2 = 80;
 
 #ifndef __SYCL_DEVICE_ONLY__
-  std::cout << "-- RUNNING THE TEST --\n";
-  std::cout << KernelInfo<Functor1>::getName() << "\n";
-  std::cout << KernelInfo<ns::Functor2>::getName() << "\n";
-  std::cout << KernelInfo<TmplFunctor<int>>::getName() << "\n";
-  std::cout << KernelInfo<TmplConstFunctor<int>>::getName() << "\n";
-#endif //__SYCL_DEVICE_ONLY__
+  cl::sycl::detail::KernelInfo<Functor1>::getName();
+  // CHECK: Functor1
+  cl::sycl::detail::KernelInfo<ns::Functor2>::getName();
+  // CHECK: ::ns::Functor2
+  cl::sycl::detail::KernelInfo<TmplFunctor<int>>::getName();
+  // CHECK: TmplFunctor<int>
+  cl::sycl::detail::KernelInfo<TmplConstFunctor<int>>::getName();
+  // CHECK: TmplConstFunctor<int>
+#endif // __SYCL_DEVICE_ONLY__
 
   return 0;
 }

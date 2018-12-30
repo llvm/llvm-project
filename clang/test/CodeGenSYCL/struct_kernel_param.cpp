@@ -1,12 +1,12 @@
-// RUN: %clang --sycl -Xclang -fsycl-int-header=%t.h %s -c -o %T/kernel.spv
+// RUN: %clang -I %S/Inputs --sycl -Xclang -fsycl-int-header=%t.h %s -c -o %T/kernel.spv
 // RUN: FileCheck -input-file=%t.h %s
 
 // CHECK:     const kernel_param_desc_t kernel_signatures[] = {
 // CHECK-NEXT:  //--- MyKernel
 // CHECK-NEXT:  { kernel_param_kind_t::kind_accessor, 2014, 0 },
-// CHECK-NEXT:  { kernel_param_kind_t::kind_std_layout, 8, 16 },
-// CHECK-NEXT:  { kernel_param_kind_t::kind_std_layout, 8, 24 },
-// CHECK-NEXT:  { kernel_param_kind_t::kind_std_layout, 24, 32 },
+// CHECK-NEXT:  { kernel_param_kind_t::kind_std_layout, 1, 0 },
+// CHECK-NEXT:  { kernel_param_kind_t::kind_std_layout, 1, 1 },
+// CHECK-NEXT:  { kernel_param_kind_t::kind_std_layout, 24, 4 },
 // CHECK-EMPTY:
 // CHECK-NEXT:};
 
@@ -38,7 +38,7 @@ bool test0() {
     queue myQueue;
     myQueue.submit([&](handler &cgh) {
       auto B = Buf.get_access<access::mode::write>(cgh);
-      cgh.single_task<class MyKernel>([=] { B[0] = S; });
+      cgh.single_task<class MyKernel>([=] { B; S; });
     });
   }
 }
