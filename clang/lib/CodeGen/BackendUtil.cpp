@@ -704,9 +704,6 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
   if (!CodeGenOpts.SampleProfileFile.empty())
     PMBuilder.PGOSampleUse = CodeGenOpts.SampleProfileFile;
 
-  if (LangOpts.SYCL)
-    MPM.add(createASFixerPass());
-
   PMBuilder.populateFunctionPassManager(FPM);
   PMBuilder.populateModulePassManager(MPM);
 }
@@ -842,10 +839,15 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
     }
     break;
 
-
   case Backend_EmitSPIRV:
-    if (LangOpts.SYCL)
+    if (LangOpts.SYCL) {
       SPIRV::SPIRVNoDerefAttr = true;
+      // TODO: this pass added to work around missing linkonce_odr in SPIR-V
+      PerModulePasses.add(
+          createAlwaysInlinerLegacyPass(true /*InsertLifetimeIntrinsics*/));
+      PerModulePasses.add(createASFixerPass());
+      PerModulePasses.add(createDeadStoreEliminationPass());
+    }
     PerModulePasses.add(createSPIRVWriterPass(*OS));
 
     break;
@@ -1086,6 +1088,14 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     break;
 
   case Backend_EmitSPIRV:
+    if (LangOpts.SYCL) {
+      SPIRV::SPIRVNoDerefAttr = true;
+      // TODO: this pass added to work around missing linkonce_odr in SPIR-V
+      CodeGenPasses.add(
+          createAlwaysInlinerLegacyPass(true /*InsertLifetimeIntrinsics*/));
+      CodeGenPasses.add(createASFixerPass());
+      CodeGenPasses.add(createDeadStoreEliminationPass());
+    }
     CodeGenPasses.add(createSPIRVWriterPass(*OS));
     break;
 

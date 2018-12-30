@@ -3500,6 +3500,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         llvm::Triple(llvm::sys::getProcessTriple()).normalize();
     CmdArgs.push_back("-aux-triple");
     CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
+    CmdArgs.push_back("-disable-llvm-passes");
   }
 
   if (IsOpenMPDevice) {

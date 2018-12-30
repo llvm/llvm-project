@@ -1,4 +1,4 @@
-// RUN: %clang -cc1 -triple spir64-unknown-linux-sycldevice -std=c++11 -fsycl-is-device -S -emit-spirv -x c++ %s -o %t.spv
+// RUN: %clang_cc1 -triple spir64-unknown-linux-sycldevice -std=c++11 -fsycl-is-device -disable-llvm-passes -S -emit-spirv -x c++ %s -o %t.spv
 // RUN: llvm-spirv %t.spv -to-text -o %t.txt
 // RUN: FileCheck < %t.txt %s --check-prefix=CHECK
 

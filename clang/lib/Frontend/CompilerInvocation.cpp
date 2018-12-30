@@ -121,11 +121,9 @@ CompilerInvocationBase::~CompilerInvocationBase() = default;
 static unsigned getOptimizationLevel(ArgList &Args, InputKind IK,
                                      DiagnosticsEngine &Diags) {
   unsigned DefaultOpt = llvm::CodeGenOpt::None;
-  if (IK.getLanguage() == InputKind::OpenCL && !Args.hasArg(OPT_cl_opt_disable))
+  if (IK.getLanguage() == InputKind::OpenCL &&
+      !Args.hasArg(OPT_cl_opt_disable) || Args.hasArg(OPT_fsycl_is_device))
     DefaultOpt = llvm::CodeGenOpt::Default;
-
-  if (Args.hasArg(OPT_emit_spirv))
-    return 0; // LLVM-SPIRV translator expects not optimized IR
 
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O0))

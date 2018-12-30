@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple spir64-unknown-linux-sycldevice -std=c++11 -fsycl-is-device -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple spir64-unknown-linux-sycldevice -std=c++11 -fsycl-is-device -disable-llvm-passes -S -emit-llvm %s -o - | FileCheck %s
 
 namespace cl {
 namespace sycl {
@@ -69,8 +69,8 @@ __attribute__((sycl_kernel)) void kernel(Func kernelFunc) {
 
 int main() {
   cl::sycl::accessor<int, 1, cl::sycl::access::mode::read_write> accessorA;
-// CHECK: call spir_func void @_ZN2cl4sycl8accessorIiLi1ELNS0_6access4modeE1026ELNS2_6targetE2014ELNS2_11placeholderE0EE13__set_pointerEPU3AS1i(%"class.cl::sycl::accessor"* %1, i32 addrspace(1)* %2)
-// CHECK: call spir_func void @_ZN2cl4sycl8accessorIiLi1ELNS0_6access4modeE1026ELNS2_6targetE2014ELNS2_11placeholderE0EE11__set_rangeENS0_5rangeILi1EEE(%"class.cl::sycl::accessor"* %3, %"struct.cl::sycl::range"* byval align 1 %agg.tmp)
+// CHECK: call spir_func void @{{.*}}__set_pointer{{.*}}(%"class.cl::sycl::accessor"* %{{.*}}, i32 addrspace(1)* %{{.*}})
+// CHECK: call spir_func void @{{.*}}__set_range{{.*}}(%"class.cl::sycl::accessor"* %{{.*}}, %"struct.cl::sycl::range"* byval align 1 %{{.*}})
     kernel<class kernel_function>(
       [=]() {
         accessorA.use();
