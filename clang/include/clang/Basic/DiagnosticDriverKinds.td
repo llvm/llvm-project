@@ -209,6 +209,8 @@ def err_drv_optimization_remark_pattern : Error<
 def err_drv_no_neon_modifier : Error<"[no]neon is not accepted as modifier, please use [no]simd instead">;
 def err_drv_invalid_omp_target : Error<"OpenMP target is invalid: '%0'">;
 def err_drv_invalid_sycl_target : Error<"SYCL target is invalid: '%0'">;
+def err_drv_sycl_target_conflict : Error<"The option -fsycl-targets conflicts with -fsycl-link-targets">;
+def err_drv_sycl_add_link_conflict : Error<"The option -fsycl-link-targets conflicts with -fsycl-add-targets">;
 def err_drv_omp_host_ir_file_not_found : Error<
   "The provided host compiler IR file '%0' is required to generate code for OpenMP target regions but cannot be found.">;
 def err_drv_omp_host_target_not_supported : Error<
@@ -216,7 +218,7 @@ def err_drv_omp_host_target_not_supported : Error<
 def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
   "The option -fopenmp-targets must be used in conjunction with a -fopenmp option compatible with offloading, please use -fopenmp=libomp or -fopenmp=libiomp5.">;
 def err_drv_expecting_fsycl_with_fsycl_targets : Error<
-  "The option -fsycl-targets must be used in conjunction with -fsycl to enable offloading.">;
+  "The option -fsycl%0targets must be used in conjunction with -fsycl to enable offloading.">;
 def warn_drv_omp_offload_target_duplicate : Warning<
   "The OpenMP offloading target '%0' is similar to target '%1' already specified - will be ignored.">,
   InGroup<OpenMPTarget>;

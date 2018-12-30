@@ -698,18 +698,49 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   // SYCL
   //
   // We need to generate a SYCL toolchain if the user specified targets with
-  // the -fsycl-targets option.  If -fsycl is supplied without -fsycl-targets
-  // we will assume SPIR-V
+  // the -fsycl-targets, -fsycl-add-targets or -fsycl-link-targets option.
+  // If -fsycl is supplied without any of these we will assume SPIR-V
   bool HasValidSYCLRuntime = C.getInputArgs().hasFlag(options::OPT_fsycl,
                                               options::OPT_fno_sycl, false);
-  if (Arg *SYCLTargets =
-          C.getInputArgs().getLastArg(options::OPT_fsycl_targets_EQ)) {
-    if (SYCLTargets->getNumValues()) {
+
+  Arg *SYCLTargets =
+          C.getInputArgs().getLastArg(options::OPT_fsycl_targets_EQ);
+  Arg *SYCLLinkTargets =
+          C.getInputArgs().getLastArg(options::OPT_fsycl_link_targets_EQ);
+  Arg *SYCLAddTargets =
+          C.getInputArgs().getLastArg(options::OPT_fsycl_add_targets_EQ);
+  // -fsycl-targets cannot be used with -fsycl-link-targets
+  if (SYCLTargets && SYCLLinkTargets)
+    Diag(clang::diag::err_drv_sycl_target_conflict);
+  // -fsycl-link-targets and -fsycl-add-targets cannot be used together
+  if (SYCLLinkTargets && SYCLAddTargets)
+    Diag(clang::diag::err_drv_sycl_add_link_conflict);
+
+  // -fsycl-add-targets is a list of paired items (Triple and file) which are
+  // gathered and used to be linked into the final device binary. This can
+  // be used with -fsycl-targets to put together the final conglomerate binary
+  if (SYCLAddTargets) {
+    if (SYCLAddTargets->getNumValues()) {
+      // -fsycl-add-targets should be used with -fsycl
+      if (HasValidSYCLRuntime) {
+        // Use of -fsycl-add-targets adds additional files to the SYCL device
+        // link step.  Regular offload processing occurs below
+      } else
+        Diag(clang::diag::err_drv_expecting_fsycl_with_fsycl_targets)
+            << "-add-";
+    } else
+      Diag(clang::diag::warn_drv_empty_joined_argument)
+          << SYCLAddTargets->getAsString(C.getInputArgs());
+  }
+  if (SYCLTargets || SYCLLinkTargets) {
+    // At this point, we know we have a valid -fsycl*target option passed
+    Arg * SYCLTargetsValues = SYCLTargets ? SYCLTargets : SYCLLinkTargets;
+    if (SYCLTargetsValues->getNumValues()) {
       // We expect that -fsycl-targets is always used in conjunction with the
       // -fsycl option
       if (HasValidSYCLRuntime) {
         llvm::StringMap<const char *> FoundNormalizedTriples;
-        for (const char *Val : SYCLTargets->getValues()) {
+        for (const char *Val : SYCLTargetsValues->getValues()) {
           llvm::Triple TT(Val);
           std::string NormalizedName = TT.normalize();
 
@@ -742,11 +773,14 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
             C.addOffloadDeviceToolChain(SYCLTC.get(), Action::OFK_SYCL);
           }
         }
-      } else
-        Diag(clang::diag::err_drv_expecting_fsycl_with_fsycl_targets);
+      } else {
+        const char *syclArg = SYCLTargets ? "-" : "-link-";
+        Diag(clang::diag::err_drv_expecting_fsycl_with_fsycl_targets)
+            << syclArg;
+      }
     } else
       Diag(clang::diag::warn_drv_empty_joined_argument)
-          << SYCLTargets->getAsString(C.getInputArgs());
+          << SYCLTargetsValues->getAsString(C.getInputArgs());
   } else {
     // If -fsycl is supplied without -fsycl-targets we will assume SPIR-V
     if (HasValidSYCLRuntime) {
@@ -2933,8 +2967,17 @@ class OffloadingActionBuilder final {
   /// and all the device linked images are passed to the host link phase.
   /// SPIR related are wrapped before added to the fat binary
   class SYCLActionBuilder final : public DeviceActionBuilder {
+    /// Flag to signal if the user requested device-only compilation.
+    bool CompileDeviceOnly = false;
+
     /// The SYCL actions for the current input.
     ActionList SYCLDeviceActions;
+
+    /// The SYCL link binary if it was generated for the current input.
+    Action *SYCLLinkBinary = nullptr;
+
+    /// SYCL ahead of time compilation inputs
+    SmallVector<std::pair<llvm::Triple, const char *>, 8> SYCLAOTInputs;
 
     /// The linker inputs obtained for each toolchain.
     SmallVector<ActionList, 8> DeviceLinkerInputs;
@@ -2952,9 +2995,44 @@ class OffloadingActionBuilder final {
                          phases::ID CurPhase, phases::ID FinalPhase,
                          PhasesTy &Phases) override {
 
-      // We should always have an action for each input.
-      assert(SYCLDeviceActions.size() == ToolChains.size() &&
-             "Number of SYCL actions and toolchains do not match.");
+      // With -fsycl-link-targets, we will take the unbundled binaries
+      // for each device and link them together to a single binary that will
+      // be used in a split compilation step.
+      if (CompileDeviceOnly) {
+        ActionList DeviceActions;
+        for (auto Ph : Phases) {
+          // Skip the phases that were already dealt with.
+          if (Ph < CurPhase)
+            continue;
+          // We have to be consistent with the host final phase.
+          if (Ph > FinalPhase || Ph == phases::Link)
+            break;
+          for (Action *&A : SYCLDeviceActions) {
+            A = C.getDriver().ConstructPhaseAction(C, Args, Ph, A,
+                                                   Action::OFK_SYCL);
+          }
+        }
+        for (Action *&A : SYCLDeviceActions) {
+          OffloadAction::DeviceDependences DDep;
+          DDep.add(*A, *ToolChains.front(), /*BoundArch*/ nullptr,
+                   Action::OFK_SYCL);
+          DeviceActions.push_back(
+              C.MakeAction<OffloadAction>(DDep, A->getType()));
+        }
+
+        // We generate the fat binary if we have device input actions.
+        if (!DeviceActions.empty()) {
+          SYCLLinkBinary =
+              C.MakeAction<LinkJobAction>(DeviceActions, types::TY_Image);
+
+          // Remove the SYCL actions as they are already connected to an host
+          // action or fat binary.
+          SYCLDeviceActions.clear();
+        }
+
+        // We avoid creating host action in device-only mode.
+        return CompileDeviceOnly ? ABRT_Ignore_Host : ABRT_Success;
+      }
 
       // FIXME: This adds the integrated header generation pass before the
       // Host compilation pass so the Host can use the header generated.  This
@@ -3005,6 +3083,11 @@ class OffloadingActionBuilder final {
       // If this is an input action replicate it for each SYCL toolchain.
       if (auto *IA = dyn_cast<InputAction>(HostAction)) {
         SYCLDeviceActions.clear();
+
+        // libraries are not replicated for SYCL
+        if (!types::isSrcFile(IA->getType()))
+          return ABRT_Inactive;
+
         for (unsigned I = 0; I < ToolChains.size(); ++I)
           SYCLDeviceActions.push_back(
               C.MakeAction<InputAction>(IA->getInputArg(), IA->getType()));
@@ -3025,6 +3108,17 @@ class OffloadingActionBuilder final {
     }
 
     void appendTopLevelActions(ActionList &AL) override {
+
+      if (SYCLLinkBinary) {
+        OffloadAction::DeviceDependences Dep;
+        Dep.add(*SYCLLinkBinary, *ToolChains.front(), /*BoundArch=*/nullptr,
+                Action::OFK_SYCL);
+        AL.push_back(C.MakeAction<OffloadAction>(Dep, SYCLLinkBinary->getType()));
+        SYCLDeviceActions.clear();
+        SYCLLinkBinary = nullptr;
+        return;
+      }
+
       if (SYCLDeviceActions.empty())
         return;
 
@@ -3048,19 +3142,46 @@ class OffloadingActionBuilder final {
       assert(ToolChains.size() == DeviceLinkerInputs.size() &&
              "Toolchains and linker inputs sizes do not match.");
 
-      // Append a new link action for each device.
-      auto TC = ToolChains.begin();
-      for (auto &LI : DeviceLinkerInputs) {
-        auto *DeviceLinkAction =
-            C.MakeAction<LinkJobAction>(LI, types::TY_Image);
+      // FIXME - If -fsycl-add-targets is provided, do not link in the regular
+      // device binaries - only pull in the add-targets variants.  We are doing
+      // this to allow for a specific device only binary to be created until
+      // we have the ability to resolve multiple devices
+      if (SYCLAOTInputs.empty()) {
+        // Append a new link action for each device.
+        auto TC = ToolChains.begin();
+        for (auto &LI : DeviceLinkerInputs) {
+          auto *DeviceLinkAction =
+              C.MakeAction<LinkJobAction>(LI, types::TY_Image);
 
-        // After the Link, wrap the files before the final host link
-        auto *DeviceWrappingAction =
-            C.MakeAction<OffloadWrappingJobAction>(DeviceLinkAction,
-                                                   types::TY_Object);
-        DA.add(*DeviceWrappingAction, **TC, /*BoundArch=*/nullptr,
-               Action::OFK_SYCL);
-        ++TC;
+          // After the Link, wrap the files before the final host link
+          auto *DeviceWrappingAction =
+              C.MakeAction<OffloadWrappingJobAction>(DeviceLinkAction,
+                                                     types::TY_Object);
+          DA.add(*DeviceWrappingAction, **TC, /*BoundArch=*/nullptr,
+                 Action::OFK_SYCL);
+          ++TC;
+        }
+      } else {
+        // Perform additional wraps against -fsycl-add-targets
+        // FIXME - The triple is currently not used from the AOT inputs, these
+        // will eventually be added to a manifest that is built into the final
+        // binary
+        ActionList AddInputs;
+        for (auto SAI : SYCLAOTInputs) {
+          std::string FN(SAI.second);
+          const char * FNStr = Args.MakeArgString(FN);
+          Arg *myArg = Args.MakeSeparateArg(nullptr,
+                 C.getDriver().getOpts().getOption(options::OPT_INPUT), FNStr);
+          Action *SYCLAdd = C.MakeAction<InputAction>(*myArg,
+                                                      types::TY_SYCL_FATBIN);
+          AddInputs.push_back(SYCLAdd);
+        }
+        for (auto &LI : AddInputs) {
+          auto *DeviceWrappingAction =
+              C.MakeAction<OffloadWrappingJobAction>(LI, types::TY_Object);
+          DA.add(*DeviceWrappingAction, *ToolChains.front(),
+                 /*BoundArch=*/nullptr, Action::OFK_SYCL);
+        }
       }
     }
 
@@ -3071,6 +3192,36 @@ class OffloadingActionBuilder final {
       for (auto TI = SYCLTCRange.first, TE = SYCLTCRange.second; TI != TE;
            ++TI)
         ToolChains.push_back(TI->second);
+
+      Arg *SYCLLinkTargets = Args.getLastArg(
+                                  options::OPT_fsycl_link_targets_EQ);
+      CompileDeviceOnly = SYCLLinkTargets &&
+                          SYCLLinkTargets->getOption().matches(
+                              options::OPT_fsycl_link_targets_EQ);
+      Arg *SYCLAddTargets = Args.getLastArg(
+                                  options::OPT_fsycl_add_targets_EQ);
+      if (SYCLAddTargets) {
+        for (StringRef Val : SYCLAddTargets->getValues()) {
+          // Parse out the Triple and Input (triple:binary) and create a
+          // ToolChain for each entry.  Each of these will be wrapped and fed
+          // into the final binary
+          // Populate the pairs, expects format of 'triple:file', any other
+          // format will not be accepted
+          std::pair<StringRef, StringRef> I = Val.split(':');
+          llvm::Triple TT;
+          const char * TF;
+          if (!I.first.empty() && !I.second.empty()) {
+            TT = llvm::Triple(I.first);
+            TF = C.getArgs().MakeArgString(I.second);
+            // populate the input vector
+            SYCLAOTInputs.push_back(std::make_pair(TT, TF));
+          } else {
+            // No colon found, do not use the input
+            C.getDriver().Diag(diag::err_drv_unsupported_option_argument)
+                 << SYCLAddTargets->getOption().getName() << Val;
+          }
+        }
+      }
 
       DeviceLinkerInputs.resize(ToolChains.size());
       return false;
@@ -4324,9 +4475,18 @@ InputInfo Driver::BuildJobsForActionNoCache(
           Arch = UI.DependentBoundArch;
       } else
         Arch = BoundArch;
+      // When unbundling for SYCL and there is no Target offload, assume
+      // Host as the dependent offload, as the host path has been stripped
+      // in this instance
+      Action::OffloadKind DependentOffloadKind;
+      if (UI.DependentOffloadKind == Action::OFK_SYCL &&
+          TargetDeviceOffloadKind == Action::OFK_None)
+        DependentOffloadKind = Action::OFK_Host;
+      else
+        DependentOffloadKind = UI.DependentOffloadKind;
 
       CachedResults[{A, GetTriplePlusArchString(UI.DependentToolChain, Arch,
-                                                UI.DependentOffloadKind)}] =
+                                                DependentOffloadKind)}] =
           CurI;
     }
 
@@ -4340,12 +4500,20 @@ InputInfo Driver::BuildJobsForActionNoCache(
   } else if (JA->getType() == types::TY_Nothing)
     Result = InputInfo(A, BaseInput);
   else {
-    // We only have to generate a prefix for the host if this is not a top-level
-    // action.
-    std::string OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
+    std::string OffloadingPrefix;
+    // When generating binaries with -fsycl-link-target, the output file prefix
+    // is the triple arch only
+    if (Args.getLastArg(options::OPT_fsycl_link_targets_EQ)) {
+      OffloadingPrefix = "-";
+      OffloadingPrefix += TC->getTriple().getArchName();
+    } else {
+      // We only have to generate a prefix for the host if this is not a
+      // top-level action.
+      OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
         A->getOffloadingDeviceKind(), TC->getTriple().normalize(),
         /*CreatePrefixForHost=*/!!A->getOffloadingHostActiveKinds() &&
             !AtTopLevel);
+    }
     Result = InputInfo(A, GetNamedOutputPath(C, *JA, BaseInput, BoundArch,
                                              AtTopLevel, MultipleArchs,
                                              OffloadingPrefix),
