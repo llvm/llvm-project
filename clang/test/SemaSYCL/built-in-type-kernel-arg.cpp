@@ -21,5 +21,5 @@ int main() {
       });
   return 0;
 }
-// CHECK: kernel_function 'void (__global int *__global, range<1>)
-// CHECK: kernel_local_acc 'void (__local int *__local, range<1>)
+// CHECK: kernel_function 'void (__global int *, range<1>, id<1>)
+// CHECK: kernel_local_acc 'void (__local int *, range<1>, id<1>)

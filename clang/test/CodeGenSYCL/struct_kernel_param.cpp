@@ -5,6 +5,7 @@
 // CHECK-NEXT:  //--- MyKernel
 // CHECK-NEXT:  { kernel_param_kind_t::kind_accessor, 2014, 0 },
 // CHECK-NEXT:  { kernel_param_kind_t::kind_std_layout, 8, 16 },
+// CHECK-NEXT:  { kernel_param_kind_t::kind_std_layout, 8, 24 },
 // CHECK-NEXT:  { kernel_param_kind_t::kind_std_layout, 24, 32 },
 // CHECK-EMPTY:
 // CHECK-NEXT:};

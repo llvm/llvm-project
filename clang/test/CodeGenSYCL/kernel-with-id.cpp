@@ -39,8 +39,13 @@ struct range {
 };
 
 template <int dim>
+struct id {
+};
+
+template <int dim>
 struct _ImplT {
     range<dim> Range;
+    id<dim> Offset;
 };
 
 template <typename dataT, int dimensions, access::mode accessmode,
@@ -50,9 +55,8 @@ class accessor {
 
 public:
 
-  void __set_pointer(__global dataT *Ptr) { }
-  void __set_range(range<dimensions> Range) {
-    __impl.Range = Range;
+  void __init(__global dataT *Ptr, range<dimensions> Range,
+    id<dimensions> Offset) {
   }
   void use(void) const {}
   void use(void*) const {}
@@ -69,8 +73,7 @@ __attribute__((sycl_kernel)) void kernel(Func kernelFunc) {
 
 int main() {
   cl::sycl::accessor<int, 1, cl::sycl::access::mode::read_write> accessorA;
-// CHECK: call spir_func void @{{.*}}__set_pointer{{.*}}(%"class.cl::sycl::accessor"* %{{.*}}, i32 addrspace(1)* %{{.*}})
-// CHECK: call spir_func void @{{.*}}__set_range{{.*}}(%"class.cl::sycl::accessor"* %{{.*}}, %"struct.cl::sycl::range"* byval align 1 %{{.*}})
+// CHECK: call spir_func void @{{.*}}__init{{.*}}(%"class.cl::sycl::accessor"* %{{.*}}, i32 addrspace(1)* %{{.*}}, %"struct.cl::sycl::range"* byval align 1 %{{.*}}, %"struct.cl::sycl::id"* byval align 1 %{{.*}})
     kernel<class kernel_function>(
       [=]() {
         accessorA.use();

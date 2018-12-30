@@ -24,18 +24,22 @@
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2014, 4 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 4 },
-// CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 5 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 5 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 6 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 6 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 7 },
 // CHECK-EMPTY:
 // CHECK-NEXT:   //--- ::second_namespace::second_kernel<char>
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 4 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 4 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 5 },
 // CHECK-EMPTY:
 // CHECK-NEXT:   //--- ::third_kernel<1, int, ::point<X> >
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 4, 0 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_accessor, 2016, 4 },
 // CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 4 },
+// CHECK-NEXT:   { kernel_param_kind_t::kind_std_layout, 1, 5 },
 // CHECK-EMPTY:
 // CHECK-NEXT: };
 //
@@ -81,8 +85,12 @@ enum class address_space : int {
 struct range {
 };
 
+struct id {
+};
+
 struct _ImplT {
   range Range;
+  id Offset;
 };
 
 template <typename dataT, int dimensions, access::mode accessmode,
@@ -92,6 +100,8 @@ class accessor {
 
 public:
   void use(void) const {}
+  void __init(dataT *Ptr, range Range, id Offset) {
+  }
 
   _ImplT __impl; // compiler looks for this field
 

@@ -123,6 +123,7 @@ public:
 
 template <int dim>
 struct id {
+  template<typename ...T> id(T...args) {} // fake constructor
 };
 
 template <int dim>
@@ -137,6 +138,7 @@ struct nd_range {
 template <int dim>
 struct _ImplT {
     range<dim> Range;
+    id<dim> Offset;
 };
 
 template <typename dataT, int dimensions, access::mode accessmode,
@@ -146,9 +148,8 @@ template <typename dataT, int dimensions, access::mode accessmode,
 
   public:
 
-    void __set_pointer(__global dataT *Ptr) { }
-    void __set_range(range<dimensions> Range) {
-      __impl.Range = Range;
+    void __init(__global dataT *Ptr, range<dimensions> Range,
+      id<dimensions> Offset) {
     }
     void use(void) const {}
     template <typename ...T> void use(T...args)       { }

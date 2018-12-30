@@ -3,6 +3,10 @@
 
 // Shared code for SYCL tests
 
+#ifndef __SYCL_DEVICE_ONLY__
+#define __global
+#endif
+
 namespace cl {
 namespace sycl {
 namespace access {
@@ -42,8 +46,13 @@ struct range {
 };
 
 template <int dim>
+struct id {
+};
+
+template <int dim>
 struct _ImplT {
     range<dim> Range;
+    id<dim> Offset;
 };
 
 template <typename dataT, int dimensions, access::mode accessmode,
@@ -54,6 +63,11 @@ class accessor {
 public:
   void use(void) const {}
   void use(void*) const {}
+  void __init(__global dataT *Ptr, range<dimensions> Range,
+    id<dimensions> Offset) {
+  }
+
+
   _ImplT<dimensions> __impl;
 };
 
