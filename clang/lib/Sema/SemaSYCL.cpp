@@ -808,18 +808,19 @@ void SYCLIntegrationHeader::emitForwardClassDecls(
 void SYCLIntegrationHeader::emit(raw_ostream &O) {
   O << "// This is auto-generated SYCL integration header.\n";
   O << "\n";
+
+  O << "#include <CL/sycl/detail/kernel_desc.hpp>\n";
+
+  O << "\n";
   O << "// Forward declarations of templated kernel function types:\n";
 
   llvm::SmallPtrSet<const void *, 4> Printed;
-
   for (const KernelDesc &K : KernelDescs) {
     emitForwardClassDecls(O, K.NameType, Printed);
   }
   O << "\n";
 
-  O << "#include <CL/sycl/detail/kernel_desc.hpp>\n";
 
-  O << "\n";
 
   O << "namespace cl {\n";
   O << "namespace sycl {\n";

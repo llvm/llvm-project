@@ -1,6 +1,8 @@
 // RUN: %clang --sycl -Xclang -fsycl-int-header=%t.h %s -c -o %T/kernel.spv
 // RUN: FileCheck -input-file=%t.h %s
 //
+// CHECK: #include <CL/sycl/detail/kernel_desc.hpp>
+//
 // CHECK: class first_kernel;
 // CHECK-NEXT: namespace second_namespace {
 // CHECK-NEXT: template <typename T> class second_kernel;
@@ -8,8 +10,6 @@
 // CHECK-NEXT: struct X;
 // CHECK-NEXT: template <typename T> struct point;
 // CHECK-NEXT: template <int a, typename T1, typename T2> class third_kernel;
-//
-// CHECK: #include <CL/sycl/detail/kernel_desc.hpp>
 //
 // CHECK: static constexpr
 // CHECK-NEXT: const char* const kernel_names[] = {
