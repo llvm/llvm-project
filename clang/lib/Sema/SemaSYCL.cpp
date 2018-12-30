@@ -659,6 +659,15 @@ static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
   visitKernelLambdaCaptures(Lambda, Vis);
 }
 
+// Removes all "(anonymous namespace)::" substrings from given string
+static std::string eraseAnonNamespace(std::string S) {
+  const char S1[] = "(anonymous namespace)::";
+
+  for (auto Pos = S.find(S1); Pos != StringRef::npos; Pos = S.find(S1, Pos))
+    S.erase(Pos, sizeof(S1)-1);
+  return S;
+}
+
 // Creates a kernel name for given kernel name type which is unique across all
 // instantiations of the type if it is templated. If it is not templated,
 // uniqueueness is prescribed by the SYCL spec. 'class' and 'struct' keywords
@@ -670,10 +679,10 @@ static std::string constructKernelName(QualType KernelNameType) {
   std::string TStr = KernelNameType.getAsString();
 
   for (const std::string &Kwd : Kwds) {
-    for (size_t Pos = TStr.find(Kwd); Pos != StringRef::npos;
+    for (auto Pos = TStr.find(Kwd); Pos != StringRef::npos;
          Pos = TStr.find(Kwd, Pos)) {
 
-      size_t EndPos = Pos + Kwd.length();
+      auto EndPos = Pos + Kwd.length();
       if ((Pos == 0 || !llvm::isAlnum(TStr[Pos - 1])) &&
           (EndPos == TStr.length() || !llvm::isAlnum(TStr[EndPos]))) {
         // keyword is a separate word - erase
@@ -682,7 +691,7 @@ static std::string constructKernelName(QualType KernelNameType) {
         Pos = EndPos;
     }
   }
-  return StringRef(TStr).trim().str();
+  return StringRef(eraseAnonNamespace(TStr)).trim();
 }
 
 void Sema::ConstructSYCLKernel(FunctionDecl *KernelCallerFunc) {
@@ -961,8 +970,8 @@ void SYCLIntegrationHeader::emit(raw_ostream &O) {
 
   for (const KernelDesc &K : KernelDescs) {
     const size_t N = K.Params.size();
-    O << "template <> struct KernelInfo<" << K.NameType.getAsString()
-      << "> {\n";
+    O << "template <> struct KernelInfo<"
+      << eraseAnonNamespace(K.NameType.getAsString()) << "> {\n";
     O << "  static constexpr const char* getName() { return \"" << K.Name
       << "\"; }\n";
     O << "  static constexpr unsigned getNumParams() { return " << N << "; }\n";
