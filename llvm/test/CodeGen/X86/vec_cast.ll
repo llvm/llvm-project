@@ -14,11 +14,10 @@ define <8 x i32> @a(<8 x i16> %a) nounwind {
 ;
 ; CHECK-WIN-LABEL: a:
 ; CHECK-WIN:       # %bb.0:
-; CHECK-WIN-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; CHECK-WIN-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; CHECK-WIN-NEXT:    movdqa (%rcx), %xmm1
+; CHECK-WIN-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; CHECK-WIN-NEXT:    psrad $16, %xmm0
-; CHECK-WIN-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; CHECK-WIN-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
+; CHECK-WIN-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
 ; CHECK-WIN-NEXT:    psrad $16, %xmm1
 ; CHECK-WIN-NEXT:    retq
   %c = sext <8 x i16> %a to <8 x i32>
