@@ -21,7 +21,7 @@ int main() {
   kernel_single_task<class fake_kernel>([]() { foo(); });
   return 0;
 }
-// CHECK: define spir_kernel void @fake_kernel()
+// CHECK: define spir_kernel void @_ZTSZ4mainE11fake_kernel()
 // CHECK: define internal spir_func void @"_ZZ4mainENK3$_0clEv"(%class.anon* %this)
 // CHECK: define spir_func void @_Z3foov()
 // CHECK: define linkonce_odr spir_func i32 @_Z3barIiET_S0_(i32 %arg)

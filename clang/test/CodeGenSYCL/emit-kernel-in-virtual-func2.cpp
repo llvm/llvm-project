@@ -31,5 +31,5 @@ int main() {
 }
 
 // Ensure that the SPIR-Kernel function is actually emitted.
-// CHECK: define spir_kernel void @PP
+// CHECK: define spir_kernel void @_ZTSZ2TTIiEvvE2PP
 

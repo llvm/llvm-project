@@ -11,6 +11,7 @@
 
 #include "TreeTransform.h"
 #include "clang/AST/AST.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/QualTypeNames.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -687,30 +688,17 @@ static std::string eraseAnonNamespace(std::string S) {
   return S;
 }
 
-// Creates a kernel name for given kernel name type which is unique across all
-// instantiations of the type if it is templated. If it is not templated,
-// uniqueueness is prescribed by the SYCL spec. 'class' and 'struct' keywords
-// are removed to make the name shorter. Non-alphanumeric characters in a
-// kernel name are OK - SPIRV and runtimes allow that.
-static std::string constructKernelName(QualType KernelNameType) {
-  static const std::string Kwds[] = {std::string("class"),
-                                     std::string("struct")};
-  std::string TStr = KernelNameType.getAsString();
+// Creates a mangled kernel name for given kernel name type
+static std::string constructKernelName(QualType KernelNameType,
+                                       ASTContext &AC) {
+  std::unique_ptr<MangleContext> MC(AC.createMangleContext());
 
-  for (const std::string &Kwd : Kwds) {
-    for (auto Pos = TStr.find(Kwd); Pos != StringRef::npos;
-         Pos = TStr.find(Kwd, Pos)) {
+  SmallString<256> Result;
+  llvm::raw_svector_ostream Out(Result);
 
-      auto EndPos = Pos + Kwd.length();
-      if ((Pos == 0 || !llvm::isAlnum(TStr[Pos - 1])) &&
-          (EndPos == TStr.length() || !llvm::isAlnum(TStr[EndPos]))) {
-        // keyword is a separate word - erase
-        TStr.erase(Pos, Kwd.length());
-      } else
-        Pos = EndPos;
-    }
-  }
-  return StringRef(eraseAnonNamespace(TStr)).trim();
+  MC->mangleTypeName(KernelNameType, Out);
+
+  return Out.str();
 }
 
 void Sema::ConstructSYCLKernel(FunctionDecl *KernelCallerFunc) {
@@ -726,7 +714,7 @@ void Sema::ConstructSYCLKernel(FunctionDecl *KernelCallerFunc) {
   // it is lambda or functor.
   QualType KernelNameType = TypeName::getFullyQualifiedType(
       TemplateArgs->get(0).getAsType(), getASTContext(), true);
-  std::string Name = constructKernelName(KernelNameType);
+  std::string Name = constructKernelName(KernelNameType, getASTContext());
   populateIntHeader(getSyclIntegrationHeader(), Name, KernelNameType, LE);
   FunctionDecl *SYCLKernel =
       CreateSYCLKernelFunction(getASTContext(), Name, ParamDescs);

@@ -2,7 +2,7 @@
 // RUN: FileCheck -input-file=%t.h %s
 
 // CHECK:     const kernel_param_desc_t kernel_signatures[] = {
-// CHECK-NEXT:  //--- MyKernel
+// CHECK-NEXT:  //--- _ZTSZZ5test0vENK3$_0clERN2cl4sycl7handlerEE8MyKernel
 // CHECK-NEXT:  { kernel_param_kind_t::kind_accessor, 2014, 0 },
 // CHECK-NEXT:  { kernel_param_kind_t::kind_std_layout, 1, 0 },
 // CHECK-NEXT:  { kernel_param_kind_t::kind_std_layout, 1, 1 },
