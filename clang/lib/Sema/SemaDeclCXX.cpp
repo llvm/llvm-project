@@ -15013,6 +15013,10 @@ void Sema::MarkVTableUsed(SourceLocation Loc, CXXRecordDecl *Class,
     return;
   }
 
+  // No VTable usage is legal in SYCL, so don't bother marking them used.
+  if (getLangOpts().SYCL)
+    return;
+
   // Try to insert this class into the map.
   LoadExternalVTableUses();
   Class = Class->getCanonicalDecl();

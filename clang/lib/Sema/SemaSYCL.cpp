@@ -49,19 +49,21 @@ public:
   MarkDeviceFunction(Sema &S)
       : RecursiveASTVisitor<MarkDeviceFunction>(), SemaRef(S) {}
   bool VisitCallExpr(CallExpr *e) {
+    for (const auto &Arg : e->arguments())
+      CheckTypeForVirtual(Arg->getType(), Arg->getSourceRange());
+
     if (FunctionDecl *Callee = e->getDirectCallee()) {
       // Remember that all SYCL kernel functions have deferred
       // instantiation as template functions. It means that
       // all functions used by kernel have already been parsed and have
       // definitions.
+
+      CheckTypeForVirtual(Callee->getReturnType(), Callee->getSourceRange());
+
       if (FunctionDecl *Def = Callee->getDefinition()) {
         if (!Def->hasAttr<SYCLDeviceAttr>()) {
           Def->addAttr(SYCLDeviceAttr::CreateImplicit(SemaRef.Context));
           this->TraverseStmt(Def->getBody());
-          // But because parser works with top level declarations and CodeGen
-          // already saw and ignored our function without device attribute we
-          // need to add this function into SYCL kernels array to show it
-          // this function again.
           SemaRef.AddSyclKernel(Def);
         }
       }
@@ -69,7 +71,91 @@ public:
     return true;
   }
 
+  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    for (const auto &Arg : E->arguments())
+      CheckTypeForVirtual(Arg->getType(), Arg->getSourceRange());
+
+    CXXConstructorDecl *Ctor = E->getConstructor();
+
+    if (FunctionDecl *Def = Ctor->getDefinition()) {
+      Def->addAttr(SYCLDeviceAttr::CreateImplicit(SemaRef.Context));
+      this->TraverseStmt(Def->getBody());
+      SemaRef.AddSyclKernel(Def);
+    }
+
+    const auto *ConstructedType = Ctor->getParent();
+    if (ConstructedType->hasUserDeclaredDestructor()) {
+      CXXDestructorDecl *Dtor = ConstructedType->getDestructor();
+
+      if (FunctionDecl *Def = Dtor->getDefinition()) {
+        Def->addAttr(SYCLDeviceAttr::CreateImplicit(SemaRef.Context));
+        this->TraverseStmt(Def->getBody());
+        SemaRef.AddSyclKernel(Def);
+      }
+    }
+    return true;
+  }
+
+  bool VisitTypedefNameDecl(TypedefNameDecl *TD) {
+    CheckTypeForVirtual(TD->getUnderlyingType(), TD->getLocation());
+    return true;
+  }
+
+  bool VisitRecordDecl(RecordDecl *RD) {
+    CheckTypeForVirtual(QualType{RD->getTypeForDecl(), 0}, RD->getLocation());
+    return true;
+  }
+
+  bool VisitParmVarDecl(VarDecl *VD) {
+    CheckTypeForVirtual(VD->getType(), VD->getLocation());
+    return true;
+  }
+
+  bool VisitVarDecl(VarDecl *VD) {
+    CheckTypeForVirtual(VD->getType(), VD->getLocation());
+    return true;
+  }
+
+  bool VisitDeclRefExpr(DeclRefExpr *E) {
+    CheckTypeForVirtual(E->getType(), E->getSourceRange());
+    return true;
+  }
+
 private:
+  bool CheckTypeForVirtual(QualType Ty, SourceRange Loc) {
+    while (Ty->isAnyPointerType() || Ty->isArrayType())
+      Ty = QualType{Ty->getPointeeOrArrayElementType(), 0};
+
+    if (const auto *CRD = Ty->getAsCXXRecordDecl()) {
+      if (CRD->isPolymorphic()) {
+        SemaRef.Diag(CRD->getLocation(), diag::err_sycl_virtual_types);
+        SemaRef.Diag(Loc.getBegin(), diag::note_sycl_used_here);
+        return false;
+      }
+
+      for (const auto &Field : CRD->fields()) {
+        if (!CheckTypeForVirtual(Field->getType(), Field->getSourceRange())) {
+          SemaRef.Diag(Loc.getBegin(), diag::note_sycl_used_here);
+          return false;
+        }
+      }
+    } else if (const auto *RD = Ty->getAsRecordDecl()) {
+      for (const auto &Field : RD->fields()) {
+        if (!CheckTypeForVirtual(Field->getType(), Field->getSourceRange())) {
+          SemaRef.Diag(Loc.getBegin(), diag::note_sycl_used_here);
+          return false;
+        }
+      }
+    } else if (const auto *FPTy = dyn_cast<FunctionProtoType>(Ty)) {
+      for (const auto &ParamTy : FPTy->param_types())
+        if (!CheckTypeForVirtual(ParamTy, Loc))
+          return false;
+      return CheckTypeForVirtual(FPTy->getReturnType(), Loc);
+    } else if (const auto *FTy = dyn_cast<FunctionType>(Ty)) {
+      return CheckTypeForVirtual(FTy->getReturnType(), Loc);
+    }
+    return true;
+  }
   Sema &SemaRef;
 };
 

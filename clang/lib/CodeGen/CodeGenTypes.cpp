@@ -719,6 +719,10 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
     return Ty;
   }
 
+  assert((!Context.getLangOpts().SYCL || !isa<CXXRecordDecl>(RD) ||
+          !dyn_cast<CXXRecordDecl>(RD)->isPolymorphic()) &&
+         "Types with virtual functions not allowed in SYCL");
+
   // Okay, this is a definition of a type.  Compile the implementation now.
   bool InsertResult = RecordsBeingLaidOut.insert(Key).second;
   (void)InsertResult;
