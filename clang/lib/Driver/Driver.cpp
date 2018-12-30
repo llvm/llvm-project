@@ -698,15 +698,15 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   // SYCL
   //
   // We need to generate a SYCL toolchain if the user specified targets with
-  // the -fsycl-targets option.
+  // the -fsycl-targets option.  If -fsycl is supplied without -fsycl-targets
+  // we will assume SPIR-V
+  bool HasValidSYCLRuntime = C.getInputArgs().hasFlag(options::OPT_fsycl,
+                                              options::OPT_fno_sycl, false);
   if (Arg *SYCLTargets =
           C.getInputArgs().getLastArg(options::OPT_fsycl_targets_EQ)) {
     if (SYCLTargets->getNumValues()) {
       // We expect that -fsycl-targets is always used in conjunction with the
       // -fsycl option
-      bool HasValidSYCLRuntime = C.getInputArgs().hasFlag(
-          options::OPT_fsycl, options::OPT_fno_sycl, false);
-
       if (HasValidSYCLRuntime) {
         llvm::StringMap<const char *> FoundNormalizedTriples;
         for (const char *Val : SYCLTargets->getValues()) {
@@ -747,6 +747,27 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     } else
       Diag(clang::diag::warn_drv_empty_joined_argument)
           << SYCLTargets->getAsString(C.getInputArgs());
+  } else {
+    // If -fsycl is supplied without -fsycl-targets we will assume SPIR-V
+    if (HasValidSYCLRuntime) {
+      const ToolChain *HostTC =
+          C.getSingleOffloadToolChain<Action::OFK_Host>();
+      const llvm::Triple &HostTriple = HostTC->getTriple();
+      llvm::Triple TT(TargetTriple);
+      TT.setArch(llvm::Triple::spir64);
+      TT.setVendor(llvm::Triple::UnknownVendor);
+      TT.setOS(llvm::Triple(llvm::sys::getProcessTriple()).getOS());
+      TT.setEnvironment(llvm::Triple::SYCLDevice);
+      // Use the SYCL and host triples as the key into the ToolChains map,
+      // because the device toolchain we create depends on both.
+      auto &SYCLTC = ToolChains[(TT.normalize() + Twine("/") +
+                                 HostTriple.normalize()).str()];
+      if (!SYCLTC) {
+        SYCLTC = llvm::make_unique<toolchains::SYCLToolChain>(
+            *this, TT, *HostTC, C.getInputArgs());
+      }
+      C.addOffloadDeviceToolChain(SYCLTC.get(), Action::OFK_SYCL);
+    }
   }
 
   //
@@ -2942,7 +2963,7 @@ class OffloadingActionBuilder final {
       // The host depends on the generated integrated header from the device
       // compilation.
       if (CurPhase == phases::Compile) {
-         for (Action *&A : SYCLDeviceActions) {
+        for (Action *&A : SYCLDeviceActions) {
           DeviceCompilerInput =
               C.MakeAction<CompileJobAction>(A, types::TY_SYCL_Header);
         }
@@ -3032,7 +3053,12 @@ class OffloadingActionBuilder final {
       for (auto &LI : DeviceLinkerInputs) {
         auto *DeviceLinkAction =
             C.MakeAction<LinkJobAction>(LI, types::TY_Image);
-        DA.add(*DeviceLinkAction, **TC, /*BoundArch=*/nullptr,
+
+        // After the Link, wrap the files before the final host link
+        auto *DeviceWrappingAction =
+            C.MakeAction<OffloadWrappingJobAction>(DeviceLinkAction,
+                                                   types::TY_Object);
+        DA.add(*DeviceWrappingAction, **TC, /*BoundArch=*/nullptr,
                Action::OFK_SYCL);
         ++TC;
       }

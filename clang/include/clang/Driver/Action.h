@@ -72,9 +72,10 @@ public:
     VerifyPCHJobClass,
     OffloadBundlingJobClass,
     OffloadUnbundlingJobClass,
+    OffloadWrappingJobClass,
 
     JobClassFirst = PreprocessJobClass,
-    JobClassLast = OffloadUnbundlingJobClass
+    JobClassLast = OffloadWrappingJobClass
   };
 
   // The offloading kind determines if this action is binded to a particular
@@ -612,6 +613,17 @@ public:
 
   static bool classof(const Action *A) {
     return A->getKind() == OffloadUnbundlingJobClass;
+  }
+};
+
+class OffloadWrappingJobAction : public JobAction {
+  void anchor() override;
+
+public:
+  OffloadWrappingJobAction(Action *Input, types::ID OutputType);
+
+  static bool classof(const Action *A) {
+    return A->getKind() == OffloadWrappingJobClass;
   }
 };
 

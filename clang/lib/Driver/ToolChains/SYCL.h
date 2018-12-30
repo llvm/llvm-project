@@ -35,6 +35,7 @@ public:
 private:
   /// \return llvm-spirv output file name.
   const char *constructLLVMSpirvCommand(Compilation &C, const JobAction &JA,
+                                       const InputInfo &Output,
                                        llvm::StringRef OutputFilePrefix,
                                        bool isBc, const char *InputFile) const;
   /// \return llvm-link output file name.
@@ -42,11 +43,6 @@ private:
                              llvm::StringRef SubArchName,
                              llvm::StringRef OutputFilePrefix,
                              const llvm::opt::ArgStringList &InputFiles) const;
-  /// \return clang-offload-wrapper output file name.
-  const char *constructOffloadWrapperCommand(Compilation &C,
-                                       const JobAction &JA,
-                                       llvm::StringRef OutputFilePrefix,
-                                       const char *InputFile) const;
   void constructLlcCommand(Compilation &C, const JobAction &JA,
                            const InputInfo &Output,
                            const char *InputFile) const;

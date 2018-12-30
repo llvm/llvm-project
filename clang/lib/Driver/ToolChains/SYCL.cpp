@@ -24,24 +24,27 @@ using namespace clang;
 using namespace llvm::opt;
 
 const char *SYCL::Linker::constructLLVMSpirvCommand(Compilation &C,
-    const JobAction &JA, StringRef OutputFilePrefix, bool toBc,
-    const char *InputFileName) const {
+    const JobAction &JA, const InputInfo &Output, StringRef OutputFilePrefix,
+    bool ToBc, const char *InputFileName) const {
   // Construct llvm-spirv command.
   // The output is a bc file or vice versa depending on the -r option usage
   // llvm-spirv -r -o a_kernel.bc a_kernel.spv
   // llvm-spirv -o a_kernel.spv a_kernel.bc
   ArgStringList CmdArgs;
-  if (toBc)
+  const char *OutputFileName = nullptr;
+  if (ToBc) {
+    std::string TmpName =
+      C.getDriver().GetTemporaryPath(OutputFilePrefix.str() + "-spirv", "bc");
+    OutputFileName = C.addTempFile(C.getArgs().MakeArgString(TmpName));
     CmdArgs.push_back("-r");
-  std::string TmpName =
-      C.getDriver().GetTemporaryPath(OutputFilePrefix.str() + "-spirv",
-                                     toBc ? "bc" : "spv");
-  const char *OutputFileName =
-      C.addTempFile(C.getArgs().MakeArgString(TmpName));
-  //return OutputFileName;
-  CmdArgs.push_back("-o");
-  CmdArgs.push_back(OutputFileName);
+    CmdArgs.push_back("-o");
+    CmdArgs.push_back(OutputFileName);
+  } else {
+    CmdArgs.push_back("-o");
+    CmdArgs.push_back(Output.getFilename());
+  }
   CmdArgs.push_back(InputFileName);
+
   SmallString<128> LLVMSpirvPath(C.getDriver().Dir);
   llvm::sys::path::append(LLVMSpirvPath, "llvm-spirv");
   const char *LLVMSpirv = C.getArgs().MakeArgString(LLVMSpirvPath);
@@ -71,39 +74,6 @@ const char *SYCL::Linker::constructLLVMLinkCommand(
   return OutputFileName;
 }
 
-const char *SYCL::Linker::constructOffloadWrapperCommand(
-    Compilation &C, const JobAction &JA, StringRef OutputFilePrefix,
-    const char *InputFileName) const {
-  // Construct offload-wrapper command.
-  // The output is bc wrapped spirv file
-  std::string TmpName =
-      C.getDriver().GetTemporaryPath(OutputFilePrefix.str() + "-wrapped", "bc");
-  const char *OutputFileName =
-      C.addTempFile(C.getArgs().MakeArgString(TmpName));
-  ArgStringList WrapperArgs;
-
-  SmallString<128> TmpOutOpt("-o=");
-  TmpOutOpt += OutputFileName;
-  WrapperArgs.push_back(C.getArgs().MakeArgString(TmpOutOpt));
-  WrapperArgs.push_back(InputFileName);
-
-  SmallString<128> TmpTargetOpt("-target=");
-  TmpTargetOpt += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
-  TmpTargetOpt += '-';
-  TmpTargetOpt += getToolChain().getAuxTriple()->str();
-  WrapperArgs.push_back(C.getArgs().MakeArgString(TmpTargetOpt));
-
-  // For SYCL, do not emit entry tables
-  WrapperArgs.push_back("-emit-entry-table=0");
-
-  SmallString<128> WrapperPath(C.getDriver().Dir);
-  llvm::sys::path::append(WrapperPath, "clang-offload-wrapper");
-  const char *Wrapper = C.getArgs().MakeArgString(WrapperPath);
-  C.addCommand(llvm::make_unique<Command>(JA, *this, Wrapper, WrapperArgs,
-                                          None));
-  return OutputFileName;
-}
-
 void SYCL::Linker::constructLlcCommand(Compilation &C, const JobAction &JA,
     const InputInfo &Output, const char *InputFileName) const {
   // Construct llc command.
@@ -117,8 +87,7 @@ void SYCL::Linker::constructLlcCommand(Compilation &C, const JobAction &JA,
 }
 
 // For SYCL the inputs of the linker job are SPIR-V binaries and output is
-// object file. It calls llvm-spirv, llvm-link, llvm-spirv, offload-wrapper
-// and llc
+// a single SPIR-V binary.
 void SYCL::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfo &Output,
                                    const InputInfoList &Inputs,
@@ -142,16 +111,12 @@ void SYCL::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (!II.isFilename())
       continue;
     const char *LLVMSpirvOutputFile =
-      constructLLVMSpirvCommand(C, JA, Prefix, true, II.getFilename());
+      constructLLVMSpirvCommand(C, JA, Output, Prefix, true, II.getFilename());
     SpirvInputs.push_back(LLVMSpirvOutputFile);
   }
   const char *LLVMLinkOutputFile =
       constructLLVMLinkCommand(C, JA, SubArchName, Prefix, SpirvInputs);
-  const char *LLVMSpirvOutputFile =
-      constructLLVMSpirvCommand(C, JA, Prefix, false, LLVMLinkOutputFile);
-  const char *OffloadWrapperOutputFile =
-      constructOffloadWrapperCommand(C, JA, Prefix, LLVMSpirvOutputFile);
-  constructLlcCommand(C, JA, Output, OffloadWrapperOutputFile);
+  constructLLVMSpirvCommand(C, JA, Output, Prefix, false, LLVMLinkOutputFile);
 }
 
 SYCLToolChain::SYCLToolChain(const Driver &D, const llvm::Triple &Triple,

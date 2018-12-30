@@ -3412,6 +3412,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   InputInfoList ModuleHeaderInputs;
   const InputInfo *CudaDeviceInput = nullptr;
   const InputInfo *OpenMPDeviceInput = nullptr;
+  const InputInfo *SYCLDeviceInput = nullptr;
   for (const InputInfo &I : Inputs) {
     if (&I == &Input) {
       // This is the primary input.
@@ -3428,6 +3429,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CudaDeviceInput = &I;
     } else if (IsOpenMPDevice && !OpenMPDeviceInput) {
       OpenMPDeviceInput = &I;
+    } else if (IsSYCL && !SYCLDeviceInput) {
+      SYCLDeviceInput = &I;
     } else {
       llvm_unreachable("unexpectedly given multiple inputs");
     }
@@ -3544,8 +3547,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   } else if (isa<AssembleJobAction>(JA)) {
     if (IsSYCLOffloadDevice && IsSYCLDevice) {
       CmdArgs.push_back("-emit-spirv");
-    }
-    else {
+    } else {
       CmdArgs.push_back("-emit-obj");
       CollectArgsForIntegratedAssembler(C, Args, CmdArgs, D);
     }
@@ -5221,11 +5223,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (IsSYCL) {
-    // Host-side SYCL compilation receives the integrated header file as
+    // Host-side SYCL compilation receives the integration header file as
     // Inputs[1].  Include the header with -include
-    if (!IsSYCLOffloadDevice && Inputs.size() > 1) {
+    if (!IsSYCLOffloadDevice && SYCLDeviceInput) {
       CmdArgs.push_back("-include");
-      CmdArgs.push_back(Inputs[1].getFilename());
+      CmdArgs.push_back(SYCLDeviceInput->getFilename());
     }
     if (IsSYCLOffloadDevice && JA.getType() == types::TY_SYCL_Header) {
       // Generating a SYCL Header
@@ -6254,3 +6256,66 @@ void OffloadBundler::ConstructJobMultipleOutputs(
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
       CmdArgs, None));
 }
+
+// Begin OffloadWrapper
+
+void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,
+                                  const InputInfo &Output,
+                                  const InputInfoList &Inputs,
+                                  const llvm::opt::ArgList &TCArgs,
+                                  const char *LinkingOutput) const {
+  // Construct offload-wrapper command.  Also calls llc to generate the
+  // object that is fed to the linker from the wrapper generated bc file
+  assert(isa<OffloadWrappingJobAction>(JA) && "Expecting wrapping job!");
+
+  // The wrapper command looks like this:
+  // clang-offload-wrapper
+  //   -o=<outputfile>.bc
+  //   -target=sycl-x86_64-pc-linux-gnu <inputfile(s)>.spv
+  ArgStringList WrapperArgs;
+
+  std::string OutTmpName = C.getDriver().GetTemporaryPath("wrapper", "bc");
+  const char * WrapperFileName =
+      C.addTempFile(C.getArgs().MakeArgString(OutTmpName));
+  SmallString<128> OutOpt("-o=");
+  OutOpt += WrapperFileName;
+  WrapperArgs.push_back(C.getArgs().MakeArgString(OutOpt));
+  for (auto I : Inputs) {
+    WrapperArgs.push_back(I.getFilename());
+  }
+
+  SmallString<128> TargetOpt("-target=");
+  TargetOpt += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
+  TargetOpt += '-';
+  TargetOpt += getToolChain().getAuxTriple()->str();
+  WrapperArgs.push_back(C.getArgs().MakeArgString(TargetOpt));
+
+  // For SYCL, do not emit entry tables
+  if (JA.isOffloading(Action::OFK_SYCL))
+    WrapperArgs.push_back("-emit-entry-table=0");
+
+  C.addCommand(llvm::make_unique<Command>(JA, *this,
+      TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
+      WrapperArgs, None));
+
+  // Construct llc command.
+  // The output is an object file
+  ArgStringList LlcArgs{"-filetype=obj", "-o",  Output.getFilename(),
+                        WrapperFileName};
+  llvm::Reloc::Model RelocationModel;
+  unsigned PICLevel;
+  bool IsPIE;
+  std::tie(RelocationModel, PICLevel, IsPIE) =
+      ParsePICArgs(getToolChain(), TCArgs);
+  if (PICLevel > 0) {
+      LlcArgs.push_back("-relocation-model=pic");
+  }
+  if (IsPIE) {
+      LlcArgs.push_back("-enable-pie");
+  }
+  SmallString<128> LlcPath(C.getDriver().Dir);
+  llvm::sys::path::append(LlcPath, "llc");
+  const char *Llc = C.getArgs().MakeArgString(LlcPath);
+  C.addCommand(llvm::make_unique<Command>(JA, *this, Llc, LlcArgs, None));
+}
+

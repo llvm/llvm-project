@@ -286,6 +286,12 @@ Tool *ToolChain::getOffloadBundler() const {
   return OffloadBundler.get();
 }
 
+Tool *ToolChain::getOffloadWrapper() const {
+  if (!OffloadWrapper)
+    OffloadWrapper.reset(new tools::OffloadWrapper(*this));
+  return OffloadWrapper.get();
+}
+
 Tool *ToolChain::getTool(Action::ActionClass AC) const {
   switch (AC) {
   case Action::AssembleJobClass:
@@ -315,6 +321,9 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::OffloadBundlingJobClass:
   case Action::OffloadUnbundlingJobClass:
     return getOffloadBundler();
+
+  case Action::OffloadWrappingJobClass:
+    return getOffloadWrapper();
   }
 
   llvm_unreachable("Invalid tool kind.");
@@ -931,7 +940,9 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOffloadTargetArgs(
     unsigned Index;
     unsigned Prev;
     bool XOffloadTargetNoTriple;
-   
+
+    // TODO: functionality between OpenMP offloading and SYCL offloading
+    // is similar, can be improved
     if (DeviceOffloadKind == Action::OFK_OpenMP) {
       XOffloadTargetNoTriple =
         A->getOption().matches(options::OPT_Xopenmp_target);
@@ -966,7 +977,6 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOffloadTargetArgs(
       }
     }
 
-
     // Parse the argument to -Xopenmp-target.
     Prev = Index;
     std::unique_ptr<Arg> XOffloadTargetArg(Opts.ParseOneArg(Args, Index));
@@ -981,6 +991,8 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOffloadTargetArgs(
       continue;
     }
     if (XOffloadTargetNoTriple && XOffloadTargetArg) {
+      // TODO: similar behaviors with OpenMP and SYCL offloading, can be
+      // improved upon
       if (DeviceOffloadKind == Action::OFK_OpenMP &&
           Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() != 1) {
         getDriver().Diag(diag::err_drv_Xopenmp_target_missing_triple);
