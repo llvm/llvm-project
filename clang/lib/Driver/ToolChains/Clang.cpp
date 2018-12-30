@@ -144,6 +144,13 @@ forAllAssociatedToolChains(Compilation &C, const JobAction &JA,
   } else if (JA.isDeviceOffloading(Action::OFK_OpenMP))
     Work(*C.getSingleOffloadToolChain<Action::OFK_Host>());
 
+  if (JA.isHostOffloading(Action::OFK_SYCL)) {
+    auto TCs = C.getOffloadToolChains<Action::OFK_SYCL>();
+    for (auto II = TCs.first, IE = TCs.second; II != IE; ++II)
+      Work(*II->second);
+  } else if (JA.isDeviceOffloading(Action::OFK_SYCL))
+    Work(*C.getSingleOffloadToolChain<Action::OFK_Host>());
+
   //
   // TODO: Add support for other offloading programming models here.
   //
@@ -3378,14 +3385,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Check number of inputs for sanity. We need at least one input.
   assert(Inputs.size() >= 1 && "Must have at least one input.");
   // CUDA/HIP compilation may have multiple inputs (source file + results of
-  // device-side compilations). OpenMP device jobs also take the host IR as a
-  // second input. Module precompilation accepts a list of header files to
+  // device-side compilations). OpenMP and SYCL device jobs also take the host
+  // IR as a second input. All other jobs are expected to have exactly one
   // include as part of the module. All other jobs are expected to have exactly
   // one input.
   bool IsCuda = JA.isOffloading(Action::OFK_Cuda);
   bool IsHIP = JA.isOffloading(Action::OFK_HIP);
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
+  bool IsSYCLOffloadDevice = JA.isDeviceOffloading(Action::OFK_SYCL);
+  bool IsSYCL = JA.isOffloading(Action::OFK_SYCL);
   bool IsHeaderModulePrecompile = isa<HeaderModulePrecompileJobAction>(JA);
+  assert((IsCuda || IsHIP || (IsOpenMPDevice && Inputs.size() == 2) ||
+         IsSYCL || Inputs.size() == 1) && "Unable to handle multiple inputs.");
 
   // A header module compilation doesn't have a main input file, so invent a
   // fake one as a placeholder.
@@ -3478,7 +3489,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (IsSYCLDevice) {
     // We want to compile sycl kernels.
-    CmdArgs.push_back("-std=c++11");
+    if (types::isCXX(Input.getType()))
+      CmdArgs.push_back("-std=c++11");
     CmdArgs.push_back("-fsycl-is-device");
     // Pass the triple of host when doing SYCL
     std::string NormalizedTriple =
@@ -3530,9 +3542,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-P");
     }
   } else if (isa<AssembleJobAction>(JA)) {
-    CmdArgs.push_back("-emit-obj");
-
-    CollectArgsForIntegratedAssembler(C, Args, CmdArgs, D);
+    if (IsSYCLOffloadDevice && IsSYCLDevice) {
+      CmdArgs.push_back("-emit-spirv");
+    }
+    else {
+      CmdArgs.push_back("-emit-obj");
+      CollectArgsForIntegratedAssembler(C, Args, CmdArgs, D);
+    }
 
     // Also ignore explicit -force_cpusubtype_ALL option.
     (void)Args.hasArg(options::OPT_force__cpusubtype__ALL);
@@ -3550,7 +3566,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   } else {
     assert((isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) &&
            "Invalid action for clang tool.");
-    if (JA.getType() == types::TY_Nothing) {
+    if (JA.getType() == types::TY_Nothing ||
+        JA.getType() == types::TY_SYCL_Header) {
       CmdArgs.push_back("-fsyntax-only");
     } else if (JA.getType() == types::TY_LLVM_IR ||
                JA.getType() == types::TY_LTO_IR) {
@@ -5203,6 +5220,21 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fcuda-short-ptr");
   }
 
+  if (IsSYCL) {
+    // Host-side SYCL compilation receives the integrated header file as
+    // Inputs[1].  Include the header with -include
+    if (!IsSYCLOffloadDevice && Inputs.size() > 1) {
+      CmdArgs.push_back("-include");
+      CmdArgs.push_back(Inputs[1].getFilename());
+    }
+    if (IsSYCLOffloadDevice && JA.getType() == types::TY_SYCL_Header) {
+      // Generating a SYCL Header
+      SmallString<128> HeaderOpt("-fsycl-int-header=");
+      HeaderOpt += Output.getFilename();
+      CmdArgs.push_back(Args.MakeArgString(HeaderOpt));
+    }
+  }
+
   // OpenMP offloading device jobs take the argument -fopenmp-host-ir-file-path
   // to specify the result of the compile phase on the host, so the meaningful
   // device declarations can be identified. Also, -fopenmp-is-device is passed
@@ -5224,6 +5256,25 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Arg *Tgts = Args.getLastArg(options::OPT_fopenmp_targets_EQ);
     assert(Tgts && Tgts->getNumValues() &&
            "OpenMP offloading has to have targets specified.");
+    for (unsigned i = 0; i < Tgts->getNumValues(); ++i) {
+      if (i)
+        TargetInfo += ',';
+      // We need to get the string from the triple because it may be not exactly
+      // the same as the one we get directly from the arguments.
+      llvm::Triple T(Tgts->getValue(i));
+      TargetInfo += T.getTriple();
+    }
+    CmdArgs.push_back(Args.MakeArgString(TargetInfo.str()));
+  }
+
+  // For all the host SYCL offloading compile jobs we need to pass the targets
+  // information using -fsycl-targets= option.
+  if (isa<CompileJobAction>(JA) && JA.isHostOffloading(Action::OFK_SYCL)) {
+    SmallString<128> TargetInfo("-fsycl-targets=");
+
+    Arg *Tgts = Args.getLastArg(options::OPT_fsycl_targets_EQ);
+    assert(Tgts && Tgts->getNumValues() &&
+           "SYCL offloading has to have targets specified.");
     for (unsigned i = 0; i < Tgts->getNumValues(); ++i) {
       if (i)
         TargetInfo += ',';

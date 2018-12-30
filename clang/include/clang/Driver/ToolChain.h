@@ -273,12 +273,14 @@ public:
     return nullptr;
   }
 
-  /// TranslateOpenMPTargetArgs - Create a new derived argument list for
-  /// that contains the OpenMP target specific flags passed via
+  /// TranslateOffloadTargetArgs - Create a new derived argument list for
+  /// that contains the Offloat target specific flags passed via
   /// -Xopenmp-target -opt=val OR -Xopenmp-target=<triple> -opt=val
-  virtual llvm::opt::DerivedArgList *TranslateOpenMPTargetArgs(
+  /// Also handles -Xsycl-target OR -Xsycl-target=<triple>
+  virtual llvm::opt::DerivedArgList *TranslateOffloadTargetArgs(
       const llvm::opt::DerivedArgList &Args, bool SameTripleAsHost,
-      SmallVectorImpl<llvm::opt::Arg *> &AllocatedArgs) const;
+      SmallVectorImpl<llvm::opt::Arg *> &AllocatedArgs,
+      Action::OffloadKind DeviceOffloadKind) const;
 
   /// Choose a tool to use to handle the action \p JA.
   ///

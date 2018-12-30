@@ -473,6 +473,11 @@ def Xopenmp_target : Separate<["-"], "Xopenmp-target">,
 def Xopenmp_target_EQ : JoinedAndSeparate<["-"], "Xopenmp-target=">,
   HelpText<"Pass <arg> to the target offloading toolchain identified by <triple>.">,
   MetaVarName<"<triple> <arg>">;
+def Xsycl_target : Separate<["-"], "Xsycl-target">,
+  HelpText<"Pass <arg> to the SYCL based target offloading toolchain.">, MetaVarName<"<arg>">;
+def Xsycl_target_EQ : JoinedAndSeparate<["-"], "Xsycl-target=">,
+  HelpText<"Pass <arg> to the SYCL based target offloading toolchain identified by <triple>.">,
+  MetaVarName<"<triple> <arg>">;
 def z : Separate<["-"], "z">, Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass -z <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
@@ -1677,6 +1682,11 @@ def fstrict_vtable_pointers: Flag<["-"], "fstrict-vtable-pointers">,
   HelpText<"Enable optimizations based on the strict rules for overwriting "
              "polymorphic C++ objects">;
 def fstrict_overflow : Flag<["-"], "fstrict-overflow">, Group<f_Group>;
+def fsycl : Flag<["-"], "fsycl">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>,
+  HelpText<"generate SYCL code.">;
+def fno_sycl : Flag<["-"], "fno-sycl">, Group<f_Group>, Flags<[NoArgumentUnused]>;
+def fsycl_targets_EQ : CommaJoined<["-"], "fsycl-targets=">, Flags<[DriverOption, CC1Option]>,
+  HelpText<"Specify comma-separated list of triples SYCL offloading targets to be supported">;
 def fsyntax_only : Flag<["-"], "fsyntax-only">,
   Flags<[DriverOption,CoreOption,CC1Option]>, Group<Action_Group>;
 def ftabstop_EQ : Joined<["-"], "ftabstop=">, Group<f_Group>;

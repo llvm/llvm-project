@@ -69,12 +69,14 @@ Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
   if (!Entry) {
     SmallVector<Arg *, 4> AllocatedArgs;
     DerivedArgList *OpenMPArgs = nullptr;
-    // Translate OpenMP toolchain arguments provided via the -Xopenmp-target flags.
-    if (DeviceOffloadKind == Action::OFK_OpenMP) {
+    // Translate OpenMP toolchain arguments provided via the -Xopenmp-target
+    // or -Xsycl-target flags.
+    if (DeviceOffloadKind == Action::OFK_OpenMP ||
+        DeviceOffloadKind == Action::OFK_SYCL) {
       const ToolChain *HostTC = getSingleOffloadToolChain<Action::OFK_Host>();
       bool SameTripleAsHost = (TC->getTriple() == HostTC->getTriple());
-      OpenMPArgs = TC->TranslateOpenMPTargetArgs(
-          *TranslatedArgs, SameTripleAsHost, AllocatedArgs);
+      OpenMPArgs = TC->TranslateOffloadTargetArgs(
+          *TranslatedArgs, SameTripleAsHost, AllocatedArgs, DeviceOffloadKind);
     }
 
     if (!OpenMPArgs) {

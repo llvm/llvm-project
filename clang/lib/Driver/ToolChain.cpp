@@ -897,14 +897,18 @@ ToolChain::computeMSVCVersion(const Driver *D,
   return VersionTuple();
 }
 
-llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
+llvm::opt::DerivedArgList *ToolChain::TranslateOffloadTargetArgs(
     const llvm::opt::DerivedArgList &Args, bool SameTripleAsHost,
-    SmallVectorImpl<llvm::opt::Arg *> &AllocatedArgs) const {
+    SmallVectorImpl<llvm::opt::Arg *> &AllocatedArgs,
+    Action::OffloadKind DeviceOffloadKind) const {
+  assert((DeviceOffloadKind == Action::OFK_OpenMP ||
+          DeviceOffloadKind == Action::OFK_SYCL) &&
+         "requires OpenMP or SYCL offload kind");
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
   const OptTable &Opts = getDriver().getOpts();
   bool Modified = false;
 
-  // Handle -Xopenmp-target flags
+  // Handle -Xopenmp-target and -Xsycl-target flags
   for (auto *A : Args) {
     // Exclude flags which may only apply to the host toolchain.
     // Do not exclude flags when the host triple (AuxTriple)
@@ -918,40 +922,77 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
       continue;
     }
 
-    unsigned Index;
-    unsigned Prev;
-    bool XOpenMPTargetNoTriple =
-        A->getOption().matches(options::OPT_Xopenmp_target);
-
-    if (A->getOption().matches(options::OPT_Xopenmp_target_EQ)) {
-      // Passing device args: -Xopenmp-target=<triple> -opt=val.
-      if (A->getValue(0) == getTripleString())
-        Index = Args.getBaseArgs().MakeIndex(A->getValue(1));
-      else
-        continue;
-    } else if (XOpenMPTargetNoTriple) {
-      // Passing device args: -Xopenmp-target -opt=val.
-      Index = Args.getBaseArgs().MakeIndex(A->getValue(0));
-    } else {
-      DAL->append(A);
+    // Exclude -fsycl
+    if (A->getOption().matches(options::OPT_fsycl)) {
+      Modified = true;
       continue;
     }
+
+    unsigned Index;
+    unsigned Prev;
+    bool XOffloadTargetNoTriple;
+   
+    if (DeviceOffloadKind == Action::OFK_OpenMP) {
+      XOffloadTargetNoTriple =
+        A->getOption().matches(options::OPT_Xopenmp_target);
+      if (A->getOption().matches(options::OPT_Xopenmp_target_EQ)) {
+        // Passing device args: -Xopenmp-target=<triple> -opt=val.
+        if (A->getValue(0) == getTripleString())
+          Index = Args.getBaseArgs().MakeIndex(A->getValue(1));
+        else
+          continue;
+      } else if (XOffloadTargetNoTriple) {
+        // Passing device args: -Xopenmp-target -opt=val.
+        Index = Args.getBaseArgs().MakeIndex(A->getValue(0));
+      } else {
+        DAL->append(A);
+        continue;
+      }
+    } else if (DeviceOffloadKind == Action::OFK_SYCL) {
+      XOffloadTargetNoTriple =
+        A->getOption().matches(options::OPT_Xsycl_target);
+      if (A->getOption().matches(options::OPT_Xsycl_target_EQ)) {
+        // Passing device args: -Xsycl-target=<triple> -opt=val.
+        if (A->getValue(0) == getTripleString())
+          Index = Args.getBaseArgs().MakeIndex(A->getValue(1));
+        else
+          continue;
+      } else if (XOffloadTargetNoTriple) {
+        // Passing device args: -Xsycl-target -opt=val.
+        Index = Args.getBaseArgs().MakeIndex(A->getValue(0));
+      } else {
+        DAL->append(A);
+        continue;
+      }
+    }
+
 
     // Parse the argument to -Xopenmp-target.
     Prev = Index;
-    std::unique_ptr<Arg> XOpenMPTargetArg(Opts.ParseOneArg(Args, Index));
-    if (!XOpenMPTargetArg || Index > Prev + 1) {
-      getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
-          << A->getAsString(Args);
+    std::unique_ptr<Arg> XOffloadTargetArg(Opts.ParseOneArg(Args, Index));
+    if (!XOffloadTargetArg || Index > Prev + 1) {
+      if (DeviceOffloadKind == Action::OFK_OpenMP) {
+        getDriver().Diag(diag::err_drv_invalid_Xopenmp_target_with_args)
+            << A->getAsString(Args);
+      } else {
+        getDriver().Diag(diag::err_drv_invalid_Xsycl_target_with_args)
+            << A->getAsString(Args);
+      }
       continue;
     }
-    if (XOpenMPTargetNoTriple && XOpenMPTargetArg &&
-        Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() != 1) {
-      getDriver().Diag(diag::err_drv_Xopenmp_target_missing_triple);
-      continue;
+    if (XOffloadTargetNoTriple && XOffloadTargetArg) {
+      if (DeviceOffloadKind == Action::OFK_OpenMP &&
+          Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() != 1) {
+        getDriver().Diag(diag::err_drv_Xopenmp_target_missing_triple);
+        continue;
+      } else if (DeviceOffloadKind == Action::OFK_SYCL &&
+          Args.getAllArgValues(options::OPT_fsycl_targets_EQ).size() != 1) {
+        getDriver().Diag(diag::err_drv_Xsycl_target_missing_triple);
+        continue;
+      }
     }
-    XOpenMPTargetArg->setBaseArg(A);
-    A = XOpenMPTargetArg.release();
+    XOffloadTargetArg->setBaseArg(A);
+    A = XOffloadTargetArg.release();
     AllocatedArgs.push_back(A);
     DAL->append(A);
     Modified = true;

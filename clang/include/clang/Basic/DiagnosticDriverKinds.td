@@ -81,6 +81,10 @@ def err_drv_Xopenmp_target_missing_triple : Error<
   "cannot deduce implicit triple value for -Xopenmp-target, specify triple using -Xopenmp-target=<triple>">;
 def err_drv_invalid_Xopenmp_target_with_args : Error<
   "invalid -Xopenmp-target argument: '%0', options requiring arguments are unsupported">;
+def err_drv_Xsycl_target_missing_triple : Error<
+  "cannot deduce implicit triple value for -Xsycl-target, specify triple using -Xsycl-target=<triple>">;
+def err_drv_invalid_Xsycl_target_with_args : Error<
+  "invalid -Xsycl-target argument: '%0', options requiring arguments are unsupported">;
 def err_drv_argument_only_allowed_with : Error<
   "invalid argument '%0' only allowed with '%1'">;
 def err_drv_argument_not_allowed_with : Error<
@@ -204,15 +208,21 @@ def err_drv_optimization_remark_pattern : Error<
   "%0 in '%1'">;
 def err_drv_no_neon_modifier : Error<"[no]neon is not accepted as modifier, please use [no]simd instead">;
 def err_drv_invalid_omp_target : Error<"OpenMP target is invalid: '%0'">;
+def err_drv_invalid_sycl_target : Error<"SYCL target is invalid: '%0'">;
 def err_drv_omp_host_ir_file_not_found : Error<
   "The provided host compiler IR file '%0' is required to generate code for OpenMP target regions but cannot be found.">;
 def err_drv_omp_host_target_not_supported : Error<
   "The target '%0' is not a supported OpenMP host target.">;
 def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
   "The option -fopenmp-targets must be used in conjunction with a -fopenmp option compatible with offloading, please use -fopenmp=libomp or -fopenmp=libiomp5.">;
+def err_drv_expecting_fsycl_with_fsycl_targets : Error<
+  "The option -fsycl-targets must be used in conjunction with -fsycl to enable offloading.">;
 def warn_drv_omp_offload_target_duplicate : Warning<
   "The OpenMP offloading target '%0' is similar to target '%1' already specified - will be ignored.">,
   InGroup<OpenMPTarget>;
+def warn_drv_sycl_offload_target_duplicate : Warning<
+  "The SYCL offloading target '%0' is similar to target '%1' already specified - will be ignored.">, 
+  InGroup<SyclTarget>;
 def warn_drv_omp_offload_target_missingbcruntime : Warning<
   "No library '%0' found in the default clang lib directory or in LIBRARY_PATH. Expect degraded performance due to no inlining of runtime functions on target devices.">,
   InGroup<OpenMPTarget>;
