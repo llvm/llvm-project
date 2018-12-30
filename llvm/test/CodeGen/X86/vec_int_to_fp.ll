@@ -4278,13 +4278,12 @@ define <8 x float> @sitofp_load_8i32_to_8f32(<8 x i32> *%a) {
 define <8 x float> @sitofp_load_8i16_to_8f32(<8 x i16> *%a) {
 ; SSE2-LABEL: sitofp_load_8i16_to_8f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; SSE2-NEXT:    psrad $16, %xmm1
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    movdqa (%rdi), %xmm1
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; SSE2-NEXT:    psrad $16, %xmm0
 ; SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    psrad $16, %xmm1
 ; SSE2-NEXT:    cvtdq2ps %xmm1, %xmm1
 ; SSE2-NEXT:    retq
 ;
@@ -4323,15 +4322,13 @@ define <8 x float> @sitofp_load_8i16_to_8f32(<8 x i16> *%a) {
 define <8 x float> @sitofp_load_8i8_to_8f32(<8 x i8> *%a) {
 ; SSE2-LABEL: sitofp_load_8i8_to_8f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; SSE2-NEXT:    psrad $24, %xmm1
-; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; SSE2-NEXT:    psrad $24, %xmm0
 ; SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    psrad $24, %xmm1
 ; SSE2-NEXT:    cvtdq2ps %xmm1, %xmm1
 ; SSE2-NEXT:    retq
 ;
@@ -4345,10 +4342,8 @@ define <8 x float> @sitofp_load_8i8_to_8f32(<8 x i8> *%a) {
 ;
 ; AVX1-LABEL: sitofp_load_8i8_to_8f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovsxbw (%rdi), %xmm0
-; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm0
+; AVX1-NEXT:    vpmovsxbd 4(%rdi), %xmm0
+; AVX1-NEXT:    vpmovsxbd (%rdi), %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; AVX1-NEXT:    retq

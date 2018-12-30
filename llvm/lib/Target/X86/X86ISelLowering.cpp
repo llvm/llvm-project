@@ -883,12 +883,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // scalars) and extend in-register to a legal 128-bit vector type. For sext
     // loads these must work with a single scalar load.
     for (MVT VT : MVT::integer_vector_valuetypes()) {
-      if (!ExperimentalVectorWideningLegalization) {
-        // We don't want narrow result types here when widening.
-        setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v4i8, Custom);
-        setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v4i16, Custom);
-        setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v8i8, Custom);
-      }
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v2i8, Custom);
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v2i16, Custom);
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v2i32, Custom);
@@ -985,6 +979,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::TRUNCATE,    MVT::v4i8,  Custom);
       setOperationAction(ISD::TRUNCATE,    MVT::v4i16, Custom);
       setOperationAction(ISD::TRUNCATE,    MVT::v8i8,  Custom);
+    } else {
+      setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, MVT::v4i64, Custom);
     }
 
     // In the customized shift lowering, the legal v4i32/v2i64 cases
@@ -26423,6 +26419,48 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     }
     return;
   }
+  case ISD::SIGN_EXTEND_VECTOR_INREG: {
+    if (ExperimentalVectorWideningLegalization)
+      return;
+
+    EVT VT = N->getValueType(0);
+    SDValue In = N->getOperand(0);
+    EVT InVT = In.getValueType();
+    if (!Subtarget.hasSSE41() && VT == MVT::v4i64 &&
+        (InVT == MVT::v16i16 || InVT == MVT::v32i8)) {
+      // Custom split this so we can extend i8/i16->i32 invec. This is better
+      // since sign_extend_inreg i8/i16->i64 requires an extend to i32 using
+      // sra. Then extending from i32 to i64 using pcmpgt. By custom splitting
+      // we allow the sra from the extend to i32 to be shared by the split.
+      EVT ExtractVT = EVT::getVectorVT(*DAG.getContext(),
+                                       InVT.getVectorElementType(),
+                                       InVT.getVectorNumElements() / 2);
+      MVT ExtendVT = MVT::getVectorVT(MVT::i32,
+                                      VT.getVectorNumElements());
+      In = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ExtractVT,
+                       In, DAG.getIntPtrConstant(0, dl));
+      In = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, dl, MVT::v4i32, In);
+
+      // Fill a vector with sign bits for each element.
+      SDValue Zero = DAG.getConstant(0, dl, ExtendVT);
+      SDValue SignBits = DAG.getSetCC(dl, ExtendVT, Zero, In, ISD::SETGT);
+
+      EVT LoVT, HiVT;
+      std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
+
+      // Create an unpackl and unpackh to interleave the sign bits then bitcast
+      // to vXi64.
+      SDValue Lo = getUnpackl(DAG, dl, ExtendVT, In, SignBits);
+      Lo = DAG.getNode(ISD::BITCAST, dl, LoVT, Lo);
+      SDValue Hi = getUnpackh(DAG, dl, ExtendVT, In, SignBits);
+      Hi = DAG.getNode(ISD::BITCAST, dl, HiVT, Hi);
+
+      SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Lo, Hi);
+      Results.push_back(Res);
+      return;
+    }
+    return;
+  }
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND: {
     if (!ExperimentalVectorWideningLegalization)
@@ -26434,8 +26472,9 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     if (!Subtarget.hasSSE41() && VT == MVT::v4i64 &&
         (InVT == MVT::v4i16 || InVT == MVT::v4i8)) {
       // Custom split this so we can extend i8/i16->i32 invec. This is better
-      // since sign_extend_inreg i8/i16->i64 requires two sra operations. So
-      // this allows the first to be shared.
+      // since sign_extend_inreg i8/i16->i64 requires an extend to i32 using
+      // sra. Then extending from i32 to i64 using pcmpgt. By custom splitting
+      // we allow the sra from the extend to i32 to be shared by the split.
       In = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::v4i32, In);
 
       // Fill a vector with sign bits for each element.

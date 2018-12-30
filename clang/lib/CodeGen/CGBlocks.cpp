@@ -161,6 +161,9 @@ static std::string getBlockDescriptorName(const CGBlockInfo &BlockInfo,
 
   std::string TypeAtEncoding =
       CGM.getContext().getObjCEncodingForBlock(BlockInfo.getBlockExpr());
+  /// Replace occurrences of '@' with '\1'. '@' is reserved on ELF platforms as
+  /// a separator between symbol name and symbol version.
+  std::replace(TypeAtEncoding.begin(), TypeAtEncoding.end(), '@', '\1');
   Name += "e" + llvm::to_string(TypeAtEncoding.size()) + "_" + TypeAtEncoding;
   Name += "l" + CGM.getObjCRuntime().getRCBlockLayoutStr(CGM, BlockInfo);
   return Name;
