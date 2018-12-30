@@ -20,9 +20,9 @@ __attribute__((sycl_kernel)) void kernel_single_task(Func kernelFunc) {
 
 
 void test() {
-  // expected-error@+1 2{{kernel parameter has non-standard layout class/struct type}}
+  // expected-error@+1 {{kernel parameter has non-standard layout class/struct type}}
   C C0;
   C0.Y=0;
-  kernel_single_task<class MyKernel>([&] { C0.Y++; });
+  kernel_single_task<class MyKernel>([=] { (void)C0.Y; });
 }
 

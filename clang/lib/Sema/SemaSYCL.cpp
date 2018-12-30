@@ -39,6 +39,8 @@ enum target {
   image_array
 };
 
+using ParamDesc = std::tuple<QualType, IdentifierInfo *, TypeSourceInfo *>;
+
 /// Various utilities.
 class Util {
 public:
@@ -205,14 +207,18 @@ private:
   Sema &SemaRef;
 };
 
-static FunctionDecl *
-CreateSYCLKernelFunction(ASTContext &Context, StringRef Name,
-                         ArrayRef<QualType> ArgTys,
-                         ArrayRef<DeclaratorDecl *> ArgDecls) {
+static FunctionDecl *CreateSYCLKernelFunction(ASTContext &Context,
+                                              StringRef Name,
+                                              ArrayRef<ParamDesc> ParamDescs) {
 
   DeclContext *DC = Context.getTranslationUnitDecl();
   FunctionProtoType::ExtProtoInfo Info(CC_OpenCLKernel);
   QualType RetTy = Context.VoidTy;
+  SmallVector<QualType, 8> ArgTys;
+  // extract argument types from the descriptor array:
+  std::transform(
+      ParamDescs.begin(), ParamDescs.end(), std::back_inserter(ArgTys),
+      [](const ParamDesc &PD) -> QualType { return std::get<0>(PD); });
   QualType FuncTy = Context.getFunctionType(RetTy, ArgTys, Info);
   DeclarationName DN = DeclarationName(&Context.Idents.get(Name));
   FunctionDecl *SYCLKernel = FunctionDecl::Create(
@@ -220,11 +226,10 @@ CreateSYCLKernelFunction(ASTContext &Context, StringRef Name,
       Context.getTrivialTypeSourceInfo(RetTy), SC_None);
   llvm::SmallVector<ParmVarDecl *, 16> Params;
   int i = 0;
-  for (auto ArgTy : ArgTys) {
+  for (const auto &PD : ParamDescs) {
     auto P = ParmVarDecl::Create(Context, SYCLKernel, SourceLocation(),
-                                 SourceLocation(), ArgDecls[i]->getIdentifier(),
-                                 ArgTy, ArgDecls[i]->getTypeSourceInfo(),
-                                 SC_None, 0);
+                                 SourceLocation(), std::get<1>(PD),
+                                 std::get<0>(PD), std::get<2>(PD), SC_None, 0);
     P->setScopeInfo(0, i++);
     P->setIsUsed();
     Params.push_back(P);
@@ -250,12 +255,13 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
   auto KernelObjClone = VarDecl::Create(
       S.Context, DC, SourceLocation(), SourceLocation(), LC->getIdentifier(),
       QualType(LC->getTypeForDecl(), 0), TSInfo, SC_None);
-  Stmt *DS = new (S.Context)
-      DeclStmt(DeclGroupRef(KernelObjClone), SourceLocation(), SourceLocation());
+  Stmt *DS = new (S.Context) DeclStmt(DeclGroupRef(KernelObjClone),
+                                      SourceLocation(), SourceLocation());
   BodyStmts.push_back(DS);
-  auto CloneRef = DeclRefExpr::Create(
-      S.Context, NestedNameSpecifierLoc(), SourceLocation(), KernelObjClone, false,
-      DeclarationNameInfo(), QualType(LC->getTypeForDecl(), 0), VK_LValue);
+  auto CloneRef =
+      DeclRefExpr::Create(S.Context, NestedNameSpecifierLoc(), SourceLocation(),
+                          KernelObjClone, false, DeclarationNameInfo(),
+                          QualType(LC->getTypeForDecl(), 0), VK_LValue);
   auto TargetFunc = dyn_cast<FunctionDecl>(DC);
   auto TargetFuncParam =
       TargetFunc->param_begin(); // Iterator to ParamVarDecl (VarDecl)
@@ -268,20 +274,19 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
             S.Context, paramTy, CK_NoOp, DRE, nullptr, VK_LValue);
         Expr *Res =
             ImplicitCastExpr::Create(S.Context, paramTy, CK_LValueToRValue,
-                                      qualifiersCast, nullptr, VK_RValue);
+                                     qualifiersCast, nullptr, VK_RValue);
         return Res;
       };
       auto getExprForRange = [](Sema &S, const QualType &paramTy,
                                 DeclRefExpr *DRE) {
         Expr *Res = ImplicitCastExpr::Create(S.Context, paramTy, CK_NoOp, DRE,
-                                              nullptr, VK_RValue);
+                                             nullptr, VK_RValue);
         return Res;
       };
       QualType ParamType = (*TargetFuncParam)->getOriginalType();
-      auto DRE =
-          DeclRefExpr::Create(S.Context, NestedNameSpecifierLoc(),
-                              SourceLocation(), *TargetFuncParam, false,
-                              DeclarationNameInfo(), ParamType, VK_LValue);
+      auto DRE = DeclRefExpr::Create(
+          S.Context, NestedNameSpecifierLoc(), SourceLocation(),
+          *TargetFuncParam, false, DeclarationNameInfo(), ParamType, VK_LValue);
       QualType FieldType = Field->getType();
       CXXRecordDecl *CRD = FieldType->getAsCXXRecordDecl();
       if (CRD && Util::isSyclAccessorType(FieldType)) {
@@ -324,10 +329,10 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
         if (PointerOfAccesorWasSet) {
           TargetFuncParam++;
           ParamType = (*TargetFuncParam)->getOriginalType();
-          DRE = DeclRefExpr::Create(S.Context, NestedNameSpecifierLoc(),
-                                    SourceLocation(), *TargetFuncParam, false,
-                                    DeclarationNameInfo(), ParamType,
-                                    VK_LValue);
+          DRE =
+              DeclRefExpr::Create(S.Context, NestedNameSpecifierLoc(),
+                                  SourceLocation(), *TargetFuncParam, false,
+                                  DeclarationNameInfo(), ParamType, VK_LValue);
           FieldType = Field->getType();
           CRD = FieldType->getAsCXXRecordDecl();
           if (CRD) {
@@ -389,7 +394,7 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
         // lambda.field = kernel_parameter
         Expr *Res = new (S.Context)
             BinaryOperator(Lhs, Rhs, BO_Assign, FieldType, VK_LValue,
-                            OK_Ordinary, SourceLocation(), FPOptions());
+                           OK_Ordinary, SourceLocation(), FPOptions());
         BodyStmts.push_back(Res);
       }
       TargetFuncParam++;
@@ -416,242 +421,169 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
                               SourceLocation());
 }
 
-/// Identifies context of kernel lambda capture visitor function
-/// invocation.
-enum VisitorContext {
-  pre_visit,
-  pre_visit_class_field,
-  visit_accessor,
-  visit_std_layout,
-  visit_stream,
-  post_visit,
-};
+/// Creates a kernel parameter descriptor
+/// \param Src  field declaration to construct name from
+/// \param Ty   the desired parameter type
+/// \return     the constructed descriptor
+static ParamDesc makeParamDesc(const FieldDecl *Src, QualType Ty) {
+  ASTContext &Ctx = Src->getASTContext();
+  std::string Name = (Twine("_arg_") + Src->getName()).str();
+  return std::make_tuple(Ty, &Ctx.Idents.get(Name),
+                         Ctx.getTrivialTypeSourceInfo(Ty));
+}
 
-/// Implements visitor design pattern for kernel object fields.
+/// \return the target of given SYCL accessor type
+static target getAccessTarget(const ClassTemplateSpecializationDecl *AccTy) {
+  return static_cast<target>(
+    AccTy->getTemplateArgs()[3].getAsIntegral().getExtValue());
+}
+
 ///
-/// Iterates over fields of given kernel object (can be lambda or functor) and
-/// invokes given visitor functions at appropriate context providing information
-/// of interest.
-/// \param KernelObj  the kernel object
-/// \param Vis     a tuple of visitor functions, each corresponds to and is
-///     invoked at a specific context. @see VisitorContext.
-///
-template <typename VisitorTupleTy>
-static void visitKernelObjFields(const CXXRecordDecl *KernelObj,
-                                      VisitorTupleTy &Vis) {
+static FieldDecl *getFieldDeclByName(const CXXRecordDecl *RD,
+                                     const ArrayRef<StringRef> FldExpr,
+                                     uint64_t *Offset = nullptr) {
+
+  FieldDecl *Res = nullptr;
+
+  for (const auto FldName : FldExpr) {
+    Res = nullptr;
+    assert(RD && "field lookup in non-struct type");
+
+    for (FieldDecl *Fld : RD->fields()) {
+      if (Fld->getNameAsString() == FldName) {
+        if (Offset) {
+          const ASTRecordLayout &LO =
+              RD->getASTContext().getASTRecordLayout(RD);
+          *Offset += LO.getFieldOffset(Fld->getFieldIndex()) / 8;
+        }
+        RD = Fld->getType()->getAsCXXRecordDecl();
+        Res = Fld;
+        break;
+      }
+    }
+    assert(Res && "field declaration must have been found");
+  }
+  return Res;
+}
+
+static void buildArgTys(ASTContext &Context, CXXRecordDecl *KernelObj,
+                        SmallVectorImpl<ParamDesc> &ParamDescs) {
   const LambdaCapture *Cpt = KernelObj->captures_begin();
-  RecordDecl::field_iterator Fld = KernelObj->field_begin();
-#ifndef NDEBUG
-  const LambdaCapture *CptEnd = KernelObj->captures_end();
-#endif // NDEBUG
-  const RecordDecl::field_iterator FldEnd = KernelObj->field_end();
-  bool IsLambda = KernelObj->isLambda();
-  for (unsigned Cnt = 0; Fld != FldEnd; Fld++, ++Cnt) {
-    assert(!Cpt || (Cpt != CptEnd) && "too few captures");
-    // pre-visit context
-    VarDecl *V = IsLambda ? Cpt->getCapturedVar() : nullptr;
+
+  for (const auto *Fld : KernelObj->fields()) {
+    QualType ActualArgType;
     QualType ArgTy = Fld->getType();
-    auto F1 = std::get<pre_visit>(Vis);
-    F1(Cnt, V, *Fld);
     FieldDecl *AccessorRangeField = nullptr;
+
     if (Util::isSyclAccessorType(ArgTy)) {
-      // accessor parameter context
+      // the parameter is a SYCL accessor object
       const auto *RecordDecl = ArgTy->getAsCXXRecordDecl();
       assert(RecordDecl && "accessor must be of a record type");
       const auto *TemplateDecl =
-          dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl);
-      assert(TemplateDecl && "templated accessor type expected");
-
-      auto getFieldByName = [](const CXXRecordDecl *RecordDecl,
-                               std::string Name) {
-        FieldDecl *result = nullptr;
-        for (auto jt = RecordDecl->field_begin(); jt != RecordDecl->field_end();
-             ++jt) {
-          if (jt->getNameAsString() == Name) {
-            result = *jt;
-            break;
-          }
-        }
-        return result;
-      };
-      FieldDecl *AccessorImplField = getFieldByName(RecordDecl, "__impl");
-      assert(AccessorImplField && "no __impl found in accessor");
-      const auto *AccessorImplRecord =
-          AccessorImplField->getType()->getAsCXXRecordDecl();
-      assert(AccessorImplRecord && "accessor __impl must be of a record type");
-      AccessorRangeField = getFieldByName(AccessorImplRecord, "Range");
-      assert(AccessorRangeField && "no Range found in __impl of accessor");
+          cast<ClassTemplateSpecializationDecl>(RecordDecl);
+      AccessorRangeField = getFieldDeclByName(RecordDecl, {"__impl", "Range"});
       // First accessor template parameter - data type
       QualType PointeeType = TemplateDecl->getTemplateArgs()[0].getAsType();
       // Fourth parameter - access target
-      auto AccessQualifier = TemplateDecl->getTemplateArgs()[3].getAsIntegral();
-      int64_t AccessTarget = AccessQualifier.getExtValue();
-      auto F = std::get<visit_accessor>(Vis);
-      F(Cnt, static_cast<target>(AccessTarget), PointeeType, V, *Fld);
+      target AccessTarget = getAccessTarget(TemplateDecl);
+      Qualifiers Quals = PointeeType.getQualifiers();
+      // TODO: Support all access targets
+      switch (AccessTarget) {
+      case target::global_buffer:
+        Quals.setAddressSpace(LangAS::opencl_global);
+        break;
+      case target::constant_buffer:
+        Quals.setAddressSpace(LangAS::opencl_constant);
+        break;
+      case target::local:
+        Quals.setAddressSpace(LangAS::opencl_local);
+        break;
+      default:
+        llvm_unreachable("Unsupported access target");
+      }
+      // TODO: get address space from accessor template parameter.
+      PointeeType =
+          Context.getQualifiedType(PointeeType.getUnqualifiedType(), Quals);
+      QualType PointerType = Context.getPointerType(PointeeType);
+      ActualArgType =
+          Context.getQualifiedType(PointerType.getUnqualifiedType(), Quals);
     } else if (Util::isSyclStreamType(ArgTy)) {
-      // stream parameter context
-      auto F = std::get<visit_stream>(Vis);
-      F(Cnt, V, *Fld);
+      // the parameter is a SYCL stream object
+      llvm_unreachable("streams not supported yet");
     } else if (ArgTy->isStructureOrClassType()) {
-      if (!ArgTy->isStandardLayoutType())
-        KernelObj->getASTContext().getDiagnostics().Report(V->getLocation(),
-          diag::err_sycl_non_std_layout_type);
+      if (!ArgTy->isStandardLayoutType()) {
+        const DeclaratorDecl *V =
+            Cpt ? cast<DeclaratorDecl>(Cpt->getCapturedVar())
+                : cast<DeclaratorDecl>(Fld);
+        KernelObj->getASTContext().getDiagnostics().Report(
+            V->getLocation(), diag::err_sycl_non_std_layout_type);
+      }
       // structure or class typed parameter - the same handling as a scalar
-      auto F = std::get<visit_std_layout>(Vis);
-      F(Cnt, V, *Fld);
+      ActualArgType = Fld->getType();
     } else if (ArgTy->isScalarType()) {
-      // scalar typed parameter context
-      auto F = std::get<visit_std_layout>(Vis);
-      F(Cnt, V, *Fld);
+      // scalar typed parameter
+      ActualArgType = Fld->getType();
     } else {
       llvm_unreachable("unsupported kernel parameter type");
     }
-    // post-visit context
-    auto F2 = std::get<post_visit>(Vis);
-    F2(Cnt, V, *Fld);
 
-    if (AccessorRangeField) {
-      // pre-visit context the same like for accessor
-      auto F1Range = std::get<pre_visit_class_field>(Vis);
-      F1Range(Cnt, V, *Fld, AccessorRangeField);
-      auto FRange = std::get<visit_std_layout>(Vis);
-      FRange(Cnt, V, AccessorRangeField);
-      // post-visit context
-      auto F2Range = std::get<post_visit>(Vis);
-      F2Range(Cnt, nullptr, AccessorRangeField);
-    }
+    // create a parameter descriptor and append it to the result
+    ParamDescs.push_back(makeParamDesc(Fld, ActualArgType));
+
+    if (AccessorRangeField)
+      ParamDescs.push_back(
+          makeParamDesc(AccessorRangeField, AccessorRangeField->getType()));
   }
-  assert((Cpt == CptEnd) && (Fld == FldEnd) &&
-         "captures inconsistent with fields");
-}
-
-static void BuildArgTys(ASTContext &Context, CXXRecordDecl *KernelObjType,
-                        llvm::SmallVector<DeclaratorDecl *, 16> &NewArgDecls,
-                        llvm::SmallVector<QualType, 16> &ArgTys) {
-  QualType ActualArgType; // serves to transfer info between visitor lambdas
-  auto Vis = std::make_tuple(
-      // pre_visit
-      [&](int, VarDecl *, FieldDecl *) {},
-      // pre_visit_class_field
-      [&](int, VarDecl *, FieldDecl *, FieldDecl *) {},
-      // visit_accessor
-      [&](int FieldN, target AccTrg, QualType PointeeType,
-          DeclaratorDecl *CapturedVar, FieldDecl *Field) {
-        Qualifiers Quals = PointeeType.getQualifiers();
-        // TODO: Support all access targets
-        switch (AccTrg) {
-        case target::global_buffer:
-          Quals.setAddressSpace(LangAS::opencl_global);
-          break;
-        case target::constant_buffer:
-          Quals.setAddressSpace(LangAS::opencl_constant);
-          break;
-        case target::local:
-          Quals.setAddressSpace(LangAS::opencl_local);
-          break;
-        default:
-          llvm_unreachable("Unsupported access target");
-        }
-        // TODO: get address space from accessor template parameter.
-        PointeeType =
-            Context.getQualifiedType(PointeeType.getUnqualifiedType(), Quals);
-        QualType PointerType = Context.getPointerType(PointeeType);
-        ActualArgType =
-            Context.getQualifiedType(PointerType.getUnqualifiedType(), Quals);
-      },
-      // visit_std_layout
-      [&](int FieldN, VarDecl *CapturedVar, FieldDecl *Field) {
-        ActualArgType = Field->getType();
-      },
-      // visit_stream
-      [&](int FieldN, VarDecl *CapturedVar, FieldDecl *Field) {
-        llvm_unreachable("streams not supported yet");
-      },
-      // post_visit
-      [&](int FieldN, VarDecl *CapturedVar, FieldDecl *Field) {
-        DeclContext *DC = Context.getTranslationUnitDecl();
-        IdentifierInfo *VarName = 0;
-        SmallString<8> Str;
-        llvm::raw_svector_ostream OS(Str);
-        IdentifierInfo *Identifier = (CapturedVar != nullptr)
-                                         ? CapturedVar->getIdentifier()
-                                         : Field->getIdentifier();
-        OS << "_arg_" << Identifier->getName();
-        VarName = &Context.Idents.get(OS.str());
-
-        auto NewVarDecl = VarDecl::Create(
-            Context, DC, SourceLocation(), SourceLocation(), VarName,
-            ActualArgType, Context.getTrivialTypeSourceInfo(ActualArgType),
-            SC_None);
-        ArgTys.push_back(ActualArgType);
-        NewArgDecls.push_back(NewVarDecl);
-      });
-  visitKernelObjFields(KernelObjType, Vis);
 }
 
 /// Adds necessary data describing given kernel to the integration header.
-/// \param H         the integration header object
-/// \param Name      kernel name
-/// \param NameType  type representing kernel name (first template argument of
-///                  single_task, parallel_for, etc)
-/// \param KernelObj kernel object
+/// \param H           the integration header object
+/// \param Name        kernel name
+/// \param NameType    type representing kernel name (first template argument of
+///                      single_task, parallel_for, etc)
+/// \param KernelObjTy kernel object type
 static void populateIntHeader(SYCLIntegrationHeader &H, const StringRef Name,
-                              QualType NameType, CXXRecordDecl *KernelObj) {
-  ASTContext &Ctx = KernelObj->getASTContext();
-  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(KernelObj);
-  KernelParamKind Knd = SYCLIntegrationHeader::kind_last;
-  H.startKernel(Name, NameType);
-  unsigned Offset = 0;
-  int Info = 0;
+                              QualType NameType, CXXRecordDecl *KernelObjTy) {
 
-  auto Vis = std::make_tuple(
-      // pre_visit
-      [&](int FieldN, VarDecl *CapturedVar, FieldDecl *Field) {
-        // Set offset in bytes
-        Offset = static_cast<unsigned>(
-                     Layout.getFieldOffset(Field->getFieldIndex())) /
-                 8;
-      },
-      // pre_visit_class_field
-      [&](int FieldN, VarDecl *CapturedVar, FieldDecl *Field,
-          FieldDecl *MemberVal) {
-        // Set offset of parent in bytes
-        Offset = static_cast<unsigned>(
-                     Layout.getFieldOffset(Field->getFieldIndex())) /
-                 8;
-        const RecordDecl *parent = MemberVal->getParent();
-        ASTContext &CtxMember = parent->getASTContext();
-        const ASTRecordLayout &LayoutMember =
-            CtxMember.getASTRecordLayout(parent);
-        // Add offset relative to parent in bytes
-        Offset += static_cast<unsigned>(
-                      LayoutMember.getFieldOffset(MemberVal->getFieldIndex())) /
-                  8;
-      },
-      // visit_accessor
-      [&](int FieldN, target AccTrg, QualType PointeeType,
-          DeclaratorDecl *CapturedVar, FieldDecl *Field) {
-        Knd = SYCLIntegrationHeader::kind_accessor;
-        Info = static_cast<int>(AccTrg);
-      },
-      // visit_std_layout
-      [&](int FieldN, VarDecl *CapturedVar, FieldDecl *Field) {
-        // TODO this code (when used to handle a structure-typed scalar) relies
-        // on the host and device structure layouts and sizes to be the same.
-        // Need SYCL spec clarification on passing structures as parameters.
-        Knd = SYCLIntegrationHeader::kind_std_layout;
-        Info = static_cast<unsigned>(
-            Ctx.getTypeSizeInChars(Field->getType()).getQuantity());
-      },
-      // visit_stream
-      [&](int FieldN, VarDecl *CapturedVar, FieldDecl *Field) {
-        llvm_unreachable("streams not supported yet");
-      },
-      // post_visit
-      [&](int FieldN, VarDecl *CapturedVar, FieldDecl *Field) {
-        H.addParamDesc(Knd, Info, Offset);
-      });
-  visitKernelObjFields(KernelObj, Vis);
+  ASTContext &Ctx = KernelObjTy->getASTContext();
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(KernelObjTy);
+  H.startKernel(Name, NameType);
+
+  for (const auto Fld : KernelObjTy->fields()) {
+    QualType ActualArgType;
+    QualType ArgTy = Fld->getType();
+
+    // Get offset in bytes
+    uint64_t Offset = Layout.getFieldOffset(Fld->getFieldIndex()) / 8;
+
+    if (Util::isSyclAccessorType(ArgTy)) {
+      // The parameter is a SYCL accessor object - split into two parameters, so
+      // need to generate two descriptors.
+      // ... first descriptor (translated to pointer kernel parameter):
+      const auto *AccTy = ArgTy->getAsCXXRecordDecl();
+      assert(AccTy && "accessor must be of a record type");
+      const auto *AccTmplTy = cast<ClassTemplateSpecializationDecl>(AccTy);
+      H.addParamDesc(SYCLIntegrationHeader::kind_accessor,
+                     getAccessTarget(AccTmplTy), Offset);
+      // ... second descriptor (translated to range kernel parameter):
+      FieldDecl *RngFld =
+          getFieldDeclByName(AccTy, {"__impl", "Range"}, &Offset);
+      uint64_t Sz = Ctx.getTypeSizeInChars(RngFld->getType()).getQuantity();
+      H.addParamDesc(SYCLIntegrationHeader::kind_std_layout,
+                     static_cast<unsigned>(Sz), static_cast<unsigned>(Offset));
+    } else if (Util::isSyclStreamType(ArgTy)) {
+      // the parameter is a SYCL stream object
+      llvm_unreachable("streams not supported yet");
+    } else if (ArgTy->isStructureOrClassType() || ArgTy->isScalarType()) {
+      // the parameter is an object of standard layout type or scalar;
+      // the check for standard layout is done elsewhere
+      uint64_t Sz = Ctx.getTypeSizeInChars(Fld->getType()).getQuantity();
+      H.addParamDesc(SYCLIntegrationHeader::kind_std_layout,
+                     static_cast<unsigned>(Sz), static_cast<unsigned>(Offset));
+    } else {
+      llvm_unreachable("unsupported kernel parameter type");
+    }
+  }
 }
 
 // Removes all "(anonymous namespace)::" substrings from given string
@@ -659,7 +591,7 @@ static std::string eraseAnonNamespace(std::string S) {
   const char S1[] = "(anonymous namespace)::";
 
   for (auto Pos = S.find(S1); Pos != StringRef::npos; Pos = S.find(S1, Pos))
-    S.erase(Pos, sizeof(S1)-1);
+    S.erase(Pos, sizeof(S1) - 1);
   return S;
 }
 
@@ -693,22 +625,19 @@ void Sema::ConstructSYCLKernel(FunctionDecl *KernelCallerFunc) {
   // TODO: Case when kernel is functor
   CXXRecordDecl *LE = getKernelObjectType(KernelCallerFunc);
   assert(LE && "invalid kernel caller");
-  llvm::SmallVector<QualType, 16> ArgTys;
-  llvm::SmallVector<DeclaratorDecl *, 16> NewArgDecls;
-  BuildArgTys(getASTContext(), LE, NewArgDecls, ArgTys);
+  llvm::SmallVector<ParamDesc, 16> ParamDescs;
+  buildArgTys(getASTContext(), LE, ParamDescs);
   // Get Name for our kernel.
   const TemplateArgumentList *TemplateArgs =
       KernelCallerFunc->getTemplateSpecializationArgs();
   // The first teamplate argument always describes the kernel name - whether it
   // is lambda or functor.
   QualType KernelNameType = TypeName::getFullyQualifiedType(
-                              TemplateArgs->get(0).getAsType(),
-                              getASTContext(),
-                              true);
+      TemplateArgs->get(0).getAsType(), getASTContext(), true);
   std::string Name = constructKernelName(KernelNameType);
   populateIntHeader(getSyclIntegrationHeader(), Name, KernelNameType, LE);
   FunctionDecl *SYCLKernel =
-      CreateSYCLKernelFunction(getASTContext(), Name, ArgTys, NewArgDecls);
+      CreateSYCLKernelFunction(getASTContext(), Name, ParamDescs);
   CompoundStmt *SYCLKernelBody =
       CreateSYCLKernelBody(*this, KernelCallerFunc, SYCLKernel);
   SYCLKernel->setBody(SYCLKernelBody);
@@ -750,14 +679,15 @@ void SYCLIntegrationHeader::emitFwdDecl(raw_ostream &O, const Decl *D) {
 
     if (!NS) {
       if (!DC->isTranslationUnit()) {
-        const TagDecl *TD = isa<ClassTemplateDecl>(D) ?
-          cast<ClassTemplateDecl>(D)->getTemplatedDecl() : dyn_cast<TagDecl>(D);
+        const TagDecl *TD = isa<ClassTemplateDecl>(D)
+                                ? cast<ClassTemplateDecl>(D)->getTemplatedDecl()
+                                : dyn_cast<TagDecl>(D);
 
         if (TD && TD->isCompleteDefinition()) {
           // defined class constituting the kernel name is not globally
           // accessible - contradicts the spec
           Diag.Report(D->getSourceRange().getBegin(),
-            diag::err_sycl_kernel_name_class_not_top_level);
+                      diag::err_sycl_kernel_name_class_not_top_level);
         }
       }
       break;
@@ -819,9 +749,8 @@ void SYCLIntegrationHeader::emitFwdDecl(raw_ostream &O, const Decl *D) {
 //   template <typename T> class MyTmplClass;
 //   template <typename T1, unsigned int N, typename ...T2> class SimpleVadd;
 //
-void SYCLIntegrationHeader::emitForwardClassDecls(raw_ostream &O,
-                                  QualType T,
-                                  llvm::SmallPtrSetImpl<const void*> &Printed) {
+void SYCLIntegrationHeader::emitForwardClassDecls(
+    raw_ostream &O, QualType T, llvm::SmallPtrSetImpl<const void *> &Printed) {
 
   // peel off the pointer types and get the class/struct type:
   for (; T->isPointerType(); T = T->getPointeeType())
@@ -869,8 +798,7 @@ void SYCLIntegrationHeader::emitForwardClassDecls(raw_ostream &O,
     if (Printed.insert(CTD).second) {
       emitFwdDecl(O, CTD);
     }
-  }
-  else if (Printed.insert(RD).second) {
+  } else if (Printed.insert(RD).second) {
     // emit forward declarations for "leaf" classes in the template parameter
     // tree;
     emitFwdDecl(O, RD);
@@ -1020,24 +948,22 @@ void SYCLIntegrationHeader::endKernel() {
 }
 
 SYCLIntegrationHeader::SYCLIntegrationHeader(DiagnosticsEngine &_Diag)
-  : Diag(_Diag) {}
+    : Diag(_Diag) {}
 
 bool Util::isSyclAccessorType(const QualType &Ty) {
   static std::array<DeclContextDesc, 3> Scopes = {
-    Util::DeclContextDesc { clang::Decl::Kind::Namespace, "cl"   },
-    Util::DeclContextDesc { clang::Decl::Kind::Namespace, "sycl" },
-    Util::DeclContextDesc { clang::Decl::Kind::ClassTemplateSpecialization,
-                            "accessor" }
-  };
+      Util::DeclContextDesc{clang::Decl::Kind::Namespace, "cl"},
+      Util::DeclContextDesc{clang::Decl::Kind::Namespace, "sycl"},
+      Util::DeclContextDesc{clang::Decl::Kind::ClassTemplateSpecialization,
+                            "accessor"}};
   return matchQualifiedTypeName(Ty, Scopes);
 }
 
 bool Util::isSyclStreamType(const QualType &Ty) {
   static std::array<DeclContextDesc, 3> Scopes = {
-    Util::DeclContextDesc { clang::Decl::Kind::Namespace, "cl"   },
-    Util::DeclContextDesc { clang::Decl::Kind::Namespace, "sycl" },
-    Util::DeclContextDesc { clang::Decl::Kind::CXXRecord, "stream" }
-  };
+      Util::DeclContextDesc{clang::Decl::Kind::Namespace, "cl"},
+      Util::DeclContextDesc{clang::Decl::Kind::Namespace, "sycl"},
+      Util::DeclContextDesc{clang::Decl::Kind::CXXRecord, "stream"}};
   return matchQualifiedTypeName(Ty, Scopes);
 }
 
