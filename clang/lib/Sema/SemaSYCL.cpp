@@ -21,6 +21,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <array>
+
 using namespace clang;
 
 typedef llvm::DenseMap<DeclaratorDecl *, DeclaratorDecl *> DeclMap;
@@ -40,19 +42,22 @@ enum target {
 /// Various utilities.
 class Util {
 public:
-  // TODO SYCL use AST infrastructure instead of string matching
+  using DeclContextDesc = std::pair<clang::Decl::Kind, StringRef>;
 
-  /// Checks whether given clang type is a sycl accessor class.
-  static bool isSyclAccessorType(QualType Ty) {
-    std::string Name = Ty.getCanonicalType().getAsString();
-    return Name.find("class cl::sycl::accessor") != std::string::npos;
-  }
+  /// Checks whether given clang type is a full specialization of the sycl
+  /// accessor class.
+  static bool isSyclAccessorType(const QualType &Ty);
 
-  /// Checks whether given clang type is a sycl stream class.
-  static bool isSyclStreamType(QualType Ty) {
-    std::string Name = Ty.getCanonicalType().getAsString();
-    return Name == "stream";
-  }
+  /// Checks whether given clang type is the sycl stream class.
+  static bool isSyclStreamType(const QualType &Ty);
+
+  /// Checks whether given clang type is declared in the given hierarchy of
+  /// declaration contexts.
+  /// \param Ty         the clang type being checked
+  /// \param Scopes     the declaration scopes leading from the type to the
+  ///     translation unit (excluding the latter)
+  static bool matchQualifiedTypeName(const QualType &Ty,
+                                     ArrayRef<Util::DeclContextDesc> Scopes);
 };
 
 static CXXRecordDecl *getKernelObjectType(FunctionDecl *Caller) {
@@ -1017,3 +1022,58 @@ void SYCLIntegrationHeader::endKernel() {
 SYCLIntegrationHeader::SYCLIntegrationHeader(DiagnosticsEngine &_Diag)
   : Diag(_Diag) {}
 
+bool Util::isSyclAccessorType(const QualType &Ty) {
+  static std::array<DeclContextDesc, 3> Scopes = {
+    Util::DeclContextDesc { clang::Decl::Kind::Namespace, "cl"   },
+    Util::DeclContextDesc { clang::Decl::Kind::Namespace, "sycl" },
+    Util::DeclContextDesc { clang::Decl::Kind::ClassTemplateSpecialization,
+                            "accessor" }
+  };
+  return matchQualifiedTypeName(Ty, Scopes);
+}
+
+bool Util::isSyclStreamType(const QualType &Ty) {
+  static std::array<DeclContextDesc, 3> Scopes = {
+    Util::DeclContextDesc { clang::Decl::Kind::Namespace, "cl"   },
+    Util::DeclContextDesc { clang::Decl::Kind::Namespace, "sycl" },
+    Util::DeclContextDesc { clang::Decl::Kind::CXXRecord, "stream" }
+  };
+  return matchQualifiedTypeName(Ty, Scopes);
+}
+
+bool Util::matchQualifiedTypeName(const QualType &Ty,
+                                  ArrayRef<Util::DeclContextDesc> Scopes) {
+  // The idea: check the declaration context chain starting from the type
+  // itself. At each step check the context is of expected kind
+  // (namespace) and name.
+  const CXXRecordDecl *RecTy = Ty->getAsCXXRecordDecl();
+
+  if (!RecTy)
+    return false; // only classes/structs supported
+  const auto *Ctx = dyn_cast<DeclContext>(RecTy);
+  StringRef Name = "";
+
+  for (const auto &Scope : llvm::reverse(Scopes)) {
+    clang::Decl::Kind DK = Ctx->getDeclKind();
+
+    if (DK != Scope.first)
+      return false;
+
+    switch (DK) {
+    case clang::Decl::Kind::ClassTemplateSpecialization:
+      // ClassTemplateSpecializationDecl inherits from CXXRecordDecl
+    case clang::Decl::Kind::CXXRecord:
+      Name = cast<CXXRecordDecl>(Ctx)->getName();
+      break;
+    case clang::Decl::Kind::Namespace:
+      Name = cast<NamespaceDecl>(Ctx)->getName();
+      break;
+    default:
+      llvm_unreachable("matchQualifiedTypeName: decl kind not supported");
+    }
+    if (Name != Scope.second)
+      return false;
+    Ctx = Ctx->getParent();
+  }
+  return Ctx->isTranslationUnit();
+}
