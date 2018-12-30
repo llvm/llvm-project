@@ -5097,9 +5097,15 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
 
   // All calls, in both the ELF V1 and V2 ABIs, need the TOC register live
   // into the call.
-  if (isSVR4ABI && isPPC64 && !isPatchPoint) {
+  // We do need to reserve X2 to appease the verifier for the PATCHPOINT.
+  if (isSVR4ABI && isPPC64) {
     setUsesTOCBasePtr(DAG);
-    Ops.push_back(DAG.getRegister(PPC::X2, PtrVT));
+
+    // We cannot add X2 as an operand here for PATCHPOINT, because there is no
+    // way to mark dependencies as implicit here. We will add the X2 dependency
+    // in EmitInstrWithCustomInserter.
+    if (!isPatchPoint) 
+      Ops.push_back(DAG.getRegister(PPC::X2, PtrVT));
   }
 
   return CallOpc;
@@ -10346,7 +10352,6 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       // way to mark the dependence as implicit there, and so the stackmap code
       // will confuse it with a regular operand. Instead, add the dependence
       // here.
-      setUsesTOCBasePtr(*BB->getParent());
       MI.addOperand(MachineOperand::CreateReg(PPC::X2, false, true));
     }
 
