@@ -788,8 +788,17 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::FP_TO_SINT, MVT::v2i64, Legal);
       setOperationAction(ISD::FP_TO_UINT, MVT::v2i64, Legal);
 
+      // Custom handling for partial vectors of integers converted to
+      // floating point. We already have optimal handling for v2i32 through
+      // the DAG combine, so those aren't necessary.
+      setOperationAction(ISD::UINT_TO_FP, MVT::v2i8, Custom);
+      setOperationAction(ISD::UINT_TO_FP, MVT::v4i8, Custom);
       setOperationAction(ISD::UINT_TO_FP, MVT::v2i16, Custom);
+      setOperationAction(ISD::UINT_TO_FP, MVT::v4i16, Custom);
+      setOperationAction(ISD::SINT_TO_FP, MVT::v2i8, Custom);
+      setOperationAction(ISD::SINT_TO_FP, MVT::v4i8, Custom);
       setOperationAction(ISD::SINT_TO_FP, MVT::v2i16, Custom);
+      setOperationAction(ISD::SINT_TO_FP, MVT::v4i16, Custom);
 
       setOperationAction(ISD::FNEG, MVT::v4f32, Legal);
       setOperationAction(ISD::FNEG, MVT::v2f64, Legal);
@@ -7288,43 +7297,49 @@ static SDValue widenVec(SelectionDAG &DAG, SDValue Vec, const SDLoc &dl) {
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, WideVT, Ops);
 }
 
-SDValue PPCTargetLowering::LowerINT_TO_FPVector(SDValue Op,
-                                                SelectionDAG &DAG,
+SDValue PPCTargetLowering::LowerINT_TO_FPVector(SDValue Op, SelectionDAG &DAG,
                                                 const SDLoc &dl) const {
 
   unsigned Opc = Op.getOpcode();
   assert((Opc == ISD::UINT_TO_FP || Opc == ISD::SINT_TO_FP) &&
          "Unexpected conversion type");
-  assert(Op.getValueType() == MVT::v2f64 && "Supports v2f64 only.");
+  assert((Op.getValueType() == MVT::v2f64 || Op.getValueType() == MVT::v4f32) &&
+         "Supports conversions to v2f64/v4f32 only.");
 
-  // CPU's prior to P9 don't have a way to sign-extend in vectors.
   bool SignedConv = Opc == ISD::SINT_TO_FP;
-  if (SignedConv && !Subtarget.hasP9Altivec())
-    return SDValue();
+  bool FourEltRes = Op.getValueType() == MVT::v4f32;
 
   SDValue Wide = widenVec(DAG, Op.getOperand(0), dl);
   EVT WideVT = Wide.getValueType();
   unsigned WideNumElts = WideVT.getVectorNumElements();
+  MVT IntermediateVT = FourEltRes ? MVT::v4i32 : MVT::v2i64;
 
   SmallVector<int, 16> ShuffV;
   for (unsigned i = 0; i < WideNumElts; ++i)
     ShuffV.push_back(i + WideNumElts);
 
-  if (Subtarget.isLittleEndian()) {
-    ShuffV[0] = 0;
-    ShuffV[WideNumElts / 2] = 1;
-  }
-  else {
-    ShuffV[WideNumElts / 2 - 1] = 0;
-    ShuffV[WideNumElts - 1] = 1;
-  }
+  int Stride = FourEltRes ? WideNumElts / 4 : WideNumElts / 2;
+  int SaveElts = FourEltRes ? 4 : 2;
+  if (Subtarget.isLittleEndian())
+    for (int i = 0; i < SaveElts; i++)
+      ShuffV[i * Stride] = i;
+  else
+    for (int i = 1; i <= SaveElts; i++)
+      ShuffV[i * Stride - 1] = i - 1;
 
-  SDValue ShuffleSrc2 = SignedConv ? DAG.getUNDEF(WideVT) :
-                                     DAG.getConstant(0, dl, WideVT);
+  SDValue ShuffleSrc2 =
+      SignedConv ? DAG.getUNDEF(WideVT) : DAG.getConstant(0, dl, WideVT);
   SDValue Arrange = DAG.getVectorShuffle(WideVT, dl, Wide, ShuffleSrc2, ShuffV);
-  unsigned ExtendOp = SignedConv ? (unsigned) PPCISD::SExtVElems :
-                                   (unsigned) ISD::BITCAST;
-  SDValue Extend = DAG.getNode(ExtendOp, dl, MVT::v2i64, Arrange);
+  unsigned ExtendOp =
+      SignedConv ? (unsigned)PPCISD::SExtVElems : (unsigned)ISD::BITCAST;
+
+  SDValue Extend;
+  if (!Subtarget.hasP9Altivec() && SignedConv) {
+    Arrange = DAG.getBitcast(IntermediateVT, Arrange);
+    Extend = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, IntermediateVT, Arrange,
+                         DAG.getValueType(Op.getOperand(0).getValueType()));
+  } else
+    Extend = DAG.getNode(ExtendOp, dl, IntermediateVT, Arrange);
 
   return DAG.getNode(Opc, dl, Op.getValueType(), Extend);
 }
@@ -7333,8 +7348,10 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
                                           SelectionDAG &DAG) const {
   SDLoc dl(Op);
 
-  if (Op.getValueType() == MVT::v2f64 &&
-      Op.getOperand(0).getValueType() == MVT::v2i16)
+  EVT InVT = Op.getOperand(0).getValueType();
+  EVT OutVT = Op.getValueType();
+  if (OutVT.isVector() && OutVT.isFloatingPoint() &&
+      isOperationCustom(Op.getOpcode(), InVT))
     return LowerINT_TO_FPVector(Op, DAG, dl);
 
   // Conversions to f128 are legal.

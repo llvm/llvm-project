@@ -1,0 +1,121 @@
+# RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu -start-after \
+# RUN:   virtregrewriter -ppc-asm-full-reg-names -verify-machineinstrs %s \
+# RUN:   -o - | FileCheck %s
+
+--- |
+  ; ModuleID = 'a.ll'
+  source_filename = "a.c"
+  target datalayout = "e-m:e-i64:64-n32:64"
+  target triple = "powerpc64le-unknown-linux-gnu"
+  
+  ; Function Attrs: nounwind
+  define void @test(i32 signext %a6, i32 signext %a7, i32 signext %a17) local_unnamed_addr #0 {
+  entry:
+    %cmp27 = icmp slt i32 %a6, %a7
+    %cmp29 = icmp sgt i32 %a6, %a17
+    %or.cond781 = or i1 %cmp27, %cmp29
+    tail call void asm sideeffect "# nothing", "~{cr0},~{cr1},~{cr2},~{cr3},~{cr4},~{cr5},~{cr6},~{cr7},~{memory}"() #1, !srcloc !1
+    br label %if.end326
+  
+  if.end326:                                        ; preds = %entry
+    br i1 %or.cond781, label %if.then330, label %if.end331
+  
+  if.then330:                                       ; preds = %if.end326
+    unreachable
+  
+  if.end331:                                        ; preds = %if.end326
+    ret void
+  }
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #1
+  
+  attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64le" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+vsx,-power9-vector,-qpx" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { nounwind }
+  
+  !llvm.ident = !{!0}
+  
+  !0 = !{!"clang version 8.0.0 (trunk 349357)"}
+  !1 = !{i32 3373}
+
+...
+---
+name:            test
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         
+  - { reg: '$x3', virtual-reg: '' }
+  - { reg: '$x4', virtual-reg: '' }
+  - { reg: '$x5', virtual-reg: '' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           
+  - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4, 
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4, 
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4, 
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:       []
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4, $x5
+  
+    renamable $cr0 = CMPW renamable $r3, renamable $r4, implicit $x4
+    renamable $cr1 = CMPW renamable $r3, renamable $r5, implicit $x5, implicit killed $x3
+    renamable $cr5lt = CRNOR renamable $cr0lt, renamable $cr1gt, implicit killed $cr0
+    renamable $cr5gt = COPY renamable $cr1gt, implicit $cr1
+    ; CHECK: crnor 4*cr5+lt, lt, 4*cr1+gt
+    ; CHECK: cror 4*cr5+gt, 4*cr1+gt, 4*cr1+gt
+    SPILL_CRBIT killed renamable $cr5lt, 0, %stack.0 :: (store 4 into %stack.0)
+    renamable $cr1 = CMPW renamable $r4, renamable $r5, implicit killed $x5, implicit killed $x4
+    SPILL_CRBIT killed renamable $cr5gt, 0, %stack.1 :: (store 4 into %stack.1)
+    SPILL_CRBIT killed renamable $cr1gt, 0, %stack.2 :: (store 4 into %stack.2)
+    INLINEASM &"# nothing", 25, 12, implicit-def dead early-clobber $cr0, 12, implicit-def dead early-clobber $cr1, 12, implicit-def dead early-clobber $cr2, 12, implicit-def dead early-clobber $cr3, 12, implicit-def dead early-clobber $cr4, 12, implicit-def dead early-clobber $cr5, 12, implicit-def dead early-clobber $cr6, 12, implicit-def dead early-clobber $cr7, !1
+    BLR8 implicit $lr8, implicit $rm
+  
+  bb.1.if.end326:
+    successors: %bb.2(0x00000001), %bb.3(0x7fffffff)
+  
+    renamable $cr5lt = RESTORE_CRBIT 0, %stack.0 :: (load 4 from %stack.0)
+    renamable $cr5gt = RESTORE_CRBIT 0, %stack.1 :: (load 4 from %stack.1)
+    renamable $cr5lt = CROR killed renamable $cr5lt, killed renamable $cr5gt
+    BCn killed renamable $cr5lt, %bb.3
+    B %bb.2
+  
+  bb.2.if.then330:
+    successors: 
+  
+  
+  bb.3.if.end331:
+    BLR8 implicit $lr8, implicit $rm
+
+...
