@@ -846,7 +846,7 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
       PerModulePasses.add(
           createAlwaysInlinerLegacyPass(true /*InsertLifetimeIntrinsics*/));
       PerModulePasses.add(createASFixerPass());
-      PerModulePasses.add(createDeadStoreEliminationPass());
+      PerModulePasses.add(createDeadCodeEliminationPass());
     }
     PerModulePasses.add(createSPIRVWriterPass(*OS));
 
@@ -1094,7 +1094,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       CodeGenPasses.add(
           createAlwaysInlinerLegacyPass(true /*InsertLifetimeIntrinsics*/));
       CodeGenPasses.add(createASFixerPass());
-      CodeGenPasses.add(createDeadStoreEliminationPass());
+      CodeGenPasses.add(createDeadCodeEliminationPass());
     }
     CodeGenPasses.add(createSPIRVWriterPass(*OS));
     break;
