@@ -22,4 +22,4 @@ target_link_libraries(clang-offload-bundler
   ${CLANG_OFFLOAD_BUNDLER_LIB_DEPS}
   )
 
-install(TARGETS clang-offload-bundler RUNTIME DESTINATION bin)
+install(TARGETS clang-offload-bundler RUNTIME DESTINATION bin COMPONENT clang-offload-bundler)

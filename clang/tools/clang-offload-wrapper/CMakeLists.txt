@@ -22,4 +22,4 @@ target_link_libraries(clang-offload-wrapper
   ${CLANG_OFFLOAD_WRAPPER_LIB_DEPS}
   )
 
-install(TARGETS clang-offload-wrapper RUNTIME DESTINATION bin)
+install(TARGETS clang-offload-wrapper RUNTIME DESTINATION bin COMPONENT clang-offload-wrapper)
