@@ -2832,6 +2832,7 @@ static const struct Extension {
     {"tlb-rmi", {AArch64::FeatureTLB_RMI}},
     {"pan-rwv", {AArch64::FeaturePAN_RWV}},
     {"ccpp", {AArch64::FeatureCCPP}},
+    {"sve", {AArch64::FeatureSVE}},
     // FIXME: Unsupported extensions
     {"pan", {}},
     {"lor", {}},
