@@ -12,6 +12,7 @@
 
 #include "Buffer.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Error.h"
 #include <cstddef>
 #include <utility>
 
@@ -28,7 +29,7 @@ protected:
 
 public:
   virtual ~Writer();
-  virtual void write() = 0;
+  virtual Error write() = 0;
 
   Writer(Object &O, Buffer &B) : Obj(O), Buf(B) {}
 };
@@ -49,13 +50,13 @@ class COFFWriter : public Writer {
   void writeSections();
   template <class SymbolTy> void writeSymbolStringTables();
 
-  void write(bool IsBigObj);
+  Error write(bool IsBigObj);
 
-  void patchDebugDirectory();
+  Error patchDebugDirectory();
 
 public:
   virtual ~COFFWriter() {}
-  void write() override;
+  Error write() override;
 
   COFFWriter(Object &Obj, Buffer &Buf)
       : Writer(Obj, Buf), StrTabBuilder(StringTableBuilder::WinCOFF) {}
