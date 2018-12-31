@@ -125,6 +125,7 @@ group("test") {
     "//clang/tools/clang-rename",
     "//clang/tools/diagtool",
     "//clang/tools/driver:symlinks",
+    "//clang/unittests",
     "//clang/utils/TableGen:clang-tblgen",
     "//clang/utils/hmaptool",
     "//llvm/tools/llc",
@@ -159,7 +160,6 @@ group("test") {
     ]
   }
 
-  # FIXME: dep on "//clang/unittests" once it exists
   # FIXME: clang_build_examples
   testonly = true
 }

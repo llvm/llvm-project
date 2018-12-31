@@ -54,7 +54,7 @@ namespace llvm {
 void ErrorInfoBase::anchor() {}
 char ErrorInfoBase::ID = 0;
 char ErrorList::ID = 0;
-void ECError::anchor() {};
+void ECError::anchor() {}
 char ECError::ID = 0;
 char StringError::ID = 0;
 char FileError::ID = 0;

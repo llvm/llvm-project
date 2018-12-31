@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple=powerpc64-unknown-linux-gnu 2>&1 | FileCheck %s
+; RUN: not llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu 2>&1 | FileCheck %s
 ;
 ; Check that misuse of anyregcc results in a compile time error.
 

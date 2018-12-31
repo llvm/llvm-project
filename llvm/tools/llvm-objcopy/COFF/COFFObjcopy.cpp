@@ -29,10 +29,14 @@ using namespace COFF;
 void executeObjcopyOnBinary(const CopyConfig &Config,
                             object::COFFObjectFile &In, Buffer &Out) {
   COFFReader Reader(In);
-  std::unique_ptr<Object> Obj = Reader.create();
+  Expected<std::unique_ptr<Object>> ObjOrErr = Reader.create();
+  if (!ObjOrErr)
+    reportError(Config.InputFilename, ObjOrErr.takeError());
+  Object *Obj = ObjOrErr->get();
   assert(Obj && "Unable to deserialize COFF object");
   COFFWriter Writer(*Obj, Out);
-  Writer.write();
+  if (Error E = Writer.write())
+    reportError(Config.OutputFilename, std::move(E));
 }
 
 } // end namespace coff
