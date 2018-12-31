@@ -1455,130 +1455,140 @@ Status CommandInterpreter::PreprocessCommand(std::string &command) {
   size_t start_backtick;
   size_t pos = 0;
   while ((start_backtick = command.find('`', pos)) != std::string::npos) {
+    // Stop if an error was encountered during the previous iteration.
+    if (error.Fail())
+      break;
+
     if (start_backtick > 0 && command[start_backtick - 1] == '\\') {
       // The backtick was preceded by a '\' character, remove the slash and
-      // don't treat the backtick as the start of an expression
+      // don't treat the backtick as the start of an expression.
       command.erase(start_backtick - 1, 1);
-      // No need to add one to start_backtick since we just deleted a char
+      // No need to add one to start_backtick since we just deleted a char.
       pos = start_backtick;
-    } else {
-      const size_t expr_content_start = start_backtick + 1;
-      const size_t end_backtick = command.find('`', expr_content_start);
-      if (end_backtick == std::string::npos)
-        return error;
-      else if (end_backtick == expr_content_start) {
-        // Empty expression (two backticks in a row)
-        command.erase(start_backtick, 2);
-      } else {
-        std::string expr_str(command, expr_content_start,
-                             end_backtick - expr_content_start);
+      continue;
+    }
 
-        ExecutionContext exe_ctx(GetExecutionContext());
-        Target *target = exe_ctx.GetTargetPtr();
-        // Get a dummy target to allow for calculator mode while processing
-        // backticks. This also helps break the infinite loop caused when
-        // target is null.
-        if (!target)
-          target = m_debugger.GetDummyTarget();
-        if (target) {
-          ValueObjectSP expr_result_valobj_sp;
+    const size_t expr_content_start = start_backtick + 1;
+    const size_t end_backtick = command.find('`', expr_content_start);
 
-          EvaluateExpressionOptions options;
-          options.SetCoerceToId(false);
-          options.SetUnwindOnError(true);
-          options.SetIgnoreBreakpoints(true);
-          options.SetKeepInMemory(false);
-          options.SetTryAllThreads(true);
-          options.SetTimeout(llvm::None);
+    if (end_backtick == std::string::npos) {
+      // Stop if there's no end backtick.
+      break;
+    }
 
-          ExpressionResults expr_result = target->EvaluateExpression(
-              expr_str.c_str(), exe_ctx.GetFramePtr(), expr_result_valobj_sp,
-              options);
+    if (end_backtick == expr_content_start) {
+      // Skip over empty expression. (two backticks in a row)
+      command.erase(start_backtick, 2);
+      continue;
+    }
 
-          if (expr_result == eExpressionCompleted) {
-            Scalar scalar;
-            if (expr_result_valobj_sp)
-              expr_result_valobj_sp =
-                  expr_result_valobj_sp->GetQualifiedRepresentationIfAvailable(
-                      expr_result_valobj_sp->GetDynamicValueType(), true);
-            if (expr_result_valobj_sp->ResolveValue(scalar)) {
-              command.erase(start_backtick, end_backtick - start_backtick + 1);
-              StreamString value_strm;
-              const bool show_type = false;
-              scalar.GetValue(&value_strm, show_type);
-              size_t value_string_size = value_strm.GetSize();
-              if (value_string_size) {
-                command.insert(start_backtick, value_strm.GetString());
-                pos = start_backtick + value_string_size;
-                continue;
-              } else {
-                error.SetErrorStringWithFormat("expression value didn't result "
-                                               "in a scalar value for the "
-                                               "expression '%s'",
-                                               expr_str.c_str());
-              }
-            } else {
-              error.SetErrorStringWithFormat("expression value didn't result "
-                                             "in a scalar value for the "
-                                             "expression '%s'",
-                                             expr_str.c_str());
-            }
-          } else {
-            if (expr_result_valobj_sp)
-              error = expr_result_valobj_sp->GetError();
-            if (error.Success()) {
+    std::string expr_str(command, expr_content_start,
+                         end_backtick - expr_content_start);
 
-              switch (expr_result) {
-              case eExpressionSetupError:
-                error.SetErrorStringWithFormat(
-                    "expression setup error for the expression '%s'",
-                    expr_str.c_str());
-                break;
-              case eExpressionParseError:
-                error.SetErrorStringWithFormat(
-                    "expression parse error for the expression '%s'",
-                    expr_str.c_str());
-                break;
-              case eExpressionResultUnavailable:
-                error.SetErrorStringWithFormat(
-                    "expression error fetching result for the expression '%s'",
-                    expr_str.c_str());
-                break;
-              case eExpressionCompleted:
-                break;
-              case eExpressionDiscarded:
-                error.SetErrorStringWithFormat(
-                    "expression discarded for the expression '%s'",
-                    expr_str.c_str());
-                break;
-              case eExpressionInterrupted:
-                error.SetErrorStringWithFormat(
-                    "expression interrupted for the expression '%s'",
-                    expr_str.c_str());
-                break;
-              case eExpressionHitBreakpoint:
-                error.SetErrorStringWithFormat(
-                    "expression hit breakpoint for the expression '%s'",
-                    expr_str.c_str());
-                break;
-              case eExpressionTimedOut:
-                error.SetErrorStringWithFormat(
-                    "expression timed out for the expression '%s'",
-                    expr_str.c_str());
-                break;
-              case eExpressionStoppedForDebug:
-                error.SetErrorStringWithFormat("expression stop at entry point "
-                                               "for debugging for the "
-                                               "expression '%s'",
-                                               expr_str.c_str());
-                break;
-              }
-            }
-          }
+    ExecutionContext exe_ctx(GetExecutionContext());
+    Target *target = exe_ctx.GetTargetPtr();
+
+    // Get a dummy target to allow for calculator mode while processing
+    // backticks. This also helps break the infinite loop caused when target is
+    // null.
+    if (!target)
+      target = m_debugger.GetDummyTarget();
+
+    if (!target)
+      continue;
+
+    ValueObjectSP expr_result_valobj_sp;
+
+    EvaluateExpressionOptions options;
+    options.SetCoerceToId(false);
+    options.SetUnwindOnError(true);
+    options.SetIgnoreBreakpoints(true);
+    options.SetKeepInMemory(false);
+    options.SetTryAllThreads(true);
+    options.SetTimeout(llvm::None);
+
+    ExpressionResults expr_result =
+        target->EvaluateExpression(expr_str.c_str(), exe_ctx.GetFramePtr(),
+                                   expr_result_valobj_sp, options);
+
+    if (expr_result == eExpressionCompleted) {
+      Scalar scalar;
+      if (expr_result_valobj_sp)
+        expr_result_valobj_sp =
+            expr_result_valobj_sp->GetQualifiedRepresentationIfAvailable(
+                expr_result_valobj_sp->GetDynamicValueType(), true);
+      if (expr_result_valobj_sp->ResolveValue(scalar)) {
+        command.erase(start_backtick, end_backtick - start_backtick + 1);
+        StreamString value_strm;
+        const bool show_type = false;
+        scalar.GetValue(&value_strm, show_type);
+        size_t value_string_size = value_strm.GetSize();
+        if (value_string_size) {
+          command.insert(start_backtick, value_strm.GetString());
+          pos = start_backtick + value_string_size;
+          continue;
+        } else {
+          error.SetErrorStringWithFormat("expression value didn't result "
+                                         "in a scalar value for the "
+                                         "expression '%s'",
+                                         expr_str.c_str());
+          break;
         }
-      }
-      if (error.Fail())
+      } else {
+        error.SetErrorStringWithFormat("expression value didn't result "
+                                       "in a scalar value for the "
+                                       "expression '%s'",
+                                       expr_str.c_str());
         break;
+      }
+
+      continue;
+    }
+
+    if (expr_result_valobj_sp)
+      error = expr_result_valobj_sp->GetError();
+
+    if (error.Success()) {
+      switch (expr_result) {
+      case eExpressionSetupError:
+        error.SetErrorStringWithFormat(
+            "expression setup error for the expression '%s'", expr_str.c_str());
+        break;
+      case eExpressionParseError:
+        error.SetErrorStringWithFormat(
+            "expression parse error for the expression '%s'", expr_str.c_str());
+        break;
+      case eExpressionResultUnavailable:
+        error.SetErrorStringWithFormat(
+            "expression error fetching result for the expression '%s'",
+            expr_str.c_str());
+        break;
+      case eExpressionCompleted:
+        break;
+      case eExpressionDiscarded:
+        error.SetErrorStringWithFormat(
+            "expression discarded for the expression '%s'", expr_str.c_str());
+        break;
+      case eExpressionInterrupted:
+        error.SetErrorStringWithFormat(
+            "expression interrupted for the expression '%s'", expr_str.c_str());
+        break;
+      case eExpressionHitBreakpoint:
+        error.SetErrorStringWithFormat(
+            "expression hit breakpoint for the expression '%s'",
+            expr_str.c_str());
+        break;
+      case eExpressionTimedOut:
+        error.SetErrorStringWithFormat(
+            "expression timed out for the expression '%s'", expr_str.c_str());
+        break;
+      case eExpressionStoppedForDebug:
+        error.SetErrorStringWithFormat("expression stop at entry point "
+                                       "for debugging for the "
+                                       "expression '%s'",
+                                       expr_str.c_str());
+        break;
+      }
     }
   }
   return error;
