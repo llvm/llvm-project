@@ -247,7 +247,7 @@ template <class SymbolTy> void COFFWriter::writeSymbolStringTables() {
   }
 }
 
-void COFFWriter::write(bool IsBigObj) {
+Error COFFWriter::write(bool IsBigObj) {
   finalize(IsBigObj);
 
   Buf.allocate(FileSize);
@@ -260,31 +260,30 @@ void COFFWriter::write(bool IsBigObj) {
     writeSymbolStringTables<coff_symbol16>();
 
   if (Obj.IsPE)
-    patchDebugDirectory();
+    if (Error E = patchDebugDirectory())
+      return E;
 
-  if (auto E = Buf.commit())
-    reportError(Buf.getName(), errorToErrorCode(std::move(E)));
+  return Buf.commit();
 }
 
 // Locate which sections contain the debug directories, iterate over all
 // the debug_directory structs in there, and set the PointerToRawData field
 // in all of them, according to their new physical location in the file.
-void COFFWriter::patchDebugDirectory() {
+Error COFFWriter::patchDebugDirectory() {
   if (Obj.DataDirectories.size() < DEBUG_DIRECTORY)
-    return;
+    return Error::success();
   const data_directory *Dir = &Obj.DataDirectories[DEBUG_DIRECTORY];
   if (Dir->Size <= 0)
-    return;
+    return Error::success();
   for (const auto &S : Obj.Sections) {
     if (Dir->RelativeVirtualAddress >= S.Header.VirtualAddress &&
         Dir->RelativeVirtualAddress <
             S.Header.VirtualAddress + S.Header.SizeOfRawData) {
       if (Dir->RelativeVirtualAddress + Dir->Size >
           S.Header.VirtualAddress + S.Header.SizeOfRawData)
-        reportError(Buf.getName(),
-                    make_error<StringError>(
-                        "Debug directory extends past end of section",
-                        object_error::parse_failed));
+        return make_error<StringError>(
+            "Debug directory extends past end of section",
+            object_error::parse_failed);
 
       size_t Offset = Dir->RelativeVirtualAddress - S.Header.VirtualAddress;
       uint8_t *Ptr = Buf.getBufferStart() + S.Header.PointerToRawData + Offset;
@@ -297,21 +296,19 @@ void COFFWriter::patchDebugDirectory() {
         Offset += sizeof(debug_directory) + Debug->SizeOfData;
       }
       // Debug directory found and patched, all done.
-      return;
+      return Error::success();
     }
   }
-  reportError(Buf.getName(),
-              make_error<StringError>("Debug directory not found",
-                                      object_error::parse_failed));
+  return make_error<StringError>("Debug directory not found",
+                                 object_error::parse_failed);
 }
 
-void COFFWriter::write() {
+Error COFFWriter::write() {
   bool IsBigObj = Obj.Sections.size() > MaxNumberOfSections16;
   if (IsBigObj && Obj.IsPE)
-    reportError(Buf.getName(),
-                make_error<StringError>("Too many sections for executable",
-                                        object_error::parse_failed));
-  write(IsBigObj);
+    return make_error<StringError>("Too many sections for executable",
+                                   object_error::parse_failed);
+  return write(IsBigObj);
 }
 
 } // end namespace coff

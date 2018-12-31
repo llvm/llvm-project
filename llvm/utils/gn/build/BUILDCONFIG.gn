@@ -2,7 +2,7 @@
 # Targets can opt out of a config by removing it from their local configs list.
 # If you're adding global flags and don't need targets to be able to opt out,
 # add the flags to compiler_defaults, not to a new config.
-_shared_binary_target_configs = [
+shared_binary_target_configs = [
   "//llvm/utils/gn/build:compiler_defaults",
   "//llvm/utils/gn/build:llvm_code",
   "//llvm/utils/gn/build:warn_covered_switch_default",
@@ -10,19 +10,19 @@ _shared_binary_target_configs = [
 
 # Apply that default list to the binary target types.
 set_defaults("executable") {
-  configs = _shared_binary_target_configs
+  configs = shared_binary_target_configs
 }
 set_defaults("loadable_module") {
-  configs = _shared_binary_target_configs
+  configs = shared_binary_target_configs
 }
 set_defaults("static_library") {
-  configs = _shared_binary_target_configs
+  configs = shared_binary_target_configs
 }
 set_defaults("shared_library") {
-  configs = _shared_binary_target_configs
+  configs = shared_binary_target_configs
 }
 set_defaults("source_set") {
-  configs = _shared_binary_target_configs
+  configs = shared_binary_target_configs
 }
 
 if (host_os == "win") {
