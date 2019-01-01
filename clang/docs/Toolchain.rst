@@ -100,14 +100,14 @@ currently-supported languages are:
 
 In each case, GCC will be invoked to compile the input.
 
-Assember
---------
+Assembler
+---------
 
 Clang can either use LLVM's integrated assembler or an external system-specific
 tool (for instance, the GNU Assembler on GNU OSes) to produce machine code from
 assembly.
 By default, Clang uses LLVM's integrated assembler on all targets where it is
-supported. If you wish to use the system assember instead, use the
+supported. If you wish to use the system assembler instead, use the
 ``-fno-integrated-as`` option.
 
 Linker

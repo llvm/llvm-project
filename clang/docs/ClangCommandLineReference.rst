@@ -158,7 +158,7 @@ Compile CUDA code for host only.  Has no effect on non-CUDA compilations.
 
 .. option:: --cuda-include-ptx=<arg>, --no-cuda-include-ptx=<arg>
 
-Include PTX for the follwing GPU architecture (e.g. sm\_35) or 'all'. May be specified more than once.
+Include PTX for the following GPU architecture (e.g. sm\_35) or 'all'. May be specified more than once.
 
 .. option:: --cuda-noopt-device-debug, --no-cuda-noopt-device-debug
 
