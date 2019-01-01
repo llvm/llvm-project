@@ -57,6 +57,9 @@ public:
   /// Return true if, during analysis, I could not be reached.
   bool isInstructionDead(Instruction *I);
 
+  /// Return whether this use is dead by means of not having any demanded bits.
+  bool isUseDead(Use *U);
+
   void print(raw_ostream &OS);
 
 private:
@@ -75,6 +78,9 @@ private:
   // The set of visited instructions (non-integer-typed only).
   SmallPtrSet<Instruction*, 32> Visited;
   DenseMap<Instruction *, APInt> AliveBits;
+  // Uses with no demanded bits. If the user also has no demanded bits, the use
+  // might not be stored explicitly in this map, to save memory during analysis.
+  SmallPtrSet<Use *, 16> DeadUses;
 };
 
 class DemandedBitsWrapperPass : public FunctionPass {
