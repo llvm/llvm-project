@@ -5,6 +5,11 @@ group("default") {
   deps = [
     "//clang/test",
     "//lld/test",
+    "//llvm/tools/llvm-exegesis",
+    "//llvm/tools/llvm-extract",
+    "//llvm/tools/llvm-link",
+    "//llvm/tools/llvm-rc",
+    "//llvm/tools/llvm-rtdyld",
     "//llvm/tools/llvm-undname",
   ]
   if (clang_enable_arcmt) {

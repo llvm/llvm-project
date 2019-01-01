@@ -30001,6 +30001,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.Zero.setBitsFrom(SrcVT.getScalarSizeInBits());
     break;
   }
+  case X86ISD::VSRAI:
   case X86ISD::VSHLI:
   case X86ISD::VSRLI: {
     if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
@@ -30016,11 +30017,14 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
         Known.One <<= ShAmt;
         // Low bits are known zero.
         Known.Zero.setLowBits(ShAmt);
-      } else {
+      } else if (Opc == X86ISD::VSRLI) {
         Known.Zero.lshrInPlace(ShAmt);
         Known.One.lshrInPlace(ShAmt);
         // High bits are known zero.
         Known.Zero.setHighBits(ShAmt);
+      } else {
+        Known.Zero.ashrInPlace(ShAmt);
+        Known.One.ashrInPlace(ShAmt);
       }
     }
     break;
