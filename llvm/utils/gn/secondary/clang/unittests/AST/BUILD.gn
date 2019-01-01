@@ -1,0 +1,33 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("ASTTests") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/ASTMatchers",
+    "//clang/lib/Analysis",
+    "//clang/lib/Basic",
+    "//clang/lib/Frontend",
+    "//clang/lib/Tooling",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "ASTContextParentMapTest.cpp",
+    "ASTImporterTest.cpp",
+    "ASTTypeTraitsTest.cpp",
+    "ASTVectorTest.cpp",
+    "CommentLexer.cpp",
+    "CommentParser.cpp",
+    "CommentTextTest.cpp",
+    "DataCollectionTest.cpp",
+    "DeclPrinterTest.cpp",
+    "DeclTest.cpp",
+    "EvaluateAsRValueTest.cpp",
+    "ExternalASTSourceTest.cpp",
+    "Language.cpp",
+    "NamedDeclPrinterTest.cpp",
+    "SourceLocationTest.cpp",
+    "StmtPrinterTest.cpp",
+    "StructuralEquivalenceTest.cpp",
+  ]
+}

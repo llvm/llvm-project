@@ -1,0 +1,25 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("FrontendTests") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/Basic",
+    "//clang/lib/CodeGen",
+    "//clang/lib/Frontend",
+    "//clang/lib/FrontendTool",
+    "//clang/lib/Lex",
+    "//clang/lib/Sema",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "ASTUnitTest.cpp",
+    "CodeGenActionTest.cpp",
+    "CompilerInstanceTest.cpp",
+    "FixedPointString.cpp",
+    "FrontendActionTest.cpp",
+    "OutputStreamTest.cpp",
+    "PCHPreambleTest.cpp",
+    "ParsedSourceLocationTest.cpp",
+  ]
+}
