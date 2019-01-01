@@ -191,13 +191,6 @@ void DWARFUnit::ExtractDIEsRWLocked() {
                                                       IsDWARF64());
   while (offset < next_cu_offset &&
          die.FastExtract(data, this, fixed_form_sizes, &offset)) {
-    //        if (log)
-    //            log->Printf("0x%8.8x: %*.*s%s%s",
-    //                        die.GetOffset(),
-    //                        depth * 2, depth * 2, "",
-    //                        DW_TAG_value_to_name (die.Tag()),
-    //                        die.HasChildren() ? " *" : "");
-
     const bool null_die = die.IsNULL();
     if (depth == 0) {
       assert(m_die_array.empty() && "Compile unit DIE already added");
