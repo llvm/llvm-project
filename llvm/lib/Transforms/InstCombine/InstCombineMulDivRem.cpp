@@ -244,6 +244,11 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
     return NewMul;
   }
 
+  // -X * Y --> -(X * Y)
+  // X * -Y --> -(X * Y)
+  if (match(&I, m_c_Mul(m_OneUse(m_Neg(m_Value(X))), m_Value(Y))))
+    return BinaryOperator::CreateNeg(Builder.CreateMul(X, Y));
+
   // (X / Y) *  Y = X - (X % Y)
   // (X / Y) * -Y = (X % Y) - X
   {
