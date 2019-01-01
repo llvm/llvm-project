@@ -38,7 +38,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::PackExpansion" IncludeView="poly">{*(clang::PackExpansionType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::LocInfoType::LocInfo" IncludeView="poly">{*(clang::LocInfoType *)this}</DisplayString>
     <DisplayString IncludeView="cpp">{*this,view(poly)}</DisplayString>
-    <DisplayString IncludeView="poly">{*this,view(cmn)}</DisplayString> <!-- Not yet implemented Type subclass -->
+    <DisplayString IncludeView="poly">No visualizer yet for {(clang::Type::TypeClass)TypeBits.TC,en}Type</DisplayString> <!-- Not yet implemented Type subclass -->
     <DisplayString>{*this,view(cmn)}  {{{*this,view(poly)}}}</DisplayString>
     <Expand>
       <Item Name="TypeClass" IncludeView="cmn">(clang::Type::TypeClass)TypeBits.TC</Item>
