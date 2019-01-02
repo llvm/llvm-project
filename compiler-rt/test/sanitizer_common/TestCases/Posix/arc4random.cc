@@ -15,8 +15,10 @@ void print_buf(unsigned char *buf, size_t buflen) {
 }
 
 void test_seed() {
+#ifdef __NetBSD__
   time_t now = ::time(nullptr);
   arc4random_addrandom((unsigned char *)&now, sizeof(now));
+#endif
 }
 
 void test_arc4random() {
@@ -34,7 +36,9 @@ void test_arc4random_uniform() {
 void test_arc4random_buf10() {
   printf("test_arc4random_buf10\n");
   char buf[10];
+#ifdef __NetBSD__
   arc4random_stir();
+#endif
   arc4random_buf(buf, sizeof(buf));
   print_buf((unsigned char *)buf, sizeof(buf));
 }
@@ -42,7 +46,9 @@ void test_arc4random_buf10() {
 void test_arc4random_buf256() {
   printf("test_arc4random_buf256\n");
   char buf[256];
+#ifdef __NetBSD__
   arc4random_stir();
+#endif
   arc4random_buf(buf, sizeof(buf));
   print_buf((unsigned char *)buf, sizeof(buf));
 }
