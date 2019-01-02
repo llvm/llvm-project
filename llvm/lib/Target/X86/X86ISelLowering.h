@@ -336,7 +336,7 @@ namespace llvm {
       CMPM_RND,
 
       // Arithmetic operations with FLAGS results.
-      ADD, SUB, ADC, SBB, SMUL,
+      ADD, SUB, ADC, SBB, SMUL, UMUL,
       INC, DEC, OR, XOR, AND,
 
       // Bit field extract.
@@ -344,12 +344,6 @@ namespace llvm {
 
       // Zero High Bits Starting with Specified Bit Position.
       BZHI,
-
-      // LOW, HI, FLAGS = umul LHS, RHS.
-      UMUL,
-
-      // 8-bit SMUL/UMUL - AX, FLAGS = smul8/umul8 AL, RHS.
-      SMUL8, UMUL8,
 
       // X86-specific multiply by immediate.
       MUL_IMM,

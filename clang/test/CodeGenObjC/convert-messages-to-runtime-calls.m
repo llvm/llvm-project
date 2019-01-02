@@ -54,7 +54,9 @@ void test2(void* x) {
 @class A;
 @interface B
 + (A*) alloc;
-+ (A*)allocWithZone:(void*)zone;
++ (A*) allocWithZone:(void*)zone;
+- (A*) alloc;
+- (A*) allocWithZone:(void*)zone;
 - (A*) retain;
 - (A*) autorelease;
 @end
@@ -77,6 +79,19 @@ A* test_allocWithZone_class_ptr() {
   // CALLS-NEXT: bitcast i8*
   // CALLS-NEXT: ret
   return [B allocWithZone:nil];
+}
+
+// Only call objc_alloc on a Class, not an instance
+// CHECK-LABEL: define {{.*}}void @test_alloc_instance
+void test_alloc_instance(A *a) {
+  // CALLS: {{call.*@objc_alloc}}
+  // CALLS: {{call.*@objc_allocWithZone}}
+  // CALLS: {{call.*@objc_msgSend}}
+  // CALLS: {{call.*@objc_msgSend}}
+  [A alloc];
+  [A allocWithZone:nil];
+  [a alloc];
+  [a allocWithZone:nil];
 }
 
 // Make sure we get a bitcast on the return type as the

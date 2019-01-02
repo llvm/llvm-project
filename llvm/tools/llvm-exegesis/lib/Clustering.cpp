@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Clustering.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include <string>
 
@@ -91,14 +92,8 @@ llvm::Error InstructionBenchmarkClustering::validateAndSetup() {
 }
 
 void InstructionBenchmarkClustering::dbScan(const size_t MinPts) {
-  const size_t NumPoints = Points_.size();
-
-  // Persistent buffers to avoid allocs.
-  std::vector<size_t> Neighbors;
-  std::vector<size_t> ToProcess(NumPoints);
-  std::vector<char> Processed(NumPoints);
-
-  for (size_t P = 0; P < NumPoints; ++P) {
+  std::vector<size_t> Neighbors; // Persistent buffer to avoid allocs.
+  for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
     if (!ClusterIdForPoint_[P].isUndef())
       continue; // Previously processed in inner loop.
     rangeQuery(P, Neighbors);
@@ -114,40 +109,43 @@ void InstructionBenchmarkClustering::dbScan(const size_t MinPts) {
     Cluster &CurrentCluster = Clusters_.back();
     ClusterIdForPoint_[P] = CurrentCluster.Id; /* Label initial point */
     CurrentCluster.PointIndices.push_back(P);
-    Processed[P] = 1;
 
-    // Enqueue P's neighbors.
-    size_t Tail = 0;
-    auto EnqueueUnprocessed = [&](const std::vector<size_t> &Neighbors) {
-      for (size_t Q : Neighbors)
-        if (!Processed[Q]) {
-          ToProcess[Tail++] = Q;
-          Processed[Q] = 1;
-        }
-    };
-    EnqueueUnprocessed(Neighbors);
+    // Process P's neighbors.
+    llvm::SetVector<size_t, std::deque<size_t>> ToProcess;
+    ToProcess.insert(Neighbors.begin(), Neighbors.end());
+    while (!ToProcess.empty()) {
+      // Retrieve a point from the set.
+      const size_t Q = *ToProcess.begin();
+      ToProcess.erase(ToProcess.begin());
 
-    for (size_t Head = 0; Head < Tail; ++Head) {
-      // Retrieve a point from the queue and add it to the current cluster.
-      P = ToProcess[Head];
-      ClusterId OldCID = ClusterIdForPoint_[P];
-      ClusterIdForPoint_[P] = CurrentCluster.Id;
-      CurrentCluster.PointIndices.push_back(P);
-      if (OldCID.isNoise())
+      if (ClusterIdForPoint_[Q].isNoise()) {
+        // Change noise point to border point.
+        ClusterIdForPoint_[Q] = CurrentCluster.Id;
+        CurrentCluster.PointIndices.push_back(Q);
         continue;
-      assert(OldCID.isUndef());
-
-      // And extend to the neighbors of P if the region is dense enough.
-      rangeQuery(P, Neighbors);
-      if (Neighbors.size() + 1 >= MinPts)
-        EnqueueUnprocessed(Neighbors);
+      }
+      if (!ClusterIdForPoint_[Q].isUndef()) {
+        continue; // Previously processed.
+      }
+      // Add Q to the current custer.
+      ClusterIdForPoint_[Q] = CurrentCluster.Id;
+      CurrentCluster.PointIndices.push_back(Q);
+      // And extend to the neighbors of Q if the region is dense enough.
+      rangeQuery(Q, Neighbors);
+      if (Neighbors.size() + 1 >= MinPts) {
+        ToProcess.insert(Neighbors.begin(), Neighbors.end());
+      }
     }
   }
+  // assert(Neighbors.capacity() == (Points_.size() - 1));
+  // ^ True, but it is not quaranteed to be true in all the cases.
 
   // Add noisy points to noise cluster.
-  for (size_t P = 0; P < NumPoints; ++P)
-    if (ClusterIdForPoint_[P].isNoise())
+  for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
+    if (ClusterIdForPoint_[P].isNoise()) {
       NoiseCluster_.PointIndices.push_back(P);
+    }
+  }
 }
 
 llvm::Expected<InstructionBenchmarkClustering>
