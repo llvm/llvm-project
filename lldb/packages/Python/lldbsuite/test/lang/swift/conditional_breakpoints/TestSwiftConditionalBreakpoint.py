@@ -35,6 +35,11 @@ class TestSwiftConditionalBreakpoint(TestBase):
 
     def break_commands(self):
         """Tests that we can set a conditional breakpoint in Swift code"""
+
+        # FIXME: temporarily enabled to track down a bug with the ASAN bot.
+        self.runCmd("log enable lldb expr")
+        # END FIXME
+
         exe_name = self.getBuildArtifact("a.out")
         self.runCmd("file %s"%(exe_name), CURRENT_EXECUTABLE_SET)
         bkno = lldbutil.run_break_set_by_source_regexp(
