@@ -97,12 +97,12 @@ entry:
   ret float %val
 }
 
-;CHECK-LABEL: {{^}}buffer_load_x1_offen_merged:
+;CHECK-LABEL: {{^}}buffer_load_x1_offen_merged_and:
 ;CHECK-NEXT: %bb.
 ;CHECK-NEXT: buffer_load_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4
 ;CHECK-NEXT: buffer_load_dwordx2 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:28
 ;CHECK: s_waitcnt
-define amdgpu_ps void @buffer_load_x1_offen_merged(<4 x i32> inreg %rsrc, i32 %a) {
+define amdgpu_ps void @buffer_load_x1_offen_merged_and(<4 x i32> inreg %rsrc, i32 %a) {
 main_body:
   %a1 = add i32 %a, 4
   %a2 = add i32 %a, 8
@@ -110,6 +110,32 @@ main_body:
   %a4 = add i32 %a, 16
   %a5 = add i32 %a, 28
   %a6 = add i32 %a, 32
+  %r1 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a1, i32 0, i32 0)
+  %r2 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a2, i32 0, i32 0)
+  %r3 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a3, i32 0, i32 0)
+  %r4 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a4, i32 0, i32 0)
+  %r5 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a5, i32 0, i32 0)
+  %r6 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a6, i32 0, i32 0)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}buffer_load_x1_offen_merged_or:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: v_lshlrev_b32_e32 v{{[0-9]}}, 6, v0
+;CHECK-NEXT: buffer_load_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v{{[0-9]}}, s[0:3], 0 offen offset:4
+;CHECK-NEXT: buffer_load_dwordx2 v[{{[0-9]}}:{{[0-9]}}], v{{[0-9]}}, s[0:3], 0 offen offset:28
+;CHECK: s_waitcnt
+define amdgpu_ps void @buffer_load_x1_offen_merged_or(<4 x i32> inreg %rsrc, i32 %inp) {
+main_body:
+  %a = shl i32 %inp, 6
+  %a1 = or i32 %a, 4
+  %a2 = or i32 %a, 8
+  %a3 = or i32 %a, 12
+  %a4 = or i32 %a, 16
+  %a5 = or i32 %a, 28
+  %a6 = or i32 %a, 32
   %r1 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a1, i32 0, i32 0)
   %r2 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a2, i32 0, i32 0)
   %r3 = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 %a3, i32 0, i32 0)
@@ -146,12 +172,32 @@ main_body:
   ret void
 }
 
-;CHECK-LABEL: {{^}}buffer_load_x2_offen_merged:
+;CHECK-LABEL: {{^}}buffer_load_x2_offen_merged_and:
 ;CHECK-NEXT: %bb.
 ;CHECK-NEXT: buffer_load_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4
 ;CHECK: s_waitcnt
-define amdgpu_ps void @buffer_load_x2_offen_merged(<4 x i32> inreg %rsrc, i32 %a) {
+define amdgpu_ps void @buffer_load_x2_offen_merged_and(<4 x i32> inreg %rsrc, i32 %a) {
 main_body:
+  %a1 = add i32 %a, 4
+  %a2 = add i32 %a, 12
+  %vr1 = call <2 x float> @llvm.amdgcn.raw.buffer.load.v2f32(<4 x i32> %rsrc, i32 %a1, i32 0, i32 0)
+  %vr2 = call <2 x float> @llvm.amdgcn.raw.buffer.load.v2f32(<4 x i32> %rsrc, i32 %a2, i32 0, i32 0)
+  %r1 = extractelement <2 x float> %vr1, i32 0
+  %r2 = extractelement <2 x float> %vr1, i32 1
+  %r3 = extractelement <2 x float> %vr2, i32 0
+  %r4 = extractelement <2 x float> %vr2, i32 1
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}buffer_load_x2_offen_merged_or:
+;CHECK-NEXT: %bb.
+;CHECK-NEXT: v_lshlrev_b32_e32 v{{[0-9]}}, 4, v0
+;CHECK-NEXT: buffer_load_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v{{[0-9]}}, s[0:3], 0 offen offset:4
+;CHECK: s_waitcnt
+define amdgpu_ps void @buffer_load_x2_offen_merged_or(<4 x i32> inreg %rsrc, i32 %inp) {
+main_body:
+  %a = shl i32 %inp, 4
   %a1 = add i32 %a, 4
   %a2 = add i32 %a, 12
   %vr1 = call <2 x float> @llvm.amdgcn.raw.buffer.load.v2f32(<4 x i32> %rsrc, i32 %a1, i32 0, i32 0)

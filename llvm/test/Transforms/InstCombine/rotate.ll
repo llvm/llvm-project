@@ -700,12 +700,7 @@ define i9 @rotateleft_9_neg_mask_wide_amount_commute(i9 %v, i33 %shamt) {
 
 define i32 @rotr_select(i32 %x, i32 %shamt) {
 ; CHECK-LABEL: @rotr_select(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[SHAMT:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[SHAMT]], 31
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP1]], 31
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[X:%.*]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[X]], [[TMP3]]
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshr.i32(i32 [[X:%.*]], i32 [[X]], i32 [[SHAMT:%.*]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp = icmp eq i32 %shamt, 0
@@ -721,12 +716,7 @@ define i32 @rotr_select(i32 %x, i32 %shamt) {
 
 define i8 @rotr_select_commute(i8 %x, i8 %shamt) {
 ; CHECK-LABEL: @rotr_select_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[SHAMT:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[SHAMT]], 7
-; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP1]], 7
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i8 [[X:%.*]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i8 [[X]], [[TMP2]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshr.i8(i8 [[X:%.*]], i8 [[X]], i8 [[SHAMT:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp = icmp eq i8 %shamt, 0
@@ -742,12 +732,7 @@ define i8 @rotr_select_commute(i8 %x, i8 %shamt) {
 
 define i16 @rotl_select(i16 %x, i16 %shamt) {
 ; CHECK-LABEL: @rotl_select(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 0, [[SHAMT:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[SHAMT]], 15
-; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP1]], 15
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i16 [[X:%.*]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i16 [[X]], [[TMP2]]
-; CHECK-NEXT:    [[R:%.*]] = or i16 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.fshl.i16(i16 [[X:%.*]], i16 [[X]], i16 [[SHAMT:%.*]])
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %cmp = icmp eq i16 %shamt, 0
@@ -763,12 +748,7 @@ define i16 @rotl_select(i16 %x, i16 %shamt) {
 
 define <2 x i64> @rotl_select_commute(<2 x i64> %x, <2 x i64> %shamt) {
 ; CHECK-LABEL: @rotl_select_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i64> zeroinitializer, [[SHAMT:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> [[SHAMT]], <i64 63, i64 63>
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP1]], <i64 63, i64 63>
-; CHECK-NEXT:    [[TMP4:%.*]] = shl <2 x i64> [[X:%.*]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr <2 x i64> [[X]], [[TMP3]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i64> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> [[X:%.*]], <2 x i64> [[X]], <2 x i64> [[SHAMT:%.*]])
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %cmp = icmp eq <2 x i64> %shamt, zeroinitializer
