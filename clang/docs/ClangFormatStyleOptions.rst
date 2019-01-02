@@ -1398,7 +1398,7 @@ the configuration (without a prefix: ``Auto``).
 **JavaImportGroups** (``std::vector<std::string>``)
   A vector of prefixes ordered by the desired groups for Java imports.
 
-  Each group is seperated by a newline. Static imports will also follow the
+  Each group is separated by a newline. Static imports will also follow the
   same grouping convention above all non-static imports. One group's prefix
   can be a subset of another - the longest prefix is always matched. Within
   a group, the imports are ordered lexicographically.

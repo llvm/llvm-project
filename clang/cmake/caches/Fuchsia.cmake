@@ -82,14 +82,17 @@ set(CLANG_BOOTSTRAP_TARGETS
   check-all
   check-llvm
   check-clang
+  check-lld
   llvm-config
   test-suite
   test-depends
   llvm-test-depends
   clang-test-depends
+  lld-test-depends
   distribution
   install-distribution
   install-distribution-stripped
+  install-distribution-toolchain
   clang CACHE STRING "")
 
 get_cmake_property(variableNames VARIABLES)
