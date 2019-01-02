@@ -108,6 +108,14 @@ void LLVMContextSetYieldCallback(LLVMContextRef C, LLVMYieldCallback Callback,
   unwrap(C)->setYieldCallback(YieldCallback, OpaqueHandle);
 }
 
+LLVMBool LLVMContextShouldDiscardValueNames(LLVMContextRef C) {
+  return unwrap(C)->shouldDiscardValueNames();
+}
+
+void LLVMContextSetDiscardValueNames(LLVMContextRef C, LLVMBool Discard) {
+  unwrap(C)->setDiscardValueNames(Discard);
+}
+
 void LLVMContextDispose(LLVMContextRef C) {
   delete unwrap(C);
 }

@@ -3411,24 +3411,11 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
                            getI8Imm(ShlVal, dl));
     return;
   }
-  case X86ISD::UMUL8:
-  case X86ISD::SMUL8: {
-    SDValue N0 = Node->getOperand(0);
-    SDValue N1 = Node->getOperand(1);
-
-    unsigned Opc = (Opcode == X86ISD::SMUL8 ? X86::IMUL8r : X86::MUL8r);
-
-    SDValue InFlag = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, X86::AL,
-                                          N0, SDValue()).getValue(1);
-
-    SDVTList VTs = CurDAG->getVTList(NVT, MVT::i32);
-    SDValue Ops[] = {N1, InFlag};
-    SDNode *CNode = CurDAG->getMachineNode(Opc, dl, VTs, Ops);
-
-    ReplaceNode(Node, CNode);
-    return;
-  }
-
+  case X86ISD::SMUL:
+    // i16/i32/i64 are handled with isel patterns.
+    if (NVT != MVT::i8)
+      break;
+    LLVM_FALLTHROUGH;
   case X86ISD::UMUL: {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
@@ -3436,7 +3423,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     unsigned LoReg, Opc;
     switch (NVT.SimpleTy) {
     default: llvm_unreachable("Unsupported VT!");
-    // MVT::i8 is handled by X86ISD::UMUL8.
+    case MVT::i8:
+      LoReg = X86::AL;
+      Opc = Opcode == X86ISD::SMUL ? X86::IMUL8r : X86::MUL8r;
+      break;
     case MVT::i16: LoReg = X86::AX;  Opc = X86::MUL16r; break;
     case MVT::i32: LoReg = X86::EAX; Opc = X86::MUL32r; break;
     case MVT::i64: LoReg = X86::RAX; Opc = X86::MUL64r; break;
@@ -3445,11 +3435,19 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue InFlag = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, LoReg,
                                           N0, SDValue()).getValue(1);
 
-    SDVTList VTs = CurDAG->getVTList(NVT, NVT, MVT::i32);
+    // i16/i32/i64 use an instruction that produces a low and high result even
+    // though only the low result is used.
+    SDVTList VTs;
+    if (NVT == MVT::i8)
+      VTs = CurDAG->getVTList(NVT, MVT::i32);
+    else
+      VTs = CurDAG->getVTList(NVT, NVT, MVT::i32);
+
     SDValue Ops[] = {N1, InFlag};
     SDNode *CNode = CurDAG->getMachineNode(Opc, dl, VTs, Ops);
-
-    ReplaceNode(Node, CNode);
+    ReplaceUses(SDValue(Node, 0), SDValue(CNode, 0));
+    ReplaceUses(SDValue(Node, 1), SDValue(CNode, NVT == MVT::i8 ? 1 : 2));
+    CurDAG->RemoveDeadNode(Node);
     return;
   }
 
