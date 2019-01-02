@@ -6005,11 +6005,13 @@ std::pair<SDValue, SDValue> SITargetLowering::splitBufferOffsets(
   const unsigned MaxImm = 4095;
   SDValue N0 = Offset;
   ConstantSDNode *C1 = nullptr;
-  if (N0.getOpcode() == ISD::ADD) {
-    if ((C1 = dyn_cast<ConstantSDNode>(N0.getOperand(1))))
-      N0 = N0.getOperand(0);
-  } else if ((C1 = dyn_cast<ConstantSDNode>(N0)))
+
+  if ((C1 = dyn_cast<ConstantSDNode>(N0)))
     N0 = SDValue();
+  else if (DAG.isBaseWithConstantOffset(N0)) {
+    C1 = cast<ConstantSDNode>(N0.getOperand(1));
+    N0 = N0.getOperand(0);
+  }
 
   if (C1) {
     unsigned ImmOffset = C1->getZExtValue();

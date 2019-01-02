@@ -744,14 +744,14 @@ define i64 @setb28(i64 %a, i64 %b) {
 ; CHECK-NOT: addic
 ; CHECK-NOT: subfe
 ; CHECK-NOT: isel
-; CHECK: extsh
+; CHECK: extsw
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: setb28
 ; CHECK-PWR8-DAG: cmpd
 ; CHECK-PWR8-DAG: addic
 ; CHECK-PWR8-DAG: subfe
 ; CHECK-PWR8: isel
-; CHECK-PWR8: extsh
+; CHECK-PWR8: extsw
 ; CHECK-PWR8: blr
 }
 

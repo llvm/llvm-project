@@ -355,7 +355,7 @@ define signext i16 @qpConv2shw(fp128* nocapture readonly %a) {
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    xscvqpswz v2, v2
 ; CHECK-NEXT:    mfvsrwz r3, v2
-; CHECK-NEXT:    extsh r3, r3
+; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -393,7 +393,7 @@ define signext i16 @qpConv2shw_03(fp128* nocapture readonly %a) {
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-NEXT:    xscvqpswz v2, v2
 ; CHECK-NEXT:    mfvsrwz r3, v2
-; CHECK-NEXT:    extsh r3, r3
+; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -509,7 +509,7 @@ define signext i8 @qpConv2sb(fp128* nocapture readonly %a) {
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    xscvqpswz v2, v2
 ; CHECK-NEXT:    mfvsrwz r3, v2
-; CHECK-NEXT:    extsb r3, r3
+; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -547,7 +547,7 @@ define signext i8 @qpConv2sb_03(fp128* nocapture readonly %a) {
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-NEXT:    xscvqpswz v2, v2
 ; CHECK-NEXT:    mfvsrwz r3, v2
-; CHECK-NEXT:    extsb r3, r3
+; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16

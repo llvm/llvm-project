@@ -140,7 +140,7 @@ namespace {
           // This conditional branch is always taken. So, remove all branches
           // and insert an unconditional branch to the destination of this.
           MachineBasicBlock::iterator It = Br, Er = MBB.end();
-          for (; It != Er && !SeenUse; It++) {
+          for (; It != Er; It++) {
             if (It->isDebugInstr()) continue;
             assert(It->isTerminator() && "Non-terminator after a terminator");
             InstrsToErase.push_back(&*It);

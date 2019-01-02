@@ -2254,7 +2254,8 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
   (void) ctx;
 
 #define COMMON_INTERCEPTOR_FILE_OPEN(ctx, file, path) \
-  Acquire(thr, pc, File2addr(path));                  \
+  if (path)                                           \
+    Acquire(thr, pc, File2addr(path));                \
   if (file) {                                         \
     int fd = fileno_unlocked(file);                   \
     if (fd >= 0) FdFileCreate(thr, pc, fd);           \
