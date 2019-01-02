@@ -641,7 +641,6 @@
 		AF0C112818580CD800C4C45B /* QueueItem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0C112718580CD800C4C45B /* QueueItem.cpp */; };
 		AF26703B1852D01E00B6CC36 /* QueueList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2670391852D01E00B6CC36 /* QueueList.cpp */; };
 		4939EA8D1BD56B6D00084382 /* REPL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4939EA8C1BD56B6D00084382 /* REPL.cpp */; };
-		94BA8B6D176F8C9B005A91B5 /* Range.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94BA8B6C176F8C9B005A91B5 /* Range.cpp */; };
 		268900F113353E6F00698AC0 /* RegisterContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F3710F1B90C00F91463 /* RegisterContext.cpp */; };
 		26957D9813D381C900670048 /* RegisterContextDarwin_arm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26957D9213D381C900670048 /* RegisterContextDarwin_arm.cpp */; };
 		AF9107EE168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9107EC168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp */; };
@@ -2523,8 +2522,6 @@
 		4939EA8C1BD56B6D00084382 /* REPL.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = REPL.cpp; path = source/Expression/REPL.cpp; sourceTree = "<group>"; };
 		4939EA8B1BD56B3700084382 /* REPL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = REPL.h; path = include/lldb/Expression/REPL.h; sourceTree = "<group>"; };
 		9A2057451F3B905C00F6C293 /* RNBSocketTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RNBSocketTest.cpp; path = debugserver/RNBSocketTest.cpp; sourceTree = "<group>"; };
-		94BA8B6C176F8C9B005A91B5 /* Range.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Range.cpp; path = source/Utility/Range.cpp; sourceTree = "<group>"; };
-		94BA8B6E176F8CA0005A91B5 /* Range.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Range.h; path = include/lldb/Utility/Range.h; sourceTree = "<group>"; };
 		2626B6AD143E1BEA00EF935C /* RangeMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RangeMap.h; path = include/lldb/Core/RangeMap.h; sourceTree = "<group>"; };
 		26AB54111832DC3400EADFF3 /* RegisterCheckpoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterCheckpoint.h; path = include/lldb/Target/RegisterCheckpoint.h; sourceTree = "<group>"; };
 		26BC7F3710F1B90C00F91463 /* RegisterContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterContext.cpp; path = source/Target/RegisterContext.cpp; sourceTree = "<group>"; };
@@ -4661,8 +4658,6 @@
 				9A35765F116E76B900E8ED2F /* StringList.cpp */,
 				26F2F8FD1B156678007857DE /* StructuredData.h */,
 				AFEC3361194A8ABA00FF05C6 /* StructuredData.cpp */,
-				94BA8B6E176F8CA0005A91B5 /* Range.h */,
-				94BA8B6C176F8C9B005A91B5 /* Range.cpp */,
 				AFF8FF0B1E779D4B003830EF /* TildeExpressionResolver.cpp */,
 				AFF8FF0D1E779D51003830EF /* TildeExpressionResolver.h */,
 				26BC7D7E10F1B77400F91463 /* Timer.h */,
@@ -8399,7 +8394,6 @@
 				6D55B2911A8A806200A70529 /* GDBRemoteCommunicationServerLLGS.cpp in Sources */,
 				260CC65315D0440D002BF2E0 /* OptionValueUInt64.cpp in Sources */,
 				260CC65415D0440D002BF2E0 /* OptionValueUUID.cpp in Sources */,
-				94BA8B6D176F8C9B005A91B5 /* Range.cpp in Sources */,
 				267F684A1CC02DED0086832B /* ABISysV_s390x.cpp in Sources */,
 				AFDBC36E204663AF00B9C8F2 /* EmulateInstructionPPC64.cpp in Sources */,
 				26DAED6315D327C200E15819 /* OptionValuePathMappings.cpp in Sources */,

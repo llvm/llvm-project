@@ -31,14 +31,14 @@ class TestQueues(TestBase):
         self.main_source = "main.c"
 
     def remove_token(self, name):
-        for i in range(6):
-            token = name+'.token.%d'%(i+1)
+        for i in range(7):
+            token = name+'.token.%d'%i
             if os.path.exists(token):
                 os.remove(token)
 
     def await_token(self, name):
-        for i in range(6):
-            lldbutil.wait_for_file_on_target(self, name+'.token.%d'%(i+1))
+        for i in range(7):
+            lldbutil.wait_for_file_on_target(self, name+'.token.%d'%i)
 
     def check_queue_for_valid_queue_id(self, queue):
         self.assertTrue(
