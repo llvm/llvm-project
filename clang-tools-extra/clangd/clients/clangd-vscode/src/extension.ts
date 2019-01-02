@@ -18,6 +18,33 @@ export const type =
                              void, void>('textDocument/switchSourceHeader');
 }
 
+class FileStatus {
+    private statuses = new Map<string, any>();
+    private readonly statusBarItem =
+        vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
+
+    onFileUpdated(fileStatus: any) {
+        const filePath = vscode.Uri.parse(fileStatus.uri);
+        this.statuses.set(filePath.fsPath, fileStatus);
+        this.updateStatus();
+    }
+
+    updateStatus() {
+        const path = vscode.window.activeTextEditor.document.fileName;
+        const status = this.statuses.get(path);
+        if (!status) {
+          this.statusBarItem.hide();
+          return;
+        }
+        this.statusBarItem.text = `clangd: ` + status.state;
+        this.statusBarItem.show();
+    }
+
+    dispose() {
+        this.statusBarItem.dispose();
+    }
+}
+
 /**
  *  this method is called when your extension is activate
  *  your extension is activated the very first time the command is executed
@@ -44,6 +71,7 @@ export function activate(context: vscode.ExtensionContext) {
         synchronize: !syncFileEvents ? undefined : {
             fileEvents: vscode.workspace.createFileSystemWatcher(filePattern)
         },
+        initializationOptions: { clangdFileStatus: true },
         // Resolve symlinks for all files provided by clangd.
         // This is a workaround for a bazel + clangd issue - bazel produces a symlink tree to build in,
         // and when navigating to the included file, clangd passes its path inside the symlink tree
@@ -80,4 +108,13 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.Uri.parse(sourceUri));
         vscode.window.showTextDocument(doc);
       }));
+    const status = new FileStatus();
+    context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(() => {
+        status.updateStatus();
+    }));
+    clangdClient.onReady().then(() => {
+        clangdClient.onNotification(
+            'textDocument/clangd.fileStatus',
+            (fileStatus) => { status.onFileUpdated(fileStatus); });
+    })
 }
