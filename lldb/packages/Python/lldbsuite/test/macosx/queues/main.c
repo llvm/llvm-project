@@ -1,9 +1,24 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <dispatch/dispatch.h>
 #include <pthread.h>
 
 int finished_enqueueing_work = 0;
+
+void
+touch (const char *name, unsigned n)
+{
+    char token[2048];
+    snprintf (token, 2048, "%s%d", name, n);
+    FILE *f = fopen (token, "wx");
+    if (!f)
+        exit (1);
+    fputs ("\n", f);
+    fflush (f);
+    fclose (f);
+}
 
 void
 doing_the_work_1(void *in)
@@ -77,7 +92,7 @@ stopper ()
 }
 
 
-int main ()
+int main (int argc, const char **argv)
 {
     dispatch_queue_t work_submittor_1 = dispatch_queue_create ("com.apple.work_submittor_1", DISPATCH_QUEUE_SERIAL);
     dispatch_queue_t work_submittor_2 = dispatch_queue_create ("com.apple.work_submittor_and_quit_2", DISPATCH_QUEUE_SERIAL);
@@ -100,31 +115,37 @@ int main ()
 
     dispatch_async (dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
             pthread_setname_np ("user initiated QoS");
+            touch(argv[1], 1);
             while (1)
                 sleep (10);
                 });
     dispatch_async (dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), ^{
             pthread_setname_np ("user interactive QoS");
+            touch(argv[1], 2);
             while (1)
                 sleep (10);
                 });
     dispatch_async (dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0), ^{
             pthread_setname_np ("default QoS");
+            touch(argv[1], 3);
             while (1)
                 sleep (10);
                 });
     dispatch_async (dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
             pthread_setname_np ("utility QoS");
+            touch(argv[1], 4);
             while (1)
                 sleep (10);
                 });
     dispatch_async (dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0), ^{
             pthread_setname_np ("background QoS");
+            touch(argv[1], 5);
             while (1)
                 sleep (10);
                 });
     dispatch_async (dispatch_get_global_queue(QOS_CLASS_UNSPECIFIED, 0), ^{
             pthread_setname_np ("unspecified QoS");
+            touch(argv[1], 6);
             while (1)
                 sleep (10);
                 });
