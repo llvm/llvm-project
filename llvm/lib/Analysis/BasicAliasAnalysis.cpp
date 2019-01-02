@@ -68,6 +68,16 @@ using namespace llvm;
 /// Enable analysis of recursive PHI nodes.
 static cl::opt<bool> EnableRecPhiAnalysis("basicaa-recphi", cl::Hidden,
                                           cl::init(false));
+
+/// By default, even on 32-bit architectures we use 64-bit integers for
+/// calculations. This will allow us to more-aggressively decompose indexing
+/// expressions calculated using i64 values (e.g., long long in C) which is
+/// common enough to worry about.
+static cl::opt<bool> ForceAtLeast64Bits("basicaa-force-at-least-64b",
+                                        cl::Hidden, cl::init(true));
+static cl::opt<bool> DoubleCalcBits("basicaa-double-calc-bits",
+                                    cl::Hidden, cl::init(false));
+
 /// SearchLimitReached / SearchTimes shows how often the limit of
 /// to decompose GEPs is reached. It will affect the precision
 /// of basic alias analysis.
@@ -381,13 +391,22 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
 }
 
 /// To ensure a pointer offset fits in an integer of size PointerSize
-/// (in bits) when that size is smaller than 64. This is an issue in
-/// particular for 32b programs with negative indices that rely on two's
-/// complement wrap-arounds for precise alias information.
-static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
-  assert(PointerSize <= 64 && "Invalid PointerSize!");
-  unsigned ShiftBits = 64 - PointerSize;
-  return (int64_t)((uint64_t)Offset << ShiftBits) >> ShiftBits;
+/// (in bits) when that size is smaller than the maximum pointer size. This is
+/// an issue, for example, in particular for 32b pointers with negative indices
+/// that rely on two's complement wrap-arounds for precise alias information
+/// where the maximum pointer size is 64b.
+static APInt adjustToPointerSize(APInt Offset, unsigned PointerSize) {
+  assert(PointerSize <= Offset.getBitWidth() && "Invalid PointerSize!");
+  unsigned ShiftBits = Offset.getBitWidth() - PointerSize;
+  return (Offset << ShiftBits).ashr(ShiftBits);
+}
+
+static unsigned getMaxPointerSize(const DataLayout &DL) {
+  unsigned MaxPointerSize = DL.getMaxPointerSizeInBits();
+  if (MaxPointerSize < 64 && ForceAtLeast64Bits) MaxPointerSize = 64;
+  if (DoubleCalcBits) MaxPointerSize *= 2;
+
+  return MaxPointerSize;
 }
 
 /// If V is a symbolic pointer expression, decompose it into a base pointer
@@ -410,8 +429,7 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
   unsigned MaxLookup = MaxLookupSearchDepth;
   SearchTimes++;
 
-  Decomposed.StructOffset = 0;
-  Decomposed.OtherOffset = 0;
+  unsigned MaxPointerSize = getMaxPointerSize(DL);
   Decomposed.VarIndices.clear();
   do {
     // See if this is a bitcast or GEP.
@@ -501,13 +519,15 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
         if (CIdx->isZero())
           continue;
         Decomposed.OtherOffset +=
-          DL.getTypeAllocSize(GTI.getIndexedType()) * CIdx->getSExtValue();
+          (DL.getTypeAllocSize(GTI.getIndexedType()) *
+            CIdx->getValue().sextOrSelf(MaxPointerSize))
+              .sextOrTrunc(MaxPointerSize);
         continue;
       }
 
       GepHasConstantOffset = false;
 
-      uint64_t Scale = DL.getTypeAllocSize(GTI.getIndexedType());
+      APInt Scale(MaxPointerSize, DL.getTypeAllocSize(GTI.getIndexedType()));
       unsigned ZExtBits = 0, SExtBits = 0;
 
       // If the integer type is smaller than the pointer size, it is implicitly
@@ -519,20 +539,34 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
       // Use GetLinearExpression to decompose the index into a C1*V+C2 form.
       APInt IndexScale(Width, 0), IndexOffset(Width, 0);
       bool NSW = true, NUW = true;
+      const Value *OrigIndex = Index;
       Index = GetLinearExpression(Index, IndexScale, IndexOffset, ZExtBits,
                                   SExtBits, DL, 0, AC, DT, NSW, NUW);
 
-      // All GEP math happens in the width of the pointer type,
-      // so we can truncate the value to 64-bits as we don't handle
-      // currently pointers larger than 64 bits and we would crash
-      // later. TODO: Make `Scale` an APInt to avoid this problem.
-      if (IndexScale.getBitWidth() > 64)
-        IndexScale = IndexScale.sextOrTrunc(64);
-
       // The GEP index scale ("Scale") scales C1*V+C2, yielding (C1*V+C2)*Scale.
       // This gives us an aggregate computation of (C1*Scale)*V + C2*Scale.
-      Decomposed.OtherOffset += IndexOffset.getSExtValue() * Scale;
-      Scale *= IndexScale.getSExtValue();
+
+      // It can be the case that, even through C1*V+C2 does not overflow for
+      // relevant values of V, (C2*Scale) can overflow. In that case, we cannot
+      // decompose the expression in this way.
+      //
+      // FIXME: C1*Scale and the other operations in the decomposed
+      // (C1*Scale)*V+C2*Scale can also overflow. We should check for this
+      // possibility.
+      APInt WideScaledOffset = IndexOffset.sextOrTrunc(MaxPointerSize*2) *
+                                 Scale.sext(MaxPointerSize*2);
+      if (WideScaledOffset.getMinSignedBits() > MaxPointerSize) {
+        Index = OrigIndex;
+        IndexScale = 1;
+        IndexOffset = 0;
+
+        ZExtBits = SExtBits = 0;
+        if (PointerSize > Width)
+          SExtBits += PointerSize - Width;
+      } else {
+        Decomposed.OtherOffset += IndexOffset.sextOrTrunc(MaxPointerSize) * Scale;
+        Scale *= IndexScale.sextOrTrunc(MaxPointerSize);
+      }
 
       // If we already had an occurrence of this index variable, merge this
       // scale into it.  For example, we want to handle:
@@ -552,9 +586,8 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
       // pointer size.
       Scale = adjustToPointerSize(Scale, PointerSize);
 
-      if (Scale) {
-        VariableGEPIndex Entry = {Index, ZExtBits, SExtBits,
-                                  static_cast<int64_t>(Scale)};
+      if (!!Scale) {
+        VariableGEPIndex Entry = {Index, ZExtBits, SExtBits, Scale};
         Decomposed.VarIndices.push_back(Entry);
       }
     }
@@ -1039,8 +1072,12 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
 
   // If the last (struct) indices are constants and are equal, the other indices
   // might be also be dynamically equal, so the GEPs can alias.
-  if (C1 && C2 && C1->getSExtValue() == C2->getSExtValue())
-    return MayAlias;
+  if (C1 && C2) {
+    unsigned BitWidth = std::max(C1->getBitWidth(), C2->getBitWidth());
+    if (C1->getValue().sextOrSelf(BitWidth) ==
+        C2->getValue().sextOrSelf(BitWidth))
+      return MayAlias;
+  }
 
   // Find the last-indexed type of the GEP, i.e., the type you'd get if
   // you stripped the last index.
@@ -1123,6 +1160,10 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
     return MayAlias;
   }
 
+  if (C1->getValue().getActiveBits() > 64 ||
+      C2->getValue().getActiveBits() > 64)
+    return MayAlias;
+
   // We know that:
   // - both GEPs begin indexing from the exact same pointer;
   // - the last indices in both GEPs are constants, indexing into a struct;
@@ -1203,8 +1244,8 @@ bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
       !DecompObject.VarIndices.empty())
     return false;
 
-  int64_t ObjectBaseOffset = DecompObject.StructOffset +
-                             DecompObject.OtherOffset;
+  APInt ObjectBaseOffset = DecompObject.StructOffset +
+                           DecompObject.OtherOffset;
 
   // If the GEP has no variable indices, we know the precise offset
   // from the base, then use it. If the GEP has variable indices,
@@ -1212,10 +1253,11 @@ bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
   // false in that case.
   if (!DecompGEP.VarIndices.empty())
     return false;
-  int64_t GEPBaseOffset = DecompGEP.StructOffset;
+
+  APInt GEPBaseOffset = DecompGEP.StructOffset;
   GEPBaseOffset += DecompGEP.OtherOffset;
 
-  return (GEPBaseOffset >= ObjectBaseOffset + (int64_t)ObjectAccessSize);
+  return GEPBaseOffset.sge(ObjectBaseOffset + (int64_t)ObjectAccessSize);
 }
 
 /// Provides a bunch of ad-hoc rules to disambiguate a GEP instruction against
@@ -1230,13 +1272,17 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
                         LocationSize V2Size, const AAMDNodes &V2AAInfo,
                         const Value *UnderlyingV1, const Value *UnderlyingV2) {
   DecomposedGEP DecompGEP1, DecompGEP2;
+  unsigned MaxPointerSize = getMaxPointerSize(DL);
+  DecompGEP1.StructOffset = DecompGEP1.OtherOffset = APInt(MaxPointerSize, 0);
+  DecompGEP2.StructOffset = DecompGEP2.OtherOffset = APInt(MaxPointerSize, 0);
+
   bool GEP1MaxLookupReached =
     DecomposeGEPExpression(GEP1, DecompGEP1, DL, &AC, DT);
   bool GEP2MaxLookupReached =
     DecomposeGEPExpression(V2, DecompGEP2, DL, &AC, DT);
 
-  int64_t GEP1BaseOffset = DecompGEP1.StructOffset + DecompGEP1.OtherOffset;
-  int64_t GEP2BaseOffset = DecompGEP2.StructOffset + DecompGEP2.OtherOffset;
+  APInt GEP1BaseOffset = DecompGEP1.StructOffset + DecompGEP1.OtherOffset;
+  APInt GEP2BaseOffset = DecompGEP2.StructOffset + DecompGEP2.OtherOffset;
 
   assert(DecompGEP1.Base == UnderlyingV1 && DecompGEP2.Base == UnderlyingV2 &&
          "DecomposeGEPExpression returned a result different from "
@@ -1354,9 +1400,9 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
   // that the objects are partially overlapping.  If the difference is
   // greater, we know they do not overlap.
   if (GEP1BaseOffset != 0 && DecompGEP1.VarIndices.empty()) {
-    if (GEP1BaseOffset >= 0) {
+    if (GEP1BaseOffset.sge(0)) {
       if (V2Size != LocationSize::unknown()) {
-        if ((uint64_t)GEP1BaseOffset < V2Size.getValue())
+        if (GEP1BaseOffset.ult(V2Size.getValue()))
           return PartialAlias;
         return NoAlias;
       }
@@ -1371,7 +1417,7 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
       // stripped a gep with negative index ('gep <ptr>, -1, ...).
       if (V1Size != LocationSize::unknown() &&
           V2Size != LocationSize::unknown()) {
-        if (-(uint64_t)GEP1BaseOffset < V1Size.getValue())
+        if ((-GEP1BaseOffset).ult(V1Size.getValue()))
           return PartialAlias;
         return NoAlias;
       }
@@ -1379,7 +1425,7 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
   }
 
   if (!DecompGEP1.VarIndices.empty()) {
-    uint64_t Modulo = 0;
+    APInt Modulo(MaxPointerSize, 0);
     bool AllPositive = true;
     for (unsigned i = 0, e = DecompGEP1.VarIndices.size(); i != e; ++i) {
 
@@ -1387,7 +1433,7 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
       // Grab the least significant bit set in any of the scales. We
       // don't need std::abs here (even if the scale's negative) as we'll
       // be ^'ing Modulo with itself later.
-      Modulo |= (uint64_t)DecompGEP1.VarIndices[i].Scale;
+      Modulo |= DecompGEP1.VarIndices[i].Scale;
 
       if (AllPositive) {
         // If the Value could change between cycles, then any reasoning about
@@ -1408,9 +1454,9 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
         // If the variable begins with a zero then we know it's
         // positive, regardless of whether the value is signed or
         // unsigned.
-        int64_t Scale = DecompGEP1.VarIndices[i].Scale;
+        APInt Scale = DecompGEP1.VarIndices[i].Scale;
         AllPositive =
-            (SignKnownZero && Scale >= 0) || (SignKnownOne && Scale < 0);
+            (SignKnownZero && Scale.sge(0)) || (SignKnownOne && Scale.slt(0));
       }
     }
 
@@ -1419,18 +1465,18 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
     // We can compute the difference between the two addresses
     // mod Modulo. Check whether that difference guarantees that the
     // two locations do not alias.
-    uint64_t ModOffset = (uint64_t)GEP1BaseOffset & (Modulo - 1);
+    APInt ModOffset = GEP1BaseOffset & (Modulo - 1);
     if (V1Size != LocationSize::unknown() &&
-        V2Size != LocationSize::unknown() && ModOffset >= V2Size.getValue() &&
-        V1Size.getValue() <= Modulo - ModOffset)
+        V2Size != LocationSize::unknown() && ModOffset.uge(V2Size.getValue()) &&
+        (Modulo - ModOffset).uge(V1Size.getValue()))
       return NoAlias;
 
     // If we know all the variables are positive, then GEP1 >= GEP1BasePtr.
     // If GEP1BasePtr > V2 (GEP1BaseOffset > 0) then we know the pointers
     // don't alias if V2Size can fit in the gap between V2 and GEP1BasePtr.
-    if (AllPositive && GEP1BaseOffset > 0 &&
+    if (AllPositive && GEP1BaseOffset.sgt(0) &&
         V2Size != LocationSize::unknown() &&
-        V2Size.getValue() <= (uint64_t)GEP1BaseOffset)
+        GEP1BaseOffset.uge(V2Size.getValue()))
       return NoAlias;
 
     if (constantOffsetHeuristic(DecompGEP1.VarIndices, V1Size, V2Size,
@@ -1836,7 +1882,7 @@ void BasicAAResult::GetIndexDifference(
   for (unsigned i = 0, e = Src.size(); i != e; ++i) {
     const Value *V = Src[i].V;
     unsigned ZExtBits = Src[i].ZExtBits, SExtBits = Src[i].SExtBits;
-    int64_t Scale = Src[i].Scale;
+    APInt Scale = Src[i].Scale;
 
     // Find V in Dest.  This is N^2, but pointer indices almost never have more
     // than a few variable indexes.
@@ -1856,7 +1902,7 @@ void BasicAAResult::GetIndexDifference(
     }
 
     // If we didn't consume this entry, add it to the end of the Dest list.
-    if (Scale) {
+    if (!!Scale) {
       VariableGEPIndex Entry = {V, ZExtBits, SExtBits, -Scale};
       Dest.push_back(Entry);
     }
@@ -1865,7 +1911,7 @@ void BasicAAResult::GetIndexDifference(
 
 bool BasicAAResult::constantOffsetHeuristic(
     const SmallVectorImpl<VariableGEPIndex> &VarIndices,
-    LocationSize MaybeV1Size, LocationSize MaybeV2Size, int64_t BaseOffset,
+    LocationSize MaybeV1Size, LocationSize MaybeV2Size, APInt BaseOffset,
     AssumptionCache *AC, DominatorTree *DT) {
   if (VarIndices.size() != 2 || MaybeV1Size == LocationSize::unknown() ||
       MaybeV2Size == LocationSize::unknown())
@@ -1910,14 +1956,15 @@ bool BasicAAResult::constantOffsetHeuristic(
   // the minimum distance between %i and %i + 5 is 3.
   APInt MinDiff = V0Offset - V1Offset, Wrapped = -MinDiff;
   MinDiff = APIntOps::umin(MinDiff, Wrapped);
-  uint64_t MinDiffBytes = MinDiff.getZExtValue() * std::abs(Var0.Scale);
+  APInt MinDiffBytes =
+    MinDiff.zextOrTrunc(Var0.Scale.getBitWidth()) * Var0.Scale.abs();
 
   // We can't definitely say whether GEP1 is before or after V2 due to wrapping
   // arithmetic (i.e. for some values of GEP1 and V2 GEP1 < V2, and for other
   // values GEP1 > V2). We'll therefore only declare NoAlias if both V1Size and
   // V2Size can fit in the MinDiffBytes gap.
-  return V1Size + std::abs(BaseOffset) <= MinDiffBytes &&
-         V2Size + std::abs(BaseOffset) <= MinDiffBytes;
+  return MinDiffBytes.uge(V1Size + BaseOffset.abs()) &&
+         MinDiffBytes.uge(V2Size + BaseOffset.abs());
 }
 
 //===----------------------------------------------------------------------===//

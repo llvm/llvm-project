@@ -334,6 +334,9 @@ public:
   /// the backends/clients are updated.
   unsigned getPointerSize(unsigned AS = 0) const;
 
+  /// Returns the maximum pointer size over all address spaces.
+  unsigned getMaxPointerSize() const;
+
   // Index size used for address calculation.
   unsigned getIndexSize(unsigned AS) const;
 
@@ -359,6 +362,11 @@ public:
   /// the backends/clients are updated.
   unsigned getPointerSizeInBits(unsigned AS = 0) const {
     return getPointerSize(AS) * 8;
+  }
+
+  /// Returns the maximum pointer size over all address spaces.
+  unsigned getMaxPointerSizeInBits() const {
+    return getMaxPointerSize() * 8;
   }
 
   /// Size in bits of index used for address calculation in getelementptr.
