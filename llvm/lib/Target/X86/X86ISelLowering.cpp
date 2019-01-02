@@ -19588,6 +19588,93 @@ SDValue X86TargetLowering::LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const 
   return getSETCC(CC, Cmp.getValue(1), DL, DAG);
 }
 
+// This function returns three things: the arithmetic computation itself
+// (Value), an EFLAGS result (Overflow), and a condition code (Cond).  The
+// flag and the condition code define the case in which the arithmetic
+// computation overflows.
+static std::pair<SDValue, SDValue>
+getX86XALUOOp(X86::CondCode &Cond, SDValue Op, SelectionDAG &DAG) {
+  assert(Op.getResNo() == 0 && "Unexpected result number!");
+  SDValue Value, Overflow;
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  unsigned BaseOp = 0;
+  SDLoc DL(Op);
+  switch (Op.getOpcode()) {
+  default: llvm_unreachable("Unknown ovf instruction!");
+  case ISD::SADDO:
+    // A subtract of one will be selected as a INC. Note that INC doesn't
+    // set CF, so we can't do this for UADDO.
+    if (isOneConstant(RHS)) {
+      BaseOp = X86ISD::INC;
+      Cond = X86::COND_O;
+      break;
+    }
+    BaseOp = X86ISD::ADD;
+    Cond = X86::COND_O;
+    break;
+  case ISD::UADDO:
+    BaseOp = X86ISD::ADD;
+    Cond = X86::COND_B;
+    break;
+  case ISD::SSUBO:
+    // A subtract of one will be selected as a DEC. Note that DEC doesn't
+    // set CF, so we can't do this for USUBO.
+    if (isOneConstant(RHS)) {
+      BaseOp = X86ISD::DEC;
+      Cond = X86::COND_O;
+      break;
+    }
+    BaseOp = X86ISD::SUB;
+    Cond = X86::COND_O;
+    break;
+  case ISD::USUBO:
+    BaseOp = X86ISD::SUB;
+    Cond = X86::COND_B;
+    break;
+  case ISD::SMULO:
+    BaseOp = Op.getValueType() == MVT::i8 ? X86ISD::SMUL8 : X86ISD::SMUL;
+    Cond = X86::COND_O;
+    break;
+  case ISD::UMULO: { // i64, i8 = umulo lhs, rhs --> i64, i64, i32 umul lhs,rhs
+    if (Op.getValueType() == MVT::i8) {
+      BaseOp = X86ISD::UMUL8;
+      Cond = X86::COND_O;
+      break;
+    }
+    SDVTList VTs = DAG.getVTList(Op.getValueType(), Op.getValueType(),
+                                 MVT::i32);
+    Value = DAG.getNode(X86ISD::UMUL, DL, VTs, LHS, RHS);
+    Overflow = Value.getValue(2);
+    Cond = X86::COND_O;
+    break;
+  }
+  }
+
+  if (BaseOp) {
+    // Also sets EFLAGS.
+    SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
+    Value = DAG.getNode(BaseOp, DL, VTs, LHS, RHS);
+    Overflow = Value.getValue(1);
+  }
+
+  return std::make_pair(Value, Overflow);
+}
+
+static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
+  // Lower the "add/sub/mul with overflow" instruction into a regular ins plus
+  // a "setcc" instruction that checks the overflow flag. The "brcond" lowering
+  // looks for this combo and may remove the "setcc" instruction if the "setcc"
+  // has only one use.
+  SDLoc DL(Op);
+  X86::CondCode Cond;
+  SDValue Value, Overflow;
+  std::tie(Value, Overflow) = getX86XALUOOp(Cond, Op, DAG);
+
+  SDValue SetCC = getSETCC(Cond, Overflow, DL, DAG);
+  return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(), Value, SetCC);
+}
+
 /// Return true if opcode is a X86 logical comparison.
 static bool isX86LogicalCmp(SDValue Op) {
   unsigned Opc = Op.getOpcode();
@@ -19848,34 +19935,10 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     }
   } else if (CondOpcode == ISD::USUBO || CondOpcode == ISD::SSUBO ||
              CondOpcode == ISD::UADDO || CondOpcode == ISD::SADDO ||
-             ((CondOpcode == ISD::UMULO || CondOpcode == ISD::SMULO) &&
-              Cond.getOperand(0).getValueType() != MVT::i8)) {
-    SDValue LHS = Cond.getOperand(0);
-    SDValue RHS = Cond.getOperand(1);
-    unsigned X86Opcode;
-    unsigned X86Cond;
-    SDVTList VTs;
-    switch (CondOpcode) {
-    case ISD::UADDO: X86Opcode = X86ISD::ADD; X86Cond = X86::COND_B; break;
-    case ISD::SADDO: X86Opcode = X86ISD::ADD; X86Cond = X86::COND_O; break;
-    case ISD::USUBO: X86Opcode = X86ISD::SUB; X86Cond = X86::COND_B; break;
-    case ISD::SSUBO: X86Opcode = X86ISD::SUB; X86Cond = X86::COND_O; break;
-    case ISD::UMULO: X86Opcode = X86ISD::UMUL; X86Cond = X86::COND_O; break;
-    case ISD::SMULO: X86Opcode = X86ISD::SMUL; X86Cond = X86::COND_O; break;
-    default: llvm_unreachable("unexpected overflowing operator");
-    }
-    if (CondOpcode == ISD::UMULO)
-      VTs = DAG.getVTList(LHS.getValueType(), LHS.getValueType(),
-                          MVT::i32);
-    else
-      VTs = DAG.getVTList(LHS.getValueType(), MVT::i32);
-
-    SDValue X86Op = DAG.getNode(X86Opcode, DL, VTs, LHS, RHS);
-
-    if (CondOpcode == ISD::UMULO)
-      Cond = X86Op.getValue(2);
-    else
-      Cond = X86Op.getValue(1);
+             CondOpcode == ISD::UMULO || CondOpcode == ISD::SMULO) {
+    SDValue Value;
+    X86::CondCode X86Cond;
+    std::tie(Value, Cond) = getX86XALUOOp(X86Cond, Cond.getValue(0), DAG);
 
     CC = DAG.getConstant(X86Cond, DL, MVT::i8);
     AddTest = false;
@@ -20555,49 +20618,13 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
   CondOpcode = Cond.getOpcode();
   if (CondOpcode == ISD::UADDO || CondOpcode == ISD::SADDO ||
       CondOpcode == ISD::USUBO || CondOpcode == ISD::SSUBO ||
-      ((CondOpcode == ISD::UMULO || CondOpcode == ISD::SMULO) &&
-       Cond.getOperand(0).getValueType() != MVT::i8)) {
-    SDValue LHS = Cond.getOperand(0);
-    SDValue RHS = Cond.getOperand(1);
-    unsigned X86Opcode;
-    unsigned X86Cond;
-    SDVTList VTs;
-    // Keep this in sync with LowerXALUO, otherwise we might create redundant
-    // instructions that can't be removed afterwards (i.e. X86ISD::ADD and
-    // X86ISD::INC).
-    switch (CondOpcode) {
-    case ISD::UADDO: X86Opcode = X86ISD::ADD; X86Cond = X86::COND_B; break;
-    case ISD::SADDO:
-      if (isOneConstant(RHS)) {
-          X86Opcode = X86ISD::INC; X86Cond = X86::COND_O;
-          break;
-        }
-      X86Opcode = X86ISD::ADD; X86Cond = X86::COND_O; break;
-    case ISD::USUBO: X86Opcode = X86ISD::SUB; X86Cond = X86::COND_B; break;
-    case ISD::SSUBO:
-      if (isOneConstant(RHS)) {
-          X86Opcode = X86ISD::DEC; X86Cond = X86::COND_O;
-          break;
-        }
-      X86Opcode = X86ISD::SUB; X86Cond = X86::COND_O; break;
-    case ISD::UMULO: X86Opcode = X86ISD::UMUL; X86Cond = X86::COND_O; break;
-    case ISD::SMULO: X86Opcode = X86ISD::SMUL; X86Cond = X86::COND_O; break;
-    default: llvm_unreachable("unexpected overflowing operator");
-    }
+      CondOpcode == ISD::UMULO || CondOpcode == ISD::SMULO) {
+    SDValue Value;
+    X86::CondCode X86Cond;
+    std::tie(Value, Cond) = getX86XALUOOp(X86Cond, Cond.getValue(0), DAG);
+
     if (Inverted)
-      X86Cond = X86::GetOppositeBranchCondition((X86::CondCode)X86Cond);
-    if (CondOpcode == ISD::UMULO)
-      VTs = DAG.getVTList(LHS.getValueType(), LHS.getValueType(),
-                          MVT::i32);
-    else
-      VTs = DAG.getVTList(LHS.getValueType(), MVT::i32);
-
-    SDValue X86Op = DAG.getNode(X86Opcode, dl, VTs, LHS, RHS);
-
-    if (CondOpcode == ISD::UMULO)
-      Cond = X86Op.getValue(2);
-    else
-      Cond = X86Op.getValue(1);
+      X86Cond = X86::GetOppositeBranchCondition(X86Cond);
 
     CC = DAG.getConstant(X86Cond, dl, MVT::i8);
     addTest = false;
@@ -24918,78 +24945,6 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getNode(ISD::OR, DL, VT,
                      DAG.getVectorShuffle(VT, DL, Res02, Res13, {0, 4, 2, 6}),
                      DAG.getVectorShuffle(VT, DL, Res02, Res13, {1, 5, 3, 7}));
-}
-
-static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
-  // Lower the "add/sub/mul with overflow" instruction into a regular ins plus
-  // a "setcc" instruction that checks the overflow flag. The "brcond" lowering
-  // looks for this combo and may remove the "setcc" instruction if the "setcc"
-  // has only one use.
-  SDNode *N = Op.getNode();
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-  unsigned BaseOp = 0;
-  X86::CondCode Cond;
-  SDLoc DL(Op);
-  switch (Op.getOpcode()) {
-  default: llvm_unreachable("Unknown ovf instruction!");
-  case ISD::SADDO:
-    // A subtract of one will be selected as a INC. Note that INC doesn't
-    // set CF, so we can't do this for UADDO.
-    if (isOneConstant(RHS)) {
-      BaseOp = X86ISD::INC;
-      Cond = X86::COND_O;
-      break;
-    }
-    BaseOp = X86ISD::ADD;
-    Cond = X86::COND_O;
-    break;
-  case ISD::UADDO:
-    BaseOp = X86ISD::ADD;
-    Cond = X86::COND_B;
-    break;
-  case ISD::SSUBO:
-    // A subtract of one will be selected as a DEC. Note that DEC doesn't
-    // set CF, so we can't do this for USUBO.
-    if (isOneConstant(RHS)) {
-      BaseOp = X86ISD::DEC;
-      Cond = X86::COND_O;
-      break;
-    }
-    BaseOp = X86ISD::SUB;
-    Cond = X86::COND_O;
-    break;
-  case ISD::USUBO:
-    BaseOp = X86ISD::SUB;
-    Cond = X86::COND_B;
-    break;
-  case ISD::SMULO:
-    BaseOp = N->getValueType(0) == MVT::i8 ? X86ISD::SMUL8 : X86ISD::SMUL;
-    Cond = X86::COND_O;
-    break;
-  case ISD::UMULO: { // i64, i8 = umulo lhs, rhs --> i64, i64, i32 umul lhs,rhs
-    if (N->getValueType(0) == MVT::i8) {
-      BaseOp = X86ISD::UMUL8;
-      Cond = X86::COND_O;
-      break;
-    }
-    SDVTList VTs = DAG.getVTList(N->getValueType(0), N->getValueType(0),
-                                 MVT::i32);
-    SDValue Sum = DAG.getNode(X86ISD::UMUL, DL, VTs, LHS, RHS);
-
-    SDValue SetCC = getSETCC(X86::COND_O, SDValue(Sum.getNode(), 2), DL, DAG);
-
-    return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, SetCC);
-  }
-  }
-
-  // Also sets EFLAGS.
-  SDVTList VTs = DAG.getVTList(N->getValueType(0), MVT::i32);
-  SDValue Sum = DAG.getNode(BaseOp, DL, VTs, LHS, RHS);
-
-  SDValue SetCC = getSETCC(Cond, SDValue(Sum.getNode(), 1), DL, DAG);
-
-  return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, SetCC);
 }
 
 /// Returns true if the operand type is exactly twice the native width, and
