@@ -1645,8 +1645,6 @@ public:
       SourceLocation Loc, const NamedDecl *D,
       ArrayRef<const NamedDecl *> Equiv);
 
-  bool isUsualDeallocationFunction(const CXXMethodDecl *FD);
-
   bool isCompleteType(SourceLocation Loc, QualType T) {
     return !RequireCompleteTypeImpl(Loc, T, nullptr);
   }

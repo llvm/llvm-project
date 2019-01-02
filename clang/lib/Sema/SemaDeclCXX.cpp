@@ -13130,8 +13130,7 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
   // C++ P0722:
   //   A destroying operator delete shall be a usual deallocation function.
   if (MD && !MD->getParent()->isDependentContext() &&
-      MD->isDestroyingOperatorDelete() &&
-      !SemaRef.isUsualDeallocationFunction(MD)) {
+      MD->isDestroyingOperatorDelete() && !MD->isUsualDeallocationFunction()) {
     SemaRef.Diag(MD->getLocation(),
                  diag::err_destroying_operator_delete_not_usual);
     return true;
