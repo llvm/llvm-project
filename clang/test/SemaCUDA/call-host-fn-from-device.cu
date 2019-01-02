@@ -41,12 +41,12 @@ struct T {
   operator Dummy() { return Dummy(); }
   // expected-note@-1 {{'operator Dummy' declared here}}
 
-  __host__ void operator delete(void *) { host_fn(); };
-  __device__ void operator delete(void*, __SIZE_TYPE__);
+  __host__ void operator delete(void*);
+  __device__ void operator delete(void*, size_t);
 };
 
 struct U {
-  __device__ void operator delete(void*, __SIZE_TYPE__) = delete;
+  __device__ void operator delete(void*, size_t) = delete;
   __host__ __device__ void operator delete(void*);
 };
 

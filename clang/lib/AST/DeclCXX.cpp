@@ -1994,9 +1994,7 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
   return nullptr;
 }
 
-bool CXXMethodDecl::isUsualDeallocationFunction(
-    SmallVectorImpl<const FunctionDecl *> &PreventedBy) const {
-  assert(PreventedBy.empty() && "PreventedBy is expected to be empty");
+bool CXXMethodDecl::isUsualDeallocationFunction() const {
   if (getOverloadedOperator() != OO_Delete &&
       getOverloadedOperator() != OO_Array_Delete)
     return false;
@@ -2054,16 +2052,14 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
   // This function is a usual deallocation function if there are no
   // single-parameter deallocation functions of the same kind.
   DeclContext::lookup_result R = getDeclContext()->lookup(getDeclName());
-  bool Result = true;
-  for (const auto *D : R) {
-    if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-      if (FD->getNumParams() == 1) {
-        PreventedBy.push_back(FD);
-        Result = false;
-      }
-    }
+  for (DeclContext::lookup_result::iterator I = R.begin(), E = R.end();
+       I != E; ++I) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(*I))
+      if (FD->getNumParams() == 1)
+        return false;
   }
-  return Result;
+
+  return true;
 }
 
 bool CXXMethodDecl::isCopyAssignmentOperator() const {
