@@ -191,6 +191,41 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: #pragma omp target defaultmap(tofrom: scalar)
 // CHECK-NEXT: foo()
 
+// CHECK-LABEL: class S {
+class S {
+  void foo() {
+// CHECK-NEXT: void foo() {
+    int a = 0;
+// CHECK-NEXT: int a = 0;
+    #pragma omp target map(this[0])
+// CHECK-NEXT: #pragma omp target map(tofrom: this[0])
+      a++;
+// CHECK-NEXT: a++;
+    #pragma omp target map(this[:1])
+// CHECK-NEXT: #pragma omp target map(tofrom: this[:1])
+      a++;
+// CHECK-NEXT: a++;
+    #pragma omp target map((this)[0])
+// CHECK-NEXT: #pragma omp target map(tofrom: (this)[0])
+      a++;
+// CHECK-NEXT: a++;
+    #pragma omp target map(this[:a])
+// CHECK-NEXT: #pragma omp target map(tofrom: this[:a])
+      a++;
+// CHECK-NEXT: a++;
+    #pragma omp target map(this[a:1])
+// CHECK-NEXT: #pragma omp target map(tofrom: this[a:1])
+      a++;
+// CHECK-NEXT: a++;
+    #pragma omp target map(this[a])
+// CHECK-NEXT: #pragma omp target map(tofrom: this[a])
+      a++;
+// CHECK-NEXT: a++;
+  }
+// CHECK-NEXT: }
+};
+// CHECK-NEXT: };
+
 // CHECK-LABEL: int main(int argc, char **argv) {
 int main (int argc, char **argv) {
   int i, j, a[20], always, close;

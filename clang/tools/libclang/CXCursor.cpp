@@ -241,16 +241,19 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::SEHLeaveStmtClass:
     K = CXCursor_SEHLeaveStmt;
     break;
-  
+
+  case Stmt::CoroutineBodyStmtClass:
+  case Stmt::CoreturnStmtClass:
+    K = CXCursor_UnexposedStmt;
+    break;
+
   case Stmt::ArrayTypeTraitExprClass:
   case Stmt::AsTypeExprClass:
   case Stmt::AtomicExprClass:
   case Stmt::BinaryConditionalOperatorClass:
   case Stmt::TypeTraitExprClass:
-  case Stmt::CoroutineBodyStmtClass:
   case Stmt::CoawaitExprClass:
   case Stmt::DependentCoawaitExprClass:
-  case Stmt::CoreturnStmtClass:
   case Stmt::CoyieldExprClass:
   case Stmt::CXXBindTemporaryExprClass:
   case Stmt::CXXDefaultArgExprClass:
