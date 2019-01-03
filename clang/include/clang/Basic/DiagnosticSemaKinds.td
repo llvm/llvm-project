@@ -9076,6 +9076,14 @@ def note_omp_requires_previous_clause : Note <
   "%0 clause previously used here">;
 def err_omp_invalid_scope : Error <
   "'#pragma omp %0' directive must appear only in file scope">;
+def note_omp_invalid_length_on_this_ptr_mapping : Note <
+  "expected length on mapping of 'this' array section expression to be '1'">;
+def note_omp_invalid_lower_bound_on_this_ptr_mapping : Note <
+  "expected lower bound on mapping of 'this' array section expression to be '0' or not specified">;
+def note_omp_invalid_subscript_on_this_ptr_map : Note <
+  "expected 'this' subscript expression on map clause to be 'this[0]'">;
+def err_omp_invalid_map_this_expr : Error <
+  "invalid 'this' expression on 'map' clause">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

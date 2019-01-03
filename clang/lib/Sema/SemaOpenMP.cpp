@@ -22,6 +22,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
@@ -146,6 +147,7 @@ private:
     SourceLocation InnerTeamsRegionLoc;
     /// Reference to the taskgroup task_reduction reference expression.
     Expr *TaskgroupReductionRef = nullptr;
+    llvm::DenseSet<QualType> MappedClassesQualTypes;
     SharingMapTy(OpenMPDirectiveKind DKind, DeclarationNameInfo Name,
                  Scope *CurScope, SourceLocation Loc)
         : Directive(DKind), DirectiveName(Name), CurScope(CurScope),
@@ -660,6 +662,19 @@ public:
     return llvm::make_range(StackElem.DoacrossDepends.end(),
                             StackElem.DoacrossDepends.end());
   }
+
+  // Store types of classes which have been explicitly mapped
+  void addMappedClassesQualTypes(QualType QT) {
+    SharingMapTy &StackElem = Stack.back().first.back();
+    StackElem.MappedClassesQualTypes.insert(QT);
+  }
+
+  // Return set of mapped classes types
+  bool isClassPreviouslyMapped(QualType QT) const {
+    const SharingMapTy &StackElem = Stack.back().first.back();
+    return StackElem.MappedClassesQualTypes.count(QT) != 0;
+  }
+
 };
 bool isParallelOrTaskRegion(OpenMPDirectiveKind DKind) {
   return isOpenMPParallelDirective(DKind) || isOpenMPTaskingDirective(DKind) ||
@@ -2267,7 +2282,7 @@ public:
       return;
     auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl());
     OpenMPDirectiveKind DKind = Stack->getCurrentDirective();
-    if (isa<CXXThisExpr>(E->getBase()->IgnoreParens())) {
+    if (auto *TE = dyn_cast<CXXThisExpr>(E->getBase()->IgnoreParens())) {
       if (!FD)
         return;
       DSAStackTy::DSAVarData DVar = Stack->getTopDSA(FD, /*FromParent=*/false);
@@ -2294,6 +2309,12 @@ public:
         //
         if (FD->isBitField())
           return;
+
+        // Check to see if the member expression is referencing a class that
+        // has already been explicitly mapped
+        if (Stack->isClassPreviouslyMapped(TE->getType()))
+          return;
+
         ImplicitMap.emplace_back(E);
         return;
       }
@@ -12448,6 +12469,19 @@ static const Expr *checkMapClauseExpressionBase(
                                                       E->getType()))
         AllowWholeSizeArraySection = false;
 
+      if (const auto *TE = dyn_cast<CXXThisExpr>(E)) {
+        Expr::EvalResult Result;
+        if (CurE->getIdx()->EvaluateAsInt(Result, SemaRef.getASTContext())) {
+          if (!Result.Val.getInt().isNullValue()) {
+            SemaRef.Diag(CurE->getIdx()->getExprLoc(),
+                         diag::err_omp_invalid_map_this_expr);
+            SemaRef.Diag(CurE->getIdx()->getExprLoc(),
+                         diag::note_omp_invalid_subscript_on_this_ptr_map);
+          }
+        }
+        RelevantExpr = TE;
+      }
+
       // Record the component - we don't have any declaration associated.
       CurComponents.emplace_back(CurE, nullptr);
     } else if (auto *CurE = dyn_cast<OMPArraySectionExpr>(E)) {
@@ -12492,6 +12526,30 @@ static const Expr *checkMapClauseExpressionBase(
             ELoc, diag::err_array_section_does_not_specify_contiguous_storage)
             << CurE->getSourceRange();
         return nullptr;
+      }
+
+      if (const auto *TE = dyn_cast<CXXThisExpr>(E)) {
+        Expr::EvalResult ResultR;
+        Expr::EvalResult ResultL;
+        if (CurE->getLength()->EvaluateAsInt(ResultR,
+                                             SemaRef.getASTContext())) {
+          if (!ResultR.Val.getInt().isOneValue()) {
+            SemaRef.Diag(CurE->getLength()->getExprLoc(),
+                         diag::err_omp_invalid_map_this_expr);
+            SemaRef.Diag(CurE->getLength()->getExprLoc(),
+                         diag::note_omp_invalid_length_on_this_ptr_mapping);
+          }
+        }
+        if (CurE->getLowerBound() && CurE->getLowerBound()->EvaluateAsInt(
+                                        ResultL, SemaRef.getASTContext())) {
+          if (!ResultL.Val.getInt().isNullValue()) {
+            SemaRef.Diag(CurE->getLowerBound()->getExprLoc(),
+                         diag::err_omp_invalid_map_this_expr);
+            SemaRef.Diag(CurE->getLowerBound()->getExprLoc(),
+                         diag::note_omp_invalid_lower_bound_on_this_ptr_mapping);
+          }
+        }
+        RelevantExpr = TE;
       }
 
       // Record the component - we don't have any declaration associated.
@@ -12830,6 +12888,18 @@ checkMappableExpressionList(Sema &SemaRef, DSAStackTy *DSAS,
 
     assert(!CurComponents.empty() &&
            "Invalid mappable expression information.");
+
+    if (const auto *TE = dyn_cast<CXXThisExpr>(BE)) {
+      // Add store "this" pointer to class in DSAStackTy for future checking
+      DSAS->addMappedClassesQualTypes(TE->getType());
+      // Skip restriction checking for variable or field declarations
+      MVLI.ProcessedVarList.push_back(RE);
+      MVLI.VarComponents.resize(MVLI.VarComponents.size() + 1);
+      MVLI.VarComponents.back().append(CurComponents.begin(),
+                                       CurComponents.end());
+      MVLI.VarBaseDeclarations.push_back(nullptr);
+      continue;
+    }
 
     // For the following checks, we rely on the base declaration which is
     // expected to be associated with the last component. The declaration is

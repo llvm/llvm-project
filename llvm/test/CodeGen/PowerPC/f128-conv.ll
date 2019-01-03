@@ -444,10 +444,10 @@ define void @qpConv2dp_03(double* nocapture %res, i32 signext %idx) {
 ; CHECK-LABEL: qpConv2dp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC7@toc@ha
-; CHECK-NEXT:    sldi r4, r4, 3
 ; CHECK-NEXT:    ld r5, .LC7@toc@l(r5)
 ; CHECK-NEXT:    lxvx v2, 0, r5
 ; CHECK-NEXT:    xscvqpdp v2, v2
+; CHECK-NEXT:    sldi r4, r4, 3
 ; CHECK-NEXT:    stxsdx v2, r3, r4
 ; CHECK-NEXT:    blr
 entry:
@@ -517,11 +517,11 @@ define void @qpConv2sp_03(float* nocapture %res, i32 signext %idx) {
 ; CHECK-LABEL: qpConv2sp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC7@toc@ha
-; CHECK-NEXT:    sldi r4, r4, 2
 ; CHECK-NEXT:    ld r5, .LC7@toc@l(r5)
 ; CHECK-NEXT:    lxv v2, 48(r5)
 ; CHECK-NEXT:    xscvqpdpo v2, v2
 ; CHECK-NEXT:    xsrsp f0, v2
+; CHECK-NEXT:    sldi r4, r4, 2
 ; CHECK-NEXT:    stfsx f0, r3, r4
 ; CHECK-NEXT:    blr
 entry:
@@ -609,8 +609,8 @@ define void @dpConv2qp_03(fp128* nocapture %res, i32 signext %idx, double %a) {
 ; CHECK-LABEL: dpConv2qp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscpsgndp v2, f1, f1
-; CHECK-NEXT:    sldi r4, r4, 4
-; CHECK-NEXT:    xscvdpqp v2, v2
+; CHECK-DAG:     sldi r4, r4, 4
+; CHECK-DAG:     xscvdpqp v2, v2
 ; CHECK-NEXT:    stxvx v2, r3, r4
 ; CHECK-NEXT:    blr
 entry:
@@ -689,8 +689,8 @@ define void @spConv2qp_03(fp128* nocapture %res, i32 signext %idx, float %a) {
 ; CHECK-LABEL: spConv2qp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscpsgndp v2, f1, f1
-; CHECK-NEXT:    sldi r4, r4, 4
-; CHECK-NEXT:    xscvdpqp v2, v2
+; CHECK-DAG:     sldi r4, r4, 4
+; CHECK-DAG:     xscvdpqp v2, v2
 ; CHECK-NEXT:    stxvx v2, r3, r4
 ; CHECK-NEXT:    blr
 entry:

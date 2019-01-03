@@ -733,7 +733,11 @@ size_t lldb_private::npdb::GetSizeOfType(PdbTypeSymId id,
     return 0;
   }
 
-  CVType cvt = tpi.getType(id.index);
+  TypeIndex index = id.index;
+  if (IsForwardRefUdt(index, tpi))
+    index = llvm::cantFail(tpi.findFullDeclForForwardRef(index));
+
+  CVType cvt = tpi.getType(index);
   switch (cvt.kind()) {
   case LF_MODIFIER:
     return GetSizeOfType({LookThroughModifierRecord(cvt)}, tpi);

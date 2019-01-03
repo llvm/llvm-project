@@ -253,8 +253,6 @@ def X86umul_flag : SDNode<"X86ISD::UMUL", SDT2ResultBinaryArithWithFlags,
 def X86adc_flag  : SDNode<"X86ISD::ADC",  SDTBinaryArithWithFlagsInOut>;
 def X86sbb_flag  : SDNode<"X86ISD::SBB",  SDTBinaryArithWithFlagsInOut>;
 
-def X86inc_flag  : SDNode<"X86ISD::INC",  SDTUnaryArithWithFlags>;
-def X86dec_flag  : SDNode<"X86ISD::DEC",  SDTUnaryArithWithFlags>;
 def X86or_flag   : SDNode<"X86ISD::OR",   SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
 def X86xor_flag  : SDNode<"X86ISD::XOR",  SDTBinaryArithWithFlags,
@@ -275,13 +273,6 @@ def X86lock_xor  : SDNode<"X86ISD::LXOR",  SDTLockBinaryArithWithFlags,
                           [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
                            SDNPMemOperand]>;
 def X86lock_and  : SDNode<"X86ISD::LAND",  SDTLockBinaryArithWithFlags,
-                          [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
-                           SDNPMemOperand]>;
-
-def X86lock_inc  : SDNode<"X86ISD::LINC",  SDTLockUnaryArithWithFlags,
-                          [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
-                           SDNPMemOperand]>;
-def X86lock_dec  : SDNode<"X86ISD::LDEC",  SDTLockUnaryArithWithFlags,
                           [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
                            SDNPMemOperand]>;
 

@@ -44,7 +44,7 @@ bool isSpelledInSourceCode(const Decl *D) {
 
 bool isImplementationDetail(const Decl *D) { return !isSpelledInSourceCode(D); }
 
-SourceLocation findNameLoc(const clang::Decl* D) {
+SourceLocation findNameLoc(const clang::Decl *D) {
   const auto &SM = D->getASTContext().getSourceManager();
   if (!isSpelledInSourceCode(D))
     // Use the expansion location as spelling location is not interesting.

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import sys
 import random
 
@@ -173,7 +175,7 @@ class KScriptGenerator:
 
 def generateKScript(filename, numFuncs, elementsPerFunc, funcsBetweenExec, callWeighting, timingScript):
     """ Generate a random Kaleidoscope script based on the given parameters """
-    print "Generating " + filename
+    print("Generating " + filename)
     print("  %d functions, %d elements per function, %d functions between execution" %
           (numFuncs, elementsPerFunc, funcsBetweenExec))
     print("  Call weighting = %f" % callWeighting)
@@ -200,7 +202,7 @@ def generateKScript(filename, numFuncs, elementsPerFunc, funcsBetweenExec, callW
     script.writeEmptyLine()
     script.writeFinalFunctionCounts()
     funcsCalled = len(script.calledFunctions)
-    print "  Called %d of %d functions, %d total" % (funcsCalled, numFuncs, script.totalCallsExecuted)
+    print("  Called %d of %d functions, %d total" % (funcsCalled, numFuncs, script.totalCallsExecuted))
     timingScript.writeTimingCall(filename, numFuncs, funcsCalled, script.totalCallsExecuted)
 
 # Execution begins here
@@ -216,4 +218,4 @@ dataSets = [(5000, 3,  50, 0.50), (5000, 10, 100, 0.10), (5000, 10, 5, 0.10), (5
 for (numFuncs, elementsPerFunc, funcsBetweenExec, callWeighting) in dataSets:
     filename = "test-%d-%d-%d-%d.k" % (numFuncs, elementsPerFunc, funcsBetweenExec, int(callWeighting * 100))
     generateKScript(filename, numFuncs, elementsPerFunc, funcsBetweenExec, callWeighting, timingScript)
-print "All done!"
+print("All done!")

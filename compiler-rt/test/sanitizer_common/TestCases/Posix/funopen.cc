@@ -10,6 +10,8 @@
 // CHECK-NEXT: SEEK CALLED; off=100, whence=0
 // CHECK-NEXT: READ CALLED; len={{[0-9]*}}
 // CHECK-NEXT: READ: test
+//
+// UNSUPPORTED: linux, darwin, solaris
 
 #include <assert.h>
 #include <stdio.h>

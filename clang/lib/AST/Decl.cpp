@@ -3231,20 +3231,6 @@ SourceRange FunctionDecl::getExceptionSpecSourceRange() const {
   return FTL.getExceptionSpecRange();
 }
 
-const Attr *FunctionDecl::getUnusedResultAttr() const {
-  QualType RetType = getReturnType();
-  if (const auto *Ret = RetType->getAsRecordDecl()) {
-    if (const auto *R = Ret->getAttr<WarnUnusedResultAttr>())
-      return R;
-  } else if (const auto *ET = RetType->getAs<EnumType>()) {
-    if (const EnumDecl *ED = ET->getDecl()) {
-      if (const auto *R = ED->getAttr<WarnUnusedResultAttr>())
-        return R;
-    }
-  }
-  return getAttr<WarnUnusedResultAttr>();
-}
-
 /// For an inline function definition in C, or for a gnu_inline function
 /// in C++, determine whether the definition will be externally visible.
 ///

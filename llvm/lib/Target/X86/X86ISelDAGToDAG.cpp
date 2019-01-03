@@ -2327,6 +2327,22 @@ bool X86DAGToDAGISel::hasNoSignFlagUses(SDValue Flags) const {
   return true;
 }
 
+static bool mayUseCarryFlag(X86::CondCode CC) {
+  switch (CC) {
+  // Comparisons which don't examine the CF flag.
+  case X86::COND_O: case X86::COND_NO:
+  case X86::COND_E: case X86::COND_NE:
+  case X86::COND_S: case X86::COND_NS:
+  case X86::COND_P: case X86::COND_NP:
+  case X86::COND_L: case X86::COND_GE:
+  case X86::COND_G: case X86::COND_LE:
+    return false;
+  // Anything else: assume conservatively.
+  default:
+    return true;
+  }
+}
+
 /// Test whether the given node which sets flags has any uses which require the
 /// CF flag to be accurate.
  bool X86DAGToDAGISel::hasNoCarryFlagUses(SDValue Flags) const {
@@ -2336,36 +2352,49 @@ bool X86DAGToDAGISel::hasNoSignFlagUses(SDValue Flags) const {
     // Only check things that use the flags.
     if (UI.getUse().getResNo() != Flags.getResNo())
       continue;
-    // Only examine CopyToReg uses that copy to EFLAGS.
-    if (UI->getOpcode() != ISD::CopyToReg ||
-        cast<RegisterSDNode>(UI->getOperand(1))->getReg() != X86::EFLAGS)
-      return false;
-    // Examine each user of the CopyToReg use.
-    for (SDNode::use_iterator FlagUI = UI->use_begin(), FlagUE = UI->use_end();
-         FlagUI != FlagUE; ++FlagUI) {
-      // Only examine the Flag result.
-      if (FlagUI.getUse().getResNo() != 1)
-        continue;
-      // Anything unusual: assume conservatively.
-      if (!FlagUI->isMachineOpcode())
-        return false;
-      // Examine the condition code of the user.
-      X86::CondCode CC = getCondFromOpc(FlagUI->getMachineOpcode());
 
-      switch (CC) {
-      // Comparisons which don't examine the CF flag.
-      case X86::COND_O: case X86::COND_NO:
-      case X86::COND_E: case X86::COND_NE:
-      case X86::COND_S: case X86::COND_NS:
-      case X86::COND_P: case X86::COND_NP:
-      case X86::COND_L: case X86::COND_GE:
-      case X86::COND_G: case X86::COND_LE:
-        continue;
-      // Anything else: assume conservatively.
-      default:
+    unsigned UIOpc = UI->getOpcode();
+
+    if (UIOpc == ISD::CopyToReg) {
+      // Only examine CopyToReg uses that copy to EFLAGS.
+      if (cast<RegisterSDNode>(UI->getOperand(1))->getReg() != X86::EFLAGS)
         return false;
+      // Examine each user of the CopyToReg use.
+      for (SDNode::use_iterator FlagUI = UI->use_begin(), FlagUE = UI->use_end();
+           FlagUI != FlagUE; ++FlagUI) {
+        // Only examine the Flag result.
+        if (FlagUI.getUse().getResNo() != 1)
+          continue;
+        // Anything unusual: assume conservatively.
+        if (!FlagUI->isMachineOpcode())
+          return false;
+        // Examine the condition code of the user.
+        X86::CondCode CC = getCondFromOpc(FlagUI->getMachineOpcode());
+
+        if (mayUseCarryFlag(CC))
+          return false;
       }
+
+      // This CopyToReg is ok. Move on to the next user.
+      continue;
     }
+
+    // This might be an unselected node. So look for the pre-isel opcodes that
+    // use flags.
+    unsigned CCOpNo;
+    switch (UIOpc) {
+    default:
+      // Something unusual. Be conservative.
+      return false;
+    case X86ISD::SETCC:       CCOpNo = 0; break;
+    case X86ISD::SETCC_CARRY: CCOpNo = 0; break;
+    case X86ISD::CMOV:        CCOpNo = 2; break;
+    case X86ISD::BRCOND:      CCOpNo = 2; break;
+    }
+
+    X86::CondCode CC = (X86::CondCode)UI->getConstantOperandVal(CCOpNo);
+    if (mayUseCarryFlag(CC))
+      return false;
   }
   return true;
 }
@@ -2521,8 +2550,6 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
   switch (Opc) {
   default:
     return false;
-  case X86ISD::INC:
-  case X86ISD::DEC:
   case X86ISD::SUB:
   case X86ISD::SBB:
     break;
@@ -2573,20 +2600,27 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
 
   MachineSDNode *Result;
   switch (Opc) {
-  case X86ISD::INC:
-  case X86ISD::DEC: {
-    unsigned NewOpc =
-        Opc == X86ISD::INC
-            ? SelectOpcode(X86::INC64m, X86::INC32m, X86::INC16m, X86::INC8m)
-            : SelectOpcode(X86::DEC64m, X86::DEC32m, X86::DEC16m, X86::DEC8m);
-    const SDValue Ops[] = {Base, Scale, Index, Disp, Segment, InputChain};
-    Result =
-        CurDAG->getMachineNode(NewOpc, SDLoc(Node), MVT::i32, MVT::Other, Ops);
-    break;
-  }
   case X86ISD::ADD:
-  case X86ISD::ADC:
   case X86ISD::SUB:
+    // Try to match inc/dec.
+    if (!Subtarget->slowIncDec() ||
+        CurDAG->getMachineFunction().getFunction().optForSize()) {
+      bool IsOne = isOneConstant(StoredVal.getOperand(1));
+      bool IsNegOne = isAllOnesConstant(StoredVal.getOperand(1));
+      // ADD/SUB with 1/-1 and carry flag isn't used can use inc/dec.
+      if ((IsOne || IsNegOne) && hasNoCarryFlagUses(StoredVal.getValue(1))) {
+        unsigned NewOpc = 
+          ((Opc == X86ISD::ADD) == IsOne)
+              ? SelectOpcode(X86::INC64m, X86::INC32m, X86::INC16m, X86::INC8m)
+              : SelectOpcode(X86::DEC64m, X86::DEC32m, X86::DEC16m, X86::DEC8m);
+        const SDValue Ops[] = {Base, Scale, Index, Disp, Segment, InputChain};
+        Result = CurDAG->getMachineNode(NewOpc, SDLoc(Node), MVT::i32,
+                                        MVT::Other, Ops);
+        break;
+      }
+    }
+    LLVM_FALLTHROUGH;
+  case X86ISD::ADC:
   case X86ISD::SBB:
   case X86ISD::AND:
   case X86ISD::OR:
@@ -3420,31 +3454,73 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
 
-    unsigned LoReg, Opc;
+    unsigned LoReg, ROpc, MOpc;
     switch (NVT.SimpleTy) {
     default: llvm_unreachable("Unsupported VT!");
     case MVT::i8:
       LoReg = X86::AL;
-      Opc = Opcode == X86ISD::SMUL ? X86::IMUL8r : X86::MUL8r;
+      ROpc = Opcode == X86ISD::SMUL ? X86::IMUL8r : X86::MUL8r;
+      MOpc = Opcode == X86ISD::SMUL ? X86::IMUL8m : X86::MUL8m;
       break;
-    case MVT::i16: LoReg = X86::AX;  Opc = X86::MUL16r; break;
-    case MVT::i32: LoReg = X86::EAX; Opc = X86::MUL32r; break;
-    case MVT::i64: LoReg = X86::RAX; Opc = X86::MUL64r; break;
+    case MVT::i16:
+      LoReg = X86::AX;
+      ROpc = X86::MUL16r;
+      MOpc = X86::MUL16m;
+      break;
+    case MVT::i32:
+      LoReg = X86::EAX;
+      ROpc = X86::MUL32r;
+      MOpc = X86::MUL32m;
+      break;
+    case MVT::i64:
+      LoReg = X86::RAX;
+      ROpc = X86::MUL64r;
+      MOpc = X86::MUL64m;
+      break;
+    }
+
+    SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
+    bool FoldedLoad = tryFoldLoad(Node, N1, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4);
+    // Multiply is commmutative.
+    if (!FoldedLoad) {
+      FoldedLoad = tryFoldLoad(Node, N0, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4);
+      if (FoldedLoad)
+        std::swap(N0, N1);
     }
 
     SDValue InFlag = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, LoReg,
                                           N0, SDValue()).getValue(1);
 
-    // i16/i32/i64 use an instruction that produces a low and high result even
-    // though only the low result is used.
-    SDVTList VTs;
-    if (NVT == MVT::i8)
-      VTs = CurDAG->getVTList(NVT, MVT::i32);
-    else
-      VTs = CurDAG->getVTList(NVT, NVT, MVT::i32);
+    MachineSDNode *CNode;
+    if (FoldedLoad) {
+      // i16/i32/i64 use an instruction that produces a low and high result even
+      // though only the low result is used.
+      SDVTList VTs;
+      if (NVT == MVT::i8)
+        VTs = CurDAG->getVTList(NVT, MVT::i32, MVT::Other);
+      else
+        VTs = CurDAG->getVTList(NVT, NVT, MVT::i32, MVT::Other);
 
-    SDValue Ops[] = {N1, InFlag};
-    SDNode *CNode = CurDAG->getMachineNode(Opc, dl, VTs, Ops);
+      SDValue Ops[] = { Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, N1.getOperand(0),
+                        InFlag };
+      CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
+
+      // Update the chain.
+      ReplaceUses(N1.getValue(1), SDValue(CNode, NVT == MVT::i8 ? 2 : 3));
+      // Record the mem-refs
+      CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(N1)->getMemOperand()});
+    } else {
+      // i16/i32/i64 use an instruction that produces a low and high result even
+      // though only the low result is used.
+      SDVTList VTs;
+      if (NVT == MVT::i8)
+        VTs = CurDAG->getVTList(NVT, MVT::i32);
+      else
+        VTs = CurDAG->getVTList(NVT, NVT, MVT::i32);
+
+      CNode = CurDAG->getMachineNode(ROpc, dl, VTs, {N1, InFlag});
+    }
+
     ReplaceUses(SDValue(Node, 0), SDValue(CNode, 0));
     ReplaceUses(SDValue(Node, 1), SDValue(CNode, NVT == MVT::i8 ? 1 : 2));
     CurDAG->RemoveDeadNode(Node);

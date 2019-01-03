@@ -301,6 +301,18 @@ public:
     return Optional<wasm::ValType>();
   }
 
+  WebAssembly::ExprType parseBlockType(StringRef ID) {
+    return StringSwitch<WebAssembly::ExprType>(ID)
+        .Case("i32", WebAssembly::ExprType::I32)
+        .Case("i64", WebAssembly::ExprType::I64)
+        .Case("f32", WebAssembly::ExprType::F32)
+        .Case("f64", WebAssembly::ExprType::F64)
+        .Case("v128", WebAssembly::ExprType::V128)
+        .Case("except_ref", WebAssembly::ExprType::ExceptRef)
+        .Case("void", WebAssembly::ExprType::Void)
+        .Default(WebAssembly::ExprType::Invalid);
+  }
+
   bool parseRegTypeList(SmallVectorImpl<wasm::ValType> &Types) {
     while (Lexer.is(AsmToken::Identifier)) {
       auto Type = parseType(Lexer.getTok().getString());
@@ -351,6 +363,13 @@ public:
     return false;
   }
 
+  void addBlockTypeOperand(OperandVector &Operands, SMLoc NameLoc,
+                           WebAssembly::ExprType BT) {
+    Operands.push_back(make_unique<WebAssemblyOperand>(
+        WebAssemblyOperand::Integer, NameLoc, NameLoc,
+        WebAssemblyOperand::IntOp{static_cast<int64_t>(BT)}));
+  }
+
   bool ParseInstruction(ParseInstructionInfo & /*Info*/, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override {
     // Note: Name does NOT point into the sourcecode, but to a local, so
@@ -387,14 +406,19 @@ public:
 
     // If this instruction is part of a control flow structure, ensure
     // proper nesting.
+    bool ExpectBlockType = false;
     if (BaseName == "block") {
       push(Block);
+      ExpectBlockType = true;
     } else if (BaseName == "loop") {
       push(Loop);
+      ExpectBlockType = true;
     } else if (BaseName == "try") {
       push(Try);
+      ExpectBlockType = true;
     } else if (BaseName == "if") {
       push(If);
+      ExpectBlockType = true;
     } else if (BaseName == "else") {
       if (pop(BaseName, If))
         return true;
@@ -429,13 +453,23 @@ public:
       switch (Tok.getKind()) {
       case AsmToken::Identifier: {
         auto &Id = Lexer.getTok();
-        const MCExpr *Val;
-        SMLoc End;
-        if (Parser.parsePrimaryExpr(Val, End))
-          return error("Cannot parse symbol: ", Lexer.getTok());
-        Operands.push_back(make_unique<WebAssemblyOperand>(
-            WebAssemblyOperand::Symbol, Id.getLoc(), Id.getEndLoc(),
-            WebAssemblyOperand::SymOp{Val}));
+        if (ExpectBlockType) {
+          // Assume this identifier is a block_type.
+          auto BT = parseBlockType(Id.getString());
+          if (BT == WebAssembly::ExprType::Invalid)
+            return error("Unknown block type: ", Id);
+          addBlockTypeOperand(Operands, NameLoc, BT);
+          Parser.Lex();
+        } else {
+          // Assume this identifier is a label.
+          const MCExpr *Val;
+          SMLoc End;
+          if (Parser.parsePrimaryExpr(Val, End))
+            return error("Cannot parse symbol: ", Lexer.getTok());
+          Operands.push_back(make_unique<WebAssemblyOperand>(
+              WebAssemblyOperand::Symbol, Id.getLoc(), Id.getEndLoc(),
+              WebAssemblyOperand::SymOp{Val}));
+        }
         break;
       }
       case AsmToken::Minus:
@@ -482,18 +516,11 @@ public:
           return true;
       }
     }
-    Parser.Lex();
-
-    // Block instructions require a signature index, but these are missing in
-    // assembly, so we add a dummy one explicitly (since we have no control
-    // over signature tables here, we assume these will be regenerated when
-    // the wasm module is generated).
-    if (BaseName == "block" || BaseName == "loop" || BaseName == "try" ||
-        BaseName == "if") {
-      Operands.push_back(make_unique<WebAssemblyOperand>(
-          WebAssemblyOperand::Integer, NameLoc, NameLoc,
-          WebAssemblyOperand::IntOp{-1}));
+    if (ExpectBlockType && Operands.size() == 1) {
+      // Support blocks with no operands as default to void.
+      addBlockTypeOperand(Operands, NameLoc, WebAssembly::ExprType::Void);
     }
+    Parser.Lex();
     return false;
   }
 

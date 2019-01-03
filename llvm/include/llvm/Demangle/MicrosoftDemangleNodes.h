@@ -53,6 +53,7 @@ enum class ReferenceKind : uint8_t { None, LValueRef, RValueRef };
 enum OutputFlags {
   OF_Default = 0,
   OF_NoCallingConvention = 1,
+  OF_NoTagSpecifier = 2,
 };
 
 // Types
@@ -235,7 +236,7 @@ struct Node {
 
   virtual void output(OutputStream &OS, OutputFlags Flags) const = 0;
 
-  std::string toString() const;
+  std::string toString(OutputFlags Flags = OF_Default) const;
 
 private:
   NodeKind Kind;

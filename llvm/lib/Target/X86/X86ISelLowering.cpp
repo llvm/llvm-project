@@ -18644,44 +18644,6 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
   // which may be the result of a CAST.  We use the variable 'Op', which is the
   // non-casted variable when we check for possible users.
   switch (ArithOp.getOpcode()) {
-  case ISD::ADD:
-    // We only want to rewrite this as a target-specific node with attached
-    // flags if there is a reasonable chance of either using that to do custom
-    // instructions selection that can fold some of the memory operands, or if
-    // only the flags are used. If there are other uses, leave the node alone
-    // and emit a test instruction.
-    for (SDNode::use_iterator UI = Op.getNode()->use_begin(),
-         UE = Op.getNode()->use_end(); UI != UE; ++UI)
-      if (UI->getOpcode() != ISD::CopyToReg &&
-          UI->getOpcode() != ISD::SETCC &&
-          UI->getOpcode() != ISD::STORE)
-        goto default_case;
-
-    if (auto *C = dyn_cast<ConstantSDNode>(ArithOp.getOperand(1))) {
-      // An add of one will be selected as an INC.
-      if (C->isOne() &&
-          (!Subtarget.slowIncDec() ||
-           DAG.getMachineFunction().getFunction().optForSize())) {
-        Opcode = X86ISD::INC;
-        NumOperands = 1;
-        break;
-      }
-
-      // An add of negative one (subtract of one) will be selected as a DEC.
-      if (C->isAllOnesValue() &&
-          (!Subtarget.slowIncDec() ||
-           DAG.getMachineFunction().getFunction().optForSize())) {
-        Opcode = X86ISD::DEC;
-        NumOperands = 1;
-        break;
-      }
-    }
-
-    // Otherwise use a regular EFLAGS-setting add.
-    Opcode = X86ISD::ADD;
-    NumOperands = 2;
-    break;
-
   case ISD::AND:
     // If the primary 'and' result isn't used, don't bother using X86ISD::AND,
     // because a TEST instruction will be better.
@@ -18689,11 +18651,13 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
       break;
 
     LLVM_FALLTHROUGH;
+  case ISD::ADD:
   case ISD::SUB:
   case ISD::OR:
   case ISD::XOR:
-    // Similar to ISD::ADD above, check if the uses will preclude useful
-    // lowering of the target-specific node.
+    // Transform to an x86-specific ALU node with flags if there is a chance of
+    // using an RMW op or only the flags are used. Otherwise, leave
+    // the node alone and emit a 'test' instruction.
     for (SDNode::use_iterator UI = Op.getNode()->use_begin(),
            UE = Op.getNode()->use_end(); UI != UE; ++UI)
       if (UI->getOpcode() != ISD::CopyToReg &&
@@ -18704,6 +18668,7 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
     // Otherwise use a regular EFLAGS-setting instruction.
     switch (ArithOp.getOpcode()) {
     default: llvm_unreachable("unexpected operator!");
+    case ISD::ADD: Opcode = X86ISD::ADD; break;
     case ISD::SUB: Opcode = X86ISD::SUB; break;
     case ISD::XOR: Opcode = X86ISD::XOR; break;
     case ISD::AND: Opcode = X86ISD::AND; break;
@@ -18714,8 +18679,6 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
     break;
   case X86ISD::ADD:
   case X86ISD::SUB:
-  case X86ISD::INC:
-  case X86ISD::DEC:
   case X86ISD::OR:
   case X86ISD::XOR:
   case X86ISD::AND:
@@ -19603,13 +19566,6 @@ getX86XALUOOp(X86::CondCode &Cond, SDValue Op, SelectionDAG &DAG) {
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Unknown ovf instruction!");
   case ISD::SADDO:
-    // A subtract of one will be selected as a INC. Note that INC doesn't
-    // set CF, so we can't do this for UADDO.
-    if (isOneConstant(RHS)) {
-      BaseOp = X86ISD::INC;
-      Cond = X86::COND_O;
-      break;
-    }
     BaseOp = X86ISD::ADD;
     Cond = X86::COND_O;
     break;
@@ -19618,13 +19574,6 @@ getX86XALUOOp(X86::CondCode &Cond, SDValue Op, SelectionDAG &DAG) {
     Cond = X86::COND_B;
     break;
   case ISD::SSUBO:
-    // A subtract of one will be selected as a DEC. Note that DEC doesn't
-    // set CF, so we can't do this for USUBO.
-    if (isOneConstant(RHS)) {
-      BaseOp = X86ISD::DEC;
-      Cond = X86::COND_O;
-      break;
-    }
     BaseOp = X86ISD::SUB;
     Cond = X86::COND_O;
     break;
@@ -19675,8 +19624,7 @@ static bool isX86LogicalCmp(SDValue Op) {
   if (Op.getResNo() == 1 &&
       (Opc == X86ISD::ADD || Opc == X86ISD::SUB || Opc == X86ISD::ADC ||
        Opc == X86ISD::SBB || Opc == X86ISD::SMUL || Opc == X86ISD::UMUL ||
-       Opc == X86ISD::INC || Opc == X86ISD::DEC || Opc == X86ISD::OR ||
-       Opc == X86ISD::XOR || Opc == X86ISD::AND))
+       Opc == X86ISD::OR || Opc == X86ISD::XOR || Opc == X86ISD::AND))
     return true;
 
   return false;
@@ -25511,8 +25459,7 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
 }
 
 static SDValue lowerAtomicArithWithLOCK(SDValue N, SelectionDAG &DAG,
-                                        const X86Subtarget &Subtarget,
-                                        bool AllowIncDec = true) {
+                                        const X86Subtarget &Subtarget) {
   unsigned NewOpc = 0;
   switch (N->getOpcode()) {
   case ISD::ATOMIC_LOAD_ADD:
@@ -25535,25 +25482,6 @@ static SDValue lowerAtomicArithWithLOCK(SDValue N, SelectionDAG &DAG,
   }
 
   MachineMemOperand *MMO = cast<MemSDNode>(N)->getMemOperand();
-
-  if (auto *C = dyn_cast<ConstantSDNode>(N->getOperand(2))) {
-    // Convert to inc/dec if they aren't slow or we are optimizing for size.
-    if (AllowIncDec && (!Subtarget.slowIncDec() ||
-                        DAG.getMachineFunction().getFunction().optForSize())) {
-      if ((NewOpc == X86ISD::LADD && C->isOne()) ||
-          (NewOpc == X86ISD::LSUB && C->isAllOnesValue()))
-        return DAG.getMemIntrinsicNode(X86ISD::LINC, SDLoc(N),
-                                       DAG.getVTList(MVT::i32, MVT::Other),
-                                       {N->getOperand(0), N->getOperand(1)},
-                                       /*MemVT=*/N->getSimpleValueType(0), MMO);
-      if ((NewOpc == X86ISD::LSUB && C->isOne()) ||
-          (NewOpc == X86ISD::LADD && C->isAllOnesValue()))
-        return DAG.getMemIntrinsicNode(X86ISD::LDEC, SDLoc(N),
-                                       DAG.getVTList(MVT::i32, MVT::Other),
-                                       {N->getOperand(0), N->getOperand(1)},
-                                       /*MemVT=*/N->getSimpleValueType(0), MMO);
-    }
-  }
 
   return DAG.getMemIntrinsicNode(
       NewOpc, SDLoc(N), DAG.getVTList(MVT::i32, MVT::Other),
@@ -27034,8 +26962,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::LOR:                return "X86ISD::LOR";
   case X86ISD::LXOR:               return "X86ISD::LXOR";
   case X86ISD::LAND:               return "X86ISD::LAND";
-  case X86ISD::LINC:               return "X86ISD::LINC";
-  case X86ISD::LDEC:               return "X86ISD::LDEC";
   case X86ISD::VZEXT_MOVL:         return "X86ISD::VZEXT_MOVL";
   case X86ISD::VZEXT_LOAD:         return "X86ISD::VZEXT_LOAD";
   case X86ISD::VTRUNC:             return "X86ISD::VTRUNC";
@@ -27073,8 +26999,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::SBB:                return "X86ISD::SBB";
   case X86ISD::SMUL:               return "X86ISD::SMUL";
   case X86ISD::UMUL:               return "X86ISD::UMUL";
-  case X86ISD::INC:                return "X86ISD::INC";
-  case X86ISD::DEC:                return "X86ISD::DEC";
   case X86ISD::OR:                 return "X86ISD::OR";
   case X86ISD::XOR:                return "X86ISD::XOR";
   case X86ISD::AND:                return "X86ISD::AND";
@@ -34297,16 +34221,7 @@ static SDValue combineSetCCAtomicArith(SDValue Cmp, X86::CondCode &CC,
         /*Chain*/ CmpLHS.getOperand(0), /*LHS*/ CmpLHS.getOperand(1),
         /*RHS*/ DAG.getConstant(-Addend, SDLoc(CmpRHS), CmpRHS.getValueType()),
         AN->getMemOperand());
-    // If the comparision uses the CF flag we can't use INC/DEC instructions.
-    bool NeedCF = false;
-    switch (CC) {
-    default: break;
-    case X86::COND_A: case X86::COND_AE:
-    case X86::COND_B: case X86::COND_BE:
-      NeedCF = true;
-      break;
-    }
-    auto LockOp = lowerAtomicArithWithLOCK(AtomicSub, DAG, Subtarget, !NeedCF);
+    auto LockOp = lowerAtomicArithWithLOCK(AtomicSub, DAG, Subtarget);
     DAG.ReplaceAllUsesOfValueWith(CmpLHS.getValue(0),
                                   DAG.getUNDEF(CmpLHS.getValueType()));
     DAG.ReplaceAllUsesOfValueWith(CmpLHS.getValue(1), LockOp.getValue(1));

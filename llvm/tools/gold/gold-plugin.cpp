@@ -128,6 +128,7 @@ namespace options {
     OT_NORMAL,
     OT_DISABLE,
     OT_BC_ONLY,
+    OT_ASM_ONLY,
     OT_SAVE_TEMPS
   };
   static OutputType TheOutputType = OT_NORMAL;
@@ -229,6 +230,8 @@ namespace options {
       TheOutputType = OT_SAVE_TEMPS;
     } else if (opt == "disable-output") {
       TheOutputType = OT_DISABLE;
+    } else if (opt == "emit-asm") {
+      TheOutputType = OT_ASM_ONLY;
     } else if (opt == "thinlto") {
       thinlto = true;
     } else if (opt == "thinlto-index-only") {
@@ -882,6 +885,9 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
     check(Conf.addSaveTemps(output_name + ".",
                             /* UseInputModulePath */ true));
     break;
+  case options::OT_ASM_ONLY:
+    Conf.CGFileType = TargetMachine::CGFT_AssemblyFile;
+    break;
   }
 
   if (!options::sample_profile.empty())
@@ -1009,6 +1015,8 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
     Filename = options::obj_path;
   else if (options::TheOutputType == options::OT_SAVE_TEMPS)
     Filename = output_name + ".o";
+  else if (options::TheOutputType == options::OT_ASM_ONLY)
+    Filename = output_name;
   bool SaveTemps = !Filename.empty();
 
   size_t MaxTasks = Lto->getMaxTasks();
@@ -1057,7 +1065,8 @@ static ld_plugin_status allSymbolsReadHook() {
   std::vector<std::pair<SmallString<128>, bool>> Files = runLTO();
 
   if (options::TheOutputType == options::OT_DISABLE ||
-      options::TheOutputType == options::OT_BC_ONLY)
+      options::TheOutputType == options::OT_BC_ONLY ||
+      options::TheOutputType == options::OT_ASM_ONLY)
     return LDPS_OK;
 
   if (options::thinlto_index_only) {
@@ -1082,6 +1091,7 @@ static ld_plugin_status all_symbols_read_hook(void) {
   llvm_shutdown();
 
   if (options::TheOutputType == options::OT_BC_ONLY ||
+      options::TheOutputType == options::OT_ASM_ONLY ||
       options::TheOutputType == options::OT_DISABLE) {
     if (options::TheOutputType == options::OT_DISABLE) {
       // Remove the output file here since ld.bfd creates the output file

@@ -6,6 +6,7 @@ if 'CLANG_LIBRARY_PATH' in os.environ:
 from contextlib import contextmanager
 import gc
 import os
+import sys
 import tempfile
 import unittest
 
@@ -93,10 +94,10 @@ int SOME_DEFINE;
         self.assertEqual(spellings[-1], 'y')
 
     def test_unsaved_files_2(self):
-        try:
-            from StringIO import StringIO
-        except:
+        if sys.version_info.major >= 3:
             from io import StringIO
+        else:
+            from io import BytesIO as StringIO
         tu = TranslationUnit.from_source('fake.c', unsaved_files = [
                 ('fake.c', StringIO('int x;'))])
         spellings = [c.spelling for c in tu.cursor.get_children()]

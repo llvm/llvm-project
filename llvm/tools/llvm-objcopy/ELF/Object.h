@@ -71,7 +71,7 @@ enum ElfType { ELFT_ELF32LE, ELFT_ELF64LE, ELFT_ELF32BE, ELFT_ELF64BE };
 
 class SectionVisitor {
 public:
-  virtual ~SectionVisitor();
+  virtual ~SectionVisitor() = default;
 
   virtual void visit(const Section &Sec) = 0;
   virtual void visit(const OwnedDataSection &Sec) = 0;
@@ -84,6 +84,23 @@ public:
   virtual void visit(const SectionIndexSection &Sec) = 0;
   virtual void visit(const CompressedSection &Sec) = 0;
   virtual void visit(const DecompressedSection &Sec) = 0;
+};
+
+class MutableSectionVisitor {
+public:
+  virtual ~MutableSectionVisitor() = default;
+
+  virtual void visit(Section &Sec) = 0;
+  virtual void visit(OwnedDataSection &Sec) = 0;
+  virtual void visit(StringTableSection &Sec) = 0;
+  virtual void visit(SymbolTableSection &Sec) = 0;
+  virtual void visit(RelocationSection &Sec) = 0;
+  virtual void visit(DynamicRelocationSection &Sec) = 0;
+  virtual void visit(GnuDebugLinkSection &Sec) = 0;
+  virtual void visit(GroupSection &Sec) = 0;
+  virtual void visit(SectionIndexSection &Sec) = 0;
+  virtual void visit(CompressedSection &Sec) = 0;
+  virtual void visit(DecompressedSection &Sec) = 0;
 };
 
 class SectionWriter : public SectionVisitor {
@@ -128,9 +145,30 @@ public:
   explicit ELFSectionWriter(Buffer &Buf) : SectionWriter(Buf) {}
 };
 
+template <class ELFT> class ELFSectionSizer : public MutableSectionVisitor {
+private:
+  using Elf_Rel = typename ELFT::Rel;
+  using Elf_Rela = typename ELFT::Rela;
+  using Elf_Sym = typename ELFT::Sym;
+
+public:
+  void visit(Section &Sec) override;
+  void visit(OwnedDataSection &Sec) override;
+  void visit(StringTableSection &Sec) override;
+  void visit(DynamicRelocationSection &Sec) override;
+  void visit(SymbolTableSection &Sec) override;
+  void visit(RelocationSection &Sec) override;
+  void visit(GnuDebugLinkSection &Sec) override;
+  void visit(GroupSection &Sec) override;
+  void visit(SectionIndexSection &Sec) override;
+  void visit(CompressedSection &Sec) override;
+  void visit(DecompressedSection &Sec) override;
+};
+
 #define MAKE_SEC_WRITER_FRIEND                                                 \
   friend class SectionWriter;                                                  \
-  template <class ELFT> friend class ELFSectionWriter;
+  template <class ELFT> friend class ELFSectionWriter;                         \
+  template <class ELFT> friend class ELFSectionSizer;
 
 class BinarySectionWriter : public SectionWriter {
 public:
@@ -237,6 +275,7 @@ public:
   virtual void removeSectionReferences(const SectionBase *Sec);
   virtual void removeSymbols(function_ref<bool(const Symbol &)> ToRemove);
   virtual void accept(SectionVisitor &Visitor) const = 0;
+  virtual void accept(MutableSectionVisitor &Visitor) = 0;
   virtual void markSymbols();
 };
 
@@ -293,6 +332,7 @@ public:
   explicit Section(ArrayRef<uint8_t> Data) : Contents(Data) {}
 
   void accept(SectionVisitor &Visitor) const override;
+  void accept(MutableSectionVisitor &Visitor) override;
   void removeSectionReferences(const SectionBase *Sec) override;
   void initialize(SectionTableRef SecTable) override;
   void finalize() override;
@@ -313,6 +353,7 @@ public:
   }
 
   void accept(SectionVisitor &Sec) const override;
+  void accept(MutableSectionVisitor &Visitor) override;
 };
 
 class CompressedSection : public SectionBase {
@@ -333,6 +374,7 @@ public:
   uint64_t getDecompressedAlign() const { return DecompressedAlign; }
 
   void accept(SectionVisitor &Visitor) const override;
+  void accept(MutableSectionVisitor &Visitor) override;
 
   static bool classof(const SectionBase *S) {
     return (S->Flags & ELF::SHF_COMPRESSED) ||
@@ -354,6 +396,7 @@ public:
   }
 
   void accept(SectionVisitor &Visitor) const override;
+  void accept(MutableSectionVisitor &Visitor) override;
 };
 
 // There are two types of string tables that can exist, dynamic and not dynamic.
@@ -378,6 +421,7 @@ public:
   uint32_t findIndex(StringRef Name) const;
   void finalize() override;
   void accept(SectionVisitor &Visitor) const override;
+  void accept(MutableSectionVisitor &Visitor) override;
 
   static bool classof(const SectionBase *S) {
     if (S->Flags & ELF::SHF_ALLOC)
@@ -435,6 +479,7 @@ public:
   void initialize(SectionTableRef SecTable) override;
   void finalize() override;
   void accept(SectionVisitor &Visitor) const override;
+  void accept(MutableSectionVisitor &Visitor) override;
 
   SectionIndexSection() {
     Name = ".symtab_shndx";
@@ -479,6 +524,7 @@ public:
   void initialize(SectionTableRef SecTable) override;
   void finalize() override;
   void accept(SectionVisitor &Visitor) const override;
+  void accept(MutableSectionVisitor &Visitor) override;
   void removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
 
   static bool classof(const SectionBase *S) {
@@ -540,6 +586,7 @@ class RelocationSection
 public:
   void addRelocation(Relocation Rel) { Relocations.push_back(Rel); }
   void accept(SectionVisitor &Visitor) const override;
+  void accept(MutableSectionVisitor &Visitor) override;
   void removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
   void markSymbols() override;
 
@@ -573,6 +620,7 @@ public:
   void addMember(SectionBase *Sec) { GroupMembers.push_back(Sec); }
 
   void accept(SectionVisitor &) const override;
+  void accept(MutableSectionVisitor &Visitor) override;
   void finalize() override;
   void removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
   void markSymbols() override;
@@ -611,6 +659,7 @@ public:
   explicit DynamicRelocationSection(ArrayRef<uint8_t> Data) : Contents(Data) {}
 
   void accept(SectionVisitor &) const override;
+  void accept(MutableSectionVisitor &Visitor) override;
 
   static bool classof(const SectionBase *S) {
     if (!(S->Flags & ELF::SHF_ALLOC))
@@ -632,6 +681,7 @@ public:
   // If we add this section from an external source we can use this ctor.
   explicit GnuDebugLinkSection(StringRef File);
   void accept(SectionVisitor &Visitor) const override;
+  void accept(MutableSectionVisitor &Visitor) override;
 };
 
 class Reader {
@@ -645,9 +695,7 @@ using object::ELFFile;
 using object::ELFObjectFile;
 using object::OwningBinary;
 
-template <class ELFT> class BinaryELFBuilder {
-  using Elf_Sym = typename ELFT::Sym;
-
+class BinaryELFBuilder {
   uint16_t EMachine;
   MemoryBuffer *MemBuf;
   std::unique_ptr<Object> Obj;

@@ -917,8 +917,9 @@ void MCStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
     TS->emitAssignment(Symbol, Value);
 }
 
-void MCTargetStreamer::prettyPrintAsm(MCInstPrinter &InstPrinter, raw_ostream &OS,
-                              const MCInst &Inst, const MCSubtargetInfo &STI) {
+void MCTargetStreamer::prettyPrintAsm(MCInstPrinter &InstPrinter,
+                                      raw_ostream &OS, const MCInst &Inst,
+                                      const MCSubtargetInfo &STI) {
   InstPrinter.printInst(&Inst, OS, "", STI);
 }
 

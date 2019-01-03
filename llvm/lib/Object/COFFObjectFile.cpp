@@ -1065,6 +1065,16 @@ COFFObjectFile::getSymbolAuxData(COFFSymbolRef Symbol) const {
   return makeArrayRef(Aux, Symbol.getNumberOfAuxSymbols() * SymbolSize);
 }
 
+uint32_t COFFObjectFile::getSymbolIndex(COFFSymbolRef Symbol) const {
+  uintptr_t Offset =
+      reinterpret_cast<uintptr_t>(Symbol.getRawPtr()) - getSymbolTable();
+  assert(Offset % getSymbolTableEntrySize() == 0 &&
+         "Symbol did not point to the beginning of a symbol");
+  size_t Index = Offset / getSymbolTableEntrySize();
+  assert(Index < getNumberOfSymbols());
+  return Index;
+}
+
 std::error_code COFFObjectFile::getSectionName(const coff_section *Sec,
                                                StringRef &Res) const {
   StringRef Name;

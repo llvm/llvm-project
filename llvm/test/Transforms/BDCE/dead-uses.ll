@@ -62,7 +62,7 @@ define i32 @pr39771_fshr_multi_use_arg(i32 %a) {
 define i32 @pr39771_expanded_fshr_multi_use(i32 %a) {
 ; CHECK-LABEL: @pr39771_expanded_fshr_multi_use(
 ; CHECK-NEXT:    [[TMP:%.*]] = lshr i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[A]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[A]], 31
 ; CHECK-NEXT:    [[B:%.*]] = or i32 [[TMP]], [[TMP2]]
 ; CHECK-NEXT:    [[C:%.*]] = lshr i32 [[B]], 23
 ; CHECK-NEXT:    [[D:%.*]] = xor i32 [[C]], [[B]]
@@ -70,7 +70,7 @@ define i32 @pr39771_expanded_fshr_multi_use(i32 %a) {
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %tmp = lshr i32 %a, 1
-  %tmp2 = shl i32 %a, 32
+  %tmp2 = shl i32 %a, 31
   %b = or i32 %tmp, %tmp2
   %c = lshr i32 %b, 23
   %d = xor i32 %c, %b

@@ -365,8 +365,8 @@ def FeatureUseAA : SubtargetFeature<"use-aa", "UseAA", "true",
 
 // Armv8.5-A extensions
 
-def FeatureSpecCtrl : SubtargetFeature<"specctrl", "HasSpecCtrl", "true",
-  "Enable speculation control barrier" >;
+def FeatureSB       : SubtargetFeature<"sb", "HasSB", "true",
+  "Enable v8.5a Speculation Barrier" >;
 
 //===----------------------------------------------------------------------===//
 // ARM architecture class
@@ -459,7 +459,7 @@ def HasV8_4aOps   : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
 
 def HasV8_5aOps   : SubtargetFeature<"v8.5a", "HasV8_5aOps", "true",
                                    "Support ARM v8.5a instructions",
-                                   [HasV8_4aOps, FeatureSpecCtrl]>;
+                                   [HasV8_4aOps, FeatureSB]>;
 
 //===----------------------------------------------------------------------===//
 // ARM Processor subtarget features.

@@ -5,6 +5,7 @@ Summarize the information in the given coverage files.
 Emits the number of rules covered or the percentage of rules covered depending
 on whether --num-rules has been used to specify the total number of rules.
 """
+from __future__ import print_function
 
 import argparse
 import struct
@@ -59,9 +60,9 @@ def main():
   num_rules = dict(args.num_rules)
   for backend, rules_for_backend in covered_rules.items():
     if backend in num_rules:
-      print "%s: %3.2f%% of rules covered" % (backend, (float(len(rules_for_backend.keys())) / num_rules[backend]) * 100)
+      print("%s: %3.2f%% of rules covered" % (backend, float(len(rules_for_backend)) / num_rules[backend]) * 100))
     else:
-      print "%s: %d rules covered" % (backend, len(rules_for_backend.keys()))
+      print("%s: %d rules covered" % (backend, len(rules_for_backend)))
 
 if __name__ == '__main__':
   main()
