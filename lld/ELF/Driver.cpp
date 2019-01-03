@@ -1550,6 +1550,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Out::ElfHeader = make<OutputSection>("", 0, SHF_ALLOC);
   Out::ElfHeader->Size = sizeof(typename ELFT::Ehdr);
 
+  // Create wrapped symbols for -wrap option.
+  std::vector<WrappedSymbol> Wrapped = addWrappedSymbols<ELFT>(Args);
+
   // We need to create some reserved symbols such as _end. Create them.
   if (!Config->Relocatable)
     addReservedSymbols();
@@ -1561,9 +1564,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // name "foo@ver1") rather do harm, so we don't call this if -r is given.
   if (!Config->Relocatable)
     Symtab->scanVersionScript();
-
-  // Create wrapped symbols for -wrap option.
-  std::vector<WrappedSymbol> Wrapped = addWrappedSymbols<ELFT>(Args);
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.

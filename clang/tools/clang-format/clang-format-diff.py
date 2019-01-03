@@ -28,10 +28,11 @@ import difflib
 import re
 import subprocess
 import sys
-try:
-  from StringIO import StringIO
-except ImportError:
-   from io import StringIO
+
+if sys.version_info.major >= 3:
+    from io import StringIO
+else:
+    from io import BytesIO as StringIO
 
 
 def main():

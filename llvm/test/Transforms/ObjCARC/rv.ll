@@ -61,6 +61,11 @@ define void @test2() {
   call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* null)
   call i8* @llvm.objc.autoreleaseReturnValue(i8* null)
   ; call i8* @llvm.objc.retainAutoreleaseReturnValue(i8* null) ; TODO
+  %bitcast = bitcast i32* null to i8*
+  %rb = call i8* @llvm.objc.retainBlock(i8* %bitcast)
+  call void @use_pointer(i8* %rb)
+  %rb2 = call i8* @llvm.objc.retainBlock(i8* undef)
+  call void @use_pointer(i8* %rb2)
   ret void
 }
 
@@ -231,6 +236,24 @@ define void @test15() {
 define i8* @test19(i8* %p) {
   call i8* @llvm.objc.autoreleaseReturnValue(i8* %p)
   call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %p)
+  ret i8* %p
+}
+
+; Delete autoreleaseRV+retainRV pairs when they have equivalent PHIs as inputs
+
+; CHECK: define i8* @test19phi(i8* %p) {
+; CHECK-NEXT: entry:
+; CHECK-NEXT: br label %test19bb
+; CHECK: test19bb:
+; CHECK-NEXT: ret i8* %p
+define i8* @test19phi(i8* %p) {
+entry:
+  br label %test19bb
+test19bb:
+  %phi1 = phi i8* [ %p, %entry ]
+  %phi2 = phi i8* [ %p, %entry ]
+  call i8* @llvm.objc.autoreleaseReturnValue(i8* %phi1)
+  call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %phi2)
   ret i8* %p
 }
 

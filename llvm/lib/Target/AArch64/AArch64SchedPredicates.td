@@ -182,6 +182,92 @@ def IsArithLogicShiftOp    : CheckOpcode<!listconcat(IsArithShiftOp.ValidOpcodes
 def IsArithLogicUnshiftOp  : CheckOpcode<!listconcat(IsArithUnshiftOp.ValidOpcodes,
                                                      IsLogicUnshiftOp.ValidOpcodes)>;
 
+// Identify whether an instruction is an ASIMD
+// load using the post index addressing mode.
+def IsLoadASIMDPostOp      : CheckOpcode<[LD1Onev8b_POST, LD1Onev4h_POST, LD1Onev2s_POST, LD1Onev1d_POST,
+                                          LD1Onev16b_POST, LD1Onev8h_POST, LD1Onev4s_POST, LD1Onev2d_POST,
+                                          LD1Twov8b_POST, LD1Twov4h_POST, LD1Twov2s_POST, LD1Twov1d_POST,
+                                          LD1Twov16b_POST, LD1Twov8h_POST, LD1Twov4s_POST, LD1Twov2d_POST,
+                                          LD1Threev8b_POST, LD1Threev4h_POST, LD1Threev2s_POST, LD1Threev1d_POST,
+                                          LD1Threev16b_POST, LD1Threev8h_POST, LD1Threev4s_POST, LD1Threev2d_POST,
+                                          LD1Fourv8b_POST, LD1Fourv4h_POST, LD1Fourv2s_POST, LD1Fourv1d_POST,
+                                          LD1Fourv16b_POST, LD1Fourv8h_POST, LD1Fourv4s_POST, LD1Fourv2d_POST,
+                                          LD1i8_POST, LD1i16_POST, LD1i32_POST, LD1i64_POST,
+                                          LD1Rv8b_POST, LD1Rv4h_POST, LD1Rv2s_POST, LD1Rv1d_POST,
+                                          LD1Rv16b_POST, LD1Rv8h_POST, LD1Rv4s_POST, LD1Rv2d_POST,
+                                          LD2Twov8b_POST, LD2Twov4h_POST, LD2Twov2s_POST,
+                                          LD2Twov16b_POST, LD2Twov8h_POST, LD2Twov4s_POST, LD2Twov2d_POST,
+                                          LD2i8_POST, LD2i16_POST, LD2i32_POST, LD2i64_POST,
+                                          LD2Rv8b_POST, LD2Rv4h_POST, LD2Rv2s_POST, LD2Rv1d_POST,
+                                          LD2Rv16b_POST, LD2Rv8h_POST, LD2Rv4s_POST, LD2Rv2d_POST,
+                                          LD3Threev8b_POST, LD3Threev4h_POST, LD3Threev2s_POST,
+                                          LD3Threev16b_POST, LD3Threev8h_POST, LD3Threev4s_POST, LD3Threev2d_POST,
+                                          LD3i8_POST, LD3i16_POST, LD3i32_POST, LD3i64_POST,
+                                          LD3Rv8b_POST, LD3Rv4h_POST, LD3Rv2s_POST, LD3Rv1d_POST,
+                                          LD3Rv16b_POST, LD3Rv8h_POST, LD3Rv4s_POST, LD3Rv2d_POST,
+                                          LD4Fourv8b_POST, LD4Fourv4h_POST, LD4Fourv2s_POST,
+                                          LD4Fourv16b_POST, LD4Fourv8h_POST, LD4Fourv4s_POST, LD4Fourv2d_POST,
+                                          LD4i8_POST, LD4i16_POST, LD4i32_POST, LD4i64_POST,
+                                          LD4Rv8b_POST, LD4Rv4h_POST, LD4Rv2s_POST, LD4Rv1d_POST,
+                                          LD4Rv16b_POST, LD4Rv8h_POST, LD4Rv4s_POST, LD4Rv2d_POST]>;
+
+// Identify whether an instruction is an ASIMD
+// store using the post index addressing mode.
+def IsStoreASIMDPostOp     : CheckOpcode<[ST1Onev8b_POST, ST1Onev4h_POST, ST1Onev2s_POST, ST1Onev1d_POST,
+                                          ST1Onev16b_POST, ST1Onev8h_POST, ST1Onev4s_POST, ST1Onev2d_POST,
+                                          ST1Twov8b_POST, ST1Twov4h_POST, ST1Twov2s_POST, ST1Twov1d_POST,
+                                          ST1Twov16b_POST, ST1Twov8h_POST, ST1Twov4s_POST, ST1Twov2d_POST,
+                                          ST1Threev8b_POST, ST1Threev4h_POST, ST1Threev2s_POST, ST1Threev1d_POST,
+                                          ST1Threev16b_POST, ST1Threev8h_POST, ST1Threev4s_POST, ST1Threev2d_POST,
+                                          ST1Fourv8b_POST, ST1Fourv4h_POST, ST1Fourv2s_POST, ST1Fourv1d_POST,
+                                          ST1Fourv16b_POST, ST1Fourv8h_POST, ST1Fourv4s_POST, ST1Fourv2d_POST,
+                                          ST1i8_POST, ST1i16_POST, ST1i32_POST, ST1i64_POST,
+                                          ST2Twov8b_POST, ST2Twov4h_POST, ST2Twov2s_POST,
+                                          ST2Twov16b_POST, ST2Twov8h_POST, ST2Twov4s_POST, ST2Twov2d_POST,
+                                          ST2i8_POST, ST2i16_POST, ST2i32_POST, ST2i64_POST,
+                                          ST3Threev8b_POST, ST3Threev4h_POST, ST3Threev2s_POST,
+                                          ST3Threev16b_POST, ST3Threev8h_POST, ST3Threev4s_POST, ST3Threev2d_POST,
+                                          ST3i8_POST, ST3i16_POST, ST3i32_POST, ST3i64_POST,
+                                          ST4Fourv8b_POST, ST4Fourv4h_POST, ST4Fourv2s_POST,
+                                          ST4Fourv16b_POST, ST4Fourv8h_POST, ST4Fourv4s_POST, ST4Fourv2d_POST,
+                                          ST4i8_POST, ST4i16_POST, ST4i32_POST, ST4i64_POST]>;
+
+// Identify whether an instruction is an ASIMD load
+// or store using the post index addressing mode.
+def IsLoadStoreASIMDPostOp : CheckOpcode<!listconcat(IsLoadASIMDPostOp.ValidOpcodes,
+                                                     IsStoreASIMDPostOp.ValidOpcodes)>;
+
+// Identify whether an instruction is a load
+// using the register offset addressing mode.
+def IsLoadRegOffsetOp      : CheckOpcode<[PRFMroW, PRFMroX,
+                                          LDRBBroW, LDRBBroX,
+                                          LDRSBWroW, LDRSBWroX, LDRSBXroW, LDRSBXroX,
+                                          LDRHHroW, LDRHHroX,
+                                          LDRSHWroW, LDRSHWroX, LDRSHXroW, LDRSHXroX,
+                                          LDRWroW, LDRWroX,
+                                          LDRSWroW, LDRSWroX,
+                                          LDRXroW, LDRXroX,
+                                          LDRBroW, LDRBroX,
+                                          LDRHroW, LDRHroX,
+                                          LDRSroW, LDRSroX,
+                                          LDRDroW, LDRDroX]>;
+
+// Identify whether an instruction is a load
+// using the register offset addressing mode.
+def IsStoreRegOffsetOp     : CheckOpcode<[STRBBroW, STRBBroX,
+                                          STRHHroW, STRHHroX,
+                                          STRWroW, STRWroX,
+                                          STRXroW, STRXroX,
+                                          STRBroW, STRBroX,
+                                          STRHroW, STRHroX,
+                                          STRSroW, STRSroX,
+                                          STRDroW, STRDroX]>;
+
+// Identify whether an instruction is a load or
+// store using the register offset addressing mode.
+def IsLoadStoreRegOffsetOp : CheckOpcode<!listconcat(IsLoadRegOffsetOp.ValidOpcodes,
+                                                     IsStoreRegOffsetOp.ValidOpcodes)>;
+
 // Identify whether an instruction whose result is a long vector
 // operates on the upper half of the input registers.
 def IsLongVectorUpperOp    : CheckOpcode<[FCVTLv8i16, FCVTLv4i32,
@@ -234,37 +320,6 @@ def IsLongVectorUpperOp    : CheckOpcode<[FCVTLv8i16, FCVTLv4i32,
                                           USUBLv16i8_v8i16, USUBLv8i16_v4i32, USUBLv4i32_v2i64,
                                           USUBWv16i8_v8i16, USUBWv8i16_v4i32, USUBWv4i32_v2i64,
                                           XTNv16i8, XTNv8i16, XTNv4i32]>;
-
-// Identify whether an instruction is a load
-// using the register offset addressing mode.
-def IsLoadRegOffsetOp      : CheckOpcode<[PRFMroW, PRFMroX,
-                                          LDRBBroW, LDRBBroX,
-                                          LDRSBWroW, LDRSBWroX, LDRSBXroW, LDRSBXroX,
-                                          LDRHHroW, LDRHHroX,
-                                          LDRSHWroW, LDRSHWroX, LDRSHXroW, LDRSHXroX,
-                                          LDRWroW, LDRWroX,
-                                          LDRSWroW, LDRSWroX,
-                                          LDRXroW, LDRXroX,
-                                          LDRBroW, LDRBroX,
-                                          LDRHroW, LDRHroX,
-                                          LDRSroW, LDRSroX,
-                                          LDRDroW, LDRDroX]>;
-
-// Identify whether an instruction is a load
-// using the register offset addressing mode.
-def IsStoreRegOffsetOp     : CheckOpcode<[STRBBroW, STRBBroX,
-                                          STRHHroW, STRHHroX,
-                                          STRWroW, STRWroX,
-                                          STRXroW, STRXroX,
-                                          STRBroW, STRBroX,
-                                          STRHroW, STRHroX,
-                                          STRSroW, STRSroX,
-                                          STRDroW, STRDroX]>;
-
-// Identify whether an instruction is a load or
-// store using the register offset addressing mode.
-def IsLoadStoreRegOffsetOp : CheckOpcode<!listconcat(IsLoadRegOffsetOp.ValidOpcodes,
-                                                     IsStoreRegOffsetOp.ValidOpcodes)>;
 
 // Target predicates.
 

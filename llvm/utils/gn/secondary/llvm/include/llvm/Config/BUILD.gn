@@ -370,8 +370,8 @@ action("llvm-config") {
 # .def files used by llvm/lib/Target
 
 template("write_target_def_file") {
-  assert(defined(invoker.key), "callers must set key")
-  assert(defined(invoker.value), "callers must set value")
+  assert(defined(invoker.key), "must set 'key' in $target_name")
+  assert(defined(invoker.value), "must set 'value' in $target_name")
 
   action(target_name) {
     visibility = [ ":write_target_def_files" ]

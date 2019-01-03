@@ -41,8 +41,7 @@ public:
     StringRef FileName = llvm::sys::path::filename(Path);
     if (FileName.startswith("preamble-") && FileName.endswith(".pch"))
       return File;
-    return std::unique_ptr<VolatileFile>(
-        new VolatileFile(std::move(*File)));
+    return std::unique_ptr<VolatileFile>(new VolatileFile(std::move(*File)));
   }
 
 private:

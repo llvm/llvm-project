@@ -1,7 +1,7 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("IntrinsicEnums") {
-  visibility = [ "//llvm/lib/IR" ]
+  visibility = [ ":public_tablegen" ]
   args = [ "-gen-intrinsic-enums" ]
   td_file = "Intrinsics.td"
 }
@@ -13,6 +13,20 @@ tablegen("IntrinsicImpl") {
 }
 
 tablegen("Attributes") {
-  visibility = [ "//llvm/lib/IR" ]
+  visibility = [ ":public_tablegen" ]
   args = [ "-gen-attrs" ]
+}
+
+# Groups all tablegen() calls that create .inc files that are included in
+# IR's public headers.  //llvm/lib/Target has this as a public_dep, so targets
+# dependign on //llvm/lib/IR don't need to depend on this.  This exists
+# solely for targets that use IR's public headers but don't link against IR.
+group("public_tablegen") {
+  public_deps = [
+    # IR's public headers include Attributes.inc.
+    ":Attributes",
+
+    # IR's public headers include IntrinsicEnums.inc.
+    ":IntrinsicEnums",
+  ]
 }

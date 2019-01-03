@@ -230,11 +230,6 @@ Symtab *ObjectFileBreakpad::GetSymtab() {
   return nullptr;
 }
 
-bool ObjectFileBreakpad::GetArchitecture(ArchSpec &arch) {
-  arch = m_arch;
-  return true;
-}
-
 bool ObjectFileBreakpad::GetUUID(UUID *uuid) {
   *uuid = m_uuid;
   return true;

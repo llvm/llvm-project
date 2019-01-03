@@ -13,6 +13,8 @@ set of transforms you want to test, and run the program. If it crashes, it found
 a bug.
 """
 
+from __future__ import print_function
+
 import argparse
 import itertools
 import random
@@ -105,22 +107,22 @@ def main():
                        else random.choice(range(shuffle_range))
                     for _ in itertools.repeat(None, width)]
                    for _ in itertools.repeat(None, args.max_shuffle_height - i)]
-                  for i in xrange(args.max_shuffle_height)]
+                  for i in range(args.max_shuffle_height)]
 
   if args.verbose:
     # Print out the shuffle sequence in a compact form.
-    print >>sys.stderr, ('Testing shuffle sequence "%s" (v%d%s):' %
-                         (args.seed, width, element_type))
+    print(('Testing shuffle sequence "%s" (v%d%s):' %
+                         (args.seed, width, element_type)), file=sys.stderr)
     for i, shuffles in enumerate(shuffle_tree):
-      print >>sys.stderr, '  tree level %d:' % (i,)
+      print('  tree level %d:' % (i,), file=sys.stderr)
       for j, s in enumerate(shuffles):
-        print >>sys.stderr, '    shuffle %d: %s' % (j, s)
-    print >>sys.stderr, ''
+        print('    shuffle %d: %s' % (j, s), file=sys.stderr)
+    print('', file=sys.stderr)
 
   # Symbolically evaluate the shuffle tree.
   inputs = [[int(j % element_modulus)
-             for j in xrange(i * width + 1, (i + 1) * width + 1)]
-            for i in xrange(args.max_shuffle_height + 1)]
+             for j in range(i * width + 1, (i + 1) * width + 1)]
+            for i in range(args.max_shuffle_height + 1)]
   results = inputs
   for shuffles in shuffle_tree:
     results = [[((results[i] if j < width else results[i + 1])[j % width]
@@ -128,15 +130,15 @@ def main():
                 for j in s]
                for i, s in enumerate(shuffles)]
   if len(results) != 1:
-    print >>sys.stderr, 'ERROR: Bad results: %s' % (results,)
+    print('ERROR: Bad results: %s' % (results,), file=sys.stderr)
     sys.exit(1)
   result = results[0]
 
   if args.verbose:
-    print >>sys.stderr, 'Which transforms:'
-    print >>sys.stderr, '  from: %s' % (inputs,)
-    print >>sys.stderr, '  into: %s' % (result,)
-    print >>sys.stderr, ''
+    print('Which transforms:', file=sys.stderr)
+    print('  from: %s' % (inputs,), file=sys.stderr)
+    print('  into: %s' % (result,), file=sys.stderr)
+    print('', file=sys.stderr)
 
   # The IR uses silly names for floating point types. We also need a same-size
   # integer type.
@@ -150,25 +152,25 @@ def main():
 
   # Now we need to generate IR for the shuffle function.
   subst = {'N': width, 'T': element_type, 'IT': integral_element_type}
-  print """
+  print("""
 define internal fastcc <%(N)d x %(T)s> @test(%(arguments)s) noinline nounwind {
 entry:""" % dict(subst,
                  arguments=', '.join(
                      ['<%(N)d x %(T)s> %%s.0.%(i)d' % dict(subst, i=i)
-                      for i in xrange(args.max_shuffle_height + 1)]))
+                      for i in range(args.max_shuffle_height + 1)])))
 
   for i, shuffles in enumerate(shuffle_tree):
    for j, s in enumerate(shuffles):
-    print """
+    print("""
   %%s.%(next_i)d.%(j)d = shufflevector <%(N)d x %(T)s> %%s.%(i)d.%(j)d, <%(N)d x %(T)s> %%s.%(i)d.%(next_j)d, <%(N)d x i32> <%(S)s>
 """.strip('\n') % dict(subst, i=i, next_i=i + 1, j=j, next_j=j + 1,
                        S=', '.join(['i32 ' + (str(si) if si != -1 else 'undef')
-                                    for si in s]))
+                                    for si in s])))
 
-  print """
+  print("""
   ret <%(N)d x %(T)s> %%s.%(i)d.0
 }
-""" % dict(subst, i=len(shuffle_tree))
+""" % dict(subst, i=len(shuffle_tree)))
 
   # Generate some string constants that we can use to report errors.
   for i, r in enumerate(result):
@@ -176,24 +178,24 @@ entry:""" % dict(subst,
       s = ('FAIL(%(seed)s): lane %(lane)d, expected %(result)d, found %%d\n\\0A' %
            {'seed': args.seed, 'lane': i, 'result': r})
       s += ''.join(['\\00' for _ in itertools.repeat(None, 128 - len(s) + 2)])
-      print """
+      print("""
 @error.%(i)d = private unnamed_addr global [128 x i8] c"%(s)s"
-""".strip() % {'i': i, 's': s}
+""".strip() % {'i': i, 's': s})
 
   # Define a wrapper function which is marked 'optnone' to prevent
   # interprocedural optimizations from deleting the test.
-  print """
+  print("""
 define internal fastcc <%(N)d x %(T)s> @test_wrapper(%(arguments)s) optnone noinline {
   %%result = call fastcc <%(N)d x %(T)s> @test(%(arguments)s)
   ret <%(N)d x %(T)s> %%result
 }
 """ % dict(subst,
            arguments=', '.join(['<%(N)d x %(T)s> %%s.%(i)d' % dict(subst, i=i)
-                                for i in xrange(args.max_shuffle_height + 1)]))
+                                for i in range(args.max_shuffle_height + 1)])))
 
   # Finally, generate a main function which will trap if any lanes are mapped
   # incorrectly (in an observable way).
-  print """
+  print("""
 define i32 @main() {
 entry:
   ; Create a scratch space to print error messages.
@@ -212,18 +214,18 @@ entry:
                  '(<%(N)d x %(IT)s> <%(input)s> to <%(N)d x %(T)s>)' %
                  dict(subst, input=', '.join(['%(IT)s %(i)d' % dict(subst, i=i)
                                               for i in input])))
-                for input in inputs]))
+                for input in inputs])))
 
   # Test that each non-undef result lane contains the expected value.
   for i, r in enumerate(result):
     if r == -1:
-      print """
+      print("""
 test.%(i)d:
   ; Skip this lane, its value is undef.
   br label %%test.%(next_i)d
-""" % dict(subst, i=i, next_i=i + 1)
+""" % dict(subst, i=i, next_i=i + 1))
     else:
-      print """
+      print("""
 test.%(i)d:
   %%v.%(i)d = extractelement <%(N)d x %(IT)s> %%v.cast, i32 %(i)d
   %%cmp.%(i)d = icmp ne %(IT)s %%v.%(i)d, %(r)d
@@ -238,9 +240,9 @@ die.%(i)d:
   call i32 @write(i32 2, i8* %%str.ptr, i32 %%length.%(i)d)
   call void @llvm.trap()
   unreachable
-""" % dict(subst, i=i, next_i=i + 1, r=r)
+""" % dict(subst, i=i, next_i=i + 1, r=r))
 
-  print """
+  print("""
 test.%d:
   ret i32 0
 }
@@ -249,7 +251,7 @@ declare i32 @strlen(i8*)
 declare i32 @write(i32, i8*, i32)
 declare i32 @sprintf(i8*, i8*, ...)
 declare void @llvm.trap() noreturn nounwind
-""" % (len(result),)
+""" % (len(result),))
 
 if __name__ == '__main__':
   main()

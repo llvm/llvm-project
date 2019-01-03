@@ -477,8 +477,8 @@ int hello;
 
   Locations = runFindDefinitions(Server, FooCpp, FooSource.point());
   EXPECT_TRUE(bool(Locations));
-  EXPECT_THAT(*Locations, ElementsAre(FileRange(FooCpp,
-                                                FooSource.range("two"))));
+  EXPECT_THAT(*Locations,
+              ElementsAre(FileRange(FooCpp, FooSource.range("two"))));
 }
 
 TEST_F(ClangdVFSTest, MemoryUsage) {

@@ -77,6 +77,9 @@ public:
 
   uint32_t GetNumCompileUnits() override;
 
+  void
+  ParseDeclsForContext(lldb_private::CompilerDeclContext decl_ctx) override;
+
   lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
   lldb::LanguageType ParseCompileUnitLanguage(const SymbolContext &sc) override;
@@ -104,6 +107,8 @@ public:
   size_t ParseTypes(const SymbolContext &sc) override;
   size_t ParseVariablesForContext(const SymbolContext &sc) override;
 
+  void AddSymbols(Symtab &symtab) override;
+
   CompilerDecl GetDeclForUID(lldb::user_id_t uid) override;
   CompilerDeclContext GetDeclContextForUID(lldb::user_id_t uid) override;
   CompilerDeclContext GetDeclContextContainingUID(lldb::user_id_t uid) override;
@@ -116,6 +121,10 @@ public:
   uint32_t ResolveSymbolContext(const Address &so_addr,
                                 lldb::SymbolContextItem resolve_scope,
                                 SymbolContext &sc) override;
+  uint32_t ResolveSymbolContext(const FileSpec &file_spec, uint32_t line,
+                                bool check_inlines,
+                                lldb::SymbolContextItem resolve_scope,
+                                SymbolContextList &sc_list) override;
 
   size_t GetTypes(SymbolContextScope *sc_scope, lldb::TypeClass type_mask,
                   TypeList &type_list) override;

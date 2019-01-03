@@ -736,8 +736,7 @@ uint32_t ProcessElfCore::GetNumThreadContexts() {
 }
 
 ArchSpec ProcessElfCore::GetArchitecture() {
-  ArchSpec arch;
-  m_core_module_sp->GetObjectFile()->GetArchitecture(arch);
+  ArchSpec arch = m_core_module_sp->GetObjectFile()->GetArchitecture();
 
   ArchSpec target_arch = GetTarget().GetArchitecture();
   arch.MergeFrom(target_arch);

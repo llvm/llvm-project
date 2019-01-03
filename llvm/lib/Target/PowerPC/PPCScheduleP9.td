@@ -33,6 +33,12 @@ def P9Model : SchedMachineModel {
   // A dispatch group is 6 instructions.
   let LoopMicroOpBufferSize = 60;
 
+  // As iops are dispatched to a slice, they are held in an independent slice
+  // issue queue until all register sources and other dependencies have been
+  // resolved and they can be issued. Each of four execution slices has an
+  // 11-entry iop issue queue.
+  let MicroOpBufferSize = 44;
+
   let CompleteModel = 1;
 
   // Do not support QPX (Quad Processing eXtension) or SPE (Signal Procesing

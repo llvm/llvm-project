@@ -659,7 +659,7 @@ TEST(DexTest, ProximityPathsBoosting) {
 TEST(DexTests, Refs) {
   DenseMap<SymbolID, std::vector<Ref>> Refs;
   auto AddRef = [&](const Symbol &Sym, const char *Filename, RefKind Kind) {
-    auto& SymbolRefs = Refs[Sym.ID];
+    auto &SymbolRefs = Refs[Sym.ID];
     SymbolRefs.emplace_back();
     SymbolRefs.back().Kind = Kind;
     SymbolRefs.back().Location.FileURI = Filename;

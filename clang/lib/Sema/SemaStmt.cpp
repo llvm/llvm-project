@@ -259,17 +259,16 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S) {
     if (E->getType()->isVoidType())
       return;
 
+    if (const Attr *A = CE->getUnusedResultAttr(Context)) {
+      Diag(Loc, diag::warn_unused_result) << A << R1 << R2;
+      return;
+    }
+
     // If the callee has attribute pure, const, or warn_unused_result, warn with
     // a more specific message to make it clear what is happening. If the call
     // is written in a macro body, only warn if it has the warn_unused_result
     // attribute.
     if (const Decl *FD = CE->getCalleeDecl()) {
-      if (const Attr *A = isa<FunctionDecl>(FD)
-                              ? cast<FunctionDecl>(FD)->getUnusedResultAttr()
-                              : FD->getAttr<WarnUnusedResultAttr>()) {
-        Diag(Loc, diag::warn_unused_result) << A << R1 << R2;
-        return;
-      }
       if (ShouldSuppress)
         return;
       if (FD->hasAttr<PureAttr>()) {

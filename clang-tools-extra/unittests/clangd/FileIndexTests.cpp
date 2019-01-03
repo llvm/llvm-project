@@ -343,7 +343,7 @@ TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
   )cpp");
   auto MainFile = testPath("foo.cpp");
   auto HeaderFile = testPath("foo.h");
-  std::vector<const char*> Cmd = {"clang", "-xc++", MainFile.c_str()};
+  std::vector<const char *> Cmd = {"clang", "-xc++", MainFile.c_str()};
   // Preparse ParseInputs.
   ParseInputs PI;
   PI.CompileCommand.Directory = testRoot();
@@ -355,10 +355,9 @@ TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
   // Prepare preamble.
   auto CI = buildCompilerInvocation(PI);
   auto PreambleData = buildPreamble(
-      MainFile,
-      *buildCompilerInvocation(PI), /*OldPreamble=*/nullptr,
-      tooling::CompileCommand(), PI,
-      std::make_shared<PCHContainerOperations>(), /*StoreInMemory=*/true,
+      MainFile, *buildCompilerInvocation(PI), /*OldPreamble=*/nullptr,
+      tooling::CompileCommand(), PI, std::make_shared<PCHContainerOperations>(),
+      /*StoreInMemory=*/true,
       [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP) {});
   // Build AST for main file with preamble.
   auto AST =
@@ -369,8 +368,7 @@ TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
   FileIndex Index;
   Index.updateMain(MainFile, *AST);
 
-  auto Foo =
-      findSymbol(TestTU::withHeaderCode(Header).headerSymbols(), "Foo");
+  auto Foo = findSymbol(TestTU::withHeaderCode(Header).headerSymbols(), "Foo");
   RefsRequest Request;
   Request.IDs.insert(Foo.ID);
 

@@ -346,7 +346,8 @@ enum class ExprType : unsigned {
   F32 = 0x7D,
   F64 = 0x7C,
   V128 = 0x7B,
-  ExceptRef = 0x68
+  ExceptRef = 0x68,
+  Invalid = 0x00
 };
 
 /// Instruction opcodes emitted via means other than CodeGen.

@@ -1,12 +1,15 @@
+from __future__ import print_function
+import sys
+
 import gdb.printing
 
 class Iterator:
   def __iter__(self):
     return self
 
-  # Python 2 compatibility
-  def next(self):
-    return self.__next__()
+  if sys.version_info.major == 2:
+      def next(self):
+        return self.__next__()
 
   def children(self):
     return self
@@ -68,7 +71,7 @@ class ArrayRefPrinter:
     def __iter__(self):
       return self
 
-    def next(self):
+    def __next__(self):
       if self.cur == self.end:
         raise StopIteration
       count = self.count
@@ -77,12 +80,11 @@ class ArrayRefPrinter:
       self.cur = self.cur + 1
       return '[%d]' % count, cur.dereference()
 
-    __next__ = next
+    if sys.version_info.major == 2:
+        next = __next__
 
   def __init__(self, val):
     self.val = val
-
-    __next__ = next
 
   def children(self):
     data = self.val['Data']
@@ -167,7 +169,7 @@ class DenseMapPrinter:
       while self.cur != self.end and (is_equal(self.cur.dereference()['first'], empty) or is_equal(self.cur.dereference()['first'], tombstone)):
         self.cur = self.cur + 1
 
-    def next(self):
+    def __next__(self):
       if self.cur == self.end:
         raise StopIteration
       cur = self.cur
@@ -180,7 +182,8 @@ class DenseMapPrinter:
         self.first = False
       return 'x', v
 
-    __next__ = next
+    if sys.version_info.major == 2:
+        next = __next__
 
   def __init__(self, val):
     self.val = val

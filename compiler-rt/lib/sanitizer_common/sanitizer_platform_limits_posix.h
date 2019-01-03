@@ -51,9 +51,9 @@ namespace __sanitizer {
   extern unsigned struct_statfs64_sz;
   extern unsigned struct_regex_sz;
   extern unsigned struct_regmatch_sz;
-  extern unsigned struct_fstab_sz;
 
 #if !SANITIZER_ANDROID
+  extern unsigned struct_fstab_sz;
   extern unsigned struct_statfs_sz;
   extern unsigned struct_sockaddr_sz;
   extern unsigned ucontext_t_sz;

@@ -226,12 +226,13 @@ private:
 /// propagated.
 template <typename T>
 std::future<T> runAsync(llvm::unique_function<T()> Action) {
-  return std::async(std::launch::async,
-                    [](llvm::unique_function<T()> &&Action, Context Ctx) {
-                      WithContext WithCtx(std::move(Ctx));
-                      return Action();
-                    },
-                    std::move(Action), Context::current().clone());
+  return std::async(
+      std::launch::async,
+      [](llvm::unique_function<T()> &&Action, Context Ctx) {
+        WithContext WithCtx(std::move(Ctx));
+        return Action();
+      },
+      std::move(Action), Context::current().clone());
 }
 
 } // namespace clangd

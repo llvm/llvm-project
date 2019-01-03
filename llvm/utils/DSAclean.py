@@ -8,10 +8,13 @@
 #the comments
 #10/12/2005: now it only removes nodes and edges for which the label is %tmp.# rather
 #than removing all lines for which the lable CONTAINS %tmp.#
+
+from __future__ import print_function
+
 import re
 import sys
 if( len(sys.argv) < 3 ):
-	print 'usage is: ./DSAclean <dot_file_to_be_cleaned> <out_put_file>'
+	print('usage is: ./DSAclean <dot_file_to_be_cleaned> <out_put_file>')
 	sys.exit(1)
 #get a file object
 input = open(sys.argv[1], 'r')

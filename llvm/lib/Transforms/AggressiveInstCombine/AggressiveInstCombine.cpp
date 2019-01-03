@@ -81,8 +81,8 @@ static bool foldGuardedRotateToFunnelShift(Instruction &I) {
     auto Sub = m_Sub(m_SpecificInt(Width), m_Value(R1));
 
     // rotate_left(X, Y) == (X << Y) | (X >> (Width - Y))
-    auto RotL = m_OneUse(m_c_Or(m_Shl(m_Value(L0), m_Value(L1)),
-                                m_LShr(m_Value(R0), Sub)));
+    auto RotL = m_OneUse(
+        m_c_Or(m_Shl(m_Value(L0), m_Value(L1)), m_LShr(m_Value(R0), Sub)));
     if (RotL.match(V) && L0 == R0 && L1 == R1) {
       X = L0;
       Y = L1;
@@ -90,8 +90,8 @@ static bool foldGuardedRotateToFunnelShift(Instruction &I) {
     }
 
     // rotate_right(X, Y) == (X >> Y) | (X << (Width - Y))
-    auto RotR = m_OneUse(m_c_Or(m_LShr(m_Value(L0), m_Value(L1)),
-                                m_Shl(m_Value(R0), Sub)));
+    auto RotR = m_OneUse(
+        m_c_Or(m_LShr(m_Value(L0), m_Value(L1)), m_Shl(m_Value(R0), Sub)));
     if (RotR.match(V) && L0 == R0 && L1 == R1) {
       X = L0;
       Y = L1;
@@ -124,8 +124,8 @@ static bool foldGuardedRotateToFunnelShift(Instruction &I) {
   Instruction *TermI = GuardBB->getTerminator();
   BasicBlock *TrueBB, *FalseBB;
   ICmpInst::Predicate Pred;
-  if (!match(TermI, m_Br(m_ICmp(Pred, m_Specific(RotAmt), m_ZeroInt()),
-                         TrueBB, FalseBB)))
+  if (!match(TermI, m_Br(m_ICmp(Pred, m_Specific(RotAmt), m_ZeroInt()), TrueBB,
+                         FalseBB)))
     return false;
 
   BasicBlock *PhiBB = Phi.getParent();
@@ -162,9 +162,9 @@ struct MaskOps {
   bool MatchAndChain;
   bool FoundAnd1;
 
-  MaskOps(unsigned BitWidth, bool MatchAnds) :
-      Root(nullptr), Mask(APInt::getNullValue(BitWidth)),
-      MatchAndChain(MatchAnds), FoundAnd1(false) {}
+  MaskOps(unsigned BitWidth, bool MatchAnds)
+      : Root(nullptr), Mask(APInt::getNullValue(BitWidth)),
+        MatchAndChain(MatchAnds), FoundAnd1(false) {}
 };
 
 /// This is a recursive helper for foldAnyOrAllBitsSet() that walks through a
@@ -245,8 +245,8 @@ static bool foldAnyOrAllBitsSet(Instruction &I) {
   IRBuilder<> Builder(&I);
   Constant *Mask = ConstantInt::get(I.getType(), MOps.Mask);
   Value *And = Builder.CreateAnd(MOps.Root, Mask);
-  Value *Cmp = MatchAllBitsSet ? Builder.CreateICmpEQ(And, Mask) :
-                                 Builder.CreateIsNotNull(And);
+  Value *Cmp = MatchAllBitsSet ? Builder.CreateICmpEQ(And, Mask)
+                               : Builder.CreateIsNotNull(And);
   Value *Zext = Builder.CreateZExt(Cmp, I.getType());
   I.replaceAllUsesWith(Zext);
   return true;

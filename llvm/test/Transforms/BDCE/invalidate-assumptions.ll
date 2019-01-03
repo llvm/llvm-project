@@ -9,7 +9,6 @@
 
 define i1 @PR33695(i1 %b, i8 %x) {
 ; CHECK-LABEL: @PR33695(
-; CHECK-NEXT:    [[SETBIT:%.*]] = or i8 [[X:%.*]], 64
 ; CHECK-NEXT:    [[LITTLE_NUMBER:%.*]] = zext i1 [[B:%.*]] to i8
 ; CHECK-NEXT:    [[BIG_NUMBER:%.*]] = shl i8 0, 1
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[BIG_NUMBER]], [[LITTLE_NUMBER]]
@@ -29,10 +28,6 @@ define i1 @PR33695(i1 %b, i8 %x) {
 
 define i64 @PR34037(i64 %m, i32 %r, i64 %j, i1 %b, i32 %k, i64 %p) {
 ; CHECK-LABEL: @PR34037(
-; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[R:%.*]] to i64
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[M:%.*]], 0
-; CHECK-NEXT:    [[NEG:%.*]] = xor i64 0, 34359738367
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[J:%.*]], 0
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 0, 29
 ; CHECK-NEXT:    [[CONV1:%.*]] = select i1 [[B:%.*]], i64 7, i64 0
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[SHL]], [[CONV1]]
@@ -64,7 +59,6 @@ declare i1 @foo(i1)
 
 define i1 @poison_on_call_user_is_ok(i1 %b, i8 %x) {
 ; CHECK-LABEL: @poison_on_call_user_is_ok(
-; CHECK-NEXT:    [[SETBIT:%.*]] = or i8 [[X:%.*]], 64
 ; CHECK-NEXT:    [[LITTLE_NUMBER:%.*]] = zext i1 [[B:%.*]] to i8
 ; CHECK-NEXT:    [[BIG_NUMBER:%.*]] = shl i8 0, 1
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[BIG_NUMBER]], [[LITTLE_NUMBER]]

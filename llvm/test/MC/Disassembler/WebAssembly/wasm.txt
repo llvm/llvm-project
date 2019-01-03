@@ -14,10 +14,8 @@
 # CHECK: i64.load32_u 16:p2align=1
 0x35 0x01 0x10
 
-# CHECK: block
-# 3
-# FIXME: WebAssemblyInstPrinter does not currently print block number.
-0x02 0x03
+# CHECK: block f64
+0x02 0x7C
 
 # CHECK: call_indirect
 # $0=, 128, 0
