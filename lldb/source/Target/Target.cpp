@@ -3232,7 +3232,8 @@ static constexpr PropertyDefinition g_properties[] = {
          "whose paths don't match the local file system."},
     {"debug-file-search-paths", OptionValue::eTypeFileSpecList, false, 0,
      nullptr, {},
-     "List of directories to be searched when locating debug symbol files."},
+     "List of directories to be searched when locating debug symbol files. "
+     "See also symbols.enable-external-lookup."},
     {"clang-module-search-paths", OptionValue::eTypeFileSpecList, false, 0,
      nullptr, {},
      "List of directories to be searched when locating modules for Clang."},

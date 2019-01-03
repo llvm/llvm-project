@@ -63,6 +63,9 @@
 #define __ACTIVEMASK() __ballot(1)
 #endif
 
+#define __SYNCTHREADS_N(n) asm volatile("bar.sync %0;" : : "r"(n) : "memory");
+#define __SYNCTHREADS() __SYNCTHREADS_N(0)
+
 // arguments needed for L0 parallelism only.
 class omptarget_nvptx_SharedArgs {
 public:

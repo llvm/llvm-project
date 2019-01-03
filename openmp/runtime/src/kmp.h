@@ -4000,6 +4000,13 @@ extern kmp_target_offload_kind_t __kmp_target_offload;
 extern int __kmpc_get_target_offload();
 #endif
 
+#if OMP_40_ENABLED
+// Constants used in libomptarget
+#define KMP_DEVICE_DEFAULT -1 // This is libomptarget's default device.
+#define KMP_HOST_DEVICE -10 // This is what it is in libomptarget, go figure.
+#define KMP_DEVICE_ALL -11 // This is libomptarget's "all devices".
+#endif // OMP_40_ENABLED
+
 #ifdef __cplusplus
 }
 #endif
