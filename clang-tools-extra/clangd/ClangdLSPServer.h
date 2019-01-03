@@ -74,8 +74,7 @@ private:
   void onDocumentSymbol(const DocumentSymbolParams &,
                         Callback<llvm::json::Value>);
   void onCodeAction(const CodeActionParams &, Callback<llvm::json::Value>);
-  void onCompletion(const TextDocumentPositionParams &,
-                    Callback<CompletionList>);
+  void onCompletion(const CompletionParams &, Callback<CompletionList>);
   void onSignatureHelp(const TextDocumentPositionParams &,
                        Callback<SignatureHelp>);
   void onGoToDefinition(const TextDocumentPositionParams &,
@@ -97,6 +96,12 @@ private:
                     Callback<std::vector<SymbolDetails>>);
 
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
+
+  /// Checks if completion request should be ignored. We need this due to the
+  /// limitation of the LSP. Per LSP, a client sends requests for all "trigger
+  /// character" we specify, but for '>' and ':' we need to check they actually
+  /// produce '->' and '::', respectively.
+  bool shouldRunCompletion(const CompletionParams &Params) const;
 
   /// Forces a reparse of all currently opened files.  As a result, this method
   /// may be very expensive.  This method is normally called when the

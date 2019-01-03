@@ -550,6 +550,29 @@ bool fromJSON(const json::Value &Params, TextDocumentPositionParams &R) {
          O.map("position", R.position);
 }
 
+bool fromJSON(const llvm::json::Value &Params, CompletionContext &R) {
+  json::ObjectMapper O(Params);
+  if (!O)
+    return false;
+
+  int triggerKind;
+  if (!O.map("triggerKind", triggerKind))
+    return false;
+  R.triggerKind = static_cast<CompletionTriggerKind>(triggerKind);
+
+  if (auto *TC = Params.getAsObject()->get("triggerCharacter"))
+    return fromJSON(*TC, R.triggerCharacter);
+  return true;
+}
+
+bool fromJSON(const llvm::json::Value &Params, CompletionParams &R) {
+  if (!fromJSON(Params, static_cast<TextDocumentPositionParams &>(R)))
+    return false;
+  if (auto *Context = Params.getAsObject()->get("context"))
+    return fromJSON(*Context, R.context);
+  return true;
+}
+
 static StringRef toTextKind(MarkupKind Kind) {
   switch (Kind) {
   case MarkupKind::PlainText:

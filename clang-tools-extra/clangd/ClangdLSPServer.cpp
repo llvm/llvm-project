@@ -22,6 +22,15 @@ using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
+class IgnoreCompletionError : public llvm::ErrorInfo<CancelledError> {
+public:
+  void log(llvm::raw_ostream &OS) const override {
+    OS << "ignored auto-triggered completion, preceding char did not match";
+  }
+  std::error_code convertToErrorCode() const override {
+    return std::make_error_code(std::errc::operation_canceled);
+  }
+};
 
 void adjustSymbolKinds(llvm::MutableArrayRef<DocumentSymbol> Syms,
                        SymbolKindBitset Kinds) {
@@ -310,6 +319,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"completionProvider",
              json::Object{
                  {"resolveProvider", false},
+                 // We do extra checks for '>' and ':' in completion to only
+                 // trigger on '->' and '::'.
                  {"triggerCharacters", {".", ">", ":"}},
              }},
             {"signatureHelpProvider",
@@ -612,8 +623,10 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
   }
 }
 
-void ClangdLSPServer::onCompletion(const TextDocumentPositionParams &Params,
+void ClangdLSPServer::onCompletion(const CompletionParams &Params,
                                    Callback<CompletionList> Reply) {
+  if (!shouldRunCompletion(Params))
+    return Reply(llvm::make_error<IgnoreCompletionError>());
   Server->codeComplete(
       Params.textDocument.uri.file(), Params.position, CCOpts,
       Bind(
@@ -771,6 +784,41 @@ std::vector<Fix> ClangdLSPServer::getFixes(StringRef File,
     return {};
 
   return FixItsIter->second;
+}
+
+bool ClangdLSPServer::shouldRunCompletion(
+    const CompletionParams &Params) const {
+  StringRef Trigger = Params.context.triggerCharacter;
+  if (Params.context.triggerKind != CompletionTriggerKind::TriggerCharacter ||
+      (Trigger != ">" && Trigger != ":"))
+    return true;
+
+  auto Code = DraftMgr.getDraft(Params.textDocument.uri.file());
+  if (!Code)
+    return true; // completion code will log the error for untracked doc.
+
+  // A completion request is sent when the user types '>' or ':', but we only
+  // want to trigger on '->' and '::'. We check the preceeding character to make
+  // sure it matches what we expected.
+  // Running the lexer here would be more robust (e.g. we can detect comments
+  // and avoid triggering completion there), but we choose to err on the side
+  // of simplicity here.
+  auto Offset = positionToOffset(*Code, Params.position,
+                                 /*AllowColumnsBeyondLineLength=*/false);
+  if (!Offset) {
+    vlog("could not convert position '{0}' to offset for file '{1}'",
+         Params.position, Params.textDocument.uri.file());
+    return true;
+  }
+  if (*Offset < 2)
+    return false;
+
+  if (Trigger == ">")
+    return (*Code)[*Offset - 2] == '-'; // trigger only on '->'.
+  if (Trigger == ":")
+    return (*Code)[*Offset - 2] == ':'; // trigger only on '::'.
+  assert(false && "unhandled trigger character");
+  return true;
 }
 
 void ClangdLSPServer::onDiagnosticsReady(PathRef File,
