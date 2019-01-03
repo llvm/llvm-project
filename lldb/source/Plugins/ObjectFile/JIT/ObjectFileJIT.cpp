@@ -153,8 +153,7 @@ void ObjectFileJIT::Dump(Stream *s) {
     s->Indent();
     s->PutCString("ObjectFileJIT");
 
-    ArchSpec arch;
-    if (GetArchitecture(arch))
+    if (ArchSpec arch = GetArchitecture())
       *s << ", arch = " << arch.GetArchitectureName();
 
     s->EOL();
@@ -190,11 +189,10 @@ ObjectFile::Type ObjectFileJIT::CalculateType() { return eTypeJIT; }
 
 ObjectFile::Strata ObjectFileJIT::CalculateStrata() { return eStrataJIT; }
 
-bool ObjectFileJIT::GetArchitecture(ArchSpec &arch) {
-  ObjectFileJITDelegateSP delegate_sp(m_delegate_wp.lock());
-  if (delegate_sp)
-    return delegate_sp->GetArchitecture(arch);
-  return false;
+ArchSpec ObjectFileJIT::GetArchitecture() {
+  if (ObjectFileJITDelegateSP delegate_sp = m_delegate_wp.lock())
+    return delegate_sp->GetArchitecture();
+  return ArchSpec();
 }
 
 //------------------------------------------------------------------

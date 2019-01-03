@@ -879,38 +879,37 @@ public:
           IndexRequest.IDs.size(), FetchedDocs.size());
     }
 
-    llvm::sort(
-        ScoredSignatures,
-        [](const ScoredSignature &L, const ScoredSignature &R) {
-          // Ordering follows:
-          // - Less number of parameters is better.
-          // - Function is better than FunctionType which is better than
-          // Function Template.
-          // - High score is better.
-          // - Shorter signature is better.
-          // - Alphebatically smaller is better.
-          if (L.Quality.NumberOfParameters != R.Quality.NumberOfParameters)
-            return L.Quality.NumberOfParameters < R.Quality.NumberOfParameters;
-          if (L.Quality.NumberOfOptionalParameters !=
-              R.Quality.NumberOfOptionalParameters)
-            return L.Quality.NumberOfOptionalParameters <
-                   R.Quality.NumberOfOptionalParameters;
-          if (L.Quality.Kind != R.Quality.Kind) {
-            using OC = CodeCompleteConsumer::OverloadCandidate;
-            switch (L.Quality.Kind) {
-            case OC::CK_Function:
-              return true;
-            case OC::CK_FunctionType:
-              return R.Quality.Kind != OC::CK_Function;
-            case OC::CK_FunctionTemplate:
-              return false;
-            }
-            llvm_unreachable("Unknown overload candidate type.");
-          }
-          if (L.Signature.label.size() != R.Signature.label.size())
-            return L.Signature.label.size() < R.Signature.label.size();
-          return L.Signature.label < R.Signature.label;
-        });
+    llvm::sort(ScoredSignatures, [](const ScoredSignature &L,
+                                    const ScoredSignature &R) {
+      // Ordering follows:
+      // - Less number of parameters is better.
+      // - Function is better than FunctionType which is better than
+      // Function Template.
+      // - High score is better.
+      // - Shorter signature is better.
+      // - Alphebatically smaller is better.
+      if (L.Quality.NumberOfParameters != R.Quality.NumberOfParameters)
+        return L.Quality.NumberOfParameters < R.Quality.NumberOfParameters;
+      if (L.Quality.NumberOfOptionalParameters !=
+          R.Quality.NumberOfOptionalParameters)
+        return L.Quality.NumberOfOptionalParameters <
+               R.Quality.NumberOfOptionalParameters;
+      if (L.Quality.Kind != R.Quality.Kind) {
+        using OC = CodeCompleteConsumer::OverloadCandidate;
+        switch (L.Quality.Kind) {
+        case OC::CK_Function:
+          return true;
+        case OC::CK_FunctionType:
+          return R.Quality.Kind != OC::CK_Function;
+        case OC::CK_FunctionTemplate:
+          return false;
+        }
+        llvm_unreachable("Unknown overload candidate type.");
+      }
+      if (L.Signature.label.size() != R.Signature.label.size())
+        return L.Signature.label.size() < R.Signature.label.size();
+      return L.Signature.label < R.Signature.label;
+    });
 
     for (auto &SS : ScoredSignatures) {
       auto IndexDocIt =
@@ -1224,15 +1223,15 @@ SmallVector<StringRef, 1> getRankedIncludes(const Symbol &Sym) {
 //   - TopN determines the results with the best score.
 class CodeCompleteFlow {
   PathRef FileName;
-  IncludeStructure Includes; // Complete once the compiler runs.
+  IncludeStructure Includes;           // Complete once the compiler runs.
   SpeculativeFuzzyFind *SpecFuzzyFind; // Can be nullptr.
   const CodeCompleteOptions &Opts;
 
   // Sema takes ownership of Recorder. Recorder is valid until Sema cleanup.
   CompletionRecorder *Recorder = nullptr;
   int NSema = 0, NIndex = 0, NBoth = 0; // Counters for logging.
-  bool Incomplete = false; // Would more be available with a higher limit?
-  Optional<FuzzyMatcher> Filter;        // Initialized once Sema runs.
+  bool Incomplete = false;       // Would more be available with a higher limit?
+  Optional<FuzzyMatcher> Filter; // Initialized once Sema runs.
   std::vector<std::string> QueryScopes; // Initialized once Sema runs.
   // Initialized once QueryScopes is initialized, if there are scopes.
   Optional<ScopeDistance> ScopeProximity;

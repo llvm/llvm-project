@@ -156,7 +156,8 @@ TEST(GoToDefinition, WithIndex) {
       )cpp");
   EXPECT_THAT(runFindDefinitionsWithIndex(Test),
               testing::ElementsAreArray({
-                  RangeIs(Test.range()), RangeIs(SymbolHeader.range("forward")),
+                  RangeIs(Test.range()),
+                  RangeIs(SymbolHeader.range("forward")),
               }));
 }
 

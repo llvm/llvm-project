@@ -516,7 +516,8 @@ TEST(CompletionTest, ScopedWithFilter) {
 
 TEST(CompletionTest, ReferencesAffectRanking) {
   auto Results = completions("int main() { abs^ }", {ns("absl"), func("absb")});
-  EXPECT_THAT(Results.Completions, HasSubsequence(Named("absb"), Named("absl")));
+  EXPECT_THAT(Results.Completions,
+              HasSubsequence(Named("absb"), Named("absl")));
   Results = completions("int main() { abs^ }",
                         {withReferences(10000, ns("absl")), func("absb")});
   EXPECT_THAT(Results.Completions,
@@ -1662,7 +1663,8 @@ TEST(CompletionTest, CompletionTokenRange) {
     auto Results = completions(Server, TestCode.code(), TestCode.point());
 
     EXPECT_EQ(Results.Completions.size(), 1u);
-    EXPECT_THAT(Results.Completions.front().CompletionTokenRange, TestCode.range());
+    EXPECT_THAT(Results.Completions.front().CompletionTokenRange,
+                TestCode.range());
   }
 }
 
@@ -2095,11 +2097,10 @@ TEST(SignatureHelpTest, ConstructorInitializeFields) {
         A a_elem;
       };
     )cpp");
-    EXPECT_THAT(Results.signatures, UnorderedElementsAre(
-            Sig("A(int)", {"int"}),
-            Sig("A(A &&)", {"A &&"}),
-            Sig("A(const A &)", {"const A &"})
-        ));
+    EXPECT_THAT(Results.signatures,
+                UnorderedElementsAre(Sig("A(int)", {"int"}),
+                                     Sig("A(A &&)", {"A &&"}),
+                                     Sig("A(const A &)", {"const A &"})));
   }
   {
     const auto Results = signatures(R"cpp(
@@ -2115,11 +2116,10 @@ TEST(SignatureHelpTest, ConstructorInitializeFields) {
         C c_elem;
       };
     )cpp");
-    EXPECT_THAT(Results.signatures, UnorderedElementsAre(
-            Sig("A(int)", {"int"}),
-            Sig("A(A &&)", {"A &&"}),
-            Sig("A(const A &)", {"const A &"})
-        ));
+    EXPECT_THAT(Results.signatures,
+                UnorderedElementsAre(Sig("A(int)", {"int"}),
+                                     Sig("A(A &&)", {"A &&"}),
+                                     Sig("A(const A &)", {"const A &"})));
   }
 }
 
@@ -2134,10 +2134,9 @@ TEST(CompletionTest, IncludedCompletionKinds) {
   IgnoreDiagnostics DiagConsumer;
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
   auto Results = completions(Server,
-      R"cpp(
+                             R"cpp(
         #include "^"
-      )cpp"
-      );
+      )cpp");
   EXPECT_THAT(Results.Completions,
               AllOf(Has("sub/", CompletionItemKind::Folder),
                     Has("bar.h\"", CompletionItemKind::File)));
@@ -2147,8 +2146,7 @@ TEST(CompletionTest, NoCrashAtNonAlphaIncludeHeader) {
   auto Results = completions(
       R"cpp(
         #include "./^"
-      )cpp"
-      );
+      )cpp");
   EXPECT_TRUE(Results.Completions.empty());
 }
 
@@ -2221,9 +2219,8 @@ TEST(CompletionTest, ObjectiveCMethodNoArguments) {
       @end
       Foo *foo = [Foo new]; int y = [foo v^]
     )objc",
-    /*IndexSymbols=*/{},
-    /*Opts=*/{},
-    "Foo.m");
+                             /*IndexSymbols=*/{},
+                             /*Opts=*/{}, "Foo.m");
 
   auto C = Results.Completions;
   EXPECT_THAT(C, ElementsAre(Named("value")));
@@ -2240,9 +2237,8 @@ TEST(CompletionTest, ObjectiveCMethodOneArgument) {
       @end
       Foo *foo = [Foo new]; int y = [foo v^]
     )objc",
-    /*IndexSymbols=*/{},
-    /*Opts=*/{},
-    "Foo.m");
+                             /*IndexSymbols=*/{},
+                             /*Opts=*/{}, "Foo.m");
 
   auto C = Results.Completions;
   EXPECT_THAT(C, ElementsAre(Named("valueForCharacter:")));
@@ -2259,17 +2255,16 @@ TEST(CompletionTest, ObjectiveCMethodTwoArgumentsFromBeginning) {
       @end
       id val = [Foo foo^]
     )objc",
-    /*IndexSymbols=*/{},
-    /*Opts=*/{},
-    "Foo.m");
+                             /*IndexSymbols=*/{},
+                             /*Opts=*/{}, "Foo.m");
 
   auto C = Results.Completions;
   EXPECT_THAT(C, ElementsAre(Named("fooWithValue:")));
   EXPECT_THAT(C, ElementsAre(Kind(CompletionItemKind::Method)));
   EXPECT_THAT(C, ElementsAre(ReturnType("id")));
   EXPECT_THAT(C, ElementsAre(Signature("(int) fooey:(unsigned int)")));
-  EXPECT_THAT(C,
-      ElementsAre(SnippetSuffix("${1:(int)} fooey:${2:(unsigned int)}")));
+  EXPECT_THAT(
+      C, ElementsAre(SnippetSuffix("${1:(int)} fooey:${2:(unsigned int)}")));
 }
 
 TEST(CompletionTest, ObjectiveCMethodTwoArgumentsFromMiddle) {
@@ -2279,9 +2274,8 @@ TEST(CompletionTest, ObjectiveCMethodTwoArgumentsFromMiddle) {
       @end
       id val = [Foo fooWithValue:10 f^]
     )objc",
-    /*IndexSymbols=*/{},
-    /*Opts=*/{},
-    "Foo.m");
+                             /*IndexSymbols=*/{},
+                             /*Opts=*/{}, "Foo.m");
 
   auto C = Results.Completions;
   EXPECT_THAT(C, ElementsAre(Named("fooey:")));

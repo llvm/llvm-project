@@ -386,21 +386,21 @@ bool fromJSON(const json::Value &Params, CodeActionContext &R) {
 raw_ostream &operator<<(raw_ostream &OS, const Diagnostic &D) {
   OS << D.range << " [";
   switch (D.severity) {
-    case 1:
-      OS << "error";
-      break;
-    case 2:
-      OS << "warning";
-      break;
-    case 3:
-      OS << "note";
-      break;
-    case 4:
-      OS << "remark";
-      break;
-    default:
-      OS << "diagnostic";
-      break;
+  case 1:
+    OS << "error";
+    break;
+  case 2:
+    OS << "warning";
+    break;
+  case 3:
+    OS << "note";
+    break;
+  case 4:
+    OS << "remark";
+    break;
+  default:
+    OS << "diagnostic";
+    break;
   }
   return OS << '(' << D.severity << "): " << D.message << "]";
 }
@@ -718,7 +718,8 @@ json::Value toJSON(const DocumentHighlight &DH) {
 
 llvm::json::Value toJSON(const FileStatus &FStatus) {
   return json::Object{
-      {"uri", FStatus.uri}, {"state", FStatus.state},
+      {"uri", FStatus.uri},
+      {"state", FStatus.state},
   };
 }
 

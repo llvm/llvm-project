@@ -159,9 +159,7 @@ void ClangdServer::addDocument(PathRef File, StringRef Contents,
                        WantDiags);
 }
 
-void ClangdServer::removeDocument(PathRef File) {
-  WorkScheduler.remove(File);
-}
+void ClangdServer::removeDocument(PathRef File) { WorkScheduler.remove(File); }
 
 void ClangdServer::codeComplete(PathRef File, Position Pos,
                                 const clangd::CodeCompleteOptions &Opts,
