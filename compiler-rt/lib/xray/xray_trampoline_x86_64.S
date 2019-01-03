@@ -91,10 +91,10 @@
 	.text
 #if !defined(__APPLE__)
 	.section .text
+	.file "xray_trampoline_x86.S"
 #else
 	.section __TEXT,__text
 #endif
-	.file "xray_trampoline_x86.S"
 
 //===----------------------------------------------------------------------===//
 

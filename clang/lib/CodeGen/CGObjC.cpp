@@ -370,7 +370,8 @@ static Optional<llvm::Value *>
 tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
                                   llvm::Value *Receiver,
                                   const CallArgList& Args, Selector Sel,
-                                  const ObjCMethodDecl *method) {
+                                  const ObjCMethodDecl *method,
+                                  bool isClassMessage) {
   auto &CGM = CGF.CGM;
   if (!CGM.getCodeGenOpts().ObjCConvertMessagesToRuntimeCalls)
     return None;
@@ -378,7 +379,8 @@ tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
   auto &Runtime = CGM.getLangOpts().ObjCRuntime;
   switch (Sel.getMethodFamily()) {
   case OMF_alloc:
-    if (Runtime.shouldUseRuntimeFunctionsForAlloc() &&
+    if (isClassMessage &&
+        Runtime.shouldUseRuntimeFunctionsForAlloc() &&
         ResultType->isObjCObjectPointerType()) {
         // [Foo alloc] -> objc_alloc(Foo)
         if (Sel.isUnarySelector() && Sel.getNameForSlot(0) == "alloc")
@@ -550,7 +552,8 @@ RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
     // Call runtime methods directly if we can.
     if (Optional<llvm::Value *> SpecializedResult =
             tryGenerateSpecializedMessageSend(*this, ResultType, Receiver, Args,
-                                              E->getSelector(), method)) {
+                                              E->getSelector(), method,
+                                              isClassMessage)) {
       result = RValue::get(SpecializedResult.getValue());
     } else {
       result = Runtime.GenerateMessageSend(*this, Return, ResultType,

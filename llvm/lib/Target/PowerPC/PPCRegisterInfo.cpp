@@ -673,12 +673,15 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
   unsigned Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
   unsigned SrcReg = MI.getOperand(0).getReg();
 
-  BuildMI(MBB, II, dl, TII.get(TargetOpcode::KILL),
-          getCRFromCRBit(SrcReg))
-          .addReg(SrcReg, getKillRegState(MI.getOperand(0).isKill()));
-
+  // We need to move the CR field that contains the CR bit we are spilling.
+  // The super register may not be explicitly defined (i.e. it can be defined
+  // by a CR-logical that only defines the subreg) so we state that the CR
+  // field is undef. Also, in order to preserve the kill flag on the CR bit,
+  // we add it as an implicit use.
   BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::MFOCRF8 : PPC::MFOCRF), Reg)
-      .addReg(getCRFromCRBit(SrcReg));
+      .addReg(getCRFromCRBit(SrcReg), RegState::Undef)
+      .addReg(SrcReg,
+              RegState::Implicit | getKillRegState(MI.getOperand(0).isKill()));
 
   // If the saved register wasn't CR0LT, shift the bits left so that the bit to
   // store is the first one. Mask all but that bit.

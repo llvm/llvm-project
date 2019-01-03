@@ -5533,9 +5533,8 @@ GetDynamicArrayInfo(ClangASTContext &ast, SymbolFile *sym_file,
                     const ExecutionContext *exe_ctx) {
   if (qual_type->isIncompleteArrayType())
     if (auto *metadata = ast.GetMetadata(qual_type.getAsOpaquePtr()))
-      if (auto *dwarf_parser = ast.GetDWARFParser())
-        return sym_file->GetDynamicArrayInfoForUID(metadata->GetUserID(),
-                                                   exe_ctx);
+      return sym_file->GetDynamicArrayInfoForUID(metadata->GetUserID(),
+                                                 exe_ctx);
   return llvm::None;
 }
 

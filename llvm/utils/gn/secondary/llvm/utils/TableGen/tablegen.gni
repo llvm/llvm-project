@@ -25,7 +25,7 @@
 #   }
 
 template("tablegen") {
-  assert(defined(invoker.args), "args must be defined for $target_name")
+  assert(defined(invoker.args), "must set 'args' in $target_name")
 
   config_name = "${target_name}_config"
   config(config_name) {

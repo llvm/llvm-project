@@ -10,7 +10,7 @@ declare <2 x i32> @llvm.fshr.v2i32(<2 x i32>, <2 x i32>, <2 x i32>)
 define i32 @pr39771_fshr_multi_use_instr(i32 %a) {
 ; CHECK-LABEL: @pr39771_fshr_multi_use_instr(
 ; CHECK-NEXT:    [[X:%.*]] = or i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = tail call i32 @llvm.fshr.i32(i32 [[X]], i32 [[X]], i32 1)
+; CHECK-NEXT:    [[B:%.*]] = tail call i32 @llvm.fshr.i32(i32 0, i32 [[X]], i32 1)
 ; CHECK-NEXT:    [[C:%.*]] = lshr i32 [[B]], 23
 ; CHECK-NEXT:    [[D:%.*]] = xor i32 [[C]], [[B]]
 ; CHECK-NEXT:    [[E:%.*]] = and i32 [[D]], 31
@@ -28,7 +28,7 @@ define i32 @pr39771_fshr_multi_use_instr(i32 %a) {
 define <2 x i32> @pr39771_fshr_multi_use_instr_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @pr39771_fshr_multi_use_instr_vec(
 ; CHECK-NEXT:    [[X:%.*]] = or <2 x i32> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[B:%.*]] = tail call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[X]], <2 x i32> [[X]], <2 x i32> <i32 1, i32 1>)
+; CHECK-NEXT:    [[B:%.*]] = tail call <2 x i32> @llvm.fshr.v2i32(<2 x i32> zeroinitializer, <2 x i32> [[X]], <2 x i32> <i32 1, i32 1>)
 ; CHECK-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 23, i32 23>
 ; CHECK-NEXT:    [[D:%.*]] = xor <2 x i32> [[C]], [[B]]
 ; CHECK-NEXT:    [[E:%.*]] = and <2 x i32> [[D]], <i32 31, i32 31>
@@ -77,3 +77,28 @@ define i32 @pr39771_expanded_fshr_multi_use(i32 %a) {
   %e = and i32 %d, 31
   ret i32 %e
 }
+
+; %b operand of %c will be dead initially, but later found live.
+define void @dead_use_invalidation(i32 %a) {
+; CHECK-LABEL: @dead_use_invalidation(
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[C:%.*]] = shl i32 [[B]], 31
+; CHECK-NEXT:    [[D:%.*]] = and i32 [[C]], 1
+; CHECK-NEXT:    [[E:%.*]] = or i32 [[C]], 0
+; CHECK-NEXT:    [[F:%.*]] = or i32 [[D]], 0
+; CHECK-NEXT:    call void @dummy(i32 [[E]])
+; CHECK-NEXT:    call void @dummy(i32 [[F]])
+; CHECK-NEXT:    call void @dummy(i32 [[B]])
+; CHECK-NEXT:    ret void
+;
+  %b = or i32 %a, 0
+  %c = shl i32 %b, 31
+  %d = and i32 %c, 1
+  %e = or i32 %c, 0
+  %f = or i32 %d, 0
+  call void @dummy(i32 %e)
+  call void @dummy(i32 %f)
+  call void @dummy(i32 %b)
+  ret void
+}
+declare void @dummy(i32)

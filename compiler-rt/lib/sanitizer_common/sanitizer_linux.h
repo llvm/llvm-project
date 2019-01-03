@@ -44,7 +44,6 @@ struct MemoryMappingLayoutData {
 };
 
 void ReadProcMaps(ProcSelfMapsBuff *proc_maps);
-bool IsProcMapsAvailable();
 
 // Syscall wrappers.
 uptr internal_getdents(fd_t fd, struct linux_dirent *dirp, unsigned int count);

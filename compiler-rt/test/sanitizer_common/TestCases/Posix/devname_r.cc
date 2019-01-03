@@ -4,6 +4,7 @@
 #include <sys/cdefs.h>
 #include <sys/stat.h>
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -12,17 +13,14 @@ int main(void) {
   char name[100];
   mode_t type;
 
-  if (stat("/dev/null", &st))
-    exit(1);
+  assert(!stat("/dev/null", &st));
 
   type = S_ISCHR(st.st_mode) ? S_IFCHR : S_IFBLK;
 
 #if defined(__NetBSD__)
-  if (devname_r(st.st_rdev, type, name, sizeof(name)))
-    exit(1);
+  assert(!devname_r(st.st_rdev, type, name, sizeof(name)));
 #else
-  if (!devname_r(st.st_rdev, type, name, sizeof(name)))
-    exit(1);
+  assert(devname_r(st.st_rdev, type, name, sizeof(name)));
 #endif
 
   printf("%s\n", name);

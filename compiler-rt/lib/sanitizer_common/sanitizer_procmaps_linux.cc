@@ -13,14 +13,9 @@
 #include "sanitizer_platform.h"
 #if SANITIZER_LINUX
 #include "sanitizer_common.h"
-#include "sanitizer_file.h"
 #include "sanitizer_procmaps.h"
 
 namespace __sanitizer {
-
-bool IsProcMapsAvailable() {
-  return FileExists("/proc/self/maps");
-}
 
 void ReadProcMaps(ProcSelfMapsBuff *proc_maps) {
   if (!ReadFileToBuffer("/proc/self/maps", &proc_maps->data,

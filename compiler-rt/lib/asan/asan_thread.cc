@@ -18,7 +18,6 @@
 #include "asan_thread.h"
 #include "asan_mapping.h"
 #include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
@@ -224,11 +223,9 @@ void AsanThread::Init(const InitOptions *options) {
   atomic_store(&stack_switching_, false, memory_order_release);
   CHECK_EQ(this->stack_size(), 0U);
   SetThreadStackAndTls(options);
-  if (stack_top_ != stack_bottom_) {
-    CHECK_GT(this->stack_size(), 0U);
-    CHECK(AddrIsInMem(stack_bottom_));
-    CHECK(AddrIsInMem(stack_top_ - 1));
-  }
+  CHECK_GT(this->stack_size(), 0U);
+  CHECK(AddrIsInMem(stack_bottom_));
+  CHECK(AddrIsInMem(stack_top_ - 1));
   ClearShadowForThreadStackAndTLS();
   fake_stack_ = nullptr;
   if (__asan_option_detect_stack_use_after_return)
@@ -285,42 +282,27 @@ AsanThread *CreateMainThread() {
   return main_thread;
 }
 
-static bool StackLimitsAreAvailable() {
-#if SANITIZER_WINDOWS
-  return true;
-#else
-  return MemoryMappingLayout::IsAvailable();
-#endif
-}
-
 // This implementation doesn't use the argument, which is just passed down
 // from the caller of Init (which see, above).  It's only there to support
 // OS-specific implementations that need more information passed through.
 void AsanThread::SetThreadStackAndTls(const InitOptions *options) {
   DCHECK_EQ(options, nullptr);
-  // If this process is "init" (pid 1), /proc may not be mounted yet.
-  if (!start_routine_ && !StackLimitsAreAvailable()) {
-    stack_top_ = stack_bottom_ = 0;
-    tls_begin_ = tls_end_ = 0;
-  } else {
-    uptr tls_size = 0;
-    uptr stack_size = 0;
-    GetThreadStackAndTls(tid() == 0, &stack_bottom_, &stack_size, &tls_begin_,
-                         &tls_size);
-    stack_top_ = stack_bottom_ + stack_size;
-    tls_end_ = tls_begin_ + tls_size;
-    dtls_ = DTLS_Get();
+  uptr tls_size = 0;
+  uptr stack_size = 0;
+  GetThreadStackAndTls(tid() == 0, &stack_bottom_, &stack_size, &tls_begin_,
+                       &tls_size);
+  stack_top_ = stack_bottom_ + stack_size;
+  tls_end_ = tls_begin_ + tls_size;
+  dtls_ = DTLS_Get();
 
-    int local;
-    CHECK(AddrIsInStack((uptr)&local));
-  }
+  int local;
+  CHECK(AddrIsInStack((uptr)&local));
 }
 
 #endif  // !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
 
 void AsanThread::ClearShadowForThreadStackAndTLS() {
-  if (stack_top_ != stack_bottom_)
-    PoisonShadow(stack_bottom_, stack_top_ - stack_bottom_, 0);
+  PoisonShadow(stack_bottom_, stack_top_ - stack_bottom_, 0);
   if (tls_begin_ != tls_end_) {
     uptr tls_begin_aligned = RoundDownTo(tls_begin_, SHADOW_GRANULARITY);
     uptr tls_end_aligned = RoundUpTo(tls_end_, SHADOW_GRANULARITY);
@@ -332,9 +314,6 @@ void AsanThread::ClearShadowForThreadStackAndTLS() {
 
 bool AsanThread::GetStackFrameAccessByAddr(uptr addr,
                                            StackFrameAccess *access) {
-  if (stack_top_ == stack_bottom_)
-    return false;
-
   uptr bottom = 0;
   if (AddrIsInStack(addr)) {
     bottom = stack_bottom();

@@ -210,8 +210,6 @@ void AsanCheckIncompatibleRT() {
     }
   } else {
     if (__asan_rt_version == ASAN_RT_VERSION_UNDEFINED) {
-      if (!MemoryMappingLayout::IsAvailable())
-        return;
       // Ensure that dynamic runtime is not present. We should detect it
       // as early as possible, otherwise ASan interceptors could bind to
       // the functions in dynamic ASan runtime instead of the functions in

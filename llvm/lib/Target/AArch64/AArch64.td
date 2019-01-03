@@ -306,11 +306,11 @@ def FeatureFRInt3264 : SubtargetFeature<"fptoint", "HasFRInt3264", "true",
 def FeatureSpecRestrict : SubtargetFeature<"specrestrict", "HasSpecRestrict",
   "true", "Enable architectural speculation restriction" >;
 
+def FeatureSB : SubtargetFeature<"sb", "HasSB",
+  "true", "Enable v8.5 Speculation Barrier" >;
+
 def FeatureSSBS : SubtargetFeature<"ssbs", "HasSSBS",
   "true", "Enable Speculative Store Bypass Safe bit" >;
-
-def FeatureSpecCtrl : SubtargetFeature<"specctrl", "HasSpecCtrl", "true",
-  "Enable speculation control barrier" >;
 
 def FeaturePredCtrl : SubtargetFeature<"predctrl", "HasPredCtrl", "true",
   "Enable execution and data prediction invalidation instructions" >;
@@ -352,7 +352,7 @@ def HasV8_4aOps : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
 def HasV8_5aOps : SubtargetFeature<
   "v8.5a", "HasV8_5aOps", "true", "Support ARM v8.5a instructions",
   [HasV8_4aOps, FeatureAltFPCmp, FeatureFRInt3264, FeatureSpecRestrict,
-   FeatureSSBS, FeatureSpecCtrl, FeaturePredCtrl, FeatureCacheDeepPersist,
+   FeatureSSBS, FeatureSB, FeaturePredCtrl, FeatureCacheDeepPersist,
    FeatureBranchTargetId]
 >;
 

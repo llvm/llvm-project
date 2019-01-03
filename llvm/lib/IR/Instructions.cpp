@@ -27,6 +27,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -253,6 +254,26 @@ void LandingPadInst::addClause(Constant *Val) {
 //===----------------------------------------------------------------------===//
 //                        CallBase Implementation
 //===----------------------------------------------------------------------===//
+
+Function *CallBase::getCaller() { return getParent()->getParent(); }
+
+Intrinsic::ID CallBase::getIntrinsicID() const {
+  if (auto *F = getCalledFunction())
+    return F->getIntrinsicID();
+  return Intrinsic::not_intrinsic;
+}
+
+bool CallBase::isReturnNonNull() const {
+  if (hasRetAttr(Attribute::NonNull))
+    return true;
+
+  if (getDereferenceableBytes(AttributeList::ReturnIndex) > 0 &&
+           !NullPointerIsDefined(getCaller(),
+                                 getType()->getPointerAddressSpace()))
+    return true;
+
+  return false;
+}
 
 Value *CallBase::getReturnedArgOperand() const {
   unsigned Index;

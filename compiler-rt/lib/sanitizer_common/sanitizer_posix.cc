@@ -18,7 +18,6 @@
 
 #include "sanitizer_common.h"
 #include "sanitizer_file.h"
-#include "sanitizer_flags.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_posix.h"
 #include "sanitizer_procmaps.h"
@@ -158,8 +157,6 @@ void MprotectMallocZones(void *addr, int prot) {}
 #endif
 
 fd_t OpenFile(const char *filename, FileAccessMode mode, error_t *errno_p) {
-  if (ShouldMockFailureToOpen(filename))
-    return kInvalidFd;
   int flags;
   switch (mode) {
     case RdOnly: flags = O_RDONLY; break;
@@ -232,8 +229,6 @@ static inline bool IntervalsAreSeparate(uptr start1, uptr end1,
 // several worker threads on Mac, which aren't expected to map big chunks of
 // memory).
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
-  if (!MemoryMappingLayout::IsAvailable())
-    return true; // hope for the best
   MemoryMappingLayout proc_maps(/*cache_enabled*/true);
   MemoryMappedSegment segment;
   while (proc_maps.Next(&segment)) {
@@ -337,11 +332,6 @@ fd_t ReserveStandardFds(fd_t fd) {
     if (used[i])
       internal_close(i);
   return fd;
-}
-
-bool ShouldMockFailureToOpen(const char *path) {
-  return common_flags()->test_only_emulate_no_procfs &&
-         internal_strncmp(path, "/proc/", 6) == 0;
 }
 
 } // namespace __sanitizer

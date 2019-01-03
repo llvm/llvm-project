@@ -101,6 +101,7 @@ private:
   /// Severity gives the severity of the diagnostic.
   const DiagnosticSeverity Severity;
 
+  virtual void anchor();
 public:
   DiagnosticInfo(/* DiagnosticKind */ int Kind, DiagnosticSeverity Severity)
       : Kind(Kind), Severity(Severity) {}
@@ -210,6 +211,7 @@ public:
 };
 
 class DiagnosticInfoStackSize : public DiagnosticInfoResourceLimit {
+  virtual void anchor() override;
 public:
   DiagnosticInfoStackSize(const Function &Fn, uint64_t StackSize,
                           DiagnosticSeverity Severity = DS_Warning,
@@ -360,6 +362,7 @@ public:
 
 /// Common features for diagnostics with an associated location.
 class DiagnosticInfoWithLocationBase : public DiagnosticInfo {
+  virtual void anchor() override;
 public:
   /// \p Fn is the function where the diagnostic is being emitted. \p Loc is
   /// the location information to use in the diagnostic.
@@ -598,6 +601,7 @@ operator<<(RemarkT &R,
 /// Common features for diagnostics dealing with optimization remarks
 /// that are used by IR passes.
 class DiagnosticInfoIROptimization : public DiagnosticInfoOptimizationBase {
+  virtual void anchor() override;
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. \p
   /// RemarkName is a textual identifier for the remark (single-word,
@@ -818,6 +822,7 @@ private:
 /// Diagnostic information for optimization analysis remarks related to
 /// floating-point non-commutativity.
 class OptimizationRemarkAnalysisFPCommute : public OptimizationRemarkAnalysis {
+  virtual void anchor();
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the
@@ -859,6 +864,7 @@ private:
 /// Diagnostic information for optimization analysis remarks related to
 /// pointer aliasing.
 class OptimizationRemarkAnalysisAliasing : public OptimizationRemarkAnalysis {
+  virtual void anchor();
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the

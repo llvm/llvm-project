@@ -144,12 +144,6 @@ void MemoryMappingLayout::DumpListOfModules(
   }
 }
 
-bool MemoryMappingLayout::IsAvailable() {
-  if (cached_proc_self_maps.data)
-    return true;
-  return IsProcMapsAvailable();
-}
-
 void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) {
   char *smaps = nullptr;
   uptr smaps_cap = 0;

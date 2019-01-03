@@ -20,10 +20,6 @@
 
 namespace __sanitizer {
 
-bool IsProcMapsAvailable() {
-  return FileExists("/proc/self/xmap");
-}
-
 void ReadProcMaps(ProcSelfMapsBuff *proc_maps) {
   ReadFileToBuffer("/proc/self/xmap", &proc_maps->data, &proc_maps->mmaped_size,
                    &proc_maps->len);

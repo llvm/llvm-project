@@ -24,6 +24,9 @@ public:
   MOCK_METHOD1(DidExec, void(NativeProcessProtocol *Process));
 };
 
+// NB: This class doesn't use the override keyword to avoid
+// -Winconsistent-missing-override warnings from the compiler. The
+// inconsistency comes from the overriding definitions in the MOCK_*** macros.
 class MockProcess : public NativeProcessProtocol {
 public:
   MockProcess(NativeDelegate &Delegate, const ArchSpec &Arch,
@@ -47,9 +50,9 @@ public:
   MOCK_METHOD2(GetFileLoadAddress,
                Status(const llvm::StringRef &FileName, addr_t &Addr));
 
-  const ArchSpec &GetArchitecture() const override { return Arch; }
+  const ArchSpec &GetArchitecture() const /*override*/ { return Arch; }
   Status SetBreakpoint(lldb::addr_t Addr, uint32_t Size,
-                       bool Hardware) override {
+                       bool Hardware) /*override*/ {
     if (Hardware)
       return SetHardwareBreakpoint(Addr, Size);
     else
@@ -59,9 +62,9 @@ public:
   // Redirect base class Read/Write Memory methods to functions whose signatures
   // are more mock-friendly.
   Status ReadMemory(addr_t Addr, void *Buf, size_t Size,
-                    size_t &BytesRead) override;
+                    size_t &BytesRead) /*override*/;
   Status WriteMemory(addr_t Addr, const void *Buf, size_t Size,
-                     size_t &BytesWritten) override;
+                     size_t &BytesWritten) /*override*/;
 
   MOCK_METHOD2(ReadMemory,
                llvm::Expected<std::vector<uint8_t>>(addr_t Addr, size_t Size));

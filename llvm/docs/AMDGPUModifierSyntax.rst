@@ -27,8 +27,8 @@ DS Modifiers
 
 .. _amdgpu_synid_ds_offset8:
 
-ds_offset8
-~~~~~~~~~~
+offset8
+~~~~~~~
 
 Specifies an immediate unsigned 8-bit offset, in bytes. The default value is 0.
 
@@ -50,8 +50,8 @@ Examples:
 
 .. _amdgpu_synid_ds_offset16:
 
-ds_offset16
-~~~~~~~~~~~
+offset16
+~~~~~~~~
 
 Specifies an immediate unsigned 16-bit offset, in bytes. The default value is 0.
 
@@ -73,8 +73,8 @@ Examples:
 
 .. _amdgpu_synid_sw_offset16:
 
-sw_offset16
-~~~~~~~~~~~
+pattern
+~~~~~~~
 
 This is a special modifier which may be used with *ds_swizzle_b32* instruction only.
 It specifies a swizzle pattern in numeric or symbolic form. The default value is 0.
@@ -205,8 +205,8 @@ FLAT Modifiers
 
 .. _amdgpu_synid_flat_offset12:
 
-flat_offset12
-~~~~~~~~~~~~~
+offset12
+~~~~~~~~
 
 Specifies an immediate unsigned 12-bit offset, in bytes. The default value is 0.
 
@@ -226,10 +226,10 @@ Examples:
   offset:4095
   offset:0xff
 
-.. _amdgpu_synid_flat_offset13:
+.. _amdgpu_synid_flat_offset13s:
 
-flat_offset13
-~~~~~~~~~~~~~
+offset13s
+~~~~~~~~~
 
 Specifies an immediate signed 13-bit offset, in bytes. The default value is 0.
 
@@ -238,7 +238,7 @@ Can be used with *global/scratch* opcodes only. GFX9 only.
     ============================ =======================================================
     Syntax                       Description
     ============================ =======================================================
-    offset:{-4096..+4095}        Specifies a 13-bit signed offset as an
+    offset:{-4096..4095}         Specifies a 13-bit signed offset as an
                                  :ref:`integer number <amdgpu_synid_integer_number>`.
     ============================ =======================================================
 
@@ -353,7 +353,7 @@ GFX7 and GFX8 only.
     r128                Specifies 128 bits texture resource size.
     =================== ================================================
 
-.. WARNING:: Using this modifier should descrease *rsrc* register size from 8 to 4 dwords, but assembler does not currently support this feature.
+.. WARNING:: Using this modifier should descrease *rsrc* operand size from 8 to 4 dwords, but assembler does not currently support this feature.
 
 tfe
 ~~~
@@ -545,8 +545,8 @@ GFX7 only. Cannot be used with :ref:`offen<amdgpu_synid_offen>` and
 
 .. _amdgpu_synid_buf_offset12:
 
-buf_offset12
-~~~~~~~~~~~~
+offset12
+~~~~~~~~
 
 Specifies an immediate unsigned 12-bit offset, in bytes. The default value is 0.
 
@@ -889,8 +889,8 @@ VOP3 Modifiers
 
 .. _amdgpu_synid_vop3_op_sel:
 
-vop3_op_sel
-~~~~~~~~~~~
+op_sel
+~~~~~~
 
 Selects the low [15:0] or high [31:16] operand bits for source and destination operands.
 By default, low bits are used for all operands.
@@ -1177,11 +1177,11 @@ GFX9 only.
 
 .. _amdgpu_synid_mad_mix_op_sel:
 
-mad_mix_op_sel
-~~~~~~~~~~~~~~
+m_op_sel
+~~~~~~~~
 
 This operand has meaning only for 16-bit source operands as indicated by
-:ref:`mad_mix_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>`.
+:ref:`m_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>`.
 It specifies to select either the low [15:0] or high [31:16] operand bits
 as input to the operation.
 
@@ -1206,8 +1206,8 @@ Examples:
 
 .. _amdgpu_synid_mad_mix_op_sel_hi:
 
-mad_mix_op_sel_hi
-~~~~~~~~~~~~~~~~~
+m_op_sel_hi
+~~~~~~~~~~~
 
 Selects the size of source operands: either 32 bits or 16 bits.
 By default, 32 bits are used for all source operands.
@@ -1218,7 +1218,7 @@ operands. First value controls src0, second value controls src1 and so on.
 The value 0 indicates 32 bits, the value 1 indicates 16 bits.
 
 The location of 16 bits in the operand may be specified by
-:ref:`mad_mix_op_sel<amdgpu_synid_mad_mix_op_sel>`.
+:ref:`m_op_sel<amdgpu_synid_mad_mix_op_sel>`.
 
     ======================================== ====================================
     Syntax                                   Description

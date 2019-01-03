@@ -3099,6 +3099,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleVectorComparePackedIntrinsic(I);
       break;
 
+    case Intrinsic::is_constant:
+      // The result of llvm.is.constant() is always defined.
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      break;
+
     default:
       if (!handleUnknownIntrinsic(I))
         visitInstruction(I);

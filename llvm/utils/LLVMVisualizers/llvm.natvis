@@ -35,6 +35,7 @@ For later versions of Visual Studio, no setup is required.
     <DisplayString IncludeView ="elt4">, /* {Size - 4} more*/ </DisplayString>
     <DisplayString Condition="Size == 0">empty</DisplayString>
     <DisplayString Condition="Size != 0">{{{*this,view(elt0)}}}</DisplayString>
+    <DisplayString>Uninitialized</DisplayString>
     <Expand>
       <Item Name="[size]">Size</Item>
       <Item Name="[capacity]">Capacity</Item>
@@ -93,11 +94,13 @@ For later versions of Visual Studio, no setup is required.
   </Type>
 
   <Type Name="llvm::PointerUnion&lt;*,*&gt;">
-    <DisplayString Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) == 0">{"$T1", s8b}: {($T1)(Val.Value &amp; Val.PointerBitMask)}</DisplayString>
-    <DisplayString Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) != 0">{"$T2", s8b}: {($T2)(Val.Value &amp; Val.PointerBitMask)}</DisplayString>
+    <DisplayString Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) == 0">{"$T1", s8b}: {($T1)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)}</DisplayString>
+    <DisplayString Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) != 0">{"$T2", s8b}: {($T2)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)}</DisplayString>
     <Expand>
-      <ExpandedItem Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) == 0">($T1)(Val.Value &amp; Val.PointerBitMask)</ExpandedItem>
-      <ExpandedItem Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) != 0">($T2)(Val.Value &amp; Val.PointerBitMask)</ExpandedItem>
+      <Item Name="[Holds]" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) == 0">"$T1", s8b</Item>
+      <Item Name="[Ptr]" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) == 0">($T1)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)</Item>
+      <Item Name="[Holds]" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) != 0">"$T2", s8b</Item>
+      <Item Name="[Ptr]" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) != 0">($T2)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)</Item>
     </Expand>
   </Type>
 

@@ -710,11 +710,7 @@ bool TypeAndOrName::operator==(const TypeAndOrName &other) const {
 }
 
 bool TypeAndOrName::operator!=(const TypeAndOrName &other) const {
-  if (m_type_pair != other.m_type_pair)
-    return true;
-  if (m_type_name != other.m_type_name)
-    return true;
-  return false;
+  return !(*this == other);
 }
 
 ConstString TypeAndOrName::GetName() const {
@@ -871,8 +867,7 @@ bool TypeImpl::operator==(const TypeImpl &rhs) const {
 }
 
 bool TypeImpl::operator!=(const TypeImpl &rhs) const {
-  return m_static_type != rhs.m_static_type ||
-         m_dynamic_type != rhs.m_dynamic_type;
+  return !(*this == rhs);
 }
 
 bool TypeImpl::IsValid() const {

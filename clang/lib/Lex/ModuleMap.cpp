@@ -54,6 +54,8 @@
 
 using namespace clang;
 
+void ModuleMapCallbacks::anchor() {}
+
 void ModuleMap::resolveLinkAsDependencies(Module *Mod) {
   auto PendingLinkAs = PendingLinkAsModule.find(Mod->Name);
   if (PendingLinkAs != PendingLinkAsModule.end()) {

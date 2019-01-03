@@ -37,8 +37,7 @@ truncateIfIntegral(const FloatingLiteral &FloatLiteral) {
   return llvm::None;
 }
 
-/// Given a `Scale` return the inverse functions for it.
-static const std::pair<llvm::StringRef, llvm::StringRef> &
+const std::pair<llvm::StringRef, llvm::StringRef> &
 getInverseForScale(DurationScale Scale) {
   static const llvm::IndexedMap<std::pair<llvm::StringRef, llvm::StringRef>,
                                 DurationScale2IndexFunctor>

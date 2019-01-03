@@ -67,11 +67,11 @@ main_body:
   ret void
 }
 
-;CHECK-LABEL: {{^}}buffer_store_x1_offen_merged:
+;CHECK-LABEL: {{^}}buffer_store_x1_offen_merged_and:
 ;CHECK-NOT: s_waitcnt
 ;CHECK-DAG: buffer_store_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4
 ;CHECK-DAG: buffer_store_dwordx2 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:28
-define amdgpu_ps void @buffer_store_x1_offen_merged(<4 x i32> inreg %rsrc, i32 %a, float %v1, float %v2, float %v3, float %v4, float %v5, float %v6) {
+define amdgpu_ps void @buffer_store_x1_offen_merged_and(<4 x i32> inreg %rsrc, i32 %a, float %v1, float %v2, float %v3, float %v4, float %v5, float %v6) {
   %a1 = add i32 %a, 4
   %a2 = add i32 %a, 8
   %a3 = add i32 %a, 12
@@ -86,6 +86,28 @@ define amdgpu_ps void @buffer_store_x1_offen_merged(<4 x i32> inreg %rsrc, i32 %
   call void @llvm.amdgcn.raw.buffer.store.f32(float %v6, <4 x i32> %rsrc, i32 %a6, i32 0, i32 0)
   ret void
 }
+
+;CHECK-LABEL: {{^}}buffer_store_x1_offen_merged_or:
+;CHECK-NOT: s_waitcnt
+;CHECK-DAG: buffer_store_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v{{[0-9]}}, s[0:3], 0 offen offset:4
+;CHECK-DAG: buffer_store_dwordx2 v[{{[0-9]}}:{{[0-9]}}], v{{[0-9]}}, s[0:3], 0 offen offset:28
+define amdgpu_ps void @buffer_store_x1_offen_merged_or(<4 x i32> inreg %rsrc, i32 %inp, float %v1, float %v2, float %v3, float %v4, float %v5, float %v6) {
+  %a = shl i32 %inp, 6
+  %a1 = add i32 %a, 4
+  %a2 = add i32 %a, 8
+  %a3 = add i32 %a, 12
+  %a4 = add i32 %a, 16
+  %a5 = add i32 %a, 28
+  %a6 = add i32 %a, 32
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v1, <4 x i32> %rsrc, i32 %a1, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v2, <4 x i32> %rsrc, i32 %a2, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v3, <4 x i32> %rsrc, i32 %a3, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v4, <4 x i32> %rsrc, i32 %a4, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v5, <4 x i32> %rsrc, i32 %a5, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %v6, <4 x i32> %rsrc, i32 %a6, i32 0, i32 0)
+  ret void
+}
+
 
 ;CHECK-LABEL: {{^}}buffer_store_x1_offen_merged_glc_slc:
 ;CHECK-NOT: s_waitcnt
@@ -108,10 +130,22 @@ define amdgpu_ps void @buffer_store_x1_offen_merged_glc_slc(<4 x i32> inreg %rsr
   ret void
 }
 
-;CHECK-LABEL: {{^}}buffer_store_x2_offen_merged:
+;CHECK-LABEL: {{^}}buffer_store_x2_offen_merged_and:
 ;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_store_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4
-define amdgpu_ps void @buffer_store_x2_offen_merged(<4 x i32> inreg %rsrc, i32 %a, <2 x float> %v1, <2 x float> %v2) {
+define amdgpu_ps void @buffer_store_x2_offen_merged_and(<4 x i32> inreg %rsrc, i32 %a, <2 x float> %v1, <2 x float> %v2) {
+  %a1 = add i32 %a, 4
+  %a2 = add i32 %a, 12
+  call void @llvm.amdgcn.raw.buffer.store.v2f32(<2 x float> %v1, <4 x i32> %rsrc, i32 %a1, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.buffer.store.v2f32(<2 x float> %v2, <4 x i32> %rsrc, i32 %a2, i32 0, i32 0)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}buffer_store_x2_offen_merged_or:
+;CHECK-NOT: s_waitcnt
+;CHECK: buffer_store_dwordx4 v[{{[0-9]}}:{{[0-9]}}], v{{[0-9]}}, s[0:3], 0 offen offset:4
+define amdgpu_ps void @buffer_store_x2_offen_merged_or(<4 x i32> inreg %rsrc, i32 %inp, <2 x float> %v1, <2 x float> %v2) {
+  %a = shl i32 %inp, 4
   %a1 = add i32 %a, 4
   %a2 = add i32 %a, 12
   call void @llvm.amdgcn.raw.buffer.store.v2f32(<2 x float> %v1, <4 x i32> %rsrc, i32 %a1, i32 0, i32 0)

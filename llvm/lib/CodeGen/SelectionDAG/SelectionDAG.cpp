@@ -87,6 +87,8 @@ static SDVTList makeVTList(const EVT *VTs, unsigned NumVTs) {
 void SelectionDAG::DAGUpdateListener::NodeDeleted(SDNode*, SDNode*) {}
 void SelectionDAG::DAGUpdateListener::NodeUpdated(SDNode*) {}
 
+void SelectionDAG::DAGNodeDeletedListener::anchor() {}
+
 #define DEBUG_TYPE "selectiondag"
 
 static cl::opt<bool> EnableMemCpyDAGOpt("enable-memcpy-dag-opt",
@@ -2825,7 +2827,15 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known.Zero.setBitsFrom(InVT.getScalarSizeInBits());
     break;
   }
-  // TODO ISD::SIGN_EXTEND_VECTOR_INREG
+  case ISD::SIGN_EXTEND_VECTOR_INREG: {
+    EVT InVT = Op.getOperand(0).getValueType();
+    APInt InDemandedElts = DemandedElts.zextOrSelf(InVT.getVectorNumElements());
+    Known = computeKnownBits(Op.getOperand(0), InDemandedElts, Depth + 1);
+    // If the sign bit is known to be zero or one, then sext will extend
+    // it to the top bits, else it will just zext.
+    Known = Known.sext(BitWidth);
+    break;
+  }
   case ISD::SIGN_EXTEND: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // If the sign bit is known to be zero or one, then sext will extend

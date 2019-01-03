@@ -104,6 +104,11 @@ void DiagnosticInfoPGOProfile::print(DiagnosticPrinter &DP) const {
   DP << getMsg();
 }
 
+void DiagnosticInfo::anchor() {}
+void DiagnosticInfoStackSize::anchor() {}
+void DiagnosticInfoWithLocationBase::anchor() {}
+void DiagnosticInfoIROptimization::anchor() {}
+
 DiagnosticLocation::DiagnosticLocation(const DebugLoc &DL) {
   if (!DL)
     return;
@@ -365,6 +370,9 @@ std::string DiagnosticInfoOptimizationBase::getMsg() const {
     OS << Arg.Val;
   return OS.str();
 }
+
+void OptimizationRemarkAnalysisFPCommute::anchor() {}
+void OptimizationRemarkAnalysisAliasing::anchor() {}
 
 namespace llvm {
 namespace yaml {

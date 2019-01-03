@@ -2900,23 +2900,15 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
         isCommutativeIntrinsic(II))
       std::swap(LHS, RHS);
 
-    bool UseIncDec = false;
-    if (isa<ConstantInt>(RHS) && cast<ConstantInt>(RHS)->isOne())
-      UseIncDec = true;
-
     unsigned BaseOpc, CondOpc;
     switch (II->getIntrinsicID()) {
     default: llvm_unreachable("Unexpected intrinsic!");
     case Intrinsic::sadd_with_overflow:
-      BaseOpc = UseIncDec ? unsigned(X86ISD::INC) : unsigned(ISD::ADD);
-      CondOpc = X86::SETOr;
-      break;
+      BaseOpc = ISD::ADD; CondOpc = X86::SETOr; break;
     case Intrinsic::uadd_with_overflow:
       BaseOpc = ISD::ADD; CondOpc = X86::SETBr; break;
     case Intrinsic::ssub_with_overflow:
-      BaseOpc = UseIncDec ? unsigned(X86ISD::DEC) : unsigned(ISD::SUB);
-      CondOpc = X86::SETOr;
-      break;
+      BaseOpc = ISD::SUB; CondOpc = X86::SETOr; break;
     case Intrinsic::usub_with_overflow:
       BaseOpc = ISD::SUB; CondOpc = X86::SETBr; break;
     case Intrinsic::smul_with_overflow:
@@ -2938,9 +2930,11 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
         { X86::DEC8r, X86::DEC16r, X86::DEC32r, X86::DEC64r }
       };
 
-      if (BaseOpc == X86ISD::INC || BaseOpc == X86ISD::DEC) {
+      if (CI->isOne() && (BaseOpc == ISD::ADD || BaseOpc == ISD::SUB) &&
+          CondOpc == X86::SETOr) {
+        // We can use INC/DEC.
         ResultReg = createResultReg(TLI.getRegClassFor(VT));
-        bool IsDec = BaseOpc == X86ISD::DEC;
+        bool IsDec = BaseOpc == ISD::SUB;
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                 TII.get(Opc[IsDec][VT.SimpleTy-MVT::i8]), ResultReg)
           .addReg(LHSReg, getKillRegState(LHSIsKill));

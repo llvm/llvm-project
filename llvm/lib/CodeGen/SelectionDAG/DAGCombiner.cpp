@@ -3161,8 +3161,19 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
   if (DAG.SignBitIsZero(N1) && DAG.SignBitIsZero(N0))
     return DAG.getNode(ISD::UDIV, DL, N1.getValueType(), N0, N1);
 
-  if (SDValue V = visitSDIVLike(N0, N1, N))
+  if (SDValue V = visitSDIVLike(N0, N1, N)) {
+    // If the corresponding remainder node exists, update its users with
+    // (Dividend - (Quotient * Divisor).
+    if (SDNode *RemNode = DAG.getNodeIfExists(ISD::SREM, N->getVTList(),
+                                              { N0, N1 })) {
+      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, V, N1);
+      SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0, Mul);
+      AddToWorklist(Mul.getNode());
+      AddToWorklist(Sub.getNode());
+      CombineTo(RemNode, Sub);
+    }
     return V;
+  }
 
   // sdiv, srem -> sdivrem
   // If the divisor is constant, then return DIVREM only if isIntDivCheap() is
@@ -3288,8 +3299,19 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
-  if (SDValue V = visitUDIVLike(N0, N1, N))
+  if (SDValue V = visitUDIVLike(N0, N1, N)) {
+    // If the corresponding remainder node exists, update its users with
+    // (Dividend - (Quotient * Divisor).
+    if (SDNode *RemNode = DAG.getNodeIfExists(ISD::UREM, N->getVTList(),
+                                              { N0, N1 })) {
+      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, V, N1);
+      SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0, Mul);
+      AddToWorklist(Mul.getNode());
+      AddToWorklist(Sub.getNode());
+      CombineTo(RemNode, Sub);
+    }
     return V;
+  }
 
   // sdiv, srem -> sdivrem
   // If the divisor is constant, then return DIVREM only if isIntDivCheap() is
@@ -3408,6 +3430,11 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
     SDValue OptimizedDiv =
         isSigned ? visitSDIVLike(N0, N1, N) : visitUDIVLike(N0, N1, N);
     if (OptimizedDiv.getNode()) {
+      // If the equivalent Div node also exists, update its users.
+      unsigned DivOpcode = isSigned ? ISD::SDIV : ISD::UDIV;
+      if (SDNode *DivNode = DAG.getNodeIfExists(DivOpcode, N->getVTList(),
+                                                { N0, N1 }))
+        CombineTo(DivNode, OptimizedDiv);
       SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, OptimizedDiv, N1);
       SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0, Mul);
       AddToWorklist(OptimizedDiv.getNode());
@@ -9414,10 +9441,13 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
 
   // fold (sext_in_reg (sext x)) -> (sext x)
   // fold (sext_in_reg (aext x)) -> (sext x)
-  // if x is small enough.
+  // if x is small enough or if we know that x has more than 1 sign bit and the
+  // sign_extend_inreg is extending from one of them.
   if (N0.getOpcode() == ISD::SIGN_EXTEND || N0.getOpcode() == ISD::ANY_EXTEND) {
     SDValue N00 = N0.getOperand(0);
-    if (N00.getScalarValueSizeInBits() <= EVTBits &&
+    unsigned N00Bits = N00.getScalarValueSizeInBits();
+    if ((N00Bits <= EVTBits ||
+         (N00Bits - DAG.ComputeNumSignBits(N00)) < EVTBits) &&
         (!LegalOperations || TLI.isOperationLegal(ISD::SIGN_EXTEND, VT)))
       return DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), VT, N00);
   }
@@ -10156,7 +10186,7 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   // float vectors bitcast to integer vectors) into shuffles.
   // bitcast(shuffle(bitcast(s0),bitcast(s1))) -> shuffle(s0,s1)
   if (Level < AfterLegalizeDAG && TLI.isTypeLegal(VT) && VT.isVector() &&
-      N0->getOpcode() == ISD::VECTOR_SHUFFLE &&
+      N0->getOpcode() == ISD::VECTOR_SHUFFLE && N0.hasOneUse() &&
       VT.getVectorNumElements() >= N0.getValueType().getVectorNumElements() &&
       !(VT.getVectorNumElements() % N0.getValueType().getVectorNumElements())) {
     ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(N0);

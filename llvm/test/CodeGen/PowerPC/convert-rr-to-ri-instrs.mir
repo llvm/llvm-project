@@ -1,5 +1,5 @@
-# RUN: llc -run-pass ppc-mi-peepholes -ppc-convert-rr-to-ri %s -o - | FileCheck %s
-# RUN: llc -start-after ppc-mi-peepholes -ppc-late-peephole %s -o - | FileCheck %s --check-prefix=CHECK-LATE
+# RUN: llc -run-pass ppc-mi-peepholes -ppc-convert-rr-to-ri %s -o - -verify-machineinstrs | FileCheck %s
+# RUN: llc -start-after ppc-mi-peepholes -ppc-late-peephole %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-LATE
 
 --- |
   ; ModuleID = 'convert-rr-to-ri-instrs.ll'

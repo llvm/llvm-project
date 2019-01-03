@@ -383,6 +383,8 @@ protected:
 
 private:
   IntrusiveRefCntPtr<FileSystem> FS;
+
+  virtual void anchor();
 };
 
 namespace detail {

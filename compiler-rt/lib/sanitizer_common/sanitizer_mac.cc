@@ -282,8 +282,6 @@ uptr internal_waitpid(int pid, int *status, int options) {
 
 // ----------------- sanitizer_common.h
 bool FileExists(const char *filename) {
-  if (ShouldMockFailureToOpen(filename))
-    return false;
   struct stat st;
   if (stat(filename, &st))
     return false;

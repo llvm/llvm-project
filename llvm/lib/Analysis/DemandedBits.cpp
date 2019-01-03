@@ -314,6 +314,7 @@ void DemandedBits::performAnalysis() {
 
   Visited.clear();
   AliveBits.clear();
+  DeadUses.clear();
 
   SmallVector<Instruction*, 128> Worklist;
 
@@ -358,7 +359,8 @@ void DemandedBits::performAnalysis() {
     APInt AOut;
     if (UserI->getType()->isIntOrIntVectorTy()) {
       AOut = AliveBits[UserI];
-      LLVM_DEBUG(dbgs() << " Alive Out: " << AOut);
+      LLVM_DEBUG(dbgs() << " Alive Out: 0x"
+                        << Twine::utohexstr(AOut.getLimitedValue()));
     }
     LLVM_DEBUG(dbgs() << "\n");
 
@@ -377,13 +379,20 @@ void DemandedBits::performAnalysis() {
           APInt AB = APInt::getAllOnesValue(BitWidth);
           if (UserI->getType()->isIntOrIntVectorTy() && !AOut &&
               !isAlwaysLive(UserI)) {
+            // If all bits of the output are dead, then all bits of the input
+            // are also dead.
             AB = APInt(BitWidth, 0);
           } else {
-            // If all bits of the output are dead, then all bits of the input
             // Bits of each operand that are used to compute alive bits of the
             // output are alive, all others are dead.
             determineLiveOperandBits(UserI, I, OI.getOperandNo(), AOut, AB,
                                      Known, Known2);
+
+            // Keep track of uses which have no demanded bits.
+            if (AB.isNullValue())
+              DeadUses.insert(&OI);
+            else
+              DeadUses.erase(&OI);
           }
 
           // If we've added to the set of alive bits (or the operand has not
@@ -424,6 +433,31 @@ bool DemandedBits::isInstructionDead(Instruction *I) {
 
   return !Visited.count(I) && AliveBits.find(I) == AliveBits.end() &&
     !isAlwaysLive(I);
+}
+
+bool DemandedBits::isUseDead(Use *U) {
+  // We only track integer uses, everything else is assumed live.
+  if (!(*U)->getType()->isIntOrIntVectorTy())
+    return false;
+
+  // Uses by always-live instructions are never dead.
+  Instruction *UserI = cast<Instruction>(U->getUser());
+  if (isAlwaysLive(UserI))
+    return false;
+
+  performAnalysis();
+  if (DeadUses.count(U))
+    return true;
+
+  // If no output bits are demanded, no input bits are demanded and the use
+  // is dead. These uses might not be explicitly present in the DeadUses map.
+  if (UserI->getType()->isIntOrIntVectorTy()) {
+    auto Found = AliveBits.find(UserI);
+    if (Found != AliveBits.end() && Found->second.isNullValue())
+      return true;
+  }
+
+  return false;
 }
 
 void DemandedBits::print(raw_ostream &OS) {

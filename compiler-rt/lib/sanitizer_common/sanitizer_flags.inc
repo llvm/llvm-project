@@ -243,6 +243,3 @@ COMMON_FLAG(bool, dump_registers, true,
 COMMON_FLAG(bool, detect_write_exec, false,
           "If true, triggers warning when writable-executable pages requests "
           "are being made")
-COMMON_FLAG(bool, test_only_emulate_no_procfs, false,
-            "TEST ONLY fail to open any files under /proc to emulate sanitized "
-            "\"init\"")

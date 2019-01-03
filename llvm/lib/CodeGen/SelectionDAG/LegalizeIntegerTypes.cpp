@@ -140,6 +140,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SMULO:
   case ISD::UMULO:       Res = PromoteIntRes_XMULO(N, ResNo); break;
 
+  case ISD::ADDE:
+  case ISD::SUBE:
   case ISD::ADDCARRY:
   case ISD::SUBCARRY:    Res = PromoteIntRes_ADDSUBCARRY(N, ResNo); break;
 
@@ -439,8 +441,26 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTTZ(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_VECTOR_ELT(SDNode *N) {
   SDLoc dl(N);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, NVT, N->getOperand(0),
-                     N->getOperand(1));
+
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+
+  // If the input also needs to be promoted, do that first so we can get a
+  // get a good idea for the output type.
+  if (TLI.getTypeAction(*DAG.getContext(), Op0.getValueType())
+      == TargetLowering::TypePromoteInteger) {
+    SDValue In = GetPromotedInteger(Op0);
+
+    // If the new type is larger than NVT, use it. We probably won't need to
+    // promote it again.
+    EVT SVT = In.getValueType().getScalarType();
+    if (SVT.bitsGE(NVT)) {
+      SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SVT, In, Op1);
+      return DAG.getAnyExtOrTrunc(Ext, dl, NVT);
+    }
+  }
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, NVT, Op0, Op1);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_XINT(SDNode *N) {
@@ -865,6 +885,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_UADDSUBO(SDNode *N, unsigned ResNo) {
   return Res;
 }
 
+// Handle promotion for the ADDE/SUBE/ADDCARRY/SUBCARRY nodes. Notice that
+// the third operand of ADDE/SUBE nodes is carry flag, which differs from 
+// the ADDCARRY/SUBCARRY nodes in that the third operand is carry Boolean.
 SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBCARRY(SDNode *N, unsigned ResNo) {
   if (ResNo == 1)
     return PromoteIntRes_Overflow(N);

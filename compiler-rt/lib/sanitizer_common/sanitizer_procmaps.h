@@ -75,7 +75,6 @@ class MemoryMappingLayout {
   // to obtain the memory mappings. It should fall back to pre-cached data
   // instead of aborting.
   static void CacheMemoryMappings();
-  static bool IsAvailable();
 
   // Adds all mapped objects into a vector.
   void DumpListOfModules(InternalMmapVectorNoCtor<LoadedModule> *modules);

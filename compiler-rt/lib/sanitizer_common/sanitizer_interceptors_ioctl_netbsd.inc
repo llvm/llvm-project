@@ -25,7 +25,7 @@ struct ioctl_desc {
   const char *name;
 };
 
-const unsigned ioctl_table_max = 1201;
+const unsigned ioctl_table_max = 1202;
 static ioctl_desc ioctl_table[ioctl_table_max];
 static unsigned ioctl_table_size = 0;
 
@@ -649,6 +649,23 @@ static void ioctl_table_fill() {
   _(SPKRTUNE, NONE, 0);
   _(SPKRGETVOL, WRITE, sizeof(unsigned int));
   _(SPKRSETVOL, READ, sizeof(unsigned int));
+  /* Entries from file: dev/nvmm/nvmm_ioctl.h */
+#if 0 /* WIP */
+  _(NVMM_IOC_CAPABILITY, WRITE, struct_nvmm_ioc_capability_sz);
+  _(NVMM_IOC_MACHINE_CREATE, READWRITE, struct_nvmm_ioc_machine_create_sz);
+  _(NVMM_IOC_MACHINE_DESTROY, READ, struct_nvmm_ioc_machine_destroy_sz);
+  _(NVMM_IOC_MACHINE_CONFIGURE, READ, struct_nvmm_ioc_machine_configure_sz);
+  _(NVMM_IOC_VCPU_CREATE, READ, struct_nvmm_ioc_vcpu_create_sz);
+  _(NVMM_IOC_VCPU_DESTROY, READ, struct_nvmm_ioc_vcpu_destroy_sz);
+  _(NVMM_IOC_VCPU_SETSTATE, READ, struct_nvmm_ioc_vcpu_setstate_sz);
+  _(NVMM_IOC_VCPU_GETSTATE, READ, struct_nvmm_ioc_vcpu_getstate_sz);
+  _(NVMM_IOC_VCPU_INJECT, READWRITE, struct_nvmm_ioc_vcpu_inject_sz);
+  _(NVMM_IOC_VCPU_RUN, READWRITE, struct_nvmm_ioc_vcpu_run_sz);
+  _(NVMM_IOC_GPA_MAP, READ, struct_nvmm_ioc_gpa_map_sz);
+  _(NVMM_IOC_GPA_UNMAP, READ, struct_nvmm_ioc_gpa_unmap_sz);
+  _(NVMM_IOC_HVA_MAP, READ, struct_nvmm_ioc_hva_map_sz);
+  _(NVMM_IOC_HVA_UNMAP, READ, struct_nvmm_ioc_hva_unmap_sz);
+#endif
   /* Entries from file: fs/autofs/autofs_ioctl.h */
   _(AUTOFSREQUEST, WRITE, struct_autofs_daemon_request_sz);
   _(AUTOFSDONE, READ, struct_autofs_daemon_done_sz);
@@ -1192,6 +1209,7 @@ static void ioctl_table_fill() {
   _(SIOCSLINKSTR, READ, struct_ifdrv_sz);
   _(SIOCGETHERCAP, READWRITE, struct_eccapreq_sz);
   _(SIOCGIFINDEX, READWRITE, struct_ifreq_sz);
+  _(SIOCSETHERCAP, READ, struct_eccapreq_sz);
   _(SIOCGUMBINFO, READWRITE, struct_ifreq_sz);
   _(SIOCSUMBPARAM, READ, struct_ifreq_sz);
   _(SIOCGUMBPARAM, READWRITE, struct_ifreq_sz);
