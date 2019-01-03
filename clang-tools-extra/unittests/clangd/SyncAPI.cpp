@@ -148,6 +148,5 @@ RefSlab getRefs(const SymbolIndex &Index, SymbolID ID) {
   return std::move(Slab).build();
 }
 
-
 } // namespace clangd
 } // namespace clang

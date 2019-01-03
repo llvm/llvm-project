@@ -371,7 +371,7 @@ TEST(QualityTests, IsInstanceMember) {
   Rel.merge(BarSym);
   EXPECT_TRUE(Rel.IsInstanceMember);
 
-  Rel.IsInstanceMember =false;
+  Rel.IsInstanceMember = false;
   const Symbol &TplSym = findSymbol(Symbols, "Foo::tpl");
   Rel.merge(TplSym);
   EXPECT_TRUE(Rel.IsInstanceMember);

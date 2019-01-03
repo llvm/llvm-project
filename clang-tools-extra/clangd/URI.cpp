@@ -229,7 +229,7 @@ Expected<std::string> URI::resolvePath(StringRef AbsPath, StringRef HintPath) {
   if (!sys::path::is_absolute(AbsPath))
     llvm_unreachable(("Not a valid absolute path: " + AbsPath).str().c_str());
   for (auto &Entry : URISchemeRegistry::entries()) {
-    auto S =  Entry.instantiate();
+    auto S = Entry.instantiate();
     auto U = S->uriFromAbsolutePath(AbsPath);
     // For some paths, conversion to different URI schemes is impossible. These
     // should be just skipped.

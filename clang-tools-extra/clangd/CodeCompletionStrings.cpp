@@ -69,7 +69,8 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
   // Sanity check that the comment does not come from the PCH. We choose to not
   // write them into PCH, because they are racy and slow to load.
   assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
-  std::string Doc = RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+  std::string Doc =
+      RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
   return looksLikeDocComment(Doc) ? Doc : "";
 }
 
@@ -96,12 +97,12 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       //   treat them carefully. For Objective-C methods, all typed-text chunks
       //   will end in ':' (unless there are no arguments, in which case we
       //   can safely treat them as C++).
-      if (!StringRef(Chunk.Text).endswith(":")) {  // Treat as C++.
+      if (!StringRef(Chunk.Text).endswith(":")) { // Treat as C++.
         if (RequiredQualifiers)
           *RequiredQualifiers = std::move(*Signature);
         Signature->clear();
         Snippet->clear();
-      } else {  // Objective-C method with args.
+      } else { // Objective-C method with args.
         // If this is the first TypedText to the Objective-C method, discard any
         // text that we've previously seen (such as previous parameter selector,
         // which will be marked as Informative text).
@@ -111,7 +112,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
         if (!HadObjCArguments) {
           HadObjCArguments = true;
           Signature->clear();
-        } else {  // Subsequent argument, considered part of snippet/signature.
+        } else { // Subsequent argument, considered part of snippet/signature.
           *Signature += Chunk.Text;
           *Snippet += Chunk.Text;
         }

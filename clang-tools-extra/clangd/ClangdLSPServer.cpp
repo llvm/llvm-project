@@ -163,9 +163,9 @@ private:
           Server(Other.Server), TraceArgs(Other.TraceArgs) {
       Other.Server = nullptr;
     }
-    ReplyOnce& operator=(ReplyOnce&&) = delete;
+    ReplyOnce &operator=(ReplyOnce &&) = delete;
     ReplyOnce(const ReplyOnce &) = delete;
-    ReplyOnce& operator=(const ReplyOnce&) = delete;
+    ReplyOnce &operator=(const ReplyOnce &) = delete;
 
     ~ReplyOnce() {
       if (Server && !Replied) {
@@ -614,23 +614,23 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
 
 void ClangdLSPServer::onCompletion(const TextDocumentPositionParams &Params,
                                    Callback<CompletionList> Reply) {
-  Server->codeComplete(Params.textDocument.uri.file(), Params.position, CCOpts,
-                       Bind(
-                           [this](decltype(Reply) Reply,
-                                  Expected<CodeCompleteResult> List) {
-                             if (!List)
-                               return Reply(List.takeError());
-                             CompletionList LSPList;
-                             LSPList.isIncomplete = List->HasMore;
-                             for (const auto &R : List->Completions) {
-                               CompletionItem C = R.render(CCOpts);
-                               C.kind = adjustKindToCapability(
-                                   C.kind, SupportedCompletionItemKinds);
-                               LSPList.items.push_back(std::move(C));
-                             }
-                             return Reply(std::move(LSPList));
-                           },
-                           std::move(Reply)));
+  Server->codeComplete(
+      Params.textDocument.uri.file(), Params.position, CCOpts,
+      Bind(
+          [this](decltype(Reply) Reply, Expected<CodeCompleteResult> List) {
+            if (!List)
+              return Reply(List.takeError());
+            CompletionList LSPList;
+            LSPList.isIncomplete = List->HasMore;
+            for (const auto &R : List->Completions) {
+              CompletionItem C = R.render(CCOpts);
+              C.kind =
+                  adjustKindToCapability(C.kind, SupportedCompletionItemKinds);
+              LSPList.items.push_back(std::move(C));
+            }
+            return Reply(std::move(LSPList));
+          },
+          std::move(Reply)));
 }
 
 void ClangdLSPServer::onSignatureHelp(const TextDocumentPositionParams &Params,

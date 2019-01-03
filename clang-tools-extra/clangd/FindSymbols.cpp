@@ -190,7 +190,7 @@ llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   // sourceLocToPosition won't switch files, so we call getSpellingLoc on top of
   // that to make sure it does not switch files.
   // FIXME: sourceLocToPosition should not switch files!
-  SourceLocation BeginLoc =  SM.getSpellingLoc(SM.getFileLoc(ND.getBeginLoc()));
+  SourceLocation BeginLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getBeginLoc()));
   SourceLocation EndLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getEndLoc()));
   if (NameLoc.isInvalid() || BeginLoc.isInvalid() || EndLoc.isInvalid())
     return llvm::None;

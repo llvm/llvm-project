@@ -46,8 +46,7 @@ void logIfOverflow(const SymbolLocation &Loc) {
 // TUPath is used to resolve the path of URI.
 // FIXME: figure out a good home for it, and share the implementation with
 // FindSymbols.
-Optional<Location> toLSPLocation(const SymbolLocation &Loc,
-                                 StringRef TUPath) {
+Optional<Location> toLSPLocation(const SymbolLocation &Loc, StringRef TUPath) {
   if (!Loc)
     return None;
   auto Uri = URI::parse(Loc.FileURI);
@@ -336,8 +335,7 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
     for (auto It : CandidatesIndex)
       QueryRequest.IDs.insert(It.first);
     std::string TUPath;
-    const FileEntry *FE =
-        SM.getFileEntryForID(SM.getMainFileID());
+    const FileEntry *FE = SM.getFileEntryForID(SM.getMainFileID());
     if (auto Path = getCanonicalPath(FE, SM))
       TUPath = *Path;
     // Query the index and populate the empty slot.

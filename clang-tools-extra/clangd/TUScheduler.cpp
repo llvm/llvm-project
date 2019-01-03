@@ -18,8 +18,8 @@
 // preamble. However, unlike AST, the same preamble can be read concurrently, so
 // we run each of async preamble reads on its own thread.
 //
-// To limit the concurrent load that clangd produces we maintain a semaphore that
-// keeps more than a fixed number of threads from running concurrently.
+// To limit the concurrent load that clangd produces we maintain a semaphore
+// that keeps more than a fixed number of threads from running concurrently.
 //
 // Rationale for cancelling updates.
 // LSP clients can send updates to clangd on each keystroke. Some files take
@@ -334,8 +334,9 @@ ASTWorker::ASTWorker(PathRef FileName, TUScheduler::ASTCache &LRUCache,
                      bool StorePreamblesInMemory, ParsingCallbacks &Callbacks)
     : IdleASTs(LRUCache), RunSync(RunSync), UpdateDebounce(UpdateDebounce),
       FileName(FileName), StorePreambleInMemory(StorePreamblesInMemory),
-      Callbacks(Callbacks), PCHs(std::move(PCHs)),
-      Status{TUAction(TUAction::Idle, ""), TUStatus::BuildDetails()},
+      Callbacks(Callbacks),
+      PCHs(std::move(PCHs)), Status{TUAction(TUAction::Idle, ""),
+                                    TUStatus::BuildDetails()},
       Barrier(Barrier), Done(false) {}
 
 ASTWorker::~ASTWorker() {
@@ -537,9 +538,7 @@ void ASTWorker::getCurrentPreamble(
   RequestsCV.notify_all();
 }
 
-void ASTWorker::waitForFirstPreamble() const {
-  PreambleWasBuilt.wait();
-}
+void ASTWorker::waitForFirstPreamble() const { PreambleWasBuilt.wait(); }
 
 std::size_t ASTWorker::getUsedBytes() const {
   // Note that we don't report the size of ASTs currently used for processing
