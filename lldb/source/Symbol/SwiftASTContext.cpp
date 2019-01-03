@@ -1469,10 +1469,12 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   ArchSpec arch = module.GetArchitecture();
 
   ObjectFile *objfile = module.GetObjectFile();
-  ArchSpec object_arch;
+  if (!objfile)
+    return {};
 
-  if (!objfile || !objfile->GetArchitecture(object_arch))
-    return TypeSystemSP();
+  ArchSpec object_arch = objfile->GetArchitecture();
+  if (!object_arch.IsValid())
+    return {};
 
   lldb::CompUnitSP main_compile_unit_sp = module.GetCompileUnitAtIndex(0);
 
