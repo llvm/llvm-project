@@ -11,8 +11,8 @@
 ; Function Attrs: norecurse nounwind writeonly
 define void @initCombList(%0* nocapture, i32 signext) local_unnamed_addr #0 {
 ; CHECK-LABEL: initCombList:
-; CHECK:   addi 3, 3, -8
-; CHECK-NEXT: stwu 5, 64(4)
+; CHECK: addi 4, 4, -8
+; CHECK: stwu 5, 64(3)
 
 ; CHECK-ITIN-LABEL: initCombList:
 ; CHECK-ITIN: stwu 5, 64(4)

@@ -10,6 +10,8 @@
    dump format.
 """
 
+from __future__ import print_function
+
 import os
 import sys
 import re
@@ -32,8 +34,8 @@ def look_for_indirect(file):
         result = re.search('(call|jmp).*\*', line)
         if result != None:
             # TODO: Perhaps use cxxfilt to demangle functions?
-            print function
-            print line
+            print(function)
+            print(line)
     return
 
 def main(args):

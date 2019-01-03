@@ -54,9 +54,9 @@ namespace clang {
 namespace clangd {
 
 struct FileDistanceOptions {
-  unsigned UpCost = 2;      // |foo/bar.h -> foo|
-  unsigned DownCost = 1;    // |foo -> foo/bar.h|
-  unsigned IncludeCost = 2; // |foo.cc -> included_header.h|
+  unsigned UpCost = 2;                    // |foo/bar.h -> foo|
+  unsigned DownCost = 1;                  // |foo -> foo/bar.h|
+  unsigned IncludeCost = 2;               // |foo.cc -> included_header.h|
   bool AllowDownTraversalFromRoot = true; // | / -> /a |
 };
 

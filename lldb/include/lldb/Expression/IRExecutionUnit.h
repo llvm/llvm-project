@@ -108,7 +108,7 @@ public:
   void PopulateSectionList(lldb_private::ObjectFile *obj_file,
                            lldb_private::SectionList &section_list) override;
 
-  bool GetArchitecture(lldb_private::ArchSpec &arch) override;
+  ArchSpec GetArchitecture() override;
 
   lldb::ModuleSP GetJITModule();
 

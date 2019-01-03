@@ -1,5 +1,7 @@
 ; Verify that calls with !nosanitize are not instrumented by MSan.
+; RUN: opt < %s -S -passes=msan 2>&1 | FileCheck %s
 ; RUN: opt < %s -msan -S | FileCheck %s
+; RUN: opt < %s -msan-track-origins=1 -S -passes=msan 2>&1 | FileCheck %s
 ; RUN: opt < %s -msan -msan-track-origins=1 -S | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

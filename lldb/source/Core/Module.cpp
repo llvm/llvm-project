@@ -309,7 +309,7 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
           // Once we get the object file, update our module with the object
           // file's architecture since it might differ in vendor/os if some
           // parts were unknown.
-          m_objfile_sp->GetArchitecture(m_arch);
+          m_arch = m_objfile_sp->GetArchitecture();
         } else {
           error.SetErrorString("unable to find suitable object file plug-in");
         }
@@ -1265,9 +1265,7 @@ ObjectFile *Module::GetObjectFile() {
           // parts were unknown.  But since the matching arch might already be
           // more specific than the generic COFF architecture, only merge in
           // those values that overwrite unspecified unknown values.
-          ArchSpec new_arch;
-          m_objfile_sp->GetArchitecture(new_arch);
-          m_arch.MergeFrom(new_arch);
+          m_arch.MergeFrom(m_objfile_sp->GetArchitecture());
         } else {
           ReportError("failed to load objfile for %s",
                       GetFileSpec().GetPath().c_str());

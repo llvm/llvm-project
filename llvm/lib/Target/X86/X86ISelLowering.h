@@ -337,7 +337,7 @@ namespace llvm {
 
       // Arithmetic operations with FLAGS results.
       ADD, SUB, ADC, SBB, SMUL, UMUL,
-      INC, DEC, OR, XOR, AND,
+      OR, XOR, AND,
 
       // Bit field extract.
       BEXTR,
@@ -568,7 +568,7 @@ namespace llvm {
 
       /// LOCK-prefixed arithmetic read-modify-write instructions.
       /// EFLAGS, OUTCHAIN = LADD(INCHAIN, PTR, RHS)
-      LADD, LSUB, LOR, LXOR, LAND, LINC, LDEC,
+      LADD, LSUB, LOR, LXOR, LAND,
 
       // Load, scalar_to_vector, and zero extend.
       VZEXT_LOAD,

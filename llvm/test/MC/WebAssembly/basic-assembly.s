@@ -22,13 +22,13 @@ test0:
     get_local   0
     f64.store   0
     # Loops, conditionals, binary ops, calls etc:
-    block
+    block       i32
     i32.const   1
     get_local   0
     i32.ge_s
     br_if       0        # 0: down to label0
 .LBB0_1:
-    loop             # label1:
+    loop        i32      # label1:
     call        something1@FUNCTION
     i64.const   1234
     i32.call    something2@FUNCTION
@@ -42,25 +42,25 @@ test0:
     br_if       0        # 0: up to label1
 .LBB0_2:
     end_loop
-    end_block                       # label0:
+    end_block            # label0:
     get_local   4
     get_local   5
-    block
-    block
-    block
-    block
+    block       void
+    block       i64
+    block       f32
+    block       f64
     br_table {0, 1, 2}   # 2 entries, default
     end_block            # first entry jumps here.
-    i32.const 1
+    i32.const   1
     br 2
     end_block            # second entry jumps here.
-    i32.const 2
+    i32.const   2
     br 1
     end_block            # default jumps here.
-    i32.const 3
+    i32.const   3
     end_block            # "switch" exit.
-    if
-    if
+    if          # void
+    if          i32
     end_if
     else
     end_if
@@ -69,7 +69,7 @@ test0:
     # TODO: enable once instruction has been added.
     #i32x4.trunc_s/f32x4:sat
     i32.trunc_s/f32
-    try
+    try         except_ref
 .LBB0_3:
     i32.catch   0
 .LBB0_4:
@@ -80,7 +80,7 @@ test0:
     get_global  __stack_pointer@GLOBAL
     end_function
 .Lfunc_end0:
-	.size	test0, .Lfunc_end0-test0
+    .size	test0, .Lfunc_end0-test0
     .globaltype	__stack_pointer, i32
 
 # CHECK:           .text
@@ -96,13 +96,13 @@ test0:
 # CHECK-NEXT:      v128.const  0, 1, 2, 3, 4, 5, 6, 7
 # CHECK-NEXT:      get_local   0
 # CHECK-NEXT:      f64.store   0:p2align=0
-# CHECK-NEXT:      block
+# CHECK-NEXT:      block       i32
 # CHECK-NEXT:      i32.const   1
 # CHECK-NEXT:      get_local   0
 # CHECK-NEXT:      i32.ge_s
 # CHECK-NEXT:      br_if 0            # 0: down to label0
 # CHECK-NEXT:  .LBB0_1:
-# CHECK-NEXT:      loop                    # label1:
+# CHECK-NEXT:      loop        i32         # label1:
 # CHECK-NEXT:      call        something1@FUNCTION
 # CHECK-NEXT:      i64.const   1234
 # CHECK-NEXT:      i32.call    something2@FUNCTION
@@ -120,9 +120,9 @@ test0:
 # CHECK-NEXT:      get_local   4
 # CHECK-NEXT:      get_local   5
 # CHECK-NEXT:      block
-# CHECK-NEXT:      block
-# CHECK-NEXT:      block
-# CHECK-NEXT:      block
+# CHECK-NEXT:      block       i64
+# CHECK-NEXT:      block       f32
+# CHECK-NEXT:      block       f64
 # CHECK-NEXT:      br_table {0, 1, 2}  # 1: down to label4
 # CHECK-NEXT:                          # 2: down to label3
 # CHECK-NEXT:      end_block           # label5:
@@ -135,13 +135,13 @@ test0:
 # CHECK-NEXT:      i32.const 3
 # CHECK-NEXT:      end_block           # label2:
 # CHECK-NEXT:      if
-# CHECK-NEXT:      if
+# CHECK-NEXT:      if          i32
 # CHECK-NEXT:      end_if
 # CHECK-NEXT:      else
 # CHECK-NEXT:      end_if
 # CHECK-NEXT:      f32x4.add
 # CHECK-NEXT:      i32.trunc_s/f32
-# CHECK-NEXT:      try
+# CHECK-NEXT:      try         except_ref
 # CHECK-NEXT:  .LBB0_3:
 # CHECK-NEXT:      i32.catch   0
 # CHECK-NEXT:  .LBB0_4:

@@ -2,6 +2,11 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
+if(CLANG_BUILT_STANDALONE)
+  # needed to get HAVE_CXX_ATOMICS64_WITHOUT_LIB defined
+  include(CheckAtomic)
+endif()
+
 set(CLANGD_ATOMIC_LIB "")
 if(NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
   list(APPEND CLANGD_ATOMIC_LIB "atomic")

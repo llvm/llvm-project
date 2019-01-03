@@ -278,6 +278,8 @@ void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
   case WebAssembly::ExprType::ExceptRef:
     O << "except_ref";
     break;
+  default:
+    llvm_unreachable("invalid WebAssembly::ExprType");
   }
 }
 

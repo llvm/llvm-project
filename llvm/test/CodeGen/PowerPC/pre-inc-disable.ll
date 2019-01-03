@@ -10,78 +10,78 @@
 define signext i32 @test_pre_inc_disable_1(i8* nocapture readonly %pix1, i32 signext %i_stride_pix1, i8* nocapture readonly %pix2) {
 ; CHECK-LABEL: test_pre_inc_disable_1:
 ; CHECK:   # %bb.0: # %entry
-; CHECK:    addis r6, r2
-; CHECK:    addis r7, r2,
 ; CHECK:    lfd f0, 0(r5)
-; CHECK:    xxlxor v4, v4, v4
-; CHECK:    addi r5, r6,
-; CHECK:    addi r6, r7,
+; CHECK:    addis r5, r2
+; CHECK:    addi r5, r5,
 ; CHECK:    lxvx v2, 0, r5
-; CHECK:    lxvx v3, 0, r6
+; CHECK:    addis r5, r2,
+; CHECK:    addi r5, r5,
+; CHECK:    lxvx v4, 0, r5
 ; CHECK:    xxpermdi v5, f0, f0, 2
-; CHECK-DAG: vperm v[[VR1:[0-9]+]], v4, v5, v2
-; CHECK-DAG: vperm v[[VR2:[0-9]+]], v5, v4, v3
+; CHECK:    xxlxor v3, v3, v3
+; CHECK-DAG: vperm v[[VR1:[0-9]+]], v5, v3, v4
+; CHECK-DAG: vperm v[[VR2:[0-9]+]], v3, v5, v2
 ; CHECK-DAG: xvnegsp v[[VR3:[0-9]+]], v[[VR1]]
 ; CHECK-DAG: xvnegsp v[[VR4:[0-9]+]], v[[VR2]]
 
 ; CHECK:  .LBB0_1: # %for.cond1.preheader
 ; CHECK:    lfd f0, 0(r3)
 ; CHECK:    xxpermdi v1, f0, f0, 2
-; CHECK:    vperm v6, v1, v4, v3
-; CHECK:    vperm v1, v4, v1, v2
+; CHECK:    vperm v6, v3, v1, v2
+; CHECK:    vperm v1, v1, v3, v4
 ; CHECK-DAG:    xvnegsp v6, v6
 ; CHECK-DAG:    xvnegsp v1, v1
 ; CHECK-DAG: vabsduw v1, v1, v[[VR3]]
 ; CHECK-DAG: vabsduw v6, v6, v[[VR4]]
-; CHECK:    vadduwm v1, v6, v1
+; CHECK:    vadduwm v1, v1, v6
 ; CHECK:    xxswapd v6, v1
 ; CHECK:    vadduwm v1, v1, v6
 ; CHECK:    xxspltw v6, v1, 2
 ; CHECK:    vadduwm v1, v1, v6
-; CHECK:    vextuwrx r7, r6, v1
+; CHECK:    vextuwrx r7, r5, v1
 ; CHECK:    ldux r8, r3, r4
 ; CHECK:    add r3, r3, r4
-; CHECK:    add r5, r7, r5
+; CHECK:    add r6, r7, r6
 ; CHECK:    mtvsrd f0, r8
 ; CHECK:    xxswapd v1, vs0
-; CHECK:    vperm v6, v1, v4, v3
-; CHECK:    vperm v1, v4, v1, v2
+; CHECK:    vperm v6, v3, v1, v2
+; CHECK:    vperm v1, v1, v3, v4
 ; CHECK-DAG: xvnegsp v6, v6
 ; CHECK-DAG: xvnegsp v1, v1
 ; CHECK-DAG: vabsduw v1, v1, v[[VR3]]
 ; CHECK-DAG: vabsduw v6, v6, v[[VR4]]
-; CHECK:    vadduwm v1, v6, v1
+; CHECK:    vadduwm v1, v1, v6
 ; CHECK:    xxswapd v6, v1
 ; CHECK:    vadduwm v1, v1, v6
 ; CHECK:    xxspltw v6, v1, 2
 ; CHECK:    vadduwm v1, v1, v6
-; CHECK:    vextuwrx r8, r6, v1
-; CHECK:    add r5, r8, r5
+; CHECK:    vextuwrx r7, r5, v1
+; CHECK:    add r6, r7, r6
 ; CHECK:    bdnz .LBB0_1
-; CHECK:    extsw r3, r5
+; CHECK:    extsw r3, r6
 ; CHECK:    blr
 
 ; P9BE-LABEL: test_pre_inc_disable_1:
-; P9BE:    addis r6, r2,
-; P9BE:    addis r7, r2,
 ; P9BE:    lfd f0, 0(r5)
-; P9BE:    xxlxor v4, v4, v4
-; P9BE:    addi r5, r6,
-; P9BE:    addi r6, r7,
+; P9BE:    addis r5, r2,
+; P9BE:    addi r5, r5,
 ; P9BE:    lxvx v2, 0, r5
-; P9BE:    lxvx v3, 0, r6
+; P9BE:    addis r5, r2,
+; P9BE:    addi r5, r5,
+; P9BE:    lxvx v4, 0, r5
 ; P9BE:    xxlor v5, vs0, vs0
-; P9BE:    li r6, 0
-; P9BE-DAG: vperm v[[VR1:[0-9]+]], v4, v5, v2
-; P9BE-DAG: vperm v[[VR2:[0-9]+]], v4, v5, v3
+; P9BE:    xxlxor v3, v3, v3
+; P9BE-DAG: li r5, 0
+; P9BE-DAG: vperm v[[VR1:[0-9]+]], v3, v5, v2
+; P9BE-DAG: vperm v[[VR2:[0-9]+]], v3, v5, v4
 ; P9BE-DAG: xvnegsp v[[VR3:[0-9]+]], v[[VR1]]
 ; P9BE-DAG: xvnegsp v[[VR4:[0-9]+]], v[[VR2]]
 
 ; P9BE:  .LBB0_1: # %for.cond1.preheader
 ; P9BE:    lfd f0, 0(r3)
 ; P9BE:    xxlor v1, vs0, vs0
-; P9BE:    vperm v6, v4, v1, v3
-; P9BE:    vperm v1, v4, v1, v2
+; P9BE:    vperm v6, v3, v1, v4
+; P9BE:    vperm v1, v3, v1, v2
 ; P9BE-DAG: xvnegsp v6, v6
 ; P9BE-DAG: xvnegsp v1, v1
 ; P9BE-DAG: vabsduw v1, v1, v[[VR3]]
@@ -91,26 +91,26 @@ define signext i32 @test_pre_inc_disable_1(i8* nocapture readonly %pix1, i32 sig
 ; P9BE:    vadduwm v1, v1, v6
 ; P9BE:    xxspltw v6, v1, 1
 ; P9BE:    vadduwm v1, v1, v6
-; P9BE:    vextuwlx r[[GR1:[0-9]+]], r6, v1
+; P9BE:    vextuwlx r[[GR1:[0-9]+]], r5, v1
+; P9BE:    add r6, r[[GR1]], r6
 ; P9BE:    ldux r[[GR2:[0-9]+]], r3, r4
 ; P9BE:    add r3, r3, r4
-; P9BE:    add r5, r[[GR1]], r5
 ; P9BE:    mtvsrd v1, r[[GR2]]
-; P9BE:    vperm v6, v4, v1, v3
-; P9BE:    vperm v1, v4, v1, v2
+; P9BE:    vperm v6, v3, v1, v2
+; P9BE:    vperm v1, v3, v1, v4
 ; P9BE-DAG: xvnegsp v6, v6
 ; P9BE-DAG: xvnegsp v1, v1
-; P9BE-DAG: vabsduw v1, v1, v[[VR3]]
-; P9BE-DAG: vabsduw v6, v6, v[[VR4]]
-; P9BE:    vadduwm v1, v6, v1
+; P9BE-DAG: vabsduw v1, v1, v[[VR4]]
+; P9BE-DAG: vabsduw v6, v6, v[[VR3]]
+; P9BE:    vadduwm v1, v1, v6
 ; P9BE:    xxswapd v6, v1
 ; P9BE:    vadduwm v1, v1, v6
 ; P9BE:    xxspltw v6, v1, 1
 ; P9BE:    vadduwm v1, v1, v6
-; P9BE:    vextuwlx r8, r6, v1
-; P9BE:    add r5, r8, r5
+; P9BE:    vextuwlx r7, r5, v1
+; P9BE:    add r6, r7, r6
 ; P9BE:    bdnz .LBB0_1
-; P9BE:    extsw r3, r5
+; P9BE:    extsw r3, r6
 ; P9BE:    blr
 entry:
   %idx.ext = sext i32 %i_stride_pix1 to i64
@@ -166,24 +166,24 @@ for.cond.cleanup:                                 ; preds = %for.cond1.preheader
 ; Function Attrs: norecurse nounwind readonly
 define signext i32 @test_pre_inc_disable_2(i8* nocapture readonly %pix1, i8* nocapture readonly %pix2) {
 ; CHECK-LABEL: test_pre_inc_disable_2:
-; CHECK:    addis r5, r2,
-; CHECK:    addis r6, r2,
 ; CHECK:    lfd f0, 0(r3)
-; CHECK:    lfd f1, 0(r4)
-; CHECK:    xxlxor v0, v0, v0
-; CHECK:    addi r3, r5, .LCPI1_0@toc@l
-; CHECK:    addi r4, r6, .LCPI1_1@toc@l
-; CHECK:    lxvx v2, 0, r3
-; CHECK:    lxvx v3, 0, r4
-; CHECK:    xxpermdi v4, f0, f0, 2
-; CHECK:    xxpermdi v5, f1, f1, 2
-; CHECK:    vperm v1, v4, v0, v2
-; CHECK:    vperm v4, v0, v4, v3
-; CHECK:    vperm v2, v5, v0, v2
-; CHECK:    vperm v3, v0, v5, v3
-; CHECK:    vabsduw v3, v4, v3
-; CHECK:    vabsduw v2, v1, v2
-; CHECK:    vadduwm v2, v2, v3
+; CHECK:    addis r3, r2,
+; CHECK:    addi r3, r3, .LCPI1_0@toc@l
+; CHECK:    lxvx v4, 0, r3
+; CHECK:    addis r3, r2,
+; CHECK:    xxpermdi v2, f0, f0, 2
+; CHECK:    lfd f0, 0(r4)
+; CHECK:    addi r3, r3, .LCPI1_1@toc@l
+; CHECK:    xxlxor v3, v3, v3
+; CHECK:    lxvx v0, 0, r3
+; CHECK:    xxpermdi v1, f0, f0, 2
+; CHECK:    vperm v5, v2, v3, v4
+; CHECK:    vperm v2, v3, v2, v0
+; CHECK:    vperm v0, v3, v1, v0
+; CHECK:    vperm v3, v1, v3, v4
+; CHECK:    vabsduw v2, v2, v0
+; CHECK:    vabsduw v3, v5, v3
+; CHECK:    vadduwm v2, v3, v2
 ; CHECK:    xxswapd v3, v2
 ; CHECK:    vadduwm v2, v2, v3
 ; CHECK:    xxspltw v3, v2, 2
@@ -193,24 +193,24 @@ define signext i32 @test_pre_inc_disable_2(i8* nocapture readonly %pix1, i8* noc
 ; CHECK:    blr
 
 ; P9BE-LABEL: test_pre_inc_disable_2:
-; P9BE:    addis r5, r2,
-; P9BE:    addis r6, r2,
 ; P9BE:    lfd f0, 0(r3)
-; P9BE:    lfd f1, 0(r4)
-; P9BE:    xxlxor v5, v5, v5
-; P9BE:    addi r3, r5,
-; P9BE:    addi r4, r6,
-; P9BE:    lxvx v2, 0, r3
-; P9BE:    lxvx v3, 0, r4
-; P9BE:    xxlor v4, vs0, vs0
-; P9BE:    xxlor v0, vs1, vs1
-; P9BE:    vperm v1, v5, v4, v2
-; P9BE:    vperm v4, v5, v4, v3
-; P9BE:    vperm v2, v5, v0, v2
-; P9BE:    vperm v3, v5, v0, v3
-; P9BE:    vabsduw v3, v4, v3
-; P9BE:    vabsduw v2, v1, v2
-; P9BE:    vadduwm v2, v2, v3
+; P9BE:    addis r3, r2,
+; P9BE:    addi r3, r3,
+; P9BE:    lxvx v4, 0, r3
+; P9BE:    addis r3, r2,
+; P9BE:    addi r3, r3,
+; P9BE:    xxlor v2, vs0, vs0
+; P9BE:    lfd f0, 0(r4)
+; P9BE:    lxvx v0, 0, r3
+; P9BE:    xxlxor v3, v3, v3
+; P9BE:    xxlor v1, vs0, vs0
+; P9BE:    vperm v5, v3, v2, v4
+; P9BE:    vperm v2, v3, v2, v0
+; P9BE:    vperm v0, v3, v1, v0
+; P9BE:    vperm v3, v3, v1, v4
+; P9BE:    vabsduw v2, v2, v0
+; P9BE:    vabsduw v3, v5, v3
+; P9BE:    vadduwm v2, v3, v2
 ; P9BE:    xxswapd v3, v2
 ; P9BE:    vadduwm v2, v2, v3
 ; P9BE:    xxspltw v3, v2, 1

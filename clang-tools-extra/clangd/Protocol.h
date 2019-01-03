@@ -775,6 +775,31 @@ struct TextDocumentPositionParams {
 };
 bool fromJSON(const llvm::json::Value &, TextDocumentPositionParams &);
 
+enum class CompletionTriggerKind {
+  /// Completion was triggered by typing an identifier (24x7 code
+  /// complete), manual invocation (e.g Ctrl+Space) or via API.
+  Invoked = 1,
+  /// Completion was triggered by a trigger character specified by
+  /// the `triggerCharacters` properties of the `CompletionRegistrationOptions`.
+  TriggerCharacter = 2,
+  /// Completion was re-triggered as the current completion list is incomplete.
+  TriggerTriggerForIncompleteCompletions = 3
+};
+
+struct CompletionContext {
+  /// How the completion was triggered.
+  CompletionTriggerKind triggerKind = CompletionTriggerKind::Invoked;
+  /// The trigger character (a single character) that has trigger code complete.
+  /// Is undefined if `triggerKind !== CompletionTriggerKind.TriggerCharacter`
+  std::string triggerCharacter;
+};
+bool fromJSON(const llvm::json::Value &, CompletionContext &);
+
+struct CompletionParams : TextDocumentPositionParams {
+  CompletionContext context;
+};
+bool fromJSON(const llvm::json::Value &, CompletionParams &);
+
 enum class MarkupKind {
   PlainText,
   Markdown,

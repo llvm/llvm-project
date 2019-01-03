@@ -371,6 +371,7 @@ public:
   bool IsValid() const {
     return m_core >= eCore_arm_generic && m_core < kNumCores;
   }
+  explicit operator bool() const { return IsValid(); }
 
   bool TripleVendorWasSpecified() const {
     return !m_triple.getVendorName().empty();

@@ -386,21 +386,21 @@ bool fromJSON(const json::Value &Params, CodeActionContext &R) {
 raw_ostream &operator<<(raw_ostream &OS, const Diagnostic &D) {
   OS << D.range << " [";
   switch (D.severity) {
-    case 1:
-      OS << "error";
-      break;
-    case 2:
-      OS << "warning";
-      break;
-    case 3:
-      OS << "note";
-      break;
-    case 4:
-      OS << "remark";
-      break;
-    default:
-      OS << "diagnostic";
-      break;
+  case 1:
+    OS << "error";
+    break;
+  case 2:
+    OS << "warning";
+    break;
+  case 3:
+    OS << "note";
+    break;
+  case 4:
+    OS << "remark";
+    break;
+  default:
+    OS << "diagnostic";
+    break;
   }
   return OS << '(' << D.severity << "): " << D.message << "]";
 }
@@ -548,6 +548,29 @@ bool fromJSON(const json::Value &Params, TextDocumentPositionParams &R) {
   json::ObjectMapper O(Params);
   return O && O.map("textDocument", R.textDocument) &&
          O.map("position", R.position);
+}
+
+bool fromJSON(const llvm::json::Value &Params, CompletionContext &R) {
+  json::ObjectMapper O(Params);
+  if (!O)
+    return false;
+
+  int triggerKind;
+  if (!O.map("triggerKind", triggerKind))
+    return false;
+  R.triggerKind = static_cast<CompletionTriggerKind>(triggerKind);
+
+  if (auto *TC = Params.getAsObject()->get("triggerCharacter"))
+    return fromJSON(*TC, R.triggerCharacter);
+  return true;
+}
+
+bool fromJSON(const llvm::json::Value &Params, CompletionParams &R) {
+  if (!fromJSON(Params, static_cast<TextDocumentPositionParams &>(R)))
+    return false;
+  if (auto *Context = Params.getAsObject()->get("context"))
+    return fromJSON(*Context, R.context);
+  return true;
 }
 
 static StringRef toTextKind(MarkupKind Kind) {
@@ -718,7 +741,8 @@ json::Value toJSON(const DocumentHighlight &DH) {
 
 llvm::json::Value toJSON(const FileStatus &FStatus) {
   return json::Object{
-      {"uri", FStatus.uri}, {"state", FStatus.state},
+      {"uri", FStatus.uri},
+      {"state", FStatus.state},
   };
 }
 

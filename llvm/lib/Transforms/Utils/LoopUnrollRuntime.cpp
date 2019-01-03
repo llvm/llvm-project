@@ -927,6 +927,12 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   // of its parent loops, so the Scalar Evolution pass needs to be run again.
   SE->forgetTopmostLoop(L);
 
+  // Verify that the Dom Tree is correct.
+#if !defined(NDEBUG)
+  if (DT)
+    assert(DT->verify(DominatorTree::VerificationLevel::Full));
+#endif
+
   // Canonicalize to LoopSimplifyForm both original and remainder loops. We
   // cannot rely on the LoopUnrollPass to do this because it only does
   // canonicalization for parent/subloops and not the sibling loops.

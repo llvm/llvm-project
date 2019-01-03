@@ -303,7 +303,7 @@ TEST(MergeIndexTest, Refs) {
                                         FileURI("unittest:///test2.cc"))))));
 }
 
-MATCHER_P2(IncludeHeaderWithRef, IncludeHeader, References,  "") {
+MATCHER_P2(IncludeHeaderWithRef, IncludeHeader, References, "") {
   return (arg.IncludeHeader == IncludeHeader) && (arg.References == References);
 }
 

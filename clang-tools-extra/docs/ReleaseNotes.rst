@@ -232,14 +232,6 @@ Improvements to clang-tidy
   <clang-tidy/checks/readability-uppercase-literal-suffix>`
   added.
 
-- The :doc:`readability-redundant-smartptr-get
-  <clang-tidy/checks/readability-redundant-smartptr-get>` check does not warn
-  about calls inside macros anymore by default.
-
-- The :doc:`readability-uppercase-literal-suffix
-  <clang-tidy/checks/readability-uppercase-literal-suffix>` check does not warn
-  about literal suffixes inside macros anymore by default.
-
 - The :doc:`cppcoreguidelines-narrowing-conversions
   <clang-tidy/checks/cppcoreguidelines-narrowing-conversions>` check now
   detects more narrowing conversions:
@@ -251,6 +243,14 @@ Improvements to clang-tidy
 - The :doc:`objc-property-declaration
   <clang-tidy/checks/objc-property-declaration>` check now ignores the
   `Acronyms` and `IncludeDefaultAcronyms` options.
+
+- The :doc:`readability-redundant-smartptr-get
+  <clang-tidy/checks/readability-redundant-smartptr-get>` check does not warn
+  about calls inside macros anymore by default.
+
+- The :doc:`readability-uppercase-literal-suffix
+  <clang-tidy/checks/readability-uppercase-literal-suffix>` check does not warn
+  about literal suffixes inside macros anymore by default.
 
 Improvements to include-fixer
 -----------------------------

@@ -40,8 +40,8 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK: li [[REG4:[0-9]+]], 5
 ; CHECK: [[LAB:[a-z0-9A-Z_.]+]]:
 ; CHECK: ld [[REG2:[0-9]+]], a@toc@l([[REG1]])
-; CHECK: ld [[REG3:[0-9]+]], 0([[REG2]])
 ; CHECK: stw [[REG4]], 8([[REG2]])
+; CHECK: ld [[REG3:[0-9]+]], 0([[REG2]])
 ; CHECK: stw [[REG4]], 8([[REG3]]) 
 ; CHECK: std [[REG3]], 0([[REG3]])
 ; CHECK: bdnz [[LAB]]
