@@ -564,7 +564,8 @@ EXTERN void __kmpc_get_team_static_memory(const void *buf, size_t size,
     if (GetThreadIdInBlock() == 0) {
       *frame = omptarget_nvptx_simpleMemoryManager.Acquire(buf, size);
     }
-    __syncthreads();
+    // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
+    __SYNCTHREADS();
     return;
   }
   ASSERT0(LT_FUSSY, GetThreadIdInBlock() == getMasterThreadId(),
@@ -577,7 +578,8 @@ EXTERN void __kmpc_restore_team_static_memory(int16_t is_shared) {
   if (is_shared)
     return;
   if (isSPMDMode()) {
-    __syncthreads();
+    // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
+    __SYNCTHREADS();
     if (GetThreadIdInBlock() == 0) {
       omptarget_nvptx_simpleMemoryManager.Release();
     }
