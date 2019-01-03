@@ -30,16 +30,6 @@ class TestQueues(TestBase):
         # Find the line numbers that we will step to in main:
         self.main_source = "main.c"
 
-    def remove_token(self, name):
-        for i in range(7):
-            token = name+'.token.%d'%i
-            if os.path.exists(token):
-                os.remove(token)
-
-    def await_token(self, name):
-        for i in range(7):
-            lldbutil.wait_for_file_on_target(self, name+'.token.%d'%i)
-
     def check_queue_for_valid_queue_id(self, queue):
         self.assertTrue(
             queue.GetQueueID() != 0, "Check queue %s for valid QueueID (got 0x%x)" %
@@ -122,14 +112,12 @@ class TestQueues(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
         break1 = target.BreakpointCreateByName("stopper", 'a.out')
         self.assertTrue(break1, VALID_BREAKPOINT)
-        self.remove_token(exe)
         process = target.LaunchSimple(
-            [exe+'.token.'], None, self.get_process_working_directory())
+            [], None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, break1)
         if len(threads) != 1:
             self.fail("Failed to stop at breakpoint 1.")
-        self.await_token(exe)
 
         queue_submittor_1 = lldb.SBQueue()
         queue_performer_1 = lldb.SBQueue()
@@ -284,7 +272,7 @@ class TestQueues(TestBase):
             libbtr_path = "/Developer/usr/lib/libBacktraceRecording.dylib"
 
         process = target.LaunchSimple(
-            [exe+'.token.'],
+            [],
             [
                 'DYLD_INSERT_LIBRARIES=/Applications/Xcode.app/Contents/Developer/usr/lib/libBacktraceRecording.dylib',
                 'DYLD_LIBRARY_PATH=/usr/lib/system/introspection'],
@@ -296,7 +284,6 @@ class TestQueues(TestBase):
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, break1)
         if len(threads) != 1:
             self.fail("Failed to stop at breakpoint 1.")
-        self.await_token(exe)
 
         libbtr_module_filespec = lldb.SBFileSpec("libBacktraceRecording.dylib")
         libbtr_module = target.FindModule(libbtr_module_filespec)
