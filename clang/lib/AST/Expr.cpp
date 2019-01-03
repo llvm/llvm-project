@@ -1412,6 +1412,19 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
   return FnType->getReturnType();
 }
 
+const Attr *CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
+  // If the return type is a struct, union, or enum that is marked nodiscard,
+  // then return the return type attribute.
+  if (const TagDecl *TD = getCallReturnType(Ctx)->getAsTagDecl())
+    if (const auto *A = TD->getAttr<WarnUnusedResultAttr>())
+      return A;
+
+  // Otherwise, see if the callee is marked nodiscard and return that attribute
+  // instead.
+  const Decl *D = getCalleeDecl();
+  return D ? D->getAttr<WarnUnusedResultAttr>() : nullptr;
+}
+
 SourceLocation CallExpr::getBeginLoc() const {
   if (isa<CXXOperatorCallExpr>(this))
     return cast<CXXOperatorCallExpr>(this)->getBeginLoc();
@@ -2323,16 +2336,12 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     // If this is a direct call, get the callee.
     const CallExpr *CE = cast<CallExpr>(this);
     if (const Decl *FD = CE->getCalleeDecl()) {
-      const FunctionDecl *Func = dyn_cast<FunctionDecl>(FD);
-      bool HasWarnUnusedResultAttr = Func ? Func->hasUnusedResultAttr()
-                                          : FD->hasAttr<WarnUnusedResultAttr>();
-
       // If the callee has attribute pure, const, or warn_unused_result, warn
       // about it. void foo() { strlen("bar"); } should warn.
       //
       // Note: If new cases are added here, DiagnoseUnusedExprResult should be
       // updated to match for QoI.
-      if (HasWarnUnusedResultAttr ||
+      if (CE->hasUnusedResultAttr(Ctx) ||
           FD->hasAttr<PureAttr>() || FD->hasAttr<ConstAttr>()) {
         WarnE = this;
         Loc = CE->getCallee()->getBeginLoc();

@@ -37,7 +37,7 @@ int bar(int n){
 // CHECK-DAG: [[KERNEL_SHARED:@.+]] = internal unnamed_addr constant i16 1
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l12}}_worker()
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call i1 @__kmpc_kernel_parallel(
 // CHECK: call void @__omp_outlined___wrapper(
 
@@ -52,8 +52,8 @@ int bar(int n){
 // CHECK: [[STACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i{{64|32}} 0
 // CHECK: call void @__kmpc_kernel_prepare_parallel(
 // CHECK: call void @__kmpc_begin_sharing_variables({{.*}}, i64 2)
-// CHECK: call void @llvm.nvvm.barrier0()
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_end_sharing_variables()
 // CHECK: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
 // CHECK: call void @__kmpc_restore_team_static_memory(i16 [[IS_SHARED]])

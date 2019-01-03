@@ -52,8 +52,8 @@ struct TT{
 // CHECK: [[ARG_PTR2:%.+]] = getelementptr inbounds i8*, i8** [[ARG_PTRS]], i{{[0-9]+}} 1
 // CHECK: [[BC:%.+]] = bitcast i32** [[PTR2_REF]] to i8*
 // CHECK: store i8* [[BC]], i8** [[ARG_PTR2]],
-// CHECK: call void @llvm.nvvm.barrier0()
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_end_sharing_variables()
 void targetBar(int *Ptr1, int *Ptr2) {
 #pragma omp target map(Ptr1[:0], Ptr2)
@@ -78,7 +78,7 @@ int foo(int n) {
   // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
   //
   // CHECK: [[AWAIT_WORK]]
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: [[WORK:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
   // CHECK: [[SHOULD_EXIT:%.+]] = icmp eq i8* [[WORK]], null
   // CHECK: br i1 [[SHOULD_EXIT]], label {{%?}}[[EXIT:.+]], label {{%?}}[[SEL_WORKERS:.+]]
@@ -95,7 +95,7 @@ int foo(int n) {
   // CHECK: br label {{%?}}[[BAR_PARALLEL]]
   //
   // CHECK: [[BAR_PARALLEL]]
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: br label {{%?}}[[AWAIT_WORK]]
   //
   // CHECK: [[EXIT]]
@@ -129,7 +129,7 @@ int foo(int n) {
   //
   // CHECK: [[TERMINATE]]
   // CHECK: call void @__kmpc_kernel_deinit(
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: br label {{%?}}[[EXIT]]
   //
   // CHECK: [[EXIT]]
@@ -151,7 +151,7 @@ int foo(int n) {
   // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
   //
   // CHECK: [[AWAIT_WORK]]
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: [[WORK:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
   // CHECK: [[SHOULD_EXIT:%.+]] = icmp eq i8* [[WORK]], null
   // CHECK: br i1 [[SHOULD_EXIT]], label {{%?}}[[EXIT:.+]], label {{%?}}[[SEL_WORKERS:.+]]
@@ -168,7 +168,7 @@ int foo(int n) {
   // CHECK: br label {{%?}}[[BAR_PARALLEL]]
   //
   // CHECK: [[BAR_PARALLEL]]
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: br label {{%?}}[[AWAIT_WORK]]
   //
   // CHECK: [[EXIT]]
@@ -206,7 +206,7 @@ int foo(int n) {
   //
   // CHECK: [[TERMINATE]]
   // CHECK: call void @__kmpc_kernel_deinit(
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: br label {{%?}}[[EXIT]]
   //
   // CHECK: [[EXIT]]
@@ -225,7 +225,7 @@ int foo(int n) {
   // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
   //
   // CHECK: [[AWAIT_WORK]]
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: [[WORK:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
   // CHECK: [[SHOULD_EXIT:%.+]] = icmp eq i8* [[WORK]], null
   // CHECK: br i1 [[SHOULD_EXIT]], label {{%?}}[[EXIT:.+]], label {{%?}}[[SEL_WORKERS:.+]]
@@ -242,7 +242,7 @@ int foo(int n) {
   // CHECK: br label {{%?}}[[BAR_PARALLEL]]
   //
   // CHECK: [[BAR_PARALLEL]]
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: br label {{%?}}[[AWAIT_WORK]]
   //
   // CHECK: [[EXIT]]
@@ -316,7 +316,7 @@ int foo(int n) {
   //
   // CHECK: [[TERMINATE]]
   // CHECK: call void @__kmpc_kernel_deinit(
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: br label {{%?}}[[EXIT]]
   //
   // CHECK: [[EXIT]]
@@ -417,7 +417,7 @@ int baz(int f, double &a) {
   // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
   //
   // CHECK: [[AWAIT_WORK]]
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: [[WORK:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
   // CHECK: [[SHOULD_EXIT:%.+]] = icmp eq i8* [[WORK]], null
   // CHECK: br i1 [[SHOULD_EXIT]], label {{%?}}[[EXIT:.+]], label {{%?}}[[SEL_WORKERS:.+]]
@@ -434,7 +434,7 @@ int baz(int f, double &a) {
   // CHECK: br label {{%?}}[[BAR_PARALLEL]]
   //
   // CHECK: [[BAR_PARALLEL]]
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: br label {{%?}}[[AWAIT_WORK]]
   //
   // CHECK: [[EXIT]]
@@ -487,7 +487,7 @@ int baz(int f, double &a) {
   //
   // CHECK: [[TERMINATE]]
   // CHECK: call void @__kmpc_kernel_deinit(
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: br label {{%?}}[[EXIT]]
   //
   // CHECK: [[EXIT]]
@@ -503,7 +503,7 @@ int baz(int f, double &a) {
   // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
   //
   // CHECK: [[AWAIT_WORK]]
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: [[WORK:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
   // CHECK: [[SHOULD_EXIT:%.+]] = icmp eq i8* [[WORK]], null
   // CHECK: br i1 [[SHOULD_EXIT]], label {{%?}}[[EXIT:.+]], label {{%?}}[[SEL_WORKERS:.+]]
@@ -523,7 +523,7 @@ int baz(int f, double &a) {
   // CHECK: br label {{%?}}[[BAR_PARALLEL]]
   //
   // CHECK: [[BAR_PARALLEL]]
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: br label {{%?}}[[AWAIT_WORK]]
   //
   // CHECK: [[EXIT]]
@@ -581,7 +581,7 @@ int baz(int f, double &a) {
   //
   // CHECK: [[TERMINATE]]
   // CHECK: call void @__kmpc_kernel_deinit(
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: br label {{%?}}[[EXIT]]
   //
   // CHECK: [[EXIT]]
@@ -633,8 +633,8 @@ int baz(int f, double &a) {
   // CHECK: [[REF:%.+]] = getelementptr inbounds i8*, i8** [[SHARED]], i{{64|32}} 0
   // CHECK: [[F_REF:%.+]] = bitcast i32* [[F_PTR]] to i8*
   // CHECK: store i8* [[F_REF]], i8** [[REF]],
-  // CHECK: call void @llvm.nvvm.barrier0()
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: call void @__kmpc_end_sharing_variables()
   // CHECK: br label
 
@@ -656,7 +656,7 @@ int baz(int f, double &a) {
   // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
   //
   // CHECK: [[AWAIT_WORK]]
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: [[WORK:%.+]] = load i8*, i8** [[OMP_WORK_FN]],
   // CHECK: [[SHOULD_EXIT:%.+]] = icmp eq i8* [[WORK]], null
   // CHECK: br i1 [[SHOULD_EXIT]], label {{%?}}[[EXIT:.+]], label {{%?}}[[SEL_WORKERS:.+]]
@@ -673,7 +673,7 @@ int baz(int f, double &a) {
   // CHECK: br label {{%?}}[[BAR_PARALLEL]]
   //
   // CHECK: [[BAR_PARALLEL]]
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: br label {{%?}}[[AWAIT_WORK]]
   //
   // CHECK: [[EXIT]]
@@ -725,7 +725,7 @@ int baz(int f, double &a) {
   //
   // CHECK: [[TERMINATE]]
   // CHECK: call void @__kmpc_kernel_deinit(
-  // CHECK: call void @llvm.nvvm.barrier0()
+  // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
   // CHECK: br label {{%?}}[[EXIT]]
   //
   // CHECK: [[EXIT]]
