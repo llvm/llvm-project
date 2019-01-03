@@ -306,26 +306,30 @@ protected:
     //------------------------------------------------------------------
     // Member variables.
     //------------------------------------------------------------------
-    lldb::addr_t file_addr; ///< The file address for this line entry
-    uint32_t line;   ///< The source line number, or zero if there is no line
-                     ///number information.
-    uint16_t column; ///< The column number of the source line, or zero if there
-                     ///is no column information.
-    uint16_t file_idx : 11, ///< The file index into CompileUnit's file table,
-                            ///or zero if there is no file information.
-        is_start_of_statement : 1, ///< Indicates this entry is the beginning of
-                                   ///a statement.
-        is_start_of_basic_block : 1, ///< Indicates this entry is the beginning
-                                     ///of a basic block.
-        is_prologue_end : 1, ///< Indicates this entry is one (of possibly many)
-                             ///where execution should be suspended for an entry
-                             ///breakpoint of a function.
-        is_epilogue_begin : 1, ///< Indicates this entry is one (of possibly
-                               ///many) where execution should be suspended for
-                               ///an exit breakpoint of a function.
-        is_terminal_entry : 1; ///< Indicates this entry is that of the first
-                               ///byte after the end of a sequence of target
-                               ///machine instructions.
+    /// The file address for this line entry.
+    lldb::addr_t file_addr;
+    /// The source line number, or zero if there is no line number
+    /// information.
+    uint32_t line : 27;
+    /// Indicates this entry is the beginning of a statement.
+    uint32_t is_start_of_statement : 1;
+    /// Indicates this entry is the beginning of a basic block.
+    uint32_t is_start_of_basic_block : 1;
+    /// Indicates this entry is one (of possibly many) where execution
+    /// should be suspended for an entry breakpoint of a function.
+    uint32_t is_prologue_end : 1;
+    /// Indicates this entry is one (of possibly many) where execution
+    /// should be suspended for an exit breakpoint of a function.
+    uint32_t is_epilogue_begin : 1;
+    /// Indicates this entry is that of the first byte after the end
+    /// of a sequence of target machine instructions.
+    uint32_t is_terminal_entry : 1;
+    /// The column number of the source line, or zero if there is no
+    /// column information.
+    uint16_t column;
+    /// The file index into CompileUnit's file table, or zero if there
+    /// is no file information.
+    uint16_t file_idx;
   };
 
   struct EntrySearchInfo {
