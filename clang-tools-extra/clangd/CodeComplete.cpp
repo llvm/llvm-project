@@ -1152,28 +1152,6 @@ Optional<FuzzyFindRequest> speculativeFuzzyFindRequestForCompletion(
   return CachedReq;
 }
 
-} // namespace
-
-clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
-  clang::CodeCompleteOptions Result;
-  Result.IncludeCodePatterns = EnableSnippets && IncludeCodePatterns;
-  Result.IncludeMacros = IncludeMacros;
-  Result.IncludeGlobals = true;
-  // We choose to include full comments and not do doxygen parsing in
-  // completion.
-  // FIXME: ideally, we should support doxygen in some form, e.g. do markdown
-  // formatting of the comments.
-  Result.IncludeBriefComments = false;
-
-  // When an is used, Sema is responsible for completing the main file,
-  // the index can provide results from the preamble.
-  // Tell Sema not to deserialize the preamble to look for results.
-  Result.LoadExternal = !Index;
-  Result.IncludeFixIts = IncludeFixIts;
-
-  return Result;
-}
-
 // Returns the most popular include header for \p Sym. If two headers are
 // equally popular, prefer the shorter one. Returns empty string if \p Sym has
 // no include header.
@@ -1583,6 +1561,28 @@ private:
     return Builder->build();
   }
 };
+
+} // namespace
+
+clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
+  clang::CodeCompleteOptions Result;
+  Result.IncludeCodePatterns = EnableSnippets && IncludeCodePatterns;
+  Result.IncludeMacros = IncludeMacros;
+  Result.IncludeGlobals = true;
+  // We choose to include full comments and not do doxygen parsing in
+  // completion.
+  // FIXME: ideally, we should support doxygen in some form, e.g. do markdown
+  // formatting of the comments.
+  Result.IncludeBriefComments = false;
+
+  // When an is used, Sema is responsible for completing the main file,
+  // the index can provide results from the preamble.
+  // Tell Sema not to deserialize the preamble to look for results.
+  Result.LoadExternal = !Index;
+  Result.IncludeFixIts = IncludeFixIts;
+
+  return Result;
+}
 
 Expected<StringRef> speculateCompletionFilter(StringRef Content, Position Pos) {
   auto Offset = positionToOffset(Content, Pos);
