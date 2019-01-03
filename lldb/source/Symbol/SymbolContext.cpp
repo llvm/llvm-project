@@ -393,12 +393,7 @@ bool lldb_private::operator==(const SymbolContext &lhs,
 
 bool lldb_private::operator!=(const SymbolContext &lhs,
                               const SymbolContext &rhs) {
-  return lhs.function != rhs.function || lhs.symbol != rhs.symbol ||
-         lhs.module_sp.get() != rhs.module_sp.get() ||
-         lhs.comp_unit != rhs.comp_unit ||
-         lhs.target_sp.get() != rhs.target_sp.get() ||
-         LineEntry::Compare(lhs.line_entry, rhs.line_entry) != 0 ||
-         lhs.variable != rhs.variable;
+  return !(lhs == rhs);
 }
 
 bool SymbolContext::GetAddressRange(uint32_t scope, uint32_t range_idx,

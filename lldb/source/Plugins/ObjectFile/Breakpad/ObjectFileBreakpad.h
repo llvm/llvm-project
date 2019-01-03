@@ -82,7 +82,7 @@ public:
 
   void Dump(Stream *s) override {}
 
-  bool GetArchitecture(ArchSpec &arch) override;
+  ArchSpec GetArchitecture() override { return m_arch; }
 
   bool GetUUID(UUID *uuid) override;
 
