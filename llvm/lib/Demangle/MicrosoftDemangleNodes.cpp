@@ -114,10 +114,10 @@ static void outputCallingConvention(OutputStream &OS, CallingConv CC) {
   }
 }
 
-std::string Node::toString() const {
+std::string Node::toString(OutputFlags Flags) const {
   OutputStream OS;
   initializeOutputStream(nullptr, nullptr, OS, 1024);
-  this->output(OS, llvm::ms_demangle::OF_Default);
+  this->output(OS, Flags);
   OS << '\0';
   return {OS.getBuffer()};
 }
@@ -510,13 +510,15 @@ void PointerTypeNode::outputPost(OutputStream &OS, OutputFlags Flags) const {
 }
 
 void TagTypeNode::outputPre(OutputStream &OS, OutputFlags Flags) const {
-  switch (Tag) {
-    OUTPUT_ENUM_CLASS_VALUE(TagKind, Class, "class");
-    OUTPUT_ENUM_CLASS_VALUE(TagKind, Struct, "struct");
-    OUTPUT_ENUM_CLASS_VALUE(TagKind, Union, "union");
-    OUTPUT_ENUM_CLASS_VALUE(TagKind, Enum, "enum");
+  if (!(Flags & OF_NoTagSpecifier)) {
+    switch (Tag) {
+      OUTPUT_ENUM_CLASS_VALUE(TagKind, Class, "class");
+      OUTPUT_ENUM_CLASS_VALUE(TagKind, Struct, "struct");
+      OUTPUT_ENUM_CLASS_VALUE(TagKind, Union, "union");
+      OUTPUT_ENUM_CLASS_VALUE(TagKind, Enum, "enum");
+    }
+    OS << " ";
   }
-  OS << " ";
   QualifiedName->output(OS, Flags);
   outputQualifiers(OS, Quals, true, false);
 }

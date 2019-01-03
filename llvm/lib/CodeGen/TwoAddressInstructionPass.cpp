@@ -929,9 +929,12 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
   MachineBasicBlock::iterator Begin = MI;
   MachineBasicBlock::iterator AfterMI = std::next(Begin);
   MachineBasicBlock::iterator End = AfterMI;
-  while (End->isCopy() &&
-         regOverlapsSet(Defs, End->getOperand(1).getReg(), TRI)) {
-    Defs.push_back(End->getOperand(0).getReg());
+  while (End != MBB->end()) {
+    End = skipDebugInstructionsForward(End, MBB->end());
+    if (End->isCopy() && regOverlapsSet(Defs, End->getOperand(1).getReg(), TRI))
+      Defs.push_back(End->getOperand(0).getReg());
+    else
+      break;
     ++End;
   }
 
