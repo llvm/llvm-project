@@ -423,8 +423,7 @@ void DWARFCallFrameInfo::GetFDEIndex() {
                      m_objfile.GetFileSpec().GetFilename().AsCString(""));
 
   bool clear_address_zeroth_bit = false;
-  ArchSpec arch;
-  if (m_objfile.GetArchitecture(arch)) {
+  if (ArchSpec arch = m_objfile.GetArchitecture()) {
     if (arch.GetTriple().getArch() == llvm::Triple::arm ||
         arch.GetTriple().getArch() == llvm::Triple::thumb)
       clear_address_zeroth_bit = true;

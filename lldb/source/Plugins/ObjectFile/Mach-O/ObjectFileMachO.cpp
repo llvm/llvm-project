@@ -916,12 +916,10 @@ size_t ObjectFileMachO::GetModuleSpecifications(
         spec.SetObjectOffset(file_offset);
         spec.SetObjectSize(length);
 
-        if (GetArchitecture(header, data, data_offset,
-                            spec.GetArchitecture())) {
-          if (spec.GetArchitecture().IsValid()) {
-            GetUUID(header, data, data_offset, spec.GetUUID());
-            specs.Append(spec);
-          }
+        spec.GetArchitecture() = GetArchitecture(header, data, data_offset);
+        if (spec.GetArchitecture().IsValid()) {
+          GetUUID(header, data, data_offset, spec.GetUUID());
+          specs.Append(spec);
         }
       }
     }
@@ -1104,9 +1102,7 @@ bool ObjectFileMachO::ParseHeader() {
     if (can_parse) {
       m_data.GetU32(&offset, &m_header.cputype, 6);
 
-      ArchSpec mach_arch;
-
-      if (GetArchitecture(mach_arch)) {
+      if (ArchSpec mach_arch = GetArchitecture()) {
         // Check if the module has a required architecture
         const ArchSpec &module_arch = module_sp->GetArchitecture();
         if (module_arch.IsValid() && !module_arch.IsCompatibleMatch(mach_arch))
@@ -5041,8 +5037,7 @@ void ObjectFileMachO::Dump(Stream *s) {
     else
       s->PutCString("ObjectFileMachO32");
 
-    ArchSpec header_arch;
-    GetArchitecture(header_arch);
+    ArchSpec header_arch = GetArchitecture();
 
     *s << ", file = '" << m_file
        << "', triple = " << header_arch.GetTriple().getTriple() << "\n";
@@ -5165,10 +5160,11 @@ namespace {
   };
 } // namespace
 
-bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
-                                      const lldb_private::DataExtractor &data,
-                                      lldb::offset_t lc_offset,
-                                      ArchSpec &arch) {
+ArchSpec
+ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
+                                 const lldb_private::DataExtractor &data,
+                                 lldb::offset_t lc_offset) {
+  ArchSpec arch;
   arch.SetArchitecture(eArchTypeMachO, header.cputype, header.cpusubtype);
 
   if (arch.IsValid()) {
@@ -5193,7 +5189,7 @@ bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
         triple.setVendor(llvm::Triple::UnknownVendor);
         triple.setVendorName(llvm::StringRef());
       }
-      return true;
+      return arch;
     } else {
       struct load_command load_cmd;
       llvm::SmallString<16> os_name;
@@ -5222,7 +5218,7 @@ bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
           os << GetOSName(load_cmd.cmd) << min_os.major_version << '.'
              << min_os.minor_version << '.' << min_os.patch_version;
           triple.setOSName(os.str());
-          return true;
+          return arch;
         }
         default:
           break;
@@ -5258,7 +5254,7 @@ bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
             triple.setOSName(os.str());
             if (!os_env.environment.empty())
               triple.setEnvironmentName(os_env.environment);
-            return true;
+            return arch;
           }
         } while (0);
         offset = cmd_offset + load_cmd.cmdsize;
@@ -5273,7 +5269,7 @@ bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
       }
     }
   }
-  return arch.IsValid();
+  return arch;
 }
 
 bool ObjectFileMachO::GetUUID(lldb_private::UUID *uuid) {
@@ -5895,14 +5891,16 @@ llvm::VersionTuple ObjectFileMachO::GetVersion() {
   return llvm::VersionTuple();
 }
 
-bool ObjectFileMachO::GetArchitecture(ArchSpec &arch) {
+ArchSpec ObjectFileMachO::GetArchitecture() {
   ModuleSP module_sp(GetModule());
+  ArchSpec arch;
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+
     return GetArchitecture(m_header, m_data,
-                           MachHeaderSizeFromMagic(m_header.magic), arch);
+                           MachHeaderSizeFromMagic(m_header.magic));
   }
-  return false;
+  return arch;
 }
 
 void ObjectFileMachO::GetProcessSharedCacheUUID(Process *process, addr_t &base_addr, UUID &uuid) {

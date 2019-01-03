@@ -168,10 +168,11 @@ public:
     // Once we get the object file, update our module with the object file's
     // architecture since it might differ in vendor/os if some parts were
     // unknown.
-    if (!module_sp->m_objfile_sp->GetArchitecture(module_sp->m_arch))
-      return nullptr;
-
-    return module_sp;
+    if (ArchSpec arch = module_sp->m_objfile_sp->GetArchitecture()) {
+      module_sp->m_arch = arch;
+      return module_sp;
+    }
+    return nullptr;
   }
 
   //------------------------------------------------------------------

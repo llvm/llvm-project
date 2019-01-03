@@ -108,7 +108,7 @@ private:
   llvm::DenseSet<llvm::CachedHashStringRef> ComdatGroups;
 
   // Set of .so files to not link the same shared object file more than once.
-  llvm::DenseSet<StringRef> SoNames;
+  llvm::DenseMap<StringRef, InputFile *> SoNames;
 
   // A map from demangled symbol names to their symbol objects.
   // This mapping is 1:N because two symbols with different versions

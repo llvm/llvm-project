@@ -395,7 +395,7 @@ Status ProcessWindows::DoResume() {
       SetPrivateState(eStateRunning);
     }
   } else {
-    LLDB_LOG(log, "error: process %I64u is in state %u.  Returning...",
+    LLDB_LOG(log, "error: process {0} is in state {1}.  Returning...",
              m_session_data->m_debugger->GetProcess().GetProcessId(),
              GetPrivateState());
   }
@@ -884,7 +884,7 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   // If the process exits before any initial stop then notify the debugger 
   // of the error otherwise WaitForDebuggerConnection() will be blocked.
   // An example of this issue is when a process fails to load a dependent DLL. 
-  if (!m_session_data->m_initial_stop_received) {
+  if (m_session_data && !m_session_data->m_initial_stop_received) {
     Status error(exit_code, eErrorTypeWin32);
     OnDebuggerError(error, 0);
   }

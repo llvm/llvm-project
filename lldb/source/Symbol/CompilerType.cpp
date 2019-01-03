@@ -1127,16 +1127,6 @@ bool CompilerType::WriteToMemory(lldb_private::ExecutionContext *exe_ctx,
   return false;
 }
 
-// clang::CXXRecordDecl *
-// CompilerType::GetAsCXXRecordDecl (lldb::opaque_compiler_type_t
-// opaque_compiler_qual_type)
-//{
-//    if (opaque_compiler_qual_type)
-//        return
-//        clang::QualType::getFromOpaquePtr(opaque_compiler_qual_type)->getAsCXXRecordDecl();
-//    return NULL;
-//}
-
 bool lldb_private::operator==(const lldb_private::CompilerType &lhs,
                               const lldb_private::CompilerType &rhs) {
   return lhs.GetTypeSystem() == rhs.GetTypeSystem() &&
@@ -1145,6 +1135,5 @@ bool lldb_private::operator==(const lldb_private::CompilerType &lhs,
 
 bool lldb_private::operator!=(const lldb_private::CompilerType &lhs,
                               const lldb_private::CompilerType &rhs) {
-  return lhs.GetTypeSystem() != rhs.GetTypeSystem() ||
-         lhs.GetOpaqueQualType() != rhs.GetOpaqueQualType();
+  return !(lhs == rhs);
 }

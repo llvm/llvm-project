@@ -9,20 +9,13 @@
 
 #include "Driver.h"
 
-#include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
-#include "lldb/API/SBCommunication.h"
 #include "lldb/API/SBDebugger.h"
-#include "lldb/API/SBEvent.h"
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBLanguageRuntime.h"
-#include "lldb/API/SBListener.h"
-#include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
-#include "lldb/API/SBTarget.h"
-#include "lldb/API/SBThread.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"

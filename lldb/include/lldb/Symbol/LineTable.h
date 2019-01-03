@@ -238,21 +238,22 @@ public:
 protected:
   struct Entry {
     Entry()
-        : file_addr(LLDB_INVALID_ADDRESS), line(0), column(0), file_idx(0),
+        : file_addr(LLDB_INVALID_ADDRESS), line(0),
           is_start_of_statement(false), is_start_of_basic_block(false),
           is_prologue_end(false), is_epilogue_begin(false),
-          is_terminal_entry(false) {}
+          is_terminal_entry(false), column(0), file_idx(0) {}
 
     Entry(lldb::addr_t _file_addr, uint32_t _line, uint16_t _column,
           uint16_t _file_idx, bool _is_start_of_statement,
           bool _is_start_of_basic_block, bool _is_prologue_end,
           bool _is_epilogue_begin, bool _is_terminal_entry)
-        : file_addr(_file_addr), line(_line), column(_column),
-          file_idx(_file_idx), is_start_of_statement(_is_start_of_statement),
+        : file_addr(_file_addr), line(_line),
+          is_start_of_statement(_is_start_of_statement),
           is_start_of_basic_block(_is_start_of_basic_block),
           is_prologue_end(_is_prologue_end),
           is_epilogue_begin(_is_epilogue_begin),
-          is_terminal_entry(_is_terminal_entry) {}
+          is_terminal_entry(_is_terminal_entry), column(_column),
+          file_idx(_file_idx) {}
 
     int bsearch_compare(const void *key, const void *arrmem);
 
