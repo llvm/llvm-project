@@ -20,20 +20,17 @@ define void @_Z12d2s_bufferedmPc(i64, i8* nocapture) {
 ; CHECK-NEXT:    imulq $10000, %rdx, %rax # imm = 0x2710
 ; CHECK-NEXT:    movq %r9, %rdi
 ; CHECK-NEXT:    subq %rax, %rdi
-; CHECK-NEXT:    imulq $1374389535, %rdi, %rcx # imm = 0x51EB851F
-; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    imulq $1374389535, %rdi, %rax # imm = 0x51EB851F
 ; CHECK-NEXT:    shrq $37, %rax
-; CHECK-NEXT:    imull $100, %eax, %eax
-; CHECK-NEXT:    subl %eax, %edi
-; CHECK-NEXT:    shrq $36, %rcx
-; CHECK-NEXT:    andl $510, %ecx # imm = 0x1FE
+; CHECK-NEXT:    imull $100, %eax, %ecx
+; CHECK-NEXT:    subl %ecx, %edi
 ; CHECK-NEXT:    movl %r10d, %r11d
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    subq %r11, %rax
+; CHECK-NEXT:    movq %rsi, %rcx
+; CHECK-NEXT:    subq %r11, %rcx
 ; CHECK-NEXT:    movzwl _ZL11DIGIT_TABLE(%rdi,%rdi), %edi
-; CHECK-NEXT:    movw %di, -1(%rax)
-; CHECK-NEXT:    movzwl _ZL11DIGIT_TABLE(%rcx), %ecx
-; CHECK-NEXT:    movw %cx, -3(%rax)
+; CHECK-NEXT:    movw %di, -1(%rcx)
+; CHECK-NEXT:    movzwl _ZL11DIGIT_TABLE(%rax,%rax), %eax
+; CHECK-NEXT:    movw %ax, -3(%rcx)
 ; CHECK-NEXT:    addl $4, %r10d
 ; CHECK-NEXT:    cmpq $99999999, %r9 # imm = 0x5F5E0FF
 ; CHECK-NEXT:    movq %rdx, %r9

@@ -777,9 +777,14 @@ void llvm::computeDeadSymbols(
     VI = updateValueInfoForIndirectCalls(Index, VI);
     if (!VI)
       return;
-    for (auto &S : VI.getSummaryList())
-      if (S->isLive())
-        return;
+
+    // We need to make sure all variants of the symbol are scanned, alias can
+    // make one (but not all) alive.
+    if (llvm::all_of(VI.getSummaryList(),
+                     [](const std::unique_ptr<llvm::GlobalValueSummary> &S) {
+                       return S->isLive();
+                     }))
+      return;
 
     // We only keep live symbols that are known to be non-prevailing if any are
     // available_externally, linkonceodr, weakodr. Those symbols are discarded

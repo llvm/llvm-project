@@ -20,10 +20,14 @@
 ; RUN:   -r %t1.bc,_live_available_externally_func,l \
 ; RUN:   -r %t1.bc,_live_linkonce_odr_func,l \
 ; RUN:   -r %t1.bc,_live_weak_odr_func,l \
+; RUN:   -r %t1.bc,_linkonceodralias,pl \
+; RUN:   -r %t1.bc,_linkonceodrfuncwithalias,l \
+; RUN:   -r %t1.bc,_linkonceodrfuncwithalias_caller,pl \
 ; RUN:   -r %t2.bc,_baz,pl \
 ; RUN:   -r %t2.bc,_boo,pl \
 ; RUN:   -r %t2.bc,_dead_func,l \
 ; RUN:   -r %t2.bc,_another_dead_func,pl \
+; RUN:   -r %t2.bc,_linkonceodrfuncwithalias,pl \
 ; RUN:   -thinlto-threads=1 \
 ; RUN:	 -debug-only=function-import 2>&1 | FileCheck %s --check-prefix=DEBUG --check-prefix=STATS
 ; RUN: llvm-dis < %t.out.1.3.import.bc | FileCheck %s --check-prefix=LTO2
@@ -71,6 +75,11 @@
 ; llvm.global_ctors
 ; CHECK2: define void @boo()
 ; LTO2-CHECK2: define dso_local void @boo()
+
+; Make sure we keep @linkonceodrfuncwithalias in Input/deadstrip.ll alive as it
+; is reachable from @main.
+; LTO2-CHECK2: define weak_odr dso_local void @linkonceodrfuncwithalias() {
+
 ; We should have eventually removed @baz since it was internalized and unused
 ; CHECK2-NM-NOT: _baz
 
@@ -105,10 +114,14 @@
 ; RUN:   -r %t1.bc,_live_available_externally_func,l \
 ; RUN:   -r %t1.bc,_live_linkonce_odr_func,l \
 ; RUN:   -r %t1.bc,_live_weak_odr_func,l \
+; RUN:   -r %t1.bc,_linkonceodralias,pl \
+; RUN:   -r %t1.bc,_linkonceodrfuncwithalias,l \
+; RUN:   -r %t1.bc,_linkonceodrfuncwithalias_caller,pl \
 ; RUN:   -r %t3.bc,_baz,pl \
 ; RUN:   -r %t3.bc,_boo,pl \
 ; RUN:   -r %t3.bc,_dead_func,l \
-; RUN:   -r %t3.bc,_another_dead_func,pl
+; RUN:   -r %t3.bc,_another_dead_func,pl \
+; RUN:   -r %t3.bc,_linkonceodrfuncwithalias,pl
 ; RUN: llvm-dis < %t4.out.1.3.import.bc | FileCheck %s --check-prefix=CHECK-NOTDEAD
 ; RUN: llvm-nm %t4.out.0 | FileCheck %s --check-prefix=CHECK-NM-NOTDEAD
 
@@ -163,11 +176,31 @@ define available_externally void @live_available_externally_func() {
     ret void
 }
 
+; This alias will set its base object in this file (linkonceodrfuncwithalias)
+; alive.
+; We want to make sure the @linkonceodrfuncwithalias copy in Input/deadstrip.ll
+; is also scanned when computing reachability.
+@linkonceodralias = linkonce_odr alias void (), void ()* @linkonceodrfuncwithalias
+
+define linkonce_odr void @linkonceodrfuncwithalias() {
+entry:
+  ret void
+}
+
+define void @linkonceodrfuncwithalias_caller() {
+entry:
+  call void @linkonceodrfuncwithalias()
+  ret void
+}
+
+
 define void @main() {
     call void @bar()
     call void @bar_internal()
     call void @live_linkonce_odr_func()
     call void @live_weak_odr_func()
     call void @live_available_externally_func()
+    call void @linkonceodrfuncwithalias_caller()
+    call void @linkonceodralias()
     ret void
 }

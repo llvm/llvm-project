@@ -24,29 +24,29 @@ namespace mca {
 #define DEBUG_TYPE "llvm-mca"
 ResourceStrategy::~ResourceStrategy() = default;
 
+static uint64_t selectImpl(uint64_t CandidateMask,
+                           uint64_t &NextInSequenceMask) {
+  CandidateMask = 1ULL << (countLeadingZeros(CandidateMask) ^
+                           (std::numeric_limits<uint64_t>::digits - 1));
+  NextInSequenceMask &= (CandidateMask ^ (CandidateMask - 1));
+  return CandidateMask;
+}
+
 uint64_t DefaultResourceStrategy::select(uint64_t ReadyMask) {
   // This method assumes that ReadyMask cannot be zero.
   uint64_t CandidateMask = ReadyMask & NextInSequenceMask;
-  if (CandidateMask) {
-    CandidateMask = PowerOf2Floor(CandidateMask);
-    NextInSequenceMask &= (CandidateMask | (CandidateMask - 1));
-    return CandidateMask;
-  }
+  if (CandidateMask)
+    return selectImpl(CandidateMask, NextInSequenceMask);
 
   NextInSequenceMask = ResourceUnitMask ^ RemovedFromNextInSequence;
   RemovedFromNextInSequence = 0;
   CandidateMask = ReadyMask & NextInSequenceMask;
-
-  if (CandidateMask) {
-    CandidateMask = PowerOf2Floor(CandidateMask);
-    NextInSequenceMask &= (CandidateMask | (CandidateMask - 1));
-    return CandidateMask;
-  }
+  if (CandidateMask)
+    return selectImpl(CandidateMask, NextInSequenceMask);
 
   NextInSequenceMask = ResourceUnitMask;
-  CandidateMask = PowerOf2Floor(ReadyMask & NextInSequenceMask);
-  NextInSequenceMask &= (CandidateMask | (CandidateMask - 1));
-  return CandidateMask;
+  CandidateMask = ReadyMask & NextInSequenceMask;
+  return selectImpl(CandidateMask, NextInSequenceMask);
 }
 
 void DefaultResourceStrategy::used(uint64_t Mask) {
@@ -66,11 +66,14 @@ void DefaultResourceStrategy::used(uint64_t Mask) {
 ResourceState::ResourceState(const MCProcResourceDesc &Desc, unsigned Index,
                              uint64_t Mask)
     : ProcResourceDescIndex(Index), ResourceMask(Mask),
-      BufferSize(Desc.BufferSize), IsAGroup(countPopulation(ResourceMask)>1) {
-  if (IsAGroup)
-    ResourceSizeMask = ResourceMask ^ PowerOf2Floor(ResourceMask);
-  else
+      BufferSize(Desc.BufferSize), IsAGroup(countPopulation(ResourceMask) > 1) {
+  if (IsAGroup) {
+    ResourceSizeMask =
+        ResourceMask ^ (1ULL << (countLeadingZeros(ResourceMask) ^
+                                 (std::numeric_limits<uint64_t>::digits - 1)));
+  } else {
     ResourceSizeMask = (1ULL << Desc.NumUnits) - 1;
+  }
   ReadyMask = ResourceSizeMask;
   AvailableSlots = BufferSize == -1 ? 0U : static_cast<unsigned>(BufferSize);
   Unavailable = false;

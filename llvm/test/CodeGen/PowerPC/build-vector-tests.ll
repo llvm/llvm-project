@@ -1244,15 +1244,15 @@ entry:
 ; P9LE-LABEL: fromRegsConvftoi
 ; P8BE-LABEL: fromRegsConvftoi
 ; P8LE-LABEL: fromRegsConvftoi
-; P9BE-DAG: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs1, vs3
-; P9BE-DAG: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs2, vs4
-; P9BE-DAG: xvcvdpsxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
-; P9BE-DAG: xvcvdpsxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
+; P9BE: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs2, vs4
+; P9BE: xvcvdpsxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
+; P9BE: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs1, vs3
+; P9BE: xvcvdpsxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
 ; P9BE: vmrgew v2, [[REG3]], [[REG4]]
-; P9LE-DAG: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs3, vs1
-; P9LE-DAG: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs4, vs2
-; P9LE-DAG: xvcvdpsxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
-; P9LE-DAG: xvcvdpsxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
+; P9LE: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs3, vs1
+; P9LE: xvcvdpsxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
+; P9LE: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs4, vs2
+; P9LE: xvcvdpsxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
 ; P9LE: vmrgew v2, [[REG4]], [[REG3]]
 ; P8BE-DAG: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs1, vs3
 ; P8BE-DAG: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs2, vs4
@@ -1516,15 +1516,15 @@ entry:
 ; P9LE-LABEL: fromRegsConvdtoi
 ; P8BE-LABEL: fromRegsConvdtoi
 ; P8LE-LABEL: fromRegsConvdtoi
-; P9BE-DAG: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs1, vs3
-; P9BE-DAG: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs2, vs4
-; P9BE-DAG: xvcvdpsxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
-; P9BE-DAG: xvcvdpsxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
+; P9BE: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs2, vs4
+; P9BE: xvcvdpsxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
+; P9BE: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs1, vs3
+; P9BE: xvcvdpsxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
 ; P9BE: vmrgew v2, [[REG3]], [[REG4]]
-; P9LE-DAG: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs3, vs1
-; P9LE-DAG: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs4, vs2
-; P9LE-DAG: xvcvdpsxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
-; P9LE-DAG: xvcvdpsxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
+; P9LE: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs3, vs1
+; P9LE: xvcvdpsxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
+; P9LE: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs4, vs2
+; P9LE: xvcvdpsxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
 ; P9LE: vmrgew v2, [[REG4]], [[REG3]]
 ; P8BE-DAG: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs1, vs3
 ; P8BE-DAG: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs2, vs4
@@ -1642,8 +1642,8 @@ entry:
 ; P9LE: lfd
 ; P9LE: lfd
 ; P9LE: xxmrghd
-; P9LE: xxmrghd
 ; P9LE: xvcvdpsxws
+; P9LE: xxmrghd
 ; P9LE: xvcvdpsxws
 ; P9LE: vmrgew v2
 ; P8BE: lfdx
@@ -1711,8 +1711,8 @@ entry:
 ; P9LE: lfd
 ; P9LE: lfd
 ; P9LE: xxmrghd
-; P9LE: xxmrghd
 ; P9LE: xvcvdpsxws
+; P9LE: xxmrghd
 ; P9LE: xvcvdpsxws
 ; P9LE: vmrgew v2
 ; P8BE: lfdux
@@ -1780,8 +1780,8 @@ entry:
 ; P9LE: lfd
 ; P9LE: lfd
 ; P9LE: xxmrghd
-; P9LE: xxmrghd
 ; P9LE: xvcvdpsxws
+; P9LE: xxmrghd
 ; P9LE: xvcvdpsxws
 ; P9LE: vmrgew v2
 ; P8BE: lfdux
@@ -2376,15 +2376,15 @@ entry:
 ; P9LE-LABEL: fromRegsConvftoui
 ; P8BE-LABEL: fromRegsConvftoui
 ; P8LE-LABEL: fromRegsConvftoui
-; P9BE-DAG: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs1, vs3
-; P9BE-DAG: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs2, vs4
-; P9BE-DAG: xvcvdpuxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
-; P9BE-DAG: xvcvdpuxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
+; P9BE: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs2, vs4
+; P9BE: xvcvdpuxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
+; P9BE: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs1, vs3
+; P9BE: xvcvdpuxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
 ; P9BE: vmrgew v2, [[REG3]], [[REG4]]
-; P9LE-DAG: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs3, vs1
-; P9LE-DAG: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs4, vs2
-; P9LE-DAG: xvcvdpuxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
-; P9LE-DAG: xvcvdpuxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
+; P9LE: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs3, vs1
+; P9LE: xvcvdpuxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
+; P9LE: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs4, vs2
+; P9LE: xvcvdpuxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
 ; P9LE: vmrgew v2, [[REG4]], [[REG3]]
 ; P8BE-DAG: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs1, vs3
 ; P8BE-DAG: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs2, vs4
@@ -2648,15 +2648,15 @@ entry:
 ; P9LE-LABEL: fromRegsConvdtoui
 ; P8BE-LABEL: fromRegsConvdtoui
 ; P8LE-LABEL: fromRegsConvdtoui
-; P9BE-DAG: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs1, vs3
-; P9BE-DAG: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs2, vs4
-; P9BE-DAG: xvcvdpuxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
-; P9BE-DAG: xvcvdpuxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
+; P9BE: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs2, vs4
+; P9BE: xvcvdpuxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
+; P9BE: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs1, vs3
+; P9BE: xvcvdpuxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
 ; P9BE: vmrgew v2, [[REG3]], [[REG4]]
-; P9LE-DAG: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs3, vs1
-; P9LE-DAG: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs4, vs2
-; P9LE-DAG: xvcvdpuxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
-; P9LE-DAG: xvcvdpuxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
+; P9LE: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs3, vs1
+; P9LE: xvcvdpuxws [[REG3:v[0-9]+]], {{[vs]+}}[[REG1]]
+; P9LE: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs4, vs2
+; P9LE: xvcvdpuxws [[REG4:v[0-9]+]], {{[vs]+}}[[REG2]]
 ; P9LE: vmrgew v2, [[REG4]], [[REG3]]
 ; P8BE-DAG: xxmrghd {{[vs]+}}[[REG1:[0-9]+]], vs1, vs3
 ; P8BE-DAG: xxmrghd {{[vs]+}}[[REG2:[0-9]+]], vs2, vs4
@@ -2774,8 +2774,8 @@ entry:
 ; P9LE: lfd
 ; P9LE: lfd
 ; P9LE: xxmrghd
-; P9LE: xxmrghd
 ; P9LE: xvcvdpuxws
+; P9LE: xxmrghd
 ; P9LE: xvcvdpuxws
 ; P9LE: vmrgew v2
 ; P8BE: lfdx
@@ -2843,8 +2843,8 @@ entry:
 ; P9LE: lfd
 ; P9LE: lfd
 ; P9LE: xxmrghd
-; P9LE: xxmrghd
 ; P9LE: xvcvdpuxws
+; P9LE: xxmrghd
 ; P9LE: xvcvdpuxws
 ; P9LE: vmrgew v2
 ; P8BE: lfdux
@@ -2912,8 +2912,8 @@ entry:
 ; P9LE: lfd
 ; P9LE: lfd
 ; P9LE: xxmrghd
-; P9LE: xxmrghd
 ; P9LE: xvcvdpuxws
+; P9LE: xxmrghd
 ; P9LE: xvcvdpuxws
 ; P9LE: vmrgew v2
 ; P8BE: lfdux

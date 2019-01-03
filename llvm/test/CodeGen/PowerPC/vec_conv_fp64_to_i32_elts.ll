@@ -28,27 +28,27 @@ define i64 @test2elt(<2 x double> %a) local_unnamed_addr #0 {
 ;
 ; CHECK-P9-LABEL: test2elt:
 ; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    xscvdpuxws f0, v2
+; CHECK-P9-NEXT:    mfvsrwz r3, f0
 ; CHECK-P9-NEXT:    xxswapd vs0, v2
-; CHECK-P9-NEXT:    xscvdpuxws f1, v2
+; CHECK-P9-NEXT:    mtvsrws v3, r3
 ; CHECK-P9-NEXT:    xscvdpuxws f0, f0
-; CHECK-P9-NEXT:    mfvsrwz r3, f1
+; CHECK-P9-NEXT:    mfvsrwz r3, f0
 ; CHECK-P9-NEXT:    mtvsrws v2, r3
-; CHECK-P9-NEXT:    mfvsrwz r4, f0
-; CHECK-P9-NEXT:    mtvsrws v3, r4
-; CHECK-P9-NEXT:    vmrglw v2, v2, v3
+; CHECK-P9-NEXT:    vmrglw v2, v3, v2
 ; CHECK-P9-NEXT:    mfvsrld r3, v2
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test2elt:
 ; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    xscvdpuxws f0, v2
+; CHECK-BE-NEXT:    mfvsrwz r3, f0
 ; CHECK-BE-NEXT:    xxswapd vs0, v2
-; CHECK-BE-NEXT:    xscvdpuxws f1, v2
+; CHECK-BE-NEXT:    mtvsrws v3, r3
 ; CHECK-BE-NEXT:    xscvdpuxws f0, f0
-; CHECK-BE-NEXT:    mfvsrwz r3, f1
+; CHECK-BE-NEXT:    mfvsrwz r3, f0
 ; CHECK-BE-NEXT:    mtvsrws v2, r3
-; CHECK-BE-NEXT:    mfvsrwz r4, f0
-; CHECK-BE-NEXT:    mtvsrws v3, r4
-; CHECK-BE-NEXT:    vmrghw v2, v2, v3
+; CHECK-BE-NEXT:    vmrghw v2, v3, v2
 ; CHECK-BE-NEXT:    mfvsrd r3, v2
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -129,42 +129,42 @@ define void @test8elt(<8 x i32>* noalias nocapture sret %agg.result, <8 x double
 ;
 ; CHECK-P9-LABEL: test8elt:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lxv vs0, 32(r4)
-; CHECK-P9-NEXT:    lxv vs1, 48(r4)
 ; CHECK-P9-NEXT:    lxv vs2, 0(r4)
 ; CHECK-P9-NEXT:    lxv vs3, 16(r4)
 ; CHECK-P9-NEXT:    xxmrgld vs4, vs3, vs2
 ; CHECK-P9-NEXT:    xxmrghd vs2, vs3, vs2
-; CHECK-P9-NEXT:    xxmrgld vs3, vs1, vs0
-; CHECK-P9-NEXT:    xxmrghd vs0, vs1, vs0
+; CHECK-P9-NEXT:    lxv vs0, 32(r4)
+; CHECK-P9-NEXT:    lxv vs1, 48(r4)
 ; CHECK-P9-NEXT:    xvcvdpuxws v2, vs4
 ; CHECK-P9-NEXT:    xvcvdpuxws v3, vs2
-; CHECK-P9-NEXT:    xvcvdpuxws v4, vs3
-; CHECK-P9-NEXT:    xvcvdpuxws v5, vs0
+; CHECK-P9-NEXT:    xxmrgld vs2, vs1, vs0
+; CHECK-P9-NEXT:    xxmrghd vs0, vs1, vs0
+; CHECK-P9-NEXT:    xvcvdpuxws v4, vs0
 ; CHECK-P9-NEXT:    vmrgew v2, v3, v2
-; CHECK-P9-NEXT:    vmrgew v3, v5, v4
-; CHECK-P9-NEXT:    stxv v3, 16(r3)
+; CHECK-P9-NEXT:    xvcvdpuxws v3, vs2
 ; CHECK-P9-NEXT:    stxv v2, 0(r3)
+; CHECK-P9-NEXT:    vmrgew v3, v4, v3
+; CHECK-P9-NEXT:    stxv v3, 16(r3)
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test8elt:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs0, 48(r4)
-; CHECK-BE-NEXT:    lxv vs1, 32(r4)
 ; CHECK-BE-NEXT:    lxv vs2, 16(r4)
 ; CHECK-BE-NEXT:    lxv vs3, 0(r4)
 ; CHECK-BE-NEXT:    xxmrgld vs4, vs3, vs2
 ; CHECK-BE-NEXT:    xxmrghd vs2, vs3, vs2
-; CHECK-BE-NEXT:    xxmrgld vs3, vs1, vs0
-; CHECK-BE-NEXT:    xxmrghd vs0, vs1, vs0
+; CHECK-BE-NEXT:    lxv vs0, 48(r4)
+; CHECK-BE-NEXT:    lxv vs1, 32(r4)
 ; CHECK-BE-NEXT:    xvcvdpuxws v2, vs4
 ; CHECK-BE-NEXT:    xvcvdpuxws v3, vs2
-; CHECK-BE-NEXT:    xvcvdpuxws v4, vs3
-; CHECK-BE-NEXT:    xvcvdpuxws v5, vs0
+; CHECK-BE-NEXT:    xxmrgld vs2, vs1, vs0
+; CHECK-BE-NEXT:    xxmrghd vs0, vs1, vs0
+; CHECK-BE-NEXT:    xvcvdpuxws v4, vs0
 ; CHECK-BE-NEXT:    vmrgew v2, v3, v2
-; CHECK-BE-NEXT:    vmrgew v3, v5, v4
-; CHECK-BE-NEXT:    stxv v3, 16(r3)
+; CHECK-BE-NEXT:    xvcvdpuxws v3, vs2
 ; CHECK-BE-NEXT:    stxv v2, 0(r3)
+; CHECK-BE-NEXT:    vmrgew v3, v4, v3
+; CHECK-BE-NEXT:    stxv v3, 16(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %a = load <8 x double>, <8 x double>* %0, align 64
@@ -227,74 +227,74 @@ define void @test16elt(<16 x i32>* noalias nocapture sret %agg.result, <16 x dou
 ;
 ; CHECK-P9-LABEL: test16elt:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lxv vs0, 32(r4)
-; CHECK-P9-NEXT:    lxv vs1, 48(r4)
-; CHECK-P9-NEXT:    lxv vs2, 0(r4)
-; CHECK-P9-NEXT:    lxv vs3, 16(r4)
-; CHECK-P9-NEXT:    lxv vs4, 96(r4)
-; CHECK-P9-NEXT:    lxv vs5, 112(r4)
-; CHECK-P9-NEXT:    lxv vs6, 64(r4)
-; CHECK-P9-NEXT:    lxv vs7, 80(r4)
-; CHECK-P9-NEXT:    xxmrgld vs8, vs3, vs2
-; CHECK-P9-NEXT:    xxmrghd vs2, vs3, vs2
-; CHECK-P9-NEXT:    xxmrgld vs3, vs1, vs0
-; CHECK-P9-NEXT:    xxmrghd vs0, vs1, vs0
-; CHECK-P9-NEXT:    xxmrgld vs1, vs7, vs6
+; CHECK-P9-NEXT:    lxv vs6, 0(r4)
+; CHECK-P9-NEXT:    lxv vs7, 16(r4)
+; CHECK-P9-NEXT:    xxmrgld vs8, vs7, vs6
 ; CHECK-P9-NEXT:    xxmrghd vs6, vs7, vs6
+; CHECK-P9-NEXT:    lxv vs4, 32(r4)
+; CHECK-P9-NEXT:    lxv vs5, 48(r4)
 ; CHECK-P9-NEXT:    xxmrgld vs7, vs5, vs4
 ; CHECK-P9-NEXT:    xxmrghd vs4, vs5, vs4
 ; CHECK-P9-NEXT:    xvcvdpuxws v2, vs8
-; CHECK-P9-NEXT:    xvcvdpuxws v3, vs2
-; CHECK-P9-NEXT:    xvcvdpuxws v4, vs3
-; CHECK-P9-NEXT:    xvcvdpuxws v5, vs0
-; CHECK-P9-NEXT:    xvcvdpuxws v0, vs1
-; CHECK-P9-NEXT:    xvcvdpuxws v1, vs6
-; CHECK-P9-NEXT:    xvcvdpuxws v6, vs7
-; CHECK-P9-NEXT:    xvcvdpuxws v7, vs4
+; CHECK-P9-NEXT:    xvcvdpuxws v3, vs6
+; CHECK-P9-NEXT:    lxv vs2, 64(r4)
+; CHECK-P9-NEXT:    lxv vs3, 80(r4)
+; CHECK-P9-NEXT:    xvcvdpuxws v4, vs7
 ; CHECK-P9-NEXT:    vmrgew v2, v3, v2
-; CHECK-P9-NEXT:    vmrgew v3, v5, v4
-; CHECK-P9-NEXT:    vmrgew v4, v1, v0
-; CHECK-P9-NEXT:    vmrgew v5, v7, v6
-; CHECK-P9-NEXT:    stxv v3, 16(r3)
+; CHECK-P9-NEXT:    xvcvdpuxws v3, vs4
+; CHECK-P9-NEXT:    xxmrgld vs4, vs3, vs2
+; CHECK-P9-NEXT:    xxmrghd vs2, vs3, vs2
+; CHECK-P9-NEXT:    lxv vs0, 96(r4)
+; CHECK-P9-NEXT:    lxv vs1, 112(r4)
 ; CHECK-P9-NEXT:    stxv v2, 0(r3)
-; CHECK-P9-NEXT:    stxv v5, 48(r3)
+; CHECK-P9-NEXT:    xvcvdpuxws v5, vs2
+; CHECK-P9-NEXT:    xxmrgld vs2, vs1, vs0
+; CHECK-P9-NEXT:    xxmrghd vs0, vs1, vs0
+; CHECK-P9-NEXT:    xvcvdpuxws v0, vs0
+; CHECK-P9-NEXT:    vmrgew v3, v3, v4
+; CHECK-P9-NEXT:    xvcvdpuxws v4, vs4
+; CHECK-P9-NEXT:    stxv v3, 16(r3)
+; CHECK-P9-NEXT:    vmrgew v4, v5, v4
 ; CHECK-P9-NEXT:    stxv v4, 32(r3)
+; CHECK-P9-NEXT:    xvcvdpuxws v5, vs2
+; CHECK-P9-NEXT:    vmrgew v5, v0, v5
+; CHECK-P9-NEXT:    stxv v5, 48(r3)
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test16elt:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs0, 48(r4)
-; CHECK-BE-NEXT:    lxv vs1, 32(r4)
-; CHECK-BE-NEXT:    lxv vs2, 16(r4)
-; CHECK-BE-NEXT:    lxv vs3, 0(r4)
-; CHECK-BE-NEXT:    lxv vs4, 112(r4)
-; CHECK-BE-NEXT:    lxv vs5, 96(r4)
-; CHECK-BE-NEXT:    lxv vs6, 80(r4)
-; CHECK-BE-NEXT:    lxv vs7, 64(r4)
-; CHECK-BE-NEXT:    xxmrgld vs8, vs3, vs2
-; CHECK-BE-NEXT:    xxmrghd vs2, vs3, vs2
-; CHECK-BE-NEXT:    xxmrgld vs3, vs1, vs0
-; CHECK-BE-NEXT:    xxmrghd vs0, vs1, vs0
-; CHECK-BE-NEXT:    xxmrgld vs1, vs7, vs6
+; CHECK-BE-NEXT:    lxv vs6, 16(r4)
+; CHECK-BE-NEXT:    lxv vs7, 0(r4)
+; CHECK-BE-NEXT:    xxmrgld vs8, vs7, vs6
 ; CHECK-BE-NEXT:    xxmrghd vs6, vs7, vs6
+; CHECK-BE-NEXT:    lxv vs4, 48(r4)
+; CHECK-BE-NEXT:    lxv vs5, 32(r4)
 ; CHECK-BE-NEXT:    xxmrgld vs7, vs5, vs4
 ; CHECK-BE-NEXT:    xxmrghd vs4, vs5, vs4
 ; CHECK-BE-NEXT:    xvcvdpuxws v2, vs8
-; CHECK-BE-NEXT:    xvcvdpuxws v3, vs2
-; CHECK-BE-NEXT:    xvcvdpuxws v4, vs3
-; CHECK-BE-NEXT:    xvcvdpuxws v5, vs0
-; CHECK-BE-NEXT:    xvcvdpuxws v0, vs1
-; CHECK-BE-NEXT:    xvcvdpuxws v1, vs6
-; CHECK-BE-NEXT:    xvcvdpuxws v6, vs7
-; CHECK-BE-NEXT:    xvcvdpuxws v7, vs4
+; CHECK-BE-NEXT:    xvcvdpuxws v3, vs6
+; CHECK-BE-NEXT:    lxv vs2, 80(r4)
+; CHECK-BE-NEXT:    lxv vs3, 64(r4)
+; CHECK-BE-NEXT:    xvcvdpuxws v4, vs7
 ; CHECK-BE-NEXT:    vmrgew v2, v3, v2
-; CHECK-BE-NEXT:    vmrgew v3, v5, v4
-; CHECK-BE-NEXT:    vmrgew v4, v1, v0
-; CHECK-BE-NEXT:    vmrgew v5, v7, v6
-; CHECK-BE-NEXT:    stxv v3, 16(r3)
+; CHECK-BE-NEXT:    xvcvdpuxws v3, vs4
+; CHECK-BE-NEXT:    xxmrgld vs4, vs3, vs2
+; CHECK-BE-NEXT:    xxmrghd vs2, vs3, vs2
+; CHECK-BE-NEXT:    lxv vs0, 112(r4)
+; CHECK-BE-NEXT:    lxv vs1, 96(r4)
 ; CHECK-BE-NEXT:    stxv v2, 0(r3)
-; CHECK-BE-NEXT:    stxv v5, 48(r3)
+; CHECK-BE-NEXT:    xvcvdpuxws v5, vs2
+; CHECK-BE-NEXT:    xxmrgld vs2, vs1, vs0
+; CHECK-BE-NEXT:    xxmrghd vs0, vs1, vs0
+; CHECK-BE-NEXT:    xvcvdpuxws v0, vs0
+; CHECK-BE-NEXT:    vmrgew v3, v3, v4
+; CHECK-BE-NEXT:    xvcvdpuxws v4, vs4
+; CHECK-BE-NEXT:    stxv v3, 16(r3)
+; CHECK-BE-NEXT:    vmrgew v4, v5, v4
 ; CHECK-BE-NEXT:    stxv v4, 32(r3)
+; CHECK-BE-NEXT:    xvcvdpuxws v5, vs2
+; CHECK-BE-NEXT:    vmrgew v5, v0, v5
+; CHECK-BE-NEXT:    stxv v5, 48(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %a = load <16 x double>, <16 x double>* %0, align 128
@@ -322,27 +322,27 @@ define i64 @test2elt_signed(<2 x double> %a) local_unnamed_addr #0 {
 ;
 ; CHECK-P9-LABEL: test2elt_signed:
 ; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    xscvdpsxws f0, v2
+; CHECK-P9-NEXT:    mfvsrwz r3, f0
 ; CHECK-P9-NEXT:    xxswapd vs0, v2
-; CHECK-P9-NEXT:    xscvdpsxws f1, v2
+; CHECK-P9-NEXT:    mtvsrws v3, r3
 ; CHECK-P9-NEXT:    xscvdpsxws f0, f0
-; CHECK-P9-NEXT:    mfvsrwz r3, f1
+; CHECK-P9-NEXT:    mfvsrwz r3, f0
 ; CHECK-P9-NEXT:    mtvsrws v2, r3
-; CHECK-P9-NEXT:    mfvsrwz r4, f0
-; CHECK-P9-NEXT:    mtvsrws v3, r4
-; CHECK-P9-NEXT:    vmrglw v2, v2, v3
+; CHECK-P9-NEXT:    vmrglw v2, v3, v2
 ; CHECK-P9-NEXT:    mfvsrld r3, v2
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test2elt_signed:
 ; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    xscvdpsxws f0, v2
+; CHECK-BE-NEXT:    mfvsrwz r3, f0
 ; CHECK-BE-NEXT:    xxswapd vs0, v2
-; CHECK-BE-NEXT:    xscvdpsxws f1, v2
+; CHECK-BE-NEXT:    mtvsrws v3, r3
 ; CHECK-BE-NEXT:    xscvdpsxws f0, f0
-; CHECK-BE-NEXT:    mfvsrwz r3, f1
+; CHECK-BE-NEXT:    mfvsrwz r3, f0
 ; CHECK-BE-NEXT:    mtvsrws v2, r3
-; CHECK-BE-NEXT:    mfvsrwz r4, f0
-; CHECK-BE-NEXT:    mtvsrws v3, r4
-; CHECK-BE-NEXT:    vmrghw v2, v2, v3
+; CHECK-BE-NEXT:    vmrghw v2, v3, v2
 ; CHECK-BE-NEXT:    mfvsrd r3, v2
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -423,42 +423,42 @@ define void @test8elt_signed(<8 x i32>* noalias nocapture sret %agg.result, <8 x
 ;
 ; CHECK-P9-LABEL: test8elt_signed:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lxv vs0, 32(r4)
-; CHECK-P9-NEXT:    lxv vs1, 48(r4)
 ; CHECK-P9-NEXT:    lxv vs2, 0(r4)
 ; CHECK-P9-NEXT:    lxv vs3, 16(r4)
 ; CHECK-P9-NEXT:    xxmrgld vs4, vs3, vs2
 ; CHECK-P9-NEXT:    xxmrghd vs2, vs3, vs2
-; CHECK-P9-NEXT:    xxmrgld vs3, vs1, vs0
-; CHECK-P9-NEXT:    xxmrghd vs0, vs1, vs0
+; CHECK-P9-NEXT:    lxv vs0, 32(r4)
+; CHECK-P9-NEXT:    lxv vs1, 48(r4)
 ; CHECK-P9-NEXT:    xvcvdpsxws v2, vs4
 ; CHECK-P9-NEXT:    xvcvdpsxws v3, vs2
-; CHECK-P9-NEXT:    xvcvdpsxws v4, vs3
-; CHECK-P9-NEXT:    xvcvdpsxws v5, vs0
+; CHECK-P9-NEXT:    xxmrgld vs2, vs1, vs0
+; CHECK-P9-NEXT:    xxmrghd vs0, vs1, vs0
+; CHECK-P9-NEXT:    xvcvdpsxws v4, vs0
 ; CHECK-P9-NEXT:    vmrgew v2, v3, v2
-; CHECK-P9-NEXT:    vmrgew v3, v5, v4
-; CHECK-P9-NEXT:    stxv v3, 16(r3)
+; CHECK-P9-NEXT:    xvcvdpsxws v3, vs2
 ; CHECK-P9-NEXT:    stxv v2, 0(r3)
+; CHECK-P9-NEXT:    vmrgew v3, v4, v3
+; CHECK-P9-NEXT:    stxv v3, 16(r3)
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test8elt_signed:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs0, 48(r4)
-; CHECK-BE-NEXT:    lxv vs1, 32(r4)
 ; CHECK-BE-NEXT:    lxv vs2, 16(r4)
 ; CHECK-BE-NEXT:    lxv vs3, 0(r4)
 ; CHECK-BE-NEXT:    xxmrgld vs4, vs3, vs2
 ; CHECK-BE-NEXT:    xxmrghd vs2, vs3, vs2
-; CHECK-BE-NEXT:    xxmrgld vs3, vs1, vs0
-; CHECK-BE-NEXT:    xxmrghd vs0, vs1, vs0
+; CHECK-BE-NEXT:    lxv vs0, 48(r4)
+; CHECK-BE-NEXT:    lxv vs1, 32(r4)
 ; CHECK-BE-NEXT:    xvcvdpsxws v2, vs4
 ; CHECK-BE-NEXT:    xvcvdpsxws v3, vs2
-; CHECK-BE-NEXT:    xvcvdpsxws v4, vs3
-; CHECK-BE-NEXT:    xvcvdpsxws v5, vs0
+; CHECK-BE-NEXT:    xxmrgld vs2, vs1, vs0
+; CHECK-BE-NEXT:    xxmrghd vs0, vs1, vs0
+; CHECK-BE-NEXT:    xvcvdpsxws v4, vs0
 ; CHECK-BE-NEXT:    vmrgew v2, v3, v2
-; CHECK-BE-NEXT:    vmrgew v3, v5, v4
-; CHECK-BE-NEXT:    stxv v3, 16(r3)
+; CHECK-BE-NEXT:    xvcvdpsxws v3, vs2
 ; CHECK-BE-NEXT:    stxv v2, 0(r3)
+; CHECK-BE-NEXT:    vmrgew v3, v4, v3
+; CHECK-BE-NEXT:    stxv v3, 16(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %a = load <8 x double>, <8 x double>* %0, align 64
@@ -521,74 +521,74 @@ define void @test16elt_signed(<16 x i32>* noalias nocapture sret %agg.result, <1
 ;
 ; CHECK-P9-LABEL: test16elt_signed:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lxv vs0, 32(r4)
-; CHECK-P9-NEXT:    lxv vs1, 48(r4)
-; CHECK-P9-NEXT:    lxv vs2, 0(r4)
-; CHECK-P9-NEXT:    lxv vs3, 16(r4)
-; CHECK-P9-NEXT:    lxv vs4, 96(r4)
-; CHECK-P9-NEXT:    lxv vs5, 112(r4)
-; CHECK-P9-NEXT:    lxv vs6, 64(r4)
-; CHECK-P9-NEXT:    lxv vs7, 80(r4)
-; CHECK-P9-NEXT:    xxmrgld vs8, vs3, vs2
-; CHECK-P9-NEXT:    xxmrghd vs2, vs3, vs2
-; CHECK-P9-NEXT:    xxmrgld vs3, vs1, vs0
-; CHECK-P9-NEXT:    xxmrghd vs0, vs1, vs0
-; CHECK-P9-NEXT:    xxmrgld vs1, vs7, vs6
+; CHECK-P9-NEXT:    lxv vs6, 0(r4)
+; CHECK-P9-NEXT:    lxv vs7, 16(r4)
+; CHECK-P9-NEXT:    xxmrgld vs8, vs7, vs6
 ; CHECK-P9-NEXT:    xxmrghd vs6, vs7, vs6
+; CHECK-P9-NEXT:    lxv vs4, 32(r4)
+; CHECK-P9-NEXT:    lxv vs5, 48(r4)
 ; CHECK-P9-NEXT:    xxmrgld vs7, vs5, vs4
 ; CHECK-P9-NEXT:    xxmrghd vs4, vs5, vs4
 ; CHECK-P9-NEXT:    xvcvdpsxws v2, vs8
-; CHECK-P9-NEXT:    xvcvdpsxws v3, vs2
-; CHECK-P9-NEXT:    xvcvdpsxws v4, vs3
-; CHECK-P9-NEXT:    xvcvdpsxws v5, vs0
-; CHECK-P9-NEXT:    xvcvdpsxws v0, vs1
-; CHECK-P9-NEXT:    xvcvdpsxws v1, vs6
-; CHECK-P9-NEXT:    xvcvdpsxws v6, vs7
-; CHECK-P9-NEXT:    xvcvdpsxws v7, vs4
+; CHECK-P9-NEXT:    xvcvdpsxws v3, vs6
+; CHECK-P9-NEXT:    lxv vs2, 64(r4)
+; CHECK-P9-NEXT:    lxv vs3, 80(r4)
+; CHECK-P9-NEXT:    xvcvdpsxws v4, vs7
 ; CHECK-P9-NEXT:    vmrgew v2, v3, v2
-; CHECK-P9-NEXT:    vmrgew v3, v5, v4
-; CHECK-P9-NEXT:    vmrgew v4, v1, v0
-; CHECK-P9-NEXT:    vmrgew v5, v7, v6
-; CHECK-P9-NEXT:    stxv v3, 16(r3)
+; CHECK-P9-NEXT:    xvcvdpsxws v3, vs4
+; CHECK-P9-NEXT:    xxmrgld vs4, vs3, vs2
+; CHECK-P9-NEXT:    xxmrghd vs2, vs3, vs2
+; CHECK-P9-NEXT:    lxv vs0, 96(r4)
+; CHECK-P9-NEXT:    lxv vs1, 112(r4)
 ; CHECK-P9-NEXT:    stxv v2, 0(r3)
-; CHECK-P9-NEXT:    stxv v5, 48(r3)
+; CHECK-P9-NEXT:    xvcvdpsxws v5, vs2
+; CHECK-P9-NEXT:    xxmrgld vs2, vs1, vs0
+; CHECK-P9-NEXT:    xxmrghd vs0, vs1, vs0
+; CHECK-P9-NEXT:    xvcvdpsxws v0, vs0
+; CHECK-P9-NEXT:    vmrgew v3, v3, v4
+; CHECK-P9-NEXT:    xvcvdpsxws v4, vs4
+; CHECK-P9-NEXT:    stxv v3, 16(r3)
+; CHECK-P9-NEXT:    vmrgew v4, v5, v4
 ; CHECK-P9-NEXT:    stxv v4, 32(r3)
+; CHECK-P9-NEXT:    xvcvdpsxws v5, vs2
+; CHECK-P9-NEXT:    vmrgew v5, v0, v5
+; CHECK-P9-NEXT:    stxv v5, 48(r3)
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test16elt_signed:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs0, 48(r4)
-; CHECK-BE-NEXT:    lxv vs1, 32(r4)
-; CHECK-BE-NEXT:    lxv vs2, 16(r4)
-; CHECK-BE-NEXT:    lxv vs3, 0(r4)
-; CHECK-BE-NEXT:    lxv vs4, 112(r4)
-; CHECK-BE-NEXT:    lxv vs5, 96(r4)
-; CHECK-BE-NEXT:    lxv vs6, 80(r4)
-; CHECK-BE-NEXT:    lxv vs7, 64(r4)
-; CHECK-BE-NEXT:    xxmrgld vs8, vs3, vs2
-; CHECK-BE-NEXT:    xxmrghd vs2, vs3, vs2
-; CHECK-BE-NEXT:    xxmrgld vs3, vs1, vs0
-; CHECK-BE-NEXT:    xxmrghd vs0, vs1, vs0
-; CHECK-BE-NEXT:    xxmrgld vs1, vs7, vs6
+; CHECK-BE-NEXT:    lxv vs6, 16(r4)
+; CHECK-BE-NEXT:    lxv vs7, 0(r4)
+; CHECK-BE-NEXT:    xxmrgld vs8, vs7, vs6
 ; CHECK-BE-NEXT:    xxmrghd vs6, vs7, vs6
+; CHECK-BE-NEXT:    lxv vs4, 48(r4)
+; CHECK-BE-NEXT:    lxv vs5, 32(r4)
 ; CHECK-BE-NEXT:    xxmrgld vs7, vs5, vs4
 ; CHECK-BE-NEXT:    xxmrghd vs4, vs5, vs4
 ; CHECK-BE-NEXT:    xvcvdpsxws v2, vs8
-; CHECK-BE-NEXT:    xvcvdpsxws v3, vs2
-; CHECK-BE-NEXT:    xvcvdpsxws v4, vs3
-; CHECK-BE-NEXT:    xvcvdpsxws v5, vs0
-; CHECK-BE-NEXT:    xvcvdpsxws v0, vs1
-; CHECK-BE-NEXT:    xvcvdpsxws v1, vs6
-; CHECK-BE-NEXT:    xvcvdpsxws v6, vs7
-; CHECK-BE-NEXT:    xvcvdpsxws v7, vs4
+; CHECK-BE-NEXT:    xvcvdpsxws v3, vs6
+; CHECK-BE-NEXT:    lxv vs2, 80(r4)
+; CHECK-BE-NEXT:    lxv vs3, 64(r4)
+; CHECK-BE-NEXT:    xvcvdpsxws v4, vs7
 ; CHECK-BE-NEXT:    vmrgew v2, v3, v2
-; CHECK-BE-NEXT:    vmrgew v3, v5, v4
-; CHECK-BE-NEXT:    vmrgew v4, v1, v0
-; CHECK-BE-NEXT:    vmrgew v5, v7, v6
-; CHECK-BE-NEXT:    stxv v3, 16(r3)
+; CHECK-BE-NEXT:    xvcvdpsxws v3, vs4
+; CHECK-BE-NEXT:    xxmrgld vs4, vs3, vs2
+; CHECK-BE-NEXT:    xxmrghd vs2, vs3, vs2
+; CHECK-BE-NEXT:    lxv vs0, 112(r4)
+; CHECK-BE-NEXT:    lxv vs1, 96(r4)
 ; CHECK-BE-NEXT:    stxv v2, 0(r3)
-; CHECK-BE-NEXT:    stxv v5, 48(r3)
+; CHECK-BE-NEXT:    xvcvdpsxws v5, vs2
+; CHECK-BE-NEXT:    xxmrgld vs2, vs1, vs0
+; CHECK-BE-NEXT:    xxmrghd vs0, vs1, vs0
+; CHECK-BE-NEXT:    xvcvdpsxws v0, vs0
+; CHECK-BE-NEXT:    vmrgew v3, v3, v4
+; CHECK-BE-NEXT:    xvcvdpsxws v4, vs4
+; CHECK-BE-NEXT:    stxv v3, 16(r3)
+; CHECK-BE-NEXT:    vmrgew v4, v5, v4
 ; CHECK-BE-NEXT:    stxv v4, 32(r3)
+; CHECK-BE-NEXT:    xvcvdpsxws v5, vs2
+; CHECK-BE-NEXT:    vmrgew v5, v0, v5
+; CHECK-BE-NEXT:    stxv v5, 48(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
   %a = load <16 x double>, <16 x double>* %0, align 128

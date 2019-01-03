@@ -10,12 +10,7 @@ static_library("IR") {
   public_deps = [
     # Must be public_dep because IR's public headers include llvm-config.h.
     "//llvm/include/llvm/Config:llvm-config",
-
-    # Must be public_dep because IR's public headers include Attributes.inc.
-    "//llvm/include/llvm/IR:Attributes",
-
-    # Must be public_dep because IR's public headers include IntrinsicEnums.inc.
-    "//llvm/include/llvm/IR:IntrinsicEnums",
+    "//llvm/include/llvm/IR:public_tablegen",
   ]
   deps = [
     ":AttributesCompatFunc",

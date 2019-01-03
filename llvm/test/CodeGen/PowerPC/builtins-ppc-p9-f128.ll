@@ -112,8 +112,8 @@ entry:
   %2 = call fp128 @llvm.ppc.scalar.insert.exp.qp(fp128 %0, i64 %1)
   ret fp128 %2
 ; CHECK-LABEL: insert_exp_qp
-; CHECK: mtvsrd [[FPREG:f[0-9]+]], r3
-; CHECK: lxvx [[VECREG:v[0-9]+]]
+; CHECK-DAG: mtvsrd [[FPREG:f[0-9]+]], r3
+; CHECK-DAG: lxvx [[VECREG:v[0-9]+]]
 ; CHECK: xsiexpqp v2, [[VECREG]], [[FPREG]]
 ; CHECK: blr
 }

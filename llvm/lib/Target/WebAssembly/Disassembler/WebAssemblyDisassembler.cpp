@@ -167,9 +167,14 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     }
     // SLEB operands:
     case WebAssembly::OPERAND_I32IMM:
-    case WebAssembly::OPERAND_I64IMM:
-    case WebAssembly::OPERAND_SIGNATURE: {
+    case WebAssembly::OPERAND_I64IMM: {
       if (!parseLEBImmediate(MI, Size, Bytes, true))
+        return MCDisassembler::Fail;
+      break;
+    }
+    // block_type operands (uint8_t).
+    case WebAssembly::OPERAND_SIGNATURE: {
+      if (!parseImmediate<uint8_t>(MI, Size, Bytes))
         return MCDisassembler::Fail;
       break;
     }

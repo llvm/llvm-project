@@ -1022,6 +1022,8 @@ public:
 
   ArrayRef<uint8_t> getSymbolAuxData(COFFSymbolRef Symbol) const;
 
+  uint32_t getSymbolIndex(COFFSymbolRef Symbol) const;
+
   size_t getSymbolTableEntrySize() const {
     if (COFFHeader)
       return sizeof(coff_symbol16);
