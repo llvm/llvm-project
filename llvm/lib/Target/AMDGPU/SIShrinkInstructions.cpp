@@ -212,6 +212,82 @@ static void shrinkScalarCompare(const SIInstrInfo *TII, MachineInstr &MI) {
   }
 }
 
+/// Attempt to shink AND/OR/XOR operations requiring non-inlineable literals.
+/// For AND or OR, try using S_BITSET{0,1} to clear or set bits.
+/// If the inverse of the immediate is legal, use ANDN2, ORN2 or
+/// XNOR (as a ^ b == ~(a ^ ~b)).
+/// \returns true if the caller should continue the machine function iterator
+static bool shrinkScalarLogicOp(const GCNSubtarget &ST,
+                                MachineRegisterInfo &MRI,
+                                const SIInstrInfo *TII,
+                                MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  const MachineOperand *Dest = &MI.getOperand(0);
+  MachineOperand *Src0 = &MI.getOperand(1);
+  MachineOperand *Src1 = &MI.getOperand(2);
+  MachineOperand *SrcReg = Src0;
+  MachineOperand *SrcImm = Src1;
+
+  if (SrcImm->isImm() &&
+      !AMDGPU::isInlinableLiteral32(SrcImm->getImm(), ST.hasInv2PiInlineImm())) {
+    uint32_t Imm = static_cast<uint32_t>(SrcImm->getImm());
+    uint32_t NewImm = 0;
+
+    if (Opc == AMDGPU::S_AND_B32) {
+      if (isPowerOf2_32(~Imm)) {
+        NewImm = countTrailingOnes(Imm);
+        Opc = AMDGPU::S_BITSET0_B32;
+      } else if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
+        NewImm = ~Imm;
+        Opc = AMDGPU::S_ANDN2_B32;
+      }
+    } else if (Opc == AMDGPU::S_OR_B32) {
+      if (isPowerOf2_32(Imm)) {
+        NewImm = countTrailingZeros(Imm);
+        Opc = AMDGPU::S_BITSET1_B32;
+      } else if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
+        NewImm = ~Imm;
+        Opc = AMDGPU::S_ORN2_B32;
+      }
+    } else if (Opc == AMDGPU::S_XOR_B32) {
+      if (AMDGPU::isInlinableLiteral32(~Imm, ST.hasInv2PiInlineImm())) {
+        NewImm = ~Imm;
+        Opc = AMDGPU::S_XNOR_B32;
+      }
+    } else {
+      llvm_unreachable("unexpected opcode");
+    }
+
+    if ((Opc == AMDGPU::S_ANDN2_B32 || Opc == AMDGPU::S_ORN2_B32) &&
+        SrcImm == Src0) {
+      if (!TII->commuteInstruction(MI, false, 1, 2))
+        NewImm = 0;
+    }
+
+    if (NewImm != 0) {
+      if (TargetRegisterInfo::isVirtualRegister(Dest->getReg()) &&
+        SrcReg->isReg()) {
+        MRI.setRegAllocationHint(Dest->getReg(), 0, SrcReg->getReg());
+        MRI.setRegAllocationHint(SrcReg->getReg(), 0, Dest->getReg());
+        return true;
+      }
+
+      if (SrcReg->isReg() && SrcReg->getReg() == Dest->getReg()) {
+        MI.setDesc(TII->get(Opc));
+        if (Opc == AMDGPU::S_BITSET0_B32 ||
+            Opc == AMDGPU::S_BITSET1_B32) {
+          Src0->ChangeToImmediate(NewImm);
+          MI.RemoveOperand(2);
+        } else {
+          SrcImm->setImm(NewImm);
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 // This is the same as MachineInstr::readsRegister/modifiesRegister except
 // it takes subregs into account.
 static bool instAccessReg(iterator_range<MachineInstr::const_mop_iterator> &&R,
@@ -510,6 +586,14 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         }
 
         continue;
+      }
+
+      // Shrink scalar logic operations.
+      if (MI.getOpcode() == AMDGPU::S_AND_B32 ||
+          MI.getOpcode() == AMDGPU::S_OR_B32 ||
+          MI.getOpcode() == AMDGPU::S_XOR_B32) {
+        if (shrinkScalarLogicOp(ST, MRI, TII, MI))
+          continue;
       }
 
       if (!TII->hasVALU32BitEncoding(MI.getOpcode()))

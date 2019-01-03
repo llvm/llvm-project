@@ -1,5 +1,5 @@
-// REQUIRES: powerpc-registered-target
-// RUN: %clang_builtins %s -o %t && %run %t
+// REQUIRES: target-is-powerpc64le
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 #include <stdio.h>
 #include <limits.h>
 #include <stdint.h>

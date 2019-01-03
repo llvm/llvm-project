@@ -213,3 +213,59 @@ v_mov_b32_e32 v16, s3
 // ASM: .byte 17
 .byte .amdgcn.next_free_sgpr
 // ASM: .byte 4
+
+// Metadata
+
+.amdgpu_metadata
+  amdhsa.version:
+    - 3
+    - 0
+  amdhsa.kernels:
+    - .name:       amd_kernel_code_t_test_all
+      .symbol: amd_kernel_code_t_test_all@kd
+      .kernarg_segment_size: 8
+      .group_segment_fixed_size: 16
+      .private_segment_fixed_size: 32
+      .kernarg_segment_align: 64
+      .wavefront_size: 128
+      .sgpr_count: 14
+      .vgpr_count: 40
+      .max_flat_workgroup_size: 256
+    - .name:       amd_kernel_code_t_minimal
+      .symbol: amd_kernel_code_t_minimal@kd
+      .kernarg_segment_size: 8
+      .group_segment_fixed_size: 16
+      .private_segment_fixed_size: 32
+      .kernarg_segment_align: 64
+      .wavefront_size: 128
+      .sgpr_count: 14
+      .vgpr_count: 40
+      .max_flat_workgroup_size: 256
+.end_amdgpu_metadata
+
+// ASM: .amdgpu_metadata
+// ASM:    amdhsa.kernels:
+// ASM:  - .sgpr_count:     14
+// ASM:    .max_flat_workgroup_size: 256
+// ASM:    .symbol:         'amd_kernel_code_t_test_all@kd'
+// ASM:    .kernarg_segment_size: 8
+// ASM:    .group_segment_fixed_size: 16
+// ASM:    .private_segment_fixed_size: 32
+// ASM:    .vgpr_count:     40
+// ASM:    .kernarg_segment_align: 64
+// ASM:    .wavefront_size: 128
+// ASM:    .name:           amd_kernel_code_t_test_all
+// ASM:  - .sgpr_count:     14
+// ASM:    .max_flat_workgroup_size: 256
+// ASM:    .symbol:         'amd_kernel_code_t_minimal@kd'
+// ASM:    .kernarg_segment_size: 8
+// ASM:    .group_segment_fixed_size: 16
+// ASM:    .private_segment_fixed_size: 32
+// ASM:    .vgpr_count:     40
+// ASM:    .kernarg_segment_align: 64
+// ASM:    .wavefront_size: 128
+// ASM:    .name:           amd_kernel_code_t_minimal
+// ASM:    amdhsa.version:
+// ASM-NEXT: - 3
+// ASM-NEXT: - 0
+// ASM: .end_amdgpu_metadata

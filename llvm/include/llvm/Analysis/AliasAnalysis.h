@@ -363,7 +363,8 @@ public:
 
   /// A convenience wrapper around the \c isMustAlias helper interface.
   bool isMustAlias(const Value *V1, const Value *V2) {
-    return alias(V1, 1, V2, 1) == MustAlias;
+    return alias(V1, LocationSize::precise(1), V2, LocationSize::precise(1)) ==
+           MustAlias;
   }
 
   /// Checks whether the given location points to constant memory, or if
@@ -568,7 +569,7 @@ public:
 
   /// getModRefInfo (for cmpxchges) - A convenience wrapper.
   ModRefInfo getModRefInfo(const AtomicCmpXchgInst *CX, const Value *P,
-                           unsigned Size) {
+                           LocationSize Size) {
     return getModRefInfo(CX, MemoryLocation(P, Size));
   }
 
@@ -578,7 +579,7 @@ public:
 
   /// getModRefInfo (for atomicrmws) - A convenience wrapper.
   ModRefInfo getModRefInfo(const AtomicRMWInst *RMW, const Value *P,
-                           unsigned Size) {
+                           LocationSize Size) {
     return getModRefInfo(RMW, MemoryLocation(P, Size));
   }
 

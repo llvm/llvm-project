@@ -1956,12 +1956,9 @@ define <4 x i64> @test_mm256_set1_epi32(i32 %a0) nounwind {
 define <4 x i64> @test_mm256_set1_epi64x(i64 %a0) nounwind {
 ; X86-LABEL: test_mm256_set1_epi64x:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovd %ecx, %xmm0
-; X86-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; X86-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
-; X86-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;

@@ -81,6 +81,7 @@ EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
 }
 
 EXTERN void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized) {
+  PRINT0(LD_IO, "call to __kmpc_kernel_deinit\n");
   ASSERT0(LT_FUSSY, IsOMPRuntimeInitialized,
           "Generic always requires initialized runtime.");
   // Enqueue omp state object for use by another team.
@@ -150,7 +151,7 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
   PRINT(LD_PAR,
         "thread will execute parallel region with id %d in a team of "
         "%d threads\n",
-        newTaskDescr->ThreadId(), newTaskDescr->ThreadsInTeam());
+        (int)newTaskDescr->ThreadId(), (int)newTaskDescr->ThreadsInTeam());
 
   if (RequiresDataSharing && threadId % WARPSIZE == 0) {
     // Warp master innitializes data sharing environment.
@@ -162,12 +163,16 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
   }
 }
 
-EXTERN void __kmpc_spmd_kernel_deinit() {
+EXTERN __attribute__((deprecated)) void __kmpc_spmd_kernel_deinit() {
+  __kmpc_spmd_kernel_deinit_v2(isRuntimeInitialized());
+}
+
+EXTERN void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime) {
   // We're not going to pop the task descr stack of each thread since
   // there are no more parallel regions in SPMD mode.
   __syncthreads();
   int threadId = GetThreadIdInBlock();
-  if (isRuntimeUninitialized()) {
+  if (!RequiresOMPRuntime) {
     if (threadId == 0) {
       // Enqueue omp state object for use by another team.
       int slot = usedSlotIdx;
@@ -186,5 +191,6 @@ EXTERN void __kmpc_spmd_kernel_deinit() {
 
 // Return true if the current target region is executed in SPMD mode.
 EXTERN int8_t __kmpc_is_spmd_exec_mode() {
+  PRINT0(LD_IO | LD_PAR, "call to __kmpc_is_spmd_exec_mode\n");
   return isSPMDMode();
 }

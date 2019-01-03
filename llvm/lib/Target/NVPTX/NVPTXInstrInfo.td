@@ -1885,6 +1885,7 @@ def SDTStoreRetvalProfile : SDTypeProfile<0, 2, [SDTCisInt<0>]>;
 def SDTStoreRetvalV2Profile : SDTypeProfile<0, 3, [SDTCisInt<0>]>;
 def SDTStoreRetvalV4Profile : SDTypeProfile<0, 5, [SDTCisInt<0>]>;
 def SDTPseudoUseParamProfile : SDTypeProfile<0, 1, []>;
+def SDTProxyRegProfile : SDTypeProfile<1, 1, []>;
 
 def DeclareParam :
   SDNode<"NVPTXISD::DeclareParam", SDTDeclareParamProfile,
@@ -1972,6 +1973,9 @@ def PseudoUseParam :
 def RETURNNode :
   SDNode<"NVPTXISD::RETURN", SDTCallArgMarkProfile,
          [SDNPHasChain, SDNPSideEffect]>;
+def ProxyReg :
+  SDNode<"NVPTXISD::ProxyReg", SDTProxyRegProfile,
+         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 
 let mayLoad = 1 in {
   class LoadParamMemInst<NVPTXRegClass regclass, string opstr> :
@@ -2249,6 +2253,21 @@ def PseudoUseParamI16 : PseudoUseParamInst<Int16Regs>;
 def PseudoUseParamF64 : PseudoUseParamInst<Float64Regs>;
 def PseudoUseParamF32 : PseudoUseParamInst<Float32Regs>;
 
+class ProxyRegInst<string SzStr, NVPTXRegClass regclass> :
+  NVPTXInst<(outs regclass:$dst), (ins regclass:$src),
+            !strconcat("mov.", SzStr, " \t$dst, $src;"),
+            [(set regclass:$dst, (ProxyReg regclass:$src))]>;
+
+let isCodeGenOnly=1, isPseudo=1 in {
+  def ProxyRegI1    : ProxyRegInst<"pred", Int1Regs>;
+  def ProxyRegI16   : ProxyRegInst<"b16",  Int16Regs>;
+  def ProxyRegI32   : ProxyRegInst<"b32",  Int32Regs>;
+  def ProxyRegI64   : ProxyRegInst<"b64",  Int64Regs>;
+  def ProxyRegF16   : ProxyRegInst<"b16",  Float16Regs>;
+  def ProxyRegF32   : ProxyRegInst<"f32",  Float32Regs>;
+  def ProxyRegF64   : ProxyRegInst<"f64",  Float64Regs>;
+  def ProxyRegF16x2 : ProxyRegInst<"b32",  Float16x2Regs>;
+}
 
 //
 // Load / Store Handling
@@ -2541,7 +2560,7 @@ let mayStore=1, hasSideEffects=0 in {
 class F_BITCONVERT<string SzStr, NVPTXRegClass regclassIn,
   NVPTXRegClass regclassOut> :
            NVPTXInst<(outs regclassOut:$d), (ins regclassIn:$a),
-           !strconcat("mov.b", !strconcat(SzStr, " \t$d, $a;")),
+           !strconcat("mov.b", SzStr, " \t$d, $a;"),
      [(set regclassOut:$d, (bitconvert regclassIn:$a))]>;
 
 def BITCONVERT_16_I2F : F_BITCONVERT<"16", Int16Regs, Float16Regs>;

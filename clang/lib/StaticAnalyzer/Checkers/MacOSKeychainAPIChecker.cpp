@@ -12,10 +12,11 @@
 // to be freed using a call to SecKeychainItemFreeContent.
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
@@ -29,6 +30,7 @@ namespace {
 class MacOSKeychainAPIChecker : public Checker<check::PreStmt<CallExpr>,
                                                check::PostStmt<CallExpr>,
                                                check::DeadSymbols,
+                                               check::PointerEscape,
                                                eval::Assume> {
   mutable std::unique_ptr<BugType> BT;
 
@@ -58,6 +60,10 @@ public:
   void checkPreStmt(const CallExpr *S, CheckerContext &C) const;
   void checkPostStmt(const CallExpr *S, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;
+  ProgramStateRef checkPointerEscape(ProgramStateRef State,
+                                     const InvalidatedSymbols &Escaped,
+                                     const CallEvent *Call,
+                                     PointerEscapeKind Kind) const;
   ProgramStateRef evalAssume(ProgramStateRef state, SVal Cond,
                              bool Assumption) const;
   void printState(raw_ostream &Out, ProgramStateRef State,
@@ -568,6 +574,44 @@ void MacOSKeychainAPIChecker::checkDeadSymbols(SymbolReaper &SR,
 
   // Generate the new, cleaned up state.
   C.addTransition(State, N);
+}
+
+ProgramStateRef MacOSKeychainAPIChecker::checkPointerEscape(
+    ProgramStateRef State, const InvalidatedSymbols &Escaped,
+    const CallEvent *Call, PointerEscapeKind Kind) const {
+  // FIXME: This branch doesn't make any sense at all, but it is an overfitted
+  // replacement for a previous overfitted code that was making even less sense.
+  if (!Call || Call->getDecl())
+    return State;
+
+  for (auto I : State->get<AllocatedData>()) {
+    SymbolRef Sym = I.first;
+    if (Escaped.count(Sym))
+      State = State->remove<AllocatedData>(Sym);
+
+    // This checker is special. Most checkers in fact only track symbols of
+    // SymbolConjured type, eg. symbols returned from functions such as
+    // malloc(). This checker tracks symbols returned as out-parameters.
+    //
+    // When a function is evaluated conservatively, the out-parameter's pointee
+    // base region gets invalidated with a SymbolConjured. If the base region is
+    // larger than the region we're interested in, the value we're interested in
+    // would be SymbolDerived based on that SymbolConjured. However, such
+    // SymbolDerived will never be listed in the Escaped set when the base
+    // region is invalidated because ExprEngine doesn't know which symbols
+    // were derived from a given symbol, while there can be infinitely many
+    // valid symbols derived from any given symbol.
+    //
+    // Hence the extra boilerplate: remove the derived symbol when its parent
+    // symbol escapes.
+    //
+    if (const auto *SD = dyn_cast<SymbolDerived>(Sym)) {
+      SymbolRef ParentSym = SD->getParentSymbol();
+      if (Escaped.count(ParentSym))
+        State = State->remove<AllocatedData>(Sym);
+    }
+  }
+  return State;
 }
 
 std::shared_ptr<PathDiagnosticPiece>

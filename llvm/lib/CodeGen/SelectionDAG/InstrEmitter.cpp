@@ -652,6 +652,12 @@ void InstrEmitter::EmitRegSequence(SDNode *Node,
   const MCInstrDesc &II = TII->get(TargetOpcode::REG_SEQUENCE);
   MachineInstrBuilder MIB = BuildMI(*MF, Node->getDebugLoc(), II, NewVReg);
   unsigned NumOps = Node->getNumOperands();
+  // If the input pattern has a chain, then the root of the corresponding
+  // output pattern will get a chain as well. This can happen to be a
+  // REG_SEQUENCE (which is not "guarded" by countOperands/CountResults).
+  if (NumOps && Node->getOperand(NumOps-1).getValueType() == MVT::Other)
+    --NumOps; // Ignore chain if it exists.
+
   assert((NumOps & 1) == 1 &&
          "REG_SEQUENCE must have an odd number of operands!");
   for (unsigned i = 1; i != NumOps; ++i) {
@@ -694,6 +700,20 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
 
+  SD->setIsEmitted();
+
+  if (SD->isInvalidated()) {
+    // An invalidated SDNode must generate an undef DBG_VALUE: although the
+    // original value is no longer computed, earlier DBG_VALUEs live ranges
+    // must not leak into later code.
+    auto MIB = BuildMI(*MF, DL, TII->get(TargetOpcode::DBG_VALUE));
+    MIB.addReg(0U);
+    MIB.addReg(0U, RegState::Debug);
+    MIB.addMetadata(Var);
+    MIB.addMetadata(Expr);
+    return &*MIB;
+  }
+
   if (SD->getKind() == SDDbgValue::FRAMEIX) {
     // Stack address; this needs to be lowered in target-dependent fashion.
     // EmitTargetCodeForFrameDebugValue is responsible for allocation.
@@ -735,6 +755,9 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
         MIB.addImm(CI->getSExtValue());
     } else if (const ConstantFP *CF = dyn_cast<ConstantFP>(V)) {
       MIB.addFPImm(CF);
+    } else if (isa<ConstantPointerNull>(V)) {
+      // Note: This assumes that all nullptr constants are zero-valued.
+      MIB.addImm(0);
     } else {
       // Could be an Undef.  In any case insert an Undef so we can see what we
       // dropped.

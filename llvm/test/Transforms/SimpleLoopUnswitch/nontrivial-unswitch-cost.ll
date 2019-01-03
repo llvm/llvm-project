@@ -2,6 +2,7 @@
 ;
 ; RUN: opt -passes='loop(unswitch),verify<loops>' -enable-nontrivial-unswitch -unswitch-threshold=5 -S < %s | FileCheck %s
 ; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -unswitch-threshold=5 -S < %s | FileCheck %s
+; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -unswitch-threshold=5 -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s | FileCheck %s
 
 declare void @a()
 declare void @b()

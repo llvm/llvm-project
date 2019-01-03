@@ -213,8 +213,9 @@ void MisplacedWideningCastCheck::check(const MatchFinder::MatchResult &Result) {
         dyn_cast<BuiltinType>(CastType->getUnqualifiedDesugaredType());
     const auto *CalcBuiltinType =
         dyn_cast<BuiltinType>(CalcType->getUnqualifiedDesugaredType());
-    if (CastBuiltinType && CalcBuiltinType &&
-        !isFirstWider(CastBuiltinType->getKind(), CalcBuiltinType->getKind()))
+    if (!CastBuiltinType || !CalcBuiltinType)
+      return;
+    if (!isFirstWider(CastBuiltinType->getKind(), CalcBuiltinType->getKind()))
       return;
   }
 

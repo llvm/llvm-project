@@ -65,6 +65,9 @@ public:
                                                      bool throw_bp) override;
 
   lldb::SearchFilterSP CreateExceptionSearchFilter() override;
+  
+  lldb::ValueObjectSP GetExceptionObjectForThread(
+      lldb::ThreadSP thread_sp) override;
 
   //------------------------------------------------------------------
   // PluginInterface protocol

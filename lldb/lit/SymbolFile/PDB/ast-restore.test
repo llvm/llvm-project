@@ -1,6 +1,5 @@
-REQUIRES: system-windows
-RUN: %msvc_cl /Zi /GS- /c %S/Inputs/AstRestoreTest.cpp /Fo%t.obj
-RUN: %msvc_link /debug:full /nodefaultlib /entry:main %t.obj /out:%t.exe
+REQUIRES: system-windows, msvc
+RUN: %build --compiler=msvc --nodefaultlib --output=%t.exe %S/Inputs/AstRestoreTest.cpp
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=ENUM %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=GLOBAL %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=BASE %s

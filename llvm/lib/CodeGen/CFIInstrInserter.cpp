@@ -207,6 +207,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpUndefined:
       case MCCFIInstruction::OpRegister:
       case MCCFIInstruction::OpWindowSave:
+      case MCCFIInstruction::OpNegateRAState:
       case MCCFIInstruction::OpGnuArgsSize:
         break;
       }

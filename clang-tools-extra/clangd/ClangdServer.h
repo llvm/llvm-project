@@ -37,6 +37,7 @@ class PCHContainerOperations;
 
 namespace clangd {
 
+// FIXME: find a better name.
 class DiagnosticsConsumer {
 public:
   virtual ~DiagnosticsConsumer() = default;
@@ -44,6 +45,8 @@ public:
   /// Called by ClangdServer when \p Diagnostics for \p File are ready.
   virtual void onDiagnosticsReady(PathRef File,
                                   std::vector<Diag> Diagnostics) = 0;
+  /// Called whenever the file status is updated.
+  virtual void onFileUpdated(PathRef File, const TUStatus &Status){};
 };
 
 /// Manages a collection of source files and derived data (ASTs, indexes),
@@ -82,6 +85,10 @@ public:
     /// If true, ClangdServer automatically indexes files in the current project
     /// on background threads. The index is stored in the project root.
     bool BackgroundIndex = false;
+    /// If set to non-zero, the background index rebuilds the symbol index
+    /// periodically every BuildIndexPeriodMs milliseconds; otherwise, the
+    /// symbol index will be updated for each indexed file.
+    size_t BackgroundIndexRebuildPeriodMs = 0;
 
     /// If set, use this index to augment code completion results.
     SymbolIndex *StaticIndex = nullptr;
@@ -201,6 +208,11 @@ public:
   void dumpAST(PathRef File, llvm::unique_function<void(std::string)> Callback);
   /// Called when an event occurs for a watched file in the workspace.
   void onFileEvent(const DidChangeWatchedFilesParams &Params);
+
+  /// Get symbol info for given position.
+  /// Clangd extension - not part of official LSP.
+  void symbolInfo(PathRef File, Position Pos,
+                  Callback<std::vector<SymbolDetails>> CB);
 
   /// Returns estimated memory usage for each of the currently open files.
   /// The order of results is unspecified.

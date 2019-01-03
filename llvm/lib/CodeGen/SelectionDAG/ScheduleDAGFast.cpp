@@ -776,11 +776,9 @@ ScheduleDAGLinearize::EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     if (N->getHasDebugValue()) {
       MachineBasicBlock::iterator InsertPos = Emitter.getInsertPos();
       for (auto DV : DAG->GetDbgValues(N)) {
-        if (DV->isInvalidated())
-          continue;
-        if (auto *DbgMI = Emitter.EmitDbgValue(DV, VRBaseMap))
-          BB->insert(InsertPos, DbgMI);
-        DV->setIsInvalidated();
+        if (!DV->isEmitted())
+          if (auto *DbgMI = Emitter.EmitDbgValue(DV, VRBaseMap))
+            BB->insert(InsertPos, DbgMI);
       }
     }
   }

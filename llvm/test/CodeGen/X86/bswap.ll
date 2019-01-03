@@ -5,9 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s --check-prefix=CHECK64
 
 declare i16 @llvm.bswap.i16(i16)
-
 declare i32 @llvm.bswap.i32(i32)
-
 declare i64 @llvm.bswap.i64(i64)
 
 define i16 @W(i16 %A) {
@@ -61,23 +59,61 @@ define i64 @Y(i64 %A) {
         ret i64 %Z
 }
 
+; This isn't really a bswap test, but the potential probem is
+; easier to see with bswap vs. other ops. The transform in
+; question starts with a bitwise logic op and tries to hoist
+; those ahead of other ops. But that's not generally profitable
+; when the other ops have other uses (and it might not be safe
+; either due to unconstrained instruction count growth).
+
+define i32 @bswap_multiuse(i32 %x, i32 %y, i32* %p1, i32* %p2) nounwind {
+; CHECK-LABEL: bswap_multiuse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    bswapl %esi
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    movl %esi, (%edx)
+; CHECK-NEXT:    movl %eax, (%ecx)
+; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    retl
+;
+; CHECK64-LABEL: bswap_multiuse:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    movl %esi, %eax
+; CHECK64-NEXT:    bswapl %edi
+; CHECK64-NEXT:    bswapl %eax
+; CHECK64-NEXT:    movl %edi, (%rdx)
+; CHECK64-NEXT:    movl %eax, (%rcx)
+; CHECK64-NEXT:    orl %edi, %eax
+; CHECK64-NEXT:    retq
+  %xt = call i32 @llvm.bswap.i32(i32 %x)
+  %yt = call i32 @llvm.bswap.i32(i32 %y)
+  store i32 %xt, i32* %p1
+  store i32 %yt, i32* %p2
+  %r = or i32 %xt, %yt
+  ret i32 %r
+}
+
 ; rdar://9164521
 define i32 @test1(i32 %a) nounwind readnone {
 ; CHECK-LABEL: test1:
-; CHECK:       # %bb.0: # %entry
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    bswapl %eax
 ; CHECK-NEXT:    shrl $16, %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: test1:
-; CHECK64:       # %bb.0: # %entry
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl %edi, %eax
 ; CHECK64-NEXT:    bswapl %eax
 ; CHECK64-NEXT:    shrl $16, %eax
 ; CHECK64-NEXT:    retq
-entry:
-
   %and = lshr i32 %a, 8
   %shr3 = and i32 %and, 255
   %and2 = shl i32 %a, 8
@@ -88,20 +124,18 @@ entry:
 
 define i32 @test2(i32 %a) nounwind readnone {
 ; CHECK-LABEL: test2:
-; CHECK:       # %bb.0: # %entry
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    bswapl %eax
 ; CHECK-NEXT:    sarl $16, %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: test2:
-; CHECK64:       # %bb.0: # %entry
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl %edi, %eax
 ; CHECK64-NEXT:    bswapl %eax
 ; CHECK64-NEXT:    sarl $16, %eax
 ; CHECK64-NEXT:    retq
-entry:
-
   %and = lshr i32 %a, 8
   %shr4 = and i32 %and, 255
   %and2 = shl i32 %a, 8

@@ -149,7 +149,8 @@ class FuzzyFind : public Command {
     outs() << formatv(OutputFormat, "Rank", "Symbol ID", "Symbol Name");
     size_t Rank = 0;
     Index->fuzzyFind(Request, [&](const Symbol &Sym) {
-      outs() << formatv(OutputFormat, Rank++, Sym.ID.str(), Sym.Name);
+      outs() << formatv(OutputFormat, Rank++, Sym.ID.str(),
+                        Sym.Scope + Sym.Name);
     });
   }
 };

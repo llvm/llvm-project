@@ -203,6 +203,10 @@ AArch64RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (hasBasePointer(MF))
     markSuperRegs(Reserved, AArch64::W19);
 
+  // SLH uses register W16/X16 as the taint register.
+  if (MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
+    markSuperRegs(Reserved, AArch64::W16);
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }

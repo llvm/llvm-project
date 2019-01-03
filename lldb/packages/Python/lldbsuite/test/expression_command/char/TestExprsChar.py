@@ -41,7 +41,6 @@ class ExprCharTestCase(TestBase):
         self.assertTrue(value.GetError().Success())
         self.assertEqual(value.GetValueAsSigned(0), 3)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_default_char(self):
         self.do_test()
 
@@ -52,7 +51,6 @@ class ExprCharTestCase(TestBase):
             "powerpc64le",
             "s390x"],
         bugnumber="llvm.org/pr23069")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_signed_char(self):
         self.do_test(dictionary={'CFLAGS_EXTRAS': '-fsigned-char'})
 
@@ -64,7 +62,6 @@ class ExprCharTestCase(TestBase):
             'armv7',
             'armv7k'],
         bugnumber="llvm.org/pr23069, <rdar://problem/28721938>")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     @expectedFailureAll(triple='mips*', bugnumber="llvm.org/pr23069")
     def test_unsigned_char(self):
         self.do_test(dictionary={'CFLAGS_EXTRAS': '-funsigned-char'})

@@ -45,6 +45,8 @@ class SourceManager;
 /// A mechanism to observe the actions of the module map parser as it
 /// reads module map files.
 class ModuleMapCallbacks {
+  virtual void anchor();
+
 public:
   virtual ~ModuleMapCallbacks() = default;
 
@@ -230,6 +232,9 @@ private:
 
     /// Whether this is an exhaustive set of configuration macros.
     unsigned IsExhaustive : 1;
+
+    /// \brief Whether this is a module who has its swift_names inferred.
+    unsigned IsSwiftInferImportAsMember : 1;
 
     /// Whether files in this module can only include non-modular headers
     /// and headers from used modules.

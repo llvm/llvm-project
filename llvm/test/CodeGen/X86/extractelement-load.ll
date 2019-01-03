@@ -93,8 +93,7 @@ define i64 @t4(<2 x double>* %a) {
 ;
 ; X64-SSSE3-LABEL: t4:
 ; X64-SSSE3:       # %bb.0:
-; X64-SSSE3-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-SSSE3-NEXT:    movq %xmm0, %rax
+; X64-SSSE3-NEXT:    movq (%rdi), %rax
 ; X64-SSSE3-NEXT:    retq
 ;
 ; X64-AVX-LABEL: t4:

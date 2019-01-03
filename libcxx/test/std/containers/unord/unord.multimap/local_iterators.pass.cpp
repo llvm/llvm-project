@@ -22,6 +22,7 @@
 
 #include <unordered_map>
 #include <string>
+#include <set>
 #include <cassert>
 
 #include "min_allocator.h"
@@ -52,21 +53,35 @@ int main()
         i = c.begin(b);
         j = c.end(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 1);
-        assert(i->second == "one");
-        ++i;
-        assert(i->first == 1);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("one");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 1);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(2);
         i = c.begin(b);
         j = c.end(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 2);
-        assert(i->second == "two");
-        ++i;
-        assert(i->first == 2);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("two");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 2);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(3);
         i = c.begin(b);
@@ -116,21 +131,35 @@ int main()
         i = c.begin(b);
         j = c.end(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 1);
-        assert(i->second == "one");
-        ++i;
-        assert(i->first == 1);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("one");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 1);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(2);
         i = c.begin(b);
         j = c.end(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 2);
-        assert(i->second == "two");
-        ++i;
-        assert(i->first == 2);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("two");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 2);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(3);
         i = c.begin(b);
@@ -180,21 +209,35 @@ int main()
         i = c.cbegin(b);
         j = c.cend(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 1);
-        assert(i->second == "one");
-        ++i;
-        assert(i->first == 1);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("one");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 1);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(2);
         i = c.cbegin(b);
         j = c.cend(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 2);
-        assert(i->second == "two");
-        ++i;
-        assert(i->first == 2);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("two");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 2);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(3);
         i = c.cbegin(b);
@@ -244,21 +287,35 @@ int main()
         i = c.cbegin(b);
         j = c.cend(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 1);
-        assert(i->second == "one");
-        ++i;
-        assert(i->first == 1);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("one");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 1);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(2);
         i = c.cbegin(b);
         j = c.cend(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 2);
-        assert(i->second == "two");
-        ++i;
-        assert(i->first == 2);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("two");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 2);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(3);
         i = c.cbegin(b);
@@ -310,21 +367,35 @@ int main()
         i = c.begin(b);
         j = c.end(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 1);
-        assert(i->second == "one");
-        ++i;
-        assert(i->first == 1);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("one");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 1);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(2);
         i = c.begin(b);
         j = c.end(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 2);
-        assert(i->second == "two");
-        ++i;
-        assert(i->first == 2);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("two");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 2);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(3);
         i = c.begin(b);
@@ -375,21 +446,35 @@ int main()
         i = c.begin(b);
         j = c.end(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 1);
-        assert(i->second == "one");
-        ++i;
-        assert(i->first == 1);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("one");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 1);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(2);
         i = c.begin(b);
         j = c.end(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 2);
-        assert(i->second == "two");
-        ++i;
-        assert(i->first == 2);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("two");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 2);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(3);
         i = c.begin(b);
@@ -440,21 +525,35 @@ int main()
         i = c.cbegin(b);
         j = c.cend(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 1);
-        assert(i->second == "one");
-        ++i;
-        assert(i->first == 1);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("one");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 1);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(2);
         i = c.cbegin(b);
         j = c.cend(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 2);
-        assert(i->second == "two");
-        ++i;
-        assert(i->first == 2);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("two");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 2);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(3);
         i = c.cbegin(b);
@@ -505,21 +604,35 @@ int main()
         i = c.cbegin(b);
         j = c.cend(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 1);
-        assert(i->second == "one");
-        ++i;
-        assert(i->first == 1);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("one");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 1);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(2);
         i = c.cbegin(b);
         j = c.cend(b);
         assert(std::distance(i, j) == 2);
-        assert(i->first == 2);
-        assert(i->second == "two");
-        ++i;
-        assert(i->first == 2);
-        assert(i->second == "four");
+        {
+            std::set<std::string> s;
+            s.insert("two");
+            s.insert("four");
+            for ( int n = 0; n < 2; ++n )
+            {
+                assert(i->first == 2);
+                assert(s.find(i->second) != s.end());
+                s.erase(s.find(i->second));
+                ++i;
+            }
+        }
 
         b = c.bucket(3);
         i = c.cbegin(b);

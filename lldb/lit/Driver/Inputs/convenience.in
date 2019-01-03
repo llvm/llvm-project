@@ -1,0 +1,9 @@
+breakpoint set -f hello.cpp -p Hello
+run
+script print(lldb.debugger)
+script print(lldb.target)
+script print(lldb.process)
+script print(lldb.thread.GetStopDescription(100))
+script lldb.frame.GetLineEntry().GetLine()
+script lldb.frame.GetLineEntry().GetFileSpec().GetFilename()
+script lldb.frame.GetFunctionName()

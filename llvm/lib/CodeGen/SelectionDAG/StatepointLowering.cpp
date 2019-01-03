@@ -522,7 +522,16 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   // The vm state arguments are lowered in an opaque manner.  We do not know
   // what type of values are contained within.
   for (const Value *V : SI.DeoptState) {
-    SDValue Incoming = Builder.getValue(V);
+    SDValue Incoming;
+    // If this is a function argument at a static frame index, generate it as
+    // the frame index.
+    if (const Argument *Arg = dyn_cast<Argument>(V)) {
+      int FI = Builder.FuncInfo.getArgumentFrameIndex(Arg);
+      if (FI != INT_MAX)
+        Incoming = Builder.DAG.getFrameIndex(FI, Builder.getFrameIndexTy());
+    }
+    if (!Incoming.getNode())
+      Incoming = Builder.getValue(V);
     const bool LiveInValue = LiveInDeopt && !isGCValue(V);
     lowerIncomingStatepointValue(Incoming, LiveInValue, Ops, Builder);
   }

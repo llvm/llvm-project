@@ -40,10 +40,6 @@ template <class _Tp, class _VoidPtr> class __tree_node;
 template <class _Key, class _Value>
 struct __value_type;
 
-template <class _Key, class _CP, class _Compare,
-    bool = is_empty<_Compare>::value && !__libcpp_is_final<_Compare>::value>
-class __map_value_compare;
-
 template <class _Allocator> class __map_node_destructor;
 template <class _TreeIterator> class _LIBCPP_TEMPLATE_VIS __map_iterator;
 template <class _TreeIterator> class _LIBCPP_TEMPLATE_VIS __map_const_iterator;
@@ -966,24 +962,12 @@ private:
 
 };
 
+template<class _Tp, class _Compare>
 #ifndef _LIBCPP_CXX03_LANG
-template <class _Tp, class _Compare, class _Allocator>
-struct __diagnose_tree_helper {
-  static constexpr bool __trigger_diagnostics()
-      _LIBCPP_DIAGNOSE_WARNING(!__invokable<_Compare const&, _Tp const&, _Tp const&>::value,
-            "the specified comparator type does not provide a const call operator")
-  { return true; }
-};
-
-template <class _Key, class _Value, class _KeyComp, class _Alloc>
-struct __diagnose_tree_helper<
-    __value_type<_Key, _Value>,
-    __map_value_compare<_Key, __value_type<_Key, _Value>, _KeyComp>,
-    _Alloc
-> : __diagnose_tree_helper<_Key, _KeyComp, _Alloc>
-{
-};
-#endif // !_LIBCPP_CXX03_LANG
+    _LIBCPP_DIAGNOSE_WARNING(!std::__invokable<_Compare const&, _Tp const&, _Tp const&>::value,
+        "the specified comparator type does not provide a const call operator")
+#endif
+int __diagnose_non_const_comparator();
 
 template <class _Tp, class _Compare, class _Allocator>
 class __tree
@@ -1855,10 +1839,6 @@ __tree<_Tp, _Compare, _Allocator>::~__tree()
 {
     static_assert((is_copy_constructible<value_compare>::value),
                  "Comparator must be copy-constructible.");
-#ifndef _LIBCPP_CXX03_LANG
-    static_assert((__diagnose_tree_helper<_Tp, _Compare, _Allocator>::
-                     __trigger_diagnostics()), "");
-#endif
   destroy(__root());
 }
 

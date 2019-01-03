@@ -25,10 +25,10 @@
 
 #if defined(__x86_64__)
 #define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
-  _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 312)
+  _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 264)
 #elif defined(__i386__)
 #define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
-  _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 164)
+  _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 136)
 #endif
 
 namespace __sanitizer {
@@ -60,6 +60,29 @@ extern unsigned struct_timespec_sz;
 extern unsigned struct_sembuf_sz;
 
 extern unsigned struct_kevent_sz;
+extern unsigned struct_FTS_sz;
+extern unsigned struct_FTSENT_sz;
+
+extern unsigned struct_regex_sz;
+extern unsigned struct_regmatch_sz;
+
+extern unsigned struct_fstab_sz;
+
+struct __sanitizer_regmatch {
+  OFF_T rm_so;
+  OFF_T rm_eo;
+};
+
+typedef struct __sanitizer_modctl_load {
+  const char *ml_filename;
+  int ml_flags;
+  const char *ml_props;
+  uptr ml_propslen;
+} __sanitizer_modctl_load_t;
+extern const int modctl_load;
+extern const int modctl_unload;
+extern const int modctl_stat;
+extern const int modctl_exists;
 
 union __sanitizer_sigval {
   int sival_int;
@@ -1528,6 +1551,22 @@ extern unsigned IOCTL_SPKRTONE;
 extern unsigned IOCTL_SPKRTUNE;
 extern unsigned IOCTL_SPKRGETVOL;
 extern unsigned IOCTL_SPKRSETVOL;
+#if 0 /* interfaces are WIP */
+extern unsigned IOCTL_NVMM_IOC_CAPABILITY;
+extern unsigned IOCTL_NVMM_IOC_MACHINE_CREATE;
+extern unsigned IOCTL_NVMM_IOC_MACHINE_DESTROY;
+extern unsigned IOCTL_NVMM_IOC_MACHINE_CONFIGURE;
+extern unsigned IOCTL_NVMM_IOC_VCPU_CREATE;
+extern unsigned IOCTL_NVMM_IOC_VCPU_DESTROY;
+extern unsigned IOCTL_NVMM_IOC_VCPU_SETSTATE;
+extern unsigned IOCTL_NVMM_IOC_VCPU_GETSTATE;
+extern unsigned IOCTL_NVMM_IOC_VCPU_INJECT;
+extern unsigned IOCTL_NVMM_IOC_VCPU_RUN;
+extern unsigned IOCTL_NVMM_IOC_GPA_MAP;
+extern unsigned IOCTL_NVMM_IOC_GPA_UNMAP;
+extern unsigned IOCTL_NVMM_IOC_HVA_MAP;
+extern unsigned IOCTL_NVMM_IOC_HVA_UNMAP;
+#endif
 extern unsigned IOCTL_AUTOFSREQUEST;
 extern unsigned IOCTL_AUTOFSDONE;
 extern unsigned IOCTL_BIOCGBLEN;
@@ -2033,6 +2072,7 @@ extern unsigned IOCTL_SIOCGLINKSTR;
 extern unsigned IOCTL_SIOCSLINKSTR;
 extern unsigned IOCTL_SIOCGETHERCAP;
 extern unsigned IOCTL_SIOCGIFINDEX;
+extern unsigned IOCTL_SIOCSETHERCAP;
 extern unsigned IOCTL_SIOCGUMBINFO;
 extern unsigned IOCTL_SIOCSUMBPARAM;
 extern unsigned IOCTL_SIOCGUMBPARAM;
@@ -2202,6 +2242,74 @@ extern unsigned IOCTL_SNDCTL_DSP_SILENCE;
 
 extern const int si_SEGV_MAPERR;
 extern const int si_SEGV_ACCERR;
+
+extern const unsigned SHA1_CTX_sz;
+extern const unsigned SHA1_return_length;
+
+extern const unsigned MD4_CTX_sz;
+extern const unsigned MD4_return_length;
+
+extern const unsigned RMD160_CTX_sz;
+extern const unsigned RMD160_return_length;
+
+extern const unsigned MD5_CTX_sz;
+extern const unsigned MD5_return_length;
+
+extern const unsigned fpos_t_sz;
+
+extern const unsigned MD2_CTX_sz;
+extern const unsigned MD2_return_length;
+
+#define SHA2_EXTERN(LEN)                          \
+  extern const unsigned SHA##LEN##_CTX_sz;        \
+  extern const unsigned SHA##LEN##_return_length; \
+  extern const unsigned SHA##LEN##_block_length;  \
+  extern const unsigned SHA##LEN##_digest_length
+
+SHA2_EXTERN(224);
+SHA2_EXTERN(256);
+SHA2_EXTERN(384);
+SHA2_EXTERN(512);
+
+#undef SHA2_EXTERN
+
+extern const int unvis_valid;
+extern const int unvis_validpush;
+
+struct __sanitizer_cdbr {
+  void (*unmap)(void *, void *, uptr);
+  void *cookie;
+  u8 *mmap_base;
+  uptr mmap_size;
+
+  u8 *hash_base;
+  u8 *offset_base;
+  u8 *data_base;
+
+  u32 data_size;
+  u32 entries;
+  u32 entries_index;
+  u32 seed;
+
+  u8 offset_size;
+  u8 index_size;
+
+  u32 entries_m;
+  u32 entries_index_m;
+  u8 entries_s1, entries_s2;
+  u8 entries_index_s1, entries_index_s2;
+};
+
+struct __sanitizer_cdbw {
+  uptr data_counter;
+  uptr data_allocated;
+  uptr data_size;
+  uptr *data_len;
+  void **data_ptr;
+  uptr hash_size;
+  void *hash;
+  uptr key_counter;
+};
 }  // namespace __sanitizer
 
 #define CHECK_TYPE_SIZE(TYPE) \

@@ -6,7 +6,11 @@
 # RUN: %lldb -b -s %p/Inputs/stop-hook-2.lldbinit -s %s -f %t | FileCheck %s
 # Test setting stop-hook with multi-line expression
 # RUN: %lldb -b -s %p/Inputs/stop-hook-3.lldbinit -s %s -f %t | FileCheck %s
-# XFAIL: system-windows
+# This test is not "unsupported" on Windows, but it fails because "expr ptr"
+# does not evaluate correctly. However, the error message contains the expected
+# string, so the test "passes" despite the fact that the commands failed
+# llvm.org/pr40119
+# UNSUPPORTED: system-windows
 
 break set -f stop-hook.c -p "// Set breakpoint here to test target stop-hook"
 break set -f stop-hook.c -p "// Another breakpoint which is outside of the stop-hook range"

@@ -138,6 +138,7 @@ void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
     FLAG(isInsertSubreg)
     FLAG(isConvergent)
     FLAG(hasNoSchedulingInfo)
+    FLAG(variadicOpsAreDefs)
     if (!FlagStrings.empty()) {
       OS << "Flags: ";
       bool IsFirst = true;

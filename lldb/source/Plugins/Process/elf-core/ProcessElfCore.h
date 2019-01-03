@@ -166,7 +166,7 @@ private:
 
   // Parse thread(s) data structures(prstatus, prpsinfo) from given NOTE segment
   llvm::Error ParseThreadContextsFromNoteSegment(
-      const elf::ELFProgramHeader *segment_header,
+      const elf::ELFProgramHeader &segment_header,
       lldb_private::DataExtractor segment_data);
 
   // Returns number of thread contexts stored in the core file
@@ -174,7 +174,7 @@ private:
 
   // Parse a contiguous address range of the process from LOAD segment
   lldb::addr_t
-  AddAddressRangeFromLoadSegment(const elf::ELFProgramHeader *header);
+  AddAddressRangeFromLoadSegment(const elf::ELFProgramHeader &header);
 
   llvm::Expected<std::vector<lldb_private::CoreNote>>
   parseSegment(const lldb_private::DataExtractor &segment);

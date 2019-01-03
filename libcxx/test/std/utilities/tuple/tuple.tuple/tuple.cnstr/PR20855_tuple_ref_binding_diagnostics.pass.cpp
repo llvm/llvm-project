@@ -14,6 +14,7 @@
 
 // See llvm.org/PR20855
 
+#include <functional>
 #include <tuple>
 #include <string>
 #include <cassert>

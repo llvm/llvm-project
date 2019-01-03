@@ -91,8 +91,8 @@ StringRef CIndexer::getClangToolchainPath() {
 }
 
 LibclangInvocationReporter::LibclangInvocationReporter(
-    CIndexer &Idx, OperationKind Op, unsigned ParseOptions,
-    llvm::ArrayRef<const char *> Args,
+    CIndexer &Idx, StringRef SourceFilename, OperationKind Op,
+    unsigned ParseOptions, llvm::ArrayRef<const char *> Args,
     llvm::ArrayRef<std::string> InvocationArgs,
     llvm::ArrayRef<CXUnsavedFile> UnsavedFiles) {
   StringRef Path = Idx.getInvocationEmissionPath();
@@ -116,6 +116,12 @@ LibclangInvocationReporter::LibclangInvocationReporter(
   };
   OS << '{';
   WriteStringKey("toolchain", Idx.getClangToolchainPath());
+  OS << ',';
+  std::string Signature;
+  llvm::raw_string_ostream SignatureOS(Signature);
+  SignatureOS << "clang-" << getClangMajorVersionNumber() << ';'
+              << llvm::sys::path::filename(SourceFilename);
+  WriteStringKey("signature", SignatureOS.str());
   OS << ',';
   WriteStringKey("libclang.operation",
                  Op == OperationKind::ParseOperation ? "parse" : "complete");

@@ -2414,27 +2414,20 @@ DEF_TRAVERSE_STMT(LambdaExpr, {
   TypeLoc TL = S->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
   FunctionProtoTypeLoc Proto = TL.getAsAdjusted<FunctionProtoTypeLoc>();
 
-  if (S->hasExplicitParameters() && S->hasExplicitResultType()) {
-    // Visit the whole type.
-    TRY_TO(TraverseTypeLoc(TL));
-  } else {
-    if (S->hasExplicitParameters()) {
-      // Visit parameters.
-      for (unsigned I = 0, N = Proto.getNumParams(); I != N; ++I) {
-        TRY_TO(TraverseDecl(Proto.getParam(I)));
-      }
-    } else if (S->hasExplicitResultType()) {
-      TRY_TO(TraverseTypeLoc(Proto.getReturnLoc()));
-    }
-
-    auto *T = Proto.getTypePtr();
-    for (const auto &E : T->exceptions()) {
-      TRY_TO(TraverseType(E));
-    }
-
-    if (Expr *NE = T->getNoexceptExpr())
-      TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(NE);
+  if (S->hasExplicitParameters()) {
+    // Visit parameters.
+    for (unsigned I = 0, N = Proto.getNumParams(); I != N; ++I)
+      TRY_TO(TraverseDecl(Proto.getParam(I)));
   }
+  if (S->hasExplicitResultType())
+    TRY_TO(TraverseTypeLoc(Proto.getReturnLoc()));
+
+  auto *T = Proto.getTypePtr();
+  for (const auto &E : T->exceptions())
+    TRY_TO(TraverseType(E));
+
+  if (Expr *NE = T->getNoexceptExpr())
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(NE);
 
   ReturnValue = TRAVERSE_STMT_BASE(LambdaBody, LambdaExpr, S, Queue);
   ShouldVisitChildren = false;

@@ -71,7 +71,7 @@
 ; COMBINED-NEXT:    <COMBINED abbrevid=
 ; COMBINED-NEXT:    <COMBINED abbrevid=
 ; COMBINED-NEXT:    <COMBINED abbrevid=
-; COMBINED-NEXT:    <COMBINED_PROFILE {{.*}} op7=[[HOT1:.*]] op8=3 op9=[[COLD:.*]] op10=1 op11=[[HOT2:.*]] op12=3 op13=[[NONE1:.*]] op14=2 op15=[[HOT3:.*]] op16=3 op17=[[NONE2:.*]] op18=2 op19=[[NONE3:.*]] op20=2/>
+; COMBINED-NEXT:    <COMBINED_PROFILE {{.*}} op8=[[HOT1:.*]] op9=3 op10=[[COLD:.*]] op11=1 op12=[[HOT2:.*]] op13=3 op14=[[NONE1:.*]] op15=2 op16=[[HOT3:.*]] op17=3 op18=[[NONE2:.*]] op19=2 op20=[[NONE3:.*]] op21=2/>
 ; COMBINED_NEXT:    <COMBINED abbrevid=
 ; COMBINED_NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 

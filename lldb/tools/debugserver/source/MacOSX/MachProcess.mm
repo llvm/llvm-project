@@ -783,8 +783,8 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     uuid_unparse_upper(image_infos[i].macho_info.uuid, uuidstr);
     image_info_dict_sp->AddStringItem("uuid", uuidstr);
 
-    if (image_infos[i].macho_info.min_version_os_name.empty() == false &&
-        image_infos[i].macho_info.min_version_os_version.empty() == false) {
+    if (!image_infos[i].macho_info.min_version_os_name.empty() &&
+        !image_infos[i].macho_info.min_version_os_version.empty()) {
       image_info_dict_sp->AddStringItem(
           "min_version_os_name", image_infos[i].macho_info.min_version_os_name);
       image_info_dict_sp->AddStringItem(
@@ -1602,7 +1602,7 @@ nub_size_t MachProcess::WriteMemory(nub_addr_t addr, nub_size_t size,
 
 void MachProcess::ReplyToAllExceptions() {
   PTHREAD_MUTEX_LOCKER(locker, m_exception_messages_mutex);
-  if (m_exception_messages.empty() == false) {
+  if (!m_exception_messages.empty()) {
     MachException::Message::iterator pos;
     MachException::Message::iterator begin = m_exception_messages.begin();
     MachException::Message::iterator end = m_exception_messages.end();
@@ -1774,7 +1774,7 @@ bool MachProcess::DisableBreakpoint(nub_addr_t addr, bool remove) {
     if (bp->IsHardware()) {
       bool hw_disable_result = m_thread_list.DisableHardwareBreakpoint(bp);
 
-      if (hw_disable_result == true) {
+      if (hw_disable_result) {
         bp->SetEnabled(false);
         // Let the thread list know that a breakpoint has been modified
         if (remove) {
@@ -1909,7 +1909,7 @@ bool MachProcess::DisableWatchpoint(nub_addr_t addr, bool remove) {
     if (wp->IsHardware()) {
       bool hw_disable_result = m_thread_list.DisableHardwareWatchpoint(wp);
 
-      if (hw_disable_result == true) {
+      if (hw_disable_result) {
         wp->SetEnabled(false);
         if (remove)
           m_watchpoints.Remove(addr);
@@ -2179,7 +2179,7 @@ task_t MachProcess::ExceptionMessageBundleComplete() {
       m_thread_list.Dump();
 
     bool step_more = false;
-    if (m_thread_list.ShouldStop(step_more) && auto_resume == false) {
+    if (m_thread_list.ShouldStop(step_more) && !auto_resume) {
       // Wait for the eEventProcessRunningStateChanged event to be reset
       // before changing state to stopped to avoid race condition with
       // very fast start/stops

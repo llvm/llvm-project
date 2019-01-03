@@ -30,6 +30,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/ADT/IntervalMap.h"
@@ -90,6 +91,9 @@ namespace object {
 cl::opt<bool> SectionContents("contents",
                               cl::desc("Dump each section's contents"),
                               cl::sub(ObjectFileSubcommand));
+cl::opt<bool> SectionDependentModules("dep-modules",
+                                      cl::desc("Dump each dependent module"),
+                                      cl::sub(ObjectFileSubcommand));
 cl::list<std::string> InputFilenames(cl::Positional, cl::desc("<input files>"),
                                      cl::OneOrMore,
                                      cl::sub(ObjectFileSubcommand));
@@ -205,7 +209,6 @@ struct IRMemoryMapTestState {
       : Target(Target), Map(Target), Allocations(IntervalMapAllocator) {}
 };
 
-bool areAllocationsOverlapping(const AllocationT &L, const AllocationT &R);
 bool evalMalloc(StringRef Line, IRMemoryMapTestState &State);
 bool evalFree(StringRef Line, IRMemoryMapTestState &State);
 int evaluateMemoryMapCommands(Debugger &Dbg);
@@ -612,8 +615,7 @@ Expected<Error (*)(lldb_private::Module &)> opts::symbols::getAction() {
 
   if (DumpAST) {
     if (Find != FindType::None)
-      return make_string_error(
-          "Cannot both search and dump AST.");
+      return make_string_error("Cannot both search and dump AST.");
     if (Regex || !Context.empty() || !Name.empty() || !File.empty() ||
         Line != 0)
       return make_string_error(
@@ -716,6 +718,41 @@ int opts::symbols::dumpSymbols(Debugger &Dbg) {
   return HadErrors;
 }
 
+static void dumpSectionList(LinePrinter &Printer, const SectionList &List, bool is_subsection) {
+  size_t Count = List.GetNumSections(0);
+  if (Count == 0) {
+    Printer.formatLine("There are no {0}sections", is_subsection ? "sub" : "");
+    return;
+  }
+  Printer.formatLine("Showing {0} {1}sections", Count,
+                     is_subsection ? "sub" : "");
+  for (size_t I = 0; I < Count; ++I) {
+    auto S = List.GetSectionAtIndex(I);
+    assert(S);
+    AutoIndent Indent(Printer, 2);
+    Printer.formatLine("Index: {0}", I);
+    Printer.formatLine("ID: {0:x}", S->GetID());
+    Printer.formatLine("Name: {0}", S->GetName().GetStringRef());
+    Printer.formatLine("Type: {0}", S->GetTypeAsCString());
+    Printer.formatLine("Permissions: {0}", GetPermissionsAsCString(S->GetPermissions()));
+    Printer.formatLine("Thread specific: {0:y}", S->IsThreadSpecific());
+    Printer.formatLine("VM address: {0:x}", S->GetFileAddress());
+    Printer.formatLine("VM size: {0}", S->GetByteSize());
+    Printer.formatLine("File size: {0}", S->GetFileSize());
+
+    if (opts::object::SectionContents) {
+      DataExtractor Data;
+      S->GetSectionData(Data);
+      ArrayRef<uint8_t> Bytes = {Data.GetDataStart(), Data.GetDataEnd()};
+      Printer.formatBinary("Data: ", Bytes, 0);
+    }
+
+    if (S->GetType() == eSectionTypeContainer)
+      dumpSectionList(Printer, S->GetChildren(), true);
+    Printer.NewLine();
+  }
+}
+
 static int dumpObjectFiles(Debugger &Dbg) {
   LinePrinter Printer(4, llvm::outs());
 
@@ -724,6 +761,14 @@ static int dumpObjectFiles(Debugger &Dbg) {
     ModuleSpec Spec{FileSpec(File)};
 
     auto ModulePtr = std::make_shared<lldb_private::Module>(Spec);
+
+    ObjectFile *ObjectPtr = ModulePtr->GetObjectFile();
+    if (!ObjectPtr) {
+      WithColor::error() << File << " not recognised as an object file\n";
+      HadErrors = 1;
+      continue;
+    }
+
     // Fetch symbol vendor before we get the section list to give the symbol
     // vendor a chance to populate it.
     ModulePtr->GetSymbolVendor();
@@ -734,39 +779,32 @@ static int dumpObjectFiles(Debugger &Dbg) {
       continue;
     }
 
+    Printer.formatLine("Plugin name: {0}", ObjectPtr->GetPluginName());
     Printer.formatLine("Architecture: {0}",
                        ModulePtr->GetArchitecture().GetTriple().getTriple());
     Printer.formatLine("UUID: {0}", ModulePtr->GetUUID().GetAsString());
+    Printer.formatLine("Executable: {0}", ObjectPtr->IsExecutable());
+    Printer.formatLine("Stripped: {0}", ObjectPtr->IsStripped());
+    Printer.formatLine("Type: {0}", ObjectPtr->GetType());
+    Printer.formatLine("Strata: {0}", ObjectPtr->GetStrata());
 
-    size_t Count = Sections->GetNumSections(0);
-    Printer.formatLine("Showing {0} sections", Count);
-    for (size_t I = 0; I < Count; ++I) {
-      AutoIndent Indent(Printer, 2);
-      auto S = Sections->GetSectionAtIndex(I);
-      assert(S);
-      Printer.formatLine("Index: {0}", I);
-      Printer.formatLine("Name: {0}", S->GetName().GetStringRef());
-      Printer.formatLine("Type: {0}", S->GetTypeAsCString());
-      Printer.formatLine("VM size: {0}", S->GetByteSize());
-      Printer.formatLine("File size: {0}", S->GetFileSize());
+    dumpSectionList(Printer, *Sections, /*is_subsection*/ false);
 
-      if (opts::object::SectionContents) {
-        DataExtractor Data;
-        S->GetSectionData(Data);
-        ArrayRef<uint8_t> Bytes = {Data.GetDataStart(), Data.GetDataEnd()};
-        Printer.formatBinary("Data: ", Bytes, 0);
+    if (opts::object::SectionDependentModules) {
+      // A non-empty section list ensures a valid object file.
+      auto Obj = ModulePtr->GetObjectFile();
+      FileSpecList Files;
+      auto Count = Obj->GetDependentModules(Files);
+      Printer.formatLine("Showing {0} dependent module(s)", Count);
+      for (size_t I = 0; I < Files.GetSize(); ++I) {
+        AutoIndent Indent(Printer, 2);
+        Printer.formatLine("Name: {0}",
+                           Files.GetFileSpecAtIndex(I).GetCString());
       }
       Printer.NewLine();
     }
   }
   return HadErrors;
-}
-
-/// Check if two half-open intervals intersect:
-///   http://world.std.com/~swmcd/steven/tech/interval.html
-bool opts::irmemorymap::areAllocationsOverlapping(const AllocationT &L,
-                                                  const AllocationT &R) {
-  return R.first < L.second && L.first < R.second;
 }
 
 bool opts::irmemorymap::evalMalloc(StringRef Line,
@@ -815,28 +853,21 @@ bool opts::irmemorymap::evalMalloc(StringRef Line,
     exit(1);
   }
 
-  // Check that the allocation does not overlap another allocation. Do so by
-  // testing each allocation which may cover the interval [Addr, EndOfRegion).
-  addr_t EndOfRegion = Addr + Size;
-  auto Probe = State.Allocations.begin();
-  Probe.advanceTo(Addr); //< First interval s.t stop >= Addr.
-  AllocationT NewAllocation = {Addr, EndOfRegion};
-  while (Probe != State.Allocations.end() && Probe.start() < EndOfRegion) {
-    AllocationT ProbeAllocation = {Probe.start(), Probe.stop()};
-    if (areAllocationsOverlapping(ProbeAllocation, NewAllocation)) {
-      outs() << "Malloc error: overlapping allocation detected"
-             << formatv(", previous allocation at [{0:x}, {1:x})\n",
-                        Probe.start(), Probe.stop());
-      exit(1);
-    }
-    ++Probe;
+  // In case of Size == 0, we still expect the returned address to be unique and
+  // non-overlapping.
+  addr_t EndOfRegion = Addr + std::max<size_t>(Size, 1);
+  if (State.Allocations.overlaps(Addr, EndOfRegion)) {
+    auto I = State.Allocations.find(Addr);
+    outs() << "Malloc error: overlapping allocation detected"
+           << formatv(", previous allocation at [{0:x}, {1:x})\n", I.start(),
+                      I.stop());
+    exit(1);
   }
 
-  // Insert the new allocation into the interval map. Use unique allocation IDs
-  // to inhibit interval coalescing.
+  // Insert the new allocation into the interval map. Use unique allocation
+  // IDs to inhibit interval coalescing.
   static unsigned AllocationID = 0;
-  if (Size)
-    State.Allocations.insert(Addr, EndOfRegion, AllocationID++);
+  State.Allocations.insert(Addr, EndOfRegion, AllocationID++);
 
   // Store the label -> address mapping.
   State.Label2AddrMap[Label] = Addr;
@@ -934,8 +965,13 @@ int main(int argc, const char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "LLDB Testing Utility\n");
 
   SystemLifetimeManager DebuggerLifetime;
-  DebuggerLifetime.Initialize(llvm::make_unique<SystemInitializerTest>(),
-                              nullptr);
+  if (auto e = DebuggerLifetime.Initialize(
+          llvm::make_unique<SystemInitializerTest>(), {}, nullptr)) {
+    WithColor::error() << "initialization failed: " << toString(std::move(e))
+                       << '\n';
+    return 1;
+  }
+
   CleanUp TerminateDebugger([&] { DebuggerLifetime.Terminate(); });
 
   auto Dbg = lldb_private::Debugger::CreateInstance();

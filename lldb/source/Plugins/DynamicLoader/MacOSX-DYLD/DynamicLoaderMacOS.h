@@ -104,6 +104,12 @@ protected:
                                   // loaded/unloaded images
   lldb::user_id_t m_break_id;
   mutable std::recursive_mutex m_mutex;
+  lldb::addr_t m_maybe_image_infos_address; // If dyld is still maintaining the
+                                            // all_image_infos address, store it
+                                            // here so we can use it to detect
+                                            // exec's when talking to
+                                            // debugservers that don't support
+                                            // the "reason:exec" annotation.
 
 private:
   DISALLOW_COPY_AND_ASSIGN(DynamicLoaderMacOS);

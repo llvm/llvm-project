@@ -13,6 +13,8 @@
 
 #include <limits>
 
+#include "test_macros.h"
+
 template <class T, std::float_denorm_style expected>
 void
 test()
@@ -30,6 +32,9 @@ int main()
     test<signed char, std::denorm_absent>();
     test<unsigned char, std::denorm_absent>();
     test<wchar_t, std::denorm_absent>();
+#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
+    test<char8_t, std::denorm_absent>();
+#endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     test<char16_t, std::denorm_absent>();
     test<char32_t, std::denorm_absent>();

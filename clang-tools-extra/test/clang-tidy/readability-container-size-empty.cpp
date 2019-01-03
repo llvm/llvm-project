@@ -105,20 +105,20 @@ int main() {
   std::string str;
   std::string str2;
   std::wstring wstr;
-  str.size() + 0;
-  str.size() - 0;
-  0 + str.size();
-  0 - str.size();
+  (void)(str.size() + 0);
+  (void)(str.size() - 0);
+  (void)(0 + str.size());
+  (void)(0 - str.size());
   if (intSet.size() == 0)
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
   // CHECK-FIXES: {{^  }}if (intSet.empty()){{$}}
-  // CHECK-MESSAGES: :32:8: note: method 'set<int>'::empty() defined here
+  // CHECK-MESSAGES: :32:8: note: method 'set'::empty() defined here
   if (intSet == std::set<int>())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness
   // CHECK-FIXES: {{^  }}if (intSet.empty()){{$}}
-  // CHECK-MESSAGES: :32:8: note: method 'set<int>'::empty() defined here
+  // CHECK-MESSAGES: :32:8: note: method 'set'::empty() defined here
   if (s_func() == "")
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
@@ -399,14 +399,15 @@ int main() {
   // CHECK-FIXES: {{^  }}if (derived.empty()){{$}}
 }
 
-#define CHECKSIZE(x) if (x.size())
-// CHECK-FIXES: #define CHECKSIZE(x) if (x.size())
+#define CHECKSIZE(x) if (x.size()) {}
+// CHECK-FIXES: #define CHECKSIZE(x) if (x.size()) {}
 
 template <typename T> void f() {
   std::vector<T> v;
   if (v.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-MESSAGES: :9:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: {{^  }}if (!v.empty()){{$}}
   if (v == std::vector<T>())
     ;
@@ -415,21 +416,25 @@ template <typename T> void f() {
   // CHECK-FIXES-NEXT: ;
   CHECKSIZE(v);
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: CHECKSIZE(v);
+  // CHECK-MESSAGES: :9:8: note: method 'vector'::empty() defined here
+  // CHECK-FIXES: CHECKSIZE(v);
 
   TemplatedContainer<T> templated_container;
   if (templated_container.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
+  // CHECK-MESSAGES: :44:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: {{^  }}if (!templated_container.empty()){{$}}
   if (templated_container != TemplatedContainer<T>())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
+  // CHECK-MESSAGES: :44:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: {{^  }}if (!templated_container.empty()){{$}}
   // CHECK-FIXES-NEXT: ;
   CHECKSIZE(templated_container);
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: CHECKSIZE(templated_container);
+  // CHECK-MESSAGES: :44:8: note: method 'TemplatedContainer'::empty() defined here
+  // CHECK-FIXES: CHECKSIZE(templated_container);
 }
 
 void g() {

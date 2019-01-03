@@ -133,7 +133,6 @@ public:
     std::lock_guard<std::recursive_mutex> Lock(ListenersMu);
     Listeners.push_back({std::move(L), ++ListenerCount});
     return Subscription(this, ListenerCount);
-    ;
   }
 
   // Synchronously sends an event to all registered listeners.

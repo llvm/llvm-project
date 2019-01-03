@@ -291,7 +291,7 @@ uint32_t CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
 
   // If we are not looking for inlined functions and our file spec doesn't
   // match then we are done...
-  if (file_spec_matches_cu_file_spec == false && check_inlines == false)
+  if (!file_spec_matches_cu_file_spec && !check_inlines)
     return 0;
 
   uint32_t file_idx =

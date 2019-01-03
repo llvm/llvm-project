@@ -14,6 +14,8 @@
 #include <array>
 #include <cassert>
 
+#include "test_macros.h"
+
 // std::array is explicitly allowed to be initialized with A a = { init-list };.
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
@@ -40,6 +42,11 @@ int main()
       typedef NoDefault T;
       typedef std::array<T, 0> C;
       C c = {};
-      assert(c.begin() == c.end());
+      C::iterator ib, ie;
+      ib = c.begin();
+      ie = c.end();
+      assert(ib == ie);
+      LIBCPP_ASSERT(ib != nullptr);
+      LIBCPP_ASSERT(ie != nullptr);
     }
 }

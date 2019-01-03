@@ -3065,9 +3065,18 @@ bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
 }
 
 bool AMDGPUAsmParser::ParseDirectiveHSAMetadata() {
+  const char *AssemblerDirectiveBegin;
+  const char *AssemblerDirectiveEnd;
+  std::tie(AssemblerDirectiveBegin, AssemblerDirectiveEnd) =
+      AMDGPU::IsaInfo::hasCodeObjectV3(&getSTI())
+          ? std::make_tuple(HSAMD::V3::AssemblerDirectiveBegin,
+                            HSAMD::V3::AssemblerDirectiveEnd)
+          : std::make_tuple(HSAMD::AssemblerDirectiveBegin,
+                            HSAMD::AssemblerDirectiveEnd);
+
   if (getSTI().getTargetTriple().getOS() != Triple::AMDHSA) {
     return Error(getParser().getTok().getLoc(),
-                 (Twine(HSAMD::AssemblerDirectiveBegin) + Twine(" directive is "
+                 (Twine(AssemblerDirectiveBegin) + Twine(" directive is "
                  "not available on non-amdhsa OSes")).str());
   }
 
@@ -3085,7 +3094,7 @@ bool AMDGPUAsmParser::ParseDirectiveHSAMetadata() {
 
     if (getLexer().is(AsmToken::Identifier)) {
       StringRef ID = getLexer().getTok().getIdentifier();
-      if (ID == AMDGPU::HSAMD::AssemblerDirectiveEnd) {
+      if (ID == AssemblerDirectiveEnd) {
         Lex();
         FoundEnd = true;
         break;
@@ -3107,8 +3116,13 @@ bool AMDGPUAsmParser::ParseDirectiveHSAMetadata() {
 
   YamlStream.flush();
 
-  if (!getTargetStreamer().EmitHSAMetadata(HSAMetadataString))
-    return Error(getParser().getTok().getLoc(), "invalid HSA metadata");
+  if (IsaInfo::hasCodeObjectV3(&getSTI())) {
+    if (!getTargetStreamer().EmitHSAMetadataV3(HSAMetadataString))
+      return Error(getParser().getTok().getLoc(), "invalid HSA metadata");
+  } else {
+    if (!getTargetStreamer().EmitHSAMetadataV2(HSAMetadataString))
+      return Error(getParser().getTok().getLoc(), "invalid HSA metadata");
+  }
 
   return false;
 }
@@ -3145,6 +3159,10 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 
     if (IDVal == ".amdhsa_kernel")
       return ParseDirectiveAMDHSAKernel();
+
+    // TODO: Restructure/combine with PAL metadata directive.
+    if (IDVal == AMDGPU::HSAMD::V3::AssemblerDirectiveBegin)
+      return ParseDirectiveHSAMetadata();
   } else {
     if (IDVal == ".hsa_code_object_version")
       return ParseDirectiveHSACodeObjectVersion();
@@ -3160,10 +3178,10 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 
     if (IDVal == ".amd_amdgpu_isa")
       return ParseDirectiveISAVersion();
-  }
 
-  if (IDVal == AMDGPU::HSAMD::AssemblerDirectiveBegin)
-    return ParseDirectiveHSAMetadata();
+    if (IDVal == AMDGPU::HSAMD::AssemblerDirectiveBegin)
+      return ParseDirectiveHSAMetadata();
+  }
 
   if (IDVal == PALMD::AssemblerDirective)
     return ParseDirectivePALMetadata();
@@ -5275,12 +5293,14 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands) {
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
-  // All DPP instructions with at least one source operand have a fake "old"
-  // source at the beginning that's tied to the dst operand. Handle it here.
-  if (Desc.getNumOperands() >= 2)
-    Inst.addOperand(Inst.getOperand(0));
-
   for (unsigned E = Operands.size(); I != E; ++I) {
+    auto TiedTo = Desc.getOperandConstraint(Inst.getNumOperands(),
+                                            MCOI::TIED_TO);
+    if (TiedTo != -1) {
+      assert((unsigned)TiedTo < Inst.getNumOperands());
+      // handle tied old or src2 for MAC instructions
+      Inst.addOperand(Inst.getOperand(TiedTo));
+    }
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     // Add the register arguments
     if (Op.isReg() && Op.Reg.RegNo == AMDGPU::VCC) {

@@ -341,9 +341,21 @@
 // RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
 // PROFILE_EXPORT: "-exported_symbol" "___llvm_profile_filename" "-exported_symbol" "___llvm_profile_raw_version" "-exported_symbol" "_lprofCurFilename"
 //
-// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -### %t.o 2> %t.log
+// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate --coverage -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=NO_PROFILE_EXPORT %s < %t.log
 // NO_PROFILE_EXPORT-NOT: "-exported_symbol"
+//
+// RUN: %clang -target x86_64-apple-darwin12 --coverage -exported_symbols_list /dev/null -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=GCOV_EXPORT %s < %t.log
+// RUN: %clang -target x86_64-apple-darwin12 -fprofile-arcs -Wl,-exported_symbols_list,/dev/null -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=GCOV_EXPORT %s < %t.log
+// RUN: %clang -target x86_64-apple-darwin12 -fprofile-arcs -Wl,-exported_symbol,foo -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=GCOV_EXPORT %s < %t.log
+// RUN: %clang -target x86_64-apple-darwin12 -fprofile-arcs -Xlinker -exported_symbol -Xlinker foo -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=GCOV_EXPORT %s < %t.log
+// RUN: %clang -target x86_64-apple-darwin12 -fprofile-arcs -Xlinker -exported_symbols_list -Xlinker /dev/null -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=GCOV_EXPORT %s < %t.log
+// GCOV_EXPORT: "-exported_symbol" "___gcov_flush"
 //
 // Check that we can pass the outliner down to the linker.
 // RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \

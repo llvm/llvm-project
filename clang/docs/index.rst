@@ -83,7 +83,6 @@ Design Documents
 
    InternalsManual
    DriverInternals
-   PTHInternals
    PCHInternals
    ItaniumMangleAbiTags
    HardwareAssistedAddressSanitizerDesign.rst

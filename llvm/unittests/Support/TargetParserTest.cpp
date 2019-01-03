@@ -508,7 +508,7 @@ TEST(TargetParserTest, testARMExtension) {
 }
 
 TEST(TargetParserTest, ARMFPUVersion) {
-  for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0); 
+  for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0);
        FK <= ARM::FPUKind::FK_LAST;
        FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1))
     if (FK == ARM::FK_LAST || ARM::getFPUName(FK) == "invalid" ||
@@ -690,8 +690,6 @@ bool testAArch64CPU(StringRef CPUName, StringRef ExpectedArch,
                     StringRef CPUAttr) {
   AArch64::ArchKind AK = AArch64::parseCPUArch(CPUName);
   bool pass = AArch64::getArchName(AK).equals(ExpectedArch);
-  unsigned FPUKind = AArch64::getDefaultFPU(CPUName, AK);
-  pass &= AArch64::getFPUName(FPUKind).equals(ExpectedFPU);
 
   unsigned ExtKind = AArch64::getDefaultExtensions(CPUName, AK);
   if (ExtKind > 1 && (ExtKind & AArch64::AEK_NONE))
@@ -967,13 +965,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
 
 TEST(TargetParserTest, AArch64ArchFeatures) {
   std::vector<StringRef> Features;
-  AArch64::ArchKind ArchKinds[] = {
-#define AARCH64_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT)       \
-     AArch64::ArchKind::ID,
-#include "llvm/Support/AArch64TargetParser.def"
-  };
 
-  for (auto AK : ArchKinds)
+  for (auto AK : AArch64::ArchKinds)
     EXPECT_TRUE((AK == AArch64::ArchKind::INVALID)
                     ? !AArch64::getArchFeatures(AK, Features)
                     : AArch64::getArchFeatures(AK, Features));
@@ -994,7 +987,9 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
                               {"dotprod", "nodotprod", "+dotprod", "-dotprod"},
                               {"rcpc", "norcpc", "+rcpc", "-rcpc" },
                               {"rng", "norng", "+rand", "-rand"},
-                              {"memtag", "nomemtag", "+mte", "-mte"}};
+                              {"memtag", "nomemtag", "+mte", "-mte"},
+                              {"ssbs", "nossbs", "+ssbs", "-ssbs"},
+                              {"sb", "nosb", "+sb", "-sb"}};
 
   for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
     EXPECT_EQ(StringRef(ArchExt[i][2]),

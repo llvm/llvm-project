@@ -241,16 +241,19 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::SEHLeaveStmtClass:
     K = CXCursor_SEHLeaveStmt;
     break;
-  
+
+  case Stmt::CoroutineBodyStmtClass:
+  case Stmt::CoreturnStmtClass:
+    K = CXCursor_UnexposedStmt;
+    break;
+
   case Stmt::ArrayTypeTraitExprClass:
   case Stmt::AsTypeExprClass:
   case Stmt::AtomicExprClass:
   case Stmt::BinaryConditionalOperatorClass:
   case Stmt::TypeTraitExprClass:
-  case Stmt::CoroutineBodyStmtClass:
   case Stmt::CoawaitExprClass:
   case Stmt::DependentCoawaitExprClass:
-  case Stmt::CoreturnStmtClass:
   case Stmt::CoyieldExprClass:
   case Stmt::CXXBindTemporaryExprClass:
   case Stmt::CXXDefaultArgExprClass:
@@ -1164,6 +1167,9 @@ int clang_Cursor_getNumArguments(CXCursor C) {
     if (const CallExpr *CE = dyn_cast<CallExpr>(E)) {
       return CE->getNumArgs();
     }
+    if (const CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(E)) {
+      return CE->getNumArgs();
+    }
   }
 
   return -1;
@@ -1186,6 +1192,13 @@ CXCursor clang_Cursor_getArgument(CXCursor C, unsigned i) {
   if (clang_isExpression(C.kind)) {
     const Expr *E = cxcursor::getCursorExpr(C);
     if (const CallExpr *CE = dyn_cast<CallExpr>(E)) {
+      if (i < CE->getNumArgs()) {
+        return cxcursor::MakeCXCursor(CE->getArg(i),
+                                      getCursorDecl(C),
+                                      cxcursor::getCursorTU(C));
+      }
+    }
+    if (const CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(E)) {
       if (i < CE->getNumArgs()) {
         return cxcursor::MakeCXCursor(CE->getArg(i),
                                       getCursorDecl(C),

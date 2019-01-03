@@ -195,3 +195,26 @@ bool SparcInstPrinter::printGetPCX(const MCInst *MI, unsigned opNum,
   llvm_unreachable("FIXME: Implement SparcInstPrinter::printGetPCX.");
   return true;
 }
+
+void SparcInstPrinter::printMembarTag(const MCInst *MI, int opNum,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
+  static const char *const TagNames[] = {
+      "#LoadLoad",  "#StoreLoad", "#LoadStore", "#StoreStore",
+      "#Lookaside", "#MemIssue",  "#Sync"};
+
+  unsigned Imm = MI->getOperand(opNum).getImm();
+
+  if (Imm > 127) {
+    O << Imm;
+    return;
+  }
+
+  bool First = true;
+  for (unsigned i = 0; i < sizeof(TagNames) / sizeof(char *); i++) {
+    if (Imm & (1 << i)) {
+      O << (First ? "" : " | ") << TagNames[i];
+      First = false;
+    }
+  }
+}

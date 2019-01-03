@@ -60,6 +60,7 @@ static std::unique_ptr<lto::LTO> createLTO() {
   C.DisableVerify = true;
   C.DiagHandler = diagnosticHandler;
   C.OptLevel = Config->LTOO;
+  C.CPU = GetCPUStr();
   C.MAttrs = GetMAttrs();
 
   if (Config->SaveTemps)

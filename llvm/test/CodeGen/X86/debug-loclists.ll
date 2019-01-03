@@ -5,7 +5,7 @@
 ; CHECK-NEXT:               DW_AT_location [DW_FORM_sec_offset]   (0x0000000c
 ; CHECK-NEXT:                  [0x0000000000000000, 0x0000000000000004): DW_OP_breg5 RDI+0
 ; CHECK-NEXT:                  [0x0000000000000004, 0x0000000000000012): DW_OP_breg3 RBX+0)
-; CHECK-NEXT:               DW_AT_name [DW_FORM_strx1]    ( indexed (0000000e) string = "a")
+; CHECK-NEXT:               DW_AT_name [DW_FORM_strx1]    (indexed (0000000e) string = "a")
 ; CHECK-NEXT:               DW_AT_decl_file [DW_FORM_data1]       ("/home/folder{{\\|\/}}test.cc")
 ; CHECK-NEXT:               DW_AT_decl_line [DW_FORM_data1]       (6)
 ; CHECK-NEXT:               DW_AT_type [DW_FORM_ref4]     (cu + 0x0040 => {0x00000040} "A")

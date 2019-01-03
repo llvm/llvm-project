@@ -437,10 +437,10 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleEventSBBreakpointAdded(
     sBrkPtInfo.m_nIgnore = brkPt.GetIgnoreCount();
     sBrkPtInfo.m_bPending = false;
     const char *pStrCondition = brkPt.GetCondition();
-    sBrkPtInfo.m_bCondition = (pStrCondition != nullptr) ? true : false;
+    sBrkPtInfo.m_bCondition = pStrCondition != nullptr;
     sBrkPtInfo.m_strCondition =
         (pStrCondition != nullptr) ? pStrCondition : "??";
-    sBrkPtInfo.m_bBrkPtThreadId = (brkPt.GetThreadID() != 0) ? true : false;
+    sBrkPtInfo.m_bBrkPtThreadId = brkPt.GetThreadID() != 0;
     sBrkPtInfo.m_nBrkPtThreadId = brkPt.GetThreadID();
   }
 

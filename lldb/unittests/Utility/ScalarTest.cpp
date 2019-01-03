@@ -19,6 +19,34 @@
 using namespace lldb_private;
 using namespace llvm;
 
+template <typename T>
+bool checkInequality(T c1, T c2) {
+  return (Scalar(c1) != Scalar(c2));
+}
+
+template <typename T>
+bool checkEquality(T c1, T c2) {
+  return (Scalar(c1) == Scalar(c2));
+}
+
+TEST(ScalarTest, Equality) {
+  ASSERT_TRUE(checkInequality<int>(23, 24));
+  ASSERT_TRUE(checkEquality<int>(96, 96));
+  ASSERT_TRUE(checkInequality<float>(4.0f, 4.5f));
+  ASSERT_TRUE(checkEquality<float>(4.0f, 4.0f));
+
+  auto apint1 = APInt(64, 234);
+  auto apint2 = APInt(64, 246);
+  ASSERT_TRUE(checkInequality<APInt>(apint1, apint2));
+  ASSERT_TRUE(checkEquality<APInt>(apint1, apint1));
+
+  Scalar void1;
+  Scalar void2;
+  float f1 = 2.0;
+  ASSERT_TRUE(void1 == void2);
+  ASSERT_FALSE(void1 == Scalar(f1));
+}
+
 TEST(ScalarTest, RightShiftOperator) {
   int a = 0x00001000;
   int b = 0xFFFFFFFF;

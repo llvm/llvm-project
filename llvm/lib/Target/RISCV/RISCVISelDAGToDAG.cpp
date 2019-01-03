@@ -85,6 +85,17 @@ static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, int64_t Imm,
   return Result;
 }
 
+// Returns true if the Node is an ISD::AND with a constant argument. If so,
+// set Mask to that constant value.
+static bool isConstantMask(SDNode *Node, uint64_t &Mask) {
+  if (Node->getOpcode() == ISD::AND &&
+      Node->getOperand(1).getOpcode() == ISD::Constant) {
+    Mask = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    return true;
+  }
+  return false;
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -122,6 +133,29 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDValue TFI = CurDAG->getTargetFrameIndex(FI, VT);
     ReplaceNode(Node, CurDAG->getMachineNode(RISCV::ADDI, DL, VT, TFI, Imm));
     return;
+  }
+  case ISD::SRL: {
+    if (!Subtarget->is64Bit())
+      break;
+    SDValue Op0 = Node->getOperand(0);
+    SDValue Op1 = Node->getOperand(1);
+    uint64_t Mask;
+    // Match (srl (and val, mask), imm) where the result would be a
+    // zero-extended 32-bit integer. i.e. the mask is 0xffffffff or the result
+    // is equivalent to this (SimplifyDemandedBits may have removed lower bits
+    // from the mask that aren't necessary due to the right-shifting).
+    if (Op1.getOpcode() == ISD::Constant &&
+        isConstantMask(Op0.getNode(), Mask)) {
+      uint64_t ShAmt = cast<ConstantSDNode>(Op1.getNode())->getZExtValue();
+
+      if ((Mask | maskTrailingOnes<uint64_t>(ShAmt)) == 0xffffffff) {
+        SDValue ShAmtVal =
+            CurDAG->getTargetConstant(ShAmt, SDLoc(Node), XLenVT);
+        CurDAG->SelectNodeTo(Node, RISCV::SRLIW, XLenVT, Op0.getOperand(0),
+                             ShAmtVal);
+        return;
+      }
+    }
   }
   }
 

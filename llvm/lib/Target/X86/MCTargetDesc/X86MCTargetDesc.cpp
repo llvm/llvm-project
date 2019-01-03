@@ -39,7 +39,7 @@ using namespace llvm;
 #include "X86GenRegisterInfo.inc"
 
 #define GET_INSTRINFO_MC_DESC
-#define GET_GENINSTRINFO_MC_HELPERS
+#define GET_INSTRINFO_MC_HELPERS
 #include "X86GenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC

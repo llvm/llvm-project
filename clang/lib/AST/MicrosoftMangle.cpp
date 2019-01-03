@@ -311,11 +311,13 @@ public:
   void mangleTagTypeKind(TagTypeKind TK);
   void mangleArtificialTagType(TagTypeKind TK, StringRef UnqualifiedName,
                               ArrayRef<StringRef> NestedNames = None);
+  void mangleAddressSpaceType(QualType T, Qualifiers Quals, SourceRange Range);
   void mangleType(QualType T, SourceRange Range,
                   QualifierMangleMode QMM = QMM_Mangle);
   void mangleFunctionType(const FunctionType *T,
                           const FunctionDecl *D = nullptr,
-                          bool ForceThisQuals = false);
+                          bool ForceThisQuals = false,
+                          bool MangleExceptionSpec = true);
   void mangleNestedName(const NamedDecl *ND);
 
 private:
@@ -512,7 +514,7 @@ void MicrosoftCXXNameMangler::mangleFunctionEncoding(const FunctionDecl *FD,
 
     mangleFunctionClass(FD);
 
-    mangleFunctionType(FT, FD);
+    mangleFunctionType(FT, FD, false, false);
   } else {
     Out << '9';
   }
@@ -1777,12 +1779,77 @@ void MicrosoftCXXNameMangler::manglePassObjectSizeArg(
   }
 }
 
+void MicrosoftCXXNameMangler::mangleAddressSpaceType(QualType T,
+                                                     Qualifiers Quals,
+                                                     SourceRange Range) {
+  // Address space is mangled as an unqualified templated type in the __clang
+  // namespace. The demangled version of this is:
+  // In the case of a language specific address space:
+  // __clang::struct _AS[language_addr_space]<Type>
+  // where:
+  //  <language_addr_space> ::= <OpenCL-addrspace> | <CUDA-addrspace>
+  //    <OpenCL-addrspace> ::= "CL" [ "global" | "local" | "constant" |
+  //                                "private"| "generic" ]
+  //    <CUDA-addrspace> ::= "CU" [ "device" | "constant" | "shared" ]
+  //    Note that the above were chosen to match the Itanium mangling for this.
+  //
+  // In the case of a non-language specific address space:
+  //  __clang::struct _AS<TargetAS, Type>
+  assert(Quals.hasAddressSpace() && "Not valid without address space");
+  llvm::SmallString<32> ASMangling;
+  llvm::raw_svector_ostream Stream(ASMangling);
+  MicrosoftCXXNameMangler Extra(Context, Stream);
+  Stream << "?$";
+
+  LangAS AS = Quals.getAddressSpace();
+  if (Context.getASTContext().addressSpaceMapManglingFor(AS)) {
+    unsigned TargetAS = Context.getASTContext().getTargetAddressSpace(AS);
+    Extra.mangleSourceName("_AS");
+    Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(TargetAS),
+                               /*IsBoolean*/ false);
+  } else {
+    switch (AS) {
+    default:
+      llvm_unreachable("Not a language specific address space");
+    case LangAS::opencl_global:
+      Extra.mangleSourceName("_ASCLglobal");
+      break;
+    case LangAS::opencl_local:
+      Extra.mangleSourceName("_ASCLlocal");
+      break;
+    case LangAS::opencl_constant:
+      Extra.mangleSourceName("_ASCLconstant");
+      break;
+    case LangAS::opencl_private:
+      Extra.mangleSourceName("_ASCLprivate");
+      break;
+    case LangAS::opencl_generic:
+      Extra.mangleSourceName("_ASCLgeneric");
+      break;
+    case LangAS::cuda_device:
+      Extra.mangleSourceName("_ASCUdevice");
+      break;
+    case LangAS::cuda_constant:
+      Extra.mangleSourceName("_ASCUconstant");
+      break;
+    case LangAS::cuda_shared:
+      Extra.mangleSourceName("_ASCUshared");
+      break;
+    }
+  }
+
+  Extra.mangleType(T, Range, QMM_Escape);
+  mangleQualifiers(Qualifiers(), false);
+  mangleArtificialTagType(TTK_Struct, ASMangling, {"__clang"});
+}
+
 void MicrosoftCXXNameMangler::mangleType(QualType T, SourceRange Range,
                                          QualifierMangleMode QMM) {
   // Don't use the canonical types.  MSVC includes things like 'const' on
   // pointer arguments to function pointers that canonicalization strips away.
   T = T.getDesugaredType(getASTContext());
   Qualifiers Quals = T.getLocalQualifiers();
+
   if (const ArrayType *AT = getASTContext().getAsArrayType(T)) {
     // If there were any Quals, getAsArrayType() pushed them onto the array
     // element type.
@@ -2061,7 +2128,8 @@ void MicrosoftCXXNameMangler::mangleType(const FunctionNoProtoType *T,
 
 void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
                                                  const FunctionDecl *D,
-                                                 bool ForceThisQuals) {
+                                                 bool ForceThisQuals,
+                                                 bool MangleExceptionSpec) {
   // <function-type> ::= <this-cvr-qualifiers> <calling-convention>
   //                     <return-type> <argument-list> <throw-spec>
   const FunctionProtoType *Proto = dyn_cast<FunctionProtoType>(T);
@@ -2093,7 +2161,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
   // If this is a C++ instance method, mangle the CVR qualifiers for the
   // this pointer.
   if (HasThisQuals) {
-    Qualifiers Quals = Qualifiers::fromCVRUMask(Proto->getTypeQuals());
+    Qualifiers Quals = Proto->getTypeQuals();
     manglePointerExtQualifiers(Quals, /*PointeeType=*/QualType());
     mangleRefQualifier(Proto->getRefQualifier());
     mangleQualifiers(Quals, /*IsMember=*/false);
@@ -2194,7 +2262,12 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
       Out << '@';
   }
 
-  mangleThrowSpecification(Proto);
+  if (MangleExceptionSpec && getASTContext().getLangOpts().CPlusPlus17 &&
+      getASTContext().getLangOpts().isCompatibleWithMSVC(
+          LangOptions::MSVC2017_5))
+    mangleThrowSpecification(Proto);
+  else
+    Out << 'Z';
 }
 
 void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
@@ -2299,15 +2372,15 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC) {
 void MicrosoftCXXNameMangler::mangleCallingConvention(const FunctionType *T) {
   mangleCallingConvention(T->getCallConv());
 }
+
 void MicrosoftCXXNameMangler::mangleThrowSpecification(
                                                 const FunctionProtoType *FT) {
-  // <throw-spec> ::= Z # throw(...) (default)
-  //              ::= @ # throw() or __declspec/__attribute__((nothrow))
-  //              ::= <type>+
-  // NOTE: Since the Microsoft compiler ignores throw specifications, they are
-  // all actually mangled as 'Z'. (They're ignored because their associated
-  // functionality isn't implemented, and probably never will be.)
-  Out << 'Z';
+  // <throw-spec> ::= Z # (default)
+  //              ::= _E # noexcept
+  if (FT->canThrow())
+    Out << 'Z';
+  else
+    Out << "_E";
 }
 
 void MicrosoftCXXNameMangler::mangleType(const UnresolvedUsingType *T,
@@ -2488,7 +2561,11 @@ void MicrosoftCXXNameMangler::mangleType(const PointerType *T, Qualifiers Quals,
   QualType PointeeType = T->getPointeeType();
   manglePointerCVQualifiers(Quals);
   manglePointerExtQualifiers(Quals, PointeeType);
-  mangleType(PointeeType, Range);
+
+  if (PointeeType.getQualifiers().hasAddressSpace())
+    mangleAddressSpaceType(PointeeType, PointeeType.getQualifiers(), Range);
+  else
+    mangleType(PointeeType, Range);
 }
 
 void MicrosoftCXXNameMangler::mangleType(const ObjCObjectPointerType *T,
@@ -2862,14 +2939,14 @@ void MicrosoftMangleContextImpl::mangleCXXName(const NamedDecl *D,
 // <vtordisp-shift>     ::= <offset-to-vtordisp>
 // <vtordispex-shift>   ::= <offset-to-vbptr> <vbase-offset-offset>
 //                          <offset-to-vtordisp>
-static void mangleThunkThisAdjustment(const CXXMethodDecl *MD,
+static void mangleThunkThisAdjustment(AccessSpecifier AS,
                                       const ThisAdjustment &Adjustment,
                                       MicrosoftCXXNameMangler &Mangler,
                                       raw_ostream &Out) {
   if (!Adjustment.Virtual.isEmpty()) {
     Out << '$';
     char AccessSpec;
-    switch (MD->getAccess()) {
+    switch (AS) {
     case AS_none:
       llvm_unreachable("Unsupported access specifier");
     case AS_private:
@@ -2897,7 +2974,7 @@ static void mangleThunkThisAdjustment(const CXXMethodDecl *MD,
       Mangler.mangleNumber(-static_cast<uint32_t>(Adjustment.NonVirtual));
     }
   } else if (Adjustment.NonVirtual != 0) {
-    switch (MD->getAccess()) {
+    switch (AS) {
     case AS_none:
       llvm_unreachable("Unsupported access specifier");
     case AS_private:
@@ -2911,7 +2988,7 @@ static void mangleThunkThisAdjustment(const CXXMethodDecl *MD,
     }
     Mangler.mangleNumber(-static_cast<uint32_t>(Adjustment.NonVirtual));
   } else {
-    switch (MD->getAccess()) {
+    switch (AS) {
     case AS_none:
       llvm_unreachable("Unsupported access specifier");
     case AS_private:
@@ -2942,7 +3019,13 @@ void MicrosoftMangleContextImpl::mangleThunk(const CXXMethodDecl *MD,
   MicrosoftCXXNameMangler Mangler(*this, MHO);
   Mangler.getStream() << '?';
   Mangler.mangleName(MD);
-  mangleThunkThisAdjustment(MD, Thunk.This, Mangler, MHO);
+
+  // Usually the thunk uses the access specifier of the new method, but if this
+  // is a covariant return thunk, then MSVC always uses the public access
+  // specifier, and we do the same.
+  AccessSpecifier AS = Thunk.Return.isEmpty() ? MD->getAccess() : AS_public;
+  mangleThunkThisAdjustment(AS, Thunk.This, Mangler, MHO);
+
   if (!Thunk.Return.isEmpty())
     assert(Thunk.Method != nullptr &&
            "Thunk info should hold the overridee decl");
@@ -2963,7 +3046,7 @@ void MicrosoftMangleContextImpl::mangleCXXDtorThunk(
   MicrosoftCXXNameMangler Mangler(*this, MHO, DD, Type);
   Mangler.getStream() << "??_E";
   Mangler.mangleName(DD->getParent());
-  mangleThunkThisAdjustment(DD, Adjustment, Mangler, MHO);
+  mangleThunkThisAdjustment(DD->getAccess(), Adjustment, Mangler, MHO);
   Mangler.mangleFunctionType(DD->getType()->castAs<FunctionProtoType>(), DD);
 }
 

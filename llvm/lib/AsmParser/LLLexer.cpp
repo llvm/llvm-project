@@ -905,6 +905,11 @@ lltok::Kind LLLexer::LexIdentifier() {
     return lltok::DIFlag;
   }
 
+  if (Keyword.startswith("DISPFlag")) {
+    StrVal.assign(Keyword.begin(), Keyword.end());
+    return lltok::DISPFlag;
+  }
+
   if (Keyword.startswith("CSK_")) {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::ChecksumKind;

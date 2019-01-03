@@ -37,6 +37,7 @@ FunctionPass *createAMDGPUCFGStructurizerPass();
 FunctionPass *createR600ISelDag(TargetMachine *TM, CodeGenOpt::Level OptLevel);
 
 // SI Passes
+FunctionPass *createGCNDPPCombinePass();
 FunctionPass *createSIAnnotateControlFlowPass();
 FunctionPass *createSIFoldOperandsPass();
 FunctionPass *createSIPeepholeSDWAPass();
@@ -58,6 +59,7 @@ FunctionPass *createAMDGPUUseNativeCallsPass();
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPUMachineCFGStructurizerPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
+FunctionPass *createSIModeRegisterPass();
 
 void initializeAMDGPUDAGToDAGISelPass(PassRegistry&);
 
@@ -92,6 +94,9 @@ extern char &AMDGPULowerKernelAttributesID;
 
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
+
+void initializeGCNDPPCombinePass(PassRegistry &);
+extern char &GCNDPPCombineID;
 
 void initializeR600ClauseMergePassPass(PassRegistry &);
 extern char &R600ClauseMergePassID;
@@ -190,6 +195,9 @@ extern char &SIMemoryLegalizerID;
 
 void initializeSIDebuggerInsertNopsPass(PassRegistry&);
 extern char &SIDebuggerInsertNopsID;
+
+void initializeSIModeRegisterPass(PassRegistry&);
+extern char &SIModeRegisterID;
 
 void initializeSIInsertWaitcntsPass(PassRegistry&);
 extern char &SIInsertWaitcntsID;

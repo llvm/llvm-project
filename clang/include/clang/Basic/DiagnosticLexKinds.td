@@ -258,13 +258,6 @@ def warn_bad_character_encoding : ExtWarn<
 def err_lexing_string : Error<"failure when lexing a string">;
 def err_placeholder_in_source : Error<"editor placeholder in source file">;
 
-
-//===----------------------------------------------------------------------===//
-// PTH Diagnostics
-//===----------------------------------------------------------------------===//
-def err_invalid_pth_file : Error<
-    "invalid or corrupt PTH file '%0'">;
-
 //===----------------------------------------------------------------------===//
 // Preprocessor Diagnostics
 //===----------------------------------------------------------------------===//
@@ -570,8 +563,6 @@ def err_pp_module_end_without_module_begin : Error<
   "'#pragma clang module end'">;
 def note_pp_module_begin_here : Note<
   "entering module '%0' due to this pragma">;
-def err_pp_module_build_pth : Error<
-  "'#pragma clang module build' not supported in pretokenized header">;
 def err_pp_module_build_missing_end : Error<
   "no matching '#pragma clang module endbuild' for this '#pragma clang module build'">;
 
@@ -740,7 +731,7 @@ def warn_quoted_include_in_framework_header : Warning<
   >, InGroup<FrameworkHdrQuotedInclude>, DefaultIgnore;
 def warn_framework_include_private_from_public : Warning<
   "public framework header includes private framework header '%0'"
-  >, InGroup<FrameworkIncludePrivateFromPublic>;
+  >, InGroup<FrameworkIncludePrivateFromPublic>, DefaultIgnore;
 
 def warn_auto_module_import : Warning<
   "treating #%select{include|import|include_next|__include_macros}0 as an "

@@ -13,6 +13,7 @@
 #include "Context.h"
 #include "FSProvider.h"
 #include "GlobalCompilationDatabase.h"
+#include "Threading.h"
 #include "index/FileIndex.h"
 #include "index/Index.h"
 #include "index/Serialization.h"
@@ -20,8 +21,10 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/Threading.h"
+#include <atomic>
 #include <condition_variable>
 #include <deque>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -62,11 +65,15 @@ public:
 // FIXME: it should watch for changes to files on disk.
 class BackgroundIndex : public SwapIndex {
 public:
+  /// If BuildIndexPeriodMs is greater than 0, the symbol index will only be
+  /// rebuilt periodically (one per \p BuildIndexPeriodMs); otherwise, index is
+  /// rebuilt for each indexed file.
   // FIXME: resource-dir injection should be hoisted somewhere common.
   BackgroundIndex(Context BackgroundContext, llvm::StringRef ResourceDir,
                   const FileSystemProvider &,
                   const GlobalCompilationDatabase &CDB,
                   BackgroundIndexStorage::Factory IndexStorageFactory,
+                  size_t BuildIndexPeriodMs = 0,
                   size_t ThreadPoolSize = llvm::hardware_concurrency());
   ~BackgroundIndex(); // Blocks while the current task finishes.
 
@@ -84,11 +91,10 @@ public:
   LLVM_NODISCARD bool
   blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds = 10);
 
-  using FileDigest = decltype(llvm::SHA1::hash({}));
-
 private:
   /// Given index results from a TU, only update files in \p FilesToUpdate.
-  void update(llvm::StringRef MainFile, SymbolSlab Symbols, RefSlab Refs,
+  /// Also stores new index information on IndexStorage.
+  void update(llvm::StringRef MainFile, IndexFileIn Index,
               const llvm::StringMap<FileDigest> &FilesToUpdate,
               BackgroundIndexStorage *IndexStorage);
 
@@ -101,6 +107,11 @@ private:
   // index state
   llvm::Error index(tooling::CompileCommand,
                     BackgroundIndexStorage *IndexStorage);
+  void buildIndex(); // Rebuild index periodically every BuildIndexPeriodMs.
+  const size_t BuildIndexPeriodMs;
+  std::atomic<bool> SymbolsUpdatedSinceLastIndex;
+  std::mutex IndexMu;
+  std::condition_variable IndexCV;
 
   FileSymbols IndexedSymbols;
   llvm::StringMap<FileDigest> IndexedFileDigests; // Key is absolute file path.
@@ -111,14 +122,14 @@ private:
   // queue management
   using Task = std::function<void()>;
   void run(); // Main loop executed by Thread. Runs tasks from Queue.
-  void enqueueTask(Task T);
+  void enqueueTask(Task T, ThreadPriority Prioirty);
   void enqueueLocked(tooling::CompileCommand Cmd,
                      BackgroundIndexStorage *IndexStorage);
   std::mutex QueueMu;
   unsigned NumActiveTasks = 0; // Only idle when queue is empty *and* no tasks.
   std::condition_variable QueueCV;
   bool ShouldStop = false;
-  std::deque<Task> Queue;
+  std::deque<std::pair<Task, ThreadPriority>> Queue;
   std::vector<std::thread> ThreadPool; // FIXME: Abstract this away.
   GlobalCompilationDatabase::CommandChanged::Subscription CommandsChanged;
 };

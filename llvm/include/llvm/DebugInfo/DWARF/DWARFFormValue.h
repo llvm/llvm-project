@@ -61,7 +61,6 @@ public:
 
   dwarf::Form getForm() const { return Form; }
   uint64_t getRawUValue() const { return Value.uval; }
-  uint64_t getSectionIndex() const { return Value.SectionIndex; }
   void setForm(dwarf::Form F) { Form = F; }
   void setUValue(uint64_t V) { Value.uval = V; }
   void setSValue(int64_t V) { Value.sval = V; }
@@ -75,6 +74,10 @@ public:
   bool isFormClass(FormClass FC) const;
   const DWARFUnit *getUnit() const { return U; }
   void dump(raw_ostream &OS, DIDumpOptions DumpOpts = DIDumpOptions()) const;
+  void dumpSectionedAddress(raw_ostream &OS, DIDumpOptions DumpOpts,
+                            SectionedAddress SA) const;
+  static void dumpAddressSection(const DWARFObject &Obj, raw_ostream &OS,
+                                 DIDumpOptions DumpOpts, uint64_t SectionIndex);
 
   /// Extracts a value in \p Data at offset \p *OffsetPtr. The information
   /// in \p FormParams is needed to interpret some forms. The optional

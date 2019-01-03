@@ -1,0 +1,12 @@
+import("//llvm/utils/gn/build/libs/zlib/enable.gni")
+
+config("zlib_config") {
+  visibility = [ ":zlib" ]
+  libs = [ "z" ]
+}
+
+group("zlib") {
+  if (llvm_enable_zlib) {
+    public_configs = [ ":zlib_config" ]
+  }
+}

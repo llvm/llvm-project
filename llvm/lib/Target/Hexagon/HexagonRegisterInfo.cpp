@@ -312,6 +312,7 @@ unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
 
   static const unsigned ISub[] = { Hexagon::isub_lo, Hexagon::isub_hi };
   static const unsigned VSub[] = { Hexagon::vsub_lo, Hexagon::vsub_hi };
+  static const unsigned WSub[] = { Hexagon::wsub_lo, Hexagon::wsub_hi };
 
   switch (RC.getID()) {
     case Hexagon::CtrRegs64RegClassID:
@@ -319,6 +320,8 @@ unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
       return ISub[GenIdx];
     case Hexagon::HvxWRRegClassID:
       return VSub[GenIdx];
+    case Hexagon::HvxVQRRegClassID:
+      return WSub[GenIdx];
   }
 
   if (const TargetRegisterClass *SuperRC = *RC.getSuperClasses())

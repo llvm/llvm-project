@@ -764,3 +764,82 @@ define <4 x i64> @test_int_x86_xop_vpcmov_256_rm(<4 x i64> %a0, <4 x i64> %a1, <
 }
 declare <4 x i64> @llvm.x86.xop.vpcmov.256(<4 x i64>, <4 x i64>, <4 x i64>) nounwind readnone
 
+define <16 x i8> @test_int_x86_xop_vprotb(<16 x i8> %a0, <16 x i8> %a1) {
+; CHECK-LABEL: test_int_x86_xop_vprotb:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vprotb %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x i8> @llvm.x86.xop.vprotb(<16 x i8> %a0, <16 x i8> %a1) ;
+  ret <16 x i8> %res
+}
+declare <16 x i8> @llvm.x86.xop.vprotb(<16 x i8>, <16 x i8>) nounwind readnone
+
+define <4 x i32> @test_int_x86_xop_vprotd(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: test_int_x86_xop_vprotd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vprotd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <4 x i32> @llvm.x86.xop.vprotd(<4 x i32> %a0, <4 x i32> %a1) ;
+  ret <4 x i32> %res
+}
+declare <4 x i32> @llvm.x86.xop.vprotd(<4 x i32>, <4 x i32>) nounwind readnone
+
+define <2 x i64> @test_int_x86_xop_vprotq(<2 x i64> %a0, <2 x i64> %a1) {
+; CHECK-LABEL: test_int_x86_xop_vprotq:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vprotq %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <2 x i64> @llvm.x86.xop.vprotq(<2 x i64> %a0, <2 x i64> %a1) ;
+  ret <2 x i64> %res
+}
+declare <2 x i64> @llvm.x86.xop.vprotq(<2 x i64>, <2 x i64>) nounwind readnone
+
+define <8 x i16> @test_int_x86_xop_vprotw(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: test_int_x86_xop_vprotw:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vprotw %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x i16> @llvm.x86.xop.vprotw(<8 x i16> %a0, <8 x i16> %a1) ;
+  ret <8 x i16> %res
+}
+declare <8 x i16> @llvm.x86.xop.vprotw(<8 x i16>, <8 x i16>) nounwind readnone
+
+define <16 x i8> @test_int_x86_xop_vprotbi(<16 x i8> %a0) {
+; CHECK-LABEL: test_int_x86_xop_vprotbi:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vprotb $1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x i8> @llvm.x86.xop.vprotbi(<16 x i8> %a0, i8 1) ;
+  ret <16 x i8> %res
+}
+declare <16 x i8> @llvm.x86.xop.vprotbi(<16 x i8>, i8) nounwind readnone
+
+define <4 x i32> @test_int_x86_xop_vprotdi(<4 x i32> %a0) {
+; CHECK-LABEL: test_int_x86_xop_vprotdi:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vprotd $30, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <4 x i32> @llvm.x86.xop.vprotdi(<4 x i32> %a0, i8 -2) ;
+  ret <4 x i32> %res
+}
+declare <4 x i32> @llvm.x86.xop.vprotdi(<4 x i32>, i8) nounwind readnone
+
+define <2 x i64> @test_int_x86_xop_vprotqi(<2 x i64> %a0) {
+; CHECK-LABEL: test_int_x86_xop_vprotqi:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vprotq $3, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <2 x i64> @llvm.x86.xop.vprotqi(<2 x i64> %a0, i8 3) ;
+  ret <2 x i64> %res
+}
+declare <2 x i64> @llvm.x86.xop.vprotqi(<2 x i64>, i8) nounwind readnone
+
+define <8 x i16> @test_int_x86_xop_vprotwi(<8 x i16> %a0) {
+; CHECK-LABEL: test_int_x86_xop_vprotwi:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vprotw $12, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x i16> @llvm.x86.xop.vprotwi(<8 x i16> %a0, i8 -4) ;
+  ret <8 x i16> %res
+}
+declare <8 x i16> @llvm.x86.xop.vprotwi(<8 x i16>, i8) nounwind readnone

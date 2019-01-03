@@ -88,6 +88,36 @@ class MiniDumpNewTestCase(TestBase):
         self.assertEqual(self.process.GetProcessID(), self._linux_x86_64_pid)
         self.check_state()
 
+    def test_memory_region_name(self):
+        self.dbg.CreateTarget(None)
+        self.target = self.dbg.GetSelectedTarget()
+        self.process = self.target.LoadCore("regions-linux-map.dmp")
+        result = lldb.SBCommandReturnObject()
+        addr_region_name_pairs = [
+            ("0x400d9000", "/system/bin/app_process"),
+            ("0x400db000", "/system/bin/app_process"),
+            ("0x400dd000", "/system/bin/linker"),
+            ("0x400ed000", "/system/bin/linker"),
+            ("0x400ee000", "/system/bin/linker"),
+            ("0x400fb000", "/system/lib/liblog.so"),
+            ("0x400fc000", "/system/lib/liblog.so"),
+            ("0x400fd000", "/system/lib/liblog.so"),
+            ("0x400ff000", "/system/lib/liblog.so"),
+            ("0x40100000", "/system/lib/liblog.so"),
+            ("0x40101000", "/system/lib/libc.so"),
+            ("0x40122000", "/system/lib/libc.so"),
+            ("0x40123000", "/system/lib/libc.so"),
+            ("0x40167000", "/system/lib/libc.so"),
+            ("0x40169000", "/system/lib/libc.so"),
+        ]
+        ci = self.dbg.GetCommandInterpreter()
+        for (addr, region_name) in addr_region_name_pairs:
+            command = 'memory region ' + addr
+            ci.HandleCommand(command, result, False)
+            message = 'Ensure memory "%s" shows up in output for "%s"' % (
+                region_name, command)
+            self.assertTrue(region_name in result.GetOutput(), message)
+
     def test_modules_in_mini_dump(self):
         """Test that lldb can read the list of modules from the minidump."""
         # target create -c linux-x86_64.dmp
@@ -97,12 +127,16 @@ class MiniDumpNewTestCase(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
         expected_modules = [
             {
-                'filename' : 'linux-gate.so',
-                'uuid' : '4EAD28F8-88EF-3520-872B-73C6F2FE7306-C41AF22F',
+                'filename' : 'linux-x86_64',
+                'uuid' : 'E35C283B-C327-C287-62DB-788BF5A4078B-E2351448',
             },
             {
                 'filename' : 'libm-2.19.so',
                 'uuid' : 'D144258E-6149-00B2-55A3-1F3FD2283A87-8670D5BC',
+            },
+            {
+                'filename' : 'libgcc_s.so.1',
+                'uuid' : '36311B44-5771-0AE5-578C-4BF00791DED7-359DBB92',
             },
             {
                 'filename' : 'libstdc++.so.6.0.19',
@@ -113,24 +147,20 @@ class MiniDumpNewTestCase(TestBase):
                 'uuid' : 'CF699A15-CAAE-64F5-0311-FC4655B86DC3-9A479789',
             },
             {
-                'filename' : 'linux-x86_64',
-                'uuid' : 'E35C283B-C327-C287-62DB-788BF5A4078B-E2351448',
-            },
-            {
-                'filename' : 'libgcc_s.so.1',
-                'uuid' : '36311B44-5771-0AE5-578C-4BF00791DED7-359DBB92',
-            },
-            {
                 'filename' : 'libpthread-2.19.so',
                 'uuid' : '31E9F21A-E8C1-0396-171F-1E13DA157809-86FA696C',
+            },
+            {
+                'filename' : 'libbreakpad.so',
+                'uuid' : '784FD549-332D-826E-D23F-18C17C6F320A',
             },
             {
                 'filename' : 'ld-2.19.so',
                 'uuid' : 'D0F53790-4076-D73F-29E4-A37341F8A449-E2EF6CD0',
             },
             {
-                'filename' : 'libbreakpad.so',
-                'uuid' : '784FD549-332D-826E-D23F-18C17C6F320A',
+                'filename' : 'linux-gate.so',
+                'uuid' : '4EAD28F8-88EF-3520-872B-73C6F2FE7306-C41AF22F',
             },
         ]
         self.assertEqual(self.target.GetNumModules(), len(expected_modules))
@@ -418,3 +448,65 @@ class MiniDumpNewTestCase(TestBase):
         frame = thread.GetFrameAtIndex(1)
         value = frame.EvaluateExpression('x')
         self.assertEqual(value.GetValueAsSigned(), 3)
+
+    def test_memory_regions_in_minidump(self):
+        """Test memory regions from a Minidump"""
+        # target create -c regions-linux-map.dmp
+        self.dbg.CreateTarget(None)
+        self.target = self.dbg.GetSelectedTarget()
+        self.process = self.target.LoadCore("regions-linux-map.dmp")
+        self.check_state()
+
+        regions_count = 19
+        region_info_list = self.process.GetMemoryRegions()
+        self.assertEqual(region_info_list.GetSize(), regions_count)
+
+        def check_region(index, start, end, read, write, execute, mapped, name):
+            region_info = lldb.SBMemoryRegionInfo()
+            self.assertTrue(
+                self.process.GetMemoryRegionInfo(start, region_info).Success())
+            self.assertEqual(start, region_info.GetRegionBase())
+            self.assertEqual(end, region_info.GetRegionEnd())
+            self.assertEqual(read, region_info.IsReadable())
+            self.assertEqual(write, region_info.IsWritable())
+            self.assertEqual(execute, region_info.IsExecutable())
+            self.assertEqual(mapped, region_info.IsMapped())
+            self.assertEqual(name, region_info.GetName())
+
+            # Ensure we have the same regions as SBMemoryRegionInfoList contains.
+            if index >= 0 and index < regions_count:
+                region_info_from_list = lldb.SBMemoryRegionInfo()
+                self.assertTrue(region_info_list.GetMemoryRegionAtIndex(
+                    index, region_info_from_list))
+                self.assertEqual(region_info_from_list, region_info)
+
+        a = "/system/bin/app_process"
+        b = "/system/bin/linker"
+        c = "/system/lib/liblog.so"
+        d = "/system/lib/libc.so"
+        n = None
+        max_int = 0xffffffffffffffff
+
+        # Test address before the first entry comes back with nothing mapped up
+        # to first valid region info
+        check_region(-1, 0x00000000, 0x400d9000, False, False, False, False, n)
+        check_region( 0, 0x400d9000, 0x400db000, True,  False, True,  True,  a)
+        check_region( 1, 0x400db000, 0x400dc000, True,  False, False, True,  a)
+        check_region( 2, 0x400dc000, 0x400dd000, True,  True,  False, True,  n)
+        check_region( 3, 0x400dd000, 0x400ec000, True,  False, True,  True,  b)
+        check_region( 4, 0x400ec000, 0x400ed000, True,  False, False, True,  n)
+        check_region( 5, 0x400ed000, 0x400ee000, True,  False, False, True,  b)
+        check_region( 6, 0x400ee000, 0x400ef000, True,  True,  False, True,  b)
+        check_region( 7, 0x400ef000, 0x400fb000, True,  True,  False, True,  n)
+        check_region( 8, 0x400fb000, 0x400fc000, True,  False, True,  True,  c)
+        check_region( 9, 0x400fc000, 0x400fd000, True,  True,  True,  True,  c)
+        check_region(10, 0x400fd000, 0x400ff000, True,  False, True,  True,  c)
+        check_region(11, 0x400ff000, 0x40100000, True,  False, False, True,  c)
+        check_region(12, 0x40100000, 0x40101000, True,  True,  False, True,  c)
+        check_region(13, 0x40101000, 0x40122000, True,  False, True,  True,  d)
+        check_region(14, 0x40122000, 0x40123000, True,  True,  True,  True,  d)
+        check_region(15, 0x40123000, 0x40167000, True,  False, True,  True,  d)
+        check_region(16, 0x40167000, 0x40169000, True,  False, False, True,  d)
+        check_region(17, 0x40169000, 0x4016b000, True,  True,  False, True,  d)
+        check_region(18, 0x4016b000, 0x40176000, True,  True,  False, True,  n)
+        check_region(-1, 0x40176000, max_int,    False, False, False, False, n)

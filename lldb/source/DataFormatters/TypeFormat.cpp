@@ -178,7 +178,7 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
     }
   } else
     valobj_enum_type = iter->second;
-  if (valobj_enum_type.IsValid() == false)
+  if (!valobj_enum_type.IsValid())
     return false;
   DataExtractor data;
   Status error;

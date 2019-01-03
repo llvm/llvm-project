@@ -529,14 +529,14 @@ operator=(const lldb::SBTypeCategory &rhs) {
 }
 
 bool SBTypeCategory::operator==(lldb::SBTypeCategory &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return !rhs.IsValid();
 
   return m_opaque_sp.get() == rhs.m_opaque_sp.get();
 }
 
 bool SBTypeCategory::operator!=(lldb::SBTypeCategory &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return rhs.IsValid();
 
   return m_opaque_sp.get() != rhs.m_opaque_sp.get();

@@ -1175,6 +1175,15 @@ const MemRegion *MemRegion::getBaseRegion() const {
   return R;
 }
 
+// getgetMostDerivedObjectRegion gets the region of the root class of a C++
+// class hierarchy.
+const MemRegion *MemRegion::getMostDerivedObjectRegion() const {
+  const MemRegion *R = this;
+  while (const auto *BR = dyn_cast<CXXBaseObjectRegion>(R))
+    R = BR->getSuperRegion();
+  return R;
+}
+
 bool MemRegion::isSubRegionOf(const MemRegion *) const {
   return false;
 }

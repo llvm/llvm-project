@@ -21,6 +21,7 @@
 #include "tsan_interface_ann.h"
 
 #include <libkern/OSAtomic.h>
+#include <objc/objc-sync.h>
 
 #if defined(__has_include) && __has_include(<xpc/xpc.h>)
 #include <xpc/xpc.h>
@@ -318,17 +319,25 @@ static uptr SyncAddressForObjCObject(void *obj) {
   return (uptr)obj;
 }
 
-TSAN_INTERCEPTOR(int, objc_sync_enter, void *obj) {
+TSAN_INTERCEPTOR(int, objc_sync_enter, id obj) {
   SCOPED_TSAN_INTERCEPTOR(objc_sync_enter, obj);
+  if (!obj) return REAL(objc_sync_enter)(obj);
+  uptr addr = SyncAddressForObjCObject(obj);
+  MutexPreLock(thr, pc, addr, MutexFlagWriteReentrant);
   int result = REAL(objc_sync_enter)(obj);
-  if (obj) Acquire(thr, pc, SyncAddressForObjCObject(obj));
+  CHECK_EQ(result, OBJC_SYNC_SUCCESS);
+  MutexPostLock(thr, pc, addr, MutexFlagWriteReentrant);
   return result;
 }
 
-TSAN_INTERCEPTOR(int, objc_sync_exit, void *obj) {
-  SCOPED_TSAN_INTERCEPTOR(objc_sync_enter, obj);
-  if (obj) Release(thr, pc, SyncAddressForObjCObject(obj));
-  return REAL(objc_sync_exit)(obj);
+TSAN_INTERCEPTOR(int, objc_sync_exit, id obj) {
+  SCOPED_TSAN_INTERCEPTOR(objc_sync_exit, obj);
+  if (!obj) return REAL(objc_sync_exit)(obj);
+  uptr addr = SyncAddressForObjCObject(obj);
+  MutexUnlock(thr, pc, addr);
+  int result = REAL(objc_sync_exit)(obj);
+  if (result != OBJC_SYNC_SUCCESS) MutexInvalidAccess(thr, pc, addr);
+  return result;
 }
 
 // On macOS, libc++ is always linked dynamically, so intercepting works the

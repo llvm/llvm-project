@@ -267,10 +267,16 @@ template <class ELFT> static void doGcSections() {
 // input sections. This function make some or all of them on
 // so that they are emitted to the output file.
 template <class ELFT> void elf::markLive() {
-  // If -gc-sections is missing, no sections are removed.
   if (!Config->GcSections) {
+    // If -gc-sections is missing, no sections are removed.
     for (InputSectionBase *Sec : InputSections)
       Sec->Live = true;
+
+    // If a DSO defines a symbol referenced in a regular object, it is needed.
+    for (Symbol *Sym : Symtab->getSymbols())
+      if (auto *S = dyn_cast<SharedSymbol>(Sym))
+        if (S->IsUsedInRegularObj && !S->isWeak())
+          S->getFile<ELFT>().IsNeeded = true;
     return;
   }
 

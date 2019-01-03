@@ -569,22 +569,9 @@ const char *DWARFFormValue::AsCString() const {
     if (!symbol_file)
       return nullptr;
 
-    lldb::offset_t baseOffset = 0;
-    const DWARFDataExtractor &strOffsets =
-        symbol_file->get_debug_str_offsets_data();
-    uint64_t length = strOffsets.GetU32(&baseOffset);
-    if (length == 0xffffffff)
-      length = strOffsets.GetU64(&baseOffset);
-
-    // Check version.
-    if (strOffsets.GetU16(&baseOffset) < 5)
-      return nullptr;
-
-    // Skip padding.
-    baseOffset += 2;
-
     uint32_t indexSize = m_cu->IsDWARF64() ? 8 : 4;
-    lldb::offset_t offset = baseOffset + m_value.value.uval * indexSize;
+    lldb::offset_t offset =
+        m_cu->GetStrOffsetsBase() + m_value.value.uval * indexSize;
     dw_offset_t strOffset =
         symbol_file->get_debug_str_offsets_data().GetMaxU64(&offset, indexSize);
     return symbol_file->get_debug_str_data().PeekCStr(strOffset);
@@ -617,7 +604,7 @@ dw_addr_t DWARFFormValue::Address() const {
 }
 
 uint64_t DWARFFormValue::Reference() const {
-  uint64_t die_offset = m_value.value.uval;
+  uint64_t value = m_value.value.uval;
   switch (m_form) {
   case DW_FORM_ref1:
   case DW_FORM_ref2:
@@ -626,32 +613,36 @@ uint64_t DWARFFormValue::Reference() const {
   case DW_FORM_ref_udata:
     assert(m_cu); // CU must be valid for DW_FORM_ref forms that are compile
                   // unit relative or we will get this wrong
-    die_offset += m_cu->GetOffset();
-    break;
+    return value + m_cu->GetOffset();
+
+  case DW_FORM_ref_addr:
+  case DW_FORM_ref_sig8:
+  case DW_FORM_GNU_ref_alt:
+    return value;
 
   default:
-    break;
+    return DW_INVALID_OFFSET;
   }
-
-  return die_offset;
 }
 
 uint64_t DWARFFormValue::Reference(dw_offset_t base_offset) const {
-  uint64_t die_offset = m_value.value.uval;
+  uint64_t value = m_value.value.uval;
   switch (m_form) {
   case DW_FORM_ref1:
   case DW_FORM_ref2:
   case DW_FORM_ref4:
   case DW_FORM_ref8:
   case DW_FORM_ref_udata:
-    die_offset += base_offset;
-    break;
+    return value + base_offset;
+
+  case DW_FORM_ref_addr:
+  case DW_FORM_ref_sig8:
+  case DW_FORM_GNU_ref_alt:
+    return value;
 
   default:
-    break;
+    return DW_INVALID_OFFSET;
   }
-
-  return die_offset;
 }
 
 const uint8_t *DWARFFormValue::BlockData() const { return m_value.data; }

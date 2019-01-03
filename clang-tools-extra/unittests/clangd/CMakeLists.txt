@@ -28,6 +28,7 @@ add_extra_unittest(ClangdTests
   FuzzyMatchTests.cpp
   GlobalCompilationDatabaseTests.cpp
   HeadersTests.cpp
+  IndexActionTests.cpp
   IndexTests.cpp
   JSONTransportTests.cpp
   QualityTests.cpp
@@ -35,6 +36,7 @@ add_extra_unittest(ClangdTests
   SerializationTests.cpp
   SourceCodeTests.cpp
   SymbolCollectorTests.cpp
+  SymbolInfoTests.cpp
   SyncAPI.cpp
   TUSchedulerTests.cpp
   TestFS.cpp
@@ -56,6 +58,7 @@ target_link_libraries(ClangdTests
   clangIndex
   clangLex
   clangSema
+  clangSerialization
   clangTooling
   clangToolingCore
   clangToolingInclusions

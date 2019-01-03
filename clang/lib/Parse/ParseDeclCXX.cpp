@@ -24,7 +24,6 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
-#include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/ADT/SmallString.h"
 
 using namespace clang;
@@ -2786,8 +2785,10 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
         // initialize it.
         ThisDecl = VT->getTemplatedDecl();
 
-      if (ThisDecl)
+      if (ThisDecl) {
         Actions.ProcessDeclAttributeList(getCurScope(), ThisDecl, AccessAttrs);
+        Actions.ProcessAPINotes(ThisDecl);
+      }
     }
 
     // Error recovery might have converted a non-static member into a static

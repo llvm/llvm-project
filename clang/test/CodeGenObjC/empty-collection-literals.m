@@ -17,16 +17,16 @@ void test_empty_array() {
   // CHECK-WITHOUT-EMPTY-COLLECTIONS-NOT: ret void
   // CHECK-WITHOUT-EMPTY-COLLECTIONS: {{call.*objc_msgSend}}
   // CHECK-WITHOUT-EMPTY-COLLECTIONS-NOT: ret void
-  // CHECK-WITHOUT-EMPTY-COLLECTIONS: {{call.*objc_retainAutoreleasedReturnValue}}
+  // CHECK-WITHOUT-EMPTY-COLLECTIONS: {{call.*llvm.objc.retainAutoreleasedReturnValue}}
   // CHECK-WITHOUT-EMPTY-COLLECTIONS: ret void
 
   // CHECK-WITH-EMPTY-COLLECTIONS-LABEL: define void @test_empty_array
   // CHECK-WITH-EMPTY-COLLECTIONS-NOT: ret void
   // CHECK-WITH-EMPTY-COLLECTIONS: load {{.*}} @__NSArray0__
   // CHECK-WITH-EMPTY-COLLECTIONS-NOT: ret void
-  // CHECK-WITH-EMPTY-COLLECTIONS: {{call.*objc_retain\(}}
+  // CHECK-WITH-EMPTY-COLLECTIONS: {{call.*llvm.objc.retain\(}}
   // CHECK-WITH-EMPTY-COLLECTIONS-NOT: ret void
-  // CHECK-WITH-EMPTY-COLLECTIONS: call void @objc_storeStrong
+  // CHECK-WITH-EMPTY-COLLECTIONS: call void @llvm.objc.storeStrong
   // CHECK-WITH-EMPTY-COLLECTIONS-NEXT: ret void
   NSArray *arr = @[];
 }
@@ -36,16 +36,16 @@ void test_empty_dictionary() {
   // CHECK-WITHOUT-EMPTY-COLLECTIONS-NOT: ret void
   // CHECK-WITHOUT-EMPTY-COLLECTIONS: {{call.*objc_msgSend}}
   // CHECK-WITHOUT-EMPTY-COLLECTIONS-NOT: ret void
-  // CHECK-WITHOUT-EMPTY-COLLECTIONS: {{call.*objc_retainAutoreleasedReturnValue}}
+  // CHECK-WITHOUT-EMPTY-COLLECTIONS: {{call.*llvm.objc.retainAutoreleasedReturnValue}}
   // CHECK-WITHOUT-EMPTY-COLLECTIONS: ret void
 
   // CHECK-WITH-EMPTY-COLLECTIONS-LABEL: define void @test_empty_dictionary
   // CHECK-WITH-EMPTY-COLLECTIONS-NOT: ret void
   // CHECK-WITH-EMPTY-COLLECTIONS: load {{.*}} @__NSDictionary0__{{.*}}!invariant.load
   // CHECK-WITH-EMPTY-COLLECTIONS-NOT: ret void
-  // CHECK-WITH-EMPTY-COLLECTIONS: {{call.*objc_retain\(}}
+  // CHECK-WITH-EMPTY-COLLECTIONS: {{call.*llvm.objc.retain\(}}
   // CHECK-WITH-EMPTY-COLLECTIONS-NOT: ret void
-  // CHECK-WITH-EMPTY-COLLECTIONS: call void @objc_storeStrong
+  // CHECK-WITH-EMPTY-COLLECTIONS: call void @llvm.objc.storeStrong
   // CHECK-WITH-EMPTY-COLLECTIONS-NEXT: ret void
   NSDictionary *dict = @{};
 }

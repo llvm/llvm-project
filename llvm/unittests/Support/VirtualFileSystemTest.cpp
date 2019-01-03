@@ -743,6 +743,43 @@ TEST(VirtualFileSystemTest, HiddenInIteration) {
   }
 }
 
+TEST(ProxyFileSystemTest, Basic) {
+  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> Base(
+      new vfs::InMemoryFileSystem());
+  vfs::ProxyFileSystem PFS(Base);
+
+  Base->addFile("/a", 0, MemoryBuffer::getMemBuffer("test"));
+
+  auto Stat = PFS.status("/a");
+  ASSERT_FALSE(Stat.getError());
+
+  auto File = PFS.openFileForRead("/a");
+  ASSERT_FALSE(File.getError());
+  EXPECT_EQ("test", (*(*File)->getBuffer("ignored"))->getBuffer());
+
+  std::error_code EC;
+  vfs::directory_iterator I = PFS.dir_begin("/", EC);
+  ASSERT_FALSE(EC);
+  ASSERT_EQ("/a", I->path());
+  I.increment(EC);
+  ASSERT_FALSE(EC);
+  ASSERT_EQ(vfs::directory_iterator(), I);
+
+  ASSERT_FALSE(PFS.setCurrentWorkingDirectory("/"));
+
+  auto PWD = PFS.getCurrentWorkingDirectory();
+  ASSERT_FALSE(PWD.getError());
+  ASSERT_EQ("/", *PWD);
+
+  SmallString<16> Path;
+  ASSERT_FALSE(PFS.getRealPath("a", Path));
+  ASSERT_EQ("/a", Path);
+
+  bool Local = true;
+  ASSERT_FALSE(PFS.isLocal("/a", Local));
+  ASSERT_EQ(false, Local);
+}
+
 class InMemoryFileSystemTest : public ::testing::Test {
 protected:
   llvm::vfs::InMemoryFileSystem FS;

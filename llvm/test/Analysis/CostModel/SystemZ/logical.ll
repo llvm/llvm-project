@@ -68,8 +68,8 @@ define void @ashr() {
   %res18 = ashr <16 x i32> undef, undef
   %res19 = ashr <16 x i64> undef, undef
 
-; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %res0 = ashr i8 undef, undef
-; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %res1 = ashr i16 undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res0 = ashr i8 undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res1 = ashr i16 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res2 = ashr i32 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res3 = ashr i64 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res4 = ashr <2 x i8> undef, undef
@@ -114,8 +114,8 @@ define void @lshr() {
   %res18 = lshr <16 x i32> undef, undef
   %res19 = lshr <16 x i64> undef, undef
 
-; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %res0 = lshr i8 undef, undef
-; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %res1 = lshr i16 undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res0 = lshr i8 undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res1 = lshr i16 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res2 = lshr i32 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res3 = lshr i64 undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %res4 = lshr <2 x i8> undef, undef

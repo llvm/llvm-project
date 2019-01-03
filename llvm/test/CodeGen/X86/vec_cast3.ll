@@ -236,3 +236,26 @@ define <2 x i32> @cvt_v2f32_v2u32(<2 x float> %src) {
   %res = fptoui <2 x float> %src to <2 x i32>
   ret <2 x i32> %res
 }
+
+define <32 x i8> @PR40146(<4 x i64> %x) {
+; CHECK-LABEL: PR40146:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    retl
+;
+; CHECK-WIDE-LABEL: PR40146:
+; CHECK-WIDE:       ## %bb.0:
+; CHECK-WIDE-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; CHECK-WIDE-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-WIDE-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; CHECK-WIDE-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-WIDE-NEXT:    retl
+  %perm = shufflevector <4 x i64> %x, <4 x i64> undef, <4 x i32> <i32 0, i32 undef, i32 1, i32 undef>
+  %t1 = bitcast <4 x i64> %perm to <32 x i8>
+  %t2 = shufflevector <32 x i8> %t1, <32 x i8> <i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <32 x i32> <i32 0, i32 32, i32 1, i32 32, i32 2, i32 32, i32 3, i32 32, i32 4, i32 32, i32 5, i32 32, i32 6, i32 32, i32 7, i32 32, i32 16, i32 48, i32 17, i32 48, i32 18, i32 48, i32 19, i32 48, i32 20, i32 48, i32 21, i32 48, i32 22, i32 48, i32 23, i32 48>
+  ret <32 x i8> %t2
+}
+

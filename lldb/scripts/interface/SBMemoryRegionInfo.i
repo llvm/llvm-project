@@ -44,6 +44,9 @@ public:
     bool
     IsMapped ();
 
+    const char *
+    GetName ();
+
     bool
     operator == (const lldb::SBMemoryRegionInfo &rhs) const;
 

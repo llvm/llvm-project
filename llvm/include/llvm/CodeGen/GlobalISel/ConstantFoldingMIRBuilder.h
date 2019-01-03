@@ -68,38 +68,18 @@ static Optional<APInt> ConstantFoldBinOp(unsigned Opcode, const unsigned Op1,
 
 /// An MIRBuilder which does trivial constant folding of binary ops.
 /// Calls to buildInstr will also try to constant fold binary ops.
-class ConstantFoldingMIRBuilder
-    : public FoldableInstructionsBuilder<ConstantFoldingMIRBuilder> {
+class ConstantFoldingMIRBuilder : public MachineIRBuilder {
 public:
   // Pull in base class constructors.
-  using FoldableInstructionsBuilder<
-      ConstantFoldingMIRBuilder>::FoldableInstructionsBuilder;
-  // Unhide buildInstr
-  using FoldableInstructionsBuilder<ConstantFoldingMIRBuilder>::buildInstr;
+  using MachineIRBuilder::MachineIRBuilder;
 
-  // Implement buildBinaryOp required by FoldableInstructionsBuilder which
-  // tries to constant fold.
-  MachineInstrBuilder buildBinaryOp(unsigned Opcode, unsigned Dst,
-                                    unsigned Src0, unsigned Src1) {
-    validateBinaryOp(Dst, Src0, Src1);
-    auto MaybeCst = ConstantFoldBinOp(Opcode, Src0, Src1, getMF().getRegInfo());
-    if (MaybeCst)
-      return buildConstant(Dst, MaybeCst->getSExtValue());
-    return buildInstr(Opcode).addDef(Dst).addUse(Src0).addUse(Src1);
-  }
-
-  template <typename DstTy, typename UseArg1Ty, typename UseArg2Ty>
-  MachineInstrBuilder buildInstr(unsigned Opc, DstTy &&Ty, UseArg1Ty &&Arg1,
-                                 UseArg2Ty &&Arg2) {
-    unsigned Dst = getDestFromArg(Ty);
-    return buildInstr(Opc, Dst, getRegFromArg(std::forward<UseArg1Ty>(Arg1)),
-                      getRegFromArg(std::forward<UseArg2Ty>(Arg2)));
-  }
+  virtual ~ConstantFoldingMIRBuilder() = default;
 
   // Try to provide an overload for buildInstr for binary ops in order to
   // constant fold.
-  MachineInstrBuilder buildInstr(unsigned Opc, unsigned Dst, unsigned Src0,
-                                 unsigned Src1) {
+  MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
+                                 ArrayRef<SrcOp> SrcOps,
+                                 Optional<unsigned> Flags = None) override {
     switch (Opc) {
     default:
       break;
@@ -116,19 +96,18 @@ public:
     case TargetOpcode::G_SDIV:
     case TargetOpcode::G_UREM:
     case TargetOpcode::G_SREM: {
-      return buildBinaryOp(Opc, Dst, Src0, Src1);
+      assert(DstOps.size() == 1 && "Invalid dst ops");
+      assert(SrcOps.size() == 2 && "Invalid src ops");
+      const DstOp &Dst = DstOps[0];
+      const SrcOp &Src0 = SrcOps[0];
+      const SrcOp &Src1 = SrcOps[1];
+      if (auto MaybeCst =
+              ConstantFoldBinOp(Opc, Src0.getReg(), Src1.getReg(), *getMRI()))
+        return buildConstant(Dst, MaybeCst->getSExtValue());
+      break;
     }
     }
-    return buildInstr(Opc).addDef(Dst).addUse(Src0).addUse(Src1);
-  }
-
-  // Fallback implementation of buildInstr.
-  template <typename DstTy, typename... UseArgsTy>
-  MachineInstrBuilder buildInstr(unsigned Opc, DstTy &&Ty,
-                                 UseArgsTy &&... Args) {
-    auto MIB = buildInstr(Opc).addDef(getDestFromArg(Ty));
-    addUsesFromArgs(MIB, std::forward<UseArgsTy>(Args)...);
-    return MIB;
+    return MachineIRBuilder::buildInstr(Opc, DstOps, SrcOps);
   }
 };
 } // namespace llvm

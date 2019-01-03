@@ -897,8 +897,8 @@ define <2 x i32> @test_pswapdsi(<2 x i32> %a) nounwind readnone {
 ; X64-LABEL: test_pswapdsi:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-NEXT:    movq %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    pswapd -{{[0-9]+}}(%rsp), %mm0 # mm0 = mem[1,0]
+; X64-NEXT:    movdq2q %xmm0, %mm0
+; X64-NEXT:    pswapd %mm0, %mm0 # mm0 = mm0[1,0]
 ; X64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]

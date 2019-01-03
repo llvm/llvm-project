@@ -138,8 +138,7 @@ configuration. Passing the option on the command line will override the default.
   Specify the directory of the libc++ library to use at runtime. This directory
   is not added to the linkers search path. This can be used to compile tests
   against one version of libc++ and run them using another. The default value
-  for this option is `cxx_library_root`. This option cannot be used
-  when use_system_cxx_lib is provided.
+  for this option is `cxx_library_root`.
 
 .. option:: use_system_cxx_lib=<bool>
 
@@ -154,14 +153,6 @@ configuration. Passing the option on the command line will override the default.
   environment variable LIT_USE_INTERNAL_SHELL is present then that is used as
   the default value. Otherwise the default value is True on Windows and False
   on every other platform.
-
-.. option:: no_default_flags=<bool>
-
-  **Default**: False
-
-  Disable all default compile and link flags from being added. When this
-  option is used only flags specified using the compile_flags and link_flags
-  will be used.
 
 .. option:: compile_flags="<list-of-args>"
 

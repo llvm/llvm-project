@@ -1070,33 +1070,49 @@ TEST(APFloatTest, toInteger) {
   EXPECT_EQ(APSInt::getMaxValue(5, false), result);
 }
 
-static APInt nanbits(const fltSemantics &Sem,
-                     bool SNaN, bool Negative, uint64_t fill) {
-  APInt apfill(64, fill);
+static APInt nanbitsFromAPInt(const fltSemantics &Sem, bool SNaN, bool Negative,
+                              uint64_t payload) {
+  APInt appayload(64, payload);
   if (SNaN)
-    return APFloat::getSNaN(Sem, Negative, &apfill).bitcastToAPInt();
+    return APFloat::getSNaN(Sem, Negative, &appayload).bitcastToAPInt();
   else
-    return APFloat::getQNaN(Sem, Negative, &apfill).bitcastToAPInt();
+    return APFloat::getQNaN(Sem, Negative, &appayload).bitcastToAPInt();
 }
 
 TEST(APFloatTest, makeNaN) {
-  ASSERT_EQ(0x7fc00000, nanbits(APFloat::IEEEsingle(), false, false, 0));
-  ASSERT_EQ(0xffc00000, nanbits(APFloat::IEEEsingle(), false, true, 0));
-  ASSERT_EQ(0x7fc0ae72, nanbits(APFloat::IEEEsingle(), false, false, 0xae72));
-  ASSERT_EQ(0x7fffae72, nanbits(APFloat::IEEEsingle(), false, false, 0xffffae72));
-  ASSERT_EQ(0x7fa00000, nanbits(APFloat::IEEEsingle(), true, false, 0));
-  ASSERT_EQ(0xffa00000, nanbits(APFloat::IEEEsingle(), true, true, 0));
-  ASSERT_EQ(0x7f80ae72, nanbits(APFloat::IEEEsingle(), true, false, 0xae72));
-  ASSERT_EQ(0x7fbfae72, nanbits(APFloat::IEEEsingle(), true, false, 0xffffae72));
+  const struct {
+    uint64_t expected;
+    const fltSemantics &semantics;
+    bool SNaN;
+    bool Negative;
+    uint64_t payload;
+  } tests[] = {
+    /*             expected              semantics   SNaN    Neg                payload */
+    {         0x7fc00000ULL, APFloat::IEEEsingle(), false, false,         0x00000000ULL },
+    {         0xffc00000ULL, APFloat::IEEEsingle(), false,  true,         0x00000000ULL },
+    {         0x7fc0ae72ULL, APFloat::IEEEsingle(), false, false,         0x0000ae72ULL },
+    {         0x7fffae72ULL, APFloat::IEEEsingle(), false, false,         0xffffae72ULL },
+    {         0x7fdaae72ULL, APFloat::IEEEsingle(), false, false,         0x00daae72ULL },
+    {         0x7fa00000ULL, APFloat::IEEEsingle(),  true, false,         0x00000000ULL },
+    {         0xffa00000ULL, APFloat::IEEEsingle(),  true,  true,         0x00000000ULL },
+    {         0x7f80ae72ULL, APFloat::IEEEsingle(),  true, false,         0x0000ae72ULL },
+    {         0x7fbfae72ULL, APFloat::IEEEsingle(),  true, false,         0xffffae72ULL },
+    {         0x7f9aae72ULL, APFloat::IEEEsingle(),  true, false,         0x001aae72ULL },
+    { 0x7ff8000000000000ULL, APFloat::IEEEdouble(), false, false, 0x0000000000000000ULL },
+    { 0xfff8000000000000ULL, APFloat::IEEEdouble(), false,  true, 0x0000000000000000ULL },
+    { 0x7ff800000000ae72ULL, APFloat::IEEEdouble(), false, false, 0x000000000000ae72ULL },
+    { 0x7fffffffffffae72ULL, APFloat::IEEEdouble(), false, false, 0xffffffffffffae72ULL },
+    { 0x7ffdaaaaaaaaae72ULL, APFloat::IEEEdouble(), false, false, 0x000daaaaaaaaae72ULL },
+    { 0x7ff4000000000000ULL, APFloat::IEEEdouble(),  true, false, 0x0000000000000000ULL },
+    { 0xfff4000000000000ULL, APFloat::IEEEdouble(),  true,  true, 0x0000000000000000ULL },
+    { 0x7ff000000000ae72ULL, APFloat::IEEEdouble(),  true, false, 0x000000000000ae72ULL },
+    { 0x7ff7ffffffffae72ULL, APFloat::IEEEdouble(),  true, false, 0xffffffffffffae72ULL },
+    { 0x7ff1aaaaaaaaae72ULL, APFloat::IEEEdouble(),  true, false, 0x0001aaaaaaaaae72ULL },
+  };
 
-  ASSERT_EQ(0x7ff8000000000000ULL, nanbits(APFloat::IEEEdouble(), false, false, 0));
-  ASSERT_EQ(0xfff8000000000000ULL, nanbits(APFloat::IEEEdouble(), false, true, 0));
-  ASSERT_EQ(0x7ff800000000ae72ULL, nanbits(APFloat::IEEEdouble(), false, false, 0xae72));
-  ASSERT_EQ(0x7fffffffffffae72ULL, nanbits(APFloat::IEEEdouble(), false, false, 0xffffffffffffae72ULL));
-  ASSERT_EQ(0x7ff4000000000000ULL, nanbits(APFloat::IEEEdouble(), true, false, 0));
-  ASSERT_EQ(0xfff4000000000000ULL, nanbits(APFloat::IEEEdouble(), true, true, 0));
-  ASSERT_EQ(0x7ff000000000ae72ULL, nanbits(APFloat::IEEEdouble(), true, false, 0xae72));
-  ASSERT_EQ(0x7ff7ffffffffae72ULL, nanbits(APFloat::IEEEdouble(), true, false, 0xffffffffffffae72ULL));
+  for (const auto &t : tests) {
+    ASSERT_EQ(t.expected, nanbitsFromAPInt(t.semantics, t.SNaN, t.Negative, t.payload));
+  }
 }
 
 #ifdef GTEST_HAS_DEATH_TEST

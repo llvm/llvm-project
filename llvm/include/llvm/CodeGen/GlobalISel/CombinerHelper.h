@@ -1,4 +1,4 @@
-//== llvm/CodeGen/GlobalISel/CombinerHelper.h -------------- -*- C++ -*-==//
+//===-- llvm/CodeGen/GlobalISel/CombinerHelper.h --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,21 +20,27 @@
 
 namespace llvm {
 
-class CombinerChangeObserver;
+class GISelChangeObserver;
 class MachineIRBuilder;
 class MachineRegisterInfo;
 class MachineInstr;
+class MachineOperand;
 
 class CombinerHelper {
   MachineIRBuilder &Builder;
   MachineRegisterInfo &MRI;
-  CombinerChangeObserver &Observer;
-
-  void eraseInstr(MachineInstr &MI);
-  void scheduleForVisit(MachineInstr &MI);
+  GISelChangeObserver &Observer;
 
 public:
-  CombinerHelper(CombinerChangeObserver &Observer, MachineIRBuilder &B);
+  CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B);
+
+  /// MachineRegisterInfo::replaceRegWith() and inform the observer of the changes
+  void replaceRegWith(MachineRegisterInfo &MRI, unsigned FromReg, unsigned ToReg) const;
+
+  /// Replace a single register operand with a new register and inform the
+  /// observer of the changes.
+  void replaceRegOpWith(MachineRegisterInfo &MRI, MachineOperand &FromRegOp,
+                        unsigned ToReg) const;
 
   /// If \p MI is COPY, try to combine it.
   /// Returns true if MI changed.

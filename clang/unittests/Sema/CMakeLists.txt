@@ -14,5 +14,6 @@ target_link_libraries(SemaTests
   clangFrontend
   clangParse
   clangSema
+  clangSerialization
   clangTooling
   )

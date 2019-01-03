@@ -235,6 +235,10 @@ void macros() {
   // CHECK-FIXES: static constexpr auto m0 = PASSTHROUGH(1U);
   static_assert(is_same<decltype(m0), const unsigned int>::value, "");
   static_assert(m0 == 1, "");
+
+  // This location is inside a macro, no warning on that by default.
+#define MACRO 1u
+  int foo = MACRO;
 }
 
 // Check that user-defined literals do not cause any diags.

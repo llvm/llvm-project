@@ -97,6 +97,19 @@ public:
   /// Set of potential dependent memory accesses.
   typedef EquivalenceClasses<MemAccessInfo> DepCandidates;
 
+  /// Type to keep track of the status of the dependence check. The order of
+  /// the elements is important and has to be from most permissive to least
+  /// permissive.
+  enum class VectorizationSafetyStatus {
+    // Can vectorize safely without RT checks. All dependences are known to be
+    // safe.
+    Safe,
+    // Can possibly vectorize with RT checks to overcome unknown dependencies.
+    PossiblySafeWithRtChecks,
+    // Cannot vectorize due to known unsafe dependencies.
+    Unsafe,
+  };
+
   /// Dependece between memory access instructions.
   struct Dependence {
     /// The type of the dependence.
@@ -146,7 +159,7 @@ public:
     Instruction *getDestination(const LoopAccessInfo &LAI) const;
 
     /// Dependence types that don't prevent vectorization.
-    static bool isSafeForVectorization(DepType Type);
+    static VectorizationSafetyStatus isSafeForVectorization(DepType Type);
 
     /// Lexically forward dependence.
     bool isForward() const;
@@ -164,8 +177,8 @@ public:
 
   MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L)
       : PSE(PSE), InnermostLoop(L), AccessIdx(0), MaxSafeRegisterWidth(-1U),
-        ShouldRetryWithRuntimeCheck(false), SafeForVectorization(true),
-        RecordDependences(true) {}
+        FoundNonConstantDistanceDependence(false),
+        Status(VectorizationSafetyStatus::Safe), RecordDependences(true) {}
 
   /// Register the location (instructions are given increasing numbers)
   /// of a write access.
@@ -193,7 +206,9 @@ public:
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
-  bool isSafeForVectorization() const { return SafeForVectorization; }
+  bool isSafeForVectorization() const {
+    return Status == VectorizationSafetyStatus::Safe;
+  }
 
   /// The maximum number of bytes of a vector register we can vectorize
   /// the accesses safely with.
@@ -205,7 +220,10 @@ public:
 
   /// In same cases when the dependency check fails we can still
   /// vectorize the loop with a dynamic array access check.
-  bool shouldRetryWithRuntimeCheck() { return ShouldRetryWithRuntimeCheck; }
+  bool shouldRetryWithRuntimeCheck() const {
+    return FoundNonConstantDistanceDependence &&
+           Status == VectorizationSafetyStatus::PossiblySafeWithRtChecks;
+  }
 
   /// Returns the memory dependences.  If null is returned we exceeded
   /// the MaxDependences threshold and this information is not
@@ -267,11 +285,12 @@ private:
 
   /// If we see a non-constant dependence distance we can still try to
   /// vectorize this loop with runtime checks.
-  bool ShouldRetryWithRuntimeCheck;
+  bool FoundNonConstantDistanceDependence;
 
-  /// No memory dependence was encountered that would inhibit
-  /// vectorization.
-  bool SafeForVectorization;
+  /// Result of the dependence checks, indicating whether the checked
+  /// dependences are safe for vectorization, require RT checks or are known to
+  /// be unsafe.
+  VectorizationSafetyStatus Status;
 
   //// True if Dependences reflects the dependences in the
   //// loop.  If false we exceeded MaxDependences and
@@ -304,6 +323,11 @@ private:
   /// \return false if we shouldn't vectorize at all or avoid larger
   /// vectorization factors by limiting MaxSafeDepDistBytes.
   bool couldPreventStoreLoadForward(uint64_t Distance, uint64_t TypeByteSize);
+
+  /// Updates the current safety status with \p S. We can go from Safe to
+  /// either PossiblySafeWithRtChecks or Unsafe and from
+  /// PossiblySafeWithRtChecks to Unsafe.
+  void mergeInStatus(VectorizationSafetyStatus S);
 };
 
 /// Holds information about the memory runtime legality checks to verify

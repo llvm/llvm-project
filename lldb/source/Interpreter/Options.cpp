@@ -457,7 +457,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
         }
       }
 
-      if (options.empty() == false) {
+      if (!options.empty()) {
         // We have some required options with no arguments
         strm.PutCString(" -");
         for (i = 0; i < 2; ++i)
@@ -476,14 +476,14 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
         if (def.usage_mask & opt_set_mask && isprint8(def.short_option)) {
           // Add current option to the end of out_stream.
 
-          if (def.required == false &&
+          if (!def.required &&
               def.option_has_arg == OptionParser::eNoArgument) {
             options.insert(def.short_option);
           }
         }
       }
 
-      if (options.empty() == false) {
+      if (!options.empty()) {
         // We have some required options with no arguments
         strm.PutCString(" [-");
         for (i = 0; i < 2; ++i)

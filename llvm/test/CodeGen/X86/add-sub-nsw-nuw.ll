@@ -9,7 +9,7 @@ define i8 @PR30841(i64 %argc) {
 ; CHECK-LABEL: PR30841:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    negb %al
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retl
 entry:

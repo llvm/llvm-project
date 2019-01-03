@@ -42,7 +42,8 @@
 #define DEBUGSERVER_BASENAME "lldb-server"
 #endif
 
-#if defined(HAVE_LIBCOMPRESSION)
+#if defined(__APPLE__)
+#define HAVE_LIBCOMPRESSION
 #include <compression.h>
 #endif
 
@@ -67,7 +68,9 @@ GDBRemoteCommunication::GDBRemoteCommunication(const char *comm_name,
 #endif
       m_echo_number(0), m_supports_qEcho(eLazyBoolCalculate), m_history(512),
       m_send_acks(true), m_compression_type(CompressionType::None),
-      m_listen_url() {
+      m_listen_url(), m_decompression_scratch_type(CompressionType::None),
+      m_decompression_scratch(nullptr)
+{ 
 }
 
 //----------------------------------------------------------------------
@@ -77,6 +80,9 @@ GDBRemoteCommunication::~GDBRemoteCommunication() {
   if (IsConnected()) {
     Disconnect();
   }
+
+  if (m_decompression_scratch)
+    free (m_decompression_scratch);
 
   // Stop the communications read thread which is used to parse all incoming
   // packets.  This function will block until the read thread returns.
@@ -532,7 +538,7 @@ bool GDBRemoteCommunication::DecompressPacket() {
   size_t decompressed_bytes = 0;
 
   if (decompressed_bufsize != ULONG_MAX) {
-    decompressed_buffer = (uint8_t *)malloc(decompressed_bufsize + 1);
+    decompressed_buffer = (uint8_t *)malloc(decompressed_bufsize);
     if (decompressed_buffer == nullptr) {
       m_bytes.erase(0, size_of_first_packet);
       return false;
@@ -540,11 +546,10 @@ bool GDBRemoteCommunication::DecompressPacket() {
   }
 
 #if defined(HAVE_LIBCOMPRESSION)
-  // libcompression is weak linked so check that compression_decode_buffer() is
-  // available
   if (m_compression_type == CompressionType::ZlibDeflate ||
       m_compression_type == CompressionType::LZFSE ||
-      m_compression_type == CompressionType::LZ4) {
+      m_compression_type == CompressionType::LZ4 || 
+      m_compression_type == CompressionType::LZMA) {
     compression_algorithm compression_type;
     if (m_compression_type == CompressionType::LZFSE)
       compression_type = COMPRESSION_LZFSE;
@@ -555,16 +560,33 @@ bool GDBRemoteCommunication::DecompressPacket() {
     else if (m_compression_type == CompressionType::LZMA)
       compression_type = COMPRESSION_LZMA;
 
-    // If we have the expected size of the decompressed payload, we can
-    // allocate the right-sized buffer and do it.  If we don't have that
-    // information, we'll need to try decoding into a big buffer and if the
-    // buffer wasn't big enough, increase it and try again.
+    if (m_decompression_scratch_type != m_compression_type) {
+      if (m_decompression_scratch) {
+        free (m_decompression_scratch);
+        m_decompression_scratch = nullptr;
+      }
+      size_t scratchbuf_size = 0;
+      if (m_compression_type == CompressionType::LZFSE)
+        scratchbuf_size = compression_decode_scratch_buffer_size (COMPRESSION_LZFSE);
+      else if (m_compression_type == CompressionType::LZ4)
+        scratchbuf_size = compression_decode_scratch_buffer_size (COMPRESSION_LZ4_RAW);
+      else if (m_compression_type == CompressionType::ZlibDeflate)
+        scratchbuf_size = compression_decode_scratch_buffer_size (COMPRESSION_ZLIB);
+      else if (m_compression_type == CompressionType::LZMA)
+        scratchbuf_size = compression_decode_scratch_buffer_size (COMPRESSION_LZMA);
+      else if (m_compression_type == CompressionType::LZFSE)
+        scratchbuf_size = compression_decode_scratch_buffer_size (COMPRESSION_LZFSE);
+      if (scratchbuf_size > 0) {
+        m_decompression_scratch = (void*) malloc (scratchbuf_size);
+        m_decompression_scratch_type = m_compression_type;
+      }
+    }
 
     if (decompressed_bufsize != ULONG_MAX && decompressed_buffer != nullptr) {
       decompressed_bytes = compression_decode_buffer(
-          decompressed_buffer, decompressed_bufsize + 10,
-          (uint8_t *)unescaped_content.data(), unescaped_content.size(), NULL,
-          compression_type);
+          decompressed_buffer, decompressed_bufsize,
+          (uint8_t *)unescaped_content.data(), unescaped_content.size(), 
+          m_decompression_scratch, compression_type);
     }
   }
 #endif
@@ -656,7 +678,7 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
     // Size of packet before it is decompressed, for logging purposes
     size_t original_packet_size = m_bytes.size();
     if (CompressionIsEnabled()) {
-      if (DecompressPacket() == false) {
+      if (!DecompressPacket()) {
         packet.Clear();
         return GDBRemoteCommunication::PacketType::Standard;
       }
@@ -1011,7 +1033,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
       debugserver_args.AppendArgument(llvm::StringRef("--setsid"));
     }
 
-    llvm::SmallString<PATH_MAX> named_pipe_path;
+    llvm::SmallString<128> named_pipe_path;
     // socket_pipe is used by debug server to communicate back either
     // TCP port or domain socket name which it listens on.
     // The second purpose of the pipe to serve as a synchronization point -

@@ -353,7 +353,7 @@ public:
       if (VD->isLocalVarDeclOrParm())
         continue;
 
-      DeclRefExpr DRE(const_cast<VarDecl *>(VD),
+      DeclRefExpr DRE(CGF.getContext(), const_cast<VarDecl *>(VD),
                       /*RefersToEnclosingVariableOrCapture=*/false,
                       VD->getType().getNonReferenceType(), VK_LValue,
                       C.getLocation());
@@ -3214,13 +3214,7 @@ void CGOpenMPRuntime::emitOrderedRegion(CodeGenFunction &CGF,
   emitInlinedDirective(CGF, OMPD_ordered, OrderedOpGen);
 }
 
-void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
-                                      OpenMPDirectiveKind Kind, bool EmitChecks,
-                                      bool ForceSimpleCall) {
-  if (!CGF.HaveInsertPoint())
-    return;
-  // Build call __kmpc_cancel_barrier(loc, thread_id);
-  // Build call __kmpc_barrier(loc, thread_id);
+unsigned CGOpenMPRuntime::getDefaultFlagsForBarriers(OpenMPDirectiveKind Kind) {
   unsigned Flags;
   if (Kind == OMPD_for)
     Flags = OMP_IDENT_BARRIER_IMPL_FOR;
@@ -3232,6 +3226,17 @@ void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
     Flags = OMP_IDENT_BARRIER_EXPL;
   else
     Flags = OMP_IDENT_BARRIER_IMPL;
+  return Flags;
+}
+
+void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
+                                      OpenMPDirectiveKind Kind, bool EmitChecks,
+                                      bool ForceSimpleCall) {
+  if (!CGF.HaveInsertPoint())
+    return;
+  // Build call __kmpc_cancel_barrier(loc, thread_id);
+  // Build call __kmpc_barrier(loc, thread_id);
+  unsigned Flags = getDefaultFlagsForBarriers(Kind);
   // Build call __kmpc_cancel_barrier(loc, thread_id) or __kmpc_barrier(loc,
   // thread_id);
   llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc, Flags),
@@ -6640,17 +6645,17 @@ private:
   struct MapInfo {
     OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
     OpenMPMapClauseKind MapType = OMPC_MAP_unknown;
-    OpenMPMapClauseKind MapTypeModifier = OMPC_MAP_unknown;
+    ArrayRef<OpenMPMapModifierKind> MapModifiers;
     bool ReturnDevicePointer = false;
     bool IsImplicit = false;
 
     MapInfo() = default;
     MapInfo(
         OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
-        OpenMPMapClauseKind MapType, OpenMPMapClauseKind MapTypeModifier,
+        OpenMPMapClauseKind MapType,
+        ArrayRef<OpenMPMapModifierKind> MapModifiers,
         bool ReturnDevicePointer, bool IsImplicit)
-        : Components(Components), MapType(MapType),
-          MapTypeModifier(MapTypeModifier),
+        : Components(Components), MapType(MapType), MapModifiers(MapModifiers),
           ReturnDevicePointer(ReturnDevicePointer), IsImplicit(IsImplicit) {}
   };
 
@@ -6727,10 +6732,9 @@ private:
   /// a flag marking the map as a pointer if requested. Add a flag marking the
   /// map as the first one of a series of maps that relate to the same map
   /// expression.
-  OpenMPOffloadMappingFlags getMapTypeBits(OpenMPMapClauseKind MapType,
-                                           OpenMPMapClauseKind MapTypeModifier,
-                                           bool IsImplicit, bool AddPtrFlag,
-                                           bool AddIsTargetParamFlag) const {
+  OpenMPOffloadMappingFlags getMapTypeBits(
+      OpenMPMapClauseKind MapType, ArrayRef<OpenMPMapModifierKind> MapModifiers,
+      bool IsImplicit, bool AddPtrFlag, bool AddIsTargetParamFlag) const {
     OpenMPOffloadMappingFlags Bits =
         IsImplicit ? OMP_MAP_IMPLICIT : OMP_MAP_NONE;
     switch (MapType) {
@@ -6753,7 +6757,6 @@ private:
     case OMPC_MAP_delete:
       Bits |= OMP_MAP_DELETE;
       break;
-    case OMPC_MAP_always:
     case OMPC_MAP_unknown:
       llvm_unreachable("Unexpected map type!");
     }
@@ -6761,7 +6764,8 @@ private:
       Bits |= OMP_MAP_PTR_AND_OBJ;
     if (AddIsTargetParamFlag)
       Bits |= OMP_MAP_TARGET_PARAM;
-    if (MapTypeModifier == OMPC_MAP_always)
+    if (llvm::find(MapModifiers, OMPC_MAP_MODIFIER_always)
+        != MapModifiers.end())
       Bits |= OMP_MAP_ALWAYS;
     return Bits;
   }
@@ -6810,7 +6814,8 @@ private:
   /// \a IsFirstComponent should be set to true if the provided set of
   /// components is the first associated with a capture.
   void generateInfoForComponentList(
-      OpenMPMapClauseKind MapType, OpenMPMapClauseKind MapTypeModifier,
+      OpenMPMapClauseKind MapType,
+      ArrayRef<OpenMPMapModifierKind> MapModifiers,
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
       MapBaseValuesArrayTy &BasePointers, MapValuesArrayTy &Pointers,
       MapValuesArrayTy &Sizes, MapFlagsArrayTy &Types,
@@ -6987,15 +6992,22 @@ private:
     // components.
     bool IsExpressionFirstInfo = true;
     Address BP = Address::invalid();
+    const Expr *AssocExpr = I->getAssociatedExpression();
+    const auto *AE = dyn_cast<ArraySubscriptExpr>(AssocExpr);
+    const auto *OASE = dyn_cast<OMPArraySectionExpr>(AssocExpr);
 
-    if (isa<MemberExpr>(I->getAssociatedExpression())) {
+    if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
       // to be the base of the field being mapped.
       BP = CGF.LoadCXXThisAddress();
+    } else if ((AE && isa<CXXThisExpr>(AE->getBase()->IgnoreParenImpCasts())) ||
+               (OASE &&
+                isa<CXXThisExpr>(OASE->getBase()->IgnoreParenImpCasts()))) {
+      BP = CGF.EmitOMPSharedLValue(AssocExpr).getAddress();
     } else {
       // The base is the reference to the variable.
       // BP = &Var.
-      BP = CGF.EmitOMPSharedLValue(I->getAssociatedExpression()).getAddress();
+      BP = CGF.EmitOMPSharedLValue(AssocExpr).getAddress();
       if (const auto *VD =
               dyn_cast_or_null<VarDecl>(I->getAssociatedDeclaration())) {
         if (llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
@@ -7120,7 +7132,7 @@ private:
           // Emit data for non-overlapped data.
           OpenMPOffloadMappingFlags Flags =
               OMP_MAP_MEMBER_OF |
-              getMapTypeBits(MapType, MapTypeModifier, IsImplicit,
+              getMapTypeBits(MapType, MapModifiers, IsImplicit,
                              /*AddPtrFlag=*/false,
                              /*AddIsTargetParamFlag=*/false);
           LB = BP;
@@ -7170,7 +7182,7 @@ private:
           // this map is the first one that relates with the current capture
           // (there is a set of entries for each capture).
           OpenMPOffloadMappingFlags Flags = getMapTypeBits(
-              MapType, MapTypeModifier, IsImplicit,
+              MapType, MapModifiers, IsImplicit,
               !IsExpressionFirstInfo || IsLink, IsCaptureFirstInfo && !IsLink);
 
           if (!IsExpressionFirstInfo) {
@@ -7390,28 +7402,29 @@ public:
     auto &&InfoGen = [&Info](
         const ValueDecl *D,
         OMPClauseMappableExprCommon::MappableExprComponentListRef L,
-        OpenMPMapClauseKind MapType, OpenMPMapClauseKind MapModifier,
+        OpenMPMapClauseKind MapType,
+        ArrayRef<OpenMPMapModifierKind> MapModifiers,
         bool ReturnDevicePointer, bool IsImplicit) {
       const ValueDecl *VD =
           D ? cast<ValueDecl>(D->getCanonicalDecl()) : nullptr;
-      Info[VD].emplace_back(L, MapType, MapModifier, ReturnDevicePointer,
+      Info[VD].emplace_back(L, MapType, MapModifiers, ReturnDevicePointer,
                             IsImplicit);
     };
 
     // FIXME: MSVC 2013 seems to require this-> to find member CurDir.
     for (const auto *C : this->CurDir.getClausesOfKind<OMPMapClause>())
       for (const auto &L : C->component_lists()) {
-        InfoGen(L.first, L.second, C->getMapType(), C->getMapTypeModifier(),
+        InfoGen(L.first, L.second, C->getMapType(), C->getMapTypeModifiers(),
             /*ReturnDevicePointer=*/false, C->isImplicit());
       }
     for (const auto *C : this->CurDir.getClausesOfKind<OMPToClause>())
       for (const auto &L : C->component_lists()) {
-        InfoGen(L.first, L.second, OMPC_MAP_to, OMPC_MAP_unknown,
+        InfoGen(L.first, L.second, OMPC_MAP_to, llvm::None,
             /*ReturnDevicePointer=*/false, C->isImplicit());
       }
     for (const auto *C : this->CurDir.getClausesOfKind<OMPFromClause>())
       for (const auto &L : C->component_lists()) {
-        InfoGen(L.first, L.second, OMPC_MAP_from, OMPC_MAP_unknown,
+        InfoGen(L.first, L.second, OMPC_MAP_from, llvm::None,
             /*ReturnDevicePointer=*/false, C->isImplicit());
       }
 
@@ -7464,7 +7477,7 @@ public:
           // Nonetheless, generateInfoForComponentList must be called to take
           // the pointer into account for the calculation of the range of the
           // partial struct.
-          InfoGen(nullptr, L.second, OMPC_MAP_unknown, OMPC_MAP_unknown,
+          InfoGen(nullptr, L.second, OMPC_MAP_unknown, llvm::None,
                   /*ReturnDevicePointer=*/false, C->isImplicit());
           DeferredInfo[nullptr].emplace_back(IE, VD);
         } else {
@@ -7498,7 +7511,7 @@ public:
         unsigned CurrentBasePointersIdx = CurBasePointers.size();
         // FIXME: MSVC 2013 seems to require this-> to find the member method.
         this->generateInfoForComponentList(
-            L.MapType, L.MapTypeModifier, L.Components, CurBasePointers,
+            L.MapType, L.MapModifiers, L.Components, CurBasePointers,
             CurPointers, CurSizes, CurTypes, PartialStruct,
             IsFirstComponentList, L.IsImplicit);
 
@@ -7657,7 +7670,7 @@ public:
 
     using MapData =
         std::tuple<OMPClauseMappableExprCommon::MappableExprComponentListRef,
-                   OpenMPMapClauseKind, OpenMPMapClauseKind, bool>;
+                   OpenMPMapClauseKind, ArrayRef<OpenMPMapModifierKind>, bool>;
     SmallVector<MapData, 4> DeclComponentLists;
     // FIXME: MSVC 2013 seems to require this-> to find member CurDir.
     for (const auto *C : this->CurDir.getClausesOfKind<OMPMapClause>()) {
@@ -7667,7 +7680,7 @@ public:
         assert(!L.second.empty() &&
                "Not expecting declaration with no component lists.");
         DeclComponentLists.emplace_back(L.second, C->getMapType(),
-                                        C->getMapTypeModifier(),
+                                        C->getMapTypeModifiers(),
                                         C->isImplicit());
       }
     }
@@ -7683,13 +7696,13 @@ public:
     for (const MapData &L : DeclComponentLists) {
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
       OpenMPMapClauseKind MapType;
-      OpenMPMapClauseKind MapTypeModifier;
+      ArrayRef<OpenMPMapModifierKind> MapModifiers;
       bool IsImplicit;
-      std::tie(Components, MapType, MapTypeModifier, IsImplicit) = L;
+      std::tie(Components, MapType, MapModifiers, IsImplicit) = L;
       ++Count;
       for (const MapData &L1 : makeArrayRef(DeclComponentLists).slice(Count)) {
         OMPClauseMappableExprCommon::MappableExprComponentListRef Components1;
-        std::tie(Components1, MapType, MapTypeModifier, IsImplicit) = L1;
+        std::tie(Components1, MapType, MapModifiers, IsImplicit) = L1;
         auto CI = Components.rbegin();
         auto CE = Components.rend();
         auto SI = Components1.rbegin();
@@ -7773,13 +7786,13 @@ public:
       const MapData &L = *Pair.getFirst();
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
       OpenMPMapClauseKind MapType;
-      OpenMPMapClauseKind MapTypeModifier;
+      ArrayRef<OpenMPMapModifierKind> MapModifiers;
       bool IsImplicit;
-      std::tie(Components, MapType, MapTypeModifier, IsImplicit) = L;
+      std::tie(Components, MapType, MapModifiers, IsImplicit) = L;
       ArrayRef<OMPClauseMappableExprCommon::MappableExprComponentListRef>
           OverlappedComponents = Pair.getSecond();
       bool IsFirstComponentList = true;
-      generateInfoForComponentList(MapType, MapTypeModifier, Components,
+      generateInfoForComponentList(MapType, MapModifiers, Components,
                                    BasePointers, Pointers, Sizes, Types,
                                    PartialStruct, IsFirstComponentList,
                                    IsImplicit, OverlappedComponents);
@@ -7789,12 +7802,12 @@ public:
     for (const MapData &L : DeclComponentLists) {
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
       OpenMPMapClauseKind MapType;
-      OpenMPMapClauseKind MapTypeModifier;
+      ArrayRef<OpenMPMapModifierKind> MapModifiers;
       bool IsImplicit;
-      std::tie(Components, MapType, MapTypeModifier, IsImplicit) = L;
+      std::tie(Components, MapType, MapModifiers, IsImplicit) = L;
       auto It = OverlappedData.find(&L);
       if (It == OverlappedData.end())
-        generateInfoForComponentList(MapType, MapTypeModifier, Components,
+        generateInfoForComponentList(MapType, MapModifiers, Components,
                                      BasePointers, Pointers, Sizes, Types,
                                      PartialStruct, IsFirstComponentList,
                                      IsImplicit);
@@ -7823,7 +7836,7 @@ public:
           continue;
         StructRangeInfoTy PartialStruct;
         generateInfoForComponentList(
-            C->getMapType(), C->getMapTypeModifier(), L.second, BasePointers,
+            C->getMapType(), C->getMapTypeModifiers(), L.second, BasePointers,
             Pointers, Sizes, Types, PartialStruct,
             /*IsFirstComponentList=*/true, C->isImplicit());
         assert(!PartialStruct.Base.isValid() &&

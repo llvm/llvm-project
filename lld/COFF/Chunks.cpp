@@ -619,6 +619,7 @@ uint32_t CommonChunk::getOutputCharacteristics() const {
 
 void StringChunk::writeTo(uint8_t *Buf) const {
   memcpy(Buf + OutputSectionOff, Str.data(), Str.size());
+  Buf[OutputSectionOff + Str.size()] = '\0';
 }
 
 ImportThunkChunkX64::ImportThunkChunkX64(Defined *S) : ImpSymbol(S) {

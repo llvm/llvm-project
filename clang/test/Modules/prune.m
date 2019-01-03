@@ -1,3 +1,6 @@
+// NetBSD: noatime mounts currently inhibit 'touch -a' updates
+// UNSUPPORTED: system-netbsd
+
 // Test the automatic pruning of module cache entries.
 #ifdef IMPORT_DEPENDS_ON_MODULE
 @import DependsOnModule;

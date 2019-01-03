@@ -42,6 +42,7 @@ class Semaphore {
 public:
   Semaphore(std::size_t MaxLocks);
 
+  bool try_lock();
   void lock();
   void unlock();
 
@@ -121,7 +122,11 @@ enum class ThreadPriority {
   Low = 0,
   Normal = 1,
 };
-void setThreadPriority(std::thread &T, ThreadPriority Priority);
+void setCurrentThreadPriority(ThreadPriority Priority);
+// Avoid the use of scheduler policies that may starve low-priority threads.
+// This prevents tests from timing out on loaded systems.
+// Affects subsequent setThreadPriority() calls.
+void preventThreadStarvationInTests();
 
 } // namespace clangd
 } // namespace clang

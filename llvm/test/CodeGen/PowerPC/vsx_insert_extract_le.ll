@@ -31,10 +31,10 @@ define <2 x double> @testi0(<2 x double>* %p1, double* %p2) {
 ;
 ; CHECK-P9-LABEL: testi0:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    lfd f0, 0(r4)
-; CHECK-P9-NEXT:    lxv vs1, 0(r3)
-; CHECK-P9-NEXT:    xxpermdi vs0, f0, f0, 2
-; CHECK-P9-NEXT:    xxpermdi v2, vs1, vs0, 1
+; CHECK-P9-NEXT:    lfd [[REG:f[0-9]+]], 0(r4)
+; CHECK-P9-NEXT:    lxv [[REG1:vs[0-9]+]], 0(r3)
+; CHECK-P9-NEXT:    xxpermdi [[REG2:vs[0-9]+]], [[REG]], [[REG]], 2
+; CHECK-P9-NEXT:    xxpermdi v2, [[REG1]], [[REG2]], 1
 ; CHECK-P9-NEXT:    blr
   %v = load <2 x double>, <2 x double>* %p1
   %s = load double, double* %p2
@@ -65,10 +65,10 @@ define <2 x double> @testi1(<2 x double>* %p1, double* %p2) {
 ;
 ; CHECK-P9-LABEL: testi1:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    lfd f0, 0(r4)
-; CHECK-P9-NEXT:    lxv vs1, 0(r3)
-; CHECK-P9-NEXT:    xxpermdi vs0, f0, f0, 2
-; CHECK-P9-NEXT:    xxmrgld v2, vs0, vs1
+; CHECK-P9-NEXT:    lfd [[REG:f[0-9]+]], 0(r4)
+; CHECK-P9-NEXT:    lxv [[REG1:vs[0-9]+]], 0(r3)
+; CHECK-P9-NEXT:    xxpermdi [[REG2:vs[0-9]+]], [[REG]], [[REG]], 2
+; CHECK-P9-NEXT:    xxmrgld v2, [[REG2]], [[REG1]] 
 ; CHECK-P9-NEXT:    blr
   %v = load <2 x double>, <2 x double>* %p1
   %s = load double, double* %p2

@@ -1,32 +1,9 @@
-// RUN: %check_clang_tidy %s abseil-duration-factory-scale %t
+// RUN: %check_clang_tidy %s abseil-duration-factory-scale %t -- -- -I%S/Inputs
 
-// Mimic the implementation of absl::Duration
-namespace absl {
+#include "absl/time/time.h"
 
-class Duration {};
-
-Duration Nanoseconds(long long);
-Duration Microseconds(long long);
-Duration Milliseconds(long long);
-Duration Seconds(long long);
-Duration Minutes(long long);
-Duration Hours(long long);
-
-#define GENERATE_DURATION_FACTORY_OVERLOADS(NAME) \
-  Duration NAME(float n);                         \
-  Duration NAME(double n);                        \
-  template <typename T>                           \
-  Duration NAME(T n);
-
-GENERATE_DURATION_FACTORY_OVERLOADS(Nanoseconds);
-GENERATE_DURATION_FACTORY_OVERLOADS(Microseconds);
-GENERATE_DURATION_FACTORY_OVERLOADS(Milliseconds);
-GENERATE_DURATION_FACTORY_OVERLOADS(Seconds);
-GENERATE_DURATION_FACTORY_OVERLOADS(Minutes);
-GENERATE_DURATION_FACTORY_OVERLOADS(Hours);
-#undef GENERATE_DURATION_FACTORY_OVERLOADS
-
-}  // namespace absl
+namespace std { typedef long long int64_t; }
+using int64_t = std::int64_t;
 
 void ScaleTest() {
   absl::Duration d;
@@ -54,6 +31,15 @@ void ScaleTest() {
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use ZeroDuration() for zero-length time intervals [abseil-duration-factory-scale]
   // CHECK-FIXES: absl::ZeroDuration();
   d = absl::Seconds(0x0.000001p-126f);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use ZeroDuration() for zero-length time intervals [abseil-duration-factory-scale]
+  // CHECK-FIXES: absl::ZeroDuration();
+  d = absl::Seconds(int{0});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use ZeroDuration() for zero-length time intervals [abseil-duration-factory-scale]
+  // CHECK-FIXES: absl::ZeroDuration();
+  d = absl::Seconds(int64_t{0});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use ZeroDuration() for zero-length time intervals [abseil-duration-factory-scale]
+  // CHECK-FIXES: absl::ZeroDuration();
+  d = absl::Seconds(float{0});
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use ZeroDuration() for zero-length time intervals [abseil-duration-factory-scale]
   // CHECK-FIXES: absl::ZeroDuration();
 
@@ -109,6 +95,8 @@ void ScaleTest() {
 
   // None of these should trigger the check
   d = absl::Seconds(60);
+  d = absl::Seconds(int{60});
+  d = absl::Seconds(float{60});
   d = absl::Seconds(60 + 30);
   d = absl::Seconds(60 - 30);
   d = absl::Seconds(50 * 30);

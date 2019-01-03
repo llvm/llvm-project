@@ -6,8 +6,8 @@ target triple = "i686--windows-msvc19.11.0"
 %0 = type opaque
 
 declare i32 @__CxxFrameHandler3(...)
-declare dllimport void @objc_release(i8*) local_unnamed_addr
-declare dllimport i8* @objc_retain(i8* returned) local_unnamed_addr
+declare dllimport void @llvm.objc.release(i8*) local_unnamed_addr
+declare dllimport i8* @llvm.objc.retain(i8* returned) local_unnamed_addr
 
 @p = global i8* null, align 4
 
@@ -17,7 +17,7 @@ define void @g() local_unnamed_addr personality i8* bitcast (i32 (...)* @__CxxFr
 entry:
   %tmp = load i8*, i8** @p, align 4
   %cast = bitcast i8* %tmp to %0*
-  %tmp1 = tail call i8* @objc_retain(i8* %tmp) #0
+  %tmp1 = tail call i8* @llvm.objc.retain(i8* %tmp) #0
   ; Split the basic block to ensure bitcast ends up in entry.split.
   br label %entry.split
 
@@ -43,8 +43,8 @@ catch1:
 invoke.cont:
   %tmp6 = load i8*, i8** @p, align 4
   %cast1 = bitcast i8* %tmp6 to %0*
-  %tmp7 = tail call i8* @objc_retain(i8* %tmp6) #0
-  call void @objc_release(i8* %tmp) #0, !clang.imprecise_release !0
+  %tmp7 = tail call i8* @llvm.objc.retain(i8* %tmp6) #0
+  call void @llvm.objc.release(i8* %tmp) #0, !clang.imprecise_release !0
   ; Split the basic block to ensure bitcast ends up in invoke.cont.split.
   br label %invoke.cont.split
 
@@ -59,7 +59,7 @@ ehcleanup:
   %tmp8 = phi %0* [ %cast, %catch.dispatch1 ], [ %cast1, %invoke.cont.split ]
   %tmp9 = cleanuppad within none []
   %tmp10 = bitcast %0* %tmp8 to i8*
-  call void @objc_release(i8* %tmp10) #0 [ "funclet"(token %tmp9) ]
+  call void @llvm.objc.release(i8* %tmp10) #0 [ "funclet"(token %tmp9) ]
   cleanupret from %tmp9 unwind to caller
 }
 

@@ -352,7 +352,11 @@ public:
         continue;
       PreservedAnalyses PassPA = Pass.run(*L, LAM, LAR, Updater);
 
-      PI.runAfterPass<Loop>(Pass, *L);
+      // Do not pass deleted Loop into the instrumentation.
+      if (Updater.skipCurrentLoop())
+        PI.runAfterPassInvalidated<Loop>(Pass);
+      else
+        PI.runAfterPass<Loop>(Pass, *L);
 
       // FIXME: We should verify the set of analyses relevant to Loop passes
       // are preserved.

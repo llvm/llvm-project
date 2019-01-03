@@ -30,6 +30,8 @@ __cpp_lib_bit_cast                          201806L <bit>
 __cpp_lib_bool_constant                     201505L <type_traits>
 __cpp_lib_boyer_moore_searcher              201603L <functional>
 __cpp_lib_byte                              201603L <cstddef>
+__cpp_lib_char8_t                           201811L <atomic> <filesystem> <istream> <limits>
+                                                    <locale> <ostream> <string> <string_view>
 __cpp_lib_chrono                            201611L <chrono>
 __cpp_lib_chrono_udls                       201304L <chrono>
 __cpp_lib_clamp                             201603L <algorithm>
@@ -37,6 +39,9 @@ __cpp_lib_complex_udls                      201309L <complex>
 __cpp_lib_concepts                          201806L <concepts>
 __cpp_lib_constexpr_swap_algorithms         201806L <algorithm>
 __cpp_lib_enable_shared_from_this           201603L <memory>
+__cpp_lib_erase_if                          201811L <string> <deque> <forward_list> <list> 
+                                                    <vector> <map> <set> <unordered_map> 
+                                                    <unordered_set>
 __cpp_lib_exchange_function                 201304L <utility>
 __cpp_lib_execution                         201603L <execution>
 __cpp_lib_filesystem                        201703L <filesystem>
@@ -114,6 +119,10 @@ __cpp_lib_void_t                            201411L <type_traits>
 #endif
 
 #if _LIBCPP_STD_VER > 17
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+# define __cpp_lib_char8_t                              201811L
+#endif
+#define  __cpp_lib_erase_if                             201811L
 #endif
 
 #endif  // _LIBCPP_VERSIONH

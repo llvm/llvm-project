@@ -8,8 +8,8 @@ typedef __weak id weak_id;
 void test_new(id invalue) {
   // CHECK: [[INVALUEADDR:%.*]] = alloca i8*
   // UNOPT-NEXT: store i8* null, i8** [[INVALUEADDR]]
-  // UNOPT-NEXT: call void @objc_storeStrong(i8** [[INVALUEADDR]], i8* [[INVALUE:%.*]])
-  // OPT-NEXT: [[T0:%.*]] = call i8* @objc_retain(i8* [[INVALUE:%.*]])
+  // UNOPT-NEXT: call void @llvm.objc.storeStrong(i8** [[INVALUEADDR]], i8* [[INVALUE:%.*]])
+  // OPT-NEXT: [[T0:%.*]] = call i8* @llvm.objc.retain(i8* [[INVALUE:%.*]])
   // OPT-NEXT: store i8* [[T0]], i8** [[INVALUEADDR]]
 
   // CHECK: call i8* @_Znwm
@@ -19,7 +19,7 @@ void test_new(id invalue) {
   // CHECK: call i8* @_Znwm
   // CHECK-NEXT: {{bitcast i8\*.*to i8\*\*}}
   // UNOPT-NEXT: store i8* null, i8**
-  // OPT-NEXT: call i8* @objc_initWeak(i8** {{.*}}, i8* null)
+  // OPT-NEXT: call i8* @llvm.objc.initWeak(i8** {{.*}}, i8* null)
   new weak_id;
 
   // CHECK: call i8* @_Znwm
@@ -29,20 +29,20 @@ void test_new(id invalue) {
   // CHECK: call i8* @_Znwm
   // CHECK-NEXT: {{bitcast i8\*.*to i8\*\*}}
   // UNOPT-NEXT: store i8* null, i8**
-  // OPT-NEXT: call i8* @objc_initWeak(i8** {{.*}}, i8* null)
+  // OPT-NEXT: call i8* @llvm.objc.initWeak(i8** {{.*}}, i8* null)
   new __weak id;
 
   // CHECK: call i8* @_Znwm
-  // CHECK: call i8* @objc_retain
+  // CHECK: call i8* @llvm.objc.retain
   // CHECK: store i8*
   new __strong id(invalue);
 
   // CHECK: call i8* @_Znwm
-  // CHECK: call i8* @objc_initWeak
+  // CHECK: call i8* @llvm.objc.initWeak
   new __weak id(invalue);
 
-  // UNOPT: call void @objc_storeStrong
-  // OPT: call void @objc_release
+  // UNOPT: call void @llvm.objc.storeStrong
+  // OPT: call void @llvm.objc.release
   // CHECK: ret void
 }
 
@@ -63,13 +63,13 @@ void test_array_new() {
 // CHECK-LABEL: define void @_Z11test_deletePU8__strongP11objc_objectPU6__weakS0_
 void test_delete(__strong id *sptr, __weak id *wptr) {
   // CHECK: br i1
-  // UNOPT: call void @objc_storeStrong(i8** {{.*}}, i8* null)
+  // UNOPT: call void @llvm.objc.storeStrong(i8** {{.*}}, i8* null)
   // OPT: load i8*, i8**
-  // OPT-NEXT: call void @objc_release
+  // OPT-NEXT: call void @llvm.objc.release
   // CHECK: call void @_ZdlPv
   delete sptr;
 
-  // CHECK: call void @objc_destroyWeak
+  // CHECK: call void @llvm.objc.destroyWeak
   // CHECK: call void @_ZdlPv
   delete wptr;
 
@@ -84,9 +84,9 @@ void test_array_delete(__strong id *sptr, __weak id *wptr) {
   // CHECK-NEXT: icmp eq i8** [[BEGIN]], [[END]]
   // CHECK: [[PAST:%.*]] = phi i8** [ [[END]], {{%.*}} ], [ [[CUR:%.*]],
   // CHECK-NEXT: [[CUR]] = getelementptr inbounds i8*, i8** [[PAST]], i64 -1
-  // UNOPT-NEXT: call void @objc_storeStrong(i8** [[CUR]], i8* null)
+  // UNOPT-NEXT: call void @llvm.objc.storeStrong(i8** [[CUR]], i8* null)
   // OPT-NEXT: [[T0:%.*]] = load i8*, i8** [[CUR]]
-  // OPT-NEXT: objc_release(i8* [[T0]])
+  // OPT-NEXT: llvm.objc.release(i8* [[T0]])
   // CHECK-NEXT: icmp eq i8** [[CUR]], [[BEGIN]]
   // CHECK: call void @_ZdaPv
   delete [] sptr;
@@ -97,7 +97,7 @@ void test_array_delete(__strong id *sptr, __weak id *wptr) {
   // CHECK-NEXT: icmp eq i8** [[BEGIN]], [[END]]
   // CHECK: [[PAST:%.*]] = phi i8** [ [[END]], {{%.*}} ], [ [[CUR:%.*]],
   // CHECK-NEXT: [[CUR]] = getelementptr inbounds i8*, i8** [[PAST]], i64 -1
-  // CHECK-NEXT: call void @objc_destroyWeak(i8** [[CUR]])
+  // CHECK-NEXT: call void @llvm.objc.destroyWeak(i8** [[CUR]])
   // CHECK-NEXT: icmp eq i8** [[CUR]], [[BEGIN]]
   // CHECK: call void @_ZdaPv
   delete [] wptr;

@@ -103,8 +103,8 @@ public:
   /// Currently the TableGen-like file would look like:
   /// \code
   /// PartialMapping[] = {
-  /// /*32-bit add*/ {0, 32, GPR},
-  /// /*2x32-bit add*/ {0, 32, GPR}, {0, 32, GPR}, // <-- Same entry 3x
+  /// /*32-bit add*/    {0, 32, GPR}, // Scalar entry repeated for first vec elt.
+  /// /*2x32-bit add*/  {0, 32, GPR}, {32, 32, GPR},
   /// /*<2x32-bit> vadd {0, 64, VPR}
   /// }; // PartialMapping duplicated.
   ///
@@ -118,14 +118,15 @@ public:
   /// With the array of pointer, we would have:
   /// \code
   /// PartialMapping[] = {
-  /// /*32-bit add*/ {0, 32, GPR},
+  /// /*32-bit add lower */ {0, 32, GPR},
+  /// /*32-bit add upper */ {32, 32, GPR},
   /// /*<2x32-bit> vadd {0, 64, VPR}
   /// }; // No more duplication.
   ///
   /// BreakDowns[] = {
   /// /*AddBreakDown*/ &PartialMapping[0],
-  /// /*2xAddBreakDown*/ &PartialMapping[0], &PartialMapping[0],
-  /// /*VAddBreakDown*/ &PartialMapping[1]
+  /// /*2xAddBreakDown*/ &PartialMapping[0], &PartialMapping[1],
+  /// /*VAddBreakDown*/ &PartialMapping[2]
   /// }; // Addresses of PartialMapping duplicated (smaller).
   ///
   /// ValueMapping[] {

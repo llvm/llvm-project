@@ -75,7 +75,7 @@ uint32_t SBDeclaration::GetLine() const {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   uint32_t line = 0;
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     line = m_opaque_ap->GetLine();
 
   if (log)
@@ -86,7 +86,7 @@ uint32_t SBDeclaration::GetLine() const {
 }
 
 uint32_t SBDeclaration::GetColumn() const {
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     return m_opaque_ap->GetColumn();
   return 0;
 }
@@ -126,7 +126,7 @@ const lldb_private::Declaration *SBDeclaration::operator->() const {
 }
 
 lldb_private::Declaration &SBDeclaration::ref() {
-  if (m_opaque_ap.get() == NULL)
+  if (m_opaque_ap == NULL)
     m_opaque_ap.reset(new lldb_private::Declaration());
   return *m_opaque_ap;
 }
@@ -138,7 +138,7 @@ const lldb_private::Declaration &SBDeclaration::ref() const {
 bool SBDeclaration::GetDescription(SBStream &description) {
   Stream &strm = description.ref();
 
-  if (m_opaque_ap.get()) {
+  if (m_opaque_ap) {
     char file_path[PATH_MAX * 2];
     m_opaque_ap->GetFile().GetPath(file_path, sizeof(file_path));
     strm.Printf("%s:%u", file_path, GetLine());

@@ -1,5 +1,8 @@
 # RUN: llvm-mc -show-encoding -triple=wasm32-unkown-unknown -mattr=+sign-ext,+simd128 < %s | FileCheck %s
 
+main:
+    .functype main () -> ()
+
     # CHECK: v128.load 48:p2align=0 # encoding: [0xfd,0x00,0x00,0x30]
     v128.load 48
 

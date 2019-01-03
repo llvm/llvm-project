@@ -57,6 +57,14 @@ namespace opts {
                    "--section-groups and --elf-hash-histogram."));
   cl::alias AllShort("a", cl::desc("Alias for --all"), cl::aliasopt(All));
 
+  // --headers -e
+  cl::opt<bool>
+      Headers("headers",
+          cl::desc("Equivalent to setting: --file-headers, --program-headers, "
+                   "--section-headers"));
+  cl::alias HeadersShort("e", cl::desc("Alias for --headers"),
+     cl::aliasopt(Headers));
+
   // -wide, -W
   cl::opt<bool>
       WideOutput("wide", cl::desc("Ignored for compatibility with GNU readelf"),
@@ -666,8 +674,14 @@ int main(int argc, const char *argv[]) {
     opts::HashHistogram = true;
   }
 
+  if (opts::Headers) {
+    opts::FileHeaders = true;
+    opts::ProgramHeaders = true;
+    opts::SectionHeaders = true;
+  }
+
   // Default to stdin if no filename is specified.
-  if (opts::InputFilenames.size() == 0)
+  if (opts::InputFilenames.empty())
     opts::InputFilenames.push_back("-");
 
   llvm::for_each(opts::InputFilenames, dumpInput);

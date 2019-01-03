@@ -14,8 +14,8 @@
 #ifndef LLVM_LIB_CODEGEN_ASMPRINTER_EHSTREAMER_H
 #define LLVM_LIB_CODEGEN_ASMPRINTER_EHSTREAMER_H
 
-#include "AsmPrinterHandler.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {

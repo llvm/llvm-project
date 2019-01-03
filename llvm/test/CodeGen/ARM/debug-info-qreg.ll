@@ -17,12 +17,12 @@ target triple = "thumbv7-apple-macosx10.6.7"
 
 declare <4 x float> @test0001(float) nounwind readnone ssp
 
-define i32 @main(i32 %argc, i8** nocapture %argv, <4 x float> %x) nounwind ssp !dbg !10 {
+define i32 @main(i32 %argc, i8** nocapture %argv, <4 x float> %x, <4 x float> %y) nounwind ssp !dbg !10 {
 entry:
   br label %for.body9
 
 for.body9:                                        ; preds = %for.body9, %entry
-  %add19 = fadd <4 x float> %x, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 1.000000e+00>, !dbg !39
+  %add19 = fadd <4 x float> %x, %y, !dbg !39
   br i1 undef, label %for.end54, label %for.body9, !dbg !44
 
 for.end54:                                        ; preds = %for.body9

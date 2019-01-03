@@ -1547,9 +1547,9 @@ static Instruction *factorizeMinMaxTree(SelectPatternFlavor SPF, Value *LHS,
 }
 
 /// Try to reduce a rotate pattern that includes a compare and select into a
-/// sequence of ALU ops only. Example:
+/// funnel shift intrinsic. Example:
 /// rotl32(a, b) --> (b == 0 ? a : ((a >> (32 - b)) | (a << b)))
-///              --> (a >> (-b & 31)) | (a << (b & 31))
+///              --> call llvm.fshl.i32(a, a, b)
 static Instruction *foldSelectRotate(SelectInst &Sel,
                                      InstCombiner::BuilderTy &Builder) {
   // The false value of the select must be a rotate of the true value.
@@ -1593,17 +1593,12 @@ static Instruction *foldSelectRotate(SelectInst &Sel,
     return nullptr;
 
   // This is a rotate that avoids shift-by-bitwidth UB in a suboptimal way.
-  // Convert to safely bitmasked shifts.
-  // TODO: When we can canonicalize to funnel shift intrinsics without risk of
-  // performance regressions, replace this sequence with that call.
-  Value *NegShAmt = Builder.CreateNeg(ShAmt);
-  Value *MaskedShAmt = Builder.CreateAnd(ShAmt, Width - 1);
-  Value *MaskedNegShAmt = Builder.CreateAnd(NegShAmt, Width - 1);
-  Value *NewSA0 = ShAmt == SA0 ? MaskedShAmt : MaskedNegShAmt;
-  Value *NewSA1 = ShAmt == SA1 ? MaskedShAmt : MaskedNegShAmt;
-  Value *NewSh0 = Builder.CreateBinOp(ShiftOpcode0, TVal, NewSA0);
-  Value *NewSh1 = Builder.CreateBinOp(ShiftOpcode1, TVal, NewSA1);
-  return BinaryOperator::CreateOr(NewSh0, NewSh1);
+  // Convert to funnel shift intrinsic.
+  bool IsFshl = (ShAmt == SA0 && ShiftOpcode0 == BinaryOperator::Shl) ||
+                (ShAmt == SA1 && ShiftOpcode1 == BinaryOperator::Shl);
+  Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
+  Function *F = Intrinsic::getDeclaration(Sel.getModule(), IID, Sel.getType());
+  return IntrinsicInst::Create(F, { TVal, TVal, ShAmt });
 }
 
 Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
@@ -2018,24 +2013,6 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       if (V != &SI)
         return replaceInstUsesWith(SI, V);
       return &SI;
-    }
-  }
-
-  // See if we can determine the result of this select based on a dominating
-  // condition.
-  BasicBlock *Parent = SI.getParent();
-  if (BasicBlock *Dom = Parent->getSinglePredecessor()) {
-    auto *PBI = dyn_cast_or_null<BranchInst>(Dom->getTerminator());
-    if (PBI && PBI->isConditional() &&
-        PBI->getSuccessor(0) != PBI->getSuccessor(1) &&
-        (PBI->getSuccessor(0) == Parent || PBI->getSuccessor(1) == Parent)) {
-      bool CondIsTrue = PBI->getSuccessor(0) == Parent;
-      Optional<bool> Implication = isImpliedCondition(
-          PBI->getCondition(), SI.getCondition(), DL, CondIsTrue);
-      if (Implication) {
-        Value *V = *Implication ? TrueVal : FalseVal;
-        return replaceInstUsesWith(SI, V);
-      }
     }
   }
 

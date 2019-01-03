@@ -1013,7 +1013,7 @@ IRExecutionUnit::MemoryManager::getSymbolAddress(const std::string &Name) {
           Name.c_str());
 
     m_parent.ReportSymbolLookupError(name_cs);
-    return 0xbad0bad0;
+    return 0;
   } else {
     if (log)
       log->Printf("IRExecutionUnit::getSymbolAddress(Name=\"%s\") = %" PRIx64,
@@ -1217,14 +1217,11 @@ void IRExecutionUnit::PopulateSectionList(
   }
 }
 
-bool IRExecutionUnit::GetArchitecture(lldb_private::ArchSpec &arch) {
+ArchSpec IRExecutionUnit::GetArchitecture() {
   ExecutionContext exe_ctx(GetBestExecutionContextScope());
-  Target *target = exe_ctx.GetTargetPtr();
-  if (target)
-    arch = target->GetArchitecture();
-  else
-    arch.Clear();
-  return arch.IsValid();
+  if(Target *target = exe_ctx.GetTargetPtr())
+    return target->GetArchitecture();
+  return ArchSpec();
 }
 
 lldb::ModuleSP IRExecutionUnit::GetJITModule() {

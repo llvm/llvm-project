@@ -30,16 +30,19 @@ Foo::Nested n;
 // CHECK: ![[vptr_ty]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[vshape]], size: 32
 
 // CHECK: ![[f]] = !DISubprogram(name: "f",
-// CHECK-SAME: containingType: ![[Foo]], virtuality: DW_VIRTUALITY_virtual, virtualIndex: 0,
+// CHECK-SAME: containingType: ![[Foo]], virtualIndex: 0,
 // CHECK-SAME: flags: DIFlagPrototyped | DIFlagIntroducedVirtual,
+// CHECK-SAME: spFlags: DISPFlagVirtual
 
 // CHECK: ![[g]] = !DISubprogram(name: "g",
-// CHECK-SAME: containingType: ![[Foo]], virtuality: DW_VIRTUALITY_virtual, virtualIndex: 1,
+// CHECK-SAME: containingType: ![[Foo]], virtualIndex: 1,
 // CHECK-SAME: flags: DIFlagPrototyped | DIFlagIntroducedVirtual,
+// CHECK-SAME: spFlags: DISPFlagVirtual
 
 // CHECK: ![[h]] = !DISubprogram(name: "h",
-// CHECK-SAME: containingType: ![[Foo]], virtuality: DW_VIRTUALITY_virtual, virtualIndex: 2,
+// CHECK-SAME: containingType: ![[Foo]], virtualIndex: 2,
 // CHECK-SAME: flags: DIFlagPrototyped | DIFlagIntroducedVirtual,
+// CHECK-SAME: spFlags: DISPFlagVirtual
 
 // CHECK: ![[i]] = !DISubprogram(name: "i",
 // CHECK-SAME: flags: DIFlagPrototyped | DIFlagStaticMember

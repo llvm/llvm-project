@@ -591,7 +591,7 @@ void CoreSimulatorSupport::DeviceSet::ForEach(
     std::function<bool(const Device &)> f) {
   const size_t n = GetNumDevices();
   for (NSUInteger i = 0; i < n; ++i) {
-    if (f(GetDeviceAtIndex(i)) == false)
+    if (!f(GetDeviceAtIndex(i)))
       break;
   }
 }

@@ -1,5 +1,7 @@
 ; RUN: opt -module-hash -module-summary %s -o %t.o
 ; RUN: opt -module-hash -module-summary %p/Inputs/cache.ll -o %t2.o
+; NetBSD: noatime mounts currently inhibit 'touch' from updating atime
+; UNSUPPORTED: system-netbsd
 
 ; RUN: rm -Rf %t.cache && mkdir %t.cache
 ; Create two files that would be removed by cache pruning due to age.

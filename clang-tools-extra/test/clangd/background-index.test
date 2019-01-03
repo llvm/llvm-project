@@ -10,7 +10,7 @@
 # We're editing bar.cpp, which includes foo.h.
 # foo() is declared in foo.h and defined in foo.cpp.
 # The background index should allow us to go-to-definition on foo().
-# RUN: clangd -background-index -lit-test < %t/definition.jsonrpc | FileCheck %t/definition.jsonrpc
+# RUN: clangd -background-index -background-index-rebuild-period=0 -lit-test < %t/definition.jsonrpc | FileCheck %t/definition.jsonrpc
 
 # Test that the index is writing files in the expected location.
 # RUN: ls %t/.clangd-index/foo.cpp.*.idx

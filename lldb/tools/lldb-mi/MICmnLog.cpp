@@ -209,10 +209,7 @@ bool CMICmnLog::RegisterMedium(const IMedium &vrMedium) {
 bool CMICmnLog::HaveMediumAlready(const IMedium &vrMedium) const {
   IMedium *pMedium = const_cast<IMedium *>(&vrMedium);
   const MapMediumToName_t::const_iterator it = m_mapMediumToName.find(pMedium);
-  if (it != m_mapMediumToName.end())
-    return true;
-
-  return false;
+  return it != m_mapMediumToName.end();
 }
 
 //++

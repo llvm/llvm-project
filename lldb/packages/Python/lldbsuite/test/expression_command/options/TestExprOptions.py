@@ -14,6 +14,7 @@ import os
 import time
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
@@ -61,5 +62,32 @@ class ExprOptionsTestCase(TestBase):
         # Make sure it fails if language is set to C:
         options.SetLanguage(lldb.eLanguageTypeC)
         val = frame.EvaluateExpression('foo != nullptr', options)
+        self.assertTrue(val.IsValid())
+        self.assertFalse(val.GetError().Success())
+
+    @skipIfDarwin
+    def test_expr_options_lang(self):
+        """These expression language options should work as expected."""
+        self.build()
+
+        # Set debugger into synchronous mode
+        self.dbg.SetAsync(False)
+
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, '// breakpoint_in_main', self.main_source_spec)
+
+        frame = thread.GetFrameAtIndex(0)
+        options = lldb.SBExpressionOptions()
+
+        # Make sure we can retrieve `id` variable if language is set to C++11:
+        options.SetLanguage(lldb.eLanguageTypeC_plus_plus_11)
+        val = frame.EvaluateExpression('id == 0', options)
+        self.assertTrue(val.IsValid())
+        self.assertTrue(val.GetError().Success())
+        self.DebugSBValue(val)
+
+        # Make sure we can't retrieve `id` variable if language is set to ObjC:
+        options.SetLanguage(lldb.eLanguageTypeObjC)
+        val = frame.EvaluateExpression('id == 0', options)
         self.assertTrue(val.IsValid())
         self.assertFalse(val.GetError().Success())

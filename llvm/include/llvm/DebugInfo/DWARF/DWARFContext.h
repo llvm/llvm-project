@@ -360,6 +360,10 @@ public:
   /// Dump Error as warning message to stderr.
   static void dumpWarning(Error Warning);
 
+  Triple::ArchType getArch() const {
+    return getDWARFObj().getFile()->getArch();
+  }
+
 private:
   /// Return the compile unit which contains instruction with provided
   /// address.

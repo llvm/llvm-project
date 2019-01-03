@@ -24,6 +24,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -207,8 +208,8 @@ static wasm::WasmTable readTable(WasmObjectFile::ReadContext &Ctx) {
   return Table;
 }
 
-static Error readSection(WasmSection &Section,
-                         WasmObjectFile::ReadContext &Ctx) {
+static Error readSection(WasmSection &Section, WasmObjectFile::ReadContext &Ctx,
+                         WasmSectionOrderChecker &Checker) {
   Section.Offset = Ctx.Ptr - Ctx.Start;
   Section.Type = readUint8(Ctx);
   LLVM_DEBUG(dbgs() << "readSection type=" << Section.Type << "\n");
@@ -231,6 +232,13 @@ static Error readSection(WasmSection &Section,
     Ctx.Ptr += SectionNameSize;
     Size -= SectionNameSize;
   }
+
+  if (!Checker.isValidSectionOrder(Section.Type, Section.Name)) {
+    return make_error<StringError>("Out of order section type: " +
+                                       llvm::to_string(Section.Type),
+                                   object_error::parse_failed);
+  }
+
   Section.Content = ArrayRef<uint8_t>(Ctx.Ptr, Size);
   Ctx.Ptr += Size;
   return Error::success();
@@ -265,8 +273,9 @@ WasmObjectFile::WasmObjectFile(MemoryBufferRef Buffer, Error &Err)
   }
 
   WasmSection Sec;
+  WasmSectionOrderChecker Checker;
   while (Ctx.Ptr < Ctx.End) {
-    if ((Err = readSection(Sec, Ctx)))
+    if ((Err = readSection(Sec, Ctx, Checker)))
       return;
     if ((Err = parseSection(Sec)))
       return;
@@ -319,6 +328,10 @@ Error WasmObjectFile::parseDylinkSection(ReadContext &Ctx) {
   DylinkInfo.MemoryAlignment = readVaruint32(Ctx);
   DylinkInfo.TableSize = readVaruint32(Ctx);
   DylinkInfo.TableAlignment = readVaruint32(Ctx);
+  uint32_t Count = readVaruint32(Ctx);
+  while (Count--) {
+    DylinkInfo.Needed.push_back(readString(Ctx));
+  }
   if (Ctx.Ptr != Ctx.End)
     return make_error<GenericBinaryError>("dylink section ended prematurely",
                                           object_error::parse_failed);
@@ -468,7 +481,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
 
   while (Count--) {
     wasm::WasmSymbolInfo Info;
-    const wasm::WasmSignature *FunctionType = nullptr;
+    const wasm::WasmSignature *Signature = nullptr;
     const wasm::WasmGlobalType *GlobalType = nullptr;
     const wasm::WasmEventType *EventType = nullptr;
 
@@ -486,13 +499,13 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       if (IsDefined) {
         Info.Name = readString(Ctx);
         unsigned FuncIndex = Info.ElementIndex - NumImportedFunctions;
-        FunctionType = &Signatures[FunctionTypes[FuncIndex]];
+        Signature = &Signatures[FunctionTypes[FuncIndex]];
         wasm::WasmFunction &Function = Functions[FuncIndex];
         if (Function.SymbolName.empty())
           Function.SymbolName = Info.Name;
       } else {
         wasm::WasmImport &Import = *ImportedFunctions[Info.ElementIndex];
-        FunctionType = &Signatures[Import.SigIndex];
+        Signature = &Signatures[Import.SigIndex];
         Info.Name = Import.Field;
         Info.Module = Import.Module;
       }
@@ -565,6 +578,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
         Info.Name = readString(Ctx);
         unsigned EventIndex = Info.ElementIndex - NumImportedEvents;
         wasm::WasmEvent &Event = Events[EventIndex];
+        Signature = &Signatures[Event.Type.SigIndex];
         EventType = &Event.Type;
         if (Event.SymbolName.empty())
           Event.SymbolName = Info.Name;
@@ -572,6 +586,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       } else {
         wasm::WasmImport &Import = *ImportedEvents[Info.ElementIndex];
         EventType = &Import.Event;
+        Signature = &Signatures[EventType->SigIndex];
         Info.Name = Import.Field;
       }
       break;
@@ -589,8 +604,8 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
                                                 Twine(Info.Name),
                                             object_error::parse_failed);
     LinkingData.SymbolTable.emplace_back(Info);
-    Symbols.emplace_back(LinkingData.SymbolTable.back(), FunctionType,
-                         GlobalType, EventType);
+    Symbols.emplace_back(LinkingData.SymbolTable.back(), GlobalType, EventType,
+                         Signature);
     LLVM_DEBUG(dbgs() << "Adding symbol: " << Symbols.back() << "\n");
   }
 
@@ -1403,6 +1418,8 @@ SubtargetFeatures WasmObjectFile::getFeatures() const {
 
 bool WasmObjectFile::isRelocatableObject() const { return HasLinkingSection; }
 
+bool WasmObjectFile::isSharedObject() const { return HasDylinkSection; }
+
 const WasmSection &WasmObjectFile::getWasmSection(DataRefImpl Ref) const {
   assert(Ref.d.a < Sections.size());
   return Sections[Ref.d.a];
@@ -1424,4 +1441,59 @@ WasmObjectFile::getWasmRelocation(DataRefImpl Ref) const {
   const WasmSection &Sec = Sections[Ref.d.a];
   assert(Ref.d.b < Sec.Relocations.size());
   return Sec.Relocations[Ref.d.b];
+}
+
+int WasmSectionOrderChecker::getSectionOrder(unsigned ID,
+                                             StringRef CustomSectionName) {
+  switch (ID) {
+  case wasm::WASM_SEC_CUSTOM:
+    return StringSwitch<unsigned>(CustomSectionName)
+        .Case("dylink", WASM_SEC_ORDER_DYLINK)
+        .Case("linking", WASM_SEC_ORDER_LINKING)
+        .StartsWith("reloc.", WASM_SEC_ORDER_RELOC)
+        .Case("name", WASM_SEC_ORDER_NAME)
+        .Case("producers", WASM_SEC_ORDER_PRODUCERS)
+        .Default(-1);
+  case wasm::WASM_SEC_TYPE:
+    return WASM_SEC_ORDER_TYPE;
+  case wasm::WASM_SEC_IMPORT:
+    return WASM_SEC_ORDER_IMPORT;
+  case wasm::WASM_SEC_FUNCTION:
+    return WASM_SEC_ORDER_FUNCTION;
+  case wasm::WASM_SEC_TABLE:
+    return WASM_SEC_ORDER_TABLE;
+  case wasm::WASM_SEC_MEMORY:
+    return WASM_SEC_ORDER_MEMORY;
+  case wasm::WASM_SEC_GLOBAL:
+    return WASM_SEC_ORDER_GLOBAL;
+  case wasm::WASM_SEC_EXPORT:
+    return WASM_SEC_ORDER_EXPORT;
+  case wasm::WASM_SEC_START:
+    return WASM_SEC_ORDER_START;
+  case wasm::WASM_SEC_ELEM:
+    return WASM_SEC_ORDER_ELEM;
+  case wasm::WASM_SEC_CODE:
+    return WASM_SEC_ORDER_CODE;
+  case wasm::WASM_SEC_DATA:
+    return WASM_SEC_ORDER_DATA;
+  case wasm::WASM_SEC_DATACOUNT:
+    return WASM_SEC_ORDER_DATACOUNT;
+  case wasm::WASM_SEC_EVENT:
+    return WASM_SEC_ORDER_EVENT;
+  default:
+    llvm_unreachable("invalid section");
+  }
+}
+
+bool WasmSectionOrderChecker::isValidSectionOrder(unsigned ID,
+                                                  StringRef CustomSectionName) {
+  int Order = getSectionOrder(ID, CustomSectionName);
+  if (Order == -1) // Skip unknown sections
+    return true;
+  // There can be multiple "reloc." sections. Otherwise there shouldn't be any
+  // duplicate section orders.
+  bool IsValid = (LastOrder == Order && Order == WASM_SEC_ORDER_RELOC) ||
+                 LastOrder < Order;
+  LastOrder = Order;
+  return IsValid;
 }

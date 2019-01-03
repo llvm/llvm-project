@@ -98,7 +98,8 @@ static void ImposeStackOrdering(MachineInstr *MI) {
 static void ConvertImplicitDefToConstZero(MachineInstr *MI,
                                           MachineRegisterInfo &MRI,
                                           const TargetInstrInfo *TII,
-                                          MachineFunction &MF) {
+                                          MachineFunction &MF,
+                                          LiveIntervals &LIS) {
   assert(MI->getOpcode() == TargetOpcode::IMPLICIT_DEF);
 
   const auto *RegClass = MRI.getRegClass(MI->getOperand(0).getReg());
@@ -119,10 +120,13 @@ static void ConvertImplicitDefToConstZero(MachineInstr *MI,
         Type::getDoubleTy(MF.getFunction().getContext())));
     MI->addOperand(MachineOperand::CreateFPImm(Val));
   } else if (RegClass == &WebAssembly::V128RegClass) {
-    // TODO: make splat instead of constant
-    MI->setDesc(TII->get(WebAssembly::CONST_V128_v16i8));
-    for (int I = 0; I < 16; ++I)
-      MI->addOperand(MachineOperand::CreateImm(0));
+    unsigned TempReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+    MI->setDesc(TII->get(WebAssembly::SPLAT_v4i32));
+    MI->addOperand(MachineOperand::CreateReg(TempReg, false));
+    MachineInstr *Const = BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                                  TII->get(WebAssembly::CONST_I32), TempReg)
+                              .addImm(0);
+    LIS.InsertMachineInstrInMaps(*Const);
   } else {
     llvm_unreachable("Unexpected reg class");
   }
@@ -410,7 +414,6 @@ static bool OneUseDominatesOtherUses(unsigned Reg, const MachineOperand &OneUse,
     if (UseVNI != OneUseVNI)
       continue;
 
-    const MachineInstr *OneUseInst = OneUse.getParent();
     if (UseInst == OneUseInst) {
       // Another use in the same instruction. We need to ensure that the one
       // selected use happens "before" it.
@@ -751,9 +754,9 @@ public:
 /// tried for the current instruction and didn't work.
 class CommutingState {
   /// There are effectively three states: the initial state where we haven't
-  /// started commuting anything and we don't know anything yet, the tenative
+  /// started commuting anything and we don't know anything yet, the tentative
   /// state where we've commuted the operands of the current instruction and are
-  /// revisting it, and the declined state where we've reverted the operands
+  /// revisiting it, and the declined state where we've reverted the operands
   /// back to their original order and will no longer commute it further.
   bool TentativelyCommuting;
   bool Declined;
@@ -895,7 +898,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         // to a constant 0 so that the def is explicit, and the push/pop
         // correspondence is maintained.
         if (Insert->getOpcode() == TargetOpcode::IMPLICIT_DEF)
-          ConvertImplicitDefToConstZero(Insert, MRI, TII, MF);
+          ConvertImplicitDefToConstZero(Insert, MRI, TII, MF, LIS);
 
         // We stackified an operand. Add the defining instruction's operands to
         // the worklist stack now to continue to build an ever deeper tree.

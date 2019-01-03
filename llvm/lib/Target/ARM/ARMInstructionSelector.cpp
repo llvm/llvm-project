@@ -76,6 +76,42 @@ private:
   const ARMRegisterBankInfo &RBI;
   const ARMSubtarget &STI;
 
+  // Store the opcodes that we might need, so we don't have to check what kind
+  // of subtarget (ARM vs Thumb) we have all the time.
+  struct OpcodeCache {
+    unsigned ZEXT16;
+    unsigned SEXT16;
+
+    unsigned ZEXT8;
+    unsigned SEXT8;
+
+    // Used for implementing ZEXT/SEXT from i1
+    unsigned AND;
+    unsigned RSB;
+
+    unsigned STORE32;
+    unsigned LOAD32;
+
+    unsigned STORE16;
+    unsigned LOAD16;
+
+    unsigned STORE8;
+    unsigned LOAD8;
+
+    OpcodeCache(const ARMSubtarget &STI);
+  } const Opcodes;
+
+  // Select the opcode for simple extensions (that translate to a single SXT/UXT
+  // instruction). Extension operations more complicated than that should not
+  // invoke this. Returns the original opcode if it doesn't know how to select a
+  // better one.
+  unsigned selectSimpleExtOpc(unsigned Opc, unsigned Size) const;
+
+  // Select the opcode for simple loads and stores. Returns the original opcode
+  // if it doesn't know how to select a better one.
+  unsigned selectLoadStoreOpCode(unsigned Opc, unsigned RegBank,
+                                 unsigned Size) const;
+
 #define GET_GLOBALISEL_PREDICATES_DECL
 #include "ARMGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_DECL
@@ -107,7 +143,7 @@ ARMInstructionSelector::ARMInstructionSelector(const ARMBaseTargetMachine &TM,
                                                const ARMSubtarget &STI,
                                                const ARMRegisterBankInfo &RBI)
     : InstructionSelector(), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), TM(TM), RBI(RBI), STI(STI),
+      TRI(*STI.getRegisterInfo()), TM(TM), RBI(RBI), STI(STI), Opcodes(STI),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "ARMGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT
@@ -225,41 +261,63 @@ static bool selectUnmergeValues(MachineInstrBuilder &MIB,
   return true;
 }
 
-/// Select the opcode for simple extensions (that translate to a single SXT/UXT
-/// instruction). Extension operations more complicated than that should not
-/// invoke this. Returns the original opcode if it doesn't know how to select a
-/// better one.
-static unsigned selectSimpleExtOpc(unsigned Opc, unsigned Size) {
+ARMInstructionSelector::OpcodeCache::OpcodeCache(const ARMSubtarget &STI) {
+  bool isThumb = STI.isThumb();
+
+  using namespace TargetOpcode;
+
+#define STORE_OPCODE(VAR, OPC) VAR = isThumb ? ARM::t2##OPC : ARM::OPC
+  STORE_OPCODE(SEXT16, SXTH);
+  STORE_OPCODE(ZEXT16, UXTH);
+
+  STORE_OPCODE(SEXT8, SXTB);
+  STORE_OPCODE(ZEXT8, UXTB);
+
+  STORE_OPCODE(AND, ANDri);
+  STORE_OPCODE(RSB, RSBri);
+
+  STORE_OPCODE(STORE32, STRi12);
+  STORE_OPCODE(LOAD32, LDRi12);
+
+  // LDRH/STRH are special...
+  STORE16 = isThumb ? ARM::t2STRHi12 : ARM::STRH;
+  LOAD16 = isThumb ? ARM::t2LDRHi12 : ARM::LDRH;
+
+  STORE_OPCODE(STORE8, STRBi12);
+  STORE_OPCODE(LOAD8, LDRBi12);
+#undef MAP_OPCODE
+}
+
+unsigned ARMInstructionSelector::selectSimpleExtOpc(unsigned Opc,
+                                                    unsigned Size) const {
   using namespace TargetOpcode;
 
   if (Size != 8 && Size != 16)
     return Opc;
 
   if (Opc == G_SEXT)
-    return Size == 8 ? ARM::SXTB : ARM::SXTH;
+    return Size == 8 ? Opcodes.SEXT8 : Opcodes.SEXT16;
 
   if (Opc == G_ZEXT)
-    return Size == 8 ? ARM::UXTB : ARM::UXTH;
+    return Size == 8 ? Opcodes.ZEXT8 : Opcodes.ZEXT16;
 
   return Opc;
 }
 
-/// Select the opcode for simple loads and stores. For types smaller than 32
-/// bits, the value will be zero extended. Returns the original opcode if it
-/// doesn't know how to select a better one.
-static unsigned selectLoadStoreOpCode(unsigned Opc, unsigned RegBank,
-                                      unsigned Size) {
+unsigned ARMInstructionSelector::selectLoadStoreOpCode(unsigned Opc,
+                                                       unsigned RegBank,
+                                                       unsigned Size) const {
   bool isStore = Opc == TargetOpcode::G_STORE;
 
   if (RegBank == ARM::GPRRegBankID) {
     switch (Size) {
     case 1:
     case 8:
-      return isStore ? ARM::STRBi12 : ARM::LDRBi12;
+      return isStore ? Opcodes.STORE8 : Opcodes.LOAD8;
     case 16:
-      return isStore ? ARM::STRH : ARM::LDRH;
+      return isStore ? Opcodes.STORE16 : Opcodes.LOAD16;
     case 32:
-      return isStore ? ARM::STRi12 : ARM::LDRi12;
+      return isStore ? Opcodes.STORE32 : Opcodes.LOAD32;
     default:
       return Opc;
     }
@@ -702,7 +760,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     switch (SrcSize) {
     case 1: {
       // ZExt boils down to & 0x1; for SExt we also subtract that from 0
-      I.setDesc(TII.get(ARM::ANDri));
+      I.setDesc(TII.get(Opcodes.AND));
       MIB.addImm(1).add(predOps(ARMCC::AL)).add(condCodeOp());
 
       if (isSExt) {
@@ -714,7 +772,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
 
         auto InsertBefore = std::next(I.getIterator());
         auto SubI =
-            BuildMI(MBB, InsertBefore, I.getDebugLoc(), TII.get(ARM::RSBri))
+            BuildMI(MBB, InsertBefore, I.getDebugLoc(), TII.get(Opcodes.RSB))
                 .addDef(SExtResult)
                 .addUse(AndResult)
                 .addImm(0)

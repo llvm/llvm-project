@@ -12,6 +12,7 @@
 // Test exporting the symbol: "__cxa_deleted_virtual" in macosx
 // But don't expect the symbol to be exported in previous versions.
 //
+// XFAIL: with_system_cxx_lib=macosx10.14
 // XFAIL: with_system_cxx_lib=macosx10.13
 // XFAIL: with_system_cxx_lib=macosx10.12
 // XFAIL: with_system_cxx_lib=macosx10.11

@@ -1,37 +1,41 @@
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr9 -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-PWR8 -implicit-check-not vabsdu
+; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr9 -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-PWR8 -implicit-check-not vabsdu
+; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-PWR7 -implicit-check-not vmaxsd
 
-; Function Attrs: nounwind readnone
 define <4 x i32> @simple_absv_32(<4 x i32> %a) local_unnamed_addr {
 entry:
   %sub.i = sub <4 x i32> zeroinitializer, %a
   %0 = tail call <4 x i32> @llvm.ppc.altivec.vmaxsw(<4 x i32> %a, <4 x i32> %sub.i)
   ret <4 x i32> %0
 ; CHECK-LABEL: simple_absv_32
-; CHECK-DAG: vxor {{[0-9]+}}, [[REG:[0-9]+]], [[REG]]
-; CHECK-DAG: xvnegsp 34, 34
-; CHECK-DAG: xvnegsp 35, {{[0-9]+}}
-; CHECK-NEXT: vabsduw 2, 2, {{[0-9]+}}
+; CHECK-NOT:  vxor 
+; CHECK-NOT:  vabsduw
+; CHECK:      vnegw v[[REG:[0-9]+]], v2
+; CHECK-NEXT: vmaxsw v2, v2, v[[REG]]
 ; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: simple_absv_32
 ; CHECK-PWR8: xxlxor
 ; CHECK-PWR8: vsubuwm
 ; CHECK-PWR8: vmaxsw
 ; CHECK-PWR8: blr
+; CHECK-PWR7-LABEL: simple_absv_32
+; CHECK-PWR7: xxlxor
+; CHECK-PWR7: vsubuwm
+; CHECK-PWR7: vmaxsw
+; CHECK-PWR7: blr
 }
 
-; Function Attrs: nounwind readnone
 define <4 x i32> @simple_absv_32_swap(<4 x i32> %a) local_unnamed_addr {
 entry:
   %sub.i = sub <4 x i32> zeroinitializer, %a
   %0 = tail call <4 x i32> @llvm.ppc.altivec.vmaxsw(<4 x i32> %sub.i, <4 x i32> %a)
   ret <4 x i32> %0
 ; CHECK-LABEL: simple_absv_32_swap
-; CHECK-DAG: vxor {{[0-9]+}}, [[REG:[0-9]+]], [[REG]]
-; CHECK-DAG: xvnegsp 34, 34
-; CHECK-DAG: xvnegsp 35, {{[0-9]+}}
-; CHECK-NEXT: vabsduw 2, 2, {{[0-9]+}}
+; CHECK-NOT:  vxor 
+; CHECK-NOT:  vabsduw
+; CHECK:      vnegw  v[[REG:[0-9]+]], v2
+; CHECK-NEXT: vmaxsw v2, v2, v[[REG]]
 ; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: simple_absv_32_swap
 ; CHECK-PWR8: xxlxor
@@ -46,37 +50,72 @@ entry:
   %0 = tail call <8 x i16> @llvm.ppc.altivec.vmaxsh(<8 x i16> %a, <8 x i16> %sub.i)
   ret <8 x i16> %0
 ; CHECK-LABEL: simple_absv_16
-; CHECK: mtvsrws {{[0-9]+}}, {{[0-9]+}}
-; CHECK-NEXT: vadduhm 2, 2, [[IMM:[0-9]+]]
-; CHECK-NEXT: vabsduh 2, 2, [[IMM]]
+; CHECK-NOT:  mtvsrws
+; CHECK-NOT:  vabsduh
+; CHECK:      xxlxor v[[ZERO:[0-9]+]], v[[ZERO]], v[[ZERO]]
+; CHECK-NEXT: vsubuhm v[[REG:[0-9]+]], v[[ZERO]], v2
+; CHECK-NEXT: vmaxsh v2, v2, v[[REG]]
 ; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: simple_absv_16
 ; CHECK-PWR8: xxlxor
 ; CHECK-PWR8: vsubuhm
 ; CHECK-PWR8: vmaxsh
 ; CHECK-PWR8: blr
+; CHECK-PWR7-LABEL: simple_absv_16
+; CHECK-PWR7: xxlxor
+; CHECK-PWR7: vsubuhm
+; CHECK-PWR7: vmaxsh
+; CHECK-PWR7: blr
 }
 
-; Function Attrs: nounwind readnone
 define <16 x i8> @simple_absv_8(<16 x i8> %a) local_unnamed_addr {
 entry:
   %sub.i = sub <16 x i8> zeroinitializer, %a
   %0 = tail call <16 x i8> @llvm.ppc.altivec.vmaxsb(<16 x i8> %a, <16 x i8> %sub.i)
   ret <16 x i8> %0
 ; CHECK-LABEL: simple_absv_8
-; CHECK: xxspltib {{[0-9]+}}, 128
-; CHECK-NEXT: vaddubm 2, 2, [[IMM:[0-9]+]]
-; CHECK-NEXT: vabsdub 2, 2, [[IMM]]
+; CHECK-NOT:  xxspltib
+; CHECK-NOT:  vabsdub
+; CHECK:      xxlxor v[[ZERO:[0-9]+]], v[[ZERO]], v[[ZERO]]
+; CHECK-NEXT: vsububm v[[REG:[0-9]+]], v[[ZERO]], v2
+; CHECK-NEXT: vmaxsb v2, v2, v[[REG]]
 ; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: simple_absv_8
 ; CHECK-PWR8: xxlxor
 ; CHECK-PWR8: vsububm
 ; CHECK-PWR8: vmaxsb
 ; CHECK-PWR8: blr
+; CHECK-PWR7-LABEL: simple_absv_8
+; CHECK-PWR7: xxlxor
+; CHECK-PWR7: vsububm
+; CHECK-PWR7: vmaxsb
+; CHECK-PWR7: blr
+}
+
+; v2i64 vmax isn't avaiable on pwr7 
+define <2 x i64> @sub_absv_64(<2 x i64> %a, <2 x i64> %b) local_unnamed_addr {
+entry:
+  %0 = sub nsw <2 x i64> %a, %b
+  %1 = icmp sgt <2 x i64> %0, <i64 -1, i64 -1>
+  %2 = sub <2 x i64> zeroinitializer, %0
+  %3 = select <2 x i1> %1, <2 x i64> %0, <2 x i64> %2
+  ret <2 x i64> %3
+; CHECK-LABEL: sub_absv_64
+; CHECK: vsubudm
+; CHECK: vnegd
+; CHECK: vmaxsd
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: sub_absv_64
+; CHECK-PWR8-DAG: vsubudm
+; CHECK-PWR8-DAG: xxlxor
+; CHECK-PWR8: vmaxsd
+; CHECK-PWR8: blr
+; CHECK-PWR7-LABEL: sub_absv_64
+; CHECK-PWR7-NOT: vmaxsd
+; CHECK-PWR7: blr
 }
 
 ; The select pattern can only be detected for v4i32.
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @sub_absv_32(<4 x i32> %a, <4 x i32> %b) local_unnamed_addr {
 entry:
   %0 = sub nsw <4 x i32> %a, %b
@@ -85,14 +124,77 @@ entry:
   %3 = select <4 x i1> %1, <4 x i32> %0, <4 x i32> %2
   ret <4 x i32> %3
 ; CHECK-LABEL: sub_absv_32
-; CHECK-DAG: xvnegsp 34, 34
-; CHECK-DAG: xvnegsp 35, 35
-; CHECK-NEXT: vabsduw 2, 2, 3
+; CHECK-NOT:  vsubuwm
+; CHECK-NOT:  vnegw
+; CHECK-NOT:  vmaxsw
+; CHECK-DAG:  xvnegsp v2, v2
+; CHECK-DAG:  xvnegsp v3, v3
+; CHECK-NEXT: vabsduw v2, v{{[23]}}, v{{[23]}}
 ; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: sub_absv_32
-; CHECK-PWR8: vsubuwm
-; CHECK-PWR8: xxlxor
+; CHECK-PWR8-DAG: vsubuwm
+; CHECK-PWR8-DAG: xxlxor
+; CHECK-PWR8: vmaxsw
 ; CHECK-PWR8: blr
+; CHECK-PWR7-LABEL: sub_absv_32
+; CHECK-PWR7-DAG: vsubuwm
+; CHECK-PWR7-DAG: xxlxor
+; CHECK-PWR7: vmaxsw
+; CHECK-PWR7: blr
+}
+
+define <8 x i16> @sub_absv_16(<8 x i16> %a, <8 x i16> %b) local_unnamed_addr {
+entry:
+  %0 = sub nsw <8 x i16> %a, %b
+  %1 = icmp sgt <8 x i16> %0, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  %2 = sub <8 x i16> zeroinitializer, %0
+  %3 = select <8 x i1> %1, <8 x i16> %0, <8 x i16> %2
+  ret <8 x i16> %3
+; CHECK-LABEL: sub_absv_16
+; CHECK-NOT:  vabsduh
+; CHECK-DAG:  xxlxor v[[ZERO:[0-9]+]], v[[ZERO]], v[[ZERO]]
+; CHECK-DAG:  vsubuhm v[[SUB:[0-9]+]], v2, v3
+; CHECK:      vsubuhm v[[SUB1:[0-9]+]], v[[ZERO]], v[[SUB]]
+; CHECK-NEXT: vmaxsh v2, v[[SUB]], v[[SUB1]]
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: sub_absv_16
+; CHECK-PWR8-DAG:  xxlxor v[[ZERO:[0-9]+]], v[[ZERO]], v[[ZERO]]
+; CHECK-PWR8-DAG:  vsubuhm v[[SUB:[0-9]+]], v2, v3
+; CHECK-PWR8:      vsubuhm v[[SUB1:[0-9]+]], v[[ZERO]], v[[SUB]]
+; CHECK-PWR8-NEXT: vmaxsh v2, v[[SUB]], v[[SUB1]]
+; CHECK-PWR8-NEXT: blr
+; CHECK-PWR7-LABEL: sub_absv_16
+; CHECK-PWR7-DAG: vsubuhm
+; CHECK-PWR7-DAG: xxlxor
+; CHECK-PWR7: vmaxsh
+; CHECK-PWR7-NEXT: blr
+}
+
+define <16 x i8> @sub_absv_8(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr {
+entry:
+  %0 = sub nsw <16 x i8> %a, %b
+  %1 = icmp sgt <16 x i8> %0, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %2 = sub <16 x i8> zeroinitializer, %0
+  %3 = select <16 x i1> %1, <16 x i8> %0, <16 x i8> %2
+  ret <16 x i8> %3
+; CHECK-LABEL: sub_absv_8
+; CHECK-NOT:  vabsdub
+; CHECK-DAG:  xxlxor v[[ZERO:[0-9]+]], v[[ZERO]], v[[ZERO]]
+; CHECK-DAG:  vsububm v[[SUB:[0-9]+]], v2, v3
+; CHECK:      vsububm v[[SUB1:[0-9]+]], v[[ZERO]], v[[SUB]]
+; CHECK-NEXT: vmaxsb v2, v[[SUB]], v[[SUB1]]
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: sub_absv_8
+; CHECK-PWR8-DAG:  xxlxor v[[ZERO:[0-9]+]], v[[ZERO]], v[[ZERO]]
+; CHECK-PWR8-DAG:  vsububm v[[SUB:[0-9]+]], v2, v3
+; CHECK-PWR8:      vsububm v[[SUB1:[0-9]+]], v[[ZERO]], v[[SUB]]
+; CHECK-PWR8-NEXT: vmaxsb v2, v[[SUB]], v[[SUB1]]
+; CHECK-PWR8-NEXT: blr
+; CHECK-PWR7-LABEL: sub_absv_8
+; CHECK-PWR7-DAG:  xxlxor
+; CHECK-PWR7-DAG:  vsububm
+; CHECK-PWR7: vmaxsb
+; CHECK-PWR7-NEXT: blr
 }
 
 ; FIXME: This does not produce the ISD::ABS that we are looking for.
@@ -100,8 +202,7 @@ entry:
 ; We do manage to find the word version of ABS but not the halfword.
 ; Threfore, we end up doing more work than is required with a pair of abs for word
 ;  instead of just one for the halfword.
-; Function Attrs: norecurse nounwind readnone
-define <8 x i16> @sub_absv_16(<8 x i16> %a, <8 x i16> %b) local_unnamed_addr {
+define <8 x i16> @sub_absv_16_ext(<8 x i16> %a, <8 x i16> %b) local_unnamed_addr {
 entry:
   %0 = sext <8 x i16> %a to <8 x i32>
   %1 = sext <8 x i16> %b to <8 x i32>
@@ -111,23 +212,25 @@ entry:
   %5 = select <8 x i1> %3, <8 x i32> %2, <8 x i32> %4
   %6 = trunc <8 x i32> %5 to <8 x i16>
   ret <8 x i16> %6
-; CHECK-LABEL: sub_absv_16
+; CHECK-LABEL: sub_absv_16_ext
 ; CHECK-NOT: vabsduh
 ; CHECK: vabsduw
+; CHECK-NOT: vnegw
 ; CHECK-NOT: vabsduh
 ; CHECK: vabsduw
+; CHECK-NOT: vnegw
 ; CHECK-NOT: vabsduh
 ; CHECK: blr
 ; CHECK-PWR8-LABEL: sub_absv_16
-; CHECK-PWR8: vsubuwm
-; CHECK-PWR8: xxlxor
+; CHECK-PWR8-DAG: vsubuwm
+; CHECK-PWR8-DAG: xxlxor
 ; CHECK-PWR8: blr
 }
 
 ; FIXME: This does not produce ISD::ABS. This does not even vectorize correctly!
 ; This function should look like sub_absv_32 and sub_absv_16 except that the type is v16i8.
 ; Function Attrs: norecurse nounwind readnone
-define <16 x i8> @sub_absv_8(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr {
+define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr {
 entry:
   %vecext = extractelement <16 x i8> %a, i32 0
   %conv = zext i8 %vecext to i32
@@ -290,20 +393,19 @@ entry:
   %conv122 = trunc i32 %15 to i8
   %vecins123 = insertelement <16 x i8> %vecins115, i8 %conv122, i32 15
   ret <16 x i8> %vecins123
-; CHECK-LABEL: sub_absv_8
+; CHECK-LABEL: sub_absv_8_ext
 ; CHECK-NOT: vabsdub
 ; CHECK: subf
 ; CHECK-NOT: vabsdub
 ; CHECK: xor
 ; CHECK-NOT: vabsdub
 ; CHECK: blr
-; CHECK-PWR8-LABEL: sub_absv_8
+; CHECK-PWR8-LABEL: sub_absv_8_ext
 ; CHECK-PWR8: subf
 ; CHECK-PWR8: xor
 ; CHECK-PWR8: blr
 }
 
-; Function Attrs: nounwind readnone
 define <4 x i32> @sub_absv_vec_32(<4 x i32> %a, <4 x i32> %b) local_unnamed_addr {
 entry:
   %sub = sub <4 x i32> %a, %b
@@ -311,16 +413,20 @@ entry:
   %0 = tail call <4 x i32> @llvm.ppc.altivec.vmaxsw(<4 x i32> %sub, <4 x i32> %sub.i)
   ret <4 x i32> %0
 ; CHECK-LABEL: sub_absv_vec_32
-; CHECK: vabsduw 2, 2, 3
+; CHECK-NOT:  vsubuwm
+; CHECK-NOT:  vnegw
+; CHECK-NOT:  vmaxsw
+; CHECK-DAG:  xvnegsp v2, v2
+; CHECK-DAG:  xvnegsp v3, v3
+; CHECK-NEXT: vabsduw v2, v{{[23]}}, v{{[23]}}
 ; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: sub_absv_vec_32
-; CHECK-PWR8: xxlxor
-; CHECK-PWR8: vsubuwm
+; CHECK-PWR8-DAG: xxlxor
+; CHECK-PWR8-DAG: vsubuwm
 ; CHECK-PWR8: vmaxsw
 ; CHECK-PWR8: blr
 }
 
-; Function Attrs: nounwind readnone
 define <8 x i16> @sub_absv_vec_16(<8 x i16> %a, <8 x i16> %b) local_unnamed_addr {
 entry:
   %sub = sub <8 x i16> %a, %b
@@ -328,16 +434,20 @@ entry:
   %0 = tail call <8 x i16> @llvm.ppc.altivec.vmaxsh(<8 x i16> %sub, <8 x i16> %sub.i)
   ret <8 x i16> %0
 ; CHECK-LABEL: sub_absv_vec_16
-; CHECK: vabsduh 2, 2, 3
+; CHECK-NOT:  mtvsrws
+; CHECK-NOT:  vabsduh
+; CHECK-DAG:  xxlxor v[[ZERO:[0-9]+]], v[[ZERO]], v[[ZERO]]
+; CHECK-DAG:  vsubuhm v[[SUB:[0-9]+]], v2, v3
+; CHECK:      vsubuhm v[[SUB1:[0-9]+]], v[[ZERO]], v[[SUB]]
+; CHECK-NEXT: vmaxsh v2, v[[SUB]], v[[SUB1]]
 ; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: sub_absv_vec_16
-; CHECK-PWR8: xxlxor
-; CHECK-PWR8: vsubuhm
+; CHECK-PWR8-DAG: xxlxor
+; CHECK-PWR8-DAG: vsubuhm
 ; CHECK-PWR8: vmaxsh
 ; CHECK-PWR8: blr
 }
 
-; Function Attrs: nounwind readnone
 define <16 x i8> @sub_absv_vec_8(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr {
 entry:
   %sub = sub <16 x i8> %a, %b
@@ -345,22 +455,313 @@ entry:
   %0 = tail call <16 x i8> @llvm.ppc.altivec.vmaxsb(<16 x i8> %sub, <16 x i8> %sub.i)
   ret <16 x i8> %0
 ; CHECK-LABEL: sub_absv_vec_8
-; CHECK: vabsdub 2, 2, 3
+; CHECK-NOT:  xxspltib
+; CHECK-NOT:  vabsdub
+; CHECK-DAG:  xxlxor v[[ZERO:[0-9]+]], v[[ZERO]], v[[ZERO]]
+; CHECK-DAG:  vsububm v[[SUB:[0-9]+]], v2, v3
+; CHECK:      vsububm v[[SUB1:[0-9]+]], v[[ZERO]], v[[SUB]]
+; CHECK-NEXT: vmaxsb v2, v[[SUB]], v[[SUB1]]
 ; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: sub_absv_vec_8
-; CHECK-PWR8: xxlxor
-; CHECK-PWR8: vsububm
+; CHECK-PWR8-DAG: xxlxor
+; CHECK-PWR8-DAG: vsububm
 ; CHECK-PWR8: vmaxsb
 ; CHECK-PWR8: blr
 }
 
+define <4 x i32> @zext_sub_absd32(<4 x i16>, <4 x i16>) local_unnamed_addr {
+    %3 = zext <4 x i16> %0 to <4 x i32>
+    %4 = zext <4 x i16> %1 to <4 x i32>
+    %5 = sub <4 x i32> %3, %4
+    %6 = sub <4 x i32> zeroinitializer, %5
+    %7 = tail call <4 x i32> @llvm.ppc.altivec.vmaxsw(<4 x i32> %5, <4 x i32> %6)
+    ret <4 x i32> %7
+; CHECK-LABEL: zext_sub_absd32
+; CHECK-NOT: xvnegsp
+; CHECK:     vabsduw
+; CHECK:     blr
+; CHECK-PWR8-LABEL: zext_sub_absd32
+; CHECK-PWR8: vmaxsw
+; CHECK-PWR8: blr
+}
 
-; Function Attrs: nounwind readnone
+define <8 x i16> @zext_sub_absd16(<8 x i8>, <8 x i8>) local_unnamed_addr {
+    %3 = zext <8 x i8> %0 to <8 x i16>
+    %4 = zext <8 x i8> %1 to <8 x i16>
+    %5 = sub <8 x i16> %3, %4
+    %6 = sub <8 x i16> zeroinitializer, %5
+    %7 = tail call <8 x i16> @llvm.ppc.altivec.vmaxsh(<8 x i16> %5, <8 x i16> %6)
+    ret <8 x i16> %7
+; CHECK-LABEL: zext_sub_absd16
+; CHECK-NOT: vadduhm
+; CHECK:     vabsduh
+; CHECK:     blr
+; CHECK-PWR8-LABEL: zext_sub_absd16
+; CHECK-PWR8: vmaxsh
+; CHECK-PWR8: blr
+}
+
+define <16 x i8> @zext_sub_absd8(<16 x i4>, <16 x i4>) local_unnamed_addr {
+    %3 = zext <16 x i4> %0 to <16 x i8>
+    %4 = zext <16 x i4> %1 to <16 x i8>
+    %5 = sub <16 x i8> %3, %4
+    %6 = sub <16 x i8> zeroinitializer, %5
+    %7 = tail call <16 x i8> @llvm.ppc.altivec.vmaxsb(<16 x i8> %5, <16 x i8> %6)
+    ret <16 x i8> %7
+; CHECK-LABEL: zext_sub_absd8
+; CHECK-NOT: vaddubm
+; CHECK:     vabsdub
+; CHECK:     blr
+; CHECK-PWR8-LABEL: zext_sub_absd8
+; CHECK-PWR8: vmaxsb
+; CHECK-PWR8: blr
+}
+
+; To verify vabsdu* exploitation for ucmp + sub + select sequence
+
+define <4 x i32> @absd_int32_ugt(<4 x i32>, <4 x i32>) {
+  %3 = icmp ugt <4 x i32> %0, %1
+  %4 = sub <4 x i32> %0, %1
+  %5 = sub <4 x i32> %1, %0
+  %6 = select <4 x i1> %3, <4 x i32> %4, <4 x i32> %5
+  ret <4 x i32> %6
+; CHECK-LABEL: absd_int32_ugt
+; CHECK-NOT: vcmpgtuw
+; CHECK-NOT: xxsel
+; CHECK: vabsduw v2, v2, v3
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: absd_int32_ugt
+; CHECK-PWR8: vcmpgtuw
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+define <4 x i32> @absd_int32_uge(<4 x i32>, <4 x i32>) {
+  %3 = icmp uge <4 x i32> %0, %1
+  %4 = sub <4 x i32> %0, %1
+  %5 = sub <4 x i32> %1, %0
+  %6 = select <4 x i1> %3, <4 x i32> %4, <4 x i32> %5
+  ret <4 x i32> %6
+; CHECK-LABEL: absd_int32_uge
+; CHECK-NOT: vcmpgtuw
+; CHECK-NOT: xxsel
+; CHECK: vabsduw v2, v2, v3
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: absd_int32_uge
+; CHECK-PWR8: vcmpgtuw
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+define <4 x i32> @absd_int32_ult(<4 x i32>, <4 x i32>) {
+  %3 = icmp ult <4 x i32> %0, %1
+  %4 = sub <4 x i32> %0, %1
+  %5 = sub <4 x i32> %1, %0
+  %6 = select <4 x i1> %3, <4 x i32> %5, <4 x i32> %4
+  ret <4 x i32> %6
+; CHECK-LABEL: absd_int32_ult
+; CHECK-NOT: vcmpgtuw
+; CHECK-NOT: xxsel
+; CHECK: vabsduw v2, v2, v3
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: absd_int32_ult
+; CHECK-PWR8: vcmpgtuw
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+define <4 x i32> @absd_int32_ule(<4 x i32>, <4 x i32>) {
+  %3 = icmp ule <4 x i32> %0, %1
+  %4 = sub <4 x i32> %0, %1
+  %5 = sub <4 x i32> %1, %0
+  %6 = select <4 x i1> %3, <4 x i32> %5, <4 x i32> %4
+  ret <4 x i32> %6
+; CHECK-LABEL: absd_int32_ule
+; CHECK-NOT: vcmpgtuw
+; CHECK-NOT: xxsel
+; CHECK: vabsduw v2, v2, v3
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: absd_int32_ule
+; CHECK-PWR8: vcmpgtuw
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+define <8 x i16> @absd_int16_ugt(<8 x i16>, <8 x i16>) {
+  %3 = icmp ugt <8 x i16> %0, %1
+  %4 = sub <8 x i16> %0, %1
+  %5 = sub <8 x i16> %1, %0
+  %6 = select <8 x i1> %3, <8 x i16> %4, <8 x i16> %5
+  ret <8 x i16> %6
+; CHECK-LABEL: absd_int16_ugt
+; CHECK-NOT: vcmpgtuh
+; CHECK-NOT: xxsel
+; CHECK: vabsduh v2, v2, v3
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: absd_int16_ugt
+; CHECK-PWR8: vcmpgtuh
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+define <8 x i16> @absd_int16_uge(<8 x i16>, <8 x i16>) {
+  %3 = icmp uge <8 x i16> %0, %1
+  %4 = sub <8 x i16> %0, %1
+  %5 = sub <8 x i16> %1, %0
+  %6 = select <8 x i1> %3, <8 x i16> %4, <8 x i16> %5
+  ret <8 x i16> %6
+; CHECK-LABEL: absd_int16_uge
+; CHECK-NOT: vcmpgtuh
+; CHECK-NOT: xxsel
+; CHECK: vabsduh v2, v2, v3
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: absd_int16_uge
+; CHECK-PWR8: vcmpgtuh
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+define <8 x i16> @absd_int16_ult(<8 x i16>, <8 x i16>) {
+  %3 = icmp ult <8 x i16> %0, %1
+  %4 = sub <8 x i16> %0, %1
+  %5 = sub <8 x i16> %1, %0
+  %6 = select <8 x i1> %3, <8 x i16> %5, <8 x i16> %4
+  ret <8 x i16> %6
+; CHECK-LABEL: absd_int16_ult
+; CHECK-NOT: vcmpgtuh
+; CHECK-NOT: xxsel
+; CHECK: vabsduh v2, v2, v3
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: absd_int16_ult
+; CHECK-PWR8: vcmpgtuh
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+define <8 x i16> @absd_int16_ule(<8 x i16>, <8 x i16>) {
+  %3 = icmp ule <8 x i16> %0, %1
+  %4 = sub <8 x i16> %0, %1
+  %5 = sub <8 x i16> %1, %0
+  %6 = select <8 x i1> %3, <8 x i16> %5, <8 x i16> %4
+  ret <8 x i16> %6
+; CHECK-LABEL: absd_int16_ule
+; CHECK-NOT: vcmpgtuh
+; CHECK-NOT: xxsel
+; CHECK: vabsduh v2, v2, v3
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: absd_int16_ule
+; CHECK-PWR8: vcmpgtuh
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+define <16 x i8> @absd_int8_ugt(<16 x i8>, <16 x i8>) {
+  %3 = icmp ugt <16 x i8> %0, %1
+  %4 = sub <16 x i8> %0, %1
+  %5 = sub <16 x i8> %1, %0
+  %6 = select <16 x i1> %3, <16 x i8> %4, <16 x i8> %5
+  ret <16 x i8> %6
+; CHECK-LABEL: absd_int8_ugt
+; CHECK-NOT: vcmpgtub
+; CHECK-NOT: xxsel
+; CHECK: vabsdub v2, v2, v3
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: absd_int8_ugt
+; CHECK-PWR8: vcmpgtub
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+define <16 x i8> @absd_int8_uge(<16 x i8>, <16 x i8>) {
+  %3 = icmp uge <16 x i8> %0, %1
+  %4 = sub <16 x i8> %0, %1
+  %5 = sub <16 x i8> %1, %0
+  %6 = select <16 x i1> %3, <16 x i8> %4, <16 x i8> %5
+  ret <16 x i8> %6
+; CHECK-LABEL: absd_int8_uge
+; CHECK-NOT: vcmpgtub
+; CHECK-NOT: xxsel
+; CHECK: vabsdub v2, v2, v3
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: absd_int8_uge
+; CHECK-PWR8: vcmpgtub
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+define <16 x i8> @absd_int8_ult(<16 x i8>, <16 x i8>) {
+  %3 = icmp ult <16 x i8> %0, %1
+  %4 = sub <16 x i8> %0, %1
+  %5 = sub <16 x i8> %1, %0
+  %6 = select <16 x i1> %3, <16 x i8> %5, <16 x i8> %4
+  ret <16 x i8> %6
+; CHECK-LABEL: absd_int8_ult
+; CHECK-NOT: vcmpgtub
+; CHECK-NOT: xxsel
+; CHECK: vabsdub v2, v2, v3
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: absd_int8_ult
+; CHECK-PWR8: vcmpgtub
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+define <16 x i8> @absd_int8_ule(<16 x i8>, <16 x i8>) {
+  %3 = icmp ule <16 x i8> %0, %1
+  %4 = sub <16 x i8> %0, %1
+  %5 = sub <16 x i8> %1, %0
+  %6 = select <16 x i1> %3, <16 x i8> %5, <16 x i8> %4
+  ret <16 x i8> %6
+; CHECK-LABEL: absd_int8_ule
+; CHECK-NOT: vcmpgtub
+; CHECK-NOT: xxsel
+; CHECK: vabsdub v2, v2, v3
+; CHECK-NEXT: blr
+; CHECK-PWR8-LABEL: absd_int8_ule
+; CHECK-PWR8: vcmpgtub
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+; some cases we are unable to optimize
+; check whether goes beyond the scope
+define <4 x i32> @absd_int32_ugt_opp(<4 x i32>, <4 x i32>) {
+  %3 = icmp ugt <4 x i32> %0, %1
+  %4 = sub <4 x i32> %0, %1
+  %5 = sub <4 x i32> %1, %0
+  %6 = select <4 x i1> %3, <4 x i32> %5, <4 x i32> %4
+  ret <4 x i32> %6
+; CHECK-LABEL: absd_int32_ugt_opp
+; CHECK-NOT: vabsduw
+; CHECK: vcmpgtuw
+; CHECK: xxsel
+; CHECK: blr
+; CHECK-PWR8-LABEL: absd_int32_ugt_opp
+; CHECK-PWR8: vcmpgtuw
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
+define <2 x i64> @absd_int64_ugt(<2 x i64>, <2 x i64>) {
+  %3 = icmp ugt <2 x i64> %0, %1
+  %4 = sub <2 x i64> %0, %1
+  %5 = sub <2 x i64> %1, %0
+  %6 = select <2 x i1> %3, <2 x i64> %4, <2 x i64> %5
+  ret <2 x i64> %6
+; CHECK-LABEL: absd_int64_ugt
+; CHECK-NOT: vabsduw
+; CHECK: vcmpgtud
+; CHECK: xxsel
+; CHECK: blr
+; CHECK-PWR8-LABEL: absd_int64_ugt
+; CHECK-PWR8: vcmpgtud
+; CHECK-PWR8: xxsel
+; CHECK-PWR8: blr
+}
+
 declare <4 x i32> @llvm.ppc.altivec.vmaxsw(<4 x i32>, <4 x i32>)
 
-; Function Attrs: nounwind readnone
 declare <8 x i16> @llvm.ppc.altivec.vmaxsh(<8 x i16>, <8 x i16>)
 
-; Function Attrs: nounwind readnone
 declare <16 x i8> @llvm.ppc.altivec.vmaxsb(<16 x i8>, <16 x i8>)
 

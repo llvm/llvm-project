@@ -6,6 +6,8 @@ from gdbclientutils import *
 
 
 class TestStopPCs(GDBRemoteTestBase):
+
+    @skipIfXmlSupportMissing
     def test(self):
         class MyResponder(MockGDBServerResponder):
             def haltReason(self):

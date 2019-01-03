@@ -1,4 +1,4 @@
-# RUN: not llvm-mc %s -arch=mips -mcpu=mips32 -mattr=+fp64,-nooddspreg 2>&1 | \
+# RUN: not llvm-mc %s -triple mips-unknown-linux-gnu -mattr=+fp64,-nooddspreg 2>&1 | \
 # RUN:   FileCheck %s
 
   .module nooddspreg

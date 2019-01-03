@@ -22,6 +22,15 @@ using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
+class IgnoreCompletionError : public llvm::ErrorInfo<CancelledError> {
+public:
+  void log(llvm::raw_ostream &OS) const override {
+    OS << "ignored auto-triggered completion, preceding char did not match";
+  }
+  std::error_code convertToErrorCode() const override {
+    return std::make_error_code(std::errc::operation_canceled);
+  }
+};
 
 void adjustSymbolKinds(llvm::MutableArrayRef<DocumentSymbol> Syms,
                        SymbolKindBitset Kinds) {
@@ -163,9 +172,9 @@ private:
           Server(Other.Server), TraceArgs(Other.TraceArgs) {
       Other.Server = nullptr;
     }
-    ReplyOnce& operator=(ReplyOnce&&) = delete;
+    ReplyOnce &operator=(ReplyOnce &&) = delete;
     ReplyOnce(const ReplyOnce &) = delete;
-    ReplyOnce& operator=(const ReplyOnce&) = delete;
+    ReplyOnce &operator=(const ReplyOnce &) = delete;
 
     ~ReplyOnce() {
       if (Server && !Replied) {
@@ -294,7 +303,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   SupportsCodeAction = Params.capabilities.CodeActionStructure;
   SupportsHierarchicalDocumentSymbol =
       Params.capabilities.HierarchicalDocumentSymbol;
-
+  SupportFileStatus = Params.initializationOptions.FileStatus;
   Reply(json::Object{
       {{"capabilities",
         json::Object{
@@ -310,6 +319,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"completionProvider",
              json::Object{
                  {"resolveProvider", false},
+                 // We do extra checks for '>' and ':' in completion to only
+                 // trigger on '->' and '::'.
                  {"triggerCharacters", {".", ">", ":"}},
              }},
             {"signatureHelpProvider",
@@ -612,25 +623,27 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
   }
 }
 
-void ClangdLSPServer::onCompletion(const TextDocumentPositionParams &Params,
+void ClangdLSPServer::onCompletion(const CompletionParams &Params,
                                    Callback<CompletionList> Reply) {
-  Server->codeComplete(Params.textDocument.uri.file(), Params.position, CCOpts,
-                       Bind(
-                           [this](decltype(Reply) Reply,
-                                  Expected<CodeCompleteResult> List) {
-                             if (!List)
-                               return Reply(List.takeError());
-                             CompletionList LSPList;
-                             LSPList.isIncomplete = List->HasMore;
-                             for (const auto &R : List->Completions) {
-                               CompletionItem C = R.render(CCOpts);
-                               C.kind = adjustKindToCapability(
-                                   C.kind, SupportedCompletionItemKinds);
-                               LSPList.items.push_back(std::move(C));
-                             }
-                             return Reply(std::move(LSPList));
-                           },
-                           std::move(Reply)));
+  if (!shouldRunCompletion(Params))
+    return Reply(llvm::make_error<IgnoreCompletionError>());
+  Server->codeComplete(
+      Params.textDocument.uri.file(), Params.position, CCOpts,
+      Bind(
+          [this](decltype(Reply) Reply, Expected<CodeCompleteResult> List) {
+            if (!List)
+              return Reply(List.takeError());
+            CompletionList LSPList;
+            LSPList.isIncomplete = List->HasMore;
+            for (const auto &R : List->Completions) {
+              CompletionItem C = R.render(CCOpts);
+              C.kind =
+                  adjustKindToCapability(C.kind, SupportedCompletionItemKinds);
+              LSPList.items.push_back(std::move(C));
+            }
+            return Reply(std::move(LSPList));
+          },
+          std::move(Reply)));
 }
 
 void ClangdLSPServer::onSignatureHelp(const TextDocumentPositionParams &Params,
@@ -698,6 +711,12 @@ void ClangdLSPServer::onReference(const ReferenceParams &Params,
                          std::move(Reply));
 }
 
+void ClangdLSPServer::onSymbolInfo(const TextDocumentPositionParams &Params,
+                                   Callback<std::vector<SymbolDetails>> Reply) {
+  Server->symbolInfo(Params.textDocument.uri.file(), Params.position,
+                     std::move(Reply));
+}
+
 ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
                                  const clangd::CodeCompleteOptions &CCOpts,
                                  Optional<Path> CompileCommandsDir,
@@ -733,6 +752,7 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
   MsgHandler->bind("textDocument/didChange", &ClangdLSPServer::onDocumentDidChange);
   MsgHandler->bind("workspace/didChangeWatchedFiles", &ClangdLSPServer::onFileEvent);
   MsgHandler->bind("workspace/didChangeConfiguration", &ClangdLSPServer::onChangeConfiguration);
+  MsgHandler->bind("textDocument/symbolInfo", &ClangdLSPServer::onSymbolInfo);
   // clang-format on
 }
 
@@ -766,9 +786,44 @@ std::vector<Fix> ClangdLSPServer::getFixes(StringRef File,
   return FixItsIter->second;
 }
 
+bool ClangdLSPServer::shouldRunCompletion(
+    const CompletionParams &Params) const {
+  StringRef Trigger = Params.context.triggerCharacter;
+  if (Params.context.triggerKind != CompletionTriggerKind::TriggerCharacter ||
+      (Trigger != ">" && Trigger != ":"))
+    return true;
+
+  auto Code = DraftMgr.getDraft(Params.textDocument.uri.file());
+  if (!Code)
+    return true; // completion code will log the error for untracked doc.
+
+  // A completion request is sent when the user types '>' or ':', but we only
+  // want to trigger on '->' and '::'. We check the preceeding character to make
+  // sure it matches what we expected.
+  // Running the lexer here would be more robust (e.g. we can detect comments
+  // and avoid triggering completion there), but we choose to err on the side
+  // of simplicity here.
+  auto Offset = positionToOffset(*Code, Params.position,
+                                 /*AllowColumnsBeyondLineLength=*/false);
+  if (!Offset) {
+    vlog("could not convert position '{0}' to offset for file '{1}'",
+         Params.position, Params.textDocument.uri.file());
+    return true;
+  }
+  if (*Offset < 2)
+    return false;
+
+  if (Trigger == ">")
+    return (*Code)[*Offset - 2] == '-'; // trigger only on '->'.
+  if (Trigger == ":")
+    return (*Code)[*Offset - 2] == ':'; // trigger only on '::'.
+  assert(false && "unhandled trigger character");
+  return true;
+}
+
 void ClangdLSPServer::onDiagnosticsReady(PathRef File,
                                          std::vector<Diag> Diagnostics) {
-  URIForFile URI(File);
+  auto URI = URIForFile::canonicalize(File, /*TUPath=*/File);
   std::vector<Diagnostic> LSPDiagnostics;
   DiagnosticToReplacementMap LocalFixIts; // Temporary storage
   for (auto &Diag : Diagnostics) {
@@ -793,6 +848,19 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File,
              {"uri", URI},
              {"diagnostics", std::move(LSPDiagnostics)},
          });
+}
+
+void ClangdLSPServer::onFileUpdated(PathRef File, const TUStatus &Status) {
+  if (!SupportFileStatus)
+    return;
+  // FIXME: we don't emit "BuildingFile" and `RunningAction`, as these
+  // two statuses are running faster in practice, which leads the UI constantly
+  // changing, and doesn't provide much value. We may want to emit status at a
+  // reasonable time interval (e.g. 0.5s).
+  if (Status.Action.S == TUAction::BuildingFile ||
+      Status.Action.S == TUAction::RunningAction)
+    return;
+  notify("textDocument/clangd.fileStatus", Status.render(File));
 }
 
 void ClangdLSPServer::reparseOpenedFiles() {

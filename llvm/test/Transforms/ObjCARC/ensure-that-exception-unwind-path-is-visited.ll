@@ -39,66 +39,66 @@ entry:
   %tmp = load %struct._class_t*, %struct._class_t** @"\01L_OBJC_CLASSLIST_REFERENCES_$_", align 8, !dbg !37
   %tmp1 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8, !dbg !37, !invariant.load !38
   %tmp2 = bitcast %struct._class_t* %tmp to i8*, !dbg !37
-; CHECK: call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %tmp2, i8* %tmp1)
-  %call = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %tmp2, i8* %tmp1), !dbg !37, !clang.arc.no_objc_arc_exceptions !38
+; CHECK: call i8* bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i8* (i8*, i8*)*)(i8* %tmp2, i8* %tmp1)
+  %call = call i8* bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i8* (i8*, i8*)*)(i8* %tmp2, i8* %tmp1), !dbg !37, !clang.arc.no_objc_arc_exceptions !38
   call void @llvm.dbg.value(metadata i8* %call, metadata !25, metadata !DIExpression()), !dbg !37
-; CHECK: call i8* @objc_retain(i8* %call) [[NUW:#[0-9]+]]
-  %tmp3 = call i8* @objc_retain(i8* %call) nounwind, !dbg !39
+; CHECK: call i8* @llvm.objc.retain(i8* %call) [[NUW:#[0-9]+]]
+  %tmp3 = call i8* @llvm.objc.retain(i8* %call) nounwind, !dbg !39
   call void @llvm.dbg.value(metadata i8* %call, metadata !25, metadata !DIExpression()), !dbg !39
   invoke fastcc void @ThrowFunc(i8* %call)
           to label %eh.cont unwind label %lpad, !dbg !40, !clang.arc.no_objc_arc_exceptions !38
 
 eh.cont:                                          ; preds = %entry
-; CHECK: call void @objc_release(i8* %call)
-  call void @objc_release(i8* %call) nounwind, !dbg !42, !clang.imprecise_release !38
+; CHECK: call void @llvm.objc.release(i8* %call)
+  call void @llvm.objc.release(i8* %call) nounwind, !dbg !42, !clang.imprecise_release !38
   br label %if.end, !dbg !43
 
 lpad:                                             ; preds = %entry
   %tmp4 = landingpad { i8*, i32 }
           catch i8* null, !dbg !40
   %tmp5 = extractvalue { i8*, i32 } %tmp4, 0, !dbg !40
-  %exn.adjusted = call i8* @objc_begin_catch(i8* %tmp5) nounwind, !dbg !44
+  %exn.adjusted = call i8* @llvm.objc.begin_catch(i8* %tmp5) nounwind, !dbg !44
   call void @llvm.dbg.value(metadata i8 0, metadata !21, metadata !DIExpression()), !dbg !46
-  call void @objc_end_catch(), !dbg !49, !clang.arc.no_objc_arc_exceptions !38
-; CHECK: call void @objc_release(i8* %call)
-  call void @objc_release(i8* %call) nounwind, !dbg !42, !clang.imprecise_release !38
+  call void @llvm.objc.end_catch(), !dbg !49, !clang.arc.no_objc_arc_exceptions !38
+; CHECK: call void @llvm.objc.release(i8* %call)
+  call void @llvm.objc.release(i8* %call) nounwind, !dbg !42, !clang.imprecise_release !38
   call void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring_ to i8*), i8* %call), !dbg !50, !clang.arc.no_objc_arc_exceptions !38
   br label %if.end, !dbg !52
 
 if.end:                                           ; preds = %lpad, %eh.cont
   call void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring_ to i8*), i8* %call), !dbg !53, !clang.arc.no_objc_arc_exceptions !38
-; CHECK: call void @objc_release(i8* %call)
-  call void @objc_release(i8* %call) nounwind, !dbg !54, !clang.imprecise_release !38
+; CHECK: call void @llvm.objc.release(i8* %call)
+  call void @llvm.objc.release(i8* %call) nounwind, !dbg !54, !clang.imprecise_release !38
   ret i32 0, !dbg !54
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
-declare i8* @objc_msgSend(i8*, i8*, ...) nonlazybind
+declare i8* @llvm.objc.msgSend(i8*, i8*, ...) nonlazybind
 
-declare i8* @objc_retain(i8*) nonlazybind
+declare i8* @llvm.objc.retain(i8*) nonlazybind
 
-declare i8* @objc_begin_catch(i8*)
+declare i8* @llvm.objc.begin_catch(i8*)
 
-declare void @objc_end_catch()
+declare void @llvm.objc.end_catch()
 
-declare void @objc_exception_rethrow()
+declare void @llvm.objc.exception_rethrow()
 
 define internal fastcc void @ThrowFunc(i8* %obj) uwtable noinline ssp !dbg !27 {
 entry:
-  %tmp = call i8* @objc_retain(i8* %obj) nounwind
+  %tmp = call i8* @llvm.objc.retain(i8* %obj) nounwind
   call void @llvm.dbg.value(metadata i8* %obj, metadata !32, metadata !DIExpression()), !dbg !55
   %tmp1 = load %struct._class_t*, %struct._class_t** @"\01L_OBJC_CLASSLIST_REFERENCES_$_1", align 8, !dbg !56
   %tmp2 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_5", align 8, !dbg !56, !invariant.load !38
   %tmp3 = bitcast %struct._class_t* %tmp1 to i8*, !dbg !56
-  call void (i8*, i8*, %0*, %0*, ...) bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %0*, %0*, ...)*)(i8* %tmp3, i8* %tmp2, %0* bitcast (%struct.NSConstantString* @_unnamed_cfstring_3 to %0*), %0* bitcast (%struct.NSConstantString* @_unnamed_cfstring_3 to %0*)), !dbg !56, !clang.arc.no_objc_arc_exceptions !38
-  call void @objc_release(i8* %obj) nounwind, !dbg !58, !clang.imprecise_release !38
+  call void (i8*, i8*, %0*, %0*, ...) bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to void (i8*, i8*, %0*, %0*, ...)*)(i8* %tmp3, i8* %tmp2, %0* bitcast (%struct.NSConstantString* @_unnamed_cfstring_3 to %0*), %0* bitcast (%struct.NSConstantString* @_unnamed_cfstring_3 to %0*)), !dbg !56, !clang.arc.no_objc_arc_exceptions !38
+  call void @llvm.objc.release(i8* %obj) nounwind, !dbg !58, !clang.imprecise_release !38
   ret void, !dbg !58
 }
 
 declare i32 @__objc_personality_v0(...)
 
-declare void @objc_release(i8*) nonlazybind
+declare void @llvm.objc.release(i8*) nonlazybind
 
 declare void @NSLog(i8*, ...)
 
@@ -107,8 +107,8 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 ; CHECK: attributes #0 = { ssp uwtable }
 ; CHECK: attributes #1 = { nounwind readnone speculatable }
 ; CHECK: attributes #2 = { nonlazybind }
-; CHECK: attributes #3 = { noinline ssp uwtable }
 ; CHECK: attributes [[NUW]] = { nounwind }
+; CHECK: attributes #4 = { noinline ssp uwtable }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!33, !34, !35, !36, !61}

@@ -6,8 +6,6 @@ define double @foo(i32** nocapture readonly) #0 {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    vcvtsi2sdq %rax, %xmm0, %xmm1
-; CHECK-NEXT:    ## kill: def $eax killed $eax killed $rax
-; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    kmovd %eax, %k1
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 {%k1}

@@ -18,7 +18,7 @@
 ; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=4 -unswitch-siblings-toplevel-div=1 \
 ; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | \
-; RUN:     sort -b | FileCheck %s --check-prefixes=LOOP-UNSCALE4-DIV1
+; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-UNSCALE4-DIV1
 ;
 ; NB: sort -b is essential here and below, otherwise blanks might lead to different
 ; order depending on locale.
@@ -26,7 +26,7 @@
 ; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=4 -unswitch-siblings-toplevel-div=2 \
 ; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | \
-; RUN:     sort -b | FileCheck %s --check-prefixes=LOOP-UNSCALE4-DIV2
+; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-UNSCALE4-DIV2
 ;
 ;
 ; Get
@@ -35,7 +35,7 @@
 ;
 ; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=false \
 ; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | \
-; RUN:	   sort -b | FileCheck %s --check-prefixes=LOOP32
+; RUN:	   sort -b -k 1 | FileCheck %s --check-prefixes=LOOP32
 ;
 ; Single loop nest, not unswitched
 ; LOOP1:     Loop at depth 1 containing:

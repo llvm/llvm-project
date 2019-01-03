@@ -20,6 +20,7 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "truncate_fp.h"
 
 int main()
 {
@@ -41,7 +42,7 @@ int main()
     {
     std::chrono::duration<int, std::ratio<2, 3> > s1(30);
     std::chrono::duration<double, std::ratio<3, 5> > s2(5);
-    assert(s1 / s2 == 20./3);
+    assert(s1 / s2 == truncate_fp(20./3));
     }
 #if TEST_STD_VER >= 11
     {

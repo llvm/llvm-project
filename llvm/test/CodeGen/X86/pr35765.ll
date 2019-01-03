@@ -9,10 +9,9 @@
 define void @PR35765() {
 ; CHECK-LABEL: PR35765:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %ecx
-; CHECK-NEXT:    addl $-1398, %ecx # imm = 0xFA8A
+; CHECK-NEXT:    movb {{.*}}(%rip), %cl
+; CHECK-NEXT:    addb $-118, %cl
 ; CHECK-NEXT:    movl $4, %eax
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    movzwl {{.*}}(%rip), %ecx
 ; CHECK-NEXT:    movzwl {{.*}}(%rip), %edx

@@ -19,7 +19,7 @@ int main() {
            ompt_get_state(NULL));
 
     // ompt_enumerate_states()
-    int state = omp_state_undefined;
+    int state = ompt_state_undefined;
     const char *state_name;
     int steps = 0;
     while (ompt_enumerate_states(state, &state, &state_name) && steps < 1000) {
@@ -35,7 +35,7 @@ int main() {
     }
 
     // ompt_enumerate_mutex_impls()
-    int impl = ompt_mutex_impl_unknown;
+    int impl = ompt_mutex_impl_none;
     const char *impl_name;
     steps = 0;
     while (ompt_enumerate_mutex_impls(impl, &impl, &impl_name) &&

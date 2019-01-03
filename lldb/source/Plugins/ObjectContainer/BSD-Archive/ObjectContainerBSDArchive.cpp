@@ -207,7 +207,7 @@ ObjectContainerBSDArchive::Archive::FindCachedArchive(
   while (pos != archive_map.end() && pos->first == file) {
     bool match = true;
     if (arch.IsValid() &&
-        pos->second->GetArchitecture().IsCompatibleMatch(arch) == false)
+        !pos->second->GetArchitecture().IsCompatibleMatch(arch))
       match = false;
     else if (file_offset != LLDB_INVALID_OFFSET &&
              pos->second->GetFileOffset() != file_offset)

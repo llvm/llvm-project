@@ -15,7 +15,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../ClangSACheckers.h"
 #include "UninitializedObject.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -144,7 +143,7 @@ bool FindUninitializedFields::isDereferencableUninit(
 
   assert((isDereferencableType(FR->getDecl()->getType()) ||
           V.getAs<nonloc::LocAsInteger>()) &&
-         "This method only checks dereferencable objects!");
+         "This method only checks dereferenceable objects!");
 
   if (V.isUnknown() || V.getAs<loc::ConcreteInt>()) {
     IsAnyFieldInitialized = true;

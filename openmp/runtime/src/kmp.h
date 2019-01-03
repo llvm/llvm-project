@@ -129,6 +129,11 @@ class kmp_stats_list;
 #include "ompt-internal.h"
 #endif
 
+#if OMP_50_ENABLED
+// Affinity format function
+#include "kmp_str.h"
+#endif
+
 // 0 - no fast memory allocation, alignment: 8-byte on x86, 16-byte on x64.
 // 3 - fast allocation using sync, non-sync free lists of any size, non-self
 // free lists of limited size.
@@ -544,10 +549,14 @@ typedef int PACKED_REDUCTION_METHOD_T;
 
 #if KMP_OS_WINDOWS
 #define USE_CBLKDATA
+#if KMP_MSVC_COMPAT
 #pragma warning(push)
 #pragma warning(disable : 271 310)
+#endif
 #include <windows.h>
+#if KMP_MSVC_COMPAT
 #pragma warning(pop)
+#endif
 #endif
 
 #if KMP_OS_UNIX
@@ -560,7 +569,7 @@ typedef int PACKED_REDUCTION_METHOD_T;
 
 // GROUP_AFFINITY is already defined for _MSC_VER>=1600 (VS2010 and later).
 #if KMP_OS_WINDOWS
-#if _MSC_VER < 1600
+#if _MSC_VER < 1600 && KMP_MSVC_COMPAT
 typedef struct GROUP_AFFINITY {
   KAFFINITY Mask;
   WORD Group;
@@ -792,6 +801,12 @@ typedef struct kmp_nested_proc_bind_t {
 extern kmp_nested_proc_bind_t __kmp_nested_proc_bind;
 
 #endif /* OMP_40_ENABLED */
+
+#if OMP_50_ENABLED
+extern int __kmp_display_affinity;
+extern char *__kmp_affinity_format;
+static const size_t KMP_AFFINITY_FORMAT_SIZE = 512;
+#endif // OMP_50_ENABLED
 
 #if KMP_AFFINITY_SUPPORTED
 #define KMP_PLACE_ALL (-1)
@@ -1042,6 +1057,10 @@ extern kmp_uint64 __kmp_now_nsec();
 /* TODO: tune for KMP_OS_DARWIN */
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
+#elif KMP_OS_DRAGONFLY
+/* TODO: tune for KMP_OS_DRAGONFLY */
+#define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
+#define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #elif KMP_OS_FREEBSD
 /* TODO: tune for KMP_OS_FREEBSD */
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
@@ -1052,6 +1071,10 @@ extern kmp_uint64 __kmp_now_nsec();
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #elif KMP_OS_HURD
 /* TODO: tune for KMP_OS_HURD */
+#define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
+#define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
+#elif KMP_OS_OPENBSD
+/* TODO: tune for KMP_OS_OPENBSD */
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #endif
@@ -2222,6 +2245,18 @@ typedef struct kmp_dephash {
 #endif
 } kmp_dephash_t;
 
+#if OMP_50_ENABLED
+typedef struct kmp_task_affinity_info {
+  kmp_intptr_t base_addr;
+  size_t len;
+  struct {
+    bool flag1 : 1;
+    bool flag2 : 1;
+    kmp_int32 reserved : 30;
+  } flags;
+} kmp_task_affinity_info_t;
+#endif
+
 #endif
 
 #ifdef BUILD_TIED_TASK_STACK
@@ -2483,6 +2518,10 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   int th_last_place; /* last place in partition */
 #endif
 #endif
+#if OMP_50_ENABLED
+  int th_prev_level; /* previous level for affinity format */
+  int th_prev_num_threads; /* previous num_threads for affinity format */
+#endif
 #if USE_ITT_BUILD
   kmp_uint64 th_bar_arrive_time; /* arrival to barrier timestamp */
   kmp_uint64 th_bar_min_time; /* minimum arrival time at the barrier */
@@ -2676,6 +2715,9 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   int t_first_place; // first & last place in parent thread's partition.
   int t_last_place; // Restore these values to master after par region.
 #endif // OMP_40_ENABLED && KMP_AFFINITY_SUPPORTED
+#if OMP_50_ENABLED
+  int t_display_affinity;
+#endif
   int t_size_changed; // team size was changed?: 0: no, 1: yes, -1: changed via
 // omp_set_num_threads() call
 #if OMP_50_ENABLED
@@ -3359,6 +3401,8 @@ extern void __kmp_runtime_destroy(void);
 #if KMP_AFFINITY_SUPPORTED
 extern char *__kmp_affinity_print_mask(char *buf, int buf_len,
                                        kmp_affin_mask_t *mask);
+extern kmp_str_buf_t *__kmp_affinity_str_buf_mask(kmp_str_buf_t *buf,
+                                                  kmp_affin_mask_t *mask);
 extern void __kmp_affinity_initialize(void);
 extern void __kmp_affinity_uninitialize(void);
 extern void __kmp_affinity_set_init_mask(
@@ -3378,6 +3422,14 @@ extern void __kmp_balanced_affinity(kmp_info_t *th, int team_size);
 extern int kmp_set_thread_affinity_mask_initial(void);
 #endif
 #endif /* KMP_AFFINITY_SUPPORTED */
+#if OMP_50_ENABLED
+// No need for KMP_AFFINITY_SUPPORTED guard as only one field in the
+// format string is for affinity, so platforms that do not support
+// affinity can still use the other fields, e.g., %n for num_threads
+extern size_t __kmp_aux_capture_affinity(int gtid, const char *format,
+                                         kmp_str_buf_t *buffer);
+extern void __kmp_aux_display_affinity(int gtid, const char *format);
+#endif
 
 extern void __kmp_cleanup_hierarchy();
 extern void __kmp_get_hierarchy(kmp_uint32 nproc, kmp_bstate_t *thr_bar);
@@ -3530,6 +3582,8 @@ KMP_EXPORT int __kmpc_invoke_task_func(int gtid);
 #if OMP_40_ENABLED
 extern int __kmp_invoke_teams_master(int gtid);
 extern void __kmp_teams_master(int gtid);
+extern int __kmp_aux_get_team_num();
+extern int __kmp_aux_get_num_teams();
 #endif
 extern void __kmp_save_internal_controls(kmp_info_t *thread);
 extern void __kmp_user_set_library(enum library_type arg);
@@ -3783,6 +3837,9 @@ KMP_EXPORT void __kmpc_taskloop(ident_t *loc, kmp_int32 gtid, kmp_task_t *task,
 #if OMP_50_ENABLED
 KMP_EXPORT void *__kmpc_task_reduction_init(int gtid, int num_data, void *data);
 KMP_EXPORT void *__kmpc_task_reduction_get_th_data(int gtid, void *tg, void *d);
+KMP_EXPORT kmp_int32 __kmpc_omp_reg_task_with_affinity(
+    ident_t *loc_ref, kmp_int32 gtid, kmp_task_t *new_task, kmp_int32 naffins,
+    kmp_task_affinity_info_t *affin_list);
 #endif
 
 #endif

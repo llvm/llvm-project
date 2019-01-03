@@ -11,7 +11,7 @@
 ////===----------------------------------------------------------------------===//
 //
 
-#include "winres.h"
+#include "winresrc.h"
 #include "kmp_config.h"
 
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US    // English (U.S.) resources

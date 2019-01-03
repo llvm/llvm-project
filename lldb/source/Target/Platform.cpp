@@ -1296,7 +1296,7 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
     return error;
   if (dest_file == UINT64_MAX)
     return Status("unable to open target file");
-  lldb::DataBufferSP buffer_sp(new DataBufferHeap(1024, 0));
+  lldb::DataBufferSP buffer_sp(new DataBufferHeap(1024 * 16, 0));
   uint64_t offset = 0;
   for (;;) {
     size_t bytes_read = buffer_sp->GetByteSize();
@@ -1586,14 +1586,14 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
     if (process->GetModuleSpec(module_spec.GetFileSpec(),
                                module_spec.GetArchitecture(),
                                resolved_module_spec)) {
-      if (module_spec.GetUUID().IsValid() == false ||
+      if (!module_spec.GetUUID().IsValid() ||
           module_spec.GetUUID() == resolved_module_spec.GetUUID()) {
         got_module_spec = true;
       }
     }
   }
 
-  if (module_spec.GetArchitecture().IsValid() == false) {
+  if (!module_spec.GetArchitecture().IsValid()) {
     Status error;
     // No valid architecture was specified, ask the platform for the
     // architectures that we should be using (in the correct order) and see if
@@ -1616,7 +1616,7 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
     // Get module information from a target.
     if (!GetModuleSpec(module_spec.GetFileSpec(), module_spec.GetArchitecture(),
                        resolved_module_spec)) {
-      if (module_spec.GetUUID().IsValid() == false ||
+      if (!module_spec.GetUUID().IsValid() ||
           module_spec.GetUUID() == resolved_module_spec.GetUUID()) {
         return module_resolver(module_spec);
       }

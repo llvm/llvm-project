@@ -20,13 +20,14 @@
 */
 
 #include <functional>
+#include <cassert>
 #include "test_macros.h"
 
 int main()
 {
 //  ensure that the macros that are supposed to be defined in <functional> are defined.
 
-#if _TEST_STD_VER > 14
+#if TEST_STD_VER > 14
 # if !defined(__cpp_lib_invoke)
 #  error "__cpp_lib_invoke is not defined"
 # elif __cpp_lib_invoke < 201411L

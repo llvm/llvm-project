@@ -177,6 +177,14 @@ public:
     return SourceRange(TemplateLoc, RAngleLoc);
   }
 
+  void print(llvm::raw_ostream &Out, const PrintingPolicy &Policy,
+             const ASTContext &Context, unsigned Indentation = 0) const;
+
+  friend TrailingObjects;
+
+  template <size_t N, bool HasRequiresClause>
+  friend class FixedSizeTemplateParameterListStorage;
+
 public:
   // FIXME: workaround for MSVC 2013; remove when no longer needed
   using FixedSizeStorageOwner = TrailingObjects::FixedSizeStorageOwner;
@@ -751,6 +759,7 @@ class RedeclarableTemplateDecl : public TemplateDecl,
     return getMostRecentDecl();
   }
 
+  void anchor() override;
 protected:
   template <typename EntryType> struct SpecEntryTraits {
     using DeclType = EntryType;

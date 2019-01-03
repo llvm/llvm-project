@@ -154,6 +154,8 @@ void UpdateMemoryUsage();
 
 void AppendToErrorMessageBuffer(const char *buffer);
 
+void AndroidTestTlsSlot();
+
 }  // namespace __hwasan
 
 #define HWASAN_MALLOC_HOOK(ptr, size)       \

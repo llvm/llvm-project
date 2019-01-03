@@ -124,6 +124,9 @@ public:
     Initialize();
 
     static void
+    Initialize(lldb::SBInitializerOptions& options);
+
+    static void
     Terminate();
 
     static lldb::SBDebugger
@@ -375,9 +378,6 @@ public:
 
     const char *
     GetReproducerPath() const;
-
-    void
-    SetReproducerPath (const char *path);
 
     lldb::ScriptLanguage
     GetScriptLanguage() const;

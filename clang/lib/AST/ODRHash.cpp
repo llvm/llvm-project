@@ -49,7 +49,7 @@ void ODRHash::AddDeclarationNameImpl(DeclarationName Name) {
   auto Result = DeclNameMap.insert(std::make_pair(Name, DeclNameMap.size()));
   ID.AddInteger(Result.first->second);
   if (!Result.second) {
-    // If found in map, the the DeclarationName has previously been processed.
+    // If found in map, the DeclarationName has previously been processed.
     return;
   }
 

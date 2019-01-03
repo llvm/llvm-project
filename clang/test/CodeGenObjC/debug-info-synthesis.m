@@ -34,4 +34,4 @@ int main(int argc, char *argv[]) {
 // CHECK: !DISubprogram(name: "-[Foo setDict:]"
 // CHECK-SAME:          file: ![[FILE]],
 // CHECK-SAME:          line: 8,
-// CHECK-SAME:          isLocal: true, isDefinition: true
+// CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition

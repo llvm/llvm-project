@@ -8,6 +8,9 @@
 //===----------------------------------------------------------------------===//
 //
 // XFAIL: apple-darwin
+//
+// NetBSD does not support LC_MONETARY at the moment
+// XFAIL: netbsd
 
 // REQUIRES: locale.fr_FR.UTF-8
 

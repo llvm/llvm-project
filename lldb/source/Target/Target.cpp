@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <mutex>
+#include "lldb/Target/Target.h"
 #include "Plugins/ExpressionParser/Clang/ClangASTSource.h"
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
@@ -20,12 +20,11 @@
 #include "lldb/Breakpoint/BreakpointResolverScripted.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Event.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Section.h"
 #include "lldb/Core/SearchFilter.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredDataImpl.h"
@@ -50,15 +49,16 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/SystemRuntime.h"
-#include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Utility/Event.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include <mutex>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -2864,22 +2864,15 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
       log->Printf("Target::%s asking the platform to debug the process",
                   __FUNCTION__);
 
-    // Get a weak pointer to the previous process if we have one
-    ProcessWP process_wp;
-    if (m_process_sp)
-      process_wp = m_process_sp;
+    // If there was a previous process, delete it before we make the new one.
+    // One subtle point, we delete the process before we release the reference
+    // to m_process_sp.  That way even if we are the last owner, the process
+    // will get Finalized before it gets destroyed.
+    DeleteCurrentProcess();
+    
     m_process_sp =
         GetPlatform()->DebugProcess(launch_info, debugger, this, error);
 
-    // Cleanup the old process since someone might still have a strong
-    // reference to this process and we would like to allow it to cleanup as
-    // much as it can without the object being destroyed. We try to lock the
-    // shared pointer and if that works, then someone else still has a strong
-    // reference to the process.
-
-    ProcessSP old_process_sp(process_wp.lock());
-    if (old_process_sp)
-      old_process_sp->Finalize();
   } else {
     if (log)
       log->Printf("Target::%s the platform doesn't know how to debug a "
@@ -3363,6 +3356,8 @@ static constexpr PropertyDefinition g_properties[] = {
     {"display-runtime-support-values", OptionValue::eTypeBoolean, false, false,
      nullptr, {}, "If true, LLDB will show variables that are meant to "
                   "support the operation of a language's runtime support."},
+    {"display-recognized-arguments", OptionValue::eTypeBoolean, false, false,
+     nullptr, {}, "Show recognized arguments in variable listings by default."},
     {"non-stop-mode", OptionValue::eTypeBoolean, false, 0, nullptr, {},
      "Disable lock-step debugging, instead control threads independently."},
     {"require-hardware-breakpoint", OptionValue::eTypeBoolean, false, 0,
@@ -3411,6 +3406,7 @@ enum {
   ePropertyDisplayExpressionsInCrashlogs,
   ePropertyTrapHandlerNames,
   ePropertyDisplayRuntimeSupportValues,
+  ePropertyDisplayRecognizedArguments,
   ePropertyNonStopModeEnabled,
   ePropertyRequireHardwareBreakpoints,
   ePropertyExperimental,
@@ -3967,6 +3963,16 @@ bool TargetProperties::GetDisplayRuntimeSupportValues() const {
 
 void TargetProperties::SetDisplayRuntimeSupportValues(bool b) {
   const uint32_t idx = ePropertyDisplayRuntimeSupportValues;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+}
+
+bool TargetProperties::GetDisplayRecognizedArguments() const {
+  const uint32_t idx = ePropertyDisplayRecognizedArguments;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx, false);
+}
+
+void TargetProperties::SetDisplayRecognizedArguments(bool b) {
+  const uint32_t idx = ePropertyDisplayRecognizedArguments;
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
 }
 

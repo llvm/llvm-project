@@ -483,8 +483,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
           }
         }
 
-        if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-            II->getIntrinsicID() == Intrinsic::lifetime_end) {
+        if (II->isLifetimeStartOrEnd()) {
           LLVM_DEBUG(dbgs() << "Ignoring lifetime intrinsic.\n");
           ++CurInst;
           continue;

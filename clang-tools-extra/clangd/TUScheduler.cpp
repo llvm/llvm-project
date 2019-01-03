@@ -18,8 +18,8 @@
 // preamble. However, unlike AST, the same preamble can be read concurrently, so
 // we run each of async preamble reads on its own thread.
 //
-// To limit the concurrent load that clangd produces we maintain a semaphore that
-// keeps more than a fixed number of threads from running concurrently.
+// To limit the concurrent load that clangd produces we maintain a semaphore
+// that keeps more than a fixed number of threads from running concurrently.
 //
 // Rationale for cancelling updates.
 // LSP clients can send updates to clangd on each keystroke. Some files take
@@ -205,6 +205,10 @@ private:
   /// Adds a new task to the end of the request queue.
   void startTask(StringRef Name, unique_function<void()> Task,
                  Optional<WantDiagnostics> UpdateType);
+  /// Updates the TUStatus and emits it. Only called in the worker thread.
+  void emitTUStatus(TUAction FAction,
+                    const TUStatus::BuildDetails *Detail = nullptr);
+
   /// Determines the next action to perform.
   /// All actions that should never run are discarded.
   /// Returns a deadline for the next action. If it's expired, run now.
@@ -234,6 +238,8 @@ private:
   ParsingCallbacks &Callbacks;
   /// Helper class required to build the ASTs.
   const std::shared_ptr<PCHContainerOperations> PCHs;
+  /// Only accessed by the worker thread.
+  TUStatus Status;
 
   Semaphore &Barrier;
   /// Inputs, corresponding to the current state of AST.
@@ -251,7 +257,9 @@ private:
   bool Done;                    /* GUARDED_BY(Mutex) */
   std::deque<Request> Requests; /* GUARDED_BY(Mutex) */
   mutable std::condition_variable RequestsCV;
-  /// Guards a critical section for running the diagnostics callbacks. 
+  // FIXME: rename it to better fix the current usage, we also use it to guard
+  // emitting TUStatus.
+  /// Guards a critical section for running the diagnostics callbacks.
   std::mutex DiagsMu;
   // Used to prevent remove document + leading to out-of-order diagnostics:
   // The lifetime of the old/new ASTWorkers will overlap, but their handles
@@ -326,8 +334,10 @@ ASTWorker::ASTWorker(PathRef FileName, TUScheduler::ASTCache &LRUCache,
                      bool StorePreamblesInMemory, ParsingCallbacks &Callbacks)
     : IdleASTs(LRUCache), RunSync(RunSync), UpdateDebounce(UpdateDebounce),
       FileName(FileName), StorePreambleInMemory(StorePreamblesInMemory),
-      Callbacks(Callbacks), PCHs(std::move(PCHs)), Barrier(Barrier),
-      Done(false) {}
+      Callbacks(Callbacks),
+      PCHs(std::move(PCHs)), Status{TUAction(TUAction::Idle, ""),
+                                    TUStatus::BuildDetails()},
+      Barrier(Barrier), Done(false) {}
 
 ASTWorker::~ASTWorker() {
   // Make sure we remove the cached AST, if any.
@@ -340,6 +350,7 @@ ASTWorker::~ASTWorker() {
 }
 
 void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
+  StringRef TaskName = "Update";
   auto Task = [=]() mutable {
     // Will be used to check if we can avoid rebuilding the AST.
     bool InputsAreTheSame =
@@ -350,7 +361,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     bool PrevDiagsWereReported = DiagsWereReported;
     FileInputs = Inputs;
     DiagsWereReported = false;
-
+    emitTUStatus({TUAction::BuildingPreamble, TaskName});
     log("Updating file {0} with command [{1}] {2}", FileName,
         Inputs.CompileCommand.Directory,
         join(Inputs.CompileCommand.CommandLine, " "));
@@ -361,6 +372,9 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
       elog("Could not build CompilerInvocation for file {0}", FileName);
       // Remove the old AST if it's still in cache.
       IdleASTs.take(this);
+      TUStatus::BuildDetails Details;
+      Details.BuildFailed = true;
+      emitTUStatus({TUAction::BuildingPreamble, TaskName}, &Details);
       // Make sure anyone waiting for the preamble gets notified it could not
       // be built.
       PreambleWasBuilt.notify();
@@ -386,7 +400,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     // to it.
     OldPreamble.reset();
     PreambleWasBuilt.notify();
-
+    emitTUStatus({TUAction::BuildingFile, TaskName});
     if (!CanReuseAST) {
       IdleASTs.take(this); // Remove the old AST if it's still in cache.
     } else {
@@ -403,6 +417,9 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
         // current file at this point?
         log("Skipping rebuild of the AST for {0}, inputs are the same.",
             FileName);
+        TUStatus::BuildDetails Details;
+        Details.ReuseAST = true;
+        emitTUStatus({TUAction::BuildingFile, TaskName}, &Details);
         return;
       }
     }
@@ -425,6 +442,16 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
       Optional<ParsedAST> NewAST =
           buildAST(FileName, std::move(Invocation), Inputs, NewPreamble, PCHs);
       AST = NewAST ? llvm::make_unique<ParsedAST>(std::move(*NewAST)) : nullptr;
+      if (!(*AST)) { // buildAST fails.
+        TUStatus::BuildDetails Details;
+        Details.BuildFailed = true;
+        emitTUStatus({TUAction::BuildingFile, TaskName}, &Details);
+      }
+    } else {
+      // We are reusing the AST.
+      TUStatus::BuildDetails Details;
+      Details.ReuseAST = true;
+      emitTUStatus({TUAction::BuildingFile, TaskName}, &Details);
     }
     // We want to report the diagnostics even if this update was cancelled.
     // It seems more useful than making the clients wait indefinitely if they
@@ -443,8 +470,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     // Stash the AST in the cache for further use.
     IdleASTs.put(this, std::move(*AST));
   };
-
-  startTask("Update", std::move(Task), WantDiags);
+  startTask(TaskName, std::move(Task), WantDiags);
 }
 
 void ASTWorker::runWithAST(
@@ -512,9 +538,7 @@ void ASTWorker::getCurrentPreamble(
   RequestsCV.notify_all();
 }
 
-void ASTWorker::waitForFirstPreamble() const {
-  PreambleWasBuilt.wait();
-}
+void ASTWorker::waitForFirstPreamble() const { PreambleWasBuilt.wait(); }
 
 std::size_t ASTWorker::getUsedBytes() const {
   // Note that we don't report the size of ASTs currently used for processing
@@ -560,6 +584,18 @@ void ASTWorker::startTask(StringRef Name, unique_function<void()> Task,
   RequestsCV.notify_all();
 }
 
+void ASTWorker::emitTUStatus(TUAction Action,
+                             const TUStatus::BuildDetails *Details) {
+  Status.Action = std::move(Action);
+  if (Details)
+    Status.Details = *Details;
+  std::lock_guard<std::mutex> Lock(DiagsMu);
+  // Do not emit TU statuses when the ASTWorker is shutting down.
+  if (ReportDiagnostics) {
+    Callbacks.onFileUpdated(FileName, Status);
+  }
+}
+
 void ASTWorker::run() {
   while (true) {
     Request Req;
@@ -581,11 +617,13 @@ void ASTWorker::run() {
           Ctx.emplace(Requests.front().Ctx.clone());
           Tracer.emplace("Debounce");
           SPAN_ATTACH(*Tracer, "next_request", Requests.front().Name);
-          if (!(Wait == Deadline::infinity()))
+          if (!(Wait == Deadline::infinity())) {
+            emitTUStatus({TUAction::Queued, Req.Name});
             SPAN_ATTACH(*Tracer, "sleep_ms",
                         std::chrono::duration_cast<std::chrono::milliseconds>(
                             Wait.time() - steady_clock::now())
                             .count());
+          }
         }
 
         wait(Lock, RequestsCV, Wait);
@@ -595,16 +633,25 @@ void ASTWorker::run() {
     } // unlock Mutex
 
     {
-      std::lock_guard<Semaphore> BarrierLock(Barrier);
+      std::unique_lock<Semaphore> Lock(Barrier, std::try_to_lock);
+      if (!Lock.owns_lock()) {
+        emitTUStatus({TUAction::Queued, Req.Name});
+        Lock.lock();
+      }
       WithContext Guard(std::move(Req.Ctx));
       trace::Span Tracer(Req.Name);
+      emitTUStatus({TUAction::RunningAction, Req.Name});
       Req.Action();
     }
 
+    bool IsEmpty = false;
     {
       std::lock_guard<std::mutex> Lock(Mutex);
       Requests.pop_front();
+      IsEmpty = Requests.empty();
     }
+    if (IsEmpty)
+      emitTUStatus({TUAction::Idle, /*Name*/ ""});
     RequestsCV.notify_all();
   }
 }
@@ -681,6 +728,33 @@ bool ASTWorker::blockUntilIdle(Deadline Timeout) const {
   return wait(Lock, RequestsCV, Timeout, [&] { return Requests.empty(); });
 }
 
+// Render a TUAction to a user-facing string representation.
+// TUAction represents clangd-internal states, we don't intend to expose them
+// to users (say C++ programmers) directly to avoid confusion, we use terms that
+// are familiar by C++ programmers.
+std::string renderTUAction(const TUAction &Action) {
+  std::string Result;
+  raw_string_ostream OS(Result);
+  switch (Action.S) {
+  case TUAction::Queued:
+    OS << "file is queued";
+    break;
+  case TUAction::RunningAction:
+    OS << "running " << Action.Name;
+    break;
+  case TUAction::BuildingPreamble:
+    OS << "parsing includes";
+    break;
+  case TUAction::BuildingFile:
+    OS << "parsing main file";
+    break;
+  case TUAction::Idle:
+    OS << "idle";
+    break;
+  }
+  return OS.str();
+}
+
 } // namespace
 
 unsigned getDefaultAsyncThreadsCount() {
@@ -691,6 +765,13 @@ unsigned getDefaultAsyncThreadsCount() {
   if (HardwareConcurrency == 0)
     return 1;
   return HardwareConcurrency;
+}
+
+FileStatus TUStatus::render(PathRef File) const {
+  FileStatus FStatus;
+  FStatus.uri = URIForFile::canonicalize(File, /*TUPath=*/File);
+  FStatus.state = renderTUAction(Action);
+  return FStatus;
 }
 
 struct TUScheduler::FileData {

@@ -174,6 +174,10 @@ uptr internal_filesize(fd_t fd) {
   return (uptr)st.st_size;
 }
 
+uptr internal_dup(int oldfd) {
+  return dup(oldfd);
+}
+
 uptr internal_dup2(int oldfd, int newfd) {
   return dup2(oldfd, newfd);
 }
@@ -370,6 +374,10 @@ void ReExec() {
 }
 
 void CheckASLR() {
+  // Do nothing
+}
+
+void CheckMPROTECT() {
   // Do nothing
 }
 

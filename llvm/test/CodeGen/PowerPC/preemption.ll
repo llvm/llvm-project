@@ -1,4 +1,5 @@
-; RUN: llc -mtriple powerpc64le-unkown-gnu-linux  < %s |  FileCheck %s
+; RUN: llc -mtriple powerpc64le-unkown-gnu-linux  -relocation-model=pic \
+; RUN: < %s |  FileCheck %s
 ; RUN: llc -mtriple powerpc64le-unkown-gnu-linux -relocation-model=static \
 ; RUN: < %s |  FileCheck --check-prefix=STATIC %s
 ; RUN: llc -mtriple powerpc64le-unkown-gnu-linux -relocation-model=pic \

@@ -1336,10 +1336,7 @@ bool DisassemblerLLVMC::FlavorValidForArchSpec(
 
   if (triple.getArch() == llvm::Triple::x86 ||
       triple.getArch() == llvm::Triple::x86_64) {
-    if (strcmp(flavor, "intel") == 0 || strcmp(flavor, "att") == 0)
-      return true;
-    else
-      return false;
+    return strcmp(flavor, "intel") == 0 || strcmp(flavor, "att") == 0;
   } else
     return false;
 }

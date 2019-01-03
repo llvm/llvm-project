@@ -27,7 +27,7 @@ int main (int argc, char **argv) {
   return tmain(argv);
 }
 
-// CK1: [[MEM_TY:%.+]] = type { [{{4|8}} x i8] }
+// CK1: [[MEM_TY:%.+]] = type { [128 x i8] }
 // CK1-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
 // CK1-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
 // CK1-DAG: [[KERNEL_SIZE1:@.+]] = internal unnamed_addr constant i{{64|32}} 4
@@ -114,7 +114,7 @@ int main (int argc, char **argv) {
   return tmain(argv);
 }
 
-// CK2: [[MEM_TY:%.+]] = type { [{{4|8}} x i8] }
+// CK2: [[MEM_TY:%.+]] = type { [128 x i8] }
 // CK2-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
 // CK2-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
 // CK2-DAG: [[KERNEL_SIZE1:@.+]] = internal unnamed_addr constant i{{64|32}} 4

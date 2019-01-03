@@ -134,7 +134,7 @@ unsigned getX86SubSuperRegisterOrZero(unsigned, unsigned,
 // Defines symbolic names for the X86 instructions.
 //
 #define GET_INSTRINFO_ENUM
-#define GET_GENINSTRINFO_MC_DECL
+#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "X86GenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

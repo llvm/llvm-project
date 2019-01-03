@@ -41,6 +41,7 @@
 #include "llvm/CodeGen/ScheduleDFS.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -1483,15 +1484,40 @@ namespace {
 class BaseMemOpClusterMutation : public ScheduleDAGMutation {
   struct MemOpInfo {
     SUnit *SU;
-    unsigned BaseReg;
+    MachineOperand *BaseOp;
     int64_t Offset;
 
-    MemOpInfo(SUnit *su, unsigned reg, int64_t ofs)
-        : SU(su), BaseReg(reg), Offset(ofs) {}
+    MemOpInfo(SUnit *su, MachineOperand *Op, int64_t ofs)
+        : SU(su), BaseOp(Op), Offset(ofs) {}
 
-    bool operator<(const MemOpInfo&RHS) const {
-      return std::tie(BaseReg, Offset, SU->NodeNum) <
-             std::tie(RHS.BaseReg, RHS.Offset, RHS.SU->NodeNum);
+    bool operator<(const MemOpInfo &RHS) const {
+      if (BaseOp->getType() != RHS.BaseOp->getType())
+        return BaseOp->getType() < RHS.BaseOp->getType();
+
+      if (BaseOp->isReg())
+        return std::make_tuple(BaseOp->getReg(), Offset, SU->NodeNum) <
+               std::make_tuple(RHS.BaseOp->getReg(), RHS.Offset,
+                               RHS.SU->NodeNum);
+      if (BaseOp->isFI()) {
+        const MachineFunction &MF =
+            *BaseOp->getParent()->getParent()->getParent();
+        const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
+        bool StackGrowsDown = TFI.getStackGrowthDirection() ==
+                              TargetFrameLowering::StackGrowsDown;
+        // Can't use tuple comparison here since we might need to use a
+        // different order when the stack grows down.
+        if (BaseOp->getIndex() != RHS.BaseOp->getIndex())
+          return StackGrowsDown ? BaseOp->getIndex() > RHS.BaseOp->getIndex()
+                                : BaseOp->getIndex() < RHS.BaseOp->getIndex();
+
+        if (Offset != RHS.Offset)
+          return StackGrowsDown ? Offset > RHS.Offset : Offset < RHS.Offset;
+
+        return SU->NodeNum < RHS.SU->NodeNum;
+      }
+
+      llvm_unreachable("MemOpClusterMutation only supports register or frame "
+                       "index bases.");
     }
   };
 
@@ -1547,10 +1573,10 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     ArrayRef<SUnit *> MemOps, ScheduleDAGMI *DAG) {
   SmallVector<MemOpInfo, 32> MemOpRecords;
   for (SUnit *SU : MemOps) {
-    unsigned BaseReg;
+    MachineOperand *BaseOp;
     int64_t Offset;
-    if (TII->getMemOpBaseRegImmOfs(*SU->getInstr(), BaseReg, Offset, TRI))
-      MemOpRecords.push_back(MemOpInfo(SU, BaseReg, Offset));
+    if (TII->getMemOperandWithOffset(*SU->getInstr(), BaseOp, Offset, TRI))
+      MemOpRecords.push_back(MemOpInfo(SU, BaseOp, Offset));
   }
   if (MemOpRecords.size() < 2)
     return;
@@ -1560,8 +1586,8 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
   for (unsigned Idx = 0, End = MemOpRecords.size(); Idx < (End - 1); ++Idx) {
     SUnit *SUa = MemOpRecords[Idx].SU;
     SUnit *SUb = MemOpRecords[Idx+1].SU;
-    if (TII->shouldClusterMemOps(*SUa->getInstr(), MemOpRecords[Idx].BaseReg,
-                                 *SUb->getInstr(), MemOpRecords[Idx+1].BaseReg,
+    if (TII->shouldClusterMemOps(*MemOpRecords[Idx].BaseOp,
+                                 *MemOpRecords[Idx + 1].BaseOp,
                                  ClusterLength) &&
         DAG->addEdge(SUb, SDep(SUa, SDep::Cluster))) {
       LLVM_DEBUG(dbgs() << "Cluster ld/st SU(" << SUa->NodeNum << ") - SU("

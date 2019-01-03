@@ -67,7 +67,7 @@ bool CMICmdArgValConsume::Validate(CMICmdArgContext &vwArgContext) {
   while (it != vecOptions.end()) {
     const CMIUtilString &rTxt(*it);
 
-    if (rTxt.compare("--") == 0) {
+    if (rTxt == "--") {
       m_bFound = true;
       m_bValid = true;
       if (!vwArgContext.RemoveArg(rTxt))

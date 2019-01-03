@@ -11,12 +11,6 @@ include(LLDBStandalone)
 include(LLDBConfig)
 include(AddLLDB)
 
-option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
-if(LLDB_CODESIGN_IDENTITY)
-  # In the future we may use LLVM_CODESIGNING_IDENTITY directly.
-  set(LLVM_CODESIGNING_IDENTITY ${LLDB_CODESIGN_IDENTITY})
-endif()
-
 # Define the LLDB_CONFIGURATION_xxx matching the build type
 if( uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
   add_definitions( -DLLDB_CONFIGURATION_DEBUG )
@@ -62,7 +56,7 @@ if(LLDB_BUILD_FRAMEWORK)
   # the framework, and must be defined before building liblldb.
   set(PRODUCT_NAME "LLDB")
   set(EXECUTABLE_NAME "LLDB")
-  set(CURRENT_PROJECT_VERSION "${LLDB_VERSION}")
+  set(CURRENT_PROJECT_VERSION "${LLDB_VERSION_MAJOR}.${LLDB_VERSION_MINOR}.${LLDB_VERSION_PATCH}")
   set(LLDB_SUITE_TARGET lldb-framework)
 
   set(LLDB_FRAMEWORK_DIR
@@ -163,6 +157,9 @@ if(LLDB_INCLUDE_TESTS)
 
   if(TARGET clang)
     list(APPEND LLDB_TEST_DEPS clang)
+    if(APPLE)
+      list(APPEND LLDB_TEST_DEPS cxx)
+    endif()
   endif()
 
   if(TARGET dsymutil)

@@ -99,9 +99,9 @@ TEST(SerializationTest, YAMLConversions) {
   auto ParsedYAML = readIndexFile(YAML);
   ASSERT_TRUE(bool(ParsedYAML)) << ParsedYAML.takeError();
   ASSERT_TRUE(bool(ParsedYAML->Symbols));
-  EXPECT_THAT(*ParsedYAML->Symbols,
-              UnorderedElementsAre(ID("057557CEBF6E6B2D"),
-                                   ID("057557CEBF6E6B2E")));
+  EXPECT_THAT(
+      *ParsedYAML->Symbols,
+      UnorderedElementsAre(ID("057557CEBF6E6B2D"), ID("057557CEBF6E6B2E")));
 
   auto Sym1 = *ParsedYAML->Symbols->find(
       cantFail(SymbolID::fromStr("057557CEBF6E6B2D")));
@@ -131,9 +131,8 @@ TEST(SerializationTest, YAMLConversions) {
   ASSERT_TRUE(bool(ParsedYAML->Refs));
   EXPECT_THAT(
       *ParsedYAML->Refs,
-      UnorderedElementsAre(
-          Pair(cantFail(SymbolID::fromStr("057557CEBF6E6B2D")),
-               testing::SizeIs(1))));
+      UnorderedElementsAre(Pair(cantFail(SymbolID::fromStr("057557CEBF6E6B2D")),
+                                testing::SizeIs(1))));
   auto Ref1 = ParsedYAML->Refs->begin()->second.front();
   EXPECT_EQ(Ref1.Kind, RefKind::Reference);
   EXPECT_EQ(StringRef(Ref1.Location.FileURI), "file:///path/foo.cc");
@@ -173,31 +172,44 @@ TEST(SerializationTest, BinaryConversions) {
               UnorderedElementsAreArray(YAMLFromRefs(*In->Refs)));
 }
 
-TEST(SerializationTest, HashTest) {
+TEST(SerializationTest, SrcsTest) {
   auto In = readIndexFile(YAML);
   EXPECT_TRUE(bool(In)) << In.takeError();
 
-  std::string TestContent("TESTCONTENT");
-  auto Digest =
+  std::string TestContent("TestContent");
+  IncludeGraphNode IGN;
+  IGN.Digest =
       llvm::SHA1::hash({reinterpret_cast<const uint8_t *>(TestContent.data()),
                         TestContent.size()});
+  IGN.DirectIncludes = {"inc1", "inc2"};
+  IGN.URI = "URI";
+  IGN.IsTU = true;
+  IncludeGraph Sources;
+  Sources[IGN.URI] = IGN;
   // Write to binary format, and parse again.
   IndexFileOut Out(*In);
   Out.Format = IndexFileFormat::RIFF;
-  Out.Digest = &Digest;
-  std::string Serialized = to_string(Out);
+  Out.Sources = &Sources;
+  {
+    std::string Serialized = to_string(Out);
 
-  auto In2 = readIndexFile(Serialized);
-  ASSERT_TRUE(bool(In2)) << In.takeError();
-  ASSERT_EQ(In2->Digest, Digest);
-  ASSERT_TRUE(In2->Symbols);
-  ASSERT_TRUE(In2->Refs);
-
-  // Assert the YAML serializations match, for nice comparisons and diffs.
-  EXPECT_THAT(YAMLFromSymbols(*In2->Symbols),
-              UnorderedElementsAreArray(YAMLFromSymbols(*In->Symbols)));
-  EXPECT_THAT(YAMLFromRefs(*In2->Refs),
-              UnorderedElementsAreArray(YAMLFromRefs(*In->Refs)));
+    auto In = readIndexFile(Serialized);
+    ASSERT_TRUE(bool(In)) << In.takeError();
+    ASSERT_TRUE(In->Symbols);
+    ASSERT_TRUE(In->Refs);
+    ASSERT_TRUE(In->Sources);
+    ASSERT_TRUE(In->Sources->count(IGN.URI));
+    // Assert the YAML serializations match, for nice comparisons and diffs.
+    EXPECT_THAT(YAMLFromSymbols(*In->Symbols),
+                UnorderedElementsAreArray(YAMLFromSymbols(*In->Symbols)));
+    EXPECT_THAT(YAMLFromRefs(*In->Refs),
+                UnorderedElementsAreArray(YAMLFromRefs(*In->Refs)));
+    auto IGNDeserialized = In->Sources->lookup(IGN.URI);
+    EXPECT_EQ(IGNDeserialized.Digest, IGN.Digest);
+    EXPECT_EQ(IGNDeserialized.DirectIncludes, IGN.DirectIncludes);
+    EXPECT_EQ(IGNDeserialized.URI, IGN.URI);
+    EXPECT_EQ(IGNDeserialized.IsTU, IGN.IsTU);
+  }
 }
 
 } // namespace

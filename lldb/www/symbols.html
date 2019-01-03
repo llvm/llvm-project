@@ -262,6 +262,17 @@ A40597AA-5529-3337-8C09-D8A014EB1578.plist
    &lt;string&gt;/path/to/foo.dSYM/Contents/Resources/DWARF/foo&lt;/string&gt;
    &lt;key&gt;DBGSymbolRichExecutable&lt;/key&gt;
    &lt;string&gt;/path/to/unstripped/executable&lt;/string&gt;
+   &lt;key&gt;DBGVersion&lt;/key&gt;
+   &lt;string&gt;3&lt;/string&gt;
+   &lt;key&gt;DBGSourcePathRemapping&lt;/key&gt;
+   &lt;dict&gt;
+       &lt;key&gt;/path/to/build/time/src/location1&lt;/key&gt;
+       &lt;string&gt;/path/to/debug/time/src/location&lt;/string&gt;
+       &lt;key&gt;/path/to/build/time/src/location2&lt;/key&gt;
+       &lt;string&gt;/path/to/debug/time/src/location&lt;/string&gt;
+   &lt;/dict&gt;
+   &lt;key&gt;DBGSymbolRichExecutable&lt;/key&gt;
+   &lt;string&gt;/path/to/unstripped/executable&lt;/string&gt;
 &lt;/dict&gt;
 &lt;/plist&gt;
 </tt></pre></code>
@@ -270,6 +281,22 @@ A40597AA-5529-3337-8C09-D8A014EB1578.plist
 so making the results of your shell script will be very easy to create by 
 combining two plists into a single one where you take the UUID and use it a
  string key, and the value is the contents of the plist.
+
+<p>LLDB will read the following entries from the per-UUID plist file in the dSYM
+bundle:  <b>DBGSymbolRichExecutable</b>, <b>DBGBuildSourcePath</b> and
+<b>DBGSourcePath</b>, and <b>DBGSourcePathRemapping</b> if <b>DBGVersion</b> is 3
+or higher.  <b>DBGBuildSourcePath</b> and <b>DBGSourcePath</b> are for remapping
+a single file path.  For instance, the files may be in /BuildDir/SheetApp/SheetApp-37
+when built, but they are in /SourceDir/SheetApp/SheetApp-37 at debug time, those
+two paths could be listed in those keys.  If there are multiple source path
+remappings, the <b>DBGSourcePathRemapping</b> dictionary can be used, where an
+arbitrary number of entries may be present.  <b>DBGVersion</b> should be 3 or
+<b>DBGSourcePathRemapping</b> will not be read.  If both <b>DBGSourcePathRemapping</b>
+AND <b>DBGBuildSourcePath</b>/<b>DBGSourcePath</b> are present in the plist, the
+<b>DBGSourcePathRemapping</b> entries will be used for path remapping first.  This
+may allow for more specific remappings in the <b>DBGSourcePathRemapping</b>
+dictionary and a less specific remapping in the
+<b>DBGBuildSourcePath</b>/<b>DBGSourcePath</b> pair as a last resort.
 
 
     			</div>

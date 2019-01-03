@@ -225,7 +225,7 @@ void f(int a) {
 
 namespace PR34120 {
 struct A {
-  int B; // expected-note {{declared here}}
+  int B; // expected-note 2 {{declared here}}
 };
 
 class C : public A {
@@ -233,7 +233,12 @@ class C : public A {
   void E() {
     extern void f(int B); // Ok
   }
+  void F(int B); // Ok, declaration; not definition.
+  void G(int B);
 };
+
+void C::G(int B) { // expected-warning {{parameter 'B' shadows member inherited from type 'A'}}
+}
 
 class Private {
   int B;

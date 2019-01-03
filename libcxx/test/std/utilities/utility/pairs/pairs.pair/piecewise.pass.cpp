@@ -17,9 +17,10 @@
 //     pair(piecewise_construct_t, tuple<Args1...> first_args,
 //                                 tuple<Args2...> second_args);
 
-#include <utility>
-#include <tuple>
 #include <cassert>
+#include <tuple>
+#include <utility>
+
 
 int main()
 {

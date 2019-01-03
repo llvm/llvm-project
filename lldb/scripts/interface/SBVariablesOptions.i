@@ -28,7 +28,7 @@ public:
     SetIncludeArguments (bool);
 
     bool
-    GetIncludeRecognizedArguments ()  const;
+    GetIncludeRecognizedArguments (const lldb::SBTarget &)  const;
 
     void
     SetIncludeRecognizedArguments (bool);

@@ -128,10 +128,8 @@ EVT AMDGPUTargetLowering::getEquivalentMemType(LLVMContext &Ctx, EVT VT) {
 }
 
 unsigned AMDGPUTargetLowering::numBitsUnsigned(SDValue Op, SelectionDAG &DAG) {
-  KnownBits Known;
   EVT VT = Op.getValueType();
-  DAG.computeKnownBits(Op, Known);
-
+  KnownBits Known = DAG.computeKnownBits(Op);
   return VT.getSizeInBits() - Known.countMinLeadingZeros();
 }
 
@@ -2970,8 +2968,7 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
     // shl (ext x) => zext (shl x), if shift does not overflow int
     if (VT != MVT::i64)
       break;
-    KnownBits Known;
-    DAG.computeKnownBits(X, Known);
+    KnownBits Known = DAG.computeKnownBits(X);
     unsigned LZ = Known.countMinLeadingZeros();
     if (LZ < RHSVal)
       break;
@@ -3130,8 +3127,7 @@ SDValue AMDGPUTargetLowering::performTruncateCombine(
          Src.getOpcode() == ISD::SRA ||
          Src.getOpcode() == ISD::SHL)) {
       SDValue Amt = Src.getOperand(1);
-      KnownBits Known;
-      DAG.computeKnownBits(Amt, Known);
+      KnownBits Known = DAG.computeKnownBits(Amt);
       unsigned Size = VT.getScalarSizeInBits();
       if ((Known.isConstant() && Known.getConstant().ule(Size)) ||
           (Known.getBitWidth() - Known.countMinLeadingZeros() <= Log2_32(Size))) {
@@ -4294,10 +4290,8 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
   }
   case AMDGPUISD::MUL_U24:
   case AMDGPUISD::MUL_I24: {
-    KnownBits LHSKnown, RHSKnown;
-    DAG.computeKnownBits(Op.getOperand(0), LHSKnown, Depth + 1);
-    DAG.computeKnownBits(Op.getOperand(1), RHSKnown, Depth + 1);
-
+    KnownBits LHSKnown = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    KnownBits RHSKnown = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
     unsigned TrailZ = LHSKnown.countMinTrailingZeros() +
                       RHSKnown.countMinTrailingZeros();
     Known.Zero.setLowBits(std::min(TrailZ, 32u));
@@ -4328,9 +4322,8 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     if (!CMask)
       return;
 
-    KnownBits LHSKnown, RHSKnown;
-    DAG.computeKnownBits(Op.getOperand(0), LHSKnown, Depth + 1);
-    DAG.computeKnownBits(Op.getOperand(1), RHSKnown, Depth + 1);
+    KnownBits LHSKnown = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    KnownBits RHSKnown = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
     unsigned Sel = CMask->getZExtValue();
 
     for (unsigned I = 0; I < 32; I += 8) {

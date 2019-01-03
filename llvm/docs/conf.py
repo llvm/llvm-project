@@ -219,7 +219,7 @@ man_pages = []
 # Automatically derive the list of man pages from the contents of the command
 # guide subdirectory.
 basedir = os.path.dirname(__file__)
-man_page_authors = "Maintained by The LLVM Team (http://llvm.org/)."
+man_page_authors = "Maintained by the LLVM Team (https://llvm.org/)."
 command_guide_subpath = 'CommandGuide'
 command_guide_path = os.path.join(basedir, command_guide_subpath)
 for name in os.listdir(command_guide_path):

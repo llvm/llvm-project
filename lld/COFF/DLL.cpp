@@ -416,6 +416,8 @@ public:
   size_t getSize() const override { return Size * 4; }
 
   void writeTo(uint8_t *Buf) const override {
+    memset(Buf + OutputSectionOff, 0, getSize());
+
     for (const Export &E : Config->Exports) {
       uint8_t *P = Buf + OutputSectionOff + E.Ordinal * 4;
       uint32_t Bit = 0;

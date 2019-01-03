@@ -81,9 +81,8 @@ define void @foo() {
 ; 686-NEXT:    movzbl c, %eax
 ; 686-NEXT:    xorl %ecx, %ecx
 ; 686-NEXT:    testl %eax, %eax
-; 686-NEXT:    setne %cl
-; 686-NEXT:    testb %al, %al
 ; 686-NEXT:    setne {{[0-9]+}}(%esp)
+; 686-NEXT:    setne %cl
 ; 686-NEXT:    xorl %edx, %edx
 ; 686-NEXT:    cmpl %eax, %ecx
 ; 686-NEXT:    setle %dl

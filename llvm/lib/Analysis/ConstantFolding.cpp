@@ -347,9 +347,20 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
 
     // We're simulating a load through a pointer that was bitcast to point to
     // a different type, so we can try to walk down through the initial
-    // elements of an aggregate to see if some part of th e aggregate is
+    // elements of an aggregate to see if some part of the aggregate is
     // castable to implement the "load" semantic model.
-    C = C->getAggregateElement(0u);
+    if (SrcTy->isStructTy()) {
+      // Struct types might have leading zero-length elements like [0 x i32],
+      // which are certainly not what we are looking for, so skip them.
+      unsigned Elem = 0;
+      Constant *ElemC;
+      do {
+        ElemC = C->getAggregateElement(Elem++);
+      } while (ElemC && DL.getTypeSizeInBits(ElemC->getType()) == 0);
+      C = ElemC;
+    } else {
+      C = C->getAggregateElement(0u);
+    }
   } while (C);
 
   return nullptr;

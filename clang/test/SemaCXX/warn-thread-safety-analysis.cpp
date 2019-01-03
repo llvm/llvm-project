@@ -2787,6 +2787,110 @@ void relockWeird() {
 } // end namespace RelockableScopedLock
 
 
+namespace ScopedUnlock {
+
+class SCOPED_LOCKABLE MutexUnlock {
+public:
+  MutexUnlock(Mutex *mu) EXCLUSIVE_UNLOCK_FUNCTION(mu);
+  ~MutexUnlock() EXCLUSIVE_UNLOCK_FUNCTION();
+
+  void Lock() EXCLUSIVE_UNLOCK_FUNCTION();
+  void Unlock() EXCLUSIVE_LOCK_FUNCTION();
+};
+
+class SCOPED_LOCKABLE ReaderMutexUnlock {
+public:
+  ReaderMutexUnlock(Mutex *mu) SHARED_UNLOCK_FUNCTION(mu);
+  ~ReaderMutexUnlock() EXCLUSIVE_UNLOCK_FUNCTION();
+
+  void Lock() EXCLUSIVE_UNLOCK_FUNCTION();
+  void Unlock() EXCLUSIVE_LOCK_FUNCTION();
+};
+
+Mutex mu;
+int x GUARDED_BY(mu);
+bool c;
+void print(int);
+
+void simple() EXCLUSIVE_LOCKS_REQUIRED(mu) {
+  x = 1;
+  MutexUnlock scope(&mu);
+  x = 2; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+}
+
+void simpleShared() SHARED_LOCKS_REQUIRED(mu) {
+  print(x);
+  ReaderMutexUnlock scope(&mu);
+  print(x); // expected-warning {{reading variable 'x' requires holding mutex 'mu'}}
+}
+
+void innerUnlock() {
+  MutexLock outer(&mu);
+  if (x == 0) {
+    MutexUnlock inner(&mu);
+    x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+  }
+  x = 2;
+}
+
+void innerUnlockShared() {
+  ReaderMutexLock outer(&mu);
+  if (x == 0) {
+    ReaderMutexUnlock inner(&mu);
+    print(x); // expected-warning {{reading variable 'x' requires holding mutex 'mu'}}
+  }
+  print(x);
+}
+
+void manual() EXCLUSIVE_LOCKS_REQUIRED(mu) {
+  MutexUnlock scope(&mu);
+  scope.Lock();
+  x = 2;
+  scope.Unlock();
+  x = 3; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+}
+
+void join() EXCLUSIVE_LOCKS_REQUIRED(mu) {
+  MutexUnlock scope(&mu);
+  if (c) {
+    scope.Lock(); // expected-note{{mutex acquired here}}
+  }
+  // expected-warning@+1{{mutex 'mu' is not held on every path through here}}
+  scope.Lock();
+}
+
+void doubleLock() EXCLUSIVE_LOCKS_REQUIRED(mu) {
+  MutexUnlock scope(&mu);
+  scope.Lock();
+  scope.Lock(); // expected-warning {{acquiring mutex 'mu' that is already held}}
+}
+
+void doubleUnlock() EXCLUSIVE_LOCKS_REQUIRED(mu) {
+  MutexUnlock scope(&mu);
+  scope.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
+}
+
+class SCOPED_LOCKABLE MutexLockUnlock {
+public:
+  MutexLockUnlock(Mutex *mu1, Mutex *mu2) EXCLUSIVE_UNLOCK_FUNCTION(mu1) EXCLUSIVE_LOCK_FUNCTION(mu2);
+  ~MutexLockUnlock() EXCLUSIVE_UNLOCK_FUNCTION();
+
+  void Release() EXCLUSIVE_UNLOCK_FUNCTION();
+  void Acquire() EXCLUSIVE_LOCK_FUNCTION();
+};
+
+Mutex other;
+void fn() EXCLUSIVE_LOCKS_REQUIRED(other);
+
+void lockUnlock() EXCLUSIVE_LOCKS_REQUIRED(mu) {
+  MutexLockUnlock scope(&mu, &other);
+  fn();
+  x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+}
+
+} // end namespace ScopedUnlock
+
+
 namespace TrylockFunctionTest {
 
 class Foo {

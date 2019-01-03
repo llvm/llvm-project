@@ -771,18 +771,16 @@ bool ClangASTSource::IgnoreName(const ConstString name,
   static const ConstString id_name("id");
   static const ConstString Class_name("Class");
 
-  if (name == id_name || name == Class_name)
-    return true;
+  if (m_ast_context->getLangOpts().ObjC)
+    if (name == id_name || name == Class_name)
+      return true;
 
   StringRef name_string_ref = name.GetStringRef();
 
   // The ClangASTSource is not responsible for finding $-names.
-  if (name_string_ref.empty() ||
-      (ignore_all_dollar_names && name_string_ref.startswith("$")) ||
-      name_string_ref.startswith("_$"))
-    return true;
-
-  return false;
+  return name_string_ref.empty() ||
+         (ignore_all_dollar_names && name_string_ref.startswith("$")) ||
+         name_string_ref.startswith("_$");
 }
 
 void ClangASTSource::FindExternalVisibleDecls(

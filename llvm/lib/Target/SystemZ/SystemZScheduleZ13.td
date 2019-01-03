@@ -609,7 +609,7 @@ def : InstRW<[WLat3LSU, WLat3LSU, FXa, FXb, LSU, GroupAlone],
 // Compare double and swap
 def : InstRW<[WLat6LSU, WLat6LSU, FXa3, FXb2, LSU, GroupAlone2],
              (instregex "CDS(Y)?$")>;
-def : InstRW<[WLat15, WLat15, FXa2, FXb4, LSU3, GroupAlone],
+def : InstRW<[WLat15, WLat15, FXa2, FXb4, LSU3, GroupAlone3],
              (instregex "CDSG$")>;
 
 // Compare and swap and store
@@ -664,10 +664,10 @@ def : InstRW<[WLat1, LSU5, GroupAlone], (instregex "(PACK|PKA|PKU)$")>;
 def : InstRW<[WLat12, LSU5, GroupAlone], (instregex "UNPK(A|U)$")>;
 def : InstRW<[WLat1, FXb, LSU2, Cracked], (instregex "UNPK$")>;
 
-def : InstRW<[WLat5LSU, FXb, VecDFX, LSU3, GroupAlone],
+def : InstRW<[WLat5LSU, FXb, VecDFX, LSU3, GroupAlone2],
              (instregex "(A|S|ZA)P$")>;
-def : InstRW<[WLat1, FXb, VecDFX4, LSU3, GroupAlone], (instregex "(M|D)P$")>;
-def : InstRW<[WLat15, FXb, VecDFX2, LSU2, GroupAlone], (instregex "SRP$")>;
+def : InstRW<[WLat1, FXb, VecDFX4, LSU3, GroupAlone2], (instregex "(M|D)P$")>;
+def : InstRW<[WLat15, FXb, VecDFX2, LSU2, GroupAlone3], (instregex "SRP$")>;
 def : InstRW<[WLat8, VecDFX, LSU, LSU, GroupAlone], (instregex "CP$")>;
 def : InstRW<[WLat3LSU, VecDFX, LSU, Cracked], (instregex "TP$")>;
 def : InstRW<[WLat30, MCD], (instregex "ED(MK)?$")>;
@@ -684,7 +684,7 @@ def : InstRW<[WLat5, LSU, FXa, Cracked], (instregex "LAE(Y)?$")>;
 
 // Load/store access multiple (not modeled precisely)
 def : InstRW<[WLat20, WLat20, LSU5, GroupAlone], (instregex "LAM(Y)?$")>;
-def : InstRW<[WLat1, LSU5, GroupAlone], (instregex "STAM(Y)?$")>;
+def : InstRW<[WLat1, LSU5, FXb, GroupAlone2], (instregex "STAM(Y)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Program mask and addressing mode
@@ -909,7 +909,7 @@ def : InstRW<[WLat9, VecDF2, GroupAlone], (instregex "(K|C)XBR$")>;
 
 // Test Data Class
 def : InstRW<[WLat5, LSU, VecXsPm, NormalGr], (instregex "TC(E|D)B$")>;
-def : InstRW<[WLat10, LSU2, VecDF4, GroupAlone], (instregex "TCXB$")>;
+def : InstRW<[WLat10, LSU, VecDF4, GroupAlone], (instregex "TCXB$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Floating-point control register instructions
@@ -1210,7 +1210,7 @@ def : InstRW<[WLat4LSU, WLat4LSU, LSU5, GroupAlone], (instregex "VLM$")>;
 def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "VST(L|32|64)?$")>;
 def : InstRW<[WLat1, FXb, LSU, NormalGr], (instregex "VSTE(F|G)$")>;
 def : InstRW<[WLat1, FXb, LSU, VecXsPm, Cracked], (instregex "VSTE(B|H)$")>;
-def : InstRW<[WLat1, LSU2, FXb3, GroupAlone], (instregex "VSTM$")>;
+def : InstRW<[WLat1, LSU2, FXb3, GroupAlone2], (instregex "VSTM$")>;
 def : InstRW<[WLat1, FXb2, LSU, Cracked], (instregex "VSCE(F|G)$")>;
 
 //===----------------------------------------------------------------------===//
@@ -1424,7 +1424,7 @@ def : InstRW<[WLat1, LSU, EndGroup], (instregex "SAC(F)?$")>;
 //===----------------------------------------------------------------------===//
 
 def : InstRW<[WLat4LSU, WLat4LSU, LSU2, GroupAlone], (instregex "LCTL(G)?$")>;
-def : InstRW<[WLat1, LSU5, GroupAlone], (instregex "STCT(L|G)$")>;
+def : InstRW<[WLat1, LSU5, FXb, GroupAlone2], (instregex "STCT(L|G)$")>;
 def : InstRW<[LSULatency, LSU, NormalGr], (instregex "E(P|S)A(I)?R$")>;
 def : InstRW<[WLat30, MCD], (instregex "SSA(I)?R$")>;
 def : InstRW<[WLat30, MCD], (instregex "ESEA$")>;
@@ -1468,8 +1468,8 @@ def : InstRW<[WLat30, MCD], (instregex "TPROT$")>;
 // System: Memory-move Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat4LSU, FXa2, FXb, LSU5, GroupAlone], (instregex "MVC(K|P|S)$")>;
-def : InstRW<[WLat1, FXa, LSU5, GroupAlone], (instregex "MVC(S|D)K$")>;
+def : InstRW<[WLat4LSU, FXa2, FXb, LSU5, GroupAlone2], (instregex "MVC(K|P|S)$")>;
+def : InstRW<[WLat1, FXa, LSU5, GroupAlone2], (instregex "MVC(S|D)K$")>;
 def : InstRW<[WLat30, MCD], (instregex "MVCOS$")>;
 def : InstRW<[WLat30, MCD], (instregex "MVPG$")>;
 

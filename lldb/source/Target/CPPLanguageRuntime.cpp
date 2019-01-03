@@ -93,6 +93,15 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   //    we will obtain the name from this pointer.
   ValueObjectSP member__f_(
       valobj_sp->GetChildMemberWithName(ConstString("__f_"), true));
+
+  if (member__f_) {
+    ValueObjectSP sub_member__f_(
+       member__f_->GetChildMemberWithName(ConstString("__f_"), true));
+
+    if (sub_member__f_)
+        member__f_ = sub_member__f_;
+  }
+
   lldb::addr_t member__f_pointer_value = member__f_->GetValueAsUnsigned(0);
 
   optional_info.member__f_pointer_value = member__f_pointer_value;

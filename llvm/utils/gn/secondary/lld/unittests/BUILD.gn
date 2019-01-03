@@ -1,0 +1,7 @@
+group("unittests") {
+  deps = [
+    "DriverTests",
+    "MachOTests",
+  ]
+  testonly = true
+}

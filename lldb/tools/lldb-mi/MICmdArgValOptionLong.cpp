@@ -252,10 +252,7 @@ bool CMICmdArgValOptionLong::IsArgLongOption(const CMIUtilString &vrTxt) const {
     return false;
 
   const CMIUtilString strArg = vrTxt.substr(2);
-  if (strArg.IsNumber())
-    return false;
-
-  return true;
+  return !strArg.IsNumber();
 }
 
 //++

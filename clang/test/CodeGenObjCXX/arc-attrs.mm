@@ -15,7 +15,7 @@ void sanityTest() {
   // CHECK-NEXT: call void @_Z13releaseObjectP11objc_object(i8* [[OBJ2]])
   releaseObject(makeObject2());
 
-  // CHECK-NEXT: call void @objc_storeStrong(i8** [[X]], i8* null)
+  // CHECK-NEXT: call void @llvm.objc.storeStrong(i8** [[X]], i8* null)
   // CHECK-NEXT: ret void
 }
 
@@ -43,7 +43,7 @@ void templateTest() {
   // CHECK-NEXT: call void @_Z14releaseObjectTIU8__strongP11objc_objectEvT_(i8* [[OBJ3]])
   releaseObjectT(makeObject1());
 
-  // CHECK-NEXT: call void @objc_storeStrong(i8** [[X]], i8* null)
+  // CHECK-NEXT: call void @llvm.objc.storeStrong(i8** [[X]], i8* null)
   // CHECK-NEXT: ret void
 }
 
@@ -58,7 +58,7 @@ ForwardConsumed::ForwardConsumed(__attribute__((ns_consumed)) id x) {}
 // CHECK-NOT:  objc_retain
 // CHECK:      store i8* {{.*}}, i8** [[X:%.*]],
 // CHECK-NOT:  [[X]]
-// CHECK:      call void @objc_storeStrong(i8** [[X]], i8* null)
+// CHECK:      call void @llvm.objc.storeStrong(i8** [[X]], i8* null)
 
 // CHECK: define void @_ZN15ForwardConsumedC1EP11objc_object(
 // CHECK-NOT:  objc_retain
@@ -66,4 +66,4 @@ ForwardConsumed::ForwardConsumed(__attribute__((ns_consumed)) id x) {}
 // CHECK:      [[T0:%.*]] = load i8*, i8** [[X]],
 // CHECK-NEXT: store i8* null, i8** [[X]],
 // CHECK-NEXT: call void @_ZN15ForwardConsumedC2EP11objc_object({{.*}}, i8* [[T0]])
-// CHECK:      call void @objc_storeStrong(i8** [[X]], i8* null)
+// CHECK:      call void @llvm.objc.storeStrong(i8** [[X]], i8* null)

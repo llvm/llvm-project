@@ -26,7 +26,7 @@ SBFileSpecList::SBFileSpecList() : m_opaque_ap(new FileSpecList()) {}
 SBFileSpecList::SBFileSpecList(const SBFileSpecList &rhs) : m_opaque_ap() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
-  if (rhs.m_opaque_ap.get())
+  if (rhs.m_opaque_ap)
     m_opaque_ap.reset(new FileSpecList(*(rhs.get())));
 
   if (log) {
@@ -78,17 +78,17 @@ const lldb_private::FileSpecList *SBFileSpecList::get() const {
 }
 
 const lldb_private::FileSpecList &SBFileSpecList::operator*() const {
-  return *m_opaque_ap.get();
+  return *m_opaque_ap;
 }
 
 const lldb_private::FileSpecList &SBFileSpecList::ref() const {
-  return *m_opaque_ap.get();
+  return *m_opaque_ap;
 }
 
 bool SBFileSpecList::GetDescription(SBStream &description) const {
   Stream &strm = description.ref();
 
-  if (m_opaque_ap.get()) {
+  if (m_opaque_ap) {
     uint32_t num_files = m_opaque_ap->GetSize();
     strm.Printf("%d files: ", num_files);
     for (uint32_t i = 0; i < num_files; i++) {

@@ -95,8 +95,8 @@ body:             |
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s64>) = COPY $q2
     %3:_(<2 x s64>) = COPY $q3
-    %4:_(<4 x s64>) = G_MERGE_VALUES %0(<2 x s64>), %1(<2 x s64>)
-    %5:_(<4 x s64>) = G_MERGE_VALUES %2(<2 x s64>), %3(<2 x s64>)
+    %4:_(<4 x s64>) = G_CONCAT_VECTORS %0, %1
+    %5:_(<4 x s64>) = G_CONCAT_VECTORS %2, %3
     %6:_(<4 x s64>) = G_ADD %4, %5
     %7:_(<2 x s64>), %8:_(<2 x s64>) = G_UNMERGE_VALUES %6(<4 x s64>)
     $q0 = COPY %7(<2 x s64>)
@@ -122,12 +122,11 @@ body:             |
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s64>) = COPY $q2
     %3:_(<2 x s64>) = COPY $q3
-    %4:_(<6 x s64>) = G_MERGE_VALUES %0(<2 x s64>), %1(<2 x s64>), %2(<2 x s64>)
-    %5:_(<6 x s64>) = G_MERGE_VALUES %1(<2 x s64>), %2(<2 x s64>), %3(<2 x s64>)
+    %4:_(<6 x s64>) = G_CONCAT_VECTORS %0(<2 x s64>), %1(<2 x s64>), %2(<2 x s64>)
+    %5:_(<6 x s64>) = G_CONCAT_VECTORS %1(<2 x s64>), %2(<2 x s64>), %3(<2 x s64>)
     %6:_(<6 x s64>) = G_ADD %4, %5
     %7:_(<2 x s64>), %8:_(<2 x s64>), %9:_(<2 x s64>) = G_UNMERGE_VALUES %6(<6 x s64>)
     $q0 = COPY %7(<2 x s64>)
     $q1 = COPY %8(<2 x s64>)
     $q2 = COPY %9(<2 x s64>)
-
 ...

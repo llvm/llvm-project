@@ -33,9 +33,7 @@ class RealFileSystemProvider : public FileSystemProvider {
 public:
   // FIXME: returns the single real FS instance, which is not threadsafe.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-  getFileSystem() const override {
-    return llvm::vfs::getRealFileSystem();
-  }
+  getFileSystem() const override;
 };
 
 } // namespace clangd

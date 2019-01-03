@@ -324,7 +324,7 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
     above_trap_handler = true;
 
   if (pc == 0 || pc == 0x1) {
-    if (above_trap_handler == false) {
+    if (!above_trap_handler) {
       m_frame_type = eNotAValidFrame;
       UnwindLogMsg("this frame has a pc of 0x0");
       return;
@@ -474,7 +474,7 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
   bool decr_pc_and_recompute_addr_range = false;
 
   // If the symbol lookup failed...
-  if (m_sym_ctx_valid == false)
+  if (!m_sym_ctx_valid)
     decr_pc_and_recompute_addr_range = true;
 
   // Or if we're in the middle of the stack (and not "above" an asynchronous
@@ -1250,7 +1250,7 @@ RegisterContextLLDB::SavedLocationForRegister(
       // Address register and it hasn't been saved anywhere yet -- that is,
       // it's still live in the actual register. Handle this specially.
 
-      if (have_unwindplan_regloc == false && return_address_reg.IsValid() &&
+      if (!have_unwindplan_regloc && return_address_reg.IsValid() &&
           IsFrameZero()) {
         if (return_address_reg.GetAsKind(eRegisterKindLLDB) !=
             LLDB_INVALID_REGNUM) {
@@ -1329,11 +1329,7 @@ RegisterContextLLDB::SavedLocationForRegister(
             }
           }
 
-          if (can_fetch_pc_value && can_fetch_cfa) {
-            have_unwindplan_regloc = true;
-          } else {
-            have_unwindplan_regloc = false;
-          }
+          have_unwindplan_regloc = can_fetch_pc_value && can_fetch_cfa;
         } else {
           // We were unable to fall back to another unwind plan
           have_unwindplan_regloc = false;
@@ -1344,7 +1340,7 @@ RegisterContextLLDB::SavedLocationForRegister(
 
   ExecutionContext exe_ctx(m_thread.shared_from_this());
   Process *process = exe_ctx.GetProcessPtr();
-  if (have_unwindplan_regloc == false) {
+  if (!have_unwindplan_regloc) {
     // If the UnwindPlan failed to give us an unwind location for this
     // register, we may be able to fall back to some ABI-defined default.  For
     // example, some ABIs allow to determine the caller's SP via the CFA. Also,
@@ -1363,7 +1359,7 @@ RegisterContextLLDB::SavedLocationForRegister(
     }
   }
 
-  if (have_unwindplan_regloc == false) {
+  if (!have_unwindplan_regloc) {
     if (IsFrameZero()) {
       // This is frame 0 - we should return the actual live register context
       // value
@@ -1409,7 +1405,7 @@ RegisterContextLLDB::SavedLocationForRegister(
   }
 
   if (unwindplan_regloc.IsSame()) {
-    if (IsFrameZero() == false &&
+    if (!IsFrameZero() &&
         (regnum.GetAsKind(eRegisterKindGeneric) == LLDB_REGNUM_GENERIC_PC ||
          regnum.GetAsKind(eRegisterKindGeneric) == LLDB_REGNUM_GENERIC_RA)) {
       UnwindLogMsg("register %s (%d) is marked as 'IsSame' - it is a pc or "
@@ -2051,12 +2047,8 @@ bool RegisterContextLLDB::ReadPC(addr_t &pc) {
             pc = abi->FixCodeAddress(pc);
     }
 
-    if (m_all_registers_available == false && above_trap_handler == false &&
-        (pc == 0 || pc == 1)) {
-      return false;
-    }
-
-    return true;
+    return !(m_all_registers_available == false &&
+             above_trap_handler == false && (pc == 0 || pc == 1));
   } else {
     return false;
   }

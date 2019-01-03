@@ -42,13 +42,7 @@
 #include "RNBSocket.h"
 #include "StdStringExtractor.h"
 
-#if defined(HAVE_LIBCOMPRESSION)
 #include <compression.h>
-#endif
-
-#if defined(HAVE_LIBZ)
-#include <zlib.h>
-#endif
 
 #include <TargetConditionals.h>
 #include <iomanip>
@@ -709,53 +703,73 @@ std::string RNBRemote::CompressString(const std::string &orig) {
       std::vector<uint8_t> encoded_data(encoded_data_buf_size);
       size_t compressed_size = 0;
 
-#if defined(HAVE_LIBCOMPRESSION)
+      // Allocate a scratch buffer for libcompression the first
+      // time we see a different compression type; reuse it in 
+      // all compression_encode_buffer calls so it doesn't need
+      // to allocate / free its own scratch buffer each time.
+      // This buffer will only be freed when compression type
+      // changes; otherwise it will persist until debugserver
+      // exit.
+
+      static compression_types g_libcompress_scratchbuf_type = compression_types::none;
+      static void *g_libcompress_scratchbuf = nullptr;
+
+      if (g_libcompress_scratchbuf_type != compression_type) {
+        if (g_libcompress_scratchbuf) {
+          free (g_libcompress_scratchbuf);
+          g_libcompress_scratchbuf = nullptr;
+        }
+        size_t scratchbuf_size = 0;
+        switch (compression_type) {
+          case compression_types::lz4: 
+            scratchbuf_size = compression_encode_scratch_buffer_size (COMPRESSION_LZ4_RAW);
+            break;
+          case compression_types::zlib_deflate: 
+            scratchbuf_size = compression_encode_scratch_buffer_size (COMPRESSION_ZLIB);
+            break;
+          case compression_types::lzma: 
+            scratchbuf_size = compression_encode_scratch_buffer_size (COMPRESSION_LZMA);
+            break;
+          case compression_types::lzfse: 
+            scratchbuf_size = compression_encode_scratch_buffer_size (COMPRESSION_LZFSE);
+            break;
+          default:
+            break;
+        }
+        if (scratchbuf_size > 0) {
+          g_libcompress_scratchbuf = (void*) malloc (scratchbuf_size);
+          g_libcompress_scratchbuf_type = compression_type;
+        }
+      }
+
       if (compression_type == compression_types::lz4) {
         compressed_size = compression_encode_buffer(
             encoded_data.data(), encoded_data_buf_size,
-            (const uint8_t *)orig.c_str(), orig.size(), nullptr,
+            (const uint8_t *)orig.c_str(), orig.size(), 
+            g_libcompress_scratchbuf,
             COMPRESSION_LZ4_RAW);
       }
       if (compression_type == compression_types::zlib_deflate) {
         compressed_size = compression_encode_buffer(
             encoded_data.data(), encoded_data_buf_size,
-            (const uint8_t *)orig.c_str(), orig.size(), nullptr,
+            (const uint8_t *)orig.c_str(), orig.size(), 
+            g_libcompress_scratchbuf,
             COMPRESSION_ZLIB);
       }
       if (compression_type == compression_types::lzma) {
         compressed_size = compression_encode_buffer(
             encoded_data.data(), encoded_data_buf_size,
-            (const uint8_t *)orig.c_str(), orig.size(), nullptr,
+            (const uint8_t *)orig.c_str(), orig.size(), 
+            g_libcompress_scratchbuf,
             COMPRESSION_LZMA);
       }
       if (compression_type == compression_types::lzfse) {
         compressed_size = compression_encode_buffer(
             encoded_data.data(), encoded_data_buf_size,
-            (const uint8_t *)orig.c_str(), orig.size(), nullptr,
+            (const uint8_t *)orig.c_str(), orig.size(), 
+            g_libcompress_scratchbuf,
             COMPRESSION_LZFSE);
       }
-#endif
-
-#if defined(HAVE_LIBZ)
-      if (compressed_size == 0 &&
-          compression_type == compression_types::zlib_deflate) {
-        z_stream stream;
-        memset(&stream, 0, sizeof(z_stream));
-        stream.next_in = (Bytef *)orig.c_str();
-        stream.avail_in = (uInt)orig.size();
-        stream.next_out = (Bytef *)encoded_data.data();
-        stream.avail_out = (uInt)encoded_data_buf_size;
-        stream.zalloc = Z_NULL;
-        stream.zfree = Z_NULL;
-        stream.opaque = Z_NULL;
-        deflateInit2(&stream, 5, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
-        int compress_status = deflate(&stream, Z_FINISH);
-        deflateEnd(&stream);
-        if (compress_status == Z_STREAM_END && stream.total_out > 0) {
-          compressed_size = stream.total_out;
-        }
-      }
-#endif
 
       if (compressed_size > 0) {
         compressed.clear();
@@ -1811,18 +1825,18 @@ rnb_err_t RNBRemote::HandlePacket_qRcmd(const char *p) {
   }
   if (*c == '\0') {
     std::string command = get_identifier(line);
-    if (command.compare("set") == 0) {
+    if (command == "set") {
       std::string variable = get_identifier(line);
       std::string op = get_operator(line);
       std::string value = get_value(line);
-      if (variable.compare("logfile") == 0) {
+      if (variable == "logfile") {
         FILE *log_file = fopen(value.c_str(), "w");
         if (log_file) {
           DNBLogSetLogCallback(FileLogCallback, log_file);
           return SendPacket("OK");
         }
         return SendPacket("E71");
-      } else if (variable.compare("logmask") == 0) {
+      } else if (variable == "logmask") {
         char *end;
         errno = 0;
         uint32_t logmask =
@@ -3413,10 +3427,7 @@ static bool RNBRemoteShouldCancelCallback(void *not_used) {
   RNBRemoteSP remoteSP(g_remoteSP);
   if (remoteSP.get() != NULL) {
     RNBRemote *remote = remoteSP.get();
-    if (remote->Comm().IsConnected())
-      return false;
-    else
-      return true;
+    return !remote->Comm().IsConnected();
   }
   return true;
 }
@@ -3614,13 +3625,13 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
   bool enable_compression = false;
   (void)enable_compression;
 
-#if (defined (TARGET_OS_WATCH) && TARGET_OS_WATCH == 1) || (defined (TARGET_OS_IOS) && TARGET_OS_IOS == 1) || (defined (TARGET_OS_TV) && TARGET_OS_TV == 1)
+#if (defined (TARGET_OS_WATCH) && TARGET_OS_WATCH == 1) \
+    || (defined (TARGET_OS_IOS) && TARGET_OS_IOS == 1) \
+    || (defined (TARGET_OS_TV) && TARGET_OS_TV == 1) \
+    || (defined (TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1)
   enable_compression = true;
 #endif
 
-#if defined(HAVE_LIBCOMPRESSION)
-  // libcompression is weak linked so test if compression_decode_buffer() is
-  // available
   if (enable_compression) {
     strcat(buf, ";SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;"
                 "DefaultCompressionMinSize=");
@@ -3628,17 +3639,7 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
     snprintf(numbuf, sizeof(numbuf), "%zu", m_compression_minsize);
     numbuf[sizeof(numbuf) - 1] = '\0';
     strcat(buf, numbuf);
-  }
-#elif defined(HAVE_LIBZ)
-  if (enable_compression) {
-    strcat(buf,
-           ";SupportedCompressions=zlib-deflate;DefaultCompressionMinSize=");
-    char numbuf[16];
-    snprintf(numbuf, sizeof(numbuf), "%zu", m_compression_minsize);
-    numbuf[sizeof(numbuf) - 1] = '\0';
-    strcat(buf, numbuf);
-  }
-#endif
+  } 
 
   return SendPacket(buf);
 }
@@ -3817,7 +3818,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
             attach_failed_due_to_sip = true;
           }
 
-          if (attach_failed_due_to_sip == false) {
+          if (!attach_failed_due_to_sip) {
             int csops_flags = 0;
             int retval = ::csops(pid_attaching_to, CS_OPS_STATUS, &csops_flags,
                                  sizeof(csops_flags));
@@ -4230,7 +4231,7 @@ rnb_err_t RNBRemote::HandlePacket_GetProfileData(const char *p) {
   std::string name;
   std::string value;
   while (packet.GetNameColonValue(name, value)) {
-    if (name.compare("scan_type") == 0) {
+    if (name == "scan_type") {
       std::istringstream iss(value);
       uint32_t int_value = 0;
       if (iss >> std::hex >> int_value) {
@@ -4260,11 +4261,11 @@ rnb_err_t RNBRemote::HandlePacket_SetEnableAsyncProfiling(const char *p) {
   std::string name;
   std::string value;
   while (packet.GetNameColonValue(name, value)) {
-    if (name.compare("enable") == 0) {
+    if (name == "enable") {
       enable = strtoul(value.c_str(), NULL, 10) > 0;
-    } else if (name.compare("interval_usec") == 0) {
+    } else if (name == "interval_usec") {
       interval_usec = strtoul(value.c_str(), NULL, 10);
-    } else if (name.compare("scan_type") == 0) {
+    } else if (name == "scan_type") {
       std::istringstream iss(value);
       uint32_t int_value = 0;
       if (iss >> std::hex >> int_value) {
@@ -4306,7 +4307,6 @@ rnb_err_t RNBRemote::HandlePacket_QEnableCompression(const char *p) {
     }
   }
 
-#if defined(HAVE_LIBCOMPRESSION)
   if (strstr(p, "type:zlib-deflate;") != nullptr) {
     EnableCompressionNextSendPacket(compression_types::zlib_deflate);
     m_compression_minsize = new_compression_minsize;
@@ -4324,15 +4324,6 @@ rnb_err_t RNBRemote::HandlePacket_QEnableCompression(const char *p) {
     m_compression_minsize = new_compression_minsize;
     return SendPacket("OK");
   }
-#endif
-
-#if defined(HAVE_LIBZ)
-  if (strstr(p, "type:zlib-deflate;") != nullptr) {
-    EnableCompressionNextSendPacket(compression_types::zlib_deflate);
-    m_compression_minsize = new_compression_minsize;
-    return SendPacket("OK");
-  }
-#endif
 
   return SendPacket("E88");
 }
@@ -5300,7 +5291,7 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
 
       thread_dict_sp->AddStringItem("reason", reason_value);
 
-      if (threads_with_valid_stop_info_only == false) {
+      if (!threads_with_valid_stop_info_only) {
         const char *thread_name = DNBThreadGetName(pid, tid);
         if (thread_name && thread_name[0])
           thread_dict_sp->AddStringItem("name", thread_name);
@@ -5488,7 +5479,7 @@ rnb_err_t RNBRemote::HandlePacket_jThreadExtendedInfo(const char *p) {
 
       bool need_to_print_comma = false;
 
-      if (thread_activity_sp && timed_out == false) {
+      if (thread_activity_sp && !timed_out) {
         const Genealogy::Activity *activity =
             &thread_activity_sp->current_activity;
         bool need_vouchers_comma_sep = false;

@@ -45,9 +45,8 @@ entry:
 define i32 @test4(i32 %x) {
 ; CHECK-LABEL: test4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    lsls r0, r0, #4
-; CHECK-NEXT:    movs r1, #112
-; CHECK-NEXT:    bics r0, r1
+; CHECK-NEXT:    lsrs r0, r0, #3
+; CHECK-NEXT:    lsls r0, r0, #7
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = shl i32 %x, 4
@@ -84,9 +83,8 @@ entry:
 define i32 @test7(i32 %x) {
 ; CHECK-LABEL: test7:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    lsrs r1, r0, #29
-; CHECK-NEXT:    movs r0, #4
-; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    lsrs r0, r0, #31
+; CHECK-NEXT:    lsls r0, r0, #2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i32 %x, 29
@@ -110,9 +108,8 @@ entry:
 define i32 @test9(i32 %x) {
 ; CHECK-LABEL: test9:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    lsrs r0, r0, #2
-; CHECK-NEXT:    movs r1, #1
-; CHECK-NEXT:    bics r0, r1
+; CHECK-NEXT:    lsrs r0, r0, #3
+; CHECK-NEXT:    lsls r0, r0, #1
 ; CHECK-NEXT:    bx lr
 entry:
   %and = lshr i32 %x, 2
@@ -130,4 +127,64 @@ entry:
   %0 = shl i32 %x, 2
   %shr = and i32 %0, 255
   ret i32 %shr
+}
+
+define i32 @test11(i32 %x) {
+; CHECK-LABEL: test11:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    lsrs r0, r0, #24
+; CHECK-NEXT:    lsls r0, r0, #2
+; CHECK-NEXT:    bx lr
+entry:
+  %shl = lshr i32 %x, 22
+  %and = and i32 %shl, 1020
+  ret i32 %and
+}
+
+define i32 @test12(i32 %x) {
+; CHECK-LABEL: test12:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    lsrs r0, r0, #3
+; CHECK-NEXT:    lsls r0, r0, #4
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = shl i32 %x, 1
+  %shr = and i32 %0, -16
+  ret i32 %shr
+}
+
+define i32 @test13(i32 %x) {
+; CHECK-LABEL: test13:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    lsrs r0, r0, #3
+; CHECK-NEXT:    lsls r0, r0, #4
+; CHECK-NEXT:    bx lr
+entry:
+  %shr = lshr i32 %x, 3
+  %shl = shl i32 %shr, 4
+  ret i32 %shl
+}
+
+define i32 @test14(i32 %x) {
+; CHECK-LABEL: test14:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    lsrs r0, r0, #6
+; CHECK-NEXT:    lsls r0, r0, #10
+; CHECK-NEXT:    bx lr
+entry:
+  %shl = shl i32 %x, 4
+  %and = and i32 %shl, -1024
+  ret i32 %and
+}
+
+define i32 @test15(i32 %x) {
+; CHECK-LABEL: test15:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    lsrs r0, r0, #4
+; CHECK-NEXT:    lsls r0, r0, #3
+; CHECK-NEXT:    bx lr
+entry:
+  %shr = lshr i32 %x, 4
+  %shl = shl i32 %shr, 3
+  ret i32 %shl
 }

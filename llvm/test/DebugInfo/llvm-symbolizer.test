@@ -1,10 +1,10 @@
 RUN: rm -rf %t
 RUN: mkdir -p %t
-RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x400559" > %t.input
-RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64.debuglink 0x400559" >> %t.input
-RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x400436" >> %t.input
-RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x400528" >> %t.input
-RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x400586" >> %t.input
+RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x40113f" > %t.input
+RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64.debuglink 0x40113f" >> %t.input
+RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x401020" >> %t.input
+RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x40110e" >> %t.input
+RUN: echo "%p/Inputs/dwarfdump-test.elf-x86-64 0x401160" >> %t.input
 RUN: echo "%p/Inputs/dwarfdump-test2.elf-x86-64 0x4004e8" >> %t.input
 RUN: echo "%p/Inputs/dwarfdump-test2.elf-x86-64 0x4004f4" >> %t.input
 RUN: echo "%p/Inputs/dwarfdump-test4.elf-x86-64 0x62c" >> %t.input
@@ -181,8 +181,8 @@ UNKNOWN-ARCH-NOT: main
 UNKNOWN-ARCH: ??
 UNKNOWN-ARCH-NOT: main
 
-RUN: echo "0x400559" > %t.input4
-RUN: echo "0x400436" >> %t.input4
+RUN: echo "0x40113f" > %t.input4
+RUN: echo "0x401020" >> %t.input4
 RUN: llvm-symbolizer --obj %p/Inputs/dwarfdump-test.elf-x86-64 < %t.input4 \
 RUN:   | FileCheck %s --check-prefix=BINARY
 
@@ -190,9 +190,9 @@ BINARY:       main
 BINARY-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test.cc:16
 BINARY:      _start
 
-RUN: echo "0x400720" > %t.input5
-RUN: echo "0x4004a0" >> %t.input5
-RUN: echo "0x4006f0" >> %t.input5
+RUN: echo "0x401140" > %t.input5
+RUN: echo "0x401020" >> %t.input5
+RUN: echo "0x401120" >> %t.input5
 RUN: llvm-symbolizer --obj %p/Inputs/llvm-symbolizer-test.elf-x86-64 < %t.input5 \
 RUN:   | FileCheck %s --check-prefix=BINARY_C
 

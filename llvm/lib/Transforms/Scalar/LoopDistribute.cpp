@@ -78,6 +78,18 @@ using namespace llvm;
 #define LDIST_NAME "loop-distribute"
 #define DEBUG_TYPE LDIST_NAME
 
+/// @{
+/// Metadata attribute names
+static const char *const LLVMLoopDistributeFollowupAll =
+    "llvm.loop.distribute.followup_all";
+static const char *const LLVMLoopDistributeFollowupCoincident =
+    "llvm.loop.distribute.followup_coincident";
+static const char *const LLVMLoopDistributeFollowupSequential =
+    "llvm.loop.distribute.followup_sequential";
+static const char *const LLVMLoopDistributeFollowupFallback =
+    "llvm.loop.distribute.followup_fallback";
+/// @}
+
 static cl::opt<bool>
     LDistVerify("loop-distribute-verify", cl::Hidden,
                 cl::desc("Turn on DominatorTree and LoopInfo verification "
@@ -186,7 +198,7 @@ public:
   /// Returns the loop where this partition ends up after distribution.
   /// If this partition is mapped to the original loop then use the block from
   /// the loop.
-  const Loop *getDistributedLoop() const {
+  Loop *getDistributedLoop() const {
     return ClonedLoop ? ClonedLoop : OrigLoop;
   }
 
@@ -443,6 +455,9 @@ public:
     assert(&*OrigPH->begin() == OrigPH->getTerminator() &&
            "preheader not empty");
 
+    // Preserve the original loop ID for use after the transformation.
+    MDNode *OrigLoopID = L->getLoopID();
+
     // Create a loop for each partition except the last.  Clone the original
     // loop before PH along with adding a preheader for the cloned loop.  Then
     // update PH to point to the newly added preheader.
@@ -457,8 +472,12 @@ public:
 
       Part->getVMap()[ExitBlock] = TopPH;
       Part->remapInstructions();
+      setNewLoopID(OrigLoopID, Part);
     }
     Pred->getTerminator()->replaceUsesOfWith(OrigPH, TopPH);
+
+    // Also set a new loop ID for the last loop.
+    setNewLoopID(OrigLoopID, &PartitionContainer.back());
 
     // Now go in forward order and update the immediate dominator for the
     // preheaders with the exiting block of the previous loop.  Dominance
@@ -573,6 +592,19 @@ private:
         PrevMatch = nullptr;
         ++I;
       }
+    }
+  }
+
+  /// Assign new LoopIDs for the partition's cloned loop.
+  void setNewLoopID(MDNode *OrigLoopID, InstPartition *Part) {
+    Optional<MDNode *> PartitionID = makeFollowupLoopID(
+        OrigLoopID,
+        {LLVMLoopDistributeFollowupAll,
+         Part->hasDepCycle() ? LLVMLoopDistributeFollowupSequential
+                             : LLVMLoopDistributeFollowupCoincident});
+    if (PartitionID.hasValue()) {
+      Loop *NewLoop = Part->getDistributedLoop();
+      NewLoop->setLoopID(PartitionID.getValue());
     }
   }
 };
@@ -743,6 +775,9 @@ public:
       return fail("TooManySCEVRuntimeChecks",
                   "too many SCEV run-time checks needed.\n");
 
+    if (!IsForced.getValueOr(false) && hasDisableAllTransformsHint(L))
+      return fail("HeuristicDisabled", "distribution heuristic disabled");
+
     LLVM_DEBUG(dbgs() << "\nDistributing loop: " << *L << "\n");
     // We're done forming the partitions set up the reverse mapping from
     // instructions to partitions.
@@ -762,6 +797,8 @@ public:
                                                   RtPtrChecking);
 
     if (!Pred.isAlwaysTrue() || !Checks.empty()) {
+      MDNode *OrigLoopID = L->getLoopID();
+
       LLVM_DEBUG(dbgs() << "\nPointers:\n");
       LLVM_DEBUG(LAI->getRuntimePointerChecking()->printChecks(dbgs(), Checks));
       LoopVersioning LVer(*LAI, L, LI, DT, SE, false);
@@ -769,6 +806,17 @@ public:
       LVer.setSCEVChecks(LAI->getPSE().getUnionPredicate());
       LVer.versionLoop(DefsUsedOutside);
       LVer.annotateLoopWithNoAlias();
+
+      // The unversioned loop will not be changed, so we inherit all attributes
+      // from the original loop, but remove the loop distribution metadata to
+      // avoid to distribute it again.
+      MDNode *UnversionedLoopID =
+          makeFollowupLoopID(OrigLoopID,
+                             {LLVMLoopDistributeFollowupAll,
+                              LLVMLoopDistributeFollowupFallback},
+                             "llvm.loop.distribute.", true)
+              .getValue();
+      LVer.getNonVersionedLoop()->setLoopID(UnversionedLoopID);
     }
 
     // Create identical copies of the original loop for each partition and hook

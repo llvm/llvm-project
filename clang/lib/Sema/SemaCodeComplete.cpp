@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
@@ -432,49 +433,6 @@ ResultBuilder::ShadowMapEntry::end() const {
   return iterator(DeclOrVector.get<DeclIndexPairVector *>()->end());
 }
 
-/// Compute the qualification required to get from the current context
-/// (\p CurContext) to the target context (\p TargetContext).
-///
-/// \param Context the AST context in which the qualification will be used.
-///
-/// \param CurContext the context where an entity is being named, which is
-/// typically based on the current scope.
-///
-/// \param TargetContext the context in which the named entity actually
-/// resides.
-///
-/// \returns a nested name specifier that refers into the target context, or
-/// NULL if no qualification is needed.
-static NestedNameSpecifier *
-getRequiredQualification(ASTContext &Context, const DeclContext *CurContext,
-                         const DeclContext *TargetContext) {
-  SmallVector<const DeclContext *, 4> TargetParents;
-
-  for (const DeclContext *CommonAncestor = TargetContext;
-       CommonAncestor && !CommonAncestor->Encloses(CurContext);
-       CommonAncestor = CommonAncestor->getLookupParent()) {
-    if (CommonAncestor->isTransparentContext() ||
-        CommonAncestor->isFunctionOrMethod())
-      continue;
-
-    TargetParents.push_back(CommonAncestor);
-  }
-
-  NestedNameSpecifier *Result = nullptr;
-  while (!TargetParents.empty()) {
-    const DeclContext *Parent = TargetParents.pop_back_val();
-
-    if (const auto *Namespace = dyn_cast<NamespaceDecl>(Parent)) {
-      if (!Namespace->getIdentifier())
-        continue;
-
-      Result = NestedNameSpecifier::Create(Context, Result, Namespace);
-    } else if (const auto *TD = dyn_cast<TagDecl>(Parent))
-      Result = NestedNameSpecifier::Create(
-          Context, Result, false, Context.getTypeDeclType(TD).getTypePtr());
-  }
-  return Result;
-}
 
 /// Determine whether \p Id is a name reserved for the implementation (C99
 /// 7.1.3, C++ [lib.global.names]).
@@ -585,8 +543,8 @@ bool ResultBuilder::CheckHiddenResult(Result &R, DeclContext *CurContext,
   R.QualifierIsInformative = false;
 
   if (!R.Qualifier)
-    R.Qualifier = getRequiredQualification(SemaRef.Context, CurContext,
-                                           R.Declaration->getDeclContext());
+    R.Qualifier = NestedNameSpecifier::getRequiredQualification(
+        SemaRef.Context, CurContext, R.Declaration->getDeclContext());
   return false;
 }
 
@@ -1027,8 +985,7 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
   if (HasObjectTypeQualifiers)
     if (const auto *Method = dyn_cast<CXXMethodDecl>(R.Declaration))
       if (Method->isInstance()) {
-        Qualifiers MethodQuals =
-            Qualifiers::fromCVRMask(Method->getTypeQualifiers());
+        Qualifiers MethodQuals = Method->getTypeQualifiers();
         if (ObjectTypeQualifiers == MethodQuals)
           R.Priority += CCD_ObjectQualifierMatch;
         else if (ObjectTypeQualifiers - MethodQuals) {
@@ -1278,42 +1235,77 @@ bool ResultBuilder::IsObjCIvar(const NamedDecl *ND) const {
 }
 
 namespace {
+
 /// Visible declaration consumer that adds a code-completion result
 /// for each visible declaration.
 class CodeCompletionDeclConsumer : public VisibleDeclConsumer {
   ResultBuilder &Results;
-  DeclContext *CurContext;
+  DeclContext *InitialLookupCtx;
+  // NamingClass and BaseType are used for access-checking. See
+  // Sema::IsSimplyAccessible for details.
+  CXXRecordDecl *NamingClass;
+  QualType BaseType;
   std::vector<FixItHint> FixIts;
-  // This is set to the record where the search starts, if this is a record
-  // member completion.
-  RecordDecl *MemberCompletionRecord = nullptr;
 
 public:
   CodeCompletionDeclConsumer(
-      ResultBuilder &Results, DeclContext *CurContext,
-      std::vector<FixItHint> FixIts = std::vector<FixItHint>(),
-      RecordDecl *MemberCompletionRecord = nullptr)
-      : Results(Results), CurContext(CurContext), FixIts(std::move(FixIts)),
-        MemberCompletionRecord(MemberCompletionRecord) {}
+      ResultBuilder &Results, DeclContext *InitialLookupCtx,
+      QualType BaseType = QualType(),
+      std::vector<FixItHint> FixIts = std::vector<FixItHint>())
+      : Results(Results), InitialLookupCtx(InitialLookupCtx),
+        FixIts(std::move(FixIts)) {
+    NamingClass = llvm::dyn_cast<CXXRecordDecl>(InitialLookupCtx);
+    // If BaseType was not provided explicitly, emulate implicit 'this->'.
+    if (BaseType.isNull()) {
+      auto ThisType = Results.getSema().getCurrentThisType();
+      if (!ThisType.isNull()) {
+        assert(ThisType->isPointerType());
+        BaseType = ThisType->getPointeeType();
+        if (!NamingClass)
+          NamingClass = BaseType->getAsCXXRecordDecl();
+      }
+    }
+    this->BaseType = BaseType;
+  }
 
   void FoundDecl(NamedDecl *ND, NamedDecl *Hiding, DeclContext *Ctx,
                  bool InBaseClass) override {
-    bool Accessible = true;
-    if (Ctx) {
-      // Set the actual accessing context (i.e. naming class) to the record
-      // context where the search starts. When `InBaseClass` is true, `Ctx`
-      // will be the base class, which is not the actual naming class.
-      DeclContext *AccessingCtx =
-          MemberCompletionRecord ? MemberCompletionRecord : Ctx;
-      Accessible = Results.getSema().IsSimplyAccessible(ND, AccessingCtx);
-    }
     ResultBuilder::Result Result(ND, Results.getBasePriority(ND), nullptr,
-                                 false, Accessible, FixIts);
-    Results.AddResult(Result, CurContext, Hiding, InBaseClass);
+                                 false, IsAccessible(ND, Ctx), FixIts);
+    Results.AddResult(Result, InitialLookupCtx, Hiding, InBaseClass);
   }
 
   void EnteredContext(DeclContext *Ctx) override {
     Results.addVisitedContext(Ctx);
+  }
+
+private:
+  bool IsAccessible(NamedDecl *ND, DeclContext *Ctx) {
+    // Naming class to use for access check. In most cases it was provided
+    // explicitly (e.g. member access (lhs.foo) or qualified lookup (X::)),
+    // for unqualified lookup we fallback to the \p Ctx in which we found the
+    // member.
+    auto *NamingClass = this->NamingClass;
+    QualType BaseType = this->BaseType;
+    if (auto *Cls = llvm::dyn_cast_or_null<CXXRecordDecl>(Ctx)) {
+      if (!NamingClass)
+        NamingClass = Cls;
+      // When we emulate implicit 'this->' in an unqualified lookup, we might
+      // end up with an invalid naming class. In that case, we avoid emulating
+      // 'this->' qualifier to satisfy preconditions of the access checking.
+      if (NamingClass->getCanonicalDecl() != Cls->getCanonicalDecl() &&
+          !NamingClass->isDerivedFrom(Cls)) {
+        NamingClass = Cls;
+        BaseType = QualType();
+      }
+    } else {
+      // The decl was found outside the C++ class, so only ObjC access checks
+      // apply. Those do not rely on NamingClass and BaseType, so we clear them
+      // out.
+      NamingClass = nullptr;
+      BaseType = QualType();
+    }
+    return Results.getSema().IsSimplyAccessible(ND, NamingClass, BaseType);
   }
 };
 } // namespace
@@ -2707,17 +2699,17 @@ AddFunctionTypeQualsToCompletionString(CodeCompletionBuilder &Result,
   // FIXME: Add ref-qualifier!
 
   // Handle single qualifiers without copying
-  if (Proto->getTypeQuals() == Qualifiers::Const) {
+  if (Proto->getTypeQuals().hasOnlyConst()) {
     Result.AddInformativeChunk(" const");
     return;
   }
 
-  if (Proto->getTypeQuals() == Qualifiers::Volatile) {
+  if (Proto->getTypeQuals().hasOnlyVolatile()) {
     Result.AddInformativeChunk(" volatile");
     return;
   }
 
-  if (Proto->getTypeQuals() == Qualifiers::Restrict) {
+  if (Proto->getTypeQuals().hasOnlyRestrict()) {
     Result.AddInformativeChunk(" restrict");
     return;
   }
@@ -3412,6 +3404,7 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
     case ObjCPropertyImplDecl::Synthesize:
       return CXCursor_ObjCSynthesizeDecl;
     }
+    llvm_unreachable("Unexpected Kind!");
 
   case Decl::Import:
     return CXCursor_ModuleImportDecl;
@@ -3486,7 +3479,7 @@ static void HandleCodeCompleteResults(Sema *S,
     CodeCompleter->ProcessCodeCompleteResults(*S, Context, Results, NumResults);
 }
 
-static enum CodeCompletionContext::Kind
+static CodeCompletionContext
 mapCodeCompletionContext(Sema &S, Sema::ParserCompletionContext PCC) {
   switch (PCC) {
   case Sema::PCC_Namespace:
@@ -3523,8 +3516,10 @@ mapCodeCompletionContext(Sema &S, Sema::ParserCompletionContext PCC) {
       return CodeCompletionContext::CCC_Expression;
 
   case Sema::PCC_Expression:
-  case Sema::PCC_Condition:
     return CodeCompletionContext::CCC_Expression;
+  case Sema::PCC_Condition:
+    return CodeCompletionContext(CodeCompletionContext::CCC_Expression,
+                                 S.getASTContext().BoolTy);
 
   case Sema::PCC_Statement:
     return CodeCompletionContext::CCC_Statement;
@@ -3576,7 +3571,7 @@ static void MaybeAddOverrideCalls(Sema &S, DeclContext *InContext,
 
     // If we need a nested-name-specifier, add one now.
     if (!InContext) {
-      NestedNameSpecifier *NNS = getRequiredQualification(
+      NestedNameSpecifier *NNS = NestedNameSpecifier::getRequiredQualification(
           S.Context, CurContext, Overridden->getDeclContext());
       if (NNS) {
         std::string Str;
@@ -3699,20 +3694,12 @@ void Sema::CodeCompleteOrdinaryName(Scope *S,
   }
 
   // If we are in a C++ non-static member function, check the qualifiers on
-  // the member function to filter/prioritize the results list and set the
-  // context to the record context so that accessibility check in base class
-  // works correctly.
-  RecordDecl *MemberCompletionRecord = nullptr;
-  if (CXXMethodDecl *CurMethod = dyn_cast<CXXMethodDecl>(CurContext)) {
-    if (CurMethod->isInstance()) {
-      Results.setObjectTypeQualifiers(
-          Qualifiers::fromCVRMask(CurMethod->getTypeQualifiers()));
-      MemberCompletionRecord = CurMethod->getParent();
-    }
-  }
+  // the member function to filter/prioritize the results list.
+  auto ThisType = getCurrentThisType();
+  if (!ThisType.isNull())
+    Results.setObjectTypeQualifiers(ThisType->getPointeeType().getQualifiers());
 
-  CodeCompletionDeclConsumer Consumer(Results, CurContext, /*FixIts=*/{},
-                                      MemberCompletionRecord);
+  CodeCompletionDeclConsumer Consumer(Results, CurContext);
   LookupVisibleDecls(S, LookupOrdinaryName, Consumer,
                      CodeCompleter->includeGlobals(),
                      CodeCompleter->loadExternal());
@@ -4152,8 +4139,7 @@ AddRecordMembersCompletionResults(Sema &SemaRef, ResultBuilder &Results,
   std::vector<FixItHint> FixIts;
   if (AccessOpFixIt)
     FixIts.emplace_back(AccessOpFixIt.getValue());
-  CodeCompletionDeclConsumer Consumer(Results, SemaRef.CurContext,
-                                      std::move(FixIts), RD);
+  CodeCompletionDeclConsumer Consumer(Results, RD, BaseType, std::move(FixIts));
   SemaRef.LookupVisibleDecls(RD, Sema::LookupMemberName, Consumer,
                              SemaRef.CodeCompleter->includeGlobals(),
                              /*IncludeDependentBases=*/true,
@@ -4283,7 +4269,7 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
 
       // Add all ivars from this class and its superclasses.
       if (Class) {
-        CodeCompletionDeclConsumer Consumer(Results, CurContext);
+        CodeCompletionDeclConsumer Consumer(Results, Class, BaseType);
         Results.setFilter(&ResultBuilder::IsObjCIvar);
         LookupVisibleDecls(
             Class, LookupMemberName, Consumer, CodeCompleter->includeGlobals(),
@@ -4507,7 +4493,8 @@ void Sema::CodeCompleteCase(Scope *S) {
     // If there are no prior enumerators in C++, check whether we have to
     // qualify the names of the enumerators that we suggest, because they
     // may not be visible in this scope.
-    Qualifier = getRequiredQualification(Context, CurContext, Enum);
+    Qualifier = NestedNameSpecifier::getRequiredQualification(Context,
+                                                              CurContext, Enum);
   }
 
   // Add any enumerators that have not yet been mentioned.
@@ -4848,15 +4835,93 @@ void Sema::CodeCompleteAfterIf(Scope *S) {
                             Results.data(), Results.size());
 }
 
-void Sema::CodeCompleteAssignmentRHS(Scope *S, Expr *LHS) {
-  if (LHS)
-    CodeCompleteExpression(S, static_cast<Expr *>(LHS)->getType());
+static QualType getPreferredTypeOfBinaryRHS(Sema &S, Expr *LHS,
+                                            tok::TokenKind Op) {
+  if (!LHS)
+    return QualType();
+
+  QualType LHSType = LHS->getType();
+  if (LHSType->isPointerType()) {
+    if (Op == tok::plus || Op == tok::plusequal || Op == tok::minusequal)
+      return S.getASTContext().getPointerDiffType();
+    // Pointer difference is more common than subtracting an int from a pointer.
+    if (Op == tok::minus)
+      return LHSType;
+  }
+
+  switch (Op) {
+  // No way to infer the type of RHS from LHS.
+  case tok::comma:
+    return QualType();
+  // Prefer the type of the left operand for all of these.
+  // Arithmetic operations.
+  case tok::plus:
+  case tok::plusequal:
+  case tok::minus:
+  case tok::minusequal:
+  case tok::percent:
+  case tok::percentequal:
+  case tok::slash:
+  case tok::slashequal:
+  case tok::star:
+  case tok::starequal:
+  // Assignment.
+  case tok::equal:
+  // Comparison operators.
+  case tok::equalequal:
+  case tok::exclaimequal:
+  case tok::less:
+  case tok::lessequal:
+  case tok::greater:
+  case tok::greaterequal:
+  case tok::spaceship:
+    return LHS->getType();
+  // Binary shifts are often overloaded, so don't try to guess those.
+  case tok::greatergreater:
+  case tok::greatergreaterequal:
+  case tok::lessless:
+  case tok::lesslessequal:
+    if (LHSType->isIntegralOrEnumerationType())
+      return S.getASTContext().IntTy;
+    return QualType();
+  // Logical operators, assume we want bool.
+  case tok::ampamp:
+  case tok::pipepipe:
+  case tok::caretcaret:
+    return S.getASTContext().BoolTy;
+  // Operators often used for bit manipulation are typically used with the type
+  // of the left argument.
+  case tok::pipe:
+  case tok::pipeequal:
+  case tok::caret:
+  case tok::caretequal:
+  case tok::amp:
+  case tok::ampequal:
+    if (LHSType->isIntegralOrEnumerationType())
+      return LHSType;
+    return QualType();
+  // RHS should be a pointer to a member of the 'LHS' type, but we can't give
+  // any particular type here.
+  case tok::periodstar:
+  case tok::arrowstar:
+    return QualType();
+  default:
+    // FIXME(ibiryukov): handle the missing op, re-add the assertion.
+    // assert(false && "unhandled binary op");
+    return QualType();
+  }
+}
+
+void Sema::CodeCompleteBinaryRHS(Scope *S, Expr *LHS, tok::TokenKind Op) {
+  auto PreferredType = getPreferredTypeOfBinaryRHS(*this, LHS, Op);
+  if (!PreferredType.isNull())
+    CodeCompleteExpression(S, PreferredType);
   else
     CodeCompleteOrdinaryName(S, PCC_Expression);
 }
 
 void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
-                                   bool EnteringContext) {
+                                   bool EnteringContext, QualType BaseType) {
   if (SS.isEmpty() || !CodeCompleter)
     return;
 
@@ -4903,7 +4968,7 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
 
   if (CodeCompleter->includeNamespaceLevelDecls() ||
       (!Ctx->isNamespace() && !Ctx->isTranslationUnit())) {
-    CodeCompletionDeclConsumer Consumer(Results, CurContext);
+    CodeCompletionDeclConsumer Consumer(Results, Ctx, BaseType);
     LookupVisibleDecls(Ctx, LookupOrdinaryName, Consumer,
                        /*IncludeGlobalScope=*/true,
                        /*IncludeDependentBases=*/true,

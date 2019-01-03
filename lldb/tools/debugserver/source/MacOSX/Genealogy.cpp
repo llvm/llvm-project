@@ -74,8 +74,7 @@ Genealogy::GetGenealogyInfoForThread(pid_t pid, nub_thread_t tid,
   // (else we'll need to hit the timeout for every thread we're asked about.)
   // We'll try again at the next public stop.
 
-  if (m_thread_activities.size() == 0 &&
-      m_diagnosticd_call_timed_out == false) {
+  if (m_thread_activities.size() == 0 && !m_diagnosticd_call_timed_out) {
     GetActivities(pid, thread_list, task);
   }
   std::map<nub_thread_t, ThreadActivitySP>::const_iterator search;

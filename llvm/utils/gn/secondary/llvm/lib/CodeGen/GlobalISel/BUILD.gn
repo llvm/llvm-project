@@ -1,0 +1,35 @@
+static_library("GlobalISel") {
+  output_name = "LLVMGlobalISel"
+  deps = [
+    "//llvm/include/llvm/Config:config",
+    "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/Analysis",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Transforms/Utils",
+  ]
+  sources = [
+    "CallLowering.cpp",
+    "Combiner.cpp",
+    "CombinerHelper.cpp",
+    "GISelChangeObserver.cpp",
+    "GlobalISel.cpp",
+    "IRTranslator.cpp",
+    "InstructionSelect.cpp",
+    "InstructionSelector.cpp",
+    "LegalityPredicates.cpp",
+    "LegalizeMutations.cpp",
+    "Legalizer.cpp",
+    "LegalizerHelper.cpp",
+    "LegalizerInfo.cpp",
+    "Localizer.cpp",
+    "MachineIRBuilder.cpp",
+    "RegBankSelect.cpp",
+    "RegisterBank.cpp",
+    "RegisterBankInfo.cpp",
+    "Utils.cpp",
+  ]
+}

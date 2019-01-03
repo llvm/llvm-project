@@ -46,11 +46,10 @@ const StackColoring::LiveRange &StackColoring::getLiveRange(AllocaInst *AI) {
 }
 
 bool StackColoring::readMarker(Instruction *I, bool *IsStart) {
-  auto *II = dyn_cast<IntrinsicInst>(I);
-  if (!II || (II->getIntrinsicID() != Intrinsic::lifetime_start &&
-              II->getIntrinsicID() != Intrinsic::lifetime_end))
+  if (!I->isLifetimeStartOrEnd())
     return false;
 
+  auto *II = cast<IntrinsicInst>(I);
   *IsStart = II->getIntrinsicID() == Intrinsic::lifetime_start;
   return true;
 }

@@ -26,6 +26,10 @@
 #endif
 #endif
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wformat-zero-length"
+#endif
+
 int main()
 {
     std::clock_t c = 0;

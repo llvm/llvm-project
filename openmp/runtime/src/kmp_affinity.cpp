@@ -83,53 +83,133 @@ void KMPAffinity::destroy_api() {
   }
 }
 
+#define KMP_ADVANCE_SCAN(scan)                                                 \
+  while (*scan != '\0') {                                                      \
+    scan++;                                                                    \
+  }
+
 // Print the affinity mask to the character array in a pretty format.
+// The format is a comma separated list of non-negative integers or integer
+// ranges: e.g., 1,2,3-5,7,9-15
+// The format can also be the string "{<empty>}" if no bits are set in mask
 char *__kmp_affinity_print_mask(char *buf, int buf_len,
                                 kmp_affin_mask_t *mask) {
+  int start = 0, finish = 0, previous = 0;
+  bool first_range;
+  KMP_ASSERT(buf);
   KMP_ASSERT(buf_len >= 40);
+  KMP_ASSERT(mask);
   char *scan = buf;
   char *end = buf + buf_len - 1;
 
-  // Find first element / check for empty set.
-  int i;
-  i = mask->begin();
-  if (i == mask->end()) {
+  // Check for empty set.
+  if (mask->begin() == mask->end()) {
     KMP_SNPRINTF(scan, end - scan + 1, "{<empty>}");
-    while (*scan != '\0')
-      scan++;
+    KMP_ADVANCE_SCAN(scan);
     KMP_ASSERT(scan <= end);
     return buf;
   }
 
-  KMP_SNPRINTF(scan, end - scan + 1, "{%d", i);
-  while (*scan != '\0')
-    scan++;
-  i++;
-  for (; i != mask->end(); i = mask->next(i)) {
-    if (!KMP_CPU_ISSET(i, mask)) {
-      continue;
+  first_range = true;
+  start = mask->begin();
+  while (1) {
+    // Find next range
+    // [start, previous] is inclusive range of contiguous bits in mask
+    for (finish = mask->next(start), previous = start;
+         finish == previous + 1 && finish != mask->end();
+         finish = mask->next(finish)) {
+      previous = finish;
     }
 
-    // Check for buffer overflow.  A string of the form ",<n>" will have at most
-    // 10 characters, plus we want to leave room to print ",...}" if the set is
-    // too large to print for a total of 15 characters. We already left room for
-    // '\0' in setting end.
-    if (end - scan < 15) {
-      break;
+    // The first range does not need a comma printed before it, but the rest
+    // of the ranges do need a comma beforehand
+    if (!first_range) {
+      KMP_SNPRINTF(scan, end - scan + 1, "%s", ",");
+      KMP_ADVANCE_SCAN(scan);
+    } else {
+      first_range = false;
     }
-    KMP_SNPRINTF(scan, end - scan + 1, ",%-d", i);
-    while (*scan != '\0')
-      scan++;
+    // Range with three or more contiguous bits in the affinity mask
+    if (previous - start > 1) {
+      KMP_SNPRINTF(scan, end - scan + 1, "%d-%d", static_cast<int>(start),
+                   static_cast<int>(previous));
+    } else {
+      // Range with one or two contiguous bits in the affinity mask
+      KMP_SNPRINTF(scan, end - scan + 1, "%d", static_cast<int>(start));
+      KMP_ADVANCE_SCAN(scan);
+      if (previous - start > 0) {
+        KMP_SNPRINTF(scan, end - scan + 1, ",%d", static_cast<int>(previous));
+      }
+    }
+    KMP_ADVANCE_SCAN(scan);
+    // Start over with new start point
+    start = finish;
+    if (start == mask->end())
+      break;
+    // Check for overflow
+    if (end - scan < 2)
+      break;
   }
-  if (i != mask->end()) {
-    KMP_SNPRINTF(scan, end - scan + 1, ",...");
-    while (*scan != '\0')
-      scan++;
-  }
-  KMP_SNPRINTF(scan, end - scan + 1, "}");
-  while (*scan != '\0')
-    scan++;
+
+  // Check for overflow
   KMP_ASSERT(scan <= end);
+  return buf;
+}
+#undef KMP_ADVANCE_SCAN
+
+// Print the affinity mask to the string buffer object in a pretty format
+// The format is a comma separated list of non-negative integers or integer
+// ranges: e.g., 1,2,3-5,7,9-15
+// The format can also be the string "{<empty>}" if no bits are set in mask
+kmp_str_buf_t *__kmp_affinity_str_buf_mask(kmp_str_buf_t *buf,
+                                           kmp_affin_mask_t *mask) {
+  int start = 0, finish = 0, previous = 0;
+  bool first_range;
+  KMP_ASSERT(buf);
+  KMP_ASSERT(mask);
+
+  __kmp_str_buf_clear(buf);
+
+  // Check for empty set.
+  if (mask->begin() == mask->end()) {
+    __kmp_str_buf_print(buf, "%s", "{<empty>}");
+    return buf;
+  }
+
+  first_range = true;
+  start = mask->begin();
+  while (1) {
+    // Find next range
+    // [start, previous] is inclusive range of contiguous bits in mask
+    for (finish = mask->next(start), previous = start;
+         finish == previous + 1 && finish != mask->end();
+         finish = mask->next(finish)) {
+      previous = finish;
+    }
+
+    // The first range does not need a comma printed before it, but the rest
+    // of the ranges do need a comma beforehand
+    if (!first_range) {
+      __kmp_str_buf_print(buf, "%s", ",");
+    } else {
+      first_range = false;
+    }
+    // Range with three or more contiguous bits in the affinity mask
+    if (previous - start > 1) {
+      __kmp_str_buf_print(buf, "%d-%d", static_cast<int>(start),
+                          static_cast<int>(previous));
+    } else {
+      // Range with one or two contiguous bits in the affinity mask
+      __kmp_str_buf_print(buf, "%d", static_cast<int>(start));
+      if (previous - start > 0) {
+        __kmp_str_buf_print(buf, ",%d", static_cast<int>(previous));
+      }
+    }
+    // Start over with new start point
+    start = finish;
+    if (start == mask->end())
+      break;
+  }
   return buf;
 }
 

@@ -26,9 +26,11 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ValueHandle.h"
@@ -41,6 +43,8 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "loop-utils"
+
+static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    bool PreserveLCSSA) {
@@ -188,37 +192,231 @@ void llvm::initializeLoopPassPass(PassRegistry &Registry) {
 /// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
 /// operand or null otherwise.  If the string metadata is not found return
 /// Optional's not-a-value.
-Optional<const MDOperand *> llvm::findStringMetadataForLoop(Loop *TheLoop,
+Optional<const MDOperand *> llvm::findStringMetadataForLoop(const Loop *TheLoop,
                                                             StringRef Name) {
-  MDNode *LoopID = TheLoop->getLoopID();
-  // Return none if LoopID is false.
-  if (!LoopID)
+  MDNode *MD = findOptionMDForLoop(TheLoop, Name);
+  if (!MD)
+    return None;
+  switch (MD->getNumOperands()) {
+  case 1:
+    return nullptr;
+  case 2:
+    return &MD->getOperand(1);
+  default:
+    llvm_unreachable("loop metadata has 0 or 1 operand");
+  }
+}
+
+static Optional<bool> getOptionalBoolLoopAttribute(const Loop *TheLoop,
+                                                   StringRef Name) {
+  MDNode *MD = findOptionMDForLoop(TheLoop, Name);
+  if (!MD)
+    return None;
+  switch (MD->getNumOperands()) {
+  case 1:
+    // When the value is absent it is interpreted as 'attribute set'.
+    return true;
+  case 2:
+    return mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get());
+  }
+  llvm_unreachable("unexpected number of options");
+}
+
+static bool getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name) {
+  return getOptionalBoolLoopAttribute(TheLoop, Name).getValueOr(false);
+}
+
+llvm::Optional<int> llvm::getOptionalIntLoopAttribute(Loop *TheLoop,
+                                                      StringRef Name) {
+  const MDOperand *AttrMD =
+      findStringMetadataForLoop(TheLoop, Name).getValueOr(nullptr);
+  if (!AttrMD)
     return None;
 
-  // First operand should refer to the loop id itself.
-  assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
-  assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
+  ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(AttrMD->get());
+  if (!IntMD)
+    return None;
 
-  // Iterate over LoopID operands and look for MDString Metadata
-  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
-    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
-    if (!MD)
-      continue;
-    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-    if (!S)
-      continue;
-    // Return true if MDString holds expected MetaData.
-    if (Name.equals(S->getString()))
-      switch (MD->getNumOperands()) {
-      case 1:
-        return nullptr;
-      case 2:
-        return &MD->getOperand(1);
-      default:
-        llvm_unreachable("loop metadata has 0 or 1 operand");
-      }
+  return IntMD->getSExtValue();
+}
+
+Optional<MDNode *> llvm::makeFollowupLoopID(
+    MDNode *OrigLoopID, ArrayRef<StringRef> FollowupOptions,
+    const char *InheritOptionsExceptPrefix, bool AlwaysNew) {
+  if (!OrigLoopID) {
+    if (AlwaysNew)
+      return nullptr;
+    return None;
   }
-  return None;
+
+  assert(OrigLoopID->getOperand(0) == OrigLoopID);
+
+  bool InheritAllAttrs = !InheritOptionsExceptPrefix;
+  bool InheritSomeAttrs =
+      InheritOptionsExceptPrefix && InheritOptionsExceptPrefix[0] != '\0';
+  SmallVector<Metadata *, 8> MDs;
+  MDs.push_back(nullptr);
+
+  bool Changed = false;
+  if (InheritAllAttrs || InheritSomeAttrs) {
+    for (const MDOperand &Existing : drop_begin(OrigLoopID->operands(), 1)) {
+      MDNode *Op = cast<MDNode>(Existing.get());
+
+      auto InheritThisAttribute = [InheritSomeAttrs,
+                                   InheritOptionsExceptPrefix](MDNode *Op) {
+        if (!InheritSomeAttrs)
+          return false;
+
+        // Skip malformatted attribute metadata nodes.
+        if (Op->getNumOperands() == 0)
+          return true;
+        Metadata *NameMD = Op->getOperand(0).get();
+        if (!isa<MDString>(NameMD))
+          return true;
+        StringRef AttrName = cast<MDString>(NameMD)->getString();
+
+        // Do not inherit excluded attributes.
+        return !AttrName.startswith(InheritOptionsExceptPrefix);
+      };
+
+      if (InheritThisAttribute(Op))
+        MDs.push_back(Op);
+      else
+        Changed = true;
+    }
+  } else {
+    // Modified if we dropped at least one attribute.
+    Changed = OrigLoopID->getNumOperands() > 1;
+  }
+
+  bool HasAnyFollowup = false;
+  for (StringRef OptionName : FollowupOptions) {
+    MDNode *FollowupNode = findOptionMDForLoopID(OrigLoopID, OptionName);
+    if (!FollowupNode)
+      continue;
+
+    HasAnyFollowup = true;
+    for (const MDOperand &Option : drop_begin(FollowupNode->operands(), 1)) {
+      MDs.push_back(Option.get());
+      Changed = true;
+    }
+  }
+
+  // Attributes of the followup loop not specified explicity, so signal to the
+  // transformation pass to add suitable attributes.
+  if (!AlwaysNew && !HasAnyFollowup)
+    return None;
+
+  // If no attributes were added or remove, the previous loop Id can be reused.
+  if (!AlwaysNew && !Changed)
+    return OrigLoopID;
+
+  // No attributes is equivalent to having no !llvm.loop metadata at all.
+  if (MDs.size() == 1)
+    return nullptr;
+
+  // Build the new loop ID.
+  MDTuple *FollowupLoopID = MDNode::get(OrigLoopID->getContext(), MDs);
+  FollowupLoopID->replaceOperandWith(0, FollowupLoopID);
+  return FollowupLoopID;
+}
+
+bool llvm::hasDisableAllTransformsHint(const Loop *L) {
+  return getBooleanLoopAttribute(L, LLVMLoopDisableNonforced);
+}
+
+TransformationMode llvm::hasUnrollTransformation(Loop *L) {
+  if (getBooleanLoopAttribute(L, "llvm.loop.unroll.disable"))
+    return TM_SuppressedByUser;
+
+  Optional<int> Count =
+      getOptionalIntLoopAttribute(L, "llvm.loop.unroll.count");
+  if (Count.hasValue())
+    return Count.getValue() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
+
+  if (getBooleanLoopAttribute(L, "llvm.loop.unroll.enable"))
+    return TM_ForcedByUser;
+
+  if (getBooleanLoopAttribute(L, "llvm.loop.unroll.full"))
+    return TM_ForcedByUser;
+
+  if (hasDisableAllTransformsHint(L))
+    return TM_Disable;
+
+  return TM_Unspecified;
+}
+
+TransformationMode llvm::hasUnrollAndJamTransformation(Loop *L) {
+  if (getBooleanLoopAttribute(L, "llvm.loop.unroll_and_jam.disable"))
+    return TM_SuppressedByUser;
+
+  Optional<int> Count =
+      getOptionalIntLoopAttribute(L, "llvm.loop.unroll_and_jam.count");
+  if (Count.hasValue())
+    return Count.getValue() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
+
+  if (getBooleanLoopAttribute(L, "llvm.loop.unroll_and_jam.enable"))
+    return TM_ForcedByUser;
+
+  if (hasDisableAllTransformsHint(L))
+    return TM_Disable;
+
+  return TM_Unspecified;
+}
+
+TransformationMode llvm::hasVectorizeTransformation(Loop *L) {
+  Optional<bool> Enable =
+      getOptionalBoolLoopAttribute(L, "llvm.loop.vectorize.enable");
+
+  if (Enable == false)
+    return TM_SuppressedByUser;
+
+  Optional<int> VectorizeWidth =
+      getOptionalIntLoopAttribute(L, "llvm.loop.vectorize.width");
+  Optional<int> InterleaveCount =
+      getOptionalIntLoopAttribute(L, "llvm.loop.interleave.count");
+
+  if (Enable == true) {
+    // 'Forcing' vector width and interleave count to one effectively disables
+    // this tranformation.
+    if (VectorizeWidth == 1 && InterleaveCount == 1)
+      return TM_SuppressedByUser;
+    return TM_ForcedByUser;
+  }
+
+  if (getBooleanLoopAttribute(L, "llvm.loop.isvectorized"))
+    return TM_Disable;
+
+  if (VectorizeWidth == 1 && InterleaveCount == 1)
+    return TM_Disable;
+
+  if (VectorizeWidth > 1 || InterleaveCount > 1)
+    return TM_Enable;
+
+  if (hasDisableAllTransformsHint(L))
+    return TM_Disable;
+
+  return TM_Unspecified;
+}
+
+TransformationMode llvm::hasDistributeTransformation(Loop *L) {
+  if (getBooleanLoopAttribute(L, "llvm.loop.distribute.enable"))
+    return TM_ForcedByUser;
+
+  if (hasDisableAllTransformsHint(L))
+    return TM_Disable;
+
+  return TM_Unspecified;
+}
+
+TransformationMode llvm::hasLICMVersioningTransformation(Loop *L) {
+  if (getBooleanLoopAttribute(L, "llvm.loop.licm_versioning.disable"))
+    return TM_SuppressedByUser;
+
+  if (hasDisableAllTransformsHint(L))
+    return TM_Disable;
+
+  return TM_Unspecified;
 }
 
 /// Does a BFS from a given node to all of its children inside a given loop.
@@ -336,6 +534,10 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
     DTU.deleteEdge(Preheader, L->getHeader());
   }
 
+  // Use a map to unique and a vector to guarantee deterministic ordering.
+  llvm::SmallDenseSet<std::pair<DIVariable *, DIExpression *>, 4> DeadDebugSet;
+  llvm::SmallVector<DbgVariableIntrinsic *, 4> DeadDebugInst;
+
   // Given LCSSA form is satisfied, we should not have users of instructions
   // within the dead loop outside of the loop. However, LCSSA doesn't take
   // unreachable uses into account. We handle them here.
@@ -360,7 +562,26 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
                  "Unexpected user in reachable block");
         U.set(Undef);
       }
+      auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I);
+      if (!DVI)
+        continue;
+      auto Key = DeadDebugSet.find({DVI->getVariable(), DVI->getExpression()});
+      if (Key != DeadDebugSet.end())
+        continue;
+      DeadDebugSet.insert({DVI->getVariable(), DVI->getExpression()});
+      DeadDebugInst.push_back(DVI);
     }
+
+  // After the loop has been deleted all the values defined and modified
+  // inside the loop are going to be unavailable.
+  // Since debug values in the loop have been deleted, inserting an undef
+  // dbg.value truncates the range of any dbg.value before the loop where the
+  // loop used to be. This is particularly important for constant values.
+  DIBuilder DIB(*ExitBlock->getModule());
+  for (auto *DVI : DeadDebugInst)
+    DIB.insertDbgValueIntrinsic(
+        UndefValue::get(Builder.getInt32Ty()), DVI->getVariable(),
+        DVI->getExpression(), DVI->getDebugLoc(), ExitBlock->getFirstNonPHI());
 
   // Remove the block from the reference counting scheme, so that we can
   // delete it freely later.

@@ -37,7 +37,6 @@
 #include "index/Index.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Format/Format.h"
@@ -656,6 +655,13 @@ bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
   llvm_unreachable("unknown code completion context");
 }
 
+static bool isInjectedClass(const NamedDecl &D) {
+  if (auto *R = dyn_cast_or_null<RecordDecl>(&D))
+    if (R->isInjectedClassName())
+      return true;
+  return false;
+}
+
 // Some member calls are blacklisted because they're so rarely useful.
 static bool isBlacklistedMember(const NamedDecl &D) {
   // Destructor completion is rarely useful, and works inconsistently.
@@ -663,9 +669,8 @@ static bool isBlacklistedMember(const NamedDecl &D) {
   if (D.getKind() == Decl::CXXDestructor)
     return true;
   // Injected name may be useful for A::foo(), but who writes A::A::foo()?
-  if (auto *R = dyn_cast_or_null<RecordDecl>(&D))
-    if (R->isInjectedClassName())
-      return true;
+  if (isInjectedClass(D))
+    return true;
   // Explicit calls to operators are also rare.
   auto NameKind = D.getDeclName().getNameKind();
   if (NameKind == DeclarationName::CXXOperatorName ||
@@ -743,6 +748,11 @@ struct CompletionRecorder : public CodeCompleteConsumer {
       if (Result.Declaration &&
           !Context.getBaseType().isNull() // is this a member-access context?
           && isBlacklistedMember(*Result.Declaration))
+        continue;
+      // Skip injected class name when no class scope is not explicitly set.
+      // E.g. show injected A::A in `using A::A^` but not in "A^".
+      if (Result.Declaration && !Context.getCXXScopeSpecifier().hasValue() &&
+          isInjectedClass(*Result.Declaration))
         continue;
       // We choose to never append '::' to completion results in clangd.
       Result.StartsNestedNameSpecifier = false;
@@ -869,38 +879,37 @@ public:
           IndexRequest.IDs.size(), FetchedDocs.size());
     }
 
-    llvm::sort(
-        ScoredSignatures,
-        [](const ScoredSignature &L, const ScoredSignature &R) {
-          // Ordering follows:
-          // - Less number of parameters is better.
-          // - Function is better than FunctionType which is better than
-          // Function Template.
-          // - High score is better.
-          // - Shorter signature is better.
-          // - Alphebatically smaller is better.
-          if (L.Quality.NumberOfParameters != R.Quality.NumberOfParameters)
-            return L.Quality.NumberOfParameters < R.Quality.NumberOfParameters;
-          if (L.Quality.NumberOfOptionalParameters !=
-              R.Quality.NumberOfOptionalParameters)
-            return L.Quality.NumberOfOptionalParameters <
-                   R.Quality.NumberOfOptionalParameters;
-          if (L.Quality.Kind != R.Quality.Kind) {
-            using OC = CodeCompleteConsumer::OverloadCandidate;
-            switch (L.Quality.Kind) {
-            case OC::CK_Function:
-              return true;
-            case OC::CK_FunctionType:
-              return R.Quality.Kind != OC::CK_Function;
-            case OC::CK_FunctionTemplate:
-              return false;
-            }
-            llvm_unreachable("Unknown overload candidate type.");
-          }
-          if (L.Signature.label.size() != R.Signature.label.size())
-            return L.Signature.label.size() < R.Signature.label.size();
-          return L.Signature.label < R.Signature.label;
-        });
+    llvm::sort(ScoredSignatures, [](const ScoredSignature &L,
+                                    const ScoredSignature &R) {
+      // Ordering follows:
+      // - Less number of parameters is better.
+      // - Function is better than FunctionType which is better than
+      // Function Template.
+      // - High score is better.
+      // - Shorter signature is better.
+      // - Alphebatically smaller is better.
+      if (L.Quality.NumberOfParameters != R.Quality.NumberOfParameters)
+        return L.Quality.NumberOfParameters < R.Quality.NumberOfParameters;
+      if (L.Quality.NumberOfOptionalParameters !=
+          R.Quality.NumberOfOptionalParameters)
+        return L.Quality.NumberOfOptionalParameters <
+               R.Quality.NumberOfOptionalParameters;
+      if (L.Quality.Kind != R.Quality.Kind) {
+        using OC = CodeCompleteConsumer::OverloadCandidate;
+        switch (L.Quality.Kind) {
+        case OC::CK_Function:
+          return true;
+        case OC::CK_FunctionType:
+          return R.Quality.Kind != OC::CK_Function;
+        case OC::CK_FunctionTemplate:
+          return false;
+        }
+        llvm_unreachable("Unknown overload candidate type.");
+      }
+      if (L.Signature.label.size() != R.Signature.label.size())
+        return L.Signature.label.size() < R.Signature.label.size();
+      return L.Signature.label < R.Signature.label;
+    });
 
     for (auto &SS : ScoredSignatures) {
       auto IndexDocIt =
@@ -1143,28 +1152,6 @@ Optional<FuzzyFindRequest> speculativeFuzzyFindRequestForCompletion(
   return CachedReq;
 }
 
-} // namespace
-
-clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
-  clang::CodeCompleteOptions Result;
-  Result.IncludeCodePatterns = EnableSnippets && IncludeCodePatterns;
-  Result.IncludeMacros = IncludeMacros;
-  Result.IncludeGlobals = true;
-  // We choose to include full comments and not do doxygen parsing in
-  // completion.
-  // FIXME: ideally, we should support doxygen in some form, e.g. do markdown
-  // formatting of the comments.
-  Result.IncludeBriefComments = false;
-
-  // When an is used, Sema is responsible for completing the main file,
-  // the index can provide results from the preamble.
-  // Tell Sema not to deserialize the preamble to look for results.
-  Result.LoadExternal = !Index;
-  Result.IncludeFixIts = IncludeFixIts;
-
-  return Result;
-}
-
 // Returns the most popular include header for \p Sym. If two headers are
 // equally popular, prefer the shorter one. Returns empty string if \p Sym has
 // no include header.
@@ -1214,15 +1201,15 @@ SmallVector<StringRef, 1> getRankedIncludes(const Symbol &Sym) {
 //   - TopN determines the results with the best score.
 class CodeCompleteFlow {
   PathRef FileName;
-  IncludeStructure Includes; // Complete once the compiler runs.
+  IncludeStructure Includes;           // Complete once the compiler runs.
   SpeculativeFuzzyFind *SpecFuzzyFind; // Can be nullptr.
   const CodeCompleteOptions &Opts;
 
   // Sema takes ownership of Recorder. Recorder is valid until Sema cleanup.
   CompletionRecorder *Recorder = nullptr;
   int NSema = 0, NIndex = 0, NBoth = 0; // Counters for logging.
-  bool Incomplete = false; // Would more be available with a higher limit?
-  Optional<FuzzyMatcher> Filter;        // Initialized once Sema runs.
+  bool Incomplete = false;       // Would more be available with a higher limit?
+  Optional<FuzzyMatcher> Filter; // Initialized once Sema runs.
   std::vector<std::string> QueryScopes; // Initialized once Sema runs.
   // Initialized once QueryScopes is initialized, if there are scopes.
   Optional<ScopeDistance> ScopeProximity;
@@ -1575,6 +1562,28 @@ private:
   }
 };
 
+} // namespace
+
+clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
+  clang::CodeCompleteOptions Result;
+  Result.IncludeCodePatterns = EnableSnippets && IncludeCodePatterns;
+  Result.IncludeMacros = IncludeMacros;
+  Result.IncludeGlobals = true;
+  // We choose to include full comments and not do doxygen parsing in
+  // completion.
+  // FIXME: ideally, we should support doxygen in some form, e.g. do markdown
+  // formatting of the comments.
+  Result.IncludeBriefComments = false;
+
+  // When an is used, Sema is responsible for completing the main file,
+  // the index can provide results from the preamble.
+  // Tell Sema not to deserialize the preamble to look for results.
+  Result.LoadExternal = !Index;
+  Result.IncludeFixIts = IncludeFixIts;
+
+  return Result;
+}
+
 Expected<StringRef> speculateCompletionFilter(StringRef Content, Position Pos) {
   auto Offset = positionToOffset(Content, Pos);
   if (!Offset)
@@ -1634,14 +1643,24 @@ SignatureHelp signatureHelp(PathRef FileName,
 }
 
 bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
-  using namespace clang::ast_matchers;
-  auto InTopLevelScope = hasDeclContext(
-      anyOf(namespaceDecl(), translationUnitDecl(), linkageSpecDecl()));
-  return !match(decl(anyOf(InTopLevelScope,
-                           hasDeclContext(
-                               enumDecl(InTopLevelScope, unless(isScoped()))))),
-                ND, ASTCtx)
-              .empty();
+  auto InTopLevelScope = [](const NamedDecl &ND) {
+    switch (ND.getDeclContext()->getDeclKind()) {
+    case Decl::TranslationUnit:
+    case Decl::Namespace:
+    case Decl::LinkageSpec:
+      return true;
+    default:
+      break;
+    };
+    return false;
+  };
+  if (InTopLevelScope(ND))
+    return true;
+
+  if (const auto *EnumDecl = dyn_cast<clang::EnumDecl>(ND.getDeclContext()))
+    return InTopLevelScope(*EnumDecl) && !EnumDecl->isScoped();
+
+  return false;
 }
 
 CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {

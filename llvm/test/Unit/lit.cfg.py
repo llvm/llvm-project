@@ -31,6 +31,11 @@ if 'TMP' in os.environ:
 if 'TEMP' in os.environ:
     config.environment['TEMP'] = os.environ['TEMP']
 
+# Propagate HOME as it can be used to override incorrect homedir in passwd
+# that causes the tests to fail.
+if 'HOME' in os.environ:
+    config.environment['HOME'] = os.environ['HOME']
+
 # Propagate path to symbolizer for ASan/MSan.
 for symbolizer in ['ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH']:
     if symbolizer in os.environ:

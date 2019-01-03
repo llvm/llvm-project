@@ -14,14 +14,14 @@
 #ifndef LLVM_LIB_CODEGEN_ASMPRINTER_CODEVIEWDEBUG_H
 #define LLVM_LIB_CODEGEN_ASMPRINTER_CODEVIEWDEBUG_H
 
-#include "DbgEntityHistoryCalculator.h"
-#include "DebugHandlerBase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/DbgEntityHistoryCalculator.h"
+#include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
@@ -99,6 +99,11 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     bool UseReferenceType = false;
   };
 
+  struct CVGlobalVariable {
+    const DIGlobalVariable *DIGV;
+    const GlobalVariable *GV;
+  };
+
   struct InlineSite {
     SmallVector<LocalVariable, 1> InlinedLocals;
     SmallVector<const DILocation *, 1> ChildSites;
@@ -112,6 +117,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   // Combines information from DILexicalBlock and LexicalScope.
   struct LexicalBlock {
     SmallVector<LocalVariable, 1> Locals;
+    SmallVector<CVGlobalVariable, 1> Globals;
     SmallVector<LexicalBlock *, 1> Children;
     const MCSymbol *Begin;
     const MCSymbol *End;
@@ -134,6 +140,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     SmallVector<const DILocation *, 1> ChildSites;
 
     SmallVector<LocalVariable, 1> Locals;
+    SmallVector<CVGlobalVariable, 1> Globals;
 
     std::unordered_map<const DILexicalBlockBase*, LexicalBlock> LexicalBlocks;
 
@@ -182,6 +189,17 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   // collectLexicalBlocks() separates the variables between the FunctionInfo
   // and LexicalBlocks.
   DenseMap<const LexicalScope *, SmallVector<LocalVariable, 1>> ScopeVariables;
+
+  // Map to separate global variables according to the lexical scope they
+  // belong in. A null local scope represents the global scope.
+  typedef SmallVector<CVGlobalVariable, 1> GlobalVariableList;
+  DenseMap<const DIScope*, std::unique_ptr<GlobalVariableList> > ScopeGlobals;
+
+  // Array of global variables which  need to be emitted into a COMDAT section.
+  SmallVector<CVGlobalVariable, 1> ComdatVariables;
+
+  // Array of non-COMDAT global variables.
+  SmallVector<CVGlobalVariable, 1> GlobalVariables;
 
   /// The set of comdat .debug$S sections that we've seen so far. Each section
   /// must start with a magic version number that must only be emitted once.
@@ -288,13 +306,13 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void emitDebugInfoForFunction(const Function *GV, FunctionInfo &FI);
 
-  void emitDebugInfoForGlobals();
-
   void emitDebugInfoForRetainedTypes();
 
   void
   emitDebugInfoForUDTs(ArrayRef<std::pair<std::string, const DIType *>> UDTs);
 
+  void emitDebugInfoForGlobals();
+  void emitGlobalVariableList(ArrayRef<CVGlobalVariable> Globals);
   void emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
                               const GlobalVariable *GV, MCSymbol *GVSym);
 
@@ -302,14 +320,24 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// Returns an end label for use with endCVSubsection when the subsection is
   /// finished.
   MCSymbol *beginCVSubsection(codeview::DebugSubsectionKind Kind);
-
   void endCVSubsection(MCSymbol *EndLabel);
+
+  /// Opens a symbol record of the given kind. Returns an end label for use with
+  /// endSymbolRecord.
+  MCSymbol *beginSymbolRecord(codeview::SymbolKind Kind);
+  void endSymbolRecord(MCSymbol *SymEnd);
+
+  /// Emits an S_END, S_INLINESITE_END, or S_PROC_ID_END record. These records
+  /// are empty, so we emit them with a simpler assembly sequence that doesn't
+  /// involve labels.
+  void emitEndSymbolRecord(codeview::SymbolKind EndKind);
 
   void emitInlinedCallSite(const FunctionInfo &FI, const DILocation *InlinedAt,
                            const InlineSite &Site);
 
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
 
+  void collectGlobalVariableInfo();
   void collectVariableInfo(const DISubprogram *SP);
 
   void collectVariableInfoFromMFTable(DenseSet<InlinedEntity> &Processed);
@@ -318,10 +346,12 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   // scopes, and populate it with local variables.
   void collectLexicalBlockInfo(SmallVectorImpl<LexicalScope *> &Scopes,
                                SmallVectorImpl<LexicalBlock *> &Blocks,
-                               SmallVectorImpl<LocalVariable> &Locals);
+                               SmallVectorImpl<LocalVariable> &Locals,
+                               SmallVectorImpl<CVGlobalVariable> &Globals);
   void collectLexicalBlockInfo(LexicalScope &Scope,
                                SmallVectorImpl<LexicalBlock *> &ParentBlocks,
-                               SmallVectorImpl<LocalVariable> &ParentLocals);
+                               SmallVectorImpl<LocalVariable> &ParentLocals,
+                               SmallVectorImpl<CVGlobalVariable> &ParentGlobals);
 
   /// Records information about a local variable in the appropriate scope. In
   /// particular, locals from inlined code live inside the inlining site.
@@ -347,7 +377,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
                                    DITypeRef ClassTyRef = DITypeRef());
 
   codeview::TypeIndex
-  getTypeIndexForThisPtr(DITypeRef TypeRef,
+  getTypeIndexForThisPtr(const DIDerivedType *PtrTy,
                          const DISubroutineType *SubroutineTy);
 
   codeview::TypeIndex getTypeIndexForReferenceTo(DITypeRef TypeRef);

@@ -198,6 +198,10 @@ public:
 
   uint32_t GetExtendedBacktraceOriginatingIndexID();
 
+  SBValue GetCurrentException();
+
+  SBThread GetCurrentExceptionBacktrace();
+
   bool SafeToCallFunctions();
 
 #ifndef SWIG

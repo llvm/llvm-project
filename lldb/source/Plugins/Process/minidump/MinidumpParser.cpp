@@ -11,14 +11,15 @@
 #include "NtStructures.h"
 #include "RegisterContextMinidump_x86_32.h"
 
-#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "Plugins/Process/Utility/LinuxProcMaps.h"
 
 // C includes
 // C++ includes
 #include <algorithm>
 #include <map>
 #include <vector>
+#include <utility>
 
 using namespace lldb_private;
 using namespace minidump;
@@ -274,36 +275,45 @@ llvm::ArrayRef<MinidumpModule> MinidumpParser::GetModuleList() {
 
 std::vector<const MinidumpModule *> MinidumpParser::GetFilteredModuleList() {
   llvm::ArrayRef<MinidumpModule> modules = GetModuleList();
-  // map module_name -> pair(load_address, pointer to module struct in memory)
-  llvm::StringMap<std::pair<uint64_t, const MinidumpModule *>> lowest_addr;
+  // map module_name -> filtered_modules index
+  typedef llvm::StringMap<size_t> MapType;
+  MapType module_name_to_filtered_index;
 
   std::vector<const MinidumpModule *> filtered_modules;
-
+  
   llvm::Optional<std::string> name;
   std::string module_name;
 
   for (const auto &module : modules) {
     name = GetMinidumpString(module.module_name_rva);
-
+    
     if (!name)
       continue;
-
+    
     module_name = name.getValue();
+    
+    MapType::iterator iter;
+    bool inserted;
+    // See if we have inserted this module aready into filtered_modules. If we
+    // haven't insert an entry into module_name_to_filtered_index with the
+    // index where we will insert it if it isn't in the vector already.
+    std::tie(iter, inserted) = module_name_to_filtered_index.try_emplace(
+        module_name, filtered_modules.size());
 
-    auto iter = lowest_addr.end();
-    bool exists;
-    std::tie(iter, exists) = lowest_addr.try_emplace(
-        module_name, std::make_pair(module.base_of_image, &module));
-
-    if (exists && module.base_of_image < iter->second.first)
-      iter->second = std::make_pair(module.base_of_image, &module);
+    if (inserted) {
+      // This module has not been seen yet, insert it into filtered_modules at
+      // the index that was inserted into module_name_to_filtered_index using
+      // "filtered_modules.size()" above.
+      filtered_modules.push_back(&module);
+    } else {
+      // This module has been seen. Modules are sometimes mentioned multiple
+      // times when they are mapped discontiguously, so find the module with
+      // the lowest "base_of_image" and use that as the filtered module.
+      auto dup_module = filtered_modules[iter->second];
+      if (module.base_of_image < dup_module->base_of_image)
+        filtered_modules[iter->second] = &module;
+    }
   }
-
-  filtered_modules.reserve(lowest_addr.size());
-  for (const auto &module : lowest_addr) {
-    filtered_modules.push_back(module.second.second);
-  }
-
   return filtered_modules;
 }
 
@@ -401,72 +411,153 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
   return range->range_ref.slice(offset, overlap);
 }
 
-llvm::Optional<MemoryRegionInfo>
-MinidumpParser::GetMemoryRegionInfo(lldb::addr_t load_addr) {
-  MemoryRegionInfo info;
-  llvm::ArrayRef<uint8_t> data = GetStream(MinidumpStreamType::MemoryInfoList);
+static bool
+CreateRegionsCacheFromLinuxMaps(MinidumpParser &parser,
+                                std::vector<MemoryRegionInfo> &regions) {
+  auto data = parser.GetStream(MinidumpStreamType::LinuxMaps);
   if (data.empty())
-    return llvm::None;
+    return false;
+  ParseLinuxMapRegions(llvm::toStringRef(data),
+                       [&](const lldb_private::MemoryRegionInfo &region,
+                           const lldb_private::Status &status) -> bool {
+    if (status.Success())
+      regions.push_back(region);
+    return true;
+  });
+  return !regions.empty();
+}
 
-  std::vector<const MinidumpMemoryInfo *> mem_info_list =
-      MinidumpMemoryInfo::ParseMemoryInfoList(data);
+static bool
+CreateRegionsCacheFromMemoryInfoList(MinidumpParser &parser,
+                                     std::vector<MemoryRegionInfo> &regions) {
+  auto data = parser.GetStream(MinidumpStreamType::MemoryInfoList);
+  if (data.empty())
+    return false;
+  auto mem_info_list = MinidumpMemoryInfo::ParseMemoryInfoList(data);
   if (mem_info_list.empty())
-    return llvm::None;
-
-  const auto yes = MemoryRegionInfo::eYes;
-  const auto no = MemoryRegionInfo::eNo;
-
-  const MinidumpMemoryInfo *next_entry = nullptr;
+    return false;
+  constexpr auto yes = MemoryRegionInfo::eYes;
+  constexpr auto no = MemoryRegionInfo::eNo;
+  regions.reserve(mem_info_list.size());
   for (const auto &entry : mem_info_list) {
-    const auto head = entry->base_address;
-    const auto tail = head + entry->region_size;
-
-    if (head <= load_addr && load_addr < tail) {
-      info.GetRange().SetRangeBase(
-          (entry->state != uint32_t(MinidumpMemoryInfoState::MemFree))
-              ? head
-              : load_addr);
-      info.GetRange().SetRangeEnd(tail);
-
-      const uint32_t PageNoAccess =
-          static_cast<uint32_t>(MinidumpMemoryProtectionContants::PageNoAccess);
-      info.SetReadable((entry->protect & PageNoAccess) == 0 ? yes : no);
-
-      const uint32_t PageWritable =
-          static_cast<uint32_t>(MinidumpMemoryProtectionContants::PageWritable);
-      info.SetWritable((entry->protect & PageWritable) != 0 ? yes : no);
-
-      const uint32_t PageExecutable = static_cast<uint32_t>(
-          MinidumpMemoryProtectionContants::PageExecutable);
-      info.SetExecutable((entry->protect & PageExecutable) != 0 ? yes : no);
-
-      const uint32_t MemFree =
-          static_cast<uint32_t>(MinidumpMemoryInfoState::MemFree);
-      info.SetMapped((entry->state != MemFree) ? yes : no);
-
-      return info;
-    } else if (head > load_addr &&
-               (next_entry == nullptr || head < next_entry->base_address)) {
-      // In case there is no region containing load_addr keep track of the
-      // nearest region after load_addr so we can return the distance to it.
-      next_entry = entry;
-    }
+    MemoryRegionInfo region;
+    region.GetRange().SetRangeBase(entry->base_address);
+    region.GetRange().SetByteSize(entry->region_size);
+    region.SetReadable(entry->isReadable() ? yes : no);
+    region.SetWritable(entry->isWritable() ? yes : no);
+    region.SetExecutable(entry->isExecutable() ? yes : no);
+    region.SetMapped(entry->isMapped() ? yes : no);
+    regions.push_back(region);
   }
+  return !regions.empty();
+}
 
-  // No containing region found. Create an unmapped region that extends to the
-  // next region or LLDB_INVALID_ADDRESS
-  info.GetRange().SetRangeBase(load_addr);
-  info.GetRange().SetRangeEnd((next_entry != nullptr) ? next_entry->base_address
-                                                      : LLDB_INVALID_ADDRESS);
-  info.SetReadable(no);
-  info.SetWritable(no);
-  info.SetExecutable(no);
-  info.SetMapped(no);
+static bool
+CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
+                                 std::vector<MemoryRegionInfo> &regions) {
+  auto data = parser.GetStream(MinidumpStreamType::MemoryList);
+  if (data.empty())
+    return false;
+  auto memory_list = MinidumpMemoryDescriptor::ParseMemoryList(data);
+  if (memory_list.empty())
+    return false;
+  regions.reserve(memory_list.size());
+  for (const auto &memory_desc : memory_list) {
+    if (memory_desc.memory.data_size == 0)
+      continue;
+    MemoryRegionInfo region;
+    region.GetRange().SetRangeBase(memory_desc.start_of_memory_range);
+    region.GetRange().SetByteSize(memory_desc.memory.data_size);
+    region.SetReadable(MemoryRegionInfo::eYes);
+    region.SetMapped(MemoryRegionInfo::eYes);
+    regions.push_back(region);
+  }
+  regions.shrink_to_fit();
+  return !regions.empty();
+}
 
-  // Note that the memory info list doesn't seem to contain ranges in kernel
-  // space, so if you're walking a stack that has kernel frames, the stack may
-  // appear truncated.
-  return info;
+static bool
+CreateRegionsCacheFromMemory64List(MinidumpParser &parser,
+                                   std::vector<MemoryRegionInfo> &regions) {
+  llvm::ArrayRef<uint8_t> data =
+      parser.GetStream(MinidumpStreamType::Memory64List);
+  if (data.empty())
+    return false;
+  llvm::ArrayRef<MinidumpMemoryDescriptor64> memory64_list;
+  uint64_t base_rva;
+  std::tie(memory64_list, base_rva) =
+      MinidumpMemoryDescriptor64::ParseMemory64List(data);
+  
+  if (memory64_list.empty())
+    return false;
+    
+  regions.reserve(memory64_list.size());
+  for (const auto &memory_desc : memory64_list) {
+    if (memory_desc.data_size == 0)
+      continue;
+    MemoryRegionInfo region;
+    region.GetRange().SetRangeBase(memory_desc.start_of_memory_range);
+    region.GetRange().SetByteSize(memory_desc.data_size);
+    region.SetReadable(MemoryRegionInfo::eYes);
+    region.SetMapped(MemoryRegionInfo::eYes);
+    regions.push_back(region);
+  }
+  regions.shrink_to_fit();
+  return !regions.empty();
+}
+
+MemoryRegionInfo
+MinidumpParser::FindMemoryRegion(lldb::addr_t load_addr) const {
+  auto begin = m_regions.begin();
+  auto end = m_regions.end();
+  auto pos = std::lower_bound(begin, end, load_addr);
+  if (pos != end && pos->GetRange().Contains(load_addr))
+    return *pos;
+  
+  MemoryRegionInfo region;
+  if (pos == begin)
+    region.GetRange().SetRangeBase(0);
+  else {
+    auto prev = pos - 1;
+    if (prev->GetRange().Contains(load_addr))
+      return *prev;
+    region.GetRange().SetRangeBase(prev->GetRange().GetRangeEnd());
+  }
+  if (pos == end)
+    region.GetRange().SetRangeEnd(UINT64_MAX);
+  else
+    region.GetRange().SetRangeEnd(pos->GetRange().GetRangeBase());
+  region.SetReadable(MemoryRegionInfo::eNo);
+  region.SetWritable(MemoryRegionInfo::eNo);
+  region.SetExecutable(MemoryRegionInfo::eNo);
+  region.SetMapped(MemoryRegionInfo::eNo);
+  return region;
+}
+
+MemoryRegionInfo
+MinidumpParser::GetMemoryRegionInfo(lldb::addr_t load_addr) {
+  if (!m_parsed_regions)
+    GetMemoryRegions();
+  return FindMemoryRegion(load_addr);
+}
+
+const MemoryRegionInfos &MinidumpParser::GetMemoryRegions() {
+  if (!m_parsed_regions) {
+    m_parsed_regions = true;
+    // We haven't cached our memory regions yet we will create the region cache
+    // once. We create the region cache using the best source. We start with
+    // the linux maps since they are the most complete and have names for the
+    // regions. Next we try the MemoryInfoList since it has
+    // read/write/execute/map data, and then fall back to the MemoryList and
+    // Memory64List to just get a list of the memory that is mapped in this
+    // core file
+    if (!CreateRegionsCacheFromLinuxMaps(*this, m_regions))
+      if (!CreateRegionsCacheFromMemoryInfoList(*this, m_regions))
+        if (!CreateRegionsCacheFromMemoryList(*this, m_regions))
+          CreateRegionsCacheFromMemory64List(*this, m_regions);
+    std::sort(m_regions.begin(), m_regions.end());
+  }
+  return m_regions;
 }
 
 Status MinidumpParser::Initialize() {
@@ -573,4 +664,49 @@ Status MinidumpParser::Initialize() {
   }
 
   return error;
+}
+
+#define ENUM_TO_CSTR(ST) case (uint32_t)MinidumpStreamType::ST: return #ST
+
+llvm::StringRef
+MinidumpParser::GetStreamTypeAsString(uint32_t stream_type) {
+  switch (stream_type) {
+    ENUM_TO_CSTR(Unused);
+    ENUM_TO_CSTR(Reserved0);
+    ENUM_TO_CSTR(Reserved1);
+    ENUM_TO_CSTR(ThreadList);
+    ENUM_TO_CSTR(ModuleList);
+    ENUM_TO_CSTR(MemoryList);
+    ENUM_TO_CSTR(Exception);
+    ENUM_TO_CSTR(SystemInfo);
+    ENUM_TO_CSTR(ThreadExList);
+    ENUM_TO_CSTR(Memory64List);
+    ENUM_TO_CSTR(CommentA);
+    ENUM_TO_CSTR(CommentW);
+    ENUM_TO_CSTR(HandleData);
+    ENUM_TO_CSTR(FunctionTable);
+    ENUM_TO_CSTR(UnloadedModuleList);
+    ENUM_TO_CSTR(MiscInfo);
+    ENUM_TO_CSTR(MemoryInfoList);
+    ENUM_TO_CSTR(ThreadInfoList);
+    ENUM_TO_CSTR(HandleOperationList);
+    ENUM_TO_CSTR(Token);
+    ENUM_TO_CSTR(JavascriptData);
+    ENUM_TO_CSTR(SystemMemoryInfo);
+    ENUM_TO_CSTR(ProcessVMCounters);
+    ENUM_TO_CSTR(BreakpadInfo);
+    ENUM_TO_CSTR(AssertionInfo);
+    ENUM_TO_CSTR(LinuxCPUInfo);
+    ENUM_TO_CSTR(LinuxProcStatus);
+    ENUM_TO_CSTR(LinuxLSBRelease);
+    ENUM_TO_CSTR(LinuxCMDLine);
+    ENUM_TO_CSTR(LinuxEnviron);
+    ENUM_TO_CSTR(LinuxAuxv);
+    ENUM_TO_CSTR(LinuxMaps);
+    ENUM_TO_CSTR(LinuxDSODebug);
+    ENUM_TO_CSTR(LinuxProcStat);
+    ENUM_TO_CSTR(LinuxProcUptime);
+    ENUM_TO_CSTR(LinuxProcFD);
+  }
+  return "unknown stream type";
 }

@@ -93,7 +93,10 @@ public:
 
   Expected<std::string> getAbsolutePath(StringRef /*Authority*/, StringRef Body,
                                         StringRef HintPath) const override {
-    assert(HintPath.startswith(testRoot()));
+    if (!HintPath.startswith(testRoot()))
+      return make_error<StringError>(
+          "Hint path doesn't start with test root: " + HintPath,
+          inconvertibleErrorCode());
     if (!Body.consume_front("/"))
       return make_error<StringError>(
           "Body of an unittest: URI must start with '/'",

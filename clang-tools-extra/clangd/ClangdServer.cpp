@@ -86,6 +86,10 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     DiagConsumer.onDiagnosticsReady(File, std::move(Diags));
   }
 
+  void onFileUpdated(PathRef File, const TUStatus &Status) override {
+    DiagConsumer.onFileUpdated(File, Status);
+  }
+
 private:
   FileIndex *FIndex;
   DiagnosticsConsumer &DiagConsumer;
@@ -135,7 +139,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
   if (Opts.BackgroundIndex) {
     BackgroundIdx = llvm::make_unique<BackgroundIndex>(
         Context::current().clone(), ResourceDir, FSProvider, CDB,
-        BackgroundIndexStorage::createDiskBackedStorageFactory());
+        BackgroundIndexStorage::createDiskBackedStorageFactory(),
+        Opts.BackgroundIndexRebuildPeriodMs);
     AddIndex(BackgroundIdx.get());
   }
   if (DynamicIdx)
@@ -144,15 +149,17 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
 
 void ClangdServer::addDocument(PathRef File, StringRef Contents,
                                WantDiagnostics WantDiags) {
+  // FIXME: some build systems like Bazel will take time to preparing
+  // environment to build the file, it would be nice if we could emit a
+  // "PreparingBuild" status to inform users, it is non-trivial given the
+  // current implementation.
   WorkScheduler.update(File,
                        ParseInputs{getCompileCommand(File),
                                    FSProvider.getFileSystem(), Contents.str()},
                        WantDiags);
 }
 
-void ClangdServer::removeDocument(PathRef File) {
-  WorkScheduler.remove(File);
-}
+void ClangdServer::removeDocument(PathRef File) { WorkScheduler.remove(File); }
 
 void ClangdServer::codeComplete(PathRef File, Position Pos,
                                 const clangd::CodeCompleteOptions &Opts,
@@ -501,6 +508,18 @@ void ClangdServer::findReferences(PathRef File, Position Pos,
   };
 
   WorkScheduler.runWithAST("References", File, Bind(Action, std::move(CB)));
+}
+
+void ClangdServer::symbolInfo(PathRef File, Position Pos,
+                              Callback<std::vector<SymbolDetails>> CB) {
+  auto Action = [Pos](Callback<std::vector<SymbolDetails>> CB,
+                      Expected<InputsAndAST> InpAST) {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::getSymbolInfo(InpAST->AST, Pos));
+  };
+
+  WorkScheduler.runWithAST("SymbolInfo", File, Bind(Action, std::move(CB)));
 }
 
 std::vector<std::pair<Path, std::size_t>>

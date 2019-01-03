@@ -26,9 +26,7 @@ class ThreadExitTestCase(TestBase):
         self.break_3 = line_number('main.cpp', '// Set third breakpoint here')
         self.break_4 = line_number('main.cpp', '// Set fourth breakpoint here')
 
-    # The test is actually flakey on Windows, failing every dozen or so runs, but even with the flakey
-    # decorator it still fails
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr38373")
+    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test(self):
         """Test thread exit handling."""
         self.build(dictionary=self.getBuildFlags())

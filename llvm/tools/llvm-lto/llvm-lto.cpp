@@ -562,11 +562,14 @@ private:
 
     auto Index = loadCombinedIndex();
     for (auto &Filename : InputFilenames) {
+      LLVMContext Ctx;
+      auto TheModule = loadModule(Filename, Ctx);
+
       // Build a map of module to the GUIDs and summary objects that should
       // be written to its index.
       std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
-      ThinLTOCodeGenerator::gatherImportedSummariesForModule(
-          Filename, *Index, ModuleToSummariesForIndex);
+      ThinGenerator.gatherImportedSummariesForModule(*TheModule, *Index,
+                                                     ModuleToSummariesForIndex);
 
       std::string OutputName = OutputFilename;
       if (OutputName.empty()) {
@@ -594,12 +597,14 @@ private:
 
     auto Index = loadCombinedIndex();
     for (auto &Filename : InputFilenames) {
+      LLVMContext Ctx;
+      auto TheModule = loadModule(Filename, Ctx);
       std::string OutputName = OutputFilename;
       if (OutputName.empty()) {
         OutputName = Filename + ".imports";
       }
       OutputName = getThinLTOOutputFile(OutputName, OldPrefix, NewPrefix);
-      ThinLTOCodeGenerator::emitImports(Filename, OutputName, *Index);
+      ThinGenerator.emitImports(*TheModule, OutputName, *Index);
     }
   }
 

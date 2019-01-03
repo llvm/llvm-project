@@ -22,6 +22,7 @@
 #include "sanitizer_local_address_space_view.h"
 #include "sanitizer_mutex.h"
 #include "sanitizer_procmaps.h"
+#include "sanitizer_type_traits.h"
 
 namespace __sanitizer {
 

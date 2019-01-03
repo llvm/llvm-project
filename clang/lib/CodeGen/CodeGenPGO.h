@@ -17,7 +17,6 @@
 #include "CGBuilder.h"
 #include "CodeGenModule.h"
 #include "CodeGenTypes.h"
-#include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include <array>
 #include <memory>

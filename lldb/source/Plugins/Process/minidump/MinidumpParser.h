@@ -1,5 +1,4 @@
-//===-- MinidumpParser.h -----------------------------------------*- C++
-//-*-===//
+//===-- MinidumpParser.h -----------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,6 +12,7 @@
 
 #include "MinidumpTypes.h"
 
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Status.h"
@@ -86,18 +86,31 @@ public:
 
   llvm::ArrayRef<uint8_t> GetMemory(lldb::addr_t addr, size_t size);
 
-  llvm::Optional<MemoryRegionInfo> GetMemoryRegionInfo(lldb::addr_t);
+  MemoryRegionInfo GetMemoryRegionInfo(lldb::addr_t load_addr);
+
+  const MemoryRegionInfos &GetMemoryRegions();
 
   // Perform consistency checks and initialize internal data structures
   Status Initialize();
 
+  static llvm::StringRef GetStreamTypeAsString(uint32_t stream_type);
+
+  const llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> &
+  GetDirectoryMap() const {
+    return m_directory_map;
+  }
+
 private:
   MinidumpParser(const lldb::DataBufferSP &data_buf_sp);
+
+  MemoryRegionInfo FindMemoryRegion(lldb::addr_t load_addr) const;
 
 private:
   lldb::DataBufferSP m_data_sp;
   llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> m_directory_map;
   ArchSpec m_arch;
+  MemoryRegionInfos m_regions;
+  bool m_parsed_regions = false;
 };
 
 } // end namespace minidump

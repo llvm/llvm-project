@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Annotations.h"
 #include "Context.h"
 #include "Matchers.h"
 #include "TUScheduler.h"
@@ -23,12 +24,17 @@ namespace clangd {
 namespace {
 
 using ::testing::_;
+using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Pair;
 using ::testing::Pointee;
 using ::testing::UnorderedElementsAre;
+
+MATCHER_P2(TUState, State, ActionName, "") {
+  return arg.Action.S == State && arg.Action.Name == ActionName;
+}
 
 class TUSchedulerTests : public ::testing::Test {
 protected:
@@ -383,22 +389,20 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
         }
         {
           WithContextValue WithNonce(NonceKey, ++Nonce);
-          S.runWithAST("CheckAST", File,
-                       [File, Inputs, Nonce, &Mut,
-                        &TotalASTReads](Expected<InputsAndAST> AST) {
-                         EXPECT_THAT(Context::current().get(NonceKey),
-                                     Pointee(Nonce));
+          S.runWithAST(
+              "CheckAST", File,
+              [File, Inputs, Nonce, &Mut,
+               &TotalASTReads](Expected<InputsAndAST> AST) {
+                EXPECT_THAT(Context::current().get(NonceKey), Pointee(Nonce));
 
-                         ASSERT_TRUE((bool)AST);
-                         EXPECT_EQ(AST->Inputs.FS, Inputs.FS);
-                         EXPECT_EQ(AST->Inputs.Contents, Inputs.Contents);
+                ASSERT_TRUE((bool)AST);
+                EXPECT_EQ(AST->Inputs.FS, Inputs.FS);
+                EXPECT_EQ(AST->Inputs.Contents, Inputs.Contents);
 
-                         std::lock_guard<std::mutex> Lock(Mut);
-                         ++TotalASTReads;
-                         EXPECT_EQ(
-                             File,
-                             *TUScheduler::getFileBeingProcessedInContext());
-                       });
+                std::lock_guard<std::mutex> Lock(Mut);
+                ++TotalASTReads;
+                EXPECT_EQ(File, *TUScheduler::getFileBeingProcessedInContext());
+              });
         }
 
         {
@@ -499,14 +503,14 @@ TEST_F(TUSchedulerTests, EmptyPreamble) {
   )cpp";
   auto WithEmptyPreamble = R"cpp(int main() {})cpp";
   S.update(Foo, getInputs(Foo, WithPreamble), WantDiagnostics::Auto);
-  S.runWithPreamble("getNonEmptyPreamble", Foo, TUScheduler::Stale,
-                    [&](Expected<InputsAndPreamble> Preamble) {
-                      // We expect to get a non-empty preamble.
-                      EXPECT_GT(cantFail(std::move(Preamble))
-                                    .Preamble->Preamble.getBounds()
-                                    .Size,
-                                0u);
-                    });
+  S.runWithPreamble(
+      "getNonEmptyPreamble", Foo, TUScheduler::Stale,
+      [&](Expected<InputsAndPreamble> Preamble) {
+        // We expect to get a non-empty preamble.
+        EXPECT_GT(
+            cantFail(std::move(Preamble)).Preamble->Preamble.getBounds().Size,
+            0u);
+      });
   // Wait for the preamble is being built.
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
 
@@ -514,14 +518,14 @@ TEST_F(TUSchedulerTests, EmptyPreamble) {
   S.update(Foo, getInputs(Foo, WithEmptyPreamble), WantDiagnostics::Auto);
   // Wait for the preamble is being built.
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
-  S.runWithPreamble("getEmptyPreamble", Foo, TUScheduler::Stale,
-                    [&](Expected<InputsAndPreamble> Preamble) {
-                      // We expect to get an empty preamble.
-                      EXPECT_EQ(cantFail(std::move(Preamble))
-                                    .Preamble->Preamble.getBounds()
-                                    .Size,
-                                0u);
-                    });
+  S.runWithPreamble(
+      "getEmptyPreamble", Foo, TUScheduler::Stale,
+      [&](Expected<InputsAndPreamble> Preamble) {
+        // We expect to get an empty preamble.
+        EXPECT_EQ(
+            cantFail(std::move(Preamble)).Preamble->Preamble.getBounds().Size,
+            0u);
+      });
 }
 
 TEST_F(TUSchedulerTests, RunWaitsForPreamble) {
@@ -593,7 +597,7 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   ASSERT_FALSE(DoUpdate(SourceContents));
 
   // Update to a header should cause a rebuild, though.
-  Files[Header] = time_t(1);
+  Timestamps[Header] = time_t(1);
   ASSERT_TRUE(DoUpdate(SourceContents));
   ASSERT_FALSE(DoUpdate(SourceContents));
 
@@ -656,6 +660,49 @@ TEST_F(TUSchedulerTests, Run) {
   S.run("add 2", [&] { Counter += 2; });
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   EXPECT_EQ(Counter.load(), 3);
+}
+
+TEST_F(TUSchedulerTests, TUStatus) {
+  class CaptureTUStatus : public DiagnosticsConsumer {
+  public:
+    void onDiagnosticsReady(PathRef File,
+                            std::vector<Diag> Diagnostics) override {}
+
+    void onFileUpdated(PathRef File, const TUStatus &Status) override {
+      std::lock_guard<std::mutex> Lock(Mutex);
+      AllStatus.push_back(Status);
+    }
+
+    std::vector<TUStatus> AllStatus;
+
+  private:
+    std::mutex Mutex;
+  } CaptureTUStatus;
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, FS, CaptureTUStatus, ClangdServer::optsForTest());
+  Annotations Code("int m^ain () {}");
+
+  // We schedule the following tasks in the queue:
+  //   [Update] [GoToDefinition]
+  Server.addDocument(testPath("foo.cpp"), Code.code(), WantDiagnostics::Yes);
+  Server.findDefinitions(testPath("foo.cpp"), Code.point(),
+                         [](Expected<std::vector<Location>> Result) {
+                           ASSERT_TRUE((bool)Result);
+                         });
+
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+
+  EXPECT_THAT(CaptureTUStatus.AllStatus,
+              ElementsAre(
+                  // Statuses of "Update" action.
+                  TUState(TUAction::RunningAction, "Update"),
+                  TUState(TUAction::BuildingPreamble, "Update"),
+                  TUState(TUAction::BuildingFile, "Update"),
+
+                  // Statuses of "Definitions" action
+                  TUState(TUAction::RunningAction, "Definitions"),
+                  TUState(TUAction::Idle, /*No action*/ "")));
 }
 
 } // namespace

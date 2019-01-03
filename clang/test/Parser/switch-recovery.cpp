@@ -21,7 +21,7 @@ struct B {
   void test2() {
     enum X { Xa, Xb } x;
 
-    switch (x) { // expected-warning {{enumeration value 'Xb' not handled in switch}}
+    switch (x) { // expected-warning {{enumeration value 'Xb' not handled in switch}} expected-note {{add missing switch cases}}
     case Xa; // expected-error {{expected ':' after 'case'}}
       break;
     }

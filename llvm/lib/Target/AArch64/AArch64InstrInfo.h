@@ -62,14 +62,6 @@ public:
   unsigned isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
-  /// Returns true if there is a shiftable register and that the shift value
-  /// is non-zero.
-  static bool hasShiftedReg(const MachineInstr &MI);
-
-  /// Returns true if there is an extendable register and that the extending
-  /// value is non-zero.
-  static bool hasExtendedReg(const MachineInstr &MI);
-
   /// Does this instruction set its full destination register to zero?
   static bool isGPRZero(const MachineInstr &MI);
 
@@ -78,11 +70,6 @@ public:
 
   /// Does this instruction rename an FPR without modifying bits?
   static bool isFPRCopy(const MachineInstr &MI);
-
-  /// Return true if this is load/store scales or extends its register offset.
-  /// This refers to scaling a dynamic index as opposed to scaled immediates.
-  /// MI should be a memory op that allows scaled addressing.
-  static bool isScaledAddr(const MachineInstr &MI);
 
   /// Return true if pairing the given load or store is hinted to be
   /// unprofitable.
@@ -110,13 +97,13 @@ public:
   /// Hint that pairing the given load or store is unprofitable.
   static void suppressLdStPair(MachineInstr &MI);
 
-  bool getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
-                             int64_t &Offset,
-                             const TargetRegisterInfo *TRI) const override;
+  bool getMemOperandWithOffset(MachineInstr &MI, MachineOperand *&BaseOp,
+                               int64_t &Offset,
+                               const TargetRegisterInfo *TRI) const override;
 
-  bool getMemOpBaseRegImmOfsWidth(MachineInstr &LdSt, unsigned &BaseReg,
-                                  int64_t &Offset, unsigned &Width,
-                                  const TargetRegisterInfo *TRI) const;
+  bool getMemOperandWithOffsetWidth(MachineInstr &MI, MachineOperand *&BaseOp,
+                                    int64_t &Offset, unsigned &Width,
+                                    const TargetRegisterInfo *TRI) const;
 
   /// Return the immediate offset of the base register in a load/store \p LdSt.
   MachineOperand &getMemOpBaseRegImmOfsOffsetOperand(MachineInstr &LdSt) const;
@@ -128,8 +115,7 @@ public:
   bool getMemOpInfo(unsigned Opcode, unsigned &Scale, unsigned &Width,
                     int64_t &MinOffset, int64_t &MaxOffset) const;
 
-  bool shouldClusterMemOps(MachineInstr &FirstLdSt, unsigned BaseReg1,
-                           MachineInstr &SecondLdSt, unsigned BaseReg2,
+  bool shouldClusterMemOps(MachineOperand &BaseOp1, MachineOperand &BaseOp2,
                            unsigned NumLoads) const override;
 
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
@@ -255,21 +241,15 @@ public:
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      const outliner::Candidate &C) const override;
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
-  /// Returns true if the instruction sets a constant value that can be
-  /// executed more efficiently.
-  static bool isExynosResetFast(const MachineInstr &MI);
-  /// Returns true if the load or store has an extension that can be executed
-  /// more efficiently.
-  static bool isExynosLdStExtFast(const MachineInstr &MI);
-  /// Returns true if the instruction has a constant shift left or extension
-  /// that can be executed more efficiently.
-  static bool isExynosShiftExtFast(const MachineInstr &MI);
   /// Returns true if the instruction has a shift by immediate that can be
   /// executed in one cycle less.
   static bool isFalkorShiftExtFast(const MachineInstr &MI);
   /// Return true if the instructions is a SEH instruciton used for unwinding
   /// on Windows.
   static bool isSEHInstruction(const MachineInstr &MI);
+
+#define GET_INSTRINFO_HELPER_DECLS
+#include "AArch64GenInstrInfo.inc"
 
 private:
   /// Sets the offsets on outlined instructions in \p MBB which use SP

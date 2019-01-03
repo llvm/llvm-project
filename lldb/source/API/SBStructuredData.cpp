@@ -11,9 +11,9 @@
 
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
-#include "lldb/Core/Event.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Target/StructuredDataPlugin.h"
+#include "lldb/Utility/Event.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"

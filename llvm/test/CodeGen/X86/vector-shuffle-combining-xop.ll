@@ -332,8 +332,7 @@ define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
 ; X86AVX2-LABEL: buildvector_v4f32_0404:
 ; X86AVX2:       # %bb.0:
 ; X86AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X86AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X86AVX2-NEXT:    vmovapd %xmm0, (%eax)
 ; X86AVX2-NEXT:    retl
 ;

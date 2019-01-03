@@ -319,6 +319,78 @@ def int_gcwrite : Intrinsic<[],
                             [llvm_ptr_ty, llvm_ptr_ty, llvm_ptrptr_ty],
                             [IntrArgMemOnly, NoCapture<1>, NoCapture<2>]>;
 
+//===------------------- ObjC ARC runtime Intrinsics --------------------===//
+//
+// Note these are to support the Objective-C ARC optimizer which wants to
+// eliminate retain and releases where possible.
+
+def int_objc_autorelease                    : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_autoreleasePoolPop             : Intrinsic<[], [llvm_ptr_ty]>;
+def int_objc_autoreleasePoolPush            : Intrinsic<[llvm_ptr_ty], []>;
+def int_objc_autoreleaseReturnValue         : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_copyWeak                       : Intrinsic<[],
+                                                        [llvm_ptrptr_ty,
+                                                         llvm_ptrptr_ty]>;
+def int_objc_destroyWeak                    : Intrinsic<[], [llvm_ptrptr_ty]>;
+def int_objc_initWeak                       : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptrptr_ty,
+                                                         llvm_ptr_ty]>;
+def int_objc_loadWeak                       : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptrptr_ty]>;
+def int_objc_loadWeakRetained               : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptrptr_ty]>;
+def int_objc_moveWeak                       : Intrinsic<[],
+                                                        [llvm_ptrptr_ty,
+                                                         llvm_ptrptr_ty]>;
+def int_objc_release                        : Intrinsic<[], [llvm_ptr_ty]>;
+def int_objc_retain                         : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_retainAutorelease              : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_retainAutoreleaseReturnValue   : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_retainAutoreleasedReturnValue  : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_retainBlock                    : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_storeStrong                    : Intrinsic<[],
+                                                        [llvm_ptrptr_ty,
+                                                         llvm_ptr_ty]>;
+def int_objc_storeWeak                      : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptrptr_ty,
+                                                         llvm_ptr_ty]>;
+def int_objc_clang_arc_use                  : Intrinsic<[],
+                                                        [llvm_vararg_ty]>;
+def int_objc_unsafeClaimAutoreleasedReturnValue : Intrinsic<[llvm_ptr_ty],
+                                                            [llvm_ptr_ty]>;
+def int_objc_retainedObject                 : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_unretainedObject               : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_unretainedPointer              : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_retain_autorelease             : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_sync_enter                     : Intrinsic<[llvm_i32_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_sync_exit                      : Intrinsic<[llvm_i32_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_arc_annotation_topdown_bbstart : Intrinsic<[],
+                                                        [llvm_ptrptr_ty,
+                                                         llvm_ptrptr_ty]>;
+def int_objc_arc_annotation_topdown_bbend   : Intrinsic<[],
+                                                        [llvm_ptrptr_ty,
+                                                         llvm_ptrptr_ty]>;
+def int_objc_arc_annotation_bottomup_bbstart  : Intrinsic<[],
+                                                          [llvm_ptrptr_ty,
+                                                           llvm_ptrptr_ty]>;
+def int_objc_arc_annotation_bottomup_bbend  : Intrinsic<[],
+                                                        [llvm_ptrptr_ty,
+                                                         llvm_ptrptr_ty]>;
+
+
 //===--------------------- Code Generator Intrinsics ----------------------===//
 //
 def int_returnaddress : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty], [IntrNoMem]>;
@@ -739,7 +811,7 @@ def int_umul_with_overflow : Intrinsic<[llvm_anyint_ty, llvm_i1_ty],
                                        [LLVMMatchType<0>, LLVMMatchType<0>],
                                        [IntrNoMem, IntrSpeculatable]>;
 
-//===------------------------- Fixed Point Intrinsics ---------------------===//
+//===------------------------- Saturation Arithmetic Intrinsics ---------------------===//
 //
 def int_sadd_sat : Intrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
@@ -753,6 +825,12 @@ def int_ssub_sat : Intrinsic<[llvm_anyint_ty],
 def int_usub_sat : Intrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
                              [IntrNoMem, IntrSpeculatable]>;
+
+//===------------------------- Fixed Point Arithmetic Intrinsics ---------------------===//
+//
+def int_smul_fix : Intrinsic<[llvm_anyint_ty],
+                             [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
+                             [IntrNoMem, IntrSpeculatable, Commutative]>;
 
 //===------------------------- Memory Use Markers -------------------------===//
 //
@@ -832,6 +910,14 @@ def int_coro_id : Intrinsic<[llvm_token_ty], [llvm_i32_ty, llvm_ptr_ty,
                              llvm_ptr_ty, llvm_ptr_ty],
                             [IntrArgMemOnly, IntrReadMem,
                              ReadNone<1>, ReadOnly<2>, NoCapture<2>]>;
+def int_coro_id_retcon : Intrinsic<[llvm_token_ty],
+    [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty,
+     llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
+    []>;
+def int_coro_id_retcon_once : Intrinsic<[llvm_token_ty],
+    [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty,
+     llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
+    []>;
 def int_coro_alloc : Intrinsic<[llvm_i1_ty], [llvm_token_ty], []>;
 def int_coro_begin : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
                                [WriteOnly<1>]>;
@@ -847,6 +933,13 @@ def int_coro_size : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
 
 def int_coro_save : Intrinsic<[llvm_token_ty], [llvm_ptr_ty], []>;
 def int_coro_suspend : Intrinsic<[llvm_i8_ty], [llvm_token_ty, llvm_i1_ty], []>;
+def int_coro_suspend_retcon : Intrinsic<[llvm_any_ty], [llvm_vararg_ty], []>;
+def int_coro_prepare_retcon : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
+                                        [IntrNoMem]>;
+def int_coro_alloca_alloc : Intrinsic<[llvm_token_ty],
+                                      [llvm_anyint_ty, llvm_i32_ty], []>;
+def int_coro_alloca_get : Intrinsic<[llvm_ptr_ty], [llvm_token_ty], []>;
+def int_coro_alloca_free : Intrinsic<[], [llvm_token_ty], []>;
 
 def int_coro_param : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_ptr_ty],
                                [IntrNoMem, ReadNone<0>, ReadNone<1>]>;
@@ -883,6 +976,10 @@ def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
 // Support for speculative runtime guards
 def int_experimental_guard : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
                                        [Throws]>;
+
+// Supports widenable conditions for guards represented as explicit branches.
+def int_experimental_widenable_condition : Intrinsic<[llvm_i1_ty], [],
+                                           [IntrInaccessibleMemOnly]>;
 
 // NOP: calls/invokes to this intrinsic are removed by codegen
 def int_donothing : Intrinsic<[], [], [IntrNoMem]>;

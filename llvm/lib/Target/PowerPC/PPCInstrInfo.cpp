@@ -1429,17 +1429,15 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
                                       : (isPPC64 ? PPC::BDZLR8 : PPC::BDZLR)));
     } else if (Pred[0].getImm() == PPC::PRED_BIT_SET) {
       MI.setDesc(get(PPC::BCLR));
-      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-          .addReg(Pred[1].getReg());
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI).add(Pred[1]);
     } else if (Pred[0].getImm() == PPC::PRED_BIT_UNSET) {
       MI.setDesc(get(PPC::BCLRn));
-      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-          .addReg(Pred[1].getReg());
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI).add(Pred[1]);
     } else {
       MI.setDesc(get(PPC::BCCLR));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI)
           .addImm(Pred[0].getImm())
-          .addReg(Pred[1].getReg());
+          .add(Pred[1]);
     }
 
     return true;
@@ -1454,7 +1452,7 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
 
       MI.setDesc(get(PPC::BC));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-          .addReg(Pred[1].getReg())
+          .add(Pred[1])
           .addMBB(MBB);
     } else if (Pred[0].getImm() == PPC::PRED_BIT_UNSET) {
       MachineBasicBlock *MBB = MI.getOperand(0).getMBB();
@@ -1462,7 +1460,7 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
 
       MI.setDesc(get(PPC::BCn));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-          .addReg(Pred[1].getReg())
+          .add(Pred[1])
           .addMBB(MBB);
     } else {
       MachineBasicBlock *MBB = MI.getOperand(0).getMBB();
@@ -1471,13 +1469,13 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
       MI.setDesc(get(PPC::BCC));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI)
           .addImm(Pred[0].getImm())
-          .addReg(Pred[1].getReg())
+          .add(Pred[1])
           .addMBB(MBB);
     }
 
     return true;
-  } else if (OpC == PPC::BCTR  || OpC == PPC::BCTR8 ||
-             OpC == PPC::BCTRL || OpC == PPC::BCTRL8) {
+  } else if (OpC == PPC::BCTR || OpC == PPC::BCTR8 || OpC == PPC::BCTRL ||
+             OpC == PPC::BCTRL8) {
     if (Pred[1].getReg() == PPC::CTR8 || Pred[1].getReg() == PPC::CTR)
       llvm_unreachable("Cannot predicate bctr[l] on the ctr register");
 
@@ -1487,14 +1485,12 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
     if (Pred[0].getImm() == PPC::PRED_BIT_SET) {
       MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCTRL8 : PPC::BCCTR8)
                              : (setLR ? PPC::BCCTRL : PPC::BCCTR)));
-      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-          .addReg(Pred[1].getReg());
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI).add(Pred[1]);
       return true;
     } else if (Pred[0].getImm() == PPC::PRED_BIT_UNSET) {
       MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCTRL8n : PPC::BCCTR8n)
                              : (setLR ? PPC::BCCTRLn : PPC::BCCTRn)));
-      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-          .addReg(Pred[1].getReg());
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI).add(Pred[1]);
       return true;
     }
 
@@ -1502,7 +1498,7 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
                            : (setLR ? PPC::BCCCTRL : PPC::BCCCTR)));
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
         .addImm(Pred[0].getImm())
-        .addReg(Pred[1].getReg());
+        .add(Pred[1]);
     return true;
   }
 
@@ -2252,6 +2248,35 @@ static unsigned selectReg(int64_t Imm1, int64_t Imm2, unsigned CompareOpc,
   return PPC::NoRegister;
 }
 
+void PPCInstrInfo::replaceInstrOperandWithImm(MachineInstr &MI,
+                                              unsigned OpNo,
+                                              int64_t Imm) const {
+  assert(MI.getOperand(OpNo).isReg() && "Operand must be a REG");
+  // Replace the REG with the Immediate.
+  unsigned InUseReg = MI.getOperand(OpNo).getReg();
+  MI.getOperand(OpNo).ChangeToImmediate(Imm);
+
+  if (empty(MI.implicit_operands()))
+    return;
+
+  // We need to make sure that the MI didn't have any implicit use
+  // of this REG any more.
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  int UseOpIdx = MI.findRegisterUseOperandIdx(InUseReg, false, TRI);
+  if (UseOpIdx >= 0) {
+    MachineOperand &MO = MI.getOperand(UseOpIdx);
+    if (MO.isImplicit())
+      // The operands must always be in the following order:
+      // - explicit reg defs,
+      // - other explicit operands (reg uses, immediates, etc.),
+      // - implicit reg defs
+      // - implicit reg uses
+      // Therefore, removing the implicit operand won't change the explicit
+      // operands layout.
+      MI.RemoveOperand(UseOpIdx);
+  }
+}
+
 // Replace an instruction with one that materializes a constant (and sets
 // CR0 if the original instruction was a record-form instruction).
 void PPCInstrInfo::replaceInstrWithLI(MachineInstr &MI,
@@ -2485,7 +2510,7 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
       // Can't use PPC::COPY to copy PPC::ZERO[8]. Convert it to LI[8] 0.
       if (RegToCopy == PPC::ZERO || RegToCopy == PPC::ZERO8) {
         CompareUseMI.setDesc(get(UseOpc == PPC::ISEL8 ? PPC::LI8 : PPC::LI));
-        CompareUseMI.getOperand(1).ChangeToImmediate(0);
+        replaceInstrOperandWithImm(CompareUseMI, 1, 0);
         CompareUseMI.RemoveOperand(3);
         CompareUseMI.RemoveOperand(2);
         continue;
@@ -2984,8 +3009,10 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
       if (PostRA) {
         if (isVFReg(MI.getOperand(0).getReg()))
           III.ImmOpcode = PPC::LXSSP;
-        else
+        else {
           III.ImmOpcode = PPC::LFS;
+          III.ImmMustBeMultipleOf = 1;
+        }
         break;
       }
       LLVM_FALLTHROUGH;
@@ -2996,8 +3023,10 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
       if (PostRA) {
         if (isVFReg(MI.getOperand(0).getReg()))
           III.ImmOpcode = PPC::LXSD;
-        else
+        else {
           III.ImmOpcode = PPC::LFD;
+          III.ImmMustBeMultipleOf = 1;
+        }
         break;
       }
       LLVM_FALLTHROUGH;
@@ -3012,8 +3041,10 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
       if (PostRA) {
         if (isVFReg(MI.getOperand(0).getReg()))
           III.ImmOpcode = PPC::STXSSP;
-        else
+        else {
           III.ImmOpcode = PPC::STFS;
+          III.ImmMustBeMultipleOf = 1;
+        }
         break;
       }
       LLVM_FALLTHROUGH;
@@ -3024,8 +3055,10 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
       if (PostRA) {
         if (isVFReg(MI.getOperand(0).getReg()))
           III.ImmOpcode = PPC::STXSD;
-        else
+        else {
           III.ImmOpcode = PPC::STFD;
+          III.ImmMustBeMultipleOf = 1;
+        }
         break;
       }
       LLVM_FALLTHROUGH;
@@ -3288,7 +3321,7 @@ bool PPCInstrInfo::transformToImmFormFedByAdd(MachineInstr &MI,
   if (ImmMO->isImm()) {
     // If the ImmMO is Imm, change the operand that has ZERO to that Imm
     // directly.
-    MI.getOperand(III.ZeroIsSpecialOrig).ChangeToImmediate(Imm);
+    replaceInstrOperandWithImm(MI, III.ZeroIsSpecialOrig, Imm);
   }
   else {
     // Otherwise, it is Constant Pool Index(CPI) or Global,
@@ -3407,24 +3440,24 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
           uint64_t SH = RightShift ? 32 - ShAmt : ShAmt;
           uint64_t MB = RightShift ? ShAmt : 0;
           uint64_t ME = RightShift ? 31 : 31 - ShAmt;
-          MI.getOperand(III.OpNoForForwarding).ChangeToImmediate(SH);
+          replaceInstrOperandWithImm(MI, III.OpNoForForwarding, SH);
           MachineInstrBuilder(*MI.getParent()->getParent(), MI).addImm(MB)
             .addImm(ME);
         } else {
           // Left shifts use (N, 63-N), right shifts use (64-N, N).
           uint64_t SH = RightShift ? 64 - ShAmt : ShAmt;
           uint64_t ME = RightShift ? ShAmt : 63 - ShAmt;
-          MI.getOperand(III.OpNoForForwarding).ChangeToImmediate(SH);
+          replaceInstrOperandWithImm(MI, III.OpNoForForwarding, SH);
           MachineInstrBuilder(*MI.getParent()->getParent(), MI).addImm(ME);
         }
       }
     } else
-      MI.getOperand(ConstantOpNo).ChangeToImmediate(Imm);
+      replaceInstrOperandWithImm(MI, ConstantOpNo, Imm);
   }
   // Convert commutative instructions (switch the operands and convert the
   // desired one to an immediate.
   else if (III.IsCommutative) {
-    MI.getOperand(ConstantOpNo).ChangeToImmediate(Imm);
+    replaceInstrOperandWithImm(MI, ConstantOpNo, Imm);
     swapMIOperands(MI, ConstantOpNo, III.OpNoForForwarding);
   } else
     llvm_unreachable("Should have exited early!");
@@ -3434,15 +3467,20 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
   if (III.OpNoForForwarding != III.ImmOpNo)
     swapMIOperands(MI, III.OpNoForForwarding, III.ImmOpNo);
 
-  // If the R0/X0 register is special for the original instruction and not for
-  // the new instruction (or vice versa), we need to fix up the register class.
+  // If the special R0/X0 register index are different for original instruction
+  // and new instruction, we need to fix up the register class in new
+  // instruction.
   if (!PostRA && III.ZeroIsSpecialOrig != III.ZeroIsSpecialNew) {
-    if (!III.ZeroIsSpecialOrig) {
+    if (III.ZeroIsSpecialNew) {
+      // If operand at III.ZeroIsSpecialNew is physical reg(eg: ZERO/ZERO8), no
+      // need to fix up register class.
       unsigned RegToModify = MI.getOperand(III.ZeroIsSpecialNew).getReg();
-      const TargetRegisterClass *NewRC =
-        MRI.getRegClass(RegToModify)->hasSuperClassEq(&PPC::GPRCRegClass) ?
-        &PPC::GPRC_and_GPRC_NOR0RegClass : &PPC::G8RC_and_G8RC_NOX0RegClass;
-      MRI.setRegClass(RegToModify, NewRC);
+      if (TargetRegisterInfo::isVirtualRegister(RegToModify)) {
+        const TargetRegisterClass *NewRC =
+          MRI.getRegClass(RegToModify)->hasSuperClassEq(&PPC::GPRCRegClass) ?
+          &PPC::GPRC_and_GPRC_NOR0RegClass : &PPC::G8RC_and_G8RC_NOX0RegClass;
+        MRI.setRegClass(RegToModify, NewRC);
+      }
     }
   }
   return true;
@@ -3484,6 +3522,7 @@ static bool isSignExtendingOp(const MachineInstr &MI) {
       Opcode == PPC::EXTSH  || Opcode == PPC::EXTSHo  ||
       Opcode == PPC::EXTSB8 || Opcode == PPC::EXTSH8  ||
       Opcode == PPC::EXTSW  || Opcode == PPC::EXTSWo  ||
+      Opcode == PPC::SETB   || Opcode == PPC::SETB8   ||
       Opcode == PPC::EXTSH8_32_64 || Opcode == PPC::EXTSW_32_64 ||
       Opcode == PPC::EXTSB8_32_64)
     return true;

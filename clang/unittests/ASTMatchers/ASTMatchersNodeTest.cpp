@@ -199,6 +199,40 @@ TEST(Matcher, UnresolvedLookupExpr) {
                                    "-fno-delayed-template-parsing"));
 }
 
+TEST(Matcher, ADLCall) {
+  StatementMatcher ADLMatch = callExpr(usesADL());
+  StatementMatcher ADLMatchOper = cxxOperatorCallExpr(usesADL());
+  auto NS_Str = R"cpp(
+  namespace NS {
+    struct X {};
+    void f(X);
+    void operator+(X, X);
+  }
+  struct MyX {};
+  void f(...);
+  void operator+(MyX, MyX);
+)cpp";
+
+  auto MkStr = [&](std::string Body) -> std::string {
+    std::string S = NS_Str;
+    S += "void test_fn() { " + Body + " }";
+    return S;
+  };
+
+  EXPECT_TRUE(matches(MkStr("NS::X x; f(x);"), ADLMatch));
+  EXPECT_TRUE(notMatches(MkStr("NS::X x; NS::f(x);"), ADLMatch));
+  EXPECT_TRUE(notMatches(MkStr("MyX x; f(x);"), ADLMatch));
+  EXPECT_TRUE(notMatches(MkStr("NS::X x; using NS::f; f(x);"), ADLMatch));
+
+  // Operator call expressions
+  EXPECT_TRUE(matches(MkStr("NS::X x; x + x;"), ADLMatch));
+  EXPECT_TRUE(matches(MkStr("NS::X x; x + x;"), ADLMatchOper));
+  EXPECT_TRUE(notMatches(MkStr("MyX x; x + x;"), ADLMatch));
+  EXPECT_TRUE(notMatches(MkStr("MyX x; x + x;"), ADLMatchOper));
+  EXPECT_TRUE(matches(MkStr("NS::X x; operator+(x, x);"), ADLMatch));
+  EXPECT_TRUE(notMatches(MkStr("NS::X x; NS::operator+(x, x);"), ADLMatch));
+}
+
 TEST(Matcher, Call) {
   // FIXME: Do we want to overload Call() to directly take
   // Matcher<Decl>, too?

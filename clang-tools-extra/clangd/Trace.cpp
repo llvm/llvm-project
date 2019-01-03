@@ -124,9 +124,7 @@ private:
     }
 
     // May be called by any thread.
-    void markEnded() {
-      EndTime = Tracer->timestamp();
-    }
+    void markEnded() { EndTime = Tracer->timestamp(); }
 
   private:
     static int64_t nextID() {

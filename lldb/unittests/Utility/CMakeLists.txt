@@ -3,18 +3,22 @@ add_lldb_unittest(UtilityTests
   ArgsTest.cpp
   OptionsWithRawTest.cpp
   ArchSpecTest.cpp
+  BroadcasterTest.cpp
   CleanUpTest.cpp
   ConstStringTest.cpp
   CompletionRequestTest.cpp
   DataExtractorTest.cpp
   EnvironmentTest.cpp
+  EventTest.cpp
   FileSpecTest.cpp
   FlagsTest.cpp
   JSONTest.cpp
+  ListenerTest.cpp
   LogTest.cpp
   NameMatchesTest.cpp
   PredicateTest.cpp
   RegisterValueTest.cpp
+  ReproducerTest.cpp
   ScalarTest.cpp
   StateTest.cpp
   StatusTest.cpp

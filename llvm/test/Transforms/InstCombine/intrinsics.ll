@@ -322,30 +322,26 @@ define <2 x i1> @cttz_knownbits_vec(<2 x i32> %arg) {
   ret <2 x i1> %res
 }
 
-define i1 @cttz_knownbits2(i32 %arg) {
+define i32 @cttz_knownbits2(i32 %arg) {
 ; CHECK-LABEL: @cttz_knownbits2(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[ARG:%.*]], 4
 ; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.cttz.i32(i32 [[OR]], i1 true) #2, !range ![[$CTTZ_RANGE:[0-9]+]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[CNT]], 2
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i32 [[CNT]]
 ;
   %or = or i32 %arg, 4
   %cnt = call i32 @llvm.cttz.i32(i32 %or, i1 true) nounwind readnone
-  %res = icmp eq i32 %cnt, 2
-  ret i1 %res
+  ret i32 %cnt
 }
 
-define <2 x i1> @cttz_knownbits2_vec(<2 x i32> %arg) {
+define <2 x i32> @cttz_knownbits2_vec(<2 x i32> %arg) {
 ; CHECK-LABEL: @cttz_knownbits2_vec(
 ; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ARG:%.*]], <i32 4, i32 4>
 ; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[OR]], i1 true)
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i32> [[CNT]], <i32 2, i32 2>
-; CHECK-NEXT:    ret <2 x i1> [[RES]]
+; CHECK-NEXT:    ret <2 x i32> [[CNT]]
 ;
   %or = or <2 x i32> %arg, <i32 4, i32 4>
   %cnt = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %or, i1 true) nounwind readnone
-  %res = icmp eq <2 x i32> %cnt, <i32 2, i32 2>
-  ret <2 x i1> %res
+  ret <2 x i32> %cnt
 }
 
 define i1 @cttz_knownbits3(i32 %arg) {
@@ -358,13 +354,9 @@ define i1 @cttz_knownbits3(i32 %arg) {
   ret i1 %res
 }
 
-; TODO: The icmp is unnecessary given the known bits of the input.
 define <2 x i1> @cttz_knownbits3_vec(<2 x i32> %arg) {
 ; CHECK-LABEL: @cttz_knownbits3_vec(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[ARG:%.*]], <i32 4, i32 4>
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[OR]], i1 true)
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i32> [[CNT]], <i32 3, i32 3>
-; CHECK-NEXT:    ret <2 x i1> [[RES]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %or = or <2 x i32> %arg, <i32 4, i32 4>
   %cnt = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %or, i1 true) nounwind readnone
@@ -422,30 +414,26 @@ define <2 x i1> @ctlz_knownbits_vec(<2 x i8> %arg) {
   ret <2 x i1> %res
 }
 
-define i1 @ctlz_knownbits2(i8 %arg) {
+define i8 @ctlz_knownbits2(i8 %arg) {
 ; CHECK-LABEL: @ctlz_knownbits2(
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[ARG:%.*]], 32
 ; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctlz.i8(i8 [[OR]], i1 true) #2, !range ![[$CTLZ_RANGE:[0-9]+]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[CNT]], 2
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i8 [[CNT]]
 ;
   %or = or i8 %arg, 32
   %cnt = call i8 @llvm.ctlz.i8(i8 %or, i1 true) nounwind readnone
-  %res = icmp eq i8 %cnt, 2
-  ret i1 %res
+  ret i8 %cnt
 }
 
-define <2 x i1> @ctlz_knownbits2_vec(<2 x i8> %arg) {
+define <2 x i8> @ctlz_knownbits2_vec(<2 x i8> %arg) {
 ; CHECK-LABEL: @ctlz_knownbits2_vec(
 ; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[ARG:%.*]], <i8 32, i8 32>
 ; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[OR]], i1 true)
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i8> [[CNT]], <i8 2, i8 2>
-; CHECK-NEXT:    ret <2 x i1> [[RES]]
+; CHECK-NEXT:    ret <2 x i8> [[CNT]]
 ;
   %or = or <2 x i8> %arg, <i8 32, i8 32>
   %cnt = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %or, i1 true) nounwind readnone
-  %res = icmp eq <2 x i8> %cnt, <i8 2, i8 2>
-  ret <2 x i1> %res
+  ret <2 x i8> %cnt
 }
 
 define i1 @ctlz_knownbits3(i8 %arg) {
@@ -458,13 +446,9 @@ define i1 @ctlz_knownbits3(i8 %arg) {
   ret i1 %res
 }
 
-; TODO: The icmp is unnecessary given the known bits of the input.
 define <2 x i1> @ctlz_knownbits3_vec(<2 x i8> %arg) {
 ; CHECK-LABEL: @ctlz_knownbits3_vec(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[ARG:%.*]], <i8 32, i8 32>
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[OR]], i1 true)
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i8> [[CNT]], <i8 3, i8 3>
-; CHECK-NEXT:    ret <2 x i1> [[RES]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %or = or <2 x i8> %arg, <i8 32, i8 32>
   %cnt = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %or, i1 true) nounwind readnone

@@ -610,6 +610,12 @@ class Value;
   Optional<bool> isImpliedCondition(const Value *LHS, const Value *RHS,
                                     const DataLayout &DL, bool LHSIsTrue = true,
                                     unsigned Depth = 0);
+
+  /// Return the boolean condition value in the context of the given instruction
+  /// if it is known based on dominating conditions.
+  Optional<bool> isImpliedByDomCondition(const Value *Cond,
+                                         const Instruction *ContextI,
+                                         const DataLayout &DL);
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_VALUETRACKING_H

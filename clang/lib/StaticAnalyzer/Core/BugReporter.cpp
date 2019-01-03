@@ -820,7 +820,7 @@ void generateMinimalDiagForBlockEdge(const ExplodedNode *N, BlockEdge BE,
 // and values by tracing interesting calculations backwards through evaluated
 // expressions along a path.  This is probably overly complicated, but the idea
 // is that if an expression computed an "interesting" value, the child
-// expressions are are also likely to be "interesting" as well (which then
+// expressions are also likely to be "interesting" as well (which then
 // propagates to the values they in turn compute).  This reverse propagation
 // is needed to track interesting correlations across function call boundaries,
 // where formal arguments bind to actual arguments, etc.  This is also needed
@@ -1976,7 +1976,7 @@ static std::unique_ptr<PathDiagnostic> generatePathDiagnosticForConsumer(
 
   // Finally, prune the diagnostic path of uninteresting stuff.
   if (!PD->path.empty()) {
-    if (R->shouldPrunePath() && Opts.shouldPrunePaths()) {
+    if (R->shouldPrunePath() && Opts.ShouldPrunePaths) {
       bool stillHasNotes =
           removeUnneededCalls(PD->getMutablePieces(), R, LCM);
       assert(stillHasNotes);
@@ -2007,7 +2007,7 @@ static std::unique_ptr<PathDiagnostic> generatePathDiagnosticForConsumer(
     removeEdgesToDefaultInitializers(PD->getMutablePieces());
   }
 
-  if (GenerateDiagnostics && Opts.shouldDisplayMacroExpansions())
+  if (GenerateDiagnostics && Opts.ShouldDisplayMacroExpansions)
     CompactMacroExpandedPieces(PD->getMutablePieces(), SM);
 
   return PD;
@@ -2621,7 +2621,7 @@ std::pair<BugReport*, std::unique_ptr<VisitorsDiagnosticsTy>> findValidReport(
         generateVisitorsDiagnostics(R, ErrorNode, BRC);
 
     if (R->isValid()) {
-      if (Opts.shouldCrosscheckWithZ3()) {
+      if (Opts.ShouldCrosscheckWithZ3) {
         // If crosscheck is enabled, remove all visitors, add the refutation
         // visitor and check again
         R->clearVisitors();
@@ -2963,7 +2963,7 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
     }
 
     PathPieces &Pieces = PD->getMutablePieces();
-    if (getAnalyzerOptions().shouldDisplayNotesAsEvents()) {
+    if (getAnalyzerOptions().ShouldDisplayNotesAsEvents) {
       // For path diagnostic consumers that don't support extra notes,
       // we may optionally convert those to path notes.
       for (auto I = report->getNotes().rbegin(),
@@ -3100,7 +3100,7 @@ BugReporter::generateDiagnosticForConsumerMap(
   // report location to the last piece in the main source file.
   AnalyzerOptions &Opts = getAnalyzerOptions();
   for (auto const &P : *Out)
-    if (Opts.shouldReportIssuesInMainSourceFile() && !Opts.AnalyzeAll)
+    if (Opts.ShouldReportIssuesInMainSourceFile && !Opts.AnalyzeAll)
       P.second->resetDiagnosticLocationToMainFile();
 
   return Out;

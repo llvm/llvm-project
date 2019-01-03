@@ -153,8 +153,7 @@ void ObjectFileJIT::Dump(Stream *s) {
     s->Indent();
     s->PutCString("ObjectFileJIT");
 
-    ArchSpec arch;
-    if (GetArchitecture(arch))
+    if (ArchSpec arch = GetArchitecture())
       *s << ", arch = " << arch.GetArchitectureName();
 
     s->EOL();
@@ -184,17 +183,16 @@ lldb_private::Address ObjectFileJIT::GetEntryPointAddress() {
   return Address();
 }
 
-lldb_private::Address ObjectFileJIT::GetHeaderAddress() { return Address(); }
+lldb_private::Address ObjectFileJIT::GetBaseAddress() { return Address(); }
 
 ObjectFile::Type ObjectFileJIT::CalculateType() { return eTypeJIT; }
 
 ObjectFile::Strata ObjectFileJIT::CalculateStrata() { return eStrataJIT; }
 
-bool ObjectFileJIT::GetArchitecture(ArchSpec &arch) {
-  ObjectFileJITDelegateSP delegate_sp(m_delegate_wp.lock());
-  if (delegate_sp)
-    return delegate_sp->GetArchitecture(arch);
-  return false;
+ArchSpec ObjectFileJIT::GetArchitecture() {
+  if (ObjectFileJITDelegateSP delegate_sp = m_delegate_wp.lock())
+    return delegate_sp->GetArchitecture();
+  return ArchSpec();
 }
 
 //------------------------------------------------------------------
@@ -218,7 +216,7 @@ bool ObjectFileJIT::SetLoadAddress(Target &target, lldb::addr_t value,
       // that size on disk (to avoid __PAGEZERO) and load them
       SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
       if (section_sp && section_sp->GetFileSize() > 0 &&
-          section_sp->IsThreadSpecific() == false) {
+          !section_sp->IsThreadSpecific()) {
         if (target.GetSectionLoadList().SetSectionLoadAddress(
                 section_sp, section_sp->GetFileAddress() + value))
           ++num_loaded_sections;

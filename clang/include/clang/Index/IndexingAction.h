@@ -15,13 +15,17 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <memory>
+#include <string>
 
 namespace clang {
   class ASTContext;
   class ASTReader;
   class ASTUnit;
+  class CompilerInstance;
   class Decl;
   class FrontendAction;
+  class FrontendOptions;
+  class Module;
 
 namespace serialization {
   class ModuleFile;
@@ -29,6 +33,7 @@ namespace serialization {
 
 namespace index {
   class IndexDataConsumer;
+  class IndexUnitWriter;
 
 struct IndexingOptions {
   enum class SystemSymbolFilterKind {
@@ -45,6 +50,19 @@ struct IndexingOptions {
   // callback is not available (e.g. after parsing has finished). Note that
   // macro references are not available in Proprocessor.
   bool IndexMacrosInPreprocessor = false;
+};
+
+struct RecordingOptions {
+  enum class IncludesRecordingKind {
+    None,
+    UserOnly, // only record includes inside non-system files.
+    All,
+  };
+
+  std::string DataDirPath;
+  bool RecordSymbolCodeGenName = false;
+  bool RecordSystemDependencies = true;
+  IncludesRecordingKind RecordIncludes = IncludesRecordingKind::UserOnly;
 };
 
 /// Creates a frontend action that indexes all symbols (macros and AST decls).
@@ -71,6 +89,18 @@ std::unique_ptr<PPCallbacks> indexMacrosCallback(IndexDataConsumer &Consumer,
 /// Recursively indexes all top-level decls in the module.
 void indexModuleFile(serialization::ModuleFile &Mod, ASTReader &Reader,
                      IndexDataConsumer &DataConsumer, IndexingOptions Opts);
+
+/// \param WrappedAction another frontend action to wrap over or null.
+std::unique_ptr<FrontendAction>
+createIndexDataRecordingAction(const FrontendOptions &FEOpts,
+                               std::unique_ptr<FrontendAction> WrappedAction);
+
+/// Checks if the unit file exists for the module file, if it doesn't it
+/// generates index data for it.
+///
+/// \returns true if the index data were generated, false otherwise.
+bool emitIndexDataForModuleFile(const Module *Mod, const CompilerInstance &CI,
+                                IndexUnitWriter &ParentUnitWriter);
 
 } // namespace index
 } // namespace clang

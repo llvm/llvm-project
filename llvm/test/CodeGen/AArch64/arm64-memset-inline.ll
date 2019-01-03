@@ -113,9 +113,9 @@ define void @bzero_20_stack() {
 
 define void @bzero_26_stack() {
 ; CHECK-LABEL: bzero_26_stack:
-; CHECK:       stp xzr, xzr, [sp]
+; CHECK:       stp xzr, xzr, [sp, #8]
+; CHECK-NEXT:  str xzr, [sp]
 ; CHECK-NEXT:  strh wzr, [sp, #24]
-; CHECK-NEXT:  str xzr, [sp, #16]
 ; CHECK-NEXT:  bl something
   %buf = alloca [26 x i8], align 1
   %cast = bitcast [26 x i8]* %buf to i8*

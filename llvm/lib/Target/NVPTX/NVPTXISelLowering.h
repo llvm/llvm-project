@@ -51,6 +51,7 @@ enum NodeType : unsigned {
   CallSeqBegin,
   CallSeqEnd,
   CallPrototype,
+  ProxyReg,
   FUN_SHFL_CLAMP,
   FUN_SHFR_CLAMP,
   MUL_WIDE_SIGNED,

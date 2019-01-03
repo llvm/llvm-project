@@ -691,6 +691,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     FileManager &FileMgr = CI.getFileManager();
     PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
     StringRef PCHInclude = PPOpts.ImplicitPCHInclude;
+    CI.getLangOpts().NeededByPCHOrCompilationUsesPCH = true;
     std::string SpecificModuleCachePath = CI.getSpecificModuleCachePath();
     if (const DirectoryEntry *PCHDir = FileMgr.getDirectory(PCHInclude)) {
       std::error_code EC;
@@ -718,6 +719,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       }
     }
   }
+
+  if (CI.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
+    CI.getLangOpts().NeededByPCHOrCompilationUsesPCH = true;
 
   // Set up the preprocessor if needed. When parsing model files the
   // preprocessor of the original source is reused.

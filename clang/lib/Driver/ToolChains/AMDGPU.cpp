@@ -104,7 +104,7 @@ void AMDGPUToolChain::addClangTargetOptions(
     llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadingKind) const {
   // Default to "hidden" visibility, as object level linking will not be
-  // supported for the forseeable future.
+  // supported for the foreseeable future.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
                          options::OPT_fvisibility_ms_compat)) {
     CC1Args.push_back("-fvisibility");

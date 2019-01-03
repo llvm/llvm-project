@@ -1,0 +1,49 @@
+import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/utils/gn/build/symlink_or_copy.gni")
+
+if (llvm_install_binutils_symlinks) {
+  symlink_or_copy("objdump") {
+    deps = [
+      ":llvm-objdump",
+    ]
+    source = "llvm-objdump"
+    output = "$root_out_dir/bin/objdump"
+  }
+}
+
+# //:llvm-nm depends on this symlink target, see comment in //BUILD.gn.
+group("symlinks") {
+  deps = [
+    ":llvm-objdump",
+  ]
+  if (llvm_install_binutils_symlinks) {
+    deps += [ ":objdump" ]
+  }
+}
+
+executable("llvm-objdump") {
+  deps = [
+    "//llvm/include/llvm/Config:config",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/DebugInfo/DWARF",
+    "//llvm/lib/DebugInfo/PDB",
+    "//llvm/lib/DebugInfo/Symbolize",
+    "//llvm/lib/Demangle",
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCDisassembler",
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target:AllTargetsAsmPrinters",
+    "//llvm/lib/Target:AllTargetsDescs",
+    "//llvm/lib/Target:AllTargetsDisassemblers",
+    "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/utils/gn/build/libs/xar",
+  ]
+  sources = [
+    "COFFDump.cpp",
+    "ELFDump.cpp",
+    "MachODump.cpp",
+    "WasmDump.cpp",
+    "llvm-objdump.cpp",
+  ]
+}

@@ -291,15 +291,16 @@ define <2 x i64> @umull_extvec_v2i32_v2i64(<2 x i32> %arg) nounwind {
   ret <2 x i64> %tmp4
 }
 
-define i16 @smullWithInconsistentExtensions(<8 x i8> %vec) {
+define i16 @smullWithInconsistentExtensions(<8 x i8> %x, <8 x i8> %y) {
 ; If one operand has a zero-extend and the other a sign-extend, smull
 ; cannot be used.
 ; CHECK-LABEL: smullWithInconsistentExtensions:
 ; CHECK: mul {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
-  %1 = sext <8 x i8> %vec to <8 x i16>
-  %2 = mul <8 x i16> %1, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
-  %3 = extractelement <8 x i16> %2, i32 0
-  ret i16 %3
+  %s = sext <8 x i8> %x to <8 x i16>
+  %z = zext <8 x i8> %y to <8 x i16>
+  %m = mul <8 x i16> %s, %z
+  %r = extractelement <8 x i16> %m, i32 0
+  ret i16 %r
 }
 
 define void @distribute(i16* %dst, i8* %src, i32 %mul) nounwind {

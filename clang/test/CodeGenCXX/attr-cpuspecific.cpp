@@ -13,13 +13,14 @@ void foo() {
   s.Func();
 }
 
-
-// LINUX: define linkonce_odr void @_ZN1S4FuncEv.O
 // LINUX: define void (%struct.S*)* @_ZN1S4FuncEv.resolver
 // LINUX: ret void (%struct.S*)* @_ZN1S4FuncEv.S
 // LINUX: ret void (%struct.S*)* @_ZN1S4FuncEv.O
+// LINUX: declare void @_ZN1S4FuncEv.S
+// LINUX: define linkonce_odr void @_ZN1S4FuncEv.O
 
-// WINDOWS: define linkonce_odr dso_local void @"?Func@S@@QEAAXXZ.O"
 // WINDOWS: define dso_local void @"?Func@S@@QEAAXXZ"(%struct.S*)
 // WINDOWS: musttail call void @"?Func@S@@QEAAXXZ.S"(%struct.S* %0)
 // WINDOWS: musttail call void @"?Func@S@@QEAAXXZ.O"(%struct.S* %0)
+// WINDOWS: declare dso_local void @"?Func@S@@QEAAXXZ.S"
+// WINDOWS: define linkonce_odr dso_local void @"?Func@S@@QEAAXXZ.O"

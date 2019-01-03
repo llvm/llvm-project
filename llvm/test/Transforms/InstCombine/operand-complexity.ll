@@ -7,12 +7,12 @@ define i8 @neg(i8 %x) {
 ; CHECK-LABEL: @neg(
 ; CHECK-NEXT:    [[BO:%.*]] = udiv i8 [[X:%.*]], 42
 ; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X]]
-; CHECK-NEXT:    [[R:%.*]] = mul i8 [[BO]], [[NEGX]]
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[BO]], [[NEGX]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %bo = udiv i8 %x, 42
   %negx = sub i8 0, %x
-  %r = mul i8 %negx, %bo
+  %r = xor i8 %negx, %bo
   ret i8 %r
 }
 
@@ -20,12 +20,12 @@ define <2 x i8> @neg_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @neg_vec(
 ; CHECK-NEXT:    [[BO:%.*]] = udiv <2 x i8> [[X:%.*]], <i8 42, i8 -42>
 ; CHECK-NEXT:    [[NEGX:%.*]] = sub <2 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[R:%.*]] = mul <2 x i8> [[BO]], [[NEGX]]
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[BO]], [[NEGX]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %bo = udiv <2 x i8> %x, <i8 42, i8 -42>
   %negx = sub <2 x i8> <i8 0, i8 0>, %x
-  %r = mul <2 x i8> %negx, %bo
+  %r = xor <2 x i8> %negx, %bo
   ret <2 x i8> %r
 }
 
@@ -33,12 +33,12 @@ define <2 x i8> @neg_vec_undef(<2 x i8> %x) {
 ; CHECK-LABEL: @neg_vec_undef(
 ; CHECK-NEXT:    [[BO:%.*]] = udiv <2 x i8> [[X:%.*]], <i8 42, i8 -42>
 ; CHECK-NEXT:    [[NEGX:%.*]] = sub <2 x i8> <i8 0, i8 undef>, [[X]]
-; CHECK-NEXT:    [[R:%.*]] = mul <2 x i8> [[BO]], [[NEGX]]
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[BO]], [[NEGX]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %bo = udiv <2 x i8> %x, <i8 42, i8 -42>
   %negx = sub <2 x i8> <i8 0, i8 undef>, %x
-  %r = mul <2 x i8> %negx, %bo
+  %r = xor <2 x i8> %negx, %bo
   ret <2 x i8> %r
 }
 

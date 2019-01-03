@@ -123,13 +123,21 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       for (auto Op : {ISD::SADDSAT, ISD::UADDSAT})
         setOperationAction(Op, T, Legal);
 
-  for (auto T : {MVT::i32, MVT::i64}) {
-    // Expand unavailable integer operations.
-    for (auto Op :
-         {ISD::BSWAP, ISD::SMUL_LOHI, ISD::UMUL_LOHI, ISD::MULHS, ISD::MULHU,
-          ISD::SDIVREM, ISD::UDIVREM, ISD::SHL_PARTS, ISD::SRA_PARTS,
-          ISD::SRL_PARTS, ISD::ADDC, ISD::ADDE, ISD::SUBC, ISD::SUBE}) {
+  // Expand unavailable integer operations.
+  for (auto Op :
+       {ISD::BSWAP, ISD::SMUL_LOHI, ISD::UMUL_LOHI, ISD::MULHS, ISD::MULHU,
+        ISD::SDIVREM, ISD::UDIVREM, ISD::SHL_PARTS, ISD::SRA_PARTS,
+        ISD::SRL_PARTS, ISD::ADDC, ISD::ADDE, ISD::SUBC, ISD::SUBE}) {
+    for (auto T : {MVT::i32, MVT::i64}) {
       setOperationAction(Op, T, Expand);
+    }
+    if (Subtarget->hasSIMD128()) {
+      for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32}) {
+        setOperationAction(Op, T, Expand);
+      }
+      if (EnableUnimplementedWasmSIMDInstrs) {
+        setOperationAction(Op, MVT::v2i64, Expand);
+      }
     }
   }
 
@@ -214,6 +222,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         }
       }
     }
+  }
+
+  // Expand additional SIMD ops that V8 hasn't implemented yet
+  if (Subtarget->hasSIMD128() && !EnableUnimplementedWasmSIMDInstrs) {
+    setOperationAction(ISD::FSQRT, MVT::v4f32, Expand);
+    setOperationAction(ISD::FDIV, MVT::v4f32, Expand);
   }
 
   // Custom lower lane accesses to expand out variable indices

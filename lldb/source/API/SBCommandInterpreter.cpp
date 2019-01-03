@@ -9,11 +9,11 @@
 
 #include "lldb/lldb-types.h"
 
-#include "lldb/Core/Listener.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Listener.h"
 
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
@@ -98,7 +98,7 @@ SBCommandInterpreterRunOptions::get() const {
 
 lldb_private::CommandInterpreterRunOptions &
 SBCommandInterpreterRunOptions::ref() const {
-  return *m_opaque_up.get();
+  return *m_opaque_up;
 }
 
 class CommandPluginInterfaceImplementation : public CommandObjectParsed {

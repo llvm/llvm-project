@@ -102,7 +102,7 @@ void function();
 
 #pragma clang attribute // expected-error {{expected 'push', 'pop', or '(' after '#pragma clang attribute'}}
 #pragma clang attribute 42 // expected-error {{expected 'push', 'pop', or '(' after '#pragma clang attribute'}}
-#pragma clang attribute pushpop // expected-error {{unexpected argument 'pushpop' to '#pragma clang attribute'; expected 'push' or 'pop'}}
+#pragma clang attribute pushpop // expected-error {{expected '.' after pragma attribute namespace 'pushpop'}}
 
 #pragma clang attribute push
 #pragma clang attribute pop

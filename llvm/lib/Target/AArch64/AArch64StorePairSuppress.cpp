@@ -148,9 +148,11 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
     for (auto &MI : MBB) {
       if (!isNarrowFPStore(MI))
         continue;
-      unsigned BaseReg;
+      MachineOperand *BaseOp;
       int64_t Offset;
-      if (TII->getMemOpBaseRegImmOfs(MI, BaseReg, Offset, TRI)) {
+      if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI) &&
+          BaseOp->isReg()) {
+        unsigned BaseReg = BaseOp->getReg();
         if (PrevBaseReg == BaseReg) {
           // If this block can take STPs, skip ahead to the next block.
           if (!SuppressSTP && shouldAddSTPToBlock(MI.getParent()))

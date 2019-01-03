@@ -915,12 +915,10 @@ size_t ObjectFileMachO::GetModuleSpecifications(
         spec.SetObjectOffset(file_offset);
         spec.SetObjectSize(length);
 
-        if (GetArchitecture(header, data, data_offset,
-                            spec.GetArchitecture())) {
-          if (spec.GetArchitecture().IsValid()) {
-            GetUUID(header, data, data_offset, spec.GetUUID());
-            specs.Append(spec);
-          }
+        spec.GetArchitecture() = GetArchitecture(header, data, data_offset);
+        if (spec.GetArchitecture().IsValid()) {
+          GetUUID(header, data, data_offset, spec.GetUUID());
+          specs.Append(spec);
         }
       }
     }
@@ -956,6 +954,11 @@ const ConstString &ObjectFileMachO::GetSegmentNameOBJC() {
 const ConstString &ObjectFileMachO::GetSegmentNameLINKEDIT() {
   static ConstString g_section_name_LINKEDIT("__LINKEDIT");
   return g_section_name_LINKEDIT;
+}
+
+const ConstString &ObjectFileMachO::GetSegmentNameDWARF() {
+  static ConstString g_section_name("__DWARF");
+  return g_section_name;
 }
 
 const ConstString &ObjectFileMachO::GetSectionNameEHFrame() {
@@ -1098,9 +1101,7 @@ bool ObjectFileMachO::ParseHeader() {
     if (can_parse) {
       m_data.GetU32(&offset, &m_header.cputype, 6);
 
-      ArchSpec mach_arch;
-
-      if (GetArchitecture(mach_arch)) {
+      if (ArchSpec mach_arch = GetArchitecture()) {
         // Check if the module has a required architecture
         const ArchSpec &module_arch = module_sp->GetArchitecture();
         if (module_arch.IsValid() && !module_arch.IsCompatibleMatch(mach_arch))
@@ -1674,7 +1675,7 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
   } else if (unified_section_sp) {
     if (is_dsym && unified_section_sp->GetFileAddress() != load_cmd.vmaddr) {
       // Check to see if the module was read from memory?
-      if (module_sp->GetObjectFile()->GetHeaderAddress().IsValid()) {
+      if (module_sp->GetObjectFile()->GetBaseAddress().IsValid()) {
         // We have a module that is in memory and needs to have its file
         // address adjusted. We need to do this because when we load a file
         // from memory, its addresses will be slid already, yet the addresses
@@ -4469,7 +4470,7 @@ size_t ObjectFileMachO::ParseSymtab() {
             symbol_value -= section_file_addr;
           }
 
-          if (is_debug == false) {
+          if (!is_debug) {
             if (type == eSymbolTypeCode) {
               // See if we can find a N_FUN entry for any code symbols. If we
               // do find a match, and the name matches, then we can merge the
@@ -4616,7 +4617,7 @@ size_t ObjectFileMachO::ParseSymtab() {
     if (function_starts_count > 0) {
       uint32_t num_synthetic_function_symbols = 0;
       for (i = 0; i < function_starts_count; ++i) {
-        if (function_starts.GetEntryRef(i).data == false)
+        if (!function_starts.GetEntryRef(i).data)
           ++num_synthetic_function_symbols;
       }
 
@@ -4628,7 +4629,7 @@ size_t ObjectFileMachO::ParseSymtab() {
         for (i = 0; i < function_starts_count; ++i) {
           const FunctionStarts::Entry *func_start_entry =
               function_starts.GetEntryAtIndex(i);
-          if (func_start_entry->data == false) {
+          if (!func_start_entry->data) {
             addr_t symbol_file_addr = func_start_entry->addr;
             uint32_t symbol_flags = 0;
             if (is_arm) {
@@ -4833,8 +4834,7 @@ void ObjectFileMachO::Dump(Stream *s) {
     else
       s->PutCString("ObjectFileMachO32");
 
-    ArchSpec header_arch;
-    GetArchitecture(header_arch);
+    ArchSpec header_arch = GetArchitecture();
 
     *s << ", file = '" << m_file
        << "', triple = " << header_arch.GetTriple().getTriple() << "\n";
@@ -4957,10 +4957,11 @@ namespace {
   };
 } // namespace
 
-bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
-                                      const lldb_private::DataExtractor &data,
-                                      lldb::offset_t lc_offset,
-                                      ArchSpec &arch) {
+ArchSpec
+ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
+                                 const lldb_private::DataExtractor &data,
+                                 lldb::offset_t lc_offset) {
+  ArchSpec arch;
   arch.SetArchitecture(eArchTypeMachO, header.cputype, header.cpusubtype);
 
   if (arch.IsValid()) {
@@ -4985,7 +4986,7 @@ bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
         triple.setVendor(llvm::Triple::UnknownVendor);
         triple.setVendorName(llvm::StringRef());
       }
-      return true;
+      return arch;
     } else {
       struct load_command load_cmd;
       llvm::SmallString<16> os_name;
@@ -5014,7 +5015,7 @@ bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
           os << GetOSName(load_cmd.cmd) << min_os.major_version << '.'
              << min_os.minor_version << '.' << min_os.patch_version;
           triple.setOSName(os.str());
-          return true;
+          return arch;
         }
         default:
           break;
@@ -5050,7 +5051,7 @@ bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
             triple.setOSName(os.str());
             if (!os_env.environment.empty())
               triple.setEnvironmentName(os_env.environment);
-            return true;
+            return arch;
           }
         } while (0);
         offset = cmd_offset + load_cmd.cmdsize;
@@ -5065,7 +5066,7 @@ bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
       }
     }
   }
-  return arch.IsValid();
+  return arch;
 }
 
 bool ObjectFileMachO::GetUUID(lldb_private::UUID *uuid) {
@@ -5339,7 +5340,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
   return m_entry_point_address;
 }
 
-lldb_private::Address ObjectFileMachO::GetHeaderAddress() {
+lldb_private::Address ObjectFileMachO::GetBaseAddress() {
   lldb_private::Address header_addr;
   SectionList *section_list = GetSectionList();
   if (section_list) {
@@ -5687,14 +5688,16 @@ llvm::VersionTuple ObjectFileMachO::GetVersion() {
   return llvm::VersionTuple();
 }
 
-bool ObjectFileMachO::GetArchitecture(ArchSpec &arch) {
+ArchSpec ObjectFileMachO::GetArchitecture() {
   ModuleSP module_sp(GetModule());
+  ArchSpec arch;
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+
     return GetArchitecture(m_header, m_data,
-                           MachHeaderSizeFromMagic(m_header.magic), arch);
+                           MachHeaderSizeFromMagic(m_header.magic));
   }
-  return false;
+  return arch;
 }
 
 void ObjectFileMachO::GetProcessSharedCacheUUID(Process *process, addr_t &base_addr, UUID &uuid) {
@@ -5861,7 +5864,7 @@ uint32_t ObjectFileMachO::GetSDKVersion(uint32_t *versions,
   if (m_sdk_versions.empty()) {
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
     bool success = false;
-    for (uint32_t i = 0; success == false && i < m_header.ncmds; ++i) {
+    for (uint32_t i = 0; !success && i < m_header.ncmds; ++i) {
       const lldb::offset_t load_cmd_offset = offset;
 
       version_min_command lc;
@@ -5890,47 +5893,46 @@ uint32_t ObjectFileMachO::GetSDKVersion(uint32_t *versions,
       offset = load_cmd_offset + lc.cmdsize;
     }
 
-    if (success == false)
-    {
-        offset = MachHeaderSizeFromMagic(m_header.magic);
-        for (uint32_t i = 0; success == false && i < m_header.ncmds; ++i) 
-        {
-            const lldb::offset_t load_cmd_offset = offset;
+    if (!success) {
+      offset = MachHeaderSizeFromMagic(m_header.magic);
+      for (uint32_t i = 0; !success && i < m_header.ncmds; ++i) {
+        const lldb::offset_t load_cmd_offset = offset;
 
-            version_min_command lc;
-            if (m_data.GetU32(&offset, &lc.cmd, 2) == NULL)
-                break;
-            if (lc.cmd == llvm::MachO::LC_BUILD_VERSION)
-            {
-                // struct build_version_command {
-                //     uint32_t    cmd;            /* LC_BUILD_VERSION */
-                //     uint32_t    cmdsize;        /* sizeof(struct build_version_command) plus */
-                //                                 /* ntools * sizeof(struct build_tool_version) */
-                //     uint32_t    platform;       /* platform */
-                //     uint32_t    minos;          /* X.Y.Z is encoded in nibbles xxxx.yy.zz */
-                //     uint32_t    sdk;            /* X.Y.Z is encoded in nibbles xxxx.yy.zz */
-                //     uint32_t    ntools;         /* number of tool entries following this */
-                // };
+        version_min_command lc;
+        if (m_data.GetU32(&offset, &lc.cmd, 2) == NULL)
+          break;
+        if (lc.cmd == llvm::MachO::LC_BUILD_VERSION) {
+          // struct build_version_command {
+          //     uint32_t    cmd;            /* LC_BUILD_VERSION */
+          //     uint32_t    cmdsize;        /* sizeof(struct
+          //     build_version_command) plus */
+          //                                 /* ntools * sizeof(struct
+          //                                 build_tool_version) */
+          //     uint32_t    platform;       /* platform */
+          //     uint32_t    minos;          /* X.Y.Z is encoded in nibbles
+          //     xxxx.yy.zz */ uint32_t    sdk;            /* X.Y.Z is encoded
+          //     in nibbles xxxx.yy.zz */ uint32_t    ntools;         /* number
+          //     of tool entries following this */
+          // };
 
-                offset += 4;  // skip platform
-                uint32_t minos = m_data.GetU32(&offset);
+          offset += 4; // skip platform
+          uint32_t minos = m_data.GetU32(&offset);
 
-                const uint32_t xxxx = minos >> 16;
-                const uint32_t yy = (minos >> 8) & 0xffu;
-                const uint32_t zz = minos & 0xffu;
-                if (xxxx) 
-                {
-                    m_sdk_versions.push_back (xxxx);
-                    m_sdk_versions.push_back (yy);
-                    m_sdk_versions.push_back (zz);
-                    success = true;
-                }
-            }
-            offset = load_cmd_offset + lc.cmdsize;
+          const uint32_t xxxx = minos >> 16;
+          const uint32_t yy = (minos >> 8) & 0xffu;
+          const uint32_t zz = minos & 0xffu;
+          if (xxxx) {
+            m_sdk_versions.push_back(xxxx);
+            m_sdk_versions.push_back(yy);
+            m_sdk_versions.push_back(zz);
+            success = true;
+          }
         }
+        offset = load_cmd_offset + lc.cmdsize;
+      }
     }
 
-    if (success == false) {
+    if (!success) {
       // Push an invalid value so we don't try to find
       // the version # again on the next call to this
       // method.
@@ -5980,52 +5982,52 @@ Section *ObjectFileMachO::GetMachHeaderSection() {
   // the mach-o file which can be subtracted from the vmaddr of the other
   // segments found in memory and added to the load address
   ModuleSP module_sp = GetModule();
-  if (module_sp) {
-    SectionList *section_list = GetSectionList();
-    if (section_list) {
-      lldb::addr_t mach_base_file_addr = LLDB_INVALID_ADDRESS;
-      const size_t num_sections = section_list->GetSize();
-
-      for (size_t sect_idx = 0; sect_idx < num_sections &&
-                                mach_base_file_addr == LLDB_INVALID_ADDRESS;
-           ++sect_idx) {
-        Section *section = section_list->GetSectionAtIndex(sect_idx).get();
-        if (section && section->GetFileSize() > 0 &&
-            section->GetFileOffset() == 0 &&
-            section->IsThreadSpecific() == false &&
-            module_sp.get() == section->GetModule().get()) {
-          return section;
-        }
-      }
-    }
+  if (!module_sp)
+    return nullptr;
+  SectionList *section_list = GetSectionList();
+  if (!section_list)
+    return nullptr;
+  const size_t num_sections = section_list->GetSize();
+  for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
+    Section *section = section_list->GetSectionAtIndex(sect_idx).get();
+    if (section->GetFileOffset() == 0 && SectionIsLoadable(section))
+      return section;
   }
   return nullptr;
 }
 
+bool ObjectFileMachO::SectionIsLoadable(const Section *section) {
+  if (!section)
+    return false;
+  const bool is_dsym = (m_header.filetype == MH_DSYM);
+  if (section->GetFileSize() == 0 && !is_dsym)
+    return false;
+  if (section->IsThreadSpecific())
+    return false;
+  if (GetModule().get() != section->GetModule().get())
+    return false;
+  // Be careful with __LINKEDIT and __DWARF segments
+  if (section->GetName() == GetSegmentNameLINKEDIT() ||
+      section->GetName() == GetSegmentNameDWARF()) {
+    // Only map __LINKEDIT and __DWARF if we have an in memory image and
+    // this isn't a kernel binary like a kext or mach_kernel.
+    const bool is_memory_image = (bool)m_process_wp.lock();
+    const Strata strata = GetStrata();
+    if (is_memory_image == false || strata == eStrataKernel)
+      return false;
+  }
+  return true;
+}
+
 lldb::addr_t ObjectFileMachO::CalculateSectionLoadAddressForMemoryImage(
-    lldb::addr_t mach_header_load_address, const Section *mach_header_section,
+    lldb::addr_t header_load_address, const Section *header_section,
     const Section *section) {
   ModuleSP module_sp = GetModule();
-  if (module_sp && mach_header_section && section &&
-      mach_header_load_address != LLDB_INVALID_ADDRESS) {
-    lldb::addr_t mach_header_file_addr = mach_header_section->GetFileAddress();
-    if (mach_header_file_addr != LLDB_INVALID_ADDRESS) {
-      if (section && section->GetFileSize() > 0 &&
-          section->IsThreadSpecific() == false &&
-          module_sp.get() == section->GetModule().get()) {
-        // Ignore __LINKEDIT and __DWARF segments
-        if (section->GetName() == GetSegmentNameLINKEDIT()) {
-          // Only map __LINKEDIT if we have an in memory image and this isn't a
-          // kernel binary like a kext or mach_kernel.
-          const bool is_memory_image = (bool)m_process_wp.lock();
-          const Strata strata = GetStrata();
-          if (is_memory_image == false || strata == eStrataKernel)
-            return LLDB_INVALID_ADDRESS;
-        }
-        return section->GetFileAddress() - mach_header_file_addr +
-               mach_header_load_address;
-      }
-    }
+  if (module_sp && header_section && section &&
+      header_load_address != LLDB_INVALID_ADDRESS) {
+    lldb::addr_t file_addr = header_section->GetFileAddress();
+    if (file_addr != LLDB_INVALID_ADDRESS && SectionIsLoadable(section))
+      return section->GetFileAddress() - file_addr + header_load_address;
   }
   return LLDB_INVALID_ADDRESS;
 }
@@ -6045,22 +6047,10 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
           // Iterate through the object file sections to find all of the
           // sections that size on disk (to avoid __PAGEZERO) and load them
           SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
-          if (section_sp && section_sp->GetFileSize() > 0 &&
-              section_sp->IsThreadSpecific() == false &&
-              module_sp.get() == section_sp->GetModule().get()) {
-            // Ignore __LINKEDIT and __DWARF segments
-            if (section_sp->GetName() == GetSegmentNameLINKEDIT()) {
-              // Only map __LINKEDIT if we have an in memory image and this
-              // isn't a kernel binary like a kext or mach_kernel.
-              const bool is_memory_image = (bool)m_process_wp.lock();
-              const Strata strata = GetStrata();
-              if (is_memory_image == false || strata == eStrataKernel)
-                continue;
-            }
+          if (SectionIsLoadable(section_sp.get()))
             if (target.GetSectionLoadList().SetSectionLoadAddress(
                     section_sp, section_sp->GetFileAddress() + value))
               ++num_loaded_sections;
-          }
         }
       } else {
         // "value" is the new base address of the mach_header, adjust each

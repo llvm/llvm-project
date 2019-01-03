@@ -750,16 +750,6 @@ void DumpTokensAction::ExecuteAction() {
   } while (Tok.isNot(tok::eof));
 }
 
-void GeneratePTHAction::ExecuteAction() {
-  CompilerInstance &CI = getCompilerInstance();
-  std::unique_ptr<raw_pwrite_stream> OS =
-      CI.createDefaultOutputFile(true, getCurrentFile());
-  if (!OS)
-    return;
-
-  CacheTokens(CI.getPreprocessor(), OS.get());
-}
-
 void PreprocessOnlyAction::ExecuteAction() {
   Preprocessor &PP = getCompilerInstance().getPreprocessor();
 

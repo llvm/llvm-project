@@ -156,22 +156,14 @@ define <8 x i16> @trunc_ashr_v4i32_icmp_v4i32(<4 x i32> %a, <4 x i32> %b) nounwi
 define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ; X86-SSE-LABEL: trunc_ashr_v4i64_demandedelts:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movdqa %xmm1, %xmm2
-; X86-SSE-NEXT:    psllq $63, %xmm2
-; X86-SSE-NEXT:    movdqa %xmm1, %xmm3
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm3 = xmm2[0],xmm3[1]
-; X86-SSE-NEXT:    movdqa %xmm0, %xmm2
-; X86-SSE-NEXT:    psllq $63, %xmm2
-; X86-SSE-NEXT:    movdqa %xmm0, %xmm4
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm4 = xmm2[0],xmm4[1]
-; X86-SSE-NEXT:    psrlq $63, %xmm4
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm4[0],xmm0[1]
-; X86-SSE-NEXT:    movapd {{.*#+}} xmm2 = [4.9406564584124654E-324,-0.0E+0]
-; X86-SSE-NEXT:    xorpd %xmm2, %xmm0
+; X86-SSE-NEXT:    psllq $63, %xmm1
+; X86-SSE-NEXT:    psllq $63, %xmm0
+; X86-SSE-NEXT:    psrlq $63, %xmm0
+; X86-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [4.9406564584124654E-324,-0.0E+0]
+; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    psubq %xmm2, %xmm0
-; X86-SSE-NEXT:    psrlq $63, %xmm3
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm3[0],xmm1[1]
-; X86-SSE-NEXT:    xorpd %xmm2, %xmm1
+; X86-SSE-NEXT:    psrlq $63, %xmm1
+; X86-SSE-NEXT:    pxor %xmm2, %xmm1
 ; X86-SSE-NEXT:    psubq %xmm2, %xmm1
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
@@ -181,10 +173,8 @@ define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ; X86-AVX1-LABEL: trunc_ashr_v4i64_demandedelts:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    vpsllq $63, %xmm0, %xmm1
-; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm0[4,5,6,7]
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; X86-AVX1-NEXT:    vpsllq $63, %xmm2, %xmm3
-; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm2[4,5,6,7]
 ; X86-AVX1-NEXT:    vpsrlq $63, %xmm3, %xmm3
 ; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
 ; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,0,0,0,0,0,0,32768]
@@ -206,10 +196,10 @@ define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ; X86-AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [63,0,0,0,63,0,0,0]
 ; X86-AVX2-NEXT:    vpsllvq %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2147483648,0,2147483648,0,2147483648,0,2147483648]
-; X86-AVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm3
-; X86-AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm2
 ; X86-AVX2-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vpsubq %ymm3, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
 ; X86-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X86-AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
@@ -218,22 +208,14 @@ define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ;
 ; X64-SSE-LABEL: trunc_ashr_v4i64_demandedelts:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movdqa %xmm1, %xmm2
-; X64-SSE-NEXT:    psllq $63, %xmm2
-; X64-SSE-NEXT:    movdqa %xmm1, %xmm3
-; X64-SSE-NEXT:    movsd {{.*#+}} xmm3 = xmm2[0],xmm3[1]
-; X64-SSE-NEXT:    movdqa %xmm0, %xmm2
-; X64-SSE-NEXT:    psllq $63, %xmm2
-; X64-SSE-NEXT:    movdqa %xmm0, %xmm4
-; X64-SSE-NEXT:    movsd {{.*#+}} xmm4 = xmm2[0],xmm4[1]
-; X64-SSE-NEXT:    psrlq $63, %xmm4
-; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm4[0],xmm0[1]
-; X64-SSE-NEXT:    movapd {{.*#+}} xmm2 = [1,9223372036854775808]
-; X64-SSE-NEXT:    xorpd %xmm2, %xmm0
+; X64-SSE-NEXT:    psllq $63, %xmm1
+; X64-SSE-NEXT:    psllq $63, %xmm0
+; X64-SSE-NEXT:    psrlq $63, %xmm0
+; X64-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,9223372036854775808]
+; X64-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X64-SSE-NEXT:    psubq %xmm2, %xmm0
-; X64-SSE-NEXT:    psrlq $63, %xmm3
-; X64-SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm3[0],xmm1[1]
-; X64-SSE-NEXT:    xorpd %xmm2, %xmm1
+; X64-SSE-NEXT:    psrlq $63, %xmm1
+; X64-SSE-NEXT:    pxor %xmm2, %xmm1
 ; X64-SSE-NEXT:    psubq %xmm2, %xmm1
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
@@ -243,10 +225,8 @@ define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ; X64-AVX1-LABEL: trunc_ashr_v4i64_demandedelts:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vpsllq $63, %xmm0, %xmm1
-; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm0[4,5,6,7]
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; X64-AVX1-NEXT:    vpsllq $63, %xmm2, %xmm3
-; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm2[4,5,6,7]
 ; X64-AVX1-NEXT:    vpsrlq $63, %xmm3, %xmm3
 ; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
 ; X64-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,9223372036854775808]
@@ -265,7 +245,8 @@ define <8 x i16> @trunc_ashr_v4i64_demandedelts(<4 x i64> %a0) {
 ;
 ; X64-AVX2-LABEL: trunc_ashr_v4i64_demandedelts:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
+; X64-AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [1,9223372036854775808,1,9223372036854775808]
 ; X64-AVX2-NEXT:    # ymm1 = mem[0,1,0,1]
 ; X64-AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0

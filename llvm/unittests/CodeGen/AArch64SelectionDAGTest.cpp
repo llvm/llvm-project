@@ -89,8 +89,7 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBits_ZERO_EXTEND_VECTOR_INREG) {
   auto InVec = DAG->getConstant(0, Loc, InVecVT);
   auto Op = DAG->getNode(ISD::ZERO_EXTEND_VECTOR_INREG, Loc, OutVecVT, InVec);
   auto DemandedElts = APInt(2, 3);
-  KnownBits Known;
-  DAG->computeKnownBits(Op, Known, DemandedElts);
+  KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
   EXPECT_TRUE(Known.isZero());
 }
 
@@ -105,8 +104,7 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBits_EXTRACT_SUBVECTOR) {
   auto ZeroIdx = DAG->getConstant(0, Loc, IdxVT);
   auto Op = DAG->getNode(ISD::EXTRACT_SUBVECTOR, Loc, VecVT, Vec, ZeroIdx);
   auto DemandedElts = APInt(3, 7);
-  KnownBits Known;
-  DAG->computeKnownBits(Op, Known, DemandedElts);
+  KnownBits Known = DAG->computeKnownBits(Op, DemandedElts);
   EXPECT_TRUE(Known.isZero());
 }
 

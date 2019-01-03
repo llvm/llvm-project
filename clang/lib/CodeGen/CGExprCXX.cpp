@@ -17,8 +17,8 @@
 #include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
 #include "ConstantEmitter.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Intrinsics.h"
 

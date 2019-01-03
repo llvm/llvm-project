@@ -66,6 +66,14 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
+static Optional<std::string> getLinkerScriptLocation(const Symbol &Sym) {
+  for (BaseCommand *Base : Script->SectionCommands)
+    if (auto *Cmd = dyn_cast<SymbolAssignment>(Base))
+      if (Cmd->Sym == &Sym)
+        return Cmd->Location;
+  return None;
+}
+
 // Construct a message in the following format.
 //
 // >>> defined in /home/alice/src/foo.o
@@ -73,8 +81,13 @@ using namespace lld::elf;
 // >>>               /home/alice/src/bar.o:(.text+0x1)
 static std::string getLocation(InputSectionBase &S, const Symbol &Sym,
                                uint64_t Off) {
-  std::string Msg =
-      "\n>>> defined in " + toString(Sym.File) + "\n>>> referenced by ";
+  std::string Msg = "\n>>> defined in ";
+  if (Sym.File)
+    Msg += toString(Sym.File);
+  else if (Optional<std::string> Loc = getLinkerScriptLocation(Sym))
+    Msg += *Loc;
+
+  Msg += "\n>>> referenced by ";
   std::string Src = S.getSrcMsg(Sym, Off);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
@@ -324,8 +337,8 @@ static bool isAbsoluteValue(const Symbol &Sym) {
 
 // Returns true if Expr refers a PLT entry.
 static bool needsPlt(RelExpr Expr) {
-  return isRelExprOneOf<R_PLT_PC, R_PPC_CALL_PLT, R_PLT, R_AARCH64_PLT_PAGE_PC>(
-      Expr);
+  return isRelExprOneOf<R_PLT_PC, R_PPC_CALL_PLT, R_PLT, R_AARCH64_PLT_PAGE_PC,
+                        R_GOT_PLT, R_AARCH64_GOT_PAGE_PC_PLT>(Expr);
 }
 
 // Returns true if Expr refers a GOT entry. Note that this function
@@ -334,7 +347,8 @@ static bool needsPlt(RelExpr Expr) {
 static bool needsGot(RelExpr Expr) {
   return isRelExprOneOf<R_GOT, R_GOT_OFF, R_HEXAGON_GOT, R_MIPS_GOT_LOCAL_PAGE,
                         R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_AARCH64_GOT_PAGE_PC,
-                        R_GOT_PC, R_GOT_FROM_END>(Expr);
+                        R_AARCH64_GOT_PAGE_PC_PLT, R_GOT_PC, R_GOT_FROM_END,
+                        R_GOT_PLT>(Expr);
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
@@ -417,8 +431,12 @@ static RelExpr toPlt(RelExpr Expr) {
     return R_PLT_PC;
   case R_AARCH64_PAGE_PC:
     return R_AARCH64_PLT_PAGE_PC;
+  case R_AARCH64_GOT_PAGE_PC:
+    return R_AARCH64_GOT_PAGE_PC_PLT;
   case R_ABS:
     return R_PLT;
+  case R_GOT:
+    return R_GOT_PLT;
   default:
     return Expr;
   }
@@ -645,6 +663,10 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
     Msg += Src + "\n>>>               ";
   Msg += Sec.getObjMsg(Offset);
 
+  if (Sym.getName().startswith("_ZTV"))
+    Msg += "\nthe vtable symbol may be undefined because the class is missing "
+           "its key function (see https://lld.llvm.org/missingkeyfunction)";
+
   if ((Config->UnresolvedSymbols == UnresolvedPolicy::Warn && CanBeExternal) ||
       Config->NoinhibitExec) {
     warn(Msg);
@@ -746,7 +768,14 @@ static void addPltEntry(PltSection *Plt, GotPltSection *GotPlt,
 template <class ELFT> static void addGotEntry(Symbol &Sym) {
   In.Got->addEntry(Sym);
 
-  RelExpr Expr = Sym.isTls() ? R_TLS : R_ABS;
+  RelExpr Expr;
+  if (Sym.isTls())
+    Expr = R_TLS;
+  else if (Sym.isGnuIFunc())
+    Expr = R_PLT;
+  else
+    Expr = R_ABS;
+
   uint64_t Off = Sym.getGotOffset();
 
   // If a GOT slot value can be calculated at link-time, which is now,
@@ -931,7 +960,7 @@ static void processRelocAux(InputSectionBase &Sec, RelExpr Expr, RelType Type,
     if (!Sym.isInPlt())
       addPltEntry<ELFT>(In.Plt, In.GotPlt, In.RelaPlt, Target->PltRel, Sym);
     if (!Sym.isDefined())
-      replaceWithDefined(Sym, In.Plt, Sym.getPltOffset(), 0);
+      replaceWithDefined(Sym, In.Plt, getPltEntryOffset(Sym.PltIndex), 0);
     Sym.NeedsPltAddr = true;
     Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
     return;

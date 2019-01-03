@@ -46,6 +46,7 @@
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
+using namespace llvm::AMDGPU::HSAMD;
 
 // TODO: This should get the default rounding mode from the kernel. We just set
 // the default here, but this could change if the OpenCL rounding mode pragmas
@@ -99,6 +100,10 @@ extern "C" void LLVMInitializeAMDGPUAsmPrinter() {
 AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
   : AsmPrinter(TM, std::move(Streamer)) {
+    if (IsaInfo::hasCodeObjectV3(getSTI()))
+      HSAMetadataStream.reset(new MetadataStreamerV3());
+    else
+      HSAMetadataStream.reset(new MetadataStreamerV2());
 }
 
 StringRef AMDGPUAsmPrinter::getPassName() const {
@@ -122,9 +127,6 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
     IsaInfo::streamIsaVersion(getSTI(), ExpectedTargetOS);
 
     getTargetStreamer()->EmitDirectiveAMDGCNTarget(ExpectedTarget);
-
-    if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
-      return;
   }
 
   if (TM.getTargetTriple().getOS() != Triple::AMDHSA &&
@@ -132,10 +134,13 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
     return;
 
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
-    HSAMetadataStream.begin(M);
+    HSAMetadataStream->begin(M);
 
   if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
     readPALMetadata(M);
+
+  if (IsaInfo::hasCodeObjectV3(getSTI()))
+    return;
 
   // HSA emits NT_AMDGPU_HSA_CODE_OBJECT_VERSION for code objects v2.
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
@@ -148,37 +153,38 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
 }
 
 void AMDGPUAsmPrinter::EmitEndOfAsmFile(Module &M) {
-  // TODO: Add metadata to code object v3.
-  if (IsaInfo::hasCodeObjectV3(getSTI()) &&
-      TM.getTargetTriple().getOS() == Triple::AMDHSA)
-    return;
-
   // Following code requires TargetStreamer to be present.
   if (!getTargetStreamer())
     return;
 
-  // Emit ISA Version (NT_AMD_AMDGPU_ISA).
-  std::string ISAVersionString;
-  raw_string_ostream ISAVersionStream(ISAVersionString);
-  IsaInfo::streamIsaVersion(getSTI(), ISAVersionStream);
-  getTargetStreamer()->EmitISAVersion(ISAVersionStream.str());
+  if (!IsaInfo::hasCodeObjectV3(getSTI())) {
+    // Emit ISA Version (NT_AMD_AMDGPU_ISA).
+    std::string ISAVersionString;
+    raw_string_ostream ISAVersionStream(ISAVersionString);
+    IsaInfo::streamIsaVersion(getSTI(), ISAVersionStream);
+    getTargetStreamer()->EmitISAVersion(ISAVersionStream.str());
+  }
 
   // Emit HSA Metadata (NT_AMD_AMDGPU_HSA_METADATA).
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
-    HSAMetadataStream.end();
-    getTargetStreamer()->EmitHSAMetadata(HSAMetadataStream.getHSAMetadata());
+    HSAMetadataStream->end();
+    bool Success = HSAMetadataStream->emitTo(*getTargetStreamer());
+    (void)Success;
+    assert(Success && "Malformed HSA Metadata");
   }
 
-  // Emit PAL Metadata (NT_AMD_AMDGPU_PAL_METADATA).
-  if (TM.getTargetTriple().getOS() == Triple::AMDPAL) {
-    // Copy the PAL metadata from the map where we collected it into a vector,
-    // then write it as a .note.
-    PALMD::Metadata PALMetadataVector;
-    for (auto i : PALMetadataMap) {
-      PALMetadataVector.push_back(i.first);
-      PALMetadataVector.push_back(i.second);
+  if (!IsaInfo::hasCodeObjectV3(getSTI())) {
+    // Emit PAL Metadata (NT_AMD_AMDGPU_PAL_METADATA).
+    if (TM.getTargetTriple().getOS() == Triple::AMDPAL) {
+      // Copy the PAL metadata from the map where we collected it into a vector,
+      // then write it as a .note.
+      PALMD::Metadata PALMetadataVector;
+      for (auto i : PALMetadataMap) {
+        PALMetadataVector.push_back(i.first);
+        PALMetadataVector.push_back(i.second);
+      }
+      getTargetStreamer()->EmitPALMetadata(PALMetadataVector);
     }
-    getTargetStreamer()->EmitPALMetadata(PALMetadataVector);
   }
 }
 
@@ -211,11 +217,8 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
     getTargetStreamer()->EmitAMDKernelCodeT(KernelCode);
   }
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
-    return;
-
-  if (!STM.hasCodeObjectV3() && STM.isAmdHsaOS())
-    HSAMetadataStream.emitKernel(*MF, CurrentProgramInfo);
+  if (STM.isAmdHsaOS())
+    HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
 }
 
 void AMDGPUAsmPrinter::EmitFunctionBodyEnd() {

@@ -138,6 +138,9 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
   if (VFS.exists("/etc/arch-release"))
     return Distro::ArchLinux;
 
+  if (VFS.exists("/etc/gentoo-release"))
+    return Distro::Gentoo;
+
   return Distro::UnknownDistro;
 }
 

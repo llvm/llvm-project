@@ -67,10 +67,10 @@ define <2 x i64> @var_shift_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; AVX2-LABEL: var_shift_v2i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
-; AVX2-NEXT:    vpsrlvq %xmm1, %xmm2, %xmm3
-; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpsrlvq %xmm1, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsrlvq %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubq %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; XOP-LABEL: var_shift_v2i64:

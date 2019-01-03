@@ -539,9 +539,12 @@ void PrintingCodeCompleteConsumer::ProcessCodeCompleteResults(
     unsigned NumResults) {
   std::stable_sort(Results, Results + NumResults);
 
-  StringRef Filter = SemaRef.getPreprocessor().getCodeCompletionFilter();
+  if (!Context.getPreferredType().isNull())
+    OS << "PREFERRED-TYPE: " << Context.getPreferredType().getAsString()
+       << "\n";
 
-  // Print the results.
+  StringRef Filter = SemaRef.getPreprocessor().getCodeCompletionFilter();
+  // Print the completions.
   for (unsigned I = 0; I != NumResults; ++I) {
     if (!Filter.empty() && isResultFilteredOut(Filter, Results[I]))
       continue;
@@ -555,6 +558,9 @@ void PrintingCodeCompleteConsumer::ProcessCodeCompleteResults(
           Tags.push_back("Hidden");
         if (Results[I].InBaseClass)
           Tags.push_back("InBase");
+        if (Results[I].Availability ==
+            CXAvailabilityKind::CXAvailability_NotAccessible)
+          Tags.push_back("Inaccessible");
         if (!Tags.empty())
           OS << " (" << llvm::join(Tags, ",") << ")";
       }

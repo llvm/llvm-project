@@ -230,6 +230,22 @@ def : Pat<(fabs FPR64:$rs1), (FSGNJX_D $rs1, $rs1)>;
 def : PatFpr64Fpr64<fcopysign, FSGNJ_D>;
 def : Pat<(fcopysign FPR64:$rs1, (fneg FPR64:$rs2)), (FSGNJN_D $rs1, $rs2)>;
 
+// fmadd: rs1 * rs2 + rs3
+def : Pat<(fma FPR64:$rs1, FPR64:$rs2, FPR64:$rs3),
+          (FMADD_D $rs1, $rs2, $rs3, 0b111)>;
+
+// fmsub: rs1 * rs2 - rs3
+def : Pat<(fma FPR64:$rs1, FPR64:$rs2, (fneg FPR64:$rs3)),
+          (FMSUB_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
+
+// fnmsub: -rs1 * rs2 + rs3
+def : Pat<(fma (fneg FPR64:$rs1), FPR64:$rs2, FPR64:$rs3),
+          (FNMSUB_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
+
+// fnmadd: -rs1 * rs2 - rs3
+def : Pat<(fma (fneg FPR64:$rs1), FPR64:$rs2, (fneg FPR64:$rs3)),
+          (FNMADD_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
+
 // The RISC-V 2.2 user-level ISA spec defines fmin and fmax as returning the
 // canonical NaN when giving a signaling NaN. This doesn't match the LLVM
 // behaviour (see https://bugs.llvm.org/show_bug.cgi?id=27363). However, the

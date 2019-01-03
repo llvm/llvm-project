@@ -61,8 +61,8 @@ GN only works in the monorepo layout.
    build directory, it can have any name, and you can have as many as you want,
    each with different build settings).
 
-#. Run e.g. `ninja -C out/gn check-lld` to build all prerequisites for and
-   run the LLD tests.
+#. Run e.g. `ninja -C out/gn llvm-undname` to build all prerequisites for and
+   including the Microsoft symbol name pretty printing tool llvm-undname.
 
 By default, you get a release build with assertions enabled that targets
 the host arch. You can set various build options by editing `out/gn/args.gn`,
@@ -78,9 +78,27 @@ for the `gen` command. The full GN reference is also `available online
 GN has an autoformatter: `git ls-files '*.gn' '*.gni' | xargs -n 1 gn format`
 after making GN build changes is your friend.
 
-To not put `BUILD.gn` into the main tree, they are all below `utils/gn/tree`.
-For example, the build file for `llvm/lib/Support` is in
-`utils/gn/tree/llvm/lib/Support`.
+To not put `BUILD.gn` into the main tree, they are all below
+`utils/gn/secondary`.  For example, the build file for `llvm/lib/Support` is in
+`utils/gn/secondary/llvm/lib/Support`.
+
+.. _Syncing GN files from CMake files:
+
+Syncing GN files from CMake files
+=================================
+
+Sometimes after pulling in the latest changes, the GN build doesn't work.
+Most of the time this is due to someone adding a file to CMakeLists.txt file.
+Run `llvm/utils/gn/build/sync_source_lists_from_cmake.py` to print a report
+of which files need to be added to or removed from `BUILD.gn` files to
+match the corresponding `CMakeLists.txt`. You have to manually read the output
+of the script and implement its suggestions.
+
+If new `CMakeLists.txt` files have been added, you have to manually create
+a new corresponding `BUILD.gn` file below `llvm/utils/gn/secondary/`.
+
+If the dependencies in a `CMakeLists.txt` file have been changed, you have to
+manually analyze and fix.
 
 .. _Philosophy:
 

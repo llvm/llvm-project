@@ -432,13 +432,13 @@ void CodeViewContext::emitInlineLineTableForFunction(MCObjectStreamer &OS,
                                   OS.getCurrentSectionOnly());
 }
 
-void CodeViewContext::emitDefRange(
+MCFragment *CodeViewContext::emitDefRange(
     MCObjectStreamer &OS,
     ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
     StringRef FixedSizePortion) {
   // Create and insert a fragment into the current section that will be encoded
   // later.
-  new MCCVDefRangeFragment(Ranges, FixedSizePortion,
+  return new MCCVDefRangeFragment(Ranges, FixedSizePortion,
                            OS.getCurrentSectionOnly());
 }
 

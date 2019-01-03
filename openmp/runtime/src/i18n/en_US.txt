@@ -425,6 +425,7 @@ AffHWSubsetManyNodes         "KMP_HW_SUBSET ignored: too many NUMA Nodes request
 AffHWSubsetManyTiles         "KMP_HW_SUBSET ignored: too many L2 Caches requested."
 AffHWSubsetManyProcs         "KMP_HW_SUBSET ignored: too many Procs requested."
 HierSchedInvalid             "Hierarchy ignored: unsupported level: %1$s."
+AffFormatDefault             "OMP: pid %1$s tid %2$s thread %3$s bound to OS proc set {%4$s}"
 
 
 # --------------------------------------------------------------------------------------------------

@@ -790,7 +790,7 @@ def : InstRW<[WriteMicrocoded], (instregex "RDTSC")>;
 def : InstRW<[WriteMicrocoded], (instrs RDPMC)>;
 
 // RDRAND.
-def : InstRW<[WriteMicrocoded], (instregex "RDRAND(16|32|64)r")>;
+def : InstRW<[WriteMicrocoded], (instrs RDRAND16r, RDRAND32r, RDRAND64r)>;
 
 // XGETBV.
 def : InstRW<[WriteMicrocoded], (instrs XGETBV)>;

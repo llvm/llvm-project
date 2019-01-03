@@ -53,6 +53,7 @@ FunctionPass *createNVPTXImageOptimizerPass();
 FunctionPass *createNVPTXLowerArgsPass(const NVPTXTargetMachine *TM);
 BasicBlockPass *createNVPTXLowerAllocaPass();
 MachineFunctionPass *createNVPTXPeephole();
+MachineFunctionPass *createNVPTXProxyRegErasurePass();
 
 Target &getTheNVPTXTarget32();
 Target &getTheNVPTXTarget64();

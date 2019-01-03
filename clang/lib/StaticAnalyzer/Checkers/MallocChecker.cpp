@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "InterCheckerAPI.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/ParentMap.h"
@@ -1083,7 +1083,7 @@ void MallocChecker::processNewAllocation(const CXXNewExpr *NE,
   ProgramStateRef State = C.getState();
   // The return value from operator new is bound to a specified initialization
   // value (if any) and we don't want to loose this value. So we call
-  // MallocUpdateRefState() instead of MallocMemAux() which breakes the
+  // MallocUpdateRefState() instead of MallocMemAux() which breaks the
   // existing binding.
   State = MallocUpdateRefState(C, NE, State, NE->isArray() ? AF_CXXNewArray
                                                            : AF_CXXNew, Target);
@@ -1094,7 +1094,7 @@ void MallocChecker::processNewAllocation(const CXXNewExpr *NE,
 
 void MallocChecker::checkPostStmt(const CXXNewExpr *NE,
                                   CheckerContext &C) const {
-  if (!C.getAnalysisManager().getAnalyzerOptions().mayInlineCXXAllocator())
+  if (!C.getAnalysisManager().getAnalyzerOptions().MayInlineCXXAllocator)
     processNewAllocation(NE, C, C.getSVal(NE));
 }
 
@@ -2345,13 +2345,11 @@ void MallocChecker::reportLeak(SymbolRef Sym, ExplodedNode *N,
 void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
                                      CheckerContext &C) const
 {
-  if (!SymReaper.hasDeadSymbols())
-    return;
-
   ProgramStateRef state = C.getState();
-  RegionStateTy RS = state->get<RegionState>();
+  RegionStateTy OldRS = state->get<RegionState>();
   RegionStateTy::Factory &F = state->get_context<RegionState>();
 
+  RegionStateTy RS = OldRS;
   SmallVector<SymbolRef, 2> Errors;
   for (RegionStateTy::iterator I = RS.begin(), E = RS.end(); I != E; ++I) {
     if (SymReaper.isDead(I->first)) {
@@ -2359,8 +2357,16 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
         Errors.push_back(I->first);
       // Remove the dead symbol from the map.
       RS = F.remove(RS, I->first);
-
     }
+  }
+
+  if (RS == OldRS) {
+    // We shouldn't have touched other maps yet.
+    assert(state->get<ReallocPairs>() ==
+           C.getState()->get<ReallocPairs>());
+    assert(state->get<FreeReturnValue>() ==
+           C.getState()->get<FreeReturnValue>());
+    return;
   }
 
   // Cleanup the Realloc Pairs Map.

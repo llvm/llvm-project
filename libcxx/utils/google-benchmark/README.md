@@ -255,7 +255,7 @@ that might be used to customize high-order term calculation.
 
 ```c++
 BENCHMARK(BM_StringCompare)->RangeMultiplier(2)
-    ->Range(1<<10, 1<<18)->Complexity([](int n)->double{return n; });
+    ->Range(1<<10, 1<<18)->Complexity([](int64_t n)->double{return n; });
 ```
 
 ### Templated benchmarks
@@ -264,7 +264,7 @@ messages of size `sizeof(v)` `range_x` times. It also outputs throughput in the
 absence of multiprogramming.
 
 ```c++
-template <class Q> int BM_Sequential(benchmark::State& state) {
+template <class Q> void BM_Sequential(benchmark::State& state) {
   Q q;
   typename Q::value_type v;
   for (auto _ : state) {
@@ -428,6 +428,26 @@ BENCHMARK(BM_test)->Range(8, 8<<10)->UseRealTime();
 
 Without `UseRealTime`, CPU time is used by default.
 
+## Controlling timers
+Normally, the entire duration of the work loop (`for (auto _ : state) {}`)
+is measured. But sometimes, it is nessesary to do some work inside of
+that loop, every iteration, but without counting that time to the benchmark time.
+That is possible, althought it is not recommended, since it has high overhead.
+
+```c++
+static void BM_SetInsert_With_Timer_Control(benchmark::State& state) {
+  std::set<int> data;
+  for (auto _ : state) {
+    state.PauseTiming(); // Stop timers. They will not count until they are resumed.
+    data = ConstructRandomSet(state.range(0)); // Do something that should not be measured
+    state.ResumeTiming(); // And resume timers. They are now counting again.
+    // The rest will be measured.
+    for (int j = 0; j < state.range(1); ++j)
+      data.insert(RandomNumber());
+  }
+}
+BENCHMARK(BM_SetInsert_With_Timer_Control)->Ranges({{1<<10, 8<<10}, {128, 512}});
+```
 
 ## Manual timing
 For benchmarking something for which neither CPU time nor real-time are

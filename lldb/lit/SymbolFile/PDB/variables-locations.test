@@ -1,7 +1,6 @@
-REQUIRES: system-windows, msvc
-RUN: %clang_cl /Zi %S/Inputs/VariablesLocationsTest.cpp /c /o %t.obj
-RUN: %msvc_link /debug:full %t.obj /out:%t.exe
-RUN: %lldb -b -s %S/Inputs/VariablesLocationsTest.script -- %t.exe | FileCheck %s
+REQUIRES: system-windows, lld
+RUN: %build --compiler=clang-cl --output=%t.exe %S/Inputs/VariablesLocationsTest.cpp
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -b -s %S/Inputs/VariablesLocationsTest.script -- %t.exe | FileCheck %s
 
 CHECK: g_var = 2222
 

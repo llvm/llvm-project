@@ -442,3 +442,62 @@ define i128 @test34(i128 %X) {
   %mul = mul nsw i128 %X, 2
   ret i128 %mul
 }
+
+define i32 @test_mul_canonicalize_op0(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_mul_canonicalize_op0(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[MUL]]
+; CHECK-NEXT:    ret i32 [[NEG]]
+;
+  %neg = sub i32 0, %x
+  %mul = mul i32 %neg, %y
+  ret i32 %mul
+}
+
+define i32 @test_mul_canonicalize_op1(i32 %x, i32 %z) {
+; CHECK-LABEL: @test_mul_canonicalize_op1(
+; CHECK-NEXT:    [[Y:%.*]] = mul i32 [[Z:%.*]], 3
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[MUL]]
+; CHECK-NEXT:    ret i32 [[NEG]]
+;
+  %y = mul i32 %z, 3 
+  %neg = sub i32 0, %x
+  %mul = mul i32 %y, %neg
+  ret i32 %mul
+}
+
+define i32 @test_mul_canonicalize_nsw(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_mul_canonicalize_nsw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[MUL]]
+; CHECK-NEXT:    ret i32 [[NEG]]
+;
+  %neg = sub nsw i32 0, %x
+  %mul = mul nsw i32 %neg, %y
+  ret i32 %mul
+}
+
+define <2 x i32> @test_mul_canonicalize_vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @test_mul_canonicalize_vec(
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i32> zeroinitializer, [[MUL]]
+; CHECK-NEXT:    ret <2 x i32> [[NEG]]
+;
+  %neg = sub <2 x i32> <i32 0, i32 0>, %x
+  %mul = mul <2 x i32> %neg, %y
+  ret <2 x i32> %mul
+}
+
+define i32 @test_mul_canonicalize_multiple_uses(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_mul_canonicalize_multiple_uses(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL]], [[NEG]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %mul = mul i32 %neg, %y
+  %mul2 = mul i32 %mul, %neg
+  ret i32 %mul2
+}

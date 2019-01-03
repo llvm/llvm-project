@@ -778,11 +778,8 @@ bool IRForTarget::RewriteObjCConstStrings() {
 static bool IsObjCSelectorRef(Value *value) {
   GlobalVariable *global_variable = dyn_cast<GlobalVariable>(value);
 
-  if (!global_variable || !global_variable->hasName() ||
-      !global_variable->getName().startswith("OBJC_SELECTOR_REFERENCES_"))
-    return false;
-
-  return true;
+  return !(!global_variable || !global_variable->hasName() ||
+           !global_variable->getName().startswith("OBJC_SELECTOR_REFERENCES_"));
 }
 
 // This function does not report errors; its callers are responsible.
@@ -953,11 +950,8 @@ bool IRForTarget::RewriteObjCSelectors(BasicBlock &basic_block) {
 static bool IsObjCClassReference(Value *value) {
   GlobalVariable *global_variable = dyn_cast<GlobalVariable>(value);
 
-  if (!global_variable || !global_variable->hasName() ||
-      !global_variable->getName().startswith("OBJC_CLASS_REFERENCES_"))
-    return false;
-
-  return true;
+  return !(!global_variable || !global_variable->hasName() ||
+           !global_variable->getName().startswith("OBJC_CLASS_REFERENCES_"));
 }
 
 // This function does not report errors; its callers are responsible.
@@ -1259,12 +1253,9 @@ bool IRForTarget::MaterializeInitializer(uint8_t *data, Constant *initializer) {
         llvm::NextPowerOf2(constant_size) * 8);
 
     lldb_private::Status get_data_error;
-    if (!scalar.GetAsMemoryData(data, constant_size,
-                                lldb_private::endian::InlHostByteOrder(),
-                                get_data_error))
-      return false;
-
-    return true;
+    return scalar.GetAsMemoryData(data, constant_size,
+                                  lldb_private::endian::InlHostByteOrder(),
+                                  get_data_error) != 0;
   } else if (ConstantDataArray *array_initializer =
                  dyn_cast<ConstantDataArray>(initializer)) {
     if (array_initializer->isString()) {

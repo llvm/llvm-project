@@ -224,7 +224,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
           GlobalValueSummary::GVFlags(
               static_cast<GlobalValue::LinkageTypes>(FSum.Linkage),
               FSum.NotEligibleToImport, FSum.Live, FSum.IsLocal),
-          0, FunctionSummary::FFlags{}, Refs,
+          /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0, Refs,
           ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests),
           std::move(FSum.TypeTestAssumeVCalls),
           std::move(FSum.TypeCheckedLoadVCalls),

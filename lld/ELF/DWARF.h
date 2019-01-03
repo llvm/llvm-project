@@ -37,8 +37,16 @@ public:
     return RangeSection;
   }
 
+  const llvm::DWARFSection &getRnglistsSection() const override {
+    return RngListsSection;
+  }
+
   const llvm::DWARFSection &getLineSection() const override {
     return LineSection;
+  }
+
+  const llvm::DWARFSection &getAddrSection() const override {
+    return AddrSection;
   }
 
   const llvm::DWARFSection &getGnuPubNamesSection() const override {
@@ -71,8 +79,9 @@ private:
   LLDDWARFSection GnuPubTypesSection;
   LLDDWARFSection InfoSection;
   LLDDWARFSection RangeSection;
+  LLDDWARFSection RngListsSection;
   LLDDWARFSection LineSection;
-
+  LLDDWARFSection AddrSection;
   StringRef AbbrevSection;
   StringRef StrSection;
   StringRef LineStringSection;

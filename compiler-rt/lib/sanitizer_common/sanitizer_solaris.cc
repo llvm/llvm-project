@@ -88,8 +88,8 @@ uptr internal_open(const char *filename, int flags, u32 mode) {
 }
 
 uptr OpenFile(const char *filename, bool write) {
-  return internal_open(filename,
-      write ? O_WRONLY | O_CREAT : O_RDONLY, 0660);
+  return ReserveStandardFds(
+      internal_open(filename, write ? O_WRONLY | O_CREAT : O_RDONLY, 0660));
 }
 
 DECLARE__REAL_AND_INTERNAL(uptr, read, fd_t fd, void *buf, uptr count) {

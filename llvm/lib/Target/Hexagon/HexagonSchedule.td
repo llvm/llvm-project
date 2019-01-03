@@ -27,6 +27,7 @@ def CVI_SHIFT  : FuncUnit;
 def CVI_MPY0   : FuncUnit;
 def CVI_MPY1   : FuncUnit;
 def CVI_LD     : FuncUnit;
+def CVI_ZW     : FuncUnit; // Z register write port
 
 // Combined functional units.
 def CVI_XLSHF  : FuncUnit;
@@ -84,3 +85,9 @@ include "HexagonScheduleV62.td"
 //===----------------------------------------------------------------------===//
 
 include "HexagonScheduleV65.td"
+
+//===----------------------------------------------------------------------===//
+// V66 Machine Info +
+//===----------------------------------------------------------------------===//
+
+include "HexagonScheduleV66.td"

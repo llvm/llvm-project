@@ -14,7 +14,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class PythonSynthDataFormatterTestCase(TestBase):
+class DataFormatterVarScriptFormatting(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 

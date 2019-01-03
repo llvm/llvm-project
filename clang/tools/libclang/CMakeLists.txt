@@ -9,6 +9,7 @@ set(SOURCES
   CIndexInclusionStack.cpp
   CIndexUSRs.cpp
   CIndexer.cpp
+  CRefactor.cpp
   CXComment.cpp
   CXCursor.cpp
   CXIndexDataConsumer.cpp
@@ -35,16 +36,28 @@ set(SOURCES
 
 set(LIBS
   clangAST
+  clangAPINotes
   clangBasic
   clangFrontend
   clangIndex
   clangLex
   clangSema
+  clangSerialization
   clangTooling
+  clangToolingRefactor
 )
 
 if (CLANG_ENABLE_ARCMT)
   list(APPEND LIBS clangARCMigrate)
+endif ()
+
+if (TARGET clangTidyPlugin)
+  add_definitions(-DCLANG_TOOL_EXTRA_BUILD)
+  list(APPEND LIBS clangTidyPlugin)
+  list(APPEND LIBS clangIncludeFixerPlugin)
+  if(LLVM_ENABLE_MODULES)
+    list(APPEND LLVM_COMPILE_FLAGS "-fmodules-ignore-macro=CLANG_TOOL_EXTRA_BUILD")
+  endif()
 endif ()
 
 find_library(DL_LIBRARY_PATH dl)

@@ -141,7 +141,7 @@ static cl::opt<bool> AllScopesCompletion(
         "not defined in the scopes (e.g. "
         "namespaces) visible from the code completion point. Such completions "
         "can insert scope qualifiers."),
-    cl::init(false), cl::Hidden);
+    cl::init(true));
 
 static cl::opt<bool>
     ShowOrigins("debug-origin", cl::desc("Show origins of completion items"),
@@ -169,6 +169,14 @@ static cl::opt<bool> EnableBackgroundIndex(
     cl::desc("Index project code in the background and persist index on disk. "
              "Experimental"),
     cl::init(false), cl::Hidden);
+
+static cl::opt<int> BackgroundIndexRebuildPeriod(
+    "background-index-rebuild-period",
+    cl::desc(
+        "If set to non-zero, the background index rebuilds the symbol index "
+        "periodically every X milliseconds; otherwise, the "
+        "symbol index will be updated for each indexed file."),
+    cl::init(5000), cl::Hidden);
 
 enum CompileArgsFrom { LSPCompileArgs, FilesystemCompileArgs };
 static cl::opt<CompileArgsFrom> CompileArgsFrom(
@@ -254,6 +262,7 @@ int main(int argc, char *argv[]) {
     RunSynchronously = true;
     InputStyle = JSONStreamStyle::Delimited;
     PrettyPrint = true;
+    preventThreadStarvationInTests(); // Ensure background index makes progress.
   }
   if (Test || EnableTestScheme) {
     static URISchemeRegistry::Add<TestScheme> X(
@@ -351,6 +360,7 @@ int main(int argc, char *argv[]) {
   Opts.BuildDynamicSymbolIndex = EnableIndex;
   Opts.HeavyweightDynamicSymbolIndex = UseDex;
   Opts.BackgroundIndex = EnableBackgroundIndex;
+  Opts.BackgroundIndexRebuildPeriodMs = BackgroundIndexRebuildPeriod;
   std::unique_ptr<SymbolIndex> StaticIdx;
   std::future<void> AsyncIndexLoad; // Block exit while loading the index.
   if (EnableIndex && !IndexFile.empty()) {

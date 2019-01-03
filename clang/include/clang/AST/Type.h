@@ -256,28 +256,24 @@ public:
   }
 
   bool hasConst() const { return Mask & Const; }
-  void setConst(bool flag) {
-    Mask = (Mask & ~Const) | (flag ? Const : 0);
-  }
+  bool hasOnlyConst() const { return Mask == Const; }
   void removeConst() { Mask &= ~Const; }
   void addConst() { Mask |= Const; }
 
   bool hasVolatile() const { return Mask & Volatile; }
-  void setVolatile(bool flag) {
-    Mask = (Mask & ~Volatile) | (flag ? Volatile : 0);
-  }
+  bool hasOnlyVolatile() const { return Mask == Volatile; }
   void removeVolatile() { Mask &= ~Volatile; }
   void addVolatile() { Mask |= Volatile; }
 
   bool hasRestrict() const { return Mask & Restrict; }
-  void setRestrict(bool flag) {
-    Mask = (Mask & ~Restrict) | (flag ? Restrict : 0);
-  }
+  bool hasOnlyRestrict() const { return Mask == Restrict; }
   void removeRestrict() { Mask &= ~Restrict; }
   void addRestrict() { Mask |= Restrict; }
 
   bool hasCVRQualifiers() const { return getCVRQualifiers(); }
   unsigned getCVRQualifiers() const { return Mask & CVRMask; }
+  unsigned getCVRUQualifiers() const { return Mask & (CVRMask | UMask); }
+
   void setCVRQualifiers(unsigned mask) {
     assert(!(mask & ~CVRMask) && "bitmask contains non-CVR bits");
     Mask = (Mask & ~CVRMask) | mask;
@@ -984,9 +980,7 @@ public:
 
   void print(raw_ostream &OS, const PrintingPolicy &Policy,
              const Twine &PlaceHolder = Twine(),
-             unsigned Indentation = 0) const {
-    print(split(), OS, Policy, PlaceHolder, Indentation);
-  }
+             unsigned Indentation = 0) const;
 
   static void print(SplitQualType split, raw_ostream &OS,
                     const PrintingPolicy &policy, const Twine &PlaceHolder,
@@ -1000,9 +994,7 @@ public:
                     unsigned Indentation = 0);
 
   void getAsStringInternal(std::string &Str,
-                           const PrintingPolicy &Policy) const {
-    return getAsStringInternal(split(), Str, Policy);
-  }
+                           const PrintingPolicy &Policy) const;
 
   static void getAsStringInternal(SplitQualType split, std::string &out,
                                   const PrintingPolicy &policy) {
@@ -1526,7 +1518,9 @@ protected:
     ///
     /// C++ 8.3.5p4: The return type, the parameter type list and the
     /// cv-qualifier-seq, [...], are part of the function type.
-    unsigned TypeQuals : 4;
+    unsigned FastTypeQuals : Qualifiers::FastWidth;
+    /// Whether this function has extended Qualifiers.
+    unsigned HasExtQuals : 1;
 
     /// The number of parameters this function has, not counting '...'.
     /// According to [implimits] 8 bits should be enough here but this is
@@ -3611,7 +3605,9 @@ protected:
     FunctionTypeBits.ExtInfo = Info.Bits;
   }
 
-  unsigned getTypeQuals() const { return FunctionTypeBits.TypeQuals; }
+  Qualifiers getFastTypeQuals() const {
+    return Qualifiers::fromFastMask(FunctionTypeBits.FastTypeQuals);
+  }
 
 public:
   QualType getReturnType() const { return ResultType; }
@@ -3626,9 +3622,14 @@ public:
 
   CallingConv getCallConv() const { return getExtInfo().getCC(); }
   ExtInfo getExtInfo() const { return ExtInfo(FunctionTypeBits.ExtInfo); }
-  bool isConst() const { return getTypeQuals() & Qualifiers::Const; }
-  bool isVolatile() const { return getTypeQuals() & Qualifiers::Volatile; }
-  bool isRestrict() const { return getTypeQuals() & Qualifiers::Restrict; }
+
+  static_assert((~Qualifiers::FastMask & Qualifiers::CVRMask) == 0,
+                "Const, volatile and restrict are assumed to be a subset of "
+                "the fast qualifiers.");
+
+  bool isConst() const { return getFastTypeQuals().hasConst(); }
+  bool isVolatile() const { return getFastTypeQuals().hasVolatile(); }
+  bool isRestrict() const { return getFastTypeQuals().hasRestrict(); }
 
   /// Determine the type of an expression that calls a function of
   /// this type.
@@ -3689,7 +3690,7 @@ class FunctionProtoType final
       private llvm::TrailingObjects<
           FunctionProtoType, QualType, FunctionType::FunctionTypeExtraBitfields,
           FunctionType::ExceptionType, Expr *, FunctionDecl *,
-          FunctionType::ExtParameterInfo> {
+          FunctionType::ExtParameterInfo, Qualifiers> {
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 
@@ -3716,6 +3717,10 @@ class FunctionProtoType final
   // * Optionally an array of getNumParams() ExtParameterInfo holding
   //   an ExtParameterInfo for each of the parameters. Present if and
   //   only if hasExtParameterInfos() is true.
+  //
+  // * Optionally a Qualifiers object to represent extra qualifiers that can't
+  //   be represented by FunctionTypeBitfields.FastTypeQuals. Present if and only
+  //   if hasExtQualifiers() is true.
   //
   // The optional FunctionTypeExtraBitfields has to be before the data
   // related to the exception specification since it contains the number
@@ -3763,7 +3768,7 @@ public:
     FunctionType::ExtInfo ExtInfo;
     bool Variadic : 1;
     bool HasTrailingReturn : 1;
-    unsigned char TypeQuals = 0;
+    Qualifiers TypeQuals;
     RefQualifierKind RefQualifier = RQ_None;
     ExceptionSpecInfo ExceptionSpec;
     const ExtParameterInfo *ExtParameterInfos = nullptr;
@@ -3875,6 +3880,10 @@ private:
     return hasExtraBitfields(getExceptionSpecType());
   }
 
+  bool hasExtQualifiers() const {
+    return FunctionTypeBits.HasExtQuals;
+  }
+
 public:
   unsigned getNumParams() const { return FunctionTypeBits.NumParams; }
 
@@ -3893,7 +3902,7 @@ public:
     EPI.Variadic = isVariadic();
     EPI.HasTrailingReturn = hasTrailingReturn();
     EPI.ExceptionSpec.Type = getExceptionSpecType();
-    EPI.TypeQuals = static_cast<unsigned char>(getTypeQuals());
+    EPI.TypeQuals = getTypeQuals();
     EPI.RefQualifier = getRefQualifier();
     if (EPI.ExceptionSpec.Type == EST_Dynamic) {
       EPI.ExceptionSpec.Exceptions = exceptions();
@@ -4003,7 +4012,12 @@ public:
   /// Whether this function prototype has a trailing return type.
   bool hasTrailingReturn() const { return FunctionTypeBits.HasTrailingReturn; }
 
-  unsigned getTypeQuals() const { return FunctionType::getTypeQuals(); }
+  Qualifiers getTypeQuals() const {
+    if (hasExtQualifiers())
+      return *getTrailingObjects<Qualifiers>();
+    else
+      return getFastTypeQuals();
+  }
 
   /// Retrieve the ref-qualifier associated with this function type.
   RefQualifierKind getRefQualifier() const {

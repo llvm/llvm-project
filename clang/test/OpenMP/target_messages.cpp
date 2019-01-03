@@ -43,6 +43,18 @@ void bar() {
 void foo() {
 }
 
+class S {
+  public:
+  void zee() {
+    #pragma omp target map(this[:2]) // expected-note {{expected length on mapping of 'this' array section expression to be '1'}} // expected-error {{invalid 'this' expression on 'map' clause}}
+      int a;
+    #pragma omp target map(this[1:1]) // expected-note {{expected lower bound on mapping of 'this' array section expression to be '0' or not specified}} // expected-error {{invalid 'this' expression on 'map' clause}}
+      int b;
+    #pragma omp target map(this[1]) // expected-note {{expected 'this' subscript expression on map clause to be 'this[0]'}} // expected-error {{invalid 'this' expression on 'map' clause}}
+      int c;
+  }
+};
+
 #pragma omp target // expected-error {{unexpected OpenMP directive '#pragma omp target'}}
 
 int main(int argc, char **argv) {

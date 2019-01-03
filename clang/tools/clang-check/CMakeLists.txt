@@ -10,11 +10,13 @@ add_clang_executable(clang-check
 
 target_link_libraries(clang-check
   PRIVATE
+  clangAPINotes
   clangAST
   clangBasic
   clangDriver
   clangFrontend
   clangRewriteFrontend
+  clangSerialization
   clangStaticAnalyzerFrontend
   clangTooling
   )

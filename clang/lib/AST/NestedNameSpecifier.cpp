@@ -16,6 +16,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -270,9 +271,8 @@ bool NestedNameSpecifier::containsUnexpandedParameterPack() const {
 
 /// Print this nested name specifier to the given output
 /// stream.
-void
-NestedNameSpecifier::print(raw_ostream &OS,
-                           const PrintingPolicy &Policy) const {
+void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
+                                bool ResolveTemplateArguments) const {
   if (getPrefix())
     getPrefix()->print(OS, Policy);
 
@@ -305,6 +305,15 @@ NestedNameSpecifier::print(raw_ostream &OS,
     LLVM_FALLTHROUGH;
 
   case TypeSpec: {
+    const auto *Record =
+            dyn_cast_or_null<ClassTemplateSpecializationDecl>(getAsRecordDecl());
+    if (ResolveTemplateArguments && Record) {
+        // Print the type trait with resolved template parameters.
+        Record->printName(OS);
+        printTemplateArgumentList(OS, Record->getTemplateArgs().asArray(),
+                                  Policy);
+        break;
+    }
     const Type *T = getAsType();
 
     PrintingPolicy InnerPolicy(Policy);
@@ -704,4 +713,35 @@ NestedNameSpecifierLocBuilder::getWithLocInContext(ASTContext &Context) const {
   void *Mem = Context.Allocate(BufferSize, alignof(void *));
   memcpy(Mem, Buffer, BufferSize);
   return NestedNameSpecifierLoc(Representation, Mem);
+}
+
+NestedNameSpecifier *NestedNameSpecifier::getRequiredQualification(
+    ASTContext &Context, const DeclContext *CurContext,
+    const DeclContext *TargetContext) {
+  SmallVector<const DeclContext *, 4> TargetParents;
+
+  for (const DeclContext *CommonAncestor = TargetContext;
+       CommonAncestor && !CommonAncestor->Encloses(CurContext);
+       CommonAncestor = CommonAncestor->getLookupParent()) {
+    if (CommonAncestor->isTransparentContext() ||
+        CommonAncestor->isFunctionOrMethod())
+      continue;
+
+    TargetParents.push_back(CommonAncestor);
+  }
+
+  NestedNameSpecifier *Result = nullptr;
+  while (!TargetParents.empty()) {
+    const DeclContext *Parent = TargetParents.pop_back_val();
+
+    if (const NamespaceDecl *Namespace = dyn_cast<NamespaceDecl>(Parent)) {
+      if (!Namespace->getIdentifier())
+        continue;
+
+      Result = NestedNameSpecifier::Create(Context, Result, Namespace);
+    } else if (const TagDecl *TD = dyn_cast<TagDecl>(Parent))
+      Result = NestedNameSpecifier::Create(
+          Context, Result, false, Context.getTypeDeclType(TD).getTypePtr());
+  }
+  return Result;
 }

@@ -375,7 +375,11 @@ void __kmp_expand_file_name(char *result, size_t rlen, char *pattern) {
         case 'I':
         case 'i': {
           pid_t id = getpid();
+#if KMP_ARCH_X86_64 && defined(__MINGW32__)
+          snp_result = KMP_SNPRINTF(pos, end - pos + 1, "%0*lld", width, id);
+#else
           snp_result = KMP_SNPRINTF(pos, end - pos + 1, "%0*d", width, id);
+#endif
           if (snp_result >= 0 && snp_result <= end - pos) {
             while (*pos)
               ++pos;

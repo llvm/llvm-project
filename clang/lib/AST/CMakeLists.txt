@@ -10,6 +10,7 @@ add_clang_library(clangAST
   ASTDiagnostic.cpp
   ASTDumper.cpp
   ASTImporter.cpp
+  ASTImporterLookupTable.cpp
   ASTStructuralEquivalence.cpp
   ASTTypeTraits.cpp
   AttrImpl.cpp
@@ -69,6 +70,7 @@ add_clang_library(clangAST
   StmtViz.cpp
   TemplateBase.cpp
   TemplateName.cpp
+  TextNodeDumper.cpp
   Type.cpp
   TypeLoc.cpp
   TypePrinter.cpp

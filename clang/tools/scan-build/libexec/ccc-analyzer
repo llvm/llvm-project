@@ -746,9 +746,10 @@ if ($Action eq 'compile' or $Action eq 'link') {
 
     if (defined $OutputFormat) {
       push @AnalyzeArgs, "-analyzer-output=" . $OutputFormat;
-      if ($OutputFormat =~ /plist/) {
+      if ($OutputFormat =~ /plist/ || $OutputFormat =~ /sarif/) {
         # Change "Output" to be a file.
-        my ($h, $f) = tempfile("report-XXXXXX", SUFFIX => ".plist",
+        my $Suffix = $OutputFormat =~ /plist/ ? ".plist" : ".sarif";
+        my ($h, $f) = tempfile("report-XXXXXX", SUFFIX => $Suffix,
                                DIR => $HtmlDir);
         $ResultFile = $f;
         # If the HtmlDir is not set, we should clean up the plist files.

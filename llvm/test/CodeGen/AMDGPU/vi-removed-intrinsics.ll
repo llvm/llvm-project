@@ -17,7 +17,7 @@ attributes #1 = { nounwind }
 !llvm.module.flags = !{!2, !3}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_OpenCL, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
-!1 = !DIFile(filename: "foo.cl", directory: "/dev/null")
+!1 = !DIFile(filename: "foo.cl", directory: ".")
 !2 = !{i32 2, !"Dwarf Version", i32 4}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !DILocation(line: 1, column: 42, scope: !5)

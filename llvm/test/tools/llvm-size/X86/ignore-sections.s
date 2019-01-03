@@ -25,5 +25,5 @@
 // SYSV-NEXT:    Total                 69
 
 // BSD:        text    data     bss     dec     hex filename
-// BSD-NEXT:      4       4       4      12       c {{[ -\(\)_A-Za-z0-9.\\/:]+}}
-// BSD-NEXT:      4       4       4      12       c (TOTALS)
+// BSD-NEXT:     52       4       4      60      3c {{[ -\(\)_A-Za-z0-9.\\/:]+}}
+// BSD-NEXT:     52       4       4      60      3c (TOTALS)

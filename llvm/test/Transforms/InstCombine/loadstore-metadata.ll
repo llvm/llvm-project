@@ -39,7 +39,7 @@ entry:
 define i32 @test_load_cast_combine_invariant(float* %ptr) {
 ; Ensure (cast (load (...))) -> (load (cast (...))) preserves invariant metadata.
 ; CHECK-LABEL: @test_load_cast_combine_invariant(
-; CHECK: load i32, i32* %{{.*}}, !invariant.load !5
+; CHECK: load i32, i32* %{{.*}}, !invariant.load !7
 entry:
   %l = load float, float* %ptr, !invariant.load !6
   %c = bitcast float %l to i32
@@ -50,7 +50,7 @@ define i32 @test_load_cast_combine_nontemporal(float* %ptr) {
 ; Ensure (cast (load (...))) -> (load (cast (...))) preserves nontemporal
 ; metadata.
 ; CHECK-LABEL: @test_load_cast_combine_nontemporal(
-; CHECK: load i32, i32* %{{.*}}, !nontemporal !6
+; CHECK: load i32, i32* %{{.*}}, !nontemporal !8
 entry:
   %l = load float, float* %ptr, !nontemporal !7
   %c = bitcast float %l to i32
@@ -61,7 +61,7 @@ define i8* @test_load_cast_combine_align(i32** %ptr) {
 ; Ensure (cast (load (...))) -> (load (cast (...))) preserves align
 ; metadata.
 ; CHECK-LABEL: @test_load_cast_combine_align(
-; CHECK: load i8*, i8** %{{.*}}, !align !7
+; CHECK: load i8*, i8** %{{.*}}, !align !9
 entry:
   %l = load i32*, i32** %ptr, !align !8
   %c = bitcast i32* %l to i8*
@@ -72,7 +72,7 @@ define i8* @test_load_cast_combine_deref(i32** %ptr) {
 ; Ensure (cast (load (...))) -> (load (cast (...))) preserves dereferenceable
 ; metadata.
 ; CHECK-LABEL: @test_load_cast_combine_deref(
-; CHECK: load i8*, i8** %{{.*}}, !dereferenceable !7
+; CHECK: load i8*, i8** %{{.*}}, !dereferenceable !9
 entry:
   %l = load i32*, i32** %ptr, !dereferenceable !8
   %c = bitcast i32* %l to i8*
@@ -83,7 +83,7 @@ define i8* @test_load_cast_combine_deref_or_null(i32** %ptr) {
 ; Ensure (cast (load (...))) -> (load (cast (...))) preserves
 ; dereferenceable_or_null metadata.
 ; CHECK-LABEL: @test_load_cast_combine_deref_or_null(
-; CHECK: load i8*, i8** %{{.*}}, !dereferenceable_or_null !7
+; CHECK: load i8*, i8** %{{.*}}, !dereferenceable_or_null !9
 entry:
   %l = load i32*, i32** %ptr, !dereferenceable_or_null !8
   %c = bitcast i32* %l to i8*
@@ -94,7 +94,7 @@ define void @test_load_cast_combine_loop(float* %src, i32* %dst, i32 %n) {
 ; Ensure (cast (load (...))) -> (load (cast (...))) preserves loop access
 ; metadata.
 ; CHECK-LABEL: @test_load_cast_combine_loop(
-; CHECK: load i32, i32* %{{.*}}, !llvm.mem.parallel_loop_access !4
+; CHECK: load i32, i32* %{{.*}}, !llvm.access.group !6
 entry:
   br label %loop
 
@@ -102,7 +102,7 @@ loop:
   %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
   %src.gep = getelementptr inbounds float, float* %src, i32 %i
   %dst.gep = getelementptr inbounds i32, i32* %dst, i32 %i
-  %l = load float, float* %src.gep, !llvm.mem.parallel_loop_access !4
+  %l = load float, float* %src.gep, !llvm.access.group !9
   %c = bitcast float %l to i32
   store i32 %c, i32* %dst.gep
   %i.next = add i32 %i, 1
@@ -142,8 +142,9 @@ entry:
 !1 = !{!"scalar type", !2}
 !2 = !{!"root"}
 !3 = distinct !{!3, !4}
-!4 = distinct !{!4}
+!4 = distinct !{!4, !{!"llvm.loop.parallel_accesses", !9}}
 !5 = !{i32 0, i32 42}
 !6 = !{}
 !7 = !{i32 1}
 !8 = !{i64 8}
+!9 = distinct !{}

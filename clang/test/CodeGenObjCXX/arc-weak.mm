@@ -15,9 +15,9 @@ void test0(__weak B **src) {
 // CHECK-NEXT:  [[T1:%.*]] = bitcast [[B]]** [[T0]] to [[A]]**
 // CHECK-NEXT:  [[T2:%.*]] = bitcast [[A]]** [[DEST]] to i8**
 // CHECK-NEXT:  [[T3:%.*]] = bitcast [[A]]** [[T1]] to i8**
-// CHECK-NEXT:  call void @objc_copyWeak(i8** [[T2]], i8** [[T3]])
+// CHECK-NEXT:  call void @llvm.objc.copyWeak(i8** [[T2]], i8** [[T3]])
 // CHECK-NEXT:  [[T0:%.*]] = bitcast [[A]]** [[DEST]] to i8**
-// CHECK:       call void @objc_destroyWeak(i8** [[T0]])
+// CHECK:       call void @llvm.objc.destroyWeak(i8** [[T0]])
 
 void test1(__weak B **src) {
   __weak A *dest = static_cast<__weak B*&&>(*src);
@@ -29,6 +29,6 @@ void test1(__weak B **src) {
 // CHECK-NEXT:  [[T1:%.*]] = bitcast [[B]]** [[T0]] to [[A]]**
 // CHECK-NEXT:  [[T2:%.*]] = bitcast [[A]]** [[DEST]] to i8**
 // CHECK-NEXT:  [[T3:%.*]] = bitcast [[A]]** [[T1]] to i8**
-// CHECK-NEXT:  call void @objc_moveWeak(i8** [[T2]], i8** [[T3]])
+// CHECK-NEXT:  call void @llvm.objc.moveWeak(i8** [[T2]], i8** [[T3]])
 // CHECK-NEXT:  [[T0:%.*]] = bitcast [[A]]** [[DEST]] to i8**
-// CHECK:       call void @objc_destroyWeak(i8** [[T0]])
+// CHECK:       call void @llvm.objc.destroyWeak(i8** [[T0]])

@@ -19,9 +19,9 @@
 #include <cstring>
 
 // Project includes
-#include "lldb/Core/Event.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Event.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"

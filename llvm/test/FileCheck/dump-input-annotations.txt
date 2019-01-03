@@ -1,0 +1,394 @@
+;--------------------------------------------------
+; Use -strict-whitespace to check marker and note alignment here.
+; (Also check multiline marker where start/end columns vary across lines.)
+;
+; In the remaining checks, don't use -strict-whitespace and thus check just the
+; presence, order, and lengths of markers.  That way, if we ever change padding
+; within line labels, we don't have to adjust so many tests.
+;--------------------------------------------------
+
+; RUN: echo 'hello world' > %t.in
+; RUN: echo 'goodbye' >> %t.in
+; RUN: echo 'world' >> %t.in
+; RUN: echo 'unicorn' >> %t.in
+
+; RUN: echo 'CHECK: hello' > %t.chk
+; RUN: echo 'CHECK: universe' >> %t.chk
+
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -strict-whitespace -match-full-lines -check-prefix=ALIGN %s
+
+; ALIGN:Full input was:
+; ALIGN-NEXT:<<<<<<
+; ALIGN-NEXT:           1: hello world
+; ALIGN-NEXT:check:1       ^~~~~
+; ALIGN-NEXT:check:2'0           X~~~~
+; ALIGN-NEXT:           2: goodbye
+; ALIGN-NEXT:check:2'0     ~~~~~~~
+; ALIGN-NEXT:           3: world
+; ALIGN-NEXT:check:2'0     ~~~~~
+; ALIGN-NEXT:           4: unicorn
+; ALIGN-NEXT:check:2'0     ~~~~~~~ error: no match found
+; ALIGN-NEXT:check:2'1     ?       possible intended match
+; ALIGN-NEXT:>>>>>>
+; ALIGN-NOT:{{.}}
+
+;--------------------------------------------------
+; CHECK (also: multi-line search range, fuzzy match)
+;--------------------------------------------------
+
+; Good match and no match.
+
+; RUN: echo 'hello'   > %t.in
+; RUN: echo 'again'   >> %t.in
+; RUN: echo 'whirled' >> %t.in
+
+; RUN: echo 'CHECK: hello' > %t.chk
+; RUN: echo 'CHECK: world' >> %t.chk
+
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=CHK
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=CHK,CHK-V
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=CHK,CHK-V
+
+; CHK:        <<<<<<
+; CHK-NEXT:              1: hello
+; CHK-V-NEXT: check:1       ^~~~~
+; CHK-NEXT:              2: again
+; CHK-NEXT:   check:2'0     X~~~~
+; CHK-NEXT:              3: whirled
+; CHK-NEXT:   check:2'0     ~~~~~~~ error: no match found
+; CHK-NEXT:   check:2'1     ?       possible intended match
+; CHK-NEXT:   >>>>>>
+; CHK-NOT:    {{.}}
+
+;--------------------------------------------------
+; CHECK-COUNT-<num>
+;--------------------------------------------------
+
+; Good match and no match.
+
+; RUN: echo 'pete'   > %t.in
+; RUN: echo 'repete' >> %t.in
+; RUN: echo 'repeat' >> %t.in
+
+; RUN: echo 'CHECK-COUNT-3: pete' > %t.chk
+
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=CNT,CNT-Q
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=CNT,CNT-V
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=CNT,CNT-V
+
+; CNT:          <<<<<<
+; CNT-NEXT:                1: pete
+; CNT-V-NEXT:   count:1'0     ^~~~
+; CNT-NEXT:                2: repete
+; CNT-V-NEXT:   count:1'1       ^~~~
+; CNT-NEXT:                3: repeat
+; CNT-Q-NEXT:   count:1       X~~~~~ error: no match found
+; CNT-V-NEXT:   count:1'2     X~~~~~ error: no match found
+; CNT-NEXT:     >>>>>>
+; CNT-NOT:      {{.}}
+
+;--------------------------------------------------
+; CHECK-NEXT (also: EOF search-range, wrong-line match)
+;--------------------------------------------------
+
+; Good match and no match.
+
+; RUN: echo 'hello' > %t.in
+; RUN: echo 'again' >> %t.in
+
+; RUN: echo 'CHECK: hello' > %t.chk
+; RUN: echo 'CHECK-NEXT: again' >> %t.chk
+; RUN: echo 'CHECK-NEXT: world' >> %t.chk
+
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=NXT
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=NXT,NXT-V
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=NXT,NXT-V,NXT-VV
+
+; NXT:        <<<<<<
+; NXT-NEXT:            1: hello
+; NXT-V-NEXT: check:1     ^~~~~
+; NXT-NEXT:            2: again
+; NXT-V-NEXT: next:2      ^~~~~
+; NXT-NEXT:            3:
+; NXT-NEXT:   next:3      X error: no match found
+; NXT-NEXT:   >>>>>>
+; NXT-NOT:    {{.}}
+
+; Wrong-line match.
+
+; RUN: echo 'yonder' >> %t.in
+; RUN: echo 'world' >> %t.in
+
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=NXT2
+
+; NXT2:      <<<<<<
+; NXT2-NEXT:         1: hello
+; NXT2-NEXT:         2: again
+; NXT2-NEXT:         3: yonder
+; NXT2-NEXT:         4: world
+; NXT2-NEXT: next:3     !~~~~ error: match on wrong line
+; NXT2-NEXT: >>>>>>
+; NXT2-NOT:  {{.}}
+
+;--------------------------------------------------
+; CHECK-SAME (also: multiple annotations per line, single-char search range,
+; wrong-line match)
+;--------------------------------------------------
+
+; Good match and no match.
+
+; RUN: echo 'hello world!' > %t.in
+
+; RUN: echo 'CHECK: hello' > %t.chk
+; RUN: echo 'CHECK-SAME: world' >> %t.chk
+; RUN: echo 'CHECK-SAME: again' >> %t.chk
+
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=SAM
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=SAM,SAM-V
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=SAM,SAM-V,SAM-VV
+
+; SAM:        <<<<<<
+; SAM-NEXT:            1: hello world!
+; SAM-V-NEXT: check:1     ^~~~~
+; SAM-V-NEXT: same:2            ^~~~~
+; SAM-NEXT:   same:3                 X error: no match found
+; SAM-NEXT:   >>>>>>
+; SAM-NOT:    {{.}}
+
+; Wrong-line match.
+
+; RUN: echo 'again' >> %t.in
+
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=SAM2
+
+; SAM2:      <<<<<<
+; SAM2-NEXT:          1: hello world!
+; SAM2-NEXT: check:1     ^~~~~
+; SAM2-NEXT: same:2            ^~~~~
+; SAM2-NEXT:          2: again
+; SAM2-NEXT: same:3      !~~~~ error: match on wrong line
+; SAM2-NEXT: >>>>>>
+; SAM2-NOT:  {{.}}
+
+;--------------------------------------------------
+; CHECK-EMPTY (also: search range ends at label, single-char match, wrong-line
+; match)
+;--------------------------------------------------
+
+; Good match and no match.
+;
+; CHECK-EMPTY always seems to match an empty line at EOF (illegally when it's
+; not the next line) unless either (1) the last line is non-empty and has no
+; newline or (2) there's a CHECK-LABEL to end the search range before EOF.  We
+; choose scenario 2 to check the case of no match.
+
+; RUN: echo 'hello' > %t.in
+; RUN: echo '' >> %t.in
+; RUN: echo 'world' >> %t.in
+; RUN: echo 'label' >> %t.in
+
+; RUN: echo 'CHECK: hello' > %t.chk
+; RUN: echo 'CHECK-EMPTY:' >> %t.chk
+; RUN: echo 'CHECK-EMPTY:' >> %t.chk
+; RUN: echo 'CHECK-LABEL: label' >> %t.chk
+
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=EMP
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=EMP,EMP-V
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=EMP,EMP-V,EMP-VV
+
+; EMP:        <<<<<<
+; EMP-NEXT:            1: hello
+; EMP-V-NEXT: check:1     ^~~~~
+; EMP-NEXT:            2:
+; EMP-V-NEXT: empty:2     ^
+; EMP-NEXT:            3: world
+; EMP-NEXT:   empty:3     X~~~~
+; EMP-NEXT:            4: label
+; EMP-NEXT:   empty:3     ~~~~~ error: no match found
+; EMP-V-NEXT: label:4     ^~~~~
+; EMP-NEXT:   >>>>>>
+; EMP-NOT:    {{.}}
+
+; Wrong-line match.
+
+; RUN: echo 'hello' > %t.in
+; RUN: echo 'world' >> %t.in
+
+; RUN: echo 'CHECK: hello' > %t.chk
+; RUN: echo 'CHECK-EMPTY:' >> %t.chk
+
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=EMP2
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=EMP2,EMP2-V
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=EMP2,EMP2-V,EMP2-VV
+
+; EMP2:        <<<<<<
+; EMP2-NEXT:            1: hello
+; EMP2-V-NEXT: check:1     ^~~~~
+; EMP2-NEXT:            2: world
+; EMP2-NEXT:            3:
+; EMP2-NEXT:   empty:2     !     error: match on wrong line
+; EMP2-NEXT:   >>>>>>
+; EMP2-NOT:    {{.}}
+
+;--------------------------------------------------
+; CHECK-NOT (also: EOF pattern, and multiline range that ends before EOL)
+;--------------------------------------------------
+
+; No match (success) and unexpected match (error).
+
+; RUN: echo 'hello' > %t.in
+; RUN: echo 'world' >> %t.in
+; RUN: echo 'again' >> %t.in
+
+; RUN: echo 'CHECK-NOT: goodbye' > %t.chk
+; RUN: echo 'CHECK-NOT: world' >> %t.chk
+
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=NOT
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=NOT,NOT-V
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=NOT,NOT-V,NOT-VV
+
+; NOT:         <<<<<<
+; NOT-NEXT:           1: hello
+; NOT-VV-NEXT: not:1     X~~~~
+; NOT-NEXT:           2: world
+; NOT-VV-NEXT: not:1     ~~~~~
+; NOT-NEXT:    not:2     !~~~~ error: no match expected
+; NOT-NEXT:           3: again
+; NOT-VV-NEXT: not:1     ~~~~~
+; NOT-VV-NEXT:        4:
+; NOT-VV-NEXT: eof:2     ^
+; NOT-NEXT:    >>>>>>
+; NOT-NOT:     {{.}}
+
+; Again, but with a CHECK instead of EOF as search range end.
+
+; RUN: echo 'CHECK: ain' >> %t.chk
+
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefix=NOT2
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=NOT2,NOT2-V
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=NOT2,NOT2-V,NOT2-VV
+
+; NOT2:         <<<<<<
+; NOT2-NEXT:             1: hello
+; NOT2-VV-NEXT: not:1       X~~~~
+; NOT2-NEXT:             2: world
+; NOT2-VV-NEXT: not:1       ~~~~~
+; NOT2-NEXT:    not:2       !~~~~ error: no match expected
+; NOT2-NEXT:             3: again
+; NOT2-VV-NEXT: not:1       ~~
+; NOT2-V-NEXT:  check:3       ^~~
+; NOT2-NEXT:    >>>>>>
+; NOT2-NOT:     {{.}}
+
+;--------------------------------------------------
+; CHECK-DAG (also: matches in different order than directives, discarded match)
+;--------------------------------------------------
+
+; Good match, discarded match plus good match, and no match.
+
+; RUN: echo 'abc' > %t.in
+; RUN: echo 'def' >> %t.in
+; RUN: echo 'abc' >> %t.in
+
+; RUN: echo 'CHECK-DAG: def' > %t.chk
+; RUN: echo 'CHECK-DAG: abc' >> %t.chk
+; RUN: echo 'CHECK-DAG: abc' >> %t.chk
+; RUN: echo 'CHECK-DAG: def' >> %t.chk
+
+; Prefixes used here:
+; DAG    = quiet, -v, or -vv
+; DAG-Q  = quiet
+; DAG-V  = -v or -vv (-vv implies -v)
+; DAG-VQ = -v and not -vv
+; DAG-VV = -vv
+
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG,DAG-Q
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG,DAG-V,DAG-VQ
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=DAG,DAG-V,DAG-VV
+
+; DAG:         <<<<<<
+; DAG-NEXT:             1: abc
+; DAG-V-NEXT:  dag:2       ^~~
+; DAG-VV-NEXT: dag:3'0     !~~ discard: overlaps earlier match
+; DAG-NEXT:             2: def
+; DAG-V-NEXT:  dag:1       ^~~
+; DAG-VV-NEXT: dag:4'0     !~~ discard: overlaps earlier match
+; DAG-NEXT:             3: abc
+; DAG-VQ-NEXT: dag:3       ^~~
+; DAG-VV-NEXT: dag:3'1     ^~~
+; DAG-Q-NEXT:  dag:4       X~~ error: no match found
+; DAG-VQ-NEXT: dag:4       X~~ error: no match found
+; DAG-VV-NEXT: dag:4'1     X~~ error: no match found
+; DAG-NEXT:    >>>>>>
+; DAG-NOT:     {{.}}
+
+;--------------------------------------------------
+; CHECK-LABEL
+;
+; FIXME: Labels sometimes produce redundant diagnostics for good matches.
+; That bug is independent of but affects -dump-input.
+;--------------------------------------------------
+
+; Good match and no match.
+
+; RUN: echo 'lab0' > %t.in
+; RUN: echo 'foo' >> %t.in
+; RUN: echo 'lab1' >> %t.in
+; RUN: echo 'bar' >> %t.in
+
+; RUN: echo 'CHECK-LABEL: lab0' > %t.chk
+; RUN: echo 'CHECK: foo' >> %t.chk
+; RUN: echo 'CHECK-LABEL: lab2' >> %t.chk
+
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=LAB
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=LAB,LAB-V
+; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=LAB,LAB-V,LAB-VV
+
+; LAB:         <<<<<<
+; LAB-NEXT:               1: lab0
+; LAB-V-NEXT:  label:1'0     ^~~~
+; LAB-V-NEXT:  label:1'1     ^~~~
+; LAB-NEXT:               2: foo
+; LAB-NEXT:    label:3'0     X~~
+; LAB-NEXT:               3: lab1
+; LAB-NEXT:    label:3'0     ~~~~
+; LAB-NEXT:    label:3'1     ?    possible intended match
+; LAB-NEXT:               4: bar
+; LAB-NEXT:    label:3'0     ~~~ error: no match found
+; LAB-NEXT:    >>>>>>
+; LAB-NOT:     {{.}}
+
+

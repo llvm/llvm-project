@@ -23,6 +23,7 @@
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Index/IndexingAction.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/Option/OptTable.h"
@@ -65,7 +66,6 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case GenerateHeaderModule:
     return llvm::make_unique<GenerateHeaderModuleAction>();
   case GeneratePCH:            return llvm::make_unique<GeneratePCHAction>();
-  case GeneratePTH:            return llvm::make_unique<GeneratePTHAction>();
   case InitOnly:               return llvm::make_unique<InitOnlyAction>();
   case ParseSyntaxOnly:        return llvm::make_unique<SyntaxOnlyAction>();
   case ModuleFileInfo:         return llvm::make_unique<DumpModuleInfoAction>();
@@ -171,6 +171,11 @@ CreateFrontendAction(CompilerInstance &CI) {
   }
 #endif
 
+  if (!FEOpts.IndexStorePath.empty()) {
+    Act = index::createIndexDataRecordingAction(FEOpts, std::move(Act));
+    CI.setGenModuleActionWrapper(&index::createIndexDataRecordingAction);
+  }
+
   // If there are any AST files to merge, create a frontend action
   // adaptor to perform the merge.
   if (!FEOpts.ASTMergeFiles.empty())
@@ -239,7 +244,8 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // Honor -analyzer-checker-help.
   // This should happen AFTER plugins have been loaded!
   if (Clang->getAnalyzerOpts()->ShowCheckerHelp) {
-    ento::printCheckerHelp(llvm::outs(), Clang->getFrontendOpts().Plugins);
+    ento::printCheckerHelp(llvm::outs(), Clang->getFrontendOpts().Plugins,
+                           Clang->getDiagnostics());
     return true;
   }
 
@@ -247,7 +253,8 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   if (Clang->getAnalyzerOpts()->ShowEnabledCheckerList) {
     ento::printEnabledCheckerList(llvm::outs(),
                                   Clang->getFrontendOpts().Plugins,
-                                  *Clang->getAnalyzerOpts());
+                                  *Clang->getAnalyzerOpts(),
+                                  Clang->getDiagnostics());
   }
 
   // Honor -analyzer-config-help.

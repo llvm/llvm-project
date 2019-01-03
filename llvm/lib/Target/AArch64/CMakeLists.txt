@@ -52,6 +52,7 @@ add_llvm_target(AArch64CodeGen
   AArch64RegisterBankInfo.cpp
   AArch64RegisterInfo.cpp
   AArch64SelectionDAGInfo.cpp
+  AArch64SpeculationHardening.cpp
   AArch64StorePairSuppress.cpp
   AArch64Subtarget.cpp
   AArch64TargetMachine.cpp

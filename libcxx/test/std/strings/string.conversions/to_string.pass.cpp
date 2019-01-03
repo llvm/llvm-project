@@ -19,6 +19,7 @@
 // string to_string(double val);
 // string to_string(long double val);
 
+#include <limits>
 #include <string>
 #include <cassert>
 #include <sstream>

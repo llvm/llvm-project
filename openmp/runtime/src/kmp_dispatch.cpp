@@ -24,7 +24,7 @@
 #include "kmp_itt.h"
 #include "kmp_stats.h"
 #include "kmp_str.h"
-#if KMP_OS_WINDOWS && KMP_ARCH_X86
+#if KMP_USE_X87CONTROL
 #include <float.h>
 #endif
 #include "kmp_lock.h"
@@ -478,7 +478,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
         /* commonly used term: (2 nproc - 1)/(2 nproc) */
         DBL x;
 
-#if KMP_OS_WINDOWS && KMP_ARCH_X86
+#if KMP_USE_X87CONTROL
         /* Linux* OS already has 64-bit computation by default for long double,
            and on Windows* OS on Intel(R) 64, /Qlong_double doesn't work. On
            Windows* OS on IA-32 architecture, we need to set precision to 64-bit
@@ -573,7 +573,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
         pr->u.p.count = tc - __kmp_dispatch_guided_remaining(
                                  tc, GUIDED_ANALYTICAL_WORKAROUND, cross) -
                         cross * chunk;
-#if KMP_OS_WINDOWS && KMP_ARCH_X86
+#if KMP_USE_X87CONTROL
         // restore FPCW
         _control87(oldFpcw, _MCW_PC);
 #endif
@@ -1625,7 +1625,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
   case kmp_sch_guided_analytical_chunked: {
     T chunkspec = pr->u.p.parm1;
     UT chunkIdx;
-#if KMP_OS_WINDOWS && KMP_ARCH_X86
+#if KMP_USE_X87CONTROL
     /* for storing original FPCW value for Windows* OS on
        IA-32 architecture 8-byte version */
     unsigned int oldFpcw;
@@ -1662,7 +1662,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
    Windows* OS.
    This check works around the possible effect that init != 0 for chunkIdx == 0.
  */
-#if KMP_OS_WINDOWS && KMP_ARCH_X86
+#if KMP_USE_X87CONTROL
         /* If we haven't already done so, save original
            FPCW and set precision to 64-bit, as Windows* OS
            on IA-32 architecture defaults to 53-bit */
@@ -1690,7 +1690,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
         } // if
       } // if
     } // while (1)
-#if KMP_OS_WINDOWS && KMP_ARCH_X86
+#if KMP_USE_X87CONTROL
     /* restore FPCW if necessary
        AC: check fpcwSet flag first because oldFpcw can be uninitialized here
     */

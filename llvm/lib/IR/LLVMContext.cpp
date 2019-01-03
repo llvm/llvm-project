@@ -61,6 +61,7 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
     {MD_associated, "associated"},
     {MD_callees, "callees"},
     {MD_irr_loop, "irr_loop"},
+    {MD_access_group, "llvm.access.group"},
   };
 
   for (auto &MDKind : MDKinds) {

@@ -1,0 +1,62 @@
+REQUIRES: system-windows, msvc
+
+RUN: %build -n --verbose --arch=32 --compiler=msvc --mode=compile-and-link -o %t/foo.exe foobar.c \
+RUN:    | FileCheck --check-prefix=X86 %s
+
+RUN: %build -n --verbose --arch=64 --compiler=msvc --mode=compile-and-link -o %t/foo.exe foobar.c \
+RUN:    | FileCheck --check-prefix=X64 %s
+
+X86: Script Arguments:
+X86:   Arch: 32
+X86:   Compiler: msvc
+X86:   Outdir: {{.*}}
+X86:   Output: {{.*}}toolchain-msvc.test.tmp\foo.exe
+X86:   Nodefaultlib: False
+X86:   Opt: none
+X86:   Mode: compile
+X86:   Clean: True
+X86:   Verbose: True
+X86:   Dryrun: True
+X86:   Inputs: foobar.c
+X86: Cleaning {{.*}}toolchain-msvc.test.tmp\foobar.ilk
+X86: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.exe-foobar.obj
+X86: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.pdb
+X86: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.exe
+X86: compiling foobar.c -> foo.exe-foobar.obj
+X86:   Command Line: {{.*}}\{{[Hh]ost[Xx]64}}\x86\cl.exe
+X86: linking foo.exe-foobar.obj -> foo.exe
+X86:   Command Line: {{.*}}\{{[Hh]ost[Xx]64}}\x86\link.exe
+X86:   Env
+X86:     LIB = {{.*}}\ATLMFC\lib\x86
+X86:           {{.*}}\lib\x86
+X86:           {{.*}}\ucrt\x86
+X86:           {{.*}}\um\x86
+X86:     PATH = {{.*}}\bin\{{[Hh]ost[Xx]64}}\x64
+
+
+X64: Script Arguments:
+X64:   Arch: 64
+X64:   Compiler: msvc
+X64:   Outdir: {{.*}}
+X64:   Output: {{.*}}toolchain-msvc.test.tmp\foo.exe
+X64:   Nodefaultlib: False
+X64:   Opt: none
+X64:   Mode: compile
+X64:   Clean: True
+X64:   Verbose: True
+X64:   Dryrun: True
+X64:   Inputs: foobar.c
+X64: Cleaning {{.*}}toolchain-msvc.test.tmp\foobar.ilk
+X64: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.exe-foobar.obj
+X64: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.pdb
+X64: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.exe
+X64: compiling foobar.c -> foo.exe-foobar.obj
+X64:   Command Line: {{.*}}\{{[Hh]ost[Xx]64}}\x64\cl.exe
+X64: linking foo.exe-foobar.obj -> foo.exe
+X64:   Command Line: {{.*}}\{{[Hh]ost[Xx]64}}\x64\link.exe
+X64:   Env
+X64:     LIB = {{.*}}\ATLMFC\lib\x64
+X64:           {{.*}}\lib\x64
+X64:           {{.*}}\ucrt\x64
+X64:           {{.*}}\um\x64
+X64:     PATH = {{.*}}\bin\{{[Hh]ost[Xx]64}}\x64

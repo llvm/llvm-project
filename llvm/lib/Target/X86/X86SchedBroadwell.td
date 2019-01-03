@@ -1229,7 +1229,7 @@ def BWWriteResGroup112 : SchedWriteRes<[BWPort23,BWPort06,BWPort0156]> {
   let NumMicroOps = 5;
   let ResourceCycles = [1,1,3];
 }
-def: InstRW<[BWWriteResGroup112], (instregex "RDRAND(16|32|64)r")>;
+def: InstRW<[BWWriteResGroup112], (instrs RDRAND16r, RDRAND32r, RDRAND64r)>;
 
 def BWWriteResGroup113 : SchedWriteRes<[BWPort1,BWPort6,BWPort23,BWPort0156]> {
   let Latency = 9;

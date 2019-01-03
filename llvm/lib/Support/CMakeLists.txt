@@ -45,6 +45,8 @@ if (MSVC)
 endif()
 
 add_llvm_library(LLVMSupport
+  AArch64TargetParser.cpp
+  ARMTargetParser.cpp
   AMDGPUMetadata.cpp
   APFloat.cpp
   APInt.cpp

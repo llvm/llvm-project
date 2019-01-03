@@ -83,17 +83,17 @@ int main(int argc, char **argv) {
 // CHECK: [[LB_I32:%.+]] = trunc i64 [[LB_VAL]] to i32
 // CHECK: store i32 [[LB_I32]], i32* [[CNT:%.+]],
 // CHECK: br label
-// CHECK: [[VAL:%.+]] = load i32, i32* [[CNT]],{{.*}}!llvm.mem.parallel_loop_access [[LOOP1:!.+]]
+// CHECK: [[VAL:%.+]] = load i32, i32* [[CNT]],{{.*}}!llvm.access.group
 // CHECK: [[VAL_I64:%.+]] = sext i32 [[VAL]] to i64
-// CHECK: [[UB_VAL:%.+]] = load i64, i64* [[UB]],{{.*}}!llvm.mem.parallel_loop_access [[LOOP1]]
+// CHECK: [[UB_VAL:%.+]] = load i64, i64* [[UB]],{{.*}}!llvm.access.group
 // CHECK: [[CMP:%.+]] = icmp ule i64 [[VAL_I64]], [[UB_VAL]]
 // CHECK: br i1 [[CMP]], label %{{.+}}, label %{{.+}}
-// CHECK: load i32, i32* %{{.*}}!llvm.mem.parallel_loop_access [[LOOP1]]
-// CHECK: store i32 %{{.*}}!llvm.mem.parallel_loop_access [[LOOP1]]
-// CHECK: load i32, i32* %{{.*}}!llvm.mem.parallel_loop_access [[LOOP1]]
+// CHECK: load i32, i32* %{{.*}}!llvm.access.group
+// CHECK: store i32 %{{.*}}!llvm.access.group
+// CHECK: load i32, i32* %{{.*}}!llvm.access.group
 // CHECK: add nsw i32 %{{.+}}, 1
-// CHECK: store i32 %{{.+}}, i32* %{{.*}}!llvm.mem.parallel_loop_access [[LOOP1]]
-// CHECK: br label %{{.*}}!llvm.loop [[LOOP1]]
+// CHECK: store i32 %{{.+}}, i32* %{{.*}}!llvm.access.group
+// CHECK: br label %{{.*}}!llvm.loop
 // CHECK: ret i32 0
 
 // CHECK: define internal i32 [[TASK2]](
@@ -113,17 +113,17 @@ int main(int argc, char **argv) {
 // CHECK: [[LB_I32:%.+]] = trunc i64 [[LB_VAL]] to i32
 // CHECK: store i32 [[LB_I32]], i32* [[CNT:%.+]],
 // CHECK: br label
-// CHECK: [[VAL:%.+]] = load i32, i32* [[CNT]],{{.*}}!llvm.mem.parallel_loop_access [[LOOP2:!.+]]
+// CHECK: [[VAL:%.+]] = load i32, i32* [[CNT]],{{.*}}!llvm.access.group
 // CHECK: [[VAL_I64:%.+]] = sext i32 [[VAL]] to i64
-// CHECK: [[UB_VAL:%.+]] = load i64, i64* [[UB]],{{.*}}!llvm.mem.parallel_loop_access [[LOOP2]]
+// CHECK: [[UB_VAL:%.+]] = load i64, i64* [[UB]],{{.*}}!llvm.access.group
 // CHECK: [[CMP:%.+]] = icmp ule i64 [[VAL_I64]], [[UB_VAL]]
 // CHECK: br i1 [[CMP]], label %{{.+}}, label %{{.+}}
-// CHECK: load i32, i32* %{{.*}}!llvm.mem.parallel_loop_access [[LOOP2]]
-// CHECK: store i32 %{{.*}}!llvm.mem.parallel_loop_access [[LOOP2]]
-// CHECK: load i32, i32* %{{.*}}!llvm.mem.parallel_loop_access [[LOOP2]]
+// CHECK: load i32, i32* %{{.*}}!llvm.access.group
+// CHECK: store i32 %{{.*}}!llvm.access.group
+// CHECK: load i32, i32* %{{.*}}!llvm.access.group
 // CHECK: add nsw i32 %{{.+}}, 1
-// CHECK: store i32 %{{.+}}, i32* %{{.*}}!llvm.mem.parallel_loop_access [[LOOP2]]
-// CHECK: br label %{{.*}}!llvm.loop [[LOOP2]]
+// CHECK: store i32 %{{.+}}, i32* %{{.*}}!llvm.access.group
+// CHECK: br label %{{.*}}!llvm.loop
 // CHECK: ret i32 0
 
 // CHECK: define internal i32 [[TASK3]](
@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
 // CHECK: [[LB_VAL:%.+]] = load i64, i64* [[LB]],
 // CHECK: store i64 [[LB_VAL]], i64* [[CNT:%.+]],
 // CHECK: br label
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
 // CHECK: br label %{{.*}}!llvm.loop
 // CHECK: ret i32 0
 
@@ -192,14 +192,14 @@ struct S {
 // CHECK: [[CMP:%.+]] = icmp ule i64 [[VAL_I64]], [[UB_VAL]]
 // CHECK: br i1 [[CMP]], label %{{.+}}, label %{{.+}}
 // CHECK: load i32, i32* %
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
 // CHECK: store i32 %
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
 // CHECK: load i32, i32* %
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
 // CHECK: add nsw i32 %{{.+}}, 1
 // CHECK: store i32 %{{.+}}, i32* %
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
 // CHECK: br label %{{.*}}!llvm.loop
 // CHECK: ret i32 0
 

@@ -46,7 +46,7 @@ std::vector<LazyObjFile *> elf::LazyObjFiles;
 std::vector<InputFile *> elf::ObjectFiles;
 std::vector<InputFile *> elf::SharedFiles;
 
-TarWriter *elf::Tar;
+std::unique_ptr<TarWriter> elf::Tar;
 
 InputFile::InputFile(Kind K, MemoryBufferRef M)
     : MB(M), GroupId(NextGroupId), FileKind(K) {

@@ -427,7 +427,7 @@ TEST_CASE(set_last_write_time_dynamic_env_test)
         epoch_time - Minutes(3) - Sec(42) - SubSec(17);
     // FreeBSD has a bug in their utimes implementation where the time is not update
     // when the number of seconds is '-1'.
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__)
     const file_time_type just_before_epoch_time =
         epoch_time - Sec(2) - SubSec(17);
 #else

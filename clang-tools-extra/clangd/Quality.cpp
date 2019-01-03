@@ -62,6 +62,10 @@ static bool hasUsingDeclInMainFile(const CodeCompletionResult &R) {
 }
 
 static SymbolQualitySignals::SymbolCategory categorize(const NamedDecl &ND) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(&ND)) {
+    if (FD->isOverloadedOperator())
+      return SymbolQualitySignals::Operator;
+  }
   class Switch
       : public ConstDeclVisitor<Switch, SymbolQualitySignals::SymbolCategory> {
   public:
@@ -75,6 +79,7 @@ static SymbolQualitySignals::SymbolCategory categorize(const NamedDecl &ND) {
     MAP(TypeAliasTemplateDecl, Type);
     MAP(ClassTemplateDecl, Type);
     MAP(CXXConstructorDecl, Constructor);
+    MAP(CXXDestructorDecl, Destructor);
     MAP(ValueDecl, Variable);
     MAP(VarTemplateDecl, Variable);
     MAP(FunctionDecl, Function);
@@ -134,9 +139,10 @@ categorize(const index::SymbolInfo &D) {
   case index::SymbolKind::InstanceProperty:
   case index::SymbolKind::ClassProperty:
   case index::SymbolKind::StaticProperty:
-  case index::SymbolKind::Destructor:
   case index::SymbolKind::ConversionFunction:
     return SymbolQualitySignals::Function;
+  case index::SymbolKind::Destructor:
+    return SymbolQualitySignals::Destructor;
   case index::SymbolKind::Constructor:
     return SymbolQualitySignals::Constructor;
   case index::SymbolKind::Variable:
@@ -231,10 +237,12 @@ float SymbolQualitySignals::evaluate() const {
     Score *= 0.8f;
     break;
   case Macro:
+  case Destructor:
+  case Operator:
     Score *= 0.5f;
     break;
-  case Unknown:
   case Constructor: // No boost constructors so they are after class types.
+  case Unknown:
     break;
   }
 
@@ -324,8 +332,8 @@ static float scopeBoost(ScopeDistance &Distance,
     return 1;
   auto D = Distance.distance(*SymbolScope);
   if (D == FileDistance::Unreachable)
-    return 0.4f;
-  return std::max(0.5, 2.0 * std::pow(0.6, D / 2.0));
+    return 0.6f;
+  return std::max(0.65, 2.0 * std::pow(0.6, D / 2.0));
 }
 
 float SymbolRelevanceSignals::evaluate() const {

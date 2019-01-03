@@ -19,9 +19,11 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
+#include "llvm/Analysis/DivergenceAnalysis.h"
 
 namespace llvm {
 class Value;
+class GPUDivergenceAnalysis;
 class LegacyDivergenceAnalysis : public FunctionPass {
 public:
   static char ID;
@@ -41,7 +43,7 @@ public:
   //
   // Even if this function returns false, V may still be divergent when used
   // in a different basic block.
-  bool isDivergent(const Value *V) const { return DivergentValues.count(V); }
+  bool isDivergent(const Value *V) const;
 
   // Returns true if V is uniform/non-divergent.
   //
@@ -53,6 +55,12 @@ public:
   void removeValue(const Value *V) { DivergentValues.erase(V); }
 
 private:
+  // Whether analysis should be performed by GPUDivergenceAnalysis.
+  bool shouldUseGPUDivergenceAnalysis(const Function &F) const;
+
+  // (optional) handle to new DivergenceAnalysis
+  std::unique_ptr<GPUDivergenceAnalysis> gpuDA;
+
   // Stores all divergent values.
   DenseSet<const Value *> DivergentValues;
 };

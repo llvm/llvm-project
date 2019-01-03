@@ -25,7 +25,6 @@ class BreakpointCommandTestCase(TestBase):
         self.build()
         self.breakpoint_command_sequence()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_script_parameters(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()
@@ -45,7 +44,6 @@ class BreakpointCommandTestCase(TestBase):
         self.addTearDownHook(
             lambda: self.runCmd("settings clear auto-confirm"))
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_delete_all_breakpoints(self):
         """Test that deleting all breakpoints works."""
         self.build()

@@ -67,6 +67,12 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New :doc:`abseil-duration-comparison
+  <clang-tidy/checks/abseil-duration-comparison>` check.
+
+  Checks for comparisons which should be done in the ``absl::Duration`` domain
+  instead of the float of integer domains.
+
 - New :doc:`abseil-duration-division
   <clang-tidy/checks/abseil-duration-division>` check.
 
@@ -86,6 +92,12 @@ Improvements to clang-tidy
 
   Checks for cases where arguments to ``absl::Duration`` factory functions are
   scaled internally and could be changed to a different factory function.
+
+- New :doc:`abseil-duration-subtraction
+  <clang-tidy/checks/abseil-duration-subtraction>` check.
+
+  Checks for cases where subtraction should be performed in the
+  ``absl::Duration`` domain.
 
 - New :doc:`abseil-faster-strsplit-delimiter
   <clang-tidy/checks/abseil-faster-strsplit-delimiter>` check.
@@ -115,6 +127,13 @@ Improvements to clang-tidy
 
   Flags uses of ``absl::StrCat()`` to append to a ``std::string``. Suggests
   ``absl::StrAppend()`` should be used instead.
+
+- New :doc:`abseil-upgrade-duration-conversions
+  <clang-tidy/checks/abseil-upgrade-duration-conversions>` check.
+
+  Finds calls to ``absl::Duration`` arithmetic operators and factories whose
+  argument needs an explicit cast to continue compiling after upcoming API
+  changes.
 
 - New :doc:`bugprone-too-small-loop-variable
   <clang-tidy/checks/bugprone-too-small-loop-variable>` check.
@@ -213,10 +232,6 @@ Improvements to clang-tidy
   <clang-tidy/checks/readability-uppercase-literal-suffix>`
   added.
 
-- The :doc:`readability-redundant-smartptr-get
-  <clang-tidy/checks/readability-redundant-smartptr-get>` check does not warn
-  about calls inside macros anymore by default.
-
 - The :doc:`cppcoreguidelines-narrowing-conversions
   <clang-tidy/checks/cppcoreguidelines-narrowing-conversions>` check now
   detects more narrowing conversions:
@@ -224,6 +239,18 @@ Improvements to clang-tidy
   - integer - floating point narrowing conversions,
   - floating point - integer narrowing conversions,
   - constants with narrowing conversions (even in ternary operator).
+
+- The :doc:`objc-property-declaration
+  <clang-tidy/checks/objc-property-declaration>` check now ignores the
+  `Acronyms` and `IncludeDefaultAcronyms` options.
+
+- The :doc:`readability-redundant-smartptr-get
+  <clang-tidy/checks/readability-redundant-smartptr-get>` check does not warn
+  about calls inside macros anymore by default.
+
+- The :doc:`readability-uppercase-literal-suffix
+  <clang-tidy/checks/readability-uppercase-literal-suffix>` check does not warn
+  about literal suffixes inside macros anymore by default.
 
 Improvements to include-fixer
 -----------------------------

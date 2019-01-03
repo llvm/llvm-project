@@ -624,21 +624,13 @@ define void @test8(i1 %c, <6 x i32>* %dst.addr, <6 x i32> %src1,<6 x i32> %src2)
 ;; Test integer select between values and constants.
 
 define i64 @test9(i64 %x, i64 %y) nounwind readnone ssp noredzone {
-; GENERIC-LABEL: test9:
-; GENERIC:       ## %bb.0:
-; GENERIC-NEXT:    cmpq $1, %rdi
-; GENERIC-NEXT:    sbbq %rax, %rax
-; GENERIC-NEXT:    orq %rsi, %rax
-; GENERIC-NEXT:    retq
-;
-; ATOM-LABEL: test9:
-; ATOM:       ## %bb.0:
-; ATOM-NEXT:    cmpq $1, %rdi
-; ATOM-NEXT:    sbbq %rax, %rax
-; ATOM-NEXT:    orq %rsi, %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; CHECK-LABEL: test9:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq $1, %rdi
+; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    orq %rsi, %rax
+; CHECK-NEXT:    retq
 ;
 ; ATHLON-LABEL: test9:
 ; ATHLON:       ## %bb.0:
@@ -672,21 +664,13 @@ define i64 @test9(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 
 ;; Same as test9
 define i64 @test9a(i64 %x, i64 %y) nounwind readnone ssp noredzone {
-; GENERIC-LABEL: test9a:
-; GENERIC:       ## %bb.0:
-; GENERIC-NEXT:    cmpq $1, %rdi
-; GENERIC-NEXT:    sbbq %rax, %rax
-; GENERIC-NEXT:    orq %rsi, %rax
-; GENERIC-NEXT:    retq
-;
-; ATOM-LABEL: test9a:
-; ATOM:       ## %bb.0:
-; ATOM-NEXT:    cmpq $1, %rdi
-; ATOM-NEXT:    sbbq %rax, %rax
-; ATOM-NEXT:    orq %rsi, %rax
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    nop
-; ATOM-NEXT:    retq
+; CHECK-LABEL: test9a:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpq $1, %rdi
+; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    orq %rsi, %rax
+; CHECK-NEXT:    retq
 ;
 ; ATHLON-LABEL: test9a:
 ; ATHLON:       ## %bb.0:
@@ -803,6 +787,7 @@ define i64 @test10(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 define i64 @test11(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 ; CHECK-LABEL: test11:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq $1, %rdi
 ; CHECK-NEXT:    sbbq %rax, %rax
 ; CHECK-NEXT:    notq %rax
@@ -842,6 +827,7 @@ define i64 @test11(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 define i64 @test11a(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 ; CHECK-LABEL: test11a:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq $1, %rdi
 ; CHECK-NEXT:    sbbq %rax, %rax
 ; CHECK-NEXT:    notq %rax

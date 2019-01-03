@@ -98,6 +98,7 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
 void InitializePlatformEarly() {}
 void MaybeReexec() {}
 void CheckASLR() {}
+void CheckMPROTECT() {}
 void DisableCoreDumperIfNecessary() {}
 void InstallDeadlySignalHandlers(SignalHandlerType handler) {}
 void SetAlternateSignalStack() {}
@@ -225,11 +226,6 @@ bool WriteToFile(fd_t fd, const void *buff, uptr buff_size, uptr *bytes_written,
   if (bytes_written)
     *bytes_written = res;
   return true;
-}
-
-bool RenameFile(const char *oldpath, const char *newpath, error_t *error_p) {
-  uptr res = rename(oldpath, newpath);
-  return !internal_iserror(res, error_p);
 }
 
 void ReleaseMemoryPagesToOS(uptr beg, uptr end) {}

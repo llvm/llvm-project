@@ -182,14 +182,19 @@ bool BenchmarkFamilies::FindBenchmarks(
             }
           }
 
-          instance.name += StrFormat("%d", arg);
+          // we know that the args are always non-negative (see 'AddRange()'),
+          // thus print as 'unsigned'. BUT, do a cast due to the 32-bit builds.
+          instance.name += StrFormat("%lu", static_cast<unsigned long>(arg));
           ++arg_i;
         }
 
         if (!IsZero(family->min_time_))
           instance.name += StrFormat("/min_time:%0.3f", family->min_time_);
-        if (family->iterations_ != 0)
-          instance.name += StrFormat("/iterations:%d", family->iterations_);
+        if (family->iterations_ != 0) {
+          instance.name +=
+              StrFormat("/iterations:%lu",
+                        static_cast<unsigned long>(family->iterations_));
+        }
         if (family->repetitions_ != 0)
           instance.name += StrFormat("/repeats:%d", family->repetitions_);
 

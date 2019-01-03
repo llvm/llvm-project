@@ -1,8 +1,7 @@
 // clang-format off
 // REQUIRES: lld
 
-// RUN: %clang_cl /Z7 /GS- /GR- /c -Xclang -fkeep-static-consts /Fo%t.obj -- %s
-// RUN: lld-link /DEBUG /nodefaultlib /entry:main /OUT:%t.exe /PDB:%t.pdb -- %t.obj
+// RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s 
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/function-types-builtins.lldbinit | FileCheck %s
 

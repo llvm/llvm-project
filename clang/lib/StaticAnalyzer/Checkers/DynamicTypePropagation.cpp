@@ -21,7 +21,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/Builtins.h"
@@ -121,11 +121,6 @@ void DynamicTypePropagation::checkDeadSymbols(SymbolReaper &SR,
     if (!SR.isLiveRegion(I->first)) {
       State = State->remove<DynamicTypeMap>(I->first);
     }
-  }
-
-  if (!SR.hasDeadSymbols()) {
-    C.addTransition(State);
-    return;
   }
 
   MostSpecializedTypeArgsMapTy TyArgMap =
@@ -637,7 +632,7 @@ static bool isObjCTypeParamDependent(QualType Type) {
       : public RecursiveASTVisitor<IsObjCTypeParamDependentTypeVisitor> {
   public:
     IsObjCTypeParamDependentTypeVisitor() : Result(false) {}
-    bool VisitObjCTypeParamType(const ObjCTypeParamType *Type) {
+    bool VisitTypedefType(const TypedefType *Type) {
       if (isa<ObjCTypeParamDecl>(Type->getDecl())) {
         Result = true;
         return false;

@@ -183,6 +183,8 @@ struct MCExtraProcessorInfo {
   unsigned NumRegisterFiles;
   const MCRegisterCostEntry *RegisterCostTable;
   unsigned NumRegisterCostEntries;
+  unsigned LoadQueueID;
+  unsigned StoreQueueID;
 };
 
 /// Machine model for scheduling, bundling, and heuristics.

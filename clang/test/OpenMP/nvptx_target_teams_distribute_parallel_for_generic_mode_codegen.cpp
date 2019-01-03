@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
 
 // CHECK: call void @__kmpc_for_static_fini(%struct.ident_t* @
 
-// CHECK: call void @__kmpc_spmd_kernel_deinit()
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 
 // CHECK: define internal void [[PARALLEL]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i{{64|32}} %{{.+}}, i{{64|32}} %{{.+}}, i{{64|32}} [[ARGC:%.+]], i32* dereferenceable{{.*}})
 // CHECK-NOT: call i8* @__kmpc_data_sharing_push_stack(

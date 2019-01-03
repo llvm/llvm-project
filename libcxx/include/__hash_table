@@ -35,15 +35,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Key, class _Tp>
 struct __hash_value_type;
 
-template <class _Key, class _Cp, class _Hash,
-          bool =  is_empty<_Hash>::value && !__libcpp_is_final<_Hash>::value>
-class __unordered_map_hasher;
-
-template <class _Key, class _Cp, class _Pred,
-          bool = is_empty<_Pred>::value && !__libcpp_is_final<_Pred>::value
-         >
-class __unordered_map_equal;
-
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Tp>
 struct __is_hash_value_type_imp : false_type {};
@@ -418,7 +409,7 @@ public:
         _LIBCPP_DEBUG_MODE(__get_db()->__insert_i(this));
     }
 
-    _LIBCPP_INLINE_VISIBILITY 
+    _LIBCPP_INLINE_VISIBILITY
     __hash_const_iterator(const __non_const_iterator& __x) _NOEXCEPT
         : __node_(__x.__node_)
     {
@@ -871,35 +862,32 @@ struct __generic_container_node_destructor<__hash_node<_Tp, _VoidPtr>, _Alloc>
 };
 #endif
 
+template <class _Key, class _Hash, class _Equal>
+struct __enforce_unordered_container_requirements {
 #ifndef _LIBCPP_CXX03_LANG
-template <class _Key, class _Hash, class _Equal, class _Alloc>
-struct __diagnose_hash_table_helper {
-  static constexpr bool __trigger_diagnostics()
-    _LIBCPP_DIAGNOSE_WARNING(__check_hash_requirements<_Key, _Hash>::value
-                         && !__invokable<_Hash const&, _Key const&>::value,
-      "the specified hash functor does not provide a const call operator")
-    _LIBCPP_DIAGNOSE_WARNING(is_copy_constructible<_Equal>::value
-                          && !__invokable<_Equal const&, _Key const&, _Key const&>::value,
-      "the specified comparator type does not provide a const call operator")
-  {
     static_assert(__check_hash_requirements<_Key, _Hash>::value,
-      "the specified hash does not meet the Hash requirements");
+    "the specified hash does not meet the Hash requirements");
     static_assert(is_copy_constructible<_Equal>::value,
-      "the specified comparator is required to be copy constructible");
-    return true;
-  }
+    "the specified comparator is required to be copy constructible");
+#endif
+    typedef int type;
 };
 
-template <class _Key, class _Value, class _Hash, class _Equal, class _Alloc>
-struct __diagnose_hash_table_helper<
-  __hash_value_type<_Key, _Value>,
-  __unordered_map_hasher<_Key, __hash_value_type<_Key, _Value>, _Hash>,
-  __unordered_map_equal<_Key, __hash_value_type<_Key, _Value>, _Equal>,
-  _Alloc>
-: __diagnose_hash_table_helper<_Key, _Hash, _Equal, _Alloc>
-{
-};
-#endif // _LIBCPP_CXX03_LANG
+template <class _Key, class _Hash, class _Equal>
+#ifndef _LIBCPP_CXX03_LANG
+    _LIBCPP_DIAGNOSE_WARNING(!__invokable<_Equal const&, _Key const&, _Key const&>::value,
+    "the specified comparator type does not provide a const call operator")
+    _LIBCPP_DIAGNOSE_WARNING(!__invokable<_Hash const&, _Key const&>::value,
+    "the specified hash functor does not provide a const call operator")
+#endif
+typename __enforce_unordered_container_requirements<_Key, _Hash, _Equal>::type
+__diagnose_unordered_container_requirements(int);
+
+// This dummy overload is used so that the compiler won't emit a spurious
+// "no matching function for call to __diagnose_unordered_xxx" diagnostic
+// when the overload above causes a hard error.
+template <class _Key, class _Hash, class _Equal>
+int __diagnose_unordered_container_requirements(void*);
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 class __hash_table
@@ -962,10 +950,6 @@ private:
     typedef unique_ptr<__next_pointer[], __bucket_list_deleter> __bucket_list;
     typedef allocator_traits<__pointer_allocator>          __pointer_alloc_traits;
     typedef typename __bucket_list_deleter::pointer       __node_pointer_pointer;
-
-#ifndef _LIBCPP_CXX03_LANG
-    static_assert(__diagnose_hash_table_helper<_Tp, _Hash, _Equal, _Alloc>::__trigger_diagnostics(), "");
-#endif
 
     // --- Member data begin ---
     __bucket_list                                         __bucket_list_;

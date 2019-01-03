@@ -938,6 +938,18 @@ iterator_range<base_reloc_iterator> COFFObjectFile::base_relocs() const {
   return make_range(base_reloc_begin(), base_reloc_end());
 }
 
+std::error_code
+COFFObjectFile::getCOFFHeader(const coff_file_header *&Res) const {
+  Res = COFFHeader;
+  return std::error_code();
+}
+
+std::error_code
+COFFObjectFile::getCOFFBigObjHeader(const coff_bigobj_file_header *&Res) const {
+  Res = COFFBigObjHeader;
+  return std::error_code();
+}
+
 std::error_code COFFObjectFile::getPE32Header(const pe32_header *&Res) const {
   Res = PE32Header;
   return std::error_code();
@@ -1051,6 +1063,16 @@ COFFObjectFile::getSymbolAuxData(COFFSymbolRef Symbol) const {
 #endif
   }
   return makeArrayRef(Aux, Symbol.getNumberOfAuxSymbols() * SymbolSize);
+}
+
+uint32_t COFFObjectFile::getSymbolIndex(COFFSymbolRef Symbol) const {
+  uintptr_t Offset =
+      reinterpret_cast<uintptr_t>(Symbol.getRawPtr()) - getSymbolTable();
+  assert(Offset % getSymbolTableEntrySize() == 0 &&
+         "Symbol did not point to the beginning of a symbol");
+  size_t Index = Offset / getSymbolTableEntrySize();
+  assert(Index < getNumberOfSymbols());
+  return Index;
 }
 
 std::error_code COFFObjectFile::getSectionName(const coff_section *Sec,
@@ -1282,6 +1304,12 @@ void COFFObjectFile::getRelocationTypeName(
 
 bool COFFObjectFile::isRelocatableObject() const {
   return !DataDirectory;
+}
+
+StringRef COFFObjectFile::mapDebugSectionName(StringRef Name) const {
+  return StringSwitch<StringRef>(Name)
+      .Case("eh_fram", "eh_frame")
+      .Default(Name);
 }
 
 bool ImportDirectoryEntryRef::

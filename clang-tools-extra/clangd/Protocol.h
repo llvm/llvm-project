@@ -25,6 +25,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_PROTOCOL_H
 
 #include "URI.h"
+#include "index/SymbolID.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 #include <bitset>
@@ -66,9 +67,25 @@ public:
   }
 };
 
+// URI in "file" scheme for a file.
 struct URIForFile {
   URIForFile() = default;
-  explicit URIForFile(std::string AbsPath);
+
+  /// Canonicalizes \p AbsPath via URI.
+  ///
+  /// File paths in URIForFile can come from index or local AST. Path from
+  /// index goes through URI transformation, and the final path is resolved by
+  /// URI scheme and could potentially be different from the original path.
+  /// Hence, we do the same transformation for all paths.
+  ///
+  /// Files can be referred to by several paths (e.g. in the presence of links).
+  /// Which one we prefer may depend on where we're coming from. \p TUPath is a
+  /// hint, and should usually be the main entrypoint file we're processing.
+  static URIForFile canonicalize(llvm::StringRef AbsPath,
+                                 llvm::StringRef TUPath);
+
+  static llvm::Expected<URIForFile> fromURI(const URI &U,
+                                            llvm::StringRef HintPath);
 
   /// Retrieves absolute path to the file.
   llvm::StringRef file() const { return File; }
@@ -89,6 +106,8 @@ struct URIForFile {
   }
 
 private:
+  explicit URIForFile(std::string &&File) : File(std::move(File)) {}
+
   std::string File;
 };
 
@@ -378,6 +397,9 @@ struct InitializationOptions {
   // the compilation database doesn't describe an opened file.
   // The command used will be approximately `clang $FILE $fallbackFlags`.
   std::vector<std::string> fallbackFlags;
+
+  /// Clients supports show file status for textDocument/clangd.fileStatus.
+  bool FileStatus = false;
 };
 bool fromJSON(const llvm::json::Value &, InitializationOptions &);
 
@@ -712,6 +734,26 @@ struct SymbolInformation {
 llvm::json::Value toJSON(const SymbolInformation &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolInformation &);
 
+/// Represents information about identifier.
+/// This is returned from textDocument/symbolInfo, which is a clangd extension.
+struct SymbolDetails {
+  std::string name;
+
+  std::string containerName;
+
+  /// Unified Symbol Resolution identifier
+  /// This is an opaque string uniquely identifying a symbol.
+  /// Unlike SymbolID, it is variable-length and somewhat human-readable.
+  /// It is a common representation across several clang tools.
+  /// (See USRGeneration.h)
+  std::string USR;
+
+  llvm::Optional<SymbolID> ID;
+};
+llvm::json::Value toJSON(const SymbolDetails &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolDetails &);
+bool operator==(const SymbolDetails &, const SymbolDetails &);
+
 /// The parameters of a Workspace Symbol Request.
 struct WorkspaceSymbolParams {
   /// A non-empty query string
@@ -732,6 +774,31 @@ struct TextDocumentPositionParams {
   Position position;
 };
 bool fromJSON(const llvm::json::Value &, TextDocumentPositionParams &);
+
+enum class CompletionTriggerKind {
+  /// Completion was triggered by typing an identifier (24x7 code
+  /// complete), manual invocation (e.g Ctrl+Space) or via API.
+  Invoked = 1,
+  /// Completion was triggered by a trigger character specified by
+  /// the `triggerCharacters` properties of the `CompletionRegistrationOptions`.
+  TriggerCharacter = 2,
+  /// Completion was re-triggered as the current completion list is incomplete.
+  TriggerTriggerForIncompleteCompletions = 3
+};
+
+struct CompletionContext {
+  /// How the completion was triggered.
+  CompletionTriggerKind triggerKind = CompletionTriggerKind::Invoked;
+  /// The trigger character (a single character) that has trigger code complete.
+  /// Is undefined if `triggerKind !== CompletionTriggerKind.TriggerCharacter`
+  std::string triggerCharacter;
+};
+bool fromJSON(const llvm::json::Value &, CompletionContext &);
+
+struct CompletionParams : TextDocumentPositionParams {
+  CompletionContext context;
+};
+bool fromJSON(const llvm::json::Value &, CompletionParams &);
 
 enum class MarkupKind {
   PlainText,
@@ -933,6 +1000,18 @@ struct ReferenceParams : public TextDocumentPositionParams {
   // For now, no options like context.includeDeclaration are supported.
 };
 bool fromJSON(const llvm::json::Value &, ReferenceParams &);
+
+/// Clangd extension: indicates the current state of the file in clangd,
+/// sent from server via the `textDocument/clangd.fileStatus` notification.
+struct FileStatus {
+  /// The text document's URI.
+  URIForFile uri;
+  /// The human-readable string presents the current state of the file, can be
+  /// shown in the UI (e.g. status bar).
+  std::string state;
+  // FIXME: add detail messages.
+};
+llvm::json::Value toJSON(const FileStatus &FStatus);
 
 } // namespace clangd
 } // namespace clang

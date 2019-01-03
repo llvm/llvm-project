@@ -30,7 +30,7 @@ static uint32_t g_initialize_count = 0;
 
 PlatformSP PlatformKalimba::CreateInstance(bool force, const ArchSpec *arch) {
   bool create = force;
-  if (create == false && arch && arch->IsValid()) {
+  if (!create && arch && arch->IsValid()) {
     const llvm::Triple &triple = arch->GetTriple();
     switch (triple.getVendor()) {
     case llvm::Triple::CSR:

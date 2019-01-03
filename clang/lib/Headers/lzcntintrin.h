@@ -31,6 +31,7 @@
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("lzcnt")))
 
+#ifndef _MSC_VER
 /// Counts the number of leading zero bits in the operand.
 ///
 /// \headerfile <x86intrin.h>
@@ -41,11 +42,8 @@
 ///    An unsigned 16-bit integer whose leading zeros are to be counted.
 /// \returns An unsigned 16-bit integer containing the number of leading zero
 ///    bits in the operand.
-static __inline__ unsigned short __DEFAULT_FN_ATTRS
-__lzcnt16(unsigned short __X)
-{
-  return __builtin_ia32_lzcnt_u16(__X);
-}
+#define __lzcnt16(X) __builtin_ia32_lzcnt_u16((unsigned short)(X))
+#endif // _MSC_VER
 
 /// Counts the number of leading zero bits in the operand.
 ///
@@ -82,6 +80,7 @@ _lzcnt_u32(unsigned int __X)
 }
 
 #ifdef __x86_64__
+#ifndef _MSC_VER
 /// Counts the number of leading zero bits in the operand.
 ///
 /// \headerfile <x86intrin.h>
@@ -93,11 +92,8 @@ _lzcnt_u32(unsigned int __X)
 /// \returns An unsigned 64-bit integer containing the number of leading zero
 ///    bits in the operand.
 /// \see _lzcnt_u64
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS
-__lzcnt64(unsigned long long __X)
-{
-  return __builtin_ia32_lzcnt_u64(__X);
-}
+#define __lzcnt64(X) __builtin_ia32_lzcnt_u64((unsigned long long)(X))
+#endif // _MSC_VER
 
 /// Counts the number of leading zero bits in the operand.
 ///

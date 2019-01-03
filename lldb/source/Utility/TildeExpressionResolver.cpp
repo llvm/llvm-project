@@ -59,7 +59,7 @@ bool StandardTildeExpressionResolver::ResolvePartial(StringRef Expr,
   struct passwd *user_entry;
   Expr = Expr.drop_front();
 
-  while ((user_entry = getpwent()) != NULL) {
+  while ((user_entry = getpwent()) != nullptr) {
     StringRef ThisName(user_entry->pw_name);
     if (!ThisName.startswith(Expr))
       continue;

@@ -93,8 +93,12 @@ temporary buffer, and CALLBACK is called with the temporary
 buffer as only argument."
   (unless buffer-file-name
     (user-error "clang-include-fixer works only in buffers that visit a file"))
-  (let ((process (if (fboundp 'make-process)
-                     ;; Prefer using ‘make-process’ if available, because
+  (let ((process (if (and (fboundp 'make-process)
+                          ;; ‘make-process’ doesn’t support remote files
+                          ;; (https://debbugs.gnu.org/cgi/bugreport.cgi?bug=28691).
+                          (not (find-file-name-handler default-directory
+                                                       'start-file-process)))
+                     ;; Prefer using ‘make-process’ if possible, because
                      ;; ‘start-process’ doesn’t allow us to separate the
                      ;; standard error from the output.
                      (clang-include-fixer--make-process callback args)
@@ -125,7 +129,7 @@ arguments.  Return the new process object."
                   :stderr stderr)))
 
 (defun clang-include-fixer--start-process (callback args)
-  "Start a new clang-incude-fixer process using `start-process'.
+  "Start a new clang-incude-fixer process using `start-file-process'.
 CALLBACK is called after the process finishes successfully; it is
 called with a single argument, the buffer where standard output
 has been inserted.  ARGS is a list of additional command line
@@ -133,7 +137,7 @@ arguments.  Return the new process object."
   (let* ((stdin (current-buffer))
          (stdout (generate-new-buffer "*clang-include-fixer output*"))
          (process-connection-type nil)
-         (process (apply #'start-process "clang-include-fixer" stdout
+         (process (apply #'start-file-process "clang-include-fixer" stdout
                          (clang-include-fixer--command args))))
     (set-process-coding-system process 'utf-8-unix 'utf-8-unix)
     (set-process-query-on-exit-flag process nil)
@@ -156,7 +160,7 @@ file name; prepends ARGS directly in front of it."
     ,(format "-input=%s" clang-include-fixer-init-string)
     "-stdin"
     ,@args
-    ,(buffer-file-name)))
+    ,(clang-include-fixer--file-local-name buffer-file-name)))
 
 (defun clang-include-fixer--sentinel (stdin stdout stderr callback)
   "Return a process sentinel for clang-include-fixer processes.
@@ -445,6 +449,12 @@ non-nil.  Otherwise return nil."
 ;; versions.
 (defalias 'clang-include-fixer--format-message
   (if (fboundp 'format-message) 'format-message 'format))
+
+;; ‘file-local-name’ is new in Emacs 26.1.  Provide a fallback for older
+;; versions.
+(defalias 'clang-include-fixer--file-local-name
+  (if (fboundp 'file-local-name) #'file-local-name
+    (lambda (file) (or (file-remote-p file 'localname) file))))
 
 (provide 'clang-include-fixer)
 ;;; clang-include-fixer.el ends here

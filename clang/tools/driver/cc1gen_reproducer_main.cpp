@@ -35,6 +35,7 @@ struct UnsavedFileHash {
 
 struct ClangInvocationInfo {
   std::string Toolchain;
+  std::string Signature;
   std::string LibclangOperation;
   std::string LibclangOptions;
   std::vector<std::string> Arguments;
@@ -60,6 +61,7 @@ template <> struct MappingTraits<UnsavedFileHash> {
 template <> struct MappingTraits<ClangInvocationInfo> {
   static void mapping(IO &IO, ClangInvocationInfo &Info) {
     IO.mapRequired("toolchain", Info.Toolchain);
+    IO.mapOptional("signature", Info.Signature);
     IO.mapOptional("libclang.operation", Info.LibclangOperation);
     IO.mapOptional("libclang.opts", Info.LibclangOptions);
     IO.mapRequired("args", Info.Arguments);

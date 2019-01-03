@@ -53,6 +53,6 @@ define i32 @test_throw1(i8* %p) {
 ; CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
 ; CHECK-NEXT:         Event:           0
 
-; SEC:          Type: EVENT (0xC)
+; SEC:          Type: EVENT (0xD)
 ; SEC-NEXT:     Size: 3
 ; SEC-NEXT:     Offset: 97

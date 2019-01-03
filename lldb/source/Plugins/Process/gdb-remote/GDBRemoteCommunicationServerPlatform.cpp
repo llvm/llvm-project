@@ -538,8 +538,8 @@ const FileSpec &GDBRemoteCommunicationServerPlatform::GetDomainSocketDir() {
 
 FileSpec
 GDBRemoteCommunicationServerPlatform::GetDomainSocketPath(const char *prefix) {
-  llvm::SmallString<PATH_MAX> socket_path;
-  llvm::SmallString<PATH_MAX> socket_name(
+  llvm::SmallString<128> socket_path;
+  llvm::SmallString<128> socket_name(
       (llvm::StringRef(prefix) + ".%%%%%%").str());
 
   FileSpec socket_path_spec(GetDomainSocketDir());

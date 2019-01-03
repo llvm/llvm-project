@@ -25,7 +25,7 @@ void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded)) {
   SoftRssLimitExceededCallback = Callback;
 }
 
-#if SANITIZER_LINUX && !SANITIZER_GO
+#if (SANITIZER_LINUX || SANITIZER_NETBSD) && !SANITIZER_GO
 // Weak default implementation for when sanitizer_stackdepot is not linked in.
 SANITIZER_WEAK_ATTRIBUTE StackDepotStats *StackDepotGetStats() {
   return nullptr;
@@ -114,7 +114,7 @@ void WriteToSyslog(const char *msg) {
 }
 
 void MaybeStartBackgroudThread() {
-#if SANITIZER_LINUX && \
+#if (SANITIZER_LINUX || SANITIZER_NETBSD) && \
     !SANITIZER_GO  // Need to implement/test on other platforms.
   // Start the background thread if one of the rss limits is given.
   if (!common_flags()->hard_rss_limit_mb &&

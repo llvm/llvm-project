@@ -88,7 +88,7 @@ bool CFCMutableArray::SetValueAtIndex(CFIndex idx, const void *value) {
 bool CFCMutableArray::AppendValue(const void *value, bool can_create) {
   CFMutableArrayRef array = get();
   if (array == NULL) {
-    if (can_create == false)
+    if (!can_create)
       return false;
     array =
         ::CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
@@ -106,7 +106,7 @@ bool CFCMutableArray::AppendCStringAsCFString(const char *s,
                                               bool can_create) {
   CFMutableArrayRef array = get();
   if (array == NULL) {
-    if (can_create == false)
+    if (!can_create)
       return false;
     array =
         ::CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
@@ -124,7 +124,7 @@ bool CFCMutableArray::AppendFileSystemRepresentationAsCFString(
     const char *s, bool can_create) {
   CFMutableArrayRef array = get();
   if (array == NULL) {
-    if (can_create == false)
+    if (!can_create)
       return false;
     array =
         ::CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);

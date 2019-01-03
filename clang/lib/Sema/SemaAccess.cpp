@@ -1877,22 +1877,31 @@ void Sema::CheckLookupAccess(const LookupResult &R) {
 /// specifiers into account, but no member access expressions and such.
 ///
 /// \param Target the declaration to check if it can be accessed
-/// \param Ctx the class/context from which to start the search
+/// \param NamingClass the class in which the lookup was started.
+/// \param BaseType type of the left side of member access expression.
+///        \p BaseType and \p NamingClass are used for C++ access control.
+///        Depending on the lookup case, they should be set to the following:
+///        - lhs.target (member access without a qualifier):
+///          \p BaseType and \p NamingClass are both the type of 'lhs'.
+///        - lhs.X::target (member access with a qualifier):
+///          BaseType is the type of 'lhs', NamingClass is 'X'
+///        - X::target (qualified lookup without member access):
+///          BaseType is null, NamingClass is 'X'.
+///        - target (unqualified lookup).
+///          BaseType is null, NamingClass is the parent class of 'target'.
 /// \return true if the Target is accessible from the Class, false otherwise.
-bool Sema::IsSimplyAccessible(NamedDecl *Target, DeclContext *Ctx) {
-  if (CXXRecordDecl *Class = dyn_cast<CXXRecordDecl>(Ctx)) {
-    if (!Target->isCXXClassMember())
-      return true;
-
-    if (Target->getAccess() == AS_public)
-      return true;
-    QualType qType = Class->getTypeForDecl()->getCanonicalTypeInternal();
+bool Sema::IsSimplyAccessible(NamedDecl *Target, CXXRecordDecl *NamingClass,
+                              QualType BaseType) {
+  // Perform the C++ accessibility checks first.
+  if (Target->isCXXClassMember() && NamingClass) {
+    if (!getLangOpts().CPlusPlus)
+      return false;
     // The unprivileged access is AS_none as we don't know how the member was
     // accessed, which is described by the access in DeclAccessPair.
     // `IsAccessible` will examine the actual access of Target (i.e.
     // Decl->getAccess()) when calculating the access.
-    AccessTarget Entity(Context, AccessedEntity::Member, Class,
-                        DeclAccessPair::make(Target, AS_none), qType);
+    AccessTarget Entity(Context, AccessedEntity::Member, NamingClass,
+                        DeclAccessPair::make(Target, AS_none), BaseType);
     EffectiveContext EC(CurContext);
     return ::IsAccessible(*this, EC, Entity) != ::AR_inaccessible;
   }

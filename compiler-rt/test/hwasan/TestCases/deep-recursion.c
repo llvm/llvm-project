@@ -30,25 +30,25 @@ __attribute__((noinline)) void FUNC10() { int x; USE(&x); FUNC9(); }
 
 int main() { FUNC10(); }
 
-// D1: Previosly allocated frames
+// D1: Previously allocated frames
 // D1: in OOB
 // D1-NOT: in FUNC
 // D1: Memory tags around the buggy address
 
-// D2: Previosly allocated frames
+// D2: Previously allocated frames
 // D2: in OOB
 // D2: in FUNC1
 // D2-NOT: in FUNC
 // D2: Memory tags around the buggy address
 
-// D3: Previosly allocated frames
+// D3: Previously allocated frames
 // D3: in OOB
 // D3: in FUNC1
 // D3: in FUNC2
 // D3-NOT: in FUNC
 // D3: Memory tags around the buggy address
 
-// D5: Previosly allocated frames
+// D5: Previously allocated frames
 // D5: in OOB
 // D5: in FUNC1
 // D5: in FUNC2
@@ -57,7 +57,7 @@ int main() { FUNC10(); }
 // D5-NOT: in FUNC
 // D5: Memory tags around the buggy address
 
-// DEFAULT: Previosly allocated frames
+// DEFAULT: Previously allocated frames
 // DEFAULT: in OOB
 // DEFAULT: in FUNC1
 // DEFAULT: in FUNC2

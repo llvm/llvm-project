@@ -492,7 +492,13 @@ namespace dr647 { // dr647: yes
   struct C {
     constexpr C(NonLiteral);
     constexpr C(NonLiteral, int) {} // expected-error {{not a literal type}}
-    constexpr C() try {} catch (...) {} // expected-error {{function try block}}
+    constexpr C() try {} catch (...) {}
+#if __cplusplus <= 201703L
+    // expected-error@-2 {{function try block in constexpr constructor is a C++2a extension}}
+#endif
+#if __cplusplus < 201402L
+    // expected-error@-5 {{use of this statement in a constexpr constructor is a C++14 extension}}
+#endif
   };
 
   struct D {

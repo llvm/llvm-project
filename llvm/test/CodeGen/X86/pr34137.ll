@@ -11,11 +11,12 @@ define void @pr34127() {
 ; CHECK-NEXT:    movzwl {{.*}}(%rip), %eax
 ; CHECK-NEXT:    movzwl {{.*}}(%rip), %ecx
 ; CHECK-NEXT:    andl %eax, %ecx
-; CHECK-NEXT:    andl %eax, %ecx
-; CHECK-NEXT:    movzwl %cx, %ecx
-; CHECK-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    andl %ecx, %edx
+; CHECK-NEXT:    movzwl %dx, %edx
+; CHECK-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    testw %cx, %cx
+; CHECK-NEXT:    testw %cx, %ax
 ; CHECK-NEXT:    sete %dl
 ; CHECK-NEXT:    andl %eax, %edx
 ; CHECK-NEXT:    movq %rdx, {{.*}}(%rip)

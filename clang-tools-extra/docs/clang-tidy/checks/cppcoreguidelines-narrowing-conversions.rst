@@ -27,15 +27,15 @@ This check will flag:
    For example: ``int i; i+= 0.1;``.
 
 
- Options
- -------
+Options
+-------
 
- .. option:: WarnOnFloatingPointNarrowingConversion
+.. option:: WarnOnFloatingPointNarrowingConversion
 
     When non-zero, the check will warn on narrowing floating point conversion
     (e.g. ``double`` to ``float``). `1` by default.
 
-  .. option:: PedanticMode
+.. option:: PedanticMode
 
     When non-zero, the check will warn on assigning a floating point constant
     to an integer value even if the floating point value is exactly

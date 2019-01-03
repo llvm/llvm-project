@@ -389,9 +389,10 @@ namespace llvm {
   ///
   ModulePass *createLowerEmuTLSPass();
 
-  /// This pass lowers the \@llvm.load.relative intrinsic to instructions.
-  /// This is unsafe to do earlier because a pass may combine the constant
-  /// initializer into the load, which may result in an overflowing evaluation.
+  /// This pass lowers the \@llvm.load.relative and \@llvm.objc.* intrinsics to
+  /// instructions.  This is unsafe to do earlier because a pass may combine the
+  /// constant initializer into the load, which may result in an overflowing
+  /// evaluation.
   ModulePass *createPreISelIntrinsicLoweringPass();
 
   /// GlobalMerge - This pass merges internal (by default) globals into structs

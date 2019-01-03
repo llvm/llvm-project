@@ -77,31 +77,26 @@ class Z3Sort : public SMTSort {
 
 public:
   /// Default constructor, mainly used by make_shared
-  Z3Sort(Z3Context &C, Z3_sort ZS) : SMTSort(), Context(C), Sort(ZS) {
+  Z3Sort(Z3Context &C, Z3_sort ZS) : Context(C), Sort(ZS) {
     Z3_inc_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
   }
 
   /// Override implicit copy constructor for correct reference counting.
-  Z3Sort(const Z3Sort &Copy)
-      : SMTSort(), Context(Copy.Context), Sort(Copy.Sort) {
+  Z3Sort(const Z3Sort &Other) : Context(Other.Context), Sort(Other.Sort) {
     Z3_inc_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
   }
 
-  /// Provide move constructor
-  Z3Sort(Z3Sort &&Move) : SMTSort(), Context(Move.Context), Sort(nullptr) {
-    *this = std::move(Move);
-  }
-
-  /// Provide move assignment constructor
-  Z3Sort &operator=(Z3Sort &&Move) {
-    if (this != &Move) {
-      if (Sort)
-        Z3_dec_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
-      Sort = Move.Sort;
-      Move.Sort = nullptr;
-    }
+  /// Override implicit copy assignment constructor for correct reference
+  /// counting.
+  Z3Sort &operator=(const Z3Sort &Other) {
+    Z3_inc_ref(Context.Context, reinterpret_cast<Z3_ast>(Other.Sort));
+    Z3_dec_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
+    Sort = Other.Sort;
     return *this;
   }
+
+  Z3Sort(Z3Sort &&Other) = delete;
+  Z3Sort &operator=(Z3Sort &&Other) = delete;
 
   ~Z3Sort() {
     if (Sort)
@@ -134,13 +129,6 @@ public:
                          static_cast<const Z3Sort &>(Other).Sort);
   }
 
-  Z3Sort &operator=(const Z3Sort &Move) {
-    Z3_inc_ref(Context.Context, reinterpret_cast<Z3_ast>(Move.Sort));
-    Z3_dec_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
-    Sort = Move.Sort;
-    return *this;
-  }
-
   void print(raw_ostream &OS) const override {
     OS << Z3_sort_to_string(Context.Context, Sort);
   }
@@ -167,21 +155,17 @@ public:
     Z3_inc_ref(Context.Context, AST);
   }
 
-  /// Provide move constructor
-  Z3Expr(Z3Expr &&Move) : SMTExpr(), Context(Move.Context), AST(nullptr) {
-    *this = std::move(Move);
-  }
-
-  /// Provide move assignment constructor
-  Z3Expr &operator=(Z3Expr &&Move) {
-    if (this != &Move) {
-      if (AST)
-        Z3_dec_ref(Context.Context, AST);
-      AST = Move.AST;
-      Move.AST = nullptr;
-    }
+  /// Override implicit copy assignment constructor for correct reference
+  /// counting.
+  Z3Expr &operator=(const Z3Expr &Other) {
+    Z3_inc_ref(Context.Context, Other.AST);
+    Z3_dec_ref(Context.Context, AST);
+    AST = Other.AST;
     return *this;
   }
+
+  Z3Expr(Z3Expr &&Other) = delete;
+  Z3Expr &operator=(Z3Expr &&Other) = delete;
 
   ~Z3Expr() {
     if (AST)
@@ -202,14 +186,6 @@ public:
                         static_cast<const Z3Expr &>(Other).AST);
   }
 
-  /// Override implicit move constructor for correct reference counting.
-  Z3Expr &operator=(const Z3Expr &Move) {
-    Z3_inc_ref(Context.Context, Move.AST);
-    Z3_dec_ref(Context.Context, AST);
-    AST = Move.AST;
-    return *this;
-  }
-
   void print(raw_ostream &OS) const override {
     OS << Z3_ast_to_string(Context.Context, AST);
   }
@@ -228,30 +204,13 @@ class Z3Model {
 
 public:
   Z3Model(Z3Context &C, Z3_model ZM) : Context(C), Model(ZM) {
-    assert(C.Context != nullptr);
     Z3_model_inc_ref(Context.Context, Model);
   }
 
-  /// Override implicit copy constructor for correct reference counting.
-  Z3Model(const Z3Model &Copy) : Context(Copy.Context), Model(Copy.Model) {
-    Z3_model_inc_ref(Context.Context, Model);
-  }
-
-  /// Provide move constructor
-  Z3Model(Z3Model &&Move) : Context(Move.Context), Model(nullptr) {
-    *this = std::move(Move);
-  }
-
-  /// Provide move assignment constructor
-  Z3Model &operator=(Z3Model &&Move) {
-    if (this != &Move) {
-      if (Model)
-        Z3_model_dec_ref(Context.Context, Model);
-      Model = Move.Model;
-      Move.Model = nullptr;
-    }
-    return *this;
-  }
+  Z3Model(const Z3Model &Other) = delete;
+  Z3Model(Z3Model &&Other) = delete;
+  Z3Model &operator=(Z3Model &Other) = delete;
+  Z3Model &operator=(Z3Model &&Other) = delete;
 
   ~Z3Model() {
     if (Model)
@@ -310,32 +269,14 @@ class Z3Solver : public SMTSolver {
   Z3_solver Solver;
 
 public:
-  Z3Solver() : SMTSolver(), Solver(Z3_mk_simple_solver(Context.Context)) {
+  Z3Solver() : Solver(Z3_mk_simple_solver(Context.Context)) {
     Z3_solver_inc_ref(Context.Context, Solver);
   }
 
-  /// Override implicit copy constructor for correct reference counting.
-  Z3Solver(const Z3Solver &Copy)
-      : SMTSolver(), Context(Copy.Context), Solver(Copy.Solver) {
-    Z3_solver_inc_ref(Context.Context, Solver);
-  }
-
-  /// Provide move constructor
-  Z3Solver(Z3Solver &&Move)
-      : SMTSolver(), Context(Move.Context), Solver(nullptr) {
-    *this = std::move(Move);
-  }
-
-  /// Provide move assignment constructor
-  Z3Solver &operator=(Z3Solver &&Move) {
-    if (this != &Move) {
-      if (Solver)
-        Z3_solver_dec_ref(Context.Context, Solver);
-      Solver = Move.Solver;
-      Move.Solver = nullptr;
-    }
-    return *this;
-  }
+  Z3Solver(const Z3Solver &Other) = delete;
+  Z3Solver(Z3Solver &&Other) = delete;
+  Z3Solver &operator=(Z3Solver &Other) = delete;
+  Z3Solver &operator=(Z3Solver &&Other) = delete;
 
   ~Z3Solver() {
     if (Solver)
@@ -809,7 +750,7 @@ public:
   }
 
   bool getInterpretation(const SMTExprRef &Exp, llvm::APSInt &Int) override {
-    Z3Model Model = getModel();
+    Z3Model Model(Context, Z3_solver_get_model(Context.Context, Solver));
     Z3_func_decl Func = Z3_get_app_decl(
         Context.Context, Z3_to_app(Context.Context, toZ3Expr(*Exp).AST));
     if (Z3_model_has_interp(Context.Context, Model.Model, Func) != Z3_L_TRUE)
@@ -823,7 +764,7 @@ public:
   }
 
   bool getInterpretation(const SMTExprRef &Exp, llvm::APFloat &Float) override {
-    Z3Model Model = getModel();
+    Z3Model Model(Context, Z3_solver_get_model(Context.Context, Solver));
     Z3_func_decl Func = Z3_get_app_decl(
         Context.Context, Z3_to_app(Context.Context, toZ3Expr(*Exp).AST));
     if (Z3_model_has_interp(Context.Context, Model.Model, Func) != Z3_L_TRUE)
@@ -852,12 +793,6 @@ public:
   void pop(unsigned NumStates = 1) override {
     assert(Z3_solver_get_num_scopes(Context.Context, Solver) >= NumStates);
     return Z3_solver_pop(Context.Context, Solver, NumStates);
-  }
-
-  /// Get a model from the solver. Caller should check the model is
-  /// satisfiable.
-  Z3Model getModel() {
-    return Z3Model(Context, Z3_solver_get_model(Context.Context, Solver));
   }
 
   bool isFPSupported() override { return true; }

@@ -2087,8 +2087,7 @@ static bool isBitfieldPositioningOp(SelectionDAG *CurDAG, SDValue Op,
   (void)BitWidth;
   assert(BitWidth == 32 || BitWidth == 64);
 
-  KnownBits Known;
-  CurDAG->computeKnownBits(Op, Known);
+  KnownBits Known = CurDAG->computeKnownBits(Op);
 
   // Non-zero in the sense that they're not provably zero, which is the key
   // point if we want to use this value
@@ -2167,8 +2166,7 @@ static bool tryBitfieldInsertOpFromOrAndImm(SDNode *N, SelectionDAG *CurDAG) {
 
   // Compute the Known Zero for the AND as this allows us to catch more general
   // cases than just looking for AND with imm.
-  KnownBits Known;
-  CurDAG->computeKnownBits(And, Known);
+  KnownBits Known = CurDAG->computeKnownBits(And);
 
   // Non-zero in the sense that they're not provably zero, which is the key
   // point if we want to use this value.
@@ -2309,8 +2307,7 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
     // This allows to catch more general case than just looking for
     // AND with imm. Indeed, simplify-demanded-bits may have removed
     // the AND instruction because it proves it was useless.
-    KnownBits Known;
-    CurDAG->computeKnownBits(OrOpd1Val, Known);
+    KnownBits Known = CurDAG->computeKnownBits(OrOpd1Val);
 
     // Check if there is enough room for the second operand to appear
     // in the first one

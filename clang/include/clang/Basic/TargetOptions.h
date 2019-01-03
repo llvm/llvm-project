@@ -15,10 +15,11 @@
 #ifndef LLVM_CLANG_BASIC_TARGETOPTIONS_H
 #define LLVM_CLANG_BASIC_TARGETOPTIONS_H
 
+#include "clang/Basic/OpenCLOptions.h"
+#include "llvm/Support/VersionTuple.h"
+#include "llvm/Target/TargetOptions.h"
 #include <string>
 #include <vector>
-#include "clang/Basic/OpenCLOptions.h"
-#include "llvm/Target/TargetOptions.h"
 
 namespace clang {
 
@@ -73,6 +74,9 @@ public:
   // "default" for the case when the user has not explicitly specified a
   // code model.
   std::string CodeModel;
+
+  /// The version of the SDK which was used during the compilation.
+  llvm::VersionTuple SDKVersion;
 };
 
 }  // end namespace clang

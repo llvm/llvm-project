@@ -1,0 +1,58 @@
+import("//clang/test/clang_lit_site_cfg_files.gni")
+import("//lld/test/lld_lit_site_cfg_files.gni")
+
+action("llvm-lit") {
+  script = "//llvm/utils/gn/build/write_cmake_config.py"
+
+  sources = [
+    "llvm-lit.in",
+  ]
+  outputs = [
+    "$root_out_dir/bin/llvm-lit",
+  ]
+
+  if (host_os == "win") {
+    # llvm-lit needs suffix.py for multiprocess to find a main module.
+    outputs[0] = "${outputs[0]}.py"
+  }
+
+  # lit's lit/llvm/config.py shells out to llvm-config.
+  deps = [
+    "//llvm/tools/llvm-config",
+  ]
+
+  # Generate LLVM_LIT_CONFIG_MAP parameter.
+  # llvm-lit contains a mapping from each lit.cfg.py file to the corresponding
+  # generated llvm.site.cfg.py file, so llvm-lit depends on all the targets to
+  # generate the site.cfg.py file.
+  config_map = ""
+
+  deps += [
+    "//clang/test:lit_site_cfg",
+    "//clang/test:lit_unit_site_cfg",
+    "//lld/test:lit_site_cfg",
+    "//lld/test:lit_unit_site_cfg",
+  ]
+
+  # Note: \n is converted into a newline by write_cmake_config.py, not by gn.
+  config_map += "map_config('" + rebase_path("//clang/test/lit.cfg.py") +
+                "', '" + rebase_path(clang_lit_site_cfg_file) + "')\n"
+  config_map += "map_config('" + rebase_path("//clang/test/Unit/lit.cfg.py") +
+                "', '" + rebase_path(clang_lit_unit_site_cfg_file) + "')\n"
+  config_map += "map_config('" + rebase_path("//lld/test/lit.cfg.py") + "', '" +
+                rebase_path(lld_lit_site_cfg_file) + "')\n"
+  config_map += "map_config('" + rebase_path("//lld/test/Unit/lit.cfg.py") +
+                "', '" + rebase_path(lld_lit_unit_site_cfg_file) + "')\n"
+
+  args = [
+    "-o",
+    rebase_path(outputs[0], root_out_dir),
+    rebase_path(sources[0], root_out_dir),
+
+    "LLVM_SOURCE_DIR=" + rebase_path("//llvm"),
+    "LLVM_BINARY_DIR=" +
+        rebase_path(get_label_info("//llvm", "target_out_dir")),
+    "BUILD_MODE=.",
+    "LLVM_LIT_CONFIG_MAP=" + config_map,
+  ]
+}

@@ -620,3 +620,20 @@ TEST_F(SymbolFilePDBTests, TestNullName) {
   EXPECT_EQ(0u, num_results);
   EXPECT_EQ(0u, results.GetSize());
 }
+
+TEST_F(SymbolFilePDBTests, TestFindSymbolsWithNameAndType) {
+  FileSpec fspec(m_pdb_test_exe.c_str());
+  ArchSpec aspec("i686-pc-windows");
+  lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
+
+  SymbolContextList sc_list;
+  EXPECT_EQ(1u,
+            module->FindSymbolsWithNameAndType(ConstString("?foo@@YAHH@Z"),
+                                               lldb::eSymbolTypeAny, sc_list));
+  EXPECT_EQ(1u, sc_list.GetSize());
+
+  SymbolContext sc;
+  EXPECT_TRUE(sc_list.GetContextAtIndex(0, sc));
+  EXPECT_STREQ("int foo(int)",
+               sc.GetFunctionName(Mangled::ePreferDemangled).AsCString());
+}

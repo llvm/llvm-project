@@ -18,10 +18,7 @@ void f0() { id x = @protocol(P2); }
 // RUN: grep OBJC_PROTOCOL_P3 %t | count 3
 // RUN: not grep OBJC_PROTOCOL_INSTANCE_METHODS_P3 %t
 @protocol P3;
-@interface UserP3<P3>
-@end
-@implementation UserP3
-@end
+void f1() { id x = @protocol(P3); }
 
 // Definition triggered by class reference.
 // RUN: grep OBJC_PROTOCOL_P4 %t | count 3
@@ -34,16 +31,10 @@ void f0() { id x = @protocol(P2); }
 // RUN: grep OBJC_PROTOCOL_P5 %t | count 3
 // RUN: grep OBJC_PROTOCOL_INSTANCE_METHODS_P5 %t | count 3
 @protocol P5;
-@interface UserP5<P5> // This generates a forward
-                      // reference, which has to be
-                      // updated on the next line.
-@end
-@protocol P5 -im1; @end
-@implementation UserP5
-
-- im1 { }
-
-@end
+void f2() { id x = @protocol(P5); } // This generates a forward
+                                    // reference, which has to be
+                                    // updated on the next line.
+@protocol P5 -im1; @end               
 
 // Protocol reference following definition.
 // RUN: grep OBJC_PROTOCOL_P6 %t | count 4

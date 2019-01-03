@@ -68,6 +68,7 @@ struct FileHeader {
   ELF_ELFCLASS Class;
   ELF_ELFDATA Data;
   ELF_ELFOSABI OSABI;
+  llvm::yaml::Hex8 ABIVersion;
   ELF_ET Type;
   ELF_EM Machine;
   ELF_EF Flags;

@@ -139,6 +139,10 @@
 #define FTN_GET_DEFAULT_ALLOCATOR omp_get_default_allocator
 #define FTN_ALLOC omp_alloc
 #define FTN_FREE omp_free
+#define FTN_SET_AFFINITY_FORMAT omp_set_affinity_format
+#define FTN_GET_AFFINITY_FORMAT omp_get_affinity_format
+#define FTN_DISPLAY_AFFINITY omp_display_affinity
+#define FTN_CAPTURE_AFFINITY omp_capture_affinity
 #endif
 
 #endif /* KMP_FTN_PLAIN */
@@ -265,6 +269,10 @@
 #define FTN_GET_DEFAULT_ALLOCATOR omp_get_default_allocator_
 #define FTN_ALLOC omp_alloc_
 #define FTN_FREE omp_free_
+#define FTN_SET_AFFINITY_FORMAT omp_set_affinity_format_
+#define FTN_GET_AFFINITY_FORMAT omp_get_affinity_format_
+#define FTN_DISPLAY_AFFINITY omp_display_affinity_
+#define FTN_CAPTURE_AFFINITY omp_capture_affinity_
 #endif
 
 #endif /* KMP_FTN_APPEND */
@@ -391,6 +399,10 @@
 #define FTN_GET_DEFAULT_ALLOCATOR OMP_GET_DEFAULT_ALLOCATOR
 #define FTN_ALLOC OMP_ALLOC
 #define FTN_FREE OMP_FREE
+#define FTN_SET_AFFINITY_FORMAT OMP_SET_AFFINITY_FORMAT
+#define FTN_GET_AFFINITY_FORMAT OMP_GET_AFFINITY_FORMAT
+#define FTN_DISPLAY_AFFINITY OMP_DISPLAY_AFFINITY
+#define FTN_CAPTURE_AFFINITY OMP_CAPTURE_AFFINITY
 #endif
 
 #endif /* KMP_FTN_UPPER */
@@ -517,6 +529,10 @@
 #define FTN_GET_DEFAULT_ALLOCATOR OMP_GET_DEFAULT_ALLOCATOR_
 #define FTN_ALLOC OMP_ALLOC_
 #define FTN_FREE OMP_FREE_
+#define FTN_SET_AFFINITY_FORMAT OMP_SET_AFFINITY_FORMAT_
+#define FTN_GET_AFFINITY_FORMAT OMP_GET_AFFINITY_FORMAT_
+#define FTN_DISPLAY_AFFINITY OMP_DISPLAY_AFFINITY_
+#define FTN_CAPTURE_AFFINITY OMP_CAPTURE_AFFINITY_
 #endif
 
 #endif /* KMP_FTN_UAPPEND */

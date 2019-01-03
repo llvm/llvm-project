@@ -195,7 +195,7 @@ struct ClassWithMembers {
   int AAA();
   int BBB();
   int CCC();
-}
+};
 int main() { ClassWithMembers().^ }
       )cpp",
                              /*IndexSymbols=*/{}, Opts);
@@ -416,6 +416,11 @@ TEST(CompletionTest, InjectedTypename) {
               Has("X"));
 }
 
+TEST(CompletionTest, SkipInjectedWhenUnqualified) {
+  EXPECT_THAT(completions("struct X { void f() { X^ }};").Completions,
+              ElementsAre(Named("X"), Named("~X")));
+}
+
 TEST(CompletionTest, Snippets) {
   clangd::CodeCompleteOptions Opts;
   auto Results = completions(
@@ -511,7 +516,8 @@ TEST(CompletionTest, ScopedWithFilter) {
 
 TEST(CompletionTest, ReferencesAffectRanking) {
   auto Results = completions("int main() { abs^ }", {ns("absl"), func("absb")});
-  EXPECT_THAT(Results.Completions, HasSubsequence(Named("absb"), Named("absl")));
+  EXPECT_THAT(Results.Completions,
+              HasSubsequence(Named("absb"), Named("absl")));
   Results = completions("int main() { abs^ }",
                         {withReferences(10000, ns("absl")), func("absb")});
   EXPECT_THAT(Results.Completions,
@@ -623,7 +629,7 @@ TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
                              R"cpp(
           namespace ns {
             class X;
-            class Y {}
+            class Y {};
           }
           int main() { ns::^ }
       )cpp",
@@ -646,7 +652,7 @@ TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
       #include "bar.h"
       namespace ns { int local; }
       void f() { ns::^; }
-      void f() { ns::preamble().$2^; }
+      void f2() { ns::preamble().$2^; }
   )cpp");
   runAddDocument(Server, File, Test.code());
   clangd::CodeCompleteOptions Opts = {};
@@ -1657,7 +1663,8 @@ TEST(CompletionTest, CompletionTokenRange) {
     auto Results = completions(Server, TestCode.code(), TestCode.point());
 
     EXPECT_EQ(Results.Completions.size(), 1u);
-    EXPECT_THAT(Results.Completions.front().CompletionTokenRange, TestCode.range());
+    EXPECT_THAT(Results.Completions.front().CompletionTokenRange,
+                TestCode.range());
   }
 }
 
@@ -1922,7 +1929,7 @@ TEST(CompletionTest, EnableSpeculativeIndexRequest) {
       namespace ns1 { int abc; }
       namespace ns2 { int abc; }
       void f() { ns1::ab$1^; ns1::ab$2^; }
-      void f() { ns2::ab$3^; }
+      void f2() { ns2::ab$3^; }
   )cpp");
   runAddDocument(Server, File, Test.code());
   clangd::CodeCompleteOptions Opts = {};
@@ -2090,11 +2097,10 @@ TEST(SignatureHelpTest, ConstructorInitializeFields) {
         A a_elem;
       };
     )cpp");
-    EXPECT_THAT(Results.signatures, UnorderedElementsAre(
-            Sig("A(int)", {"int"}),
-            Sig("A(A &&)", {"A &&"}),
-            Sig("A(const A &)", {"const A &"})
-        ));
+    EXPECT_THAT(Results.signatures,
+                UnorderedElementsAre(Sig("A(int)", {"int"}),
+                                     Sig("A(A &&)", {"A &&"}),
+                                     Sig("A(const A &)", {"const A &"})));
   }
   {
     const auto Results = signatures(R"cpp(
@@ -2110,11 +2116,10 @@ TEST(SignatureHelpTest, ConstructorInitializeFields) {
         C c_elem;
       };
     )cpp");
-    EXPECT_THAT(Results.signatures, UnorderedElementsAre(
-            Sig("A(int)", {"int"}),
-            Sig("A(A &&)", {"A &&"}),
-            Sig("A(const A &)", {"const A &"})
-        ));
+    EXPECT_THAT(Results.signatures,
+                UnorderedElementsAre(Sig("A(int)", {"int"}),
+                                     Sig("A(A &&)", {"A &&"}),
+                                     Sig("A(const A &)", {"const A &"})));
   }
 }
 
@@ -2129,10 +2134,9 @@ TEST(CompletionTest, IncludedCompletionKinds) {
   IgnoreDiagnostics DiagConsumer;
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
   auto Results = completions(Server,
-      R"cpp(
+                             R"cpp(
         #include "^"
-      )cpp"
-      );
+      )cpp");
   EXPECT_THAT(Results.Completions,
               AllOf(Has("sub/", CompletionItemKind::Folder),
                     Has("bar.h\"", CompletionItemKind::File)));
@@ -2142,8 +2146,7 @@ TEST(CompletionTest, NoCrashAtNonAlphaIncludeHeader) {
   auto Results = completions(
       R"cpp(
         #include "./^"
-      )cpp"
-      );
+      )cpp");
   EXPECT_TRUE(Results.Completions.empty());
 }
 
@@ -2216,9 +2219,8 @@ TEST(CompletionTest, ObjectiveCMethodNoArguments) {
       @end
       Foo *foo = [Foo new]; int y = [foo v^]
     )objc",
-    /*IndexSymbols=*/{},
-    /*Opts=*/{},
-    "Foo.m");
+                             /*IndexSymbols=*/{},
+                             /*Opts=*/{}, "Foo.m");
 
   auto C = Results.Completions;
   EXPECT_THAT(C, ElementsAre(Named("value")));
@@ -2235,9 +2237,8 @@ TEST(CompletionTest, ObjectiveCMethodOneArgument) {
       @end
       Foo *foo = [Foo new]; int y = [foo v^]
     )objc",
-    /*IndexSymbols=*/{},
-    /*Opts=*/{},
-    "Foo.m");
+                             /*IndexSymbols=*/{},
+                             /*Opts=*/{}, "Foo.m");
 
   auto C = Results.Completions;
   EXPECT_THAT(C, ElementsAre(Named("valueForCharacter:")));
@@ -2254,17 +2255,16 @@ TEST(CompletionTest, ObjectiveCMethodTwoArgumentsFromBeginning) {
       @end
       id val = [Foo foo^]
     )objc",
-    /*IndexSymbols=*/{},
-    /*Opts=*/{},
-    "Foo.m");
+                             /*IndexSymbols=*/{},
+                             /*Opts=*/{}, "Foo.m");
 
   auto C = Results.Completions;
   EXPECT_THAT(C, ElementsAre(Named("fooWithValue:")));
   EXPECT_THAT(C, ElementsAre(Kind(CompletionItemKind::Method)));
   EXPECT_THAT(C, ElementsAre(ReturnType("id")));
   EXPECT_THAT(C, ElementsAre(Signature("(int) fooey:(unsigned int)")));
-  EXPECT_THAT(C,
-      ElementsAre(SnippetSuffix("${1:(int)} fooey:${2:(unsigned int)}")));
+  EXPECT_THAT(
+      C, ElementsAre(SnippetSuffix("${1:(int)} fooey:${2:(unsigned int)}")));
 }
 
 TEST(CompletionTest, ObjectiveCMethodTwoArgumentsFromMiddle) {
@@ -2274,9 +2274,8 @@ TEST(CompletionTest, ObjectiveCMethodTwoArgumentsFromMiddle) {
       @end
       id val = [Foo fooWithValue:10 f^]
     )objc",
-    /*IndexSymbols=*/{},
-    /*Opts=*/{},
-    "Foo.m");
+                             /*IndexSymbols=*/{},
+                             /*Opts=*/{}, "Foo.m");
 
   auto C = Results.Completions;
   EXPECT_THAT(C, ElementsAre(Named("fooey:")));

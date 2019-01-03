@@ -39,18 +39,18 @@ int main(int argc, char **argv) {
       ;
   foo();
 // CHECK: @{{.+}}foo
-// CHECK-NOT: @k{{.+}}!llvm.mem.parallel_loop_access
-// CHECK: i32 @{{.+}}bar{{.+}}!llvm.mem.parallel_loop_access
-// CHECK-NOT: @k{{.+}}!llvm.mem.parallel_loop_access
+// CHECK-NOT: @k{{.+}}!llvm.access.group
+// CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
+// CHECK-NOT: @k{{.+}}!llvm.access.group
 // CHECK: sdiv i32
 // CHECK: store i32 %{{.+}}, i32* @k,
 #pragma omp simd linear(k : 2)
   for (k = 0; k < argc; k++)
     bar();
 // CHECK: @{{.+}}foo
-// CHECK-NOT: @k{{.+}}!llvm.mem.parallel_loop_access
-// CHECK: i32 @{{.+}}bar{{.+}}!llvm.mem.parallel_loop_access
-// CHECK-NOT: @k{{.+}}!llvm.mem.parallel_loop_access
+// CHECK-NOT: @k{{.+}}!llvm.access.group
+// CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
+// CHECK-NOT: @k{{.+}}!llvm.access.group
 // CHECK: sdiv i32
 // CHECK: store i32 %{{.+}}, i32* @k,
   foo();
@@ -60,9 +60,9 @@ int main(int argc, char **argv) {
      bar() ;
   foo();
 // CHECK: @{{.+}}foo
-// CHECK-NOT: @k{{.+}}!llvm.mem.parallel_loop_access
-// CHECK: i32 @{{.+}}bar{{.+}}!llvm.mem.parallel_loop_access
-// CHECK-NOT: @k{{.+}}!llvm.mem.parallel_loop_access
+// CHECK-NOT: @k{{.+}}!llvm.access.group
+// CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
+// CHECK-NOT: @k{{.+}}!llvm.access.group
 // CHECK: sdiv i32
 // CHECK: store i32 %{{.+}}, i32* @k,
 #pragma omp simd
@@ -70,9 +70,9 @@ int main(int argc, char **argv) {
     bar();
   foo();
 // CHECK: @{{.+}}foo
-// CHECK-NOT: @k{{.+}}!llvm.mem.parallel_loop_access
-// CHECK: i32 @{{.+}}bar{{.+}}!llvm.mem.parallel_loop_access
-// CHECK-NOT: @k{{.+}}!llvm.mem.parallel_loop_access
+// CHECK-NOT: @k{{.+}}!llvm.access.group
+// CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
+// CHECK-NOT: @k{{.+}}!llvm.access.group
 // CHECK: sdiv i32
 // CHECK: store i32 %{{.+}}, i32* @k,
 #pragma omp simd collapse(2)
@@ -110,7 +110,7 @@ struct S {
 // CHECK: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
 // CHECK: br i1
 // CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
-// CHECK: i32 @{{.+}}bar{{.+}}!llvm.mem.parallel_loop_access
+// CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
 // CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
 // CHECK: add nsw i32 %{{.+}}, 1
 // CHECK: br label {{.+}}, !llvm.loop
@@ -123,7 +123,7 @@ struct S {
 // CHECK: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
 // CHECK: br i1
 // CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
-// CHECK: i32 @{{.+}}bar{{.+}}!llvm.mem.parallel_loop_access
+// CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
 // CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
 // CHECK: add nsw i64 %{{.+}}, 1
 // CHECK: br label {{.+}}, !llvm.loop
@@ -137,7 +137,7 @@ struct S {
 // CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
 // CHECK: br i1
 // CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
-// CHECK: i32 @{{.+}}bar{{.+}}!llvm.mem.parallel_loop_access
+// CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
 // CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
 // CHECK: add nsw i32 %{{.+}}, 1
 // CHECK: br label {{.+}}, !llvm.loop
@@ -150,7 +150,7 @@ struct S {
 // CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
 // CHECK: br i1
 // CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
-// CHECK: i32 @{{.+}}bar{{.+}}!llvm.mem.parallel_loop_access
+// CHECK: i32 @{{.+}}bar{{.+}}!llvm.access.group
 // CHECK-NOT: getelementptr inbounds %struct.S, %struct.S* %{{.+}}, i32 0, i32 0
 // CHECK: add nsw i64 %{{.+}}, 1
 // CHECK: br label {{.+}}, !llvm.loop

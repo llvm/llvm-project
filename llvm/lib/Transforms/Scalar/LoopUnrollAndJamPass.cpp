@@ -56,6 +56,20 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loop-unroll-and-jam"
 
+/// @{
+/// Metadata attribute names
+static const char *const LLVMLoopUnrollAndJamFollowupAll =
+    "llvm.loop.unroll_and_jam.followup_all";
+static const char *const LLVMLoopUnrollAndJamFollowupInner =
+    "llvm.loop.unroll_and_jam.followup_inner";
+static const char *const LLVMLoopUnrollAndJamFollowupOuter =
+    "llvm.loop.unroll_and_jam.followup_outer";
+static const char *const LLVMLoopUnrollAndJamFollowupRemainderInner =
+    "llvm.loop.unroll_and_jam.followup_remainder_inner";
+static const char *const LLVMLoopUnrollAndJamFollowupRemainderOuter =
+    "llvm.loop.unroll_and_jam.followup_remainder_outer";
+/// @}
+
 static cl::opt<bool>
     AllowUnrollAndJam("allow-unroll-and-jam", cl::Hidden,
                       cl::desc("Allows loops to be unroll-and-jammed."));
@@ -110,11 +124,6 @@ static bool HasAnyUnrollPragma(const Loop *L, StringRef Prefix) {
 // Returns true if the loop has an unroll_and_jam(enable) pragma.
 static bool HasUnrollAndJamEnablePragma(const Loop *L) {
   return GetUnrollMetadataForLoop(L, "llvm.loop.unroll_and_jam.enable");
-}
-
-// Returns true if the loop has an unroll_and_jam(disable) pragma.
-static bool HasUnrollAndJamDisablePragma(const Loop *L) {
-  return GetUnrollMetadataForLoop(L, "llvm.loop.unroll_and_jam.disable");
 }
 
 // If loop has an unroll_and_jam_count pragma return the (necessarily
@@ -299,13 +308,16 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
                     << L->getHeader()->getParent()->getName() << "] Loop %"
                     << L->getHeader()->getName() << "\n");
 
+  TransformationMode EnableMode = hasUnrollAndJamTransformation(L);
+  if (EnableMode & TM_Disable)
+    return LoopUnrollResult::Unmodified;
+
   // A loop with any unroll pragma (enabling/disabling/count/etc) is left for
   // the unroller, so long as it does not explicitly have unroll_and_jam
   // metadata. This means #pragma nounroll will disable unroll and jam as well
   // as unrolling
-  if (HasUnrollAndJamDisablePragma(L) ||
-      (HasAnyUnrollPragma(L, "llvm.loop.unroll.") &&
-       !HasAnyUnrollPragma(L, "llvm.loop.unroll_and_jam."))) {
+  if (HasAnyUnrollPragma(L, "llvm.loop.unroll.") &&
+      !HasAnyUnrollPragma(L, "llvm.loop.unroll_and_jam.")) {
     LLVM_DEBUG(dbgs() << "  Disabled due to pragma.\n");
     return LoopUnrollResult::Unmodified;
   }
@@ -344,6 +356,19 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
     return LoopUnrollResult::Unmodified;
   }
 
+  // Save original loop IDs for after the transformation.
+  MDNode *OrigOuterLoopID = L->getLoopID();
+  MDNode *OrigSubLoopID = SubLoop->getLoopID();
+
+  // To assign the loop id of the epilogue, assign it before unrolling it so it
+  // is applied to every inner loop of the epilogue. We later apply the loop ID
+  // for the jammed inner loop.
+  Optional<MDNode *> NewInnerEpilogueLoopID = makeFollowupLoopID(
+      OrigOuterLoopID, {LLVMLoopUnrollAndJamFollowupAll,
+                        LLVMLoopUnrollAndJamFollowupRemainderInner});
+  if (NewInnerEpilogueLoopID.hasValue())
+    SubLoop->setLoopID(NewInnerEpilogueLoopID.getValue());
+
   // Find trip count and trip multiple
   unsigned OuterTripCount = SE.getSmallConstantTripCount(L, Latch);
   unsigned OuterTripMultiple = SE.getSmallConstantTripMultiple(L, Latch);
@@ -359,9 +384,39 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   if (OuterTripCount && UP.Count > OuterTripCount)
     UP.Count = OuterTripCount;
 
-  LoopUnrollResult UnrollResult =
-      UnrollAndJamLoop(L, UP.Count, OuterTripCount, OuterTripMultiple,
-                       UP.UnrollRemainder, LI, &SE, &DT, &AC, &ORE);
+  Loop *EpilogueOuterLoop = nullptr;
+  LoopUnrollResult UnrollResult = UnrollAndJamLoop(
+      L, UP.Count, OuterTripCount, OuterTripMultiple, UP.UnrollRemainder, LI,
+      &SE, &DT, &AC, &ORE, &EpilogueOuterLoop);
+
+  // Assign new loop attributes.
+  if (EpilogueOuterLoop) {
+    Optional<MDNode *> NewOuterEpilogueLoopID = makeFollowupLoopID(
+        OrigOuterLoopID, {LLVMLoopUnrollAndJamFollowupAll,
+                          LLVMLoopUnrollAndJamFollowupRemainderOuter});
+    if (NewOuterEpilogueLoopID.hasValue())
+      EpilogueOuterLoop->setLoopID(NewOuterEpilogueLoopID.getValue());
+  }
+
+  Optional<MDNode *> NewInnerLoopID =
+      makeFollowupLoopID(OrigOuterLoopID, {LLVMLoopUnrollAndJamFollowupAll,
+                                           LLVMLoopUnrollAndJamFollowupInner});
+  if (NewInnerLoopID.hasValue())
+    SubLoop->setLoopID(NewInnerLoopID.getValue());
+  else
+    SubLoop->setLoopID(OrigSubLoopID);
+
+  if (UnrollResult == LoopUnrollResult::PartiallyUnrolled) {
+    Optional<MDNode *> NewOuterLoopID = makeFollowupLoopID(
+        OrigOuterLoopID,
+        {LLVMLoopUnrollAndJamFollowupAll, LLVMLoopUnrollAndJamFollowupOuter});
+    if (NewOuterLoopID.hasValue()) {
+      L->setLoopID(NewOuterLoopID.getValue());
+
+      // Do not setLoopAlreadyUnrolled if a followup was given.
+      return UnrollResult;
+    }
+  }
 
   // If loop has an unroll count pragma or unrolled by explicitly set count
   // mark loop as unrolled to prevent unrolling beyond that requested.

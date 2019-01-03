@@ -114,18 +114,17 @@ MemorizeStatCalls::LookupResult
 MemorizeStatCalls::getStat(StringRef Path, FileData &Data, bool isFile,
                            std::unique_ptr<llvm::vfs::File> *F,
                            llvm::vfs::FileSystem &FS) {
-  LookupResult Result = statChained(Path, Data, isFile, F, FS);
-
-  // Do not cache failed stats, it is easy to construct common inconsistent
-  // situations if we do, and they are not important for PCH performance (which
-  // currently only needs the stats to construct the initial FileManager
-  // entries).
-  if (Result == CacheMissing)
-    return Result;
+  if (get(Path, Data, isFile, F, nullptr, FS)) {
+    // Do not cache failed stats, it is easy to construct common inconsistent
+    // situations if we do, and they are not important for PCH performance
+    // (which currently only needs the stats to construct the initial
+    // FileManager entries).
+    return CacheMissing;
+  }
 
   // Cache file 'stat' results and directories with absolutely paths.
   if (!Data.IsDirectory || llvm::sys::path::is_absolute(Path))
     StatCalls[Path] = Data;
 
-  return Result;
+  return CacheExists;
 }

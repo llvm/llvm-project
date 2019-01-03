@@ -25,6 +25,7 @@ target_link_libraries(ClangTidyTests
   clangBasic
   clangFrontend
   clangLex
+  clangSerialization
   clangTidy
   clangTidyAndroidModule
   clangTidyGoogleModule

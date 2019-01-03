@@ -9,6 +9,7 @@
 
 #include "llvm-objcopy.h"
 #include "Buffer.h"
+#include "COFF/COFFObjcopy.h"
 #include "CopyConfig.h"
 #include "ELF/ELFObjcopy.h"
 
@@ -19,6 +20,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
@@ -125,6 +127,8 @@ static void executeObjcopyOnBinary(const CopyConfig &Config, object::Binary &In,
                                    Buffer &Out) {
   if (auto *ELFBinary = dyn_cast<object::ELFObjectFileBase>(&In))
     return elf::executeObjcopyOnBinary(Config, *ELFBinary, Out);
+  else if (auto *COFFBinary = dyn_cast<object::COFFObjectFile>(&In))
+    return coff::executeObjcopyOnBinary(Config, *COFFBinary, Out);
   else
     error("Unsupported object file format");
 }

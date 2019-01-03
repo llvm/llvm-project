@@ -87,6 +87,8 @@ _GCC_specific_handler(PEXCEPTION_RECORD ms_exc, PVOID frame, PCONTEXT ms_ctx,
       disp->ContextRecord->Rdx = ms_exc->ExceptionInformation[3];
 #elif defined(__arm__)
       disp->ContextRecord->R1 = ms_exc->ExceptionInformation[3];
+#elif defined(__aarch64__)
+      disp->ContextRecord->X1 = ms_exc->ExceptionInformation[3];
 #endif
     }
     // This is the collided unwind to the landing pad. Nothing to do.
@@ -172,12 +174,16 @@ _GCC_specific_handler(PEXCEPTION_RECORD ms_exc, PVOID frame, PCONTEXT ms_ctx,
     exc->private_[2] = disp->TargetPc;
     unw_get_reg(&cursor, UNW_ARM_R0, &retval);
     unw_get_reg(&cursor, UNW_ARM_R1, &exc->private_[3]);
+#elif defined(__aarch64__)
+    exc->private_[2] = disp->TargetPc;
+    unw_get_reg(&cursor, UNW_ARM64_X0, &retval);
+    unw_get_reg(&cursor, UNW_ARM64_X1, &exc->private_[3]);
 #endif
     unw_get_reg(&cursor, UNW_REG_IP, &target);
     ms_exc->ExceptionCode = STATUS_GCC_UNWIND;
 #ifdef __x86_64__
     ms_exc->ExceptionInformation[2] = disp->TargetIp;
-#elif defined(__arm__)
+#elif defined(__arm__) || defined(__aarch64__)
     ms_exc->ExceptionInformation[2] = disp->TargetPc;
 #endif
     ms_exc->ExceptionInformation[3] = exc->private_[3];
@@ -374,6 +380,8 @@ _Unwind_Resume(_Unwind_Exception *exception_object) {
     CONTEXT ms_ctx;
     UNWIND_HISTORY_TABLE hist;
 
+    memset(&ms_exc, 0, sizeof(ms_exc));
+    memset(&hist, 0, sizeof(hist));
     ms_exc.ExceptionCode = STATUS_GCC_THROW;
     ms_exc.ExceptionFlags = EXCEPTION_NONCONTINUABLE;
     ms_exc.NumberParameters = 4;
@@ -445,6 +453,12 @@ _unw_init_seh(unw_cursor_t *cursor, CONTEXT *context) {
   auto *co = reinterpret_cast<AbstractUnwindCursor *>(cursor);
   co->setInfoBasedOnIPRegister();
   return UNW_ESUCCESS;
+#elif defined(_LIBUNWIND_TARGET_AARCH64)
+  new ((void *)cursor) UnwindCursor<LocalAddressSpace, Registers_arm64>(
+      context, LocalAddressSpace::sThisAddressSpace);
+  auto *co = reinterpret_cast<AbstractUnwindCursor *>(cursor);
+  co->setInfoBasedOnIPRegister();
+  return UNW_ESUCCESS;
 #else
   return UNW_EINVAL;
 #endif
@@ -456,6 +470,8 @@ _unw_seh_get_disp_ctx(unw_cursor_t *cursor) {
   return reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_x86_64> *>(cursor)->getDispatcherContext();
 #elif defined(_LIBUNWIND_TARGET_ARM)
   return reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_arm> *>(cursor)->getDispatcherContext();
+#elif defined(_LIBUNWIND_TARGET_AARCH64)
+  return reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_arm64> *>(cursor)->getDispatcherContext();
 #else
   return nullptr;
 #endif
@@ -467,6 +483,8 @@ _unw_seh_set_disp_ctx(unw_cursor_t *cursor, DISPATCHER_CONTEXT *disp) {
   reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_x86_64> *>(cursor)->setDispatcherContext(disp);
 #elif defined(_LIBUNWIND_TARGET_ARM)
   reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_arm> *>(cursor)->setDispatcherContext(disp);
+#elif defined(_LIBUNWIND_TARGET_AARCH64)
+  reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_arm64> *>(cursor)->setDispatcherContext(disp);
 #endif
 }
 

@@ -100,13 +100,13 @@ endfunction(add_lldb_library)
 function(add_lldb_executable name)
   cmake_parse_arguments(ARG
     "INCLUDE_IN_SUITE;GENERATE_INSTALL"
-    "ENTITLEMENTS"
+    ""
     "LINK_LIBS;LINK_COMPONENTS"
     ${ARGN}
     )
 
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
-  add_llvm_executable(${name} ${ARG_UNPARSED_ARGUMENTS} ENTITLEMENTS ${ARG_ENTITLEMENTS})
+  add_llvm_executable(${name} ${ARG_UNPARSED_ARGUMENTS})
 
   target_link_libraries(${name} PRIVATE ${ARG_LINK_LIBS})
   set_target_properties(${name} PROPERTIES

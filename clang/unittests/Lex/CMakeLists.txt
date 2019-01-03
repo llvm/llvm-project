@@ -15,6 +15,7 @@ target_link_libraries(LexTests
   clangAST
   clangBasic
   clangLex
+  clangAPINotes
   clangParse
   clangSema
   )

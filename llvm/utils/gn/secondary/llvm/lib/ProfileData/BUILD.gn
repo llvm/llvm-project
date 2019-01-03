@@ -1,0 +1,17 @@
+static_library("ProfileData") {
+  output_name = "LLVMProfileData"
+  deps = [
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "GCOV.cpp",
+    "InstrProf.cpp",
+    "InstrProfReader.cpp",
+    "InstrProfWriter.cpp",
+    "ProfileSummaryBuilder.cpp",
+    "SampleProf.cpp",
+    "SampleProfReader.cpp",
+    "SampleProfWriter.cpp",
+  ]
+}

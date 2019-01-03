@@ -5,7 +5,7 @@ clang_compiler_add_cxx_check()
 # FIXME: use SANITIZER_COMMON_SUPPORTED_ARCH here
 filter_available_targets(SANITIZER_UNITTEST_SUPPORTED_ARCH x86_64 i386 mips64 mips64el)
 if(APPLE)
-  darwin_filter_host_archs(SANITIZER_UNITTEST_SUPPORTED_ARCH SANITIZER_COMMON_SUPPORTED_ARCH)
+  darwin_filter_host_archs(SANITIZER_UNITTEST_SUPPORTED_ARCH SANITIZER_UNITTEST_SUPPORTED_ARCH)
 endif()
 
 set(SANITIZER_UNITTESTS
@@ -36,6 +36,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_symbolizer_test.cc
   sanitizer_test_main.cc
   sanitizer_thread_registry_test.cc
+  sanitizer_type_traits_test.cc
   sanitizer_vector_test.cc)
 
 set(SANITIZER_TEST_HEADERS

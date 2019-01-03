@@ -118,6 +118,10 @@ public:
 
   const MemRegion *getBaseRegion() const;
 
+  /// Recursively retrieve the region of the most derived class instance of
+  /// regions of C++ base class instances.
+  const MemRegion *getMostDerivedObjectRegion() const;
+
   /// Check if the region is a subregion of the given region.
   /// Each region is a subregion of itself.
   virtual bool isSubRegionOf(const MemRegion *R) const;
@@ -1077,7 +1081,7 @@ public:
   void dump() const;
 };
 
-/// ElementRegin is used to represent both array elements and casts.
+/// ElementRegion is used to represent both array elements and casts.
 class ElementRegion : public TypedValueRegion {
   friend class MemRegionManager;
 

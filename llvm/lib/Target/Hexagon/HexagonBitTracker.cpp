@@ -93,11 +93,12 @@ BT::BitMask HexagonEvaluator::mask(unsigned Reg, unsigned Sub) const {
   const TargetRegisterClass &RC = *MRI.getRegClass(Reg);
   unsigned ID = RC.getID();
   uint16_t RW = getRegBitWidth(RegisterRef(Reg, Sub));
-  auto &HRI = static_cast<const HexagonRegisterInfo&>(TRI);
+  const auto &HRI = static_cast<const HexagonRegisterInfo&>(TRI);
   bool IsSubLo = (Sub == HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_lo));
   switch (ID) {
     case Hexagon::DoubleRegsRegClassID:
     case Hexagon::HvxWRRegClassID:
+    case Hexagon::HvxVQRRegClassID:
       return IsSubLo ? BT::BitMask(0, RW-1)
                      : BT::BitMask(RW, 2*RW-1);
     default:
@@ -114,9 +115,13 @@ uint16_t HexagonEvaluator::getPhysRegBitWidth(unsigned Reg) const {
   assert(TargetRegisterInfo::isPhysicalRegister(Reg));
 
   using namespace Hexagon;
-  for (auto &RC : {HvxVRRegClass, HvxWRRegClass, HvxQRRegClass})
-    if (RC.contains(Reg))
-      return TRI.getRegSizeInBits(RC);
+  const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  if (HST.useHVXOps()) {
+    for (auto &RC : {HvxVRRegClass, HvxWRRegClass, HvxQRRegClass,
+                     HvxVQRRegClass})
+      if (RC.contains(Reg))
+        return TRI.getRegSizeInBits(RC);
+  }
   // Default treatment for other physical registers.
   if (const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg))
     return TRI.getRegSizeInBits(*RC);
@@ -142,6 +147,8 @@ const TargetRegisterClass &HexagonEvaluator::composeWithSubRegIndex(
       return Hexagon::IntRegsRegClass;
     case Hexagon::HvxWRRegClassID:
       return Hexagon::HvxVRRegClass;
+    case Hexagon::HvxVQRRegClassID:
+      return Hexagon::HvxWRRegClass;
     default:
       break;
   }

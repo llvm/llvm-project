@@ -1506,6 +1506,27 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
         // of bits which might be set provided by popcnt KnownOne2.
         break;
       }
+      case Intrinsic::fshr:
+      case Intrinsic::fshl: {
+        const APInt *SA;
+        if (!match(I->getOperand(2), m_APInt(SA)))
+          break;
+
+        // Normalize to funnel shift left.
+        uint64_t ShiftAmt = SA->urem(BitWidth);
+        if (II->getIntrinsicID() == Intrinsic::fshr)
+          ShiftAmt = BitWidth - ShiftAmt;
+
+        KnownBits Known3(Known);
+        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), Known3, Depth + 1, Q);
+
+        Known.Zero =
+            Known2.Zero.shl(ShiftAmt) | Known3.Zero.lshr(BitWidth - ShiftAmt);
+        Known.One =
+            Known2.One.shl(ShiftAmt) | Known3.One.lshr(BitWidth - ShiftAmt);
+        break;
+      }
       case Intrinsic::x86_sse42_crc32_64_64:
         Known.Zero.setBitsFrom(32);
         break;
@@ -3801,8 +3822,7 @@ bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
     const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U);
     if (!II) return false;
 
-    if (II->getIntrinsicID() != Intrinsic::lifetime_start &&
-        II->getIntrinsicID() != Intrinsic::lifetime_end)
+    if (!II->isLifetimeStartOrEnd())
       return false;
   }
   return true;
@@ -4001,13 +4021,11 @@ OverflowResult llvm::computeOverflowForUnsignedAdd(
 
     if (LHSKnown.isNegative() && RHSKnown.isNegative()) {
       // The sign bit is set in both cases: this MUST overflow.
-      // Create a simple add instruction, and insert it into the struct.
       return OverflowResult::AlwaysOverflows;
     }
 
     if (LHSKnown.isNonNegative() && RHSKnown.isNonNegative()) {
       // The sign bit is clear in both cases: this CANNOT overflow.
-      // Create a simple add instruction, and insert it into the struct.
       return OverflowResult::NeverOverflows;
     }
   }
@@ -4124,11 +4142,18 @@ OverflowResult llvm::computeOverflowForUnsignedSub(const Value *LHS,
                                                    AssumptionCache *AC,
                                                    const Instruction *CxtI,
                                                    const DominatorTree *DT) {
-  // If the LHS is negative and the RHS is non-negative, no unsigned wrap.
   KnownBits LHSKnown = computeKnownBits(LHS, DL, /*Depth=*/0, AC, CxtI, DT);
-  KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT);
-  if (LHSKnown.isNegative() && RHSKnown.isNonNegative())
-    return OverflowResult::NeverOverflows;
+  if (LHSKnown.isNonNegative() || LHSKnown.isNegative()) {
+    KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT);
+
+    // If the LHS is negative and the RHS is non-negative, no unsigned wrap.
+    if (LHSKnown.isNegative() && RHSKnown.isNonNegative())
+      return OverflowResult::NeverOverflows;
+
+    // If the LHS is non-negative and the RHS negative, we always wrap.
+    if (LHSKnown.isNonNegative() && RHSKnown.isNegative())
+      return OverflowResult::AlwaysOverflows;
+  }
 
   return OverflowResult::MayOverflow;
 }
@@ -5210,21 +5235,16 @@ static bool isMatchingOps(const Value *ALHS, const Value *ARHS,
   return IsMatchingOps || IsSwappedOps;
 }
 
-/// Return true if "icmp1 APred ALHS ARHS" implies "icmp2 BPred BLHS BRHS" is
-/// true.  Return false if "icmp1 APred ALHS ARHS" implies "icmp2 BPred BLHS
-/// BRHS" is false.  Otherwise, return None if we can't infer anything.
+/// Return true if "icmp1 APred X, Y" implies "icmp2 BPred X, Y" is true.
+/// Return false if "icmp1 APred X, Y" implies "icmp2 BPred X, Y" is false.
+/// Otherwise, return None if we can't infer anything.
 static Optional<bool> isImpliedCondMatchingOperands(CmpInst::Predicate APred,
-                                                    const Value *ALHS,
-                                                    const Value *ARHS,
                                                     CmpInst::Predicate BPred,
-                                                    const Value *BLHS,
-                                                    const Value *BRHS,
-                                                    bool IsSwappedOps) {
-  // Canonicalize the operands so they're matching.
-  if (IsSwappedOps) {
-    std::swap(BLHS, BRHS);
+                                                    bool AreSwappedOps) {
+  // Canonicalize the predicate as if the operands were not commuted.
+  if (AreSwappedOps)
     BPred = ICmpInst::getSwappedPredicate(BPred);
-  }
+
   if (CmpInst::isImpliedTrueByMatchingCmp(APred, BPred))
     return true;
   if (CmpInst::isImpliedFalseByMatchingCmp(APred, BPred))
@@ -5233,15 +5253,14 @@ static Optional<bool> isImpliedCondMatchingOperands(CmpInst::Predicate APred,
   return None;
 }
 
-/// Return true if "icmp1 APred ALHS C1" implies "icmp2 BPred BLHS C2" is
-/// true.  Return false if "icmp1 APred ALHS C1" implies "icmp2 BPred BLHS
-/// C2" is false.  Otherwise, return None if we can't infer anything.
+/// Return true if "icmp APred X, C1" implies "icmp BPred X, C2" is true.
+/// Return false if "icmp APred X, C1" implies "icmp BPred X, C2" is false.
+/// Otherwise, return None if we can't infer anything.
 static Optional<bool>
-isImpliedCondMatchingImmOperands(CmpInst::Predicate APred, const Value *ALHS,
+isImpliedCondMatchingImmOperands(CmpInst::Predicate APred,
                                  const ConstantInt *C1,
                                  CmpInst::Predicate BPred,
-                                 const Value *BLHS, const ConstantInt *C2) {
-  assert(ALHS == BLHS && "LHS operands must match.");
+                                 const ConstantInt *C2) {
   ConstantRange DomCR =
       ConstantRange::makeExactICmpRegion(APred, C1->getValue());
   ConstantRange CR =
@@ -5273,10 +5292,10 @@ static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
   ICmpInst::Predicate BPred = RHS->getPredicate();
 
   // Can we infer anything when the two compares have matching operands?
-  bool IsSwappedOps;
-  if (isMatchingOps(ALHS, ARHS, BLHS, BRHS, IsSwappedOps)) {
+  bool AreSwappedOps;
+  if (isMatchingOps(ALHS, ARHS, BLHS, BRHS, AreSwappedOps)) {
     if (Optional<bool> Implication = isImpliedCondMatchingOperands(
-            APred, ALHS, ARHS, BPred, BLHS, BRHS, IsSwappedOps))
+            APred, BPred, AreSwappedOps))
       return Implication;
     // No amount of additional analysis will infer the second condition, so
     // early exit.
@@ -5287,8 +5306,7 @@ static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
   // constants (not necessarily matching)?
   if (ALHS == BLHS && isa<ConstantInt>(ARHS) && isa<ConstantInt>(BRHS)) {
     if (Optional<bool> Implication = isImpliedCondMatchingImmOperands(
-            APred, ALHS, cast<ConstantInt>(ARHS), BPred, BLHS,
-            cast<ConstantInt>(BRHS)))
+            APred, cast<ConstantInt>(ARHS), BPred, cast<ConstantInt>(BRHS)))
       return Implication;
     // No amount of additional analysis will infer the second condition, so
     // early exit.
@@ -5372,4 +5390,36 @@ Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
       return isImpliedCondAndOr(LHSBO, RHSCmp, DL, LHSIsTrue, Depth);
   }
   return None;
+}
+
+Optional<bool> llvm::isImpliedByDomCondition(const Value *Cond,
+                                             const Instruction *ContextI,
+                                             const DataLayout &DL) {
+  assert(Cond->getType()->isIntOrIntVectorTy(1) && "Condition must be bool");
+  if (!ContextI || !ContextI->getParent())
+    return None;
+
+  // TODO: This is a poor/cheap way to determine dominance. Should we use a
+  // dominator tree (eg, from a SimplifyQuery) instead?
+  const BasicBlock *ContextBB = ContextI->getParent();
+  const BasicBlock *PredBB = ContextBB->getSinglePredecessor();
+  if (!PredBB)
+    return None;
+
+  // We need a conditional branch in the predecessor.
+  Value *PredCond;
+  BasicBlock *TrueBB, *FalseBB;
+  if (!match(PredBB->getTerminator(), m_Br(m_Value(PredCond), TrueBB, FalseBB)))
+    return None;
+
+  // The branch should get simplified. Don't bother simplifying this condition.
+  if (TrueBB == FalseBB)
+    return None;
+
+  assert((TrueBB == ContextBB || FalseBB == ContextBB) &&
+         "Predecessor block does not point to successor?");
+
+  // Is this condition implied by the predecessor condition?
+  bool CondIsTrue = TrueBB == ContextBB;
+  return isImpliedCondition(PredCond, Cond, DL, CondIsTrue);
 }

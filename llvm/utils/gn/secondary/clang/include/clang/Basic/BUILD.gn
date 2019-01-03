@@ -1,0 +1,109 @@
+import("//clang/utils/TableGen/clang_tablegen.gni")
+import("//llvm/version.gni")
+
+# Version header.
+
+action("version") {
+  script = "//llvm/utils/gn/build/write_cmake_config.py"
+
+  sources = [
+    "Version.inc.in",
+  ]
+  outputs = [
+    "$root_gen_dir/clang/include/clang/Basic/Version.inc",
+  ]
+  args = [
+    "-o",
+    rebase_path(outputs[0], root_out_dir),
+    rebase_path(sources[0], root_out_dir),
+
+    "CLANG_VERSION=$llvm_version",
+    "CLANG_VERSION_MAJOR=$llvm_version_major",
+    "CLANG_VERSION_MINOR=$llvm_version_minor",
+    "CLANG_VERSION_PATCHLEVEL=$llvm_version_patch",
+  ]
+}
+
+# Diagnostics.
+
+diag_groups = [
+  "Analysis",
+  "AST",
+  "Comment",
+  "Common",
+  "CrossTU",
+  "Driver",
+  "Frontend",
+  "Lex",
+  "Parse",
+  "Refactoring",
+  "Sema",
+  "Serialization",
+]
+foreach(diag_group, diag_groups) {
+  clang_tablegen("Diagnostic${diag_group}Kinds") {
+    args = [
+      "-gen-clang-diags-defs",
+      "-clang-component=${diag_group}",
+    ]
+    td_file = "Diagnostic.td"
+  }
+}
+group("diags_tablegen") {
+  # DiagnosticGroups and DiagnosticIndexName are intentionally not part of this
+  # group.  Much of clang depends on the DiagKinds.inc files transitively,
+  # but almost nothing needs DiagnosticGroups.inc or DiagnosticIndexName.inc.
+  public_deps = []
+  foreach(diag_group, diag_groups) {
+    public_deps += [ ":Diagnostic${diag_group}Kinds" ]
+  }
+}
+
+clang_tablegen("DiagnosticGroups") {
+  args = [ "-gen-clang-diag-groups" ]
+  td_file = "Diagnostic.td"
+}
+
+clang_tablegen("DiagnosticIndexName") {
+  args = [ "-gen-clang-diags-index-name" ]
+  td_file = "Diagnostic.td"
+}
+
+# Attributes
+
+clang_tablegen("AttrList") {
+  args = [
+    "-gen-clang-attr-list",
+    "-I",
+    rebase_path("../..", root_out_dir),
+  ]
+  td_file = "Attr.td"
+}
+
+clang_tablegen("AttrSubMatchRulesList") {
+  args = [
+    "-gen-clang-attr-subject-match-rule-list",
+    "-I",
+    rebase_path("../..", root_out_dir),
+  ]
+  td_file = "Attr.td"
+}
+
+clang_tablegen("AttrHasAttributeImpl") {
+  args = [
+    "-gen-clang-attr-has-attribute-impl",
+    "-I",
+    rebase_path("../..", root_out_dir),
+  ]
+  td_file = "Attr.td"
+}
+
+# Misc
+
+clang_tablegen("arm_neon") {
+  args = [ "-gen-arm-neon-sema" ]
+}
+
+clang_tablegen("arm_fp16") {
+  args = [ "-gen-arm-neon-sema" ]
+}

@@ -60,8 +60,7 @@ endif:
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, vcc
 
-; GCN-DAG: buffer_store_dword v
-; GCN-DAG: buffer_store_dwordx2
+; GCN-DAG: buffer_store_dwordx3
 define amdgpu_kernel void @test_vccnz_ifcvt_triangle96(<3 x i32> addrspace(1)* %out, <3 x i32> addrspace(1)* %in, float %cnd) #0 {
 entry:
   %v = load <3 x i32>, <3 x i32> addrspace(1)* %in

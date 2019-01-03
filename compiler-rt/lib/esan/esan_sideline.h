@@ -17,6 +17,7 @@
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
+#include "sanitizer_common/sanitizer_platform_limits_freebsd.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 
 namespace __esan {

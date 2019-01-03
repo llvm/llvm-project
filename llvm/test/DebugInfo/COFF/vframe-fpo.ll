@@ -64,14 +64,14 @@
 ; CODEVIEW-NEXT:   Magic: 0x4
 ; CODEVIEW-NEXT:   Subsection [
 ; CODEVIEW-NEXT:     SubSectionType: Symbols (0xF1)
-; CODEVIEW-NEXT:     SubSectionSize: 0x2F
+; CODEVIEW-NEXT:     SubSectionSize:
 ; CODEVIEW-NEXT:     Compile3Sym {
 ; CODEVIEW-NEXT:       Kind: S_COMPILE3 (0x113C)
 ; CODEVIEW:          }
 ; CODEVIEW:        ]
 ; CODEVIEW:        Subsection [
 ; CODEVIEW-NEXT:     SubSectionType: FrameData (0xF5)
-; CODEVIEW-NEXT:     SubSectionSize: 0xA4
+; CODEVIEW-NEXT:     SubSectionSize:
 ; CODEVIEW-NEXT:     LinkageName: _main
 ; CODEVIEW:          FrameData {
 ; CODEVIEW:          }
@@ -109,7 +109,7 @@
 
 ; CODEVIEW:      Subsection [
 ; CODEVIEW-NEXT:   SubSectionType: Symbols (0xF1)
-; CODEVIEW-NEXT:   SubSectionSize: 0xA2
+; CODEVIEW-NEXT:   SubSectionSize:
 ; CODEVIEW-NEXT:   GlobalProcIdSym {
 ; CODEVIEW-NEXT:     Kind: S_GPROC32_ID (0x1147)
 ; CODEVIEW:          DisplayName: main

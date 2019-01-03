@@ -579,9 +579,18 @@ FunctionLoweringInfo::getOrCreateSwiftErrorVRegUseAt(const Instruction *I, const
 const Value *
 FunctionLoweringInfo::getValueFromVirtualReg(unsigned Vreg) {
   if (VirtReg2Value.empty()) {
+    SmallVector<EVT, 4> ValueVTs;
     for (auto &P : ValueMap) {
-      VirtReg2Value[P.second] = P.first;
+      ValueVTs.clear();
+      ComputeValueVTs(*TLI, Fn->getParent()->getDataLayout(),
+                      P.first->getType(), ValueVTs);
+      unsigned Reg = P.second;
+      for (EVT VT : ValueVTs) {
+        unsigned NumRegisters = TLI->getNumRegisters(Fn->getContext(), VT);
+        for (unsigned i = 0, e = NumRegisters; i != e; ++i)
+          VirtReg2Value[Reg++] = P.first;
+      }
     }
   }
-  return VirtReg2Value[Vreg];
+  return VirtReg2Value.lookup(Vreg);
 }

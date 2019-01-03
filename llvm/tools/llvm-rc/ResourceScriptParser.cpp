@@ -114,16 +114,23 @@ void RCParser::consume() {
 
 // An integer description might consist of a single integer or
 // an arithmetic expression evaluating to the integer. The expressions
-// can contain the following tokens: <int> ( ) + - | & ~. Their meaning
-// is the same as in C++.
+// can contain the following tokens: <int> ( ) + - | & ~ not. Their meaning
+// is the same as in C++ except for 'not' expression.
 // The operators in the original RC implementation have the following
 // precedence:
-//   1) Unary operators (- ~),
+//   1) Unary operators (- ~ not),
 //   2) Binary operators (+ - & |), with no precedence.
+//
+// 'not' expression is mostly useful for style values. It evaluates to 0,
+// but value given to the operator is stored separately from integer value.
+// It's mostly useful for control style expressions and causes bits from
+// default control style to be excluded from generated style. For binary
+// operators the mask from the right operand is applied to the left operand
+// and masks from both operands are combined in operator result.
 //
 // The following grammar is used to parse the expressions Exp1:
 //   Exp1 ::= Exp2 || Exp1 + Exp2 || Exp1 - Exp2 || Exp1 | Exp2 || Exp1 & Exp2
-//   Exp2 ::= -Exp2 || ~Exp2 || Int || (Exp1).
+//   Exp2 ::= -Exp2 || ~Exp2 || not Expr2 || Int || (Exp1).
 // (More conveniently, Exp1 is a non-empty sequence of Exp2 expressions,
 // separated by binary operators.)
 //
@@ -139,12 +146,15 @@ void RCParser::consume() {
 //    1 => 01 00, -1 => ff ff, --1 => 01 00, ---1 => ff ff;
 //    1 => 01 00, ~1 => fe ff, ~~1 => 01 00, ~~~1 => fe ff.
 
-Expected<RCInt> RCParser::readInt() { return parseIntExpr1(); }
+Expected<RCInt> RCParser::readInt() {
+  ASSIGN_OR_RETURN(Value, parseIntExpr1());
+  return (*Value).getValue();
+}
 
-Expected<RCInt> RCParser::parseIntExpr1() {
+Expected<IntWithNotMask> RCParser::parseIntExpr1() {
   // Exp1 ::= Exp2 || Exp1 + Exp2 || Exp1 - Exp2 || Exp1 | Exp2 || Exp1 & Exp2.
   ASSIGN_OR_RETURN(FirstResult, parseIntExpr2());
-  RCInt Result = *FirstResult;
+  IntWithNotMask Result = *FirstResult;
 
   while (!isEof() && look().isBinaryOp()) {
     auto OpToken = read();
@@ -175,8 +185,8 @@ Expected<RCInt> RCParser::parseIntExpr1() {
   return Result;
 }
 
-Expected<RCInt> RCParser::parseIntExpr2() {
-  // Exp2 ::= -Exp2 || ~Exp2 || Int || (Exp1).
+Expected<IntWithNotMask> RCParser::parseIntExpr2() {
+  // Exp2 ::= -Exp2 || ~Exp2 || not Expr2 || Int || (Exp1).
   static const char ErrorMsg[] = "'-', '~', integer or '('";
 
   if (isEof())
@@ -203,6 +213,13 @@ Expected<RCInt> RCParser::parseIntExpr2() {
     ASSIGN_OR_RETURN(Result, parseIntExpr1());
     RETURN_IF_ERROR(consumeType(Kind::RightParen));
     return *Result;
+  }
+
+  case Kind::Identifier: {
+    if (!read().value().equals_lower("not"))
+      return getExpectedError(ErrorMsg, true);
+    ASSIGN_OR_RETURN(Result, parseIntExpr2());
+    return IntWithNotMask(0, (*Result).getValue());
   }
 
   default:
@@ -388,6 +405,8 @@ RCParser::parseSingleOptionalStatement(OptStmtType StmtsType) {
       return parseCaptionStmt();
     if (TypeToken->equals_lower("CLASS"))
       return parseClassStmt();
+    if (TypeToken->equals_lower("EXSTYLE"))
+      return parseExStyleStmt();
     if (TypeToken->equals_lower("FONT"))
       return parseFontStmt(StmtsType);
     if (TypeToken->equals_lower("STYLE"))
@@ -537,13 +556,13 @@ Expected<Control> RCParser::parseControl() {
   RETURN_IF_ERROR(consumeType(Kind::Comma));
 
   IntOrString Class;
-  Optional<uint32_t> Style;
+  Optional<IntWithNotMask> Style;
   if (ClassUpper == "CONTROL") {
     // CONTROL text, id, class, style, x, y, width, height [, exstyle] [, helpID]
     ASSIGN_OR_RETURN(ClassStr, readString());
     RETURN_IF_ERROR(consumeType(Kind::Comma));
     Class = *ClassStr;
-    ASSIGN_OR_RETURN(StyleVal, readInt());
+    ASSIGN_OR_RETURN(StyleVal, parseIntExpr1());
     RETURN_IF_ERROR(consumeType(Kind::Comma));
     Style = *StyleVal;
   } else {
@@ -555,7 +574,7 @@ Expected<Control> RCParser::parseControl() {
 
   if (ClassUpper != "CONTROL") {
     if (consumeOptionalType(Kind::Comma)) {
-      ASSIGN_OR_RETURN(Val, readInt());
+      ASSIGN_OR_RETURN(Val, parseIntExpr1());
       Style = *Val;
     }
   }
@@ -815,6 +834,11 @@ RCParser::ParseOptionType RCParser::parseFontStmt(OptStmtType DialogType) {
 RCParser::ParseOptionType RCParser::parseStyleStmt() {
   ASSIGN_OR_RETURN(Arg, readInt());
   return llvm::make_unique<StyleStmt>(*Arg);
+}
+
+RCParser::ParseOptionType RCParser::parseExStyleStmt() {
+  ASSIGN_OR_RETURN(Arg, readInt());
+  return llvm::make_unique<ExStyleStmt>(*Arg);
 }
 
 Error RCParser::getExpectedError(const Twine &Message, bool IsAlreadyRead) {

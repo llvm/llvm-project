@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-///  This file implements classes for searching and anlyzing source code clones.
+/// This file implements classes for searching and analyzing source code clones.
 ///
 //===----------------------------------------------------------------------===//
 

@@ -331,6 +331,29 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
   return true;
 }
 
+void DWARFFormValue::dumpSectionedAddress(raw_ostream &OS,
+                                          DIDumpOptions DumpOpts,
+                                          SectionedAddress SA) const {
+  OS << format("0x%016" PRIx64, SA.Address);
+  dumpAddressSection(U->getContext().getDWARFObj(), OS, DumpOpts,
+                     SA.SectionIndex);
+}
+
+void DWARFFormValue::dumpAddressSection(const DWARFObject &Obj, raw_ostream &OS,
+                                        DIDumpOptions DumpOpts,
+                                        uint64_t SectionIndex) {
+  if (!DumpOpts.Verbose || SectionIndex == -1ULL)
+    return;
+  ArrayRef<SectionName> SectionNames = Obj.getSectionNames();
+  const auto &SecRef = SectionNames[SectionIndex];
+
+  OS << " \"" << SecRef.Name << '\"';
+
+  // Print section index if name is not unique.
+  if (!SecRef.IsNameUnique)
+    OS << format(" [%" PRIu64 "]", SectionIndex);
+}
+
 void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   uint64_t UValue = Value.uval;
   bool CURelativeOffset = false;
@@ -339,7 +362,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
                             : nulls();
   switch (Form) {
   case DW_FORM_addr:
-    AddrOS << format("0x%016" PRIx64, UValue);
+    dumpSectionedAddress(AddrOS, DumpOpts, {Value.uval, Value.SectionIndex});
     break;
   case DW_FORM_addrx:
   case DW_FORM_addrx1:
@@ -347,11 +370,13 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   case DW_FORM_addrx3:
   case DW_FORM_addrx4:
   case DW_FORM_GNU_addr_index: {
-    AddrOS << format(" indexed (%8.8x) address = ", (uint32_t)UValue);
+    Optional<SectionedAddress> A = U->getAddrOffsetSectionItem(UValue);
+    if (!A || DumpOpts.Verbose)
+      AddrOS << format("indexed (%8.8x) address = ", (uint32_t)UValue);
     if (U == nullptr)
       OS << "<invalid dwarf unit>";
-    else if (Optional<SectionedAddress> A = U->getAddrOffsetSectionItem(UValue))
-      AddrOS << format("0x%016" PRIx64, A->Address);
+    else if (A)
+      dumpSectionedAddress(AddrOS, DumpOpts, *A);
     else
       OS << "<no .debug_addr section>";
     break;
@@ -443,7 +468,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   case DW_FORM_strx4:
   case DW_FORM_GNU_str_index:
     if (DumpOpts.Verbose)
-      OS << format(" indexed (%8.8x) string = ", (uint32_t)UValue);
+      OS << format("indexed (%8.8x) string = ", (uint32_t)UValue);
     dumpString(OS);
     break;
   case DW_FORM_GNU_strp_alt:

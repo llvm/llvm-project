@@ -126,11 +126,7 @@ public:
     return false;
   }
 
-  bool MightHaveChildren() override {
-    if (m_impl.m_mode == Mode::Invalid)
-      return false;
-    return true;
-  }
+  bool MightHaveChildren() override { return m_impl.m_mode != Mode::Invalid; }
 
   size_t GetIndexOfChildWithName(const ConstString &name) override {
     const char *item_name = name.GetCString();

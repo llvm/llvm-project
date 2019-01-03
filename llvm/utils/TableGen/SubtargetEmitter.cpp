@@ -93,6 +93,8 @@ class SubtargetEmitter {
                          &ProcItinLists);
   unsigned EmitRegisterFileTables(const CodeGenProcModel &ProcModel,
                                   raw_ostream &OS);
+  void EmitLoadStoreQueueInfo(const CodeGenProcModel &ProcModel,
+                              raw_ostream &OS);
   void EmitExtraProcessorInfo(const CodeGenProcModel &ProcModel,
                               raw_ostream &OS);
   void EmitProcessorProp(raw_ostream &OS, const Record *R, StringRef Name,
@@ -697,6 +699,30 @@ SubtargetEmitter::EmitRegisterFileTables(const CodeGenProcModel &ProcModel,
   return CostTblIndex;
 }
 
+void SubtargetEmitter::EmitLoadStoreQueueInfo(const CodeGenProcModel &ProcModel,
+                                              raw_ostream &OS) {
+  unsigned QueueID = 0;
+  if (ProcModel.LoadQueue) {
+    const Record *Queue = ProcModel.LoadQueue->getValueAsDef("QueueDescriptor");
+    QueueID =
+        1 + std::distance(ProcModel.ProcResourceDefs.begin(),
+                          std::find(ProcModel.ProcResourceDefs.begin(),
+                                    ProcModel.ProcResourceDefs.end(), Queue));
+  }
+  OS << "  " << QueueID << ", // Resource Descriptor for the Load Queue\n";
+
+  QueueID = 0;
+  if (ProcModel.StoreQueue) {
+    const Record *Queue =
+        ProcModel.StoreQueue->getValueAsDef("QueueDescriptor");
+    QueueID =
+        1 + std::distance(ProcModel.ProcResourceDefs.begin(),
+                          std::find(ProcModel.ProcResourceDefs.begin(),
+                                    ProcModel.ProcResourceDefs.end(), Queue));
+  }
+  OS << "  " << QueueID << ", // Resource Descriptor for the Store Queue\n";
+}
+
 void SubtargetEmitter::EmitExtraProcessorInfo(const CodeGenProcModel &ProcModel,
                                               raw_ostream &OS) {
   // Generate a table of register file descriptors (one entry per each user
@@ -714,6 +740,9 @@ void SubtargetEmitter::EmitExtraProcessorInfo(const CodeGenProcModel &ProcModel,
   // file descriptors and register costs).
   EmitRegisterFileInfo(ProcModel, ProcModel.RegisterFiles.size(),
                        NumCostEntries, OS);
+
+  // Add information about load/store queues.
+  EmitLoadStoreQueueInfo(ProcModel, OS);
 
   OS << "};\n";
 }

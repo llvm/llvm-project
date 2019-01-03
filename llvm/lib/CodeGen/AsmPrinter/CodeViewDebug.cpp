@@ -44,6 +44,7 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/ContinuationRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
+#include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
@@ -122,6 +123,8 @@ CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
 
   TheCPU =
       mapArchToCVCPUType(Triple(MMI->getModule()->getTargetTriple()).getArch());
+
+  collectGlobalVariableInfo();
 
   // Check if we should emit type record hashes.
   ConstantInt *GH = mdconst::extract_or_null<ConstantInt>(
@@ -731,14 +734,7 @@ static Version parseVersion(StringRef Name) {
 }
 
 void CodeViewDebug::emitCompilerInformation() {
-  MCContext &Context = MMI->getContext();
-  MCSymbol *CompilerBegin = Context.createTempSymbol(),
-           *CompilerEnd = Context.createTempSymbol();
-  OS.AddComment("Record length");
-  OS.emitAbsoluteSymbolDiff(CompilerEnd, CompilerBegin, 2);
-  OS.EmitLabel(CompilerBegin);
-  OS.AddComment("Record kind: S_COMPILE3");
-  OS.EmitIntValue(SymbolKind::S_COMPILE3, 2);
+  MCSymbol *CompilerEnd = beginSymbolRecord(SymbolKind::S_COMPILE3);
   uint32_t Flags = 0;
 
   NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
@@ -777,7 +773,7 @@ void CodeViewDebug::emitCompilerInformation() {
   OS.AddComment("Null-terminated compiler version string");
   emitNullTerminatedSymbolName(OS, CompilerVersion);
 
-  OS.EmitLabel(CompilerEnd);
+  endSymbolRecord(CompilerEnd);
 }
 
 static TypeIndex getStringIdTypeIdx(GlobalTypeTableBuilder &TypeTable,
@@ -813,14 +809,12 @@ void CodeViewDebug::emitBuildInfo() {
 
   // Make a new .debug$S subsection for the S_BUILDINFO record, which points
   // from the module symbols into the type stream.
-  MCSymbol *BuildInfoEnd = beginCVSubsection(DebugSubsectionKind::Symbols);
-  OS.AddComment("Record length");
-  OS.EmitIntValue(6, 2);
-  OS.AddComment("Record kind: S_BUILDINFO");
-  OS.EmitIntValue(unsigned(SymbolKind::S_BUILDINFO), 2);
+  MCSymbol *BISubsecEnd = beginCVSubsection(DebugSubsectionKind::Symbols);
+  MCSymbol *BIEnd = beginSymbolRecord(SymbolKind::S_BUILDINFO);
   OS.AddComment("LF_BUILDINFO index");
   OS.EmitIntValue(BuildInfoIndex.getIndex(), 4);
-  endCVSubsection(BuildInfoEnd);
+  endSymbolRecord(BIEnd);
+  endCVSubsection(BISubsecEnd);
 }
 
 void CodeViewDebug::emitInlineeLinesSubsection() {
@@ -860,18 +854,11 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
 void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
                                         const DILocation *InlinedAt,
                                         const InlineSite &Site) {
-  MCSymbol *InlineBegin = MMI->getContext().createTempSymbol(),
-           *InlineEnd = MMI->getContext().createTempSymbol();
-
   assert(TypeIndices.count({Site.Inlinee, nullptr}));
   TypeIndex InlineeIdx = TypeIndices[{Site.Inlinee, nullptr}];
 
   // SymbolRecord
-  OS.AddComment("Record length");
-  OS.emitAbsoluteSymbolDiff(InlineEnd, InlineBegin, 2);   // RecordLength
-  OS.EmitLabel(InlineBegin);
-  OS.AddComment("Record kind: S_INLINESITE");
-  OS.EmitIntValue(SymbolKind::S_INLINESITE, 2); // RecordKind
+  MCSymbol *InlineEnd = beginSymbolRecord(SymbolKind::S_INLINESITE);
 
   OS.AddComment("PtrParent");
   OS.EmitIntValue(0, 4);
@@ -886,7 +873,7 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   OS.EmitCVInlineLinetableDirective(Site.SiteFuncId, FileId, StartLineNum,
                                     FI.Begin, FI.End);
 
-  OS.EmitLabel(InlineEnd);
+  endSymbolRecord(InlineEnd);
 
   emitLocalVariableList(FI, Site.InlinedLocals);
 
@@ -899,10 +886,7 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   }
 
   // Close the scope.
-  OS.AddComment("Record length");
-  OS.EmitIntValue(2, 2);                                  // RecordLength
-  OS.AddComment("Record kind: S_INLINESITE_END");
-  OS.EmitIntValue(SymbolKind::S_INLINESITE_END, 2); // RecordKind
+  emitEndSymbolRecord(SymbolKind::S_INLINESITE_END);
 }
 
 void CodeViewDebug::switchToDebugSectionForSymbol(const MCSymbol *GVSym) {
@@ -937,13 +921,7 @@ void CodeViewDebug::emitDebugInfoForThunk(const Function *GV,
   MCSymbol *SymbolsEnd = beginCVSubsection(DebugSubsectionKind::Symbols);
 
   // Emit S_THUNK32
-  MCSymbol *ThunkRecordBegin = MMI->getContext().createTempSymbol(),
-           *ThunkRecordEnd   = MMI->getContext().createTempSymbol();
-  OS.AddComment("Record length");
-  OS.emitAbsoluteSymbolDiff(ThunkRecordEnd, ThunkRecordBegin, 2);
-  OS.EmitLabel(ThunkRecordBegin);
-  OS.AddComment("Record kind: S_THUNK32");
-  OS.EmitIntValue(unsigned(SymbolKind::S_THUNK32), 2);
+  MCSymbol *ThunkRecordEnd = beginSymbolRecord(SymbolKind::S_THUNK32);
   OS.AddComment("PtrParent");
   OS.EmitIntValue(0, 4);
   OS.AddComment("PtrEnd");
@@ -961,17 +939,13 @@ void CodeViewDebug::emitDebugInfoForThunk(const Function *GV,
   OS.AddComment("Function name");
   emitNullTerminatedSymbolName(OS, FuncName);
   // Additional fields specific to the thunk ordinal would go here.
-  OS.EmitLabel(ThunkRecordEnd);
+  endSymbolRecord(ThunkRecordEnd);
 
   // Local variables/inlined routines are purposely omitted here.  The point of
   // marking this as a thunk is so Visual Studio will NOT stop in this routine.
 
   // Emit S_PROC_ID_END
-  const unsigned RecordLengthForSymbolEnd = 2;
-  OS.AddComment("Record length");
-  OS.EmitIntValue(RecordLengthForSymbolEnd, 2);
-  OS.AddComment("Record kind: S_PROC_ID_END");
-  OS.EmitIntValue(unsigned(SymbolKind::S_PROC_ID_END), 2);
+  emitEndSymbolRecord(SymbolKind::S_PROC_ID_END);
 
   endCVSubsection(SymbolsEnd);
 }
@@ -1014,19 +988,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
   OS.AddComment("Symbol subsection for " + Twine(FuncName));
   MCSymbol *SymbolsEnd = beginCVSubsection(DebugSubsectionKind::Symbols);
   {
-    MCSymbol *ProcRecordBegin = MMI->getContext().createTempSymbol(),
-             *ProcRecordEnd = MMI->getContext().createTempSymbol();
-    OS.AddComment("Record length");
-    OS.emitAbsoluteSymbolDiff(ProcRecordEnd, ProcRecordBegin, 2);
-    OS.EmitLabel(ProcRecordBegin);
-
-    if (GV->hasLocalLinkage()) {
-      OS.AddComment("Record kind: S_LPROC32_ID");
-      OS.EmitIntValue(unsigned(SymbolKind::S_LPROC32_ID), 2);
-    } else {
-      OS.AddComment("Record kind: S_GPROC32_ID");
-      OS.EmitIntValue(unsigned(SymbolKind::S_GPROC32_ID), 2);
-    }
+    SymbolKind ProcKind = GV->hasLocalLinkage() ? SymbolKind::S_LPROC32_ID
+                                                : SymbolKind::S_GPROC32_ID;
+    MCSymbol *ProcRecordEnd = beginSymbolRecord(ProcKind);
 
     // These fields are filled in by tools like CVPACK which run after the fact.
     OS.AddComment("PtrParent");
@@ -1055,15 +1019,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.AddComment("Function name");
     // Truncate the name so we won't overflow the record length field.
     emitNullTerminatedSymbolName(OS, FuncName);
-    OS.EmitLabel(ProcRecordEnd);
+    endSymbolRecord(ProcRecordEnd);
 
-    MCSymbol *FrameProcBegin = MMI->getContext().createTempSymbol(),
-             *FrameProcEnd = MMI->getContext().createTempSymbol();
-    OS.AddComment("Record length");
-    OS.emitAbsoluteSymbolDiff(FrameProcEnd, FrameProcBegin, 2);
-    OS.EmitLabel(FrameProcBegin);
-    OS.AddComment("Record kind: S_FRAMEPROC");
-    OS.EmitIntValue(unsigned(SymbolKind::S_FRAMEPROC), 2);
+    MCSymbol *FrameProcEnd = beginSymbolRecord(SymbolKind::S_FRAMEPROC);
     // Subtract out the CSR size since MSVC excludes that and we include it.
     OS.AddComment("FrameSize");
     OS.EmitIntValue(FI.FrameSize - FI.CSRSize, 4);
@@ -1079,9 +1037,10 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.EmitIntValue(0, 2);
     OS.AddComment("Flags (defines frame register)");
     OS.EmitIntValue(uint32_t(FI.FrameProcOpts), 4);
-    OS.EmitLabel(FrameProcEnd);
+    endSymbolRecord(FrameProcEnd);
 
     emitLocalVariableList(FI, FI.Locals);
+    emitGlobalVariableList(FI.Globals);
     emitLexicalBlockList(FI.ChildBlocks, FI);
 
     // Emit inlined call site information. Only emit functions inlined directly
@@ -1097,13 +1056,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     for (auto Annot : FI.Annotations) {
       MCSymbol *Label = Annot.first;
       MDTuple *Strs = cast<MDTuple>(Annot.second);
-      MCSymbol *AnnotBegin = MMI->getContext().createTempSymbol(),
-               *AnnotEnd = MMI->getContext().createTempSymbol();
-      OS.AddComment("Record length");
-      OS.emitAbsoluteSymbolDiff(AnnotEnd, AnnotBegin, 2);
-      OS.EmitLabel(AnnotBegin);
-      OS.AddComment("Record kind: S_ANNOTATION");
-      OS.EmitIntValue(SymbolKind::S_ANNOTATION, 2);
+      MCSymbol *AnnotEnd = beginSymbolRecord(SymbolKind::S_ANNOTATION);
       OS.EmitCOFFSecRel32(Label, /*Offset=*/0);
       // FIXME: Make sure we don't overflow the max record size.
       OS.EmitCOFFSectionIndex(Label);
@@ -1115,17 +1068,14 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
         assert(Str.data()[Str.size()] == '\0' && "non-nullterminated MDString");
         OS.EmitBytes(StringRef(Str.data(), Str.size() + 1));
       }
-      OS.EmitLabel(AnnotEnd);
+      endSymbolRecord(AnnotEnd);
     }
 
     if (SP != nullptr)
       emitDebugInfoForUDTs(LocalUDTs);
 
     // We're done with this function.
-    OS.AddComment("Record length");
-    OS.EmitIntValue(0x0002, 2);
-    OS.AddComment("Record kind: S_PROC_ID_END");
-    OS.EmitIntValue(unsigned(SymbolKind::S_PROC_ID_END), 2);
+    emitEndSymbolRecord(SymbolKind::S_PROC_ID_END);
   }
   endCVSubsection(SymbolsEnd);
 
@@ -1888,9 +1838,19 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
   SmallVector<TypeIndex, 8> ArgTypeIndices;
   TypeIndex ReturnTypeIndex = getTypeIndex(ReturnAndArgs[Index++]);
 
+  // If the first argument is a pointer type and this isn't a static method,
+  // treat it as the special 'this' parameter, which is encoded separately from
+  // the arguments.
   TypeIndex ThisTypeIndex;
-  if (!IsStaticMethod && ReturnAndArgs.size() > 1)
-    ThisTypeIndex = getTypeIndexForThisPtr(ReturnAndArgs[Index++], Ty);
+  if (!IsStaticMethod && ReturnAndArgs.size() > Index) {
+    if (const DIDerivedType *PtrTy =
+            dyn_cast_or_null<DIDerivedType>(ReturnAndArgs[Index].resolve())) {
+      if (PtrTy->getTag() == dwarf::DW_TAG_pointer_type) {
+        ThisTypeIndex = getTypeIndexForThisPtr(PtrTy, Ty);
+        Index++;
+      }
+    }
+  }
 
   while (Index < ReturnAndArgs.size())
     ArgTypeIndices.push_back(getTypeIndex(ReturnAndArgs[Index++]));
@@ -2099,6 +2059,7 @@ void CodeViewDebug::clear() {
   GlobalUDTs.clear();
   TypeIndices.clear();
   CompleteTypeIndices.clear();
+  ScopeGlobals.clear();
 }
 
 void CodeViewDebug::collectMemberInfo(ClassInfo &Info,
@@ -2445,9 +2406,10 @@ TypeIndex CodeViewDebug::getTypeIndex(DITypeRef TypeRef, DITypeRef ClassTyRef) {
 }
 
 codeview::TypeIndex
-CodeViewDebug::getTypeIndexForThisPtr(DITypeRef TypeRef,
+CodeViewDebug::getTypeIndexForThisPtr(const DIDerivedType *PtrTy,
                                       const DISubroutineType *SubroutineTy) {
-  const DIType *Ty = TypeRef.resolve();
+  assert(PtrTy->getTag() == dwarf::DW_TAG_pointer_type &&
+         "this type must be a pointer type");
 
   PointerOptions Options = PointerOptions::None;
   if (SubroutineTy->getFlags() & DINode::DIFlags::FlagLValueReference)
@@ -2460,17 +2422,13 @@ CodeViewDebug::getTypeIndexForThisPtr(DITypeRef TypeRef,
   // so that the TypeIndex for the this pointer can be shared with the type
   // index for other pointers to this class type.  If there is a ref qualifier
   // then we lookup the pointer using the subroutine as the parent type.
-  const DIType *ParentTy = nullptr;
-  if (Options != PointerOptions::None)
-    ParentTy = SubroutineTy;
-
-  auto I = TypeIndices.find({Ty, SubroutineTy});
+  auto I = TypeIndices.find({PtrTy, SubroutineTy});
   if (I != TypeIndices.end())
     return I->second;
 
   TypeLoweringScope S(*this);
-  TypeIndex TI = lowerTypePointer(cast<DIDerivedType>(Ty), Options);
-  return recordTypeIndexForDINode(Ty, TI, SubroutineTy);
+  TypeIndex TI = lowerTypePointer(PtrTy, Options);
+  return recordTypeIndexForDINode(PtrTy, TI, SubroutineTy);
 }
 
 TypeIndex CodeViewDebug::getTypeIndexForReferenceTo(DITypeRef TypeRef) {
@@ -2489,6 +2447,14 @@ TypeIndex CodeViewDebug::getCompleteTypeIndex(DITypeRef TypeRef) {
   // The null DIType is the void type. Don't try to hash it.
   if (!Ty)
     return TypeIndex::Void();
+
+  // Look through typedefs when getting the complete type index. Call
+  // getTypeIndex on the typdef to ensure that any UDTs are accumulated and are
+  // emitted only once.
+  if (Ty->getTag() == dwarf::DW_TAG_typedef)
+    (void)getTypeIndex(Ty);
+  while (Ty->getTag() == dwarf::DW_TAG_typedef)
+    Ty = cast<DIDerivedType>(Ty)->getBaseType().resolve();
 
   // If this is a non-record type, the complete type index is the same as the
   // normal type index. Just call getTypeIndex.
@@ -2591,14 +2557,7 @@ static void copyBytesForDefRange(SmallString<20> &BytePrefix,
 void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
                                       const LocalVariable &Var) {
   // LocalSym record, see SymbolRecord.h for more info.
-  MCSymbol *LocalBegin = MMI->getContext().createTempSymbol(),
-           *LocalEnd = MMI->getContext().createTempSymbol();
-  OS.AddComment("Record length");
-  OS.emitAbsoluteSymbolDiff(LocalEnd, LocalBegin, 2);
-  OS.EmitLabel(LocalBegin);
-
-  OS.AddComment("Record kind: S_LOCAL");
-  OS.EmitIntValue(unsigned(SymbolKind::S_LOCAL), 2);
+  MCSymbol *LocalEnd = beginSymbolRecord(SymbolKind::S_LOCAL);
 
   LocalSymFlags Flags = LocalSymFlags::None;
   if (Var.DIVar->isParameter())
@@ -2615,7 +2574,7 @@ void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
   OS.EmitIntValue(static_cast<uint16_t>(Flags), 2);
   // Truncate the name so we won't overflow the record length field.
   emitNullTerminatedSymbolName(OS, Var.DIVar->getName());
-  OS.EmitLabel(LocalEnd);
+  endSymbolRecord(LocalEnd);
 
   // Calculate the on disk prefix of the appropriate def range record. The
   // records and on disk formats are described in SymbolRecords.h. BytePrefix
@@ -2687,15 +2646,7 @@ void CodeViewDebug::emitLexicalBlockList(ArrayRef<LexicalBlock *> Blocks,
 /// lexical block scope.
 void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
                                      const FunctionInfo& FI) {
-  MCSymbol *RecordBegin = MMI->getContext().createTempSymbol(),
-           *RecordEnd   = MMI->getContext().createTempSymbol();
-
-  // Lexical block symbol record.
-  OS.AddComment("Record length");
-  OS.emitAbsoluteSymbolDiff(RecordEnd, RecordBegin, 2);   // Record Length
-  OS.EmitLabel(RecordBegin);
-  OS.AddComment("Record kind: S_BLOCK32");
-  OS.EmitIntValue(SymbolKind::S_BLOCK32, 2);              // Record Kind
+  MCSymbol *RecordEnd = beginSymbolRecord(SymbolKind::S_BLOCK32);
   OS.AddComment("PtrParent");
   OS.EmitIntValue(0, 4);                                  // PtrParent
   OS.AddComment("PtrEnd");
@@ -2708,19 +2659,17 @@ void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
   OS.EmitCOFFSectionIndex(FI.Begin);                      // Func Symbol
   OS.AddComment("Lexical block name");
   emitNullTerminatedSymbolName(OS, Block.Name);           // Name
-  OS.EmitLabel(RecordEnd);
+  endSymbolRecord(RecordEnd);
 
   // Emit variables local to this lexical block.
   emitLocalVariableList(FI, Block.Locals);
+  emitGlobalVariableList(Block.Globals);
 
   // Emit lexical blocks contained within this block.
   emitLexicalBlockList(Block.Children, FI);
 
   // Close the lexical block scope.
-  OS.AddComment("Record length");
-  OS.EmitIntValue(2, 2);                                  // Record Length
-  OS.AddComment("Record kind: S_END");
-  OS.EmitIntValue(SymbolKind::S_END, 2);                  // Record Kind
+  emitEndSymbolRecord(SymbolKind::S_END);
 }
 
 /// Convenience routine for collecting lexical block information for a list
@@ -2728,9 +2677,10 @@ void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
 void CodeViewDebug::collectLexicalBlockInfo(
         SmallVectorImpl<LexicalScope *> &Scopes,
         SmallVectorImpl<LexicalBlock *> &Blocks,
-        SmallVectorImpl<LocalVariable> &Locals) {
+        SmallVectorImpl<LocalVariable> &Locals,
+        SmallVectorImpl<CVGlobalVariable> &Globals) {
   for (LexicalScope *Scope : Scopes)
-    collectLexicalBlockInfo(*Scope, Blocks, Locals);
+    collectLexicalBlockInfo(*Scope, Blocks, Locals, Globals);
 }
 
 /// Populate the lexical blocks and local variable lists of the parent with
@@ -2738,45 +2688,58 @@ void CodeViewDebug::collectLexicalBlockInfo(
 void CodeViewDebug::collectLexicalBlockInfo(
     LexicalScope &Scope,
     SmallVectorImpl<LexicalBlock *> &ParentBlocks,
-    SmallVectorImpl<LocalVariable> &ParentLocals) {
+    SmallVectorImpl<LocalVariable> &ParentLocals,
+    SmallVectorImpl<CVGlobalVariable> &ParentGlobals) {
   if (Scope.isAbstractScope())
     return;
 
-  auto LocalsIter = ScopeVariables.find(&Scope);
-  if (LocalsIter == ScopeVariables.end()) {
-    // This scope does not contain variables and can be eliminated.
-    collectLexicalBlockInfo(Scope.getChildren(), ParentBlocks, ParentLocals);
-    return;
-  }
-  SmallVectorImpl<LocalVariable> &Locals = LocalsIter->second;
-
+  // Gather information about the lexical scope including local variables,
+  // global variables, and address ranges.
+  bool IgnoreScope = false;
+  auto LI = ScopeVariables.find(&Scope);
+  SmallVectorImpl<LocalVariable> *Locals =
+      LI != ScopeVariables.end() ? &LI->second : nullptr;
+  auto GI = ScopeGlobals.find(Scope.getScopeNode());
+  SmallVectorImpl<CVGlobalVariable> *Globals =
+      GI != ScopeGlobals.end() ? GI->second.get() : nullptr;
   const DILexicalBlock *DILB = dyn_cast<DILexicalBlock>(Scope.getScopeNode());
-  if (!DILB) {
-    // This scope is not a lexical block and can be eliminated, but keep any
-    // local variables it contains.
-    ParentLocals.append(Locals.begin(), Locals.end());
-    collectLexicalBlockInfo(Scope.getChildren(), ParentBlocks, ParentLocals);
-    return;
-  }
-
   const SmallVectorImpl<InsnRange> &Ranges = Scope.getRanges();
-  if (Ranges.size() != 1 || !getLabelAfterInsn(Ranges.front().second)) {
-    // This lexical block scope has too many address ranges to represent in the
-    // current CodeView format or does not have a valid address range.
-    // Eliminate this lexical scope and promote any locals it contains to the
-    // parent scope.
-    //
-    // For lexical scopes with multiple address ranges you may be tempted to
-    // construct a single range covering every instruction where the block is
-    // live and everything in between.  Unfortunately, Visual Studio only
-    // displays variables from the first matching lexical block scope.  If the
-    // first lexical block contains exception handling code or cold code which
-    // is moved to the bottom of the routine creating a single range covering
-    // nearly the entire routine, then it will hide all other lexical blocks
-    // and the variables they contain.
-    //
-    ParentLocals.append(Locals.begin(), Locals.end());
-    collectLexicalBlockInfo(Scope.getChildren(), ParentBlocks, ParentLocals);
+
+  // Ignore lexical scopes which do not contain variables.
+  if (!Locals && !Globals)
+    IgnoreScope = true;
+
+  // Ignore lexical scopes which are not lexical blocks.
+  if (!DILB)
+    IgnoreScope = true;
+
+  // Ignore scopes which have too many address ranges to represent in the
+  // current CodeView format or do not have a valid address range.
+  //
+  // For lexical scopes with multiple address ranges you may be tempted to
+  // construct a single range covering every instruction where the block is
+  // live and everything in between.  Unfortunately, Visual Studio only
+  // displays variables from the first matching lexical block scope.  If the
+  // first lexical block contains exception handling code or cold code which
+  // is moved to the bottom of the routine creating a single range covering
+  // nearly the entire routine, then it will hide all other lexical blocks
+  // and the variables they contain.
+  if (Ranges.size() != 1 || !getLabelAfterInsn(Ranges.front().second))
+    IgnoreScope = true;
+
+  if (IgnoreScope) {
+    // This scope can be safely ignored and eliminating it will reduce the
+    // size of the debug information. Be sure to collect any variable and scope
+    // information from the this scope or any of its children and collapse them
+    // into the parent scope.
+    if (Locals)
+      ParentLocals.append(Locals->begin(), Locals->end());
+    if (Globals)
+      ParentGlobals.append(Globals->begin(), Globals->end());
+    collectLexicalBlockInfo(Scope.getChildren(),
+                            ParentBlocks,
+                            ParentLocals,
+                            ParentGlobals);
     return;
   }
 
@@ -2787,8 +2750,8 @@ void CodeViewDebug::collectLexicalBlockInfo(
   if (!BlockInsertion.second)
     return;
 
-  // Create a lexical block containing the local variables and collect the
-  // the lexical block information for the children.
+  // Create a lexical block containing the variables and collect the the
+  // lexical block information for the children.
   const InsnRange &Range = Ranges.front();
   assert(Range.first && Range.second);
   LexicalBlock &Block = BlockInsertion.first->second;
@@ -2797,9 +2760,15 @@ void CodeViewDebug::collectLexicalBlockInfo(
   assert(Block.Begin && "missing label for scope begin");
   assert(Block.End && "missing label for scope end");
   Block.Name = DILB->getName();
-  Block.Locals = std::move(Locals);
+  if (Locals)
+    Block.Locals = std::move(*Locals);
+  if (Globals)
+    Block.Globals = std::move(*Globals);
   ParentBlocks.push_back(&Block);
-  collectLexicalBlockInfo(Scope.getChildren(), Block.Children, Block.Locals);
+  collectLexicalBlockInfo(Scope.getChildren(),
+                          Block.Children,
+                          Block.Locals,
+                          Block.Globals);
 }
 
 void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
@@ -2811,7 +2780,10 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
 
   // Build the lexical block structure to emit for this routine.
   if (LexicalScope *CFS = LScopes.getCurrentFunctionScope())
-    collectLexicalBlockInfo(*CFS, CurFn->ChildBlocks, CurFn->Locals);
+    collectLexicalBlockInfo(*CFS,
+                            CurFn->ChildBlocks,
+                            CurFn->Locals,
+                            CurFn->Globals);
 
   // Clear the scope and variable information from the map which will not be
   // valid after we have finished processing this routine.  This also prepares
@@ -2878,30 +2850,57 @@ void CodeViewDebug::endCVSubsection(MCSymbol *EndLabel) {
   OS.EmitValueToAlignment(4);
 }
 
+static StringRef getSymbolName(SymbolKind SymKind) {
+  for (const EnumEntry<SymbolKind> &EE : getSymbolTypeNames())
+    if (EE.Value == SymKind)
+      return EE.Name;
+  return "";
+}
+
+MCSymbol *CodeViewDebug::beginSymbolRecord(SymbolKind SymKind) {
+  MCSymbol *BeginLabel = MMI->getContext().createTempSymbol(),
+           *EndLabel = MMI->getContext().createTempSymbol();
+  OS.AddComment("Record length");
+  OS.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 2);
+  OS.EmitLabel(BeginLabel);
+  if (OS.isVerboseAsm())
+    OS.AddComment("Record kind: " + getSymbolName(SymKind));
+  OS.EmitIntValue(unsigned(SymKind), 2);
+  return EndLabel;
+}
+
+void CodeViewDebug::endSymbolRecord(MCSymbol *SymEnd) {
+  // MSVC does not pad out symbol records to four bytes, but LLVM does to avoid
+  // an extra copy of every symbol record in LLD. This increases object file
+  // size by less than 1% in the clang build, and is compatible with the Visual
+  // C++ linker.
+  OS.EmitValueToAlignment(4);
+  OS.EmitLabel(SymEnd);
+}
+
+void CodeViewDebug::emitEndSymbolRecord(SymbolKind EndKind) {
+  OS.AddComment("Record length");
+  OS.EmitIntValue(2, 2);
+  if (OS.isVerboseAsm())
+    OS.AddComment("Record kind: " + getSymbolName(EndKind));
+  OS.EmitIntValue(unsigned(EndKind), 2); // Record Kind
+}
+
 void CodeViewDebug::emitDebugInfoForUDTs(
     ArrayRef<std::pair<std::string, const DIType *>> UDTs) {
   for (const auto &UDT : UDTs) {
     const DIType *T = UDT.second;
     assert(shouldEmitUdt(T));
 
-    MCSymbol *UDTRecordBegin = MMI->getContext().createTempSymbol(),
-             *UDTRecordEnd = MMI->getContext().createTempSymbol();
-    OS.AddComment("Record length");
-    OS.emitAbsoluteSymbolDiff(UDTRecordEnd, UDTRecordBegin, 2);
-    OS.EmitLabel(UDTRecordBegin);
-
-    OS.AddComment("Record kind: S_UDT");
-    OS.EmitIntValue(unsigned(SymbolKind::S_UDT), 2);
-
+    MCSymbol *UDTRecordEnd = beginSymbolRecord(SymbolKind::S_UDT);
     OS.AddComment("Type");
     OS.EmitIntValue(getCompleteTypeIndex(T).getIndex(), 4);
-
     emitNullTerminatedSymbolName(OS, UDT.first);
-    OS.EmitLabel(UDTRecordEnd);
+    endSymbolRecord(UDTRecordEnd);
   }
 }
 
-void CodeViewDebug::emitDebugInfoForGlobals() {
+void CodeViewDebug::collectGlobalVariableInfo() {
   DenseMap<const DIGlobalVariableExpression *, const GlobalVariable *>
       GlobalMap;
   for (const GlobalVariable &GV : MMI->getModule()->globals()) {
@@ -2914,42 +2913,56 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
   NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
   for (const MDNode *Node : CUs->operands()) {
     const auto *CU = cast<DICompileUnit>(Node);
-
-    // First, emit all globals that are not in a comdat in a single symbol
-    // substream. MSVC doesn't like it if the substream is empty, so only open
-    // it if we have at least one global to emit.
-    switchToDebugSectionForSymbol(nullptr);
-    MCSymbol *EndLabel = nullptr;
     for (const auto *GVE : CU->getGlobalVariables()) {
-      if (const auto *GV = GlobalMap.lookup(GVE))
-        if (!GV->hasComdat() && !GV->isDeclarationForLinker()) {
-          if (!EndLabel) {
-            OS.AddComment("Symbol subsection for globals");
-            EndLabel = beginCVSubsection(DebugSubsectionKind::Symbols);
-          }
-          // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
-          emitDebugInfoForGlobal(GVE->getVariable(), GV, Asm->getSymbol(GV));
-        }
+      const auto *GV = GlobalMap.lookup(GVE);
+      if (!GV || GV->isDeclarationForLinker())
+        continue;
+      const DIGlobalVariable *DIGV = GVE->getVariable();
+      DIScope *Scope = DIGV->getScope();
+      SmallVector<CVGlobalVariable, 1> *VariableList;
+      if (Scope && isa<DILocalScope>(Scope)) {
+        // Locate a global variable list for this scope, creating one if
+        // necessary.
+        auto Insertion = ScopeGlobals.insert(
+            {Scope, std::unique_ptr<GlobalVariableList>()});
+        if (Insertion.second)
+          Insertion.first->second = llvm::make_unique<GlobalVariableList>();
+        VariableList = Insertion.first->second.get();
+      } else if (GV->hasComdat())
+        // Emit this global variable into a COMDAT section.
+        VariableList = &ComdatVariables;
+      else
+        // Emit this globla variable in a single global symbol section.
+        VariableList = &GlobalVariables;
+      CVGlobalVariable CVGV = {DIGV, GV};
+      VariableList->emplace_back(std::move(CVGV));
     }
-    if (EndLabel)
-      endCVSubsection(EndLabel);
+  }
+}
 
-    // Second, emit each global that is in a comdat into its own .debug$S
-    // section along with its own symbol substream.
-    for (const auto *GVE : CU->getGlobalVariables()) {
-      if (const auto *GV = GlobalMap.lookup(GVE)) {
-        if (GV->hasComdat()) {
-          MCSymbol *GVSym = Asm->getSymbol(GV);
-          OS.AddComment("Symbol subsection for " +
-                        Twine(GlobalValue::dropLLVMManglingEscape(GV->getName())));
-          switchToDebugSectionForSymbol(GVSym);
-          EndLabel = beginCVSubsection(DebugSubsectionKind::Symbols);
-          // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
-          emitDebugInfoForGlobal(GVE->getVariable(), GV, GVSym);
-          endCVSubsection(EndLabel);
-        }
-      }
-    }
+void CodeViewDebug::emitDebugInfoForGlobals() {
+  // First, emit all globals that are not in a comdat in a single symbol
+  // substream. MSVC doesn't like it if the substream is empty, so only open
+  // it if we have at least one global to emit.
+  switchToDebugSectionForSymbol(nullptr);
+  if (!GlobalVariables.empty()) {
+    OS.AddComment("Symbol subsection for globals");
+    MCSymbol *EndLabel = beginCVSubsection(DebugSubsectionKind::Symbols);
+    emitGlobalVariableList(GlobalVariables);
+    endCVSubsection(EndLabel);
+  }
+
+  // Second, emit each global that is in a comdat into its own .debug$S
+  // section along with its own symbol substream.
+  for (const CVGlobalVariable &CVGV : ComdatVariables) {
+    MCSymbol *GVSym = Asm->getSymbol(CVGV.GV);
+    OS.AddComment("Symbol subsection for " +
+            Twine(GlobalValue::dropLLVMManglingEscape(CVGV.GV->getName())));
+    switchToDebugSectionForSymbol(GVSym);
+    MCSymbol *EndLabel = beginCVSubsection(DebugSubsectionKind::Symbols);
+    // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
+    emitDebugInfoForGlobal(CVGV.DIGV, CVGV.GV, GVSym);
+    endCVSubsection(EndLabel);
   }
 }
 
@@ -2965,34 +2978,26 @@ void CodeViewDebug::emitDebugInfoForRetainedTypes() {
   }
 }
 
+// Emit each global variable in the specified array.
+void CodeViewDebug::emitGlobalVariableList(ArrayRef<CVGlobalVariable> Globals) {
+  for (const CVGlobalVariable &CVGV : Globals) {
+    MCSymbol *GVSym = Asm->getSymbol(CVGV.GV);
+    // FIXME: emitDebugInfoForGlobal() doesn't handle DIExpressions.
+    emitDebugInfoForGlobal(CVGV.DIGV, CVGV.GV, GVSym);
+  }
+}
+
 void CodeViewDebug::emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
                                            const GlobalVariable *GV,
                                            MCSymbol *GVSym) {
-  // DataSym record, see SymbolRecord.h for more info.
-  // FIXME: Thread local data, etc
-  MCSymbol *DataBegin = MMI->getContext().createTempSymbol(),
-           *DataEnd = MMI->getContext().createTempSymbol();
-  const unsigned FixedLengthOfThisRecord = 12;
-  OS.AddComment("Record length");
-  OS.emitAbsoluteSymbolDiff(DataEnd, DataBegin, 2);
-  OS.EmitLabel(DataBegin);
-  if (DIGV->isLocalToUnit()) {
-    if (GV->isThreadLocal()) {
-      OS.AddComment("Record kind: S_LTHREAD32");
-      OS.EmitIntValue(unsigned(SymbolKind::S_LTHREAD32), 2);
-    } else {
-      OS.AddComment("Record kind: S_LDATA32");
-      OS.EmitIntValue(unsigned(SymbolKind::S_LDATA32), 2);
-    }
-  } else {
-    if (GV->isThreadLocal()) {
-      OS.AddComment("Record kind: S_GTHREAD32");
-      OS.EmitIntValue(unsigned(SymbolKind::S_GTHREAD32), 2);
-    } else {
-      OS.AddComment("Record kind: S_GDATA32");
-      OS.EmitIntValue(unsigned(SymbolKind::S_GDATA32), 2);
-    }
-  }
+  // DataSym record, see SymbolRecord.h for more info. Thread local data
+  // happens to have the same format as global data.
+  SymbolKind DataSym = GV->isThreadLocal()
+                           ? (DIGV->isLocalToUnit() ? SymbolKind::S_LTHREAD32
+                                                    : SymbolKind::S_GTHREAD32)
+                           : (DIGV->isLocalToUnit() ? SymbolKind::S_LDATA32
+                                                    : SymbolKind::S_GDATA32);
+  MCSymbol *DataEnd = beginSymbolRecord(DataSym);
   OS.AddComment("Type");
   OS.EmitIntValue(getCompleteTypeIndex(DIGV->getType()).getIndex(), 4);
   OS.AddComment("DataOffset");
@@ -3000,6 +3005,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
   OS.AddComment("Segment");
   OS.EmitCOFFSectionIndex(GVSym);
   OS.AddComment("Name");
-  emitNullTerminatedSymbolName(OS, DIGV->getName(), FixedLengthOfThisRecord);
-  OS.EmitLabel(DataEnd);
+  const unsigned LengthOfDataRecord = 12;
+  emitNullTerminatedSymbolName(OS, DIGV->getName(), LengthOfDataRecord);
+  endSymbolRecord(DataEnd);
 }

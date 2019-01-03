@@ -456,6 +456,21 @@ bool llvm::RelocAddressLess(RelocationRef a, RelocationRef b) {
   return a.getOffset() < b.getOffset();
 }
 
+static std::string demangle(StringRef Name) {
+  char *Demangled = nullptr;
+  if (Name.startswith("_Z"))
+    Demangled = itaniumDemangle(Name.data(), Demangled, nullptr, nullptr);
+  else if (Name.startswith("?"))
+    Demangled = microsoftDemangle(Name.data(), Demangled, nullptr, nullptr);
+
+  if (!Demangled)
+    return Name;
+
+  std::string Ret = Demangled;
+  free(Demangled);
+  return Ret;
+}
+
 template <class ELFT>
 static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
                                                 const RelocationRef &RelRef,
@@ -504,7 +519,7 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
     break;
   }
   }
-  StringRef Target;
+  std::string Target;
   if (!undef) {
     symbol_iterator SI = RelRef.getSymbol();
     const Elf_Sym *symb = Obj->getSymbol(SI->getRawDataRefImpl());
@@ -521,7 +536,10 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
       Expected<StringRef> SymName = symb->getName(StrTab);
       if (!SymName)
         return errorToErrorCode(SymName.takeError());
-      Target = *SymName;
+      if (Demangle)
+        Target = demangle(*SymName);
+      else
+        Target = *SymName;
     }
   } else
     Target = "*ABS*";
@@ -1288,7 +1306,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
   // Package up features to be passed to target/subtarget
   SubtargetFeatures Features = Obj->getFeatures();
-  if (MAttrs.size()) {
+  if (!MAttrs.empty()) {
     for (unsigned i = 0; i != MAttrs.size(); ++i)
       Features.AddFeature(MAttrs[i]);
   }
@@ -1573,30 +1591,12 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
         }
       }
 
-      auto PrintSymbol = [](StringRef Name) {
-        outs() << '\n' << Name << ":\n";
-      };
+      outs() << '\n';
       StringRef SymbolName = std::get<1>(Symbols[si]);
-      if (Demangle) {
-        char *DemangledSymbol = nullptr;
-        size_t Size = 0;
-        int Status = -1;
-        if (SymbolName.startswith("_Z"))
-          DemangledSymbol = itaniumDemangle(SymbolName.data(), DemangledSymbol,
-                                            &Size, &Status);
-        else if (SymbolName.startswith("?"))
-          DemangledSymbol = microsoftDemangle(SymbolName.data(),
-                                              DemangledSymbol, &Size, &Status);
-
-        if (Status == 0 && DemangledSymbol)
-          PrintSymbol(StringRef(DemangledSymbol));
-        else
-          PrintSymbol(SymbolName);
-
-        if (DemangledSymbol)
-          free(DemangledSymbol);
-      } else
-        PrintSymbol(SymbolName);
+      if (Demangle)
+        outs() << demangle(SymbolName) << ":\n";
+      else
+        outs() << SymbolName << ":\n";
 
       // Don't print raw contents of a virtual section. A virtual section
       // doesn't have any contents in the file.
@@ -2061,8 +2061,11 @@ void llvm::PrintSymbolTable(const ObjectFile *o, StringRef ArchiveName,
     if (Hidden) {
       outs() << ".hidden ";
     }
-    outs() << Name
-           << '\n';
+
+    if (Demangle)
+      outs() << demangle(Name) << '\n';
+    else
+      outs() << Name << '\n';
   }
 }
 
@@ -2453,7 +2456,7 @@ int main(int argc, char **argv) {
   ToolName = argv[0];
 
   // Defaults to a.out if no filenames specified.
-  if (InputFilenames.size() == 0)
+  if (InputFilenames.empty())
     InputFilenames.push_back("a.out");
 
   if (AllHeaders)
@@ -2487,7 +2490,7 @@ int main(int argc, char **argv) {
       && !(DylibsUsed && MachOOpt)
       && !(DylibId && MachOOpt)
       && !(ObjcMetaData && MachOOpt)
-      && !(FilterSections.size() != 0 && MachOOpt)
+      && !(!FilterSections.empty() && MachOOpt)
       && !PrintFaultMaps
       && DwarfDumpType == DIDT_Null) {
     cl::PrintHelpMessage();

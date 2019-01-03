@@ -490,6 +490,9 @@ public:
                                               MCContext &Ctx) {
     return nullptr;
   }
+
+  // For any checks or cleanups at the end of parsing.
+  virtual void onEndOfFile() {}
 };
 
 } // end namespace llvm

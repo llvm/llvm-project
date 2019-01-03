@@ -783,5 +783,10 @@ entry:
   ret void
 }
 
+; GCN-PRELINK: declare float @_Z4fabsf(float) local_unnamed_addr #[[$NOUNWIND_READONLY:[0-9]+]]
+; GCN-PRELINK: declare float @_Z4cbrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY]]
+; GCN-PRELINK: declare float @_Z11native_sqrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY]]
+
 ; CGN-PRELINK: attributes #[[$NOUNWIND]] = { nounwind }
+; GCN-PRELINK: attributes #[[$NOUNWIND_READONLY]] = { nounwind readonly }
 attributes #0 = { nounwind }

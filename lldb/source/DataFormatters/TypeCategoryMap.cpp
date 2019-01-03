@@ -118,8 +118,7 @@ void TypeCategoryMap::EnableAllCategories() {
 
 void TypeCategoryMap::DisableAllCategories() {
   std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-  Position p = First;
-  for (; false == m_active_categories.empty(); p++) {
+  for (Position p = First; !m_active_categories.empty(); p++) {
     m_active_categories.front()->SetEnabledPosition(p);
     Disable(m_active_categories.front());
   }

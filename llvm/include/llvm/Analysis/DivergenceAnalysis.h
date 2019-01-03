@@ -173,6 +173,33 @@ private:
   std::vector<const Instruction *> Worklist;
 };
 
+/// \brief Divergence analysis frontend for GPU kernels.
+class GPUDivergenceAnalysis {
+  SyncDependenceAnalysis SDA;
+  DivergenceAnalysis DA;
+
+public:
+  /// Runs the divergence analysis on @F, a GPU kernel
+  GPUDivergenceAnalysis(Function &F, const DominatorTree &DT,
+                        const PostDominatorTree &PDT, const LoopInfo &LI,
+                        const TargetTransformInfo &TTI);
+
+  /// Whether any divergence was detected.
+  bool hasDivergence() const { return DA.hasDetectedDivergence(); }
+
+  /// The GPU kernel this analysis result is for
+  const Function &getFunction() const { return DA.getFunction(); }
+
+  /// Whether \p V is divergent.
+  bool isDivergent(const Value &V) const;
+
+  /// Whether \p V is uniform/non-divergent
+  bool isUniform(const Value &V) const { return !isDivergent(V); }
+
+  /// Print all divergent values in the kernel.
+  void print(raw_ostream &OS, const Module *) const;
+};
+
 } // namespace llvm
 
 #endif // LLVM_ANALYSIS_DIVERGENCE_ANALYSIS_H

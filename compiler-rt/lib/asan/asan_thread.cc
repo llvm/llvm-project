@@ -289,8 +289,8 @@ void AsanThread::SetThreadStackAndTls(const InitOptions *options) {
   DCHECK_EQ(options, nullptr);
   uptr tls_size = 0;
   uptr stack_size = 0;
-  GetThreadStackAndTls(tid() == 0, const_cast<uptr *>(&stack_bottom_),
-                       const_cast<uptr *>(&stack_size), &tls_begin_, &tls_size);
+  GetThreadStackAndTls(tid() == 0, &stack_bottom_, &stack_size, &tls_begin_,
+                       &tls_size);
   stack_top_ = stack_bottom_ + stack_size;
   tls_end_ = tls_begin_ + tls_size;
   dtls_ = DTLS_Get();

@@ -10,6 +10,7 @@ target_link_libraries(clang-diff
   PRIVATE
   clangBasic
   clangFrontend
+  clangSerialization
   clangTooling
   clangToolingASTDiff
   )

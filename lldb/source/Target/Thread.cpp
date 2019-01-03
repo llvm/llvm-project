@@ -23,8 +23,10 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
@@ -1036,9 +1038,11 @@ void Thread::PushPlan(ThreadPlanSP &thread_plan_sp) {
   if (thread_plan_sp) {
     // If the thread plan doesn't already have a tracer, give it its parent's
     // tracer:
-    if (!thread_plan_sp->GetThreadPlanTracer())
+    if (!thread_plan_sp->GetThreadPlanTracer()) {
+      assert(!m_plan_stack.empty());
       thread_plan_sp->SetThreadPlanTracer(
           m_plan_stack.back()->GetThreadPlanTracer());
+    }
     m_plan_stack.push_back(thread_plan_sp);
 
     thread_plan_sp->DidPush();
@@ -2198,4 +2202,33 @@ Status Thread::StepOut() {
     error.SetErrorString("process not stopped");
   }
   return error;
+}
+
+ValueObjectSP Thread::GetCurrentException() {
+  if (auto frame_sp = GetStackFrameAtIndex(0))
+    if (auto recognized_frame = frame_sp->GetRecognizedFrame())
+      if (auto e = recognized_frame->GetExceptionObject())
+        return e;
+
+  // FIXME: For now, only ObjC exceptions are supported. This should really
+  // iterate over all language runtimes and ask them all to give us the current
+  // exception.
+  if (auto runtime = GetProcess()->GetObjCLanguageRuntime())
+    if (auto e = runtime->GetExceptionObjectForThread(shared_from_this()))
+      return e;
+
+  return ValueObjectSP();
+}
+
+ThreadSP Thread::GetCurrentExceptionBacktrace() {
+  ValueObjectSP exception = GetCurrentException();
+  if (!exception) return ThreadSP();
+
+  // FIXME: For now, only ObjC exceptions are supported. This should really
+  // iterate over all language runtimes and ask them all to give us the current
+  // exception.
+  auto runtime = GetProcess()->GetObjCLanguageRuntime();
+  if (!runtime) return ThreadSP();
+
+  return runtime->GetBacktraceThreadFromException(exception);
 }

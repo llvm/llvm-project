@@ -805,6 +805,38 @@ public:
     return OpActions[(unsigned)VT.getSimpleVT().SimpleTy][Op];
   }
 
+  /// Custom method defined by each target to indicate if an operation which
+  /// may require a scale is supported natively by the target.
+  /// If not, the operation is illegal.
+  virtual bool isSupportedFixedPointOperation(unsigned Op, EVT VT,
+                                              unsigned Scale) const {
+    return false;
+  }
+
+  /// Some fixed point operations may be natively supported by the target but
+  /// only for specific scales. This method allows for checking
+  /// if the width is supported by the target for a given operation that may
+  /// depend on scale.
+  LegalizeAction getFixedPointOperationAction(unsigned Op, EVT VT,
+                                              unsigned Scale) const {
+    auto Action = getOperationAction(Op, VT);
+    if (Action != Legal)
+      return Action;
+
+    // This operation is supported in this type but may only work on specific
+    // scales.
+    bool Supported;
+    switch (Op) {
+    default:
+      llvm_unreachable("Unexpected fixed point operation.");
+    case ISD::SMULFIX:
+      Supported = isSupportedFixedPointOperation(Op, VT, Scale);
+      break;
+    }
+
+    return Supported ? Action : Expand;
+  }
+
   LegalizeAction getStrictFPOperationAction(unsigned Op, EVT VT) const {
     unsigned EqOpc;
     switch (Op) {
@@ -1746,6 +1778,16 @@ public:
     return false;
   }
 
+  /// Return true if it is more correct/profitable to use strict FP_TO_INT
+  /// conversion operations - canonicalizing the FP source value instead of
+  /// converting all cases and then selecting based on value.
+  /// This may be true if the target throws exceptions for out of bounds
+  /// conversions or has fast FP CMOV.
+  virtual bool shouldUseStrictFP_TO_INT(EVT FpVT, EVT IntVT,
+                                        bool IsSigned) const {
+    return false;
+  }
+
   //===--------------------------------------------------------------------===//
   // TargetLowering Configuration Methods - These methods should be invoked by
   // the derived class constructor to configure this object for the target.
@@ -2217,6 +2259,12 @@ public:
   }
 
   virtual bool isZExtFree(EVT FromTy, EVT ToTy) const {
+    return false;
+  }
+
+  /// Return true if sign-extension from FromTy to ToTy is cheaper than
+  /// zero-extension.
+  virtual bool isSExtCheaperThanZExt(EVT FromTy, EVT ToTy) const {
     return false;
   }
 
@@ -2851,22 +2899,28 @@ public:
   bool SimplifyDemandedBits(SDNode *User, unsigned OpIdx, const APInt &Demanded,
                             DAGCombinerInfo &DCI, TargetLoweringOpt &TLO) const;
 
-  /// Look at Op.  At this point, we know that only the DemandedMask bits of the
+  /// Look at Op.  At this point, we know that only the DemandedBits bits of the
   /// result of Op are ever used downstream.  If we can use this information to
   /// simplify Op, create a new simplified DAG node and return true, returning
   /// the original and new nodes in Old and New.  Otherwise, analyze the
   /// expression and return a mask of KnownOne and KnownZero bits for the
   /// expression (used to simplify the caller).  The KnownZero/One bits may only
-  /// be accurate for those bits in the DemandedMask.
+  /// be accurate for those bits in the Demanded masks.
   /// \p AssumeSingleUse When this parameter is true, this function will
   ///    attempt to simplify \p Op even if there are multiple uses.
   ///    Callers are responsible for correctly updating the DAG based on the
   ///    results of this function, because simply replacing replacing TLO.Old
   ///    with TLO.New will be incorrect when this parameter is true and TLO.Old
   ///    has multiple uses.
-  bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedMask,
-                            KnownBits &Known,
-                            TargetLoweringOpt &TLO,
+  bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
+                            const APInt &DemandedElts, KnownBits &Known,
+                            TargetLoweringOpt &TLO, unsigned Depth = 0,
+                            bool AssumeSingleUse = false) const;
+
+  /// Helper wrapper around SimplifyDemandedBits, demanding all elements.
+  /// Adds Op back to the worklist upon success.
+  bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
+                            KnownBits &Known, TargetLoweringOpt &TLO,
                             unsigned Depth = 0,
                             bool AssumeSingleUse = false) const;
 
@@ -2937,13 +2991,14 @@ public:
       SDValue Op, const APInt &DemandedElts, APInt &KnownUndef,
       APInt &KnownZero, TargetLoweringOpt &TLO, unsigned Depth = 0) const;
 
-  /// Attempt to simplify any target nodes based on the demanded bits,
+  /// Attempt to simplify any target nodes based on the demanded bits/elts,
   /// returning true on success. Otherwise, analyze the
   /// expression and return a mask of KnownOne and KnownZero bits for the
   /// expression (used to simplify the caller).  The KnownZero/One bits may only
-  /// be accurate for those bits in the DemandedMask.
+  /// be accurate for those bits in the Demanded masks.
   virtual bool SimplifyDemandedBitsForTargetNode(SDValue Op,
                                                  const APInt &DemandedBits,
+                                                 const APInt &DemandedElts,
                                                  KnownBits &Known,
                                                  TargetLoweringOpt &TLO,
                                                  unsigned Depth = 0) const;
@@ -3032,6 +3087,15 @@ public:
   /// @param Level the current DAGCombine legalization level.
   virtual bool isDesirableToCommuteWithShift(const SDNode *N,
                                              CombineLevel Level) const {
+    return true;
+  }
+
+  /// Return true if it is profitable to fold a pair of shifts into a mask.
+  /// This is usually true on most targets. But some targets, like Thumb1,
+  /// have immediate shift instructions, but no immediate "and" instruction;
+  /// this makes the fold unprofitable.
+  virtual bool shouldFoldShiftPairToMask(const SDNode *N,
+                                         CombineLevel Level) const {
     return true;
   }
 
@@ -3673,6 +3737,18 @@ public:
                  SDValue LL = SDValue(), SDValue LH = SDValue(),
                  SDValue RL = SDValue(), SDValue RH = SDValue()) const;
 
+  /// Expand funnel shift.
+  /// \param N Node to expand
+  /// \param Result output after conversion
+  /// \returns True, if the expansion was successful, false otherwise
+  bool expandFunnelShift(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+
+  /// Expand rotations.
+  /// \param N Node to expand
+  /// \param Result output after conversion
+  /// \returns True, if the expansion was successful, false otherwise
+  bool expandROT(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+
   /// Expand float(f32) to SINT(i64) conversion
   /// \param N Node to expand
   /// \param Result output after conversion
@@ -3753,9 +3829,14 @@ public:
                                   SDValue Index) const;
 
   /// Method for building the DAG expansion of ISD::[US][ADD|SUB]SAT. This
-  /// method accepts integers or vectors of integers as its arguments.
+  /// method accepts integers as its arguments.
   SDValue getExpandedSaturationAdditionSubtraction(SDNode *Node,
                                                    SelectionDAG &DAG) const;
+
+  /// Method for building the DAG expansion of ISD::SMULFIX. This method accepts
+  /// integers as its arguments.
+  SDValue getExpandedFixedPointMultiplication(SDNode *Node,
+                                              SelectionDAG &DAG) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

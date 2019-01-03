@@ -38,6 +38,9 @@ llvm::Optional<Hover> getHover(ParsedAST &AST, Position Pos);
 std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
                                      const SymbolIndex *Index = nullptr);
 
+/// Get info about symbols at \p Pos.
+std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos);
+
 } // namespace clangd
 } // namespace clang
 

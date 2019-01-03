@@ -1321,7 +1321,8 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
                              LLVMContext::MD_align,
                              LLVMContext::MD_dereferenceable,
                              LLVMContext::MD_dereferenceable_or_null,
-                             LLVMContext::MD_mem_parallel_loop_access};
+                             LLVMContext::MD_mem_parallel_loop_access,
+                             LLVMContext::MD_access_group};
       combineMetadata(I1, I2, KnownIDs, true);
 
       // I1 and I2 are being combined into a single instruction.  Its debug
@@ -1375,7 +1376,7 @@ HoistTerminator:
   // As the parent basic block terminator is a branch instruction which is
   // removed at the end of the current transformation, use its previous
   // non-debug instruction, as the reference insertion point, which will
-  // provide the debug location for the instruction being hoisted. For BBs
+  // provide the debug location for generated select instructions. For BBs
   // with only debug instructions, use an empty debug location.
   Instruction *InsertPt =
       BIParent->getTerminator()->getPrevNonDebugInstruction();
@@ -1389,15 +1390,16 @@ HoistTerminator:
     NT->takeName(I1);
   }
 
-  // The instruction NT being hoisted, is the terminator for the true branch,
-  // with debug location (DILocation) within that branch. We can't retain
-  // its original debug location value, otherwise 'select' instructions that
-  // are created from any PHI nodes, will take its debug location, giving
-  // the impression that those 'select' instructions are in the true branch,
-  // causing incorrect stepping, affecting the debug experience.
-  NT->setDebugLoc(InsertPt ? InsertPt->getDebugLoc() : DebugLoc());
+  // Ensure terminator gets a debug location, even an unknown one, in case
+  // it involves inlinable calls.
+  NT->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
 
   IRBuilder<NoFolder> Builder(NT);
+  // If an earlier instruction in this BB had a location, adopt it, otherwise
+  // clear debug locations.
+  Builder.SetCurrentDebugLocation(InsertPt ? InsertPt->getDebugLoc()
+                                           : DebugLoc());
+
   // Hoisting one of the terminators from our successor is a great thing.
   // Unfortunately, the successors of the if/else blocks may have PHI nodes in
   // them.  If they do, all PHI entries for BB1/BB2 must agree for all PHI
@@ -5853,28 +5855,17 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   if (SimplifyBranchOnICmpChain(BI, Builder, DL))
     return true;
 
-  // If this basic block has a single dominating predecessor block and the
-  // dominating block's condition implies BI's condition, we know the direction
-  // of the BI branch.
-  if (BasicBlock *Dom = BB->getSinglePredecessor()) {
-    auto *PBI = dyn_cast_or_null<BranchInst>(Dom->getTerminator());
-    if (PBI && PBI->isConditional() &&
-        PBI->getSuccessor(0) != PBI->getSuccessor(1)) {
-      assert(PBI->getSuccessor(0) == BB || PBI->getSuccessor(1) == BB);
-      bool CondIsTrue = PBI->getSuccessor(0) == BB;
-      Optional<bool> Implication = isImpliedCondition(
-          PBI->getCondition(), BI->getCondition(), DL, CondIsTrue);
-      if (Implication) {
-        // Turn this into a branch on constant.
-        auto *OldCond = BI->getCondition();
-        ConstantInt *CI = *Implication
-                              ? ConstantInt::getTrue(BB->getContext())
-                              : ConstantInt::getFalse(BB->getContext());
-        BI->setCondition(CI);
-        RecursivelyDeleteTriviallyDeadInstructions(OldCond);
-        return requestResimplify();
-      }
-    }
+  // If this basic block has dominating predecessor blocks and the dominating
+  // blocks' conditions imply BI's condition, we know the direction of BI.
+  Optional<bool> Imp = isImpliedByDomCondition(BI->getCondition(), BI, DL);
+  if (Imp) {
+    // Turn this into a branch on constant.
+    auto *OldCond = BI->getCondition();
+    ConstantInt *TorF = *Imp ? ConstantInt::getTrue(BB->getContext())
+                             : ConstantInt::getFalse(BB->getContext());
+    BI->setCondition(TorF);
+    RecursivelyDeleteTriviallyDeadInstructions(OldCond);
+    return requestResimplify();
   }
 
   // If this basic block is ONLY a compare and a branch, and if a predecessor

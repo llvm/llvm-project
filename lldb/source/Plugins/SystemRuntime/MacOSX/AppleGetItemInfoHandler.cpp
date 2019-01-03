@@ -238,7 +238,7 @@ AppleGetItemInfoHandler::GetItemInfo(Thread &thread, uint64_t item,
 
   error.Clear();
 
-  if (thread.SafeToCallFunctions() == false) {
+  if (!thread.SafeToCallFunctions()) {
     if (log)
       log->Printf("Not safe to call functions on thread 0x%" PRIx64,
                   thread.GetID());

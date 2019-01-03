@@ -3623,13 +3623,13 @@ defm PADDD   : PDI_binop_all<0xFE, "paddd", add, v4i32, v8i32,
                              SchedWriteVecALU, 1, NoVLX>;
 defm PADDQ   : PDI_binop_all<0xD4, "paddq", add, v2i64, v4i64,
                              SchedWriteVecALU, 1, NoVLX>;
-defm PADDSB  : PDI_binop_all<0xEC, "paddsb", X86adds, v16i8, v32i8,
+defm PADDSB  : PDI_binop_all<0xEC, "paddsb", saddsat, v16i8, v32i8,
                              SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
-defm PADDSW  : PDI_binop_all<0xED, "paddsw", X86adds, v8i16, v16i16,
+defm PADDSW  : PDI_binop_all<0xED, "paddsw", saddsat, v8i16, v16i16,
                              SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
-defm PADDUSB : PDI_binop_all<0xDC, "paddusb", X86addus, v16i8, v32i8,
+defm PADDUSB : PDI_binop_all<0xDC, "paddusb", uaddsat, v16i8, v32i8,
                              SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
-defm PADDUSW : PDI_binop_all<0xDD, "paddusw", X86addus, v8i16, v16i16,
+defm PADDUSW : PDI_binop_all<0xDD, "paddusw", uaddsat, v8i16, v16i16,
                              SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
 defm PMULLW  : PDI_binop_all<0xD5, "pmullw", mul, v8i16, v16i16,
                              SchedWriteVecIMul, 1, NoVLX_Or_NoBWI>;
@@ -3645,13 +3645,13 @@ defm PSUBD   : PDI_binop_all<0xFA, "psubd", sub, v4i32, v8i32,
                              SchedWriteVecALU, 0, NoVLX>;
 defm PSUBQ   : PDI_binop_all<0xFB, "psubq", sub, v2i64, v4i64,
                              SchedWriteVecALU, 0, NoVLX>;
-defm PSUBSB  : PDI_binop_all<0xE8, "psubsb", X86subs, v16i8, v32i8,
+defm PSUBSB  : PDI_binop_all<0xE8, "psubsb", ssubsat, v16i8, v32i8,
                              SchedWriteVecALU, 0, NoVLX_Or_NoBWI>;
-defm PSUBSW  : PDI_binop_all<0xE9, "psubsw", X86subs, v8i16, v16i16,
+defm PSUBSW  : PDI_binop_all<0xE9, "psubsw", ssubsat, v8i16, v16i16,
                              SchedWriteVecALU, 0, NoVLX_Or_NoBWI>;
-defm PSUBUSB : PDI_binop_all<0xD8, "psubusb", X86subus, v16i8, v32i8,
+defm PSUBUSB : PDI_binop_all<0xD8, "psubusb", usubsat, v16i8, v32i8,
                              SchedWriteVecALU, 0, NoVLX_Or_NoBWI>;
-defm PSUBUSW : PDI_binop_all<0xD9, "psubusw", X86subus, v8i16, v16i16,
+defm PSUBUSW : PDI_binop_all<0xD9, "psubusw", usubsat, v8i16, v16i16,
                              SchedWriteVecALU, 0, NoVLX_Or_NoBWI>;
 defm PMINUB  : PDI_binop_all<0xDA, "pminub", umin, v16i8, v32i8,
                              SchedWriteVecALU, 1, NoVLX_Or_NoBWI>;
@@ -4669,11 +4669,15 @@ defm MOVDDUP : sse3_replicate_dfp<"movddup", SchedWriteFShuffle>;
 let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(X86Movddup (loadv2f64 addr:$src)),
             (VMOVDDUPrm addr:$src)>, Requires<[HasAVX]>;
+  def : Pat<(X86Movddup (v2f64 (X86vzload addr:$src))),
+            (VMOVDDUPrm addr:$src)>, Requires<[HasAVX]>;
 }
 
 let Predicates = [UseSSE3] in {
   // No need for aligned memory as this only loads 64-bits.
   def : Pat<(X86Movddup (loadv2f64 addr:$src)),
+            (MOVDDUPrm addr:$src)>;
+  def : Pat<(X86Movddup (v2f64 (X86vzload addr:$src))),
             (MOVDDUPrm addr:$src)>;
 }
 
@@ -8033,6 +8037,8 @@ let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(v2f64 (X86VBroadcast v2f64:$src)),
             (VMOVDDUPrr VR128:$src)>;
   def : Pat<(v2f64 (X86VBroadcast (loadv2f64 addr:$src))),
+            (VMOVDDUPrm addr:$src)>;
+  def : Pat<(v2f64 (X86VBroadcast (v2f64 (X86vzload addr:$src)))),
             (VMOVDDUPrm addr:$src)>;
 }
 

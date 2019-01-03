@@ -213,7 +213,7 @@ bool OperatingSystemPython::UpdateThreadList(ThreadList &old_thread_list,
   // beginning of the list
   uint32_t insert_idx = 0;
   for (uint32_t core_idx = 0; core_idx < num_cores; ++core_idx) {
-    if (core_used_map[core_idx] == false) {
+    if (!core_used_map[core_idx]) {
       new_thread_list.InsertThread(
           core_thread_list.GetThreadAtIndex(core_idx, false), insert_idx);
       ++insert_idx;

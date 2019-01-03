@@ -483,29 +483,20 @@ define i64 @fptoui_i64_fp80(x86_fp80 %a0) nounwind {
 ; X64-X87-NEXT:    flds {{.*}}(%rip)
 ; X64-X87-NEXT:    fld %st(1)
 ; X64-X87-NEXT:    fsub %st(1)
+; X64-X87-NEXT:    xorl %eax, %eax
+; X64-X87-NEXT:    fxch %st(1)
+; X64-X87-NEXT:    fucompi %st(2)
+; X64-X87-NEXT:    fcmovnbe %st(1), %st(0)
+; X64-X87-NEXT:    fstp %st(1)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
+; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
 ; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fistpll -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    fld %st(1)
-; X64-X87-NEXT:    fistpll -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    fucompi %st(1)
-; X64-X87-NEXT:    fstp %st(0)
-; X64-X87-NEXT:    jbe .LBB10_1
-; X64-X87-NEXT:  # %bb.2:
-; X64-X87-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-X87-NEXT:    retq
-; X64-X87-NEXT:  .LBB10_1:
-; X64-X87-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; X64-X87-NEXT:    setbe %al
+; X64-X87-NEXT:    shlq $63, %rax
 ; X64-X87-NEXT:    xorq -{{[0-9]+}}(%rsp), %rax
 ; X64-X87-NEXT:    retq
 ;
@@ -515,17 +506,14 @@ define i64 @fptoui_i64_fp80(x86_fp80 %a0) nounwind {
 ; X64-SSSE3-NEXT:    flds {{.*}}(%rip)
 ; X64-SSSE3-NEXT:    fld %st(1)
 ; X64-SSSE3-NEXT:    fsub %st(1)
+; X64-SSSE3-NEXT:    xorl %eax, %eax
+; X64-SSSE3-NEXT:    fxch %st(1)
+; X64-SSSE3-NEXT:    fucompi %st(2)
+; X64-SSSE3-NEXT:    fcmovnbe %st(1), %st(0)
+; X64-SSSE3-NEXT:    fstp %st(1)
 ; X64-SSSE3-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
-; X64-SSSE3-NEXT:    fld %st(1)
-; X64-SSSE3-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
-; X64-SSSE3-NEXT:    fucompi %st(1)
-; X64-SSSE3-NEXT:    fstp %st(0)
-; X64-SSSE3-NEXT:    jbe .LBB10_1
-; X64-SSSE3-NEXT:  # %bb.2:
-; X64-SSSE3-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-SSSE3-NEXT:    retq
-; X64-SSSE3-NEXT:  .LBB10_1:
-; X64-SSSE3-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; X64-SSSE3-NEXT:    setbe %al
+; X64-SSSE3-NEXT:    shlq $63, %rax
 ; X64-SSSE3-NEXT:    xorq -{{[0-9]+}}(%rsp), %rax
 ; X64-SSSE3-NEXT:    retq
   %1 = fptoui x86_fp80 %a0 to i64
@@ -577,29 +565,20 @@ define i64 @fptoui_i64_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-X87-NEXT:    flds {{.*}}(%rip)
 ; X64-X87-NEXT:    fld %st(1)
 ; X64-X87-NEXT:    fsub %st(1)
+; X64-X87-NEXT:    xorl %eax, %eax
+; X64-X87-NEXT:    fxch %st(1)
+; X64-X87-NEXT:    fucompi %st(2)
+; X64-X87-NEXT:    fcmovnbe %st(1), %st(0)
+; X64-X87-NEXT:    fstp %st(1)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
+; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
 ; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fistpll -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    fld %st(1)
-; X64-X87-NEXT:    fistpll -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    fucompi %st(1)
-; X64-X87-NEXT:    fstp %st(0)
-; X64-X87-NEXT:    jbe .LBB11_1
-; X64-X87-NEXT:  # %bb.2:
-; X64-X87-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-X87-NEXT:    retq
-; X64-X87-NEXT:  .LBB11_1:
-; X64-X87-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; X64-X87-NEXT:    setbe %al
+; X64-X87-NEXT:    shlq $63, %rax
 ; X64-X87-NEXT:    xorq -{{[0-9]+}}(%rsp), %rax
 ; X64-X87-NEXT:    retq
 ;
@@ -609,17 +588,14 @@ define i64 @fptoui_i64_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-SSSE3-NEXT:    flds {{.*}}(%rip)
 ; X64-SSSE3-NEXT:    fld %st(1)
 ; X64-SSSE3-NEXT:    fsub %st(1)
+; X64-SSSE3-NEXT:    xorl %eax, %eax
+; X64-SSSE3-NEXT:    fxch %st(1)
+; X64-SSSE3-NEXT:    fucompi %st(2)
+; X64-SSSE3-NEXT:    fcmovnbe %st(1), %st(0)
+; X64-SSSE3-NEXT:    fstp %st(1)
 ; X64-SSSE3-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
-; X64-SSSE3-NEXT:    fld %st(1)
-; X64-SSSE3-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
-; X64-SSSE3-NEXT:    fucompi %st(1)
-; X64-SSSE3-NEXT:    fstp %st(0)
-; X64-SSSE3-NEXT:    jbe .LBB11_1
-; X64-SSSE3-NEXT:  # %bb.2:
-; X64-SSSE3-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; X64-SSSE3-NEXT:    retq
-; X64-SSSE3-NEXT:  .LBB11_1:
-; X64-SSSE3-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; X64-SSSE3-NEXT:    setbe %al
+; X64-SSSE3-NEXT:    shlq $63, %rax
 ; X64-SSSE3-NEXT:    xorq -{{[0-9]+}}(%rsp), %rax
 ; X64-SSSE3-NEXT:    retq
   %1 = load x86_fp80, x86_fp80 *%a0

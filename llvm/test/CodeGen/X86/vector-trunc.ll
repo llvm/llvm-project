@@ -1639,29 +1639,11 @@ define i64 @trunc2i64_i64(<2 x i64> %inval) {
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: trunc2i64_i64:
-; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: trunc2i64_i64:
-; AVX512VL:       # %bb.0: # %entry
-; AVX512VL-NEXT:    vpmovqd %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    retq
-;
-; AVX512BW-LABEL: trunc2i64_i64:
-; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX512BW-NEXT:    vmovq %xmm0, %rax
-; AVX512BW-NEXT:    retq
-;
-; AVX512BWVL-LABEL: trunc2i64_i64:
-; AVX512BWVL:       # %bb.0: # %entry
-; AVX512BWVL-NEXT:    vpmovqd %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512BWVL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; AVX512BWVL-NEXT:    retq
+; AVX512-LABEL: trunc2i64_i64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    retq
 entry:
   %0 = trunc <2 x i64> %inval to <2 x i32>
   %1 = bitcast <2 x i32> %0 to i64
@@ -1746,29 +1728,11 @@ define i64 @trunc4i32_i64(<4 x i32> %inval) {
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: trunc4i32_i64:
-; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: trunc4i32_i64:
-; AVX512VL:       # %bb.0: # %entry
-; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    retq
-;
-; AVX512BW-LABEL: trunc4i32_i64:
-; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX512BW-NEXT:    vmovq %xmm0, %rax
-; AVX512BW-NEXT:    retq
-;
-; AVX512BWVL-LABEL: trunc4i32_i64:
-; AVX512BWVL:       # %bb.0: # %entry
-; AVX512BWVL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512BWVL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; AVX512BWVL-NEXT:    retq
+; AVX512-LABEL: trunc4i32_i64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    retq
 entry:
   %0 = trunc <4 x i32> %inval to <4 x i16>
   %1 = bitcast <4 x i16> %0 to i64
@@ -1849,29 +1813,11 @@ define i64 @trunc8i16_i64(<8 x i16> %inval) {
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: trunc8i16_i64:
-; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: trunc8i16_i64:
-; AVX512VL:       # %bb.0: # %entry
-; AVX512VL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; AVX512VL-NEXT:    vmovq %xmm0, %rax
-; AVX512VL-NEXT:    retq
-;
-; AVX512BW-LABEL: trunc8i16_i64:
-; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
-; AVX512BW-NEXT:    vmovq %xmm0, %rax
-; AVX512BW-NEXT:    retq
-;
-; AVX512BWVL-LABEL: trunc8i16_i64:
-; AVX512BWVL:       # %bb.0: # %entry
-; AVX512BWVL-NEXT:    vpmovwb %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512BWVL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; AVX512BWVL-NEXT:    retq
+; AVX512-LABEL: trunc8i16_i64:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    retq
 entry:
   %0 = trunc <8 x i16> %inval to <8 x i8>
   %1 = bitcast <8 x i8> %0 to i64

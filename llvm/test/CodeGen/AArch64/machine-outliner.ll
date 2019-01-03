@@ -103,6 +103,7 @@ define void @dog() #0 {
 ; CHECK-NEXT: str     w8, [sp, #12]
 ; CHECK-NEXT: orr     w8, wzr, #0x6
 ; CHECK-NEXT: str     w8, [sp, #8]
+; CHECK-NEXT: add     sp, sp, #32
 ; CHECK-NEXT: ret
 
 attributes #0 = { noredzone "target-cpu"="cyclone" "target-features"="+sse" }

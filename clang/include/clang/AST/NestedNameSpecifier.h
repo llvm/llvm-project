@@ -212,9 +212,12 @@ public:
   /// parameter pack (for C++11 variadic templates).
   bool containsUnexpandedParameterPack() const;
 
-  /// Print this nested name specifier to the given output
-  /// stream.
-  void print(raw_ostream &OS, const PrintingPolicy &Policy) const;
+  /// Print this nested name specifier to the given output stream. If
+  /// `ResolveTemplateArguments` is true, we'll print actual types, e.g.
+  /// `ns::SomeTemplate<int, MyClass>` instead of
+  /// `ns::SomeTemplate<Container::value_type, T>`.
+  void print(raw_ostream &OS, const PrintingPolicy &Policy,
+             bool ResolveTemplateArguments = false) const;
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddPointer(Prefix.getOpaqueValue());
@@ -227,6 +230,23 @@ public:
   void dump() const;
   void dump(llvm::raw_ostream &OS) const;
   void dump(llvm::raw_ostream &OS, const LangOptions &LO) const;
+
+  /// \brief Compute the qualification required to get from the current context
+  /// (\p CurContext) to the target context (\p TargetContext).
+  ///
+  /// \param Context the AST context in which the qualification will be used.
+  ///
+  /// \param CurContext the context where an entity is being named, which is
+  /// typically based on the current scope.
+  ///
+  /// \param TargetContext the context in which the named entity actually
+  /// resides.
+  ///
+  /// \returns a nested name specifier that refers into the target context, or
+  /// NULL if no qualification is needed.
+  static NestedNameSpecifier *
+  getRequiredQualification(ASTContext &Context, const DeclContext *CurContext,
+                           const DeclContext *TargetContext);
 };
 
 /// A C++ nested-name-specifier augmented with source location

@@ -9,12 +9,12 @@
 
 #include "lldb/Core/Communication.h"
 
-#include "lldb/Core/Event.h"
-#include "lldb/Core/Listener.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Utility/Connection.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Event.h"
+#include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/Status.h"

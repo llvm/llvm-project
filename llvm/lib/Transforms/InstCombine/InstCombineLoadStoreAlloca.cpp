@@ -116,13 +116,10 @@ isOnlyCopiedFromConstantGlobal(Value *V, MemTransferInst *&TheCopy,
       }
 
       // Lifetime intrinsics can be handled by the caller.
-      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-        if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-            II->getIntrinsicID() == Intrinsic::lifetime_end) {
-          assert(II->use_empty() && "Lifetime markers have no result to use!");
-          ToDelete.push_back(II);
-          continue;
-        }
+      if (I->isLifetimeStartOrEnd()) {
+        assert(I->use_empty() && "Lifetime markers have no result to use!");
+        ToDelete.push_back(I);
+        continue;
       }
 
       // If this is isn't our memcpy/memmove, reject it as something we can't
@@ -493,6 +490,7 @@ static LoadInst *combineLoadToNewType(InstCombiner &IC, LoadInst &LI, Type *NewT
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_nontemporal:
     case LLVMContext::MD_mem_parallel_loop_access:
+    case LLVMContext::MD_access_group:
       // All of these directly apply.
       NewLoad->setMetadata(ID, N);
       break;
@@ -552,10 +550,10 @@ static StoreInst *combineStoreToNewValue(InstCombiner &IC, StoreInst &SI, Value 
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_nontemporal:
     case LLVMContext::MD_mem_parallel_loop_access:
+    case LLVMContext::MD_access_group:
       // All of these directly apply.
       NewStore->setMetadata(ID, N);
       break;
-
     case LLVMContext::MD_invariant_load:
     case LLVMContext::MD_nonnull:
     case LLVMContext::MD_range:

@@ -12,6 +12,7 @@ add_clang_library(clangTidyHICPPModule
   clangASTMatchers
   clangBasic
   clangLex
+  clangSerialization
   clangTidy
   clangTidyBugproneModule
   clangTidyCppCoreGuidelinesModule

@@ -39,6 +39,69 @@ ProgramStateRef removeRefBinding(ProgramStateRef State, SymbolRef Sym) {
   return State->remove<RefBindings>(Sym);
 }
 
+class UseAfterRelease : public CFRefBug {
+public:
+  UseAfterRelease(const CheckerBase *checker)
+      : CFRefBug(checker, "Use-after-release") {}
+
+  const char *getDescription() const override {
+    return "Reference-counted object is used after it is released";
+  }
+};
+
+class BadRelease : public CFRefBug {
+public:
+  BadRelease(const CheckerBase *checker) : CFRefBug(checker, "Bad release") {}
+
+  const char *getDescription() const override {
+    return "Incorrect decrement of the reference count of an object that is "
+           "not owned at this point by the caller";
+  }
+};
+
+class DeallocNotOwned : public CFRefBug {
+public:
+  DeallocNotOwned(const CheckerBase *checker)
+      : CFRefBug(checker, "-dealloc sent to non-exclusively owned object") {}
+
+  const char *getDescription() const override {
+    return "-dealloc sent to object that may be referenced elsewhere";
+  }
+};
+
+class OverAutorelease : public CFRefBug {
+public:
+  OverAutorelease(const CheckerBase *checker)
+      : CFRefBug(checker, "Object autoreleased too many times") {}
+
+  const char *getDescription() const override {
+    return "Object autoreleased too many times";
+  }
+};
+
+class ReturnedNotOwnedForOwned : public CFRefBug {
+public:
+  ReturnedNotOwnedForOwned(const CheckerBase *checker)
+      : CFRefBug(checker, "Method should return an owned object") {}
+
+  const char *getDescription() const override {
+    return "Object with a +0 retain count returned to caller where a +1 "
+           "(owning) retain count is expected";
+  }
+};
+
+class Leak : public CFRefBug {
+public:
+  Leak(const CheckerBase *checker, StringRef name) : CFRefBug(checker, name) {
+    // Leaks should not be reported if they are post-dominated by a sink.
+    setSuppressOnSink(true);
+  }
+
+  const char *getDescription() const override { return ""; }
+
+  bool isLeak() const override { return true; }
+};
+
 } // end namespace retaincountchecker
 } // end namespace ento
 } // end namespace clang
@@ -350,6 +413,56 @@ void RetainCountChecker::checkPostCall(const CallEvent &Call,
   checkSummary(*Summ, Call, C);
 }
 
+void RetainCountChecker::checkEndAnalysis(ExplodedGraph &G, BugReporter &BR,
+                                          ExprEngine &Eng) const {
+  // FIXME: This is a hack to make sure the summary log gets cleared between
+  // analyses of different code bodies.
+  //
+  // Why is this necessary? Because a checker's lifetime is tied to a
+  // translation unit, but an ExplodedGraph's lifetime is just a code body.
+  // Once in a blue moon, a new ExplodedNode will have the same address as an
+  // old one with an associated summary, and the bug report visitor gets very
+  // confused. (To make things worse, the summary lifetime is currently also
+  // tied to a code body, so we get a crash instead of incorrect results.)
+  //
+  // Why is this a bad solution? Because if the lifetime of the ExplodedGraph
+  // changes, things will start going wrong again. Really the lifetime of this
+  // log needs to be tied to either the specific nodes in it or the entire
+  // ExplodedGraph, not to a specific part of the code being analyzed.
+  //
+  // (Also, having stateful local data means that the same checker can't be
+  // used from multiple threads, but a lot of checkers have incorrect
+  // assumptions about that anyway. So that wasn't a priority at the time of
+  // this fix.)
+  //
+  // This happens at the end of analysis, but bug reports are emitted /after/
+  // this point. So we can't just clear the summary log now. Instead, we mark
+  // that the next time we access the summary log, it should be cleared.
+
+  // If we never reset the summary log during /this/ code body analysis,
+  // there were no new summaries. There might still have been summaries from
+  // the /last/ analysis, so clear them out to make sure the bug report
+  // visitors don't get confused.
+  if (ShouldResetSummaryLog)
+    SummaryLog.clear();
+
+  ShouldResetSummaryLog = !SummaryLog.empty();
+}
+
+CFRefBug *
+RetainCountChecker::getLeakWithinFunctionBug(const LangOptions &LOpts) const {
+  if (!leakWithinFunction)
+    leakWithinFunction.reset(new Leak(this, "Leak"));
+  return leakWithinFunction.get();
+}
+
+CFRefBug *
+RetainCountChecker::getLeakAtReturnBug(const LangOptions &LOpts) const {
+  if (!leakAtReturn)
+    leakAtReturn.reset(new Leak(this, "Leak of returned object"));
+  return leakAtReturn.get();
+}
+
 /// GetReturnType - Used to get the return type of a message expression or
 ///  function call with the intention of affixing that type to a tracked symbol.
 ///  While the return type can be queried directly from RetEx, when
@@ -389,6 +502,25 @@ static Optional<RefVal> refValFromRetEffect(RetEffect RE,
   return None;
 }
 
+static bool isPointerToObject(QualType QT) {
+  QualType PT = QT->getPointeeType();
+  if (!PT.isNull())
+    if (PT->getAsCXXRecordDecl())
+      return true;
+  return false;
+}
+
+/// Whether the tracked value should be escaped on a given call.
+/// OSObjects are escaped when passed to void * / etc.
+static bool shouldEscapeArgumentOnCall(const CallEvent &CE, unsigned ArgIdx,
+                                       const RefVal *TrackedValue) {
+  if (TrackedValue->getObjKind() != RetEffect::OS)
+    return false;
+  if (ArgIdx >= CE.parameters().size())
+    return false;
+  return !isPointerToObject(CE.parameters()[ArgIdx]->getType());
+}
+
 // We don't always get the exact modeling of the function with regards to the
 // retain count checker even when the function is inlined. For example, we need
 // to stop tracking the symbols which were marked with StopTrackingHard.
@@ -399,11 +531,16 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
 
   // Evaluate the effect of the arguments.
   for (unsigned idx = 0, e = CallOrMsg.getNumArgs(); idx != e; ++idx) {
-    if (Summ.getArg(idx) == StopTrackingHard) {
-      SVal V = CallOrMsg.getArgSVal(idx);
-      if (SymbolRef Sym = V.getAsLocSymbol()) {
+    SVal V = CallOrMsg.getArgSVal(idx);
+
+    if (SymbolRef Sym = V.getAsLocSymbol()) {
+      bool ShouldRemoveBinding = Summ.getArg(idx) == StopTrackingHard;
+      if (const RefVal *T = getRefBinding(state, Sym))
+        if (shouldEscapeArgumentOnCall(CallOrMsg, idx, T))
+          ShouldRemoveBinding = true;
+
+      if (ShouldRemoveBinding)
         state = removeRefBinding(state, Sym);
-      }
     }
   }
 
@@ -479,6 +616,10 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
       state = updateOutParameter(state, V, Effect);
     } else if (SymbolRef Sym = V.getAsLocSymbol()) {
       if (const RefVal *T = getRefBinding(state, Sym)) {
+
+        if (shouldEscapeArgumentOnCall(CallOrMsg, idx, T))
+          Effect = StopTrackingHard;
+
         state = updateSymbol(state, Sym, *T, Effect, hasErr, C);
         if (hasErr) {
           ErrorRange = CallOrMsg.getArgSourceRange(idx);
@@ -946,8 +1087,7 @@ ExplodedNode * RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
         if (N) {
           const LangOptions &LOpts = C.getASTContext().getLangOpts();
           auto R = llvm::make_unique<CFRefLeakReport>(
-              *getLeakAtReturnBug(LOpts), LOpts, SummaryLog, N, Sym, C,
-              IncludeAllocationLine);
+              *getLeakAtReturnBug(LOpts), LOpts, SummaryLog, N, Sym, C);
           C.emitReport(std::move(R));
         }
         return N;
@@ -1233,7 +1373,7 @@ RetainCountChecker::processLeaks(ProgramStateRef state,
       assert(BT && "BugType not initialized.");
 
       Ctx.emitReport(llvm::make_unique<CFRefLeakReport>(
-          *BT, LOpts, SummaryLog, N, *I, Ctx, IncludeAllocationLine));
+          *BT, LOpts, SummaryLog, N, *I, Ctx));
     }
   }
 
@@ -1329,20 +1469,18 @@ void RetainCountChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   SmallVector<SymbolRef, 10> Leaked;
 
   // Update counts from autorelease pools
-  for (SymbolReaper::dead_iterator I = SymReaper.dead_begin(),
-       E = SymReaper.dead_end(); I != E; ++I) {
-    SymbolRef Sym = *I;
-    if (const RefVal *T = B.lookup(Sym)){
-      // Use the symbol as the tag.
-      // FIXME: This might not be as unique as we would like.
+  for (const auto &I: state->get<RefBindings>()) {
+    SymbolRef Sym = I.first;
+    if (SymReaper.isDead(Sym)) {
       static CheckerProgramPointTag Tag(this, "DeadSymbolAutorelease");
-      state = handleAutoreleaseCounts(state, Pred, &Tag, C, Sym, *T);
+      const RefVal &V = I.second;
+      state = handleAutoreleaseCounts(state, Pred, &Tag, C, Sym, V);
       if (!state)
         return;
 
       // Fetch the new reference count from the state, and use it to handle
       // this symbol.
-      state = handleSymbolDeath(state, *I, *getRefBinding(state, Sym), Leaked);
+      state = handleSymbolDeath(state, Sym, *getRefBinding(state, Sym), Leaked);
     }
   }
 
@@ -1394,11 +1532,22 @@ void RetainCountChecker::printState(raw_ostream &Out, ProgramStateRef State,
 
 void ento::registerRetainCountChecker(CheckerManager &Mgr) {
   auto *Chk = Mgr.registerChecker<RetainCountChecker>();
+  Chk->TrackObjCAndCFObjects = true;
+}
 
-  AnalyzerOptions &Options = Mgr.getAnalyzerOptions();
+// FIXME: remove this, hack for backwards compatibility:
+// it should be possible to enable the NS/CF retain count checker as
+// osx.cocoa.RetainCount, and it should be possible to disable
+// osx.OSObjectRetainCount using osx.cocoa.RetainCount:CheckOSObject=false.
+static bool hasPrevCheckOSObjectOptionDisabled(AnalyzerOptions &Options) {
+  auto I = Options.Config.find("osx.cocoa.RetainCount:CheckOSObject");
+  if (I != Options.Config.end())
+    return I->getValue() == "false";
+  return false;
+}
 
-  Chk->IncludeAllocationLine = Options.getCheckerBooleanOption(
-                           "leak-diagnostics-reference-allocation", false, Chk);
-  Chk->ShouldCheckOSObjectRetainCount = Options.getCheckerBooleanOption(
-                                                    "CheckOSObject", true, Chk);
+void ento::registerOSObjectRetainCountChecker(CheckerManager &Mgr) {
+  auto *Chk = Mgr.registerChecker<RetainCountChecker>();
+  if (!hasPrevCheckOSObjectOptionDisabled(Mgr.getAnalyzerOptions()))
+    Chk->TrackOSObjects = true;
 }

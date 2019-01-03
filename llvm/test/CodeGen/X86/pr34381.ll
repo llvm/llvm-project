@@ -13,11 +13,9 @@ define void @_Z3foov() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movsbl {{.*}}(%rip), %eax
 ; CHECK-NEXT:    negl %eax
-; CHECK-NEXT:    cmpl %eax, {{.*}}(%rip)
-; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    addb $-1, %al
-; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    cmpl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    setb %cl
 ; CHECK-NEXT:    movl %ecx, {{.*}}(%rip)
 ; CHECK-NEXT:    movb {{.*}}(%rip), %al
 ; CHECK-NEXT:    movb %al, {{.*}}(%rip)

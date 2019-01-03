@@ -12,7 +12,11 @@ void AppendHumanReadable(int n, std::string* str);
 
 std::string HumanReadableNumber(double n, double one_k = 1024.0);
 
-std::string StrFormat(const char* format, ...);
+#ifdef __GNUC__
+__attribute__((format(printf, 1, 2)))
+#endif
+std::string
+StrFormat(const char* format, ...);
 
 inline std::ostream& StrCatImp(std::ostream& out) BENCHMARK_NOEXCEPT {
   return out;

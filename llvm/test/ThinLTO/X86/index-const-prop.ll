@@ -21,7 +21,7 @@
 
 ; IMPORT: @gFoo.llvm.0 = internal unnamed_addr global i32 1, align 4, !dbg !0
 ; IMPORT-NEXT: @gBar = internal local_unnamed_addr global i32 2, align 4, !dbg !5
-; IMPORT: !DICompileUnit({{.*}}, globals: !{{[0-9]+}})
+; IMPORT: !DICompileUnit({{.*}})
 
 ; OPTIMIZE:        define i32 @main
 ; OPTIMIZE-NEXT:     ret i32 3

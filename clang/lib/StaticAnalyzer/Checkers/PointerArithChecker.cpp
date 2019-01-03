@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -112,7 +112,7 @@ PointerArithChecker::getPointedRegion(const MemRegion *Region,
 }
 
 /// Checks whether a region is the part of an array.
-/// In case there is a dericed to base cast above the array element, the
+/// In case there is a derived to base cast above the array element, the
 /// Polymorphic output value is set to true. AKind output value is set to the
 /// allocation kind of the inspected region.
 const MemRegion *PointerArithChecker::getArrayRegion(const MemRegion *Region,

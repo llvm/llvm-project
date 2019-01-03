@@ -1,35 +1,35 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=+fp64 | \
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mattr=+fp64 | \
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 #
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=+fp64 -filetype=obj -o - | \
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mattr=+fp64 -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations - | \
 # RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-O32
 #
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n32 | \
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 | \
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 #
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n32 -filetype=obj -o - | \
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations - | \
 # RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-N32
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 | \
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnu | \
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 #
 # Repeat the -filetype=obj tests but this time use an empty assembly file. The
 # output should be unchanged.
-# RUN: llvm-mc /dev/null -arch=mips64 -mcpu=mips64 -filetype=obj -o - | \
+# RUN: llvm-mc /dev/null -triple mips64-unknown-linux-gnu -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations - | \
 # RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-N64
 
-# RUN: llvm-mc /dev/null -arch=mips -mcpu=mips32 -mattr=+fp64 -filetype=obj -o - | \
+# RUN: llvm-mc /dev/null -triple mips-unknown-linux-gnu -mattr=+fp64 -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations - | \
 # RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-O32
 #
-# RUN: llvm-mc /dev/null -arch=mips64 -mcpu=mips64 -target-abi n32 -filetype=obj -o - | \
+# RUN: llvm-mc /dev/null -triple mips64-unknown-linux-gnuabin32 -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations - | \
 # RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-N32
 
-# RUN: llvm-mc /dev/null -arch=mips64 -mcpu=mips64 -filetype=obj -o - | \
+# RUN: llvm-mc /dev/null -triple mips64-unknown-linux-gnu -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations - | \
 # RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-N64
 

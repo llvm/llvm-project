@@ -135,7 +135,7 @@ bool CXXFunctionSummaryFormat::FormatObject(ValueObject *valobj,
                                             const TypeSummaryOptions &options) {
   dest.clear();
   StreamString stream;
-  if (!m_impl || m_impl(*valobj, stream, options) == false)
+  if (!m_impl || !m_impl(*valobj, stream, options))
     return false;
   dest = stream.GetString();
   return true;

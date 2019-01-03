@@ -200,7 +200,7 @@ set(CXXABIS none default libstdc++ libc++)
 set_property(CACHE SANITIZER_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 
 if (SANITIZER_CXX_ABI STREQUAL "default")
-  if (APPLE)
+  if (APPLE OR CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
     set(SANITIZER_CXX_ABI_LIBNAME "libc++")
     set(SANITIZER_CXX_ABI_SYSTEM 1)
   elseif (FUCHSIA)

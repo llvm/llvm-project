@@ -183,11 +183,15 @@ namespace {
     SmallVector<TypeAttrPair, 8> AttrsForTypes;
     bool AttrsForTypesSorted = true;
 
+    /// Flag to indicate we parsed a noderef attribute. This is used for
+    /// validating that noderef was used on a pointer or array.
+    bool parsedNoDeref;
+
   public:
     TypeProcessingState(Sema &sema, Declarator &declarator)
-      : sema(sema), declarator(declarator),
-        chunkIndex(declarator.getNumTypeObjects()),
-        trivial(true), hasSavedAttrs(false) {}
+        : sema(sema), declarator(declarator),
+          chunkIndex(declarator.getNumTypeObjects()), trivial(true),
+          hasSavedAttrs(false), parsedNoDeref(false) {}
 
     Sema &getSema() const {
       return sema;
@@ -277,6 +281,10 @@ namespace {
 
       llvm_unreachable("no Attr* for AttributedType*");
     }
+
+    void setParsedNoDeref(bool parsed) { parsedNoDeref = parsed; }
+
+    bool didParseNoDeref() const { return parsedNoDeref; }
 
     ~TypeProcessingState() {
       if (trivial) return;
@@ -1159,20 +1167,6 @@ TypeResult Sema::actOnObjCTypeArgsAndProtocolQualifiers(
     ResultTL = ObjCObjectPointerTL.getPointeeLoc();
   }
 
-  if (auto OTPTL = ResultTL.getAs<ObjCTypeParamTypeLoc>()) {
-    // Protocol qualifier information.
-    if (OTPTL.getNumProtocols() > 0) {
-      assert(OTPTL.getNumProtocols() == Protocols.size());
-      OTPTL.setProtocolLAngleLoc(ProtocolLAngleLoc);
-      OTPTL.setProtocolRAngleLoc(ProtocolRAngleLoc);
-      for (unsigned i = 0, n = Protocols.size(); i != n; ++i)
-        OTPTL.setProtocolLoc(i, ProtocolLocs[i]);
-    }
-
-    // We're done. Return the completed type to the parser.
-    return CreateParsedType(Result, ResultTInfo);
-  }
-
   auto ObjCObjectTL = ResultTL.castAs<ObjCObjectTypeLoc>();
 
   // Type argument information.
@@ -1865,8 +1859,7 @@ static QualType inferARCLifetimeForPointee(Sema &S, QualType type,
 }
 
 static std::string getFunctionQualifiersAsString(const FunctionProtoType *FnTy){
-  std::string Quals =
-    Qualifiers::fromCVRMask(FnTy->getTypeQuals()).getAsString();
+  std::string Quals = FnTy->getTypeQuals().getAsString();
 
   switch (FnTy->getRefQualifier()) {
   case RQ_None:
@@ -1908,7 +1901,7 @@ static bool checkQualifiedFunction(Sema &S, QualType T, SourceLocation Loc,
                                    QualifiedFunctionKind QFK) {
   // Does T refer to a function type with a cv-qualifier or a ref-qualifier?
   const FunctionProtoType *FPT = T->getAs<FunctionProtoType>();
-  if (!FPT || (FPT->getTypeQuals() == 0 && FPT->getRefQualifier() == RQ_None))
+  if (!FPT || (FPT->getTypeQuals().empty() && FPT->getRefQualifier() == RQ_None))
     return false;
 
   S.Diag(Loc, diag::err_compound_qualified_function_type)
@@ -3636,32 +3629,9 @@ classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
     if (auto recordType = type->getAs<RecordType>()) {
       RecordDecl *recordDecl = recordType->getDecl();
 
-      bool isCFError = false;
-      if (S.CFError) {
-        // If we already know about CFError, test it directly.
-        isCFError = (S.CFError == recordDecl);
-      } else {
-        // Check whether this is CFError, which we identify based on its bridge
-        // to NSError. CFErrorRef used to be declared with "objc_bridge" but is
-        // now declared with "objc_bridge_mutable", so look for either one of
-        // the two attributes.
-        if (recordDecl->getTagKind() == TTK_Struct && numNormalPointers > 0) {
-          IdentifierInfo *bridgedType = nullptr;
-          if (auto bridgeAttr = recordDecl->getAttr<ObjCBridgeAttr>())
-            bridgedType = bridgeAttr->getBridgedType();
-          else if (auto bridgeAttr =
-                       recordDecl->getAttr<ObjCBridgeMutableAttr>())
-            bridgedType = bridgeAttr->getBridgedType();
-
-          if (bridgedType == S.getNSErrorIdent()) {
-            S.CFError = recordDecl;
-            isCFError = true;
-          }
-        }
-      }
-
       // If this is CFErrorRef*, report it as such.
-      if (isCFError && numNormalPointers == 2 && numTypeSpecifierPointers < 2) {
+      if (numNormalPointers == 2 && numTypeSpecifierPointers < 2 &&
+          S.isCFError(recordDecl)) {
         return PointerDeclaratorKind::CFErrorRefPointer;
       }
       break;
@@ -3683,6 +3653,33 @@ classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
   default:
     return PointerDeclaratorKind::MultiLevelPointer;
   }
+}
+
+bool Sema::isCFError(RecordDecl *recordDecl) {
+  // If we already know about CFError, test it directly.
+  if (CFError) {
+    return (CFError == recordDecl);
+  }
+
+  // Check whether this is CFError, which we identify based on being
+  // bridged to NSError. CFErrorRef used to be declared with "objc_bridge" but
+  // is now declared with "objc_bridge_mutable", so look for either one of the
+  // two attributes.
+  if (recordDecl->getTagKind() == TTK_Struct) {
+    IdentifierInfo *bridgedType = nullptr;
+    if (auto bridgeAttr = recordDecl->getAttr<ObjCBridgeAttr>())
+      bridgedType = bridgeAttr->getBridgedType();
+    else if (auto bridgeAttr =
+                 recordDecl->getAttr<ObjCBridgeMutableAttr>())
+      bridgedType = bridgeAttr->getBridgedType();
+
+    if (bridgedType == getNSErrorIdent()) {
+      CFError = recordDecl;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 static FileID getNullabilityCompletenessCheckFileID(Sema &S,
@@ -3887,6 +3884,11 @@ static bool hasOuterPointerLikeChunk(const Declarator &D, unsigned endIndex) {
   return false;
 }
 
+static bool IsNoDerefableChunk(DeclaratorChunk Chunk) {
+  return (Chunk.Kind == DeclaratorChunk::Pointer ||
+          Chunk.Kind == DeclaratorChunk::Array);
+}
+
 template<typename AttrT>
 static AttrT *createSimpleAttr(ASTContext &Ctx, ParsedAttr &Attr) {
   Attr.setUsedAsTypeAttr();
@@ -3937,7 +3939,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
   // Does T refer to a function type with a cv-qualifier or a ref-qualifier?
   bool IsQualifiedFunction = T->isFunctionProtoType() &&
-      (T->castAs<FunctionProtoType>()->getTypeQuals() != 0 ||
+      (!T->castAs<FunctionProtoType>()->getTypeQuals().empty() ||
        T->castAs<FunctionProtoType>()->getRefQualifier() != RQ_None);
 
   // If T is 'decltype(auto)', the only declarators we can have are parens
@@ -4279,6 +4281,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                                   D.getDeclSpec().getTypeSpecTypeLoc());
     }
   }
+
+  bool ExpectNoDerefChunk =
+      state.getCurrentAttributes().hasAttribute(ParsedAttr::AT_NoDeref);
 
   // Walk the DeclTypeInfo, building the recursive type as we go.
   // DeclTypeInfos are ordered from the identifier out, which is
@@ -4683,7 +4688,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         EPI.ExtInfo = EI;
         EPI.Variadic = FTI.isVariadic;
         EPI.HasTrailingReturn = FTI.hasTrailingReturnType();
-        EPI.TypeQuals = FTI.TypeQuals;
+        EPI.TypeQuals.addCVRUQualifiers(FTI.TypeQuals);
         EPI.RefQualifier = !FTI.hasRefQualifier()? RQ_None
                     : FTI.RefQualifierIsLValueRef? RQ_LValue
                     : RQ_RValue;
@@ -4810,7 +4815,24 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                                       Exceptions,
                                       EPI.ExceptionSpec);
 
-        T = Context.getFunctionType(T, ParamTys, EPI);
+        const auto &Spec = D.getCXXScopeSpec();
+        // OpenCLCPlusPlus: A class member function has an address space.
+        if (state.getSema().getLangOpts().OpenCLCPlusPlus &&
+            ((!Spec.isEmpty() &&
+              Spec.getScopeRep()->getKind() == NestedNameSpecifier::TypeSpec) ||
+             state.getDeclarator().getContext() ==
+                 DeclaratorContext::MemberContext)) {
+          LangAS CurAS = EPI.TypeQuals.getAddressSpace();
+          // If a class member function's address space is not set, set it to
+          // __generic.
+          LangAS AS =
+              (CurAS == LangAS::Default ? LangAS::opencl_generic : CurAS);
+          EPI.TypeQuals.addAddressSpace(AS);
+          T = Context.getFunctionType(T, ParamTys, EPI);
+          T = state.getSema().Context.getAddrSpaceQualType(T, AS);
+        } else {
+          T = Context.getFunctionType(T, ParamTys, EPI);
+        }
       }
       break;
     }
@@ -4889,7 +4911,21 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
     // See if there are any attributes on this declarator chunk.
     processTypeAttrs(state, T, TAL_DeclChunk, DeclType.getAttrs());
+
+    if (DeclType.Kind != DeclaratorChunk::Paren) {
+      if (ExpectNoDerefChunk) {
+        if (!IsNoDerefableChunk(DeclType))
+          S.Diag(DeclType.Loc, diag::warn_noderef_on_non_pointer_or_array);
+        ExpectNoDerefChunk = false;
+      }
+
+      ExpectNoDerefChunk = state.didParseNoDeref();
+    }
   }
+
+  if (ExpectNoDerefChunk)
+    S.Diag(state.getDeclarator().getBeginLoc(),
+           diag::warn_noderef_on_non_pointer_or_array);
 
   // GNU warning -Wstrict-prototypes
   //   Warn if a function declaration is without a prototype.
@@ -5001,7 +5037,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // Strip the cv-qualifiers and ref-qualifiers from the type.
       FunctionProtoType::ExtProtoInfo EPI = FnTy->getExtProtoInfo();
-      EPI.TypeQuals = 0;
+      EPI.TypeQuals.removeCVRQualifiers();
       EPI.RefQualifier = RQ_None;
 
       T = Context.getFunctionType(FnTy->getReturnType(), FnTy->getParamTypes(),
@@ -6360,6 +6396,25 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
   return false;
 }
 
+/// Rebuild an attributed type without the nullability attribute on it.
+static QualType rebuildAttributedTypeWithoutNullability(ASTContext &ctx,
+                                                        QualType type) {
+  auto attributed = dyn_cast<AttributedType>(type.getTypePtr());
+  if (!attributed) return type;
+
+  // Skip the nullability attribute; we're done.
+  if (attributed->getImmediateNullability()) {
+    return attributed->getModifiedType();
+  }
+
+  // Build the modified type.
+  auto modified = rebuildAttributedTypeWithoutNullability(
+                    ctx, attributed->getModifiedType());
+  assert(modified.getTypePtr() != attributed->getModifiedType().getTypePtr());
+  return ctx.getAttributedType(attributed->getAttrKind(), modified,
+                                   attributed->getEquivalentType());
+}
+
 /// Map a nullability attribute kind to a nullability kind.
 static NullabilityKind mapNullabilityAttrKind(ParsedAttr::Kind kind) {
   switch (kind) {
@@ -6377,30 +6432,18 @@ static NullabilityKind mapNullabilityAttrKind(ParsedAttr::Kind kind) {
   }
 }
 
-/// Applies a nullability type specifier to the given type, if possible.
-///
-/// \param state The type processing state.
-///
-/// \param type The type to which the nullability specifier will be
-/// added. On success, this type will be updated appropriately.
-///
-/// \param attr The attribute as written on the type.
-///
-/// \param allowOnArrayType Whether to accept nullability specifiers on an
-/// array type (e.g., because it will decay to a pointer).
-///
-/// \returns true if a problem has been diagnosed, false on success.
-static bool checkNullabilityTypeSpecifier(TypeProcessingState &state,
+static bool checkNullabilityTypeSpecifier(Sema &S,
+                                          TypeProcessingState *state,
+                                          ParsedAttr *parsedAttr,
                                           QualType &type,
-                                          ParsedAttr &attr,
-                                          bool allowOnArrayType) {
-  Sema &S = state.getSema();
-
-  NullabilityKind nullability = mapNullabilityAttrKind(attr.getKind());
-  SourceLocation nullabilityLoc = attr.getLoc();
-  bool isContextSensitive = attr.isContextSensitiveKeywordAttribute();
-
-  recordNullabilitySeen(S, nullabilityLoc);
+                                          NullabilityKind nullability,
+                                          SourceLocation nullabilityLoc,
+                                          bool isContextSensitive,
+                                          bool allowOnArrayType,
+                                          bool overrideExisting) {
+  bool implicit = (state == nullptr);
+  if (!implicit)
+    recordNullabilitySeen(S, nullabilityLoc);
 
   // Check for existing nullability attributes on the type.
   QualType desugared = type;
@@ -6409,6 +6452,9 @@ static bool checkNullabilityTypeSpecifier(TypeProcessingState &state,
     if (auto existingNullability = attributed->getImmediateNullability()) {
       // Duplicated nullability.
       if (nullability == *existingNullability) {
+        if (implicit)
+          break;
+
         S.Diag(nullabilityLoc, diag::warn_nullability_duplicate)
           << DiagNullabilityKind(nullability, isContextSensitive)
           << FixItHint::CreateRemoval(nullabilityLoc);
@@ -6416,11 +6462,16 @@ static bool checkNullabilityTypeSpecifier(TypeProcessingState &state,
         break;
       }
 
-      // Conflicting nullability.
-      S.Diag(nullabilityLoc, diag::err_nullability_conflicting)
-        << DiagNullabilityKind(nullability, isContextSensitive)
-        << DiagNullabilityKind(*existingNullability, false);
-      return true;
+      if (!overrideExisting) {
+        // Conflicting nullability.
+        S.Diag(nullabilityLoc, diag::err_nullability_conflicting)
+          << DiagNullabilityKind(nullability, isContextSensitive)
+          << DiagNullabilityKind(*existingNullability, false);
+        return true;
+      }
+
+      // Rebuild the attributed type, dropping the existing nullability.
+      type = rebuildAttributedTypeWithoutNullability(S.Context, type);
     }
 
     desugared = attributed->getModifiedType();
@@ -6431,7 +6482,7 @@ static bool checkNullabilityTypeSpecifier(TypeProcessingState &state,
   // have nullability specifiers on them, which means we cannot
   // provide a useful Fix-It.
   if (auto existingNullability = desugared->getNullability(S.Context)) {
-    if (nullability != *existingNullability) {
+    if (nullability != *existingNullability && !implicit) {
       S.Diag(nullabilityLoc, diag::err_nullability_conflicting)
         << DiagNullabilityKind(nullability, isContextSensitive)
         << DiagNullabilityKind(*existingNullability, false);
@@ -6456,15 +6507,16 @@ static bool checkNullabilityTypeSpecifier(TypeProcessingState &state,
   // If this definitely isn't a pointer type, reject the specifier.
   if (!desugared->canHaveNullability() &&
       !(allowOnArrayType && desugared->isArrayType())) {
-    S.Diag(nullabilityLoc, diag::err_nullability_nonpointer)
-      << DiagNullabilityKind(nullability, isContextSensitive) << type;
+    if (!implicit) {
+      S.Diag(nullabilityLoc, diag::err_nullability_nonpointer)
+        << DiagNullabilityKind(nullability, isContextSensitive) << type;
+    }
     return true;
   }
 
   // For the context-sensitive keywords/Objective-C property
   // attributes, require that the type be a single-level pointer.
   if (isContextSensitive) {
-    // Make sure that the pointee isn't itself a pointer type.
     const Type *pointeeType;
     if (desugared->isArrayType())
       pointeeType = desugared->getArrayElementTypeNoTypeQual();
@@ -6487,9 +6539,40 @@ static bool checkNullabilityTypeSpecifier(TypeProcessingState &state,
   }
 
   // Form the attributed type.
-  type = state.getAttributedType(
-      createNullabilityAttr(S.Context, attr, nullability), type, type);
+  if (state) {
+    assert(parsedAttr);
+    Attr *A = createNullabilityAttr(S.Context, *parsedAttr, nullability);
+    type = state->getAttributedType(A, type, type);
+  } else {
+    attr::Kind attrKind = AttributedType::getNullabilityAttrKind(nullability);
+    type = S.Context.getAttributedType(attrKind, type, type);
+  }
   return false;
+}
+
+static bool checkNullabilityTypeSpecifier(TypeProcessingState &state,
+                                          QualType &type,
+                                          ParsedAttr &attr,
+                                          bool allowOnArrayType) {
+  NullabilityKind nullability = mapNullabilityAttrKind(attr.getKind());
+  SourceLocation nullabilityLoc = attr.getLoc();
+  bool isContextSensitive = attr.isContextSensitiveKeywordAttribute();
+
+  return checkNullabilityTypeSpecifier(state.getSema(), &state, &attr, type,
+                                       nullability, nullabilityLoc,
+                                       isContextSensitive, allowOnArrayType,
+                                       /*overrideExisting*/false);
+}
+
+bool Sema::checkImplicitNullabilityTypeSpecifier(QualType &type,
+                                                 NullabilityKind nullability,
+                                                 SourceLocation diagLoc,
+                                                 bool allowArrayTypes,
+                                                 bool overrideExisting) {
+  return checkNullabilityTypeSpecifier(*this, nullptr, nullptr, type,
+                                       nullability, diagLoc,
+                                       /*isContextSensitive*/false,
+                                       allowArrayTypes, overrideExisting);
 }
 
 /// Check the application of the Objective-C '__kindof' qualifier to
@@ -6505,7 +6588,6 @@ static bool checkObjCKindOfType(TypeProcessingState &state, QualType &type,
     return false;
   }
 
-  // Find out if it's an Objective-C object or object pointer type;
   const ObjCObjectPointerType *ptrType = type->getAs<ObjCObjectPointerType>();
   const ObjCObjectType *objType = ptrType ? ptrType->getObjectType()
                                           : type->getAs<ObjCObjectType>();
@@ -7201,7 +7283,10 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
        !IsPointee) ||
       // Do not deduce addr space of the void type, e.g. in f(void), otherwise
       // it will fail some sema check.
-      (T->isVoidType() && !IsPointee))
+      (T->isVoidType() && !IsPointee) ||
+      // Do not deduce address spaces for dependent types because they might end
+      // up instantiating to a type with an explicit address space qualifier.
+      T->isDependentType())
     return;
 
   LangAS ImpAddr = LangAS::Default;
@@ -7227,7 +7312,7 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
       ImpAddr = LangAS::opencl_generic;
     } else {
       if (D.getContext() == DeclaratorContext::TemplateArgContext) {
-        // Do not deduce address space for non-pointee type in template args
+        // Do not deduce address space for non-pointee type in template arg.
       } else if (D.getContext() == DeclaratorContext::FileContext) {
         ImpAddr = LangAS::opencl_global;
       } else {
@@ -7268,6 +7353,9 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
   // sure we visit every element once. Copy the attributes list, and iterate
   // over that.
   ParsedAttributesView AttrsCopy{attrs};
+
+  state.setParsedNoDeref(false);
+
   for (ParsedAttr &attr : AttrsCopy) {
 
     // Skip attributes that were marked to be invalid.
@@ -7364,6 +7452,15 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       if (TAL == TAL_DeclChunk)
         HandleLifetimeBoundAttr(state, type, attr);
       break;
+
+    case ParsedAttr::AT_NoDeref: {
+      ASTContext &Ctx = state.getSema().Context;
+      type = state.getAttributedType(createSimpleAttr<NoDerefAttr>(Ctx, attr),
+                                     type, type);
+      attr.setUsedAsTypeAttr();
+      state.setParsedNoDeref(true);
+      break;
+    }
 
     MS_TYPE_ATTRS_CASELIST:
       if (!handleMSPointerTypeQualifierAttr(state, attr, type))

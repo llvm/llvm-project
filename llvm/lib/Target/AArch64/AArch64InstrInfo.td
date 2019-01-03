@@ -24,6 +24,54 @@ def HasV8_4a         : Predicate<"Subtarget->hasV8_4aOps()">,
                                  AssemblerPredicate<"HasV8_4aOps", "armv8.4a">;
 def HasV8_5a         : Predicate<"Subtarget->hasV8_5aOps()">,
                                  AssemblerPredicate<"HasV8_5aOps", "armv8.5a">;
+def HasVH            : Predicate<"Subtarget->hasVH()">,
+                       AssemblerPredicate<"FeatureVH", "vh">;
+
+def HasLOR           : Predicate<"Subtarget->hasLOR()">,
+                       AssemblerPredicate<"FeatureLOR", "lor">;
+
+def HasPA            : Predicate<"Subtarget->hasPA()">,
+                       AssemblerPredicate<"FeaturePA", "pa">;
+
+def HasJS            : Predicate<"Subtarget->hasJS()">,
+                       AssemblerPredicate<"FeatureJS", "jsconv">;
+
+def HasCCIDX         : Predicate<"Subtarget->hasCCIDX()">,
+                       AssemblerPredicate<"FeatureCCIDX", "ccidx">;
+
+def HasComplxNum      : Predicate<"Subtarget->hasComplxNum()">,
+                       AssemblerPredicate<"FeatureComplxNum", "complxnum">;
+
+def HasNV            : Predicate<"Subtarget->hasNV()">,
+                       AssemblerPredicate<"FeatureNV", "nv">;
+
+def HasRASv8_4       : Predicate<"Subtarget->hasRASv8_4()">,
+                       AssemblerPredicate<"FeatureRASv8_4", "rasv8_4">;
+
+def HasMPAM          : Predicate<"Subtarget->hasMPAM()">,
+                       AssemblerPredicate<"FeatureMPAM", "mpam">;
+
+def HasDIT           : Predicate<"Subtarget->hasDIT()">,
+                       AssemblerPredicate<"FeatureDIT", "dit">;
+
+def HasTRACEV8_4         : Predicate<"Subtarget->hasTRACEV8_4()">,
+                       AssemblerPredicate<"FeatureTRACEV8_4", "tracev8.4">;
+
+def HasAM            : Predicate<"Subtarget->hasAM()">,
+                       AssemblerPredicate<"FeatureAM", "am">;
+
+def HasSEL2          : Predicate<"Subtarget->hasSEL2()">,
+                       AssemblerPredicate<"FeatureSEL2", "sel2">;
+
+def HasTLB_RMI          : Predicate<"Subtarget->hasTLB_RMI()">,
+                       AssemblerPredicate<"FeatureTLB_RMI", "tlb-rmi">;
+
+def HasFMI           : Predicate<"Subtarget->hasFMI()">,
+                       AssemblerPredicate<"FeatureFMI", "fmi">;
+
+def HasRCPC_IMMO      : Predicate<"Subtarget->hasRCPCImm()">,
+                       AssemblerPredicate<"FeatureRCPC_IMMO", "rcpc-immo">;
+
 def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,
                                AssemblerPredicate<"FeatureFPARMv8", "fp-armv8">;
 def HasNEON          : Predicate<"Subtarget->hasNEON()">,
@@ -66,8 +114,8 @@ def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,
                        AssemblerPredicate<"FeatureAltFPCmp", "altnzcv">;
 def HasFRInt3264     : Predicate<"Subtarget->hasFRInt3264()">,
                        AssemblerPredicate<"FeatureFRInt3264", "frint3264">;
-def HasSpecCtrl      : Predicate<"Subtarget->hasSpecCtrl()">,
-                       AssemblerPredicate<"FeatureSpecCtrl", "specctrl">;
+def HasSB            : Predicate<"Subtarget->hasSB()">,
+                       AssemblerPredicate<"FeatureSB", "sb">;
 def HasPredCtrl      : Predicate<"Subtarget->hasPredCtrl()">,
                        AssemblerPredicate<"FeaturePredCtrl", "predctrl">;
 def HasCCDP          : Predicate<"Subtarget->hasCCDP()">,
@@ -510,7 +558,7 @@ def ISB   : CRmSystemI<barrier_op, 0b110, "isb",
 def TSB   : CRmSystemI<barrier_op, 0b010, "tsb", []> {
   let CRm        = 0b0010;
   let Inst{12}   = 0;
-  let Predicates = [HasV8_4a];
+  let Predicates = [HasTRACEV8_4];
 }
 }
 
@@ -602,7 +650,7 @@ let Uses = [LR], Defs = [LR], CRm = 0b0000 in {
 }
 
 // These pointer authentication isntructions require armv8.3a
-let Predicates = [HasV8_3a] in {
+let Predicates = [HasPA] in {
   multiclass SignAuth<bits<3> prefix, bits<3> prefix_z, string asm> {
     def IA   : SignAuthOneData<prefix, 0b00, !strconcat(asm, "ia")>;
     def IB   : SignAuthOneData<prefix, 0b01, !strconcat(asm, "ib")>;
@@ -642,17 +690,17 @@ let Predicates = [HasV8_3a] in {
   defm LDRAA  : AuthLoad<0, "ldraa", simm10Scaled>;
   defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
 
-  // v8.3a floating point conversion for javascript
-  let Predicates = [HasV8_3a, HasFPARMv8] in
-  def FJCVTZS  : BaseFPToIntegerUnscaled<0b01, 0b11, 0b110, FPR64, GPR32,
-                                        "fjcvtzs", []> {
-    let Inst{31} = 0;
-  }
+}
 
-} // HasV8_3a
+// v8.3a floating point conversion for javascript
+let Predicates = [HasJS, HasFPARMv8] in
+def FJCVTZS  : BaseFPToIntegerUnscaled<0b01, 0b11, 0b110, FPR64, GPR32,
+                                      "fjcvtzs", []> {
+  let Inst{31} = 0;
+} // HasJS, HasFPARMv8
 
 // v8.4 Flag manipulation instructions
-let Predicates = [HasV8_4a] in {
+let Predicates = [HasFMI] in {
 def CFINV : SimpleSystemI<0, (ins), "cfinv", "">, Sched<[WriteSys]> {
   let Inst{20-5} = 0b0000001000000000;
 }
@@ -660,7 +708,7 @@ def SETF8  : BaseFlagManipulation<0, 0, (ins GPR32:$Rn), "setf8", "{\t$Rn}">;
 def SETF16 : BaseFlagManipulation<0, 1, (ins GPR32:$Rn), "setf16", "{\t$Rn}">;
 def RMIF   : FlagRotate<(ins GPR64:$Rn, uimm6:$imm, imm0_15:$mask), "rmif",
                         "{\t$Rn, $imm, $mask}">;
-} // HasV8_4a
+} // HasFMI
 
 // v8.5 flag manipulation instructions
 let Predicates = [HasAltNZCV], Uses = [NZCV], Defs = [NZCV] in {
@@ -685,7 +733,7 @@ def AXFLAG : PstateWriteSimple<(ins), "axflag", "">, Sched<[WriteSys]> {
 def SB : SimpleSystemI<0, (ins), "sb", "">, Sched<[]> {
   let Inst{20-5} = 0b0001100110000111;
   let Unpredictable{11-8} = 0b1111;
-  let Predicates = [HasSpecCtrl];
+  let Predicates = [HasSB];
   let hasSideEffects = 1;
 }
 
@@ -1570,6 +1618,10 @@ let hasSideEffects = 1 in
 def TLSDESCCALL : Pseudo<(outs), (ins i64imm:$sym), []>, Sched<[]> {
   let AsmString = ".tlsdesccall $sym";
 }
+
+// Pseudo instruction to tell the streamer to emit a 'B' character into the
+// augmentation string.
+def EMITBKEY : Pseudo<(outs), (ins), []>, Sched<[]> {}
 
 // FIXME: maybe the scratch register used shouldn't be fixed to X1?
 // FIXME: can "hasSideEffects be dropped?
@@ -2629,8 +2681,9 @@ defm STURBB : StoreUnscaled<0b00, 0, 0b00, GPR32z, "sturb",
                          [(truncstorei8 GPR32z:$Rt,
                                   (am_unscaled8 GPR64sp:$Rn, simm9:$offset))]>;
 
-// Armv8.4 LDAPR & STLR with Immediate Offset instruction
-let Predicates = [HasV8_4a] in {
+// Armv8.4 Weaker Release Consistency enhancements
+//         LDAPR & STLR with Immediate Offset instructions
+let Predicates = [HasRCPC_IMMO] in {
 defm STLURB     : BaseStoreUnscaleV84<"stlurb",  0b00, 0b00, GPR32>;
 defm STLURH     : BaseStoreUnscaleV84<"stlurh",  0b01, 0b00, GPR32>;
 defm STLURW     : BaseStoreUnscaleV84<"stlur",   0b10, 0b00, GPR32>;
@@ -2915,7 +2968,7 @@ def STLXPX : StoreExclusivePair<0b11, 0, 0, 1, 1, GPR64, "stlxp">;
 def STXPW  : StoreExclusivePair<0b10, 0, 0, 1, 0, GPR32, "stxp">;
 def STXPX  : StoreExclusivePair<0b11, 0, 0, 1, 0, GPR64, "stxp">;
 
-let Predicates = [HasV8_1a] in {
+let Predicates = [HasLOR] in {
   // v8.1a "Limited Order Region" extension load-acquire instructions
   def LDLARW  : LoadAcquire   <0b10, 1, 1, 0, 0, GPR32, "ldlar">;
   def LDLARX  : LoadAcquire   <0b11, 1, 1, 0, 0, GPR64, "ldlar">;
@@ -4107,25 +4160,6 @@ defm : Neon_mul_widen_patterns<AArch64smull, SMULLv8i8_v8i16,
   SMULLv4i16_v4i32, SMULLv2i32_v2i64>;
 defm : Neon_mul_widen_patterns<AArch64umull, UMULLv8i8_v8i16,
   UMULLv4i16_v4i32, UMULLv2i32_v2i64>;
-
-// Patterns for smull2/umull2.
-multiclass Neon_mul_high_patterns<SDPatternOperator opnode,
-  Instruction INST8B, Instruction INST4H, Instruction INST2S> {
-  def : Pat<(v8i16 (opnode (extract_high_v16i8 V128:$Rn),
-                           (extract_high_v16i8 V128:$Rm))),
-             (INST8B V128:$Rn, V128:$Rm)>;
-  def : Pat<(v4i32 (opnode (extract_high_v8i16 V128:$Rn),
-                           (extract_high_v8i16 V128:$Rm))),
-             (INST4H V128:$Rn, V128:$Rm)>;
-  def : Pat<(v2i64 (opnode (extract_high_v4i32 V128:$Rn),
-                           (extract_high_v4i32 V128:$Rm))),
-             (INST2S V128:$Rn, V128:$Rm)>;
-}
-
-defm : Neon_mul_high_patterns<AArch64smull, SMULLv16i8_v8i16,
-  SMULLv8i16_v4i32, SMULLv4i32_v2i64>;
-defm : Neon_mul_high_patterns<AArch64umull, UMULLv16i8_v8i16,
-  UMULLv8i16_v4i32, UMULLv4i32_v2i64>;
 
 // Additional patterns for SMLAL/SMLSL and UMLAL/UMLSL
 multiclass Neon_mulacc_widen_patterns<SDPatternOperator opnode,
@@ -5989,6 +6023,41 @@ def : Pat<(i32 (trunc GPR64sp:$src)),
 
 // __builtin_trap() uses the BRK instruction on AArch64.
 def : Pat<(trap), (BRK 1)>;
+
+// Multiply high patterns which multiply the lower subvector using smull/umull
+// and the upper subvector with smull2/umull2. Then shuffle the high the high
+// part of both results together.
+def : Pat<(v16i8 (mulhs V128:$Rn, V128:$Rm)),
+          (UZP2v16i8
+           (SMULLv8i8_v8i16 (EXTRACT_SUBREG V128:$Rn, dsub),
+                            (EXTRACT_SUBREG V128:$Rm, dsub)),
+           (SMULLv16i8_v8i16 V128:$Rn, V128:$Rm))>;
+def : Pat<(v8i16 (mulhs V128:$Rn, V128:$Rm)),
+          (UZP2v8i16
+           (SMULLv4i16_v4i32 (EXTRACT_SUBREG V128:$Rn, dsub),
+                             (EXTRACT_SUBREG V128:$Rm, dsub)),
+           (SMULLv8i16_v4i32 V128:$Rn, V128:$Rm))>;
+def : Pat<(v4i32 (mulhs V128:$Rn, V128:$Rm)),
+          (UZP2v4i32
+           (SMULLv2i32_v2i64 (EXTRACT_SUBREG V128:$Rn, dsub),
+                             (EXTRACT_SUBREG V128:$Rm, dsub)),
+           (SMULLv4i32_v2i64 V128:$Rn, V128:$Rm))>;
+
+def : Pat<(v16i8 (mulhu V128:$Rn, V128:$Rm)),
+          (UZP2v16i8
+           (UMULLv8i8_v8i16 (EXTRACT_SUBREG V128:$Rn, dsub),
+                            (EXTRACT_SUBREG V128:$Rm, dsub)),
+           (UMULLv16i8_v8i16 V128:$Rn, V128:$Rm))>;
+def : Pat<(v8i16 (mulhu V128:$Rn, V128:$Rm)),
+          (UZP2v8i16
+           (UMULLv4i16_v4i32 (EXTRACT_SUBREG V128:$Rn, dsub),
+                             (EXTRACT_SUBREG V128:$Rm, dsub)),
+           (UMULLv8i16_v4i32 V128:$Rn, V128:$Rm))>;
+def : Pat<(v4i32 (mulhu V128:$Rn, V128:$Rm)),
+          (UZP2v4i32
+           (UMULLv2i32_v2i64 (EXTRACT_SUBREG V128:$Rn, dsub),
+                             (EXTRACT_SUBREG V128:$Rm, dsub)),
+           (UMULLv4i32_v2i64 V128:$Rn, V128:$Rm))>;
 
 // Conversions within AdvSIMD types in the same register size are free.
 // But because we need a consistent lane ordering, in big endian many

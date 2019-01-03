@@ -254,21 +254,21 @@ private:
   };
 
   std::set<const SectionBase *, SectionCompare> Sections;
-  ArrayRef<uint8_t> Contents;
 
 public:
-  uint64_t Align;
-  uint64_t FileSize;
+  uint32_t Type;
   uint32_t Flags;
-  uint32_t Index;
-  uint64_t MemSize;
   uint64_t Offset;
-  uint64_t PAddr;
-  uint64_t Type;
   uint64_t VAddr;
+  uint64_t PAddr;
+  uint64_t FileSize;
+  uint64_t MemSize;
+  uint64_t Align;
 
+  uint32_t Index;
   uint64_t OriginalOffset;
   Segment *ParentSegment = nullptr;
+  ArrayRef<uint8_t> Contents;
 
   explicit Segment(ArrayRef<uint8_t> Data) : Contents(Data) {}
   Segment() {}
@@ -733,6 +733,8 @@ public:
   Segment ElfHdrSegment;
   Segment ProgramHdrSegment;
 
+  uint8_t OSABI;
+  uint8_t ABIVersion;
   uint64_t Entry;
   uint64_t SHOffset;
   uint32_t Type;

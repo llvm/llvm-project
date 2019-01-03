@@ -48,3 +48,11 @@ CompilerType ClangUtil::RemoveFastQualifiers(const CompilerType &ct) {
   qual_type.removeLocalFastQualifiers();
   return CompilerType(ct.GetTypeSystem(), qual_type.getAsOpaquePtr());
 }
+
+clang::TagDecl *ClangUtil::GetAsTagDecl(const CompilerType &type) {
+  clang::QualType qual_type = ClangUtil::GetCanonicalQualType(type);
+  if (qual_type.isNull())
+    return nullptr;
+
+  return qual_type->getAsTagDecl();
+}

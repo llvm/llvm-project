@@ -69,23 +69,23 @@ triggered the problem.
 
 = Notes about C++ =
 
-Since now constructors are seen before the variable that is constructed 
-in the CFG, we create a temporary object as the destination region that 
+Since now constructors are seen before the variable that is constructed
+in the CFG, we create a temporary object as the destination region that
 is constructed into. See ExprEngine::VisitCXXConstructExpr().
 
 In ExprEngine::processCallExit(), we always bind the object region to the
 evaluated CXXConstructExpr. Then in VisitDeclStmt(), we compute the
 corresponding lazy compound value if the variable is not a reference, and
 bind the variable region to the lazy compound value. If the variable
-is a reference, just use the object region as the initilizer value.
+is a reference, just use the object region as the initializer value.
 
 Before entering a C++ method (or ctor/dtor), the 'this' region is bound
-to the object region. In ctors, we synthesize 'this' region with  
+to the object region. In ctors, we synthesize 'this' region with
 CXXRecordDecl*, which means we do not use type qualifiers. In methods, we
-synthesize 'this' region with CXXMethodDecl*, which has getThisType() 
+synthesize 'this' region with CXXMethodDecl*, which has getThisType()
 taking type qualifiers into account. It does not matter we use qualified
 'this' region in one method and unqualified 'this' region in another
-method, because we only need to ensure the 'this' region is consistent 
+method, because we only need to ensure the 'this' region is consistent
 when we synthesize it and create it directly from CXXThisExpr in a single
 method call.
 

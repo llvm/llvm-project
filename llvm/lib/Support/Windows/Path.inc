@@ -416,7 +416,7 @@ static std::error_code rename_internal(HANDLE FromHandle, const Twine &To,
       *reinterpret_cast<FILE_RENAME_INFO *>(RenameInfoBuf.data());
   RenameInfo.ReplaceIfExists = ReplaceIfExists;
   RenameInfo.RootDirectory = 0;
-  RenameInfo.FileNameLength = ToWide.size();
+  RenameInfo.FileNameLength = ToWide.size() * sizeof(wchar_t);
   std::copy(ToWide.begin(), ToWide.end(), &RenameInfo.FileName[0]);
 
   SetLastError(ERROR_SUCCESS);

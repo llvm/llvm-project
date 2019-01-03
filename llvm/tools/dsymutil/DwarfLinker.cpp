@@ -2417,15 +2417,20 @@ bool DwarfLinker::link(const DebugMap &Map) {
         warn(Err.message());
         continue;
       }
-      if (!Options.NoTimestamp &&
-          Stat.getLastModificationTime() !=
-              sys::TimePoint<>(LinkContext.DMO.getTimestamp())) {
-        // Not using the helper here as we can easily stream TimePoint<>.
-        WithColor::warning()
-            << "Timestamp mismatch for " << File << ": "
-            << Stat.getLastModificationTime() << " and "
-            << sys::TimePoint<>(LinkContext.DMO.getTimestamp()) << "\n";
-        continue;
+      if (!Options.NoTimestamp) {
+        // The modification can have sub-second precision so we need to cast
+        // away the extra precision that's not present in the debug map.
+        auto ModificationTime =
+            std::chrono::time_point_cast<std::chrono::seconds>(
+                Stat.getLastModificationTime());
+        if (ModificationTime != LinkContext.DMO.getTimestamp()) {
+          // Not using the helper here as we can easily stream TimePoint<>.
+          WithColor::warning()
+              << "Timestamp mismatch for " << File << ": "
+              << Stat.getLastModificationTime() << " and "
+              << sys::TimePoint<>(LinkContext.DMO.getTimestamp()) << "\n";
+          continue;
+        }
       }
 
       // Copy the module into the .swift_ast section.

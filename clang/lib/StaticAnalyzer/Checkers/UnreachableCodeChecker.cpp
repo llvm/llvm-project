@@ -13,7 +13,7 @@
 // A similar flow-sensitive only check exists in Analysis/ReachableCode.cpp
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/SourceManager.h"
@@ -232,7 +232,7 @@ bool UnreachableCodeChecker::isInvalidPath(const CFGBlock *CB,
   if (!pred)
     return false;
 
-  // Get the predecessor block's terminator conditon
+  // Get the predecessor block's terminator condition
   const Stmt *cond = pred->getTerminatorCondition();
 
   //assert(cond && "CFGBlock's predecessor has a terminator condition");

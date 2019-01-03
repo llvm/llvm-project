@@ -816,10 +816,21 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc DL;
 
   if (ShouldSignReturnAddress(MF)) {
-    BuildMI(
-        MBB, MBBI, DL,
-        TII->get(ShouldSignWithAKey(MF) ? AArch64::PACIASP : AArch64::PACIBSP))
-        .setMIFlag(MachineInstr::FrameSetup);
+    if (ShouldSignWithAKey(MF))
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACIASP))
+          .setMIFlag(MachineInstr::FrameSetup);
+    else {
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITBKEY))
+          .setMIFlag(MachineInstr::FrameSetup);
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACIBSP))
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
+
+    unsigned CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
+    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlags(MachineInstr::FrameSetup);
   }
 
   // All calls are tail calls in GHC calling conv, and functions have no
@@ -1289,12 +1300,17 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 
   bool IsWin64 =
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
-  unsigned FixedObject = IsWin64 ? alignTo(AFI->getVarArgsGPRSize(), 16) : 0;
+  // Var args are accounted for in the containing function, so don't
+  // include them for funclets.
+  unsigned FixedObject =
+      (IsWin64 && !IsFunclet) ? alignTo(AFI->getVarArgsGPRSize(), 16) : 0;
 
   uint64_t AfterCSRPopSize = ArgumentPopSize;
   auto PrologueSaveSize = AFI->getCalleeSavedStackSize() + FixedObject;
-  // Var args are accounted for in the containting function, so don't
-  // include them for funclets.
+  // We cannot rely on the local stack size set in emitPrologue if the function
+  // has funclets, as funclets have different local stack size requirements, and
+  // the current value set in emitPrologue may be that of the containing
+  // function.
   if (MF.hasEHFunclets())
     AFI->setLocalStackSize(NumBytes - PrologueSaveSize);
   bool CombineSPBump = shouldCombineCSRLocalStackBump(MF, NumBytes);
@@ -1733,20 +1749,22 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       BuildMI(MBB, MI, DL, TII.get(AArch64::SEH_Nop))
           .setMIFlag(MachineInstr::FrameSetup);
 
-    // Emit a CFI instruction that causes 8 to be subtracted from the value of
-    // x18 when unwinding past this frame.
-    static const char CFIInst[] = {
-        dwarf::DW_CFA_val_expression,
-        18, // register
-        2,  // length
-        static_cast<char>(unsigned(dwarf::DW_OP_breg18)),
-        static_cast<char>(-8) & 0x7f, // addend (sleb128)
-    };
-    unsigned CFIIndex =
-        MF.addFrameInst(MCCFIInstruction::createEscape(nullptr, CFIInst));
-    BuildMI(MBB, MI, DL, TII.get(AArch64::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex)
-        .setMIFlag(MachineInstr::FrameSetup);
+    if (!MF.getFunction().hasFnAttribute(Attribute::NoUnwind)) {
+      // Emit a CFI instruction that causes 8 to be subtracted from the value of
+      // x18 when unwinding past this frame.
+      static const char CFIInst[] = {
+          dwarf::DW_CFA_val_expression,
+          18, // register
+          2,  // length
+          static_cast<char>(unsigned(dwarf::DW_OP_breg18)),
+          static_cast<char>(-8) & 0x7f, // addend (sleb128)
+      };
+      unsigned CFIIndex =
+          MF.addFrameInst(MCCFIInstruction::createEscape(nullptr, CFIInst));
+      BuildMI(MBB, MI, DL, TII.get(AArch64::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
 
     // This instruction also makes x18 live-in to the entry block.
     MBB.addLiveIn(AArch64::X18);

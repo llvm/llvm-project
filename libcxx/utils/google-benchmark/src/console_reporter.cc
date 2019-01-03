@@ -53,7 +53,7 @@ bool ConsoleReporter::ReportContext(const Context& context) {
 }
 
 void ConsoleReporter::PrintHeader(const Run& run) {
-  std::string str = FormatString("%-*s %13s %13s %10s", static_cast<int>(name_field_width_),
+  std::string str = FormatString("%-*s %13s %15s %12s", static_cast<int>(name_field_width_),
                                  "Benchmark", "Time", "CPU", "Iterations");
   if(!run.counters.empty()) {
     if(output_options_ & OO_Tabular) {
@@ -98,6 +98,21 @@ static void IgnoreColorPrint(std::ostream& out, LogColor, const char* fmt,
   va_end(args);
 }
 
+
+static std::string FormatTime(double time) {
+  // Align decimal places...
+  if (time < 1.0) {
+    return FormatString("%10.3f", time);
+  }
+  if (time < 10.0) {
+    return FormatString("%10.2f", time);
+  }
+  if (time < 100.0) {
+    return FormatString("%10.1f", time);
+  }
+  return FormatString("%10.0f", time);
+}
+
 void ConsoleReporter::PrintRunData(const Run& result) {
   typedef void(PrinterFn)(std::ostream&, LogColor, const char*, ...);
   auto& Out = GetOutputStream();
@@ -117,18 +132,21 @@ void ConsoleReporter::PrintRunData(const Run& result) {
 
   const double real_time = result.GetAdjustedRealTime();
   const double cpu_time = result.GetAdjustedCPUTime();
+  const std::string real_time_str = FormatTime(real_time);
+  const std::string cpu_time_str = FormatTime(cpu_time);
+
 
   if (result.report_big_o) {
     std::string big_o = GetBigOString(result.complexity);
-    printer(Out, COLOR_YELLOW, "%10.2f %s %10.2f %s ", real_time, big_o.c_str(),
+    printer(Out, COLOR_YELLOW, "%10.2f %-4s %10.2f %-4s ", real_time, big_o.c_str(),
             cpu_time, big_o.c_str());
   } else if (result.report_rms) {
-    printer(Out, COLOR_YELLOW, "%10.0f %% %10.0f %% ", real_time * 100,
-            cpu_time * 100);
+    printer(Out, COLOR_YELLOW, "%10.0f %-4s %10.0f %-4s ", real_time * 100, "%",
+            cpu_time * 100, "%");
   } else {
     const char* timeLabel = GetTimeUnitString(result.time_unit);
-    printer(Out, COLOR_YELLOW, "%10.0f %s %10.0f %s ", real_time, timeLabel,
-            cpu_time, timeLabel);
+    printer(Out, COLOR_YELLOW, "%s %-4s %s %-4s ", real_time_str.c_str(), timeLabel,
+            cpu_time_str.c_str(), timeLabel);
   }
 
   if (!result.report_big_o && !result.report_rms) {

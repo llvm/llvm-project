@@ -1,4 +1,4 @@
-//===- HexagonDepIICHVX.td ------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,1849 +9,2549 @@
 // Automatically generated file, please consult code owner before editing.
 //===----------------------------------------------------------------------===//
 
-
-def tc_0317c6ca : InstrItinClass;
-def tc_1b93bdc6 : InstrItinClass;
-def tc_2171ebae : InstrItinClass;
-def tc_28978789 : InstrItinClass;
-def tc_29841470 : InstrItinClass;
-def tc_316c637c : InstrItinClass;
-def tc_354299ad : InstrItinClass;
-def tc_35e92f8e : InstrItinClass;
-def tc_38208312 : InstrItinClass;
-def tc_4105d6b5 : InstrItinClass;
-def tc_41f4b64e : InstrItinClass;
-def tc_41f99e1c : InstrItinClass;
-def tc_45453b98 : InstrItinClass;
-def tc_4e2a5159 : InstrItinClass;
-def tc_4f190ba3 : InstrItinClass;
-def tc_4fd8566e : InstrItinClass;
-def tc_51cd3aab : InstrItinClass;
-def tc_5a9fc4ec : InstrItinClass;
-def tc_5c03dc63 : InstrItinClass;
-def tc_5c120602 : InstrItinClass;
-def tc_5cbf490b : InstrItinClass;
-def tc_63e3d94c : InstrItinClass;
-def tc_644584f8 : InstrItinClass;
-def tc_66bb62ea : InstrItinClass;
-def tc_69b6dd20 : InstrItinClass;
-def tc_6b78cf13 : InstrItinClass;
-def tc_6fd9ad30 : InstrItinClass;
-def tc_71337255 : InstrItinClass;
-def tc_72ad7b54 : InstrItinClass;
-def tc_7474003e : InstrItinClass;
-def tc_77a4c701 : InstrItinClass;
-def tc_7c3f55c4 : InstrItinClass;
-def tc_7e9f581b : InstrItinClass;
-def tc_7fa82b08 : InstrItinClass;
-def tc_7fa8b40f : InstrItinClass;
-def tc_85d237e3 : InstrItinClass;
-def tc_8a6eb39a : InstrItinClass;
-def tc_8b6a873f : InstrItinClass;
-def tc_908a4c8c : InstrItinClass;
-def tc_9311da3f : InstrItinClass;
-def tc_94f43c04 : InstrItinClass;
-def tc_9777e6bf : InstrItinClass;
-def tc_97c165b9 : InstrItinClass;
-def tc_98733e9d : InstrItinClass;
-def tc_99093773 : InstrItinClass;
-def tc_9b9642a1 : InstrItinClass;
-def tc_9c267309 : InstrItinClass;
-def tc_a3127e12 : InstrItinClass;
-def tc_a4c9df3b : InstrItinClass;
-def tc_a807365d : InstrItinClass;
-def tc_aedb9f9e : InstrItinClass;
-def tc_b06ab583 : InstrItinClass;
-def tc_b712833a : InstrItinClass;
-def tc_b77635b4 : InstrItinClass;
-def tc_bbaf280e : InstrItinClass;
-def tc_bf142ae2 : InstrItinClass;
-def tc_bfe309d5 : InstrItinClass;
-def tc_c00bf9c9 : InstrItinClass;
-def tc_c4b515c5 : InstrItinClass;
-def tc_cbf6d1dc : InstrItinClass;
-def tc_cedf314b : InstrItinClass;
-def tc_d2cb81ea : InstrItinClass;
-def tc_d5090f3e : InstrItinClass;
-def tc_d642eff3 : InstrItinClass;
-def tc_d725e5b0 : InstrItinClass;
-def tc_d7bea0ec : InstrItinClass;
-def tc_d98f4d63 : InstrItinClass;
-def tc_da979fb3 : InstrItinClass;
-def tc_db5b9e2f : InstrItinClass;
-def tc_df54ad52 : InstrItinClass;
-def tc_e172d86a : InstrItinClass;
-def tc_e231aa4f : InstrItinClass;
-def tc_e3748cdf : InstrItinClass;
-def tc_e5053c8f : InstrItinClass;
-def tc_e6299d16 : InstrItinClass;
-def tc_eb669007 : InstrItinClass;
-def tc_ec58f88a : InstrItinClass;
-def tc_eda67dcd : InstrItinClass;
-def tc_ee927c0e : InstrItinClass;
-def tc_f3fc3f83 : InstrItinClass;
-def tc_fa99dc24 : InstrItinClass;
+def tc_04da405a : InstrItinClass;
+def tc_05058f6f : InstrItinClass;
+def tc_05ac6f98 : InstrItinClass;
+def tc_05ca8cfd : InstrItinClass;
+def tc_08a4f1b6 : InstrItinClass;
+def tc_0b04c6c7 : InstrItinClass;
+def tc_0ec46cf9 : InstrItinClass;
+def tc_131f1c81 : InstrItinClass;
+def tc_1381a97c : InstrItinClass;
+def tc_15fdf750 : InstrItinClass;
+def tc_16ff9ef8 : InstrItinClass;
+def tc_191381c1 : InstrItinClass;
+def tc_1ad8a370 : InstrItinClass;
+def tc_1ba8a0cd : InstrItinClass;
+def tc_20a4bbec : InstrItinClass;
+def tc_257f6f7c : InstrItinClass;
+def tc_26a377fe : InstrItinClass;
+def tc_2c745bb8 : InstrItinClass;
+def tc_2d4051cd : InstrItinClass;
+def tc_2e8f5f6e : InstrItinClass;
+def tc_309dbb4f : InstrItinClass;
+def tc_3904b926 : InstrItinClass;
+def tc_3aacf4a8 : InstrItinClass;
+def tc_3ad719fb : InstrItinClass;
+def tc_3c56e5ce : InstrItinClass;
+def tc_3ce09744 : InstrItinClass;
+def tc_3e2aaafc : InstrItinClass;
+def tc_447d9895 : InstrItinClass;
+def tc_453fe68d : InstrItinClass;
+def tc_46d6c3e0 : InstrItinClass;
+def tc_51d0ecc3 : InstrItinClass;
+def tc_52447ecc : InstrItinClass;
+def tc_540c3da3 : InstrItinClass;
+def tc_54a0dc47 : InstrItinClass;
+def tc_561aaa58 : InstrItinClass;
+def tc_56c4f9fe : InstrItinClass;
+def tc_56e64202 : InstrItinClass;
+def tc_58d21193 : InstrItinClass;
+def tc_5bf8afbb : InstrItinClass;
+def tc_61bf7c03 : InstrItinClass;
+def tc_649072c2 : InstrItinClass;
+def tc_660769f1 : InstrItinClass;
+def tc_663c80a7 : InstrItinClass;
+def tc_6942b6e0 : InstrItinClass;
+def tc_6e7fa133 : InstrItinClass;
+def tc_71646d06 : InstrItinClass;
+def tc_7177e272 : InstrItinClass;
+def tc_718b5c53 : InstrItinClass;
+def tc_7273323b : InstrItinClass;
+def tc_7417e785 : InstrItinClass;
+def tc_767c4e9d : InstrItinClass;
+def tc_7e6a3e89 : InstrItinClass;
+def tc_8772086c : InstrItinClass;
+def tc_87adc037 : InstrItinClass;
+def tc_8e420e4d : InstrItinClass;
+def tc_90bcc1db : InstrItinClass;
+def tc_933f2b39 : InstrItinClass;
+def tc_946013d8 : InstrItinClass;
+def tc_9d1dc972 : InstrItinClass;
+def tc_9f363d21 : InstrItinClass;
+def tc_a02a10a8 : InstrItinClass;
+def tc_a0dbea28 : InstrItinClass;
+def tc_a7e6707d : InstrItinClass;
+def tc_ab23f776 : InstrItinClass;
+def tc_abe8c3b2 : InstrItinClass;
+def tc_ac4046bc : InstrItinClass;
+def tc_af25efd9 : InstrItinClass;
+def tc_b091f1c6 : InstrItinClass;
+def tc_b28e51aa : InstrItinClass;
+def tc_b4416217 : InstrItinClass;
+def tc_b9db8205 : InstrItinClass;
+def tc_c0749f3c : InstrItinClass;
+def tc_c127de3a : InstrItinClass;
+def tc_c4edf264 : InstrItinClass;
+def tc_c5dba46e : InstrItinClass;
+def tc_c7039829 : InstrItinClass;
+def tc_cd94bfe0 : InstrItinClass;
+def tc_d8287c14 : InstrItinClass;
+def tc_db5555f3 : InstrItinClass;
+def tc_dd5b0695 : InstrItinClass;
+def tc_df80eeb0 : InstrItinClass;
+def tc_e2d2e9e5 : InstrItinClass;
+def tc_e35c1e93 : InstrItinClass;
+def tc_e3f68a46 : InstrItinClass;
+def tc_e675c45a : InstrItinClass;
+def tc_e699ae41 : InstrItinClass;
+def tc_e8797b98 : InstrItinClass;
+def tc_e99d4c2e : InstrItinClass;
+def tc_f1de44ef : InstrItinClass;
+def tc_f21e8abb : InstrItinClass;
+def tc_fd7610da : InstrItinClass;
 
 class DepHVXItinV55 {
   list<InstrItinData> DepHVXItinV55_list = [
-    InstrItinData <tc_0317c6ca, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 2, 1, 2, 7],
-      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_1b93bdc6, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [1, 2, 5],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_2171ebae, /*SLOT0123,VA_DV*/
+    InstrItinData <tc_04da405a, /*SLOT0123,VP_VS*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
-      [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_28978789, /*SLOT0123,4SLOT*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_ALL]>], [3, 2],
-      [HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_29841470, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [1, 2],
-      [Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_316c637c, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_354299ad, /*SLOT0,NOSLOT1,STORE,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_XLANE]>], [1, 2, 5],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_35e92f8e, /*SLOT0,NOSLOT1,LOAD,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_38208312, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 3, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_4105d6b5, /*SLOT0123,VP*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 2],
-      [HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_41f4b64e, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_41f99e1c, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_45453b98, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_4e2a5159, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_4f190ba3, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_4fd8566e, /*SLOT0,NOSLOT1,LOAD,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 3, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_51cd3aab, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_5a9fc4ec, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 9, 7, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_5c03dc63, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [3, 1, 2],
-      [Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_5c120602, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_5cbf490b, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_63e3d94c, /*SLOT1,LOAD,VA*/
-      [InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_644584f8, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7],
+       InstrStage<1, [CVI_XLSHF]>], [9, 5],
       [HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_66bb62ea, /*SLOT1,LOAD,VA*/
-      [InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_69b6dd20, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_6b78cf13, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 2],
-      [HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_6fd9ad30, /*SLOT0,NOSLOT1,STORE,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_XLANE]>], [3, 2, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_71337255, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7],
-      [HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_72ad7b54, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_7474003e, /*SLOT2,VX_DV*/
-      [InstrStage<1, [SLOT2], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_77a4c701, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_7c3f55c4, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_7e9f581b, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 2, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_7fa82b08, /*SLOT0,NOSLOT1,STORE,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_XLANE]>], [3, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_7fa8b40f, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_85d237e3, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [2, 1, 2, 7],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_8a6eb39a, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9],
-      [HVX_FWD]>,
-
-    InstrItinData <tc_8b6a873f, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [3, 2, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_908a4c8c, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9311da3f, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 7, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_94f43c04, /*SLOT0,STORE,VA_DV*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9777e6bf, /*SLOT0,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [4, 7, 1],
-      [Hex_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_97c165b9, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_98733e9d, /*SLOT1,LOAD,VA_DV*/
-      [InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_99093773, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 7, 1, 2, 7],
-      [Hex_FWD, HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9b9642a1, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9c267309, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 3, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_a3127e12, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_a4c9df3b, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 1, 2, 7],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_a807365d, /*SLOT23,VS_VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1], 0>,
-       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_aedb9f9e, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_b06ab583, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 7],
-      [HVX_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_b712833a, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_b77635b4, /*SLOT0123,4SLOT*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_ALL]>], [2],
-      [Hex_FWD]>,
-
-    InstrItinData <tc_bbaf280e, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_bf142ae2, /*SLOT0123,VP*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_bfe309d5, /*SLOT1,LOAD,VA_DV*/
+    InstrItinData <tc_05058f6f, /*SLOT1,LOAD,VA_DV*/
       [InstrStage<1, [SLOT1], 0>,
        InstrStage<1, [CVI_LD], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [1, 2, 7],
       [Hex_FWD, Hex_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_c00bf9c9, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 7, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+    InstrItinData <tc_05ac6f98, /*SLOT1,LOAD,VA*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_c4b515c5, /*SLOT0123,VP*/
+    InstrItinData <tc_05ca8cfd, /*SLOT0123,VS*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_cbf6d1dc, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+    InstrItinData <tc_08a4f1b6, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_cedf314b, /*SLOT0123,4SLOT*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_ALL]>], [3],
-      [HVX_FWD]>,
+    InstrItinData <tc_0b04c6c7, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_d2cb81ea, /*SLOT0123,VS*/
+    InstrItinData <tc_0ec46cf9, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_d5090f3e, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [2, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_d642eff3, /*SLOT0,NOSLOT1,STORE,VP*/
+    InstrItinData <tc_131f1c81, /*SLOT0,NOSLOT1,STORE,VP*/
       [InstrStage<1, [SLOT0], 0>,
        InstrStage<1, [SLOT1], 0>,
        InstrStage<1, [CVI_ST], 0>,
        InstrStage<1, [CVI_XLANE]>], [2, 1, 2, 5],
       [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_d725e5b0, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_d7bea0ec, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 5],
-      [HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_d98f4d63, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_da979fb3, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_db5b9e2f, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [3, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_df54ad52, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_e172d86a, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_e231aa4f, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_e3748cdf, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_e5053c8f, /*SLOT0123,4SLOT*/
+    InstrItinData <tc_1381a97c, /*SLOT0123,4SLOT*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_ALL]>], [],
       []>,
 
-    InstrItinData <tc_e6299d16, /*SLOT0123,VP*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 5],
-      [HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_eb669007, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_ec58f88a, /*SLOT0,STORE,VA_DV*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [1, 2, 7, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_eda67dcd, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_ee927c0e, /*SLOT23,VS_VX*/
+    InstrItinData <tc_15fdf750, /*SLOT23,VS_VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1], 0>,
        InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 7, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_f3fc3f83, /*SLOT0123,VP*/
+    InstrItinData <tc_16ff9ef8, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_191381c1, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 7, 1, 2, 7],
+      [Hex_FWD, HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_1ad8a370, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 2, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_1ba8a0cd, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_20a4bbec, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_257f6f7c, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_26a377fe, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 3, 5, 2],
+      [HVX_FWD, Hex_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_2c745bb8, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_2d4051cd, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 3, 7, 5, 2],
+      [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_2e8f5f6e, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 7, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_309dbb4f, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3904b926, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3aacf4a8, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 7],
+      [HVX_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_3ad719fb, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [3, 2, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3c56e5ce, /*SLOT0,NOSLOT1,LOAD,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3ce09744, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [1, 2],
+      [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3e2aaafc, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_447d9895, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_453fe68d, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_46d6c3e0, /*SLOT0123,VP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLANE]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_fa99dc24, /*SLOT2,VX_DV*/
+    InstrItinData <tc_51d0ecc3, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_52447ecc, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_540c3da3, /*SLOT0,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [4, 7, 1],
+      [Hex_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_54a0dc47, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 2, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_561aaa58, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_56c4f9fe, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_56e64202, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_58d21193, /*SLOT0,STORE,VA_DV*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_5bf8afbb, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_61bf7c03, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_649072c2, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_660769f1, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_663c80a7, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_6942b6e0, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_6e7fa133, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_71646d06, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_7177e272, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_718b5c53, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9],
+      [HVX_FWD]>,
+
+    InstrItinData <tc_7273323b, /*SLOT0,STORE,VA_DV*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [1, 2, 7, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_7417e785, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_767c4e9d, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [3, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_7e6a3e89, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_8772086c, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_87adc037, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_8e420e4d, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_90bcc1db, /*SLOT2,VX_DV*/
+      [InstrStage<1, [SLOT2], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_933f2b39, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_946013d8, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_9d1dc972, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_9f363d21, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_a02a10a8, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [2, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_a0dbea28, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [3, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_a7e6707d, /*SLOT0,NOSLOT1,LOAD,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ab23f776, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [1, 2, 5],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_abe8c3b2, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ac4046bc, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_af25efd9, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_b091f1c6, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_b28e51aa, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [2],
+      [Hex_FWD]>,
+
+    InstrItinData <tc_b4416217, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_b9db8205, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 3, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c0749f3c, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c127de3a, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_c4edf264, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c5dba46e, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_c7039829, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [3, 2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_cd94bfe0, /*SLOT23,VS_VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_d8287c14, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_db5555f3, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_dd5b0695, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [2, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_df80eeb0, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e2d2e9e5, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [3, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e35c1e93, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e3f68a46, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [3],
+      [HVX_FWD]>,
+
+    InstrItinData <tc_e675c45a, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_e699ae41, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [1, 2],
+      [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_e8797b98, /*SLOT1,LOAD,VA*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e99d4c2e, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_f1de44ef, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
        InstrStage<1, [CVI_MPY01]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_f21e8abb, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [1, 2, 5],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_fd7610da, /*SLOT1,LOAD,VA_DV*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>
   ];
 }
 
 class DepHVXItinV60 {
   list<InstrItinData> DepHVXItinV60_list = [
-    InstrItinData <tc_0317c6ca, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 2, 1, 2, 7],
-      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_1b93bdc6, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [1, 2, 5],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_2171ebae, /*SLOT0123,VA_DV*/
+    InstrItinData <tc_04da405a, /*SLOT0123,VP_VS*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
-      [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_28978789, /*SLOT0123,4SLOT*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_ALL]>], [3, 2],
-      [HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_29841470, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [1, 2],
-      [Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_316c637c, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_354299ad, /*SLOT0,NOSLOT1,STORE,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_XLANE]>], [1, 2, 5],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_35e92f8e, /*SLOT0,NOSLOT1,LOAD,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_38208312, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 3, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_4105d6b5, /*SLOT0123,VP*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 2],
-      [HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_41f4b64e, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_41f99e1c, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_45453b98, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_4e2a5159, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_4f190ba3, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_4fd8566e, /*SLOT0,NOSLOT1,LOAD,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 3, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_51cd3aab, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_5a9fc4ec, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 9, 7, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_5c03dc63, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [3, 1, 2],
-      [Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_5c120602, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_5cbf490b, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_63e3d94c, /*SLOT1,LOAD,VA*/
-      [InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_644584f8, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7],
+       InstrStage<1, [CVI_XLSHF]>], [9, 5],
       [HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_66bb62ea, /*SLOT1,LOAD,VA*/
-      [InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_69b6dd20, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_6b78cf13, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 2],
-      [HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_6fd9ad30, /*SLOT0,NOSLOT1,STORE,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_XLANE]>], [3, 2, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_71337255, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7],
-      [HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_72ad7b54, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_7474003e, /*SLOT2,VX_DV*/
-      [InstrStage<1, [SLOT2], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_77a4c701, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_7c3f55c4, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_7e9f581b, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 2, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_7fa82b08, /*SLOT0,NOSLOT1,STORE,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_XLANE]>], [3, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_7fa8b40f, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_85d237e3, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [2, 1, 2, 7],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_8a6eb39a, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9],
-      [HVX_FWD]>,
-
-    InstrItinData <tc_8b6a873f, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [3, 2, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_908a4c8c, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9311da3f, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 7, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_94f43c04, /*SLOT0,STORE,VA_DV*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9777e6bf, /*SLOT0,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [4, 7, 1],
-      [Hex_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_97c165b9, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_98733e9d, /*SLOT1,LOAD,VA_DV*/
-      [InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_99093773, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 7, 1, 2, 7],
-      [Hex_FWD, HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9b9642a1, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9c267309, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 3, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_a3127e12, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_a4c9df3b, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 1, 2, 7],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_a807365d, /*SLOT23,VS_VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1], 0>,
-       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_aedb9f9e, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_b06ab583, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 7],
-      [HVX_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_b712833a, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_b77635b4, /*SLOT0123,4SLOT*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_ALL]>], [2],
-      [Hex_FWD]>,
-
-    InstrItinData <tc_bbaf280e, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_bf142ae2, /*SLOT0123,VP*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_bfe309d5, /*SLOT1,LOAD,VA_DV*/
+    InstrItinData <tc_05058f6f, /*SLOT1,LOAD,VA_DV*/
       [InstrStage<1, [SLOT1], 0>,
        InstrStage<1, [CVI_LD], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [1, 2, 7],
       [Hex_FWD, Hex_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_c00bf9c9, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 7, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+    InstrItinData <tc_05ac6f98, /*SLOT1,LOAD,VA*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_c4b515c5, /*SLOT0123,VP*/
+    InstrItinData <tc_05ca8cfd, /*SLOT0123,VS*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_cbf6d1dc, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+    InstrItinData <tc_08a4f1b6, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_cedf314b, /*SLOT0123,4SLOT*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_ALL]>], [3],
-      [HVX_FWD]>,
+    InstrItinData <tc_0b04c6c7, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_d2cb81ea, /*SLOT0123,VS*/
+    InstrItinData <tc_0ec46cf9, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_d5090f3e, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [2, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_d642eff3, /*SLOT0,NOSLOT1,STORE,VP*/
+    InstrItinData <tc_131f1c81, /*SLOT0,NOSLOT1,STORE,VP*/
       [InstrStage<1, [SLOT0], 0>,
        InstrStage<1, [SLOT1], 0>,
        InstrStage<1, [CVI_ST], 0>,
        InstrStage<1, [CVI_XLANE]>], [2, 1, 2, 5],
       [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_d725e5b0, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_d7bea0ec, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 5],
-      [HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_d98f4d63, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_da979fb3, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_db5b9e2f, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [3, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_df54ad52, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_e172d86a, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_e231aa4f, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_e3748cdf, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_e5053c8f, /*SLOT0123,4SLOT*/
+    InstrItinData <tc_1381a97c, /*SLOT0123,4SLOT*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_ALL]>], [],
       []>,
 
-    InstrItinData <tc_e6299d16, /*SLOT0123,VP*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 5],
-      [HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_eb669007, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_ec58f88a, /*SLOT0,STORE,VA_DV*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [1, 2, 7, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_eda67dcd, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_ee927c0e, /*SLOT23,VS_VX*/
+    InstrItinData <tc_15fdf750, /*SLOT23,VS_VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1], 0>,
        InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 7, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_f3fc3f83, /*SLOT0123,VP*/
+    InstrItinData <tc_16ff9ef8, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_191381c1, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 7, 1, 2, 7],
+      [Hex_FWD, HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_1ad8a370, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 2, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_1ba8a0cd, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_20a4bbec, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_257f6f7c, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_26a377fe, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 3, 5, 2],
+      [HVX_FWD, Hex_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_2c745bb8, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_2d4051cd, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 3, 7, 5, 2],
+      [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_2e8f5f6e, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 7, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_309dbb4f, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3904b926, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3aacf4a8, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 7],
+      [HVX_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_3ad719fb, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [3, 2, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3c56e5ce, /*SLOT0,NOSLOT1,LOAD,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3ce09744, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [1, 2],
+      [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3e2aaafc, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_447d9895, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_453fe68d, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_46d6c3e0, /*SLOT0123,VP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLANE]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_fa99dc24, /*SLOT2,VX_DV*/
+    InstrItinData <tc_51d0ecc3, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_52447ecc, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_540c3da3, /*SLOT0,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [4, 7, 1],
+      [Hex_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_54a0dc47, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 2, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_561aaa58, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_56c4f9fe, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_56e64202, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_58d21193, /*SLOT0,STORE,VA_DV*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_5bf8afbb, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_61bf7c03, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_649072c2, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_660769f1, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_663c80a7, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_6942b6e0, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_6e7fa133, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_71646d06, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_7177e272, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_718b5c53, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9],
+      [HVX_FWD]>,
+
+    InstrItinData <tc_7273323b, /*SLOT0,STORE,VA_DV*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [1, 2, 7, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_7417e785, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_767c4e9d, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [3, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_7e6a3e89, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_8772086c, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_87adc037, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_8e420e4d, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_90bcc1db, /*SLOT2,VX_DV*/
+      [InstrStage<1, [SLOT2], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_933f2b39, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_946013d8, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_9d1dc972, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_9f363d21, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_a02a10a8, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [2, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_a0dbea28, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [3, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_a7e6707d, /*SLOT0,NOSLOT1,LOAD,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ab23f776, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [1, 2, 5],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_abe8c3b2, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ac4046bc, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_af25efd9, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_b091f1c6, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_b28e51aa, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [2],
+      [Hex_FWD]>,
+
+    InstrItinData <tc_b4416217, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_b9db8205, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 3, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c0749f3c, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c127de3a, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_c4edf264, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c5dba46e, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_c7039829, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [3, 2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_cd94bfe0, /*SLOT23,VS_VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_d8287c14, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_db5555f3, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_dd5b0695, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [2, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_df80eeb0, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e2d2e9e5, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [3, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e35c1e93, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e3f68a46, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [3],
+      [HVX_FWD]>,
+
+    InstrItinData <tc_e675c45a, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_e699ae41, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [1, 2],
+      [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_e8797b98, /*SLOT1,LOAD,VA*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e99d4c2e, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_f1de44ef, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
        InstrStage<1, [CVI_MPY01]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_f21e8abb, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [1, 2, 5],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_fd7610da, /*SLOT1,LOAD,VA_DV*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>
   ];
 }
 
 class DepHVXItinV62 {
   list<InstrItinData> DepHVXItinV62_list = [
-    InstrItinData <tc_0317c6ca, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 2, 1, 2, 7],
-      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_1b93bdc6, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [1, 2, 5],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_2171ebae, /*SLOT0123,VA_DV*/
+    InstrItinData <tc_04da405a, /*SLOT0123,VP_VS*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
-      [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_28978789, /*SLOT0123,4SLOT*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_ALL]>], [3, 2],
-      [HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_29841470, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [1, 2],
-      [Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_316c637c, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_354299ad, /*SLOT0,NOSLOT1,STORE,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_XLANE]>], [1, 2, 5],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_35e92f8e, /*SLOT0,NOSLOT1,LOAD,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_38208312, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 3, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_4105d6b5, /*SLOT0123,VP*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 2],
-      [HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_41f4b64e, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_41f99e1c, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_45453b98, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_4e2a5159, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_4f190ba3, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_4fd8566e, /*SLOT0,NOSLOT1,LOAD,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 3, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_51cd3aab, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_5a9fc4ec, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 9, 7, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_5c03dc63, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [3, 1, 2],
-      [Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_5c120602, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_5cbf490b, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_63e3d94c, /*SLOT1,LOAD,VA*/
-      [InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_644584f8, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7],
+       InstrStage<1, [CVI_XLSHF]>], [9, 5],
       [HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_66bb62ea, /*SLOT1,LOAD,VA*/
-      [InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_69b6dd20, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_6b78cf13, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 2],
-      [HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_6fd9ad30, /*SLOT0,NOSLOT1,STORE,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_XLANE]>], [3, 2, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_71337255, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7],
-      [HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_72ad7b54, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_7474003e, /*SLOT2,VX_DV*/
-      [InstrStage<1, [SLOT2], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_77a4c701, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_7c3f55c4, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_7e9f581b, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 2, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_7fa82b08, /*SLOT0,NOSLOT1,STORE,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_XLANE]>], [3, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_7fa8b40f, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_85d237e3, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [2, 1, 2, 7],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_8a6eb39a, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9],
-      [HVX_FWD]>,
-
-    InstrItinData <tc_8b6a873f, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [3, 2, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_908a4c8c, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9311da3f, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 7, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_94f43c04, /*SLOT0,STORE,VA_DV*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9777e6bf, /*SLOT0,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [4, 7, 1],
-      [Hex_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_97c165b9, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_98733e9d, /*SLOT1,LOAD,VA_DV*/
-      [InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_99093773, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 7, 1, 2, 7],
-      [Hex_FWD, HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9b9642a1, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9c267309, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 3, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_a3127e12, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_a4c9df3b, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 1, 2, 7],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_a807365d, /*SLOT23,VS_VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1], 0>,
-       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_aedb9f9e, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_b06ab583, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 7],
-      [HVX_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_b712833a, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_b77635b4, /*SLOT0123,4SLOT*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_ALL]>], [2],
-      [Hex_FWD]>,
-
-    InstrItinData <tc_bbaf280e, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_bf142ae2, /*SLOT0123,VP*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_bfe309d5, /*SLOT1,LOAD,VA_DV*/
+    InstrItinData <tc_05058f6f, /*SLOT1,LOAD,VA_DV*/
       [InstrStage<1, [SLOT1], 0>,
        InstrStage<1, [CVI_LD], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [1, 2, 7],
       [Hex_FWD, Hex_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_c00bf9c9, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 7, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+    InstrItinData <tc_05ac6f98, /*SLOT1,LOAD,VA*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_c4b515c5, /*SLOT0123,VP*/
+    InstrItinData <tc_05ca8cfd, /*SLOT0123,VS*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_cbf6d1dc, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+    InstrItinData <tc_08a4f1b6, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_cedf314b, /*SLOT0123,4SLOT*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_ALL]>], [3],
-      [HVX_FWD]>,
+    InstrItinData <tc_0b04c6c7, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_d2cb81ea, /*SLOT0123,VS*/
+    InstrItinData <tc_0ec46cf9, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_d5090f3e, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [2, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_d642eff3, /*SLOT0,NOSLOT1,STORE,VP*/
+    InstrItinData <tc_131f1c81, /*SLOT0,NOSLOT1,STORE,VP*/
       [InstrStage<1, [SLOT0], 0>,
        InstrStage<1, [SLOT1], 0>,
        InstrStage<1, [CVI_ST], 0>,
        InstrStage<1, [CVI_XLANE]>], [2, 1, 2, 5],
       [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_d725e5b0, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_d7bea0ec, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 5],
-      [HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_d98f4d63, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_da979fb3, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_db5b9e2f, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [3, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_df54ad52, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_e172d86a, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_e231aa4f, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_e3748cdf, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_e5053c8f, /*SLOT0123,4SLOT*/
+    InstrItinData <tc_1381a97c, /*SLOT0123,4SLOT*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_ALL]>], [],
       []>,
 
-    InstrItinData <tc_e6299d16, /*SLOT0123,VP*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 5],
-      [HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_eb669007, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_ec58f88a, /*SLOT0,STORE,VA_DV*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [1, 2, 7, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_eda67dcd, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_ee927c0e, /*SLOT23,VS_VX*/
+    InstrItinData <tc_15fdf750, /*SLOT23,VS_VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1], 0>,
        InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 7, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_f3fc3f83, /*SLOT0123,VP*/
+    InstrItinData <tc_16ff9ef8, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_191381c1, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 7, 1, 2, 7],
+      [Hex_FWD, HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_1ad8a370, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 2, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_1ba8a0cd, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_20a4bbec, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_257f6f7c, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_26a377fe, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 3, 5, 2],
+      [HVX_FWD, Hex_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_2c745bb8, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_2d4051cd, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 3, 7, 5, 2],
+      [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_2e8f5f6e, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 7, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_309dbb4f, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3904b926, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3aacf4a8, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 7],
+      [HVX_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_3ad719fb, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [3, 2, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3c56e5ce, /*SLOT0,NOSLOT1,LOAD,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3ce09744, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [1, 2],
+      [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3e2aaafc, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_447d9895, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_453fe68d, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_46d6c3e0, /*SLOT0123,VP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLANE]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_fa99dc24, /*SLOT2,VX_DV*/
+    InstrItinData <tc_51d0ecc3, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_52447ecc, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_540c3da3, /*SLOT0,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [4, 7, 1],
+      [Hex_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_54a0dc47, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 2, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_561aaa58, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_56c4f9fe, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_56e64202, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_58d21193, /*SLOT0,STORE,VA_DV*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_5bf8afbb, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_61bf7c03, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_649072c2, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_660769f1, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_663c80a7, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_6942b6e0, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_6e7fa133, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_71646d06, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_7177e272, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_718b5c53, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9],
+      [HVX_FWD]>,
+
+    InstrItinData <tc_7273323b, /*SLOT0,STORE,VA_DV*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [1, 2, 7, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_7417e785, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_767c4e9d, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [3, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_7e6a3e89, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_8772086c, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_87adc037, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_8e420e4d, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_90bcc1db, /*SLOT2,VX_DV*/
+      [InstrStage<1, [SLOT2], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_933f2b39, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_946013d8, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_9d1dc972, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_9f363d21, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_a02a10a8, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [2, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_a0dbea28, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [3, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_a7e6707d, /*SLOT0,NOSLOT1,LOAD,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ab23f776, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [1, 2, 5],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_abe8c3b2, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ac4046bc, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_af25efd9, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_b091f1c6, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_b28e51aa, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [2],
+      [Hex_FWD]>,
+
+    InstrItinData <tc_b4416217, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_b9db8205, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 3, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c0749f3c, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c127de3a, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_c4edf264, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c5dba46e, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_c7039829, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [3, 2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_cd94bfe0, /*SLOT23,VS_VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_d8287c14, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_db5555f3, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_dd5b0695, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [2, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_df80eeb0, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e2d2e9e5, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [3, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e35c1e93, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e3f68a46, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [3],
+      [HVX_FWD]>,
+
+    InstrItinData <tc_e675c45a, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_e699ae41, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [1, 2],
+      [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_e8797b98, /*SLOT1,LOAD,VA*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e99d4c2e, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_f1de44ef, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
        InstrStage<1, [CVI_MPY01]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_f21e8abb, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [1, 2, 5],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_fd7610da, /*SLOT1,LOAD,VA_DV*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>
   ];
 }
 
 class DepHVXItinV65 {
   list<InstrItinData> DepHVXItinV65_list = [
-    InstrItinData <tc_0317c6ca, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 2, 1, 2, 7],
-      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_1b93bdc6, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [1, 2, 5],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_2171ebae, /*SLOT0123,VA_DV*/
+    InstrItinData <tc_04da405a, /*SLOT0123,VP_VS*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
-      [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_28978789, /*SLOT0123,4SLOT*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_ALL]>], [3, 2],
-      [HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_29841470, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [1, 2],
-      [Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_316c637c, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_354299ad, /*SLOT0,NOSLOT1,STORE,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_XLANE]>], [1, 2, 5],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_35e92f8e, /*SLOT0,NOSLOT1,LOAD,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_38208312, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 3, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_4105d6b5, /*SLOT0123,VP*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 2],
-      [HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_41f4b64e, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_41f99e1c, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_45453b98, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_4e2a5159, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_4f190ba3, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_4fd8566e, /*SLOT0,NOSLOT1,LOAD,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 3, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_51cd3aab, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_5a9fc4ec, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 9, 7, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_5c03dc63, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [3, 1, 2],
-      [Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_5c120602, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_5cbf490b, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_63e3d94c, /*SLOT1,LOAD,VA*/
-      [InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_644584f8, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7],
+       InstrStage<1, [CVI_XLSHF]>], [9, 5],
       [HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_66bb62ea, /*SLOT1,LOAD,VA*/
-      [InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_69b6dd20, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_6b78cf13, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 2],
-      [HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_6fd9ad30, /*SLOT0,NOSLOT1,STORE,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_XLANE]>], [3, 2, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_71337255, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7],
-      [HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_72ad7b54, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_7474003e, /*SLOT2,VX_DV*/
-      [InstrStage<1, [SLOT2], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_77a4c701, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_7c3f55c4, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_7e9f581b, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 2, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_7fa82b08, /*SLOT0,NOSLOT1,STORE,VP*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_XLANE]>], [3, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_7fa8b40f, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_85d237e3, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [2, 1, 2, 7],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_8a6eb39a, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9],
-      [HVX_FWD]>,
-
-    InstrItinData <tc_8b6a873f, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [3, 2, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_908a4c8c, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9311da3f, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 7, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_94f43c04, /*SLOT0,STORE,VA_DV*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9777e6bf, /*SLOT0,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [4, 7, 1],
-      [Hex_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_97c165b9, /*SLOT0123,VA_DV*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_98733e9d, /*SLOT1,LOAD,VA_DV*/
-      [InstrStage<1, [SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_99093773, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 7, 1, 2, 7],
-      [Hex_FWD, HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9b9642a1, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_9c267309, /*SLOT01,LOAD*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD]>], [9, 3, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_a3127e12, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_a4c9df3b, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 1, 2, 7],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_a807365d, /*SLOT23,VS_VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1], 0>,
-       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_aedb9f9e, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_b06ab583, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 7],
-      [HVX_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_b712833a, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_b77635b4, /*SLOT0123,4SLOT*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_ALL]>], [2],
-      [Hex_FWD]>,
-
-    InstrItinData <tc_bbaf280e, /*SLOT0123,VA*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_bf142ae2, /*SLOT0123,VP*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_bfe309d5, /*SLOT1,LOAD,VA_DV*/
+    InstrItinData <tc_05058f6f, /*SLOT1,LOAD,VA_DV*/
       [InstrStage<1, [SLOT1], 0>,
        InstrStage<1, [CVI_LD], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [1, 2, 7],
       [Hex_FWD, Hex_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_c00bf9c9, /*SLOT0123,VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 7, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+    InstrItinData <tc_05ac6f98, /*SLOT1,LOAD,VA*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_c4b515c5, /*SLOT0123,VP*/
+    InstrItinData <tc_05ca8cfd, /*SLOT0123,VS*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_cbf6d1dc, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+    InstrItinData <tc_08a4f1b6, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_cedf314b, /*SLOT0123,4SLOT*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_ALL]>], [3],
-      [HVX_FWD]>,
+    InstrItinData <tc_0b04c6c7, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_d2cb81ea, /*SLOT0123,VS*/
+    InstrItinData <tc_0ec46cf9, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_d5090f3e, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [2, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_d642eff3, /*SLOT0,NOSLOT1,STORE,VP*/
+    InstrItinData <tc_131f1c81, /*SLOT0,NOSLOT1,STORE,VP*/
       [InstrStage<1, [SLOT0], 0>,
        InstrStage<1, [SLOT1], 0>,
        InstrStage<1, [CVI_ST], 0>,
        InstrStage<1, [CVI_XLANE]>], [2, 1, 2, 5],
       [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_d725e5b0, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_d7bea0ec, /*SLOT0123,VP_VS*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLSHF]>], [9, 5],
-      [HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_d98f4d63, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2],
-      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_da979fb3, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 2, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_db5b9e2f, /*SLOT0,STORE*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST]>], [3, 1, 2, 5],
-      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_df54ad52, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7, 7],
-      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_e172d86a, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_e231aa4f, /*SLOT23,VX*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_e3748cdf, /*SLOT0,STORE,VA*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_e5053c8f, /*SLOT0123,4SLOT*/
+    InstrItinData <tc_1381a97c, /*SLOT0123,4SLOT*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_ALL]>], [],
       []>,
 
-    InstrItinData <tc_e6299d16, /*SLOT0123,VP*/
-      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_XLANE]>], [9, 5],
-      [HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_eb669007, /*SLOT01,LOAD,VA*/
-      [InstrStage<1, [SLOT0, SLOT1], 0>,
-       InstrStage<1, [CVI_LD], 0>,
-       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 1, 2],
-      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
-
-    InstrItinData <tc_ec58f88a, /*SLOT0,STORE,VA_DV*/
-      [InstrStage<1, [SLOT0], 0>,
-       InstrStage<1, [CVI_ST], 0>,
-       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [1, 2, 7, 7],
-      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_eda67dcd, /*SLOT23,VX_DV*/
-      [InstrStage<1, [SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_MPY01]>], [9, 5, 5],
-      [HVX_FWD, HVX_FWD, HVX_FWD]>,
-
-    InstrItinData <tc_ee927c0e, /*SLOT23,VS_VX*/
+    InstrItinData <tc_15fdf750, /*SLOT23,VS_VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1], 0>,
        InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 7, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_f3fc3f83, /*SLOT0123,VP*/
+    InstrItinData <tc_16ff9ef8, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_191381c1, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 7, 1, 2, 7],
+      [Hex_FWD, HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_1ad8a370, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 2, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_1ba8a0cd, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_20a4bbec, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_257f6f7c, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_26a377fe, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 3, 5, 2],
+      [HVX_FWD, Hex_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_2c745bb8, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_2d4051cd, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 3, 7, 5, 2],
+      [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_2e8f5f6e, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 7, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_309dbb4f, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3904b926, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3aacf4a8, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 7],
+      [HVX_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_3ad719fb, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [3, 2, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3c56e5ce, /*SLOT0,NOSLOT1,LOAD,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3ce09744, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [1, 2],
+      [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3e2aaafc, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_447d9895, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_453fe68d, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_46d6c3e0, /*SLOT0123,VP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLANE]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_fa99dc24, /*SLOT2,VX_DV*/
+    InstrItinData <tc_51d0ecc3, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_52447ecc, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_540c3da3, /*SLOT0,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [4, 7, 1],
+      [Hex_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_54a0dc47, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 2, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_561aaa58, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_56c4f9fe, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_56e64202, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_58d21193, /*SLOT0,STORE,VA_DV*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_5bf8afbb, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_61bf7c03, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_649072c2, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_660769f1, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_663c80a7, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_6942b6e0, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_6e7fa133, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_71646d06, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_7177e272, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_718b5c53, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9],
+      [HVX_FWD]>,
+
+    InstrItinData <tc_7273323b, /*SLOT0,STORE,VA_DV*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [1, 2, 7, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_7417e785, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_767c4e9d, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [3, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_7e6a3e89, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_8772086c, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_87adc037, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_8e420e4d, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_90bcc1db, /*SLOT2,VX_DV*/
+      [InstrStage<1, [SLOT2], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_933f2b39, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_946013d8, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_9d1dc972, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_9f363d21, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_a02a10a8, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [2, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_a0dbea28, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [3, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_a7e6707d, /*SLOT0,NOSLOT1,LOAD,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ab23f776, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [1, 2, 5],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_abe8c3b2, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ac4046bc, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_af25efd9, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_b091f1c6, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_b28e51aa, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [2],
+      [Hex_FWD]>,
+
+    InstrItinData <tc_b4416217, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_b9db8205, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 3, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c0749f3c, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c127de3a, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_c4edf264, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c5dba46e, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_c7039829, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [3, 2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_cd94bfe0, /*SLOT23,VS_VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_d8287c14, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_db5555f3, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_dd5b0695, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [2, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_df80eeb0, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e2d2e9e5, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [3, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e35c1e93, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e3f68a46, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [3],
+      [HVX_FWD]>,
+
+    InstrItinData <tc_e675c45a, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_e699ae41, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [1, 2],
+      [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_e8797b98, /*SLOT1,LOAD,VA*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e99d4c2e, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_f1de44ef, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
        InstrStage<1, [CVI_MPY01]>], [9, 5, 2],
-      [HVX_FWD, HVX_FWD, Hex_FWD]>
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_f21e8abb, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [1, 2, 5],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_fd7610da, /*SLOT1,LOAD,VA_DV*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>
+  ];
+}
+
+class DepHVXItinV66 {
+  list<InstrItinData> DepHVXItinV66_list = [
+    InstrItinData <tc_04da405a, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_05058f6f, /*SLOT1,LOAD,VA_DV*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [1, 2, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_05ac6f98, /*SLOT1,LOAD,VA*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_05ca8cfd, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_08a4f1b6, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_0b04c6c7, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_0ec46cf9, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_131f1c81, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_1381a97c, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [],
+      []>,
+
+    InstrItinData <tc_15fdf750, /*SLOT23,VS_VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_16ff9ef8, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_191381c1, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 7, 1, 2, 7],
+      [Hex_FWD, HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_1ad8a370, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 2, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_1ba8a0cd, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_20a4bbec, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_257f6f7c, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_26a377fe, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 3, 5, 2],
+      [HVX_FWD, Hex_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_2c745bb8, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_2d4051cd, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 3, 7, 5, 2],
+      [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_2e8f5f6e, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 7, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_309dbb4f, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3904b926, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3aacf4a8, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 7],
+      [HVX_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_3ad719fb, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [3, 2, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3c56e5ce, /*SLOT0,NOSLOT1,LOAD,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3ce09744, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [1, 2],
+      [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_3e2aaafc, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_447d9895, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_453fe68d, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 3, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_46d6c3e0, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_51d0ecc3, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_52447ecc, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_540c3da3, /*SLOT0,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [4, 7, 1],
+      [Hex_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_54a0dc47, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [3, 2, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_561aaa58, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_56c4f9fe, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_56e64202, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_58d21193, /*SLOT0,STORE,VA_DV*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_5bf8afbb, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_61bf7c03, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_649072c2, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_660769f1, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_663c80a7, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 3, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_6942b6e0, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_6e7fa133, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_71646d06, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_7177e272, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_718b5c53, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9],
+      [HVX_FWD]>,
+
+    InstrItinData <tc_7273323b, /*SLOT0,STORE,VA_DV*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [1, 2, 7, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_7417e785, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_767c4e9d, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [3, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_7e6a3e89, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 9, 7, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_8772086c, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_87adc037, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_8e420e4d, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [7, 1, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_90bcc1db, /*SLOT2,VX_DV*/
+      [InstrStage<1, [SLOT2], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_933f2b39, /*SLOT23,4SLOT_MPY*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL_NOMEM]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_946013d8, /*SLOT0123,VP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_9d1dc972, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_9f363d21, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_a02a10a8, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [2, 1, 2, 7],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_a0dbea28, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [3, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_a7e6707d, /*SLOT0,NOSLOT1,LOAD,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_XLANE]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ab23f776, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [1, 2, 5],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_abe8c3b2, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_ac4046bc, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_af25efd9, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
+      [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_b091f1c6, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 5, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_b28e51aa, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [2],
+      [Hex_FWD]>,
+
+    InstrItinData <tc_b4416217, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7],
+      [HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_b9db8205, /*SLOT01,LOAD*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD]>], [9, 3, 2, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c0749f3c, /*SLOT01,LOAD,VA*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 1, 2],
+      [HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c127de3a, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_c4edf264, /*SLOT23,VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 2],
+      [HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_c5dba46e, /*SLOT0,STORE,VA*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_c7039829, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [3, 2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_cd94bfe0, /*SLOT23,VS_VX*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_d8287c14, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_db5555f3, /*SLOT0123,VA_DV*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_dd5b0695, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [2, 1, 2],
+      [Hex_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_df80eeb0, /*SLOT0123,VP_VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e2d2e9e5, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [3, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e35c1e93, /*SLOT0123,VA*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [9, 9, 7, 7],
+      [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e3f68a46, /*SLOT0123,4SLOT*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_ALL]>], [3],
+      [HVX_FWD]>,
+
+    InstrItinData <tc_e675c45a, /*SLOT23,VX_DV*/
+      [InstrStage<1, [SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 7, 5, 2, 2],
+      [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_e699ae41, /*SLOT01,ZW*/
+      [InstrStage<1, [SLOT0, SLOT1], 0>,
+       InstrStage<1, [CVI_ZW]>], [1, 2],
+      [Hex_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_e8797b98, /*SLOT1,LOAD,VA*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE]>], [1, 2, 7],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_e99d4c2e, /*SLOT0,STORE*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [CVI_ST]>], [3, 2, 1, 2, 5],
+      [Hex_FWD, Hex_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_f1de44ef, /*SLOT2,VX_DV*/
+      [InstrStage<1, [SLOT2], 0>,
+       InstrStage<1, [CVI_MPY01]>], [9, 5, 2],
+      [HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_f21e8abb, /*SLOT0,NOSLOT1,STORE,VP*/
+      [InstrStage<1, [SLOT0], 0>,
+       InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_ST], 0>,
+       InstrStage<1, [CVI_XLANE]>], [1, 2, 5],
+      [Hex_FWD, Hex_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_fd7610da, /*SLOT1,LOAD,VA_DV*/
+      [InstrStage<1, [SLOT1], 0>,
+       InstrStage<1, [CVI_LD], 0>,
+       InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [7, 1, 2, 7],
+      [HVX_FWD, Hex_FWD, Hex_FWD, HVX_FWD]>
   ];
 }

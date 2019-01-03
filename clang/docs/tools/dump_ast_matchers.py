@@ -5,7 +5,10 @@
 
 import collections
 import re
-import urllib2
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib2 import urlopen
 
 MATCHERS_FILE = '../../include/clang/ASTMatchers/ASTMatchers.h'
 
@@ -41,8 +44,8 @@ def esc(text):
     url = 'https://clang.llvm.org/doxygen/classclang_1_1%s.html' % name
     if url not in doxygen_probes:
       try:
-        print 'Probing %s...' % url
-        urllib2.urlopen(url)
+        print('Probing %s...' % url)
+        urlopen(url)
         doxygen_probes[url] = True
       except:
         doxygen_probes[url] = False
@@ -307,14 +310,14 @@ def act_on_decl(declaration, comment, allowed_types):
       if not result_types:
         if not comment:
           # Only overloads don't have their own doxygen comments; ignore those.
-          print 'Ignoring "%s"' % name
+          print('Ignoring "%s"' % name)
         else:
-          print 'Cannot determine result type for "%s"' % name
+          print('Cannot determine result type for "%s"' % name)
       else:
         for result_type in result_types:
           add_matcher(result_type, name, args, comment)
     else:
-      print '*** Unparsable: "' + declaration + '" ***'
+      print('*** Unparsable: "' + declaration + '" ***')
 
 def sort_table(matcher_type, matcher_map):
   """Returns the sorted html table for the given row map."""
@@ -354,7 +357,7 @@ for line in open(MATCHERS_FILE).read().splitlines():
         allowed_types += [m.group(1)]
     continue
   if line.strip() and line.lstrip()[0] == '/':
-    comment += re.sub(r'/+\s?', '', line) + '\n'
+    comment += re.sub(r'^/+\s?', '', line) + '\n'
   else:
     declaration += ' ' + line
     if ((not line.strip()) or 

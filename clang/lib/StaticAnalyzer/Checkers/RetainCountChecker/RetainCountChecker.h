@@ -15,7 +15,7 @@
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_RETAINCOUNTCHECKER_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_RETAINCOUNTCHECKER_H
 
-#include "../ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "RetainCountDiagnostics.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
@@ -92,7 +92,7 @@ private:
   /// See the RefVal::Kind enum for possible values.
   unsigned RawKind : 5;
 
-  /// The kind of object being tracked (CF or ObjC), if known.
+  /// The kind of object being tracked (CF or ObjC or OSObject), if known.
   ///
   /// See the RetEffect::ObjKind enum for possible values.
   unsigned RawObjectKind : 3;
@@ -268,62 +268,23 @@ class RetainCountChecker
   mutable bool ShouldResetSummaryLog;
 
 public:
-  /// Optional setting to indicate if leak reports should include
-  /// the allocation line.
-  bool IncludeAllocationLine;
-  bool ShouldCheckOSObjectRetainCount;
+
+  /// Track Objective-C and CoreFoundation objects.
+  bool TrackObjCAndCFObjects = false;
+
+  /// Track sublcasses of OSObject.
+  bool TrackOSObjects = false;
 
   RetainCountChecker() : ShouldResetSummaryLog(false) {}
 
   ~RetainCountChecker() override { DeleteContainerSeconds(DeadSymbolTags); }
 
   void checkEndAnalysis(ExplodedGraph &G, BugReporter &BR,
-                        ExprEngine &Eng) const {
-    // FIXME: This is a hack to make sure the summary log gets cleared between
-    // analyses of different code bodies.
-    //
-    // Why is this necessary? Because a checker's lifetime is tied to a
-    // translation unit, but an ExplodedGraph's lifetime is just a code body.
-    // Once in a blue moon, a new ExplodedNode will have the same address as an
-    // old one with an associated summary, and the bug report visitor gets very
-    // confused. (To make things worse, the summary lifetime is currently also
-    // tied to a code body, so we get a crash instead of incorrect results.)
-    //
-    // Why is this a bad solution? Because if the lifetime of the ExplodedGraph
-    // changes, things will start going wrong again. Really the lifetime of this
-    // log needs to be tied to either the specific nodes in it or the entire
-    // ExplodedGraph, not to a specific part of the code being analyzed.
-    //
-    // (Also, having stateful local data means that the same checker can't be
-    // used from multiple threads, but a lot of checkers have incorrect
-    // assumptions about that anyway. So that wasn't a priority at the time of
-    // this fix.)
-    //
-    // This happens at the end of analysis, but bug reports are emitted /after/
-    // this point. So we can't just clear the summary log now. Instead, we mark
-    // that the next time we access the summary log, it should be cleared.
+                        ExprEngine &Eng) const;
 
-    // If we never reset the summary log during /this/ code body analysis,
-    // there were no new summaries. There might still have been summaries from
-    // the /last/ analysis, so clear them out to make sure the bug report
-    // visitors don't get confused.
-    if (ShouldResetSummaryLog)
-      SummaryLog.clear();
+  CFRefBug *getLeakWithinFunctionBug(const LangOptions &LOpts) const;
 
-    ShouldResetSummaryLog = !SummaryLog.empty();
-  }
-
-  CFRefBug *getLeakWithinFunctionBug(const LangOptions &LOpts) const {
-    if (!leakWithinFunction)
-      leakWithinFunction.reset(new Leak(this, "Leak"));
-    return leakWithinFunction.get();
-  }
-
-  CFRefBug *getLeakAtReturnBug(const LangOptions &LOpts) const {
-      if (!leakAtReturn)
-        leakAtReturn.reset(new Leak(this, "Leak of returned object"));
-      return leakAtReturn.get();
-  }
+  CFRefBug *getLeakAtReturnBug(const LangOptions &LOpts) const;
 
   RetainSummaryManager &getSummaryManager(ASTContext &Ctx) const {
     // FIXME: We don't support ARC being turned on and off during one analysis.
@@ -331,7 +292,7 @@ public:
     bool ARCEnabled = (bool)Ctx.getLangOpts().ObjCAutoRefCount;
     if (!Summaries) {
       Summaries.reset(new RetainSummaryManager(
-          Ctx, ARCEnabled, ShouldCheckOSObjectRetainCount));
+          Ctx, ARCEnabled, TrackObjCAndCFObjects, TrackOSObjects));
     } else {
       assert(Summaries->isARCEnabled() == ARCEnabled);
     }

@@ -23,6 +23,7 @@ target_link_libraries(IncludeFixerTests
   clangFrontend
   clangIncludeFixer
   clangRewrite
+  clangSerialization
   clangTooling
   clangToolingCore
   findAllSymbols

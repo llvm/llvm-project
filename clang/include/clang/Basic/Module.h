@@ -262,6 +262,9 @@ public:
   /// to a regular (public) module map.
   unsigned ModuleMapIsPrivate : 1;
 
+  /// \brief Whether this is a module who has its swift_names inferred.
+  unsigned IsSwiftInferImportAsMember : 1;
+
   /// Describes the visibility of the various names within a
   /// particular module.
   enum NameVisibilityKind {

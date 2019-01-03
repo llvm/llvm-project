@@ -83,8 +83,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (getTriple().getArch() == llvm::Triple::ppc64le) {
     Builder.defineMacro("_LITTLE_ENDIAN");
   } else {
-    if (getTriple().getOS() != llvm::Triple::NetBSD &&
-        getTriple().getOS() != llvm::Triple::OpenBSD)
+    if (!getTriple().isOSNetBSD() &&
+        !getTriple().isOSOpenBSD())
       Builder.defineMacro("_BIG_ENDIAN");
   }
 
@@ -410,6 +410,36 @@ const TargetInfo::GCCRegAlias PPCTargetInfo::GCCRegAliases[] = {
 
 ArrayRef<TargetInfo::GCCRegAlias> PPCTargetInfo::getGCCRegAliases() const {
   return llvm::makeArrayRef(GCCRegAliases);
+}
+
+// PPC ELFABIv2 DWARF Definitoin "Table 2.26. Mappings of Common Registers".
+// vs0 ~ vs31 is mapping to 32 - 63,
+// vs32 ~ vs63 is mapping to 77 - 108. 
+const TargetInfo::AddlRegName GCCAddlRegNames[] = {
+    // Table of additional register names to use in user input.
+    {{"vs0"}, 32},   {{"vs1"}, 33},   {{"vs2"}, 34},   {{"vs3"}, 35}, 
+    {{"vs4"}, 36},   {{"vs5"}, 37},   {{"vs6"}, 38},   {{"vs7"}, 39},
+    {{"vs8"}, 40},   {{"vs9"}, 41},   {{"vs10"}, 42},  {{"vs11"}, 43},
+    {{"vs12"}, 44},  {{"vs13"}, 45},  {{"vs14"}, 46},  {{"vs15"}, 47},
+    {{"vs16"}, 48},  {{"vs17"}, 49},  {{"vs18"}, 50},  {{"vs19"}, 51},
+    {{"vs20"}, 52},  {{"vs21"}, 53},  {{"vs22"}, 54},  {{"vs23"}, 55},
+    {{"vs24"}, 56},  {{"vs25"}, 57},  {{"vs26"}, 58},  {{"vs27"}, 59},
+    {{"vs28"}, 60},  {{"vs29"}, 61},  {{"vs30"}, 62},  {{"vs31"}, 63},
+    {{"vs32"}, 77},  {{"vs33"}, 78},  {{"vs34"}, 79},  {{"vs35"}, 80},
+    {{"vs36"}, 81},  {{"vs37"}, 82},  {{"vs38"}, 83},  {{"vs39"}, 84},
+    {{"vs40"}, 85},  {{"vs41"}, 86},  {{"vs42"}, 87},  {{"vs43"}, 88},
+    {{"vs44"}, 89},  {{"vs45"}, 90},  {{"vs46"}, 91},  {{"vs47"}, 92},
+    {{"vs48"}, 93},  {{"vs49"}, 94},  {{"vs50"}, 95},  {{"vs51"}, 96},
+    {{"vs52"}, 97},  {{"vs53"}, 98},  {{"vs54"}, 99},  {{"vs55"}, 100},
+    {{"vs56"}, 101}, {{"vs57"}, 102}, {{"vs58"}, 103}, {{"vs59"}, 104},
+    {{"vs60"}, 105}, {{"vs61"}, 106}, {{"vs62"}, 107}, {{"vs63"}, 108},
+};
+
+ArrayRef<TargetInfo::AddlRegName> PPCTargetInfo::getGCCAddlRegNames() const {
+  if (ABI == "elfv2")
+    return llvm::makeArrayRef(GCCAddlRegNames);
+  else 
+    return TargetInfo::getGCCAddlRegNames(); 
 }
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {

@@ -334,51 +334,51 @@ TU_split_5_end:
 # COMMON:      .debug_info contents:
 # COMMON-NOT:  contents:     
 # COMMON:      DW_TAG_compile_unit
-# COMMON-NEXT: DW_AT_producer [DW_FORM_strx] ( indexed (00000000) string = "Handmade DWARF producer")
-# COMMON-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "Compile_Unit_1")
+# COMMON-NEXT: DW_AT_producer [DW_FORM_strx] (indexed (00000000) string = "Handmade DWARF producer")
+# COMMON-NEXT: DW_AT_name [DW_FORM_strx] (indexed (00000001) string = "Compile_Unit_1")
 # COMMON-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
-# COMMON-NEXT: DW_AT_comp_dir [DW_FORM_strx] ( indexed (00000002) string = "/home/test/CU1")
+# COMMON-NEXT: DW_AT_comp_dir [DW_FORM_strx] (indexed (00000002) string = "/home/test/CU1")
 # COMMON-NOT:  NULL
 # COMMON:      DW_TAG_subprogram
-# COMMON-NEXT: DW_AT_name [DW_FORM_strx1] ( indexed (00000003) string = "MyFunc")
+# COMMON-NEXT: DW_AT_name [DW_FORM_strx1] (indexed (00000003) string = "MyFunc")
 # COMMON-NOT:  NULL
 # COMMON:      DW_TAG_variable
-# COMMON-NEXT: DW_AT_name [DW_FORM_strx2] ( indexed (00000004) string = "MyVar1")
+# COMMON-NEXT: DW_AT_name [DW_FORM_strx2] (indexed (00000004) string = "MyVar1")
 # COMMON-NOT:  NULL
 # COMMON:      DW_TAG_variable
-# COMMON-NEXT: DW_AT_name [DW_FORM_strx3] ( indexed (00000005) string = "MyVar2")
+# COMMON-NEXT: DW_AT_name [DW_FORM_strx3] (indexed (00000005) string = "MyVar2")
 # COMMON-NOT:  NULL
 # COMMON:      DW_TAG_variable
-# COMMON-NEXT: DW_AT_name [DW_FORM_strx4] ( indexed (00000006) string = "MyVar3")
+# COMMON-NEXT: DW_AT_name [DW_FORM_strx4] (indexed (00000006) string = "MyVar3")
 # 
 # Second compile unit (b.cpp)
 # COMMON:      DW_TAG_compile_unit
-# COMMON-NEXT: DW_AT_producer [DW_FORM_strx] ( indexed (00000000) string = "Handmade DWARF producer")
-# COMMON-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "Compile_Unit_2")
+# COMMON-NEXT: DW_AT_producer [DW_FORM_strx] (indexed (00000000) string = "Handmade DWARF producer")
+# COMMON-NEXT: DW_AT_name [DW_FORM_strx] (indexed (00000001) string = "Compile_Unit_2")
 # COMMON-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000038)
-# COMMON-NEXT: DW_AT_comp_dir [DW_FORM_strx] ( indexed (00000002) string = "/home/test/CU2")
+# COMMON-NEXT: DW_AT_comp_dir [DW_FORM_strx] (indexed (00000002) string = "/home/test/CU2")
 # 
 # The split CU
 # SPLIT:       .debug_info.dwo contents:
 # SPLIT-NOT:   contents:
 # SPLIT:       DW_TAG_compile_unit
-# SPLIT-NEXT:  DW_AT_producer [DW_FORM_strx] ( indexed (00000000) string = "Handmade split DWARF producer")
-# SPLIT-NEXT:  DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "V5_split_compile_unit")
-# SPLIT-NEXT:  DW_AT_comp_dir [DW_FORM_strx] ( indexed (00000002) string = "/home/test/splitCU")
+# SPLIT-NEXT:  DW_AT_producer [DW_FORM_strx] (indexed (00000000) string = "Handmade split DWARF producer")
+# SPLIT-NEXT:  DW_AT_name [DW_FORM_strx] (indexed (00000001) string = "V5_split_compile_unit")
+# SPLIT-NEXT:  DW_AT_comp_dir [DW_FORM_strx] (indexed (00000002) string = "/home/test/splitCU")
 # 
 # The type unit
 # COMMON:      .debug_types contents:
 # COMMON:      DW_TAG_type_unit
-# COMMON-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000000) string = "Type_Unit")
+# COMMON-NEXT: DW_AT_name [DW_FORM_strx] (indexed (00000000) string = "Type_Unit")
 # COMMON:      DW_TAG_structure_type
-# COMMON-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "MyStruct")
+# COMMON-NEXT: DW_AT_name [DW_FORM_strx] (indexed (00000001) string = "MyStruct")
 # 
 # The split type unit
 # SPLIT:       .debug_types.dwo contents:
 # SPLIT:       DW_TAG_type_unit
-# SPLIT-NEXT:  DW_AT_name [DW_FORM_strx] ( indexed (00000003) string = "V5_split_type_unit")
+# SPLIT-NEXT:  DW_AT_name [DW_FORM_strx] (indexed (00000003) string = "V5_split_type_unit")
 # SPLIT:       DW_TAG_structure_type
-# SPLIT-NEXT:  DW_AT_name [DW_FORM_strx] ( indexed (00000004) string = "V5_split_Mystruct")
+# SPLIT-NEXT:  DW_AT_name [DW_FORM_strx] (indexed (00000004) string = "V5_split_Mystruct")
 # 
 # The .debug_str_offsets section
 # COMMON:      .debug_str_offsets contents:

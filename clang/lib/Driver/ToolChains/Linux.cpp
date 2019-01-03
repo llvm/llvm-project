@@ -247,6 +247,14 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     ExtraOpts.push_back("relro");
   }
 
+  // The lld default page size is too large for Aarch64, which produces much
+  // larger .so files and images for arm64 device targets. Use 4KB page size
+  // for Android arm64 targets instead.
+  if (Triple.isAArch64() && Triple.isAndroid()) {
+    ExtraOpts.push_back("-z");
+    ExtraOpts.push_back("max-page-size=4096");
+  }
+
   if (GCCInstallation.getParentLibPath().find("opt/rh/devtoolset") !=
       StringRef::npos)
     // With devtoolset on RHEL, we want to add a bin directory that is relative
@@ -1019,7 +1027,7 @@ void Linux::addProfileRTLibs(const llvm::opt::ArgList &Args,
 
   // Add linker option -u__llvm_runtime_variable to cause runtime
   // initialization module to be linked in.
-  if (!Args.hasArg(options::OPT_coverage))
+  if ((!Args.hasArg(options::OPT_coverage)) && (!Args.hasArg(options::OPT_ftest_coverage)))
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
   ToolChain::addProfileRTLibs(Args, CmdArgs);

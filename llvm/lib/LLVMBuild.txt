@@ -31,6 +31,7 @@ subdirectories =
  IRReader
  LTO
  MC
+ MCA
  Object
  BinaryFormat
  ObjectYAML
@@ -40,6 +41,7 @@ subdirectories =
  ProfileData
  Support
  TableGen
+ TextAPI
  Target
  Testing
  ToolDrivers

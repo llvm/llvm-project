@@ -110,8 +110,8 @@ struct ErrorFreeNotMalloced : ErrorBase {
 
 struct ErrorAllocTypeMismatch : ErrorBase {
   const BufferedStackTrace *dealloc_stack;
-  HeapAddressDescription addr_description;
   AllocType alloc_type, dealloc_type;
+  AddressDescription addr_description;
 
   ErrorAllocTypeMismatch() = default;  // (*)
   ErrorAllocTypeMismatch(u32 tid, BufferedStackTrace *stack, uptr addr,
@@ -119,9 +119,8 @@ struct ErrorAllocTypeMismatch : ErrorBase {
       : ErrorBase(tid, 10, "alloc-dealloc-mismatch"),
         dealloc_stack(stack),
         alloc_type(alloc_type_),
-        dealloc_type(dealloc_type_) {
-    GetHeapAddressInformation(addr, 1, &addr_description);
-  };
+        dealloc_type(dealloc_type_),
+        addr_description(addr, 1, false) {}
   void Print();
 };
 

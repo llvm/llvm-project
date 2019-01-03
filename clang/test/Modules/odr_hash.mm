@@ -47,7 +47,7 @@
 
 @interface Interface1 <T : I1 *> {
 @public
-  T<P1> x;
+  T x; // FIXME: align with upstream (rdar://43906928).
 }
 @end
 
@@ -228,12 +228,12 @@ Valid v;
 #if defined(FIRST)
 @interface Interface4 <T : I1 *> {
 @public
-  T<P1> x;
+  T x; // FIXME: align with upstream (rdar://43906928).
 }
 @end
 @interface Interface5 <T : I1 *> {
 @public
-  T<P1> x;
+  T x; // FIXME: align with upstream (rdar://43906928).
 }
 @end
 @interface Interface6 <T1 : I1 *, T2 : I2 *> {
@@ -244,12 +244,12 @@ Valid v;
 #elif defined(SECOND)
 @interface Interface4 <T : I1 *> {
 @public
-  T<P2> x;
+  T x; // FIXME: align with upstream (rdar://43906928).
 }
 @end
 @interface Interface5 <T : I1 *> {
 @public
-  T<P1, P2> x;
+  T x; // FIXME: align with upstream (rdar://43906928).
 }
 @end
 @interface Interface6 <T1 : I1 *, T2 : I2 *> {
@@ -276,11 +276,7 @@ struct Invalid3 {
 };
 #else
 Invalid1 i1;
-// expected-error@first.h:* {{'Types::ObjCTypeParam::Invalid1::x' from module 'FirstModule' is not present in definition of 'Types::ObjCTypeParam::Invalid1' in module 'SecondModule'}}
-// expected-note@second.h:* {{declaration of 'x' does not match}}
 Invalid2 i2;
-// expected-error@first.h:* {{'Types::ObjCTypeParam::Invalid2::x' from module 'FirstModule' is not present in definition of 'Types::ObjCTypeParam::Invalid2' in module 'SecondModule'}}
-// expected-note@second.h:* {{declaration of 'x' does not match}}
 Invalid3 i3;
 // expected-error@first.h:* {{'Types::ObjCTypeParam::Invalid3::x' from module 'FirstModule' is not present in definition of 'Types::ObjCTypeParam::Invalid3' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}

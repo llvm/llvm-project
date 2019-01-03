@@ -123,10 +123,7 @@ bool ThreadPlanStepOverRange::IsEquivalentContext(
     }
   }
   // Fall back to symbol if we have no decision from comp_unit/function/block.
-  if (m_addr_context.symbol && m_addr_context.symbol == context.symbol) {
-    return true;
-  }
-  return false;
+  return m_addr_context.symbol && m_addr_context.symbol == context.symbol;
 }
 
 bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {

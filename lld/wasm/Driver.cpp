@@ -31,6 +31,7 @@
 #define DEBUG_TYPE "lld"
 
 using namespace llvm;
+using namespace llvm::object;
 using namespace llvm::sys;
 using namespace llvm::wasm;
 
@@ -305,15 +306,14 @@ static void handleWeakUndefines() {
 
     // It is possible for undefined functions not to have a signature (eg. if
     // added via "--undefined"), but weak undefined ones do have a signature.
-    assert(FuncSym->FunctionType);
-    const WasmSignature &Sig = *FuncSym->FunctionType;
+    assert(FuncSym->Signature);
+    const WasmSignature &Sig = *FuncSym->Signature;
 
     // Add a synthetic dummy for weak undefined functions.  These dummies will
     // be GC'd if not used as the target of any "call" instructions.
     std::string SymName = toString(*Sym);
     StringRef DebugName = Saver.save("undefined function " + SymName);
-    SyntheticFunction *Func =
-        make<SyntheticFunction>(Sig, Sym->getName(), DebugName);
+    auto *Func = make<SyntheticFunction>(Sig, Sym->getName(), DebugName);
     Func->setBody(UnreachableFn);
     // Ensure it compares equal to the null pointer, and so that table relocs
     // don't pull in the stub body (only call-operand relocs should do that).
@@ -447,9 +447,10 @@ static void createSyntheticSymbols() {
   static llvm::wasm::WasmGlobalType MutableGlobalTypeI32 = {WASM_TYPE_I32,
                                                             true};
 
-  WasmSym::CallCtors = Symtab->addSyntheticFunction(
-      "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
-      make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
+  if (!Config->Relocatable)
+    WasmSym::CallCtors = Symtab->addSyntheticFunction(
+        "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
+        make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
 
   // The __stack_pointer is imported in the shared library case, and exported
   // in the non-shared (executable) case.
@@ -462,7 +463,7 @@ static void createSyntheticSymbols() {
     Global.InitExpr.Value.Int32 = 0;
     Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
     Global.SymbolName = "__stack_pointer";
-    InputGlobal *StackPointer = make<InputGlobal>(Global, nullptr);
+    auto *StackPointer = make<InputGlobal>(Global, nullptr);
     StackPointer->Live = true;
     // For non-PIC code
     // TODO(sbc): Remove WASM_SYMBOL_VISIBILITY_HIDDEN when the mutable global
@@ -542,8 +543,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Config->ImportTable = true;
   }
 
-  if (Config->Shared)
+  if (Config->Shared) {
     Config->ExportDynamic = true;
+    Config->AllowUndefined = true;
+  }
 
   if (!Config->Relocatable)
     createSyntheticSymbols();

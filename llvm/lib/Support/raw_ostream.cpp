@@ -914,3 +914,5 @@ void raw_null_ostream::pwrite_impl(const char *Ptr, size_t Size,
                                    uint64_t Offset) {}
 
 void raw_pwrite_stream::anchor() {}
+
+void buffer_ostream::anchor() {}

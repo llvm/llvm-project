@@ -76,7 +76,11 @@
   .section .drectve,"yn" SEPARATOR                        \
   .ascii "-export:", #name, "\0" SEPARATOR                \
   .text
+#if defined(_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS)
+#define EXPORT_SYMBOL(name)
+#else
 #define EXPORT_SYMBOL(name) EXPORT_SYMBOL2(name)
+#endif
 #define HIDDEN_SYMBOL(name)
 
 #define NO_EXEC_STACK_DIRECTIVE

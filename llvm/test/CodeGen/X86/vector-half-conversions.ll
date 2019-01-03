@@ -22,224 +22,63 @@ define float @cvt_i16_to_f32(i16 %a0) nounwind {
 }
 
 define <4 x float> @cvt_4i16_to_4f32(<4 x i16> %a0) nounwind {
-; AVX1-LABEL: cvt_4i16_to_4f32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    movq %rax, %rcx
-; AVX1-NEXT:    movq %rax, %rdx
-; AVX1-NEXT:    movswl %ax, %esi
-; AVX1-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX1-NEXT:    shrl $16, %eax
-; AVX1-NEXT:    shrq $32, %rcx
-; AVX1-NEXT:    shrq $48, %rdx
-; AVX1-NEXT:    movswl %dx, %edx
-; AVX1-NEXT:    vmovd %edx, %xmm0
-; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX1-NEXT:    movswl %cx, %ecx
-; AVX1-NEXT:    vmovd %ecx, %xmm1
-; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX1-NEXT:    cwtl
-; AVX1-NEXT:    vmovd %eax, %xmm2
-; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX1-NEXT:    vmovd %esi, %xmm3
-; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: cvt_4i16_to_4f32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    movq %rax, %rcx
-; AVX2-NEXT:    movq %rax, %rdx
-; AVX2-NEXT:    movswl %ax, %esi
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX2-NEXT:    shrl $16, %eax
-; AVX2-NEXT:    shrq $32, %rcx
-; AVX2-NEXT:    shrq $48, %rdx
-; AVX2-NEXT:    movswl %dx, %edx
-; AVX2-NEXT:    vmovd %edx, %xmm0
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX2-NEXT:    movswl %cx, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm1
-; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX2-NEXT:    cwtl
-; AVX2-NEXT:    vmovd %eax, %xmm2
-; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX2-NEXT:    vmovd %esi, %xmm3
-; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: cvt_4i16_to_4f32:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    movq %rax, %rcx
-; AVX512F-NEXT:    movq %rax, %rdx
-; AVX512F-NEXT:    movswl %ax, %esi
-; AVX512F-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    shrq $48, %rdx
-; AVX512F-NEXT:    movswl %dx, %edx
-; AVX512F-NEXT:    vmovd %edx, %xmm0
-; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512F-NEXT:    movswl %cx, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm1
-; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512F-NEXT:    cwtl
-; AVX512F-NEXT:    vmovd %eax, %xmm2
-; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512F-NEXT:    vmovd %esi, %xmm3
-; AVX512F-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: cvt_4i16_to_4f32:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    movq %rax, %rcx
-; AVX512VL-NEXT:    movq %rax, %rdx
-; AVX512VL-NEXT:    movswl %ax, %esi
-; AVX512VL-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512VL-NEXT:    shrl $16, %eax
-; AVX512VL-NEXT:    shrq $32, %rcx
-; AVX512VL-NEXT:    shrq $48, %rdx
-; AVX512VL-NEXT:    movswl %dx, %edx
-; AVX512VL-NEXT:    vmovd %edx, %xmm0
-; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512VL-NEXT:    movswl %cx, %ecx
-; AVX512VL-NEXT:    vmovd %ecx, %xmm1
-; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512VL-NEXT:    cwtl
-; AVX512VL-NEXT:    vmovd %eax, %xmm2
-; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovd %esi, %xmm3
-; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: cvt_4i16_to_4f32:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; ALL-NEXT:    vmovq %xmm0, %rax
+; ALL-NEXT:    movq %rax, %rcx
+; ALL-NEXT:    movq %rax, %rdx
+; ALL-NEXT:    movswl %ax, %esi
+; ALL-NEXT:    # kill: def $eax killed $eax killed $rax
+; ALL-NEXT:    shrl $16, %eax
+; ALL-NEXT:    shrq $32, %rcx
+; ALL-NEXT:    shrq $48, %rdx
+; ALL-NEXT:    movswl %dx, %edx
+; ALL-NEXT:    vmovd %edx, %xmm0
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    movswl %cx, %ecx
+; ALL-NEXT:    vmovd %ecx, %xmm1
+; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; ALL-NEXT:    cwtl
+; ALL-NEXT:    vmovd %eax, %xmm2
+; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; ALL-NEXT:    vmovd %esi, %xmm3
+; ALL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; ALL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; ALL-NEXT:    retq
   %1 = bitcast <4 x i16> %a0 to <4 x half>
   %2 = fpext <4 x half> %1 to <4 x float>
   ret <4 x float> %2
 }
 
 define <4 x float> @cvt_8i16_to_4f32(<8 x i16> %a0) nounwind {
-; AVX1-LABEL: cvt_8i16_to_4f32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    movq %rax, %rcx
-; AVX1-NEXT:    movq %rax, %rdx
-; AVX1-NEXT:    movswl %ax, %esi
-; AVX1-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX1-NEXT:    shrl $16, %eax
-; AVX1-NEXT:    shrq $32, %rcx
-; AVX1-NEXT:    shrq $48, %rdx
-; AVX1-NEXT:    movswl %dx, %edx
-; AVX1-NEXT:    vmovd %edx, %xmm0
-; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX1-NEXT:    movswl %cx, %ecx
-; AVX1-NEXT:    vmovd %ecx, %xmm1
-; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX1-NEXT:    cwtl
-; AVX1-NEXT:    vmovd %eax, %xmm2
-; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX1-NEXT:    vmovd %esi, %xmm3
-; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: cvt_8i16_to_4f32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    movq %rax, %rcx
-; AVX2-NEXT:    movq %rax, %rdx
-; AVX2-NEXT:    movswl %ax, %esi
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX2-NEXT:    shrl $16, %eax
-; AVX2-NEXT:    shrq $32, %rcx
-; AVX2-NEXT:    shrq $48, %rdx
-; AVX2-NEXT:    movswl %dx, %edx
-; AVX2-NEXT:    vmovd %edx, %xmm0
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX2-NEXT:    movswl %cx, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm1
-; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX2-NEXT:    cwtl
-; AVX2-NEXT:    vmovd %eax, %xmm2
-; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX2-NEXT:    vmovd %esi, %xmm3
-; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: cvt_8i16_to_4f32:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    movq %rax, %rcx
-; AVX512F-NEXT:    movq %rax, %rdx
-; AVX512F-NEXT:    movswl %ax, %esi
-; AVX512F-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    shrq $48, %rdx
-; AVX512F-NEXT:    movswl %dx, %edx
-; AVX512F-NEXT:    vmovd %edx, %xmm0
-; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512F-NEXT:    movswl %cx, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm1
-; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512F-NEXT:    cwtl
-; AVX512F-NEXT:    vmovd %eax, %xmm2
-; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512F-NEXT:    vmovd %esi, %xmm3
-; AVX512F-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: cvt_8i16_to_4f32:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    movq %rax, %rcx
-; AVX512VL-NEXT:    movq %rax, %rdx
-; AVX512VL-NEXT:    movswl %ax, %esi
-; AVX512VL-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512VL-NEXT:    shrl $16, %eax
-; AVX512VL-NEXT:    shrq $32, %rcx
-; AVX512VL-NEXT:    shrq $48, %rdx
-; AVX512VL-NEXT:    movswl %dx, %edx
-; AVX512VL-NEXT:    vmovd %edx, %xmm0
-; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512VL-NEXT:    movswl %cx, %ecx
-; AVX512VL-NEXT:    vmovd %ecx, %xmm1
-; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512VL-NEXT:    cwtl
-; AVX512VL-NEXT:    vmovd %eax, %xmm2
-; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovd %esi, %xmm3
-; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: cvt_8i16_to_4f32:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vmovq %xmm0, %rax
+; ALL-NEXT:    movq %rax, %rcx
+; ALL-NEXT:    movq %rax, %rdx
+; ALL-NEXT:    movswl %ax, %esi
+; ALL-NEXT:    # kill: def $eax killed $eax killed $rax
+; ALL-NEXT:    shrl $16, %eax
+; ALL-NEXT:    shrq $32, %rcx
+; ALL-NEXT:    shrq $48, %rdx
+; ALL-NEXT:    movswl %dx, %edx
+; ALL-NEXT:    vmovd %edx, %xmm0
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    movswl %cx, %ecx
+; ALL-NEXT:    vmovd %ecx, %xmm1
+; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; ALL-NEXT:    cwtl
+; ALL-NEXT:    vmovd %eax, %xmm2
+; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; ALL-NEXT:    vmovd %esi, %xmm3
+; ALL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; ALL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; ALL-NEXT:    retq
   %1 = shufflevector <8 x i16> %a0, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %2 = bitcast <4 x i16> %1 to <4 x half>
   %3 = fpext <4 x half> %2 to <4 x float>
@@ -730,111 +569,31 @@ define <4 x float> @load_cvt_4i16_to_4f32(<4 x i16>* %a0) nounwind {
 }
 
 define <4 x float> @load_cvt_8i16_to_4f32(<8 x i16>* %a0) nounwind {
-; AVX1-LABEL: load_cvt_8i16_to_4f32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    movq (%rdi), %rax
-; AVX1-NEXT:    movq %rax, %rcx
-; AVX1-NEXT:    movq %rax, %rdx
-; AVX1-NEXT:    movswl %ax, %esi
-; AVX1-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX1-NEXT:    shrl $16, %eax
-; AVX1-NEXT:    shrq $32, %rcx
-; AVX1-NEXT:    shrq $48, %rdx
-; AVX1-NEXT:    movswl %dx, %edx
-; AVX1-NEXT:    vmovd %edx, %xmm0
-; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX1-NEXT:    movswl %cx, %ecx
-; AVX1-NEXT:    vmovd %ecx, %xmm1
-; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX1-NEXT:    cwtl
-; AVX1-NEXT:    vmovd %eax, %xmm2
-; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX1-NEXT:    vmovd %esi, %xmm3
-; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load_cvt_8i16_to_4f32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    movq (%rdi), %rax
-; AVX2-NEXT:    movq %rax, %rcx
-; AVX2-NEXT:    movq %rax, %rdx
-; AVX2-NEXT:    movswl %ax, %esi
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX2-NEXT:    shrl $16, %eax
-; AVX2-NEXT:    shrq $32, %rcx
-; AVX2-NEXT:    shrq $48, %rdx
-; AVX2-NEXT:    movswl %dx, %edx
-; AVX2-NEXT:    vmovd %edx, %xmm0
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX2-NEXT:    movswl %cx, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm1
-; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX2-NEXT:    cwtl
-; AVX2-NEXT:    vmovd %eax, %xmm2
-; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX2-NEXT:    vmovd %esi, %xmm3
-; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: load_cvt_8i16_to_4f32:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    movq (%rdi), %rax
-; AVX512F-NEXT:    movq %rax, %rcx
-; AVX512F-NEXT:    movq %rax, %rdx
-; AVX512F-NEXT:    movswl %ax, %esi
-; AVX512F-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512F-NEXT:    shrl $16, %eax
-; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    shrq $48, %rdx
-; AVX512F-NEXT:    movswl %dx, %edx
-; AVX512F-NEXT:    vmovd %edx, %xmm0
-; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512F-NEXT:    movswl %cx, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm1
-; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512F-NEXT:    cwtl
-; AVX512F-NEXT:    vmovd %eax, %xmm2
-; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512F-NEXT:    vmovd %esi, %xmm3
-; AVX512F-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: load_cvt_8i16_to_4f32:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    movq %rax, %rcx
-; AVX512VL-NEXT:    movq %rax, %rdx
-; AVX512VL-NEXT:    movswl %ax, %esi
-; AVX512VL-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512VL-NEXT:    shrl $16, %eax
-; AVX512VL-NEXT:    shrq $32, %rcx
-; AVX512VL-NEXT:    shrq $48, %rdx
-; AVX512VL-NEXT:    movswl %dx, %edx
-; AVX512VL-NEXT:    vmovd %edx, %xmm0
-; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512VL-NEXT:    movswl %cx, %ecx
-; AVX512VL-NEXT:    vmovd %ecx, %xmm1
-; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512VL-NEXT:    cwtl
-; AVX512VL-NEXT:    vmovd %eax, %xmm2
-; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovd %esi, %xmm3
-; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
-; AVX512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: load_cvt_8i16_to_4f32:
+; ALL:       # %bb.0:
+; ALL-NEXT:    movq (%rdi), %rax
+; ALL-NEXT:    movq %rax, %rcx
+; ALL-NEXT:    movq %rax, %rdx
+; ALL-NEXT:    movswl %ax, %esi
+; ALL-NEXT:    # kill: def $eax killed $eax killed $rax
+; ALL-NEXT:    shrl $16, %eax
+; ALL-NEXT:    shrq $32, %rcx
+; ALL-NEXT:    shrq $48, %rdx
+; ALL-NEXT:    movswl %dx, %edx
+; ALL-NEXT:    vmovd %edx, %xmm0
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    movswl %cx, %ecx
+; ALL-NEXT:    vmovd %ecx, %xmm1
+; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; ALL-NEXT:    cwtl
+; ALL-NEXT:    vmovd %eax, %xmm2
+; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; ALL-NEXT:    vmovd %esi, %xmm3
+; ALL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; ALL-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1],xmm1[0],xmm2[3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; ALL-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
   %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %3 = bitcast <4 x i16> %2 to <4 x half>
@@ -1261,125 +1020,35 @@ define <2 x double> @cvt_2i16_to_2f64(<2 x i16> %a0) nounwind {
 }
 
 define <4 x double> @cvt_4i16_to_4f64(<4 x i16> %a0) nounwind {
-; AVX1-LABEL: cvt_4i16_to_4f64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    movq %rax, %rcx
-; AVX1-NEXT:    movl %eax, %edx
-; AVX1-NEXT:    movswl %ax, %esi
-; AVX1-NEXT:    shrq $48, %rax
-; AVX1-NEXT:    shrq $32, %rcx
-; AVX1-NEXT:    shrl $16, %edx
-; AVX1-NEXT:    movswl %dx, %edx
-; AVX1-NEXT:    vmovd %edx, %xmm0
-; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %esi, %xmm1
-; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX1-NEXT:    movswl %cx, %ecx
-; AVX1-NEXT:    vmovd %ecx, %xmm2
-; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX1-NEXT:    cwtl
-; AVX1-NEXT:    vmovd %eax, %xmm3
-; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX1-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX1-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: cvt_4i16_to_4f64:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    movq %rax, %rcx
-; AVX2-NEXT:    movl %eax, %edx
-; AVX2-NEXT:    movswl %ax, %esi
-; AVX2-NEXT:    shrq $48, %rax
-; AVX2-NEXT:    shrq $32, %rcx
-; AVX2-NEXT:    shrl $16, %edx
-; AVX2-NEXT:    movswl %dx, %edx
-; AVX2-NEXT:    vmovd %edx, %xmm0
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %esi, %xmm1
-; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX2-NEXT:    movswl %cx, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm2
-; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX2-NEXT:    cwtl
-; AVX2-NEXT:    vmovd %eax, %xmm3
-; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX2-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX2-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: cvt_4i16_to_4f64:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    movq %rax, %rcx
-; AVX512F-NEXT:    movl %eax, %edx
-; AVX512F-NEXT:    movswl %ax, %esi
-; AVX512F-NEXT:    shrq $48, %rax
-; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    shrl $16, %edx
-; AVX512F-NEXT:    movswl %dx, %edx
-; AVX512F-NEXT:    vmovd %edx, %xmm0
-; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512F-NEXT:    vmovd %esi, %xmm1
-; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512F-NEXT:    movswl %cx, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm2
-; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512F-NEXT:    cwtl
-; AVX512F-NEXT:    vmovd %eax, %xmm3
-; AVX512F-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512F-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
-; AVX512F-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX512F-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512F-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: cvt_4i16_to_4f64:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    movq %rax, %rcx
-; AVX512VL-NEXT:    movl %eax, %edx
-; AVX512VL-NEXT:    movswl %ax, %esi
-; AVX512VL-NEXT:    shrq $48, %rax
-; AVX512VL-NEXT:    shrq $32, %rcx
-; AVX512VL-NEXT:    shrl $16, %edx
-; AVX512VL-NEXT:    movswl %dx, %edx
-; AVX512VL-NEXT:    vmovd %edx, %xmm0
-; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovd %esi, %xmm1
-; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512VL-NEXT:    movswl %cx, %ecx
-; AVX512VL-NEXT:    vmovd %ecx, %xmm2
-; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512VL-NEXT:    cwtl
-; AVX512VL-NEXT:    vmovd %eax, %xmm3
-; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512VL-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
-; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: cvt_4i16_to_4f64:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; ALL-NEXT:    vmovq %xmm0, %rax
+; ALL-NEXT:    movq %rax, %rcx
+; ALL-NEXT:    movl %eax, %edx
+; ALL-NEXT:    movswl %ax, %esi
+; ALL-NEXT:    shrq $48, %rax
+; ALL-NEXT:    shrq $32, %rcx
+; ALL-NEXT:    shrl $16, %edx
+; ALL-NEXT:    movswl %dx, %edx
+; ALL-NEXT:    vmovd %edx, %xmm0
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    vmovd %esi, %xmm1
+; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; ALL-NEXT:    movswl %cx, %ecx
+; ALL-NEXT:    vmovd %ecx, %xmm2
+; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; ALL-NEXT:    cwtl
+; ALL-NEXT:    vmovd %eax, %xmm3
+; ALL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; ALL-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
+; ALL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
+; ALL-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; ALL-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; ALL-NEXT:    retq
   %1 = bitcast <4 x i16> %a0 to <4 x half>
   %2 = fpext <4 x half> %1 to <4 x double>
   ret <4 x double> %2
@@ -1454,123 +1123,34 @@ define <2 x double> @cvt_8i16_to_2f64(<8 x i16> %a0) nounwind {
 }
 
 define <4 x double> @cvt_8i16_to_4f64(<8 x i16> %a0) nounwind {
-; AVX1-LABEL: cvt_8i16_to_4f64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    movq %rax, %rcx
-; AVX1-NEXT:    movl %eax, %edx
-; AVX1-NEXT:    movswl %ax, %esi
-; AVX1-NEXT:    shrq $48, %rax
-; AVX1-NEXT:    shrq $32, %rcx
-; AVX1-NEXT:    shrl $16, %edx
-; AVX1-NEXT:    movswl %dx, %edx
-; AVX1-NEXT:    vmovd %edx, %xmm0
-; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %esi, %xmm1
-; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX1-NEXT:    movswl %cx, %ecx
-; AVX1-NEXT:    vmovd %ecx, %xmm2
-; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX1-NEXT:    cwtl
-; AVX1-NEXT:    vmovd %eax, %xmm3
-; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX1-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX1-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: cvt_8i16_to_4f64:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    movq %rax, %rcx
-; AVX2-NEXT:    movl %eax, %edx
-; AVX2-NEXT:    movswl %ax, %esi
-; AVX2-NEXT:    shrq $48, %rax
-; AVX2-NEXT:    shrq $32, %rcx
-; AVX2-NEXT:    shrl $16, %edx
-; AVX2-NEXT:    movswl %dx, %edx
-; AVX2-NEXT:    vmovd %edx, %xmm0
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %esi, %xmm1
-; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX2-NEXT:    movswl %cx, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm2
-; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX2-NEXT:    cwtl
-; AVX2-NEXT:    vmovd %eax, %xmm3
-; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX2-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX2-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: cvt_8i16_to_4f64:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    movq %rax, %rcx
-; AVX512F-NEXT:    movl %eax, %edx
-; AVX512F-NEXT:    movswl %ax, %esi
-; AVX512F-NEXT:    shrq $48, %rax
-; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    shrl $16, %edx
-; AVX512F-NEXT:    movswl %dx, %edx
-; AVX512F-NEXT:    vmovd %edx, %xmm0
-; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512F-NEXT:    vmovd %esi, %xmm1
-; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512F-NEXT:    movswl %cx, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm2
-; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512F-NEXT:    cwtl
-; AVX512F-NEXT:    vmovd %eax, %xmm3
-; AVX512F-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512F-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
-; AVX512F-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX512F-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512F-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: cvt_8i16_to_4f64:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    movq %rax, %rcx
-; AVX512VL-NEXT:    movl %eax, %edx
-; AVX512VL-NEXT:    movswl %ax, %esi
-; AVX512VL-NEXT:    shrq $48, %rax
-; AVX512VL-NEXT:    shrq $32, %rcx
-; AVX512VL-NEXT:    shrl $16, %edx
-; AVX512VL-NEXT:    movswl %dx, %edx
-; AVX512VL-NEXT:    vmovd %edx, %xmm0
-; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovd %esi, %xmm1
-; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512VL-NEXT:    movswl %cx, %ecx
-; AVX512VL-NEXT:    vmovd %ecx, %xmm2
-; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512VL-NEXT:    cwtl
-; AVX512VL-NEXT:    vmovd %eax, %xmm3
-; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512VL-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
-; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: cvt_8i16_to_4f64:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vmovq %xmm0, %rax
+; ALL-NEXT:    movq %rax, %rcx
+; ALL-NEXT:    movl %eax, %edx
+; ALL-NEXT:    movswl %ax, %esi
+; ALL-NEXT:    shrq $48, %rax
+; ALL-NEXT:    shrq $32, %rcx
+; ALL-NEXT:    shrl $16, %edx
+; ALL-NEXT:    movswl %dx, %edx
+; ALL-NEXT:    vmovd %edx, %xmm0
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    vmovd %esi, %xmm1
+; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; ALL-NEXT:    movswl %cx, %ecx
+; ALL-NEXT:    vmovd %ecx, %xmm2
+; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; ALL-NEXT:    cwtl
+; ALL-NEXT:    vmovd %eax, %xmm3
+; ALL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; ALL-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
+; ALL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
+; ALL-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; ALL-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; ALL-NEXT:    retq
   %1 = shufflevector <8 x i16> %a0, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %2 = bitcast <4 x i16> %1 to <4 x half>
   %3 = fpext <4 x half> %2 to <4 x double>
@@ -1812,123 +1392,34 @@ define <4 x double> @load_cvt_4i16_to_4f64(<4 x i16>* %a0) nounwind {
 }
 
 define <4 x double> @load_cvt_8i16_to_4f64(<8 x i16>* %a0) nounwind {
-; AVX1-LABEL: load_cvt_8i16_to_4f64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    movq (%rdi), %rax
-; AVX1-NEXT:    movq %rax, %rcx
-; AVX1-NEXT:    movl %eax, %edx
-; AVX1-NEXT:    movswl %ax, %esi
-; AVX1-NEXT:    shrq $48, %rax
-; AVX1-NEXT:    shrq $32, %rcx
-; AVX1-NEXT:    shrl $16, %edx
-; AVX1-NEXT:    movswl %dx, %edx
-; AVX1-NEXT:    vmovd %edx, %xmm0
-; AVX1-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %esi, %xmm1
-; AVX1-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX1-NEXT:    movswl %cx, %ecx
-; AVX1-NEXT:    vmovd %ecx, %xmm2
-; AVX1-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX1-NEXT:    cwtl
-; AVX1-NEXT:    vmovd %eax, %xmm3
-; AVX1-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX1-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX1-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load_cvt_8i16_to_4f64:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    movq (%rdi), %rax
-; AVX2-NEXT:    movq %rax, %rcx
-; AVX2-NEXT:    movl %eax, %edx
-; AVX2-NEXT:    movswl %ax, %esi
-; AVX2-NEXT:    shrq $48, %rax
-; AVX2-NEXT:    shrq $32, %rcx
-; AVX2-NEXT:    shrl $16, %edx
-; AVX2-NEXT:    movswl %dx, %edx
-; AVX2-NEXT:    vmovd %edx, %xmm0
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %esi, %xmm1
-; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX2-NEXT:    movswl %cx, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm2
-; AVX2-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX2-NEXT:    cwtl
-; AVX2-NEXT:    vmovd %eax, %xmm3
-; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX2-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX2-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: load_cvt_8i16_to_4f64:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    movq (%rdi), %rax
-; AVX512F-NEXT:    movq %rax, %rcx
-; AVX512F-NEXT:    movl %eax, %edx
-; AVX512F-NEXT:    movswl %ax, %esi
-; AVX512F-NEXT:    shrq $48, %rax
-; AVX512F-NEXT:    shrq $32, %rcx
-; AVX512F-NEXT:    shrl $16, %edx
-; AVX512F-NEXT:    movswl %dx, %edx
-; AVX512F-NEXT:    vmovd %edx, %xmm0
-; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512F-NEXT:    vmovd %esi, %xmm1
-; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512F-NEXT:    movswl %cx, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm2
-; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512F-NEXT:    cwtl
-; AVX512F-NEXT:    vmovd %eax, %xmm3
-; AVX512F-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512F-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
-; AVX512F-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX512F-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512F-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: load_cvt_8i16_to_4f64:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX512VL-NEXT:    vpmovdw %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; AVX512VL-NEXT:    movq %rax, %rcx
-; AVX512VL-NEXT:    movl %eax, %edx
-; AVX512VL-NEXT:    movswl %ax, %esi
-; AVX512VL-NEXT:    shrq $48, %rax
-; AVX512VL-NEXT:    shrq $32, %rcx
-; AVX512VL-NEXT:    shrl $16, %edx
-; AVX512VL-NEXT:    movswl %dx, %edx
-; AVX512VL-NEXT:    vmovd %edx, %xmm0
-; AVX512VL-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovd %esi, %xmm1
-; AVX512VL-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512VL-NEXT:    movswl %cx, %ecx
-; AVX512VL-NEXT:    vmovd %ecx, %xmm2
-; AVX512VL-NEXT:    vcvtph2ps %xmm2, %xmm2
-; AVX512VL-NEXT:    cwtl
-; AVX512VL-NEXT:    vmovd %eax, %xmm3
-; AVX512VL-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512VL-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
-; AVX512VL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX512VL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: load_cvt_8i16_to_4f64:
+; ALL:       # %bb.0:
+; ALL-NEXT:    movq (%rdi), %rax
+; ALL-NEXT:    movq %rax, %rcx
+; ALL-NEXT:    movl %eax, %edx
+; ALL-NEXT:    movswl %ax, %esi
+; ALL-NEXT:    shrq $48, %rax
+; ALL-NEXT:    shrq $32, %rcx
+; ALL-NEXT:    shrl $16, %edx
+; ALL-NEXT:    movswl %dx, %edx
+; ALL-NEXT:    vmovd %edx, %xmm0
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    vmovd %esi, %xmm1
+; ALL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; ALL-NEXT:    movswl %cx, %ecx
+; ALL-NEXT:    vmovd %ecx, %xmm2
+; ALL-NEXT:    vcvtph2ps %xmm2, %xmm2
+; ALL-NEXT:    cwtl
+; ALL-NEXT:    vmovd %eax, %xmm3
+; ALL-NEXT:    vcvtph2ps %xmm3, %xmm3
+; ALL-NEXT:    vcvtss2sd %xmm3, %xmm3, %xmm3
+; ALL-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
+; ALL-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; ALL-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; ALL-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; ALL-NEXT:    retq
   %1 = load <8 x i16>, <8 x i16>* %a0
   %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %3 = bitcast <4 x i16> %2 to <4 x half>

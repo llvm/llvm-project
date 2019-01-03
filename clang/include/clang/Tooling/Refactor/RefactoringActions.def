@@ -1,0 +1,62 @@
+//===--- RefactoringActions.def - The list of refactoring actions  --------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef REFACTORING_ACTION
+#define REFACTORING_ACTION(Name, Spelling)
+#endif
+
+#ifndef REFACTORING_SUB_ACTION
+#define REFACTORING_SUB_ACTION(Name, Parent, Spelling) \
+  REFACTORING_ACTION(Parent##_##Name, Spelling)
+#endif
+
+#ifndef REFACTORING_OPERATION_ACTION
+#define REFACTORING_OPERATION_ACTION(Name, Spelling, Command)\
+  REFACTORING_ACTION(Name, Spelling)
+#endif
+
+#ifndef REFACTORING_OPERATION_SUB_ACTION
+#define REFACTORING_OPERATION_SUB_ACTION(Name, Parent, Spelling, Command)\
+  REFACTORING_SUB_ACTION(Name, Parent, Spelling)
+#endif
+
+REFACTORING_ACTION(Rename, "Rename")
+REFACTORING_SUB_ACTION(Local, Rename, "Rename")
+
+REFACTORING_OPERATION_ACTION(Extract, "Extract Function", "extract")
+REFACTORING_OPERATION_SUB_ACTION(Method, Extract, "Extract Method",
+                                 "extract-method")
+REFACTORING_OPERATION_SUB_ACTION(Expression, Extract, "Extract Expression",
+                                 "extract-expression")
+
+REFACTORING_OPERATION_ACTION(IfSwitchConversion, "Convert to Switch",
+                             "if-switch-conversion")
+REFACTORING_OPERATION_ACTION(FillInEnumSwitchCases, "Add Missing Switch Cases",
+                             "fill-in-enum-switch-cases")
+REFACTORING_OPERATION_ACTION(FillInMissingProtocolStubs,
+                             "Add Missing Protocol Requirements",
+                             "fill-in-missing-protocol-stubs")
+REFACTORING_OPERATION_ACTION(LocalizeObjCStringLiteral,
+                             "Wrap in NSLocalizedString",
+                             "localize-objc-string-literal")
+REFACTORING_OPERATION_ACTION(ExtractRepeatedExpressionIntoVariable,
+                             "Extract Repeated Expression",
+                             "extract-repeated-expr-into-var")
+REFACTORING_OPERATION_ACTION(FillInMissingMethodStubsFromAbstractClasses,
+                             "Add Missing Abstract Class Overrides",
+                             "fill-in-missing-abstract-methods")
+ // FIXME: For ObjC this should say 'Methods':
+REFACTORING_OPERATION_ACTION(ImplementDeclaredMethods,
+                             "Generate Missing Function Definitions",
+                             "implement-declared-methods")
+
+#undef REFACTORING_OPERATION_SUB_ACTION
+#undef REFACTORING_OPERATION_ACTION
+#undef REFACTORING_SUB_ACTION
+#undef REFACTORING_ACTION

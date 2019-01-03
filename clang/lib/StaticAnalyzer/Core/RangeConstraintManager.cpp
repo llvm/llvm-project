@@ -399,7 +399,7 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
 
   for (ConstraintRangeTy::iterator I = CR.begin(), E = CR.end(); I != E; ++I) {
     SymbolRef Sym = I.getKey();
-    if (SymReaper.maybeDead(Sym)) {
+    if (SymReaper.isDead(Sym)) {
       Changed = true;
       CR = CRFactory.remove(CR, Sym);
     }

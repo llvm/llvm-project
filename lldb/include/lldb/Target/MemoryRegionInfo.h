@@ -14,7 +14,6 @@
 #include "lldb/Core/RangeMap.h"
 #include "llvm/Support/FormatProviders.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Range.h"
 
 namespace lldb_private {
 class MemoryRegionInfo {
@@ -109,6 +108,26 @@ protected:
   OptionalBool m_flash;
   lldb::offset_t m_blocksize;
 };
+  
+inline bool operator<(const MemoryRegionInfo &lhs,
+                      const MemoryRegionInfo &rhs) {
+  return lhs.GetRange() < rhs.GetRange();
+}
+
+inline bool operator<(const MemoryRegionInfo &lhs, lldb::addr_t rhs) {
+  return lhs.GetRange().GetRangeBase() < rhs;
+}
+
+inline bool operator<(lldb::addr_t lhs, const MemoryRegionInfo &rhs) {
+  return lhs < rhs.GetRange().GetRangeBase();
+}
+
+// Forward-declarable wrapper.
+class MemoryRegionInfos : public std::vector<lldb_private::MemoryRegionInfo> {
+public:
+  using std::vector<lldb_private::MemoryRegionInfo>::vector;
+};
+
 }
 
 namespace llvm {

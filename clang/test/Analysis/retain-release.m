@@ -1,8 +1,19 @@
 // RUN: rm -f %t.objc.plist %t.objcpp.plist
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.coreFoundation.CFRetainRelease,osx.cocoa.ClassRelease,osx.cocoa.RetainCount -analyzer-store=region -fblocks -verify -Wno-objc-root-class %s -analyzer-output=plist -o %t.objc.plist
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.coreFoundation.CFRetainRelease,osx.cocoa.ClassRelease,osx.cocoa.RetainCount -analyzer-store=region -fblocks -verify -x objective-c++ -std=gnu++98 -Wno-objc-root-class %s -analyzer-output=plist -o %t.objcpp.plist
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10\
+// RUN:     -analyzer-checker=core,osx.coreFoundation.CFRetainRelease\
+// RUN:     -analyzer-checker=osx.cocoa.ClassRelease,osx.cocoa.RetainCount\
+// RUN:     -analyzer-checker=debug.ExprInspection -fblocks -verify %s\
+// RUN:     -Wno-objc-root-class -analyzer-output=plist -o %t.objcpp.plist
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10\
+// RUN:     -analyzer-checker=core,osx.coreFoundation.CFRetainRelease\
+// RUN:     -analyzer-checker=osx.cocoa.ClassRelease,osx.cocoa.RetainCount\
+// RUN:     -analyzer-checker=debug.ExprInspection -fblocks -verify %s\
+// RUN:     -Wno-objc-root-class -analyzer-output=plist -o %t.objcpp.plist\
+// RUN:     -x objective-c++ -std=gnu++98
 // FIXLATER: cat %t.objc.plist ; FileCheck --input-file=%t.objc.plist %s
 // FIXLATER: cat %t.objcpp.plist ; FileCheck --input-file=%t.objcpp.plist %s
+
+void clang_analyzer_eval(int);
 
 #if __has_feature(attribute_ns_returns_retained)
 #define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
@@ -493,6 +504,21 @@ void testLeakWithReturnsRetainedOutParameter() {
   // responsibility to release 'foo'. However, we don't currently have
   // a mechanism in this checker to only require a release when a successful
   // status is returned.
+}
+
+typedef CFTypeRef CMBufferRef;
+
+typedef CFTypeRef *CMBufferQueueRef;
+
+CMBufferRef CMBufferQueueDequeueAndRetain(CMBufferQueueRef);
+
+void testCMBufferQueueDequeueAndRetain(CMBufferQueueRef queue) {
+  CMBufferRef buffer = CMBufferQueueDequeueAndRetain(queue); // expected-warning{{Potential leak of an object stored into 'buffer'}}
+  // There's a state split due to the eagerly-assume behavior.
+  // The point here is that we don't treat CMBufferQueueDequeueAndRetain
+  // as some sort of CFRetain() that returns its argument.
+  clang_analyzer_eval((CMFooRef)buffer == (CMFooRef)queue); // expected-warning{{TRUE}}
+                                                            // expected-warning@-1{{FALSE}}
 }
 
 // Test retain/release checker with CFString and CFMutableArray.

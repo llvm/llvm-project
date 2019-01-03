@@ -12,8 +12,8 @@ class __declspec(dllexport) A {
 //
 // CHECK: ![[SP]] = distinct !DISubprogram(
 // CHECK-SAME:          line: 4
-// CHECK-SAME:          isDefinition: true
 // CHECK-SAME:          DIFlagArtificial
+// CHECK-SAME:          DISPFlagDefinition
 // CHECK-SAME:          ){{$}}
 //
 // CHECK: ![[DBG]] = !DILocation(line: 0

@@ -1,8 +1,8 @@
 ; RUN: llc < %s -ppc-vsr-nums-as-vr -mtriple=powerpc64-unknown-linux-gnu \
-; RUN:       -verify-machineinstrs -ppc-asm-full-reg-names -mcpu=pwr8 \
+; RUN:       -verify-machineinstrs -ppc-asm-full-reg-names -mcpu=pwr8 -relocation-model=pic \
 ; RUN:       | FileCheck %s
 ; RUN: llc < %s -ppc-vsr-nums-as-vr -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:       -verify-machineinstrs -ppc-asm-full-reg-names -mcpu=pwr8 \
+; RUN:       -verify-machineinstrs -ppc-asm-full-reg-names -mcpu=pwr8 -relocation-model=pic \
 ; RUN:       | FileCheck %s -check-prefix=CHECK-LE
 
 ; The build[csilf] functions simply test the scalar_to_vector handling with

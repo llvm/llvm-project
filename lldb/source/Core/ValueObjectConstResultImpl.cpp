@@ -66,7 +66,7 @@ ValueObject *ValueObjectConstResultImpl::CreateChildAtIndex(
   bool child_is_deref_of_parent = false;
   uint64_t language_flags;
 
-  const bool transparent_pointers = synthetic_array_member == false;
+  const bool transparent_pointers = !synthetic_array_member;
   CompilerType compiler_type = m_impl_backend->GetCompilerType();
   CompilerType child_compiler_type;
 

@@ -22,10 +22,7 @@
 ; BC-NEXT: <PERMODULE {{.*}} op0=1 op1=0
 ; BC-NEXT: <PERMODULE {{.*}} op0=2 op1=0
 ; BC-NEXT: <PERMODULE {{.*}} op0=3 op1=7
-; Summary for @variadic has flags (op3) = 16 since non-inlinable owing to
-; va_start call.
-; flag is set due to va_start call.
-; BC-NEXT: <PERMODULE {{.*}} op0=4 op1=0 op2=4 op3=16
+; BC-NEXT: <PERMODULE {{.*}} op0=4 op1=0 op2=4 op3=0
 ; BC-NEXT: <ALIAS {{.*}} op0=6 op1=0 op2=3
 ; BC-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 ; BC: <STRTAB_BLOCK

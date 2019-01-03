@@ -35,6 +35,15 @@ class ScalarEvolution;
 
 using NewLoopsMap = SmallDenseMap<const Loop *, Loop *, 4>;
 
+/// @{
+/// Metadata attribute names
+const char *const LLVMLoopUnrollFollowupAll = "llvm.loop.unroll.followup_all";
+const char *const LLVMLoopUnrollFollowupUnrolled =
+    "llvm.loop.unroll.followup_unrolled";
+const char *const LLVMLoopUnrollFollowupRemainder =
+    "llvm.loop.unroll.followup_remainder";
+/// @}
+
 const Loop* addClonedBlockToLoopInfo(BasicBlock *OriginalBB,
                                      BasicBlock *ClonedBB, LoopInfo *LI,
                                      NewLoopsMap &NewLoops);
@@ -61,15 +70,16 @@ LoopUnrollResult UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
                             unsigned PeelCount, bool UnrollRemainder,
                             LoopInfo *LI, ScalarEvolution *SE,
                             DominatorTree *DT, AssumptionCache *AC,
-                            OptimizationRemarkEmitter *ORE, bool PreserveLCSSA);
+                            OptimizationRemarkEmitter *ORE, bool PreserveLCSSA,
+                            Loop **RemainderLoop = nullptr);
 
 bool UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                 bool AllowExpensiveTripCount,
                                 bool UseEpilogRemainder, bool UnrollRemainder,
-                                LoopInfo *LI,
-                                ScalarEvolution *SE, DominatorTree *DT,
-                                AssumptionCache *AC,
-                                bool PreserveLCSSA);
+                                LoopInfo *LI, ScalarEvolution *SE,
+                                DominatorTree *DT, AssumptionCache *AC,
+                                bool PreserveLCSSA,
+                                Loop **ResultLoop = nullptr);
 
 void computePeelCount(Loop *L, unsigned LoopSize,
                       TargetTransformInfo::UnrollingPreferences &UP,
@@ -84,7 +94,8 @@ LoopUnrollResult UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
                                   unsigned TripMultiple, bool UnrollRemainder,
                                   LoopInfo *LI, ScalarEvolution *SE,
                                   DominatorTree *DT, AssumptionCache *AC,
-                                  OptimizationRemarkEmitter *ORE);
+                                  OptimizationRemarkEmitter *ORE,
+                                  Loop **EpilogueLoop = nullptr);
 
 bool isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
                           DependenceInfo &DI);

@@ -14,9 +14,9 @@ void test1(void) {
   extern id test1_helper(void);
   // CHECK:      [[T0:%.*]] = call [[CC]]i8* @test1_helper()
   // CHECK-NEXT: call void asm sideeffect "mov\09{{fp, fp|r7, r7}}\09\09// marker for objc_retainAutoreleaseReturnValue"
-  // CHECK-NEXT: [[T1:%.*]] = call [[CC]]i8* @objc_retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK-NEXT: [[T1:%.*]] = call [[CC]]i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
   // CHECK-NEXT: store i8* [[T1]],
-  // CHECK-NEXT: call [[CC]]void @objc_storeStrong(
+  // CHECK-NEXT: call [[CC]]void @llvm.objc.storeStrong(
   // CHECK-NEXT: ret void
   id x = test1_helper();
 }

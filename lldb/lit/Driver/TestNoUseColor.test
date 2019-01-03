@@ -1,0 +1,4 @@
+# RUN: %lldb --no-use-color -s %s | FileCheck %s
+settings show use-color
+# CHECK: use-color (boolean) = false
+q

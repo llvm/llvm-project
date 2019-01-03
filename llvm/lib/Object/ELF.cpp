@@ -154,7 +154,7 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
 
 #undef ELF_RELOC
 
-uint32_t llvm::object::getELFRelrRelocationType(uint32_t Machine) {
+uint32_t llvm::object::getELFRelativeRelocationType(uint32_t Machine) {
   switch (Machine) {
   case ELF::EM_X86_64:
     return ELF::R_X86_64_RELATIVE;
@@ -300,7 +300,7 @@ ELFFile<ELFT>::decode_relrs(Elf_Relr_Range relrs) const {
   Elf_Rela Rela;
   Rela.r_info = 0;
   Rela.r_addend = 0;
-  Rela.setType(getRelrRelocationType(), false);
+  Rela.setType(getRelativeRelocationType(), false);
   std::vector<Elf_Rela> Relocs;
 
   // Word type: uint32_t for Elf32, and uint64_t for Elf64.

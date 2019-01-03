@@ -1,0 +1,31 @@
+# REQUIRES: zlib
+# RUN: yaml2obj %s > %t
+# RUN: lldb-test object-file --contents %t | FileCheck %s
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_386
+Sections:
+  - Name:            .hello_elf
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_COMPRESSED ]
+    Content:         010000000800000001000000789c5330700848286898000009c802c1
+  - Name:            .bogus
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_COMPRESSED ]
+    Content:         deadbeefbaadf00d
+
+# CHECK: Name: .hello_elf
+# CHECK-NEXT: Type: regular
+# CHECK: VM size: 0
+# CHECK-NEXT: File size: 28
+# CHECK-NEXT: Data:
+# CHECK-NEXT: 20304050 60708090
+
+# CHECK: Name: .bogus
+# CHECK-NEXT: Type: regular
+# CHECK: VM size: 0
+# CHECK-NEXT: File size: 8
+# CHECK-NEXT: Data: ()

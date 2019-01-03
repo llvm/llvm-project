@@ -94,6 +94,7 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
       SmallVector<MVT, 4> Params;
       ComputeSignatureVTs(F.getFunctionType(), F, TM, Params, Results);
       auto *Sym = cast<MCSymbolWasm>(getSymbol(&F));
+      Sym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       if (!Sym->getSignature()) {
         auto Signature = SignatureFromMVTs(Results, Params);
         Sym->setSignature(Signature.get());
@@ -110,6 +111,7 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
           F.hasFnAttribute("wasm-import-module")) {
         StringRef Name =
             F.getFnAttribute("wasm-import-module").getValueAsString();
+        Sym->setModuleName(Name);
         getTargetStreamer()->emitImportModule(Sym, Name);
       }
     }
@@ -164,6 +166,7 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
   auto *WasmSym = cast<MCSymbolWasm>(CurrentFnSym);
   WasmSym->setSignature(Signature.get());
   addSignature(std::move(Signature));
+  WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
 
   // FIXME: clean up how params and results are emitted (use signatures)
   getTargetStreamer()->emitFunctionType(WasmSym);

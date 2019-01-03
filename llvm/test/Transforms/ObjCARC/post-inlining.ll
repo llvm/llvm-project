@@ -2,9 +2,9 @@
 
 declare void @use_pointer(i8*)
 declare i8* @returner()
-declare i8* @objc_retain(i8*)
-declare i8* @objc_autoreleaseReturnValue(i8*)
-declare i8* @objc_retainAutoreleasedReturnValue(i8*)
+declare i8* @llvm.objc.retain(i8*)
+declare i8* @llvm.objc.autoreleaseReturnValue(i8*)
+declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
 
 ; Clean up residue left behind after inlining.
 
@@ -14,8 +14,8 @@ declare i8* @objc_retainAutoreleasedReturnValue(i8*)
 ; CHECK-NEXT: }
 define void @test0(i8* %call.i) {
 entry:
-  %0 = tail call i8* @objc_retain(i8* %call.i) nounwind
-  %1 = tail call i8* @objc_autoreleaseReturnValue(i8* %0) nounwind
+  %0 = tail call i8* @llvm.objc.retain(i8* %call.i) nounwind
+  %1 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %0) nounwind
   ret void
 }
 
@@ -27,8 +27,8 @@ entry:
 ; CHECK-NEXT: }
 define void @test1(i8* %call.i) {
 entry:
-  %0 = tail call i8* @objc_retain(i8* %call.i) nounwind
-  %1 = tail call i8* @objc_autoreleaseReturnValue(i8* %call.i) nounwind
+  %0 = tail call i8* @llvm.objc.retain(i8* %call.i) nounwind
+  %1 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %call.i) nounwind
   ret void
 }
 
@@ -41,8 +41,8 @@ entry:
 ; CHECK-NEXT: }
 define void @test24(i8* %p) {
 entry:
-  call i8* @objc_autoreleaseReturnValue(i8* %p) nounwind
-  call i8* @objc_retainAutoreleasedReturnValue(i8* %p) nounwind
+  call i8* @llvm.objc.autoreleaseReturnValue(i8* %p) nounwind
+  call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %p) nounwind
   call void @use_pointer(i8* %p)
   ret void
 }

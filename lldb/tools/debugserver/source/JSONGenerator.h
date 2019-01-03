@@ -182,7 +182,7 @@ public:
     void SetValue(bool value) { m_value = value; }
 
     void Dump(std::ostream &s) const override {
-      if (m_value == true)
+      if (m_value)
         s << "true";
       else
         s << "false";
@@ -262,7 +262,7 @@ public:
       s << "{";
       for (collection::const_iterator iter = m_dict.begin();
            iter != m_dict.end(); ++iter) {
-        if (have_printed_one_elem == false) {
+        if (!have_printed_one_elem) {
           have_printed_one_elem = true;
         } else {
           s << ",";

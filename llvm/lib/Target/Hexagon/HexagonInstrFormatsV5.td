@@ -49,39 +49,39 @@ class InstDuplex<bits<4> iClass, list<dag> pattern = [],
 
   // *** Must match MCTargetDesc/HexagonBaseInfo.h ***
 
-  let TSFlags{5-0} = Type.Value;
+  let TSFlags{6-0} = Type.Value;
 
   // Predicated instructions.
   bits<1> isPredicated = 0;
-  let TSFlags{6} = isPredicated;
+  let TSFlags{7} = isPredicated;
   bits<1> isPredicatedFalse = 0;
-  let TSFlags{7} = isPredicatedFalse;
+  let TSFlags{8} = isPredicatedFalse;
   bits<1> isPredicatedNew = 0;
-  let TSFlags{8} = isPredicatedNew;
+  let TSFlags{9} = isPredicatedNew;
 
   // New-value insn helper fields.
   bits<1> isNewValue = 0;
-  let TSFlags{9} = isNewValue; // New-value consumer insn.
+  let TSFlags{10} = isNewValue; // New-value consumer insn.
   bits<1> hasNewValue = 0;
-  let TSFlags{10} = hasNewValue; // New-value producer insn.
+  let TSFlags{11} = hasNewValue; // New-value producer insn.
   bits<3> opNewValue = 0;
-  let TSFlags{13-11} = opNewValue; // New-value produced operand.
+  let TSFlags{14-12} = opNewValue; // New-value produced operand.
   bits<1> isNVStorable = 0;
-  let TSFlags{14} = isNVStorable; // Store that can become new-value store.
+  let TSFlags{15} = isNVStorable; // Store that can become new-value store.
   bits<1> isNVStore = 0;
-  let TSFlags{15} = isNVStore; // New-value store insn.
+  let TSFlags{16} = isNVStore; // New-value store insn.
 
   // Immediate extender helper fields.
   bits<1> isExtendable = 0;
-  let TSFlags{16} = isExtendable; // Insn may be extended.
+  let TSFlags{17} = isExtendable; // Insn may be extended.
   bits<1> isExtended = 0;
-  let TSFlags{17} = isExtended; // Insn must be extended.
+  let TSFlags{18} = isExtended; // Insn must be extended.
   bits<3> opExtendable = 0;
-  let TSFlags{20-18} = opExtendable; // Which operand may be extended.
+  let TSFlags{21-19} = opExtendable; // Which operand may be extended.
   bits<1> isExtentSigned = 0;
-  let TSFlags{21} = isExtentSigned; // Signed or unsigned range.
+  let TSFlags{22} = isExtentSigned; // Signed or unsigned range.
   bits<5> opExtentBits = 0;
-  let TSFlags{26-22} = opExtentBits; //Number of bits of range before extending.
+  let TSFlags{27-23} = opExtentBits; //Number of bits of range before extending.
   bits<2> opExtentAlign = 0;
-  let TSFlags{28-27} = opExtentAlign; // Alignment exponent before extending.
+  let TSFlags{29-28} = opExtentAlign; // Alignment exponent before extending.
 }

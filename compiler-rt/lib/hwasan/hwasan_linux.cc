@@ -24,6 +24,7 @@
 #include "hwasan_thread.h"
 #include "hwasan_thread_list.h"
 
+#include <dlfcn.h>
 #include <elf.h>
 #include <link.h>
 #include <pthread.h>
@@ -281,6 +282,22 @@ uptr *GetCurrentThreadLongPtr() {
 uptr *GetCurrentThreadLongPtr() {
   return &__hwasan_tls;
 }
+#endif
+
+#if SANITIZER_ANDROID
+void AndroidTestTlsSlot() {
+  uptr kMagicValue = 0x010203040A0B0C0D;
+  *(uptr *)get_android_tls_ptr() = kMagicValue;
+  dlerror();
+  if (*(uptr *)get_android_tls_ptr() != kMagicValue) {
+    Printf(
+        "ERROR: Incompatible version of Android: TLS_SLOT_SANITIZER(6) is used "
+        "for dlerror().\n");
+    Die();
+  }
+}
+#else
+void AndroidTestTlsSlot() {}
 #endif
 
 Thread *GetCurrentThread() {

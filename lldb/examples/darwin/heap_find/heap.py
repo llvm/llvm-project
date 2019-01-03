@@ -1036,7 +1036,7 @@ range_callback_t range_callback = [](task_t task, void *baton, unsigned type, ui
     callback_baton_t *lldb_info = (callback_baton_t *)baton;
     if (lldb_info->cstr_len < ptr_size) {
         const char *begin = (const char *)ptr_addr;
-        const char *end = begin + ptr_size - info->cstr_len;
+        const char *end = begin + ptr_size - lldb_info->cstr_len;
         for (const char *s = begin; s < end; ++s) {
             if ((int)memcmp(s, lldb_info->cstr, lldb_info->cstr_len) == 0) {
                 if (lldb_info->num_matches < MAX_MATCHES) {

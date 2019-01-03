@@ -86,6 +86,14 @@ public:
   bool ExceptionBreakpointsExplainStop(lldb::StopInfoSP stop_reason) override;
 
   lldb::SearchFilterSP CreateExceptionSearchFilter() override;
+  
+  static std::tuple<FileSpec, ConstString> GetExceptionThrowLocation();
+
+  lldb::ValueObjectSP GetExceptionObjectForThread(
+      lldb::ThreadSP thread_sp) override;
+
+  lldb::ThreadSP GetBacktraceThreadFromException(
+      lldb::ValueObjectSP thread_sp) override;
 
   uint32_t GetFoundationVersion();
 

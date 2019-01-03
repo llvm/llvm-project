@@ -16,9 +16,6 @@ class OverloadedFunctionsTestCase(TestBase):
         TestBase.setUp(self)
         self.line = line_number('main.cpp', '// breakpoint')
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_with_run_command(self):
         """Test that functions with the same name are resolved correctly"""
         self.build()

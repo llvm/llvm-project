@@ -11,11 +11,11 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_H
 
 #include "ExpectedTypes.h"
+#include "SymbolID.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -94,53 +94,6 @@ inline bool operator<(const SymbolLocation &L, const SymbolLocation &R) {
   return std::tie(L.Start, L.End) < std::tie(R.Start, R.End);
 }
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolLocation &);
-
-// The class identifies a particular C++ symbol (class, function, method, etc).
-//
-// As USRs (Unified Symbol Resolution) could be large, especially for functions
-// with long type arguments, SymbolID is using truncated SHA1(USR) values to
-// guarantee the uniqueness of symbols while using a relatively small amount of
-// memory (vs storing USRs directly).
-//
-// SymbolID can be used as key in the symbol indexes to lookup the symbol.
-class SymbolID {
-public:
-  SymbolID() = default;
-  explicit SymbolID(llvm::StringRef USR);
-
-  bool operator==(const SymbolID &Sym) const {
-    return HashValue == Sym.HashValue;
-  }
-  bool operator<(const SymbolID &Sym) const {
-    return HashValue < Sym.HashValue;
-  }
-
-  // The stored hash is truncated to RawSize bytes.
-  // This trades off memory against the number of symbols we can handle.
-  constexpr static size_t RawSize = 8;
-  llvm::StringRef raw() const {
-    return StringRef(reinterpret_cast<const char *>(HashValue.data()), RawSize);
-  }
-  static SymbolID fromRaw(llvm::StringRef);
-
-  // Returns a hex encoded string.
-  std::string str() const;
-  static llvm::Expected<SymbolID> fromStr(llvm::StringRef);
-
-private:
-  std::array<uint8_t, RawSize> HashValue;
-};
-
-inline llvm::hash_code hash_value(const SymbolID &ID) {
-  // We already have a good hash, just return the first bytes.
-  assert(sizeof(size_t) <= SymbolID::RawSize && "size_t longer than SHA1!");
-  size_t Result;
-  memcpy(&Result, ID.raw().data(), sizeof(size_t));
-  return llvm::hash_code(Result);
-}
-
-// Write SymbolID into the given stream. SymbolID is encoded as ID.str().
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolID &ID);
 
 } // namespace clangd
 } // namespace clang

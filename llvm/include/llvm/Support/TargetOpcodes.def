@@ -258,6 +258,17 @@ HANDLE_TARGET_OPCODE(G_INSERT)
 /// larger register.
 HANDLE_TARGET_OPCODE(G_MERGE_VALUES)
 
+/// Generic instruction to create a vector value from a number of scalar
+/// components.
+HANDLE_TARGET_OPCODE(G_BUILD_VECTOR)
+
+/// Generic instruction to create a vector value from a number of scalar
+/// components, which have types larger than the result vector elt type.
+HANDLE_TARGET_OPCODE(G_BUILD_VECTOR_TRUNC)
+
+/// Generic instruction to create a vector by concatenating multiple vectors.
+HANDLE_TARGET_OPCODE(G_CONCAT_VECTORS)
+
 /// Generic pointer to int conversion.
 HANDLE_TARGET_OPCODE(G_PTRTOINT)
 
@@ -443,6 +454,9 @@ HANDLE_TARGET_OPCODE(G_FLOG)
 /// Floating point base-2 logarithm of a value.
 HANDLE_TARGET_OPCODE(G_FLOG2)
 
+/// Floating point base-10 logarithm of a value.
+HANDLE_TARGET_OPCODE(G_FLOG10)
+
 /// Generic FP negation.
 HANDLE_TARGET_OPCODE(G_FNEG)
 
@@ -503,6 +517,9 @@ HANDLE_TARGET_OPCODE(G_CTPOP)
 
 /// Generic byte swap.
 HANDLE_TARGET_OPCODE(G_BSWAP)
+
+/// Floating point ceil.
+HANDLE_TARGET_OPCODE(G_FCEIL)
 
 /// Generic AddressSpaceCast.
 HANDLE_TARGET_OPCODE(G_ADDRSPACE_CAST)

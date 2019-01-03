@@ -479,6 +479,7 @@ class Instruction {
   bit isInsertSubreg = 0;   // Is this instruction a kind of insert subreg?
                             // If so, make sure to override
                             // TargetInstrInfo::getInsertSubregLikeInputs.
+  bit variadicOpsAreDefs = 0; // Are variadic operands definitions?
 
   // Does the instruction have side effects that are not captured by any
   // operands of the instruction or other flags?

@@ -21,9 +21,18 @@
 // PrimaryAllocator is used via a local AllocatorCache.
 // SecondaryAllocator can allocate anything, but is not efficient.
 template <class PrimaryAllocator, class AllocatorCache,
-          class SecondaryAllocator>  // NOLINT
+          class SecondaryAllocator,
+          typename AddressSpaceViewTy = LocalAddressSpaceView>  // NOLINT
 class CombinedAllocator {
  public:
+  using AddressSpaceView = AddressSpaceViewTy;
+  static_assert(is_same<AddressSpaceView,
+                        typename PrimaryAllocator::AddressSpaceView>::value,
+                "PrimaryAllocator is using wrong AddressSpaceView");
+  static_assert(is_same<AddressSpaceView,
+                        typename SecondaryAllocator::AddressSpaceView>::value,
+                "SecondaryAllocator is using wrong AddressSpaceView");
+
   void InitLinkerInitialized(s32 release_to_os_interval_ms) {
     primary_.Init(release_to_os_interval_ms);
     secondary_.InitLinkerInitialized();
@@ -194,4 +203,3 @@ class CombinedAllocator {
   SecondaryAllocator secondary_;
   AllocatorGlobalStats stats_;
 };
-

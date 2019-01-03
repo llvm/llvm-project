@@ -222,9 +222,11 @@ EXTERN int omp_get_ancestor_thread_num(int level) {
                 " chunk %" PRIu64 "; tid %d, tnum %d, nthreads %d\n",
                 "ancestor", steps,
                 (currTaskDescr->IsParallelConstruct() ? "par" : "task"),
-                currTaskDescr->InParallelRegion(), sched,
-                currTaskDescr->RuntimeChunkSize(), currTaskDescr->ThreadId(),
-                currTaskDescr->ThreadsInTeam(), currTaskDescr->NThreads());
+                (int)currTaskDescr->InParallelRegion(), (int)sched,
+                currTaskDescr->RuntimeChunkSize(),
+                (int)currTaskDescr->ThreadId(),
+                (int)currTaskDescr->ThreadsInTeam(),
+                (int)currTaskDescr->NThreads());
         }
 
         if (currTaskDescr->IsParallelConstruct()) {

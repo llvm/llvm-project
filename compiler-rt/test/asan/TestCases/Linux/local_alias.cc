@@ -4,14 +4,11 @@
 // false positive global-buffer-overflow due to sanitized library poisons
 // globals from non-sanitized one.
 //
-// FIXME: https://github.com/google/sanitizers/issues/316
-// XFAIL: android
-//
-// RUN: %clangxx_asan -DBUILD_INSTRUMENTED_DSO=1 -fPIC -shared -mllvm -asan-use-private-alias %s -o %t-INSTRUMENTED-SO.so
-// RUN: %clangxx -DBUILD_UNINSTRUMENTED_DSO=1 -fPIC -shared %s -o %t-UNINSTRUMENTED-SO.so
+// RUN: %clangxx_asan -DBUILD_INSTRUMENTED_DSO=1 -fPIC -shared -mllvm -asan-use-private-alias %s -o %dynamiclib1
+// RUN: %clangxx -DBUILD_UNINSTRUMENTED_DSO=1 -fPIC -shared %s -o %dynamiclib2
 // RUN: %clangxx %s -c -mllvm -asan-use-private-alias -o %t.o
-// RUN: %clangxx_asan %t.o %t-UNINSTRUMENTED-SO.so %t-INSTRUMENTED-SO.so -o %t-EXE
-// RUN: %env_asan_opts=use_odr_indicator=true %run %t-EXE
+// RUN: %clangxx_asan %t.o %ld_flags_rpath_exe2 %ld_flags_rpath_exe1 -o %t-EXE
+// RUN: %run %t-EXE
 
 #if defined (BUILD_INSTRUMENTED_DSO)
 long h = 15;

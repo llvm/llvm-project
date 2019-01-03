@@ -258,6 +258,24 @@ char * Test20(char *p, const char *in, unsigned n)
     return buf;
 }
 
+typedef void (fn_t)(int);
+
+void test_builtin_launder(char *p, void *vp, const void *cvp,
+                          const volatile int *ip, float *restrict fp,
+                          fn_t *fn) {
+  __builtin_launder(); // expected-error {{too few arguments to function call, expected 1, have 0}}
+  __builtin_launder(p, p); // expected-error {{too many arguments to function call, expected 1, have 2}}
+  int x;
+  __builtin_launder(x); // expected-error {{non-pointer argument to '__builtin_launder' is not allowed}}
+  char *d = __builtin_launder(p);
+  __builtin_launder(vp);  // expected-error {{void pointer argument to '__builtin_launder' is not allowed}}
+  __builtin_launder(cvp); // expected-error {{void pointer argument to '__builtin_launder' is not allowed}}
+  const volatile int *id = __builtin_launder(ip);
+  int *id2 = __builtin_launder(ip); // expected-warning {{discards qualifiers}}
+  float *fd = __builtin_launder(fp);
+  __builtin_launder(fn); // expected-error {{function pointer argument to '__builtin_launder' is not allowed}}
+}
+
 void test21(const int *ptr) {
   __sync_fetch_and_add(ptr, 1); // expected-error{{address argument to atomic builtin cannot be const-qualified ('const int *' invalid)}}
   __atomic_fetch_add(ptr, 1, 0);  // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const int *' invalid)}}

@@ -319,7 +319,7 @@ static bool IsNOLINTFound(StringRef NolintDirectiveText, StringRef Line,
   return true;
 }
 
-static bool LineIsMarkedWithNOLINT(SourceManager &SM, SourceLocation Loc,
+static bool LineIsMarkedWithNOLINT(const SourceManager &SM, SourceLocation Loc,
                                    unsigned DiagID,
                                    const ClangTidyContext &Context) {
   bool Invalid;
@@ -365,8 +365,8 @@ static bool LineIsMarkedWithNOLINT(SourceManager &SM, SourceLocation Loc,
   return false;
 }
 
-static bool LineIsMarkedWithNOLINTinMacro(SourceManager &SM, SourceLocation Loc,
-                                          unsigned DiagID,
+static bool LineIsMarkedWithNOLINTinMacro(const SourceManager &SM,
+                                          SourceLocation Loc, unsigned DiagID,
                                           const ClangTidyContext &Context) {
   while (true) {
     if (LineIsMarkedWithNOLINT(SM, Loc, DiagID, Context))

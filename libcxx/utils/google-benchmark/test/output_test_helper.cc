@@ -4,6 +4,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <random>
 #include <sstream>
 #include <streambuf>
 
@@ -38,17 +39,18 @@ SubMap& GetSubstitutions() {
   // Don't use 'dec_re' from header because it may not yet be initialized.
   // clang-format off
   static std::string safe_dec_re = "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?";
+  static std::string time_re = "([0-9]+[.])?[0-9]+";
   static SubMap map = {
       {"%float", "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?"},
       // human-readable float
       {"%hrfloat", "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?[kMGTPEZYmunpfazy]?"},
       {"%int", "[ ]*[0-9]+"},
       {" %s ", "[ ]+"},
-      {"%time", "[ ]*[0-9]+ ns"},
-      {"%console_report", "[ ]*[0-9]+ ns [ ]*[0-9]+ ns [ ]*[0-9]+"},
-      {"%console_time_only_report", "[ ]*[0-9]+ ns [ ]*[0-9]+ ns"},
-      {"%console_us_report", "[ ]*[0-9]+ us [ ]*[0-9]+ us [ ]*[0-9]+"},
-      {"%console_us_time_only_report", "[ ]*[0-9]+ us [ ]*[0-9]+ us"},
+      {"%time", "[ ]*" + time_re + "[ ]+ns"},
+      {"%console_report", "[ ]*" + time_re + "[ ]+ns [ ]*" + time_re + "[ ]+ns [ ]*[0-9]+"},
+      {"%console_time_only_report", "[ ]*" + time_re + "[ ]+ns [ ]*" + time_re + "[ ]+ns"},
+      {"%console_us_report", "[ ]*" + time_re + "[ ]+us [ ]*" + time_re + "[ ]+us [ ]*[0-9]+"},
+      {"%console_us_time_only_report", "[ ]*" + time_re + "[ ]+us [ ]*" + time_re + "[ ]+us"},
       {"%csv_header",
        "name,iterations,real_time,cpu_time,time_unit,bytes_per_second,"
        "items_per_second,label,error_occurred,error_message"},
@@ -207,7 +209,7 @@ void ResultsChecker::Add(const std::string& entry_pattern, ResultsCheckFn fn) {
 void ResultsChecker::CheckResults(std::stringstream& output) {
   // first reset the stream to the start
   {
-    auto start = std::ios::streampos(0);
+    auto start = std::stringstream::pos_type(0);
     // clear before calling tellg()
     output.clear();
     // seek to zero only when needed
@@ -438,11 +440,50 @@ int SubstrCnt(const std::string& haystack, const std::string& pat) {
   return count;
 }
 
+static char ToHex(int ch) {
+  return ch < 10 ? static_cast<char>('0' + ch)
+                 : static_cast<char>('a' + (ch - 10));
+}
+
+static char RandomHexChar() {
+  static std::mt19937 rd{std::random_device{}()};
+  static std::uniform_int_distribution<int> mrand{0, 15};
+  return ToHex(mrand(rd));
+}
+
+static std::string GetRandomFileName() {
+  std::string model = "test.%%%%%%";
+  for (auto & ch :  model) {
+    if (ch == '%')
+      ch = RandomHexChar();
+  }
+  return model;
+}
+
+static bool FileExists(std::string const& name) {
+  std::ifstream in(name.c_str());
+  return in.good();
+}
+
+static std::string GetTempFileName() {
+  // This function attempts to avoid race conditions where two tests
+  // create the same file at the same time. However, it still introduces races
+  // similar to tmpnam.
+  int retries = 3;
+  while (--retries) {
+    std::string name = GetRandomFileName();
+    if (!FileExists(name))
+      return name;
+  }
+  std::cerr << "Failed to create unique temporary file name" << std::endl;
+  std::abort();
+}
+
 std::string GetFileReporterOutput(int argc, char* argv[]) {
   std::vector<char*> new_argv(argv, argv + argc);
   assert(static_cast<decltype(new_argv)::size_type>(argc) == new_argv.size());
 
-  std::string tmp_file_name = std::tmpnam(nullptr);
+  std::string tmp_file_name = GetTempFileName();
   std::cout << "Will be using this as the tmp file: " << tmp_file_name << '\n';
 
   std::string tmp = "--benchmark_out=";

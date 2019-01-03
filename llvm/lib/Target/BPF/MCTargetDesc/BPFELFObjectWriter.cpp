@@ -12,6 +12,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 
@@ -50,6 +51,15 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   case FK_Data_8:
     return ELF::R_BPF_64_64;
   case FK_Data_4:
+    // .BTF.ext generates FK_Data_4 relocations for
+    // insn offset by creating temporary labels.
+    // The insn offset is within the code section and
+    // already been fulfilled by applyFixup(). No
+    // further relocation is needed.
+    if (const MCSymbolRefExpr *A = Target.getSymA()) {
+      if (A->getSymbol().isTemporary())
+        return ELF::R_BPF_NONE;
+    }
     return ELF::R_BPF_64_32;
   }
 }

@@ -25,12 +25,12 @@ int main(int argc, char **argv) {
   OOB();
 }
 
-// YES: Previosly allocated frames
+// YES: Previously allocated frames
 // YES: OOB
 // YES: FUNC
 // YES: FUNC0
 
-// NO: Previosly allocated frames
+// NO: Previously allocated frames
 // NO: OOB
 // NO: FUNC
 // NO-NOT: FUNC0

@@ -127,9 +127,29 @@
 
 #if OMPTARGET_NVPTX_DEBUG || OMPTARGET_NVPTX_TEST || OMPTARGET_NVPTX_WARNING
 #include <stdio.h>
+#include "option.h"
+
+template <typename... Arguments>
+static NOINLINE void log(const char *fmt, Arguments... parameters) {
+  printf(fmt, (int)blockIdx.x, (int)threadIdx.x, (int)(threadIdx.x / WARPSIZE),
+         (int)(threadIdx.x & 0x1F), parameters...);
+}
+
 #endif
 #if OMPTARGET_NVPTX_TEST
 #include <assert.h>
+
+template <typename... Arguments>
+NOINLINE static void check(bool cond, const char *fmt,
+                           Arguments... parameters) {
+  if (!cond)
+    printf(fmt, (int)blockIdx.x, (int)threadIdx.x,
+           (int)(threadIdx.x / WARPSIZE), (int)(threadIdx.x & 0x1F),
+           parameters...);
+  assert(cond);
+}
+
+NOINLINE static void check(bool cond) { assert(cond); }
 #endif
 
 // set flags that are tested (inclusion properties)
@@ -164,16 +184,14 @@
 #define PRINT0(_flag, _str)                                                    \
   {                                                                            \
     if (omptarget_device_environment.debug_level && DON(_flag)) {              \
-      printf("<b %2d, t %4d, w %2d, l %2d>: " _str, blockIdx.x, threadIdx.x,   \
-             threadIdx.x / WARPSIZE, threadIdx.x & 0x1F);                      \
+      log("<b %2d, t %4d, w %2d, l %2d>: " _str);                              \
     }                                                                          \
   }
 
 #define PRINT(_flag, _str, _args...)                                           \
   {                                                                            \
     if (omptarget_device_environment.debug_level && DON(_flag)) {              \
-      printf("<b %2d, t %4d, w %2d, l %2d>: " _str, blockIdx.x, threadIdx.x,   \
-             threadIdx.x / WARPSIZE, threadIdx.x & 0x1F, _args);               \
+      log("<b %2d, t %4d, w %2d, l %2d>: " _str, _args);                       \
     }                                                                          \
   }
 #else
@@ -201,13 +219,13 @@
 #define ASSERT0(_flag, _cond, _str)                                            \
   {                                                                            \
     if (TON(_flag)) {                                                          \
-      assert(_cond);                                                           \
+      check(_cond);                                                            \
     }                                                                          \
   }
 #define ASSERT(_flag, _cond, _str, _args...)                                   \
   {                                                                            \
     if (TON(_flag)) {                                                          \
-      assert(_cond);                                                           \
+      check(_cond);                                                            \
     }                                                                          \
   }
 
@@ -216,18 +234,15 @@
 #define TON(_flag) ((OMPTARGET_NVPTX_TEST) & (_flag))
 #define ASSERT0(_flag, _cond, _str)                                            \
   {                                                                            \
-    if (TON(_flag) && !(_cond)) {                                              \
-      printf("<b %3d, t %4d, w %2d, l %2d> ASSERT: " _str "\n", blockIdx.x,    \
-             threadIdx.x, threadIdx.x / WARPSIZE, threadIdx.x & 0x1F);         \
-      assert(_cond);                                                           \
+    if (TON(_flag)) {                                                          \
+      check((_cond), "<b %3d, t %4d, w %2d, l %2d> ASSERT: " _str "\n");       \
     }                                                                          \
   }
 #define ASSERT(_flag, _cond, _str, _args...)                                   \
   {                                                                            \
-    if (TON(_flag) && !(_cond)) {                                              \
-      printf("<b %3d, t %4d, w %2d, l %d2> ASSERT: " _str "\n", blockIdx.x,    \
-             threadIdx.x, threadIdx.x / WARPSIZE, threadIdx.x & 0x1F, _args);  \
-      assert(_cond);                                                           \
+    if (TON(_flag)) {                                                          \
+      check((_cond), "<b %3d, t %4d, w %2d, l %d2> ASSERT: " _str "\n",        \
+            _args);                                                            \
     }                                                                          \
   }
 
@@ -253,15 +268,13 @@
 #define WARNING0(_flag, _str)                                                  \
   {                                                                            \
     if (WON(_flag)) {                                                          \
-      printf("<b %2d, t %4d, w %2d, l %2d> WARNING: " _str, blockIdx.x,        \
-             threadIdx.x, threadIdx.x / WARPSIZE, threadIdx.x & 0x1F);         \
+      log("<b %2d, t %4d, w %2d, l %2d> WARNING: " _str);                      \
     }                                                                          \
   }
 #define WARNING(_flag, _str, _args...)                                         \
   {                                                                            \
     if (WON(_flag)) {                                                          \
-      printf("<b %2d, t %4d, w %2d, l %2d> WARNING: " _str, blockIdx.x,        \
-             threadIdx.x, threadIdx.x / WARPSIZE, threadIdx.x & 0x1F, _args);  \
+      log("<b %2d, t %4d, w %2d, l %2d> WARNING: " _str, _args);               \
     }                                                                          \
   }
 

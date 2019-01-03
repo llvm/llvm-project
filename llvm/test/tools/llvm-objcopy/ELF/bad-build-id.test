@@ -1,0 +1,21 @@
+# RUN: yaml2obj %s > %t
+# RUN: not llvm-objcopy --build-id-link-dir=%t-dir --build-id-link-input=.debug %t 2>&1 >/dev/null | FileCheck %s
+
+# CHECK: build ID in file {{.*}} is smaller than two bytes.
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .note.gnu.build-id
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Content:         040000000100000003000000474E55004F000000
+ProgramHeaders:
+  - Type: PT_NOTE
+    Flags: [ PF_R ]
+    Sections:
+      - Section: .note.gnu.build-id

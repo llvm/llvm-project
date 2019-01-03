@@ -98,10 +98,7 @@ public:
       // they depend on.  So I have no good way to make that check without
       // tracking that in all the ValueObject subclasses.
       TargetSP target_sp = m_valobj_sp->GetTargetSP();
-      if (target_sp && target_sp->IsValid())
-        return true;
-      else
-        return false;
+      return target_sp && target_sp->IsValid();
     }
   }
 

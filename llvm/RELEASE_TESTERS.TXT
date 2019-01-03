@@ -13,8 +13,8 @@ O: Ubuntu
 
 N: Sylvestre Ledru
 E: sylvestre@debian.org
-T: x86
-O: Debian
+T: All supported archs Debian/Ubuntu
+O: Debian/Ubuntu packages
 
 N: Nikola Smiljanic
 E: popizdeh@gmail.com

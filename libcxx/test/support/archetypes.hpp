@@ -225,7 +225,6 @@ namespace ExplicitTypes {
 #include "archetypes.ipp"
 }
 
-
 //============================================================================//
 //
 namespace NonConstexprTypes {
@@ -242,11 +241,17 @@ namespace NonLiteralTypes {
 }
 
 //============================================================================//
+// Non-throwing implicit test types
+namespace NonThrowingTypes {
+#define DEFINE_NOEXCEPT noexcept
+#include "archetypes.ipp"
+}
+
+//============================================================================//
 // Non-Trivially Copyable Implicit Test Types
 namespace NonTrivialTypes {
 #define DEFINE_CTOR {}
 #define DEFINE_ASSIGN { return *this; }
-#define DEFINE_DEFAULT_CTOR = default
 #include "archetypes.ipp"
 }
 

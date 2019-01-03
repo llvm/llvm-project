@@ -395,7 +395,7 @@ Status ProcessWindows::DoResume() {
       SetPrivateState(eStateRunning);
     }
   } else {
-    LLDB_LOG(log, "error: process %I64u is in state %u.  Returning...",
+    LLDB_LOG(log, "error: process {0} is in state {1}.  Returning...",
              m_session_data->m_debugger->GetProcess().GetProcessId(),
              GetPrivateState());
   }
@@ -722,7 +722,7 @@ lldb::addr_t ProcessWindows::DoAllocateMemory(size_t size, uint32_t permissions,
     LLDB_LOG(log, "cannot allocate, there is no active debugger connection.");
     error.SetErrorString(
         "cannot allocate, there is no active debugger connection");
-    return 0;
+    return LLDB_INVALID_ADDRESS;
   }
 
   HostProcess process = m_session_data->m_debugger->GetProcess();
@@ -732,7 +732,7 @@ lldb::addr_t ProcessWindows::DoAllocateMemory(size_t size, uint32_t permissions,
   if (!result) {
     error.SetError(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "allocating failed with error: {0}", error);
-    return 0;
+    return LLDB_INVALID_ADDRESS;
   }
 
   return reinterpret_cast<addr_t>(result);
@@ -884,7 +884,7 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   // If the process exits before any initial stop then notify the debugger 
   // of the error otherwise WaitForDebuggerConnection() will be blocked.
   // An example of this issue is when a process fails to load a dependent DLL. 
-  if (!m_session_data->m_initial_stop_received) {
+  if (m_session_data && !m_session_data->m_initial_stop_received) {
     Status error(exit_code, eErrorTypeWin32);
     OnDebuggerError(error, 0);
   }
@@ -957,8 +957,9 @@ ProcessWindows::OnDebugException(bool first_chance,
   }
 
   if (!first_chance) {
-    // Any second chance exception is an application crash by definition.
-    SetPrivateState(eStateCrashed);
+    // Not any second chance exception is an application crash by definition.
+    // It may be an expression evaluation crash.
+    SetPrivateState(eStateStopped);
   }
 
   ExceptionResult result = ExceptionResult::SendToApplication;

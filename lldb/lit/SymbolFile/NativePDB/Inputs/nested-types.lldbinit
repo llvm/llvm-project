@@ -8,5 +8,6 @@ target variable -T GlobalE
 target variable -T GlobalF
 target variable -T GlobalG
 target variable -T GlobalH
+target variable -T GlobalEnum
 
 target modules dump ast

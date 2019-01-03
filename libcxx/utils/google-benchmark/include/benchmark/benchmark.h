@@ -1293,6 +1293,15 @@ struct CPUInfo {
   BENCHMARK_DISALLOW_COPY_AND_ASSIGN(CPUInfo);
 };
 
+//Adding Struct for System Information
+struct SystemInfo {
+  std::string name;
+  static const SystemInfo& Get();
+ private:
+  SystemInfo();
+  BENCHMARK_DISALLOW_COPY_AND_ASSIGN(SystemInfo);
+};
+
 // Interface for custom benchmark result printers.
 // By default, benchmark reports are printed to stdout. However an application
 // can control the destination of the reports by calling
@@ -1302,6 +1311,7 @@ class BenchmarkReporter {
  public:
   struct Context {
     CPUInfo const& cpu_info;
+    SystemInfo const& sys_info;
     // The number of chars in the longest benchmark name.
     size_t name_field_width;
     static const char* executable_name;

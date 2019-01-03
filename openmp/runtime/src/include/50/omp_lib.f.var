@@ -375,6 +375,27 @@
             integer (kind=omp_allocator_kind) omp_get_default_allocator
           end function omp_get_default_allocator
 
+          subroutine omp_set_affinity_format(format)
+            character (len=*) format
+          end subroutine omp_set_affinity_format
+
+          function omp_get_affinity_format(buffer)
+            use omp_lib_kinds
+            character (len=*) buffer
+            integer (kind=kmp_size_t_kind) omp_get_affinity_format
+          end function omp_get_affinity_format
+
+          subroutine omp_display_affinity(format)
+            character (len=*) format
+          end subroutine omp_display_affinity
+
+          function omp_capture_affinity(buffer, format)
+            use omp_lib_kinds
+            character (len=*) format
+            character (len=*) buffer
+            integer (kind=kmp_size_t_kind) omp_capture_affinity
+          end function omp_capture_affinity
+
 !         ***
 !         *** kmp_* entry points
 !         ***
@@ -594,6 +615,10 @@
 !dec$ attributes alias:'OMP_IS_INITIAL_DEVICE' :: omp_is_initial_device
 !dec$ attributes alias:'OMP_GET_MAX_TASK_PRIORITY' :: omp_get_max_task_priority
 !dec$ attributes alias:'OMP_CONTROL_TOOL' :: omp_control_tool
+!dec$ attributes alias:'OMP_SET_AFFINITY_FORMAT' :: omp_set_affinity_format
+!dec$ attributes alias:'OMP_GET_AFFINITY_FORMAT' :: omp_get_affinity_format
+!dec$ attributes alias:'OMP_DISPLAY_AFFINITY' :: omp_display_affinity
+!dec$ attributes alias:'OMP_CAPTURE_AFFINITY' :: omp_capture_affinity
 
 !dec$ attributes alias:'omp_init_lock' :: omp_init_lock
 !dec$ attributes alias:'omp_init_lock_with_hint' :: omp_init_lock_with_hint
@@ -675,6 +700,10 @@
 !dec$ attributes alias:'_OMP_IS_INITIAL_DEVICE' :: omp_is_initial_device
 !dec$ attributes alias:'_OMP_GET_MAX_TASK_PRIORTY' :: omp_get_max_task_priority
 !dec$ attributes alias:'_OMP_CONTROL_TOOL' :: omp_control_tool
+!dec$ attributes alias:'_OMP_SET_AFFINITY_FORMAT' :: omp_set_affinity_format
+!dec$ attributes alias:'_OMP_GET_AFFINITY_FORMAT' :: omp_get_affinity_format
+!dec$ attributes alias:'_OMP_DISPLAY_AFFINITY' :: omp_display_affinity
+!dec$ attributes alias:'_OMP_CAPTURE_AFFINITY' :: omp_capture_affinity
 
 !dec$ attributes alias:'_omp_init_lock' :: omp_init_lock
 !dec$ attributes alias:'_omp_init_lock_with_hint' :: omp_init_lock_with_hint
@@ -758,6 +787,10 @@
 !dec$ attributes alias:'omp_get_cancellation_'::omp_get_cancellation
 !dec$ attributes alias:'omp_is_initial_device_'::omp_is_initial_device
 !dec$ attributes alias:'omp_get_max_task_priority_'::omp_get_max_task_priority
+!dec$ attributes alias:'omp_set_affinity_format_' :: omp_set_affinity_format
+!dec$ attributes alias:'omp_get_affinity_format_' :: omp_get_affinity_format
+!dec$ attributes alias:'omp_display_affinity_' :: omp_display_affinity
+!dec$ attributes alias:'omp_capture_affinity_' :: omp_capture_affinity
 
 !dec$ attributes alias:'omp_init_lock_'::omp_init_lock
 !dec$ attributes alias:'omp_init_lock_with_hint_'::omp_init_lock_with_hint
@@ -852,6 +885,10 @@
 !dec$ attributes alias:'_omp_unset_nest_lock_'::omp_unset_nest_lock
 !dec$ attributes alias:'_omp_test_nest_lock_'::omp_test_nest_lock
 !dec$ attributes alias:'_omp_control_tool_'::omp_control_tool
+!dec$ attributes alias:'_omp_set_affinity_format_' :: omp_set_affinity_format
+!dec$ attributes alias:'_omp_get_affinity_format_' :: omp_get_affinity_format
+!dec$ attributes alias:'_omp_display_affinity_' :: omp_display_affinity
+!dec$ attributes alias:'_omp_capture_affinity_' :: omp_capture_affinity
 
 !dec$ attributes alias:'_kmp_set_stacksize_'::kmp_set_stacksize
 !dec$ attributes alias:'_kmp_set_stacksize_s_'::kmp_set_stacksize_s

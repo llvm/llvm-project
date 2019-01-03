@@ -1,32 +1,6 @@
-// RUN: %check_clang_tidy %s abseil-duration-factory-float %t
+// RUN: %check_clang_tidy %s abseil-duration-factory-float %t -- -- -I%S/Inputs
 
-// Mimic the implementation of absl::Duration
-namespace absl {
-
-class Duration {};
-
-Duration Nanoseconds(long long);
-Duration Microseconds(long long);
-Duration Milliseconds(long long);
-Duration Seconds(long long);
-Duration Minutes(long long);
-Duration Hours(long long);
-
-#define GENERATE_DURATION_FACTORY_OVERLOADS(NAME) \
-  Duration NAME(float n);                         \
-  Duration NAME(double n);                        \
-  template <typename T>                           \
-  Duration NAME(T n);
-
-GENERATE_DURATION_FACTORY_OVERLOADS(Nanoseconds);
-GENERATE_DURATION_FACTORY_OVERLOADS(Microseconds);
-GENERATE_DURATION_FACTORY_OVERLOADS(Milliseconds);
-GENERATE_DURATION_FACTORY_OVERLOADS(Seconds);
-GENERATE_DURATION_FACTORY_OVERLOADS(Minutes);
-GENERATE_DURATION_FACTORY_OVERLOADS(Hours);
-#undef GENERATE_DURATION_FACTORY_OVERLOADS
-
-}  // namespace absl
+#include "absl/time/time.h"
 
 void ConvertFloatTest() {
   absl::Duration d;

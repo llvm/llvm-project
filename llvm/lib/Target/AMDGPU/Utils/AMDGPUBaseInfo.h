@@ -221,6 +221,24 @@ LLVM_READONLY
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels);
 
 LLVM_READONLY
+int getMUBUFBaseOpcode(unsigned Opc);
+
+LLVM_READONLY
+int getMUBUFOpcode(unsigned BaseOpc, unsigned Dwords);
+
+LLVM_READONLY
+int getMUBUFDwords(unsigned Opc);
+
+LLVM_READONLY
+bool getMUBUFHasVAddr(unsigned Opc);
+
+LLVM_READONLY
+bool getMUBUFHasSrsrc(unsigned Opc);
+
+LLVM_READONLY
+bool getMUBUFHasSoffset(unsigned Opc);
+
+LLVM_READONLY
 int getMCOpcode(uint16_t Opcode, unsigned Gen);
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
@@ -258,6 +276,32 @@ std::pair<int, int> getIntegerPairAttribute(const Function &F,
                                             std::pair<int, int> Default,
                                             bool OnlyFirstRequired = false);
 
+/// Represents the counter values to wait for in an s_waitcnt instruction.
+///
+/// Large values (including the maximum possible integer) can be used to
+/// represent "don't care" waits.
+struct Waitcnt {
+  unsigned VmCnt = ~0u;
+  unsigned ExpCnt = ~0u;
+  unsigned LgkmCnt = ~0u;
+
+  Waitcnt() {}
+  Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt)
+      : VmCnt(VmCnt), ExpCnt(ExpCnt), LgkmCnt(LgkmCnt) {}
+
+  static Waitcnt allZero() { return Waitcnt(0, 0, 0); }
+
+  bool dominates(const Waitcnt &Other) const {
+    return VmCnt <= Other.VmCnt && ExpCnt <= Other.ExpCnt &&
+           LgkmCnt <= Other.LgkmCnt;
+  }
+
+  Waitcnt combined(const Waitcnt &Other) const {
+    return Waitcnt(std::min(VmCnt, Other.VmCnt), std::min(ExpCnt, Other.ExpCnt),
+                   std::min(LgkmCnt, Other.LgkmCnt));
+  }
+};
+
 /// \returns Vmcnt bit mask for given isa \p Version.
 unsigned getVmcntBitMask(const IsaVersion &Version);
 
@@ -291,6 +335,8 @@ unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt);
 void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt,
                    unsigned &Vmcnt, unsigned &Expcnt, unsigned &Lgkmcnt);
 
+Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded);
+
 /// \returns \p Waitcnt with encoded \p Vmcnt for given isa \p Version.
 unsigned encodeVmcnt(const IsaVersion &Version, unsigned Waitcnt,
                      unsigned Vmcnt);
@@ -317,6 +363,8 @@ unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
 /// isa \p Version.
 unsigned encodeWaitcnt(const IsaVersion &Version,
                        unsigned Vmcnt, unsigned Expcnt, unsigned Lgkmcnt);
+
+unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded);
 
 unsigned getInitialPSInputAddr(const Function &F);
 
@@ -441,11 +489,8 @@ int64_t getSMRDEncodedOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 /// not the encoded offset.
 bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
 
-// Given Imm, split it into the values to put into the SOffset and ImmOffset
-// fields in an MUBUF instruction. Return false if it is not possible (due to a
-// hardware bug needing a workaround).
 bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
-                      const GCNSubtarget *Subtarget);
+                      const GCNSubtarget *Subtarget, uint32_t Align = 4);
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);

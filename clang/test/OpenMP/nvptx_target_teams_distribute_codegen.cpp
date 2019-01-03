@@ -8,7 +8,7 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK: [[MEM_TY:%.+]] = type { [4 x i8] }
+// CHECK: [[MEM_TY:%.+]] = type { [128 x i8] }
 // CHECK-DAG: {{@__omp_offloading_.+}}_l19_exec_mode = weak constant i8 1
 // CHECK-DAG: internal unnamed_addr constant i{{64|32}} 4
 

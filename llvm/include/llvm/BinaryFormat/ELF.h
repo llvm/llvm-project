@@ -582,6 +582,7 @@ enum {
   EF_HEXAGON_MACH_V60 = 0x00000060, // Hexagon V60
   EF_HEXAGON_MACH_V62 = 0x00000062, // Hexagon V62
   EF_HEXAGON_MACH_V65 = 0x00000065, // Hexagon V65
+  EF_HEXAGON_MACH_V66 = 0x00000066, // Hexagon V66
 
   // Highest ISA version flags
   EF_HEXAGON_ISA_MACH = 0x00000000, // Same as specified in bits[11:0]
@@ -594,6 +595,7 @@ enum {
   EF_HEXAGON_ISA_V60 = 0x00000060,  // Hexagon V60 ISA
   EF_HEXAGON_ISA_V62 = 0x00000062,  // Hexagon V62 ISA
   EF_HEXAGON_ISA_V65 = 0x00000065,  // Hexagon V65 ISA
+  EF_HEXAGON_ISA_V66 = 0x00000066,  // Hexagon V66 ISA
 };
 
 // Hexagon-specific section indexes for common small data
@@ -1359,12 +1361,18 @@ enum {
   GNU_PROPERTY_X86_FEATURE_1_SHSTK = 1 << 1
 };
 
-// AMDGPU specific notes.
+// AMD specific notes. (Code Object V2)
 enum {
   // Note types with values between 0 and 9 (inclusive) are reserved.
   NT_AMD_AMDGPU_HSA_METADATA = 10,
   NT_AMD_AMDGPU_ISA = 11,
   NT_AMD_AMDGPU_PAL_METADATA = 12
+};
+
+// AMDGPU specific notes. (Code Object V3)
+enum {
+  // Note types with values between 0 and 31 (inclusive) are reserved.
+  NT_AMDGPU_METADATA = 32
 };
 
 enum {
@@ -1376,6 +1384,8 @@ enum {
   GNU_ABI_TAG_SYLLABLE = 5,
   GNU_ABI_TAG_NACL = 6,
 };
+
+constexpr const char *ELF_NOTE_GNU = "GNU";
 
 // Android packed relocation group flags.
 enum {

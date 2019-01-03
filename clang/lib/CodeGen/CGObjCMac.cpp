@@ -23,9 +23,9 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
@@ -6838,9 +6838,8 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocol(
     return Entry;
 
   // Use the protocol definition, if there is one.
-  assert(PD->hasDefinition() &&
-         "emitting protocol metadata without definition");
-  PD = PD->getDefinition();
+  if (const ObjCProtocolDecl *Def = PD->getDefinition())
+    PD = Def;
 
   auto methodLists = ProtocolMethodLists::get(PD);
 
@@ -7206,7 +7205,12 @@ CGObjCNonFragileABIMac::GetClassGlobal(StringRef Name,
   }
 
   assert(GV->getLinkage() == L);
-  return GV;
+
+  if (IsForDefinition ||
+      GV->getValueType() == ObjCTypes.ClassnfABITy)
+    return GV;
+
+  return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.ClassnfABIPtrTy);
 }
 
 llvm::Value *

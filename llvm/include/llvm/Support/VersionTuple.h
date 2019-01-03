@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_VERSIONTUPLE_H
 #define LLVM_SUPPORT_VERSIONTUPLE_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
@@ -63,6 +64,9 @@ public:
   bool empty() const {
     return Major == 0 && Minor == 0 && Subminor == 0 && Build == 0;
   }
+
+  /// Whether this is a non-empty version tuple.
+  explicit operator bool () const { return !empty(); }
 
   /// Retrieve the major version number.
   unsigned getMajor() const { return Major; }
@@ -149,6 +153,33 @@ public:
 
 /// Print a version number.
 raw_ostream &operator<<(raw_ostream &Out, const VersionTuple &V);
+
+  // Provide DenseMapInfo for version tuples.
+  template<>
+  struct DenseMapInfo<VersionTuple> {
+    static inline VersionTuple getEmptyKey() {
+      return VersionTuple(0x7FFFFFFF);
+    }
+    static inline VersionTuple getTombstoneKey() {
+      return VersionTuple(0x7FFFFFFE);
+    }
+    static unsigned getHashValue(const VersionTuple &value) {
+      unsigned result = value.getMajor();
+      if (auto minor = value.getMinor())
+        result = combineHashValue(result, *minor);
+      if (auto subminor = value.getSubminor())
+        result = combineHashValue(result, *subminor);
+      if (auto build = value.getBuild())
+        result = combineHashValue(result, *build);
+
+      return result;
+    }
+
+    static bool isEqual(const VersionTuple &lhs,
+                        const VersionTuple &rhs) {
+      return lhs == rhs;
+    }
+  };
 
 } // end namespace llvm
 #endif // LLVM_SUPPORT_VERSIONTUPLE_H

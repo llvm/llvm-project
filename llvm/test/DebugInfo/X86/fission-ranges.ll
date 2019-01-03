@@ -8,8 +8,8 @@
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NEXT: DW_AT_stmt_list
-; CHECK-NEXT: DW_AT_GNU_dwo_name
 ; CHECK-NEXT: DW_AT_comp_dir
+; CHECK-NEXT: DW_AT_GNU_dwo_name
 ; CHECK-NEXT: DW_AT_GNU_dwo_id
 ; CHECK-NEXT: DW_AT_GNU_ranges_base
 ; CHECK-NEXT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]                   (0x00000000)

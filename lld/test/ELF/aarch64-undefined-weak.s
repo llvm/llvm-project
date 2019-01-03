@@ -40,7 +40,7 @@ _start:
 // CHECK-NEXT:    210008: {{.*}} b.eq    #4
 // CHECK-NEXT:    21000c: {{.*}} cbz     x1, #4
 // CHECK-NEXT:    210010: {{.*}} adr     x0, #0
-// CHECK-NEXT:    210014: {{.*}} adrp    x0, #-2162688
+// CHECK-NEXT:    210014: {{.*}} adrp    x0, #0
 // CHECK:         210018: {{.*}} .word   0x00000000
 // CHECK-NEXT:    21001c: {{.*}} .word   0x00000000
 // CHECK-NEXT:    210020: {{.*}} .word   0x00000000

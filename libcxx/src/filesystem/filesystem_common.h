@@ -67,24 +67,31 @@ static string format_string_imp(const char* msg, ...) {
   va_copy(args_cp, args);
   GuardVAList args_copy_guard(args_cp);
 
+  std::string result;
+
   array<char, 256> local_buff;
-  size_t size = local_buff.size();
-  auto ret = ::vsnprintf(local_buff.data(), size, msg, args_cp);
+  size_t size_with_null = local_buff.size();
+  auto ret = ::vsnprintf(local_buff.data(), size_with_null, msg, args_cp);
 
   args_copy_guard.clear();
 
   // handle empty expansion
   if (ret == 0)
-    return string{};
-  if (static_cast<size_t>(ret) < size)
-    return string(local_buff.data());
+    return result;
+  if (static_cast<size_t>(ret) < size_with_null) {
+    result.assign(local_buff.data(), static_cast<size_t>(ret));
+    return result;
+  }
 
-  // we did not provide a long enough buffer on our first attempt.
-  // add 1 to size to account for null-byte in size cast to prevent overflow
-  size = static_cast<size_t>(ret) + 1;
-  auto buff_ptr = unique_ptr<char[]>(new char[size]);
-  ret = ::vsnprintf(buff_ptr.get(), size, msg, args);
-  return string(buff_ptr.get());
+  // we did not provide a long enough buffer on our first attempt. The
+  // return value is the number of bytes (excluding the null byte) that are
+  // needed for formatting.
+  size_with_null = static_cast<size_t>(ret) + 1;
+  result.__resize_default_init(size_with_null - 1);
+  ret = ::vsnprintf(&result[0], size_with_null, msg, args);
+  _LIBCPP_ASSERT(static_cast<size_t>(ret) == (size_with_null - 1), "TODO");
+
+  return result;
 }
 
 const char* unwrap(string const& s) { return s.c_str(); }

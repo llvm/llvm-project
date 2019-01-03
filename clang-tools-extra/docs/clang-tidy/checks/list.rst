@@ -4,15 +4,18 @@ Clang-Tidy Checks
 =================
 
 .. toctree::
+   abseil-duration-comparison
    abseil-duration-division
    abseil-duration-factory-float
    abseil-duration-factory-scale
+   abseil-duration-subtraction
    abseil-faster-strsplit-delimiter
    abseil-no-internal-dependencies
    abseil-no-namespace
    abseil-redundant-strcat-calls
    abseil-string-find-startswith
    abseil-str-cat-append
+   abseil-upgrade-duration-conversions
    android-cloexec-accept
    android-cloexec-accept4
    android-cloexec-creat

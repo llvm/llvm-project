@@ -83,7 +83,7 @@ size_t StringList::GetMaxStringLength() const {
 const char *StringList::GetStringAtIndex(size_t idx) const {
   if (idx < m_strings.size())
     return m_strings[idx].c_str();
-  return NULL;
+  return nullptr;
 }
 
 void StringList::Join(const char *separator, Stream &strm) {

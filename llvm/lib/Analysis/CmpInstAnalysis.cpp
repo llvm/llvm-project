@@ -40,28 +40,28 @@ unsigned llvm::getICmpCode(const ICmpInst *ICI, bool InvertPred) {
   }
 }
 
-Value *llvm::getICmpValue(bool Sign, unsigned Code, Value *LHS, Value *RHS,
-                          CmpInst::Predicate &NewICmpPred) {
+Constant *llvm::getPredForICmpCode(unsigned Code, bool Sign, Type *OpTy,
+                                   CmpInst::Predicate &Pred) {
   switch (Code) {
     default: llvm_unreachable("Illegal ICmp code!");
     case 0: // False.
-      return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
-    case 1: NewICmpPred = Sign ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT; break;
-    case 2: NewICmpPred = ICmpInst::ICMP_EQ; break;
-    case 3: NewICmpPred = Sign ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE; break;
-    case 4: NewICmpPred = Sign ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT; break;
-    case 5: NewICmpPred = ICmpInst::ICMP_NE; break;
-    case 6: NewICmpPred = Sign ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE; break;
+      return ConstantInt::get(CmpInst::makeCmpResultType(OpTy), 0);
+    case 1: Pred = Sign ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT; break;
+    case 2: Pred = ICmpInst::ICMP_EQ; break;
+    case 3: Pred = Sign ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE; break;
+    case 4: Pred = Sign ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT; break;
+    case 5: Pred = ICmpInst::ICMP_NE; break;
+    case 6: Pred = Sign ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE; break;
     case 7: // True.
-      return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 1);
+      return ConstantInt::get(CmpInst::makeCmpResultType(OpTy), 1);
   }
   return nullptr;
 }
 
-bool llvm::PredicatesFoldable(ICmpInst::Predicate p1, ICmpInst::Predicate p2) {
-  return (CmpInst::isSigned(p1) == CmpInst::isSigned(p2)) ||
-         (CmpInst::isSigned(p1) && ICmpInst::isEquality(p2)) ||
-         (CmpInst::isSigned(p2) && ICmpInst::isEquality(p1));
+bool llvm::predicatesFoldable(ICmpInst::Predicate P1, ICmpInst::Predicate P2) {
+  return (CmpInst::isSigned(P1) == CmpInst::isSigned(P2)) ||
+         (CmpInst::isSigned(P1) && ICmpInst::isEquality(P2)) ||
+         (CmpInst::isSigned(P2) && ICmpInst::isEquality(P1));
 }
 
 bool llvm::decomposeBitTestICmp(Value *LHS, Value *RHS,

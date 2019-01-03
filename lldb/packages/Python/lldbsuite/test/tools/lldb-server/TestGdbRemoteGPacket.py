@@ -35,6 +35,7 @@ class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfOutOfTreeDebugserver
     @debugserver_test
+    @skipIfDarwinEmbedded
     def test_g_packet_debugserver(self):
         self.init_debugserver_test()
         self.run_test_g_packet()

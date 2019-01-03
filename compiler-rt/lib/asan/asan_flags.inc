@@ -152,8 +152,6 @@ ASAN_FLAG(const char *, suppressions, "", "Suppressions file name.")
 ASAN_FLAG(bool, halt_on_error, true,
           "Crash the program after printing the first error report "
           "(WARNING: USE AT YOUR OWN RISK!)")
-ASAN_FLAG(bool, use_odr_indicator, false,
-          "Use special ODR indicator symbol for ODR violation detection")
 ASAN_FLAG(bool, allocator_frees_and_returns_null_on_realloc_zero, true,
           "realloc(p, 0) is equivalent to free(p) by default (Same as the "
           "POSIX standard). If set to false, realloc(p, 0) will return a "

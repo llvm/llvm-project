@@ -1,5 +1,7 @@
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -load-store-vectorizer -mcpu haswell -S -o - %s | FileCheck --check-prefix=CHECK-HSW %s
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -load-store-vectorizer -mcpu knl -S -o - %s | FileCheck --check-prefix=CHECK-KNL %s
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -mcpu haswell -S -o - %s | FileCheck --check-prefix=CHECK-HSW %s
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -mcpu knl -S -o - %s | FileCheck --check-prefix=CHECK-KNL %s
 
 define <8 x double> @loadwidth_insert_extract(double* %ptr) {
     %a = bitcast double* %ptr to <2 x double> *

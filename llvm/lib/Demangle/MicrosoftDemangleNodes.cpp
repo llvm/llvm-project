@@ -15,6 +15,7 @@
 #include "llvm/Demangle/Compiler.h"
 #include "llvm/Demangle/Utility.h"
 #include <cctype>
+#include <string>
 
 using namespace llvm;
 using namespace ms_demangle;
@@ -111,6 +112,14 @@ static void outputCallingConvention(OutputStream &OS, CallingConv CC) {
   default:
     break;
   }
+}
+
+std::string Node::toString(OutputFlags Flags) const {
+  OutputStream OS;
+  initializeOutputStream(nullptr, nullptr, OS, 1024);
+  this->output(OS, Flags);
+  OS << '\0';
+  return {OS.getBuffer()};
 }
 
 void TypeNode::outputQuals(bool SpaceBefore, bool SpaceAfter) const {}
@@ -501,13 +510,15 @@ void PointerTypeNode::outputPost(OutputStream &OS, OutputFlags Flags) const {
 }
 
 void TagTypeNode::outputPre(OutputStream &OS, OutputFlags Flags) const {
-  switch (Tag) {
-    OUTPUT_ENUM_CLASS_VALUE(TagKind, Class, "class");
-    OUTPUT_ENUM_CLASS_VALUE(TagKind, Struct, "struct");
-    OUTPUT_ENUM_CLASS_VALUE(TagKind, Union, "union");
-    OUTPUT_ENUM_CLASS_VALUE(TagKind, Enum, "enum");
+  if (!(Flags & OF_NoTagSpecifier)) {
+    switch (Tag) {
+      OUTPUT_ENUM_CLASS_VALUE(TagKind, Class, "class");
+      OUTPUT_ENUM_CLASS_VALUE(TagKind, Struct, "struct");
+      OUTPUT_ENUM_CLASS_VALUE(TagKind, Union, "union");
+      OUTPUT_ENUM_CLASS_VALUE(TagKind, Enum, "enum");
+    }
+    OS << " ";
   }
-  OS << " ";
   QualifiedName->output(OS, Flags);
   outputQualifiers(OS, Quals, true, false);
 }

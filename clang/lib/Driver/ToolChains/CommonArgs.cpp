@@ -271,7 +271,7 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
 
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be:
-    return aarch64::getAArch64TargetCPU(Args, A);
+    return aarch64::getAArch64TargetCPU(Args, T, A);
 
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
@@ -603,19 +603,19 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   if (TC.getTriple().getOS() != llvm::Triple::RTEMS &&
       !TC.getTriple().isAndroid()) {
     CmdArgs.push_back("-lpthread");
-    if (TC.getTriple().getOS() != llvm::Triple::OpenBSD)
+    if (!TC.getTriple().isOSOpenBSD())
       CmdArgs.push_back("-lrt");
   }
   CmdArgs.push_back("-lm");
   // There's no libdl on all OSes.
-  if (TC.getTriple().getOS() != llvm::Triple::FreeBSD &&
-      TC.getTriple().getOS() != llvm::Triple::NetBSD &&
-      TC.getTriple().getOS() != llvm::Triple::OpenBSD &&
-      TC.getTriple().getOS() != llvm::Triple::RTEMS)
+  if (!TC.getTriple().isOSFreeBSD() &&
+      !TC.getTriple().isOSNetBSD() &&
+      !TC.getTriple().isOSOpenBSD() &&
+       TC.getTriple().getOS() != llvm::Triple::RTEMS)
     CmdArgs.push_back("-ldl");
   // Required for backtrace on some OSes
-  if (TC.getTriple().getOS() == llvm::Triple::NetBSD ||
-      TC.getTriple().getOS() == llvm::Triple::FreeBSD)
+  if (TC.getTriple().isOSFreeBSD() ||
+      TC.getTriple().isOSNetBSD())
     CmdArgs.push_back("-lexecinfo");
 }
 
@@ -790,13 +790,13 @@ bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args, ArgStringLis
 void tools::linkXRayRuntimeDeps(const ToolChain &TC, ArgStringList &CmdArgs) {
   CmdArgs.push_back("--no-as-needed");
   CmdArgs.push_back("-lpthread");
-  if (TC.getTriple().getOS() != llvm::Triple::OpenBSD)
+  if (!TC.getTriple().isOSOpenBSD())
     CmdArgs.push_back("-lrt");
   CmdArgs.push_back("-lm");
 
-  if (TC.getTriple().getOS() != llvm::Triple::FreeBSD &&
-      TC.getTriple().getOS() != llvm::Triple::NetBSD &&
-      TC.getTriple().getOS() != llvm::Triple::OpenBSD)
+  if (!TC.getTriple().isOSFreeBSD() &&
+      !TC.getTriple().isOSNetBSD() &&
+      !TC.getTriple().isOSOpenBSD())
     CmdArgs.push_back("-ldl");
 }
 
@@ -810,13 +810,16 @@ bool tools::areOptimizationsEnabled(const ArgList &Args) {
 
 const char *tools::SplitDebugName(const ArgList &Args,
                                   const InputInfo &Output) {
+  SmallString<128> F(Output.isFilename()
+                         ? Output.getFilename()
+                         : llvm::sys::path::stem(Output.getBaseInput()));
+
   if (Arg *A = Args.getLastArg(options::OPT_gsplit_dwarf_EQ))
     if (StringRef(A->getValue()) == "single")
-      return Args.MakeArgString(Output.getFilename());
+      return Args.MakeArgString(F);
 
-  SmallString<128> T(Output.getFilename());
-  llvm::sys::path::replace_extension(T, "dwo");
-  return Args.MakeArgString(T);
+  llvm::sys::path::replace_extension(F, "dwo");
+  return Args.MakeArgString(F);
 }
 
 void tools::SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
@@ -930,7 +933,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   }
 
   // OpenBSD-specific defaults for PIE
-  if (Triple.getOS() == llvm::Triple::OpenBSD) {
+  if (Triple.isOSOpenBSD()) {
     switch (ToolChain.getArch()) {
     case llvm::Triple::arm:
     case llvm::Triple::aarch64:

@@ -1,4 +1,5 @@
 // RUN: %libomp-compile-and-run
+// REQUIRES: openmp-4.5
 /*
   Test for the 'schedule(simd:guided)' clause.
   Compiler needs to generate a dynamic dispatching and pass the schedule

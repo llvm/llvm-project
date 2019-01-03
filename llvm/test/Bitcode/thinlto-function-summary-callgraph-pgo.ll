@@ -30,7 +30,7 @@
 ; COMBINED-NEXT:    <COMBINED
 ; See if the call to func is registered, using the expected hotness type.
 ; op6=2 which is hotnessType::None.
-; COMBINED-NEXT:    <COMBINED_PROFILE {{.*}} op7=[[FUNCID]] op8=2/>
+; COMBINED-NEXT:    <COMBINED_PROFILE {{.*}} op8=[[FUNCID]] op9=2/>
 ; COMBINED-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 
 ; ModuleID = 'thinlto-function-summary-callgraph.ll'

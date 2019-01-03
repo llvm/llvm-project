@@ -430,6 +430,7 @@ public:
     OpUndefined,
     OpRegister,
     OpWindowSave,
+    OpNegateRAState,
     OpGnuArgsSize
   };
 
@@ -507,6 +508,11 @@ public:
   /// .cfi_window_save SPARC register window is saved.
   static MCCFIInstruction createWindowSave(MCSymbol *L) {
     return MCCFIInstruction(OpWindowSave, L, 0, 0, "");
+  }
+
+  /// .cfi_negate_ra_state AArch64 negate RA state.
+  static MCCFIInstruction createNegateRAState(MCSymbol *L) {
+    return MCCFIInstruction(OpNegateRAState, L, 0, 0, "");
   }
 
   /// .cfi_restore says that the rule for Register is now the same as it
@@ -593,6 +599,7 @@ struct MCDwarfFrameInfo {
   bool IsSignalFrame = false;
   bool IsSimple = false;
   unsigned RAReg = static_cast<unsigned>(INT_MAX);
+  bool IsBKeyFrame = false;
 };
 
 class MCDwarfFrameEmitter {

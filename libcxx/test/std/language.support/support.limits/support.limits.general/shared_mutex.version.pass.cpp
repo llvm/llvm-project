@@ -19,6 +19,7 @@
 // UNSUPPORTED: libcpp-has-no-threads
 
 #include <shared_mutex>
+#include <cassert>
 #include "test_macros.h"
 
 int main()

@@ -687,12 +687,12 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // }
 ; CHECK: // .section .debug_info
 ; CHECK: // {
-; CHECK: // .b32 10025                           // Length of Unit
+; CHECK: // .b32 10030                           // Length of Unit
 ; CHECK: // .b8 2                                // DWARF version number
 ; CHECK: // .b8 0
 ; CHECK: // .b32 .debug_abbrev                   // Offset Into Abbrev. Section
 ; CHECK: // .b8 8                                // Address Size (in bytes)
-; CHECK: // .b8 1                                // Abbrev [1] 0xb:0x2722 DW_TAG_compile_unit
+; CHECK: // .b8 1                                // Abbrev [1] 0xb:0x2727 DW_TAG_compile_unit
 ; CHECK: // .b8 0                                // DW_AT_producer
 ; CHECK: // .b8 4                                // DW_AT_language
 ; CHECK: // .b8 0
@@ -4719,7 +4719,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 3                                // DW_AT_decl_line
 ; CHECK: // .b32 3345                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
-; CHECK: // .b8 40                               // Abbrev [40] 0x2671:0xbb DW_TAG_subprogram
+; CHECK: // .b8 40                               // Abbrev [40] 0x2671:0xc0 DW_TAG_subprogram
 ; CHECK: // .b64 Lfunc_begin0                    // DW_AT_low_pc
 ; CHECK: // .b64 Lfunc_end0                      // DW_AT_high_pc
 ; CHECK: // .b8 1                                // DW_AT_frame_base
@@ -4779,7 +4779,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b64 Ltmp3                           // DW_AT_high_pc
 ; CHECK: // .b8 12                               // DW_AT_call_file
 ; CHECK: // .b8 6                                // DW_AT_call_line
-; CHECK: // .b8 43                               // Abbrev [43] 0x270e:0x1d DW_TAG_inlined_subroutine
+; CHECK: // .b8 43                               // Abbrev [43] 0x270e:0x22 DW_TAG_inlined_subroutine
 ; CHECK: // .b32 9791                            // DW_AT_abstract_origin
 ; CHECK: // .b64 Ltmp8                           // DW_AT_low_pc
 ; CHECK: // .b64 Ltmp9                           // DW_AT_high_pc

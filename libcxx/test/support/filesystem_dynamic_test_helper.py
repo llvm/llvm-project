@@ -1,10 +1,12 @@
 import sys
 import os
+import socket
 import stat
 
 # Ensure that this is being run on a specific platform
 assert sys.platform.startswith('linux') or sys.platform.startswith('darwin') \
-    or sys.platform.startswith('cygwin') or sys.platform.startswith('freebsd')
+    or sys.platform.startswith('cygwin') or sys.platform.startswith('freebsd') \
+    or sys.platform.startswith('netbsd')
 
 def env_path():
     ep = os.environ.get('LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT')
@@ -75,8 +77,13 @@ def create_fifo(source):
 
 
 def create_socket(source):
-    mode = 0o600 | stat.S_IFSOCK
-    os.mknod(sanitize(source), mode)
+    sock = socket.socket(socket.AF_UNIX)
+    sanitized_source = sanitize(source)
+    # AF_UNIX sockets may have very limited path length, so split it
+    # into chdir call (with technically unlimited length) followed
+    # by bind() relative to the directory
+    os.chdir(os.path.dirname(sanitized_source))
+    sock.bind(os.path.basename(sanitized_source))
 
 
 if __name__ == '__main__':

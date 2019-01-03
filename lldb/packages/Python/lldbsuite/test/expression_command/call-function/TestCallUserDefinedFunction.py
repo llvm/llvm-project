@@ -28,9 +28,6 @@ class ExprCommandCallUserDefinedFunction(TestBase):
             'main.cpp',
             '// Please test these expressions while stopped at this line:')
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test(self):
         """Test return values of user defined function calls."""
         self.build()

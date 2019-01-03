@@ -82,6 +82,7 @@ template<> class numeric_limits<cv char>;
 template<> class numeric_limits<cv signed char>;
 template<> class numeric_limits<cv unsigned char>;
 template<> class numeric_limits<cv wchar_t>;
+template<> class numeric_limits<cv char8_t>; // C++20
 template<> class numeric_limits<cv char16_t>;
 template<> class numeric_limits<cv char32_t>;
 
@@ -118,6 +119,7 @@ template<> class numeric_limits<cv long double>;
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
+#include <version>
 
 
 _LIBCPP_BEGIN_NAMESPACE_STD

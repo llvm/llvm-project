@@ -7,7 +7,7 @@
 ; CHECK: $"??_C@_04JIHMPGLA@asdf?$AA@" = comdat any
 
 ; CHECK: @"??_C@_04JIHMPGLA@asdf?$AA@" =
-; CHECK-SAME: linkonce_odr dso_local unnamed_addr constant { [5 x i8], [59 x i8] }
+; CHECK-SAME: linkonce_odr dso_local constant { [5 x i8], [59 x i8] }
 ; CHECK-SAME: { [5 x i8] c"asdf\00", [59 x i8] zeroinitializer }, comdat, align 32
 
 ; CHECK: @"__asan_global_??_C@_04JIHMPGLA@asdf?$AA@" =

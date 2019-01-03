@@ -6,7 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
+/// \file
 /// Compute iterated dominance frontiers using a linear time algorithm.
 ///
 /// The algorithm used here is based on:

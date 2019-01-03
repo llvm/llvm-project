@@ -12,13 +12,13 @@
 
 // <variant>
 
-// XFAIL: availability_markup=macosx10.13
-// XFAIL: availability_markup=macosx10.12
-// XFAIL: availability_markup=macosx10.11
-// XFAIL: availability_markup=macosx10.10
-// XFAIL: availability_markup=macosx10.9
-// XFAIL: availability_markup=macosx10.8
-// XFAIL: availability_markup=macosx10.7
+// XFAIL: availability=macosx10.13
+// XFAIL: availability=macosx10.12
+// XFAIL: availability=macosx10.11
+// XFAIL: availability=macosx10.10
+// XFAIL: availability=macosx10.9
+// XFAIL: availability=macosx10.8
+// XFAIL: availability=macosx10.7
 
 // template <class ...Types> class variant;
 

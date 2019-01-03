@@ -62,7 +62,7 @@ int bar(int n){
   return a;
 }
 
-// CHECK-DAG: [[MEM_TY:%.+]] = type { [4 x i8] }
+// CHECK-DAG: [[MEM_TY:%.+]] = type { [128 x i8] }
 // CHECK-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
 // CHECK-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
 // CHECK-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i{{64|32}} 4
@@ -79,7 +79,7 @@ int bar(int n){
 // CHECK: {{call|invoke}} void [[OUTL1:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: call void @__kmpc_restore_team_static_memory(i16 1)
-// CHECK: call void @__kmpc_spmd_kernel_deinit()
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 // CHECK: ret void
 
 // CHECK: define internal void [[OUTL1]](
@@ -93,7 +93,7 @@ int bar(int n){
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
 // CHECK: {{call|invoke}} void [[OUTL2:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_spmd_kernel_deinit()
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 // CHECK: ret void
 
 // CHECK: define internal void [[OUTL2]](
@@ -107,7 +107,7 @@ int bar(int n){
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
 // CHECK: {{call|invoke}} void [[OUTL3:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_spmd_kernel_deinit()
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 // CHECK: ret void
 
 // CHECK: define internal void [[OUTL3]](
@@ -123,7 +123,7 @@ int bar(int n){
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91, {{.+}}, {{.+}}, {{.+}}* [[COMB_UB]],
 // CHECK: {{call|invoke}} void [[OUTL4:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_spmd_kernel_deinit()
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 // CHECK: ret void
 
 // CHECK: define internal void [[OUTL4]](

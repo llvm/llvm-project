@@ -883,6 +883,17 @@ class SkylakeServerProc<string Name> : ProcModel<Name, SkylakeServerModel,
 def : SkylakeServerProc<"skylake-avx512">;
 def : SkylakeServerProc<"skx">; // Legacy alias.
 
+def CLXFeatures : ProcessorFeatures<SKXFeatures.Value, [
+  FeatureVNNI
+]>;
+
+class CascadelakeProc<string Name> : ProcModel<Name, SkylakeServerModel,
+                                              CLXFeatures.Value, [
+  FeatureHasFastGather,
+  FeaturePOPCNTFalseDeps
+]>;
+def : CascadelakeProc<"cascadelake">;
+
 def CNLFeatures : ProcessorFeatures<SKLFeatures.Value, [
   FeatureAVX512,
   FeatureCDI,

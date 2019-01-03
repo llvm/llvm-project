@@ -981,6 +981,107 @@ TEST_F(DILocationTest, cloneTemporary) {
   EXPECT_TRUE(L2->isTemporary());
 }
 
+TEST_F(DILocationTest, discriminatorEncoding) {
+  EXPECT_EQ(0U, DILocation::encodeDiscriminator(0, 0, 0).getValue());
+
+  // Encode base discriminator as a component: lsb is 0, then the value.
+  // The other components are all absent, so we leave all the other bits 0.
+  EXPECT_EQ(2U, DILocation::encodeDiscriminator(1, 0, 0).getValue());
+
+  // Base discriminator component is empty, so lsb is 1. Next component is not
+  // empty, so its lsb is 0, then its value (1). Next component is empty.
+  // So the bit pattern is 101.
+  EXPECT_EQ(5U, DILocation::encodeDiscriminator(0, 1, 0).getValue());
+
+  // First 2 components are empty, so the bit pattern is 11. Then the
+  // next component - ending up with 1011.
+  EXPECT_EQ(0xbU, DILocation::encodeDiscriminator(0, 0, 1).getValue());
+
+  // The bit pattern for the first 2 components is 11. The next bit is 0,
+  // because the last component is not empty. We have 29 bits usable for
+  // encoding, but we cap it at 12 bits uniformously for all components. We
+  // encode the last component over 14 bits.
+  EXPECT_EQ(0xfffbU, DILocation::encodeDiscriminator(0, 0, 0xfff).getValue());
+
+  EXPECT_EQ(0x102U, DILocation::encodeDiscriminator(1, 1, 0).getValue());
+
+  EXPECT_EQ(0x13eU, DILocation::encodeDiscriminator(0x1f, 1, 0).getValue());
+
+  EXPECT_EQ(0x87feU, DILocation::encodeDiscriminator(0x1ff, 1, 0).getValue());
+
+  EXPECT_EQ(0x1f3eU, DILocation::encodeDiscriminator(0x1f, 0x1f, 0).getValue());
+
+  EXPECT_EQ(0x3ff3eU,
+            DILocation::encodeDiscriminator(0x1f, 0x1ff, 0).getValue());
+
+  EXPECT_EQ(0x1ff87feU,
+            DILocation::encodeDiscriminator(0x1ff, 0x1ff, 0).getValue());
+
+  EXPECT_EQ(0xfff9f3eU,
+            DILocation::encodeDiscriminator(0x1f, 0x1f, 0xfff).getValue());
+
+  EXPECT_EQ(0xffc3ff3eU,
+            DILocation::encodeDiscriminator(0x1f, 0x1ff, 0x1ff).getValue());
+
+  EXPECT_EQ(0xffcf87feU,
+            DILocation::encodeDiscriminator(0x1ff, 0x1f, 0x1ff).getValue());
+
+  EXPECT_EQ(0xe1ff87feU,
+            DILocation::encodeDiscriminator(0x1ff, 0x1ff, 7).getValue());
+}
+
+TEST_F(DILocationTest, discriminatorEncodingNegativeTests) {
+  EXPECT_EQ(None, DILocation::encodeDiscriminator(0, 0, 0x1000));
+  EXPECT_EQ(None, DILocation::encodeDiscriminator(0x1000, 0, 0));
+  EXPECT_EQ(None, DILocation::encodeDiscriminator(0, 0x1000, 0));
+  EXPECT_EQ(None, DILocation::encodeDiscriminator(0, 0, 0x1000));
+  EXPECT_EQ(None, DILocation::encodeDiscriminator(0x1ff, 0x1ff, 8));
+  EXPECT_EQ(None,
+            DILocation::encodeDiscriminator(std::numeric_limits<uint32_t>::max(),
+                                            std::numeric_limits<uint32_t>::max(),
+                                            0));
+}
+
+TEST_F(DILocationTest, discriminatorSpecialCases) {
+  // We don't test getCopyIdentifier here because the only way
+  // to set it is by constructing an encoded discriminator using
+  // encodeDiscriminator, which is already tested.
+  auto L1 = DILocation::get(Context, 1, 2, getSubprogram());
+  EXPECT_EQ(0U, L1->getBaseDiscriminator());
+  EXPECT_EQ(1U, L1->getDuplicationFactor());
+
+  auto L2 = L1->setBaseDiscriminator(1).getValue();
+  EXPECT_EQ(0U, L1->getBaseDiscriminator());
+  EXPECT_EQ(1U, L1->getDuplicationFactor());
+
+  EXPECT_EQ(1U, L2->getBaseDiscriminator());
+  EXPECT_EQ(1U, L2->getDuplicationFactor());
+
+  auto L3 = L2->cloneWithDuplicationFactor(2).getValue();
+  EXPECT_EQ(1U, L3->getBaseDiscriminator());
+  EXPECT_EQ(2U, L3->getDuplicationFactor());
+
+  auto L4 = L3->cloneWithDuplicationFactor(4).getValue();
+  EXPECT_EQ(1U, L4->getBaseDiscriminator());
+  EXPECT_EQ(8U, L4->getDuplicationFactor());
+
+  auto L5 = L4->setBaseDiscriminator(2).getValue();
+  EXPECT_EQ(2U, L5->getBaseDiscriminator());
+  EXPECT_EQ(1U, L5->getDuplicationFactor());
+
+  // Check extreme cases
+  auto L6 = L1->setBaseDiscriminator(0xfff).getValue();
+  EXPECT_EQ(0xfffU, L6->getBaseDiscriminator());
+  EXPECT_EQ(
+      0xfffU,
+      L6->cloneWithDuplicationFactor(0xfff).getValue()->getDuplicationFactor());
+
+  // Check we return None for unencodable cases.
+  EXPECT_EQ(None, L4->setBaseDiscriminator(0x1000));
+  EXPECT_EQ(None, L4->cloneWithDuplicationFactor(0x1000));
+}
+
+
 typedef MetadataTest GenericDINodeTest;
 
 TEST_F(GenericDINodeTest, get) {

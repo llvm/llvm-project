@@ -20,7 +20,6 @@ class CrashDuringStepTestCase(TestBase):
         TestBase.setUp(self)
         self.breakpoint = line_number('main.cpp', '// Set breakpoint here')
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     # IO error due to breakpoint at invalid address
     @expectedFailureAll(triple=re.compile('^mips'))
     def test_step_inst_with(self):

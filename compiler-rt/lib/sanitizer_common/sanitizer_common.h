@@ -223,6 +223,7 @@ bool SetEnv(const char *name, const char *value);
 u32 GetUid();
 void ReExec();
 void CheckASLR();
+void CheckMPROTECT();
 char **GetArgv();
 char **GetEnviron();
 void PrintCmdline();

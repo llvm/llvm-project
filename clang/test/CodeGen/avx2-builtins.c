@@ -56,31 +56,27 @@ __m256i test_mm256_add_epi64(__m256i a, __m256i b) {
 
 __m256i test_mm256_adds_epi8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_adds_epi8
-  // CHECK: call <32 x i8> @llvm.x86.avx2.padds.b(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
+  // CHECK: call <32 x i8> @llvm.sadd.sat.v32i8(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
   return _mm256_adds_epi8(a, b);
 }
 
 __m256i test_mm256_adds_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_adds_epi16
-  // CHECK: call <16 x i16> @llvm.x86.avx2.padds.w(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
+  // CHECK: call <16 x i16> @llvm.sadd.sat.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_adds_epi16(a, b);
 }
 
 __m256i test_mm256_adds_epu8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_adds_epu8
   // CHECK-NOT: call <32 x i8> @llvm.x86.avx2.paddus.b(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
-  // CHECK: add <32 x i8> %{{.*}}, %{{.*}}
-  // CHECK: icmp ugt <32 x i8> %{{.*}}, %{{.*}}
-  // CHECK: select <32 x i1> %{{.*}}, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <32 x i8> {{.*}}
+  // CHECK: call <32 x i8> @llvm.uadd.sat.v32i8(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
   return _mm256_adds_epu8(a, b);
 }
 
 __m256i test_mm256_adds_epu16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_adds_epu16
   // CHECK-NOT: call <16 x i16> @llvm.x86.avx2.paddus.w(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
-  // CHECK: add <16 x i16> %{{.*}}, %{{.*}}
-  // CHECK: icmp ugt <16 x i16> %{{.*}}, %{{.*}}
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>, <16 x i16> {{.*}}
+  // CHECK: call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_adds_epu16(a, b);
 }
 
@@ -1175,31 +1171,27 @@ __m256i test_mm256_sub_epi64(__m256i a, __m256i b) {
 
 __m256i test_mm256_subs_epi8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_subs_epi8
-  // CHECK: call <32 x i8> @llvm.x86.avx2.psubs.b(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
+  // CHECK: call <32 x i8> @llvm.ssub.sat.v32i8(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
   return _mm256_subs_epi8(a, b);
 }
 
 __m256i test_mm256_subs_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_subs_epi16
-  // CHECK: call <16 x i16> @llvm.x86.avx2.psubs.w(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
+  // CHECK: call <16 x i16> @llvm.ssub.sat.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_subs_epi16(a, b);
 }
 
 __m256i test_mm256_subs_epu8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_subs_epu8
   // CHECK-NOT: call <32 x i8> @llvm.x86.avx2.psubus.b(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
-  // CHECK: icmp ugt <32 x i8> {{.*}}, {{.*}}
-  // CHECK: select <32 x i1> {{.*}}, <32 x i8> {{.*}}, <32 x i8> {{.*}}
-  // CHECK: sub <32 x i8> {{.*}}, {{.*}}
+  // CHECK: call <32 x i8> @llvm.usub.sat.v32i8(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
   return _mm256_subs_epu8(a, b);
 }
 
 __m256i test_mm256_subs_epu16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_subs_epu16
   // CHECK-NOT: call <16 x i16> @llvm.x86.avx2.psubus.w(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
-  // CHECK: icmp ugt <16 x i16> {{.*}}, {{.*}}
-  // CHECK: select <16 x i1> {{.*}}, <16 x i16> {{.*}}, <16 x i16> {{.*}}
-  // CHECK: sub <16 x i16> {{.*}}, {{.*}}
+  // CHECK: call <16 x i16> @llvm.usub.sat.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_subs_epu16(a, b);
 }
 

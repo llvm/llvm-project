@@ -15,12 +15,12 @@
 #include <string>
 #include <vector>
 
-#include "lldb/Core/Broadcaster.h"
-#include "lldb/Core/Event.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/RegisterCheckpoint.h"
 #include "lldb/Target/StackFrameList.h"
+#include "lldb/Utility/Broadcaster.h"
+#include "lldb/Utility/Event.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
@@ -280,7 +280,7 @@ public:
   /// message).
   //------------------------------------------------------------------
   StructuredData::ObjectSP GetExtendedInfo() {
-    if (m_extended_info_fetched == false) {
+    if (!m_extended_info_fetched) {
       m_extended_info = FetchThreadExtendedInfo();
       m_extended_info_fetched = true;
     }
@@ -1252,6 +1252,10 @@ public:
   ///     LLDB_INVALID_ADDRESS is returned if no token is available.
   //----------------------------------------------------------------------
   virtual uint64_t GetExtendedBacktraceToken() { return LLDB_INVALID_ADDRESS; }
+
+  lldb::ValueObjectSP GetCurrentException();
+
+  lldb::ThreadSP GetCurrentExceptionBacktrace();
 
 protected:
   friend class ThreadPlan;

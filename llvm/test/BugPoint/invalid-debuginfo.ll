@@ -1,4 +1,4 @@
-; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crash-too-many-cus -silence-passes --opt-command opt 2>&1 | FileCheck %s
+; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext %s -output-prefix %t -bugpoint-crash-too-many-cus -silence-passes 2>&1 | FileCheck %s
 ; REQUIRES: loadable_module
 ; CHECK: DICompileUnit not listed in llvm.dbg.cu
 

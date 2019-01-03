@@ -85,6 +85,37 @@ define void @add() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %10 = add i32 %sext_3, undef
 }
 
+define void @add_i16_mem16(i16 %Arg, i16* %Src1, i16* %Src2, i16* %Dst, i32* %Src32) {
+  %L1 = load i16, i16* %Src1
+  %S0 = add i16 %L1, %Arg
+  store volatile i16 %S0, i16* %Dst
+
+  %L2 = load i16, i16* %Src1
+  %L3 = load i16, i16* %Src2
+  %S1 = add i16 %L2, %L3
+  store volatile i16 %S1, i16* %Dst
+
+  ; Truncated load
+  %L32 = load i32, i32* %Src32
+  %tr = trunc i32 %L32 to i16
+  %S2 = add i16 %tr, %Arg
+  store volatile i16 %S2, i16* %Dst
+
+  ret void
+; CHECK: Printing analysis 'Cost Model Analysis' for function 'add_i16_mem16':
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %L1 = load i16, i16* %Src1
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %S0 = add i16 %L1, %Arg
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   store volatile i16 %S0, i16* %Dst
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %L2 = load i16, i16* %Src1
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %L3 = load i16, i16* %Src2
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %S1 = add i16 %L2, %L3
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   store volatile i16 %S1, i16* %Dst
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %L32 = load i32, i32* %Src32
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %tr = trunc i32 %L32 to i16
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %S2 = add i16 %tr, %Arg
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   store volatile i16 %S2, i16* %Dst
+}
+
 define void @sub_lhs_mem() {
   %li32 = load i32, i32* undef
   sub i32 %li32, undef
@@ -228,6 +259,37 @@ define void @sub_rhs_mem() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %8 = sub i32 undef, %sext_3
 }
 
+define void @sub_i16_mem16(i16 %Arg, i16* %Src1, i16* %Src2, i16* %Dst, i32* %Src32) {
+  %L1 = load i16, i16* %Src1
+  %D0 = sub i16 %Arg, %L1
+  store volatile i16 %D0, i16* %Dst
+
+  %L2 = load i16, i16* %Src1
+  %L3 = load i16, i16* %Src2
+  %D1 = sub i16 %L2, %L3
+  store volatile i16 %D1, i16* %Dst
+
+  ; Truncated load
+  %L32 = load i32, i32* %Src32
+  %tr = trunc i32 %L32 to i16
+  %D2 = sub i16 %Arg, %tr
+  store volatile i16 %D2, i16* %Dst
+
+  ret void
+; CHECK: Printing analysis 'Cost Model Analysis' for function 'sub_i16_mem16':
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %L1 = load i16, i16* %Src1
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %D0 = sub i16 %Arg, %L1
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   store volatile i16 %D0, i16* %Dst
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %L2 = load i16, i16* %Src1
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %L3 = load i16, i16* %Src2
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %D1 = sub i16 %L2, %L3
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   store volatile i16 %D1, i16* %Dst
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %L32 = load i32, i32* %Src32
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %tr = trunc i32 %L32 to i16
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %D2 = sub i16 %Arg, %tr
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   store volatile i16 %D2, i16* %Dst
+}
+
 define void @mul() {
   %li32 = load i32, i32* undef
   mul i32 %li32, undef
@@ -305,6 +367,37 @@ define void @mul() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %10 = mul i32 %sext_3, undef
 }
 
+define void @mul_i16_mem16(i16 %Arg, i16* %Src1, i16* %Src2, i16* %Dst, i32* %Src32) {
+  %L1 = load i16, i16* %Src1
+  %P0 = mul i16 %Arg, %L1
+  store volatile i16 %P0, i16* %Dst
+
+  %L2 = load i16, i16* %Src1
+  %L3 = load i16, i16* %Src2
+  %P1 = mul i16 %L2, %L3
+  store volatile i16 %P1, i16* %Dst
+
+  ; Truncated load
+  %L32 = load i32, i32* %Src32
+  %tr = trunc i32 %L32 to i16
+  %P2 = mul i16 %Arg, %tr
+  store volatile i16 %P2, i16* %Dst
+
+  ret void
+; CHECK: Printing analysis 'Cost Model Analysis' for function 'mul_i16_mem16':
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %L1 = load i16, i16* %Src1
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %P0 = mul i16 %Arg, %L1
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   store volatile i16 %P0, i16* %Dst
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %L2 = load i16, i16* %Src1
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %L3 = load i16, i16* %Src2
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %P1 = mul i16 %L2, %L3
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   store volatile i16 %P1, i16* %Dst
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %L32 = load i32, i32* %Src32
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %tr = trunc i32 %L32 to i16
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %P2 = mul i16 %Arg, %tr
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   store volatile i16 %P2, i16* %Dst
+}
+
 define void @sdiv_lhs(i32 %arg32, i64 %arg64) {
   %li32 = load i32, i32* undef
   sdiv i32 %li32, %arg32
@@ -340,10 +433,10 @@ define void @sdiv_lhs(i32 %arg32, i64 %arg64) {
 
 ; An sdiv loaded dividend (lhs) operand is *not* foldable.
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li32 = load i32, i32* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %1 = sdiv i32 %li32, %arg32
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %1 = sdiv i32 %li32, %arg32
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li32_0 = load i32, i32* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li32_1 = load i32, i32* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %2 = sdiv i32 %li32_0, %li32_1
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %2 = sdiv i32 %li32_0, %li32_1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li64 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %3 = sdiv i64 %li64, %arg64
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li64_0 = load i64, i64* undef
@@ -388,12 +481,12 @@ define void @sdiv_rhs(i32 %arg32, i64 %arg64) {
 
 ; An sdiv loaded divisor (rhs) operand is foldable.
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li32 = load i32, i32* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %1 = sdiv i32 %arg32, %li32
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %1 = sdiv i32 %arg32, %li32
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li64 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %2 = sdiv i64 %arg64, %li64
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li64_2 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %tr = trunc i64 %li64_2 to i32
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %3 = sdiv i32 undef, %tr
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %3 = sdiv i32 undef, %tr
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li32_2 = load i32, i32* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %sext_0 = sext i32 %li32_2 to i64
 ; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %4 = sdiv i64 undef, %sext_0
@@ -432,15 +525,15 @@ define void @udiv_lhs(i32 %arg32, i64 %arg64) {
 
 ; An udiv loaded dividend (lhs) operand is *not* foldable.
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li32 = load i32, i32* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %1 = udiv i32 %li32, %arg32
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %1 = udiv i32 %li32, %arg32
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li32_0 = load i32, i32* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li32_1 = load i32, i32* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %2 = udiv i32 %li32_0, %li32_1
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %2 = udiv i32 %li32_0, %li32_1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li64 = load i64, i64* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %3 = udiv i64 %li64, %arg64
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %3 = udiv i64 %li64, %arg64
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li64_0 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li64_1 = load i64, i64* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %4 = udiv i64 %li64_0, %li64_1
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %4 = udiv i64 %li64_0, %li64_1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li64_2 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %tr_0 = trunc i64 %li64_2 to i32
 ; CHECK: Cost Model: Found an estimated cost of 10 for instruction:   %5 = udiv i32 %tr_0, undef
@@ -470,15 +563,15 @@ define void @udiv_rhs(i32 %arg32, i64 %arg64) {
 
 ; An udiv loaded divisor (rhs) operand is foldable.
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li32 = load i32, i32* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %1 = udiv i32 %arg32, %li32
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %1 = udiv i32 %arg32, %li32
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li64 = load i64, i64* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %2 = udiv i64 %arg64, %li64
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %2 = udiv i64 %arg64, %li64
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li64_2 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %tr_0 = trunc i64 %li64_2 to i32
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %3 = udiv i32 undef, %tr_0
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %3 = udiv i32 undef, %tr_0
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li64_3 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %tr_1 = trunc i64 %li64_3 to i32
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %4 = udiv i64 undef, %li64_3
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %4 = udiv i64 undef, %li64_3
 }
 
 define void @and() {
@@ -633,6 +726,16 @@ define void @icmp() {
   %tr_0 = trunc i64 %li64_2 to i32
   icmp eq i32 %tr_0, undef
 
+  ; Sign-extended load
+  %li32_2 = load i32, i32* undef
+  %sext = sext i32 %li32_2 to i64
+  icmp eq i64 %sext, undef
+
+  ; Zero-extended load
+  %li32_3 = load i32, i32* undef
+  %zext = zext i32 %li32_3 to i64
+  icmp eq i64 %zext, undef
+
   ; Loads with multiple uses are *not* folded
   %li64_3 = load i64, i64* undef
   %tr_1 = trunc i64 %li64_3 to i32
@@ -652,7 +755,13 @@ define void @icmp() {
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li64_2 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %tr_0 = trunc i64 %li64_2 to i32
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %5 = icmp eq i32 %tr_0, undef
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li32_2 = load i32, i32* undef
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %sext = sext i32 %li32_2 to i64
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %6 = icmp eq i64 %sext, undef
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li32_3 = load i32, i32* undef
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %zext = zext i32 %li32_3 to i64
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %7 = icmp eq i64 %zext, undef
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li64_3 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %tr_1 = trunc i64 %li64_3 to i32
-; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %6 = icmp eq i64 %li64_3, undef
+; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %8 = icmp eq i64 %li64_3, undef
 }

@@ -10,6 +10,7 @@ Sections:
     MemoryAlignment: 2
     TableSize:       1
     TableAlignment:  0
+    Needed:          [ libfoo.so, libbar.so ]
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
@@ -21,4 +22,7 @@ Sections:
 # CHECK:     MemoryAlignment: 2
 # CHECK:     TableSize:       1
 # CHECK:     TableAlignment:  0
+# CHECK:     Needed:
+# CHECK:       - libfoo.so
+# CHECK:       - libbar.so
 # CHECK: ...

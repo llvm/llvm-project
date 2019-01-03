@@ -62,44 +62,44 @@
 ; }
 ; }
 
-; CHECK-LABEL: S_GPROC32_ID [size = 50] `use_alloca`
-; CHECK: S_FRAMEPROC [size = 30]
+; CHECK-LABEL: S_GPROC32_ID [size = 52] `use_alloca`
+; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = VFRAME, param fp reg = EBP
 ; CHECK:   flags = has alloca | secure checks | opt speed
-; CHECK-LABEL: S_GPROC32_ID [size = 51] `call_setjmp`
-; CHECK: S_FRAMEPROC [size = 30]
+; CHECK-LABEL: S_GPROC32_ID [size = 52] `call_setjmp`
+; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
 ; CHECK:   flags = has setjmp | opt speed
-; CHECK-LABEL: S_GPROC32_ID [size = 53] `use_inlineasm`
-; CHECK: S_FRAMEPROC [size = 30]
+; CHECK-LABEL: S_GPROC32_ID [size = 56] `use_inlineasm`
+; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
 ; CHECK:   flags = has inline asm | opt speed
-; CHECK-LABEL: S_GPROC32_ID [size = 46] `cpp_eh`
-; CHECK: S_FRAMEPROC [size = 30]
+; CHECK-LABEL: S_GPROC32_ID [size = 48] `cpp_eh`
+; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = EBP, param fp reg = EBP
 ; CHECK:   flags = has eh | opt speed
-; CHECK-LABEL: S_GPROC32_ID [size = 50] `use_inline`
-; CHECK: S_FRAMEPROC [size = 30]
+; CHECK-LABEL: S_GPROC32_ID [size = 52] `use_inline`
+; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
 ; CHECK:   flags = opt speed
 ; CHECK-LABEL: S_LPROC32_ID [size = 56] `is_marked_inline`
-; CHECK: S_FRAMEPROC [size = 30]
+; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
 ; CHECK:   flags = marked inline | opt speed
-; CHECK-LABEL: S_GPROC32_ID [size = 43] `seh`
-; CHECK: S_FRAMEPROC [size = 30]
+; CHECK-LABEL: S_GPROC32_ID [size = 44] `seh`
+; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = EBP, param fp reg = EBP
 ; CHECK:   flags = has seh | opt speed
-; CHECK-LABEL: S_LPROC32_ID [size = 55] `?filt$0@0@seh@@`
-; CHECK: S_FRAMEPROC [size = 30]
+; CHECK-LABEL: S_LPROC32_ID [size = 56] `?filt$0@0@seh@@`
+; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = EBP, param fp reg = EBP
 ; CHECK:   flags = opt speed
-; CHECK-LABEL: S_GPROC32_ID [size = 49] `use_naked`
-; CHECK: S_FRAMEPROC [size = 30]
+; CHECK-LABEL: S_GPROC32_ID [size = 52] `use_naked`
+; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
 ; CHECK:   flags = has inline asm | naked | opt speed
-; CHECK-LABEL: S_GPROC32_ID [size = 51] `stack_guard`
-; CHECK: S_FRAMEPROC [size = 30]
+; CHECK-LABEL: S_GPROC32_ID [size = 52] `stack_guard`
+; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = VFRAME, param fp reg = EBP
 ; CHECK:   flags = secure checks | opt speed
 

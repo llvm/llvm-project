@@ -7,6 +7,7 @@ set(HWASAN_RTL_SOURCES
   hwasan_dynamic_shadow.cc
   hwasan_interceptors.cc
   hwasan_linux.cc
+  hwasan_memintrinsics.cc
   hwasan_poisoning.cc
   hwasan_report.cc
   hwasan_thread.cc
@@ -145,6 +146,7 @@ foreach(arch ${HWASAN_SUPPORTED_ARCH})
             RTSanitizerCommonCoverage
             RTSanitizerCommonSymbolizer
             RTUbsan
+            RTUbsan_cxx
             # The only purpose of RTHWAsan_dynamic_version_script_dummy is to
             # carry a dependency of the shared runtime on the version script.
             # Replacing it with a straightforward

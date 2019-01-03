@@ -1,6 +1,17 @@
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -aarch64-neon-syntax=apple -asm-verbose=false -disable-post-ra -disable-fp-elim | FileCheck %s --check-prefix=CHECK-CVT --check-prefix=CHECK-COMMON
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -mattr=+fullfp16 -aarch64-neon-syntax=apple -asm-verbose=false -disable-post-ra -disable-fp-elim | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-FP16
 
+; RUN: llc < %s -mtriple aarch64-unknown-unknown -aarch64-neon-syntax=apple \
+; RUN: -asm-verbose=false -disable-post-ra -disable-fp-elim -global-isel \
+; RUN: -global-isel-abort=2 -pass-remarks-missed=gisel-* 2>&1 | FileCheck %s \
+; RUN: --check-prefixes=FALLBACK,GISEL-CVT
+
+; RUN: llc < %s -mtriple aarch64-unknown-unknown -mattr=+fullfp16 \
+; RUN: -aarch64-neon-syntax=apple -asm-verbose=false -disable-post-ra \
+; RUN: -disable-fp-elim -global-isel -global-isel-abort=2 \
+; RUN: -pass-remarks-missed=gisel-* 2>&1 | FileCheck %s \
+; RUN: --check-prefixes=FALLBACK-FP16,GISEL-FP16
+
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 ; CHECK-CVT-LABEL: test_fadd:
@@ -1071,6 +1082,18 @@ define half @test_floor(half %a) #0 {
 ; CHECK-FP16-NEXT: frintp h0, h0
 ; CHECK-FP16-NEXT: ret
 
+; FALLBACK-NOT: remark:{{.*}}test_ceil
+; FALLBACK-FP16-NOT: remark:{{.*}}test_ceil
+
+; GISEL-CVT-LABEL: test_ceil:
+; GISEL-CVT-NEXT: fcvt [[FLOAT32:s[0-9]+]], h0
+; GISEL-CVT-NEXT: frintp [[INT32:s[0-9]+]], [[FLOAT32]]
+; GISEL-CVT-NEXT: fcvt h0, [[INT32]]
+; GISEL-CVT-NEXT: ret
+
+; GISEL-FP16-LABEL: test_ceil:
+; GISEL-FP16-NEXT: frintp h0, h0
+; GISEL-FP16-NEXT: ret
 define half @test_ceil(half %a) #0 {
   %r = call half @llvm.ceil.f16(half %a)
   ret half %r

@@ -20,8 +20,8 @@ def HTM_get_imm : SDNodeXForm<imm, [{
   return getI32Imm (N->getZExtValue(), SDLoc(N));
 }]>;
 
-let hasSideEffects = 1, usesCustomInserter = 1  in {
-def TCHECK_RET : Pseudo<(outs crrc:$out), (ins), "#TCHECK_RET", []>;
+let hasSideEffects = 1 in {
+def TCHECK_RET : PPCCustomInserterPseudo<(outs crrc:$out), (ins), "#TCHECK_RET", []>;
 }
 
 

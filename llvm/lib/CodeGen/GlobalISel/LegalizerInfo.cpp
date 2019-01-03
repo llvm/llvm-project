@@ -19,6 +19,7 @@
 
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -375,7 +376,8 @@ bool LegalizerInfo::isLegal(const MachineInstr &MI,
 }
 
 bool LegalizerInfo::legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                   MachineIRBuilder &MIRBuilder) const {
+                                   MachineIRBuilder &MIRBuilder,
+                                   GISelChangeObserver &Observer) const {
   return false;
 }
 
@@ -583,7 +585,7 @@ const MachineInstr *llvm::machineFunctionIsIllegal(const MachineFunction &MF) {
     for (const MachineBasicBlock &MBB : MF)
       for (const MachineInstr &MI : MBB)
         if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI, MRI))
-	  return &MI;
+          return &MI;
   }
   return nullptr;
 }

@@ -16,6 +16,7 @@
 
 #include "test_macros.h"
 #include "hexfloat.h"
+#include "truncate_fp.h"
 
 // convertible to int/float/double/etc
 template <class T, int N=0>
@@ -860,7 +861,7 @@ void test_cbrt()
     static_assert((std::is_same<decltype(std::cbrtf(0)), float>::value), "");
     static_assert((std::is_same<decltype(std::cbrtl(0)), long double>::value), "");
     static_assert((std::is_same<decltype(cbrt(Ambiguous())), Ambiguous>::value), "");
-    assert(std::cbrt(1) == 1);
+    assert(truncate_fp(std::cbrt(1)) == 1);
 }
 
 void test_copysign()

@@ -228,6 +228,12 @@ public:
   getConstrainedRegClassForOperand(const MachineOperand &MO,
                                  const MachineRegisterInfo &MRI) const override;
 
+  // Find reaching register definition
+  MachineInstr *findReachingDef(unsigned Reg, unsigned SubReg,
+                                MachineInstr &Use,
+                                MachineRegisterInfo &MRI,
+                                LiveIntervals *LIS) const;
+
 private:
   void buildSpillLoadStore(MachineBasicBlock::iterator MI,
                            unsigned LoadStoreOp,

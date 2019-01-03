@@ -67,6 +67,10 @@ def SDT_PPCxxswapd : SDTypeProfile<1, 1, [
 def SDTVecConv : SDTypeProfile<1, 2, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisPtrTy<2>
 ]>;
+def SDTVabsd : SDTypeProfile<1, 3, [
+  SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<3, i32>
+]>;
+
 
 def PPClxvd2x  : SDNode<"PPCISD::LXVD2X", SDT_PPClxvd2x,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
@@ -79,6 +83,7 @@ def PPCmtvsrz : SDNode<"PPCISD::MTVSRZ", SDTUnaryOp, []>;
 def PPCsvec2fp : SDNode<"PPCISD::SINT_VEC_TO_FP", SDTVecConv, []>;
 def PPCuvec2fp: SDNode<"PPCISD::UINT_VEC_TO_FP", SDTVecConv, []>;
 def PPCswapNoChain : SDNode<"PPCISD::SWAP_NO_CHAIN", SDT_PPCxxswapd>;
+def PPCvabsd : SDNode<"PPCISD::VABSD", SDTVabsd, []>;
 
 multiclass XX3Form_Rcr<bits<6> opcode, bits<7> xo, string asmbase,
                     string asmstr, InstrItinClass itin, Intrinsic Int,
@@ -132,7 +137,7 @@ let Uses = [RM] in {
                         []>;
 
     // Pseudo instruction XFLOADf64 will be expanded to LXSDX or LFDX later
-    let isPseudo = 1, CodeSize = 3 in
+    let CodeSize = 3 in
       def XFLOADf64  : PseudoXFormMemOp<(outs vsfrc:$XT), (ins memrr:$src),
                               "#XFLOADf64",
                               [(set f64:$XT, (load xoaddr:$src))]>;
@@ -163,7 +168,7 @@ let Uses = [RM] in {
                         []>;
 
     // Pseudo instruction XFSTOREf64  will be expanded to STXSDX or STFDX later
-    let isPseudo = 1, CodeSize = 3 in
+    let CodeSize = 3 in
       def XFSTOREf64 : PseudoXFormMemOp<(outs), (ins vsfrc:$XT, memrr:$dst),
                               "#XFSTOREf64",
                               [(store f64:$XT, xoaddr:$dst)]>;
@@ -898,37 +903,36 @@ let Uses = [RM] in {
 
 // SELECT_CC_* - Used to implement the SELECT_CC DAG operation.  Expanded after
 // instruction selection into a branch sequence.
-let usesCustomInserter = 1,    // Expanded after instruction selection.
-    PPC970_Single = 1 in {
+let PPC970_Single = 1 in {
 
-  def SELECT_CC_VSRC: Pseudo<(outs vsrc:$dst),
+  def SELECT_CC_VSRC: PPCCustomInserterPseudo<(outs vsrc:$dst),
                              (ins crrc:$cond, vsrc:$T, vsrc:$F, i32imm:$BROPC),
                              "#SELECT_CC_VSRC",
                              []>;
-  def SELECT_VSRC: Pseudo<(outs vsrc:$dst),
+  def SELECT_VSRC: PPCCustomInserterPseudo<(outs vsrc:$dst),
                           (ins crbitrc:$cond, vsrc:$T, vsrc:$F),
                           "#SELECT_VSRC",
                           [(set v2f64:$dst,
                                 (select i1:$cond, v2f64:$T, v2f64:$F))]>;
-  def SELECT_CC_VSFRC: Pseudo<(outs f8rc:$dst),
+  def SELECT_CC_VSFRC: PPCCustomInserterPseudo<(outs f8rc:$dst),
                               (ins crrc:$cond, f8rc:$T, f8rc:$F,
                                i32imm:$BROPC), "#SELECT_CC_VSFRC",
                               []>;
-  def SELECT_VSFRC: Pseudo<(outs f8rc:$dst),
+  def SELECT_VSFRC: PPCCustomInserterPseudo<(outs f8rc:$dst),
                            (ins crbitrc:$cond, f8rc:$T, f8rc:$F),
                            "#SELECT_VSFRC",
                            [(set f64:$dst,
                                  (select i1:$cond, f64:$T, f64:$F))]>;
-  def SELECT_CC_VSSRC: Pseudo<(outs f4rc:$dst),
+  def SELECT_CC_VSSRC: PPCCustomInserterPseudo<(outs f4rc:$dst),
                               (ins crrc:$cond, f4rc:$T, f4rc:$F,
                                i32imm:$BROPC), "#SELECT_CC_VSSRC",
                               []>;
-  def SELECT_VSSRC: Pseudo<(outs f4rc:$dst),
+  def SELECT_VSSRC: PPCCustomInserterPseudo<(outs f4rc:$dst),
                            (ins crbitrc:$cond, f4rc:$T, f4rc:$F),
                            "#SELECT_VSSRC",
                            [(set f32:$dst,
                                  (select i1:$cond, f32:$T, f32:$F))]>;
-} // usesCustomInserter
+} 
 } // AddedComplexity
 
 def : InstAlias<"xvmovdp $XT, $XB",
@@ -1213,6 +1217,27 @@ def ScalarLoads {
   dag Li32 = (i32 (load xoaddr:$src));
 }
 
+def DWToSPExtractConv {
+  dag El0US1 = (f32 (PPCfcfidus
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S1, 0))))));
+  dag El1US1 = (f32 (PPCfcfidus
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S1, 1))))));
+  dag El0US2 = (f32 (PPCfcfidus
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S2, 0))))));
+  dag El1US2 = (f32 (PPCfcfidus
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S2, 1))))));
+  dag El0SS1 = (f32 (PPCfcfids
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S1, 0))))));
+  dag El1SS1 = (f32 (PPCfcfids
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S1, 1))))));
+  dag El0SS2 = (f32 (PPCfcfids
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S2, 0))))));
+  dag El1SS2 = (f32 (PPCfcfids
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S2, 1))))));
+  dag BVU = (v4f32 (build_vector El0US1, El1US1, El0US2, El1US2));
+  dag BVS = (v4f32 (build_vector El0SS1, El1SS1, El0SS2, El1SS2));
+}
+
 // The following VSX instructions were introduced in Power ISA 2.07
 /* FIXME: if the operands are v2i64, these patterns will not match.
    we should define new patterns or otherwise match the same patterns
@@ -1254,23 +1279,19 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
     def LXSIWZX : XX1Form_memOp<31, 12, (outs vsfrc:$XT), (ins memrr:$src),
                           "lxsiwzx $XT, $src", IIC_LdStLFD, []>;
 
-    // Please note let isPseudo = 1 is not part of class Pseudo<>. Missing it
-    // would cause these Pseudos are not expanded in expandPostRAPseudos()
-    let isPseudo = 1 in {
-      // Pseudo instruction XFLOADf32 will be expanded to LXSSPX or LFSX later
-      let CodeSize = 3 in
-      def XFLOADf32  : PseudoXFormMemOp<(outs vssrc:$XT), (ins memrr:$src),
-                              "#XFLOADf32",
-                              [(set f32:$XT, (load xoaddr:$src))]>;
-      // Pseudo instruction LIWAX will be expanded to LXSIWAX or LFIWAX later
-      def LIWAX : PseudoXFormMemOp<(outs vsfrc:$XT), (ins memrr:$src),
-                         "#LIWAX",
-                         [(set f64:$XT, (PPClfiwax xoaddr:$src))]>;
-      // Pseudo instruction LIWZX will be expanded to LXSIWZX or LFIWZX later
-      def LIWZX : PseudoXFormMemOp<(outs vsfrc:$XT), (ins memrr:$src),
-                         "#LIWZX",
-                         [(set f64:$XT, (PPClfiwzx xoaddr:$src))]>;
-    }
+    // Pseudo instruction XFLOADf32 will be expanded to LXSSPX or LFSX later
+    let CodeSize = 3 in
+    def XFLOADf32  : PseudoXFormMemOp<(outs vssrc:$XT), (ins memrr:$src),
+                            "#XFLOADf32",
+                            [(set f32:$XT, (load xoaddr:$src))]>;
+    // Pseudo instruction LIWAX will be expanded to LXSIWAX or LFIWAX later
+    def LIWAX : PseudoXFormMemOp<(outs vsfrc:$XT), (ins memrr:$src),
+                       "#LIWAX",
+                       [(set f64:$XT, (PPClfiwax xoaddr:$src))]>;
+    // Pseudo instruction LIWZX will be expanded to LXSIWZX or LFIWZX later
+    def LIWZX : PseudoXFormMemOp<(outs vsfrc:$XT), (ins memrr:$src),
+                       "#LIWZX",
+                       [(set f64:$XT, (PPClfiwzx xoaddr:$src))]>;
   } // mayLoad
 
   // VSX scalar stores introduced in ISA 2.07
@@ -1281,19 +1302,15 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
     def STXSIWX : XX1Form_memOp<31, 140, (outs), (ins vsfrc:$XT, memrr:$dst),
                           "stxsiwx $XT, $dst", IIC_LdStSTFD, []>;
 
-    // Please note let isPseudo = 1 is not part of class Pseudo<>. Missing it
-    // would cause these Pseudos are not expanded in expandPostRAPseudos()
-    let isPseudo = 1 in {
-      // Pseudo instruction XFSTOREf32 will be expanded to STXSSPX or STFSX later
-      let CodeSize = 3 in
-      def XFSTOREf32 : PseudoXFormMemOp<(outs), (ins vssrc:$XT, memrr:$dst),
-                              "#XFSTOREf32",
-                              [(store f32:$XT, xoaddr:$dst)]>;
-      // Pseudo instruction STIWX will be expanded to STXSIWX or STFIWX later
-      def STIWX : PseudoXFormMemOp<(outs), (ins vsfrc:$XT, memrr:$dst),
-                         "#STIWX",
-                        [(PPCstfiwx f64:$XT, xoaddr:$dst)]>;
-    }
+    // Pseudo instruction XFSTOREf32 will be expanded to STXSSPX or STFSX later
+    let CodeSize = 3 in
+    def XFSTOREf32 : PseudoXFormMemOp<(outs), (ins vssrc:$XT, memrr:$dst),
+                            "#XFSTOREf32",
+                            [(store f32:$XT, xoaddr:$dst)]>;
+    // Pseudo instruction STIWX will be expanded to STXSIWX or STFIWX later
+    def STIWX : PseudoXFormMemOp<(outs), (ins vsfrc:$XT, memrr:$dst),
+                       "#STIWX",
+                      [(PPCstfiwx f64:$XT, xoaddr:$dst)]>;
   } // mayStore
   } // UseVSXReg = 1
 
@@ -1456,35 +1473,27 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
   } // UseVSXReg = 1
 
   let Predicates = [IsLittleEndian] in {
-  def : Pat<(f32 (PPCfcfids
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 0)))))),
-            (f32 (XSCVSXDSP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
-  def : Pat<(f32 (PPCfcfids
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 1)))))),
+  def : Pat<DWToSPExtractConv.El0SS1,
+            (f32 (XSCVSXDSP (COPY_TO_REGCLASS (XXPERMDI $S1, $S1, 2), VSFRC)))>;
+  def : Pat<DWToSPExtractConv.El1SS1,
             (f32 (XSCVSXDSP (COPY_TO_REGCLASS
-                              (f64 (COPY_TO_REGCLASS $S, VSRC)), VSFRC)))>;
-  def : Pat<(f32 (PPCfcfidus
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 0)))))),
-            (f32 (XSCVUXDSP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
-  def : Pat<(f32 (PPCfcfidus
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 1)))))),
+                              (f64 (COPY_TO_REGCLASS $S1, VSRC)), VSFRC)))>;
+  def : Pat<DWToSPExtractConv.El0US1,
+            (f32 (XSCVUXDSP (COPY_TO_REGCLASS (XXPERMDI $S1, $S1, 2), VSFRC)))>;
+  def : Pat<DWToSPExtractConv.El1US1,
             (f32 (XSCVUXDSP (COPY_TO_REGCLASS
-                              (f64 (COPY_TO_REGCLASS $S, VSRC)), VSFRC)))>;
+                              (f64 (COPY_TO_REGCLASS $S1, VSRC)), VSFRC)))>;
   }
 
   let Predicates = [IsBigEndian] in {
-  def : Pat<(f32 (PPCfcfids
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 0)))))),
-            (f32 (XSCVSXDSP (COPY_TO_REGCLASS $S, VSFRC)))>;
-  def : Pat<(f32 (PPCfcfids
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 1)))))),
-            (f32 (XSCVSXDSP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
-  def : Pat<(f32 (PPCfcfidus
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 0)))))),
-            (f32 (XSCVUXDSP (COPY_TO_REGCLASS $S, VSFRC)))>;
-  def : Pat<(f32 (PPCfcfidus
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 1)))))),
-            (f32 (XSCVUXDSP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
+  def : Pat<DWToSPExtractConv.El0SS1,
+            (f32 (XSCVSXDSP (COPY_TO_REGCLASS $S1, VSFRC)))>;
+  def : Pat<DWToSPExtractConv.El1SS1,
+            (f32 (XSCVSXDSP (COPY_TO_REGCLASS (XXPERMDI $S1, $S1, 2), VSFRC)))>;
+  def : Pat<DWToSPExtractConv.El0US1,
+            (f32 (XSCVUXDSP (COPY_TO_REGCLASS $S1, VSFRC)))>;
+  def : Pat<DWToSPExtractConv.El1US1,
+            (f32 (XSCVUXDSP (COPY_TO_REGCLASS (XXPERMDI $S1, $S1, 2), VSFRC)))>;
   }
 
   // Instructions for converting float to i64 feeding a store.
@@ -3262,20 +3271,19 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def : Pat<(f64 (PPCVexts f64:$A, 2)),
             (f64 (COPY_TO_REGCLASS (VEXTSH2Ds $A), VSFRC))>;
 
-  let isPseudo = 1 in {
-    def DFLOADf32  : Pseudo<(outs vssrc:$XT), (ins memrix:$src),
-                            "#DFLOADf32",
-                            [(set f32:$XT, (load ixaddr:$src))]>;
-    def DFLOADf64  : Pseudo<(outs vsfrc:$XT), (ins memrix:$src),
-                            "#DFLOADf64",
-                            [(set f64:$XT, (load ixaddr:$src))]>;
-    def DFSTOREf32 : Pseudo<(outs), (ins vssrc:$XT, memrix:$dst),
-                            "#DFSTOREf32",
-                            [(store f32:$XT, ixaddr:$dst)]>;
-    def DFSTOREf64 : Pseudo<(outs), (ins vsfrc:$XT, memrix:$dst),
-                            "#DFSTOREf64",
-                            [(store f64:$XT, ixaddr:$dst)]>;
-  }
+  def DFLOADf32  : PPCPostRAExpPseudo<(outs vssrc:$XT), (ins memrix:$src),
+                          "#DFLOADf32",
+                          [(set f32:$XT, (load ixaddr:$src))]>;
+  def DFLOADf64  : PPCPostRAExpPseudo<(outs vsfrc:$XT), (ins memrix:$src),
+                          "#DFLOADf64",
+                          [(set f64:$XT, (load ixaddr:$src))]>;
+  def DFSTOREf32 : PPCPostRAExpPseudo<(outs), (ins vssrc:$XT, memrix:$dst),
+                          "#DFSTOREf32",
+                          [(store f32:$XT, ixaddr:$dst)]>;
+  def DFSTOREf64 : PPCPostRAExpPseudo<(outs), (ins vsfrc:$XT, memrix:$dst),
+                          "#DFSTOREf64",
+                          [(store f64:$XT, ixaddr:$dst)]>;
+
   def : Pat<(f64 (extloadf32 ixaddr:$src)),
             (COPY_TO_REGCLASS (DFLOADf32 ixaddr:$src), VSFRC)>;
   def : Pat<(f32 (fpround (f64 (extloadf32 ixaddr:$src)))),
@@ -3557,22 +3565,20 @@ let AddedComplexity = 400 in {
 }
 
 let Predicates = [HasP9Vector] in {
-  let isPseudo = 1 in {
-    let mayStore = 1 in {
-      def SPILLTOVSR_STX : PseudoXFormMemOp<(outs),
-                                            (ins spilltovsrrc:$XT, memrr:$dst),
-                                            "#SPILLTOVSR_STX", []>;
-      def SPILLTOVSR_ST : Pseudo<(outs), (ins spilltovsrrc:$XT, memrix:$dst),
-                                "#SPILLTOVSR_ST", []>;
-    }
-    let mayLoad = 1 in {
-      def SPILLTOVSR_LDX : PseudoXFormMemOp<(outs spilltovsrrc:$XT),
-                                            (ins memrr:$src),
-                                            "#SPILLTOVSR_LDX", []>;
-      def SPILLTOVSR_LD : Pseudo<(outs spilltovsrrc:$XT), (ins memrix:$src),
-                                "#SPILLTOVSR_LD", []>;
+  let mayStore = 1 in {
+    def SPILLTOVSR_STX : PseudoXFormMemOp<(outs),
+                                          (ins spilltovsrrc:$XT, memrr:$dst),
+                                          "#SPILLTOVSR_STX", []>;
+    def SPILLTOVSR_ST : PPCPostRAExpPseudo<(outs), (ins spilltovsrrc:$XT, memrix:$dst),
+                              "#SPILLTOVSR_ST", []>;
+  }
+  let mayLoad = 1 in {
+    def SPILLTOVSR_LDX : PseudoXFormMemOp<(outs spilltovsrrc:$XT),
+                                          (ins memrr:$src),
+                                          "#SPILLTOVSR_LDX", []>;
+    def SPILLTOVSR_LD : PPCPostRAExpPseudo<(outs spilltovsrrc:$XT), (ins memrix:$src),
+                              "#SPILLTOVSR_LD", []>;
 
-    }
   }
 }
 // Integer extend helper dags 32 -> 64
@@ -3821,6 +3827,15 @@ let AddedComplexity = 400 in {
                                               (XFLOADf32 xoaddr:$A), VSFRC)), 0))>;
   }
 
+  let Predicates = [IsBigEndian, HasP8Vector] in {
+    def : Pat<DWToSPExtractConv.BVU,
+              (v4f32 (VPKUDUM (XXSLDWI (XVCVUXDSP $S1), (XVCVUXDSP $S1), 3),
+                              (XXSLDWI (XVCVUXDSP $S2), (XVCVUXDSP $S2), 3)))>;
+    def : Pat<DWToSPExtractConv.BVS,
+              (v4f32 (VPKUDUM (XXSLDWI (XVCVSXDSP $S1), (XVCVSXDSP $S1), 3),
+                              (XXSLDWI (XVCVSXDSP $S2), (XVCVSXDSP $S2), 3)))>;
+  }
+
   // Big endian, available on all targets with VSX
   let Predicates = [IsBigEndian, HasVSX] in {
     def : Pat<(v2f64 (build_vector f64:$A, f64:$B)),
@@ -3847,6 +3862,15 @@ let AddedComplexity = 400 in {
     def : Pat<(v4i32 (build_vector ExtDbl.A0U, ExtDbl.A1U,
                                    ExtDbl.B0U, ExtDbl.B1U)),
               (v4i32 (VMRGEW MrgWords.CVA0B0U, MrgWords.CVA1B1U))>;
+  }
+
+  let Predicates = [IsLittleEndian, HasP8Vector] in {
+    def : Pat<DWToSPExtractConv.BVU,
+              (v4f32 (VPKUDUM (XXSLDWI (XVCVUXDSP $S2), (XVCVUXDSP $S2), 3),
+                              (XXSLDWI (XVCVUXDSP $S1), (XVCVUXDSP $S1), 3)))>;
+    def : Pat<DWToSPExtractConv.BVS,
+              (v4f32 (VPKUDUM (XXSLDWI (XVCVSXDSP $S2), (XVCVSXDSP $S2), 3),
+                              (XXSLDWI (XVCVSXDSP $S1), (XVCVSXDSP $S1), 3)))>;
   }
 
   let Predicates = [IsLittleEndian, HasVSX] in {
@@ -4029,3 +4053,21 @@ let AddedComplexity = 400 in {
   }
 }
 
+// Put this P9Altivec related definition here since it's possible to be 
+// selected to VSX instruction xvnegsp, avoid possible undef.
+let Predicates = [HasP9Altivec] in {
+
+  def : Pat<(v4i32 (PPCvabsd v4i32:$A, v4i32:$B, (i32 0))),
+            (v4i32 (VABSDUW $A, $B))>;
+
+  def : Pat<(v8i16 (PPCvabsd v8i16:$A, v8i16:$B, (i32 0))),
+            (v8i16 (VABSDUH $A, $B))>;
+
+  def : Pat<(v16i8 (PPCvabsd v16i8:$A, v16i8:$B, (i32 0))),
+            (v16i8 (VABSDUB $A, $B))>;
+
+  // As PPCVABSD description, the last operand indicates whether do the
+  // sign bit flip.
+  def : Pat<(v4i32 (PPCvabsd v4i32:$A, v4i32:$B, (i32 1))),
+            (v4i32 (VABSDUW (XVNEGSP $A), (XVNEGSP $B)))>;
+}

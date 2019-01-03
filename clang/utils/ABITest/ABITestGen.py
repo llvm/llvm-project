@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import, division, print_function
 from pprint import pprint
 import random, atexit, time
 from random import randrange
@@ -10,7 +11,7 @@ from TypeGen import *
 
 ####
 
-class TypePrinter:
+class TypePrinter(object):
     def __init__(self, output, outputHeader=None, 
                  outputTests=None, outputDriver=None,
                  headerName=None, info=None):
@@ -28,42 +29,42 @@ class TypePrinter:
         if info:
             for f in (self.output,self.outputHeader,self.outputTests,self.outputDriver):
                 if f:
-                    print >>f,info
+                    print(info, file=f)
 
         if self.writeBody:
-            print >>self.output, '#include <stdio.h>\n'
+            print('#include <stdio.h>\n', file=self.output)
             if self.outputTests:
-                print >>self.outputTests, '#include <stdio.h>'
-                print >>self.outputTests, '#include <string.h>'
-                print >>self.outputTests, '#include <assert.h>\n'
+                print('#include <stdio.h>', file=self.outputTests)
+                print('#include <string.h>', file=self.outputTests)
+                print('#include <assert.h>\n', file=self.outputTests)
 
         if headerName:
             for f in (self.output,self.outputTests,self.outputDriver):
                 if f is not None:
-                    print >>f, '#include "%s"\n'%(headerName,)
+                    print('#include "%s"\n'%(headerName,), file=f)
         
         if self.outputDriver:
-            print >>self.outputDriver, '#include <stdio.h>'
-            print >>self.outputDriver, '#include <stdlib.h>\n'
-            print >>self.outputDriver, 'int main(int argc, char **argv) {'
-            print >>self.outputDriver, '  int index = -1;'
-            print >>self.outputDriver, '  if (argc > 1) index = atoi(argv[1]);'
+            print('#include <stdio.h>', file=self.outputDriver)
+            print('#include <stdlib.h>\n', file=self.outputDriver)
+            print('int main(int argc, char **argv) {', file=self.outputDriver)
+            print('  int index = -1;', file=self.outputDriver)
+            print('  if (argc > 1) index = atoi(argv[1]);', file=self.outputDriver)
             
     def finish(self):
         if self.layoutTests:
-            print >>self.output, 'int main(int argc, char **argv) {'
-            print >>self.output, '  int index = -1;'
-            print >>self.output, '  if (argc > 1) index = atoi(argv[1]);'
+            print('int main(int argc, char **argv) {', file=self.output)
+            print('  int index = -1;', file=self.output)
+            print('  if (argc > 1) index = atoi(argv[1]);', file=self.output)
             for i,f in self.layoutTests:
-                print >>self.output, '  if (index == -1 || index == %d)' % i
-                print >>self.output, '    %s();' % f
-            print >>self.output, '  return 0;'
-            print >>self.output, '}' 
+                print('  if (index == -1 || index == %d)' % i, file=self.output)
+                print('    %s();' % f, file=self.output)
+            print('  return 0;', file=self.output)
+            print('}', file=self.output) 
 
         if self.outputDriver:
-            print >>self.outputDriver, '  printf("DONE\\n");'
-            print >>self.outputDriver, '  return 0;'
-            print >>self.outputDriver, '}'        
+            print('  printf("DONE\\n");', file=self.outputDriver)
+            print('  return 0;', file=self.outputDriver)
+            print('}', file=self.outputDriver)        
 
     def addDeclaration(self, decl):
         if decl in self.declarations:
@@ -71,11 +72,11 @@ class TypePrinter:
 
         self.declarations.add(decl)
         if self.outputHeader:
-            print >>self.outputHeader, decl
+            print(decl, file=self.outputHeader)
         else:
-            print >>self.output, decl
+            print(decl, file=self.output)
             if self.outputTests:
-                print >>self.outputTests, decl
+                print(decl, file=self.outputTests)
         return True
 
     def getTypeName(self, T):
@@ -91,12 +92,12 @@ class TypePrinter:
         tyNameClean = tyName.replace(' ','_').replace('*','star')
         fnName = 'test_%s' % tyNameClean
             
-        print >>self.output,'void %s(void) {' % fnName
+        print('void %s(void) {' % fnName, file=self.output)
         self.printSizeOfType('    %s'%fnName, tyName, ty, self.output)
         self.printAlignOfType('    %s'%fnName, tyName, ty, self.output)
         self.printOffsetsOfType('    %s'%fnName, tyName, ty, self.output)
-        print >>self.output,'}'
-        print >>self.output
+        print('}', file=self.output)
+        print(file=self.output)
         
         self.layoutTests.append((i,fnName))
         
@@ -115,71 +116,71 @@ class TypePrinter:
 
         fnName = 'fn%d'%(FT.index,)
         if self.outputHeader:
-            print >>self.outputHeader,'%s %s(%s);'%(retvalTypeName, fnName, args)
+            print('%s %s(%s);'%(retvalTypeName, fnName, args), file=self.outputHeader)
         elif self.outputTests:
-            print >>self.outputTests,'%s %s(%s);'%(retvalTypeName, fnName, args)
+            print('%s %s(%s);'%(retvalTypeName, fnName, args), file=self.outputTests)
             
-        print >>self.output,'%s %s(%s)'%(retvalTypeName, fnName, args),
+        print('%s %s(%s)'%(retvalTypeName, fnName, args), end=' ', file=self.output)
         if self.writeBody:
-            print >>self.output, '{'
+            print('{', file=self.output)
             
             for i,t in enumerate(FT.argTypes):
                 self.printValueOfType('    %s'%fnName, 'arg%d'%i, t)
 
             if retvalName is not None:
-                print >>self.output, '  return %s;'%(retvalName,)
-            print >>self.output, '}'
+                print('  return %s;'%(retvalName,), file=self.output)
+            print('}', file=self.output)
         else:
-            print >>self.output, '{}'
-        print >>self.output
+            print('{}', file=self.output)
+        print(file=self.output)
 
         if self.outputDriver:
-            print >>self.outputDriver, '  if (index == -1 || index == %d) {' % i
-            print >>self.outputDriver, '    extern void test_%s(void);' % fnName
-            print >>self.outputDriver, '    test_%s();' % fnName
-            print >>self.outputDriver, '   }'
+            print('  if (index == -1 || index == %d) {' % i, file=self.outputDriver)
+            print('    extern void test_%s(void);' % fnName, file=self.outputDriver)
+            print('    test_%s();' % fnName, file=self.outputDriver)
+            print('   }', file=self.outputDriver)
             
         if self.outputTests:
             if self.outputHeader:
-                print >>self.outputHeader, 'void test_%s(void);'%(fnName,)
+                print('void test_%s(void);'%(fnName,), file=self.outputHeader)
 
             if retvalName is None:
                 retvalTests = None
             else:
                 retvalTests = self.getTestValuesArray(FT.returnType)
-            tests = map(self.getTestValuesArray, FT.argTypes)
-            print >>self.outputTests, 'void test_%s(void) {'%(fnName,)
+            tests = [self.getTestValuesArray(ty) for ty in FT.argTypes]
+            print('void test_%s(void) {'%(fnName,), file=self.outputTests)
 
             if retvalTests is not None:
-                print >>self.outputTests, '  printf("%s: testing return.\\n");'%(fnName,)
-                print >>self.outputTests, '  for (int i=0; i<%d; ++i) {'%(retvalTests[1],)
+                print('  printf("%s: testing return.\\n");'%(fnName,), file=self.outputTests)
+                print('  for (int i=0; i<%d; ++i) {'%(retvalTests[1],), file=self.outputTests)
                 args = ', '.join(['%s[%d]'%(t,randrange(l)) for t,l in tests])
-                print >>self.outputTests, '    %s RV;'%(retvalTypeName,)
-                print >>self.outputTests, '    %s = %s[i];'%(retvalName, retvalTests[0])
-                print >>self.outputTests, '    RV = %s(%s);'%(fnName, args)
+                print('    %s RV;'%(retvalTypeName,), file=self.outputTests)
+                print('    %s = %s[i];'%(retvalName, retvalTests[0]), file=self.outputTests)
+                print('    RV = %s(%s);'%(fnName, args), file=self.outputTests)
                 self.printValueOfType('  %s_RV'%fnName, 'RV', FT.returnType, output=self.outputTests, indent=4)
                 self.checkTypeValues('RV', '%s[i]' % retvalTests[0], FT.returnType, output=self.outputTests, indent=4)
-                print >>self.outputTests, '  }'
+                print('  }', file=self.outputTests)
             
             if tests:
-                print >>self.outputTests, '  printf("%s: testing arguments.\\n");'%(fnName,)
+                print('  printf("%s: testing arguments.\\n");'%(fnName,), file=self.outputTests)
             for i,(array,length) in enumerate(tests):
                 for j in range(length):
                     args = ['%s[%d]'%(t,randrange(l)) for t,l in tests]
                     args[i] = '%s[%d]'%(array,j)
-                    print >>self.outputTests, '  %s(%s);'%(fnName, ', '.join(args),)
-            print >>self.outputTests, '}'
+                    print('  %s(%s);'%(fnName, ', '.join(args),), file=self.outputTests)
+            print('}', file=self.outputTests)
 
     def getTestReturnValue(self, type):
         typeName = self.getTypeName(type)        
         info = self.testReturnValues.get(typeName)
         if info is None:
             name = '%s_retval'%(typeName.replace(' ','_').replace('*','star'),)
-            print >>self.output, '%s %s;'%(typeName,name)
+            print('%s %s;'%(typeName,name), file=self.output)
             if self.outputHeader:
-                print >>self.outputHeader, 'extern %s %s;'%(typeName,name)
+                print('extern %s %s;'%(typeName,name), file=self.outputHeader)
             elif self.outputTests:                
-                print >>self.outputTests, 'extern %s %s;'%(typeName,name)
+                print('extern %s %s;'%(typeName,name), file=self.outputTests)
             info = self.testReturnValues[typeName] = name
         return info
 
@@ -188,12 +189,12 @@ class TypePrinter:
         info = self.testValues.get(typeName)
         if info is None:
             name = '%s_values'%(typeName.replace(' ','_').replace('*','star'),)
-            print >>self.outputTests, 'static %s %s[] = {'%(typeName,name)
+            print('static %s %s[] = {'%(typeName,name), file=self.outputTests)
             length = 0
             for item in self.getTestValues(type):
-                print >>self.outputTests, '\t%s,'%(item,)
+                print('\t%s,'%(item,), file=self.outputTests)
                 length += 1
-            print >>self.outputTests,'};'
+            print('};', file=self.outputTests)
             info = self.testValues[typeName] = (name,length)
         return info
 
@@ -230,10 +231,10 @@ class TypePrinter:
                     yield '{ %s }' % v
                 return
 
-            fieldValues = map(list, map(self.getTestValues, nonPadding))
+            fieldValues = [list(v) for v in map(self.getTestValues, nonPadding)]
             for i,values in enumerate(fieldValues):
                 for v in values:
-                    elements = map(random.choice,fieldValues)
+                    elements = [random.choice(fv) for fv in fieldValues]
                     elements[i] = v
                     yield '{ %s }'%(', '.join(elements))
 
@@ -250,19 +251,19 @@ class TypePrinter:
                     elements[i] = v
                     yield '{ %s }'%(', '.join(elements))
         else:
-            raise NotImplementedError,'Cannot make tests values of type: "%s"'%(t,)
+            raise NotImplementedError('Cannot make tests values of type: "%s"'%(t,))
 
     def printSizeOfType(self, prefix, name, t, output=None, indent=2):
-        print >>output, '%*sprintf("%s: sizeof(%s) = %%ld\\n", (long)sizeof(%s));'%(indent, '', prefix, name, name) 
+        print('%*sprintf("%s: sizeof(%s) = %%ld\\n", (long)sizeof(%s));'%(indent, '', prefix, name, name), file=output) 
     def printAlignOfType(self, prefix, name, t, output=None, indent=2):
-        print >>output, '%*sprintf("%s: __alignof__(%s) = %%ld\\n", (long)__alignof__(%s));'%(indent, '', prefix, name, name) 
+        print('%*sprintf("%s: __alignof__(%s) = %%ld\\n", (long)__alignof__(%s));'%(indent, '', prefix, name, name), file=output) 
     def printOffsetsOfType(self, prefix, name, t, output=None, indent=2):
         if isinstance(t, RecordType):
             for i,f in enumerate(t.fields):
                 if f.isBitField():
                     continue
                 fname = 'field%d' % i
-                print >>output, '%*sprintf("%s: __builtin_offsetof(%s, %s) = %%ld\\n", (long)__builtin_offsetof(%s, %s));'%(indent, '', prefix, name, fname, name, fname) 
+                print('%*sprintf("%s: __builtin_offsetof(%s, %s) = %%ld\\n", (long)__builtin_offsetof(%s, %s));'%(indent, '', prefix, name, fname, name, fname), file=output) 
                 
     def printValueOfType(self, prefix, name, t, output=None, indent=2):
         if output is None:
@@ -286,13 +287,13 @@ class TypePrinter:
                 code = 'Lf'
             else:
                 code = 'p'
-            print >>output, '%*sprintf("%s: %s = %%%s\\n", %s);'%(
-                indent, '', prefix, name, code, value_expr)
+            print('%*sprintf("%s: %s = %%%s\\n", %s);'%(
+                indent, '', prefix, name, code, value_expr), file=output)
         elif isinstance(t, EnumType):
-            print >>output, '%*sprintf("%s: %s = %%d\\n", %s);'%(indent, '', prefix, name, name)
+            print('%*sprintf("%s: %s = %%d\\n", %s);'%(indent, '', prefix, name, name), file=output)
         elif isinstance(t, RecordType):
             if not t.fields:
-                print >>output, '%*sprintf("%s: %s (empty)\\n");'%(indent, '', prefix, name) 
+                print('%*sprintf("%s: %s (empty)\\n");'%(indent, '', prefix, name), file=output) 
             for i,f in enumerate(t.fields):
                 if f.isPaddingBitField():
                     continue
@@ -310,16 +311,16 @@ class TypePrinter:
                 else:
                     self.printValueOfType(prefix, '%s[%d]'%(name,i), t.elementType, output=output,indent=indent)                    
         else:
-            raise NotImplementedError,'Cannot print value of type: "%s"'%(t,)
+            raise NotImplementedError('Cannot print value of type: "%s"'%(t,))
 
     def checkTypeValues(self, nameLHS, nameRHS, t, output=None, indent=2):
         prefix = 'foo'
         if output is None:
             output = self.output
         if isinstance(t, BuiltinType):
-            print >>output, '%*sassert(%s == %s);' % (indent, '', nameLHS, nameRHS)
+            print('%*sassert(%s == %s);' % (indent, '', nameLHS, nameRHS), file=output)
         elif isinstance(t, EnumType):
-            print >>output, '%*sassert(%s == %s);' % (indent, '', nameLHS, nameRHS)
+            print('%*sassert(%s == %s);' % (indent, '', nameLHS, nameRHS), file=output)
         elif isinstance(t, RecordType):
             for i,f in enumerate(t.fields):
                 if f.isPaddingBitField():
@@ -343,7 +344,7 @@ class TypePrinter:
                     self.checkTypeValues('%s[%d]'%(nameLHS,i), '%s[%d]'%(nameRHS,i), 
                                          t.elementType, output=output,indent=indent)                    
         else:
-            raise NotImplementedError,'Cannot print value of type: "%s"'%(t,)
+            raise NotImplementedError('Cannot print value of type: "%s"'%(t,))
 
 import sys
 
@@ -642,9 +643,9 @@ def main():
     def write(N):
         try:
             FT = ftg.get(N)
-        except RuntimeError,e:
+        except RuntimeError as e:
             if e.args[0]=='maximum recursion depth exceeded':
-                print >>sys.stderr,'WARNING: Skipped %d, recursion limit exceeded (bad arguments?)'%(N,)
+                print('WARNING: Skipped %d, recursion limit exceeded (bad arguments?)'%(N,), file=sys.stderr)
                 return
             raise
         if opts.testLayout:

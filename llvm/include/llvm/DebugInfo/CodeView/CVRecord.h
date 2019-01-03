@@ -45,13 +45,8 @@ public:
     return RecordData.drop_front(sizeof(RecordPrefix));
   }
 
-  Optional<uint32_t> hash() const { return Hash; }
-
-  void setHash(uint32_t Value) { Hash = Value; }
-
   Kind Type;
   ArrayRef<uint8_t> RecordData;
-  Optional<uint32_t> Hash;
 };
 
 template <typename Kind> struct RemappedRecord {

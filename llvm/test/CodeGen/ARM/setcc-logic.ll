@@ -61,9 +61,8 @@ define <4 x i1> @and_eq_vec(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> 
 ; CHECK-NEXT:    vceq.i32 q8, q9, q8
 ; CHECK-NEXT:    vld1.64 {d22, d23}, [r0]
 ; CHECK-NEXT:    vceq.i32 q9, q11, q10
+; CHECK-NEXT:    vand q8, q8, q9
 ; CHECK-NEXT:    vmovn.i32 d16, q8
-; CHECK-NEXT:    vmovn.i32 d17, q9
-; CHECK-NEXT:    vand d16, d16, d17
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    pop {r11, pc}
   %cmp1 = icmp eq <4 x i32> %a, %b

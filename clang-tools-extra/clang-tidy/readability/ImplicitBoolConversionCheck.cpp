@@ -306,6 +306,11 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
   auto boolOpAssignment =
       binaryOperator(anyOf(hasOperatorName("|="), hasOperatorName("&=")),
                      hasLHS(expr(hasType(booleanType()))));
+  auto bitfieldAssignment = binaryOperator(
+      hasLHS(memberExpr(hasDeclaration(fieldDecl(hasBitWidth(1))))));
+  auto bitfieldConstruct = cxxConstructorDecl(hasDescendant(cxxCtorInitializer(
+      withInitializer(equalsBoundNode("implicitCastFromBool")),
+      forField(hasBitWidth(1)))));
   Finder->addMatcher(
       implicitCastExpr(
           implicitCastFromBool,
@@ -313,14 +318,15 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
           // in such context:
           //   bool_expr_a == bool_expr_b
           //   bool_expr_a != bool_expr_b
-          unless(hasParent(binaryOperator(
-              anyOf(boolComparison, boolXor, boolOpAssignment)))),
+          unless(hasParent(binaryOperator(anyOf(
+              boolComparison, boolXor, boolOpAssignment, bitfieldAssignment)))),
+          implicitCastExpr().bind("implicitCastFromBool"),
+          unless(hasParent(bitfieldConstruct)),
           // Check also for nested casts, for example: bool -> int -> float.
           anyOf(hasParent(implicitCastExpr().bind("furtherImplicitCast")),
                 anything()),
           unless(isInTemplateInstantiation()),
-          unless(hasAncestor(functionTemplateDecl())))
-          .bind("implicitCastFromBool"),
+          unless(hasAncestor(functionTemplateDecl()))),
       this);
 }
 

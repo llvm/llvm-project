@@ -614,6 +614,28 @@ define <4 x i64> @test_x86_avx2_pmul_dq(<8 x i32> %a0, <8 x i32> %a1) {
 declare <4 x i64> @llvm.x86.avx2.pmul.dq(<8 x i32>, <8 x i32>) nounwind readnone
 
 
+define <32 x i8> @test_x86_avx2_padds_b(<32 x i8> %a0, <32 x i8> %a1) {
+; CHECK-LABEL: test_x86_avx2_padds_b:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpaddsb %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <32 x i8> @llvm.sadd.sat.v32i8(<32 x i8> %a0, <32 x i8> %a1) ; <<32 x i8>> [#uses=1]
+  ret <32 x i8> %res
+}
+declare <32 x i8> @llvm.sadd.sat.v32i8(<32 x i8>, <32 x i8>) nounwind readnone
+
+
+define <16 x i16> @test_x86_avx2_padds_w(<16 x i16> %a0, <16 x i16> %a1) {
+; CHECK-LABEL: test_x86_avx2_padds_w:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpaddsw %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x i16> @llvm.sadd.sat.v16i16(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
+  ret <16 x i16> %res
+}
+declare <16 x i16> @llvm.sadd.sat.v16i16(<16 x i16>, <16 x i16>) nounwind readnone
+
+
 define <32 x i8> @test_x86_avx2_paddus_b(<32 x i8> %a0, <32 x i8> %a1) {
 ; CHECK-LABEL: test_x86_avx2_paddus_b:
 ; CHECK:       ## %bb.0:
@@ -634,6 +656,28 @@ define <16 x i16> @test_x86_avx2_paddus_w(<16 x i16> %a0, <16 x i16> %a1) {
   ret <16 x i16> %res
 }
 declare <16 x i16> @llvm.x86.avx2.paddus.w(<16 x i16>, <16 x i16>) nounwind readnone
+
+
+define <32 x i8> @test_x86_avx2_psubs_b(<32 x i8> %a0, <32 x i8> %a1) {
+; CHECK-LABEL: test_x86_avx2_psubs_b:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpsubsb %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <32 x i8> @llvm.ssub.sat.v32i8(<32 x i8> %a0, <32 x i8> %a1) ; <<32 x i8>> [#uses=1]
+  ret <32 x i8> %res
+}
+declare <32 x i8> @llvm.ssub.sat.v32i8(<32 x i8>, <32 x i8>) nounwind readnone
+
+
+define <16 x i16> @test_x86_avx2_psubs_w(<16 x i16> %a0, <16 x i16> %a1) {
+; CHECK-LABEL: test_x86_avx2_psubs_w:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpsubsw %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x i16> @llvm.ssub.sat.v16i16(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
+  ret <16 x i16> %res
+}
+declare <16 x i16> @llvm.ssub.sat.v16i16(<16 x i16>, <16 x i16>) nounwind readnone
 
 
 define <32 x i8> @test_x86_avx2_psubus_b(<32 x i8> %a0, <32 x i8> %a1) {

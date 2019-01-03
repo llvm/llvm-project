@@ -1,6 +1,6 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/StaticAnalyzer/Core/CheckerRegistry.h"
+#include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
 using namespace clang;
@@ -45,7 +45,9 @@ void MainCallChecker::checkPreStmt(const CallExpr *CE, CheckerContext &C) const 
 // Register plugin!
 extern "C"
 void clang_registerCheckers (CheckerRegistry &registry) {
-  registry.addChecker<MainCallChecker>("example.MainCallChecker", "Disallows calls to functions called main");
+  registry.addChecker<MainCallChecker>(
+      "example.MainCallChecker", "Disallows calls to functions called main",
+      "");
 }
 
 extern "C"

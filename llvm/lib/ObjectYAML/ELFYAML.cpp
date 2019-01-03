@@ -337,10 +337,18 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCase(EF_HEXAGON_MACH_V3);
     BCase(EF_HEXAGON_MACH_V4);
     BCase(EF_HEXAGON_MACH_V5);
+    BCase(EF_HEXAGON_MACH_V55);
+    BCase(EF_HEXAGON_MACH_V60);
+    BCase(EF_HEXAGON_MACH_V62);
+    BCase(EF_HEXAGON_MACH_V65);
     BCase(EF_HEXAGON_ISA_V2);
     BCase(EF_HEXAGON_ISA_V3);
     BCase(EF_HEXAGON_ISA_V4);
     BCase(EF_HEXAGON_ISA_V5);
+    BCase(EF_HEXAGON_ISA_V55);
+    BCase(EF_HEXAGON_ISA_V60);
+    BCase(EF_HEXAGON_ISA_V62);
+    BCase(EF_HEXAGON_ISA_V65);
     break;
   case ELF::EM_AVR:
     BCase(EF_AVR_ARCH_AVR1);
@@ -745,6 +753,7 @@ void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
   IO.mapRequired("Class", FileHdr.Class);
   IO.mapRequired("Data", FileHdr.Data);
   IO.mapOptional("OSABI", FileHdr.OSABI, ELFYAML::ELF_ELFOSABI(0));
+  IO.mapOptional("ABIVersion", FileHdr.ABIVersion, Hex8(0));
   IO.mapRequired("Type", FileHdr.Type);
   IO.mapRequired("Machine", FileHdr.Machine);
   IO.mapOptional("Flags", FileHdr.Flags, ELFYAML::ELF_EF(0));

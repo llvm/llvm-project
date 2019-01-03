@@ -13,7 +13,6 @@ add_lldb_library(lldbCore
   AddressResolver.cpp
   AddressResolverFileLine.cpp
   AddressResolverName.cpp
-  Broadcaster.cpp
   Communication.cpp
   Debugger.cpp
   Disassembler.cpp
@@ -21,13 +20,11 @@ add_lldb_library(lldbCore
   DumpRegisterValue.cpp
   DynamicLoader.cpp
   EmulateInstruction.cpp
-  Event.cpp
   FileLineResolver.cpp
   FileSpecList.cpp
   FormatEntity.cpp
   Highlighter.cpp
   IOHandler.cpp
-  Listener.cpp
   Mangled.cpp
   Module.cpp
   ModuleChild.cpp

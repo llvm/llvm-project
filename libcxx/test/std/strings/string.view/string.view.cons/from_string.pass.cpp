@@ -42,6 +42,12 @@ int main () {
     test ( std::wstring(L"") );
     test ( std::wstring() );
 
+#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+    test ( std::u8string{u8"QBCDE"} );
+    test ( std::u8string{u8""} );
+    test ( std::u8string{} );
+#endif
+
 #if TEST_STD_VER >= 11
     test ( std::u16string{u"QBCDE"} );
     test ( std::u16string{u""} );

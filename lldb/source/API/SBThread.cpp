@@ -571,7 +571,7 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
             success = true;
           }
           if (node->GetType() == eStructuredDataTypeBoolean) {
-            if (node->GetAsBoolean()->GetValue() == true)
+            if (node->GetAsBoolean()->GetValue())
               strm.Printf("true");
             else
               strm.Printf("false");
@@ -1470,7 +1470,7 @@ SBThread SBThread::GetExtendedBacktraceThread(const char *type) {
     }
   }
 
-  if (log && sb_origin_thread.IsValid() == false)
+  if (log && !sb_origin_thread.IsValid())
     log->Printf("SBThread(%p)::GetExtendedBacktraceThread() is not returning a "
                 "Valid thread",
                 static_cast<void *>(exe_ctx.GetThreadPtr()));
@@ -1482,6 +1482,20 @@ uint32_t SBThread::GetExtendedBacktraceOriginatingIndexID() {
   if (thread_sp)
     return thread_sp->GetExtendedBacktraceOriginatingIndexID();
   return LLDB_INVALID_INDEX32;
+}
+
+SBValue SBThread::GetCurrentException() {
+  ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
+  if (!thread_sp) return SBValue();
+
+  return SBValue(thread_sp->GetCurrentException());
+}
+
+SBThread SBThread::GetCurrentExceptionBacktrace() {
+  ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
+  if (!thread_sp) return SBThread();
+
+  return SBThread(thread_sp->GetCurrentExceptionBacktrace());
 }
 
 bool SBThread::SafeToCallFunctions() {

@@ -170,7 +170,7 @@ public:
     bool
     ForEach(std::function<bool(Object *object)> const &foreach_callback) const {
       for (const auto &object_sp : m_items) {
-        if (foreach_callback(object_sp.get()) == false)
+        if (!foreach_callback(object_sp.get()))
           return false;
       }
       return true;
@@ -359,7 +359,7 @@ public:
     void ForEach(std::function<bool(ConstString key, Object *object)> const
                      &callback) const {
       for (const auto &pair : m_dict) {
-        if (callback(pair.first, pair.second.get()) == false)
+        if (!callback(pair.first, pair.second.get()))
           break;
       }
     }

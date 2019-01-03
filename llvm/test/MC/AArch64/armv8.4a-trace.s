@@ -1,5 +1,14 @@
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.4a < %s  | FileCheck %s --check-prefix=CHECK
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=-v8.4a < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.4a -o - 2>&1 %s  | \
+// RUN: FileCheck %s
+
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+tracev8.4 -o - 2>&1 %s  | \
+// RUN: FileCheck %s
+
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=-v8.4a -o - %s 2>&1 | \
+// RUN: FileCheck %s --check-prefix=CHECK-ERROR
+
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.4a,-tracev8.4 -o - %s 2>&1 | \
+// RUN: FileCheck %s --check-prefixes NOFEATURE,CHECK-ERROR
 
 //------------------------------------------------------------------------------
 // ARMV8.4-A Debug, Trace and PMU Extensions
@@ -45,4 +54,4 @@ tsb csync
 //CHECK-ERROR: mrs x0, TRFCR_EL12
 //CHECK-ERROR:         ^
 
-//CHECK-ERROR: error: instruction requires: armv8.4a
+//CHECK-ERROR: error: instruction requires: tracev8.4

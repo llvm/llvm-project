@@ -514,6 +514,13 @@ def C_SDSP : CStackStore<0b111, "c.sdsp", GPR, uimm9_lsb000> {
   let Inst{9-7}   = imm{8-6};
 }
 
+// The all zeros pattern isn't a valid RISC-V instruction. It's used by GNU
+// binutils as 16-bit instruction known to be unimplemented (i.e., trapping).
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+def C_UNIMP : RVInst16<(outs), (ins), "c.unimp", "", [], InstFormatOther> {
+  let Inst{15-0} = 0;
+}
+
 } // Predicates = [HasStdExtC]
 
 //===----------------------------------------------------------------------===//
@@ -677,6 +684,7 @@ def : CompressPat<(ADD GPRNoX0:$rs1, GPRNoX0:$rs2, X0),
 def : CompressPat<(ADDI GPRNoX0:$rs1, GPRNoX0:$rs2, 0),
                   (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
 def : CompressPat<(EBREAK), (C_EBREAK)>;
+def : CompressPat<(UNIMP), (C_UNIMP)>;
 def : CompressPat<(JALR X1, GPRNoX0:$rs1, 0),
                   (C_JALR GPRNoX0:$rs1)>;
 def : CompressPat<(ADD GPRNoX0:$rs1, GPRNoX0:$rs1, GPRNoX0:$rs2),

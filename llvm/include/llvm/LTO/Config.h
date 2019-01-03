@@ -49,6 +49,10 @@ struct Config {
   /// Use the new pass manager
   bool UseNewPM = false;
 
+  /// Flag to indicate that the optimizer should not assume builtins are present
+  /// on the target.
+  bool Freestanding = false;
+
   /// Disable entirely the optimizer, including importing for ThinLTO
   bool CodeGenOnly = false;
 

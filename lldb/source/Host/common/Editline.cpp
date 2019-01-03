@@ -430,7 +430,7 @@ unsigned char Editline::RecallHistory(bool earlier) {
 
   // Treat moving from the "live" entry differently
   if (!m_in_history) {
-    if (earlier == false)
+    if (!earlier)
       return CC_ERROR; // Can't go newer than the "live" entry
     if (history_w(pHistory, &history_event, H_FIRST) == -1)
       return CC_ERROR;

@@ -1633,22 +1633,20 @@ void ModuleBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
 void ModuleBitcodeWriter::writeDISubprogram(const DISubprogram *N,
                                             SmallVectorImpl<uint64_t> &Record,
                                             unsigned Abbrev) {
-  uint64_t HasUnitFlag = 1 << 1;
-  Record.push_back(N->isDistinct() | HasUnitFlag);
+  const uint64_t HasUnitFlag = 1 << 1;
+  const uint64_t HasSPFlagsFlag = 1 << 2;
+  Record.push_back(uint64_t(N->isDistinct()) | HasUnitFlag | HasSPFlagsFlag);
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawLinkageName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(N->getLine());
   Record.push_back(VE.getMetadataOrNullID(N->getType()));
-  Record.push_back(N->isLocalToUnit());
-  Record.push_back(N->isDefinition());
   Record.push_back(N->getScopeLine());
   Record.push_back(VE.getMetadataOrNullID(N->getContainingType()));
-  Record.push_back(N->getVirtuality());
+  Record.push_back(N->getSPFlags());
   Record.push_back(N->getVirtualIndex());
   Record.push_back(N->getFlags());
-  Record.push_back(N->isOptimized());
   Record.push_back(VE.getMetadataOrNullID(N->getRawUnit()));
   Record.push_back(VE.getMetadataOrNullID(N->getTemplateParams().get()));
   Record.push_back(VE.getMetadataOrNullID(N->getDeclaration()));
@@ -3603,7 +3601,7 @@ void ModuleBitcodeWriterBase::writeModuleLevelReferences(
 // Current version for the summary.
 // This is bumped whenever we introduce changes in the way some record are
 // interpreted, like flags for instance.
-static const uint64_t INDEX_VERSION = 5;
+static const uint64_t INDEX_VERSION = 6;
 
 /// Emit the per-module summary section alongside the rest of
 /// the module's bitcode.
@@ -3734,6 +3732,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     Flags |= 0x1;
   if (Index.skipModuleByDistributedBackend())
     Flags |= 0x2;
+  if (Index.hasSyntheticEntryCounts())
+    Flags |= 0x4;
   Stream.EmitRecord(bitc::FS_FLAGS, ArrayRef<uint64_t>{Flags});
 
   for (const auto &GVI : valueIds()) {
@@ -3749,6 +3749,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // flags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // instcount
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // fflags
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // entrycount
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // immutablerefcnt
   // numrefs x valueid, n x (valueid)
@@ -3863,6 +3864,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     NameVals.push_back(getEncodedGVSummaryFlags(FS->flags()));
     NameVals.push_back(FS->instCount());
     NameVals.push_back(getEncodedFFlags(FS->fflags()));
+    NameVals.push_back(FS->entryCount());
+
     // Fill in below
     NameVals.push_back(0); // numrefs
     NameVals.push_back(0); // immutablerefcnt
@@ -3877,8 +3880,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
         ImmutableRefCnt++;
       Count++;
     }
-    NameVals[5] = Count;
-    NameVals[6] = ImmutableRefCnt;
+    NameVals[6] = Count;
+    NameVals[7] = ImmutableRefCnt;
 
     bool HasProfileData = false;
     for (auto &EI : FS->calls()) {

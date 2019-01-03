@@ -48,6 +48,7 @@ add_clang_library(clangBasic
   Attributes.cpp
   Builtins.cpp
   CharInfo.cpp
+  CodeGenOptions.cpp
   Cuda.cpp
   Diagnostic.cpp
   DiagnosticIDs.cpp
@@ -67,10 +68,12 @@ add_clang_library(clangBasic
   Sanitizers.cpp
   SourceLocation.cpp
   SourceManager.cpp
+  SourceMgrAdapter.cpp
   TargetInfo.cpp
   Targets.cpp
   Targets/AArch64.cpp
   Targets/AMDGPU.cpp
+  Targets/ARC.cpp
   Targets/ARM.cpp
   Targets/AVR.cpp
   Targets/BPF.cpp

@@ -25,6 +25,11 @@
     extern "C" {
 #   endif
 
+#   define omp_set_affinity_format   ompc_set_affinity_format
+#   define omp_get_affinity_format   ompc_get_affinity_format
+#   define omp_display_affinity      ompc_display_affinity
+#   define omp_capture_affinity      ompc_capture_affinity
+
 #   if defined(_WIN32)
 #       define __KAI_KMPC_CONVENTION __cdecl
 #       ifndef __KMP_IMP
@@ -234,6 +239,12 @@
     extern void *__KAI_KMPC_CONVENTION omp_alloc(size_t size, const omp_allocator_t *allocator);
     extern void __KAI_KMPC_CONVENTION omp_free(void *ptr, const omp_allocator_t *allocator);
 #endif
+
+    /* OpenMP 5.0 Affinity Format */
+    extern void __KAI_KMPC_CONVENTION omp_set_affinity_format(char const *);
+    extern size_t __KAI_KMPC_CONVENTION omp_get_affinity_format(char *, size_t);
+    extern void __KAI_KMPC_CONVENTION omp_display_affinity(char const *);
+    extern size_t __KAI_KMPC_CONVENTION omp_capture_affinity(char *, size_t, char const *);
 
 #   undef __KAI_KMPC_CONVENTION
 #   undef __KMP_IMP

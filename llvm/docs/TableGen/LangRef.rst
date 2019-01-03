@@ -33,7 +33,7 @@ Lexical Analysis
 ================
 
 TableGen supports BCPL (``// ...``) and nestable C-style (``/* ... */``)
-comments.
+comments.  TableGen also provides simple `Preprocessing Support`_.
 
 The following is a listing of the basic punctuation tokens::
 
@@ -448,3 +448,50 @@ applied at the end of parsing the base classes of a record.
    BaseMultiClassList: `MultiClassID` ("," `MultiClassID`)*
    MultiClassID: `TokIdentifier`
    MultiClassObject: `Def` | `Defm` | `Let` | `Foreach`
+
+Preprocessing Support
+=====================
+
+TableGen's embedded preprocessor is only intended for conditional compilation.
+It supports the following directives:
+
+.. productionlist::
+   LineBegin: ^
+   LineEnd: "\n" | "\r" | EOF
+   WhiteSpace: " " | "\t"
+   CStyleComment: "/*" (.* - "*/") "*/"
+   BCPLComment: "//" (.* - `LineEnd`) `LineEnd`
+   WhiteSpaceOrCStyleComment: `WhiteSpace` | `CStyleComment`
+   WhiteSpaceOrAnyComment: `WhiteSpace` | `CStyleComment` | `BCPLComment`
+   MacroName: `ualpha` (`ualpha` | "0"..."9")*
+   PrepDefine: `LineBegin` (`WhiteSpaceOrCStyleComment`)*
+             : "#define" (`WhiteSpace`)+ `MacroName`
+             : (`WhiteSpaceOrAnyComment`)* `LineEnd`
+   PrepIfdef: `LineBegin` (`WhiteSpaceOrCStyleComment`)*
+            : "#ifdef" (`WhiteSpace`)+ `MacroName`
+            : (`WhiteSpaceOrAnyComment`)* `LineEnd`
+   PrepElse: `LineBegin` (`WhiteSpaceOrCStyleComment`)*
+           : "#else" (`WhiteSpaceOrAnyComment`)* `LineEnd`
+   PrepEndif: `LineBegin` (`WhiteSpaceOrCStyleComment`)*
+            : "#endif" (`WhiteSpaceOrAnyComment`)* `LineEnd`
+   PrepRegContentException: `PredIfdef` | `PredElse` | `PredEndif` | EOF
+   PrepRegion: .* - `PrepRegContentException`
+             :| `PrepIfDef`
+             :  (`PrepRegion`)*
+             :  [`PrepElse`]
+             :  (`PrepRegion`)*
+             :  `PrepEndif`
+
+:token:`PrepRegion` may occur anywhere in a TD file, as long as it matches
+the grammar specification.
+
+:token:`PrepDefine` allows defining a :token:`MacroName` so that any following
+:token:`PrepIfdef` - :token:`PrepElse` preprocessing region part and
+:token:`PrepIfdef` - :token:`PrepEndif` preprocessing region
+are enabled for TableGen tokens parsing.
+
+A preprocessing region, starting (i.e. having its :token:`PrepIfdef`) in a file,
+must end (i.e. have its :token:`PrepEndif`) in the same file.
+
+A :token:`MacroName` may be defined externally by using ``{ -D<NAME> }``
+option of TableGen.

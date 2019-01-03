@@ -436,7 +436,7 @@ bool EmulateInstructionARM64::EvaluateInstruction(uint32_t evaluate_options) {
 
   // Only return false if we are unable to read the CPSR if we care about
   // conditions
-  if (success == false && m_ignore_conditions == false)
+  if (!success && !m_ignore_conditions)
     return false;
 
   uint32_t orig_pc_value = 0;
@@ -546,11 +546,8 @@ bool EmulateInstructionARM64::BranchTo(const Context &context, uint32_t N,
   } else
     return false;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindGeneric,
-                             LLDB_REGNUM_GENERIC_PC, addr))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindGeneric,
+                               LLDB_REGNUM_GENERIC_PC, addr);
 }
 
 bool EmulateInstructionARM64::ConditionHolds(const uint32_t cond) {
@@ -1096,9 +1093,7 @@ bool EmulateInstructionARM64::EmulateB(const uint32_t opcode) {
     return false;
   }
 
-  if (!BranchTo(context, 64, target))
-    return false;
-  return true;
+  return BranchTo(context, 64, target);
 }
 
 bool EmulateInstructionARM64::EmulateBcond(const uint32_t opcode) {

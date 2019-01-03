@@ -1,0 +1,72 @@
+# RUN: llc -run-pass opt-phis -march=x86-64 -o - %s | FileCheck %s
+# All PHIs should be removed since they can be securely replaced
+# by %8 register.
+# CHECK-NOT: PHI
+--- |
+  define void @test() {
+    ret void
+  }
+...
+---
+name:            test
+alignment:       4
+tracksRegLiveness: true
+jumpTable:
+  kind:            block-address
+  entries:
+    - id:              0
+      blocks:          [ '%bb.3', '%bb.2', '%bb.1', '%bb.4' ]
+body:             |
+  bb.0:
+    liveins: $edi, $ymm0, $rsi
+
+    %9:gr64 = COPY $rsi
+    %8:vr256 = COPY $ymm0
+    %7:gr32 = COPY $edi
+    %11:gr32 = SAR32ri %7, 31, implicit-def dead $eflags
+    %12:gr32 = SHR32ri %11, 30, implicit-def dead $eflags
+    %13:gr32 = ADD32rr %7, killed %12, implicit-def dead $eflags
+    %14:gr32 = AND32ri8 %13, -4, implicit-def dead $eflags
+    %15:gr32 = SUB32rr %7, %14, implicit-def dead $eflags
+    %10:gr64_nosp = SUBREG_TO_REG 0, %15, %subreg.sub_32bit
+    %16:gr32 = SUB32ri8 %15, 3, implicit-def $eflags
+    JA_1 %bb.8, implicit $eflags
+
+  bb.9:
+    JMP64m $noreg, 8, %10, %jump-table.0, $noreg :: (load 8 from jump-table)
+
+  bb.1:
+    %0:vr256 = COPY %8
+    JMP_1 %bb.5
+
+  bb.2:
+    %1:vr256 = COPY %8
+    JMP_1 %bb.6
+
+  bb.3:
+    %2:vr256 = COPY %8
+    JMP_1 %bb.7
+
+  bb.4:
+    %3:vr256 = COPY %8
+    %17:vr128 = VEXTRACTF128rr %8, 1
+    VPEXTRDmr %9, 1, $noreg, 12, $noreg, killed %17, 2
+
+  bb.5:
+    %4:vr256 = PHI %0, %bb.1, %3, %bb.4
+    %18:vr128 = VEXTRACTF128rr %4, 1
+    VPEXTRDmr %9, 1, $noreg, 8, $noreg, killed %18, 1
+
+  bb.6:
+    %5:vr256 = PHI %1, %bb.2, %4, %bb.5
+    %19:vr128 = VEXTRACTF128rr %5, 1
+    VMOVPDI2DImr %9, 1, $noreg, 4, $noreg, killed %19
+
+  bb.7:
+    %6:vr256 = PHI %2, %bb.3, %5, %bb.6
+    %20:vr128 = COPY %6.sub_xmm
+    VPEXTRDmr %9, 1, $noreg, 0, $noreg, killed %20, 3
+
+  bb.8:
+    RET 0
+...

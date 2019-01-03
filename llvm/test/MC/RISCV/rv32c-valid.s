@@ -103,3 +103,6 @@ c.lui s0, 0xfffe0
 # CHECK-ASM-AND-OBJ: c.lui s0, 1048575
 # CHECK-ASM: encoding: [0x7d,0x74]
 c.lui s0, 0xfffff
+# CHECK-ASM-AND-OBJ: c.unimp
+# CHECK-ASM: encoding: [0x00,0x00]
+c.unimp

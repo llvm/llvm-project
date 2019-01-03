@@ -381,6 +381,10 @@ uptr internal_filesize(fd_t fd) {
   return (uptr)st.st_size;
 }
 
+uptr internal_dup(int oldfd) {
+  return internal_syscall(SYSCALL(dup), oldfd);
+}
+
 uptr internal_dup2(int oldfd, int newfd) {
 #if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(dup3), oldfd, newfd, 0);
@@ -433,7 +437,7 @@ void internal__exit(int exitcode) {
 
 unsigned int internal_sleep(unsigned int seconds) {
   struct timespec ts;
-  ts.tv_sec = 1;
+  ts.tv_sec = seconds;
   ts.tv_nsec = 0;
   int res = internal_syscall(SYSCALL(nanosleep), &ts, &ts);
   if (res) return ts.tv_sec;
@@ -772,7 +776,8 @@ int internal_sysctl(const int *name, unsigned int namelen, void *oldp,
   return sysctl(name, namelen, oldp, (size_t *)oldlenp, (void *)newp,
                 (size_t)newlen);
 #else
-  return sysctl(name, namelen, oldp, (size_t *)oldlenp, newp, (size_t)newlen);
+  return internal_syscall(SYSCALL(__sysctl), name, namelen, oldp,
+                          (size_t *)oldlenp, newp, (size_t)newlen);
 #endif
 }
 
@@ -1076,6 +1081,14 @@ uptr GetPageSize() {
   return EXEC_PAGESIZE;
 #elif SANITIZER_USE_GETAUXVAL
   return getauxval(AT_PAGESZ);
+#elif SANITIZER_FREEBSD || SANITIZER_NETBSD
+// Use sysctl as sysconf can trigger interceptors internally.
+  int pz = 0;
+  uptr pzl = sizeof(pz);
+  int mib[2] = {CTL_HW, HW_PAGESIZE};
+  int rv = internal_sysctl(mib, 2, &pz, &pzl, nullptr, 0);
+  CHECK_EQ(rv, 0);
+  return (uptr)pz;
 #else
   return sysconf(_SC_PAGESIZE);  // EXEC_PAGESIZE may not be trustworthy.
 #endif
@@ -2004,6 +2017,30 @@ void CheckASLR() {
                "ASLR will be disabled and the program re-executed.\n");
     CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
     ReExec();
+  }
+#else
+  // Do nothing
+#endif
+}
+
+void CheckMPROTECT() {
+#if SANITIZER_NETBSD
+  int mib[3];
+  int paxflags;
+  uptr len = sizeof(paxflags);
+
+  mib[0] = CTL_PROC;
+  mib[1] = internal_getpid();
+  mib[2] = PROC_PID_PAXFLAGS;
+
+  if (UNLIKELY(internal_sysctl(mib, 3, &paxflags, &len, NULL, 0) == -1)) {
+    Printf("sysctl failed\n");
+    Die();
+  }
+
+  if (UNLIKELY(paxflags & CTL_PROC_PAXFLAGS_MPROTECT)) {
+    Printf("This sanitizer is not compatible with enabled MPROTECT\n");
+    Die();
   }
 #else
   // Do nothing

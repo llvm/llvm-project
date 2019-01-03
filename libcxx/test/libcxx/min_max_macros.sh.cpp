@@ -241,8 +241,6 @@ TEST_MACROS();
 TEST_MACROS();
 #include <experimental/deque>
 TEST_MACROS();
-#include <experimental/dynarray>
-TEST_MACROS();
 #include <experimental/filesystem>
 TEST_MACROS();
 #include <experimental/forward_list>

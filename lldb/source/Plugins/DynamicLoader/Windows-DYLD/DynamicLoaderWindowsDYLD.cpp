@@ -10,12 +10,14 @@
 
 #include "DynamicLoaderWindowsDYLD.h"
 
+#include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlanStepInstruction.h"
+#include "lldb/Utility/Log.h"
 
 #include "llvm/ADT/Triple.h"
 
@@ -60,7 +62,39 @@ DynamicLoader *DynamicLoaderWindowsDYLD::CreateInstance(Process *process,
   return nullptr;
 }
 
-void DynamicLoaderWindowsDYLD::DidAttach() {}
+void DynamicLoaderWindowsDYLD::DidAttach() {
+    Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  if (log)
+    log->Printf("DynamicLoaderWindowsDYLD::%s()", __FUNCTION__);
+
+  ModuleSP executable = GetTargetExecutable();
+
+  if (!executable.get())
+    return;
+
+  // Try to fetch the load address of the file from the process, since there
+  // could be randomization of the load address.
+
+  // It might happen that the remote has a different dir for the file, so we
+  // only send the basename of the executable in the query. I think this is safe
+  // because I doubt that two executables with the same basenames are loaded in
+  // memory...
+  FileSpec file_spec(
+      executable->GetPlatformFileSpec().GetFilename().GetCString());
+  bool is_loaded;
+  addr_t base_addr = 0;
+  lldb::addr_t load_addr;
+  Status error = m_process->GetFileLoadAddress(file_spec, is_loaded, load_addr);
+  if (error.Success() && is_loaded) {
+    base_addr = load_addr;
+    UpdateLoadedSections(executable, LLDB_INVALID_ADDRESS, base_addr, false);
+  }
+
+  ModuleList module_list;
+  module_list.Append(executable);
+  m_process->GetTarget().ModulesDidLoad(module_list);
+  m_process->LoadModules();
+}
 
 void DynamicLoaderWindowsDYLD::DidLaunch() {}
 

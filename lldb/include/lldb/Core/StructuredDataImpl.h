@@ -10,8 +10,8 @@
 #ifndef liblldb_StructuredDataImpl_h_
 #define liblldb_StructuredDataImpl_h_
 
-#include "lldb/Core/Event.h"
 #include "lldb/Target/StructuredDataPlugin.h"
+#include "lldb/Utility/Event.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"

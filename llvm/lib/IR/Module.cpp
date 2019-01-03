@@ -46,6 +46,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/VersionTuple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -202,16 +203,14 @@ GlobalVariable *Module::getGlobalVariable(StringRef Name,
 ///      with a constantexpr cast to the right type.
 ///   3. Finally, if the existing global is the correct declaration, return the
 ///      existing global.
-Constant *Module::getOrInsertGlobal(StringRef Name, Type *Ty) {
+Constant *Module::getOrInsertGlobal(
+    StringRef Name, Type *Ty,
+    function_ref<GlobalVariable *()> CreateGlobalCallback) {
   // See if we have a definition for the specified global already.
   GlobalVariable *GV = dyn_cast_or_null<GlobalVariable>(getNamedValue(Name));
-  if (!GV) {
-    // Nope, add it
-    GlobalVariable *New =
-      new GlobalVariable(*this, Ty, false, GlobalVariable::ExternalLinkage,
-                         nullptr, Name);
-     return New;                    // Return the new declaration.
-  }
+  if (!GV)
+    GV = CreateGlobalCallback();
+  assert(GV && "The CreateGlobalCallback is expected to create a global");
 
   // If the variable exists but has the wrong type, return a bitcast to the
   // right type.
@@ -222,6 +221,14 @@ Constant *Module::getOrInsertGlobal(StringRef Name, Type *Ty) {
 
   // Otherwise, we just found the existing function or a prototype.
   return GV;
+}
+
+// Overload to construct a global variable using its constructor's defaults.
+Constant *Module::getOrInsertGlobal(StringRef Name, Type *Ty) {
+  return getOrInsertGlobal(Name, Ty, [&] {
+    return new GlobalVariable(*this, Ty, false, GlobalVariable::ExternalLinkage,
+                              nullptr, Name);
+  });
 }
 
 //===----------------------------------------------------------------------===//
@@ -545,6 +552,45 @@ bool Module::getRtLibUseGOT() const {
 
 void Module::setRtLibUseGOT() {
   addModuleFlag(ModFlagBehavior::Max, "RtLibUseGOT", 1);
+}
+
+void Module::setSDKVersion(const VersionTuple &V) {
+  SmallVector<unsigned, 3> Entries;
+  Entries.push_back(V.getMajor());
+  if (auto Minor = V.getMinor()) {
+    Entries.push_back(*Minor);
+    if (auto Subminor = V.getSubminor())
+      Entries.push_back(*Subminor);
+    // Ignore the 'build' component as it can't be represented in the object
+    // file.
+  }
+  addModuleFlag(ModFlagBehavior::Warning, "SDK Version",
+                ConstantDataArray::get(Context, Entries));
+}
+
+VersionTuple Module::getSDKVersion() const {
+  auto *CM = dyn_cast_or_null<ConstantAsMetadata>(getModuleFlag("SDK Version"));
+  if (!CM)
+    return {};
+  auto *Arr = dyn_cast_or_null<ConstantDataArray>(CM->getValue());
+  if (!Arr)
+    return {};
+  auto getVersionComponent = [&](unsigned Index) -> Optional<unsigned> {
+    if (Index >= Arr->getNumElements())
+      return None;
+    return (unsigned)Arr->getElementAsInteger(Index);
+  };
+  auto Major = getVersionComponent(0);
+  if (!Major)
+    return {};
+  VersionTuple Result = VersionTuple(*Major);
+  if (auto Minor = getVersionComponent(1)) {
+    Result = VersionTuple(*Major, *Minor);
+    if (auto Subminor = getVersionComponent(2)) {
+      Result = VersionTuple(*Major, *Minor, *Subminor);
+    }
+  }
+  return Result;
 }
 
 GlobalVariable *llvm::collectUsedGlobalVariables(

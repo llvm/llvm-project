@@ -109,6 +109,7 @@ static const uint64_t kFreeBSD_ShadowOffset32 = 1ULL << 30;
 static const uint64_t kFreeBSD_ShadowOffset64 = 1ULL << 46;
 static const uint64_t kNetBSD_ShadowOffset32 = 1ULL << 30;
 static const uint64_t kNetBSD_ShadowOffset64 = 1ULL << 46;
+static const uint64_t kNetBSDKasan_ShadowOffset64 = 0xdfff900000000000;
 static const uint64_t kPS4CPU_ShadowOffset64 = 1ULL << 40;
 static const uint64_t kWindowsShadowOffset32 = 3ULL << 28;
 
@@ -344,10 +345,14 @@ static cl::opt<uint32_t> ClForceExperiment(
     cl::init(0));
 
 static cl::opt<bool>
-    ClUsePrivateAliasForGlobals("asan-use-private-alias",
-                                cl::desc("Use private aliases for global"
-                                         " variables"),
-                                cl::Hidden, cl::init(false));
+    ClUsePrivateAlias("asan-use-private-alias",
+                      cl::desc("Use private aliases for global variables"),
+                      cl::Hidden, cl::init(false));
+
+static cl::opt<bool>
+    ClUseOdrIndicator("asan-use-odr-indicator",
+                      cl::desc("Use odr indicators to improve ODR reporting"),
+                      cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
     ClUseGlobalsGC("asan-globals-live-support",
@@ -436,8 +441,11 @@ public:
     for (auto MDN : Globals->operands()) {
       // Metadata node contains the global and the fields of "Entry".
       assert(MDN->getNumOperands() == 5);
-      auto *GV = mdconst::extract_or_null<GlobalVariable>(MDN->getOperand(0));
+      auto *V = mdconst::extract_or_null<Constant>(MDN->getOperand(0));
       // The optimizer may optimize away a global entirely.
+      if (!V) continue;
+      auto *StrippedV = V->stripPointerCasts();
+      auto *GV = dyn_cast<GlobalVariable>(StrippedV);
       if (!GV) continue;
       // We can already have an entry for GV if it was merged with another
       // global.
@@ -540,9 +548,12 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
       Mapping.Offset = kSystemZ_ShadowOffset64;
     else if (IsFreeBSD && !IsMIPS64)
       Mapping.Offset = kFreeBSD_ShadowOffset64;
-    else if (IsNetBSD)
-      Mapping.Offset = kNetBSD_ShadowOffset64;
-    else if (IsPS4CPU)
+    else if (IsNetBSD) {
+      if (IsKasan)
+        Mapping.Offset = kNetBSDKasan_ShadowOffset64;
+      else
+        Mapping.Offset = kNetBSD_ShadowOffset64;
+    } else if (IsPS4CPU)
       Mapping.Offset = kPS4CPU_ShadowOffset64;
     else if (IsLinux && IsX86_64) {
       if (IsKasan)
@@ -731,9 +742,12 @@ public:
 
   explicit AddressSanitizerModule(bool CompileKernel = false,
                                   bool Recover = false,
-                                  bool UseGlobalsGC = true)
-      : ModulePass(ID),
-        UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC),
+                                  bool UseGlobalsGC = true,
+                                  bool UseOdrIndicator = false)
+      : ModulePass(ID), UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC),
+        // Enable aliases as they should have no downside with ODR indicators.
+        UsePrivateAlias(UseOdrIndicator || ClUsePrivateAlias),
+        UseOdrIndicator(UseOdrIndicator || ClUseOdrIndicator),
         // Not a typo: ClWithComdat is almost completely pointless without
         // ClUseGlobalsGC (because then it only works on modules without
         // globals, which are rare); it is a prerequisite for ClUseGlobalsGC;
@@ -742,11 +756,10 @@ public:
         // ClWithComdat and ClUseGlobalsGC unless the frontend says it's ok to
         // do globals-gc.
         UseCtorComdat(UseGlobalsGC && ClWithComdat) {
-          this->Recover = ClRecover.getNumOccurrences() > 0 ?
-              ClRecover : Recover;
-          this->CompileKernel = ClEnableKasan.getNumOccurrences() > 0 ?
-              ClEnableKasan : CompileKernel;
-	}
+    this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
+    this->CompileKernel =
+        ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan : CompileKernel;
+  }
 
   bool runOnModule(Module &M) override;
   StringRef getPassName() const override { return "AddressSanitizerModule"; }
@@ -790,6 +803,8 @@ private:
   bool CompileKernel;
   bool Recover;
   bool UseGlobalsGC;
+  bool UsePrivateAlias;
+  bool UseOdrIndicator;
   bool UseCtorComdat;
   Type *IntptrTy;
   LLVMContext *C;
@@ -990,7 +1005,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     if (ID == Intrinsic::localescape) LocalEscapeCall = &II;
     if (!ASan.UseAfterScope)
       return;
-    if (ID != Intrinsic::lifetime_start && ID != Intrinsic::lifetime_end)
+    if (!II.isLifetimeStartOrEnd())
       return;
     // Found lifetime intrinsic, add ASan instrumentation if necessary.
     ConstantInt *Size = dyn_cast<ConstantInt>(II.getArgOperand(0));
@@ -1089,9 +1104,11 @@ INITIALIZE_PASS(
 
 ModulePass *llvm::createAddressSanitizerModulePass(bool CompileKernel,
                                                    bool Recover,
-                                                   bool UseGlobalsGC) {
+                                                   bool UseGlobalsGC,
+                                                   bool UseOdrIndicator) {
   assert(!CompileKernel || Recover);
-  return new AddressSanitizerModule(CompileKernel, Recover, UseGlobalsGC);
+  return new AddressSanitizerModule(CompileKernel, Recover, UseGlobalsGC,
+                                    UseOdrIndicator);
 }
 
 static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
@@ -2133,6 +2150,10 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
     NewGlobal->copyAttributesFrom(G);
     NewGlobal->setComdat(G->getComdat());
     NewGlobal->setAlignment(MinRZ);
+    // Don't fold globals with redzones. ODR violation detector and redzone
+    // poisoning implicitly creates a dependence on the global's address, so it
+    // is no longer valid for it to be marked unnamed_addr.
+    NewGlobal->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
 
     // Move null-terminated C strings to "__asan_cstring" section on Darwin.
     if (TargetTriple.isOSBinFormatMachO() && !G->hasSection() &&
@@ -2173,12 +2194,18 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
     bool CanUsePrivateAliases =
         TargetTriple.isOSBinFormatELF() || TargetTriple.isOSBinFormatMachO() ||
         TargetTriple.isOSBinFormatWasm();
-    if (CanUsePrivateAliases && ClUsePrivateAliasForGlobals) {
+    if (CanUsePrivateAliases && UsePrivateAlias) {
       // Create local alias for NewGlobal to avoid crash on ODR between
       // instrumented and non-instrumented libraries.
-      auto *GA = GlobalAlias::create(GlobalValue::InternalLinkage,
-                                     NameForGlobal + M.getName(), NewGlobal);
+      InstrumentedGlobal =
+          GlobalAlias::create(GlobalValue::PrivateLinkage, "", NewGlobal);
+    }
 
+    // ODR should not happen for local linkage.
+    if (NewGlobal->hasLocalLinkage()) {
+      ODRIndicator = ConstantExpr::getIntToPtr(ConstantInt::get(IntptrTy, -1),
+                                               IRB.getInt8PtrTy());
+    } else if (UseOdrIndicator) {
       // With local aliases, we need to provide another externally visible
       // symbol __odr_asan_XXX to detect ODR violation.
       auto *ODRIndicatorSym =
@@ -2192,7 +2219,6 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
       ODRIndicatorSym->setDLLStorageClass(NewGlobal->getDLLStorageClass());
       ODRIndicatorSym->setAlignment(1);
       ODRIndicator = ODRIndicatorSym;
-      InstrumentedGlobal = GA;
     }
 
     Constant *Initializer = ConstantStruct::get(

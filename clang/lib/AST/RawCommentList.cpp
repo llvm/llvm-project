@@ -415,7 +415,7 @@ std::string RawComment::getFormattedText(const SourceManager &SourceMgr,
       Str.pop_back();
   };
 
-  // Proces first line separately to remember indent for the following lines.
+  // Process first line separately to remember indent for the following lines.
   if (!LexLine(/*IsFirstLine=*/true)) {
     DropTrailingNewLines(Result);
     return Result;

@@ -750,6 +750,32 @@ public:
     bool operator()(const _T1& __x, const _T2& __y) {return __p_(__y, __x);}
 };
 
+// Perform division by two quickly for positive integers (llvm.org/PR39129)
+
+template <typename _Integral>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+typename enable_if
+<
+    is_integral<_Integral>::value,
+    _Integral
+>::type
+__half_positive(_Integral __value)
+{
+    return static_cast<_Integral>(static_cast<typename make_unsigned<_Integral>::type>(__value) / 2);
+}
+
+template <typename _Tp>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+typename enable_if
+<
+    !is_integral<_Tp>::value,
+    _Tp
+>::type
+__half_positive(_Tp __value)
+{
+    return __value / 2;
+}
+
 #ifdef _LIBCPP_DEBUG
 
 template <class _Compare>
@@ -3202,7 +3228,7 @@ partition_point(_ForwardIterator __first, _ForwardIterator __last, _Predicate __
     difference_type __len = _VSTD::distance(__first, __last);
     while (__len != 0)
     {
-        difference_type __l2 = __len / 2;
+        difference_type __l2 = _VSTD::__half_positive(__len);
         _ForwardIterator __m = __first;
         _VSTD::advance(__m, __l2);
         if (__pred(*__m))
@@ -4070,7 +4096,7 @@ __lower_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
     difference_type __len = _VSTD::distance(__first, __last);
     while (__len != 0)
     {
-        difference_type __l2 = __len / 2;
+        difference_type __l2 = _VSTD::__half_positive(__len);
         _ForwardIterator __m = __first;
         _VSTD::advance(__m, __l2);
         if (__comp(*__m, __value_))
@@ -4112,7 +4138,7 @@ __upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
     difference_type __len = _VSTD::distance(__first, __last);
     while (__len != 0)
     {
-        difference_type __l2 = __len / 2;
+        difference_type __l2 = _VSTD::__half_positive(__len);
         _ForwardIterator __m = __first;
         _VSTD::advance(__m, __l2);
         if (__comp(__value_, *__m))
@@ -4154,7 +4180,7 @@ __equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
     difference_type __len = _VSTD::distance(__first, __last);
     while (__len != 0)
     {
-        difference_type __l2 = __len / 2;
+        difference_type __l2 = _VSTD::__half_positive(__len);
         _ForwardIterator __m = __first;
         _VSTD::advance(__m, __l2);
         if (__comp(*__m, __value_))

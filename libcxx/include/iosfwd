@@ -18,6 +18,12 @@ namespace std
 {
 
 template<class charT> struct char_traits;
+template<>            struct char_traits<char>;
+template<>            struct char_traits<char8_t>;  // C++20
+template<>            struct char_traits<char16_t>;
+template<>            struct char_traits<char32_t>;
+template<>            struct char_traits<wchar_t>;
+
 template<class T>     class allocator;
 
 class ios_base;
@@ -98,6 +104,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 class _LIBCPP_TYPE_VIS ios_base;
 
 template<class _CharT>  struct _LIBCPP_TEMPLATE_VIS char_traits;
+template<> struct char_traits<char>;
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+template<> struct char_traits<char8_t>;
+#endif
+template<> struct char_traits<char16_t>;
+template<> struct char_traits<char32_t>;
+template<> struct char_traits<wchar_t>;
+
 template<class _Tp>     class _LIBCPP_TEMPLATE_VIS allocator;
 
 template <class _CharT, class _Traits = char_traits<_CharT> >
@@ -175,6 +189,9 @@ typedef basic_fstream<wchar_t>       wfstream;
 template <class _State>             class _LIBCPP_TEMPLATE_VIS fpos;
 typedef fpos<mbstate_t>    streampos;
 typedef fpos<mbstate_t>    wstreampos;
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+typedef fpos<mbstate_t>    u8streampos;
+#endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 typedef fpos<mbstate_t>    u16streampos;
 typedef fpos<mbstate_t>    u32streampos;

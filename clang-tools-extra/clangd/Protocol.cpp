@@ -14,7 +14,9 @@
 #include "Protocol.h"
 #include "Logger.h"
 #include "URI.h"
+#include "index/Index.h"
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -28,29 +30,44 @@ namespace clangd {
 
 char LSPError::ID;
 
-URIForFile::URIForFile(std::string AbsPath) {
+URIForFile URIForFile::canonicalize(StringRef AbsPath, StringRef TUPath) {
   assert(sys::path::is_absolute(AbsPath) && "the path is relative");
-  File = std::move(AbsPath);
+  auto Resolved = URI::resolvePath(AbsPath, TUPath);
+  if (!Resolved) {
+    elog("URIForFile: failed to resolve path {0} with TU path {1}: "
+         "{2}.\nUsing unresolved path.",
+         AbsPath, TUPath, Resolved.takeError());
+    return URIForFile(AbsPath);
+  }
+  return URIForFile(std::move(*Resolved));
+}
+
+Expected<URIForFile> URIForFile::fromURI(const URI &U, StringRef HintPath) {
+  auto Resolved = URI::resolve(U, HintPath);
+  if (!Resolved)
+    return Resolved.takeError();
+  return URIForFile(std::move(*Resolved));
 }
 
 bool fromJSON(const json::Value &E, URIForFile &R) {
   if (auto S = E.getAsString()) {
-    auto U = URI::parse(*S);
-    if (!U) {
-      elog("Failed to parse URI {0}: {1}", *S, U.takeError());
+    auto Parsed = URI::parse(*S);
+    if (!Parsed) {
+      elog("Failed to parse URI {0}: {1}", *S, Parsed.takeError());
       return false;
     }
-    if (U->scheme() != "file" && U->scheme() != "test") {
+    if (Parsed->scheme() != "file" && Parsed->scheme() != "test") {
       elog("Clangd only supports 'file' URI scheme for workspace files: {0}",
            *S);
       return false;
     }
-    auto Path = URI::resolve(*U);
-    if (!Path) {
-      log("{0}", Path.takeError());
+    // "file" and "test" schemes do not require hint path.
+    auto U = URIForFile::fromURI(*Parsed, /*HintPath=*/"");
+    if (!U) {
+      elog("{0}", U.takeError());
       return false;
     }
-    R = URIForFile(*Path);
+    R = std::move(*U);
     return true;
   }
   return false;
@@ -369,21 +386,21 @@ bool fromJSON(const json::Value &Params, CodeActionContext &R) {
 raw_ostream &operator<<(raw_ostream &OS, const Diagnostic &D) {
   OS << D.range << " [";
   switch (D.severity) {
-    case 1:
-      OS << "error";
-      break;
-    case 2:
-      OS << "warning";
-      break;
-    case 3:
-      OS << "note";
-      break;
-    case 4:
-      OS << "remark";
-      break;
-    default:
-      OS << "diagnostic";
-      break;
+  case 1:
+    OS << "error";
+    break;
+  case 2:
+    OS << "warning";
+    break;
+  case 3:
+    OS << "note";
+    break;
+  case 4:
+    OS << "remark";
+    break;
+  default:
+    OS << "diagnostic";
+    break;
   }
   return OS << '(' << D.severity << "): " << D.message << "]";
 }
@@ -425,6 +442,45 @@ json::Value toJSON(const SymbolInformation &P) {
 
 raw_ostream &operator<<(raw_ostream &O, const SymbolInformation &SI) {
   O << SI.containerName << "::" << SI.name << " - " << toJSON(SI);
+  return O;
+}
+
+bool operator==(const SymbolDetails &LHS, const SymbolDetails &RHS) {
+  return LHS.name == RHS.name && LHS.containerName == RHS.containerName &&
+         LHS.USR == RHS.USR && LHS.ID == RHS.ID;
+}
+
+llvm::json::Value toJSON(const SymbolDetails &P) {
+  json::Object result{{"name", llvm::json::Value(nullptr)},
+                      {"containerName", llvm::json::Value(nullptr)},
+                      {"usr", llvm::json::Value(nullptr)},
+                      {"id", llvm::json::Value(nullptr)}};
+
+  if (!P.name.empty())
+    result["name"] = P.name;
+
+  if (!P.containerName.empty())
+    result["containerName"] = P.containerName;
+
+  if (!P.USR.empty())
+    result["usr"] = P.USR;
+
+  if (P.ID.hasValue())
+    result["id"] = P.ID.getValue().str();
+
+  // Older clang cannot compile 'return Result', even though it is legal.
+  return json::Value(std::move(result));
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &O, const SymbolDetails &S) {
+  if (!S.containerName.empty()) {
+    O << S.containerName;
+    StringRef ContNameRef;
+    if (!ContNameRef.endswith("::")) {
+      O << " ";
+    }
+  }
+  O << S.name << " - " << toJSON(S);
   return O;
 }
 
@@ -492,6 +548,29 @@ bool fromJSON(const json::Value &Params, TextDocumentPositionParams &R) {
   json::ObjectMapper O(Params);
   return O && O.map("textDocument", R.textDocument) &&
          O.map("position", R.position);
+}
+
+bool fromJSON(const llvm::json::Value &Params, CompletionContext &R) {
+  json::ObjectMapper O(Params);
+  if (!O)
+    return false;
+
+  int triggerKind;
+  if (!O.map("triggerKind", triggerKind))
+    return false;
+  R.triggerKind = static_cast<CompletionTriggerKind>(triggerKind);
+
+  if (auto *TC = Params.getAsObject()->get("triggerCharacter"))
+    return fromJSON(*TC, R.triggerCharacter);
+  return true;
+}
+
+bool fromJSON(const llvm::json::Value &Params, CompletionParams &R) {
+  if (!fromJSON(Params, static_cast<TextDocumentPositionParams &>(R)))
+    return false;
+  if (auto *Context = Params.getAsObject()->get("context"))
+    return fromJSON(*Context, R.context);
+  return true;
 }
 
 static StringRef toTextKind(MarkupKind Kind) {
@@ -660,6 +739,13 @@ json::Value toJSON(const DocumentHighlight &DH) {
   };
 }
 
+llvm::json::Value toJSON(const FileStatus &FStatus) {
+  return json::Object{
+      {"uri", FStatus.uri},
+      {"state", FStatus.state},
+  };
+}
+
 raw_ostream &operator<<(raw_ostream &O, const DocumentHighlight &V) {
   O << V.range;
   if (V.kind == DocumentHighlightKind::Read)
@@ -696,6 +782,7 @@ bool fromJSON(const json::Value &Params, InitializationOptions &Opts) {
   fromJSON(Params, Opts.ConfigSettings);
   O.map("compilationDatabasePath", Opts.compilationDatabasePath);
   O.map("fallbackFlags", Opts.fallbackFlags);
+  O.map("clangdFileStatus", Opts.FileStatus);
   return true;
 }
 

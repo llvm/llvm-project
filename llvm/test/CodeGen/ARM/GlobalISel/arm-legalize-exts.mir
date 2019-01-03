@@ -1,0 +1,79 @@
+# RUN: llc -mtriple arm-- -run-pass=legalizer %s -o - | FileCheck %s
+# RUN: llc -mtriple thumb-- -mattr=+v6t2 -run-pass=legalizer %s -o - | FileCheck %s
+--- |
+  define void @test_zext_s16() { ret void }
+  define void @test_sext_s8() { ret void }
+  define void @test_anyext_s1() { ret void }
+...
+---
+name:            test_zext_s16
+# CHECK-LABEL: name: test_zext_s16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(p0) = COPY $r0
+    %1(s16) = G_LOAD %0 :: (load 2)
+    %2(s32) = G_ZEXT %1
+    ; G_ZEXT with s16 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}:_(s32) = G_ZEXT {{%[0-9]+}}
+    $r0 = COPY %2(s32)
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_sext_s8
+# CHECK-LABEL: name: test_sext_s8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(p0) = COPY $r0
+    %1(s8) = G_LOAD %0(p0) :: (load 1)
+    %2(s32) = G_SEXT %1
+    ; G_SEXT with s8 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}:_(s32) = G_SEXT {{%[0-9]+}}
+    $r0 = COPY %2(s32)
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_anyext_s1
+# CHECK-LABEL: name: test_anyext_s1
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(p0) = COPY $r0
+    %1(s1) = G_LOAD %0(p0) :: (load 1)
+    %2(s32) = G_ANYEXT %1
+    ; G_ANYEXT with s1 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}:_(s32) = G_ANYEXT {{%[0-9]+}}
+    $r0 = COPY %2(s32)
+    BX_RET 14, $noreg, implicit $r0
+...

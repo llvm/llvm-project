@@ -52,6 +52,7 @@ public:
 private:
   // Implement DiagnosticsConsumer.
   void onDiagnosticsReady(PathRef File, std::vector<Diag> Diagnostics) override;
+  void onFileUpdated(PathRef File, const TUStatus &Status) override;
 
   // LSP methods. Notifications have signature void(const Params&).
   // Calls have signature void(const Params&, Callback<Response>).
@@ -73,8 +74,7 @@ private:
   void onDocumentSymbol(const DocumentSymbolParams &,
                         Callback<llvm::json::Value>);
   void onCodeAction(const CodeActionParams &, Callback<llvm::json::Value>);
-  void onCompletion(const TextDocumentPositionParams &,
-                    Callback<CompletionList>);
+  void onCompletion(const CompletionParams &, Callback<CompletionList>);
   void onSignatureHelp(const TextDocumentPositionParams &,
                        Callback<SignatureHelp>);
   void onGoToDefinition(const TextDocumentPositionParams &,
@@ -92,8 +92,16 @@ private:
   void onHover(const TextDocumentPositionParams &,
                Callback<llvm::Optional<Hover>>);
   void onChangeConfiguration(const DidChangeConfigurationParams &);
+  void onSymbolInfo(const TextDocumentPositionParams &,
+                    Callback<std::vector<SymbolDetails>>);
 
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
+
+  /// Checks if completion request should be ignored. We need this due to the
+  /// limitation of the LSP. Per LSP, a client sends requests for all "trigger
+  /// character" we specify, but for '>' and ':' we need to check they actually
+  /// produce '->' and '::', respectively.
+  bool shouldRunCompletion(const CompletionParams &Params) const;
 
   /// Forces a reparse of all currently opened files.  As a result, this method
   /// may be very expensive.  This method is normally called when the
@@ -130,11 +138,12 @@ private:
   SymbolKindBitset SupportedSymbolKinds;
   /// The supported completion item kinds of the client.
   CompletionItemKindBitset SupportedCompletionItemKinds;
-  // Whether the client supports CodeAction response objects.
+  /// Whether the client supports CodeAction response objects.
   bool SupportsCodeAction = false;
   /// From capabilities of textDocument/documentSymbol.
   bool SupportsHierarchicalDocumentSymbol = false;
-
+  /// Whether the client supports showing file status.
+  bool SupportFileStatus = false;
   // Store of the current versions of the open documents.
   DraftStore DraftMgr;
 

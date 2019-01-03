@@ -43,7 +43,7 @@ entry:
 
 define <4 x i32> @test2(<4 x i32> %v) {
 ; CHECK-NOSSSE3-LABEL: test2:
-; CHECK-NOSSSE3:       # %bb.0: # %entry
+; CHECK-NOSSSE3:       # %bb.0:
 ; CHECK-NOSSSE3-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NOSSSE3-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-NOSSSE3-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm1[8],xmm2[9],xmm1[9],xmm2[10],xmm1[10],xmm2[11],xmm1[11],xmm2[12],xmm1[12],xmm2[13],xmm1[13],xmm2[14],xmm1[14],xmm2[15],xmm1[15]
@@ -56,21 +56,58 @@ define <4 x i32> @test2(<4 x i32> %v) {
 ; CHECK-NOSSSE3-NEXT:    retq
 ;
 ; CHECK-SSSE3-LABEL: test2:
-; CHECK-SSSE3:       # %bb.0: # %entry
+; CHECK-SSSE3:       # %bb.0:
 ; CHECK-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
 ; CHECK-SSSE3-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: test2:
-; CHECK-AVX:       # %bb.0: # %entry
+; CHECK-AVX:       # %bb.0:
 ; CHECK-AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
 ; CHECK-AVX-NEXT:    retq
 ;
 ; CHECK-WIDE-AVX-LABEL: test2:
-; CHECK-WIDE-AVX:       # %bb.0: # %entry
+; CHECK-WIDE-AVX:       # %bb.0:
 ; CHECK-WIDE-AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
 ; CHECK-WIDE-AVX-NEXT:    retq
-entry:
   %r = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %v)
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @or_bswap(<4 x i32> %x, <4 x i32> %y, <4 x i32>* %p1, <4 x i32>* %p2) {
+; CHECK-NOSSSE3-LABEL: or_bswap:
+; CHECK-NOSSSE3:       # %bb.0:
+; CHECK-NOSSSE3-NEXT:    por %xmm1, %xmm0
+; CHECK-NOSSSE3-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NOSSSE3-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-NOSSSE3-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm1[8],xmm2[9],xmm1[9],xmm2[10],xmm1[10],xmm2[11],xmm1[11],xmm2[12],xmm1[12],xmm2[13],xmm1[13],xmm2[14],xmm1[14],xmm2[15],xmm1[15]
+; CHECK-NOSSSE3-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,2,1,0,4,5,6,7]
+; CHECK-NOSSSE3-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,6,5,4]
+; CHECK-NOSSSE3-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; CHECK-NOSSSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; CHECK-NOSSSE3-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
+; CHECK-NOSSSE3-NEXT:    packuswb %xmm2, %xmm0
+; CHECK-NOSSSE3-NEXT:    retq
+;
+; CHECK-SSSE3-LABEL: or_bswap:
+; CHECK-SSSE3:       # %bb.0:
+; CHECK-SSSE3-NEXT:    por %xmm1, %xmm0
+; CHECK-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; CHECK-SSSE3-NEXT:    retq
+;
+; CHECK-AVX-LABEL: or_bswap:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; CHECK-AVX-NEXT:    retq
+;
+; CHECK-WIDE-AVX-LABEL: or_bswap:
+; CHECK-WIDE-AVX:       # %bb.0:
+; CHECK-WIDE-AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; CHECK-WIDE-AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; CHECK-WIDE-AVX-NEXT:    retq
+  %xt = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %x)
+  %yt = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %y)
+  %r = or <4 x i32> %xt, %yt
   ret <4 x i32> %r
 }
 

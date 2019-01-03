@@ -691,7 +691,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       PathRemapping = EquivPair;
 
     // If a demangler is supplied, check if it exists and register it.
-    if (DemanglerOpts.size()) {
+    if (!DemanglerOpts.empty()) {
       auto DemanglerPathOrErr = sys::findProgramByName(DemanglerOpts[0]);
       if (!DemanglerPathOrErr) {
         error("Could not find the demangler!",

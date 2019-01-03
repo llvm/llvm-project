@@ -40,13 +40,3 @@
 # NOSPECID: msr S3_4_C13_C0_7, x6
 # NOSPECID: msr S3_6_C13_C0_7, x5
 # NOSPECID: msr S3_5_C13_C0_7, x4
-
-[0x3f 0x41 0x03 0xd5]
-[0xc3 0x42 0x1b 0xd5]
-[0xc2 0x42 0x3b 0xd5]
-# CHECK:    msr SSBS, #1
-# CHECK:    msr SSBS, x3
-# CHECK:    mrs x2, SSBS
-# NOSPECID: msr S0_3_C4_C1_1, xzr
-# NOSPECID: msr S3_3_C4_C2_6, x3
-# NOSPECID: mrs x2, S3_3_C4_C2_6

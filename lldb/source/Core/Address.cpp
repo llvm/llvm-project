@@ -988,8 +988,10 @@ AddressClass Address::GetAddressClass() const {
   if (module_sp) {
     ObjectFile *obj_file = module_sp->GetObjectFile();
     if (obj_file) {
-      // Give the symbol vendor a chance to add to the unified section list.
-      module_sp->GetSymbolVendor();
+      // Give the symbol vendor a chance to add to the unified section list
+      // and to symtab from symbol file
+      if (SymbolVendor *vendor = module_sp->GetSymbolVendor())
+        vendor->GetSymtab();
       return obj_file->GetAddressClass(GetFileAddress());
     }
   }

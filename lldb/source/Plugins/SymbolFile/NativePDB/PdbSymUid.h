@@ -93,6 +93,7 @@ class PdbSymUid {
   uint64_t m_repr = 0;
 
 public:
+  PdbSymUid() = default;
   PdbSymUid(uint64_t repr) : m_repr(repr) {}
   PdbSymUid(const PdbCompilandId &cid);
   PdbSymUid(const PdbCompilandSymId &csid);

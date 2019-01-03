@@ -78,8 +78,8 @@ HANDLE_DI_FLAG((1 << 29), Largest)
 // Use this as a zero/initialization value.
 // For example: void foo(DISPFlags Flags = SPFlagZero).
 HANDLE_DISP_FLAG(0, Zero)
-// Virtuality is a two-bit valued field.
-HANDLE_DISP_FLAG(0u, Nonvirtual)
+// Virtuality is a two-bit enum field in the LSB of the word.
+// Values should match DW_VIRTUALITY_*.
 HANDLE_DISP_FLAG(1u, Virtual)
 HANDLE_DISP_FLAG(2u, PureVirtual)
 HANDLE_DISP_FLAG((1u << 2), LocalToUnit)

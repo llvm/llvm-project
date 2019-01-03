@@ -10,8 +10,8 @@
 #include "ELFObjcopy.h"
 #include "Buffer.h"
 #include "CopyConfig.h"
-#include "llvm-objcopy.h"
 #include "Object.h"
+#include "llvm-objcopy.h"
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Optional.h"
@@ -28,6 +28,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
@@ -115,6 +116,58 @@ static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
   llvm_unreachable("Invalid output format");
 }
 
+template <class ELFT>
+static Expected<ArrayRef<uint8_t>>
+findBuildID(const object::ELFFile<ELFT> &In) {
+  for (const auto &Phdr : unwrapOrError(In.program_headers())) {
+    if (Phdr.p_type != PT_NOTE)
+      continue;
+    Error Err = Error::success();
+    for (const auto &Note : In.notes(Phdr, Err))
+      if (Note.getType() == NT_GNU_BUILD_ID && Note.getName() == ELF_NOTE_GNU)
+        return Note.getDesc();
+    if (Err)
+      return std::move(Err);
+  }
+  return createStringError(llvm::errc::invalid_argument,
+                           "Could not find build ID.");
+}
+
+static Expected<ArrayRef<uint8_t>>
+findBuildID(const object::ELFObjectFileBase &In) {
+  if (auto *O = dyn_cast<ELFObjectFile<ELF32LE>>(&In))
+    return findBuildID(*O->getELFFile());
+  else if (auto *O = dyn_cast<ELFObjectFile<ELF64LE>>(&In))
+    return findBuildID(*O->getELFFile());
+  else if (auto *O = dyn_cast<ELFObjectFile<ELF32BE>>(&In))
+    return findBuildID(*O->getELFFile());
+  else if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(&In))
+    return findBuildID(*O->getELFFile());
+
+  llvm_unreachable("Bad file format");
+}
+
+static void linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
+                             StringRef Suffix, ArrayRef<uint8_t> BuildIdBytes) {
+  SmallString<128> Path = Config.BuildIdLinkDir;
+  sys::path::append(Path, llvm::toHex(BuildIdBytes[0], /*LowerCase*/ true));
+  if (auto EC = sys::fs::create_directories(Path))
+    error("cannot create build ID link directory " + Path + ": " +
+          EC.message());
+
+  sys::path::append(Path,
+                    llvm::toHex(BuildIdBytes.slice(1), /*LowerCase*/ true));
+  Path += Suffix;
+  if (auto EC = sys::fs::create_hard_link(ToLink, Path)) {
+    // Hard linking failed, try to remove the file first if it exists.
+    if (sys::fs::exists(Path))
+      sys::fs::remove(Path);
+    EC = sys::fs::create_hard_link(ToLink, Path);
+    if (EC)
+      error("cannot link " + ToLink + " to " + Path + ": " + EC.message());
+  }
+}
+
 static void splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
                            StringRef File, ElfType OutputElfType) {
   auto DWOFile = Reader.create();
@@ -130,7 +183,7 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
                                Object &Obj) {
   for (auto &Sec : Obj.sections()) {
     if (Sec.Name == SecName) {
-      if (Sec.OriginalData.size() == 0)
+      if (Sec.OriginalData.empty())
         return make_error<StringError>("Can't dump section \"" + SecName +
                                            "\": it has no contents",
                                        object_error::parse_failed);
@@ -216,8 +269,7 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
       if (!Sym.isCommon() &&
           ((Config.LocalizeHidden &&
             (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
-           (!Config.SymbolsToLocalize.empty() &&
-            is_contained(Config.SymbolsToLocalize, Sym.Name))))
+           is_contained(Config.SymbolsToLocalize, Sym.Name)))
         Sym.Binding = STB_LOCAL;
 
       // Note: these two globalize flags have very similar names but different
@@ -235,13 +287,11 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
           Sym.getShndx() != SHN_UNDEF)
         Sym.Binding = STB_LOCAL;
 
-      if (!Config.SymbolsToGlobalize.empty() &&
-          is_contained(Config.SymbolsToGlobalize, Sym.Name) &&
+      if (is_contained(Config.SymbolsToGlobalize, Sym.Name) &&
           Sym.getShndx() != SHN_UNDEF)
         Sym.Binding = STB_GLOBAL;
 
-      if (!Config.SymbolsToWeaken.empty() &&
-          is_contained(Config.SymbolsToWeaken, Sym.Name) &&
+      if (is_contained(Config.SymbolsToWeaken, Sym.Name) &&
           Sym.Binding == STB_GLOBAL)
         Sym.Binding = STB_WEAK;
 
@@ -266,8 +316,7 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
     }
 
     Obj.removeSymbols([&](const Symbol &Sym) {
-      if ((!Config.SymbolsToKeep.empty() &&
-           is_contained(Config.SymbolsToKeep, Sym.Name)) ||
+      if (is_contained(Config.SymbolsToKeep, Sym.Name) ||
           (Config.KeepFileSymbols && Sym.Type == STT_FILE))
         return false;
 
@@ -279,10 +328,8 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
       if (Config.StripAll || Config.StripAllGNU)
         return true;
 
-      if (!Config.SymbolsToRemove.empty() &&
-          is_contained(Config.SymbolsToRemove, Sym.Name)) {
+      if (is_contained(Config.SymbolsToRemove, Sym.Name))
         return true;
-      }
 
       if (Config.StripUnneeded && !Sym.Referenced &&
           (Sym.Binding == STB_LOCAL || Sym.getShndx() == SHN_UNDEF) &&
@@ -363,10 +410,10 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
     };
 
   // Explicit copies:
-  if (!Config.OnlyKeep.empty()) {
+  if (!Config.OnlySection.empty()) {
     RemovePred = [&Config, RemovePred, &Obj](const SectionBase &Sec) {
       // Explicitly keep these sections regardless of previous removes.
-      if (is_contained(Config.OnlyKeep, Sec.Name))
+      if (is_contained(Config.OnlySection, Sec.Name))
         return false;
 
       // Allow all implicit removes.
@@ -494,11 +541,28 @@ void executeObjcopyOnBinary(const CopyConfig &Config,
   ELFReader Reader(&In);
   std::unique_ptr<Object> Obj = Reader.create();
   const ElfType OutputElfType = getOutputElfType(In);
+  ArrayRef<uint8_t> BuildIdBytes;
+
+  if (!Config.BuildIdLinkDir.empty()) {
+    BuildIdBytes = unwrapOrError(findBuildID(In));
+    if (BuildIdBytes.size() < 2)
+      error("build ID in file '" + Config.InputFilename +
+            "' is smaller than two bytes");
+  }
+
+  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkInput) {
+    linkToBuildIdDir(Config, Config.InputFilename,
+                     Config.BuildIdLinkInput.getValue(), BuildIdBytes);
+  }
   handleArgs(Config, *Obj, Reader, OutputElfType);
   std::unique_ptr<Writer> Writer =
       createWriter(Config, *Obj, Out, OutputElfType);
   Writer->finalize();
   Writer->write();
+  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkOutput) {
+    linkToBuildIdDir(Config, Config.OutputFilename,
+                     Config.BuildIdLinkOutput.getValue(), BuildIdBytes);
+  }
 }
 
 } // end namespace elf

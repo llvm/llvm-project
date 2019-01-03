@@ -173,6 +173,7 @@ private:
   void createExportTable();
   void mergeSections();
   void readRelocTargets();
+  void removeUnusedSections();
   void assignAddresses();
   void finalizeAddresses();
   void removeEmptySections();
@@ -500,6 +501,7 @@ void Writer::run() {
   createExportTable();
   mergeSections();
   readRelocTargets();
+  removeUnusedSections();
   finalizeAddresses();
   removeEmptySections();
   setSectionPermissions();
@@ -880,6 +882,21 @@ void Writer::createExportTable() {
     return;
   for (Chunk *C : Edata.Chunks)
     EdataSec->addChunk(C);
+}
+
+void Writer::removeUnusedSections() {
+  // Remove sections that we can be sure won't get content, to avoid
+  // allocating space for their section headers.
+  auto IsUnused = [this](OutputSection *S) {
+    if (S == RelocSec)
+      return false; // This section is populated later.
+    // MergeChunks have zero size at this point, as their size is finalized
+    // later. Only remove sections that have no Chunks at all.
+    return S->Chunks.empty();
+  };
+  OutputSections.erase(
+      std::remove_if(OutputSections.begin(), OutputSections.end(), IsUnused),
+      OutputSections.end());
 }
 
 // The Windows loader doesn't seem to like empty sections,
@@ -1304,6 +1321,25 @@ static void addSymbolToRVASet(SymbolRVASet &RVASet, Defined *S) {
   RVASet.insert({C, Off});
 }
 
+// Given a symbol, add it to the GFIDs table if it is a live, defined, function
+// symbol in an executable section.
+static void maybeAddAddressTakenFunction(SymbolRVASet &AddressTakenSyms,
+                                         Symbol *S) {
+  auto *D = dyn_cast_or_null<DefinedCOFF>(S);
+
+  // Ignore undefined symbols and references to non-functions (e.g. globals and
+  // labels).
+  if (!D ||
+      D->getCOFFSymbol().getComplexType() != COFF::IMAGE_SYM_DTYPE_FUNCTION)
+    return;
+
+  // Mark the symbol as address taken if it's in an executable section.
+  Chunk *RefChunk = D->getChunk();
+  OutputSection *OS = RefChunk ? RefChunk->getOutputSection() : nullptr;
+  if (OS && OS->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE)
+    addSymbolToRVASet(AddressTakenSyms, D);
+}
+
 // Visit all relocations from all section contributions of this object file and
 // mark the relocation target as address-taken.
 static void markSymbolsWithRelocations(ObjFile *File,
@@ -1322,17 +1358,7 @@ static void markSymbolsWithRelocations(ObjFile *File,
         continue;
 
       Symbol *Ref = SC->File->getSymbol(Reloc.SymbolTableIndex);
-      if (auto *D = dyn_cast_or_null<DefinedCOFF>(Ref)) {
-        if (D->getCOFFSymbol().getComplexType() != COFF::IMAGE_SYM_DTYPE_FUNCTION)
-          // Ignore relocations against non-functions (e.g. labels).
-          continue;
-
-        // Mark the symbol if it's in an executable section.
-        Chunk *RefChunk = D->getChunk();
-        OutputSection *OS = RefChunk ? RefChunk->getOutputSection() : nullptr;
-        if (OS && OS->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE)
-          addSymbolToRVASet(UsedSymbols, D);
-      }
+      maybeAddAddressTakenFunction(UsedSymbols, Ref);
     }
   }
 }
@@ -1359,7 +1385,11 @@ void Writer::createGuardCFTables() {
 
   // Mark the image entry as address-taken.
   if (Config->Entry)
-    addSymbolToRVASet(AddressTakenSyms, cast<Defined>(Config->Entry));
+    maybeAddAddressTakenFunction(AddressTakenSyms, Config->Entry);
+
+  // Mark exported symbols in executable sections as address-taken.
+  for (Export &E : Config->Exports)
+    maybeAddAddressTakenFunction(AddressTakenSyms, E.Sym);
 
   // Ensure sections referenced in the gfid table are 16-byte aligned.
   for (const ChunkAndOffset &C : AddressTakenSyms)
@@ -1544,8 +1574,25 @@ void Writer::writeBuildId() {
       Buffer->getBufferSize());
 
   uint32_t Timestamp = Config->Timestamp;
+  uint64_t Hash = 0;
+  bool GenerateSyntheticBuildId =
+      Config->MinGW && Config->Debug && Config->PDBPath.empty();
+
+  if (Config->Repro || GenerateSyntheticBuildId)
+    Hash = xxHash64(OutputFileData);
+
   if (Config->Repro)
-    Timestamp = static_cast<uint32_t>(xxHash64(OutputFileData));
+    Timestamp = static_cast<uint32_t>(Hash);
+
+  if (GenerateSyntheticBuildId) {
+    // For MinGW builds without a PDB file, we still generate a build id
+    // to allow associating a crash dump to the executable.
+    BuildId->BuildId->PDB70.CVSignature = OMF::Signature::PDB70;
+    BuildId->BuildId->PDB70.Age = 1;
+    memcpy(BuildId->BuildId->PDB70.Signature, &Hash, 8);
+    // xxhash only gives us 8 bytes, so put some fixed data in the other half.
+    memcpy(&BuildId->BuildId->PDB70.Signature[8], "LLD PDB.", 8);
+  }
 
   if (DebugDirectory)
     DebugDirectory->setTimeDateStamp(Timestamp);

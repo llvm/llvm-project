@@ -2969,8 +2969,8 @@ static constexpr OptionDefinition g_target_modules_list_options[] = {
   { LLDB_OPT_SET_1, false, "address",        'a', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeAddressOrExpression, "Display the image at this address." },
   { LLDB_OPT_SET_1, false, "arch",           'A', OptionParser::eOptionalArgument, nullptr, {}, 0, eArgTypeWidth,               "Display the architecture when listing images." },
   { LLDB_OPT_SET_1, false, "triple",         't', OptionParser::eOptionalArgument, nullptr, {}, 0, eArgTypeWidth,               "Display the triple when listing images." },
-  { LLDB_OPT_SET_1, false, "header",         'h', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,                "Display the image header address as a load address if debugging, a file address otherwise." },
-  { LLDB_OPT_SET_1, false, "offset",         'o', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,                "Display the image header address offset from the header file address (the slide amount)." },
+  { LLDB_OPT_SET_1, false, "header",         'h', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,                "Display the image base address as a load address if debugging, a file address otherwise." },
+  { LLDB_OPT_SET_1, false, "offset",         'o', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,                "Display the image load address offset from the base file address (the slide amount)." },
   { LLDB_OPT_SET_1, false, "uuid",           'u', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,                "Display the UUID when listing images." },
   { LLDB_OPT_SET_1, false, "fullpath",       'f', OptionParser::eOptionalArgument, nullptr, {}, 0, eArgTypeWidth,               "Display the fullpath to the image object file." },
   { LLDB_OPT_SET_1, false, "directory",      'd', OptionParser::eOptionalArgument, nullptr, {}, 0, eArgTypeWidth,               "Display the directory with optional width for the image object file." },
@@ -3229,13 +3229,13 @@ protected:
 
           ObjectFile *objfile = module->GetObjectFile();
           if (objfile) {
-            Address header_addr(objfile->GetHeaderAddress());
-            if (header_addr.IsValid()) {
+            Address base_addr(objfile->GetBaseAddress());
+            if (base_addr.IsValid()) {
               if (target && !target->GetSectionLoadList().IsEmpty()) {
-                lldb::addr_t header_load_addr =
-                    header_addr.GetLoadAddress(target);
-                if (header_load_addr == LLDB_INVALID_ADDRESS) {
-                  header_addr.Dump(&strm, target,
+                lldb::addr_t load_addr =
+                    base_addr.GetLoadAddress(target);
+                if (load_addr == LLDB_INVALID_ADDRESS) {
+                  base_addr.Dump(&strm, target,
                                    Address::DumpStyleModuleWithFileAddress,
                                    Address::DumpStyleFileAddress);
                 } else {
@@ -3243,18 +3243,18 @@ protected:
                     // Show the offset of slide for the image
                     strm.Printf(
                         "0x%*.*" PRIx64, addr_nibble_width, addr_nibble_width,
-                        header_load_addr - header_addr.GetFileAddress());
+                        load_addr - base_addr.GetFileAddress());
                   } else {
                     // Show the load address of the image
                     strm.Printf("0x%*.*" PRIx64, addr_nibble_width,
-                                addr_nibble_width, header_load_addr);
+                                addr_nibble_width, load_addr);
                   }
                 }
                 break;
               }
               // The address was valid, but the image isn't loaded, output the
               // address in an appropriate format
-              header_addr.Dump(&strm, target, Address::DumpStyleFileAddress);
+              base_addr.Dump(&strm, target, Address::DumpStyleFileAddress);
               break;
             }
           }

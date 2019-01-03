@@ -14,11 +14,11 @@ void test0() {
 
   // CHECK-NEXT: [[T1:%.*]] = load i8*, i8** [[X]]
   // CHECK-NEXT: store i8* null, i8** [[X]]
-  // CHECK-NEXT: call void @objc_release(i8* [[T1]]) [[NUW:#[0-9]+]]
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]]) [[NUW:#[0-9]+]]
   // CHECK-NOT:  clang.imprecise_release
 
   // CHECK-NEXT: [[T1:%.*]] = load i8*, i8** [[X]]
-  // CHECK-NEXT: call void @objc_release(i8* [[T1]]) [[NUW:#[0-9]+]]
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]]) [[NUW:#[0-9]+]]
   // CHECK-NOT:  clang.imprecise_release
 
   // CHECK-NEXT: [[XPTR2:%.*]] = bitcast i8** [[X]] to i8*
@@ -43,14 +43,14 @@ void test1a_message(void) {
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
   // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = call i8* @objc_retainAutoreleasedReturnValue(i8* [[T1]])
+  // CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
   // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
   // CHECK-NEXT: store [[TEST1]]* [[T3]]
   // CHECK-NEXT: [[CPTR1:%.*]] = bitcast i8** [[C]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[CPTR1]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = call i8* @objc_retainAutorelease(i8* [[T1]])
+  // CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retainAutorelease(i8* [[T1]])
   // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
   // CHECK-NEXT: [[T4:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[T5:%.*]] = bitcast [[TEST1]]* [[T3]] to i8*
@@ -60,7 +60,7 @@ void test1a_message(void) {
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[CPTR2]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: call void @objc_release(i8* [[T1]]) [[NUW]], !clang.imprecise_release
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]]) [[NUW]], !clang.imprecise_release
   // CHECK-NEXT: [[PTRPTR2:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PTRPTR2]])
   // CHECK-NEXT: ret void
@@ -77,14 +77,14 @@ void test1a_property(void) {
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
   // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = call i8* @objc_retainAutoreleasedReturnValue(i8* [[T1]])
+  // CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
   // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
   // CHECK-NEXT: store [[TEST1]]* [[T3]]
   // CHECK-NEXT: [[CPTR1:%.*]] = bitcast i8** [[C]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[CPTR1]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = call i8* @objc_retainAutorelease(i8* [[T1]])
+  // CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retainAutorelease(i8* [[T1]])
   // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
   // CHECK-NEXT: [[T4:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[T5:%.*]] = bitcast [[TEST1]]* [[T3]] to i8*
@@ -94,7 +94,7 @@ void test1a_property(void) {
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[CPTR2]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: call void @objc_release(i8* [[T1]]) [[NUW]], !clang.imprecise_release
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]]) [[NUW]], !clang.imprecise_release
   // CHECK-NEXT: [[PTRPTR2:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PTRPTR2]])
   // CHECK-NEXT: ret void
@@ -111,7 +111,7 @@ void test1b_message(void) {
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
   // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = call i8* @objc_retainAutoreleasedReturnValue(i8* [[T1]])
+  // CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
   // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
   // CHECK-NEXT: store [[TEST1]]* [[T3]]
   // CHECK-NEXT: [[CPTR1:%.*]] = bitcast i8** [[C]] to i8*
@@ -125,7 +125,7 @@ void test1b_message(void) {
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[CPTR2]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: call void @objc_release(i8* [[T1]]) [[NUW]]
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]]) [[NUW]]
   // CHECK-NOT:  clang.imprecise_release
   // CHECK-NEXT: [[PTRPTR2:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PTRPTR2]])
@@ -142,7 +142,7 @@ void test1b_property(void) {
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
   // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = call i8* @objc_retainAutoreleasedReturnValue(i8* [[T1]])
+  // CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
   // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
   // CHECK-NEXT: store [[TEST1]]* [[T3]]
   // CHECK-NEXT: [[CPTR1:%.*]] = bitcast i8** [[C]] to i8*
@@ -156,7 +156,7 @@ void test1b_property(void) {
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[CPTR2]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: call void @objc_release(i8* [[T1]]) [[NUW]]
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]]) [[NUW]]
   // CHECK-NOT:  clang.imprecise_release
   // CHECK-NEXT: [[PTRPTR2:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PTRPTR2]])
@@ -173,14 +173,14 @@ void test1c_message(void) {
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
   // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = call i8* @objc_retainAutoreleasedReturnValue(i8* [[T1]])
+  // CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
   // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
   // CHECK-NEXT: store [[TEST1]]* [[T3]]
   // CHECK-NEXT: [[PCPTR1:%.*]] = bitcast i8** [[PC]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PCPTR1]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = call i8* @objc_retainAutorelease(i8* [[T1]])
+  // CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retainAutorelease(i8* [[T1]])
   // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
   // CHECK-NEXT: [[T4:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[T5:%.*]] = bitcast [[TEST1]]* [[T3]] to i8*
@@ -190,7 +190,7 @@ void test1c_message(void) {
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PCPTR2]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: call void @objc_release(i8* [[T1]]) [[NUW]], !clang.imprecise_release
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]]) [[NUW]], !clang.imprecise_release
   // CHECK-NEXT: [[PTRPTR2:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PTRPTR2]])
   // CHECK-NEXT: ret void
@@ -206,14 +206,14 @@ void test1c_property(void) {
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
   // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = call i8* @objc_retainAutoreleasedReturnValue(i8* [[T1]])
+  // CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
   // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
   // CHECK-NEXT: store [[TEST1]]* [[T3]]
   // CHECK-NEXT: [[PCPTR1:%.*]] = bitcast i8** [[PC]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PCPTR1]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = call i8* @objc_retainAutorelease(i8* [[T1]])
+  // CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retainAutorelease(i8* [[T1]])
   // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
   // CHECK-NEXT: [[T4:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
   // CHECK-NEXT: [[T5:%.*]] = bitcast [[TEST1]]* [[T3]] to i8*
@@ -223,7 +223,7 @@ void test1c_property(void) {
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PCPTR2]])
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST1]]*, [[TEST1]]**
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: call void @objc_release(i8* [[T1]]) [[NUW]], !clang.imprecise_release
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]]) [[NUW]], !clang.imprecise_release
   // CHECK-NEXT: [[PTRPTR2:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PTRPTR2]])
   // CHECK-NEXT: ret void
@@ -239,7 +239,7 @@ void test1d_message(void) {
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
   // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = call i8* @objc_retainAutoreleasedReturnValue(i8* [[T1]])
+  // CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
   // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
   // CHECK-NEXT: store [[TEST1]]* [[T3]]
   // CHECK-NEXT: [[PCPTR1:%.*]] = bitcast i8** [[PC]] to i8*
@@ -253,7 +253,7 @@ void test1d_message(void) {
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PCPTR2]])
   // CHECK-NEXT: [[NINE:%.*]] = load [[TEST1]]*, [[TEST1]]**
   // CHECK-NEXT: [[TEN:%.*]] = bitcast [[TEST1]]* [[NINE]] to i8*
-  // CHECK-NEXT: call void @objc_release(i8* [[TEN]])
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[TEN]])
   // CHECK-NEXT: [[PTRPTR2:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PTRPTR2]])
   // CHECK-NEXT: ret void
@@ -269,7 +269,7 @@ void test1d_property(void) {
   // CHECK:      call void @llvm.lifetime.start.p0i8(i64 8, i8* [[PTRPTR1]])
   // CHECK:      [[T0:%.*]] = call [[TEST1:%.*]]* @test1_helper()
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST1]]* [[T0]] to i8*
-  // CHECK-NEXT: [[T2:%.*]] = call i8* @objc_retainAutoreleasedReturnValue(i8* [[T1]])
+  // CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
   // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[TEST1]]*
   // CHECK-NEXT: store [[TEST1]]* [[T3]]
   // CHECK-NEXT: [[PCPTR1:%.*]] = bitcast i8** [[PC]] to i8*
@@ -283,7 +283,7 @@ void test1d_property(void) {
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PCPTR2]])
   // CHECK-NEXT: [[NINE:%.*]] = load [[TEST1]]*, [[TEST1]]**
   // CHECK-NEXT: [[TEN:%.*]] = bitcast [[TEST1]]* [[NINE]] to i8*
-  // CHECK-NEXT: call void @objc_release(i8* [[TEN]])
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[TEN]])
   // CHECK-NEXT: [[PTRPTR2:%.*]] = bitcast [[PTR_T]]** [[PTR]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[PTRPTR2]])
   // CHECK-NEXT: ret void
@@ -301,7 +301,7 @@ void test2(Test2 *x) {
   x->ivar = 0;
   // CHECK:      [[X:%.*]] = alloca [[TEST2:%.*]]*
   // CHECK-NEXT: [[T0:%.*]] = bitcast [[TEST2]]* {{%.*}} to i8*
-  // CHECK-NEXT: [[T1:%.*]] = call i8* @objc_retain(i8* [[T0]]) [[NUW]]
+  // CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retain(i8* [[T0]]) [[NUW]]
   // CHECK-NEXT: [[T2:%.*]] = bitcast i8* [[T1]] to [[TEST2]]*
   // CHECK-NEXT: store [[TEST2]]* [[T2]], [[TEST2]]** [[X]],
 
@@ -312,12 +312,12 @@ void test2(Test2 *x) {
   // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to i8**
   // CHECK-NEXT: [[T4:%.*]] = load i8*, i8** [[T3]],
   // CHECK-NEXT: store i8* null, i8** [[T3]],
-  // CHECK-NEXT: call void @objc_release(i8* [[T4]]) [[NUW]]
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T4]]) [[NUW]]
   // CHECK-NOT:  imprecise
 
   // CHECK-NEXT: [[T0:%.*]] = load [[TEST2]]*, [[TEST2]]** [[X]]
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST2]]* [[T0]] to i8*
-  // CHECK-NEXT: call void @objc_release(i8* [[T1]]) [[NUW]], !clang.imprecise_release
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]]) [[NUW]], !clang.imprecise_release
 
   // CHECK-NEXT: ret void
 }
@@ -325,11 +325,11 @@ void test2(Test2 *x) {
 // CHECK-LABEL:      define void @test3(i8*
 void test3(PRECISE_LIFETIME id x) {
   // CHECK:      [[X:%.*]] = alloca i8*,
-  // CHECK-NEXT: [[T0:%.*]] = call i8* @objc_retain(i8* {{%.*}}) [[NUW]]
+  // CHECK-NEXT: [[T0:%.*]] = call i8* @llvm.objc.retain(i8* {{%.*}}) [[NUW]]
   // CHECK-NEXT: store i8* [[T0]], i8** [[X]],
 
   // CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[X]]
-  // CHECK-NEXT: call void @objc_release(i8* [[T0]]) [[NUW]]
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T0]]) [[NUW]]
   // CHECK-NOT:  imprecise_release
 
   // CHECK-NEXT: ret void  

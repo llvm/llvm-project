@@ -128,6 +128,13 @@ public:
       break;
     }
 
+    case COFF::IMAGE_REL_AMD64_SECREL: {
+      assert(static_cast<int64_t>(RE.Addend) <= INT32_MAX && "Relocation overflow");
+      assert(static_cast<int64_t>(RE.Addend) >= INT32_MIN && "Relocation underflow");
+      writeBytesUnaligned(RE.Addend, Target, 4);
+      break;
+    }
+
     default:
       llvm_unreachable("Relocation type not implemented yet!");
       break;

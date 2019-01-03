@@ -33,12 +33,12 @@ define void @testExpandPostRAPseudo(i32* nocapture readonly %ptr) {
 ; CHECK-P9:    xxpermdi vs0, f0, f0, 2
 ; CHECK-P9:    xxspltw vs0, vs0, 3
 ; CHECK-P9:    stxvx vs0, 0, r4
-; CHECK-P9:    lis r4, 1024
 ; CHECK-P9:    lfiwax f0, 0, r3
 ; CHECK-P9:    addis r3, r2, .LC1@toc@ha
 ; CHECK-P9:    ld r3, .LC1@toc@l(r3)
 ; CHECK-P9:    xscvsxdsp f0, f0
 ; CHECK-P9:    ld r3, 0(r3)
+; CHECK-P9:    lis r4, 1024
 ; CHECK-P9:    stfsx f0, r3, r4
 ; CHECK-P9:    blr
 entry:

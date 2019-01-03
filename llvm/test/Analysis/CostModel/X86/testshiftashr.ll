@@ -261,7 +261,7 @@ entry:
   ; SSE2-LABEL: shift4i16const
   ; SSE2: cost of 1 {{.*}} ashr
   ; SSE2-CODEGEN-LABEL: shift4i16const
-  ; SSE2-CODEGEN: psrad $3
+  ; SSE2-CODEGEN: psrad $19
 
   %0 = ashr %shifttypec4i16 %a , <i16 3, i16 3, i16 3, i16 3>
   ret %shifttypec4i16 %0
@@ -476,7 +476,7 @@ entry:
   ; SSE2-LABEL: shift4i8c
   ; SSE2: cost of 1 {{.*}} ashr
   ; SSE2-CODEGEN-LABEL: shift4i8c
-  ; SSE2-CODEGEN: psrad $3
+  ; SSE2-CODEGEN: psrad $27
 
   %0 = ashr %shifttypec4i8 %a , <i8 3, i8 3, i8 3, i8 3>
   ret %shifttypec4i8 %0
@@ -488,7 +488,7 @@ entry:
   ; SSE2-LABEL: shift8i8c
   ; SSE2: cost of 1 {{.*}} ashr
   ; SSE2-CODEGEN-LABEL: shift8i8c
-  ; SSE2-CODEGEN: psraw $3
+  ; SSE2-CODEGEN: psraw $11
 
   %0 = ashr %shifttypec8i8 %a , <i8 3, i8 3, i8 3, i8 3,
                                  i8 3, i8 3, i8 3, i8 3>

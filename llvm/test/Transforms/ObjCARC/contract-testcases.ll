@@ -7,13 +7,13 @@
 %4 = type opaque
 
 declare %0* @"\01-[NSAttributedString(Terminal) pathAtIndex:effectiveRange:]"(%1*, i8* nocapture, i64, %2*) optsize
-declare i8* @objc_retainAutoreleasedReturnValue(i8*)
-declare i8* @objc_msgSend_fixup(i8*, i8*, ...)
-declare i8* @objc_msgSend(i8*, i8*, ...)
-declare void @objc_release(i8*)
+declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
+declare i8* @llvm.objc.msgSend_fixup(i8*, i8*, ...)
+declare i8* @llvm.objc.msgSend(i8*, i8*, ...)
+declare void @llvm.objc.release(i8*)
 declare %2 @NSUnionRange(i64, i64, i64, i64) optsize
-declare i8* @objc_autoreleaseReturnValue(i8*)
-declare i8* @objc_autorelease(i8*)
+declare i8* @llvm.objc.autoreleaseReturnValue(i8*)
+declare i8* @llvm.objc.autorelease(i8*)
 declare i32 @__gxx_personality_sj0(...)
 
 ; Don't get in trouble on bugpointed code.
@@ -22,7 +22,7 @@ declare i32 @__gxx_personality_sj0(...)
 define void @test0() {
 bb:
   %tmp = bitcast %4* undef to i8*
-  %tmp1 = tail call i8* @objc_retainAutoreleasedReturnValue(i8* %tmp) nounwind
+  %tmp1 = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %tmp) nounwind
   br label %bb3
 
 bb3:                                              ; preds = %bb2
@@ -53,9 +53,9 @@ bb6:                                              ; preds = %bb5, %bb4, %bb4, %b
 ; CHECK: }
 define void @test1() {
 bb:
-  %tmp = tail call %0* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to %0* ()*)()
+  %tmp = tail call %0* bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to %0* ()*)()
   %tmp2 = bitcast %0* %tmp to i8*
-  %tmp3 = tail call i8* @objc_retainAutoreleasedReturnValue(i8* %tmp2) nounwind
+  %tmp3 = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %tmp2) nounwind
   br i1 undef, label %bb7, label %bb7
 
 bb7:                                              ; preds = %bb6, %bb6, %bb5
@@ -70,15 +70,15 @@ bb7:                                              ; preds = %bb6, %bb6, %bb5
 ; CHECK: define void @_Z6doTestP8NSString() personality i8* bitcast (i32 (...)* @__gxx_personality_sj0 to i8*) {
 ; CHECK: invoke.cont:                                      ; preds = %entry
 ; CHECK-NEXT: call void asm sideeffect "mov\09r7, r7\09\09@ marker for objc_retainAutoreleaseReturnValue", ""()
-; CHECK-NEXT: %tmp = tail call i8* @objc_retainAutoreleasedReturnValue(i8* %call) [[NUW:#[0-9]+]]
+; CHECK-NEXT: %tmp = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %call) [[NUW:#[0-9]+]]
 ; CHECK: }
 define void @_Z6doTestP8NSString() personality i8* bitcast (i32 (...)* @__gxx_personality_sj0 to i8*) {
 entry:
-  %call = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* ()*)()
+  %call = invoke i8* bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i8* ()*)()
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:                                      ; preds = %entry
-  %tmp = tail call i8* @objc_retainAutoreleasedReturnValue(i8* %call) nounwind
+  %tmp = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %call) nounwind
   unreachable
 
 lpad:                                             ; preds = %entry

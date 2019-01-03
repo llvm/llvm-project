@@ -97,9 +97,7 @@ int64_t GetSigned(const llvm::json::Object *obj, llvm::StringRef key,
 }
 
 bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key) {
-  if (obj.find(key) != obj.end())
-    return true;
-  return false;
+  return obj.find(key) != obj.end();
 }
 
 std::vector<std::string> GetStrings(const llvm::json::Object *obj,

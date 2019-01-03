@@ -452,8 +452,7 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
           if (mixed_source_and_assembly && sc.line_entry.IsValid()) {
             if (sc.symbol != previous_symbol) {
               SourceLine decl_line = GetFunctionDeclLineEntry(sc);
-              if (ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, decl_line) ==
-                  false)
+              if (!ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, decl_line))
                 AddLineToSourceLineTables(decl_line, source_lines_seen);
             }
             if (sc.line_entry.IsValid()) {
@@ -461,8 +460,7 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
               this_line.file = sc.line_entry.file;
               this_line.line = sc.line_entry.line;
               this_line.column = sc.line_entry.column;
-              if (ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, this_line) ==
-                  false)
+              if (!ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, this_line))
                 AddLineToSourceLineTables(this_line, source_lines_seen);
             }
           }
@@ -506,8 +504,8 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
               previous_symbol = sc.symbol;
               if (sc.function && sc.line_entry.IsValid()) {
                 LineEntry prologue_end_line = sc.line_entry;
-                if (ElideMixedSourceAndDisassemblyLine(
-                        exe_ctx, sc, prologue_end_line) == false) {
+                if (!ElideMixedSourceAndDisassemblyLine(exe_ctx, sc,
+                                                        prologue_end_line)) {
                   FileSpec func_decl_file;
                   uint32_t func_decl_line;
                   sc.function->GetStartLineSourceInfo(func_decl_file,
@@ -547,8 +545,8 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
                 this_line.file = sc.line_entry.file;
                 this_line.line = sc.line_entry.line;
 
-                if (ElideMixedSourceAndDisassemblyLine(exe_ctx, sc,
-                                                       this_line) == false) {
+                if (!ElideMixedSourceAndDisassemblyLine(exe_ctx, sc,
+                                                        this_line)) {
                   // Only print this source line if it is different from the
                   // last source line we printed.  There may have been inlined
                   // functions between these lines that we elided, resulting in

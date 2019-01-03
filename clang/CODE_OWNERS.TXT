@@ -49,6 +49,10 @@ N: John McCall
 E: rjmccall@apple.com
 D: Clang LLVM IR generation
 
+N: Brad Smith
+E: brad@comstyle.com
+D: OpenBSD driver
+
 N: Richard Smith
 E: richard@metafoo.co.uk
 D: All parts of Clang not covered by someone else

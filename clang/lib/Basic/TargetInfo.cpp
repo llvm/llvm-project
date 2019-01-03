@@ -685,7 +685,9 @@ bool TargetInfo::validateInputConstraint(
       // FIXME: Fail if % is used with the last operand.
       break;
     case 'i': // immediate integer.
+      break;
     case 'n': // immediate integer with a known value.
+      Info.setRequiresImmediate();
       break;
     case 'I':  // Various constant constraints with target-specific meanings.
     case 'J':

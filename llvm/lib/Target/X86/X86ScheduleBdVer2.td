@@ -136,11 +136,15 @@ def PdLoad  : ProcResource<2> {
   let BufferSize = 40;
 }
 
+def PdLoadQueue : LoadQueue<PdLoad>;
+
 let Super = PdAGLU01 in
 def PdStore : ProcResource<1> {
   // For Piledriver, the store queue is 24 entries deep.
   let BufferSize = 24;
 }
+
+def PdStoreQueue : StoreQueue<PdStore>;
 
 //===----------------------------------------------------------------------===//
 // Integer Execution Units

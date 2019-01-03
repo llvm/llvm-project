@@ -1,20 +1,24 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 --position-independent -show-encoding | \
-# RUN:  FileCheck %s
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu --position-independent \
+# RUN:            -show-encoding | FileCheck %s
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 --position-independent -filetype=obj -o -| \
-# RUN:  llvm-objdump -d -r - | FileCheck %s -check-prefix=CHECK-FOR-STORE
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu --position-independent \
+# RUN:            -filetype=obj -o - \
+# RUN:   | llvm-objdump -d -r - | FileCheck %s -check-prefix=CHECK-FOR-STORE
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=+micromips --position-independent -show-encoding | \
-# RUN:  FileCheck %s -check-prefix=MICROMIPS
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mattr=+micromips \
+# RUN:            --position-independent -show-encoding \
+# RUN:   | FileCheck %s -check-prefix=MICROMIPS
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -show-encoding | \
-# RUN:  FileCheck %s -check-prefix=NO-PIC
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -show-encoding \
+# RUN:   | FileCheck %s -check-prefix=NO-PIC
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips64 -target-abi n32 --position-independent -show-encoding | \
-# RUN:  FileCheck %s -check-prefixes=BAD-ABI,BAD-ABI-N32
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 \
+# RUN:            --position-independent -show-encoding \
+# RUN:   | FileCheck %s -check-prefixes=BAD-ABI,BAD-ABI-N32
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 --position-independent -show-encoding | \
-# RUN:  FileCheck %s -check-prefixes=BAD-ABI,BAD-ABI-N64
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnu --position-independent \
+# RUN:            -show-encoding \
+# RUN:   | FileCheck %s -check-prefixes=BAD-ABI,BAD-ABI-N64
 
   .text
   .ent foo

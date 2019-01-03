@@ -70,11 +70,16 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
 // pic32  PIC_    Medium     GOT < 2^32 bytes
 //
 // All code models require that the text segment is smaller than 2GB.
-static CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM,
-                                              Reloc::Model RM, bool Is64Bit,
-                                              bool JIT) {
-  if (CM)
+static CodeModel::Model
+getEffectiveSparcCodeModel(Optional<CodeModel::Model> CM, Reloc::Model RM,
+                           bool Is64Bit, bool JIT) {
+  if (CM) {
+    if (*CM == CodeModel::Tiny)
+      report_fatal_error("Target does not support the tiny CodeModel");
+    if (*CM == CodeModel::Kernel)
+      report_fatal_error("Target does not support the kernel CodeModel");
     return *CM;
+  }
   if (Is64Bit) {
     if (JIT)
       return CodeModel::Large;
@@ -88,11 +93,11 @@ SparcTargetMachine::SparcTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, Optional<Reloc::Model> RM,
     Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT, bool is64bit)
-    : LLVMTargetMachine(
-          T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
-          getEffectiveRelocModel(RM),
-          getEffectiveCodeModel(CM, getEffectiveRelocModel(RM), is64bit, JIT),
-          OL),
+    : LLVMTargetMachine(T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
+                        getEffectiveRelocModel(RM),
+                        getEffectiveSparcCodeModel(
+                            CM, getEffectiveRelocModel(RM), is64bit, JIT),
+                        OL),
       TLOF(make_unique<SparcELFTargetObjectFile>()),
       Subtarget(TT, CPU, FS, *this, is64bit), is64Bit(is64bit) {
   initAsmInfo();

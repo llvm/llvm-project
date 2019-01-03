@@ -67,7 +67,7 @@ DumpValueObjectOptions &DumpValueObjectOptions::SetUseObjectiveC(bool use) {
 }
 
 DumpValueObjectOptions &DumpValueObjectOptions::SetShowSummary(bool show) {
-  if (show == false)
+  if (!show)
     SetOmitSummaryDepth(UINT32_MAX);
   else
     SetOmitSummaryDepth(0);

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mattr=+simd128 | FileCheck %s --check-prefixes CHECK
+; RUN: llc < %s -mattr=+simd128 -verify-machineinstrs | FileCheck %s --check-prefixes CHECK
 
 ; Check that shuffles maintain their type when being custom
 ; lowered. Regression test for bug 39275.

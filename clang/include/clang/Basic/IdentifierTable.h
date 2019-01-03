@@ -95,10 +95,6 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   // loaded from an AST file.
   unsigned ChangedAfterLoad : 1;
 
-  // True if the identifier's frontend information has changed from the
-  // definition loaded from an AST file.
-  unsigned FEChangedAfterLoad : 1;
-
   // True if revertTokenIDToIdentifier was called.
   unsigned RevertedTokenID : 1;
 
@@ -109,17 +105,26 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   // True if this is the 'import' contextual keyword.
   unsigned IsModulesImport : 1;
 
-  // 29 bits left in a 64-bit word.
+  // 30 bits left in a 64-bit word.
 
   // Managed by the language front-end.
   void *FETokenInfo = nullptr;
 
   llvm::StringMapEntry<IdentifierInfo *> *Entry = nullptr;
 
+  IdentifierInfo()
+      : TokenID(tok::identifier), ObjCOrBuiltinID(0), HasMacro(false),
+        HadMacro(false), IsExtension(false), IsFutureCompatKeyword(false),
+        IsPoisoned(false), IsCPPOperatorKeyword(false),
+        NeedsHandleIdentifier(false), IsFromAST(false), ChangedAfterLoad(false),
+        RevertedTokenID(false), OutOfDate(false),
+        IsModulesImport(false) {}
+
 public:
-  IdentifierInfo();
   IdentifierInfo(const IdentifierInfo &) = delete;
   IdentifierInfo &operator=(const IdentifierInfo &) = delete;
+  IdentifierInfo(IdentifierInfo &&) = delete;
+  IdentifierInfo &operator=(IdentifierInfo &&) = delete;
 
   /// Return true if this is the identifier for the specified string.
   ///
@@ -138,31 +143,10 @@ public:
 
   /// Return the beginning of the actual null-terminated string for this
   /// identifier.
-  const char *getNameStart() const {
-    if (Entry) return Entry->getKeyData();
-    // FIXME: This is gross. It would be best not to embed specific details
-    // of the PTH file format here.
-    // The 'this' pointer really points to a
-    // std::pair<IdentifierInfo, const char*>, where internal pointer
-    // points to the external string data.
-    using actualtype = std::pair<IdentifierInfo, const char *>;
-
-    return ((const actualtype*) this)->second;
-  }
+  const char *getNameStart() const { return Entry->getKeyData(); }
 
   /// Efficiently return the length of this identifier info.
-  unsigned getLength() const {
-    if (Entry) return Entry->getKeyLength();
-    // FIXME: This is gross. It would be best not to embed specific details
-    // of the PTH file format here.
-    // The 'this' pointer really points to a
-    // std::pair<IdentifierInfo, const char*>, where internal pointer
-    // points to the external string data.
-    using actualtype = std::pair<IdentifierInfo, const char *>;
-
-    const char* p = ((const actualtype*) this)->second - 2;
-    return (((unsigned) p[0]) | (((unsigned) p[1]) << 8)) - 1;
-  }
+  unsigned getLength() const { return Entry->getKeyLength(); }
 
   /// Return the actual identifier string.
   StringRef getName() const {
@@ -344,18 +328,6 @@ public:
   /// an AST file.
   void setChangedSinceDeserialization() {
     ChangedAfterLoad = true;
-  }
-
-  /// Determine whether the frontend token information for this
-  /// identifier has changed since it was loaded from an AST file.
-  bool hasFETokenInfoChangedSinceDeserialization() const {
-    return FEChangedAfterLoad;
-  }
-
-  /// Note that the frontend token information for this identifier has
-  /// changed since it was loaded from an AST file.
-  void setFETokenInfoChangedSinceDeserialization() {
-    FEChangedAfterLoad = true;
   }
 
   /// Determine whether the information for this identifier is out of

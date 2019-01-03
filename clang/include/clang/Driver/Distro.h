@@ -39,6 +39,7 @@ public:
     RHEL6,
     RHEL7,
     Fedora,
+    Gentoo,
     OpenSUSE,
     UbuntuHardy,
     UbuntuIntrepid,
@@ -121,6 +122,10 @@ public:
 
   bool IsAlpineLinux() const {
     return DistroVal == AlpineLinux;
+  }
+
+  bool IsGentoo() const {
+    return DistroVal == Gentoo;
   }
 
   /// @}

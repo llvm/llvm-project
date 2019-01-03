@@ -338,12 +338,22 @@ bool RegisterContextDarwin_arm64::ReadRegister(const RegisterInfo *reg_info,
   case gpr_x26:
   case gpr_x27:
   case gpr_x28:
-  case gpr_fp:
-  case gpr_sp:
-  case gpr_lr:
-  case gpr_pc:
-  case gpr_cpsr:
     value.SetUInt64(gpr.x[reg - gpr_x0]);
+    break;
+  case gpr_fp:
+    value.SetUInt64(gpr.fp);
+    break;
+  case gpr_sp:
+    value.SetUInt64(gpr.sp);
+    break;
+  case gpr_lr:
+    value.SetUInt64(gpr.lr);
+    break;
+  case gpr_pc:
+    value.SetUInt64(gpr.pc);
+    break;
+  case gpr_cpsr:
+    value.SetUInt64(gpr.cpsr);
     break;
 
   case gpr_w0:
@@ -946,7 +956,7 @@ uint32_t RegisterContextDarwin_arm64::SetHardwareWatchpoint(lldb::addr_t addr,
     return LLDB_INVALID_INDEX32;
 
   // We must watch for either read or write
-  if (read == false && write == false)
+  if (!read && !write)
     return LLDB_INVALID_INDEX32;
 
   // Can't watch more than 4 bytes per WVR/WCR pair

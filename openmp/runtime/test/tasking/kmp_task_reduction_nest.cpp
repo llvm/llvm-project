@@ -1,5 +1,6 @@
 // RUN: %libomp-cxx-compile-and-run
 // RUN: %libomp-cxx-compile -DFLG=1 && %libomp-run
+// REQUIRES: openmp-5.0
 // GCC-5 is needed for OpenMP 4.0 support (taskgroup)
 // XFAIL: gcc-4
 #include <cstdio>

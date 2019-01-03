@@ -398,10 +398,9 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
     LLVM_FALLTHROUGH;
   case lldb::eLanguageTypeC_plus_plus_03:
     m_compiler->getLangOpts().CPlusPlus = true;
-    // FIXME: the following language option is a temporary workaround,
-    // to "ask for C++, get ObjC++".  Apple hopes to remove this requirement on
-    // non-Apple platforms, but for now it is needed.
-    m_compiler->getLangOpts().ObjC = true;
+    if (process_sp)
+      m_compiler->getLangOpts().ObjC =
+          process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC) != nullptr;
     break;
   case lldb::eLanguageTypeObjC_plus_plus:
   case lldb::eLanguageTypeUnknown:
@@ -833,7 +832,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
 
   if (should_create_file) {
     int temp_fd = -1;
-    llvm::SmallString<PATH_MAX> result_path;
+    llvm::SmallString<128> result_path;
     if (FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir()) {
       tmpdir_file_spec.AppendPathComponent("lldb-%%%%%%.expr");
       std::string temp_source_path = tmpdir_file_spec.GetPath();

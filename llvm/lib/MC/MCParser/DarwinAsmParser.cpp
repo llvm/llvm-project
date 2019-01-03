@@ -459,7 +459,12 @@ public:
 
   bool parseBuildVersion(StringRef Directive, SMLoc Loc);
   bool parseVersionMin(StringRef Directive, SMLoc Loc, MCVersionMinType Type);
+  bool parseMajorMinorVersionComponent(unsigned *Major, unsigned *Minor,
+                                       const char *VersionName);
+  bool parseOptionalTrailingVersionComponent(unsigned *Component,
+                                             const char *ComponentName);
   bool parseVersion(unsigned *Major, unsigned *Minor, unsigned *Update);
+  bool parseSDKVersion(VersionTuple &SDKVersion);
   void checkVersion(StringRef Directive, StringRef Arg, SMLoc Loc,
                     Triple::OSType ExpectedOS);
 };
@@ -1000,43 +1005,89 @@ bool DarwinAsmParser::parseDirectiveDataRegionEnd(StringRef, SMLoc) {
   return false;
 }
 
-/// parseVersion ::= major, minor [, update]
-bool DarwinAsmParser::parseVersion(unsigned *Major, unsigned *Minor,
-                                   unsigned *Update) {
+static bool isSDKVersionToken(const AsmToken &Tok) {
+  return Tok.is(AsmToken::Identifier) && Tok.getIdentifier() == "sdk_version";
+}
+
+/// parseMajorMinorVersionComponent ::= major, minor
+bool DarwinAsmParser::parseMajorMinorVersionComponent(unsigned *Major,
+                                                      unsigned *Minor,
+                                                      const char *VersionName) {
   // Get the major version number.
   if (getLexer().isNot(AsmToken::Integer))
-    return TokError("invalid OS major version number, integer expected");
+    return TokError(Twine("invalid ") + VersionName +
+                    " major version number, integer expected");
   int64_t MajorVal = getLexer().getTok().getIntVal();
   if (MajorVal > 65535 || MajorVal <= 0)
-    return TokError("invalid OS major version number");
+    return TokError(Twine("invalid ") + VersionName + " major version number");
   *Major = (unsigned)MajorVal;
   Lex();
   if (getLexer().isNot(AsmToken::Comma))
-    return TokError("OS minor version number required, comma expected");
+    return TokError(Twine(VersionName) +
+                    " minor version number required, comma expected");
   Lex();
   // Get the minor version number.
   if (getLexer().isNot(AsmToken::Integer))
-    return TokError("invalid OS minor version number, integer expected");
+    return TokError(Twine("invalid ") + VersionName +
+                    " minor version number, integer expected");
   int64_t MinorVal = getLexer().getTok().getIntVal();
   if (MinorVal > 255 || MinorVal < 0)
-    return TokError("invalid OS minor version number");
+    return TokError(Twine("invalid ") + VersionName + " minor version number");
   *Minor = MinorVal;
   Lex();
+  return false;
+}
+
+/// parseOptionalTrailingVersionComponent ::= , version_number
+bool DarwinAsmParser::parseOptionalTrailingVersionComponent(
+    unsigned *Component, const char *ComponentName) {
+  assert(getLexer().is(AsmToken::Comma) && "comma expected");
+  Lex();
+  if (getLexer().isNot(AsmToken::Integer))
+    return TokError(Twine("invalid ") + ComponentName +
+                    " version number, integer expected");
+  int64_t Val = getLexer().getTok().getIntVal();
+  if (Val > 255 || Val < 0)
+    return TokError(Twine("invalid ") + ComponentName + " version number");
+  *Component = Val;
+  Lex();
+  return false;
+}
+
+/// parseVersion ::= parseMajorMinorVersionComponent
+///                      parseOptionalTrailingVersionComponent
+bool DarwinAsmParser::parseVersion(unsigned *Major, unsigned *Minor,
+                                   unsigned *Update) {
+  if (parseMajorMinorVersionComponent(Major, Minor, "OS"))
+    return true;
 
   // Get the update level, if specified
   *Update = 0;
-  if (getLexer().is(AsmToken::EndOfStatement))
+  if (getLexer().is(AsmToken::EndOfStatement) ||
+      isSDKVersionToken(getLexer().getTok()))
     return false;
   if (getLexer().isNot(AsmToken::Comma))
     return TokError("invalid OS update specifier, comma expected");
+  if (parseOptionalTrailingVersionComponent(Update, "OS update"))
+    return true;
+  return false;
+}
+
+bool DarwinAsmParser::parseSDKVersion(VersionTuple &SDKVersion) {
+  assert(isSDKVersionToken(getLexer().getTok()) && "expected sdk_version");
   Lex();
-  if (getLexer().isNot(AsmToken::Integer))
-    return TokError("invalid OS update version number, integer expected");
-  int64_t UpdateVal = getLexer().getTok().getIntVal();
-  if (UpdateVal > 255 || UpdateVal < 0)
-    return TokError("invalid OS update version number");
-  *Update = UpdateVal;
-  Lex();
+  unsigned Major, Minor;
+  if (parseMajorMinorVersionComponent(&Major, &Minor, "SDK"))
+    return true;
+  SDKVersion = VersionTuple(Major, Minor);
+
+  // Get the subminor version, if specified.
+  if (getLexer().is(AsmToken::Comma)) {
+    unsigned Subminor;
+    if (parseOptionalTrailingVersionComponent(&Subminor, "SDK subminor"))
+      return true;
+    SDKVersion = VersionTuple(Major, Minor, Subminor);
+  }
   return false;
 }
 
@@ -1066,10 +1117,10 @@ static Triple::OSType getOSTypeFromMCVM(MCVersionMinType Type) {
 }
 
 /// parseVersionMin
-///   ::= .ios_version_min parseVersion
-///   |   .macosx_version_min parseVersion
-///   |   .tvos_version_min parseVersion
-///   |   .watchos_version_min parseVersion
+///   ::= .ios_version_min parseVersion parseSDKVersion
+///   |   .macosx_version_min parseVersion parseSDKVersion
+///   |   .tvos_version_min parseVersion parseSDKVersion
+///   |   .watchos_version_min parseVersion parseSDKVersion
 bool DarwinAsmParser::parseVersionMin(StringRef Directive, SMLoc Loc,
                                       MCVersionMinType Type) {
   unsigned Major;
@@ -1078,13 +1129,16 @@ bool DarwinAsmParser::parseVersionMin(StringRef Directive, SMLoc Loc,
   if (parseVersion(&Major, &Minor, &Update))
     return true;
 
+  VersionTuple SDKVersion;
+  if (isSDKVersionToken(getLexer().getTok()) && parseSDKVersion(SDKVersion))
+    return true;
+
   if (parseToken(AsmToken::EndOfStatement))
     return addErrorSuffix(Twine(" in '") + Directive + "' directive");
 
   Triple::OSType ExpectedOS = getOSTypeFromMCVM(Type);
   checkVersion(Directive, StringRef(), Loc, ExpectedOS);
-
-  getStreamer().EmitVersionMin(Type, Major, Minor, Update);
+  getStreamer().EmitVersionMin(Type, Major, Minor, Update, SDKVersion);
   return false;
 }
 
@@ -1094,13 +1148,16 @@ static Triple::OSType getOSTypeFromPlatform(MachO::PlatformType Type) {
   case MachO::PLATFORM_IOS:     return Triple::IOS;
   case MachO::PLATFORM_TVOS:    return Triple::TvOS;
   case MachO::PLATFORM_WATCHOS: return Triple::WatchOS;
-  case MachO::PLATFORM_BRIDGEOS: /* silence warning */break;
+  case MachO::PLATFORM_BRIDGEOS:         /* silence warning */ break;
+  case MachO::PLATFORM_IOSSIMULATOR:     /* silence warning */ break;
+  case MachO::PLATFORM_TVOSSIMULATOR:    /* silence warning */ break;
+  case MachO::PLATFORM_WATCHOSSIMULATOR: /* silence warning */ break;
   }
   llvm_unreachable("Invalid mach-o platform type");
 }
 
 /// parseBuildVersion
-///   ::= .build_version (macos|ios|tvos|watchos), parseVersion
+///   ::= .build_version (macos|ios|tvos|watchos), parseVersion parseSDKVersion
 bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
   StringRef PlatformName;
   SMLoc PlatformLoc = getTok().getLoc();
@@ -1126,14 +1183,17 @@ bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
   if (parseVersion(&Major, &Minor, &Update))
     return true;
 
+  VersionTuple SDKVersion;
+  if (isSDKVersionToken(getLexer().getTok()) && parseSDKVersion(SDKVersion))
+    return true;
+
   if (parseToken(AsmToken::EndOfStatement))
     return addErrorSuffix(" in '.build_version' directive");
 
   Triple::OSType ExpectedOS
     = getOSTypeFromPlatform((MachO::PlatformType)Platform);
   checkVersion(Directive, PlatformName, Loc, ExpectedOS);
-
-  getStreamer().EmitBuildVersion(Platform, Major, Minor, Update);
+  getStreamer().EmitBuildVersion(Platform, Major, Minor, Update, SDKVersion);
   return false;
 }
 

@@ -125,13 +125,23 @@ SBDebugger &SBDebugger::operator=(const SBDebugger &rhs) {
 }
 
 void SBDebugger::Initialize() {
+  SBInitializerOptions options;
+  SBDebugger::Initialize(options);
+}
+
+lldb::SBError SBDebugger::Initialize(SBInitializerOptions &options) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (log)
     log->Printf("SBDebugger::Initialize ()");
 
-  g_debugger_lifetime->Initialize(llvm::make_unique<SystemInitializerFull>(),
-                                  LoadPlugin);
+  SBError error;
+  if (auto e = g_debugger_lifetime->Initialize(
+          llvm::make_unique<SystemInitializerFull>(), *options.m_opaque_up,
+          LoadPlugin)) {
+    error.SetError(Status(std::move(e)));
+  }
+  return error;
 }
 
 void SBDebugger::Terminate() { g_debugger_lifetime->Terminate(); }
@@ -1055,11 +1065,6 @@ const char *SBDebugger::GetReproducerPath() const {
   return (m_opaque_sp
               ? ConstString(m_opaque_sp->GetReproducerPath()).GetCString()
               : nullptr);
-}
-
-void SBDebugger::SetReproducerPath(const char *p) {
-  if (m_opaque_sp)
-    m_opaque_sp->SetReproducerPath(llvm::StringRef::withNullAsEmpty(p));
 }
 
 ScriptLanguage SBDebugger::GetScriptLanguage() const {

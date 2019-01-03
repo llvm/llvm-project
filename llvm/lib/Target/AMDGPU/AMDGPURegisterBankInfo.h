@@ -49,6 +49,8 @@ class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
   bool isSALUMapping(const MachineInstr &MI) const;
   const InstructionMapping &getDefaultMappingSOP(const MachineInstr &MI) const;
   const InstructionMapping &getDefaultMappingVOP(const MachineInstr &MI) const;
+  const InstructionMapping &getDefaultMappingAllVGPR(
+    const MachineInstr &MI) const;
 public:
   AMDGPURegisterBankInfo(const TargetRegisterInfo &TRI);
 

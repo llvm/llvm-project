@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -383,26 +383,26 @@ ProgramStateRef StreamChecker::CheckDoubleClose(const CallExpr *CE,
 
 void StreamChecker::checkDeadSymbols(SymbolReaper &SymReaper,
                                      CheckerContext &C) const {
+  ProgramStateRef state = C.getState();
+
   // TODO: Clean up the state.
-  for (SymbolReaper::dead_iterator I = SymReaper.dead_begin(),
-         E = SymReaper.dead_end(); I != E; ++I) {
-    SymbolRef Sym = *I;
-    ProgramStateRef state = C.getState();
-    const StreamState *SS = state->get<StreamMap>(Sym);
-    if (!SS)
+  const StreamMapTy &Map = state->get<StreamMap>();
+  for (const auto &I: Map) {
+    SymbolRef Sym = I.first;
+    const StreamState &SS = I.second;
+    if (!SymReaper.isDead(Sym) || !SS.isOpened())
       continue;
 
-    if (SS->isOpened()) {
-      ExplodedNode *N = C.generateErrorNode();
-      if (N) {
-        if (!BT_ResourceLeak)
-          BT_ResourceLeak.reset(new BuiltinBug(
-              this, "Resource Leak",
-              "Opened File never closed. Potential Resource leak."));
-        C.emitReport(llvm::make_unique<BugReport>(
-            *BT_ResourceLeak, BT_ResourceLeak->getDescription(), N));
-      }
-    }
+    ExplodedNode *N = C.generateErrorNode();
+    if (!N)
+      return;
+
+    if (!BT_ResourceLeak)
+      BT_ResourceLeak.reset(
+          new BuiltinBug(this, "Resource Leak",
+                         "Opened File never closed. Potential Resource leak."));
+    C.emitReport(llvm::make_unique<BugReport>(
+        *BT_ResourceLeak, BT_ResourceLeak->getDescription(), N));
   }
 }
 

@@ -144,7 +144,7 @@ foreach( f ${files} ${cuda_wrapper_files} )
   list(APPEND out_files ${dst})
 endforeach( f )
 
-add_custom_command(OUTPUT ${output_dir}/arm_neon.h 
+add_custom_command(OUTPUT ${output_dir}/arm_neon.h
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/arm_neon.h
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/arm_neon.h ${output_dir}/arm_neon.h
   COMMENT "Copying clang's arm_neon.h...")
@@ -156,7 +156,9 @@ add_custom_command(OUTPUT ${output_dir}/arm_fp16.h
 list(APPEND out_files ${output_dir}/arm_fp16.h)
 
 add_custom_target(clang-headers ALL DEPENDS ${out_files})
-set_target_properties(clang-headers PROPERTIES FOLDER "Misc")
+set_target_properties(clang-headers PROPERTIES
+  FOLDER "Misc"
+  RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
 
 install(
   FILES ${files} ${CMAKE_CURRENT_BINARY_DIR}/arm_neon.h

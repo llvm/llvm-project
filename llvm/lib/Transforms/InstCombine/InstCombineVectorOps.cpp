@@ -46,40 +46,34 @@ using namespace PatternMatch;
 #define DEBUG_TYPE "instcombine"
 
 /// Return true if the value is cheaper to scalarize than it is to leave as a
-/// vector operation. isConstant indicates whether we're extracting one known
-/// element. If false we're extracting a variable index.
-static bool cheapToScalarize(Value *V, bool isConstant) {
-  if (Constant *C = dyn_cast<Constant>(V)) {
-    if (isConstant) return true;
+/// vector operation. IsConstantExtractIndex indicates whether we are extracting
+/// one known element from a vector constant.
+///
+/// FIXME: It's possible to create more instructions than previously existed.
+static bool cheapToScalarize(Value *V, bool IsConstantExtractIndex) {
+  // If we can pick a scalar constant value out of a vector, that is free.
+  if (auto *C = dyn_cast<Constant>(V))
+    return IsConstantExtractIndex || C->getSplatValue();
 
-    // If all elts are the same, we can extract it and use any of the values.
-    if (Constant *Op0 = C->getAggregateElement(0U)) {
-      for (unsigned i = 1, e = V->getType()->getVectorNumElements(); i != e;
-           ++i)
-        if (C->getAggregateElement(i) != Op0)
-          return false;
-      return true;
-    }
-  }
-  Instruction *I = dyn_cast<Instruction>(V);
-  if (!I) return false;
+  // An insertelement to the same constant index as our extract will simplify
+  // to the scalar inserted element. An insertelement to a different constant
+  // index is irrelevant to our extract.
+  if (match(V, m_InsertElement(m_Value(), m_Value(), m_ConstantInt())))
+    return IsConstantExtractIndex;
 
-  // Insert element gets simplified to the inserted element or is deleted if
-  // this is constant idx extract element and its a constant idx insertelt.
-  if (I->getOpcode() == Instruction::InsertElement && isConstant &&
-      isa<ConstantInt>(I->getOperand(2)))
+  if (match(V, m_OneUse(m_Load(m_Value()))))
     return true;
-  if (I->getOpcode() == Instruction::Load && I->hasOneUse())
-    return true;
-  if (BinaryOperator *BO = dyn_cast<BinaryOperator>(I))
-    if (BO->hasOneUse() &&
-        (cheapToScalarize(BO->getOperand(0), isConstant) ||
-         cheapToScalarize(BO->getOperand(1), isConstant)))
+
+  Value *V0, *V1;
+  if (match(V, m_OneUse(m_BinOp(m_Value(V0), m_Value(V1)))))
+    if (cheapToScalarize(V0, IsConstantExtractIndex) ||
+        cheapToScalarize(V1, IsConstantExtractIndex))
       return true;
-  if (CmpInst *CI = dyn_cast<CmpInst>(I))
-    if (CI->hasOneUse() &&
-        (cheapToScalarize(CI->getOperand(0), isConstant) ||
-         cheapToScalarize(CI->getOperand(1), isConstant)))
+
+  CmpInst::Predicate UnusedPred;
+  if (match(V, m_OneUse(m_Cmp(UnusedPred, m_Value(V0), m_Value(V1)))))
+    if (cheapToScalarize(V0, IsConstantExtractIndex) ||
+        cheapToScalarize(V1, IsConstantExtractIndex))
       return true;
 
   return false;
@@ -261,34 +255,30 @@ static Instruction *foldBitcastExtElt(ExtractElementInst &Ext,
 }
 
 Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
-  if (Value *V = SimplifyExtractElementInst(EI.getVectorOperand(),
-                                            EI.getIndexOperand(),
+  Value *SrcVec = EI.getVectorOperand();
+  Value *Index = EI.getIndexOperand();
+  if (Value *V = SimplifyExtractElementInst(SrcVec, Index,
                                             SQ.getWithInstruction(&EI)))
     return replaceInstUsesWith(EI, V);
 
-  // If vector val is constant with all elements the same, replace EI with
-  // that element.  We handle a known element # below.
-  if (Constant *C = dyn_cast<Constant>(EI.getOperand(0)))
-    if (cheapToScalarize(C, false))
-      return replaceInstUsesWith(EI, C->getAggregateElement(0U));
-
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
-  if (ConstantInt *IdxC = dyn_cast<ConstantInt>(EI.getOperand(1))) {
+  auto *IndexC = dyn_cast<ConstantInt>(Index);
+  if (IndexC) {
     unsigned NumElts = EI.getVectorOperandType()->getNumElements();
 
     // InstSimplify should handle cases where the index is invalid.
-    if (!IdxC->getValue().ule(NumElts))
+    if (!IndexC->getValue().ule(NumElts))
       return nullptr;
 
     // This instruction only demands the single element from the input vector.
     // If the input vector has a single use, simplify it based on this use
     // property.
-    if (EI.getOperand(0)->hasOneUse() && NumElts != 1) {
+    if (SrcVec->hasOneUse() && NumElts != 1) {
       APInt UndefElts(NumElts, 0);
-      APInt DemandedMask(NumElts, 0);
-      DemandedMask.setBit(IdxC->getZExtValue());
-      if (Value *V = SimplifyDemandedVectorElts(EI.getOperand(0), DemandedMask,
+      APInt DemandedElts(NumElts, 0);
+      DemandedElts.setBit(IndexC->getZExtValue());
+      if (Value *V = SimplifyDemandedVectorElts(SrcVec, DemandedElts,
                                                 UndefElts)) {
         EI.setOperand(0, V);
         return &EI;
@@ -300,43 +290,46 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
 
     // If there's a vector PHI feeding a scalar use through this extractelement
     // instruction, try to scalarize the PHI.
-    if (PHINode *PN = dyn_cast<PHINode>(EI.getOperand(0))) {
-      Instruction *scalarPHI = scalarizePHI(EI, PN);
-      if (scalarPHI)
-        return scalarPHI;
-    }
+    if (auto *Phi = dyn_cast<PHINode>(SrcVec))
+      if (Instruction *ScalarPHI = scalarizePHI(EI, Phi))
+        return ScalarPHI;
   }
 
-  if (Instruction *I = dyn_cast<Instruction>(EI.getOperand(0))) {
-    // Push extractelement into predecessor operation if legal and
-    // profitable to do so.
-    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(I)) {
-      if (I->hasOneUse() &&
-          cheapToScalarize(BO, isa<ConstantInt>(EI.getOperand(1)))) {
-        Value *newEI0 =
-          Builder.CreateExtractElement(BO->getOperand(0), EI.getOperand(1),
-                                       EI.getName()+".lhs");
-        Value *newEI1 =
-          Builder.CreateExtractElement(BO->getOperand(1), EI.getOperand(1),
-                                       EI.getName()+".rhs");
-        return BinaryOperator::CreateWithCopiedFlags(BO->getOpcode(),
-                                                     newEI0, newEI1, BO);
-      }
-    } else if (InsertElementInst *IE = dyn_cast<InsertElementInst>(I)) {
+  BinaryOperator *BO;
+  if (match(SrcVec, m_BinOp(BO)) && cheapToScalarize(SrcVec, IndexC)) {
+    // extelt (binop X, Y), Index --> binop (extelt X, Index), (extelt Y, Index)
+    Value *X = BO->getOperand(0), *Y = BO->getOperand(1);
+    Value *E0 = Builder.CreateExtractElement(X, Index);
+    Value *E1 = Builder.CreateExtractElement(Y, Index);
+    return BinaryOperator::CreateWithCopiedFlags(BO->getOpcode(), E0, E1, BO);
+  }
+
+  Value *X, *Y;
+  CmpInst::Predicate Pred;
+  if (match(SrcVec, m_Cmp(Pred, m_Value(X), m_Value(Y))) &&
+      cheapToScalarize(SrcVec, IndexC)) {
+    // extelt (cmp X, Y), Index --> cmp (extelt X, Index), (extelt Y, Index)
+    Value *E0 = Builder.CreateExtractElement(X, Index);
+    Value *E1 = Builder.CreateExtractElement(Y, Index);
+    return CmpInst::Create(cast<CmpInst>(SrcVec)->getOpcode(), Pred, E0, E1);
+  }
+
+  if (auto *I = dyn_cast<Instruction>(SrcVec)) {
+    if (auto *IE = dyn_cast<InsertElementInst>(I)) {
       // Extracting the inserted element?
-      if (IE->getOperand(2) == EI.getOperand(1))
+      if (IE->getOperand(2) == Index)
         return replaceInstUsesWith(EI, IE->getOperand(1));
       // If the inserted and extracted elements are constants, they must not
       // be the same value, extract from the pre-inserted value instead.
-      if (isa<Constant>(IE->getOperand(2)) && isa<Constant>(EI.getOperand(1))) {
-        Worklist.AddValue(EI.getOperand(0));
+      if (isa<Constant>(IE->getOperand(2)) && IndexC) {
+        Worklist.AddValue(SrcVec);
         EI.setOperand(0, IE->getOperand(0));
         return &EI;
       }
-    } else if (ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(I)) {
+    } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
       // If this is extracting an element from a shufflevector, figure out where
       // it came from and extract from the appropriate input element instead.
-      if (ConstantInt *Elt = dyn_cast<ConstantInt>(EI.getOperand(1))) {
+      if (auto *Elt = dyn_cast<ConstantInt>(Index)) {
         int SrcIdx = SVI->getMaskValue(Elt->getZExtValue());
         Value *Src;
         unsigned LHSWidth =
@@ -355,13 +348,12 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
                                           ConstantInt::get(Int32Ty,
                                                            SrcIdx, false));
       }
-    } else if (CastInst *CI = dyn_cast<CastInst>(I)) {
+    } else if (auto *CI = dyn_cast<CastInst>(I)) {
       // Canonicalize extractelement(cast) -> cast(extractelement).
       // Bitcasts can change the number of vector elements, and they cost
       // nothing.
       if (CI->hasOneUse() && (CI->getOpcode() != Instruction::BitCast)) {
-        Value *EE = Builder.CreateExtractElement(CI->getOperand(0),
-                                                 EI.getIndexOperand());
+        Value *EE = Builder.CreateExtractElement(CI->getOperand(0), Index);
         Worklist.AddValue(EE);
         return CastInst::Create(CI->getOpcode(), EE, EI.getType());
       }

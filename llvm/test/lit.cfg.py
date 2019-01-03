@@ -146,11 +146,11 @@ tools.extend([
     'llvm-isel-fuzzer', 'llvm-opt-fuzzer', 'llvm-lib', 'llvm-link', 'llvm-lto',
     'llvm-lto2', 'llvm-mc', 'llvm-mca', 'llvm-modextract', 'llvm-nm',
     'llvm-objcopy', 'llvm-objdump', 'llvm-pdbutil', 'llvm-profdata',
-    'llvm-ranlib', 'llvm-readobj', 'llvm-rtdyld', 'llvm-size', 'llvm-split',
-    'llvm-strings', 'llvm-strip', 'llvm-tblgen', 'llvm-undname', 'llvm-c-test',
-    'llvm-cxxfilt', 'llvm-xray', 'yaml2obj', 'obj2yaml', 'yaml-bench',
-    'verify-uselistorder', 'bugpoint', 'llc', 'llvm-symbolizer', 'opt',
-    'sancov', 'sanstats'])
+    'llvm-ranlib', 'llvm-readelf', 'llvm-readobj', 'llvm-rtdyld', 'llvm-size',
+    'llvm-split', 'llvm-strings', 'llvm-strip', 'llvm-tblgen', 'llvm-undname',
+    'llvm-c-test', 'llvm-cxxfilt', 'llvm-xray', 'yaml2obj', 'obj2yaml',
+    'yaml-bench', 'verify-uselistorder', 'bugpoint', 'llc', 'llvm-symbolizer',
+    'opt', 'sancov', 'sanstats'])
 
 # The following tools are optional
 tools.extend([
@@ -236,6 +236,9 @@ if not 'hexagon' in config.target_triple:
 if config.target_triple:
     config.available_features.add('default_triple')
 
+if lit.util.isMacOSTriple(config.target_triple):
+   config.available_features.add('darwin')
+
 import subprocess
 
 
@@ -301,7 +304,7 @@ llvm_config.feature_config(
     [('--assertion-mode', {'ON': 'asserts'}),
      ('--has-global-isel', {'ON': 'global-isel'})])
 
-if 'darwin' == sys.platform:
+if lit.util.isMacOSTriple(config.target_triple):
     try:
         sysctl_cmd = subprocess.Popen(['sysctl', 'hw.optional.fma'],
                                       stdout=subprocess.PIPE)

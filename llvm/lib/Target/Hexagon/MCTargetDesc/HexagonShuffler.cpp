@@ -138,6 +138,8 @@ void HexagonCVIResource::SetupTUL(TypeUnitsAndLanes *TUL, StringRef CPU) {
       UnitsAndLanes(CVI_XLANE | CVI_MPY0, 2);
   (*TUL)[HexagonII::TypeCVI_SCATTER_NEW_ST] =
       UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
+  (*TUL)[HexagonII::TypeCVI_4SLOT_MPY] = UnitsAndLanes(CVI_XLANE, 4);
+  (*TUL)[HexagonII::TypeCVI_ZW] = UnitsAndLanes(CVI_ZW, 1);
 }
 
 HexagonCVIResource::HexagonCVIResource(TypeUnitsAndLanes *TUL,
@@ -300,6 +302,7 @@ bool HexagonShuffler::check() {
   // Number of memory operations, loads, solo loads, stores, solo stores, single
   // stores.
   unsigned memory = 0, loads = 0, load0 = 0, stores = 0, store0 = 0, store1 = 0;
+  unsigned NonZCVIloads = 0, AllCVIloads = 0, CVIstores = 0;
   // Number of duplex insns
   unsigned duplex = 0;
   unsigned pSlot3Cnt = 0;
@@ -331,6 +334,11 @@ bool HexagonShuffler::check() {
     case HexagonII::TypeCVI_VM_TMP_LD:
     case HexagonII::TypeCVI_GATHER:
     case HexagonII::TypeCVI_GATHER_RST:
+      ++NonZCVIloads;
+      LLVM_FALLTHROUGH;
+    case HexagonII::TypeCVI_ZW:
+      ++AllCVIloads;
+      LLVM_FALLTHROUGH;
     case HexagonII::TypeLD:
       ++loads;
       ++memory;
@@ -348,6 +356,8 @@ bool HexagonShuffler::check() {
     case HexagonII::TypeCVI_SCATTER_RST:
     case HexagonII::TypeCVI_SCATTER_NEW_RST:
     case HexagonII::TypeCVI_SCATTER_NEW_ST:
+      ++CVIstores;
+      LLVM_FALLTHROUGH;
     case HexagonII::TypeST:
       ++stores;
       ++memory;
@@ -405,7 +415,11 @@ bool HexagonShuffler::check() {
   applySlotRestrictions();
 
   // Check if the packet is legal.
-  if ((load0 > 1 || store0 > 1) || (duplex > 1 || (duplex && memory))) {
+  const unsigned ZCVIloads = AllCVIloads - NonZCVIloads;
+  const bool ValidHVXMem =
+      NonZCVIloads <= 1 && ZCVIloads <= 1 && CVIstores <= 1;
+  if ((load0 > 1 || store0 > 1 || !ValidHVXMem) ||
+      (duplex > 1 || (duplex && memory))) {
     reportError(llvm::Twine("invalid instruction packet"));
     return false;
   }

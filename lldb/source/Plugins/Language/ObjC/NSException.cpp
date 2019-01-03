@@ -144,11 +144,8 @@ public:
     m_userinfo_sp.reset();
     m_reserved_sp.reset();
 
-    if (!ExtractFields(m_backend, &m_name_sp, &m_reason_sp, &m_userinfo_sp,
-                       &m_reserved_sp)) {
-      return false;
-    }
-    return true;
+    return ExtractFields(m_backend, &m_name_sp, &m_reason_sp, &m_userinfo_sp,
+                         &m_reserved_sp);
   }
 
   bool MightHaveChildren() override { return true; }

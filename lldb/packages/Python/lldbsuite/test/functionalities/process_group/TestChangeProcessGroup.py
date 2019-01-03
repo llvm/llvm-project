@@ -24,7 +24,6 @@ class ChangeProcessGroupTestCase(TestBase):
     @skipIfFreeBSD  # Times out on FreeBSD llvm.org/pr23731
     @skipIfWindows  # setpgid call does not exist on Windows
     @expectedFailureAndroid("http://llvm.org/pr23762", api_levels=[16])
-    @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], bugnumber="<rdar://problem/34538611>") # old lldb-server has race condition, launching an inferior and then launching debugserver in quick succession sometimes fails
     def test_setpgid(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

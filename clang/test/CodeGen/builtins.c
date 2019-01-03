@@ -132,6 +132,8 @@ int main() {
   R(extract_return_addr, (&N));
   P(signbit, (1.0));
 
+  R(launder, (&N));
+
   return 0;
 }
 
@@ -394,6 +396,15 @@ void test_builtin_longjmp(void **buffer) {
 long long test_builtin_readcyclecounter() {
   // CHECK: call i64 @llvm.readcyclecounter()
   return __builtin_readcyclecounter();
+}
+
+/// __builtin_launder should be a NOP in C since there are no vtables.
+// CHECK-LABEL: define void @test_builtin_launder
+void test_builtin_launder(int *p) {
+  // CHECK: [[TMP:%.*]] = load i32*,
+  // CHECK-NOT: @llvm.launder
+  // CHECK: store i32* [[TMP]],
+  int *d = __builtin_launder(p);
 }
 
 // Behavior of __builtin_os_log differs between platforms, so only test on X86

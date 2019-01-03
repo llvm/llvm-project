@@ -388,10 +388,7 @@ SearchFilterForUnconstrainedSearches::SerializeToStructuredData() {
 
 bool SearchFilterForUnconstrainedSearches::ModulePasses(
     const FileSpec &module_spec) {
-  if (m_target_sp->ModuleIsExcludedForUnconstrainedSearches(module_spec))
-    return false;
-  else
-    return true;
+  return !m_target_sp->ModuleIsExcludedForUnconstrainedSearches(module_spec);
 }
 
 bool SearchFilterForUnconstrainedSearches::ModulePasses(
@@ -570,22 +567,15 @@ bool SearchFilterByModuleList::ModulePasses(const ModuleSP &module_sp) {
   if (m_module_spec_list.GetSize() == 0)
     return true;
 
-  if (module_sp &&
-      m_module_spec_list.FindFileIndex(0, module_sp->GetFileSpec(), false) !=
-          UINT32_MAX)
-    return true;
-  else
-    return false;
+  return module_sp && m_module_spec_list.FindFileIndex(
+                          0, module_sp->GetFileSpec(), false) != UINT32_MAX;
 }
 
 bool SearchFilterByModuleList::ModulePasses(const FileSpec &spec) {
   if (m_module_spec_list.GetSize() == 0)
     return true;
 
-  if (m_module_spec_list.FindFileIndex(0, spec, true) != UINT32_MAX)
-    return true;
-  else
-    return false;
+  return m_module_spec_list.FindFileIndex(0, spec, true) != UINT32_MAX;
 }
 
 bool SearchFilterByModuleList::AddressPasses(Address &address) {

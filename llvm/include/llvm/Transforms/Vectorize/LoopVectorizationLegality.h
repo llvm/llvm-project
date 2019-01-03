@@ -95,7 +95,7 @@ public:
     FK_Enabled = 1,    ///< Forcing enabled.
   };
 
-  LoopVectorizeHints(const Loop *L, bool DisableInterleaving,
+  LoopVectorizeHints(const Loop *L, bool InterleaveOnlyWhenForced,
                      OptimizationRemarkEmitter &ORE);
 
   /// Mark the loop L as already vectorized by setting the width to 1.
@@ -105,7 +105,8 @@ public:
     writeHintsToMetadata(Hints);
   }
 
-  bool allowVectorization(Function *F, Loop *L, bool AlwaysVectorize) const;
+  bool allowVectorization(Function *F, Loop *L,
+                          bool VectorizeOnlyWhenForced) const;
 
   /// Dumps all the hint information.
   void emitRemarkWithHints() const;
@@ -113,7 +114,12 @@ public:
   unsigned getWidth() const { return Width.Value; }
   unsigned getInterleave() const { return Interleave.Value; }
   unsigned getIsVectorized() const { return IsVectorized.Value; }
-  enum ForceKind getForce() const { return (ForceKind)Force.Value; }
+  enum ForceKind getForce() const {
+    if ((ForceKind)Force.Value == FK_Undefined &&
+        hasDisableAllTransformsHint(TheLoop))
+      return FK_Disabled;
+    return (ForceKind)Force.Value;
+  }
 
   /// If hints are provided that force vectorization, use the AlwaysPrint
   /// pass name to force the frontend to print the diagnostic.

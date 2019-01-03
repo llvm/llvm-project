@@ -28,6 +28,7 @@ target_link_libraries(ClangDocTests
   clangFormat
   clangFrontend
   clangRewrite
+  clangSerialization
   clangTooling
   clangToolingCore
   )

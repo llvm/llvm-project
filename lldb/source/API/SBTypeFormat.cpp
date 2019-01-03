@@ -88,13 +88,13 @@ lldb::SBTypeFormat &SBTypeFormat::operator=(const lldb::SBTypeFormat &rhs) {
 }
 
 bool SBTypeFormat::operator==(lldb::SBTypeFormat &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return !rhs.IsValid();
   return m_opaque_sp == rhs.m_opaque_sp;
 }
 
 bool SBTypeFormat::IsEqualTo(lldb::SBTypeFormat &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return !rhs.IsValid();
 
   if (GetFormat() == rhs.GetFormat())
@@ -104,7 +104,7 @@ bool SBTypeFormat::IsEqualTo(lldb::SBTypeFormat &rhs) {
 }
 
 bool SBTypeFormat::operator!=(lldb::SBTypeFormat &rhs) {
-  if (IsValid() == false)
+  if (!IsValid())
     return !rhs.IsValid();
   return m_opaque_sp != rhs.m_opaque_sp;
 }

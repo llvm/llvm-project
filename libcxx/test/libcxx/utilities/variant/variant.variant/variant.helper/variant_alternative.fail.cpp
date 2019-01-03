@@ -31,6 +31,6 @@ int main()
     {
         typedef std::variant<int, double> T;
         std::variant_alternative<2, T>::type foo; // expected-note {{requested here}}
-        // expected-error@variant:* {{static_assert failed "Index out of bounds in std::variant_alternative<>"}}
+        // expected-error-re@variant:* {{static_assert failed{{( due to requirement '2U[L]{0,2} < sizeof...\(_Types\)')?}} "Index out of bounds in std::variant_alternative<>"}}
     }
 }

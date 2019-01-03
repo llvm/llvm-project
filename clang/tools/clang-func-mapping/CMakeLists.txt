@@ -13,6 +13,7 @@ target_link_libraries(clang-func-mapping
   clangBasic
   clangCrossTU
   clangFrontend
+  clangSerialization
   clangTooling
   )
 

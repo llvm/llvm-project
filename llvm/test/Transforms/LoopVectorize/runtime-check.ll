@@ -117,6 +117,48 @@ loopexit:
   ret void
 }
 
+; Check we do not generate runtime checks if we found a known dependence preventing
+; vectorization. In this case, it is a read of c[i-1] followed by a write of c[i].
+; The runtime checks would always fail.
+
+; void test_runtime_check2(float *a, float b, unsigned offset, unsigned offset2, unsigned n, float *c) {
+;   for (unsigned i = 1; i < n; i++) {
+;     a[i+o1] += a[i+o2] + b;
+;     c[i] = c[i-1] + b;
+;   }
+; }
+;
+; CHECK-LABEL: test_runtime_check2
+; CHECK-NOT:      <4 x float>
+define void @test_runtime_check2(float* %a, float %b, i64 %offset, i64 %offset2, i64 %n, float* %c) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %ind.sum = add i64 %iv, %offset
+  %arr.idx = getelementptr inbounds float, float* %a, i64 %ind.sum
+  %l1 = load float, float* %arr.idx, align 4
+  %ind.sum2 = add i64 %iv, %offset2
+  %arr.idx2 = getelementptr inbounds float, float* %a, i64 %ind.sum2
+  %l2 = load float, float* %arr.idx2, align 4
+  %m = fmul fast float %b, %l2
+  %ad = fadd fast float %l1, %m
+  store float %ad, float* %arr.idx, align 4
+  %c.ind = add i64 %iv, -1
+  %c.idx = getelementptr inbounds float, float* %c, i64 %c.ind
+  %lc = load float, float* %c.idx, align 4
+  %vc = fadd float %lc, 1.0
+  %c.idx2 = getelementptr inbounds float, float* %c, i64 %iv
+  store float %vc, float* %c.idx2
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %loopexit, label %for.body
+
+loopexit:
+  ret void
+}
+
 ; CHECK: !9 = !DILocation(line: 101, column: 1, scope: !{{.*}})
 
 !llvm.module.flags = !{!0, !1}

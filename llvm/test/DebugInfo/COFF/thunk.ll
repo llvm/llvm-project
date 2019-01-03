@@ -70,6 +70,7 @@
 ; ASM-NEXT:   .short  Lfunc_end{{.*}}-"[[NAME1]]" # Code size 
 ; ASM-NEXT:   .byte   0                       # Ordinal 
 ; ASM-NEXT:   .asciz  "[[NAME1]]"             # Function name 
+; ASM-NEXT:   .p2align 2
 ; ASM-NEXT: [[END1]]:
 ; ASM-NEXT:   .short  2                       # Record length 
 ; ASM-NEXT:   .short  4431                    # Record kind: S_PROC_ID_END 
@@ -88,6 +89,7 @@
 ; ASM-NEXT:   .short Lfunc_end{{.*}}-"[[NAME2]]" # Code size
 ; ASM-NEXT:   .byte 0                         # Ordinal
 ; ASM-NEXT:   .asciz "[[NAME2]]"              # Function name
+; ASM-NEXT:   .p2align 2
 ; ASM-NEXT: [[END2]]:
 ; ASM-NEXT:   .short 2                        # Record length
 ; ASM-NEXT:   .short 4431                     # Record kind: S_PROC_ID_END 

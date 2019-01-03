@@ -125,7 +125,7 @@ static void failIfError(std::error_code EC, Twine Context = "") {
     return;
 
   std::string ContextStr = Context.str();
-  if (ContextStr == "")
+  if (ContextStr.empty())
     fail(EC.message());
   fail(Context + ": " + EC.message());
 }
@@ -136,7 +136,7 @@ static void failIfError(Error E, Twine Context = "") {
 
   handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EIB) {
     std::string ContextStr = Context.str();
-    if (ContextStr == "")
+    if (ContextStr.empty())
       fail(EIB.message());
     fail(Context + ": " + EIB.message());
   });
@@ -196,7 +196,7 @@ static std::vector<StringRef> Members;
 // Extract the member filename from the command line for the [relpos] argument
 // associated with a, b, and i modifiers
 static void getRelPos() {
-  if (PositionalArgs.size() == 0)
+  if (PositionalArgs.empty())
     fail("Expected [relpos] for a, b, or i modifier");
   RelPos = PositionalArgs[0];
   PositionalArgs.erase(PositionalArgs.begin());
@@ -204,7 +204,7 @@ static void getRelPos() {
 
 // Get the archive file name from the command line
 static void getArchive() {
-  if (PositionalArgs.size() == 0)
+  if (PositionalArgs.empty())
     fail("An archive name must be specified");
   ArchiveName = PositionalArgs[0];
   PositionalArgs.erase(PositionalArgs.begin());
@@ -760,11 +760,11 @@ static void performWriteOperation(ArchiveOperation Operation,
     else if (OldArchive)
       Kind = OldArchive->kind();
     else if (NewMembersP)
-      Kind = NewMembersP->size() ? getKindFromMember(NewMembersP->front())
-                                 : getDefaultForHost();
+      Kind = !NewMembersP->empty() ? getKindFromMember(NewMembersP->front())
+                                   : getDefaultForHost();
     else
-      Kind = NewMembers.size() ? getKindFromMember(NewMembers.front())
-                               : getDefaultForHost();
+      Kind = !NewMembers.empty() ? getKindFromMember(NewMembers.front())
+                                 : getDefaultForHost();
     break;
   case GNU:
     Kind = object::Archive::K_GNU;

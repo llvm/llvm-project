@@ -41,7 +41,7 @@ define void @vectorized(float* noalias nocapture %A, float* noalias nocapture re
 ; CHECK-NEXT:    store <8 x float> [[TMP7]], <8 x float>* [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !1
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 20, 16
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -51,14 +51,14 @@ define void @vectorized(float* noalias nocapture %A, float* noalias nocapture re
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load float, float* [[ARRAYIDX]], align 4, !llvm.mem.parallel_loop_access !3
+; CHECK-NEXT:    [[TMP10:%.*]] = load float, float* [[ARRAYIDX]], align 4, !llvm.access.group !0
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load float, float* [[ARRAYIDX2]], align 4, !llvm.mem.parallel_loop_access !3
+; CHECK-NEXT:    [[TMP11:%.*]] = load float, float* [[ARRAYIDX2]], align 4, !llvm.access.group !0
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX2]], align 4, !llvm.mem.parallel_loop_access !3
+; CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX2]], align 4, !llvm.access.group !0
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 20
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop !4
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop !5
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -68,11 +68,11 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4, !llvm.mem.parallel_loop_access !1
+  %0 = load float, float* %arrayidx, align 4, !llvm.access.group !11
   %arrayidx2 = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %1 = load float, float* %arrayidx2, align 4, !llvm.mem.parallel_loop_access !1
+  %1 = load float, float* %arrayidx2, align 4, !llvm.access.group !11
   %add = fadd fast float %0, %1
-  store float %add, float* %arrayidx2, align 4, !llvm.mem.parallel_loop_access !1
+  store float %add, float* %arrayidx2, align 4, !llvm.access.group !11
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 20
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !1
@@ -81,8 +81,9 @@ for.end:
   ret void
 }
 
-!1 = !{!1, !2}
+!1 = !{!1, !2, !{!"llvm.loop.parallel_accesses", !11}}
 !2 = !{!"llvm.loop.vectorize.enable", i1 true}
+!11 = distinct !{}
 
 ;
 ; This loop will be vectorized as the trip count is below the threshold but no
@@ -114,7 +115,7 @@ define void @vectorized1(float* noalias nocapture %A, float* noalias nocapture r
 ; CHECK-NEXT:    call void @llvm.masked.store.v8f32.p0v8f32(<8 x float> [[TMP7]], <8 x float>* [[TMP9]], i32 4, <8 x i1> [[TMP8]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !6
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !8
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -127,11 +128,11 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4, !llvm.mem.parallel_loop_access !3
+  %0 = load float, float* %arrayidx, align 4, !llvm.access.group !13
   %arrayidx2 = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %1 = load float, float* %arrayidx2, align 4, !llvm.mem.parallel_loop_access !3
+  %1 = load float, float* %arrayidx2, align 4, !llvm.access.group !13
   %add = fadd fast float %0, %1
-  store float %add, float* %arrayidx2, align 4, !llvm.mem.parallel_loop_access !3
+  store float %add, float* %arrayidx2, align 4, !llvm.access.group !13
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 20
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !3
@@ -140,7 +141,8 @@ for.end:
   ret void
 }
 
-!3 = !{!3}
+!3 = !{!3, !{!"llvm.loop.parallel_accesses", !13}}
+!13 = distinct !{}
 
 ;
 ; This loop will be vectorized as the trip count is below the threshold but no
@@ -171,7 +173,7 @@ define void @vectorized2(float* noalias nocapture %A, float* noalias nocapture r
 ; CHECK-NEXT:    store <8 x float> [[TMP7]], <8 x float>* [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !9
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !11
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 16, 16
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -181,14 +183,14 @@ define void @vectorized2(float* noalias nocapture %A, float* noalias nocapture r
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load float, float* [[ARRAYIDX]], align 4, !llvm.mem.parallel_loop_access !7
+; CHECK-NEXT:    [[TMP10:%.*]] = load float, float* [[ARRAYIDX]], align 4, !llvm.access.group !7
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load float, float* [[ARRAYIDX2]], align 4, !llvm.mem.parallel_loop_access !7
+; CHECK-NEXT:    [[TMP11:%.*]] = load float, float* [[ARRAYIDX2]], align 4, !llvm.access.group !7
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX2]], align 4, !llvm.mem.parallel_loop_access !7
+; CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX2]], align 4, !llvm.access.group !7
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 16
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop !10
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop !12
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -198,11 +200,11 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4, !llvm.mem.parallel_loop_access !3
+  %0 = load float, float* %arrayidx, align 4, !llvm.access.group !13
   %arrayidx2 = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %1 = load float, float* %arrayidx2, align 4, !llvm.mem.parallel_loop_access !3
+  %1 = load float, float* %arrayidx2, align 4, !llvm.access.group !13
   %add = fadd fast float %0, %1
-  store float %add, float* %arrayidx2, align 4, !llvm.mem.parallel_loop_access !3
+  store float %add, float* %arrayidx2, align 4, !llvm.access.group !13
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 16
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4

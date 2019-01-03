@@ -1,0 +1,26 @@
+# UNSUPPORTED: system-windows, system-freebsd
+
+# This tests the replaying of GDB remote packets.
+#
+# We issue the same commands and ensure the output is identical to the original
+# process. To ensure we're not actually running the original binary we check
+# that the string "testing" is not printed.
+
+# RUN: %clang %S/Inputs/simple.c -g -o %t.out
+# RUN: %lldb -x -b -s %S/Inputs/GDBRemoteCapture.in --capture %T/reproducer -- %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+# RUN: %lldb -x -b -s %S/Inputs/GDBRemoteReplay.in --replay %T/reproducer -- %t.out | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
+
+# CHECK: Breakpoint 1
+# CHECK: Process {{.*}} stopped
+# CHECK: Process {{.*}} launched
+# CHECK: thread {{.*}} stop reason = breakpoint
+# CHECK: frame {{.*}} simple.c
+
+# CAPTURE: testing
+# REPLAY-NOT: testing
+
+# CHECK: Process {{.*}} resuming
+# CHECK: Process {{.*}} exited
+
+# CAPTURE: Reproducer is in capture mode.
+# CAPTURE: Reproducer written

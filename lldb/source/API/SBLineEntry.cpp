@@ -50,7 +50,7 @@ SBLineEntry::~SBLineEntry() {}
 
 SBAddress SBLineEntry::GetStartAddress() const {
   SBAddress sb_address;
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     sb_address.SetAddress(&m_opaque_ap->range.GetBaseAddress());
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
@@ -70,7 +70,7 @@ SBAddress SBLineEntry::GetStartAddress() const {
 
 SBAddress SBLineEntry::GetEndAddress() const {
   SBAddress sb_address;
-  if (m_opaque_ap.get()) {
+  if (m_opaque_ap) {
     sb_address.SetAddress(&m_opaque_ap->range.GetBaseAddress());
     sb_address.OffsetAddress(m_opaque_ap->range.GetByteSize());
   }
@@ -114,7 +114,7 @@ uint32_t SBLineEntry::GetLine() const {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   uint32_t line = 0;
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     line = m_opaque_ap->line;
 
   if (log)
@@ -125,7 +125,7 @@ uint32_t SBLineEntry::GetLine() const {
 }
 
 uint32_t SBLineEntry::GetColumn() const {
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     return m_opaque_ap->column;
   return 0;
 }
@@ -165,7 +165,7 @@ const lldb_private::LineEntry *SBLineEntry::operator->() const {
 }
 
 lldb_private::LineEntry &SBLineEntry::ref() {
-  if (m_opaque_ap.get() == NULL)
+  if (m_opaque_ap == NULL)
     m_opaque_ap.reset(new lldb_private::LineEntry());
   return *m_opaque_ap;
 }
@@ -175,7 +175,7 @@ const lldb_private::LineEntry &SBLineEntry::ref() const { return *m_opaque_ap; }
 bool SBLineEntry::GetDescription(SBStream &description) {
   Stream &strm = description.ref();
 
-  if (m_opaque_ap.get()) {
+  if (m_opaque_ap) {
     char file_path[PATH_MAX * 2];
     m_opaque_ap->file.GetPath(file_path, sizeof(file_path));
     strm.Printf("%s:%u", file_path, GetLine());

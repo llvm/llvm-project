@@ -522,7 +522,7 @@ bool ObjCARCContract::tryToPeepholeInstruction(
         TailOkForStoreStrongs = false;
       return true;
     case ARCInstKind::IntrinsicUser:
-      // Remove calls to @clang.arc.use(...).
+      // Remove calls to @llvm.objc.clang.arc.use(...).
       Inst->eraseFromParent();
       return true;
     default:

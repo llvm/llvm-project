@@ -124,7 +124,7 @@ bool ValueObjectChild::UpdateValue() {
 
       Flags parent_type_flags(parent_type.GetTypeInfo());
       const bool is_instance_ptr_base =
-          ((m_is_base_class == true) &&
+          ((m_is_base_class) &&
            (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
 
       if (parent->GetCompilerType().ShouldTreatScalarValueAsAddress()) {
@@ -142,7 +142,7 @@ bool ValueObjectChild::UpdateValue() {
           switch (addr_type) {
           case eAddressTypeFile: {
             lldb::ProcessSP process_sp(GetProcessSP());
-            if (process_sp && process_sp->IsAlive() == true)
+            if (process_sp && process_sp->IsAlive())
               m_value.SetValueType(Value::eValueTypeLoadAddress);
             else
               m_value.SetValueType(Value::eValueTypeFileAddress);
@@ -202,12 +202,9 @@ bool ValueObjectChild::UpdateValue() {
         ExecutionContext exe_ctx(
             GetExecutionContextRef().Lock(thread_and_frame_only_if_stopped));
         if (GetCompilerType().GetTypeInfo() & lldb::eTypeHasValue) {
-          if (!is_instance_ptr_base)
-            m_error =
-                m_value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
-          else
-            m_error = m_parent->GetValue().GetValueAsData(&exe_ctx, m_data, 0,
-                                                          GetModule().get());
+          Value &value = is_instance_ptr_base ? m_parent->GetValue() : m_value;
+          m_error =
+              value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
         } else {
           m_error.Clear(); // No value so nothing to read...
         }

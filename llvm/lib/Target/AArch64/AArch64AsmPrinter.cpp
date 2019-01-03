@@ -28,6 +28,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -109,12 +110,33 @@ public:
     AU.setPreservesAll();
   }
 
-  bool runOnMachineFunction(MachineFunction &F) override {
-    AArch64FI = F.getInfo<AArch64FunctionInfo>();
-    STI = static_cast<const AArch64Subtarget*>(&F.getSubtarget());
-    bool Result = AsmPrinter::runOnMachineFunction(F);
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    AArch64FI = MF.getInfo<AArch64FunctionInfo>();
+    STI = static_cast<const AArch64Subtarget*>(&MF.getSubtarget());
+
+    SetupMachineFunction(MF);
+
+    if (STI->isTargetCOFF()) {
+      bool Internal = MF.getFunction().hasInternalLinkage();
+      COFF::SymbolStorageClass Scl = Internal ? COFF::IMAGE_SYM_CLASS_STATIC
+                                              : COFF::IMAGE_SYM_CLASS_EXTERNAL;
+      int Type =
+        COFF::IMAGE_SYM_DTYPE_FUNCTION << COFF::SCT_COMPLEX_TYPE_SHIFT;
+
+      OutStreamer->BeginCOFFSymbolDef(CurrentFnSym);
+      OutStreamer->EmitCOFFSymbolStorageClass(Scl);
+      OutStreamer->EmitCOFFSymbolType(Type);
+      OutStreamer->EndCOFFSymbolDef();
+    }
+
+    // Emit the rest of the function body.
+    EmitFunctionBody();
+
+    // Emit the XRay table for this function.
     emitXRayTable();
-    return Result;
+
+    // We didn't modify anything.
+    return false;
   }
 
 private:
@@ -217,7 +239,7 @@ void AArch64AsmPrinter::EmitEndOfAsmFile(Module &M) {
     // linker can safely perform dead code stripping.  Since LLVM never
     // generates code that does this, it is always safe to set.
     OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
-    SM.serializeToStackMapSection();
+    emitStackMaps(SM);
   }
 }
 
@@ -694,6 +716,19 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       OutStreamer->EmitRawText(StringRef(OS.str()));
     }
     return;
+
+  case AArch64::EMITBKEY: {
+      ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
+      if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
+          ExceptionHandlingType != ExceptionHandling::ARM)
+        return;
+
+      if (needsCFIMoves() == CFI_M_None)
+        return;
+
+      OutStreamer->EmitCFIBKeyFrame();
+      return;
+    }
   }
 
   // Tail calls use pseudo instructions so they have the proper code-gen

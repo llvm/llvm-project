@@ -1315,12 +1315,12 @@ void runTest() {
 // CHECK:     </array>
 // CHECK:     <key>depth</key><integer>4</integer>
 // CHECK:     <key>extended_message</key>
-// CHECK:     <string>Object leaked: allocated object is not referenced later in this execution path and has a retain count of +1</string>
+// CHECK:     <string>Object leaked: allocated object of type NSNumber * is not referenced later in this execution path and has a retain count of +1</string>
 // CHECK:     <key>message</key>
-// CHECK:     <string>Object leaked: allocated object is not referenced later in this execution path and has a retain count of +1</string>
+// CHECK:     <string>Object leaked: allocated object of type NSNumber * is not referenced later in this execution path and has a retain count of +1</string>
 // CHECK:    </dict>
 // CHECK:   </array>
-// CHECK:   <key>description</key><string>Potential leak of an object</string>
+// CHECK:   <key>description</key><string>Potential leak of an object of type NSNumber *</string>
 // CHECK:   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
 // CHECK:   <key>type</key><string>Leak</string>
 // CHECK:  <key>location</key>

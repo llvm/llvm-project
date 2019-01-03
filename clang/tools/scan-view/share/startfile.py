@@ -110,7 +110,10 @@ elif sys.platform == 'darwin':
 # Platform support for Unix
 else:
 
-    import commands
+    try:
+        from commands import getoutput
+    except ImportError:
+        from subprocess import getoutput
 
     # @WARNING: use the private API of the webbrowser module
     from webbrowser import _iscommand
@@ -125,7 +128,7 @@ else:
         def detect_kde_version(self):
             kde_version = None
             try:
-                info = commands.getoutput('kde-config --version')
+                info = getoutput('kde-config --version')
 
                 for line in info.splitlines():
                     if line.startswith('KDE'):
@@ -158,7 +161,7 @@ else:
             desktop_environment = 'gnome'
         else:
             try:
-                info = commands.getoutput('xprop -root _DT_SAVE_MODE')
+                info = getoutput('xprop -root _DT_SAVE_MODE')
                 if ' = "xfce4"' in info:
                     desktop_environment = 'xfce'
             except (OSError, RuntimeError):
@@ -189,7 +192,7 @@ else:
             return _controllers[controller_name].open
 
         except KeyError:
-            if _controllers.has_key('xdg-open'):
+            if 'xdg-open' in _controllers:
                 return _controllers['xdg-open'].open
             else:
                 return webbrowser.open

@@ -80,9 +80,16 @@ and from the command line.
   -verify``. With this option FileCheck will verify that input does not contain
   warnings not covered by any ``CHECK:`` patterns.
 
+.. option:: --dump-input <mode>
+
+  Dump input to stderr, adding annotations representing currently enabled
+  diagnostics.  Do this either 'always', on 'fail', or 'never'.  Specify 'help'
+  to explain the dump format and quit.
+
 .. option:: --dump-input-on-failure
 
-  When the check fails, dump all of the original input.
+  When the check fails, dump all of the original input.  This option is
+  deprecated in favor of `--dump-input=fail`.
 
 .. option:: --enable-var-scope
 

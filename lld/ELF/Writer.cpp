@@ -212,9 +212,20 @@ void elf::addReservedSymbols() {
   // _GLOBAL_OFFSET_TABLE_ and _SDA_BASE_ from the 32-bit ABI. It is used to
   // represent the TOC base which is offset by 0x8000 bytes from the start of
   // the .got section.
-  ElfSym::GlobalOffsetTable = addOptionalRegular(
-      (Config->EMachine == EM_PPC64) ? ".TOC." : "_GLOBAL_OFFSET_TABLE_",
-      Out::ElfHeader, Target->GotBaseSymOff);
+  // We do not allow _GLOBAL_OFFSET_TABLE_ to be defined by input objects as the
+  // correctness of some relocations depends on its value.
+  StringRef GotTableSymName =
+      (Config->EMachine == EM_PPC64) ? ".TOC." : "_GLOBAL_OFFSET_TABLE_";
+  if (Symbol *S = Symtab->find(GotTableSymName)) {
+    if (S->isDefined())
+      error(toString(S->File) + " cannot redefine linker defined symbol '" +
+            GotTableSymName + "'");
+    else
+      ElfSym::GlobalOffsetTable = Symtab->addDefined(
+          GotTableSymName, STV_HIDDEN, STT_NOTYPE, Target->GotBaseSymOff,
+          /*Size=*/0, STB_GLOBAL, Out::ElfHeader,
+          /*File=*/nullptr);
+  }
 
   // __ehdr_start is the location of ELF file headers. Note that we define
   // this symbol unconditionally even when using a linker script, which
@@ -719,17 +730,17 @@ static bool isRelroSection(const OutputSection *Sec) {
 // * It is easy two see how similar two ranks are (see getRankProximity).
 enum RankFlags {
   RF_NOT_ADDR_SET = 1 << 18,
-  RF_NOT_INTERP = 1 << 17,
-  RF_NOT_ALLOC = 1 << 16,
-  RF_WRITE = 1 << 15,
-  RF_EXEC_WRITE = 1 << 14,
-  RF_EXEC = 1 << 13,
-  RF_RODATA = 1 << 12,
-  RF_NON_TLS_BSS = 1 << 11,
-  RF_NON_TLS_BSS_RO = 1 << 10,
-  RF_NOT_TLS = 1 << 9,
-  RF_BSS = 1 << 8,
-  RF_NOTE = 1 << 7,
+  RF_NOT_ALLOC = 1 << 17,
+  RF_NOT_INTERP = 1 << 16,
+  RF_NOT_NOTE = 1 << 15,
+  RF_WRITE = 1 << 14,
+  RF_EXEC_WRITE = 1 << 13,
+  RF_EXEC = 1 << 12,
+  RF_RODATA = 1 << 11,
+  RF_NON_TLS_BSS = 1 << 10,
+  RF_NON_TLS_BSS_RO = 1 << 9,
+  RF_NOT_TLS = 1 << 8,
+  RF_BSS = 1 << 7,
   RF_PPC_NOT_TOCBSS = 1 << 6,
   RF_PPC_TOCL = 1 << 5,
   RF_PPC_TOC = 1 << 4,
@@ -748,16 +759,24 @@ static unsigned getSectionRank(const OutputSection *Sec) {
     return Rank;
   Rank |= RF_NOT_ADDR_SET;
 
+  // Allocatable sections go first to reduce the total PT_LOAD size and
+  // so debug info doesn't change addresses in actual code.
+  if (!(Sec->Flags & SHF_ALLOC))
+    return Rank | RF_NOT_ALLOC;
+
   // Put .interp first because some loaders want to see that section
   // on the first page of the executable file when loaded into memory.
   if (Sec->Name == ".interp")
     return Rank;
   Rank |= RF_NOT_INTERP;
 
-  // Allocatable sections go first to reduce the total PT_LOAD size and
-  // so debug info doesn't change addresses in actual code.
-  if (!(Sec->Flags & SHF_ALLOC))
-    return Rank | RF_NOT_ALLOC;
+  // Put .note sections (which make up one PT_NOTE) at the beginning so that
+  // they are likely to be included in a core file even if core file size is
+  // limited. In particular, we want a .note.gnu.build-id and a .note.tag to be
+  // included in a core to match core files with executables.
+  if (Sec->Type == SHT_NOTE)
+    return Rank;
+  Rank |= RF_NOT_NOTE;
 
   // Sort sections based on their access permission in the following
   // order: R, RX, RWX, RW.  This order is based on the following
@@ -820,12 +839,6 @@ static unsigned getSectionRank(const OutputSection *Sec) {
   // first.
   if (IsNoBits)
     Rank |= RF_BSS;
-
-  // We create a NOTE segment for contiguous .note sections, so make
-  // them contigous if there are more than one .note section with the
-  // same attributes.
-  if (Sec->Type == SHT_NOTE)
-    Rank |= RF_NOTE;
 
   // Some architectures have additional ordering restrictions for sections
   // within the same PT_LOAD.
@@ -1610,7 +1623,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // It should be okay as no one seems to care about the type.
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
-  if (In.DynSymTab)
+  if (In.Dynamic->Parent)
     Symtab->addDefined("_DYNAMIC", STV_HIDDEN, STT_NOTYPE, 0 /*Value*/,
                        /*Size=*/0, STB_WEAK, In.Dynamic,
                        /*File=*/nullptr);
@@ -1650,7 +1663,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     if (In.SymTab)
       In.SymTab->addSymbol(Sym);
 
-    if (In.DynSymTab && Sym->includeInDynsym()) {
+    if (Sym->includeInDynsym()) {
       In.DynSymTab->addSymbol(Sym);
       if (auto *File = dyn_cast_or_null<SharedFile<ELFT>>(Sym->File))
         if (File->IsNeeded && !Sym->isUndefined())
@@ -1924,9 +1937,8 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
     Ret.push_back(TlsHdr);
 
   // Add an entry for .dynamic.
-  if (In.DynSymTab)
-    AddHdr(PT_DYNAMIC, In.Dynamic->getParent()->getPhdrFlags())
-        ->add(In.Dynamic->getParent());
+  if (OutputSection *Sec = In.Dynamic->getParent())
+    AddHdr(PT_DYNAMIC, Sec->getPhdrFlags())->add(Sec);
 
   // PT_GNU_RELRO includes all sections that should be marked as
   // read-only by dynamic linker after proccessing relocations.
@@ -2391,7 +2403,8 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 
 // Open a result file.
 template <class ELFT> void Writer<ELFT>::openFile() {
-  if (!Config->Is64 && FileSize > UINT32_MAX) {
+  uint64_t MaxSize = Config->Is64 ? INT64_MAX : UINT32_MAX;
+  if (MaxSize < FileSize) {
     error("output file too large: " + Twine(FileSize) + " bytes");
     return;
   }

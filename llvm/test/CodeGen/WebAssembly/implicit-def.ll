@@ -109,8 +109,8 @@ X:                                                ; preds = %0, C
 ; CHECK-LABEL: implicit_def_v4i32:
 ; CHECK: .LBB{{[0-9]+}}_4:{{$}}
 ; CHECK-NEXT: end_block{{$}}
-; CHECK-NEXT: v128.const $push[[R:[0-9]+]]=, 0, 0, 0, 0, 0, 0, 0, 0,
-; CHECK-SAME:                                0, 0, 0, 0, 0, 0, 0, 0{{$}}
+; CHECK-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: i32x4.splat $push[[R:[0-9]+]]=, $pop[[L0]]
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 ; CHECK-NEXT: end_function{{$}}
 define <4 x i32> @implicit_def_v4i32() {

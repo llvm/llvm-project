@@ -5,7 +5,7 @@
   ; Function Attrs: nounwind
   define i8 @stack_fold_adcx32(i8 %a0, i32 %a1, i32 %a2, i8* %a3) #0 {
     %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
-    %2 = call { i8, i32 } @llvm.x86.addcarryx.u32(i8 %a0, i32 %a1, i32 %a2)
+    %2 = call { i8, i32 } @llvm.x86.addcarry.32(i8 %a0, i32 %a1, i32 %a2)
     %3 = extractvalue { i8, i32 } %2, 1
     %4 = bitcast i8* %a3 to i32*
     store i32 %3, i32* %4, align 1
@@ -16,7 +16,7 @@
   ; Function Attrs: nounwind
   define i8 @stack_fold_adcx64(i8 %a0, i64 %a1, i64 %a2, i8* %a3) #0 {
     %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
-    %2 = call { i8, i64 } @llvm.x86.addcarryx.u64(i8 %a0, i64 %a1, i64 %a2)
+    %2 = call { i8, i64 } @llvm.x86.addcarry.64(i8 %a0, i64 %a1, i64 %a2)
     %3 = extractvalue { i8, i64 } %2, 1
     %4 = bitcast i8* %a3 to i64*
     store i64 %3, i64* %4, align 1
@@ -26,7 +26,7 @@
 
   define i8 @stack_fold_adox32(i8 %a0, i32 %a1, i32 %a2, i8* %a3) #0 {
     %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
-    %2 = call { i8, i32 } @llvm.x86.addcarryx.u32(i8 %a0, i32 %a1, i32 %a2)
+    %2 = call { i8, i32 } @llvm.x86.addcarry.32(i8 %a0, i32 %a1, i32 %a2)
     %3 = extractvalue { i8, i32 } %2, 1
     %4 = bitcast i8* %a3 to i32*
     store i32 %3, i32* %4, align 1
@@ -37,7 +37,7 @@
   ; Function Attrs: nounwind
   define i8 @stack_fold_adox64(i8 %a0, i64 %a1, i64 %a2, i8* %a3) #0 {
     %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
-    %2 = call { i8, i64 } @llvm.x86.addcarryx.u64(i8 %a0, i64 %a1, i64 %a2)
+    %2 = call { i8, i64 } @llvm.x86.addcarry.64(i8 %a0, i64 %a1, i64 %a2)
     %3 = extractvalue { i8, i64 } %2, 1
     %4 = bitcast i8* %a3 to i64*
     store i64 %3, i64* %4, align 1
@@ -46,10 +46,10 @@
   }
 
   ; Function Attrs: nounwind readnone
-  declare { i8, i32 } @llvm.x86.addcarryx.u32(i8, i32, i32) #1
+  declare { i8, i32 } @llvm.x86.addcarry.32(i8, i32, i32) #1
 
   ; Function Attrs: nounwind readnone
-  declare { i8, i64 } @llvm.x86.addcarryx.u64(i8, i64, i64) #1
+  declare { i8, i64 } @llvm.x86.addcarry.64(i8, i64, i64) #1
 
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(i8*, i8**) #2

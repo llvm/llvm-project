@@ -1,0 +1,151 @@
+{
+  "files": [
+    "/json-with-module.m.tmp.mcp/ModDep.pcm",
+    "/json-with-module.m.tmp.mcp/ModTop.pcm",
+    "/Inputs/module/ModDep.h",
+    "/Inputs/module/ModTop.h",
+    "/Inputs/module/ModTopSub1.h",
+    "/Inputs/module/ModTopSub2.h",
+    "/json-with-module.m.tmp.o",
+    "/json-with-module.m",
+    "/Inputs/module/module.modulemap"
+  ],
+  "symbols": [
+    {
+      "kind": "function",
+      "lang": "C",
+      "usr": "c:@F@ModDep_func",
+      "name": "ModDep_func",
+      "roles": "Decl",
+      "rel-roles": "RelCont"
+    },
+    {
+      "kind": "type-alias",
+      "lang": "C",
+      "usr": "c:@T@ModTopStruct",
+      "name": "ModTopStruct",
+      "roles": "Def,Ref,RelCont"
+    },
+    {
+      "kind": "struct",
+      "lang": "C",
+      "usr": "c:@SA@ModTopStruct",
+      "name": "",
+      "roles": "Def"
+    },
+    {
+      "kind": "function",
+      "lang": "C",
+      "usr": "c:@F@ModTop_func",
+      "name": "ModTop_func",
+      "roles": "Decl"
+    },
+    {
+      "kind": "function",
+      "lang": "C",
+      "usr": "c:@F@ModTopSub1_func",
+      "name": "ModTopSub1_func",
+      "roles": "Decl"
+    }
+  ],
+  "records": [
+    {
+      "occurrences": [
+        {
+          "symbol": 0,
+          "line": 3,
+          "col": 6,
+          "roles": "Decl"
+        },
+        {
+          "symbol": 1,
+          "line": 3,
+          "col": 18,
+          "roles": "Ref,RelCont",
+          "relations": [
+            {
+              "symbol": 0,
+              "rel-roles": "RelCont"
+            }
+          ]
+
+        }
+      ]
+    },
+    {
+      "occurrences": [
+        {
+          "symbol": 2,
+          "line": 2,
+          "col": 9,
+          "roles": "Def"
+        },
+        {
+          "symbol": 1,
+          "line": 2,
+          "col": 19,
+          "roles": "Def"
+        },
+        {
+          "symbol": 3,
+          "line": 4,
+          "col": 6,
+          "roles": "Decl"
+        }
+      ]
+    },
+    {
+      "occurrences": [
+        {
+          "symbol": 4,
+          "line": 1,
+          "col": 6,
+          "roles": "Decl"
+        }
+      ]
+    }
+  ],
+  "units": [
+    {
+      "triple": "x86_64-apple-macosx10.7.0",
+      "out-file": 0,
+      "unit-dependencies": [1],
+      "sources": [
+        {
+          "file": 2,
+          "records": [0]
+        }
+      ]
+    },
+    {
+      "triple": "x86_64-apple-macosx10.7.0",
+      "out-file": 1,
+      "sources": [
+        {
+          "file": 3,
+          "records": [1]
+        },
+        {
+          "file": 4,
+          "records": [2]
+        },
+        {
+          "file": 5
+        }
+      ]
+    },
+    {
+      "triple": "x86_64-apple-macosx10.7.0",
+      "out-file": 6,
+      "unit-dependencies": [0],
+      "sources": [
+        {
+          "file": 7
+        },
+        {
+          "file": 8
+        }
+      ]
+    }
+  ]
+}

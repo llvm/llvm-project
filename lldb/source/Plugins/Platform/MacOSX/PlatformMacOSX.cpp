@@ -80,7 +80,7 @@ PlatformSP PlatformMacOSX::CreateInstance(bool force, const ArchSpec *arch) {
   const bool is_host = false;
 
   bool create = force;
-  if (create == false && arch && arch->IsValid()) {
+  if (!create && arch && arch->IsValid()) {
     const llvm::Triple &triple = arch->GetTriple();
     switch (triple.getVendor()) {
     case llvm::Triple::Apple:
@@ -256,7 +256,7 @@ PlatformMacOSX::GetFileWithUUID(const lldb_private::FileSpec &platform_file,
 #endif
     std::string remote_os_build;
     m_remote_platform_sp->GetOSBuildString(remote_os_build);
-    if (local_os_build.compare(remote_os_build) == 0) {
+    if (local_os_build == remote_os_build) {
       // same OS version: the local file is good enough
       local_file = platform_file;
       return Status();

@@ -1,0 +1,22 @@
+RUN: %build %p/Inputs/hello.cpp -o %t
+RUN: %lldb %t -s %p/Inputs/convenience.in -o quit | FileCheck %s
+
+script print(lldb.debugger)
+
+CHECK: stop reason = breakpoint 1.1
+CHECK: Debugger (instance: {{.*}}, id: {{[0-9]+}})
+CHECK: script print(lldb.target)
+CHECK: TestConvenienceVariables.test
+CHECK: script print(lldb.process)
+CHECK: SBProcess: pid = {{[0-9]+}},
+CHECK-SAME:       state = stopped,
+CHECK-SAME:       threads = {{[0-9]+}},
+CHECK-SAME:       executable = TestConvenienceVariables.test
+CHECK: script print(lldb.thread.GetStopDescription(100))
+CHECK: breakpoint 1.1
+CHECK: script lldb.frame.GetLineEntry().GetLine()
+CHECK: 8
+CHECK: script lldb.frame.GetLineEntry().GetFileSpec().GetFilename()
+CHECK: hello.c
+CHECK: script lldb.frame.GetFunctionName()
+CHECK: main

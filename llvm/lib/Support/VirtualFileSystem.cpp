@@ -472,6 +472,8 @@ directory_iterator OverlayFileSystem::dir_begin(const Twine &Dir,
       std::make_shared<OverlayFSDirIterImpl>(Dir, *this, EC));
 }
 
+void ProxyFileSystem::anchor() {}
+
 namespace llvm {
 namespace vfs {
 

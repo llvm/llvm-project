@@ -70,6 +70,17 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
                           BasicBlock *PreHeader, BasicBlock *NewPreHeader,
                           ValueToValueMapTy &VMap, DominatorTree *DT,
                           LoopInfo *LI, bool PreserveLCSSA) {
+  // Loop structure should be the following:
+  // Preheader
+  //  PrologHeader
+  //  ...
+  //  PrologLatch
+  //  PrologExit
+  //   NewPreheader
+  //    Header
+  //    ...
+  //    Latch
+  //      LatchExit
   BasicBlock *Latch = L->getLoopLatch();
   assert(Latch && "Loop must have a latch");
   BasicBlock *PrologLatch = cast<BasicBlock>(VMap[Latch]);
@@ -83,14 +94,21 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
     for (PHINode &PN : Succ->phis()) {
       // Add a new PHI node to the prolog end block and add the
       // appropriate incoming values.
+      // TODO: This code assumes that the PrologExit (or the LatchExit block for
+      // prolog loop) contains only one predecessor from the loop, i.e. the
+      // PrologLatch. When supporting multiple-exiting block loops, we can have
+      // two or more blocks that have the LatchExit as the target in the
+      // original loop.
       PHINode *NewPN = PHINode::Create(PN.getType(), 2, PN.getName() + ".unr",
                                        PrologExit->getFirstNonPHI());
       // Adding a value to the new PHI node from the original loop preheader.
       // This is the value that skips all the prolog code.
       if (L->contains(&PN)) {
+        // Succ is loop header.
         NewPN->addIncoming(PN.getIncomingValueForBlock(NewPreHeader),
                            PreHeader);
       } else {
+        // Succ is LatchExit.
         NewPN->addIncoming(UndefValue::get(PN.getType()), PreHeader);
       }
 
@@ -380,12 +398,23 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
   }
   if (CreateRemainderLoop) {
     Loop *NewLoop = NewLoops[L];
+    MDNode *LoopID = NewLoop->getLoopID();
     assert(NewLoop && "L should have been cloned");
 
     // Only add loop metadata if the loop is not going to be completely
     // unrolled.
     if (UnrollRemainder)
       return NewLoop;
+
+    Optional<MDNode *> NewLoopID = makeFollowupLoopID(
+        LoopID, {LLVMLoopUnrollFollowupAll, LLVMLoopUnrollFollowupRemainder});
+    if (NewLoopID.hasValue()) {
+      NewLoop->setLoopID(NewLoopID.getValue());
+
+      // Do not setLoopAlreadyUnrolled if loop attributes have been defined
+      // explicitly.
+      return NewLoop;
+    }
 
     // Add unroll disable metadata to disable future unrolling for this loop.
     NewLoop->setLoopAlreadyUnrolled();
@@ -525,10 +554,10 @@ static bool canProfitablyUnrollMultiExitLoop(
 bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                       bool AllowExpensiveTripCount,
                                       bool UseEpilogRemainder,
-                                      bool UnrollRemainder,
-                                      LoopInfo *LI, ScalarEvolution *SE,
-                                      DominatorTree *DT, AssumptionCache *AC,
-                                      bool PreserveLCSSA) {
+                                      bool UnrollRemainder, LoopInfo *LI,
+                                      ScalarEvolution *SE, DominatorTree *DT,
+                                      AssumptionCache *AC, bool PreserveLCSSA,
+                                      Loop **ResultLoop) {
   LLVM_DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   LLVM_DEBUG(L->dump());
   LLVM_DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n"
@@ -911,16 +940,20 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
       formDedicatedExitBlocks(remainderLoop, DT, LI, PreserveLCSSA);
   }
 
+  auto UnrollResult = LoopUnrollResult::Unmodified;
   if (remainderLoop && UnrollRemainder) {
     LLVM_DEBUG(dbgs() << "Unrolling remainder loop\n");
-    UnrollLoop(remainderLoop, /*Count*/ Count - 1, /*TripCount*/ Count - 1,
-               /*Force*/ false, /*AllowRuntime*/ false,
-               /*AllowExpensiveTripCount*/ false, /*PreserveCondBr*/ true,
-               /*PreserveOnlyFirst*/ false, /*TripMultiple*/ 1,
-               /*PeelCount*/ 0, /*UnrollRemainder*/ false, LI, SE, DT, AC,
-               /*ORE*/ nullptr, PreserveLCSSA);
+    UnrollResult =
+        UnrollLoop(remainderLoop, /*Count*/ Count - 1, /*TripCount*/ Count - 1,
+                   /*Force*/ false, /*AllowRuntime*/ false,
+                   /*AllowExpensiveTripCount*/ false, /*PreserveCondBr*/ true,
+                   /*PreserveOnlyFirst*/ false, /*TripMultiple*/ 1,
+                   /*PeelCount*/ 0, /*UnrollRemainder*/ false, LI, SE, DT, AC,
+                   /*ORE*/ nullptr, PreserveLCSSA);
   }
 
+  if (ResultLoop && UnrollResult != LoopUnrollResult::FullyUnrolled)
+    *ResultLoop = remainderLoop;
   NumRuntimeUnrolled++;
   return true;
 }

@@ -104,9 +104,7 @@ entry:
 
 ; CHECK-COMMON-LABEL: or_icmp_ugt:
 ; CHECK-COMMON:     ldrb
-; CHECK-COMMON:     sub.w
-; CHECK-COMMON-NOT: uxt
-; CHECK-COMMON:     cmp.w
+; CHECK-COMMON:     subs.w
 ; CHECK-COMMON-NOT: uxt
 ; CHECK-COMMON:     cmp
 define i1 @or_icmp_ugt(i32 %arg, i8* %ptr) {
@@ -531,5 +529,62 @@ if.end183:
   %w.0.off8 = phi i8 [ %extract.t857, %if.else136 ], [ %2, %entry ]
   store i8 %w.0.off8, i8* %c, align 1
   store i8 %w.0.off0, i8* %d, align 1
+  ret void
+}
+
+@c = common dso_local local_unnamed_addr global i16 0, align 2
+@b = common dso_local local_unnamed_addr global i16 0, align 2
+@f = common dso_local local_unnamed_addr global i32 0, align 4
+@e = common dso_local local_unnamed_addr global i8 0, align 1
+@a = common dso_local local_unnamed_addr global i8 0, align 1
+@d = common dso_local local_unnamed_addr global i32 0, align 4
+
+; CHECK-LABEL: and_trunc
+; CHECK: ldrh
+; CHECK: sxth
+; CHECK: uxtb
+define void @and_trunc_two_zext() {
+entry:
+  %0 = load i16, i16* @c, align 2
+  %1 = load i16, i16* @b, align 2
+  %conv = sext i16 %1 to i32
+  store i32 %conv, i32* @f, align 4
+  %2 = trunc i16 %1 to i8
+  %conv1 = and i8 %2, 1
+  store i8 %conv1, i8* @e, align 1
+  %3 = load i8, i8* @a, align 1
+  %narrow = mul nuw i8 %3, %conv1
+  %mul = zext i8 %narrow to i32
+  store i32 %mul, i32* @d, align 4
+  %4 = zext i8 %narrow to i16
+  %conv5 = or i16 %0, %4
+  %tobool = icmp eq i16 %conv5, 0
+  br i1 %tobool, label %if.end, label %for.cond
+
+for.cond:
+  br label %for.cond
+
+if.end:
+  ret void
+}
+
+; CHECK-LABEL: zext_urem_trunc
+; CHECK-NOT: uxt
+define void @zext_urem_trunc() {
+entry:
+  %0 = load i16, i16* @c, align 2
+  %cmp = icmp eq i16 %0, 0
+  %1 = load i8, i8* @e, align 1
+  br i1 %cmp, label %cond.end, label %cond.false
+
+cond.false:
+  %rem.lhs.trunc = zext i8 %1 to i16
+  %rem7 = urem i16 %rem.lhs.trunc, %0
+  %rem.zext = trunc i16 %rem7 to i8
+  br label %cond.end
+
+cond.end:
+  %cond = phi i8 [ %rem.zext, %cond.false ], [ %1, %entry ]
+  store i8 %cond, i8* @a, align 1
   ret void
 }

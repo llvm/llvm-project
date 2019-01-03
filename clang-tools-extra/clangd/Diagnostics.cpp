@@ -240,9 +240,9 @@ CodeAction toCodeAction(const Fix &F, const URIForFile &File) {
   return Action;
 }
 
-void toLSPDiags(
-    const Diag &D, const URIForFile &File, const ClangdDiagnosticOptions &Opts,
-    function_ref<void(clangd::Diagnostic, ArrayRef<Fix>)> OutFn) {
+void toLSPDiags(const Diag &D, const URIForFile &File,
+                const ClangdDiagnosticOptions &Opts,
+                function_ref<void(clangd::Diagnostic, ArrayRef<Fix>)> OutFn) {
   auto FillBasicFields = [](const DiagBase &D) -> clangd::Diagnostic {
     clangd::Diagnostic Res;
     Res.range = D.Range;

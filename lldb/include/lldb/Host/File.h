@@ -33,6 +33,8 @@ public:
   static int kInvalidDescriptor;
   static FILE *kInvalidStream;
 
+  // NB this enum is used in the lldb platform gdb-remote packet
+  // vFile:open: and existing values cannot be modified.
   enum OpenOptions {
     eOpenOptionRead = (1u << 0),  // Open file for reading
     eOpenOptionWrite = (1u << 1), // Open file for writing

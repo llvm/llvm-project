@@ -55,8 +55,8 @@ static Status ValidateNamedSummary(const char *str, void *) {
   if (!str || !str[0])
     return Status("must specify a valid named summary");
   TypeSummaryImplSP summary_sp;
-  if (DataVisualization::NamedSummaryFormats::GetSummaryFormat(
-          ConstString(str), summary_sp) == false)
+  if (!DataVisualization::NamedSummaryFormats::GetSummaryFormat(
+          ConstString(str), summary_sp))
     return Status("must specify a valid named summary");
   return Status();
 }

@@ -52,6 +52,9 @@ private:
                             MachineBasicBlock::iterator MBBI,
                             AtomicRMWInst::BinOp, bool IsMasked, int Width,
                             MachineBasicBlock::iterator &NextMBBI);
+  bool expandAtomicCmpXchg(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MBBI, bool IsMasked,
+                           int Width, MachineBasicBlock::iterator &NextMBBI);
 };
 
 char RISCVExpandPseudo::ID = 0;
@@ -106,6 +109,10 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoMaskedAtomicLoadUMin32:
     return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::UMin, true, 32,
                                 NextMBBI);
+  case RISCV::PseudoCmpXchg32:
+    return expandAtomicCmpXchg(MBB, MBBI, false, 32, NextMBBI);
+  case RISCV::PseudoMaskedCmpXchg32:
+    return expandAtomicCmpXchg(MBB, MBBI, true, 32, NextMBBI);
   }
 
   return false;
@@ -435,6 +442,103 @@ bool RISCVExpandPseudo::expandAtomicMinMaxOp(
   LivePhysRegs LiveRegs;
   computeAndAddLiveIns(LiveRegs, *LoopHeadMBB);
   computeAndAddLiveIns(LiveRegs, *LoopIfBodyMBB);
+  computeAndAddLiveIns(LiveRegs, *LoopTailMBB);
+  computeAndAddLiveIns(LiveRegs, *DoneMBB);
+
+  return true;
+}
+
+bool RISCVExpandPseudo::expandAtomicCmpXchg(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, bool IsMasked,
+    int Width, MachineBasicBlock::iterator &NextMBBI) {
+  assert(Width == 32 && "RV64 atomic expansion currently unsupported");
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  MachineFunction *MF = MBB.getParent();
+  auto LoopHeadMBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto LoopTailMBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto DoneMBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+
+  // Insert new MBBs.
+  MF->insert(++MBB.getIterator(), LoopHeadMBB);
+  MF->insert(++LoopHeadMBB->getIterator(), LoopTailMBB);
+  MF->insert(++LoopTailMBB->getIterator(), DoneMBB);
+
+  // Set up successors and transfer remaining instructions to DoneMBB.
+  LoopHeadMBB->addSuccessor(LoopTailMBB);
+  LoopHeadMBB->addSuccessor(DoneMBB);
+  LoopTailMBB->addSuccessor(DoneMBB);
+  LoopTailMBB->addSuccessor(LoopHeadMBB);
+  DoneMBB->splice(DoneMBB->end(), &MBB, MI, MBB.end());
+  DoneMBB->transferSuccessors(&MBB);
+  MBB.addSuccessor(LoopHeadMBB);
+
+  unsigned DestReg = MI.getOperand(0).getReg();
+  unsigned ScratchReg = MI.getOperand(1).getReg();
+  unsigned AddrReg = MI.getOperand(2).getReg();
+  unsigned CmpValReg = MI.getOperand(3).getReg();
+  unsigned NewValReg = MI.getOperand(4).getReg();
+  AtomicOrdering Ordering =
+      static_cast<AtomicOrdering>(MI.getOperand(IsMasked ? 6 : 5).getImm());
+
+  if (!IsMasked) {
+    // .loophead:
+    //   lr.w dest, (addr)
+    //   bne dest, cmpval, done
+    BuildMI(LoopHeadMBB, DL, TII->get(getLRForRMW32(Ordering)), DestReg)
+        .addReg(AddrReg);
+    BuildMI(LoopHeadMBB, DL, TII->get(RISCV::BNE))
+        .addReg(DestReg)
+        .addReg(CmpValReg)
+        .addMBB(DoneMBB);
+    // .looptail:
+    //   sc.w scratch, newval, (addr)
+    //   bnez scratch, loophead
+    BuildMI(LoopTailMBB, DL, TII->get(getSCForRMW32(Ordering)), ScratchReg)
+        .addReg(AddrReg)
+        .addReg(NewValReg);
+    BuildMI(LoopTailMBB, DL, TII->get(RISCV::BNE))
+        .addReg(ScratchReg)
+        .addReg(RISCV::X0)
+        .addMBB(LoopHeadMBB);
+  } else {
+    // .loophead:
+    //   lr.w dest, (addr)
+    //   and scratch, dest, mask
+    //   bne scratch, cmpval, done
+    unsigned MaskReg = MI.getOperand(5).getReg();
+    BuildMI(LoopHeadMBB, DL, TII->get(getLRForRMW32(Ordering)), DestReg)
+        .addReg(AddrReg);
+    BuildMI(LoopHeadMBB, DL, TII->get(RISCV::AND), ScratchReg)
+        .addReg(DestReg)
+        .addReg(MaskReg);
+    BuildMI(LoopHeadMBB, DL, TII->get(RISCV::BNE))
+        .addReg(ScratchReg)
+        .addReg(CmpValReg)
+        .addMBB(DoneMBB);
+
+    // .looptail:
+    //   xor scratch, dest, newval
+    //   and scratch, scratch, mask
+    //   xor scratch, dest, scratch
+    //   sc.w scratch, scratch, (adrr)
+    //   bnez scratch, loophead
+    insertMaskedMerge(TII, DL, LoopTailMBB, ScratchReg, DestReg, NewValReg,
+                      MaskReg, ScratchReg);
+    BuildMI(LoopTailMBB, DL, TII->get(getSCForRMW32(Ordering)), ScratchReg)
+        .addReg(AddrReg)
+        .addReg(ScratchReg);
+    BuildMI(LoopTailMBB, DL, TII->get(RISCV::BNE))
+        .addReg(ScratchReg)
+        .addReg(RISCV::X0)
+        .addMBB(LoopHeadMBB);
+  }
+
+  NextMBBI = MBB.end();
+  MI.eraseFromParent();
+
+  LivePhysRegs LiveRegs;
+  computeAndAddLiveIns(LiveRegs, *LoopHeadMBB);
   computeAndAddLiveIns(LiveRegs, *LoopTailMBB);
   computeAndAddLiveIns(LiveRegs, *DoneMBB);
 

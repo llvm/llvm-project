@@ -128,6 +128,49 @@ int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels) {
   return NewInfo ? NewInfo->Opcode : -1;
 }
 
+struct MUBUFInfo {
+  uint16_t Opcode;
+  uint16_t BaseOpcode;
+  uint8_t dwords;
+  bool has_vaddr;
+  bool has_srsrc;
+  bool has_soffset;
+};
+
+#define GET_MUBUFInfoTable_DECL
+#define GET_MUBUFInfoTable_IMPL
+#include "AMDGPUGenSearchableTables.inc"
+
+int getMUBUFBaseOpcode(unsigned Opc) {
+  const MUBUFInfo *Info = getMUBUFInfoFromOpcode(Opc);
+  return Info ? Info->BaseOpcode : -1;
+}
+
+int getMUBUFOpcode(unsigned BaseOpc, unsigned Dwords) {
+  const MUBUFInfo *Info = getMUBUFInfoFromBaseOpcodeAndDwords(BaseOpc, Dwords);
+  return Info ? Info->Opcode : -1;
+}
+
+int getMUBUFDwords(unsigned Opc) {
+  const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
+  return Info ? Info->dwords : 0;
+}
+
+bool getMUBUFHasVAddr(unsigned Opc) {
+  const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
+  return Info ? Info->has_vaddr : false;
+}
+
+bool getMUBUFHasSrsrc(unsigned Opc) {
+  const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
+  return Info ? Info->has_srsrc : false;
+}
+
+bool getMUBUFHasSoffset(unsigned Opc) {
+  const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
+  return Info ? Info->has_soffset : false;
+}
+
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
 // header files, so we need to wrap it in a function that takes unsigned
 // instead.
@@ -522,6 +565,14 @@ void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt,
   Lgkmcnt = decodeLgkmcnt(Version, Waitcnt);
 }
 
+Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded) {
+  Waitcnt Decoded;
+  Decoded.VmCnt = decodeVmcnt(Version, Encoded);
+  Decoded.ExpCnt = decodeExpcnt(Version, Encoded);
+  Decoded.LgkmCnt = decodeLgkmcnt(Version, Encoded);
+  return Decoded;
+}
+
 unsigned encodeVmcnt(const IsaVersion &Version, unsigned Waitcnt,
                      unsigned Vmcnt) {
   Waitcnt =
@@ -550,6 +601,10 @@ unsigned encodeWaitcnt(const IsaVersion &Version,
   Waitcnt = encodeExpcnt(Version, Waitcnt, Expcnt);
   Waitcnt = encodeLgkmcnt(Version, Waitcnt, Lgkmcnt);
   return Waitcnt;
+}
+
+unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded) {
+  return encodeWaitcnt(Version, Decoded.VmCnt, Decoded.ExpCnt, Decoded.LgkmCnt);
 }
 
 unsigned getInitialPSInputAddr(const Function &F) {
@@ -896,9 +951,12 @@ bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset) {
 // Given Imm, split it into the values to put into the SOffset and ImmOffset
 // fields in an MUBUF instruction. Return false if it is not possible (due to a
 // hardware bug needing a workaround).
+//
+// The required alignment ensures that individual address components remain
+// aligned if they are aligned to begin with. It also ensures that additional
+// offsets within the given alignment can be added to the resulting ImmOffset.
 bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
-                      const GCNSubtarget *Subtarget) {
-  const uint32_t Align = 4;
+                      const GCNSubtarget *Subtarget, uint32_t Align) {
   const uint32_t MaxImm = alignDown(4095, Align);
   uint32_t Overflow = 0;
 

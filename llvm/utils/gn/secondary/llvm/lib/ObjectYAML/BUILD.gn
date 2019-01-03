@@ -1,0 +1,22 @@
+static_library("ObjectYAML") {
+  output_name = "LLVMObjectYAML"
+  deps = [
+    "//llvm/lib/DebugInfo/CodeView",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "COFFYAML.cpp",
+    "CodeViewYAMLDebugSections.cpp",
+    "CodeViewYAMLSymbols.cpp",
+    "CodeViewYAMLTypeHashing.cpp",
+    "CodeViewYAMLTypes.cpp",
+    "DWARFEmitter.cpp",
+    "DWARFVisitor.cpp",
+    "DWARFYAML.cpp",
+    "ELFYAML.cpp",
+    "MachOYAML.cpp",
+    "ObjectYAML.cpp",
+    "WasmYAML.cpp",
+    "YAML.cpp",
+  ]
+}

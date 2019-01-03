@@ -1172,7 +1172,7 @@ void SCCPSolver::visitCallSite(CallSite CS) {
         return;
 
       Value *CopyOf = I->getOperand(0);
-      auto *PBranch = dyn_cast<PredicateBranch>(getPredicateInfoFor(I));
+      auto *PBranch = dyn_cast<PredicateBranch>(PI);
       if (!PBranch) {
         mergeInValue(ValueState[I], I, getValueState(CopyOf));
         return;

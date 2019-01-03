@@ -63,7 +63,7 @@ void ProcessInfo::SetExecutableFile(const FileSpec &exe_file,
   if (exe_file) {
     m_executable = exe_file;
     if (add_exe_file_as_first_arg) {
-      llvm::SmallString<PATH_MAX> filename;
+      llvm::SmallString<128> filename;
       exe_file.GetPath(filename);
       if (!filename.empty())
         m_arguments.InsertArgumentAtIndex(0, filename);

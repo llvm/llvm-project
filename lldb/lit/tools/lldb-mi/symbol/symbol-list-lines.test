@@ -1,7 +1,4 @@
-# XFAIL: system-windows
-# -> llvm.org/pr24452
-#
-# RUN: %clang -o %t %p/inputs/main.c %p/inputs/symbol-list-lines.c %p/inputs/list-lines-helper.c -g
+# RUN: %build %p/inputs/main.c %p/inputs/symbol-list-lines.c %p/inputs/list-lines-helper.c --nodefaultlib -o %t
 # RUN: %lldbmi %t < %s | FileCheck %s
 
 # Test lldb-mi -symbol-list-lines command.

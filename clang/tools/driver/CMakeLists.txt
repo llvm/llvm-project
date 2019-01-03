@@ -33,6 +33,7 @@ add_clang_tool(clang
   driver.cpp
   cc1_main.cpp
   cc1as_main.cpp
+  apinotes_main.cpp
   cc1gen_reproducer_main.cpp
 
   DEPENDS
@@ -42,10 +43,12 @@ add_clang_tool(clang
 target_link_libraries(clang
   PRIVATE
   clangBasic
+  clangAPINotes
   clangCodeGen
   clangDriver
   clangFrontend
   clangFrontendTool
+  clangSerialization
   )
 
 if(WIN32 AND NOT CYGWIN)

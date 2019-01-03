@@ -13,10 +13,10 @@
 
 #include "AMDGPU.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;

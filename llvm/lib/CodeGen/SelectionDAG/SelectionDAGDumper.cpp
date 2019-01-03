@@ -237,6 +237,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SRL:                        return "srl";
   case ISD::ROTL:                       return "rotl";
   case ISD::ROTR:                       return "rotr";
+  case ISD::FSHL:                       return "fshl";
+  case ISD::FSHR:                       return "fshr";
   case ISD::FADD:                       return "fadd";
   case ISD::STRICT_FADD:                return "strict_fadd";
   case ISD::FSUB:                       return "fsub";
@@ -295,6 +297,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::UADDSAT:                    return "uaddsat";
   case ISD::SSUBSAT:                    return "ssubsat";
   case ISD::USUBSAT:                    return "usubsat";
+  case ISD::SMULFIX:                    return "smulfix";
 
   // Conversion operators.
   case ISD::SIGN_EXTEND:                return "sign_extend";

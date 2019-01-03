@@ -232,7 +232,7 @@ TEST(FileSystemTest, MakeAbsolute) {
     FileSpec file_spec("foo");
     auto EC = fs.MakeAbsolute(file_spec);
     EXPECT_FALSE(EC);
-    EXPECT_EQ("/foo", file_spec.GetPath());
+    EXPECT_EQ(FileSpec("/foo"), file_spec);
   }
 }
 
@@ -249,7 +249,7 @@ TEST(FileSystemTest, Resolve) {
   {
     FileSpec file_spec("foo");
     fs.Resolve(file_spec);
-    EXPECT_EQ("/foo", file_spec.GetPath());
+    EXPECT_EQ(FileSpec("/foo"), file_spec);
   }
 
   {
@@ -262,7 +262,7 @@ TEST(FileSystemTest, Resolve) {
   {
     FileSpec file_spec("bogus");
     fs.Resolve(file_spec);
-    EXPECT_EQ("bogus", file_spec.GetPath());
+    EXPECT_EQ(FileSpec("bogus"), file_spec);
   }
 }
 

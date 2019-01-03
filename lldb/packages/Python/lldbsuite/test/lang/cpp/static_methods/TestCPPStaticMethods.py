@@ -16,7 +16,6 @@ class CPPStaticMethodsTestCase(TestBase):
         TestBase.setUp(self)
         self.line = line_number('main.cpp', '// Break at this line')
 
-    @expectedFailureAll(oslist=["windows"])
     def test_with_run_command(self):
         """Test that static methods are properly distinguished from regular methods"""
         self.build()

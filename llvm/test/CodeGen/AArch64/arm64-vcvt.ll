@@ -1,4 +1,7 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -pass-remarks-missed=gisel-* \
+; RUN: -aarch64-neon-syntax=apple -global-isel -global-isel-abort=2 2>&1 | \
+; RUN: FileCheck %s --check-prefixes=FALLBACK,CHECK
 
 define <2 x i32> @fcvtas_2s(<2 x float> %A) nounwind {
 ;CHECK-LABEL: fcvtas_2s:
@@ -427,6 +430,7 @@ declare <2 x float> @llvm.aarch64.neon.frintn.v2f32(<2 x float>) nounwind readno
 declare <4 x float> @llvm.aarch64.neon.frintn.v4f32(<4 x float>) nounwind readnone
 declare <2 x double> @llvm.aarch64.neon.frintn.v2f64(<2 x double>) nounwind readnone
 
+; FALLBACK-NOT: remark{{.*}}frintp_2s
 define <2 x float> @frintp_2s(<2 x float> %A) nounwind {
 ;CHECK-LABEL: frintp_2s:
 ;CHECK-NOT: ld1
@@ -436,6 +440,7 @@ define <2 x float> @frintp_2s(<2 x float> %A) nounwind {
 	ret <2 x float> %tmp3
 }
 
+; FALLBACK-NOT: remark{{.*}}frintp_4s
 define <4 x float> @frintp_4s(<4 x float> %A) nounwind {
 ;CHECK-LABEL: frintp_4s:
 ;CHECK-NOT: ld1
@@ -445,6 +450,7 @@ define <4 x float> @frintp_4s(<4 x float> %A) nounwind {
 	ret <4 x float> %tmp3
 }
 
+; FALLBACK-NOT: remark{{.*}}frintp_2d
 define <2 x double> @frintp_2d(<2 x double> %A) nounwind {
 ;CHECK-LABEL: frintp_2d:
 ;CHECK-NOT: ld1

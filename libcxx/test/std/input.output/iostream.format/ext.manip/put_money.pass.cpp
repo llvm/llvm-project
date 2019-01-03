@@ -14,6 +14,7 @@
 // REQUIRES: locale.en_US.UTF-8
 
 #include <iomanip>
+#include <ostream>
 #include <cassert>
 
 #include "platform_support.h" // locale name macros

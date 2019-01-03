@@ -15,7 +15,9 @@
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <stdint.h>
 
@@ -52,7 +54,11 @@ const char *ReadModule(char SizeofPtr, const char *Begin, const char *End) {
     ++Begin;
   if (Begin == End)
     return nullptr;
-  StringRef Filename(FilenameBegin, Begin - FilenameBegin);
+  std::string Filename(FilenameBegin, Begin - FilenameBegin);
+
+  if (!llvm::sys::fs::exists(Filename))
+    Filename = std::string(llvm::sys::path::parent_path(ClInputFile)) +
+               std::string(llvm::sys::path::filename(Filename));
 
   ++Begin;
   if (Begin == End)
@@ -81,8 +87,9 @@ const char *ReadModule(char SizeofPtr, const char *Begin, const char *End) {
     // remove one from the address to get the correct DI.
     if (Expected<DILineInfo> LineInfo =
             Symbolizer.symbolizeCode(Filename, Addr - 1)) {
-      llvm::outs() << LineInfo->FileName << ':' << LineInfo->Line << ' '
-                   << LineInfo->FunctionName << ' ';
+      llvm::outs() << format_hex(Addr - 1, 18) << ' ' << LineInfo->FileName
+                   << ':' << LineInfo->Line << ' ' << LineInfo->FunctionName
+                   << ' ';
     } else {
       logAllUnhandledErrors(LineInfo.takeError(), llvm::outs(), "<error> ");
     }

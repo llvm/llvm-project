@@ -19,12 +19,12 @@
 #include <vector>
 
 #include "lldb/Core/Communication.h"
-#include "lldb/Core/Listener.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Predicate.h"
-#include "lldb/lldb-public.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
+#include "lldb/lldb-public.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {
@@ -217,6 +217,9 @@ private:
 
   HostThread m_listen_thread;
   std::string m_listen_url;
+
+  CompressionType m_decompression_scratch_type;
+  void *m_decompression_scratch;
 
   DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunication);
 };

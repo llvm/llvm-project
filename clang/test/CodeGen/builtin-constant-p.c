@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -O2 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -O0 | FileCheck --check-prefix=O0 %s
 
 int a = 42;
 
@@ -156,4 +157,23 @@ static void src_fn(void) {
 
 void test14() {
   assign(dest_p, src_fn);
+}
+
+extern int test15_v;
+
+struct { const char *t; int a; } test15[] = {
+    { "tag", __builtin_constant_p(test15_v) && !test15_v ? 1 : 0 }
+};
+
+extern char test16_v;
+struct { int a; } test16 = { __builtin_constant_p(test16_v) };
+
+extern unsigned long long test17_v;
+
+void test17() {
+  // O0: define void @test17
+  // O0: call void asm sideeffect "", {{.*}}(i32 -1) 
+  // CHECK: define void @test17
+  // CHECK: call void asm sideeffect "", {{.*}}(i32 -1) 
+  __asm__ __volatile__("" :: "n"( (__builtin_constant_p(test17_v) || 0) ? 1 : -1));
 }

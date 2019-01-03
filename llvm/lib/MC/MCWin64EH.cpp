@@ -468,10 +468,10 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   info->Symbol = Label;
 
   uint32_t FuncLength = 0x0;
-  FuncLength = (uint32_t)GetAbsDifference(streamer, info->FuncletOrFuncEnd,
-                                          info->Begin);
-  if (FuncLength)
-    FuncLength /= 4;
+  if (info->FuncletOrFuncEnd)
+    FuncLength = (uint32_t)GetAbsDifference(streamer, info->FuncletOrFuncEnd,
+                                            info->Begin);
+  FuncLength /= 4;
   uint32_t PrologCodeBytes = ARM64CountOfUnwindCodes(info->Instructions);
   uint32_t TotalCodeBytes = PrologCodeBytes;
 

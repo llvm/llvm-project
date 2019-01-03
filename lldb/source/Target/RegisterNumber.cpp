@@ -61,26 +61,15 @@ bool RegisterNumber::operator==(RegisterNumber &rhs) {
     return false;
 
   if (m_kind == rhs.m_kind) {
-    if (m_regnum == rhs.m_regnum)
-      return true;
-    else
-      return false;
+    return m_regnum == rhs.m_regnum;
   }
 
   uint32_t rhs_regnum = rhs.GetAsKind(m_kind);
   if (rhs_regnum != LLDB_INVALID_REGNUM) {
-    if (m_regnum == rhs_regnum)
-      return true;
-    else
-      return false;
+    return m_regnum == rhs_regnum;
   }
   uint32_t lhs_regnum = GetAsKind(rhs.m_kind);
-  {
-    if (lhs_regnum == rhs.m_regnum)
-      return true;
-    else
-      return false;
-  }
+  { return lhs_regnum == rhs.m_regnum; }
   return false;
 }
 

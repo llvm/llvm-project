@@ -21,8 +21,8 @@
 #include "lldb/Breakpoint/BreakpointName.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Breakpoint/Stoppoint.h"
-#include "lldb/Core/Event.h"
 #include "lldb/Core/SearchFilter.h"
+#include "lldb/Utility/Event.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/StructuredData.h"
 

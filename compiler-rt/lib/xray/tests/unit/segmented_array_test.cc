@@ -2,6 +2,9 @@
 #include "xray_segmented_array.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <algorithm>
+#include <numeric>
+#include <vector>
 
 namespace __xray {
 namespace {
@@ -218,6 +221,127 @@ TEST(SegmentedArrayTest, SimulateStackBehaviour) {
     Data.trim(1);
     --Counter;
     ASSERT_EQ(Data.size(), size_t(Counter));
+  }
+}
+
+TEST(SegmentedArrayTest, PlacementNewOnAlignedStorage) {
+  using AllocatorType = typename Array<ShadowStackEntry>::AllocatorType;
+  typename std::aligned_storage<sizeof(AllocatorType),
+                                alignof(AllocatorType)>::type AllocatorStorage;
+  new (&AllocatorStorage) AllocatorType(1 << 10);
+  auto *A = reinterpret_cast<AllocatorType *>(&AllocatorStorage);
+  typename std::aligned_storage<sizeof(Array<ShadowStackEntry>),
+                                alignof(Array<ShadowStackEntry>)>::type
+      ArrayStorage;
+  new (&ArrayStorage) Array<ShadowStackEntry>(*A);
+  auto *Data = reinterpret_cast<Array<ShadowStackEntry> *>(&ArrayStorage);
+
+  static uint64_t Dummy = 0;
+  constexpr uint64_t Max = 9;
+
+  for (uint64_t i = 0; i < Max; ++i) {
+    auto P = Data->Append({i, &Dummy});
+    ASSERT_NE(P, nullptr);
+    ASSERT_EQ(P->NodePtr, &Dummy);
+    auto &Back = Data->back();
+    ASSERT_EQ(Back.NodePtr, &Dummy);
+    ASSERT_EQ(Back.EntryTSC, i);
+  }
+
+  // Simulate a stack by checking the data from the end as we're trimming.
+  auto Counter = Max;
+  ASSERT_EQ(Data->size(), size_t(Max));
+  while (!Data->empty()) {
+    const auto &Top = Data->back();
+    uint64_t *TopNode = Top.NodePtr;
+    EXPECT_EQ(TopNode, &Dummy) << "Counter = " << Counter;
+    Data->trim(1);
+    --Counter;
+    ASSERT_EQ(Data->size(), size_t(Counter));
+  }
+
+  // Once the stack is exhausted, we re-use the storage.
+  for (uint64_t i = 0; i < Max; ++i) {
+    auto P = Data->Append({i, &Dummy});
+    ASSERT_NE(P, nullptr);
+    ASSERT_EQ(P->NodePtr, &Dummy);
+    auto &Back = Data->back();
+    ASSERT_EQ(Back.NodePtr, &Dummy);
+    ASSERT_EQ(Back.EntryTSC, i);
+  }
+
+  // We re-initialize the storage, by calling the destructor and
+  // placement-new'ing again.
+  Data->~Array();
+  A->~AllocatorType();
+  new (A) AllocatorType(1 << 10);
+  new (Data) Array<ShadowStackEntry>(*A);
+
+  // Then re-do the test.
+  for (uint64_t i = 0; i < Max; ++i) {
+    auto P = Data->Append({i, &Dummy});
+    ASSERT_NE(P, nullptr);
+    ASSERT_EQ(P->NodePtr, &Dummy);
+    auto &Back = Data->back();
+    ASSERT_EQ(Back.NodePtr, &Dummy);
+    ASSERT_EQ(Back.EntryTSC, i);
+  }
+
+  // Simulate a stack by checking the data from the end as we're trimming.
+  Counter = Max;
+  ASSERT_EQ(Data->size(), size_t(Max));
+  while (!Data->empty()) {
+    const auto &Top = Data->back();
+    uint64_t *TopNode = Top.NodePtr;
+    EXPECT_EQ(TopNode, &Dummy) << "Counter = " << Counter;
+    Data->trim(1);
+    --Counter;
+    ASSERT_EQ(Data->size(), size_t(Counter));
+  }
+
+  // Once the stack is exhausted, we re-use the storage.
+  for (uint64_t i = 0; i < Max; ++i) {
+    auto P = Data->Append({i, &Dummy});
+    ASSERT_NE(P, nullptr);
+    ASSERT_EQ(P->NodePtr, &Dummy);
+    auto &Back = Data->back();
+    ASSERT_EQ(Back.NodePtr, &Dummy);
+    ASSERT_EQ(Back.EntryTSC, i);
+  }
+}
+
+TEST(SegmentedArrayTest, ArrayOfPointersIteratorAccess) {
+  using PtrArray = Array<int *>;
+  PtrArray::AllocatorType Alloc(16384);
+  Array<int *> A(Alloc);
+  static constexpr size_t Count = 100;
+  std::vector<int> Integers(Count);
+  std::iota(Integers.begin(), Integers.end(), 0);
+  for (auto &I : Integers)
+    ASSERT_NE(A.Append(&I), nullptr);
+  int V = 0;
+  ASSERT_EQ(A.size(), Count);
+  for (auto P : A) {
+    ASSERT_NE(P, nullptr);
+    ASSERT_EQ(*P, V++);
+  }
+}
+
+TEST(SegmentedArrayTest, ArrayOfPointersIteratorAccessExhaustion) {
+  using PtrArray = Array<int *>;
+  PtrArray::AllocatorType Alloc(4096);
+  Array<int *> A(Alloc);
+  static constexpr size_t Count = 1000;
+  std::vector<int> Integers(Count);
+  std::iota(Integers.begin(), Integers.end(), 0);
+  for (auto &I : Integers)
+    if (A.Append(&I) == nullptr)
+      break;
+  int V = 0;
+  ASSERT_LT(A.size(), Count);
+  for (auto P : A) {
+    ASSERT_NE(P, nullptr);
+    ASSERT_EQ(*P, V++);
   }
 }
 

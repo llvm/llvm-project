@@ -31,7 +31,6 @@
 #include "clang/Lex/Pragma.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
-#include "clang/Lex/PTHLexer.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/VariadicMacroSupport.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -119,7 +118,7 @@ static bool isReservedId(StringRef Text, const LangOptions &Lang) {
 // the specified module, meaning clang won't build the specified module. This is
 // useful in a number of situations, for instance, when building a library that
 // vends a module map, one might want to avoid hitting intermediate build
-// products containig the the module map or avoid finding the system installed
+// products containimg the the module map or avoid finding the system installed
 // modulemap for that library.
 static bool isForModuleBuilding(Module *M, StringRef CurrentModule,
                                 StringRef ModuleName) {
@@ -383,11 +382,6 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
     CurPPLexer->pushConditionalLevel(IfTokenLoc, /*isSkipping*/ false,
                                      FoundNonSkipPortion, FoundElse);
 
-  if (CurPTHLexer) {
-    PTHSkipExcludedConditionalBlock();
-    return;
-  }
-
   // Enter raw mode to disable identifier lookup (and thus macro expansion),
   // disabling warnings, etc.
   CurPPLexer->LexingRawMode = true;
@@ -405,7 +399,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
     // If this is the end of the buffer, we have an error.
     if (Tok.is(tok::eof)) {
       // We don't emit errors for unterminated conditionals here,
-      // Lexer::LexEndOfFile can do that propertly.
+      // Lexer::LexEndOfFile can do that properly.
       // Just return and let the caller lex after this #include.
       if (PreambleConditionalStack.isRecording())
         PreambleConditionalStack.SkipInfo.emplace(
@@ -577,89 +571,10 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
   // the #if block.
   CurPPLexer->LexingRawMode = false;
 
-  // The last skipped range isn't actually skipped yet if it's truncated
-  // by the end of the preamble; we'll resume parsing after the preamble.
-  if (Callbacks && (Tok.isNot(tok::eof) || !isRecordingPreamble()))
+  if (Callbacks)
     Callbacks->SourceRangeSkipped(
         SourceRange(HashTokenLoc, CurPPLexer->getSourceLocation()),
         Tok.getLocation());
-}
-
-void Preprocessor::PTHSkipExcludedConditionalBlock() {
-  while (true) {
-    assert(CurPTHLexer);
-    assert(CurPTHLexer->LexingRawMode == false);
-
-    // Skip to the next '#else', '#elif', or #endif.
-    if (CurPTHLexer->SkipBlock()) {
-      // We have reached an #endif.  Both the '#' and 'endif' tokens
-      // have been consumed by the PTHLexer.  Just pop off the condition level.
-      PPConditionalInfo CondInfo;
-      bool InCond = CurPTHLexer->popConditionalLevel(CondInfo);
-      (void)InCond;  // Silence warning in no-asserts mode.
-      assert(!InCond && "Can't be skipping if not in a conditional!");
-      break;
-    }
-
-    // We have reached a '#else' or '#elif'.  Lex the next token to get
-    // the directive flavor.
-    Token Tok;
-    LexUnexpandedToken(Tok);
-
-    // We can actually look up the IdentifierInfo here since we aren't in
-    // raw mode.
-    tok::PPKeywordKind K = Tok.getIdentifierInfo()->getPPKeywordID();
-
-    if (K == tok::pp_else) {
-      // #else: Enter the else condition.  We aren't in a nested condition
-      //  since we skip those. We're always in the one matching the last
-      //  blocked we skipped.
-      PPConditionalInfo &CondInfo = CurPTHLexer->peekConditionalLevel();
-      // Note that we've seen a #else in this conditional.
-      CondInfo.FoundElse = true;
-
-      // If the #if block wasn't entered then enter the #else block now.
-      if (!CondInfo.FoundNonSkip) {
-        CondInfo.FoundNonSkip = true;
-
-        // Scan until the eod token.
-        CurPTHLexer->ParsingPreprocessorDirective = true;
-        DiscardUntilEndOfDirective();
-        CurPTHLexer->ParsingPreprocessorDirective = false;
-
-        break;
-      }
-
-      // Otherwise skip this block.
-      continue;
-    }
-
-    assert(K == tok::pp_elif);
-    PPConditionalInfo &CondInfo = CurPTHLexer->peekConditionalLevel();
-
-    // If this is a #elif with a #else before it, report the error.
-    if (CondInfo.FoundElse)
-      Diag(Tok, diag::pp_err_elif_after_else);
-
-    // If this is in a skipping block or if we're already handled this #if
-    // block, don't bother parsing the condition.  We just skip this block.
-    if (CondInfo.FoundNonSkip)
-      continue;
-
-    // Evaluate the condition of the #elif.
-    IdentifierInfo *IfNDefMacro = nullptr;
-    CurPTHLexer->ParsingPreprocessorDirective = true;
-    bool ShouldEnter = EvaluateDirectiveExpression(IfNDefMacro).Conditional;
-    CurPTHLexer->ParsingPreprocessorDirective = false;
-
-    // If this condition is true, enter it!
-    if (ShouldEnter) {
-      CondInfo.FoundNonSkip = true;
-      break;
-    }
-
-    // Otherwise, skip this block and go to the next one.
-  }
 }
 
 Module *Preprocessor::getModuleForLocation(SourceLocation Loc) {
@@ -1387,10 +1302,6 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
 ///
 void Preprocessor::HandleUserDiagnosticDirective(Token &Tok,
                                                  bool isWarning) {
-  // PTH doesn't emit #warning or #error directives.
-  if (CurPTHLexer)
-    return CurPTHLexer->DiscardToEndOfLine();
-
   // Read the rest of the line raw.  We do this because we don't want macros
   // to be expanded and we don't require that the tokens be valid preprocessing
   // tokens.  For example, this is allowed: "#warning `   'foo".  GCC does
@@ -1794,6 +1705,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   // Check that we don't have infinite #include recursion.
   if (IncludeMacroStack.size() == MaxAllowedIncludeStackDepth-1) {
     Diag(FilenameTok, diag::err_pp_include_too_deep);
+    HasReachedMaxIncludeDepth = true;
     return;
   }
 
@@ -1942,10 +1854,11 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   if (PPOpts->SingleFileParseMode)
     ShouldEnter = false;
 
-  // Any diagnostics after the fatal error will not be visible. As the
-  // compilation failed already and errors in subsequently included files won't
-  // be visible, avoid preprocessing those files.
-  if (ShouldEnter && Diags->hasFatalErrorOccurred())
+  // If we've reached the max allowed include depth, it is usually due to an
+  // include cycle. Don't enter already processed files again as it can lead to
+  // reaching the max allowed include depth again.
+  if (ShouldEnter && HasReachedMaxIncludeDepth && File &&
+      HeaderInfo.getFileInfo(File).NumIncludes)
     ShouldEnter = false;
 
   // Determine whether we should try to import the module for this #include, if
@@ -2007,14 +1920,10 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
       if (hadModuleLoaderFatalFailure()) {
         // With a fatal failure in the module loader, we abort parsing.
         Token &Result = IncludeTok;
-        if (CurLexer) {
-          Result.startToken();
-          CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
-          CurLexer->cutOffLexing();
-        } else {
-          assert(CurPTHLexer && "#include but no current lexer set!");
-          CurPTHLexer->getEOF(Result);
-        }
+        assert(CurLexer && "#include but no current lexer set!");
+        Result.startToken();
+        CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
+        CurLexer->cutOffLexing();
       }
       return;
     }

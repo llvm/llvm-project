@@ -262,4 +262,4 @@ declare void @_ZSt9terminatev()
 declare %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* returned)
 
 ; CHECK: __cpp_exception:
-; CHECK: .eventtype  __cpp_exception, void, i32
+; CHECK: .eventtype  __cpp_exception i32

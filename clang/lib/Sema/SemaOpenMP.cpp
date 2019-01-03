@@ -22,6 +22,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
@@ -146,6 +147,7 @@ private:
     SourceLocation InnerTeamsRegionLoc;
     /// Reference to the taskgroup task_reduction reference expression.
     Expr *TaskgroupReductionRef = nullptr;
+    llvm::DenseSet<QualType> MappedClassesQualTypes;
     SharingMapTy(OpenMPDirectiveKind DKind, DeclarationNameInfo Name,
                  Scope *CurScope, SourceLocation Loc)
         : Directive(DKind), DirectiveName(Name), CurScope(CurScope),
@@ -660,6 +662,19 @@ public:
     return llvm::make_range(StackElem.DoacrossDepends.end(),
                             StackElem.DoacrossDepends.end());
   }
+
+  // Store types of classes which have been explicitly mapped
+  void addMappedClassesQualTypes(QualType QT) {
+    SharingMapTy &StackElem = Stack.back().first.back();
+    StackElem.MappedClassesQualTypes.insert(QT);
+  }
+
+  // Return set of mapped classes types
+  bool isClassPreviouslyMapped(QualType QT) const {
+    const SharingMapTy &StackElem = Stack.back().first.back();
+    return StackElem.MappedClassesQualTypes.count(QT) != 0;
+  }
+
 };
 bool isParallelOrTaskRegion(OpenMPDirectiveKind DKind) {
   return isOpenMPParallelDirective(DKind) || isOpenMPTaskingDirective(DKind) ||
@@ -1179,10 +1194,13 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D,
         RD->hasMutableFields())) {
     // Variables with const-qualified type having no mutable member may be
     // listed in a firstprivate clause, even if they are static data members.
-    DSAVarData DVarTemp =
-        hasDSA(D, [](OpenMPClauseKind C) { return C == OMPC_firstprivate; },
-               MatchesAlways, FromParent);
-    if (DVarTemp.CKind == OMPC_firstprivate && DVarTemp.RefExpr)
+    DSAVarData DVarTemp = hasInnermostDSA(
+        D,
+        [](OpenMPClauseKind C) {
+          return C == OMPC_firstprivate || C == OMPC_shared;
+        },
+        MatchesAlways, FromParent);
+    if (DVarTemp.CKind != OMPC_unknown && DVarTemp.RefExpr)
       return DVarTemp;
 
     DVar.CKind = OMPC_shared;
@@ -2264,7 +2282,7 @@ public:
       return;
     auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl());
     OpenMPDirectiveKind DKind = Stack->getCurrentDirective();
-    if (isa<CXXThisExpr>(E->getBase()->IgnoreParens())) {
+    if (auto *TE = dyn_cast<CXXThisExpr>(E->getBase()->IgnoreParens())) {
       if (!FD)
         return;
       DSAStackTy::DSAVarData DVar = Stack->getTopDSA(FD, /*FromParent=*/false);
@@ -2291,6 +2309,12 @@ public:
         //
         if (FD->isBitField())
           return;
+
+        // Check to see if the member expression is referencing a class that
+        // has already been explicitly mapped
+        if (Stack->isClassPreviouslyMapped(TE->getType()))
+          return;
+
         ImplicitMap.emplace_back(E);
         return;
       }
@@ -2390,13 +2414,9 @@ public:
   void VisitStmt(Stmt *S) {
     for (Stmt *C : S->children()) {
       if (C) {
-        if (auto *OED = dyn_cast<OMPExecutableDirective>(C)) {
-          // Check implicitly captured variables in the task-based directives to
-          // check if they must be firstprivatized.
-          VisitSubCaptures(OED);
-        } else {
-          Visit(C);
-        }
+        // Check implicitly captured variables in the task-based directives to
+        // check if they must be firstprivatized.
+        Visit(C);
       }
     }
   }
@@ -3336,9 +3356,10 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     }
     if (!ImplicitMaps.empty()) {
       if (OMPClause *Implicit = ActOnOpenMPMapClause(
-              OMPC_MAP_unknown, OMPC_MAP_tofrom, /*IsMapTypeImplicit=*/true,
-              SourceLocation(), SourceLocation(), ImplicitMaps,
-              SourceLocation(), SourceLocation(), SourceLocation())) {
+              llvm::None, llvm::None, OMPC_MAP_tofrom,
+              /*IsMapTypeImplicit=*/true, SourceLocation(), SourceLocation(),
+              ImplicitMaps, SourceLocation(), SourceLocation(),
+              SourceLocation())) {
         ClausesWithImplicit.emplace_back(Implicit);
         ErrorFound |=
             cast<OMPMapClause>(Implicit)->varlist_size() != ImplicitMaps.size();
@@ -4652,6 +4673,7 @@ void Sema::ActOnOpenMPLoopInitialization(SourceLocation ForLoc, Stmt *Init) {
   unsigned AssociatedLoops = DSAStack->getAssociatedLoops();
   if (AssociatedLoops > 0 &&
       isOpenMPLoopDirective(DSAStack->getCurrentDirective())) {
+    DSAStack->loopStart();
     OpenMPIterationSpaceChecker ISC(*this, ForLoc);
     if (!ISC.checkAndSetInit(Init, /*EmitDiags=*/false)) {
       if (ValueDecl *D = ISC.getLoopDecl()) {
@@ -9535,7 +9557,9 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation ColonLoc,
     SourceLocation EndLoc, CXXScopeSpec &ReductionIdScopeSpec,
     const DeclarationNameInfo &ReductionId, OpenMPDependClauseKind DepKind,
-    OpenMPLinearClauseKind LinKind, OpenMPMapClauseKind MapTypeModifier,
+    OpenMPLinearClauseKind LinKind,
+    ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
+    ArrayRef<SourceLocation> MapTypeModifiersLoc,
     OpenMPMapClauseKind MapType, bool IsMapTypeImplicit,
     SourceLocation DepLinMapLoc) {
   OMPClause *Res = nullptr;
@@ -9588,9 +9612,9 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
                                   StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_map:
-    Res = ActOnOpenMPMapClause(MapTypeModifier, MapType, IsMapTypeImplicit,
-                               DepLinMapLoc, ColonLoc, VarList, StartLoc,
-                               LParenLoc, EndLoc);
+    Res = ActOnOpenMPMapClause(MapTypeModifiers, MapTypeModifiersLoc, MapType,
+                               IsMapTypeImplicit, DepLinMapLoc, ColonLoc,
+                               VarList, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_to:
     Res = ActOnOpenMPToClause(VarList, StartLoc, LParenLoc, EndLoc);
@@ -11231,8 +11255,8 @@ static bool actOnOMPReductionKindClause(
           ELoc, Context.getPointerType(FnTy), VK_RValue, OK_Ordinary,
           S.DefaultLvalueConversion(DeclareReductionRef.get()).get());
       Expr *Args[] = {LHS.get(), RHS.get()};
-      ReductionOp = new (Context)
-          CallExpr(Context, OVE, Args, Context.VoidTy, VK_RValue, ELoc);
+      ReductionOp =
+          CallExpr::Create(Context, OVE, Args, Context.VoidTy, VK_RValue, ELoc);
     } else {
       ReductionOp = S.BuildBinOp(
           Stack->getCurScope(), ReductionId.getBeginLoc(), BOK, LHSDRE, RHSDRE);
@@ -12445,6 +12469,19 @@ static const Expr *checkMapClauseExpressionBase(
                                                       E->getType()))
         AllowWholeSizeArraySection = false;
 
+      if (const auto *TE = dyn_cast<CXXThisExpr>(E)) {
+        Expr::EvalResult Result;
+        if (CurE->getIdx()->EvaluateAsInt(Result, SemaRef.getASTContext())) {
+          if (!Result.Val.getInt().isNullValue()) {
+            SemaRef.Diag(CurE->getIdx()->getExprLoc(),
+                         diag::err_omp_invalid_map_this_expr);
+            SemaRef.Diag(CurE->getIdx()->getExprLoc(),
+                         diag::note_omp_invalid_subscript_on_this_ptr_map);
+          }
+        }
+        RelevantExpr = TE;
+      }
+
       // Record the component - we don't have any declaration associated.
       CurComponents.emplace_back(CurE, nullptr);
     } else if (auto *CurE = dyn_cast<OMPArraySectionExpr>(E)) {
@@ -12489,6 +12526,30 @@ static const Expr *checkMapClauseExpressionBase(
             ELoc, diag::err_array_section_does_not_specify_contiguous_storage)
             << CurE->getSourceRange();
         return nullptr;
+      }
+
+      if (const auto *TE = dyn_cast<CXXThisExpr>(E)) {
+        Expr::EvalResult ResultR;
+        Expr::EvalResult ResultL;
+        if (CurE->getLength()->EvaluateAsInt(ResultR,
+                                             SemaRef.getASTContext())) {
+          if (!ResultR.Val.getInt().isOneValue()) {
+            SemaRef.Diag(CurE->getLength()->getExprLoc(),
+                         diag::err_omp_invalid_map_this_expr);
+            SemaRef.Diag(CurE->getLength()->getExprLoc(),
+                         diag::note_omp_invalid_length_on_this_ptr_mapping);
+          }
+        }
+        if (CurE->getLowerBound() && CurE->getLowerBound()->EvaluateAsInt(
+                                        ResultL, SemaRef.getASTContext())) {
+          if (!ResultL.Val.getInt().isNullValue()) {
+            SemaRef.Diag(CurE->getLowerBound()->getExprLoc(),
+                         diag::err_omp_invalid_map_this_expr);
+            SemaRef.Diag(CurE->getLowerBound()->getExprLoc(),
+                         diag::note_omp_invalid_lower_bound_on_this_ptr_mapping);
+          }
+        }
+        RelevantExpr = TE;
       }
 
       // Record the component - we don't have any declaration associated.
@@ -12828,6 +12889,18 @@ checkMappableExpressionList(Sema &SemaRef, DSAStackTy *DSAS,
     assert(!CurComponents.empty() &&
            "Invalid mappable expression information.");
 
+    if (const auto *TE = dyn_cast<CXXThisExpr>(BE)) {
+      // Add store "this" pointer to class in DSAStackTy for future checking
+      DSAS->addMappedClassesQualTypes(TE->getType());
+      // Skip restriction checking for variable or field declarations
+      MVLI.ProcessedVarList.push_back(RE);
+      MVLI.VarComponents.resize(MVLI.VarComponents.size() + 1);
+      MVLI.VarComponents.back().append(CurComponents.begin(),
+                                       CurComponents.end());
+      MVLI.VarBaseDeclarations.push_back(nullptr);
+      continue;
+    }
+
     // For the following checks, we rely on the base declaration which is
     // expected to be associated with the last component. The declaration is
     // expected to be a variable or a field (if 'this' is being mapped).
@@ -12957,7 +13030,8 @@ checkMappableExpressionList(Sema &SemaRef, DSAStackTy *DSAS,
 }
 
 OMPClause *
-Sema::ActOnOpenMPMapClause(OpenMPMapClauseKind MapTypeModifier,
+Sema::ActOnOpenMPMapClause(ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
+                           ArrayRef<SourceLocation> MapTypeModifiersLoc,
                            OpenMPMapClauseKind MapType, bool IsMapTypeImplicit,
                            SourceLocation MapLoc, SourceLocation ColonLoc,
                            ArrayRef<Expr *> VarList, SourceLocation StartLoc,
@@ -12966,12 +13040,31 @@ Sema::ActOnOpenMPMapClause(OpenMPMapClauseKind MapTypeModifier,
   checkMappableExpressionList(*this, DSAStack, OMPC_map, MVLI, StartLoc,
                               MapType, IsMapTypeImplicit);
 
+  OpenMPMapModifierKind Modifiers[] = { OMPC_MAP_MODIFIER_unknown,
+                                        OMPC_MAP_MODIFIER_unknown };
+  SourceLocation ModifiersLoc[OMPMapClause::NumberOfModifiers];
+
+  // Process map-type-modifiers, flag errors for duplicate modifiers.
+  unsigned Count = 0;
+  for (unsigned I = 0, E = MapTypeModifiers.size(); I < E; ++I) {
+    if (MapTypeModifiers[I] != OMPC_MAP_MODIFIER_unknown &&
+        llvm::find(Modifiers, MapTypeModifiers[I]) != std::end(Modifiers)) {
+      Diag(MapTypeModifiersLoc[I], diag::err_omp_duplicate_map_type_modifier);
+      continue;
+    }
+    assert(Count < OMPMapClause::NumberOfModifiers &&
+           "Modifiers exceed the allowed number of map type modifiers"); 
+    Modifiers[Count] = MapTypeModifiers[I];
+    ModifiersLoc[Count] = MapTypeModifiersLoc[I];
+    ++Count;
+  }
+
   // We need to produce a map clause even if we don't have variables so that
   // other diagnostics related with non-existing map clauses are accurate.
   return OMPMapClause::Create(Context, StartLoc, LParenLoc, EndLoc,
                               MVLI.ProcessedVarList, MVLI.VarBaseDeclarations,
-                              MVLI.VarComponents, MapTypeModifier, MapType,
-                              IsMapTypeImplicit, MapLoc);
+                              MVLI.VarComponents, Modifiers, ModifiersLoc,
+                              MapType, IsMapTypeImplicit, MapLoc);
 }
 
 QualType Sema::ActOnOpenMPDeclareReductionType(SourceLocation TyLoc,

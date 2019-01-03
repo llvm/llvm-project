@@ -1975,7 +1975,8 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
   // If the loop iterates a fixed number of times, we can refine the access
   // size to be exactly the size of the memset, which is (BECount+1)*StoreSize
   if (const SCEVConstant *BECst = dyn_cast<SCEVConstant>(BECount))
-    AccessSize = (BECst->getValue()->getZExtValue() + 1) * StoreSize;
+    AccessSize = LocationSize::precise((BECst->getValue()->getZExtValue() + 1) *
+                                       StoreSize);
 
   // TODO: For this to be really effective, we have to dive into the pointer
   // operand in the store.  Store to &A[i] of 100 will always return may alias

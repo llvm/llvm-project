@@ -1,0 +1,32 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Options") {
+  visibility = [ ":wasm" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+static_library("wasm") {
+  output_name = "lldWasm"
+  configs += [ "//llvm/utils/gn/build:lld_code" ]
+  deps = [
+    ":Options",
+    "//lld/Common",
+    "//llvm/lib/BinaryFormat",
+    "//llvm/lib/Demangle",
+    "//llvm/lib/IR",
+    "//llvm/lib/Object",
+    "//llvm/lib/Option",
+  ]
+  sources = [
+    "Driver.cpp",
+    "InputChunks.cpp",
+    "InputFiles.cpp",
+    "LTO.cpp",
+    "MarkLive.cpp",
+    "OutputSections.cpp",
+    "SymbolTable.cpp",
+    "Symbols.cpp",
+    "Writer.cpp",
+    "WriterUtils.cpp",
+  ]
+}

@@ -598,6 +598,14 @@ bool Instruction::isSafeToRemove() const {
          !this->isTerminator();
 }
 
+bool Instruction::isLifetimeStartOrEnd() const {
+  auto II = dyn_cast<IntrinsicInst>(this);
+  if (!II)
+    return false;
+  Intrinsic::ID ID = II->getIntrinsicID();
+  return ID == Intrinsic::lifetime_start || ID == Intrinsic::lifetime_end;
+}
+
 const Instruction *Instruction::getNextNonDebugInstruction() const {
   for (const Instruction *I = getNextNode(); I; I = I->getNextNode())
     if (!isa<DbgInfoIntrinsic>(I))

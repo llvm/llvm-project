@@ -89,8 +89,7 @@ define amdgpu_kernel void @local_store_v3i64_unaligned(<3 x i64> addrspace(3)* %
 }
 
 ; GCN-LABEL: {{^}}global_truncstore_v3i64_to_v3i32:
-; GCN-DAG: buffer_store_dwordx2
-; GCN-DAG: buffer_store_dword v
+; GCN-DAG: buffer_store_dwordx3
 define amdgpu_kernel void @global_truncstore_v3i64_to_v3i32(<3 x i32> addrspace(1)* %out, <3 x i64> %x) {
   %trunc = trunc <3 x i64> %x to <3 x i32>
   store <3 x i32> %trunc, <3 x i32> addrspace(1)* %out

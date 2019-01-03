@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass si-fixup-vector-isel %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass si-fixup-vector-isel -amdgpu-enable-global-sgpr-addr %s -o - | FileCheck -check-prefix=GCN %s
 
 # Coverage tests for GLOBAL_* to their _SADDR equivalent.
 

@@ -72,7 +72,7 @@ namespace test1 {
 // CHECK: %[[V10:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_DEST]], i32 0, i32 5
 // CHECK: %[[BLOCKCOPY_SRC2:.*]] = load i8*, i8** %[[V9]], align 8
 // CHECK: store i8* null, i8** %[[V10]], align 8
-// CHECK: call void @objc_storeStrong(i8** %[[V10]], i8* %[[BLOCKCOPY_SRC2]])
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[V10]], i8* %[[BLOCKCOPY_SRC2]])
 
 // CHECK: %[[V4:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_SOURCE]], i32 0, i32 6
 // CHECK: %[[V5:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_DEST]], i32 0, i32 6
@@ -82,7 +82,7 @@ namespace test1 {
 
 // CHECK: %[[V7:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_SOURCE]], i32 0, i32 7
 // CHECK: %[[V8:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_DEST]], i32 0, i32 7
-// CHECK: call void @objc_copyWeak(i8** %[[V8]], i8** %[[V7]])
+// CHECK: call void @llvm.objc.copyWeak(i8** %[[V8]], i8** %[[V7]])
 
 // CHECK: %[[V11:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_SOURCE]], i32 0, i32 8
 // CHECK: %[[V12:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8*, %[[STRUCT_TEST1_S0]], %[[STRUCT_TEST1_S0]], %[[STRUCT_TRIVIAL_INTERNAL]] }>* %[[BLOCK_DEST]], i32 0, i32 8
@@ -109,10 +109,10 @@ namespace test1 {
 // CHECK: br label %[[EHCLEANUP]]
 
 // CHECK: [[EHCLEANUP]]:
-// CHECK: call void @objc_destroyWeak(i8** %[[V8]])
+// CHECK: call void @llvm.objc.destroyWeak(i8** %[[V8]])
 // CHECK: %[[V21:.*]] = load i8*, i8** %[[V5]], align 8
 // CHECK: call void @_Block_object_dispose(i8* %[[V21]], i32 8)
-// CHECK: call void @objc_storeStrong(i8** %[[V10]], i8* null)
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[V10]], i8* null)
 // CHECK: br label %[[EH_RESUME:.*]]
 
 // CHECK: [[EH_RESUME]]:
@@ -122,7 +122,7 @@ namespace test1 {
 // CHECK: call void @__clang_call_terminate(
 
 // CHECK-O1-LABEL: define linkonce_odr hidden void @__copy_helper_block_ea8_32s40r48w56c15_ZTSN5test12S0E60c15_ZTSN5test12S0E(
-// CHECK-O1: tail call void @objc_release({{.*}}) {{.*}} !clang.imprecise_release
+// CHECK-O1: tail call void @llvm.objc.release({{.*}}) {{.*}} !clang.imprecise_release
 // CHECK-NOEXCP: define linkonce_odr hidden void @__copy_helper_block_8_32s40r48w56c15_ZTSN5test12S0E60c15_ZTSN5test12S0E(
 
 // CHECK: define linkonce_odr hidden void @__destroy_helper_block_ea8_32s40r48w56c15_ZTSN5test12S0E60c15_ZTSN5test12S0E(
@@ -140,10 +140,10 @@ namespace test1 {
 // CHECK: to label %[[INVOKE_CONT2:.*]] unwind label %[[LPAD1:.*]]
 
 // CHECK: [[INVOKE_CONT2]]:
-// CHECK: call void @objc_destroyWeak(i8** %[[V3]])
+// CHECK: call void @llvm.objc.destroyWeak(i8** %[[V3]])
 // CHECK: %[[V7:.*]] = load i8*, i8** %[[V2]], align 8
 // CHECK: call void @_Block_object_dispose(i8* %[[V7]], i32 8)
-// CHECK: call void @objc_storeStrong(i8** %[[V4]], i8* null)
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[V4]], i8* null)
 // CHECK: ret void
 
 // CHECK: [[LPAD]]:
@@ -157,10 +157,10 @@ namespace test1 {
 // CHECK: br label %[[EHCLEANUP]]
 
 // CHECK: [[EHCLEANUP]]:
-// CHECK: call void @objc_destroyWeak(i8** %[[V3]])
+// CHECK: call void @llvm.objc.destroyWeak(i8** %[[V3]])
 // CHECK: %[[V14:.*]] = load i8*, i8** %[[V2]], align 8
 // CHECK: call void @_Block_object_dispose(i8* %[[V14]], i32 8)
-// CHECK: call void @objc_storeStrong(i8** %[[V4]], i8* null)
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[V4]], i8* null)
 // CHECK: br label %[[EH_RESUME:.*]]
 
 // CHECK: [[EH_RESUME]]:
@@ -170,8 +170,8 @@ namespace test1 {
 // CHECK: call void @__clang_call_terminate(
 
 // CHECK-O1-LABEL: define linkonce_odr hidden void @__destroy_helper_block_ea8_32s40r48w56c15_ZTSN5test12S0E60c15_ZTSN5test12S0E(
-// CHECK-O1: tail call void @objc_release({{.*}}) {{.*}} !clang.imprecise_release
-// CHECK-O1: tail call void @objc_release({{.*}}) {{.*}} !clang.imprecise_release
+// CHECK-O1: tail call void @llvm.objc.release({{.*}}) {{.*}} !clang.imprecise_release
+// CHECK-O1: tail call void @llvm.objc.release({{.*}}) {{.*}} !clang.imprecise_release
 // CHECK-NOEXCP: define linkonce_odr hidden void @__destroy_helper_block_8_32s40r48w56c15_ZTSN5test12S0E60c15_ZTSN5test12S0E(
 
 namespace {

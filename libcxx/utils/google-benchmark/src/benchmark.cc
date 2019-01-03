@@ -57,9 +57,9 @@ DEFINE_bool(benchmark_list_tests, false,
 
 DEFINE_string(benchmark_filter, ".",
               "A regular expression that specifies the set of benchmarks "
-              "to execute.  If this flag is empty, no benchmarks are run.  "
-              "If this flag is the string \"all\", all benchmarks linked "
-              "into the process are run.");
+              "to execute.  If this flag is empty, or if this flag is the "
+              "string \"all\", all benchmarks linked into the binary are "
+              "run.");
 
 DEFINE_double(benchmark_min_time, 0.5,
               "Minimum number of seconds we should run benchmark before "

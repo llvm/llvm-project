@@ -1,9 +1,9 @@
 {
-  "$schema": "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2018-10-10",
+  "$schema": "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2018-11-28",
   "runs": [
     {
-      "files": {
-        "file:sarif-diagnostics-taint-test.c": {
+      "files": [
+        {
           "fileLocation": {
             "uri": "file:sarif-diagnostics-taint-test.c"
           },
@@ -13,18 +13,19 @@
             "resultFile"
           ]
         }
-      },
+      ],
       "resources": {
-        "rules": {
-          "debug.TaintTest": {
+        "rules": [
+          {
             "fullDescription": {
               "text": "Mark tainted symbols as such."
             },
+            "id": "debug.TaintTest",
             "name": {
               "text": "debug.TaintTest"
             }
           }
-        }
+        ]
       },      
       "results": [
         {
@@ -41,6 +42,7 @@
                         },
                         "physicalLocation": {
                           "fileLocation": {
+                            "fileIndex": 0,
                             "uri": "file:sarif-diagnostics-taint-test.c"
                           },
                           "region": {
@@ -60,6 +62,7 @@
                         },
                         "physicalLocation": {
                           "fileLocation": {
+                            "fileIndex": 0,
                             "uri": "file:sarif-diagnostics-taint-test.c"
                           },
                           "region": {
@@ -80,6 +83,7 @@
             {
               "physicalLocation": {
                 "fileLocation": {
+                  "fileIndex": 0,
                   "uri": "file:sarif-diagnostics-taint-test.c"
                 },
                 "region": {
@@ -94,7 +98,8 @@
           "message": {
             "text": "tainted"
           },
-          "ruleId": "debug.TaintTest"
+          "ruleId": "debug.TaintTest",
+          "ruleIndex": 0
         }
       ],
       "tool": {
@@ -105,5 +110,5 @@
       }
     }
   ],
-  "version": "2.0.0-csd.2.beta.2018-10-10"
+  "version": "2.0.0-csd.2.beta.2018-11-28"
 }

@@ -615,6 +615,13 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
     d.d = r.getFloatRegister(i);
     _msContext.D[i - UNW_ARM_D0] = d.w;
   }
+#elif defined(_LIBUNWIND_TARGET_AARCH64)
+  for (int i = UNW_ARM64_X0; i <= UNW_ARM64_X30; ++i)
+    _msContext.X[i - UNW_ARM64_X0] = r.getRegister(i);
+  _msContext.Sp = r.getRegister(UNW_REG_SP);
+  _msContext.Pc = r.getRegister(UNW_REG_IP);
+  for (int i = UNW_ARM64_D0; i <= UNW_ARM64_D31; ++i)
+    _msContext.V[i - UNW_ARM64_D0].D[0] = r.getFloatRegister(i);
 #endif
 }
 
@@ -638,6 +645,8 @@ bool UnwindCursor<A, R>::validReg(int regNum) {
   if (regNum >= UNW_X86_64_RAX && regNum <= UNW_X86_64_R15) return true;
 #elif defined(_LIBUNWIND_TARGET_ARM)
   if (regNum >= UNW_ARM_R0 && regNum <= UNW_ARM_R15) return true;
+#elif defined(_LIBUNWIND_TARGET_AARCH64)
+  if (regNum >= UNW_ARM64_X0 && regNum <= UNW_ARM64_X30) return true;
 #endif
   return false;
 }
@@ -683,6 +692,10 @@ unw_word_t UnwindCursor<A, R>::getReg(int regNum) {
   case UNW_ARM_LR: return _msContext.Lr;
   case UNW_REG_IP:
   case UNW_ARM_IP: return _msContext.Pc;
+#elif defined(_LIBUNWIND_TARGET_AARCH64)
+  case UNW_REG_SP: return _msContext.Sp;
+  case UNW_REG_IP: return _msContext.Pc;
+  default: return _msContext.X[regNum - UNW_ARM64_X0];
 #endif
   }
   _LIBUNWIND_ABORT("unsupported register");
@@ -729,6 +742,40 @@ void UnwindCursor<A, R>::setReg(int regNum, unw_word_t value) {
   case UNW_ARM_LR: _msContext.Lr = value; break;
   case UNW_REG_IP:
   case UNW_ARM_IP: _msContext.Pc = value; break;
+#elif defined(_LIBUNWIND_TARGET_AARCH64)
+  case UNW_REG_SP: _msContext.Sp = value; break;
+  case UNW_REG_IP: _msContext.Pc = value; break;
+  case UNW_ARM64_X0:
+  case UNW_ARM64_X1:
+  case UNW_ARM64_X2:
+  case UNW_ARM64_X3:
+  case UNW_ARM64_X4:
+  case UNW_ARM64_X5:
+  case UNW_ARM64_X6:
+  case UNW_ARM64_X7:
+  case UNW_ARM64_X8:
+  case UNW_ARM64_X9:
+  case UNW_ARM64_X10:
+  case UNW_ARM64_X11:
+  case UNW_ARM64_X12:
+  case UNW_ARM64_X13:
+  case UNW_ARM64_X14:
+  case UNW_ARM64_X15:
+  case UNW_ARM64_X16:
+  case UNW_ARM64_X17:
+  case UNW_ARM64_X18:
+  case UNW_ARM64_X19:
+  case UNW_ARM64_X20:
+  case UNW_ARM64_X21:
+  case UNW_ARM64_X22:
+  case UNW_ARM64_X23:
+  case UNW_ARM64_X24:
+  case UNW_ARM64_X25:
+  case UNW_ARM64_X26:
+  case UNW_ARM64_X27:
+  case UNW_ARM64_X28:
+  case UNW_ARM64_FP:
+  case UNW_ARM64_LR: _msContext.X[regNum - UNW_ARM64_X0] = value; break;
 #endif
   default:
     _LIBUNWIND_ABORT("unsupported register");
@@ -740,6 +787,8 @@ bool UnwindCursor<A, R>::validFloatReg(int regNum) {
 #if defined(_LIBUNWIND_TARGET_ARM)
   if (regNum >= UNW_ARM_S0 && regNum <= UNW_ARM_S31) return true;
   if (regNum >= UNW_ARM_D0 && regNum <= UNW_ARM_D31) return true;
+#elif defined(_LIBUNWIND_TARGET_AARCH64)
+  if (regNum >= UNW_ARM64_D0 && regNum <= UNW_ARM64_D31) return true;
 #endif
   return false;
 }
@@ -764,6 +813,8 @@ unw_fpreg_t UnwindCursor<A, R>::getFloatReg(int regNum) {
     return d.d;
   }
   _LIBUNWIND_ABORT("unsupported float register");
+#elif defined(_LIBUNWIND_TARGET_AARCH64)
+  return _msContext.V[regNum - UNW_ARM64_D0].D[0];
 #else
   _LIBUNWIND_ABORT("float registers unimplemented");
 #endif
@@ -789,6 +840,8 @@ void UnwindCursor<A, R>::setFloatReg(int regNum, unw_fpreg_t value) {
     _msContext.D[regNum - UNW_ARM_D0] = d.w;
   }
   _LIBUNWIND_ABORT("unsupported float register");
+#elif defined(_LIBUNWIND_TARGET_AARCH64)
+  _msContext.V[regNum - UNW_ARM64_D0].D[0] = value;
 #else
   _LIBUNWIND_ABORT("float registers unimplemented");
 #endif
@@ -804,113 +857,7 @@ template <typename A, typename R> void UnwindCursor<A, R>::saveVFPAsX() {}
 
 template <typename A, typename R>
 const char *UnwindCursor<A, R>::getRegisterName(int regNum) {
-  switch (regNum) {
-#if defined(_LIBUNWIND_TARGET_X86_64)
-  case UNW_REG_IP: return "rip";
-  case UNW_X86_64_RAX: return "rax";
-  case UNW_X86_64_RDX: return "rdx";
-  case UNW_X86_64_RCX: return "rcx";
-  case UNW_X86_64_RBX: return "rbx";
-  case UNW_REG_SP:
-  case UNW_X86_64_RSP: return "rsp";
-  case UNW_X86_64_RBP: return "rbp";
-  case UNW_X86_64_RSI: return "rsi";
-  case UNW_X86_64_RDI: return "rdi";
-  case UNW_X86_64_R8: return "r8";
-  case UNW_X86_64_R9: return "r9";
-  case UNW_X86_64_R10: return "r10";
-  case UNW_X86_64_R11: return "r11";
-  case UNW_X86_64_R12: return "r12";
-  case UNW_X86_64_R13: return "r13";
-  case UNW_X86_64_R14: return "r14";
-  case UNW_X86_64_R15: return "r15";
-#elif defined(_LIBUNWIND_TARGET_ARM)
-  case UNW_ARM_R0: return "r0";
-  case UNW_ARM_R1: return "r1";
-  case UNW_ARM_R2: return "r2";
-  case UNW_ARM_R3: return "r3";
-  case UNW_ARM_R4: return "r4";
-  case UNW_ARM_R5: return "r5";
-  case UNW_ARM_R6: return "r6";
-  case UNW_ARM_R7: return "r7";
-  case UNW_ARM_R8: return "r8";
-  case UNW_ARM_R9: return "r9";
-  case UNW_ARM_R10: return "r10";
-  case UNW_ARM_R11: return "r11";
-  case UNW_ARM_R12: return "r12";
-  case UNW_REG_SP:
-  case UNW_ARM_SP: return "sp";
-  case UNW_ARM_LR: return "lr";
-  case UNW_REG_IP:
-  case UNW_ARM_IP: return "pc";
-  case UNW_ARM_S0: return "s0";
-  case UNW_ARM_S1: return "s1";
-  case UNW_ARM_S2: return "s2";
-  case UNW_ARM_S3: return "s3";
-  case UNW_ARM_S4: return "s4";
-  case UNW_ARM_S5: return "s5";
-  case UNW_ARM_S6: return "s6";
-  case UNW_ARM_S7: return "s7";
-  case UNW_ARM_S8: return "s8";
-  case UNW_ARM_S9: return "s9";
-  case UNW_ARM_S10: return "s10";
-  case UNW_ARM_S11: return "s11";
-  case UNW_ARM_S12: return "s12";
-  case UNW_ARM_S13: return "s13";
-  case UNW_ARM_S14: return "s14";
-  case UNW_ARM_S15: return "s15";
-  case UNW_ARM_S16: return "s16";
-  case UNW_ARM_S17: return "s17";
-  case UNW_ARM_S18: return "s18";
-  case UNW_ARM_S19: return "s19";
-  case UNW_ARM_S20: return "s20";
-  case UNW_ARM_S21: return "s21";
-  case UNW_ARM_S22: return "s22";
-  case UNW_ARM_S23: return "s23";
-  case UNW_ARM_S24: return "s24";
-  case UNW_ARM_S25: return "s25";
-  case UNW_ARM_S26: return "s26";
-  case UNW_ARM_S27: return "s27";
-  case UNW_ARM_S28: return "s28";
-  case UNW_ARM_S29: return "s29";
-  case UNW_ARM_S30: return "s30";
-  case UNW_ARM_S31: return "s31";
-  case UNW_ARM_D0: return "d0";
-  case UNW_ARM_D1: return "d1";
-  case UNW_ARM_D2: return "d2";
-  case UNW_ARM_D3: return "d3";
-  case UNW_ARM_D4: return "d4";
-  case UNW_ARM_D5: return "d5";
-  case UNW_ARM_D6: return "d6";
-  case UNW_ARM_D7: return "d7";
-  case UNW_ARM_D8: return "d8";
-  case UNW_ARM_D9: return "d9";
-  case UNW_ARM_D10: return "d10";
-  case UNW_ARM_D11: return "d11";
-  case UNW_ARM_D12: return "d12";
-  case UNW_ARM_D13: return "d13";
-  case UNW_ARM_D14: return "d14";
-  case UNW_ARM_D15: return "d15";
-  case UNW_ARM_D16: return "d16";
-  case UNW_ARM_D17: return "d17";
-  case UNW_ARM_D18: return "d18";
-  case UNW_ARM_D19: return "d19";
-  case UNW_ARM_D20: return "d20";
-  case UNW_ARM_D21: return "d21";
-  case UNW_ARM_D22: return "d22";
-  case UNW_ARM_D23: return "d23";
-  case UNW_ARM_D24: return "d24";
-  case UNW_ARM_D25: return "d25";
-  case UNW_ARM_D26: return "d26";
-  case UNW_ARM_D27: return "d27";
-  case UNW_ARM_D28: return "d28";
-  case UNW_ARM_D29: return "d29";
-  case UNW_ARM_D30: return "d30";
-  case UNW_ARM_D31: return "d31";
-#endif
-  default:
-    _LIBUNWIND_ABORT("unsupported register");
-  }
+  return R::getRegisterName(regNum);
 }
 
 template <typename A, typename R> bool UnwindCursor<A, R>::isSignalFrame() {

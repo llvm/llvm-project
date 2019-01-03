@@ -532,7 +532,7 @@ bool CMICmnLLDBDebugSessionInfo::GetVariableInfo(const lldb::SBValue &vrValue,
                                                  const bool vbInSimpleForm,
                                                  CMIUtilString &vwrStrValue) {
   const CMICmnLLDBUtilSBValue utilValue(vrValue, true, false);
-  const bool bExpandAggregates = vbInSimpleForm ? false : true;
+  const bool bExpandAggregates = !vbInSimpleForm;
   vwrStrValue = utilValue.GetValue(bExpandAggregates);
   return MIstatus::success;
 }

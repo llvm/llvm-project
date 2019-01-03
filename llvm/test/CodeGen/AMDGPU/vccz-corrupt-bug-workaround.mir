@@ -47,7 +47,7 @@
 ---
 # CHECK-LABEL: name: vccz_corrupt_workaround
 # CHECK: $vcc = V_CMP_EQ_F32
-# CHECK-NEXT: S_WAITCNT 0
+# CHECK-NEXT: S_WAITCNT 127
 # CHECK-NEXT: $vcc = S_MOV_B64 $vcc
 # CHECK-NEXT: S_CBRANCH_VCCZ %bb.2, implicit killed $vcc
 

@@ -1,6 +1,6 @@
 ; RUN: opt < %s -sroa -S | FileCheck %s
 ;
-; Make sure the llvm.mem.parallel_loop_access meta-data is preserved
+; Make sure the llvm.access.group meta-data is preserved
 ; when a load/store is replaced with another load/store by sroa
 ;
 ; class Complex {
@@ -33,9 +33,9 @@
 
 ; CHECK: for.body:
 ; CHECK-NOT:  store i32 %{{.*}}, i32* %{{.*}}, align 4
-; CHECK: store i32 %{{.*}}, i32* %{{.*}}, align 4, !llvm.mem.parallel_loop_access !1
+; CHECK: store i32 %{{.*}}, i32* %{{.*}}, align 4, !llvm.access.group !1
 ; CHECK-NOT:  store i32 %{{.*}}, i32* %{{.*}}, align 4
-; CHECK: store i32 %{{.*}}, i32* %{{.*}}, align 4, !llvm.mem.parallel_loop_access !1
+; CHECK: store i32 %{{.*}}, i32* %{{.*}}, align 4, !llvm.access.group !1
 ; CHECK-NOT:  store i32 %{{.*}}, i32* %{{.*}}, align 4
 ; CHECK: br label
 
@@ -63,30 +63,30 @@ for.body:                                         ; preds = %for.cond
   %arrayidx = getelementptr inbounds %class.Complex, %class.Complex* %out, i64 %offset.0
   %real_.i = getelementptr inbounds %class.Complex, %class.Complex* %t0, i64 0, i32 0
   %real_.i.i = getelementptr inbounds %class.Complex, %class.Complex* %arrayidx, i64 0, i32 0
-  %0 = load float, float* %real_.i.i, align 4, !llvm.mem.parallel_loop_access !1
-  store float %0, float* %real_.i, align 4, !llvm.mem.parallel_loop_access !1
+  %0 = load float, float* %real_.i.i, align 4, !llvm.access.group !11
+  store float %0, float* %real_.i, align 4, !llvm.access.group !11
   %imaginary_.i = getelementptr inbounds %class.Complex, %class.Complex* %t0, i64 0, i32 1
   %imaginary_.i.i = getelementptr inbounds %class.Complex, %class.Complex* %arrayidx, i64 0, i32 1
-  %1 = load float, float* %imaginary_.i.i, align 4, !llvm.mem.parallel_loop_access !1
-  store float %1, float* %imaginary_.i, align 4, !llvm.mem.parallel_loop_access !1
+  %1 = load float, float* %imaginary_.i.i, align 4, !llvm.access.group !11
+  store float %1, float* %imaginary_.i, align 4, !llvm.access.group !11
   %arrayidx1 = getelementptr inbounds %class.Complex, %class.Complex* %out, i64 %offset.0
   %real_.i1 = getelementptr inbounds %class.Complex, %class.Complex* %t0, i64 0, i32 0
-  %2 = load float, float* %real_.i1, align 4, !noalias !3, !llvm.mem.parallel_loop_access !1
+  %2 = load float, float* %real_.i1, align 4, !noalias !3, !llvm.access.group !11
   %real_2.i = getelementptr inbounds %class.Complex, %class.Complex* %t0, i64 0, i32 0
-  %3 = load float, float* %real_2.i, align 4, !noalias !3, !llvm.mem.parallel_loop_access !1
+  %3 = load float, float* %real_2.i, align 4, !noalias !3, !llvm.access.group !11
   %add.i = fadd float %2, %3
   %imaginary_.i2 = getelementptr inbounds %class.Complex, %class.Complex* %t0, i64 0, i32 1
-  %4 = load float, float* %imaginary_.i2, align 4, !noalias !3, !llvm.mem.parallel_loop_access !1
+  %4 = load float, float* %imaginary_.i2, align 4, !noalias !3, !llvm.access.group !11
   %imaginary_3.i = getelementptr inbounds %class.Complex, %class.Complex* %t0, i64 0, i32 1
-  %5 = load float, float* %imaginary_3.i, align 4, !noalias !3, !llvm.mem.parallel_loop_access !1
+  %5 = load float, float* %imaginary_3.i, align 4, !noalias !3, !llvm.access.group !11
   %add4.i = fadd float %4, %5
   %real_.i.i3 = getelementptr inbounds %class.Complex, %class.Complex* %tmpcast, i64 0, i32 0
-  store float %add.i, float* %real_.i.i3, align 4, !alias.scope !3, !llvm.mem.parallel_loop_access !1
+  store float %add.i, float* %real_.i.i3, align 4, !alias.scope !3, !llvm.access.group !11
   %imaginary_.i.i4 = getelementptr inbounds %class.Complex, %class.Complex* %tmpcast, i64 0, i32 1
-  store float %add4.i, float* %imaginary_.i.i4, align 4, !alias.scope !3, !llvm.mem.parallel_loop_access !1
+  store float %add4.i, float* %imaginary_.i.i4, align 4, !alias.scope !3, !llvm.access.group !11
   %6 = bitcast %class.Complex* %arrayidx1 to i64*
-  %7 = load i64, i64* %ref.tmp, align 8, !llvm.mem.parallel_loop_access !1
-  store i64 %7, i64* %6, align 4, !llvm.mem.parallel_loop_access !1
+  %7 = load i64, i64* %ref.tmp, align 8, !llvm.access.group !11
+  store i64 %7, i64* %6, align 4, !llvm.access.group !11
   %inc = add nsw i64 %offset.0, 1
   br label %for.cond, !llvm.loop !1
 
@@ -103,8 +103,9 @@ attributes #1 = { argmemonly nounwind }
 !llvm.ident = !{!0}
 
 !0 = !{!"clang version 4.0.0 (cfe/trunk 277751)"}
-!1 = distinct !{!1, !2}
+!1 = distinct !{!1, !2, !{!"llvm.loop.parallel_accesses", !11}}
 !2 = !{!"llvm.loop.vectorize.enable", i1 true}
 !3 = !{!4}
 !4 = distinct !{!4, !5, !"_ZNK7ComplexplERKS_: %agg.result"}
 !5 = distinct !{!5, !"_ZNK7ComplexplERKS_"}
+!11 = distinct !{}

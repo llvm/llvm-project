@@ -11,8 +11,8 @@ define void @bn_mul_comba8(i64* nocapture %r, i64* nocapture readonly %a, i64* n
 ; CHECK-LABEL: bn_mul_comba8:
 ; CHECK:    mulhdu
 ; CHECK-NEXT:    mulld
-; CHECK-NEXT:    mulhdu
-; CHECK-NEXT:    mulld
+; CHECK:         mulhdu
+; CHECK:         mulld
 ; CHECK-NEXT:    mulhdu
 
 

@@ -1,0 +1,163 @@
+import("//clang/utils/TableGen/clang_tablegen.gni")
+import("//llvm/version.gni")
+
+# Generate arm_neon.h
+clang_tablegen("arm_neon") {
+  args = [ "-gen-arm-neon" ]
+  td_file = "//clang/include/clang/Basic/arm_neon.td"
+  output_name = "arm_neon.h"
+}
+
+# Generate arm_fp16.h
+clang_tablegen("arm_fp16") {
+  args = [ "-gen-arm-fp16" ]
+  td_file = "//clang/include/clang/Basic/arm_fp16.td"
+  output_name = "arm_fp16.h"
+}
+
+output_dir = "$root_out_dir/lib/clang/$llvm_version/include"
+
+copy("arm_headers") {
+  visibility = [ ":Headers" ]
+  deps = [
+    ":arm_fp16",
+    ":arm_neon",
+  ]
+  sources = get_target_outputs(":arm_neon") + get_target_outputs(":arm_fp16")
+  outputs = [
+    "$output_dir/{{source_file_part}}",
+  ]
+}
+
+copy("Headers") {
+  deps = [
+    ":arm_headers",
+  ]
+
+  # NOSORT
+  # Tell `gn format` to not reorder the sources list: Its order matches CMake,
+  # and the ordering is alphabetical but ignores leading underscores.
+  sources = [
+    "adxintrin.h",
+    "altivec.h",
+    "ammintrin.h",
+    "arm_acle.h",
+    "armintr.h",
+    "arm64intr.h",
+    "avx2intrin.h",
+    "avx512bwintrin.h",
+    "avx512bitalgintrin.h",
+    "avx512vlbitalgintrin.h",
+    "avx512cdintrin.h",
+    "avx512vpopcntdqintrin.h",
+    "avx512dqintrin.h",
+    "avx512erintrin.h",
+    "avx512fintrin.h",
+    "avx512ifmaintrin.h",
+    "avx512ifmavlintrin.h",
+    "avx512pfintrin.h",
+    "avx512vbmiintrin.h",
+    "avx512vbmivlintrin.h",
+    "avx512vbmi2intrin.h",
+    "avx512vlvbmi2intrin.h",
+    "avx512vlbwintrin.h",
+    "avx512vlcdintrin.h",
+    "avx512vldqintrin.h",
+    "avx512vlintrin.h",
+    "avx512vpopcntdqvlintrin.h",
+    "avx512vnniintrin.h",
+    "avx512vlvnniintrin.h",
+    "avxintrin.h",
+    "bmi2intrin.h",
+    "bmiintrin.h",
+    "__clang_cuda_builtin_vars.h",
+    "__clang_cuda_cmath.h",
+    "__clang_cuda_complex_builtins.h",
+    "__clang_cuda_device_functions.h",
+    "__clang_cuda_intrinsics.h",
+    "__clang_cuda_libdevice_declares.h",
+    "__clang_cuda_math_forward_declares.h",
+    "__clang_cuda_runtime_wrapper.h",
+    "cetintrin.h",
+    "cldemoteintrin.h",
+    "clzerointrin.h",
+    "cpuid.h",
+    "clflushoptintrin.h",
+    "clwbintrin.h",
+    "emmintrin.h",
+    "f16cintrin.h",
+    "float.h",
+    "fma4intrin.h",
+    "fmaintrin.h",
+    "fxsrintrin.h",
+    "gfniintrin.h",
+    "htmintrin.h",
+    "htmxlintrin.h",
+    "ia32intrin.h",
+    "immintrin.h",
+    "intrin.h",
+    "inttypes.h",
+    "invpcidintrin.h",
+    "iso646.h",
+    "limits.h",
+    "lwpintrin.h",
+    "lzcntintrin.h",
+    "mm3dnow.h",
+    "mmintrin.h",
+    "mm_malloc.h",
+    "module.modulemap",
+    "movdirintrin.h",
+    "msa.h",
+    "mwaitxintrin.h",
+    "nmmintrin.h",
+    "opencl-c.h",
+    "pconfigintrin.h",
+    "pkuintrin.h",
+    "pmmintrin.h",
+    "popcntintrin.h",
+    "prfchwintrin.h",
+    "ptwriteintrin.h",
+    "rdseedintrin.h",
+    "rtmintrin.h",
+    "s390intrin.h",
+    "sgxintrin.h",
+    "shaintrin.h",
+    "smmintrin.h",
+    "stdalign.h",
+    "stdarg.h",
+    "stdatomic.h",
+    "stdbool.h",
+    "stddef.h",
+    "__stddef_max_align_t.h",
+    "stdint.h",
+    "stdnoreturn.h",
+    "tbmintrin.h",
+    "tgmath.h",
+    "tmmintrin.h",
+    "unwind.h",
+    "vadefs.h",
+    "vaesintrin.h",
+    "varargs.h",
+    "vecintrin.h",
+    "vpclmulqdqintrin.h",
+    "waitpkgintrin.h",
+    "wbnoinvdintrin.h",
+    "wmmintrin.h",
+    "__wmmintrin_aes.h",
+    "__wmmintrin_pclmul.h",
+    "x86intrin.h",
+    "xmmintrin.h",
+    "xopintrin.h",
+    "xsavecintrin.h",
+    "xsaveintrin.h",
+    "xsaveoptintrin.h",
+    "xsavesintrin.h",
+    "xtestintrin.h",
+    "cuda_wrappers/algorithm",
+    "cuda_wrappers/complex",
+    "cuda_wrappers/new",
+  ]
+  outputs = [
+    "$output_dir/{{source_target_relative}}",
+  ]
+}

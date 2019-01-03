@@ -17,7 +17,6 @@ add_clang_library(clangLex
   PPExpressions.cpp
   PPLexerChange.cpp
   PPMacroExpansion.cpp
-  PTHLexer.cpp
   Pragma.cpp
   PreprocessingRecord.cpp
   Preprocessor.cpp
