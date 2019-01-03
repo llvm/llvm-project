@@ -6992,15 +6992,22 @@ private:
     // components.
     bool IsExpressionFirstInfo = true;
     Address BP = Address::invalid();
+    const Expr *AssocExpr = I->getAssociatedExpression();
+    const auto *AE = dyn_cast<ArraySubscriptExpr>(AssocExpr);
+    const auto *OASE = dyn_cast<OMPArraySectionExpr>(AssocExpr);
 
-    if (isa<MemberExpr>(I->getAssociatedExpression())) {
+    if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
       // to be the base of the field being mapped.
       BP = CGF.LoadCXXThisAddress();
+    } else if ((AE && isa<CXXThisExpr>(AE->getBase()->IgnoreParenImpCasts())) ||
+               (OASE &&
+                isa<CXXThisExpr>(OASE->getBase()->IgnoreParenImpCasts()))) {
+      BP = CGF.EmitOMPSharedLValue(AssocExpr).getAddress();
     } else {
       // The base is the reference to the variable.
       // BP = &Var.
-      BP = CGF.EmitOMPSharedLValue(I->getAssociatedExpression()).getAddress();
+      BP = CGF.EmitOMPSharedLValue(AssocExpr).getAddress();
       if (const auto *VD =
               dyn_cast_or_null<VarDecl>(I->getAssociatedDeclaration())) {
         if (llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
