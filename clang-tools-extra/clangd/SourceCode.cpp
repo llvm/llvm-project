@@ -187,15 +187,8 @@ Optional<std::string> getCanonicalPath(const FileEntry *F,
                                        const SourceManager &SourceMgr) {
   if (!F)
     return None;
-  // Ideally, we get the real path from the FileEntry object.
-  SmallString<128> FilePath = F->tryGetRealPathName();
-  if (!FilePath.empty() && sys::path::is_absolute(FilePath))
-    return FilePath.str().str();
 
-  // Otherwise, we try to compute ourselves.
-  FilePath = F->getName();
-  vlog("FileEntry for {0} did not contain the real path.", FilePath);
-
+  SmallString<128> FilePath = F->getName();
   if (!sys::path::is_absolute(FilePath)) {
     if (auto EC =
             SourceMgr.getFileManager().getVirtualFileSystem()->makeAbsolute(
