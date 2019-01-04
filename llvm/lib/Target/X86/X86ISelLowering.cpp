@@ -540,6 +540,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       // Use ANDPD and ORPD to simulate FCOPYSIGN.
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
 
+      // These might be better off as horizontal vector ops.
+      setOperationAction(ISD::FADD, VT, Custom);
+      setOperationAction(ISD::FSUB, VT, Custom);
+
       // We don't support sin/cos/fmod
       setOperationAction(ISD::FSIN   , VT, Expand);
       setOperationAction(ISD::FCOS   , VT, Expand);
@@ -18335,6 +18339,63 @@ static bool shouldUseHorizontalOp(bool IsSingleSource, SelectionDAG &DAG,
   return !IsSingleSource || IsOptimizingSize || HasFastHOps;
 }
 
+/// Depending on uarch and/or optimizing for size, we might prefer to use a
+/// vector operation in place of the typical scalar operation.
+static SDValue lowerFaddFsub(SDValue Op, SelectionDAG &DAG,
+                             const X86Subtarget &Subtarget) {
+  MVT VT = Op.getSimpleValueType();
+  assert((VT == MVT::f32 || VT == MVT::f64) && "Only expecting float/double");
+
+  // If both operands have other uses, this is probably not profitable.
+  // Horizontal FP add/sub were added with SSE3.
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  if ((!LHS.hasOneUse() && !RHS.hasOneUse()) || !Subtarget.hasSSE3())
+    return Op;
+
+  if (LHS.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      RHS.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      LHS.getOperand(0) != RHS.getOperand(0))
+    return Op;
+
+  if (!isa<ConstantSDNode>(LHS.getOperand(1)) ||
+      !isa<ConstantSDNode>(RHS.getOperand(1)) ||
+      !shouldUseHorizontalOp(true, DAG, Subtarget))
+    return Op;
+
+  // Allow commuted 'hadd' ops.
+  // TODO: Allow commuted fsub by negating the result of FHSUB?
+  // TODO: This can be extended to handle other adjacent extract pairs.
+  auto HOpcode = Op.getOpcode() == ISD::FADD ? X86ISD::FHADD : X86ISD::FHSUB;
+  unsigned LExtIndex = LHS.getConstantOperandVal(1);
+  unsigned RExtIndex = RHS.getConstantOperandVal(1);
+  if (LExtIndex == 1 && RExtIndex == 0 && HOpcode == X86ISD::FHADD)
+    std::swap(LExtIndex, RExtIndex);
+  if (LExtIndex != 0 || RExtIndex != 1)
+    return Op;
+
+  SDValue X = LHS.getOperand(0);
+  EVT VecVT = X.getValueType();
+  unsigned BitWidth = VecVT.getSizeInBits();
+  assert((BitWidth == 128 || BitWidth == 256 || BitWidth == 512) &&
+         "Not expecting illegal vector widths here");
+
+  // Creating a 256-bit horizontal op would be wasteful, and there is no 512-bit
+  // equivalent, so extract the 256/512-bit source op to 128-bit.
+  // This is free: ymm/zmm -> xmm.
+  SDLoc DL(Op);
+  if (BitWidth == 256 || BitWidth == 512)
+    X = extract128BitVector(X, 0, DAG, DL);
+
+  // fadd (extractelt (X, 0), extractelt (X, 1)) --> extractelt (hadd X, X), 0
+  // fadd (extractelt (X, 1), extractelt (X, 0)) --> extractelt (hadd X, X), 0
+  // fsub (extractelt (X, 0), extractelt (X, 1)) --> extractelt (hsub X, X), 0
+  // The extract of element 0 is free: the scalar result is element 0.
+  SDValue HOp = DAG.getNode(HOpcode, DL, X.getValueType(), X, X);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, HOp,
+                     DAG.getIntPtrConstant(0, DL));
+}
+
 /// The only differences between FABS and FNEG are the mask and the logic op.
 /// FNEG also has a folding opportunity for FNEG(FABS(x)).
 static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
@@ -26015,6 +26076,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_EXTEND:          return LowerFP_EXTEND(Op, DAG);
   case ISD::LOAD:               return LowerLoad(Op, Subtarget, DAG);
   case ISD::STORE:              return LowerStore(Op, Subtarget, DAG);
+  case ISD::FADD:
+  case ISD::FSUB:               return lowerFaddFsub(Op, DAG, Subtarget);
   case ISD::FABS:
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);
@@ -32403,15 +32466,38 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     break;
   }
   case X86ISD::VSHLI: {
-    if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
+    if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op1)) {
       if (ShiftImm->getAPIntValue().uge(BitWidth))
         break;
 
       unsigned ShAmt = ShiftImm->getZExtValue();
       APInt DemandedMask = OriginalDemandedBits.lshr(ShAmt);
 
-      if (SimplifyDemandedBits(Op.getOperand(0), DemandedMask,
-                               OriginalDemandedElts, Known, TLO, Depth + 1))
+      // If this is ((X >>u C1) << ShAmt), see if we can simplify this into a
+      // single shift.  We can do this if the bottom bits (which are shifted
+      // out) are never demanded.
+      if (Op0.getOpcode() == X86ISD::VSRLI &&
+          OriginalDemandedBits.countTrailingZeros() >= ShAmt) {
+        if (auto *Shift2Imm = dyn_cast<ConstantSDNode>(Op0.getOperand(1))) {
+          if (Shift2Imm->getAPIntValue().ult(BitWidth)) {
+            int Diff = ShAmt - Shift2Imm->getZExtValue();
+            if (Diff == 0)
+              return TLO.CombineTo(Op, Op0.getOperand(0));
+
+            unsigned NewOpc = Diff < 0 ? X86ISD::VSRLI : X86ISD::VSHLI;
+            SDValue NewShift = TLO.DAG.getNode(
+                NewOpc, SDLoc(Op), VT, Op0.getOperand(0),
+                TLO.DAG.getConstant(std::abs(Diff), SDLoc(Op), MVT::i8));
+            return TLO.CombineTo(Op, NewShift);
+          }
+        }
+      }
+
+      if (SimplifyDemandedBits(Op0, DemandedMask, OriginalDemandedElts, Known,
+                               TLO, Depth + 1))
         return true;
 
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");

@@ -264,6 +264,7 @@ private:
 
   Function *HwasanTagMemoryFunc;
   Function *HwasanGenerateTagFunc;
+  Function *HwasanThreadEnterFunc;
 
   Constant *ShadowGlobal;
 
@@ -391,6 +392,9 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
   HWAsanMemset = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
       MemIntrinCallbackPrefix + "memset", IRB.getInt8PtrTy(),
       IRB.getInt8PtrTy(), IRB.getInt32Ty(), IntptrTy));
+
+  HwasanThreadEnterFunc = checkSanitizerInterfaceFunction(
+      M.getOrInsertFunction("__hwasan_thread_enter", IRB.getVoidTy()));
 }
 
 Value *HWAddressSanitizer::getDynamicShadowNonTls(IRBuilder<> &IRB) {
@@ -806,14 +810,35 @@ Value *HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB,
   Value *SlotPtr = getHwasanThreadSlotPtr(IRB, IntptrTy);
   assert(SlotPtr);
 
-  Value *ThreadLong = IRB.CreateLoad(SlotPtr);
+  Instruction *ThreadLong = IRB.CreateLoad(SlotPtr);
+
+  Function *F = IRB.GetInsertBlock()->getParent();
+  if (F->getFnAttribute("hwasan-abi").getValueAsString() == "interceptor") {
+    Value *ThreadLongEqZero =
+        IRB.CreateICmpEQ(ThreadLong, ConstantInt::get(IntptrTy, 0));
+    auto *Br = cast<BranchInst>(SplitBlockAndInsertIfThen(
+        ThreadLongEqZero, cast<Instruction>(ThreadLongEqZero)->getNextNode(),
+        false, MDBuilder(*C).createBranchWeights(1, 100000)));
+
+    IRB.SetInsertPoint(Br);
+    // FIXME: This should call a new runtime function with a custom calling
+    // convention to avoid needing to spill all arguments here.
+    IRB.CreateCall(HwasanThreadEnterFunc);
+    LoadInst *ReloadThreadLong = IRB.CreateLoad(SlotPtr);
+
+    IRB.SetInsertPoint(&*Br->getSuccessor(0)->begin());
+    PHINode *ThreadLongPhi = IRB.CreatePHI(IntptrTy, 2);
+    ThreadLongPhi->addIncoming(ThreadLong, ThreadLong->getParent());
+    ThreadLongPhi->addIncoming(ReloadThreadLong, ReloadThreadLong->getParent());
+    ThreadLong = ThreadLongPhi;
+  }
+
   // Extract the address field from ThreadLong. Unnecessary on AArch64 with TBI.
   Value *ThreadLongMaybeUntagged =
       TargetTriple.isAArch64() ? ThreadLong : untagPointer(IRB, ThreadLong);
 
   if (WithFrameRecord) {
     // Prepare ring buffer data.
-    Function *F = IRB.GetInsertBlock()->getParent();
     auto PC = IRB.CreatePtrToInt(F, IntptrTy);
     auto GetStackPointerFn =
         Intrinsic::getDeclaration(F->getParent(), Intrinsic::frameaddress);

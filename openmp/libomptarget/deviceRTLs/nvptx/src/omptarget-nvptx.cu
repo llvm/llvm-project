@@ -29,7 +29,7 @@ extern __device__ omptarget_nvptx_Queue<
 // init entry points
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE unsigned smid() {
+INLINE static unsigned smid() {
   unsigned id;
   asm("mov.u32 %0, %%smid;" : "=r"(id));
   return id;

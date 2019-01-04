@@ -2240,6 +2240,14 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
   if (parseToken(AsmToken::RParen, "unexpected token in memory operand"))
     return nullptr;
 
+  // This is a terrible hack to handle "out[s]?[bwl]? %al, (%dx)" ->
+  // "outb %al, %dx".  Out doesn't take a memory form, but this is a widely
+  // documented form in various unofficial manuals, so a lot of code uses it.
+  if (BaseReg == X86::DX && IndexReg == 0 && Scale == 1 &&
+      SegReg == 0 && isa<MCConstantExpr>(Disp) &&
+      cast<MCConstantExpr>(Disp)->getValue() == 0)
+    return X86Operand::CreateDXReg(BaseLoc, BaseLoc);
+
   StringRef ErrMsg;
   if (CheckBaseRegAndIndexRegAndScale(BaseReg, IndexReg, Scale, is64BitMode(),
                                       ErrMsg)) {

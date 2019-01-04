@@ -990,7 +990,9 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
                               {"rng", "norng", "+rand", "-rand"},
                               {"memtag", "nomemtag", "+mte", "-mte"},
                               {"ssbs", "nossbs", "+ssbs", "-ssbs"},
-                              {"sb", "nosb", "+sb", "-sb"}};
+                              {"sb", "nosb", "+sb", "-sb"},
+                              {"predres", "nopredres", "+predres", "-predres"}
+};
 
   for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
     EXPECT_EQ(StringRef(ArchExt[i][2]),

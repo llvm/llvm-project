@@ -1,0 +1,11 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("DemangleTests") {
+  deps = [
+    "//llvm/lib/Demangle",
+  ]
+  sources = [
+    "ItaniumDemangleTest.cpp",
+    "PartialDemangleTest.cpp",
+  ]
+}
