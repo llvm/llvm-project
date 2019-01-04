@@ -96,8 +96,11 @@ enum OpenMPRTLFunctionNVPTX {
   OMPRTL_NVPTX__kmpc_get_team_static_memory,
   /// Call to void __kmpc_restore_team_static_memory(int16_t is_shared);
   OMPRTL_NVPTX__kmpc_restore_team_static_memory,
-  // Call to void __kmpc_barrier(ident_t *loc, kmp_int32 global_tid);
+  /// Call to void __kmpc_barrier(ident_t *loc, kmp_int32 global_tid);
   OMPRTL__kmpc_barrier,
+  /// Call to void __kmpc_barrier_simple_spmd(ident_t *loc, kmp_int32
+  /// global_tid);
+  OMPRTL__kmpc_barrier_simple_spmd,
 };
 
 /// Pre(post)-action for different OpenMP constructs specialized for NVPTX.
@@ -639,17 +642,6 @@ static llvm::Value *getNVPTXNumThreads(CodeGenFunction &CGF) {
           &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_read_ptx_sreg_ntid_x),
       "nvptx_num_threads");
 }
-
-/// Get barrier to synchronize all threads in a block.
-static void getNVPTXCTABarrier(CodeGenFunction &CGF) {
-  llvm::Function *F = llvm::Intrinsic::getDeclaration(
-      &CGF.CGM.getModule(), llvm::Intrinsic::nvvm_barrier0);
-  F->addFnAttr(llvm::Attribute::Convergent);
-  CGF.EmitRuntimeCall(F);
-}
-
-/// Synchronize all GPU threads in a block.
-static void syncCTAThreads(CodeGenFunction &CGF) { getNVPTXCTABarrier(CGF); }
 
 /// Get the value of the thread_limit clause in the teams directive.
 /// For the 'generic' execution mode, the runtime encodes thread_limit in
@@ -1813,6 +1805,17 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
     cast<llvm::Function>(RTLFn)->addFnAttr(llvm::Attribute::Convergent);
     break;
   }
+  case OMPRTL__kmpc_barrier_simple_spmd: {
+    // Build void __kmpc_barrier_simple_spmd(ident_t *loc, kmp_int32
+    // global_tid);
+    llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty};
+    auto *FnTy =
+        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
+    RTLFn =
+        CGM.CreateRuntimeFunction(FnTy, /*Name*/ "__kmpc_barrier_simple_spmd");
+    cast<llvm::Function>(RTLFn)->addFnAttr(llvm::Attribute::Convergent);
+    break;
+  }
   }
   return RTLFn;
 }
@@ -2663,6 +2666,20 @@ void CGOpenMPRuntimeNVPTX::emitSPMDParallelCall(
     RegionCodeGenTy RCG(SeqGen);
     RCG(CGF);
   }
+}
+
+void CGOpenMPRuntimeNVPTX::syncCTAThreads(CodeGenFunction &CGF) {
+  // Always emit simple barriers!
+  if (!CGF.HaveInsertPoint())
+    return;
+  // Build call __kmpc_barrier_simple_spmd(nullptr, 0);
+  // This function does not use parameters, so we can emit just default values.
+  llvm::Value *Args[] = {
+      llvm::ConstantPointerNull::get(
+          cast<llvm::PointerType>(getIdentTyPointerTy())),
+      llvm::ConstantInt::get(CGF.Int32Ty, /*V=*/0, /*isSigned=*/true)};
+  CGF.EmitRuntimeCall(
+      createNVPTXRuntimeFunction(OMPRTL__kmpc_barrier_simple_spmd), Args);
 }
 
 void CGOpenMPRuntimeNVPTX::emitBarrierCall(CodeGenFunction &CGF,

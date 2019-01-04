@@ -88,7 +88,7 @@ int bar(int n){
 // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
 //
 // CHECK: [[AWAIT_WORK]]
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]]
 // CHECK: [[KPRB:%.+]] = zext i1 [[KPR]] to i8
 // store i8 [[KPRB]], i8* [[OMP_EXEC_STATUS]], align 1
@@ -127,7 +127,7 @@ int bar(int n){
 // CHECK: br label {{%?}}[[BAR_PARALLEL]]
 //
 // CHECK: [[BAR_PARALLEL]]
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: br label {{%?}}[[AWAIT_WORK]]
 //
 // CHECK: [[EXIT]]
@@ -164,21 +164,21 @@ int bar(int n){
 // CHECK: [[MTMP1:%.+]] = sub nuw i32 [[MNTH]], [[MWS]]
 // CHECK: call void @__kmpc_kernel_init(i32 [[MTMP1]]
 // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN1]]_wrapper to i8*),
-// CHECK: call void @llvm.nvvm.barrier0()
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_serialized_parallel(
 // CHECK: {{call|invoke}} void [[PARALLEL_FN3:@.+]](
 // CHECK: call void @__kmpc_end_serialized_parallel(
 // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN2]]_wrapper to i8*),
-// CHECK: call void @llvm.nvvm.barrier0()
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK-64-DAG: load i32, i32* [[REF_A]]
 // CHECK-32-DAG: load i32, i32* [[LOCAL_A]]
 // CHECK: br label {{%?}}[[TERMINATE:.+]]
 //
 // CHECK: [[TERMINATE]]
 // CHECK: call void @__kmpc_kernel_deinit(
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: br label {{%?}}[[EXIT]]
 //
 // CHECK: [[EXIT]]
@@ -207,7 +207,7 @@ int bar(int n){
 // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
 //
 // CHECK: [[AWAIT_WORK]]
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]],
 // CHECK: [[KPRB:%.+]] = zext i1 [[KPR]] to i8
 // store i8 [[KPRB]], i8* [[OMP_EXEC_STATUS]], align 1
@@ -237,7 +237,7 @@ int bar(int n){
 // CHECK: br label {{%?}}[[BAR_PARALLEL]]
 //
 // CHECK: [[BAR_PARALLEL]]
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: br label {{%?}}[[AWAIT_WORK]]
 //
 // CHECK: [[EXIT]]
@@ -289,8 +289,8 @@ int bar(int n){
 //
 // CHECK: [[IF_THEN]]
 // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN4]]_wrapper to i8*),
-// CHECK: call void @llvm.nvvm.barrier0()
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: br label {{%?}}[[IF_END:.+]]
 //
 // CHECK: [[IF_ELSE]]
@@ -309,7 +309,7 @@ int bar(int n){
 //
 // CHECK: [[TERMINATE]]
 // CHECK: call void @__kmpc_kernel_deinit(
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: br label {{%?}}[[EXIT]]
 //
 // CHECK: [[EXIT]]
