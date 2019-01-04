@@ -27,6 +27,7 @@ class BasicBlock;
 class BlockFrequency;
 class BlockFrequencyInfo;
 class BranchProbabilityInfo;
+class CallInst;
 class DominatorTree;
 class Function;
 class Instruction;
@@ -164,10 +165,9 @@ class Value;
         DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
         BranchProbabilityInfo *BPI);
 
-    void emitCallAndSwitchStatement(Function *newFunction,
-                                    BasicBlock *newHeader,
-                                    ValueSet &inputs,
-                                    ValueSet &outputs);
+    CallInst *emitCallAndSwitchStatement(Function *newFunction,
+                                         BasicBlock *newHeader,
+                                         ValueSet &inputs, ValueSet &outputs);
   };
 
 } // end namespace llvm

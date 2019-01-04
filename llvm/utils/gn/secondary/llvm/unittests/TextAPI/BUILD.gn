@@ -1,0 +1,11 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("TextAPITests") {
+  deps = [
+    "//llvm/lib/Testing/Support",
+    "//llvm/lib/TextAPI",
+  ]
+  sources = [
+    "ELFYAMLTest.cpp",
+  ]
+}

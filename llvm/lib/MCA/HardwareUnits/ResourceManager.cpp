@@ -115,10 +115,11 @@ getStrategyFor(const ResourceState &RS) {
   return std::unique_ptr<ResourceStrategy>(nullptr);
 }
 
-ResourceManager::ResourceManager(const MCSchedModel &SM) {
+ResourceManager::ResourceManager(const MCSchedModel &SM)
+    : Resources(SM.getNumProcResourceKinds()),
+      Strategies(SM.getNumProcResourceKinds()),
+      Resource2Groups(SM.getNumProcResourceKinds(), 0) {
   computeProcResourceMasks(SM, ProcResID2Mask);
-  Resources.resize(SM.getNumProcResourceKinds());
-  Strategies.resize(SM.getNumProcResourceKinds());
 
   for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     uint64_t Mask = ProcResID2Mask[I];
@@ -126,6 +127,24 @@ ResourceManager::ResourceManager(const MCSchedModel &SM) {
     Resources[Index] =
         llvm::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask);
     Strategies[Index] = getStrategyFor(*Resources[Index]);
+  }
+
+  for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    uint64_t Mask = ProcResID2Mask[I];
+    unsigned Index = getResourceStateIndex(Mask);
+    const ResourceState &RS = *Resources[Index];
+    if (!RS.isAResourceGroup())
+      continue;
+
+    uint64_t GroupMaskIdx = 1ULL << (Index - 1);
+    Mask -= GroupMaskIdx;
+    while (Mask) {
+      // Extract lowest set isolated bit.
+      uint64_t Unit = Mask & (-Mask);
+      unsigned IndexUnit = getResourceStateIndex(Unit);
+      Resource2Groups[IndexUnit] |= GroupMaskIdx;
+      Mask ^= Unit;
+    }
   }
 }
 
@@ -179,17 +198,16 @@ void ResourceManager::use(const ResourceRef &RR) {
   if (RS.isReady())
     return;
 
-  // Notify to other resources that RR.first is no longer available.
-  for (std::unique_ptr<ResourceState> &Res : Resources) {
-    ResourceState &Current = *Res;
-    if (!Current.isAResourceGroup() || Current.getResourceMask() == RR.first)
-      continue;
-
-    if (Current.containsResource(RR.first)) {
-      unsigned Index = getResourceStateIndex(Current.getResourceMask());
-      Current.markSubResourceAsUsed(RR.first);
-      Strategies[Index]->used(RR.first);
-    }
+  // Notify groups that RR.first is no longer available.
+  uint64_t Users = Resource2Groups[RSID];
+  while (Users) {
+    // Extract lowest set isolated bit.
+    unsigned GroupIndex = getResourceStateIndex(Users & (-Users));
+    ResourceState &CurrentUser = *Resources[GroupIndex];
+    CurrentUser.markSubResourceAsUsed(RR.first);
+    Strategies[GroupIndex]->used(RR.first);
+    // Reset lowest set bit.
+    Users &= Users - 1;
   }
 }
 
@@ -247,24 +265,6 @@ bool ResourceManager::canBeIssued(const InstrDesc &Desc) const {
         unsigned Index = getResourceStateIndex(E.first);
         return Resources[Index]->isReady(NumUnits);
       });
-}
-
-// Returns true if all resources are in-order, and there is at least one
-// resource which is a dispatch hazard (BufferSize = 0).
-bool ResourceManager::mustIssueImmediately(const InstrDesc &Desc) const {
-  if (!canBeIssued(Desc))
-    return false;
-  bool AllInOrderResources = all_of(Desc.Buffers, [&](uint64_t BufferMask) {
-    unsigned Index = getResourceStateIndex(BufferMask);
-    const ResourceState &Resource = *Resources[Index];
-    return Resource.isInOrder() || Resource.isADispatchHazard();
-  });
-  if (!AllInOrderResources)
-    return false;
-
-  return any_of(Desc.Buffers, [&](uint64_t BufferMask) {
-    return Resources[getResourceStateIndex(BufferMask)]->isADispatchHazard();
-  });
 }
 
 void ResourceManager::issueInstruction(

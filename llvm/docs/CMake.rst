@@ -774,7 +774,7 @@ Contents of ``<project dir>/<pass name>/CMakeLists.txt``:
 
 Note if you intend for this pass to be merged into the LLVM source tree at some
 point in the future it might make more sense to use LLVM's internal
-``add_llvm_library`` function with he MODULE argument instead by...
+``add_llvm_library`` function with the MODULE argument instead by...
 
 
 Adding the following to ``<project dir>/CMakeLists.txt`` (after

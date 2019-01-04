@@ -12,6 +12,7 @@ add_llvm_unittest(AnalysisTests
   BlockFrequencyInfoTest.cpp
   BranchProbabilityInfoTest.cpp
   CallGraphTest.cpp
+  CaptureTrackingTest.cpp
   CFGTest.cpp
   CGSCCPassManagerTest.cpp
   DivergenceAnalysisTest.cpp

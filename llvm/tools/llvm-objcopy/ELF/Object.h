@@ -150,6 +150,8 @@ private:
   using Elf_Rel = typename ELFT::Rel;
   using Elf_Rela = typename ELFT::Rela;
   using Elf_Sym = typename ELFT::Sym;
+  using Elf_Word = typename ELFT::Word;
+  using Elf_Xword = typename ELFT::Xword;
 
 public:
   void visit(Section &Sec) override;

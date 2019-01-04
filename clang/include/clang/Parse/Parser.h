@@ -360,6 +360,11 @@ class Parser : public CodeCompletionHandler {
   /// just a regular sub-expression.
   SourceLocation ExprStatementTokLoc;
 
+  /// Tests whether an expression value is discarded based on token lookahead.
+  /// It will return true if the lexer is currently processing the })
+  /// terminating a GNU statement expression and false otherwise.
+  bool isExprValueDiscarded();
+
 public:
   Parser(Preprocessor &PP, Sema &Actions, bool SkipFunctionBodies);
   ~Parser() override;

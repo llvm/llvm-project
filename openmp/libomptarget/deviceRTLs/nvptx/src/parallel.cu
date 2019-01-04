@@ -57,7 +57,7 @@ EXTERN bool __kmpc_kernel_convergent_simd(void *buffer, uint32_t Mask,
   asm("mov.u32 %0, %%lanemask_lt;" : "=r"(lanemask_lt));
   *LaneId = __popc(ConvergentMask & lanemask_lt);
 
-  int threadId = GetLogicalThreadIdInBlock();
+  int threadId = GetLogicalThreadIdInBlock(isSPMDMode());
   int sourceThreadId = (threadId & ~(WARPSIZE - 1)) + *LaneSource;
 
   ConvergentSimdJob *job = (ConvergentSimdJob *)buffer;
@@ -101,7 +101,7 @@ EXTERN bool __kmpc_kernel_convergent_simd(void *buffer, uint32_t Mask,
 EXTERN void __kmpc_kernel_end_convergent_simd(void *buffer) {
   PRINT0(LD_IO | LD_PAR, "call to __kmpc_kernel_end_convergent_parallel\n");
   // pop stack
-  int threadId = GetLogicalThreadIdInBlock();
+  int threadId = GetLogicalThreadIdInBlock(isSPMDMode());
   ConvergentSimdJob *job = (ConvergentSimdJob *)buffer;
   omptarget_nvptx_threadPrivateContext->SimdLimitForNextSimd(threadId) =
       job->slimForNextSimd;
@@ -131,7 +131,7 @@ EXTERN bool __kmpc_kernel_convergent_parallel(void *buffer, uint32_t Mask,
   asm("mov.u32 %0, %%lanemask_lt;" : "=r"(lanemask_lt));
   uint32_t OmpId = __popc(ConvergentMask & lanemask_lt);
 
-  int threadId = GetLogicalThreadIdInBlock();
+  int threadId = GetLogicalThreadIdInBlock(isSPMDMode());
   int sourceThreadId = (threadId & ~(WARPSIZE - 1)) + *LaneSource;
 
   ConvergentParallelJob *job = (ConvergentParallelJob *)buffer;
@@ -181,7 +181,7 @@ EXTERN bool __kmpc_kernel_convergent_parallel(void *buffer, uint32_t Mask,
 EXTERN void __kmpc_kernel_end_convergent_parallel(void *buffer) {
   PRINT0(LD_IO | LD_PAR, "call to __kmpc_kernel_end_convergent_parallel\n");
   // pop stack
-  int threadId = GetLogicalThreadIdInBlock();
+  int threadId = GetLogicalThreadIdInBlock(isSPMDMode());
   ConvergentParallelJob *job = (ConvergentParallelJob *)buffer;
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(
       threadId, job->convHeadTaskDescr);
@@ -345,7 +345,7 @@ EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
   }
 
   // assume this is only called for nested parallel
-  int threadId = GetLogicalThreadIdInBlock();
+  int threadId = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
 
   // unlike actual parallel, threads in the same team do not share
   // the workTaskDescr in this case and num threads is fixed to 1
@@ -384,7 +384,7 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
   }
 
   // pop stack
-  int threadId = GetLogicalThreadIdInBlock();
+  int threadId = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
   omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(threadId);
   // set new top
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(
@@ -404,7 +404,7 @@ EXTERN uint16_t __kmpc_parallel_level(kmp_Ident *loc, uint32_t global_tid) {
     return omptarget_nvptx_simpleThreadPrivateContext->GetParallelLevel();
   }
 
-  int threadId = GetLogicalThreadIdInBlock();
+  int threadId = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
   omptarget_nvptx_TaskDescr *currTaskDescr =
       omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
   if (currTaskDescr->InL2OrHigherParallelRegion())
@@ -420,7 +420,7 @@ EXTERN uint16_t __kmpc_parallel_level(kmp_Ident *loc, uint32_t global_tid) {
 // it's cheap to recalculate this value so we never use the result
 // of this call.
 EXTERN int32_t __kmpc_global_thread_num(kmp_Ident *loc) {
-  int tid = GetLogicalThreadIdInBlock();
+  int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
   return GetOmpThreadId(tid, checkSPMDMode(loc),
                         checkRuntimeUninitialized(loc));
 }
@@ -433,7 +433,7 @@ EXTERN void __kmpc_push_num_threads(kmp_Ident *loc, int32_t tid,
                                     int32_t num_threads) {
   PRINT(LD_IO, "call kmpc_push_num_threads %d\n", num_threads);
   ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc), "Runtime must be initialized.");
-  tid = GetLogicalThreadIdInBlock();
+  tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
   omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(tid) =
       num_threads;
 }
@@ -442,7 +442,7 @@ EXTERN void __kmpc_push_simd_limit(kmp_Ident *loc, int32_t tid,
                                    int32_t simd_limit) {
   PRINT(LD_IO, "call kmpc_push_simd_limit %d\n", (int)simd_limit);
   ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc), "Runtime must be initialized.");
-  tid = GetLogicalThreadIdInBlock();
+  tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
   omptarget_nvptx_threadPrivateContext->SimdLimitForNextSimd(tid) = simd_limit;
 }
 

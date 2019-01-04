@@ -4,34 +4,74 @@ set(LLDB_PROJECT_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLDB_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/source")
 set(LLDB_INCLUDE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
+set(LLDB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(LLDB_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+  message(FATAL_ERROR
+    "In-source builds are not allowed. CMake would overwrite the makefiles "
+    "distributed with LLDB. Please create a directory and run cmake from "
+    "there, passing the path to this source directory as the last argument. "
+    "This process created the file `CMakeCache.txt' and the directory "
+    "`CMakeFiles'. Please delete them.")
+endif()
+
 set(LLDB_LINKER_SUPPORTS_GROUPS OFF)
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
   # The Darwin linker doesn't understand --start-group/--end-group.
   set(LLDB_LINKER_SUPPORTS_GROUPS ON)
 endif()
 
-set(LLDB_DEFAULT_DISABLE_PYTHON 0)
-set(LLDB_DEFAULT_DISABLE_CURSES 0)
+set(default_disable_python OFF)
+set(default_disable_curses OFF)
+set(default_disable_libedit OFF)
 
-if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
-  set(LLDB_DEFAULT_DISABLE_CURSES 1)
-elseif (CMAKE_SYSTEM_NAME MATCHES "Android" )
-  set(LLDB_DEFAULT_DISABLE_PYTHON 1)
-  set(LLDB_DEFAULT_DISABLE_CURSES 1)
-elseif(IOS)
-  set(LLDB_DEFAULT_DISABLE_PYTHON 1)
+if(DEFINED LLVM_ENABLE_LIBEDIT AND NOT LLVM_ENABLE_LIBEDIT)
+  set(default_disable_libedit ON)
 endif()
 
-set(LLDB_DISABLE_PYTHON ${LLDB_DEFAULT_DISABLE_PYTHON} CACHE BOOL
-  "Disables the Python scripting integration.")
-set(LLDB_DISABLE_CURSES ${LLDB_DEFAULT_DISABLE_CURSES} CACHE BOOL
-  "Disables the Curses integration.")
+if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+  set(default_disable_curses ON)
+  set(default_disable_libedit ON)
+elseif(CMAKE_SYSTEM_NAME MATCHES "Android")
+  set(default_disable_python ON)
+  set(default_disable_curses ON)
+  set(default_disable_libedit ON)
+elseif(IOS)
+  set(default_disable_python ON)
+endif()
 
-set(LLDB_RELOCATABLE_PYTHON 0 CACHE BOOL
-  "Causes LLDB to use the PYTHONHOME environment variable to locate Python.")
+option(LLDB_DISABLE_PYTHON "Disable Python scripting integration." ${default_disable_python})
+option(LLDB_DISABLE_CURSES "Disable Curses integration." ${default_disable_curses})
+option(LLDB_DISABLE_LIBEDIT "Disable the use of editline." ${default_disable_libedit})
+option(LLDB_RELOCATABLE_PYTHON "Use the PYTHONHOME environment variable to locate Python." OFF)
+option(LLDB_USE_SYSTEM_SIX "Use six.py shipped with system and do not install a copy of it" OFF)
+option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
+option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
+option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries" OFF)
 
-set(LLDB_USE_SYSTEM_SIX 0 CACHE BOOL
-  "Use six.py shipped with system and do not install a copy of it")
+if(LLDB_BUILD_FRAMEWORK)
+  if(NOT APPLE)
+    message(FATAL_ERROR "LLDB.framework can only be generated when targeting Apple platforms")
+  endif()
+  # CMake 3.6 did not correctly emit POST_BUILD commands for Apple Framework targets
+  if(CMAKE_VERSION VERSION_LESS 3.7)
+    message(FATAL_ERROR "LLDB_BUILD_FRAMEWORK is not supported on CMake < 3.7")
+  endif()
+
+  set(LLDB_FRAMEWORK_VERSION A CACHE STRING "LLDB.framework version (default is A)")
+  set(LLDB_FRAMEWORK_BUILD_DIR bin CACHE STRING "Output directory for LLDB.framework")
+  set(LLDB_FRAMEWORK_INSTALL_DIR Library/Frameworks CACHE STRING "Install directory for LLDB.framework")
+  set(LLDB_FRAMEWORK_TOOLS darwin-debug;debugserver;lldb-argdumper;lldb-server CACHE INTERNAL
+      "List of tools to include in LLDB.framework/Resources")
+
+  # Set designated directory for all dSYMs. Essentially, this emits the
+  # framework's dSYM outside of the framework directory.
+  if(LLVM_EXTERNALIZE_DEBUGINFO)
+    set(LLVM_EXTERNALIZE_DEBUGINFO_OUTPUT_DIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin CACHE STRING
+        "Directory to emit dSYM files stripped from executables and libraries (Darwin Only)")
+  endif()
+endif()
 
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
   set(LLDB_EXPORT_ALL_SYMBOLS 0 CACHE BOOL
@@ -255,17 +295,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     add_definitions( -D_UNICODE -DUNICODE )
 endif()
 
-set(LLDB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(LLDB_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
-
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
-  message(FATAL_ERROR "In-source builds are not allowed. CMake would overwrite "
-"the makefiles distributed with LLDB. Please create a directory and run cmake "
-"from there, passing the path to this source directory as the last argument. "
-"This process created the file `CMakeCache.txt' and the directory "
-"`CMakeFiles'. Please delete them.")
-endif()
-
 # If LLDB_VERSION_* is specified, use it, if not use LLVM_VERSION_*.
 if(NOT DEFINED LLDB_VERSION_MAJOR)
   set(LLDB_VERSION_MAJOR ${LLVM_VERSION_MAJOR})
@@ -330,11 +359,6 @@ if (APPLE)
   find_library(FOUNDATION_LIBRARY Foundation)
   find_library(CORE_FOUNDATION_LIBRARY CoreFoundation)
   find_library(SECURITY_LIBRARY Security)
-
-  set(LLDB_FRAMEWORK_INSTALL_DIR Library/Frameworks CACHE STRING "Output directory for LLDB.framework")
-  set(LLDB_FRAMEWORK_VERSION A CACHE STRING "LLDB.framework version (default is A)")
-  set(LLDB_FRAMEWORK_RESOURCE_DIR
-    LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/Resources)
 
   add_definitions( -DLIBXML2_DEFINED )
   list(APPEND system_libs xml2

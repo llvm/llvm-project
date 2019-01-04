@@ -177,6 +177,9 @@ public:
     /// IdentifierInfo
     ak_identifierinfo,
 
+    /// Qualifiers
+    ak_qual,
+
     /// QualType
     ak_qualtype,
 

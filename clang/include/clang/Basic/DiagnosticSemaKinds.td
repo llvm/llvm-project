@@ -1809,11 +1809,7 @@ def err_init_conversion_failed : Error<
   "|: different number of parameters (%5 vs %6)"
   "|: type mismatch at %ordinal5 parameter%diff{ ($ vs $)|}6,7"
   "|: different return type%diff{ ($ vs $)|}5,6"
-  "|: different qualifiers ("
-  "%select{none|const|restrict|const and restrict|volatile|const and volatile|"
-  "volatile and restrict|const, volatile, and restrict}5 vs "
-  "%select{none|const|restrict|const and restrict|volatile|const and volatile|"
-  "volatile and restrict|const, volatile, and restrict}6)"
+  "|: different qualifiers (%5 vs %6)"
   "|: different exception specifications}4">;
 
 def err_lvalue_to_rvalue_ref : Error<"rvalue reference %diff{to type $ cannot "
@@ -3593,11 +3589,7 @@ def note_ovl_candidate : Note<
     "| has type mismatch at %ordinal5 parameter"
     "%diff{ (expected $ but has $)|}6,7"
     "| has different return type%diff{ ($ expected but has $)|}5,6"
-    "| has different qualifiers (expected "
-    "%select{none|const|restrict|const and restrict|volatile|const and volatile"
-    "|volatile and restrict|const, volatile, and restrict}5 but found "
-    "%select{none|const|restrict|const and restrict|volatile|const and volatile"
-    "|volatile and restrict|const, volatile, and restrict}6)"
+    "| has different qualifiers (expected %5 but found %6)"
     "| has different exception specification}4">;
 
 def note_ovl_candidate_inherited_constructor : Note<
@@ -6470,11 +6462,7 @@ def note_hidden_overloaded_virtual_declared_here : Note<
   "|: different number of parameters (%2 vs %3)"
   "|: type mismatch at %ordinal2 parameter%diff{ ($ vs $)|}3,4"
   "|: different return type%diff{ ($ vs $)|}2,3"
-  "|: different qualifiers ("
-  "%select{none|const|restrict|const and restrict|volatile|const and volatile|"
-  "volatile and restrict|const, volatile, and restrict}2 vs "
-  "%select{none|const|restrict|const and restrict|volatile|const and volatile|"
-  "volatile and restrict|const, volatile, and restrict}3)"
+  "|: different qualifiers (%2 vs %3)"
   "|: different exception specifications}1">;
 def warn_using_directive_in_header : Warning<
   "using namespace directive in global context in header">,
@@ -6748,11 +6736,7 @@ def err_typecheck_convert_incompatible : Error<
   "|: different number of parameters (%5 vs %6)"
   "|: type mismatch at %ordinal5 parameter%diff{ ($ vs $)|}6,7"
   "|: different return type%diff{ ($ vs $)|}5,6"
-  "|: different qualifiers ("
-  "%select{none|const|restrict|const and restrict|volatile|const and volatile|"
-  "volatile and restrict|const, volatile, and restrict}5 vs "
-  "%select{none|const|restrict|const and restrict|volatile|const and volatile|"
-  "volatile and restrict|const, volatile, and restrict}6)"
+  "|: different qualifiers (%5 vs %6)"
   "|: different exception specifications}4">;
 def err_typecheck_missing_return_type_incompatible : Error<
   "%diff{return type $ must match previous return type $|"

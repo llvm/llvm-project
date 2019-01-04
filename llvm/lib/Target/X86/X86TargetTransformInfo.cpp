@@ -832,6 +832,12 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::FDIV, MVT::v4f32,      39 }, // Pentium IV from http://www.agner.org/
     { ISD::FDIV, MVT::f64,        38 }, // Pentium IV from http://www.agner.org/
     { ISD::FDIV, MVT::v2f64,      69 }, // Pentium IV from http://www.agner.org/
+
+    { ISD::FADD, MVT::f32,         2 }, // Pentium IV from http://www.agner.org/
+    { ISD::FADD, MVT::f64,         2 }, // Pentium IV from http://www.agner.org/
+
+    { ISD::FSUB, MVT::f32,         2 }, // Pentium IV from http://www.agner.org/
+    { ISD::FSUB, MVT::f64,         2 }, // Pentium IV from http://www.agner.org/
   };
 
   if (ST->hasSSE2())
@@ -841,6 +847,12 @@ int X86TTIImpl::getArithmeticInstrCost(
   static const CostTblEntry SSE1CostTable[] = {
     { ISD::FDIV, MVT::f32,   17 }, // Pentium III from http://www.agner.org/
     { ISD::FDIV, MVT::v4f32, 34 }, // Pentium III from http://www.agner.org/
+
+    { ISD::FADD, MVT::f32,    1 }, // Pentium III from http://www.agner.org/
+    { ISD::FADD, MVT::v4f32,  2 }, // Pentium III from http://www.agner.org/
+
+    { ISD::FSUB, MVT::f32,    1 }, // Pentium III from http://www.agner.org/
+    { ISD::FSUB, MVT::v4f32,  2 }, // Pentium III from http://www.agner.org/
   };
 
   if (ST->hasSSE1())

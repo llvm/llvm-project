@@ -492,18 +492,6 @@ For later versions of Visual Studio, no setup is required-->
       <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
     </Expand>
   </Type>
-  <Type Name="clang::OpaquePtr&lt;clang::QualType&gt;">
-    <DisplayString>{*(clang::QualType *)this}</DisplayString>
-    <Expand>
-      <Item Name="Ptr">*(clang::QualType *)this</Item>
-    </Expand>
-  </Type>
-  <Type Name="clang::UnionOpaquePtr&lt;clang::QualType&gt;">
-    <DisplayString>{*(clang::QualType *)this}</DisplayString>
-    <Expand>
-      <Item Name="Ptr">*(clang::QualType *)this</Item>
-    </Expand>
-  </Type>
   <Type Name="clang::OpaquePtr&lt;*&gt;">
     <DisplayString>{($T1 *)Ptr}</DisplayString>
     <Expand>
@@ -568,30 +556,18 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString Condition="ResultKind == clang::LookupResult::Ambiguous">{Ambiguity,en}: {Decls}</DisplayString>
     <DisplayString>{ResultKind,en}: {Decls}</DisplayString>
   </Type>
-  <Type Name="clang::ActionResult&lt;*&gt;" IncludeView="packedValidity">
-    <DisplayString Condition="PtrWithInvalid&amp;1">Invalid</DisplayString>
-    <DisplayString Condition="!(PtrWithInvalid&amp;1)">Valid</DisplayString>
-   </Type>
-  <Type Name="clang::ActionResult&lt;*&gt;" IncludeView="unpackedValidity">
+  <Type Name="clang::ActionResult&lt;*, 0&gt;">
     <DisplayString Condition="Invalid">Invalid</DisplayString>
-    <DisplayString Condition="!Invalid">Valid</DisplayString>
+    <DisplayString Condition="!*(void **)&amp;Val">Unset</DisplayString>
+    <DisplayString>{Val}</DisplayString>
   </Type>
-  <Type Name="clang::ActionResult&lt;*&gt;" IncludeView="packed">
-    <DisplayString>{*this,view(packedValidity)}: {($T1 *)(PtrWithInvalid&amp;~1)}</DisplayString>
+  <Type Name="clang::ActionResult&lt;*, 1&gt;">
+    <DisplayString Condition="PtrWithInvalid&amp;1">Invalid</DisplayString>
+    <DisplayString Condition="!PtrWithInvalid">Unset</DisplayString>
+    <DisplayString>{($T1)(PtrWithInvalid&amp;~1)}</DisplayString>
     <Expand>
       <Item Name="Invalid">(bool)(PtrWithInvalid&amp;1)</Item>
-      <Item Name="Val">($T1 *)(PtrWithInvalid&amp;~1)</Item>
-    </Expand>
-  </Type>
-  <Type Name="clang::ActionResult&lt;*&gt;" IncludeView="unpacked">
-    <DisplayString>{*this,view(unpackedValidity)}: {Val}</DisplayString>
-  </Type>
-  <Type Name="clang::ActionResult&lt;*&gt;">
-    <DisplayString Condition="$T2">{*this,view(packed)}</DisplayString>
-    <DisplayString Condition="!$T2">{*this,view(unpacked)}</DisplayString>
-    <Expand>
-      <ExpandedItem Condition="$T2">*this,view(packed)</ExpandedItem>
-      <ExpandedItem Condition="!$T2">*this,view(unpacked)</ExpandedItem>
+      <Item Name="Val">($T1)(PtrWithInvalid&amp;~1)</Item>
     </Expand>
   </Type>
 </AutoVisualizer>
