@@ -50,7 +50,9 @@ option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" O
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
 option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries" OFF)
 
+# BEGIN SWIFT CODE
 option(LLDB_ALLOW_STATIC_BINDINGS "Enable using static/baked language bindings if swig is not present." OFF)
+# END SWIFT CODE
 
 if(LLDB_BUILD_FRAMEWORK)
   if(NOT APPLE)
@@ -74,8 +76,11 @@ if(LLDB_BUILD_FRAMEWORK)
         "Directory to emit dSYM files stripped from executables and libraries (Darwin Only)")
   endif()
 
-  # We should override this from the cmake config at some point:
+  # BEGIN SWIFT CODE
+  # FIXME: We should override these from cmake config/cache!
   set(LLDB_FRAMEWORK_TOOLS "${LLDB_FRAMEWORK_TOOLS};repl_swift" CACHE INTERNAL "" FORCE)
+  set(LLDB_USE_SYSTEM_DEBUGSERVER ON CACHE BOOL "" FORCE)
+  # END SWIFT CODE
 endif()
 
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
