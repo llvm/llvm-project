@@ -90,7 +90,8 @@ if(LLDB_CODESIGN_IDENTITY_USED)
 endif()
 
 if(LLDB_BUILD_FRAMEWORK)
-  list(APPEND LLDB_TEST_COMMON_ARGS --framework ${LLDB_FRAMEWORK_DIR}/LLDB.framework)
+  get_target_property(framework_target_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
+  list(APPEND LLDB_TEST_COMMON_ARGS --framework ${framework_target_dir}/LLDB.framework)
 endif()
 
 if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows|Darwin")
@@ -129,6 +130,11 @@ add_custom_target(check-lldb)
 # to run tests.
 if (TARGET clang)
   add_dependencies(check-lldb clang)
+endif()
+
+# If we build the framework, tests will use the tools in there.
+if (TARGET lldb-framework)
+  add_dependencies(check-lldb lldb-framework)
 endif()
 
 # LLD is required to link test executables on Windows.

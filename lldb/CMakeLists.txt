@@ -36,46 +36,18 @@ if(APPLE)
   add_definitions(-DLLDB_USE_OS_LOG)
 endif()
 
-# lldb-suite is a dummy target that encompasses all the necessary tools and
-# libraries for building a fully-functioning liblldb.
-add_custom_target(lldb-suite)
-set(LLDB_SUITE_TARGET lldb-suite)
-
-if(LLDB_BUILD_FRAMEWORK)
-  add_custom_target(lldb-framework)
-
-  # These are used to fill out LLDB-Info.plist. These are relevant when building
-  # the framework, and must be defined before building liblldb.
-  set(PRODUCT_NAME "LLDB")
-  set(EXECUTABLE_NAME "LLDB")
-  set(CURRENT_PROJECT_VERSION "${LLDB_VERSION_MAJOR}.${LLDB_VERSION_MINOR}.${LLDB_VERSION_PATCH}")
-  set(LLDB_SUITE_TARGET lldb-framework)
-
-  set(LLDB_FRAMEWORK_DIR
-    ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_FRAMEWORK_INSTALL_DIR})
-  include(LLDBFramework)
-endif()
-
 add_subdirectory(docs)
 if (NOT LLDB_DISABLE_PYTHON)
-  if(LLDB_USE_SYSTEM_SIX)
-    set(SIX_EXTRA_ARGS "--useSystemSix")
-  endif()
-
   set(LLDB_PYTHON_TARGET_DIR ${LLDB_BINARY_DIR}/scripts)
   set(LLDB_WRAP_PYTHON ${LLDB_BINARY_DIR}/scripts/LLDBWrapPython.cpp)
   if(LLDB_BUILD_FRAMEWORK)
-    set(LLDB_PYTHON_TARGET_DIR ${LLDB_FRAMEWORK_DIR})
+    set(LLDB_PYTHON_TARGET_DIR ${LLDB_FRAMEWORK_BUILD_DIR})
     set(LLDB_WRAP_PYTHON ${LLDB_PYTHON_TARGET_DIR}/LLDBWrapPython.cpp)
-  else()
-    # Don't set -m when building the framework.
-    set(FINISH_EXTRA_ARGS "-m")
   endif()
 
 
   add_subdirectory(scripts)
 endif ()
-
 add_subdirectory(source)
 add_subdirectory(tools)
 
@@ -152,8 +124,14 @@ if(LLDB_INCLUDE_TESTS)
   add_subdirectory(utils/lldb-dotest)
 endif()
 
-
 if (NOT LLDB_DISABLE_PYTHON)
+    if(NOT LLDB_BUILD_FRAMEWORK)
+      set(use_python_wrapper_from_src_dir -m)
+    endif()
+    if(LLDB_USE_SYSTEM_SIX)
+      set(use_six_py_from_system --useSystemSix)
+    endif()
+
     # Add a Post-Build Event to copy over Python files and create the symlink
     # to liblldb.so for the Python API(hardlink on Windows)
     if (APPLE)
@@ -181,30 +159,25 @@ if (NOT LLDB_DISABLE_PYTHON)
                --prefix=${CMAKE_BINARY_DIR}
                --cmakeBuildConfiguration=${CMAKE_CFG_INTDIR}
                --lldbLibDir=lib${LLVM_LIBDIR_SUFFIX}
-               ${SIX_EXTRA_ARGS}
-               ${FINISH_EXTRA_ARGS}
+               ${use_python_wrapper_from_src_dir}
+               ${use_six_py_from_system}
         VERBATIM
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
         DEPENDS ${LLDB_PYTHON_TARGET_DIR}/lldb.py
         COMMENT "Python script sym-linking LLDB Python API")
     endif()
 
-    # We depend on liblldb and lldb-argdumper being built before we can do this step.
-    add_dependencies(finish_swig ${LLDB_SUITE_TARGET})
 
-    # If we build the readline module, we depend on that happening
-    # first.
     if (TARGET readline)
-        add_dependencies(finish_swig readline)
+      set(readline_dep readline)
     endif()
+    add_dependencies(finish_swig swig_wrapper liblldb lldb-argdumper ${readline_dep})
 
     # Ensure we do the python post-build step when building lldb.
     add_dependencies(lldb finish_swig)
 
-    if (LLDB_BUILD_FRAMEWORK)
-      # The target to install libLLDB needs to depend on finish_swig so that the
-      # framework build properly copies over the Python files.
-      add_dependencies(install-liblldb finish_swig)
+    if(LLDB_BUILD_FRAMEWORK)
+      add_dependencies(lldb-framework finish_swig)
     endif()
 
     # Add a Post-Build Event to copy the custom Python DLL to the lldb binaries dir so that Windows can find it when launching

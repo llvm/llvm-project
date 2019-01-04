@@ -98,24 +98,26 @@ add_lldb_library(liblldb SHARED
     Support
   )
 
-add_dependencies(lldb-suite liblldb)
+if(LLDB_WRAP_PYTHON)
+  add_dependencies(liblldb swig_wrapper)
 
-if (MSVC)
-  set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
-else()
-  set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING PROPERTY COMPILE_FLAGS " -w")
-endif()
+  if (MSVC)
+    set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
+  else()
+    set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING PROPERTY COMPILE_FLAGS " -w")
+  endif()
 
-set_source_files_properties(${LLDB_WRAP_PYTHON} PROPERTIES GENERATED 1)
-if (CLANG_CL)
-  set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING
-    PROPERTY COMPILE_FLAGS " -Wno-unused-function")
+  set_source_files_properties(${LLDB_WRAP_PYTHON} PROPERTIES GENERATED 1)
+  if (CLANG_CL)
+    set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING
+      PROPERTY COMPILE_FLAGS " -Wno-unused-function")
+  endif()
+  if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND
+      NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+    set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING
+      PROPERTY COMPILE_FLAGS " -Wno-sequence-point -Wno-cast-qual")
+  endif ()
 endif()
-if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND
-    NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-  set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING
-    PROPERTY COMPILE_FLAGS " -Wno-sequence-point -Wno-cast-qual")
-endif ()
 
 set_target_properties(liblldb
   PROPERTIES
@@ -150,20 +152,8 @@ else()
   )
 endif()
 
-if (LLDB_BUILD_FRAMEWORK)
-  set_target_properties(liblldb
-    PROPERTIES
-    SOVERSION "1.0.0"
-    OUTPUT_NAME LLDB
-    FRAMEWORK On
-    FRAMEWORK_VERSION ${LLDB_FRAMEWORK_VERSION}
-    MACOSX_FRAMEWORK_INFO_PLIST ${LLDB_SOURCE_DIR}/resources/LLDB-Info.plist
-    LIBRARY_OUTPUT_DIRECTORY ${LLDB_FRAMEWORK_DIR}
-  )
-endif()
-
-if (LLDB_WRAP_PYTHON)
-  add_dependencies(liblldb swig_wrapper)
+if(LLDB_BUILD_FRAMEWORK)
+  include(LLDBFramework)
 endif()
 
 set(lib_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX}")
