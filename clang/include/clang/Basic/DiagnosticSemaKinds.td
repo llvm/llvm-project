@@ -3560,6 +3560,11 @@ def warn_swift_newtype_attribute_non_typedef : Warning<
   "'swift_newtype' attribute may be put on a typedef only; "
   "attribute is ignored">, InGroup<DiagGroup<"swift-newtype-attribute">>;
 
+def warn_ignored_objc_externally_retained : Warning<
+  "'objc_externally_retained' can only be applied to local variables "
+  "%select{of retainable type|with strong ownership}0">,
+  InGroup<IgnoredAttributes>;
+
 // Function Parameter Semantic Analysis.
 def err_param_with_void_type : Error<"argument may not have 'void' type">;
 def err_void_only_param : Error<
@@ -5333,6 +5338,9 @@ def err_typecheck_arc_assign_self_class_method : Error<
 def err_typecheck_arr_assign_enumeration : Error<
   "fast enumeration variables cannot be modified in ARC by default; "
   "declare the variable __strong to allow this">;
+def err_typecheck_arc_assign_externally_retained : Error<
+  "variable declared with 'objc_externally_retained' "
+  "cannot be modified in ARC">;
 def warn_arc_retained_assign : Warning<
   "assigning retained object to %select{weak|unsafe_unretained}0 "
   "%select{property|variable}1"
