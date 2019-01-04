@@ -584,7 +584,8 @@ TEST(TargetParserTest, ARMArchExtFeature) {
                               {"iwmmxt", "noiwmmxt", nullptr, nullptr},
                               {"iwmmxt2", "noiwmmxt2", nullptr, nullptr},
                               {"maverick", "maverick", nullptr, nullptr},
-                              {"xscale", "noxscale", nullptr, nullptr}};
+                              {"xscale", "noxscale", nullptr, nullptr},
+                              {"sb", "nosb", "+sb", "-sb"}};
 
   for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
     EXPECT_EQ(StringRef(ArchExt[i][2]), ARM::getArchExtFeature(ArchExt[i][0]));

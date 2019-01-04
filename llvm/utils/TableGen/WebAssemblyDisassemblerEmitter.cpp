@@ -92,6 +92,7 @@ void emitWebAssemblyDisassemblerTables(
         // Collect operand types for storage in a shared list.
         CurOperandList.clear();
         for (auto &Op : CGI.Operands.OperandList) {
+          assert(Op.OperandType != "MCOI::OPERAND_UNKNOWN");
           CurOperandList.push_back(Op.OperandType);
         }
         // See if we already have stored this sequence before. This is not

@@ -17,7 +17,7 @@ Quickstart
 
    ```bash
    % mkdir venv
-   % virtualenv -p python2.7 venv
+   % virtualenv venv
    % . venv/bin/activate
    % pip install svn+http://llvm.org/svn/llvm-project/llvm/trunk/utils/lit
    % lit --version

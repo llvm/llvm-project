@@ -1165,8 +1165,8 @@ define i16 @test_v2i16(<2 x i16> %a0) {
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pminsw %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;
@@ -1211,8 +1211,8 @@ define i16 @test_v4i16(<4 x i16> %a0) {
 ; SSE2-NEXT:    psrld $16, %xmm0
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pminsw %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;
@@ -1268,8 +1268,8 @@ define i16 @test_v8i16(<8 x i16> %a0) {
 ; SSE2-NEXT:    psrld $16, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pminsw %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;
@@ -1319,8 +1319,8 @@ define i16 @test_v16i16(<16 x i16> %a0) {
 ; SSE2-NEXT:    psrld $16, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pminsw %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;
@@ -1391,8 +1391,8 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 ; SSE2-NEXT:    psrld $16, %xmm1
 ; SSE2-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-NEXT:    pminsw %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;
@@ -1479,8 +1479,8 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 ; SSE2-NEXT:    psrld $16, %xmm0
 ; SSE2-NEXT:    pxor %xmm8, %xmm0
 ; SSE2-NEXT:    pminsw %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm8, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;

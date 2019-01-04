@@ -1,4 +1,8 @@
+; RUN: opt < %s -msan-check-access-address=0 -S -passes=msan 2>&1 | FileCheck  \
+; RUN: %s
 ; RUN: opt < %s -msan -msan-check-access-address=0 -S | FileCheck %s
+; RUN: opt < %s -msan-check-access-address=1 -S -passes=msan 2>&1 | FileCheck  \
+; RUN: %s --check-prefix=ADDR
 ; RUN: opt < %s -msan -msan-check-access-address=1 -S | FileCheck %s --check-prefix=ADDR
 ; REQUIRES: x86-registered-target
 

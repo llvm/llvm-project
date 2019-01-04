@@ -79,6 +79,8 @@ enum OperandType {
   OPERAND_TYPEINDEX,
   /// Event index.
   OPERAND_EVENT,
+  /// A list of branch targets for br_list.
+  OPERAND_BRLIST,
 };
 } // end namespace WebAssembly
 

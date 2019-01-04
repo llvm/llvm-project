@@ -1,0 +1,13 @@
+# RUN: llvm-elfabi %s --emit-tbe=- | FileCheck %s
+
+--- !tapi-tbe
+TbeVersion: 1.0
+Arch: AArch64
+Symbols: {}
+...
+
+# As the tbe reader/writer is updated, update this check to ensure --emit-tbe
+# uses the latest tbe writer by default.
+
+# CHECK:      --- !tapi-tbe
+# CHECK-NEXT: TbeVersion: 1.0

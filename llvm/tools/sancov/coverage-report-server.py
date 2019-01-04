@@ -22,6 +22,8 @@ Other options:
     --host host_name - host name to bind server to (127.0.0.1)
 '''
 
+from __future__ import print_function
+
 import argparse
 import http.server
 import json

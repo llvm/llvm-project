@@ -47,7 +47,7 @@ static void printTypes(formatted_raw_ostream &OS,
       First = false;
     else
       OS << ", ";
-    OS << WebAssembly::TypeToString(Type);
+    OS << WebAssembly::typeToString(Type);
   }
   OS << '\n';
 }
@@ -76,7 +76,7 @@ void WebAssemblyTargetAsmStreamer::emitParamList(
   for (auto &Ty : Params) {
     if (&Ty != &Params[0])
       OS << ", ";
-    OS << WebAssembly::TypeToString(Ty);
+    OS << WebAssembly::typeToString(Ty);
   }
 }
 
@@ -86,7 +86,7 @@ void WebAssemblyTargetAsmStreamer::emitReturnList(
   for (auto &Ty : Returns) {
     if (&Ty != &Returns[0])
       OS << ", ";
-    OS << WebAssembly::TypeToString(Ty);
+    OS << WebAssembly::typeToString(Ty);
   }
 }
 
@@ -99,10 +99,10 @@ void WebAssemblyTargetAsmStreamer::emitFunctionType(const MCSymbolWasm *Sym) {
 
 void WebAssemblyTargetAsmStreamer::emitGlobalType(const MCSymbolWasm *Sym) {
   assert(Sym->isGlobal());
-  OS << "\t.globaltype\t" << Sym->getName() << ", " <<
-        WebAssembly::TypeToString(
-          static_cast<wasm::ValType>(Sym->getGlobalType().Type)) <<
-        '\n';
+  OS << "\t.globaltype\t" << Sym->getName() << ", "
+     << WebAssembly::typeToString(
+            static_cast<wasm::ValType>(Sym->getGlobalType().Type))
+     << '\n';
 }
 
 void WebAssemblyTargetAsmStreamer::emitEventType(const MCSymbolWasm *Sym) {

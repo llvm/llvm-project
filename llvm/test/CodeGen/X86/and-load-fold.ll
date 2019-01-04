@@ -8,9 +8,8 @@ define i8 @foo(<4 x i8>* %V) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pextrw $4, %xmm0, %eax
+; CHECK-NEXT:    pextrw $2, %xmm0, %eax
+; CHECK-NEXT:    andb $95, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %Vp = bitcast <4 x i8>* %V to <3 x i8>*

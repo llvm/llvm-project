@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 class TimingScriptGenerator:
     """Used to generate a bash script which will invoke the toy and time it"""
     def __init__(self, scriptname, outputname):
@@ -47,7 +49,7 @@ def splitScript(inputname, libGenScript, timingScript):
   infile = open(inputname, "r")
   libfile = open(libname, "w")
   callfile = open(callname, "w")
-  print "Splitting %s into %s and %s" % (inputname, callname, libname)
+  print("Splitting %s into %s and %s" % (inputname, callname, libname))
   for line in infile:
     if not line.startswith("#"):
       if line.startswith("print"):
@@ -67,4 +69,4 @@ script_list = ["test-5000-3-50-50.k", "test-5000-10-100-10.k", "test-5000-10-5-1
 
 for script in script_list:
   splitScript(script, libGenScript, timingScript)
-print "All done!"
+print("All done!")
