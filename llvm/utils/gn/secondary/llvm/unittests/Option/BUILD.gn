@@ -1,0 +1,18 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+import("//llvm/utils/unittest/unittest.gni")
+
+tablegen("Opts") {
+  visibility = [ ":OptionTests" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+unittest("OptionTests") {
+  deps = [
+    ":Opts",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "OptionParsingTest.cpp",
+  ]
+}

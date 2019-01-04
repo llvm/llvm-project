@@ -34,15 +34,15 @@ class CombinedAllocator {
                 "SecondaryAllocator is using wrong AddressSpaceView");
 
   void InitLinkerInitialized(s32 release_to_os_interval_ms) {
+    stats_.InitLinkerInitialized();
     primary_.Init(release_to_os_interval_ms);
     secondary_.InitLinkerInitialized();
-    stats_.InitLinkerInitialized();
   }
 
   void Init(s32 release_to_os_interval_ms) {
+    stats_.Init();
     primary_.Init(release_to_os_interval_ms);
     secondary_.Init();
-    stats_.Init();
   }
 
   void *Allocate(AllocatorCache *cache, uptr size, uptr alignment) {

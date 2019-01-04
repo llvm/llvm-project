@@ -1294,12 +1294,13 @@ define <4 x i32> @splatvar_funnnel_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %
 ; SSE2-NEXT:    movss {{.*#+}} xmm4 = xmm2[0],xmm4[1,2,3]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm5
 ; SSE2-NEXT:    pslld %xmm4, %xmm5
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [32,32,32,32]
-; SSE2-NEXT:    psubd %xmm2, %xmm4
-; SSE2-NEXT:    pcmpeqd %xmm3, %xmm2
-; SSE2-NEXT:    movss {{.*#+}} xmm3 = xmm4[0],xmm3[1,2,3]
-; SSE2-NEXT:    psrld %xmm3, %xmm1
+; SSE2-NEXT:    movd %xmm2, %eax
+; SSE2-NEXT:    movl $32, %ecx
+; SSE2-NEXT:    subl %eax, %ecx
+; SSE2-NEXT:    movd %ecx, %xmm4
+; SSE2-NEXT:    psrld %xmm4, %xmm1
 ; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm2
 ; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    pandn %xmm1, %xmm2
 ; SSE2-NEXT:    por %xmm2, %xmm0
@@ -1471,12 +1472,13 @@ define <4 x i32> @splatvar_funnnel_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %
 ; X32-SSE-NEXT:    movss {{.*#+}} xmm4 = xmm2[0],xmm4[1,2,3]
 ; X32-SSE-NEXT:    movdqa %xmm0, %xmm5
 ; X32-SSE-NEXT:    pslld %xmm4, %xmm5
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm4 = [32,32,32,32]
-; X32-SSE-NEXT:    psubd %xmm2, %xmm4
-; X32-SSE-NEXT:    pcmpeqd %xmm3, %xmm2
-; X32-SSE-NEXT:    movss {{.*#+}} xmm3 = xmm4[0],xmm3[1,2,3]
-; X32-SSE-NEXT:    psrld %xmm3, %xmm1
+; X32-SSE-NEXT:    movd %xmm2, %eax
+; X32-SSE-NEXT:    movl $32, %ecx
+; X32-SSE-NEXT:    subl %eax, %ecx
+; X32-SSE-NEXT:    movd %ecx, %xmm4
+; X32-SSE-NEXT:    psrld %xmm4, %xmm1
 ; X32-SSE-NEXT:    por %xmm5, %xmm1
+; X32-SSE-NEXT:    pcmpeqd %xmm3, %xmm2
 ; X32-SSE-NEXT:    pand %xmm2, %xmm0
 ; X32-SSE-NEXT:    pandn %xmm1, %xmm2
 ; X32-SSE-NEXT:    por %xmm2, %xmm0

@@ -1,5 +1,6 @@
 import("//clang/test/clang_lit_site_cfg_files.gni")
 import("//lld/test/lld_lit_site_cfg_files.gni")
+import("//llvm/test/llvm_lit_site_cfg_files.gni")
 
 action("llvm-lit") {
   script = "//llvm/utils/gn/build/write_cmake_config.py"
@@ -32,6 +33,8 @@ action("llvm-lit") {
     "//clang/test:lit_unit_site_cfg",
     "//lld/test:lit_site_cfg",
     "//lld/test:lit_unit_site_cfg",
+    "//llvm/test:lit_site_cfg",
+    "//llvm/test:lit_unit_site_cfg",
   ]
 
   # Note: \n is converted into a newline by write_cmake_config.py, not by gn.
@@ -43,6 +46,10 @@ action("llvm-lit") {
                 rebase_path(lld_lit_site_cfg_file) + "')\n"
   config_map += "map_config('" + rebase_path("//lld/test/Unit/lit.cfg.py") +
                 "', '" + rebase_path(lld_lit_unit_site_cfg_file) + "')\n"
+  config_map += "map_config('" + rebase_path("//llvm/test/lit.cfg.py") +
+                "', '" + rebase_path(llvm_lit_site_cfg_file) + "')\n"
+  config_map += "map_config('" + rebase_path("//llvm/test/Unit/lit.cfg.py") +
+                "', '" + rebase_path(llvm_lit_unit_site_cfg_file) + "')\n"
 
   args = [
     "-o",

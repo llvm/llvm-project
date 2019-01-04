@@ -59,12 +59,20 @@ static void initializeUsedResources(InstrDesc &ID,
   unsigned NumProcResources = SM.getNumProcResourceKinds();
   APInt Buffers(NumProcResources, 0);
 
+  bool AllInOrderResources = true;
+  bool AnyDispatchHazards = false;
   for (unsigned I = 0, E = SCDesc.NumWriteProcResEntries; I < E; ++I) {
     const MCWriteProcResEntry *PRE = STI.getWriteProcResBegin(&SCDesc) + I;
     const MCProcResourceDesc &PR = *SM.getProcResource(PRE->ProcResourceIdx);
     uint64_t Mask = ProcResourceMasks[PRE->ProcResourceIdx];
-    if (PR.BufferSize != -1)
+    if (PR.BufferSize < 0) {
+      AllInOrderResources = false;
+    } else {
       Buffers.setBit(PRE->ProcResourceIdx);
+      AnyDispatchHazards |= (PR.BufferSize == 0);
+      AllInOrderResources &= (PR.BufferSize <= 1);
+    }
+
     CycleSegment RCy(0, PRE->Cycles, false);
     Worklist.emplace_back(ResourcePlusCycles(Mask, ResourceUsage(RCy)));
     if (PR.SuperIdx) {
@@ -72,6 +80,8 @@ static void initializeUsedResources(InstrDesc &ID,
       SuperResources[Super] += PRE->Cycles;
     }
   }
+
+  ID.MustIssueImmediately = AllInOrderResources && AnyDispatchHazards;
 
   // Sort elements by mask popcount, so that we prioritize resource units over
   // resource groups, and smaller groups over larger groups.

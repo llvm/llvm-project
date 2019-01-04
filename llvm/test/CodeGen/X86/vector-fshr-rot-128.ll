@@ -828,20 +828,17 @@ define <2 x i64> @splatvar_funnnel_v2i64(<2 x i64> %x, <2 x i64> %amt) nounwind 
 define <4 x i32> @splatvar_funnnel_v4i32(<4 x i32> %x, <4 x i32> %amt) nounwind {
 ; SSE2-LABEL: splatvar_funnnel_v4i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; SSE2-NEXT:    xorps %xmm2, %xmm2
-; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    psubd %xmm1, %xmm3
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm3
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    movss {{.*#+}} xmm1 = xmm3[0],xmm1[1,2,3]
-; SSE2-NEXT:    movdqa %xmm0, %xmm4
-; SSE2-NEXT:    pslld %xmm1, %xmm4
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [32,32,32,32]
-; SSE2-NEXT:    psubd %xmm3, %xmm1
-; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
-; SSE2-NEXT:    psrld %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm4, %xmm0
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    andl $31, %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    pslld %xmm1, %xmm2
+; SSE2-NEXT:    movl $32, %ecx
+; SSE2-NEXT:    subl %eax, %ecx
+; SSE2-NEXT:    movd %ecx, %xmm1
+; SSE2-NEXT:    psrld %xmm1, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: splatvar_funnnel_v4i32:
@@ -939,20 +936,17 @@ define <4 x i32> @splatvar_funnnel_v4i32(<4 x i32> %x, <4 x i32> %amt) nounwind 
 ;
 ; X32-SSE-LABEL: splatvar_funnnel_v4i32:
 ; X32-SSE:       # %bb.0:
-; X32-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; X32-SSE-NEXT:    xorps %xmm2, %xmm2
-; X32-SSE-NEXT:    pxor %xmm3, %xmm3
-; X32-SSE-NEXT:    psubd %xmm1, %xmm3
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm3
-; X32-SSE-NEXT:    pxor %xmm1, %xmm1
-; X32-SSE-NEXT:    movss {{.*#+}} xmm1 = xmm3[0],xmm1[1,2,3]
-; X32-SSE-NEXT:    movdqa %xmm0, %xmm4
-; X32-SSE-NEXT:    pslld %xmm1, %xmm4
-; X32-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [32,32,32,32]
-; X32-SSE-NEXT:    psubd %xmm3, %xmm1
-; X32-SSE-NEXT:    movss {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
-; X32-SSE-NEXT:    psrld %xmm2, %xmm0
-; X32-SSE-NEXT:    por %xmm4, %xmm0
+; X32-SSE-NEXT:    movd %xmm1, %eax
+; X32-SSE-NEXT:    negl %eax
+; X32-SSE-NEXT:    andl $31, %eax
+; X32-SSE-NEXT:    movd %eax, %xmm1
+; X32-SSE-NEXT:    movdqa %xmm0, %xmm2
+; X32-SSE-NEXT:    pslld %xmm1, %xmm2
+; X32-SSE-NEXT:    movl $32, %ecx
+; X32-SSE-NEXT:    subl %eax, %ecx
+; X32-SSE-NEXT:    movd %ecx, %xmm1
+; X32-SSE-NEXT:    psrld %xmm1, %xmm0
+; X32-SSE-NEXT:    por %xmm2, %xmm0
 ; X32-SSE-NEXT:    retl
   %splat = shufflevector <4 x i32> %amt, <4 x i32> undef, <4 x i32> zeroinitializer
   %res = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> %splat)

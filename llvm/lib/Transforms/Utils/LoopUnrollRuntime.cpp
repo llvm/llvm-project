@@ -928,7 +928,7 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   SE->forgetTopmostLoop(L);
 
   // Verify that the Dom Tree is correct.
-#if !defined(NDEBUG)
+#if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
   if (DT)
     assert(DT->verify(DominatorTree::VerificationLevel::Full));
 #endif

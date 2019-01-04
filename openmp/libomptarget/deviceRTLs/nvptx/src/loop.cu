@@ -101,7 +101,7 @@ public:
     // When IsRuntimeUninitialized is true, we assume that the caller is
     // in an L0 parallel region and that all worker threads participate.
 
-    int tid = GetLogicalThreadIdInBlock();
+    int tid = GetLogicalThreadIdInBlock(IsSPMDExecutionMode);
 
     // Assume we are in teams region or that we use a single block
     // per target region
@@ -208,7 +208,7 @@ public:
                                    ST chunk) {
     ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc),
             "Expected non-SPMD mode + initialized runtime.");
-    int tid = GetLogicalThreadIdInBlock();
+    int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
     omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(tid);
     T tnum = currTaskDescr->ThreadsInTeam();
     T tripCount = ub - lb + 1; // +1 because ub is inclusive
@@ -417,17 +417,18 @@ public:
   // On Pascal, with inlining of the runtime into the user application,
   // this code deadlocks.  This is probably because different threads
   // in a warp cannot make independent progress.
-  NOINLINE static int dispatch_next(int32_t gtid, int32_t *plast, T *plower,
-                                    T *pupper, ST *pstride) {
-    ASSERT0(LT_FUSSY, isRuntimeInitialized(),
+  NOINLINE static int dispatch_next(kmp_Ident *loc, int32_t gtid,
+                                    int32_t *plast, T *plower, T *pupper,
+                                    ST *pstride) {
+    ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc),
             "Expected non-SPMD mode + initialized runtime.");
     // ID of a thread in its own warp
 
     // automatically selects thread or warp ID based on selected implementation
-    int tid = GetLogicalThreadIdInBlock();
+    int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
     ASSERT0(LT_FUSSY,
-            gtid < GetNumberOfOmpThreads(tid, isSPMDMode(),
-                                         isRuntimeUninitialized()),
+            gtid < GetNumberOfOmpThreads(tid, checkSPMDMode(loc),
+                                         checkRuntimeUninitialized(loc)),
             "current thread is not needed here; error");
     // retrieve schedule
     kmp_sched_t schedule =
@@ -540,7 +541,7 @@ EXTERN int __kmpc_dispatch_next_4(kmp_Ident *loc, int32_t tid, int32_t *p_last,
                                   int32_t *p_lb, int32_t *p_ub, int32_t *p_st) {
   PRINT0(LD_IO, "call kmpc_dispatch_next_4\n");
   return omptarget_nvptx_LoopSupport<int32_t, int32_t>::dispatch_next(
-      tid, p_last, p_lb, p_ub, p_st);
+      loc, tid, p_last, p_lb, p_ub, p_st);
 }
 
 EXTERN int __kmpc_dispatch_next_4u(kmp_Ident *loc, int32_t tid,
@@ -548,14 +549,14 @@ EXTERN int __kmpc_dispatch_next_4u(kmp_Ident *loc, int32_t tid,
                                    uint32_t *p_ub, int32_t *p_st) {
   PRINT0(LD_IO, "call kmpc_dispatch_next_4u\n");
   return omptarget_nvptx_LoopSupport<uint32_t, int32_t>::dispatch_next(
-      tid, p_last, p_lb, p_ub, p_st);
+      loc, tid, p_last, p_lb, p_ub, p_st);
 }
 
 EXTERN int __kmpc_dispatch_next_8(kmp_Ident *loc, int32_t tid, int32_t *p_last,
                                   int64_t *p_lb, int64_t *p_ub, int64_t *p_st) {
   PRINT0(LD_IO, "call kmpc_dispatch_next_8\n");
   return omptarget_nvptx_LoopSupport<int64_t, int64_t>::dispatch_next(
-      tid, p_last, p_lb, p_ub, p_st);
+      loc, tid, p_last, p_lb, p_ub, p_st);
 }
 
 EXTERN int __kmpc_dispatch_next_8u(kmp_Ident *loc, int32_t tid,
@@ -563,7 +564,7 @@ EXTERN int __kmpc_dispatch_next_8u(kmp_Ident *loc, int32_t tid,
                                    uint64_t *p_ub, int64_t *p_st) {
   PRINT0(LD_IO, "call kmpc_dispatch_next_8u\n");
   return omptarget_nvptx_LoopSupport<uint64_t, int64_t>::dispatch_next(
-      tid, p_last, p_lb, p_ub, p_st);
+      loc, tid, p_last, p_lb, p_ub, p_st);
 }
 
 // fini
@@ -756,7 +757,7 @@ EXTERN void __kmpc_reduce_conditional_lastprivate(kmp_Ident *loc, int32_t gtid,
           "Expected non-SPMD mode + initialized runtime.");
 
   omptarget_nvptx_TeamDescr &teamDescr = getMyTeamDescriptor();
-  int tid = GetLogicalThreadIdInBlock();
+  int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
   uint32_t NumThreads = GetNumberOfOmpThreads(tid, checkSPMDMode(loc),
                                               checkRuntimeUninitialized(loc));
   uint64_t *Buffer = teamDescr.getLastprivateIterBuffer();

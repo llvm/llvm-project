@@ -42,7 +42,7 @@ else()
   list(APPEND LLDB_PLUGINS lldbPluginObjectFileELF)
 endif()
 
-add_lldb_tool(lldb-server INCLUDE_IN_SUITE
+add_lldb_tool(lldb-server
     Acceptor.cpp
     lldb-gdbserver.cpp
     lldb-platform.cpp

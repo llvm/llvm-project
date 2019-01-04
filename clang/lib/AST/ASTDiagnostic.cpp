@@ -334,6 +334,20 @@ void clang::FormatASTNodeDiagnosticArgument(
 
   switch (Kind) {
     default: llvm_unreachable("unknown ArgumentKind");
+    case DiagnosticsEngine::ak_qual: {
+      assert(Modifier.empty() && Argument.empty() &&
+             "Invalid modifier for Qualfiers argument");
+
+      Qualifiers Q(Qualifiers::fromOpaqueValue(Val));
+      auto S = Q.getAsString();
+      if (S.empty()) {
+        OS << "unqualified";
+        NeedQuotes = false;
+      } else {
+        OS << Q.getAsString();
+      }
+      break;
+    }
     case DiagnosticsEngine::ak_qualtype_pair: {
       TemplateDiffTypes &TDT = *reinterpret_cast<TemplateDiffTypes*>(Val);
       QualType FromType =

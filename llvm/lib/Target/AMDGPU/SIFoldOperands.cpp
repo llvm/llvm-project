@@ -854,13 +854,17 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
     }
   } else {
     // Folding register.
+    SmallVector <MachineRegisterInfo::use_iterator, 4> UsesToProcess;
     for (MachineRegisterInfo::use_iterator
            Use = MRI->use_begin(Dst.getReg()), E = MRI->use_end();
          Use != E; ++Use) {
-      MachineInstr *UseMI = Use->getParent();
+      UsesToProcess.push_back(Use);
+    }
+    for (auto U : UsesToProcess) {
+      MachineInstr *UseMI = U->getParent();
 
-      foldOperand(OpToFold, UseMI, Use.getOperandNo(),
-                  FoldList, CopiesToReplace);
+      foldOperand(OpToFold, UseMI, U.getOperandNo(),
+        FoldList, CopiesToReplace);
     }
   }
 

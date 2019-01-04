@@ -33,6 +33,7 @@
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
+#include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/LangStandard.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
@@ -1663,7 +1664,20 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.ProgramAction = frontend::PluginAction;
     Opts.ActionName = A->getValue();
   }
-  Opts.AddPluginActions = Args.getAllArgValues(OPT_add_plugin);
+  for (const std::string &Arg : Args.getAllArgValues(OPT_add_plugin)) {
+    bool Found = false;
+    for (FrontendPluginRegistry::iterator it = FrontendPluginRegistry::begin(),
+                                          ie = FrontendPluginRegistry::end();
+         it != ie; ++it) {
+      if (it->getName() == Arg)
+        Found = true;
+    }
+    if (!Found) {
+      Diags.Report(diag::err_fe_invalid_plugin_name) << Arg;
+      continue;
+    }
+    Opts.AddPluginActions.push_back(Arg);
+  }
   for (const auto *AA : Args.filtered(OPT_plugin_arg))
     Opts.PluginArgs[AA->getValue(0)].emplace_back(AA->getValue(1));
 
