@@ -43,8 +43,8 @@ __device__ static bool IsWarpMasterActiveThread() {
   return (unsigned)Sh == 0;
 }
 // Return true if this is the master thread.
-__device__ static bool IsMasterThread() {
-  return !isSPMDMode() && getMasterThreadId() == getThreadId();
+__device__ static bool IsMasterThread(bool isSPMDExecutionMode) {
+  return !isSPMDExecutionMode && getMasterThreadId() == getThreadId();
 }
 
 /// Return the provided size aligned to the size of a pointer.
@@ -88,7 +88,8 @@ __kmpc_initialize_data_sharing_environment(__kmpc_data_sharing_slot *rootS,
 
   omptarget_nvptx_TeamDescr *teamDescr =
       &omptarget_nvptx_threadPrivateContext->TeamContext();
-  __kmpc_data_sharing_slot *RootS = teamDescr->RootS(WID, IsMasterThread());
+  __kmpc_data_sharing_slot *RootS =
+      teamDescr->RootS(WID, IsMasterThread(isSPMDMode()));
 
   DataSharingState.SlotPtr[WID] = RootS;
   DataSharingState.StackPtr[WID] = (void *)&RootS->Data[0];
@@ -253,8 +254,9 @@ EXTERN void __kmpc_data_sharing_environment_end(
 
       // The master thread cleans the saved slot, because this is an environment
       // only for the master.
-      __kmpc_data_sharing_slot *S =
-          IsMasterThread() ? *SavedSharedSlot : DataSharingState.SlotPtr[WID];
+      __kmpc_data_sharing_slot *S = IsMasterThread(isSPMDMode())
+                                        ? *SavedSharedSlot
+                                        : DataSharingState.SlotPtr[WID];
 
       if (S->Next) {
         free(S->Next);
@@ -472,8 +474,9 @@ EXTERN void* __kmpc_data_sharing_push_stack(size_t DataSize,
   // space for the variables of each thread in the warp,
   // i.e. one DataSize chunk per warp lane.
   // TODO: change WARPSIZE to the number of active threads in the warp.
-  size_t PushSize = (isRuntimeUninitialized() || IsMasterThread()) ?
-      DataSize : WARPSIZE * DataSize;
+  size_t PushSize = (isRuntimeUninitialized() || IsMasterThread(isSPMDMode()))
+                        ? DataSize
+                        : WARPSIZE * DataSize;
 
   // Compute the start address of the frame of each thread in the warp.
   uintptr_t FrameStartAddress =
@@ -553,14 +556,15 @@ EXTERN void __kmpc_get_shared_variables(void ***GlobalArgs) {
 // manage statically allocated global memory. This memory is allocated by the
 // compiler and used to correctly implement globalization of the variables in
 // target, teams and distribute regions.
-EXTERN void __kmpc_get_team_static_memory(const void *buf, size_t size,
+EXTERN void __kmpc_get_team_static_memory(int16_t isSPMDExecutionMode,
+                                          const void *buf, size_t size,
                                           int16_t is_shared,
                                           const void **frame) {
   if (is_shared) {
     *frame = buf;
     return;
   }
-  if (isSPMDMode()) {
+  if (isSPMDExecutionMode) {
     if (GetThreadIdInBlock() == 0) {
       *frame = omptarget_nvptx_simpleMemoryManager.Acquire(buf, size);
     }
@@ -574,10 +578,11 @@ EXTERN void __kmpc_get_team_static_memory(const void *buf, size_t size,
   __threadfence();
 }
 
-EXTERN void __kmpc_restore_team_static_memory(int16_t is_shared) {
+EXTERN void __kmpc_restore_team_static_memory(int16_t isSPMDExecutionMode,
+                                              int16_t is_shared) {
   if (is_shared)
     return;
-  if (isSPMDMode()) {
+  if (isSPMDExecutionMode) {
     // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
     __SYNCTHREADS();
     if (GetThreadIdInBlock() == 0) {

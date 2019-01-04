@@ -96,7 +96,7 @@ EXTERN int32_t __kmpc_omp_task_with_deps(kmp_Ident *loc, uint32_t global_tid,
           "bad assumptions");
 
   // 2. push new context: update new task descriptor
-  int tid = GetLogicalThreadIdInBlock();
+  int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
   omptarget_nvptx_TaskDescr *parentTaskDescr = getMyTopTaskDescriptor(tid);
   newTaskDescr->CopyForExplicitTask(parentTaskDescr);
   // set new task descriptor as top
@@ -135,7 +135,7 @@ EXTERN void __kmpc_omp_task_begin_if0(kmp_Ident *loc, uint32_t global_tid,
           "bad assumptions");
 
   // 2. push new context: update new task descriptor
-  int tid = GetLogicalThreadIdInBlock();
+  int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
   omptarget_nvptx_TaskDescr *parentTaskDescr = getMyTopTaskDescriptor(tid);
   newTaskDescr->CopyForExplicitTask(parentTaskDescr);
   // set new task descriptor as top
@@ -163,7 +163,7 @@ EXTERN void __kmpc_omp_task_complete_if0(kmp_Ident *loc, uint32_t global_tid,
   omptarget_nvptx_TaskDescr *parentTaskDescr = newTaskDescr->GetPrevTaskDescr();
   // 3... noting to call... is inline
   // 4. pop context
-  int tid = GetLogicalThreadIdInBlock();
+  int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(tid,
                                                              parentTaskDescr);
   // 5. free
