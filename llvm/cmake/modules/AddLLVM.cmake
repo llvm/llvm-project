@@ -1620,7 +1620,16 @@ function(llvm_codesign name)
     return()
   endif()
 
-  if(APPLE)
+  if(CMAKE_GENERATOR STREQUAL "Xcode")
+    set_target_properties(${name} PROPERTIES
+      XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ${LLVM_CODESIGNING_IDENTITY}
+    )
+    if(DEFINED ARG_ENTITLEMENTS)
+      set_target_properties(${name} PROPERTIES
+        XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS ${ARG_ENTITLEMENTS}
+      )
+    endif()
+  elseif(APPLE)
     if(NOT CMAKE_CODESIGN)
       set(CMAKE_CODESIGN xcrun codesign)
     endif()
@@ -1634,18 +1643,13 @@ function(llvm_codesign name)
     if(DEFINED ARG_ENTITLEMENTS)
       set(pass_entitlements --entitlements ${ARG_ENTITLEMENTS})
     endif()
-    if(CMAKE_GENERATOR STREQUAL "Xcode")
-      # Avoid double-signing error: Since output overwrites input, Xcode runs
-      # the post-build rule even if the actual build-step was skipped.
-      set(pass_force --force)
-    endif()
 
     add_custom_command(
       TARGET ${name} POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E
               env CODESIGN_ALLOCATE=${CMAKE_CODESIGN_ALLOCATE}
               ${CMAKE_CODESIGN} -s ${LLVM_CODESIGNING_IDENTITY}
-              ${pass_entitlements} ${pass_force} $<TARGET_FILE:${name}>
+              ${pass_entitlements} $<TARGET_FILE:${name}>
     )
   endif()
 endfunction()

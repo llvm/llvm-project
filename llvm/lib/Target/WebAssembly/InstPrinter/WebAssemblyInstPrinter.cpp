@@ -95,23 +95,32 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
 
     case WebAssembly::END_LOOP:
     case WebAssembly::END_LOOP_S:
-      assert(!ControlFlowStack.empty() && "End marker mismatch!");
-      ControlFlowStack.pop_back();
+      if (ControlFlowStack.empty()) {
+        printAnnotation(OS, "End marker mismatch!");
+      } else {
+        ControlFlowStack.pop_back();
+      }
       break;
 
     case WebAssembly::END_BLOCK:
     case WebAssembly::END_BLOCK_S:
-      assert(!ControlFlowStack.empty() && "End marker mismatch!");
-      printAnnotation(
-          OS, "label" + utostr(ControlFlowStack.pop_back_val().first) + ':');
+      if (ControlFlowStack.empty()) {
+        printAnnotation(OS, "End marker mismatch!");
+      } else {
+        printAnnotation(
+            OS, "label" + utostr(ControlFlowStack.pop_back_val().first) + ':');
+      }
       break;
 
     case WebAssembly::END_TRY:
     case WebAssembly::END_TRY_S:
-      assert(!ControlFlowStack.empty() && "End marker mismatch!");
-      printAnnotation(
-          OS, "label" + utostr(ControlFlowStack.pop_back_val().first) + ':');
-      LastSeenEHInst = END_TRY;
+      if (ControlFlowStack.empty()) {
+        printAnnotation(OS, "End marker mismatch!");
+      } else {
+        printAnnotation(
+            OS, "label" + utostr(ControlFlowStack.pop_back_val().first) + ':');
+        LastSeenEHInst = END_TRY;
+      }
       break;
 
     case WebAssembly::CATCH_I32:
@@ -123,8 +132,12 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
       // There can be multiple catch instructions for one try instruction, so we
       // print a label only for the first 'catch' label.
       if (LastSeenEHInst != CATCH) {
-        assert(!EHPadStack.empty() && "try-catch mismatch!");
-        printAnnotation(OS, "catch" + utostr(EHPadStack.pop_back_val()) + ':');
+        if (EHPadStack.empty()) {
+          printAnnotation(OS, "try-catch mismatch!");
+        } else {
+          printAnnotation(OS,
+                          "catch" + utostr(EHPadStack.pop_back_val()) + ':');
+        }
       }
       LastSeenEHInst = CATCH;
       break;
@@ -152,8 +165,9 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
         continue;
 
       if (Opc == WebAssembly::RETHROW || Opc == WebAssembly::RETHROW_S) {
-        assert(Depth <= EHPadStack.size() && "Invalid depth argument!");
-        if (Depth == EHPadStack.size()) {
+        if (Depth > EHPadStack.size()) {
+          printAnnotation(OS, "Invalid depth argument!");
+        } else if (Depth == EHPadStack.size()) {
           // This can happen when rethrow instruction breaks out of all nests
           // and throws up to the current function's caller.
           printAnnotation(OS, utostr(Depth) + ": " + "to caller");
@@ -164,11 +178,14 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
         }
 
       } else {
-        assert(Depth < ControlFlowStack.size() && "Invalid depth argument!");
-        const auto &Pair = ControlFlowStack.rbegin()[Depth];
-        printAnnotation(OS, utostr(Depth) + ": " +
-                                (Pair.second ? "up" : "down") + " to label" +
-                                utostr(Pair.first));
+        if (Depth >= ControlFlowStack.size()) {
+          printAnnotation(OS, "Invalid depth argument!");
+        } else {
+          const auto &Pair = ControlFlowStack.rbegin()[Depth];
+          printAnnotation(OS, utostr(Depth) + ": " +
+                                  (Pair.second ? "up" : "down") + " to label" +
+                                  utostr(Pair.first));
+        }
       }
     }
   }
@@ -256,47 +273,38 @@ void WebAssemblyInstPrinter::printWebAssemblyP2AlignOperand(const MCInst *MI,
 void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
                                                               unsigned OpNo,
                                                               raw_ostream &O) {
-  int64_t Imm = MI->getOperand(OpNo).getImm();
-  switch (WebAssembly::ExprType(Imm)) {
-  case WebAssembly::ExprType::Void:
-    break;
-  case WebAssembly::ExprType::I32:
-    O << "i32";
-    break;
-  case WebAssembly::ExprType::I64:
-    O << "i64";
-    break;
-  case WebAssembly::ExprType::F32:
-    O << "f32";
-    break;
-  case WebAssembly::ExprType::F64:
-    O << "f64";
-    break;
-  case WebAssembly::ExprType::V128:
-    O << "v128";
-    break;
-  case WebAssembly::ExprType::ExceptRef:
-    O << "except_ref";
-    break;
+  auto Imm = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
+  if (Imm != wasm::WASM_TYPE_NORESULT)
+    O << WebAssembly::anyTypeToString(Imm);
+}
+
+// We have various enums representing a subset of these types, use this
+// function to convert any of them to text.
+const char *llvm::WebAssembly::anyTypeToString(unsigned Ty) {
+  switch (Ty) {
+  case wasm::WASM_TYPE_I32:
+    return "i32";
+  case wasm::WASM_TYPE_I64:
+    return "i64";
+  case wasm::WASM_TYPE_F32:
+    return "f32";
+  case wasm::WASM_TYPE_F64:
+    return "f64";
+  case wasm::WASM_TYPE_V128:
+    return "v128";
+  case wasm::WASM_TYPE_ANYFUNC:
+    return "anyfunc";
+  case wasm::WASM_TYPE_FUNC:
+    return "func";
+  case wasm::WASM_TYPE_EXCEPT_REF:
+    return "except_ref";
+  case wasm::WASM_TYPE_NORESULT:
+    return "void";
   default:
-    llvm_unreachable("invalid WebAssembly::ExprType");
+    return "invalid_type";
   }
 }
 
-const char *llvm::WebAssembly::TypeToString(wasm::ValType Ty) {
-  switch (Ty) {
-  case wasm::ValType::I32:
-    return "i32";
-  case wasm::ValType::I64:
-    return "i64";
-  case wasm::ValType::F32:
-    return "f32";
-  case wasm::ValType::F64:
-    return "f64";
-  case wasm::ValType::V128:
-    return "v128";
-  case wasm::ValType::EXCEPT_REF:
-    return "except_ref";
-  }
-  llvm_unreachable("Unknown wasm::ValType");
+const char *llvm::WebAssembly::typeToString(wasm::ValType Ty) {
+  return anyTypeToString(static_cast<unsigned>(Ty));
 }

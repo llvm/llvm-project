@@ -4,6 +4,8 @@
 # demanglings.  Useful for stress testing the demangler against a large corpus
 # of inputs.
 
+from __future__ import print_function
+
 import argparse
 import functools
 import os

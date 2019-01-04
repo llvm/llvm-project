@@ -554,6 +554,9 @@ bool ItaniumABILanguageRuntime::ExceptionBreakpointsExplainStop(
 
 ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
     ThreadSP thread_sp) {
+  if (!thread_sp->SafeToCallFunctions())
+    return {};
+
   ClangASTContext *clang_ast_context =
       m_process->GetTarget().GetScratchClangASTContext();
   CompilerType voidstar =

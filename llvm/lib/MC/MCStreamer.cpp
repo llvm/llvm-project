@@ -865,13 +865,11 @@ void MCStreamer::EmitWinCFIEndProlog(SMLoc Loc) {
   CurFrame->PrologEnd = Label;
 }
 
-void MCStreamer::EmitCOFFSafeSEH(MCSymbol const *Symbol) {
-}
+void MCStreamer::EmitCOFFSafeSEH(MCSymbol const *Symbol) {}
 
 void MCStreamer::EmitCOFFSymbolIndex(MCSymbol const *Symbol) {}
 
-void MCStreamer::EmitCOFFSectionIndex(MCSymbol const *Symbol) {
-}
+void MCStreamer::EmitCOFFSectionIndex(MCSymbol const *Symbol) {}
 
 void MCStreamer::EmitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) {}
 
@@ -881,9 +879,12 @@ void MCStreamer::EmitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) {}
 /// the specified string in the output .s file.  This capability is
 /// indicated by the hasRawTextSupport() predicate.
 void MCStreamer::EmitRawTextImpl(StringRef String) {
-  errs() << "EmitRawText called on an MCStreamer that doesn't support it, "
-  " something must not be fully mc'ized\n";
-  abort();
+  // This is not llvm_unreachable for the sake of out of tree backend
+  // developers who may not have assembly streamers and should serve as a
+  // reminder to not accidentally call EmitRawText in the absence of such.
+  report_fatal_error("EmitRawText called on an MCStreamer that doesn't support "
+                     "it (target backend is likely missing an AsmStreamer "
+                     "implementation)");
 }
 
 void MCStreamer::EmitRawText(const Twine &T) {

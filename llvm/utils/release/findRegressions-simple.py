@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+
+from __future__ import print_function
 import re, string, sys, os, time, math
 
 DEBUG = 0
@@ -18,20 +20,20 @@ def parse(file):
   fname = ''
   for t in r:
     if DEBUG:
-      print t
+      print(t)
 
     if t[0] == 'PASS' or t[0] == 'FAIL' :
       tmp = t[2].split('llvm-test/')
       
       if DEBUG:
-        print tmp
+        print(tmp)
 
       if len(tmp) == 2:
         fname = tmp[1].strip('\r\n')
       else:
         fname = tmp[0].strip('\r\n')
 
-      if not test.has_key(fname):
+      if fname not in test:
         test[fname] = {}
 
       test[fname][t[1] + ' state'] = t[0]
@@ -41,7 +43,7 @@ def parse(file):
         n = t[0].split('RESULT-')[1]
 
         if DEBUG:
-          print "n == ", n;
+          print("n == ", n);
         
         if n == 'compile-success':
           test[fname]['compile time'] = float(t[2].split('program')[1].strip('\r\n'))
@@ -49,7 +51,7 @@ def parse(file):
         elif n == 'exec-success':
           test[fname]['exec time'] = float(t[2].split('program')[1].strip('\r\n'))
           if DEBUG:
-            print test[fname][string.replace(n, '-success', '')]
+            print(test[fname][string.replace(n, '-success', '')])
 
         else :
           # print "ERROR!"
@@ -71,16 +73,16 @@ def diffResults(d_old, d_new):
     passes[x] = ''
 
   for t in sorted(d_old.keys()) :
-    if d_new.has_key(t):
+    if t in d_new:
 
       # Check if the test passed or failed.
       for x in ['compile state', 'compile time', 'exec state', 'exec time']:
 
-        if not d_old[t].has_key(x) and not d_new[t].has_key(x):
+        if x not in d_old[t] and x not in d_new[t]:
           continue
 
-        if d_old[t].has_key(x):
-          if d_new[t].has_key(x):
+        if x in d_old[t]:
+          if x in d_new[t]:
 
             if d_old[t][x] == 'PASS':
               if d_new[t][x] != 'PASS':
@@ -96,11 +98,11 @@ def diffResults(d_old, d_new):
           continue
 
         # For execution time, if there is no result it's a fail.
-        if not d_old[t].has_key(x) and not d_new[t].has_key(x):
+        if x not in d_old[t] and x not in d_new[t]:
           continue
-        elif not d_new[t].has_key(x):
+        elif x not in d_new[t]:
           regressions[x] += t + "\n"
-        elif not d_old[t].has_key(x):
+        elif x not in d_old[t]:
           passes[x] += t + "\n"
 
         if math.isnan(d_old[t][x]) and math.isnan(d_new[t][x]):
@@ -120,36 +122,36 @@ def diffResults(d_old, d_new):
       removed += t + "\n"
 
   if len(regressions['compile state']) != 0:
-    print 'REGRESSION: Compilation Failed'
-    print regressions['compile state']
+    print('REGRESSION: Compilation Failed')
+    print(regressions['compile state'])
 
   if len(regressions['exec state']) != 0:
-    print 'REGRESSION: Execution Failed'
-    print regressions['exec state']
+    print('REGRESSION: Execution Failed')
+    print(regressions['exec state'])
 
   if len(regressions['compile time']) != 0:
-    print 'REGRESSION: Compilation Time'
-    print regressions['compile time']
+    print('REGRESSION: Compilation Time')
+    print(regressions['compile time'])
 
   if len(regressions['exec time']) != 0:
-    print 'REGRESSION: Execution Time'
-    print regressions['exec time']
+    print('REGRESSION: Execution Time')
+    print(regressions['exec time'])
 
   if len(passes['compile state']) != 0:
-    print 'NEW PASSES: Compilation'
-    print passes['compile state']
+    print('NEW PASSES: Compilation')
+    print(passes['compile state'])
 
   if len(passes['exec state']) != 0:
-    print 'NEW PASSES: Execution'
-    print passes['exec state']
+    print('NEW PASSES: Execution')
+    print(passes['exec state'])
 
   if len(removed) != 0:
-    print 'REMOVED TESTS'
-    print removed
+    print('REMOVED TESTS')
+    print(removed)
 
 # Main
 if len(sys.argv) < 3 :
-  print 'Usage:', sys.argv[0], '<old log> <new log>'
+  print('Usage:', sys.argv[0], '<old log> <new log>')
   sys.exit(-1)
 
 d_old = parse(sys.argv[1])
