@@ -237,3 +237,6 @@ typedef SizeClassMap<2, 5, 9, 16, 64, 14> VeryCompactSizeClassMap;
 // allowing for denser per-class arrays, smaller memory footprint and usually
 // better performances in threaded environments.
 typedef SizeClassMap<3, 4, 8, 17, 8, 10> DenseSizeClassMap;
+// Similar to VeryCompact map above, this one has a small number of different
+// size classes, and also reduced thread-local caches.
+typedef SizeClassMap<2, 5, 9, 16, 8, 10> VeryDenseSizeClassMap;

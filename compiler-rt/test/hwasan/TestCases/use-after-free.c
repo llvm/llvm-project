@@ -23,7 +23,7 @@ int main() {
   // CHECK: [[TYPE]] of size 1 at {{.*}} tags: [[PTR_TAG:[0-9a-f][0-9a-f]]]/[[MEM_TAG:[0-9a-f][0-9a-f]]] (ptr/mem)
   // CHECK: #0 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-2]]
   // Offset is 5 or 11 depending on left/right alignment.
-  // CHECK: is a small unallocated heap chunk; size: 16 offset: {{5|11}}
+  // CHECK: is a small unallocated heap chunk; size: 32 offset: {{5|11}}
   // CHECK: is located 5 bytes inside of 10-byte region
   //
   // CHECK: freed by thread {{.*}} here:
