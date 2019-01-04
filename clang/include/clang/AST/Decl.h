@@ -2327,14 +2327,6 @@ public:
         getASTContext());
   }
 
-  /// Returns the WarnUnusedResultAttr that is either declared on this
-  /// function, or its return type declaration.
-  const Attr *getUnusedResultAttr() const;
-
-  /// Returns true if this function or its return type has the
-  /// warn_unused_result attribute.
-  bool hasUnusedResultAttr() const { return getUnusedResultAttr() != nullptr; }
-
   /// Returns the storage class as written in the source. For the
   /// computed linkage of symbol, see getLinkage.
   StorageClass getStorageClass() const {

@@ -34,7 +34,7 @@ void test_ds(){
 
 /// ========= In the worker function ========= ///
 // CK1: {{.*}}define internal void @__omp_offloading{{.*}}test_ds{{.*}}_worker()
-// CK1: call void @llvm.nvvm.barrier0()
+// CK1: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CK1-NOT: call void @__kmpc_data_sharing_init_stack
 
 /// ========= In the kernel function ========= ///
@@ -59,8 +59,8 @@ void test_ds(){
 // CK1: [[SHARGSTMP2:%.+]] = getelementptr inbounds i8*, i8** [[SHARGSTMP1]], i64 0
 // CK1: [[SHAREDVAR:%.+]] = bitcast i32* [[A]] to i8*
 // CK1: store i8* [[SHAREDVAR]], i8** [[SHARGSTMP2]]
-// CK1: call void @llvm.nvvm.barrier0()
-// CK1: call void @llvm.nvvm.barrier0()
+// CK1: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
+// CK1: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CK1: call void @__kmpc_end_sharing_variables()
 // CK1: store i32 100, i32* [[B]]
 // CK1: call void @__kmpc_kernel_prepare_parallel({{.*}}, i16 1)
@@ -72,8 +72,8 @@ void test_ds(){
 // CK1: [[SHARGSTMP12:%.+]] = getelementptr inbounds i8*, i8** [[SHARGSTMP3]], i64 1
 // CK1: [[SHAREDVAR2:%.+]] = bitcast i32* [[A]] to i8*
 // CK1: store i8* [[SHAREDVAR2]], i8** [[SHARGSTMP12]]
-// CK1: call void @llvm.nvvm.barrier0()
-// CK1: call void @llvm.nvvm.barrier0()
+// CK1: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
+// CK1: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CK1: call void @__kmpc_end_sharing_variables()
 // CK1: [[SHARED_MEM_FLAG:%.+]] = load i16, i16* [[KERNEL_SHARED]],
 // CK1: call void @__kmpc_restore_team_static_memory(i16 [[SHARED_MEM_FLAG]])
