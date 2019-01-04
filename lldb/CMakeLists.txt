@@ -139,9 +139,7 @@ if(LLDB_INCLUDE_TESTS)
   endif()
 
   if(TARGET debugserver)
-    if(NOT CMAKE_HOST_APPLE OR LLDB_CODESIGN_IDENTITY)
-      list(APPEND LLDB_TEST_DEPS debugserver)
-    endif()
+    list(APPEND LLDB_TEST_DEPS debugserver)
   endif()
 
   if(TARGET lldb-mi)
