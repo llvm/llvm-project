@@ -22,3 +22,7 @@ add_dependencies(lldb
   LLDBOptionsTableGen
   ${tablegen_deps}
 )
+
+if(LLDB_BUILD_FRAMEWORK)
+  lldb_setup_framework_rpaths_in_tool(lldb)
+endif()

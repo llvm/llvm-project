@@ -44,9 +44,15 @@ function(add_lldb_library name)
   if (PARAM_OBJECT)
     add_library(${name} ${libkind} ${srcs})
   else()
-    llvm_add_library(${name} ${libkind} ${srcs} LINK_LIBS
-                                ${PARAM_LINK_LIBS}
-                                DEPENDS ${PARAM_DEPENDS})
+    if(LLDB_NO_INSTALL_DEFAULT_RPATH)
+      set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
+    endif()
+
+    llvm_add_library(${name} ${libkind} ${srcs}
+      LINK_LIBS ${PARAM_LINK_LIBS}
+      DEPENDS ${PARAM_DEPENDS}
+      ${pass_NO_INSTALL_RPATH}
+    )
 
     if (${name} STREQUAL "liblldb")
       if (PARAM_SHARED)
@@ -98,8 +104,15 @@ function(add_lldb_executable name)
     ${ARGN}
     )
 
+  if(LLDB_NO_INSTALL_DEFAULT_RPATH)
+    set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
+  endif()
+
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
-  add_llvm_executable(${name} ${ARG_UNPARSED_ARGUMENTS} ENTITLEMENTS ${ARG_ENTITLEMENTS})
+  add_llvm_executable(${name} ${ARG_UNPARSED_ARGUMENTS}
+    ENTITLEMENTS ${ARG_ENTITLEMENTS}
+    ${pass_NO_INSTALL_RPATH}
+  )
 
   target_link_libraries(${name} PRIVATE ${ARG_LINK_LIBS})
   set_target_properties(${name} PROPERTIES FOLDER "lldb executables")
@@ -134,4 +147,41 @@ function(lldb_append_link_flags target_name new_link_flags)
 
   # Now set them onto the target.
   set_target_properties(${target_name} PROPERTIES LINK_FLAGS ${new_link_flags})
+endfunction()
+
+# For tools that depend on liblldb, account for varying directory structures in
+# which LLDB.framework can be used and distributed: In the build-tree we find it
+# by its absolute target path. This is only relevant for running the test suite.
+# In the install step CMake will remove this entry and insert the final RPATHs.
+# These are relative to the file path from where the tool will be loaded on the
+# enduser system.
+#
+# Note that the LLVM install-tree doesn't match the enduser system structure
+# for LLDB.framework, so by default dependent tools will not be functional in
+# their install location. The LLDB_FRAMEWORK_INSTALL_DIR variable allows to fix
+# this. If specified, it causes the install-tree location of the framework to be
+# added as an extra RPATH below.
+#
+function(lldb_setup_framework_rpaths_in_tool name)
+  # In the build-tree, we know the exact path to the binary in the framework.
+  set(rpath_build_tree "$<TARGET_FILE:liblldb>")
+
+  # The installed framework is relocatable and can be in different locations.
+  set(rpaths_install_tree "@loader_path/../../../SharedFrameworks")
+  list(APPEND rpaths_install_tree "@loader_path/../../System/Library/PrivateFrameworks")
+  list(APPEND rpaths_install_tree "@loader_path/../../Library/PrivateFrameworks")
+
+  if(LLDB_FRAMEWORK_INSTALL_DIR)
+    set(rpaths_install_tree "@loader_path/../${LLDB_FRAMEWORK_INSTALL_DIR}")
+  endif()
+
+  # If LLDB_NO_INSTALL_DEFAULT_RPATH was NOT enabled (default), this overwrites
+  # the default settings from llvm_setup_rpath().
+  set_target_properties(${name} PROPERTIES
+    BUILD_WITH_INSTALL_RPATH OFF
+    BUILD_RPATH "${rpath_build_tree}"
+    INSTALL_RPATH "${rpaths_install_tree}"
+  )
+
+  add_dependencies(${name} lldb-framework)
 endfunction()
