@@ -983,6 +983,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
       llvm::raw_svector_ostream(OutStr) << '\'' << II->getName() << '\'';
       break;
     }
+    case DiagnosticsEngine::ak_qual:
     case DiagnosticsEngine::ak_qualtype:
     case DiagnosticsEngine::ak_declarationname:
     case DiagnosticsEngine::ak_nameddecl:

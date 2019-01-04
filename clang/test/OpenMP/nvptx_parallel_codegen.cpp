@@ -330,7 +330,7 @@ int bar(int n){
 // CHECK-64: [[CONV:%.+]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
 // CHECK: [[SIZE:%.+]] = load i{{64|32}}, i{{64|32}}* [[KERNEL_SIZE]],
-// CHECK: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} [[SIZE]], i16 [[IS_SHARED]], i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CHECK: call void @__kmpc_get_team_static_memory(i16 0, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} [[SIZE]], i16 [[IS_SHARED]], i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
 // CHECK: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
 // CHECK: [[STACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i{{64|32}} 0
 // CHECK: [[BC:%.+]] = bitcast i8* [[STACK]] to %struct._globalized_locals_ty*
@@ -339,7 +339,7 @@ int bar(int n){
 // CHECK: [[GLOBAL_A_ADDR:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[BC]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: store i32 [[A]], i32* [[GLOBAL_A_ADDR]],
 // CHECK: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
-// CHECK: call void @__kmpc_restore_team_static_memory(i16 [[IS_SHARED]])
+// CHECK: call void @__kmpc_restore_team_static_memory(i16 0, i16 [[IS_SHARED]])
 
 // CHECK-LABEL: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable{{.*}})
 // CHECK:  [[CC:%.+]] = alloca i32,

@@ -47,7 +47,7 @@ int bar(int n){
 // CHECK: call void @__kmpc_data_sharing_init_stack()
 // CHECK: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
 // CHECK: [[SIZE:%.+]] = load i{{64|32}}, i{{64|32}}* [[KERNEL_SIZE]],
-// CHECK: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i64 %7, i16 %6, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CHECK: call void @__kmpc_get_team_static_memory(i16 0, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i64 %7, i16 %6, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
 // CHECK: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
 // CHECK: [[STACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i{{64|32}} 0
 // CHECK: call void @__kmpc_kernel_prepare_parallel(
@@ -56,7 +56,7 @@ int bar(int n){
 // CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_end_sharing_variables()
 // CHECK: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
-// CHECK: call void @__kmpc_restore_team_static_memory(i16 [[IS_SHARED]])
+// CHECK: call void @__kmpc_restore_team_static_memory(i16 0, i16 [[IS_SHARED]])
 // CHECK: call void @__kmpc_kernel_deinit(i16 1)
 
 // CHECK: define internal void @__omp_outlined__(

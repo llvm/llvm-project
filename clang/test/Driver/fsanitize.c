@@ -837,3 +837,11 @@
 //
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=scudo,kernel-memory  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-KMSAN
 // CHECK-SCUDO-KMSAN: error: invalid argument '-fsanitize=kernel-memory' not allowed with '-fsanitize=scudo'
+
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=hwaddress %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-INTERCEPTOR-ABI
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=hwaddress -fsanitize-hwaddress-abi=interceptor %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-INTERCEPTOR-ABI
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=hwaddress -fsanitize-hwaddress-abi=platform %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-PLATFORM-ABI
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=hwaddress -fsanitize-hwaddress-abi=foo %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-FOO-ABI
+// CHECK-HWASAN-INTERCEPTOR-ABI: "-default-function-attr" "hwasan-abi=interceptor"
+// CHECK-HWASAN-PLATFORM-ABI: "-default-function-attr" "hwasan-abi=platform"
+// CHECK-HWASAN-FOO-ABI: error: invalid value 'foo' in '-fsanitize-hwaddress-abi=foo'

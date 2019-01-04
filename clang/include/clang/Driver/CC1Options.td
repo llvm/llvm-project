@@ -163,6 +163,8 @@ let Flags = [CC1Option, CC1AsOption, NoDriverOption] in {
 def debug_info_kind_EQ : Joined<["-"], "debug-info-kind=">;
 def debug_info_macro : Flag<["-"], "debug-info-macro">,
   HelpText<"Emit macro debug information">;
+def default_function_attr : Separate<["-"], "default-function-attr">,
+  HelpText<"Apply given attribute to all functions">;
 def dwarf_version_EQ : Joined<["-"], "dwarf-version=">;
 def debugger_tuning_EQ : Joined<["-"], "debugger-tuning=">;
 def fdebug_compilation_dir : Separate<["-"], "fdebug-compilation-dir">,

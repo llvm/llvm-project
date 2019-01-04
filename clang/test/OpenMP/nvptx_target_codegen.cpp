@@ -37,7 +37,7 @@ struct TT{
 // CHECK: store i32** [[PTR2_REF]], i32*** [[PTR2_REF_PTR:%.+]],
 // CHECK: [[PTR2_REF:%.+]] = load i32**, i32*** [[PTR2_REF_PTR]],
 // CHECK: call void @__kmpc_kernel_init(
-// CHECK: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MAP_TY]], [[MAP_TY]] addrspace(3)* @{{.+}}, i32 0, i32 0, i32 0) to i8*), i{{64|32}} %{{.+}}, i16 %{{.+}}, i8** addrspacecast (i8* addrspace(3)* [[BUF_PTR:@.+]] to i8**))
+// CHECK: call void @__kmpc_get_team_static_memory(i16 0, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MAP_TY]], [[MAP_TY]] addrspace(3)* @{{.+}}, i32 0, i32 0, i32 0) to i8*), i{{64|32}} %{{.+}}, i16 %{{.+}}, i8** addrspacecast (i8* addrspace(3)* [[BUF_PTR:@.+]] to i8**))
 // CHECK: [[BUF:%.+]] = load i8*, i8* addrspace(3)* [[BUF_PTR]],
 // CHECK: [[BUF_OFFS:%.+]] = getelementptr inbounds i8, i8* [[BUF]], i{{[0-9]+}} 0
 // CHECK: [[BUF:%.+]] = bitcast i8* [[BUF_OFFS]] to [[GLOB_TY]]*

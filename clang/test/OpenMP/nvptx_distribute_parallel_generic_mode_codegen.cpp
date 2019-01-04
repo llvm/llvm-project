@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
 // CHECK-LABEL: define internal void @__omp_offloading_{{.*}}_main_l17_worker(
 
 // CHECK: define weak void @__omp_offloading_{{.*}}_main_l17([10 x i32]* dereferenceable(40) %{{.+}}, [10 x i32]* dereferenceable(40) %{{.+}}, i32* dereferenceable(4) %{{.+}}, i{{64|32}} %{{.+}}, [10 x i32]* dereferenceable(40) %{{.+}})
-// CHECK: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} 84, i16 1, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CHECK: call void @__kmpc_get_team_static_memory(i16 0, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} 84, i16 1, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
 // CHECK: [[PTR:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
 // CHECK: [[STACK:%.+]] = bitcast i8* [[PTR]] to %struct._globalized_locals_ty*
 // CHECK: [[ARGC:%.+]] = load i32, i32* %{{.+}}, align
@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 
 // CHECK: call void @__kmpc_for_static_fini(%struct.ident_t* @
 
-// CHECK: call void @__kmpc_restore_team_static_memory(i16 1)
+// CHECK: call void @__kmpc_restore_team_static_memory(i16 0, i16 1)
 
 // CHECK: define internal void [[PARALLEL]](
 // CHECK-NOT: call i8* @__kmpc_data_sharing_push_stack(

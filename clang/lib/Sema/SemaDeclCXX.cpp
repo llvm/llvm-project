@@ -1205,7 +1205,7 @@ static bool checkTupleLikeDecomposition(Sema &S,
     E = Seq.Perform(S, Entity, Kind, Init);
     if (E.isInvalid())
       return true;
-    E = S.ActOnFinishFullExpr(E.get(), Loc);
+    E = S.ActOnFinishFullExpr(E.get(), Loc, /*DiscardedValue*/ false);
     if (E.isInvalid())
       return true;
     RefVD->setInit(E.get());
@@ -3682,7 +3682,7 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
   // C++11 [class.base.init]p7:
   //   The initialization of each base and member constitutes a
   //   full-expression.
-  Init = ActOnFinishFullExpr(Init.get(), InitLoc);
+  Init = ActOnFinishFullExpr(Init.get(), InitLoc, /*DiscardedValue*/ false);
   if (Init.isInvalid()) {
     FD->setInvalidDecl();
     return;
@@ -4040,7 +4040,8 @@ Sema::BuildMemberInitializer(ValueDecl *Member, Expr *Init,
     // C++11 [class.base.init]p7:
     //   The initialization of each base and member constitutes a
     //   full-expression.
-    MemberInit = ActOnFinishFullExpr(MemberInit.get(), InitRange.getBegin());
+    MemberInit = ActOnFinishFullExpr(MemberInit.get(), InitRange.getBegin(),
+                                     /*DiscardedValue*/ false);
     if (MemberInit.isInvalid())
       return true;
 
@@ -4095,8 +4096,8 @@ Sema::BuildDelegatingInitializer(TypeSourceInfo *TInfo, Expr *Init,
   // C++11 [class.base.init]p7:
   //   The initialization of each base and member constitutes a
   //   full-expression.
-  DelegationInit = ActOnFinishFullExpr(DelegationInit.get(),
-                                       InitRange.getBegin());
+  DelegationInit = ActOnFinishFullExpr(
+      DelegationInit.get(), InitRange.getBegin(), /*DiscardedValue*/ false);
   if (DelegationInit.isInvalid())
     return true;
 
@@ -4225,7 +4226,8 @@ Sema::BuildBaseInitializer(QualType BaseType, TypeSourceInfo *BaseTInfo,
   // C++11 [class.base.init]p7:
   //   The initialization of each base and member constitutes a
   //   full-expression.
-  BaseInit = ActOnFinishFullExpr(BaseInit.get(), InitRange.getBegin());
+  BaseInit = ActOnFinishFullExpr(BaseInit.get(), InitRange.getBegin(),
+                                 /*DiscardedValue*/ false);
   if (BaseInit.isInvalid())
     return true;
 

@@ -2824,11 +2824,9 @@ void Sema::HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
     return;
   }
 
-  // FIXME: OpenCL: Need to consider address spaces
-  unsigned FromQuals = FromFunction->getTypeQuals().getCVRUQualifiers();
-  unsigned ToQuals = ToFunction->getTypeQuals().getCVRUQualifiers();
-  if (FromQuals != ToQuals) {
-    PDiag << ft_qualifer_mismatch << ToQuals << FromQuals;
+  if (FromFunction->getTypeQuals() != ToFunction->getTypeQuals()) {
+    PDiag << ft_qualifer_mismatch << ToFunction->getTypeQuals()
+          << FromFunction->getTypeQuals();
     return;
   }
 
@@ -9024,6 +9022,11 @@ static bool isBetterMultiversionCandidate(const OverloadCandidate &Cand1,
   if (!Cand1.Function || !Cand1.Function->isMultiVersion() || !Cand2.Function ||
       !Cand2.Function->isMultiVersion())
     return false;
+
+  // If Cand1 is invalid, it cannot be a better match, if Cand2 is invalid, this
+  // is obviously better.
+  if (Cand1.Function->isInvalidDecl()) return false;
+  if (Cand2.Function->isInvalidDecl()) return true;
 
   // If this is a cpu_dispatch/cpu_specific multiversion situation, prefer
   // cpu_dispatch, else arbitrarily based on the identifiers.
