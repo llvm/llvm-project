@@ -31,7 +31,8 @@ INLINE void omptarget_nvptx_TaskDescr::SetRuntimeSched(omp_sched_t sched) {
   items.flags |= val;
 }
 
-INLINE void omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr() {
+INLINE void
+omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr(bool isSPMDExecutionMode) {
   // slow method
   // flag:
   //   default sched is static,
@@ -39,7 +40,7 @@ INLINE void omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr() {
   //   not in parallel
 
   items.flags = 0;
-  items.nthreads = GetNumberOfProcsInTeam();
+  items.nthreads = GetNumberOfProcsInTeam(isSPMDExecutionMode);
   ;                                // threads: whatever was alloc by kernel
   items.threadId = 0;         // is master
   items.threadsInTeam = 1;    // sequential
@@ -177,8 +178,8 @@ omptarget_nvptx_ThreadPrivateContext::InitThreadPrivateContext(int tid) {
 // Team Descriptor
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE void omptarget_nvptx_TeamDescr::InitTeamDescr() {
-  levelZeroTaskDescr.InitLevelZeroTaskDescr();
+INLINE void omptarget_nvptx_TeamDescr::InitTeamDescr(bool isSPMDExecutionMode) {
+  levelZeroTaskDescr.InitLevelZeroTaskDescr(isSPMDExecutionMode);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -199,8 +200,9 @@ INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor(int threadId) {
   return omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
 }
 
-INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor() {
-  return getMyTopTaskDescriptor(GetLogicalThreadIdInBlock());
+INLINE omptarget_nvptx_TaskDescr *
+getMyTopTaskDescriptor(bool isSPMDExecutionMode) {
+  return getMyTopTaskDescriptor(GetLogicalThreadIdInBlock(isSPMDExecutionMode));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
