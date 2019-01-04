@@ -10,30 +10,44 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darw
   set(LLDB_LINKER_SUPPORTS_GROUPS ON)
 endif()
 
-set(LLDB_DEFAULT_DISABLE_PYTHON 0)
-set(LLDB_DEFAULT_DISABLE_CURSES 0)
+set(default_disable_python OFF)
+set(default_disable_curses OFF)
+set(default_disable_libedit OFF)
 
-if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
-  set(LLDB_DEFAULT_DISABLE_CURSES 1)
-elseif (CMAKE_SYSTEM_NAME MATCHES "Android" )
-  set(LLDB_DEFAULT_DISABLE_PYTHON 1)
-  set(LLDB_DEFAULT_DISABLE_CURSES 1)
-elseif(IOS)
-  set(LLDB_DEFAULT_DISABLE_PYTHON 1)
+if(DEFINED LLVM_ENABLE_LIBEDIT AND NOT LLVM_ENABLE_LIBEDIT)
+  set(default_disable_libedit ON)
 endif()
 
-set(LLDB_DISABLE_PYTHON ${LLDB_DEFAULT_DISABLE_PYTHON} CACHE BOOL
-  "Disables the Python scripting integration.")
-set(LLDB_ALLOW_STATIC_BINDINGS FALSE CACHE BOOL
-  "Enable using static/baked language bindings if swig is not present.")
-set(LLDB_DISABLE_CURSES ${LLDB_DEFAULT_DISABLE_CURSES} CACHE BOOL
-  "Disables the Curses integration.")
+if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+  set(default_disable_curses ON)
+  set(default_disable_libedit ON)
+elseif(CMAKE_SYSTEM_NAME MATCHES "Android")
+  set(default_disable_python ON)
+  set(default_disable_curses ON)
+  set(default_disable_libedit ON)
+elseif(IOS)
+  set(default_disable_python ON)
+endif()
 
-set(LLDB_RELOCATABLE_PYTHON 0 CACHE BOOL
-  "Causes LLDB to use the PYTHONHOME environment variable to locate Python.")
+option(LLDB_DISABLE_PYTHON "Disable Python scripting integration." ${default_disable_python})
+option(LLDB_DISABLE_CURSES "Disable Curses integration." ${default_disable_curses})
+option(LLDB_DISABLE_LIBEDIT "Disable the use of editline." ${default_disable_libedit})
+option(LLDB_RELOCATABLE_PYTHON "Use the PYTHONHOME environment variable to locate Python." OFF)
+option(LLDB_USE_SYSTEM_SIX "Use six.py shipped with system and do not install a copy of it" OFF)
+option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
+option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
 
-set(LLDB_USE_SYSTEM_SIX 0 CACHE BOOL
-  "Use six.py shipped with system and do not install a copy of it")
+option(LLDB_ALLOW_STATIC_BINDINGS "Enable using static/baked language bindings if swig is not present." OFF)
+
+if(LLDB_BUILD_FRAMEWORK)
+  if(NOT APPLE)
+    message(FATAL_ERROR "LLDB.framework can only be generated when targeting Apple platforms")
+  endif()
+  # CMake 3.6 did not correctly emit POST_BUILD commands for Apple Framework targets
+  if(CMAKE_VERSION VERSION_LESS 3.7)
+    message(FATAL_ERROR "LLDB_BUILD_FRAMEWORK is not supported on CMake < 3.7")
+  endif()
+endif()
 
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
   set(LLDB_EXPORT_ALL_SYMBOLS 0 CACHE BOOL
@@ -51,8 +65,6 @@ endif()
 if (LLDB_DISABLE_CURSES)
   add_definitions( -DLLDB_DISABLE_CURSES )
 endif()
-
-option(LLDB_USE_ENTITLEMENTS "When code signing, use entitlements if available" ON)
 
 # On Windows, we can't use the normal FindPythonLibs module that comes with CMake,
 # for a number of reasons.

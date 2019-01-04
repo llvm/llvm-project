@@ -26,15 +26,6 @@ else()
   add_definitions( -DLLDB_CONFIGURATION_RELEASE )
 endif()
 
-if (CMAKE_SYSTEM_NAME MATCHES "Windows|Android")
-  set(LLDB_DEFAULT_DISABLE_LIBEDIT 1)
-else()
-  set(LLDB_DEFAULT_DISABLE_LIBEDIT 0)
-endif ()
-
-# We need libedit support to go down both the source and
-# the scripts directories.
-set(LLDB_DISABLE_LIBEDIT ${LLDB_DEFAULT_DISABLE_LIBEDIT} CACHE BOOL "Disables the use of editline.")
 if (LLDB_DISABLE_LIBEDIT)
   add_definitions( -DLLDB_DISABLE_LIBEDIT )
 else()
@@ -50,16 +41,9 @@ endif()
 add_custom_target(lldb-suite)
 set(LLDB_SUITE_TARGET lldb-suite)
 
-option(LLDB_BUILD_FRAMEWORK "Build the Darwin LLDB.framework" Off)
 if(LLDB_BUILD_FRAMEWORK)
-  if (CMAKE_VERSION VERSION_LESS 3.7)
-    message(FATAL_ERROR "LLDB_BUILD_FRAMEWORK is not supported on CMake < 3.7")
-  endif()
-  if (NOT APPLE)
-    message(FATAL_ERROR "LLDB.framework can only be generated when targeting Apple platforms")
-  endif()
-
   add_custom_target(lldb-framework)
+
   # These are used to fill out LLDB-Info.plist. These are relevant when building
   # the framework, and must be defined before building liblldb.
   set(PRODUCT_NAME "LLDB")
