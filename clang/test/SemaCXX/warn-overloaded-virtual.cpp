@@ -130,7 +130,7 @@ namespace {
     virtual int foo(int*) const;
     // expected-note@-1{{type mismatch at 1st parameter ('int *' vs 'int')}}
     virtual int foo(int) volatile;
-    // expected-note@-1{{different qualifiers (volatile vs const)}}
+    // expected-note@-1{{different qualifiers ('volatile' vs 'const')}}
   };
 
   class B : public A {

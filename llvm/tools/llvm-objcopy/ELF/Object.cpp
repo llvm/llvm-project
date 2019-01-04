@@ -87,7 +87,7 @@ void ELFSectionSizer<ELFT>::visit(SymbolTableSection &Sec) {
   Sec.EntrySize = sizeof(Elf_Sym);
   Sec.Size = Sec.Symbols.size() * Sec.EntrySize;
   // Align to the largest field in Elf_Sym.
-  Sec.Align = sizeof(Elf_Sym::st_size);
+  Sec.Align = ELFT::Is64Bits ? sizeof(Elf_Xword) : sizeof(Elf_Word);
 }
 
 template <class ELFT>
@@ -95,8 +95,7 @@ void ELFSectionSizer<ELFT>::visit(RelocationSection &Sec) {
   Sec.EntrySize = Sec.Type == SHT_REL ? sizeof(Elf_Rel) : sizeof(Elf_Rela);
   Sec.Size = Sec.Relocations.size() * Sec.EntrySize;
   // Align to the largest field in Elf_Rel(a).
-  Sec.Align =
-      Sec.Type == SHT_REL ? sizeof(Elf_Rel::r_info) : sizeof(Elf_Rela::r_info);
+  Sec.Align = ELFT::Is64Bits ? sizeof(Elf_Xword) : sizeof(Elf_Word);
 }
 
 template <class ELFT>

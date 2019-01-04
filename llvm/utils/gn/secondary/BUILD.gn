@@ -5,60 +5,8 @@ group("default") {
   deps = [
     "//clang/test",
     "//lld/test",
-    "//llvm/tools/bugpoint",
-    "//llvm/tools/dsymutil",
-    "//llvm/tools/lli",
-    "//llvm/tools/lli/ChildTarget:lli-child-target",
-    "//llvm/tools/llvm-c-test",
-    "//llvm/tools/llvm-cfi-verify",
-    "//llvm/tools/llvm-cov",
-    "//llvm/tools/llvm-cvtres",
-    "//llvm/tools/llvm-cxxdump",
-    "//llvm/tools/llvm-cxxfilt",
-    "//llvm/tools/llvm-cxxmap",
-    "//llvm/tools/llvm-diff",
-    "//llvm/tools/llvm-dwp",
-    "//llvm/tools/llvm-exegesis",
-    "//llvm/tools/llvm-extract",
-    "//llvm/tools/llvm-isel-fuzzer",
-    "//llvm/tools/llvm-link",
-    "//llvm/tools/llvm-mca",
-    "//llvm/tools/llvm-mt",
-    "//llvm/tools/llvm-opt-fuzzer",
-    "//llvm/tools/llvm-opt-report",
-    "//llvm/tools/llvm-rc",
-    "//llvm/tools/llvm-rtdyld",
-    "//llvm/tools/llvm-size",
-    "//llvm/tools/llvm-split",
-    "//llvm/tools/llvm-strings",
-    "//llvm/tools/llvm-undname",
-    "//llvm/tools/llvm-xray",
-    "//llvm/tools/sancov",
-    "//llvm/tools/sanstats",
-    "//llvm/tools/verify-uselistorder",
-    "//llvm/utils/yaml-bench",
+    "//llvm/test",
   ]
-  if (clang_enable_arcmt) {
-    deps += [
-      "//clang/tools/arcmt-test",
-      "//clang/tools/c-arcmt-test",
-    ]
-  }
-  if (clang_enable_static_analyzer) {
-    deps += [
-      "//clang/tools/clang-check",
-      "//clang/tools/clang-func-mapping",
-    ]
-  }
-  if (host_os != "win") {
-    # loadable_modules don't work on Windows.
-    # FIXME: In the CMake build, ENABLE_SHARED makes them work somehow
-    # (but they're off by default there too).
-    deps += [
-      "//llvm/lib/Transforms/Hello",
-      "//llvm/tools/bugpoint-passes",
-    ]
-  }
   testonly = true
 }
 

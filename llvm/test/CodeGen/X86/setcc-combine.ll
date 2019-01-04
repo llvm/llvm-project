@@ -6,18 +6,16 @@ define i32 @test_eq_1(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_eq_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_eq_1:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE41-NEXT:    pxor %xmm1, %xmm0
-; SSE41-NEXT:    pextrd $1, %xmm0, %eax
+; SSE41-NEXT:    pextrd $1, %xmm1, %eax
+; SSE41-NEXT:    notl %eax
 ; SSE41-NEXT:    retq
   %cmp = icmp slt <4 x i32> %A, %B
   %sext = sext <4 x i1> %cmp to <4 x i32>
@@ -65,18 +63,16 @@ define i32 @test_ge_1(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_ge_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
 ; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_ge_1:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE41-NEXT:    pxor %xmm1, %xmm0
-; SSE41-NEXT:    pextrd $1, %xmm0, %eax
+; SSE41-NEXT:    pextrd $1, %xmm1, %eax
+; SSE41-NEXT:    notl %eax
 ; SSE41-NEXT:    retq
   %cmp = icmp slt <4 x i32> %A, %B
   %sext = sext <4 x i1> %cmp to <4 x i32>
@@ -124,18 +120,16 @@ define i32 @test_eq_2(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_eq_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_eq_2:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
-; SSE41-NEXT:    pextrd $1, %xmm1, %eax
+; SSE41-NEXT:    pextrd $1, %xmm0, %eax
+; SSE41-NEXT:    notl %eax
 ; SSE41-NEXT:    retq
   %cmp = icmp slt <4 x i32> %B, %A
   %sext = sext <4 x i1> %cmp to <4 x i32>
@@ -170,18 +164,16 @@ define i32 @test_le_2(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_le_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_le_2:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
-; SSE41-NEXT:    pextrd $1, %xmm1, %eax
+; SSE41-NEXT:    pextrd $1, %xmm0, %eax
+; SSE41-NEXT:    notl %eax
 ; SSE41-NEXT:    retq
   %cmp = icmp slt <4 x i32> %B, %A
   %sext = sext <4 x i1> %cmp to <4 x i32>

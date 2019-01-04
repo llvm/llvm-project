@@ -244,7 +244,7 @@ void foo ()
 { 
   int b = 1, a[b];
   a[0] = 0;
-  [&] { for (int c : a) 0; } ();
+  [&] { for (int c : a) 0; } (); // expected-warning {{expression result unused}}
 }
 
 

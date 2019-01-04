@@ -130,11 +130,11 @@ INLINE int GetNumberOfWorkersInTeam() { return GetMasterThreadID(); }
 // or a serial region by the master.  If the master (whose CUDA thread
 // id is GetMasterThreadID()) calls this routine, we return 0 because
 // it is a shadow for the first worker.
-INLINE int GetLogicalThreadIdInBlock() {
+INLINE int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode) {
   // Implemented using control flow (predication) instead of with a modulo
   // operation.
   int tid = GetThreadIdInBlock();
-  if (isGenericMode() && tid >= GetMasterThreadID())
+  if (!isSPMDExecutionMode && tid >= GetMasterThreadID())
     return 0;
   else
     return tid;
@@ -214,13 +214,15 @@ INLINE int IsTeamMaster(int ompThreadId) { return (ompThreadId == 0); }
 // get OpenMP number of procs
 
 // Get the number of processors in the device.
-INLINE int GetNumberOfProcsInDevice() {
-  if (isGenericMode())
+INLINE int GetNumberOfProcsInDevice(bool isSPMDExecutionMode) {
+  if (!isSPMDExecutionMode)
     return GetNumberOfWorkersInTeam();
   return GetNumberOfThreadsInBlock();
 }
 
-INLINE int GetNumberOfProcsInTeam() { return GetNumberOfProcsInDevice(); }
+INLINE int GetNumberOfProcsInTeam(bool isSPMDExecutionMode) {
+  return GetNumberOfProcsInDevice(isSPMDExecutionMode);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Memory

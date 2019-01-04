@@ -19,7 +19,10 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
 endif()
 
 add_dependencies(lldb
-  ${LLDB_SUITE_TARGET}
   LLDBOptionsTableGen
   ${tablegen_deps}
 )
+
+if(LLDB_BUILD_FRAMEWORK)
+  lldb_setup_framework_rpaths_in_tool(lldb)
+endif()

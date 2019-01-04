@@ -62,7 +62,7 @@ int bar(int n){
   // CHECK-DAG: [[MWS:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
   // CHECK: [[MTMP1:%.+]] = sub nuw i32 [[MNTH]], [[MWS]]
   // CHECK: call void @__kmpc_kernel_init(i32 [[MTMP1]]
-  // CHECK: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* @{{.+}}, i32 0, i32 0, i32 0) to i8*), i{{64|32}} 4, i16 1, i8** addrspacecast (i8* addrspace(3)* [[BUF:@.+]] to i8**))
+  // CHECK: call void @__kmpc_get_team_static_memory(i16 0, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* @{{.+}}, i32 0, i32 0, i32 0) to i8*), i{{64|32}} 4, i16 1, i8** addrspacecast (i8* addrspace(3)* [[BUF:@.+]] to i8**))
   // CHECK: [[PTR:%.+]] = load i8*, i8* addrspace(3)* [[BUF]],
   // CHECK: [[RD:%.+]] = bitcast i8* [[PTR]] to [[GLOB_TY:%.+]]*
   // CHECK: [[I_ADDR:%.+]] = getelementptr inbounds [[GLOB_TY]], [[GLOB_TY]]* [[RD]], i32 0, i32 0

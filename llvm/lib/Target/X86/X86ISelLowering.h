@@ -1039,6 +1039,11 @@ namespace llvm {
     bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                  unsigned Index) const override;
 
+    /// Scalar ops always have equal or better analysis/performance/power than
+    /// the vector equivalent, so this always makes sense if the scalar op is
+    /// supported.
+    bool shouldScalarizeBinop(SDValue) const override;
+
     bool storeOfVectorConstantIsCheap(EVT MemVT, unsigned NumElem,
                                       unsigned AddrSpace) const override {
       // If we can replace more than 2 scalar stores, there will be a reduction

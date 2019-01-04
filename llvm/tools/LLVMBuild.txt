@@ -32,6 +32,7 @@ subdirectories =
  llvm-dis
  llvm-dwarfdump
  llvm-dwp
+ llvm-elfabi
  llvm-exegesis
  llvm-extract
  llvm-jitlistener

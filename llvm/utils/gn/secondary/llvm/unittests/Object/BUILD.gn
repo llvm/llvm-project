@@ -1,0 +1,11 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("ObjectTests") {
+  deps = [
+    "//llvm/lib/Object",
+  ]
+  sources = [
+    "SymbolSizeTest.cpp",
+    "SymbolicFileTest.cpp",
+  ]
+}

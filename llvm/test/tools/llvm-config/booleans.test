@@ -18,7 +18,7 @@ CHECK-BUILD-MODE-NOT: error:
 CHECK-BUILD-MODE-NOT: warning
 
 RUN: llvm-config --build-system 2>&1 | FileCheck --check-prefix=CHECK-BUILD-SYSTEM %s
-CHECK-BUILD-SYSTEM: cmake
+CHECK-BUILD-SYSTEM: {{cmake|gn}}
 CHECK-BUILD-SYSTEM-NOT: error:
 CHECK-BUILD-SYSTEM-NOT: warning
 

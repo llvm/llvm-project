@@ -89,7 +89,6 @@ llvm_config.use_default_substitutions()
 config.substitutions.append(('%llvmshlibdir', config.llvm_shlib_dir))
 config.substitutions.append(('%shlibext', config.llvm_shlib_ext))
 config.substitutions.append(('%exeext', config.llvm_exe_ext))
-config.substitutions.append(('%host_cc', config.host_cc))
 
 
 lli_args = []

@@ -809,14 +809,15 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
                         [&](Use &U) { return DT->dominates(I, U); })) {
         BasicBlock *Dominator =
             DT->getNode(I->getParent())->getIDom()->getBlock();
-        LLVM_DEBUG(dbgs() << "LICM rehoisting to " << Dominator->getName()
-                          << ": " << *I << "\n");
-        if (!HoistPoint || HoistPoint->getParent() != Dominator) {
+        if (!HoistPoint || !DT->dominates(HoistPoint->getParent(), Dominator)) {
           if (HoistPoint)
             assert(DT->dominates(Dominator, HoistPoint->getParent()) &&
                    "New hoist point expected to dominate old hoist point");
           HoistPoint = Dominator->getTerminator();
         }
+        LLVM_DEBUG(dbgs() << "LICM rehoisting to "
+                          << HoistPoint->getParent()->getName()
+                          << ": " << *I << "\n");
         moveInstructionBefore(*I, *HoistPoint, *SafetyInfo);
         HoistPoint = I;
         Changed = true;

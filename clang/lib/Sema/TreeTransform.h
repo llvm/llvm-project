@@ -328,7 +328,7 @@ public:
   /// other mechanism.
   ///
   /// \returns the transformed statement.
-  StmtResult TransformStmt(Stmt *S);
+  StmtResult TransformStmt(Stmt *S, bool DiscardedValue = false);
 
   /// Transform the given statement.
   ///
@@ -3269,8 +3269,8 @@ private:
                                       bool DeducibleTSTContext);
 };
 
-template<typename Derived>
-StmtResult TreeTransform<Derived>::TransformStmt(Stmt *S) {
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformStmt(Stmt *S, bool DiscardedValue) {
   if (!S)
     return S;
 
@@ -3294,7 +3294,7 @@ StmtResult TreeTransform<Derived>::TransformStmt(Stmt *S) {
       if (E.isInvalid())
         return StmtError();
 
-      return getSema().ActOnExprStmt(E);
+      return getSema().ActOnExprStmt(E, DiscardedValue);
     }
   }
 
@@ -4715,7 +4715,8 @@ TreeTransform<Derived>::TransformVariableArrayType(TypeLocBuilder &TLB,
   }
   if (SizeResult.isInvalid())
     return QualType();
-  SizeResult = SemaRef.ActOnFinishFullExpr(SizeResult.get());
+  SizeResult =
+      SemaRef.ActOnFinishFullExpr(SizeResult.get(), /*DiscardedValue*/ false);
   if (SizeResult.isInvalid())
     return QualType();
 
@@ -6520,7 +6521,9 @@ TreeTransform<Derived>::TransformCompoundStmt(CompoundStmt *S,
   bool SubStmtChanged = false;
   SmallVector<Stmt*, 8> Statements;
   for (auto *B : S->body()) {
-    StmtResult Result = getDerived().TransformStmt(B);
+    StmtResult Result =
+        getDerived().TransformStmt(B, !IsStmtExpr || B != S->body_back());
+
     if (Result.isInvalid()) {
       // Immediately fail if this was a DeclStmt, since it's very
       // likely that this will cause problems for future statements.

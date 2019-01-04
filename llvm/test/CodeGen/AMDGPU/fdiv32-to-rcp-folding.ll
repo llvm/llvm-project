@@ -131,10 +131,10 @@ define amdgpu_kernel void @div_v4_1_by_x_25ulp(<4 x float> addrspace(1)* %arg) {
 ; GCN-DENORM-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, [[S]], vcc
 ; GCN-DENORM-DAG: v_cmp_gt_f32_e64 vcc, |v{{[0-9]+}}|, [[L]]
 ; GCN-DENORM-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, [[S]], vcc
-; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
-; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
-; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
-; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
+; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, -v{{[0-9]+}}
+; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, -v{{[0-9]+}}
+; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, -v{{[0-9]+}}
+; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, -v{{[0-9]+}}
 ; GCN-DENORM-DAG: v_rcp_f32_e32
 ; GCN-DENORM-DAG: v_rcp_f32_e32
 ; GCN-DENORM-DAG: v_rcp_f32_e32
@@ -166,10 +166,10 @@ define amdgpu_kernel void @div_v4_minus_1_by_x_25ulp(<4 x float> addrspace(1)* %
 ; GCN-DENORM-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, [[S]], vcc
 ; GCN-DENORM-DAG: v_cmp_gt_f32_e64 vcc, |v{{[0-9]+}}|, [[L]]
 ; GCN-DENORM-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, [[S]], vcc
-; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, -s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, -s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, -s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, -s{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-DENORM-DAG: v_rcp_f32_e32
 ; GCN-DENORM-DAG: v_rcp_f32_e32
 ; GCN-DENORM-DAG: v_rcp_f32_e32
@@ -246,7 +246,7 @@ define amdgpu_kernel void @div_v4_minus_1_by_minus_x_25ulp(<4 x float> addrspace
 ; GCN-DAG:        v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, [[S]], vcc
 
 ; GCN-DENORM-DAG: v_mul_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
+; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, -v{{[0-9]+}}
 ; GCN-DENORM-DAG: v_rcp_f32_e32 [[RCP1:v[0-9]+]], v{{[0-9]+}}
 ; GCN-DENORM-DAG: v_mul_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, [[RCP1]]
 ; GCN-DENORM-DAG: v_rcp_f32_e32 [[RCP2:v[0-9]+]], v{{[0-9]+}}
@@ -288,7 +288,7 @@ define amdgpu_kernel void @div_v4_c_by_x_25ulp(<4 x float> addrspace(1)* %arg) {
 ; GCN-DAG:        v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, [[S]], vcc
 
 ; GCN-DENORM-DAG: v_mul_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DENORM-DAG: v_mul_f32_e64 v{{[0-9]+}}, -s{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-DENORM-DAG: v_rcp_f32_e32 [[RCP1:v[0-9]+]], v{{[0-9]+}}
 ; GCN-DENORM-DAG: v_mul_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, [[RCP1]]
 ; GCN-DENORM-DAG: v_rcp_f32_e32 [[RCP2:v[0-9]+]], v{{[0-9]+}}

@@ -675,13 +675,11 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
           if (UseMemMove)
             M = Builder.CreateMemMove(
                 SI->getPointerOperand(), findStoreAlignment(DL, SI),
-                LI->getPointerOperand(), findLoadAlignment(DL, LI), Size,
-                SI->isVolatile());
+                LI->getPointerOperand(), findLoadAlignment(DL, LI), Size);
           else
             M = Builder.CreateMemCpy(
                 SI->getPointerOperand(), findStoreAlignment(DL, SI),
-                LI->getPointerOperand(), findLoadAlignment(DL, LI), Size,
-                SI->isVolatile());
+                LI->getPointerOperand(), findLoadAlignment(DL, LI), Size);
 
           LLVM_DEBUG(dbgs() << "Promoting " << *LI << " to " << *SI << " => "
                             << *M << "\n");
@@ -770,8 +768,8 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
       if (!Align)
         Align = DL.getABITypeAlignment(T);
       IRBuilder<> Builder(SI);
-      auto *M = Builder.CreateMemSet(SI->getPointerOperand(), ByteVal,
-                                     Size, Align, SI->isVolatile());
+      auto *M =
+          Builder.CreateMemSet(SI->getPointerOperand(), ByteVal, Size, Align);
 
       LLVM_DEBUG(dbgs() << "Promoting " << *SI << " to " << *M << "\n");
 

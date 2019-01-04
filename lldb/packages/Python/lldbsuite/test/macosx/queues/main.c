@@ -1,30 +1,16 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdatomic.h>
 #include <string.h>
 #include <unistd.h>
 #include <dispatch/dispatch.h>
 #include <pthread.h>
 
 int finished_enqueueing_work = 0;
-char *name = NULL;
-
-void
-touch (const char *name, unsigned n)
-{
-    char token[2048];
-    snprintf (token, 2048, "%s%d", name, n);
-    FILE *f = fopen (token, "wx");
-    if (!f)
-        exit (1);
-    fputs ("\n", f);
-    fflush (f);
-    fclose (f);
-}
+atomic_int thread_count = 0;
 
 void
 doing_the_work_1(void *in)
 {
-    touch (name, 0);
+    atomic_fetch_add(&thread_count, 1);
     while (1)
         sleep (1);
 }
@@ -96,9 +82,6 @@ stopper ()
 
 int main (int argc, const char **argv)
 {
-    if (argc != 2)
-      return 2;
-    name = argv[1];
     dispatch_queue_t work_submittor_1 = dispatch_queue_create ("com.apple.work_submittor_1", DISPATCH_QUEUE_SERIAL);
     dispatch_queue_t work_submittor_2 = dispatch_queue_create ("com.apple.work_submittor_and_quit_2", DISPATCH_QUEUE_SERIAL);
     dispatch_queue_t work_submittor_3 = dispatch_queue_create ("com.apple.work_submittor_3", DISPATCH_QUEUE_SERIAL);
@@ -117,44 +100,46 @@ int main (int argc, const char **argv)
 
 
     // Spin up threads with each of the different libdispatch QoS values.
-
     dispatch_async (dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
             pthread_setname_np ("user initiated QoS");
-            touch(name, 1);
+            atomic_fetch_add(&thread_count, 1);
             while (1)
                 sleep (10);
                 });
     dispatch_async (dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), ^{
             pthread_setname_np ("user interactive QoS");
-            touch(name, 2);
+            atomic_fetch_add(&thread_count, 1);
             while (1)
                 sleep (10);
                 });
     dispatch_async (dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0), ^{
             pthread_setname_np ("default QoS");
-            touch(name, 3);
+            atomic_fetch_add(&thread_count, 1);
             while (1)
                 sleep (10);
                 });
     dispatch_async (dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
             pthread_setname_np ("utility QoS");
-            touch(name, 4);
+            atomic_fetch_add(&thread_count, 1);
             while (1)
                 sleep (10);
                 });
     dispatch_async (dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0), ^{
             pthread_setname_np ("background QoS");
-            touch(name, 5);
+            atomic_fetch_add(&thread_count, 1);
             while (1)
                 sleep (10);
                 });
     dispatch_async (dispatch_get_global_queue(QOS_CLASS_UNSPECIFIED, 0), ^{
             pthread_setname_np ("unspecified QoS");
-            touch(name, 6);
+            atomic_fetch_add(&thread_count, 1);
             while (1)
                 sleep (10);
                 });
 
+    // Unfortunately there is no pthread_barrier on darwin.
+    while (atomic_load(&thread_count) < 7)
+        sleep(1);
 
     while (finished_enqueueing_work == 0)
         sleep (1);

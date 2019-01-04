@@ -478,11 +478,7 @@ entry:
 define <8 x i16> @trunc8i32_8i16_lshr(<8 x i32> %a) {
 ; SSE2-LABEL: trunc8i32_8i16_lshr:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    psrld $16, %xmm0
-; SSE2-NEXT:    psrld $16, %xmm1
-; SSE2-NEXT:    pslld $16, %xmm1
 ; SSE2-NEXT:    psrad $16, %xmm1
-; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    psrad $16, %xmm0
 ; SSE2-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -777,18 +773,10 @@ entry:
 define void @trunc16i32_16i16_lshr(<16 x i32> %a) {
 ; SSE2-LABEL: trunc16i32_16i16_lshr:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    psrld $16, %xmm2
-; SSE2-NEXT:    psrld $16, %xmm3
-; SSE2-NEXT:    psrld $16, %xmm0
-; SSE2-NEXT:    psrld $16, %xmm1
-; SSE2-NEXT:    pslld $16, %xmm1
 ; SSE2-NEXT:    psrad $16, %xmm1
-; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    psrad $16, %xmm0
 ; SSE2-NEXT:    packssdw %xmm1, %xmm0
-; SSE2-NEXT:    pslld $16, %xmm3
 ; SSE2-NEXT:    psrad $16, %xmm3
-; SSE2-NEXT:    pslld $16, %xmm2
 ; SSE2-NEXT:    psrad $16, %xmm2
 ; SSE2-NEXT:    packssdw %xmm3, %xmm2
 ; SSE2-NEXT:    movdqu %xmm2, (%rax)
@@ -797,18 +785,10 @@ define void @trunc16i32_16i16_lshr(<16 x i32> %a) {
 ;
 ; SSSE3-LABEL: trunc16i32_16i16_lshr:
 ; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    psrld $16, %xmm2
-; SSSE3-NEXT:    psrld $16, %xmm3
-; SSSE3-NEXT:    psrld $16, %xmm0
-; SSSE3-NEXT:    psrld $16, %xmm1
-; SSSE3-NEXT:    pslld $16, %xmm1
 ; SSSE3-NEXT:    psrad $16, %xmm1
-; SSSE3-NEXT:    pslld $16, %xmm0
 ; SSSE3-NEXT:    psrad $16, %xmm0
 ; SSSE3-NEXT:    packssdw %xmm1, %xmm0
-; SSSE3-NEXT:    pslld $16, %xmm3
 ; SSSE3-NEXT:    psrad $16, %xmm3
-; SSSE3-NEXT:    pslld $16, %xmm2
 ; SSSE3-NEXT:    psrad $16, %xmm2
 ; SSSE3-NEXT:    packssdw %xmm3, %xmm2
 ; SSSE3-NEXT:    movdqu %xmm2, (%rax)
