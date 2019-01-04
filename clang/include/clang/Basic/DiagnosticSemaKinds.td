@@ -8864,8 +8864,10 @@ def err_omp_required_access : Error<
   "%0 variable must be %1">;
 def err_omp_const_variable : Error<
   "const-qualified variable cannot be %0">;
-def err_omp_const_reduction_list_item : Error<
-  "const-qualified list item cannot be reduction">;
+def err_omp_const_not_mutable_variable : Error<
+  "const-qualified variable without mutable fields cannot be %0">;
+def err_omp_const_list_item : Error<
+  "const-qualified list item cannot be %0">;
 def err_omp_linear_incomplete_type : Error<
   "a linear variable with incomplete type %0">;
 def err_omp_linear_expected_int_or_ptr : Error<
