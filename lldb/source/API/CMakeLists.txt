@@ -9,6 +9,11 @@ endif()
 
 get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 
+if(NOT LLDB_DISABLE_PYTHON)
+  get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
+  set(lldb_python_wrapper ${lldb_scripts_dir}/LLDBWrapPython.cpp)
+endif()
+
 add_lldb_library(liblldb SHARED
   SBAddress.cpp
   SBAttachInfo.cpp
@@ -78,7 +83,7 @@ add_lldb_library(liblldb SHARED
   SBWatchpoint.cpp
   SBUnixSignals.cpp
   SystemInitializerFull.cpp
-  ${LLDB_WRAP_PYTHON}
+  ${lldb_python_wrapper}
 
   LINK_LIBS
     lldbBase
@@ -98,23 +103,23 @@ add_lldb_library(liblldb SHARED
     Support
   )
 
-if(LLDB_WRAP_PYTHON)
+if(lldb_python_wrapper)
   add_dependencies(liblldb swig_wrapper)
 
   if (MSVC)
-    set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
+    set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
   else()
-    set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING PROPERTY COMPILE_FLAGS " -w")
+    set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " -w")
   endif()
 
-  set_source_files_properties(${LLDB_WRAP_PYTHON} PROPERTIES GENERATED 1)
+  set_source_files_properties(${lldb_python_wrapper} PROPERTIES GENERATED ON)
   if (CLANG_CL)
-    set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING
+    set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
       PROPERTY COMPILE_FLAGS " -Wno-unused-function")
   endif()
   if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND
       NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-    set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING
+    set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
       PROPERTY COMPILE_FLAGS " -Wno-sequence-point -Wno-cast-qual")
   endif ()
 endif()
