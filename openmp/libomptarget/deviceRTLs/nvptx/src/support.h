@@ -43,7 +43,7 @@ INLINE int GetNumberOfBlocksInKernel();
 INLINE int GetNumberOfThreadsInBlock();
 
 // get global ids to locate tread/team info (constant regardless of OMP)
-INLINE int GetLogicalThreadIdInBlock();
+INLINE int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode);
 INLINE int GetMasterThreadID();
 INLINE int GetNumberOfWorkersInTeam();
 
@@ -59,8 +59,8 @@ GetNumberOfOmpThreads(int threadId, bool isSPMDExecutionMode,
 INLINE int GetNumberOfOmpTeams();                   // omp_num_teams
 
 // get OpenMP number of procs
-INLINE int GetNumberOfProcsInTeam();
-INLINE int GetNumberOfProcsInDevice();
+INLINE int GetNumberOfProcsInTeam(bool isSPMDExecutionMode);
+INLINE int GetNumberOfProcsInDevice(bool isSPMDExecutionMode);
 
 // masters
 INLINE int IsTeamMaster(int ompThreadId);
