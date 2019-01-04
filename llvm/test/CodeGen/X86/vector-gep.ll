@@ -20,9 +20,8 @@ define <4 x i32*> @AGEP0(i32* %ptr) nounwind {
 define i32 @AGEP1(<4 x i32*> %param) nounwind {
 ; CHECK-LABEL: AGEP1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpaddd {{\.LCPI.*}}, %xmm0, %xmm0
-; CHECK-NEXT:    vpextrd $3, %xmm0, %eax
-; CHECK-NEXT:    movl (%eax), %eax
+; CHECK-NEXT:    vextractps $3, %xmm0, %eax
+; CHECK-NEXT:    movl 16(%eax), %eax
 ; CHECK-NEXT:    retl
   %A2 = getelementptr i32, <4 x i32*> %param, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
   %k = extractelement <4 x i32*> %A2, i32 3

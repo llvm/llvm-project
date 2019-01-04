@@ -144,12 +144,14 @@ class ResourceState {
 
   /// A ProcResource can have multiple units.
   ///
-  /// For processor resource groups,
-  /// this field default to the value of field `ResourceMask`; the number of
-  /// bits set is equal to the cardinality of the group.  For normal (i.e.
-  /// non-group) resources, the number of bits set in this mask is equivalent
-  /// to the number of units declared by the processor model (see field
-  /// 'NumUnits' in 'ProcResourceUnits').
+  /// For processor resource groups this field is a mask of contained resource
+  /// units. It is obtained from ResourceMask by clearing the highest set bit.
+  /// The number of resource units in a group can be simply computed as the
+  /// population count of this field.
+  ///
+  /// For normal (i.e. non-group) resources, the number of bits set in this mask
+  /// is equivalent to the number of units declared by the processor model (see
+  /// field 'NumUnits' in 'ProcResourceUnits').
   uint64_t ResourceSizeMask;
 
   /// A mask of ready units.

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import argparse
 import email.mime.multipart
 import email.mime.text
@@ -50,10 +52,10 @@ class PhabObjectCache:
         return self.id2PhabObjects[id]
 
     def get_ids_in_cache(self):
-        return self.id2PhabObjects.keys()
+        return list(self.id2PhabObjects.keys())
 
     def get_objects(self):
-        return self.id2PhabObjects.values()
+        return list(self.id2PhabObjects.values())
 
     DEFAULT_DIRECTORY = "PhabObjectCache"
 

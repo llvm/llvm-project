@@ -56,7 +56,8 @@ public:
 
 namespace WebAssembly {
 
-const char *TypeToString(wasm::ValType Ty);
+const char *typeToString(wasm::ValType Ty);
+const char *anyTypeToString(unsigned Ty);
 
 } // end namespace WebAssembly
 

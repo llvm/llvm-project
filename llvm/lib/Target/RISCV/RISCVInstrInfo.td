@@ -198,8 +198,10 @@ def csr_sysreg : Operand<XLenVT> {
 }
 
 // A parameterized register class alternative to i32imm/i64imm from Target.td.
-def ixlenimm : Operand<XLenVT> {
-  let ParserMatchClass = ImmXLenAsmOperand<"">;
+def ixlenimm : Operand<XLenVT>;
+
+def ixlenimm_li : Operand<XLenVT> {
+  let ParserMatchClass = ImmXLenAsmOperand<"", "LI">;
 }
 
 // Standalone (codegen-only) immleaf patterns.
@@ -497,7 +499,7 @@ def : InstAlias<"nop",           (ADDI      X0,      X0,       0)>;
 // expanded to real instructions immediately.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 32,
     isCodeGenOnly = 0, isAsmParserOnly = 1 in
-def PseudoLI : Pseudo<(outs GPR:$rd), (ins ixlenimm:$imm), [],
+def PseudoLI : Pseudo<(outs GPR:$rd), (ins ixlenimm_li:$imm), [],
                       "li", "$rd, $imm">;
 
 def : InstAlias<"mv $rd, $rs",   (ADDI GPR:$rd, GPR:$rs,       0)>;

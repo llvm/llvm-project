@@ -105,7 +105,8 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
       omptarget_nvptx_simpleThreadPrivateContext =
           omptarget_nvptx_device_simpleState[slot].Dequeue();
     }
-    __syncthreads();
+    // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
+    __SYNCTHREADS();
     omptarget_nvptx_simpleThreadPrivateContext->Init();
     return;
   }
@@ -129,7 +130,8 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
     // init team context
     currTeamDescr.InitTeamDescr();
   }
-  __syncthreads();
+  // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
+  __SYNCTHREADS();
 
   omptarget_nvptx_TeamDescr &currTeamDescr = getMyTeamDescriptor();
   omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
@@ -170,7 +172,8 @@ EXTERN __attribute__((deprecated)) void __kmpc_spmd_kernel_deinit() {
 EXTERN void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime) {
   // We're not going to pop the task descr stack of each thread since
   // there are no more parallel regions in SPMD mode.
-  __syncthreads();
+  // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
+  __SYNCTHREADS();
   int threadId = GetThreadIdInBlock();
   if (!RequiresOMPRuntime) {
     if (threadId == 0) {
