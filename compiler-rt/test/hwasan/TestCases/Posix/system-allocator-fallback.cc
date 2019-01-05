@@ -2,6 +2,10 @@
 // RUN: %clangxx_hwasan -shared %s -o %t.so -DSHARED_LIB -shared-libsan -Wl,-rpath,%compiler_rt_libdir
 // RUN: %env_hwasan_opts=disable_allocator_tagging=0 %run %t
 
+// The dynamic loader on Android O appears to have a bug where it crashes when
+// dlopening DF_1_GLOBAL libraries.
+// REQUIRES: android-28
+
 #include <stddef.h>
 
 // Test that allocations made by the system allocator can be realloc'd and freed
