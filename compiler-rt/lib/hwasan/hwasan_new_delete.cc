@@ -51,7 +51,7 @@ void *operator new[](size_t size, std::nothrow_t const&) {
 
 #define OPERATOR_DELETE_BODY \
   GET_MALLOC_STACK_TRACE; \
-  if (ptr) HwasanDeallocate(&stack, ptr)
+  if (ptr) hwasan_free(ptr, &stack)
 
 INTERCEPTOR_ATTRIBUTE
 void operator delete(void *ptr) NOEXCEPT { OPERATOR_DELETE_BODY; }

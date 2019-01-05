@@ -866,8 +866,12 @@ private:
     unsigned SClass : 3;
     unsigned TSCSpec : 2;
     unsigned InitStyle : 2;
+
+    /// Whether this variable is an ARC pseudo-__strong variable; see
+    /// isARCPseudoStrong() for details.
+    unsigned ARCPseudoStrong : 1;
   };
-  enum { NumVarDeclBits = 7 };
+  enum { NumVarDeclBits = 8 };
 
 protected:
   enum { NumParameterIndexBits = 8 };
@@ -939,10 +943,6 @@ protected:
 
     /// Whether this variable is the for-in loop declaration in Objective-C.
     unsigned ObjCForDecl : 1;
-
-    /// Whether this variable is an ARC pseudo-__strong
-    /// variable;  see isARCPseudoStrong() for details.
-    unsigned ARCPseudoStrong : 1;
 
     /// Whether this variable is (C++1z) inline.
     unsigned IsInline : 1;
@@ -1349,17 +1349,15 @@ public:
     NonParmVarDeclBits.ObjCForDecl = FRD;
   }
 
-  /// Determine whether this variable is an ARC pseudo-__strong
-  /// variable.  A pseudo-__strong variable has a __strong-qualified
-  /// type but does not actually retain the object written into it.
-  /// Generally such variables are also 'const' for safety.
-  bool isARCPseudoStrong() const {
-    return isa<ParmVarDecl>(this) ? false : NonParmVarDeclBits.ARCPseudoStrong;
-  }
-  void setARCPseudoStrong(bool ps) {
-    assert(!isa<ParmVarDecl>(this));
-    NonParmVarDeclBits.ARCPseudoStrong = ps;
-  }
+  /// Determine whether this variable is an ARC pseudo-__strong variable. A
+  /// pseudo-__strong variable has a __strong-qualified type but does not
+  /// actually retain the object written into it. Generally such variables are
+  /// also 'const' for safety. There are 3 cases where this will be set, 1) if
+  /// the variable is annotated with the objc_externally_retained attribute, 2)
+  /// if its 'self' in a non-init method, or 3) if its the variable in an for-in
+  /// loop.
+  bool isARCPseudoStrong() const { return VarDeclBits.ARCPseudoStrong; }
+  void setARCPseudoStrong(bool PS) { VarDeclBits.ARCPseudoStrong = PS; }
 
   /// Whether this variable is (C++1z) inline.
   bool isInline() const {

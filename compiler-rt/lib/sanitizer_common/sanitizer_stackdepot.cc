@@ -26,7 +26,7 @@ struct StackDepotNode {
   u32 tag;
   uptr stack[1];  // [size]
 
-  static const u32 kTabSizeLog = 20;
+  static const u32 kTabSizeLog = SANITIZER_ANDROID ? 16 : 20;
   // Lower kTabSizeLog bits are equal for all items in one bucket.
   // We use these bits to store the per-stack use counter.
   static const u32 kUseCountBits = kTabSizeLog;

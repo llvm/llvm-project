@@ -94,6 +94,7 @@
 // CHECK-NEXT: ObjCBridgeRelated (SubjectMatchRule_record)
 // CHECK-NEXT: ObjCException (SubjectMatchRule_objc_interface)
 // CHECK-NEXT: ObjCExplicitProtocolImpl (SubjectMatchRule_objc_protocol)
+// CHECK-NEXT: ObjCExternallyRetained (SubjectMatchRule_variable_not_is_parameter, SubjectMatchRule_function, SubjectMatchRule_block, SubjectMatchRule_objc_method)
 // CHECK-NEXT: ObjCMethodFamily (SubjectMatchRule_objc_method)
 // CHECK-NEXT: ObjCPreciseLifetime (SubjectMatchRule_variable)
 // CHECK-NEXT: ObjCRequiresPropertyDefs (SubjectMatchRule_objc_interface)

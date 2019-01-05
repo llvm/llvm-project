@@ -26,9 +26,9 @@ class S3 {
 public:
   S3() : a(0) {}
 };
-const S3 c;         // expected-note {{global variable is predetermined as shared}}
-const S3 ca[5];     // expected-note {{global variable is predetermined as shared}}
-extern const int f; // expected-note {{global variable is predetermined as shared}}
+const S3 c;         // expected-note {{'c' defined here}}
+const S3 ca[5];     // expected-note {{'ca' defined here}}
+extern const int f; // expected-note {{'f' declared here}}
 class S4 {
   int a;
   S4(); // expected-note {{implicitly declared private here}}
@@ -61,8 +61,8 @@ using A::x;
 }
 
 int main(int argc, char **argv) {
-  const int d = 5;       // expected-note {{constant variable is predetermined as shared}}
-  const int da[5] = {0}; // expected-note {{constant variable is predetermined as shared}}
+  const int d = 5;       // expected-note {{'d' defined here}}
+  const int da[5] = {0}; // expected-note {{'da' defined here}}
   S4 e(4);
   S5 g(5);
   int i;
@@ -75,11 +75,11 @@ int main(int argc, char **argv) {
 #pragma omp task private(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
 #pragma omp task private(argc argv)                    // expected-error {{expected ',' or ')' in 'private' clause}}
 #pragma omp task private(S1)                           // expected-error {{'S1' does not refer to a value}}
-#pragma omp task private(a, b, c, d, f)                // expected-error {{a private variable with incomplete type 'S1'}} expected-error 3 {{shared variable cannot be private}}
+#pragma omp task private(a, b, c, d, f)                // expected-error {{a private variable with incomplete type 'S1'}} expected-error 1 {{const-qualified variable without mutable fields cannot be private}} expected-error 2 {{const-qualified variable cannot be private}}
 #pragma omp task private(argv[1])                      // expected-error {{expected variable name}}
 #pragma omp task private(ba)
-#pragma omp task private(ca)           // expected-error {{shared variable cannot be private}}
-#pragma omp task private(da)           // expected-error {{shared variable cannot be private}}
+#pragma omp task private(ca)           // expected-error {{const-qualified variable without mutable fields cannot be private}}
+#pragma omp task private(da)           // expected-error {{const-qualified variable cannot be private}}
 #pragma omp task private(S2::S2s)      // expected-error {{shared variable cannot be private}}
 #pragma omp task private(e, g)         // expected-error {{calling a private constructor of class 'S4'}} expected-error {{calling a private constructor of class 'S5'}}
 #pragma omp task private(threadvar, B::x)    // expected-error 2 {{threadprivate or thread local variable cannot be private}}

@@ -148,7 +148,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
 #pragma omp target teams distribute parallel for simd linear (S1) // expected-error {{'S1' does not refer to a value}}
   for (int k = 0; k < argc; ++k) ++k;
 
-#pragma omp target teams distribute parallel for simd linear (a, b:B::ib) // expected-error {{linear variable with incomplete type 'S1'}} expected-error {{const-qualified variable cannot be linear}}
+#pragma omp target teams distribute parallel for simd linear (a, b:B::ib) // expected-error {{linear variable with incomplete type 'S1'}} expected-error {{argument of a linear clause should be of integral or pointer type, not 'S2'}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target teams distribute parallel for simd linear (argv[1]) // expected-error {{expected variable name}}
@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
   for (int k = 0; k < argc; ++k) ++k;
 
 
-#pragma omp target teams distribute parallel for simd linear (a, b) // expected-error {{linear variable with incomplete type 'S1'}} expected-error {{const-qualified variable cannot be linear}}
+#pragma omp target teams distribute parallel for simd linear (a, b) // expected-error {{linear variable with incomplete type 'S1'}} expected-error {{argument of a linear clause should be of integral or pointer type, not 'S2'}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target teams distribute parallel for simd linear (argv[1]) // expected-error {{expected variable name}}

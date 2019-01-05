@@ -32,7 +32,7 @@ struct StackDepotHandle {
   void inc_use_count_unsafe();
 };
 
-const int kStackDepotMaxUseCount = 1U << 20;
+const int kStackDepotMaxUseCount = 1U << (SANITIZER_ANDROID ? 16 : 20);
 
 StackDepotStats *StackDepotGetStats();
 u32 StackDepotPut(StackTrace stack);

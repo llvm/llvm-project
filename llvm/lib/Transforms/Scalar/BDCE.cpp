@@ -114,8 +114,7 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
       if (!U->getType()->isIntOrIntVectorTy())
         continue;
 
-      // TODO: We could also find dead non-instruction uses, e.g. arguments.
-      if (!isa<Instruction>(U))
+      if (!isa<Instruction>(U) && !isa<Argument>(U))
         continue;
 
       if (!DB.isUseDead(&U))

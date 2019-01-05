@@ -369,6 +369,14 @@ public:
                               NumParams);
   }
 
+  ParmVarDecl *getParamDecl(unsigned Idx) {
+    assert(Idx < NumParams && "Index out of bounds!");
+    return getParams()[Idx];
+  }
+  const ParmVarDecl *getParamDecl(unsigned Idx) const {
+    return const_cast<ObjCMethodDecl *>(this)->getParamDecl(Idx);
+  }
+
   /// Sets the method's parameters and selector source locations.
   /// If the method is implicit (not coming from source) \p SelLocs is
   /// ignored.

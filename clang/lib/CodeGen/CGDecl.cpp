@@ -797,14 +797,20 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
   case Qualifiers::OCL_None:
     llvm_unreachable("present but none");
 
+  case Qualifiers::OCL_Strong: {
+    if (!D || !isa<VarDecl>(D) || !cast<VarDecl>(D)->isARCPseudoStrong()) {
+      value = EmitARCRetainScalarExpr(init);
+      break;
+    }
+    // If D is pseudo-strong, treat it like __unsafe_unretained here. This means
+    // that we omit the retain, and causes non-autoreleased return values to be
+    // immediately released.
+    LLVM_FALLTHROUGH;
+  }
+
   case Qualifiers::OCL_ExplicitNone:
     value = EmitARCUnsafeUnretainedScalarExpr(init);
     break;
-
-  case Qualifiers::OCL_Strong: {
-    value = EmitARCRetainScalarExpr(init);
-    break;
-  }
 
   case Qualifiers::OCL_Weak: {
     // If it's not accessed by the initializer, try to emit the
@@ -2324,15 +2330,11 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       // cleanup to do the release at the end of the function.
       bool isConsumed = D.hasAttr<NSConsumedAttr>();
 
-      // 'self' is always formally __strong, but if this is not an
-      // init method then we don't want to retain it.
+      // If a parameter is pseudo-strong then we can omit the implicit retain.
       if (D.isARCPseudoStrong()) {
-        const ObjCMethodDecl *method = cast<ObjCMethodDecl>(CurCodeDecl);
-        assert(&D == method->getSelfDecl());
-        assert(lt == Qualifiers::OCL_Strong);
-        assert(qs.hasConst());
-        assert(method->getMethodFamily() != OMF_init);
-        (void) method;
+        assert(lt == Qualifiers::OCL_Strong &&
+               "pseudo-strong variable isn't strong?");
+        assert(qs.hasConst() && "pseudo-strong variable should be const!");
         lt = Qualifiers::OCL_ExplicitNone;
       }
 

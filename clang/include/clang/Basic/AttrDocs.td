@@ -3824,3 +3824,31 @@ def SpeculativeLoadHardeningDocs : Documentation {
   (even after inlining) end up hardened.
   }];
 }
+
+def ObjCExternallyRetainedDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``objc_externally_retained`` attribute can be applied to strong local
+variables, functions, methods, or blocks to opt into
+`externally-retained semantics
+<https://clang.llvm.org/docs/AutomaticReferenceCounting.html#externally-retained-variables>`_.
+
+When applied to the definition of a function, method, or block, every parameter
+of the function with implicit strong retainable object pointer type is
+considered externally-retained, and becomes ``const``. By explicitly annotating
+a parameter with ``__strong``, you can opt back into the default
+non-externally-retained behaviour for that parameter. For instance,
+``first_param`` is externally-retained below, but not ``second_param``:
+
+.. code-block:: objc
+
+  __attribute__((objc_externally_retained))
+  void f(NSArray *first_param, __strong NSArray *second_param) {
+    // ...
+  }
+
+Likewise, when applied to a strong local variable, that variable becomes
+``const`` and is considered externally-retained.
+
+When compiled without ``-fobjc-arc``, this attribute is ignored.
+}]; }

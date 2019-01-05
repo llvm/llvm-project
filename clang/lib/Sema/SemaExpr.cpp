@@ -11214,17 +11214,23 @@ static bool CheckForModifiableLvalue(Expr *E, SourceLocation Loc, Sema &S) {
         if (var->isARCPseudoStrong() &&
             (!var->getTypeSourceInfo() ||
              !var->getTypeSourceInfo()->getType().isConstQualified())) {
-          // There are two pseudo-strong cases:
+          // There are three pseudo-strong cases:
           //  - self
           ObjCMethodDecl *method = S.getCurMethodDecl();
-          if (method && var == method->getSelfDecl())
+          if (method && var == method->getSelfDecl()) {
             DiagID = method->isClassMethod()
               ? diag::err_typecheck_arc_assign_self_class_method
               : diag::err_typecheck_arc_assign_self;
 
+          //  - Objective-C externally_retained attribute.
+          } else if (var->hasAttr<ObjCExternallyRetainedAttr>() ||
+                     isa<ParmVarDecl>(var)) {
+            DiagID = diag::err_typecheck_arc_assign_externally_retained;
+
           //  - fast enumeration variables
-          else
+          } else {
             DiagID = diag::err_typecheck_arr_assign_enumeration;
+          }
 
           SourceRange Assign;
           if (Loc != OrigLoc)
