@@ -16,11 +16,9 @@ group("unittests") {
     "DebugInfo/MSF:DebugInfoMSFTests",
     "DebugInfo/PDB:DebugInfoPDBTests",
     "Demangle:DemangleTests",
-
-    # FIXME: Add.
-    #"ExecutionEngine:ExecutionEngineTests",
-    #"ExecutionEngine/MCJIT:MCJITTests",
-    #"ExecutionEngine/Orc:OrcJITTests",
+    "ExecutionEngine:ExecutionEngineTests",
+    "ExecutionEngine/MCJIT:MCJITTests",
+    "ExecutionEngine/Orc:OrcJITTests",
     "FuzzMutate:FuzzMutateTests",
     "IR:IRTests",
     "LineEditor:LineEditorTests",
