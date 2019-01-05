@@ -45,7 +45,7 @@ define <2 x i32> @pr39771_fshr_multi_use_instr_vec(<2 x i32> %a) {
 ; First fshr operand is dead, but it comes from an argument, not instruction.
 define i32 @pr39771_fshr_multi_use_arg(i32 %a) {
 ; CHECK-LABEL: @pr39771_fshr_multi_use_arg(
-; CHECK-NEXT:    [[B:%.*]] = tail call i32 @llvm.fshr.i32(i32 [[A:%.*]], i32 [[A]], i32 1)
+; CHECK-NEXT:    [[B:%.*]] = tail call i32 @llvm.fshr.i32(i32 0, i32 [[A:%.*]], i32 1)
 ; CHECK-NEXT:    [[C:%.*]] = lshr i32 [[B]], 23
 ; CHECK-NEXT:    [[D:%.*]] = xor i32 [[C]], [[B]]
 ; CHECK-NEXT:    [[E:%.*]] = and i32 [[D]], 31
@@ -58,11 +58,10 @@ define i32 @pr39771_fshr_multi_use_arg(i32 %a) {
   ret i32 %e
 }
 
-; Second or operand is dead, but BDCE does not realize this.
 define i32 @pr39771_expanded_fshr_multi_use(i32 %a) {
 ; CHECK-LABEL: @pr39771_expanded_fshr_multi_use(
 ; CHECK-NEXT:    [[TMP:%.*]] = lshr i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[A]], 31
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 0, 31
 ; CHECK-NEXT:    [[B:%.*]] = or i32 [[TMP]], [[TMP2]]
 ; CHECK-NEXT:    [[C:%.*]] = lshr i32 [[B]], 23
 ; CHECK-NEXT:    [[D:%.*]] = xor i32 [[C]], [[B]]

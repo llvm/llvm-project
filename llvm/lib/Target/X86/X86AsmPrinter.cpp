@@ -572,9 +572,9 @@ void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
 
       // Emitting an Elf_Prop for the CET properties.
       OutStreamer->EmitIntValue(ELF::GNU_PROPERTY_X86_FEATURE_1_AND, 4);
-      OutStreamer->EmitIntValue(WordSize, 4);               // data size
-      OutStreamer->EmitIntValue(FeatureFlagsAnd, WordSize); // data
-      EmitAlignment(WordSize == 4 ? 2 : 3);                 // padding
+      OutStreamer->EmitIntValue(4, 4);               // data size
+      OutStreamer->EmitIntValue(FeatureFlagsAnd, 4); // data
+      EmitAlignment(WordSize == 4 ? 2 : 3);          // padding
 
       OutStreamer->endSection(Nt);
       OutStreamer->SwitchSection(Cur);

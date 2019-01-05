@@ -108,6 +108,8 @@ def M3UnitNSHF : ProcResGroup<[M3UnitNSHF0,
 
 def M3WriteZ0 : SchedWriteRes<[]> { let Latency = 0;
                                     let NumMicroOps = 1; }
+def M3WriteZ1 : SchedWriteRes<[]> { let Latency = 1;
+                                    let NumMicroOps = 0; }
 
 def M3WriteA1 : SchedWriteRes<[M3UnitALU]> { let Latency = 1; }
 def M3WriteAA : SchedWriteRes<[M3UnitALU]> { let Latency = 2;
@@ -179,16 +181,16 @@ def M3ReadAdrBase : SchedReadVariant<[SchedVar<ExynosScaledIdxPred, [ReadDefault
 
 // Branch instructions.
 def : SchedAlias<WriteBr, M3WriteZ0>;
-def : WriteRes<WriteBrReg, [M3UnitC]> { let Latency = 1; }
+def : SchedAlias<WriteBrReg, M3WriteC1>;
 
 // Arithmetic and logical integer instructions.
-def : WriteRes<WriteI,     [M3UnitALU]> { let Latency = 1; }
-def : WriteRes<WriteISReg, [M3UnitALU]> { let Latency = 1; }
-def : WriteRes<WriteIEReg, [M3UnitALU]> { let Latency = 1; }
-def : WriteRes<WriteIS,    [M3UnitALU]> { let Latency = 1; }
+def : SchedAlias<WriteI,     M3WriteA1>;
+def : SchedAlias<WriteISReg, M3WriteA1>;
+def : SchedAlias<WriteIEReg, M3WriteA1>;
+def : SchedAlias<WriteIS,    M3WriteA1>;
 
 // Move instructions.
-def : WriteRes<WriteImm, [M3UnitALU]> { let Latency = 1; }
+def : SchedAlias<WriteImm, M3WriteA1>;
 
 // Divide and multiply instructions.
 def : WriteRes<WriteID32, [M3UnitC,
@@ -205,8 +207,7 @@ def : WriteRes<WriteIM64, [M3UnitC]>  { let Latency = 4;
 def : SchedAlias<WriteExtr, M3WriteAY>;
 
 // Addressing modes.
-def : WriteRes<WriteAdr, []> { let Latency = 1;
-                               let NumMicroOps = 0; }
+def : SchedAlias<WriteAdr,    M3WriteZ1>;
 def : SchedAlias<ReadAdrBase, M3ReadAdrBase>;
 
 // Load instructions.
@@ -669,108 +670,108 @@ def : InstRW<[M3WriteNSHF1], (instregex "^(TRN|UZP|ZIP)[12]v")>;
 // ASIMD load instructions.
 def : InstRW<[M3WriteL5],   (instregex "LD1Onev(8b|4h|2s|1d)$")>;
 def : InstRW<[M3WriteL5,
-              WriteAdr],    (instregex "LD1Onev(8b|4h|2s|1d)_POST")>;
+              M3WriteA1],   (instregex "LD1Onev(8b|4h|2s|1d)_POST")>;
 def : InstRW<[M3WriteL5],   (instregex "LD1Onev(16b|8h|4s|2d)$")>;
 def : InstRW<[M3WriteL5,
-              WriteAdr],    (instregex "LD1Onev(16b|8h|4s|2d)_POST")>;
+              M3WriteA1],   (instregex "LD1Onev(16b|8h|4s|2d)_POST")>;
 
 def : InstRW<[M3WriteVLDA], (instregex "LD1Twov(8b|4h|2s|1d)$")>;
 def : InstRW<[M3WriteVLDA,
-              WriteAdr],    (instregex "LD1Twov(8b|4h|2s|1d)_POST")>;
+              M3WriteA1],   (instregex "LD1Twov(8b|4h|2s|1d)_POST")>;
 def : InstRW<[M3WriteVLDA], (instregex "LD1Twov(16b|8h|4s|2d)$")>;
 def : InstRW<[M3WriteVLDA,
-              WriteAdr],    (instregex "LD1Twov(16b|8h|4s|2d)_POST")>;
+              M3WriteA1],   (instregex "LD1Twov(16b|8h|4s|2d)_POST")>;
 
 def : InstRW<[M3WriteVLDB], (instregex "LD1Threev(8b|4h|2s|1d)$")>;
 def : InstRW<[M3WriteVLDB,
-              WriteAdr],    (instregex "LD1Threev(8b|4h|2s|1d)_POST")>;
+              M3WriteA1],   (instregex "LD1Threev(8b|4h|2s|1d)_POST")>;
 def : InstRW<[M3WriteVLDB], (instregex "LD1Threev(16b|8h|4s|2d)$")>;
 def : InstRW<[M3WriteVLDB,
-              WriteAdr],    (instregex "LD1Threev(16b|8h|4s|2d)_POST")>;
+              M3WriteA1],   (instregex "LD1Threev(16b|8h|4s|2d)_POST")>;
 
 def : InstRW<[M3WriteVLDC], (instregex "LD1Fourv(8b|4h|2s|1d)$")>;
 def : InstRW<[M3WriteVLDC,
-              WriteAdr],    (instregex "LD1Fourv(8b|4h|2s|1d)_POST")>;
+              M3WriteA1],   (instregex "LD1Fourv(8b|4h|2s|1d)_POST")>;
 def : InstRW<[M3WriteVLDC], (instregex "LD1Fourv(16b|8h|4s|2d)$")>;
 def : InstRW<[M3WriteVLDC,
-              WriteAdr],    (instregex "LD1Fourv(16b|8h|4s|2d)_POST")>;
+              M3WriteA1],   (instregex "LD1Fourv(16b|8h|4s|2d)_POST")>;
 
 def : InstRW<[M3WriteVLDD], (instregex "LD1i(8|16|32)$")>;
 def : InstRW<[M3WriteVLDD,
-              WriteAdr],    (instregex "LD1i(8|16|32)_POST")>;
+              M3WriteA1],   (instregex "LD1i(8|16|32)_POST")>;
 def : InstRW<[M3WriteVLDE], (instregex "LD1i(64)$")>;
 def : InstRW<[M3WriteVLDE,
-              WriteAdr],    (instregex "LD1i(64)_POST")>;
+              M3WriteA1],   (instregex "LD1i(64)_POST")>;
 
 def : InstRW<[M3WriteL5],   (instregex "LD1Rv(8b|4h|2s|1d)$")>;
 def : InstRW<[M3WriteL5,
-              WriteAdr],    (instregex "LD1Rv(8b|4h|2s|1d)_POST")>;
+              M3WriteA1],   (instregex "LD1Rv(8b|4h|2s|1d)_POST")>;
 def : InstRW<[M3WriteL5],   (instregex "LD1Rv(16b|8h|4s|2d)$")>;
 def : InstRW<[M3WriteL5,
-              WriteAdr],    (instregex "LD1Rv(16b|8h|4s|2d)_POST")>;
+              M3WriteA1],   (instregex "LD1Rv(16b|8h|4s|2d)_POST")>;
 
 def : InstRW<[M3WriteVLDF], (instregex "LD2Twov(8b|4h|2s)$")>;
 def : InstRW<[M3WriteVLDF,
-              WriteAdr],    (instregex "LD2Twov(8b|4h|2s)_POST")>;
+              M3WriteA1],   (instregex "LD2Twov(8b|4h|2s)_POST")>;
 def : InstRW<[M3WriteVLDF], (instregex "LD2Twov(16b|8h|4s|2d)$")>;
 def : InstRW<[M3WriteVLDF,
-              WriteAdr],    (instregex "LD2Twov(16b|8h|4s|2d)_POST")>;
+              M3WriteA1],   (instregex "LD2Twov(16b|8h|4s|2d)_POST")>;
 
 def : InstRW<[M3WriteVLDG], (instregex "LD2i(8|16|32)$")>;
 def : InstRW<[M3WriteVLDG,
-              WriteAdr],    (instregex "LD2i(8|16|32)_POST")>;
+              M3WriteA1],   (instregex "LD2i(8|16|32)_POST")>;
 def : InstRW<[M3WriteVLDH], (instregex "LD2i(64)$")>;
 def : InstRW<[M3WriteVLDH,
-              WriteAdr],    (instregex "LD2i(64)_POST")>;
+              M3WriteA1],   (instregex "LD2i(64)_POST")>;
 
 def : InstRW<[M3WriteVLDA], (instregex "LD2Rv(8b|4h|2s|1d)$")>;
 def : InstRW<[M3WriteVLDA,
-              WriteAdr],    (instregex "LD2Rv(8b|4h|2s|1d)_POST")>;
+              M3WriteA1],   (instregex "LD2Rv(8b|4h|2s|1d)_POST")>;
 def : InstRW<[M3WriteVLDA], (instregex "LD2Rv(16b|8h|4s|2d)$")>;
 def : InstRW<[M3WriteVLDA,
-              WriteAdr],    (instregex "LD2Rv(16b|8h|4s|2d)_POST")>;
+              M3WriteA1],   (instregex "LD2Rv(16b|8h|4s|2d)_POST")>;
 
 def : InstRW<[M3WriteVLDI], (instregex "LD3Threev(8b|4h|2s)$")>;
 def : InstRW<[M3WriteVLDI,
-              WriteAdr],    (instregex "LD3Threev(8b|4h|2s)_POST")>;
+              M3WriteA1],   (instregex "LD3Threev(8b|4h|2s)_POST")>;
 def : InstRW<[M3WriteVLDI], (instregex "LD3Threev(16b|8h|4s|2d)$")>;
 def : InstRW<[M3WriteVLDI,
-              WriteAdr],    (instregex "LD3Threev(16b|8h|4s|2d)_POST")>;
+              M3WriteA1],   (instregex "LD3Threev(16b|8h|4s|2d)_POST")>;
 
 def : InstRW<[M3WriteVLDJ], (instregex "LD3i(8|16|32)$")>;
 def : InstRW<[M3WriteVLDJ,
-              WriteAdr],    (instregex "LD3i(8|16|32)_POST")>;
+              M3WriteA1],   (instregex "LD3i(8|16|32)_POST")>;
 def : InstRW<[M3WriteVLDL], (instregex "LD3i(64)$")>;
 def : InstRW<[M3WriteVLDL,
-              WriteAdr],    (instregex "LD3i(64)_POST")>;
+              M3WriteA1],   (instregex "LD3i(64)_POST")>;
 
 def : InstRW<[M3WriteVLDB], (instregex "LD3Rv(8b|4h|2s|1d)$")>;
 def : InstRW<[M3WriteVLDB,
-              WriteAdr],    (instregex "LD3Rv(8b|4h|2s|1d)_POST")>;
+              M3WriteA1],   (instregex "LD3Rv(8b|4h|2s|1d)_POST")>;
 def : InstRW<[M3WriteVLDB], (instregex "LD3Rv(16b|8h|4s|2d)$")>;
 def : InstRW<[M3WriteVLDB,
-              WriteAdr],    (instregex "LD3Rv(16b|8h|4s|2d)_POST")>;
+              M3WriteA1],   (instregex "LD3Rv(16b|8h|4s|2d)_POST")>;
 
 def : InstRW<[M3WriteVLDN], (instregex "LD4Fourv(8b|4h|2s)$")>;
 def : InstRW<[M3WriteVLDN,
-              WriteAdr],    (instregex "LD4Fourv(8b|4h|2s)_POST")>;
+              M3WriteA1],   (instregex "LD4Fourv(8b|4h|2s)_POST")>;
 def : InstRW<[M3WriteVLDN], (instregex "LD4Fourv(16b|8h|4s|2d)$")>;
 def : InstRW<[M3WriteVLDN,
-              WriteAdr],    (instregex "LD4Fourv(16b|8h|4s|2d)_POST")>;
+              M3WriteA1],   (instregex "LD4Fourv(16b|8h|4s|2d)_POST")>;
 
 def : InstRW<[M3WriteVLDK], (instregex "LD4i(8|16|32)$")>;
 def : InstRW<[M3WriteVLDK,
-              WriteAdr],    (instregex "LD4i(8|16|32)_POST")>;
+              M3WriteA1],   (instregex "LD4i(8|16|32)_POST")>;
 def : InstRW<[M3WriteVLDM], (instregex "LD4i(64)$")>;
 def : InstRW<[M3WriteVLDM,
-              WriteAdr],    (instregex "LD4i(64)_POST")>;
+              M3WriteA1],   (instregex "LD4i(64)_POST")>;
 
 def : InstRW<[M3WriteVLDC], (instregex "LD4Rv(8b|4h|2s|1d)$")>;
 def : InstRW<[M3WriteVLDC,
-              WriteAdr],    (instregex "LD4Rv(8b|4h|2s|1d)_POST")>;
+              M3WriteA1],   (instregex "LD4Rv(8b|4h|2s|1d)_POST")>;
 def : InstRW<[M3WriteVLDC], (instregex "LD4Rv(16b|8h|4s|2d)$")>;
 def : InstRW<[M3WriteVLDC,
-              WriteAdr],    (instregex "LD4Rv(16b|8h|4s|2d)_POST")>;
+              M3WriteA1],   (instregex "LD4Rv(16b|8h|4s|2d)_POST")>;
 
 // ASIMD store instructions.
 def : InstRW<[WriteVST],    (instregex "ST1Onev(8b|4h|2s|1d)$")>;

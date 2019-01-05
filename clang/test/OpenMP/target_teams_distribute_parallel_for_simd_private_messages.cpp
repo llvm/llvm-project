@@ -24,9 +24,9 @@ class S3 {
 public:
   S3():a(0) { }
 };
-const S3 c; // expected-note {{predetermined as shared}}
-const S3 ca[5]; // expected-note {{predetermined as shared}}
-extern const int f;  // expected-note {{predetermined as shared}}
+const S3 c; // expected-note {{'c' defined here}}
+const S3 ca[5]; // expected-note {{'ca' defined here}}
+extern const int f;  // expected-note {{'f' declared here}}
 class S4 {
   int a;
   S4(); // expected-note {{implicitly declared private here}}
@@ -45,8 +45,8 @@ S3 h;
 
 
 int main(int argc, char **argv) {
-  const int d = 5;  // expected-note {{predetermined as shared}}
-  const int da[5] = { 0 }; // expected-note {{predetermined as shared}}
+  const int d = 5;  // expected-note {{'d' defined here}}
+  const int da[5] = { 0 }; // expected-note {{'da' defined here}}
   S4 e(4);
   S5 g(5);
   int i;
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
   #pragma omp target teams distribute parallel for simd private (S1) // expected-error {{'S1' does not refer to a value}}
   for (int k = 0; k < argc; ++k) ++k;
 
-  #pragma omp target teams distribute parallel for simd private (a, b, c, d, f) // expected-error {{private variable with incomplete type 'S1'}} expected-error 3 {{shared variable cannot be private}}
+  #pragma omp target teams distribute parallel for simd private (a, b, c, d, f) // expected-error {{private variable with incomplete type 'S1'}} expected-error 1 {{const-qualified variable without mutable fields cannot be private}} expected-error 2 {{const-qualified variable cannot be private}}
   for (int k = 0; k < argc; ++k) ++k;
 
   #pragma omp target teams distribute parallel for simd private (argv[1]) // expected-error {{expected variable name}}
@@ -85,10 +85,10 @@ int main(int argc, char **argv) {
   #pragma omp target teams distribute parallel for simd private(ba)
   for (int k = 0; k < argc; ++k) ++k;
 
-  #pragma omp target teams distribute parallel for simd private(ca) // expected-error {{shared variable cannot be private}}
+  #pragma omp target teams distribute parallel for simd private(ca) // expected-error {{const-qualified variable without mutable fields cannot be private}}
   for (int k = 0; k < argc; ++k) ++k;
 
-  #pragma omp target teams distribute parallel for simd private(da) // expected-error {{shared variable cannot be private}}
+  #pragma omp target teams distribute parallel for simd private(da) // expected-error {{const-qualified variable cannot be private}}
   for (int k = 0; k < argc; ++k) ++k;
 
   #pragma omp target teams distribute parallel for simd private(S2::S2s) // expected-error {{shared variable cannot be private}}

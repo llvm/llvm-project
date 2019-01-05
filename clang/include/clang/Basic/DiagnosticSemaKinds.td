@@ -3485,6 +3485,11 @@ def err_objc_bridged_related_known_method : Error<
 def err_objc_attr_protocol_requires_definition : Error<
   "attribute %0 can only be applied to @protocol definitions, not forward declarations">;
 
+def warn_ignored_objc_externally_retained : Warning<
+  "'objc_externally_retained' can only be applied to local variables "
+  "%select{of retainable type|with strong ownership}0">,
+  InGroup<IgnoredAttributes>;
+
 // Function Parameter Semantic Analysis.
 def err_param_with_void_type : Error<"argument may not have 'void' type">;
 def err_void_only_param : Error<
@@ -5254,6 +5259,9 @@ def err_typecheck_arc_assign_self_class_method : Error<
 def err_typecheck_arr_assign_enumeration : Error<
   "fast enumeration variables cannot be modified in ARC by default; "
   "declare the variable __strong to allow this">;
+def err_typecheck_arc_assign_externally_retained : Error<
+  "variable declared with 'objc_externally_retained' "
+  "cannot be modified in ARC">;
 def warn_arc_retained_assign : Warning<
   "assigning retained object to %select{weak|unsafe_unretained}0 "
   "%select{property|variable}1"
@@ -8770,8 +8778,10 @@ def err_omp_required_access : Error<
   "%0 variable must be %1">;
 def err_omp_const_variable : Error<
   "const-qualified variable cannot be %0">;
-def err_omp_const_reduction_list_item : Error<
-  "const-qualified list item cannot be reduction">;
+def err_omp_const_not_mutable_variable : Error<
+  "const-qualified variable without mutable fields cannot be %0">;
+def err_omp_const_list_item : Error<
+  "const-qualified list item cannot be %0">;
 def err_omp_linear_incomplete_type : Error<
   "a linear variable with incomplete type %0">;
 def err_omp_linear_expected_int_or_ptr : Error<

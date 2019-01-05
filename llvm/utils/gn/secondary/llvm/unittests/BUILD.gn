@@ -14,9 +14,7 @@ group("unittests") {
     "DebugInfo/CodeView:DebugInfoCodeViewTests",
     "DebugInfo/DWARF:DebugInfoDWARFTests",
     "DebugInfo/MSF:DebugInfoMSFTests",
-
-    # FIXME: Add.
-    #"DebugInfo/PDB:DebugInfoPDBTests",
+    "DebugInfo/PDB:DebugInfoPDBTests",
     "Demangle:DemangleTests",
 
     # FIXME: Add.
@@ -55,7 +53,7 @@ group("unittests") {
     "tools/llvm-exegesis:LLVMExegesisTests",
   ]
 
-  # Target-dependend unit tests.
+  # Target-dependent unit tests.
   # FIXME: This matches how they are set up in the cmake build,
   # but if we disable an arch after building with it on, this
   # setup leaves behind stale executables.

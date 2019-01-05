@@ -22,9 +22,9 @@ class S3 {
 public:
   S3() : a(0) {}
 };
-const S3 c; // expected-note {{global variable is predetermined as shared}} expected-note 1 {{global variable is predetermined as shared}}
-const S3 ca[5]; // expected-note {{global variable is predetermined as shared}} expected-note 1 {{global variable is predetermined as shared}}
-extern const int f; // expected-note {{global variable is predetermined as shared}} expected-note 1 {{global variable is predetermined as shared}} 
+const S3 c; // expected-note 2 {{'c' defined here}}
+const S3 ca[5]; // expected-note 2 {{'ca' defined here}}
+extern const int f; // expected-note 2 {{'f' declared here}}
 
 int threadvar;
 #pragma omp threadprivate(threadvar) // expected-note {{defined as threadprivate or thread local}} expected-note 1 {{defined as threadprivate or thread local}}
@@ -56,8 +56,8 @@ S3 h;
 
 template <class I, class C, class D, class E>
 int foomain(I argc, C **argv) {
-  const I d = 5; // expected-note {{constant variable is predetermined as shared}}
-  const I da[5] = { 0 }; // expected-note {{constant variable is predetermined as shared}}
+  const I d = 5; // expected-note {{'d' defined here}}
+  const I da[5] = { 0 }; // expected-note {{'da' defined here}}
   D e(4);
   E g[] = {5, 6};
   I i;
@@ -82,15 +82,15 @@ int foomain(I argc, C **argv) {
 {}
 #pragma omp target parallel private(a, b) // expected-error {{private variable with incomplete type 'S1'}}
 {}
-#pragma omp target parallel private (a, b, c, d, f) // expected-error {{a private variable with incomplete type 'S1'}} expected-error 3 {{shared variable cannot be private}}
+#pragma omp target parallel private (a, b, c, d, f) // expected-error {{a private variable with incomplete type 'S1'}} expected-error 1 {{const-qualified variable without mutable fields cannot be private}} expected-error 2 {{const-qualified variable cannot be private}}
 {}
 #pragma omp target parallel private(argv[1]) // expected-error {{expected variable name}}
 {}
 #pragma omp target parallel private(ba)
 {}
-#pragma omp target parallel private(ca) // expected-error {{shared variable cannot be private}}
+#pragma omp target parallel private(ca) // expected-error {{const-qualified variable without mutable fields cannot be private}}
 {}
-#pragma omp target parallel private(da) // expected-error {{shared variable cannot be private}}
+#pragma omp target parallel private(da) // expected-error {{const-qualified variable cannot be private}}
 {}
 #pragma omp target parallel private(S2::S2s) // expected-error {{shared variable cannot be private}}
 {}
@@ -143,8 +143,8 @@ void bar(S4 a[2]) {
 }
 
 int main(int argc, char **argv) {
-  const int d = 5; // expected-note {{constant variable is predetermined as shared}}
-  const int da[5] = { 0 }; // expected-note {{constant variable is predetermined as shared}}
+  const int d = 5; // expected-note {{'d' defined here}}
+  const int da[5] = { 0 }; // expected-note {{'da' defined here}}
   S4 e(4);
   S5 g[] = {5, 6};
   int i;
@@ -169,15 +169,15 @@ int main(int argc, char **argv) {
 {}
 #pragma omp target parallel private(a, b) // expected-error {{private variable with incomplete type 'S1'}}
 {}
-#pragma omp target parallel private (a, b, c, d, f) // expected-error {{a private variable with incomplete type 'S1'}} expected-error 3 {{shared variable cannot be private}}
+#pragma omp target parallel private (a, b, c, d, f) // expected-error {{a private variable with incomplete type 'S1'}} expected-error 1 {{const-qualified variable without mutable fields cannot be private}} expected-error 2 {{const-qualified variable cannot be private}}
 {}
 #pragma omp target parallel private(argv[1]) // expected-error {{expected variable name}}
 {}
 #pragma omp target parallel private(ba)
 {}
-#pragma omp target parallel private(ca) // expected-error {{shared variable cannot be private}}
+#pragma omp target parallel private(ca) // expected-error {{const-qualified variable without mutable fields cannot be private}}
 {}
-#pragma omp target parallel private(da) // expected-error {{shared variable cannot be private}}
+#pragma omp target parallel private(da) // expected-error {{const-qualified variable cannot be private}}
 {}
 #pragma omp target parallel private(S2::S2s) // expected-error {{shared variable cannot be private}}
 {}

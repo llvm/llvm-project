@@ -16,6 +16,7 @@ unittest("AnalysisTests") {
     "CFGTest.cpp",
     "CGSCCPassManagerTest.cpp",
     "CallGraphTest.cpp",
+    "CaptureTrackingTest.cpp",
     "DivergenceAnalysisTest.cpp",
     "GlobalsModRefTest.cpp",
     "LazyCallGraphTest.cpp",

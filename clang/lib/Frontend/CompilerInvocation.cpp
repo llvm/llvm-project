@@ -1319,6 +1319,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.SpeculativeLoadHardening = Args.hasArg(OPT_mspeculative_load_hardening);
 
+  Opts.DefaultFunctionAttrs = Args.getAllArgValues(OPT_default_function_attr);
+
   return Success;
 }
 
@@ -1664,20 +1666,7 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.ProgramAction = frontend::PluginAction;
     Opts.ActionName = A->getValue();
   }
-  for (const std::string &Arg : Args.getAllArgValues(OPT_add_plugin)) {
-    bool Found = false;
-    for (FrontendPluginRegistry::iterator it = FrontendPluginRegistry::begin(),
-                                          ie = FrontendPluginRegistry::end();
-         it != ie; ++it) {
-      if (it->getName() == Arg)
-        Found = true;
-    }
-    if (!Found) {
-      Diags.Report(diag::err_fe_invalid_plugin_name) << Arg;
-      continue;
-    }
-    Opts.AddPluginActions.push_back(Arg);
-  }
+  Opts.AddPluginActions = Args.getAllArgValues(OPT_add_plugin);
   for (const auto *AA : Args.filtered(OPT_plugin_arg))
     Opts.PluginArgs[AA->getValue(0)].emplace_back(AA->getValue(1));
 

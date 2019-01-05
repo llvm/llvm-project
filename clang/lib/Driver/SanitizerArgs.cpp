@@ -741,6 +741,18 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     AsanUseAfterScope = false;
   }
 
+  if (AllAddedKinds & HWAddress) {
+    if (Arg *HwasanAbiArg =
+            Args.getLastArg(options::OPT_fsanitize_hwaddress_abi_EQ)) {
+      HwasanAbi = HwasanAbiArg->getValue();
+      if (HwasanAbi != "platform" && HwasanAbi != "interceptor")
+        D.Diag(clang::diag::err_drv_invalid_value)
+            << HwasanAbiArg->getAsString(Args) << HwasanAbi;
+    } else {
+      HwasanAbi = "interceptor";
+    }
+  }
+
   if (AllAddedKinds & SafeStack) {
     // SafeStack runtime is built into the system on Fuchsia.
     SafeStackRuntime = !TC.getTriple().isOSFuchsia();
@@ -912,6 +924,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (AsanUseOdrIndicator)
     CmdArgs.push_back("-fsanitize-address-use-odr-indicator");
+
+  if (!HwasanAbi.empty()) {
+    CmdArgs.push_back("-default-function-attr");
+    CmdArgs.push_back(Args.MakeArgString("hwasan-abi=" + HwasanAbi));
+  }
 
   // MSan: Workaround for PR16386.
   // ASan: This is mainly to help LSan with cases such as
