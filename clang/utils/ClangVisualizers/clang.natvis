@@ -34,16 +34,37 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Record" IncludeView="cpp">{*(clang::RecordType *)this,view(cpp)}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::FunctionProto" IncludeView="poly">{*(clang::FunctionProtoType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::TemplateSpecialization" IncludeView="poly">{*(clang::TemplateSpecializationType *)this}</DisplayString>
+    <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::DeducedTemplateSpecialization" IncludeView="poly">{*(clang::DeducedTemplateSpecializationType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::InjectedClassName" IncludeView="poly">{*(clang::InjectedClassNameType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::PackExpansion" IncludeView="poly">{*(clang::PackExpansionType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::LocInfoType::LocInfo" IncludeView="poly">{*(clang::LocInfoType *)this}</DisplayString>
     <DisplayString IncludeView="cpp">{*this,view(poly)}</DisplayString>
     <DisplayString IncludeView="poly">No visualizer yet for {(clang::Type::TypeClass)TypeBits.TC,en}Type</DisplayString> <!-- Not yet implemented Type subclass -->
+    <DisplayString IncludeView="Dependent" Condition="TypeBits.Dependent">Dependent</DisplayString>
+    <DisplayString IncludeView="Dependent"></DisplayString>
+    <DisplayString IncludeView="InstantiationDependent" Condition="TypeBits.InstantiationDependent">InstantiationDependent</DisplayString>
+    <DisplayString IncludeView="InstantiationDependent"></DisplayString>
+    <DisplayString IncludeView="VariablyModified" Condition="TypeBits.VariablyModified">VariablyModified</DisplayString>
+    <DisplayString IncludeView="VariablyModified"></DisplayString>
+    <DisplayString IncludeView="ContainsUnexpandedParameterPack" Condition="TypeBits.ContainsUnexpandedParameterPack">ContainsUnexpandedParameterPack</DisplayString>
+    <DisplayString IncludeView="ContainsUnexpandedParameterPack"></DisplayString>
+    <DisplayString IncludeView="Cache" Condition="TypeBits.CacheValid &amp;&amp; TypeBits.CachedLocalOrUnnamed">CachedLinkage: {(clang::Linkage)TypeBits.CachedLinkage,en} CachedLocalOrUnnamed</DisplayString>
+    <DisplayString IncludeView="Cache" Condition="TypeBits.CacheValid &amp;&amp; !TypeBits.CachedLocalOrUnnamed">CachedLinkage: {(clang::Linkage)TypeBits.CachedLinkage,en}</DisplayString>
+    <DisplayString IncludeView="Cache"></DisplayString>
+    <DisplayString IncludeView="FromAST" Condition="TypeBits.FromAST">FromAST</DisplayString>
+    <DisplayString IncludeView="FromAST"></DisplayString>
+    <DisplayString IncludeView="flags" Condition="!TypeBits.Dependent &amp;&amp; !TypeBits.InstantiationDependent &amp;&amp; !TypeBits.VariablyModified  &amp;&amp; !TypeBits.ContainsUnexpandedParameterPack &amp;&amp; !TypeBits.CacheValid &amp;&amp; !TypeBits.FromAST">
+      No TypeBits set beyond TypeClass
+    </DisplayString>
+    <DisplayString IncludeView="flags">
+    {*this, view(Dependent)}{*this, view(InstantiationDependent)}{*this, view(VariablyModified)}
+    {*this, view(ContainsUnexpandedParameterPack)}{*this, view(Cache)}{*this, view(FromAST)}</DisplayString>
     <DisplayString>{*this,view(cmn)}  {{{*this,view(poly)}}}</DisplayString>
     <Expand>
       <Item Name="TypeClass" IncludeView="cmn">(clang::Type::TypeClass)TypeBits.TC</Item>
-      <Item Name="Flags" IncludeView="cmn">TypeBits</Item>
+      <Item Name="Flags" IncludeView="cmn">*this,view(flags)</Item>
       <Item Name="Canonical" IncludeView="cmn">CanonicalType</Item>
+      <Item Name="isCanonicalUnqualified" IncludeView="cmn">CanonicalType.Value.Value == this</Item>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::Builtin">*(clang::BuiltinType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::Pointer">*(clang::PointerType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::LValueReference">*(clang::LValueReferenceType *)this</ExpandedItem>
@@ -54,6 +75,7 @@ For later versions of Visual Studio, no setup is required-->
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::Record">(clang::RecordType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::FunctionProto">(clang::FunctionProtoType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::TemplateSpecialization">(clang::TemplateSpecializationType *)this</ExpandedItem>
+      <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::DeducedTemplateSpecialization">(clang::DeducedTemplateSpecializationType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::InjectedClassName">(clang::InjectedClassNameType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::PackExpansion">(clang::PackExpansionType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::LocInfoType::LocInfo">(clang::LocInfoType *)this</ExpandedItem>
@@ -125,7 +147,13 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString>{*this,view(TorC)} {*this,view(MaybeEllipses)}{Name,view(cpp)}</DisplayString> 
   </Type>
   <Type Name="clang::TemplateDecl">
-    <DisplayString>template{*TemplateParams} {*TemplatedDecl};</DisplayString>
+    <DisplayString>template{TemplateParams,view(deref)} {*TemplatedDecl};</DisplayString>
+  </Type>
+  <Type Name="clang::TemplateName">
+    <DisplayString>{Storage,view(deref)}</DisplayString>
+    <Expand>
+      <ExpandedItem>Storage</ExpandedItem>
+    </Expand>
   </Type>
   <Type Name="clang::NamedDecl" >
     <DisplayString IncludeView="cpp">{Name,view(cpp)}</DisplayString>
@@ -136,11 +164,11 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString IncludeView="implicit"></DisplayString>
     <DisplayString IncludeView="modifiers">{*this,view(implicit)}</DisplayString>
     <DisplayString IncludeView="cpp">{*this,view(modifiers)}{Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Struct">{*this,view(modifiers)}struct {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Interface">{*this,view(modifiers)}interface {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Union">{*this,view(modifiers)}union {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Class">{*this,view(modifiers)}class {Name,view(cpp)}</DisplayString>
-    <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Enum">{*this,view(modifiers)}enum {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Struct">{*this,view(modifiers)}struct {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Interface">{*this,view(modifiers)}interface {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Union">{*this,view(modifiers)}union {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Class">{*this,view(modifiers)}class {Name,view(cpp)}</DisplayString>
+    <DisplayString Condition="TagDeclBits.TagDeclKind==clang::TagTypeKind::TTK_Enum">{*this,view(modifiers)}enum {Name,view(cpp)}</DisplayString>
     <Expand>
       <ExpandedItem>(clang::DeclContext *)this</ExpandedItem>
     </Expand>
@@ -379,6 +407,18 @@ For later versions of Visual Studio, no setup is required-->
         <Size>NumArgs</Size>
         <ValuePointer>(clang::TemplateArgument *)(this+1)</ValuePointer>
       </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="clang::DeducedType">
+    <Expand>
+      <Item Name="isDeduced">(CanonicalType.Value.Value != this) || TypeBits.Dependent</Item>
+      <ExpandedItem>*(clang::Type *)this,view(cmn)</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="clang::DeducedTemplateSpecializationType">
+    <DisplayString>{Template}</DisplayString>
+    <Expand>
+      <ExpandedItem>*(clang::DeducedType *)this</ExpandedItem>
     </Expand>
   </Type>
   <Type Name="clang::IdentifierInfo">

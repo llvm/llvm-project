@@ -709,23 +709,30 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
       match(Count, m_Trunc(m_Value(V))))
     Count = V;
 
+  // Check that 'Count' is a call to intrinsic cttz/ctlz. Also check that the
+  // input to the cttz/ctlz is used as LHS for the compare instruction.
+  if (!match(Count, m_Intrinsic<Intrinsic::cttz>(m_Specific(CmpLHS))) &&
+      !match(Count, m_Intrinsic<Intrinsic::ctlz>(m_Specific(CmpLHS))))
+    return nullptr;
+
+  IntrinsicInst *II = cast<IntrinsicInst>(Count);
+
   // Check if the value propagated on zero is a constant number equal to the
   // sizeof in bits of 'Count'.
   unsigned SizeOfInBits = Count->getType()->getScalarSizeInBits();
-  if (!match(ValueOnZero, m_SpecificInt(SizeOfInBits)))
-    return nullptr;
-
-  // Check that 'Count' is a call to intrinsic cttz/ctlz. Also check that the
-  // input to the cttz/ctlz is used as LHS for the compare instruction.
-  if (match(Count, m_Intrinsic<Intrinsic::cttz>(m_Specific(CmpLHS))) ||
-      match(Count, m_Intrinsic<Intrinsic::ctlz>(m_Specific(CmpLHS)))) {
-    IntrinsicInst *II = cast<IntrinsicInst>(Count);
+  if (match(ValueOnZero, m_SpecificInt(SizeOfInBits))) {
     // Explicitly clear the 'undef_on_zero' flag.
     IntrinsicInst *NewI = cast<IntrinsicInst>(II->clone());
     NewI->setArgOperand(1, ConstantInt::getFalse(NewI->getContext()));
     Builder.Insert(NewI);
     return Builder.CreateZExtOrTrunc(NewI, ValueOnZero->getType());
   }
+
+  // If the ValueOnZero is not the bitwidth, we can at least make use of the
+  // fact that the cttz/ctlz result will not be used if the input is zero, so
+  // it's okay to relax it to undef for that case.
+  if (II->hasOneUse() && !match(II->getArgOperand(1), m_One()))
+    II->setArgOperand(1, ConstantInt::getTrue(II->getContext()));
 
   return nullptr;
 }
