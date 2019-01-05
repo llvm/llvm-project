@@ -193,7 +193,7 @@ EXTERN void __kmpc_kernel_end_convergent_parallel(void *buffer) {
 // support for parallel that goes parallel (1 static level only)
 ////////////////////////////////////////////////////////////////////////////////
 
-static INLINE uint16_t determineNumberOfThreads(uint16_t NumThreadsClause,
+INLINE static uint16_t determineNumberOfThreads(uint16_t NumThreadsClause,
                                                 uint16_t NThreadsICV,
                                                 uint16_t ThreadLimit) {
   uint16_t ThreadsRequested = NThreadsICV;
@@ -236,7 +236,7 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
   // This routine is only called by the team master.  The team master is
   // the first thread of the last warp.  It always has the logical thread
   // id of 0 (since it is a shadow for the first worker thread).
-  int threadId = 0;
+  const int threadId = 0;
   omptarget_nvptx_TaskDescr *currTaskDescr =
       omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
   ASSERT0(LT_FUSSY, currTaskDescr, "expected a top task descr");

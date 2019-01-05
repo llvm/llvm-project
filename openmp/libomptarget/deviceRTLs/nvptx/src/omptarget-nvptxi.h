@@ -16,7 +16,7 @@
 // Task Descriptor
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE omp_sched_t omptarget_nvptx_TaskDescr::GetRuntimeSched() {
+INLINE omp_sched_t omptarget_nvptx_TaskDescr::GetRuntimeSched() const {
   // sched starts from 1..4; encode it as 0..3; so add 1 here
   uint8_t rc = (items.flags & TaskDescr_SchedMask) + 1;
   return (omp_sched_t)rc;
@@ -155,7 +155,7 @@ INLINE void omptarget_nvptx_TaskDescr::RestoreLoopData() const {
 ////////////////////////////////////////////////////////////////////////////////
 
 INLINE omptarget_nvptx_TaskDescr *
-omptarget_nvptx_ThreadPrivateContext::GetTopLevelTaskDescr(int tid) {
+omptarget_nvptx_ThreadPrivateContext::GetTopLevelTaskDescr(int tid) const {
   ASSERT0(
       LT_FUSSY, tid < MAX_THREADS_PER_TEAM,
       "Getting top level, tid is larger than allocated data structure size");

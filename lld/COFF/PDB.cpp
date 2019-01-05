@@ -1735,20 +1735,26 @@ std::pair<StringRef, uint32_t> coff::getFileLine(const SectionChunk *C,
   if (!findLineTable(C, Addr, CVStrTab, Checksums, Lines, OffsetInLinetable))
     return {"", 0};
 
-  uint32_t NameIndex;
-  uint32_t LineNumber;
+  Optional<uint32_t> NameIndex;
+  Optional<uint32_t> LineNumber;
   for (LineColumnEntry &Entry : Lines) {
     for (const LineNumberEntry &LN : Entry.LineNumbers) {
-      if (LN.Offset > OffsetInLinetable) {
-        StringRef Filename =
-            ExitOnErr(getFileName(CVStrTab, Checksums, NameIndex));
-        return {Filename, LineNumber};
-      }
       LineInfo LI(LN.Flags);
+      if (LN.Offset > OffsetInLinetable) {
+        if (!NameIndex) {
+          NameIndex = Entry.NameIndex;
+          LineNumber = LI.getStartLine();
+        }
+        StringRef Filename =
+            ExitOnErr(getFileName(CVStrTab, Checksums, *NameIndex));
+        return {Filename, *LineNumber};
+      }
       NameIndex = Entry.NameIndex;
       LineNumber = LI.getStartLine();
     }
   }
-  StringRef Filename = ExitOnErr(getFileName(CVStrTab, Checksums, NameIndex));
-  return {Filename, LineNumber};
+  if (!NameIndex)
+    return {"", 0};
+  StringRef Filename = ExitOnErr(getFileName(CVStrTab, Checksums, *NameIndex));
+  return {Filename, *LineNumber};
 }
