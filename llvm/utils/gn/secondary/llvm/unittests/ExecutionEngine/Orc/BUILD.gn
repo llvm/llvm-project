@@ -1,0 +1,33 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("OrcJITTests") {
+  deps = [
+    "//llvm/lib/ExecutionEngine",
+    "//llvm/lib/ExecutionEngine/Orc",
+    "//llvm/lib/ExecutionEngine/RuntimeDyld",
+    "//llvm/lib/IR",
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target:NativeTarget",
+  ]
+  sources = [
+    "CoreAPIsTest.cpp",
+    "GlobalMappingLayerTest.cpp",
+    "IndirectionUtilsTest.cpp",
+    "JITTargetMachineBuilderTest.cpp",
+    "LazyCallThroughAndReexportsTest.cpp",
+    "LazyEmittingLayerTest.cpp",
+    "LegacyAPIInteropTest.cpp",
+    "LegacyCompileOnDemandLayerTest.cpp",
+    "LegacyRTDyldObjectLinkingLayerTest.cpp",
+    "ObjectTransformLayerTest.cpp",
+    "OrcCAPITest.cpp",
+    "OrcTestCommon.cpp",
+    "QueueChannel.cpp",
+    "RPCUtilsTest.cpp",
+    "RTDyldObjectLinkingLayerTest.cpp",
+    "RemoteObjectLayerTest.cpp",
+    "SymbolStringPoolTest.cpp",
+    "ThreadSafeModuleTest.cpp",
+  ]
+}

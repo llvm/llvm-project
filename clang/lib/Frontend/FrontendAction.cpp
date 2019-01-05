@@ -152,10 +152,6 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
   if (!Consumer)
     return nullptr;
 
-  // If there are no registered plugins we don't need to wrap the consumer
-  if (FrontendPluginRegistry::begin() == FrontendPluginRegistry::end())
-    return Consumer;
-
   // Validate -add-plugin args.
   bool FoundAllPlugins = true;
   for (const std::string &Arg : CI.getFrontendOpts().AddPluginActions) {
@@ -173,6 +169,10 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
   }
   if (!FoundAllPlugins)
     return nullptr;
+
+  // If there are no registered plugins we don't need to wrap the consumer
+  if (FrontendPluginRegistry::begin() == FrontendPluginRegistry::end())
+    return Consumer;
 
   // If this is a code completion run, avoid invoking the plugin consumers
   if (CI.hasCodeCompletionConsumer())

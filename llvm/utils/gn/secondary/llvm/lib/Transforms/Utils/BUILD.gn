@@ -13,6 +13,7 @@ static_library("Utils") {
     "BuildLibCalls.cpp",
     "BypassSlowDivision.cpp",
     "CallPromotionUtils.cpp",
+    "CanonicalizeAliases.cpp",
     "CloneFunction.cpp",
     "CloneModule.cpp",
     "CodeExtractor.cpp",

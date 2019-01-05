@@ -172,7 +172,7 @@ def X86phminpos: SDNode<"X86ISD::PHMINPOS",
 
 def X86vshiftuniform : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                             SDTCisVec<2>, SDTCisInt<0>,
-                                            SDTCisInt<1>]>;
+                                            SDTCisInt<2>]>;
 
 def X86vshl    : SDNode<"X86ISD::VSHL", X86vshiftuniform>;
 def X86vsrl    : SDNode<"X86ISD::VSRL", X86vshiftuniform>;

@@ -59,7 +59,10 @@ MinGW Improvements
 * lld can now use existing normal MinGW sysroots with import libraries and
   CRT startup object files for GNU binutils. lld can handle most object
   files produced by GCC, and thus works as a drop-in replacement for
-  ld.bfd in such environments.
+  ld.bfd in such environments. (There are known issues with linking crtend.o
+  from GCC in setups with DWARF exceptions though, where object files are
+  linked in a different order than with GNU ld, inserting a DWARF exception
+  table terminator too early.)
 
 MachO Improvements
 ------------------
