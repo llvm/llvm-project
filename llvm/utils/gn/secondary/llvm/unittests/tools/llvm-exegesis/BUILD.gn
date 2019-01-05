@@ -1,0 +1,19 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("LLVMExegesisTests") {
+  deps = [
+    "//llvm/lib/DebugInfo/Symbolize",
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCParser",
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+    "//llvm/tools/llvm-exegesis/lib",
+  ]
+  include_dirs = [ "../../../tools/llvm-exegesis/lib" ]
+  sources = [
+    "BenchmarkRunnerTest.cpp",
+    "ClusteringTest.cpp",
+    "PerfHelperTest.cpp",
+    "RegisterValueTest.cpp",
+  ]
+}

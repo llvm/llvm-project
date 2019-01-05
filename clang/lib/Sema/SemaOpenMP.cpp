@@ -1080,6 +1080,51 @@ bool DSAStackTy::isOpenMPLocal(VarDecl *D, iterator Iter) const {
   return false;
 }
 
+static bool isConstNotMutableType(Sema &SemaRef, QualType Type,
+                                  bool AcceptIfMutable = true,
+                                  bool *IsClassType = nullptr) {
+  ASTContext &Context = SemaRef.getASTContext();
+  Type = Type.getNonReferenceType().getCanonicalType();
+  bool IsConstant = Type.isConstant(Context);
+  Type = Context.getBaseElementType(Type);
+  const CXXRecordDecl *RD = AcceptIfMutable && SemaRef.getLangOpts().CPlusPlus
+                                ? Type->getAsCXXRecordDecl()
+                                : nullptr;
+  if (const auto *CTSD = dyn_cast_or_null<ClassTemplateSpecializationDecl>(RD))
+    if (const ClassTemplateDecl *CTD = CTSD->getSpecializedTemplate())
+      RD = CTD->getTemplatedDecl();
+  if (IsClassType)
+    *IsClassType = RD;
+  return IsConstant && !(SemaRef.getLangOpts().CPlusPlus && RD &&
+                         RD->hasDefinition() && RD->hasMutableFields());
+}
+
+static bool rejectConstNotMutableType(Sema &SemaRef, const ValueDecl *D,
+                                      QualType Type, OpenMPClauseKind CKind,
+                                      SourceLocation ELoc,
+                                      bool AcceptIfMutable = true,
+                                      bool ListItemNotVar = false) {
+  ASTContext &Context = SemaRef.getASTContext();
+  bool IsClassType;
+  if (isConstNotMutableType(SemaRef, Type, AcceptIfMutable, &IsClassType)) {
+    unsigned Diag = ListItemNotVar
+                        ? diag::err_omp_const_list_item
+                        : IsClassType ? diag::err_omp_const_not_mutable_variable
+                                      : diag::err_omp_const_variable;
+    SemaRef.Diag(ELoc, Diag) << getOpenMPClauseName(CKind);
+    if (!ListItemNotVar && D) {
+      const VarDecl *VD = dyn_cast<VarDecl>(D);
+      bool IsDecl = !VD || VD->isThisDeclarationADefinition(Context) ==
+                               VarDecl::DeclarationOnly;
+      SemaRef.Diag(D->getLocation(),
+                   IsDecl ? diag::note_previous_decl : diag::note_defined_here)
+          << D;
+    }
+    return true;
+  }
+  return false;
+}
+
 const DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D,
                                                    bool FromParent) {
   D = getCanonicalDecl(D);
@@ -1177,34 +1222,28 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D,
     return DVar;
   }
 
-  QualType Type = D->getType().getNonReferenceType().getCanonicalType();
-  bool IsConstant = Type.isConstant(SemaRef.getASTContext());
-  Type = SemaRef.getASTContext().getBaseElementType(Type);
-  // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
-  // in a Construct, C/C++, predetermined, p.6]
-  //  Variables with const qualified type having no mutable member are
-  //  shared.
-  const CXXRecordDecl *RD =
-      SemaRef.getLangOpts().CPlusPlus ? Type->getAsCXXRecordDecl() : nullptr;
-  if (const auto *CTSD = dyn_cast_or_null<ClassTemplateSpecializationDecl>(RD))
-    if (const ClassTemplateDecl *CTD = CTSD->getSpecializedTemplate())
-      RD = CTD->getTemplatedDecl();
-  if (IsConstant &&
-      !(SemaRef.getLangOpts().CPlusPlus && RD && RD->hasDefinition() &&
-        RD->hasMutableFields())) {
-    // Variables with const-qualified type having no mutable member may be
-    // listed in a firstprivate clause, even if they are static data members.
-    DSAVarData DVarTemp = hasInnermostDSA(
-        D,
-        [](OpenMPClauseKind C) {
-          return C == OMPC_firstprivate || C == OMPC_shared;
-        },
-        MatchesAlways, FromParent);
-    if (DVarTemp.CKind != OMPC_unknown && DVarTemp.RefExpr)
-      return DVarTemp;
+  // The predetermined shared attribute for const-qualified types having no
+  // mutable members was removed after OpenMP 3.1.
+  if (SemaRef.LangOpts.OpenMP <= 31) {
+    // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
+    // in a Construct, C/C++, predetermined, p.6]
+    //  Variables with const qualified type having no mutable member are
+    //  shared.
+    if (isConstNotMutableType(SemaRef, D->getType())) {
+      // Variables with const-qualified type having no mutable member may be
+      // listed in a firstprivate clause, even if they are static data members.
+      DSAVarData DVarTemp = hasInnermostDSA(
+          D,
+          [](OpenMPClauseKind C) {
+            return C == OMPC_firstprivate || C == OMPC_shared;
+          },
+          MatchesAlways, FromParent);
+      if (DVarTemp.CKind != OMPC_unknown && DVarTemp.RefExpr)
+        return DVarTemp;
 
-    DVar.CKind = OMPC_shared;
-    return DVar;
+      DVar.CKind = OMPC_shared;
+      return DVar;
+    }
   }
 
   // Explicitly specified attributes and local variables with predetermined
@@ -5320,7 +5359,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
         LastIteration.get(), UB.get());
     EUB = SemaRef.BuildBinOp(CurScope, InitLoc, BO_Assign, UB.get(),
                              CondOp.get());
-    EUB = SemaRef.ActOnFinishFullExpr(EUB.get());
+    EUB = SemaRef.ActOnFinishFullExpr(EUB.get(), /*DiscardedValue*/ false);
 
     // If we have a combined directive that combines 'distribute', 'for' or
     // 'simd' we need to be able to access the bounds of the schedule of the
@@ -5349,7 +5388,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
                                      LastIteration.get(), CombUB.get());
       CombEUB = SemaRef.BuildBinOp(CurScope, InitLoc, BO_Assign, CombUB.get(),
                                    CombCondOp.get());
-      CombEUB = SemaRef.ActOnFinishFullExpr(CombEUB.get());
+      CombEUB =
+          SemaRef.ActOnFinishFullExpr(CombEUB.get(), /*DiscardedValue*/ false);
 
       const CapturedDecl *CD = cast<CapturedStmt>(AStmt)->getCapturedDecl();
       // We expect to have at least 2 more parameters than the 'parallel'
@@ -5383,7 +5423,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
             ? LB.get()
             : SemaRef.ActOnIntegerConstant(SourceLocation(), 0).get();
     Init = SemaRef.BuildBinOp(CurScope, InitLoc, BO_Assign, IV.get(), RHS);
-    Init = SemaRef.ActOnFinishFullExpr(Init.get());
+    Init = SemaRef.ActOnFinishFullExpr(Init.get(), /*DiscardedValue*/ false);
 
     if (isOpenMPLoopBoundSharingDirective(DKind)) {
       Expr *CombRHS =
@@ -5394,7 +5434,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
               : SemaRef.ActOnIntegerConstant(SourceLocation(), 0).get();
       CombInit =
           SemaRef.BuildBinOp(CurScope, InitLoc, BO_Assign, IV.get(), CombRHS);
-      CombInit = SemaRef.ActOnFinishFullExpr(CombInit.get());
+      CombInit =
+          SemaRef.ActOnFinishFullExpr(CombInit.get(), /*DiscardedValue*/ false);
     }
   }
 
@@ -5426,7 +5467,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   if (!Inc.isUsable())
     return 0;
   Inc = SemaRef.BuildBinOp(CurScope, IncLoc, BO_Assign, IV.get(), Inc.get());
-  Inc = SemaRef.ActOnFinishFullExpr(Inc.get());
+  Inc = SemaRef.ActOnFinishFullExpr(Inc.get(), /*DiscardedValue*/ false);
   if (!Inc.isUsable())
     return 0;
 
@@ -5444,7 +5485,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     // LB = LB + ST
     NextLB =
         SemaRef.BuildBinOp(CurScope, IncLoc, BO_Assign, LB.get(), NextLB.get());
-    NextLB = SemaRef.ActOnFinishFullExpr(NextLB.get());
+    NextLB =
+        SemaRef.ActOnFinishFullExpr(NextLB.get(), /*DiscardedValue*/ false);
     if (!NextLB.isUsable())
       return 0;
     // UB + ST
@@ -5454,7 +5496,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     // UB = UB + ST
     NextUB =
         SemaRef.BuildBinOp(CurScope, IncLoc, BO_Assign, UB.get(), NextUB.get());
-    NextUB = SemaRef.ActOnFinishFullExpr(NextUB.get());
+    NextUB =
+        SemaRef.ActOnFinishFullExpr(NextUB.get(), /*DiscardedValue*/ false);
     if (!NextUB.isUsable())
       return 0;
     if (isOpenMPLoopBoundSharingDirective(DKind)) {
@@ -5465,7 +5508,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       // LB = LB + ST
       CombNextLB = SemaRef.BuildBinOp(CurScope, IncLoc, BO_Assign, CombLB.get(),
                                       CombNextLB.get());
-      CombNextLB = SemaRef.ActOnFinishFullExpr(CombNextLB.get());
+      CombNextLB = SemaRef.ActOnFinishFullExpr(CombNextLB.get(),
+                                               /*DiscardedValue*/ false);
       if (!CombNextLB.isUsable())
         return 0;
       // UB + ST
@@ -5476,7 +5520,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       // UB = UB + ST
       CombNextUB = SemaRef.BuildBinOp(CurScope, IncLoc, BO_Assign, CombUB.get(),
                                       CombNextUB.get());
-      CombNextUB = SemaRef.ActOnFinishFullExpr(CombNextUB.get());
+      CombNextUB = SemaRef.ActOnFinishFullExpr(CombNextUB.get(),
+                                               /*DiscardedValue*/ false);
       if (!CombNextUB.isUsable())
         return 0;
     }
@@ -5497,7 +5542,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     assert(DistInc.isUsable() && "distribute inc expr was not built");
     DistInc = SemaRef.BuildBinOp(CurScope, DistIncLoc, BO_Assign, IV.get(),
                                  DistInc.get());
-    DistInc = SemaRef.ActOnFinishFullExpr(DistInc.get());
+    DistInc =
+        SemaRef.ActOnFinishFullExpr(DistInc.get(), /*DiscardedValue*/ false);
     assert(DistInc.isUsable() && "distribute inc expr was not built");
 
     // Build expression: UB = min(UB, prevUB) for #for in composite or combined
@@ -5509,7 +5555,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
         DistEUBLoc, DistEUBLoc, IsUBGreater.get(), PrevUB.get(), UB.get());
     PrevEUB = SemaRef.BuildBinOp(CurScope, DistIncLoc, BO_Assign, UB.get(),
                                  CondOp.get());
-    PrevEUB = SemaRef.ActOnFinishFullExpr(PrevEUB.get());
+    PrevEUB =
+        SemaRef.ActOnFinishFullExpr(PrevEUB.get(), /*DiscardedValue*/ false);
 
     // Build IV <= PrevUB to be used in parallel for is in combination with
     // a distribute directive with schedule(static, 1)
@@ -5613,8 +5660,10 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   Built.IterationVarRef = IV.get();
   Built.LastIteration = LastIteration.get();
   Built.NumIterations = NumIterations.get();
-  Built.CalcLastIteration =
-      SemaRef.ActOnFinishFullExpr(CalcLastIteration.get()).get();
+  Built.CalcLastIteration = SemaRef
+                                .ActOnFinishFullExpr(CalcLastIteration.get(),
+                                                     /*DiscardedValue*/ false)
+                                .get();
   Built.PreCond = PreCond.get();
   Built.PreInits = buildPreInits(C, Captures);
   Built.Cond = Cond.get();
@@ -9781,6 +9830,17 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
       continue;
     Type = Type.getNonReferenceType();
 
+    // OpenMP 5.0 [2.19.3, List Item Privatization, Restrictions]
+    // A variable that is privatized must not have a const-qualified type
+    // unless it is of class type with a mutable member. This restriction does
+    // not apply to the firstprivate clause.
+    //
+    // OpenMP 3.1 [2.9.3.3, private clause, Restrictions]
+    // A variable that appears in a private clause must not have a
+    // const-qualified type unless it is of class type with a mutable member.
+    if (rejectConstNotMutableType(*this, D, Type, OMPC_private, ELoc))
+      continue;
+
     // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
     // in a Construct]
     //  Variables with the predetermined data-sharing attributes may not be
@@ -10202,6 +10262,17 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(ArrayRef<Expr *> VarList,
       continue;
     Type = Type.getNonReferenceType();
 
+    // OpenMP 5.0 [2.19.3, List Item Privatization, Restrictions]
+    // A variable that is privatized must not have a const-qualified type
+    // unless it is of class type with a mutable member. This restriction does
+    // not apply to the firstprivate clause.
+    //
+    // OpenMP 3.1 [2.9.3.5, lastprivate clause, Restrictions]
+    // A variable that appears in a lastprivate clause must not have a
+    // const-qualified type unless it is of class type with a mutable member.
+    if (rejectConstNotMutableType(*this, D, Type, OMPC_lastprivate, ELoc))
+      continue;
+
     OpenMPDirectiveKind CurrDir = DSAStack->getCurrentDirective();
     // OpenMP [2.14.1.1, Data-sharing Attribute Rules for Variables Referenced
     // in a Construct]
@@ -10267,8 +10338,8 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(ArrayRef<Expr *> VarList,
                                          PseudoDstExpr, PseudoSrcExpr);
     if (AssignmentOp.isInvalid())
       continue;
-    AssignmentOp = ActOnFinishFullExpr(AssignmentOp.get(), ELoc,
-                                       /*DiscardedValue=*/true);
+    AssignmentOp =
+        ActOnFinishFullExpr(AssignmentOp.get(), ELoc, /*DiscardedValue*/ false);
     if (AssignmentOp.isInvalid())
       continue;
 
@@ -10911,17 +10982,9 @@ static bool actOnOMPReductionKindClause(
     // OpenMP [2.14.3.6, reduction clause, Restrictions]
     // A list item that appears in a reduction clause must not be
     // const-qualified.
-    if (Type.getNonReferenceType().isConstant(Context)) {
-      S.Diag(ELoc, diag::err_omp_const_reduction_list_item) << ERange;
-      if (!ASE && !OASE) {
-        bool IsDecl = !VD || VD->isThisDeclarationADefinition(Context) ==
-                                 VarDecl::DeclarationOnly;
-        S.Diag(D->getLocation(),
-               IsDecl ? diag::note_previous_decl : diag::note_defined_here)
-            << D;
-      }
+    if (rejectConstNotMutableType(S, D, Type, ClauseKind, ELoc,
+                                  /*AcceptIfMutable*/ false, ASE || OASE))
       continue;
-    }
 
     OpenMPDirectiveKind CurrDir = Stack->getCurrentDirective();
     // OpenMP [2.9.3.6, Restrictions, C/C++, p.4]
@@ -11274,7 +11337,8 @@ static bool actOnOMPReductionKindClause(
                            BO_Assign, LHSDRE, ConditionalOp);
         }
         if (ReductionOp.isUsable())
-          ReductionOp = S.ActOnFinishFullExpr(ReductionOp.get());
+          ReductionOp = S.ActOnFinishFullExpr(ReductionOp.get(),
+                                              /*DiscardedValue*/ false);
       }
       if (!ReductionOp.isUsable())
         continue;
@@ -11467,20 +11531,12 @@ bool Sema::CheckOpenMPLinearDecl(const ValueDecl *D, SourceLocation ELoc,
   }
   Type = Type.getNonReferenceType();
 
-  // A list item must not be const-qualified.
-  if (Type.isConstant(Context)) {
-    Diag(ELoc, diag::err_omp_const_variable)
-        << getOpenMPClauseName(OMPC_linear);
-    if (D) {
-      bool IsDecl =
-          !VD ||
-          VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
-      Diag(D->getLocation(),
-           IsDecl ? diag::note_previous_decl : diag::note_defined_here)
-          << D;
-    }
+  // OpenMP 5.0 [2.19.3, List Item Privatization, Restrictions]
+  // A variable that is privatized must not have a const-qualified type
+  // unless it is of class type with a mutable member. This restriction does
+  // not apply to the firstprivate clause.
+  if (rejectConstNotMutableType(*this, D, Type, OMPC_linear, ELoc))
     return true;
-  }
 
   // A list item must be of integral or pointer type.
   Type = Type.getUnqualifiedType().getCanonicalType();
@@ -11612,7 +11668,7 @@ OMPClause *Sema::ActOnOpenMPLinearClause(
         buildDeclRefExpr(*this, SaveVar, StepExpr->getType(), StepLoc);
     ExprResult CalcStep =
         BuildBinOp(CurScope, StepLoc, BO_Assign, SaveRef.get(), StepExpr);
-    CalcStep = ActOnFinishFullExpr(CalcStep.get());
+    CalcStep = ActOnFinishFullExpr(CalcStep.get(), /*DiscardedValue*/ false);
 
     // Warn about zero linear step (it would be probably better specified as
     // making corresponding variables 'const').
@@ -11700,7 +11756,7 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
     else
       Update = *CurPrivate;
     Update = SemaRef.ActOnFinishFullExpr(Update.get(), DE->getBeginLoc(),
-                                         /*DiscardedValue=*/true);
+                                         /*DiscardedValue*/ false);
 
     // Build final: Var = InitExpr + NumIterations * Step
     ExprResult Final;
@@ -11711,7 +11767,7 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
     else
       Final = *CurPrivate;
     Final = SemaRef.ActOnFinishFullExpr(Final.get(), DE->getBeginLoc(),
-                                        /*DiscardedValue=*/true);
+                                        /*DiscardedValue*/ false);
 
     if (!Update.isUsable() || !Final.isUsable()) {
       Updates.push_back(nullptr);
@@ -11879,7 +11935,7 @@ OMPClause *Sema::ActOnOpenMPCopyinClause(ArrayRef<Expr *> VarList,
     if (AssignmentOp.isInvalid())
       continue;
     AssignmentOp = ActOnFinishFullExpr(AssignmentOp.get(), DE->getExprLoc(),
-                                       /*DiscardedValue=*/true);
+                                       /*DiscardedValue*/ false);
     if (AssignmentOp.isInvalid())
       continue;
 
@@ -11987,8 +12043,8 @@ OMPClause *Sema::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
         DSAStack->getCurScope(), ELoc, BO_Assign, PseudoDstExpr, PseudoSrcExpr);
     if (AssignmentOp.isInvalid())
       continue;
-    AssignmentOp = ActOnFinishFullExpr(AssignmentOp.get(), ELoc,
-                                       /*DiscardedValue=*/true);
+    AssignmentOp =
+        ActOnFinishFullExpr(AssignmentOp.get(), ELoc, /*DiscardedValue*/ false);
     if (AssignmentOp.isInvalid())
       continue;
 

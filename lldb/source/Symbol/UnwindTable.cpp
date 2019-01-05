@@ -180,8 +180,8 @@ ArmUnwindInfo *UnwindTable::GetArmUnwindInfo() {
   return m_arm_unwind_up.get();
 }
 
-bool UnwindTable::GetArchitecture(lldb_private::ArchSpec &arch) {
-  return m_object_file.GetArchitecture(arch);
+ArchSpec UnwindTable::GetArchitecture() {
+  return m_object_file.GetArchitecture();
 }
 
 bool UnwindTable::GetAllowAssemblyEmulationUnwindPlans() {

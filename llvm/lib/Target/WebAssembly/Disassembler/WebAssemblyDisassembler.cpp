@@ -151,7 +151,8 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
   MI.setOpcode(WasmInst->Opcode);
   // Parse any operands.
   for (uint8_t OPI = 0; OPI < WasmInst->NumOperands; OPI++) {
-    switch (OperandTable[WasmInst->OperandStart + OPI]) {
+    auto OT = OperandTable[WasmInst->OperandStart + OPI];
+    switch (OT) {
     // ULEB operands:
     case WebAssembly::OPERAND_BASIC_BLOCK:
     case WebAssembly::OPERAND_LOCAL:
@@ -167,9 +168,14 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     }
     // SLEB operands:
     case WebAssembly::OPERAND_I32IMM:
-    case WebAssembly::OPERAND_I64IMM:
-    case WebAssembly::OPERAND_SIGNATURE: {
+    case WebAssembly::OPERAND_I64IMM: {
       if (!parseLEBImmediate(MI, Size, Bytes, true))
+        return MCDisassembler::Fail;
+      break;
+    }
+    // block_type operands (uint8_t).
+    case WebAssembly::OPERAND_SIGNATURE: {
+      if (!parseImmediate<uint8_t>(MI, Size, Bytes))
         return MCDisassembler::Fail;
       break;
     }
@@ -202,6 +208,19 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     }
     case WebAssembly::OPERAND_VEC_I64IMM: {
       if (!parseImmediate<uint64_t>(MI, Size, Bytes))
+        return MCDisassembler::Fail;
+      break;
+    }
+    case WebAssembly::OPERAND_BRLIST: {
+      int64_t TargetTableLen;
+      if (!nextLEB(TargetTableLen, Bytes, Size, false))
+        return MCDisassembler::Fail;
+      for (int64_t I = 0; I < TargetTableLen; I++) {
+        if (!parseLEBImmediate(MI, Size, Bytes, false))
+          return MCDisassembler::Fail;
+      }
+      // Default case.
+      if (!parseLEBImmediate(MI, Size, Bytes, false))
         return MCDisassembler::Fail;
       break;
     }

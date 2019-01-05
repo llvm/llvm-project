@@ -14,6 +14,7 @@
 #ifndef HWASAN_ALLOCATOR_H
 #define HWASAN_ALLOCATOR_H
 
+#include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
@@ -24,6 +25,11 @@
 
 #if !defined(__aarch64__) && !defined(__x86_64__)
 #error Unsupported platform
+#endif
+
+#if HWASAN_WITH_INTERCEPTORS
+DECLARE_REAL(void *, realloc, void *ptr, uptr size)
+DECLARE_REAL(void, free, void *ptr)
 #endif
 
 namespace __hwasan {
@@ -45,27 +51,21 @@ struct HwasanMapUnmapCallback {
 };
 
 static const uptr kMaxAllowedMallocSize = 2UL << 30;  // 2G
-static const uptr kRegionSizeLog = 20;
-static const uptr kNumRegions = SANITIZER_MMAP_RANGE_SIZE >> kRegionSizeLog;
-typedef TwoLevelByteMap<(kNumRegions >> 12), 1 << 12> ByteMap;
 
-struct AP32 {
-  static const uptr kSpaceBeg = 0;
-  static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
+struct AP64 {
+  static const uptr kSpaceBeg = ~0ULL;
+  static const uptr kSpaceSize = 0x2000000000ULL;
   static const uptr kMetadataSize = sizeof(Metadata);
-  typedef __sanitizer::CompactSizeClassMap SizeClassMap;
-  static const uptr kRegionSizeLog = __hwasan::kRegionSizeLog;
+  typedef __sanitizer::VeryDenseSizeClassMap SizeClassMap;
   using AddressSpaceView = LocalAddressSpaceView;
-  using ByteMap = __hwasan::ByteMap;
   typedef HwasanMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
 };
-typedef SizeClassAllocator32<AP32> PrimaryAllocator;
+typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 typedef SizeClassAllocatorLocalCache<PrimaryAllocator> AllocatorCache;
 typedef LargeMmapAllocator<HwasanMapUnmapCallback> SecondaryAllocator;
 typedef CombinedAllocator<PrimaryAllocator, AllocatorCache,
                           SecondaryAllocator> Allocator;
-
 
 void AllocatorSwallowThreadLocalCache(AllocatorCache *cache);
 

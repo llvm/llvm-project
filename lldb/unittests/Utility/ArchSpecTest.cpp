@@ -228,3 +228,8 @@ TEST(ArchSpecTest, Compatibility) {
     ASSERT_TRUE(A.IsCompatibleMatch(B));
   }
 }
+
+TEST(ArchSpecTest, OperatorBool) {
+  EXPECT_FALSE(ArchSpec());
+  EXPECT_TRUE(ArchSpec("x86_64-pc-linux"));
+}

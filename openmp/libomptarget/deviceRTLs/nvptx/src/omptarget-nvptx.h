@@ -53,15 +53,16 @@
 #define __SHFL_SYNC(mask, var, srcLane) __shfl_sync((mask), (var), (srcLane))
 #define __SHFL_DOWN_SYNC(mask, var, delta, width)                              \
   __shfl_down_sync((mask), (var), (delta), (width))
-#define __BALLOT_SYNC(mask, predicate) __ballot_sync((mask), (predicate))
 #define __ACTIVEMASK() __activemask()
 #else
 #define __SHFL_SYNC(mask, var, srcLane) __shfl((var), (srcLane))
 #define __SHFL_DOWN_SYNC(mask, var, delta, width)                              \
   __shfl_down((var), (delta), (width))
-#define __BALLOT_SYNC(mask, predicate) __ballot((predicate))
 #define __ACTIVEMASK() __ballot(1)
 #endif
+
+#define __SYNCTHREADS_N(n) asm volatile("bar.sync %0;" : : "r"(n) : "memory");
+#define __SYNCTHREADS() __SYNCTHREADS_N(0)
 
 // arguments needed for L0 parallelism only.
 class omptarget_nvptx_SharedArgs {
@@ -90,7 +91,7 @@ public:
     }
   }
   // Called by all threads.
-  INLINE void **GetArgs() { return args; };
+  INLINE void **GetArgs() const { return args; };
 private:
   // buffer of pre-allocated arguments.
   void *buffer[MAX_SHARED_ARGS];
@@ -101,7 +102,8 @@ private:
   uint32_t nArgs;
 };
 
-extern __device__ __shared__ omptarget_nvptx_SharedArgs omptarget_nvptx_globalArgs;
+extern __device__ __shared__ omptarget_nvptx_SharedArgs
+    omptarget_nvptx_globalArgs;
 
 // Data sharing related quantities, need to match what is used in the compiler.
 enum DATA_SHARING_SIZES {
@@ -152,28 +154,28 @@ extern __device__ __shared__ DataSharingStateTy DataSharingState;
 class omptarget_nvptx_TaskDescr {
 public:
   // methods for flags
-  INLINE omp_sched_t GetRuntimeSched();
+  INLINE omp_sched_t GetRuntimeSched() const;
   INLINE void SetRuntimeSched(omp_sched_t sched);
-  INLINE int InParallelRegion() { return items.flags & TaskDescr_InPar; }
-  INLINE int InL2OrHigherParallelRegion() {
+  INLINE int InParallelRegion() const { return items.flags & TaskDescr_InPar; }
+  INLINE int InL2OrHigherParallelRegion() const {
     return items.flags & TaskDescr_InParL2P;
   }
-  INLINE int IsParallelConstruct() {
+  INLINE int IsParallelConstruct() const {
     return items.flags & TaskDescr_IsParConstr;
   }
-  INLINE int IsTaskConstruct() { return !IsParallelConstruct(); }
+  INLINE int IsTaskConstruct() const { return !IsParallelConstruct(); }
   // methods for other fields
   INLINE uint16_t &NThreads() { return items.nthreads; }
   INLINE uint16_t &ThreadLimit() { return items.threadlimit; }
   INLINE uint16_t &ThreadId() { return items.threadId; }
   INLINE uint16_t &ThreadsInTeam() { return items.threadsInTeam; }
   INLINE uint64_t &RuntimeChunkSize() { return items.runtimeChunkSize; }
-  INLINE omptarget_nvptx_TaskDescr *GetPrevTaskDescr() { return prev; }
+  INLINE omptarget_nvptx_TaskDescr *GetPrevTaskDescr() const { return prev; }
   INLINE void SetPrevTaskDescr(omptarget_nvptx_TaskDescr *taskDescr) {
     prev = taskDescr;
   }
   // init & copy
-  INLINE void InitLevelZeroTaskDescr();
+  INLINE void InitLevelZeroTaskDescr(bool isSPMDExecutionMode);
   INLINE void InitLevelOneTaskDescr(uint16_t tnum,
                                     omptarget_nvptx_TaskDescr *parentTaskDescr);
   INLINE void Copy(omptarget_nvptx_TaskDescr *sourceTaskDescr);
@@ -254,7 +256,7 @@ public:
   INLINE uint64_t *getLastprivateIterBuffer() { return &lastprivateIterBuffer; }
 
   // init
-  INLINE void InitTeamDescr();
+  INLINE void InitTeamDescr(bool isSPMDExecutionMode);
 
   INLINE __kmpc_data_sharing_slot *RootS(int wid, bool IsMasterThread) {
     // If this is invoked by the master thread of the master warp then intialize
@@ -323,7 +325,7 @@ public:
                                    omptarget_nvptx_TaskDescr *taskICV) {
     topTaskDescr[tid] = taskICV;
   }
-  INLINE omptarget_nvptx_TaskDescr *GetTopLevelTaskDescr(int tid);
+  INLINE omptarget_nvptx_TaskDescr *GetTopLevelTaskDescr(int tid) const;
   // parallel
   INLINE uint16_t &NumThreadsForNextParallel(int tid) {
     return nextRegion.tnum[tid];
@@ -378,7 +380,7 @@ private:
     volatile unsigned keys[OMP_STATE_COUNT];
   } MemData[MAX_SM];
 
-  INLINE uint32_t hash(unsigned key) const {
+  INLINE static uint32_t hash(unsigned key) {
     return key & (OMP_STATE_COUNT - 1);
   }
 
@@ -459,7 +461,8 @@ extern volatile __device__ __shared__ omptarget_nvptx_WorkFn
 
 INLINE omptarget_nvptx_TeamDescr &getMyTeamDescriptor();
 INLINE omptarget_nvptx_WorkDescr &getMyWorkDescriptor();
-INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor();
+INLINE omptarget_nvptx_TaskDescr *
+getMyTopTaskDescriptor(bool isSPMDExecutionMode);
 INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor(int globalThreadId);
 
 ////////////////////////////////////////////////////////////////////////////////

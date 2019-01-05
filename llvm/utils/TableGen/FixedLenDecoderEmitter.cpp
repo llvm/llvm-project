@@ -1717,7 +1717,7 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
   dumpStack(errs(), "\t\t");
 
   for (unsigned i = 0; i < Opcodes.size(); ++i) {
-    errs() << '\t' << Opcodes[i] << " ";
+    errs() << '\t' << AllInstructions[Opcodes[i]] << " ";
     dumpBits(errs(),
              getBitsField(*AllInstructions[Opcodes[i]].EncodingDef, "Inst"));
     errs() << '\n';

@@ -13,6 +13,7 @@ Take the output IR printed to stdout, compile it to an executable using whatever
 set of transforms you want to test, and run the program. If it crashes, it found
 a bug (an error message with the expected and actual result is printed).
 """
+from __future__ import print_function
 
 import random
 import uuid
@@ -145,7 +146,7 @@ class ShufInstr(Instruction):
 
   def calc_value(self):
     if self.value != None:
-      print 'Trying to calculate the value of a shuffle instruction twice'
+      print('Trying to calculate the value of a shuffle instruction twice')
       exit(1)
 
     result = []
@@ -179,7 +180,7 @@ class SelectInstr(Instruction):
 
   def calc_value(self):
     if self.value != None:
-      print 'Trying to calculate the value of a select instruction twice'
+      print('Trying to calculate the value of a select instruction twice')
       exit(1)
 
     result = []
@@ -343,7 +344,7 @@ def main():
                       help='Choose specific number of vector elements to be tested. (default: random)')
   args = parser.parse_args()
 
-  print '; The seed used for this test is ' + args.seed
+  print('; The seed used for this test is ' + args.seed)
 
   assert args.min_num_inputs < args.max_num_inputs , "Minimum value greater than maximum."
   assert args.type in [None, 'i8', 'i16', 'i32', 'i64', 'f32', 'f64'], "Illegal type."
@@ -362,14 +363,14 @@ def main():
 
   # print the actual test function by dumping the generated instructions.
   insts_str = ''.join([inst.dump() for inst in insts])
-  print test_template.format(ty = ty.dump(), inputs = inputs_str,
-                             instructions = insts_str, last_name = res.name)
+  print(test_template.format(ty = ty.dump(), inputs = inputs_str,
+                             instructions = insts_str, last_name = res.name))
 
   # Print the error message templates as global strings
   for i in range(len(res.value)):
     pad = ''.join(['\\00']*(31 - len(str(i)) - len(str(res.value[i]))))
-    print error_template.format(lane = str(i), exp = str(res.value[i]),
-                                padding = pad)
+    print(error_template.format(lane = str(i), exp = str(res.value[i]),
+                                padding = pad))
 
   # Prepare the runtime checks and failure handlers.
   scalar_ty = ty.get_scalar_type()
@@ -395,7 +396,7 @@ def main():
   inputs_values = [', '.join([scalar_ty.dump() + ' ' + str(i) for i in inp]) for inp in inputs_values]
   inputs = ', '.join([ty.dump() + ' <' + inp + '>' for inp in inputs_values])
 
-  print main_template.format(ty = ty.dump(), inputs = inputs, check_die = check_die)
+  print(main_template.format(ty = ty.dump(), inputs = inputs, check_die = check_die))
 
 
 if __name__ == '__main__':

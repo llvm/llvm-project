@@ -53,10 +53,10 @@ entry:
   ret i64 %conv
 
 ; CHECK-LABEL: qpConv2sdw_03
+; CHECK: lxv v[[REG:[0-9]+]], 0(r3)
 ; CHECK: addis r[[REG0:[0-9]+]], r2, .LC0@toc@ha
-; CHECK-DAG: ld r[[REG0]], .LC0@toc@l(r[[REG0]])
-; CHECK-DAG: lxv v[[REG1:[0-9]+]], 16(r[[REG0]])
-; CHECK-DAG: lxv v[[REG:[0-9]+]], 0(r3)
+; CHECK: ld r[[REG0]], .LC0@toc@l(r[[REG0]])
+; CHECK: lxv v[[REG1:[0-9]+]], 16(r[[REG0]])
 ; CHECK: xsaddqp v[[REG]], v[[REG]], v[[REG1]]
 ; CHECK-NEXT: xscvqpsdz v[[CONV:[0-9]+]], v[[REG]]
 ; CHECK-NEXT: mfvsrd r3, v[[CONV]]
@@ -97,7 +97,7 @@ entry:
 
 ; CHECK-LABEL: qpConv2sdw_testXForm
 ; CHECK: xscvqpsdz v[[CONV:[0-9]+]],
-; CHECK-NEXT: stxsdx v[[CONV]], r3, r4
+; CHECK: stxsdx v[[CONV]], r3, r4
 ; CHECK-NEXT: blr
 }
 
@@ -146,10 +146,10 @@ entry:
   ret i64 %conv
 
 ; CHECK-LABEL: qpConv2udw_03
+; CHECK: lxv v[[REG:[0-9]+]], 0(r3)
 ; CHECK: addis r[[REG0:[0-9]+]], r2, .LC0@toc@ha
 ; CHECK-DAG: ld r[[REG0]], .LC0@toc@l(r[[REG0]])
 ; CHECK-DAG: lxv v[[REG1:[0-9]+]], 16(r[[REG0]])
-; CHECK-DAG: lxv v[[REG:[0-9]+]], 0(r3)
 ; CHECK: xsaddqp v[[REG]], v[[REG]], v[[REG1]]
 ; CHECK-NEXT: xscvqpudz v[[CONV:[0-9]+]], v[[REG]]
 ; CHECK-NEXT: mfvsrd r3, v[[CONV]]
@@ -190,7 +190,7 @@ entry:
 
 ; CHECK-LABEL: qpConv2udw_testXForm
 ; CHECK: xscvqpudz v[[CONV:[0-9]+]],
-; CHECK-NEXT: stxsdx v[[CONV]], r3, r4
+; CHECK: stxsdx v[[CONV]], r3, r4
 ; CHECK-NEXT: blr
 }
 
@@ -240,10 +240,10 @@ entry:
   ret i32 %conv
 
 ; CHECK-LABEL: qpConv2sw_03
+; CHECK: lxv v[[REG:[0-9]+]], 0(r3)
 ; CHECK: addis r[[REG0:[0-9]+]], r2, .LC0@toc@ha
 ; CHECK-DAG: ld r[[REG0]], .LC0@toc@l(r[[REG0]])
 ; CHECK-DAG: lxv v[[REG1:[0-9]+]], 16(r[[REG0]])
-; CHECK-DAG: lxv v[[REG:[0-9]+]], 0(r3)
 ; CHECK-NEXT: xsaddqp v[[ADD:[0-9]+]], v[[REG]], v[[REG1]]
 ; CHECK-NEXT: xscvqpswz v[[CONV:[0-9]+]], v[[ADD]]
 ; CHECK-NEXT: mfvsrwz r[[REG2:[0-9]+]], v[[CONV]]
@@ -316,10 +316,10 @@ entry:
   ret i32 %conv
 
 ; CHECK-LABEL: qpConv2uw_03
+; CHECK: lxv v[[REG:[0-9]+]], 0(r3)
 ; CHECK: addis r[[REG0:[0-9]+]], r2, .LC0@toc@ha
 ; CHECK-DAG: ld r[[REG0]], .LC0@toc@l(r[[REG0]])
 ; CHECK-DAG: lxv v[[REG1:[0-9]+]], 16(r[[REG0]])
-; CHECK-DAG: lxv v[[REG:[0-9]+]], 0(r3)
 ; CHECK-NEXT: xsaddqp v[[ADD:[0-9]+]], v[[REG]], v[[REG1]]
 ; CHECK-NEXT: xscvqpuwz v[[CONV:[0-9]+]], v[[ADD]]
 ; CHECK-NEXT: mfvsrwz r3, v[[CONV]]
@@ -386,10 +386,10 @@ entry:
 define signext i16 @qpConv2shw_03(fp128* nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2shw_03:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    lxv v2, 0(r3)
-; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
-; CHECK-NEXT:    lxv v3, 16(r4)
+; CHECK-NEXT:    addis [[REG:r[0-9]+]], r2, .LC0@toc@ha
+; CHECK-NEXT:    ld [[REG1:r[0-9]+]], .LC0@toc@l([[REG]])
+; CHECK-NEXT:    lxv v3, 16([[REG1]])
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-NEXT:    xscvqpswz v2, v2
 ; CHECK-NEXT:    mfvsrwz r3, v2
@@ -463,10 +463,10 @@ entry:
 define zeroext i16 @qpConv2uhw_03(fp128* nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2uhw_03:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    lxv v2, 0(r3)
-; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
-; CHECK-NEXT:    lxv v3, 16(r4)
+; CHECK-NEXT:    addis [[REG:r[0-9]+]], r2, .LC0@toc@ha
+; CHECK-NEXT:    ld [[REG1:r[0-9]+]], .LC0@toc@l([[REG]])
+; CHECK-NEXT:    lxv v3, 16([[REG1]])
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-NEXT:    xscvqpswz v2, v2
 ; CHECK-NEXT:    mfvsrwz r3, v2
@@ -540,10 +540,10 @@ entry:
 define signext i8 @qpConv2sb_03(fp128* nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2sb_03:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    lxv v2, 0(r3)
-; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
-; CHECK-NEXT:    lxv v3, 16(r4)
+; CHECK-NEXT:    addis [[REG:r[0-9]+]], r2, .LC0@toc@ha
+; CHECK-NEXT:    ld [[REG1:r[0-9]+]], .LC0@toc@l([[REG]])
+; CHECK-NEXT:    lxv v3, 16([[REG1]])
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-NEXT:    xscvqpswz v2, v2
 ; CHECK-NEXT:    mfvsrwz r3, v2
@@ -617,10 +617,10 @@ entry:
 define zeroext i8 @qpConv2ub_03(fp128* nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2ub_03:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-NEXT:    lxv v2, 0(r3)
-; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
-; CHECK-NEXT:    lxv v3, 16(r4)
+; CHECK-NEXT:    addis [[REG:r[0-9]+]], r2, .LC0@toc@ha
+; CHECK-NEXT:    ld [[REG1:r[0-9]+]], .LC0@toc@l([[REG]])
+; CHECK-NEXT:    lxv v3, 16([[REG1]])
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-NEXT:    xscvqpswz v2, v2
 ; CHECK-NEXT:    mfvsrwz r3, v2

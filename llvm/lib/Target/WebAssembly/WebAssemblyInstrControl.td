@@ -36,10 +36,14 @@ def : Pat<(brcond (i32 (seteq I32:$cond, 0)), bb:$dst),
 // A list of branch targets enclosed in {} and separated by comma.
 // Used by br_table only.
 def BrListAsmOperand : AsmOperandClass { let Name = "BrList"; }
+let OperandNamespace = "WebAssembly" in {
+let OperandType = "OPERAND_BRLIST" in {
 def brlist : Operand<i32> {
   let ParserMatchClass = BrListAsmOperand;
   let PrintMethod = "printBrList";
 }
+}  // OPERAND_BRLIST
+}  // OperandNamespace = "WebAssembly"
 
 // TODO: SelectionDAG's lowering insists on using a pointer as the index for
 // jump tables, so in practice we don't ever use BR_TABLE_I64 in wasm32 mode

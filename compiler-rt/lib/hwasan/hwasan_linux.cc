@@ -40,6 +40,7 @@
 #include "sanitizer_common/sanitizer_procmaps.h"
 
 #if HWASAN_WITH_INTERCEPTORS && !SANITIZER_ANDROID
+SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL uptr __hwasan_tls;
 #endif
 
@@ -301,7 +302,12 @@ void AndroidTestTlsSlot() {}
 #endif
 
 Thread *GetCurrentThread() {
-  auto *R = (StackAllocationsRingBuffer*)GetCurrentThreadLongPtr();
+  uptr *ThreadLong = GetCurrentThreadLongPtr();
+#if HWASAN_WITH_INTERCEPTORS
+  if (!*ThreadLong)
+    __hwasan_thread_enter();
+#endif
+  auto *R = (StackAllocationsRingBuffer *)ThreadLong;
   return hwasanThreadList().GetThreadByBufferAddress((uptr)(R->Next()));
 }
 

@@ -6701,6 +6701,24 @@ inline const Type *Type::getPointeeOrArrayElementType() const {
   return type;
 }
 
+/// Insertion operator for diagnostics. This allows sending Qualifiers into a
+/// diagnostic with <<.
+inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                           Qualifiers Q) {
+  DB.AddTaggedVal(Q.getAsOpaqueValue(),
+                  DiagnosticsEngine::ArgumentKind::ak_qual);
+  return DB;
+}
+
+/// Insertion operator for partial diagnostics. This allows sending Qualifiers
+/// into a diagnostic with <<.
+inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
+                                           Qualifiers Q) {
+  PD.AddTaggedVal(Q.getAsOpaqueValue(),
+                  DiagnosticsEngine::ArgumentKind::ak_qual);
+  return PD;
+}
+
 /// Insertion operator for diagnostics.  This allows sending QualType's into a
 /// diagnostic with <<.
 inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,

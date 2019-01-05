@@ -367,8 +367,8 @@ void PdbAstBuilder::BuildParentMap() {
   std::vector<TypeIndex> full_keys;
   std::vector<TypeIndex> fwd_keys;
   for (auto &entry : m_parent_types) {
-    TypeIndex key, value;
-    std::tie(key, value) = entry;
+    TypeIndex key = entry.first;
+    TypeIndex value = entry.second;
 
     auto iter = forward_to_full.find(value);
     if (iter != forward_to_full.end())

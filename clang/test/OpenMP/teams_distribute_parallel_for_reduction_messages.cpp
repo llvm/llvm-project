@@ -125,22 +125,22 @@ T tmain(T argc) {
 #pragma omp teams distribute parallel for reduction(^ : T) // expected-error {{'T' does not refer to a value}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified list item cannot be reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}}
+#pragma omp teams distribute parallel for reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified variable cannot be reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 4 {{arguments of OpenMP clause 'reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 3 {{const-qualified list item cannot be reduction}}
+#pragma omp teams distribute parallel for reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 4 {{arguments of OpenMP clause 'reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 3 {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
 #pragma omp teams distribute parallel for reduction(max : h.b) // expected-error {{expected variable name, array element or array section}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for reduction(+ : ba) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp teams distribute parallel for reduction(+ : ba) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for reduction(* : ca) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp teams distribute parallel for reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for reduction(- : da) // expected-error {{const-qualified list item cannot be reduction}} expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp teams distribute parallel for reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}} expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
 #pragma omp teams distribute parallel for reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
@@ -149,7 +149,7 @@ T tmain(T argc) {
 #pragma omp teams distribute parallel for reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for reduction(&& : S2::S2sc) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp teams distribute parallel for reduction(&& : S2::S2sc) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
 #pragma omp teams distribute parallel for reduction(+ : h, k) // expected-error {{threadprivate or thread local variable cannot be reduction}}
@@ -168,7 +168,7 @@ T tmain(T argc) {
 #pragma omp teams distribute parallel for reduction(+ : p), reduction(+ : p) // expected-error 2 {{variable can appear only once in OpenMP 'reduction' clause}} expected-note 2 {{previously referenced here}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for reduction(+ : r) // expected-error 2 {{const-qualified list item cannot be reduction}}
+#pragma omp teams distribute parallel for reduction(+ : r) // expected-error 2 {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp parallel shared(i)
 #pragma omp parallel reduction(min : i)
@@ -242,22 +242,22 @@ int main(int argc, char **argv) {
 #pragma omp teams distribute parallel for reduction(^ : S1) // expected-error {{'S1' does not refer to a value}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{const-qualified list item cannot be reduction}} expected-error {{'operator+' is a private member of 'S2'}}
+#pragma omp teams distribute parallel for reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{const-qualified variable cannot be reduction}} expected-error {{'operator+' is a private member of 'S2'}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{arguments of OpenMP clause 'reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 2 {{const-qualified list item cannot be reduction}}
+#pragma omp teams distribute parallel for reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{arguments of OpenMP clause 'reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 2 {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
 #pragma omp teams distribute parallel for reduction(max : h.b) // expected-error {{expected variable name, array element or array section}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for reduction(+ : ba) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp teams distribute parallel for reduction(+ : ba) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for reduction(* : ca) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp teams distribute parallel for reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for reduction(- : da) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp teams distribute parallel for reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
 #pragma omp teams distribute parallel for reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
@@ -266,7 +266,7 @@ int main(int argc, char **argv) {
 #pragma omp teams distribute parallel for reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for reduction(&& : S2::S2sc) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp teams distribute parallel for reduction(&& : S2::S2sc) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
 #pragma omp teams distribute parallel for reduction(& : e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{invalid operands to binary expression ('S4' and 'S4')}} expected-error {{calling a private constructor of class 'S5'}} expected-error {{invalid operands to binary expression ('S5' and 'S5')}}
@@ -288,7 +288,7 @@ int main(int argc, char **argv) {
 #pragma omp teams distribute parallel for reduction(+ : p), reduction(+ : p) // expected-error {{variable can appear only once in OpenMP 'reduction' clause}} expected-note {{previously referenced here}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for reduction(+ : r) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp teams distribute parallel for reduction(+ : r) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp parallel shared(i)
 #pragma omp parallel reduction(min : i)

@@ -2624,6 +2624,15 @@ public:
   /// type.
   QualType getCallReturnType(const ASTContext &Ctx) const;
 
+  /// Returns the WarnUnusedResultAttr that is either declared on the called
+  /// function, or its return type declaration.
+  const Attr *getUnusedResultAttr(const ASTContext &Ctx) const;
+
+  /// Returns true if this call expression should warn on unused results.
+  bool hasUnusedResultAttr(const ASTContext &Ctx) const {
+    return getUnusedResultAttr(Ctx) != nullptr;
+  }
+
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 

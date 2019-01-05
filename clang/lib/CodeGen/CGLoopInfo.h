@@ -66,6 +66,12 @@ struct LoopAttributes {
 
   /// Value for llvm.loop.distribute.enable metadata.
   LVEnableState DistributeEnable;
+
+  /// Value for llvm.loop.pipeline.disable metadata.
+  bool PipelineDisabled;
+
+  /// Value for llvm.loop.pipeline.iicount metadata.
+  unsigned PipelineInitiationInterval;
 };
 
 /// Information used when generating a structured loop.
@@ -170,6 +176,14 @@ public:
 
   /// \brief Set the unroll count for the next loop pushed.
   void setUnrollAndJamCount(unsigned C) { StagedAttrs.UnrollAndJamCount = C; }
+
+  /// Set the pipeline disabled state.
+  void setPipelineDisabled(bool S) { StagedAttrs.PipelineDisabled = S; }
+
+  /// Set the pipeline initiation interval.
+  void setPipelineInitiationInterval(unsigned C) {
+    StagedAttrs.PipelineInitiationInterval = C;
+  }
 
 private:
   /// Returns true if there is LoopInfo on the stack.

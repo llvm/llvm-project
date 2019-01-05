@@ -32,6 +32,35 @@ void g() {
   // OK, warning suppressed.
   (void)fp();
 }
+
+namespace PR31526 {
+typedef E (*fp1)();
+typedef S (*fp2)();
+
+typedef S S_alias;
+typedef S_alias (*fp3)();
+
+typedef fp2 fp2_alias;
+
+void f() {
+  fp1 one;
+  fp2 two;
+  fp3 three;
+  fp2_alias four;
+
+  one(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  two(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  three(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  four(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  // These are all okay because of the explicit cast to void.
+  (void)one();
+  (void)two();
+  (void)three();
+  (void)four();
+}
+} // namespace PR31526
+
 #ifdef EXT
 // expected-warning@4 {{use of the 'nodiscard' attribute is a C++17 extension}}
 // expected-warning@8 {{use of the 'nodiscard' attribute is a C++17 extension}}

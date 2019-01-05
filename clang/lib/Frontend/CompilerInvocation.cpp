@@ -33,6 +33,7 @@
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
+#include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/LangStandard.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
@@ -1317,6 +1318,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.KeepStaticConsts = Args.hasArg(OPT_fkeep_static_consts);
 
   Opts.SpeculativeLoadHardening = Args.hasArg(OPT_mspeculative_load_hardening);
+
+  Opts.DefaultFunctionAttrs = Args.getAllArgValues(OPT_default_function_attr);
 
   return Success;
 }

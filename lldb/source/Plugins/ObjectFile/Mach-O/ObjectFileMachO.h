@@ -92,7 +92,7 @@ public:
 
   void Dump(lldb_private::Stream *s) override;
 
-  bool GetArchitecture(lldb_private::ArchSpec &arch) override;
+  lldb_private::ArchSpec GetArchitecture() override;
 
   bool GetUUID(lldb_private::UUID *uuid) override;
 
@@ -147,10 +147,10 @@ protected:
           lldb::offset_t lc_offset, // Offset to the first load command
           lldb_private::UUID &uuid);
 
-  static bool GetArchitecture(const llvm::MachO::mach_header &header,
-                              const lldb_private::DataExtractor &data,
-                              lldb::offset_t lc_offset,
-                              lldb_private::ArchSpec &arch);
+  static lldb_private::ArchSpec
+  GetArchitecture(const llvm::MachO::mach_header &header,
+                  const lldb_private::DataExtractor &data,
+                  lldb::offset_t lc_offset);
 
   // Intended for same-host arm device debugging where lldb needs to
   // detect libraries in the shared cache and augment the nlist entries

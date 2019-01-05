@@ -79,6 +79,8 @@ enum OperandType {
   OPERAND_TYPEINDEX,
   /// Event index.
   OPERAND_EVENT,
+  /// A list of branch targets for br_list.
+  OPERAND_BRLIST,
 };
 } // end namespace WebAssembly
 
@@ -346,7 +348,8 @@ enum class ExprType : unsigned {
   F32 = 0x7D,
   F64 = 0x7C,
   V128 = 0x7B,
-  ExceptRef = 0x68
+  ExceptRef = 0x68,
+  Invalid = 0x00
 };
 
 /// Instruction opcodes emitted via means other than CodeGen.

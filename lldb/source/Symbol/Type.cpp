@@ -328,8 +328,7 @@ uint64_t Type::GetByteSize() {
     case eEncodingIsPointerUID:
     case eEncodingIsLValueReferenceUID:
     case eEncodingIsRValueReferenceUID: {
-      ArchSpec arch;
-      if (m_symbol_file->GetObjectFile()->GetArchitecture(arch))
+      if (ArchSpec arch = m_symbol_file->GetObjectFile()->GetArchitecture())
         m_byte_size = arch.GetAddressByteSize();
     } break;
     }

@@ -156,6 +156,24 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
   if (FrontendPluginRegistry::begin() == FrontendPluginRegistry::end())
     return Consumer;
 
+  // Validate -add-plugin args.
+  bool FoundAllPlugins = true;
+  for (const std::string &Arg : CI.getFrontendOpts().AddPluginActions) {
+    bool Found = false;
+    for (FrontendPluginRegistry::iterator it = FrontendPluginRegistry::begin(),
+                                          ie = FrontendPluginRegistry::end();
+         it != ie; ++it) {
+      if (it->getName() == Arg)
+        Found = true;
+    }
+    if (!Found) {
+      CI.getDiagnostics().Report(diag::err_fe_invalid_plugin_name) << Arg;
+      FoundAllPlugins = false;
+    }
+  }
+  if (!FoundAllPlugins)
+    return nullptr;
+
   // If this is a code completion run, avoid invoking the plugin consumers
   if (CI.hasCodeCompletionConsumer())
     return Consumer;

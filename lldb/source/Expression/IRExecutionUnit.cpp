@@ -1217,14 +1217,11 @@ void IRExecutionUnit::PopulateSectionList(
   }
 }
 
-bool IRExecutionUnit::GetArchitecture(lldb_private::ArchSpec &arch) {
+ArchSpec IRExecutionUnit::GetArchitecture() {
   ExecutionContext exe_ctx(GetBestExecutionContextScope());
-  Target *target = exe_ctx.GetTargetPtr();
-  if (target)
-    arch = target->GetArchitecture();
-  else
-    arch.Clear();
-  return arch.IsValid();
+  if(Target *target = exe_ctx.GetTargetPtr())
+    return target->GetArchitecture();
+  return ArchSpec();
 }
 
 lldb::ModuleSP IRExecutionUnit::GetJITModule() {

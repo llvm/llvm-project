@@ -11,7 +11,7 @@
 // CHECK-NEXT: READ CALLED; len={{[0-9]*}}
 // CHECK-NEXT: READ: test
 //
-// UNSUPPORTED: linux. darwin, solaris
+// UNSUPPORTED: linux, darwin, solaris
 
 #include <assert.h>
 #include <stdio.h>

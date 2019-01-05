@@ -2578,10 +2578,10 @@ def LoopHintDocs : Documentation {
   let Heading = "#pragma clang loop";
   let Content = [{
 The ``#pragma clang loop`` directive allows loop optimization hints to be
-specified for the subsequent loop. The directive allows vectorization,
-interleaving, and unrolling to be enabled or disabled. Vector width as well
-as interleave and unrolling count can be manually specified. See
-`language extensions
+specified for the subsequent loop. The directive allows pipelining to be
+disabled, or vectorization, interleaving, and unrolling to be enabled or disabled.
+Vector width, interleave count, unrolling count, and the initiation interval
+for pipelining can be explicitly specified. See `language extensions
 <http://clang.llvm.org/docs/LanguageExtensions.html#extensions-for-loop-hint-optimizations>`_
 for details.
   }];
@@ -2641,6 +2641,56 @@ is equivalent to ``#pragma clang loop unroll(disable)``.  See
 for further details including limitations of the unroll hints.
   }];
 }
+
+def PipelineHintDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "#pragma clang loop pipeline, #pragma clang loop pipeline_initiation_interval";
+  let Content = [{
+    Software Pipelining optimization is a technique used to optimize loops by
+  utilizing instruction-level parallelism. It reorders loop instructions to
+  overlap iterations. As a result, the next iteration starts before the previous
+  iteration has finished. The module scheduling technique creates a schedule for
+  one iteration such that when repeating at regular intervals, no inter-iteration
+  dependencies are violated. This constant interval(in cycles) between the start
+  of iterations is called the initiation interval. i.e. The initiation interval
+  is the number of cycles between two iterations of an unoptimized loop in the
+  newly created schedule. A new, optimized loop is created such that a single iteration
+  of the loop executes in the same number of cycles as the initiation interval.
+    For further details see <https://llvm.org/pubs/2005-06-17-LattnerMSThesis-book.pdf>.
+
+  ``#pragma clang loop pipeline and #pragma loop pipeline_initiation_interval``
+  could be used as hints for the software pipelining optimization. The pragma is
+  placed immediately before a for, while, do-while, or a C++11 range-based for
+  loop.
+
+  Using ``#pragma clang loop pipeline(disable)`` avoids the software pipelining
+  optimization. The disable state can only be specified:
+
+  .. code-block:: c++
+
+  #pragma clang loop pipeline(disable)
+  for (...) {
+    ...
+  }
+
+  Using ``#pragma loop pipeline_initiation_interval`` instructs
+  the software pipeliner to try the specified initiation interval.
+  If a schedule was found then the resulting loop iteration would have
+  the specified cycle count. If a schedule was not found then loop
+  remains unchanged. The initiation interval must be a positive number
+  greater than zero:
+
+  .. code-block:: c++
+
+  #pragma loop pipeline_initiation_interval(10)
+  for (...) {
+    ...
+  }
+
+  }];
+}
+
+
 
 def OpenCLUnrollHintDocs : Documentation {
   let Category = DocCatStmt;
@@ -3774,3 +3824,31 @@ def SpeculativeLoadHardeningDocs : Documentation {
   (even after inlining) end up hardened.
   }];
 }
+
+def ObjCExternallyRetainedDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``objc_externally_retained`` attribute can be applied to strong local
+variables, functions, methods, or blocks to opt into
+`externally-retained semantics
+<https://clang.llvm.org/docs/AutomaticReferenceCounting.html#externally-retained-variables>`_.
+
+When applied to the definition of a function, method, or block, every parameter
+of the function with implicit strong retainable object pointer type is
+considered externally-retained, and becomes ``const``. By explicitly annotating
+a parameter with ``__strong``, you can opt back into the default
+non-externally-retained behaviour for that parameter. For instance,
+``first_param`` is externally-retained below, but not ``second_param``:
+
+.. code-block:: objc
+
+  __attribute__((objc_externally_retained))
+  void f(NSArray *first_param, __strong NSArray *second_param) {
+    // ...
+  }
+
+Likewise, when applied to a strong local variable, that variable becomes
+``const`` and is considered externally-retained.
+
+When compiled without ``-fobjc-arc``, this attribute is ignored.
+}]; }

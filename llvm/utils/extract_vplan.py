@@ -4,6 +4,8 @@
 # and saves them in individual dot files (one for each plan). Optionally, and
 # providing 'dot' is installed, it can also render the dot into a PNG file.
 
+from __future__ import print_function
+
 import sys
 import re
 import argparse

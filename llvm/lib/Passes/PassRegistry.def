@@ -42,6 +42,7 @@ MODULE_ALIAS_ANALYSIS("globals-aa", GlobalsAA())
 #endif
 MODULE_PASS("always-inline", AlwaysInlinerPass())
 MODULE_PASS("called-value-propagation", CalledValuePropagationPass())
+MODULE_PASS("canonicalize-aliases", CanonicalizeAliasesPass())
 MODULE_PASS("cg-profile", CGProfilePass())
 MODULE_PASS("constmerge", ConstantMergePass())
 MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
@@ -231,6 +232,7 @@ FUNCTION_PASS("verify<regions>", RegionInfoVerifierPass())
 FUNCTION_PASS("view-cfg", CFGViewerPass())
 FUNCTION_PASS("view-cfg-only", CFGOnlyViewerPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
+FUNCTION_PASS("msan", MemorySanitizerPass())
 #undef FUNCTION_PASS
 
 #ifndef LOOP_ANALYSIS

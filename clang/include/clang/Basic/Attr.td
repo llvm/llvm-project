@@ -300,6 +300,7 @@ def OpenCL : LangOpt<"OpenCL">;
 def RenderScript : LangOpt<"RenderScript">;
 def ObjC : LangOpt<"ObjC">;
 def BlocksSupported : LangOpt<"Blocks">;
+def ObjCAutoRefCount : LangOpt<"ObjCAutoRefCount">;
 
 // Defines targets for target-specific attributes. Empty lists are unchecked.
 class TargetSpec {
@@ -2867,7 +2868,9 @@ def LoopHint : Attr {
   /// unroll_count: unrolls loop 'Value' times.
   /// unroll_and_jam: attempt to unroll and jam loop if State == Enable.
   /// unroll_and_jam_count: unroll and jams loop 'Value' times.
-  /// distribute: attempt to distribute loop if State == Enable
+  /// distribute: attempt to distribute loop if State == Enable.
+  /// pipeline: disable pipelining loop if State == Disable.
+  /// pipeline_initiation_interval: create loop schedule with initiation interval equal to 'Value'.
 
   /// #pragma unroll <argument> directive
   /// <no arg>: fully unrolls loop.
@@ -2882,10 +2885,10 @@ def LoopHint : Attr {
   let Args = [EnumArgument<"Option", "OptionType",
                           ["vectorize", "vectorize_width", "interleave", "interleave_count",
                            "unroll", "unroll_count", "unroll_and_jam", "unroll_and_jam_count",
-                           "distribute"],
+                           "pipeline", "pipeline_initiation_interval", "distribute"],
                           ["Vectorize", "VectorizeWidth", "Interleave", "InterleaveCount",
                            "Unroll", "UnrollCount", "UnrollAndJam", "UnrollAndJamCount",
-                           "Distribute"]>,
+                           "PipelineDisabled", "PipelineInitiationInterval", "Distribute"]>,
               EnumArgument<"State", "LoopHintState",
                            ["enable", "disable", "numeric", "assume_safety", "full"],
                            ["Enable", "Disable", "Numeric", "AssumeSafety", "Full"]>,
@@ -2902,6 +2905,8 @@ def LoopHint : Attr {
     case UnrollCount: return "unroll_count";
     case UnrollAndJam: return "unroll_and_jam";
     case UnrollAndJamCount: return "unroll_and_jam_count";
+    case PipelineDisabled: return "pipeline";
+    case PipelineInitiationInterval: return "pipeline_initiation_interval";
     case Distribute: return "distribute";
     }
     llvm_unreachable("Unhandled LoopHint option.");
@@ -3136,4 +3141,11 @@ def Uninitialized : InheritableAttr {
   let Spellings = [Clang<"uninitialized", 0>];
   let Subjects = SubjectList<[LocalVar]>;
   let Documentation = [UninitializedDocs];
+}
+
+def ObjCExternallyRetained : InheritableAttr {
+  let LangOpts = [ObjCAutoRefCount];
+  let Spellings = [Clang<"objc_externally_retained">];
+  let Subjects = SubjectList<[NonParmVar, Function, Block, ObjCMethod]>;
+  let Documentation = [ObjCExternallyRetainedDocs];
 }

@@ -7803,6 +7803,8 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
     FullExpr = IgnoredValueConversions(FullExpr.get());
     if (FullExpr.isInvalid())
       return ExprError();
+
+    DiagnoseUnusedExprResult(FullExpr.get());
   }
 
   FullExpr = CorrectDelayedTyposInExpr(FullExpr.get());

@@ -2407,6 +2407,12 @@ public:
     return false;
   }
 
+  /// Try to convert an extract element of a vector binary operation into an
+  /// extract element followed by a scalar operation.
+  virtual bool shouldScalarizeBinop(SDValue VecOp) const {
+    return false;
+  }
+
   // Return true if it is profitable to use a scalar input to a BUILD_VECTOR
   // even if the vector itself has multiple uses.
   virtual bool aggressivelyPreferBuildVectorSources(EVT VecVT) const {

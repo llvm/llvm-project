@@ -237,7 +237,11 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
 
         # Prepared source file
         sourceFile = self.copyScript("start_script_error")
-        self.spawnLldbMi(args="--source %s" % sourceFile)
+        self.spawnLldbMi(args="--source %s" % sourceFile, preconfig=False)
+
+        # After 'settings set symbols.enable-external-lookup false'
+        self.expect("settings set symbols.enable-external-lookup false")
+        self.expect("\^done")
 
         # After '-file-exec-and-symbols a.out'
         self.expect("-file-exec-and-symbols %s" % self.myexe)

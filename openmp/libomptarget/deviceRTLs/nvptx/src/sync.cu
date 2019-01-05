@@ -46,7 +46,7 @@ EXTERN void __kmpc_barrier(kmp_Ident *loc_ref, int32_t tid) {
             "Expected SPMD mode with uninitialized runtime.");
     __kmpc_barrier_simple_spmd(loc_ref, tid);
   } else {
-    tid = GetLogicalThreadIdInBlock();
+    tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc_ref));
     omptarget_nvptx_TaskDescr *currTaskDescr =
         omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(tid);
     int numberOfActiveOMPThreads = GetNumberOfOmpThreads(
@@ -74,7 +74,8 @@ EXTERN void __kmpc_barrier(kmp_Ident *loc_ref, int32_t tid) {
 // parallel region and that all worker threads participate.
 EXTERN void __kmpc_barrier_simple_spmd(kmp_Ident *loc_ref, int32_t tid) {
   PRINT0(LD_SYNC, "call kmpc_barrier_simple_spmd\n");
-  __syncthreads();
+  // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
+  __SYNCTHREADS();
   PRINT0(LD_SYNC, "completed kmpc_barrier_simple_spmd\n");
 }
 

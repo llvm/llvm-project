@@ -337,6 +337,10 @@ struct InstrDesc {
   bool BeginGroup;
   bool EndGroup;
 
+  // True if all buffered resources are in-order, and there is at least one
+  // buffer which is a dispatch hazard (BufferSize = 0).
+  bool MustIssueImmediately;
+
   // A zero latency instruction doesn't consume any scheduler resources.
   bool isZeroLatency() const { return !MaxLatency && Resources.empty(); }
 

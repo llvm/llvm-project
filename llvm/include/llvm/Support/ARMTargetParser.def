@@ -158,6 +158,7 @@ ARM_ARCH_EXT_NAME("iwmmxt2",  ARM::AEK_IWMMXT2,  nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("maverick", ARM::AEK_MAVERICK, nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("xscale",   ARM::AEK_XSCALE,   nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("fp16fml",  ARM::AEK_FP16FML,  "+fp16fml", "-fp16fml")
+ARM_ARCH_EXT_NAME("sb",       ARM::AEK_SB,       "+sb",      "-sb")
 #undef ARM_ARCH_EXT_NAME
 
 #ifndef ARM_HW_DIV_NAME

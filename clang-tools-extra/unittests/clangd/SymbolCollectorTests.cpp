@@ -61,7 +61,7 @@ MATCHER_P(IncludeHeader, P, "") {
   return (arg.IncludeHeaders.size() == 1) &&
          (arg.IncludeHeaders.begin()->IncludeHeader == P);
 }
-MATCHER_P2(IncludeHeaderWithRef, IncludeHeader, References,  "") {
+MATCHER_P2(IncludeHeaderWithRef, IncludeHeader, References, "") {
   return (arg.IncludeHeader == IncludeHeader) && (arg.References == References);
 }
 MATCHER_P(DeclRange, Pos, "") {
@@ -123,7 +123,7 @@ protected:
   std::string HeaderName = "f.h";
   std::string FileName = "f.cpp";
   TestTU File;
-  Optional<ParsedAST> AST;  // Initialized after build.
+  Optional<ParsedAST> AST; // Initialized after build.
 };
 
 TEST_F(ShouldCollectSymbolTest, ShouldCollectSymbol) {
@@ -248,8 +248,7 @@ public:
     Args.push_back(TestFileName);
 
     tooling::ToolInvocation Invocation(
-        Args,
-        Factory->create(), Files.get(),
+        Args, Factory->create(), Files.get(),
         std::make_shared<PCHContainerOperations>());
 
     InMemoryFileSystem->addFile(TestHeaderName, 0,
@@ -422,18 +421,16 @@ o]]();
     int Y;
   )cpp");
   runSymbolCollector(Header.code(), Main.code());
-  EXPECT_THAT(
-      Symbols,
-      UnorderedElementsAre(
-          AllOf(QName("X"), DeclRange(Header.range("xdecl")),
-                DefRange(Main.range("xdef"))),
-          AllOf(QName("Cls"), DeclRange(Header.range("clsdecl")),
-                DefRange(Main.range("clsdef"))),
-          AllOf(QName("print"), DeclRange(Header.range("printdecl")),
-                DefRange(Main.range("printdef"))),
-          AllOf(QName("Z"), DeclRange(Header.range("zdecl"))),
-          AllOf(QName("foo"), DeclRange(Header.range("foodecl")))
-          ));
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("X"), DeclRange(Header.range("xdecl")),
+                        DefRange(Main.range("xdef"))),
+                  AllOf(QName("Cls"), DeclRange(Header.range("clsdecl")),
+                        DefRange(Main.range("clsdef"))),
+                  AllOf(QName("print"), DeclRange(Header.range("printdecl")),
+                        DefRange(Main.range("printdef"))),
+                  AllOf(QName("Z"), DeclRange(Header.range("zdecl"))),
+                  AllOf(QName("foo"), DeclRange(Header.range("foodecl")))));
 }
 
 TEST_F(SymbolCollectorTest, Refs) {
@@ -537,8 +534,8 @@ TEST_F(SymbolCollectorTest, SymbolRelativeWithFallback) {
   TestHeaderURI = URI::create(testPath(TestHeaderName)).toString();
   CollectorOpts.FallbackDir = testRoot();
   runSymbolCollector("class Foo {};", /*Main=*/"");
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(AllOf(QName("Foo"), DeclURI(TestHeaderURI))));
+  EXPECT_THAT(Symbols, UnorderedElementsAre(
+                           AllOf(QName("Foo"), DeclURI(TestHeaderURI))));
 }
 
 TEST_F(SymbolCollectorTest, UnittestURIScheme) {
@@ -605,13 +602,12 @@ TEST_F(SymbolCollectorTest, SymbolFormedFromRegisteredSchemeFromMacro) {
   )");
 
   runSymbolCollector(Header.code(), /*Main=*/"");
-  EXPECT_THAT(
-      Symbols,
-      UnorderedElementsAre(
-          AllOf(QName("abc_Test"), DeclRange(Header.range("expansion")),
-                DeclURI(TestHeaderURI)),
-          AllOf(QName("Test"), DeclRange(Header.range("spelling")),
-                DeclURI(TestHeaderURI))));
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("abc_Test"), DeclRange(Header.range("expansion")),
+                        DeclURI(TestHeaderURI)),
+                  AllOf(QName("Test"), DeclRange(Header.range("spelling")),
+                        DeclURI(TestHeaderURI))));
 }
 
 TEST_F(SymbolCollectorTest, SymbolFormedByCLI) {

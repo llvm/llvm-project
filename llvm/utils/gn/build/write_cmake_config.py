@@ -53,6 +53,9 @@ def main():
     values = {}
     for value in args.values:
         key, val = value.split('=', 1)
+        if key in values:
+            print('duplicate key "%s" in args' % key, file=sys.stderr)
+            return 1
         values[key] = val.replace('\\n', '\n')
     unused_values = set(values.keys())
 

@@ -58,6 +58,9 @@ private:
 
   bool requiresFullRuntime() const { return RequiresFullRuntime; }
 
+  /// Get barrier to synchronize all threads in a block.
+  void syncCTAThreads(CodeGenFunction &CGF);
+
   /// Emit the worker function for the current target region.
   void emitWorkerFunction(WorkerFunctionState &WST);
 

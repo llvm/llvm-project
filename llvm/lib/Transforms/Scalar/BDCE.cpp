@@ -96,8 +96,12 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
     if (I.mayHaveSideEffects() && I.use_empty())
       continue;
 
-    // Remove instructions not reached during analysis.
-    if (DB.isInstructionDead(&I)) {
+    // Remove instructions that are dead, either because they were not reached
+    // during analysis or have no demanded bits.
+    if (DB.isInstructionDead(&I) ||
+        (I.getType()->isIntOrIntVectorTy() &&
+         DB.getDemandedBits(&I).isNullValue() &&
+         wouldInstructionBeTriviallyDead(&I))) {
       salvageDebugInfo(I);
       Worklist.push_back(&I);
       I.dropAllReferences();
@@ -110,8 +114,7 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
       if (!U->getType()->isIntOrIntVectorTy())
         continue;
 
-      // TODO: We could also find dead non-instruction uses, e.g. arguments.
-      if (!isa<Instruction>(U))
+      if (!isa<Instruction>(U) && !isa<Argument>(U))
         continue;
 
       if (!DB.isUseDead(&U))

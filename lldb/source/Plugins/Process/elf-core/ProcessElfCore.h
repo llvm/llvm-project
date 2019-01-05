@@ -136,7 +136,7 @@ private:
   // For ProcessElfCore only
   //------------------------------------------------------------------
   typedef lldb_private::Range<lldb::addr_t, lldb::addr_t> FileRange;
-  typedef lldb_private::RangeDataArray<lldb::addr_t, lldb::addr_t, FileRange, 1>
+  typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, FileRange>
       VMRangeToFileOffset;
   typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, uint32_t>
       VMRangeToPermissions;

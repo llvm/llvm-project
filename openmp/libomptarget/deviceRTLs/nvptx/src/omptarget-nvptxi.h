@@ -16,7 +16,7 @@
 // Task Descriptor
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE omp_sched_t omptarget_nvptx_TaskDescr::GetRuntimeSched() {
+INLINE omp_sched_t omptarget_nvptx_TaskDescr::GetRuntimeSched() const {
   // sched starts from 1..4; encode it as 0..3; so add 1 here
   uint8_t rc = (items.flags & TaskDescr_SchedMask) + 1;
   return (omp_sched_t)rc;
@@ -31,7 +31,8 @@ INLINE void omptarget_nvptx_TaskDescr::SetRuntimeSched(omp_sched_t sched) {
   items.flags |= val;
 }
 
-INLINE void omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr() {
+INLINE void
+omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr(bool isSPMDExecutionMode) {
   // slow method
   // flag:
   //   default sched is static,
@@ -39,7 +40,7 @@ INLINE void omptarget_nvptx_TaskDescr::InitLevelZeroTaskDescr() {
   //   not in parallel
 
   items.flags = 0;
-  items.nthreads = GetNumberOfProcsInTeam();
+  items.nthreads = GetNumberOfProcsInTeam(isSPMDExecutionMode);
   ;                                // threads: whatever was alloc by kernel
   items.threadId = 0;         // is master
   items.threadsInTeam = 1;    // sequential
@@ -154,7 +155,7 @@ INLINE void omptarget_nvptx_TaskDescr::RestoreLoopData() const {
 ////////////////////////////////////////////////////////////////////////////////
 
 INLINE omptarget_nvptx_TaskDescr *
-omptarget_nvptx_ThreadPrivateContext::GetTopLevelTaskDescr(int tid) {
+omptarget_nvptx_ThreadPrivateContext::GetTopLevelTaskDescr(int tid) const {
   ASSERT0(
       LT_FUSSY, tid < MAX_THREADS_PER_TEAM,
       "Getting top level, tid is larger than allocated data structure size");
@@ -177,8 +178,8 @@ omptarget_nvptx_ThreadPrivateContext::InitThreadPrivateContext(int tid) {
 // Team Descriptor
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE void omptarget_nvptx_TeamDescr::InitTeamDescr() {
-  levelZeroTaskDescr.InitLevelZeroTaskDescr();
+INLINE void omptarget_nvptx_TeamDescr::InitTeamDescr(bool isSPMDExecutionMode) {
+  levelZeroTaskDescr.InitLevelZeroTaskDescr(isSPMDExecutionMode);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -199,8 +200,9 @@ INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor(int threadId) {
   return omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
 }
 
-INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor() {
-  return getMyTopTaskDescriptor(GetLogicalThreadIdInBlock());
+INLINE omptarget_nvptx_TaskDescr *
+getMyTopTaskDescriptor(bool isSPMDExecutionMode) {
+  return getMyTopTaskDescriptor(GetLogicalThreadIdInBlock(isSPMDExecutionMode));
 }
 
 ////////////////////////////////////////////////////////////////////////////////

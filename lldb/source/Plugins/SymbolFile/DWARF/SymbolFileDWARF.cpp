@@ -1084,9 +1084,7 @@ bool SymbolFileDWARF::ParseCompileUnitLineTable(const SymbolContext &sc) {
            * #0
            * for MIPS. Use ArchSpec to clear the bit #0.
           */
-          ArchSpec arch;
-          GetObjectFile()->GetArchitecture(arch);
-          switch (arch.GetMachine()) {
+          switch (GetObjectFile()->GetArchitecture().GetMachine()) {
           case llvm::Triple::mips:
           case llvm::Triple::mipsel:
           case llvm::Triple::mips64:

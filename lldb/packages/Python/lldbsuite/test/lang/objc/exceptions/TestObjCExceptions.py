@@ -34,6 +34,17 @@ class ObjCExceptionsTestCase(TestBase):
                 'name: "ThrownException" - reason: "SomeReason"',
             ])
 
+        target = self.dbg.GetSelectedTarget()
+        thread = target.GetProcess().GetSelectedThread()
+        frame = thread.GetSelectedFrame()
+        
+        opts = lldb.SBVariablesOptions()
+        opts.SetIncludeRecognizedArguments(True)
+        variables = frame.GetVariables(opts)
+
+        self.assertEqual(variables.GetSize(), 1)
+        self.assertEqual(variables.GetValueAtIndex(0).name, "exception")
+
         lldbutil.run_to_source_breakpoint(self, "// Set break point at this line.", lldb.SBFileSpec("main.mm"), launch_info=launch_info)
 
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,

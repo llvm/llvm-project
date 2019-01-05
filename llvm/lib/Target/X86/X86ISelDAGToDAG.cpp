@@ -948,6 +948,41 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
       }
     }
 
+    // Look for a KAND+KORTEST and turn it into KTEST if only the zero flag is
+    // used. We're doing this late so we can prefer to fold the AND into masked
+    // comparisons. Doing that can be better for the live range of the mask
+    // register.
+    if ((Opc == X86::KORTESTBrr || Opc == X86::KORTESTWrr ||
+         Opc == X86::KORTESTDrr || Opc == X86::KORTESTQrr) &&
+        N->getOperand(0) == N->getOperand(1) &&
+        N->isOnlyUserOf(N->getOperand(0).getNode()) &&
+        N->getOperand(0).isMachineOpcode() &&
+        onlyUsesZeroFlag(SDValue(N, 0))) {
+      SDValue And = N->getOperand(0);
+      unsigned N0Opc = And.getMachineOpcode();
+      // KANDW is legal with AVX512F, but KTESTW requires AVX512DQ. The other
+      // KAND instructions and KTEST use the same ISA feature.
+      if (N0Opc == X86::KANDBrr ||
+          (N0Opc == X86::KANDWrr && Subtarget->hasDQI()) ||
+          N0Opc == X86::KANDDrr || N0Opc == X86::KANDQrr) {
+        unsigned NewOpc;
+        switch (Opc) {
+        default: llvm_unreachable("Unexpected opcode!");
+        case X86::KORTESTBrr: NewOpc = X86::KTESTBrr; break;
+        case X86::KORTESTWrr: NewOpc = X86::KTESTWrr; break;
+        case X86::KORTESTDrr: NewOpc = X86::KTESTDrr; break;
+        case X86::KORTESTQrr: NewOpc = X86::KTESTQrr; break;
+        }
+        MachineSDNode *KTest = CurDAG->getMachineNode(NewOpc, SDLoc(N),
+                                                      MVT::i32,
+                                                      And.getOperand(0),
+                                                      And.getOperand(1));
+        ReplaceUses(N, KTest);
+        MadeChange = true;
+        continue;
+      }
+    }
+
     // Attempt to remove vectors moves that were inserted to zero upper bits.
     if (Opc != TargetOpcode::SUBREG_TO_REG)
       continue;
@@ -3454,31 +3489,73 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
 
-    unsigned LoReg, Opc;
+    unsigned LoReg, ROpc, MOpc;
     switch (NVT.SimpleTy) {
     default: llvm_unreachable("Unsupported VT!");
     case MVT::i8:
       LoReg = X86::AL;
-      Opc = Opcode == X86ISD::SMUL ? X86::IMUL8r : X86::MUL8r;
+      ROpc = Opcode == X86ISD::SMUL ? X86::IMUL8r : X86::MUL8r;
+      MOpc = Opcode == X86ISD::SMUL ? X86::IMUL8m : X86::MUL8m;
       break;
-    case MVT::i16: LoReg = X86::AX;  Opc = X86::MUL16r; break;
-    case MVT::i32: LoReg = X86::EAX; Opc = X86::MUL32r; break;
-    case MVT::i64: LoReg = X86::RAX; Opc = X86::MUL64r; break;
+    case MVT::i16:
+      LoReg = X86::AX;
+      ROpc = X86::MUL16r;
+      MOpc = X86::MUL16m;
+      break;
+    case MVT::i32:
+      LoReg = X86::EAX;
+      ROpc = X86::MUL32r;
+      MOpc = X86::MUL32m;
+      break;
+    case MVT::i64:
+      LoReg = X86::RAX;
+      ROpc = X86::MUL64r;
+      MOpc = X86::MUL64m;
+      break;
+    }
+
+    SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
+    bool FoldedLoad = tryFoldLoad(Node, N1, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4);
+    // Multiply is commmutative.
+    if (!FoldedLoad) {
+      FoldedLoad = tryFoldLoad(Node, N0, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4);
+      if (FoldedLoad)
+        std::swap(N0, N1);
     }
 
     SDValue InFlag = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, LoReg,
                                           N0, SDValue()).getValue(1);
 
-    // i16/i32/i64 use an instruction that produces a low and high result even
-    // though only the low result is used.
-    SDVTList VTs;
-    if (NVT == MVT::i8)
-      VTs = CurDAG->getVTList(NVT, MVT::i32);
-    else
-      VTs = CurDAG->getVTList(NVT, NVT, MVT::i32);
+    MachineSDNode *CNode;
+    if (FoldedLoad) {
+      // i16/i32/i64 use an instruction that produces a low and high result even
+      // though only the low result is used.
+      SDVTList VTs;
+      if (NVT == MVT::i8)
+        VTs = CurDAG->getVTList(NVT, MVT::i32, MVT::Other);
+      else
+        VTs = CurDAG->getVTList(NVT, NVT, MVT::i32, MVT::Other);
 
-    SDValue Ops[] = {N1, InFlag};
-    SDNode *CNode = CurDAG->getMachineNode(Opc, dl, VTs, Ops);
+      SDValue Ops[] = { Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, N1.getOperand(0),
+                        InFlag };
+      CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
+
+      // Update the chain.
+      ReplaceUses(N1.getValue(1), SDValue(CNode, NVT == MVT::i8 ? 2 : 3));
+      // Record the mem-refs
+      CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(N1)->getMemOperand()});
+    } else {
+      // i16/i32/i64 use an instruction that produces a low and high result even
+      // though only the low result is used.
+      SDVTList VTs;
+      if (NVT == MVT::i8)
+        VTs = CurDAG->getVTList(NVT, MVT::i32);
+      else
+        VTs = CurDAG->getVTList(NVT, NVT, MVT::i32);
+
+      CNode = CurDAG->getMachineNode(ROpc, dl, VTs, {N1, InFlag});
+    }
+
     ReplaceUses(SDValue(Node, 0), SDValue(CNode, 0));
     ReplaceUses(SDValue(Node, 1), SDValue(CNode, NVT == MVT::i8 ? 1 : 2));
     CurDAG->RemoveDeadNode(Node);

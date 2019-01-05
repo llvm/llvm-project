@@ -10,15 +10,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     )
 
   include(LLDBStandalone)
+  include(debugserverConfig)
   include(AddLLDB)
 
   set(LLDB_SOURCE_DIR "${CMAKE_SOURCE_DIR}/../../")
   include_directories(${LLDB_SOURCE_DIR}/include)
-
-  # lldb-suite is a dummy target that encompasses all the necessary tools and
-  # libraries for building a fully-functioning liblldb.
-  add_custom_target(lldb-suite)
-  set(LLDB_SUITE_TARGET lldb-suite)
 endif()
 
 add_subdirectory(source)

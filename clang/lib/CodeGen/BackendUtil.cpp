@@ -53,12 +53,14 @@
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include <memory>
@@ -276,7 +278,7 @@ static void addGeneralOptsForMemorySanitizer(const PassManagerBuilder &Builder,
   const CodeGenOptions &CGOpts = BuilderWrapper.getCGOpts();
   int TrackOrigins = CGOpts.SanitizeMemoryTrackOrigins;
   bool Recover = CGOpts.SanitizeRecover.has(SanitizerKind::Memory);
-  PM.add(createMemorySanitizerPass(TrackOrigins, Recover, CompileKernel));
+  PM.add(createMemorySanitizerLegacyPassPass(TrackOrigins, Recover, CompileKernel));
 
   // MemorySanitizer inserts complex instrumentation that mostly follows
   // the logic of the original code, but operates on "shadow" values.
@@ -995,9 +997,11 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
         MPM.addPass(createModuleToFunctionPassAdaptor(BoundsCheckingPass()));
 
-      // Lastly, add a semantically necessary pass for LTO.
-      if (IsLTO || IsThinLTO)
+      // Lastly, add semantically necessary passes for LTO.
+      if (IsLTO || IsThinLTO) {
+        MPM.addPass(CanonicalizeAliasesPass());
         MPM.addPass(NameAnonGlobalPass());
+      }
     } else {
       // Map our optimization levels into one of the distinct levels used to
       // configure the pipeline.
@@ -1018,10 +1022,12 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       if (IsThinLTO) {
         MPM = PB.buildThinLTOPreLinkDefaultPipeline(
             Level, CodeGenOpts.DebugPassManager);
+        MPM.addPass(CanonicalizeAliasesPass());
         MPM.addPass(NameAnonGlobalPass());
       } else if (IsLTO) {
         MPM = PB.buildLTOPreLinkDefaultPipeline(Level,
                                                 CodeGenOpts.DebugPassManager);
+        MPM.addPass(CanonicalizeAliasesPass());
         MPM.addPass(NameAnonGlobalPass());
       } else {
         MPM = PB.buildPerModuleDefaultPipeline(Level,

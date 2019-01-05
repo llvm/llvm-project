@@ -434,9 +434,8 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (address_size == 4 || address_size == 8) {
     std::unique_ptr<ObjectFileELF> objfile_ap(new ObjectFileELF(
         module_sp, data_sp, data_offset, file, file_offset, length));
-    ArchSpec spec;
-    if (objfile_ap->GetArchitecture(spec) &&
-        objfile_ap->SetModulesArchitecture(spec))
+    ArchSpec spec = objfile_ap->GetArchitecture();
+    if (spec && objfile_ap->SetModulesArchitecture(spec))
       return objfile_ap.release();
   }
 
@@ -453,9 +452,8 @@ ObjectFile *ObjectFileELF::CreateMemoryInstance(
       if (address_size == 4 || address_size == 8) {
         std::unique_ptr<ObjectFileELF> objfile_ap(
             new ObjectFileELF(module_sp, data_sp, process_sp, header_addr));
-        ArchSpec spec;
-        if (objfile_ap->GetArchitecture(spec) &&
-            objfile_ap->SetModulesArchitecture(spec))
+        ArchSpec spec = objfile_ap->GetArchitecture();
+        if (spec && objfile_ap->SetModulesArchitecture(spec))
           return objfile_ap.release();
       }
     }
@@ -1957,8 +1955,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
   bool skip_oatdata_oatexec = file_extension == ConstString(".oat") ||
                               file_extension == ConstString(".odex");
 
-  ArchSpec arch;
-  GetArchitecture(arch);
+  ArchSpec arch = GetArchitecture();
   ModuleSP module_sp(GetModule());
   SectionList *module_section_list =
       module_sp ? module_sp->GetSectionList() : nullptr;
@@ -2885,8 +2882,7 @@ void ObjectFileELF::Dump(Stream *s) {
   s->Indent();
   s->PutCString("ObjectFileELF");
 
-  ArchSpec header_arch;
-  GetArchitecture(header_arch);
+  ArchSpec header_arch = GetArchitecture();
 
   *s << ", file = '" << m_file
      << "', arch = " << header_arch.GetArchitectureName() << "\n";
@@ -3172,9 +3168,9 @@ void ObjectFileELF::DumpDependentModules(lldb_private::Stream *s) {
   }
 }
 
-bool ObjectFileELF::GetArchitecture(ArchSpec &arch) {
+ArchSpec ObjectFileELF::GetArchitecture() {
   if (!ParseHeader())
-    return false;
+    return ArchSpec();
 
   if (m_section_headers.empty()) {
     // Allow elf notes to be parsed which may affect the detected architecture.
@@ -3195,8 +3191,7 @@ bool ObjectFileELF::GetArchitecture(ArchSpec &arch) {
       }
     }
   }
-  arch = m_arch_spec;
-  return true;
+  return m_arch_spec;
 }
 
 ObjectFile::Type ObjectFileELF::CalculateType() {

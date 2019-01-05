@@ -2630,6 +2630,9 @@ class ObjCExceptionRecognizedStackFrame : public RecognizedStackFrame {
     exception = ValueObjectConstResult::Create(frame_sp.get(), value,
                                                ConstString("exception"));
     exception = exception->GetDynamicValue(eDynamicDontRunTarget);
+      
+    m_arguments = ValueObjectListSP(new ValueObjectList());
+    m_arguments->Append(exception);
   }
 
   ValueObjectSP exception;

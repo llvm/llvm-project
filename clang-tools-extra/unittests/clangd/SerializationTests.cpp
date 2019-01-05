@@ -99,9 +99,9 @@ TEST(SerializationTest, YAMLConversions) {
   auto ParsedYAML = readIndexFile(YAML);
   ASSERT_TRUE(bool(ParsedYAML)) << ParsedYAML.takeError();
   ASSERT_TRUE(bool(ParsedYAML->Symbols));
-  EXPECT_THAT(*ParsedYAML->Symbols,
-              UnorderedElementsAre(ID("057557CEBF6E6B2D"),
-                                   ID("057557CEBF6E6B2E")));
+  EXPECT_THAT(
+      *ParsedYAML->Symbols,
+      UnorderedElementsAre(ID("057557CEBF6E6B2D"), ID("057557CEBF6E6B2E")));
 
   auto Sym1 = *ParsedYAML->Symbols->find(
       cantFail(SymbolID::fromStr("057557CEBF6E6B2D")));
@@ -131,9 +131,8 @@ TEST(SerializationTest, YAMLConversions) {
   ASSERT_TRUE(bool(ParsedYAML->Refs));
   EXPECT_THAT(
       *ParsedYAML->Refs,
-      UnorderedElementsAre(
-          Pair(cantFail(SymbolID::fromStr("057557CEBF6E6B2D")),
-               testing::SizeIs(1))));
+      UnorderedElementsAre(Pair(cantFail(SymbolID::fromStr("057557CEBF6E6B2D")),
+                                testing::SizeIs(1))));
   auto Ref1 = ParsedYAML->Refs->begin()->second.front();
   EXPECT_EQ(Ref1.Kind, RefKind::Reference);
   EXPECT_EQ(StringRef(Ref1.Location.FileURI), "file:///path/foo.cc");

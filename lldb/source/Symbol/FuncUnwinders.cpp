@@ -443,8 +443,7 @@ const Address &FuncUnwinders::GetFunctionStartAddress() const {
 lldb::UnwindAssemblySP
 FuncUnwinders::GetUnwindAssemblyProfiler(Target &target) {
   UnwindAssemblySP assembly_profiler_sp;
-  ArchSpec arch;
-  if (m_unwind_table.GetArchitecture(arch)) {
+  if (ArchSpec arch = m_unwind_table.GetArchitecture()) {
     arch.MergeFrom(target.GetArchitecture());
     assembly_profiler_sp = UnwindAssembly::FindPlugin(arch);
   }

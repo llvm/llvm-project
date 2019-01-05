@@ -5,7 +5,6 @@
 
 define <2 x i32> @test_basic(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @test_basic(
-; CHECK-NEXT:    [[A2:%.*]] = add <2 x i32> [[A:%.*]], <i32 1, i32 1>
 ; CHECK-NEXT:    [[A3:%.*]] = and <2 x i32> zeroinitializer, <i32 4, i32 4>
 ; CHECK-NEXT:    [[B2:%.*]] = add <2 x i32> [[B:%.*]], <i32 1, i32 1>
 ; CHECK-NEXT:    [[B3:%.*]] = and <2 x i32> [[B2]], <i32 8, i32 8>
@@ -25,7 +24,6 @@ define <2 x i32> @test_basic(<2 x i32> %a, <2 x i32> %b) {
 ; Going vector -> scalar
 define i32 @test_extractelement(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @test_extractelement(
-; CHECK-NEXT:    [[A2:%.*]] = add <2 x i32> [[A:%.*]], <i32 1, i32 1>
 ; CHECK-NEXT:    [[A3:%.*]] = and <2 x i32> zeroinitializer, <i32 4, i32 4>
 ; CHECK-NEXT:    [[B2:%.*]] = add <2 x i32> [[B:%.*]], <i32 1, i32 1>
 ; CHECK-NEXT:    [[B3:%.*]] = and <2 x i32> [[B2]], <i32 8, i32 8>
@@ -47,11 +45,9 @@ define i32 @test_extractelement(<2 x i32> %a, <2 x i32> %b) {
 ; Going scalar -> vector
 define <2 x i32> @test_insertelement(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_insertelement(
-; CHECK-NEXT:    [[X:%.*]] = insertelement <2 x i32> undef, i32 [[A:%.*]], i32 0
-; CHECK-NEXT:    [[X2:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[B:%.*]], i32 1
 ; CHECK-NEXT:    [[X3:%.*]] = and <2 x i32> zeroinitializer, <i32 4, i32 4>
-; CHECK-NEXT:    [[Y:%.*]] = insertelement <2 x i32> undef, i32 [[B]], i32 0
-; CHECK-NEXT:    [[Y2:%.*]] = insertelement <2 x i32> [[Y]], i32 [[A]], i32 1
+; CHECK-NEXT:    [[Y:%.*]] = insertelement <2 x i32> undef, i32 [[B:%.*]], i32 0
+; CHECK-NEXT:    [[Y2:%.*]] = insertelement <2 x i32> [[Y]], i32 [[A:%.*]], i32 1
 ; CHECK-NEXT:    [[Y3:%.*]] = and <2 x i32> [[Y2]], <i32 8, i32 8>
 ; CHECK-NEXT:    [[Z:%.*]] = or <2 x i32> [[X3]], [[Y3]]
 ; CHECK-NEXT:    [[U:%.*]] = ashr <2 x i32> [[Z]], <i32 3, i32 3>
@@ -91,7 +87,6 @@ define <2 x i32> @test_conversion(<2 x i32> %a) {
 ; Assumption invalidation (adapted from invalidate-assumptions.ll)
 define <2 x i1> @test_assumption_invalidation(<2 x i1> %b, <2 x i8> %x) {
 ; CHECK-LABEL: @test_assumption_invalidation(
-; CHECK-NEXT:    [[SETBIT:%.*]] = or <2 x i8> [[X:%.*]], <i8 64, i8 64>
 ; CHECK-NEXT:    [[LITTLE_NUMBER:%.*]] = zext <2 x i1> [[B:%.*]] to <2 x i8>
 ; CHECK-NEXT:    [[BIG_NUMBER:%.*]] = shl <2 x i8> zeroinitializer, <i8 1, i8 1>
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i8> [[BIG_NUMBER]], [[LITTLE_NUMBER]]

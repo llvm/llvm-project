@@ -65,9 +65,9 @@ public:
 private:
   void performAnalysis();
   void determineLiveOperandBits(const Instruction *UserI,
-    const Instruction *I, unsigned OperandNo,
+    const Value *Val, unsigned OperandNo,
     const APInt &AOut, APInt &AB,
-    KnownBits &Known, KnownBits &Known2);
+    KnownBits &Known, KnownBits &Known2, bool &KnownBitsComputed);
 
   Function &F;
   AssumptionCache &AC;

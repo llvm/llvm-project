@@ -47,6 +47,24 @@ TEST(ScalarTest, Equality) {
   ASSERT_FALSE(void1 == Scalar(f1));
 }
 
+TEST(ScalarTest, Comparison) {
+  auto s1 = Scalar(23);
+  auto s2 = Scalar(46);
+  ASSERT_TRUE(s1 < s2);
+  ASSERT_TRUE(s1 <= s2);
+  ASSERT_TRUE(s2 > s1);
+  ASSERT_TRUE(s2 >= s1);
+}
+
+TEST(ScalarTest, ComparisonFloat) {
+  auto s1 = Scalar(23.0f);
+  auto s2 = Scalar(46.0f);
+  ASSERT_TRUE(s1 < s2);
+  ASSERT_TRUE(s1 <= s2);
+  ASSERT_TRUE(s2 > s1);
+  ASSERT_TRUE(s2 >= s1);
+}
+
 TEST(ScalarTest, RightShiftOperator) {
   int a = 0x00001000;
   int b = 0xFFFFFFFF;

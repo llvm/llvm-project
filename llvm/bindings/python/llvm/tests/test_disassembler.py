@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from .base import TestBase
 
 from ..disassembler import Disassembler, Option_UseMarkup
@@ -17,7 +19,7 @@ class TestDisassembler(TestBase):
         self.assertEqual(s, '\tjcxz\t-127')
 
     def test_nonexistent_triple(self):
-        with self.assertRaisesRegexp(Exception, "Could not obtain disassembler for triple"):
+        with self.assertRaisesRegex(Exception, "Could not obtain disassembler for triple"):
             Disassembler("nonexistent-triple-raises")
 
     def test_get_instructions(self):
@@ -38,6 +40,6 @@ class TestDisassembler(TestBase):
         disassembler = Disassembler(triple)
         disassembler.set_options(Option_UseMarkup)
         count, s = disassembler.get_instruction(sequence)
-        print s
+        print(s)
         self.assertEqual(count, 4)
         self.assertEqual(s, '\tpush\t{<reg:r4>, <reg:lr>}')

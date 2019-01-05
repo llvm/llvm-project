@@ -976,32 +976,8 @@ void Symtab::InitAddressIndexes() {
 
 void Symtab::CalculateSymbolSizes() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-
-  if (!m_symbols.empty()) {
-    if (!m_file_addr_to_index_computed)
-      InitAddressIndexes();
-
-    const size_t num_entries = m_file_addr_to_index.GetSize();
-
-    for (size_t i = 0; i < num_entries; ++i) {
-      // The entries in the m_file_addr_to_index have calculated the sizes
-      // already so we will use this size if we need to.
-      const FileRangeToIndexMap::Entry &entry =
-          m_file_addr_to_index.GetEntryRef(i);
-
-      Symbol &symbol = m_symbols[entry.data];
-
-      // If the symbol size is already valid, no need to do anything
-      if (symbol.GetByteSizeIsValid())
-        continue;
-
-      const addr_t range_size = entry.GetByteSize();
-      if (range_size > 0) {
-        symbol.SetByteSize(range_size);
-        symbol.SetSizeIsSynthesized(true);
-      }
-    }
-  }
+  // Size computation happens inside InitAddressIndexes.
+  InitAddressIndexes();
 }
 
 Symbol *Symtab::FindSymbolAtFileAddress(addr_t file_addr) {
