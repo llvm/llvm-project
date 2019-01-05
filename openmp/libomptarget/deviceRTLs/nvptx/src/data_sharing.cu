@@ -13,42 +13,26 @@
 #include "omptarget-nvptx.h"
 #include <stdio.h>
 
-// Number of threads in the CUDA block.
-__device__ static unsigned getNumThreads() { return blockDim.x; }
-// Thread ID in the CUDA block
-__device__ static unsigned getThreadId() { return threadIdx.x; }
 // Warp ID in the CUDA block
-__device__ static unsigned getWarpId() { return threadIdx.x / WARPSIZE; }
+INLINE static unsigned getWarpId() { return threadIdx.x / WARPSIZE; }
 // Lane ID in the CUDA warp.
-__device__ static unsigned getLaneId() { return threadIdx.x % WARPSIZE; }
-
-// The CUDA thread ID of the master thread.
-__device__ static unsigned getMasterThreadId() {
-  unsigned Mask = WARPSIZE - 1;
-  return (getNumThreads() - 1) & (~Mask);
-}
-
-// Find the active threads in the warp - return a mask whose n-th bit is set if
-// the n-th thread in the warp is active.
-__device__ static unsigned getActiveThreadsMask() {
-  return __BALLOT_SYNC(0xFFFFFFFF, true);
-}
+INLINE static unsigned getLaneId() { return threadIdx.x % WARPSIZE; }
 
 // Return true if this is the first active thread in the warp.
-__device__ static bool IsWarpMasterActiveThread() {
-  unsigned long long Mask = getActiveThreadsMask();
-  unsigned long long ShNum = WARPSIZE - (getThreadId() % WARPSIZE);
+INLINE static bool IsWarpMasterActiveThread() {
+  unsigned long long Mask = __ACTIVEMASK();
+  unsigned long long ShNum = WARPSIZE - (GetThreadIdInBlock() % WARPSIZE);
   unsigned long long Sh = Mask << ShNum;
   // Truncate Sh to the 32 lower bits
   return (unsigned)Sh == 0;
 }
 // Return true if this is the master thread.
-__device__ static bool IsMasterThread(bool isSPMDExecutionMode) {
-  return !isSPMDExecutionMode && getMasterThreadId() == getThreadId();
+INLINE static bool IsMasterThread(bool isSPMDExecutionMode) {
+  return !isSPMDExecutionMode && GetMasterThreadID() == GetThreadIdInBlock();
 }
 
 /// Return the provided size aligned to the size of a pointer.
-__device__ static size_t AlignVal(size_t Val) {
+INLINE static size_t AlignVal(size_t Val) {
   const size_t Align = (size_t)sizeof(void *);
   if (Val & (Align - 1)) {
     Val += Align;
@@ -128,7 +112,7 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
           (unsigned long long)SharingDefaultDataSize);
 
   unsigned WID = getWarpId();
-  unsigned CurActiveThreads = getActiveThreadsMask();
+  unsigned CurActiveThreads = __ACTIVEMASK();
 
   __kmpc_data_sharing_slot *&SlotP = DataSharingState.SlotPtr[WID];
   void *&StackP = DataSharingState.StackPtr[WID];
@@ -268,7 +252,7 @@ EXTERN void __kmpc_data_sharing_environment_end(
     return;
   }
 
-  int32_t CurActive = getActiveThreadsMask();
+  int32_t CurActive = __ACTIVEMASK();
 
   // Only the warp master can restore the stack and frame information, and only
   // if there are no other threads left behind in this environment (i.e. the
@@ -341,7 +325,7 @@ __kmpc_get_data_sharing_environment_frame(int32_t SourceThreadID,
 // Runtime functions for trunk data sharing scheme.
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE void data_sharing_init_stack_common() {
+INLINE static void data_sharing_init_stack_common() {
   ASSERT0(LT_FUSSY, isRuntimeInitialized(), "Runtime must be initialized.");
   omptarget_nvptx_TeamDescr *teamDescr =
       &omptarget_nvptx_threadPrivateContext->TeamContext();
@@ -380,11 +364,11 @@ EXTERN void __kmpc_data_sharing_init_stack_spmd() {
   __threadfence_block();
 }
 
-INLINE void* data_sharing_push_stack_common(size_t PushSize) {
+INLINE static void* data_sharing_push_stack_common(size_t PushSize) {
   ASSERT0(LT_FUSSY, isRuntimeInitialized(), "Expected initialized runtime.");
 
   // Only warp active master threads manage the stack.
-  bool IsWarpMaster = (getThreadId() % WARPSIZE) == 0;
+  bool IsWarpMaster = (GetThreadIdInBlock() % WARPSIZE) == 0;
 
   // Add worst-case padding to DataSize so that future stack allocations are
   // correctly aligned.
@@ -394,7 +378,7 @@ INLINE void* data_sharing_push_stack_common(size_t PushSize) {
   // Frame pointer must be visible to all workers in the same warp.
   const unsigned WID = getWarpId();
   void *FrameP = 0;
-  const int32_t CurActive = getActiveThreadsMask();
+  int32_t CurActive = __ACTIVEMASK();
 
   if (IsWarpMaster) {
     // SlotP will point to either the shared memory slot or an existing
@@ -454,8 +438,8 @@ INLINE void* data_sharing_push_stack_common(size_t PushSize) {
   return FrameP;
 }
 
-EXTERN void* __kmpc_data_sharing_coalesced_push_stack(size_t DataSize,
-    int16_t UseSharedMemory) {
+EXTERN void *__kmpc_data_sharing_coalesced_push_stack(size_t DataSize,
+                                                      int16_t UseSharedMemory) {
   return data_sharing_push_stack_common(DataSize);
 }
 
@@ -466,8 +450,8 @@ EXTERN void* __kmpc_data_sharing_coalesced_push_stack(size_t DataSize,
 // By default the globalized variables are stored in global memory. If the
 // UseSharedMemory is set to true, the runtime will attempt to use shared memory
 // as long as the size requested fits the pre-allocated size.
-EXTERN void* __kmpc_data_sharing_push_stack(size_t DataSize,
-    int16_t UseSharedMemory) {
+EXTERN void *__kmpc_data_sharing_push_stack(size_t DataSize,
+                                            int16_t UseSharedMemory) {
   // Compute the total memory footprint of the requested data.
   // The master thread requires a stack only for itself. A worker
   // thread (which at this point is a warp master) will require
@@ -495,7 +479,7 @@ EXTERN void __kmpc_data_sharing_pop_stack(void *FrameStart) {
 
   __threadfence_block();
 
-  if (getThreadId() % WARPSIZE == 0) {
+  if (GetThreadIdInBlock() % WARPSIZE == 0) {
     unsigned WID = getWarpId();
 
     // Current slot
@@ -572,7 +556,7 @@ EXTERN void __kmpc_get_team_static_memory(int16_t isSPMDExecutionMode,
     __SYNCTHREADS();
     return;
   }
-  ASSERT0(LT_FUSSY, GetThreadIdInBlock() == getMasterThreadId(),
+  ASSERT0(LT_FUSSY, GetThreadIdInBlock() == GetMasterThreadID(),
           "Must be called only in the target master thread.");
   *frame = omptarget_nvptx_simpleMemoryManager.Acquire(buf, size);
   __threadfence();
@@ -591,7 +575,7 @@ EXTERN void __kmpc_restore_team_static_memory(int16_t isSPMDExecutionMode,
     return;
   }
   __threadfence();
-  ASSERT0(LT_FUSSY, GetThreadIdInBlock() == getMasterThreadId(),
+  ASSERT0(LT_FUSSY, GetThreadIdInBlock() == GetMasterThreadID(),
           "Must be called only in the target master thread.");
   omptarget_nvptx_simpleMemoryManager.Release();
 }

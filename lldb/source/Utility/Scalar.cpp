@@ -2635,104 +2635,15 @@ bool lldb_private::operator<(const Scalar &lhs, const Scalar &rhs) {
 }
 
 bool lldb_private::operator<=(const Scalar &lhs, const Scalar &rhs) {
-  if (lhs.m_type == Scalar::e_void || rhs.m_type == Scalar::e_void)
-    return false;
-
-  Scalar temp_value;
-  const Scalar *a;
-  const Scalar *b;
-  llvm::APFloat::cmpResult result;
-  switch (PromoteToMaxType(lhs, rhs, temp_value, a, b)) {
-  case Scalar::e_void:
-    break;
-  case Scalar::e_sint:
-  case Scalar::e_slong:
-  case Scalar::e_slonglong:
-  case Scalar::e_sint128:
-  case Scalar::e_sint256:
-    return a->m_integer.sle(b->m_integer);
-  case Scalar::e_uint:
-  case Scalar::e_ulong:
-  case Scalar::e_ulonglong:
-  case Scalar::e_uint128:
-  case Scalar::e_uint256:
-    return a->m_integer.ule(b->m_integer);
-  case Scalar::e_float:
-  case Scalar::e_double:
-  case Scalar::e_long_double:
-    result = a->m_float.compare(b->m_float);
-    if (result == llvm::APFloat::cmpLessThan ||
-        result == llvm::APFloat::cmpEqual)
-      return true;
-  }
-  return false;
+  return !(rhs < lhs);
 }
 
 bool lldb_private::operator>(const Scalar &lhs, const Scalar &rhs) {
-  if (lhs.m_type == Scalar::e_void || rhs.m_type == Scalar::e_void)
-    return false;
-
-  Scalar temp_value;
-  const Scalar *a;
-  const Scalar *b;
-  llvm::APFloat::cmpResult result;
-  switch (PromoteToMaxType(lhs, rhs, temp_value, a, b)) {
-  case Scalar::e_void:
-    break;
-  case Scalar::e_sint:
-  case Scalar::e_slong:
-  case Scalar::e_slonglong:
-  case Scalar::e_sint128:
-  case Scalar::e_sint256:
-    return a->m_integer.sgt(b->m_integer);
-  case Scalar::e_uint:
-  case Scalar::e_ulong:
-  case Scalar::e_ulonglong:
-  case Scalar::e_uint128:
-  case Scalar::e_uint256:
-    return a->m_integer.ugt(b->m_integer);
-  case Scalar::e_float:
-  case Scalar::e_double:
-  case Scalar::e_long_double:
-    result = a->m_float.compare(b->m_float);
-    if (result == llvm::APFloat::cmpGreaterThan)
-      return true;
-  }
-  return false;
+  return rhs < lhs;
 }
 
 bool lldb_private::operator>=(const Scalar &lhs, const Scalar &rhs) {
-  if (lhs.m_type == Scalar::e_void || rhs.m_type == Scalar::e_void)
-    return false;
-
-  Scalar temp_value;
-  const Scalar *a;
-  const Scalar *b;
-  llvm::APFloat::cmpResult result;
-  switch (PromoteToMaxType(lhs, rhs, temp_value, a, b)) {
-  case Scalar::e_void:
-    break;
-  case Scalar::e_sint:
-  case Scalar::e_slong:
-  case Scalar::e_slonglong:
-  case Scalar::e_sint128:
-  case Scalar::e_sint256:
-    return a->m_integer.sge(b->m_integer);
-  case Scalar::e_uint:
-  case Scalar::e_ulong:
-  case Scalar::e_ulonglong:
-  case Scalar::e_uint128:
-  case Scalar::e_uint256:
-    return a->m_integer.uge(b->m_integer);
-  case Scalar::e_float:
-  case Scalar::e_double:
-  case Scalar::e_long_double:
-    result = a->m_float.compare(b->m_float);
-    if (result == llvm::APFloat::cmpGreaterThan ||
-        result == llvm::APFloat::cmpEqual)
-      return true;
-  }
-  return false;
+  return !(lhs < rhs);
 }
 
 bool Scalar::ClearBit(uint32_t bit) {

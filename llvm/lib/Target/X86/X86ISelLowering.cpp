@@ -18344,7 +18344,7 @@ static bool shouldUseHorizontalOp(bool IsSingleSource, SelectionDAG &DAG,
 static SDValue lowerFaddFsub(SDValue Op, SelectionDAG &DAG,
                              const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
-  assert(VT == MVT::f32 || VT == MVT::f64 && "Only expecting float/double");
+  assert((VT == MVT::f32 || VT == MVT::f64) && "Only expecting float/double");
 
   // If both operands have other uses, this is probably not profitable.
   // Horizontal FP add/sub were added with SSE3.

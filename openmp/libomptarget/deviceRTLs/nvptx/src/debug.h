@@ -130,7 +130,7 @@
 #include "option.h"
 
 template <typename... Arguments>
-static NOINLINE void log(const char *fmt, Arguments... parameters) {
+NOINLINE static void log(const char *fmt, Arguments... parameters) {
   printf(fmt, (int)blockIdx.x, (int)threadIdx.x, (int)(threadIdx.x / WARPSIZE),
          (int)(threadIdx.x & 0x1F), parameters...);
 }

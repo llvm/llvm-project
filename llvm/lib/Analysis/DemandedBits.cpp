@@ -85,8 +85,9 @@ static bool isAlwaysLive(Instruction *I) {
 }
 
 void DemandedBits::determineLiveOperandBits(
-    const Instruction *UserI, const Instruction *I, unsigned OperandNo,
-    const APInt &AOut, APInt &AB, KnownBits &Known, KnownBits &Known2) {
+    const Instruction *UserI, const Value *Val, unsigned OperandNo,
+    const APInt &AOut, APInt &AB, KnownBits &Known, KnownBits &Known2,
+    bool &KnownBitsComputed) {
   unsigned BitWidth = AB.getBitWidth();
 
   // We're called once per operand, but for some instructions, we need to
@@ -97,7 +98,11 @@ void DemandedBits::determineLiveOperandBits(
   // provided here.
   auto ComputeKnownBits =
       [&](unsigned BitWidth, const Value *V1, const Value *V2) {
-        const DataLayout &DL = I->getModule()->getDataLayout();
+        if (KnownBitsComputed)
+          return;
+        KnownBitsComputed = true;
+
+        const DataLayout &DL = UserI->getModule()->getDataLayout();
         Known = KnownBits(BitWidth);
         computeKnownBits(V1, Known, DL, 0, &AC, UserI, &DT);
 
@@ -129,7 +134,7 @@ void DemandedBits::determineLiveOperandBits(
           // We need some output bits, so we need all bits of the
           // input to the left of, and including, the leftmost bit
           // known to be one.
-          ComputeKnownBits(BitWidth, I, nullptr);
+          ComputeKnownBits(BitWidth, Val, nullptr);
           AB = APInt::getHighBitsSet(BitWidth,
                  std::min(BitWidth, Known.countMaxLeadingZeros()+1));
         }
@@ -139,7 +144,7 @@ void DemandedBits::determineLiveOperandBits(
           // We need some output bits, so we need all bits of the
           // input to the right of, and including, the rightmost bit
           // known to be one.
-          ComputeKnownBits(BitWidth, I, nullptr);
+          ComputeKnownBits(BitWidth, Val, nullptr);
           AB = APInt::getLowBitsSet(BitWidth,
                  std::min(BitWidth, Known.countMaxTrailingZeros()+1));
         }
@@ -234,14 +239,11 @@ void DemandedBits::determineLiveOperandBits(
     // other operand are dead (unless they're both zero, in which
     // case they can't both be dead, so just mark the LHS bits as
     // dead).
-    if (OperandNo == 0) {
-      ComputeKnownBits(BitWidth, I, UserI->getOperand(1));
+    ComputeKnownBits(BitWidth, UserI->getOperand(0), UserI->getOperand(1));
+    if (OperandNo == 0)
       AB &= ~Known2.Zero;
-    } else {
-      if (!isa<Instruction>(UserI->getOperand(0)))
-        ComputeKnownBits(BitWidth, UserI->getOperand(0), I);
+    else
       AB &= ~(Known.Zero & ~Known2.Zero);
-    }
     break;
   case Instruction::Or:
     AB = AOut;
@@ -250,14 +252,11 @@ void DemandedBits::determineLiveOperandBits(
     // other operand are dead (unless they're both one, in which
     // case they can't both be dead, so just mark the LHS bits as
     // dead).
-    if (OperandNo == 0) {
-      ComputeKnownBits(BitWidth, I, UserI->getOperand(1));
+    ComputeKnownBits(BitWidth, UserI->getOperand(0), UserI->getOperand(1));
+    if (OperandNo == 0)
       AB &= ~Known2.One;
-    } else {
-      if (!isa<Instruction>(UserI->getOperand(0)))
-        ComputeKnownBits(BitWidth, UserI->getOperand(0), I);
+    else
       AB &= ~(Known.One & ~Known2.One);
-    }
     break;
   case Instruction::Xor:
   case Instruction::PHI:
@@ -368,33 +367,40 @@ void DemandedBits::performAnalysis() {
       Visited.insert(UserI);
 
     KnownBits Known, Known2;
+    bool KnownBitsComputed = false;
     // Compute the set of alive bits for each operand. These are anded into the
     // existing set, if any, and if that changes the set of alive bits, the
     // operand is added to the work-list.
     for (Use &OI : UserI->operands()) {
-      if (Instruction *I = dyn_cast<Instruction>(OI)) {
-        Type *T = I->getType();
-        if (T->isIntOrIntVectorTy()) {
-          unsigned BitWidth = T->getScalarSizeInBits();
-          APInt AB = APInt::getAllOnesValue(BitWidth);
-          if (UserI->getType()->isIntOrIntVectorTy() && !AOut &&
-              !isAlwaysLive(UserI)) {
-            // If all bits of the output are dead, then all bits of the input
-            // are also dead.
-            AB = APInt(BitWidth, 0);
-          } else {
-            // Bits of each operand that are used to compute alive bits of the
-            // output are alive, all others are dead.
-            determineLiveOperandBits(UserI, I, OI.getOperandNo(), AOut, AB,
-                                     Known, Known2);
+      // We also want to detect dead uses of arguments, but will only store
+      // demanded bits for instructions.
+      Instruction *I = dyn_cast<Instruction>(OI);
+      if (!I && !isa<Argument>(OI))
+        continue;
 
-            // Keep track of uses which have no demanded bits.
-            if (AB.isNullValue())
-              DeadUses.insert(&OI);
-            else
-              DeadUses.erase(&OI);
-          }
+      Type *T = OI->getType();
+      if (T->isIntOrIntVectorTy()) {
+        unsigned BitWidth = T->getScalarSizeInBits();
+        APInt AB = APInt::getAllOnesValue(BitWidth);
+        if (UserI->getType()->isIntOrIntVectorTy() && !AOut &&
+            !isAlwaysLive(UserI)) {
+          // If all bits of the output are dead, then all bits of the input
+          // are also dead.
+          AB = APInt(BitWidth, 0);
+        } else {
+          // Bits of each operand that are used to compute alive bits of the
+          // output are alive, all others are dead.
+          determineLiveOperandBits(UserI, OI, OI.getOperandNo(), AOut, AB,
+                                   Known, Known2, KnownBitsComputed);
 
+          // Keep track of uses which have no demanded bits.
+          if (AB.isNullValue())
+            DeadUses.insert(&OI);
+          else
+            DeadUses.erase(&OI);
+        }
+
+        if (I) {
           // If we've added to the set of alive bits (or the operand has not
           // been previously visited), then re-queue the operand to be visited
           // again.
@@ -408,9 +414,9 @@ void DemandedBits::performAnalysis() {
             AliveBits[I] = std::move(ABNew);
             Worklist.push_back(I);
           }
-        } else if (!Visited.count(I)) {
-          Worklist.push_back(I);
         }
+      } else if (I && !Visited.count(I)) {
+        Worklist.push_back(I);
       }
     }
   }

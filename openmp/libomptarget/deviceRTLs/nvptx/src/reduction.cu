@@ -86,7 +86,7 @@ EXTERN int64_t __kmpc_shuffle_int64(int64_t val, int16_t delta, int16_t size) {
    return val;
 }
 
-static INLINE void gpu_regular_warp_reduce(void *reduce_data,
+INLINE static void gpu_regular_warp_reduce(void *reduce_data,
                                            kmp_ShuffleReductFctPtr shflFct) {
   for (uint32_t mask = WARPSIZE / 2; mask > 0; mask /= 2) {
     shflFct(reduce_data, /*LaneId - not used= */ 0,
@@ -94,7 +94,7 @@ static INLINE void gpu_regular_warp_reduce(void *reduce_data,
   }
 }
 
-static INLINE void gpu_irregular_warp_reduce(void *reduce_data,
+INLINE static void gpu_irregular_warp_reduce(void *reduce_data,
                                              kmp_ShuffleReductFctPtr shflFct,
                                              uint32_t size, uint32_t tid) {
   uint32_t curr_size;
@@ -108,18 +108,18 @@ static INLINE void gpu_irregular_warp_reduce(void *reduce_data,
   }
 }
 
-static INLINE uint32_t
+INLINE static uint32_t
 gpu_irregular_simd_reduce(void *reduce_data, kmp_ShuffleReductFctPtr shflFct) {
   uint32_t lanemask_lt;
   uint32_t lanemask_gt;
   uint32_t size, remote_id, physical_lane_id;
   physical_lane_id = GetThreadIdInBlock() % WARPSIZE;
   asm("mov.u32 %0, %%lanemask_lt;" : "=r"(lanemask_lt));
-  uint32_t Liveness = __BALLOT_SYNC(0xFFFFFFFF, true);
+  uint32_t Liveness = __ACTIVEMASK();
   uint32_t logical_lane_id = __popc(Liveness & lanemask_lt) * 2;
   asm("mov.u32 %0, %%lanemask_gt;" : "=r"(lanemask_gt));
   do {
-    Liveness = __BALLOT_SYNC(0xFFFFFFFF, true);
+    Liveness = __ACTIVEMASK();
     remote_id = __ffs(Liveness & lanemask_gt);
     size = __popc(Liveness);
     logical_lane_id /= 2;
@@ -134,7 +134,7 @@ int32_t __kmpc_nvptx_simd_reduce_nowait(int32_t global_tid, int32_t num_vars,
                                         size_t reduce_size, void *reduce_data,
                                         kmp_ShuffleReductFctPtr shflFct,
                                         kmp_InterWarpCopyFctPtr cpyFct) {
-  uint32_t Liveness = __BALLOT_SYNC(0xFFFFFFFF, true);
+  uint32_t Liveness = __ACTIVEMASK();
   if (Liveness == 0xffffffff) {
     gpu_regular_warp_reduce(reduce_data, shflFct);
     return GetThreadIdInBlock() % WARPSIZE ==
@@ -146,12 +146,10 @@ int32_t __kmpc_nvptx_simd_reduce_nowait(int32_t global_tid, int32_t num_vars,
 }
 
 INLINE
-int32_t nvptx_parallel_reduce_nowait(int32_t global_tid, int32_t num_vars,
-                                     size_t reduce_size, void *reduce_data,
-                                     kmp_ShuffleReductFctPtr shflFct,
-                                     kmp_InterWarpCopyFctPtr cpyFct,
-                                     bool isSPMDExecutionMode,
-                                     bool isRuntimeUninitialized) {
+static int32_t nvptx_parallel_reduce_nowait(
+    int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
+    kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct,
+    bool isSPMDExecutionMode, bool isRuntimeUninitialized) {
   uint32_t BlockThreadId = GetLogicalThreadIdInBlock(isSPMDExecutionMode);
   uint32_t NumThreads = GetNumberOfOmpThreads(
       BlockThreadId, isSPMDExecutionMode, isRuntimeUninitialized);
@@ -195,12 +193,10 @@ int32_t nvptx_parallel_reduce_nowait(int32_t global_tid, int32_t num_vars,
     if (WarpId == 0)
       gpu_irregular_warp_reduce(reduce_data, shflFct, WarpsNeeded,
                                 BlockThreadId);
-
-    return BlockThreadId == 0;
   }
   return BlockThreadId == 0;
 #else
-  uint32_t Liveness = __BALLOT_SYNC(0xFFFFFFFF, true);
+  uint32_t Liveness = __ACTIVEMASK();
   if (Liveness == 0xffffffff) // Full warp
     gpu_regular_warp_reduce(reduce_data, shflFct);
   else if (!(Liveness & (Liveness + 1))) // Partial warp but contiguous lanes
@@ -278,7 +274,7 @@ int32_t __kmpc_nvptx_parallel_reduce_nowait_simple_generic(
 }
 
 INLINE
-int32_t nvptx_teams_reduce_nowait(
+static int32_t nvptx_teams_reduce_nowait(
     int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
     kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct,
     kmp_CopyToScratchpadFctPtr scratchFct, kmp_LoadReduceFctPtr ldFct,
@@ -378,7 +374,7 @@ int32_t nvptx_teams_reduce_nowait(
     ldFct(reduce_data, scratchpad, i, NumTeams, /*Load and reduce*/ 1);
 
   // Reduce across warps to the warp master.
-  uint32_t Liveness = __BALLOT_SYNC(0xFFFFFFFF, true);
+  uint32_t Liveness = __ACTIVEMASK();
   if (Liveness == 0xffffffff) // Full warp
     gpu_regular_warp_reduce(reduce_data, shflFct);
   else // Partial warp but contiguous lanes

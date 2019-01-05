@@ -189,7 +189,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
 
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd linear (a, b:B::ib) // expected-error {{linear variable with incomplete type 'S1'}} expected-error {{const-qualified variable cannot be linear}}
+#pragma omp distribute simd linear (a, b:B::ib) // expected-error {{linear variable with incomplete type 'S1'}} expected-error {{argument of a linear clause should be of integral or pointer type, not 'S2'}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target
@@ -283,7 +283,7 @@ int main(int argc, char **argv) {
 
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd linear (a, b) // expected-error {{linear variable with incomplete type 'S1'}} expected-error {{const-qualified variable cannot be linear}} expected-warning {{Non-trivial type 'const S2' is mapped, only trivial types are guaranteed to be mapped correctly}} expected-error {{incomplete type 'S1' where a complete type is required}}
+#pragma omp distribute simd linear (a, b) // expected-error {{linear variable with incomplete type 'S1'}} expected-error {{argument of a linear clause should be of integral or pointer type, not 'S2'}} expected-warning {{Non-trivial type 'const S2' is mapped, only trivial types are guaranteed to be mapped correctly}} expected-error {{incomplete type 'S1' where a complete type is required}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target

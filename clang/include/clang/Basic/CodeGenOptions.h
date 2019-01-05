@@ -286,6 +286,8 @@ public:
   /// Set of XRay instrumentation kinds to emit.
   XRayInstrSet XRayInstrumentationBundle;
 
+  std::vector<std::string> DefaultFunctionAttrs;
+
 public:
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)

@@ -998,6 +998,10 @@ def fno_sanitize_address_use_odr_indicator
     : Flag<["-"], "fno-sanitize-address-use-odr-indicator">,
       Group<f_clang_Group>,
       HelpText<"Disable ODR indicator globals">;
+def fsanitize_hwaddress_abi_EQ
+    : Joined<["-"], "fsanitize-hwaddress-abi=">,
+      Group<f_clang_Group>,
+      HelpText<"Select the HWAddressSanitizer ABI to target (interceptor or platform, default interceptor)">;
 def fsanitize_recover : Flag<["-"], "fsanitize-recover">, Group<f_clang_Group>;
 def fno_sanitize_recover : Flag<["-"], "fno-sanitize-recover">,
                            Flags<[CoreOption, DriverOption]>,

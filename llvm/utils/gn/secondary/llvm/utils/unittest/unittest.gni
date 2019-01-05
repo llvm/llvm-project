@@ -33,6 +33,9 @@ template("unittest") {
     # run the unit test binary if necessary. Using target_out_dir here
     # means that //clang/unittests/Format gets its binary in
     # out/gn/obj/clang/unittests/Format/FormatTests, which seems fine.
+    #
+    # If you change output_dir here, look through
+    # `git grep target_out_dir '*/unittests/*'` and update those too.
     output_dir = target_out_dir
     deps += [ "//llvm/utils/unittest/UnitTestMain" ]
     testonly = true

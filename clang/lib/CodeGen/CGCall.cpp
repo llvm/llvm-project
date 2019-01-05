@@ -1816,6 +1816,12 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
     if (CodeGenOpts.FlushDenorm)
       FuncAttrs.addAttribute("nvptx-f32ftz", "true");
   }
+
+  for (StringRef Attr : CodeGenOpts.DefaultFunctionAttrs) {
+    StringRef Var, Value;
+    std::tie(Var, Value) = Attr.split('=');
+    FuncAttrs.addAttribute(Var, Value);
+  }
 }
 
 void CodeGenModule::AddDefaultFnAttrs(llvm::Function &F) {
