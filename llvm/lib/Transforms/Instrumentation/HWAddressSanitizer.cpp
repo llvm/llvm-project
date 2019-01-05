@@ -758,10 +758,12 @@ Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
 Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty) {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   if (TargetTriple.isAArch64() && TargetTriple.isAndroid()) {
+    // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
+    // in Bionic's libc/private/bionic_tls.h.
     Function *ThreadPointerFunc =
         Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
     Value *SlotPtr = IRB.CreatePointerCast(
-        IRB.CreateConstGEP1_32(IRB.CreateCall(ThreadPointerFunc), 0x40),
+        IRB.CreateConstGEP1_32(IRB.CreateCall(ThreadPointerFunc), 0x30),
         Ty->getPointerTo(0));
     return SlotPtr;
   }
