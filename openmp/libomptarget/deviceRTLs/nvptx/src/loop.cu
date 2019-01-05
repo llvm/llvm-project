@@ -414,12 +414,8 @@ public:
     return FINISHED;
   }
 
-  // On Pascal, with inlining of the runtime into the user application,
-  // this code deadlocks.  This is probably because different threads
-  // in a warp cannot make independent progress.
-  NOINLINE static int dispatch_next(kmp_Ident *loc, int32_t gtid,
-                                    int32_t *plast, T *plower, T *pupper,
-                                    ST *pstride) {
+  INLINE static int dispatch_next(kmp_Ident *loc, int32_t gtid, int32_t *plast,
+                                  T *plower, T *pupper, ST *pstride) {
     ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc),
             "Expected non-SPMD mode + initialized runtime.");
     // ID of a thread in its own warp

@@ -42,7 +42,7 @@ public:
   /// @return The exit code that the process should return.
   int MainLoop();
 
-  lldb::SBError ProcessArgs(const llvm::opt::InputArgList &args, bool &do_exit);
+  lldb::SBError ProcessArgs(const llvm::opt::InputArgList &args, bool &exiting);
 
   const char *GetFilename() const;
 
@@ -104,7 +104,7 @@ public:
     // FIXME: When we have set/show variables we can remove this from here.
     bool m_use_external_editor = false;
 
-    typedef std::set<char> OptionSet;
+    using OptionSet = std::set<char>;
     OptionSet m_seen_options;
   };
 
