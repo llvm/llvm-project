@@ -137,6 +137,92 @@ define <2 x i1> @ctlz_ne_bitwidth_v2i32(<2 x i32> %a) {
   ret <2 x i1> %cmp
 }
 
+define i1 @ctlz_ugt_zero_i32(i32 %x) {
+; CHECK-LABEL: @ctlz_ugt_zero_i32(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  %cmp = icmp ugt i32 %lz, 0
+  ret i1 %cmp
+}
+
+define i1 @ctlz_ugt_one_i32(i32 %x) {
+; CHECK-LABEL: @ctlz_ugt_one_i32(
+; CHECK-NEXT:    [[LZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false), !range !0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[LZ]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  %cmp = icmp ugt i32 %lz, 1
+  ret i1 %cmp
+}
+
+define i1 @ctlz_ugt_other_i32(i32 %x) {
+; CHECK-LABEL: @ctlz_ugt_other_i32(
+; CHECK-NEXT:    [[LZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false), !range !0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[LZ]], 16
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  %cmp = icmp ugt i32 %lz, 16
+  ret i1 %cmp
+}
+
+define i1 @ctlz_ugt_bw_minus_one_i32(i32 %x) {
+; CHECK-LABEL: @ctlz_ugt_bw_minus_one_i32(
+; CHECK-NEXT:    [[LZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false), !range !0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[LZ]], 31
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  %cmp = icmp ugt i32 %lz, 31
+  ret i1 %cmp
+}
+
+define i1 @ctlz_ult_one_i32(i32 %x) {
+; CHECK-LABEL: @ctlz_ult_one_i32(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  %cmp = icmp ult i32 %lz, 1
+  ret i1 %cmp
+}
+
+define i1 @ctlz_ult_other_i32(i32 %x) {
+; CHECK-LABEL: @ctlz_ult_other_i32(
+; CHECK-NEXT:    [[LZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false), !range !0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[LZ]], 16
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  %cmp = icmp ult i32 %lz, 16
+  ret i1 %cmp
+}
+
+define i1 @ctlz_ult_bw_minus_one_i32(i32 %x) {
+; CHECK-LABEL: @ctlz_ult_bw_minus_one_i32(
+; CHECK-NEXT:    [[LZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false), !range !0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[LZ]], 31
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  %cmp = icmp ult i32 %lz, 31
+  ret i1 %cmp
+}
+
+define i1 @ctlz_ult_bitwidth_i32(i32 %x) {
+; CHECK-LABEL: @ctlz_ult_bitwidth_i32(
+; CHECK-NEXT:    [[LZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false), !range !0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[LZ]], 32
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  %cmp = icmp ult i32 %lz, 32
+  ret i1 %cmp
+}
+
 define i1 @cttz_ne_bitwidth_i33(i33 %x) {
 ; CHECK-LABEL: @cttz_ne_bitwidth_i33(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i33 [[X:%.*]], 0
@@ -231,6 +317,94 @@ define i1 @cttz_eq_other_i33_multiuse(i33 %x, i33* %p) {
   %lz = tail call i33 @llvm.cttz.i33(i33 %x, i1 false)
   store i33 %lz, i33* %p
   %cmp = icmp eq i33 %lz, 4
+  ret i1 %cmp
+}
+
+define i1 @cttz_ugt_zero_i33(i33 %x) {
+; CHECK-LABEL: @cttz_ugt_zero_i33(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i33 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i33 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i33 @llvm.cttz.i33(i33 %x, i1 false)
+  %cmp = icmp ugt i33 %lz, 0
+  ret i1 %cmp
+}
+
+define i1 @cttz_ugt_one_i33(i33 %x) {
+; CHECK-LABEL: @cttz_ugt_one_i33(
+; CHECK-NEXT:    [[LZ:%.*]] = tail call i33 @llvm.cttz.i33(i33 [[X:%.*]], i1 false), !range !1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i33 [[LZ]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i33 @llvm.cttz.i33(i33 %x, i1 false)
+  %cmp = icmp ugt i33 %lz, 1
+  ret i1 %cmp
+}
+
+define i1 @cttz_ugt_other_i33(i33 %x) {
+; CHECK-LABEL: @cttz_ugt_other_i33(
+; CHECK-NEXT:    [[LZ:%.*]] = tail call i33 @llvm.cttz.i33(i33 [[X:%.*]], i1 false), !range !1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i33 [[LZ]], 16
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i33 @llvm.cttz.i33(i33 %x, i1 false)
+  %cmp = icmp ugt i33 %lz, 16
+  ret i1 %cmp
+}
+
+define i1 @cttz_ugt_bw_minus_one_i33(i33 %x) {
+; CHECK-LABEL: @cttz_ugt_bw_minus_one_i33(
+; CHECK-NEXT:    [[LZ:%.*]] = tail call i33 @llvm.cttz.i33(i33 [[X:%.*]], i1 false), !range !1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i33 [[LZ]], 32
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i33 @llvm.cttz.i33(i33 %x, i1 false)
+  %cmp = icmp ugt i33 %lz, 32
+  ret i1 %cmp
+}
+
+define i1 @cttz_ult_one_i33(i33 %x) {
+; CHECK-LABEL: @cttz_ult_one_i33(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i33 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i33 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i33 @llvm.cttz.i33(i33 %x, i1 false)
+  %cmp = icmp ult i33 %lz, 1
+  ret i1 %cmp
+}
+
+define i1 @cttz_ult_other_i33(i33 %x) {
+; CHECK-LABEL: @cttz_ult_other_i33(
+; CHECK-NEXT:    [[LZ:%.*]] = tail call i33 @llvm.cttz.i33(i33 [[X:%.*]], i1 false), !range !1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i33 [[LZ]], 16
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i33 @llvm.cttz.i33(i33 %x, i1 false)
+  %cmp = icmp ult i33 %lz, 16
+  ret i1 %cmp
+}
+
+define i1 @cttz_ult_bw_minus_one_i33(i33 %x) {
+; CHECK-LABEL: @cttz_ult_bw_minus_one_i33(
+; CHECK-NEXT:    [[LZ:%.*]] = tail call i33 @llvm.cttz.i33(i33 [[X:%.*]], i1 false), !range !1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i33 [[LZ]], 32
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i33 @llvm.cttz.i33(i33 %x, i1 false)
+  %cmp = icmp ult i33 %lz, 32
+  ret i1 %cmp
+}
+
+define i1 @cttz_ult_bitwidth_i33(i33 %x) {
+; CHECK-LABEL: @cttz_ult_bitwidth_i33(
+; CHECK-NEXT:    [[LZ:%.*]] = tail call i33 @llvm.cttz.i33(i33 [[X:%.*]], i1 false), !range !1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i33 [[LZ]], 33
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %lz = tail call i33 @llvm.cttz.i33(i33 %x, i1 false)
+  %cmp = icmp ult i33 %lz, 33
   ret i1 %cmp
 }
 

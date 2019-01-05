@@ -93,19 +93,25 @@ For later versions of Visual Studio, no setup is required.
     </Expand>
   </Type>
 
+  <!-- PointerUnion types - In addition to the regular view, which displays the pointer, there is a "deref" view that
+       displays the pointed to object, which is often needed by other visualizers -->
   <Type Name="llvm::PointerUnion&lt;*,*&gt;">
-    <DisplayString Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) == 0">{"$T1", s8b}: {($T1)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)}</DisplayString>
-    <DisplayString Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) != 0">{"$T2", s8b}: {($T2)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)}</DisplayString>
+    <DisplayString  Optional="true" IncludeView="deref" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) == 0">{*($T1)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)}</DisplayString>
+    <DisplayString  Optional="true" IncludeView="deref" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) != 0">{*($T2)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)}</DisplayString>
+    <DisplayString  Optional="true" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) == 0">{"$T1", s8b}: {($T1)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)}</DisplayString>
+    <DisplayString  Optional="true" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) != 0">{"$T2", s8b}: {($T2)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)}</DisplayString>
     <Expand>
       <Item Name="[Holds]" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) == 0">"$T1", s8b</Item>
-      <Item Name="[Ptr]" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) == 0">($T1)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)</Item>
+      <Item Name="[Ptr]" Optional="true"  Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) == 0">($T1)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)</Item>
       <Item Name="[Holds]" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) != 0">"$T2", s8b</Item>
-      <Item Name="[Ptr]" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) != 0">($T2)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)</Item>
+      <Item Name="[Ptr]" Optional="true" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) != 0">($T2)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)</Item>
     </Expand>
   </Type>
 
   <Type Name="llvm::PointerUnion3&lt;*,*,*&gt;">
-    <DisplayString Condition="(Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1">{"$T3", s8b}: {($T3)(Val.Val.Value &amp; ValTy::ValTy::InfoTy::PointerBitMask)}</DisplayString>
+    <DisplayString Optional="true" IncludeView="deref" Condition="(Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1">{Val,view(deref)}</DisplayString>
+    <DisplayString Optional="true" IncludeView="deref">{*(InnerUnion*)&amp;Val.Val.Value,view(deref)}</DisplayString>
+    <DisplayString Condition="(Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1">{Val}</DisplayString>
     <DisplayString>{*(InnerUnion*)&amp;Val.Val.Value}</DisplayString>
     <Expand>
       <Item Name="[Holds]" Condition="(Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1">"$T3", s8b</Item>
@@ -115,6 +121,22 @@ For later versions of Visual Studio, no setup is required.
   </Type>
 
   <Type Name="llvm::PointerUnion4&lt;*,*,*,*&gt;">
+    <DisplayString Optional="true" IncludeView="deref" 
+                   Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 0 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion1::ValTy::InfoTy::IntShift) &amp; 1) == 0">
+      {*($T1)(Val.Val.Value &amp; InnerUnion1::ValTy::InfoTy::PointerBitMask)}
+    </DisplayString>
+    <DisplayString Optional="true" IncludeView="deref" 
+                   Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 0 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion1::ValTy::InfoTy::IntShift) &amp; 1) == 1">
+      {*($T2)(Val.Val.Value &amp; InnerUnion1::ValTy::InfoTy::PointerBitMask)}
+    </DisplayString>
+    <DisplayString  Optional="true" IncludeView="deref" 
+                    Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 1 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion2::ValTy::InfoTy::IntShift) &amp; 1) == 0">
+      {*($T3)(Val.Val.Value &amp; InnerUnion2::ValTy::InfoTy::PointerBitMask)}
+    </DisplayString>
+    <DisplayString  Optional="true" IncludeView="deref" 
+                    Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 1 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion2::ValTy::InfoTy::IntShift) &amp; 1) == 1">
+      {*($T4)(Val.Val.Value &amp; InnerUnion2::ValTy::InfoTy::PointerBitMask)}
+    </DisplayString>
     <DisplayString Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 0 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion1::ValTy::InfoTy::IntShift) &amp; 1) == 0">
       {"$T1", s8b}: {($T1)(Val.Val.Value &amp; InnerUnion1::ValTy::InfoTy::PointerBitMask)}
     </DisplayString>
