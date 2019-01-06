@@ -57,14 +57,13 @@ For later versions of Visual Studio, no setup is required-->
       No TypeBits set beyond TypeClass
     </DisplayString>
     <DisplayString IncludeView="flags">
-    {*this, view(Dependent)}{*this, view(InstantiationDependent)}{*this, view(VariablyModified)}
-    {*this, view(ContainsUnexpandedParameterPack)}{*this, view(Cache)}{*this, view(FromAST)}</DisplayString>
+{*this, view(Dependent)}{*this, view(InstantiationDependent)}{*this, view(VariablyModified)}
+{*this, view(ContainsUnexpandedParameterPack)}{*this, view(Cache)}{*this, view(FromAST)}</DisplayString>
     <DisplayString>{*this,view(cmn)}  {{{*this,view(poly)}}}</DisplayString>
     <Expand>
       <Item Name="TypeClass" IncludeView="cmn">(clang::Type::TypeClass)TypeBits.TC</Item>
       <Item Name="Flags" IncludeView="cmn">*this,view(flags)</Item>
       <Item Name="Canonical" IncludeView="cmn">CanonicalType</Item>
-      <Item Name="isCanonicalUnqualified" IncludeView="cmn">CanonicalType.Value.Value == this</Item>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::Builtin">*(clang::BuiltinType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::Pointer">*(clang::PointerType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::LValueReference">*(clang::LValueReferenceType *)this</ExpandedItem>
@@ -142,8 +141,9 @@ For later versions of Visual Studio, no setup is required-->
   <Type Name="clang::TemplateTypeParmDecl">
     <DisplayString IncludeView="TorC" Condition="Typename">typename</DisplayString>
     <DisplayString IncludeView="TorC" Condition="!Typename">class</DisplayString>
-    <DisplayString IncludeView="MaybeEllipses" Condition="((TemplateTypeParmType *)TypeForDecl)->CanTTPTInfo.ParameterPack">...</DisplayString>
-    <DisplayString IncludeView="MaybeEllipses" Condition="!((TemplateTypeParmType *)TypeForDecl)->CanTTPTInfo.ParameterPack"></DisplayString>
+    <DisplayString IncludeView="MaybeEllipses" Condition="TypeForDecl == nullptr">(not yet known if parameter pack) </DisplayString>
+    <DisplayString IncludeView="MaybeEllipses" Condition="((TemplateTypeParmType *)(((clang::ExtQualsTypeCommonBase *)(((uintptr_t)TypeForDecl->CanonicalType.Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType))->CanTTPTInfo.ParameterPack">...</DisplayString>
+    <DisplayString IncludeView="MaybeEllipses" Condition="!((TemplateTypeParmType *)(((clang::ExtQualsTypeCommonBase *)(((uintptr_t)TypeForDecl->CanonicalType.Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType))->CanTTPTInfo.ParameterPack"></DisplayString>
     <DisplayString>{*this,view(TorC)} {*this,view(MaybeEllipses)}{Name,view(cpp)}</DisplayString> 
   </Type>
   <Type Name="clang::TemplateDecl">
@@ -227,8 +227,10 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::TemplateTypeParmType">
-    <DisplayString IncludeView="cpp">{*TTPDecl,view(cpp)}</DisplayString>
-    <DisplayString>{*TTPDecl}</DisplayString>
+    <DisplayString Condition="CanonicalType.Value.Value != this">Non-canonical: {*TTPDecl}</DisplayString>
+    <DisplayString>Canonical: {CanTTPTInfo}</DisplayString>
+    <Expand>
+    </Expand>
   </Type>
   <Type Name="clang::InjectedClassNameType">
     <DisplayString>{*Decl,view(cpp)}</DisplayString>
@@ -261,6 +263,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString IncludeView="fastQuals" Condition="(Value.Value &amp; 15)==6">{" ",sb}volatile restrict</DisplayString>
     <DisplayString IncludeView="fastQuals" Condition="(Value.Value &amp; 15)==7">{" ",sb}const volatile restrict</DisplayString>
     <DisplayString IncludeView="fastQuals">Cannot visualize non-fast qualifiers</DisplayString>
+    <DisplayString Condition="(uintptr_t)Value.Value == 0">Null</DisplayString>
     <DisplayString>{*((clang::ExtQualsTypeCommonBase *)(((uintptr_t)Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType}{*this,view(fastQuals)}</DisplayString>
     <Expand>
       <Item Name="Fast Quals">*this,view(fastQuals)</Item>
