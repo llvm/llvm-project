@@ -1530,6 +1530,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::BITCAST, MVT::v32i16, Custom);
       setOperationAction(ISD::BITCAST, MVT::v64i8,  Custom);
     }
+
+    if (Subtarget.hasVBMI2()) {
+      for (auto VT : { MVT::v16i32, MVT::v8i64 }) {
+        setOperationAction(ISD::FSHL, VT, Custom);
+        setOperationAction(ISD::FSHR, VT, Custom);
+      }
+    }
   }// has  AVX-512
 
   // This block controls legalization for operations that don't have
@@ -1705,6 +1712,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       for (auto VT : { MVT::v64i8, MVT::v32i16 })
         setOperationAction(ISD::CTPOP, VT, Legal);
     }
+
+    if (Subtarget.hasVBMI2()) {
+      setOperationAction(ISD::FSHL, MVT::v32i16, Custom);
+      setOperationAction(ISD::FSHR, MVT::v32i16, Custom);
+    }
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasBWI()) {
@@ -1750,6 +1762,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     if (Subtarget.hasBWI()) {
       setTruncStoreAction(MVT::v16i16,  MVT::v16i8, Legal);
       setTruncStoreAction(MVT::v8i16,   MVT::v8i8,  Legal);
+    }
+
+    if (Subtarget.hasVBMI2()) {
+      // TODO: Make these legal even without VLX?
+      for (auto VT : { MVT::v8i16,  MVT::v4i32, MVT::v2i64,
+                       MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
+        setOperationAction(ISD::FSHL, VT, Custom);
+        setOperationAction(ISD::FSHR, VT, Custom);
+      }
     }
   }
 
@@ -17101,20 +17122,39 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
   MVT VT = Op.getSimpleValueType();
   assert((Op.getOpcode() == ISD::FSHL || Op.getOpcode() == ISD::FSHR) &&
          "Unexpected funnel shift opcode!");
-  assert((VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
-         "Unexpected funnel shift type!");
 
   SDLoc DL(Op);
   SDValue Op0 = Op.getOperand(0);
   SDValue Op1 = Op.getOperand(1);
   SDValue Amt = Op.getOperand(2);
 
+  bool IsFSHR = Op.getOpcode() == ISD::FSHR;
+
+  if (VT.isVector()) {
+    assert(Subtarget.hasVBMI2() && "Expected VBMI2");
+
+    if (IsFSHR)
+      std::swap(Op0, Op1);
+
+    APInt APIntShiftAmt;
+    if (isConstantSplat(Amt, APIntShiftAmt)) {
+      uint64_t ShiftAmt = APIntShiftAmt.getZExtValue();
+      return DAG.getNode(IsFSHR ? X86ISD::VSHRD : X86ISD::VSHLD, DL, VT,
+                         Op0, Op1, DAG.getConstant(ShiftAmt, DL, MVT::i8));
+    }
+
+    return DAG.getNode(IsFSHR ? X86ISD::VSHRDV : X86ISD::VSHLDV, DL, VT,
+                       Op0, Op1, Amt);
+  }
+
+  assert((VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
+         "Unexpected funnel shift type!");
+
   // Expand slow SHLD/SHRD cases if we are not optimizing for size.
   bool OptForSize = DAG.getMachineFunction().getFunction().optForSize();
   if (!OptForSize && Subtarget.isSHLDSlow())
     return SDValue();
 
-  bool IsFSHR = Op.getOpcode() == ISD::FSHR;
   if (IsFSHR)
     std::swap(Op0, Op1);
 

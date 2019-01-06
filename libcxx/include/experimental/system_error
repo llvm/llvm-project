@@ -7,5 +7,15 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+#ifndef _LIBCPP_EXPERIMENTAL_SYSTEM_ERROR
+#define _LIBCPP_EXPERIMENTAL_SYSTEM_ERROR
 
-#error "<experimental/system_error> has been removed. Use <system_error> instead."
+#include <__config>
+
+#ifdef _LIBCPP_WARNING
+_LIBCPP_WARNING("<experimental/system_error> has been removed. Use <system_error> instead.")
+#else
+# warning "<experimental/system_error> has been removed. Use <system_error> instead."
+#endif
+
+#endif // _LIBCPP_EXPERIMENTAL_SYSTEM_ERROR

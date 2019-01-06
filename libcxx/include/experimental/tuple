@@ -7,5 +7,15 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+#ifndef _LIBCPP_EXPERIMENTAL_TUPLE
+#define _LIBCPP_EXPERIMENTAL_TUPLE
 
-#error "<experimental/tuple> has been removed. Use <tuple> instead."
+#include <__config>
+
+#ifdef _LIBCPP_WARNING
+_LIBCPP_WARNING("<experimental/tuple> has been removed. Use <tuple> instead.")
+#else
+# warning "<experimental/tuple> has been removed. Use <tuple> instead."
+#endif
+
+#endif // _LIBCPP_EXPERIMENTAL_TUPLE
