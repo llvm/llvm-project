@@ -7,5 +7,15 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+#ifndef _LIBCPP_EXPERIMENTAL_OPTIONAL
+#define _LIBCPP_EXPERIMENTAL_OPTIONAL
 
-#error "<experimental/optional> has been removed. Use <optional> instead."
+#include <__config>
+
+#ifdef _LIBCPP_WARNING
+_LIBCPP_WARNING("<experimental/optional> has been removed. Use <optional> instead.")
+#else
+# warning "<experimental/optional> has been removed. Use <optional> instead."
+#endif
+
+#endif // _LIBCPP_EXPERIMENTAL_OPTIONAL

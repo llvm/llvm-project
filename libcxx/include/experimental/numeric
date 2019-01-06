@@ -7,5 +7,15 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+#ifndef _LIBCPP_EXPERIMENTAL_NUMERIC
+#define _LIBCPP_EXPERIMENTAL_NUMERIC
 
-#error "<experimental/numeric> has been removed. Use <numeric> instead."
+#include <__config>
+
+#ifdef _LIBCPP_WARNING
+_LIBCPP_WARNING("<experimental/numeric> has been removed. Use <numeric> instead.")
+#else
+# warning "<experimental/numeric> has been removed. Use <numeric> instead."
+#endif
+
+#endif // _LIBCPP_EXPERIMENTAL_NUMERIC
