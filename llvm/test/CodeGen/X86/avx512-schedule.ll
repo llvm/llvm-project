@@ -4285,16 +4285,14 @@ define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
 ; GENERIC-LABEL: trunc_16i8_to_16i1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllw $7, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpmovb2m %xmm0, %k0 # sched: [1:0.33]
-; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    vpmovmskb %xmm0, %eax # sched: [2:1.00]
 ; GENERIC-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: trunc_16i8_to_16i1:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0 # sched: [1:0.50]
-; SKX-NEXT:    vpmovb2m %xmm0, %k0 # sched: [1:1.00]
-; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
+; SKX-NEXT:    vpmovmskb %xmm0, %eax # sched: [2:1.00]
 ; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %mask_b = trunc <16 x i8>%a to <16 x i1>

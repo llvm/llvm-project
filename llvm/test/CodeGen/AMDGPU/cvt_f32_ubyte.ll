@@ -281,3 +281,23 @@ define amdgpu_kernel void @extract_byte3_to_f32(float addrspace(1)* noalias %out
   store float %cvt, float addrspace(1)* %out
   ret void
 }
+
+; GCN-LABEL: {{^}}cvt_ubyte0_or_multiuse:
+; GCN:     {{buffer|flat}}_load_dword [[LOADREG:v[0-9]+]],
+; GCN-DAG: v_or_b32_e32 [[OR:v[0-9]+]], 0x80000001, [[LOADREG]]
+; GCN-DAG: v_cvt_f32_ubyte0_e32 [[CONV:v[0-9]+]], [[OR]]
+; GCN:     v_add_f32_e32 [[RES:v[0-9]+]], [[OR]], [[CONV]]
+; GCN:     buffer_store_dword [[RES]],
+define amdgpu_kernel void @cvt_ubyte0_or_multiuse(i32 addrspace(1)* %in, float addrspace(1)* %out) {
+bb:
+  %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i32 %lid
+  %load = load i32, i32 addrspace(1)* %gep
+  %or = or i32 %load, -2147483647
+  %and = and i32 %or, 255
+  %uitofp = uitofp i32 %and to float
+  %cast = bitcast i32 %or to float
+  %add = fadd float %cast, %uitofp
+  store float %add, float addrspace(1)* %out
+  ret void
+}
