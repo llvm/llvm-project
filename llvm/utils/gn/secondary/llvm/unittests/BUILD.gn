@@ -8,9 +8,7 @@ group("unittests") {
     "BinaryFormat:BinaryFormatTests",
     "Bitcode:BitcodeTests",
     "CodeGen:CodeGenTests",
-
-    # FIXME: Add.
-    #"CodeGen/GlobalISel:GlobalISelTests",
+    "CodeGen/GlobalISel:GlobalISelTests",
     "DebugInfo/CodeView:DebugInfoCodeViewTests",
     "DebugInfo/DWARF:DebugInfoDWARFTests",
     "DebugInfo/MSF:DebugInfoMSFTests",
@@ -24,9 +22,7 @@ group("unittests") {
     "LineEditor:LineEditorTests",
     "Linker:LinkerTests",
     "MC:MCTests",
-
-    # FIXME: Add.
-    #"MI:MITests",
+    "MI:MITests",
     "Object:ObjectTests",
     "ObjectYAML:ObjectYAMLTests",
     "OptRemarks:OptRemarksTests",
@@ -41,9 +37,7 @@ group("unittests") {
     "Transforms/Utils:UtilsTests",
     "Transforms/Vectorize:VectorizeTests",
     "XRay:XRayTests",
-
-    # FIXME: Add more:
-    #"tools/llvm-cfi-verify:CFIVerifyTests",
+    "tools/llvm-cfi-verify:CFIVerifyTests",
     "tools/llvm-exegesis:LLVMExegesisTests",
   ]
 
