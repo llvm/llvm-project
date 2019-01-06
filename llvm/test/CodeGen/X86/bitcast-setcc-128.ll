@@ -128,11 +128,8 @@ define i16 @v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; AVX512F-LABEL: v16i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
-; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX512F-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v16i8:

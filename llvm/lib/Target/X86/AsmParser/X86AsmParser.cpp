@@ -1011,8 +1011,7 @@ static bool CheckBaseRegAndIndexRegAndScale(unsigned BaseReg, unsigned IndexReg,
   // and then only in non-64-bit modes.
   if (X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg) &&
       (Is64BitMode || (BaseReg != X86::BX && BaseReg != X86::BP &&
-                       BaseReg != X86::SI && BaseReg != X86::DI)) &&
-      BaseReg != X86::DX) {
+                       BaseReg != X86::SI && BaseReg != X86::DI))) {
     ErrMsg = "invalid 16-bit base register";
     return true;
   }
