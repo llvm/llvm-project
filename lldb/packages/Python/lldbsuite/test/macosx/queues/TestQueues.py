@@ -18,10 +18,16 @@ class TestQueues(TestBase):
 
     @skipUnlessDarwin
     @add_test_categories(['pyapi'])
-    def test_with_python_api(self):
+    def test_with_python_api_queues(self):
         """Test queues inspection SB APIs."""
         self.build()
         self.queues()
+
+    @skipUnlessDarwin
+    @add_test_categories(['pyapi'])
+    def test_with_python_api_queues_with_backtrace(self):
+        """Test queues inspection SB APIs."""
+        self.build()
         self.queues_with_libBacktraceRecording()
 
     def setUp(self):
@@ -113,7 +119,7 @@ class TestQueues(TestBase):
         break1 = target.BreakpointCreateByName("stopper", 'a.out')
         self.assertTrue(break1, VALID_BREAKPOINT)
         process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
+            [], None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, break1)
         if len(threads) != 1:
@@ -267,8 +273,12 @@ class TestQueues(TestBase):
         self.assertTrue(break1, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
+        libbtr_path = "/Applications/Xcode.app/Contents/Developer/usr/lib/libBacktraceRecording.dylib"
+        if self.getArchitecture() in ['arm', 'arm64', 'arm64e', 'arm64_32', 'armv7', 'armv7k']:
+            libbtr_path = "/Developer/usr/lib/libBacktraceRecording.dylib"
+
         process = target.LaunchSimple(
-            None,
+            [],
             [
                 'DYLD_INSERT_LIBRARIES=/Applications/Xcode.app/Contents/Developer/usr/lib/libBacktraceRecording.dylib',
                 'DYLD_LIBRARY_PATH=/usr/lib/system/introspection'],
