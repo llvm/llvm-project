@@ -311,7 +311,10 @@ SwiftRuntimeReporting::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
   // Trim the string.
   size_t first = message.find_first_not_of(" \t\n");
   size_t last = message.find_last_not_of(" \t\n");
-  message = message.substr(first, (last-first+1));
+  if (first != std::string::npos && last != std::string::npos &&
+      first <= last) {
+    message = message.substr(first, (last - first + 1));
+  }
 
   StructuredData::DictionarySP d(new StructuredData::Dictionary());
   d->AddStringItem("instrumentation_class", "SwiftRuntimeReporting");

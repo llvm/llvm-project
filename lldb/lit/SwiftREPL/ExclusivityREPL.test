@@ -1,0 +1,20 @@
+// Runtime checks for exclusive access should be enabled in the REPL.
+
+// RUN: %lldb --repl < %s 2>&1 | FileCheck %s
+// CHECK: modification requires exclusive access
+// CHECK: Execution interrupted
+
+class C {
+  var f = 12
+}
+
+let c = C()
+
+func doIt(_ p1: inout Int, _ p2: inout Int) { }
+
+let RTLD_DEFAULT = UnsafeMutableRawPointer(bitPattern: -2)
+let flagPtr = dlsym(RTLD_DEFAULT, "_swift_disableExclusivityChecking")
+let flagValue = flagPtr!.load(as: Bool.self)
+
+print("flagValue is \(flagValue)")
+doIt(&c.f, &c.f) // This should trap
