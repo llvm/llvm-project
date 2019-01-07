@@ -91,6 +91,8 @@ cl::opt<bool> BSDFormat("B", cl::desc("Alias for --format=bsd"),
                         cl::Grouping);
 cl::opt<bool> POSIXFormat("P", cl::desc("Alias for --format=posix"),
                           cl::Grouping);
+cl::alias Portability("portability", cl::desc("Alias for --format=posix"),
+                      cl::aliasopt(POSIXFormat), cl::NotHidden);
 cl::opt<bool> DarwinFormat("m", cl::desc("Alias for --format=darwin"),
                            cl::Grouping);
 

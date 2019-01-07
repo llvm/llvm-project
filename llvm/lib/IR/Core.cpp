@@ -15,7 +15,6 @@
 #include "llvm-c/Core.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -2656,43 +2655,43 @@ unsigned LLVMGetNumArgOperands(LLVMValueRef Instr) {
   if (FuncletPadInst *FPI = dyn_cast<FuncletPadInst>(unwrap(Instr))) {
     return FPI->getNumArgOperands();
   }
-  return CallSite(unwrap<Instruction>(Instr)).getNumArgOperands();
+  return unwrap<CallBase>(Instr)->getNumArgOperands();
 }
 
 /*--.. Call and invoke instructions ........................................--*/
 
 unsigned LLVMGetInstructionCallConv(LLVMValueRef Instr) {
-  return CallSite(unwrap<Instruction>(Instr)).getCallingConv();
+  return unwrap<CallBase>(Instr)->getCallingConv();
 }
 
 void LLVMSetInstructionCallConv(LLVMValueRef Instr, unsigned CC) {
-  return CallSite(unwrap<Instruction>(Instr))
-    .setCallingConv(static_cast<CallingConv::ID>(CC));
+  return unwrap<CallBase>(Instr)->setCallingConv(
+      static_cast<CallingConv::ID>(CC));
 }
 
 void LLVMSetInstrParamAlignment(LLVMValueRef Instr, unsigned index,
                                 unsigned align) {
-  CallSite Call = CallSite(unwrap<Instruction>(Instr));
+  auto *Call = unwrap<CallBase>(Instr);
   Attribute AlignAttr = Attribute::getWithAlignment(Call->getContext(), align);
-  Call.addAttribute(index, AlignAttr);
+  Call->addAttribute(index, AlignAttr);
 }
 
 void LLVMAddCallSiteAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
                               LLVMAttributeRef A) {
-  CallSite(unwrap<Instruction>(C)).addAttribute(Idx, unwrap(A));
+  unwrap<CallBase>(C)->addAttribute(Idx, unwrap(A));
 }
 
 unsigned LLVMGetCallSiteAttributeCount(LLVMValueRef C,
                                        LLVMAttributeIndex Idx) {
-  auto CS = CallSite(unwrap<Instruction>(C));
-  auto AS = CS.getAttributes().getAttributes(Idx);
+  auto *Call = unwrap<CallBase>(C);
+  auto AS = Call->getAttributes().getAttributes(Idx);
   return AS.getNumAttributes();
 }
 
 void LLVMGetCallSiteAttributes(LLVMValueRef C, LLVMAttributeIndex Idx,
                                LLVMAttributeRef *Attrs) {
-  auto CS = CallSite(unwrap<Instruction>(C));
-  auto AS = CS.getAttributes().getAttributes(Idx);
+  auto *Call = unwrap<CallBase>(C);
+  auto AS = Call->getAttributes().getAttributes(Idx);
   for (auto A : AS)
     *Attrs++ = wrap(A);
 }
@@ -2700,30 +2699,28 @@ void LLVMGetCallSiteAttributes(LLVMValueRef C, LLVMAttributeIndex Idx,
 LLVMAttributeRef LLVMGetCallSiteEnumAttribute(LLVMValueRef C,
                                               LLVMAttributeIndex Idx,
                                               unsigned KindID) {
-  return wrap(CallSite(unwrap<Instruction>(C))
-    .getAttribute(Idx, (Attribute::AttrKind)KindID));
+  return wrap(
+      unwrap<CallBase>(C)->getAttribute(Idx, (Attribute::AttrKind)KindID));
 }
 
 LLVMAttributeRef LLVMGetCallSiteStringAttribute(LLVMValueRef C,
                                                 LLVMAttributeIndex Idx,
                                                 const char *K, unsigned KLen) {
-  return wrap(CallSite(unwrap<Instruction>(C))
-    .getAttribute(Idx, StringRef(K, KLen)));
+  return wrap(unwrap<CallBase>(C)->getAttribute(Idx, StringRef(K, KLen)));
 }
 
 void LLVMRemoveCallSiteEnumAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
                                      unsigned KindID) {
-  CallSite(unwrap<Instruction>(C))
-    .removeAttribute(Idx, (Attribute::AttrKind)KindID);
+  unwrap<CallBase>(C)->removeAttribute(Idx, (Attribute::AttrKind)KindID);
 }
 
 void LLVMRemoveCallSiteStringAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
                                        const char *K, unsigned KLen) {
-  CallSite(unwrap<Instruction>(C)).removeAttribute(Idx, StringRef(K, KLen));
+  unwrap<CallBase>(C)->removeAttribute(Idx, StringRef(K, KLen));
 }
 
 LLVMValueRef LLVMGetCalledValue(LLVMValueRef Instr) {
-  return wrap(CallSite(unwrap<Instruction>(Instr)).getCalledValue());
+  return wrap(unwrap<CallBase>(Instr)->getCalledValue());
 }
 
 /*--.. Operations on call instructions (only) ..............................--*/

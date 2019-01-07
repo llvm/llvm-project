@@ -1052,7 +1052,7 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
       // Perform the store, so that the uninitialized value detection happens.
       Bldr.takeNodes(*I);
       ExplodedNodeSet Dst3;
-      evalStore(Dst3, U, U, *I, state, loc, V2_untested);
+      evalStore(Dst3, U, Ex, *I, state, loc, V2_untested);
       Bldr.addNodes(Dst3);
 
       continue;
@@ -1120,7 +1120,7 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
     // Perform the store.
     Bldr.takeNodes(*I);
     ExplodedNodeSet Dst3;
-    evalStore(Dst3, U, U, *I, state, loc, Result);
+    evalStore(Dst3, U, Ex, *I, state, loc, Result);
     Bldr.addNodes(Dst3);
   }
   Dst.insert(Dst2);

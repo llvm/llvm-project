@@ -19,18 +19,21 @@ namespace clang {
 namespace clangd {
 namespace {
 using ::testing::ElementsAre;
+using ::testing::EndsWith;
 
 TEST(GlobalCompilationDatabaseTest, FallbackCommand) {
   DirectoryBasedGlobalCompilationDatabase DB(None);
   auto Cmd = DB.getFallbackCommand(testPath("foo/bar.cc"));
   EXPECT_EQ(Cmd.Directory, testPath("foo"));
-  EXPECT_THAT(Cmd.CommandLine, ElementsAre("clang", testPath("foo/bar.cc")));
+  EXPECT_THAT(Cmd.CommandLine, ElementsAre(
+    EndsWith("clang"), testPath("foo/bar.cc")));
   EXPECT_EQ(Cmd.Output, "");
 
   // .h files have unknown language, so they are parsed liberally as obj-c++.
   Cmd = DB.getFallbackCommand(testPath("foo/bar.h"));
-  EXPECT_THAT(Cmd.CommandLine, ElementsAre("clang", "-xobjective-c++-header",
-                                           testPath("foo/bar.h")));
+  EXPECT_THAT(Cmd.CommandLine,
+              ElementsAre(EndsWith("clang"), "-xobjective-c++-header",
+                          testPath("foo/bar.h")));
 }
 
 static tooling::CompileCommand cmd(StringRef File, StringRef Arg) {
@@ -88,7 +91,7 @@ TEST_F(OverlayCDBTest, NoBase) {
   EXPECT_EQ(CDB.getCompileCommand(testPath("bar.cc")), Override);
 
   EXPECT_THAT(CDB.getFallbackCommand(testPath("foo.cc")).CommandLine,
-              ElementsAre("clang", testPath("foo.cc"), "-DA=6"));
+              ElementsAre(EndsWith("clang"), testPath("foo.cc"), "-DA=6"));
 }
 
 TEST_F(OverlayCDBTest, Watch) {

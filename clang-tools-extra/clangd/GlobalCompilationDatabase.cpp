@@ -17,9 +17,19 @@ using namespace llvm;
 namespace clang {
 namespace clangd {
 
+static std::string getFallbackClangPath() {
+  static int Dummy;
+  std::string ClangdExecutable =
+      llvm::sys::fs::getMainExecutable("clangd", (void *)&Dummy);
+  SmallString<128> ClangPath;
+  ClangPath = llvm::sys::path::parent_path(ClangdExecutable);
+  llvm::sys::path::append(ClangPath, "clang");
+  return ClangPath.str();
+}
+
 tooling::CompileCommand
 GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
-  std::vector<std::string> Argv = {"clang"};
+  std::vector<std::string> Argv = {getFallbackClangPath()};
   // Clang treats .h files as C by default, resulting in unhelpful diagnostics.
   // Parsing as Objective C++ is friendly to more cases.
   if (sys::path::extension(File) == ".h")
