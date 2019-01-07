@@ -107,11 +107,15 @@ llvm::ArrayRef<MinidumpThread> MinidumpParser::GetThreads() {
 }
 
 llvm::ArrayRef<uint8_t>
-MinidumpParser::GetThreadContext(const MinidumpThread &td) {
-  if (td.thread_context.rva + td.thread_context.data_size > GetData().size())
+MinidumpParser::GetThreadContext(const MinidumpLocationDescriptor &location) {
+  if (location.rva + location.data_size > GetData().size())
     return {};
+  return GetData().slice(location.rva, location.data_size);
+}
 
-  return GetData().slice(td.thread_context.rva, td.thread_context.data_size);
+llvm::ArrayRef<uint8_t>
+MinidumpParser::GetThreadContext(const MinidumpThread &td) {
+  return GetThreadContext(td.thread_context);
 }
 
 llvm::ArrayRef<uint8_t>

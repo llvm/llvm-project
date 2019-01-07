@@ -9,6 +9,8 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
+// FLAKY_TEST
+
 // <condition_variable>
 
 // class condition_variable_any;
