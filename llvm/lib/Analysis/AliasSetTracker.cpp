@@ -16,7 +16,6 @@
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -236,7 +235,8 @@ bool AliasSet::aliasesUnknownInst(const Instruction *Inst,
 
   for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i) {
     if (auto *UnknownInst = getUnknownInst(i)) {
-      ImmutableCallSite C1(UnknownInst), C2(Inst);
+      const auto *C1 = dyn_cast<CallBase>(UnknownInst);
+      const auto *C2 = dyn_cast<CallBase>(Inst);
       if (!C1 || !C2 || isModOrRefSet(AA.getModRefInfo(C1, C2)) ||
           isModOrRefSet(AA.getModRefInfo(C2, C1)))
         return true;
@@ -446,44 +446,44 @@ void AliasSetTracker::add(Instruction *I) {
     return add(MTI);
 
   // Handle all calls with known mod/ref sets genericall
-  CallSite CS(I);
-  if (CS && CS.onlyAccessesArgMemory()) {
-    auto getAccessFromModRef = [](ModRefInfo MRI) {
-      if (isRefSet(MRI) && isModSet(MRI))
-        return AliasSet::ModRefAccess;
-      else if (isModSet(MRI))
-        return AliasSet::ModAccess;
-      else if (isRefSet(MRI))
-        return AliasSet::RefAccess;
-      else
-        return AliasSet::NoAccess;
-     
-    };
-    
-    ModRefInfo CallMask = createModRefInfo(AA.getModRefBehavior(CS));
+  if (auto *Call = dyn_cast<CallBase>(I))
+    if (Call->onlyAccessesArgMemory()) {
+      auto getAccessFromModRef = [](ModRefInfo MRI) {
+        if (isRefSet(MRI) && isModSet(MRI))
+          return AliasSet::ModRefAccess;
+        else if (isModSet(MRI))
+          return AliasSet::ModAccess;
+        else if (isRefSet(MRI))
+          return AliasSet::RefAccess;
+        else
+          return AliasSet::NoAccess;
+      };
 
-    // Some intrinsics are marked as modifying memory for control flow
-    // modelling purposes, but don't actually modify any specific memory
-    // location. 
-    using namespace PatternMatch;
-    if (I->use_empty() && match(I, m_Intrinsic<Intrinsic::invariant_start>()))
-      CallMask = clearMod(CallMask);
+      ModRefInfo CallMask = createModRefInfo(AA.getModRefBehavior(Call));
 
-    for (auto AI = CS.arg_begin(), AE = CS.arg_end(); AI != AE; ++AI) {
-      const Value *Arg = *AI;
-      if (!Arg->getType()->isPointerTy())
-        continue;
-      unsigned ArgIdx = std::distance(CS.arg_begin(), AI);
-      MemoryLocation ArgLoc = MemoryLocation::getForArgument(CS, ArgIdx,
-                                                             nullptr);
-      ModRefInfo ArgMask = AA.getArgModRefInfo(CS, ArgIdx);
-      ArgMask = intersectModRef(CallMask, ArgMask);
-      if (!isNoModRef(ArgMask))
-        addPointer(ArgLoc, getAccessFromModRef(ArgMask));
+      // Some intrinsics are marked as modifying memory for control flow
+      // modelling purposes, but don't actually modify any specific memory
+      // location.
+      using namespace PatternMatch;
+      if (Call->use_empty() &&
+          match(Call, m_Intrinsic<Intrinsic::invariant_start>()))
+        CallMask = clearMod(CallMask);
+
+      for (auto IdxArgPair : enumerate(Call->args())) {
+        int ArgIdx = IdxArgPair.index();
+        const Value *Arg = IdxArgPair.value();
+        if (!Arg->getType()->isPointerTy())
+          continue;
+        MemoryLocation ArgLoc =
+            MemoryLocation::getForArgument(Call, ArgIdx, nullptr);
+        ModRefInfo ArgMask = AA.getArgModRefInfo(Call, ArgIdx);
+        ArgMask = intersectModRef(CallMask, ArgMask);
+        if (!isNoModRef(ArgMask))
+          addPointer(ArgLoc, getAccessFromModRef(ArgMask));
+      }
+      return;
     }
-    return;
-  }
-  
+
   return addUnknown(I);
 }
 

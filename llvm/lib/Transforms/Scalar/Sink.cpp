@@ -76,14 +76,14 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
       Inst->mayThrow())
     return false;
 
-  if (auto CS = CallSite(Inst)) {
+  if (auto *Call = dyn_cast<CallBase>(Inst)) {
     // Convergent operations cannot be made control-dependent on additional
     // values.
-    if (CS.hasFnAttr(Attribute::Convergent))
+    if (Call->hasFnAttr(Attribute::Convergent))
       return false;
 
     for (Instruction *S : Stores)
-      if (isModSet(AA.getModRefInfo(S, CS)))
+      if (isModSet(AA.getModRefInfo(S, Call)))
         return false;
   }
 

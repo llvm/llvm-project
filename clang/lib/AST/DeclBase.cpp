@@ -1405,6 +1405,12 @@ static bool shouldBeHidden(NamedDecl *D) {
       D->isTemplateParameter())
     return true;
 
+  // Skip friends and local extern declarations unless they're the first
+  // declaration of the entity.
+  if ((D->isLocalExternDecl() || D->getFriendObjectKind()) &&
+      D != D->getCanonicalDecl())
+    return true;
+
   // Skip template specializations.
   // FIXME: This feels like a hack. Should DeclarationName support
   // template-ids, or is there a better way to keep specializations
