@@ -1041,6 +1041,35 @@ Sema::CheckOverload(Scope *S, FunctionDecl *New, const LookupResult &Old,
     }
   }
 
+  // C++ [temp.friend]p1:
+  //   For a friend function declaration that is not a template declaration:
+  //    -- if the name of the friend is a qualified or unqualified template-id,
+  //       [...], otherwise
+  //    -- if the name of the friend is a qualified-id and a matching
+  //       non-template function is found in the specified class or namespace,
+  //       the friend declaration refers to that function, otherwise,
+  //    -- if the name of the friend is a qualified-id and a matching function
+  //       template is found in the specified class or namespace, the friend
+  //       declaration refers to the deduced specialization of that function
+  //       template, otherwise
+  //    -- the name shall be an unqualified-id [...]
+  // If we get here for a qualified friend declaration, we've just reached the
+  // third bullet. If the type of the friend is dependent, skip this lookup
+  // until instantiation.
+  if (New->getFriendObjectKind() && New->getQualifier() &&
+      !New->getType()->isDependentType()) {
+    LookupResult TemplateSpecResult(LookupResult::Temporary, Old);
+    TemplateSpecResult.addAllDecls(Old);
+    if (CheckFunctionTemplateSpecialization(New, nullptr, TemplateSpecResult,
+                                            /*QualifiedFriend*/true)) {
+      New->setInvalidDecl();
+      return Ovl_Overload;
+    }
+
+    Match = TemplateSpecResult.getAsSingle<FunctionDecl>();
+    return Ovl_Match;
+  }
+
   return Ovl_Overload;
 }
 
