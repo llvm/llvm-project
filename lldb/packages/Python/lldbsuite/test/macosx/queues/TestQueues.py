@@ -18,10 +18,16 @@ class TestQueues(TestBase):
 
     @skipUnlessDarwin
     @add_test_categories(['pyapi'])
-    def test_with_python_api(self):
+    def test_with_python_api_queues(self):
         """Test queues inspection SB APIs."""
         self.build()
         self.queues()
+
+    @skipUnlessDarwin
+    @add_test_categories(['pyapi'])
+    def test_with_python_api_queues_with_backtrace(self):
+        """Test queues inspection SB APIs."""
+        self.build()
         self.queues_with_libBacktraceRecording()
 
     def setUp(self):
