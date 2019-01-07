@@ -68,7 +68,7 @@ public:
   runIndexingAction(llvm::StringRef MainFilePath,
                     const std::vector<std::string> &ExtraArgs = {}) {
     IndexFileIn IndexFile;
-    IntrusiveRefCntPtr<FileManager> Files(
+    llvm::IntrusiveRefCntPtr<FileManager> Files(
         new FileManager(FileSystemOptions(), InMemoryFileSystem));
 
     auto Action = createStaticIndexingAction(
@@ -101,7 +101,7 @@ public:
 
 protected:
   std::vector<std::string> FilePaths;
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
 };
 
 TEST_F(IndexActionTest, CollectIncludeGraph) {

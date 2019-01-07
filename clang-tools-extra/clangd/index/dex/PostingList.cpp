@@ -13,7 +13,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace dex {
@@ -24,7 +23,7 @@ namespace {
 /// them on-the-fly when the contents of chunk are to be seen.
 class ChunkIterator : public Iterator {
 public:
-  explicit ChunkIterator(const Token *Tok, ArrayRef<Chunk> Chunks)
+  explicit ChunkIterator(const Token *Tok, llvm::ArrayRef<Chunk> Chunks)
       : Tok(Tok), Chunks(Chunks), CurrentChunk(Chunks.begin()) {
     if (!Chunks.empty()) {
       DecompressedChunk = CurrentChunk->decompress();
@@ -71,7 +70,7 @@ public:
   }
 
 private:
-  raw_ostream &dump(raw_ostream &OS) const override {
+  llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     if (Tok != nullptr)
       return OS << *Tok;
     OS << '[';
@@ -113,13 +112,13 @@ private:
   }
 
   const Token *Tok;
-  ArrayRef<Chunk> Chunks;
+  llvm::ArrayRef<Chunk> Chunks;
   /// Iterator over chunks.
   /// If CurrentChunk is valid, then DecompressedChunk is
   /// CurrentChunk->decompress() and CurrentID is a valid (non-end) iterator
   /// into it.
   decltype(Chunks)::const_iterator CurrentChunk;
-  SmallVector<DocID, Chunk::PayloadSize + 1> DecompressedChunk;
+  llvm::SmallVector<DocID, Chunk::PayloadSize + 1> DecompressedChunk;
   /// Iterator over DecompressedChunk.
   decltype(DecompressedChunk)::iterator CurrentID;
 
@@ -130,11 +129,11 @@ static constexpr size_t BitsPerEncodingByte = 7;
 
 /// Writes a variable length DocID into the buffer and updates the buffer size.
 /// If it doesn't fit, returns false and doesn't write to the buffer.
-bool encodeVByte(DocID Delta, MutableArrayRef<uint8_t> &Payload) {
+bool encodeVByte(DocID Delta, llvm::MutableArrayRef<uint8_t> &Payload) {
   assert(Delta != 0 && "0 is not a valid PostingList delta.");
   // Calculate number of bytes Delta encoding would take by examining the
   // meaningful bits.
-  unsigned Width = 1 + findLastSet(Delta) / BitsPerEncodingByte;
+  unsigned Width = 1 + llvm::findLastSet(Delta) / BitsPerEncodingByte;
   if (Width > Payload.size())
     return false;
 
@@ -166,12 +165,12 @@ bool encodeVByte(DocID Delta, MutableArrayRef<uint8_t> &Payload) {
 /// DocIDs    42            47        7000
 /// gaps                    5         6958
 /// Encoding  (raw number)  00000101  10110110 00101110
-std::vector<Chunk> encodeStream(ArrayRef<DocID> Documents) {
+std::vector<Chunk> encodeStream(llvm::ArrayRef<DocID> Documents) {
   assert(!Documents.empty() && "Can't encode empty sequence.");
   std::vector<Chunk> Result;
   Result.emplace_back();
   DocID Last = Result.back().Head = Documents.front();
-  MutableArrayRef<uint8_t> RemainingPayload = Result.back().Payload;
+  llvm::MutableArrayRef<uint8_t> RemainingPayload = Result.back().Payload;
   for (DocID Doc : Documents.drop_front()) {
     if (!encodeVByte(Doc - Last, RemainingPayload)) { // didn't fit, flush chunk
       Result.emplace_back();
@@ -185,7 +184,7 @@ std::vector<Chunk> encodeStream(ArrayRef<DocID> Documents) {
 
 /// Reads variable length DocID from the buffer and updates the buffer size. If
 /// the stream is terminated, return None.
-Optional<DocID> readVByte(ArrayRef<uint8_t> &Bytes) {
+llvm::Optional<DocID> readVByte(llvm::ArrayRef<uint8_t> &Bytes) {
   if (Bytes.front() == 0 || Bytes.empty())
     return None;
   DocID Result = 0;
@@ -203,9 +202,9 @@ Optional<DocID> readVByte(ArrayRef<uint8_t> &Bytes) {
 
 } // namespace
 
-SmallVector<DocID, Chunk::PayloadSize + 1> Chunk::decompress() const {
-  SmallVector<DocID, Chunk::PayloadSize + 1> Result{Head};
-  ArrayRef<uint8_t> Bytes(Payload);
+llvm::SmallVector<DocID, Chunk::PayloadSize + 1> Chunk::decompress() const {
+  llvm::SmallVector<DocID, Chunk::PayloadSize + 1> Result{Head};
+  llvm::ArrayRef<uint8_t> Bytes(Payload);
   DocID Delta;
   for (DocID Current = Head; !Bytes.empty(); Current += Delta) {
     auto MaybeDelta = readVByte(Bytes);
@@ -214,10 +213,10 @@ SmallVector<DocID, Chunk::PayloadSize + 1> Chunk::decompress() const {
     Delta = *MaybeDelta;
     Result.push_back(Current + Delta);
   }
-  return SmallVector<DocID, Chunk::PayloadSize + 1>{Result};
+  return llvm::SmallVector<DocID, Chunk::PayloadSize + 1>{Result};
 }
 
-PostingList::PostingList(ArrayRef<DocID> Documents)
+PostingList::PostingList(llvm::ArrayRef<DocID> Documents)
     : Chunks(encodeStream(Documents)) {}
 
 std::unique_ptr<Iterator> PostingList::iterator(const Token *Tok) const {

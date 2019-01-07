@@ -14,8 +14,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
-
 namespace clang {
 namespace clangd {
 
@@ -73,14 +71,14 @@ protected:
   ClangdServer Server;
   int Limit = 0;
 
-  std::vector<SymbolInformation> getSymbols(StringRef Query) {
+  std::vector<SymbolInformation> getSymbols(llvm::StringRef Query) {
     EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
     auto SymbolInfos = runWorkspaceSymbols(Server, Query, Limit);
     EXPECT_TRUE(bool(SymbolInfos)) << "workspaceSymbols returned an error";
     return *SymbolInfos;
   }
 
-  void addFile(StringRef FileName, StringRef Contents) {
+  void addFile(llvm::StringRef FileName, llvm::StringRef Contents) {
     auto Path = testPath(FileName);
     FSProvider.Files[Path] = Contents;
     Server.addDocument(Path, Contents);
@@ -318,7 +316,7 @@ protected:
     return *SymbolInfos;
   }
 
-  void addFile(StringRef FilePath, StringRef Contents) {
+  void addFile(llvm::StringRef FilePath, llvm::StringRef Contents) {
     FSProvider.Files[FilePath] = Contents;
     Server.addDocument(FilePath, Contents);
   }

@@ -29,7 +29,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -60,9 +59,9 @@ std::string toURI(const SourceManager &SM, llvm::StringRef Path,
   }
   // We don't perform is_absolute check in an else branch because makeAbsolute
   // might return a relative path on some InMemoryFileSystems.
-  if (!sys::path::is_absolute(AbsolutePath) && !Opts.FallbackDir.empty())
-    sys::fs::make_absolute(Opts.FallbackDir, AbsolutePath);
-  sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
+  if (!llvm::sys::path::is_absolute(AbsolutePath) && !Opts.FallbackDir.empty())
+    llvm::sys::fs::make_absolute(Opts.FallbackDir, AbsolutePath);
+  llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
   return URI::create(AbsolutePath).toString();
 }
 
@@ -102,7 +101,7 @@ bool isPrivateProtoDecl(const NamedDecl &ND) {
   // will include OUTER_INNER and exclude some_enum_constant.
   // FIXME: the heuristic relies on naming style (i.e. no underscore in
   // user-defined names) and can be improved.
-  return (ND.getKind() != Decl::EnumConstant) || any_of(Name, islower);
+  return (ND.getKind() != Decl::EnumConstant) || llvm::any_of(Name, islower);
 }
 
 // We only collect #include paths for symbols that are suitable for global code
@@ -130,9 +129,9 @@ bool shouldCollectIncludePath(index::SymbolKind Kind) {
 /// Gets a canonical include (URI of the header or <header>  or "header") for
 /// header of \p Loc.
 /// Returns None if fails to get include header for \p Loc.
-Optional<std::string> getIncludeHeader(StringRef QName, const SourceManager &SM,
-                                       SourceLocation Loc,
-                                       const SymbolCollector::Options &Opts) {
+llvm::Optional<std::string>
+getIncludeHeader(llvm::StringRef QName, const SourceManager &SM,
+                 SourceLocation Loc, const SymbolCollector::Options &Opts) {
   std::vector<std::string> Headers;
   // Collect the #include stack.
   while (true) {
@@ -148,7 +147,7 @@ Optional<std::string> getIncludeHeader(StringRef QName, const SourceManager &SM,
   }
   if (Headers.empty())
     return None;
-  StringRef Header = Headers[0];
+  llvm::StringRef Header = Headers[0];
   if (Opts.Includes) {
     Header = Opts.Includes->mapHeader(Headers, QName);
     if (Header.startswith("<") || Header.startswith("\""))
@@ -186,11 +185,11 @@ bool shouldIndexFile(const SourceManager &SM, FileID FID,
 }
 
 // Return the symbol location of the token at \p TokLoc.
-Optional<SymbolLocation> getTokenLocation(SourceLocation TokLoc,
-                                          const SourceManager &SM,
-                                          const SymbolCollector::Options &Opts,
-                                          const clang::LangOptions &LangOpts,
-                                          std::string &FileURIStorage) {
+llvm::Optional<SymbolLocation>
+getTokenLocation(SourceLocation TokLoc, const SourceManager &SM,
+                 const SymbolCollector::Options &Opts,
+                 const clang::LangOptions &LangOpts,
+                 std::string &FileURIStorage) {
   auto Path = SM.getFilename(TokLoc);
   if (Path.empty())
     return None;
@@ -299,7 +298,7 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
 // Always return true to continue indexing.
 bool SymbolCollector::handleDeclOccurence(
     const Decl *D, index::SymbolRoleSet Roles,
-    ArrayRef<index::SymbolRelation> Relations, SourceLocation Loc,
+    llvm::ArrayRef<index::SymbolRelation> Relations, SourceLocation Loc,
     index::IndexDataConsumer::ASTNodeInfo ASTNode) {
   assert(ASTCtx && PP.get() && "ASTContext and Preprocessor must be set.");
   assert(CompletionAllocator && CompletionTUInfo);
@@ -461,8 +460,8 @@ void SymbolCollector::finish() {
   }
 
   const auto &SM = ASTCtx->getSourceManager();
-  DenseMap<FileID, std::string> URICache;
-  auto GetURI = [&](FileID FID) -> Optional<std::string> {
+  llvm::DenseMap<FileID, std::string> URICache;
+  auto GetURI = [&](FileID FID) -> llvm::Optional<std::string> {
     auto Found = URICache.find(FID);
     if (Found == URICache.end()) {
       if (auto *FileEntry = SM.getFileEntryForID(FID)) {

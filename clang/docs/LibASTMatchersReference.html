@@ -718,7 +718,7 @@ Example matches a || b
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('blockExpr0')"><a name="blockExpr0Anchor">blockExpr</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BlockExpr.html">BlockExpr</a>&gt;...</td></tr>
-<tr><td colspan="4" class="doc" id="blockExpr0"><pre>MAtches a reference to a block.
+<tr><td colspan="4" class="doc" id="blockExpr0"><pre>Matches a reference to a block.
 
 Example: matches "^{}":
   void f() { ^{}(); }
@@ -5863,6 +5863,15 @@ Examples matches the if statement
 matcher.
 
 FIXME: Unit test this matcher
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1InitListExpr.html">InitListExpr</a>&gt;</td><td class="name" onclick="toggle('hasInit0')"><a name="hasInit0Anchor">hasInit</a></td><td>unsigned N, ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasInit0"><pre>Matches the n'th item of an initializer list expression.
+
+Example matches y.
+    (matcher = initListExpr(hasInit(0, expr())))
+  int x{y}.
 </pre></td></tr>
 
 

@@ -352,18 +352,18 @@ public:
                 omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
             (unsigned long long)omptarget_nvptx_threadPrivateContext->Stride(
                 tid));
-
     } else if (schedule == kmp_sched_dynamic || schedule == kmp_sched_guided) {
-      __kmpc_barrier(loc, threadId);
-      // save sched state
-      int teamId = GetOmpTeamId();
+      // save data
       omptarget_nvptx_threadPrivateContext->ScheduleType(tid) = schedule;
-      if (GetThreadIdInBlock() == 0) {
-        if (chunk < 1)
-          chunk = 1;
-        omptarget_nvptx_threadPrivateContext->Chunk(teamId) = chunk;
-        omptarget_nvptx_threadPrivateContext->LoopUpperBound(teamId) = ub;
-        omptarget_nvptx_threadPrivateContext->NextLowerBound(teamId) = lb;
+      if (chunk < 1)
+        chunk = 1;
+      omptarget_nvptx_threadPrivateContext->Chunk(tid) = chunk;
+      omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid) = ub;
+      omptarget_nvptx_threadPrivateContext->NextLowerBound(tid) = lb;
+      __kmpc_barrier(loc, threadId);
+      if (tid == 0) {
+        omptarget_nvptx_threadPrivateContext->Cnt() = 0;
+        __threadfence_block();
       }
       __kmpc_barrier(loc, threadId);
       PRINT(LD_LOOP,
@@ -371,21 +371,45 @@ public:
             ", chunk %" PRIu64 "\n",
             (int)tnum,
             (unsigned long long)
-                omptarget_nvptx_threadPrivateContext->NextLowerBound(teamId),
-            omptarget_nvptx_threadPrivateContext->LoopUpperBound(teamId),
-            omptarget_nvptx_threadPrivateContext->Chunk(teamId));
+                omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
+            omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid),
+            omptarget_nvptx_threadPrivateContext->Chunk(tid));
     }
   }
 
   ////////////////////////////////////////////////////////////////////////////////
   // Support for dispatch next
 
+  INLINE static int64_t Shuffle(unsigned active, int64_t val, int leader) {
+    int lo, hi;
+    asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "l"(val));
+    hi = __SHFL_SYNC(active, hi, leader);
+    lo = __SHFL_SYNC(active, lo, leader);
+    asm volatile("mov.b64 %0, {%1,%2};" : "=l"(val) : "r"(lo), "r"(hi));
+    return val;
+  }
+
+  INLINE static uint64_t NextIter() {
+    unsigned int active = __ACTIVEMASK();
+    int leader = __ffs(active) - 1;
+    int change = __popc(active);
+    unsigned lane_mask_lt;
+    asm("mov.u32 %0, %%lanemask_lt;" : "=r"(lane_mask_lt));
+    unsigned int rank = __popc(active & lane_mask_lt);
+    uint64_t warp_res;
+    if (rank == 0) {
+      warp_res = atomicAdd(
+          (unsigned long long *)&omptarget_nvptx_threadPrivateContext->Cnt(),
+          change);
+    }
+    warp_res = Shuffle(active, warp_res, leader);
+    return warp_res + rank;
+  }
+
   INLINE static int DynamicNextChunk(T &lb, T &ub, T chunkSize,
-                                     int64_t &loopLowerBound,
-                                     T loopUpperBound) {
-    // calculate lower bound for all lanes in the warp
-    lb = atomicAdd((unsigned long long *)&loopLowerBound,
-                   (unsigned long long)chunkSize);
+                                     T loopLowerBound, T loopUpperBound) {
+    T N = NextIter();
+    lb = loopLowerBound + N * chunkSize;
     ub = lb + chunkSize - 1;  // Clang uses i <= ub
 
     // 3 result cases:
@@ -461,11 +485,10 @@ public:
             schedule == kmp_sched_dynamic || schedule == kmp_sched_guided,
             "bad sched");
     T myLb, myUb;
-    int teamId = GetOmpTeamId();
     int finished = DynamicNextChunk(
-        myLb, myUb, omptarget_nvptx_threadPrivateContext->Chunk(teamId),
-        omptarget_nvptx_threadPrivateContext->NextLowerBound(teamId),
-        omptarget_nvptx_threadPrivateContext->LoopUpperBound(teamId));
+        myLb, myUb, omptarget_nvptx_threadPrivateContext->Chunk(tid),
+        omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
+        omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid));
 
     if (finished == FINISHED)
       return DISPATCH_FINISHED;

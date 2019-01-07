@@ -18,7 +18,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ScopedPrinter.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
@@ -35,8 +34,8 @@ bool isSpelledInSourceCode(const Decl *D) {
   // macros, we should use the location where the whole definition occurs.
   if (Loc.isMacroID()) {
     std::string PrintLoc = SM.getSpellingLoc(Loc).printToString(SM);
-    if (StringRef(PrintLoc).startswith("<scratch") ||
-        StringRef(PrintLoc).startswith("<command line>"))
+    if (llvm::StringRef(PrintLoc).startswith("<scratch") ||
+        llvm::StringRef(PrintLoc).startswith("<command line>"))
       return false;
   }
   return true;
@@ -54,7 +53,7 @@ SourceLocation findNameLoc(const clang::Decl *D) {
 
 std::string printQualifiedName(const NamedDecl &ND) {
   std::string QName;
-  raw_string_ostream OS(QName);
+  llvm::raw_string_ostream OS(QName);
   PrintingPolicy Policy(ND.getASTContext().getLangOpts());
   // Note that inline namespaces are treated as transparent scopes. This
   // reflects the way they're most commonly used for lookup. Ideally we'd
@@ -115,18 +114,19 @@ std::string printNamespaceScope(const DeclContext &DC) {
   return "";
 }
 
-Optional<SymbolID> getSymbolID(const Decl *D) {
-  SmallString<128> USR;
+llvm::Optional<SymbolID> getSymbolID(const Decl *D) {
+  llvm::SmallString<128> USR;
   if (index::generateUSRForDecl(D, USR))
     return None;
   return SymbolID(USR);
 }
 
-Optional<SymbolID> getSymbolID(const IdentifierInfo &II, const MacroInfo *MI,
-                               const SourceManager &SM) {
+llvm::Optional<SymbolID> getSymbolID(const IdentifierInfo &II,
+                                     const MacroInfo *MI,
+                                     const SourceManager &SM) {
   if (MI == nullptr)
     return None;
-  SmallString<128> USR;
+  llvm::SmallString<128> USR;
   if (index::generateUSRForMacro(II.getName(), MI->getDefinitionLoc(), SM, USR))
     return None;
   return SymbolID(USR);

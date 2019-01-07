@@ -36,7 +36,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -45,7 +44,7 @@ bool compileCommandsAreEqual(const tooling::CompileCommand &LHS,
                              const tooling::CompileCommand &RHS) {
   // We don't check for Output, it should not matter to clangd.
   return LHS.Directory == RHS.Directory && LHS.Filename == RHS.Filename &&
-         makeArrayRef(LHS.CommandLine).equals(RHS.CommandLine);
+         llvm::makeArrayRef(LHS.CommandLine).equals(RHS.CommandLine);
 }
 
 template <class T> std::size_t getUsedBytes(const std::vector<T> &Vec) {
@@ -80,8 +79,8 @@ public:
   std::vector<Decl *> takeTopLevelDecls() { return std::move(TopLevelDecls); }
 
 protected:
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef InFile) override {
+  std::unique_ptr<ASTConsumer>
+  CreateASTConsumer(CompilerInstance &CI, llvm::StringRef InFile) override {
     return llvm::make_unique<DeclTrackingASTConsumer>(/*ref*/ TopLevelDecls);
   }
 
@@ -179,12 +178,12 @@ private:
       if (Inc.Resolved != "")
         File = SM.getFileManager().getFile(Inc.Resolved);
 
-      StringRef WrittenFilename =
-          StringRef(Inc.Written).drop_front().drop_back();
-      bool Angled = StringRef(Inc.Written).startswith("<");
+      llvm::StringRef WrittenFilename =
+          llvm::StringRef(Inc.Written).drop_front().drop_back();
+      bool Angled = llvm::StringRef(Inc.Written).startswith("<");
 
       // Re-lex the #include directive to find its interesting parts.
-      StringRef Src = SM.getBufferData(SM.getMainFileID());
+      llvm::StringRef Src = SM.getBufferData(SM.getMainFileID());
       Lexer RawLexer(SM.getLocForStartOfFile(SM.getMainFileID()), LangOpts,
                      Src.begin(), Src.begin() + Inc.HashOffset, Src.end());
       Token HashTok, IncludeTok, FilenameTok;
@@ -205,7 +204,7 @@ private:
       if (File)
         Delegate->FileSkipped(*File, FilenameTok, Inc.FileKind);
       else {
-        SmallString<1> UnusedRecovery;
+        llvm::SmallString<1> UnusedRecovery;
         Delegate->FileNotFound(WrittenFilename, UnusedRecovery);
       }
     }
@@ -220,16 +219,16 @@ private:
 
 } // namespace
 
-void dumpAST(ParsedAST &AST, raw_ostream &OS) {
+void dumpAST(ParsedAST &AST, llvm::raw_ostream &OS) {
   AST.getASTContext().getTranslationUnitDecl()->dump(OS, true);
 }
 
-Optional<ParsedAST>
+llvm::Optional<ParsedAST>
 ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
                  std::shared_ptr<const PreambleData> Preamble,
-                 std::unique_ptr<MemoryBuffer> Buffer,
+                 std::unique_ptr<llvm::MemoryBuffer> Buffer,
                  std::shared_ptr<PCHContainerOperations> PCHs,
-                 IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+                 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   assert(CI);
   // Command-line parsing sets DisableFree to true by default, but we don't want
   // to leak memory in clangd.
@@ -362,7 +361,7 @@ const Preprocessor &ParsedAST::getPreprocessor() const {
   return Clang->getPreprocessor();
 }
 
-ArrayRef<Decl *> ParsedAST::getLocalTopLevelDecls() {
+llvm::ArrayRef<Decl *> ParsedAST::getLocalTopLevelDecls() {
   return LocalTopLevelDecls;
 }
 
@@ -438,7 +437,7 @@ buildCompilerInvocation(const ParseInputs &Inputs) {
   // FIXME(ibiryukov): store diagnostics from CommandLine when we start
   // reporting them.
   IgnoreDiagnostics IgnoreDiagnostics;
-  IntrusiveRefCntPtr<DiagnosticsEngine> CommandLineDiagsEngine =
+  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> CommandLineDiagsEngine =
       CompilerInstance::createDiagnostics(new DiagnosticOptions,
                                           &IgnoreDiagnostics, false);
   std::unique_ptr<CompilerInvocation> CI = createInvocationFromCommandLine(
@@ -460,7 +459,7 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
               PreambleParsedCallback PreambleCallback) {
   // Note that we don't need to copy the input contents, preamble can live
   // without those.
-  auto ContentsBuffer = MemoryBuffer::getMemBuffer(Inputs.Contents);
+  auto ContentsBuffer = llvm::MemoryBuffer::getMemBuffer(Inputs.Contents);
   auto Bounds =
       ComputePreambleBounds(*CI.getLangOpts(), ContentsBuffer.get(), 0);
 
@@ -468,7 +467,7 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
       compileCommandsAreEqual(Inputs.CompileCommand, OldCompileCommand) &&
       OldPreamble->Preamble.CanReuse(CI, ContentsBuffer.get(), Bounds,
                                      Inputs.FS.get())) {
-    vlog("Reusing preamble for file {0}", Twine(FileName));
+    vlog("Reusing preamble for file {0}", llvm::Twine(FileName));
     return OldPreamble;
   }
   vlog("Preamble for file {0} cannot be reused. Attempting to rebuild it.",
@@ -477,7 +476,7 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
   trace::Span Tracer("BuildPreamble");
   SPAN_ATTACH(Tracer, "File", FileName);
   StoreDiags PreambleDiagnostics;
-  IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
+  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
       CompilerInstance::createDiagnostics(&CI.getDiagnosticOpts(),
                                           &PreambleDiagnostics, false);
 
@@ -496,7 +495,7 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
     // dirs.
   }
 
-  SmallString<32> AbsFileName(FileName);
+  llvm::SmallString<32> AbsFileName(FileName);
   Inputs.FS->makeAbsolute(AbsFileName);
   auto StatCache = llvm::make_unique<PreambleFileStatusCache>(AbsFileName);
   auto BuiltPreamble = PrecompiledPreamble::Build(
@@ -520,11 +519,11 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
   }
 }
 
-Optional<ParsedAST> buildAST(PathRef FileName,
-                             std::unique_ptr<CompilerInvocation> Invocation,
-                             const ParseInputs &Inputs,
-                             std::shared_ptr<const PreambleData> Preamble,
-                             std::shared_ptr<PCHContainerOperations> PCHs) {
+llvm::Optional<ParsedAST>
+buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
+         const ParseInputs &Inputs,
+         std::shared_ptr<const PreambleData> Preamble,
+         std::shared_ptr<PCHContainerOperations> PCHs) {
   trace::Span Tracer("BuildAST");
   SPAN_ATTACH(Tracer, "File", FileName);
 
@@ -537,9 +536,10 @@ Optional<ParsedAST> buildAST(PathRef FileName,
     // dirs.
   }
 
-  return ParsedAST::build(
-      llvm::make_unique<CompilerInvocation>(*Invocation), Preamble,
-      MemoryBuffer::getMemBufferCopy(Inputs.Contents), PCHs, std::move(VFS));
+  return ParsedAST::build(llvm::make_unique<CompilerInvocation>(*Invocation),
+                          Preamble,
+                          llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents),
+                          PCHs, std::move(VFS));
 }
 
 SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,

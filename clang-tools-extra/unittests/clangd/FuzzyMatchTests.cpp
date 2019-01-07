@@ -13,7 +13,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -21,17 +20,18 @@ using testing::Not;
 
 struct ExpectedMatch {
   // Annotations are optional, and will not be asserted if absent.
-  ExpectedMatch(StringRef Match) : Word(Match), Annotated(Match) {
+  ExpectedMatch(llvm::StringRef Match) : Word(Match), Annotated(Match) {
     for (char C : "[]")
       Word.erase(std::remove(Word.begin(), Word.end(), C), Word.end());
     if (Word.size() == Annotated->size())
-      Annotated = None;
+      Annotated = llvm::None;
   }
-  bool accepts(StringRef ActualAnnotated) const {
+  bool accepts(llvm::StringRef ActualAnnotated) const {
     return !Annotated || ActualAnnotated == *Annotated;
   }
 
-  friend raw_ostream &operator<<(raw_ostream &OS, const ExpectedMatch &M) {
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                       const ExpectedMatch &M) {
     OS << "'" << M.Word;
     if (M.Annotated)
       OS << "' as " << *M.Annotated;
@@ -41,26 +41,27 @@ struct ExpectedMatch {
   std::string Word;
 
 private:
-  Optional<StringRef> Annotated;
+  llvm::Optional<llvm::StringRef> Annotated;
 };
 
-struct MatchesMatcher : public testing::MatcherInterface<StringRef> {
+struct MatchesMatcher : public testing::MatcherInterface<llvm::StringRef> {
   ExpectedMatch Candidate;
-  Optional<float> Score;
-  MatchesMatcher(ExpectedMatch Candidate, Optional<float> Score)
+  llvm::Optional<float> Score;
+  MatchesMatcher(ExpectedMatch Candidate, llvm::Optional<float> Score)
       : Candidate(std::move(Candidate)), Score(Score) {}
 
   void DescribeTo(::std::ostream *OS) const override {
-    raw_os_ostream(*OS) << "Matches " << Candidate;
+    llvm::raw_os_ostream(*OS) << "Matches " << Candidate;
     if (Score)
       *OS << " with score " << *Score;
   }
 
-  bool MatchAndExplain(StringRef Pattern,
+  bool MatchAndExplain(llvm::StringRef Pattern,
                        testing::MatchResultListener *L) const override {
-    std::unique_ptr<raw_ostream> OS(
-        L->stream() ? (raw_ostream *)(new raw_os_ostream(*L->stream()))
-                    : new raw_null_ostream());
+    std::unique_ptr<llvm::raw_ostream> OS(
+        L->stream()
+            ? (llvm::raw_ostream *)(new llvm::raw_os_ostream(*L->stream()))
+            : new llvm::raw_null_ostream());
     FuzzyMatcher Matcher(Pattern);
     auto Result = Matcher.match(Candidate.Word);
     auto AnnotatedMatch = Matcher.dumpLast(*OS << "\n");
@@ -71,8 +72,9 @@ struct MatchesMatcher : public testing::MatcherInterface<StringRef> {
 
 // Accepts patterns that match a given word, optionally requiring a score.
 // Dumps the debug tables on match failure.
-testing::Matcher<StringRef> matches(StringRef M, Optional<float> Score = {}) {
-  return testing::MakeMatcher<StringRef>(new MatchesMatcher(M, Score));
+testing::Matcher<llvm::StringRef> matches(llvm::StringRef M,
+                                          llvm::Optional<float> Score = {}) {
+  return testing::MakeMatcher<llvm::StringRef>(new MatchesMatcher(M, Score));
 }
 
 TEST(FuzzyMatch, Matches) {
@@ -178,27 +180,28 @@ TEST(FuzzyMatch, Matches) {
   EXPECT_THAT("std", Not(matches("pthread_condattr_setpshared")));
 }
 
-struct RankMatcher : public testing::MatcherInterface<StringRef> {
+struct RankMatcher : public testing::MatcherInterface<llvm::StringRef> {
   std::vector<ExpectedMatch> RankedStrings;
   RankMatcher(std::initializer_list<ExpectedMatch> RankedStrings)
       : RankedStrings(RankedStrings) {}
 
   void DescribeTo(::std::ostream *OS) const override {
-    raw_os_ostream O(*OS);
+    llvm::raw_os_ostream O(*OS);
     O << "Ranks strings in order: [";
     for (const auto &Str : RankedStrings)
       O << "\n\t" << Str;
     O << "\n]";
   }
 
-  bool MatchAndExplain(StringRef Pattern,
+  bool MatchAndExplain(llvm::StringRef Pattern,
                        testing::MatchResultListener *L) const override {
-    std::unique_ptr<raw_ostream> OS(
-        L->stream() ? (raw_ostream *)(new raw_os_ostream(*L->stream()))
-                    : new raw_null_ostream());
+    std::unique_ptr<llvm::raw_ostream> OS(
+        L->stream()
+            ? (llvm::raw_ostream *)(new llvm::raw_os_ostream(*L->stream()))
+            : new llvm::raw_null_ostream());
     FuzzyMatcher Matcher(Pattern);
     const ExpectedMatch *LastMatch;
-    Optional<float> LastScore;
+    llvm::Optional<float> LastScore;
     bool Ok = true;
     for (const auto &Str : RankedStrings) {
       auto Score = Matcher.match(Str.Word);
@@ -208,7 +211,7 @@ struct RankMatcher : public testing::MatcherInterface<StringRef> {
         Ok = false;
       } else {
         std::string Buf;
-        raw_string_ostream Info(Buf);
+        llvm::raw_string_ostream Info(Buf);
         auto AnnotatedMatch = Matcher.dumpLast(Info);
 
         if (!Str.accepts(AnnotatedMatch)) {
@@ -233,8 +236,9 @@ struct RankMatcher : public testing::MatcherInterface<StringRef> {
 
 // Accepts patterns that match all the strings and rank them in the given order.
 // Dumps the debug tables on match failure.
-template <typename... T> testing::Matcher<StringRef> ranks(T... RankedStrings) {
-  return testing::MakeMatcher<StringRef>(
+template <typename... T>
+testing::Matcher<llvm::StringRef> ranks(T... RankedStrings) {
+  return testing::MakeMatcher<llvm::StringRef>(
       new RankMatcher{ExpectedMatch(RankedStrings)...});
 }
 
@@ -275,7 +279,7 @@ TEST(FuzzyMatch, Scoring) {
 
 // Returns pretty-printed segmentation of Text.
 // e.g. std::basic_string --> +--  +---- +-----
-std::string segment(StringRef Text) {
+std::string segment(llvm::StringRef Text) {
   std::vector<CharRole> Roles(Text.size());
   calculateRoles(Text, Roles);
   std::string Printed;
@@ -285,7 +289,7 @@ std::string segment(StringRef Text) {
 }
 
 // this is a no-op hack so clang-format will vertically align our testcases.
-StringRef returns(StringRef Text) { return Text; }
+llvm::StringRef returns(llvm::StringRef Text) { return Text; }
 
 TEST(FuzzyMatch, Segmentation) {
   EXPECT_THAT(segment("std::basic_string"), //

@@ -13,7 +13,6 @@
 #include "Quality.h"
 #include "Trace.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
@@ -25,8 +24,9 @@ std::unique_ptr<SymbolIndex> MemIndex::build(SymbolSlab Slab, RefSlab Refs) {
                                      BackingDataSize);
 }
 
-bool MemIndex::fuzzyFind(const FuzzyFindRequest &Req,
-                         function_ref<void(const Symbol &)> Callback) const {
+bool MemIndex::fuzzyFind(
+    const FuzzyFindRequest &Req,
+    llvm::function_ref<void(const Symbol &)> Callback) const {
   assert(!StringRef(Req.Query).contains("::") &&
          "There must be no :: in query.");
   trace::Span Tracer("MemIndex fuzzyFind");
@@ -39,7 +39,7 @@ bool MemIndex::fuzzyFind(const FuzzyFindRequest &Req,
     const Symbol *Sym = Pair.second;
 
     // Exact match against all possible scopes.
-    if (!Req.AnyScope && !is_contained(Req.Scopes, Sym->Scope))
+    if (!Req.AnyScope && !llvm::is_contained(Req.Scopes, Sym->Scope))
       continue;
     if (Req.RestrictForCodeCompletion &&
         !(Sym->Flags & Symbol::IndexedForCodeCompletion))
@@ -57,7 +57,7 @@ bool MemIndex::fuzzyFind(const FuzzyFindRequest &Req,
 }
 
 void MemIndex::lookup(const LookupRequest &Req,
-                      function_ref<void(const Symbol &)> Callback) const {
+                      llvm::function_ref<void(const Symbol &)> Callback) const {
   trace::Span Tracer("MemIndex lookup");
   for (const auto &ID : Req.IDs) {
     auto I = Index.find(ID);
@@ -67,7 +67,7 @@ void MemIndex::lookup(const LookupRequest &Req,
 }
 
 void MemIndex::refs(const RefsRequest &Req,
-                    function_ref<void(const Ref &)> Callback) const {
+                    llvm::function_ref<void(const Ref &)> Callback) const {
   trace::Span Tracer("MemIndex refs");
   for (const auto &ReqID : Req.IDs) {
     auto SymRefs = Refs.find(ReqID);

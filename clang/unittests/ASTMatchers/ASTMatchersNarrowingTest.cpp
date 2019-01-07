@@ -2255,6 +2255,18 @@ TEST(IsAssignmentOperator, Basic) {
       notMatches("void x() { int a; if(a == 0) return; }", BinAsgmtOperator));
 }
 
+TEST(HasInit, Basic) {
+  EXPECT_TRUE(
+    matches("int x{0};",
+            initListExpr(hasInit(0, expr()))));
+  EXPECT_FALSE(
+    matches("int x{0};",
+            initListExpr(hasInit(1, expr()))));
+  EXPECT_FALSE(
+    matches("int x;",
+            initListExpr(hasInit(0, expr()))));
+}
+
 TEST(Matcher, isMain) {
   EXPECT_TRUE(
     matches("int main() {}", functionDecl(isMain())));

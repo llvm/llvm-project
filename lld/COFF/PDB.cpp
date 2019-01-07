@@ -494,13 +494,13 @@ PDBLinker::mergeDebugT(ObjFile *File, CVIndexMap *ObjectIndexMap) {
 
     if (auto Err = mergeTypeAndIdRecords(GlobalIDTable, GlobalTypeTable,
                                          ObjectIndexMap->TPIMap, Types, Hashes,
-                                         File->EndPrecomp))
+                                         File->PCHSignature))
       fatal("codeview::mergeTypeAndIdRecords failed: " +
             toString(std::move(Err)));
   } else {
     if (auto Err =
             mergeTypeAndIdRecords(IDTable, TypeTable, ObjectIndexMap->TPIMap,
-                                  Types, File->EndPrecomp))
+                                  Types, File->PCHSignature))
       fatal("codeview::mergeTypeAndIdRecords failed: " +
             toString(std::move(Err)));
   }
@@ -632,7 +632,7 @@ PDBLinker::maybeMergeTypeServerPDB(ObjFile *File, const CVType &FirstType) {
     auto IpiHashes =
         GloballyHashedType::hashIds(ExpectedIpi->typeArray(), TpiHashes);
 
-    Optional<EndPrecompRecord> EndPrecomp;
+    Optional<uint32_t> EndPrecomp;
     // Merge TPI first, because the IPI stream will reference type indices.
     if (auto Err = mergeTypeRecords(GlobalTypeTable, IndexMap.TPIMap,
                                     ExpectedTpi->typeArray(), TpiHashes, EndPrecomp))
@@ -744,10 +744,10 @@ PDBLinker::aquirePrecompObj(ObjFile *File, PrecompRecord Precomp) {
 
   addObjFile(PrecompFile, &IndexMap);
 
-  if (!PrecompFile->EndPrecomp)
+  if (!PrecompFile->PCHSignature)
     fatal(PrecompFile->getName() + " is not a precompiled headers object");
 
-  if (Precomp.getSignature() != PrecompFile->EndPrecomp->getSignature())
+  if (Precomp.getSignature() != PrecompFile->PCHSignature.getValueOr(0))
     return createFileError(
         Precomp.getPrecompFilePath().str(),
         make_error<pdb::PDBError>(pdb::pdb_error_code::signature_out_of_date));

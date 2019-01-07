@@ -9,15 +9,14 @@
 
 #include "TestIndex.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
-Symbol symbol(StringRef QName) {
+Symbol symbol(llvm::StringRef QName) {
   Symbol Sym;
   Sym.ID = SymbolID(QName.str());
   size_t Pos = QName.rfind("::");
-  if (Pos == StringRef::npos) {
+  if (Pos == llvm::StringRef::npos) {
     Sym.Name = QName;
     Sym.Scope = "";
   } else {
@@ -29,7 +28,7 @@ Symbol symbol(StringRef QName) {
 
 SymbolSlab generateSymbols(std::vector<std::string> QualifiedNames) {
   SymbolSlab::Builder Slab;
-  for (StringRef QName : QualifiedNames)
+  for (llvm::StringRef QName : QualifiedNames)
     Slab.insert(symbol(QName));
   return std::move(Slab).build();
 }
@@ -57,7 +56,8 @@ std::vector<std::string> match(const SymbolIndex &I,
 }
 
 // Returns qualified names of symbols with any of IDs in the index.
-std::vector<std::string> lookup(const SymbolIndex &I, ArrayRef<SymbolID> IDs) {
+std::vector<std::string> lookup(const SymbolIndex &I,
+                                llvm::ArrayRef<SymbolID> IDs) {
   LookupRequest Req;
   Req.IDs.insert(IDs.begin(), IDs.end());
   std::vector<std::string> Results;

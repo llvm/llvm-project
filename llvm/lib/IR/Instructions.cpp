@@ -257,6 +257,16 @@ void LandingPadInst::addClause(Constant *Val) {
 
 Function *CallBase::getCaller() { return getParent()->getParent(); }
 
+bool CallBase::isIndirectCall() const {
+  const Value *V = getCalledValue();
+  if (isa<Function>(V) || isa<Constant>(V))
+    return false;
+  if (const CallInst *CI = dyn_cast<CallInst>(this))
+    if (CI->isInlineAsm())
+      return false;
+  return true;
+}
+
 Intrinsic::ID CallBase::getIntrinsicID() const {
   if (auto *F = getCalledFunction())
     return F->getIntrinsicID();

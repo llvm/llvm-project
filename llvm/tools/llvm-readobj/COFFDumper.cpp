@@ -1248,9 +1248,9 @@ void COFFDumper::mergeCodeViewTypes(MergingTypeTableBuilder &CVIDs,
         error(object_error::parse_failed);
       }
       SmallVector<TypeIndex, 128> SourceToDest;
-      Optional<EndPrecompRecord> EndPrecomp;
+      Optional<uint32_t> PCHSignature;
       if (auto EC = mergeTypeAndIdRecords(CVIDs, CVTypes, SourceToDest, Types,
-                                          EndPrecomp))
+                                          PCHSignature))
         return error(std::move(EC));
     }
   }
