@@ -533,7 +533,9 @@ public:
   //------------------------------------------------------------------
   void Dump(Stream *s, lldb::DescriptionLevel description_level);
 
-  const lldb::ProcessSP &CreateProcess(lldb::ListenerSP listener,
+  // If listener_sp is null, the listener of the owning Debugger object will be
+  // used.
+  const lldb::ProcessSP &CreateProcess(lldb::ListenerSP listener_sp,
                                        llvm::StringRef plugin_name,
                                        const FileSpec *crash_file);
 

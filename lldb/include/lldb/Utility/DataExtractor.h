@@ -14,6 +14,7 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/ArrayRef.h"
 
 #include <cassert>
 #include <stdint.h>
@@ -1093,6 +1094,10 @@ public:
   }
 
   void Checksum(llvm::SmallVectorImpl<uint8_t> &dest, uint64_t max_data = 0);
+
+  llvm::ArrayRef<uint8_t> GetData() const {
+    return {GetDataStart(), GetByteSize()};
+  }
 
 protected:
   //------------------------------------------------------------------

@@ -297,10 +297,10 @@ class Value;
 
   /// This function returns call pointer argument that is considered the same by
   /// aliasing rules. You CAN'T use it to replace one value with another.
-  const Value *getArgumentAliasingToReturnedPointer(ImmutableCallSite CS);
-  inline Value *getArgumentAliasingToReturnedPointer(CallSite CS) {
-    return const_cast<Value *>(
-        getArgumentAliasingToReturnedPointer(ImmutableCallSite(CS)));
+  const Value *getArgumentAliasingToReturnedPointer(const CallBase *Call);
+  inline Value *getArgumentAliasingToReturnedPointer(CallBase *Call) {
+    return const_cast<Value *>(getArgumentAliasingToReturnedPointer(
+        const_cast<const CallBase *>(Call)));
   }
 
   // {launder,strip}.invariant.group returns pointer that aliases its argument,
@@ -309,7 +309,7 @@ class Value;
   // considered as capture. The arguments are not marked as returned neither,
   // because it would make it useless.
   bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-      ImmutableCallSite CS);
+      const CallBase *Call);
 
   /// This method strips off any GEP address adjustments and pointer casts from
   /// the specified value, returning the original object being addressed. Note

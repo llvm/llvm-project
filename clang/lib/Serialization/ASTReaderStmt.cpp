@@ -1773,7 +1773,7 @@ void ASTStmtReader::VisitCXXFoldExpr(CXXFoldExpr *E) {
 void ASTStmtReader::VisitOpaqueValueExpr(OpaqueValueExpr *E) {
   VisitExpr(E);
   E->SourceExpr = Record.readSubExpr();
-  E->Loc = ReadSourceLocation();
+  E->OpaqueValueExprBits.Loc = ReadSourceLocation();
   E->setIsUnique(Record.readInt());
 }
 

@@ -174,7 +174,7 @@ __m256i test_mm256_mask_shldi_epi64(__m256i __S, __mmask8 __U, __m256i __A, __m2
   // CHECK-LABEL: @test_mm256_mask_shldi_epi64
   // CHECK: @llvm.x86.avx512.vpshld.q.256
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
-  return _mm256_mask_shldi_epi64(__S, __U, __A, __B, 127);
+  return _mm256_mask_shldi_epi64(__S, __U, __A, __B, 47);
 }
 
 __m256i test_mm256_maskz_shldi_epi64(__mmask8 __U, __m256i __A, __m256i __B) {
@@ -194,7 +194,7 @@ __m128i test_mm_mask_shldi_epi64(__m128i __S, __mmask8 __U, __m128i __A, __m128i
   // CHECK-LABEL: @test_mm_mask_shldi_epi64
   // CHECK: @llvm.x86.avx512.vpshld.q.128
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
-  return _mm_mask_shldi_epi64(__S, __U, __A, __B, 127);
+  return _mm_mask_shldi_epi64(__S, __U, __A, __B, 47);
 }
 
 __m128i test_mm_maskz_shldi_epi64(__mmask8 __U, __m128i __A, __m128i __B) {
@@ -214,14 +214,14 @@ __m256i test_mm256_mask_shldi_epi32(__m256i __S, __mmask8 __U, __m256i __A, __m2
   // CHECK-LABEL: @test_mm256_mask_shldi_epi32
   // CHECK: @llvm.x86.avx512.vpshld.d.256
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
-  return _mm256_mask_shldi_epi32(__S, __U, __A, __B, 127);
+  return _mm256_mask_shldi_epi32(__S, __U, __A, __B, 7);
 }
 
 __m256i test_mm256_maskz_shldi_epi32(__mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_shldi_epi32
   // CHECK: @llvm.x86.avx512.vpshld.d.256
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
-  return _mm256_maskz_shldi_epi32(__U, __A, __B, 63);
+  return _mm256_maskz_shldi_epi32(__U, __A, __B, 15);
 }
 
 __m256i test_mm256_shldi_epi32(__m256i __A, __m256i __B) {
@@ -234,14 +234,14 @@ __m128i test_mm_mask_shldi_epi32(__m128i __S, __mmask8 __U, __m128i __A, __m128i
   // CHECK-LABEL: @test_mm_mask_shldi_epi32
   // CHECK: @llvm.x86.avx512.vpshld.d.128
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
-  return _mm_mask_shldi_epi32(__S, __U, __A, __B, 127);
+  return _mm_mask_shldi_epi32(__S, __U, __A, __B, 7);
 }
 
 __m128i test_mm_maskz_shldi_epi32(__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_shldi_epi32
   // CHECK: @llvm.x86.avx512.vpshld.d.128
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
-  return _mm_maskz_shldi_epi32(__U, __A, __B, 63);
+  return _mm_maskz_shldi_epi32(__U, __A, __B, 15);
 }
 
 __m128i test_mm_shldi_epi32(__m128i __A, __m128i __B) {
@@ -254,14 +254,14 @@ __m256i test_mm256_mask_shldi_epi16(__m256i __S, __mmask16 __U, __m256i __A, __m
   // CHECK-LABEL: @test_mm256_mask_shldi_epi16
   // CHECK: @llvm.x86.avx512.vpshld.w.256
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
-  return _mm256_mask_shldi_epi16(__S, __U, __A, __B, 127);
+  return _mm256_mask_shldi_epi16(__S, __U, __A, __B, 3);
 }
 
 __m256i test_mm256_maskz_shldi_epi16(__mmask16 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_shldi_epi16
   // CHECK: @llvm.x86.avx512.vpshld.w.256
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
-  return _mm256_maskz_shldi_epi16(__U, __A, __B, 63);
+  return _mm256_maskz_shldi_epi16(__U, __A, __B, 7);
 }
 
 __m256i test_mm256_shldi_epi16(__m256i __A, __m256i __B) {
@@ -274,14 +274,14 @@ __m128i test_mm_mask_shldi_epi16(__m128i __S, __mmask8 __U, __m128i __A, __m128i
   // CHECK-LABEL: @test_mm_mask_shldi_epi16
   // CHECK: @llvm.x86.avx512.vpshld.w.128
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
-  return _mm_mask_shldi_epi16(__S, __U, __A, __B, 127);
+  return _mm_mask_shldi_epi16(__S, __U, __A, __B, 3);
 }
 
 __m128i test_mm_maskz_shldi_epi16(__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_shldi_epi16
   // CHECK: @llvm.x86.avx512.vpshld.w.128
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
-  return _mm_maskz_shldi_epi16(__U, __A, __B, 63);
+  return _mm_maskz_shldi_epi16(__U, __A, __B, 7);
 }
 
 __m128i test_mm_shldi_epi16(__m128i __A, __m128i __B) {
@@ -294,7 +294,7 @@ __m256i test_mm256_mask_shrdi_epi64(__m256i __S, __mmask8 __U, __m256i __A, __m2
   // CHECK-LABEL: @test_mm256_mask_shrdi_epi64
   // CHECK: @llvm.x86.avx512.vpshrd.q.256
   // CHECK: select <4 x i1> %{{.*}}, <4 x i64> %{{.*}}, <4 x i64> %{{.*}}
-  return _mm256_mask_shrdi_epi64(__S, __U, __A, __B, 127);
+  return _mm256_mask_shrdi_epi64(__S, __U, __A, __B, 47);
 }
 
 __m256i test_mm256_maskz_shrdi_epi64(__mmask8 __U, __m256i __A, __m256i __B) {
@@ -314,7 +314,7 @@ __m128i test_mm_mask_shrdi_epi64(__m128i __S, __mmask8 __U, __m128i __A, __m128i
   // CHECK-LABEL: @test_mm_mask_shrdi_epi64
   // CHECK: @llvm.x86.avx512.vpshrd.q.128
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
-  return _mm_mask_shrdi_epi64(__S, __U, __A, __B, 127);
+  return _mm_mask_shrdi_epi64(__S, __U, __A, __B, 47);
 }
 
 __m128i test_mm_maskz_shrdi_epi64(__mmask8 __U, __m128i __A, __m128i __B) {
@@ -334,14 +334,14 @@ __m256i test_mm256_mask_shrdi_epi32(__m256i __S, __mmask8 __U, __m256i __A, __m2
   // CHECK-LABEL: @test_mm256_mask_shrdi_epi32
   // CHECK: @llvm.x86.avx512.vpshrd.d.256
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
-  return _mm256_mask_shrdi_epi32(__S, __U, __A, __B, 127);
+  return _mm256_mask_shrdi_epi32(__S, __U, __A, __B, 7);
 }
 
 __m256i test_mm256_maskz_shrdi_epi32(__mmask8 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_shrdi_epi32
   // CHECK: @llvm.x86.avx512.vpshrd.d.256
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
-  return _mm256_maskz_shrdi_epi32(__U, __A, __B, 63);
+  return _mm256_maskz_shrdi_epi32(__U, __A, __B, 15);
 }
 
 __m256i test_mm256_shrdi_epi32(__m256i __A, __m256i __B) {
@@ -354,14 +354,14 @@ __m128i test_mm_mask_shrdi_epi32(__m128i __S, __mmask8 __U, __m128i __A, __m128i
   // CHECK-LABEL: @test_mm_mask_shrdi_epi32
   // CHECK: @llvm.x86.avx512.vpshrd.d.128
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
-  return _mm_mask_shrdi_epi32(__S, __U, __A, __B, 127);
+  return _mm_mask_shrdi_epi32(__S, __U, __A, __B, 7);
 }
 
 __m128i test_mm_maskz_shrdi_epi32(__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_shrdi_epi32
   // CHECK: @llvm.x86.avx512.vpshrd.d.128
   // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
-  return _mm_maskz_shrdi_epi32(__U, __A, __B, 63);
+  return _mm_maskz_shrdi_epi32(__U, __A, __B, 15);
 }
 
 __m128i test_mm_shrdi_epi32(__m128i __A, __m128i __B) {
@@ -374,14 +374,14 @@ __m256i test_mm256_mask_shrdi_epi16(__m256i __S, __mmask16 __U, __m256i __A, __m
   // CHECK-LABEL: @test_mm256_mask_shrdi_epi16
   // CHECK: @llvm.x86.avx512.vpshrd.w.256
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
-  return _mm256_mask_shrdi_epi16(__S, __U, __A, __B, 127);
+  return _mm256_mask_shrdi_epi16(__S, __U, __A, __B, 3);
 }
 
 __m256i test_mm256_maskz_shrdi_epi16(__mmask16 __U, __m256i __A, __m256i __B) {
   // CHECK-LABEL: @test_mm256_maskz_shrdi_epi16
   // CHECK: @llvm.x86.avx512.vpshrd.w.256
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
-  return _mm256_maskz_shrdi_epi16(__U, __A, __B, 63);
+  return _mm256_maskz_shrdi_epi16(__U, __A, __B, 7);
 }
 
 __m256i test_mm256_shrdi_epi16(__m256i __A, __m256i __B) {
@@ -394,14 +394,14 @@ __m128i test_mm_mask_shrdi_epi16(__m128i __S, __mmask8 __U, __m128i __A, __m128i
   // CHECK-LABEL: @test_mm_mask_shrdi_epi16
   // CHECK: @llvm.x86.avx512.vpshrd.w.128
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
-  return _mm_mask_shrdi_epi16(__S, __U, __A, __B, 127);
+  return _mm_mask_shrdi_epi16(__S, __U, __A, __B, 3);
 }
 
 __m128i test_mm_maskz_shrdi_epi16(__mmask8 __U, __m128i __A, __m128i __B) {
   // CHECK-LABEL: @test_mm_maskz_shrdi_epi16
   // CHECK: @llvm.x86.avx512.vpshrd.w.128
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
-  return _mm_maskz_shrdi_epi16(__U, __A, __B, 63);
+  return _mm_maskz_shrdi_epi16(__U, __A, __B, 7);
 }
 
 __m128i test_mm_shrdi_epi16(__m128i __A, __m128i __B) {

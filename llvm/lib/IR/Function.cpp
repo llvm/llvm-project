@@ -24,7 +24,6 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -1257,13 +1256,13 @@ bool Function::hasAddressTaken(const User* *PutOffender) const {
     const User *FU = U.getUser();
     if (isa<BlockAddress>(FU))
       continue;
-    if (!isa<CallInst>(FU) && !isa<InvokeInst>(FU)) {
+    const auto *Call = dyn_cast<CallBase>(FU);
+    if (!Call) {
       if (PutOffender)
         *PutOffender = FU;
       return true;
     }
-    ImmutableCallSite CS(cast<Instruction>(FU));
-    if (!CS.isCallee(&U)) {
+    if (!Call->isCallee(&U)) {
       if (PutOffender)
         *PutOffender = FU;
       return true;
@@ -1289,12 +1288,10 @@ bool Function::isDefTriviallyDead() const {
 /// callsFunctionThatReturnsTwice - Return true if the function has a call to
 /// setjmp or other function that gcc recognizes as "returning twice".
 bool Function::callsFunctionThatReturnsTwice() const {
-  for (const_inst_iterator
-         I = inst_begin(this), E = inst_end(this); I != E; ++I) {
-    ImmutableCallSite CS(&*I);
-    if (CS && CS.hasFnAttr(Attribute::ReturnsTwice))
-      return true;
-  }
+  for (const Instruction &I : instructions(this))
+    if (const auto *Call = dyn_cast<CallBase>(&I))
+      if (Call->hasFnAttr(Attribute::ReturnsTwice))
+        return true;
 
   return false;
 }

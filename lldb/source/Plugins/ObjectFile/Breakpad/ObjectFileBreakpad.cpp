@@ -10,6 +10,7 @@
 #include "Plugins/ObjectFile/Breakpad/ObjectFileBreakpad.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -23,7 +24,40 @@ struct Header {
   UUID uuid;
   static llvm::Optional<Header> parse(llvm::StringRef text);
 };
+
+enum class Token { Unknown, Module, Info, File, Func, Public, Stack };
 } // namespace
+
+static Token toToken(llvm::StringRef str) {
+  return llvm::StringSwitch<Token>(str)
+      .Case("MODULE", Token::Module)
+      .Case("INFO", Token::Info)
+      .Case("FILE", Token::File)
+      .Case("FUNC", Token::Func)
+      .Case("PUBLIC", Token::Public)
+      .Case("STACK", Token::Stack)
+      .Default(Token::Unknown);
+}
+
+static llvm::StringRef toString(Token t) {
+  switch (t) {
+  case Token::Unknown:
+    return "";
+  case Token::Module:
+    return "MODULE";
+  case Token::Info:
+    return "INFO";
+  case Token::File:
+    return "FILE";
+  case Token::Func:
+    return "FUNC";
+  case Token::Public:
+    return "PUBLIC";
+  case Token::Stack:
+    return "STACK";
+  }
+  llvm_unreachable("Unknown token!");
+}
 
 static llvm::Triple::OSType toOS(llvm::StringRef str) {
   using llvm::Triple;
@@ -103,7 +137,7 @@ llvm::Optional<Header> Header::parse(llvm::StringRef text) {
   llvm::StringRef token, line;
   std::tie(line, text) = text.split('\n');
   std::tie(token, line) = getToken(line);
-  if (token != "MODULE")
+  if (toToken(token) != Token::Module)
     return llvm::None;
 
   std::tie(token, line) = getToken(line);
@@ -236,5 +270,46 @@ bool ObjectFileBreakpad::GetUUID(UUID *uuid) {
 }
 
 void ObjectFileBreakpad::CreateSections(SectionList &unified_section_list) {
-  // TODO
+  if (m_sections_ap)
+    return;
+  m_sections_ap = llvm::make_unique<SectionList>();
+
+  Token current_section = Token::Unknown;
+  offset_t section_start;
+  llvm::StringRef text = toStringRef(m_data.GetData());
+  uint32_t next_section_id = 1;
+  auto maybe_add_section = [&](const uint8_t *end_ptr) {
+    if (current_section == Token::Unknown)
+      return; // We have been called before parsing the first line.
+
+    offset_t end_offset = end_ptr - m_data.GetDataStart();
+    auto section_sp = std::make_shared<Section>(
+        GetModule(), this, next_section_id++,
+        ConstString(toString(current_section)), eSectionTypeOther,
+        /*file_vm_addr*/ 0, /*vm_size*/ 0, section_start,
+        end_offset - section_start, /*log2align*/ 0, /*flags*/ 0);
+    m_sections_ap->AddSection(section_sp);
+    unified_section_list.AddSection(section_sp);
+  };
+  while (!text.empty()) {
+    llvm::StringRef line;
+    std::tie(line, text) = text.split('\n');
+
+    Token token = toToken(getToken(line).first);
+    if (token == Token::Unknown) {
+      // We assume this is a line record, which logically belongs to the Func
+      // section. Errors will be handled when parsing the Func section.
+      token = Token::Func;
+    }
+    if (token == current_section)
+      continue;
+
+    // Changing sections, finish off the previous one, if there was any.
+    maybe_add_section(line.bytes_begin());
+    // And start a new one.
+    current_section = token;
+    section_start = line.bytes_begin() - m_data.GetDataStart();
+  }
+  // Finally, add the last section.
+  maybe_add_section(m_data.GetDataEnd());
 }

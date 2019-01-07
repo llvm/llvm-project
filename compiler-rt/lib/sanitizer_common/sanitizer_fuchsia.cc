@@ -210,10 +210,10 @@ uptr ReservedAddressRange::Init(uptr init_size, const char *name,
   uintptr_t base;
   zx_handle_t vmar;
   zx_status_t status =
-      _zx_vmar_allocate_old(_zx_vmar_root_self(), 0, init_size,
-                            ZX_VM_FLAG_CAN_MAP_READ | ZX_VM_FLAG_CAN_MAP_WRITE |
-                                ZX_VM_FLAG_CAN_MAP_SPECIFIC,
-                            &vmar, &base);
+      _zx_vmar_allocate(
+          _zx_vmar_root_self(),
+          ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC,
+          0, init_size, &vmar, &base);
   if (status != ZX_OK)
     ReportMmapFailureAndDie(init_size, name, "zx_vmar_allocate", status);
   base_ = reinterpret_cast<void *>(base);

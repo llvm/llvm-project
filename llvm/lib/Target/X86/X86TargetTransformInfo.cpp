@@ -853,6 +853,14 @@ int X86TTIImpl::getArithmeticInstrCost(
 
     { ISD::FSUB, MVT::f32,    1 }, // Pentium III from http://www.agner.org/
     { ISD::FSUB, MVT::v4f32,  2 }, // Pentium III from http://www.agner.org/
+
+    { ISD::ADD, MVT::i8,      1 }, // Pentium III from http://www.agner.org/
+    { ISD::ADD, MVT::i16,     1 }, // Pentium III from http://www.agner.org/
+    { ISD::ADD, MVT::i32,     1 }, // Pentium III from http://www.agner.org/
+
+    { ISD::SUB, MVT::i8,      1 }, // Pentium III from http://www.agner.org/
+    { ISD::SUB, MVT::i16,     1 }, // Pentium III from http://www.agner.org/
+    { ISD::SUB, MVT::i32,     1 }, // Pentium III from http://www.agner.org/
   };
 
   if (ST->hasSSE1())

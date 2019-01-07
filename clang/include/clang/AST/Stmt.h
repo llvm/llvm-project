@@ -706,13 +706,16 @@ protected:
   //===--- Clang Extensions bitfields classes ---===//
 
   class OpaqueValueExprBitfields {
+    friend class ASTStmtReader;
     friend class OpaqueValueExpr;
 
     unsigned : NumExprBits;
 
-    /// The OVE is a unique semantic reference to its source expressio if this
+    /// The OVE is a unique semantic reference to its source expression if this
     /// bit is set to true.
     unsigned IsUnique : 1;
+
+    SourceLocation Loc;
   };
 
   union {

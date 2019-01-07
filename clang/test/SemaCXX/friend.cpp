@@ -162,7 +162,7 @@ namespace test9 {
   class C {
   };
   struct A {
-    friend void C::f(int, int, int) {}  // expected-error {{no function named 'f' with type 'void (int, int, int)' was found in the specified scope}}
+    friend void C::f(int, int, int) {}  // expected-error {{friend function definition cannot be qualified with 'C::'}}
   };
 }
 
@@ -230,6 +230,10 @@ namespace test10 {
     friend void f10_d(X);
   };
 
+  struct W {
+    friend void f10_d(W);
+  };
+
   void g(X x, Y y, Z z) {
     f10_d(); // expected-error {{undeclared identifier}}
     ::test10::f10_d(); // expected-error {{no member named 'f10_d'}}
@@ -245,14 +249,13 @@ namespace test10 {
     ::test10::f10_d(z); // expected-error {{no type named 'f10_d'}}
   }
 
-  void local_externs(X x, Y y) {
-    extern void f10_d();
-    extern void f10_d(X);
+  void local_externs(W w, X x, Y y) {
+    extern void f10_d(); // expected-note {{candidate}}
+    extern void f10_d(X); // expected-note {{candidate}}
     f10_d();
     f10_d(x);
-    // FIXME: This lookup should fail, because the local extern declaration
-    // should suppress ADL.
     f10_d(y);
+    f10_d(w); // expected-error {{no matching}}
     {
       int f10_d;
       f10_d(); // expected-error {{not a function}}
@@ -402,12 +405,27 @@ namespace PR33222 {
   };
   Y<float> yf; // expected-note {{instantiation}}
 
-  int h();
+  int h(); // expected-note {{previous}}
   template<typename T> struct Z {
-    // FIXME: The note here should point at the non-friend declaration, not the
-    // instantiation in Z<int>.
-    friend T h(); // expected-error {{return type}} expected-note {{previous}}
+    friend T h(); // expected-error {{return type}}
   };
   Z<int> zi;
   Z<float> zf; // expected-note {{instantiation}}
+}
+
+namespace qualified_friend_no_match {
+  void f(int); // expected-note {{type mismatch at 1st parameter}}
+  template<typename T> void f(T*); // expected-note {{could not match 'type-parameter-0-0 *' against 'double'}}
+  struct X {
+    friend void qualified_friend_no_match::f(double); // expected-error {{friend declaration of 'f' does not match any declaration in namespace 'qualified_friend_no_match'}}
+    friend void qualified_friend_no_match::g(); // expected-error {{friend declaration of 'g' does not match any declaration in namespace 'qualified_friend_no_match'}}
+  };
+
+  struct Y {
+    void f(int); // expected-note {{type mismatch at 1st parameter}}
+    template<typename T> void f(T*); // expected-note {{could not match 'type-parameter-0-0 *' against 'double'}}
+  };
+  struct Z {
+    friend void Y::f(double); // expected-error {{friend declaration of 'f' does not match any declaration in 'qualified_friend_no_match::Y'}}
+  };
 }

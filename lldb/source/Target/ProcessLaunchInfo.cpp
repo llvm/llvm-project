@@ -9,7 +9,6 @@
 
 #include <climits>
 
-#include "lldb/Core/Debugger.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -432,11 +431,4 @@ bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
     error.SetErrorString("not launching in shell");
   }
   return false;
-}
-
-ListenerSP ProcessLaunchInfo::GetListenerForProcess(Debugger &debugger) {
-  if (m_listener_sp)
-    return m_listener_sp;
-  else
-    return debugger.GetListener();
 }

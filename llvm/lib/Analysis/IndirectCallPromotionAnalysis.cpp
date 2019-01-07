@@ -15,7 +15,7 @@
 
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/IndirectCallSiteVisitor.h"
+#include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"

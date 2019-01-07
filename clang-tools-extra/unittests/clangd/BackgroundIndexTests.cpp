@@ -243,7 +243,9 @@ TEST_F(BackgroundIndexTest, DirectIncludesTest) {
               EmptyIncludeNode());
 }
 
-TEST_F(BackgroundIndexTest, PeriodicalIndex) {
+// FIXME: figure out the right timeouts or rewrite to not use the timeouts and
+// re-enable.
+TEST_F(BackgroundIndexTest, DISABLED_PeriodicalIndex) {
   MockFSProvider FS;
   llvm::StringMap<std::string> Storage;
   size_t CacheHits = 0;
