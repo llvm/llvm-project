@@ -1243,6 +1243,8 @@ void Verifier::visitDILocalVariable(const DILocalVariable &N) {
   AssertDI(N.getTag() == dwarf::DW_TAG_variable, "invalid tag", &N);
   AssertDI(N.getRawScope() && isa<DILocalScope>(N.getRawScope()),
            "local variable requires a valid scope", &N, N.getRawScope());
+  if (auto Ty = N.getType())
+    AssertDI(!isa<DISubroutineType>(Ty), "invalid type", &N, N.getType());
 }
 
 void Verifier::visitDILabel(const DILabel &N) {
