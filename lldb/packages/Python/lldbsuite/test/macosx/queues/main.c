@@ -4,7 +4,7 @@
 #include <dispatch/dispatch.h>
 #include <pthread.h>
 
-int finished_enqueueing_work = 0;
+atomic_int finished_enqueueing_work = 0;
 atomic_int thread_count = 0;
 
 void
@@ -54,7 +54,7 @@ submit_work_2(void *in)
         dispatch_async_f (*work_performer_2, NULL, doing_the_work_2);
         dispatch_async_f (*work_performer_2, NULL, doing_the_work_2);
     }
-    finished_enqueueing_work = 1;
+    atomic_fetch_add(&finished_enqueueing_work, 1);
 }
 
 
@@ -144,11 +144,8 @@ int main (int argc, const char **argv)
       });
 
     // Unfortunately there is no pthread_barrier on darwin.
-    while (atomic_load(&thread_count) < 13)
-        sleep(1);
-
-    while (finished_enqueueing_work == 0)
+    while ((atomic_load(&thread_count) < 13) || (finished_enqueueing_work == 0))
         sleep (1);
-    stopper ();
 
+    stopper ();
 }
