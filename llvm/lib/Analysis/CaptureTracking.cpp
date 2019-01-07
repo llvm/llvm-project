@@ -23,7 +23,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/OrderedBasicBlock.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -240,11 +239,12 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
     switch (I->getOpcode()) {
     case Instruction::Call:
     case Instruction::Invoke: {
-      CallSite CS(I);
+      auto *Call = cast<CallBase>(I);
       // Not captured if the callee is readonly, doesn't return a copy through
       // its return value and doesn't unwind (a readonly function can leak bits
       // by throwing an exception or not depending on the input value).
-      if (CS.onlyReadsMemory() && CS.doesNotThrow() && I->getType()->isVoidTy())
+      if (Call->onlyReadsMemory() && Call->doesNotThrow() &&
+          Call->getType()->isVoidTy())
         break;
 
       // The pointer is not captured if returned pointer is not captured.
@@ -252,14 +252,14 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // marked with nocapture do not capture. This means that places like
       // GetUnderlyingObject in ValueTracking or DecomposeGEPExpression
       // in BasicAA also need to know about this property.
-      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CS)) {
-        AddUses(I);
+      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(Call)) {
+        AddUses(Call);
         break;
       }
 
       // Volatile operations effectively capture the memory location that they
       // load and store to.
-      if (auto *MI = dyn_cast<MemIntrinsic>(I))
+      if (auto *MI = dyn_cast<MemIntrinsic>(Call))
         if (MI->isVolatile())
           if (Tracker->captured(U))
             return;
@@ -271,13 +271,14 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
       // that loading a value from a pointer does not cause the pointer to be
       // captured, even though the loaded value might be the pointer itself
       // (think of self-referential objects).
-      CallSite::data_operand_iterator B =
-        CS.data_operands_begin(), E = CS.data_operands_end();
-      for (CallSite::data_operand_iterator A = B; A != E; ++A)
-        if (A->get() == V && !CS.doesNotCapture(A - B))
+      for (auto IdxOpPair : enumerate(Call->data_ops())) {
+        int Idx = IdxOpPair.index();
+        Value *A = IdxOpPair.value();
+        if (A == V && !Call->doesNotCapture(Idx))
           // The parameter is not marked 'nocapture' - captured.
           if (Tracker->captured(U))
             return;
+      }
       break;
     }
     case Instruction::Load:

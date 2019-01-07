@@ -30,7 +30,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
@@ -131,9 +130,9 @@ public:
       : MemoryLocOrCall(MUD->getMemoryInst()) {}
 
   MemoryLocOrCall(Instruction *Inst) {
-    if (ImmutableCallSite(Inst)) {
+    if (auto *C = dyn_cast<CallBase>(Inst)) {
       IsCall = true;
-      CS = ImmutableCallSite(Inst);
+      Call = C;
     } else {
       IsCall = false;
       // There is no such thing as a memorylocation for a fence inst, and it is
@@ -145,9 +144,9 @@ public:
 
   explicit MemoryLocOrCall(const MemoryLocation &Loc) : Loc(Loc) {}
 
-  ImmutableCallSite getCS() const {
+  const CallBase *getCall() const {
     assert(IsCall);
-    return CS;
+    return Call;
   }
 
   MemoryLocation getLoc() const {
@@ -162,16 +161,17 @@ public:
     if (!IsCall)
       return Loc == Other.Loc;
 
-    if (CS.getCalledValue() != Other.CS.getCalledValue())
+    if (Call->getCalledValue() != Other.Call->getCalledValue())
       return false;
 
-    return CS.arg_size() == Other.CS.arg_size() &&
-           std::equal(CS.arg_begin(), CS.arg_end(), Other.CS.arg_begin());
+    return Call->arg_size() == Other.Call->arg_size() &&
+           std::equal(Call->arg_begin(), Call->arg_end(),
+                      Other.Call->arg_begin());
   }
 
 private:
   union {
-    ImmutableCallSite CS;
+    const CallBase *Call;
     MemoryLocation Loc;
   };
 };
@@ -197,9 +197,9 @@ template <> struct DenseMapInfo<MemoryLocOrCall> {
 
     hash_code hash =
         hash_combine(MLOC.IsCall, DenseMapInfo<const Value *>::getHashValue(
-                                      MLOC.getCS().getCalledValue()));
+                                      MLOC.getCall()->getCalledValue()));
 
-    for (const Value *Arg : MLOC.getCS().args())
+    for (const Value *Arg : MLOC.getCall()->args())
       hash = hash_combine(hash, DenseMapInfo<const Value *>::getHashValue(Arg));
     return hash;
   }
@@ -258,7 +258,7 @@ static ClobberAlias instructionClobbersQuery(const MemoryDef *MD,
                                              AliasAnalysis &AA) {
   Instruction *DefInst = MD->getMemoryInst();
   assert(DefInst && "Defining instruction not actually an instruction");
-  ImmutableCallSite UseCS(UseInst);
+  const auto *UseCall = dyn_cast<CallBase>(UseInst);
   Optional<AliasResult> AR;
 
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
@@ -271,7 +271,7 @@ static ClobberAlias instructionClobbersQuery(const MemoryDef *MD,
     // context.
     switch (II->getIntrinsicID()) {
     case Intrinsic::lifetime_start:
-      if (UseCS)
+      if (UseCall)
         return {false, NoAlias};
       AR = AA.alias(MemoryLocation(II->getArgOperand(1)), UseLoc);
       return {AR != NoAlias, AR};
@@ -285,8 +285,8 @@ static ClobberAlias instructionClobbersQuery(const MemoryDef *MD,
     }
   }
 
-  if (UseCS) {
-    ModRefInfo I = AA.getModRefInfo(DefInst, UseCS);
+  if (UseCall) {
+    ModRefInfo I = AA.getModRefInfo(DefInst, UseCall);
     AR = isMustSet(I) ? MustAlias : MayAlias;
     return {isModOrRefSet(I), AR};
   }
@@ -336,7 +336,7 @@ struct UpwardsMemoryQuery {
   UpwardsMemoryQuery() = default;
 
   UpwardsMemoryQuery(const Instruction *Inst, const MemoryAccess *Access)
-      : IsCall(ImmutableCallSite(Inst)), Inst(Inst), OriginalAccess(Access) {
+      : IsCall(isa<CallBase>(Inst)), Inst(Inst), OriginalAccess(Access) {
     if (!IsCall)
       StartingLoc = MemoryLocation::get(Inst);
   }
@@ -2162,7 +2162,7 @@ MemoryAccess *MemorySSA::CachingWalker::getClobberingMemoryAccess(
 
   // Conservatively, fences are always clobbers, so don't perform the walk if we
   // hit a fence.
-  if (!ImmutableCallSite(I) && I->isFenceLike())
+  if (!isa<CallBase>(I) && I->isFenceLike())
     return StartingUseOrDef;
 
   UpwardsMemoryQuery Q;
@@ -2202,7 +2202,7 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   // We can't sanely do anything with a fence, since they conservatively clobber
   // all memory, and have no locations to get pointers from to try to
   // disambiguate.
-  if (!ImmutableCallSite(I) && I->isFenceLike())
+  if (!isa<CallBase>(I) && I->isFenceLike())
     return StartingAccess;
 
   UpwardsMemoryQuery Q(I, StartingAccess);

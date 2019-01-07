@@ -164,7 +164,7 @@ namespace {
       // A function parameter pack is a pack expansion, so cannot contain
       // an unexpanded parameter pack. Likewise for a template parameter
       // pack that contains any references to other packs.
-      if (D->isParameterPack())
+      if (D && D->isParameterPack())
         return true;
 
       return inherited::TraverseDecl(D);

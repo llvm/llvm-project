@@ -1,0 +1,35 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("AArch64GenAsmWriter") {
+  visibility = [ ":InstPrinter" ]
+  args = [ "-gen-asm-writer" ]
+  td_file = "../AArch64.td"
+}
+
+tablegen("AArch64GenAsmWriter1") {
+  visibility = [ ":InstPrinter" ]
+  args = [
+    "-gen-asm-writer",
+    "-asmwriternum=1",
+  ]
+  td_file = "../AArch64.td"
+}
+
+static_library("InstPrinter") {
+  output_name = "LLVMAArch64AsmPrinter"
+  deps = [
+    ":AArch64GenAsmWriter",
+    ":AArch64GenAsmWriter1",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+
+    # MCTargetDesc depends on InstPrinter, so we can't depend on the full
+    # MCTargetDesc target here: it would form a cycle.
+    "//llvm/lib/Target/AArch64/MCTargetDesc:tablegen",
+    "//llvm/lib/Target/AArch64/Utils",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "AArch64InstPrinter.cpp",
+  ]
+}

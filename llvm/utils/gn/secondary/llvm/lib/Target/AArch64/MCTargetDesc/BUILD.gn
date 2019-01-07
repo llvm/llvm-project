@@ -1,0 +1,68 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("AArch64GenInstrInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-instr-info" ]
+  td_file = "../AArch64.td"
+}
+
+tablegen("AArch64GenMCCodeEmitter") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-emitter" ]
+  td_file = "../AArch64.td"
+}
+
+tablegen("AArch64GenRegisterInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-register-info" ]
+  td_file = "../AArch64.td"
+}
+
+tablegen("AArch64GenSubtargetInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-subtarget" ]
+  td_file = "../AArch64.td"
+}
+
+group("tablegen") {
+  visibility = [
+    ":MCTargetDesc",
+    "../InstPrinter",
+    "../TargetInfo",
+    "../Utils",
+  ]
+  public_deps = [
+    ":AArch64GenInstrInfo",
+    ":AArch64GenMCCodeEmitter",
+    ":AArch64GenRegisterInfo",
+    ":AArch64GenSubtargetInfo",
+  ]
+}
+
+static_library("MCTargetDesc") {
+  output_name = "LLVMAArch64Desc"
+  public_deps = [
+    ":tablegen",
+  ]
+  deps = [
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/AArch64/InstPrinter",
+    "//llvm/lib/Target/AArch64/TargetInfo",
+    "//llvm/lib/Target/AArch64/Utils",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "AArch64AsmBackend.cpp",
+    "AArch64ELFObjectWriter.cpp",
+    "AArch64ELFStreamer.cpp",
+    "AArch64MCAsmInfo.cpp",
+    "AArch64MCCodeEmitter.cpp",
+    "AArch64MCExpr.cpp",
+    "AArch64MCTargetDesc.cpp",
+    "AArch64MachObjectWriter.cpp",
+    "AArch64TargetStreamer.cpp",
+    "AArch64WinCOFFObjectWriter.cpp",
+    "AArch64WinCOFFStreamer.cpp",
+  ]
+}
