@@ -50,7 +50,7 @@ public:
   bool init(Triple TheTriple);
 
   /// Dump the file to the disk.
-  bool finish(const DebugMap &);
+  bool finish(const DebugMap &, SymbolMapTranslator &T);
 
   AsmPrinter &getAsmPrinter() const { return *Asm; }
 
@@ -103,6 +103,11 @@ public:
                             StringRef PrologueBytes, unsigned MinInstLength,
                             std::vector<DWARFDebugLine::Row> &Rows,
                             unsigned AdddressSize);
+
+  /// Copy the debug_line over to the updated binary while unobfuscating the
+  /// file names and directories.
+  void translateLineTable(DataExtractor LineData, uint32_t Offset,
+                          LinkOptions &Options);
 
   /// Copy over the debug sections that are not modified when updating.
   void copyInvariantDebugSection(const object::ObjectFile &Obj);

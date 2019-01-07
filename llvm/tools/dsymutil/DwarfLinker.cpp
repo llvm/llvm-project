@@ -1701,6 +1701,8 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
   DWARFDataExtractor LineExtractor(
       OrigDwarf.getDWARFObj(), OrigDwarf.getDWARFObj().getLineSection(),
       OrigDwarf.isLittleEndian(), Unit.getOrigUnit().getAddressByteSize());
+  if (Options.Translator)
+    return Streamer->translateLineTable(LineExtractor, StmtOffset, Options);
 
   Error Err = LineTable.parse(LineExtractor, &StmtOffset, OrigDwarf,
                               &Unit.getOrigUnit(), DWARFContext::dumpWarning);
@@ -2245,17 +2247,16 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(
     if (Linker.Options.NoOutput)
       continue;
 
-    if (LLVM_LIKELY(!Linker.Options.Update)) {
-      // FIXME: for compatibility with the classic dsymutil, we emit an empty
-      // line table for the unit, even if the unit doesn't actually exist in
-      // the DIE tree.
+    // FIXME: for compatibility with the classic dsymutil, we emit
+    // an empty line table for the unit, even if the unit doesn't
+    // actually exist in the DIE tree.
+    if (LLVM_LIKELY(!Linker.Options.Update) || Linker.Options.Translator)
       Linker.patchLineTableForUnit(*CurrentUnit, DwarfContext, Ranges, DMO);
-      Linker.emitAcceleratorEntriesForUnit(*CurrentUnit);
-      Linker.patchRangesForUnit(*CurrentUnit, DwarfContext, DMO);
-      Linker.Streamer->emitLocationsForUnit(*CurrentUnit, DwarfContext);
-    } else {
-      Linker.emitAcceleratorEntriesForUnit(*CurrentUnit);
-    }
+    Linker.emitAcceleratorEntriesForUnit(*CurrentUnit);
+    if (Linker.Options.Update)
+      continue;
+    Linker.patchRangesForUnit(*CurrentUnit, DwarfContext, DMO);
+    Linker.Streamer->emitLocationsForUnit(*CurrentUnit, DwarfContext);
   }
 
   if (Linker.Options.NoOutput)
@@ -2380,7 +2381,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
   // This Dwarf string pool which is used for emission. It must be used
   // serially as the order of calling getStringOffset matters for
   // reproducibility.
-  OffsetsStringPool OffsetsStringPool;
+  OffsetsStringPool OffsetsStringPool(Options.Translator);
 
   // ODR Contexts for the link.
   DeclContextTree ODRContexts;
@@ -2649,7 +2650,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
     pool.wait();
   }
 
-  return Options.NoOutput ? true : Streamer->finish(Map);
+  return Options.NoOutput ? true : Streamer->finish(Map, Options.Translator);
 } // namespace dsymutil
 
 bool linkDwarf(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,

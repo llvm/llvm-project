@@ -163,7 +163,8 @@ std::unique_ptr<DebugMap>
 MachODebugMapParser::parseOneBinary(const MachOObjectFile &MainBinary,
                                     StringRef BinaryPath) {
   loadMainBinarySymbols(MainBinary);
-  Result = make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath);
+  ArrayRef<uint8_t> UUID = MainBinary.getUuid();
+  Result = make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath, UUID);
   MainBinaryStrings = MainBinary.getStringTableData();
   for (const SymbolRef &Symbol : MainBinary.symbols()) {
     const DataRefImpl &DRI = Symbol.getRawDataRefImpl();
