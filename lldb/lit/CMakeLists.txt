@@ -76,6 +76,7 @@ configure_lit_site_cfg(
 if(NOT LLDB_BUILT_STANDALONE)
   list(APPEND LLDB_TEST_DEPS
     FileCheck
+    count
     not
     )
 endif()
