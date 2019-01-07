@@ -437,7 +437,7 @@ uint32_t GVN::ValueTable::lookupOrAddCall(CallInst *C) {
 
     // Non-local case.
     const MemoryDependenceResults::NonLocalDepInfo &deps =
-      MD->getNonLocalCallDependency(CallSite(C));
+        MD->getNonLocalCallDependency(C);
     // FIXME: Move the checking logic to MemDep!
     CallInst* cdep = nullptr;
 

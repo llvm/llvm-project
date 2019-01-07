@@ -31,7 +31,6 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -1486,8 +1485,10 @@ template <typename Opnd_t> struct Argument_match {
   Argument_match(unsigned OpIdx, const Opnd_t &V) : OpI(OpIdx), Val(V) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    CallSite CS(V);
-    return CS.isCall() && Val.match(CS.getArgument(OpI));
+    // FIXME: Should likely be switched to use `CallBase`.
+    if (const auto *CI = dyn_cast<CallInst>(V))
+      return Val.match(CI->getArgOperand(OpI));
+    return false;
   }
 };
 

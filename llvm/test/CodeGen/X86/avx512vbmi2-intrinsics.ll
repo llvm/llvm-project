@@ -148,23 +148,23 @@ declare <8 x i64> @llvm.x86.avx512.vpshld.q.512(<8 x i64>, <8 x i64>, i32)
 define <32 x i16>@test_int_x86_avx512_mask_vpshld_w_512(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x3, i32 %x4) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpshld_w_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpshldw $22, %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf3,0xfd,0x48,0x70,0xd9,0x16]
+; X86-NEXT:    vpshldw $6, %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf3,0xfd,0x48,0x70,0xd9,0x06]
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vpshldw $22, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0x70,0xd1,0x16]
+; X86-NEXT:    vpshldw $6, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0x70,0xd1,0x06]
 ; X86-NEXT:    vpaddw %zmm3, %zmm2, %zmm0 # encoding: [0x62,0xf1,0x6d,0x48,0xfd,0xc3]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_vpshld_w_512:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpshldw $22, %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf3,0xfd,0x48,0x70,0xd9,0x16]
+; X64-NEXT:    vpshldw $6, %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf3,0xfd,0x48,0x70,0xd9,0x06]
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vpshldw $22, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0x70,0xd1,0x16]
+; X64-NEXT:    vpshldw $6, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0x70,0xd1,0x06]
 ; X64-NEXT:    vpaddw %zmm3, %zmm2, %zmm0 # encoding: [0x62,0xf1,0x6d,0x48,0xfd,0xc3]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %1 = call <32 x i16> @llvm.x86.avx512.vpshld.w.512(<32 x i16> %x0, <32 x i16> %x1, i32 22)
+  %1 = call <32 x i16> @llvm.x86.avx512.vpshld.w.512(<32 x i16> %x0, <32 x i16> %x1, i32 6)
   %2 = bitcast i32 %x4 to <32 x i1>
   %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> %x3
-  %4 = call <32 x i16> @llvm.x86.avx512.vpshld.w.512(<32 x i16> %x0, <32 x i16> %x1, i32 22)
+  %4 = call <32 x i16> @llvm.x86.avx512.vpshld.w.512(<32 x i16> %x0, <32 x i16> %x1, i32 6)
   %res2 = add <32 x i16> %3, %4
   ret <32 x i16> %res2
 }
@@ -224,23 +224,23 @@ declare <8 x i64> @llvm.x86.avx512.vpshrd.q.512(<8 x i64>, <8 x i64>, i32)
 define <32 x i16>@test_int_x86_avx512_mask_vpshrd_w_512(<32 x i16> %x0, <32 x i16> %x1, <32 x i16> %x3, i32 %x4) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpshrd_w_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpshrdw $22, %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf3,0xfd,0x48,0x72,0xd9,0x16]
+; X86-NEXT:    vpshrdw $6, %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf3,0xfd,0x48,0x72,0xd9,0x06]
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vpshrdw $22, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0x72,0xd1,0x16]
+; X86-NEXT:    vpshrdw $6, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0x72,0xd1,0x06]
 ; X86-NEXT:    vpaddw %zmm3, %zmm2, %zmm0 # encoding: [0x62,0xf1,0x6d,0x48,0xfd,0xc3]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_vpshrd_w_512:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpshrdw $22, %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf3,0xfd,0x48,0x72,0xd9,0x16]
+; X64-NEXT:    vpshrdw $6, %zmm1, %zmm0, %zmm3 # encoding: [0x62,0xf3,0xfd,0x48,0x72,0xd9,0x06]
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vpshrdw $22, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0x72,0xd1,0x16]
+; X64-NEXT:    vpshrdw $6, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0x72,0xd1,0x06]
 ; X64-NEXT:    vpaddw %zmm3, %zmm2, %zmm0 # encoding: [0x62,0xf1,0x6d,0x48,0xfd,0xc3]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %1 = call <32 x i16> @llvm.x86.avx512.vpshrd.w.512(<32 x i16> %x0, <32 x i16> %x1, i32 22)
+  %1 = call <32 x i16> @llvm.x86.avx512.vpshrd.w.512(<32 x i16> %x0, <32 x i16> %x1, i32 6)
   %2 = bitcast i32 %x4 to <32 x i1>
   %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> %x3
-  %4 = call <32 x i16> @llvm.x86.avx512.vpshrd.w.512(<32 x i16> %x0, <32 x i16> %x1, i32 22)
+  %4 = call <32 x i16> @llvm.x86.avx512.vpshrd.w.512(<32 x i16> %x0, <32 x i16> %x1, i32 6)
   %res2 = add <32 x i16> %3, %4
   ret <32 x i16> %res2
 }

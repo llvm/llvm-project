@@ -1,0 +1,24 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("AArch64GenSystemOperands") {
+  visibility = [ ":Utils" ]
+  args = [ "-gen-searchable-tables" ]
+  td_file = "../AArch64.td"
+}
+
+static_library("Utils") {
+  output_name = "LLVMAArch64Utils"
+  public_deps = [
+    ":AArch64GenSystemOperands",
+  ]
+  deps = [
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/AArch64/MCTargetDesc:tablegen",
+  ]
+
+  # AArch64BaseInfo.h includes a header from MCTargetDesc :-/
+  include_dirs = [ ".." ]
+  sources = [
+    "AArch64BaseInfo.cpp",
+  ]
+}
