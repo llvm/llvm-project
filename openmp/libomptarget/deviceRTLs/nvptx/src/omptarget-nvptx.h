@@ -344,6 +344,7 @@ public:
   INLINE omptarget_nvptx_TeamDescr &TeamContext() { return teamContext; }
 
   INLINE void InitThreadPrivateContext(int tid);
+  INLINE uint64_t &Cnt() { return cnt; }
 
 private:
   // team context for this team
@@ -366,6 +367,7 @@ private:
   // state for dispatch with dyn/guided OR static (never use both at a time)
   int64_t nextLowerBound[MAX_THREADS_PER_TEAM];
   int64_t stride[MAX_THREADS_PER_TEAM];
+  uint64_t cnt;
 };
 
 /// Device envrionment data
