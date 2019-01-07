@@ -10,19 +10,17 @@
 // <new> feature macros
 
 /*  Constant                                    Value
-    __cpp_lib_destroying_delete                 201806L
-    __cpp_lib_hardware_interference_size        201703L
-    __cpp_lib_launder                           201606L
+    __cpp_lib_three_way_comparison              201711L
 
 */
 
-#include <new>
+#include <compare>
 #include <cassert>
 #include "test_macros.h"
 
 int main()
 {
-//  ensure that the macros that are supposed to be defined in <new> are defined.
+//  ensure that the macros that are supposed to be defined in <compare> are defined.
 
 /*
 #if !defined(__cpp_lib_fooby)
