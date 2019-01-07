@@ -154,7 +154,7 @@ public:
   // When using Microsoft precompiled headers, this is the PCH's key.
   // The same key is used by both the precompiled object, and objects using the
   // precompiled object. Any difference indicates out-of-date objects.
-  llvm::Optional<llvm::codeview::EndPrecompRecord> EndPrecomp;
+  llvm::Optional<uint32_t> PCHSignature;
 
 private:
   void initializeChunks();
