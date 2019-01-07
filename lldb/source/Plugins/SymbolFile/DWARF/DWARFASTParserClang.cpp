@@ -144,7 +144,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
 
   // This type comes from an external DWO module.
   std::vector<CompilerContext> dwo_context;
-  die.GetDWOContext(dwo_context);
+  die.GetDeclContext(dwo_context);
   TypeMap dwo_types;
 
   if (!dwo_module_sp->GetSymbolVendor()->FindTypes(dwo_context, true,

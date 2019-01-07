@@ -2625,7 +2625,7 @@ size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
 
       if (die) {
         std::vector<CompilerContext> die_context;
-        die.GetDWOContext(die_context);
+        die.GetDeclContext(die_context);
         if (die_context != context)
           continue;
 
