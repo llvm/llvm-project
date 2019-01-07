@@ -3874,8 +3874,10 @@ void SwiftLanguageRuntime::WillStartExecutingUserExpression() {
   std::lock_guard<std::mutex> lock(m_active_user_expr_mutex);
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  if (m_active_user_expr_count == 0 &&
-      m_dynamic_exclusivity_flag_addr) {
+  bool in_repl = m_process->GetTarget().GetDebugger().REPLIsActive();
+
+  if (m_active_user_expr_count == 0 && m_dynamic_exclusivity_flag_addr &&
+      !in_repl) {
     // We're executing the first user expression. Toggle the flag.
     Status error;
     TypeSystem *type_system =
@@ -3937,8 +3939,10 @@ void SwiftLanguageRuntime::DidFinishExecutingUserExpression() {
     log->Printf("SwiftLanguageRuntime: finished user expression. "
                 "Number active: %u", m_active_user_expr_count);
 
-  if (m_active_user_expr_count == 0 &&
-      m_dynamic_exclusivity_flag_addr) {
+  bool in_repl = m_process->GetTarget().GetDebugger().REPLIsActive();
+
+  if (m_active_user_expr_count == 0 && m_dynamic_exclusivity_flag_addr &&
+      !in_repl) {
     Status error;
     TypeSystem *type_system =
       m_process->GetTarget().GetScratchTypeSystemForLanguage(
