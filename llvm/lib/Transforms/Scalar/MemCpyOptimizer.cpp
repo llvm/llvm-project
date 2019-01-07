@@ -546,8 +546,8 @@ static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P,
   // Memory locations of lifted instructions.
   SmallVector<MemoryLocation, 8> MemLocs{StoreLoc};
 
-  // Lifted callsites.
-  SmallVector<ImmutableCallSite, 8> CallSites;
+  // Lifted calls.
+  SmallVector<const CallBase *, 8> Calls;
 
   const MemoryLocation LoadLoc = MemoryLocation::get(LI);
 
@@ -565,10 +565,9 @@ static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P,
       });
 
       if (!NeedLift)
-        NeedLift =
-            llvm::any_of(CallSites, [C, &AA](const ImmutableCallSite &CS) {
-              return isModOrRefSet(AA.getModRefInfo(C, CS));
-            });
+        NeedLift = llvm::any_of(Calls, [C, &AA](const CallBase *Call) {
+          return isModOrRefSet(AA.getModRefInfo(C, Call));
+        });
     }
 
     if (!NeedLift)
@@ -579,12 +578,12 @@ static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P,
       // none of them may modify its source.
       if (isModSet(AA.getModRefInfo(C, LoadLoc)))
         return false;
-      else if (auto CS = ImmutableCallSite(C)) {
+      else if (const auto *Call = dyn_cast<CallBase>(C)) {
         // If we can't lift this before P, it's game over.
-        if (isModOrRefSet(AA.getModRefInfo(P, CS)))
+        if (isModOrRefSet(AA.getModRefInfo(P, Call)))
           return false;
 
-        CallSites.push_back(CS);
+        Calls.push_back(Call);
       } else if (isa<LoadInst>(C) || isa<StoreInst>(C) || isa<VAArgInst>(C)) {
         // If we can't lift this before P, it's game over.
         auto ML = MemoryLocation::get(C);

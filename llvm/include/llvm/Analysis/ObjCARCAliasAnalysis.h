@@ -60,7 +60,7 @@ public:
   FunctionModRefBehavior getModRefBehavior(const Function *F);
 
   using AAResultBase::getModRefInfo;
-  ModRefInfo getModRefInfo(ImmutableCallSite CS, const MemoryLocation &Loc);
+  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc);
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.

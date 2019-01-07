@@ -1,0 +1,25 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("ARMGenAsmWriter") {
+  visibility = [ ":InstPrinter" ]
+  args = [ "-gen-asm-writer" ]
+  td_file = "../ARM.td"
+}
+
+static_library("InstPrinter") {
+  output_name = "LLVMARMAsmPrinter"
+  deps = [
+    ":ARMGenAsmWriter",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+
+    # MCTargetDesc depends on InstPrinter, so we can't depend on the full
+    # MCTargetDesc target here: it would form a cycle.
+    "//llvm/lib/Target/ARM/MCTargetDesc:tablegen",
+    "//llvm/lib/Target/ARM/Utils",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "ARMInstPrinter.cpp",
+  ]
+}

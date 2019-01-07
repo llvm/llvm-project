@@ -16,9 +16,9 @@
 #ifndef LLVM_ANALYSIS_MEMORYLOCATION_H
 #define LLVM_ANALYSIS_MEMORYLOCATION_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/IR/CallSite.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 
 namespace llvm {
@@ -234,11 +234,11 @@ public:
   static MemoryLocation getForDest(const AnyMemIntrinsic *MI);
 
   /// Return a location representing a particular argument of a call.
-  static MemoryLocation getForArgument(ImmutableCallSite CS, unsigned ArgIdx,
+  static MemoryLocation getForArgument(const CallBase *Call, unsigned ArgIdx,
                                        const TargetLibraryInfo *TLI);
-  static MemoryLocation getForArgument(ImmutableCallSite CS, unsigned ArgIdx,
+  static MemoryLocation getForArgument(const CallBase *Call, unsigned ArgIdx,
                                        const TargetLibraryInfo &TLI) {
-    return getForArgument(CS, ArgIdx, &TLI);
+    return getForArgument(Call, ArgIdx, &TLI);
   }
 
   explicit MemoryLocation(const Value *Ptr = nullptr,

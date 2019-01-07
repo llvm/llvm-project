@@ -1,0 +1,70 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("ARMGenInstrInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-instr-info" ]
+  td_file = "../ARM.td"
+}
+
+tablegen("ARMGenMCCodeEmitter") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-emitter" ]
+  td_file = "../ARM.td"
+}
+
+tablegen("ARMGenRegisterInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-register-info" ]
+  td_file = "../ARM.td"
+}
+
+tablegen("ARMGenSubtargetInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-subtarget" ]
+  td_file = "../ARM.td"
+}
+
+group("tablegen") {
+  visibility = [
+    ":MCTargetDesc",
+    "../InstPrinter",
+    "../TargetInfo",
+    "../Utils",
+  ]
+  public_deps = [
+    ":ARMGenInstrInfo",
+    ":ARMGenMCCodeEmitter",
+    ":ARMGenRegisterInfo",
+    ":ARMGenSubtargetInfo",
+  ]
+}
+static_library("MCTargetDesc") {
+  output_name = "LLVMARMDesc"
+  public_deps = [
+    ":tablegen",
+  ]
+  deps = [
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCDisassembler",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/ARM/InstPrinter",
+    "//llvm/lib/Target/ARM/TargetInfo",
+    "//llvm/lib/Target/ARM/Utils",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "ARMAsmBackend.cpp",
+    "ARMELFObjectWriter.cpp",
+    "ARMELFStreamer.cpp",
+    "ARMMCAsmInfo.cpp",
+    "ARMMCCodeEmitter.cpp",
+    "ARMMCExpr.cpp",
+    "ARMMCTargetDesc.cpp",
+    "ARMMachORelocationInfo.cpp",
+    "ARMMachObjectWriter.cpp",
+    "ARMTargetStreamer.cpp",
+    "ARMUnwindOpAsm.cpp",
+    "ARMWinCOFFObjectWriter.cpp",
+    "ARMWinCOFFStreamer.cpp",
+  ]
+}

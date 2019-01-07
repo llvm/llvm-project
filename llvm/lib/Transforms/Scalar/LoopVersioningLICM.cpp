@@ -360,10 +360,11 @@ bool LoopVersioningLICM::legalLoopMemoryAccesses() {
 bool LoopVersioningLICM::instructionSafeForVersioning(Instruction *I) {
   assert(I != nullptr && "Null instruction found!");
   // Check function call safety
-  if (isa<CallInst>(I) && !AA->doesNotAccessMemory(CallSite(I))) {
-    LLVM_DEBUG(dbgs() << "    Unsafe call site found.\n");
-    return false;
-  }
+  if (auto *Call = dyn_cast<CallBase>(I))
+    if (!AA->doesNotAccessMemory(Call)) {
+      LLVM_DEBUG(dbgs() << "    Unsafe call site found.\n");
+      return false;
+    }
   // Avoid loops with possiblity of throw
   if (I->mayThrow()) {
     LLVM_DEBUG(dbgs() << "    May throw instruction found in loop body\n");

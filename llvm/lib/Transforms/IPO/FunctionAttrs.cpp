@@ -130,16 +130,15 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
 
     // Some instructions can be ignored even if they read or write memory.
     // Detect these now, skipping to the next instruction if one is found.
-    CallSite CS(cast<Value>(I));
-    if (CS) {
+    if (auto *Call = dyn_cast<CallBase>(I)) {
       // Ignore calls to functions in the same SCC, as long as the call sites
       // don't have operand bundles.  Calls with operand bundles are allowed to
       // have memory effects not described by the memory effects of the call
       // target.
-      if (!CS.hasOperandBundles() && CS.getCalledFunction() &&
-          SCCNodes.count(CS.getCalledFunction()))
+      if (!Call->hasOperandBundles() && Call->getCalledFunction() &&
+          SCCNodes.count(Call->getCalledFunction()))
         continue;
-      FunctionModRefBehavior MRB = AAR.getModRefBehavior(CS);
+      FunctionModRefBehavior MRB = AAR.getModRefBehavior(Call);
       ModRefInfo MRI = createModRefInfo(MRB);
 
       // If the call doesn't access memory, we're done.
@@ -158,7 +157,7 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
 
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
-      for (CallSite::arg_iterator CI = CS.arg_begin(), CE = CS.arg_end();
+      for (CallSite::arg_iterator CI = Call->arg_begin(), CE = Call->arg_end();
            CI != CE; ++CI) {
         Value *Arg = *CI;
         if (!Arg->getType()->isPtrOrPtrVectorTy())
