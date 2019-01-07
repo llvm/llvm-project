@@ -318,8 +318,8 @@ PlatformLinux::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
 
   // Now create the gdb-remote process.
   LLDB_LOG(log, "having target create process with gdb-remote plugin");
-  process_sp = target->CreateProcess(
-      launch_info.GetListenerForProcess(debugger), "gdb-remote", nullptr);
+  process_sp =
+      target->CreateProcess(launch_info.GetListener(), "gdb-remote", nullptr);
 
   if (!process_sp) {
     error.SetErrorString("CreateProcess() failed for gdb-remote process");

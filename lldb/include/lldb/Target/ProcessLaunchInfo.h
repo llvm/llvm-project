@@ -131,8 +131,6 @@ public:
     m_listener_sp = listener_sp;
   }
 
-  lldb::ListenerSP GetListenerForProcess(Debugger &debugger);
-
   lldb::ListenerSP GetHijackListener() const { return m_hijack_listener_sp; }
 
   void SetHijackListener(const lldb::ListenerSP &listener_sp) {
