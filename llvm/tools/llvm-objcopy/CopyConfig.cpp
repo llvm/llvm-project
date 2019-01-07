@@ -189,6 +189,22 @@ static const MachineInfo &getMachineInfo(StringRef Arch) {
   return Iter->getValue();
 }
 
+static const StringMap<MachineInfo> OutputFormatMap{
+    // Name, {EMachine, 64bit, LittleEndian}
+    {"elf32-i386", {ELF::EM_386, false, true}},
+    {"elf32-powerpcle", {ELF::EM_PPC, false, true}},
+    {"elf32-x86-64", {ELF::EM_X86_64, false, true}},
+    {"elf64-powerpcle", {ELF::EM_PPC64, true, true}},
+    {"elf64-x86-64", {ELF::EM_X86_64, true, true}},
+};
+
+static const MachineInfo &getOutputFormatMachineInfo(StringRef Format) {
+  auto Iter = OutputFormatMap.find(Format);
+  if (Iter == std::end(OutputFormatMap))
+    error("Invalid output format: '" + Format + "'");
+  return Iter->getValue();
+}
+
 static void addGlobalSymbolsFromFile(std::vector<std::string> &Symbols,
                                      StringRef Filename) {
   SmallVector<StringRef, 16> Lines;
@@ -266,6 +282,8 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       error("Specified binary input without specifiying an architecture");
     Config.BinaryArch = getMachineInfo(BinaryArch);
   }
+  if (!Config.OutputFormat.empty() && Config.OutputFormat != "binary")
+    Config.OutputArch = getOutputFormatMachineInfo(Config.OutputFormat);
 
   if (auto Arg = InputArgs.getLastArg(OBJCOPY_compress_debug_sections,
                                       OBJCOPY_compress_debug_sections_eq)) {

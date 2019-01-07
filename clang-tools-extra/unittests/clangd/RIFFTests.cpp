@@ -11,7 +11,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -23,12 +22,12 @@ TEST(RIFFTest, File) {
                       {riff::fourCC("even"), "abcd"},
                       {riff::fourCC("oddd"), "abcde"},
                   }};
-  StringRef Serialized = StringRef("RIFF\x1e\0\0\0test"
-                                   "even\x04\0\0\0abcd"
-                                   "oddd\x05\0\0\0abcde\0",
-                                   38);
+  llvm::StringRef Serialized = llvm::StringRef("RIFF\x1e\0\0\0test"
+                                               "even\x04\0\0\0abcd"
+                                               "oddd\x05\0\0\0abcde\0",
+                                               38);
 
-  EXPECT_EQ(to_string(File), Serialized);
+  EXPECT_EQ(llvm::to_string(File), Serialized);
   auto Parsed = riff::readFile(Serialized);
   ASSERT_TRUE(bool(Parsed)) << Parsed.takeError();
   EXPECT_EQ(*Parsed, File);

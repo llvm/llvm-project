@@ -3514,6 +3514,19 @@ AST_POLYMORPHIC_MATCHER_P2(hasArgument,
               *Node.getArg(N)->IgnoreParenImpCasts(), Finder, Builder));
 }
 
+/// Matches the n'th item of an initializer list expression.
+///
+/// Example matches y.
+///     (matcher = initListExpr(hasInit(0, expr())))
+/// \code
+///   int x{y}.
+/// \endcode
+AST_MATCHER_P2(InitListExpr, hasInit, unsigned, N,
+               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  return N < Node.getNumInits() &&
+          InnerMatcher.matches(*Node.getInit(N), Finder, Builder);
+}
+
 /// Matches declaration statements that contain a specific number of
 /// declarations.
 ///

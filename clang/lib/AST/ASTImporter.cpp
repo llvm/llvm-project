@@ -6910,7 +6910,7 @@ ExpectedStmt ASTNodeImporter::VisitCXXNewExpr(CXXNewExpr *E) {
       ImportContainerChecked(E->placement_arguments(), ToPlacementArgs))
     return std::move(Err);
 
-  return new (Importer.getToContext()) CXXNewExpr(
+  return CXXNewExpr::Create(
       Importer.getToContext(), E->isGlobalNew(), ToOperatorNew,
       ToOperatorDelete, E->passAlignment(), E->doesUsualArrayDeleteWantSize(),
       ToPlacementArgs, ToTypeIdParens, ToArraySize, E->getInitializationStyle(),

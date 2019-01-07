@@ -6356,9 +6356,9 @@ public:
                     const TemplateArgumentListInfo &ExplicitTemplateArgs,
                                                     LookupResult &Previous);
 
-  bool CheckFunctionTemplateSpecialization(FunctionDecl *FD,
-                         TemplateArgumentListInfo *ExplicitTemplateArgs,
-                                           LookupResult &Previous);
+  bool CheckFunctionTemplateSpecialization(
+      FunctionDecl *FD, TemplateArgumentListInfo *ExplicitTemplateArgs,
+      LookupResult &Previous, bool QualifiedFriend = false);
   bool CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous);
   void CompleteMemberSpecialization(NamedDecl *Member, LookupResult &Previous);
 

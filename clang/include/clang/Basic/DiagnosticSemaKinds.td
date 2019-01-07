@@ -1298,8 +1298,8 @@ def ext_unelaborated_friend_type : ExtWarn<
 def warn_cxx98_compat_unelaborated_friend_type : Warning<
   "befriending %1 without '%select{struct|interface|union|class|enum}0' "
   "keyword is incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
-def err_qualified_friend_not_found : Error<
-  "no function named %0 with type %1 was found in the specified scope">;
+def err_qualified_friend_no_match : Error<
+  "friend declaration of %0 does not match any declaration in %1">;
 def err_introducing_special_friend : Error<
   "%plural{[0,2]:must use a qualified name when declaring|3:cannot declare}0"
   " a %select{constructor|destructor|conversion operator|deduction guide}0 "

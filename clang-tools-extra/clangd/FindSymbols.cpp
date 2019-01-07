@@ -25,7 +25,6 @@
 
 #define DEBUG_TYPE "FindSymbols"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -100,9 +99,9 @@ struct ScoredSymbolGreater {
 
 } // namespace
 
-Expected<std::vector<SymbolInformation>>
-getWorkspaceSymbols(StringRef Query, int Limit, const SymbolIndex *const Index,
-                    StringRef HintPath) {
+llvm::Expected<std::vector<SymbolInformation>>
+getWorkspaceSymbols(llvm::StringRef Query, int Limit,
+                    const SymbolIndex *const Index, llvm::StringRef HintPath) {
   std::vector<SymbolInformation> Result;
   if (Query.empty() || !Index)
     return Result;
@@ -153,7 +152,7 @@ getWorkspaceSymbols(StringRef Query, int Limit, const SymbolIndex *const Index,
     L.range = {Start, End};
     SymbolKind SK = indexSymbolKindToSymbolKind(Sym.SymInfo.Kind);
     std::string Scope = Sym.Scope;
-    StringRef ScopeRef = Scope;
+    llvm::StringRef ScopeRef = Scope;
     ScopeRef.consume_back("::");
     SymbolInformation Info = {Sym.Name, SK, L, ScopeRef};
 

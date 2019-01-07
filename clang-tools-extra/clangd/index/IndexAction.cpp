@@ -4,7 +4,6 @@
 #include "clang/Index/IndexingAction.h"
 #include "clang/Tooling/Tooling.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -63,10 +62,10 @@ public:
 
   // Add edges from including files to includes.
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
-                          StringRef FileName, bool IsAngled,
+                          llvm::StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          llvm::StringRef SearchPath,
+                          llvm::StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
     auto IncludeURI = toURI(File);
     if (!IncludeURI)
@@ -116,8 +115,8 @@ public:
         Includes(std::move(Includes)),
         PragmaHandler(collectIWYUHeaderMaps(this->Includes.get())) {}
 
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef InFile) override {
+  std::unique_ptr<ASTConsumer>
+  CreateASTConsumer(CompilerInstance &CI, llvm::StringRef InFile) override {
     CI.getPreprocessor().addCommentHandler(PragmaHandler.get());
     if (IncludeGraphCallback != nullptr)
       CI.getPreprocessor().addPPCallbacks(
@@ -137,7 +136,7 @@ public:
     const auto &CI = getCompilerInstance();
     if (CI.hasDiagnostics() &&
         CI.getDiagnostics().hasUncompilableErrorOccurred()) {
-      errs() << "Skipping TU due to uncompilable errors\n";
+      llvm::errs() << "Skipping TU due to uncompilable errors\n";
       return;
     }
     SymbolsCallback(Collector->takeSymbols());

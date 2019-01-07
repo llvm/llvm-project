@@ -63,7 +63,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/IndirectCallSiteVisitor.h"
+#include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Attributes.h"
@@ -544,7 +544,7 @@ public:
     MIVisitor.countMemIntrinsics(Func);
     NumOfPGOSelectInsts += SIVisitor.getNumOfSelectInsts();
     NumOfPGOMemIntrinsics += MIVisitor.getNumOfMemIntrinsics();
-    ValueSites[IPVK_IndirectCallTarget] = findIndirectCallSites(Func);
+    ValueSites[IPVK_IndirectCallTarget] = findIndirectCalls(Func);
     ValueSites[IPVK_MemOPSize] = MIVisitor.findMemIntrinsics(Func);
 
     FuncName = getPGOFuncName(F);
@@ -754,12 +754,12 @@ static void instrumentOneFunc(
   if (DisableValueProfiling)
     return;
 
-  unsigned NumIndirectCallSites = 0;
+  unsigned NumIndirectCalls = 0;
   for (auto &I : FuncInfo.ValueSites[IPVK_IndirectCallTarget]) {
     CallSite CS(I);
     Value *Callee = CS.getCalledValue();
     LLVM_DEBUG(dbgs() << "Instrument one indirect call: CallSite Index = "
-                      << NumIndirectCallSites << "\n");
+                      << NumIndirectCalls << "\n");
     IRBuilder<> Builder(I);
     assert(Builder.GetInsertPoint() != I->getParent()->end() &&
            "Cannot get the Instrumentation point");
@@ -769,9 +769,9 @@ static void instrumentOneFunc(
          Builder.getInt64(FuncInfo.FunctionHash),
          Builder.CreatePtrToInt(Callee, Builder.getInt64Ty()),
          Builder.getInt32(IPVK_IndirectCallTarget),
-         Builder.getInt32(NumIndirectCallSites++)});
+         Builder.getInt32(NumIndirectCalls++)});
   }
-  NumOfPGOICall += NumIndirectCallSites;
+  NumOfPGOICall += NumIndirectCalls;
 
   // Now instrument memop intrinsic calls.
   FuncInfo.MIVisitor.instrumentMemIntrinsics(

@@ -208,9 +208,6 @@ CrossTranslationUnitContext::getCrossTUDefinition(const FunctionDecl *FD,
   if (!ASTUnitOrError)
     return ASTUnitOrError.takeError();
   ASTUnit *Unit = *ASTUnitOrError;
-  if (!Unit)
-    return llvm::make_error<IndexError>(
-        index_error_code::failed_to_get_external_ast);
   assert(&Unit->getFileManager() ==
          &Unit->getASTContext().getSourceManager().getFileManager());
 
@@ -324,6 +321,9 @@ llvm::Expected<ASTUnit *> CrossTranslationUnitContext::loadExternalAST(
   } else {
     Unit = FnUnitCacheEntry->second;
   }
+  if (!Unit)
+    return llvm::make_error<IndexError>(
+        index_error_code::failed_to_get_external_ast);
   return Unit;
 }
 

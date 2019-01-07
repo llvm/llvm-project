@@ -21,7 +21,6 @@
 const char *IndexFilename;
 const char *RequestsFilename;
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -41,16 +40,17 @@ std::vector<FuzzyFindRequest> extractQueriesFromLogs() {
                   std::istreambuf_iterator<char>());
 
   std::vector<FuzzyFindRequest> Requests;
-  auto JSONArray = json::parse(Log);
+  auto JSONArray = llvm::json::parse(Log);
 
   // Panic if the provided file couldn't be parsed.
   if (!JSONArray) {
-    errs() << "Error when parsing JSON requests file: "
-           << toString(JSONArray.takeError());
+    llvm::errs() << "Error when parsing JSON requests file: "
+                 << llvm::toString(JSONArray.takeError());
     exit(1);
   }
   if (!JSONArray->getAsArray()) {
-    errs() << "Error: top-level value is not a JSON array: " << Log << '\n';
+    llvm::errs() << "Error: top-level value is not a JSON array: " << Log
+                 << '\n';
     exit(1);
   }
 
@@ -58,7 +58,7 @@ std::vector<FuzzyFindRequest> extractQueriesFromLogs() {
     FuzzyFindRequest Request;
     // Panic if the provided file couldn't be parsed.
     if (!fromJSON(Item, Request)) {
-      errs() << "Error when deserializing request: " << Item << '\n';
+      llvm::errs() << "Error when deserializing request: " << Item << '\n';
       exit(1);
     }
     Requests.push_back(Request);
@@ -94,9 +94,9 @@ BENCHMARK(DexQueries);
 // FIXME(kbobyrev): Create a logger wrapper to suppress debugging info printer.
 int main(int argc, char *argv[]) {
   if (argc < 3) {
-    errs() << "Usage: " << argv[0]
-           << " global-symbol-index.yaml requests.json "
-              "BENCHMARK_OPTIONS...\n";
+    llvm::errs() << "Usage: " << argv[0]
+                 << " global-symbol-index.yaml requests.json "
+                    "BENCHMARK_OPTIONS...\n";
     return -1;
   }
   IndexFilename = argv[1];

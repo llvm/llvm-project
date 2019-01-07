@@ -8,7 +8,6 @@
 #include <memory>
 #include <thread>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -22,7 +21,7 @@ TEST(CancellationTest, CancellationTest) {
 }
 
 TEST(CancellationTest, CancelerDiesContextLives) {
-  Optional<WithContext> ContextWithCancellation;
+  llvm::Optional<WithContext> ContextWithCancellation;
   {
     auto Task = cancelableTask();
     ContextWithCancellation.emplace(std::move(Task.first));

@@ -31,7 +31,6 @@ using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::Pair;
 using testing::UnorderedElementsAre;
-using namespace llvm;
 
 MATCHER_P(RefRange, Range, "") {
   return std::make_tuple(arg.Location.Start.line(), arg.Location.Start.column(),
@@ -39,11 +38,13 @@ MATCHER_P(RefRange, Range, "") {
          std::make_tuple(Range.start.line, Range.start.character,
                          Range.end.line, Range.end.character);
 }
-MATCHER_P(FileURI, F, "") { return StringRef(arg.Location.FileURI) == F; }
+MATCHER_P(FileURI, F, "") { return llvm::StringRef(arg.Location.FileURI) == F; }
 MATCHER_P(DeclURI, U, "") {
-  return StringRef(arg.CanonicalDeclaration.FileURI) == U;
+  return llvm::StringRef(arg.CanonicalDeclaration.FileURI) == U;
 }
-MATCHER_P(DefURI, U, "") { return StringRef(arg.Definition.FileURI) == U; }
+MATCHER_P(DefURI, U, "") {
+  return llvm::StringRef(arg.Definition.FileURI) == U;
+}
 MATCHER_P(QName, N, "") { return (arg.Scope + arg.Name).str() == N; }
 
 namespace clang {
@@ -54,7 +55,7 @@ RefsAre(std::vector<testing::Matcher<Ref>> Matchers) {
   return ElementsAre(testing::Pair(_, UnorderedElementsAreArray(Matchers)));
 }
 
-Symbol symbol(StringRef ID) {
+Symbol symbol(llvm::StringRef ID) {
   Symbol Sym;
   Sym.ID = SymbolID(ID);
   Sym.Name = ID;
@@ -103,7 +104,7 @@ TEST(FileSymbolsTest, MergeOverlap) {
   auto OneSymboSlab = [](Symbol Sym) {
     SymbolSlab::Builder S;
     S.insert(Sym);
-    return make_unique<SymbolSlab>(std::move(S).build());
+    return llvm::make_unique<SymbolSlab>(std::move(S).build());
   };
   auto X1 = symbol("x");
   X1.CanonicalDeclaration.FileURI = "file:///x1";
@@ -141,7 +142,7 @@ TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
 }
 
 // Adds Basename.cpp, which includes Basename.h, which contains Code.
-void update(FileIndex &M, StringRef Basename, StringRef Code) {
+void update(FileIndex &M, llvm::StringRef Basename, llvm::StringRef Code) {
   TestTU File;
   File.Filename = (Basename + ".cpp").str();
   File.HeaderFilename = (Basename + ".h").str();
@@ -246,7 +247,7 @@ TEST(FileIndexTest, RebuildWithPreamble) {
   PI.CompileCommand.Filename = FooCpp;
   PI.CompileCommand.CommandLine = {"clang", "-xc++", FooCpp};
 
-  StringMap<std::string> Files;
+  llvm::StringMap<std::string> Files;
   Files[FooCpp] = "";
   Files[FooH] = R"cpp(
     namespace ns_in_header {
@@ -362,7 +363,7 @@ TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
   // Build AST for main file with preamble.
   auto AST =
       ParsedAST::build(createInvocationFromCommandLine(Cmd), PreambleData,
-                       MemoryBuffer::getMemBufferCopy(Main.code()),
+                       llvm::MemoryBuffer::getMemBufferCopy(Main.code()),
                        std::make_shared<PCHContainerOperations>(), PI.FS);
   ASSERT_TRUE(AST);
   FileIndex Index;

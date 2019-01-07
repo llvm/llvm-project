@@ -10,12 +10,11 @@
 #include "SyncAPI.h"
 #include "index/Index.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
-void runAddDocument(ClangdServer &Server, PathRef File, StringRef Contents,
-                    WantDiagnostics WantDiags) {
+void runAddDocument(ClangdServer &Server, PathRef File,
+                    llvm::StringRef Contents, WantDiagnostics WantDiags) {
   Server.addDocument(File, Contents, WantDiags);
   if (!Server.blockUntilIdleForTest())
     llvm_unreachable("not idle after addDocument");
@@ -27,7 +26,7 @@ namespace {
 ///    T Result;
 ///    someAsyncFunc(Param1, Param2, /*Callback=*/capture(Result));
 template <typename T> struct CaptureProxy {
-  CaptureProxy(Optional<T> &Target) : Target(&Target) {
+  CaptureProxy(llvm::Optional<T> &Target) : Target(&Target) {
     assert(!Target.hasValue());
   }
 
@@ -39,7 +38,7 @@ template <typename T> struct CaptureProxy {
   }
   CaptureProxy &operator=(CaptureProxy &&) = delete;
 
-  operator unique_function<void(T)>() && {
+  operator llvm::unique_function<void(T)>() && {
     assert(!Future.valid() && "conversion to callback called multiple times");
     Future = Promise.get_future();
     return Bind(
@@ -58,7 +57,7 @@ template <typename T> struct CaptureProxy {
   }
 
 private:
-  Optional<T> *Target;
+  llvm::Optional<T> *Target;
   // Using shared_ptr to workaround compilation errors with MSVC.
   // MSVC only allows default-construcitble and copyable objects as future<>
   // arguments.
@@ -66,68 +65,69 @@ private:
   std::future<std::shared_ptr<T>> Future;
 };
 
-template <typename T> CaptureProxy<T> capture(Optional<T> &Target) {
+template <typename T> CaptureProxy<T> capture(llvm::Optional<T> &Target) {
   return CaptureProxy<T>(Target);
 }
 } // namespace
 
-Expected<CodeCompleteResult> runCodeComplete(ClangdServer &Server, PathRef File,
-                                             Position Pos,
-                                             clangd::CodeCompleteOptions Opts) {
-  Optional<Expected<CodeCompleteResult>> Result;
+llvm::Expected<CodeCompleteResult>
+runCodeComplete(ClangdServer &Server, PathRef File, Position Pos,
+                clangd::CodeCompleteOptions Opts) {
+  llvm::Optional<llvm::Expected<CodeCompleteResult>> Result;
   Server.codeComplete(File, Pos, Opts, capture(Result));
   return std::move(*Result);
 }
 
-Expected<SignatureHelp> runSignatureHelp(ClangdServer &Server, PathRef File,
-                                         Position Pos) {
-  Optional<Expected<SignatureHelp>> Result;
+llvm::Expected<SignatureHelp> runSignatureHelp(ClangdServer &Server,
+                                               PathRef File, Position Pos) {
+  llvm::Optional<llvm::Expected<SignatureHelp>> Result;
   Server.signatureHelp(File, Pos, capture(Result));
   return std::move(*Result);
 }
 
-Expected<std::vector<Location>> runFindDefinitions(ClangdServer &Server,
-                                                   PathRef File, Position Pos) {
-  Optional<Expected<std::vector<Location>>> Result;
+llvm::Expected<std::vector<Location>>
+runFindDefinitions(ClangdServer &Server, PathRef File, Position Pos) {
+  llvm::Optional<llvm::Expected<std::vector<Location>>> Result;
   Server.findDefinitions(File, Pos, capture(Result));
   return std::move(*Result);
 }
 
-Expected<std::vector<DocumentHighlight>>
+llvm::Expected<std::vector<DocumentHighlight>>
 runFindDocumentHighlights(ClangdServer &Server, PathRef File, Position Pos) {
-  Optional<Expected<std::vector<DocumentHighlight>>> Result;
+  llvm::Optional<llvm::Expected<std::vector<DocumentHighlight>>> Result;
   Server.findDocumentHighlights(File, Pos, capture(Result));
   return std::move(*Result);
 }
 
-Expected<std::vector<tooling::Replacement>>
-runRename(ClangdServer &Server, PathRef File, Position Pos, StringRef NewName) {
-  Optional<Expected<std::vector<tooling::Replacement>>> Result;
+llvm::Expected<std::vector<tooling::Replacement>>
+runRename(ClangdServer &Server, PathRef File, Position Pos,
+          llvm::StringRef NewName) {
+  llvm::Optional<llvm::Expected<std::vector<tooling::Replacement>>> Result;
   Server.rename(File, Pos, NewName, capture(Result));
   return std::move(*Result);
 }
 
 std::string runDumpAST(ClangdServer &Server, PathRef File) {
-  Optional<std::string> Result;
+  llvm::Optional<std::string> Result;
   Server.dumpAST(File, capture(Result));
   return std::move(*Result);
 }
 
-Expected<std::vector<SymbolInformation>>
-runWorkspaceSymbols(ClangdServer &Server, StringRef Query, int Limit) {
-  Optional<Expected<std::vector<SymbolInformation>>> Result;
+llvm::Expected<std::vector<SymbolInformation>>
+runWorkspaceSymbols(ClangdServer &Server, llvm::StringRef Query, int Limit) {
+  llvm::Optional<llvm::Expected<std::vector<SymbolInformation>>> Result;
   Server.workspaceSymbols(Query, Limit, capture(Result));
   return std::move(*Result);
 }
 
-Expected<std::vector<DocumentSymbol>> runDocumentSymbols(ClangdServer &Server,
-                                                         PathRef File) {
-  Optional<Expected<std::vector<DocumentSymbol>>> Result;
+llvm::Expected<std::vector<DocumentSymbol>>
+runDocumentSymbols(ClangdServer &Server, PathRef File) {
+  llvm::Optional<llvm::Expected<std::vector<DocumentSymbol>>> Result;
   Server.documentSymbols(File, capture(Result));
   return std::move(*Result);
 }
 
-SymbolSlab runFuzzyFind(const SymbolIndex &Index, StringRef Query) {
+SymbolSlab runFuzzyFind(const SymbolIndex &Index, llvm::StringRef Query) {
   FuzzyFindRequest Req;
   Req.Query = Query;
   Req.AnyScope = true;

@@ -21,16 +21,7 @@ namespace clang {
 namespace ento {
 namespace {
 
-class CustomChecker : public Checker<check::ASTCodeBody> {
-public:
-  void checkASTCodeBody(const Decl *D, AnalysisManager &Mgr,
-                        BugReporter &BR) const {
-    BR.EmitBasicReport(D, this, "Custom diagnostic", categories::LogicError,
-                       "Custom diagnostic description",
-                       PathDiagnosticLocation(D, Mgr.getSourceManager()), {});
-  }
-};
-
+template <typename CheckerT>
 class TestAction : public ASTFrontendAction {
   class DiagConsumer : public PathDiagnosticConsumer {
     llvm::raw_ostream &Output;
@@ -59,21 +50,53 @@ public:
     Compiler.getAnalyzerOpts()->CheckersControlList = {
         {"custom.CustomChecker", true}};
     AnalysisConsumer->AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-      Registry.addChecker<CustomChecker>("custom.CustomChecker", "Description",
-                                         "");
+      Registry.addChecker<CheckerT>("custom.CustomChecker", "Description", "");
     });
     return std::move(AnalysisConsumer);
   }
 };
 
+template <typename CheckerT>
+bool runCheckerOnCode(const std::string &Code, std::string &Diags) {
+  llvm::raw_string_ostream OS(Diags);
+  return tooling::runToolOnCode(new TestAction<CheckerT>(OS), Code);
+}
+template <typename CheckerT>
+bool runCheckerOnCode(const std::string &Code) {
+  std::string Diags;
+  return runCheckerOnCode<CheckerT>(Code, Diags);
+}
+
+
+class CustomChecker : public Checker<check::ASTCodeBody> {
+public:
+  void checkASTCodeBody(const Decl *D, AnalysisManager &Mgr,
+                        BugReporter &BR) const {
+    BR.EmitBasicReport(D, this, "Custom diagnostic", categories::LogicError,
+                       "Custom diagnostic description",
+                       PathDiagnosticLocation(D, Mgr.getSourceManager()), {});
+  }
+};
 
 TEST(RegisterCustomCheckers, RegisterChecker) {
   std::string Diags;
-  {
-    llvm::raw_string_ostream OS(Diags);
-    EXPECT_TRUE(tooling::runToolOnCode(new TestAction(OS), "void f() {;}"));
-  }
+  EXPECT_TRUE(runCheckerOnCode<CustomChecker>("void f() {;}", Diags));
   EXPECT_EQ(Diags, "custom.CustomChecker:Custom diagnostic description");
+}
+
+class LocIncDecChecker : public Checker<check::Location> {
+public:
+  void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
+                     CheckerContext &C) const {
+    auto UnaryOp = dyn_cast<UnaryOperator>(S);
+    if (UnaryOp && !IsLoad)
+      EXPECT_FALSE(UnaryOp->isIncrementOp());
+  }
+};
+
+TEST(RegisterCustomCheckers, CheckLocationIncDec) {
+  EXPECT_TRUE(
+      runCheckerOnCode<LocIncDecChecker>("void f() { int *p; (*p)++; }"));
 }
 
 }
