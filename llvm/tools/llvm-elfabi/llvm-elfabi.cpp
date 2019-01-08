@@ -19,10 +19,27 @@
 #include "llvm/TextAPI/ELF/TBEHandler.h"
 #include <string>
 
+namespace llvm {
+namespace elfabi {
+
+enum class FileFormat {
+  TBE,
+  ELF
+};
+
+} // end namespace elfabi
+} // end namespace llvm
+
 using namespace llvm;
 using namespace llvm::elfabi;
 
 // Command line flags:
+cl::opt<FileFormat> InputFileFormat(
+    cl::desc("Force input file format:"),
+    cl::values(clEnumValN(FileFormat::TBE,
+                          "tbe", "Read `input` as text-based ELF stub"),
+               clEnumValN(FileFormat::ELF,
+                          "elf", "Read `input` as ELF binary")));
 cl::opt<std::string> InputFilePath(cl::Positional, cl::desc("input"),
                                    cl::Required);
 cl::opt<std::string>
@@ -67,20 +84,26 @@ static Expected<std::unique_ptr<ELFStub>> readInputFile(StringRef FilePath) {
   ErrorCollector EC(/*UseFatalErrors=*/false);
 
   // First try to read as a binary (fails fast if not binary).
-  Expected<std::unique_ptr<ELFStub>> StubFromELF =
-      readELFFile(FileReadBuffer->getMemBufferRef());
-  if (StubFromELF) {
-    return std::move(*StubFromELF);
+  if (InputFileFormat.getNumOccurrences() == 0 ||
+      InputFileFormat == FileFormat::ELF) {
+    Expected<std::unique_ptr<ELFStub>> StubFromELF =
+        readELFFile(FileReadBuffer->getMemBufferRef());
+    if (StubFromELF) {
+      return std::move(*StubFromELF);
+    }
+    EC.addError(StubFromELF.takeError(), "BinaryRead");
   }
-  EC.addError(StubFromELF.takeError(), "BinaryRead");
 
   // Fall back to reading as a tbe.
-  Expected<std::unique_ptr<ELFStub>> StubFromTBE =
-      readTBEFromBuffer(FileReadBuffer->getBuffer());
-  if (StubFromTBE) {
-    return std::move(*StubFromTBE);
+  if (InputFileFormat.getNumOccurrences() == 0 ||
+      InputFileFormat == FileFormat::TBE) {
+    Expected<std::unique_ptr<ELFStub>> StubFromTBE =
+        readTBEFromBuffer(FileReadBuffer->getBuffer());
+    if (StubFromTBE) {
+      return std::move(*StubFromTBE);
+    }
+    EC.addError(StubFromTBE.takeError(), "YamlParse");
   }
-  EC.addError(StubFromTBE.takeError(), "YamlParse");
 
   // If both readers fail, build a new error that includes all information.
   EC.addError(createStringError(errc::not_supported,

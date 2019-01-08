@@ -155,7 +155,7 @@ bool SIAnnotateControlFlow::doInitialization(Module &M) {
 /// Is the branch condition uniform or did the StructurizeCFG pass
 /// consider it as such?
 bool SIAnnotateControlFlow::isUniform(BranchInst *T) {
-  return DA->isUniform(T->getCondition()) ||
+  return DA->isUniform(T) ||
          T->getMetadata("structurizecfg.uniform") != nullptr;
 }
 

@@ -104,20 +104,6 @@ llvm::StringRef getFactoryForScale(DurationScale Scale) {
   llvm_unreachable("unknown scaling factor");
 }
 
-/// Matches the n'th item of an initializer list expression.
-///
-/// Example matches y.
-///     (matcher = initListExpr(hasInit(0, expr())))
-/// \code
-///   int x{y}.
-/// \endcode
-AST_MATCHER_P2(InitListExpr, hasInit, unsigned, N,
-               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
-  return N < Node.getNumInits() &&
-          InnerMatcher.matches(*Node.getInit(N)->IgnoreParenImpCasts(), Finder,
-                               Builder);
-}
-
 /// Returns `true` if `Node` is a value which evaluates to a literal `0`.
 bool IsLiteralZero(const MatchFinder::MatchResult &Result, const Expr &Node) {
   auto ZeroMatcher =
@@ -132,13 +118,13 @@ bool IsLiteralZero(const MatchFinder::MatchResult &Result, const Expr &Node) {
   // Now check to see if we're using a functional cast with a scalar
   // initializer expression, e.g. `int{0}`.
   if (selectFirst<const clang::Expr>(
-          "val",
-          match(cxxFunctionalCastExpr(
-                    hasDestinationType(
-                        anyOf(isInteger(), realFloatingPointType())),
-                    hasSourceExpression(initListExpr(hasInit(0, ZeroMatcher))))
-                    .bind("val"),
-                Node, *Result.Context)) != nullptr)
+          "val", match(cxxFunctionalCastExpr(
+                           hasDestinationType(
+                               anyOf(isInteger(), realFloatingPointType())),
+                           hasSourceExpression(initListExpr(
+                               hasInit(0, ignoringParenImpCasts(ZeroMatcher)))))
+                           .bind("val"),
+                       Node, *Result.Context)) != nullptr)
     return true;
 
   return false;

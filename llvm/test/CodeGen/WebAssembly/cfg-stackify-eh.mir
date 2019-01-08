@@ -98,14 +98,14 @@ body: |
     successors: %bb.2, %bb.7
 
     %30:i32 = CATCH_I32 0, implicit-def dead $arguments
-    SET_LOCAL_I32 0, %30:i32, implicit-def $arguments
+    LOCAL_SET_I32 0, %30:i32, implicit-def $arguments
     %16:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
     %27:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
     STORE_I32 2, @__wasm_lpad_context + 4, %16:i32, %27:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack :: (store 4 into `i8** getelementptr inbounds ({ i32, i8*, i32 }, { i32, i8*, i32 }* @__wasm_lpad_context, i32 0, i32 1)`)
     %26:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
     %25:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
     STORE_I32 2, @__wasm_lpad_context, %26:i32, %25:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack :: (store 4 into `i32* getelementptr inbounds ({ i32, i8*, i32 }, { i32, i8*, i32 }* @__wasm_lpad_context, i32 0, i32 0)`)
-    %32:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %32:i32 = LOCAL_GET_I32 0, implicit-def $arguments
     %31:i32 = CALL_I32 @_Unwind_CallPersonality, %32:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
     DROP_I32 killed %31:i32, implicit-def $arguments
     %24:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
@@ -118,7 +118,7 @@ body: |
   ; predecessors: %bb.1
     successors: %bb.8, %bb.3, %bb.6
 
-    %34:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %34:i32 = LOCAL_GET_I32 0, implicit-def $arguments
     %33:i32 = CALL_I32 @__cxa_begin_catch, %34:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
     DROP_I32 killed %33:i32, implicit-def $arguments
     CALL_VOID @may_throw, implicit-def dead $arguments, implicit $sp32, implicit $sp64
@@ -134,11 +134,11 @@ body: |
     successors: %bb.4, %bb.5
 
     %35:i32 = CATCH_I32 0, implicit-def dead $arguments
-    SET_LOCAL_I32 0, %35:i32, implicit-def $arguments
+    LOCAL_SET_I32 0, %35:i32, implicit-def $arguments
     %21:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
     %20:i32 = CONST_I32 1, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
     STORE_I32 2, @__wasm_lpad_context, %21:i32, %20:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack :: (store 4 into `i32* getelementptr inbounds ({ i32, i8*, i32 }, { i32, i8*, i32 }* @__wasm_lpad_context, i32 0, i32 0)`)
-    %37:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %37:i32 = LOCAL_GET_I32 0, implicit-def $arguments
     %36:i32 = CALL_I32 @_Unwind_CallPersonality, %37:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
     DROP_I32 killed %36:i32, implicit-def $arguments
     %29:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
@@ -151,7 +151,7 @@ body: |
   ; predecessors: %bb.3
     successors: %bb.8
 
-    %39:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %39:i32 = LOCAL_GET_I32 0, implicit-def $arguments
     %38:i32 = CALL_I32 @__cxa_begin_catch, %39:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
     DROP_I32 killed %38:i32, implicit-def $arguments
     CALL_VOID @__cxa_end_catch, implicit-def dead $arguments, implicit $sp32, implicit $sp64
@@ -212,9 +212,9 @@ body: |
     successors: %bb.1, %bb.4
 
     %18:i32 = CONST_I32 0, implicit-def dead $arguments
-    SET_LOCAL_I32 1, %18:i32, implicit-def $arguments
+    LOCAL_SET_I32 1, %18:i32, implicit-def $arguments
     %14:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
-    %19:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %19:i32 = LOCAL_GET_I32 0, implicit-def $arguments
     %9:i32 = GE_S_I32 %14:i32, %19:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
     BR_IF %bb.4, %9:i32, implicit-def $arguments
 
@@ -243,11 +243,11 @@ body: |
   ; predecessors: %bb.1
     successors: %bb.1, %bb.4
 
-    %20:i32 = GET_LOCAL_I32 1, implicit-def $arguments
+    %20:i32 = LOCAL_GET_I32 1, implicit-def $arguments
     %17:i32 = CONST_I32 1, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
     %16:i32 = ADD_I32 %20:i32, %17:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
-    %15:i32 = TEE_LOCAL_I32 1, %16:i32, implicit-def $arguments
-    %21:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %15:i32 = LOCAL_TEE_I32 1, %16:i32, implicit-def $arguments
+    %21:i32 = LOCAL_GET_I32 0, implicit-def $arguments
     %10:i32 = GE_S_I32 %15:i32, %21:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
     BR_UNLESS %bb.1, %10:i32, implicit-def $arguments
   ; CHECK-LABEL: bb.3:
@@ -289,9 +289,9 @@ body: |
     %18:i32 = CALL_I32 @__cxa_begin_catch, %9:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64, implicit-def $value_stack, implicit $value_stack
     DROP_I32 killed %18:i32, implicit-def $arguments
     %19:i32 = CONST_I32 0, implicit-def dead $arguments
-    SET_LOCAL_I32 1, %19:i32, implicit-def $arguments
+    LOCAL_SET_I32 1, %19:i32, implicit-def $arguments
     %14:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
-    %20:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %20:i32 = LOCAL_GET_I32 0, implicit-def $arguments
     %10:i32 = GE_S_I32 %14:i32, %20:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
     BR_IF %bb.3, %10:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
 
@@ -300,11 +300,11 @@ body: |
     successors: %bb.2, %bb.3
 
     CALL_VOID @dont_throw, implicit-def dead $arguments, implicit $sp32, implicit $sp64
-    %21:i32 = GET_LOCAL_I32 1, implicit-def $arguments
+    %21:i32 = LOCAL_GET_I32 1, implicit-def $arguments
     %17:i32 = CONST_I32 1, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
     %16:i32 = ADD_I32 %21:i32, %17:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
-    %15:i32 = TEE_LOCAL_I32 1, %16:i32, implicit-def $arguments
-    %22:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %15:i32 = LOCAL_TEE_I32 1, %16:i32, implicit-def $arguments
+    %22:i32 = LOCAL_GET_I32 0, implicit-def $arguments
     %11:i32 = GE_S_I32 %15:i32, %22:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
     BR_UNLESS %bb.2, %11:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
 

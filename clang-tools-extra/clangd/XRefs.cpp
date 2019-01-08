@@ -18,7 +18,6 @@
 #include "clang/Index/USRGeneration.h"
 #include "llvm/Support/Path.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -46,7 +45,8 @@ void logIfOverflow(const SymbolLocation &Loc) {
 // TUPath is used to resolve the path of URI.
 // FIXME: figure out a good home for it, and share the implementation with
 // FindSymbols.
-Optional<Location> toLSPLocation(const SymbolLocation &Loc, StringRef TUPath) {
+llvm::Optional<Location> toLSPLocation(const SymbolLocation &Loc,
+                                       llvm::StringRef TUPath) {
   if (!Loc)
     return None;
   auto Uri = URI::parse(Loc.FileURI);
@@ -71,7 +71,7 @@ Optional<Location> toLSPLocation(const SymbolLocation &Loc, StringRef TUPath) {
 }
 
 struct MacroDecl {
-  StringRef Name;
+  llvm::StringRef Name;
   const MacroInfo *Info;
 };
 
@@ -88,7 +88,7 @@ class DeclarationAndMacrosFinder : public index::IndexDataConsumer {
   // explicitly in the code.
   // True means the declaration is explicitly referenced at least once; false
   // otherwise.
-  DenseMap<const Decl *, bool> Decls;
+  llvm::DenseMap<const Decl *, bool> Decls;
   const SourceLocation &SearchedLocation;
   const ASTContext &AST;
   Preprocessor &PP;
@@ -134,7 +134,7 @@ public:
 
   bool
   handleDeclOccurence(const Decl *D, index::SymbolRoleSet Roles,
-                      ArrayRef<index::SymbolRelation> Relations,
+                      llvm::ArrayRef<index::SymbolRelation> Relations,
                       SourceLocation Loc,
                       index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
     if (Loc == SearchedLocation) {
@@ -222,8 +222,8 @@ Range getTokenRange(ParsedAST &AST, SourceLocation TokLoc) {
           sourceLocToPosition(SourceMgr, LocEnd)};
 }
 
-Optional<Location> makeLocation(ParsedAST &AST, SourceLocation TokLoc,
-                                StringRef TUPath) {
+llvm::Optional<Location> makeLocation(ParsedAST &AST, SourceLocation TokLoc,
+                                      llvm::StringRef TUPath) {
   const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
   const FileEntry *F = SourceMgr.getFileEntryForID(SourceMgr.getFileID(TokLoc));
   if (!F)
@@ -294,12 +294,12 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
   //   4. Return all populated locations for all symbols, definition first (
   //      which  we think is the users wants most often).
   struct CandidateLocation {
-    Optional<Location> Def;
-    Optional<Location> Decl;
+    llvm::Optional<Location> Def;
+    llvm::Optional<Location> Decl;
   };
   // We respect the order in Symbols.Decls.
-  SmallVector<CandidateLocation, 8> ResultCandidates;
-  DenseMap<SymbolID, size_t> CandidatesIndex;
+  llvm::SmallVector<CandidateLocation, 8> ResultCandidates;
+  llvm::DenseMap<SymbolID, size_t> CandidatesIndex;
 
   // Emit all symbol locations (declaration or definition) from AST.
   for (const DeclInfo &DI : Symbols.Decls) {
@@ -400,7 +400,7 @@ public:
 
   bool
   handleDeclOccurence(const Decl *D, index::SymbolRoleSet Roles,
-                      ArrayRef<index::SymbolRelation> Relations,
+                      llvm::ArrayRef<index::SymbolRelation> Relations,
                       SourceLocation Loc,
                       index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
     assert(D->isCanonicalDecl() && "expect D to be a canonical declaration");
@@ -412,7 +412,7 @@ public:
   }
 
 private:
-  SmallSet<const Decl *, 4> CanonicalTargets;
+  llvm::SmallSet<const Decl *, 4> CanonicalTargets;
   std::vector<Reference> References;
   const ASTContext &AST;
 };
@@ -478,7 +478,7 @@ static std::string typeDeclToString(const TypeDecl *TD) {
       printingPolicyForDecls(TD->getASTContext().getPrintingPolicy());
 
   std::string Name;
-  raw_string_ostream Stream(Name);
+  llvm::raw_string_ostream Stream(Name);
   Type.print(Stream, Policy);
 
   return Stream.str();
@@ -487,12 +487,12 @@ static std::string typeDeclToString(const TypeDecl *TD) {
 /// Return a string representation (e.g. "namespace ns1::ns2") of
 /// the named declaration \p ND.
 static std::string namedDeclQualifiedName(const NamedDecl *ND,
-                                          StringRef Prefix) {
+                                          llvm::StringRef Prefix) {
   PrintingPolicy Policy =
       printingPolicyForDecls(ND->getASTContext().getPrintingPolicy());
 
   std::string Name;
-  raw_string_ostream Stream(Name);
+  llvm::raw_string_ostream Stream(Name);
   Stream << Prefix << ' ';
   ND->printQualifiedName(Stream, Policy);
 
@@ -502,7 +502,7 @@ static std::string namedDeclQualifiedName(const NamedDecl *ND,
 /// Given a declaration \p D, return a human-readable string representing the
 /// scope in which it is declared.  If the declaration is in the global scope,
 /// return the string "global namespace".
-static Optional<std::string> getScopeName(const Decl *D) {
+static llvm::Optional<std::string> getScopeName(const Decl *D) {
   const DeclContext *DC = D->getDeclContext();
 
   if (isa<TranslationUnitDecl>(DC))
@@ -520,7 +520,7 @@ static Optional<std::string> getScopeName(const Decl *D) {
 /// Generate a \p Hover object given the declaration \p D.
 static Hover getHoverContents(const Decl *D) {
   Hover H;
-  Optional<std::string> NamedScope = getScopeName(D);
+  llvm::Optional<std::string> NamedScope = getScopeName(D);
 
   // Generate the "Declared in" section.
   if (NamedScope) {
@@ -536,7 +536,7 @@ static Hover getHoverContents(const Decl *D) {
     D = TD;
 
   std::string DeclText;
-  raw_string_ostream OS(DeclText);
+  llvm::raw_string_ostream OS(DeclText);
 
   PrintingPolicy Policy =
       printingPolicyForDecls(D->getASTContext().getPrintingPolicy());
@@ -553,7 +553,7 @@ static Hover getHoverContents(const Decl *D) {
 static Hover getHoverContents(QualType T, ASTContext &ASTCtx) {
   Hover H;
   std::string TypeText;
-  raw_string_ostream OS(TypeText);
+  llvm::raw_string_ostream OS(TypeText);
   PrintingPolicy Policy = printingPolicyForDecls(ASTCtx.getPrintingPolicy());
   T.print(OS, Policy);
   OS.flush();
@@ -562,7 +562,7 @@ static Hover getHoverContents(QualType T, ASTContext &ASTCtx) {
 }
 
 /// Generate a \p Hover object given the macro \p MacroInf.
-static Hover getHoverContents(StringRef MacroName) {
+static Hover getHoverContents(llvm::StringRef MacroName) {
   Hover H;
 
   H.contents.value = "#define ";
@@ -582,13 +582,13 @@ namespace {
 /// a deduced type set. The AST should be improved to simplify this scenario.
 class DeducedTypeVisitor : public RecursiveASTVisitor<DeducedTypeVisitor> {
   SourceLocation SearchedLocation;
-  Optional<QualType> DeducedType;
+  llvm::Optional<QualType> DeducedType;
 
 public:
   DeducedTypeVisitor(SourceLocation SearchedLocation)
       : SearchedLocation(SearchedLocation) {}
 
-  Optional<QualType> getDeducedType() { return DeducedType; }
+  llvm::Optional<QualType> getDeducedType() { return DeducedType; }
 
   // Handle auto initializers:
   //- auto i = 1;
@@ -663,8 +663,8 @@ public:
 } // namespace
 
 /// Retrieves the deduced type at a given location (auto, decltype).
-Optional<QualType> getDeducedType(ParsedAST &AST,
-                                  SourceLocation SourceLocationBeg) {
+llvm::Optional<QualType> getDeducedType(ParsedAST &AST,
+                                        SourceLocation SourceLocationBeg) {
   Token Tok;
   auto &ASTCtx = AST.getASTContext();
   // Only try to find a deduced type if the token is auto or decltype.
@@ -683,7 +683,7 @@ Optional<QualType> getDeducedType(ParsedAST &AST,
   return V.getDeducedType();
 }
 
-Optional<Hover> getHover(ParsedAST &AST, Position Pos) {
+llvm::Optional<Hover> getHover(ParsedAST &AST, Position Pos) {
   const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
   SourceLocation SourceLocationBeg =
       getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());

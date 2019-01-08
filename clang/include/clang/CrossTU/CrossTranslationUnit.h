@@ -130,8 +130,9 @@ public:
   /// \p IndexName. In case the declaration is found in the index the
   /// corresponding AST file will be loaded.
   ///
-  /// \return Returns an ASTUnit that contains the definition of the looked up
-  /// function.
+  /// \return Returns a pointer to the ASTUnit that contains the definition of
+  /// the looked up function or an Error.
+  /// The returned pointer is never a nullptr.
   ///
   /// Note that the AST files should also be in the \p CrossTUDir.
   llvm::Expected<ASTUnit *> loadExternalAST(StringRef LookupName,

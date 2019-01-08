@@ -276,7 +276,7 @@ define i64 @umin_i64(i64* %p, i64 %v) {
 
 ; CHECK-LABEL: add_sext_i8_i32:
 ; CHECK-NEXT: .functype add_sext_i8_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw8_u.add $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.add_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i32.extend8_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @add_sext_i8_i32(i8* %p, i32 %v) {
@@ -288,7 +288,7 @@ define i32 @add_sext_i8_i32(i8* %p, i32 %v) {
 
 ; CHECK-LABEL: add_sext_i16_i32:
 ; CHECK-NEXT: .functype add_sext_i16_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw16_u.add $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw16.add_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i32.extend16_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @add_sext_i16_i32(i16* %p, i32 %v) {
@@ -300,7 +300,7 @@ define i32 @add_sext_i16_i32(i16* %p, i32 %v) {
 
 ; CHECK-LABEL: add_sext_i8_i64:
 ; CHECK-NEXT: .functype add_sext_i8_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw8_u.add $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw8.add_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i64.extend8_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i64 @add_sext_i8_i64(i8* %p, i64 %v) {
@@ -312,7 +312,7 @@ define i64 @add_sext_i8_i64(i8* %p, i64 %v) {
 
 ; CHECK-LABEL: add_sext_i16_i64:
 ; CHECK-NEXT: .functype add_sext_i16_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw16_u.add $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw16.add_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i64.extend16_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i64 @add_sext_i16_i64(i16* %p, i64 %v) {
@@ -322,12 +322,12 @@ define i64 @add_sext_i16_i64(i16* %p, i64 %v) {
   ret i64 %e
 }
 
-; 32->64 sext rmw gets selected as i32.atomic.rmw.add, i64_extend_s/i32
+; 32->64 sext rmw gets selected as i32.atomic.rmw.add, i64.extend_i32_s
 ; CHECK-LABEL: add_sext_i32_i64:
 ; CHECK-NEXT: .functype add_sext_i32_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i32.wrap/i64 $push0=, $1{{$}}
+; CHECK: i32.wrap_i64 $push0=, $1{{$}}
 ; CHECK: i32.atomic.rmw.add $push1=, 0($0), $pop0{{$}}
-; CHECK-NEXT: i64.extend_s/i32 $push2=, $pop1{{$}}
+; CHECK-NEXT: i64.extend_i32_s $push2=, $pop1{{$}}
 ; CHECK-NEXT: return $pop2{{$}}
 define i64 @add_sext_i32_i64(i32* %p, i64 %v) {
   %t = trunc i64 %v to i32
@@ -340,7 +340,7 @@ define i64 @add_sext_i32_i64(i32* %p, i64 %v) {
 
 ; CHECK-LABEL: sub_sext_i8_i32:
 ; CHECK-NEXT: .functype sub_sext_i8_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw8_u.sub $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.sub_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i32.extend8_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @sub_sext_i8_i32(i8* %p, i32 %v) {
@@ -352,7 +352,7 @@ define i32 @sub_sext_i8_i32(i8* %p, i32 %v) {
 
 ; CHECK-LABEL: sub_sext_i16_i32:
 ; CHECK-NEXT: .functype sub_sext_i16_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw16_u.sub $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw16.sub_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i32.extend16_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @sub_sext_i16_i32(i16* %p, i32 %v) {
@@ -364,7 +364,7 @@ define i32 @sub_sext_i16_i32(i16* %p, i32 %v) {
 
 ; CHECK-LABEL: sub_sext_i8_i64:
 ; CHECK-NEXT: .functype sub_sext_i8_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw8_u.sub $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw8.sub_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i64.extend8_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i64 @sub_sext_i8_i64(i8* %p, i64 %v) {
@@ -376,7 +376,7 @@ define i64 @sub_sext_i8_i64(i8* %p, i64 %v) {
 
 ; CHECK-LABEL: sub_sext_i16_i64:
 ; CHECK-NEXT: .functype sub_sext_i16_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw16_u.sub $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw16.sub_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i64.extend16_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i64 @sub_sext_i16_i64(i16* %p, i64 %v) {
@@ -386,12 +386,12 @@ define i64 @sub_sext_i16_i64(i16* %p, i64 %v) {
   ret i64 %e
 }
 
-; 32->64 sext rmw gets selected as i32.atomic.rmw.sub, i64_extend_s/i32
+; 32->64 sext rmw gets selected as i32.atomic.rmw.sub, i64.extend_i32_s
 ; CHECK-LABEL: sub_sext_i32_i64:
 ; CHECK-NEXT: .functype sub_sext_i32_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i32.wrap/i64 $push0=, $1
+; CHECK: i32.wrap_i64 $push0=, $1
 ; CHECK: i32.atomic.rmw.sub $push1=, 0($0), $pop0{{$}}
-; CHECK-NEXT: i64.extend_s/i32 $push2=, $pop1{{$}}
+; CHECK-NEXT: i64.extend_i32_s $push2=, $pop1{{$}}
 ; CHECK-NEXT: return $pop2{{$}}
 define i64 @sub_sext_i32_i64(i32* %p, i64 %v) {
   %t = trunc i64 %v to i32
@@ -404,7 +404,7 @@ define i64 @sub_sext_i32_i64(i32* %p, i64 %v) {
 
 ; CHECK-LABEL: and_sext_i8_i32:
 ; CHECK-NEXT: .functype and_sext_i8_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw8_u.and $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.and_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i32.extend8_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @and_sext_i8_i32(i8* %p, i32 %v) {
@@ -416,7 +416,7 @@ define i32 @and_sext_i8_i32(i8* %p, i32 %v) {
 
 ; CHECK-LABEL: and_sext_i16_i32:
 ; CHECK-NEXT: .functype and_sext_i16_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw16_u.and $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw16.and_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i32.extend16_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @and_sext_i16_i32(i16* %p, i32 %v) {
@@ -428,7 +428,7 @@ define i32 @and_sext_i16_i32(i16* %p, i32 %v) {
 
 ; CHECK-LABEL: and_sext_i8_i64:
 ; CHECK-NEXT: .functype and_sext_i8_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw8_u.and $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw8.and_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i64.extend8_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i64 @and_sext_i8_i64(i8* %p, i64 %v) {
@@ -440,7 +440,7 @@ define i64 @and_sext_i8_i64(i8* %p, i64 %v) {
 
 ; CHECK-LABEL: and_sext_i16_i64:
 ; CHECK-NEXT: .functype and_sext_i16_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw16_u.and $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw16.and_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i64.extend16_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i64 @and_sext_i16_i64(i16* %p, i64 %v) {
@@ -450,12 +450,12 @@ define i64 @and_sext_i16_i64(i16* %p, i64 %v) {
   ret i64 %e
 }
 
-; 32->64 sext rmw gets selected as i32.atomic.rmw.and, i64_extend_s/i32
+; 32->64 sext rmw gets selected as i32.atomic.rmw.and, i64.extend_i32_s
 ; CHECK-LABEL: and_sext_i32_i64:
 ; CHECK-NEXT: .functype and_sext_i32_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i32.wrap/i64 $push0=, $1{{$}}
+; CHECK: i32.wrap_i64 $push0=, $1{{$}}
 ; CHECK: i32.atomic.rmw.and $push1=, 0($0), $pop0{{$}}
-; CHECK-NEXT: i64.extend_s/i32 $push2=, $pop1{{$}}
+; CHECK-NEXT: i64.extend_i32_s $push2=, $pop1{{$}}
 ; CHECK-NEXT: return $pop2{{$}}
 define i64 @and_sext_i32_i64(i32* %p, i64 %v) {
   %t = trunc i64 %v to i32
@@ -468,7 +468,7 @@ define i64 @and_sext_i32_i64(i32* %p, i64 %v) {
 
 ; CHECK-LABEL: or_sext_i8_i32:
 ; CHECK-NEXT: .functype or_sext_i8_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw8_u.or $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.or_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i32.extend8_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @or_sext_i8_i32(i8* %p, i32 %v) {
@@ -480,7 +480,7 @@ define i32 @or_sext_i8_i32(i8* %p, i32 %v) {
 
 ; CHECK-LABEL: or_sext_i16_i32:
 ; CHECK-NEXT: .functype or_sext_i16_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw16_u.or $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw16.or_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i32.extend16_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @or_sext_i16_i32(i16* %p, i32 %v) {
@@ -492,7 +492,7 @@ define i32 @or_sext_i16_i32(i16* %p, i32 %v) {
 
 ; CHECK-LABEL: or_sext_i8_i64:
 ; CHECK-NEXT: .functype or_sext_i8_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw8_u.or $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw8.or_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i64.extend8_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i64 @or_sext_i8_i64(i8* %p, i64 %v) {
@@ -504,7 +504,7 @@ define i64 @or_sext_i8_i64(i8* %p, i64 %v) {
 
 ; CHECK-LABEL: or_sext_i16_i64:
 ; CHECK-NEXT: .functype or_sext_i16_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw16_u.or $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw16.or_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i64.extend16_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i64 @or_sext_i16_i64(i16* %p, i64 %v) {
@@ -514,12 +514,12 @@ define i64 @or_sext_i16_i64(i16* %p, i64 %v) {
   ret i64 %e
 }
 
-; 32->64 sext rmw gets selected as i32.atomic.rmw.or, i64_extend_s/i32
+; 32->64 sext rmw gets selected as i32.atomic.rmw.or, i64.extend_i32_s
 ; CHECK-LABEL: or_sext_i32_i64:
 ; CHECK-NEXT: .functype or_sext_i32_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i32.wrap/i64 $push0=, $1{{$}}
+; CHECK: i32.wrap_i64 $push0=, $1{{$}}
 ; CHECK: i32.atomic.rmw.or $push1=, 0($0), $pop0{{$}}
-; CHECK-NEXT: i64.extend_s/i32 $push2=, $pop1{{$}}
+; CHECK-NEXT: i64.extend_i32_s $push2=, $pop1{{$}}
 ; CHECK-NEXT: return $pop2{{$}}
 define i64 @or_sext_i32_i64(i32* %p, i64 %v) {
   %t = trunc i64 %v to i32
@@ -532,7 +532,7 @@ define i64 @or_sext_i32_i64(i32* %p, i64 %v) {
 
 ; CHECK-LABEL: xor_sext_i8_i32:
 ; CHECK-NEXT: .functype xor_sext_i8_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw8_u.xor $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.xor_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i32.extend8_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @xor_sext_i8_i32(i8* %p, i32 %v) {
@@ -544,7 +544,7 @@ define i32 @xor_sext_i8_i32(i8* %p, i32 %v) {
 
 ; CHECK-LABEL: xor_sext_i16_i32:
 ; CHECK-NEXT: .functype xor_sext_i16_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw16_u.xor $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw16.xor_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i32.extend16_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @xor_sext_i16_i32(i16* %p, i32 %v) {
@@ -556,7 +556,7 @@ define i32 @xor_sext_i16_i32(i16* %p, i32 %v) {
 
 ; CHECK-LABEL: xor_sext_i8_i64:
 ; CHECK-NEXT: .functype xor_sext_i8_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw8_u.xor $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw8.xor_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i64.extend8_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i64 @xor_sext_i8_i64(i8* %p, i64 %v) {
@@ -568,7 +568,7 @@ define i64 @xor_sext_i8_i64(i8* %p, i64 %v) {
 
 ; CHECK-LABEL: xor_sext_i16_i64:
 ; CHECK-NEXT: .functype xor_sext_i16_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw16_u.xor $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw16.xor_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i64.extend16_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i64 @xor_sext_i16_i64(i16* %p, i64 %v) {
@@ -578,12 +578,12 @@ define i64 @xor_sext_i16_i64(i16* %p, i64 %v) {
   ret i64 %e
 }
 
-; 32->64 sext rmw gets selected as i32.atomic.rmw.xor, i64_extend_s/i32
+; 32->64 sext rmw gets selected as i32.atomic.rmw.xor, i64.extend_i32_s
 ; CHECK-LABEL: xor_sext_i32_i64:
 ; CHECK-NEXT: .functype xor_sext_i32_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i32.wrap/i64 $push0=, $1{{$}}
+; CHECK: i32.wrap_i64 $push0=, $1{{$}}
 ; CHECK: i32.atomic.rmw.xor $push1=, 0($0), $pop0{{$}}
-; CHECK-NEXT: i64.extend_s/i32 $push2=, $pop1{{$}}
+; CHECK-NEXT: i64.extend_i32_s $push2=, $pop1{{$}}
 ; CHECK-NEXT: return $pop2{{$}}
 define i64 @xor_sext_i32_i64(i32* %p, i64 %v) {
   %t = trunc i64 %v to i32
@@ -596,7 +596,7 @@ define i64 @xor_sext_i32_i64(i32* %p, i64 %v) {
 
 ; CHECK-LABEL: xchg_sext_i8_i32:
 ; CHECK-NEXT: .functype xchg_sext_i8_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw8_u.xchg $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.xchg_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i32.extend8_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @xchg_sext_i8_i32(i8* %p, i32 %v) {
@@ -608,7 +608,7 @@ define i32 @xchg_sext_i8_i32(i8* %p, i32 %v) {
 
 ; CHECK-LABEL: xchg_sext_i16_i32:
 ; CHECK-NEXT: .functype xchg_sext_i16_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw16_u.xchg $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw16.xchg_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i32.extend16_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @xchg_sext_i16_i32(i16* %p, i32 %v) {
@@ -620,7 +620,7 @@ define i32 @xchg_sext_i16_i32(i16* %p, i32 %v) {
 
 ; CHECK-LABEL: xchg_sext_i8_i64:
 ; CHECK-NEXT: .functype xchg_sext_i8_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw8_u.xchg $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw8.xchg_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i64.extend8_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i64 @xchg_sext_i8_i64(i8* %p, i64 %v) {
@@ -632,7 +632,7 @@ define i64 @xchg_sext_i8_i64(i8* %p, i64 %v) {
 
 ; CHECK-LABEL: xchg_sext_i16_i64:
 ; CHECK-NEXT: .functype xchg_sext_i16_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw16_u.xchg $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw16.xchg_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: i64.extend16_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i64 @xchg_sext_i16_i64(i16* %p, i64 %v) {
@@ -642,12 +642,12 @@ define i64 @xchg_sext_i16_i64(i16* %p, i64 %v) {
   ret i64 %e
 }
 
-; 32->64 sext rmw gets selected as i32.atomic.rmw.xchg, i64_extend_s/i32
+; 32->64 sext rmw gets selected as i32.atomic.rmw.xchg, i64.extend_i32_s
 ; CHECK-LABEL: xchg_sext_i32_i64:
 ; CHECK-NEXT: .functype xchg_sext_i32_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i32.wrap/i64 $push0=, $1{{$}}
+; CHECK: i32.wrap_i64 $push0=, $1{{$}}
 ; CHECK: i32.atomic.rmw.xchg $push1=, 0($0), $pop0{{$}}
-; CHECK-NEXT: i64.extend_s/i32 $push2=, $pop1{{$}}
+; CHECK-NEXT: i64.extend_i32_s $push2=, $pop1{{$}}
 ; CHECK-NEXT: return $pop2{{$}}
 define i64 @xchg_sext_i32_i64(i32* %p, i64 %v) {
   %t = trunc i64 %v to i32
@@ -660,7 +660,7 @@ define i64 @xchg_sext_i32_i64(i32* %p, i64 %v) {
 
 ; CHECK-LABEL: cmpxchg_sext_i8_i32:
 ; CHECK-NEXT: .functype cmpxchg_sext_i8_i32 (i32, i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw8_u.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK: i32.atomic.rmw8.cmpxchg_u $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: i32.extend8_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @cmpxchg_sext_i8_i32(i8* %p, i32 %exp, i32 %new) {
@@ -674,7 +674,7 @@ define i32 @cmpxchg_sext_i8_i32(i8* %p, i32 %exp, i32 %new) {
 
 ; CHECK-LABEL: cmpxchg_sext_i16_i32:
 ; CHECK-NEXT: .functype cmpxchg_sext_i16_i32 (i32, i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw16_u.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK: i32.atomic.rmw16.cmpxchg_u $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: i32.extend16_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i32 @cmpxchg_sext_i16_i32(i16* %p, i32 %exp, i32 %new) {
@@ -688,7 +688,7 @@ define i32 @cmpxchg_sext_i16_i32(i16* %p, i32 %exp, i32 %new) {
 
 ; CHECK-LABEL: cmpxchg_sext_i8_i64:
 ; CHECK-NEXT: .functype cmpxchg_sext_i8_i64 (i32, i64, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw8_u.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK: i64.atomic.rmw8.cmpxchg_u $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: i64.extend8_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i64 @cmpxchg_sext_i8_i64(i8* %p, i64 %exp, i64 %new) {
@@ -702,7 +702,7 @@ define i64 @cmpxchg_sext_i8_i64(i8* %p, i64 %exp, i64 %new) {
 
 ; CHECK-LABEL: cmpxchg_sext_i16_i64:
 ; CHECK-NEXT: .functype cmpxchg_sext_i16_i64 (i32, i64, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw16_u.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK: i64.atomic.rmw16.cmpxchg_u $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: i64.extend16_s $push1=, $pop0{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
 define i64 @cmpxchg_sext_i16_i64(i16* %p, i64 %exp, i64 %new) {
@@ -714,13 +714,13 @@ define i64 @cmpxchg_sext_i16_i64(i16* %p, i64 %exp, i64 %new) {
   ret i64 %e
 }
 
-; 32->64 sext rmw gets selected as i32.atomic.rmw.cmpxchg, i64_extend_s/i32
+; 32->64 sext rmw gets selected as i32.atomic.rmw.cmpxchg, i64.extend_i32_s
 ; CHECK-LABEL: cmpxchg_sext_i32_i64:
 ; CHECK-NEXT: .functype cmpxchg_sext_i32_i64 (i32, i64, i64) -> (i64){{$}}
-; CHECK: i32.wrap/i64 $push1=, $1{{$}}
-; CHECK-NEXT: i32.wrap/i64 $push0=, $2{{$}}
+; CHECK: i32.wrap_i64 $push1=, $1{{$}}
+; CHECK-NEXT: i32.wrap_i64 $push0=, $2{{$}}
 ; CHECK-NEXT: i32.atomic.rmw.cmpxchg $push2=, 0($0), $pop1, $pop0{{$}}
-; CHECK-NEXT: i64.extend_s/i32 $push3=, $pop2{{$}}
+; CHECK-NEXT: i64.extend_i32_s $push3=, $pop2{{$}}
 ; CHECK-NEXT: return $pop3{{$}}
 define i64 @cmpxchg_sext_i32_i64(i32* %p, i64 %exp, i64 %new) {
   %exp_t = trunc i64 %exp to i32
@@ -739,7 +739,7 @@ define i64 @cmpxchg_sext_i32_i64(i32* %p, i64 %exp, i64 %new) {
 ; CHECK-LABEL: nand_sext_i8_i32:
 ; CHECK-NEXT: .functype nand_sext_i8_i32 (i32, i32) -> (i32){{$}}
 ; CHECK: loop
-; CHECK: i32.atomic.rmw8_u.cmpxchg
+; CHECK: i32.atomic.rmw8.cmpxchg_u
 ; CHECK: i32.extend8_s
 define i32 @nand_sext_i8_i32(i8* %p, i32 %v) {
   %t = trunc i32 %v to i8
@@ -751,7 +751,7 @@ define i32 @nand_sext_i8_i32(i8* %p, i32 %v) {
 ; CHECK-LABEL: nand_sext_i16_i32:
 ; CHECK-NEXT: .functype nand_sext_i16_i32 (i32, i32) -> (i32){{$}}
 ; CHECK: loop
-; CHECK: i32.atomic.rmw16_u.cmpxchg
+; CHECK: i32.atomic.rmw16.cmpxchg_u
 ; CHECK: i32.extend16_s
 define i32 @nand_sext_i16_i32(i16* %p, i32 %v) {
   %t = trunc i32 %v to i16
@@ -760,12 +760,12 @@ define i32 @nand_sext_i16_i32(i16* %p, i32 %v) {
   ret i32 %e
 }
 
-; FIXME Currently this cannot make use of i64.atomic.rmw8_u.cmpxchg
+; FIXME Currently this cannot make use of i64.atomic.rmw8.cmpxchg_u
 ; CHECK-LABEL: nand_sext_i8_i64:
 ; CHECK-NEXT: .functype nand_sext_i8_i64 (i32, i64) -> (i64){{$}}
 ; CHECK: loop
-; CHECK: i32.atomic.rmw8_u.cmpxchg
-; CHECK: i64.extend_u/i32
+; CHECK: i32.atomic.rmw8.cmpxchg_u
+; CHECK: i64.extend_i32_u
 ; CHECK: i64.extend8_s
 define i64 @nand_sext_i8_i64(i8* %p, i64 %v) {
   %t = trunc i64 %v to i8
@@ -774,12 +774,12 @@ define i64 @nand_sext_i8_i64(i8* %p, i64 %v) {
   ret i64 %e
 }
 
-; FIXME Currently this cannot make use of i64.atomic.rmw16_u.cmpxchg
+; FIXME Currently this cannot make use of i64.atomic.rmw16.cmpxchg_u
 ; CHECK-LABEL: nand_sext_i16_i64:
 ; CHECK-NEXT: .functype nand_sext_i16_i64 (i32, i64) -> (i64){{$}}
 ; CHECK: loop
-; CHECK: i32.atomic.rmw16_u.cmpxchg
-; CHECK: i64.extend_u/i32
+; CHECK: i32.atomic.rmw16.cmpxchg_u
+; CHECK: i64.extend_i32_u
 ; CHECK: i64.extend16_s
 define i64 @nand_sext_i16_i64(i16* %p, i64 %v) {
   %t = trunc i64 %v to i16
@@ -788,12 +788,12 @@ define i64 @nand_sext_i16_i64(i16* %p, i64 %v) {
   ret i64 %e
 }
 
-; 32->64 sext rmw gets selected as i32.atomic.rmw.nand, i64_extend_s/i32
+; 32->64 sext rmw gets selected as i32.atomic.rmw.nand, i64.extend_i32_s
 ; CHECK-LABEL: nand_sext_i32_i64:
 ; CHECK-NEXT: .functype nand_sext_i32_i64 (i32, i64) -> (i64){{$}}
 ; CHECK: loop
 ; CHECK: i32.atomic.rmw.cmpxchg
-; CHECK: i64.extend_s/i32
+; CHECK: i64.extend_i32_s
 define i64 @nand_sext_i32_i64(i32* %p, i64 %v) {
   %t = trunc i64 %v to i32
   %old = atomicrmw nand i32* %p, i32 %t seq_cst
@@ -809,7 +809,7 @@ define i64 @nand_sext_i32_i64(i32* %p, i64 %v) {
 
 ; CHECK-LABEL: add_zext_i8_i32:
 ; CHECK-NEXT: .functype add_zext_i8_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw8_u.add $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.add_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @add_zext_i8_i32(i8* %p, i32 %v) {
   %t = trunc i32 %v to i8
@@ -820,7 +820,7 @@ define i32 @add_zext_i8_i32(i8* %p, i32 %v) {
 
 ; CHECK-LABEL: add_zext_i16_i32:
 ; CHECK-NEXT: .functype add_zext_i16_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw16_u.add $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw16.add_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @add_zext_i16_i32(i16* %p, i32 %v) {
   %t = trunc i32 %v to i16
@@ -831,7 +831,7 @@ define i32 @add_zext_i16_i32(i16* %p, i32 %v) {
 
 ; CHECK-LABEL: add_zext_i8_i64:
 ; CHECK-NEXT: .functype add_zext_i8_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw8_u.add $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw8.add_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @add_zext_i8_i64(i8* %p, i64 %v) {
   %t = trunc i64 %v to i8
@@ -842,7 +842,7 @@ define i64 @add_zext_i8_i64(i8* %p, i64 %v) {
 
 ; CHECK-LABEL: add_zext_i16_i64:
 ; CHECK-NEXT: .functype add_zext_i16_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw16_u.add $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw16.add_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @add_zext_i16_i64(i16* %p, i64 %v) {
   %t = trunc i64 %v to i16
@@ -853,7 +853,7 @@ define i64 @add_zext_i16_i64(i16* %p, i64 %v) {
 
 ; CHECK-LABEL: add_zext_i32_i64:
 ; CHECK-NEXT: .functype add_zext_i32_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw32_u.add $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw32.add_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @add_zext_i32_i64(i32* %p, i64 %v) {
   %t = trunc i64 %v to i32
@@ -866,7 +866,7 @@ define i64 @add_zext_i32_i64(i32* %p, i64 %v) {
 
 ; CHECK-LABEL: sub_zext_i8_i32:
 ; CHECK-NEXT: .functype sub_zext_i8_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw8_u.sub $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.sub_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @sub_zext_i8_i32(i8* %p, i32 %v) {
   %t = trunc i32 %v to i8
@@ -877,7 +877,7 @@ define i32 @sub_zext_i8_i32(i8* %p, i32 %v) {
 
 ; CHECK-LABEL: sub_zext_i16_i32:
 ; CHECK-NEXT: .functype sub_zext_i16_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw16_u.sub $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw16.sub_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @sub_zext_i16_i32(i16* %p, i32 %v) {
   %t = trunc i32 %v to i16
@@ -888,7 +888,7 @@ define i32 @sub_zext_i16_i32(i16* %p, i32 %v) {
 
 ; CHECK-LABEL: sub_zext_i8_i64:
 ; CHECK-NEXT: .functype sub_zext_i8_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw8_u.sub $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw8.sub_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @sub_zext_i8_i64(i8* %p, i64 %v) {
   %t = trunc i64 %v to i8
@@ -899,7 +899,7 @@ define i64 @sub_zext_i8_i64(i8* %p, i64 %v) {
 
 ; CHECK-LABEL: sub_zext_i16_i64:
 ; CHECK-NEXT: .functype sub_zext_i16_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw16_u.sub $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw16.sub_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @sub_zext_i16_i64(i16* %p, i64 %v) {
   %t = trunc i64 %v to i16
@@ -910,7 +910,7 @@ define i64 @sub_zext_i16_i64(i16* %p, i64 %v) {
 
 ; CHECK-LABEL: sub_zext_i32_i64:
 ; CHECK-NEXT: .functype sub_zext_i32_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw32_u.sub $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw32.sub_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @sub_zext_i32_i64(i32* %p, i64 %v) {
   %t = trunc i64 %v to i32
@@ -923,7 +923,7 @@ define i64 @sub_zext_i32_i64(i32* %p, i64 %v) {
 
 ; CHECK-LABEL: and_zext_i8_i32:
 ; CHECK-NEXT: .functype and_zext_i8_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw8_u.and $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.and_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @and_zext_i8_i32(i8* %p, i32 %v) {
   %t = trunc i32 %v to i8
@@ -934,7 +934,7 @@ define i32 @and_zext_i8_i32(i8* %p, i32 %v) {
 
 ; CHECK-LABEL: and_zext_i16_i32:
 ; CHECK-NEXT: .functype and_zext_i16_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw16_u.and $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw16.and_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @and_zext_i16_i32(i16* %p, i32 %v) {
   %t = trunc i32 %v to i16
@@ -945,7 +945,7 @@ define i32 @and_zext_i16_i32(i16* %p, i32 %v) {
 
 ; CHECK-LABEL: and_zext_i8_i64:
 ; CHECK-NEXT: .functype and_zext_i8_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw8_u.and $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw8.and_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @and_zext_i8_i64(i8* %p, i64 %v) {
   %t = trunc i64 %v to i8
@@ -956,7 +956,7 @@ define i64 @and_zext_i8_i64(i8* %p, i64 %v) {
 
 ; CHECK-LABEL: and_zext_i16_i64:
 ; CHECK-NEXT: .functype and_zext_i16_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw16_u.and $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw16.and_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @and_zext_i16_i64(i16* %p, i64 %v) {
   %t = trunc i64 %v to i16
@@ -967,7 +967,7 @@ define i64 @and_zext_i16_i64(i16* %p, i64 %v) {
 
 ; CHECK-LABEL: and_zext_i32_i64:
 ; CHECK-NEXT: .functype and_zext_i32_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw32_u.and $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw32.and_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @and_zext_i32_i64(i32* %p, i64 %v) {
   %t = trunc i64 %v to i32
@@ -980,7 +980,7 @@ define i64 @and_zext_i32_i64(i32* %p, i64 %v) {
 
 ; CHECK-LABEL: or_zext_i8_i32:
 ; CHECK-NEXT: .functype or_zext_i8_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw8_u.or $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.or_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @or_zext_i8_i32(i8* %p, i32 %v) {
   %t = trunc i32 %v to i8
@@ -991,7 +991,7 @@ define i32 @or_zext_i8_i32(i8* %p, i32 %v) {
 
 ; CHECK-LABEL: or_zext_i16_i32:
 ; CHECK-NEXT: .functype or_zext_i16_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw16_u.or $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw16.or_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @or_zext_i16_i32(i16* %p, i32 %v) {
   %t = trunc i32 %v to i16
@@ -1002,7 +1002,7 @@ define i32 @or_zext_i16_i32(i16* %p, i32 %v) {
 
 ; CHECK-LABEL: or_zext_i8_i64:
 ; CHECK-NEXT: .functype or_zext_i8_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw8_u.or $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw8.or_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @or_zext_i8_i64(i8* %p, i64 %v) {
   %t = trunc i64 %v to i8
@@ -1013,7 +1013,7 @@ define i64 @or_zext_i8_i64(i8* %p, i64 %v) {
 
 ; CHECK-LABEL: or_zext_i16_i64:
 ; CHECK-NEXT: .functype or_zext_i16_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw16_u.or $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw16.or_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @or_zext_i16_i64(i16* %p, i64 %v) {
   %t = trunc i64 %v to i16
@@ -1024,7 +1024,7 @@ define i64 @or_zext_i16_i64(i16* %p, i64 %v) {
 
 ; CHECK-LABEL: or_zext_i32_i64:
 ; CHECK-NEXT: .functype or_zext_i32_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw32_u.or $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw32.or_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @or_zext_i32_i64(i32* %p, i64 %v) {
   %t = trunc i64 %v to i32
@@ -1037,7 +1037,7 @@ define i64 @or_zext_i32_i64(i32* %p, i64 %v) {
 
 ; CHECK-LABEL: xor_zext_i8_i32:
 ; CHECK-NEXT: .functype xor_zext_i8_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw8_u.xor $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.xor_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @xor_zext_i8_i32(i8* %p, i32 %v) {
   %t = trunc i32 %v to i8
@@ -1048,7 +1048,7 @@ define i32 @xor_zext_i8_i32(i8* %p, i32 %v) {
 
 ; CHECK-LABEL: xor_zext_i16_i32:
 ; CHECK-NEXT: .functype xor_zext_i16_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw16_u.xor $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw16.xor_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @xor_zext_i16_i32(i16* %p, i32 %v) {
   %t = trunc i32 %v to i16
@@ -1059,7 +1059,7 @@ define i32 @xor_zext_i16_i32(i16* %p, i32 %v) {
 
 ; CHECK-LABEL: xor_zext_i8_i64:
 ; CHECK-NEXT: .functype xor_zext_i8_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw8_u.xor $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw8.xor_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @xor_zext_i8_i64(i8* %p, i64 %v) {
   %t = trunc i64 %v to i8
@@ -1070,7 +1070,7 @@ define i64 @xor_zext_i8_i64(i8* %p, i64 %v) {
 
 ; CHECK-LABEL: xor_zext_i16_i64:
 ; CHECK-NEXT: .functype xor_zext_i16_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw16_u.xor $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw16.xor_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @xor_zext_i16_i64(i16* %p, i64 %v) {
   %t = trunc i64 %v to i16
@@ -1081,7 +1081,7 @@ define i64 @xor_zext_i16_i64(i16* %p, i64 %v) {
 
 ; CHECK-LABEL: xor_zext_i32_i64:
 ; CHECK-NEXT: .functype xor_zext_i32_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw32_u.xor $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw32.xor_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @xor_zext_i32_i64(i32* %p, i64 %v) {
   %t = trunc i64 %v to i32
@@ -1094,7 +1094,7 @@ define i64 @xor_zext_i32_i64(i32* %p, i64 %v) {
 
 ; CHECK-LABEL: xchg_zext_i8_i32:
 ; CHECK-NEXT: .functype xchg_zext_i8_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw8_u.xchg $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.xchg_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @xchg_zext_i8_i32(i8* %p, i32 %v) {
   %t = trunc i32 %v to i8
@@ -1105,7 +1105,7 @@ define i32 @xchg_zext_i8_i32(i8* %p, i32 %v) {
 
 ; CHECK-LABEL: xchg_zext_i16_i32:
 ; CHECK-NEXT: .functype xchg_zext_i16_i32 (i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw16_u.xchg $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw16.xchg_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @xchg_zext_i16_i32(i16* %p, i32 %v) {
   %t = trunc i32 %v to i16
@@ -1116,7 +1116,7 @@ define i32 @xchg_zext_i16_i32(i16* %p, i32 %v) {
 
 ; CHECK-LABEL: xchg_zext_i8_i64:
 ; CHECK-NEXT: .functype xchg_zext_i8_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw8_u.xchg $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw8.xchg_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @xchg_zext_i8_i64(i8* %p, i64 %v) {
   %t = trunc i64 %v to i8
@@ -1127,7 +1127,7 @@ define i64 @xchg_zext_i8_i64(i8* %p, i64 %v) {
 
 ; CHECK-LABEL: xchg_zext_i16_i64:
 ; CHECK-NEXT: .functype xchg_zext_i16_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw16_u.xchg $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw16.xchg_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @xchg_zext_i16_i64(i16* %p, i64 %v) {
   %t = trunc i64 %v to i16
@@ -1138,7 +1138,7 @@ define i64 @xchg_zext_i16_i64(i16* %p, i64 %v) {
 
 ; CHECK-LABEL: xchg_zext_i32_i64:
 ; CHECK-NEXT: .functype xchg_zext_i32_i64 (i32, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw32_u.xchg $push0=, 0($0), $1{{$}}
+; CHECK: i64.atomic.rmw32.xchg_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @xchg_zext_i32_i64(i32* %p, i64 %v) {
   %t = trunc i64 %v to i32
@@ -1151,7 +1151,7 @@ define i64 @xchg_zext_i32_i64(i32* %p, i64 %v) {
 
 ; CHECK-LABEL: cmpxchg_zext_i8_i32:
 ; CHECK-NEXT: .functype cmpxchg_zext_i8_i32 (i32, i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw8_u.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK: i32.atomic.rmw8.cmpxchg_u $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @cmpxchg_zext_i8_i32(i8* %p, i32 %exp, i32 %new) {
   %exp_t = trunc i32 %exp to i8
@@ -1164,7 +1164,7 @@ define i32 @cmpxchg_zext_i8_i32(i8* %p, i32 %exp, i32 %new) {
 
 ; CHECK-LABEL: cmpxchg_zext_i16_i32:
 ; CHECK-NEXT: .functype cmpxchg_zext_i16_i32 (i32, i32, i32) -> (i32){{$}}
-; CHECK: i32.atomic.rmw16_u.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK: i32.atomic.rmw16.cmpxchg_u $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @cmpxchg_zext_i16_i32(i16* %p, i32 %exp, i32 %new) {
   %exp_t = trunc i32 %exp to i16
@@ -1177,7 +1177,7 @@ define i32 @cmpxchg_zext_i16_i32(i16* %p, i32 %exp, i32 %new) {
 
 ; CHECK-LABEL: cmpxchg_zext_i8_i64:
 ; CHECK-NEXT: .functype cmpxchg_zext_i8_i64 (i32, i64, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw8_u.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK: i64.atomic.rmw8.cmpxchg_u $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @cmpxchg_zext_i8_i64(i8* %p, i64 %exp, i64 %new) {
   %exp_t = trunc i64 %exp to i8
@@ -1190,7 +1190,7 @@ define i64 @cmpxchg_zext_i8_i64(i8* %p, i64 %exp, i64 %new) {
 
 ; CHECK-LABEL: cmpxchg_zext_i16_i64:
 ; CHECK-NEXT: .functype cmpxchg_zext_i16_i64 (i32, i64, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw16_u.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK: i64.atomic.rmw16.cmpxchg_u $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @cmpxchg_zext_i16_i64(i16* %p, i64 %exp, i64 %new) {
   %exp_t = trunc i64 %exp to i16
@@ -1203,7 +1203,7 @@ define i64 @cmpxchg_zext_i16_i64(i16* %p, i64 %exp, i64 %new) {
 
 ; CHECK-LABEL: cmpxchg_zext_i32_i64:
 ; CHECK-NEXT: .functype cmpxchg_zext_i32_i64 (i32, i64, i64) -> (i64){{$}}
-; CHECK: i64.atomic.rmw32_u.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK: i64.atomic.rmw32.cmpxchg_u $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @cmpxchg_zext_i32_i64(i32* %p, i64 %exp, i64 %new) {
   %exp_t = trunc i64 %exp to i32
@@ -1222,7 +1222,7 @@ define i64 @cmpxchg_zext_i32_i64(i32* %p, i64 %exp, i64 %new) {
 ; CHECK-LABEL: nand_zext_i8_i32:
 ; CHECK-NEXT: .functype nand_zext_i8_i32 (i32, i32) -> (i32){{$}}
 ; CHECK: loop
-; CHECK: i32.atomic.rmw8_u.cmpxchg
+; CHECK: i32.atomic.rmw8.cmpxchg_u
 define i32 @nand_zext_i8_i32(i8* %p, i32 %v) {
   %t = trunc i32 %v to i8
   %old = atomicrmw nand i8* %p, i8 %t seq_cst
@@ -1233,7 +1233,7 @@ define i32 @nand_zext_i8_i32(i8* %p, i32 %v) {
 ; CHECK-LABEL: nand_zext_i16_i32:
 ; CHECK-NEXT: .functype nand_zext_i16_i32 (i32, i32) -> (i32){{$}}
 ; CHECK: loop
-; CHECK: i32.atomic.rmw16_u.cmpxchg
+; CHECK: i32.atomic.rmw16.cmpxchg_u
 define i32 @nand_zext_i16_i32(i16* %p, i32 %v) {
   %t = trunc i32 %v to i16
   %old = atomicrmw nand i16* %p, i16 %t seq_cst
@@ -1241,12 +1241,12 @@ define i32 @nand_zext_i16_i32(i16* %p, i32 %v) {
   ret i32 %e
 }
 
-; FIXME Currently this cannot make use of i64.atomic.rmw8_u.cmpxchg
+; FIXME Currently this cannot make use of i64.atomic.rmw8.cmpxchg_u
 ; CHECK-LABEL: nand_zext_i8_i64:
 ; CHECK-NEXT: .functype nand_zext_i8_i64 (i32, i64) -> (i64){{$}}
 ; CHECK: loop
-; CHECK: i32.atomic.rmw8_u.cmpxchg
-; CHECK: i64.extend_u/i32
+; CHECK: i32.atomic.rmw8.cmpxchg_u
+; CHECK: i64.extend_i32_u
 define i64 @nand_zext_i8_i64(i8* %p, i64 %v) {
   %t = trunc i64 %v to i8
   %old = atomicrmw nand i8* %p, i8 %t seq_cst
@@ -1254,12 +1254,12 @@ define i64 @nand_zext_i8_i64(i8* %p, i64 %v) {
   ret i64 %e
 }
 
-; FIXME Currently this cannot make use of i64.atomic.rmw16_u.cmpxchg
+; FIXME Currently this cannot make use of i64.atomic.rmw16.cmpxchg_u
 ; CHECK-LABEL: nand_zext_i16_i64:
 ; CHECK-NEXT: .functype nand_zext_i16_i64 (i32, i64) -> (i64){{$}}
 ; CHECK: loop
-; CHECK: i32.atomic.rmw16_u.cmpxchg
-; CHECK: i64.extend_u/i32
+; CHECK: i32.atomic.rmw16.cmpxchg_u
+; CHECK: i64.extend_i32_u
 define i64 @nand_zext_i16_i64(i16* %p, i64 %v) {
   %t = trunc i64 %v to i16
   %old = atomicrmw nand i16* %p, i16 %t seq_cst
@@ -1267,12 +1267,12 @@ define i64 @nand_zext_i16_i64(i16* %p, i64 %v) {
   ret i64 %e
 }
 
-; FIXME Currently this cannot make use of i64.atomic.rmw32_u.cmpxchg
+; FIXME Currently this cannot make use of i64.atomic.rmw32.cmpxchg_u
 ; CHECK-LABEL: nand_zext_i32_i64:
 ; CHECK-NEXT: .functype nand_zext_i32_i64 (i32, i64) -> (i64){{$}}
 ; CHECK: loop
 ; CHECK: i32.atomic.rmw.cmpxchg
-; CHECK: i64.extend_u/i32
+; CHECK: i64.extend_i32_u
 define i64 @nand_zext_i32_i64(i32* %p, i64 %v) {
   %t = trunc i64 %v to i32
   %old = atomicrmw nand i32* %p, i32 %t seq_cst

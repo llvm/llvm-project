@@ -31,6 +31,7 @@ static bool IsOneOf(char c, char c1, char c2) {
 }
 
 bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
+  if (Error()) return false; // simulate empty maps
   char *last = data_.proc_self_maps.data + data_.proc_self_maps.len;
   if (data_.current >= last) return false;
   char *next_line =

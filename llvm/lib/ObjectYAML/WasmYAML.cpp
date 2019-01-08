@@ -377,7 +377,7 @@ void MappingTraits<wasm::WasmInitExpr>::mapping(IO &IO,
   case wasm::WASM_OPCODE_F64_CONST:
     IO.mapRequired("Value", Expr.Value.Float64);
     break;
-  case wasm::WASM_OPCODE_GET_GLOBAL:
+  case wasm::WASM_OPCODE_GLOBAL_GET:
     IO.mapRequired("Index", Expr.Value.Global);
     break;
   }
@@ -491,7 +491,7 @@ void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
   ECase(F32);
   ECase(F64);
   ECase(V128);
-  ECase(ANYFUNC);
+  ECase(FUNCREF);
   ECase(FUNC);
   ECase(NORESULT);
 #undef ECase
@@ -516,14 +516,14 @@ void ScalarEnumerationTraits<WasmYAML::Opcode>::enumeration(
   ECase(I64_CONST);
   ECase(F64_CONST);
   ECase(F32_CONST);
-  ECase(GET_GLOBAL);
+  ECase(GLOBAL_GET);
 #undef ECase
 }
 
 void ScalarEnumerationTraits<WasmYAML::TableType>::enumeration(
     IO &IO, WasmYAML::TableType &Type) {
 #define ECase(X) IO.enumCase(Type, #X, wasm::WASM_TYPE_##X);
-  ECase(ANYFUNC);
+  ECase(FUNCREF);
 #undef ECase
 }
 

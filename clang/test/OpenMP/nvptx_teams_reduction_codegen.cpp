@@ -473,7 +473,6 @@ int bar(int n){
   // CHECK: br label {{%?}}[[READ_CONT]]
   //
   // CHECK: [[READ_CONT]]
-  // CHECK: call void @__kmpc_barrier(%struct.ident_t* @
   // CHECK: ret
 
 #endif

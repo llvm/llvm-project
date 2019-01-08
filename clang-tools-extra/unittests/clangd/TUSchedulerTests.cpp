@@ -18,7 +18,6 @@
 #include <algorithm>
 #include <utility>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -43,8 +42,8 @@ protected:
                        buildTestFS(Files, Timestamps), std::move(Contents)};
   }
 
-  void updateWithCallback(TUScheduler &S, PathRef File, StringRef Contents,
-                          WantDiagnostics WD,
+  void updateWithCallback(TUScheduler &S, PathRef File,
+                          llvm::StringRef Contents, WantDiagnostics WD,
                           llvm::unique_function<void()> CB) {
     WithContextValue Ctx(llvm::make_scope_exit(std::move(CB)));
     S.update(File, getInputs(File, Contents), WD);
@@ -93,8 +92,8 @@ protected:
                            std::move(CB));
   }
 
-  StringMap<std::string> Files;
-  StringMap<time_t> Timestamps;
+  llvm::StringMap<std::string> Files;
+  llvm::StringMap<time_t> Timestamps;
   MockCompilationDatabase CDB;
 };
 

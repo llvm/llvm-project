@@ -52,10 +52,14 @@ int target_teams_fun(int *g){
 // discard capture expressions for te and th
 // HCK1: = alloca i32,
 // HCK1: = alloca i32,
+// HCK1: = alloca i32,
+// HCK1: = alloca i32,
+// HCK1: = alloca i32,
 // HCK1: [[I_CAST:%.+]] = alloca i{{32|64}},
 // HCK1: [[N_CAST:%.+]] = alloca i{{32|64}},
 // HCK1: [[TE_CAST:%.+]] = alloca i{{32|64}},
 // HCK1: [[TH_CAST:%.+]] = alloca i{{32|64}},
+// HCK1: call void @__kmpc_push_target_tripcount(i64 -1, i64 %{{.+}})
 // HCK1: [[I_PAR:%.+]] = load{{.+}}, {{.+}} [[I_CAST]],
 // HCK1: [[N_PAR:%.+]] = load{{.+}}, {{.+}} [[N_CAST]],
 // HCK1: [[TE_PAR:%.+]] = load{{.+}}, {{.+}} [[TE_CAST]],
@@ -73,7 +77,8 @@ int target_teams_fun(int *g){
   // HCK1: call void @[[OFFL2:.+]](i{{64|32}} %{{.+}})
   {{{
   #pragma omp target teams distribute parallel for simd is_device_ptr(g) simdlen(8)
-  for(int i = 0; i < n; i++) {
+  for(
+    int i = 0; i < n; i++) {
     a[i] = g[0];
   }
   }}}

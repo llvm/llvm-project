@@ -57,7 +57,47 @@ The improvements are...
 Improvements to clang-query
 ---------------------------
 
-The improvements are...
+- A new command line parameter ``--preload`` was added to
+  run commands from a file and then start the interactive interpreter.
+
+- The command ``q`` can was added as an alias for ``quit`` to exit the
+  ``clang-query`` interpreter.
+
+- It is now possible to bind to named values (the result of ``let``
+  expressions). For example:
+
+  .. code-block:: none
+
+    let fn functionDecl()
+    match fn.bind("foo")
+
+- It is now possible to write comments in ``clang-query`` code. This
+  is primarily useful when using script-mode. Comments are all content
+  following the ``#`` character on a line:
+
+  .. code-block:: none
+
+    # This is a comment
+    match fn.bind("foo") # This is a trailing comment
+
+- The new ``set print-matcher true`` command now causes ``clang-query`` to
+  print the evaluated matcher together with the resulting bindings.
+
+- A new output mode ``detailed-ast`` was added to ``clang-query``. The
+  existing ``dump`` output mode is now a deprecated alias
+  for ``detailed-ast``
+
+- Output modes can now be enabled or disabled non-exclusively.  For example,
+
+  .. code-block:: none
+
+    # Enable detailed-ast without disabling other output, such as diag
+    enable output detailed-ast
+    m functionDecl()
+
+    # Disable detailed-ast only
+    disable output detailed-ast
+    m functionDecl()
 
 Improvements to clang-rename
 ----------------------------

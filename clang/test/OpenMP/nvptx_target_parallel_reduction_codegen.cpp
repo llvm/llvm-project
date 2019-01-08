@@ -231,7 +231,6 @@ int bar(int n){
   // CHECK: br label {{%?}}[[READ_CONT]]
   //
   // CHECK: [[READ_CONT]]
-  // CHECK: call void @__kmpc_barrier(%struct.ident_t* @
   // CHECK: [[NEXT:%.+]] = add nsw i32 [[CNT]], 1
   // CHECK: store i32 [[NEXT]], i32* [[CNT_ADDR]],
   // CHECK: br label
@@ -468,7 +467,6 @@ int bar(int n){
   //
   // CHECK: [[READ_CONT]]
   // CHECK: call void @__kmpc_barrier(%struct.ident_t* @
-  // CHECK: call void @__kmpc_barrier(%struct.ident_t* @
   // CHECK: [[IS_WARP_MASTER:%.+]] = icmp eq i32 [[LANEID]], 0
   // CHECK: br i1 [[IS_WARP_MASTER]], label {{%?}}[[DO_COPY:.+]], label {{%?}}[[COPY_ELSE:.+]]
   //
@@ -507,7 +505,6 @@ int bar(int n){
   // CHECK: br label {{%?}}[[READ_CONT]]
   //
   // CHECK: [[READ_CONT]]
-  // CHECK: call void @__kmpc_barrier(%struct.ident_t* @
   // CHECK: ret
 
 
@@ -823,7 +820,6 @@ int bar(int n){
   // CHECK: br label {{%?}}[[READ_CONT]]
   //
   // CHECK: [[READ_CONT]]
-  // CHECK: call void @__kmpc_barrier(%struct.ident_t* @
   // CHECK: ret
 
 #endif

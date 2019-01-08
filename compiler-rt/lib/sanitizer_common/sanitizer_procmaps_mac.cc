@@ -88,6 +88,10 @@ MemoryMappingLayout::MemoryMappingLayout(bool cache_enabled) {
 MemoryMappingLayout::~MemoryMappingLayout() {
 }
 
+bool MemoryMappingLayout::Error() const {
+  return false;
+}
+
 // More information about Mach-O headers can be found in mach-o/loader.h
 // Each Mach-O image has a header (mach_header or mach_header_64) starting with
 // a magic number, and a list of linker load commands directly following the

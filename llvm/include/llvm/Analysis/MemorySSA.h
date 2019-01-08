@@ -703,6 +703,7 @@ public:
   ~MemorySSA();
 
   MemorySSAWalker *getWalker();
+  MemorySSAWalker *getSkipSelfWalker();
 
   /// Given a memory Mod/Ref'ing instruction, get the MemorySSA
   /// access associated with it. If passed a basic block gets the memory phi
@@ -828,7 +829,9 @@ protected:
                                       const MemoryUseOrDef *Template = nullptr);
 
 private:
+  class ClobberWalkerBase;
   class CachingWalker;
+  class SkipSelfWalker;
   class OptimizeUses;
 
   CachingWalker *getWalkerImpl();
@@ -882,7 +885,9 @@ private:
   mutable DenseMap<const MemoryAccess *, unsigned long> BlockNumbering;
 
   // Memory SSA building info
+  std::unique_ptr<ClobberWalkerBase> WalkerBase;
   std::unique_ptr<CachingWalker> Walker;
+  std::unique_ptr<SkipSelfWalker> SkipWalker;
   unsigned NextID;
 };
 

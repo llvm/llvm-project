@@ -19,7 +19,8 @@ entry:
   %x2 = getelementptr inbounds %ArrayImpl, %ArrayImpl addrspace(100)* %x1, i32 0, i32 8
   %x3 = load double addrspace(100)*, double addrspace(100)* addrspace(100)* %x2
   %x4 = getelementptr inbounds double, double addrspace(100)* %x3, i64 -1
-  ; Stores that should be to the same location
+  ; These two stores refer to the same memory location
+  ; Even so, they are expected to remain separate stores here
   store double 0.000000e+00, double addrspace(100)* %4
   store double 0.000000e+00, double addrspace(100)* %x4
   ; Third section is the repeated code again, with a later store

@@ -27,9 +27,9 @@ done:
 
 ; CHECK-LABEL: test1:
 ; CHECK: .LBB1_1:
-; CHECK: copy_local $[[NUM0:[0-9]+]]=, $[[NUM1:[0-9]+]]{{$}}
-; CHECK: copy_local $[[NUM1]]=, $[[NUM2:[0-9]+]]{{$}}
-; CHECK: copy_local $[[NUM2]]=, $[[NUM0]]{{$}}
+; CHECK: local.copy $[[NUM0:[0-9]+]]=, $[[NUM1:[0-9]+]]{{$}}
+; CHECK: local.copy $[[NUM1]]=, $[[NUM2:[0-9]+]]{{$}}
+; CHECK: local.copy $[[NUM2]]=, $[[NUM0]]{{$}}
 define i32 @test1(i32 %n) {
 entry:
   br label %loop

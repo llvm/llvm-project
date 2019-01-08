@@ -51,9 +51,13 @@ int target_teams_fun(int *g){
   // discard capture expressions for te and th
   // HCK1: = alloca i32,
   // HCK1: = alloca i32,
+  // HCK1: = alloca i32,
+  // HCK1: = alloca i32,
+  // HCK1: = alloca i32,
   // HCK1: [[N_CAST:%.+]] = alloca i{{32|64}},
   // HCK1: [[TE_CAST:%.+]] = alloca i{{32|64}},
   // HCK1: [[TH_CAST:%.+]] = alloca i{{32|64}},
+  // HCK1: call void @__kmpc_push_target_tripcount(i64 -1, i64 %{{.+}})
   // HCK1: [[N_PAR:%.+]] = load{{.+}}, {{.+}} [[N_CAST]],
   // HCK1: [[TE_PAR:%.+]] = load{{.+}}, {{.+}} [[TE_CAST]],
   // HCK1: [[TH_PAR:%.+]] = load{{.+}}, {{.+}} [[TH_CAST]],

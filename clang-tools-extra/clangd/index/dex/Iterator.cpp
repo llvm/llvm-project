@@ -13,7 +13,6 @@
 #include <cassert>
 #include <numeric>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace dex {
@@ -77,7 +76,7 @@ public:
   }
 
 private:
-  raw_ostream &dump(raw_ostream &OS) const override {
+  llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << "(& ";
     auto Separator = "";
     for (const auto &Child : Children) {
@@ -198,7 +197,7 @@ public:
   }
 
 private:
-  raw_ostream &dump(raw_ostream &OS) const override {
+  llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     OS << "(| ";
     auto Separator = "";
     for (const auto &Child : Children) {
@@ -246,7 +245,9 @@ public:
   size_t estimateSize() const override { return Size; }
 
 private:
-  raw_ostream &dump(raw_ostream &OS) const override { return OS << "true"; }
+  llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
+    return OS << "true";
+  }
 
   DocID Index = 0;
   /// Size of the underlying virtual PostingList.
@@ -271,7 +272,9 @@ public:
   size_t estimateSize() const override { return 0; }
 
 private:
-  raw_ostream &dump(raw_ostream &OS) const override { return OS << "false"; }
+  llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
+    return OS << "false";
+  }
 };
 
 /// Boost iterator is a wrapper around its child which multiplies scores of
@@ -294,7 +297,7 @@ public:
   size_t estimateSize() const override { return Child->estimateSize(); }
 
 private:
-  raw_ostream &dump(raw_ostream &OS) const override {
+  llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     return OS << "(* " << Factor << ' ' << *Child << ')';
   }
 
@@ -334,7 +337,7 @@ public:
   }
 
 private:
-  raw_ostream &dump(raw_ostream &OS) const override {
+  llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
     return OS << "(LIMIT " << Limit << " " << *Child << ')';
   }
 

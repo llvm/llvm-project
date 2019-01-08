@@ -2600,9 +2600,9 @@ pattern_inplace_merge(_ExecutionPolicy&& __exec, _BidirectionalIterator __first,
 
         par_backend::parallel_merge(
             std::forward<_ExecutionPolicy>(__exec), __first, __middle, __middle, __last, __r, __comp,
-            [__n, __comp, __move_values, __move_sequences](_BidirectionalIterator __f1, _BidirectionalIterator __l1,
-                                                           _BidirectionalIterator __f2, _BidirectionalIterator __l2,
-                                                           _Tp* __f3, _Compare __comp) {
+            [__n, __move_values, __move_sequences](_BidirectionalIterator __f1, _BidirectionalIterator __l1,
+                                                   _BidirectionalIterator __f2, _BidirectionalIterator __l2, _Tp* __f3,
+                                                   _Compare __comp) {
                 auto __func = par_backend::serial_move_merge<decltype(__move_values), decltype(__move_sequences)>(
                     __n, __move_values, __move_sequences);
                 __func(__f1, __l1, __f2, __l2, __f3, __comp);
@@ -2938,12 +2938,13 @@ pattern_set_union(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _Forwar
         return std::set_union(__first1, __last1, __first2, __last2, __result, __comp);
 
     typedef typename std::iterator_traits<_OutputIterator>::value_type _T;
-    return parallel_set_union_op(
-        std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __result, __comp,
-        [__comp](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
-                 _ForwardIterator2 __last2, _T* __result,
-                 _Compare __comp) { return std::set_union(__first1, __last1, __first2, __last2, __result, __comp); },
-        __is_vector);
+    return parallel_set_union_op(std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __result,
+                                 __comp,
+                                 [](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
+                                    _ForwardIterator2 __last2, _T* __result, _Compare __comp) {
+                                     return std::set_union(__first1, __last1, __first2, __last2, __result, __comp);
+                                 },
+                                 __is_vector);
 }
 
 //------------------------------------------------------------------------
@@ -3012,14 +3013,14 @@ pattern_set_intersection(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, 
     if (__m1 > __set_algo_cut_off)
     {
         //we know proper offset due to [first1; left_bound_seq_1) < [first2; last2)
-        return parallel_set_op(
-            std::forward<_ExecutionPolicy>(__exec), __left_bound_seq_1, __last1, __first2, __last2, __result, __comp,
-            [](_DifferenceType __n, _DifferenceType __m) { return std::min(__n, __m); },
-            [__comp](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
-                     _ForwardIterator2 __last2, _T* __result, _Compare __comp) {
-                return std::set_intersection(__first1, __last1, __first2, __last2, __result, __comp);
-            },
-            __is_vector);
+        return parallel_set_op(std::forward<_ExecutionPolicy>(__exec), __left_bound_seq_1, __last1, __first2, __last2,
+                               __result, __comp,
+                               [](_DifferenceType __n, _DifferenceType __m) { return std::min(__n, __m); },
+                               [](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
+                                  _ForwardIterator2 __last2, _T* __result, _Compare __comp) {
+                                   return std::set_intersection(__first1, __last1, __first2, __last2, __result, __comp);
+                               },
+                               __is_vector);
     }
 
     const auto __m2 = __last2 - __left_bound_seq_2 + __n1;
@@ -3029,8 +3030,8 @@ pattern_set_intersection(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, 
         __result = parallel_set_op(
             std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __left_bound_seq_2, __last2, __result, __comp,
             [](_DifferenceType __n, _DifferenceType __m) { return std::min(__n, __m); },
-            [__comp](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
-                     _ForwardIterator2 __last2, _T* __result, _Compare __comp) {
+            [](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
+               _ForwardIterator2 __last2, _T* __result, _Compare __comp) {
                 return std::set_intersection(__first2, __last2, __first1, __last1, __result, __comp);
             },
             __is_vector);
@@ -3125,9 +3126,8 @@ pattern_set_difference(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _F
     if (__n1 + __n2 > __set_algo_cut_off)
         return parallel_set_op(std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __result,
                                __comp, [](_DifferenceType __n, _DifferenceType __m) { return __n; },
-                               [__comp](_ForwardIterator1 __first1, _ForwardIterator1 __last1,
-                                        _ForwardIterator2 __first2, _ForwardIterator2 __last2, _T* __result,
-                                        _Compare __comp) {
+                               [](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
+                                  _ForwardIterator2 __last2, _T* __result, _Compare __comp) {
                                    return std::set_difference(__first1, __last1, __first2, __last2, __result, __comp);
                                },
                                __is_vector);
@@ -3188,8 +3188,8 @@ pattern_set_symmetric_difference(_ExecutionPolicy&& __exec, _ForwardIterator1 __
     typedef typename std::iterator_traits<_OutputIterator>::value_type _T;
     return parallel_set_union_op(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __result, __comp,
-        [__comp](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
-                 _ForwardIterator2 __last2, _T* __result, _Compare __comp) {
+        [](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2, _ForwardIterator2 __last2,
+           _T* __result, _Compare __comp) {
             return std::set_symmetric_difference(__first1, __last1, __first2, __last2, __result, __comp);
         },
         __is_vector);

@@ -24,11 +24,11 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
 namespace {
+using ::llvm::Failed;
 using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::Each;
@@ -87,7 +87,7 @@ std::unique_ptr<SymbolIndex> memIndex(std::vector<Symbol> Symbols) {
   return MemIndex::build(std::move(Slab).build(), RefSlab());
 }
 
-CodeCompleteResult completions(ClangdServer &Server, StringRef TestCode,
+CodeCompleteResult completions(ClangdServer &Server, llvm::StringRef TestCode,
                                Position point,
                                std::vector<Symbol> IndexSymbols = {},
                                clangd::CodeCompleteOptions Opts = {}) {
@@ -100,11 +100,12 @@ CodeCompleteResult completions(ClangdServer &Server, StringRef TestCode,
 
   auto File = testPath("foo.cpp");
   runAddDocument(Server, File, TestCode);
-  auto CompletionList = cantFail(runCodeComplete(Server, File, point, Opts));
+  auto CompletionList =
+      llvm::cantFail(runCodeComplete(Server, File, point, Opts));
   return CompletionList;
 }
 
-CodeCompleteResult completions(ClangdServer &Server, StringRef Text,
+CodeCompleteResult completions(ClangdServer &Server, llvm::StringRef Text,
                                std::vector<Symbol> IndexSymbols = {},
                                clangd::CodeCompleteOptions Opts = {},
                                PathRef FilePath = "foo.cpp") {
@@ -119,13 +120,13 @@ CodeCompleteResult completions(ClangdServer &Server, StringRef Text,
   Annotations Test(Text);
   runAddDocument(Server, File, Test.code());
   auto CompletionList =
-      cantFail(runCodeComplete(Server, File, Test.point(), Opts));
+      llvm::cantFail(runCodeComplete(Server, File, Test.point(), Opts));
   return CompletionList;
 }
 
 // Builds a server and runs code completion.
 // If IndexSymbols is non-empty, an index will be built and passed to opts.
-CodeCompleteResult completions(StringRef Text,
+CodeCompleteResult completions(llvm::StringRef Text,
                                std::vector<Symbol> IndexSymbols = {},
                                clangd::CodeCompleteOptions Opts = {},
                                PathRef FilePath = "foo.cpp") {
@@ -137,10 +138,11 @@ CodeCompleteResult completions(StringRef Text,
                      FilePath);
 }
 
-std::string replace(StringRef Haystack, StringRef Needle, StringRef Repl) {
+std::string replace(llvm::StringRef Haystack, llvm::StringRef Needle,
+                    llvm::StringRef Repl) {
   std::string Result;
-  raw_string_ostream OS(Result);
-  std::pair<StringRef, StringRef> Split;
+  llvm::raw_string_ostream OS(Result);
+  std::pair<llvm::StringRef, llvm::StringRef> Split;
   for (Split = Haystack.split(Needle); !Split.second.empty();
        Split = Split.first.split(Needle))
     OS << Split.first << Repl;
@@ -151,11 +153,12 @@ std::string replace(StringRef Haystack, StringRef Needle, StringRef Repl) {
 
 // Helpers to produce fake index symbols for memIndex() or completions().
 // USRFormat is a regex replacement string for the unqualified part of the USR.
-Symbol sym(StringRef QName, index::SymbolKind Kind, StringRef USRFormat) {
+Symbol sym(llvm::StringRef QName, index::SymbolKind Kind,
+           llvm::StringRef USRFormat) {
   Symbol Sym;
   std::string USR = "c:"; // We synthesize a few simple cases of USRs by hand!
   size_t Pos = QName.rfind("::");
-  if (Pos == StringRef::npos) {
+  if (Pos == llvm::StringRef::npos) {
     Sym.Name = QName;
     Sym.Scope = "";
   } else {
@@ -163,23 +166,23 @@ Symbol sym(StringRef QName, index::SymbolKind Kind, StringRef USRFormat) {
     Sym.Scope = QName.substr(0, Pos + 2);
     USR += "@N@" + replace(QName.substr(0, Pos), "::", "@N@"); // ns:: -> @N@ns
   }
-  USR += Regex("^.*$").sub(USRFormat, Sym.Name); // e.g. func -> @F@func#
+  USR += llvm::Regex("^.*$").sub(USRFormat, Sym.Name); // e.g. func -> @F@func#
   Sym.ID = SymbolID(USR);
   Sym.SymInfo.Kind = Kind;
   Sym.Flags |= Symbol::IndexedForCodeCompletion;
   Sym.Origin = SymbolOrigin::Static;
   return Sym;
 }
-Symbol func(StringRef Name) { // Assumes the function has no args.
+Symbol func(llvm::StringRef Name) { // Assumes the function has no args.
   return sym(Name, index::SymbolKind::Function, "@F@\\0#"); // no args
 }
-Symbol cls(StringRef Name) {
+Symbol cls(llvm::StringRef Name) {
   return sym(Name, index::SymbolKind::Class, "@S@\\0");
 }
-Symbol var(StringRef Name) {
+Symbol var(llvm::StringRef Name) {
   return sym(Name, index::SymbolKind::Variable, "@\\0");
 }
-Symbol ns(StringRef Name) {
+Symbol ns(llvm::StringRef Name) {
   return sym(Name, index::SymbolKind::Namespace, "@N@\\0");
 }
 Symbol withReferences(int N, Symbol S) {
@@ -862,7 +865,7 @@ TEST(CompletionTest, IgnoreCompleteInExcludedPPBranchWithRecoveryContext) {
 
   EXPECT_TRUE(Results.Completions.empty());
 }
-SignatureHelp signatures(StringRef Text, Position Point,
+SignatureHelp signatures(llvm::StringRef Text, Position Point,
                          std::vector<Symbol> IndexSymbols = {}) {
   std::unique_ptr<SymbolIndex> Index;
   if (!IndexSymbols.empty())
@@ -877,10 +880,10 @@ SignatureHelp signatures(StringRef Text, Position Point,
   ClangdServer Server(CDB, FS, DiagConsumer, Opts);
   auto File = testPath("foo.cpp");
   runAddDocument(Server, File, Text);
-  return cantFail(runSignatureHelp(Server, File, Point));
+  return llvm::cantFail(runSignatureHelp(Server, File, Point));
 }
 
-SignatureHelp signatures(StringRef Text,
+SignatureHelp signatures(llvm::StringRef Text,
                          std::vector<Symbol> IndexSymbols = {}) {
   Annotations Test(Text);
   return signatures(Test.code(), Test.point(), std::move(IndexSymbols));
@@ -998,18 +1001,19 @@ TEST(SignatureHelpTest, OpeningParen) {
 
 class IndexRequestCollector : public SymbolIndex {
 public:
-  bool fuzzyFind(const FuzzyFindRequest &Req,
-                 function_ref<void(const Symbol &)> Callback) const override {
+  bool
+  fuzzyFind(const FuzzyFindRequest &Req,
+            llvm::function_ref<void(const Symbol &)> Callback) const override {
     std::lock_guard<std::mutex> Lock(Mut);
     Requests.push_back(Req);
     return true;
   }
 
   void lookup(const LookupRequest &,
-              function_ref<void(const Symbol &)>) const override {}
+              llvm::function_ref<void(const Symbol &)>) const override {}
 
   void refs(const RefsRequest &,
-            function_ref<void(const Ref &)>) const override {}
+            llvm::function_ref<void(const Ref &)>) const override {}
 
   // This is incorrect, but IndexRequestCollector is not an actual index and it
   // isn't used in production code.
@@ -1028,7 +1032,7 @@ private:
   mutable std::vector<FuzzyFindRequest> Requests;
 };
 
-std::vector<FuzzyFindRequest> captureIndexRequests(StringRef Code) {
+std::vector<FuzzyFindRequest> captureIndexRequests(llvm::StringRef Code) {
   clangd::CodeCompleteOptions Opts;
   IndexRequestCollector Requests;
   Opts.Index = &Requests;

@@ -1507,25 +1507,38 @@ void ASTStmtReader::VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *E) {
 
 void ASTStmtReader::VisitCXXNewExpr(CXXNewExpr *E) {
   VisitExpr(E);
-  E->GlobalNew = Record.readInt();
-  bool isArray = Record.readInt();
-  E->PassAlignment = Record.readInt();
-  E->UsualArrayDeleteWantsSize = Record.readInt();
+
+  bool IsArray = Record.readInt();
+  bool HasInit = Record.readInt();
   unsigned NumPlacementArgs = Record.readInt();
-  E->StoredInitializationStyle = Record.readInt();
+  bool IsParenTypeId = Record.readInt();
+
+  E->CXXNewExprBits.IsGlobalNew = Record.readInt();
+  E->CXXNewExprBits.ShouldPassAlignment = Record.readInt();
+  E->CXXNewExprBits.UsualArrayDeleteWantsSize = Record.readInt();
+  E->CXXNewExprBits.StoredInitializationStyle = Record.readInt();
+
+  assert((IsArray == E->isArray()) && "Wrong IsArray!");
+  assert((HasInit == E->hasInitializer()) && "Wrong HasInit!");
+  assert((NumPlacementArgs == E->getNumPlacementArgs()) &&
+         "Wrong NumPlacementArgs!");
+  assert((IsParenTypeId == E->isParenTypeId()) && "Wrong IsParenTypeId!");
+  (void)IsArray;
+  (void)HasInit;
+  (void)NumPlacementArgs;
+
   E->setOperatorNew(ReadDeclAs<FunctionDecl>());
   E->setOperatorDelete(ReadDeclAs<FunctionDecl>());
   E->AllocatedTypeInfo = GetTypeSourceInfo();
-  E->TypeIdParens = ReadSourceRange();
+  if (IsParenTypeId)
+    E->getTrailingObjects<SourceRange>()[0] = ReadSourceRange();
   E->Range = ReadSourceRange();
   E->DirectInitRange = ReadSourceRange();
 
-  E->AllocateArgsArray(Record.getContext(), isArray, NumPlacementArgs,
-                       E->StoredInitializationStyle != 0);
-
   // Install all the subexpressions.
-  for (CXXNewExpr::raw_arg_iterator I = E->raw_arg_begin(),e = E->raw_arg_end();
-       I != e; ++I)
+  for (CXXNewExpr::raw_arg_iterator I = E->raw_arg_begin(),
+                                    N = E->raw_arg_end();
+       I != N; ++I)
     *I = Record.readSubStmt();
 }
 
@@ -1612,7 +1625,7 @@ ASTStmtReader::VisitCXXUnresolvedConstructExpr(CXXUnresolvedConstructExpr *E) {
   Record.skipInts(1);
   for (unsigned I = 0, N = E->arg_size(); I != N; ++I)
     E->setArg(I, Record.readSubExpr());
-  E->Type = GetTypeSourceInfo();
+  E->TSI = GetTypeSourceInfo();
   E->setLParenLoc(ReadSourceLocation());
   E->setRParenLoc(ReadSourceLocation());
 }
@@ -3189,7 +3202,12 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_CXX_NEW:
-      S = new (Context) CXXNewExpr(Empty);
+      S = CXXNewExpr::CreateEmpty(
+          Context,
+          /*IsArray=*/Record[ASTStmtReader::NumExprFields],
+          /*HasInit=*/Record[ASTStmtReader::NumExprFields + 1],
+          /*NumPlacementArgs=*/Record[ASTStmtReader::NumExprFields + 2],
+          /*IsParenTypeId=*/Record[ASTStmtReader::NumExprFields + 3]);
       break;
 
     case EXPR_CXX_DELETE:

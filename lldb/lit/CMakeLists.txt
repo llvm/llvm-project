@@ -26,7 +26,6 @@ string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TOOLS_DIR ${LLVM_RUNT
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
 
 list(APPEND LLDB_TEST_DEPS
-  count
   LLDBUnitTests
   dsymutil
   llc
@@ -73,6 +72,7 @@ configure_lit_site_cfg(
 if(NOT LLDB_BUILT_STANDALONE)
   list(APPEND LLDB_TEST_DEPS
     FileCheck
+    count
     not
     )
 endif()

@@ -17,7 +17,6 @@
 #include "llvm/Support/Path.h"
 #include <algorithm>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
@@ -57,7 +56,7 @@ Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
     if (locationInRange(Loc, R, M))
       return halfOpenToRange(M, R);
   }
-  Optional<Range> FallbackRange;
+  llvm::Optional<Range> FallbackRange;
   // The range may be given as a fixit hint instead.
   for (const auto &F : D.getFixItHints()) {
     auto R = Lexer::makeFileCharRange(F.RemoveRange, M, L);
@@ -93,7 +92,7 @@ bool isNote(DiagnosticsEngine::Level L) {
   return L == DiagnosticsEngine::Note || L == DiagnosticsEngine::Remark;
 }
 
-StringRef diagLeveltoString(DiagnosticsEngine::Level Lvl) {
+llvm::StringRef diagLeveltoString(DiagnosticsEngine::Level Lvl) {
   switch (Lvl) {
   case DiagnosticsEngine::Ignored:
     return "ignored";
@@ -122,12 +121,12 @@ StringRef diagLeveltoString(DiagnosticsEngine::Level Lvl) {
 ///
 ///     dir1/dir2/dir3/../../dir4/header.h:12:23
 ///     error: undeclared identifier
-void printDiag(raw_string_ostream &OS, const DiagBase &D) {
+void printDiag(llvm::raw_string_ostream &OS, const DiagBase &D) {
   if (D.InsideMainFile) {
     // Paths to main files are often taken from compile_command.json, where they
     // are typically absolute. To reduce noise we print only basename for them,
     // it should not be confusing and saves space.
-    OS << sys::path::filename(D.File) << ":";
+    OS << llvm::sys::path::filename(D.File) << ":";
   } else {
     OS << D.File << ":";
   }
@@ -147,7 +146,7 @@ void printDiag(raw_string_ostream &OS, const DiagBase &D) {
 /// Capitalizes the first word in the diagnostic's message.
 std::string capitalize(std::string Message) {
   if (!Message.empty())
-    Message[0] = toUpper(Message[0]);
+    Message[0] = llvm::toUpper(Message[0]);
   return Message;
 }
 
@@ -165,7 +164,7 @@ std::string capitalize(std::string Message) {
 ///     note: candidate function not viable: requires 3 arguments
 std::string mainMessage(const Diag &D) {
   std::string Result;
-  raw_string_ostream OS(Result);
+  llvm::raw_string_ostream OS(Result);
   OS << D.Message;
   for (auto &Note : D.Notes) {
     OS << "\n\n";
@@ -180,7 +179,7 @@ std::string mainMessage(const Diag &D) {
 /// for the user to understand the note.
 std::string noteMessage(const Diag &Main, const DiagBase &Note) {
   std::string Result;
-  raw_string_ostream OS(Result);
+  llvm::raw_string_ostream OS(Result);
   OS << Note.Message;
   OS << "\n\n";
   printDiag(OS, Main);
@@ -189,7 +188,7 @@ std::string noteMessage(const Diag &Main, const DiagBase &Note) {
 }
 } // namespace
 
-raw_ostream &operator<<(raw_ostream &OS, const DiagBase &D) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const DiagBase &D) {
   OS << "[";
   if (!D.InsideMainFile)
     OS << D.File << ":";
@@ -198,7 +197,7 @@ raw_ostream &operator<<(raw_ostream &OS, const DiagBase &D) {
   return OS << D.Message;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const Fix &F) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Fix &F) {
   OS << F.Message << " {";
   const char *Sep = "";
   for (const auto &Edit : F.Edits) {
@@ -208,7 +207,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Fix &F) {
   return OS << "}";
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const Diag &D) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Diag &D) {
   OS << static_cast<const DiagBase &>(D);
   if (!D.Notes.empty()) {
     OS << ", notes: {";
@@ -240,9 +239,9 @@ CodeAction toCodeAction(const Fix &F, const URIForFile &File) {
   return Action;
 }
 
-void toLSPDiags(const Diag &D, const URIForFile &File,
-                const ClangdDiagnosticOptions &Opts,
-                function_ref<void(clangd::Diagnostic, ArrayRef<Fix>)> OutFn) {
+void toLSPDiags(
+    const Diag &D, const URIForFile &File, const ClangdDiagnosticOptions &Opts,
+    llvm::function_ref<void(clangd::Diagnostic, llvm::ArrayRef<Fix>)> OutFn) {
   auto FillBasicFields = [](const DiagBase &D) -> clangd::Diagnostic {
     clangd::Diagnostic Res;
     Res.range = D.Range;
@@ -269,7 +268,7 @@ void toLSPDiags(const Diag &D, const URIForFile &File,
       continue;
     clangd::Diagnostic Res = FillBasicFields(Note);
     Res.message = noteMessage(D, Note);
-    OutFn(std::move(Res), ArrayRef<Fix>());
+    OutFn(std::move(Res), llvm::ArrayRef<Fix>());
   }
 }
 
@@ -315,7 +314,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 
   auto FillDiagBase = [&](DiagBase &D) {
     D.Range = diagnosticRange(Info, *LangOpts);
-    SmallString<64> Message;
+    llvm::SmallString<64> Message;
     Info.FormatDiagnostic(Message);
     D.Message = Message.str();
     D.InsideMainFile = InsideMainFile;
@@ -333,7 +332,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     if (!InsideMainFile)
       return false;
 
-    SmallVector<TextEdit, 1> Edits;
+    llvm::SmallVector<TextEdit, 1> Edits;
     for (auto &FixIt : Info.getFixItHints()) {
       if (!isInsideMainFile(FixIt.RemoveRange.getBegin(),
                             Info.getSourceManager()))
@@ -341,16 +340,16 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
       Edits.push_back(toTextEdit(FixIt, Info.getSourceManager(), *LangOpts));
     }
 
-    SmallString<64> Message;
+    llvm::SmallString<64> Message;
     // If requested and possible, create a message like "change 'foo' to 'bar'".
     if (SyntheticMessage && Info.getNumFixItHints() == 1) {
       const auto &FixIt = Info.getFixItHint(0);
       bool Invalid = false;
-      StringRef Remove = Lexer::getSourceText(
+      llvm::StringRef Remove = Lexer::getSourceText(
           FixIt.RemoveRange, Info.getSourceManager(), *LangOpts, &Invalid);
-      StringRef Insert = FixIt.CodeToInsert;
+      llvm::StringRef Insert = FixIt.CodeToInsert;
       if (!Invalid) {
-        raw_svector_ostream M(Message);
+        llvm::raw_svector_ostream M(Message);
         if (!Remove.empty() && !Insert.empty())
           M << "change '" << Remove << "' to '" << Insert << "'";
         else if (!Remove.empty())
