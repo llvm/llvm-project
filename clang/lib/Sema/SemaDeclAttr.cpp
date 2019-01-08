@@ -6494,6 +6494,14 @@ static void handleDestroyAttr(Sema &S, Decl *D, const ParsedAttr &A) {
   }
 }
 
+static void handleUninitializedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  assert(cast<VarDecl>(D)->getStorageDuration() == SD_Automatic &&
+         "uninitialized is only valid on automatic duration variables");
+  unsigned Index = AL.getAttributeSpellingListIndex();
+  D->addAttr(::new (S.Context)
+                 UninitializedAttr(AL.getLoc(), S.Context, Index));
+}
+
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -7207,6 +7215,10 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   // Move semantics attribute.
   case ParsedAttr::AT_Reinitializes:
     handleSimpleAttribute<ReinitializesAttr>(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_Uninitialized:
+    handleUninitializedAttr(S, D, AL);
     break;
   }
 }
