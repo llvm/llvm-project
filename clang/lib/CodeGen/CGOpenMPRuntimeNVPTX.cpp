@@ -705,8 +705,8 @@ getDataSharingMode(CodeGenModule &CGM) {
                                           : CGOpenMPRuntimeNVPTX::Generic;
 }
 
-// Checks if the expression is constant or does not have non-trivial function
-// calls.
+/// Checks if the expression is constant or does not have non-trivial function
+/// calls.
 static bool isTrivial(ASTContext &Ctx, const Expr * E) {
   // We can skip constant expressions.
   // We can skip expressions with trivial calls or simple expressions.
@@ -3124,7 +3124,6 @@ static void emitReductionListCopy(
 ///     sync
 ///     if (I am the first warp)
 ///       Copy smem[thread_id] to my local D
-///     sync
 static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
                                               ArrayRef<const Expr *> Privates,
                                               QualType ReductionArrayTy,
@@ -3337,12 +3336,6 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
 
       CGF.EmitBlock(W0MergeBB);
 
-      // While warp 0 copies values from transfer medium, all other warps must
-      // wait.
-      // kmpc_barrier.
-      CGM.getOpenMPRuntime().emitBarrierCall(CGF, Loc, OMPD_unknown,
-                                             /*EmitChecks=*/false,
-                                             /*ForceSimpleCall=*/true);
       if (NumIters > 1) {
         Cnt = Bld.CreateNSWAdd(Cnt, llvm::ConstantInt::get(CGM.IntTy, /*V=*/1));
         CGF.EmitStoreOfScalar(Cnt, CntAddr, /*Volatile=*/false, C.IntTy);

@@ -462,9 +462,9 @@ SourceRange NestedNameSpecifierLoc::getLocalSourceRange() const {
 }
 
 TypeLoc NestedNameSpecifierLoc::getTypeLoc() const {
-  assert((Qualifier->getKind() == NestedNameSpecifier::TypeSpec ||
-          Qualifier->getKind() == NestedNameSpecifier::TypeSpecWithTemplate) &&
-         "Nested-name-specifier location is not a type");
+  if (Qualifier->getKind() != NestedNameSpecifier::TypeSpec &&
+      Qualifier->getKind() != NestedNameSpecifier::TypeSpecWithTemplate)
+    return TypeLoc();
 
   // The "void*" that points at the TypeLoc data.
   unsigned Offset = getDataLength(Qualifier->getPrefix());

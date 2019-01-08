@@ -729,9 +729,10 @@ public:
   /// getNamedTypeInfo - Returns the source type info associated to
   /// the name. Assumes it is a constructor, destructor or conversion.
   TypeSourceInfo *getNamedTypeInfo() const {
-    assert(Name.getNameKind() == DeclarationName::CXXConstructorName ||
-           Name.getNameKind() == DeclarationName::CXXDestructorName ||
-           Name.getNameKind() == DeclarationName::CXXConversionFunctionName);
+    if (Name.getNameKind() != DeclarationName::CXXConstructorName &&
+        Name.getNameKind() != DeclarationName::CXXDestructorName &&
+        Name.getNameKind() != DeclarationName::CXXConversionFunctionName)
+      return nullptr;
     return LocInfo.NamedType.TInfo;
   }
 
@@ -747,7 +748,8 @@ public:
   /// getCXXOperatorNameRange - Gets the range of the operator name
   /// (without the operator keyword). Assumes it is a (non-literal) operator.
   SourceRange getCXXOperatorNameRange() const {
-    assert(Name.getNameKind() == DeclarationName::CXXOperatorName);
+    if (Name.getNameKind() != DeclarationName::CXXOperatorName)
+      return SourceRange();
     return SourceRange(
      SourceLocation::getFromRawEncoding(LocInfo.CXXOperatorName.BeginOpNameLoc),
      SourceLocation::getFromRawEncoding(LocInfo.CXXOperatorName.EndOpNameLoc)
@@ -766,7 +768,8 @@ public:
   /// operator name (not the operator keyword).
   /// Assumes it is a literal operator.
   SourceLocation getCXXLiteralOperatorNameLoc() const {
-    assert(Name.getNameKind() == DeclarationName::CXXLiteralOperatorName);
+    if (Name.getNameKind() != DeclarationName::CXXLiteralOperatorName)
+      return SourceLocation();
     return SourceLocation::
       getFromRawEncoding(LocInfo.CXXLiteralOperatorName.OpNameLoc);
   }

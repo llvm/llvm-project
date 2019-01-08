@@ -945,7 +945,6 @@ public:
 class OpaqueValueExpr : public Expr {
   friend class ASTStmtReader;
   Expr *SourceExpr;
-  SourceLocation Loc;
 
 public:
   OpaqueValueExpr(SourceLocation Loc, QualType T, ExprValueKind VK,
@@ -959,8 +958,9 @@ public:
            T->isInstantiationDependentType() ||
            (SourceExpr && SourceExpr->isInstantiationDependent()),
            false),
-      SourceExpr(SourceExpr), Loc(Loc) {
+      SourceExpr(SourceExpr) {
     setIsUnique(false);
+    OpaqueValueExprBits.Loc = Loc;
   }
 
   /// Given an expression which invokes a copy constructor --- i.e.  a
@@ -969,20 +969,19 @@ public:
   static const OpaqueValueExpr *findInCopyConstruct(const Expr *expr);
 
   explicit OpaqueValueExpr(EmptyShell Empty)
-    : Expr(OpaqueValueExprClass, Empty) { }
+    : Expr(OpaqueValueExprClass, Empty) {}
 
   /// Retrieve the location of this expression.
-  SourceLocation getLocation() const { return Loc; }
+  SourceLocation getLocation() const { return OpaqueValueExprBits.Loc; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
-    return SourceExpr ? SourceExpr->getBeginLoc() : Loc;
+    return SourceExpr ? SourceExpr->getBeginLoc() : getLocation();
   }
   SourceLocation getEndLoc() const LLVM_READONLY {
-    return SourceExpr ? SourceExpr->getEndLoc() : Loc;
+    return SourceExpr ? SourceExpr->getEndLoc() : getLocation();
   }
   SourceLocation getExprLoc() const LLVM_READONLY {
-    if (SourceExpr) return SourceExpr->getExprLoc();
-    return Loc;
+    return SourceExpr ? SourceExpr->getExprLoc() : getLocation();
   }
 
   child_range children() {
