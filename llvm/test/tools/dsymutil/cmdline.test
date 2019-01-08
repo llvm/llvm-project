@@ -17,6 +17,7 @@ HELP: -num-threads=<n>
 HELP: -o=<filename>
 HELP: -oso-prepend-path=<path>
 HELP: -papertrail
+HELP: -symbol-map
 HELP: -symtab
 HELP: -toolchain
 HELP: -update
