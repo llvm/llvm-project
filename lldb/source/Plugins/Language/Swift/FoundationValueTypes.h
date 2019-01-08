@@ -46,6 +46,9 @@ bool UUID_SummaryProvider(ValueObject &valobj, Stream &stream,
 bool Data_SummaryProvider(ValueObject &valobj, Stream &stream,
                           const TypeSummaryOptions &options);
 
+bool Decimal_SummaryProvider(ValueObject &valobj, Stream &stream,
+                             const TypeSummaryOptions &options);
+
 SyntheticChildrenFrontEnd *
 URLComponentsSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                       lldb::ValueObjectSP);
