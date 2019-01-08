@@ -19,8 +19,8 @@ TextNodeDumper::TextNodeDumper(raw_ostream &OS, bool ShowColors,
                                const SourceManager *SM,
                                const PrintingPolicy &PrintPolicy,
                                const comments::CommandTraits *Traits)
-    : OS(OS), ShowColors(ShowColors), SM(SM), PrintPolicy(PrintPolicy),
-      Traits(Traits) {}
+    : TextTreeStructure(OS, ShowColors), OS(OS), ShowColors(ShowColors), SM(SM),
+      PrintPolicy(PrintPolicy), Traits(Traits) {}
 
 void TextNodeDumper::Visit(const comments::Comment *C,
                            const comments::FullComment *FC) {

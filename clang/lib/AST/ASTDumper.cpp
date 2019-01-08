@@ -44,7 +44,6 @@ namespace  {
         public ConstCommentVisitor<ASTDumper, void, const FullComment *>,
         public TypeVisitor<ASTDumper> {
 
-    TextTreeStructure TreeStructure;
     TextNodeDumper NodeDumper;
 
     raw_ostream &OS;
@@ -60,7 +59,7 @@ namespace  {
 
     /// Dump a child of the current node.
     template<typename Fn> void dumpChild(Fn doDumpChild) {
-      TreeStructure.addChild(doDumpChild);
+      NodeDumper.addChild(doDumpChild);
     }
 
   public:
@@ -75,8 +74,7 @@ namespace  {
     ASTDumper(raw_ostream &OS, const CommandTraits *Traits,
               const SourceManager *SM, bool ShowColors,
               const PrintingPolicy &PrintPolicy)
-        : TreeStructure(OS, ShowColors),
-          NodeDumper(OS, ShowColors, SM, PrintPolicy, Traits), OS(OS),
+        : NodeDumper(OS, ShowColors, SM, PrintPolicy, Traits), OS(OS),
           PrintPolicy(PrintPolicy), ShowColors(ShowColors) {}
 
     void setDeserialize(bool D) { Deserialize = D; }

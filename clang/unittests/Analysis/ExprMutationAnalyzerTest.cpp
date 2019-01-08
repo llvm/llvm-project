@@ -11,6 +11,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/SmallString.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cctype>
@@ -32,7 +33,9 @@ using StmtMatcher = internal::Matcher<Stmt>;
 std::unique_ptr<ASTUnit>
 buildASTFromCodeWithArgs(const Twine &Code,
                          const std::vector<std::string> &Args) {
-  auto AST = tooling::buildASTFromCodeWithArgs(Code, Args);
+  SmallString<1024> CodeStorage;
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code.toStringRef(CodeStorage), Args);
   EXPECT_FALSE(AST->getDiagnostics().hasErrorOccurred());
   return AST;
 }
