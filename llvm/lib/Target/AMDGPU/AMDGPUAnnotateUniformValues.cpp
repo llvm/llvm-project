@@ -117,14 +117,8 @@ bool AMDGPUAnnotateUniformValues::isClobberedInFunction(LoadInst * Load) {
 }
 
 void AMDGPUAnnotateUniformValues::visitBranchInst(BranchInst &I) {
-  if (I.isUnconditional())
-    return;
-
-  Value *Cond = I.getCondition();
-  if (!DA->isUniform(Cond))
-    return;
-
-  setUniformMetadata(I.getParent()->getTerminator());
+  if (DA->isUniform(&I))
+    setUniformMetadata(I.getParent()->getTerminator());
 }
 
 void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {

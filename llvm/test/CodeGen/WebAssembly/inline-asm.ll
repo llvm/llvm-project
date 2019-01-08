@@ -11,7 +11,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: #APP{{$}}
 ; CHECK-NEXT: # 0 = aaa(0){{$}}
 ; CHECK-NEXT: #NO_APP{{$}}
-; CHECK-NEXT: get_local $push0=, 0{{$}}
+; CHECK-NEXT: local.get $push0=, 0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @foo(i32 %r) {
 entry:
@@ -25,7 +25,7 @@ entry:
 ; CHECK-NEXT: #APP{{$}}
 ; CHECK-NEXT: # 0 = ccc(42){{$}}
 ; CHECK-NEXT: #NO_APP{{$}}
-; CHECK-NEXT: get_local $push0=, 0{{$}}
+; CHECK-NEXT: local.get $push0=, 0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @imm() {
 entry:
@@ -38,7 +38,7 @@ entry:
 ; CHECK-NEXT: #APP{{$}}
 ; CHECK-NEXT: # 0 = aaa(0){{$}}
 ; CHECK-NEXT: #NO_APP{{$}}
-; CHECK-NEXT: get_local $push0=, 0{{$}}
+; CHECK-NEXT: local.get $push0=, 0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @foo_i64(i64 %r) {
 entry:
@@ -48,8 +48,8 @@ entry:
 
 ; CHECK-LABEL: X_i16:
 ; CHECK: foo 1{{$}}
-; CHECK: get_local $push[[S0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: get_local $push[[S1:[0-9]+]]=, 1{{$}}
+; CHECK: local.get $push[[S0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: local.get $push[[S1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: i32.store16 0($pop[[S0]]), $pop[[S1]]{{$}}
 define void @X_i16(i16 * %t) {
   call void asm sideeffect "foo $0", "=*X,~{dirflag},~{fpsr},~{flags},~{memory}"(i16* %t)
@@ -58,8 +58,8 @@ define void @X_i16(i16 * %t) {
 
 ; CHECK-LABEL: X_ptr:
 ; CHECK: foo 1{{$}}
-; CHECK: get_local $push[[S0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: get_local $push[[S1:[0-9]+]]=, 1{{$}}
+; CHECK: local.get $push[[S0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: local.get $push[[S1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: i32.store 0($pop[[S0]]), $pop[[S1]]{{$}}
 define void @X_ptr(i16 ** %t) {
   call void asm sideeffect "foo $0", "=*X,~{dirflag},~{fpsr},~{flags},~{memory}"(i16** %t)
@@ -83,11 +83,11 @@ define void @varname() {
 
 ; CHECK-LABEL: r_constraint
 ; CHECK:      i32.const $push[[S0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: set_local [[L0:[0-9]+]], $pop[[S0]]{{$}}
+; CHECK-NEXT: local.set [[L0:[0-9]+]], $pop[[S0]]{{$}}
 ; CHECK-NEXT: i32.const $push[[S1:[0-9]+]]=, 37{{$}}
-; CHECK-NEXT: set_local [[L1:[0-9]+]], $pop[[S1]]{{$}}
+; CHECK-NEXT: local.set [[L1:[0-9]+]], $pop[[S1]]{{$}}
 ; CHECK:      foo [[L2:[0-9]+]], 1, [[L0]], [[L1]]{{$}}
-; CHECK:      get_local $push{{[0-9]+}}=, [[L2]]{{$}}
+; CHECK:      local.get $push{{[0-9]+}}=, [[L2]]{{$}}
 define hidden i32 @r_constraint(i32 %a, i32 %y) {
 entry:
   %z = bitcast i32 0 to i32
@@ -96,7 +96,7 @@ entry:
 }
 
 ; CHECK-LABEL: tied_operands
-; CHECK: get_local  $push0=, 0
+; CHECK: local.get  $push0=, 0
 ; CHECK: return    $pop0
 define i32 @tied_operands(i32 %var) {
 entry:

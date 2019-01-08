@@ -1176,7 +1176,7 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
   TableImport.Module = TableSym->getModuleName();
   TableImport.Field = TableSym->getName();
   TableImport.Kind = wasm::WASM_EXTERNAL_TABLE;
-  TableImport.Table.ElemType = wasm::WASM_TYPE_ANYFUNC;
+  TableImport.Table.ElemType = wasm::WASM_TYPE_FUNCREF;
   Imports.push_back(TableImport);
 
   // Populate SignatureIndices, and Imports and WasmIndices for undefined

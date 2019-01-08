@@ -42,33 +42,23 @@ def brlist : Operand<i32> {
   let ParserMatchClass = BrListAsmOperand;
   let PrintMethod = "printBrList";
 }
-}  // OPERAND_BRLIST
-}  // OperandNamespace = "WebAssembly"
+} // OPERAND_BRLIST
+} // OperandNamespace = "WebAssembly"
 
 // TODO: SelectionDAG's lowering insists on using a pointer as the index for
 // jump tables, so in practice we don't ever use BR_TABLE_I64 in wasm32 mode
 // currently.
-// FIXME: this can't inherit from I<> since there is no way to inherit from a
-// multiclass and still have the let statements.
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
-let isCodeGenOnly = 1 in
-def BR_TABLE_I32 : NI<(outs), (ins I32:$index, variable_ops),
-                      [(WebAssemblybr_table I32:$index)], "false",
-                      "br_table \t$index", 0x0e> {
-}
-let BaseName = "BR_TABLE_I32" in
-def BR_TABLE_I32_S : NI<(outs), (ins brlist:$brl), [], "true",
-                        "br_table \t$brl", 0x0e> {
-}
-let isCodeGenOnly = 1 in
-def BR_TABLE_I64 : NI<(outs), (ins I64:$index, variable_ops),
-                      [(WebAssemblybr_table I64:$index)], "false",
-                      "br_table \t$index"> {
-}
-let BaseName = "BR_TABLE_I64" in
-def BR_TABLE_I64_S : NI<(outs), (ins brlist:$brl), [], "true",
-                        "br_table \t$brl"> {
-}
+defm BR_TABLE_I32 : I<(outs), (ins I32:$index, variable_ops),
+                      (outs), (ins brlist:$brl),
+                      [(WebAssemblybr_table I32:$index)],
+                      "br_table \t$index", "br_table \t$brl",
+                      0x0e>;
+defm BR_TABLE_I64 : I<(outs), (ins I64:$index, variable_ops),
+                      (outs), (ins brlist:$brl),
+                      [(WebAssemblybr_table I64:$index)],
+                      "br_table \t$index", "br_table \t$brl",
+                      0x0e>;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
 // This is technically a control-flow instruction, since all it affects is the

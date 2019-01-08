@@ -115,7 +115,7 @@ bool RegBankSelect::assignmentMatch(
   // By default we assume we will have to repair something.
   OnlyAssign = false;
   // Each part of a break down needs to end up in a different register.
-  // In other word, Reg assignement does not match.
+  // In other word, Reg assignment does not match.
   if (ValMapping.NumBreakDowns != 1)
     return false;
 
@@ -528,7 +528,7 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
 bool RegBankSelect::applyMapping(
     MachineInstr &MI, const RegisterBankInfo::InstructionMapping &InstrMapping,
     SmallVectorImpl<RegBankSelect::RepairingPlacement> &RepairPts) {
-  // OpdMapper will hold all the information needed for the rewritting.
+  // OpdMapper will hold all the information needed for the rewriting.
   RegisterBankInfo::OperandsMapper OpdMapper(MI, InstrMapping, *MRI);
 
   // First, place the repairing code.
@@ -717,15 +717,21 @@ RegBankSelect::RepairingPlacement::RepairingPlacement(
     unsigned Reg = MO.getReg();
     if (Before) {
       // Check whether Reg is defined by any terminator.
-      MachineBasicBlock::iterator It = MI;
-      for (auto Begin = MI.getParent()->begin();
-           --It != Begin && It->isTerminator();)
-        if (It->modifiesRegister(Reg, &TRI)) {
-          // Insert the repairing code right after the definition.
-          addInsertPoint(*It, /*Before*/ false);
-          return;
-        }
-      addInsertPoint(*It, /*Before*/ true);
+      MachineBasicBlock::reverse_iterator It = MI;
+      auto REnd = MI.getParent()->rend();
+
+      for (; It != REnd && It->isTerminator(); ++It) {
+        assert(!It->modifiesRegister(Reg, &TRI) &&
+               "copy insertion in middle of terminators not handled");
+      }
+
+      if (It == REnd) {
+        addInsertPoint(*MI.getParent()->begin(), true);
+        return;
+      }
+
+      // We are sure to be right before the first terminator.
+      addInsertPoint(*It, /*Before*/ false);
       return;
     }
     // Make sure Reg is not redefined by other terminators, otherwise

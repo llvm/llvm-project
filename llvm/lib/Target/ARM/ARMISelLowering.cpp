@@ -13633,6 +13633,33 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.One &= Mask;
     return;
   }
+  case ARMISD::VGETLANEs:
+  case ARMISD::VGETLANEu: {
+    const SDValue &SrcSV = Op.getOperand(0);
+    EVT VecVT = SrcSV.getValueType();
+    assert(VecVT.isVector() && "VGETLANE expected a vector type");
+    const unsigned NumSrcElts = VecVT.getVectorNumElements();
+    ConstantSDNode *Pos = cast<ConstantSDNode>(Op.getOperand(1).getNode());
+    assert(Pos->getAPIntValue().ult(NumSrcElts) &&
+           "VGETLANE index out of bounds");
+    unsigned Idx = Pos->getZExtValue();
+    APInt DemandedElt = APInt::getOneBitSet(NumSrcElts, Idx);
+    Known = DAG.computeKnownBits(SrcSV, DemandedElt, Depth + 1);
+
+    EVT VT = Op.getValueType();
+    const unsigned DstSz = VT.getScalarSizeInBits();
+    const unsigned SrcSz = VecVT.getVectorElementType().getSizeInBits();
+    assert(SrcSz == Known.getBitWidth());
+    assert(DstSz > SrcSz);
+    if (Op.getOpcode() == ARMISD::VGETLANEs)
+      Known = Known.sext(DstSz);
+    else {
+      Known = Known.zext(DstSz);
+      Known.Zero.setBitsFrom(SrcSz);
+    }
+    assert(DstSz == Known.getBitWidth());
+    break;
+  }
   }
 }
 

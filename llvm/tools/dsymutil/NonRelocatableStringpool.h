@@ -10,6 +10,8 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_NONRELOCATABLESTRINGPOOL_H
 #define LLVM_TOOLS_DSYMUTIL_NONRELOCATABLESTRINGPOOL_H
 
+#include "SymbolMap.h"
+
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
@@ -32,7 +34,9 @@ public:
   /// order.
   using MapTy = StringMap<DwarfStringPoolEntry, BumpPtrAllocator>;
 
-  NonRelocatableStringpool() {
+  NonRelocatableStringpool(
+      SymbolMapTranslator Translator = SymbolMapTranslator())
+      : Translator(Translator) {
     // Legacy dsymutil puts an empty string at the start of the line table.
     EmptyString = getEntry("");
   }
@@ -62,6 +66,7 @@ private:
   uint32_t CurrentEndOffset = 0;
   unsigned NumEntries = 0;
   DwarfStringPoolEntryRef EmptyString;
+  SymbolMapTranslator Translator;
 };
 
 /// Helper for making strong types.

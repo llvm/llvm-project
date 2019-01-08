@@ -425,8 +425,8 @@ static bool OneUseDominatesOtherUses(unsigned Reg, const MachineOperand &OneUse,
         // Actually, dominating is over-conservative. Test that the use would
         // happen after the one selected use in the stack evaluation order.
         //
-        // This is needed as a consequence of using implicit get_locals for
-        // uses and implicit set_locals for defs.
+        // This is needed as a consequence of using implicit local.gets for
+        // uses and implicit local.sets for defs.
         if (UseInst->getDesc().getNumDefs() == 0)
           return false;
         const MachineOperand &MO = UseInst->getOperand(0);
@@ -628,7 +628,7 @@ static MachineInstr *RematerializeCheapDef(
 ///    INST ..., Reg, ...
 ///    INST ..., Reg, ...
 ///
-/// with DefReg and TeeReg stackified. This eliminates a get_local from the
+/// with DefReg and TeeReg stackified. This eliminates a local.get from the
 /// resulting code.
 static MachineInstr *MoveAndTeeForMultiUse(
     unsigned Reg, MachineOperand &Op, MachineInstr *Def, MachineBasicBlock &MBB,
@@ -739,8 +739,8 @@ public:
   /// operand in the tree that we haven't visited yet. Moving a definition of
   /// Reg to a point in the tree after that would change its value.
   ///
-  /// This is needed as a consequence of using implicit get_locals for
-  /// uses and implicit set_locals for defs.
+  /// This is needed as a consequence of using implicit local.gets for
+  /// uses and implicit local.sets for defs.
   bool IsOnStack(unsigned Reg) const {
     for (const RangeTy &Range : Worklist)
       for (const MachineOperand &MO : Range)

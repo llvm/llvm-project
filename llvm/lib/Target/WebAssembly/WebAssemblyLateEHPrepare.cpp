@@ -287,7 +287,7 @@ bool WebAssemblyLateEHPrepare::addRethrows(MachineFunction &MF) {
 //   %exn = catch 0
 //   call @__clang_call_terminate(%exn)
 //   unreachable
-// (There can be set_local and get_locals before the call if we didn't run
+// (There can be local.set and local.gets before the call if we didn't run
 // RegStackify)
 // But code transformations can change or add more control flow, so the call to
 // __clang_call_terminate() function may not be in the original EH pad anymore.
@@ -326,7 +326,7 @@ bool WebAssemblyLateEHPrepare::ensureSingleBBTermPads(MachineFunction &MF) {
     // This runs after hoistCatches(), so catch instruction should be at the top
     assert(WebAssembly::isCatch(*Catch));
     // Takes the result register of the catch instruction as argument. There may
-    // have been some other set_local/get_locals in between, but at this point
+    // have been some other local.set/local.gets in between, but at this point
     // we don't care.
     Call->getOperand(1).setReg(Catch->getOperand(0).getReg());
     auto InsertPos = std::next(MachineBasicBlock::iterator(Catch));

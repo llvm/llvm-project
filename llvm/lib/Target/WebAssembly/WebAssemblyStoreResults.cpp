@@ -15,7 +15,7 @@
 /// the store's result value, making the stored value register more likely to
 /// be single-use, thus more likely to be useful to register stackifying, and
 /// potentially also exposing the store to register stackifying. These both can
-/// reduce get_local/set_local traffic.
+/// reduce local.get/local.set traffic.
 ///
 /// This pass also performs this optimization for memcpy, memmove, and memset
 /// calls, since the LLVM intrinsics for these return void so they can't use the

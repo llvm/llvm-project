@@ -2732,28 +2732,25 @@ class T2ThreeRegSMUL<bits<3> op22_20, bits<2> op5_4, string opc,
 }
 
 def t2SMULBB : T2ThreeRegSMUL<0b001, 0b00, "smulbb",
-             [(set rGPR:$Rd, (mul (sext_inreg rGPR:$Rn, i16),
-                                   (sext_inreg rGPR:$Rm, i16)))]>;
+             [(set rGPR:$Rd, (bb_mul rGPR:$Rn, rGPR:$Rm))]>;
 def t2SMULBT : T2ThreeRegSMUL<0b001, 0b01, "smulbt",
-             [(set rGPR:$Rd, (mul (sext_inreg rGPR:$Rn, i16),
-                                   (sra rGPR:$Rm, (i32 16))))]>;
+             [(set rGPR:$Rd, (bt_mul rGPR:$Rn, rGPR:$Rm))]>;
 def t2SMULTB : T2ThreeRegSMUL<0b001, 0b10, "smultb",
-             [(set rGPR:$Rd, (mul (sra rGPR:$Rn, (i32 16)),
-                                   (sext_inreg rGPR:$Rm, i16)))]>;
+             [(set rGPR:$Rd, (tb_mul rGPR:$Rn, rGPR:$Rm))]>;
 def t2SMULTT : T2ThreeRegSMUL<0b001, 0b11, "smultt",
-             [(set rGPR:$Rd, (mul (sra rGPR:$Rn, (i32 16)),
-                                   (sra rGPR:$Rm, (i32 16))))]>;
+             [(set rGPR:$Rd, (tt_mul rGPR:$Rn, rGPR:$Rm))]>;
 def t2SMULWB : T2ThreeRegSMUL<0b011, 0b00, "smulwb",
              [(set rGPR:$Rd, (ARMsmulwb rGPR:$Rn, rGPR:$Rm))]>;
 def t2SMULWT : T2ThreeRegSMUL<0b011, 0b01, "smulwt",
              [(set rGPR:$Rd, (ARMsmulwt rGPR:$Rn, rGPR:$Rm))]>;
 
-def : Thumb2DSPPat<(mul sext_16_node:$Rm, sext_16_node:$Rn),
-                   (t2SMULBB rGPR:$Rm, rGPR:$Rn)>;
-def : Thumb2DSPPat<(mul sext_16_node:$Rn, (sra rGPR:$Rm, (i32 16))),
+def : Thumb2DSPPat<(mul sext_16_node:$Rn, (sext_bottom_16 rGPR:$Rm)),
+                   (t2SMULBB rGPR:$Rn, rGPR:$Rm)>;
+def : Thumb2DSPPat<(mul sext_16_node:$Rn, (sext_top_16 rGPR:$Rm)),
                    (t2SMULBT rGPR:$Rn, rGPR:$Rm)>;
-def : Thumb2DSPPat<(mul (sra rGPR:$Rn, (i32 16)), sext_16_node:$Rm),
+def : Thumb2DSPPat<(mul (sext_top_16 rGPR:$Rn), sext_16_node:$Rm),
                    (t2SMULTB rGPR:$Rn, rGPR:$Rm)>;
+
 def : Thumb2DSPPat<(int_arm_smulbb rGPR:$Rn, rGPR:$Rm),
                    (t2SMULBB rGPR:$Rn, rGPR:$Rm)>;
 def : Thumb2DSPPat<(int_arm_smulbt rGPR:$Rn, rGPR:$Rm),
@@ -2781,18 +2778,13 @@ class T2FourRegSMLA<bits<3> op22_20, bits<2> op5_4, string opc,
 }
 
 def t2SMLABB : T2FourRegSMLA<0b001, 0b00, "smlabb",
-             [(set rGPR:$Rd, (add rGPR:$Ra,
-                               (mul (sext_inreg rGPR:$Rn, i16),
-                                     (sext_inreg rGPR:$Rm, i16))))]>;
+             [(set rGPR:$Rd, (add rGPR:$Ra, (bb_mul rGPR:$Rn, rGPR:$Rm)))]>;
 def t2SMLABT : T2FourRegSMLA<0b001, 0b01, "smlabt",
-             [(set rGPR:$Rd, (add rGPR:$Ra, (mul (sext_inreg rGPR:$Rn, i16),
-                                                 (sra rGPR:$Rm, (i32 16)))))]>;
+             [(set rGPR:$Rd, (add rGPR:$Ra, (bt_mul rGPR:$Rn, rGPR:$Rm)))]>;
 def t2SMLATB : T2FourRegSMLA<0b001, 0b10, "smlatb",
-             [(set rGPR:$Rd, (add rGPR:$Ra, (mul (sra rGPR:$Rn, (i32 16)),
-                                                (sext_inreg rGPR:$Rm, i16))))]>;
+             [(set rGPR:$Rd, (add rGPR:$Ra, (tb_mul rGPR:$Rn, rGPR:$Rm)))]>;
 def t2SMLATT : T2FourRegSMLA<0b001, 0b11, "smlatt",
-             [(set rGPR:$Rd, (add rGPR:$Ra, (mul (sra rGPR:$Rn, (i32 16)),
-                                                 (sra rGPR:$Rm, (i32 16)))))]>;
+             [(set rGPR:$Rd, (add rGPR:$Ra, (tt_mul rGPR:$Rn, rGPR:$Rm)))]>;
 def t2SMLAWB : T2FourRegSMLA<0b011, 0b00, "smlawb",
              [(set rGPR:$Rd, (add rGPR:$Ra, (ARMsmulwb rGPR:$Rn, rGPR:$Rm)))]>;
 def t2SMLAWT : T2FourRegSMLA<0b011, 0b01, "smlawt",
@@ -2800,11 +2792,14 @@ def t2SMLAWT : T2FourRegSMLA<0b011, 0b01, "smlawt",
 
 def : Thumb2DSPMulPat<(add rGPR:$Ra, (mul sext_16_node:$Rn, sext_16_node:$Rm)),
                       (t2SMLABB rGPR:$Rn, rGPR:$Rm, rGPR:$Ra)>;
-def : Thumb2DSPMulPat<(add rGPR:$Ra,
-                        (mul sext_16_node:$Rn, (sra rGPR:$Rm, (i32 16)))),
+def : Thumb2DSPMulPat<(add rGPR:$Ra, (mul sext_16_node:$Rn, 
+                                          (sext_bottom_16 rGPR:$Rm))),
+                      (t2SMLABB rGPR:$Rn, rGPR:$Rm, rGPR:$Ra)>;
+def : Thumb2DSPMulPat<(add rGPR:$Ra, (mul sext_16_node:$Rn,
+                                          (sext_top_16 rGPR:$Rm))),
                       (t2SMLABT rGPR:$Rn, rGPR:$Rm, rGPR:$Ra)>;
-def : Thumb2DSPMulPat<(add rGPR:$Ra,
-                        (mul (sra rGPR:$Rn, (i32 16)), sext_16_node:$Rm)),
+def : Thumb2DSPMulPat<(add rGPR:$Ra, (mul (sext_top_16 rGPR:$Rn),
+                                          sext_16_node:$Rm)),
                       (t2SMLATB rGPR:$Rn, rGPR:$Rm, rGPR:$Ra)>;
 
 def : Thumb2DSPPat<(int_arm_smlabb GPR:$a, GPR:$b, GPR:$acc),

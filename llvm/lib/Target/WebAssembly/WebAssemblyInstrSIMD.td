@@ -773,17 +773,17 @@ multiclass SIMDConvert<ValueType vec_t, ValueType arg_t, SDNode op,
            name#"\t$dst, $vec", name, simdop>;
 }
 
-// Integer to floating point: convert_s / convert_u
-defm "" : SIMDConvert<v4f32, v4i32, sint_to_fp, "f32x4.convert_s/i32x4", 175>;
-defm "" : SIMDConvert<v4f32, v4i32, uint_to_fp, "f32x4.convert_u/i32x4", 176>;
-defm "" : SIMDConvert<v2f64, v2i64, sint_to_fp, "f64x2.convert_s/i64x2", 177>;
-defm "" : SIMDConvert<v2f64, v2i64, uint_to_fp, "f64x2.convert_u/i64x2", 178>;
+// Integer to floating point: convert
+defm "" : SIMDConvert<v4f32, v4i32, sint_to_fp, "f32x4.convert_i32x4_s", 175>;
+defm "" : SIMDConvert<v4f32, v4i32, uint_to_fp, "f32x4.convert_i32x4_u", 176>;
+defm "" : SIMDConvert<v2f64, v2i64, sint_to_fp, "f64x2.convert_i64x2_s", 177>;
+defm "" : SIMDConvert<v2f64, v2i64, uint_to_fp, "f64x2.convert_i64x2_u", 178>;
 
-// Floating point to integer with saturation: trunc_sat_s / trunc_sat_u
-defm "" : SIMDConvert<v4i32, v4f32, fp_to_sint, "i32x4.trunc_sat_s/f32x4", 171>;
-defm "" : SIMDConvert<v4i32, v4f32, fp_to_uint, "i32x4.trunc_sat_u/f32x4", 172>;
-defm "" : SIMDConvert<v2i64, v2f64, fp_to_sint, "i64x2.trunc_sat_s/f64x2", 173>;
-defm "" : SIMDConvert<v2i64, v2f64, fp_to_uint, "i64x2.trunc_sat_u/f64x2", 174>;
+// Floating point to integer with saturation: trunc_sat
+defm "" : SIMDConvert<v4i32, v4f32, fp_to_sint, "i32x4.trunc_sat_f32x4_s", 171>;
+defm "" : SIMDConvert<v4i32, v4f32, fp_to_uint, "i32x4.trunc_sat_f32x4_u", 172>;
+defm "" : SIMDConvert<v2i64, v2f64, fp_to_sint, "i64x2.trunc_sat_f64x2_s", 173>;
+defm "" : SIMDConvert<v2i64, v2f64, fp_to_uint, "i64x2.trunc_sat_f64x2_u", 174>;
 
 // Lower llvm.wasm.trunc.saturate.* to saturating instructions
 def : Pat<(v4i32 (int_wasm_trunc_saturate_signed (v4f32 V128:$src))),
