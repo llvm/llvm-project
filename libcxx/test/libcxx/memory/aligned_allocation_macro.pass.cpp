@@ -9,14 +9,17 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
-// Aligned allocation functions are not provided prior to macosx10.13, but
-// AppleClang <= 10 does not know about this restriction and always enables them.
-// XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.12
-// XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.11
-// XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.10
-// XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.9
-// XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.8
-// XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.7
+// AppleClang <= 10 enables aligned allocation regardless of the deployment
+// target, so this test would fail.
+// UNSUPPORTED: apple-clang-9, apple-clang-10
+
+// XFAIL: availability=macosx10.13
+// XFAIL: availability=macosx10.12
+// XFAIL: availability=macosx10.11
+// XFAIL: availability=macosx10.10
+// XFAIL: availability=macosx10.9
+// XFAIL: availability=macosx10.8
+// XFAIL: availability=macosx10.7
 
 #include <new>
 
