@@ -54,6 +54,11 @@ public:
   enum GCMode { NonGC, GCOnly, HybridGC };
   enum StackProtectorMode { SSPOff, SSPOn, SSPStrong, SSPReq };
 
+  // Automatic variables live on the stack, and when trivial they're usually
+  // uninitialized because it's undefined behavior to use them without
+  // initializing them.
+  enum class TrivialAutoVarInitKind { Uninitialized, Zero, Pattern };
+
   enum SignedOverflowBehaviorTy {
     // Default C standard behavior.
     SOB_Undefined,
