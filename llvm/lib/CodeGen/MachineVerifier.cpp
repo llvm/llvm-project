@@ -250,6 +250,7 @@ namespace {
     void report_context(const LiveRange::Segment &S) const;
     void report_context(const VNInfo &VNI) const;
     void report_context(SlotIndex Pos) const;
+    void report_context(MCPhysReg PhysReg) const;
     void report_context_liverange(const LiveRange &LR) const;
     void report_context_lanemask(LaneBitmask LaneMask) const;
     void report_context_vreg(unsigned VReg) const;
@@ -540,6 +541,10 @@ void MachineVerifier::report_context_liverange(const LiveRange &LR) const {
   errs() << "- liverange:   " << LR << '\n';
 }
 
+void MachineVerifier::report_context(MCPhysReg PReg) const {
+  errs() << "- p. register: " << printReg(PReg, TRI) << '\n';
+}
+
 void MachineVerifier::report_context_vreg(unsigned VReg) const {
   errs() << "- v. register: " << printReg(VReg, TRI) << '\n';
 }
@@ -619,6 +624,7 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
       if (isAllocatable(LI.PhysReg) && !MBB->isEHPad() &&
           MBB->getIterator() != MBB->getParent()->begin()) {
         report("MBB has allocatable live-in, but isn't entry or landing-pad.", MBB);
+        report_context(LI.PhysReg);
       }
     }
   }

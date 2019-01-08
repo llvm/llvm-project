@@ -105,7 +105,7 @@ static int writeInitExpr(const wasm::WasmInitExpr &InitExpr, raw_ostream &OS) {
   case wasm::WASM_OPCODE_F64_CONST:
     writeUint64(OS, InitExpr.Value.Float64);
     break;
-  case wasm::WASM_OPCODE_GET_GLOBAL:
+  case wasm::WASM_OPCODE_GLOBAL_GET:
     encodeULEB128(InitExpr.Value.Global, OS);
     break;
   default:

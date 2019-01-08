@@ -176,7 +176,7 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
   case wasm::WASM_OPCODE_F64_CONST:
     Expr.Value.Float64 = readFloat64(Ctx);
     break;
-  case wasm::WASM_OPCODE_GET_GLOBAL:
+  case wasm::WASM_OPCODE_GLOBAL_GET:
     Expr.Value.Global = readULEB128(Ctx);
     break;
   default:
@@ -819,7 +819,7 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
       break;
     case wasm::WASM_EXTERNAL_TABLE:
       Im.Table = readTable(Ctx);
-      if (Im.Table.ElemType != wasm::WASM_TYPE_ANYFUNC)
+      if (Im.Table.ElemType != wasm::WASM_TYPE_FUNCREF)
         return make_error<GenericBinaryError>("Invalid table element type",
                                               object_error::parse_failed);
       break;
@@ -862,7 +862,7 @@ Error WasmObjectFile::parseTableSection(ReadContext &Ctx) {
   Tables.reserve(Count);
   while (Count--) {
     Tables.push_back(readTable(Ctx));
-    if (Tables.back().ElemType != wasm::WASM_TYPE_ANYFUNC) {
+    if (Tables.back().ElemType != wasm::WASM_TYPE_FUNCREF) {
       return make_error<GenericBinaryError>("Invalid table element type",
                                             object_error::parse_failed);
     }

@@ -103,6 +103,8 @@ bool IsStateDetached(int state);
 // Move the fd out of {0, 1, 2} range.
 fd_t ReserveStandardFds(fd_t fd);
 
+bool ShouldMockFailureToOpen(const char *path);
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_POSIX_H

@@ -22,11 +22,11 @@
 # FIXME: WebAssemblyInstPrinter does not print immediates.
 0x11 0x80 0x01 0x00
 
-# CHECK: get_local 128
+# CHECK: local.get 128
 0x20 0x80 0x01
 
 # Prefix byte example:
-# CHECK: i64.trunc_u:sat/f64
+# CHECK: i64.trunc_sat_f64_u
 0xFC 0x07
 
 # v128.const is arbitrarily disassembled as v16i8

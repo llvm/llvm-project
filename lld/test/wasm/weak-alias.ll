@@ -32,7 +32,7 @@ entry:
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 1, 1, 1, 1, 1 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
-; CHECK-NEXT:       - ElemType:        ANYFUNC
+; CHECK-NEXT:       - ElemType:        FUNCREF
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
 ; CHECK-NEXT:           Initial:         0x00000002
@@ -170,7 +170,7 @@ entry:
 ; RELOC-NEXT:     FunctionTypes:   [ 0, 1, 1, 1, 1, 1 ]
 ; RELOC-NEXT:   - Type:            TABLE
 ; RELOC-NEXT:     Tables:
-; RELOC-NEXT:       - ElemType:        ANYFUNC
+; RELOC-NEXT:       - ElemType:        FUNCREF
 ; RELOC-NEXT:         Limits:
 ; RELOC-NEXT:           Flags:           [ HAS_MAX ]
 ; RELOC-NEXT:           Initial:         0x00000002

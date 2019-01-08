@@ -14,15 +14,15 @@ CHECK-NEXT:   Link: 1
 CHECK-NEXT:   Symbols [
 CHECK-NEXT:     Symbol {
 CHECK-NEXT:       Version: 0
-CHECK-NEXT:       Name: @
+CHECK-NEXT:       Name: {{$}}
 CHECK-NEXT:     }
 CHECK-NEXT:     Symbol {
 CHECK-NEXT:       Version: 1
-CHECK-NEXT:       Name: _end@
+CHECK-NEXT:       Name: _end{{$}}
 CHECK-NEXT:     }
 CHECK-NEXT:     Symbol {
 CHECK-NEXT:       Version: 1
-CHECK-NEXT:       Name: _edata@
+CHECK-NEXT:       Name: _edata{{$}}
 CHECK-NEXT:     }
 CHECK-NEXT:     Symbol {
 CHECK-NEXT:       Version: 3
@@ -30,7 +30,7 @@ CHECK-NEXT:       Name: goo@@VERSION2
 CHECK-NEXT:     }
 CHECK-NEXT:     Symbol {
 CHECK-NEXT:       Version: 1
-CHECK-NEXT:       Name: __bss_start@
+CHECK-NEXT:       Name: __bss_start{{$}}
 CHECK-NEXT:     }
 CHECK-NEXT:     Symbol {
 CHECK-NEXT:       Version: 2

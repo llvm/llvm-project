@@ -1,4 +1,5 @@
 ; RUN: opt < %s -analyze -basicaa -da
+; RUN: opt < %s -passes="print<da>"
 
 ; Test that the dependence analysis pass does seg-fault due to a null pointer
 ; dereference. The code in gcdMIVTest requires a null check for the result of

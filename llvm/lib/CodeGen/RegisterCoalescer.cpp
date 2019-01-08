@@ -1910,6 +1910,13 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
     }
     LI.removeEmptySubRanges();
   }
+
+  // CP.getSrcReg()'s live interval has been merged into CP.getDstReg's live
+  // interval. Since CP.getSrcReg() is in ToBeUpdated set and its live interval
+  // is not up-to-date, need to update the merged live interval here.
+  if (ToBeUpdated.count(CP.getSrcReg()))
+    ShrinkMainRange = true;
+
   if (ShrinkMainRange) {
     LiveInterval &LI = LIS->getInterval(CP.getDstReg());
     shrinkToUses(&LI);

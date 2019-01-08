@@ -3094,11 +3094,13 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
       }
       return false;
     }
-    // Allow some constructs (except teams) to be orphaned (they could be
-    // used in functions, called from OpenMP regions with the required
-    // preconditions).
+    // Allow some constructs (except teams and cancellation constructs) to be
+    // orphaned (they could be used in functions, called from OpenMP regions
+    // with the required preconditions).
     if (ParentRegion == OMPD_unknown &&
-        !isOpenMPNestingTeamsDirective(CurrentRegion))
+        !isOpenMPNestingTeamsDirective(CurrentRegion) &&
+        CurrentRegion != OMPD_cancellation_point &&
+        CurrentRegion != OMPD_cancel)
       return false;
     if (CurrentRegion == OMPD_cancellation_point ||
         CurrentRegion == OMPD_cancel) {
@@ -3127,6 +3129,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
             (CancelRegion == OMPD_sections &&
              (ParentRegion == OMPD_section || ParentRegion == OMPD_sections ||
               ParentRegion == OMPD_parallel_sections)));
+      OrphanSeen = ParentRegion == OMPD_unknown;
     } else if (CurrentRegion == OMPD_master) {
       // OpenMP [2.16, Nesting of Regions]
       // A master region may not be closely nested inside a worksharing,

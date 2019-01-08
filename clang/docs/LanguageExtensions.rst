@@ -2725,7 +2725,9 @@ same namespace. For instance:
 Without the namespaces on the macros, ``other_function`` will be annotated with
 ``[[noreturn]]`` instead of ``__attribute__((unavailable))``. This may seem like
 a contrived example, but its very possible for this kind of situation to appear
-in real code if the pragmas are spread out across a large file.
+in real code if the pragmas are spread out across a large file. You can test if
+your version of clang supports namespaces on ``#pragma clang attribute`` with
+``__has_feature(pragma_clang_attribute_namespaces)``.
 
 Subject Match Rules
 -------------------

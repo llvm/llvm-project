@@ -99,6 +99,7 @@ void ReadProcMaps(ProcSelfMapsBuff *proc_maps) {
 }
 
 bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
+  CHECK(!Error()); // can not fail
   char *last = data_.proc_self_maps.data + data_.proc_self_maps.len;
   if (data_.current >= last)
     return false;

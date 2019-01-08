@@ -10,6 +10,8 @@ if (llvm_targets_to_build == "host") {
     llvm_targets_to_build = [ "AArch64" ]
   } else if (host_cpu == "arm") {
     llvm_targets_to_build = [ "ARM" ]
+  } else if (host_cpu == "pcc" || host_cpu == "pcc64") {
+    llvm_targets_to_build = [ "PowerPC" ]
   } else if (host_cpu == "x86" || host_cpu == "x64") {
     llvm_targets_to_build = [ "X86" ]
   } else {
@@ -20,6 +22,8 @@ if (llvm_targets_to_build == "host") {
   llvm_targets_to_build = [
     "AArch64",
     "ARM",
+    "PowerPC",
+    "WebAssembly",
     "X86",
   ]
 }
@@ -28,12 +32,18 @@ if (llvm_targets_to_build == "host") {
 # and remember which targets are built.
 llvm_build_AArch64 = false
 llvm_build_ARM = false
+llvm_build_PowerPC = false
+llvm_build_WebAssembly = false
 llvm_build_X86 = false
 foreach(target, llvm_targets_to_build) {
   if (target == "AArch64") {
     llvm_build_AArch64 = true
   } else if (target == "ARM") {
     llvm_build_ARM = true
+  } else if (target == "PowerPC") {
+    llvm_build_PowerPC = true
+  } else if (target == "WebAssembly") {
+    llvm_build_WebAssembly = true
   } else if (target == "X86") {
     llvm_build_X86 = true
   } else {
@@ -47,6 +57,8 @@ if (host_cpu == "arm64") {
   native_target = "AArch64"
 } else if (host_cpu == "arm") {
   native_target = "ARM"
+} else if (host_cpu == "pcc" || host_cpu == "pcc64") {
+  native_target = [ "PowerPC" ]
 } else if (host_cpu == "x86" || host_cpu == "x64") {
   native_target = "X86"
 } else {

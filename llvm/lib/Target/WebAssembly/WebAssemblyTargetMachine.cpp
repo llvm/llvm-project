@@ -298,6 +298,12 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // order of the arguments.
   addPass(createWebAssemblyCallIndirectFixup());
 
+  // Eliminate multiple-entry loops.
+  addPass(createWebAssemblyFixIrreducibleControlFlow());
+
+  // Do various transformations for exception handling.
+  addPass(createWebAssemblyLateEHPrepare());
+
   if (getOptLevel() != CodeGenOpt::None) {
     // LiveIntervals isn't commonly run this late. Re-establish preconditions.
     addPass(createWebAssemblyPrepareForLiveIntervals());
@@ -320,16 +326,8 @@ void WebAssemblyPassConfig::addPreEmitPass() {
     addPass(createWebAssemblyRegColoring());
   }
 
-  // Eliminate multiple-entry loops. Do this before inserting explicit get_local
-  // and set_local operators because we create a new variable that we want
-  // converted into a local.
-  addPass(createWebAssemblyFixIrreducibleControlFlow());
-
-  // Insert explicit get_local and set_local operators.
+  // Insert explicit local.get and local.set operators.
   addPass(createWebAssemblyExplicitLocals());
-
-  // Do various transformations for exception handling
-  addPass(createWebAssemblyLateEHPrepare());
 
   // Sort the blocks of the CFG into topological order, a prerequisite for
   // BLOCK and LOOP markers.
