@@ -110,7 +110,7 @@ if(LLDB_INCLUDE_TESTS)
       # FIXME: Standalone builds should import the cxx target as well.
       if(LLDB_BUILT_STANDALONE)
         # For now check that the include directory exists.
-        set(cxx_dir "${LLVM_DIR}/../../../include/c++")
+        set(cxx_dir "${LLVM_BINARY_DIR}/include/c++")
         if(NOT EXISTS ${cxx_dir})
           message(WARNING "LLDB test suite requires libc++ in llvm/projects/libcxx or an existing build symlinked to ${cxx_dir}")
         endif()
