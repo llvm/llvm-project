@@ -17,16 +17,15 @@
 #include <queue>
 #include <string>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace dex {
 
-std::vector<Token> generateIdentifierTrigrams(StringRef Identifier) {
+std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier) {
   // Apply fuzzy matching text segmentation.
   std::vector<CharRole> Roles(Identifier.size());
   calculateRoles(Identifier,
-                 makeMutableArrayRef(Roles.data(), Identifier.size()));
+                 llvm::makeMutableArrayRef(Roles.data(), Identifier.size()));
 
   std::string LowercaseIdentifier = Identifier.lower();
 
@@ -48,7 +47,7 @@ std::vector<Token> generateIdentifierTrigrams(StringRef Identifier) {
     }
   }
 
-  DenseSet<Token> UniqueTrigrams;
+  llvm::DenseSet<Token> UniqueTrigrams;
 
   auto Add = [&](std::string Chars) {
     UniqueTrigrams.insert(Token(Token::Kind::Trigram, Chars));
@@ -85,7 +84,7 @@ std::vector<Token> generateIdentifierTrigrams(StringRef Identifier) {
   return {UniqueTrigrams.begin(), UniqueTrigrams.end()};
 }
 
-std::vector<Token> generateQueryTrigrams(StringRef Query) {
+std::vector<Token> generateQueryTrigrams(llvm::StringRef Query) {
   if (Query.empty())
     return {};
   std::string LowercaseQuery = Query.lower();
@@ -94,9 +93,9 @@ std::vector<Token> generateQueryTrigrams(StringRef Query) {
 
   // Apply fuzzy matching text segmentation.
   std::vector<CharRole> Roles(Query.size());
-  calculateRoles(Query, makeMutableArrayRef(Roles.data(), Query.size()));
+  calculateRoles(Query, llvm::makeMutableArrayRef(Roles.data(), Query.size()));
 
-  DenseSet<Token> UniqueTrigrams;
+  llvm::DenseSet<Token> UniqueTrigrams;
   std::string Chars;
   for (unsigned I = 0; I < Query.size(); ++I) {
     if (Roles[I] != Head && Roles[I] != Tail)

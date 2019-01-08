@@ -13,31 +13,42 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
+static std::string getFallbackClangPath() {
+  static int Dummy;
+  std::string ClangdExecutable =
+      llvm::sys::fs::getMainExecutable("clangd", (void *)&Dummy);
+  SmallString<128> ClangPath;
+  ClangPath = llvm::sys::path::parent_path(ClangdExecutable);
+  llvm::sys::path::append(ClangPath, "clang");
+  return ClangPath.str();
+}
+
 tooling::CompileCommand
 GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
-  std::vector<std::string> Argv = {"clang"};
+  std::vector<std::string> Argv = {getFallbackClangPath()};
   // Clang treats .h files as C by default, resulting in unhelpful diagnostics.
   // Parsing as Objective C++ is friendly to more cases.
-  if (sys::path::extension(File) == ".h")
+  if (llvm::sys::path::extension(File) == ".h")
     Argv.push_back("-xobjective-c++-header");
   Argv.push_back(File);
-  return tooling::CompileCommand(sys::path::parent_path(File),
-                                 sys::path::filename(File), std::move(Argv),
+  return tooling::CompileCommand(llvm::sys::path::parent_path(File),
+                                 llvm::sys::path::filename(File),
+                                 std::move(Argv),
                                  /*Output=*/"");
 }
 
 DirectoryBasedGlobalCompilationDatabase::
-    DirectoryBasedGlobalCompilationDatabase(Optional<Path> CompileCommandsDir)
+    DirectoryBasedGlobalCompilationDatabase(
+        llvm::Optional<Path> CompileCommandsDir)
     : CompileCommandsDir(std::move(CompileCommandsDir)) {}
 
 DirectoryBasedGlobalCompilationDatabase::
     ~DirectoryBasedGlobalCompilationDatabase() = default;
 
-Optional<tooling::CompileCommand>
+llvm::Optional<tooling::CompileCommand>
 DirectoryBasedGlobalCompilationDatabase::getCompileCommand(
     PathRef File, ProjectInfo *Project) const {
   if (auto CDB = getCDBForFile(File, Project)) {
@@ -67,7 +78,7 @@ DirectoryBasedGlobalCompilationDatabase::getCDBInDirLocked(PathRef Dir) const {
 tooling::CompilationDatabase *
 DirectoryBasedGlobalCompilationDatabase::getCDBForFile(
     PathRef File, ProjectInfo *Project) const {
-  namespace path = sys::path;
+  namespace path = llvm::sys::path;
   assert((path::is_absolute(File, path::Style::posix) ||
           path::is_absolute(File, path::Style::windows)) &&
          "path must be absolute");
@@ -103,7 +114,7 @@ OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,
     });
 }
 
-Optional<tooling::CompileCommand>
+llvm::Optional<tooling::CompileCommand>
 OverlayCDB::getCompileCommand(PathRef File, ProjectInfo *Project) const {
   {
     std::lock_guard<std::mutex> Lock(Mutex);

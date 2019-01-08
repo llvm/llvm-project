@@ -21,7 +21,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -379,7 +378,7 @@ int [[bar_not_preamble]];
   // Make the compilation paths appear as ../src/foo.cpp in the compile
   // commands.
   SmallString<32> RelPathPrefix("..");
-  sys::path::append(RelPathPrefix, "src");
+  llvm::sys::path::append(RelPathPrefix, "src");
   std::string BuildDir = testPath("build");
   MockCompilationDatabase CDB(BuildDir, RelPathPrefix);
 
@@ -1305,9 +1304,9 @@ TEST(FindReferences, NeedsIndex) {
 
 TEST(FindReferences, NoQueryForLocalSymbols) {
   struct RecordingIndex : public MemIndex {
-    mutable Optional<DenseSet<SymbolID>> RefIDs;
+    mutable Optional<llvm::DenseSet<SymbolID>> RefIDs;
     void refs(const RefsRequest &Req,
-              function_ref<void(const Ref &)>) const override {
+              llvm::function_ref<void(const Ref &)>) const override {
       RefIDs = Req.IDs;
     }
   };

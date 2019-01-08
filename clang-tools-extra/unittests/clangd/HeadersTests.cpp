@@ -19,7 +19,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -53,7 +52,7 @@ private:
     CI->getDiagnosticOpts().IgnoreWarnings = true;
     auto Clang = prepareCompilerInstance(
         std::move(CI), /*Preamble=*/nullptr,
-        MemoryBuffer::getMemBuffer(FS.Files[MainFile], MainFile),
+        llvm::MemoryBuffer::getMemBuffer(FS.Files[MainFile], MainFile),
         std::make_shared<PCHContainerOperations>(), VFS, IgnoreDiags);
 
     EXPECT_FALSE(Clang->getFrontendOpts().Inputs.empty());
@@ -85,9 +84,9 @@ protected:
 
     if (Preferred.empty())
       Preferred = Original;
-    auto ToHeaderFile = [](StringRef Header) {
+    auto ToHeaderFile = [](llvm::StringRef Header) {
       return HeaderFile{Header,
-                        /*Verbatim=*/!sys::path::is_absolute(Header)};
+                        /*Verbatim=*/!llvm::sys::path::is_absolute(Header)};
     };
 
     IncludeInserter Inserter(MainFile, /*Code=*/"", format::getLLVMStyle(),
@@ -104,7 +103,7 @@ protected:
     return Path;
   }
 
-  Optional<TextEdit> insert(StringRef VerbatimHeader) {
+  llvm::Optional<TextEdit> insert(llvm::StringRef VerbatimHeader) {
     auto Clang = setupClang();
     PreprocessOnlyAction Action;
     EXPECT_TRUE(
@@ -122,7 +121,7 @@ protected:
   MockCompilationDatabase CDB;
   std::string MainFile = testPath("main.cpp");
   std::string Subdir = testPath("sub");
-  std::string SearchDirArg = (Twine("-I") + Subdir).str();
+  std::string SearchDirArg = (llvm::Twine("-I") + Subdir).str();
   IgnoringDiagConsumer IgnoreDiags;
 };
 

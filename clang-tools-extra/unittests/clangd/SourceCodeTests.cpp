@@ -13,7 +13,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -54,63 +53,63 @@ TEST(SourceCodeTests, lspLength) {
 
 TEST(SourceCodeTests, PositionToOffset) {
   // line out of bounds
-  EXPECT_THAT_EXPECTED(positionToOffset(File, position(-1, 2)), Failed());
+  EXPECT_THAT_EXPECTED(positionToOffset(File, position(-1, 2)), llvm::Failed());
   // first line
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(0, -1)),
-                       Failed()); // out of range
+                       llvm::Failed()); // out of range
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(0, 0)),
-                       HasValue(0)); // first character
+                       llvm::HasValue(0)); // first character
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(0, 3)),
-                       HasValue(3)); // middle character
+                       llvm::HasValue(3)); // middle character
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(0, 6)),
-                       HasValue(6)); // last character
+                       llvm::HasValue(6)); // last character
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(0, 7)),
-                       HasValue(7)); // the newline itself
+                       llvm::HasValue(7)); // the newline itself
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(0, 7), false),
-                       HasValue(7));
+                       llvm::HasValue(7));
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(0, 8)),
-                       HasValue(7)); // out of range
+                       llvm::HasValue(7)); // out of range
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(0, 8), false),
-                       Failed()); // out of range
+                       llvm::Failed()); // out of range
   // middle line
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(1, -1)),
-                       Failed()); // out of range
+                       llvm::Failed()); // out of range
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(1, 0)),
-                       HasValue(8)); // first character
+                       llvm::HasValue(8)); // first character
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(1, 3)),
-                       HasValue(11)); // middle character
+                       llvm::HasValue(11)); // middle character
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(1, 3), false),
-                       HasValue(11));
+                       llvm::HasValue(11));
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(1, 6)),
-                       HasValue(16)); // last character
+                       llvm::HasValue(16)); // last character
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(1, 7)),
-                       HasValue(17)); // the newline itself
+                       llvm::HasValue(17)); // the newline itself
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(1, 8)),
-                       HasValue(17)); // out of range
+                       llvm::HasValue(17)); // out of range
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(1, 8), false),
-                       Failed()); // out of range
+                       llvm::Failed()); // out of range
   // last line
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(2, -1)),
-                       Failed()); // out of range
+                       llvm::Failed()); // out of range
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(2, 0)),
-                       HasValue(18)); // first character
+                       llvm::HasValue(18)); // first character
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(2, 3)),
-                       HasValue(21)); // middle character
+                       llvm::HasValue(21)); // middle character
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(2, 5), false),
-                       Failed()); // middle of surrogate pair
+                       llvm::Failed()); // middle of surrogate pair
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(2, 5)),
-                       HasValue(26)); // middle of surrogate pair
+                       llvm::HasValue(26)); // middle of surrogate pair
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(2, 6), false),
-                       HasValue(26)); // end of surrogate pair
+                       llvm::HasValue(26)); // end of surrogate pair
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(2, 8)),
-                       HasValue(28)); // last character
+                       llvm::HasValue(28)); // last character
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(2, 9)),
-                       HasValue(29)); // EOF
+                       llvm::HasValue(29)); // EOF
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(2, 10), false),
-                       Failed()); // out of range
+                       llvm::Failed()); // out of range
   // line out of bounds
-  EXPECT_THAT_EXPECTED(positionToOffset(File, position(3, 0)), Failed());
-  EXPECT_THAT_EXPECTED(positionToOffset(File, position(3, 1)), Failed());
+  EXPECT_THAT_EXPECTED(positionToOffset(File, position(3, 0)), llvm::Failed());
+  EXPECT_THAT_EXPECTED(positionToOffset(File, position(3, 1)), llvm::Failed());
 }
 
 TEST(SourceCodeTests, OffsetToPosition) {
