@@ -314,17 +314,20 @@ llvm::Expected<IndexFileIn> readYAML(llvm::StringRef Data) {
       Arena; // store the underlying data of Position::FileURI.
   llvm::UniqueStringSaver Strings(Arena);
   llvm::yaml::Input Yin(Data, &Strings);
-  do {
+  while (Yin.setCurrentDocument()) {
+    llvm::yaml::EmptyContext Ctx;
     VariantEntry Variant;
-    Yin >> Variant;
+    yamlize(Yin, Variant, true, Ctx);
     if (Yin.error())
       return llvm::errorCodeToError(Yin.error());
+
     if (Variant.Symbol)
       Symbols.insert(*Variant.Symbol);
     if (Variant.Refs)
       for (const auto &Ref : Variant.Refs->second)
         Refs.insert(Variant.Refs->first, Ref);
-  } while (Yin.nextDocument());
+    Yin.nextDocument();
+  }
 
   IndexFileIn Result;
   Result.Symbols.emplace(std::move(Symbols).build());

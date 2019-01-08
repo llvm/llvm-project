@@ -91,6 +91,10 @@ MATCHER_P2(IncludeHeaderWithRef, IncludeHeader, References, "") {
   return (arg.IncludeHeader == IncludeHeader) && (arg.References == References);
 }
 
+TEST(SerializationTest, NoCrashOnEmptyYAML) {
+  EXPECT_TRUE(bool(readIndexFile("")));
+}
+
 TEST(SerializationTest, YAMLConversions) {
   auto In = readIndexFile(YAML);
   EXPECT_TRUE(bool(In)) << In.takeError();
