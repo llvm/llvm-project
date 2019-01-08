@@ -92,7 +92,11 @@ void CompileUnit::addLabelLowPc(uint64_t LabelLowPc, int64_t PcOffset) {
 
 void CompileUnit::addFunctionRange(uint64_t FuncLowPc, uint64_t FuncHighPc,
                                    int64_t PcOffset) {
-  Ranges.insert(FuncLowPc, FuncHighPc, PcOffset);
+  //  Don't add empty ranges to the interval map.  They are a problem because
+  //  the interval map expects half open intervals. This is safe because they
+  //  are empty anyway.
+  if (FuncHighPc != FuncLowPc)
+    Ranges.insert(FuncLowPc, FuncHighPc, PcOffset);
   this->LowPc = std::min(LowPc, FuncLowPc + PcOffset);
   this->HighPc = std::max(HighPc, FuncHighPc + PcOffset);
 }
