@@ -21,11 +21,16 @@
 namespace __sanitizer {
 
 void ReadProcMaps(ProcSelfMapsBuff *proc_maps) {
-  ReadFileToBuffer("/proc/self/xmap", &proc_maps->data, &proc_maps->mmaped_size,
-                   &proc_maps->len);
+  if (!ReadFileToBuffer("/proc/self/xmap", &proc_maps->data,
+                        &proc_maps->mmaped_size, &proc_maps->len)) {
+    proc_maps->data = nullptr;
+    proc_maps->mmaped_size = 0;
+    proc_maps->len = 0;
+  }
 }
 
 bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
+  if (Error()) return false; // simulate empty maps
   char *last = data_.proc_self_maps.data + data_.proc_self_maps.len;
   if (data_.current >= last) return false;
 

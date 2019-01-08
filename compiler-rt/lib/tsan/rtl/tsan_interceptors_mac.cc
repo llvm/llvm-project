@@ -19,6 +19,7 @@
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
 #include "tsan_interface_ann.h"
+#include "sanitizer_common/sanitizer_addrhashmap.h"
 
 #include <libkern/OSAtomic.h>
 #include <objc/objc-sync.h>
@@ -295,34 +296,47 @@ TSAN_INTERCEPTOR(void, xpc_connection_cancel, xpc_connection_t connection) {
 
 #endif  // #if defined(__has_include) && __has_include(<xpc/xpc.h>)
 
-// Is the Obj-C object a tagged pointer (i.e. isn't really a valid pointer and
-// contains data in the pointers bits instead)?
-static bool IsTaggedObjCPointer(void *obj) {
+// Determines whether the Obj-C object pointer is a tagged pointer. Tagged
+// pointers encode the object data directly in their pointer bits and do not
+// have an associated memory allocation. The Obj-C runtime uses tagged pointers
+// to transparently optimize small objects.
+static bool IsTaggedObjCPointer(id obj) {
   const uptr kPossibleTaggedBits = 0x8000000000000001ull;
   return ((uptr)obj & kPossibleTaggedBits) != 0;
 }
 
-// Return an address on which we can synchronize (Acquire and Release) for a
-// Obj-C tagged pointer (which is not a valid pointer). Ideally should be a
-// derived address from 'obj', but for now just return the same global address.
-// TODO(kubamracek): Return different address for different pointers.
-static uptr SyncAddressForTaggedPointer(void *obj) {
-  (void)obj;
-  static u64 addr;
-  return (uptr)&addr;
+// Returns an address which can be used to inform TSan about synchronization
+// points (MutexLock/Unlock). The TSan infrastructure expects this to be a valid
+// address in the process space. We do a small allocation here to obtain a
+// stable address (the array backing the hash map can change). The memory is
+// never free'd (leaked) and allocation and locking are slow, but this code only
+// runs for @synchronized with tagged pointers, which is very rare.
+static uptr GetOrCreateSyncAddress(uptr addr, ThreadState *thr, uptr pc) {
+  typedef AddrHashMap<uptr, 5> Map;
+  static Map Addresses;
+  Map::Handle h(&Addresses, addr);
+  if (h.created()) {
+    ThreadIgnoreBegin(thr, pc);
+    *h = (uptr) user_alloc(thr, pc, /*size=*/1);
+    ThreadIgnoreEnd(thr, pc);
+  }
+  return *h;
 }
 
-// Address on which we can synchronize for an Objective-C object. Supports
-// tagged pointers.
-static uptr SyncAddressForObjCObject(void *obj) {
-  if (IsTaggedObjCPointer(obj)) return SyncAddressForTaggedPointer(obj);
+// Returns an address on which we can synchronize given an Obj-C object pointer.
+// For normal object pointers, this is just the address of the object in memory.
+// Tagged pointers are not backed by an actual memory allocation, so we need to
+// synthesize a valid address.
+static uptr SyncAddressForObjCObject(id obj, ThreadState *thr, uptr pc) {
+  if (IsTaggedObjCPointer(obj))
+    return GetOrCreateSyncAddress((uptr)obj, thr, pc);
   return (uptr)obj;
 }
 
 TSAN_INTERCEPTOR(int, objc_sync_enter, id obj) {
   SCOPED_TSAN_INTERCEPTOR(objc_sync_enter, obj);
   if (!obj) return REAL(objc_sync_enter)(obj);
-  uptr addr = SyncAddressForObjCObject(obj);
+  uptr addr = SyncAddressForObjCObject(obj, thr, pc);
   MutexPreLock(thr, pc, addr, MutexFlagWriteReentrant);
   int result = REAL(objc_sync_enter)(obj);
   CHECK_EQ(result, OBJC_SYNC_SUCCESS);
@@ -333,7 +347,7 @@ TSAN_INTERCEPTOR(int, objc_sync_enter, id obj) {
 TSAN_INTERCEPTOR(int, objc_sync_exit, id obj) {
   SCOPED_TSAN_INTERCEPTOR(objc_sync_exit, obj);
   if (!obj) return REAL(objc_sync_exit)(obj);
-  uptr addr = SyncAddressForObjCObject(obj);
+  uptr addr = SyncAddressForObjCObject(obj, thr, pc);
   MutexUnlock(thr, pc, addr);
   int result = REAL(objc_sync_exit)(obj);
   if (result != OBJC_SYNC_SUCCESS) MutexInvalidAccess(thr, pc, addr);

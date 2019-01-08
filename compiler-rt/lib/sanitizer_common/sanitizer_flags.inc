@@ -243,3 +243,6 @@ COMMON_FLAG(bool, dump_registers, true,
 COMMON_FLAG(bool, detect_write_exec, false,
           "If true, triggers warning when writable-executable pages requests "
           "are being made")
+COMMON_FLAG(bool, test_only_emulate_no_memorymap, false,
+            "TEST ONLY fail to read memory mappings to emulate sanitized "
+            "\"init\"")
