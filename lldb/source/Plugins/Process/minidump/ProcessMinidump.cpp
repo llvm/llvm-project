@@ -34,6 +34,7 @@
 #include "llvm/Support/Threading.h"
 
 #include "Plugins/Process/Utility/StopInfoMachException.h"
+
 // C includes
 // C++ includes
 
@@ -80,7 +81,7 @@ public:
         section_sp, module->base_of_image);
   }
 
-  ObjectFile *GetObjectFile() override { return nullptr; }
+ObjectFile *GetObjectFile() override { return nullptr; }
 
   SectionList *GetSectionList() override {
     return Module::GetUnifiedSectionList();
@@ -305,19 +306,22 @@ void ProcessMinidump::Clear() { Process::m_thread_list.Clear(); }
 
 bool ProcessMinidump::UpdateThreadList(ThreadList &old_thread_list,
                                        ThreadList &new_thread_list) {
-  uint32_t num_threads = 0;
-  if (m_thread_list.size() > 0)
-    num_threads = m_thread_list.size();
+  for (const MinidumpThread& thread : m_thread_list) {
+    MinidumpLocationDescriptor context_location = thread.thread_context;
 
-  for (lldb::tid_t tid = 0; tid < num_threads; ++tid) {
+    // If the minidump contains an exception context, use it
+    if (m_active_exception != nullptr &&
+        m_active_exception->thread_id == thread.thread_id) {
+      context_location = m_active_exception->thread_context;
+    }
+
     llvm::ArrayRef<uint8_t> context;
     if (!m_is_wow64)
-      context = m_minidump_parser.GetThreadContext(m_thread_list[tid]);
+      context = m_minidump_parser.GetThreadContext(context_location);
     else
-      context = m_minidump_parser.GetThreadContextWow64(m_thread_list[tid]);
+      context = m_minidump_parser.GetThreadContextWow64(thread);
 
-    lldb::ThreadSP thread_sp(
-        new ThreadMinidump(*this, m_thread_list[tid], context));
+    lldb::ThreadSP thread_sp(new ThreadMinidump(*this, thread, context));
     new_thread_list.AddThread(thread_sp);
   }
   return new_thread_list.GetSize(false) > 0;
@@ -549,9 +553,9 @@ public:
     APPEND_OPT(m_dump_linux_all);
     m_option_group.Finalize();
   }
-  
+
   ~CommandObjectProcessMinidumpDump() {}
-  
+
   Options *GetOptions() override { return &m_option_group; }
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -563,7 +567,7 @@ public:
       return false;
     }
     SetDefaultOptionsIfNoneAreSet();
-    
+
     ProcessMinidump *process = static_cast<ProcessMinidump *>(
         m_interpreter.GetExecutionContext().GetProcessPtr());
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -635,7 +639,7 @@ public:
     LoadSubCommand("dump",
         CommandObjectSP(new CommandObjectProcessMinidumpDump(interpreter)));
   }
-  
+
   ~CommandObjectMultiwordProcessMinidump() {}
 };
 

@@ -1,0 +1,91 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("PPCGenCallingConv") {
+  visibility = [ ":LLVMPowerPCCodeGen" ]
+  args = [ "-gen-callingconv" ]
+  td_file = "PPC.td"
+}
+
+tablegen("PPCGenDAGISel") {
+  visibility = [ ":LLVMPowerPCCodeGen" ]
+  args = [ "-gen-dag-isel" ]
+  td_file = "PPC.td"
+}
+
+tablegen("PPCGenFastISel") {
+  visibility = [ ":LLVMPowerPCCodeGen" ]
+  args = [ "-gen-fast-isel" ]
+  td_file = "PPC.td"
+}
+
+static_library("LLVMPowerPCCodeGen") {
+  deps = [
+    ":PPCGenCallingConv",
+    ":PPCGenDAGISel",
+    ":PPCGenFastISel",
+    "InstPrinter",
+    "MCTargetDesc",
+    "TargetInfo",
+    "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/Analysis",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGen/AsmPrinter",
+    "//llvm/lib/CodeGen/SelectionDAG",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Transforms/Utils",
+  ]
+  include_dirs = [ "." ]
+  sources = [
+    "PPCBoolRetToInt.cpp",
+    "PPCAsmPrinter.cpp",
+    "PPCBranchSelector.cpp",
+    "PPCBranchCoalescing.cpp",
+    "PPCCCState.cpp",
+    "PPCCTRLoops.cpp",
+    "PPCHazardRecognizers.cpp",
+    "PPCInstrInfo.cpp",
+    "PPCISelDAGToDAG.cpp",
+    "PPCISelLowering.cpp",
+    "PPCEarlyReturn.cpp",
+    "PPCFastISel.cpp",
+    "PPCFrameLowering.cpp",
+    "PPCLoopPreIncPrep.cpp",
+    "PPCMCInstLower.cpp",
+    "PPCMachineFunctionInfo.cpp",
+    "PPCMIPeephole.cpp",
+    "PPCRegisterInfo.cpp",
+    "PPCQPXLoadSplat.cpp",
+    "PPCSubtarget.cpp",
+    "PPCTargetMachine.cpp",
+    "PPCTargetObjectFile.cpp",
+    "PPCTargetTransformInfo.cpp",
+    "PPCTOCRegDeps.cpp",
+    "PPCTLSDynamicCall.cpp",
+    "PPCVSXCopy.cpp",
+    "PPCReduceCRLogicals.cpp",
+    "PPCVSXFMAMutate.cpp",
+    "PPCVSXSwapRemoval.cpp",
+    "PPCExpandISEL.cpp",
+    "PPCPreEmitPeephole.cpp",
+  ]
+}
+
+# This is a bit different from most build files: Due to this group
+# having the directory's name, "//llvm/lib/Target/PowerPC" will refer to this
+# target, which pulls in the code in this directory *and all subdirectories*.
+# For most other directories, "//llvm/lib/Foo" only pulls in the code directly
+# in "llvm/lib/Foo". The forwarding targets in //llvm/lib/Target expect this
+# different behavior.
+group("PowerPC") {
+  deps = [
+    ":LLVMPowerPCCodeGen",
+    "AsmParser",
+    "Disassembler",
+    "InstPrinter",
+    "MCTargetDesc",
+    "TargetInfo",
+  ]
+}

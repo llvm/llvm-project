@@ -173,6 +173,8 @@ static void splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
   auto DWOFile = Reader.create();
   DWOFile->removeSections(
       [&](const SectionBase &Sec) { return onlyKeepDWOPred(*DWOFile, Sec); });
+  if (Config.OutputArch)
+    DWOFile->Machine = Config.OutputArch.getValue().EMachine;
   FileBuffer FB(File);
   auto Writer = createWriter(Config, *DWOFile, FB, OutputElfType);
   Writer->finalize();
@@ -261,6 +263,8 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
   if (!Config.SplitDWO.empty()) {
     splitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType);
   }
+  if (Config.OutputArch)
+    Obj.Machine = Config.OutputArch.getValue().EMachine;
 
   // TODO: update or remove symbols only if there is an option that affects
   // them.
@@ -528,7 +532,10 @@ void executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
   BinaryReader Reader(Config.BinaryArch, &In);
   std::unique_ptr<Object> Obj = Reader.create();
 
-  const ElfType OutputElfType = getOutputElfType(Config.BinaryArch);
+  // Prefer OutputArch (-O<format>) if set, otherwise fallback to BinaryArch
+  // (-B<arch>).
+  const ElfType OutputElfType = getOutputElfType(
+      Config.OutputArch ? Config.OutputArch.getValue() : Config.BinaryArch);
   handleArgs(Config, *Obj, Reader, OutputElfType);
   std::unique_ptr<Writer> Writer =
       createWriter(Config, *Obj, Out, OutputElfType);
@@ -540,7 +547,10 @@ void executeObjcopyOnBinary(const CopyConfig &Config,
                             object::ELFObjectFileBase &In, Buffer &Out) {
   ELFReader Reader(&In);
   std::unique_ptr<Object> Obj = Reader.create();
-  const ElfType OutputElfType = getOutputElfType(In);
+  // Prefer OutputArch (-O<format>) if set, otherwise infer it from the input.
+  const ElfType OutputElfType =
+      Config.OutputArch ? getOutputElfType(Config.OutputArch.getValue())
+                        : getOutputElfType(In);
   ArrayRef<uint8_t> BuildIdBytes;
 
   if (!Config.BuildIdLinkDir.empty()) {

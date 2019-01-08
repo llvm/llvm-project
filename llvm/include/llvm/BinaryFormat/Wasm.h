@@ -211,7 +211,7 @@ enum : unsigned {
   WASM_TYPE_F32 = 0x7D,
   WASM_TYPE_F64 = 0x7C,
   WASM_TYPE_V128 = 0x7B,
-  WASM_TYPE_ANYFUNC = 0x70,
+  WASM_TYPE_FUNCREF = 0x70,
   WASM_TYPE_EXCEPT_REF = 0x68,
   WASM_TYPE_FUNC = 0x60,
   WASM_TYPE_NORESULT = 0x40, // for blocks with no result values
@@ -229,7 +229,7 @@ enum : unsigned {
 // Opcodes used in initializer expressions.
 enum : unsigned {
   WASM_OPCODE_END = 0x0b,
-  WASM_OPCODE_GET_GLOBAL = 0x23,
+  WASM_OPCODE_GLOBAL_GET = 0x23,
   WASM_OPCODE_I32_CONST = 0x41,
   WASM_OPCODE_I64_CONST = 0x42,
   WASM_OPCODE_F32_CONST = 0x43,

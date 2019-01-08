@@ -805,10 +805,7 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   // Now the loop blocks are cloned and the other exiting blocks from the
   // remainder are connected to the original Loop's exit blocks. The remaining
   // work is to update the phi nodes in the original loop, and take in the
-  // values from the cloned region. Also update the dominator info for
-  // OtherExits and their immediate successors, since we have new edges into
-  // OtherExits.
-  SmallPtrSet<BasicBlock*, 8> ImmediateSuccessorsOfExitBlocks;
+  // values from the cloned region.
   for (auto *BB : OtherExits) {
    for (auto &II : *BB) {
 
@@ -843,27 +840,30 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
              "Breaks the definition of dedicated exits!");
     }
 #endif
-   // Update the dominator info because the immediate dominator is no longer the
-   // header of the original Loop. BB has edges both from L and remainder code.
-   // Since the preheader determines which loop is run (L or directly jump to
-   // the remainder code), we set the immediate dominator as the preheader.
-   if (DT) {
-     DT->changeImmediateDominator(BB, PreHeader);
-     // Also update the IDom for immediate successors of BB.  If the current
-     // IDom is the header, update the IDom to be the preheader because that is
-     // the nearest common dominator of all predecessors of SuccBB.  We need to
-     // check for IDom being the header because successors of exit blocks can
-     // have edges from outside the loop, and we should not incorrectly update
-     // the IDom in that case.
-     for (BasicBlock *SuccBB: successors(BB))
-       if (ImmediateSuccessorsOfExitBlocks.insert(SuccBB).second) {
-         if (DT->getNode(SuccBB)->getIDom()->getBlock() == Header) {
-           assert(!SuccBB->getSinglePredecessor() &&
-                  "BB should be the IDom then!");
-           DT->changeImmediateDominator(SuccBB, PreHeader);
-         }
-       }
+  }
+
+  // Update the immediate dominator of the exit blocks and blocks that are
+  // reachable from the exit blocks. This is needed because we now have paths
+  // from both the original loop and the remainder code reaching the exit
+  // blocks. While the IDom of these exit blocks were from the original loop,
+  // now the IDom is the preheader (which decides whether the original loop or
+  // remainder code should run).
+  if (DT && !L->getExitingBlock()) {
+    SmallVector<BasicBlock *, 16> ChildrenToUpdate;
+    // NB! We have to examine the dom children of all loop blocks, not just
+    // those which are the IDom of the exit blocks. This is because blocks
+    // reachable from the exit blocks can have their IDom as the nearest common
+    // dominator of the exit blocks.
+    for (auto *BB : L->blocks()) {
+      auto *DomNodeBB = DT->getNode(BB);
+      for (auto *DomChild : DomNodeBB->getChildren()) {
+        auto *DomChildBB = DomChild->getBlock();
+        if (!L->contains(LI->getLoopFor(DomChildBB)))
+          ChildrenToUpdate.push_back(DomChildBB);
+      }
     }
+    for (auto *BB : ChildrenToUpdate)
+      DT->changeImmediateDominator(BB, PreHeader);
   }
 
   // Loop structure should be the following:

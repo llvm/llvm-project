@@ -612,6 +612,15 @@ protected:
     SourceLocation Loc;
   };
 
+  class CXXScalarValueInitExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXScalarValueInitExpr;
+
+    unsigned : NumExprBits;
+
+    SourceLocation RParenLoc;
+  };
+
   class CXXNewExprBitfields {
     friend class ASTStmtReader;
     friend class ASTStmtWriter;
@@ -738,6 +747,47 @@ protected:
     unsigned NumArgs;
   };
 
+  class CXXDependentScopeMemberExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXDependentScopeMemberExpr;
+
+    unsigned : NumExprBits;
+
+    /// Whether this member expression used the '->' operator or
+    /// the '.' operator.
+    unsigned IsArrow : 1;
+
+    /// Whether this member expression has info for explicit template
+    /// keyword and arguments.
+    unsigned HasTemplateKWAndArgsInfo : 1;
+
+    /// See getFirstQualifierFoundInScope() and the comment listing
+    /// the trailing objects.
+    unsigned HasFirstQualifierFoundInScope : 1;
+
+    /// The location of the '->' or '.' operator.
+    SourceLocation OperatorLoc;
+  };
+
+  class CXXNoexceptExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXNoexceptExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned Value : 1;
+  };
+
+  class SubstNonTypeTemplateParmExprBitfields {
+    friend class ASTStmtReader;
+    friend class SubstNonTypeTemplateParmExpr;
+
+    unsigned : NumExprBits;
+
+    /// The location of the non-type template parameter reference.
+    SourceLocation NameLoc;
+  };
+
   //===--- C++ Coroutines TS bitfields classes ---===//
 
   class CoawaitExprBitfields {
@@ -818,6 +868,7 @@ protected:
     CXXThrowExprBitfields CXXThrowExprBits;
     CXXDefaultArgExprBitfields CXXDefaultArgExprBits;
     CXXDefaultInitExprBitfields CXXDefaultInitExprBits;
+    CXXScalarValueInitExprBitfields CXXScalarValueInitExprBits;
     CXXNewExprBitfields CXXNewExprBits;
     CXXDeleteExprBitfields CXXDeleteExprBits;
     TypeTraitExprBitfields TypeTraitExprBits;
@@ -825,6 +876,9 @@ protected:
     CXXConstructExprBitfields CXXConstructExprBits;
     ExprWithCleanupsBitfields ExprWithCleanupsBits;
     CXXUnresolvedConstructExprBitfields CXXUnresolvedConstructExprBits;
+    CXXDependentScopeMemberExprBitfields CXXDependentScopeMemberExprBits;
+    CXXNoexceptExprBitfields CXXNoexceptExprBits;
+    SubstNonTypeTemplateParmExprBitfields SubstNonTypeTemplateParmExprBits;
 
     // C++ Coroutines TS expressions
     CoawaitExprBitfields CoawaitBits;

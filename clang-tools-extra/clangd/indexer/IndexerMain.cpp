@@ -22,20 +22,17 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
 
-using namespace llvm;
-using namespace clang::tooling;
-
 namespace clang {
 namespace clangd {
 namespace {
 
-static cl::opt<IndexFileFormat>
-    Format("format", cl::desc("Format of the index to be written"),
-           cl::values(clEnumValN(IndexFileFormat::YAML, "yaml",
-                                 "human-readable YAML format"),
-                      clEnumValN(IndexFileFormat::RIFF, "binary",
-                                 "binary RIFF format")),
-           cl::init(IndexFileFormat::RIFF));
+static llvm::cl::opt<IndexFileFormat>
+    Format("format", llvm::cl::desc("Format of the index to be written"),
+           llvm::cl::values(clEnumValN(IndexFileFormat::YAML, "yaml",
+                                       "human-readable YAML format"),
+                            clEnumValN(IndexFileFormat::RIFF, "binary",
+                                       "binary RIFF format")),
+           llvm::cl::init(IndexFileFormat::RIFF));
 
 class IndexActionFactory : public tooling::FrontendActionFactory {
 public:
@@ -86,7 +83,7 @@ private:
 } // namespace clang
 
 int main(int argc, const char **argv) {
-  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   const char *Overview = R"(
   Creates an index of symbol information etc in a whole project.
@@ -103,10 +100,10 @@ int main(int argc, const char **argv) {
   )";
 
   auto Executor = clang::tooling::createExecutorFromCommandLineArgs(
-      argc, argv, cl::GeneralCategory, Overview);
+      argc, argv, llvm::cl::GeneralCategory, Overview);
 
   if (!Executor) {
-    errs() << toString(Executor.takeError()) << "\n";
+    llvm::errs() << llvm::toString(Executor.takeError()) << "\n";
     return 1;
   }
 
@@ -115,12 +112,12 @@ int main(int argc, const char **argv) {
   auto Err = Executor->get()->execute(
       llvm::make_unique<clang::clangd::IndexActionFactory>(Data));
   if (Err) {
-    errs() << toString(std::move(Err)) << "\n";
+    llvm::errs() << llvm::toString(std::move(Err)) << "\n";
   }
 
   // Emit collected data.
   clang::clangd::IndexFileOut Out(Data);
   Out.Format = clang::clangd::Format;
-  outs() << Out;
+  llvm::outs() << Out;
   return 0;
 }

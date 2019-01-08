@@ -1681,3 +1681,19 @@ entry:
   %add = add i64 %ld, 1
   ret i64 %add
 }
+
+; CHECK-LABEL: trunc_splat_zero:
+; CHECK-DAG: strh wzr, [x0]
+define void @trunc_splat_zero(<2 x i8>* %ptr) {
+  store <2 x i8> zeroinitializer, <2 x i8>* %ptr, align 2
+  ret void
+}
+
+; CHECK-LABEL: trunc_splat:
+; CHECK: mov [[VAL:w[0-9]+]], #42
+; CHECK: movk [[VAL]], #42, lsl #16
+; CHECK: str [[VAL]], [x0]
+define void @trunc_splat(<2 x i16>* %ptr) {
+  store <2 x i16> <i16 42, i16 42>, <2 x i16>* %ptr, align 4
+  ret void
+}

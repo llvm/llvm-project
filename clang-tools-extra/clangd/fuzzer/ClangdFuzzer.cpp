@@ -16,8 +16,8 @@
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
 #include "CodeComplete.h"
+#include <cstdio>
 #include <sstream>
-#include <stdio.h>
 
 using namespace clang::clangd;
 

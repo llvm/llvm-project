@@ -18,11 +18,7 @@ to update GN build files. Reviewers should not ask authors to update GN build
 files. Keeping the GN build files up-to-date is on the people who use the GN
 build.
 
-*Another Warning* Right now, we're in the process of getting the GN build
-checked in. As of this writing, it's not yet functional at all. Check back
-in a few weeks!
-
-`GN <https://gn.googlesource.com/gn/>`_ is another metabuild system. It always
+`GN <https://gn.googlesource.com/gn/>`_ is a metabuild system. It always
 creates ninja files, but it can create some IDE projects (MSVC, Xcode, ...)
 which then shell out to ninja for the actual build.
 
@@ -31,11 +27,6 @@ for LLVM's build in 35ms on the author's laptop, compared to 66s for CMake) --
 a 2000x difference), and since it's so fast it doesn't aggressively cache,
 making it possible to switch e.g. between release and debug builds in one build
 directory.
-
-It is arguable easier to configure than the CMake build, and has native support
-for building with multiple toolchains in one build directory. The build
-description is declarative-ish, allowing GN to print it in a json format that
-can fairly easily be converted to other metabuild system inputs.
 
 The main motivation behind the GN build is that some people find it more
 convenient for day-to-day hacking on LLVM than CMake. Distribution, building
@@ -49,9 +40,6 @@ This is a `good overview of GN <https://docs.google.com/presentation/d/15Zwb53Jc
 Quick start
 ===========
 
-*Warning* Right now, we're in the process of getting the GN build checked in.
-As of this writing, it's not yet functional at all.
-
 GN only works in the monorepo layout.
 
 #. Obtain a `gn binary <https://gn.googlesource.com/gn/#getting-started>`_.
@@ -61,8 +49,8 @@ GN only works in the monorepo layout.
    build directory, it can have any name, and you can have as many as you want,
    each with different build settings).
 
-#. Run e.g. `ninja -C out/gn llvm-undname` to build all prerequisites for and
-   including the Microsoft symbol name pretty printing tool llvm-undname.
+#. Run e.g. `ninja -C out/gn check-lld` to build all prerequisites for and
+   run the LLD tests.
 
 By default, you get a release build with assertions enabled that targets
 the host arch. You can set various build options by editing `out/gn/args.gn`,

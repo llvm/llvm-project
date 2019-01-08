@@ -12383,12 +12383,6 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     return;
 
   const Type *BaseType = ArrayTy->getElementType().getTypePtr();
-  // It is possible that the type of the base expression after IgnoreParenCasts
-  // is incomplete, even though the type of the base expression before
-  // IgnoreParenCasts is complete (see PR39746 for an example). In this case we
-  // have no information about whether the array access is out-of-bounds.
-  if (BaseType->isIncompleteType())
-    return;
 
   Expr::EvalResult Result;
   if (!IndexExpr->EvaluateAsInt(Result, Context, Expr::SE_AllowSideEffects))
@@ -12405,6 +12399,15 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     ND = ME->getMemberDecl();
 
   if (index.isUnsigned() || !index.isNegative()) {
+    // It is possible that the type of the base expression after
+    // IgnoreParenCasts is incomplete, even though the type of the base
+    // expression before IgnoreParenCasts is complete (see PR39746 for an
+    // example). In this case we have no information about whether the array
+    // access exceeds the array bounds. However we can still diagnose an array
+    // access which precedes the array bounds.
+    if (BaseType->isIncompleteType())
+      return;
+
     llvm::APInt size = ArrayTy->getSize();
     if (!size.isStrictlyPositive())
       return;

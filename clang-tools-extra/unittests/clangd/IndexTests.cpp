@@ -24,7 +24,6 @@ using testing::Pair;
 using testing::Pointee;
 using testing::UnorderedElementsAre;
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {

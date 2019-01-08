@@ -530,19 +530,22 @@ public:
   }
 
   NestedNameSpecifierLoc getTemplateQualifierLoc() const {
-    assert(Argument.getKind() == TemplateArgument::Template ||
-           Argument.getKind() == TemplateArgument::TemplateExpansion);
+    if (Argument.getKind() != TemplateArgument::Template &&
+        Argument.getKind() != TemplateArgument::TemplateExpansion)
+      return NestedNameSpecifierLoc();
     return LocInfo.getTemplateQualifierLoc();
   }
 
   SourceLocation getTemplateNameLoc() const {
-    assert(Argument.getKind() == TemplateArgument::Template ||
-           Argument.getKind() == TemplateArgument::TemplateExpansion);
+    if (Argument.getKind() != TemplateArgument::Template &&
+        Argument.getKind() != TemplateArgument::TemplateExpansion)
+      return SourceLocation();
     return LocInfo.getTemplateNameLoc();
   }
 
   SourceLocation getTemplateEllipsisLoc() const {
-    assert(Argument.getKind() == TemplateArgument::TemplateExpansion);
+    if (Argument.getKind() != TemplateArgument::TemplateExpansion)
+      return SourceLocation();
     return LocInfo.getTemplateEllipsisLoc();
   }
 };

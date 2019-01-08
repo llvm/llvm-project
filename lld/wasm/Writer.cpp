@@ -175,7 +175,7 @@ void Writer::createImportSection() {
     Import.Module = "env";
     Import.Field = kFunctionTableName;
     Import.Kind = WASM_EXTERNAL_TABLE;
-    Import.Table.ElemType = WASM_TYPE_ANYFUNC;
+    Import.Table.ElemType = WASM_TYPE_FUNCREF;
     Import.Table.Limits = {0, TableSize, 0};
     writeImport(OS, Import);
   }
@@ -304,7 +304,7 @@ void Writer::createTableSection() {
 
   writeUleb128(OS, 1, "table count");
   WasmLimits Limits = {WASM_LIMITS_FLAG_HAS_MAX, TableSize, TableSize};
-  writeTableType(OS, WasmTable{WASM_TYPE_ANYFUNC, Limits});
+  writeTableType(OS, WasmTable{WASM_TYPE_FUNCREF, Limits});
 }
 
 void Writer::createExportSection() {
@@ -364,7 +364,7 @@ void Writer::createElemSection() {
   writeUleb128(OS, 0, "table index");
   WasmInitExpr InitExpr;
   if (Config->Pic) {
-    InitExpr.Opcode = WASM_OPCODE_GET_GLOBAL;
+    InitExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
     InitExpr.Value.Global = WasmSym::TableBase->getGlobalIndex();
   } else {
     InitExpr.Opcode = WASM_OPCODE_I32_CONST;

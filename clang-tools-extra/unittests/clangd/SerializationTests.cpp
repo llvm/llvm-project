@@ -20,7 +20,6 @@ using testing::Pair;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -92,6 +91,10 @@ MATCHER_P2(IncludeHeaderWithRef, IncludeHeader, References, "") {
   return (arg.IncludeHeader == IncludeHeader) && (arg.References == References);
 }
 
+TEST(SerializationTest, NoCrashOnEmptyYAML) {
+  EXPECT_TRUE(bool(readIndexFile("")));
+}
+
 TEST(SerializationTest, YAMLConversions) {
   auto In = readIndexFile(YAML);
   EXPECT_TRUE(bool(In)) << In.takeError();
@@ -158,7 +161,7 @@ TEST(SerializationTest, BinaryConversions) {
   // Write to binary format, and parse again.
   IndexFileOut Out(*In);
   Out.Format = IndexFileFormat::RIFF;
-  std::string Serialized = to_string(Out);
+  std::string Serialized = llvm::to_string(Out);
 
   auto In2 = readIndexFile(Serialized);
   ASSERT_TRUE(bool(In2)) << In.takeError();
@@ -191,7 +194,7 @@ TEST(SerializationTest, SrcsTest) {
   Out.Format = IndexFileFormat::RIFF;
   Out.Sources = &Sources;
   {
-    std::string Serialized = to_string(Out);
+    std::string Serialized = llvm::to_string(Out);
 
     auto In = readIndexFile(Serialized);
     ASSERT_TRUE(bool(In)) << In.takeError();

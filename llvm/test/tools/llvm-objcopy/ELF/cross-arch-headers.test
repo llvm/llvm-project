@@ -1,0 +1,71 @@
+# RUN: yaml2obj %s > %t.o
+
+# RUN: llvm-objcopy %t.o -O elf32-i386 %t.elf32_i386.o
+# RUN: llvm-readobj --file-headers %t.elf32_i386.o | FileCheck %s --check-prefixes=CHECK,I386,32
+
+# RUN: llvm-objcopy %t.o -O elf32-powerpcle %t.elf32_ppcle.o
+# RUN: llvm-readobj --file-headers %t.elf32_ppcle.o | FileCheck %s --check-prefixes=CHECK,PPC,32
+
+# RUN: llvm-objcopy %t.o -O elf32-x86-64 %t.elf32_x86_64.o
+# RUN: llvm-readobj --file-headers %t.elf32_x86_64.o | FileCheck %s --check-prefixes=CHECK,X86-64,32
+
+# RUN: llvm-objcopy %t.o -O elf64-powerpcle %t.elf64_ppcle.o
+# RUN: llvm-readobj --file-headers %t.elf64_ppcle.o | FileCheck %s --check-prefixes=CHECK,PPC64,64
+
+# RUN: llvm-objcopy %t.o -O elf64-x86-64 %t.elf64_x86_64.o
+# RUN: llvm-readobj --file-headers %t.elf64_x86_64.o | FileCheck %s --check-prefixes=CHECK,X86-64,64
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_386
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+Symbols:
+  Global:
+    - Name:     foo
+      Type:     STT_FUNC
+      Section:  .text
+      Value:    0x1234
+    - Name:     bar
+      Type:     STT_OBJECT
+      Section:  .data
+      Value:    0xabcd
+
+# CHECK: Format:
+# 32-SAME:      ELF32-
+# 64-SAME:      ELF64-
+# I386-SAME:    i386
+# PPC-SAME:     ppc
+# PPC64-SAME:   ppc64
+# X86-64-SAME:  x86-64
+
+# I386-NEXT:    Arch: i386
+# PPC-NEXT:     Arch: powerpc
+# PPC64-NEXT:   Arch: powerpc64le
+# X86-64-NEXT:  Arch: x86_64
+
+# 32-NEXT:      AddressSize: 32bit
+# 64-NEXT:      AddressSize: 64bit
+
+# 32:     Class: 32-bit
+# 64:     Class: 64-bit
+# CHECK:  DataEncoding: LittleEndian
+
+# I386:   Machine: EM_386
+# PPC:    Machine: EM_PPC
+# PPC64:  Machine: EM_PPC64
+# X86-64: Machine: EM_X86_64
+
+# 32: HeaderSize: 52
+# 64: HeaderSize: 64
+
+# 32: SectionHeaderEntrySize: 40
+# 64: SectionHeaderEntrySize: 64

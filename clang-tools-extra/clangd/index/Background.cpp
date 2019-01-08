@@ -35,7 +35,6 @@
 #include <string>
 #include <thread>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -119,11 +118,11 @@ createFileFilter(const llvm::StringMap<FileDigest> &FileDigests,
 } // namespace
 
 BackgroundIndex::BackgroundIndex(
-    Context BackgroundContext, StringRef ResourceDir,
+    Context BackgroundContext, llvm::StringRef ResourceDir,
     const FileSystemProvider &FSProvider, const GlobalCompilationDatabase &CDB,
     BackgroundIndexStorage::Factory IndexStorageFactory,
     size_t BuildIndexPeriodMs, size_t ThreadPoolSize)
-    : SwapIndex(make_unique<MemIndex>()), ResourceDir(ResourceDir),
+    : SwapIndex(llvm::make_unique<MemIndex>()), ResourceDir(ResourceDir),
       FSProvider(FSProvider), CDB(CDB),
       BackgroundContext(std::move(BackgroundContext)),
       BuildIndexPeriodMs(BuildIndexPeriodMs),
@@ -163,7 +162,7 @@ void BackgroundIndex::stop() {
 void BackgroundIndex::run() {
   WithContext Background(BackgroundContext.clone());
   while (true) {
-    Optional<Task> Task;
+    llvm::Optional<Task> Task;
     ThreadPriority Priority;
     {
       std::unique_lock<std::mutex> Lock(QueueMu);
@@ -260,15 +259,15 @@ void BackgroundIndex::enqueueTask(Task T, ThreadPriority Priority) {
 }
 
 /// Given index results from a TU, only update files in \p FilesToUpdate.
-void BackgroundIndex::update(StringRef MainFile, IndexFileIn Index,
-                             const StringMap<FileDigest> &FilesToUpdate,
+void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
+                             const llvm::StringMap<FileDigest> &FilesToUpdate,
                              BackgroundIndexStorage *IndexStorage) {
   // Partition symbols/references into files.
   struct File {
-    DenseSet<const Symbol *> Symbols;
-    DenseSet<const Ref *> Refs;
+    llvm::DenseSet<const Symbol *> Symbols;
+    llvm::DenseSet<const Ref *> Refs;
   };
-  StringMap<File> Files;
+  llvm::StringMap<File> Files;
   URIToFileCache URICache(MainFile);
   for (const auto &Sym : *Index.Symbols) {
     if (Sym.CanonicalDeclaration) {
@@ -287,7 +286,7 @@ void BackgroundIndex::update(StringRef MainFile, IndexFileIn Index,
         Files[DefPath].Symbols.insert(&Sym);
     }
   }
-  DenseMap<const Ref *, SymbolID> RefToIDs;
+  llvm::DenseMap<const Ref *, SymbolID> RefToIDs;
   for (const auto &SymRefs : *Index.Refs) {
     for (const auto &R : SymRefs.second) {
       auto Path = URICache.resolve(R.Location.FileURI);
@@ -301,7 +300,7 @@ void BackgroundIndex::update(StringRef MainFile, IndexFileIn Index,
 
   // Build and store new slabs for each updated file.
   for (const auto &F : Files) {
-    StringRef Path = F.first();
+    llvm::StringRef Path = F.first();
     vlog("Update symbols in {0}", Path);
     SymbolSlab::Builder Syms;
     RefSlab::Builder Refs;
@@ -362,22 +361,22 @@ void BackgroundIndex::buildIndex() {
   }
 }
 
-Error BackgroundIndex::index(tooling::CompileCommand Cmd,
-                             BackgroundIndexStorage *IndexStorage) {
+llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
+                                   BackgroundIndexStorage *IndexStorage) {
   trace::Span Tracer("BackgroundIndex");
   SPAN_ATTACH(Tracer, "file", Cmd.Filename);
-  SmallString<128> AbsolutePath;
-  if (sys::path::is_absolute(Cmd.Filename)) {
+  llvm::SmallString<128> AbsolutePath;
+  if (llvm::sys::path::is_absolute(Cmd.Filename)) {
     AbsolutePath = Cmd.Filename;
   } else {
     AbsolutePath = Cmd.Directory;
-    sys::path::append(AbsolutePath, Cmd.Filename);
+    llvm::sys::path::append(AbsolutePath, Cmd.Filename);
   }
 
   auto FS = FSProvider.getFileSystem();
   auto Buf = FS->getBufferForFile(AbsolutePath);
   if (!Buf)
-    return errorCodeToError(Buf.getError());
+    return llvm::errorCodeToError(Buf.getError());
   auto Hash = digest(Buf->get()->getBuffer());
 
   // Take a snapshot of the digests to avoid locking for each file in the TU.
@@ -386,31 +385,31 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
     std::lock_guard<std::mutex> Lock(DigestsMu);
     if (IndexedFileDigests.lookup(AbsolutePath) == Hash) {
       vlog("No need to index {0}, already up to date", AbsolutePath);
-      return Error::success();
+      return llvm::Error::success();
     }
 
     DigestsSnapshot = IndexedFileDigests;
   }
 
-  log("Indexing {0} (digest:={1})", Cmd.Filename, toHex(Hash));
+  log("Indexing {0} (digest:={1})", Cmd.Filename, llvm::toHex(Hash));
   ParseInputs Inputs;
   Inputs.FS = std::move(FS);
   Inputs.FS->setCurrentWorkingDirectory(Cmd.Directory);
   Inputs.CompileCommand = std::move(Cmd);
   auto CI = buildCompilerInvocation(Inputs);
   if (!CI)
-    return createStringError(inconvertibleErrorCode(),
-                             "Couldn't build compiler invocation");
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Couldn't build compiler invocation");
   IgnoreDiagnostics IgnoreDiags;
   auto Clang = prepareCompilerInstance(
       std::move(CI), /*Preamble=*/nullptr, std::move(*Buf),
       std::make_shared<PCHContainerOperations>(), Inputs.FS, IgnoreDiags);
   if (!Clang)
-    return createStringError(inconvertibleErrorCode(),
-                             "Couldn't build compiler instance");
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Couldn't build compiler instance");
 
   SymbolCollector::Options IndexOpts;
-  StringMap<FileDigest> FilesToUpdate;
+  llvm::StringMap<FileDigest> FilesToUpdate;
   IndexOpts.FileFilter = createFileFilter(DigestsSnapshot, FilesToUpdate);
   IndexFileIn Index;
   auto Action = createStaticIndexingAction(
@@ -425,15 +424,17 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
 
   const FrontendInputFile &Input = Clang->getFrontendOpts().Inputs.front();
   if (!Action->BeginSourceFile(*Clang, Input))
-    return createStringError(inconvertibleErrorCode(),
-                             "BeginSourceFile() failed");
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "BeginSourceFile() failed");
   if (!Action->Execute())
-    return createStringError(inconvertibleErrorCode(), "Execute() failed");
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Execute() failed");
   Action->EndSourceFile();
   if (Clang->hasDiagnostics() &&
       Clang->getDiagnostics().hasUncompilableErrorOccurred()) {
-    return createStringError(inconvertibleErrorCode(),
-                             "IndexingAction failed: has uncompilable errors");
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "IndexingAction failed: has uncompilable errors");
   }
 
   assert(Index.Symbols && Index.Refs && Index.Sources
@@ -460,7 +461,7 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
     reset(
         IndexedSymbols.buildIndex(IndexType::Light, DuplicateHandling::Merge));
 
-  return Error::success();
+  return llvm::Error::success();
 }
 
 } // namespace clangd

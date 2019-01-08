@@ -8,8 +8,8 @@ target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: eq_i64:
 ; CHECK-NEXT: .functype eq_i64 (i64, i64) -> (i32){{$}}
-; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: local.get $push[[L1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: i64.eq $push[[NUM:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @eq_i64(i64 %x, i64 %y) {

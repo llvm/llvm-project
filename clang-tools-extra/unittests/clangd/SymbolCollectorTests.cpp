@@ -27,7 +27,6 @@
 #include <memory>
 #include <string>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -103,7 +102,7 @@ HaveRanges(const std::vector<Range> Ranges) {
 
 class ShouldCollectSymbolTest : public ::testing::Test {
 public:
-  void build(StringRef HeaderCode, StringRef Code = "") {
+  void build(llvm::StringRef HeaderCode, llvm::StringRef Code = "") {
     File.HeaderFilename = HeaderName;
     File.Filename = FileName;
     File.HeaderCode = HeaderCode;
@@ -112,7 +111,7 @@ public:
   }
 
   // build() must have been called.
-  bool shouldCollect(StringRef Name, bool Qualified = true) {
+  bool shouldCollect(llvm::StringRef Name, bool Qualified = true) {
     assert(AST.hasValue());
     return SymbolCollector::shouldCollectSymbol(
         Qualified ? findDecl(*AST, Name) : findUnqualifiedDecl(*AST, Name),
@@ -123,7 +122,7 @@ protected:
   std::string HeaderName = "f.h";
   std::string FileName = "f.cpp";
   TestTU File;
-  Optional<ParsedAST> AST; // Initialized after build.
+  llvm::Optional<ParsedAST> AST; // Initialized after build.
 };
 
 TEST_F(ShouldCollectSymbolTest, ShouldCollectSymbol) {
@@ -197,7 +196,7 @@ public:
             PragmaHandler(PragmaHandler) {}
 
       std::unique_ptr<ASTConsumer>
-      CreateASTConsumer(CompilerInstance &CI, StringRef InFile) override {
+      CreateASTConsumer(CompilerInstance &CI, llvm::StringRef InFile) override {
         if (PragmaHandler)
           CI.getPreprocessor().addCommentHandler(PragmaHandler);
         return WrapperFrontendAction::CreateASTConsumer(CI, InFile);
@@ -224,16 +223,16 @@ public:
 class SymbolCollectorTest : public ::testing::Test {
 public:
   SymbolCollectorTest()
-      : InMemoryFileSystem(new vfs::InMemoryFileSystem),
+      : InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
         TestHeaderName(testPath("symbol.h")),
         TestFileName(testPath("symbol.cc")) {
     TestHeaderURI = URI::create(TestHeaderName).toString();
     TestFileURI = URI::create(TestFileName).toString();
   }
 
-  bool runSymbolCollector(StringRef HeaderCode, StringRef MainCode,
+  bool runSymbolCollector(llvm::StringRef HeaderCode, llvm::StringRef MainCode,
                           const std::vector<std::string> &ExtraArgs = {}) {
-    IntrusiveRefCntPtr<FileManager> Files(
+    llvm::IntrusiveRefCntPtr<FileManager> Files(
         new FileManager(FileSystemOptions(), InMemoryFileSystem));
 
     auto Factory = llvm::make_unique<SymbolIndexActionFactory>(
@@ -252,9 +251,9 @@ public:
         std::make_shared<PCHContainerOperations>());
 
     InMemoryFileSystem->addFile(TestHeaderName, 0,
-                                MemoryBuffer::getMemBuffer(HeaderCode));
+                                llvm::MemoryBuffer::getMemBuffer(HeaderCode));
     InMemoryFileSystem->addFile(TestFileName, 0,
-                                MemoryBuffer::getMemBuffer(MainCode));
+                                llvm::MemoryBuffer::getMemBuffer(MainCode));
     Invocation.run();
     Symbols = Factory->Collector->takeSymbols();
     Refs = Factory->Collector->takeRefs();
@@ -262,7 +261,7 @@ public:
   }
 
 protected:
-  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
   std::string TestHeaderName;
   std::string TestHeaderURI;
   std::string TestFileName;
@@ -829,7 +828,7 @@ TEST_F(SymbolCollectorTest, SkipIncFileWhenCanonicalizeHeaders) {
   auto IncFile = testPath("test.inc");
   auto IncURI = URI::create(IncFile).toString();
   InMemoryFileSystem->addFile(IncFile, 0,
-                              MemoryBuffer::getMemBuffer("class X {};"));
+                              llvm::MemoryBuffer::getMemBuffer("class X {};"));
   runSymbolCollector("#include \"test.inc\"\nclass Y {};", /*Main=*/"",
                      /*ExtraArgs=*/{"-I", testRoot()});
   EXPECT_THAT(Symbols,
@@ -848,7 +847,7 @@ TEST_F(SymbolCollectorTest, MainFileIsHeaderWhenSkipIncFile) {
   auto IncFile = testPath("test.inc");
   auto IncURI = URI::create(IncFile).toString();
   InMemoryFileSystem->addFile(IncFile, 0,
-                              MemoryBuffer::getMemBuffer("class X {};"));
+                              llvm::MemoryBuffer::getMemBuffer("class X {};"));
   runSymbolCollector("", /*Main=*/"#include \"test.inc\"",
                      /*ExtraArgs=*/{"-I", testRoot()});
   EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),
@@ -864,7 +863,7 @@ TEST_F(SymbolCollectorTest, MainFileIsHeaderWithoutExtensionWhenSkipIncFile) {
   auto IncFile = testPath("test.inc");
   auto IncURI = URI::create(IncFile).toString();
   InMemoryFileSystem->addFile(IncFile, 0,
-                              MemoryBuffer::getMemBuffer("class X {};"));
+                              llvm::MemoryBuffer::getMemBuffer("class X {};"));
   runSymbolCollector("", /*Main=*/"#include \"test.inc\"",
                      /*ExtraArgs=*/{"-I", testRoot()});
   EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),
@@ -878,7 +877,7 @@ TEST_F(SymbolCollectorTest, FallbackToIncFileWhenIncludingFileIsCC) {
   auto IncFile = testPath("test.inc");
   auto IncURI = URI::create(IncFile).toString();
   InMemoryFileSystem->addFile(IncFile, 0,
-                              MemoryBuffer::getMemBuffer("class X {};"));
+                              llvm::MemoryBuffer::getMemBuffer("class X {};"));
   runSymbolCollector("", /*Main=*/"#include \"test.inc\"",
                      /*ExtraArgs=*/{"-I", testRoot()});
   EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),

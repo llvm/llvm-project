@@ -100,6 +100,10 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
 
     // Find the mapping that contains a stack variable.
     MemoryMappingLayout proc_maps(/*cache_enabled*/true);
+    if (proc_maps.Error()) {
+      *stack_top = *stack_bottom = 0;
+      return;
+    }
     MemoryMappedSegment segment;
     uptr prev_end = 0;
     while (proc_maps.Next(&segment)) {

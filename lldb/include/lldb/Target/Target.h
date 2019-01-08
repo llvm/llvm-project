@@ -1354,6 +1354,8 @@ private:
 
   void AddBreakpoint(lldb::BreakpointSP breakpoint_sp, bool internal);
 
+  void FinalizeFileActions(ProcessLaunchInfo &info);
+
   DISALLOW_COPY_AND_ASSIGN(Target);
 };
 

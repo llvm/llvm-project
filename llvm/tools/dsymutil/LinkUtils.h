@@ -10,8 +10,11 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_LINKOPTIONS_H
 #define LLVM_TOOLS_DSYMUTIL_LINKOPTIONS_H
 
+#include "SymbolMap.h"
+
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/WithColor.h"
+
 #include <string>
 
 namespace llvm {
@@ -59,6 +62,9 @@ struct LinkOptions {
 
   /// -oso-prepend-path
   std::string PrependPath;
+
+  /// Symbol map translator.
+  SymbolMapTranslator Translator;
 
   LinkOptions() = default;
 };

@@ -73,7 +73,7 @@ GOT-EXE-NEXT:       Initial: 0x0
 GOT-EXE-NEXT:       Value: 0x0
 GOT-EXE-NEXT:       Type: Function (0x2)
 GOT-EXE-NEXT:       Section: Undefined (0x0)
-GOT-EXE-NEXT:       Name: __gmon_start__@ (1)
+GOT-EXE-NEXT:       Name: __gmon_start__ (1)
 GOT-EXE-NEXT:     }
 GOT-EXE-NEXT:   ]
 GOT-EXE-NEXT:   Number of TLS and multi-GOT entries: 0
@@ -145,7 +145,7 @@ GOT-SO-NEXT:       Initial: 0x0
 GOT-SO-NEXT:       Value: 0x0
 GOT-SO-NEXT:       Type: None (0x0)
 GOT-SO-NEXT:       Section: Undefined (0x0)
-GOT-SO-NEXT:       Name: _ITM_registerTMCloneTable@ (87)
+GOT-SO-NEXT:       Name: _ITM_registerTMCloneTable (87)
 GOT-SO-NEXT:     }
 GOT-SO-NEXT:     Entry {
 GOT-SO-NEXT:       Address: 0x1090C
@@ -154,7 +154,7 @@ GOT-SO-NEXT:       Initial: 0x0
 GOT-SO-NEXT:       Value: 0x0
 GOT-SO-NEXT:       Type: None (0x0)
 GOT-SO-NEXT:       Section: Undefined (0x0)
-GOT-SO-NEXT:       Name: _Jv_RegisterClasses@ (128)
+GOT-SO-NEXT:       Name: _Jv_RegisterClasses (128)
 GOT-SO-NEXT:     }
 GOT-SO-NEXT:     Entry {
 GOT-SO-NEXT:       Address: 0x10910
@@ -163,7 +163,7 @@ GOT-SO-NEXT:       Initial: 0x0
 GOT-SO-NEXT:       Value: 0x0
 GOT-SO-NEXT:       Type: Function (0x2)
 GOT-SO-NEXT:       Section: Undefined (0x0)
-GOT-SO-NEXT:       Name: __gmon_start__@ (23)
+GOT-SO-NEXT:       Name: __gmon_start__ (23)
 GOT-SO-NEXT:     }
 GOT-SO-NEXT:     Entry {
 GOT-SO-NEXT:       Address: 0x10914
@@ -181,7 +181,7 @@ GOT-SO-NEXT:       Initial: 0x0
 GOT-SO-NEXT:       Value: 0x0
 GOT-SO-NEXT:       Type: None (0x0)
 GOT-SO-NEXT:       Section: Undefined (0x0)
-GOT-SO-NEXT:       Name: _ITM_deregisterTMCloneTable@ (59)
+GOT-SO-NEXT:       Name: _ITM_deregisterTMCloneTable (59)
 GOT-SO-NEXT:     }
 GOT-SO-NEXT:     Entry {
 GOT-SO-NEXT:       Address: 0x1091C
@@ -277,7 +277,7 @@ GOT-TLS-NEXT:       Initial: 0x0
 GOT-TLS-NEXT:       Value: 0x0
 GOT-TLS-NEXT:       Type: None (0x0)
 GOT-TLS-NEXT:       Section: Undefined (0x0)
-GOT-TLS-NEXT:       Name: _ITM_registerTMCloneTable@ (78)
+GOT-TLS-NEXT:       Name: _ITM_registerTMCloneTable (78)
 GOT-TLS-NEXT:     }
 GOT-TLS-NEXT:     Entry {
 GOT-TLS-NEXT:       Address: 0x10C70
@@ -286,7 +286,7 @@ GOT-TLS-NEXT:       Initial: 0x0
 GOT-TLS-NEXT:       Value: 0x0
 GOT-TLS-NEXT:       Type: None (0x0)
 GOT-TLS-NEXT:       Section: Undefined (0x0)
-GOT-TLS-NEXT:       Name: _Jv_RegisterClasses@ (119)
+GOT-TLS-NEXT:       Name: _Jv_RegisterClasses (119)
 GOT-TLS-NEXT:     }
 GOT-TLS-NEXT:     Entry {
 GOT-TLS-NEXT:       Address: 0x10C78
@@ -295,7 +295,7 @@ GOT-TLS-NEXT:       Initial: 0x0
 GOT-TLS-NEXT:       Value: 0x0
 GOT-TLS-NEXT:       Type: Function (0x2)
 GOT-TLS-NEXT:       Section: Undefined (0x0)
-GOT-TLS-NEXT:       Name: __gmon_start__@ (23)
+GOT-TLS-NEXT:       Name: __gmon_start__ (23)
 GOT-TLS-NEXT:     }
 GOT-TLS-NEXT:     Entry {
 GOT-TLS-NEXT:       Address: 0x10C80
@@ -313,7 +313,7 @@ GOT-TLS-NEXT:       Initial: 0x0
 GOT-TLS-NEXT:       Value: 0x0
 GOT-TLS-NEXT:       Type: None (0x0)
 GOT-TLS-NEXT:       Section: Undefined (0x0)
-GOT-TLS-NEXT:       Name: _ITM_deregisterTMCloneTable@ (50)
+GOT-TLS-NEXT:       Name: _ITM_deregisterTMCloneTable (50)
 GOT-TLS-NEXT:     }
 GOT-TLS-NEXT:     Entry {
 GOT-TLS-NEXT:       Address: 0x10C90

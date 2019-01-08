@@ -1,3 +1,5 @@
+; RUN: opt < %s -disable-output "-passes=print<da>" -aa-pipeline=basic-aa 2>&1 \
+; RUN: | FileCheck %s
 ; RUN: opt < %s -analyze -basicaa -da | FileCheck %s
 
 ; ModuleID = 'ExactRDIV.bc'

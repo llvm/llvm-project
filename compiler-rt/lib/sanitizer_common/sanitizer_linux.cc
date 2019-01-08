@@ -453,6 +453,8 @@ uptr internal_execve(const char *filename, char *const argv[],
 
 // ----------------- sanitizer_common.h
 bool FileExists(const char *filename) {
+  if (ShouldMockFailureToOpen(filename))
+    return false;
   struct stat st;
 #if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   if (internal_syscall(SYSCALL(newfstatat), AT_FDCWD, filename, &st, 0))
@@ -1008,6 +1010,8 @@ static uptr GetKernelAreaSize() {
   // Firstly check if there are writable segments
   // mapped to top gigabyte (e.g. stack).
   MemoryMappingLayout proc_maps(/*cache_enabled*/true);
+  if (proc_maps.Error())
+    return 0;
   MemoryMappedSegment segment;
   while (proc_maps.Next(&segment)) {
     if ((segment.end >= 3 * gbyte) && segment.IsWritable()) return 0;

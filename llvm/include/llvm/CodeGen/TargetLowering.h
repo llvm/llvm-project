@@ -2895,16 +2895,6 @@ public:
   bool ShrinkDemandedOp(SDValue Op, unsigned BitWidth, const APInt &Demanded,
                         TargetLoweringOpt &TLO) const;
 
-  /// Helper for SimplifyDemandedBits that can simplify an operation with
-  /// multiple uses.  This function simplifies operand \p OpIdx of \p User and
-  /// then updates \p User with the simplified version. No other uses of
-  /// \p OpIdx are updated. If \p User is the only user of \p OpIdx, this
-  /// function behaves exactly like function SimplifyDemandedBits declared
-  /// below except that it also updates the DAG by calling
-  /// DCI.CommitTargetLoweringOpt.
-  bool SimplifyDemandedBits(SDNode *User, unsigned OpIdx, const APInt &Demanded,
-                            DAGCombinerInfo &DCI, TargetLoweringOpt &TLO) const;
-
   /// Look at Op.  At this point, we know that only the DemandedBits bits of the
   /// result of Op are ever used downstream.  If we can use this information to
   /// simplify Op, create a new simplified DAG node and return true, returning

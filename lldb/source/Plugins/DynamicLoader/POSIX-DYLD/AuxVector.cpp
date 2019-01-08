@@ -100,7 +100,7 @@ const char *AuxVector::GetEntryName(EntryType type) {
 
 #define ENTRY_NAME(_type) \
   _type:                  \
-  name = #_type + 5
+  name = &#_type[5]
   switch (type) {
     case ENTRY_NAME(AUXV_AT_NULL);           break;
     case ENTRY_NAME(AUXV_AT_IGNORE);         break;

@@ -52,7 +52,7 @@ entry:
 ; CHECK-LABEL: arg_i8:
 ; CHECK-NEXT: .functype arg_i8 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load   $push[[NUM0:[0-9]+]]=, 0($0){{$}}
-; CHECK-NEXT: tee_local  $push[[NUM1:[0-9]+]]=, $1=, $pop[[NUM0]]{{$}}
+; CHECK-NEXT: local.tee  $push[[NUM1:[0-9]+]]=, $1=, $pop[[NUM0]]{{$}}
 ; CHECK-NEXT: i32.const  $push[[NUM2:[0-9]+]]=, 4{{$}}
 ; CHECK-NEXT: i32.add    $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]{{$}}
 ; CHECK-NEXT: i32.store  0($0), $pop[[NUM3]]{{$}}
@@ -73,7 +73,7 @@ entry:
 ; CHECK-NEXT: i32.add    $push[[NUM2:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM1]]{{$}}
 ; CHECK-NEXT: i32.const  $push[[NUM3:[0-9]+]]=, -4{{$}}
 ; CHECK-NEXT: i32.and    $push[[NUM4:[0-9]+]]=, $pop[[NUM2]], $pop[[NUM3]]{{$}}
-; CHECK-NEXT: tee_local  $push[[NUM5:[0-9]+]]=, $1=, $pop[[NUM4]]{{$}}
+; CHECK-NEXT: local.tee  $push[[NUM5:[0-9]+]]=, $1=, $pop[[NUM4]]{{$}}
 ; CHECK-NEXT: i32.const  $push[[NUM6:[0-9]+]]=, 4{{$}}
 ; CHECK-NEXT: i32.add    $push[[NUM7:[0-9]+]]=, $pop[[NUM5]], $pop[[NUM6]]{{$}}
 ; CHECK-NEXT: i32.store  0($0), $pop[[NUM7]]{{$}}

@@ -755,22 +755,33 @@ void TargetPassConfig::addISelPrepare() {
 bool TargetPassConfig::addCoreISelPasses() {
   // Enable FastISel with -fast-isel, but allow that to be overridden.
   TM->setO0WantsFastISel(EnableFastISelOption != cl::BOU_FALSE);
-  if (EnableFastISelOption == cl::BOU_TRUE ||
-      (TM->getOptLevel() == CodeGenOpt::None && TM->getO0WantsFastISel() &&
-       !TM->Options.EnableGlobalISel)) {
+
+  // Determine an instruction selector.
+  enum class SelectorType { SelectionDAG, FastISel, GlobalISel };
+  SelectorType Selector;
+
+  if (EnableFastISelOption == cl::BOU_TRUE)
+    Selector = SelectorType::FastISel;
+  else if (EnableGlobalISelOption == cl::BOU_TRUE ||
+           (TM->Options.EnableGlobalISel &&
+            EnableGlobalISelOption != cl::BOU_FALSE))
+    Selector = SelectorType::GlobalISel;
+  else if (TM->getOptLevel() == CodeGenOpt::None && TM->getO0WantsFastISel())
+    Selector = SelectorType::FastISel;
+  else
+    Selector = SelectorType::SelectionDAG;
+
+  // Set consistently TM->Options.EnableFastISel and EnableGlobalISel.
+  if (Selector == SelectorType::FastISel) {
     TM->setFastISel(true);
     TM->setGlobalISel(false);
+  } else if (Selector == SelectorType::GlobalISel) {
+    TM->setFastISel(false);
+    TM->setGlobalISel(true);
   }
 
-  // Ask the target for an instruction selector.
-  // Explicitly enabling fast-isel should override implicitly enabled
-  // global-isel.
-  if (EnableGlobalISelOption == cl::BOU_TRUE ||
-      (EnableGlobalISelOption == cl::BOU_UNSET &&
-       TM->Options.EnableGlobalISel && EnableFastISelOption != cl::BOU_TRUE)) {
-    TM->setGlobalISel(true);
-    TM->setFastISel(false);
-
+  // Add instruction selector passes.
+  if (Selector == SelectorType::GlobalISel) {
     SaveAndRestore<bool> SavedAddingMachinePasses(AddingMachinePasses, true);
     if (addIRTranslator())
       return true;

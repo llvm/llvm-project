@@ -1554,31 +1554,36 @@ void ASTStmtWriter::VisitExprWithCleanups(ExprWithCleanups *E) {
   Code = serialization::EXPR_EXPR_WITH_CLEANUPS;
 }
 
-void
-ASTStmtWriter::VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E){
+void ASTStmtWriter::VisitCXXDependentScopeMemberExpr(
+    CXXDependentScopeMemberExpr *E) {
   VisitExpr(E);
 
-  // Don't emit anything here, HasTemplateKWAndArgsInfo must be
-  // emitted first.
+  // Don't emit anything here (or if you do you will have to update
+  // the corresponding deserialization function).
 
-  Record.push_back(E->HasTemplateKWAndArgsInfo);
-  if (E->HasTemplateKWAndArgsInfo) {
+  Record.push_back(E->hasTemplateKWAndArgsInfo());
+  Record.push_back(E->getNumTemplateArgs());
+  Record.push_back(E->hasFirstQualifierFoundInScope());
+
+  if (E->hasTemplateKWAndArgsInfo()) {
     const ASTTemplateKWAndArgsInfo &ArgInfo =
         *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>();
-    Record.push_back(ArgInfo.NumTemplateArgs);
     AddTemplateKWAndArgsInfo(ArgInfo,
                              E->getTrailingObjects<TemplateArgumentLoc>());
   }
 
+  Record.push_back(E->isArrow());
+  Record.AddSourceLocation(E->getOperatorLoc());
+  Record.AddTypeRef(E->getBaseType());
+  Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
   if (!E->isImplicitAccess())
     Record.AddStmt(E->getBase());
   else
     Record.AddStmt(nullptr);
-  Record.AddTypeRef(E->getBaseType());
-  Record.push_back(E->isArrow());
-  Record.AddSourceLocation(E->getOperatorLoc());
-  Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
-  Record.AddDeclRef(E->getFirstQualifierFoundInScope());
+
+  if (E->hasFirstQualifierFoundInScope())
+    Record.AddDeclRef(E->getFirstQualifierFoundInScope());
+
   Record.AddDeclarationNameInfo(E->MemberNameInfo);
   Code = serialization::EXPR_CXX_DEPENDENT_SCOPE_MEMBER;
 }

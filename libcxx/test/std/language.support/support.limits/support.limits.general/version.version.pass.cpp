@@ -29,6 +29,7 @@
     __cpp_lib_complex_udls                      201309L
     __cpp_lib_concepts                          201806L
     __cpp_lib_constexpr_swap_algorithms         201806L
+    __cpp_lib_destroying_delete                 201806L
     __cpp_lib_enable_shared_from_this           201603L
     __cpp_lib_exchange_function                 201304L
     __cpp_lib_execution                         201603L
@@ -75,6 +76,7 @@
     __cpp_lib_string_udls                       201304L
     __cpp_lib_string_view                       201606L
     __cpp_lib_to_chars                          201611L
+    __cpp_lib_three_way_comparison              201711L
     __cpp_lib_transformation_trait_aliases      201304L
     __cpp_lib_transparent_operators             201510L
     __cpp_lib_tuple_element_t                   201402L

@@ -17,8 +17,8 @@ declare float @llvm.fma.f32(float, float, float)
 
 ; CHECK-LABEL: fadd32:
 ; CHECK-NEXT: .functype fadd32 (f32, f32) -> (f32){{$}}
-; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: local.get $push[[L1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: f32.add $push[[LR:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: return $pop[[LR]]{{$}}
 define float @fadd32(float %x, float %y) {

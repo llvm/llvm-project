@@ -17,32 +17,32 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
 
 MATCHER_P(StringNode, Val, "") {
-  if (arg->getType() != yaml::Node::NK_Scalar) {
+  if (arg->getType() != llvm::yaml::Node::NK_Scalar) {
     *result_listener << "is a " << arg->getVerbatimTag();
     return false;
   }
-  SmallString<32> S;
-  return Val == static_cast<yaml::ScalarNode *>(arg)->getValue(S);
+  llvm::SmallString<32> S;
+  return Val == static_cast<llvm::yaml::ScalarNode *>(arg)->getValue(S);
 }
 
 // Checks that N is a Mapping (JS object) with the expected scalar properties.
 // The object must have all the Expected properties, but may have others.
-bool VerifyObject(yaml::Node &N, std::map<std::string, std::string> Expected) {
-  auto *M = dyn_cast<yaml::MappingNode>(&N);
+bool VerifyObject(llvm::yaml::Node &N,
+                  std::map<std::string, std::string> Expected) {
+  auto *M = llvm::dyn_cast<llvm::yaml::MappingNode>(&N);
   if (!M) {
     ADD_FAILURE() << "Not an object";
     return false;
   }
   bool Match = true;
-  SmallString<32> Tmp;
+  llvm::SmallString<32> Tmp;
   for (auto &Prop : *M) {
-    auto *K = dyn_cast_or_null<yaml::ScalarNode>(Prop.getKey());
+    auto *K = llvm::dyn_cast_or_null<llvm::yaml::ScalarNode>(Prop.getKey());
     if (!K)
       continue;
     std::string KS = K->getValue(Tmp).str();
@@ -50,7 +50,7 @@ bool VerifyObject(yaml::Node &N, std::map<std::string, std::string> Expected) {
     if (I == Expected.end())
       continue; // Ignore properties with no assertion.
 
-    auto *V = dyn_cast_or_null<yaml::ScalarNode>(Prop.getValue());
+    auto *V = llvm::dyn_cast_or_null<llvm::yaml::ScalarNode>(Prop.getValue());
     if (!V) {
       ADD_FAILURE() << KS << " is not a string";
       Match = false;
@@ -73,7 +73,7 @@ TEST(TraceTest, SmokeTest) {
   // Capture some events.
   std::string JSON;
   {
-    raw_string_ostream OS(JSON);
+    llvm::raw_string_ostream OS(JSON);
     auto JSONTracer = trace::createJSONTracer(OS);
     trace::Session Session(*JSONTracer);
     {
@@ -83,15 +83,15 @@ TEST(TraceTest, SmokeTest) {
   }
 
   // Get the root JSON object using the YAML parser.
-  SourceMgr SM;
-  yaml::Stream Stream(JSON, SM);
+  llvm::SourceMgr SM;
+  llvm::yaml::Stream Stream(JSON, SM);
   auto Doc = Stream.begin();
   ASSERT_NE(Doc, Stream.end());
-  auto *Root = dyn_cast_or_null<yaml::MappingNode>(Doc->getRoot());
+  auto *Root = llvm::dyn_cast_or_null<llvm::yaml::MappingNode>(Doc->getRoot());
   ASSERT_NE(Root, nullptr) << "Root should be an object";
 
   // Check whether we expect thread name events on this platform.
-  SmallString<32> ThreadName;
+  llvm::SmallString<32> ThreadName;
   get_thread_name(ThreadName);
   bool ThreadsHaveNames = !ThreadName.empty();
 
@@ -105,7 +105,8 @@ TEST(TraceTest, SmokeTest) {
   EXPECT_THAT(Prop->getValue(), StringNode("ns"));
   ASSERT_NE(++Prop, Root->end()) << "Expected traceEvents property";
   EXPECT_THAT(Prop->getKey(), StringNode("traceEvents"));
-  auto *Events = dyn_cast_or_null<yaml::SequenceNode>(Prop->getValue());
+  auto *Events =
+      llvm::dyn_cast_or_null<llvm::yaml::SequenceNode>(Prop->getValue());
   ASSERT_NE(Events, nullptr) << "traceEvents should be an array";
   auto Event = Events->begin();
   ASSERT_NE(Event, Events->end()) << "Expected process name";

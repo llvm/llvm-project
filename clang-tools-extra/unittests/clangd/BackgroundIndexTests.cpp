@@ -13,7 +13,6 @@ using testing::ElementsAre;
 using testing::Not;
 using testing::UnorderedElementsAre;
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 

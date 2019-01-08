@@ -14,7 +14,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -36,15 +35,16 @@ TEST(GlobalCompilationDatabaseTest, FallbackCommand) {
                           testPath("foo/bar.h")));
 }
 
-static tooling::CompileCommand cmd(StringRef File, StringRef Arg) {
+static tooling::CompileCommand cmd(llvm::StringRef File, llvm::StringRef Arg) {
   return tooling::CompileCommand(testRoot(), File, {"clang", Arg, File}, "");
 }
 
 class OverlayCDBTest : public ::testing::Test {
   class BaseCDB : public GlobalCompilationDatabase {
   public:
-    Optional<tooling::CompileCommand>
-    getCompileCommand(StringRef File, ProjectInfo *Project) const override {
+    llvm::Optional<tooling::CompileCommand>
+    getCompileCommand(llvm::StringRef File,
+                      ProjectInfo *Project) const override {
       if (File == testPath("foo.cc")) {
         if (Project)
           Project->SourceRoot = testRoot();
@@ -53,7 +53,8 @@ class OverlayCDBTest : public ::testing::Test {
       return None;
     }
 
-    tooling::CompileCommand getFallbackCommand(StringRef File) const override {
+    tooling::CompileCommand
+    getFallbackCommand(llvm::StringRef File) const override {
       return cmd(File, "-DA=2");
     }
   };
