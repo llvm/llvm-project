@@ -40,7 +40,7 @@ WebAssemblyInstPrinter::WebAssemblyInstPrinter(const MCAsmInfo &MAI,
 void WebAssemblyInstPrinter::printRegName(raw_ostream &OS,
                                           unsigned RegNo) const {
   assert(RegNo != WebAssemblyFunctionInfo::UnusedReg);
-  // Note that there's an implicit get_local/set_local here!
+  // Note that there's an implicit local.get/local.set here!
   OS << "$" << RegNo;
 }
 
@@ -292,8 +292,8 @@ const char *llvm::WebAssembly::anyTypeToString(unsigned Ty) {
     return "f64";
   case wasm::WASM_TYPE_V128:
     return "v128";
-  case wasm::WASM_TYPE_ANYFUNC:
-    return "anyfunc";
+  case wasm::WASM_TYPE_FUNCREF:
+    return "funcref";
   case wasm::WASM_TYPE_FUNC:
     return "func";
   case wasm::WASM_TYPE_EXCEPT_REF:

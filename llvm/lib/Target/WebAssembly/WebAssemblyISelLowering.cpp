@@ -917,7 +917,7 @@ SDValue WebAssemblyTargetLowering::LowerCopyToReg(SDValue Op,
     // the FI to some LEA-like instruction, but since we don't have that, we
     // need to insert some kind of instruction that can take an FI operand and
     // produces a value usable by CopyToReg (i.e. in a vreg). So insert a dummy
-    // copy_local between Op and its FI operand.
+    // local.copy between Op and its FI operand.
     SDValue Chain = Op.getOperand(0);
     SDLoc DL(Op);
     unsigned Reg = cast<RegisterSDNode>(Op.getOperand(1))->getReg();

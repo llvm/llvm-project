@@ -38,6 +38,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   const LLT S512 = LLT::scalar(512);
 
   const LLT V2S16 = LLT::vector(2, 16);
+  const LLT V4S16 = LLT::vector(4, 16);
+  const LLT V8S16 = LLT::vector(8, 16);
 
   const LLT V2S32 = LLT::vector(2, 32);
   const LLT V3S32 = LLT::vector(3, 32);
@@ -85,6 +87,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     PrivatePtr
   };
 
+  setAction({G_BRCOND, S1}, Legal);
+
   setAction({G_ADD, S32}, Legal);
   setAction({G_ASHR, S32}, Legal);
   setAction({G_SUB, S32}, Legal);
@@ -93,6 +97,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   // FIXME: 64-bit ones only legal for scalar
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
     .legalFor({S32, S1, S64, V2S32});
+
+  getActionDefinitionsBuilder({G_UADDO, G_SADDO, G_USUBO, G_SSUBO,
+                               G_UADDE, G_SADDE, G_USUBE, G_SSUBE})
+    .legalFor({{S32, S1}});
 
   setAction({G_BITCAST, V2S16}, Legal);
   setAction({G_BITCAST, 1, S32}, Legal);
@@ -272,6 +280,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .clampNumElements(0, V16S32, V16S32)
     .clampNumElements(0, V2S64, V8S64)
     .minScalarSameAs(1, 0);
+
+  // TODO: Support any combination of v2s32
+  getActionDefinitionsBuilder(G_CONCAT_VECTORS)
+    .legalFor({{V4S32, V2S32},
+               {V8S32, V2S32},
+               {V8S32, V4S32},
+               {V4S64, V2S64},
+               {V4S16, V2S16},
+               {V8S16, V2S16},
+               {V8S16, V4S16}});
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {

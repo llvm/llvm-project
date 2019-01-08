@@ -705,8 +705,8 @@ getDataSharingMode(CodeGenModule &CGM) {
                                           : CGOpenMPRuntimeNVPTX::Generic;
 }
 
-// Checks if the expression is constant or does not have non-trivial function
-// calls.
+/// Checks if the expression is constant or does not have non-trivial function
+/// calls.
 static bool isTrivial(ASTContext &Ctx, const Expr * E) {
   // We can skip constant expressions.
   // We can skip expressions with trivial calls or simple expressions.

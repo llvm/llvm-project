@@ -363,10 +363,10 @@ define i32 @load_i8_i32_s_with_folded_offset(i8* %p) {
   ret i32 %u
 }
 
-; 32->64 sext load gets selected as i32.atomic.load, i64_extend_s/i32
+; 32->64 sext load gets selected as i32.atomic.load, i64.extend_i32_s
 ; CHECK-LABEL: load_i32_i64_s_with_folded_offset:
 ; CHECK: i32.atomic.load $push0=, 24($0){{$}}
-; CHECK-NEXT: i64.extend_s/i32 $push1=, $pop0{{$}}
+; CHECK-NEXT: i64.extend_i32_s $push1=, $pop0{{$}}
 define i64 @load_i32_i64_s_with_folded_offset(i32* %p) {
   %q = ptrtoint i32* %p to i32
   %r = add nuw i32 %q, 24
@@ -832,7 +832,7 @@ define i64 @rmw_add_i64_with_unfolded_gep_offset(i64* %p, i64 %v) {
 ; Fold an offset into a sign-extending rmw.
 
 ; CHECK-LABEL: rmw_add_i8_i32_s_with_folded_offset:
-; CHECK: i32.atomic.rmw8_u.add $push0=, 24($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.add_u $push0=, 24($0), $1{{$}}
 ; CHECK-NEXT: i32.extend8_s $push1=, $pop0
 define i32 @rmw_add_i8_i32_s_with_folded_offset(i8* %p, i32 %v) {
   %q = ptrtoint i8* %p to i32
@@ -844,11 +844,11 @@ define i32 @rmw_add_i8_i32_s_with_folded_offset(i8* %p, i32 %v) {
   ret i32 %u
 }
 
-; 32->64 sext rmw gets selected as i32.atomic.rmw.add, i64_extend_s/i32
+; 32->64 sext rmw gets selected as i32.atomic.rmw.add, i64.extend_i32_s
 ; CHECK-LABEL: rmw_add_i32_i64_s_with_folded_offset:
-; CHECK: i32.wrap/i64 $push0=, $1
+; CHECK: i32.wrap_i64 $push0=, $1
 ; CHECK-NEXT: i32.atomic.rmw.add $push1=, 24($0), $pop0{{$}}
-; CHECK-NEXT: i64.extend_s/i32 $push2=, $pop1{{$}}
+; CHECK-NEXT: i64.extend_i32_s $push2=, $pop1{{$}}
 define i64 @rmw_add_i32_i64_s_with_folded_offset(i32* %p, i64 %v) {
   %q = ptrtoint i32* %p to i32
   %r = add nuw i32 %q, 24
@@ -862,7 +862,7 @@ define i64 @rmw_add_i32_i64_s_with_folded_offset(i32* %p, i64 %v) {
 ; Fold a gep offset into a sign-extending rmw.
 
 ; CHECK-LABEL: rmw_add_i8_i32_s_with_folded_gep_offset:
-; CHECK: i32.atomic.rmw8_u.add $push0=, 24($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.add_u $push0=, 24($0), $1{{$}}
 ; CHECK-NEXT: i32.extend8_s $push1=, $pop0
 define i32 @rmw_add_i8_i32_s_with_folded_gep_offset(i8* %p, i32 %v) {
   %s = getelementptr inbounds i8, i8* %p, i32 24
@@ -873,7 +873,7 @@ define i32 @rmw_add_i8_i32_s_with_folded_gep_offset(i8* %p, i32 %v) {
 }
 
 ; CHECK-LABEL: rmw_add_i16_i32_s_with_folded_gep_offset:
-; CHECK: i32.atomic.rmw16_u.add $push0=, 48($0), $1{{$}}
+; CHECK: i32.atomic.rmw16.add_u $push0=, 48($0), $1{{$}}
 ; CHECK-NEXT: i32.extend16_s $push1=, $pop0
 define i32 @rmw_add_i16_i32_s_with_folded_gep_offset(i16* %p, i32 %v) {
   %s = getelementptr inbounds i16, i16* %p, i32 24
@@ -884,7 +884,7 @@ define i32 @rmw_add_i16_i32_s_with_folded_gep_offset(i16* %p, i32 %v) {
 }
 
 ; CHECK-LABEL: rmw_add_i16_i64_s_with_folded_gep_offset:
-; CHECK: i64.atomic.rmw16_u.add $push0=, 48($0), $1{{$}}
+; CHECK: i64.atomic.rmw16.add_u $push0=, 48($0), $1{{$}}
 ; CHECK-NEXT: i64.extend16_s $push1=, $pop0
 define i64 @rmw_add_i16_i64_s_with_folded_gep_offset(i16* %p, i64 %v) {
   %s = getelementptr inbounds i16, i16* %p, i32 24
@@ -898,7 +898,7 @@ define i64 @rmw_add_i16_i64_s_with_folded_gep_offset(i16* %p, i64 %v) {
 ; an 'add' if the or'ed bits are known to be zero.
 
 ; CHECK-LABEL: rmw_add_i8_i32_s_with_folded_or_offset:
-; CHECK: i32.atomic.rmw8_u.add $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1{{$}}
+; CHECK: i32.atomic.rmw8.add_u $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1{{$}}
 ; CHECK-NEXT: i32.extend8_s $push{{[0-9]+}}=, $pop[[R1]]{{$}}
 define i32 @rmw_add_i8_i32_s_with_folded_or_offset(i32 %x, i32 %v) {
   %and = and i32 %x, -4
@@ -911,7 +911,7 @@ define i32 @rmw_add_i8_i32_s_with_folded_or_offset(i32 %x, i32 %v) {
 }
 
 ; CHECK-LABEL: rmw_add_i8_i64_s_with_folded_or_offset:
-; CHECK: i64.atomic.rmw8_u.add $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1{{$}}
+; CHECK: i64.atomic.rmw8.add_u $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1{{$}}
 ; CHECK-NEXT: i64.extend8_s $push{{[0-9]+}}=, $pop[[R1]]{{$}}
 define i64 @rmw_add_i8_i64_s_with_folded_or_offset(i32 %x, i64 %v) {
   %and = and i32 %x, -4
@@ -927,7 +927,7 @@ define i64 @rmw_add_i8_i64_s_with_folded_or_offset(i32 %x, i64 %v) {
 
 ; CHECK-LABEL: rmw_add_i16_i32_s_from_numeric_address
 ; CHECK: i32.const $push0=, 0{{$}}
-; CHECK: i32.atomic.rmw16_u.add $push1=, 42($pop0), $0{{$}}
+; CHECK: i32.atomic.rmw16.add_u $push1=, 42($pop0), $0{{$}}
 ; CHECK-NEXT: i32.extend16_s $push2=, $pop1
 define i32 @rmw_add_i16_i32_s_from_numeric_address(i32 %v) {
   %s = inttoptr i32 42 to i16*
@@ -939,7 +939,7 @@ define i32 @rmw_add_i16_i32_s_from_numeric_address(i32 %v) {
 
 ; CHECK-LABEL: rmw_add_i8_i32_s_from_global_address
 ; CHECK: i32.const $push0=, 0{{$}}
-; CHECK: i32.atomic.rmw8_u.add $push1=, gv8($pop0), $0{{$}}
+; CHECK: i32.atomic.rmw8.add_u $push1=, gv8($pop0), $0{{$}}
 ; CHECK-NEXT: i32.extend8_s $push2=, $pop1{{$}}
 define i32 @rmw_add_i8_i32_s_from_global_address(i32 %v) {
   %t = trunc i32 %v to i8
@@ -955,7 +955,7 @@ define i32 @rmw_add_i8_i32_s_from_global_address(i32 %v) {
 ; Fold an offset into a zero-extending rmw.
 
 ; CHECK-LABEL: rmw_add_i8_i32_z_with_folded_offset:
-; CHECK: i32.atomic.rmw8_u.add $push0=, 24($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.add_u $push0=, 24($0), $1{{$}}
 define i32 @rmw_add_i8_i32_z_with_folded_offset(i8* %p, i32 %v) {
   %q = ptrtoint i8* %p to i32
   %r = add nuw i32 %q, 24
@@ -967,7 +967,7 @@ define i32 @rmw_add_i8_i32_z_with_folded_offset(i8* %p, i32 %v) {
 }
 
 ; CHECK-LABEL: rmw_add_i32_i64_z_with_folded_offset:
-; CHECK: i64.atomic.rmw32_u.add $push0=, 24($0), $1{{$}}
+; CHECK: i64.atomic.rmw32.add_u $push0=, 24($0), $1{{$}}
 define i64 @rmw_add_i32_i64_z_with_folded_offset(i32* %p, i64 %v) {
   %q = ptrtoint i32* %p to i32
   %r = add nuw i32 %q, 24
@@ -981,7 +981,7 @@ define i64 @rmw_add_i32_i64_z_with_folded_offset(i32* %p, i64 %v) {
 ; Fold a gep offset into a zero-extending rmw.
 
 ; CHECK-LABEL: rmw_add_i8_i32_z_with_folded_gep_offset:
-; CHECK: i32.atomic.rmw8_u.add $push0=, 24($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.add_u $push0=, 24($0), $1{{$}}
 define i32 @rmw_add_i8_i32_z_with_folded_gep_offset(i8* %p, i32 %v) {
   %s = getelementptr inbounds i8, i8* %p, i32 24
   %t = trunc i32 %v to i8
@@ -991,7 +991,7 @@ define i32 @rmw_add_i8_i32_z_with_folded_gep_offset(i8* %p, i32 %v) {
 }
 
 ; CHECK-LABEL: rmw_add_i16_i32_z_with_folded_gep_offset:
-; CHECK: i32.atomic.rmw16_u.add $push0=, 48($0), $1{{$}}
+; CHECK: i32.atomic.rmw16.add_u $push0=, 48($0), $1{{$}}
 define i32 @rmw_add_i16_i32_z_with_folded_gep_offset(i16* %p, i32 %v) {
   %s = getelementptr inbounds i16, i16* %p, i32 24
   %t = trunc i32 %v to i16
@@ -1001,7 +1001,7 @@ define i32 @rmw_add_i16_i32_z_with_folded_gep_offset(i16* %p, i32 %v) {
 }
 
 ; CHECK-LABEL: rmw_add_i16_i64_z_with_folded_gep_offset:
-; CHECK: i64.atomic.rmw16_u.add $push0=, 48($0), $1{{$}}
+; CHECK: i64.atomic.rmw16.add_u $push0=, 48($0), $1{{$}}
 define i64 @rmw_add_i16_i64_z_with_folded_gep_offset(i16* %p, i64 %v) {
   %s = getelementptr inbounds i16, i16* %p, i32 24
   %t = trunc i64 %v to i16
@@ -1014,7 +1014,7 @@ define i64 @rmw_add_i16_i64_z_with_folded_gep_offset(i16* %p, i64 %v) {
 ; an 'add' if the or'ed bits are known to be zero.
 
 ; CHECK-LABEL: rmw_add_i8_i32_z_with_folded_or_offset:
-; CHECK: i32.atomic.rmw8_u.add $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1{{$}}
+; CHECK: i32.atomic.rmw8.add_u $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1{{$}}
 define i32 @rmw_add_i8_i32_z_with_folded_or_offset(i32 %x, i32 %v) {
   %and = and i32 %x, -4
   %t0 = inttoptr i32 %and to i8*
@@ -1026,7 +1026,7 @@ define i32 @rmw_add_i8_i32_z_with_folded_or_offset(i32 %x, i32 %v) {
 }
 
 ; CHECK-LABEL: rmw_add_i8_i64_z_with_folded_or_offset:
-; CHECK: i64.atomic.rmw8_u.add $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1{{$}}
+; CHECK: i64.atomic.rmw8.add_u $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1{{$}}
 define i64 @rmw_add_i8_i64_z_with_folded_or_offset(i32 %x, i64 %v) {
   %and = and i32 %x, -4
   %t0 = inttoptr i32 %and to i8*
@@ -1041,7 +1041,7 @@ define i64 @rmw_add_i8_i64_z_with_folded_or_offset(i32 %x, i64 %v) {
 
 ; CHECK-LABEL: rmw_add_i16_i32_z_from_numeric_address
 ; CHECK: i32.const $push0=, 0{{$}}
-; CHECK: i32.atomic.rmw16_u.add $push1=, 42($pop0), $0{{$}}
+; CHECK: i32.atomic.rmw16.add_u $push1=, 42($pop0), $0{{$}}
 define i32 @rmw_add_i16_i32_z_from_numeric_address(i32 %v) {
   %s = inttoptr i32 42 to i16*
   %t = trunc i32 %v to i16
@@ -1052,7 +1052,7 @@ define i32 @rmw_add_i16_i32_z_from_numeric_address(i32 %v) {
 
 ; CHECK-LABEL: rmw_add_i8_i32_z_from_global_address
 ; CHECK: i32.const $push0=, 0{{$}}
-; CHECK: i32.atomic.rmw8_u.add $push1=, gv8($pop0), $0{{$}}
+; CHECK: i32.atomic.rmw8.add_u $push1=, gv8($pop0), $0{{$}}
 define i32 @rmw_add_i8_i32_z_from_global_address(i32 %v) {
   %t = trunc i32 %v to i8
   %old = atomicrmw add i8* @gv8, i8 %t seq_cst
@@ -1063,7 +1063,7 @@ define i32 @rmw_add_i8_i32_z_from_global_address(i32 %v) {
 ; i8 return value should test anyext RMWs
 
 ; CHECK-LABEL: rmw_add_i8_i32_retvalue:
-; CHECK: i32.atomic.rmw8_u.add $push0=, 0($0), $1{{$}}
+; CHECK: i32.atomic.rmw8.add_u $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i8 @rmw_add_i8_i32_retvalue(i8 *%p, i32 %v) {
   %t = trunc i32 %v to i8
@@ -1261,7 +1261,7 @@ define i64 @cmpxchg_i64_with_unfolded_gep_offset(i64* %p, i64 %exp, i64 %new) {
 ; Fold an offset into a sign-extending rmw.
 
 ; CHECK-LABEL: cmpxchg_i8_i32_s_with_folded_offset:
-; CHECK: i32.atomic.rmw8_u.cmpxchg $push0=, 24($0), $1, $2{{$}}
+; CHECK: i32.atomic.rmw8.cmpxchg_u $push0=, 24($0), $1, $2{{$}}
 ; CHECK-NEXT: i32.extend8_s $push1=, $pop0
 define i32 @cmpxchg_i8_i32_s_with_folded_offset(i8* %p, i32 %exp, i32 %new) {
   %q = ptrtoint i8* %p to i32
@@ -1275,12 +1275,12 @@ define i32 @cmpxchg_i8_i32_s_with_folded_offset(i8* %p, i32 %exp, i32 %new) {
   ret i32 %u
 }
 
-; 32->64 sext rmw gets selected as i32.atomic.rmw.cmpxchg, i64_extend_s/i32
+; 32->64 sext rmw gets selected as i32.atomic.rmw.cmpxchg, i64.extend_i32_s
 ; CHECK-LABEL: cmpxchg_i32_i64_s_with_folded_offset:
-; CHECK: i32.wrap/i64 $push1=, $1
-; CHECK-NEXT: i32.wrap/i64 $push0=, $2
+; CHECK: i32.wrap_i64 $push1=, $1
+; CHECK-NEXT: i32.wrap_i64 $push0=, $2
 ; CHECK-NEXT: i32.atomic.rmw.cmpxchg $push2=, 24($0), $pop1, $pop0{{$}}
-; CHECK-NEXT: i64.extend_s/i32 $push3=, $pop2{{$}}
+; CHECK-NEXT: i64.extend_i32_s $push3=, $pop2{{$}}
 define i64 @cmpxchg_i32_i64_s_with_folded_offset(i32* %p, i64 %exp, i64 %new) {
   %q = ptrtoint i32* %p to i32
   %r = add nuw i32 %q, 24
@@ -1296,7 +1296,7 @@ define i64 @cmpxchg_i32_i64_s_with_folded_offset(i32* %p, i64 %exp, i64 %new) {
 ; Fold a gep offset into a sign-extending rmw.
 
 ; CHECK-LABEL: cmpxchg_i8_i32_s_with_folded_gep_offset:
-; CHECK: i32.atomic.rmw8_u.cmpxchg $push0=, 24($0), $1, $2{{$}}
+; CHECK: i32.atomic.rmw8.cmpxchg_u $push0=, 24($0), $1, $2{{$}}
 ; CHECK-NEXT: i32.extend8_s $push1=, $pop0
 define i32 @cmpxchg_i8_i32_s_with_folded_gep_offset(i8* %p, i32 %exp, i32 %new) {
   %s = getelementptr inbounds i8, i8* %p, i32 24
@@ -1309,7 +1309,7 @@ define i32 @cmpxchg_i8_i32_s_with_folded_gep_offset(i8* %p, i32 %exp, i32 %new) 
 }
 
 ; CHECK-LABEL: cmpxchg_i16_i32_s_with_folded_gep_offset:
-; CHECK: i32.atomic.rmw16_u.cmpxchg $push0=, 48($0), $1, $2{{$}}
+; CHECK: i32.atomic.rmw16.cmpxchg_u $push0=, 48($0), $1, $2{{$}}
 ; CHECK-NEXT: i32.extend16_s $push1=, $pop0
 define i32 @cmpxchg_i16_i32_s_with_folded_gep_offset(i16* %p, i32 %exp, i32 %new) {
   %s = getelementptr inbounds i16, i16* %p, i32 24
@@ -1322,7 +1322,7 @@ define i32 @cmpxchg_i16_i32_s_with_folded_gep_offset(i16* %p, i32 %exp, i32 %new
 }
 
 ; CHECK-LABEL: cmpxchg_i16_i64_s_with_folded_gep_offset:
-; CHECK: i64.atomic.rmw16_u.cmpxchg $push0=, 48($0), $1, $2{{$}}
+; CHECK: i64.atomic.rmw16.cmpxchg_u $push0=, 48($0), $1, $2{{$}}
 ; CHECK-NEXT: i64.extend16_s $push1=, $pop0
 define i64 @cmpxchg_i16_i64_s_with_folded_gep_offset(i16* %p, i64 %exp, i64 %new) {
   %s = getelementptr inbounds i16, i16* %p, i32 24
@@ -1338,7 +1338,7 @@ define i64 @cmpxchg_i16_i64_s_with_folded_gep_offset(i16* %p, i64 %exp, i64 %new
 ; an 'add' if the or'ed bits are known to be zero.
 
 ; CHECK-LABEL: cmpxchg_i8_i32_s_with_folded_or_offset:
-; CHECK: i32.atomic.rmw8_u.cmpxchg $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1, $2{{$}}
+; CHECK: i32.atomic.rmw8.cmpxchg_u $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1, $2{{$}}
 ; CHECK-NEXT: i32.extend8_s $push{{[0-9]+}}=, $pop[[R1]]{{$}}
 define i32 @cmpxchg_i8_i32_s_with_folded_or_offset(i32 %x, i32 %exp, i32 %new) {
   %and = and i32 %x, -4
@@ -1353,7 +1353,7 @@ define i32 @cmpxchg_i8_i32_s_with_folded_or_offset(i32 %x, i32 %exp, i32 %new) {
 }
 
 ; CHECK-LABEL: cmpxchg_i8_i64_s_with_folded_or_offset:
-; CHECK: i64.atomic.rmw8_u.cmpxchg $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1, $2{{$}}
+; CHECK: i64.atomic.rmw8.cmpxchg_u $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1, $2{{$}}
 ; CHECK-NEXT: i64.extend8_s $push{{[0-9]+}}=, $pop[[R1]]{{$}}
 define i64 @cmpxchg_i8_i64_s_with_folded_or_offset(i32 %x, i64 %exp, i64 %new) {
   %and = and i32 %x, -4
@@ -1371,7 +1371,7 @@ define i64 @cmpxchg_i8_i64_s_with_folded_or_offset(i32 %x, i64 %exp, i64 %new) {
 
 ; CHECK-LABEL: cmpxchg_i16_i32_s_from_numeric_address
 ; CHECK: i32.const $push0=, 0{{$}}
-; CHECK: i32.atomic.rmw16_u.cmpxchg $push1=, 42($pop0), $0, $1{{$}}
+; CHECK: i32.atomic.rmw16.cmpxchg_u $push1=, 42($pop0), $0, $1{{$}}
 ; CHECK-NEXT: i32.extend16_s $push2=, $pop1
 define i32 @cmpxchg_i16_i32_s_from_numeric_address(i32 %exp, i32 %new) {
   %s = inttoptr i32 42 to i16*
@@ -1385,7 +1385,7 @@ define i32 @cmpxchg_i16_i32_s_from_numeric_address(i32 %exp, i32 %new) {
 
 ; CHECK-LABEL: cmpxchg_i8_i32_s_from_global_address
 ; CHECK: i32.const $push0=, 0{{$}}
-; CHECK: i32.atomic.rmw8_u.cmpxchg $push1=, gv8($pop0), $0, $1{{$}}
+; CHECK: i32.atomic.rmw8.cmpxchg_u $push1=, gv8($pop0), $0, $1{{$}}
 ; CHECK-NEXT: i32.extend8_s $push2=, $pop1{{$}}
 define i32 @cmpxchg_i8_i32_s_from_global_address(i32 %exp, i32 %new) {
   %exp_t = trunc i32 %exp to i8
@@ -1403,7 +1403,7 @@ define i32 @cmpxchg_i8_i32_s_from_global_address(i32 %exp, i32 %new) {
 ; Fold an offset into a sign-extending rmw.
 
 ; CHECK-LABEL: cmpxchg_i8_i32_z_with_folded_offset:
-; CHECK: i32.atomic.rmw8_u.cmpxchg $push0=, 24($0), $1, $2{{$}}
+; CHECK: i32.atomic.rmw8.cmpxchg_u $push0=, 24($0), $1, $2{{$}}
 define i32 @cmpxchg_i8_i32_z_with_folded_offset(i8* %p, i32 %exp, i32 %new) {
   %q = ptrtoint i8* %p to i32
   %r = add nuw i32 %q, 24
@@ -1417,7 +1417,7 @@ define i32 @cmpxchg_i8_i32_z_with_folded_offset(i8* %p, i32 %exp, i32 %new) {
 }
 
 ; CHECK-LABEL: cmpxchg_i32_i64_z_with_folded_offset:
-; CHECK: i64.atomic.rmw32_u.cmpxchg $push0=, 24($0), $1, $2{{$}}
+; CHECK: i64.atomic.rmw32.cmpxchg_u $push0=, 24($0), $1, $2{{$}}
 define i64 @cmpxchg_i32_i64_z_with_folded_offset(i32* %p, i64 %exp, i64 %new) {
   %q = ptrtoint i32* %p to i32
   %r = add nuw i32 %q, 24
@@ -1433,7 +1433,7 @@ define i64 @cmpxchg_i32_i64_z_with_folded_offset(i32* %p, i64 %exp, i64 %new) {
 ; Fold a gep offset into a sign-extending rmw.
 
 ; CHECK-LABEL: cmpxchg_i8_i32_z_with_folded_gep_offset:
-; CHECK: i32.atomic.rmw8_u.cmpxchg $push0=, 24($0), $1, $2{{$}}
+; CHECK: i32.atomic.rmw8.cmpxchg_u $push0=, 24($0), $1, $2{{$}}
 define i32 @cmpxchg_i8_i32_z_with_folded_gep_offset(i8* %p, i32 %exp, i32 %new) {
   %s = getelementptr inbounds i8, i8* %p, i32 24
   %exp_t = trunc i32 %exp to i8
@@ -1445,7 +1445,7 @@ define i32 @cmpxchg_i8_i32_z_with_folded_gep_offset(i8* %p, i32 %exp, i32 %new) 
 }
 
 ; CHECK-LABEL: cmpxchg_i16_i32_z_with_folded_gep_offset:
-; CHECK: i32.atomic.rmw16_u.cmpxchg $push0=, 48($0), $1, $2{{$}}
+; CHECK: i32.atomic.rmw16.cmpxchg_u $push0=, 48($0), $1, $2{{$}}
 define i32 @cmpxchg_i16_i32_z_with_folded_gep_offset(i16* %p, i32 %exp, i32 %new) {
   %s = getelementptr inbounds i16, i16* %p, i32 24
   %exp_t = trunc i32 %exp to i16
@@ -1457,7 +1457,7 @@ define i32 @cmpxchg_i16_i32_z_with_folded_gep_offset(i16* %p, i32 %exp, i32 %new
 }
 
 ; CHECK-LABEL: cmpxchg_i16_i64_z_with_folded_gep_offset:
-; CHECK: i64.atomic.rmw16_u.cmpxchg $push0=, 48($0), $1, $2{{$}}
+; CHECK: i64.atomic.rmw16.cmpxchg_u $push0=, 48($0), $1, $2{{$}}
 define i64 @cmpxchg_i16_i64_z_with_folded_gep_offset(i16* %p, i64 %exp, i64 %new) {
   %s = getelementptr inbounds i16, i16* %p, i32 24
   %exp_t = trunc i64 %exp to i16
@@ -1472,7 +1472,7 @@ define i64 @cmpxchg_i16_i64_z_with_folded_gep_offset(i16* %p, i64 %exp, i64 %new
 ; an 'add' if the or'ed bits are known to be zero.
 
 ; CHECK-LABEL: cmpxchg_i8_i32_z_with_folded_or_offset:
-; CHECK: i32.atomic.rmw8_u.cmpxchg $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1, $2{{$}}
+; CHECK: i32.atomic.rmw8.cmpxchg_u $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1, $2{{$}}
 define i32 @cmpxchg_i8_i32_z_with_folded_or_offset(i32 %x, i32 %exp, i32 %new) {
   %and = and i32 %x, -4
   %t0 = inttoptr i32 %and to i8*
@@ -1486,7 +1486,7 @@ define i32 @cmpxchg_i8_i32_z_with_folded_or_offset(i32 %x, i32 %exp, i32 %new) {
 }
 
 ; CHECK-LABEL: cmpxchg_i8_i64_z_with_folded_or_offset:
-; CHECK: i64.atomic.rmw8_u.cmpxchg $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1, $2{{$}}
+; CHECK: i64.atomic.rmw8.cmpxchg_u $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1, $2{{$}}
 define i64 @cmpxchg_i8_i64_z_with_folded_or_offset(i32 %x, i64 %exp, i64 %new) {
   %and = and i32 %x, -4
   %t0 = inttoptr i32 %and to i8*
@@ -1503,7 +1503,7 @@ define i64 @cmpxchg_i8_i64_z_with_folded_or_offset(i32 %x, i64 %exp, i64 %new) {
 
 ; CHECK-LABEL: cmpxchg_i16_i32_z_from_numeric_address
 ; CHECK: i32.const $push0=, 0{{$}}
-; CHECK: i32.atomic.rmw16_u.cmpxchg $push1=, 42($pop0), $0, $1{{$}}
+; CHECK: i32.atomic.rmw16.cmpxchg_u $push1=, 42($pop0), $0, $1{{$}}
 define i32 @cmpxchg_i16_i32_z_from_numeric_address(i32 %exp, i32 %new) {
   %s = inttoptr i32 42 to i16*
   %exp_t = trunc i32 %exp to i16
@@ -1516,7 +1516,7 @@ define i32 @cmpxchg_i16_i32_z_from_numeric_address(i32 %exp, i32 %new) {
 
 ; CHECK-LABEL: cmpxchg_i8_i32_z_from_global_address
 ; CHECK: i32.const $push0=, 0{{$}}
-; CHECK: i32.atomic.rmw8_u.cmpxchg $push1=, gv8($pop0), $0, $1{{$}}
+; CHECK: i32.atomic.rmw8.cmpxchg_u $push1=, gv8($pop0), $0, $1{{$}}
 define i32 @cmpxchg_i8_i32_z_from_global_address(i32 %exp, i32 %new) {
   %exp_t = trunc i32 %exp to i8
   %new_t = trunc i32 %new to i8

@@ -70,6 +70,7 @@ class MemoryMappingLayout {
   explicit MemoryMappingLayout(bool cache_enabled);
   ~MemoryMappingLayout();
   bool Next(MemoryMappedSegment *segment);
+  bool Error() const;
   void Reset();
   // In some cases, e.g. when running under a sandbox on Linux, ASan is unable
   // to obtain the memory mappings. It should fall back to pre-cached data

@@ -407,7 +407,8 @@ struct NDLLCharacteristics {
 void MappingTraits<COFFYAML::Relocation>::mapping(IO &IO,
                                                   COFFYAML::Relocation &Rel) {
   IO.mapRequired("VirtualAddress", Rel.VirtualAddress);
-  IO.mapRequired("SymbolName", Rel.SymbolName);
+  IO.mapOptional("SymbolName", Rel.SymbolName, StringRef());
+  IO.mapOptional("SymbolTableIndex", Rel.SymbolTableIndex);
 
   COFF::header &H = *static_cast<COFF::header *>(IO.getContext());
   if (H.Machine == COFF::IMAGE_FILE_MACHINE_I386) {

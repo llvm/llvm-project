@@ -8,7 +8,7 @@ target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: ldi32:
 ; CHECK-NEXT: .functype ldi32 (i32) -> (i32){{$}}
-; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i32.load $push[[NUM:[0-9]+]]=, 0($pop[[L0]]){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @ldi32(i32 *%p) {
@@ -18,7 +18,7 @@ define i32 @ldi32(i32 *%p) {
 
 ; CHECK-LABEL: ldi64:
 ; CHECK-NEXT: .functype ldi64 (i32) -> (i64){{$}}
-; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i64.load $push[[NUM:[0-9]+]]=, 0($pop[[L0]]){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi64(i64 *%p) {
@@ -28,7 +28,7 @@ define i64 @ldi64(i64 *%p) {
 
 ; CHECK-LABEL: ldf32:
 ; CHECK-NEXT: .functype ldf32 (i32) -> (f32){{$}}
-; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: f32.load $push[[NUM:[0-9]+]]=, 0($pop[[L0]]){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define float @ldf32(float *%p) {
@@ -38,7 +38,7 @@ define float @ldf32(float *%p) {
 
 ; CHECK-LABEL: ldf64:
 ; CHECK-NEXT: .functype ldf64 (i32) -> (f64){{$}}
-; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: f64.load $push[[NUM:[0-9]+]]=, 0($pop[[L0]]){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define double @ldf64(double *%p) {

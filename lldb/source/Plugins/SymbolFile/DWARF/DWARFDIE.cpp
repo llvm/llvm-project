@@ -166,13 +166,13 @@ void DWARFDIE::GetDWARFDeclContext(DWARFDeclContext &dwarf_decl_ctx) const {
   }
 }
 
-void DWARFDIE::GetDWOContext(std::vector<CompilerContext> &context) const {
+void DWARFDIE::GetDeclContext(std::vector<CompilerContext> &context) const {
   const dw_tag_t tag = Tag();
   if (tag == DW_TAG_compile_unit || tag == DW_TAG_partial_unit)
     return;
   DWARFDIE parent = GetParent();
   if (parent)
-    parent.GetDWOContext(context);
+    parent.GetDeclContext(context);
   switch (tag) {
   case DW_TAG_module:
     context.push_back(
