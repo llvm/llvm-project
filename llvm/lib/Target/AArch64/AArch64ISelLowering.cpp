@@ -10053,6 +10053,7 @@ static SDValue performExtendCombine(SDNode *N,
 
 static SDValue splitStoreSplat(SelectionDAG &DAG, StoreSDNode &St,
                                SDValue SplatVal, unsigned NumVecElts) {
+  assert(!St.isTruncatingStore() && "cannot split truncating vector store");
   unsigned OrigAlignment = St.getAlignment();
   unsigned EltOffset = SplatVal.getValueType().getSizeInBits() / 8;
 
@@ -10127,6 +10128,11 @@ static SDValue replaceZeroVectorStore(SelectionDAG &DAG, StoreSDNode &St) {
   if (!StVal.hasOneUse())
     return SDValue();
 
+  // If the store is truncating then it's going down to i16 or smaller, which
+  // means it can be implemented in a single store anyway.
+  if (St.isTruncatingStore())
+    return SDValue();
+
   // If the immediate offset of the address operand is too large for the stp
   // instruction, then bail out.
   if (DAG.isBaseWithConstantOffset(St.getBasePtr())) {
@@ -10175,6 +10181,11 @@ static SDValue replaceSplatVectorStore(SelectionDAG &DAG, StoreSDNode &St) {
   // We can express a splat as store pair(s) for 2 or 4 elements.
   unsigned NumVecElts = VT.getVectorNumElements();
   if (NumVecElts != 4 && NumVecElts != 2)
+    return SDValue();
+
+  // If the store is truncating then it's going down to i16 or smaller, which
+  // means it can be implemented in a single store anyway.
+  if (St.isTruncatingStore())
     return SDValue();
 
   // Check that this is a splat.
