@@ -1502,6 +1502,12 @@ struct __alloc_traits_difference_type<_Alloc, _Ptr, true>
     typedef typename _Alloc::difference_type type;
 };
 
+template <class _Tp>
+struct __is_default_allocator : false_type {};
+
+template <class _Tp>
+struct __is_default_allocator<_VSTD::allocator<_Tp> > : true_type {};
+
 template <class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS allocator_traits
 {
@@ -1615,7 +1621,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         static
         typename enable_if
         <
-            (is_same<allocator_type, allocator<_Tp> >::value
+            (__is_default_allocator<allocator_type>::value
                 || !__has_construct<allocator_type, _Tp*, _Tp>::value) &&
              is_trivially_move_constructible<_Tp>::value,
             void
@@ -1640,23 +1646,25 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
                 construct(__a, _VSTD::__to_raw_pointer(__begin2), *__begin1);
         }
 
-    template <class _Tp>
+    template <class _SourceTp, class _DestTp,
+              class _RawSourceTp = typename remove_const<_SourceTp>::type,
+              class _RawDestTp = typename remove_const<_DestTp>::type>
         _LIBCPP_INLINE_VISIBILITY
         static
         typename enable_if
         <
-            (is_same<allocator_type, allocator<_Tp> >::value
-                || !__has_construct<allocator_type, _Tp*, _Tp>::value) &&
-             is_trivially_move_constructible<_Tp>::value,
+            is_trivially_move_constructible<_DestTp>::value &&
+            is_same<_RawSourceTp, _RawDestTp>::value &&
+            (__is_default_allocator<allocator_type>::value ||
+             !__has_construct<allocator_type, _DestTp*, _SourceTp&>::value),
             void
         >::type
-        __construct_range_forward(allocator_type&, _Tp* __begin1, _Tp* __end1, _Tp*& __begin2)
+        __construct_range_forward(allocator_type&, _SourceTp* __begin1, _SourceTp* __end1, _DestTp*& __begin2)
         {
-            typedef typename remove_const<_Tp>::type _Vp;
             ptrdiff_t _Np = __end1 - __begin1;
             if (_Np > 0)
             {
-                _VSTD::memcpy(const_cast<_Vp*>(__begin2), __begin1, _Np * sizeof(_Tp));
+                _VSTD::memcpy(const_cast<_RawDestTp*>(__begin2), __begin1, _Np * sizeof(_DestTp));
                 __begin2 += _Np;
             }
         }
@@ -1679,7 +1687,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         static
         typename enable_if
         <
-            (is_same<allocator_type, allocator<_Tp> >::value
+            (__is_default_allocator<allocator_type>::value
                 || !__has_construct<allocator_type, _Tp*, _Tp>::value) &&
              is_trivially_move_constructible<_Tp>::value,
             void
