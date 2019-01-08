@@ -626,6 +626,12 @@ LoadFoundationValueTypesFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       "Data summary provider", ConstString("Foundation.Data"),
       TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
 
+  lldb_private::formatters::AddCXXSummary(
+      swift_category_sp,
+      lldb_private::formatters::swift::Decimal_SummaryProvider,
+      "Decimal summary provider", ConstString("Foundation.Decimal"),
+      TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+
   lldb_private::formatters::AddCXXSynthetic(
       swift_category_sp,
       lldb_private::formatters::swift::URLComponentsSyntheticFrontEndCreator,
