@@ -9,6 +9,8 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
+// FLAKY_TEST
+
 // <mutex>
 
 // template <class Mutex> class lock_guard;
