@@ -540,7 +540,6 @@ protected:
     unsigned InstrOffset = 0;
     unsigned StackAdjust = 0;
     unsigned StackSize = 0;
-    unsigned PrevStackSize = 0;
     unsigned NumDefCFAOffsets = 0;
 
     for (unsigned i = 0, e = Instrs.size(); i != e; ++i) {
@@ -588,7 +587,6 @@ protected:
         //  L0:
         //     .cfi_def_cfa_offset 80
         //
-        PrevStackSize = StackSize;
         StackSize = std::abs(Inst.getOffset()) / StackDivide;
         ++NumDefCFAOffsets;
         break;

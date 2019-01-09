@@ -1793,6 +1793,37 @@ TEST(SignatureHelpTest, IndexDocumentation) {
                         SigDoc("Doc from sema"))));
 }
 
+TEST(SignatureHelpTest, DynamicIndexDocumentation) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer::Options Opts = ClangdServer::optsForTest();
+  Opts.BuildDynamicSymbolIndex = true;
+  ClangdServer Server(CDB, FS, DiagConsumer, Opts);
+
+  FS.Files[testPath("foo.h")] = R"cpp(
+    struct Foo {
+       // Member doc
+       int foo();
+    };
+  )cpp";
+  Annotations FileContent(R"cpp(
+    #include "foo.h"
+    void test() {
+      Foo f;
+      f.foo(^);
+    }
+  )cpp");
+  auto File = testPath("test.cpp");
+  Server.addDocument(File, FileContent.code());
+  // Wait for the dynamic index being built.
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+  EXPECT_THAT(
+      llvm::cantFail(runSignatureHelp(Server, File, FileContent.point()))
+          .signatures,
+      ElementsAre(AllOf(Sig("foo() -> int", {}), SigDoc("Member doc"))));
+}
+
 TEST(CompletionTest, CompletionFunctionArgsDisabled) {
   CodeCompleteOptions Opts;
   Opts.EnableSnippets = true;

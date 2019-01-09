@@ -325,8 +325,7 @@ public:
 /// \c static_cast<int>(1.0).
 class CXXStaticCastExpr final
     : public CXXNamedCastExpr,
-      private llvm::TrailingObjects<CXXStaticCastExpr, CastExpr::BasePathSizeTy,
-                                    CXXBaseSpecifier *> {
+      private llvm::TrailingObjects<CXXStaticCastExpr, CXXBaseSpecifier *> {
   CXXStaticCastExpr(QualType ty, ExprValueKind vk, CastKind kind, Expr *op,
                     unsigned pathSize, TypeSourceInfo *writtenTy,
                     SourceLocation l, SourceLocation RParenLoc,
@@ -336,10 +335,6 @@ class CXXStaticCastExpr final
 
   explicit CXXStaticCastExpr(EmptyShell Empty, unsigned PathSize)
       : CXXNamedCastExpr(CXXStaticCastExprClass, Empty, PathSize) {}
-
-  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
-    return path_empty() ? 0 : 1;
-  }
 
 public:
   friend class CastExpr;
@@ -366,8 +361,7 @@ public:
 /// check to determine how to perform the type conversion.
 class CXXDynamicCastExpr final
     : public CXXNamedCastExpr,
-      private llvm::TrailingObjects<
-          CXXDynamicCastExpr, CastExpr::BasePathSizeTy, CXXBaseSpecifier *> {
+      private llvm::TrailingObjects<CXXDynamicCastExpr, CXXBaseSpecifier *> {
   CXXDynamicCastExpr(QualType ty, ExprValueKind VK, CastKind kind,
                      Expr *op, unsigned pathSize, TypeSourceInfo *writtenTy,
                      SourceLocation l, SourceLocation RParenLoc,
@@ -377,10 +371,6 @@ class CXXDynamicCastExpr final
 
   explicit CXXDynamicCastExpr(EmptyShell Empty, unsigned pathSize)
       : CXXNamedCastExpr(CXXDynamicCastExprClass, Empty, pathSize) {}
-
-  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
-    return path_empty() ? 0 : 1;
-  }
 
 public:
   friend class CastExpr;
@@ -414,7 +404,6 @@ public:
 class CXXReinterpretCastExpr final
     : public CXXNamedCastExpr,
       private llvm::TrailingObjects<CXXReinterpretCastExpr,
-                                    CastExpr::BasePathSizeTy,
                                     CXXBaseSpecifier *> {
   CXXReinterpretCastExpr(QualType ty, ExprValueKind vk, CastKind kind,
                          Expr *op, unsigned pathSize,
@@ -426,10 +415,6 @@ class CXXReinterpretCastExpr final
 
   CXXReinterpretCastExpr(EmptyShell Empty, unsigned pathSize)
       : CXXNamedCastExpr(CXXReinterpretCastExprClass, Empty, pathSize) {}
-
-  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
-    return path_empty() ? 0 : 1;
-  }
 
 public:
   friend class CastExpr;
@@ -458,8 +443,7 @@ public:
 /// value.
 class CXXConstCastExpr final
     : public CXXNamedCastExpr,
-      private llvm::TrailingObjects<CXXConstCastExpr, CastExpr::BasePathSizeTy,
-                                    CXXBaseSpecifier *> {
+      private llvm::TrailingObjects<CXXConstCastExpr, CXXBaseSpecifier *> {
   CXXConstCastExpr(QualType ty, ExprValueKind VK, Expr *op,
                    TypeSourceInfo *writtenTy, SourceLocation l,
                    SourceLocation RParenLoc, SourceRange AngleBrackets)
@@ -468,10 +452,6 @@ class CXXConstCastExpr final
 
   explicit CXXConstCastExpr(EmptyShell Empty)
       : CXXNamedCastExpr(CXXConstCastExprClass, Empty, 0) {}
-
-  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
-    return path_empty() ? 0 : 1;
-  }
 
 public:
   friend class CastExpr;
@@ -1538,8 +1518,7 @@ public:
 /// \endcode
 class CXXFunctionalCastExpr final
     : public ExplicitCastExpr,
-      private llvm::TrailingObjects<
-          CXXFunctionalCastExpr, CastExpr::BasePathSizeTy, CXXBaseSpecifier *> {
+      private llvm::TrailingObjects<CXXFunctionalCastExpr, CXXBaseSpecifier *> {
   SourceLocation LParenLoc;
   SourceLocation RParenLoc;
 
@@ -1553,10 +1532,6 @@ class CXXFunctionalCastExpr final
 
   explicit CXXFunctionalCastExpr(EmptyShell Shell, unsigned PathSize)
       : ExplicitCastExpr(CXXFunctionalCastExprClass, Shell, PathSize) {}
-
-  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
-    return path_empty() ? 0 : 1;
-  }
 
 public:
   friend class CastExpr;
@@ -2658,58 +2633,54 @@ public:
 /// A reference to an overloaded function set, either an
 /// \c UnresolvedLookupExpr or an \c UnresolvedMemberExpr.
 class OverloadExpr : public Expr {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+
   /// The common name of these declarations.
   DeclarationNameInfo NameInfo;
 
   /// The nested-name-specifier that qualifies the name, if any.
   NestedNameSpecifierLoc QualifierLoc;
 
-  /// The results.  These are undesugared, which is to say, they may
-  /// include UsingShadowDecls.  Access is relative to the naming
-  /// class.
-  // FIXME: Allocate this data after the OverloadExpr subclass.
-  DeclAccessPair *Results = nullptr;
-
-  unsigned NumResults = 0;
-
 protected:
-  /// Whether the name includes info for explicit template
-  /// keyword and arguments.
-  bool HasTemplateKWAndArgsInfo = false;
-
-  OverloadExpr(StmtClass K, const ASTContext &C,
+  OverloadExpr(StmtClass SC, const ASTContext &Context,
                NestedNameSpecifierLoc QualifierLoc,
                SourceLocation TemplateKWLoc,
                const DeclarationNameInfo &NameInfo,
                const TemplateArgumentListInfo *TemplateArgs,
                UnresolvedSetIterator Begin, UnresolvedSetIterator End,
-               bool KnownDependent,
-               bool KnownInstantiationDependent,
+               bool KnownDependent, bool KnownInstantiationDependent,
                bool KnownContainsUnexpandedParameterPack);
 
-  OverloadExpr(StmtClass K, EmptyShell Empty) : Expr(K, Empty) {}
+  OverloadExpr(StmtClass SC, EmptyShell Empty, unsigned NumResults,
+               bool HasTemplateKWAndArgsInfo);
+
+  /// Return the results. Defined after UnresolvedMemberExpr.
+  inline DeclAccessPair *getTrailingResults();
+  const DeclAccessPair *getTrailingResults() const {
+    return const_cast<OverloadExpr *>(this)->getTrailingResults();
+  }
 
   /// Return the optional template keyword and arguments info.
-  ASTTemplateKWAndArgsInfo *
-  getTrailingASTTemplateKWAndArgsInfo(); // defined far below.
-
-  /// Return the optional template keyword and arguments info.
+  /// Defined after UnresolvedMemberExpr.
+  inline ASTTemplateKWAndArgsInfo *getTrailingASTTemplateKWAndArgsInfo();
   const ASTTemplateKWAndArgsInfo *getTrailingASTTemplateKWAndArgsInfo() const {
     return const_cast<OverloadExpr *>(this)
         ->getTrailingASTTemplateKWAndArgsInfo();
   }
 
-  /// Return the optional template arguments.
-  TemplateArgumentLoc *getTrailingTemplateArgumentLoc(); // defined far below
+  /// Return the optional template arguments. Defined after
+  /// UnresolvedMemberExpr.
+  inline TemplateArgumentLoc *getTrailingTemplateArgumentLoc();
+  const TemplateArgumentLoc *getTrailingTemplateArgumentLoc() const {
+    return const_cast<OverloadExpr *>(this)->getTrailingTemplateArgumentLoc();
+  }
 
-  void initializeResults(const ASTContext &C,
-                         UnresolvedSetIterator Begin,
-                         UnresolvedSetIterator End);
+  bool hasTemplateKWAndArgsInfo() const {
+    return OverloadExprBits.HasTemplateKWAndArgsInfo;
+  }
 
 public:
-  friend class ASTStmtReader;
-  friend class ASTStmtWriter;
-
   struct FindResult {
     OverloadExpr *Expression;
     bool IsAddressOfOperand;
@@ -2745,20 +2716,26 @@ public:
   }
 
   /// Gets the naming class of this lookup, if any.
-  CXXRecordDecl *getNamingClass() const;
+  /// Defined after UnresolvedMemberExpr.
+  inline CXXRecordDecl *getNamingClass();
+  const CXXRecordDecl *getNamingClass() const {
+    return const_cast<OverloadExpr *>(this)->getNamingClass();
+  }
 
   using decls_iterator = UnresolvedSetImpl::iterator;
 
-  decls_iterator decls_begin() const { return UnresolvedSetIterator(Results); }
+  decls_iterator decls_begin() const {
+    return UnresolvedSetIterator(getTrailingResults());
+  }
   decls_iterator decls_end() const {
-    return UnresolvedSetIterator(Results + NumResults);
+    return UnresolvedSetIterator(getTrailingResults() + getNumDecls());
   }
   llvm::iterator_range<decls_iterator> decls() const {
     return llvm::make_range(decls_begin(), decls_end());
   }
 
   /// Gets the number of declarations in the unresolved set.
-  unsigned getNumDecls() const { return NumResults; }
+  unsigned getNumDecls() const { return OverloadExprBits.NumResults; }
 
   /// Gets the full name info.
   const DeclarationNameInfo &getNameInfo() const { return NameInfo; }
@@ -2781,21 +2758,24 @@ public:
   /// Retrieve the location of the template keyword preceding
   /// this name, if any.
   SourceLocation getTemplateKeywordLoc() const {
-    if (!HasTemplateKWAndArgsInfo) return SourceLocation();
+    if (!hasTemplateKWAndArgsInfo())
+      return SourceLocation();
     return getTrailingASTTemplateKWAndArgsInfo()->TemplateKWLoc;
   }
 
   /// Retrieve the location of the left angle bracket starting the
   /// explicit template argument list following the name, if any.
   SourceLocation getLAngleLoc() const {
-    if (!HasTemplateKWAndArgsInfo) return SourceLocation();
+    if (!hasTemplateKWAndArgsInfo())
+      return SourceLocation();
     return getTrailingASTTemplateKWAndArgsInfo()->LAngleLoc;
   }
 
   /// Retrieve the location of the right angle bracket ending the
   /// explicit template argument list following the name, if any.
   SourceLocation getRAngleLoc() const {
-    if (!HasTemplateKWAndArgsInfo) return SourceLocation();
+    if (!hasTemplateKWAndArgsInfo())
+      return SourceLocation();
     return getTrailingASTTemplateKWAndArgsInfo()->RAngleLoc;
   }
 
@@ -2847,86 +2827,82 @@ public:
 /// members and therefore appear only in UnresolvedMemberLookupExprs.
 class UnresolvedLookupExpr final
     : public OverloadExpr,
-      private llvm::TrailingObjects<
-          UnresolvedLookupExpr, ASTTemplateKWAndArgsInfo, TemplateArgumentLoc> {
+      private llvm::TrailingObjects<UnresolvedLookupExpr, DeclAccessPair,
+                                    ASTTemplateKWAndArgsInfo,
+                                    TemplateArgumentLoc> {
   friend class ASTStmtReader;
   friend class OverloadExpr;
   friend TrailingObjects;
 
-  /// True if these lookup results should be extended by
-  /// argument-dependent lookup if this is the operand of a function
-  /// call.
-  bool RequiresADL = false;
-
-  /// True if these lookup results are overloaded.  This is pretty
-  /// trivially rederivable if we urgently need to kill this field.
-  bool Overloaded = false;
-
   /// The naming class (C++ [class.access.base]p5) of the lookup, if
   /// any.  This can generally be recalculated from the context chain,
-  /// but that can be fairly expensive for unqualified lookups.  If we
-  /// want to improve memory use here, this could go in a union
-  /// against the qualified-lookup bits.
-  CXXRecordDecl *NamingClass = nullptr;
+  /// but that can be fairly expensive for unqualified lookups.
+  CXXRecordDecl *NamingClass;
 
-  UnresolvedLookupExpr(const ASTContext &C,
-                       CXXRecordDecl *NamingClass,
+  // UnresolvedLookupExpr is followed by several trailing objects.
+  // They are in order:
+  //
+  // * An array of getNumResults() DeclAccessPair for the results. These are
+  //   undesugared, which is to say, they may include UsingShadowDecls.
+  //   Access is relative to the naming class.
+  //
+  // * An optional ASTTemplateKWAndArgsInfo for the explicitly specified
+  //   template keyword and arguments. Present if and only if
+  //   hasTemplateKWAndArgsInfo().
+  //
+  // * An array of getNumTemplateArgs() TemplateArgumentLoc containing
+  //   location information for the explicitly specified template arguments.
+
+  UnresolvedLookupExpr(const ASTContext &Context, CXXRecordDecl *NamingClass,
                        NestedNameSpecifierLoc QualifierLoc,
                        SourceLocation TemplateKWLoc,
-                       const DeclarationNameInfo &NameInfo,
-                       bool RequiresADL, bool Overloaded,
+                       const DeclarationNameInfo &NameInfo, bool RequiresADL,
+                       bool Overloaded,
                        const TemplateArgumentListInfo *TemplateArgs,
-                       UnresolvedSetIterator Begin, UnresolvedSetIterator End)
-      : OverloadExpr(UnresolvedLookupExprClass, C, QualifierLoc, TemplateKWLoc,
-                     NameInfo, TemplateArgs, Begin, End, false, false, false),
-        RequiresADL(RequiresADL),
-        Overloaded(Overloaded), NamingClass(NamingClass) {}
+                       UnresolvedSetIterator Begin, UnresolvedSetIterator End);
 
-  UnresolvedLookupExpr(EmptyShell Empty)
-      : OverloadExpr(UnresolvedLookupExprClass, Empty) {}
+  UnresolvedLookupExpr(EmptyShell Empty, unsigned NumResults,
+                       bool HasTemplateKWAndArgsInfo);
 
-  size_t numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
-    return HasTemplateKWAndArgsInfo ? 1 : 0;
+  unsigned numTrailingObjects(OverloadToken<DeclAccessPair>) const {
+    return getNumDecls();
+  }
+
+  unsigned numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
+    return hasTemplateKWAndArgsInfo();
   }
 
 public:
-  static UnresolvedLookupExpr *Create(const ASTContext &C,
-                                      CXXRecordDecl *NamingClass,
-                                      NestedNameSpecifierLoc QualifierLoc,
-                                      const DeclarationNameInfo &NameInfo,
-                                      bool ADL, bool Overloaded,
-                                      UnresolvedSetIterator Begin,
-                                      UnresolvedSetIterator End) {
-    return new(C) UnresolvedLookupExpr(C, NamingClass, QualifierLoc,
-                                       SourceLocation(), NameInfo,
-                                       ADL, Overloaded, nullptr, Begin, End);
-  }
+  static UnresolvedLookupExpr *
+  Create(const ASTContext &Context, CXXRecordDecl *NamingClass,
+         NestedNameSpecifierLoc QualifierLoc,
+         const DeclarationNameInfo &NameInfo, bool RequiresADL, bool Overloaded,
+         UnresolvedSetIterator Begin, UnresolvedSetIterator End);
 
-  static UnresolvedLookupExpr *Create(const ASTContext &C,
-                                      CXXRecordDecl *NamingClass,
-                                      NestedNameSpecifierLoc QualifierLoc,
-                                      SourceLocation TemplateKWLoc,
-                                      const DeclarationNameInfo &NameInfo,
-                                      bool ADL,
-                                      const TemplateArgumentListInfo *Args,
-                                      UnresolvedSetIterator Begin,
-                                      UnresolvedSetIterator End);
+  static UnresolvedLookupExpr *
+  Create(const ASTContext &Context, CXXRecordDecl *NamingClass,
+         NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
+         const DeclarationNameInfo &NameInfo, bool RequiresADL,
+         const TemplateArgumentListInfo *Args, UnresolvedSetIterator Begin,
+         UnresolvedSetIterator End);
 
-  static UnresolvedLookupExpr *CreateEmpty(const ASTContext &C,
+  static UnresolvedLookupExpr *CreateEmpty(const ASTContext &Context,
+                                           unsigned NumResults,
                                            bool HasTemplateKWAndArgsInfo,
                                            unsigned NumTemplateArgs);
 
   /// True if this declaration should be extended by
   /// argument-dependent lookup.
-  bool requiresADL() const { return RequiresADL; }
+  bool requiresADL() const { return UnresolvedLookupExprBits.RequiresADL; }
 
   /// True if this lookup is overloaded.
-  bool isOverloaded() const { return Overloaded; }
+  bool isOverloaded() const { return UnresolvedLookupExprBits.Overloaded; }
 
   /// Gets the 'naming class' (in the sense of C++0x
   /// [class.access.base]p5) of the lookup.  This is the scope
   /// that was looked in to find these results.
-  CXXRecordDecl *getNamingClass() const { return NamingClass; }
+  CXXRecordDecl *getNamingClass() { return NamingClass; }
+  const CXXRecordDecl *getNamingClass() const { return NamingClass; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     if (NestedNameSpecifierLoc l = getQualifierLoc())
@@ -3561,25 +3537,18 @@ public:
 /// DeclRefExpr, depending on whether the member is static.
 class UnresolvedMemberExpr final
     : public OverloadExpr,
-      private llvm::TrailingObjects<
-          UnresolvedMemberExpr, ASTTemplateKWAndArgsInfo, TemplateArgumentLoc> {
+      private llvm::TrailingObjects<UnresolvedMemberExpr, DeclAccessPair,
+                                    ASTTemplateKWAndArgsInfo,
+                                    TemplateArgumentLoc> {
   friend class ASTStmtReader;
   friend class OverloadExpr;
   friend TrailingObjects;
-
-  /// Whether this member expression used the '->' operator or
-  /// the '.' operator.
-  bool IsArrow : 1;
-
-  /// Whether the lookup results contain an unresolved using
-  /// declaration.
-  bool HasUnresolvedUsing : 1;
 
   /// The expression for the base pointer or class reference,
   /// e.g., the \c x in x.f.
   ///
   /// This can be null if this is an 'unbased' member expression.
-  Stmt *Base = nullptr;
+  Stmt *Base;
 
   /// The type of the base expression; never null.
   QualType BaseType;
@@ -3587,7 +3556,21 @@ class UnresolvedMemberExpr final
   /// The location of the '->' or '.' operator.
   SourceLocation OperatorLoc;
 
-  UnresolvedMemberExpr(const ASTContext &C, bool HasUnresolvedUsing,
+  // UnresolvedMemberExpr is followed by several trailing objects.
+  // They are in order:
+  //
+  // * An array of getNumResults() DeclAccessPair for the results. These are
+  //   undesugared, which is to say, they may include UsingShadowDecls.
+  //   Access is relative to the naming class.
+  //
+  // * An optional ASTTemplateKWAndArgsInfo for the explicitly specified
+  //   template keyword and arguments. Present if and only if
+  //   hasTemplateKWAndArgsInfo().
+  //
+  // * An array of getNumTemplateArgs() TemplateArgumentLoc containing
+  //   location information for the explicitly specified template arguments.
+
+  UnresolvedMemberExpr(const ASTContext &Context, bool HasUnresolvedUsing,
                        Expr *Base, QualType BaseType, bool IsArrow,
                        SourceLocation OperatorLoc,
                        NestedNameSpecifierLoc QualifierLoc,
@@ -3596,28 +3579,30 @@ class UnresolvedMemberExpr final
                        const TemplateArgumentListInfo *TemplateArgs,
                        UnresolvedSetIterator Begin, UnresolvedSetIterator End);
 
-  UnresolvedMemberExpr(EmptyShell Empty)
-      : OverloadExpr(UnresolvedMemberExprClass, Empty), IsArrow(false),
-        HasUnresolvedUsing(false) {}
+  UnresolvedMemberExpr(EmptyShell Empty, unsigned NumResults,
+                       bool HasTemplateKWAndArgsInfo);
 
-  size_t numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
-    return HasTemplateKWAndArgsInfo ? 1 : 0;
+  unsigned numTrailingObjects(OverloadToken<DeclAccessPair>) const {
+    return getNumDecls();
+  }
+
+  unsigned numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
+    return hasTemplateKWAndArgsInfo();
   }
 
 public:
   static UnresolvedMemberExpr *
-  Create(const ASTContext &C, bool HasUnresolvedUsing,
-         Expr *Base, QualType BaseType, bool IsArrow,
-         SourceLocation OperatorLoc,
-         NestedNameSpecifierLoc QualifierLoc,
-         SourceLocation TemplateKWLoc,
+  Create(const ASTContext &Context, bool HasUnresolvedUsing, Expr *Base,
+         QualType BaseType, bool IsArrow, SourceLocation OperatorLoc,
+         NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
          const DeclarationNameInfo &MemberNameInfo,
          const TemplateArgumentListInfo *TemplateArgs,
          UnresolvedSetIterator Begin, UnresolvedSetIterator End);
 
-  static UnresolvedMemberExpr *
-  CreateEmpty(const ASTContext &C, bool HasTemplateKWAndArgsInfo,
-              unsigned NumTemplateArgs);
+  static UnresolvedMemberExpr *CreateEmpty(const ASTContext &Context,
+                                           unsigned NumResults,
+                                           bool HasTemplateKWAndArgsInfo,
+                                           unsigned NumTemplateArgs);
 
   /// True if this is an implicit access, i.e., one in which the
   /// member being accessed was not written in the source.
@@ -3640,32 +3625,36 @@ public:
 
   /// Determine whether the lookup results contain an unresolved using
   /// declaration.
-  bool hasUnresolvedUsing() const { return HasUnresolvedUsing; }
+  bool hasUnresolvedUsing() const {
+    return UnresolvedMemberExprBits.HasUnresolvedUsing;
+  }
 
   /// Determine whether this member expression used the '->'
   /// operator; otherwise, it used the '.' operator.
-  bool isArrow() const { return IsArrow; }
+  bool isArrow() const { return UnresolvedMemberExprBits.IsArrow; }
 
   /// Retrieve the location of the '->' or '.' operator.
   SourceLocation getOperatorLoc() const { return OperatorLoc; }
 
   /// Retrieve the naming class of this lookup.
-  CXXRecordDecl *getNamingClass() const;
+  CXXRecordDecl *getNamingClass();
+  const CXXRecordDecl *getNamingClass() const {
+    return const_cast<UnresolvedMemberExpr *>(this)->getNamingClass();
+  }
 
   /// Retrieve the full name info for the member that this expression
   /// refers to.
   const DeclarationNameInfo &getMemberNameInfo() const { return getNameInfo(); }
 
-  /// Retrieve the name of the member that this expression
-  /// refers to.
+  /// Retrieve the name of the member that this expression refers to.
   DeclarationName getMemberName() const { return getName(); }
 
-  // Retrieve the location of the name of the member that this
-  // expression refers to.
+  /// Retrieve the location of the name of the member that this
+  /// expression refers to.
   SourceLocation getMemberLoc() const { return getNameLoc(); }
 
-  // Return the preferred location (the member name) for the arrow when
-  // diagnosing a problem with this expression.
+  /// Return the preferred location (the member name) for the arrow when
+  /// diagnosing a problem with this expression.
   SourceLocation getExprLoc() const LLVM_READONLY { return getMemberLoc(); }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
@@ -3694,26 +3683,33 @@ public:
   }
 };
 
-inline ASTTemplateKWAndArgsInfo *
-OverloadExpr::getTrailingASTTemplateKWAndArgsInfo() {
-  if (!HasTemplateKWAndArgsInfo)
-    return nullptr;
-
-  if (isa<UnresolvedLookupExpr>(this))
-    return cast<UnresolvedLookupExpr>(this)
-        ->getTrailingObjects<ASTTemplateKWAndArgsInfo>();
-  else
-    return cast<UnresolvedMemberExpr>(this)
-        ->getTrailingObjects<ASTTemplateKWAndArgsInfo>();
+DeclAccessPair *OverloadExpr::getTrailingResults() {
+  if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(this))
+    return ULE->getTrailingObjects<DeclAccessPair>();
+  return cast<UnresolvedMemberExpr>(this)->getTrailingObjects<DeclAccessPair>();
 }
 
-inline TemplateArgumentLoc *OverloadExpr::getTrailingTemplateArgumentLoc() {
-  if (isa<UnresolvedLookupExpr>(this))
-    return cast<UnresolvedLookupExpr>(this)
-        ->getTrailingObjects<TemplateArgumentLoc>();
-  else
-    return cast<UnresolvedMemberExpr>(this)
-        ->getTrailingObjects<TemplateArgumentLoc>();
+ASTTemplateKWAndArgsInfo *OverloadExpr::getTrailingASTTemplateKWAndArgsInfo() {
+  if (!hasTemplateKWAndArgsInfo())
+    return nullptr;
+
+  if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(this))
+    return ULE->getTrailingObjects<ASTTemplateKWAndArgsInfo>();
+  return cast<UnresolvedMemberExpr>(this)
+      ->getTrailingObjects<ASTTemplateKWAndArgsInfo>();
+}
+
+TemplateArgumentLoc *OverloadExpr::getTrailingTemplateArgumentLoc() {
+  if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(this))
+    return ULE->getTrailingObjects<TemplateArgumentLoc>();
+  return cast<UnresolvedMemberExpr>(this)
+      ->getTrailingObjects<TemplateArgumentLoc>();
+}
+
+CXXRecordDecl *OverloadExpr::getNamingClass() {
+  if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(this))
+    return ULE->getNamingClass();
+  return cast<UnresolvedMemberExpr>(this)->getNamingClass();
 }
 
 /// Represents a C++11 noexcept expression (C++ [expr.unary.noexcept]).

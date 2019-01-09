@@ -1,0 +1,51 @@
+# Test handling of (corrupt?) object files, which have sections with overlapping
+# virtual addresses.
+#
+# Right now the overlapping sections get dropped, but other behaviors
+# (including outright rejecting such files) are possible too.
+
+# RUN: yaml2obj %s > %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+# CHECK-NOT: .overlap1
+# CHECK-NOT: .overlap2
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_ARM
+Sections:
+  - Name:            .sect1
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Content:         DEADBEEFBAADF00D
+  - Name:            .overlap1
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1004
+    AddressAlign:    0x4
+    Content:         DEADBEEFBAADF00D
+  - Name:            .sect2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2000
+    AddressAlign:    0x4
+    Content:         DEADBEEFBAADF00D
+  - Name:            .overlap2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2004
+    AddressAlign:    0x4
+    Content:         DEADBEEFBAADF00D
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_X, PF_W, PF_R ]
+    VAddr: 0x1000
+    Align: 0x4
+    Sections:
+      - Section: .sect1
+      - Section: .overlap1

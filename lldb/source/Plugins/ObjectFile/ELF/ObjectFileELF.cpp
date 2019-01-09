@@ -17,6 +17,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/RangeMap.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
@@ -30,6 +31,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
 
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Decompressor.h"
@@ -235,6 +237,8 @@ unsigned ELFRelocation::RelocAddend64(const ELFRelocation &rel) {
 }
 
 } // end anonymous namespace
+
+static user_id_t SegmentID(size_t PHdrIndex) { return ~PHdrIndex; }
 
 bool ELFNote::Parse(const DataExtractor &data, lldb::offset_t *offset) {
   // Read all fields.
@@ -822,7 +826,8 @@ bool ObjectFileELF::SetLoadAddress(Target &target, lldb::addr_t value,
         // Iterate through the object file sections to find all of the sections
         // that have SHF_ALLOC in their flag bits.
         SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
-        if (section_sp && section_sp->Test(SHF_ALLOC)) {
+        if (section_sp->Test(SHF_ALLOC) ||
+            section_sp->GetType() == eSectionTypeContainer) {
           lldb::addr_t load_addr = section_sp->GetFileAddress();
           // We don't want to update the load address of a section with type
           // eSectionTypeAbsoluteAddress as they already have the absolute load
@@ -1821,74 +1826,185 @@ static Permissions GetPermissions(const ELFSectionHeader &H) {
   return Perm;
 }
 
+static Permissions GetPermissions(const ELFProgramHeader &H) {
+  Permissions Perm = Permissions(0);
+  if (H.p_flags & PF_R)
+    Perm |= ePermissionsReadable;
+  if (H.p_flags & PF_W)
+    Perm |= ePermissionsWritable;
+  if (H.p_flags & PF_X)
+    Perm |= ePermissionsExecutable;
+  return Perm;
+}
+
 namespace {
+
+using VMRange = lldb_private::Range<addr_t, addr_t>;
+
+struct SectionAddressInfo {
+  SectionSP Segment;
+  VMRange Range;
+};
+
 // (Unlinked) ELF object files usually have 0 for every section address, meaning
 // we need to compute synthetic addresses in order for "file addresses" from
 // different sections to not overlap. This class handles that logic.
 class VMAddressProvider {
-  bool m_synthesizing;
-  addr_t m_next;
+  using VMMap = llvm::IntervalMap<addr_t, SectionSP, 4,
+                                       llvm::IntervalMapHalfOpenInfo<addr_t>>;
+
+  ObjectFile::Type ObjectType;
+  addr_t NextVMAddress = 0;
+  VMMap::Allocator Alloc;
+  VMMap Segments = VMMap(Alloc);
+  VMMap Sections = VMMap(Alloc);
+  lldb_private::Log *Log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES);
+
+  VMRange GetVMRange(const ELFSectionHeader &H) {
+    addr_t Address = H.sh_addr;
+    addr_t Size = H.sh_flags & SHF_ALLOC ? H.sh_size : 0;
+    if (ObjectType == ObjectFile::Type::eTypeObjectFile && Segments.empty() && (H.sh_flags & SHF_ALLOC)) {
+      NextVMAddress =
+          llvm::alignTo(NextVMAddress, std::max<addr_t>(H.sh_addralign, 1));
+      Address = NextVMAddress;
+      NextVMAddress += Size;
+    }
+    return VMRange(Address, Size);
+  }
 
 public:
-  VMAddressProvider(ObjectFile::Type Type)
-      : m_synthesizing(Type == ObjectFile::Type::eTypeObjectFile), m_next(0) {}
+  VMAddressProvider(ObjectFile::Type Type) : ObjectType(Type) {}
 
-  std::pair<addr_t, addr_t> GetAddressAndSize(const ELFSectionHeader &H) {
-    addr_t address = H.sh_addr;
-    addr_t size = H.sh_flags & SHF_ALLOC ? H.sh_size : 0;
-    if (m_synthesizing && (H.sh_flags & SHF_ALLOC)) {
-      m_next = llvm::alignTo(m_next, std::max<addr_t>(H.sh_addralign, 1));
-      address = m_next;
-      m_next += size;
+  llvm::Optional<VMRange> GetAddressInfo(const ELFProgramHeader &H) {
+    if (H.p_memsz == 0) {
+      LLDB_LOG(Log,
+               "Ignoring zero-sized PT_LOAD segment. Corrupt object file?");
+      return llvm::None;
     }
-    return {address, size};
+
+    if (Segments.overlaps(H.p_vaddr, H.p_vaddr + H.p_memsz)) {
+      LLDB_LOG(Log,
+               "Ignoring overlapping PT_LOAD segment. Corrupt object file?");
+      return llvm::None;
+    }
+    return VMRange(H.p_vaddr, H.p_memsz);
+  }
+
+  llvm::Optional<SectionAddressInfo> GetAddressInfo(const ELFSectionHeader &H) {
+    VMRange Range = GetVMRange(H);
+    SectionSP Segment;
+    auto It = Segments.find(Range.GetRangeBase());
+    if ((H.sh_flags & SHF_ALLOC) && It.valid()) {
+      addr_t MaxSize;
+      if (It.start() <= Range.GetRangeBase()) {
+        MaxSize = It.stop() - Range.GetRangeBase();
+        Segment = *It;
+      } else
+        MaxSize = It.start() - Range.GetRangeBase();
+      if (Range.GetByteSize() > MaxSize) {
+        LLDB_LOG(Log, "Shortening section crossing segment boundaries. "
+                      "Corrupt object file?");
+        Range.SetByteSize(MaxSize);
+      }
+    }
+    if (Range.GetByteSize() > 0 &&
+        Sections.overlaps(Range.GetRangeBase(), Range.GetRangeEnd())) {
+      LLDB_LOG(Log, "Ignoring overlapping section. Corrupt object file?");
+      return llvm::None;
+    }
+    if (Segment)
+      Range.Slide(-Segment->GetFileAddress());
+    return SectionAddressInfo{Segment, Range};
+  }
+
+  void AddSegment(const VMRange &Range, SectionSP Seg) {
+    Segments.insert(Range.GetRangeBase(), Range.GetRangeEnd(), std::move(Seg));
+  }
+
+  void AddSection(SectionAddressInfo Info, SectionSP Sect) {
+    if (Info.Range.GetByteSize() == 0)
+      return;
+    if (Info.Segment)
+      Info.Range.Slide(Info.Segment->GetFileAddress());
+    Sections.insert(Info.Range.GetRangeBase(), Info.Range.GetRangeEnd(),
+                    std::move(Sect));
   }
 };
 }
 
 void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
-  if (!m_sections_ap.get() && ParseSectionHeaders()) {
-    m_sections_ap.reset(new SectionList());
+  if (m_sections_ap)
+    return;
 
-    VMAddressProvider address_provider(CalculateType());
-    for (SectionHeaderCollIter I = std::next(m_section_headers.begin());
-         I != m_section_headers.end(); ++I) {
-      const ELFSectionHeaderInfo &header = *I;
+  m_sections_ap = llvm::make_unique<SectionList>();
+  VMAddressProvider address_provider(CalculateType());
 
-      ConstString &name = I->section_name;
-      const uint64_t file_size =
-          header.sh_type == SHT_NOBITS ? 0 : header.sh_size;
+  size_t LoadID = 0;
+  for (const auto &EnumPHdr : llvm::enumerate(ProgramHeaders())) {
+    const ELFProgramHeader &PHdr = EnumPHdr.value();
+    if (PHdr.p_type != PT_LOAD)
+      continue;
 
-      addr_t vm_addr, vm_size;
-      std::tie(vm_addr, vm_size) = address_provider.GetAddressAndSize(header);
+    auto InfoOr = address_provider.GetAddressInfo(PHdr);
+    if (!InfoOr)
+      continue;
 
-      SectionType sect_type = GetSectionType(header);
+    ConstString Name(("PT_LOAD[" + llvm::Twine(LoadID++) + "]").str());
+    uint32_t Log2Align = llvm::Log2_64(std::max<elf_xword>(PHdr.p_align, 1));
+    SectionSP Segment = std::make_shared<Section>(
+        GetModule(), this, SegmentID(EnumPHdr.index()), Name,
+        eSectionTypeContainer, InfoOr->GetRangeBase(), InfoOr->GetByteSize(),
+        PHdr.p_offset, PHdr.p_filesz, Log2Align, /*flags*/ 0);
+    Segment->SetPermissions(GetPermissions(PHdr));
+    m_sections_ap->AddSection(Segment);
 
-      const uint32_t target_bytes_size =
-          GetTargetByteSize(sect_type, m_arch_spec);
+    address_provider.AddSegment(*InfoOr, std::move(Segment));
+  }
 
-      elf::elf_xword log2align =
-          (header.sh_addralign == 0) ? 0 : llvm::Log2_64(header.sh_addralign);
+  ParseSectionHeaders();
+  if (m_section_headers.empty())
+    return;
 
-      SectionSP section_sp(new Section(
-          GetModule(), // Module to which this section belongs.
-          this, // ObjectFile to which this section belongs and should read
-                // section data from.
-          SectionIndex(I),     // Section ID.
-          name,                // Section name.
-          sect_type,           // Section type.
-          vm_addr,             // VM address.
-          vm_size,             // VM size in bytes of this section.
-          header.sh_offset,    // Offset of this section in the file.
-          file_size,           // Size of the section as found in the file.
-          log2align,           // Alignment of the section
-          header.sh_flags,     // Flags for this section.
-          target_bytes_size)); // Number of host bytes per target byte
+  for (SectionHeaderCollIter I = std::next(m_section_headers.begin());
+       I != m_section_headers.end(); ++I) {
+    const ELFSectionHeaderInfo &header = *I;
 
-      section_sp->SetPermissions(GetPermissions(header));
-      section_sp->SetIsThreadSpecific(header.sh_flags & SHF_TLS);
-      m_sections_ap->AddSection(section_sp);
-    }
+    ConstString &name = I->section_name;
+    const uint64_t file_size =
+        header.sh_type == SHT_NOBITS ? 0 : header.sh_size;
+
+    auto InfoOr = address_provider.GetAddressInfo(header);
+    if (!InfoOr)
+      continue;
+
+    SectionType sect_type = GetSectionType(header);
+
+    const uint32_t target_bytes_size =
+        GetTargetByteSize(sect_type, m_arch_spec);
+
+    elf::elf_xword log2align =
+        (header.sh_addralign == 0) ? 0 : llvm::Log2_64(header.sh_addralign);
+
+    SectionSP section_sp(new Section(
+        InfoOr->Segment, GetModule(), // Module to which this section belongs.
+        this,            // ObjectFile to which this section belongs and should
+                         // read section data from.
+        SectionIndex(I), // Section ID.
+        name,            // Section name.
+        sect_type,       // Section type.
+        InfoOr->Range.GetRangeBase(), // VM address.
+        InfoOr->Range.GetByteSize(),  // VM size in bytes of this section.
+        header.sh_offset,             // Offset of this section in the file.
+        file_size,           // Size of the section as found in the file.
+        log2align,           // Alignment of the section
+        header.sh_flags,     // Flags for this section.
+        target_bytes_size)); // Number of host bytes per target byte
+
+    section_sp->SetPermissions(GetPermissions(header));
+    section_sp->SetIsThreadSpecific(header.sh_flags & SHF_TLS);
+    (InfoOr->Segment ? InfoOr->Segment->GetChildren() : *m_sections_ap)
+        .AddSection(section_sp);
+    address_provider.AddSection(std::move(*InfoOr), std::move(section_sp));
   }
 
   // For eTypeDebugInfo files, the Symbol Vendor will take care of updating the

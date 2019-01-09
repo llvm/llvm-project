@@ -302,68 +302,95 @@ SourceLocation CXXPseudoDestructorExpr::getEndLoc() const {
 }
 
 // UnresolvedLookupExpr
-UnresolvedLookupExpr *
-UnresolvedLookupExpr::Create(const ASTContext &C,
-                             CXXRecordDecl *NamingClass,
-                             NestedNameSpecifierLoc QualifierLoc,
-                             SourceLocation TemplateKWLoc,
-                             const DeclarationNameInfo &NameInfo,
-                             bool ADL,
-                             const TemplateArgumentListInfo *Args,
-                             UnresolvedSetIterator Begin,
-                             UnresolvedSetIterator End) {
+UnresolvedLookupExpr::UnresolvedLookupExpr(
+    const ASTContext &Context, CXXRecordDecl *NamingClass,
+    NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
+    const DeclarationNameInfo &NameInfo, bool RequiresADL, bool Overloaded,
+    const TemplateArgumentListInfo *TemplateArgs, UnresolvedSetIterator Begin,
+    UnresolvedSetIterator End)
+    : OverloadExpr(UnresolvedLookupExprClass, Context, QualifierLoc,
+                   TemplateKWLoc, NameInfo, TemplateArgs, Begin, End, false,
+                   false, false),
+      NamingClass(NamingClass) {
+  UnresolvedLookupExprBits.RequiresADL = RequiresADL;
+  UnresolvedLookupExprBits.Overloaded = Overloaded;
+}
+
+UnresolvedLookupExpr::UnresolvedLookupExpr(EmptyShell Empty,
+                                           unsigned NumResults,
+                                           bool HasTemplateKWAndArgsInfo)
+    : OverloadExpr(UnresolvedLookupExprClass, Empty, NumResults,
+                   HasTemplateKWAndArgsInfo) {}
+
+UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
+    const ASTContext &Context, CXXRecordDecl *NamingClass,
+    NestedNameSpecifierLoc QualifierLoc, const DeclarationNameInfo &NameInfo,
+    bool RequiresADL, bool Overloaded, UnresolvedSetIterator Begin,
+    UnresolvedSetIterator End) {
+  unsigned NumResults = End - Begin;
+  unsigned Size = totalSizeToAlloc<DeclAccessPair, ASTTemplateKWAndArgsInfo,
+                                   TemplateArgumentLoc>(NumResults, 0, 0);
+  void *Mem = Context.Allocate(Size, alignof(UnresolvedLookupExpr));
+  return new (Mem) UnresolvedLookupExpr(Context, NamingClass, QualifierLoc,
+                                        SourceLocation(), NameInfo, RequiresADL,
+                                        Overloaded, nullptr, Begin, End);
+}
+
+UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
+    const ASTContext &Context, CXXRecordDecl *NamingClass,
+    NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
+    const DeclarationNameInfo &NameInfo, bool RequiresADL,
+    const TemplateArgumentListInfo *Args, UnresolvedSetIterator Begin,
+    UnresolvedSetIterator End) {
   assert(Args || TemplateKWLoc.isValid());
-  unsigned num_args = Args ? Args->size() : 0;
-
-  std::size_t Size =
-      totalSizeToAlloc<ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(1,
-                                                                      num_args);
-  void *Mem = C.Allocate(Size, alignof(UnresolvedLookupExpr));
-  return new (Mem) UnresolvedLookupExpr(C, NamingClass, QualifierLoc,
-                                        TemplateKWLoc, NameInfo,
-                                        ADL, /*Overload*/ true, Args,
-                                        Begin, End);
+  unsigned NumResults = End - Begin;
+  unsigned NumTemplateArgs = Args ? Args->size() : 0;
+  unsigned Size =
+      totalSizeToAlloc<DeclAccessPair, ASTTemplateKWAndArgsInfo,
+                       TemplateArgumentLoc>(NumResults, 1, NumTemplateArgs);
+  void *Mem = Context.Allocate(Size, alignof(UnresolvedLookupExpr));
+  return new (Mem) UnresolvedLookupExpr(Context, NamingClass, QualifierLoc,
+                                        TemplateKWLoc, NameInfo, RequiresADL,
+                                        /*Overloaded*/ true, Args, Begin, End);
 }
 
-UnresolvedLookupExpr *
-UnresolvedLookupExpr::CreateEmpty(const ASTContext &C,
-                                  bool HasTemplateKWAndArgsInfo,
-                                  unsigned NumTemplateArgs) {
+UnresolvedLookupExpr *UnresolvedLookupExpr::CreateEmpty(
+    const ASTContext &Context, unsigned NumResults,
+    bool HasTemplateKWAndArgsInfo, unsigned NumTemplateArgs) {
   assert(NumTemplateArgs == 0 || HasTemplateKWAndArgsInfo);
-  std::size_t Size =
-      totalSizeToAlloc<ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
-          HasTemplateKWAndArgsInfo, NumTemplateArgs);
-  void *Mem = C.Allocate(Size, alignof(UnresolvedLookupExpr));
-  auto *E = new (Mem) UnresolvedLookupExpr(EmptyShell());
-  E->HasTemplateKWAndArgsInfo = HasTemplateKWAndArgsInfo;
-  return E;
+  unsigned Size = totalSizeToAlloc<DeclAccessPair, ASTTemplateKWAndArgsInfo,
+                                   TemplateArgumentLoc>(
+      NumResults, HasTemplateKWAndArgsInfo, NumTemplateArgs);
+  void *Mem = Context.Allocate(Size, alignof(UnresolvedLookupExpr));
+  return new (Mem)
+      UnresolvedLookupExpr(EmptyShell(), NumResults, HasTemplateKWAndArgsInfo);
 }
 
-OverloadExpr::OverloadExpr(StmtClass K, const ASTContext &C,
+OverloadExpr::OverloadExpr(StmtClass SC, const ASTContext &Context,
                            NestedNameSpecifierLoc QualifierLoc,
                            SourceLocation TemplateKWLoc,
                            const DeclarationNameInfo &NameInfo,
                            const TemplateArgumentListInfo *TemplateArgs,
                            UnresolvedSetIterator Begin,
-                           UnresolvedSetIterator End,
-                           bool KnownDependent,
+                           UnresolvedSetIterator End, bool KnownDependent,
                            bool KnownInstantiationDependent,
                            bool KnownContainsUnexpandedParameterPack)
-    : Expr(K, C.OverloadTy, VK_LValue, OK_Ordinary, KnownDependent,
-           KnownDependent,
-           (KnownInstantiationDependent ||
-            NameInfo.isInstantiationDependent() ||
-            (QualifierLoc &&
+    : Expr(
+          SC, Context.OverloadTy, VK_LValue, OK_Ordinary, KnownDependent,
+          KnownDependent,
+          (KnownInstantiationDependent || NameInfo.isInstantiationDependent() ||
+           (QualifierLoc &&
             QualifierLoc.getNestedNameSpecifier()->isInstantiationDependent())),
-           (KnownContainsUnexpandedParameterPack ||
-            NameInfo.containsUnexpandedParameterPack() ||
-            (QualifierLoc &&
-             QualifierLoc.getNestedNameSpecifier()
-                                        ->containsUnexpandedParameterPack()))),
-      NameInfo(NameInfo), QualifierLoc(QualifierLoc), NumResults(End - Begin),
-      HasTemplateKWAndArgsInfo(TemplateArgs != nullptr ||
-                               TemplateKWLoc.isValid()) {
-  NumResults = End - Begin;
+          (KnownContainsUnexpandedParameterPack ||
+           NameInfo.containsUnexpandedParameterPack() ||
+           (QualifierLoc && QualifierLoc.getNestedNameSpecifier()
+                                ->containsUnexpandedParameterPack()))),
+      NameInfo(NameInfo), QualifierLoc(QualifierLoc) {
+  unsigned NumResults = End - Begin;
+  OverloadExprBits.NumResults = NumResults;
+  OverloadExprBits.HasTemplateKWAndArgsInfo =
+      (TemplateArgs != nullptr ) || TemplateKWLoc.isValid();
+
   if (NumResults) {
     // Determine whether this expression is type-dependent.
     for (UnresolvedSetImpl::const_iterator I = Begin; I != End; ++I) {
@@ -375,8 +402,9 @@ OverloadExpr::OverloadExpr(StmtClass K, const ASTContext &C,
       }
     }
 
-    Results = static_cast<DeclAccessPair *>(C.Allocate(
-        sizeof(DeclAccessPair) * NumResults, alignof(DeclAccessPair)));
+    // Copy the results to the trailing array past UnresolvedLookupExpr
+    // or UnresolvedMemberExpr.
+    DeclAccessPair *Results = getTrailingResults();
     memcpy(Results, Begin.I, NumResults * sizeof(DeclAccessPair));
   }
 
@@ -404,28 +432,14 @@ OverloadExpr::OverloadExpr(StmtClass K, const ASTContext &C,
   }
 
   if (isTypeDependent())
-    setType(C.DependentTy);
+    setType(Context.DependentTy);
 }
 
-void OverloadExpr::initializeResults(const ASTContext &C,
-                                     UnresolvedSetIterator Begin,
-                                     UnresolvedSetIterator End) {
-  assert(!Results && "Results already initialized!");
-  NumResults = End - Begin;
-  if (NumResults) {
-    Results = static_cast<DeclAccessPair *>(
-        C.Allocate(sizeof(DeclAccessPair) * NumResults,
-
-                   alignof(DeclAccessPair)));
-    memcpy(Results, Begin.I, NumResults * sizeof(DeclAccessPair));
-  }
-}
-
-CXXRecordDecl *OverloadExpr::getNamingClass() const {
-  if (isa<UnresolvedLookupExpr>(this))
-    return cast<UnresolvedLookupExpr>(this)->getNamingClass();
-  else
-    return cast<UnresolvedMemberExpr>(this)->getNamingClass();
+OverloadExpr::OverloadExpr(StmtClass SC, EmptyShell Empty, unsigned NumResults,
+                           bool HasTemplateKWAndArgsInfo)
+    : Expr(SC, Empty) {
+  OverloadExprBits.NumResults = NumResults;
+  OverloadExprBits.HasTemplateKWAndArgsInfo = HasTemplateKWAndArgsInfo;
 }
 
 // DependentScopeDeclRefExpr
@@ -680,9 +694,7 @@ CXXStaticCastExpr *CXXStaticCastExpr::Create(const ASTContext &C, QualType T,
                                              SourceLocation RParenLoc,
                                              SourceRange AngleBrackets) {
   unsigned PathSize = (BasePath ? BasePath->size() : 0);
-  void *Buffer =
-      C.Allocate(totalSizeToAlloc<CastExpr::BasePathSizeTy, CXXBaseSpecifier *>(
-          PathSize ? 1 : 0, PathSize));
+  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
   auto *E =
       new (Buffer) CXXStaticCastExpr(T, VK, K, Op, PathSize, WrittenTy, L,
                                      RParenLoc, AngleBrackets);
@@ -694,9 +706,7 @@ CXXStaticCastExpr *CXXStaticCastExpr::Create(const ASTContext &C, QualType T,
 
 CXXStaticCastExpr *CXXStaticCastExpr::CreateEmpty(const ASTContext &C,
                                                   unsigned PathSize) {
-  void *Buffer =
-      C.Allocate(totalSizeToAlloc<CastExpr::BasePathSizeTy, CXXBaseSpecifier *>(
-          PathSize ? 1 : 0, PathSize));
+  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
   return new (Buffer) CXXStaticCastExpr(EmptyShell(), PathSize);
 }
 
@@ -709,9 +719,7 @@ CXXDynamicCastExpr *CXXDynamicCastExpr::Create(const ASTContext &C, QualType T,
                                                SourceLocation RParenLoc,
                                                SourceRange AngleBrackets) {
   unsigned PathSize = (BasePath ? BasePath->size() : 0);
-  void *Buffer =
-      C.Allocate(totalSizeToAlloc<CastExpr::BasePathSizeTy, CXXBaseSpecifier *>(
-          PathSize ? 1 : 0, PathSize));
+  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
   auto *E =
       new (Buffer) CXXDynamicCastExpr(T, VK, K, Op, PathSize, WrittenTy, L,
                                       RParenLoc, AngleBrackets);
@@ -723,9 +731,7 @@ CXXDynamicCastExpr *CXXDynamicCastExpr::Create(const ASTContext &C, QualType T,
 
 CXXDynamicCastExpr *CXXDynamicCastExpr::CreateEmpty(const ASTContext &C,
                                                     unsigned PathSize) {
-  void *Buffer =
-      C.Allocate(totalSizeToAlloc<CastExpr::BasePathSizeTy, CXXBaseSpecifier *>(
-          PathSize ? 1 : 0, PathSize));
+  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
   return new (Buffer) CXXDynamicCastExpr(EmptyShell(), PathSize);
 }
 
@@ -770,9 +776,7 @@ CXXReinterpretCastExpr::Create(const ASTContext &C, QualType T,
                                SourceLocation RParenLoc,
                                SourceRange AngleBrackets) {
   unsigned PathSize = (BasePath ? BasePath->size() : 0);
-  void *Buffer =
-      C.Allocate(totalSizeToAlloc<CastExpr::BasePathSizeTy, CXXBaseSpecifier *>(
-          PathSize ? 1 : 0, PathSize));
+  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
   auto *E =
       new (Buffer) CXXReinterpretCastExpr(T, VK, K, Op, PathSize, WrittenTy, L,
                                           RParenLoc, AngleBrackets);
@@ -784,9 +788,7 @@ CXXReinterpretCastExpr::Create(const ASTContext &C, QualType T,
 
 CXXReinterpretCastExpr *
 CXXReinterpretCastExpr::CreateEmpty(const ASTContext &C, unsigned PathSize) {
-  void *Buffer =
-      C.Allocate(totalSizeToAlloc<CastExpr::BasePathSizeTy, CXXBaseSpecifier *>(
-          PathSize ? 1 : 0, PathSize));
+  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
   return new (Buffer) CXXReinterpretCastExpr(EmptyShell(), PathSize);
 }
 
@@ -809,9 +811,7 @@ CXXFunctionalCastExpr::Create(const ASTContext &C, QualType T, ExprValueKind VK,
                               const CXXCastPath *BasePath,
                               SourceLocation L, SourceLocation R) {
   unsigned PathSize = (BasePath ? BasePath->size() : 0);
-  void *Buffer =
-      C.Allocate(totalSizeToAlloc<CastExpr::BasePathSizeTy, CXXBaseSpecifier *>(
-          PathSize ? 1 : 0, PathSize));
+  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
   auto *E =
       new (Buffer) CXXFunctionalCastExpr(T, VK, Written, K, Op, PathSize, L, R);
   if (PathSize)
@@ -822,9 +822,7 @@ CXXFunctionalCastExpr::Create(const ASTContext &C, QualType T, ExprValueKind VK,
 
 CXXFunctionalCastExpr *
 CXXFunctionalCastExpr::CreateEmpty(const ASTContext &C, unsigned PathSize) {
-  void *Buffer =
-      C.Allocate(totalSizeToAlloc<CastExpr::BasePathSizeTy, CXXBaseSpecifier *>(
-          PathSize ? 1 : 0, PathSize));
+  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
   return new (Buffer) CXXFunctionalCastExpr(EmptyShell(), PathSize);
 }
 
@@ -1401,19 +1399,15 @@ static bool hasOnlyNonStaticMemberFunctions(UnresolvedSetIterator begin,
   return true;
 }
 
-UnresolvedMemberExpr::UnresolvedMemberExpr(const ASTContext &C,
-                                           bool HasUnresolvedUsing,
-                                           Expr *Base, QualType BaseType,
-                                           bool IsArrow,
-                                           SourceLocation OperatorLoc,
-                                           NestedNameSpecifierLoc QualifierLoc,
-                                           SourceLocation TemplateKWLoc,
-                                   const DeclarationNameInfo &MemberNameInfo,
-                                   const TemplateArgumentListInfo *TemplateArgs,
-                                           UnresolvedSetIterator Begin,
-                                           UnresolvedSetIterator End)
+UnresolvedMemberExpr::UnresolvedMemberExpr(
+    const ASTContext &Context, bool HasUnresolvedUsing, Expr *Base,
+    QualType BaseType, bool IsArrow, SourceLocation OperatorLoc,
+    NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
+    const DeclarationNameInfo &MemberNameInfo,
+    const TemplateArgumentListInfo *TemplateArgs, UnresolvedSetIterator Begin,
+    UnresolvedSetIterator End)
     : OverloadExpr(
-          UnresolvedMemberExprClass, C, QualifierLoc, TemplateKWLoc,
+          UnresolvedMemberExprClass, Context, QualifierLoc, TemplateKWLoc,
           MemberNameInfo, TemplateArgs, Begin, End,
           // Dependent
           ((Base && Base->isTypeDependent()) || BaseType->isDependentType()),
@@ -1422,13 +1416,21 @@ UnresolvedMemberExpr::UnresolvedMemberExpr(const ASTContext &C,
           // Contains unexpanded parameter pack
           ((Base && Base->containsUnexpandedParameterPack()) ||
            BaseType->containsUnexpandedParameterPack())),
-      IsArrow(IsArrow), HasUnresolvedUsing(HasUnresolvedUsing), Base(Base),
-      BaseType(BaseType), OperatorLoc(OperatorLoc) {
+      Base(Base), BaseType(BaseType), OperatorLoc(OperatorLoc) {
+  UnresolvedMemberExprBits.IsArrow = IsArrow;
+  UnresolvedMemberExprBits.HasUnresolvedUsing = HasUnresolvedUsing;
+
   // Check whether all of the members are non-static member functions,
   // and if so, mark give this bound-member type instead of overload type.
   if (hasOnlyNonStaticMemberFunctions(Begin, End))
-    setType(C.BoundMemberTy);
+    setType(Context.BoundMemberTy);
 }
+
+UnresolvedMemberExpr::UnresolvedMemberExpr(EmptyShell Empty,
+                                           unsigned NumResults,
+                                           bool HasTemplateKWAndArgsInfo)
+    : OverloadExpr(UnresolvedMemberExprClass, Empty, NumResults,
+                   HasTemplateKWAndArgsInfo) {}
 
 bool UnresolvedMemberExpr::isImplicitAccess() const {
   if (!Base)
@@ -1438,39 +1440,37 @@ bool UnresolvedMemberExpr::isImplicitAccess() const {
 }
 
 UnresolvedMemberExpr *UnresolvedMemberExpr::Create(
-    const ASTContext &C, bool HasUnresolvedUsing, Expr *Base, QualType BaseType,
-    bool IsArrow, SourceLocation OperatorLoc,
+    const ASTContext &Context, bool HasUnresolvedUsing, Expr *Base,
+    QualType BaseType, bool IsArrow, SourceLocation OperatorLoc,
     NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
     const DeclarationNameInfo &MemberNameInfo,
     const TemplateArgumentListInfo *TemplateArgs, UnresolvedSetIterator Begin,
     UnresolvedSetIterator End) {
+  unsigned NumResults = End - Begin;
   bool HasTemplateKWAndArgsInfo = TemplateArgs || TemplateKWLoc.isValid();
-  std::size_t Size =
-      totalSizeToAlloc<ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
-          HasTemplateKWAndArgsInfo, TemplateArgs ? TemplateArgs->size() : 0);
-
-  void *Mem = C.Allocate(Size, alignof(UnresolvedMemberExpr));
+  unsigned NumTemplateArgs = TemplateArgs ? TemplateArgs->size() : 0;
+  unsigned Size = totalSizeToAlloc<DeclAccessPair, ASTTemplateKWAndArgsInfo,
+                                   TemplateArgumentLoc>(
+      NumResults, HasTemplateKWAndArgsInfo, NumTemplateArgs);
+  void *Mem = Context.Allocate(Size, alignof(UnresolvedMemberExpr));
   return new (Mem) UnresolvedMemberExpr(
-      C, HasUnresolvedUsing, Base, BaseType, IsArrow, OperatorLoc, QualifierLoc,
-      TemplateKWLoc, MemberNameInfo, TemplateArgs, Begin, End);
+      Context, HasUnresolvedUsing, Base, BaseType, IsArrow, OperatorLoc,
+      QualifierLoc, TemplateKWLoc, MemberNameInfo, TemplateArgs, Begin, End);
 }
 
-UnresolvedMemberExpr *
-UnresolvedMemberExpr::CreateEmpty(const ASTContext &C,
-                                  bool HasTemplateKWAndArgsInfo,
-                                  unsigned NumTemplateArgs) {
+UnresolvedMemberExpr *UnresolvedMemberExpr::CreateEmpty(
+    const ASTContext &Context, unsigned NumResults,
+    bool HasTemplateKWAndArgsInfo, unsigned NumTemplateArgs) {
   assert(NumTemplateArgs == 0 || HasTemplateKWAndArgsInfo);
-  std::size_t Size =
-      totalSizeToAlloc<ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
-          HasTemplateKWAndArgsInfo, NumTemplateArgs);
-
-  void *Mem = C.Allocate(Size, alignof(UnresolvedMemberExpr));
-  auto *E = new (Mem) UnresolvedMemberExpr(EmptyShell());
-  E->HasTemplateKWAndArgsInfo = HasTemplateKWAndArgsInfo;
-  return E;
+  unsigned Size = totalSizeToAlloc<DeclAccessPair, ASTTemplateKWAndArgsInfo,
+                                   TemplateArgumentLoc>(
+      NumResults, HasTemplateKWAndArgsInfo, NumTemplateArgs);
+  void *Mem = Context.Allocate(Size, alignof(UnresolvedMemberExpr));
+  return new (Mem)
+      UnresolvedMemberExpr(EmptyShell(), NumResults, HasTemplateKWAndArgsInfo);
 }
 
-CXXRecordDecl *UnresolvedMemberExpr::getNamingClass() const {
+CXXRecordDecl *UnresolvedMemberExpr::getNamingClass() {
   // Unlike for UnresolvedLookupExpr, it is very easy to re-derive this.
 
   // If there was a nested name specifier, it names the naming class.

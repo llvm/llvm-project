@@ -116,8 +116,8 @@ def HasFRInt3264     : Predicate<"Subtarget->hasFRInt3264()">,
                        AssemblerPredicate<"FeatureFRInt3264", "frint3264">;
 def HasSB            : Predicate<"Subtarget->hasSB()">,
                        AssemblerPredicate<"FeatureSB", "sb">;
-def HasPredCtrl      : Predicate<"Subtarget->hasPredCtrl()">,
-                       AssemblerPredicate<"FeaturePredCtrl", "predctrl">;
+def HasPredRes      : Predicate<"Subtarget->hasPredRes()">,
+                       AssemblerPredicate<"FeaturePredRes", "predres">;
 def HasCCDP          : Predicate<"Subtarget->hasCCDP()">,
                        AssemblerPredicate<"FeatureCacheDeepPersist", "ccdp">;
 def HasBTI           : Predicate<"Subtarget->hasBTI()">,
@@ -519,6 +519,14 @@ let hasSideEffects = 1, mayLoad = 1, mayStore = 1 in
 def SPACE : Pseudo<(outs GPR64:$Rd), (ins i32imm:$size, GPR64:$Rn),
                    [(set GPR64:$Rd, (int_aarch64_space imm:$size, GPR64:$Rn))]>,
             Sched<[]>;
+
+let hasSideEffects = 1, isCodeGenOnly = 1 in {
+  def SpeculationSafeValueX
+      : Pseudo<(outs GPR64:$dst), (ins GPR64:$src), []>, Sched<[]>;
+  def SpeculationSafeValueW
+      : Pseudo<(outs GPR32:$dst), (ins GPR32:$src), []>, Sched<[]>;
+}
+
 
 //===----------------------------------------------------------------------===//
 // System instructions.

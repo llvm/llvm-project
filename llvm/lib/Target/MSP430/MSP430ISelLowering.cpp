@@ -95,6 +95,8 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SIGN_EXTEND,      MVT::i16,   Custom);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i8, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i16, Expand);
+  setOperationAction(ISD::STACKSAVE,        MVT::Other, Expand);
+  setOperationAction(ISD::STACKRESTORE,     MVT::Other, Expand);
 
   setOperationAction(ISD::CTTZ,             MVT::i8,    Expand);
   setOperationAction(ISD::CTTZ,             MVT::i16,   Expand);
@@ -952,15 +954,26 @@ SDValue MSP430TargetLowering::LowerShifts(SDValue Op,
   // Expand the stuff into sequence of shifts.
   SDValue Victim = N->getOperand(0);
 
-  if ((Opc == ISD::SRA || Opc == ISD::SRL) && ShiftAmount >= 8) {
-    // foo >> (8 + N) => sxt(swpb(foo)) >> N
+  if (ShiftAmount >= 8) {
     assert(VT == MVT::i16 && "Can not shift i8 by 8 and more");
-    Victim = DAG.getNode(ISD::BSWAP, dl, VT, Victim);
-    if (Opc == ISD::SRA)
-      Victim = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, Victim,
-                           DAG.getValueType(MVT::i8));
-    else
+    switch(Opc) {
+    default:
+      llvm_unreachable("Unknown shift");
+    case ISD::SHL:
+      // foo << (8 + N) => swpb(zext(foo)) << N
       Victim = DAG.getZeroExtendInReg(Victim, dl, MVT::i8);
+      Victim = DAG.getNode(ISD::BSWAP, dl, VT, Victim);
+      break;
+    case ISD::SRA:
+    case ISD::SRL:
+      // foo >> (8 + N) => sxt(swpb(foo)) >> N
+      Victim = DAG.getNode(ISD::BSWAP, dl, VT, Victim);
+      Victim = (Opc == ISD::SRA)
+                   ? DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, Victim,
+                                 DAG.getValueType(MVT::i8))
+                   : DAG.getZeroExtendInReg(Victim, dl, MVT::i8);
+      break;
+    }
     ShiftAmount -= 8;
   }
 
