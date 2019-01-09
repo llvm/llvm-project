@@ -101,10 +101,22 @@ if(LLDB_INCLUDE_TESTS)
     list(APPEND LLDB_TEST_DEPS liblldb)
   endif()
 
+  # Add dependencies if we test with the in-tree clang.
+  # This works with standalone builds as they import the clang target.
   if(TARGET clang)
     list(APPEND LLDB_TEST_DEPS clang)
     if(APPLE)
-      list(APPEND LLDB_TEST_DEPS cxx)
+      # If we build clang, we should build libcxx.
+      # FIXME: Standalone builds should import the cxx target as well.
+      if(LLDB_BUILT_STANDALONE)
+        # For now check that the include directory exists.
+        set(cxx_dir "${LLVM_DIR}/../../../include/c++")
+        if(NOT EXISTS ${cxx_dir})
+          message(WARNING "LLDB test suite requires libc++ in llvm/projects/libcxx or an existing build symlinked to ${cxx_dir}")
+        endif()
+      else()
+        list(APPEND LLDB_TEST_DEPS cxx)
+      endif()
     endif()
   endif()
 
