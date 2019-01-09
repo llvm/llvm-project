@@ -52,13 +52,12 @@ static_library("MCTargetDesc") {
   include_dirs = [ ".." ]
   sources = [
     "PPCAsmBackend.cpp",
-    "PPCMCTargetDesc.cpp",
+    "PPCELFObjectWriter.cpp",
     "PPCMCAsmInfo.cpp",
     "PPCMCCodeEmitter.cpp",
     "PPCMCExpr.cpp",
-    "PPCPredicates.cpp",
+    "PPCMCTargetDesc.cpp",
     "PPCMachObjectWriter.cpp",
-    "PPCELFObjectWriter.cpp",
+    "PPCPredicates.cpp",
   ]
 }
-

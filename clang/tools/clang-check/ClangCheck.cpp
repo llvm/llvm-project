@@ -167,6 +167,7 @@ int main(int argc, const char **argv) {
   // Clear adjusters because -fsyntax-only is inserted by the default chain.
   Tool.clearArgumentsAdjusters();
   Tool.appendArgumentsAdjuster(getClangStripOutputAdjuster());
+  Tool.appendArgumentsAdjuster(getClangStripDependencyFileAdjuster());
 
   // Running the analyzer requires --analyze. Other modes can work with the
   // -fsyntax-only option.

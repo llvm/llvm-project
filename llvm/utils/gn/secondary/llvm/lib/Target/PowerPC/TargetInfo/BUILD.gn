@@ -12,4 +12,3 @@ static_library("TargetInfo") {
     "PowerPCTargetInfo.cpp",
   ]
 }
-

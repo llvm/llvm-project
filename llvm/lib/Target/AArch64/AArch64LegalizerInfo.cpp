@@ -48,9 +48,21 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   const LLT v2s64 = LLT::vector(2, 64);
 
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)
-      .legalFor({p0, s1, s8, s16, s32, s64, v2s64})
-      .clampScalar(0, s1, s64)
-      .widenScalarToNextPow2(0, 8);
+    .legalFor({p0, s1, s8, s16, s32, s64, v2s64})
+    .clampScalar(0, s1, s64)
+    .widenScalarToNextPow2(0, 8)
+    .fewerElementsIf(
+      [=](const LegalityQuery &Query) {
+        return Query.Types[0].isVector() &&
+          (Query.Types[0].getElementType() != s64 ||
+           Query.Types[0].getNumElements() != 2);
+      },
+      [=](const LegalityQuery &Query) {
+        LLT EltTy = Query.Types[0].getElementType();
+        if (EltTy == s64)
+          return std::make_pair(0, LLT::vector(2, 64));
+        return std::make_pair(0, EltTy);
+      });
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor({p0, s16, s32, s64})

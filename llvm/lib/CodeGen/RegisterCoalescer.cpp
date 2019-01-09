@@ -176,7 +176,7 @@ namespace {
     /// If one def has many copy like uses, and those copy uses are all
     /// rematerialized, the live interval update needed for those
     /// rematerializations will be delayed and done all at once instead
-    /// of being done multiple times. This is to save compile cost becuase
+    /// of being done multiple times. This is to save compile cost because
     /// live interval update is costly.
     void lateLiveIntervalUpdate();
 

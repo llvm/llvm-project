@@ -116,8 +116,8 @@ def HasFRInt3264     : Predicate<"Subtarget->hasFRInt3264()">,
                        AssemblerPredicate<"FeatureFRInt3264", "frint3264">;
 def HasSB            : Predicate<"Subtarget->hasSB()">,
                        AssemblerPredicate<"FeatureSB", "sb">;
-def HasPredCtrl      : Predicate<"Subtarget->hasPredCtrl()">,
-                       AssemblerPredicate<"FeaturePredCtrl", "predctrl">;
+def HasPredRes      : Predicate<"Subtarget->hasPredRes()">,
+                       AssemblerPredicate<"FeaturePredRes", "predres">;
 def HasCCDP          : Predicate<"Subtarget->hasCCDP()">,
                        AssemblerPredicate<"FeatureCacheDeepPersist", "ccdp">;
 def HasBTI           : Predicate<"Subtarget->hasBTI()">,

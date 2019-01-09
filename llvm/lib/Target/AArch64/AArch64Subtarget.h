@@ -128,7 +128,7 @@ protected:
   bool HasSpecRestrict = false;
   bool HasSSBS = false;
   bool HasSB = false;
-  bool HasPredCtrl = false;
+  bool HasPredRes = false;
   bool HasCCDP = false;
   bool HasBTI = false;
   bool HasRandGen = false;
@@ -357,7 +357,7 @@ public:
   bool hasSpecRestrict() const { return HasSpecRestrict; }
   bool hasSSBS() const { return HasSSBS; }
   bool hasSB() const { return HasSB; }
-  bool hasPredCtrl() const { return HasPredCtrl; }
+  bool hasPredRes() const { return HasPredRes; }
   bool hasCCDP() const { return HasCCDP; }
   bool hasBTI() const { return HasBTI; }
   bool hasRandGen() const { return HasRandGen; }

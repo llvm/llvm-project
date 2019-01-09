@@ -20,4 +20,3 @@ static_library("Disassembler") {
     "PPCDisassembler.cpp",
   ]
 }
-
