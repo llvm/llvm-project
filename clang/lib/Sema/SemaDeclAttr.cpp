@@ -7770,9 +7770,10 @@ ShouldDiagnoseAvailabilityOfDecl(Sema &S, const NamedDecl *D,
 /// whether we should emit a diagnostic for \c K and \c DeclVersion in
 /// the context of \c Ctx. For example, we should emit an unavailable diagnostic
 /// in a deprecated context, but not the other way around.
-static bool ShouldDiagnoseAvailabilityInContext(Sema &S, AvailabilityResult K,
-                                                VersionTuple DeclVersion,
-                                                Decl *Ctx) {
+static bool
+ShouldDiagnoseAvailabilityInContext(Sema &S, AvailabilityResult K,
+                                    VersionTuple DeclVersion, Decl *Ctx,
+                                    const NamedDecl *OffendingDecl) {
   assert(K != AR_Available && "Expected an unavailable declaration here!");
 
   // Checks if we should emit the availability diagnostic in the context of C.
@@ -7781,9 +7782,22 @@ static bool ShouldDiagnoseAvailabilityInContext(Sema &S, AvailabilityResult K,
       if (const AvailabilityAttr *AA = getAttrForPlatform(S.Context, C))
         if (AA->getIntroduced() >= DeclVersion)
           return true;
-    } else if (K == AR_Deprecated)
+    } else if (K == AR_Deprecated) {
       if (C->isDeprecated())
         return true;
+    } else if (K == AR_Unavailable) {
+      // It is perfectly fine to refer to an 'unavailable' Objective-C method
+      // when it's actually defined and is referenced from within the
+      // @implementation itself. In this context, we interpret unavailable as a
+      // form of access control.
+      if (const auto *MD = dyn_cast<ObjCMethodDecl>(OffendingDecl)) {
+        if (const auto *Impl = dyn_cast<ObjCImplDecl>(C)) {
+          if (MD->getClassInterface() == Impl->getClassInterface() &&
+              MD->isDefined())
+            return true;
+        }
+      }
+    }
 
     if (C->isUnavailable())
       return true;
@@ -7972,7 +7986,8 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   if (const AvailabilityAttr *AA = getAttrForPlatform(S.Context, OffendingDecl))
     DeclVersion = AA->getIntroduced();
 
-  if (!ShouldDiagnoseAvailabilityInContext(S, K, DeclVersion, Ctx))
+  if (!ShouldDiagnoseAvailabilityInContext(S, K, DeclVersion, Ctx,
+                                           OffendingDecl))
     return;
 
   SourceLocation Loc = Locs.front();
@@ -8456,7 +8471,8 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
 
     // If the context of this function is less available than D, we should not
     // emit a diagnostic.
-    if (!ShouldDiagnoseAvailabilityInContext(SemaRef, Result, Introduced, Ctx))
+    if (!ShouldDiagnoseAvailabilityInContext(SemaRef, Result, Introduced, Ctx,
+                                             OffendingDecl))
       return;
 
     // We would like to emit the diagnostic even if -Wunguarded-availability is
