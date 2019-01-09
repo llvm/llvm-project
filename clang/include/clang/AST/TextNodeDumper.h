@@ -107,9 +107,9 @@ public:
 };
 
 class TextNodeDumper
-    : public comments::ConstCommentVisitor<TextNodeDumper, void,
-                                           const comments::FullComment *>,
-      public TextTreeStructure {
+    : public TextTreeStructure,
+      public comments::ConstCommentVisitor<TextNodeDumper, void,
+                                           const comments::FullComment *> {
   raw_ostream &OS;
   const bool ShowColors;
 
@@ -143,6 +143,8 @@ public:
   void dumpName(const NamedDecl *ND);
   void dumpAccessSpecifier(AccessSpecifier AS);
   void dumpCXXTemporary(const CXXTemporary *Temporary);
+
+  void dumpDeclRef(const Decl *D, const char *Label = nullptr);
 
   void visitTextComment(const comments::TextComment *C,
                         const comments::FullComment *);

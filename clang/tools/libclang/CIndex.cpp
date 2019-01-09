@@ -3694,7 +3694,7 @@ struct ExprEvalResult {
   ~ExprEvalResult() {
     if (EvalType != CXEval_UnExposed && EvalType != CXEval_Float &&
         EvalType != CXEval_Int) {
-      delete EvalData.stringVal;
+      delete[] EvalData.stringVal;
     }
   }
 };

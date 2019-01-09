@@ -161,6 +161,17 @@ void TextNodeDumper::dumpCXXTemporary(const CXXTemporary *Temporary) {
   OS << ")";
 }
 
+void TextNodeDumper::dumpDeclRef(const Decl *D, const char *Label) {
+  if (!D)
+    return;
+
+  addChild([=] {
+    if (Label)
+      OS << Label << ' ';
+    dumpBareDeclRef(D);
+  });
+}
+
 const char *TextNodeDumper::getCommandName(unsigned CommandID) {
   if (Traits)
     return Traits->getCommandInfo(CommandID)->Name;
