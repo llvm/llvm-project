@@ -3761,6 +3761,11 @@ static bool isVarDeclStrongDefinition(const ASTContext &Context,
       }
     }
   }
+  // COFF doesn't support alignments greater than 32, so these cannot be
+  // in common.
+  if (Context.getTargetInfo().getTriple().isKnownWindowsMSVCEnvironment() &&
+      Context.getTypeAlignIfKnown(D->getType()) > 32)
+    return true;
 
   return false;
 }

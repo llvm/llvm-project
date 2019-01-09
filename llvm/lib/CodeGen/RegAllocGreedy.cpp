@@ -318,7 +318,7 @@ class RAGreedy : public MachineFunctionPass,
 
     /// Track new eviction.
     /// The Evictor vreg has evicted the Evictee vreg from Physreg.
-    /// \param PhysReg The phisical register Evictee was evicted from.
+    /// \param PhysReg The physical register Evictee was evicted from.
     /// \param Evictor The evictor Vreg that evicted Evictee.
     /// \param Evictee The evictee Vreg.
     void addEviction(unsigned PhysReg, unsigned Evictor, unsigned Evictee) {

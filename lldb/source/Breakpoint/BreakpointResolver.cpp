@@ -238,10 +238,10 @@ void BreakpointResolver::SetSCMatchesByLine(SearchFilter &filter,
           worklist_begin, worklist_end,
           [&](const SymbolContext &sc) { return SourceLoc(sc) < requested; });
       // Sort the remaining entries by (line, column).
-      std::sort(worklist_begin, worklist_end,
-                [](const SymbolContext &a, const SymbolContext &b) {
-                  return SourceLoc(a) < SourceLoc(b);
-                });
+      llvm::sort(worklist_begin, worklist_end,
+                 [](const SymbolContext &a, const SymbolContext &b) {
+                   return SourceLoc(a) < SourceLoc(b);
+                 });
 
       // Filter out all locations with a source location after the closest match.
       if (worklist_begin != worklist_end)
@@ -261,11 +261,11 @@ void BreakpointResolver::SetSCMatchesByLine(SearchFilter &filter,
     }
 
     // Sort by file address.
-    std::sort(worklist_begin, worklist_end,
-              [](const SymbolContext &a, const SymbolContext &b) {
-                return a.line_entry.range.GetBaseAddress().GetFileAddress() <
-                       b.line_entry.range.GetBaseAddress().GetFileAddress();
-              });
+    llvm::sort(worklist_begin, worklist_end,
+               [](const SymbolContext &a, const SymbolContext &b) {
+                 return a.line_entry.range.GetBaseAddress().GetFileAddress() <
+                        b.line_entry.range.GetBaseAddress().GetFileAddress();
+               });
 
     // Go through and see if there are line table entries that are
     // contiguous, and if so keep only the first of the contiguous range.

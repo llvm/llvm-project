@@ -345,7 +345,6 @@ protected:
     // Linux defines; list based off of gcc output
     DefineStd(Builder, "unix", Opts);
     DefineStd(Builder, "linux", Opts);
-    Builder.defineMacro("__gnu_linux__");
     Builder.defineMacro("__ELF__");
     if (Triple.isAndroid()) {
       Builder.defineMacro("__ANDROID__", "1");
@@ -355,6 +354,8 @@ protected:
       this->PlatformMinVersion = VersionTuple(Maj, Min, Rev);
       if (Maj)
         Builder.defineMacro("__ANDROID_API__", Twine(Maj));
+    } else {
+        Builder.defineMacro("__gnu_linux__");
     }
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");

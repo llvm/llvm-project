@@ -28,6 +28,7 @@
 #include <memory>
 
 namespace llvm {
+
 namespace mca {
 
 constexpr int UNKNOWN_CYCLES = -512;
@@ -347,6 +348,11 @@ struct InstrDesc {
   InstrDesc() = default;
   InstrDesc(const InstrDesc &Other) = delete;
   InstrDesc &operator=(const InstrDesc &Other) = delete;
+
+#ifndef NDEBUG
+  // Original instruction name for debugging purposes.
+  StringRef Name;
+#endif
 };
 
 /// Base class for instructions consumed by the simulation pipeline.

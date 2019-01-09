@@ -264,23 +264,6 @@ PdbAstBuilder::CreateDeclInfoForType(const TagRecord &record, TypeIndex ti) {
   return {context, uname};
 }
 
-static bool IsUniqueNameEnumTag(llvm::StringRef unique_name) {
-  if (unique_name.size() < 4)
-    return false;
-  return unique_name[3] == 'W';
-}
-
-static std::string GetParentUniqueName(llvm::StringRef unique_name) {
-  if (unique_name.size() < 4)
-    return unique_name;
-  size_t start = IsUniqueNameEnumTag(unique_name) ? 5 : 4;
-  size_t end = unique_name.find('@');
-  if (end == llvm::StringRef::npos)
-    return unique_name;
-  std::string result = unique_name.str();
-  return result.erase(start, end - start + 1);
-}
-
 void PdbAstBuilder::BuildParentMap() {
   LazyRandomTypeCollection &types = m_index.tpi().typeCollection();
 

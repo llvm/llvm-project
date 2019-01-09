@@ -683,7 +683,7 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
         // out the bottom of the function.
       } else if (MBB->succ_size() == LandingPadSuccs.size()) {
         // It's possible that the block legitimately ends with a noreturn
-        // call or an unreachable, in which case it won't actuall fall
+        // call or an unreachable, in which case it won't actually fall
         // out of the block.
       } else if (MBB->succ_size() != 1+LandingPadSuccs.size()) {
         report("MBB exits via unconditional fall-through but doesn't have "

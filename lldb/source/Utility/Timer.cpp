@@ -125,7 +125,7 @@ void Timer::DumpCategoryTimes(Stream *s) {
     return; // Later code will break without any elements.
 
   // Sort by time
-  std::sort(sorted.begin(), sorted.end(), CategoryMapIteratorSortCriterion);
+  llvm::sort(sorted.begin(), sorted.end(), CategoryMapIteratorSortCriterion);
 
   for (const auto &timer : sorted)
     s->Printf("%.9f sec for %s\n", timer.second / 1000000000., timer.first);

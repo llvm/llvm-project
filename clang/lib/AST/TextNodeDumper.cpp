@@ -19,8 +19,8 @@ TextNodeDumper::TextNodeDumper(raw_ostream &OS, bool ShowColors,
                                const SourceManager *SM,
                                const PrintingPolicy &PrintPolicy,
                                const comments::CommandTraits *Traits)
-    : OS(OS), ShowColors(ShowColors), SM(SM), PrintPolicy(PrintPolicy),
-      Traits(Traits) {}
+    : TextTreeStructure(OS, ShowColors), OS(OS), ShowColors(ShowColors), SM(SM),
+      PrintPolicy(PrintPolicy), Traits(Traits) {}
 
 void TextNodeDumper::Visit(const comments::Comment *C,
                            const comments::FullComment *FC) {
@@ -159,6 +159,17 @@ void TextNodeDumper::dumpCXXTemporary(const CXXTemporary *Temporary) {
   OS << "(CXXTemporary";
   dumpPointer(Temporary);
   OS << ")";
+}
+
+void TextNodeDumper::dumpDeclRef(const Decl *D, const char *Label) {
+  if (!D)
+    return;
+
+  addChild([=] {
+    if (Label)
+      OS << Label << ' ';
+    dumpBareDeclRef(D);
+  });
 }
 
 const char *TextNodeDumper::getCommandName(unsigned CommandID) {
