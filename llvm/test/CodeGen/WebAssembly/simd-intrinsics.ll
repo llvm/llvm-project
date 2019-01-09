@@ -77,12 +77,12 @@ define i32 @all_v16i8(<16 x i8> %x) {
 
 ; CHECK-LABEL: bitselect_v16i8:
 ; SIMD128-NEXT: .functype bitselect_v16i8 (v128, v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $0{{$}}
+; SIMD128-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 declare <16 x i8> @llvm.wasm.bitselect.v16i8(<16 x i8>, <16 x i8>, <16 x i8>)
-define <16 x i8> @bitselect_v16i8(<16 x i8> %c, <16 x i8> %v1, <16 x i8> %v2) {
+define <16 x i8> @bitselect_v16i8(<16 x i8> %v1, <16 x i8> %v2, <16 x i8> %c) {
   %a = call <16 x i8> @llvm.wasm.bitselect.v16i8(
-    <16 x i8> %c, <16 x i8> %v1, <16 x i8> %v2
+     <16 x i8> %v1, <16 x i8> %v2, <16 x i8> %c
   )
   ret <16 x i8> %a
 }
@@ -156,12 +156,12 @@ define i32 @all_v8i16(<8 x i16> %x) {
 
 ; CHECK-LABEL: bitselect_v8i16:
 ; SIMD128-NEXT: .functype bitselect_v8i16 (v128, v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $0{{$}}
+; SIMD128-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 declare <8 x i16> @llvm.wasm.bitselect.v8i16(<8 x i16>, <8 x i16>, <8 x i16>)
-define <8 x i16> @bitselect_v8i16(<8 x i16> %c, <8 x i16> %v1, <8 x i16> %v2) {
+define <8 x i16> @bitselect_v8i16(<8 x i16> %v1, <8 x i16> %v2, <8 x i16> %c) {
   %a = call <8 x i16> @llvm.wasm.bitselect.v8i16(
-    <8 x i16> %c, <8 x i16> %v1, <8 x i16> %v2
+    <8 x i16> %v1, <8 x i16> %v2, <8 x i16> %c
   )
   ret <8 x i16> %a
 }
@@ -191,12 +191,12 @@ define i32 @all_v4i32(<4 x i32> %x) {
 
 ; CHECK-LABEL: bitselect_v4i32:
 ; SIMD128-NEXT: .functype bitselect_v4i32 (v128, v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $0{{$}}
+; SIMD128-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 declare <4 x i32> @llvm.wasm.bitselect.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
-define <4 x i32> @bitselect_v4i32(<4 x i32> %c, <4 x i32> %v1, <4 x i32> %v2) {
+define <4 x i32> @bitselect_v4i32(<4 x i32> %v1, <4 x i32> %v2, <4 x i32> %c) {
   %a = call <4 x i32> @llvm.wasm.bitselect.v4i32(
-    <4 x i32> %c, <4 x i32> %v1, <4 x i32> %v2
+    <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %c
   )
   ret <4 x i32> %a
 }
@@ -248,12 +248,12 @@ define i32 @all_v2i64(<2 x i64> %x) {
 
 ; CHECK-LABEL: bitselect_v2i64:
 ; SIMD128-NEXT: .functype bitselect_v2i64 (v128, v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $0{{$}}
+; SIMD128-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 declare <2 x i64> @llvm.wasm.bitselect.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
-define <2 x i64> @bitselect_v2i64(<2 x i64> %c, <2 x i64> %v1, <2 x i64> %v2) {
+define <2 x i64> @bitselect_v2i64(<2 x i64> %v1, <2 x i64> %v2, <2 x i64> %c) {
   %a = call <2 x i64> @llvm.wasm.bitselect.v2i64(
-    <2 x i64> %c, <2 x i64> %v1, <2 x i64> %v2
+    <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %c
   )
   ret <2 x i64> %a
 }
@@ -285,12 +285,12 @@ define <2 x i64> @trunc_sat_u_v2i64(<2 x double> %x) {
 ; ==============================================================================
 ; CHECK-LABEL: bitselect_v4f32:
 ; SIMD128-NEXT: .functype bitselect_v4f32 (v128, v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $0{{$}}
+; SIMD128-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 declare <4 x float> @llvm.wasm.bitselect.v4f32(<4 x float>, <4 x float>, <4 x float>)
-define <4 x float> @bitselect_v4f32(<4 x float> %c, <4 x float> %v1, <4 x float> %v2) {
+define <4 x float> @bitselect_v4f32(<4 x float> %v1, <4 x float> %v2, <4 x float> %c) {
   %a = call <4 x float> @llvm.wasm.bitselect.v4f32(
-    <4 x float> %c, <4 x float> %v1, <4 x float> %v2
+     <4 x float> %v1, <4 x float> %v2, <4 x float> %c
   )
   ret <4 x float> %a
 }
@@ -300,12 +300,12 @@ define <4 x float> @bitselect_v4f32(<4 x float> %c, <4 x float> %v1, <4 x float>
 ; ==============================================================================
 ; CHECK-LABEL: bitselect_v2f64:
 ; SIMD128-NEXT: .functype bitselect_v2f64 (v128, v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $1, $2, $0{{$}}
+; SIMD128-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 declare <2 x double> @llvm.wasm.bitselect.v2f64(<2 x double>, <2 x double>, <2 x double>)
-define <2 x double> @bitselect_v2f64(<2 x double> %c, <2 x double> %v1, <2 x double> %v2) {
+define <2 x double> @bitselect_v2f64(<2 x double> %v1, <2 x double> %v2, <2 x double> %c) {
   %a = call <2 x double> @llvm.wasm.bitselect.v2f64(
-    <2 x double> %c, <2 x double> %v1, <2 x double> %v2
+    <2 x double> %v1, <2 x double> %v2, <2 x double> %c
   )
   ret <2 x double> %a
 }

@@ -151,9 +151,9 @@ public:
       const;
 
   /// Inform the safety info that we are planning to insert a new instruction
-  /// into the basic block \p BB. It will make all cache updates to keep it
-  /// correct after this insertion.
-  void insertInstructionTo(const BasicBlock *BB);
+  /// \p Inst into the basic block \p BB. It will make all cache updates to keep
+  /// it correct after this insertion.
+  void insertInstructionTo(const Instruction *Inst, const BasicBlock *BB);
 
   /// Inform safety info that we are planning to remove the instruction \p Inst
   /// from its block. It will make all cache updates to keep it correct after

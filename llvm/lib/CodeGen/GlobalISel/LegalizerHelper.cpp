@@ -884,6 +884,12 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_IMPLICIT_DEF: {
+    Observer.changingInstr(MI);
+    widenScalarDst(MI, WideTy);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   case TargetOpcode::G_BRCOND:
     Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_ANYEXT);
@@ -1166,6 +1172,32 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   switch (MI.getOpcode()) {
   default:
     return UnableToLegalize;
+  case TargetOpcode::G_IMPLICIT_DEF: {
+    SmallVector<unsigned, 2> DstRegs;
+
+    unsigned NarrowSize = NarrowTy.getSizeInBits();
+    unsigned DstReg = MI.getOperand(0).getReg();
+    unsigned Size = MRI.getType(DstReg).getSizeInBits();
+    int NumParts = Size / NarrowSize;
+    // FIXME: Don't know how to handle the situation where the small vectors
+    // aren't all the same size yet.
+    if (Size % NarrowSize != 0)
+      return UnableToLegalize;
+
+    for (int i = 0; i < NumParts; ++i) {
+      unsigned TmpReg = MRI.createGenericVirtualRegister(NarrowTy);
+      MIRBuilder.buildUndef(TmpReg);
+      DstRegs.push_back(TmpReg);
+    }
+
+    if (NarrowTy.isVector())
+      MIRBuilder.buildConcatVectors(DstReg, DstRegs);
+    else
+      MIRBuilder.buildBuildVector(DstReg, DstRegs);
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_ADD: {
     unsigned NarrowSize = NarrowTy.getSizeInBits();
     unsigned DstReg = MI.getOperand(0).getReg();

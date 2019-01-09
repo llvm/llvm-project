@@ -312,8 +312,8 @@ def FeatureSB : SubtargetFeature<"sb", "HasSB",
 def FeatureSSBS : SubtargetFeature<"ssbs", "HasSSBS",
   "true", "Enable Speculative Store Bypass Safe bit" >;
 
-def FeaturePredCtrl : SubtargetFeature<"predctrl", "HasPredCtrl", "true",
-  "Enable execution and data prediction invalidation instructions" >;
+def FeaturePredRes : SubtargetFeature<"predres", "HasPredRes", "true",
+  "Enable v8.5a execution and data prediction invalidation instructions" >;
 
 def FeatureCacheDeepPersist : SubtargetFeature<"ccdp", "HasCCDP",
     "true", "Enable v8.5 Cache Clean to Point of Deep Persistence" >;
@@ -352,7 +352,7 @@ def HasV8_4aOps : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
 def HasV8_5aOps : SubtargetFeature<
   "v8.5a", "HasV8_5aOps", "true", "Support ARM v8.5a instructions",
   [HasV8_4aOps, FeatureAltFPCmp, FeatureFRInt3264, FeatureSpecRestrict,
-   FeatureSSBS, FeatureSB, FeaturePredCtrl, FeatureCacheDeepPersist,
+   FeatureSSBS, FeatureSB, FeaturePredRes, FeatureCacheDeepPersist,
    FeatureBranchTargetId]
 >;
 

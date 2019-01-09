@@ -579,7 +579,7 @@ foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in
     SIMD_I<(outs V128:$dst), (ins V128:$v1, V128:$v2, V128:$c), (outs), (ins),
            [(set (vec_t V128:$dst),
              (vec_t (int_wasm_bitselect
-               (vec_t V128:$c), (vec_t V128:$v1), (vec_t V128:$v2)
+               (vec_t V128:$v1), (vec_t V128:$v2), (vec_t V128:$c)
              ))
            )],
            "v128.bitselect\t$dst, $v1, $v2, $c", "v128.bitselect", 80>;

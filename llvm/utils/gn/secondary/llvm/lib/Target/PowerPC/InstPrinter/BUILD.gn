@@ -22,4 +22,3 @@ static_library("InstPrinter") {
     "PPCInstPrinter.cpp",
   ]
 }
-

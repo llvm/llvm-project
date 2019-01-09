@@ -108,10 +108,8 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
 
-  set(LLVM_BINARY_DIR ${CMAKE_BINARY_DIR})
-
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
-  include_directories("${LLVM_BINARY_DIR}/include" "${LLVM_MAIN_INCLUDE_DIR}")
+  include_directories("${CMAKE_BINARY_DIR}/include" "${LLVM_MAIN_INCLUDE_DIR}")
   # Next three include directories are needed when llvm-config is located in build directory.
   # LLVM and Clang are assumed to be built together
   if (EXISTS "${LLVM_OBJ_ROOT}/include")
