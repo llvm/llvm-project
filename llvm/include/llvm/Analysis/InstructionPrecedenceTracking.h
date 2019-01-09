@@ -75,8 +75,14 @@ protected:
   virtual ~InstructionPrecedenceTracking() = default;
 
 public:
-  /// Clears cached information about this particular block.
-  void invalidateBlock(const BasicBlock *BB);
+  /// Notifies this tracking that we are going to insert a new instruction \p
+  /// Inst to the basic block \p BB. It makes all necessary updates to internal
+  /// caches to keep them consistent.
+  void insertInstructionTo(const Instruction *Inst, const BasicBlock *BB);
+
+  /// Notifies this tracking that we are going to remove the instruction \p Inst
+  /// It makes all necessary updates to internal caches to keep them consistent.
+  void removeInstruction(const Instruction *Inst);
 
   /// Invalidates all information from this tracking.
   void clear();

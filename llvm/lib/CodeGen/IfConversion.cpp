@@ -1444,7 +1444,7 @@ bool IfConverter::IfConvertSimple(BBInfo &BBI, IfcvtKind Kind) {
   Redefs.init(*TRI);
 
   if (MRI->tracksLiveness()) {
-    // Initialize liveins to the first BB. These are potentiall redefined by
+    // Initialize liveins to the first BB. These are potentially redefined by
     // predicated instructions.
     Redefs.addLiveIns(CvtMBB);
     Redefs.addLiveIns(NextMBB);
@@ -2148,7 +2148,7 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
       // Calculate the edge probability for the edge from ToBBI.BB to Succ,
       // which is a portion of the edge probability from FromMBB to Succ. The
       // portion ratio is the edge probability from ToBBI.BB to FromMBB (if
-      // FromBBI is a successor of ToBBI.BB. See comment below for excepion).
+      // FromBBI is a successor of ToBBI.BB. See comment below for exception).
       NewProb = MBPI->getEdgeProbability(&FromMBB, Succ);
 
       // To2FromProb is 0 when FromMBB is not a successor of ToBBI.BB. This

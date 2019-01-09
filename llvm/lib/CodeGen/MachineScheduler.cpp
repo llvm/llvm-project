@@ -2460,13 +2460,13 @@ static unsigned computeRemLatency(SchedBoundary &CurrZone) {
 }
 
 /// Returns true if the current cycle plus remaning latency is greater than
-/// the cirtical path in the scheduling region.
+/// the critical path in the scheduling region.
 bool GenericSchedulerBase::shouldReduceLatency(const CandPolicy &Policy,
                                                SchedBoundary &CurrZone,
                                                bool ComputeRemLatency,
                                                unsigned &RemLatency) const {
   // The current cycle is already greater than the critical path, so we are
-  // already latnecy limited and don't need to compute the remaining latency.
+  // already latency limited and don't need to compute the remaining latency.
   if (CurrZone.getCurrCycle() > Rem.CriticalPath)
     return true;
 

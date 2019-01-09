@@ -818,8 +818,10 @@ std::string ELFDumper<ELFT>::getFullSymbolName(const Elf_Sym *Symbol,
 
   bool IsDefault;
   StringRef Version = getSymbolVersion(StrTable, &*Symbol, IsDefault);
-  FullSymbolName += (IsDefault ? "@@" : "@");
-  FullSymbolName += Version;
+  if (!Version.empty()) {
+    FullSymbolName += (IsDefault ? "@@" : "@");
+    FullSymbolName += Version;
+  }
   return FullSymbolName;
 }
 

@@ -502,11 +502,11 @@ namespace llvm {
     /// \param Elements       Enumeration elements.
     /// \param UnderlyingType Underlying type of a C++11/ObjC fixed enum.
     /// \param UniqueIdentifier A unique identifier for the enum.
-    /// \param IsFixed Boolean flag indicate if this is C++11/ObjC fixed enum.
+    /// \param IsScoped Boolean flag indicate if this is C++11/ObjC 'enum class'.
     DICompositeType *createEnumerationType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         uint64_t SizeInBits, uint32_t AlignInBits, DINodeArray Elements,
-        DIType *UnderlyingType, StringRef UniqueIdentifier = "", bool IsFixed = false);
+        DIType *UnderlyingType, StringRef UniqueIdentifier = "", bool IsScoped = false);
 
     /// Create subroutine type.
     /// \param ParameterTypes  An array of subroutine parameter types. This

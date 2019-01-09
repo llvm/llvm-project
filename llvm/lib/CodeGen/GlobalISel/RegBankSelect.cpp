@@ -714,14 +714,13 @@ RegBankSelect::RepairingPlacement::RepairingPlacement(
     // - Terminators must be the last instructions:
     //   * Before, move the insert point before the first terminator.
     //   * After, we have to split the outcoming edges.
-    unsigned Reg = MO.getReg();
     if (Before) {
       // Check whether Reg is defined by any terminator.
       MachineBasicBlock::reverse_iterator It = MI;
       auto REnd = MI.getParent()->rend();
 
       for (; It != REnd && It->isTerminator(); ++It) {
-        assert(!It->modifiesRegister(Reg, &TRI) &&
+        assert(!It->modifiesRegister(MO.getReg(), &TRI) &&
                "copy insertion in middle of terminators not handled");
       }
 
@@ -739,7 +738,8 @@ RegBankSelect::RepairingPlacement::RepairingPlacement(
     for (MachineBasicBlock::iterator It = MI, End = MI.getParent()->end();
          ++It != End;)
       // The machine verifier should reject this kind of code.
-      assert(It->modifiesRegister(Reg, &TRI) && "Do not know where to split");
+      assert(It->modifiesRegister(MO.getReg(), &TRI) &&
+             "Do not know where to split");
     // Split each outcoming edges.
     MachineBasicBlock &Src = *MI.getParent();
     for (auto &Succ : Src.successors())

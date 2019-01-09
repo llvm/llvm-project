@@ -5,6 +5,7 @@ static_library("lib") {
   deps = [
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/ExecutionEngine",
     "//llvm/lib/ExecutionEngine/MCJIT",
     "//llvm/lib/IR",
@@ -31,10 +32,12 @@ static_library("lib") {
     "Uops.cpp",
   ]
 
-  # FIXME: Add this once llvm/lib/Target/AArch64 exists.
-  #if (llvm_build_AArch64) {
-  #  deps += [ "AArch64" ]
-  #}
+  if (llvm_build_AArch64) {
+    deps += [ "AArch64" ]
+  }
+  if (llvm_build_PowerPC) {
+    deps += [ "PowerPC" ]
+  }
   if (llvm_build_X86) {
     deps += [ "X86" ]
   }

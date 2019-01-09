@@ -52,9 +52,9 @@ def main():
         git = which('git.bat')
         use_shell = True
     rev = subprocess.check_output([git, 'rev-parse', '--short', 'HEAD'],
-                                  cwd=git_dir, shell=use_shell)
+                                  cwd=git_dir, shell=use_shell).decode().strip()
     # FIXME: add pizzas such as the svn revision read off a git note?
-    vcsrevision_contents = '#define LLVM_REVISION "git-%s"\n' % rev.strip()
+    vcsrevision_contents = '#define LLVM_REVISION "git-%s"\n' % rev
 
     # If the output already exists and is identical to what we'd write,
     # return to not perturb the existing file's timestamp.

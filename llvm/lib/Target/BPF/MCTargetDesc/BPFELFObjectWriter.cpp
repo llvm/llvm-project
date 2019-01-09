@@ -57,8 +57,16 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     // already been fulfilled by applyFixup(). No
     // further relocation is needed.
     if (const MCSymbolRefExpr *A = Target.getSymA()) {
-      if (A->getSymbol().isTemporary())
-        return ELF::R_BPF_NONE;
+      if (A->getSymbol().isTemporary()) {
+        MCSection &Section = A->getSymbol().getSection();
+        const MCSectionELF *SectionELF = dyn_cast<MCSectionELF>(&Section);
+        assert(SectionELF && "Null section for reloc symbol");
+
+        // The reloc symbol should be in text section.
+        unsigned Flags = SectionELF->getFlags();
+        if ((Flags & ELF::SHF_ALLOC) && (Flags & ELF::SHF_EXECINSTR))
+          return ELF::R_BPF_NONE;
+      }
     }
     return ELF::R_BPF_64_32;
   }

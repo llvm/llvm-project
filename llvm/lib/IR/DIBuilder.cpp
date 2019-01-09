@@ -504,11 +504,11 @@ DISubroutineType *DIBuilder::createSubroutineType(DITypeRefArray ParameterTypes,
 DICompositeType *DIBuilder::createEnumerationType(
     DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, DINodeArray Elements,
-    DIType *UnderlyingType, StringRef UniqueIdentifier, bool IsFixed) {
+    DIType *UnderlyingType, StringRef UniqueIdentifier, bool IsScoped) {
   auto *CTy = DICompositeType::get(
       VMContext, dwarf::DW_TAG_enumeration_type, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), UnderlyingType, SizeInBits, AlignInBits, 0,
-      IsFixed ? DINode::FlagFixedEnum : DINode::FlagZero, Elements, 0, nullptr,
+      IsScoped ? DINode::FlagEnumClass : DINode::FlagZero, Elements, 0, nullptr,
       nullptr, UniqueIdentifier);
   AllEnumTypes.push_back(CTy);
   trackIfUnresolved(CTy);

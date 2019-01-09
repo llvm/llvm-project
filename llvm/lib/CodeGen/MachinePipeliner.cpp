@@ -1557,7 +1557,7 @@ void SwingSchedulerDAG::Circuits::createAdjacencyStructure(
       }
     }
   }
-  // Add back-eges in the adjacency matrix for the output dependences.
+  // Add back-edges in the adjacency matrix for the output dependences.
   for (auto &OD : OutputDeps)
     if (!Added.test(OD.second)) {
       AdjK[OD.first].push_back(OD.second);
@@ -2773,7 +2773,7 @@ void SwingSchedulerDAG::generateExistingPhis(
       else if (PrologStage >= AccessStage + StageDiff + np &&
                VRMap[PrologStage - StageDiff - np].count(LoopVal) != 0)
         PhiOp1 = VRMap[PrologStage - StageDiff - np][LoopVal];
-      // Check if the Phi has already been scheduled, but the loop intruction
+      // Check if the Phi has already been scheduled, but the loop instruction
       // is either another Phi, or doesn't occur in the loop.
       else if (PrologStage >= AccessStage + StageDiff + np) {
         // If the Phi references another Phi, we need to examine the other

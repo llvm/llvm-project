@@ -169,6 +169,7 @@ unsigned ResourceManager::getNumUnits(uint64_t ResourceID) const {
 // Second, is the specific sub-resource ID.
 ResourceRef ResourceManager::selectPipe(uint64_t ResourceID) {
   unsigned Index = getResourceStateIndex(ResourceID);
+  assert(Index < Resources.size() && "Invalid resource use!");
   ResourceState &RS = *Resources[Index];
   assert(RS.isReady() && "No available units to select!");
 
