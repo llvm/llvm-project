@@ -4132,7 +4132,7 @@ void __kmp_taskloop_recur(ident_t *loc, int gtid, kmp_task_t *task,
 @param lb        Pointer to loop lower bound in task structure
 @param ub        Pointer to loop upper bound in task structure
 @param st        Loop stride
-@param nogroup   Flag, 1 if nogroup clause specified, 0 otherwise
+@param nogroup   Flag, 1 if no taskgroup needs to be added, 0 otherwise
 @param sched     Schedule specified 0/1/2 for none/grainsize/num_tasks
 @param grainsize Schedule value if specified
 @param task_dup  Tasks duplication routine

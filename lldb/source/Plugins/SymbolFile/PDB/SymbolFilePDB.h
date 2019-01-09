@@ -20,6 +20,8 @@
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 
+class PDBASTParser;
+
 class SymbolFilePDB : public lldb_private::SymbolFile {
 public:
   //------------------------------------------------------------------
@@ -223,6 +225,8 @@ private:
 
   void GetCompileUnitIndex(const llvm::pdb::PDBSymbolCompiland &pdb_compiland,
                            uint32_t &index);
+
+  PDBASTParser *GetPDBAstParser();
 
   std::unique_ptr<llvm::pdb::PDBSymbolCompiland>
   GetPDBCompilandByUID(uint32_t uid);

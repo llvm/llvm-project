@@ -314,6 +314,16 @@ lldb_private::Function *SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(
                                  func_type_uid, mangled, func_type, func_range);
 
   sc.comp_unit->AddFunction(func_sp);
+
+  TypeSystem *type_system = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
+  if (!type_system)
+    return nullptr;
+  ClangASTContext *clang_type_system =
+    llvm::dyn_cast_or_null<ClangASTContext>(type_system);
+  if (!clang_type_system)
+    return nullptr;
+  clang_type_system->GetPDBParser()->GetDeclForSymbol(pdb_func);
+
   return func_sp.get();
 }
 
@@ -1035,6 +1045,9 @@ SymbolFilePDB::ParseVariables(const lldb_private::SymbolContext &sc,
           if (variable_list)
             variable_list->AddVariableIfUnique(var_sp);
           ++num_added;
+          PDBASTParser *ast = GetPDBAstParser();
+          if (ast)
+            ast->GetDeclForSymbol(*pdb_data);
         }
       }
     }
@@ -1622,6 +1635,16 @@ SymbolFilePDB::GetTypeSystemForLanguage(lldb::LanguageType language) {
     type_system->SetSymbolFile(this);
   return type_system;
 }
+
+PDBASTParser *SymbolFilePDB::GetPDBAstParser() {
+  auto type_system = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
+  auto clang_type_system = llvm::dyn_cast_or_null<ClangASTContext>(type_system);
+  if (!clang_type_system)
+    return nullptr;
+
+  return clang_type_system->GetPDBParser();
+}
+
 
 lldb_private::CompilerDeclContext SymbolFilePDB::FindNamespace(
     const lldb_private::SymbolContext &sc,
