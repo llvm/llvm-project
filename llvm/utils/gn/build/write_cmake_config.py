@@ -101,7 +101,7 @@ def main():
 
     if not os.path.exists(args.output) or open(args.output).read() != output:
         open(args.output, 'w').write(output)
-        os.chmod(args.output, os.stat(args.input).st_mode & 0777)
+        os.chmod(args.output, os.stat(args.input).st_mode & 0o777)
 
 
 if __name__ == '__main__':
