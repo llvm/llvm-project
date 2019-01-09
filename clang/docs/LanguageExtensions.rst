@@ -2727,7 +2727,7 @@ Without the namespaces on the macros, ``other_function`` will be annotated with
 a contrived example, but its very possible for this kind of situation to appear
 in real code if the pragmas are spread out across a large file. You can test if
 your version of clang supports namespaces on ``#pragma clang attribute`` with
-``__has_feature(pragma_clang_attribute_namespaces)``.
+``__has_extension(pragma_clang_attribute_namespaces)``.
 
 Subject Match Rules
 -------------------

@@ -1,4 +1,4 @@
-//===-- WebAssemblyStoreResults.cpp - Optimize using store result values --===//
+//== WebAssemblyMemIntrinsicResults.cpp - Optimize memory intrinsic results ==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,19 +8,22 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements an optimization pass using store result values.
+/// This file implements an optimization pass using memory intrinsic results.
 ///
-/// WebAssembly's store instructions return the stored value. This is to enable
-/// an optimization wherein uses of the stored value can be replaced by uses of
-/// the store's result value, making the stored value register more likely to
-/// be single-use, thus more likely to be useful to register stackifying, and
-/// potentially also exposing the store to register stackifying. These both can
-/// reduce local.get/local.set traffic.
+/// Calls to memory intrinsics (memcpy, memmove, memset) return the destination
+/// address. They are in the form of
+///   %dst_new = call @memcpy %dst, %src, %len
+/// where %dst and %dst_new registers contain the same value.
 ///
-/// This pass also performs this optimization for memcpy, memmove, and memset
-/// calls, since the LLVM intrinsics for these return void so they can't use the
-/// returned attribute and consequently aren't handled by the OptimizeReturned
-/// pass.
+/// This is to enable an optimization wherein uses of the %dst register used in
+/// the parameter can be replaced by uses of the %dst_new register used in the
+/// result, making the %dst register more likely to be single-use, thus more
+/// likely to be useful to register stackifying, and potentially also exposing
+/// the call instruction itself to register stackifying. These both can reduce
+/// local.get/local.set traffic.
+///
+/// The LLVM intrinsics for these return void so they can't use the returned
+/// attribute and consequently aren't handled by the OptimizeReturned pass.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -38,15 +41,17 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "wasm-store-results"
+#define DEBUG_TYPE "wasm-mem-intrinsic-results"
 
 namespace {
-class WebAssemblyStoreResults final : public MachineFunctionPass {
+class WebAssemblyMemIntrinsicResults final : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyStoreResults() : MachineFunctionPass(ID) {}
+  WebAssemblyMemIntrinsicResults() : MachineFunctionPass(ID) {}
 
-  StringRef getPassName() const override { return "WebAssembly Store Results"; }
+  StringRef getPassName() const override {
+    return "WebAssembly Memory Intrinsic Results";
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -67,12 +72,13 @@ private:
 };
 } // end anonymous namespace
 
-char WebAssemblyStoreResults::ID = 0;
-INITIALIZE_PASS(WebAssemblyStoreResults, DEBUG_TYPE,
-                "Optimize store result values for WebAssembly", false, false)
+char WebAssemblyMemIntrinsicResults::ID = 0;
+INITIALIZE_PASS(WebAssemblyMemIntrinsicResults, DEBUG_TYPE,
+                "Optimize memory intrinsic result values for WebAssembly",
+                false, false)
 
-FunctionPass *llvm::createWebAssemblyStoreResults() {
-  return new WebAssemblyStoreResults();
+FunctionPass *llvm::createWebAssemblyMemIntrinsicResults() {
+  return new WebAssemblyMemIntrinsicResults();
 }
 
 // Replace uses of FromReg with ToReg if they are dominated by MI.
@@ -164,14 +170,14 @@ static bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
   unsigned FromReg = MI.getOperand(2).getReg();
   unsigned ToReg = MI.getOperand(0).getReg();
   if (MRI.getRegClass(FromReg) != MRI.getRegClass(ToReg))
-    report_fatal_error("Store results: call to builtin function with wrong "
-                       "signature, from/to mismatch");
+    report_fatal_error("Memory Intrinsic results: call to builtin function "
+                       "with wrong signature, from/to mismatch");
   return ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT, LIS);
 }
 
-bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
+bool WebAssemblyMemIntrinsicResults::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG({
-    dbgs() << "********** Store Results **********\n"
+    dbgs() << "********** Memory Intrinsic Results **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });
 
@@ -186,7 +192,8 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
   // We don't preserve SSA form.
   MRI.leaveSSA();
 
-  assert(MRI.tracksLiveness() && "StoreResults expects liveness tracking");
+  assert(MRI.tracksLiveness() &&
+         "MemIntrinsicResults expects liveness tracking");
 
   for (auto &MBB : MF) {
     LLVM_DEBUG(dbgs() << "Basic Block: " << MBB.getName() << '\n');

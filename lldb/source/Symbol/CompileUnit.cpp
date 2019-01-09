@@ -72,10 +72,10 @@ void CompileUnit::ForeachFunction(
   sorted_functions.reserve(m_functions_by_uid.size());
   for (auto &p : m_functions_by_uid)
     sorted_functions.push_back(p.second);
-  std::sort(sorted_functions.begin(), sorted_functions.end(),
-            [](const lldb::FunctionSP &a, const lldb::FunctionSP &b) {
-              return a->GetID() < b->GetID();
-            });
+  llvm::sort(sorted_functions.begin(), sorted_functions.end(),
+             [](const lldb::FunctionSP &a, const lldb::FunctionSP &b) {
+               return a->GetID() < b->GetID();
+             });
 
   for (auto &f : sorted_functions)
     if (lambda(f))

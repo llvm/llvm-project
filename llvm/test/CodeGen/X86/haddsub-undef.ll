@@ -926,8 +926,6 @@ define <4 x float> @v16f32_inputs_v4f32_output_0123(<16 x float> %a, <16 x float
   ret <4 x float> %r
 }
 
-; FIXME: Miscompiles with any AVX.
-
 define <8 x float> @v16f32_inputs_v8f32_output_4567(<16 x float> %a, <16 x float> %b) {
 ; SSE-LABEL: v16f32_inputs_v8f32_output_4567:
 ; SSE:       # %bb.0:
@@ -961,6 +959,27 @@ define <8 x float> @v16f32_inputs_v8f32_output_4567(<16 x float> %a, <16 x float
   %b6 = extractelement <16 x float> %b, i32 6
   %b7 = extractelement <16 x float> %b, i32 7
   %add4 = fadd float %a4, %a5
+  %add7 = fadd float %b6, %b7
+  %r4 = insertelement <8 x float> undef, float %add4, i32 4
+  %r = insertelement <8 x float> %r4, float %add7, i32 7
+  ret <8 x float> %r
+}
+
+define <8 x float> @PR40243(<8 x float> %a, <8 x float> %b) {
+; SSE-LABEL: PR40243:
+; SSE:       # %bb.0:
+; SSE-NEXT:    haddps %xmm3, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR40243:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    retq
+  %a4 = extractelement <8 x float> %a, i32 4
+  %a5 = extractelement <8 x float> %a, i32 5
+  %add4 = fadd float %a4, %a5
+  %b6 = extractelement <8 x float> %b, i32 6
+  %b7 = extractelement <8 x float> %b, i32 7
   %add7 = fadd float %b6, %b7
   %r4 = insertelement <8 x float> undef, float %add4, i32 4
   %r = insertelement <8 x float> %r4, float %add7, i32 7

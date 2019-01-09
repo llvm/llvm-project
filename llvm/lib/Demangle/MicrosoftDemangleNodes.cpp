@@ -423,6 +423,9 @@ void FunctionSignatureNode::outputPost(OutputStream &OS,
   if (Quals & Q_Unaligned)
     OS << " __unaligned";
 
+  if (IsNoexcept)
+    OS << " noexcept";
+
   if (RefQualifier == FunctionRefQualifier::Reference)
     OS << " &";
   else if (RefQualifier == FunctionRefQualifier::RValueReference)

@@ -217,7 +217,7 @@ public:
   // }
   // my_map.Sort();
   //------------------------------------------------------------------
-  void Sort() { std::sort(m_map.begin(), m_map.end()); }
+  void Sort() { llvm::sort(m_map.begin(), m_map.end()); }
 
   //------------------------------------------------------------------
   // Since we are using a vector to contain our items it will always double its
