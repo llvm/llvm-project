@@ -42,8 +42,7 @@ struct plus_one
   }
 };
 
-int
-main()
+int main()
 {
     using std::placeholders::_1;
 
