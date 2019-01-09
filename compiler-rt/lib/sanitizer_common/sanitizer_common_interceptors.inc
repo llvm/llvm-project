@@ -9347,6 +9347,40 @@ INTERCEPTOR(__sanitizer_FILE *, funopen2, void *cookie, funopen2_readfn readfn,
 #define INIT_FUNOPEN2
 #endif
 
+#if SANITIZER_INTERCEPT_FDEVNAME
+INTERCEPTOR(char *, fdevname,  int fd) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, fdevname, fd);
+  COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+  char *name = REAL(fdevname)(fd);
+  if (name) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, name, REAL(strlen)(name) + 1);
+    if (fd > 0)
+      COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
+  }
+  return name;
+}
+
+INTERCEPTOR(char *, fdevname_r,  int fd, char *buf, SIZE_T len) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, fdevname_r, fd, buf, len);
+  COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+  char *name = REAL(fdevname_r)(fd, buf, len);
+  if (name && buf && len > 0) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, REAL(strlen)(buf) + 1);
+    if (fd > 0)
+      COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
+  }
+  return name;
+}
+
+#define INIT_FDEVNAME \
+  COMMON_INTERCEPT_FUNCTION(fdevname); \
+  COMMON_INTERCEPT_FUNCTION(fdevname_r);
+#else
+#define INIT_FDEVNAME
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map =
@@ -9634,6 +9668,7 @@ static void InitializeCommonInterceptors() {
   INIT_PCLOSE;
   INIT_FUNOPEN;
   INIT_FUNOPEN2;
+  INIT_FDEVNAME;
 
   INIT___PRINTF_CHK;
 }

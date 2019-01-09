@@ -323,6 +323,9 @@ struct FunctionSignatureNode : public TypeNode {
 
   // Function parameters
   NodeArrayNode *Params = nullptr;
+
+  // True if the function type is noexcept
+  bool IsNoexcept = false;
 };
 
 struct IdentifierNode : public Node {

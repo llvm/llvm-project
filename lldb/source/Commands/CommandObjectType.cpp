@@ -2907,7 +2907,7 @@ public:
     if (StackFrame *frame = m_exe_ctx.GetFramePtr()) {
       guessed_language = GuessLanguage(frame);
       if (guessed_language != eLanguageTypeUnknown) {
-        std::sort(
+        llvm::sort(
             languages.begin(), languages.end(),
             [guessed_language](Language *lang1, Language *lang2) -> bool {
               if (!lang1 || !lang2)

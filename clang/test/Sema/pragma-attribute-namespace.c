@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-#if !__has_feature(pragma_clang_attribute_namespaces)
+#if !__has_extension(pragma_clang_attribute_namespaces)
 #error
 #endif
 

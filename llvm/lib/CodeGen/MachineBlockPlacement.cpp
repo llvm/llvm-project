@@ -316,7 +316,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
   /// A type for a block filter set.
   using BlockFilterSet = SmallSetVector<const MachineBasicBlock *, 16>;
 
-  /// Pair struct containing basic block and taildup profitiability
+  /// Pair struct containing basic block and taildup profitability
   struct BlockAndTailDupResult {
     MachineBasicBlock *BB;
     bool ShouldTailDup;

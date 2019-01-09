@@ -61,7 +61,8 @@ __attribute__((always_inline, nodebug)) static void CheckAddress(uptr p) {
 template <ErrorAction EA, AccessType AT>
 __attribute__((always_inline, nodebug)) static void CheckAddressSized(uptr p,
                                                                       uptr sz) {
-  CHECK_NE(0, sz);
+  if (sz == 0)
+    return;
   tag_t ptr_tag = GetTagFromPointer(p);
   uptr ptr_raw = p & ~kAddressTagMask;
   tag_t *shadow_first = (tag_t *)MemToShadow(ptr_raw);
