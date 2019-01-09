@@ -496,7 +496,7 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
     AddressVector::iterator start = addrs.begin();
     AddressVector::iterator end = addrs.end();
 
-    std::sort(start, end);
+    llvm::sort(start, end);
     addrs.erase(std::unique(start, end), end);
     thread_plan_sp.reset(new ThreadPlanRunToAddress(thread, addrs, stop));
   }

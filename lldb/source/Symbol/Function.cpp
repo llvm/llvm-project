@@ -267,11 +267,11 @@ llvm::MutableArrayRef<CallEdge> Function::GetCallEdges() {
   m_call_edges = sym_file->ParseCallEdgesInFunction(GetID());
 
   // Sort the call edges to speed up return_pc lookups.
-  std::sort(m_call_edges.begin(), m_call_edges.end(),
-            [](const CallEdge &LHS, const CallEdge &RHS) {
-              return LHS.GetUnresolvedReturnPCAddress() <
-                     RHS.GetUnresolvedReturnPCAddress();
-            });
+  llvm::sort(m_call_edges.begin(), m_call_edges.end(),
+             [](const CallEdge &LHS, const CallEdge &RHS) {
+               return LHS.GetUnresolvedReturnPCAddress() <
+                      RHS.GetUnresolvedReturnPCAddress();
+             });
 
   return m_call_edges;
 }

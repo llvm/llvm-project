@@ -1557,8 +1557,7 @@ static Instruction *factorizeMinMaxTree(SelectPatternFlavor SPF, Value *LHS,
 /// funnel shift intrinsic. Example:
 /// rotl32(a, b) --> (b == 0 ? a : ((a >> (32 - b)) | (a << b)))
 ///              --> call llvm.fshl.i32(a, a, b)
-static Instruction *foldSelectRotate(SelectInst &Sel,
-                                     InstCombiner::BuilderTy &Builder) {
+static Instruction *foldSelectRotate(SelectInst &Sel) {
   // The false value of the select must be a rotate of the true value.
   Value *Or0, *Or1;
   if (!match(Sel.getFalseValue(), m_OneUse(m_Or(m_Value(Or0), m_Value(Or1)))))
@@ -2047,7 +2046,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   if (Instruction *Select = foldSelectBinOpIdentity(SI, TLI))
     return Select;
 
-  if (Instruction *Rot = foldSelectRotate(SI, Builder))
+  if (Instruction *Rot = foldSelectRotate(SI))
     return Rot;
 
   return nullptr;

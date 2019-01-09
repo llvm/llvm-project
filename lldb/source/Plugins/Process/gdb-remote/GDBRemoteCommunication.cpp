@@ -69,8 +69,9 @@ GDBRemoteCommunication::GDBRemoteCommunication(const char *comm_name,
       m_echo_number(0), m_supports_qEcho(eLazyBoolCalculate), m_history(512),
       m_send_acks(true), m_compression_type(CompressionType::None),
       m_listen_url(), m_decompression_scratch_type(CompressionType::None),
-      m_decompression_scratch(nullptr)
-{ 
+      m_decompression_scratch(nullptr) {
+  // Unused unless HAVE_LIBCOMPRESSION is defined.
+  (void)m_decompression_scratch_type;
 }
 
 //----------------------------------------------------------------------

@@ -17,6 +17,12 @@
 //
 // The Predicate field dictates the conditions under which the feature or
 // extension will be made available.
+//
+// FEATURE(...) should be used to advertise support for standard language
+// features, whereas EXTENSION(...) should be used for clang extensions. Note
+// that many of the identifiers in this file don't follow this rule for backward
+// compatibility reasons.
+//
 //===----------------------------------------------------------------------===//
 
 #if !defined(FEATURE) && !defined(EXTENSION)
@@ -69,7 +75,6 @@ FEATURE(attribute_overloadable, true)
 FEATURE(attribute_unavailable_with_message, true)
 FEATURE(attribute_unused_on_fields, true)
 FEATURE(attribute_diagnose_if_objc, true)
-FEATURE(pragma_clang_attribute_namespaces, true)
 FEATURE(blocks, LangOpts.Blocks)
 FEATURE(c_thread_safety_attributes, true)
 FEATURE(cxx_exceptions, LangOpts.CXXExceptions)
@@ -241,6 +246,7 @@ EXTENSION(cxx_init_captures, LangOpts.CPlusPlus11)
 EXTENSION(cxx_variable_templates, LangOpts.CPlusPlus)
 // Miscellaneous language extensions
 EXTENSION(overloadable_unmarked, true)
+EXTENSION(pragma_clang_attribute_namespaces, true)
 
 #undef EXTENSION
 #undef FEATURE

@@ -1681,11 +1681,14 @@ TypeNode *Demangler::demangleType(StringView &MangledName,
   return Ty;
 }
 
-void Demangler::demangleThrowSpecification(StringView &MangledName) {
+bool Demangler::demangleThrowSpecification(StringView &MangledName) {
+  if (MangledName.consumeFront("_E"))
+    return true;
   if (MangledName.consumeFront('Z'))
-    return;
+    return false;
 
   Error = true;
+  return false;
 }
 
 FunctionSignatureNode *Demangler::demangleFunctionType(StringView &MangledName,
@@ -1709,7 +1712,7 @@ FunctionSignatureNode *Demangler::demangleFunctionType(StringView &MangledName,
 
   FTy->Params = demangleFunctionParameterList(MangledName);
 
-  demangleThrowSpecification(MangledName);
+  FTy->IsNoexcept = demangleThrowSpecification(MangledName);
 
   return FTy;
 }

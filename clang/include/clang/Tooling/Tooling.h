@@ -205,7 +205,7 @@ bool runToolOnCodeWithArgs(
 ///
 /// \return The resulting AST or null if an error occurred.
 std::unique_ptr<ASTUnit>
-buildASTFromCode(const Twine &Code, const Twine &FileName = "input.cc",
+buildASTFromCode(StringRef Code, StringRef FileName = "input.cc",
                  std::shared_ptr<PCHContainerOperations> PCHContainerOps =
                      std::make_shared<PCHContainerOperations>());
 
@@ -223,10 +223,10 @@ buildASTFromCode(const Twine &Code, const Twine &FileName = "input.cc",
 ///
 /// \return The resulting AST or null if an error occurred.
 std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
-    const Twine &Code, const std::vector<std::string> &Args,
-    const Twine &FileName = "input.cc", const Twine &ToolName = "clang-tool",
+    StringRef Code, const std::vector<std::string> &Args,
+    StringRef FileName = "input.cc", StringRef ToolName = "clang-tool",
     std::shared_ptr<PCHContainerOperations> PCHContainerOps =
-      std::make_shared<PCHContainerOperations>(),
+        std::make_shared<PCHContainerOperations>(),
     ArgumentsAdjuster Adjuster = getClangStripDependencyFileAdjuster());
 
 /// Utility to run a FrontendAction in a single clang invocation.

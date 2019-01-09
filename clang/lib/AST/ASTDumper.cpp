@@ -44,7 +44,6 @@ namespace  {
         public ConstCommentVisitor<ASTDumper, void, const FullComment *>,
         public TypeVisitor<ASTDumper> {
 
-    TextTreeStructure TreeStructure;
     TextNodeDumper NodeDumper;
 
     raw_ostream &OS;
@@ -60,7 +59,7 @@ namespace  {
 
     /// Dump a child of the current node.
     template<typename Fn> void dumpChild(Fn doDumpChild) {
-      TreeStructure.addChild(doDumpChild);
+      NodeDumper.addChild(doDumpChild);
     }
 
   public:
@@ -75,8 +74,7 @@ namespace  {
     ASTDumper(raw_ostream &OS, const CommandTraits *Traits,
               const SourceManager *SM, bool ShowColors,
               const PrintingPolicy &PrintPolicy)
-        : TreeStructure(OS, ShowColors),
-          NodeDumper(OS, ShowColors, SM, PrintPolicy, Traits), OS(OS),
+        : NodeDumper(OS, ShowColors, SM, PrintPolicy, Traits), OS(OS),
           PrintPolicy(PrintPolicy), ShowColors(ShowColors) {}
 
     void setDeserialize(bool D) { Deserialize = D; }
@@ -88,7 +86,6 @@ namespace  {
     void dumpType(QualType T) { NodeDumper.dumpType(T); }
     void dumpTypeAsChild(QualType T);
     void dumpTypeAsChild(const Type *T);
-    void dumpDeclRef(const Decl *Node, const char *Label = nullptr);
     void dumpBareDeclRef(const Decl *Node) { NodeDumper.dumpBareDeclRef(Node); }
     void dumpDeclContext(const DeclContext *DC);
     void dumpLookups(const DeclContext *DC, bool DumpDecls);
@@ -217,10 +214,10 @@ namespace  {
         dumpChild([=] { OS << "..."; });
     }
     void VisitUnresolvedUsingType(const UnresolvedUsingType *T) {
-      dumpDeclRef(T->getDecl());
+      NodeDumper.dumpDeclRef(T->getDecl());
     }
     void VisitTypedefType(const TypedefType *T) {
-      dumpDeclRef(T->getDecl());
+      NodeDumper.dumpDeclRef(T->getDecl());
     }
     void VisitTypeOfExprType(const TypeOfExprType *T) {
       dumpStmt(T->getUnderlyingExpr());
@@ -237,7 +234,7 @@ namespace  {
       dumpTypeAsChild(T->getBaseType());
     }
     void VisitTagType(const TagType *T) {
-      dumpDeclRef(T->getDecl());
+      NodeDumper.dumpDeclRef(T->getDecl());
     }
     void VisitAttributedType(const AttributedType *T) {
       // FIXME: AttrKind
@@ -246,7 +243,7 @@ namespace  {
     void VisitTemplateTypeParmType(const TemplateTypeParmType *T) {
       OS << " depth " << T->getDepth() << " index " << T->getIndex();
       if (T->isParameterPack()) OS << " pack";
-      dumpDeclRef(T->getDecl());
+      NodeDumper.dumpDeclRef(T->getDecl());
     }
     void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T) {
       dumpTypeAsChild(T->getReplacedParameter());
@@ -270,10 +267,10 @@ namespace  {
         dumpTypeAsChild(T->getAliasedType());
     }
     void VisitInjectedClassNameType(const InjectedClassNameType *T) {
-      dumpDeclRef(T->getDecl());
+      NodeDumper.dumpDeclRef(T->getDecl());
     }
     void VisitObjCInterfaceType(const ObjCInterfaceType *T) {
-      dumpDeclRef(T->getDecl());
+      NodeDumper.dumpDeclRef(T->getDecl());
     }
     void VisitObjCObjectPointerType(const ObjCObjectPointerType *T) {
       dumpTypeAsChild(T->getPointeeType());
@@ -508,17 +505,6 @@ void ASTDumper::dumpTypeAsChild(const Type *T) {
   });
 }
 
-void ASTDumper::dumpDeclRef(const Decl *D, const char *Label) {
-  if (!D)
-    return;
-
-  dumpChild([=]{
-    if (Label)
-      OS << Label << ' ';
-    dumpBareDeclRef(D);
-  });
-}
-
 void ASTDumper::dumpDeclContext(const DeclContext *DC) {
   if (!DC)
     return;
@@ -697,7 +683,7 @@ void ASTDumper::dumpTemplateArgument(const TemplateArgument &A, SourceRange R,
       NodeDumper.dumpSourceRange(R);
 
     if (From)
-      dumpDeclRef(From, Label);
+      NodeDumper.dumpDeclRef(From, Label);
 
     switch (A.getKind()) {
     case TemplateArgument::Null:
@@ -709,7 +695,7 @@ void ASTDumper::dumpTemplateArgument(const TemplateArgument &A, SourceRange R,
       break;
     case TemplateArgument::Declaration:
       OS << " decl";
-      dumpDeclRef(A.getAsDecl());
+      NodeDumper.dumpDeclRef(A.getAsDecl());
       break;
     case TemplateArgument::NullPtr:
       OS << " nullptr";
@@ -865,7 +851,7 @@ void ASTDumper::VisitIndirectFieldDecl(const IndirectFieldDecl *D) {
   NodeDumper.dumpType(D->getType());
 
   for (auto *Child : D->chain())
-    dumpDeclRef(Child);
+    NodeDumper.dumpDeclRef(Child);
 }
 
 void ASTDumper::VisitFunctionDecl(const FunctionDecl *D) {
@@ -1107,7 +1093,7 @@ void ASTDumper::VisitNamespaceDecl(const NamespaceDecl *D) {
   if (D->isInline())
     OS << " inline";
   if (!D->isOriginalNamespace())
-    dumpDeclRef(D->getOriginalNamespace(), "original");
+    NodeDumper.dumpDeclRef(D->getOriginalNamespace(), "original");
 }
 
 void ASTDumper::VisitUsingDirectiveDecl(const UsingDirectiveDecl *D) {
@@ -1117,7 +1103,7 @@ void ASTDumper::VisitUsingDirectiveDecl(const UsingDirectiveDecl *D) {
 
 void ASTDumper::VisitNamespaceAliasDecl(const NamespaceAliasDecl *D) {
   NodeDumper.dumpName(D);
-  dumpDeclRef(D->getAliasedNamespace());
+  NodeDumper.dumpDeclRef(D->getAliasedNamespace());
 }
 
 void ASTDumper::VisitTypeAliasDecl(const TypeAliasDecl *D) {
@@ -1303,7 +1289,7 @@ void ASTDumper::dumpTemplateDeclSpecialization(const SpecializationDecl *D,
     case TSK_Undeclared:
     case TSK_ImplicitInstantiation:
       if (DumpRefOnly)
-        dumpDeclRef(Redecl);
+        NodeDumper.dumpDeclRef(Redecl);
       else
         dumpDecl(Redecl);
       DumpedAny = true;
@@ -1315,7 +1301,7 @@ void ASTDumper::dumpTemplateDeclSpecialization(const SpecializationDecl *D,
 
   // Ensure we dump at least one decl for each specialization.
   if (!DumpedAny)
-    dumpDeclRef(D);
+    NodeDumper.dumpDeclRef(D);
 }
 
 template <typename TemplateDecl>
@@ -1570,42 +1556,42 @@ void ASTDumper::VisitObjCTypeParamDecl(const ObjCTypeParamDecl *D) {
 
 void ASTDumper::VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
   NodeDumper.dumpName(D);
-  dumpDeclRef(D->getClassInterface());
+  NodeDumper.dumpDeclRef(D->getClassInterface());
   dumpObjCTypeParamList(D->getTypeParamList());
-  dumpDeclRef(D->getImplementation());
+  NodeDumper.dumpDeclRef(D->getImplementation());
   for (ObjCCategoryDecl::protocol_iterator I = D->protocol_begin(),
                                            E = D->protocol_end();
        I != E; ++I)
-    dumpDeclRef(*I);
+    NodeDumper.dumpDeclRef(*I);
 }
 
 void ASTDumper::VisitObjCCategoryImplDecl(const ObjCCategoryImplDecl *D) {
   NodeDumper.dumpName(D);
-  dumpDeclRef(D->getClassInterface());
-  dumpDeclRef(D->getCategoryDecl());
+  NodeDumper.dumpDeclRef(D->getClassInterface());
+  NodeDumper.dumpDeclRef(D->getCategoryDecl());
 }
 
 void ASTDumper::VisitObjCProtocolDecl(const ObjCProtocolDecl *D) {
   NodeDumper.dumpName(D);
 
   for (auto *Child : D->protocols())
-    dumpDeclRef(Child);
+    NodeDumper.dumpDeclRef(Child);
 }
 
 void ASTDumper::VisitObjCInterfaceDecl(const ObjCInterfaceDecl *D) {
   NodeDumper.dumpName(D);
   dumpObjCTypeParamList(D->getTypeParamListAsWritten());
-  dumpDeclRef(D->getSuperClass(), "super");
+  NodeDumper.dumpDeclRef(D->getSuperClass(), "super");
 
-  dumpDeclRef(D->getImplementation());
+  NodeDumper.dumpDeclRef(D->getImplementation());
   for (auto *Child : D->protocols())
-    dumpDeclRef(Child);
+    NodeDumper.dumpDeclRef(Child);
 }
 
 void ASTDumper::VisitObjCImplementationDecl(const ObjCImplementationDecl *D) {
   NodeDumper.dumpName(D);
-  dumpDeclRef(D->getSuperClass(), "super");
-  dumpDeclRef(D->getClassInterface());
+  NodeDumper.dumpDeclRef(D->getSuperClass(), "super");
+  NodeDumper.dumpDeclRef(D->getClassInterface());
   for (ObjCImplementationDecl::init_const_iterator I = D->init_begin(),
                                                    E = D->init_end();
        I != E; ++I)
@@ -1614,7 +1600,7 @@ void ASTDumper::VisitObjCImplementationDecl(const ObjCImplementationDecl *D) {
 
 void ASTDumper::VisitObjCCompatibleAliasDecl(const ObjCCompatibleAliasDecl *D) {
   NodeDumper.dumpName(D);
-  dumpDeclRef(D->getClassInterface());
+  NodeDumper.dumpDeclRef(D->getClassInterface());
 }
 
 void ASTDumper::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
@@ -1651,9 +1637,9 @@ void ASTDumper::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
     if (Attrs & ObjCPropertyDecl::OBJC_PR_class)
       OS << " class";
     if (Attrs & ObjCPropertyDecl::OBJC_PR_getter)
-      dumpDeclRef(D->getGetterMethodDecl(), "getter");
+      NodeDumper.dumpDeclRef(D->getGetterMethodDecl(), "getter");
     if (Attrs & ObjCPropertyDecl::OBJC_PR_setter)
-      dumpDeclRef(D->getSetterMethodDecl(), "setter");
+      NodeDumper.dumpDeclRef(D->getSetterMethodDecl(), "setter");
   }
 }
 
@@ -1663,8 +1649,8 @@ void ASTDumper::VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D) {
     OS << " synthesize";
   else
     OS << " dynamic";
-  dumpDeclRef(D->getPropertyDecl());
-  dumpDeclRef(D->getPropertyIvarDecl());
+  NodeDumper.dumpDeclRef(D->getPropertyDecl());
+  NodeDumper.dumpDeclRef(D->getPropertyIvarDecl());
 }
 
 void ASTDumper::VisitBlockDecl(const BlockDecl *D) {
@@ -2155,7 +2141,7 @@ ASTDumper::VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *Node) {
 
 void ASTDumper::VisitExprWithCleanups(const ExprWithCleanups *Node) {
   for (unsigned i = 0, e = Node->getNumObjects(); i != e; ++i)
-    dumpDeclRef(Node->getObject(i), "cleanup");
+    NodeDumper.dumpDeclRef(Node->getObject(i), "cleanup");
 }
 
 void ASTDumper::VisitSizeOfPackExpr(const SizeOfPackExpr *Node) {

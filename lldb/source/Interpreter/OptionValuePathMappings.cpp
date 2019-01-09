@@ -177,7 +177,7 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
         size_t num_remove_indexes = remove_indexes.size();
         if (num_remove_indexes) {
           // Sort and then erase in reverse so indexes are always valid
-          std::sort(remove_indexes.begin(), remove_indexes.end());
+          llvm::sort(remove_indexes.begin(), remove_indexes.end());
           for (size_t j = num_remove_indexes - 1; j < num_remove_indexes; ++j) {
             m_path_mappings.Remove(j, m_notify_changes);
           }

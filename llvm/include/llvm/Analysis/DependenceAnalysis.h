@@ -936,6 +936,17 @@ template <typename T> class ArrayRef;
     friend struct AnalysisInfoMixin<DependenceAnalysis>;
   }; // class DependenceAnalysis
 
+  /// Printer pass to dump DA results.
+  struct DependenceAnalysisPrinterPass
+      : public PassInfoMixin<DependenceAnalysisPrinterPass> {
+    DependenceAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+    PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+
+  private:
+    raw_ostream &OS;
+  }; // class DependenceAnalysisPrinterPass
+
   /// Legacy pass manager pass to access dependence information
   class DependenceAnalysisWrapperPass : public FunctionPass {
   public:

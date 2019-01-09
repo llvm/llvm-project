@@ -1361,7 +1361,7 @@ void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   if (DTy) {
     if (DD->getDwarfVersion() >= 3)
       addType(Buffer, DTy);
-    if (DD->getDwarfVersion() >= 4 && (CTy->getFlags() & DINode::FlagFixedEnum))
+    if (DD->getDwarfVersion() >= 4 && (CTy->getFlags() & DINode::FlagEnumClass))
       addFlag(Buffer, dwarf::DW_AT_enum_class);
   }
 

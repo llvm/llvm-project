@@ -245,7 +245,7 @@ private:
   FuncClass demangleFunctionClass(StringView &MangledName);
   CallingConv demangleCallingConvention(StringView &MangledName);
   StorageClass demangleVariableStorageClass(StringView &MangledName);
-  void demangleThrowSpecification(StringView &MangledName);
+  bool demangleThrowSpecification(StringView &MangledName);
   wchar_t demangleWcharLiteral(StringView &MangledName);
   uint8_t demangleCharLiteral(StringView &MangledName);
 

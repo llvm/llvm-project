@@ -6460,7 +6460,7 @@ def note_delete_non_virtual : Note<
   "qualify call to silence this warning">;
 def warn_delete_abstract_non_virtual_dtor : Warning<
   "%select{delete|destructor}0 called on %1 that is abstract but has "
-  "non-virtual destructor">, InGroup<DeleteAbstractNonVirtualDtor>, ShowInSystemHeader;
+  "non-virtual destructor">, InGroup<DeleteNonVirtualDtor>, ShowInSystemHeader;
 def warn_overloaded_virtual : Warning<
   "%q0 hides overloaded virtual %select{function|functions}1">,
   InGroup<OverloadedVirtual>, DefaultIgnore;

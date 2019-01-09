@@ -53,9 +53,10 @@
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation.h"
-#include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
+#include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
+#include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -305,7 +306,7 @@ static void addKernelMemorySanitizerPass(const PassManagerBuilder &Builder,
 
 static void addThreadSanitizerPass(const PassManagerBuilder &Builder,
                                    legacy::PassManagerBase &PM) {
-  PM.add(createThreadSanitizerPass());
+  PM.add(createThreadSanitizerLegacyPassPass());
 }
 
 static void addDataFlowSanitizerPass(const PassManagerBuilder &Builder,

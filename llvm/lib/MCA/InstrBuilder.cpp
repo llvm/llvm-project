@@ -558,6 +558,9 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   populateWrites(*ID, MCI, SchedClassID);
   populateReads(*ID, MCI, SchedClassID);
 
+#ifndef NDEBUG
+  ID->Name = MCII.getName(Opcode);
+#endif
   LLVM_DEBUG(dbgs() << "\t\tMaxLatency=" << ID->MaxLatency << '\n');
   LLVM_DEBUG(dbgs() << "\t\tNumMicroOps=" << ID->NumMicroOps << '\n');
 

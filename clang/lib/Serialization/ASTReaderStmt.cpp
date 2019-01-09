@@ -1502,7 +1502,7 @@ void ASTStmtReader::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
 void ASTStmtReader::VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *E) {
   VisitExpr(E);
   E->TypeInfo = GetTypeSourceInfo();
-  E->RParenLoc = ReadSourceLocation();
+  E->CXXScalarValueInitExprBits.RParenLoc = ReadSourceLocation();
 }
 
 void ASTStmtReader::VisitCXXNewExpr(CXXNewExpr *E) {
@@ -1584,22 +1584,37 @@ void ASTStmtReader::VisitExprWithCleanups(ExprWithCleanups *E) {
   E->SubExpr = Record.readSubExpr();
 }
 
-void
-ASTStmtReader::VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E){
+void ASTStmtReader::VisitCXXDependentScopeMemberExpr(
+    CXXDependentScopeMemberExpr *E) {
   VisitExpr(E);
 
-  if (Record.readInt()) // HasTemplateKWAndArgsInfo
+  bool HasTemplateKWAndArgsInfo = Record.readInt();
+  unsigned NumTemplateArgs = Record.readInt();
+  bool HasFirstQualifierFoundInScope = Record.readInt();
+
+  assert((HasTemplateKWAndArgsInfo == E->hasTemplateKWAndArgsInfo()) &&
+         "Wrong HasTemplateKWAndArgsInfo!");
+  assert(
+      (HasFirstQualifierFoundInScope == E->hasFirstQualifierFoundInScope()) &&
+      "Wrong HasFirstQualifierFoundInScope!");
+
+  if (HasTemplateKWAndArgsInfo)
     ReadTemplateKWAndArgsInfo(
         *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
-        E->getTrailingObjects<TemplateArgumentLoc>(),
-        /*NumTemplateArgs=*/Record.readInt());
+        E->getTrailingObjects<TemplateArgumentLoc>(), NumTemplateArgs);
 
-  E->Base = Record.readSubExpr();
+  assert((NumTemplateArgs == E->getNumTemplateArgs()) &&
+         "Wrong NumTemplateArgs!");
+
+  E->CXXDependentScopeMemberExprBits.IsArrow = Record.readInt();
+  E->CXXDependentScopeMemberExprBits.OperatorLoc = ReadSourceLocation();
   E->BaseType = Record.readType();
-  E->IsArrow = Record.readInt();
-  E->OperatorLoc = ReadSourceLocation();
   E->QualifierLoc = Record.readNestedNameSpecifierLoc();
-  E->FirstQualifierFoundInScope = ReadDeclAs<NamedDecl>();
+  E->Base = Record.readSubExpr();
+
+  if (HasFirstQualifierFoundInScope)
+    *E->getTrailingObjects<NamedDecl *>() = ReadDeclAs<NamedDecl>();
+
   ReadDeclarationNameInfo(E->MemberNameInfo);
 }
 
@@ -1704,7 +1719,7 @@ void ASTStmtReader::VisitExpressionTraitExpr(ExpressionTraitExpr *E) {
 
 void ASTStmtReader::VisitCXXNoexceptExpr(CXXNoexceptExpr *E) {
   VisitExpr(E);
-  E->Value = (bool)Record.readInt();
+  E->CXXNoexceptExprBits.Value = Record.readInt();
   E->Range = ReadSourceRange();
   E->Operand = Record.readSubExpr();
 }
@@ -1738,7 +1753,7 @@ void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
   E->Param = ReadDeclAs<NonTypeTemplateParmDecl>();
-  E->NameLoc = ReadSourceLocation();
+  E->SubstNonTypeTemplateParmExprBits.NameLoc = ReadSourceLocation();
   E->Replacement = Record.readSubExpr();
 }
 
@@ -3224,11 +3239,12 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_CXX_DEPENDENT_SCOPE_MEMBER:
-      S = CXXDependentScopeMemberExpr::CreateEmpty(Context,
-         /*HasTemplateKWAndArgsInfo=*/Record[ASTStmtReader::NumExprFields],
-                  /*NumTemplateArgs=*/Record[ASTStmtReader::NumExprFields]
-                                   ? Record[ASTStmtReader::NumExprFields + 1]
-                                   : 0);
+      S = CXXDependentScopeMemberExpr::CreateEmpty(
+          Context,
+          /*HasTemplateKWAndArgsInfo=*/Record[ASTStmtReader::NumExprFields],
+          /*NumTemplateArgs=*/Record[ASTStmtReader::NumExprFields + 1],
+          /*HasFirstQualifierFoundInScope=*/
+          Record[ASTStmtReader::NumExprFields + 2]);
       break;
 
     case EXPR_CXX_DEPENDENT_SCOPE_DECL_REF:

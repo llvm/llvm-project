@@ -1186,16 +1186,52 @@ __m128i test_mm_slli_epi16(__m128i A) {
   return _mm_slli_epi16(A, 1);
 }
 
+__m128i test_mm_slli_epi16_1(__m128i A) {
+  // CHECK-LABEL: test_mm_slli_epi16_1
+  // CHECK: call <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16> %{{.*}}, i32 %{{.*}})
+  return _mm_slli_epi16(A, -1);
+}
+
+__m128i test_mm_slli_epi16_2(__m128i A, int B) {
+  // CHECK-LABEL: test_mm_slli_epi16_2
+  // CHECK: call <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16> %{{.*}}, i32 %{{.*}})
+  return _mm_slli_epi16(A, B);
+}
+
 __m128i test_mm_slli_epi32(__m128i A) {
   // CHECK-LABEL: test_mm_slli_epi32
   // CHECK: call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %{{.*}}, i32 %{{.*}})
   return _mm_slli_epi32(A, 1);
 }
 
+__m128i test_mm_slli_epi32_1(__m128i A) {
+  // CHECK-LABEL: test_mm_slli_epi32_1
+  // CHECK: call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %{{.*}}, i32 %{{.*}})
+  return _mm_slli_epi32(A, -1);
+}
+
+__m128i test_mm_slli_epi32_2(__m128i A, int B) {
+  // CHECK-LABEL: test_mm_slli_epi32_2
+  // CHECK: call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %{{.*}}, i32 %{{.*}})
+  return _mm_slli_epi32(A, B);
+}
+
 __m128i test_mm_slli_epi64(__m128i A) {
   // CHECK-LABEL: test_mm_slli_epi64
   // CHECK: call <2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64> %{{.*}}, i32 %{{.*}})
   return _mm_slli_epi64(A, 1);
+}
+
+__m128i test_mm_slli_epi64_1(__m128i A) {
+  // CHECK-LABEL: test_mm_slli_epi64_1
+  // CHECK: call <2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64> %{{.*}}, i32 %{{.*}})
+  return _mm_slli_epi64(A, -1);
+}
+
+__m128i test_mm_slli_epi64_2(__m128i A, int B) {
+  // CHECK-LABEL: test_mm_slli_epi64_2
+  // CHECK: call <2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64> %{{.*}}, i32 %{{.*}})
+  return _mm_slli_epi64(A, B);
 }
 
 __m128i test_mm_slli_si128(__m128i A) {
@@ -1242,10 +1278,34 @@ __m128i test_mm_srai_epi16(__m128i A) {
   return _mm_srai_epi16(A, 1);
 }
 
+__m128i test_mm_srai_epi16_1(__m128i A) {
+  // CHECK-LABEL: test_mm_srai_epi16_1
+  // CHECK: call <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16> %{{.*}}, i32 %{{.*}})
+  return _mm_srai_epi16(A, -1);
+}
+
+__m128i test_mm_srai_epi16_2(__m128i A, int B) {
+  // CHECK-LABEL: test_mm_srai_epi16_2
+  // CHECK: call <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16> %{{.*}}, i32 %{{.*}})
+  return _mm_srai_epi16(A, B);
+}
+
 __m128i test_mm_srai_epi32(__m128i A) {
   // CHECK-LABEL: test_mm_srai_epi32
   // CHECK: call <4 x i32> @llvm.x86.sse2.psrai.d(<4 x i32> %{{.*}}, i32 %{{.*}})
   return _mm_srai_epi32(A, 1);
+}
+
+__m128i test_mm_srai_epi32_1(__m128i A) {
+  // CHECK-LABEL: test_mm_srai_epi32_1
+  // CHECK: call <4 x i32> @llvm.x86.sse2.psrai.d(<4 x i32> %{{.*}}, i32 %{{.*}})
+  return _mm_srai_epi32(A, -1);
+}
+
+__m128i test_mm_srai_epi32_2(__m128i A, int B) {
+  // CHECK-LABEL: test_mm_srai_epi32_2
+  // CHECK: call <4 x i32> @llvm.x86.sse2.psrai.d(<4 x i32> %{{.*}}, i32 %{{.*}})
+  return _mm_srai_epi32(A, B);
 }
 
 __m128i test_mm_srl_epi16(__m128i A, __m128i B) {
@@ -1272,16 +1332,52 @@ __m128i test_mm_srli_epi16(__m128i A) {
   return _mm_srli_epi16(A, 1);
 }
 
+__m128i test_mm_srli_epi16_1(__m128i A) {
+  // CHECK-LABEL: test_mm_srli_epi16_1
+  // CHECK: call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> %{{.*}}, i32 %{{.*}})
+  return _mm_srli_epi16(A, -1);
+}
+
+__m128i test_mm_srli_epi16_2(__m128i A, int B) {
+  // CHECK-LABEL: test_mm_srli_epi16
+  // CHECK: call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> %{{.*}}, i32 %{{.*}})
+  return _mm_srli_epi16(A, B);
+}
+
 __m128i test_mm_srli_epi32(__m128i A) {
   // CHECK-LABEL: test_mm_srli_epi32
   // CHECK: call <4 x i32> @llvm.x86.sse2.psrli.d(<4 x i32> %{{.*}}, i32 %{{.*}})
   return _mm_srli_epi32(A, 1);
 }
 
+__m128i test_mm_srli_epi32_1(__m128i A) {
+  // CHECK-LABEL: test_mm_srli_epi32_1
+  // CHECK: call <4 x i32> @llvm.x86.sse2.psrli.d(<4 x i32> %{{.*}}, i32 %{{.*}})
+  return _mm_srli_epi32(A, -1);
+}
+
+__m128i test_mm_srli_epi32_2(__m128i A, int B) {
+  // CHECK-LABEL: test_mm_srli_epi32_2
+  // CHECK: call <4 x i32> @llvm.x86.sse2.psrli.d(<4 x i32> %{{.*}}, i32 %{{.*}})
+  return _mm_srli_epi32(A, B);
+}
+
 __m128i test_mm_srli_epi64(__m128i A) {
   // CHECK-LABEL: test_mm_srli_epi64
   // CHECK: call <2 x i64> @llvm.x86.sse2.psrli.q(<2 x i64> %{{.*}}, i32 %{{.*}})
   return _mm_srli_epi64(A, 1);
+}
+
+__m128i test_mm_srli_epi64_1(__m128i A) {
+  // CHECK-LABEL: test_mm_srli_epi64_1
+  // CHECK: call <2 x i64> @llvm.x86.sse2.psrli.q(<2 x i64> %{{.*}}, i32 %{{.*}})
+  return _mm_srli_epi64(A, -1);
+}
+
+__m128i test_mm_srli_epi64_2(__m128i A, int B) {
+  // CHECK-LABEL: test_mm_srli_epi64_2
+  // CHECK: call <2 x i64> @llvm.x86.sse2.psrli.q(<2 x i64> %{{.*}}, i32 %{{.*}})
+  return _mm_srli_epi64(A, B);
 }
 
 __m128i test_mm_srli_si128(__m128i A) {

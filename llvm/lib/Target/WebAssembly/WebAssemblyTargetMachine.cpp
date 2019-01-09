@@ -62,7 +62,7 @@ extern "C" void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyReplacePhysRegsPass(PR);
   initializeWebAssemblyPrepareForLiveIntervalsPass(PR);
   initializeWebAssemblyOptimizeLiveIntervalsPass(PR);
-  initializeWebAssemblyStoreResultsPass(PR);
+  initializeWebAssemblyMemIntrinsicResultsPass(PR);
   initializeWebAssemblyRegStackifyPass(PR);
   initializeWebAssemblyRegColoringPass(PR);
   initializeWebAssemblyExplicitLocalsPass(PR);
@@ -311,13 +311,14 @@ void WebAssemblyPassConfig::addPreEmitPass() {
     // Depend on LiveIntervals and perform some optimizations on it.
     addPass(createWebAssemblyOptimizeLiveIntervals());
 
-    // Prepare store instructions for register stackifying.
-    addPass(createWebAssemblyStoreResults());
+    // Prepare memory intrinsic calls for register stackifying.
+    addPass(createWebAssemblyMemIntrinsicResults());
 
     // Mark registers as representing wasm's value stack. This is a key
     // code-compression technique in WebAssembly. We run this pass (and
-    // StoreResults above) very late, so that it sees as much code as possible,
-    // including code emitted by PEI and expanded by late tail duplication.
+    // MemIntrinsicResults above) very late, so that it sees as much code as
+    // possible, including code emitted by PEI and expanded by late tail
+    // duplication.
     addPass(createWebAssemblyRegStackify());
 
     // Run the register coloring pass to reduce the total number of registers.

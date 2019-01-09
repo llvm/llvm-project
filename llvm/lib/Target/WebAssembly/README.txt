@@ -94,10 +94,10 @@ WebAssemblyTargetLowering.
 //===---------------------------------------------------------------------===//
 
 Instead of the OptimizeReturned pass, which should consider preserving the
-"returned" attribute through to MachineInstrs and extending the StoreResults
-pass to do this optimization on calls too. That would also let the
-WebAssemblyPeephole pass clean up dead defs for such calls, as it does for
-stores.
+"returned" attribute through to MachineInstrs and extending the
+MemIntrinsicResults pass to do this optimization on calls too. That would also
+let the WebAssemblyPeephole pass clean up dead defs for such calls, as it does
+for stores.
 
 //===---------------------------------------------------------------------===//
 

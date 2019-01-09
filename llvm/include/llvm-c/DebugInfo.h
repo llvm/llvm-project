@@ -54,7 +54,8 @@ typedef enum {
   LLVMDIFlagMainSubprogram = 1 << 21,
   LLVMDIFlagTypePassByValue = 1 << 22,
   LLVMDIFlagTypePassByReference = 1 << 23,
-  LLVMDIFlagFixedEnum = 1 << 24,
+  LLVMDIFlagEnumClass = 1 << 24,
+  LLVMDIFlagFixedEnum = LLVMDIFlagEnumClass, // Deprecated.
   LLVMDIFlagThunk = 1 << 25,
   LLVMDIFlagTrivial = 1 << 26,
   LLVMDIFlagBigEndian = 1 << 27,
