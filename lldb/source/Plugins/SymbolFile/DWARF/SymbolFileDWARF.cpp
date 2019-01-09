@@ -2601,8 +2601,12 @@ size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
       DWARFDIE die = GetDIE(die_ref);
 
       if (die) {
+        // LLDB never searches for Swift type definitions by context.
+        if (die.GetCU()->GetLanguageType() == eLanguageTypeSwift)
+          continue;
+
         std::vector<CompilerContext> die_context;
-        die.GetDWOContext(die_context);
+        die.GetDeclContext(die_context);
         if (die_context != context)
           continue;
 
