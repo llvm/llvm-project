@@ -518,6 +518,7 @@ Error opts::symbols::dumpModule(lldb_private::Module &Module) {
 
 Error opts::symbols::dumpAST(lldb_private::Module &Module) {
   SymbolVendor &plugin = *Module.GetSymbolVendor();
+   Module.ParseAllDebugSymbols();
 
   auto symfile = plugin.GetSymbolFile();
   if (!symfile)
@@ -535,9 +536,6 @@ Error opts::symbols::dumpAST(lldb_private::Module &Module) {
   auto tu = ast_ctx->getTranslationUnitDecl();
   if (!tu)
     return make_string_error("Can't retrieve translation unit declaration.");
-
-  symfile->ParseDeclsForContext(CompilerDeclContext(
-      clang_ast_ctx, static_cast<clang::DeclContext *>(tu)));
 
   tu->print(outs());
 

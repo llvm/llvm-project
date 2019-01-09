@@ -8,7 +8,7 @@
 # CHECK-NEXT:  201001:       callq   42
 
 #Static IPLT header due to -z retpolineplt
-# CHECK:      {{^}}.plt:
+# CHECK:       0000000000201010 .plt:
 # CHECK-NEXT:  201010:       callq   11 <.plt+0x10>
 # CHECK-NEXT:  201015:       pause
 # CHECK-NEXT:  201017:       lfence
