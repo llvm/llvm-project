@@ -113,7 +113,7 @@ void llvm::initializeInstrumentation(PassRegistry &Registry) {
   initializeInstrProfilingLegacyPassPass(Registry);
   initializeMemorySanitizerLegacyPassPass(Registry);
   initializeHWAddressSanitizerPass(Registry);
-  initializeThreadSanitizerLegacyPassPass(Registry);
+  initializeThreadSanitizerPass(Registry);
   initializeSanitizerCoverageModulePass(Registry);
   initializeDataFlowSanitizerPass(Registry);
   initializeEfficiencySanitizerPass(Registry);

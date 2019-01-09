@@ -1711,14 +1711,23 @@ static const MCInstrDesc &getInstDesc(unsigned Opcode) {
   return MipsInsts[Opcode];
 }
 
-static bool hasShortDelaySlot(unsigned Opcode) {
-  switch (Opcode) {
+static bool hasShortDelaySlot(MCInst &Inst) {
+  switch (Inst.getOpcode()) {
+    case Mips::BEQ_MM:
+    case Mips::BNE_MM:
+    case Mips::BLTZ_MM:
+    case Mips::BGEZ_MM:
+    case Mips::BLEZ_MM:
+    case Mips::BGTZ_MM:
+    case Mips::JRC16_MM:
     case Mips::JALS_MM:
     case Mips::JALRS_MM:
     case Mips::JALRS16_MM:
     case Mips::BGEZALS_MM:
     case Mips::BLTZALS_MM:
       return true;
+    case Mips::J_MM:
+      return !Inst.getOperand(0).isReg();
     default:
       return false;
   }
@@ -2302,7 +2311,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   // If this instruction has a delay slot and .set reorder is active,
   // emit a NOP after it.
   if (FillDelaySlot) {
-    TOut.emitEmptyDelaySlot(hasShortDelaySlot(Inst.getOpcode()), IDLoc, STI);
+    TOut.emitEmptyDelaySlot(hasShortDelaySlot(Inst), IDLoc, STI);
     TOut.emitDirectiveSetReorder();
   }
 
@@ -2314,7 +2323,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       // If .set reorder has been used, we've already emitted a NOP.
       // If .set noreorder has been used, we need to emit a NOP at this point.
       if (!AssemblerOptions.back()->isReorder())
-        TOut.emitEmptyDelaySlot(hasShortDelaySlot(Inst.getOpcode()), IDLoc,
+        TOut.emitEmptyDelaySlot(hasShortDelaySlot(Inst), IDLoc,
                                 STI);
 
       // Load the $gp from the stack.
@@ -2601,7 +2610,7 @@ bool MipsAsmParser::expandJalWithRegs(MCInst &Inst, SMLoc IDLoc,
   // emit a NOP after it.
   const MCInstrDesc &MCID = getInstDesc(JalrInst.getOpcode());
   if (MCID.hasDelaySlot() && AssemblerOptions.back()->isReorder())
-    TOut.emitEmptyDelaySlot(hasShortDelaySlot(JalrInst.getOpcode()), IDLoc,
+    TOut.emitEmptyDelaySlot(hasShortDelaySlot(JalrInst), IDLoc,
                             STI);
 
   return false;

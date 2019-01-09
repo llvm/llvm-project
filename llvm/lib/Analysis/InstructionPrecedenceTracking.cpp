@@ -99,9 +99,17 @@ void InstructionPrecedenceTracking::validateAll() const {
 }
 #endif
 
-void InstructionPrecedenceTracking::invalidateBlock(const BasicBlock *BB) {
+void InstructionPrecedenceTracking::insertInstructionTo(const Instruction *Inst,
+                                                        const BasicBlock *BB) {
+  if (isSpecialInstruction(Inst))
+    FirstSpecialInsts.erase(BB);
   OI.invalidateBlock(BB);
-  FirstSpecialInsts.erase(BB);
+}
+
+void InstructionPrecedenceTracking::removeInstruction(const Instruction *Inst) {
+  if (isSpecialInstruction(Inst))
+    FirstSpecialInsts.erase(Inst->getParent());
+  OI.invalidateBlock(Inst->getParent());
 }
 
 void InstructionPrecedenceTracking::clear() {

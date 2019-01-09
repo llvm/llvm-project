@@ -2826,7 +2826,7 @@ static const struct Extension {
     {"simd", {AArch64::FeatureNEON}},
     {"ras", {AArch64::FeatureRAS}},
     {"lse", {AArch64::FeatureLSE}},
-    {"predctrl", {AArch64::FeaturePredCtrl}},
+    {"predres", {AArch64::FeaturePredRes}},
     {"ccdp", {AArch64::FeatureCacheDeepPersist}},
     {"mte", {AArch64::FeatureMTE}},
     {"tlb-rmi", {AArch64::FeatureTLB_RMI}},

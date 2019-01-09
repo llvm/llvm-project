@@ -8,7 +8,7 @@ void foo() {
 #pragma omp task // expected-error {{unexpected OpenMP directive '#pragma omp task'}}
 
 class S {
-  S(const S &s) { a = s.a + 12; } // expected-note 14 {{implicitly declared private here}}
+  S(const S &s) { a = s.a + 12; } // expected-note 16 {{implicitly declared private here}}
   int a;
 
 public:
@@ -49,6 +49,15 @@ int foo() {
 #pragma omp task
   // expected-error@+1 {{calling a private constructor of class 'S'}}
   ++a; // expected-error {{calling a private constructor of class 'S'}}
+#pragma omp task default(shared)
+#pragma omp task
+  // expected-error@+1 {{calling a private constructor of class 'S'}}
+  ++a;
+#pragma omp parallel shared(a)
+#pragma omp task
+#pragma omp task
+  ++a;
+#pragma omp parallel shared(a)
 #pragma omp task default(shared)
 #pragma omp task
   ++a;
@@ -203,6 +212,15 @@ L2:
 #pragma omp task
   // expected-error@+1 {{calling a private constructor of class 'S'}}
   ++sa; // expected-error {{calling a private constructor of class 'S'}}
+#pragma omp task default(shared)
+#pragma omp task
+  // expected-error@+1 {{calling a private constructor of class 'S'}}
+  ++sa;
+#pragma omp parallel shared(sa)
+#pragma omp task
+#pragma omp task
+  ++sa;
+#pragma omp parallel shared(sa)
 #pragma omp task default(shared)
 #pragma omp task
   ++sa;

@@ -155,6 +155,9 @@ ModulePass *createAddressSanitizerModulePass(bool CompileKernel = false,
 FunctionPass *createHWAddressSanitizerPass(bool CompileKernel = false,
                                            bool Recover = false);
 
+// Insert ThreadSanitizer (race detection) instrumentation
+FunctionPass *createThreadSanitizerPass();
+
 // Insert DataFlowSanitizer (dynamic data flow analysis) instrumentation
 ModulePass *createDataFlowSanitizerPass(
     const std::vector<std::string> &ABIListFiles = std::vector<std::string>(),

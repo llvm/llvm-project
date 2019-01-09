@@ -676,9 +676,13 @@ public:
   }
 
 };
-bool isParallelOrTaskRegion(OpenMPDirectiveKind DKind) {
-  return isOpenMPParallelDirective(DKind) || isOpenMPTaskingDirective(DKind) ||
-         isOpenMPTeamsDirective(DKind) || DKind == OMPD_unknown;
+
+bool isImplicitTaskingRegion(OpenMPDirectiveKind DKind) {
+  return isOpenMPParallelDirective(DKind) || isOpenMPTeamsDirective(DKind);
+}
+
+bool isImplicitOrExplicitTaskingRegion(OpenMPDirectiveKind DKind) {
+  return isImplicitTaskingRegion(DKind) || isOpenMPTaskingDirective(DKind) || DKind == OMPD_unknown;
 }
 
 } // namespace
@@ -819,7 +823,7 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(iterator &Iter,
           DVar.CKind = OMPC_firstprivate;
           return DVar;
         }
-      } while (I != E && !isParallelOrTaskRegion(I->Directive));
+      } while (I != E && !isImplicitTaskingRegion(I->Directive));
       DVar.CKind =
           (DVarTemp.CKind == OMPC_unknown) ? OMPC_firstprivate : OMPC_shared;
       return DVar;
@@ -1066,7 +1070,7 @@ bool DSAStackTy::isOpenMPLocal(VarDecl *D, iterator Iter) const {
   if (!isStackEmpty()) {
     iterator I = Iter, E = Stack.back().first.rend();
     Scope *TopScope = nullptr;
-    while (I != E && !isParallelOrTaskRegion(I->Directive) &&
+    while (I != E && !isImplicitOrExplicitTaskingRegion(I->Directive) &&
            !isOpenMPTargetExecutionDirective(I->Directive))
       ++I;
     if (I == E)
@@ -1292,7 +1296,7 @@ DSAStackTy::hasDSA(ValueDecl *D,
   if (FromParent && I != EndI)
     std::advance(I, 1);
   for (; I != EndI; std::advance(I, 1)) {
-    if (!DPred(I->Directive) && !isParallelOrTaskRegion(I->Directive))
+    if (!DPred(I->Directive) && !isImplicitOrExplicitTaskingRegion(I->Directive))
       continue;
     iterator NewI = I;
     DSAVarData DVar = getDSA(NewI, D);
@@ -1636,7 +1640,7 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D) {
     auto &&Info = DSAStack->isLoopControlVariable(D);
     if (Info.first ||
         (VD && VD->hasLocalStorage() &&
-         isParallelOrTaskRegion(DSAStack->getCurrentDirective())) ||
+         isImplicitOrExplicitTaskingRegion(DSAStack->getCurrentDirective())) ||
         (VD && DSAStack->isForceVarCapturing()))
       return VD ? VD : Info.second;
     DSAStackTy::DSAVarData DVarPrivate =
@@ -2244,7 +2248,7 @@ public:
       // attribute, must have its data-sharing attribute explicitly determined
       // by being listed in a data-sharing attribute clause.
       if (DVar.CKind == OMPC_unknown && Stack->getDefaultDSA() == DSA_none &&
-          isParallelOrTaskRegion(DKind) &&
+          isImplicitOrExplicitTaskingRegion(DKind) &&
           VarsWithInheritedDSA.count(VD) == 0) {
         VarsWithInheritedDSA[VD] = E;
         return;

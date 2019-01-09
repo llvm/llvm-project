@@ -22248,14 +22248,16 @@ static SDValue getGatherNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
                               SDValue Src, SDValue Mask, SDValue Base,
                               SDValue Index, SDValue ScaleOp, SDValue Chain,
                               const X86Subtarget &Subtarget) {
+  MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
   auto *C = dyn_cast<ConstantSDNode>(ScaleOp);
   // Scale must be constant.
   if (!C)
     return SDValue();
   SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl, MVT::i8);
-  MVT MaskVT = MVT::getVectorVT(MVT::i1,
-                             Index.getSimpleValueType().getVectorNumElements());
+  unsigned MinElts = std::min(Index.getSimpleValueType().getVectorNumElements(),
+                              VT.getVectorNumElements());
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, MinElts);
 
   SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
   SDVTList VTs = DAG.getVTList(Op.getValueType(), MaskVT, MVT::Other);
@@ -22284,8 +22286,9 @@ static SDValue getScatterNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
   SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl, MVT::i8);
   SDValue Disp = DAG.getTargetConstant(0, dl, MVT::i32);
   SDValue Segment = DAG.getRegister(0, MVT::i32);
-  MVT MaskVT = MVT::getVectorVT(MVT::i1,
-                             Index.getSimpleValueType().getVectorNumElements());
+  unsigned MinElts = std::min(Index.getSimpleValueType().getVectorNumElements(),
+                              Src.getSimpleValueType().getVectorNumElements());
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, MinElts);
 
   SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
   SDVTList VTs = DAG.getVTList(MaskVT, MVT::Other);
@@ -30497,9 +30500,10 @@ static bool matchBinaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
     }
   }
 
-  // Attempt to match against either a unary or binary PACKSS/PACKUS shuffle.
-  // TODO add support for 256/512-bit types.
-  if ((MaskVT == MVT::v8i16 || MaskVT == MVT::v16i8) && Subtarget.hasSSE2()) {
+  // Attempt to match against either an unary or binary PACKSS/PACKUS shuffle.
+  if (((MaskVT == MVT::v8i16 || MaskVT == MVT::v16i8) && Subtarget.hasSSE2()) ||
+      ((MaskVT == MVT::v16i16 || MaskVT == MVT::v32i8) && Subtarget.hasInt256()) ||
+      ((MaskVT == MVT::v32i16 || MaskVT == MVT::v64i8) && Subtarget.hasBWI())) {
     if (matchVectorShuffleWithPACK(MaskVT, SrcVT, V1, V2, Shuffle, Mask, DAG,
                                    Subtarget)) {
       DstVT = MaskVT;

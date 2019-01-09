@@ -234,7 +234,6 @@ FUNCTION_PASS("view-cfg", CFGViewerPass())
 FUNCTION_PASS("view-cfg-only", CFGOnlyViewerPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
 FUNCTION_PASS("msan", MemorySanitizerPass())
-FUNCTION_PASS("tsan", ThreadSanitizerPass())
 #undef FUNCTION_PASS
 
 #ifndef LOOP_ANALYSIS

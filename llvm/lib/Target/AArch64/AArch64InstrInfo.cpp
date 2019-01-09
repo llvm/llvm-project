@@ -965,6 +965,11 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
     return true;
   switch (MI.getOpcode()) {
+  case AArch64::HINT:
+    // CSDB hints are scheduling barriers.
+    if (MI.getOperand(0).getImm() == 0x14)
+      return true;
+    break;
   case AArch64::DSB:
   case AArch64::ISB:
     // DSB and ISB also are scheduling barriers.

@@ -501,7 +501,7 @@ class PRCTX<string name, bits<4> crm> : SearchableTable {
   code Requires = [{ {} }];
 }
 
-let Requires = [{ {AArch64::FeaturePredCtrl} }] in {
+let Requires = [{ {AArch64::FeaturePredRes} }] in {
 def : PRCTX<"RCTX", 0b0011>;
 }
 

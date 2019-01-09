@@ -1752,10 +1752,11 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
       break;
     // On Darwin, libc++ may be installed alongside the compiler in
     // include/c++/v1.
-    // Get from 'foo/bin' to 'foo'.
-    SmallString<128> P = llvm::sys::path::parent_path(InstallDir);
-    // Get to 'foo/include/c++/v1'.
-    llvm::sys::path::append(P, "include", "c++", "v1");
+    // Get from 'foo/bin' to 'foo/include/c++/v1'.
+    SmallString<128> P = InstallDir;
+    // Note that InstallDir can be relative, so we have to '..' and not
+    // parent_path.
+    llvm::sys::path::append(P, "..", "include", "c++", "v1");
     addSystemInclude(DriverArgs, CC1Args, P);
     break;
   }

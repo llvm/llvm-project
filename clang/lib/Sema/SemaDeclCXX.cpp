@@ -8174,16 +8174,12 @@ QualType Sema::CheckConstructorDeclarator(Declarator &D, QualType R,
   }
 
   DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
-  if (FTI.TypeQuals != 0) {
-    if (FTI.TypeQuals & Qualifiers::Const)
-      Diag(D.getIdentifierLoc(), diag::err_invalid_qualified_constructor)
-        << "const" << SourceRange(D.getIdentifierLoc());
-    if (FTI.TypeQuals & Qualifiers::Volatile)
-      Diag(D.getIdentifierLoc(), diag::err_invalid_qualified_constructor)
-        << "volatile" << SourceRange(D.getIdentifierLoc());
-    if (FTI.TypeQuals & Qualifiers::Restrict)
-      Diag(D.getIdentifierLoc(), diag::err_invalid_qualified_constructor)
-        << "restrict" << SourceRange(D.getIdentifierLoc());
+  if (FTI.hasMethodTypeQualifiers()) {
+    FTI.MethodQualifiers->forEachQualifier(
+        [&](DeclSpec::TQ TypeQual, StringRef QualName, SourceLocation SL) {
+          Diag(SL, diag::err_invalid_qualified_constructor)
+              << QualName << SourceRange(SL);
+        });
     D.setInvalidType();
   }
 
@@ -8364,16 +8360,12 @@ QualType Sema::CheckDestructorDeclarator(Declarator &D, QualType R,
   }
 
   DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
-  if (FTI.TypeQuals != 0 && !D.isInvalidType()) {
-    if (FTI.TypeQuals & Qualifiers::Const)
-      Diag(D.getIdentifierLoc(), diag::err_invalid_qualified_destructor)
-        << "const" << SourceRange(D.getIdentifierLoc());
-    if (FTI.TypeQuals & Qualifiers::Volatile)
-      Diag(D.getIdentifierLoc(), diag::err_invalid_qualified_destructor)
-        << "volatile" << SourceRange(D.getIdentifierLoc());
-    if (FTI.TypeQuals & Qualifiers::Restrict)
-      Diag(D.getIdentifierLoc(), diag::err_invalid_qualified_destructor)
-        << "restrict" << SourceRange(D.getIdentifierLoc());
+  if (FTI.hasMethodTypeQualifiers() && !D.isInvalidType()) {
+    FTI.MethodQualifiers->forEachQualifier(
+        [&](DeclSpec::TQ TypeQual, StringRef QualName, SourceLocation SL) {
+          Diag(SL, diag::err_invalid_qualified_destructor)
+              << QualName << SourceRange(SL);
+        });
     D.setInvalidType();
   }
 

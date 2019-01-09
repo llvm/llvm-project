@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+predctrl < %s 2>&1| FileCheck %s
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+predres < %s 2>&1| FileCheck %s
 
 cfp rctx
 dvp rctx

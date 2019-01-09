@@ -14,7 +14,7 @@
 // optional absolute include for libc++ from InitHeaderSearch.cpp also fires.
 
 // CHECK-LIBCXX: "-stdlib=libc++"
-// CHECK-LIBCXX: "-internal-isystem" "{{[^"]*}}{{/|\\\\}}Inputs{{/|\\\\}}darwin_toolchain_tree{{/|\\\\}}bin{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
+// CHECK-LIBCXX: "-internal-isystem" "{{[^"]*}}{{/|\\\\}}Inputs{{/|\\\\}}darwin_toolchain_tree{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 
 // CHECK-LIBSTDCXX-NOT: -stdlib=libc++
 // CHECK-LIBSTDCXX-NOT: -stdlib=libstdc++

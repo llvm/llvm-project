@@ -16,17 +16,15 @@
 // execution".
 // This pass is aimed at mitigating against SpectreV1-style vulnarabilities.
 //
-// At the moment, it implements the tracking of miss-speculation of control
-// flow into a taint register, but doesn't implement a mechanism yet to then
-// use that taint register to mask of vulnerable data in registers (something
-// for a follow-on improvement). Possible strategies to mask out vulnerable
-// data that can be implemented on top of this are:
-// - speculative load hardening to automatically mask of data loaded
-//   in registers.
-// - using intrinsics to mask of data in registers as indicated by the
-//   programmer (see https://lwn.net/Articles/759423/).
+// It also implements speculative load hardening, i.e. using the taint register
+// to automatically mask off loaded data.
 //
-// For AArch64, the following implementation choices are made below.
+// As a possible follow-on improvement, also an intrinsics-based approach as
+// explained at https://lwn.net/Articles/759423/ could be implemented on top of
+// the current design.
+//
+// For AArch64, the following implementation choices are made to implement the
+// tracking of control flow miss-speculation into a taint register:
 // Some of these are different than the implementation choices made in
 // the similar pass implemented in X86SpeculativeLoadHardening.cpp, as
 // the instruction set characteristics result in different trade-offs.
@@ -65,6 +63,24 @@
 // - On function call boundaries, the miss-speculation state is transferred from
 //   the taint register X16 to be encoded in the SP register as value 0.
 //
+// For the aspect of automatically hardening loads, using the taint register,
+// (a.k.a. speculative load hardening, see
+//  https://llvm.org/docs/SpeculativeLoadHardening.html), the following
+// implementation choices are made for AArch64:
+//   - Many of the optimizations described at
+//     https://llvm.org/docs/SpeculativeLoadHardening.html to harden fewer
+//     loads haven't been implemented yet - but for some of them there are
+//     FIXMEs in the code.
+//   - loads that load into general purpose (X or W) registers get hardened by
+//     masking the loaded data. For loads that load into other registers, the
+//     address loaded from gets hardened. It is expected that hardening the
+//     loaded data may be more efficient; but masking data in registers other
+//     than X or W is not easy and may result in being slower than just
+//     hardening the X address register loaded from.
+//   - On AArch64, CSDB instructions are inserted between the masking of the
+//     register and its first use, to ensure there's no non-control-flow
+//     speculation that might undermine the hardening mechanism.
+//
 // Future extensions/improvements could be:
 // - Implement this functionality using full speculation barriers, akin to the
 //   x86-slh-lfence option. This may be more useful for the intrinsics-based
@@ -99,6 +115,10 @@ using namespace llvm;
 
 #define AARCH64_SPECULATION_HARDENING_NAME "AArch64 speculation hardening pass"
 
+cl::opt<bool> HardenLoads("aarch64-slh-loads", cl::Hidden,
+                          cl::desc("Sanitize loads from memory."),
+                          cl::init(true));
+
 namespace {
 
 class AArch64SpeculationHardening : public MachineFunctionPass {
@@ -120,7 +140,10 @@ public:
 
 private:
   unsigned MisspeculatingTaintReg;
+  unsigned MisspeculatingTaintReg32Bit;
   bool UseControlFlowSpeculationBarrier;
+  BitVector RegsNeedingCSDBBeforeUse;
+  BitVector RegsAlreadyMasked;
 
   bool functionUsesHardeningRegister(MachineFunction &MF) const;
   bool instrumentControlFlow(MachineBasicBlock &MBB);
@@ -134,6 +157,16 @@ private:
   void insertRegToSPTaintPropagation(MachineBasicBlock *MBB,
                                      MachineBasicBlock::iterator MBBI,
                                      unsigned TmpReg) const;
+
+  bool slhLoads(MachineBasicBlock &MBB);
+  bool makeGPRSpeculationSafe(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI,
+                              MachineInstr &MI, unsigned Reg);
+  bool lowerSpeculationSafeValuePseudos(MachineBasicBlock &MBB);
+  bool expandSpeculationSafeValue(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MBBI);
+  bool insertCSDB(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                  DebugLoc DL);
 };
 
 } // end anonymous namespace
@@ -330,23 +363,257 @@ bool AArch64SpeculationHardening::functionUsesHardeningRegister(
   return false;
 }
 
+// Make GPR register Reg speculation-safe by putting it through the
+// SpeculationSafeValue pseudo instruction, if we can't prove that
+// the value in the register has already been hardened.
+bool AArch64SpeculationHardening::makeGPRSpeculationSafe(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, MachineInstr &MI,
+    unsigned Reg) {
+  assert(AArch64::GPR32allRegClass.contains(Reg) ||
+         AArch64::GPR64allRegClass.contains(Reg));
+
+  // Loads cannot directly load a value into the SP (nor WSP).
+  // Therefore, if Reg is SP or WSP, it is because the instruction loads from
+  // the stack through the stack pointer.
+  //
+  // Since the stack pointer is never dynamically controllable, don't harden it.
+  if (Reg == AArch64::SP || Reg == AArch64::WSP)
+    return false;
+
+  // Do not harden the register again if already hardened before.
+  if (RegsAlreadyMasked[Reg])
+    return false;
+
+  const bool Is64Bit = AArch64::GPR64allRegClass.contains(Reg);
+  LLVM_DEBUG(dbgs() << "About to harden register : " << Reg << "\n");
+  BuildMI(MBB, MBBI, MI.getDebugLoc(),
+          TII->get(Is64Bit ? AArch64::SpeculationSafeValueX
+                           : AArch64::SpeculationSafeValueW))
+      .addDef(Reg)
+      .addUse(Reg);
+  RegsAlreadyMasked.set(Reg);
+  return true;
+}
+
+bool AArch64SpeculationHardening::slhLoads(MachineBasicBlock &MBB) {
+  bool Modified = false;
+
+  LLVM_DEBUG(dbgs() << "slhLoads running on MBB: " << MBB);
+
+  RegsAlreadyMasked.reset();
+
+  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
+  MachineBasicBlock::iterator NextMBBI;
+  for (; MBBI != E; MBBI = NextMBBI) {
+    MachineInstr &MI = *MBBI;
+    NextMBBI = std::next(MBBI);
+    // Only harden loaded values or addresses used in loads.
+    if (!MI.mayLoad())
+      continue;
+
+    LLVM_DEBUG(dbgs() << "About to harden: " << MI);
+
+    // For general purpose register loads, harden the registers loaded into.
+    // For other loads, harden the address loaded from.
+    // Masking the loaded value is expected to result in less performance
+    // overhead, as the load can still execute speculatively in comparison to
+    // when the address loaded from gets masked. However, masking is only
+    // easy to do efficiently on GPR registers, so for loads into non-GPR
+    // registers (e.g. floating point loads), mask the address loaded from.
+    bool AllDefsAreGPR = llvm::all_of(MI.defs(), [&](MachineOperand &Op) {
+      return Op.isReg() && (AArch64::GPR32allRegClass.contains(Op.getReg()) ||
+                            AArch64::GPR64allRegClass.contains(Op.getReg()));
+    });
+    // FIXME: it might be a worthwhile optimization to not mask loaded
+    // values if all the registers involved in address calculation are already
+    // hardened, leading to this load not able to execute on a miss-speculated
+    // path.
+    bool HardenLoadedData = AllDefsAreGPR;
+    bool HardenAddressLoadedFrom = !HardenLoadedData;
+
+    // First remove registers from AlreadyMaskedRegisters if their value is
+    // updated by this instruction - it makes them contain a new value that is
+    // not guaranteed to already have been masked.
+    for (MachineOperand Op : MI.defs())
+      for (MCRegAliasIterator AI(Op.getReg(), TRI, true); AI.isValid(); ++AI)
+        RegsAlreadyMasked.reset(*AI);
+
+    // FIXME: loads from the stack with an immediate offset from the stack
+    // pointer probably shouldn't be hardened, which could result in a
+    // significant optimization. See section "Don’t check loads from
+    // compile-time constant stack offsets", in
+    // https://llvm.org/docs/SpeculativeLoadHardening.html
+
+    if (HardenLoadedData)
+      for (auto Def : MI.defs()) {
+        if (Def.isDead())
+          // Do not mask a register that is not used further.
+          continue;
+        // FIXME: For pre/post-increment addressing modes, the base register
+        // used in address calculation is also defined by this instruction.
+        // It might be a worthwhile optimization to not harden that
+        // base register increment/decrement when the increment/decrement is
+        // an immediate.
+        Modified |= makeGPRSpeculationSafe(MBB, NextMBBI, MI, Def.getReg());
+      }
+
+    if (HardenAddressLoadedFrom)
+      for (auto Use : MI.uses()) {
+        if (!Use.isReg())
+          continue;
+        unsigned Reg = Use.getReg();
+        // Some loads of floating point data have implicit defs/uses on a
+        // super register of that floating point data. Some examples:
+        // $s0 = LDRSui $sp, 22, implicit-def $q0
+        // $q0 = LD1i64 $q0, 1, renamable $x0
+        // We need to filter out these uses for non-GPR register which occur
+        // because the load partially fills a non-GPR register with the loaded
+        // data. Just skipping all non-GPR registers is safe (for now) as all
+        // AArch64 load instructions only use GPR registers to perform the
+        // address calculation. FIXME: However that might change once we can
+        // produce SVE gather instructions.
+        if (!(AArch64::GPR32allRegClass.contains(Reg) ||
+              AArch64::GPR64allRegClass.contains(Reg)))
+          continue;
+        Modified |= makeGPRSpeculationSafe(MBB, MBBI, MI, Reg);
+      }
+  }
+  return Modified;
+}
+
+/// \brief If MBBI references a pseudo instruction that should be expanded
+/// here, do the expansion and return true. Otherwise return false.
+bool AArch64SpeculationHardening::expandSpeculationSafeValue(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+  MachineInstr &MI = *MBBI;
+  unsigned Opcode = MI.getOpcode();
+  bool Is64Bit = true;
+
+  switch (Opcode) {
+  default:
+    break;
+  case AArch64::SpeculationSafeValueW:
+    Is64Bit = false;
+    LLVM_FALLTHROUGH;
+  case AArch64::SpeculationSafeValueX:
+    // Just remove the SpeculationSafe pseudo's if control flow
+    // miss-speculation isn't happening because we're already inserting barriers
+    // to guarantee that.
+    if (!UseControlFlowSpeculationBarrier) {
+      unsigned DstReg = MI.getOperand(0).getReg();
+      unsigned SrcReg = MI.getOperand(1).getReg();
+      // Mark this register and all its aliasing registers as needing to be
+      // value speculation hardened before its next use, by using a CSDB
+      // barrier instruction.
+      for (MachineOperand Op : MI.defs())
+        for (MCRegAliasIterator AI(Op.getReg(), TRI, true); AI.isValid(); ++AI)
+          RegsNeedingCSDBBeforeUse.set(*AI);
+
+      // Mask off with taint state.
+      BuildMI(MBB, MBBI, MI.getDebugLoc(),
+              Is64Bit ? TII->get(AArch64::ANDXrs) : TII->get(AArch64::ANDWrs))
+          .addDef(DstReg)
+          .addUse(SrcReg, RegState::Kill)
+          .addUse(Is64Bit ? MisspeculatingTaintReg
+                          : MisspeculatingTaintReg32Bit)
+          .addImm(0);
+    }
+    MI.eraseFromParent();
+    return true;
+  }
+  return false;
+}
+
+bool AArch64SpeculationHardening::insertCSDB(MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator MBBI,
+                                             DebugLoc DL) {
+  assert(!UseControlFlowSpeculationBarrier && "No need to insert CSDBs when "
+                                              "control flow miss-speculation "
+                                              "is already blocked");
+  // insert data value speculation barrier (CSDB)
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::HINT)).addImm(0x14);
+  RegsNeedingCSDBBeforeUse.reset();
+  return true;
+}
+
+bool AArch64SpeculationHardening::lowerSpeculationSafeValuePseudos(
+    MachineBasicBlock &MBB) {
+  bool Modified = false;
+
+  RegsNeedingCSDBBeforeUse.reset();
+
+  // The following loop iterates over all instructions in the basic block,
+  // and performs 2 operations:
+  // 1. Insert a CSDB at this location if needed.
+  // 2. Expand the SpeculationSafeValuePseudo if the current instruction is
+  // one.
+  //
+  // The insertion of the CSDB is done as late as possible (i.e. just before
+  // the use of a masked register), in the hope that that will reduce the
+  // total number of CSDBs in a block when there are multiple masked registers
+  // in the block.
+  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
+  DebugLoc DL;
+  while (MBBI != E) {
+    MachineInstr &MI = *MBBI;
+    DL = MI.getDebugLoc();
+    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
+
+    // First check if a CSDB needs to be inserted due to earlier registers
+    // that were masked and that are used by the next instruction.
+    // Also emit the barrier on any potential control flow changes.
+    bool NeedToEmitBarrier = false;
+    if (RegsNeedingCSDBBeforeUse.any() && (MI.isCall() || MI.isTerminator()))
+      NeedToEmitBarrier = true;
+    if (!NeedToEmitBarrier)
+      for (MachineOperand Op : MI.uses())
+        if (Op.isReg() && RegsNeedingCSDBBeforeUse[Op.getReg()]) {
+          NeedToEmitBarrier = true;
+          break;
+        }
+
+    if (NeedToEmitBarrier)
+      Modified |= insertCSDB(MBB, MBBI, DL);
+
+    Modified |= expandSpeculationSafeValue(MBB, MBBI);
+
+    MBBI = NMBBI;
+  }
+
+  if (RegsNeedingCSDBBeforeUse.any())
+    Modified |= insertCSDB(MBB, MBBI, DL);
+
+  return Modified;
+}
+
 bool AArch64SpeculationHardening::runOnMachineFunction(MachineFunction &MF) {
   if (!MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
     return false;
 
   MisspeculatingTaintReg = AArch64::X16;
+  MisspeculatingTaintReg32Bit = AArch64::W16;
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
-  bool Modified = false;
-
+  RegsNeedingCSDBBeforeUse.resize(TRI->getNumRegs());
+  RegsAlreadyMasked.resize(TRI->getNumRegs());
   UseControlFlowSpeculationBarrier = functionUsesHardeningRegister(MF);
 
-  // Instrument control flow speculation tracking, if requested.
+  bool Modified = false;
+
+  // Step 1: Enable automatic insertion of SpeculationSafeValue.
+  if (HardenLoads) {
+    LLVM_DEBUG(
+        dbgs() << "***** AArch64SpeculationHardening - automatic insertion of "
+                  "SpeculationSafeValue intrinsics *****\n");
+    for (auto &MBB : MF)
+      Modified |= slhLoads(MBB);
+  }
+
+  // 2.a Add instrumentation code to function entry and exits.
   LLVM_DEBUG(
       dbgs()
       << "***** AArch64SpeculationHardening - track control flow *****\n");
 
-  // 1. Add instrumentation code to function entry and exits.
   SmallVector<MachineBasicBlock *, 2> EntryBlocks;
   EntryBlocks.push_back(&MF.front());
   for (const LandingPadInfo &LPI : MF.getLandingPads())
@@ -355,9 +622,15 @@ bool AArch64SpeculationHardening::runOnMachineFunction(MachineFunction &MF) {
     insertSPToRegTaintPropagation(
         Entry, Entry->SkipPHIsLabelsAndDebug(Entry->begin()));
 
-  // 2. Add instrumentation code to every basic block.
+  // 2.b Add instrumentation code to every basic block.
   for (auto &MBB : MF)
     Modified |= instrumentControlFlow(MBB);
+
+  LLVM_DEBUG(dbgs() << "***** AArch64SpeculationHardening - Lowering "
+                       "SpeculationSafeValue Pseudos *****\n");
+  // Step 3: Lower SpeculationSafeValue pseudo instructions.
+  for (auto &MBB : MF)
+    Modified |= lowerSpeculationSafeValuePseudos(MBB);
 
   return Modified;
 }
