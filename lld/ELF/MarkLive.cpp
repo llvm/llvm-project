@@ -250,9 +250,10 @@ template <class ELFT> static void doGcSections() {
 
     if (Sec->Flags & SHF_LINK_ORDER)
       continue;
-    if (isReserved<ELFT>(Sec) || Script->shouldKeep(Sec))
+
+    if (isReserved<ELFT>(Sec) || Script->shouldKeep(Sec)) {
       Enqueue(Sec, 0);
-    else if (isValidCIdentifier(Sec->Name)) {
+    } else if (isValidCIdentifier(Sec->Name)) {
       CNamedSections[Saver.save("__start_" + Sec->Name)].push_back(Sec);
       CNamedSections[Saver.save("__stop_" + Sec->Name)].push_back(Sec);
     }
