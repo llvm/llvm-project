@@ -546,6 +546,21 @@ bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
     CalleeAttrs.removeAttribute(Attribute::SExt);
   }
 
+  // Drop sext and zext return attributes if the result is not used.
+  // This enables tail calls for code like:
+  //
+  // define void @caller() {
+  // entry:
+  //   %unused_result = tail call zeroext i1 @callee()
+  //   br label %retlabel
+  // retlabel:
+  //   ret void
+  // }
+  if (I->use_empty()) {
+    CalleeAttrs.removeAttribute(Attribute::SExt);
+    CalleeAttrs.removeAttribute(Attribute::ZExt);
+  }
+
   // If they're still different, there's some facet we don't understand
   // (currently only "inreg", but in future who knows). It may be OK but the
   // only safe option is to reject the tail call.
