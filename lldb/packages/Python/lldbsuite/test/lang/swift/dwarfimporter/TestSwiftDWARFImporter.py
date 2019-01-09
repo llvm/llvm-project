@@ -43,6 +43,10 @@ class TestSwiftDWARFImporter(lldbtest.TestBase):
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("pureSwift"),
                                 value="42")
+        lldbutil.check_variable(self,
+                                target.FindFirstGlobalVariable("point"),
+                                typename="Point", num_children=2)
+        self.expect("fr v point", substrs=["x = 1", "y = 2"])
 
 if __name__ == '__main__':
     import atexit
