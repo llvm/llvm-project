@@ -481,7 +481,10 @@ protected:
 
     unsigned Kind : 6;
     unsigned PartOfExplicitCast : 1; // Only set for ImplicitCastExpr.
-    unsigned BasePathIsEmpty : 1;
+
+    /// The number of CXXBaseSpecifiers in the cast. 14 bits would be enough
+    /// here. ([implimits] Direct and indirect base classes [16384]).
+    unsigned BasePathSize;
   };
 
   class BinaryOperatorBitfields {
@@ -769,6 +772,61 @@ protected:
     SourceLocation OperatorLoc;
   };
 
+  class OverloadExprBitfields {
+    friend class ASTStmtReader;
+    friend class OverloadExpr;
+
+    unsigned : NumExprBits;
+
+    /// Whether the name includes info for explicit template
+    /// keyword and arguments.
+    unsigned HasTemplateKWAndArgsInfo : 1;
+
+    /// Padding used by the derived classes to store various bits. If you
+    /// need to add some data here, shrink this padding and add your data
+    /// above. NumOverloadExprBits also needs to be updated.
+    unsigned : 32 - NumExprBits - 1;
+
+    /// The number of results.
+    unsigned NumResults;
+  };
+  enum { NumOverloadExprBits = NumExprBits + 1 };
+
+  class UnresolvedLookupExprBitfields {
+    friend class ASTStmtReader;
+    friend class UnresolvedLookupExpr;
+
+    unsigned : NumOverloadExprBits;
+
+    /// True if these lookup results should be extended by
+    /// argument-dependent lookup if this is the operand of a function call.
+    unsigned RequiresADL : 1;
+
+    /// True if these lookup results are overloaded.  This is pretty trivially
+    /// rederivable if we urgently need to kill this field.
+    unsigned Overloaded : 1;
+  };
+  static_assert(sizeof(UnresolvedLookupExprBitfields) <= 4,
+                "UnresolvedLookupExprBitfields must be <= than 4 bytes to"
+                "avoid trashing OverloadExprBitfields::NumResults!");
+
+  class UnresolvedMemberExprBitfields {
+    friend class ASTStmtReader;
+    friend class UnresolvedMemberExpr;
+
+    unsigned : NumOverloadExprBits;
+
+    /// Whether this member expression used the '->' operator or
+    /// the '.' operator.
+    unsigned IsArrow : 1;
+
+    /// Whether the lookup results contain an unresolved using declaration.
+    unsigned HasUnresolvedUsing : 1;
+  };
+  static_assert(sizeof(UnresolvedMemberExprBitfields) <= 4,
+                "UnresolvedMemberExprBitfields must be <= than 4 bytes to"
+                "avoid trashing OverloadExprBitfields::NumResults!");
+
   class CXXNoexceptExprBitfields {
     friend class ASTStmtReader;
     friend class CXXNoexceptExpr;
@@ -877,6 +935,9 @@ protected:
     ExprWithCleanupsBitfields ExprWithCleanupsBits;
     CXXUnresolvedConstructExprBitfields CXXUnresolvedConstructExprBits;
     CXXDependentScopeMemberExprBitfields CXXDependentScopeMemberExprBits;
+    OverloadExprBitfields OverloadExprBits;
+    UnresolvedLookupExprBitfields UnresolvedLookupExprBits;
+    UnresolvedMemberExprBitfields UnresolvedMemberExprBits;
     CXXNoexceptExprBitfields CXXNoexceptExprBits;
     SubstNonTypeTemplateParmExprBitfields SubstNonTypeTemplateParmExprBits;
 

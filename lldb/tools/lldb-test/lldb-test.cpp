@@ -785,6 +785,8 @@ static int dumpObjectFiles(Debugger &Dbg) {
     Printer.formatLine("Stripped: {0}", ObjectPtr->IsStripped());
     Printer.formatLine("Type: {0}", ObjectPtr->GetType());
     Printer.formatLine("Strata: {0}", ObjectPtr->GetStrata());
+    Printer.formatLine("Base VM address: {0:x}",
+                       ObjectPtr->GetBaseAddress().GetFileAddress());
 
     dumpSectionList(Printer, *Sections, /*is_subsection*/ false);
 

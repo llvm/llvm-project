@@ -1625,25 +1625,23 @@ ASTStmtWriter::VisitCXXUnresolvedConstructExpr(CXXUnresolvedConstructExpr *E) {
 void ASTStmtWriter::VisitOverloadExpr(OverloadExpr *E) {
   VisitExpr(E);
 
-  // Don't emit anything here, HasTemplateKWAndArgsInfo must be
-  // emitted first.
-
-  Record.push_back(E->HasTemplateKWAndArgsInfo);
-  if (E->HasTemplateKWAndArgsInfo) {
+  Record.push_back(E->getNumDecls());
+  Record.push_back(E->hasTemplateKWAndArgsInfo());
+  if (E->hasTemplateKWAndArgsInfo()) {
     const ASTTemplateKWAndArgsInfo &ArgInfo =
         *E->getTrailingASTTemplateKWAndArgsInfo();
     Record.push_back(ArgInfo.NumTemplateArgs);
     AddTemplateKWAndArgsInfo(ArgInfo, E->getTrailingTemplateArgumentLoc());
   }
 
-  Record.push_back(E->getNumDecls());
-  for (OverloadExpr::decls_iterator
-         OvI = E->decls_begin(), OvE = E->decls_end(); OvI != OvE; ++OvI) {
+  for (OverloadExpr::decls_iterator OvI = E->decls_begin(),
+                                    OvE = E->decls_end();
+       OvI != OvE; ++OvI) {
     Record.AddDeclRef(OvI.getDecl());
     Record.push_back(OvI.getAccess());
   }
 
-  Record.AddDeclarationNameInfo(E->NameInfo);
+  Record.AddDeclarationNameInfo(E->getNameInfo());
   Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
 }
 

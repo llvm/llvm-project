@@ -38,7 +38,6 @@ void loop_with_counter_collapse() {
   // LIFETIME: call void @llvm.lifetime.end
   // LIFETIME: call void @llvm.lifetime.end
   // LIFETIME: call void @llvm.lifetime.end
-  // LIFETIME: call void @llvm.lifetime.end
   #pragma omp for collapse(2)
   for (int i = 0; i < 4; i++) {
     for (int j = i; j < 4; j++) {

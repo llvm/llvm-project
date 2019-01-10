@@ -66,12 +66,11 @@ Combined directives
 
 * #pragma omp target teams distribute parallel for [simd]: :good:`Complete`.
 
-Clang does not support any constructs/updates from upcoming OpenMP 5.0 except
+Clang does not support any constructs/updates from OpenMP 5.0 except
 for `reduction`-based clauses in the `task` and `target`-based directives.
 
 In addition, the LLVM OpenMP runtime `libomp` supports the OpenMP Tools
 Interface (OMPT) on x86, x86_64, AArch64, and PPC64 on Linux, Windows, and mac OS.
-ows, and mac OS.
 
 .. _basic support for Cuda devices:
 
@@ -109,10 +108,18 @@ are stored in the global memory. In `Cuda` mode local variables are not shared
 between the threads and it is user responsibility to share the required data
 between the threads in the parallel regions.
 
+Collapsed loop nest counter
+---------------------------
+
+When using the collapse clause on a loop nest the default behaviour is to
+automatically extend the representation of the loop counter to 64 bits for
+the cases where the sizes of the collapsed loops are not known at compile
+time. To prevent this conservative choice and use at most 32 bits,
+compile your program with the `-fopenmp-optimistic-collapse`.
+
+
 Features not supported or with limited support for Cuda devices
 ---------------------------------------------------------------
-
-- Reductions across the teams are not supported yet.
 
 - Cancellation constructs are not supported.
 

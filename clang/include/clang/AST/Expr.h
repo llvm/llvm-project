@@ -2996,27 +2996,14 @@ public:
 /// representation in the source code (ExplicitCastExpr's derived
 /// classes).
 class CastExpr : public Expr {
-public:
-  using BasePathSizeTy = unsigned int;
-  static_assert(std::numeric_limits<BasePathSizeTy>::max() >= 16384,
-                "[implimits] Direct and indirect base classes [16384].");
-
-private:
   Stmt *Op;
 
   bool CastConsistency() const;
-
-  BasePathSizeTy *BasePathSize();
 
   const CXXBaseSpecifier * const *path_buffer() const {
     return const_cast<CastExpr*>(this)->path_buffer();
   }
   CXXBaseSpecifier **path_buffer();
-
-  void setBasePathSize(BasePathSizeTy basePathSize) {
-    assert(!path_empty() && basePathSize != 0);
-    *(BasePathSize()) = basePathSize;
-  }
 
 protected:
   CastExpr(StmtClass SC, QualType ty, ExprValueKind VK, const CastKind kind,
@@ -3038,9 +3025,9 @@ protected:
         Op(op) {
     CastExprBits.Kind = kind;
     CastExprBits.PartOfExplicitCast = false;
-    CastExprBits.BasePathIsEmpty = BasePathSize == 0;
-    if (!path_empty())
-      setBasePathSize(BasePathSize);
+    CastExprBits.BasePathSize = BasePathSize;
+    assert((CastExprBits.BasePathSize == BasePathSize) &&
+           "BasePathSize overflow!");
     assert(CastConsistency());
   }
 
@@ -3048,9 +3035,9 @@ protected:
   CastExpr(StmtClass SC, EmptyShell Empty, unsigned BasePathSize)
     : Expr(SC, Empty) {
     CastExprBits.PartOfExplicitCast = false;
-    CastExprBits.BasePathIsEmpty = BasePathSize == 0;
-    if (!path_empty())
-      setBasePathSize(BasePathSize);
+    CastExprBits.BasePathSize = BasePathSize;
+    assert((CastExprBits.BasePathSize == BasePathSize) &&
+           "BasePathSize overflow!");
   }
 
 public:
@@ -3077,13 +3064,9 @@ public:
   NamedDecl *getConversionFunction() const;
 
   typedef CXXBaseSpecifier **path_iterator;
-  typedef const CXXBaseSpecifier * const *path_const_iterator;
-  bool path_empty() const { return CastExprBits.BasePathIsEmpty; }
-  unsigned path_size() const {
-    if (path_empty())
-      return 0U;
-    return *(const_cast<CastExpr *>(this)->BasePathSize());
-  }
+  typedef const CXXBaseSpecifier *const *path_const_iterator;
+  bool path_empty() const { return path_size() == 0; }
+  unsigned path_size() const { return CastExprBits.BasePathSize; }
   path_iterator path_begin() { return path_buffer(); }
   path_iterator path_end() { return path_buffer() + path_size(); }
   path_const_iterator path_begin() const { return path_buffer(); }
@@ -3131,13 +3114,8 @@ public:
 /// @endcode
 class ImplicitCastExpr final
     : public CastExpr,
-      private llvm::TrailingObjects<ImplicitCastExpr, CastExpr::BasePathSizeTy,
-                                    CXXBaseSpecifier *> {
-  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
-    return path_empty() ? 0 : 1;
-  }
+      private llvm::TrailingObjects<ImplicitCastExpr, CXXBaseSpecifier *> {
 
-private:
   ImplicitCastExpr(QualType ty, CastKind kind, Expr *op,
                    unsigned BasePathLength, ExprValueKind VK)
     : CastExpr(ImplicitCastExprClass, ty, VK, kind, op, BasePathLength) { }
@@ -3245,8 +3223,7 @@ public:
 /// (Type)expr. For example: @c (int)f.
 class CStyleCastExpr final
     : public ExplicitCastExpr,
-      private llvm::TrailingObjects<CStyleCastExpr, CastExpr::BasePathSizeTy,
-                                    CXXBaseSpecifier *> {
+      private llvm::TrailingObjects<CStyleCastExpr, CXXBaseSpecifier *> {
   SourceLocation LPLoc; // the location of the left paren
   SourceLocation RPLoc; // the location of the right paren
 
@@ -3259,10 +3236,6 @@ class CStyleCastExpr final
   /// Construct an empty C-style explicit cast.
   explicit CStyleCastExpr(EmptyShell Shell, unsigned PathSize)
     : ExplicitCastExpr(CStyleCastExprClass, Shell, PathSize) { }
-
-  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
-    return path_empty() ? 0 : 1;
-  }
 
 public:
   static CStyleCastExpr *Create(const ASTContext &Context, QualType T,

@@ -1658,13 +1658,14 @@ static enum CXChildVisitResult PrintType(CXCursor cursor, CXCursor p,
         if (numFields != 0) {
           printf(" [nbFields=%d]", numFields);
         }
-        /* Print if it is an anonymous record. */
-        {
-          unsigned isAnon = clang_Cursor_isAnonymous(cursor);
-          if (isAnon != 0) {
-            printf(" [isAnon=%d]", isAnon);
-          }
-        }
+      }
+    }
+
+    /* Print if it is an anonymous record or namespace. */
+    {
+      unsigned isAnon = clang_Cursor_isAnonymous(cursor);
+      if (isAnon != 0) {
+        printf(" [isAnon=%d]", isAnon);
       }
     }
 
