@@ -42,7 +42,7 @@ public:
 
 MSP430::MSP430() {
   // mov.b #0, r3
-  TrapInstr = {0x43, 0x43};
+  TrapInstr = {0x43, 0x43, 0x43, 0x43};
 }
 
 RelExpr MSP430::getRelExpr(RelType Type, const Symbol &S,
