@@ -33,8 +33,7 @@ namespace std
     };
 }
 
-int
-main()
+int main()
 {
     typedef std::unordered_map<Key, int> MapT;
     typedef MapT::iterator Iter;

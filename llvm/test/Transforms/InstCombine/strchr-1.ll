@@ -82,8 +82,9 @@ define void @test_simplify6(i8* %str) {
 define i1 @test_simplify7(i32 %C) {
 ; CHECK-LABEL: @test_simplify7
 ; CHECK-NEXT: [[TRUNC:%.*]] = trunc i32 %C to i16
-; CHECK-NEXT: %memchr.bounds = icmp ult i16 [[TRUNC]], 16
-; CHECK-NEXT: [[SHL:%.*]] = shl i16 1, [[TRUNC]]
+; CHECK-NEXT: [[TRUNC_AND:%.*]] = and i16 [[TRUNC]], 255
+; CHECK-NEXT: %memchr.bounds = icmp ult i16 [[TRUNC_AND]], 16
+; CHECK-NEXT: [[SHL:%.*]] = shl i16 1, [[TRUNC_AND]]
 ; CHECK-NEXT: [[AND:%.*]] = and i16 [[SHL]], 9217
 ; CHECK-NEXT: %memchr.bits = icmp ne i16 [[AND]], 0
 ; CHECK-NEXT: %memchr1 = and i1 %memchr.bounds, %memchr.bits

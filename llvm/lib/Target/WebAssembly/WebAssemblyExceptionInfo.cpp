@@ -32,7 +32,10 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
 INITIALIZE_PASS_END(WebAssemblyExceptionInfo, DEBUG_TYPE,
                     "WebAssembly Exception Information", true, true)
 
-bool WebAssemblyExceptionInfo::runOnMachineFunction(MachineFunction &F) {
+bool WebAssemblyExceptionInfo::runOnMachineFunction(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "********** Exception Info Calculation **********\n"
+                       "********** Function: "
+                    << MF.getName() << '\n');
   releaseMemory();
   auto &MDT = getAnalysis<MachineDominatorTree>();
   auto &MDF = getAnalysis<MachineDominanceFrontier>();

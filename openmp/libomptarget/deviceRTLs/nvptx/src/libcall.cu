@@ -165,7 +165,7 @@ EXTERN int omp_get_level(void) {
   if (isRuntimeUninitialized()) {
     ASSERT0(LT_FUSSY, isSPMDMode(),
             "Expected SPMD mode only with uninitialized runtime.");
-    return omptarget_nvptx_simpleThreadPrivateContext->GetParallelLevel();
+    return parallelLevel;
   }
   int level = 0;
   omptarget_nvptx_TaskDescr *currTaskDescr =

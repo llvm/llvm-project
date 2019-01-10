@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_AST_ASTCONTEXT_H
 #define LLVM_CLANG_AST_ASTCONTEXT_H
 
+#include "clang/AST/ASTContextAllocate.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CommentCommandTraits.h"
@@ -2969,8 +2970,8 @@ inline Selector GetUnarySelector(StringRef name, ASTContext &Ctx) {
 /// This placement form of operator new uses the ASTContext's allocator for
 /// obtaining memory.
 ///
-/// IMPORTANT: These are also declared in clang/AST/AttrIterator.h! Any changes
-/// here need to also be made there.
+/// IMPORTANT: These are also declared in clang/AST/ASTContextAllocate.h!
+/// Any changes here need to also be made there.
 ///
 /// We intentionally avoid using a nothrow specification here so that the calls
 /// to this operator will not perform a null check on the result -- the
@@ -2993,7 +2994,7 @@ inline Selector GetUnarySelector(StringRef name, ASTContext &Ctx) {
 ///                  allocator supports it).
 /// @return The allocated memory. Could be nullptr.
 inline void *operator new(size_t Bytes, const clang::ASTContext &C,
-                          size_t Alignment) {
+                          size_t Alignment /* = 8 */) {
   return C.Allocate(Bytes, Alignment);
 }
 
@@ -3031,7 +3032,7 @@ inline void operator delete(void *Ptr, const clang::ASTContext &C, size_t) {
 ///                  allocator supports it).
 /// @return The allocated memory. Could be nullptr.
 inline void *operator new[](size_t Bytes, const clang::ASTContext& C,
-                            size_t Alignment = 8) {
+                            size_t Alignment /* = 8 */) {
   return C.Allocate(Bytes, Alignment);
 }
 

@@ -63,8 +63,7 @@ test4()
     assert((std::regex_match(target, smatch, regex)));
 }
 
-int
-main()
+int main()
 {
     test1();
     test2();

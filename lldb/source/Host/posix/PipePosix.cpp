@@ -61,12 +61,13 @@ bool SetCloexecFlag(int fd) {
 std::chrono::time_point<std::chrono::steady_clock> Now() {
   return std::chrono::steady_clock::now();
 }
-}
+} // namespace
 
 PipePosix::PipePosix()
     : m_fds{PipePosix::kInvalidDescriptor, PipePosix::kInvalidDescriptor} {}
 
-PipePosix::PipePosix(int read_fd, int write_fd) : m_fds{read_fd, write_fd} {}
+PipePosix::PipePosix(lldb::pipe_t read, lldb::pipe_t write)
+    : m_fds{read, write} {}
 
 PipePosix::PipePosix(PipePosix &&pipe_posix)
     : PipeBase{std::move(pipe_posix)},

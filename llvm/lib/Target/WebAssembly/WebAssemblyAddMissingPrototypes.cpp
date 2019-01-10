@@ -60,7 +60,7 @@ ModulePass *llvm::createWebAssemblyAddMissingPrototypes() {
 }
 
 bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
-  LLVM_DEBUG(dbgs() << "runnning AddMissingPrototypes\n");
+  LLVM_DEBUG(dbgs() << "********** Add Missing Prototypes **********\n");
 
   std::vector<std::pair<Function *, Function *>> Replacements;
 

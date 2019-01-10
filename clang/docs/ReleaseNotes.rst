@@ -233,6 +233,24 @@ ABI Changes in Clang
 OpenMP Support in Clang
 ----------------------------------
 
+- Support relational-op != (not-equal) as one of the canonical forms of random
+  access iterator.
+
+- Added support for mapping of the lambdas in target regions.
+
+- Added parsing/sema analysis for OpenMP 5.0 requires directive.
+
+- Various bugfixes and improvements.
+
+New features supported for Cuda devices:
+
+- Added support for the reductions across the teams.
+
+- Extended number of constructs that can be executed in SPMD mode.
+
+- Fixed support for lastprivate/reduction variables in SPMD constructs.
+
+- General performance improvement.
 
 CUDA Support in Clang
 ---------------------

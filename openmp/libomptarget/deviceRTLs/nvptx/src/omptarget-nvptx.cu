@@ -21,10 +21,6 @@ extern __device__
     omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext, OMP_STATE_COUNT>
         omptarget_nvptx_device_State[MAX_SM];
 
-extern __device__ omptarget_nvptx_Queue<
-    omptarget_nvptx_SimpleThreadPrivateContext, OMP_STATE_COUNT>
-    omptarget_nvptx_device_simpleState[MAX_SM];
-
 ////////////////////////////////////////////////////////////////////////////////
 // init entry points
 ////////////////////////////////////////////////////////////////////////////////
@@ -100,14 +96,10 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
     // If OMP runtime is not required don't initialize OMP state.
     setExecutionParameters(Spmd, RuntimeUninitialized);
     if (GetThreadIdInBlock() == 0) {
-      int slot = smid() % MAX_SM;
-      usedSlotIdx = slot;
-      omptarget_nvptx_simpleThreadPrivateContext =
-          omptarget_nvptx_device_simpleState[slot].Dequeue();
+      parallelLevel = 0;
+      usedSlotIdx = smid() % MAX_SM;
     }
-    // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
     __SYNCTHREADS();
-    omptarget_nvptx_simpleThreadPrivateContext->Init();
     return;
   }
   setExecutionParameters(Spmd, RuntimeInitialized);
@@ -172,18 +164,12 @@ EXTERN __attribute__((deprecated)) void __kmpc_spmd_kernel_deinit() {
 EXTERN void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime) {
   // We're not going to pop the task descr stack of each thread since
   // there are no more parallel regions in SPMD mode.
+  if (!RequiresOMPRuntime)
+    return;
+
   // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
   __SYNCTHREADS();
   int threadId = GetThreadIdInBlock();
-  if (!RequiresOMPRuntime) {
-    if (threadId == 0) {
-      // Enqueue omp state object for use by another team.
-      int slot = usedSlotIdx;
-      omptarget_nvptx_device_simpleState[slot].Enqueue(
-          omptarget_nvptx_simpleThreadPrivateContext);
-    }
-    return;
-  }
   if (threadId == 0) {
     // Enqueue omp state object for use by another team.
     int slot = usedSlotIdx;

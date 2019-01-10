@@ -82,6 +82,13 @@
 #error "Support for your platform has not been implemented"
 #endif
 
+#if defined(_MSC_VER) && !defined(__clang__)
+// MSVC compiler is being used.
+#define LIBFUZZER_MSVC 1
+#else
+#define LIBFUZZER_MSVC 0
+#endif
+
 #ifndef __has_attribute
 #  define __has_attribute(x) 0
 #endif
@@ -182,11 +189,6 @@ typedef Vector<Unit> UnitVector;
 typedef int (*UserCallback)(const uint8_t *Data, size_t Size);
 
 int FuzzerDriver(int *argc, char ***argv, UserCallback Callback);
-
-inline uint8_t  Bswap(uint8_t x)  { return x; }
-inline uint16_t Bswap(uint16_t x) { return __builtin_bswap16(x); }
-inline uint32_t Bswap(uint32_t x) { return __builtin_bswap32(x); }
-inline uint64_t Bswap(uint64_t x) { return __builtin_bswap64(x); }
 
 uint8_t *ExtraCountersBegin();
 uint8_t *ExtraCountersEnd();

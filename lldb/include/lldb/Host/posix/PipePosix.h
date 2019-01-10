@@ -27,7 +27,7 @@ public:
   static int kInvalidDescriptor;
 
   PipePosix();
-  PipePosix(int read_fd, int write_fd);
+  PipePosix(lldb::pipe_t read, lldb::pipe_t write);
   PipePosix(const PipePosix &) = delete;
   PipePosix(PipePosix &&pipe_posix);
   PipePosix &operator=(const PipePosix &) = delete;
@@ -48,6 +48,13 @@ public:
 
   bool CanRead() const override;
   bool CanWrite() const override;
+
+  lldb::pipe_t GetReadPipe() const override {
+    return lldb::pipe_t(GetReadFileDescriptor());
+  }
+  lldb::pipe_t GetWritePipe() const override {
+    return lldb::pipe_t(GetWriteFileDescriptor());
+  }
 
   int GetReadFileDescriptor() const override;
   int GetWriteFileDescriptor() const override;

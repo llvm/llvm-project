@@ -12,8 +12,10 @@
 #ifndef LLVM_FUZZER_UTIL_H
 #define LLVM_FUZZER_UTIL_H
 
-#include "FuzzerDefs.h"
+#include "FuzzerBuiltins.h"
+#include "FuzzerBuiltinsMsvc.h"
 #include "FuzzerCommand.h"
+#include "FuzzerDefs.h"
 
 namespace fuzzer {
 
@@ -84,7 +86,7 @@ std::string SearchRegexCmd(const std::string &Regex);
 
 size_t SimpleFastHash(const uint8_t *Data, size_t Size);
 
-inline uint32_t Log(uint32_t X) { return 32 - __builtin_clz(X) - 1; }
+inline uint32_t Log(uint32_t X) { return 32 - Clz(X) - 1; }
 
 }  // namespace fuzzer
 

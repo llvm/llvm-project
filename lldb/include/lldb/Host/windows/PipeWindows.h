@@ -24,10 +24,18 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 class PipeWindows : public PipeBase {
 public:
+  static const int kInvalidDescriptor = -1;
+
+public:
   PipeWindows();
+  PipeWindows(lldb::pipe_t read, lldb::pipe_t write);
   ~PipeWindows() override;
 
+  // Create an unnamed pipe.
   Status CreateNew(bool child_process_inherit) override;
+
+  // Create a named pipe.
+  Status CreateNewNamed(bool child_process_inherit);
   Status CreateNew(llvm::StringRef name, bool child_process_inherit) override;
   Status CreateWithUniqueName(llvm::StringRef prefix,
                               bool child_process_inherit,
@@ -40,6 +48,9 @@ public:
 
   bool CanRead() const override;
   bool CanWrite() const override;
+
+  lldb::pipe_t GetReadPipe() const { return lldb::pipe_t(m_read); }
+  lldb::pipe_t GetWritePipe() const { return lldb::pipe_t(m_write); }
 
   int GetReadFileDescriptor() const override;
   int GetWriteFileDescriptor() const override;

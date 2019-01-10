@@ -1061,14 +1061,15 @@ def getMyCommandLine():
 
 def checkDsymForUUIDIsNotOn():
     cmd = ["defaults", "read", "com.apple.DebugSymbols"]
-    pipe = subprocess.Popen(
+    process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT)
-    cmd_output = pipe.stdout.read()
-    if cmd_output and "DBGFileMappedPaths = " in cmd_output:
+    cmd_output = process.stdout.read()
+    output_str = cmd_output.decode("utf-8")
+    if "DBGFileMappedPaths = " in output_str:
         print("%s =>" % ' '.join(cmd))
-        print(cmd_output)
+        print(output_str)
         print(
             "Disable automatic lookup and caching of dSYMs before running the test suite!")
         print("Exiting...")
