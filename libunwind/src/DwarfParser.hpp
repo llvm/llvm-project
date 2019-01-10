@@ -685,22 +685,6 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       break;
 #endif
 
-#if defined(_LIBUNWIND_TARGET_SPARC)
-    case DW_CFA_GNU_window_save:
-      _LIBUNWIND_TRACE_DWARF("DW_CFA_GNU_window_save()\n");
-      for (reg = UNW_SPARC_O0; reg <= UNW_SPARC_O7; reg++) {
-        results->savedRegisters[reg].location = kRegisterInRegister;
-        results->savedRegisters[reg].value =
-            (reg - UNW_SPARC_O0) + UNW_SPARC_I0;
-      }
-
-      for (reg = UNW_SPARC_L0; reg <= UNW_SPARC_I7; reg++) {
-        results->savedRegisters[reg].location = kRegisterInCFA;
-        results->savedRegisters[reg].value = (reg - UNW_SPARC_L0) * 4;
-      }
-      break;
-#endif
-
     default:
       operand = opcode & 0x3F;
       switch (opcode & 0xC0) {

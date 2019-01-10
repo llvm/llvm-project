@@ -293,6 +293,18 @@ DynamicLoaderDarwinKernel::SearchForKernelNearPC(Process *process) {
     return LLDB_INVALID_ADDRESS;
   addr_t pc = thread->GetRegisterContext()->GetPC(LLDB_INVALID_ADDRESS);
 
+  // The kernel is always loaded in high memory, if the top bit is zero,
+  // this isn't a kernel.
+  if (process->GetTarget().GetArchitecture().GetAddressByteSize() == 8) {
+    if ((pc & (1ULL << 63)) == 0) {
+      return LLDB_INVALID_ADDRESS;
+    }
+  } else {
+    if ((pc & (1ULL << 31)) == 0) {
+      return LLDB_INVALID_ADDRESS;
+    }
+  }
+
   if (pc == LLDB_INVALID_ADDRESS)
     return LLDB_INVALID_ADDRESS;
 
@@ -307,12 +319,13 @@ DynamicLoaderDarwinKernel::SearchForKernelNearPC(Process *process) {
   // Search backwards 32 megabytes, looking for the start of the kernel at each
   // one-megabyte boundary.
   for (int i = 0; i < 32; i++, addr -= 0x100000) {
+    // x86_64 kernels are at offset 0
     if (CheckForKernelImageAtAddress(addr, process).IsValid())
       return addr;
+    // 32-bit arm kernels are at offset 0x1000 (one 4k page)
     if (CheckForKernelImageAtAddress(addr + 0x1000, process).IsValid())
       return addr + 0x1000;
-    if (CheckForKernelImageAtAddress(addr + 0x2000, process).IsValid())
-      return addr + 0x2000;
+    // 64-bit arm kernels are at offset 0x4000 (one 16k page)
     if (CheckForKernelImageAtAddress(addr + 0x4000, process).IsValid())
       return addr + 0x4000;
   }
@@ -351,12 +364,13 @@ lldb::addr_t DynamicLoaderDarwinKernel::SearchForKernelViaExhaustiveSearch(
   addr_t addr = kernel_range_low;
 
   while (addr >= kernel_range_low && addr < kernel_range_high) {
+    // x86_64 kernels are at offset 0
     if (CheckForKernelImageAtAddress(addr, process).IsValid())
       return addr;
+    // 32-bit arm kernels are at offset 0x1000 (one 4k page)
     if (CheckForKernelImageAtAddress(addr + 0x1000, process).IsValid())
       return addr + 0x1000;
-    if (CheckForKernelImageAtAddress(addr + 0x2000, process).IsValid())
-      return addr + 0x2000;
+    // 64-bit arm kernels are at offset 0x4000 (one 16k page)
     if (CheckForKernelImageAtAddress(addr + 0x4000, process).IsValid())
       return addr + 0x4000;
     addr += 0x100000;

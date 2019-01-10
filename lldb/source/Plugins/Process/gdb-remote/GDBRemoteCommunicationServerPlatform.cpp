@@ -164,9 +164,6 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
     StringExtractorGDBRemote &packet) {
-#ifdef _WIN32
-  return SendErrorResponse(9);
-#else
   // Spawn a local debugserver as a platform so we can then attach or launch a
   // process...
 
@@ -217,10 +214,9 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
   PacketResult packet_result = SendPacketNoLock(response.GetString());
   if (packet_result != PacketResult::Success) {
     if (debugserver_pid != LLDB_INVALID_PROCESS_ID)
-      ::kill(debugserver_pid, SIGINT);
+      Host::Kill(debugserver_pid, SIGINT);
   }
   return packet_result;
-#endif
 }
 
 GDBRemoteCommunication::PacketResult

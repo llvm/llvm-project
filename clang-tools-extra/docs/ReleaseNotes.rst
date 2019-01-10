@@ -220,6 +220,12 @@ Improvements to clang-tidy
   Detects usage of the deprecated member types of ``std::ios_base`` and replaces
   those that have a non-deprecated equivalent.
 
+- New :doc:`modernize-use-nodiscard
+  <clang-tidy/checks/modernize-use-nodiscard>` check.
+
+  Adds ``[[nodiscard]]`` attributes (introduced in C++17) to member functions
+  to highlight at compile time which return values should not be ignored.
+
 - New :doc:`readability-isolate-decl
   <clang-tidy/checks/readability-isolate-declaration>` check.
 
