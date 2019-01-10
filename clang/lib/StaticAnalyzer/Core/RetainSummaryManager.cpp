@@ -36,17 +36,79 @@ constexpr static bool isOneOf() {
   return std::is_same<T, P>::value || isOneOf<T, ToCompare...>();
 }
 
-template <class T> bool RetainSummaryManager::isAttrEnabled() {
+namespace {
+
+struct GeneralizedReturnsRetainedAttr {
+  static bool classof(const Attr *A) {
+    if (auto AA = dyn_cast<AnnotateAttr>(A))
+      return AA->getAnnotation() == "rc_ownership_returns_retained";
+    return false;
+  }
+};
+
+struct GeneralizedReturnsNotRetainedAttr {
+  static bool classof(const Attr *A) {
+    if (auto AA = dyn_cast<AnnotateAttr>(A))
+      return AA->getAnnotation() == "rc_ownership_returns_not_retained";
+    return false;
+  }
+};
+
+struct GeneralizedConsumedAttr {
+  static bool classof(const Attr *A) {
+    if (auto AA = dyn_cast<AnnotateAttr>(A))
+      return AA->getAnnotation() == "rc_ownership_consumed";
+    return false;
+  }
+};
+
+}
+
+template <class T>
+Optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
+                                                            QualType QT) {
+  ObjKind K;
   if (isOneOf<T, CFConsumedAttr, CFReturnsRetainedAttr,
-              CFReturnsNotRetainedAttr, NSConsumedAttr, NSConsumesSelfAttr,
-              NSReturnsAutoreleasedAttr, NSReturnsRetainedAttr,
-              NSReturnsNotRetainedAttr>()) {
-    return TrackObjCAndCFObjects;
+              CFReturnsNotRetainedAttr>()) {
+    if (!TrackObjCAndCFObjects)
+      return None;
+
+    K = ObjKind::CF;
+  } else if (isOneOf<T, NSConsumedAttr, NSConsumesSelfAttr,
+                     NSReturnsAutoreleasedAttr, NSReturnsRetainedAttr,
+                     NSReturnsNotRetainedAttr, NSConsumesSelfAttr>()) {
+
+    if (!TrackObjCAndCFObjects)
+      return None;
+
+    if (isOneOf<T, NSReturnsRetainedAttr, NSReturnsAutoreleasedAttr,
+                NSReturnsNotRetainedAttr>() &&
+        !cocoa::isCocoaObjectRef(QT))
+      return None;
+    K = ObjKind::ObjC;
   } else if (isOneOf<T, OSConsumedAttr, OSConsumesThisAttr,
                      OSReturnsNotRetainedAttr, OSReturnsRetainedAttr>()) {
-    return TrackOSObjects;
+    if (!TrackOSObjects)
+      return None;
+    K = ObjKind::OS;
+  } else if (isOneOf<T, GeneralizedReturnsNotRetainedAttr,
+                     GeneralizedReturnsRetainedAttr,
+                     GeneralizedConsumedAttr>()) {
+    K = ObjKind::Generalized;
+  } else {
+    llvm_unreachable("Unexpected attribute");
   }
-  llvm_unreachable("Unexpected attribute passed");
+  if (D->hasAttr<T>())
+    return K;
+  return None;
+}
+
+template <class T1, class T2, class... Others>
+Optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
+                                                            QualType QT) {
+  if (auto Out = hasAnyEnabledAttrOf<T1>(D, QT))
+    return Out;
+  return hasAnyEnabledAttrOf<T2, Others...>(D, QT);
 }
 
 const RetainSummary *
@@ -727,33 +789,18 @@ RetainSummaryManager::getCFSummaryGetRule(const FunctionDecl *FD) {
 Optional<RetEffect>
 RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
                                                   const Decl *D) {
-  if (TrackObjCAndCFObjects && cocoa::isCocoaObjectRef(RetTy)) {
-    if (D->hasAttr<NSReturnsRetainedAttr>())
-      return ObjCAllocRetE;
+  if (hasAnyEnabledAttrOf<NSReturnsRetainedAttr>(D, RetTy))
+    return ObjCAllocRetE;
 
-    if (D->hasAttr<NSReturnsNotRetainedAttr>() ||
-        D->hasAttr<NSReturnsAutoreleasedAttr>())
-      return RetEffect::MakeNotOwned(ObjKind::ObjC);
+  if (auto K = hasAnyEnabledAttrOf<CFReturnsRetainedAttr, OSReturnsRetainedAttr,
+                                   GeneralizedReturnsRetainedAttr>(D, RetTy))
+    return RetEffect::MakeOwned(*K);
 
-  } else if (!RetTy->isPointerType()) {
-    return None;
-  }
-
-  if (hasEnabledAttr<CFReturnsRetainedAttr>(D)) {
-    return RetEffect::MakeOwned(ObjKind::CF);
-  } else if (hasEnabledAttr<OSReturnsRetainedAttr>(D)) {
-    return RetEffect::MakeOwned(ObjKind::OS);
-  } else if (hasRCAnnotation(D, "rc_ownership_returns_retained")) {
-    return RetEffect::MakeOwned(ObjKind::Generalized);
-  }
-
-  if (hasEnabledAttr<CFReturnsNotRetainedAttr>(D)) {
-    return RetEffect::MakeNotOwned(ObjKind::CF);
-  } else if (hasEnabledAttr<OSReturnsNotRetainedAttr>(D)) {
-    return RetEffect::MakeNotOwned(ObjKind::OS);
-  } else if (hasRCAnnotation(D, "rc_ownership_returns_not_retained")) {
-    return RetEffect::MakeNotOwned(ObjKind::Generalized);
-  }
+  if (auto K = hasAnyEnabledAttrOf<
+          CFReturnsNotRetainedAttr, OSReturnsNotRetainedAttr,
+          GeneralizedReturnsNotRetainedAttr, NSReturnsNotRetainedAttr,
+          NSReturnsAutoreleasedAttr>(D, RetTy))
+    return RetEffect::MakeNotOwned(*K);
 
   if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
     for (const auto *PD : MD->overridden_methods())
@@ -766,37 +813,20 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
 bool RetainSummaryManager::applyFunctionParamAnnotationEffect(
     const ParmVarDecl *pd, unsigned parm_idx, const FunctionDecl *FD,
     RetainSummaryTemplate &Template) {
-  if (hasEnabledAttr<NSConsumedAttr>(pd)) {
-    Template->addArg(AF, parm_idx, ArgEffect(DecRef, ObjKind::ObjC));
+  QualType QT = pd->getType();
+  if (auto K =
+          hasAnyEnabledAttrOf<NSConsumedAttr, CFConsumedAttr, OSConsumedAttr,
+                              GeneralizedConsumedAttr>(pd, QT)) {
+    Template->addArg(AF, parm_idx, ArgEffect(DecRef, *K));
     return true;
-  } else if (hasEnabledAttr<CFConsumedAttr>(pd)) {
-    Template->addArg(AF, parm_idx, ArgEffect(DecRef, ObjKind::CF));
+  } else if (auto K =
+                 hasAnyEnabledAttrOf<CFReturnsRetainedAttr,
+                                     GeneralizedReturnsRetainedAttr>(pd, QT)) {
+    Template->addArg(AF, parm_idx, ArgEffect(RetainedOutParameter, *K));
     return true;
-  } else if (hasEnabledAttr<OSConsumedAttr>(pd)) {
-    Template->addArg(AF, parm_idx, ArgEffect(DecRef, ObjKind::OS));
+  } else if (auto K = hasAnyEnabledAttrOf<CFReturnsNotRetainedAttr>(pd, QT)) {
+    Template->addArg(AF, parm_idx, ArgEffect(UnretainedOutParameter, *K));
     return true;
-  } else if (hasRCAnnotation(pd, "rc_ownership_consumed")) {
-    Template->addArg(AF, parm_idx, ArgEffect(DecRef, ObjKind::Generalized));
-    return true;
-  } else if (hasEnabledAttr<CFReturnsRetainedAttr>(pd) ||
-             hasRCAnnotation(pd, "rc_ownership_returns_retained")) {
-    QualType PointeeTy = pd->getType()->getPointeeType();
-    if (!PointeeTy.isNull()) {
-      if (coreFoundation::isCFObjectRef(PointeeTy)) {
-        Template->addArg(AF, parm_idx, ArgEffect(RetainedOutParameter,
-                                                 ObjKind::CF));
-        return true;
-      }
-    }
-  } else if (hasEnabledAttr<CFReturnsNotRetainedAttr>(pd)) {
-    QualType PointeeTy = pd->getType()->getPointeeType();
-    if (!PointeeTy.isNull()) {
-      if (coreFoundation::isCFObjectRef(PointeeTy)) {
-        Template->addArg(AF, parm_idx, ArgEffect(UnretainedOutParameter,
-                                                 ObjKind::CF));
-        return true;
-      }
-    }
   } else {
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
       for (const auto *OD : MD->overridden_methods()) {
@@ -831,7 +861,7 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
   if (Optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, FD))
     Template->setRetEffect(*RetE);
 
-  if (hasEnabledAttr<OSConsumesThisAttr>(FD))
+  if (hasAnyEnabledAttrOf<OSConsumesThisAttr>(FD, RetTy))
     Template->setThisEffect(ArgEffect(DecRef, ObjKind::OS));
 }
 
@@ -845,35 +875,25 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
   RetainSummaryTemplate Template(Summ, *this);
 
   // Effects on the receiver.
-  if (MD->hasAttr<NSConsumesSelfAttr>())
+  if (hasAnyEnabledAttrOf<NSConsumesSelfAttr>(MD, MD->getReturnType()))
     Template->setReceiverEffect(ArgEffect(DecRef, ObjKind::ObjC));
 
   // Effects on the parameters.
   unsigned parm_idx = 0;
-  for (auto pi=MD->param_begin(), pe=MD->param_end();
-       pi != pe; ++pi, ++parm_idx) {
+  for (auto pi = MD->param_begin(), pe = MD->param_end(); pi != pe;
+       ++pi, ++parm_idx) {
     const ParmVarDecl *pd = *pi;
-    if (pd->hasAttr<NSConsumedAttr>()) {
-      Template->addArg(AF, parm_idx, ArgEffect(DecRef, ObjKind::ObjC));
-    } else if (pd->hasAttr<CFConsumedAttr>()) {
-      Template->addArg(AF, parm_idx, ArgEffect(DecRef, ObjKind::CF));
-    } else if (pd->hasAttr<OSConsumedAttr>()) {
-      Template->addArg(AF, parm_idx, ArgEffect(DecRef, ObjKind::OS));
-    } else if (pd->hasAttr<CFReturnsRetainedAttr>()) {
-      QualType PointeeTy = pd->getType()->getPointeeType();
-      if (!PointeeTy.isNull())
-        if (coreFoundation::isCFObjectRef(PointeeTy))
-          Template->addArg(AF, parm_idx,
-                           ArgEffect(RetainedOutParameter, ObjKind::CF));
-    } else if (pd->hasAttr<CFReturnsNotRetainedAttr>()) {
-      QualType PointeeTy = pd->getType()->getPointeeType();
-      if (!PointeeTy.isNull())
-        if (coreFoundation::isCFObjectRef(PointeeTy))
-          Template->addArg(AF, parm_idx, ArgEffect(UnretainedOutParameter,
-                                                   ObjKind::CF));
+    QualType QT = pd->getType();
+    if (auto K =
+            hasAnyEnabledAttrOf<NSConsumedAttr, CFConsumedAttr, OSConsumedAttr>(
+                pd, QT)) {
+      Template->addArg(AF, parm_idx, ArgEffect(DecRef, *K));
+    } else if (auto K = hasAnyEnabledAttrOf<CFReturnsRetainedAttr>(pd, QT)) {
+      Template->addArg(AF, parm_idx, ArgEffect(RetainedOutParameter, *K));
+    } else if (auto K = hasAnyEnabledAttrOf<CFReturnsNotRetainedAttr>(pd, QT)) {
+      Template->addArg(AF, parm_idx, ArgEffect(UnretainedOutParameter, *K));
     }
   }
-
   QualType RetTy = MD->getReturnType();
   if (Optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, MD))
     Template->setRetEffect(*RetE);
