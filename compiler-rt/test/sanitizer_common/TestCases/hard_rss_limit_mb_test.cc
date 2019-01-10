@@ -16,7 +16,7 @@
 // XFAIL: msan
 // XFAIL: ubsan
 
-// UNSUPPORTED: freebsd, solaris, darwin
+// UNSUPPORTED: freebsd, solaris, darwin, arm
 
 #include <string.h>
 #include <stdio.h>
