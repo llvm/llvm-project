@@ -537,10 +537,8 @@ class RetainSummaryManager {
   /// Free the OS object.
   const RetainSummary *getOSSummaryFreeRule(const FunctionDecl *FD);
 
-  enum UnaryFuncKind { cfretain, cfrelease, cfautorelease, cfmakecollectable };
-
   const RetainSummary *getUnarySummary(const FunctionType* FT,
-                                       UnaryFuncKind func);
+                                       ArgEffectKind AE);
 
   const RetainSummary *getCFSummaryCreateRule(const FunctionDecl *FD);
   const RetainSummary *getCFSummaryGetRule(const FunctionDecl *FD);
