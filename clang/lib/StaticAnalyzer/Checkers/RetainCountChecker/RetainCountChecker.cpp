@@ -414,42 +414,6 @@ void RetainCountChecker::checkPostCall(const CallEvent &Call,
   checkSummary(*Summ, Call, C);
 }
 
-void RetainCountChecker::checkEndAnalysis(ExplodedGraph &G, BugReporter &BR,
-                                          ExprEngine &Eng) const {
-  // FIXME: This is a hack to make sure the summary log gets cleared between
-  // analyses of different code bodies.
-  //
-  // Why is this necessary? Because a checker's lifetime is tied to a
-  // translation unit, but an ExplodedGraph's lifetime is just a code body.
-  // Once in a blue moon, a new ExplodedNode will have the same address as an
-  // old one with an associated summary, and the bug report visitor gets very
-  // confused. (To make things worse, the summary lifetime is currently also
-  // tied to a code body, so we get a crash instead of incorrect results.)
-  //
-  // Why is this a bad solution? Because if the lifetime of the ExplodedGraph
-  // changes, things will start going wrong again. Really the lifetime of this
-  // log needs to be tied to either the specific nodes in it or the entire
-  // ExplodedGraph, not to a specific part of the code being analyzed.
-  //
-  // (Also, having stateful local data means that the same checker can't be
-  // used from multiple threads, but a lot of checkers have incorrect
-  // assumptions about that anyway. So that wasn't a priority at the time of
-  // this fix.)
-  //
-  // This happens at the end of analysis, but bug reports are emitted /after/
-  // this point. So we can't just clear the summary log now. Instead, we mark
-  // that the next time we access the summary log, it should be cleared.
-
-  // If we never reset the summary log during /this/ code body analysis,
-  // there were no new summaries. There might still have been summaries from
-  // the /last/ analysis, so clear them out to make sure the bug report
-  // visitors don't get confused.
-  if (ShouldResetSummaryLog)
-    SummaryLog.clear();
-
-  ShouldResetSummaryLog = !SummaryLog.empty();
-}
-
 CFRefBug *
 RetainCountChecker::getLeakWithinFunctionBug(const LangOptions &LOpts) const {
   if (!leakWithinFunction)
@@ -609,6 +573,11 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
   SourceRange ErrorRange;
   SymbolRef ErrorSym = nullptr;
 
+  // Helper tag for providing diagnostics: indicate whether dealloc was sent
+  // at this location.
+  static CheckerProgramPointTag DeallocSentTag(this, DeallocTagDescription);
+  bool DeallocSent = false;
+
   for (unsigned idx = 0, e = CallOrMsg.getNumArgs(); idx != e; ++idx) {
     SVal V = CallOrMsg.getArgSVal(idx);
 
@@ -627,6 +596,8 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
           ErrorRange = CallOrMsg.getArgSourceRange(idx);
           ErrorSym = Sym;
           break;
+        } else if (Effect.getKind() == Dealloc) {
+          DeallocSent = true;
         }
       }
     }
@@ -644,6 +615,8 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
           if (hasErr) {
             ErrorRange = MsgInvocation->getOriginExpr()->getReceiverRange();
             ErrorSym = Sym;
+          } else if (Summ.getReceiverEffect().getKind() == Dealloc) {
+            DeallocSent = true;
           }
         }
       }
@@ -688,24 +661,10 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
       state = setRefBinding(state, Sym, *updatedRefVal);
   }
 
-  // This check is actually necessary; otherwise the statement builder thinks
-  // we've hit a previously-found path.
-  // Normally addTransition takes care of this, but we want the node pointer.
-  ExplodedNode *NewNode;
-  if (state == C.getState()) {
-    NewNode = C.getPredecessor();
+  if (DeallocSent) {
+    C.addTransition(state, C.getPredecessor(), &DeallocSentTag);
   } else {
-    NewNode = C.addTransition(state);
-  }
-
-  // Annotate the node with summary we used.
-  if (NewNode) {
-    // FIXME: This is ugly. See checkEndAnalysis for why it's necessary.
-    if (ShouldResetSummaryLog) {
-      SummaryLog.clear();
-      ShouldResetSummaryLog = false;
-    }
-    SummaryLog[NewNode] = &Summ;
+    C.addTransition(state);
   }
 }
 
@@ -744,7 +703,7 @@ ProgramStateRef RetainCountChecker::updateSymbol(ProgramStateRef state,
       llvm_unreachable("Applies to pointer-to-pointer parameters, which should "
                        "not have ref state.");
 
-    case Dealloc:
+    case Dealloc: // NB. we only need to add a note in a non-error case.
       switch (V.getKind()) {
         default:
           llvm_unreachable("Invalid RefVal state for an explicit dealloc.");
@@ -880,7 +839,7 @@ void RetainCountChecker::processNonLeakError(ProgramStateRef St,
 
   assert(BT);
   auto report = llvm::make_unique<CFRefReport>(
-      *BT, C.getASTContext().getLangOpts(), SummaryLog, N, Sym);
+      *BT, C.getASTContext().getLangOpts(), N, Sym);
   report->addRange(ErrorRange);
   C.emitReport(std::move(report));
 }
@@ -1084,7 +1043,7 @@ ExplodedNode * RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
         if (N) {
           const LangOptions &LOpts = C.getASTContext().getLangOpts();
           auto R = llvm::make_unique<CFRefLeakReport>(
-              *getLeakAtReturnBug(LOpts), LOpts, SummaryLog, N, Sym, C);
+              *getLeakAtReturnBug(LOpts), LOpts, N, Sym, C);
           C.emitReport(std::move(R));
         }
         return N;
@@ -1112,8 +1071,7 @@ ExplodedNode * RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
             returnNotOwnedForOwned.reset(new ReturnedNotOwnedForOwned(this));
 
           auto R = llvm::make_unique<CFRefReport>(
-              *returnNotOwnedForOwned, C.getASTContext().getLangOpts(),
-              SummaryLog, N, Sym);
+              *returnNotOwnedForOwned, C.getASTContext().getLangOpts(), N, Sym);
           C.emitReport(std::move(R));
         }
         return N;
@@ -1316,8 +1274,8 @@ RetainCountChecker::handleAutoreleaseCounts(ProgramStateRef state,
       overAutorelease.reset(new OverAutorelease(this));
 
     const LangOptions &LOpts = Ctx.getASTContext().getLangOpts();
-    auto R = llvm::make_unique<CFRefReport>(*overAutorelease, LOpts, SummaryLog,
-                                            N, Sym, os.str());
+    auto R = llvm::make_unique<CFRefReport>(*overAutorelease, LOpts, N, Sym,
+                                            os.str());
     Ctx.emitReport(std::move(R));
   }
 
@@ -1369,8 +1327,8 @@ RetainCountChecker::processLeaks(ProgramStateRef state,
                           : getLeakAtReturnBug(LOpts);
       assert(BT && "BugType not initialized.");
 
-      Ctx.emitReport(llvm::make_unique<CFRefLeakReport>(
-          *BT, LOpts, SummaryLog, N, *I, Ctx));
+      Ctx.emitReport(
+          llvm::make_unique<CFRefLeakReport>(*BT, LOpts, N, *I, Ctx));
     }
   }
 

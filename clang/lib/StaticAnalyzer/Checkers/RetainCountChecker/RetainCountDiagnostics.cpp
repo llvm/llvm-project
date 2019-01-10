@@ -43,14 +43,12 @@ static std::string getPrettyTypeName(QualType QT) {
 /// return whether the note should be generated.
 static bool shouldGenerateNote(llvm::raw_string_ostream &os,
                                const RefVal *PrevT, const RefVal &CurrV,
-                               SmallVector<ArgEffect, 2> &AEffects) {
+                               bool DeallocSent) {
   // Get the previous type state.
   RefVal PrevV = *PrevT;
 
   // Specially handle -dealloc.
-  if (std::find_if(AEffects.begin(), AEffects.end(), [](ArgEffect &E) {
-        return E.getKind() == Dealloc;
-      }) != AEffects.end()) {
+  if (DeallocSent) {
     // Determine if the object's reference count was pushed to zero.
     assert(!PrevV.hasSameState(CurrV) && "The state should have changed.");
     // We may not have transitioned to 'release' if we hit an error.
@@ -194,11 +192,9 @@ namespace retaincountchecker {
 class CFRefReportVisitor : public BugReporterVisitor {
 protected:
   SymbolRef Sym;
-  const SummaryLogTy &SummaryLog;
 
 public:
-  CFRefReportVisitor(SymbolRef sym, const SummaryLogTy &log)
-      : Sym(sym), SummaryLog(log) {}
+  CFRefReportVisitor(SymbolRef sym) : Sym(sym) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int x = 0;
@@ -217,9 +213,7 @@ public:
 
 class CFRefLeakReportVisitor : public CFRefReportVisitor {
 public:
-  CFRefLeakReportVisitor(SymbolRef sym,
-                         const SummaryLogTy &log)
-     : CFRefReportVisitor(sym, log) {}
+  CFRefLeakReportVisitor(SymbolRef sym) : CFRefReportVisitor(sym) {}
 
   std::shared_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
                                                   const ExplodedNode *N,
@@ -311,6 +305,7 @@ annotateConsumedSummaryMismatch(const ExplodedNode *N,
 std::shared_ptr<PathDiagnosticPiece>
 CFRefReportVisitor::VisitNode(const ExplodedNode *N,
                               BugReporterContext &BRC, BugReport &BR) {
+
   const SourceManager &SM = BRC.getSourceManager();
   CallEventManager &CEMgr = BRC.getStateManager().getCallEventManager();
   if (auto CE = N->getLocationAs<CallExitBegin>())
@@ -383,9 +378,11 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N,
 
   // Gather up the effects that were performed on the object at this
   // program point
-  SmallVector<ArgEffect, 2> AEffects;
-  const ExplodedNode *OrigNode = BRC.getNodeResolver().getOriginalNode(N);
-  if (const RetainSummary *Summ = SummaryLog.lookup(OrigNode)) {
+  bool DeallocSent = false;
+
+  if (N->getLocation().getTag() &&
+      N->getLocation().getTag()->getTagDescription().contains(
+          RetainCountChecker::DeallocTagDescription)) {
     // We only have summaries attached to nodes after evaluating CallExpr and
     // ObjCMessageExprs.
     const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();
@@ -403,20 +400,20 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N,
           continue;
 
         // We have an argument.  Get the effect!
-        AEffects.push_back(Summ->getArg(i));
+        DeallocSent = true;
       }
     } else if (const ObjCMessageExpr *ME = dyn_cast<ObjCMessageExpr>(S)) {
       if (const Expr *receiver = ME->getInstanceReceiver()) {
         if (CurrSt->getSValAsScalarOrLoc(receiver, LCtx)
               .getAsLocSymbol() == Sym) {
           // The symbol we are tracking is the receiver.
-          AEffects.push_back(Summ->getReceiverEffect());
+          DeallocSent = true;
         }
       }
     }
   }
 
-  if (!shouldGenerateNote(os, PrevT, CurrV, AEffects))
+  if (!shouldGenerateNote(os, PrevT, CurrV, DeallocSent))
     return nullptr;
 
   if (os.str().empty())
@@ -639,20 +636,18 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
 }
 
-CFRefReport::CFRefReport(CFRefBug &D, const LangOptions &LOpts,
-                         const SummaryLogTy &Log, ExplodedNode *n,
+CFRefReport::CFRefReport(CFRefBug &D, const LangOptions &LOpts, ExplodedNode *n,
                          SymbolRef sym, bool registerVisitor)
     : BugReport(D, D.getDescription(), n), Sym(sym) {
   if (registerVisitor)
-    addVisitor(llvm::make_unique<CFRefReportVisitor>(sym, Log));
+    addVisitor(llvm::make_unique<CFRefReportVisitor>(sym));
 }
 
-CFRefReport::CFRefReport(CFRefBug &D, const LangOptions &LOpts,
-                         const SummaryLogTy &Log, ExplodedNode *n,
+CFRefReport::CFRefReport(CFRefBug &D, const LangOptions &LOpts, ExplodedNode *n,
                          SymbolRef sym, StringRef endText)
     : BugReport(D, D.getDescription(), endText, n) {
 
-  addVisitor(llvm::make_unique<CFRefReportVisitor>(sym, Log));
+  addVisitor(llvm::make_unique<CFRefReportVisitor>(sym));
 }
 
 void CFRefLeakReport::deriveParamLocation(CheckerContext &Ctx, SymbolRef sym) {
@@ -665,7 +660,8 @@ void CFRefLeakReport::deriveParamLocation(CheckerContext &Ctx, SymbolRef sym) {
   if (Region) {
     const Decl *PDecl = Region->getDecl();
     if (PDecl && isa<ParmVarDecl>(PDecl)) {
-      PathDiagnosticLocation ParamLocation = PathDiagnosticLocation::create(PDecl, SMgr);
+      PathDiagnosticLocation ParamLocation =
+          PathDiagnosticLocation::create(PDecl, SMgr);
       Location = ParamLocation;
       UniqueingLocation = ParamLocation;
       UniqueingDecl = Ctx.getLocationContext()->getDecl();
@@ -733,10 +729,9 @@ void CFRefLeakReport::createDescription(CheckerContext &Ctx) {
 }
 
 CFRefLeakReport::CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts,
-                                 const SummaryLogTy &Log,
                                  ExplodedNode *n, SymbolRef sym,
                                  CheckerContext &Ctx)
-  : CFRefReport(D, LOpts, Log, n, sym, false) {
+  : CFRefReport(D, LOpts, n, sym, false) {
 
   deriveAllocLocation(Ctx, sym);
   if (!AllocBinding)
@@ -744,5 +739,5 @@ CFRefLeakReport::CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts,
 
   createDescription(Ctx);
 
-  addVisitor(llvm::make_unique<CFRefLeakReportVisitor>(sym, Log));
+  addVisitor(llvm::make_unique<CFRefLeakReportVisitor>(sym));
 }

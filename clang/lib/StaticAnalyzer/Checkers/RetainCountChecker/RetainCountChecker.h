@@ -239,7 +239,6 @@ public:
 class RetainCountChecker
   : public Checker< check::Bind,
                     check::DeadSymbols,
-                    check::EndAnalysis,
                     check::BeginFunction,
                     check::EndFunction,
                     check::PostStmt<BlockExpr>,
@@ -263,11 +262,8 @@ class RetainCountChecker
   mutable SymbolTagMap DeadSymbolTags;
 
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
-  mutable SummaryLogTy SummaryLog;
-
-  mutable bool ShouldResetSummaryLog;
-
 public:
+  static constexpr const char *DeallocTagDescription = "DeallocSent";
 
   /// Track Objective-C and CoreFoundation objects.
   bool TrackObjCAndCFObjects = false;
@@ -275,12 +271,9 @@ public:
   /// Track sublcasses of OSObject.
   bool TrackOSObjects = false;
 
-  RetainCountChecker() : ShouldResetSummaryLog(false) {}
+  RetainCountChecker() {}
 
   ~RetainCountChecker() override { DeleteContainerSeconds(DeadSymbolTags); }
-
-  void checkEndAnalysis(ExplodedGraph &G, BugReporter &BR,
-                        ExprEngine &Eng) const;
 
   CFRefBug *getLeakWithinFunctionBug(const LangOptions &LOpts) const;
 
