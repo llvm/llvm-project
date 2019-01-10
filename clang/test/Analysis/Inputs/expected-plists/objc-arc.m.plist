@@ -223,9 +223,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type CFDateRef with a +1 retain count</string>
+     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type &apos;CFDateRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type CFDateRef with a +1 retain count</string>
+     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type &apos;CFDateRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -739,9 +739,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type CFTypeRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type CFTypeRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -934,9 +934,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type CFStringRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type &apos;CFStringRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type CFStringRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type &apos;CFStringRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -1353,9 +1353,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type CFDateRef with a +1 retain count</string>
+     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type &apos;CFDateRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type CFDateRef with a +1 retain count</string>
+     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type &apos;CFDateRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -1679,9 +1679,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type CFStringRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type &apos;CFStringRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type CFStringRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type &apos;CFStringRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -1727,12 +1727,12 @@
      </dict>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: allocated object of type CFStringRef is not referenced later in this execution path and has a retain count of +1</string>
+     <string>Object leaked: allocated object of type &apos;CFStringRef&apos; is not referenced later in this execution path and has a retain count of +1</string>
      <key>message</key>
-     <string>Object leaked: allocated object of type CFStringRef is not referenced later in this execution path and has a retain count of +1</string>
+     <string>Object leaked: allocated object of type &apos;CFStringRef&apos; is not referenced later in this execution path and has a retain count of +1</string>
     </dict>
    </array>
-   <key>description</key><string>Potential leak of an object of type CFStringRef</string>
+   <key>description</key><string>Potential leak of an object of type &apos;CFStringRef&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>

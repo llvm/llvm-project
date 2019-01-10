@@ -157,14 +157,14 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
   }
 
   if (CurrV.getObjKind() == ObjKind::CF) {
-    os << " returns a Core Foundation object of type "
-       << Sym->getType().getAsString() << " with a ";
+    os << " a Core Foundation object of type '"
+       << Sym->getType().getAsString() << "' with a ";
   } else if (CurrV.getObjKind() == ObjKind::OS) {
-    os << " returns an OSObject of type " << getPrettyTypeName(Sym->getType())
-       << " with a ";
+    os << " an OSObject of type '" << getPrettyTypeName(Sym->getType())
+       << "' with a ";
   } else if (CurrV.getObjKind() == ObjKind::Generalized) {
-    os << " returns an object of type " << Sym->getType().getAsString()
-       << " with a ";
+    os << " an object of type '" << Sym->getType().getAsString()
+       << "' with a ";
   } else {
     assert(CurrV.getObjKind() == ObjKind::ObjC);
     QualType T = Sym->getType();
@@ -587,7 +587,8 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   if (RegionDescription) {
     os << "object allocated and stored into '" << *RegionDescription << '\'';
   } else {
-    os << "allocated object of type " << getPrettyTypeName(Sym->getType());
+    os << "allocated object of type '" << getPrettyTypeName(Sym->getType())
+       << "'";
   }
 
   // Get the retain count.
@@ -724,7 +725,7 @@ void CFRefLeakReport::createDescription(CheckerContext &Ctx) {
   } else {
 
     // If we can't figure out the name, just supply the type information.
-    os << " of type " << getPrettyTypeName(Sym->getType());
+    os << " of type '" << getPrettyTypeName(Sym->getType()) << "'";
   }
 }
 

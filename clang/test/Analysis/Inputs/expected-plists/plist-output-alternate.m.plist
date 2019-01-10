@@ -1299,9 +1299,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFNumberCreate&apos; returns a Core Foundation object of type CFNumberRef with a +1 retain count</string>
+     <string>Call to function &apos;CFNumberCreate&apos; returns a Core Foundation object of type &apos;CFNumberRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFNumberCreate&apos; returns a Core Foundation object of type CFNumberRef with a +1 retain count</string>
+     <string>Call to function &apos;CFNumberCreate&apos; returns a Core Foundation object of type &apos;CFNumberRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
