@@ -189,7 +189,8 @@ public:
       demangle_ctx.clear();
     }
 
-    if (SwiftASTContext::IsPossibleZeroSizeType(m_type)) {
+    if (SwiftASTContext::IsPossibleZeroSizeType(m_type,
+            execution_unit->GetBestExecutionContextScope())) {
       MakeREPLResult(*execution_unit, err, nullptr);
       return;
     }
