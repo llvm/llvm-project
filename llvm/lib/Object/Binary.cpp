@@ -88,7 +88,8 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
 
 Expected<OwningBinary<Binary>> object::createBinary(StringRef Path) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(Path);
+      MemoryBuffer::getFileOrSTDIN(Path, /*FileSize=*/-1,
+                                   /*RequiresNullTerminator=*/false);
   if (std::error_code EC = FileOrErr.getError())
     return errorCodeToError(EC);
   std::unique_ptr<MemoryBuffer> &Buffer = FileOrErr.get();

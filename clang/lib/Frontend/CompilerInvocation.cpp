@@ -2846,6 +2846,11 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                            Opts.OpenMPCUDABlocksPerSM, Diags);
   }
 
+  // Prevent auto-widening the representation of loop counters during an
+  // OpenMP collapse clause.
+  Opts.OpenMPOptimisticCollapse =
+      Args.hasArg(options::OPT_fopenmp_optimistic_collapse) ? 1 : 0;
+
   // Get the OpenMP target triples if any.
   if (Arg *A = Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
 

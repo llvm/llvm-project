@@ -53,6 +53,10 @@ FunctionPass *llvm::createWebAssemblyEHRestoreStackPointer() {
 
 bool WebAssemblyEHRestoreStackPointer::runOnMachineFunction(
     MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "********** EH Restore Stack Pointer **********\n"
+                       "********** Function: "
+                    << MF.getName() << '\n');
+
   const auto *FrameLowering = static_cast<const WebAssemblyFrameLowering *>(
       MF.getSubtarget().getFrameLowering());
   if (!FrameLowering->needsPrologForEH(MF))

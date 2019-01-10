@@ -60,21 +60,27 @@ void llvm::computeSyntheticCounts(ModuleSummaryIndex &Index) {
       return UINT64_C(0);
     }
   };
-  auto AddToEntryCount = [](ValueInfo V, uint64_t New) {
+  auto AddToEntryCount = [](ValueInfo V, Scaled64 New) {
     if (!V.getSummaryList().size())
       return;
     for (auto &GVS : V.getSummaryList()) {
       auto S = GVS.get()->getBaseObject();
       auto *F = cast<FunctionSummary>(S);
-      F->setEntryCount(SaturatingAdd(F->entryCount(), New));
+      F->setEntryCount(
+          SaturatingAdd(F->entryCount(), New.template toInt<uint64_t>()));
     }
   };
 
+  auto GetProfileCount = [&](ValueInfo V, FunctionSummary::EdgeTy &Edge) {
+    auto RelFreq = GetCallSiteRelFreq(Edge);
+    Scaled64 EC(GetEntryCount(V), 0);
+    return RelFreq * EC;
+  };
   // After initializing the counts in initializeCounts above, the counts have to
   // be propagated across the combined callgraph.
   // SyntheticCountsUtils::propagate takes care of this propagation on any
   // callgraph that specialized GraphTraits.
-  SyntheticCountsUtils<ModuleSummaryIndex *>::propagate(
-      &Index, GetCallSiteRelFreq, GetEntryCount, AddToEntryCount);
+  SyntheticCountsUtils<ModuleSummaryIndex *>::propagate(&Index, GetProfileCount,
+                                                        AddToEntryCount);
   Index.setHasSyntheticEntryCounts();
 }

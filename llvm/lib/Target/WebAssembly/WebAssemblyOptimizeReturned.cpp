@@ -74,6 +74,10 @@ void OptimizeReturned::visitCallSite(CallSite CS) {
 }
 
 bool OptimizeReturned::runOnFunction(Function &F) {
+  LLVM_DEBUG(dbgs() << "********** Optimize returned Attributes **********\n"
+                       "********** Function: "
+                    << F.getName() << '\n');
+
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   visit(F);
   return true;

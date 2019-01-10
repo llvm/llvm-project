@@ -267,7 +267,13 @@ def FeatureUnpackedD16VMem : SubtargetFeature<"unpacked-d16-vmem",
 def FeatureDLInsts : SubtargetFeature<"dl-insts",
   "HasDLInsts",
   "true",
-  "Has deep learning instructions"
+  "Has v_fmac_f32 and v_xnor_b32 instructions"
+>;
+
+def FeatureDotInsts : SubtargetFeature<"dot-insts",
+  "HasDotInsts",
+  "true",
+  "Has v_dot* instructions"
 >;
 
 def FeatureSRAMECC : SubtargetFeature<"sram-ecc",
@@ -558,6 +564,7 @@ def FeatureISAVersion9_0_6 : SubtargetFeatureISAVersion <9,0,6,
    FeatureFmaMixInsts,
    FeatureLDSBankCount32,
    FeatureDLInsts,
+   FeatureDotInsts,
    FeatureSRAMECC,
    FeatureCodeObjectV3]>;
 
@@ -755,6 +762,9 @@ def HasFmaMixInsts : Predicate<"Subtarget->hasFmaMixInsts()">,
 
 def HasDLInsts : Predicate<"Subtarget->hasDLInsts()">,
   AssemblerPredicate<"FeatureDLInsts">;
+
+def HasDotInsts : Predicate<"Subtarget->hasDotInsts()">,
+  AssemblerPredicate<"FeatureDotInsts">;
 
 
 def EnableLateCFGStructurize : Predicate<

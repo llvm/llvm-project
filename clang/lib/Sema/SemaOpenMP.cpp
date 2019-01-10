@@ -4136,7 +4136,7 @@ bool OpenMPIterationSpaceChecker::setStep(Expr *NewStep, bool Subtract) {
     if (!TestIsLessOp.hasValue())
       TestIsLessOp = IsConstPos || (IsUnsigned && !Subtract);
     if (UB && (IsConstZero ||
-               (TestIsLessOp.getValue() ? 
+               (TestIsLessOp.getValue() ?
                   (IsConstNeg || (IsUnsigned && Subtract)) :
                   (IsConstPos || (IsUnsigned && !Subtract))))) {
       SemaRef.Diag(NewStep->getExprLoc(),
@@ -4311,7 +4311,7 @@ bool OpenMPIterationSpaceChecker::checkAndSetCond(Expr *S) {
                        Op == OO_Less || Op == OO_Greater, CE->getSourceRange(),
                        CE->getOperatorLoc());
         break;
-      case OO_ExclaimEqual: 
+      case OO_ExclaimEqual:
         return setUB(getInitLCDecl(CE->getArg(0)) == LCDecl ?
                      CE->getArg(1) : CE->getArg(0),
                      /*LessOp=*/llvm::None,
@@ -4569,7 +4569,7 @@ Expr *OpenMPIterationSpaceChecker::buildPreCond(
 
   ExprResult CondExpr =
       SemaRef.BuildBinOp(S, DefaultLoc,
-                         TestIsLessOp.getValue() ? 
+                         TestIsLessOp.getValue() ?
                            (TestIsStrictOp ? BO_LT : BO_LE) :
                            (TestIsStrictOp ? BO_GT : BO_GE),
                          NewLB.get(), NewUB.get());
@@ -5270,13 +5270,14 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
 
   // Choose either the 32-bit or 64-bit version.
   ExprResult LastIteration = LastIteration64;
-  if (LastIteration32.isUsable() &&
-      C.getTypeSize(LastIteration32.get()->getType()) == 32 &&
-      (AllCountsNeedLessThan32Bits || NestedLoopCount == 1 ||
-       fitsInto(
-           /*Bits=*/32,
-           LastIteration32.get()->getType()->hasSignedIntegerRepresentation(),
-           LastIteration64.get(), SemaRef)))
+  if (SemaRef.getLangOpts().OpenMPOptimisticCollapse ||
+      (LastIteration32.isUsable() &&
+       C.getTypeSize(LastIteration32.get()->getType()) == 32 &&
+       (AllCountsNeedLessThan32Bits || NestedLoopCount == 1 ||
+        fitsInto(
+            /*Bits=*/32,
+            LastIteration32.get()->getType()->hasSignedIntegerRepresentation(),
+            LastIteration64.get(), SemaRef))))
     LastIteration = LastIteration32;
   QualType VType = LastIteration.get()->getType();
   QualType RealVType = VType;
@@ -5578,30 +5579,58 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   Built.Updates.resize(NestedLoopCount);
   Built.Finals.resize(NestedLoopCount);
   {
-    ExprResult Div;
-    // Go from inner nested loop to outer.
-    for (int Cnt = NestedLoopCount - 1; Cnt >= 0; --Cnt) {
+    // We implement the following algorithm for obtaining the
+    // original loop iteration variable values based on the
+    // value of the collapsed loop iteration variable IV.
+    //
+    // Let n+1 be the number of collapsed loops in the nest.
+    // Iteration variables (I0, I1, .... In)
+    // Iteration counts (N0, N1, ... Nn)
+    //
+    // Acc = IV;
+    //
+    // To compute Ik for loop k, 0 <= k <= n, generate:
+    //    Prod = N(k+1) * N(k+2) * ... * Nn;
+    //    Ik = Acc / Prod;
+    //    Acc -= Ik * Prod;
+    //
+    ExprResult Acc = IV;
+    for (unsigned int Cnt = 0; Cnt < NestedLoopCount; ++Cnt) {
       LoopIterationSpace &IS = IterSpaces[Cnt];
       SourceLocation UpdLoc = IS.IncSrcRange.getBegin();
-      // Build: Iter = (IV / Div) % IS.NumIters
-      // where Div is product of previous iterations' IS.NumIters.
       ExprResult Iter;
-      if (Div.isUsable()) {
-        Iter =
-            SemaRef.BuildBinOp(CurScope, UpdLoc, BO_Div, IV.get(), Div.get());
-      } else {
-        Iter = IV;
-        assert((Cnt == (int)NestedLoopCount - 1) &&
-               "unusable div expected on first iteration only");
-      }
 
-      if (Cnt != 0 && Iter.isUsable())
-        Iter = SemaRef.BuildBinOp(CurScope, UpdLoc, BO_Rem, Iter.get(),
-                                  IS.NumIterations);
+      // Compute prod
+      ExprResult Prod =
+          SemaRef.ActOnIntegerConstant(SourceLocation(), 1).get();
+      for (unsigned int K = Cnt+1; K < NestedLoopCount; ++K)
+        Prod = SemaRef.BuildBinOp(CurScope, UpdLoc, BO_Mul, Prod.get(),
+                                  IterSpaces[K].NumIterations);
+
+      // Iter = Acc / Prod
+      // If there is at least one more inner loop to avoid
+      // multiplication by 1.
+      if (Cnt + 1 < NestedLoopCount)
+        Iter = SemaRef.BuildBinOp(CurScope, UpdLoc, BO_Div,
+                                  Acc.get(), Prod.get());
+      else
+        Iter = Acc;
       if (!Iter.isUsable()) {
         HasErrors = true;
         break;
       }
+
+      // Update Acc:
+      // Acc -= Iter * Prod
+      // Check if there is at least one more inner loop to avoid
+      // multiplication by 1.
+      if (Cnt + 1 < NestedLoopCount)
+        Prod = SemaRef.BuildBinOp(CurScope, UpdLoc, BO_Mul,
+                                  Iter.get(), Prod.get());
+      else
+        Prod = Iter;
+      Acc = SemaRef.BuildBinOp(CurScope, UpdLoc, BO_Sub,
+                               Acc.get(), Prod.get());
 
       // Build update: IS.CounterVar(Private) = IS.Start + Iter * IS.Step
       auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IS.CounterVar)->getDecl());
@@ -5631,22 +5660,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
         break;
       }
 
-      // Build Div for the next iteration: Div <- Div * IS.NumIters
-      if (Cnt != 0) {
-        if (Div.isUnset())
-          Div = IS.NumIterations;
-        else
-          Div = SemaRef.BuildBinOp(CurScope, UpdLoc, BO_Mul, Div.get(),
-                                   IS.NumIterations);
-
-        // Add parentheses (for debugging purposes only).
-        if (Div.isUsable())
-          Div = tryBuildCapture(SemaRef, Div.get(), Captures);
-        if (!Div.isUsable()) {
-          HasErrors = true;
-          break;
-        }
-      }
       if (!Update.isUsable() || !Final.isUsable()) {
         HasErrors = true;
         break;
@@ -13116,7 +13129,7 @@ Sema::ActOnOpenMPMapClause(ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
       continue;
     }
     assert(Count < OMPMapClause::NumberOfModifiers &&
-           "Modifiers exceed the allowed number of map type modifiers"); 
+           "Modifiers exceed the allowed number of map type modifiers");
     Modifiers[Count] = MapTypeModifiers[I];
     ModifiersLoc[Count] = MapTypeModifiersLoc[I];
     ++Count;

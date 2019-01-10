@@ -56,7 +56,7 @@ public:
 
   const Function *getFunction() const;
   const BranchProbabilityInfo *getBPI() const;
-  void view() const;
+  void view(StringRef = "BlockFrequencyDAGs") const;
 
   /// getblockFreq - Return block frequency. Return 0 if we don't have the
   /// information. Please note that initial frequency is equal to ENTRY_FREQ. It

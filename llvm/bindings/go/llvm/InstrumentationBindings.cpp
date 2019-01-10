@@ -17,7 +17,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
-#include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
 
 using namespace llvm;
 
@@ -30,7 +29,7 @@ void LLVMAddAddressSanitizerModulePass(LLVMPassManagerRef PM) {
 }
 
 void LLVMAddThreadSanitizerPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createThreadSanitizerLegacyPassPass());
+  unwrap(PM)->add(createThreadSanitizerPass());
 }
 
 void LLVMAddMemorySanitizerLegacyPassPass(LLVMPassManagerRef PM) {

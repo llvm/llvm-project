@@ -1,6 +1,8 @@
-; RUN: opt < %s -inline -inline-remark-attribute --inline-threshold=-2 -S | FileCheck %s
+; RUN: opt < %s -inline -inline-remark-attribute --inline-threshold=0 -S | FileCheck %s
 
 ; Test that the inliner adds inline remark attributes to non-inlined callsites.
+
+declare void @ext();
 
 define void @foo() {
   call void @bar(i1 true)
@@ -12,6 +14,7 @@ define void @bar(i1 %p) {
 
 bb1:
   call void @foo()
+  call void @ext()
   ret void
 
 bb2:
@@ -43,6 +46,6 @@ define void @test2(i8*) {
   ret void
 }
 
-; CHECK: attributes [[ATTR1]] = { "inline-remark"="(cost=-5, threshold=-6)" }
+; CHECK: attributes [[ATTR1]] = { "inline-remark"="(cost=25, threshold=0)" }
 ; CHECK: attributes [[ATTR2]] = { "inline-remark"="(cost=never): recursive" }
 ; CHECK: attributes [[ATTR3]] = { "inline-remark"="unsupported operand bundle; (cost={{.*}}, threshold={{.*}})" }

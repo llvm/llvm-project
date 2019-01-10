@@ -404,6 +404,7 @@ public:
 
   void resetOptimized() {
     OptimizedID = INVALID_MEMORYACCESS_ID;
+    setOperand(1, nullptr);
   }
 
   void print(raw_ostream &OS) const;

@@ -228,6 +228,8 @@ static Function *CreateWrapper(Function *F, FunctionType *Ty) {
 }
 
 bool FixFunctionBitcasts::runOnModule(Module &M) {
+  LLVM_DEBUG(dbgs() << "********** Fix Function Bitcasts **********\n");
+
   Function *Main = nullptr;
   CallInst *CallMain = nullptr;
   SmallVector<std::pair<Use *, Function *>, 0> Uses;

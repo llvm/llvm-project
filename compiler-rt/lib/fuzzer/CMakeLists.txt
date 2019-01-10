@@ -25,6 +25,8 @@ set(LIBFUZZER_SOURCES
   FuzzerUtilWindows.cpp)
 
 set(LIBFUZZER_HEADERS
+  FuzzerBuiltins.h
+  FuzzerBuiltinsMsvc.h
   FuzzerCommand.h
   FuzzerCorpus.h
   FuzzerDataFlowTrace.h

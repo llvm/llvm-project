@@ -95,6 +95,7 @@
 #define getutxent __getutxent50
 #define getutxid __getutxid50
 #define getutxline __getutxline50
+#define pututxline __pututxline50
 #define glob __glob30
 #define gmtime __gmtime50
 #define gmtime_r __gmtime_r50
@@ -6566,10 +6567,21 @@ INTERCEPTOR(void *, getutxline, void *ut) {
     COMMON_INTERCEPTOR_INITIALIZE_RANGE(res, __sanitizer::struct_utmpx_sz);
   return res;
 }
+INTERCEPTOR(void *, pututxline, const void *ut) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, pututxline, ut);
+  if (ut)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, ut, __sanitizer::struct_utmpx_sz);
+  void *res = REAL(pututxline)(ut);
+  if (res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, __sanitizer::struct_utmpx_sz);
+  return res;
+}
 #define INIT_UTMPX                      \
   COMMON_INTERCEPT_FUNCTION(getutxent); \
   COMMON_INTERCEPT_FUNCTION(getutxid);  \
-  COMMON_INTERCEPT_FUNCTION(getutxline);
+  COMMON_INTERCEPT_FUNCTION(getutxline); \
+  COMMON_INTERCEPT_FUNCTION(pututxline);
 #else
 #define INIT_UTMPX
 #endif
