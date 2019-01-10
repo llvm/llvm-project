@@ -1074,9 +1074,9 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
                         __FUNCTION__, error.AsCString());
           return error;
         }
-        int write_fd = socket_pipe.GetWriteFileDescriptor();
+        pipe_t write = socket_pipe.GetWritePipe();
         debugserver_args.AppendArgument(llvm::StringRef("--pipe"));
-        debugserver_args.AppendArgument(llvm::to_string(write_fd));
+        debugserver_args.AppendArgument(llvm::to_string(write));
         launch_info.AppendCloseFileAction(socket_pipe.GetReadFileDescriptor());
 #endif
       } else {

@@ -41,6 +41,9 @@ public:
   virtual bool CanRead() const = 0;
   virtual bool CanWrite() const = 0;
 
+  virtual lldb::pipe_t GetReadPipe() const = 0;
+  virtual lldb::pipe_t GetWritePipe() const = 0;
+
   virtual int GetReadFileDescriptor() const = 0;
   virtual int GetWriteFileDescriptor() const = 0;
   virtual int ReleaseReadFileDescriptor() = 0;
