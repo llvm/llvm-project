@@ -20,9 +20,7 @@ def HasAddr32 : Predicate<"!Subtarget->hasAddr64()">;
 def HasAddr64 : Predicate<"Subtarget->hasAddr64()">;
 def HasSIMD128 : Predicate<"Subtarget->hasSIMD128()">,
                            AssemblerPredicate<"FeatureSIMD128", "simd128">;
-def HasUnimplementedSIMD :
-    Predicate<"Subtarget->hasSIMD128Unimplemented()">,
-    AssemblerPredicate<"FeatureSIMD128Unimplemented", "simd128-unimplemented">;
+def HasUnimplementedSIMD : Predicate<"EnableUnimplementedWasmSIMDInstrs">;
 def HasAtomics : Predicate<"Subtarget->hasAtomics()">,
                            AssemblerPredicate<"FeatureAtomics", "atomics">;
 def HasNontrappingFPToInt :

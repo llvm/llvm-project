@@ -37,6 +37,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-lower"
 
+// Emit proposed instructions that may not have been implemented in engines
+cl::opt<bool> EnableUnimplementedWasmSIMDInstrs(
+    "wasm-enable-unimplemented-simd",
+    cl::desc("Emit potentially-unimplemented WebAssembly SIMD instructions"),
+    cl::init(false));
+
 WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     const TargetMachine &TM, const WebAssemblySubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
@@ -64,7 +70,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     addRegisterClass(MVT::v8i16, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v4i32, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v4f32, &WebAssembly::V128RegClass);
-    if (Subtarget->hasSIMD128Unimplemented()) {
+    if (EnableUnimplementedWasmSIMDInstrs) {
       addRegisterClass(MVT::v2i64, &WebAssembly::V128RegClass);
       addRegisterClass(MVT::v2f64, &WebAssembly::V128RegClass);
     }
@@ -129,7 +135,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32}) {
         setOperationAction(Op, T, Expand);
       }
-      if (Subtarget->hasSIMD128Unimplemented()) {
+      if (EnableUnimplementedWasmSIMDInstrs) {
         setOperationAction(Op, MVT::v2i64, Expand);
       }
     }
@@ -143,7 +149,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32}) {
       setOperationAction(ISD::VECTOR_SHUFFLE, T, Custom);
     }
-    if (Subtarget->hasSIMD128Unimplemented()) {
+    if (EnableUnimplementedWasmSIMDInstrs) {
       setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2i64, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2f64, Custom);
     }
@@ -154,7 +160,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
       for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
         setOperationAction(Op, T, Custom);
-    if (Subtarget->hasSIMD128Unimplemented())
+    if (EnableUnimplementedWasmSIMDInstrs)
       for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
         setOperationAction(Op, MVT::v2i64, Custom);
   }
@@ -164,7 +170,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto Op : {ISD::VSELECT, ISD::SELECT_CC, ISD::SELECT}) {
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32})
         setOperationAction(Op, T, Expand);
-      if (Subtarget->hasSIMD128Unimplemented())
+      if (EnableUnimplementedWasmSIMDInstrs)
         for (auto T : {MVT::v2i64, MVT::v2f64})
           setOperationAction(Op, T, Expand);
     }
@@ -173,10 +179,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   // sign-extend from.
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
   if (!Subtarget->hasSignExt()) {
-    // Sign extends are legal only when extending a vector extract
-    auto Action = Subtarget->hasSIMD128() ? Custom : Expand;
     for (auto T : {MVT::i8, MVT::i16, MVT::i32})
-      setOperationAction(ISD::SIGN_EXTEND_INREG, T, Action);
+      setOperationAction(ISD::SIGN_EXTEND_INREG, T, Expand);
   }
   for (auto T : MVT::integer_vector_valuetypes())
     setOperationAction(ISD::SIGN_EXTEND_INREG, T, Expand);
@@ -221,7 +225,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   }
 
   // Expand additional SIMD ops that V8 hasn't implemented yet
-  if (Subtarget->hasSIMD128() && !Subtarget->hasSIMD128Unimplemented()) {
+  if (Subtarget->hasSIMD128() && !EnableUnimplementedWasmSIMDInstrs) {
     setOperationAction(ISD::FSQRT, MVT::v4f32, Expand);
     setOperationAction(ISD::FDIV, MVT::v4f32, Expand);
   }
@@ -232,7 +236,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, T, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, T, Custom);
     }
-    if (Subtarget->hasSIMD128Unimplemented()) {
+    if (EnableUnimplementedWasmSIMDInstrs) {
       for (auto T : {MVT::v2i64, MVT::v2f64}) {
         setOperationAction(ISD::EXTRACT_VECTOR_ELT, T, Custom);
         setOperationAction(ISD::INSERT_VECTOR_ELT, T, Custom);
@@ -896,8 +900,6 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerAccessVectorElement(Op, DAG);
   case ISD::INTRINSIC_VOID:
     return LowerINTRINSIC_VOID(Op, DAG);
-  case ISD::SIGN_EXTEND_INREG:
-    return LowerSIGN_EXTEND_INREG(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SHL:
@@ -1097,22 +1099,6 @@ WebAssemblyTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     break;
   }
   }
-}
-
-SDValue
-WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
-                                                  SelectionDAG &DAG) const {
-  // If sign extension operations are disabled, allow sext_inreg only if operand
-  // is a vector extract. SIMD does not depend on sign extension operations, but
-  // allowing sext_inreg in this context lets us have simple patterns to select
-  // extract_lane_s instructions. Expanding sext_inreg everywhere would be
-  // simpler in this file, but would necessitate large and brittle patterns to
-  // undo the expansion and select extract_lane_s instructions.
-  assert(!Subtarget->hasSignExt() && Subtarget->hasSIMD128());
-  if (Op.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT)
-    return Op;
-  // Otherwise expand
-  return SDValue();
 }
 
 SDValue

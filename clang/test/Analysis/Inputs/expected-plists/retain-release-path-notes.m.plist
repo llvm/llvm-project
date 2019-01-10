@@ -103,7 +103,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;leaked&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -155,9 +155,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type CFTypeRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type CFTypeRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -224,7 +224,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;leaked&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -570,7 +570,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;leaked&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -769,7 +769,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;leaked&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -822,9 +822,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type CFTypeRef with a +0 retain count</string>
+     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type CFTypeRef with a +0 retain count</string>
+     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -966,7 +966,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;leaked&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -1163,7 +1163,7 @@
     </dict>
    </array>
    <key>description</key><string>Reference-counted object is used after it is released</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Use-after-release</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -1360,7 +1360,7 @@
     </dict>
    </array>
    <key>description</key><string>Reference-counted object is used after it is released</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Use-after-release</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -1632,7 +1632,7 @@
     </dict>
    </array>
    <key>description</key><string>Object autoreleased too many times</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Object autoreleased too many times</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -1830,7 +1830,7 @@
     </dict>
    </array>
    <key>description</key><string>Object autoreleased too many times</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Object autoreleased too many times</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -1883,9 +1883,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type CFTypeRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type CFTypeRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -1952,7 +1952,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;leaked&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -2006,9 +2006,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type CFTypeRef with a +0 retain count</string>
+     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type CFTypeRef with a +0 retain count</string>
+     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -2075,7 +2075,7 @@
     </dict>
    </array>
    <key>description</key><string>Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Method should return an owned object</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -2127,9 +2127,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type CFTypeRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type CFTypeRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -2196,7 +2196,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;object&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak of returned object</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -2317,7 +2317,7 @@
     </dict>
    </array>
    <key>description</key><string>Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Method should return an owned object</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -2438,7 +2438,7 @@
     </dict>
    </array>
    <key>description</key><string>Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Method should return an owned object</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -2559,7 +2559,7 @@
     </dict>
    </array>
    <key>description</key><string>Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Method should return an owned object</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -2680,7 +2680,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;result&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak of returned object</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -2876,7 +2876,7 @@
     </dict>
    </array>
    <key>description</key><string>Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Method should return an owned object</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -2998,7 +2998,7 @@
     </dict>
    </array>
    <key>description</key><string>Incorrect decrement of the reference count of an object that is not owned at this point by the caller</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Bad release</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -3119,7 +3119,7 @@
     </dict>
    </array>
    <key>description</key><string>Incorrect decrement of the reference count of an object that is not owned at this point by the caller</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Bad release</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -3240,7 +3240,7 @@
     </dict>
    </array>
    <key>description</key><string>Incorrect decrement of the reference count of an object that is not owned at this point by the caller</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Bad release</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -3361,7 +3361,7 @@
     </dict>
    </array>
    <key>description</key><string>Incorrect decrement of the reference count of an object that is not owned at this point by the caller</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Bad release</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -3482,7 +3482,7 @@
     </dict>
    </array>
    <key>description</key><string>Incorrect decrement of the reference count of an object that is not owned at this point by the caller</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Bad release</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -3834,13 +3834,13 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: allocated object of type MyObj * is not referenced later in this execution path and has a retain count of +1</string>
+     <string>Object leaked: allocated object of type &apos;MyObj *&apos; is not referenced later in this execution path and has a retain count of +1</string>
      <key>message</key>
-     <string>Object leaked: allocated object of type MyObj * is not referenced later in this execution path and has a retain count of +1</string>
+     <string>Object leaked: allocated object of type &apos;MyObj *&apos; is not referenced later in this execution path and has a retain count of +1</string>
     </dict>
    </array>
-   <key>description</key><string>Potential leak of an object of type MyObj *</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>description</key><string>Potential leak of an object of type &apos;MyObj *&apos;</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -4239,7 +4239,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;y&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -4298,9 +4298,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type CFTypeRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type CFTypeRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -4517,7 +4517,7 @@
     </dict>
    </array>
    <key>description</key><string>Object autoreleased too many times</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Object autoreleased too many times</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -4571,9 +4571,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type CFTypeRef with a +0 retain count</string>
+     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type CFTypeRef with a +0 retain count</string>
+     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -4715,7 +4715,7 @@
     </dict>
    </array>
    <key>description</key><string>Object autoreleased too many times</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Object autoreleased too many times</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -4768,9 +4768,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type CFTypeRef with a +0 retain count</string>
+     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type CFTypeRef with a +0 retain count</string>
+     <string>Call to function &apos;CFGetSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -4987,7 +4987,7 @@
     </dict>
    </array>
    <key>description</key><string>Object autoreleased too many times</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Object autoreleased too many times</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->

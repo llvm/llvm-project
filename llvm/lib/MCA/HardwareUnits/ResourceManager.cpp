@@ -118,7 +118,8 @@ getStrategyFor(const ResourceState &RS) {
 ResourceManager::ResourceManager(const MCSchedModel &SM)
     : Resources(SM.getNumProcResourceKinds()),
       Strategies(SM.getNumProcResourceKinds()),
-      Resource2Groups(SM.getNumProcResourceKinds(), 0) {
+      Resource2Groups(SM.getNumProcResourceKinds(), 0),
+      ProcResID2Mask(SM.getNumProcResourceKinds()) {
   computeProcResourceMasks(SM, ProcResID2Mask);
 
   for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
@@ -283,9 +284,6 @@ void ResourceManager::issueInstruction(
       ResourceRef Pipe = selectPipe(R.first);
       use(Pipe);
       BusyResources[Pipe] += CS.size();
-      // Replace the resource mask with a valid processor resource index.
-      const ResourceState &RS = *Resources[getResourceStateIndex(Pipe.first)];
-      Pipe.first = RS.getProcResourceID();
       Pipes.emplace_back(std::pair<ResourceRef, ResourceCycles>(
           Pipe, ResourceCycles(CS.size())));
     } else {

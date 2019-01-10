@@ -104,7 +104,7 @@ public:
 /// Resource masks are used by the ResourceManager to solve set membership
 /// problems with simple bit manipulation operations.
 void computeProcResourceMasks(const MCSchedModel &SM,
-                              SmallVectorImpl<uint64_t> &Masks);
+                              MutableArrayRef<uint64_t> Masks);
 
 /// Compute the reciprocal block throughput from a set of processor resource
 /// cycles. The reciprocal block throughput is computed as the MAX between:

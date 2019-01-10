@@ -1229,11 +1229,15 @@ unsigned clang_Cursor_isAnonymous(CXCursor C){
   if (!clang_isDeclaration(C.kind))
     return 0;
   const Decl *D = cxcursor::getCursorDecl(C);
-  if (const RecordDecl *FD = dyn_cast_or_null<RecordDecl>(D))
-    return FD->isAnonymousStructOrUnion();
+  if (const NamespaceDecl *ND = dyn_cast_or_null<NamespaceDecl>(D)) {
+    return ND->isAnonymousNamespace();
+  } else if (const TagDecl *TD = dyn_cast_or_null<TagDecl>(D)) {
+    return TD->getTypedefNameForAnonDecl() == nullptr &&
+           TD->getIdentifier() == nullptr;
+  }
+
   return 0;
 }
-
 CXType clang_Type_getNamedType(CXType CT){
   QualType T = GetQualType(CT);
   const Type *TP = T.getTypePtrOrNull();

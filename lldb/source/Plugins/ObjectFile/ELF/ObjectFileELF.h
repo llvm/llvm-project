@@ -134,6 +134,8 @@ public:
 
   lldb_private::Address GetEntryPointAddress() override;
 
+  lldb_private::Address GetBaseAddress() override;
+
   ObjectFile::Type CalculateType() override;
 
   ObjectFile::Strata CalculateStrata() override;

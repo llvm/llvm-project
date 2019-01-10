@@ -31,6 +31,8 @@ InstrBuilder::InstrBuilder(const llvm::MCSubtargetInfo &sti,
                            const llvm::MCInstrAnalysis *mcia)
     : STI(sti), MCII(mcii), MRI(mri), MCIA(mcia), FirstCallInst(true),
       FirstReturnInst(true) {
+  const MCSchedModel &SM = STI.getSchedModel();
+  ProcResourceMasks.resize(SM.getNumProcResourceKinds());
   computeProcResourceMasks(STI.getSchedModel(), ProcResourceMasks);
 }
 
@@ -178,8 +180,8 @@ static void initializeUsedResources(InstrDesc &ID,
 
   LLVM_DEBUG({
     for (const std::pair<uint64_t, ResourceUsage> &R : ID.Resources)
-      dbgs() << "\t\tMask=" << format_hex(R.first, 16) << ", " <<
-                "cy=" << R.second.size() << '\n';
+      dbgs() << "\t\tMask=" << format_hex(R.first, 16) << ", "
+             << "cy=" << R.second.size() << '\n';
     for (const uint64_t R : ID.Buffers)
       dbgs() << "\t\tBuffer Mask=" << format_hex(R, 16) << '\n';
   });
@@ -525,6 +527,9 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
         MCI);
   }
 
+  LLVM_DEBUG(dbgs() << "\n\t\tOpcode Name= " << MCII.getName(Opcode) << '\n');
+  LLVM_DEBUG(dbgs() << "\t\tSchedClassID=" << SchedClassID << '\n');
+
   // Create a new empty descriptor.
   std::unique_ptr<InstrDesc> ID = llvm::make_unique<InstrDesc>();
   ID->NumMicroOps = SCDesc.NumMicroOps;
@@ -559,9 +564,6 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   populateWrites(*ID, MCI, SchedClassID);
   populateReads(*ID, MCI, SchedClassID);
 
-#ifndef NDEBUG
-  ID->Name = MCII.getName(Opcode);
-#endif
   LLVM_DEBUG(dbgs() << "\t\tMaxLatency=" << ID->MaxLatency << '\n');
   LLVM_DEBUG(dbgs() << "\t\tNumMicroOps=" << ID->NumMicroOps << '\n');
 

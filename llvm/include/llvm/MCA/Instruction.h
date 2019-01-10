@@ -138,8 +138,8 @@ class WriteState {
 public:
   WriteState(const WriteDescriptor &Desc, unsigned RegID,
              bool clearsSuperRegs = false, bool writesZero = false)
-      : WD(&Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(RegID),
-        PRFID(0), ClearsSuperRegs(clearsSuperRegs), WritesZero(writesZero),
+      : WD(&Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(RegID), PRFID(0),
+        ClearsSuperRegs(clearsSuperRegs), WritesZero(writesZero),
         IsEliminated(false), DependentWrite(nullptr), PartialWrite(nullptr),
         DependentWriteCyclesLeft(0) {}
 
@@ -155,7 +155,9 @@ public:
   void addUser(ReadState *Use, int ReadAdvance);
   void addUser(WriteState *Use);
 
-  unsigned getDependentWriteCyclesLeft() const { return DependentWriteCyclesLeft; }
+  unsigned getDependentWriteCyclesLeft() const {
+    return DependentWriteCyclesLeft;
+  }
 
   unsigned getNumUsers() const {
     unsigned NumUsers = Users.size();
@@ -348,11 +350,6 @@ struct InstrDesc {
   InstrDesc() = default;
   InstrDesc(const InstrDesc &Other) = delete;
   InstrDesc &operator=(const InstrDesc &Other) = delete;
-
-#ifndef NDEBUG
-  // Original instruction name for debugging purposes.
-  StringRef Name;
-#endif
 };
 
 /// Base class for instructions consumed by the simulation pipeline.
@@ -551,4 +548,4 @@ public:
 } // namespace mca
 } // namespace llvm
 
-#endif  // LLVM_MCA_INSTRUCTION_H
+#endif // LLVM_MCA_INSTRUCTION_H

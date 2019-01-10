@@ -581,6 +581,10 @@ namespace AArch64II {
     /// to the symbol is for an import stub.  This is used for DLL import
     /// storage class indication on Windows.
     MO_DLLIMPORT = 0x80,
+
+    /// MO_S - Indicates that the bits of the symbol operand represented by
+    /// MO_G0 etc are signed.
+    MO_S = 0x100,
   };
 } // end namespace AArch64II
 

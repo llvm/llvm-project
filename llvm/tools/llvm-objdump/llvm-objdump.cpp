@@ -265,8 +265,17 @@ cl::opt<unsigned long long>
     StartAddress("start-address", cl::desc("Disassemble beginning at address"),
                  cl::value_desc("address"), cl::init(0));
 cl::opt<unsigned long long>
-    StopAddress("stop-address", cl::desc("Stop disassembly at address"),
+    StopAddress("stop-address",
+                cl::desc("Do not skip blocks of zeroes when disassembling"),
                 cl::value_desc("address"), cl::init(UINT64_MAX));
+
+cl::opt<bool> DisassembleZeroes("disassemble-zeroes",
+                                cl::desc("Do not skip blocks of zeroes when "
+                                         "disassembling the blocks of zeroes"));
+cl::alias DisassembleZeroesShort("z",
+                                 cl::desc("Alias for --disassemble-zeroes"),
+                                 cl::aliasopt(DisassembleZeroes));
+
 static StringRef ToolName;
 
 typedef std::vector<std::tuple<uint64_t, StringRef, uint8_t>> SectionSymbolsTy;
@@ -1298,6 +1307,29 @@ static void addPltEntries(const ObjectFile *Obj,
   }
 }
 
+// Normally the disassembly output will skip blocks of zeroes. This function
+// returns the number of zero bytes that can be skipped when dumping the
+// disassembly of the instructions in Buf.
+static size_t countSkippableZeroBytes(ArrayRef<uint8_t> Buf) {
+  // When -z or --disassemble-zeroes are given we always dissasemble them.
+  if (DisassembleZeroes)
+    return 0;
+
+  // Find the number of leading zeroes.
+  size_t N = 0;
+  while (N < Buf.size() && !Buf[N])
+    ++N;
+
+  // We may want to skip blocks of zero bytes, but unless we see
+  // at least 8 of them in a row.
+  if (N < 8)
+    return 0;
+
+  // We skip zeroes in multiples of 4 because do not want to truncate an
+  // instruction if it starts with a zero byte.
+  return N & ~0x3;
+}
+
 static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   if (StartAddress > StopAddress)
     error("Start address should be less than stop address");
@@ -1732,6 +1764,14 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
         if (Index >= End)
           break;
 
+        if (size_t N =
+                countSkippableZeroBytes(Bytes.slice(Index, End - Index))) {
+          outs() << "\t\t..." << '\n';
+          Index += N;
+          if (Index >= End)
+            break;
+        }
+
         // Disassemble a real instruction or a data when disassemble all is
         // provided
         bool Disassembled = DisAsm->getInstruction(Inst, Size, Bytes.slice(Index),
@@ -1975,7 +2015,14 @@ void llvm::PrintSymbolTable(const ObjectFile *o, StringRef ArchiveName,
     printCOFFSymbolTable(coff);
     return;
   }
-  for (const SymbolRef &Symbol : o->symbols()) {
+
+  for (auto I = o->symbol_begin(), E = o->symbol_end(); I != E; ++I) {
+    // Skip printing the special zero symbol when dumping an ELF file.
+    // This makes the output consistent with the GNU objdump.
+    if (I == o->symbol_begin() && isa<ELFObjectFileBase>(o))
+      continue;
+
+    const SymbolRef &Symbol = *I;
     Expected<uint64_t> AddressOrError = Symbol.getAddress();
     if (!AddressOrError)
       report_error(ArchiveName, o->getFileName(), AddressOrError.takeError(),

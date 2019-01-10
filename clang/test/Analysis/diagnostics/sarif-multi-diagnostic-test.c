@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.security.taint,debug.TaintTest %s -verify -analyzer-output=sarif -o - | %diff_sarif %S/Inputs/expected-sarif/sarif-multi-diagnostic-test.c.sarif
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.security.taint,debug.TaintTest %s -verify -analyzer-output=sarif -o - | %diff_sarif %S/Inputs/expected-sarif/sarif-multi-diagnostic-test.c.sarif -
 #include "../Inputs/system-header-simulator.h"
 
 int atoi(const char *nptr);

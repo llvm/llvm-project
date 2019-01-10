@@ -7,7 +7,7 @@
           "fileLocation": {
             "uri": "file:sarif-multi-diagnostic-test.c"
           },
-          "length": 665,
+          "length": 667,
           "mimeType": "text/plain",
           "roles": [
             "resultFile"
@@ -29,7 +29,7 @@
             "fullDescription": {
               "text": "Check for logical errors for function calls and Objective-C message expressions (e.g., uninitialized arguments, null function pointers)"
             },
-            "helpURI": "https://clang-analyzer.llvm.org/available_checks.html#core.CallAndMessage",
+            "helpUri": "https://clang-analyzer.llvm.org/available_checks.html#core.CallAndMessage",
             "id": "core.CallAndMessage",
             "name": {
               "text": "core.CallAndMessage"
@@ -39,7 +39,7 @@
             "fullDescription": {
               "text": "Check for division by zero"
             },
-            "helpURI": "https://clang-analyzer.llvm.org/available_checks.html#core.DivideZero",
+            "helpUri": "https://clang-analyzer.llvm.org/available_checks.html#core.DivideZero",
             "id": "core.DivideZero",
             "name": {
               "text": "core.DivideZero"

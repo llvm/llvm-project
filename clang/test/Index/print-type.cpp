@@ -79,6 +79,17 @@ auto autoTemplPointer = &autoTemplRefParam;
 
 outer::Foo<bool> parameter;
 outer::inner::Bar construct(&parameter);
+
+class X {
+  struct { int a; };
+  class { public: int b; };
+  union { int c; int d;};
+  enum { Test };
+};
+
+namespace {
+  int a;
+}
 // RUN: c-index-test -test-print-type %s -std=c++14 | FileCheck %s
 // CHECK: Namespace=outer:1:11 (Definition) [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: ClassTemplate=Foo:4:8 (Definition) [type=] [typekind=Invalid] [isPOD=0]
@@ -188,3 +199,8 @@ outer::inner::Bar construct(&parameter);
 // CHECK: TypeAliasDecl=baz:76:7 (Definition) [type=baz] [typekind=Typedef] [templateargs/1= [type=A<void>] [typekind=Unexposed]] [canonicaltype=A<void>] [canonicaltypekind=Record] [canonicaltemplateargs/1= [type=void] [typekind=Void]] [isPOD=0]
 // CHECK: VarDecl=autoTemplPointer:78:6 (Definition) [type=Specialization<Specialization<bool> &> *] [typekind=Auto] [canonicaltype=Specialization<Specialization<bool> &> *] [canonicaltypekind=Pointer] [isPOD=1] [pointeetype=Specialization<Specialization<bool> &>] [pointeekind=Record]
 // CHECK: CallExpr=Bar:17:3 [type=outer::inner::Bar] [typekind=Elaborated] [canonicaltype=outer::inner::Bar] [canonicaltypekind=Record] [args= [outer::Foo<bool> *] [Pointer]] [isPOD=0] [nbFields=3]
+// CHECK: StructDecl=:84:3 (Definition) [type=X::(anonymous struct at {{.*}}print-type.cpp:84:3)] [typekind=Record] [isPOD=1] [nbFields=1] [isAnon=1]
+// CHECK: ClassDecl=:85:3 (Definition) [type=X::(anonymous class at {{.*}}print-type.cpp:85:3)] [typekind=Record] [isPOD=1] [nbFields=1] [isAnon=1]
+// CHECK: UnionDecl=:86:3 (Definition) [type=X::(anonymous union at {{.*}}print-type.cpp:86:3)] [typekind=Record] [isPOD=1] [nbFields=2] [isAnon=1]
+// CHECK: EnumDecl=:87:3 (Definition) [type=X::(anonymous enum at {{.*}}print-type.cpp:87:3)] [typekind=Enum] [isPOD=1] [isAnon=1]
+// CHECK: Namespace=:90:11 (Definition) [type=] [typekind=Invalid] [isPOD=0] [isAnon=1]
