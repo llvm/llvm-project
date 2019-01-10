@@ -1,0 +1,52 @@
+# RUN: yaml2obj %s > %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+# CHECK: Name: .text{{$}}
+# CHECK: Name: 1234567{{$}}
+# CHECK: Name: 12345678{{$}}
+# CHECK: Name: 123456789{{$}}
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4616
+  ImageBase:       1073741824
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA, IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT, IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     64 # '@', if it makes its way into the name field
+    SectionData:     DEADBEEFBAADF00D
+  - Name:            1234567
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  442368
+    VirtualSize:     64
+    SectionData:     DEADBEEFBAADF00D
+  - Name:            12345678
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  446464
+    VirtualSize:     64
+    SectionData:     DEADBEEFBAADF00D
+  - Name:            123456789
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  450560
+    VirtualSize:     64
+    SectionData:     DEADBEEFBAADF00D
+symbols:         []
+...
