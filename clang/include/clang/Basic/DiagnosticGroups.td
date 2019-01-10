@@ -104,7 +104,11 @@ def UndefinedFuncTemplate : DiagGroup<"undefined-func-template">;
 def MissingNoEscape : DiagGroup<"missing-noescape">;
 
 def DeleteIncomplete : DiagGroup<"delete-incomplete">;
-def DeleteNonVirtualDtor : DiagGroup<"delete-non-virtual-dtor">;
+def DeleteNonAbstractNonVirtualDtor : DiagGroup<"delete-non-abstract-non-virtual-dtor">;
+def DeleteAbstractNonVirtualDtor : DiagGroup<"delete-abstract-non-virtual-dtor">;
+def DeleteNonVirtualDtor : DiagGroup<"delete-non-virtual-dtor",
+                                     [DeleteNonAbstractNonVirtualDtor,
+                                      DeleteAbstractNonVirtualDtor]>;
 def AbstractFinalClass : DiagGroup<"abstract-final-class">;
 
 def CXX11CompatDeprecatedWritableStr :
