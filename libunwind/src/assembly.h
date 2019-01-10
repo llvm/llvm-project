@@ -85,8 +85,6 @@
 
 #define NO_EXEC_STACK_DIRECTIVE
 
-#elif defined(__sparc__)
-
 #else
 
 #error Unsupported target
