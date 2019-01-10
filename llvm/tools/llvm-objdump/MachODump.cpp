@@ -6977,8 +6977,9 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       Expected<std::unique_ptr<MachOObjectFile>> DbgObjCheck =
           ObjectFile::createMachOObjectFile(BufOrErr.get()->getMemBufferRef());
 
-      if (DbgObjCheck.takeError())
-        report_error(MachOOF->getFileName(), DbgObjCheck.takeError());
+      if (Error E = DbgObjCheck.takeError())
+        report_error(MachOOF->getFileName(), std::move(E));
+
       DbgObj = DbgObjCheck.get().release();
       // We need to keep the file alive, because we're replacing DbgObj with it.
       DSYMBuf = std::move(BufOrErr.get());
