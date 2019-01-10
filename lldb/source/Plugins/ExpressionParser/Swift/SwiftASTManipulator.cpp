@@ -1430,8 +1430,8 @@ SwiftASTManipulator::GetTypesForResultFixup(uint32_t language_flags) {
             extension_decl->getGenericParams()->getParams().size() == 1) {
           swift::GenericTypeParamDecl *type_parameter =
               extension_decl->getGenericParams()->getParams()[0];
-          swift::NameAliasType *name_alias_type =
-              llvm::dyn_cast_or_null<swift::NameAliasType>(
+          swift::TypeAliasType *name_alias_type =
+              llvm::dyn_cast_or_null<swift::TypeAliasType>(
                   type_parameter->getSuperclass().getPointer());
 
           if (name_alias_type) {
@@ -1450,8 +1450,8 @@ SwiftASTManipulator::GetTypesForResultFixup(uint32_t language_flags) {
           }
         }
       } else if (!ret.context_alias) {
-        swift::NameAliasType *name_alias_type =
-            llvm::dyn_cast<swift::NameAliasType>(
+        swift::TypeAliasType *name_alias_type =
+            llvm::dyn_cast<swift::TypeAliasType>(
                 extension_decl->getExtendedType().getPointer());
 
         if (name_alias_type) {
