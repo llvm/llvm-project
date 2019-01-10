@@ -6543,6 +6543,11 @@ ExprResult Sema::ActOnDecltypeExpression(Expr *E) {
              ExpressionEvaluationContextRecord::EK_Decltype &&
          "not in a decltype expression");
 
+  ExprResult Result = CheckPlaceholderExpr(E);
+  if (Result.isInvalid())
+    return ExprError();
+  E = Result.get();
+
   // C++11 [expr.call]p11:
   //   If a function call is a prvalue of object type,
   // -- if the function call is either

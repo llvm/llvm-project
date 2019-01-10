@@ -4429,6 +4429,10 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
         return DAR_FailedAlreadyDiagnosed;
       }
 
+      ExprResult ER = CheckPlaceholderExpr(Init);
+      if (ER.isInvalid())
+        return DAR_FailedAlreadyDiagnosed;
+      Init = ER.get();
       QualType Deduced = BuildDecltypeType(Init, Init->getBeginLoc(), false);
       if (Deduced.isNull())
         return DAR_FailedAlreadyDiagnosed;
