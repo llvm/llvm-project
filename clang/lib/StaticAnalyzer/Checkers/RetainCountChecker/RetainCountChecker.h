@@ -256,11 +256,6 @@ class RetainCountChecker
   mutable std::unique_ptr<CFRefBug> overAutorelease, returnNotOwnedForOwned;
   mutable std::unique_ptr<CFRefBug> leakWithinFunction, leakAtReturn;
 
-  typedef llvm::DenseMap<SymbolRef, const CheckerProgramPointTag *> SymbolTagMap;
-
-  // This map is only used to ensure proper deletion of any allocated tags.
-  mutable SymbolTagMap DeadSymbolTags;
-
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
 public:
   static constexpr const char *DeallocTagDescription = "DeallocSent";
@@ -273,7 +268,6 @@ public:
 
   RetainCountChecker() {}
 
-  ~RetainCountChecker() override { DeleteContainerSeconds(DeadSymbolTags); }
 
   CFRefBug *getLeakWithinFunctionBug(const LangOptions &LOpts) const;
 
