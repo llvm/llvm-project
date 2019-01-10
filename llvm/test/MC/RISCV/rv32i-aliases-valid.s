@@ -82,6 +82,19 @@ li a0, %lo(foo)
 # CHECK-OBJ: R_RISCV_PCREL_LO12
 li a0, %pcrel_lo(foo)
 
+.equ CONST, 0x123456
+# CHECK-EXPAND: lui a0, 291
+# CHECK-EXPAND: addi a0, a0, 1110
+li a0, CONST
+# CHECK-EXPAND: lui a0, 291
+# CHECK-EXPAND: addi a0, a0, 1111
+li a0, CONST+1
+
+.equ CONST, 0x654321
+# CHECK-EXPAND: lui a0, 1620
+# CHECK-EXPAND: addi a0, a0, 801
+li a0, CONST
+
 # CHECK-INST: csrrs t4, instreth, zero
 # CHECK-ALIAS: rdinstreth t4
 rdinstreth x29

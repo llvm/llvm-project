@@ -654,10 +654,15 @@ TEST_F(SymbolCollectorTest, ClassMembers) {
     void Foo::ssf() {}
   )";
   runSymbolCollector(Header, Main);
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(QName("Foo"), QName("Foo::f"),
-                                   QName("Foo::g"), QName("Foo::sf"),
-                                   QName("Foo::ssf"), QName("Foo::x")));
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          QName("Foo"),
+          AllOf(QName("Foo::f"), ReturnType(""), ForCodeCompletion(false)),
+          AllOf(QName("Foo::g"), ReturnType(""), ForCodeCompletion(false)),
+          AllOf(QName("Foo::sf"), ReturnType(""), ForCodeCompletion(false)),
+          AllOf(QName("Foo::ssf"), ReturnType(""), ForCodeCompletion(false)),
+          AllOf(QName("Foo::x"), ReturnType(""), ForCodeCompletion(false))));
 }
 
 TEST_F(SymbolCollectorTest, Scopes) {

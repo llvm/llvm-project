@@ -356,8 +356,8 @@ struct StoreModifier: public Modifier {
   void Act() override {
     // Try to use predefined pointers. If non-exist, use undef pointer value;
     Value *Ptr = getRandomPointerValue();
-    Type  *Tp = Ptr->getType();
-    Value *Val = getRandomValue(Tp->getContainedType(0));
+    PointerType *Tp = cast<PointerType>(Ptr->getType());
+    Value *Val = getRandomValue(Tp->getElementType());
     Type  *ValTy = Val->getType();
 
     // Do not store vectors of i1s because they are unsupported

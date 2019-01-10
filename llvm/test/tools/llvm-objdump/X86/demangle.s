@@ -6,7 +6,6 @@
 
 ## Check we demangle symbols when printing symbol table.
 # CHECK:      SYMBOL TABLE:
-# CHECK-NEXT: 0000000000000000         *UND*           00000000
 # CHECK-NEXT: 0000000000000000 g     F .text           00000000 foo()
 
 ## Check the case when relocations are inlined into disassembly.

@@ -1775,11 +1775,8 @@ bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     // The intrinsic function call is of the form { ElTy, i8* }
     // @llvm.hexagon.L2.loadXX.pbr(i8*, i32). The pointer and memory access type
     // should be derived from ElTy.
-    PointerType *PtrTy = I.getCalledFunction()
-                             ->getReturnType()
-                             ->getContainedType(0)
-                             ->getPointerTo();
-    Info.memVT = MVT::getVT(PtrTy->getElementType());
+    Type *ElTy = I.getCalledFunction()->getReturnType()->getStructElementType(0);
+    Info.memVT = MVT::getVT(ElTy);
     llvm::Value *BasePtrVal = I.getOperand(0);
     Info.ptrVal = getUnderLyingObjectForBrevLdIntr(BasePtrVal);
     // The offset value comes through Modifier register. For now, assume the

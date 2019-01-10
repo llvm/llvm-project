@@ -223,8 +223,6 @@ FUNCTION_PASS("spec-phis", SpeculateAroundPHIsPass())
 FUNCTION_PASS("sroa", SROA())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
 FUNCTION_PASS("unreachableblockelim", UnreachableBlockElimPass())
-FUNCTION_PASS("unroll", LoopUnrollPass())
-FUNCTION_PASS("unroll<peeling;no-runtime>",LoopUnrollPass(LoopUnrollOptions().setPeeling(true).setRuntime(false)))
 FUNCTION_PASS("verify", VerifierPass())
 FUNCTION_PASS("verify<domtree>", DominatorTreeVerifierPass())
 FUNCTION_PASS("verify<loops>", LoopVerifierPass())
@@ -235,6 +233,14 @@ FUNCTION_PASS("view-cfg-only", CFGOnlyViewerPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
 FUNCTION_PASS("msan", MemorySanitizerPass())
 #undef FUNCTION_PASS
+
+#ifndef FUNCTION_PASS_WITH_PARAMS
+#define FUNCTION_PASS_WITH_PARAMS(NAME, CREATE_PASS, PARSER)
+#endif
+FUNCTION_PASS_WITH_PARAMS("unroll",
+			  [](LoopUnrollOptions Opts) { return LoopUnrollPass(Opts); },
+			  parseLoopUnrollOptions)
+#undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOP_ANALYSIS
 #define LOOP_ANALYSIS(NAME, CREATE_PASS)

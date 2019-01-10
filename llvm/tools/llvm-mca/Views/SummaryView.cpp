@@ -27,7 +27,8 @@ SummaryView::SummaryView(const MCSchedModel &Model, ArrayRef<MCInst> S,
                          unsigned Width)
     : SM(Model), Source(S), DispatchWidth(Width), LastInstructionIdx(0),
       TotalCycles(0), NumMicroOps(0),
-      ProcResourceUsage(Model.getNumProcResourceKinds(), 0) {
+      ProcResourceUsage(Model.getNumProcResourceKinds(), 0),
+      ProcResourceMasks(Model.getNumProcResourceKinds()) {
   computeProcResourceMasks(SM, ProcResourceMasks);
 }
 

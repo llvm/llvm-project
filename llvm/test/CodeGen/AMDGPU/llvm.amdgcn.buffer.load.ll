@@ -195,7 +195,7 @@ main_body:
 
 ;CHECK-LABEL: {{^}}buffer_load_x3_offen_merged:
 ;CHECK-NEXT: %bb.
-;CHECK-NEXT: buffer_load_dwordx3 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4
+;VI-NEXT: buffer_load_dwordx3 v[{{[0-9]}}:{{[0-9]}}], v0, s[0:3], 0 offen offset:4
 ;CHECK: s_waitcnt
 define amdgpu_ps void @buffer_load_x3_offen_merged(<4 x i32> inreg %rsrc, i32 %a) {
 main_body:
@@ -245,7 +245,7 @@ main_body:
 
 ;CHECK-LABEL: {{^}}buffer_load_x3_offset_merged:
 ;CHECK-NEXT: %bb.
-;CHECK-NEXT: buffer_load_dwordx3 v[{{[0-9]}}:{{[0-9]}}], off, s[0:3], 0 offset:4
+;VI-NEXT: buffer_load_dwordx3 v[{{[0-9]}}:{{[0-9]}}], off, s[0:3], 0 offset:4
 ;CHECK: s_waitcnt
 define amdgpu_ps void @buffer_load_x3_offset_merged(<4 x i32> inreg %rsrc) {
 main_body:

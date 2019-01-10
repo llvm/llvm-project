@@ -3720,16 +3720,16 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           return error("EXTRACTVAL: Invalid type");
         if ((unsigned)Index != Index)
           return error("Invalid value");
-        if (IsStruct && Index >= CurTy->subtypes().size())
+        if (IsStruct && Index >= CurTy->getStructNumElements())
           return error("EXTRACTVAL: Invalid struct index");
         if (IsArray && Index >= CurTy->getArrayNumElements())
           return error("EXTRACTVAL: Invalid array index");
         EXTRACTVALIdx.push_back((unsigned)Index);
 
         if (IsStruct)
-          CurTy = CurTy->subtypes()[Index];
+          CurTy = CurTy->getStructElementType(Index);
         else
-          CurTy = CurTy->subtypes()[0];
+          CurTy = CurTy->getArrayElementType();
       }
 
       I = ExtractValueInst::Create(Agg, EXTRACTVALIdx);
@@ -3762,16 +3762,16 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           return error("INSERTVAL: Invalid type");
         if ((unsigned)Index != Index)
           return error("Invalid value");
-        if (IsStruct && Index >= CurTy->subtypes().size())
+        if (IsStruct && Index >= CurTy->getStructNumElements())
           return error("INSERTVAL: Invalid struct index");
         if (IsArray && Index >= CurTy->getArrayNumElements())
           return error("INSERTVAL: Invalid array index");
 
         INSERTVALIdx.push_back((unsigned)Index);
         if (IsStruct)
-          CurTy = CurTy->subtypes()[Index];
+          CurTy = CurTy->getStructElementType(Index);
         else
-          CurTy = CurTy->subtypes()[0];
+          CurTy = CurTy->getArrayElementType();
       }
 
       if (CurTy != Val->getType())

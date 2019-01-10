@@ -21,7 +21,7 @@ endif()
 
 if(CLANG_ENABLE_STATIC_ANALYZER)
   add_clang_subdirectory(clang-check)
-  add_clang_subdirectory(clang-func-mapping)
+  add_clang_subdirectory(clang-extdef-mapping)
   add_clang_subdirectory(scan-build)
   add_clang_subdirectory(scan-view)
 endif()

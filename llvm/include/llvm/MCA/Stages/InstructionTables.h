@@ -32,7 +32,8 @@ class InstructionTables final : public Stage {
   SmallVector<uint64_t, 8> Masks;
 
 public:
-  InstructionTables(const MCSchedModel &Model) : Stage(), SM(Model) {
+  InstructionTables(const MCSchedModel &Model)
+      : Stage(), SM(Model), Masks(Model.getNumProcResourceKinds()) {
     computeProcResourceMasks(Model, Masks);
   }
 
