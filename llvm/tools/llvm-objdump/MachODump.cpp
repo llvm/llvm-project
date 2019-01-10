@@ -6970,15 +6970,17 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
           MemoryBuffer::getFileOrSTDIN(DSYMFile);
       if (std::error_code EC = BufOrErr.getError()) {
-        WithColor::error(errs(), "llvm-objdump")
-            << DSYMFile << ": " << EC.message() << '\n';
+        report_error(DSYMFile, errorCodeToError(EC));
         return;
       }
+
       Expected<std::unique_ptr<MachOObjectFile>> DbgObjCheck =
           ObjectFile::createMachOObjectFile(BufOrErr.get()->getMemBufferRef());
 
-      if (Error E = DbgObjCheck.takeError())
+      if (Error E = DbgObjCheck.takeError()) {
         report_error(DSYMFile, std::move(E));
+        return;
+      }
 
       DbgObj = DbgObjCheck.get().release();
       // We need to keep the file alive, because we're replacing DbgObj with it.
