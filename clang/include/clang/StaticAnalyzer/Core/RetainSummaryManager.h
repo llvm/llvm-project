@@ -52,9 +52,7 @@ enum class ObjKind {
   OS
 };
 
-/// An ArgEffect summarizes the retain count behavior on an argument or receiver
-/// to a function or method.
-enum ArgEffect {
+enum ArgEffectKind {
   /// There is no effect.
   DoNothing,
 
@@ -131,6 +129,27 @@ enum ArgEffect {
   /// count of the argument and all typestate tracking on that argument
   /// should cease.
   DecRefMsgAndStopTrackingHard
+};
+
+/// An ArgEffect summarizes the retain count behavior on an argument or receiver
+/// to a function or method.
+class ArgEffect {
+  ArgEffectKind K;
+  ObjKind O;
+public:
+  explicit ArgEffect(ArgEffectKind K = DoNothing, ObjKind O = ObjKind::AnyObj)
+      : K(K), O(O) {}
+
+  ArgEffectKind getKind() const { return K; }
+  ObjKind getObjKind() const { return O; }
+
+  ArgEffect withKind(ArgEffectKind NewK) {
+    return ArgEffect(NewK, O);
+  }
+
+  bool operator==(const ArgEffect &Other) const {
+    return K == Other.K && O == Other.O;
+  }
 };
 
 /// RetEffect summarizes a call's retain/release behavior with respect
@@ -218,7 +237,9 @@ class CallEffects {
   RetEffect Ret;
   ArgEffect Receiver;
 
-  CallEffects(const RetEffect &R) : Ret(R) {}
+  CallEffects(const RetEffect &R,
+              ArgEffect Receiver = ArgEffect(DoNothing, ObjKind::AnyObj))
+      : Ret(R), Receiver(Receiver) {}
 
 public:
   /// Returns the argument effects for a call.
@@ -263,7 +284,8 @@ namespace llvm {
 
 template <> struct FoldingSetTrait<ArgEffect> {
 static inline void Profile(const ArgEffect X, FoldingSetNodeID &ID) {
-  ID.AddInteger((unsigned) X);
+  ID.AddInteger((unsigned) X.getKind());
+  ID.AddInteger((unsigned) X.getObjKind());
 }
 };
 template <> struct FoldingSetTrait<RetEffect> {
@@ -377,8 +399,8 @@ public:
   void setThisEffect(ArgEffect e) { This = e; }
 
   bool isNoop() const {
-    return Ret == RetEffect::MakeNoRet() && Receiver == DoNothing
-      && DefaultArgEffect == MayEscape && This == DoNothing
+    return Ret == RetEffect::MakeNoRet() && Receiver.getKind() == DoNothing
+      && DefaultArgEffect.getKind() == MayEscape && This.getKind() == DoNothing
       && Args.isEmpty();
   }
 
@@ -547,32 +569,31 @@ class RetainSummaryManager {
 
   const RetainSummary *getPersistentSummary(const RetainSummary &OldSumm);
 
-  const RetainSummary *getPersistentSummary(RetEffect RetEff,
-                                            ArgEffects ScratchArgs,
-                                            ArgEffect ReceiverEff = DoNothing,
-                                            ArgEffect DefaultEff = MayEscape,
-                                            ArgEffect ThisEff = DoNothing) {
-    RetainSummary Summ(ScratchArgs, RetEff, DefaultEff, ReceiverEff,
-                       ThisEff);
+  const RetainSummary *
+  getPersistentSummary(RetEffect RetEff, ArgEffects ScratchArgs,
+                       ArgEffect ReceiverEff = ArgEffect(DoNothing),
+                       ArgEffect DefaultEff = ArgEffect(MayEscape),
+                       ArgEffect ThisEff = ArgEffect(DoNothing)) {
+    RetainSummary Summ(ScratchArgs, RetEff, DefaultEff, ReceiverEff, ThisEff);
     return getPersistentSummary(Summ);
   }
 
   const RetainSummary *getDoNothingSummary() {
     return getPersistentSummary(RetEffect::MakeNoRet(),
                                 ArgEffects(AF.getEmptyMap()),
-                                DoNothing, DoNothing);
+                                ArgEffect(DoNothing), ArgEffect(DoNothing));
   }
 
   const RetainSummary *getDefaultSummary() {
     return getPersistentSummary(RetEffect::MakeNoRet(),
                                 ArgEffects(AF.getEmptyMap()),
-                                DoNothing, MayEscape);
+                                ArgEffect(DoNothing), ArgEffect(MayEscape));
   }
 
   const RetainSummary *getPersistentStopSummary() {
-    return getPersistentSummary(RetEffect::MakeNoRet(),
-                                ArgEffects(AF.getEmptyMap()),
-                                StopTracking, StopTracking);
+    return getPersistentSummary(
+        RetEffect::MakeNoRet(), ArgEffects(AF.getEmptyMap()),
+        ArgEffect(StopTracking), ArgEffect(StopTracking));
   }
 
   void InitializeClassMethodSummaries();

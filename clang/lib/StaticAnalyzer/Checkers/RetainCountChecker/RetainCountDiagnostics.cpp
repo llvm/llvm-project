@@ -48,7 +48,9 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
   RefVal PrevV = *PrevT;
 
   // Specially handle -dealloc.
-  if (std::find(AEffects.begin(), AEffects.end(), Dealloc) != AEffects.end()) {
+  if (std::find_if(AEffects.begin(), AEffects.end(), [](ArgEffect &E) {
+        return E.getKind() == Dealloc;
+      }) != AEffects.end()) {
     // Determine if the object's reference count was pushed to zero.
     assert(!PrevV.hasSameState(CurrV) && "The state should have changed.");
     // We may not have transitioned to 'release' if we hit an error.

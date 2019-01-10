@@ -248,7 +248,7 @@ void RetainCountChecker::checkPostStmt(const CastExpr *CE,
   if (!BE)
     return;
 
-  ArgEffect AE = IncRef;
+  ArgEffectKind AE = IncRef;
 
   switch (BE->getBridgeKind()) {
     case OBC_Bridge:
@@ -534,7 +534,7 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
     SVal V = CallOrMsg.getArgSVal(idx);
 
     if (SymbolRef Sym = V.getAsLocSymbol()) {
-      bool ShouldRemoveBinding = Summ.getArg(idx) == StopTrackingHard;
+      bool ShouldRemoveBinding = Summ.getArg(idx).getKind() == StopTrackingHard;
       if (const RefVal *T = getRefBinding(state, Sym))
         if (shouldEscapeArgumentOnCall(CallOrMsg, idx, T))
           ShouldRemoveBinding = true;
@@ -547,7 +547,7 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
   // Evaluate the effect on the message receiver.
   if (const auto *MsgInvocation = dyn_cast<ObjCMethodCall>(&CallOrMsg)) {
     if (SymbolRef Sym = MsgInvocation->getReceiverSVal().getAsLocSymbol()) {
-      if (Summ.getReceiverEffect() == StopTrackingHard) {
+      if (Summ.getReceiverEffect().getKind() == StopTrackingHard) {
         state = removeRefBinding(state, Sym);
       }
     }
@@ -566,7 +566,7 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
 
 static ProgramStateRef updateOutParameter(ProgramStateRef State,
                                           SVal ArgVal,
-                                          ArgEffect Effect) {
+                                          ArgEffectKind Effect) {
   auto *ArgRegion = dyn_cast_or_null<TypedValueRegion>(ArgVal.getAsRegion());
   if (!ArgRegion)
     return State;
@@ -611,7 +611,7 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
   for (unsigned idx = 0, e = CallOrMsg.getNumArgs(); idx != e; ++idx) {
     SVal V = CallOrMsg.getArgSVal(idx);
 
-    ArgEffect Effect = Summ.getArg(idx);
+    ArgEffectKind Effect = Summ.getArg(idx).getKind();
     if (Effect == RetainedOutParameter || Effect == UnretainedOutParameter) {
       state = updateOutParameter(state, V, Effect);
     } else if (SymbolRef Sym = V.getAsLocSymbol()) {
@@ -637,8 +637,8 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
       if (SymbolRef Sym = MsgInvocation->getReceiverSVal().getAsLocSymbol()) {
         if (const RefVal *T = getRefBinding(state, Sym)) {
           ReceiverIsTracked = true;
-          state = updateSymbol(state, Sym, *T, Summ.getReceiverEffect(),
-                                 hasErr, C);
+          state = updateSymbol(state, Sym, *T,
+                               Summ.getReceiverEffect().getKind(), hasErr, C);
           if (hasErr) {
             ErrorRange = MsgInvocation->getOriginExpr()->getReceiverRange();
             ErrorSym = Sym;
@@ -648,7 +648,7 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
     } else if (const auto *MCall = dyn_cast<CXXMemberCall>(&CallOrMsg)) {
       if (SymbolRef Sym = MCall->getCXXThisVal().getAsLocSymbol()) {
         if (const RefVal *T = getRefBinding(state, Sym)) {
-          state = updateSymbol(state, Sym, *T, Summ.getThisEffect(),
+          state = updateSymbol(state, Sym, *T, Summ.getThisEffect().getKind(),
                                hasErr, C);
           if (hasErr) {
             ErrorRange = MCall->getOriginExpr()->getSourceRange();
@@ -707,10 +707,11 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
   }
 }
 
-ProgramStateRef
-RetainCountChecker::updateSymbol(ProgramStateRef state, SymbolRef sym,
-                                 RefVal V, ArgEffect E, RefVal::Kind &hasErr,
-                                 CheckerContext &C) const {
+ProgramStateRef RetainCountChecker::updateSymbol(ProgramStateRef state,
+                                                 SymbolRef sym, RefVal V,
+                                                 ArgEffectKind E,
+                                                 RefVal::Kind &hasErr,
+                                                 CheckerContext &C) const {
   bool IgnoreRetainMsg = (bool)C.getASTContext().getLangOpts().ObjCAutoRefCount;
   switch (E) {
   default:
@@ -1405,7 +1406,7 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
 
     QualType Ty = Param->getType();
     const ArgEffect *AE = CalleeSideArgEffects.lookup(idx);
-    if (AE && *AE == DecRef && isISLObjectRef(Ty)) {
+    if (AE && AE->getKind() == DecRef && isISLObjectRef(Ty)) {
       state = setRefBinding(
           state, Sym, RefVal::makeOwned(ObjKind::Generalized, Ty));
     } else if (isISLObjectRef(Ty)) {
