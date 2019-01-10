@@ -7,39 +7,31 @@
 //
 //===----------------------------------------------------------------------===//
 // The pass combines V_MOV_B32_dpp instruction with its VALU uses as a DPP src0
-// operand. If any of the use instruction cannot be combined with the mov the
+// operand.If any of the use instruction cannot be combined with the mov the
 // whole sequence is reverted.
 //
 // $old = ...
 // $dpp_value = V_MOV_B32_dpp $old, $vgpr_to_be_read_from_other_lane,
-//                            dpp_controls..., $row_mask, $bank_mask, $bound_ctrl
-// $res = VALU $dpp_value [, src1]
+//                            dpp_controls..., $bound_ctrl
+// $res = VALU $dpp_value, ...
 //
 // to
 //
-// $res = VALU_DPP $combined_old, $vgpr_to_be_read_from_other_lane, [src1,]
-//                 dpp_controls..., $row_mask, $bank_mask, $combined_bound_ctrl
+// $res = VALU_DPP $folded_old, $vgpr_to_be_read_from_other_lane, ...,
+//                 dpp_controls..., $folded_bound_ctrl
 //
 // Combining rules :
 //
-// if $row_mask and $bank_mask are fully enabled (0xF) and
-//    $old == $vgpr_to_be_read_from_other_lane
-// -> $combined_old = undef
-//    $combined_bound_ctrl = $bound_ctrl
+// $bound_ctrl is DPP_BOUND_ZERO, $old is any
+// $bound_ctrl is DPP_BOUND_OFF, $old is 0
 //
-// if $row_mask and $bank_mask are fully enabled (0xF) and
-//    $bound_ctrl==DPP_BOUND_ZERO and $old==any or
-//    $bound_ctrl==DPP_BOUND_OFF and $old==0 (immediate)
-// -> $combined_old = undef,
-//    $combined_bound_ctrl = DPP_BOUND_ZERO
+// ->$folded_old = undef, $folded_bound_ctrl = DPP_BOUND_ZERO
+// $bound_ctrl is DPP_BOUND_OFF, $old is undef
 //
-// if the VALU op is binary and
-//    ($old == 0(immediate) or $bound_ctrl==DPP_BOUND_OFF) and
-//    $old==identity value (immediate) for the VALU op
-// -> $combined_old = src1,
-//    $combined_bound_ctrl = DPP_BOUND_OFF
+// ->$folded_old = undef, $folded_bound_ctrl = DPP_BOUND_OFF
+// $bound_ctrl is DPP_BOUND_OFF, $old is foldable
 //
-// Othervise cancel.
+// ->$folded_old = folded value, $folded_bound_ctrl = DPP_BOUND_OFF
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
@@ -74,6 +66,10 @@ class GCNDPPCombine : public MachineFunctionPass {
   using RegSubRegPair = TargetInstrInfo::RegSubRegPair;
 
   MachineOperand *getOldOpndValue(MachineOperand &OldOpnd) const;
+
+  RegSubRegPair foldOldOpnd(MachineInstr &OrigMI,
+                            RegSubRegPair OldOpndVGPR,
+                            MachineOperand &OldOpndValue) const;
 
   MachineInstr *createDPPInst(MachineInstr &OrigMI,
                               MachineInstr &MovMI,
@@ -185,12 +181,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       assert(isOfRegClass(OldOpndVGPR, AMDGPU::VGPR_32RegClass, *MRI));
       DPPInst.addReg(OldOpndVGPR.Reg, 0, OldOpndVGPR.SubReg);
       ++NumOperands;
-    } else {
-      // TODO: this discards MAC/FMA instructions for now, let's add it later
-      LLVM_DEBUG(dbgs() << "  failed: no old operand in DPP instruction,"
-                           " TBD\n");
-      Fail = true;
-      break;
     }
 
     if (auto *Mod0 = TII->getNamedOperand(OrigMI,
@@ -209,7 +199,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       break;
     }
     DPPInst.add(*Src0);
-    DPPInst->getOperand(NumOperands).setIsKill(false);
     ++NumOperands;
 
     if (auto *Mod1 = TII->getNamedOperand(OrigMI,
@@ -253,41 +242,48 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
   return DPPInst.getInstr();
 }
 
-static bool isIdentityValue(unsigned OrigMIOp, MachineOperand *OldOpnd) {
-  assert(OldOpnd->isImm());
-  switch (OrigMIOp) {
+GCNDPPCombine::RegSubRegPair
+GCNDPPCombine::foldOldOpnd(MachineInstr &OrigMI,
+                           RegSubRegPair OldOpndVGPR,
+                           MachineOperand &OldOpndValue) const {
+  assert(OldOpndValue.isImm());
+  switch (OrigMI.getOpcode()) {
   default: break;
-  case AMDGPU::V_ADD_U32_e32:
-  case AMDGPU::V_ADD_I32_e32:
-  case AMDGPU::V_OR_B32_e32:
-  case AMDGPU::V_SUBREV_U32_e32:
-  case AMDGPU::V_SUBREV_I32_e32:
-  case AMDGPU::V_MIN_U32_e32:
-    if (OldOpnd->getImm() == 0)
-      return true;
-    break;
-  case AMDGPU::V_AND_B32_e32:
   case AMDGPU::V_MAX_U32_e32:
-    if (OldOpnd->getImm() ==
-        static_cast<int64_t>(std::numeric_limits<uint32_t>::max()))
-      return true;
+    if (OldOpndValue.getImm() == std::numeric_limits<uint32_t>::max())
+      return OldOpndVGPR;
     break;
   case AMDGPU::V_MAX_I32_e32:
-    if (OldOpnd->getImm() == std::numeric_limits<int32_t>::max())
-      return true;
+    if (OldOpndValue.getImm() == std::numeric_limits<int32_t>::max())
+      return OldOpndVGPR;
     break;
   case AMDGPU::V_MIN_I32_e32:
-    if (OldOpnd->getImm() == std::numeric_limits<int32_t>::min())
-      return true;
+    if (OldOpndValue.getImm() == std::numeric_limits<int32_t>::min())
+      return OldOpndVGPR;
     break;
+
   case AMDGPU::V_MUL_I32_I24_e32:
   case AMDGPU::V_MUL_U32_U24_e32:
-    if (OldOpnd->getImm() == 1)
-      return true;
+    if (OldOpndValue.getImm() == 1) {
+      auto *Src1 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src1);
+      assert(Src1 && Src1->isReg());
+      return getRegSubRegPair(*Src1);
+    }
     break;
   }
-  return false;
+  return RegSubRegPair();
 }
+
+// Cases to combine:
+//  $bound_ctrl is DPP_BOUND_ZERO, $old is any
+//  $bound_ctrl is DPP_BOUND_OFF, $old is 0
+//  -> $old = undef, $bound_ctrl = DPP_BOUND_ZERO
+
+//  $bound_ctrl is DPP_BOUND_OFF, $old is undef
+//  -> $old = undef, $bound_ctrl = DPP_BOUND_OFF
+
+//  $bound_ctrl is DPP_BOUND_OFF, $old is foldable
+//  -> $old = folded value, $bound_ctrl = DPP_BOUND_OFF
 
 MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
                                            MachineInstr &MovMI,
@@ -295,19 +291,11 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
                                            MachineOperand *OldOpndValue,
                                            bool BoundCtrlZero) const {
   assert(OldOpndVGPR.Reg);
-  if (!BoundCtrlZero && OldOpndValue && OldOpndValue->isImm()) {
-    auto *Src1 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src1);
-    if (!Src1 || !Src1->isReg()) {
-      LLVM_DEBUG(dbgs() << "  failed: no src1 or it isn't a register\n");
-      return nullptr;
-    }
-    if (!isIdentityValue(OrigMI.getOpcode(), OldOpndValue)) {
-      LLVM_DEBUG(dbgs() << "  failed: old immediate ins't an identity\n");
-      return nullptr;
-    }
-    OldOpndVGPR = getRegSubRegPair(*Src1);
-    if (!isOfRegClass(OldOpndVGPR, AMDGPU::VGPR_32RegClass, *MRI)) {
-      LLVM_DEBUG(dbgs() << "  failed: src1 isn't a VGPR32 register\n");
+  if (!BoundCtrlZero && OldOpndValue) {
+    assert(OldOpndValue->isImm());
+    OldOpndVGPR = foldOldOpnd(OrigMI, OldOpndVGPR, *OldOpndValue);
+    if (!OldOpndVGPR.Reg) {
+      LLVM_DEBUG(dbgs() << "  failed: old immediate cannot be folded\n");
       return nullptr;
     }
   }
@@ -328,97 +316,39 @@ bool GCNDPPCombine::hasNoImmOrEqual(MachineInstr &MI, unsigned OpndName,
 
 bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
   assert(MovMI.getOpcode() == AMDGPU::V_MOV_B32_dpp);
-  LLVM_DEBUG(dbgs() << "\nDPP combine: " << MovMI);
-
-  auto *DstOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::vdst);
-  assert(DstOpnd && DstOpnd->isReg());
-  auto DPPMovReg = DstOpnd->getReg();
-  if (!isEXECMaskConstantBetweenDefAndUses(DPPMovReg, *MRI)) {
-    LLVM_DEBUG(dbgs() << "  failed: EXEC mask should remain the same"
-                         " for all uses\n");
-    return false;
-  }
-
-  auto *RowMaskOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::row_mask);
-  assert(RowMaskOpnd && RowMaskOpnd->isImm());
-  auto *BankMaskOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::bank_mask);
-  assert(BankMaskOpnd && BankMaskOpnd->isImm());
-  const bool MaskAllLanes = RowMaskOpnd->getImm() == 0xF &&
-                            BankMaskOpnd->getImm() == 0xF;
-
   auto *BCZOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::bound_ctrl);
   assert(BCZOpnd && BCZOpnd->isImm());
-  bool BoundCtrlZero = BCZOpnd->getImm();
+  bool BoundCtrlZero = 0 != BCZOpnd->getImm();
+
+  LLVM_DEBUG(dbgs() << "\nDPP combine: " << MovMI);
 
   auto *OldOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::old);
   assert(OldOpnd && OldOpnd->isReg());
   auto OldOpndVGPR = getRegSubRegPair(*OldOpnd);
   auto *OldOpndValue = getOldOpndValue(*OldOpnd);
   assert(!OldOpndValue || OldOpndValue->isImm() || OldOpndValue == OldOpnd);
-
-  do {
-    if (!OldOpndValue) { // undef case
-      if (!BoundCtrlZero || !MaskAllLanes) {
-        LLVM_DEBUG(dbgs()
-          << "  failed: undef old has bctr off or mask isn't full BB\n");
-        return false;
-      }
-      break;
-	}
-
-	if (BoundCtrlZero && MaskAllLanes) { // [1]
-      OldOpndVGPR.Reg = AMDGPU::NoRegister;
+  if (OldOpndValue) {
+    if (BoundCtrlZero) {
+      OldOpndVGPR.Reg = AMDGPU::NoRegister; // should be undef, ignore old opnd
       OldOpndValue = nullptr;
-      break;
-    }
-
-    if (OldOpndValue->getParent()->getParent() != MovMI.getParent()) {
-      LLVM_DEBUG(dbgs() <<
-		"  failed: old reg def and mov should be in the same BB\n");
-      return false;
-    }
-
-	if (OldOpndValue->isImm()) {
-      if (OldOpndValue->getImm() == 0) {
-        if (MaskAllLanes) {
-          assert(!BoundCtrlZero); // by check [1]
-		  // undefine old to make regalloc's life easier but this requires
-		  // bound_ctrl:0 set
-          OldOpndVGPR.Reg = AMDGPU::NoRegister;
-          OldOpndValue = nullptr;
-          BoundCtrlZero = true;
-        } else {
-		  // bound_ctrl value ins't important here but this makes the combiner's
-          // logic easier - we check the VALU op for identity value when
-		  // BoundCtrlZero == false.
-          BoundCtrlZero = false;
-        }
-      } else if (BoundCtrlZero) {
-        assert(!MaskAllLanes); // by check [1]
-        LLVM_DEBUG(dbgs() <<
-	      "  failed: old!=0 and bctrl:0 and not all lanes isn't combinable\n");
+    } else {
+      if (!OldOpndValue->isImm()) {
+        LLVM_DEBUG(dbgs() << "  failed: old operand isn't an imm or undef\n");
         return false;
       }
-      break;
+      if (OldOpndValue->getImm() == 0) {
+        OldOpndVGPR.Reg = AMDGPU::NoRegister; // should be undef
+        OldOpndValue = nullptr;
+        BoundCtrlZero = true;
+      }
     }
-
-    assert(OldOpndValue->isReg());
-	auto *DPPSrcOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::src0);
-    assert(DPPSrcOpnd && DPPSrcOpnd->isReg());
-    if (!MaskAllLanes || getRegSubRegPair(*DPPSrcOpnd) != OldOpndVGPR) {
-      LLVM_DEBUG(dbgs() << "  failed: the DPP mov isn't combinable\n");
-      return false;
-    }
-	// case when DPP mov old == DPP scr register
-    OldOpndVGPR.Reg = AMDGPU::NoRegister;
-    OldOpndValue = nullptr;
-  } while (0);
+  }
 
   LLVM_DEBUG(dbgs() << "  old=";
     if (!OldOpndValue)
       dbgs() << "undef";
     else
-      dbgs() << *OldOpndValue;
+      dbgs() << OldOpndValue->getImm();
     dbgs() << ", bound_ctrl=" << BoundCtrlZero << '\n');
 
   std::vector<MachineInstr*> OrigMIs, DPPMIs;
@@ -432,12 +362,11 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 
   OrigMIs.push_back(&MovMI);
   bool Rollback = true;
-  for (auto &Use : MRI->use_nodbg_operands(DPPMovReg)) {
+  for (auto &Use : MRI->use_nodbg_operands(
+       TII->getNamedOperand(MovMI, AMDGPU::OpName::vdst)->getReg())) {
     Rollback = true;
 
     auto &OrigMI = *Use.getParent();
-    LLVM_DEBUG(dbgs() << "  try: " << OrigMI);
-
     auto OrigOp = OrigMI.getOpcode();
     if (TII->isVOP3(OrigOp)) {
       if (!TII->hasVALU32BitEncoding(OrigOp)) {

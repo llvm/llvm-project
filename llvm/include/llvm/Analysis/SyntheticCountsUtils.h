@@ -36,16 +36,17 @@ public:
   using EdgeRef = typename CGT::EdgeRef;
   using SccTy = std::vector<NodeRef>;
 
-  using GetRelBBFreqTy = function_ref<Optional<Scaled64>(EdgeRef)>;
-  using GetCountTy = function_ref<uint64_t(NodeRef)>;
-  using AddCountTy = function_ref<void(NodeRef, uint64_t)>;
+  // Not all EdgeRef have information about the source of the edge. Hence
+  // NodeRef corresponding to the source of the EdgeRef is explicitly passed.
+  using GetProfCountTy = function_ref<Optional<Scaled64>(NodeRef, EdgeRef)>;
+  using AddCountTy = function_ref<void(NodeRef, Scaled64)>;
 
-  static void propagate(const CallGraphType &CG, GetRelBBFreqTy GetRelBBFreq,
-                        GetCountTy GetCount, AddCountTy AddCount);
+  static void propagate(const CallGraphType &CG, GetProfCountTy GetProfCount,
+                        AddCountTy AddCount);
 
 private:
-  static void propagateFromSCC(const SccTy &SCC, GetRelBBFreqTy GetRelBBFreq,
-                               GetCountTy GetCount, AddCountTy AddCount);
+  static void propagateFromSCC(const SccTy &SCC, GetProfCountTy GetProfCount,
+                               AddCountTy AddCount);
 };
 } // namespace llvm
 

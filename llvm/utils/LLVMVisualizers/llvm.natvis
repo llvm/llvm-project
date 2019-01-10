@@ -191,10 +191,10 @@ For later versions of Visual Studio, no setup is required.
 
   <Type Name="llvm::IntrusiveRefCntPtr&lt;*&gt;">
     <DisplayString Condition="Obj == 0">empty</DisplayString>
-    <DisplayString Condition="(Obj != 0) &amp;&amp; (Obj-&gt;ref_cnt == 1)">RefPtr [1 ref] {*Obj}</DisplayString>
-    <DisplayString Condition="(Obj != 0) &amp;&amp; (Obj-&gt;ref_cnt != 1)">RefPtr [{Obj-&gt;ref_cnt} refs] {*Obj}</DisplayString>
+    <DisplayString Condition="(Obj != 0) &amp;&amp; (Obj-&gt;RefCount == 1)">RefPtr [1 ref] {*Obj}</DisplayString>
+    <DisplayString Condition="(Obj != 0) &amp;&amp; (Obj-&gt;RefCount != 1)">RefPtr [{Obj-&gt;RefCount} refs] {*Obj}</DisplayString>
     <Expand>
-      <Item Condition="Obj != 0" Name="[refs]">Obj-&gt;ref_cnt</Item>
+      <Item Condition="Obj != 0" Name="[refs]">Obj-&gt;RefCount</Item>
       <ExpandedItem Condition="Obj != 0">Obj</ExpandedItem>
     </Expand>
   </Type>

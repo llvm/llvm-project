@@ -1574,8 +1574,7 @@ public:
 /// \endcode
 class ObjCBridgedCastExpr final
     : public ExplicitCastExpr,
-      private llvm::TrailingObjects<
-          ObjCBridgedCastExpr, CastExpr::BasePathSizeTy, CXXBaseSpecifier *> {
+      private llvm::TrailingObjects<ObjCBridgedCastExpr, CXXBaseSpecifier *> {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
   friend class CastExpr;
@@ -1584,10 +1583,6 @@ class ObjCBridgedCastExpr final
   SourceLocation LParenLoc;
   SourceLocation BridgeKeywordLoc;
   unsigned Kind : 2;
-
-  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
-    return path_empty() ? 0 : 1;
-  }
 
 public:
   ObjCBridgedCastExpr(SourceLocation LParenLoc, ObjCBridgeCastKind Kind,

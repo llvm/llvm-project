@@ -14,16 +14,6 @@
 // definitions, which does not yet provide aligned allocation
 // XFAIL: LIBCXX-WINDOWS-FIXME
 
-// AppleClang 10 (and older) will trigger an availability error when the deployment
-// target does not support aligned allocation, even if we pass `-faligned-allocation`.
-// XFAIL: apple-clang-10 && availability=macosx10.13
-// XFAIL: apple-clang-10 && availability=macosx10.12
-// XFAIL: apple-clang-10 && availability=macosx10.11
-// XFAIL: apple-clang-10 && availability=macosx10.10
-// XFAIL: apple-clang-10 && availability=macosx10.9
-// XFAIL: apple-clang-10 && availability=macosx10.8
-// XFAIL: apple-clang-10 && availability=macosx10.7
-
 // The dylibs shipped before macosx10.14 do not contain the aligned allocation
 // functions, so trying to force using those with -faligned-allocation results
 // in a link error.

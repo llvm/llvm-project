@@ -520,6 +520,14 @@ def SPACE : Pseudo<(outs GPR64:$Rd), (ins i32imm:$size, GPR64:$Rn),
                    [(set GPR64:$Rd, (int_aarch64_space imm:$size, GPR64:$Rn))]>,
             Sched<[]>;
 
+let hasSideEffects = 1, isCodeGenOnly = 1 in {
+  def SpeculationSafeValueX
+      : Pseudo<(outs GPR64:$dst), (ins GPR64:$src), []>, Sched<[]>;
+  def SpeculationSafeValueW
+      : Pseudo<(outs GPR32:$dst), (ins GPR32:$src), []>, Sched<[]>;
+}
+
+
 //===----------------------------------------------------------------------===//
 // System instructions.
 //===----------------------------------------------------------------------===//
