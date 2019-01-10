@@ -1694,7 +1694,8 @@ define <4 x float> @floor_mask_ss_mask8(<4 x float> %x, <4 x float> %y, <4 x flo
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %k1
 ; AVX512F-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512F-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -1702,7 +1703,8 @@ define <4 x float> @floor_mask_ss_mask8(<4 x float> %x, <4 x float> %y, <4 x flo
 ;
 ; AVX512VL-LABEL: floor_mask_ss_mask8:
 ; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
+; AVX512VL-NEXT:    vcmpeqps %xmm1, %xmm0, %k0
+; AVX512VL-NEXT:    kmovw %k0, %k1
 ; AVX512VL-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512VL-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX512VL-NEXT:    retq
@@ -1753,14 +1755,16 @@ define <4 x float> @floor_maskz_ss_mask8(<4 x float> %x, <4 x float> %y) nounwin
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %k1
 ; AVX512F-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: floor_maskz_ss_mask8:
 ; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
+; AVX512VL-NEXT:    vcmpeqps %xmm1, %xmm0, %k0
+; AVX512VL-NEXT:    kmovw %k0, %k1
 ; AVX512VL-NEXT:    vrndscaless $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512VL-NEXT:    retq
   %mask1 = fcmp oeq <4 x float> %x, %y
@@ -1804,7 +1808,8 @@ define <2 x double> @floor_mask_sd_mask8(<2 x double> %x, <2 x double> %y, <2 x 
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %k1
 ; AVX512F-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512F-NEXT:    vmovapd %xmm2, %xmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -1812,7 +1817,8 @@ define <2 x double> @floor_mask_sd_mask8(<2 x double> %x, <2 x double> %y, <2 x 
 ;
 ; AVX512VL-LABEL: floor_mask_sd_mask8:
 ; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqpd %xmm1, %xmm0, %k1
+; AVX512VL-NEXT:    vcmpeqpd %xmm1, %xmm0, %k0
+; AVX512VL-NEXT:    kmovw %k0, %k1
 ; AVX512VL-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512VL-NEXT:    vmovapd %xmm2, %xmm0
 ; AVX512VL-NEXT:    retq
@@ -1863,14 +1869,16 @@ define <2 x double> @floor_maskz_sd_mask8(<2 x double> %x, <2 x double> %y) noun
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %k1
 ; AVX512F-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: floor_maskz_sd_mask8:
 ; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqpd %xmm1, %xmm0, %k1
+; AVX512VL-NEXT:    vcmpeqpd %xmm1, %xmm0, %k0
+; AVX512VL-NEXT:    kmovw %k0, %k1
 ; AVX512VL-NEXT:    vrndscalesd $1, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512VL-NEXT:    retq
   %mask1 = fcmp oeq <2 x double> %x, %y
@@ -2758,7 +2766,8 @@ define <4 x float> @ceil_mask_ss_mask8(<4 x float> %x, <4 x float> %y, <4 x floa
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %k1
 ; AVX512F-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512F-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -2766,7 +2775,8 @@ define <4 x float> @ceil_mask_ss_mask8(<4 x float> %x, <4 x float> %y, <4 x floa
 ;
 ; AVX512VL-LABEL: ceil_mask_ss_mask8:
 ; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
+; AVX512VL-NEXT:    vcmpeqps %xmm1, %xmm0, %k0
+; AVX512VL-NEXT:    kmovw %k0, %k1
 ; AVX512VL-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512VL-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX512VL-NEXT:    retq
@@ -2817,14 +2827,16 @@ define <4 x float> @ceil_maskz_ss_mask8(<4 x float> %x, <4 x float> %y) nounwind
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqps %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %k1
 ; AVX512F-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: ceil_maskz_ss_mask8:
 ; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqps %xmm1, %xmm0, %k1
+; AVX512VL-NEXT:    vcmpeqps %xmm1, %xmm0, %k0
+; AVX512VL-NEXT:    kmovw %k0, %k1
 ; AVX512VL-NEXT:    vrndscaless $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512VL-NEXT:    retq
   %mask1 = fcmp oeq <4 x float> %x, %y
@@ -2868,7 +2880,8 @@ define <2 x double> @ceil_mask_sd_mask8(<2 x double> %x, <2 x double> %y, <2 x d
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %k1
 ; AVX512F-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512F-NEXT:    vmovapd %xmm2, %xmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -2876,7 +2889,8 @@ define <2 x double> @ceil_mask_sd_mask8(<2 x double> %x, <2 x double> %y, <2 x d
 ;
 ; AVX512VL-LABEL: ceil_mask_sd_mask8:
 ; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqpd %xmm1, %xmm0, %k1
+; AVX512VL-NEXT:    vcmpeqpd %xmm1, %xmm0, %k0
+; AVX512VL-NEXT:    kmovw %k0, %k1
 ; AVX512VL-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm2 {%k1}
 ; AVX512VL-NEXT:    vmovapd %xmm2, %xmm0
 ; AVX512VL-NEXT:    retq
@@ -2927,14 +2941,16 @@ define <2 x double> @ceil_maskz_sd_mask8(<2 x double> %x, <2 x double> %y) nounw
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vcmpeqpd %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %k1
 ; AVX512F-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: ceil_maskz_sd_mask8:
 ; AVX512VL:       ## %bb.0:
-; AVX512VL-NEXT:    vcmpeqpd %xmm1, %xmm0, %k1
+; AVX512VL-NEXT:    vcmpeqpd %xmm1, %xmm0, %k0
+; AVX512VL-NEXT:    kmovw %k0, %k1
 ; AVX512VL-NEXT:    vrndscalesd $2, %xmm0, %xmm1, %xmm0 {%k1} {z}
 ; AVX512VL-NEXT:    retq
   %mask1 = fcmp oeq <2 x double> %x, %y

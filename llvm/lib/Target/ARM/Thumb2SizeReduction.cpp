@@ -122,6 +122,7 @@ namespace {
   { ARM::t2SUBSrr,ARM::tSUBrr,  0,             0,   0,   1,   0,  2,0, 0,0,0 },
   { ARM::t2SXTB,  ARM::tSXTB,   0,             0,   0,   1,   0,  1,0, 0,1,0 },
   { ARM::t2SXTH,  ARM::tSXTH,   0,             0,   0,   1,   0,  1,0, 0,1,0 },
+  { ARM::t2TEQrr, ARM::tEOR,    0,             0,   0,   1,   0,  2,0, 0,1,0 },
   { ARM::t2TSTrr, ARM::tTST,    0,             0,   0,   1,   0,  2,0, 0,0,0 },
   { ARM::t2UXTB,  ARM::tUXTB,   0,             0,   0,   1,   0,  1,0, 0,1,0 },
   { ARM::t2UXTH,  ARM::tUXTH,   0,             0,   0,   1,   0,  1,0, 0,1,0 },
@@ -717,6 +718,16 @@ Thumb2SizeReduce::ReduceSpecial(MachineBasicBlock &MBB, MachineInstr *MI,
       return true;
     return ReduceToNarrow(MBB, MI, Entry, LiveCPSR, IsSelfLoop);
   }
+  case ARM::t2TEQrr: {
+    unsigned PredReg = 0;
+    // Can only convert to eors if we're not in an IT block.
+    if (getInstrPredicate(*MI, PredReg) != ARMCC::AL)
+      break;
+    // TODO if Operand 0 is not killed but Operand 1 is, then we could write
+    // to Op1 instead.
+    if (MI->getOperand(0).isKill())
+      return ReduceToNarrow(MBB, MI, Entry, LiveCPSR, IsSelfLoop);
+  }
   }
   return false;
 }
@@ -903,9 +914,24 @@ Thumb2SizeReduce::ReduceToNarrow(MachineBasicBlock &MBB, MachineInstr *MI,
   // Add the 16-bit instruction.
   DebugLoc dl = MI->getDebugLoc();
   MachineInstrBuilder MIB = BuildMI(MBB, MI, dl, NewMCID);
-  MIB.add(MI->getOperand(0));
-  if (NewMCID.hasOptionalDef())
-    MIB.add(HasCC ? t1CondCodeOp(CCDead) : condCodeOp());
+
+  // TEQ is special in that it doesn't define a register but we're converting
+  // it into an EOR which does. So add the first operand as a def and then
+  // again as a use.
+  if (MCID.getOpcode() == ARM::t2TEQrr) {
+    MIB.add(MI->getOperand(0));
+    MIB->getOperand(0).setIsKill(false);
+    MIB->getOperand(0).setIsDef(true);
+    MIB->getOperand(0).setIsDead(true);
+
+    if (NewMCID.hasOptionalDef())
+      MIB.add(HasCC ? t1CondCodeOp(CCDead) : condCodeOp());
+    MIB.add(MI->getOperand(0));
+  } else {
+    MIB.add(MI->getOperand(0));
+    if (NewMCID.hasOptionalDef())
+      MIB.add(HasCC ? t1CondCodeOp(CCDead) : condCodeOp());
+  }
 
   // Transfer the rest of operands.
   unsigned NumOps = MCID.getNumOperands();

@@ -252,8 +252,8 @@ void BlockFrequencyInfo::setBlockFreqAndScale(
 
 /// Pop up a ghostview window with the current block frequency propagation
 /// rendered using dot.
-void BlockFrequencyInfo::view() const {
-  ViewGraph(const_cast<BlockFrequencyInfo *>(this), "BlockFrequencyDAGs");
+void BlockFrequencyInfo::view(StringRef title) const {
+  ViewGraph(const_cast<BlockFrequencyInfo *>(this), title);
 }
 
 const Function *BlockFrequencyInfo::getFunction() const {
