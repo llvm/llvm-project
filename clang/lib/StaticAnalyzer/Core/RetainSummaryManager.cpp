@@ -457,7 +457,6 @@ static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {
   case Autorelease:
   case DecRefBridgedTransferred:
   case IncRef:
-  case MakeCollectable:
   case UnretainedOutParameter:
   case RetainedOutParameter:
   case MayEscape:
@@ -665,7 +664,7 @@ RetainSummaryManager::getUnarySummary(const FunctionType* FT,
   case cfretain: Effect = Effect.withKind(IncRef); break;
   case cfrelease: Effect = Effect.withKind(DecRef); break;
   case cfautorelease: Effect = Effect.withKind(Autorelease); break;
-  case cfmakecollectable: Effect = Effect.withKind(MakeCollectable); break;
+  case cfmakecollectable: Effect = Effect.withKind(DoNothing); break;
   }
 
   ScratchArgs = AF.add(ScratchArgs, 0, Effect);
