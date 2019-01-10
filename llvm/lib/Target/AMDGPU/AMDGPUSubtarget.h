@@ -822,6 +822,11 @@ public:
     return getGeneration() != AMDGPUSubtarget::SOUTHERN_ISLANDS;
   }
 
+  // \returns true if the subtarget supports DWORDX3 load/store instructions.
+  bool hasDwordx3LoadStores() const {
+    return CIInsts;
+  }
+
   bool hasSMovFedHazard() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }

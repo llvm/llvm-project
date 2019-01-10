@@ -64,6 +64,7 @@ pattern_transform_reduce(_ExecutionPolicy&&, _ForwardIterator1 __first1, _Forwar
     return brick_transform_reduce(__first1, __last1, __first2, __init, __binary_op1, __binary_op2, __is_vector);
 }
 
+#if __PSTL_USE_PAR_POLICIES
 template <class _ExecutionPolicy, class _RandomAccessIterator1, class _RandomAccessIterator2, class _Tp,
           class _BinaryOperation1, class _BinaryOperation2, class _IsVector>
 _Tp
@@ -86,6 +87,7 @@ pattern_transform_reduce(_ExecutionPolicy&& __exec, _RandomAccessIterator1 __fir
             });
     });
 }
+#endif
 
 //------------------------------------------------------------------------
 // transform_reduce (version with unary and binary functions)
@@ -124,6 +126,7 @@ pattern_transform_reduce(_ExecutionPolicy&&, _ForwardIterator __first, _ForwardI
     return brick_transform_reduce(__first, __last, __init, __binary_op, __unary_op, __is_vector);
 }
 
+#if __PSTL_USE_PAR_POLICIES
 template <class _ExecutionPolicy, class _ForwardIterator, class _Tp, class _BinaryOperation, class _UnaryOperation,
           class _IsVector>
 _Tp
@@ -140,6 +143,7 @@ pattern_transform_reduce(_ExecutionPolicy&& __exec, _ForwardIterator __first, _F
             });
     });
 }
+#endif
 
 //------------------------------------------------------------------------
 // transform_exclusive_scan
@@ -225,6 +229,7 @@ pattern_transform_scan(_ExecutionPolicy&&, _ForwardIterator __first, _ForwardIte
         .first;
 }
 
+#if __PSTL_USE_PAR_POLICIES
 template <class _ExecutionPolicy, class _RandomAccessIterator, class _OutputIterator, class _UnaryOperation, class _Tp,
           class _BinaryOperation, class _Inclusive, class _IsVector>
 typename std::enable_if<!std::is_floating_point<_Tp>::value, _OutputIterator>::type
@@ -253,7 +258,9 @@ pattern_transform_scan(_ExecutionPolicy&& __exec, _RandomAccessIterator __first,
         return __result + (__last - __first);
     });
 }
+#endif
 
+#if __PSTL_USE_PAR_POLICIES
 template <class _ExecutionPolicy, class _RandomAccessIterator, class _OutputIterator, class _UnaryOperation, class _Tp,
           class _BinaryOperation, class _Inclusive, class _IsVector>
 typename std::enable_if<std::is_floating_point<_Tp>::value, _OutputIterator>::type
@@ -289,6 +296,7 @@ pattern_transform_scan(_ExecutionPolicy&& __exec, _RandomAccessIterator __first,
         return __result + (__last - __first);
     });
 }
+#endif
 
 //------------------------------------------------------------------------
 // adjacent_difference
@@ -329,6 +337,7 @@ pattern_adjacent_difference(_ExecutionPolicy&&, _ForwardIterator __first, _Forwa
     return internal::brick_adjacent_difference(__first, __last, __d_first, __op, __is_vector);
 }
 
+#if __PSTL_USE_PAR_POLICIES
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryOperation,
           class _IsVector>
 _ForwardIterator2
@@ -352,6 +361,7 @@ pattern_adjacent_difference(_ExecutionPolicy&& __exec, _ForwardIterator1 __first
                               });
     return __d_first + (__last - __first);
 }
+#endif
 
 } // namespace internal
 } // namespace __pstl

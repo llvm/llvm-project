@@ -75,6 +75,8 @@ TargetInfo *elf::getTarget() {
     default:
       llvm_unreachable("unsupported MIPS target");
     }
+  case EM_MSP430:
+    return getMSP430TargetInfo();
   case EM_PPC:
     return getPPCTargetInfo();
   case EM_PPC64:

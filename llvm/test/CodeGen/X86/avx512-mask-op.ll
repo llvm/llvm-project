@@ -1278,19 +1278,23 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 define <8 x i1> @test18(i8 %a, i16 %y) {
 ; KNL-LABEL: test18:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    kmovw %esi, %k2
-; KNL-NEXT:    kshiftrw $8, %k2, %k0
-; KNL-NEXT:    kshiftrw $9, %k2, %k2
-; KNL-NEXT:    kshiftrw $6, %k1, %k3
-; KNL-NEXT:    kxorw %k2, %k3, %k2
-; KNL-NEXT:    kshiftlw $15, %k2, %k2
-; KNL-NEXT:    kshiftrw $9, %k2, %k2
-; KNL-NEXT:    kxorw %k2, %k1, %k1
-; KNL-NEXT:    kshiftlw $9, %k1, %k1
+; KNL-NEXT:    kmovw %edi, %k0
+; KNL-NEXT:    kmovw %esi, %k1
+; KNL-NEXT:    kshiftrw $8, %k1, %k2
+; KNL-NEXT:    kmovw %k2, %eax
 ; KNL-NEXT:    kshiftrw $9, %k1, %k1
-; KNL-NEXT:    kshiftlw $7, %k0, %k0
-; KNL-NEXT:    korw %k0, %k1, %k1
+; KNL-NEXT:    kmovw %k1, %ecx
+; KNL-NEXT:    kshiftrw $6, %k0, %k1
+; KNL-NEXT:    kmovw %ecx, %k2
+; KNL-NEXT:    kxorw %k2, %k1, %k1
+; KNL-NEXT:    kshiftlw $15, %k1, %k1
+; KNL-NEXT:    kshiftrw $9, %k1, %k1
+; KNL-NEXT:    kxorw %k1, %k0, %k0
+; KNL-NEXT:    kshiftlw $9, %k0, %k0
+; KNL-NEXT:    kshiftrw $9, %k0, %k0
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    kshiftlw $7, %k1, %k1
+; KNL-NEXT:    korw %k1, %k0, %k1
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0
@@ -1337,19 +1341,23 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ;
 ; AVX512DQ-LABEL: test18:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    kmovw %edi, %k1
-; AVX512DQ-NEXT:    kmovw %esi, %k2
-; AVX512DQ-NEXT:    kshiftrw $8, %k2, %k0
-; AVX512DQ-NEXT:    kshiftrw $9, %k2, %k2
-; AVX512DQ-NEXT:    kshiftrb $6, %k1, %k3
-; AVX512DQ-NEXT:    kxorb %k2, %k3, %k2
-; AVX512DQ-NEXT:    kshiftlb $7, %k2, %k2
-; AVX512DQ-NEXT:    kshiftrb $1, %k2, %k2
+; AVX512DQ-NEXT:    kmovw %edi, %k0
+; AVX512DQ-NEXT:    kmovw %esi, %k1
+; AVX512DQ-NEXT:    kshiftrw $8, %k1, %k2
+; AVX512DQ-NEXT:    kmovw %k2, %eax
+; AVX512DQ-NEXT:    kshiftrw $9, %k1, %k1
+; AVX512DQ-NEXT:    kmovw %k1, %ecx
+; AVX512DQ-NEXT:    kshiftrb $6, %k0, %k1
+; AVX512DQ-NEXT:    kmovw %ecx, %k2
 ; AVX512DQ-NEXT:    kxorb %k2, %k1, %k1
-; AVX512DQ-NEXT:    kshiftlb $1, %k1, %k1
+; AVX512DQ-NEXT:    kshiftlb $7, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrb $1, %k1, %k1
-; AVX512DQ-NEXT:    kshiftlb $7, %k0, %k0
-; AVX512DQ-NEXT:    korb %k0, %k1, %k0
+; AVX512DQ-NEXT:    kxorb %k1, %k0, %k0
+; AVX512DQ-NEXT:    kshiftlb $1, %k0, %k0
+; AVX512DQ-NEXT:    kshiftrb $1, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %eax, %k1
+; AVX512DQ-NEXT:    kshiftlb $7, %k1, %k1
+; AVX512DQ-NEXT:    korb %k1, %k0, %k0
 ; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
 ; AVX512DQ-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512DQ-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0

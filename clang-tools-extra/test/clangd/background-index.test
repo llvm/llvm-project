@@ -16,6 +16,5 @@
 # RUN: ls %t/.clangd-index/foo.cpp.*.idx
 
 # Test the index is read from disk: delete code and restart clangd.
-# FIXME: This test currently fails as we don't read the index yet.
 # RUN: rm %t/foo.cpp
-# RUN: clangd -background-index -lit-test < %t/definition.jsonrpc | not FileCheck %t/definition.jsonrpc
+# RUN: clangd -background-index -lit-test < %t/definition.jsonrpc | FileCheck %t/definition.jsonrpc

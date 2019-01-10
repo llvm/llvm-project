@@ -1,4 +1,4 @@
-// RUN: %clang_func_map %s -- | FileCheck %s
+// RUN: %clang_extdef_map %s -- | FileCheck %s
 
 int f(int) {
   return 0;

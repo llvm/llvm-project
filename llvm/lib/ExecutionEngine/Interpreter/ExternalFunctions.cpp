@@ -103,8 +103,9 @@ static ExFunc lookupFunction(const Function *F) {
   // composite function name should be.
   std::string ExtName = "lle_";
   FunctionType *FT = F->getFunctionType();
-  for (unsigned i = 0, e = FT->getNumContainedTypes(); i != e; ++i)
-    ExtName += getTypeID(FT->getContainedType(i));
+  ExtName += getTypeID(FT->getReturnType());
+  for (Type *T : FT->params())
+    ExtName += getTypeID(T);
   ExtName += ("_" + F->getName()).str();
 
   sys::ScopedLock Writer(*FunctionsLock);

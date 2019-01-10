@@ -30,14 +30,14 @@ using namespace clang;
 using namespace clang::cross_tu;
 using namespace clang::tooling;
 
-static cl::OptionCategory ClangFnMapGenCategory("clang-fnmapgen options");
+static cl::OptionCategory ClangExtDefMapGenCategory("clang-extdefmapgen options");
 
-class MapFunctionNamesConsumer : public ASTConsumer {
+class MapExtDefNamesConsumer : public ASTConsumer {
 public:
-  MapFunctionNamesConsumer(ASTContext &Context)
+  MapExtDefNamesConsumer(ASTContext &Context)
       : SM(Context.getSourceManager()) {}
 
-  ~MapFunctionNamesConsumer() {
+  ~MapExtDefNamesConsumer() {
     // Flush results to standard output.
     llvm::outs() << createCrossTUIndexString(Index);
   }
@@ -54,7 +54,7 @@ private:
   std::string CurrentFileName;
 };
 
-void MapFunctionNamesConsumer::handleDecl(const Decl *D) {
+void MapExtDefNamesConsumer::handleDecl(const Decl *D) {
   if (!D)
     return;
 
@@ -90,11 +90,11 @@ void MapFunctionNamesConsumer::handleDecl(const Decl *D) {
       handleDecl(D);
 }
 
-class MapFunctionNamesAction : public ASTFrontendAction {
+class MapExtDefNamesAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  llvm::StringRef) {
-    return llvm::make_unique<MapFunctionNamesConsumer>(CI.getASTContext());
+    return llvm::make_unique<MapExtDefNamesConsumer>(CI.getASTContext());
   }
 };
 
@@ -106,13 +106,13 @@ int main(int argc, const char **argv) {
   PrettyStackTraceProgram X(argc, argv);
 
   const char *Overview = "\nThis tool collects the USR name and location "
-                         "of all functions definitions in the source files "
+                         "of external definitions in the source files "
                          "(excluding headers).\n";
-  CommonOptionsParser OptionsParser(argc, argv, ClangFnMapGenCategory,
+  CommonOptionsParser OptionsParser(argc, argv, ClangExtDefMapGenCategory,
                                     cl::ZeroOrMore, Overview);
 
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());
 
-  return Tool.run(newFrontendActionFactory<MapFunctionNamesAction>().get());
+  return Tool.run(newFrontendActionFactory<MapExtDefNamesAction>().get());
 }

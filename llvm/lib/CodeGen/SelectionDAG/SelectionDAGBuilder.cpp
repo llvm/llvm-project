@@ -7343,10 +7343,11 @@ static SDValue getAddressForMemoryInput(SDValue Chain, const SDLoc &Location,
 ///
 ///   OpInfo describes the operand
 ///   RefOpInfo describes the matching operand if any, the operand otherwise
-static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
-                                 const SDLoc &DL, SDISelAsmOperandInfo &OpInfo,
+static void GetRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
+                                 SDISelAsmOperandInfo &OpInfo,
                                  SDISelAsmOperandInfo &RefOpInfo) {
   LLVMContext &Context = *DAG.getContext();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   MachineFunction &MF = DAG.getMachineFunction();
   SmallVector<unsigned, 4> Regs;
@@ -7354,11 +7355,19 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
 
   // If this is a constraint for a single physreg, or a constraint for a
   // register class, find it.
-  std::pair<unsigned, const TargetRegisterClass *> PhysReg =
-      TLI.getRegForInlineAsmConstraint(&TRI, RefOpInfo.ConstraintCode,
-                                       RefOpInfo.ConstraintVT);
+  unsigned AssignedReg;
+  const TargetRegisterClass *RC;
+  std::tie(AssignedReg, RC) = TLI.getRegForInlineAsmConstraint(
+      &TRI, RefOpInfo.ConstraintCode, RefOpInfo.ConstraintVT);
+  // RC is unset only on failure. Return immediately.
+  if (!RC)
+    return;
 
-  unsigned NumRegs = 1;
+  // Get the actual register value type.  This is important, because the user
+  // may have asked for (e.g.) the AX register in i32 type.  We need to
+  // remember that AX is actually i16 to get the right extension.
+  const MVT RegVT = *TRI.legalclasstypes_begin(*RC);
+
   if (OpInfo.ConstraintVT != MVT::Other) {
     // If this is an FP operand in an integer register (or visa versa), or more
     // generally if the operand value disagrees with the register class we plan
@@ -7368,13 +7377,11 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
     // Bitcast for output value is done at the end of visitInlineAsm().
     if ((OpInfo.Type == InlineAsm::isOutput ||
          OpInfo.Type == InlineAsm::isInput) &&
-        PhysReg.second &&
-        !TRI.isTypeLegalForClass(*PhysReg.second, OpInfo.ConstraintVT)) {
+        !TRI.isTypeLegalForClass(*RC, OpInfo.ConstraintVT)) {
       // Try to convert to the first EVT that the reg class contains.  If the
       // types are identical size, use a bitcast to convert (e.g. two differing
       // vector types).  Note: output bitcast is done at the end of
       // visitInlineAsm().
-      MVT RegVT = *TRI.legalclasstypes_begin(*PhysReg.second);
       if (RegVT.getSizeInBits() == OpInfo.ConstraintVT.getSizeInBits()) {
         // Exclude indirect inputs while they are unsupported because the code
         // to perform the load is missing and thus OpInfo.CallOperand still
@@ -7387,15 +7394,13 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
         // use the corresponding integer type. This turns an f64 value into
         // i64, which can be passed with two i32 values on a 32-bit machine.
       } else if (RegVT.isInteger() && OpInfo.ConstraintVT.isFloatingPoint()) {
-        RegVT = MVT::getIntegerVT(OpInfo.ConstraintVT.getSizeInBits());
+        MVT VT = MVT::getIntegerVT(OpInfo.ConstraintVT.getSizeInBits());
         if (OpInfo.Type == InlineAsm::isInput)
           OpInfo.CallOperand =
-              DAG.getNode(ISD::BITCAST, DL, RegVT, OpInfo.CallOperand);
-        OpInfo.ConstraintVT = RegVT;
+              DAG.getNode(ISD::BITCAST, DL, VT, OpInfo.CallOperand);
+        OpInfo.ConstraintVT = VT;
       }
     }
-
-    NumRegs = TLI.getNumRegisters(Context, OpInfo.ConstraintVT);
   }
 
   // No need to allocate a matching input constraint since the constraint it's
@@ -7403,59 +7408,36 @@ static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
   if (OpInfo.isMatchingInputConstraint())
     return;
 
-  MVT RegVT;
   EVT ValueVT = OpInfo.ConstraintVT;
+  if (OpInfo.ConstraintVT == MVT::Other)
+    ValueVT = RegVT;
+
+  // Initialize NumRegs.
+  unsigned NumRegs = 1;
+  if (OpInfo.ConstraintVT != MVT::Other)
+    NumRegs = TLI.getNumRegisters(Context, OpInfo.ConstraintVT);
 
   // If this is a constraint for a specific physical register, like {r17},
   // assign it now.
-  if (unsigned AssignedReg = PhysReg.first) {
-    const TargetRegisterClass *RC = PhysReg.second;
-    if (OpInfo.ConstraintVT == MVT::Other)
-      ValueVT = *TRI.legalclasstypes_begin(*RC);
 
-    // Get the actual register value type.  This is important, because the user
-    // may have asked for (e.g.) the AX register in i32 type.  We need to
-    // remember that AX is actually i16 to get the right extension.
-    RegVT = *TRI.legalclasstypes_begin(*RC);
+  // If this associated to a specific register, initialize iterator to correct
+  // place. If virtual, make sure we have enough registers
 
-    // This is an explicit reference to a physical register.
-    Regs.push_back(AssignedReg);
-
-    // If this is an expanded reference, add the rest of the regs to Regs.
-    if (NumRegs != 1) {
-      TargetRegisterClass::iterator I = RC->begin();
-      for (; *I != AssignedReg; ++I)
-        assert(I != RC->end() && "Didn't find reg!");
-
-      // Already added the first reg.
-      --NumRegs; ++I;
-      for (; NumRegs; --NumRegs, ++I) {
-        assert(I != RC->end() && "Ran out of registers to allocate!");
-        Regs.push_back(*I);
-      }
-    }
-
-    OpInfo.AssignedRegs = RegsForValue(Regs, RegVT, ValueVT);
-    return;
+  // Initialize iterator if necessary
+  TargetRegisterClass::iterator I = RC->begin();
+  MachineRegisterInfo &RegInfo = MF.getRegInfo();
+  if (AssignedReg) {
+    for (; *I != AssignedReg; ++I)
+      assert(I != RC->end() && "Didn't find reg!");
   }
 
-  // Otherwise, if this was a reference to an LLVM register class, create vregs
-  // for this reference.
-  if (const TargetRegisterClass *RC = PhysReg.second) {
-    RegVT = *TRI.legalclasstypes_begin(*RC);
-    if (OpInfo.ConstraintVT == MVT::Other)
-      ValueVT = RegVT;
-
-    // Create the appropriate number of virtual registers.
-    MachineRegisterInfo &RegInfo = MF.getRegInfo();
-    for (; NumRegs; --NumRegs)
-      Regs.push_back(RegInfo.createVirtualRegister(RC));
-
-    OpInfo.AssignedRegs = RegsForValue(Regs, RegVT, ValueVT);
-    return;
+  for (; NumRegs; --NumRegs, ++I) {
+    assert(I != RC->end() && "Ran out of registers to allocate!");
+    auto R = (AssignedReg) ? *I : RegInfo.createVirtualRegister(RC);
+    Regs.push_back(R);
   }
 
-  // Otherwise, we couldn't allocate enough registers for this.
+  OpInfo.AssignedRegs = RegsForValue(Regs, RegVT, ValueVT);
 }
 
 static unsigned
@@ -7474,21 +7456,6 @@ findMatchingInlineAsmOperand(unsigned OperandNo,
     CurOp += InlineAsm::getNumOperandRegisters(OpFlag) + 1;
   }
   return CurOp;
-}
-
-/// Fill \p Regs with \p NumRegs new virtual registers of type \p RegVT
-/// \return true if it has succeeded, false otherwise
-static bool createVirtualRegs(SmallVector<unsigned, 4> &Regs, unsigned NumRegs,
-                              MVT RegVT, SelectionDAG &DAG) {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  MachineRegisterInfo &RegInfo = DAG.getMachineFunction().getRegInfo();
-  for (unsigned i = 0, e = NumRegs; i != e; ++i) {
-    if (const TargetRegisterClass *RC = TLI.getRegClassFor(RegVT))
-      Regs.push_back(RegInfo.createVirtualRegister(RC));
-    else
-      return false;
-  }
-  return true;
 }
 
 namespace {
@@ -7547,11 +7514,9 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
 
   unsigned ArgNo = 0;   // ArgNo - The argument of the CallInst.
   unsigned ResNo = 0;   // ResNo - The result number of the next output.
-  for (unsigned i = 0, e = TargetConstraints.size(); i != e; ++i) {
-    ConstraintOperands.push_back(SDISelAsmOperandInfo(TargetConstraints[i]));
+  for (auto &T : TargetConstraints) {
+    ConstraintOperands.push_back(SDISelAsmOperandInfo(T));
     SDISelAsmOperandInfo &OpInfo = ConstraintOperands.back();
-
-    MVT OpVT = MVT::Other;
 
     // Compute the value type for each operand.
     if (OpInfo.Type == InlineAsm::isInput ||
@@ -7566,39 +7531,37 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
         OpInfo.CallOperand = getValue(OpInfo.CallOperandVal);
       }
 
-      OpVT =
+      OpInfo.ConstraintVT =
           OpInfo
               .getCallOperandValEVT(*DAG.getContext(), TLI, DAG.getDataLayout())
               .getSimpleVT();
-    }
-
-    if (OpInfo.Type == InlineAsm::isOutput && !OpInfo.isIndirect) {
+    } else if (OpInfo.Type == InlineAsm::isOutput && !OpInfo.isIndirect) {
       // The return value of the call is this value.  As such, there is no
       // corresponding argument.
       assert(!CS.getType()->isVoidTy() && "Bad inline asm!");
       if (StructType *STy = dyn_cast<StructType>(CS.getType())) {
-        OpVT = TLI.getSimpleValueType(DAG.getDataLayout(),
-                                      STy->getElementType(ResNo));
+        OpInfo.ConstraintVT = TLI.getSimpleValueType(
+            DAG.getDataLayout(), STy->getElementType(ResNo));
       } else {
         assert(ResNo == 0 && "Asm only has one result!");
-        OpVT = TLI.getSimpleValueType(DAG.getDataLayout(), CS.getType());
+        OpInfo.ConstraintVT =
+            TLI.getSimpleValueType(DAG.getDataLayout(), CS.getType());
       }
       ++ResNo;
+    } else {
+      OpInfo.ConstraintVT = MVT::Other;
     }
-
-    OpInfo.ConstraintVT = OpVT;
 
     if (!hasMemory)
       hasMemory = OpInfo.hasMemory(TLI);
 
     // Determine if this InlineAsm MayLoad or MayStore based on the constraints.
-    // FIXME: Could we compute this on OpInfo rather than TargetConstraints[i]?
-    auto TargetConstraint = TargetConstraints[i];
+    // FIXME: Could we compute this on OpInfo rather than T?
 
     // Compute the constraint code and ConstraintType to use.
-    TLI.ComputeConstraintToUse(TargetConstraint, SDValue());
+    TLI.ComputeConstraintToUse(T, SDValue());
 
-    ExtraInfo.update(TargetConstraint);
+    ExtraInfo.update(T);
   }
 
   SDValue Chain, Flag;
@@ -7612,9 +7575,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
 
   // Second pass over the constraints: compute which constraint option to use
   // and assign registers to constraints that want a specific physreg.
-  for (unsigned i = 0, e = ConstraintOperands.size(); i != e; ++i) {
-    SDISelAsmOperandInfo &OpInfo = ConstraintOperands[i];
-
+  for (SDISelAsmOperandInfo &OpInfo : ConstraintOperands) {
     // If this is an output operand with a matching input operand, look up the
     // matching input. If their types mismatch, e.g. one is an integer, the
     // other is floating point, or their sizes are different, flag it as an
@@ -7654,24 +7615,23 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     SDISelAsmOperandInfo &RefOpInfo =
         OpInfo.isMatchingInputConstraint()
             ? ConstraintOperands[OpInfo.getMatchedOperand()]
-            : ConstraintOperands[i];
+            : OpInfo;
     if (RefOpInfo.ConstraintType == TargetLowering::C_Register)
-      GetRegistersForValue(DAG, TLI, getCurSDLoc(), OpInfo, RefOpInfo);
+      GetRegistersForValue(DAG, getCurSDLoc(), OpInfo, RefOpInfo);
   }
 
   // Third pass - Loop over all of the operands, assigning virtual or physregs
   // to register class operands.
-  for (unsigned i = 0, e = ConstraintOperands.size(); i != e; ++i) {
-    SDISelAsmOperandInfo &OpInfo = ConstraintOperands[i];
+  for (SDISelAsmOperandInfo &OpInfo : ConstraintOperands) {
     SDISelAsmOperandInfo &RefOpInfo =
         OpInfo.isMatchingInputConstraint()
             ? ConstraintOperands[OpInfo.getMatchedOperand()]
-            : ConstraintOperands[i];
+            : OpInfo;
 
     // C_Register operands have already been allocated, Other/Memory don't need
     // to be.
     if (RefOpInfo.ConstraintType == TargetLowering::C_RegisterClass)
-      GetRegistersForValue(DAG, TLI, getCurSDLoc(), OpInfo, RefOpInfo);
+      GetRegistersForValue(DAG, getCurSDLoc(), OpInfo, RefOpInfo);
   }
 
   // AsmNodeOperands - The operands for the ISD::INLINEASM node.
@@ -7698,9 +7658,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
   // IndirectStoresToEmit - The set of stores to emit after the inline asm node.
   std::vector<std::pair<RegsForValue, Value *>> IndirectStoresToEmit;
 
-  for (unsigned i = 0, e = ConstraintOperands.size(); i != e; ++i) {
-    SDISelAsmOperandInfo &OpInfo = ConstraintOperands[i];
-
+  for (SDISelAsmOperandInfo &OpInfo : ConstraintOperands) {
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
       if (OpInfo.ConstraintType != TargetLowering::C_RegisterClass &&
@@ -7778,9 +7736,13 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
           MVT RegVT = AsmNodeOperands[CurOp+1].getSimpleValueType();
           SmallVector<unsigned, 4> Regs;
 
-          if (!createVirtualRegs(Regs,
-                                 InlineAsm::getNumOperandRegisters(OpFlag),
-                                 RegVT, DAG)) {
+          if (const TargetRegisterClass *RC = TLI.getRegClassFor(RegVT)) {
+            unsigned NumRegs = InlineAsm::getNumOperandRegisters(OpFlag);
+            MachineRegisterInfo &RegInfo =
+                DAG.getMachineFunction().getRegInfo();
+            for (unsigned i = 0; i != NumRegs; ++i)
+              Regs.push_back(RegInfo.createVirtualRegister(RC));
+          } else {
             emitInlineAsmError(CS, "inline asm error: This value type register "
                                    "class is not natively supported!");
             return;
@@ -7915,19 +7877,19 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     unsigned numRet;
     ArrayRef<Type *> ResultTypes;
     SmallVector<SDValue, 1> ResultValues(1);
-    if (CSResultType->isSingleValueType()) {
-      numRet = 1;
-      ResultValues[0] = Val;
-      ResultTypes = makeArrayRef(CSResultType);
-    } else {
-      numRet = CSResultType->getNumContainedTypes();
+    if (StructType *StructResult = dyn_cast<StructType>(CSResultType)) {
+      numRet = StructResult->getNumElements();
       assert(Val->getNumOperands() == numRet &&
              "Mismatch in number of output operands in asm result");
-      ResultTypes = CSResultType->subtypes();
+      ResultTypes = StructResult->elements();
       ArrayRef<SDUse> ValueUses = Val->ops();
       ResultValues.resize(numRet);
       std::transform(ValueUses.begin(), ValueUses.end(), ResultValues.begin(),
                      [](const SDUse &u) -> SDValue { return u.get(); });
+    } else {
+      numRet = 1;
+      ResultValues[0] = Val;
+      ResultTypes = makeArrayRef(CSResultType);
     }
     SmallVector<EVT, 1> ResultVTs(numRet);
     for (unsigned i = 0; i < numRet; i++) {

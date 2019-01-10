@@ -47,7 +47,7 @@ if (PARALLELSTL_USE_PARALLEL_POLICIES)
         endif()
     endif()
 else()
-    target_add_definitions(ParallelSTL INTERFACE PSTL_USE_PARALLEL_POLICIES=0)
+    target_compile_definitions(ParallelSTL INTERFACE PSTL_USE_PARALLEL_POLICIES=0)
 endif()
 
 target_include_directories(ParallelSTL

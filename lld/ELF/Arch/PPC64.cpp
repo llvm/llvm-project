@@ -611,11 +611,13 @@ static bool isTocOptType(RelType Type) {
 }
 
 void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
-  // We need to save the original relocation type to determine if we should
-  // toc-optimize the instructions being relocated.
+  // We need to save the original relocation type to use in diagnostics, and
+  // use the original type to determine if we should toc-optimize the
+  // instructions being relocated.
+  RelType OriginalType = Type;
   bool ShouldTocOptimize =  isTocOptType(Type);
-  // For TOC-relative and GOT-indirect relocations, proceed in terms of the
-  // corresponding ADDR16 relocation type.
+  // For dynamic thread pointer relative, toc-relative, and got-indirect
+  // relocations, proceed in terms of the corresponding ADDR16 relocation type.
   std::tie(Type, Val) = toAddr16Rel(Type, Val);
 
   switch (Type) {
@@ -628,16 +630,16 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   }
   case R_PPC64_ADDR16:
   case R_PPC64_TPREL16:
-    checkInt(Loc, Val, 16, Type);
+    checkInt(Loc, Val, 16, OriginalType);
     write16(Loc, Val);
     break;
   case R_PPC64_ADDR16_DS:
   case R_PPC64_TPREL16_DS: {
-    checkInt(Loc, Val, 16, Type);
+    checkInt(Loc, Val, 16, OriginalType);
     // DQ-form instructions use bits 28-31 as part of the instruction encoding
     // DS-form instructions only use bits 30-31.
     uint16_t Mask = isDQFormInstruction(readInstrFromHalf16(Loc)) ? 0xF : 0x3;
-    checkAlignment(Loc, lo(Val), Mask + 1, Type);
+    checkAlignment(Loc, lo(Val), Mask + 1, OriginalType);
     write16(Loc, (read16(Loc) & Mask) | lo(Val));
   } break;
   case R_PPC64_ADDR16_HA:
@@ -692,7 +694,7 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     // DS-form instructions only use bits 30-31.
     uint32_t Inst = readInstrFromHalf16(Loc);
     uint16_t Mask = isDQFormInstruction(Inst) ? 0xF : 0x3;
-    checkAlignment(Loc, lo(Val), Mask + 1, Type);
+    checkAlignment(Loc, lo(Val), Mask + 1, OriginalType);
     if (Config->TocOptimize && ShouldTocOptimize && ha(Val) == 0) {
       // When the high-adjusted part of a toc relocation evalutes to 0, it is
       // changed into a nop. The lo part then needs to be updated to use the toc

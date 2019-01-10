@@ -53,7 +53,7 @@ with CTU analysis enabled, execute:
     
     $ analyze-build --ctu
 
-For CTU analysis an additional (function-definition) collection-phase is required. 
+For CTU analysis an additional (external definition) collection-phase is required. 
 For debugging purposes, it is possible to separately execute the collection 
 and the analysis phase. By doing this, the intermediate files used for 
 the analysis are kept on the disk in `./ctu-dir`.

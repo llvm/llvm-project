@@ -300,7 +300,7 @@ define <8 x float> @test11_undef(<8 x float> %a, <8 x float> %b) {
 ;
 ; AVX-LABEL: test11_undef:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vhaddps %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %vecext = extractelement <8 x float> %a, i32 0
   %vecext1 = extractelement <8 x float> %a, i32 1
@@ -934,12 +934,12 @@ define <8 x float> @v16f32_inputs_v8f32_output_4567(<16 x float> %a, <16 x float
 ;
 ; AVX1-SLOW-LABEL: v16f32_inputs_v8f32_output_4567:
 ; AVX1-SLOW:       # %bb.0:
-; AVX1-SLOW-NEXT:    vhaddps %ymm0, %ymm0, %ymm0
+; AVX1-SLOW-NEXT:    vhaddps %ymm2, %ymm0, %ymm0
 ; AVX1-SLOW-NEXT:    retq
 ;
 ; AVX1-FAST-LABEL: v16f32_inputs_v8f32_output_4567:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vhaddps %ymm0, %ymm0, %ymm0
+; AVX1-FAST-NEXT:    vhaddps %ymm2, %ymm0, %ymm0
 ; AVX1-FAST-NEXT:    retq
 ;
 ; AVX512-LABEL: v16f32_inputs_v8f32_output_4567:
@@ -973,7 +973,7 @@ define <8 x float> @PR40243(<8 x float> %a, <8 x float> %b) {
 ;
 ; AVX-LABEL: PR40243:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vhaddps %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %a4 = extractelement <8 x float> %a, i32 4
   %a5 = extractelement <8 x float> %a, i32 5

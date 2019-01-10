@@ -81,7 +81,6 @@ public:
   // The indexing happens in a background thread, so the symbols will be
   // available sometime later.
   void enqueue(const std::vector<std::string> &ChangedFiles);
-  void enqueue(const std::string &File);
 
   // Cause background threads to stop after ther current task, any remaining
   // tasks will be discarded.
@@ -118,6 +117,21 @@ private:
   std::mutex DigestsMu;
 
   BackgroundIndexStorage::Factory IndexStorageFactory;
+  struct Source {
+    std::string Path;
+    bool NeedsReIndexing;
+    Source(llvm::StringRef Path, bool NeedsReIndexing)
+        : Path(Path), NeedsReIndexing(NeedsReIndexing) {}
+  };
+  // Loads the shards for a single TU and all of its dependencies. Returns the
+  // list of sources and whether they need to be re-indexed.
+  std::vector<Source> loadShard(const tooling::CompileCommand &Cmd,
+                                BackgroundIndexStorage *IndexStorage,
+                                llvm::StringSet<> &LoadedShards);
+  // Tries to load shards for the ChangedFiles.
+  std::vector<std::pair<tooling::CompileCommand, BackgroundIndexStorage *>>
+  loadShards(std::vector<std::string> ChangedFiles);
+  void enqueue(tooling::CompileCommand Cmd, BackgroundIndexStorage *Storage);
 
   // queue management
   using Task = std::function<void()>;

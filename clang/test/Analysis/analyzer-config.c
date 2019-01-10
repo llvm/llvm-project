@@ -20,7 +20,7 @@
 // CHECK-NEXT: cfg-temporary-dtors = true
 // CHECK-NEXT: crosscheck-with-z3 = false
 // CHECK-NEXT: ctu-dir = ""
-// CHECK-NEXT: ctu-index-name = externalFnMap.txt
+// CHECK-NEXT: ctu-index-name = externalDefMap.txt
 // CHECK-NEXT: display-ctu-progress = false
 // CHECK-NEXT: eagerly-assume = true
 // CHECK-NEXT: elide-constructors = true

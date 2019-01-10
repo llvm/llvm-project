@@ -806,17 +806,10 @@ bool ObjectFileELF::SetLoadAddress(Target &target, lldb::addr_t value,
     SectionList *section_list = GetSectionList();
     if (section_list) {
       if (!value_is_offset) {
-        bool found_offset = false;
-        for (const ELFProgramHeader &H : ProgramHeaders()) {
-          if (H.p_type != PT_LOAD || H.p_offset != 0)
-            continue;
-
-          value = value - H.p_vaddr;
-          found_offset = true;
-          break;
-        }
-        if (!found_offset)
+        addr_t base = GetBaseAddress().GetFileAddress();
+        if (base == LLDB_INVALID_ADDRESS)
           return false;
+        value -= base;
       }
 
       const size_t num_sections = section_list->GetSize();
@@ -1053,6 +1046,18 @@ lldb_private::Address ObjectFileELF::GetEntryPointAddress() {
   else
     m_entry_point_address.ResolveAddressUsingFileSections(offset, section_list);
   return m_entry_point_address;
+}
+
+Address ObjectFileELF::GetBaseAddress() {
+  for (const auto &EnumPHdr : llvm::enumerate(ProgramHeaders())) {
+    const ELFProgramHeader &H = EnumPHdr.value();
+    if (H.p_type != PT_LOAD || H.p_offset != 0)
+      continue;
+
+    return Address(
+        GetSectionList()->FindSectionByID(SegmentID(EnumPHdr.index())), 0);
+  }
+  return LLDB_INVALID_ADDRESS;
 }
 
 //----------------------------------------------------------------------

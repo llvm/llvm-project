@@ -65,7 +65,7 @@ public:
 
   void notifyInstructionIssued(
       const InstRef &IR,
-      ArrayRef<std::pair<ResourceRef, ResourceCycles>> Used) const;
+      MutableArrayRef<std::pair<ResourceRef, ResourceCycles>> Used) const;
   void notifyInstructionExecuted(const InstRef &IR) const;
   void notifyInstructionReady(const InstRef &IR) const;
   void notifyResourceAvailable(const ResourceRef &RR) const;
