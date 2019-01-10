@@ -68,19 +68,9 @@ enum ArgEffectKind {
   /// if CFRelease has been called on the argument.
   DecRef,
 
-  /// The argument has its reference count decreased by 1.  This is as
-  /// if a -release message has been sent to the argument.  This differs
-  /// in behavior from DecRef when ARC is enabled.
-  DecRefMsg,
-
   /// The argument has its reference count decreased by 1 to model
   /// a transferred bridge cast under ARC.
   DecRefBridgedTransferred,
-
-  /// The argument has its reference count increased by 1.  This is as
-  /// if a -retain message has been sent to the argument.  This differs
-  /// in behavior from IncRef when ARC is enabled.
-  IncRefMsg,
 
   /// The argument has its reference count increased by 1.  This is as
   /// if CFRetain has been called on the argument.
@@ -122,13 +112,6 @@ enum ArgEffectKind {
   /// count of the argument and all typestate tracking on that argument
   /// should cease.
   DecRefAndStopTrackingHard,
-
-  /// Performs the combined functionality of DecRefMsg and StopTrackingHard.
-  ///
-  /// The models the effect that the called function decrements the reference
-  /// count of the argument and all typestate tracking on that argument
-  /// should cease.
-  DecRefMsgAndStopTrackingHard
 };
 
 /// An ArgEffect summarizes the retain count behavior on an argument or receiver

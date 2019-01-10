@@ -248,17 +248,17 @@ void RetainCountChecker::checkPostStmt(const CastExpr *CE,
   if (!BE)
     return;
 
-  ArgEffectKind AE = IncRef;
+  ArgEffect AE = ArgEffect(IncRef, ObjKind::ObjC);
 
   switch (BE->getBridgeKind()) {
     case OBC_Bridge:
       // Do nothing.
       return;
     case OBC_BridgeRetained:
-      AE = IncRef;
+      AE = AE.withKind(IncRef);
       break;
     case OBC_BridgeTransfer:
-      AE = DecRefBridgedTransferred;
+      AE = AE.withKind(DecRefBridgedTransferred);
       break;
   }
 
@@ -290,7 +290,8 @@ void RetainCountChecker::processObjCLiterals(CheckerContext &C,
     if (SymbolRef sym = V.getAsSymbol())
       if (const RefVal* T = getRefBinding(state, sym)) {
         RefVal::Kind hasErr = (RefVal::Kind) 0;
-        state = updateSymbol(state, sym, *T, MayEscape, hasErr, C);
+        state = updateSymbol(state, sym, *T,
+                             ArgEffect(MayEscape, ObjKind::ObjC), hasErr, C);
         if (hasErr) {
           processNonLeakError(state, Child->getSourceRange(), hasErr, sym, C);
           return;
@@ -512,7 +513,7 @@ static bool isPointerToObject(QualType QT) {
 
 /// Whether the tracked value should be escaped on a given call.
 /// OSObjects are escaped when passed to void * / etc.
-static bool shouldEscapeArgumentOnCall(const CallEvent &CE, unsigned ArgIdx,
+static bool shouldEscapeOSArgumentOnCall(const CallEvent &CE, unsigned ArgIdx,
                                        const RefVal *TrackedValue) {
   if (TrackedValue->getObjKind() != ObjKind::OS)
     return false;
@@ -536,7 +537,7 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
     if (SymbolRef Sym = V.getAsLocSymbol()) {
       bool ShouldRemoveBinding = Summ.getArg(idx).getKind() == StopTrackingHard;
       if (const RefVal *T = getRefBinding(state, Sym))
-        if (shouldEscapeArgumentOnCall(CallOrMsg, idx, T))
+        if (shouldEscapeOSArgumentOnCall(CallOrMsg, idx, T))
           ShouldRemoveBinding = true;
 
       if (ShouldRemoveBinding)
@@ -611,14 +612,15 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
   for (unsigned idx = 0, e = CallOrMsg.getNumArgs(); idx != e; ++idx) {
     SVal V = CallOrMsg.getArgSVal(idx);
 
-    ArgEffectKind Effect = Summ.getArg(idx).getKind();
-    if (Effect == RetainedOutParameter || Effect == UnretainedOutParameter) {
-      state = updateOutParameter(state, V, Effect);
+    ArgEffect Effect = Summ.getArg(idx);
+    if (Effect.getKind() == RetainedOutParameter ||
+        Effect.getKind() == UnretainedOutParameter) {
+      state = updateOutParameter(state, V, Effect.getKind());
     } else if (SymbolRef Sym = V.getAsLocSymbol()) {
       if (const RefVal *T = getRefBinding(state, Sym)) {
 
-        if (shouldEscapeArgumentOnCall(CallOrMsg, idx, T))
-          Effect = StopTrackingHard;
+        if (shouldEscapeOSArgumentOnCall(CallOrMsg, idx, T))
+          Effect = ArgEffect(StopTrackingHard, ObjKind::OS);
 
         state = updateSymbol(state, Sym, *T, Effect, hasErr, C);
         if (hasErr) {
@@ -638,7 +640,7 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
         if (const RefVal *T = getRefBinding(state, Sym)) {
           ReceiverIsTracked = true;
           state = updateSymbol(state, Sym, *T,
-                               Summ.getReceiverEffect().getKind(), hasErr, C);
+                               Summ.getReceiverEffect(), hasErr, C);
           if (hasErr) {
             ErrorRange = MsgInvocation->getOriginExpr()->getReceiverRange();
             ErrorSym = Sym;
@@ -648,7 +650,7 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
     } else if (const auto *MCall = dyn_cast<CXXMemberCall>(&CallOrMsg)) {
       if (SymbolRef Sym = MCall->getCXXThisVal().getAsLocSymbol()) {
         if (const RefVal *T = getRefBinding(state, Sym)) {
-          state = updateSymbol(state, Sym, *T, Summ.getThisEffect().getKind(),
+          state = updateSymbol(state, Sym, *T, Summ.getThisEffect(),
                                hasErr, C);
           if (hasErr) {
             ErrorRange = MCall->getOriginExpr()->getSourceRange();
@@ -709,25 +711,27 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
 
 ProgramStateRef RetainCountChecker::updateSymbol(ProgramStateRef state,
                                                  SymbolRef sym, RefVal V,
-                                                 ArgEffectKind E,
+                                                 ArgEffect AE,
                                                  RefVal::Kind &hasErr,
                                                  CheckerContext &C) const {
   bool IgnoreRetainMsg = (bool)C.getASTContext().getLangOpts().ObjCAutoRefCount;
-  switch (E) {
-  default:
-    break;
-  case IncRefMsg:
-    E = IgnoreRetainMsg ? DoNothing : IncRef;
-    break;
-  case DecRefMsg:
-    E = IgnoreRetainMsg ? DoNothing: DecRef;
-    break;
-  case DecRefMsgAndStopTrackingHard:
-    E = IgnoreRetainMsg ? StopTracking : DecRefAndStopTrackingHard;
-    break;
-  case MakeCollectable:
-    E = DoNothing;
+  if (AE.getObjKind() == ObjKind::ObjC && IgnoreRetainMsg) {
+    switch (AE.getKind()) {
+    default:
+      break;
+    case IncRef:
+      AE = AE.withKind(DoNothing);
+      break;
+    case DecRef:
+      AE = AE.withKind(DoNothing);
+      break;
+    case DecRefAndStopTrackingHard:
+      AE = AE.withKind(StopTracking);
+      break;
+    }
   }
+  if (AE.getKind() == MakeCollectable)
+    AE = AE.withKind(DoNothing);
 
   // Handle all use-after-releases.
   if (V.getKind() == RefVal::Released) {
@@ -736,12 +740,9 @@ ProgramStateRef RetainCountChecker::updateSymbol(ProgramStateRef state,
     return setRefBinding(state, sym, V);
   }
 
-  switch (E) {
-    case DecRefMsg:
-    case IncRefMsg:
+  switch (AE.getKind()) {
     case MakeCollectable:
-    case DecRefMsgAndStopTrackingHard:
-      llvm_unreachable("DecRefMsg/IncRefMsg/MakeCollectable already converted");
+      llvm_unreachable("MakeCollectable already converted");
 
     case UnretainedOutParameter:
     case RetainedOutParameter:
@@ -806,13 +807,13 @@ ProgramStateRef RetainCountChecker::updateSymbol(ProgramStateRef state,
         case RefVal::Owned:
           assert(V.getCount() > 0);
           if (V.getCount() == 1) {
-            if (E == DecRefBridgedTransferred ||
+            if (AE.getKind() == DecRefBridgedTransferred ||
                 V.getIvarAccessHistory() ==
                   RefVal::IvarAccessHistory::AccessedDirectly)
               V = V ^ RefVal::NotOwned;
             else
               V = V ^ RefVal::Released;
-          } else if (E == DecRefAndStopTrackingHard) {
+          } else if (AE.getKind() == DecRefAndStopTrackingHard) {
             return removeRefBinding(state, sym);
           }
 
@@ -821,14 +822,14 @@ ProgramStateRef RetainCountChecker::updateSymbol(ProgramStateRef state,
 
         case RefVal::NotOwned:
           if (V.getCount() > 0) {
-            if (E == DecRefAndStopTrackingHard)
+            if (AE.getKind() == DecRefAndStopTrackingHard)
               return removeRefBinding(state, sym);
             V = V - 1;
           } else if (V.getIvarAccessHistory() ==
                        RefVal::IvarAccessHistory::AccessedDirectly) {
             // Assume that the instance variable was holding on the object at
             // +1, and we just didn't know.
-            if (E == DecRefAndStopTrackingHard)
+            if (AE.getKind() == DecRefAndStopTrackingHard)
               return removeRefBinding(state, sym);
             V = V.releaseViaIvar() ^ RefVal::Released;
           } else {
