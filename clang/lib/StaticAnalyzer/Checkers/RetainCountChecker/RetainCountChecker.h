@@ -94,7 +94,7 @@ private:
 
   /// The kind of object being tracked (CF or ObjC or OSObject), if known.
   ///
-  /// See the RetEffect::ObjKind enum for possible values.
+  /// See the ObjKind enum for possible values.
   unsigned RawObjectKind : 3;
 
   /// True if the current state and/or retain count may turn out to not be the
@@ -108,7 +108,7 @@ private:
   /// them.
   unsigned RawIvarAccessHistory : 2;
 
-  RefVal(Kind k, RetEffect::ObjKind o, unsigned cnt, unsigned acnt, QualType t,
+  RefVal(Kind k, ObjKind o, unsigned cnt, unsigned acnt, QualType t,
          IvarAccessHistory IvarAccess)
     : Cnt(cnt), ACnt(acnt), T(t), RawKind(static_cast<unsigned>(k)),
       RawObjectKind(static_cast<unsigned>(o)),
@@ -121,8 +121,8 @@ private:
 public:
   Kind getKind() const { return static_cast<Kind>(RawKind); }
 
-  RetEffect::ObjKind getObjKind() const {
-    return static_cast<RetEffect::ObjKind>(RawObjectKind);
+  ObjKind getObjKind() const {
+    return static_cast<ObjKind>(RawObjectKind);
   }
 
   unsigned getCount() const { return Cnt; }
@@ -170,7 +170,7 @@ public:
   /// current function, at least partially.
   ///
   /// Most commonly, this is an owned object with a retain count of +1.
-  static RefVal makeOwned(RetEffect::ObjKind o, QualType t) {
+  static RefVal makeOwned(ObjKind o, QualType t) {
     return RefVal(Owned, o, /*Count=*/1, 0, t, IvarAccessHistory::None);
   }
 
@@ -178,7 +178,7 @@ public:
   /// the current function.
   ///
   /// Most commonly, this is an unowned object with a retain count of +0.
-  static RefVal makeNotOwned(RetEffect::ObjKind o, QualType t) {
+  static RefVal makeNotOwned(ObjKind o, QualType t) {
     return RefVal(NotOwned, o, /*Count=*/0, 0, t, IvarAccessHistory::None);
   }
 
