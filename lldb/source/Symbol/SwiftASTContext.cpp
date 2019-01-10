@@ -3981,7 +3981,7 @@ static CompilerType ValueDeclToType(swift::ValueDecl *decl,
       swift::TypeAliasDecl *alias_decl = swift::cast<swift::TypeAliasDecl>(decl);
       if (alias_decl->hasInterfaceType()) {
         swift::Type swift_type =
-          swift::NameAliasType::get(
+          swift::TypeAliasType::get(
                                   alias_decl, swift::Type(),
                                   swift::SubstitutionMap(),
                                   alias_decl->getUnderlyingTypeLoc().getType());
@@ -4069,7 +4069,7 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
       swift::TypeAliasDecl *alias_decl =
           swift::cast<swift::TypeAliasDecl>(decl);
       if (alias_decl->hasInterfaceType()) {
-        swift::Type swift_type = swift::NameAliasType::get(
+        swift::Type swift_type = swift::TypeAliasType::get(
             alias_decl, swift::Type(), swift::SubstitutionMap(),
             alias_decl->getUnderlyingTypeLoc().getType());
         return CompilerType(swift_type.getPointer());
@@ -5052,7 +5052,7 @@ bool SwiftASTContext::IsTypedefType(void *type) {
   if (!type)
     return false;
   swift::Type swift_type(GetSwiftType(type));
-  return swift::isa<swift::NameAliasType>(swift_type.getPointer());
+  return swift::isa<swift::TypeAliasType>(swift_type.getPointer());
 }
 
 bool SwiftASTContext::IsVoidType(void *type) {
@@ -5434,7 +5434,7 @@ SwiftASTContext::GetTypeInfo(void *type,
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::TypeAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
@@ -5537,7 +5537,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
     return lldb::eTypeClassOther;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::TypeAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
@@ -5790,8 +5790,8 @@ CompilerType SwiftASTContext::GetTypedefedType(void *type) {
 
   if (type) {
     swift::Type swift_type(::GetSwiftType(type));
-    swift::NameAliasType *name_alias_type =
-        swift::dyn_cast<swift::NameAliasType>(swift_type.getPointer());
+    swift::TypeAliasType *name_alias_type =
+        swift::dyn_cast<swift::TypeAliasType>(swift_type.getPointer());
     if (name_alias_type) {
       return {name_alias_type->getSinglyDesugaredType()};
     }
@@ -6011,7 +6011,7 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::TypeAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
@@ -6095,7 +6095,7 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::TypeAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
@@ -6205,7 +6205,7 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::TypeAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
@@ -6314,7 +6314,7 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::TypeAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
@@ -6610,7 +6610,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::TypeAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
@@ -6713,7 +6713,7 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
     return 0;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::TypeAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
@@ -7058,7 +7058,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::TypeAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
@@ -7270,7 +7270,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
       break;
 
     case swift::TypeKind::Optional:
-    case swift::TypeKind::NameAlias:
+    case swift::TypeKind::TypeAlias:
     case swift::TypeKind::Paren:
     case swift::TypeKind::Dictionary:
     case swift::TypeKind::ArraySlice:
@@ -7645,7 +7645,7 @@ bool SwiftASTContext::DumpTypeValue(
     break;
 
   case swift::TypeKind::Optional:
-  case swift::TypeKind::NameAlias:
+  case swift::TypeKind::TypeAlias:
   case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
