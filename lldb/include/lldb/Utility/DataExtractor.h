@@ -1096,7 +1096,7 @@ public:
   void Checksum(llvm::SmallVectorImpl<uint8_t> &dest, uint64_t max_data = 0);
 
   llvm::ArrayRef<uint8_t> GetData() const {
-    return {GetDataStart(), GetByteSize()};
+    return {GetDataStart(), size_t(GetByteSize())};
   }
 
 protected:
