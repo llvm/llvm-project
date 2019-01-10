@@ -79,9 +79,13 @@ static cl::opt<bool>
     ClPrintAddress("print-address", cl::init(false),
                    cl::desc("Show address before line information"));
 
+// -pretty-print, -p
 static cl::opt<bool>
     ClPrettyPrint("pretty-print", cl::init(false),
                   cl::desc("Make the output more human friendly"));
+static cl::alias ClPrettyPrintShort("p", cl::desc("Alias for -pretty-print"),
+                                    cl::NotHidden,
+                                    cl::aliasopt(ClPrettyPrint));
 
 static cl::opt<int> ClPrintSourceContextLines(
     "print-source-context-lines", cl::init(0),

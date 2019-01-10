@@ -110,7 +110,7 @@ OPTIONS
 
  Print address before the source code location. Defaults to false.
 
-.. option:: -pretty-print
+.. option:: -pretty-print, -p
 
  Print human readable output. If ``-inlining`` is specified, enclosing scope is
  prefixed by (inlined by). Refer to listed examples.
