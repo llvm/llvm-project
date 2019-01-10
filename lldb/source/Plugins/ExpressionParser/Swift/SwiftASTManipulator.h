@@ -217,7 +217,7 @@ private:
 
   struct TypesForResultFixup {
     swift::ArchetypeType *Wrapper_archetype = nullptr;
-    swift::NameAliasType *context_alias = nullptr;
+    swift::TypeAliasType *context_alias = nullptr;
     swift::TypeBase *context_real = nullptr;
   };
 
