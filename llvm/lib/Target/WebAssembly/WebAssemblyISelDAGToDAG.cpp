@@ -25,8 +25,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-isel"
 
-extern cl::opt<bool> EnableUnimplementedWasmSIMDInstrs;
-
 //===--------------------------------------------------------------------===//
 /// WebAssembly-specific code to select WebAssembly machine instructions for
 /// SelectionDAG operations.
@@ -50,6 +48,10 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
+    LLVM_DEBUG(dbgs() << "********** ISelDAGToDAG **********\n"
+                         "********** Function: "
+                      << MF.getName() << '\n');
+
     ForCodeSize = MF.getFunction().hasFnAttribute(Attribute::OptimizeForSize) ||
                   MF.getFunction().hasFnAttribute(Attribute::MinSize);
     Subtarget = &MF.getSubtarget<WebAssemblySubtarget>();

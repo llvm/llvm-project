@@ -178,9 +178,10 @@ static void initializeUsedResources(InstrDesc &ID,
 
   LLVM_DEBUG({
     for (const std::pair<uint64_t, ResourceUsage> &R : ID.Resources)
-      dbgs() << "\t\tMask=" << R.first << ", cy=" << R.second.size() << '\n';
+      dbgs() << "\t\tMask=" << format_hex(R.first, 16) << ", " <<
+                "cy=" << R.second.size() << '\n';
     for (const uint64_t R : ID.Buffers)
-      dbgs() << "\t\tBuffer Mask=" << R << '\n';
+      dbgs() << "\t\tBuffer Mask=" << format_hex(R, 16) << '\n';
   });
 }
 

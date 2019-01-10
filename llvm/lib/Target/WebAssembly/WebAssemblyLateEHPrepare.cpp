@@ -103,6 +103,10 @@ static void eraseDeadBBsAndChildren(const Container &MBBs) {
 }
 
 bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "********** Late EH Prepare **********\n"
+                       "********** Function: "
+                    << MF.getName() << '\n');
+
   if (MF.getTarget().getMCAsmInfo()->getExceptionHandlingType() !=
       ExceptionHandling::Wasm)
     return false;

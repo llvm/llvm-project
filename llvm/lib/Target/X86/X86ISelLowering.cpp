@@ -33927,6 +33927,7 @@ static SDValue combineVSelectToShrunkBlend(SDNode *N, SelectionDAG &DAG,
     SDValue SB = DAG.getNode(X86ISD::SHRUNKBLEND, SDLoc(U), U->getValueType(0),
                              Cond, U->getOperand(1), U->getOperand(2));
     DAG.ReplaceAllUsesOfValueWith(SDValue(U, 0), SB);
+    DCI.AddToWorklist(U);
   }
   DCI.CommitTargetLoweringOpt(TLO);
   return SDValue(N, 0);

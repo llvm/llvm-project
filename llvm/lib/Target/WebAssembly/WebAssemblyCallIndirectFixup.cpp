@@ -98,7 +98,7 @@ static bool IsPseudoCallIndirect(const MachineInstr &MI) {
 
 bool WebAssemblyCallIndirectFixup::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Fixing up CALL_INDIRECTs **********\n"
-                    << MF.getName() << '\n');
+                    << "********** Function: " << MF.getName() << '\n');
 
   bool Changed = false;
   const WebAssemblyInstrInfo *TII =

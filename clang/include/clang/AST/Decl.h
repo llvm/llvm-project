@@ -15,6 +15,7 @@
 #define LLVM_CLANG_AST_DECL_H
 
 #include "clang/AST/APValue.h"
+#include "clang/AST/ASTContextAllocate.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExternalASTSource.h"

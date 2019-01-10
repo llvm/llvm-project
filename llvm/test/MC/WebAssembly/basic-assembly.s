@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+simd128-unimplemented,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
 # this one is just here to see if it converts to .o without errors, but doesn't check any output:
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+simd128,+nontrapping-fptoint,+exception-handling < %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+simd128-unimplemented,+nontrapping-fptoint,+exception-handling < %s
 
     .text
     .section .text.main,"",@
