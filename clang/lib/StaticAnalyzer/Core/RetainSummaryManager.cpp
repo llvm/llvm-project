@@ -811,8 +811,8 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
   return None;
 }
 
-bool RetainSummaryManager::applyFunctionParamAnnotationEffect(
-    const ParmVarDecl *pd, unsigned parm_idx, const FunctionDecl *FD,
+bool RetainSummaryManager::applyParamAnnotationEffect(
+    const ParmVarDecl *pd, unsigned parm_idx, const NamedDecl *FD,
     RetainSummaryTemplate &Template) {
   QualType QT = pd->getType();
   if (auto K =
@@ -832,7 +832,7 @@ bool RetainSummaryManager::applyFunctionParamAnnotationEffect(
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
       for (const auto *OD : MD->overridden_methods()) {
         const ParmVarDecl *OP = OD->parameters()[parm_idx];
-        if (applyFunctionParamAnnotationEffect(OP, parm_idx, OD, Template))
+        if (applyParamAnnotationEffect(OP, parm_idx, OD, Template))
           return true;
       }
     }
@@ -853,10 +853,8 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
   // Effects on the parameters.
   unsigned parm_idx = 0;
   for (auto pi = FD->param_begin(),
-         pe = FD->param_end(); pi != pe; ++pi, ++parm_idx) {
-    const ParmVarDecl *pd = *pi;
-    applyFunctionParamAnnotationEffect(pd, parm_idx, FD, Template);
-  }
+         pe = FD->param_end(); pi != pe; ++pi, ++parm_idx)
+    applyParamAnnotationEffect(*pi, parm_idx, FD, Template);
 
   QualType RetTy = FD->getReturnType();
   if (Optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, FD))
@@ -882,19 +880,9 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
   // Effects on the parameters.
   unsigned parm_idx = 0;
   for (auto pi = MD->param_begin(), pe = MD->param_end(); pi != pe;
-       ++pi, ++parm_idx) {
-    const ParmVarDecl *pd = *pi;
-    QualType QT = pd->getType();
-    if (auto K =
-            hasAnyEnabledAttrOf<NSConsumedAttr, CFConsumedAttr, OSConsumedAttr>(
-                pd, QT)) {
-      Template->addArg(AF, parm_idx, ArgEffect(DecRef, *K));
-    } else if (auto K = hasAnyEnabledAttrOf<CFReturnsRetainedAttr>(pd, QT)) {
-      Template->addArg(AF, parm_idx, ArgEffect(RetainedOutParameter, *K));
-    } else if (auto K = hasAnyEnabledAttrOf<CFReturnsNotRetainedAttr>(pd, QT)) {
-      Template->addArg(AF, parm_idx, ArgEffect(UnretainedOutParameter, *K));
-    }
-  }
+       ++pi, ++parm_idx)
+    applyParamAnnotationEffect(*pi, parm_idx, MD, Template);
+
   QualType RetTy = MD->getReturnType();
   if (Optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, MD))
     Template->setRetEffect(*RetE);
