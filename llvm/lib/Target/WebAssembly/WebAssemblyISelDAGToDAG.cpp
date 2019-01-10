@@ -50,6 +50,10 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
+    LLVM_DEBUG(dbgs() << "********** ISelDAGToDAG **********\n"
+                         "********** Function: "
+                      << MF.getName() << '\n');
+
     ForCodeSize = MF.getFunction().hasFnAttribute(Attribute::OptimizeForSize) ||
                   MF.getFunction().hasFnAttribute(Attribute::MinSize);
     Subtarget = &MF.getSubtarget<WebAssemblySubtarget>();

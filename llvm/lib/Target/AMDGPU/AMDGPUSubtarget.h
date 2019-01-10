@@ -353,6 +353,7 @@ protected:
   bool HasDPP;
   bool HasR128A16;
   bool HasDLInsts;
+  bool HasDotInsts;
   bool EnableSRAMECC;
   bool FlatAddressSpace;
   bool FlatInstOffsets;
@@ -680,6 +681,10 @@ public:
     return HasDLInsts;
   }
 
+  bool hasDotInsts() const {
+    return HasDotInsts;
+  }
+
   bool isSRAMECCEnabled() const {
     return EnableSRAMECC;
   }
@@ -815,6 +820,11 @@ public:
 
   bool has12DWordStoreHazard() const {
     return getGeneration() != AMDGPUSubtarget::SOUTHERN_ISLANDS;
+  }
+
+  // \returns true if the subtarget supports DWORDX3 load/store instructions.
+  bool hasDwordx3LoadStores() const {
+    return CIInsts;
   }
 
   bool hasSMovFedHazard() const {

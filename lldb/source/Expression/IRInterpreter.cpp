@@ -1592,9 +1592,6 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
         // Check if this is a string literal or constant string pointer
         if (arg_ty->isPointerTy()) {
-          // Pointer to just one type
-          assert(arg_ty->getNumContainedTypes() == 1);
-
           lldb::addr_t addr = tmp_op.ULongLong();
           size_t dataSize = 0;
 

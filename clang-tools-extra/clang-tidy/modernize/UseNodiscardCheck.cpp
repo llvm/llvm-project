@@ -92,7 +92,7 @@ void UseNodiscardCheck::registerMatchers(MatchFinder *Finder) {
       !getLangOpts().CPlusPlus)
     return;
 
-  auto functionObj =
+  auto FunctionObj =
       cxxRecordDecl(hasAnyName("::std::function", "::boost::function"));
 
   // Find all non-void const methods which have not already been marked to
@@ -107,8 +107,8 @@ void UseNodiscardCheck::registerMatchers(MatchFinder *Finder) {
                     hasAttr(clang::attr::WarnUnusedResult),
                     hasType(isInstantiationDependentType()),
                     hasAnyParameter(anyOf(
-                        parmVarDecl(anyOf(hasType(functionObj),
-                                          hasType(references(functionObj)))),
+                        parmVarDecl(anyOf(hasType(FunctionObj),
+                                          hasType(references(FunctionObj)))),
                         hasType(isNonConstReferenceOrPointer()),
                         hasParameterPack()))))))
           .bind("no_discard"),
@@ -122,11 +122,11 @@ void UseNodiscardCheck::check(const MatchFinder::MatchResult &Result) {
   if (Loc.isInvalid() || Loc.isMacroID())
     return;
 
-  SourceLocation retLoc = MatchedDecl->getInnerLocStart();
+  SourceLocation RetLoc = MatchedDecl->getInnerLocStart();
 
   ASTContext &Context = *Result.Context;
 
-  auto Diag = diag(retLoc, "function %0 should be marked " + NoDiscardMacro)
+  auto Diag = diag(RetLoc, "function %0 should be marked " + NoDiscardMacro)
               << MatchedDecl;
 
   // Check for the existence of the keyword being used as the ``[[nodiscard]]``.
@@ -137,7 +137,7 @@ void UseNodiscardCheck::check(const MatchFinder::MatchResult &Result) {
   // 1. A const member function which returns a variable which is ignored
   // but performs some external I/O operation and the return value could be
   // ignored.
-  Diag << FixItHint::CreateInsertion(retLoc, NoDiscardMacro + " ");
+  Diag << FixItHint::CreateInsertion(RetLoc, NoDiscardMacro + " ");
 }
 
 } // namespace modernize

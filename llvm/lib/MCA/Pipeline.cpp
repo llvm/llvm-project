@@ -83,13 +83,13 @@ void Pipeline::appendStage(std::unique_ptr<Stage> S) {
 }
 
 void Pipeline::notifyCycleBegin() {
-  LLVM_DEBUG(dbgs() << "[E] Cycle begin: " << Cycles << '\n');
+  LLVM_DEBUG(dbgs() << "\n[E] Cycle begin: " << Cycles << '\n');
   for (HWEventListener *Listener : Listeners)
     Listener->onCycleBegin();
 }
 
 void Pipeline::notifyCycleEnd() {
-  LLVM_DEBUG(dbgs() << "[E] Cycle end: " << Cycles << "\n\n");
+  LLVM_DEBUG(dbgs() << "[E] Cycle end: " << Cycles << "\n");
   for (HWEventListener *Listener : Listeners)
     Listener->onCycleEnd();
 }

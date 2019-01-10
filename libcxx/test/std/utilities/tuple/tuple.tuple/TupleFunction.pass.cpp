@@ -26,8 +26,7 @@ struct X
     void operator()() {}
 };
 
-int
-main()
+int main()
 {
     X x;
     std::function<void()> f(x);

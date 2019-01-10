@@ -52,7 +52,7 @@ void check_limits()
     }
 }
 
-int main(void)
+int main()
 {
     check_limits<short>();
     check_limits<unsigned short>();

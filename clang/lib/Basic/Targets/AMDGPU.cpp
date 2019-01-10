@@ -137,6 +137,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     switch (llvm::AMDGPU::parseArchAMDGCN(CPU)) {
     case GK_GFX906:
       Features["dl-insts"] = true;
+      Features["dot-insts"] = true;
       LLVM_FALLTHROUGH;
     case GK_GFX909:
     case GK_GFX904:

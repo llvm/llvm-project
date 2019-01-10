@@ -530,22 +530,20 @@ bool ObjectFilePECOFF::ParseSectionHeaders(
   return !m_sect_headers.empty();
 }
 
-bool ObjectFilePECOFF::GetSectionName(std::string &sect_name,
-                                      const section_header_t &sect) {
-  if (sect.name[0] == '/') {
-    lldb::offset_t stroff = strtoul(&sect.name[1], NULL, 10);
+llvm::StringRef ObjectFilePECOFF::GetSectionName(const section_header_t &sect) {
+  llvm::StringRef hdr_name(sect.name, llvm::array_lengthof(sect.name));
+  hdr_name = hdr_name.split('\0').first;
+  if (hdr_name.consume_front("/")) {
+    lldb::offset_t stroff;
+    if (!to_integer(hdr_name, stroff, 10))
+      return "";
     lldb::offset_t string_file_offset =
         m_coff_header.symoff + (m_coff_header.nsyms * 18) + stroff;
-    const char *name = m_data.GetCStr(&string_file_offset);
-    if (name) {
-      sect_name = name;
-      return true;
-    }
-
-    return false;
+    if (const char *name = m_data.GetCStr(&string_file_offset))
+      return name;
+    return "";
   }
-  sect_name = sect.name;
-  return true;
+  return hdr_name;
 }
 
 //----------------------------------------------------------------------
@@ -712,9 +710,7 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
     const uint32_t nsects = m_sect_headers.size();
     ModuleSP module_sp(GetModule());
     for (uint32_t idx = 0; idx < nsects; ++idx) {
-      std::string sect_name;
-      GetSectionName(sect_name, m_sect_headers[idx]);
-      ConstString const_sect_name(sect_name.c_str());
+      ConstString const_sect_name(GetSectionName(m_sect_headers[idx]));
       static ConstString g_code_sect_name(".code");
       static ConstString g_CODE_sect_name("CODE");
       static ConstString g_data_sect_name(".data");
@@ -1086,8 +1082,7 @@ void ObjectFilePECOFF::DumpOptCOFFHeader(Stream *s,
 //----------------------------------------------------------------------
 void ObjectFilePECOFF::DumpSectionHeader(Stream *s,
                                          const section_header_t &sh) {
-  std::string name;
-  GetSectionName(name, sh);
+  std::string name = GetSectionName(sh);
   s->Printf("%-16s 0x%8.8x 0x%8.8x 0x%8.8x 0x%8.8x 0x%8.8x 0x%8.8x 0x%4.4x "
             "0x%4.4x 0x%8.8x\n",
             name.c_str(), sh.vmaddr, sh.vmsize, sh.offset, sh.size, sh.reloff,

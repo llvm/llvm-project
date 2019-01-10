@@ -484,7 +484,7 @@ void ARMV7PILongThunk::writeLong(uint8_t *Buf) {
   };
   uint64_t S = getARMThunkDestVA(Destination);
   uint64_t P = getThunkTargetSym()->getVA();
-  uint64_t Offset = S - P - 16;
+  int64_t Offset = S - P - 16;
   memcpy(Buf, Data, sizeof(Data));
   Target->relocateOne(Buf, R_ARM_MOVW_PREL_NC, Offset);
   Target->relocateOne(Buf + 4, R_ARM_MOVT_PREL, Offset);
@@ -505,7 +505,7 @@ void ThumbV7PILongThunk::writeLong(uint8_t *Buf) {
   };
   uint64_t S = getARMThunkDestVA(Destination);
   uint64_t P = getThunkTargetSym()->getVA() & ~0x1;
-  uint64_t Offset = S - P - 12;
+  int64_t Offset = S - P - 12;
   memcpy(Buf, Data, sizeof(Data));
   Target->relocateOne(Buf, R_ARM_THM_MOVW_PREL_NC, Offset);
   Target->relocateOne(Buf + 4, R_ARM_THM_MOVT_PREL, Offset);

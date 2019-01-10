@@ -42,8 +42,8 @@ __all__ = ['scan_build', 'analyze_build', 'analyze_compiler_wrapper']
 COMPILER_WRAPPER_CC = 'analyze-cc'
 COMPILER_WRAPPER_CXX = 'analyze-c++'
 
-CTU_FUNCTION_MAP_FILENAME = 'externalFnMap.txt'
-CTU_TEMP_FNMAP_FOLDER = 'tmpExternalFnMaps'
+CTU_EXTDEF_MAP_FILENAME = 'externalDefMap.txt'
+CTU_TEMP_DEFMAP_FOLDER = 'tmpExternalDefMaps'
 
 
 @command_entry_point
@@ -117,9 +117,9 @@ def get_ctu_config_from_args(args):
         CtuConfig(collect=args.ctu_phases.collect,
                   analyze=args.ctu_phases.analyze,
                   dir=args.ctu_dir,
-                  func_map_cmd=args.func_map_cmd)
+                  extdef_map_cmd=args.extdef_map_cmd)
         if hasattr(args, 'ctu_phases') and hasattr(args.ctu_phases, 'dir')
-        else CtuConfig(collect=False, analyze=False, dir='', func_map_cmd=''))
+        else CtuConfig(collect=False, analyze=False, dir='', extdef_map_cmd=''))
 
 
 def get_ctu_config_from_json(ctu_conf_json):
@@ -130,23 +130,24 @@ def get_ctu_config_from_json(ctu_conf_json):
     return CtuConfig(collect=ctu_config[0],
                      analyze=ctu_config[1],
                      dir=ctu_config[2],
-                     func_map_cmd=ctu_config[3])
+                     extdef_map_cmd=ctu_config[3])
 
 
-def create_global_ctu_function_map(func_map_lines):
-    """ Takes iterator of individual function maps and creates a global map
-    keeping only unique names. We leave conflicting names out of CTU.
+def create_global_ctu_extdef_map(extdef_map_lines):
+    """ Takes iterator of individual external definition maps and creates a
+    global map keeping only unique names. We leave conflicting names out of
+    CTU.
 
-    :param func_map_lines: Contains the id of a function (mangled name) and
+    :param extdef_map_lines: Contains the id of a definition (mangled name) and
     the originating source (the corresponding AST file) name.
-    :type func_map_lines: Iterator of str.
+    :type extdef_map_lines: Iterator of str.
     :returns: Mangled name - AST file pairs.
     :rtype: List of (str, str) tuples.
     """
 
     mangled_to_asts = defaultdict(set)
 
-    for line in func_map_lines:
+    for line in extdef_map_lines:
         mangled_name, ast_file = line.strip().split(' ', 1)
         mangled_to_asts[mangled_name].add(ast_file)
 
@@ -159,20 +160,20 @@ def create_global_ctu_function_map(func_map_lines):
     return mangled_ast_pairs
 
 
-def merge_ctu_func_maps(ctudir):
-    """ Merge individual function maps into a global one.
+def merge_ctu_extdef_maps(ctudir):
+    """ Merge individual external definition maps into a global one.
 
     As the collect phase runs parallel on multiple threads, all compilation
-    units are separately mapped into a temporary file in CTU_TEMP_FNMAP_FOLDER.
-    These function maps contain the mangled names of functions and the source
-    (AST generated from the source) which had them.
+    units are separately mapped into a temporary file in CTU_TEMP_DEFMAP_FOLDER.
+    These definition maps contain the mangled names and the source
+    (AST generated from the source) which had their definition.
     These files should be merged at the end into a global map file:
-    CTU_FUNCTION_MAP_FILENAME."""
+    CTU_EXTDEF_MAP_FILENAME."""
 
-    def generate_func_map_lines(fnmap_dir):
+    def generate_extdef_map_lines(extdefmap_dir):
         """ Iterate over all lines of input files in a determined order. """
 
-        files = glob.glob(os.path.join(fnmap_dir, '*'))
+        files = glob.glob(os.path.join(extdefmap_dir, '*'))
         files.sort()
         for filename in files:
             with open(filename, 'r') as in_file:
@@ -180,11 +181,11 @@ def merge_ctu_func_maps(ctudir):
                     yield line
 
     def write_global_map(arch, mangled_ast_pairs):
-        """ Write (mangled function name, ast file) pairs into final file. """
+        """ Write (mangled name, ast file) pairs into final file. """
 
-        extern_fns_map_file = os.path.join(ctudir, arch,
-                                           CTU_FUNCTION_MAP_FILENAME)
-        with open(extern_fns_map_file, 'w') as out_file:
+        extern_defs_map_file = os.path.join(ctudir, arch,
+                                           CTU_EXTDEF_MAP_FILENAME)
+        with open(extern_defs_map_file, 'w') as out_file:
             for mangled_name, ast_file in mangled_ast_pairs:
                 out_file.write('%s %s\n' % (mangled_name, ast_file))
 
@@ -192,15 +193,15 @@ def merge_ctu_func_maps(ctudir):
     for triple_path in triple_arches:
         if os.path.isdir(triple_path):
             triple_arch = os.path.basename(triple_path)
-            fnmap_dir = os.path.join(ctudir, triple_arch,
-                                     CTU_TEMP_FNMAP_FOLDER)
+            extdefmap_dir = os.path.join(ctudir, triple_arch,
+                                     CTU_TEMP_DEFMAP_FOLDER)
 
-            func_map_lines = generate_func_map_lines(fnmap_dir)
-            mangled_ast_pairs = create_global_ctu_function_map(func_map_lines)
+            extdef_map_lines = generate_extdef_map_lines(extdefmap_dir)
+            mangled_ast_pairs = create_global_ctu_extdef_map(extdef_map_lines)
             write_global_map(triple_arch, mangled_ast_pairs)
 
             # Remove all temporary files
-            shutil.rmtree(fnmap_dir, ignore_errors=True)
+            shutil.rmtree(extdefmap_dir, ignore_errors=True)
 
 
 def run_analyzer_parallel(args):
@@ -251,21 +252,21 @@ def govern_analyzer_runs(args):
     # left so multiple analyze runs can use the same data gathered by a single
     # collection run.
     if ctu_config.collect and ctu_config.analyze:
-        # CTU strings are coming from args.ctu_dir and func_map_cmd,
+        # CTU strings are coming from args.ctu_dir and extdef_map_cmd,
         # so we can leave it empty
         args.ctu_phases = CtuConfig(collect=True, analyze=False,
-                                    dir='', func_map_cmd='')
+                                    dir='', extdef_map_cmd='')
         run_analyzer_parallel(args)
-        merge_ctu_func_maps(ctu_config.dir)
+        merge_ctu_extdef_maps(ctu_config.dir)
         args.ctu_phases = CtuConfig(collect=False, analyze=True,
-                                    dir='', func_map_cmd='')
+                                    dir='', extdef_map_cmd='')
         run_analyzer_parallel(args)
         shutil.rmtree(ctu_config.dir, ignore_errors=True)
     else:
         # Single runs (collect or analyze) are launched from here.
         run_analyzer_parallel(args)
         if ctu_config.collect:
-            merge_ctu_func_maps(ctu_config.dir)
+            merge_ctu_extdef_maps(ctu_config.dir)
 
 
 def setup_environment(args):
@@ -544,20 +545,20 @@ def run_analyzer(opts, continuation=report_failure):
         return result
 
 
-def func_map_list_src_to_ast(func_src_list):
-    """ Turns textual function map list with source files into a
-    function map list with ast files. """
+def extdef_map_list_src_to_ast(extdef_src_list):
+    """ Turns textual external definition map list with source files into an
+    external definition map list with ast files. """
 
-    func_ast_list = []
-    for fn_src_txt in func_src_list:
-        mangled_name, path = fn_src_txt.split(" ", 1)
+    extdef_ast_list = []
+    for extdef_src_txt in extdef_src_list:
+        mangled_name, path = extdef_src_txt.split(" ", 1)
         # Normalize path on windows as well
         path = os.path.splitdrive(path)[1]
         # Make relative path out of absolute
         path = path[1:] if path[0] == os.sep else path
         ast_path = os.path.join("ast", path + ".ast")
-        func_ast_list.append(mangled_name + " " + ast_path)
-    return func_ast_list
+        extdef_ast_list.append(mangled_name + " " + ast_path)
+    return extdef_ast_list
 
 
 @require(['clang', 'directory', 'flags', 'direct_args', 'file', 'ctu'])
@@ -588,37 +589,38 @@ def ctu_collect_phase(opts):
         logging.debug("Generating AST using '%s'", ast_command)
         run_command(ast_command, cwd=opts['directory'])
 
-    def map_functions(triple_arch):
-        """ Generate function map file for the current source. """
+    def map_extdefs(triple_arch):
+        """ Generate external definition map file for the current source. """
 
         args = opts['direct_args'] + opts['flags']
-        funcmap_command = [opts['ctu'].func_map_cmd]
-        funcmap_command.append(opts['file'])
-        funcmap_command.append('--')
-        funcmap_command.extend(args)
-        logging.debug("Generating function map using '%s'", funcmap_command)
-        func_src_list = run_command(funcmap_command, cwd=opts['directory'])
-        func_ast_list = func_map_list_src_to_ast(func_src_list)
-        extern_fns_map_folder = os.path.join(opts['ctu'].dir, triple_arch,
-                                             CTU_TEMP_FNMAP_FOLDER)
-        if not os.path.isdir(extern_fns_map_folder):
+        extdefmap_command = [opts['ctu'].extdef_map_cmd]
+        extdefmap_command.append(opts['file'])
+        extdefmap_command.append('--')
+        extdefmap_command.extend(args)
+        logging.debug("Generating external definition map using '%s'",
+                      extdefmap_command)
+        extdef_src_list = run_command(extdefmap_command, cwd=opts['directory'])
+        extdef_ast_list = extdef_map_list_src_to_ast(extdef_src_list)
+        extern_defs_map_folder = os.path.join(opts['ctu'].dir, triple_arch,
+                                             CTU_TEMP_DEFMAP_FOLDER)
+        if not os.path.isdir(extern_defs_map_folder):
             try:
-                os.makedirs(extern_fns_map_folder)
+                os.makedirs(extern_defs_map_folder)
             except OSError:
                 # In case an other process already created it.
                 pass
-        if func_ast_list:
+        if extdef_ast_list:
             with tempfile.NamedTemporaryFile(mode='w',
-                                             dir=extern_fns_map_folder,
+                                             dir=extern_defs_map_folder,
                                              delete=False) as out_file:
-                out_file.write("\n".join(func_ast_list) + "\n")
+                out_file.write("\n".join(extdef_ast_list) + "\n")
 
     cwd = opts['directory']
     cmd = [opts['clang'], '--analyze'] + opts['direct_args'] + opts['flags'] \
         + [opts['file']]
     triple_arch = get_triple_arch(cmd, cwd)
     generate_ast(triple_arch)
-    map_functions(triple_arch)
+    map_extdefs(triple_arch)
 
 
 @require(['ctu'])

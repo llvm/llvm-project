@@ -149,7 +149,7 @@ void test_negate() {
     }
 }
 
-int main(void)
+int main()
 {
     test_neg_one<long>();
     test_neg_one<long long>();

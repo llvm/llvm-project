@@ -59,6 +59,8 @@ ModulePass *llvm::createWebAssemblyLowerGlobalDtors() {
 }
 
 bool LowerGlobalDtors::runOnModule(Module &M) {
+  LLVM_DEBUG(dbgs() << "********** Lower Global Destructors **********\n");
+
   GlobalVariable *GV = M.getGlobalVariable("llvm.global_dtors");
   if (!GV)
     return false;

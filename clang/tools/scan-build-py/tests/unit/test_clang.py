@@ -96,7 +96,7 @@ class ClangGetCheckersTest(unittest.TestCase):
 
 class ClangIsCtuCapableTest(unittest.TestCase):
     def test_ctu_not_found(self):
-        is_ctu = sut.is_ctu_capable('not-found-clang-func-mapping')
+        is_ctu = sut.is_ctu_capable('not-found-clang-extdef-mapping')
         self.assertFalse(is_ctu)
 
 

@@ -530,6 +530,10 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
           getTokenLocation(Loc, SM, Opts, ASTCtx->getLangOpts(), FileURI))
     S.CanonicalDeclaration = *DeclLoc;
 
+  S.Origin = Opts.Origin;
+  if (ND.getAvailability() == AR_Deprecated)
+    S.Flags |= Symbol::Deprecated;
+
   // Add completion info.
   // FIXME: we may want to choose a different redecl, or combine from several.
   assert(ASTCtx && PP.get() && "ASTContext and Preprocessor must be set.");
@@ -539,13 +543,28 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
       *ASTCtx, *PP, CodeCompletionContext::CCC_Symbol, *CompletionAllocator,
       *CompletionTUInfo,
       /*IncludeBriefComments*/ false);
-  std::string Signature;
-  std::string SnippetSuffix;
-  getSignature(*CCS, &Signature, &SnippetSuffix);
   std::string Documentation =
       formatDocumentation(*CCS, getDocComment(Ctx, SymbolCompletion,
                                               /*CommentsFromHeaders=*/true));
+  // For symbols not indexed for completion (class members), we also store their
+  // docs in the index, because Sema doesn't load the docs from the preamble, we
+  // rely on the index to get the docs.
+  // FIXME: this can be optimized by only storing the docs in dynamic index --
+  // dynamic index should index these symbols when Sema completes a member
+  // completion.
+  S.Documentation = Documentation;
+  if (!(S.Flags & Symbol::IndexedForCodeCompletion)) {
+    Symbols.insert(S);
+    return Symbols.find(S.ID);
+  }
+
+  std::string Signature;
+  std::string SnippetSuffix;
+  getSignature(*CCS, &Signature, &SnippetSuffix);
+  S.Signature = Signature;
+  S.CompletionSnippetSuffix = SnippetSuffix;
   std::string ReturnType = getReturnType(*CCS);
+  S.ReturnType = ReturnType;
 
   std::string Include;
   if (Opts.CollectIncludePath && shouldCollectIncludePath(S.SymInfo.Kind)) {
@@ -555,10 +574,6 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
             QName, SM, SM.getExpansionLoc(ND.getLocation()), Opts))
       Include = std::move(*Header);
   }
-  S.Signature = Signature;
-  S.CompletionSnippetSuffix = SnippetSuffix;
-  S.Documentation = Documentation;
-  S.ReturnType = ReturnType;
   if (!Include.empty())
     S.IncludeHeaders.emplace_back(Include, 1);
 
@@ -569,9 +584,6 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
       S.Type = TypeStorage->raw();
   }
 
-  S.Origin = Opts.Origin;
-  if (ND.getAvailability() == AR_Deprecated)
-    S.Flags |= Symbol::Deprecated;
   Symbols.insert(S);
   return Symbols.find(S.ID);
 }

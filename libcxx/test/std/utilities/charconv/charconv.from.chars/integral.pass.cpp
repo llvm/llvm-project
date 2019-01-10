@@ -184,8 +184,7 @@ struct test_signed : roundtrip_test_base<T>
     }
 };
 
-int
-main()
+int main()
 {
     run<test_basics>(integrals);
     run<test_signed>(all_signed);

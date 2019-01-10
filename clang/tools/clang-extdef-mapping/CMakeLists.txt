@@ -3,11 +3,11 @@ set(LLVM_LINK_COMPONENTS
   support
   )
 
-add_clang_executable(clang-func-mapping
-  ClangFnMapGen.cpp
+add_clang_executable(clang-extdef-mapping
+  ClangExtDefMapGen.cpp
   )
 
-target_link_libraries(clang-func-mapping
+target_link_libraries(clang-extdef-mapping
   PRIVATE
   clangAST
   clangBasic
@@ -17,5 +17,5 @@ target_link_libraries(clang-func-mapping
   clangTooling
   )
 
-install(TARGETS clang-func-mapping
+install(TARGETS clang-extdef-mapping
   RUNTIME DESTINATION bin)

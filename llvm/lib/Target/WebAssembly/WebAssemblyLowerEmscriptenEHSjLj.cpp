@@ -623,6 +623,8 @@ void WebAssemblyLowerEmscriptenEHSjLj::rebuildSSA(Function &F) {
 }
 
 bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
+  LLVM_DEBUG(dbgs() << "********** Lower Emscripten EH & SjLj **********\n");
+
   LLVMContext &C = M.getContext();
   IRBuilder<> IRB(C);
 
