@@ -39,19 +39,19 @@ ProgramStateRef removeRefBinding(ProgramStateRef State, SymbolRef Sym) {
   return State->remove<RefBindings>(Sym);
 }
 
-class UseAfterRelease : public CFRefBug {
+class UseAfterRelease : public RefCountBug {
 public:
   UseAfterRelease(const CheckerBase *checker)
-      : CFRefBug(checker, "Use-after-release") {}
+      : RefCountBug(checker, "Use-after-release") {}
 
   const char *getDescription() const override {
     return "Reference-counted object is used after it is released";
   }
 };
 
-class BadRelease : public CFRefBug {
+class BadRelease : public RefCountBug {
 public:
-  BadRelease(const CheckerBase *checker) : CFRefBug(checker, "Bad release") {}
+  BadRelease(const CheckerBase *checker) : RefCountBug(checker, "Bad release") {}
 
   const char *getDescription() const override {
     return "Incorrect decrement of the reference count of an object that is "
@@ -59,30 +59,30 @@ public:
   }
 };
 
-class DeallocNotOwned : public CFRefBug {
+class DeallocNotOwned : public RefCountBug {
 public:
   DeallocNotOwned(const CheckerBase *checker)
-      : CFRefBug(checker, "-dealloc sent to non-exclusively owned object") {}
+      : RefCountBug(checker, "-dealloc sent to non-exclusively owned object") {}
 
   const char *getDescription() const override {
     return "-dealloc sent to object that may be referenced elsewhere";
   }
 };
 
-class OverAutorelease : public CFRefBug {
+class OverAutorelease : public RefCountBug {
 public:
   OverAutorelease(const CheckerBase *checker)
-      : CFRefBug(checker, "Object autoreleased too many times") {}
+      : RefCountBug(checker, "Object autoreleased too many times") {}
 
   const char *getDescription() const override {
     return "Object autoreleased too many times";
   }
 };
 
-class ReturnedNotOwnedForOwned : public CFRefBug {
+class ReturnedNotOwnedForOwned : public RefCountBug {
 public:
   ReturnedNotOwnedForOwned(const CheckerBase *checker)
-      : CFRefBug(checker, "Method should return an owned object") {}
+      : RefCountBug(checker, "Method should return an owned object") {}
 
   const char *getDescription() const override {
     return "Object with a +0 retain count returned to caller where a +1 "
@@ -90,9 +90,9 @@ public:
   }
 };
 
-class Leak : public CFRefBug {
+class Leak : public RefCountBug {
 public:
-  Leak(const CheckerBase *checker, StringRef name) : CFRefBug(checker, name) {
+  Leak(const CheckerBase *checker, StringRef name) : RefCountBug(checker, name) {
     // Leaks should not be reported if they are post-dominated by a sink.
     setSuppressOnSink(true);
   }
@@ -414,14 +414,14 @@ void RetainCountChecker::checkPostCall(const CallEvent &Call,
   checkSummary(*Summ, Call, C);
 }
 
-CFRefBug *
+RefCountBug *
 RetainCountChecker::getLeakWithinFunctionBug(const LangOptions &LOpts) const {
   if (!leakWithinFunction)
     leakWithinFunction.reset(new Leak(this, "Leak"));
   return leakWithinFunction.get();
 }
 
-CFRefBug *
+RefCountBug *
 RetainCountChecker::getLeakAtReturnBug(const LangOptions &LOpts) const {
   if (!leakAtReturn)
     leakAtReturn.reset(new Leak(this, "Leak of returned object"));
@@ -816,7 +816,7 @@ void RetainCountChecker::processNonLeakError(ProgramStateRef St,
   if (!N)
     return;
 
-  CFRefBug *BT;
+  RefCountBug *BT;
   switch (ErrorKind) {
     default:
       llvm_unreachable("Unhandled error.");
@@ -838,7 +838,7 @@ void RetainCountChecker::processNonLeakError(ProgramStateRef St,
   }
 
   assert(BT);
-  auto report = llvm::make_unique<CFRefReport>(
+  auto report = llvm::make_unique<RefCountReport>(
       *BT, C.getASTContext().getLangOpts(), N, Sym);
   report->addRange(ErrorRange);
   C.emitReport(std::move(report));
@@ -1042,7 +1042,7 @@ ExplodedNode * RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
         ExplodedNode *N = C.addTransition(state, Pred, &ReturnOwnLeakTag);
         if (N) {
           const LangOptions &LOpts = C.getASTContext().getLangOpts();
-          auto R = llvm::make_unique<CFRefLeakReport>(
+          auto R = llvm::make_unique<RefLeakReport>(
               *getLeakAtReturnBug(LOpts), LOpts, N, Sym, C);
           C.emitReport(std::move(R));
         }
@@ -1070,7 +1070,7 @@ ExplodedNode * RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
           if (!returnNotOwnedForOwned)
             returnNotOwnedForOwned.reset(new ReturnedNotOwnedForOwned(this));
 
-          auto R = llvm::make_unique<CFRefReport>(
+          auto R = llvm::make_unique<RefCountReport>(
               *returnNotOwnedForOwned, C.getASTContext().getLangOpts(), N, Sym);
           C.emitReport(std::move(R));
         }
@@ -1274,7 +1274,7 @@ RetainCountChecker::handleAutoreleaseCounts(ProgramStateRef state,
       overAutorelease.reset(new OverAutorelease(this));
 
     const LangOptions &LOpts = Ctx.getASTContext().getLangOpts();
-    auto R = llvm::make_unique<CFRefReport>(*overAutorelease, LOpts, N, Sym,
+    auto R = llvm::make_unique<RefCountReport>(*overAutorelease, LOpts, N, Sym,
                                             os.str());
     Ctx.emitReport(std::move(R));
   }
@@ -1323,12 +1323,12 @@ RetainCountChecker::processLeaks(ProgramStateRef state,
          I = Leaked.begin(), E = Leaked.end(); I != E; ++I) {
 
       const LangOptions &LOpts = Ctx.getASTContext().getLangOpts();
-      CFRefBug *BT = Pred ? getLeakWithinFunctionBug(LOpts)
+      RefCountBug *BT = Pred ? getLeakWithinFunctionBug(LOpts)
                           : getLeakAtReturnBug(LOpts);
       assert(BT && "BugType not initialized.");
 
       Ctx.emitReport(
-          llvm::make_unique<CFRefLeakReport>(*BT, LOpts, N, *I, Ctx));
+          llvm::make_unique<RefLeakReport>(*BT, LOpts, N, *I, Ctx));
     }
   }
 

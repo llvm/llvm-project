@@ -251,10 +251,10 @@ class RetainCountChecker
                     check::RegionChanges,
                     eval::Assume,
                     eval::Call > {
-  mutable std::unique_ptr<CFRefBug> useAfterRelease, releaseNotOwned;
-  mutable std::unique_ptr<CFRefBug> deallocNotOwned;
-  mutable std::unique_ptr<CFRefBug> overAutorelease, returnNotOwnedForOwned;
-  mutable std::unique_ptr<CFRefBug> leakWithinFunction, leakAtReturn;
+  mutable std::unique_ptr<RefCountBug> useAfterRelease, releaseNotOwned;
+  mutable std::unique_ptr<RefCountBug> deallocNotOwned;
+  mutable std::unique_ptr<RefCountBug> overAutorelease, returnNotOwnedForOwned;
+  mutable std::unique_ptr<RefCountBug> leakWithinFunction, leakAtReturn;
 
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
 public:
@@ -268,10 +268,9 @@ public:
 
   RetainCountChecker() {}
 
+  RefCountBug *getLeakWithinFunctionBug(const LangOptions &LOpts) const;
 
-  CFRefBug *getLeakWithinFunctionBug(const LangOptions &LOpts) const;
-
-  CFRefBug *getLeakAtReturnBug(const LangOptions &LOpts) const;
+  RefCountBug *getLeakAtReturnBug(const LangOptions &LOpts) const;
 
   RetainSummaryManager &getSummaryManager(ASTContext &Ctx) const {
     // FIXME: We don't support ARC being turned on and off during one analysis.

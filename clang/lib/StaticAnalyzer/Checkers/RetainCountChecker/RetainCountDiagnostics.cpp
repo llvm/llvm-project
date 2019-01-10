@@ -189,12 +189,12 @@ namespace clang {
 namespace ento {
 namespace retaincountchecker {
 
-class CFRefReportVisitor : public BugReporterVisitor {
+class RefCountReportVisitor : public BugReporterVisitor {
 protected:
   SymbolRef Sym;
 
 public:
-  CFRefReportVisitor(SymbolRef sym) : Sym(sym) {}
+  RefCountReportVisitor(SymbolRef sym) : Sym(sym) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int x = 0;
@@ -211,9 +211,9 @@ public:
                                                   BugReport &BR) override;
 };
 
-class CFRefLeakReportVisitor : public CFRefReportVisitor {
+class RefLeakReportVisitor : public RefCountReportVisitor {
 public:
-  CFRefLeakReportVisitor(SymbolRef sym) : CFRefReportVisitor(sym) {}
+  RefLeakReportVisitor(SymbolRef sym) : RefCountReportVisitor(sym) {}
 
   std::shared_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
                                                   const ExplodedNode *N,
@@ -303,7 +303,7 @@ annotateConsumedSummaryMismatch(const ExplodedNode *N,
 }
 
 std::shared_ptr<PathDiagnosticPiece>
-CFRefReportVisitor::VisitNode(const ExplodedNode *N,
+RefCountReportVisitor::VisitNode(const ExplodedNode *N,
                               BugReporterContext &BRC, BugReport &BR) {
 
   const SourceManager &SM = BRC.getSourceManager();
@@ -548,14 +548,14 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
 }
 
 std::shared_ptr<PathDiagnosticPiece>
-CFRefReportVisitor::getEndPath(BugReporterContext &BRC,
+RefCountReportVisitor::getEndPath(BugReporterContext &BRC,
                                const ExplodedNode *EndN, BugReport &BR) {
   BR.markInteresting(Sym);
   return BugReporterVisitor::getDefaultEndPath(BRC, EndN, BR);
 }
 
 std::shared_ptr<PathDiagnosticPiece>
-CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
+RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
                                    const ExplodedNode *EndN, BugReport &BR) {
 
   // Tell the BugReporterContext to report cases when the tracked symbol is
@@ -637,21 +637,23 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
 }
 
-CFRefReport::CFRefReport(CFRefBug &D, const LangOptions &LOpts, ExplodedNode *n,
-                         SymbolRef sym, bool registerVisitor)
+RefCountReport::RefCountReport(RefCountBug &D, const LangOptions &LOpts,
+                               ExplodedNode *n, SymbolRef sym,
+                               bool registerVisitor)
     : BugReport(D, D.getDescription(), n), Sym(sym) {
   if (registerVisitor)
-    addVisitor(llvm::make_unique<CFRefReportVisitor>(sym));
+    addVisitor(llvm::make_unique<RefCountReportVisitor>(sym));
 }
 
-CFRefReport::CFRefReport(CFRefBug &D, const LangOptions &LOpts, ExplodedNode *n,
-                         SymbolRef sym, StringRef endText)
+RefCountReport::RefCountReport(RefCountBug &D, const LangOptions &LOpts,
+                               ExplodedNode *n, SymbolRef sym,
+                               StringRef endText)
     : BugReport(D, D.getDescription(), endText, n) {
 
-  addVisitor(llvm::make_unique<CFRefReportVisitor>(sym));
+  addVisitor(llvm::make_unique<RefCountReportVisitor>(sym));
 }
 
-void CFRefLeakReport::deriveParamLocation(CheckerContext &Ctx, SymbolRef sym) {
+void RefLeakReport::deriveParamLocation(CheckerContext &Ctx, SymbolRef sym) {
   const SourceManager& SMgr = Ctx.getSourceManager();
 
   if (!sym->getOriginRegion())
@@ -670,7 +672,7 @@ void CFRefLeakReport::deriveParamLocation(CheckerContext &Ctx, SymbolRef sym) {
   }
 }
 
-void CFRefLeakReport::deriveAllocLocation(CheckerContext &Ctx,
+void RefLeakReport::deriveAllocLocation(CheckerContext &Ctx,
                                           SymbolRef sym) {
   // Most bug reports are cached at the location where they occurred.
   // With leaks, we want to unique them by the location where they were
@@ -713,7 +715,7 @@ void CFRefLeakReport::deriveAllocLocation(CheckerContext &Ctx,
   UniqueingDecl = AllocNode->getLocationContext()->getDecl();
 }
 
-void CFRefLeakReport::createDescription(CheckerContext &Ctx) {
+void RefLeakReport::createDescription(CheckerContext &Ctx) {
   assert(Location.isValid() && UniqueingDecl && UniqueingLocation.isValid());
   Description.clear();
   llvm::raw_string_ostream os(Description);
@@ -729,10 +731,10 @@ void CFRefLeakReport::createDescription(CheckerContext &Ctx) {
   }
 }
 
-CFRefLeakReport::CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts,
-                                 ExplodedNode *n, SymbolRef sym,
-                                 CheckerContext &Ctx)
-  : CFRefReport(D, LOpts, n, sym, false) {
+RefLeakReport::RefLeakReport(RefCountBug &D, const LangOptions &LOpts,
+                             ExplodedNode *n, SymbolRef sym,
+                             CheckerContext &Ctx)
+    : RefCountReport(D, LOpts, n, sym, false) {
 
   deriveAllocLocation(Ctx, sym);
   if (!AllocBinding)
@@ -740,5 +742,5 @@ CFRefLeakReport::CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts,
 
   createDescription(Ctx);
 
-  addVisitor(llvm::make_unique<CFRefLeakReportVisitor>(sym));
+  addVisitor(llvm::make_unique<RefLeakReportVisitor>(sym));
 }
