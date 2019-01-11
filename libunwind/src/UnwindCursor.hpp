@@ -16,7 +16,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#ifndef _LIBUNWIND_HAS_NO_THREADS
+#if !defined(_LIBUNWIND_HAS_NO_THREADS) && !defined(RUST_SGX)
   #include <pthread.h>
 #endif
 #include <unwind.h>

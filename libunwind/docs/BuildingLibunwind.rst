@@ -165,3 +165,8 @@ libunwind specific options
 .. option:: LIBUNWIND_SYSROOT
 
   Sysroot for cross compiling
+
+.. option:: LIBUNWIND_ENABLE_RUST_SGX:BOOL
+
+  **Default**: ``OFF``
+

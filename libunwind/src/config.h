@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "UnwindRustSgx.h"
 
 // Define static_assert() unless already defined by compiler.
 #ifndef __has_feature
