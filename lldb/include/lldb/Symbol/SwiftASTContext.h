@@ -476,7 +476,9 @@ public:
 
   static bool IsSelfArchetypeType(const CompilerType &compiler_type);
 
-  static bool IsPossibleZeroSizeType(const CompilerType &compiler_type);
+  static bool
+  IsPossibleZeroSizeType(const CompilerType &compiler_type,
+                         ExecutionContextScope *exe_scope);
 
   bool IsTrivialOptionSetType(const CompilerType &compiler_type);
 
