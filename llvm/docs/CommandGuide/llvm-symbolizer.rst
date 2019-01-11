@@ -68,7 +68,7 @@ EXAMPLE
 OPTIONS
 -------
 
-.. option:: -obj
+.. option:: -obj, -exe, -e
 
   Path to object file to be symbolized.
 
