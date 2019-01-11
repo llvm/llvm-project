@@ -9,6 +9,7 @@
 
 using testing::_;
 using testing::AllOf;
+using testing::Contains;
 using testing::ElementsAre;
 using testing::Not;
 using testing::UnorderedElementsAre;
@@ -146,7 +147,7 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
                        FileURI("unittest:///root/B.cc")}));
 }
 
-TEST_F(BackgroundIndexTest, ShardStorageWriteTest) {
+TEST_F(BackgroundIndexTest, ShardStorageTest) {
   MockFSProvider FS;
   FS.Files[testPath("root/A.h")] = R"cpp(
       void common();
@@ -173,6 +174,16 @@ TEST_F(BackgroundIndexTest, ShardStorageWriteTest) {
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
   }
   EXPECT_EQ(CacheHits, 0U);
+  EXPECT_EQ(Storage.size(), 2U);
+
+  {
+    OverlayCDB CDB(/*Base=*/nullptr);
+    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+                        [&](llvm::StringRef) { return &MSS; });
+    CDB.setCompileCommand(testPath("root"), Cmd);
+    ASSERT_TRUE(Idx.blockUntilIdleForTest());
+  }
+  EXPECT_EQ(CacheHits, 2U); // Check both A.cc and A.h loaded from cache.
   EXPECT_EQ(Storage.size(), 2U);
 
   auto ShardHeader = MSS.loadShard(testPath("root/A.h"));
@@ -276,6 +287,74 @@ TEST_F(BackgroundIndexTest, DISABLED_PeriodicalIndex) {
   EXPECT_THAT(runFuzzyFind(Idx, ""), ElementsAre(Named("X")));
   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   EXPECT_THAT(runFuzzyFind(Idx, ""), ElementsAre(Named("Y")));
+}
+
+TEST_F(BackgroundIndexTest, ShardStorageLoad) {
+  MockFSProvider FS;
+  FS.Files[testPath("root/A.h")] = R"cpp(
+      void common();
+      void f_b();
+      class A_CC {};
+      )cpp";
+  FS.Files[testPath("root/A.cc")] =
+      "#include \"A.h\"\nvoid g() { (void)common; }";
+
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+
+  tooling::CompileCommand Cmd;
+  Cmd.Filename = testPath("root/A.cc");
+  Cmd.Directory = testPath("root");
+  Cmd.CommandLine = {"clang++", testPath("root/A.cc")};
+  // Check nothing is loaded from Storage, but A.cc and A.h has been stored.
+  {
+    OverlayCDB CDB(/*Base=*/nullptr);
+    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+                        [&](llvm::StringRef) { return &MSS; });
+    CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
+    ASSERT_TRUE(Idx.blockUntilIdleForTest());
+  }
+
+  // Change header.
+  FS.Files[testPath("root/A.h")] = R"cpp(
+      void common();
+      void f_b();
+      class A_CC {};
+      class A_CCnew {};
+      )cpp";
+  {
+    OverlayCDB CDB(/*Base=*/nullptr);
+    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+                        [&](llvm::StringRef) { return &MSS; });
+    CDB.setCompileCommand(testPath("root"), Cmd);
+    ASSERT_TRUE(Idx.blockUntilIdleForTest());
+  }
+  EXPECT_EQ(CacheHits, 2U); // Check both A.cc and A.h loaded from cache.
+
+  // Check if the new symbol has arrived.
+  auto ShardHeader = MSS.loadShard(testPath("root/A.h"));
+  EXPECT_NE(ShardHeader, nullptr);
+  EXPECT_THAT(*ShardHeader->Symbols, Contains(Named("A_CCnew")));
+
+  // Change source.
+  FS.Files[testPath("root/A.cc")] =
+      "#include \"A.h\"\nvoid g() { (void)common; }\nvoid f_b() {}";
+  {
+    CacheHits = 0;
+    OverlayCDB CDB(/*Base=*/nullptr);
+    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+                        [&](llvm::StringRef) { return &MSS; });
+    CDB.setCompileCommand(testPath("root"), Cmd);
+    ASSERT_TRUE(Idx.blockUntilIdleForTest());
+  }
+  EXPECT_EQ(CacheHits, 2U); // Check both A.cc and A.h loaded from cache.
+
+  // Check if the new symbol has arrived.
+  auto ShardSource = MSS.loadShard(testPath("root/A.cc"));
+  EXPECT_NE(ShardHeader, nullptr);
+  EXPECT_THAT(*ShardSource->Symbols,
+              Contains(AllOf(Named("f_b"), Declared(), Defined())));
 }
 
 } // namespace clangd
