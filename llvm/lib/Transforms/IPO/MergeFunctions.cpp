@@ -474,7 +474,7 @@ void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
                                           NewPAL.getRetAttributes(),
                                           NewArgAttrs));
 
-      remove(CS.getInstruction()->getParent()->getParent());
+      remove(CS.getInstruction()->getFunction());
       U->set(BitcastNew);
     }
   }
@@ -954,7 +954,7 @@ void MergeFunctions::removeUsers(Value *V) {
 
     for (User *U : V->users()) {
       if (Instruction *I = dyn_cast<Instruction>(U)) {
-        remove(I->getParent()->getParent());
+        remove(I->getFunction());
       } else if (isa<GlobalValue>(U)) {
         // do nothing
       } else if (Constant *C = dyn_cast<Constant>(U)) {
