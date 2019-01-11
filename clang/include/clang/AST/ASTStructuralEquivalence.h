@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_AST_ASTSTRUCTURALEQUIVALENCE_H
 #define LLVM_CLANG_AST_ASTSTRUCTURALEQUIVALENCE_H
 
+#include "clang/AST/DeclBase.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
