@@ -1369,28 +1369,23 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
   const Stmt *CallSite = CalleeCtx->getCallSite();
 
   if (CallSite) {
-    if (const CallExpr *CE = dyn_cast<CallExpr>(CallSite))
-      return getSimpleCall(CE, State, CallerCtx);
+    if (CallEventRef<> Out = getCall(CallSite, State, CallerCtx))
+      return Out;
 
-    switch (CallSite->getStmtClass()) {
-    case Stmt::CXXConstructExprClass:
-    case Stmt::CXXTemporaryObjectExprClass: {
-      SValBuilder &SVB = State->getStateManager().getSValBuilder();
-      const auto *Ctor = cast<CXXMethodDecl>(CalleeCtx->getDecl());
-      Loc ThisPtr = SVB.getCXXThis(Ctor, CalleeCtx);
-      SVal ThisVal = State->getSVal(ThisPtr);
+    Stmt::StmtClass SC = CallSite->getStmtClass();
 
-      return getCXXConstructorCall(cast<CXXConstructExpr>(CallSite),
-                                   ThisVal.getAsRegion(), State, CallerCtx);
-    }
-    case Stmt::CXXNewExprClass:
-      return getCXXAllocatorCall(cast<CXXNewExpr>(CallSite), State, CallerCtx);
-    case Stmt::ObjCMessageExprClass:
-      return getObjCMethodCall(cast<ObjCMessageExpr>(CallSite),
-                               State, CallerCtx);
-    default:
-      llvm_unreachable("This is not an inlineable statement.");
-    }
+    // All other cases are handled by getCall.
+    assert(SC == Stmt::CXXConstructExprClass ||
+           SC == Stmt::CXXTemporaryObjectExprClass &&
+               "This is not an inlineable statement");
+
+    SValBuilder &SVB = State->getStateManager().getSValBuilder();
+    const auto *Ctor = cast<CXXMethodDecl>(CalleeCtx->getDecl());
+    Loc ThisPtr = SVB.getCXXThis(Ctor, CalleeCtx);
+    SVal ThisVal = State->getSVal(ThisPtr);
+
+    return getCXXConstructorCall(cast<CXXConstructExpr>(CallSite),
+                                 ThisVal.getAsRegion(), State, CallerCtx);
   }
 
   // Fall back to the CFG. The only thing we haven't handled yet is
@@ -1416,4 +1411,17 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
   return getCXXDestructorCall(Dtor, Trigger, ThisVal.getAsRegion(),
                               E.getAs<CFGBaseDtor>().hasValue(), State,
                               CallerCtx);
+}
+
+CallEventRef<> CallEventManager::getCall(const Stmt *S, ProgramStateRef State,
+                                         const LocationContext *LC) {
+  if (const auto *CE = dyn_cast<CallExpr>(S)) {
+    return getSimpleCall(CE, State, LC);
+  } else if (const auto *NE = dyn_cast<CXXNewExpr>(S)) {
+    return getCXXAllocatorCall(NE, State, LC);
+  } else if (const auto *ME = dyn_cast<ObjCMessageExpr>(S)) {
+    return getObjCMethodCall(ME, State, LC);
+  } else {
+    return nullptr;
+  }
 }
