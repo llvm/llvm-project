@@ -986,11 +986,17 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Handle /ignore
   for (auto *Arg : Args.filtered(OPT_ignore)) {
-    if (StringRef(Arg->getValue()) == "4037")
-      Config->WarnMissingOrderSymbol = false;
-    else if (StringRef(Arg->getValue()) == "4217")
-      Config->WarnLocallyDefinedImported = false;
-    // Other warning numbers are ignored.
+    SmallVector<StringRef, 8> Vec;
+    StringRef(Arg->getValue()).split(Vec, ',');
+    for (StringRef S : Vec) {
+      if (S == "4037")
+        Config->WarnMissingOrderSymbol = false;
+      else if (S == "4099")
+        Config->WarnDebugInfoUnusable = false;
+      else if (S == "4217")
+        Config->WarnLocallyDefinedImported = false;
+      // Other warning numbers are ignored.
+    }
   }
 
   // Handle /out
