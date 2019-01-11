@@ -16,7 +16,7 @@ namespace clang {
     namespace categories {
       extern const char * const CoreFoundationObjectiveC;
       extern const char * const LogicError;
-      extern const char * const MemoryCoreFoundationObjectiveC;
+      extern const char * const MemoryRefCount;
       extern const char * const MemoryError;
       extern const char * const UnixAPI;
     }

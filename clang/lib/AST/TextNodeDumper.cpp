@@ -165,7 +165,7 @@ void TextNodeDumper::dumpDeclRef(const Decl *D, const char *Label) {
   if (!D)
     return;
 
-  addChild([=] {
+  AddChild([=] {
     if (Label)
       OS << Label << ' ';
     dumpBareDeclRef(D);

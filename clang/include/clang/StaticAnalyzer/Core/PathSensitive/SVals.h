@@ -530,9 +530,7 @@ public:
     return PTMDataType::getFromOpaqueValue(const_cast<void *>(Data));
   }
 
-  bool isNullMemberPointer() const {
-    return getPTMData().isNull();
-  }
+  bool isNullMemberPointer() const;
 
   const DeclaratorDecl *getDecl() const;
 

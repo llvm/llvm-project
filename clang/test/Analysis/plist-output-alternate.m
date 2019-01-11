@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.RetainCount,alpha.core -fblocks -analyzer-output=plist -o %t %s
-// RUN: cat %t | %diff_plist %S/Inputs/expected-plists/plist-output-alternate.m.plist
+// RUN: cat %t | %diff_plist %S/Inputs/expected-plists/plist-output-alternate.m.plist -
 
 void test_null_init(void) {
   int *p = 0;

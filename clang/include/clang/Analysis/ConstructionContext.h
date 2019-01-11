@@ -19,6 +19,7 @@
 
 #include "clang/Analysis/Support/BumpVector.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprObjC.h"
 
 namespace clang {
 

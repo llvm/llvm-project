@@ -94,7 +94,7 @@ private:
 
   /// The kind of object being tracked (CF or ObjC or OSObject), if known.
   ///
-  /// See the RetEffect::ObjKind enum for possible values.
+  /// See the ObjKind enum for possible values.
   unsigned RawObjectKind : 3;
 
   /// True if the current state and/or retain count may turn out to not be the
@@ -108,7 +108,7 @@ private:
   /// them.
   unsigned RawIvarAccessHistory : 2;
 
-  RefVal(Kind k, RetEffect::ObjKind o, unsigned cnt, unsigned acnt, QualType t,
+  RefVal(Kind k, ObjKind o, unsigned cnt, unsigned acnt, QualType t,
          IvarAccessHistory IvarAccess)
     : Cnt(cnt), ACnt(acnt), T(t), RawKind(static_cast<unsigned>(k)),
       RawObjectKind(static_cast<unsigned>(o)),
@@ -121,8 +121,8 @@ private:
 public:
   Kind getKind() const { return static_cast<Kind>(RawKind); }
 
-  RetEffect::ObjKind getObjKind() const {
-    return static_cast<RetEffect::ObjKind>(RawObjectKind);
+  ObjKind getObjKind() const {
+    return static_cast<ObjKind>(RawObjectKind);
   }
 
   unsigned getCount() const { return Cnt; }
@@ -170,7 +170,7 @@ public:
   /// current function, at least partially.
   ///
   /// Most commonly, this is an owned object with a retain count of +1.
-  static RefVal makeOwned(RetEffect::ObjKind o, QualType t) {
+  static RefVal makeOwned(ObjKind o, QualType t) {
     return RefVal(Owned, o, /*Count=*/1, 0, t, IvarAccessHistory::None);
   }
 
@@ -178,7 +178,7 @@ public:
   /// the current function.
   ///
   /// Most commonly, this is an unowned object with a retain count of +0.
-  static RefVal makeNotOwned(RetEffect::ObjKind o, QualType t) {
+  static RefVal makeNotOwned(ObjKind o, QualType t) {
     return RefVal(NotOwned, o, /*Count=*/0, 0, t, IvarAccessHistory::None);
   }
 
@@ -239,7 +239,6 @@ public:
 class RetainCountChecker
   : public Checker< check::Bind,
                     check::DeadSymbols,
-                    check::EndAnalysis,
                     check::BeginFunction,
                     check::EndFunction,
                     check::PostStmt<BlockExpr>,
@@ -252,22 +251,14 @@ class RetainCountChecker
                     check::RegionChanges,
                     eval::Assume,
                     eval::Call > {
-  mutable std::unique_ptr<CFRefBug> useAfterRelease, releaseNotOwned;
-  mutable std::unique_ptr<CFRefBug> deallocNotOwned;
-  mutable std::unique_ptr<CFRefBug> overAutorelease, returnNotOwnedForOwned;
-  mutable std::unique_ptr<CFRefBug> leakWithinFunction, leakAtReturn;
-
-  typedef llvm::DenseMap<SymbolRef, const CheckerProgramPointTag *> SymbolTagMap;
-
-  // This map is only used to ensure proper deletion of any allocated tags.
-  mutable SymbolTagMap DeadSymbolTags;
+  mutable std::unique_ptr<RefCountBug> useAfterRelease, releaseNotOwned;
+  mutable std::unique_ptr<RefCountBug> deallocNotOwned;
+  mutable std::unique_ptr<RefCountBug> overAutorelease, returnNotOwnedForOwned;
+  mutable std::unique_ptr<RefCountBug> leakWithinFunction, leakAtReturn;
 
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
-  mutable SummaryLogTy SummaryLog;
-
-  mutable bool ShouldResetSummaryLog;
-
 public:
+  static constexpr const char *DeallocTagDescription = "DeallocSent";
 
   /// Track Objective-C and CoreFoundation objects.
   bool TrackObjCAndCFObjects = false;
@@ -275,16 +266,11 @@ public:
   /// Track sublcasses of OSObject.
   bool TrackOSObjects = false;
 
-  RetainCountChecker() : ShouldResetSummaryLog(false) {}
+  RetainCountChecker() {}
 
-  ~RetainCountChecker() override { DeleteContainerSeconds(DeadSymbolTags); }
+  RefCountBug *getLeakWithinFunctionBug(const LangOptions &LOpts) const;
 
-  void checkEndAnalysis(ExplodedGraph &G, BugReporter &BR,
-                        ExprEngine &Eng) const;
-
-  CFRefBug *getLeakWithinFunctionBug(const LangOptions &LOpts) const;
-
-  CFRefBug *getLeakAtReturnBug(const LangOptions &LOpts) const;
+  RefCountBug *getLeakAtReturnBug(const LangOptions &LOpts) const;
 
   RetainSummaryManager &getSummaryManager(ASTContext &Ctx) const {
     // FIXME: We don't support ARC being turned on and off during one analysis.
