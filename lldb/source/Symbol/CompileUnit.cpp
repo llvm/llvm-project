@@ -182,9 +182,7 @@ lldb::LanguageType CompileUnit::GetLanguage() {
       m_flags.Set(flagsParsedLanguage);
       SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor();
       if (symbol_vendor) {
-        SymbolContext sc;
-        CalculateSymbolContext(&sc);
-        m_language = symbol_vendor->ParseCompileUnitLanguage(sc);
+        m_language = symbol_vendor->ParseLanguage(*this);
       }
     }
   }
@@ -196,11 +194,8 @@ LineTable *CompileUnit::GetLineTable() {
     if (m_flags.IsClear(flagsParsedLineTable)) {
       m_flags.Set(flagsParsedLineTable);
       SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor();
-      if (symbol_vendor) {
-        SymbolContext sc;
-        CalculateSymbolContext(&sc);
-        symbol_vendor->ParseCompileUnitLineTable(sc);
-      }
+      if (symbol_vendor)
+        symbol_vendor->ParseLineTable(*this);
     }
   }
   return m_line_table_ap.get();
@@ -220,9 +215,7 @@ DebugMacros *CompileUnit::GetDebugMacros() {
       m_flags.Set(flagsParsedDebugMacros);
       SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor();
       if (symbol_vendor) {
-        SymbolContext sc;
-        CalculateSymbolContext(&sc);
-        symbol_vendor->ParseCompileUnitDebugMacros(sc);
+        symbol_vendor->ParseDebugMacros(*this);
       }
     }
   }
@@ -387,9 +380,7 @@ bool CompileUnit::GetIsOptimized() {
   if (m_is_optimized == eLazyBoolCalculate) {
     m_is_optimized = eLazyBoolNo;
     if (SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor()) {
-      SymbolContext sc;
-      CalculateSymbolContext(&sc);
-      if (symbol_vendor->ParseCompileUnitIsOptimized(sc))
+      if (symbol_vendor->ParseIsOptimized(*this))
         m_is_optimized = eLazyBoolYes;
     }
   }
@@ -419,9 +410,7 @@ FileSpecList &CompileUnit::GetSupportFiles() {
       m_flags.Set(flagsParsedSupportFiles);
       SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor();
       if (symbol_vendor) {
-        SymbolContext sc;
-        CalculateSymbolContext(&sc);
-        symbol_vendor->ParseCompileUnitSupportFiles(sc, m_support_files);
+        symbol_vendor->ParseSupportFiles(*this, m_support_files);
       }
     }
   }

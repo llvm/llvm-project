@@ -118,63 +118,62 @@ size_t SymbolVendor::GetNumCompileUnits() {
   return m_compile_units.size();
 }
 
-lldb::LanguageType
-SymbolVendor::ParseCompileUnitLanguage(const SymbolContext &sc) {
+lldb::LanguageType SymbolVendor::ParseLanguage(CompileUnit &comp_unit) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_sym_file_ap.get())
-      return m_sym_file_ap->ParseCompileUnitLanguage(sc);
+      return m_sym_file_ap->ParseLanguage(comp_unit);
   }
   return eLanguageTypeUnknown;
 }
 
-size_t SymbolVendor::ParseCompileUnitFunctions(const SymbolContext &sc) {
+size_t SymbolVendor::ParseFunctions(CompileUnit &comp_unit) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_sym_file_ap.get())
-      return m_sym_file_ap->ParseCompileUnitFunctions(sc);
+      return m_sym_file_ap->ParseFunctions(comp_unit);
   }
   return 0;
 }
 
-bool SymbolVendor::ParseCompileUnitLineTable(const SymbolContext &sc) {
+bool SymbolVendor::ParseLineTable(CompileUnit &comp_unit) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_sym_file_ap.get())
-      return m_sym_file_ap->ParseCompileUnitLineTable(sc);
+      return m_sym_file_ap->ParseLineTable(comp_unit);
   }
   return false;
 }
 
-bool SymbolVendor::ParseCompileUnitDebugMacros(const SymbolContext &sc) {
+bool SymbolVendor::ParseDebugMacros(CompileUnit &comp_unit) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_sym_file_ap.get())
-      return m_sym_file_ap->ParseCompileUnitDebugMacros(sc);
+      return m_sym_file_ap->ParseDebugMacros(comp_unit);
   }
   return false;
 }
-bool SymbolVendor::ParseCompileUnitSupportFiles(const SymbolContext &sc,
-                                                FileSpecList &support_files) {
+bool SymbolVendor::ParseSupportFiles(CompileUnit &comp_unit,
+                                     FileSpecList &support_files) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_sym_file_ap.get())
-      return m_sym_file_ap->ParseCompileUnitSupportFiles(sc, support_files);
+      return m_sym_file_ap->ParseSupportFiles(comp_unit, support_files);
   }
   return false;
 }
 
-bool SymbolVendor::ParseCompileUnitIsOptimized(const SymbolContext &sc) {
+bool SymbolVendor::ParseIsOptimized(CompileUnit &comp_unit) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_sym_file_ap.get())
-      return m_sym_file_ap->ParseCompileUnitIsOptimized(sc);
+      return m_sym_file_ap->ParseIsOptimized(comp_unit);
   }
   return false;
 }
@@ -200,12 +199,12 @@ size_t SymbolVendor::ParseFunctionBlocks(const SymbolContext &sc) {
   return 0;
 }
 
-size_t SymbolVendor::ParseTypesForCompileUnit(CompileUnit &comp_unit) {
+size_t SymbolVendor::ParseTypes(CompileUnit &comp_unit) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_sym_file_ap.get())
-      return m_sym_file_ap->ParseTypesForCompileUnit(comp_unit);
+      return m_sym_file_ap->ParseTypes(comp_unit);
   }
   return 0;
 }

@@ -53,23 +53,21 @@ public:
 
   lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
-  lldb::LanguageType
-  ParseCompileUnitLanguage(const SymbolContext &sc) override {
+  lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) override {
     return lldb::eLanguageTypeUnknown;
   }
 
-  size_t ParseCompileUnitFunctions(const SymbolContext &sc) override;
+  size_t ParseFunctions(CompileUnit &comp_unit) override;
 
-  bool ParseCompileUnitLineTable(const SymbolContext &sc) override;
+  bool ParseLineTable(CompileUnit &comp_unit) override;
 
-  bool ParseCompileUnitDebugMacros(const SymbolContext &sc) override {
+  bool ParseDebugMacros(CompileUnit &comp_unit) override { return false; }
+
+  bool ParseSupportFiles(CompileUnit &comp_unit,
+                         FileSpecList &support_files) override {
     return false;
   }
-
-  bool ParseCompileUnitSupportFiles(const SymbolContext &sc,
-                                    FileSpecList &support_files) override {
-    return false;
-  }
+  size_t ParseTypes(CompileUnit &cu) override { return 0; }
 
   bool
   ParseImportedModules(const SymbolContext &sc,
@@ -86,7 +84,6 @@ public:
     return 0;
   }
 
-  size_t ParseTypesForCompileUnit(CompileUnit &cu) override { return 0; }
   size_t ParseVariablesForContext(const SymbolContext &sc) override {
     return 0;
   }

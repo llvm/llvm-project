@@ -82,16 +82,18 @@ public:
 
   lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
-  lldb::LanguageType ParseCompileUnitLanguage(const SymbolContext &sc) override;
+  lldb::LanguageType
+  ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
 
-  size_t ParseCompileUnitFunctions(const SymbolContext &sc) override;
+  size_t ParseFunctions(lldb_private::CompileUnit &comp_unit) override;
 
-  bool ParseCompileUnitLineTable(const SymbolContext &sc) override;
+  bool ParseLineTable(lldb_private::CompileUnit &comp_unit) override;
 
-  bool ParseCompileUnitDebugMacros(const SymbolContext &sc) override;
+  bool ParseDebugMacros(lldb_private::CompileUnit &comp_unit) override;
 
-  bool ParseCompileUnitSupportFiles(const SymbolContext &sc,
-                                    FileSpecList &support_files) override;
+  bool ParseSupportFiles(lldb_private::CompileUnit &comp_unit,
+                         FileSpecList &support_files) override;
+  size_t ParseTypes(lldb_private::CompileUnit &comp_unit) override;
 
   bool
   ParseImportedModules(const SymbolContext &sc,
@@ -104,8 +106,6 @@ public:
                                uint32_t max_matches,
                                VariableList &variables) override;
 
-  size_t
-  ParseTypesForCompileUnit(lldb_private::CompileUnit &comp_unit) override;
   size_t ParseVariablesForContext(const SymbolContext &sc) override;
 
   void AddSymbols(Symtab &symtab) override;

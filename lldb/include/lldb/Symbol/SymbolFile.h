@@ -125,22 +125,19 @@ public:
   virtual uint32_t GetNumCompileUnits() = 0;
   virtual lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) = 0;
 
-  virtual lldb::LanguageType
-  ParseCompileUnitLanguage(const SymbolContext &sc) = 0;
-  virtual size_t ParseCompileUnitFunctions(const SymbolContext &sc) = 0;
-  virtual bool ParseCompileUnitLineTable(const SymbolContext &sc) = 0;
-  virtual bool ParseCompileUnitDebugMacros(const SymbolContext &sc) = 0;
-  virtual bool ParseCompileUnitSupportFiles(const SymbolContext &sc,
-                                            FileSpecList &support_files) = 0;
-  virtual bool
-  ParseCompileUnitIsOptimized(const lldb_private::SymbolContext &sc) {
-    return false;
-  }
+  virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
+  virtual size_t ParseFunctions(CompileUnit &comp_unit) = 0;
+  virtual bool ParseLineTable(CompileUnit &comp_unit) = 0;
+  virtual bool ParseDebugMacros(CompileUnit &comp_unit) = 0;
+  virtual bool ParseSupportFiles(CompileUnit &comp_unit,
+                                 FileSpecList &support_files) = 0;
+  virtual size_t ParseTypes(CompileUnit &comp_unit) = 0;
+  virtual bool ParseIsOptimized(CompileUnit &comp_unit) { return false; }
+
   virtual bool
   ParseImportedModules(const SymbolContext &sc,
                        std::vector<ConstString> &imported_modules) = 0;
   virtual size_t ParseFunctionBlocks(const SymbolContext &sc) = 0;
-  virtual size_t ParseTypesForCompileUnit(CompileUnit &comp_unit) = 0;
   virtual size_t ParseVariablesForContext(const SymbolContext &sc) = 0;
   virtual Type *ResolveTypeUID(lldb::user_id_t type_uid) = 0;
 

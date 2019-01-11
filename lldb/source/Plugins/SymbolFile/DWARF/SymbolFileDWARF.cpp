@@ -885,8 +885,8 @@ CompUnitSP SymbolFileDWARF::ParseCompileUnitAtIndex(uint32_t cu_idx) {
   return cu_sp;
 }
 
-Function *SymbolFileDWARF::ParseCompileUnitFunction(const SymbolContext &sc,
-                                                    const DWARFDIE &die) {
+Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
+                                         const DWARFDIE &die) {
   ASSERT_MODULE_LOCK(this);
   if (die.IsValid()) {
     TypeSystem *type_system =
@@ -895,7 +895,7 @@ Function *SymbolFileDWARF::ParseCompileUnitFunction(const SymbolContext &sc,
     if (type_system) {
       DWARFASTParser *dwarf_ast = type_system->GetDWARFParser();
       if (dwarf_ast)
-        return dwarf_ast->ParseFunctionFromDWARF(sc, die);
+        return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die);
     }
   }
   return nullptr;
@@ -909,22 +909,19 @@ bool SymbolFileDWARF::FixupAddress(Address &addr) {
   // This is a normal DWARF file, no address fixups need to happen
   return true;
 }
-lldb::LanguageType
-SymbolFileDWARF::ParseCompileUnitLanguage(const SymbolContext &sc) {
+lldb::LanguageType SymbolFileDWARF::ParseLanguage(CompileUnit &comp_unit) {
   ASSERT_MODULE_LOCK(this);
-  assert(sc.comp_unit);
-  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (dwarf_cu)
     return dwarf_cu->GetLanguageType();
   else
     return eLanguageTypeUnknown;
 }
 
-size_t SymbolFileDWARF::ParseCompileUnitFunctions(const SymbolContext &sc) {
+size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
   ASSERT_MODULE_LOCK(this);
-  assert(sc.comp_unit);
   size_t functions_added = 0;
-  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (dwarf_cu) {
     DWARFDIECollection function_dies;
     const size_t num_functions =
@@ -932,8 +929,8 @@ size_t SymbolFileDWARF::ParseCompileUnitFunctions(const SymbolContext &sc) {
     size_t func_idx;
     for (func_idx = 0; func_idx < num_functions; ++func_idx) {
       DWARFDIE die = function_dies.GetDIEAtIndex(func_idx);
-      if (sc.comp_unit->FindFunctionByUID(die.GetID()).get() == NULL) {
-        if (ParseCompileUnitFunction(sc, die))
+      if (comp_unit.FindFunctionByUID(die.GetID()).get() == NULL) {
+        if (ParseFunction(comp_unit, die))
           ++functions_added;
       }
     }
@@ -942,11 +939,10 @@ size_t SymbolFileDWARF::ParseCompileUnitFunctions(const SymbolContext &sc) {
   return functions_added;
 }
 
-bool SymbolFileDWARF::ParseCompileUnitSupportFiles(
-    const SymbolContext &sc, FileSpecList &support_files) {
+bool SymbolFileDWARF::ParseSupportFiles(CompileUnit &comp_unit,
+                                        FileSpecList &support_files) {
   ASSERT_MODULE_LOCK(this);
-  assert(sc.comp_unit);
-  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (dwarf_cu) {
     const DWARFBaseDIE cu_die = dwarf_cu->GetUnitDIEOnly();
 
@@ -958,9 +954,9 @@ bool SymbolFileDWARF::ParseCompileUnitSupportFiles(
       if (stmt_list != DW_INVALID_OFFSET) {
         // All file indexes in DWARF are one based and a file of index zero is
         // supposed to be the compile unit itself.
-        support_files.Append(*sc.comp_unit);
+        support_files.Append(comp_unit);
         return DWARFDebugLine::ParseSupportFiles(
-            sc.comp_unit->GetModule(), get_debug_line_data(), cu_comp_dir,
+            comp_unit.GetModule(), get_debug_line_data(), cu_comp_dir,
             stmt_list, support_files, dwarf_cu);
       }
     }
@@ -968,10 +964,9 @@ bool SymbolFileDWARF::ParseCompileUnitSupportFiles(
   return false;
 }
 
-bool SymbolFileDWARF::ParseCompileUnitIsOptimized(
-    const lldb_private::SymbolContext &sc) {
+bool SymbolFileDWARF::ParseIsOptimized(CompileUnit &comp_unit) {
   ASSERT_MODULE_LOCK(this);
-  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (dwarf_cu)
     return dwarf_cu->GetIsOptimized();
   return false;
@@ -1057,13 +1052,12 @@ static void ParseDWARFLineTableCallback(dw_offset_t offset,
   }
 }
 
-bool SymbolFileDWARF::ParseCompileUnitLineTable(const SymbolContext &sc) {
+bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   ASSERT_MODULE_LOCK(this);
-  assert(sc.comp_unit);
-  if (sc.comp_unit->GetLineTable() != NULL)
+  if (comp_unit.GetLineTable() != NULL)
     return true;
 
-  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (dwarf_cu) {
     const DWARFBaseDIE dwarf_cu_die = dwarf_cu->GetUnitDIEOnly();
     if (dwarf_cu_die) {
@@ -1071,7 +1065,7 @@ bool SymbolFileDWARF::ParseCompileUnitLineTable(const SymbolContext &sc) {
           dwarf_cu_die.GetAttributeValueAsUnsigned(DW_AT_stmt_list,
                                                    DW_INVALID_OFFSET);
       if (cu_line_offset != DW_INVALID_OFFSET) {
-        std::unique_ptr<LineTable> line_table_ap(new LineTable(sc.comp_unit));
+        std::unique_ptr<LineTable> line_table_ap(new LineTable(&comp_unit));
         if (line_table_ap.get()) {
           ParseDWARFLineTableCallbackInfo info;
           info.line_table = line_table_ap.get();
@@ -1106,10 +1100,10 @@ bool SymbolFileDWARF::ParseCompileUnitLineTable(const SymbolContext &sc) {
             // are not linked. We need to link the line table and convert the
             // addresses that are relative to the .o file into addresses for
             // the main executable.
-            sc.comp_unit->SetLineTable(
+            comp_unit.SetLineTable(
                 debug_map_symfile->LinkOSOLineTable(this, line_table_ap.get()));
           } else {
-            sc.comp_unit->SetLineTable(line_table_ap.release());
+            comp_unit.SetLineTable(line_table_ap.release());
             return true;
           }
         }
@@ -1141,11 +1135,10 @@ SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset) {
   return debug_macros_sp;
 }
 
-bool SymbolFileDWARF::ParseCompileUnitDebugMacros(const SymbolContext &sc) {
+bool SymbolFileDWARF::ParseDebugMacros(CompileUnit &comp_unit) {
   ASSERT_MODULE_LOCK(this);
-  assert(sc.comp_unit);
 
-  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (dwarf_cu == nullptr)
     return false;
 
@@ -1161,7 +1154,7 @@ bool SymbolFileDWARF::ParseCompileUnitDebugMacros(const SymbolContext &sc) {
   if (sect_offset == DW_INVALID_OFFSET)
     return false;
 
-  sc.comp_unit->SetDebugMacros(ParseDebugMacros(&sect_offset));
+  comp_unit.SetDebugMacros(ParseDebugMacros(&sect_offset));
 
   return true;
 }
@@ -1583,7 +1576,7 @@ bool SymbolFileDWARF::GetFunction(const DWARFDIE &die, SymbolContext &sc) {
 
     sc.function = sc.comp_unit->FindFunctionByUID(die.GetID()).get();
     if (sc.function == NULL)
-      sc.function = ParseCompileUnitFunction(sc, die);
+      sc.function = ParseFunction(*sc.comp_unit, die);
 
     if (sc.function) {
       sc.module_sp = sc.function->CalculateSymbolContextModule();
@@ -1846,7 +1839,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
                 sc.function =
                     sc.comp_unit->FindFunctionByUID(function_die.GetID()).get();
                 if (sc.function == NULL)
-                  sc.function = ParseCompileUnitFunction(sc, function_die);
+                  sc.function = ParseFunction(*sc.comp_unit, function_die);
 
                 if (sc.function && (resolve_scope & eSymbolContextBlock))
                   block_die = function_die.LookupDeepestBlock(file_vm_addr);
@@ -1987,7 +1980,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const FileSpec &file_spec,
                                   .get();
                           if (sc.function == NULL)
                             sc.function =
-                                ParseCompileUnitFunction(sc, function_die);
+                                ParseFunction(*sc.comp_unit, function_die);
 
                           if (sc.function &&
                               (resolve_scope & eSymbolContextBlock))
@@ -3149,7 +3142,7 @@ size_t SymbolFileDWARF::ParseFunctionBlocks(const SymbolContext &sc) {
   return functions_added;
 }
 
-size_t SymbolFileDWARF::ParseTypesForCompileUnit(CompileUnit &comp_unit) {
+size_t SymbolFileDWARF::ParseTypes(CompileUnit &comp_unit) {
   ASSERT_MODULE_LOCK(this);
   size_t types_added = 0;
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);

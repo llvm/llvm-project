@@ -488,7 +488,12 @@ ObjectFile *SymbolFileDWARFDebugMap::GetObjectFileByOSOIndex(uint32_t oso_idx) {
 
 SymbolFileDWARF *
 SymbolFileDWARFDebugMap::GetSymbolFile(const SymbolContext &sc) {
-  CompileUnitInfo *comp_unit_info = GetCompUnitInfo(sc);
+  return GetSymbolFile(*sc.comp_unit);
+}
+
+SymbolFileDWARF *
+SymbolFileDWARFDebugMap::GetSymbolFile(const CompileUnit &comp_unit) {
+  CompileUnitInfo *comp_unit_info = GetCompUnitInfo(comp_unit);
   if (comp_unit_info)
     return GetSymbolFileByCompUnitInfo(comp_unit_info);
   return NULL;
@@ -596,9 +601,14 @@ CompUnitSP SymbolFileDWARFDebugMap::ParseCompileUnitAtIndex(uint32_t cu_idx) {
 
 SymbolFileDWARFDebugMap::CompileUnitInfo *
 SymbolFileDWARFDebugMap::GetCompUnitInfo(const SymbolContext &sc) {
+  return GetCompUnitInfo(*sc.comp_unit);
+}
+
+SymbolFileDWARFDebugMap::CompileUnitInfo *
+SymbolFileDWARFDebugMap::GetCompUnitInfo(const CompileUnit &comp_unit) {
   const uint32_t cu_count = GetNumCompileUnits();
   for (uint32_t i = 0; i < cu_count; ++i) {
-    if (sc.comp_unit == m_compile_unit_infos[i].compile_unit_sp.get())
+    if (comp_unit == m_compile_unit_infos[i].compile_unit_sp.get())
       return &m_compile_unit_infos[i];
   }
   return NULL;
@@ -616,50 +626,46 @@ size_t SymbolFileDWARFDebugMap::GetCompUnitInfosForModule(
 }
 
 lldb::LanguageType
-SymbolFileDWARFDebugMap::ParseCompileUnitLanguage(const SymbolContext &sc) {
-  SymbolFileDWARF *oso_dwarf = GetSymbolFile(sc);
+SymbolFileDWARFDebugMap::ParseLanguage(CompileUnit &comp_unit) {
+  SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
-    return oso_dwarf->ParseCompileUnitLanguage(sc);
+    return oso_dwarf->ParseLanguage(comp_unit);
   return eLanguageTypeUnknown;
 }
 
-size_t
-SymbolFileDWARFDebugMap::ParseCompileUnitFunctions(const SymbolContext &sc) {
-  SymbolFileDWARF *oso_dwarf = GetSymbolFile(sc);
+size_t SymbolFileDWARFDebugMap::ParseFunctions(CompileUnit &comp_unit) {
+  SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
-    return oso_dwarf->ParseCompileUnitFunctions(sc);
+    return oso_dwarf->ParseFunctions(comp_unit);
   return 0;
 }
 
-bool SymbolFileDWARFDebugMap::ParseCompileUnitLineTable(
-    const SymbolContext &sc) {
-  SymbolFileDWARF *oso_dwarf = GetSymbolFile(sc);
+bool SymbolFileDWARFDebugMap::ParseLineTable(CompileUnit &comp_unit) {
+  SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
-    return oso_dwarf->ParseCompileUnitLineTable(sc);
+    return oso_dwarf->ParseLineTable(comp_unit);
   return false;
 }
 
-bool SymbolFileDWARFDebugMap::ParseCompileUnitDebugMacros(
-    const SymbolContext &sc) {
-  SymbolFileDWARF *oso_dwarf = GetSymbolFile(sc);
+bool SymbolFileDWARFDebugMap::ParseDebugMacros(CompileUnit &comp_unit) {
+  SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
-    return oso_dwarf->ParseCompileUnitDebugMacros(sc);
+    return oso_dwarf->ParseDebugMacros(comp_unit);
   return false;
 }
 
-bool SymbolFileDWARFDebugMap::ParseCompileUnitSupportFiles(
-    const SymbolContext &sc, FileSpecList &support_files) {
-  SymbolFileDWARF *oso_dwarf = GetSymbolFile(sc);
+bool SymbolFileDWARFDebugMap::ParseSupportFiles(CompileUnit &comp_unit,
+                                                FileSpecList &support_files) {
+  SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
-    return oso_dwarf->ParseCompileUnitSupportFiles(sc, support_files);
+    return oso_dwarf->ParseSupportFiles(comp_unit, support_files);
   return false;
 }
 
-bool SymbolFileDWARFDebugMap::ParseCompileUnitIsOptimized(
-    const lldb_private::SymbolContext &sc) {
-  SymbolFileDWARF *oso_dwarf = GetSymbolFile(sc);
+bool SymbolFileDWARFDebugMap::ParseIsOptimized(CompileUnit &comp_unit) {
+  SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
-    return oso_dwarf->ParseCompileUnitIsOptimized(sc);
+    return oso_dwarf->ParseIsOptimized(comp_unit);
   return false;
 }
 
@@ -678,13 +684,10 @@ size_t SymbolFileDWARFDebugMap::ParseFunctionBlocks(const SymbolContext &sc) {
   return 0;
 }
 
-size_t
-SymbolFileDWARFDebugMap::ParseTypesForCompileUnit(CompileUnit &comp_unit) {
-  SymbolContext sc;
-  sc.comp_unit = &comp_unit;
-  SymbolFileDWARF *oso_dwarf = GetSymbolFile(sc);
+size_t SymbolFileDWARFDebugMap::ParseTypes(CompileUnit &comp_unit) {
+  SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
-    return oso_dwarf->ParseTypesForCompileUnit(comp_unit);
+    return oso_dwarf->ParseTypes(comp_unit);
   return 0;
 }
 

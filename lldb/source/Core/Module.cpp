@@ -365,23 +365,23 @@ void Module::ParseAllDebugSymbols() {
 
   for (size_t cu_idx = 0; cu_idx < num_comp_units; cu_idx++) {
     sc.comp_unit = symbols->GetCompileUnitAtIndex(cu_idx).get();
-    if (sc.comp_unit) {
-      sc.function = nullptr;
+    if (!sc.comp_unit)
+      continue;
+
+    symbols->ParseVariablesForContext(sc);
+
+    symbols->ParseFunctions(*sc.comp_unit);
+
+    sc.comp_unit->ForeachFunction([&sc, &symbols](const FunctionSP &f) {
+      sc.function = f.get();
+      symbols->ParseFunctionBlocks(sc);
+      // Parse the variables for this function and all its blocks
       symbols->ParseVariablesForContext(sc);
+      return false;
+    });
 
-      symbols->ParseCompileUnitFunctions(sc);
-
-      sc.comp_unit->ForeachFunction([&sc, &symbols](const FunctionSP &f) {
-        sc.function = f.get();
-        symbols->ParseFunctionBlocks(sc);
-        // Parse the variables for this function and all its blocks
-        symbols->ParseVariablesForContext(sc);
-        return false;
-      });
-
-      // Parse all types for this compile unit
-      symbols->ParseTypesForCompileUnit(*sc.comp_unit);
-    }
+    // Parse all types for this compile unit
+    symbols->ParseTypes(*sc.comp_unit);
   }
 }
 

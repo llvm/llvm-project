@@ -107,32 +107,26 @@ public:
   lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
   lldb::LanguageType
-  ParseCompileUnitLanguage(const lldb_private::SymbolContext &sc) override;
+  ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
 
-  size_t
-  ParseCompileUnitFunctions(const lldb_private::SymbolContext &sc) override;
+  size_t ParseFunctions(lldb_private::CompileUnit &comp_unit) override;
 
-  bool
-  ParseCompileUnitLineTable(const lldb_private::SymbolContext &sc) override;
+  bool ParseLineTable(lldb_private::CompileUnit &comp_unit) override;
 
-  bool
-  ParseCompileUnitDebugMacros(const lldb_private::SymbolContext &sc) override;
+  bool ParseDebugMacros(lldb_private::CompileUnit &comp_unit) override;
 
-  bool ParseCompileUnitSupportFiles(
-      const lldb_private::SymbolContext &sc,
-      lldb_private::FileSpecList &support_files) override;
+  bool ParseSupportFiles(lldb_private::CompileUnit &comp_unit,
+                         lldb_private::FileSpecList &support_files) override;
 
-  bool
-  ParseCompileUnitIsOptimized(const lldb_private::SymbolContext &sc) override;
+  bool ParseIsOptimized(lldb_private::CompileUnit &comp_unit) override;
+
+  size_t ParseTypes(lldb_private::CompileUnit &comp_unit) override;
 
   bool ParseImportedModules(
       const lldb_private::SymbolContext &sc,
       std::vector<lldb_private::ConstString> &imported_modules) override;
 
   size_t ParseFunctionBlocks(const lldb_private::SymbolContext &sc) override;
-
-  size_t
-  ParseTypesForCompileUnit(lldb_private::CompileUnit &comp_unit) override;
 
   size_t
   ParseVariablesForContext(const lldb_private::SymbolContext &sc) override;
@@ -362,9 +356,8 @@ protected:
 
   bool GetFunction(const DWARFDIE &die, lldb_private::SymbolContext &sc);
 
-  lldb_private::Function *
-  ParseCompileUnitFunction(const lldb_private::SymbolContext &sc,
-                           const DWARFDIE &die);
+  lldb_private::Function *ParseFunction(lldb_private::CompileUnit &comp_unit,
+                                        const DWARFDIE &die);
 
   size_t ParseFunctionBlocks(const lldb_private::SymbolContext &sc,
                              lldb_private::Block *parent_block,
