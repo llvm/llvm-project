@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.NewDelete,unix.Malloc -analyzer-output=text -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.NewDelete,unix.Malloc -analyzer-output=text -analyzer-config c++-allocator-inlining=true -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.NewDelete,unix.Malloc -analyzer-output=plist %s -o %t.plist
-// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/NewDelete-path-notes.cpp.plist
+// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/NewDelete-path-notes.cpp.plist -
 
 void test() {
   int *p = new int;

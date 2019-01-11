@@ -27,7 +27,7 @@ class TextTreeStructure {
   const bool ShowColors;
 
   /// Pending[i] is an action to dump an entity at level i.
-  llvm::SmallVector<std::function<void(bool isLastChild)>, 32> Pending;
+  llvm::SmallVector<std::function<void(bool IsLastChild)>, 32> Pending;
 
   /// Indicates whether we're at the top level.
   bool TopLevel = true;
@@ -39,13 +39,13 @@ class TextTreeStructure {
   std::string Prefix;
 
 public:
-  /// Add a child of the current node.  Calls doAddChild without arguments
-  template <typename Fn> void addChild(Fn doAddChild) {
+  /// Add a child of the current node.  Calls DoAddChild without arguments
+  template <typename Fn> void AddChild(Fn DoAddChild) {
     // If we're at the top level, there's nothing interesting to do; just
     // run the dumper.
     if (TopLevel) {
       TopLevel = false;
-      doAddChild();
+      DoAddChild();
       while (!Pending.empty()) {
         Pending.back()(true);
         Pending.pop_back();
@@ -56,7 +56,7 @@ public:
       return;
     }
 
-    auto dumpWithIndent = [this, doAddChild](bool isLastChild) {
+    auto DumpWithIndent = [this, DoAddChild](bool IsLastChild) {
       // Print out the appropriate tree structure and work out the prefix for
       // children of this node. For instance:
       //
@@ -72,15 +72,15 @@ public:
       {
         OS << '\n';
         ColorScope Color(OS, ShowColors, IndentColor);
-        OS << Prefix << (isLastChild ? '`' : '|') << '-';
-        this->Prefix.push_back(isLastChild ? ' ' : '|');
+        OS << Prefix << (IsLastChild ? '`' : '|') << '-';
+        this->Prefix.push_back(IsLastChild ? ' ' : '|');
         this->Prefix.push_back(' ');
       }
 
       FirstChild = true;
       unsigned Depth = Pending.size();
 
-      doAddChild();
+      DoAddChild();
 
       // If any children are left, they're the last at their nesting level.
       // Dump those ones out now.
@@ -94,10 +94,10 @@ public:
     };
 
     if (FirstChild) {
-      Pending.push_back(std::move(dumpWithIndent));
+      Pending.push_back(std::move(DumpWithIndent));
     } else {
       Pending.back()(false);
-      Pending.back() = std::move(dumpWithIndent);
+      Pending.back() = std::move(DumpWithIndent);
     }
     FirstChild = false;
   }

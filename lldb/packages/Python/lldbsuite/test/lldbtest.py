@@ -1219,12 +1219,15 @@ class Base(unittest2.TestCase):
                 if os.path.isfile(src):
                     dst = src.replace(self.log_basename, dst_log_basename)
                     if os.name == "nt" and os.path.isfile(dst):
-                        # On Windows, renaming a -> b will throw an exception if b exists.  On non-Windows platforms
-                        # it silently replaces the destination.  Ultimately this means that atomic renames are not
-                        # guaranteed to be possible on Windows, but we need this to work anyway, so just remove the
-                        # destination first if it already exists.
+                        # On Windows, renaming a -> b will throw an exception if
+                        # b exists.  On non-Windows platforms it silently
+                        # replaces the destination.  Ultimately this means that
+                        # atomic renames are not guaranteed to be possible on
+                        # Windows, but we need this to work anyway, so just
+                        # remove the destination first if it already exists.
                         remove_file(dst)
 
+                    lldbutil.mkdir_p(os.path.dirname(dst))
                     os.rename(src, dst)
         else:
             # success!  (and we don't want log files) delete log files

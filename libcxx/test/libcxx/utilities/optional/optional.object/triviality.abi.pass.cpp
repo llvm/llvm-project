@@ -8,8 +8,18 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
+
 // <optional>
 
+// This test asserts the triviality of special member functions of optional<T>
+// whenever T has these special member functions trivial. The goal of this test
+// is to make sure that we do not change the triviality of those, since that
+// constitues an ABI break (small enough optionals would be passed by registers).
+//
+// constexpr optional(const optional& rhs);
+// constexpr optional(optional&& rhs) noexcept(see below);
+// constexpr optional<T>& operator=(const optional& rhs);
+// constexpr optional<T>& operator=(optional&& rhs) noexcept(see below);
 
 #include <optional>
 #include <type_traits>
@@ -21,41 +31,27 @@ template <class T>
 struct SpecialMemberTest {
     using O = std::optional<T>;
 
-    static_assert(std::is_default_constructible_v<O>,
-        "optional is always default constructible.");
-    static_assert(std::is_copy_constructible_v<O> == std::is_copy_constructible_v<T>,
-        "optional<T> is copy constructible if and only if T is copy constructible.");
-    static_assert(std::is_move_constructible_v<O> ==
-        (std::is_copy_constructible_v<T> || std::is_move_constructible_v<T>),
-        "optional<T> is move constructible if and only if T is copy or move constructible.");
-    static_assert(std::is_copy_assignable_v<O> ==
-        (std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>),
-        "optional<T> is copy assignable if and only if T is both copy "
-        "constructible and copy assignable.");
-    static_assert(std::is_move_assignable_v<O> ==
-        ((std::is_move_constructible_v<T> && std::is_move_assignable_v<T>) ||
-         (std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>)),
-        "optional<T> is move assignable if and only if T is both move constructible and "
-        "move assignable, or both copy constructible and copy assignable.");
-
-    // The following tests are for not-yet-standardized behavior (P0602):
     static_assert(std::is_trivially_destructible_v<O> ==
         std::is_trivially_destructible_v<T>,
         "optional<T> is trivially destructible if and only if T is.");
+
     static_assert(std::is_trivially_copy_constructible_v<O> ==
         std::is_trivially_copy_constructible_v<T>,
         "optional<T> is trivially copy constructible if and only if T is.");
+
     static_assert(std::is_trivially_move_constructible_v<O> ==
         std::is_trivially_move_constructible_v<T> ||
         (!std::is_move_constructible_v<T> && std::is_trivially_copy_constructible_v<T>),
         "optional<T> is trivially move constructible if T is trivially move constructible, "
         "or if T is trivially copy constructible and is not move constructible.");
+
     static_assert(std::is_trivially_copy_assignable_v<O> ==
         (std::is_trivially_destructible_v<T> &&
          std::is_trivially_copy_constructible_v<T> &&
          std::is_trivially_copy_assignable_v<T>),
         "optional<T> is trivially copy assignable if and only if T is trivially destructible, "
         "trivially copy constructible, and trivially copy assignable.");
+
     static_assert(std::is_trivially_move_assignable_v<O> ==
         (std::is_trivially_destructible_v<T> &&
          ((std::is_trivially_move_constructible_v<T> && std::is_trivially_move_assignable_v<T>) ||

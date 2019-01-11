@@ -41,6 +41,7 @@ class BasicBlock;
 class DataLayout;
 class Loop;
 class LoopInfo;
+class MemorySSAUpdater;
 class OptimizationRemarkEmitter;
 class PredicatedScalarEvolution;
 class PredIteratorCache;
@@ -109,7 +110,7 @@ bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
 /// arguments. Diagnostics is emitted via \p ORE. It returns changed status.
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                 TargetLibraryInfo *, TargetTransformInfo *, Loop *,
-                AliasSetTracker *, ICFLoopSafetyInfo *,
+                AliasSetTracker *, MemorySSAUpdater *, ICFLoopSafetyInfo *,
                 OptimizationRemarkEmitter *ORE);
 
 /// Walk the specified region of the CFG (defined by all blocks
@@ -122,7 +123,8 @@ bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// ORE. It returns changed status.
 bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                  TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                 ICFLoopSafetyInfo *, OptimizationRemarkEmitter *ORE);
+                 MemorySSAUpdater *, ICFLoopSafetyInfo *,
+                 OptimizationRemarkEmitter *ORE);
 
 /// This function deletes dead loops. The caller of this function needs to
 /// guarantee that the loop is infact dead.
@@ -274,7 +276,7 @@ void getLoopAnalysisUsage(AnalysisUsage &AU);
 /// If \p ORE is set use it to emit optimization remarks.
 bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         Loop *CurLoop, AliasSetTracker *CurAST,
-                        bool TargetExecutesOncePerLoop,
+                        MemorySSAUpdater *MSSAU, bool TargetExecutesOncePerLoop,
                         OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.

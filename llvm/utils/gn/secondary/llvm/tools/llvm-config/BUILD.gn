@@ -4,17 +4,12 @@ import("//llvm/utils/gn/build/libs/pthread/enable.gni")
 import("//llvm/utils/gn/build/libs/terminfo/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
+import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
 
-action("BuildVariables.inc") {
-  script = "//llvm/utils/gn/build/write_cmake_config.py"
-
-  sources = [
-    "BuildVariables.inc.in",
-  ]
-  outputs = [
-    "$target_gen_dir/BuildVariables.inc",
-  ]
+write_cmake_config("BuildVariables.inc") {
+  input = "BuildVariables.inc.in"
+  output = "$target_gen_dir/BuildVariables.inc"
 
   if (is_debug) {
     build_mode = "debug"
@@ -68,11 +63,7 @@ action("BuildVariables.inc") {
     system_libs += " ${l}z${lib}"
   }
 
-  args = [
-    "-o",
-    rebase_path(outputs[0], root_out_dir),
-    rebase_path(sources[0], root_out_dir),
-
+  values = [
     "LLVM_SRC_ROOT=" + rebase_path("//llvm"),
     "LLVM_OBJ_ROOT=" + rebase_path(root_out_dir),
 

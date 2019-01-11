@@ -464,13 +464,10 @@ SymbolFilePDB::ParseFunctionBlocks(const lldb_private::SymbolContext &sc) {
   return num_added;
 }
 
-size_t SymbolFilePDB::ParseTypes(const lldb_private::SymbolContext &sc) {
-  lldbassert(sc.module_sp.get());
-  if (!sc.comp_unit)
-    return 0;
+size_t SymbolFilePDB::ParseTypesForCompileUnit(CompileUnit &comp_unit) {
 
   size_t num_added = 0;
-  auto compiland = GetPDBCompilandByUID(sc.comp_unit->GetID());
+  auto compiland = GetPDBCompilandByUID(comp_unit.GetID());
   if (!compiland)
     return 0;
 
@@ -505,23 +502,15 @@ size_t SymbolFilePDB::ParseTypes(const lldb_private::SymbolContext &sc) {
     }
   };
 
-  if (sc.function) {
-    auto pdb_func = m_session_up->getConcreteSymbolById<PDBSymbolFunc>(
-        sc.function->GetID());
-    if (!pdb_func)
-      return 0;
-    ParseTypesByTagFn(*pdb_func);
-  } else {
-    ParseTypesByTagFn(*compiland);
+  ParseTypesByTagFn(*compiland);
 
-    // Also parse global types particularly coming from this compiland.
-    // Unfortunately, PDB has no compiland information for each global type. We
-    // have to parse them all. But ensure we only do this once.
-    static bool parse_all_global_types = false;
-    if (!parse_all_global_types) {
-      ParseTypesByTagFn(*m_global_scope_up);
-      parse_all_global_types = true;
-    }
+  // Also parse global types particularly coming from this compiland.
+  // Unfortunately, PDB has no compiland information for each global type. We
+  // have to parse them all. But ensure we only do this once.
+  static bool parse_all_global_types = false;
+  if (!parse_all_global_types) {
+    ParseTypesByTagFn(*m_global_scope_up);
+    parse_all_global_types = true;
   }
   return num_added;
 }

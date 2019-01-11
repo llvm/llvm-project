@@ -104,7 +104,8 @@ public:
                                uint32_t max_matches,
                                VariableList &variables) override;
 
-  size_t ParseTypes(const SymbolContext &sc) override;
+  size_t
+  ParseTypesForCompileUnit(lldb_private::CompileUnit &comp_unit) override;
   size_t ParseVariablesForContext(const SymbolContext &sc) override;
 
   void AddSymbols(Symtab &symtab) override;
@@ -203,12 +204,14 @@ private:
   lldb::VariableSP GetOrCreateLocalVariable(PdbCompilandSymId scope_id,
                                             PdbCompilandSymId var_id,
                                             bool is_param);
+  lldb::TypeSP GetOrCreateTypedef(PdbGlobalSymId id);
 
   lldb::FunctionSP CreateFunction(PdbCompilandSymId func_id,
                                   CompileUnit &comp_unit);
   Block &CreateBlock(PdbCompilandSymId block_id);
   lldb::VariableSP CreateLocalVariable(PdbCompilandSymId scope_id,
                                        PdbCompilandSymId var_id, bool is_param);
+  lldb::TypeSP CreateTypedef(PdbGlobalSymId id);
   lldb::CompUnitSP CreateCompileUnit(const CompilandIndexItem &cci);
   lldb::TypeSP CreateType(PdbTypeSymId type_id, CompilerType ct);
   lldb::TypeSP CreateAndCacheType(PdbTypeSymId type_id);
@@ -222,6 +225,7 @@ private:
   llvm::BumpPtrAllocator m_allocator;
 
   lldb::addr_t m_obj_load_address = 0;
+  bool m_done_full_type_scan = false;
 
   std::unique_ptr<PdbIndex> m_index;
 

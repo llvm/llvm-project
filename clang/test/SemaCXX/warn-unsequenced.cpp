@@ -81,6 +81,7 @@ void test() {
   int *p = xs;
   a = *(a++, p); // ok
   a = a++ && a; // ok
+  p[(long long unsigned)(p = 0)]; // expected-warning {{unsequenced modification and access to 'p'}}
 
   A *q = &agg1;
   (q = &agg2)->y = q->x; // expected-warning {{unsequenced modification and access to 'q'}}

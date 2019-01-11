@@ -200,12 +200,12 @@ size_t SymbolVendor::ParseFunctionBlocks(const SymbolContext &sc) {
   return 0;
 }
 
-size_t SymbolVendor::ParseTypes(const SymbolContext &sc) {
+size_t SymbolVendor::ParseTypesForCompileUnit(CompileUnit &comp_unit) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_sym_file_ap.get())
-      return m_sym_file_ap->ParseTypes(sc);
+      return m_sym_file_ap->ParseTypesForCompileUnit(comp_unit);
   }
   return 0;
 }

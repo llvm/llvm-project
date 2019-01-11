@@ -11,7 +11,9 @@
 #define LLVM_TOOLS_OBJCOPY_COFF_OBJECT_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
 #include <cstddef>
@@ -22,10 +24,19 @@ namespace llvm {
 namespace objcopy {
 namespace coff {
 
+struct Relocation {
+  Relocation() {}
+  Relocation(const object::coff_relocation& R) : Reloc(R) {}
+
+  object::coff_relocation Reloc;
+  size_t Target;
+  StringRef TargetName; // Used for diagnostics only
+};
+
 struct Section {
   object::coff_section Header;
   ArrayRef<uint8_t> Contents;
-  std::vector<object::coff_relocation> Relocs;
+  std::vector<Relocation> Relocs;
   StringRef Name;
 };
 
@@ -33,6 +44,9 @@ struct Symbol {
   object::coff_symbol32 Sym;
   StringRef Name;
   ArrayRef<uint8_t> AuxData;
+  size_t UniqueId;
+  size_t RawIndex;
+  bool Referenced;
 };
 
 struct Object {
@@ -49,7 +63,31 @@ struct Object {
 
   std::vector<object::data_directory> DataDirectories;
   std::vector<Section> Sections;
+
+  ArrayRef<Symbol> getSymbols() const { return Symbols; }
+  // This allows mutating individual Symbols, but not mutating the list
+  // of symbols itself.
+  iterator_range<std::vector<Symbol>::iterator> getMutableSymbols() {
+    return make_range(Symbols.begin(), Symbols.end());
+  }
+
+  const Symbol *findSymbol(size_t UniqueId) const;
+
+  void addSymbols(ArrayRef<Symbol> NewSymbols);
+  void removeSymbols(function_ref<bool(const Symbol &)> ToRemove);
+
+  // Set the Referenced field on all Symbols, based on relocations in
+  // all sections.
+  Error markSymbols();
+
+private:
   std::vector<Symbol> Symbols;
+  DenseMap<size_t, Symbol *> SymbolMap;
+
+  size_t NextSymbolUniqueId = 0;
+
+  // Update SymbolMap and RawIndex in each Symbol.
+  void updateSymbols();
 };
 
 // Copy between coff_symbol16 and coff_symbol32.

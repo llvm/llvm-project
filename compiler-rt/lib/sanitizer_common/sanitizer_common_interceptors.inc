@@ -5695,9 +5695,15 @@ INTERCEPTOR(void *, tsearch, void *key, void **rootp,
 void unpoison_file(__sanitizer_FILE *fp) {
 #if SANITIZER_HAS_STRUCT_FILE
   COMMON_INTERCEPTOR_INITIALIZE_RANGE(fp, sizeof(*fp));
+#if SANITIZER_NETBSD
+  if (fp->_bf._base && fp->_bf._size > 0)
+    COMMON_INTERCEPTOR_INITIALIZE_RANGE(fp->_bf._base,
+                                        fp->_bf._size);
+#else
   if (fp->_IO_read_base && fp->_IO_read_base < fp->_IO_read_end)
     COMMON_INTERCEPTOR_INITIALIZE_RANGE(fp->_IO_read_base,
                                         fp->_IO_read_end - fp->_IO_read_base);
+#endif
 #endif  // SANITIZER_HAS_STRUCT_FILE
 }
 #endif

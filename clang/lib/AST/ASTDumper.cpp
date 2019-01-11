@@ -58,8 +58,8 @@ namespace  {
     const bool ShowColors;
 
     /// Dump a child of the current node.
-    template<typename Fn> void dumpChild(Fn doDumpChild) {
-      NodeDumper.addChild(doDumpChild);
+    template<typename Fn> void dumpChild(Fn DoDumpChild) {
+      NodeDumper.AddChild(DoDumpChild);
     }
 
   public:

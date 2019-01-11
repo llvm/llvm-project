@@ -28,7 +28,8 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   enum SIMDEnum {
     NoSIMD,
     SIMD128,
-  } SIMDLevel;
+    UnimplementedSIMD128,
+  } SIMDLevel = NoSIMD;
 
   bool HasNontrappingFPToInt;
   bool HasSignExt;
@@ -59,18 +60,12 @@ protected:
                         MacroBuilder &Builder) const override;
 
 private:
+  static void setSIMDLevel(llvm::StringMap<bool> &Features, SIMDEnum Level);
+
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
-                 const std::vector<std::string> &FeaturesVec) const override {
-    if (CPU == "bleeding-edge") {
-      Features["simd128"] = true;
-      Features["nontrapping-fptoint"] = true;
-      Features["sign-ext"] = true;
-    }
-    return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
-  }
-
+                 const std::vector<std::string> &FeaturesVec) const override;
   bool hasFeature(StringRef Feature) const final;
 
   bool handleTargetFeatures(std::vector<std::string> &Features,

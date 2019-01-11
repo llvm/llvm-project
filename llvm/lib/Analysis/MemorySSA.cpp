@@ -918,7 +918,8 @@ public:
     }
 
 #ifdef EXPENSIVE_CHECKS
-    checkClobberSanity(Current, Result, Q.StartingLoc, MSSA, Q, AA);
+    if (!Q.SkipSelfAccess)
+      checkClobberSanity(Current, Result, Q.StartingLoc, MSSA, Q, AA);
 #endif
     return Result;
   }

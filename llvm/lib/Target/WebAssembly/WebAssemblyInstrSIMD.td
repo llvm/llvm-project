@@ -95,7 +95,7 @@ def : StorePatExternSymOffOnly<vec_t, store, !cast<NI>("STORE_"#vec_t)>;
 // Constant: v128.const
 multiclass ConstVec<ValueType vec_t, dag ops, dag pat, string args> {
   let isMoveImm = 1, isReMaterializable = 1,
-    Predicates = [HasSIMD128, HasUnimplementedSIMD] in
+    Predicates = [HasSIMD128, HasUnimplementedSIMD128] in
   defm CONST_V128_#vec_t : SIMD_I<(outs V128:$dst), ops, (outs), ops,
                                   [(set V128:$dst, (vec_t pat))],
                                   "v128.const\t$dst, "#args,
@@ -277,7 +277,7 @@ multiclass ExtractLaneExtended<string sign, bits<32> baseInst> {
 }
 
 defm "" : ExtractLaneExtended<"_s", 5>;
-let Predicates = [HasSIMD128, HasUnimplementedSIMD] in
+let Predicates = [HasSIMD128, HasUnimplementedSIMD128] in
 defm "" : ExtractLaneExtended<"_u", 6>;
 defm "" : ExtractLane<v4i32, "i32x4", LaneIdx4, I32, 13>;
 defm "" : ExtractLane<v2i64, "i64x2", LaneIdx2, I64, 16>;
@@ -728,7 +728,7 @@ defm ABS : SIMDUnaryFP<fabs, "abs", 149>;
 defm NEG : SIMDUnaryFP<fneg, "neg", 150>;
 
 // Square root: sqrt
-let Predicates = [HasSIMD128, HasUnimplementedSIMD] in
+let Predicates = [HasSIMD128, HasUnimplementedSIMD128] in
 defm SQRT : SIMDUnaryFP<fsqrt, "sqrt", 151>;
 
 //===----------------------------------------------------------------------===//
@@ -752,7 +752,7 @@ let isCommutable = 1 in
 defm MUL : SIMDBinaryFP<fmul, "mul", 156>;
 
 // Division: div
-let Predicates = [HasSIMD128, HasUnimplementedSIMD] in
+let Predicates = [HasSIMD128, HasUnimplementedSIMD128] in
 defm DIV : SIMDBinaryFP<fdiv, "div", 157>;
 
 // NaN-propagating minimum: min

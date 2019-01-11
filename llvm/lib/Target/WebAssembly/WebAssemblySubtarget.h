@@ -29,11 +29,16 @@
 namespace llvm {
 
 class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
-  bool HasSIMD128;
-  bool HasAtomics;
-  bool HasNontrappingFPToInt;
-  bool HasSignExt;
-  bool HasExceptionHandling;
+  enum SIMDEnum {
+    NoSIMD,
+    SIMD128,
+    UnimplementedSIMD128,
+  } SIMDLevel = NoSIMD;
+
+  bool HasAtomics = false;
+  bool HasNontrappingFPToInt = false;
+  bool HasSignExt = false;
+  bool HasExceptionHandling = false;
 
   /// String name of used CPU.
   std::string CPUString;
@@ -77,7 +82,10 @@ public:
 
   // Predicates used by WebAssemblyInstrInfo.td.
   bool hasAddr64() const { return TargetTriple.isArch64Bit(); }
-  bool hasSIMD128() const { return HasSIMD128; }
+  bool hasSIMD128() const { return SIMDLevel >= SIMD128; }
+  bool hasUnimplementedSIMD128() const {
+    return SIMDLevel >= UnimplementedSIMD128;
+  }
   bool hasAtomics() const { return HasAtomics; }
   bool hasNontrappingFPToInt() const { return HasNontrappingFPToInt; }
   bool hasSignExt() const { return HasSignExt; }
