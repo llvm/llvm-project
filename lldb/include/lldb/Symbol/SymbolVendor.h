@@ -46,25 +46,25 @@ public:
 
   virtual void Dump(Stream *s);
 
-  virtual lldb::LanguageType ParseCompileUnitLanguage(const SymbolContext &sc);
+  virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit);
 
-  virtual size_t ParseCompileUnitFunctions(const SymbolContext &sc);
+  virtual size_t ParseFunctions(CompileUnit &comp_unit);
 
-  virtual bool ParseCompileUnitLineTable(const SymbolContext &sc);
+  virtual bool ParseLineTable(CompileUnit &comp_unit);
 
-  virtual bool ParseCompileUnitDebugMacros(const SymbolContext &sc);
+  virtual bool ParseDebugMacros(CompileUnit &comp_unit);
 
-  virtual bool ParseCompileUnitSupportFiles(const SymbolContext &sc,
-                                            FileSpecList &support_files);
+  virtual bool ParseSupportFiles(CompileUnit &comp_unit,
+                                 FileSpecList &support_files);
 
-  virtual bool ParseCompileUnitIsOptimized(const SymbolContext &sc);
+  virtual bool ParseIsOptimized(CompileUnit &comp_unit);
+
+  virtual size_t ParseTypes(CompileUnit &comp_unit);
 
   virtual bool ParseImportedModules(const SymbolContext &sc,
                                     std::vector<ConstString> &imported_modules);
 
   virtual size_t ParseFunctionBlocks(const SymbolContext &sc);
-
-  virtual size_t ParseTypesForCompileUnit(CompileUnit &comp_unit);
 
   virtual size_t ParseVariablesForContext(const SymbolContext &sc);
 

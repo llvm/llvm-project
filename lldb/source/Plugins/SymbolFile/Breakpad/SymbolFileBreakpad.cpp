@@ -115,12 +115,12 @@ CompUnitSP SymbolFileBreakpad::ParseCompileUnitAtIndex(uint32_t index) {
   return nullptr;
 }
 
-size_t SymbolFileBreakpad::ParseCompileUnitFunctions(const SymbolContext &sc) {
+size_t SymbolFileBreakpad::ParseFunctions(CompileUnit &comp_unit) {
   // TODO
   return 0;
 }
 
-bool SymbolFileBreakpad::ParseCompileUnitLineTable(const SymbolContext &sc) {
+bool SymbolFileBreakpad::ParseLineTable(CompileUnit &comp_unit) {
   // TODO
   return 0;
 }

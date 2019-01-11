@@ -43,19 +43,15 @@ endif ()
 add_subdirectory(source)
 add_subdirectory(tools)
 
-option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests."
-  ${LLVM_INCLUDE_TESTS})
+option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests." ${LLVM_INCLUDE_TESTS})
 option(LLDB_TEST_USE_CUSTOM_C_COMPILER "Use the C compiler provided via LLDB_TEST_C_COMPILER for building test inferiors (instead of the just-built compiler). Defaults to OFF." OFF)
 option(LLDB_TEST_USE_CUSTOM_CXX_COMPILER "Use the C++ compiler provided via LLDB_TEST_CXX_COMPILER for building test inferiors (instead of the just-built compiler). Defaults to OFF." OFF)
 if(LLDB_INCLUDE_TESTS)
 
-  # Set the path to the default lldb test executable. Make the path relative to
-  # LLVM_RUNTIME_OUTPUT_INTDIR: this will be correct even when LLVM and LLDB
-  # have separate binary directories.
+  # Set the path to the default lldb test executable.
   set(LLDB_DEFAULT_TEST_EXECUTABLE "${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb${CMAKE_EXECUTABLE_SUFFIX}")
 
-  # Set the paths to default llvm tools. Make these paths relative to the LLVM
-  # binary directory.
+  # Set the paths to default llvm tools.
   set(LLDB_DEFAULT_TEST_DSYMUTIL "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/dsymutil${CMAKE_EXECUTABLE_SUFFIX}")
   set(LLDB_DEFAULT_TEST_FILECHECK "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/FileCheck${CMAKE_EXECUTABLE_SUFFIX}")
 
