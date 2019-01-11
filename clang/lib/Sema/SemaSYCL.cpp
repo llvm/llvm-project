@@ -62,14 +62,15 @@ CompoundStmt *CreateSYCLKernelBody(Sema &S, CXXMemberCallExpr *e,
   if (LE) {
     // Create Lambda object
     CXXRecordDecl *LC = LE->getLambdaClass();
-    auto Lambda_VD = VarDecl::Create(
+    auto LambdaVD = VarDecl::Create(
         S.Context, DC, SourceLocation(), SourceLocation(), LC->getIdentifier(),
         QualType(LC->getTypeForDecl(), 0), LC->getLambdaTypeInfo(), SC_None);
+
     Stmt *DS = new (S.Context)
-        DeclStmt(DeclGroupRef(Lambda_VD), SourceLocation(), SourceLocation());
+        DeclStmt(DeclGroupRef(LambdaVD), SourceLocation(), SourceLocation());
     BodyStmts.push_back(DS);
-    auto Lambda_DRE = DeclRefExpr::Create(
-        S.Context, NestedNameSpecifierLoc(), SourceLocation(), Lambda_VD, false,
+    auto LambdaDRE = DeclRefExpr::Create(
+        S.Context, NestedNameSpecifierLoc(), SourceLocation(), LambdaVD, false,
         DeclarationNameInfo(), QualType(LC->getTypeForDecl(), 0), VK_LValue);
 
     // Init Lambda fields
@@ -78,37 +79,66 @@ CompoundStmt *CreateSYCLKernelBody(Sema &S, CXXMemberCallExpr *e,
     auto TargetFunc = dyn_cast<FunctionDecl>(DC);
     auto TargetFuncParam =
         TargetFunc->param_begin(); // Iterator to ParamVarDecl (VarDecl)
-    for (auto CaptureField : LE->captures()) {
-      VarDecl *CapturedVar =
-          CaptureField
-              .getCapturedVar(); // accessor, need to do setInit for this
+    for (auto Field : LC->fields()) {
       QualType ParamType = (*TargetFuncParam)->getOriginalType();
       auto DRE = DeclRefExpr::Create(
           S.Context, NestedNameSpecifierLoc(), SourceLocation(),
           *TargetFuncParam, false, DeclarationNameInfo(), ParamType, VK_LValue);
 
-      Expr *Res = ImplicitCastExpr::Create(
-          S.Context, ParamType, CK_LValueToRValue, DRE, nullptr, VK_RValue);
+      CXXRecordDecl *CRD = Field->getType()->getAsCXXRecordDecl();
+      if (CRD) {
+        llvm::SmallVector<Expr *, 16> ParamStmts;
+        DeclAccessPair FieldDAP = DeclAccessPair::make(Field, AS_none);
+        auto AccessorME = MemberExpr::Create(
+            S.Context, LambdaDRE, false, SourceLocation(),
+            NestedNameSpecifierLoc(), SourceLocation(), Field, FieldDAP,
+            DeclarationNameInfo(Field->getDeclName(), SourceLocation()),
+            nullptr, Field->getType(), VK_LValue, OK_Ordinary);
 
-      Expr *InitCapture = new (S.Context) InitListExpr(
-          S.Context, SourceLocation(), /*initExprs*/ Res, SourceLocation());
-      CapturedVar->setInit(InitCapture);
-      InitCapture->setType(CapturedVar->getType());
-      InitCaptures.push_back(InitCapture);
+        for (auto Method : CRD->methods()) {
+          if (Method->getNameInfo().getName().getAsString() ==
+              "__set_pointer") {
+            DeclAccessPair MethodDAP = DeclAccessPair::make(Method, AS_none);
+            auto ME = MemberExpr::Create(
+                S.Context, AccessorME, false, SourceLocation(),
+                NestedNameSpecifierLoc(), SourceLocation(), Method, MethodDAP,
+                Method->getNameInfo(), nullptr, Method->getType(), VK_LValue,
+                OK_Ordinary);
+
+            // Not referenced -> not emitted
+            S.MarkFunctionReferenced(SourceLocation(), Method, true);
+
+            QualType ResultTy = Method->getReturnType();
+            ExprValueKind VK = Expr::getValueKindForType(ResultTy);
+            ResultTy = ResultTy.getNonLValueExprType(S.Context);
+
+            // __set_pointer needs one parameter
+            QualType paramTy = (*(Method->param_begin()))->getOriginalType();
+
+            // C++ address space attribute != opencl address space attribute
+            Expr *qualifiersCast = ImplicitCastExpr::Create(
+                S.Context, paramTy, CK_NoOp, DRE, nullptr, VK_LValue);
+            Expr *Res =
+                ImplicitCastExpr::Create(S.Context, paramTy, CK_LValueToRValue,
+                                         qualifiersCast, nullptr, VK_RValue);
+
+            ParamStmts.push_back(Res);
+
+            // lambda.accessor.__set_pointer(kernel_parameter)
+            CXXMemberCallExpr *Call = CXXMemberCallExpr::Create(
+                S.Context, ME, ParamStmts, ResultTy, VK, SourceLocation());
+            BodyStmts.push_back(Call);
+          }
+        }
+      }
       TargetFuncParam++;
     }
-
-    Expr *InitLambdaCaptures = new (S.Context)
-        InitListExpr(S.Context, SourceLocation(), /*initExprs*/ InitCaptures,
-                     SourceLocation());
-    InitLambdaCaptures->setType(Lambda_VD->getType());
-    Lambda_VD->setInit(InitLambdaCaptures);
 
     // Create Lambda operator () call
     FunctionDecl *LO = LE->getCallOperator();
     ArrayRef<ParmVarDecl *> Args = LO->parameters();
     llvm::SmallVector<Expr *, 16> ParamStmts(1);
-    ParamStmts[0] = dyn_cast<Expr>(Lambda_DRE);
+    ParamStmts[0] = dyn_cast<Expr>(LambdaDRE);
 
     // Collect arguments for () operator
     for (auto Arg : Args) {

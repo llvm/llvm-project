@@ -2876,7 +2876,11 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
       // Look for a declaration that's lexically in a record.
       for (const auto *FD = cast<FunctionDecl>(D)->getMostRecentDecl(); FD;
            FD = FD->getPreviousDecl()) {
-        if (isa<CXXRecordDecl>(FD->getLexicalDeclContext())) {
+        // For SYCL we also should emit a definition for a function because all
+        // top-level declarations without OpenCL kernel attribute are ignored
+        // now.
+        // TODO: fix this hack
+        if (isa<CXXRecordDecl>(FD->getLexicalDeclContext()) || LangOpts.SYCL) {
           if (FD->doesThisDeclarationHaveABody()) {
             addDeferredDeclToEmit(GD.getWithDecl(FD));
             break;
