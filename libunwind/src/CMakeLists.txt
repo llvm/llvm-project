@@ -9,16 +9,10 @@ set(LIBUNWIND_C_SOURCES
     UnwindLevel1.c
     UnwindLevel1-gcc-ext.c
     Unwind-sjlj.c)
-set_source_files_properties(${LIBUNWIND_C_SOURCES}
-                            PROPERTIES
-                              COMPILE_FLAGS "-std=c99")
 
 set(LIBUNWIND_ASM_SOURCES
     UnwindRegistersRestore.S
     UnwindRegistersSave.S)
-set_source_files_properties(${LIBUNWIND_ASM_SOURCES}
-                            PROPERTIES
-                              LANGUAGE C)
 
 set(LIBUNWIND_HEADERS
     AddressSpace.hpp
@@ -32,6 +26,7 @@ set(LIBUNWIND_HEADERS
     Registers.hpp
     UnwindCursor.hpp
     unwind_ext.h
+    UnwindRustSgx.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/libunwind.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/unwind.h)
 
@@ -44,6 +39,31 @@ if (MSVC_IDE)
   source_group("Header Files" FILES ${LIBUNWIND_HEADERS})
 endif()
 
+if (RUST_SGX)
+    # Compile Flags
+    add_definitions(-DRUST_SGX)
+    add_definitions(-DU_FORTIFY_SOURCE)
+    add_definitions(-D_FORTIFY_SOURCE=0)
+    add_definitions(-D__NO_STRING_INLINES)
+    add_definitions(-D__NO_MATH_INLINES)
+    add_definitions(-D_LIBUNWIND_IS_BAREMETAL)
+    list(APPEND LIBUNWIND_COMPILE_FLAGS -fno-stack-protector)
+    list(APPEND LIBUNWIND_COMPILE_FLAGS -ffreestanding)
+    list(APPEND LIBUNWIND_COMPILE_FLAGS -fexceptions)
+
+    # Sources
+    list(APPEND LIBUNWIND_C_SOURCES UnwindRustSgx.c)
+    list(APPEND LIBUNWIND_C_SOURCES UnwindRustSgxSnprintf.c)
+endif()
+
+
+set_source_files_properties(${LIBUNWIND_C_SOURCES}
+                            PROPERTIES
+                              COMPILE_FLAGS "-std=c99")
+set_source_files_properties(${LIBUNWIND_ASM_SOURCES}
+                            PROPERTIES
+                              LANGUAGE C)
+
 set(LIBUNWIND_SOURCES
     ${LIBUNWIND_CXX_SOURCES}
     ${LIBUNWIND_C_SOURCES}
@@ -53,7 +73,7 @@ set(LIBUNWIND_SOURCES
 set(libraries ${LIBUNWINDCXX_ABI_LIBRARIES})
 append_if(libraries LIBUNWIND_HAS_C_LIB c)
 append_if(libraries LIBUNWIND_HAS_DL_LIB dl)
-if (LIBUNWIND_ENABLE_THREADS)
+if (LIBUNWIND_ENABLE_THREADS AND (NOT RUST_SGX))
   append_if(libraries LIBUNWIND_HAS_PTHREAD_LIB pthread)
 endif()
 

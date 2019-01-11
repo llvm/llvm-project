@@ -350,6 +350,11 @@ void _unw_remove_dynamic_fde(unw_word_t fde) {
 
 _LIBUNWIND_HIDDEN
 bool logAPIs() {
+#ifdef RUST_SGX
+  // No get env support for rust binding yet
+  // In sgx we might not want to start logging via an env setting.
+  return true;
+#else
   // do manual lock to avoid use of _cxa_guard_acquire or initializers
   static bool checked = false;
   static bool log = false;
@@ -358,10 +363,16 @@ bool logAPIs() {
     checked = true;
   }
   return log;
+#endif
 }
 
 _LIBUNWIND_HIDDEN
 bool logUnwinding() {
+#ifdef RUST_SGX
+  // No get env support for rust binding yet
+  // In sgx we might not want to start logging via an env setting.
+  return true;
+#else
   // do manual lock to avoid use of _cxa_guard_acquire or initializers
   static bool checked = false;
   static bool log = false;
@@ -370,10 +381,16 @@ bool logUnwinding() {
     checked = true;
   }
   return log;
+#endif
 }
 
 _LIBUNWIND_HIDDEN
 bool logDWARF() {
+#ifdef RUST_SGX
+   // No get env support for rust binding yet
+  // In sgx we might not want to start logging via an env setting.
+  return true;
+#else
   // do manual lock to avoid use of _cxa_guard_acquire or initializers
   static bool checked = false;
   static bool log = false;
@@ -382,6 +399,7 @@ bool logDWARF() {
     checked = true;
   }
   return log;
+#endif
 }
 
 #endif // NDEBUG
