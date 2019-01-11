@@ -474,7 +474,9 @@ ValueObject::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
                             bool mask_error_on_zerosize_type) {
   Status err = m_value.GetValueAsData(exe_ctx, data, data_offset, module);
   if (err.Fail() && mask_error_on_zerosize_type &&
-      SwiftASTContext::IsPossibleZeroSizeType(GetCompilerType()))
+      SwiftASTContext::IsPossibleZeroSizeType(
+          GetCompilerType(),
+          exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr))
     return Status();
   return err;
 }
