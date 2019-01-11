@@ -1,0 +1,34 @@
+# RUN: yaml2obj %s > %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+# CHECK: Base VM address: 0x400000
+
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x0000000000400078
+Sections:        
+  - Name:            .pad
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000400000
+    AddressAlign:    0x0000000000001000
+    Size:            0x78
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000400078
+    AddressAlign:    0x0000000000000001
+    Content:         48C7C0E700000048C7C72F0000000F05CC
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x400000
+    Align: 0x200000
+    Sections:
+      - Section: .pad
+      - Section: .text
+...

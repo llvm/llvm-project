@@ -1051,7 +1051,7 @@ lldb_private::Address ObjectFileELF::GetEntryPointAddress() {
 Address ObjectFileELF::GetBaseAddress() {
   for (const auto &EnumPHdr : llvm::enumerate(ProgramHeaders())) {
     const ELFProgramHeader &H = EnumPHdr.value();
-    if (H.p_type != PT_LOAD || H.p_offset != 0)
+    if (H.p_type != PT_LOAD)
       continue;
 
     return Address(

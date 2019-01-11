@@ -100,10 +100,14 @@ cl::list<std::string> InputFilenames(cl::Positional, cl::desc("<input files>"),
 } // namespace object
 
 namespace symbols {
-static cl::list<std::string> InputFilenames(cl::Positional,
-                                            cl::desc("<input files>"),
-                                            cl::OneOrMore,
-                                            cl::sub(SymbolsSubcommand));
+static cl::opt<std::string> InputFile(cl::Positional, cl::desc("<input file>"),
+                                      cl::Required, cl::sub(SymbolsSubcommand));
+
+static cl::opt<std::string>
+    SymbolPath("symbol-file",
+               cl::desc("The file from which to fetch symbol information."),
+               cl::value_desc("file"), cl::sub(SymbolsSubcommand));
+
 enum class FindType {
   None,
   Function,
@@ -692,28 +696,24 @@ int opts::symbols::dumpSymbols(Debugger &Dbg) {
   }
   auto Action = *ActionOr;
 
-  int HadErrors = 0;
-  for (const auto &File : InputFilenames) {
-    outs() << "Module: " << File << "\n";
-    ModuleSpec Spec{FileSpec(File)};
-    Spec.GetSymbolFileSpec().SetFile(File, FileSpec::Style::native);
+  outs() << "Module: " << InputFile << "\n";
+  ModuleSpec Spec{FileSpec(InputFile)};
+  StringRef Symbols = SymbolPath.empty() ? InputFile : SymbolPath;
+  Spec.GetSymbolFileSpec().SetFile(Symbols, FileSpec::Style::native);
 
-    auto ModulePtr = std::make_shared<lldb_private::Module>(Spec);
-    SymbolVendor *Vendor = ModulePtr->GetSymbolVendor();
-    if (!Vendor) {
-      WithColor::error() << "Module has no symbol vendor.\n";
-      HadErrors = 1;
-      continue;
-    }
-
-    if (Error E = Action(*ModulePtr)) {
-      WithColor::error() << toString(std::move(E)) << "\n";
-      HadErrors = 1;
-    }
-
-    outs().flush();
+  auto ModulePtr = std::make_shared<lldb_private::Module>(Spec);
+  SymbolVendor *Vendor = ModulePtr->GetSymbolVendor();
+  if (!Vendor) {
+    WithColor::error() << "Module has no symbol vendor.\n";
+    return 1;
   }
-  return HadErrors;
+
+  if (Error E = Action(*ModulePtr)) {
+    WithColor::error() << toString(std::move(E)) << "\n";
+    return 1;
+  }
+
+  return 0;
 }
 
 static void dumpSectionList(LinePrinter &Printer, const SectionList &List, bool is_subsection) {
