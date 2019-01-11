@@ -40,9 +40,9 @@ void RunTheExample()
 {
     using namespace std::chrono;
 
-    static_assert(year_month_day{local_days{2017y/January/0}}  == 2016y/December/31);
-    static_assert(year_month_day{local_days{2017y/January/31}} == 2017y/January/31);
-    static_assert(year_month_day{local_days{2017y/January/32}} == 2017y/February/1);  
+    static_assert(year_month_day{local_days{year{2017}/January/0}}  == year{2016}/December/31);
+    static_assert(year_month_day{local_days{year{2017}/January/31}} == year{2017}/January/31);
+    static_assert(year_month_day{local_days{year{2017}/January/32}} == year{2017}/February/1);  
 }
 
 int main()
