@@ -5090,8 +5090,32 @@ bool SwiftASTContext::IsSelfArchetypeType(const CompilerType &compiler_type) {
   return false;
 }
 
-bool SwiftASTContext::IsPossibleZeroSizeType(
-  const CompilerType &compiler_type) {
+static CompilerType BindAllArchetypes(CompilerType type,
+                                      ExecutionContextScope *exe_scope) {
+  if (!exe_scope)
+    return type;
+  auto *frame = exe_scope->CalculateStackFrame().get();
+  auto *runtime = exe_scope->CalculateProcess()->GetSwiftLanguageRuntime();
+  if (!frame || !runtime)
+    return type;
+  ExecutionContext exe_ctx;
+  exe_scope->CalculateExecutionContext(exe_ctx);
+  return runtime->DoArchetypeBindingForType(*frame, type);
+}
+
+bool SwiftASTContext::IsPossibleZeroSizeType(const CompilerType &compiler_type,
+                                             ExecutionContextScope *exe_scope) {
+  if (compiler_type && exe_scope) {
+    swift::CanType swift_can_type(GetCanonicalSwiftType(compiler_type));
+    if (swift_can_type->hasTypeParameter()) {
+      ExecutionContext exe_ctx;
+      exe_scope->CalculateExecutionContext(exe_ctx);
+      auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
+      return IsPossibleZeroSizeType(BindAllArchetypes(compiler_type, exe_scope),
+                                    nullptr);
+    }
+  }
+
   if (!SwiftASTContext::IsFullyRealized(compiler_type))
     return false;
   auto ast =
@@ -5821,38 +5845,37 @@ SwiftASTContext::GetUnboundType(lldb::opaque_compiler_type_t type) {
   return {GetSwiftType(type)};
 }
 
-CompilerType SwiftASTContext::MapIntoContext(lldb::StackFrameSP &frame_sp,
-                                             lldb::opaque_compiler_type_t type) {
+CompilerType
+SwiftASTContext::MapIntoContext(lldb::StackFrameSP &frame_sp,
+                                lldb::opaque_compiler_type_t type) {
   VALID_OR_RETURN(CompilerType());
   if (!type)
     return {};
   if (!frame_sp)
     return {GetSwiftType(type)};
+
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   assert(&swift_can_type->getASTContext() == GetASTContext());
-
   const SymbolContext &sc(frame_sp->GetSymbolContext(eSymbolContextFunction));
   if (!sc.function || (swift_can_type && !swift_can_type->hasTypeParameter()))
     return {GetSwiftType(type)};
   auto *ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
-       sc.function->GetCompilerType().GetTypeSystem());
+      sc.function->GetCompilerType().GetTypeSystem());
   if (!ctx)
     return {GetSwiftType(type)};
 
   // FIXME: we need the innermost non-inlined function.
   auto function_name = sc.GetFunctionName(Mangled::ePreferMangled);
   std::string error;
-  swift::Decl *func_decl =
-  swift::ide::getDeclFromMangledSymbolName(*ctx->GetASTContext(),
-                                           function_name.GetStringRef(),
-                                           error);
+  swift::Decl *func_decl = swift::ide::getDeclFromMangledSymbolName(
+      *ctx->GetASTContext(), function_name.GetStringRef(), error);
   if (!error.empty()) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
     if (log)
       log->Printf("Failed to getDeclFromMangledSymbolName(\"%s\"): %s\n",
                   function_name.AsCString(), error.c_str());
   }
-  
+
   if (auto *dc = llvm::dyn_cast_or_null<swift::DeclContext>(func_decl))
     return {dc->mapTypeIntoContext(swift_can_type)};
   return {GetSwiftType(type)};
@@ -5897,27 +5920,37 @@ SwiftASTContext::GetSwiftFixedTypeInfo(void *type) {
 
 uint64_t SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
                                      ExecutionContextScope *exe_scope) {
-  if (type) {
-    swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-    // FIXME: Query remote mirrors for this.
-    if (swift_can_type->hasTypeParameter())
-      return GetPointerByteSize() * 8;
+  if (!type)
+    return 0;
 
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    case swift::TypeKind::LValue:
-    case swift::TypeKind::UnboundGeneric:
-    case swift::TypeKind::GenericFunction:
-    case swift::TypeKind::Function:
+  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+  if (swift_can_type->hasTypeParameter()) {
+    if (!exe_scope)
+      // FIXME: Return an error instead.
       return GetPointerByteSize() * 8;
-    default:
-      break;
-    }
-    const swift::irgen::FixedTypeInfo *fixed_type_info =
-        GetSwiftFixedTypeInfo(type);
-    if (fixed_type_info)
-      return fixed_type_info->getFixedSize().getValue() * 8;
+    ExecutionContext exe_ctx;
+    exe_scope->CalculateExecutionContext(exe_ctx);
+    auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
+    CompilerType bound_type = BindAllArchetypes({this, type}, exe_scope);
+    // Note thay the bound type may be in a different AST context.
+    return bound_type.GetBitSize(nullptr);
   }
+
+  const swift::TypeKind type_kind = swift_can_type->getKind();
+  switch (type_kind) {
+  case swift::TypeKind::LValue:
+  case swift::TypeKind::UnboundGeneric:
+  case swift::TypeKind::GenericFunction:
+  case swift::TypeKind::Function:
+    return GetPointerByteSize() * 8;
+  default:
+    break;
+  }
+  const swift::irgen::FixedTypeInfo *fixed_type_info =
+      GetSwiftFixedTypeInfo(type);
+  if (fixed_type_info)
+    return fixed_type_info->getFixedSize().getValue() * 8;
+
   return 0;
 }
 

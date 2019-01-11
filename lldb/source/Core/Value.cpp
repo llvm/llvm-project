@@ -223,10 +223,12 @@ uint64_t Value::GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx) {
   case eContextTypeVariable: // Variable *
   {
     const CompilerType &ast_type = GetCompilerType();
+    ExecutionContextScope *exe_scope =
+        exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
     if (ast_type.IsValid())
-      byte_size = ast_type.GetByteSize(
-          exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
-    if (byte_size == 0 && SwiftASTContext::IsPossibleZeroSizeType(ast_type))
+      byte_size = ast_type.GetByteSize(exe_scope);
+    if (byte_size == 0 &&
+        SwiftASTContext::IsPossibleZeroSizeType(ast_type, exe_scope))
       return 0;
   } break;
   }
@@ -514,14 +516,18 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     return error;
   }
 
-  // If we got here, we need to read the value from memory
+  // If we got here, we need to read the value from memory.
   size_t byte_size = GetValueByteSize(&error, exe_ctx);
 
-  // Bail if we encountered any errors getting the byte size
+  // Bail if we encountered any errors getting the byte size.
   if (error.Fail())
     return error;
-  else if (byte_size == 0 &&
-           SwiftASTContext::IsPossibleZeroSizeType(GetCompilerType()))
+
+  // No memory to read for zero-sized types.
+  if (byte_size == 0 &&
+      SwiftASTContext::IsPossibleZeroSizeType(
+          GetCompilerType(),
+          exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr))
     return error;
 
   // Make sure we have enough room within "data", and if we don't make
