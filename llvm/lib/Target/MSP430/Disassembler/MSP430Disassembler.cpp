@@ -249,6 +249,10 @@ DecodeStatus MSP430Disassembler::getInstructionI(MCInst &MI, uint64_t &Size,
   case amSymbolic:
   case amImmediate:
   case amAbsolute:
+    if (Bytes.size() < (Words + 1) * 2) {
+      Size = 2;
+      return DecodeStatus::Fail;
+    }
     Insn |= (uint64_t)support::endian::read16le(Bytes.data() + 2) << 16;
     ++Words;
     break;
@@ -259,6 +263,10 @@ DecodeStatus MSP430Disassembler::getInstructionI(MCInst &MI, uint64_t &Size,
   case amIndexed:
   case amSymbolic:
   case amAbsolute:
+    if (Bytes.size() < (Words + 1) * 2) {
+      Size = 2;
+      return DecodeStatus::Fail;
+    }
     Insn |= (uint64_t)support::endian::read16le(Bytes.data() + Words * 2)
         << (Words * 16);
     ++Words;
@@ -296,6 +304,10 @@ DecodeStatus MSP430Disassembler::getInstructionII(MCInst &MI, uint64_t &Size,
   case amSymbolic:
   case amImmediate:
   case amAbsolute:
+    if (Bytes.size() < (Words + 1) * 2) {
+      Size = 2;
+      return DecodeStatus::Fail;
+    }
     Insn |= (uint64_t)support::endian::read16le(Bytes.data() + 2) << 16;
     ++Words;
     break;

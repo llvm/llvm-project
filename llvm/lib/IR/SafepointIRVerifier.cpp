@@ -257,7 +257,7 @@ static bool containsGCPtrType(Type *Ty) {
   if (ArrayType *AT = dyn_cast<ArrayType>(Ty))
     return containsGCPtrType(AT->getElementType());
   if (StructType *ST = dyn_cast<StructType>(Ty))
-    return llvm::any_of(ST->subtypes(), containsGCPtrType);
+    return llvm::any_of(ST->elements(), containsGCPtrType);
   return false;
 }
 

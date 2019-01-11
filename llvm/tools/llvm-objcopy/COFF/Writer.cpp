@@ -27,6 +27,21 @@ using namespace COFF;
 
 Writer::~Writer() {}
 
+Error COFFWriter::finalizeRelocTargets() {
+  for (Section &Sec : Obj.Sections) {
+    for (Relocation &R : Sec.Relocs) {
+      const Symbol *Sym = Obj.findSymbol(R.Target);
+      if (Sym == nullptr)
+        return make_error<StringError>("Relocation target " + R.TargetName +
+                                           " (" + Twine(R.Target) +
+                                           ") not found",
+                                       object_error::invalid_symbol_index);
+      R.Reloc.SymbolTableIndex = Sym->RawIndex;
+    }
+  }
+  return Error::success();
+}
+
 void COFFWriter::layoutSections() {
   for (auto &S : Obj.Sections) {
     if (S.Header.SizeOfRawData > 0)
@@ -48,7 +63,7 @@ size_t COFFWriter::finalizeStringTable() {
     if (S.Name.size() > COFF::NameSize)
       StrTabBuilder.add(S.Name);
 
-  for (const auto &S : Obj.Symbols)
+  for (const auto &S : Obj.getSymbols())
     if (S.Name.size() > COFF::NameSize)
       StrTabBuilder.add(S.Name);
 
@@ -62,7 +77,7 @@ size_t COFFWriter::finalizeStringTable() {
       strncpy(S.Header.Name, S.Name.data(), COFF::NameSize);
     }
   }
-  for (auto &S : Obj.Symbols) {
+  for (auto &S : Obj.getMutableSymbols()) {
     if (S.Name.size() > COFF::NameSize) {
       S.Sym.Name.Offset.Zeroes = 0;
       S.Sym.Name.Offset.Offset = StrTabBuilder.getOffset(S.Name);
@@ -75,13 +90,16 @@ size_t COFFWriter::finalizeStringTable() {
 
 template <class SymbolTy>
 std::pair<size_t, size_t> COFFWriter::finalizeSymbolTable() {
-  size_t SymTabSize = Obj.Symbols.size() * sizeof(SymbolTy);
-  for (const auto &S : Obj.Symbols)
+  size_t SymTabSize = Obj.getSymbols().size() * sizeof(SymbolTy);
+  for (const auto &S : Obj.getSymbols())
     SymTabSize += S.AuxData.size();
   return std::make_pair(SymTabSize, sizeof(SymbolTy));
 }
 
-void COFFWriter::finalize(bool IsBigObj) {
+Error COFFWriter::finalize(bool IsBigObj) {
+  if (Error E = finalizeRelocTargets())
+    return E;
+
   size_t SizeOfHeaders = 0;
   FileAlignment = 1;
   size_t PeHeaderSize = 0;
@@ -149,6 +167,8 @@ void COFFWriter::finalize(bool IsBigObj) {
   Obj.CoffFileHeader.NumberOfSymbols = NumRawSymbols;
   FileSize += SymTabSize + StrTabSize;
   FileSize = alignTo(FileSize, FileAlignment);
+
+  return Error::success();
 }
 
 void COFFWriter::writeHeaders(bool IsBigObj) {
@@ -225,14 +245,16 @@ void COFFWriter::writeSections() {
              S.Header.SizeOfRawData - S.Contents.size());
 
     Ptr += S.Header.SizeOfRawData;
-    std::copy(S.Relocs.begin(), S.Relocs.end(),
-              reinterpret_cast<coff_relocation *>(Ptr));
+    for (const auto &R : S.Relocs) {
+      memcpy(Ptr, &R.Reloc, sizeof(R.Reloc));
+      Ptr += sizeof(R.Reloc);
+    }
   }
 }
 
 template <class SymbolTy> void COFFWriter::writeSymbolStringTables() {
   uint8_t *Ptr = Buf.getBufferStart() + Obj.CoffFileHeader.PointerToSymbolTable;
-  for (const auto &S : Obj.Symbols) {
+  for (const auto &S : Obj.getSymbols()) {
     // Convert symbols back to the right size, from coff_symbol32.
     copySymbol<SymbolTy, coff_symbol32>(*reinterpret_cast<SymbolTy *>(Ptr),
                                         S.Sym);
@@ -248,7 +270,8 @@ template <class SymbolTy> void COFFWriter::writeSymbolStringTables() {
 }
 
 Error COFFWriter::write(bool IsBigObj) {
-  finalize(IsBigObj);
+  if (Error E = finalize(IsBigObj))
+    return E;
 
   Buf.allocate(FileSize);
 

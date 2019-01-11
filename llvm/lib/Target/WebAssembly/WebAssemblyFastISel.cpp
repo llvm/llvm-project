@@ -44,8 +44,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "wasm-fastisel"
 
-extern cl::opt<bool> EnableUnimplementedWasmSIMDInstrs;
-
 namespace {
 
 class WebAssemblyFastISel final : public FastISel {
@@ -145,7 +143,7 @@ private:
       break;
     case MVT::v2i64:
     case MVT::v2f64:
-      if (Subtarget->hasSIMD128() && EnableUnimplementedWasmSIMDInstrs)
+      if (Subtarget->hasUnimplementedSIMD128())
         return VT;
       break;
     default:

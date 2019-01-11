@@ -40,11 +40,12 @@ class COFFWriter : public Writer {
   size_t SizeOfInitializedData;
   StringTableBuilder StrTabBuilder;
 
+  Error finalizeRelocTargets();
   void layoutSections();
   size_t finalizeStringTable();
   template <class SymbolTy> std::pair<size_t, size_t> finalizeSymbolTable();
 
-  void finalize(bool IsBigObj);
+  Error finalize(bool IsBigObj);
 
   void writeHeaders(bool IsBigObj);
   void writeSections();
