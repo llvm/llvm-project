@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy -R .text -O binary %t %t2
 # RUN: od -Ax -v -t x1 %t2 | FileCheck %s
-# RUN: wc -c %t2 | FileCheck %s -check-prefix=SIZE
+# RUN: wc -c %t2 | FileCheck %s --check-prefix=SIZE
 
 !ELF
 FileHeader:

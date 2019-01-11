@@ -9399,6 +9399,21 @@ INTERCEPTOR(char *, fdevname_r,  int fd, char *buf, SIZE_T len) {
 #define INIT_FDEVNAME
 #endif
 
+#if SANITIZER_INTERCEPT_GETUSERSHELL
+INTERCEPTOR(char *, getusershell) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getusershell);
+  char *res = REAL(getusershell)();
+  if (res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, REAL(strlen)(res) + 1);
+  return res;
+}
+
+#define INIT_GETUSERSHELL COMMON_INTERCEPT_FUNCTION(getusershell);
+#else
+#define INIT_GETUSERSHELL
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map =
@@ -9687,6 +9702,7 @@ static void InitializeCommonInterceptors() {
   INIT_FUNOPEN;
   INIT_FUNOPEN2;
   INIT_FDEVNAME;
+  INIT_GETUSERSHELL;
 
   INIT___PRINTF_CHK;
 }

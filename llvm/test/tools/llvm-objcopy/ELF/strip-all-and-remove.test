@@ -1,10 +1,10 @@
 # RUN: yaml2obj %s > %t
 # RUN: cp %t %t1
 
-# RUN: llvm-strip -remove-section=.text.bar %t
-# RUN: llvm-readobj -file-headers -sections -symbols %t | FileCheck %s
+# RUN: llvm-strip --remove-section=.text.bar %t
+# RUN: llvm-readobj --file-headers --sections --symbols %t | FileCheck %s
 
-# RUN: llvm-objcopy -strip-all -remove-section=.text.bar %t1 %t1
+# RUN: llvm-objcopy --strip-all --remove-section=.text.bar %t1 %t1
 # RUN: cmp %t %t1
 
 !ELF

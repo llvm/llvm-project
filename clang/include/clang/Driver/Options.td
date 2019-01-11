@@ -1776,6 +1776,11 @@ def fwhole_program_vtables : Flag<["-"], "fwhole-program-vtables">, Group<f_Grou
   HelpText<"Enables whole-program vtable optimization. Requires -flto">;
 def fno_whole_program_vtables : Flag<["-"], "fno-whole-program-vtables">, Group<f_Group>,
   Flags<[CoreOption]>;
+def fsplit_lto_unit : Flag<["-"], "fsplit-lto-unit">, Group<f_Group>,
+  Flags<[CoreOption, CC1Option]>,
+  HelpText<"Enables splitting of the LTO unit.">;
+def fno_split_lto_unit : Flag<["-"], "fno-split-lto-unit">, Group<f_Group>,
+  Flags<[CoreOption]>;
 def fforce_emit_vtables : Flag<["-"], "fforce-emit-vtables">, Group<f_Group>,
     Flags<[CC1Option]>,
     HelpText<"Emits more virtual tables to improve devirtualization">;

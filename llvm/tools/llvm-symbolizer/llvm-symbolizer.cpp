@@ -62,10 +62,18 @@ static cl::opt<std::string> ClDefaultArch("default-arch", cl::init(""),
                                           cl::desc("Default architecture "
                                                    "(for multi-arch objects)"));
 
+// -obj, -exe, -e
 static cl::opt<std::string>
 ClBinaryName("obj", cl::init(""),
              cl::desc("Path to object file to be symbolized (if not provided, "
                       "object file should be specified for each input line)"));
+static cl::alias
+ClBinaryNameAliasExe("exe", cl::desc("Alias for -obj"),
+                     cl::NotHidden, cl::aliasopt(ClBinaryName));
+static cl::alias
+ClBinaryNameAliasE("e", cl::desc("Alias for -obj"),
+                   cl::NotHidden, cl::aliasopt(ClBinaryName));
+
 
 static cl::opt<std::string>
     ClDwpName("dwp", cl::init(""),

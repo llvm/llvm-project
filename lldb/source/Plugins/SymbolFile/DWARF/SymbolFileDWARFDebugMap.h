@@ -56,24 +56,25 @@ public:
   lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
   lldb::LanguageType
-  ParseCompileUnitLanguage(const lldb_private::SymbolContext &sc) override;
-  size_t
-  ParseCompileUnitFunctions(const lldb_private::SymbolContext &sc) override;
-  bool
-  ParseCompileUnitLineTable(const lldb_private::SymbolContext &sc) override;
-  bool
-  ParseCompileUnitDebugMacros(const lldb_private::SymbolContext &sc) override;
-  bool ParseCompileUnitSupportFiles(
-      const lldb_private::SymbolContext &sc,
-      lldb_private::FileSpecList &support_files) override;
-  bool
-  ParseCompileUnitIsOptimized(const lldb_private::SymbolContext &sc) override;
+  ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
+
+  size_t ParseFunctions(lldb_private::CompileUnit &comp_unit) override;
+
+  bool ParseLineTable(lldb_private::CompileUnit &comp_unit) override;
+
+  bool ParseDebugMacros(lldb_private::CompileUnit &comp_unit) override;
+
+  bool ParseSupportFiles(lldb_private::CompileUnit &comp_unit,
+                         lldb_private::FileSpecList &support_files) override;
+
+  bool ParseIsOptimized(lldb_private::CompileUnit &comp_unit) override;
+
+  size_t ParseTypes(lldb_private::CompileUnit &comp_unit) override;
+
   bool ParseImportedModules(
       const lldb_private::SymbolContext &sc,
       std::vector<lldb_private::ConstString> &imported_modules) override;
   size_t ParseFunctionBlocks(const lldb_private::SymbolContext &sc) override;
-  size_t
-  ParseTypesForCompileUnit(lldb_private::CompileUnit &comp_unit) override;
   size_t
   ParseVariablesForContext(const lldb_private::SymbolContext &sc) override;
 
@@ -199,6 +200,7 @@ protected:
   bool GetFileSpecForSO(uint32_t oso_idx, lldb_private::FileSpec &file_spec);
 
   CompileUnitInfo *GetCompUnitInfo(const lldb_private::SymbolContext &sc);
+  CompileUnitInfo *GetCompUnitInfo(const lldb_private::CompileUnit &comp_unit);
 
   size_t GetCompUnitInfosForModule(const lldb_private::Module *oso_module,
                                    std::vector<CompileUnitInfo *> &cu_infos);
@@ -216,6 +218,7 @@ protected:
   uint32_t GetCompUnitInfoIndex(const CompileUnitInfo *comp_unit_info);
 
   SymbolFileDWARF *GetSymbolFile(const lldb_private::SymbolContext &sc);
+  SymbolFileDWARF *GetSymbolFile(const lldb_private::CompileUnit &comp_unit);
 
   SymbolFileDWARF *GetSymbolFileByCompUnitInfo(CompileUnitInfo *comp_unit_info);
 

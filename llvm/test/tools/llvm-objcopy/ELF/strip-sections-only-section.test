@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-objcopy -strip-sections -only-section=.test %t %t2
+# RUN: llvm-objcopy --strip-sections --only-section=.test %t %t2
 # RUN: od -Ax -t x1 %t2 | FileCheck %s
-# RUN: od -Ax -t c  %t2 | FileCheck %s -check-prefix=TEXT
+# RUN: od -Ax -t c  %t2 | FileCheck %s --check-prefix=TEXT
 
 !ELF
 FileHeader:

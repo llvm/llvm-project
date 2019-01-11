@@ -103,6 +103,10 @@ static cl::opt<bool>
     OutputThinLTOBC("thinlto-bc",
                     cl::desc("Write output as ThinLTO-ready bitcode"));
 
+static cl::opt<bool>
+    SplitLTOUnit("thinlto-split-lto-unit",
+                 cl::desc("Enable splitting of a ThinLTO LTOUnit"));
+
 static cl::opt<std::string> ThinLinkBitcodeFile(
     "thin-link-bitcode-file", cl::value_desc("filename"),
     cl::desc(
@@ -595,6 +599,9 @@ int main(int argc, char **argv) {
   if (!Force && !NoOutput && !AnalyzeOnly && !OutputAssembly)
     if (CheckBitcodeOutputToConsole(Out->os(), !Quiet))
       NoOutput = true;
+
+  if (OutputThinLTOBC)
+    M->addModuleFlag(Module::Error, "EnableSplitLTOUnit", SplitLTOUnit);
 
   if (PassPipeline.getNumOccurrences() > 0) {
     OutputKind OK = OK_NoOutput;

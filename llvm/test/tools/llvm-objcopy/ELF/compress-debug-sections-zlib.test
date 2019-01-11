@@ -4,12 +4,12 @@
 # RUN: llvm-objcopy --compress-debug-sections=zlib %t.o %t-compressed.o
 # RUN: llvm-objcopy --decompress-debug-sections %t-compressed.o %t-decompressed.o
 
-# RUN: llvm-objdump -s %t.o -section=.debug_foo | FileCheck %s
+# RUN: llvm-objdump -s %t.o --section=.debug_foo | FileCheck %s
 # RUN: llvm-objdump -s %t-compressed.o | FileCheck %s --check-prefix=CHECK-COMPRESSED
-# RUN: llvm-readobj -relocations -s %t-compressed.o | FileCheck %s --check-prefix=CHECK-FLAGS
-# RUN: llvm-readobj -relocations -s %t-decompressed.o | FileCheck %s --check-prefix=CHECK-HEADER
-# RUN: llvm-readobj -relocations -s %t.o | FileCheck %s --check-prefix=CHECK-HEADER
-# RUN: llvm-objdump -s %t-decompressed.o -section=.debug_foo | FileCheck %s
+# RUN: llvm-readobj --relocations -s %t-compressed.o | FileCheck %s --check-prefix=CHECK-FLAGS
+# RUN: llvm-readobj --relocations -s %t-decompressed.o | FileCheck %s --check-prefix=CHECK-HEADER
+# RUN: llvm-readobj --relocations -s %t.o | FileCheck %s --check-prefix=CHECK-HEADER
+# RUN: llvm-objdump -s %t-decompressed.o --section=.debug_foo | FileCheck %s
 
 # CHECK: .debug_foo:
 # CHECK-NEXT: 0000 00000000 00000000

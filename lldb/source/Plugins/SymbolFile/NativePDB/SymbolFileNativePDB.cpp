@@ -882,13 +882,8 @@ lldb::CompUnitSP SymbolFileNativePDB::ParseCompileUnitAtIndex(uint32_t index) {
   return GetOrCreateCompileUnit(item);
 }
 
-lldb::LanguageType
-SymbolFileNativePDB::ParseCompileUnitLanguage(const SymbolContext &sc) {
-  // What fields should I expect to be filled out on the SymbolContext?  Is it
-  // safe to assume that `sc.comp_unit` is valid?
-  if (!sc.comp_unit)
-    return lldb::eLanguageTypeUnknown;
-  PdbSymUid uid(sc.comp_unit->GetID());
+lldb::LanguageType SymbolFileNativePDB::ParseLanguage(CompileUnit &comp_unit) {
+  PdbSymUid uid(comp_unit.GetID());
   lldbassert(uid.kind() == PdbSymUidKind::Compiland);
 
   CompilandIndexItem *item =
@@ -902,15 +897,13 @@ SymbolFileNativePDB::ParseCompileUnitLanguage(const SymbolContext &sc) {
 
 void SymbolFileNativePDB::AddSymbols(Symtab &symtab) { return; }
 
-size_t SymbolFileNativePDB::ParseCompileUnitFunctions(const SymbolContext &sc) {
-  lldbassert(sc.comp_unit);
-
-  PdbSymUid uid{sc.comp_unit->GetID()};
+size_t SymbolFileNativePDB::ParseFunctions(CompileUnit &comp_unit) {
+  PdbSymUid uid{comp_unit.GetID()};
   lldbassert(uid.kind() == PdbSymUidKind::Compiland);
   uint16_t modi = uid.asCompiland().modi;
   CompilandIndexItem &cii = m_index->compilands().GetOrCreateCompiland(modi);
 
-  size_t count = sc.comp_unit->GetNumFunctions();
+  size_t count = comp_unit.GetNumFunctions();
   const CVSymbolArray &syms = cii.m_debug_stream.getSymbolArray();
   for (auto iter = syms.begin(); iter != syms.end(); ++iter) {
     if (iter->kind() != S_LPROC32 && iter->kind() != S_GPROC32)
@@ -918,10 +911,10 @@ size_t SymbolFileNativePDB::ParseCompileUnitFunctions(const SymbolContext &sc) {
 
     PdbCompilandSymId sym_id{modi, iter.offset()};
 
-    FunctionSP func = GetOrCreateFunction(sym_id, *sc.comp_unit);
+    FunctionSP func = GetOrCreateFunction(sym_id, comp_unit);
   }
 
-  size_t new_count = sc.comp_unit->GetNumFunctions();
+  size_t new_count = comp_unit.GetNumFunctions();
   lldbassert(new_count >= count);
   return new_count - count;
 }
@@ -1037,18 +1030,17 @@ static void TerminateLineSequence(LineTable &table,
   table.InsertSequence(seq.release());
 }
 
-bool SymbolFileNativePDB::ParseCompileUnitLineTable(const SymbolContext &sc) {
+bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
   // Unfortunately LLDB is set up to parse the entire compile unit line table
   // all at once, even if all it really needs is line info for a specific
   // function.  In the future it would be nice if it could set the sc.m_function
   // member, and we could only get the line info for the function in question.
-  lldbassert(sc.comp_unit);
-  PdbSymUid cu_id(sc.comp_unit->GetID());
+  PdbSymUid cu_id(comp_unit.GetID());
   lldbassert(cu_id.kind() == PdbSymUidKind::Compiland);
   CompilandIndexItem *cci =
       m_index->compilands().GetCompiland(cu_id.asCompiland().modi);
   lldbassert(cci);
-  auto line_table = llvm::make_unique<LineTable>(sc.comp_unit);
+  auto line_table = llvm::make_unique<LineTable>(&comp_unit);
 
   // This is basically a copy of the .debug$S subsections from all original COFF
   // object files merged together with address relocations applied.  We are
@@ -1110,20 +1102,18 @@ bool SymbolFileNativePDB::ParseCompileUnitLineTable(const SymbolContext &sc) {
   if (line_table->GetSize() == 0)
     return false;
 
-  sc.comp_unit->SetLineTable(line_table.release());
+  comp_unit.SetLineTable(line_table.release());
   return true;
 }
 
-bool SymbolFileNativePDB::ParseCompileUnitDebugMacros(const SymbolContext &sc) {
+bool SymbolFileNativePDB::ParseDebugMacros(CompileUnit &comp_unit) {
   // PDB doesn't contain information about macros
   return false;
 }
 
-bool SymbolFileNativePDB::ParseCompileUnitSupportFiles(
-    const SymbolContext &sc, FileSpecList &support_files) {
-  lldbassert(sc.comp_unit);
-
-  PdbSymUid cu_id(sc.comp_unit->GetID());
+bool SymbolFileNativePDB::ParseSupportFiles(CompileUnit &comp_unit,
+                                            FileSpecList &support_files) {
+  PdbSymUid cu_id(comp_unit.GetID());
   lldbassert(cu_id.kind() == PdbSymUidKind::Compiland);
   CompilandIndexItem *cci =
       m_index->compilands().GetCompiland(cu_id.asCompiland().modi);
@@ -1274,7 +1264,7 @@ size_t SymbolFileNativePDB::FindTypesByName(llvm::StringRef name,
   return match_count;
 }
 
-size_t SymbolFileNativePDB::ParseTypesForCompileUnit(CompileUnit &comp_unit) {
+size_t SymbolFileNativePDB::ParseTypes(CompileUnit &comp_unit) {
   // Only do the full type scan the first time.
   if (m_done_full_type_scan)
     return 0;

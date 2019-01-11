@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objcopy -O binary -j .text %t %t2
-# RUN: llvm-objcopy -O binary -only-section .text %t %t3
+# RUN: llvm-objcopy -O binary --only-section .text %t %t3
 # RUN: llvm-objcopy --dump-section .text=%t4 %t %t5
 # RUN: llvm-objcopy --dump-section .foo=%t6 %t %t7
 # RUN: not llvm-objcopy --dump-section .bar=%t8 %t %t9 2>&1 | FileCheck %s --check-prefix=NOBITS

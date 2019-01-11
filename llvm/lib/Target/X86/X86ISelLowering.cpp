@@ -8307,10 +8307,20 @@ static bool isHopBuildVector(const BuildVectorSDNode *BV, SelectionDAG &DAG,
 static SDValue getHopForBuildVector(const BuildVectorSDNode *BV,
                                     SelectionDAG &DAG, unsigned HOpcode,
                                     SDValue V0, SDValue V1) {
-  // TODO: We should extract/insert to match the size of the build vector.
+  // If either input vector is not the same size as the build vector,
+  // extract/insert the low bits to the correct size.
+  // This is free (examples: zmm --> xmm, xmm --> ymm).
   MVT VT = BV->getSimpleValueType(0);
-  if (V0.getValueType() != VT || V1.getValueType() != VT)
-    return SDValue();
+  unsigned Width = VT.getSizeInBits();
+  if (V0.getValueSizeInBits() > Width)
+    V0 = extractSubVector(V0, 0, DAG, SDLoc(BV), Width);
+  else if (V0.getValueSizeInBits() < Width)
+    V0 = insertSubVector(DAG.getUNDEF(VT), V0, 0, DAG, SDLoc(BV), Width);
+
+  if (V1.getValueSizeInBits() > Width)
+    V1 = extractSubVector(V1, 0, DAG, SDLoc(BV), Width);
+  else if (V1.getValueSizeInBits() < Width)
+    V1 = insertSubVector(DAG.getUNDEF(VT), V1, 0, DAG, SDLoc(BV), Width);
 
   return DAG.getNode(HOpcode, SDLoc(BV), VT, V0, V1);
 }

@@ -1,6 +1,6 @@
 # RUN: llvm-objcopy %p/Inputs/dynsym.so %t
-# RUN: llvm-readobj -dyn-symbols %t | FileCheck %s
-# RUN: llvm-readobj -sections %t | FileCheck -check-prefix=LINK %s
+# RUN: llvm-readobj --dyn-symbols %t | FileCheck %s
+# RUN: llvm-readobj --sections %t | FileCheck --check-prefix=LINK %s
 
 #LINK:         Name: .dynsym
 #LINK-NEXT:    Type: SHT_DYNSYM

@@ -1,6 +1,6 @@
 # RUN: llvm-objcopy %p/Inputs/dynamic.so %t
-# RUN: llvm-readobj -dynamic-table %t | FileCheck %s
-# RUN: llvm-readobj -sections %t | FileCheck -check-prefix=LINK %s
+# RUN: llvm-readobj --dynamic-table %t | FileCheck %s
+# RUN: llvm-readobj --sections %t | FileCheck --check-prefix=LINK %s
 
 #CHECK: DynamicSection [
 #CHECK-NEXT:  Tag                Type                 Name/Value

@@ -432,25 +432,25 @@ TEST_F(PPCallbacksTest, OpenCLExtensionPragmaDisabled) {
 
 TEST_F(PPCallbacksTest, DirectiveExprRanges) {
   const auto &Results1 = DirectiveExprRange("#if FLUZZY_FLOOF\n#endif\n");
-  EXPECT_EQ(Results1.size(), 1);
+  EXPECT_EQ(Results1.size(), 1U);
   EXPECT_EQ(
       GetSourceStringToEnd(CharSourceRange(Results1[0].ConditionRange, false)),
       "FLUZZY_FLOOF");
 
   const auto &Results2 = DirectiveExprRange("#if 1 + 4 < 7\n#endif\n");
-  EXPECT_EQ(Results2.size(), 1);
+  EXPECT_EQ(Results2.size(), 1U);
   EXPECT_EQ(
       GetSourceStringToEnd(CharSourceRange(Results2[0].ConditionRange, false)),
       "1 + 4 < 7");
 
   const auto &Results3 = DirectiveExprRange("#if 1 + \\\n  2\n#endif\n");
-  EXPECT_EQ(Results3.size(), 1);
+  EXPECT_EQ(Results3.size(), 1U);
   EXPECT_EQ(
       GetSourceStringToEnd(CharSourceRange(Results3[0].ConditionRange, false)),
       "1 + \\\n  2");
 
   const auto &Results4 = DirectiveExprRange("#if 0\n#elif FLOOFY\n#endif\n");
-  EXPECT_EQ(Results4.size(), 2);
+  EXPECT_EQ(Results4.size(), 2U);
   EXPECT_EQ(
       GetSourceStringToEnd(CharSourceRange(Results4[0].ConditionRange, false)),
       "0");
@@ -459,7 +459,7 @@ TEST_F(PPCallbacksTest, DirectiveExprRanges) {
       "FLOOFY");
 
   const auto &Results5 = DirectiveExprRange("#if 1\n#elif FLOOFY\n#endif\n");
-  EXPECT_EQ(Results5.size(), 2);
+  EXPECT_EQ(Results5.size(), 2U);
   EXPECT_EQ(
       GetSourceStringToEnd(CharSourceRange(Results5[0].ConditionRange, false)),
       "1");
@@ -469,14 +469,14 @@ TEST_F(PPCallbacksTest, DirectiveExprRanges) {
 
   const auto &Results6 =
       DirectiveExprRange("#if defined(FLUZZY_FLOOF)\n#endif\n");
-  EXPECT_EQ(Results6.size(), 1);
+  EXPECT_EQ(Results6.size(), 1U);
   EXPECT_EQ(
       GetSourceStringToEnd(CharSourceRange(Results6[0].ConditionRange, false)),
       "defined(FLUZZY_FLOOF)");
 
   const auto &Results7 =
       DirectiveExprRange("#if 1\n#elif defined(FLOOFY)\n#endif\n");
-  EXPECT_EQ(Results7.size(), 2);
+  EXPECT_EQ(Results7.size(), 2U);
   EXPECT_EQ(
       GetSourceStringToEnd(CharSourceRange(Results7[0].ConditionRange, false)),
       "1");

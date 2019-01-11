@@ -2,7 +2,7 @@
 # Preserve input to verify it is not modified
 # RUN: cp %t.x-txt %t-copy.txt
 # RUN: llvm-objcopy -I binary -B i386:x86-64 %t.x-txt %t.o
-# RUN: llvm-readobj -sections -symbols %t.o | FileCheck %s
+# RUN: llvm-readobj --sections --symbols %t.o | FileCheck %s
 # RUN: cmp %t.x-txt %t-copy.txt
 
 # CHECK:      Sections [

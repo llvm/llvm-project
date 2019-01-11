@@ -38,6 +38,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_suppressions.cc
   sanitizer_tls_get_addr.cc
   sanitizer_thread_registry.cc
+  sanitizer_type_traits.cc
   sanitizer_win.cc)
 
 if(UNIX AND NOT APPLE AND NOT OS_NAME MATCHES "SunOS")

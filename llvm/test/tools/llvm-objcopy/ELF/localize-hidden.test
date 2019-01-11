@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-objcopy -localize-hidden %t %t2
-# RUN: llvm-readobj -relocations -symbols %t2 | FileCheck %s
+# RUN: llvm-objcopy --localize-hidden %t %t2
+# RUN: llvm-readobj --relocations --symbols %t2 | FileCheck %s
 
 !ELF
 FileHeader:
