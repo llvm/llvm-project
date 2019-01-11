@@ -4,7 +4,7 @@ RUN: %build --compiler=msvc --mode=link --arch=32 --nodefaultlib --output=%T/Typ
 RUN: lldb-test symbols %T/TypeQualsTest.cpp.exe | FileCheck %s
 
 CHECK: Module [[MOD:.*]]
-CHECK-DAG: {{^[0-9A-F]+}}: SymbolVendor ([[MOD]])
+CHECK-DAG: {{^[0-9A-F]+}}: SymbolVendor pdb ([[MOD]])
 CHECK-DAG:      Type{{.*}} , name = "const int", size = 4, compiler_type = {{.*}} const int
 CHECK-DAG:      Type{{.*}} , size = 4, compiler_type = {{.*}} const int *
 CHECK-DAG:      Type{{.*}} , size = 4, compiler_type = {{.*}} const int **const

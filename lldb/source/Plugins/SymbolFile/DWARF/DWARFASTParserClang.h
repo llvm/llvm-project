@@ -22,6 +22,9 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangASTImporter.h"
 
+namespace lldb_private {
+class CompileUnit;
+}
 class DWARFDebugInfoEntry;
 class DWARFDIECollection;
 class SymbolFileDWARF;
@@ -38,7 +41,7 @@ public:
                                   bool *type_is_new_ptr) override;
 
   lldb_private::Function *
-  ParseFunctionFromDWARF(const lldb_private::SymbolContext &sc,
+  ParseFunctionFromDWARF(lldb_private::CompileUnit &comp_unit,
                          const DWARFDIE &die) override;
 
   bool
@@ -89,7 +92,7 @@ protected:
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
   size_t
-  ParseChildParameters(const lldb_private::SymbolContext &sc,
+  ParseChildParameters(lldb_private::CompileUnit &comp_unit,
                        clang::DeclContext *containing_decl_ctx,
                        const DWARFDIE &parent_die, bool skip_artificial,
                        bool &is_static, bool &is_variadic,
