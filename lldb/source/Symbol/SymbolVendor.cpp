@@ -379,6 +379,7 @@ void SymbolVendor::Dump(Stream *s) {
     s->Indent();
     s->PutCString("SymbolVendor");
     if (m_sym_file_ap.get()) {
+      *s << " " << m_sym_file_ap->GetPluginName();
       ObjectFile *objfile = m_sym_file_ap->GetObjectFile();
       if (objfile) {
         const FileSpec &objfile_file_spec = objfile->GetFileSpec();
@@ -402,6 +403,9 @@ void SymbolVendor::Dump(Stream *s) {
       if (cu_pos->get())
         (*cu_pos)->Dump(s, show_context);
     }
+
+    if (Symtab *symtab = GetSymtab())
+      symtab->Dump(s, nullptr, eSortOrderNone);
 
     s->IndentLess();
   }
