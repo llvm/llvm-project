@@ -24,51 +24,25 @@ class TestSwiftMetatype(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
-    def test_with_dsym(self):
-        """Test the formatting of Swift metatypes"""
-        self.build()
-        self.do_test()
-
     def setUp(self):
         TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    def do_test(self):
+    @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
+    def test_metatype(self):
         """Test the formatting of Swift metatypes"""
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        frame = thread.frames[0]
+        self.assertTrue(frame, "Frame 0 is valid.")
 
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.main_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
-
-        var_s = self.frame.FindVariable("s")
-        var_c = self.frame.FindVariable("c")
-        var_f = self.frame.FindVariable("f")
-        var_t = self.frame.FindVariable("t")
-        var_p = self.frame.FindVariable("p")
+        var_s = frame.FindVariable("s")
+        var_c = frame.FindVariable("c")
+        var_f = frame.FindVariable("f")
+        var_t = frame.FindVariable("t")
+        var_p = frame.FindVariable("p")
         lldbutil.check_variable(self, var_s, False, "String")
         lldbutil.check_variable(self, var_c, False, "a.D")
         lldbutil.check_variable(self, var_f, False, "(Int) -> Int")

@@ -1173,7 +1173,9 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     // correctly handles zero-sized types. Unfortunately we currently have
     // this check scattered in several places in the codebase, we should at
     // some point centralize it.
-    if (repl && SwiftASTContext::IsPossibleZeroSizeType(variable.GetType())) {
+    lldb::StackFrameSP stack_frame_sp = stack_frame_wp.lock();
+    if (repl && SwiftASTContext::IsPossibleZeroSizeType(variable.GetType(),
+                                                        stack_frame_sp.get())) {
       auto &repl_mat = *llvm::cast<SwiftREPLMaterializer>(&materializer);
       offset = repl_mat.AddREPLResultVariable(
           variable.GetType(), variable.GetDecl(),

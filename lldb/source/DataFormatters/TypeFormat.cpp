@@ -91,7 +91,8 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
           Status error;
           valobj->GetData(data, error);
           if (error.Fail() &&
-              !SwiftASTContext::IsPossibleZeroSizeType(compiler_type))
+              !SwiftASTContext::IsPossibleZeroSizeType(
+                  compiler_type, exe_ctx.GetBestExecutionContextScope()))
             return false;
         }
 
