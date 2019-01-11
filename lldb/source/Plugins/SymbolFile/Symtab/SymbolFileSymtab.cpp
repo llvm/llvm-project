@@ -229,7 +229,9 @@ size_t SymbolFileSymtab::ParseFunctionBlocks(const SymbolContext &sc) {
   return 0;
 }
 
-size_t SymbolFileSymtab::ParseTypes(const SymbolContext &sc) { return 0; }
+size_t SymbolFileSymtab::ParseTypesForCompileUnit(CompileUnit &comp_unit) {
+  return 0;
+}
 
 size_t SymbolFileSymtab::ParseVariablesForContext(const SymbolContext &sc) {
   return 0;

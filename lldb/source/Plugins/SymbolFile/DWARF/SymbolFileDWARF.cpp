@@ -3149,24 +3149,16 @@ size_t SymbolFileDWARF::ParseFunctionBlocks(const SymbolContext &sc) {
   return functions_added;
 }
 
-size_t SymbolFileDWARF::ParseTypes(const SymbolContext &sc) {
+size_t SymbolFileDWARF::ParseTypesForCompileUnit(CompileUnit &comp_unit) {
   ASSERT_MODULE_LOCK(this);
-  // At least a compile unit must be valid
-  assert(sc.comp_unit);
   size_t types_added = 0;
-  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (dwarf_cu) {
-    if (sc.function) {
-      dw_offset_t function_die_offset = sc.function->GetID();
-      DWARFDIE func_die = dwarf_cu->GetDIE(function_die_offset);
-      if (func_die && func_die.HasChildren()) {
-        types_added = ParseTypes(sc, func_die.GetFirstChild(), true, true);
-      }
-    } else {
-      DWARFDIE dwarf_cu_die = dwarf_cu->DIE();
-      if (dwarf_cu_die && dwarf_cu_die.HasChildren()) {
-        types_added = ParseTypes(sc, dwarf_cu_die.GetFirstChild(), true, true);
-      }
+    DWARFDIE dwarf_cu_die = dwarf_cu->DIE();
+    if (dwarf_cu_die && dwarf_cu_die.HasChildren()) {
+      SymbolContext sc;
+      sc.comp_unit = &comp_unit;
+      types_added = ParseTypes(sc, dwarf_cu_die.GetFirstChild(), true, true);
     }
   }
 

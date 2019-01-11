@@ -380,8 +380,7 @@ void Module::ParseAllDebugSymbols() {
       });
 
       // Parse all types for this compile unit
-      sc.function = nullptr;
-      symbols->ParseTypes(sc);
+      symbols->ParseTypesForCompileUnit(*sc.comp_unit);
     }
   }
 }

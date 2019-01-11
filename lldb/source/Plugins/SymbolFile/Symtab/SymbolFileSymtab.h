@@ -70,7 +70,8 @@ public:
 
   size_t ParseFunctionBlocks(const lldb_private::SymbolContext &sc) override;
 
-  size_t ParseTypes(const lldb_private::SymbolContext &sc) override;
+  size_t
+  ParseTypesForCompileUnit(lldb_private::CompileUnit &comp_unit) override;
 
   size_t
   ParseVariablesForContext(const lldb_private::SymbolContext &sc) override;

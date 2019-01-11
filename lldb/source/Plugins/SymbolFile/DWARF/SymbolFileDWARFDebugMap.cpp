@@ -678,10 +678,13 @@ size_t SymbolFileDWARFDebugMap::ParseFunctionBlocks(const SymbolContext &sc) {
   return 0;
 }
 
-size_t SymbolFileDWARFDebugMap::ParseTypes(const SymbolContext &sc) {
+size_t
+SymbolFileDWARFDebugMap::ParseTypesForCompileUnit(CompileUnit &comp_unit) {
+  SymbolContext sc;
+  sc.comp_unit = &comp_unit;
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(sc);
   if (oso_dwarf)
-    return oso_dwarf->ParseTypes(sc);
+    return oso_dwarf->ParseTypesForCompileUnit(comp_unit);
   return 0;
 }
 

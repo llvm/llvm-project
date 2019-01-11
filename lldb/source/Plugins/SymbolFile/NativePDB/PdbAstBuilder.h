@@ -69,6 +69,7 @@ public:
   clang::VarDecl *GetOrCreateVariableDecl(PdbCompilandSymId scope_id,
                                           PdbCompilandSymId var_id);
   clang::VarDecl *GetOrCreateVariableDecl(PdbGlobalSymId var_id);
+  clang::TypedefNameDecl *GetOrCreateTypedefDecl(PdbGlobalSymId id);
   void ParseDeclsForContext(clang::DeclContext &context);
 
   clang::QualType GetBasicType(lldb::BasicType type);
@@ -112,6 +113,8 @@ private:
   clang::VarDecl *CreateVariableDecl(PdbSymUid uid,
                                      llvm::codeview::CVSymbol sym,
                                      clang::DeclContext &scope);
+  clang::DeclContext *
+  GetParentDeclContextForSymbol(const llvm::codeview::CVSymbol &sym);
 
   void ParseAllNamespacesPlusChildrenOf(llvm::Optional<llvm::StringRef> parent);
   void ParseDeclsForSimpleContext(clang::DeclContext &context);
@@ -120,6 +123,8 @@ private:
   void BuildParentMap();
   std::pair<clang::DeclContext *, std::string>
   CreateDeclInfoForType(const llvm::codeview::TagRecord &record, TypeIndex ti);
+  std::pair<clang::DeclContext *, std::string>
+  CreateDeclInfoForUndecoratedName(llvm::StringRef uname);
   clang::QualType CreateSimpleType(TypeIndex ti);
 
   PdbIndex &m_index;

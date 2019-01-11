@@ -2,6 +2,7 @@
 
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
+#include "llvm/DebugInfo/CodeView/RecordName.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecordHelpers.h"
@@ -13,6 +14,7 @@
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Demangle/MicrosoftDemangle.h"
 
+#include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
@@ -215,10 +217,15 @@ clang::DeclContext &PdbAstBuilder::GetTranslationUnitDecl() {
 std::pair<clang::DeclContext *, std::string>
 PdbAstBuilder::CreateDeclInfoForType(const TagRecord &record, TypeIndex ti) {
   // FIXME: Move this to GetDeclContextContainingUID.
+  if (!record.hasUniqueName())
+    return CreateDeclInfoForUndecoratedName(record.Name);
 
   llvm::ms_demangle::Demangler demangler;
   StringView sv(record.UniqueName.begin(), record.UniqueName.size());
   llvm::ms_demangle::TagTypeNode *ttn = demangler.parseTagUniqueName(sv);
+  if (demangler.Error)
+    return {m_clang.GetTranslationUnitDecl(), record.UniqueName};
+
   llvm::ms_demangle::IdentifierNode *idn =
       ttn->QualifiedName->getUnqualifiedIdentifier();
   std::string uname = idn->toString(llvm::ms_demangle::OF_NoTagSpecifier);
@@ -491,6 +498,82 @@ clang::DeclContext *PdbAstBuilder::GetOrCreateDeclContextForUid(PdbSymUid uid) {
   return clang::Decl::castToDeclContext(decl);
 }
 
+std::pair<clang::DeclContext *, std::string>
+PdbAstBuilder::CreateDeclInfoForUndecoratedName(llvm::StringRef name) {
+  MSVCUndecoratedNameParser parser(name);
+  llvm::ArrayRef<MSVCUndecoratedNameSpecifier> specs = parser.GetSpecifiers();
+
+  clang::DeclContext *context = &GetTranslationUnitDecl();
+
+  llvm::StringRef uname = specs.back().GetBaseName();
+  specs = specs.drop_back();
+  if (specs.empty())
+    return {context, name};
+
+  llvm::StringRef scope_name = specs.back().GetFullName();
+
+  // It might be a class name, try that first.
+  std::vector<TypeIndex> types = m_index.tpi().findRecordsByName(scope_name);
+  while (!types.empty()) {
+    clang::QualType qt = GetOrCreateType(types.back());
+    clang::TagDecl *tag = qt->getAsTagDecl();
+    if (tag)
+      return {clang::TagDecl::castToDeclContext(tag), uname};
+    types.pop_back();
+  }
+
+  // If that fails, treat it as a series of namespaces.
+  for (const MSVCUndecoratedNameSpecifier &spec : specs) {
+    std::string ns_name = spec.GetBaseName().str();
+    context = m_clang.GetUniqueNamespaceDeclaration(ns_name.c_str(), context);
+  }
+  return {context, uname};
+}
+
+clang::DeclContext *
+PdbAstBuilder::GetParentDeclContextForSymbol(const CVSymbol &sym) {
+  if (!SymbolHasAddress(sym))
+    return CreateDeclInfoForUndecoratedName(getSymbolName(sym)).first;
+  SegmentOffset addr = GetSegmentAndOffset(sym);
+  llvm::Optional<PublicSym32> pub =
+      FindPublicSym(addr, m_index.symrecords(), m_index.publics());
+  if (!pub)
+    return CreateDeclInfoForUndecoratedName(getSymbolName(sym)).first;
+
+  llvm::ms_demangle::Demangler demangler;
+  StringView name{pub->Name.begin(), pub->Name.size()};
+  llvm::ms_demangle::SymbolNode *node = demangler.parse(name);
+  if (!node)
+    return &GetTranslationUnitDecl();
+  llvm::ArrayRef<llvm::ms_demangle::Node *> name_components{
+      node->Name->Components->Nodes, node->Name->Components->Count - 1};
+
+  if (!name_components.empty()) {
+    // Render the current list of scope nodes as a fully qualified name, and
+    // look it up in the debug info as a type name.  If we find something,
+    // this is a type (which may itself be prefixed by a namespace).  If we
+    // don't, this is a list of namespaces.
+    std::string qname = RenderScopeList(name_components);
+    std::vector<TypeIndex> matches = m_index.tpi().findRecordsByName(qname);
+    while (!matches.empty()) {
+      clang::QualType qt = GetOrCreateType(matches.back());
+      clang::TagDecl *tag = qt->getAsTagDecl();
+      if (tag)
+        return clang::TagDecl::castToDeclContext(tag);
+      matches.pop_back();
+    }
+  }
+
+  // It's not a type.  It must be a series of namespaces.
+  clang::DeclContext *context = &GetTranslationUnitDecl();
+  while (!name_components.empty()) {
+    std::string ns = name_components.front()->toString();
+    context = m_clang.GetUniqueNamespaceDeclaration(ns.c_str(), context);
+    name_components = name_components.drop_front();
+  }
+  return context;
+}
+
 clang::DeclContext *PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
   // We must do this *without* calling GetOrCreate on the current uid, as
   // that would be an infinite recursion.
@@ -502,46 +585,7 @@ clang::DeclContext *PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
       return GetOrCreateDeclContextForUid(*scope);
 
     CVSymbol sym = m_index.ReadSymbolRecord(uid.asCompilandSym());
-    if (!SymbolHasAddress(sym))
-      return &GetTranslationUnitDecl();
-    SegmentOffset addr = GetSegmentAndOffset(sym);
-    llvm::Optional<PublicSym32> pub =
-        FindPublicSym(addr, m_index.symrecords(), m_index.publics());
-    if (!pub)
-      return &GetTranslationUnitDecl();
-
-    llvm::ms_demangle::Demangler demangler;
-    StringView name{pub->Name.begin(), pub->Name.size()};
-    llvm::ms_demangle::SymbolNode *node = demangler.parse(name);
-    if (!node)
-      return &GetTranslationUnitDecl();
-    llvm::ArrayRef<llvm::ms_demangle::Node *> name_components{
-        node->Name->Components->Nodes, node->Name->Components->Count - 1};
-
-    if (!name_components.empty()) {
-      // Render the current list of scope nodes as a fully qualified name, and
-      // look it up in the debug info as a type name.  If we find something,
-      // this is a type (which may itself be prefixed by a namespace).  If we
-      // don't, this is a list of namespaces.
-      std::string qname = RenderScopeList(name_components);
-      std::vector<TypeIndex> matches = m_index.tpi().findRecordsByName(qname);
-      while (!matches.empty()) {
-        clang::QualType qt = GetOrCreateType(matches.back());
-        clang::TagDecl *tag = qt->getAsTagDecl();
-        if (tag)
-          return clang::TagDecl::castToDeclContext(tag);
-        matches.pop_back();
-      }
-    }
-
-    // It's not a type.  It must be a series of namespaces.
-    clang::DeclContext *context = &GetTranslationUnitDecl();
-    while (!name_components.empty()) {
-      std::string ns = name_components.front()->toString();
-      context = m_clang.GetUniqueNamespaceDeclaration(ns.c_str(), context);
-      name_components = name_components.drop_front();
-    }
-    return context;
+    return GetParentDeclContextForSymbol(sym);
   }
   case PdbSymUidKind::Type: {
     // It could be a namespace, class, or global.  We don't support nested
@@ -556,6 +600,34 @@ clang::DeclContext *PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
     // In this case the parent DeclContext is the one for the class that this
     // member is inside of.
     break;
+  case PdbSymUidKind::GlobalSym: {
+    // If this refers to a compiland symbol, just recurse in with that symbol.
+    // The only other possibilities are S_CONSTANT and S_UDT, in which case we
+    // need to parse the undecorated name to figure out the scope, then look
+    // that up in the TPI stream.  If it's found, it's a type, othewrise it's
+    // a series of namespaces.
+    // FIXME: do this.
+    CVSymbol global = m_index.ReadSymbolRecord(uid.asGlobalSym());
+    switch (global.kind()) {
+    case SymbolKind::S_GDATA32:
+    case SymbolKind::S_LDATA32:
+      return GetParentDeclContextForSymbol(global);
+    case SymbolKind::S_PROCREF:
+    case SymbolKind::S_LPROCREF: {
+      ProcRefSym ref{global.kind()};
+      llvm::cantFail(
+          SymbolDeserializer::deserializeAs<ProcRefSym>(global, ref));
+      PdbCompilandSymId cu_sym_id{ref.modi(), ref.SymOffset};
+      return GetParentDeclContext(cu_sym_id);
+    }
+    case SymbolKind::S_CONSTANT:
+    case SymbolKind::S_UDT:
+      return CreateDeclInfoForUndecoratedName(getSymbolName(global)).first;
+    default:
+      break;
+    }
+    break;
+  }
   default:
     break;
   }
@@ -645,6 +717,11 @@ clang::QualType PdbAstBuilder::CreateSimpleType(TypeIndex ti) {
 clang::QualType PdbAstBuilder::CreatePointerType(const PointerRecord &pointer) {
   clang::QualType pointee_type = GetOrCreateType(pointer.ReferentType);
 
+  // This can happen for pointers to LF_VTSHAPE records, which we shouldn't
+  // create in the AST.
+  if (pointee_type.isNull())
+    return {};
+
   if (pointer.isPointerToMember()) {
     MemberPointerInfo mpi = pointer.getMemberInfo();
     clang::QualType class_type = GetOrCreateType(mpi.ContainingType);
@@ -677,8 +754,9 @@ clang::QualType PdbAstBuilder::CreatePointerType(const PointerRecord &pointer) {
 
 clang::QualType
 PdbAstBuilder::CreateModifierType(const ModifierRecord &modifier) {
-
   clang::QualType unmodified_type = GetOrCreateType(modifier.ModifiedType);
+  if (unmodified_type.isNull())
+    return {};
 
   if ((modifier.Modifiers & ModifierOptions::Const) != ModifierOptions::None)
     unmodified_type.addConst();
@@ -784,6 +862,32 @@ clang::VarDecl *PdbAstBuilder::GetOrCreateVariableDecl(PdbGlobalSymId var_id) {
 
   CVSymbol sym = m_index.ReadSymbolRecord(var_id);
   return CreateVariableDecl(PdbSymUid(var_id), sym, GetTranslationUnitDecl());
+}
+
+clang::TypedefNameDecl *
+PdbAstBuilder::GetOrCreateTypedefDecl(PdbGlobalSymId id) {
+  if (clang::Decl *decl = TryGetDecl(id))
+    return llvm::dyn_cast<clang::TypedefNameDecl>(decl);
+
+  CVSymbol sym = m_index.ReadSymbolRecord(id);
+  lldbassert(sym.kind() == S_UDT);
+  UDTSym udt = llvm::cantFail(SymbolDeserializer::deserializeAs<UDTSym>(sym));
+
+  clang::DeclContext *scope = GetParentDeclContext(id);
+
+  PdbTypeSymId real_type_id{udt.Type, false};
+  clang::QualType qt = GetOrCreateType(real_type_id);
+
+  std::string uname = DropNameScope(udt.Name);
+
+  CompilerType ct = m_clang.CreateTypedefType(ToCompilerType(qt), uname.c_str(),
+                                              ToCompilerDeclContext(*scope));
+  clang::TypedefNameDecl *tnd = m_clang.GetAsTypedefDecl(ct);
+  DeclStatus status;
+  status.resolved = true;
+  status.uid = toOpaqueUid(id);
+  m_decl_to_status.insert({tnd, status});
+  return tnd;
 }
 
 clang::QualType PdbAstBuilder::GetBasicType(lldb::BasicType type) {

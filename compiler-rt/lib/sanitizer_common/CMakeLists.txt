@@ -195,7 +195,6 @@ set(SANITIZER_COMMON_DEFINITIONS)
 
 include(CheckIncludeFile)
 append_have_file_definition(rpc/xdr.h HAVE_RPC_XDR_H SANITIZER_COMMON_DEFINITIONS)
-append_have_file_definition(tirpc/rpc/xdr.h HAVE_TIRPC_RPC_XDR_H SANITIZER_COMMON_DEFINITIONS)
 
 set(SANITIZER_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(OFF SANITIZER_CFLAGS)

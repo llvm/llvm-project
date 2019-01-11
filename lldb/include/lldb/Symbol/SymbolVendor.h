@@ -64,7 +64,7 @@ public:
 
   virtual size_t ParseFunctionBlocks(const SymbolContext &sc);
 
-  virtual size_t ParseTypes(const SymbolContext &sc);
+  virtual size_t ParseTypesForCompileUnit(CompileUnit &comp_unit);
 
   virtual size_t ParseVariablesForContext(const SymbolContext &sc);
 
