@@ -61,6 +61,15 @@ INLINE int Verbosity() {
   return atomic_load(&current_verbosity, memory_order_relaxed);
 }
 
+#if SANITIZER_ANDROID
+INLINE uptr GetPageSize() {
+// Android post-M sysconf(_SC_PAGESIZE) crashes if called from .preinit_array.
+  return 4096;
+}
+INLINE uptr GetPageSizeCached() {
+  return 4096;
+}
+#else
 uptr GetPageSize();
 extern uptr PageSizeCached;
 INLINE uptr GetPageSizeCached() {
@@ -68,6 +77,7 @@ INLINE uptr GetPageSizeCached() {
     PageSizeCached = GetPageSize();
   return PageSizeCached;
 }
+#endif
 uptr GetMmapGranularity();
 uptr GetMaxVirtualAddress();
 uptr GetMaxUserVirtualAddress();
