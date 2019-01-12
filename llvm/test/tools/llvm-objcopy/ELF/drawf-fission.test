@@ -1,8 +1,8 @@
-# RUN: llvm-objcopy -extract-dwo %p/Inputs/dwarf.dwo %t
-# RUN: llvm-objcopy -strip-dwo %p/Inputs/dwarf.dwo %t2
-# RUN: llvm-objcopy -split-dwo=%t3 %p/Inputs/dwarf.dwo %t4
-# RUN: llvm-readobj -file-headers -sections %t | FileCheck %s -check-prefix=DWARF
-# RUN: llvm-readobj -file-headers -sections %t2 | FileCheck %s -check-prefix=STRIP
+# RUN: llvm-objcopy --extract-dwo %p/Inputs/dwarf.dwo %t
+# RUN: llvm-objcopy --strip-dwo %p/Inputs/dwarf.dwo %t2
+# RUN: llvm-objcopy --split-dwo=%t3 %p/Inputs/dwarf.dwo %t4
+# RUN: llvm-readobj --file-headers --sections %t | FileCheck %s --check-prefix=DWARF
+# RUN: llvm-readobj --file-headers --sections %t2 | FileCheck %s --check-prefix=STRIP
 # RUN: diff %t %t3
 # RUN: diff %t2 %t4
 

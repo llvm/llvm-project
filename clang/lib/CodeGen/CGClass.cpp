@@ -2014,7 +2014,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
   CallArgList Args;
 
   LangAS SlotAS = E->getType().getAddressSpace();
-  QualType ThisType = D->getThisType(getContext());
+  QualType ThisType = D->getThisType();
   LangAS ThisAS = ThisType.getTypePtr()->getPointeeType().getAddressSpace();
   llvm::Value *ThisPtr = This.getPointer();
   if (SlotAS != ThisAS) {
@@ -2025,7 +2025,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                                                     ThisAS, SlotAS, NewType);
   }
   // Push the this ptr.
-  Args.add(RValue::get(ThisPtr), D->getThisType(getContext()));
+  Args.add(RValue::get(ThisPtr), D->getThisType());
 
   // If this is a trivial constructor, emit a memcpy now before we lose
   // the alignment information on the argument.
@@ -2159,7 +2159,7 @@ void CodeGenFunction::EmitInheritedCXXConstructorCall(
     const CXXConstructorDecl *D, bool ForVirtualBase, Address This,
     bool InheritedFromVBase, const CXXInheritedCtorInitExpr *E) {
   CallArgList Args;
-  CallArg ThisArg(RValue::get(This.getPointer()), D->getThisType(getContext()));
+  CallArg ThisArg(RValue::get(This.getPointer()), D->getThisType());
 
   // Forward the parameters.
   if (InheritedFromVBase &&
@@ -2284,7 +2284,7 @@ CodeGenFunction::EmitSynthesizedCXXCopyCtorCall(const CXXConstructorDecl *D,
   CallArgList Args;
 
   // Push the this ptr.
-  Args.add(RValue::get(This.getPointer()), D->getThisType(getContext()));
+  Args.add(RValue::get(This.getPointer()), D->getThisType());
 
   // Push the src ptr.
   QualType QT = *(FPT->param_type_begin());

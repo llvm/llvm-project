@@ -415,8 +415,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
         if (!clang_type &&
             (encoding_data_type == Type::eEncodingIsPointerUID ||
-             encoding_data_type == Type::eEncodingIsTypedefUID) &&
-            sc.comp_unit != NULL) {
+             encoding_data_type == Type::eEncodingIsTypedefUID)) {
           if (tag == DW_TAG_pointer_type) {
             DWARFDIE target_die = die.GetReferencedDIE(DW_AT_type);
 
@@ -552,9 +551,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
             if (attributes.ExtractFormValueAtIndex(i, form_value)) {
               switch (attr) {
               case DW_AT_decl_file:
-                decl.SetFile(
-                   sc.comp_unit->GetSupportFiles().GetFileSpecAtIndex(
-                      form_value.Unsigned()));
+                decl.SetFile(sc.comp_unit->GetSupportFiles().GetFileSpecAtIndex(
+                    form_value.Unsigned()));
                 break;
 
               case DW_AT_decl_line:
@@ -1295,10 +1293,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
         if (die.HasChildren()) {
           bool skip_artificial = true;
-          ParseChildParameters(sc, containing_decl_ctx, die, skip_artificial,
-                               is_static, is_variadic, has_template_params,
-                               function_param_types, function_param_decls,
-                               type_quals);
+          ParseChildParameters(*sc.comp_unit, containing_decl_ctx, die,
+                               skip_artificial, is_static, is_variadic,
+                               has_template_params, function_param_types,
+                               function_param_decls, type_quals);
         }
 
         bool ignore_containing_context = false;
@@ -2558,7 +2556,7 @@ protected:
 };
 #endif
 
-Function *DWARFASTParserClang::ParseFunctionFromDWARF(const SymbolContext &sc,
+Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
                                                       const DWARFDIE &die) {
   DWARFRangeList func_ranges;
   const char *name = NULL;
@@ -2619,9 +2617,9 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(const SymbolContext &sc,
 
         clang::DeclContext *containing_decl_ctx =
             GetClangDeclContextContainingDIE(die, nullptr);
-        ParseChildParameters(sc, containing_decl_ctx, die, true, is_static,
-                             is_variadic, has_template_params, param_types,
-                             param_decls, type_quals);
+        ParseChildParameters(comp_unit, containing_decl_ctx, die, true,
+                             is_static, is_variadic, has_template_params,
+                             param_types, param_decls, type_quals);
         sstr << "(";
         for (size_t i = 0; i < param_types.size(); i++) {
           if (i > 0)
@@ -2642,7 +2640,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(const SymbolContext &sc,
       std::unique_ptr<Declaration> decl_ap;
       if (decl_file != 0 || decl_line != 0 || decl_column != 0)
         decl_ap.reset(new Declaration(
-            sc.comp_unit->GetSupportFiles().GetFileSpecAtIndex(decl_file),
+            comp_unit.GetSupportFiles().GetFileSpecAtIndex(decl_file),
             decl_line, decl_column));
 
       SymbolFileDWARF *dwarf = die.GetDWARF();
@@ -2653,7 +2651,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(const SymbolContext &sc,
 
       if (dwarf->FixupAddress(func_range.GetBaseAddress())) {
         const user_id_t func_user_id = die.GetID();
-        func_sp.reset(new Function(sc.comp_unit,
+        func_sp.reset(new Function(&comp_unit,
                                    func_user_id, // UserID is the DIE offset
                                    func_user_id, func_name, func_type,
                                    func_range)); // first address range
@@ -2661,7 +2659,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(const SymbolContext &sc,
         if (func_sp.get() != NULL) {
           if (frame_base.IsValid())
             func_sp->GetFrameBaseExpression() = frame_base;
-          sc.comp_unit->AddFunction(func_sp);
+          comp_unit.AddFunction(func_sp);
           return func_sp.get();
         }
       }
@@ -3310,7 +3308,7 @@ bool DWARFASTParserClang::ParseChildMembers(
 }
 
 size_t DWARFASTParserClang::ParseChildParameters(
-    const SymbolContext &sc, clang::DeclContext *containing_decl_ctx,
+    CompileUnit &comp_unit, clang::DeclContext *containing_decl_ctx,
     const DWARFDIE &parent_die, bool skip_artificial, bool &is_static,
     bool &is_variadic, bool &has_template_params,
     std::vector<CompilerType> &function_param_types,
@@ -3342,7 +3340,7 @@ size_t DWARFASTParserClang::ParseChildParameters(
           if (attributes.ExtractFormValueAtIndex(i, form_value)) {
             switch (attr) {
             case DW_AT_decl_file:
-              decl.SetFile(sc.comp_unit->GetSupportFiles().GetFileSpecAtIndex(
+              decl.SetFile(comp_unit.GetSupportFiles().GetFileSpecAtIndex(
                   form_value.Unsigned()));
               break;
             case DW_AT_decl_line:

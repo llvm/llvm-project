@@ -757,15 +757,15 @@ ObjCDeallocChecker::ObjCDeallocChecker()
 
   MissingReleaseBugType.reset(
       new BugType(this, "Missing ivar release (leak)",
-                  categories::MemoryCoreFoundationObjectiveC));
+                  categories::MemoryRefCount));
 
   ExtraReleaseBugType.reset(
       new BugType(this, "Extra ivar release",
-                  categories::MemoryCoreFoundationObjectiveC));
+                  categories::MemoryRefCount));
 
   MistakenDeallocBugType.reset(
       new BugType(this, "Mistaken dealloc",
-                  categories::MemoryCoreFoundationObjectiveC));
+                  categories::MemoryRefCount));
 }
 
 void ObjCDeallocChecker::initIdentifierInfoAndSelectors(

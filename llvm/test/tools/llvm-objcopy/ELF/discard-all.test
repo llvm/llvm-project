@@ -3,7 +3,7 @@
 # RUN: llvm-objcopy --discard-all %t %t2
 # Verify that llvm-objcopy has not modified the input.
 # RUN: cmp %t %t1
-# RUN: llvm-readobj -symbols %t2 | FileCheck %s
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s
 
 # RUN: llvm-objcopy -x %t %t3
 # Verify that llvm-objcopy has not modified the input.

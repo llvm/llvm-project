@@ -5226,6 +5226,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fwhole-program-vtables");
   }
 
+  bool RequiresSplitLTOUnit = WholeProgramVTables || Sanitize.needsLTO();
+  bool SplitLTOUnit =
+      Args.hasFlag(options::OPT_fsplit_lto_unit,
+                   options::OPT_fno_split_lto_unit, RequiresSplitLTOUnit);
+  if (RequiresSplitLTOUnit && !SplitLTOUnit)
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << "-fno-split-lto-unit"
+        << (WholeProgramVTables ? "-fwhole-program-vtables" : "-fsanitize=cfi");
+  if (SplitLTOUnit)
+    CmdArgs.push_back("-fsplit-lto-unit");
+
   if (Arg *A = Args.getLastArg(options::OPT_fexperimental_isel,
                                options::OPT_fno_experimental_isel)) {
     CmdArgs.push_back("-mllvm");

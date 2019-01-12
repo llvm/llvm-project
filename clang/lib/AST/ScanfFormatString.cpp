@@ -264,6 +264,7 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
         case LengthModifier::AsWide:
           return ArgType::Invalid();
       }
+      llvm_unreachable("Unsupported LenghtModifier Type");
 
     // Unsigned int.
     case ConversionSpecifier::oArg:
@@ -303,6 +304,7 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
         case LengthModifier::AsWide:
           return ArgType::Invalid();
       }
+      llvm_unreachable("Unsupported LenghtModifier Type");
 
     // Float.
     case ConversionSpecifier::aArg:

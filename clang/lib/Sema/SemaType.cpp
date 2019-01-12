@@ -8055,9 +8055,7 @@ QualType Sema::getElaboratedType(ElaboratedTypeKeyword Keyword,
 }
 
 QualType Sema::BuildTypeofExprType(Expr *E, SourceLocation Loc) {
-  ExprResult ER = CheckPlaceholderExpr(E);
-  if (ER.isInvalid()) return QualType();
-  E = ER.get();
+  assert(!E->hasPlaceholderType() && "unexpected placeholder");
 
   if (!getLangOpts().CPlusPlus && E->refersToBitField())
     Diag(E->getExprLoc(), diag::err_sizeof_alignof_typeof_bitfield) << 2;
@@ -8142,9 +8140,7 @@ static QualType getDecltypeForExpr(Sema &S, Expr *E) {
 
 QualType Sema::BuildDecltypeType(Expr *E, SourceLocation Loc,
                                  bool AsUnevaluated) {
-  ExprResult ER = CheckPlaceholderExpr(E);
-  if (ER.isInvalid()) return QualType();
-  E = ER.get();
+  assert(!E->hasPlaceholderType() && "unexpected placeholder");
 
   if (AsUnevaluated && CodeSynthesisContexts.empty() &&
       E->HasSideEffects(Context, false)) {

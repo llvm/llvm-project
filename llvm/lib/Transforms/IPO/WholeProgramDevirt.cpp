@@ -1563,6 +1563,17 @@ bool DevirtModule::run() {
       M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load));
   Function *AssumeFunc = M.getFunction(Intrinsic::getName(Intrinsic::assume));
 
+  // If only some of the modules were split, we cannot correctly handle
+  // code that contains type tests or type checked loads.
+  if ((ExportSummary && ExportSummary->partiallySplitLTOUnits()) ||
+      (ImportSummary && ImportSummary->partiallySplitLTOUnits())) {
+    if ((TypeTestFunc && !TypeTestFunc->use_empty()) ||
+        (TypeCheckedLoadFunc && !TypeCheckedLoadFunc->use_empty()))
+      report_fatal_error("inconsistent LTO Unit splitting with llvm.type.test "
+                         "or llvm.type.checked.load");
+    return false;
+  }
+
   // Normally if there are no users of the devirtualization intrinsics in the
   // module, this pass has nothing to do. But if we are exporting, we also need
   // to handle any users that appear only in the function summaries.

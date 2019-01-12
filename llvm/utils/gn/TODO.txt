@@ -17,8 +17,6 @@ Ideas for things to do:
 - one-build-dir bootstrap builds using GN's toolchain feature
 
 - move clang_tablegen into lib/ for private files
-- add write_cmake_config() template, use it throughout where
-  write_cmake_config.py is called
 - add dead code stripping
 - move run_tablegen.py from build to tablegen folder
 - figure out why -Iclang/Support gets added so often

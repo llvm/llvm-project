@@ -65,6 +65,29 @@ public:
   SrcMgr::CharacteristicKind FileType;
 };
 
+class CondDirectiveCallbacks : public PPCallbacks {
+public:
+  struct Result {
+    SourceRange ConditionRange;
+    ConditionValueKind ConditionValue;
+
+    Result(SourceRange R, ConditionValueKind K)
+        : ConditionRange(R), ConditionValue(K) {}
+  };
+
+  std::vector<Result> Results;
+
+  void If(SourceLocation Loc, SourceRange ConditionRange,
+          ConditionValueKind ConditionValue) override {
+    Results.emplace_back(ConditionRange, ConditionValue);
+  }
+
+  void Elif(SourceLocation Loc, SourceRange ConditionRange,
+            ConditionValueKind ConditionValue, SourceLocation IfLoc) override {
+    Results.emplace_back(ConditionRange, ConditionValue);
+  }
+};
+
 // Stub to collect data from PragmaOpenCLExtension callbacks.
 class PragmaOpenCLExtensionCallbacks : public PPCallbacks {
 public:
@@ -137,6 +160,15 @@ protected:
     return StringRef(B, E - B);
   }
 
+  StringRef GetSourceStringToEnd(CharSourceRange Range) {
+    const char *B = SourceMgr.getCharacterData(Range.getBegin());
+    const char *E = SourceMgr.getCharacterData(Range.getEnd());
+
+    return StringRef(
+        B,
+        E - B + Lexer::MeasureTokenLength(Range.getEnd(), SourceMgr, LangOpts));
+  }
+
   // Run lexer over SourceText and collect FilenameRange from
   // the InclusionDirective callback.
   CharSourceRange InclusionDirectiveFilenameRange(const char *SourceText,
@@ -197,6 +229,36 @@ protected:
 
     // Callbacks have been executed at this point -- return filename range.
     return Callbacks;
+  }
+
+  std::vector<CondDirectiveCallbacks::Result>
+  DirectiveExprRange(StringRef SourceText) {
+    TrivialModuleLoader ModLoader;
+    MemoryBufferCache PCMCache;
+    std::unique_ptr<llvm::MemoryBuffer> Buf =
+        llvm::MemoryBuffer::getMemBuffer(SourceText);
+    SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
+    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                            Diags, LangOpts, Target.get());
+    Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                    SourceMgr, PCMCache, HeaderInfo, ModLoader,
+                    /*IILookup =*/nullptr,
+                    /*OwnsHeaderSearch =*/false);
+    PP.Initialize(*Target);
+    auto *Callbacks = new CondDirectiveCallbacks;
+    PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(Callbacks));
+
+    // Lex source text.
+    PP.EnterMainSourceFile();
+
+    while (true) {
+      Token Tok;
+      PP.Lex(Tok);
+      if (Tok.is(tok::eof))
+        break;
+    }
+
+    return Callbacks->Results;
   }
 
   PragmaOpenCLExtensionCallbacks::CallbackParameters
@@ -368,4 +430,59 @@ TEST_F(PPCallbacksTest, OpenCLExtensionPragmaDisabled) {
   ASSERT_EQ(ExpectedState, Parameters.State);
 }
 
-} // anonoymous namespace
+TEST_F(PPCallbacksTest, DirectiveExprRanges) {
+  const auto &Results1 = DirectiveExprRange("#if FLUZZY_FLOOF\n#endif\n");
+  EXPECT_EQ(Results1.size(), 1U);
+  EXPECT_EQ(
+      GetSourceStringToEnd(CharSourceRange(Results1[0].ConditionRange, false)),
+      "FLUZZY_FLOOF");
+
+  const auto &Results2 = DirectiveExprRange("#if 1 + 4 < 7\n#endif\n");
+  EXPECT_EQ(Results2.size(), 1U);
+  EXPECT_EQ(
+      GetSourceStringToEnd(CharSourceRange(Results2[0].ConditionRange, false)),
+      "1 + 4 < 7");
+
+  const auto &Results3 = DirectiveExprRange("#if 1 + \\\n  2\n#endif\n");
+  EXPECT_EQ(Results3.size(), 1U);
+  EXPECT_EQ(
+      GetSourceStringToEnd(CharSourceRange(Results3[0].ConditionRange, false)),
+      "1 + \\\n  2");
+
+  const auto &Results4 = DirectiveExprRange("#if 0\n#elif FLOOFY\n#endif\n");
+  EXPECT_EQ(Results4.size(), 2U);
+  EXPECT_EQ(
+      GetSourceStringToEnd(CharSourceRange(Results4[0].ConditionRange, false)),
+      "0");
+  EXPECT_EQ(
+      GetSourceStringToEnd(CharSourceRange(Results4[1].ConditionRange, false)),
+      "FLOOFY");
+
+  const auto &Results5 = DirectiveExprRange("#if 1\n#elif FLOOFY\n#endif\n");
+  EXPECT_EQ(Results5.size(), 2U);
+  EXPECT_EQ(
+      GetSourceStringToEnd(CharSourceRange(Results5[0].ConditionRange, false)),
+      "1");
+  EXPECT_EQ(
+      GetSourceStringToEnd(CharSourceRange(Results5[1].ConditionRange, false)),
+      "FLOOFY");
+
+  const auto &Results6 =
+      DirectiveExprRange("#if defined(FLUZZY_FLOOF)\n#endif\n");
+  EXPECT_EQ(Results6.size(), 1U);
+  EXPECT_EQ(
+      GetSourceStringToEnd(CharSourceRange(Results6[0].ConditionRange, false)),
+      "defined(FLUZZY_FLOOF)");
+
+  const auto &Results7 =
+      DirectiveExprRange("#if 1\n#elif defined(FLOOFY)\n#endif\n");
+  EXPECT_EQ(Results7.size(), 2U);
+  EXPECT_EQ(
+      GetSourceStringToEnd(CharSourceRange(Results7[0].ConditionRange, false)),
+      "1");
+  EXPECT_EQ(
+      GetSourceStringToEnd(CharSourceRange(Results7[1].ConditionRange, false)),
+      "defined(FLOOFY)");
+}
+
+} // namespace

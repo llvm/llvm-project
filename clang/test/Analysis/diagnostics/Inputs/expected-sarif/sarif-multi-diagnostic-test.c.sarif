@@ -7,7 +7,7 @@
           "fileLocation": {
             "uri": "file:sarif-multi-diagnostic-test.c"
           },
-          "length": 665,
+          "length": 667,
           "mimeType": "text/plain",
           "roles": [
             "resultFile"

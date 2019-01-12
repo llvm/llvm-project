@@ -38,6 +38,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_suppressions.cc
   sanitizer_tls_get_addr.cc
   sanitizer_thread_registry.cc
+  sanitizer_type_traits.cc
   sanitizer_win.cc)
 
 if(UNIX AND NOT APPLE AND NOT OS_NAME MATCHES "SunOS")
@@ -195,7 +196,6 @@ set(SANITIZER_COMMON_DEFINITIONS)
 
 include(CheckIncludeFile)
 append_have_file_definition(rpc/xdr.h HAVE_RPC_XDR_H SANITIZER_COMMON_DEFINITIONS)
-append_have_file_definition(tirpc/rpc/xdr.h HAVE_TIRPC_RPC_XDR_H SANITIZER_COMMON_DEFINITIONS)
 
 set(SANITIZER_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(OFF SANITIZER_CFLAGS)

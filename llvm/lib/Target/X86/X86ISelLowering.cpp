@@ -8307,10 +8307,20 @@ static bool isHopBuildVector(const BuildVectorSDNode *BV, SelectionDAG &DAG,
 static SDValue getHopForBuildVector(const BuildVectorSDNode *BV,
                                     SelectionDAG &DAG, unsigned HOpcode,
                                     SDValue V0, SDValue V1) {
-  // TODO: We should extract/insert to match the size of the build vector.
+  // If either input vector is not the same size as the build vector,
+  // extract/insert the low bits to the correct size.
+  // This is free (examples: zmm --> xmm, xmm --> ymm).
   MVT VT = BV->getSimpleValueType(0);
-  if (V0.getValueType() != VT || V1.getValueType() != VT)
-    return SDValue();
+  unsigned Width = VT.getSizeInBits();
+  if (V0.getValueSizeInBits() > Width)
+    V0 = extractSubVector(V0, 0, DAG, SDLoc(BV), Width);
+  else if (V0.getValueSizeInBits() < Width)
+    V0 = insertSubVector(DAG.getUNDEF(VT), V0, 0, DAG, SDLoc(BV), Width);
+
+  if (V1.getValueSizeInBits() > Width)
+    V1 = extractSubVector(V1, 0, DAG, SDLoc(BV), Width);
+  else if (V1.getValueSizeInBits() < Width)
+    V1 = insertSubVector(DAG.getUNDEF(VT), V1, 0, DAG, SDLoc(BV), Width);
 
   return DAG.getNode(HOpcode, SDLoc(BV), VT, V0, V1);
 }
@@ -16296,34 +16306,25 @@ static SDValue ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG,
   }
 
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  if (IdxVal == 0) // the operation is legal
+    return Op;
 
-  // If the kshift instructions of the correct width aren't natively supported
-  // then we need to promote the vector to the native size to get the correct
-  // zeroing behavior.
-  if (VecVT.getVectorNumElements() < 16) {
-    VecVT = MVT::v16i1;
-    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v16i1,
-                      DAG.getUNDEF(VecVT), Vec,
+  // Extend to natively supported kshift.
+  unsigned NumElems = VecVT.getVectorNumElements();
+  MVT WideVecVT = VecVT;
+  if ((!Subtarget.hasDQI() && NumElems == 8) || NumElems < 8) {
+    WideVecVT = Subtarget.hasDQI() ? MVT::v8i1 : MVT::v16i1;
+    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideVecVT,
+                      DAG.getUNDEF(WideVecVT), Vec,
                       DAG.getIntPtrConstant(0, dl));
   }
 
-  // Extracts from element 0 are always allowed.
-  if (IdxVal != 0) {
-    // Use kshiftr instruction to move to the lower element.
-    Vec = DAG.getNode(X86ISD::KSHIFTR, dl, VecVT, Vec,
-                      DAG.getConstant(IdxVal, dl, MVT::i8));
-  }
+  // Use kshiftr instruction to move to the lower element.
+  Vec = DAG.getNode(X86ISD::KSHIFTR, dl, WideVecVT, Vec,
+                    DAG.getConstant(IdxVal, dl, MVT::i8));
 
-  // Shrink to v16i1 since that's always legal.
-  if (VecVT.getVectorNumElements() > 16) {
-    VecVT = MVT::v16i1;
-    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VecVT, Vec,
-                      DAG.getIntPtrConstant(0, dl));
-  }
-
-  // Convert to a bitcast+aext/trunc.
-  MVT CastVT = MVT::getIntegerVT(VecVT.getVectorNumElements());
-  return DAG.getAnyExtOrTrunc(DAG.getBitcast(CastVT, Vec), dl, EltVT);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, Op.getValueType(), Vec,
+                     DAG.getIntPtrConstant(0, dl));
 }
 
 SDValue
@@ -20877,34 +20878,17 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
     } else if (Cond.getOpcode() == ISD::SETCC &&
                cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETUNE) {
       // For FCMP_UNE, we can emit
-      // two branches instead of an explicit AND instruction with a
-      // separate test. However, we only do this if this block doesn't
-      // have a fall-through edge, because this requires an explicit
-      // jmp when the condition is false.
-      if (Op.getNode()->hasOneUse()) {
-        SDNode *User = *Op.getNode()->use_begin();
-        // Look for an unconditional branch following this conditional branch.
-        // We need this because we need to reverse the successors in order
-        // to implement FCMP_UNE.
-        if (User->getOpcode() == ISD::BR) {
-          SDValue FalseBB = User->getOperand(1);
-          SDNode *NewBR =
-            DAG.UpdateNodeOperands(User, User->getOperand(0), Dest);
-          assert(NewBR == User);
-          (void)NewBR;
-
-          SDValue Cmp = DAG.getNode(X86ISD::CMP, dl, MVT::i32,
-                                    Cond.getOperand(0), Cond.getOperand(1));
-          Cmp = ConvertCmpIfNecessary(Cmp, DAG);
-          CC = DAG.getConstant(X86::COND_NE, dl, MVT::i8);
-          Chain = DAG.getNode(X86ISD::BRCOND, dl, Op.getValueType(),
-                              Chain, Dest, CC, Cmp);
-          CC = DAG.getConstant(X86::COND_NP, dl, MVT::i8);
-          Cond = Cmp;
-          addTest = false;
-          Dest = FalseBB;
-        }
-      }
+      // two branches instead of an explicit OR instruction with a
+      // separate test.
+      SDValue Cmp = DAG.getNode(X86ISD::CMP, dl, MVT::i32,
+                                Cond.getOperand(0), Cond.getOperand(1));
+      Cmp = ConvertCmpIfNecessary(Cmp, DAG);
+      CC = DAG.getConstant(X86::COND_NE, dl, MVT::i8);
+      Chain = DAG.getNode(X86ISD::BRCOND, dl, Op.getValueType(),
+                          Chain, Dest, CC, Cmp);
+      CC = DAG.getConstant(X86::COND_P, dl, MVT::i8);
+      Cond = Cmp;
+      addTest = false;
     }
   }
 
@@ -33964,11 +33948,14 @@ static SDValue combineSelectOfTwoConstants(SDNode *N, SelectionDAG &DAG) {
 /// If this is a *dynamic* select (non-constant condition) and we can match
 /// this node with one of the variable blend instructions, restructure the
 /// condition so that blends can use the high (sign) bit of each element.
+/// This function will also call SimplfiyDemandedBits on already created
+/// SHRUNKBLENDS to perform additional simplifications.
 static SDValue combineVSelectToShrunkBlend(SDNode *N, SelectionDAG &DAG,
                                            TargetLowering::DAGCombinerInfo &DCI,
                                            const X86Subtarget &Subtarget) {
   SDValue Cond = N->getOperand(0);
-  if (N->getOpcode() != ISD::VSELECT ||
+  if ((N->getOpcode() != ISD::VSELECT &&
+       N->getOpcode() != X86ISD::SHRUNKBLEND) ||
       ISD::isBuildVectorOfConstantSDNodes(Cond.getNode()))
     return SDValue();
 
@@ -34010,7 +33997,9 @@ static SDValue combineVSelectToShrunkBlend(SDNode *N, SelectionDAG &DAG,
   // TODO: Add other opcodes eventually lowered into BLEND.
   for (SDNode::use_iterator UI = Cond->use_begin(), UE = Cond->use_end();
        UI != UE; ++UI)
-    if (UI->getOpcode() != ISD::VSELECT || UI.getOperandNo() != 0)
+    if ((UI->getOpcode() != ISD::VSELECT &&
+         UI->getOpcode() != X86ISD::SHRUNKBLEND) ||
+        UI.getOperandNo() != 0)
       return SDValue();
 
   APInt DemandedMask(APInt::getSignMask(BitWidth));
@@ -34026,6 +34015,9 @@ static SDValue combineVSelectToShrunkBlend(SDNode *N, SelectionDAG &DAG,
   // optimizations as we messed with the actual expectation for the vector
   // boolean values.
   for (SDNode *U : Cond->uses()) {
+    if (U->getOpcode() == X86ISD::SHRUNKBLEND)
+      continue;
+
     SDValue SB = DAG.getNode(X86ISD::SHRUNKBLEND, SDLoc(U), U->getValueType(0),
                              Cond, U->getOperand(1), U->getOperand(2));
     DAG.ReplaceAllUsesOfValueWith(SDValue(U, 0), SB);
@@ -41421,6 +41413,15 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
       if (C->getAPIntValue().isOneValue())
         return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), MVT::v1i1,
                            Src.getOperand(0));
+
+  // Combine scalar_to_vector of an extract_vector_elt into an extract_subvec.
+  if (VT == MVT::v1i1 && Src.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+      Src.hasOneUse() && Src.getOperand(0).getValueType().isVector() &&
+      Src.getOperand(0).getValueType().getVectorElementType() == MVT::i1)
+    if (auto *C = dyn_cast<ConstantSDNode>(Src.getOperand(1)))
+      if (C->isNullValue())
+        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), VT,
+                           Src.getOperand(0), Src.getOperand(1));
 
   return SDValue();
 }

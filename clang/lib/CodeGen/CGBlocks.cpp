@@ -551,7 +551,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
   if (block->capturesCXXThis()) {
     assert(CGF && CGF->CurFuncDecl && isa<CXXMethodDecl>(CGF->CurFuncDecl) &&
            "Can't capture 'this' outside a method");
-    QualType thisType = cast<CXXMethodDecl>(CGF->CurFuncDecl)->getThisType(C);
+    QualType thisType = cast<CXXMethodDecl>(CGF->CurFuncDecl)->getThisType();
 
     // Theoretically, this could be in a different address space, so
     // don't assume standard pointer size/align.

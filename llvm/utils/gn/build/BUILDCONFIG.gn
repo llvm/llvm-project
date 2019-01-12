@@ -26,7 +26,9 @@ set_defaults("source_set") {
 }
 
 if (host_os == "win") {
-  set_default_toolchain("//llvm/utils/gn/build/toolchain:win")
+  host_toolchain = "//llvm/utils/gn/build/toolchain:win"
 } else {
-  set_default_toolchain("//llvm/utils/gn/build/toolchain:unix")
+  host_toolchain = "//llvm/utils/gn/build/toolchain:unix"
 }
+
+set_default_toolchain(host_toolchain)

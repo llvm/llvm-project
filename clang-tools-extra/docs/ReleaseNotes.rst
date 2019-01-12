@@ -244,6 +244,11 @@ Improvements to clang-tidy
   Detects usage of magic numbers, numbers that are used as literals instead of
   introduced via constants or symbols.
 
+- New :doc:`readability-redundant-preprocessor
+  <clang-tidy/checks/readability-redundant-preprocessor>` check.
+
+  Finds potentially redundant preprocessor directives.
+
 - New :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability-uppercase-literal-suffix>` check.
 

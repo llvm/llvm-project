@@ -103,7 +103,7 @@ swap(pair<T1, T2>& x, pair<T1, T2>& y) noexcept(noexcept(x.swap(y)));
 struct piecewise_construct_t { };
 inline constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
 
-template <class T> class tuple_size;
+template <class T> struct tuple_size;
 template <size_t I, class T> class tuple_element;
 
 template <class T1, class T2> struct tuple_size<pair<T1, T2> >;
@@ -683,7 +683,7 @@ make_pair(_T1 __x, _T2 __y)
 #endif  // _LIBCPP_CXX03_LANG
 
 template <class _T1, class _T2>
-  class _LIBCPP_TEMPLATE_VIS tuple_size<pair<_T1, _T2> >
+  struct _LIBCPP_TEMPLATE_VIS tuple_size<pair<_T1, _T2> >
     : public integral_constant<size_t, 2> {};
 
 template <size_t _Ip, class _T1, class _T2>

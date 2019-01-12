@@ -36,6 +36,8 @@ ELF Improvements
 * lld/Hexagon can now link Linux kernel and musl libc for Qualcomm
   Hexagon ISA.
 
+* Initial MSP430 ISA support has landed.
+
 * The following flags have been added: ``-z interpose``, ``-z global``
 
 COFF Improvements

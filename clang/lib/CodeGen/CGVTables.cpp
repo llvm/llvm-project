@@ -231,7 +231,7 @@ void CodeGenFunction::StartThunk(llvm::Function *Fn, GlobalDecl GD,
 
   // Build FunctionArgs.
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
-  QualType ThisType = MD->getThisType(getContext());
+  QualType ThisType = MD->getThisType();
   const FunctionProtoType *FPT = MD->getType()->getAs<FunctionProtoType>();
   QualType ResultType;
   if (IsUnprototyped)
@@ -310,7 +310,7 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::Constant *CalleePtr,
 
   // Start building CallArgs.
   CallArgList CallArgs;
-  QualType ThisType = MD->getThisType(getContext());
+  QualType ThisType = MD->getThisType();
   CallArgs.add(RValue::get(AdjustedThisPtr), ThisType);
 
   if (isa<CXXDestructorDecl>(MD))

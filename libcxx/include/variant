@@ -23,8 +23,8 @@ namespace std {
 
     // 20.7.2.1, constructors
     constexpr variant() noexcept(see below);
-    variant(const variant&);
-    variant(variant&&) noexcept(see below);
+    variant(const variant&);                // constexpr in C++20
+    variant(variant&&) noexcept(see below); // constexpr in C++20
 
     template <class T> constexpr variant(T&&) noexcept(see below);
 
@@ -46,8 +46,8 @@ namespace std {
     ~variant();
 
     // 20.7.2.3, assignment
-    variant& operator=(const variant&);
-    variant& operator=(variant&&) noexcept(see below);
+    variant& operator=(const variant&);                // constexpr in C++20
+    variant& operator=(variant&&) noexcept(see below); // constexpr in C++20
 
     template <class T> variant& operator=(T&&) noexcept(see below);
 

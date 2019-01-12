@@ -18,6 +18,7 @@
 
 class DWARFDIE;
 namespace lldb_private {
+class CompileUnit;
 class ExecutionContext;
 }
 class SymbolFileDWARF;
@@ -32,7 +33,7 @@ public:
                                           bool *type_is_new_ptr) = 0;
 
   virtual lldb_private::Function *
-  ParseFunctionFromDWARF(const lldb_private::SymbolContext &sc,
+  ParseFunctionFromDWARF(lldb_private::CompileUnit &comp_unit,
                          const DWARFDIE &die) = 0;
 
   virtual bool

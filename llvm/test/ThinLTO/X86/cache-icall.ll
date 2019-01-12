@@ -4,8 +4,8 @@
 ; This affects code generated for any users of f(). Make sure that we don't pull a stale object
 ; file for %t.o from the cache.
 
-; RUN: opt -module-hash -module-summary -thinlto-bc %s -o %t.bc
-; RUN: opt -module-hash -module-summary -thinlto-bc %p/Inputs/cache-icall.ll -o %t2.bc
+; RUN: opt -module-hash -module-summary -thinlto-bc -thinlto-split-lto-unit %s -o %t.bc
+; RUN: opt -module-hash -module-summary -thinlto-bc -thinlto-split-lto-unit %p/Inputs/cache-icall.ll -o %t2.bc
 
 ; RUN: rm -Rf %t.cache && mkdir %t.cache
 

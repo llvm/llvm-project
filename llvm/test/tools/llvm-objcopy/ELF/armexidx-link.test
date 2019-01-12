@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-objcopy -remove-section=.text.bar %t %t2
-# RUN: llvm-readobj -sections %t2 | FileCheck %s
+# RUN: llvm-objcopy --remove-section=.text.bar %t %t2
+# RUN: llvm-readobj --sections %t2 | FileCheck %s
 
 # CHECK:          Index: 2
 # CHECK-NEXT:     Name: .ARM.exidx.text.foo (1)

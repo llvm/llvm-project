@@ -207,6 +207,8 @@ bool SanitizerArgs::needsUnwindTables() const {
   return Sanitizers.Mask & NeedsUnwindTables;
 }
 
+bool SanitizerArgs::needsLTO() const { return Sanitizers.Mask & NeedsLTO; }
+
 SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                              const llvm::opt::ArgList &Args) {
   SanitizerMask AllRemove = 0;  // During the loop below, the accumulated set of

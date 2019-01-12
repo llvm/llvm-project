@@ -2181,7 +2181,7 @@ QualType CXXMethodDecl::getThisType(const FunctionProtoType *FPT,
   return C.getPointerType(ClassTy);
 }
 
-QualType CXXMethodDecl::getThisType(ASTContext &C) const {
+QualType CXXMethodDecl::getThisType() const {
   // C++ 9.3.2p1: The type of this in a member function of a class X is X*.
   // If the member function is declared const, the type of this is const X*,
   // if the member function is declared volatile, the type of this is

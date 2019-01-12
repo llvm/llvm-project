@@ -7,6 +7,7 @@ import("//llvm/utils/gn/build/libs/terminfo/enable.gni")
 import("//llvm/utils/gn/build/libs/xar/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
+import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
 
 # Contains actions to create config.h, llvm-config.h, abi-breaking.h,
@@ -43,53 +44,32 @@ declare_args() {
   llvm_enable_reverse_iteration = false
 }
 
-action("abi-breaking") {
-  script = "//llvm/utils/gn/build/write_cmake_config.py"
-
-  sources = [
-    "abi-breaking.h.cmake",
-  ]
-  outputs = [
-    "$target_gen_dir/abi-breaking.h",
-  ]
-  args = [
-    "-o",
-    rebase_path(outputs[0], root_out_dir),
-
-    rebase_path(sources[0], root_out_dir),
-  ]
+write_cmake_config("abi-breaking") {
+  input = "abi-breaking.h.cmake"
+  output = "$target_gen_dir/abi-breaking.h"
+  values = []
 
   if (llvm_enable_abi_breaking_checks) {
-    args += [ "LLVM_ENABLE_ABI_BREAKING_CHECKS=1" ]
+    values += [ "LLVM_ENABLE_ABI_BREAKING_CHECKS=1" ]
   } else {
-    args += [ "LLVM_ENABLE_ABI_BREAKING_CHECKS=" ]
+    values += [ "LLVM_ENABLE_ABI_BREAKING_CHECKS=" ]
   }
 
   if (llvm_enable_reverse_iteration) {
-    args += [ "LLVM_ENABLE_REVERSE_ITERATION=1" ]
+    values += [ "LLVM_ENABLE_REVERSE_ITERATION=1" ]
   } else {
-    args += [ "LLVM_ENABLE_REVERSE_ITERATION=" ]
+    values += [ "LLVM_ENABLE_REVERSE_ITERATION=" ]
   }
 }
 
-action("config") {
-  script = "//llvm/utils/gn/build/write_cmake_config.py"
-
+write_cmake_config("config") {
   public_deps = [
     ":llvm-config",
   ]
 
-  sources = [
-    "config.h.cmake",
-  ]
-  outputs = [
-    "$target_gen_dir/config.h",
-  ]
-  args = [
-    "-o",
-    rebase_path(outputs[0], root_out_dir),
-    rebase_path(sources[0], root_out_dir),
-
+  input = "config.h.cmake"
+  output = "$target_gen_dir/config.h"
+  values = [
     "BUG_REPORT_URL=https://bugs.llvm.org/",
     "ENABLE_BACKTRACES=1",
     "ENABLE_CRASH_OVERRIDES=1",
@@ -149,7 +129,7 @@ action("config") {
   ]
 
   if (host_os == "linux") {
-    args += [
+    values += [
       "HAVE_FUTIMENS=1",
       "HAVE_LINK_H=1",
       "HAVE_LSEEK64=1",
@@ -161,7 +141,7 @@ action("config") {
       "HAVE_VALGRIND_VALGRIND_H=1",
     ]
   } else {
-    args += [
+    values += [
       "HAVE_FUTIMENS=",
       "HAVE_LINK_H=",
       "HAVE_LSEEK64=",
@@ -175,7 +155,7 @@ action("config") {
   }
 
   if (host_os == "mac") {
-    args += [
+    values += [
       "HAVE_CRASHREPORTER_INFO=1",
       "HAVE_DECL_ARC4RANDOM=1",
       "HAVE_DLADDR=1",
@@ -186,7 +166,7 @@ action("config") {
       "HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC=1",
     ]
   } else {
-    args += [
+    values += [
       "HAVE_CRASHREPORTER_INFO=",
       "HAVE_DECL_ARC4RANDOM=",
       "HAVE_DLADDR=",
@@ -199,7 +179,7 @@ action("config") {
   }
 
   if (host_os == "win") {
-    args += [
+    values += [
       "HAVE_BACKTRACE=",
       "HAVE_DECL_STRERROR_S=1",
       "HAVE_DLFCN_H=",
@@ -241,7 +221,7 @@ action("config") {
     ]
   } else {
     # POSIX-y system defaults.
-    args += [
+    values += [
       "HAVE_BACKTRACE=1",
       "HAVE_DECL_STRERROR_S=",
       "HAVE_DLFCN_H=1",
@@ -284,58 +264,48 @@ action("config") {
   }
 
   if (host_os == "linux") {
-    args += [ "LTDL_SHLIB_EXT=.so" ]
+    values += [ "LTDL_SHLIB_EXT=.so" ]
   } else if (host_os == "mac") {
-    args += [ "LTDL_SHLIB_EXT=.dylib" ]
+    values += [ "LTDL_SHLIB_EXT=.dylib" ]
   } else if (host_os == "win") {
-    args += [ "LTDL_SHLIB_EXT=.dll" ]
+    values += [ "LTDL_SHLIB_EXT=.dll" ]
   }
 
   if (llvm_enable_libedit) {
-    args += [ "HAVE_LIBEDIT=1" ]
+    values += [ "HAVE_LIBEDIT=1" ]
   } else {
-    args += [ "HAVE_LIBEDIT=" ]
+    values += [ "HAVE_LIBEDIT=" ]
   }
 
   if (llvm_enable_libxar) {
-    args += [ "HAVE_LIBXAR=1" ]
+    values += [ "HAVE_LIBXAR=1" ]
   } else {
-    args += [ "HAVE_LIBXAR=" ]
+    values += [ "HAVE_LIBXAR=" ]
   }
 
   if (llvm_enable_terminfo) {
-    args += [ "HAVE_TERMINFO=1" ]
+    values += [ "HAVE_TERMINFO=1" ]
   } else {
-    args += [ "HAVE_TERMINFO=" ]
+    values += [ "HAVE_TERMINFO=" ]
   }
 
   if (llvm_enable_zlib) {
-    args += [ "LLVM_ENABLE_ZLIB=1" ]
+    values += [ "LLVM_ENABLE_ZLIB=1" ]
   } else {
-    args += [ "LLVM_ENABLE_ZLIB=" ]
+    values += [ "LLVM_ENABLE_ZLIB=" ]
   }
 
   if (llvm_enable_libxml2) {
-    args += [ "LLVM_LIBXML2_ENABLED=1" ]
+    values += [ "LLVM_LIBXML2_ENABLED=1" ]
   } else {
-    args += [ "LLVM_LIBXML2_ENABLED=" ]
+    values += [ "LLVM_LIBXML2_ENABLED=" ]
   }
 }
 
-action("llvm-config") {
-  script = "//llvm/utils/gn/build/write_cmake_config.py"
-
-  sources = [
-    "llvm-config.h.cmake",
-  ]
-  outputs = [
-    "$target_gen_dir/llvm-config.h",
-  ]
-  args = [
-    "-o",
-    rebase_path(outputs[0], root_out_dir),
-    rebase_path(sources[0], root_out_dir),
-
+write_cmake_config("llvm-config") {
+  input = "llvm-config.h.cmake"
+  output = "$target_gen_dir/llvm-config.h"
+  values = [
     "LLVM_ENABLE_DUMP=",
     "LINK_POLLY_INTO_TOOLS=",
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
@@ -359,15 +329,15 @@ action("llvm-config") {
   ]
 
   if (host_os == "win") {
-    args += [ "LLVM_ON_UNIX=" ]
+    values += [ "LLVM_ON_UNIX=" ]
   } else {
-    args += [ "LLVM_ON_UNIX=1" ]
+    values += [ "LLVM_ON_UNIX=1" ]
   }
 
   if (llvm_enable_threads) {
-    args += [ "LLVM_ENABLE_THREADS=1" ]
+    values += [ "LLVM_ENABLE_THREADS=1" ]
   } else {
-    args += [ "LLVM_ENABLE_THREADS=" ]
+    values += [ "LLVM_ENABLE_THREADS=" ]
   }
 }
 
@@ -378,16 +348,10 @@ template("write_target_def_file") {
   assert(defined(invoker.key), "must set 'key' in $target_name")
   assert(defined(invoker.value), "must set 'value' in $target_name")
 
-  action(target_name) {
+  write_cmake_config(target_name) {
     visibility = [ ":write_target_def_files" ]
-    script = "//llvm/utils/gn/build/write_cmake_config.py"
-
-    sources = [
-      "$target_name.in",
-    ]
-    outputs = [
-      "$target_gen_dir/$target_name",
-    ]
+    input = "$target_name.in"
+    output = "$target_gen_dir/$target_name"
 
     # Build something like
     # `LLVM_ENUM_ASM_PARSERS=LLVM_ASM_PARSER(ARM)\nLLVM_ASM_PARSER(X86)\n`. Note
@@ -397,10 +361,7 @@ template("write_target_def_file") {
     foreach(target, llvm_targets_to_build) {
       value = "$value${invoker.value}($target)\n"
     }
-    args = [
-      "-o",
-      rebase_path(outputs[0], root_out_dir),
-      rebase_path(sources[0], root_out_dir),
+    values = [
       "${invoker.key}=$value",
     ]
   }

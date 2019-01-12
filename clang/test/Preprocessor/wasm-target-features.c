@@ -8,6 +8,15 @@
 // SIMD128:#define __wasm_simd128__ 1{{$}}
 //
 // RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm32-unknown-unknown -munimplemented-simd128 \
+// RUN:   | FileCheck %s -check-prefix=SIMD128-UNIMPLEMENTED
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm64-unknown-unknown -munimplemented-simd128 \
+// RUN:   | FileCheck %s -check-prefix=SIMD128-UNIMPLEMENTED
+//
+// SIMD128-UNIMPLEMENTED:#define __wasm_unimplemented_simd128__ 1{{$}}
+//
+// RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mcpu=mvp \
 // RUN:   | FileCheck %s -check-prefix=MVP
 // RUN: %clang -E -dM %s -o - 2>&1 \

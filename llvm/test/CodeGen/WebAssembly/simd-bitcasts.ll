@@ -1,6 +1,6 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-keep-registers -wasm-disable-explicit-locals -wasm-enable-unimplemented-simd -mattr=+simd128,+sign-ext | FileCheck %s --check-prefixes CHECK,SIMD128
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-keep-registers -wasm-disable-explicit-locals -mattr=+simd128,+sign-ext | FileCheck %s --check-prefixes CHECK,SIMD128-VM
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-keep-registers -wasm-disable-explicit-locals -mattr=-simd128,+sign-ext | FileCheck %s --check-prefixes CHECK,NO-SIMD128
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-keep-registers -wasm-disable-explicit-locals -mattr=+unimplemented-simd128 | FileCheck %s --check-prefixes CHECK,SIMD128
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-keep-registers -wasm-disable-explicit-locals -mattr=+simd128 | FileCheck %s --check-prefixes CHECK,SIMD128-VM
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-keep-registers -wasm-disable-explicit-locals | FileCheck %s --check-prefixes CHECK,NO-SIMD128
 
 ; Test that bitcasts between vector types are lowered to zero instructions
 

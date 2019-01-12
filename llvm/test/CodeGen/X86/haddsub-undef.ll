@@ -737,21 +737,11 @@ define <4 x float> @v8f32_inputs_v4f32_output_0101(<8 x float> %a, <8 x float> %
 ; SSE-NEXT:    haddps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-SLOW-LABEL: v8f32_inputs_v4f32_output_0101:
-; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; AVX-SLOW-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vaddss %xmm3, %xmm1, %xmm1
-; AVX-SLOW-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
-; AVX-SLOW-NEXT:    vzeroupper
-; AVX-SLOW-NEXT:    retq
-;
-; AVX-FAST-LABEL: v8f32_inputs_v4f32_output_0101:
-; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
-; AVX-FAST-NEXT:    vzeroupper
-; AVX-FAST-NEXT:    retq
+; AVX-LABEL: v8f32_inputs_v4f32_output_0101:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %a0 = extractelement <8 x float> %a, i32 0
   %a1 = extractelement <8 x float> %a, i32 1
   %b0 = extractelement <8 x float> %b, i32 0
@@ -769,26 +759,11 @@ define <4 x float> @v8f32_input0_v4f32_output_0123(<8 x float> %a, <4 x float> %
 ; SSE-NEXT:    haddps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-SLOW-LABEL: v8f32_input0_v4f32_output_0123:
-; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm1[1,0]
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm3, %xmm1
-; AVX-SLOW-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
-; AVX-SLOW-NEXT:    vzeroupper
-; AVX-SLOW-NEXT:    retq
-;
-; AVX-FAST-LABEL: v8f32_input0_v4f32_output_0123:
-; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX-FAST-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX-FAST-NEXT:    vaddss %xmm1, %xmm2, %xmm1
-; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX-FAST-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm1[0]
-; AVX-FAST-NEXT:    vzeroupper
-; AVX-FAST-NEXT:    retq
+; AVX-LABEL: v8f32_input0_v4f32_output_0123:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %a0 = extractelement <8 x float> %a, i32 0
   %a1 = extractelement <8 x float> %a, i32 1
   %b2 = extractelement <4 x float> %b, i32 2
@@ -806,28 +781,11 @@ define <4 x float> @v8f32_input1_v4f32_output_2301(<4 x float> %a, <8 x float> %
 ; SSE-NEXT:    haddps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-SLOW-LABEL: v8f32_input1_v4f32_output_2301:
-; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX-SLOW-NEXT:    vaddss %xmm0, %xmm2, %xmm0
-; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; AVX-SLOW-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX-SLOW-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
-; AVX-SLOW-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
-; AVX-SLOW-NEXT:    vzeroupper
-; AVX-SLOW-NEXT:    retq
-;
-; AVX-FAST-LABEL: v8f32_input1_v4f32_output_2301:
-; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX-FAST-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX-FAST-NEXT:    vaddss %xmm0, %xmm2, %xmm0
-; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
-; AVX-FAST-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
-; AVX-FAST-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
-; AVX-FAST-NEXT:    vzeroupper
-; AVX-FAST-NEXT:    retq
+; AVX-LABEL: v8f32_input1_v4f32_output_2301:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %a2 = extractelement <4 x float> %a, i32 2
   %a3 = extractelement <4 x float> %a, i32 3
   %b0 = extractelement <8 x float> %b, i32 0
@@ -847,14 +805,7 @@ define <4 x float> @v8f32_inputs_v4f32_output_2323(<8 x float> %a, <8 x float> %
 ;
 ; AVX-LABEL: v8f32_inputs_v4f32_output_2323:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX-NEXT:    vaddss %xmm0, %xmm2, %xmm0
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX-NEXT:    vaddss %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
   %a2 = extractelement <8 x float> %a, i32 2
@@ -876,45 +827,21 @@ define <4 x float> @v16f32_inputs_v4f32_output_0123(<16 x float> %a, <16 x float
 ;
 ; AVX1-SLOW-LABEL: v16f32_inputs_v4f32_output_0123:
 ; AVX1-SLOW:       # %bb.0:
-; AVX1-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX1-SLOW-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm2[1,0]
-; AVX1-SLOW-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; AVX1-SLOW-NEXT:    vaddss %xmm2, %xmm3, %xmm2
-; AVX1-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
-; AVX1-SLOW-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm2[0]
+; AVX1-SLOW-NEXT:    vhaddps %xmm2, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vzeroupper
 ; AVX1-SLOW-NEXT:    retq
 ;
 ; AVX1-FAST-LABEL: v16f32_inputs_v4f32_output_0123:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm2[1,0]
-; AVX1-FAST-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; AVX1-FAST-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; AVX1-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm1[0]
+; AVX1-FAST-NEXT:    vhaddps %xmm2, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vzeroupper
 ; AVX1-FAST-NEXT:    retq
 ;
-; AVX512-SLOW-LABEL: v16f32_inputs_v4f32_output_0123:
-; AVX512-SLOW:       # %bb.0:
-; AVX512-SLOW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX512-SLOW-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm1[1,0]
-; AVX512-SLOW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX512-SLOW-NEXT:    vaddss %xmm1, %xmm3, %xmm1
-; AVX512-SLOW-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX512-SLOW-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
-; AVX512-SLOW-NEXT:    vzeroupper
-; AVX512-SLOW-NEXT:    retq
-;
-; AVX512-FAST-LABEL: v16f32_inputs_v4f32_output_0123:
-; AVX512-FAST:       # %bb.0:
-; AVX512-FAST-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX512-FAST-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX512-FAST-NEXT:    vaddss %xmm1, %xmm2, %xmm1
-; AVX512-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX512-FAST-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm1[0]
-; AVX512-FAST-NEXT:    vzeroupper
-; AVX512-FAST-NEXT:    retq
+; AVX512-LABEL: v16f32_inputs_v4f32_output_0123:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %a0 = extractelement <16 x float> %a, i32 0
   %a1 = extractelement <16 x float> %a, i32 1
   %b2 = extractelement <16 x float> %b, i32 2
@@ -944,15 +871,7 @@ define <8 x float> @v16f32_inputs_v8f32_output_4567(<16 x float> %a, <16 x float
 ;
 ; AVX512-LABEL: v16f32_inputs_v8f32_output_4567:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm1[1,0]
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX512-NEXT:    vaddss %xmm1, %xmm3, %xmm1
-; AVX512-NEXT:    vaddss %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
-; AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX512-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %a4 = extractelement <16 x float> %a, i32 4
   %a5 = extractelement <16 x float> %a, i32 5

@@ -2,35 +2,35 @@
 
 # Single flags on a section with no flags:
 # RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t %t.alloc
-# RUN: llvm-readobj -sections %t.alloc | FileCheck %s --check-prefixes=CHECK,ALLOC,WRITE
+# RUN: llvm-readobj --sections %t.alloc | FileCheck %s --check-prefixes=CHECK,ALLOC,WRITE
 # RUN: llvm-objcopy --rename-section=.foo=.bar,load %t %t.load
-# RUN: llvm-readobj -sections %t.load | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-readobj --sections %t.load | FileCheck %s --check-prefixes=CHECK,WRITE
 # RUN: llvm-objcopy --rename-section=.foo=.bar,noload %t %t.noload
-# RUN: llvm-readobj -sections %t.noload | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-readobj --sections %t.noload | FileCheck %s --check-prefixes=CHECK,WRITE
 # RUN: llvm-objcopy --rename-section=.foo=.bar,readonly %t %t.readonly
-# RUN: llvm-readobj -sections %t.readonly | FileCheck %s --check-prefixes=CHECK
+# RUN: llvm-readobj --sections %t.readonly | FileCheck %s --check-prefixes=CHECK
 # RUN: llvm-objcopy --rename-section=.foo=.bar,debug %t %t.debug
-# RUN: llvm-readobj -sections %t.debug | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-readobj --sections %t.debug | FileCheck %s --check-prefixes=CHECK,WRITE
 # RUN: llvm-objcopy --rename-section=.foo=.bar,code %t %t.code
-# RUN: llvm-readobj -sections %t.code | FileCheck %s --check-prefixes=CHECK,EXEC,WRITE
+# RUN: llvm-readobj --sections %t.code | FileCheck %s --check-prefixes=CHECK,EXEC,WRITE
 # RUN: llvm-objcopy --rename-section=.foo=.bar,data %t %t.data
-# RUN: llvm-readobj -sections %t.data | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-readobj --sections %t.data | FileCheck %s --check-prefixes=CHECK,WRITE
 # RUN: llvm-objcopy --rename-section=.foo=.bar,rom %t %t.rom
-# RUN: llvm-readobj -sections %t.rom | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-readobj --sections %t.rom | FileCheck %s --check-prefixes=CHECK,WRITE
 # RUN: llvm-objcopy --rename-section=.foo=.bar,contents %t %t.contents
-# RUN: llvm-readobj -sections %t.contents | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-readobj --sections %t.contents | FileCheck %s --check-prefixes=CHECK,WRITE
 # RUN: llvm-objcopy --rename-section=.foo=.bar,merge %t %t.merge
-# RUN: llvm-readobj -sections %t.merge | FileCheck %s --check-prefixes=CHECK,MERGE,WRITE
+# RUN: llvm-readobj --sections %t.merge | FileCheck %s --check-prefixes=CHECK,MERGE,WRITE
 # RUN: llvm-objcopy --rename-section=.foo=.bar,strings %t %t.strings
-# RUN: llvm-readobj -sections %t.strings | FileCheck %s --check-prefixes=CHECK,STRINGS,WRITE
+# RUN: llvm-readobj --sections %t.strings | FileCheck %s --check-prefixes=CHECK,STRINGS,WRITE
 # RUN: llvm-objcopy --rename-section=.foo=.bar,share %t %t.share
-# RUN: llvm-readobj -sections %t.share | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-readobj --sections %t.share | FileCheck %s --check-prefixes=CHECK,WRITE
 
 # Multiple flags:
 # RUN: llvm-objcopy --rename-section=.foo=.bar,alloc,readonly,strings %t %t.alloc_ro_strings
-# RUN: llvm-readobj -sections %t.alloc_ro_strings | FileCheck %s --check-prefixes=CHECK,ALLOC,STRINGS
+# RUN: llvm-readobj --sections %t.alloc_ro_strings | FileCheck %s --check-prefixes=CHECK,ALLOC,STRINGS
 # RUN: llvm-objcopy --rename-section=.foo=.bar,alloc,code %t %t.alloc_code
-# RUN: llvm-readobj -sections %t.alloc_code | FileCheck %s --check-prefixes=CHECK,ALLOC,EXEC,WRITE
+# RUN: llvm-readobj --sections %t.alloc_code | FileCheck %s --check-prefixes=CHECK,ALLOC,EXEC,WRITE
 
 # Invalid flags:
 # RUN: not llvm-objcopy --rename-section=.foo=.bar,xyzzy %t %t.xyzzy 2>&1 | FileCheck %s --check-prefix=BAD-FLAG

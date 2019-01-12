@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,osx -analyzer-output=text -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,osx -analyzer-output=plist-multi-file %s -o %t.plist
-// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/undef-value-param.m.plist
+// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/undef-value-param.m.plist -
 
 typedef signed char BOOL;
 @protocol NSObject  - (BOOL)isEqual:(id)object; @end
