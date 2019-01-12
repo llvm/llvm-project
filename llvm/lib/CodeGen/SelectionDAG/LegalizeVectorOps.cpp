@@ -117,6 +117,12 @@ class VectorLegalizer {
   /// the remaining lanes, finally bitcasting to the proper type.
   SDValue ExpandZERO_EXTEND_VECTOR_INREG(SDValue Op);
 
+  /// Implement expand-based legalization of ABS vector operations.
+  /// If following expanding is legal/custom then do it:
+  /// (ABS x) --> (XOR (ADD x, (SRA x, sizeof(x)-1)), (SRA x, sizeof(x)-1))
+  /// else unroll the operation.
+  SDValue ExpandABS(SDValue Op);
+
   /// Expand bswap of vectors into a shuffle if legal.
   SDValue ExpandBSWAP(SDValue Op);
 
@@ -355,6 +361,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FSHR:
   case ISD::ROTL:
   case ISD::ROTR:
+  case ISD::ABS:
   case ISD::BSWAP:
   case ISD::BITREVERSE:
   case ISD::CTLZ:
@@ -749,6 +756,8 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
     return ExpandFSUB(Op);
   case ISD::SETCC:
     return UnrollVSETCC(Op);
+  case ISD::ABS:
+    return ExpandABS(Op);
   case ISD::BITREVERSE:
     return ExpandBITREVERSE(Op);
   case ISD::CTPOP:
@@ -1062,6 +1071,16 @@ SDValue VectorLegalizer::ExpandVSELECT(SDValue Op) {
   Op2 = DAG.getNode(ISD::AND, DL, VT, Op2, NotMask);
   SDValue Val = DAG.getNode(ISD::OR, DL, VT, Op1, Op2);
   return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Val);
+}
+
+SDValue VectorLegalizer::ExpandABS(SDValue Op) {
+  // Attempt to expand using TargetLowering.
+  SDValue Result;
+  if (TLI.expandABS(Op.getNode(), Result, DAG))
+    return Result;
+
+  // Otherwise go ahead and unroll.
+  return DAG.UnrollVectorOp(Op.getNode());
 }
 
 SDValue VectorLegalizer::ExpandFP_TO_UINT(SDValue Op) {

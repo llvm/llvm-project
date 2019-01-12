@@ -24,6 +24,6 @@ unittest("MCJITTests") {
   ]
 
   if (host_os == "win") {
-    sources += [ "MCJITTest.def" ]
+    sources += [ "MCJITTests.def" ]
   }
 }

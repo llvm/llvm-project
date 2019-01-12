@@ -23,8 +23,6 @@ namespace coff {
 
 using namespace object;
 
-Reader::~Reader() {}
-
 Error COFFReader::readExecutableHeaders(Object &Obj) const {
   const dos_header *DH = COFFObj.getDOSHeader();
   Obj.Is64 = COFFObj.is64();

@@ -714,10 +714,30 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           !isa<DbgInfoIntrinsic>(CI) &&
           !(CI->getCalledFunction() && TLI &&
             TLI->isFunctionVectorizable(CI->getCalledFunction()->getName()))) {
-        ORE->emit(createMissedAnalysis("CantVectorizeCall", CI)
-                  << "call instruction cannot be vectorized");
+        // If the call is a recognized math libary call, it is likely that
+        // we can vectorize it given loosened floating-point constraints.
+        LibFunc Func;
+        bool IsMathLibCall =
+            TLI && CI->getCalledFunction() &&
+            CI->getType()->isFloatingPointTy() &&
+            TLI->getLibFunc(CI->getCalledFunction()->getName(), Func) &&
+            TLI->hasOptimizedCodeGen(Func);
+
+        if (IsMathLibCall) {
+          // TODO: Ideally, we should not use clang-specific language here,
+          // but it's hard to provide meaningful yet generic advice.
+          // Also, should this be guarded by allowExtraAnalysis() and/or be part
+          // of the returned info from isFunctionVectorizable()?
+          ORE->emit(createMissedAnalysis("CantVectorizeLibcall", CI)
+              << "library call cannot be vectorized. "
+                 "Try compiling with -fno-math-errno, -ffast-math, "
+                 "or similar flags");
+        } else {
+          ORE->emit(createMissedAnalysis("CantVectorizeCall", CI)
+                    << "call instruction cannot be vectorized");
+        }
         LLVM_DEBUG(
-            dbgs() << "LV: Found a non-intrinsic, non-libfunc callsite.\n");
+            dbgs() << "LV: Found a non-intrinsic callsite.\n");
         return false;
       }
 
