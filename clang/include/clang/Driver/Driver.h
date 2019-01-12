@@ -505,6 +505,10 @@ public:
   /// GCC goes to extra lengths here to be a bit more robust.
   std::string GetTemporaryPath(StringRef Prefix, StringRef Suffix) const;
 
+  /// GetTemporaryDirectory - Return the pathname of a temporary directory to
+  /// use as part of compilation; the directory will have the given prefix.
+  std::string GetTemporaryDirectory(StringRef Prefix) const;
+
   /// Return the pathname of the pch file in clang-cl mode.
   std::string GetClPchPath(Compilation &C, StringRef BaseName) const;
 

@@ -888,6 +888,21 @@ Similar to ``__attribute__((ns_consumes_self))``,
 ``__attribute__((os_consumes_this))`` specifies that the method call consumes
 the reference to "this" (e.g., when attaching it to a different object supplied
 as a parameter).
+Out parameters (parameters the function is meant to write into,
+either via pointers-to-pointers or references-to-pointers)
+may be annotated with ``__attribute__((os_returns_retained))``
+or ``__attribute__((os_returns_not_retained))`` which specifies that the object
+written into the out parameter should (or respectively should not) be released
+after use.
+Since often out parameters may or may not be written depending on the exit
+code of the function,
+annotations ``__attribute__((os_returns_retained_on_zero))``
+and ``__attribute__((os_returns_retained_on_non_zero))`` specify that
+an out parameter at ``+1`` is written if and only if the function returns a zero
+(respectively non-zero) error code.
+Observe that return-code-dependent out parameter annotations are only
+available for retained out parameters, as non-retained object do not have to be
+released by the callee.
 These attributes are only used by the Clang Static Analyzer.
 
 The family of attributes ``X_returns_X_retained`` can be added to functions,

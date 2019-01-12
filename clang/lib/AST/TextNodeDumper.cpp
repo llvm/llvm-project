@@ -41,6 +41,29 @@ void TextNodeDumper::Visit(const comments::Comment *C,
                       const comments::FullComment *>::visit(C, FC);
 }
 
+void TextNodeDumper::Visit(const Attr *A) {
+  {
+    ColorScope Color(OS, ShowColors, AttrColor);
+
+    switch (A->getKind()) {
+#define ATTR(X)                                                                \
+  case attr::X:                                                                \
+    OS << #X;                                                                  \
+    break;
+#include "clang/Basic/AttrList.inc"
+    }
+    OS << "Attr";
+  }
+  dumpPointer(A);
+  dumpSourceRange(A->getRange());
+  if (A->isInherited())
+    OS << " Inherited";
+  if (A->isImplicit())
+    OS << " Implicit";
+
+  ConstAttrVisitor<TextNodeDumper>::Visit(A);
+}
+
 void TextNodeDumper::dumpPointer(const void *Ptr) {
   ColorScope Color(OS, ShowColors, AddressColor);
   OS << ' ' << Ptr;

@@ -45,7 +45,10 @@ void EmitClangAttrTemplateInstantiate(llvm::RecordKeeper &Records, llvm::raw_ost
 void EmitClangAttrParsedAttrList(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangAttrParsedAttrImpl(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangAttrParsedAttrKinds(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitClangAttrDump(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrTextNodeDump(llvm::RecordKeeper &Records,
+                               llvm::raw_ostream &OS);
+void EmitClangAttrNodeTraverse(llvm::RecordKeeper &Records,
+                               llvm::raw_ostream &OS);
 
 void EmitClangDiagsDefs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS,
                         const std::string &Component);
