@@ -768,10 +768,6 @@ static void CountLocals(
         if (language_runtime)
           target_type = language_runtime->DoArchetypeBindingForType(
               *stack_frame_sp, target_type);
-
-        if (auto *ts = target_type.GetTypeSystem())
-          target_type =
-            ts->MapIntoContext(stack_frame_sp, target_type.GetOpaqueQualType());
       }
 
       // If we couldn't fully realize the type, then we aren't going
