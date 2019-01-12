@@ -591,8 +591,7 @@ public:
                 *frame_sp, layout_type);
         }
 
-        size_t bit_align = layout_type.GetTypeSystem()->MapIntoContext(
-            frame_sp, layout_type.GetOpaqueQualType()).GetTypeBitAlign();
+        size_t bit_align = layout_type.GetTypeBitAlign();
         size_t byte_align = (bit_align + 7) / 8;
 
         if (!byte_align)
