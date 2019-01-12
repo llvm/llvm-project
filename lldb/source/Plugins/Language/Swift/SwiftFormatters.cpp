@@ -165,14 +165,10 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     uint64_t count = count_sp->GetValueAsUnsigned(0);
 
     auto discriminator_sp =
-        object_sp->GetChildMemberWithName(g__discriminator, true);
+        object_sp->GetChildAtNamePath({g__discriminator, g__value, g__value});
     if (!discriminator_sp)
       return false;
-    uint64_t discriminator = discriminator_sp->GetValueAsUnsigned(0);
-    if (discriminator > 0x7F) {
-      // The discriminator only has 7 bits on 32-bit platforms.
-      return false;
-    }
+    uint64_t discriminator = discriminator_sp->GetValueAsUnsigned(0) & 0xff;
 
     auto flags_sp = object_sp->GetChildAtNamePath({g__flags, g__value});
     if (!flags_sp)
@@ -190,8 +186,6 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     ValueObjectSP payload_sp;
     if (variantCase.startswith("immortal")) {
       static ConstString g_immortal("immortal");
-      // Set the immortal bit in the discriminator.
-      discriminator |= 0x80;
       payload_sp = variant_sp->GetChildAtNamePath({g_immortal, g__value});
     } else if (variantCase.startswith("native")) {
       static ConstString g_native("native");
