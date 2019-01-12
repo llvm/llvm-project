@@ -1372,12 +1372,9 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
     if (CallEventRef<> Out = getCall(CallSite, State, CallerCtx))
       return Out;
 
-    Stmt::StmtClass SC = CallSite->getStmtClass();
-
     // All other cases are handled by getCall.
-    assert(SC == Stmt::CXXConstructExprClass ||
-           SC == Stmt::CXXTemporaryObjectExprClass &&
-               "This is not an inlineable statement");
+    assert(isa<CXXConstructExpr>(CallSite) &&
+           "This is not an inlineable statement");
 
     SValBuilder &SVB = State->getStateManager().getSValBuilder();
     const auto *Ctor = cast<CXXMethodDecl>(CalleeCtx->getDecl());
