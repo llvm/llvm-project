@@ -15,6 +15,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDumperUtils.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/AttrVisitor.h"
 #include "clang/AST/CommentVisitor.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclLookups.h"
@@ -42,7 +43,8 @@ namespace  {
       : public ConstDeclVisitor<ASTDumper>,
         public ConstStmtVisitor<ASTDumper>,
         public ConstCommentVisitor<ASTDumper, void, const FullComment *>,
-        public TypeVisitor<ASTDumper> {
+        public TypeVisitor<ASTDumper>,
+        public ConstAttrVisitor<ASTDumper> {
 
     TextNodeDumper NodeDumper;
 
@@ -60,6 +62,9 @@ namespace  {
     /// Dump a child of the current node.
     template<typename Fn> void dumpChild(Fn DoDumpChild) {
       NodeDumper.AddChild(DoDumpChild);
+    }
+    template <typename Fn> void dumpChild(StringRef Label, Fn DoDumpChild) {
+      NodeDumper.AddChild(Label, DoDumpChild);
     }
 
   public:
@@ -80,13 +85,11 @@ namespace  {
     void setDeserialize(bool D) { Deserialize = D; }
 
     void dumpDecl(const Decl *D);
-    void dumpStmt(const Stmt *S);
+    void dumpStmt(const Stmt *S, StringRef Label = {});
 
     // Utilities
-    void dumpType(QualType T) { NodeDumper.dumpType(T); }
     void dumpTypeAsChild(QualType T);
     void dumpTypeAsChild(const Type *T);
-    void dumpBareDeclRef(const Decl *Node) { NodeDumper.dumpBareDeclRef(Node); }
     void dumpDeclContext(const DeclContext *DC);
     void dumpLookups(const DeclContext *DC, bool DumpDecls);
     void dumpAttr(const Attr *A);
@@ -436,6 +439,9 @@ namespace  {
 
     // Comments.
     void dumpComment(const Comment *C, const FullComment *FC);
+
+// Implements Visit methods for Attrs.
+#include "clang/AST/AttrNodeTraverse.inc"
   };
 }
 
@@ -581,22 +587,8 @@ void ASTDumper::dumpLookups(const DeclContext *DC, bool DumpDecls) {
 
 void ASTDumper::dumpAttr(const Attr *A) {
   dumpChild([=] {
-    {
-      ColorScope Color(OS, ShowColors, AttrColor);
-
-      switch (A->getKind()) {
-#define ATTR(X) case attr::X: OS << #X; break;
-#include "clang/Basic/AttrList.inc"
-      }
-      OS << "Attr";
-    }
-    NodeDumper.dumpPointer(A);
-    NodeDumper.dumpSourceRange(A->getRange());
-    if (A->isInherited())
-      OS << " Inherited";
-    if (A->isImplicit())
-      OS << " Implicit";
-#include "clang/AST/AttrDump.inc"
+    NodeDumper.Visit(A);
+    ConstAttrVisitor<ASTDumper>::Visit(A);
   });
 }
 
@@ -717,9 +709,8 @@ void ASTDumper::dumpTemplateArgument(const TemplateArgument &A, SourceRange R,
       break;
     case TemplateArgument::Pack:
       OS << " pack";
-      for (TemplateArgument::pack_iterator I = A.pack_begin(), E = A.pack_end();
-           I != E; ++I)
-        dumpTemplateArgument(*I);
+      for (const auto& TArg : A.pack_elements())
+        dumpTemplateArgument(TArg);
       break;
     }
   });
@@ -1685,8 +1676,8 @@ void ASTDumper::VisitBlockDecl(const BlockDecl *D) {
 //  Stmt dumping methods.
 //===----------------------------------------------------------------------===//
 
-void ASTDumper::dumpStmt(const Stmt *S) {
-  dumpChild([=] {
+void ASTDumper::dumpStmt(const Stmt *S, StringRef Label) {
+  dumpChild(Label, [=] {
     if (!S) {
       ColorScope Color(OS, ShowColors, NullColor);
       OS << "<<<NULL>>>";
@@ -1957,10 +1948,7 @@ void ASTDumper::VisitInitListExpr(const InitListExpr *ILE) {
     NodeDumper.dumpBareDeclRef(Field);
   }
   if (auto *Filler = ILE->getArrayFiller()) {
-    dumpChild([=] {
-      OS << "array filler";
-      dumpStmt(Filler);
-    });
+    dumpStmt(Filler, "array_filler");
   }
 }
 

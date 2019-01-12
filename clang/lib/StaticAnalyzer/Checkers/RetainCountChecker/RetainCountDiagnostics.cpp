@@ -113,11 +113,31 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
   return true;
 }
 
+/// Finds argument index of the out paramter in the call {@code S}
+/// corresponding to the symbol {@code Sym}.
+/// If none found, returns None.
+static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
+                                             const LocationContext *LCtx,
+                                             SymbolRef &Sym,
+                                             Optional<CallEventRef<>> CE) {
+  if (!CE)
+    return None;
+
+  for (unsigned Idx = 0; Idx < (*CE)->getNumArgs(); Idx++)
+    if (const MemRegion *MR = (*CE)->getArgSVal(Idx).getAsRegion())
+      if (const auto *TR = dyn_cast<TypedValueRegion>(MR))
+        if (CurrSt->getSVal(MR, TR->getValueType()).getAsSymExpr() == Sym)
+          return Idx;
+
+  return None;
+}
+
 static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
                                            const LocationContext *LCtx,
                                            const RefVal &CurrV, SymbolRef &Sym,
                                            const Stmt *S,
                                            llvm::raw_string_ostream &os) {
+  CallEventManager &Mgr = CurrSt->getStateManager().getCallEventManager();
   if (const CallExpr *CE = dyn_cast<CallExpr>(S)) {
     // Get the name of the callee (if it is available)
     // from the tracked SVal.
@@ -139,7 +159,6 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
     os << "Operator 'new'";
   } else {
     assert(isa<ObjCMessageExpr>(S));
-    CallEventManager &Mgr = CurrSt->getStateManager().getCallEventManager();
     CallEventRef<ObjCMethodCall> Call =
         Mgr.getObjCMethodCall(cast<ObjCMessageExpr>(S), CurrSt, LCtx);
 
@@ -156,7 +175,15 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
     }
   }
 
-   os << " returns ";
+  Optional<CallEventRef<>> CE = Mgr.getCall(S, CurrSt, LCtx);
+  auto Idx = findArgIdxOfSymbol(CurrSt, LCtx, Sym, CE);
+
+  // If index is not found, we assume that the symbol was returned.
+  if (!Idx) {
+    os << " returns ";
+  } else {
+    os << " writes ";
+  }
 
   if (CurrV.getObjKind() == ObjKind::CF) {
     os << "a Core Foundation object of type '"
@@ -184,6 +211,25 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
   } else {
     assert(CurrV.isNotOwned());
     os << "+0 retain count";
+  }
+
+  if (Idx) {
+    os << " into an out parameter '";
+    const ParmVarDecl *PVD = (*CE)->parameters()[*Idx];
+    PVD->getNameForDiagnostic(os, PVD->getASTContext().getPrintingPolicy(),
+                              /*Qualified=*/false);
+    os << "'";
+
+    QualType RT = (*CE)->getResultType();
+    if (!RT.isNull() && !RT->isVoidType()) {
+      SVal RV = (*CE)->getReturnValue();
+      if (CurrSt->isNull(RV).isConstrainedTrue()) {
+        os << " (assuming the call returns zero)";
+      } else if (CurrSt->isNonNull(RV).isConstrainedTrue()) {
+        os << " (assuming the call returns non-zero)";
+      }
+
+    }
   }
 }
 

@@ -20430,10 +20430,11 @@ static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
     assert(Subtarget.hasAVX512() && !Subtarget.hasDQI() &&
            "Expected AVX512F without AVX512DQI");
 
-    StoredVal = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8i1,
-                            DAG.getUNDEF(MVT::v8i1), StoredVal,
+    StoredVal = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v16i1,
+                            DAG.getUNDEF(MVT::v16i1), StoredVal,
                             DAG.getIntPtrConstant(0, dl));
-    StoredVal = DAG.getBitcast(MVT::i8, StoredVal);
+    StoredVal = DAG.getBitcast(MVT::i16, StoredVal);
+    StoredVal = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, StoredVal);
 
     return DAG.getStore(St->getChain(), dl, StoredVal, St->getBasePtr(),
                         St->getPointerInfo(), St->getAlignment(),
@@ -20499,10 +20500,11 @@ static SDValue LowerLoad(SDValue Op, const X86Subtarget &Subtarget,
     // Replace chain users with the new chain.
     assert(NewLd->getNumValues() == 2 && "Loads must carry a chain!");
 
-    SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, RegVT,
-                                  DAG.getBitcast(MVT::v8i1, NewLd),
-                                  DAG.getIntPtrConstant(0, dl));
-    return DAG.getMergeValues({Extract, NewLd.getValue(1)}, dl);
+    SDValue Val = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i16, NewLd);
+    Val = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, RegVT,
+                      DAG.getBitcast(MVT::v16i1, Val),
+                      DAG.getIntPtrConstant(0, dl));
+    return DAG.getMergeValues({Val, NewLd.getValue(1)}, dl);
   }
 
   // Nothing useful we can do without SSE2 shuffles.
@@ -21330,11 +21332,7 @@ static SDValue getMaskNode(SDValue Mask, MVT MaskVT,
   if (X86::isZeroNode(Mask))
     return DAG.getConstant(0, dl, MaskVT);
 
-  if (MaskVT.bitsGT(Mask.getSimpleValueType())) {
-    // Mask should be extended
-    Mask = DAG.getNode(ISD::ANY_EXTEND, dl,
-                       MVT::getIntegerVT(MaskVT.getSizeInBits()), Mask);
-  }
+  assert(MaskVT.bitsLE(Mask.getSimpleValueType()) && "Unexpected mask size!");
 
   if (Mask.getSimpleValueType() == MVT::i64 && Subtarget.is32Bit()) {
     assert(MaskVT == MVT::v64i1 && "Expected v64i1 mask!");
@@ -21385,10 +21383,6 @@ static SDValue getVectorMaskingNode(SDValue Op, SDValue Mask,
   case X86ISD::VPSHUFBITQMB:
   case X86ISD::VFPCLASS:
     return DAG.getNode(ISD::AND, dl, VT, Op, VMask);
-  case ISD::TRUNCATE:
-  case X86ISD::VTRUNC:
-  case X86ISD::VTRUNCS:
-  case X86ISD::VTRUNCUS:
   case X86ISD::CVTPS2PH:
     // We can't use ISD::VSELECT here because it is not always "Legal"
     // for the destination type. For example vpmovqb require only AVX512
@@ -22067,6 +22061,22 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue SetCC = getSETCC(X86::COND_B, Res.getValue(1), dl, DAG);
       SDValue Results[] = { SetCC, Res };
       return DAG.getMergeValues(Results, dl);
+    }
+    case TRUNCATE_TO_REG: {
+      SDValue Src = Op.getOperand(1);
+      SDValue PassThru = Op.getOperand(2);
+      SDValue Mask = Op.getOperand(3);
+
+      if (isAllOnesConstant(Mask))
+        return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl,
+                                                Op.getValueType(), Src),
+                                    Mask, PassThru, Subtarget, DAG);
+
+      MVT SrcVT = Src.getSimpleValueType();
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, SrcVT.getVectorNumElements());
+      Mask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
+      return DAG.getNode(IntrData->Opc1, dl, Op.getValueType(), Src, PassThru,
+                         Mask);
     }
     default:
       break;
@@ -27172,6 +27182,9 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VTRUNC:             return "X86ISD::VTRUNC";
   case X86ISD::VTRUNCS:            return "X86ISD::VTRUNCS";
   case X86ISD::VTRUNCUS:           return "X86ISD::VTRUNCUS";
+  case X86ISD::VMTRUNC:            return "X86ISD::VMTRUNC";
+  case X86ISD::VMTRUNCS:           return "X86ISD::VMTRUNCS";
+  case X86ISD::VMTRUNCUS:          return "X86ISD::VMTRUNCUS";
   case X86ISD::VTRUNCSTORES:       return "X86ISD::VTRUNCSTORES";
   case X86ISD::VTRUNCSTOREUS:      return "X86ISD::VTRUNCSTOREUS";
   case X86ISD::VMTRUNCSTORES:      return "X86ISD::VMTRUNCSTORES";

@@ -1078,7 +1078,9 @@ def : ProcessorModel<"cyclone",     SwiftModel,         [ARMv8a, ProcSwift,
 def : ProcNoItin<"exynos-m1",                           [ARMv8a, ProcExynos]>;
 def : ProcNoItin<"exynos-m2",                           [ARMv8a, ProcExynos]>;
 def : ProcNoItin<"exynos-m3",                           [ARMv8a, ProcExynos]>;
-def : ProcNoItin<"exynos-m4",                           [ARMv8a, ProcExynos]>;
+def : ProcNoItin<"exynos-m4",                           [ARMv82a, ProcExynos,
+                                                         FeatureFullFP16,
+                                                         FeatureDotProd]>;
 
 def : ProcNoItin<"kryo",                                [ARMv8a, ProcKryo,
                                                          FeatureHWDivThumb,

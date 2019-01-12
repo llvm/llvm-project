@@ -4478,6 +4478,17 @@ std::string Driver::GetTemporaryPath(StringRef Prefix, StringRef Suffix) const {
   return Path.str();
 }
 
+std::string Driver::GetTemporaryDirectory(StringRef Prefix) const {
+  SmallString<128> Path;
+  std::error_code EC = llvm::sys::fs::createUniqueDirectory(Prefix, Path);
+  if (EC) {
+    Diag(clang::diag::err_unable_to_make_temp) << EC.message();
+    return "";
+  }
+
+  return Path.str();
+}
+
 std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
   SmallString<128> Output;
   if (Arg *FpArg = C.getArgs().getLastArg(options::OPT__SLASH_Fp)) {

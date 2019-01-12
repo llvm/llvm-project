@@ -14,6 +14,7 @@
 #   gen_dynamic_list.py libclang_rt.*san*.a [ files ... ]
 #
 #===------------------------------------------------------------------------===#
+from __future__ import print_function
 import argparse
 import os
 import re
@@ -84,6 +85,7 @@ def main(argv):
   parser.add_argument('--version-list', action='store_true')
   parser.add_argument('--extra', default=[], action='append')
   parser.add_argument('libraries', default=[], nargs='+')
+  parser.add_argument('-o', '--output', required=True)
   args = parser.parse_args()
 
   result = []
@@ -117,16 +119,17 @@ def main(argv):
     for line in f:
       result.append(line.rstrip())
   # Print the resulting list in the format recognized by ld.
-  print('{')
-  if args.version_list:
-    print('global:')
-  result.sort()
-  for f in result:
-    print(u'  %s;' % f)
-  if args.version_list:
-    print('local:')
-    print('  *;')
-  print('};')
+  with open(args.output, 'w') as f:
+    print('{', file=f)
+    if args.version_list:
+      print('global:', file=f)
+    result.sort()
+    for sym in result:
+      print(u'  %s;' % sym, file=f)
+    if args.version_list:
+      print('local:', file=f)
+      print('  *;', file=f)
+    print('};', file=f)
 
 if __name__ == '__main__':
   main(sys.argv)

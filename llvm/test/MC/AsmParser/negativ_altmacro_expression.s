@@ -6,7 +6,7 @@
 # .noaltmacro returns the format into a regular macro handling.
 # The default mode is ".noaltmacro" as first test checks.
 
-# CHECK:  error: unknown token in expression
+# CHECK:  error: expected immediate expression
 # CHECK-NEXT: addl $%(1%4), %eax
 .macro inner_percent arg
     addl $\arg, %eax
@@ -18,12 +18,12 @@ inner_percent %(1%4)
 .noaltmacro
 
 # CHECK: multi_args_macro %(1+4-5) 1 %2+1
-# CHECK: error: unknown token in expression
+# CHECK: error: expected immediate expression
 # CHECK-NEXT: addl $%(1+4-5), %eax
 
 
 # CHECK: multi_args_macro %(1+4-5),1,%4%10
-# CHECK: error: unknown token in expression
+# CHECK: error: expected immediate expression
 # CHECK-NEXT: addl $%(1+4-5), %eax
 .macro multi_args_macro arg1 arg2 arg3
   label\arg1\arg2\arg3:

@@ -1,6 +1,6 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
 
-// XFAIL: android
+// UNSUPPORTED: android
 
 #include <assert.h>
 #include <errno.h>

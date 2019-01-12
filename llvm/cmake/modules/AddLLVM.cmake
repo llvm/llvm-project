@@ -920,6 +920,9 @@ macro(add_llvm_utility name)
                                DEPENDS ${name}
                                COMPONENT ${name})
     endif()
+    set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
+  elseif( LLVM_BUILD_UTILS )
+    set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS_BUILDTREE_ONLY ${name})
   endif()
 endmacro(add_llvm_utility name)
 

@@ -529,38 +529,92 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
   C.addTransition(state);
 }
 
-static ProgramStateRef updateOutParameter(ProgramStateRef State,
-                                          SVal ArgVal,
-                                          ArgEffectKind Effect) {
-  auto *ArgRegion = dyn_cast_or_null<TypedValueRegion>(ArgVal.getAsRegion());
-  if (!ArgRegion)
-    return State;
+static bool shouldEscapeRegion(const MemRegion *R) {
 
-  QualType PointeeTy = ArgRegion->getValueType();
-  if (!coreFoundation::isCFObjectRef(PointeeTy))
-    return State;
+  // We do not currently model what happens when a symbol is
+  // assigned to a struct field, so be conservative here and let the symbol
+  // go. TODO: This could definitely be improved upon.
+  return !R->hasStackStorage() || !isa<VarRegion>(R);
+}
 
-  SVal PointeeVal = State->getSVal(ArgRegion);
-  SymbolRef Pointee = PointeeVal.getAsLocSymbol();
-  if (!Pointee)
-    return State;
+static SmallVector<ProgramStateRef, 2>
+updateOutParameters(ProgramStateRef State, const RetainSummary &Summ,
+                    const CallEvent &CE) {
 
-  switch (Effect) {
-  case UnretainedOutParameter:
-    State = setRefBinding(State, Pointee,
-                          RefVal::makeNotOwned(ObjKind::CF, PointeeTy));
-    break;
-  case RetainedOutParameter:
-    // Do nothing. Retained out parameters will either point to a +1 reference
-    // or NULL, but the way you check for failure differs depending on the API.
-    // Consequently, we don't have a good way to track them yet.
-    break;
+  SVal L = CE.getReturnValue();
 
-  default:
-    llvm_unreachable("only for out parameters");
+  // Splitting is required to support out parameters,
+  // as out parameters might be created only on the "success" branch.
+  // We want to avoid eagerly splitting unless out parameters are actually
+  // needed.
+  bool SplitNecessary = false;
+  for (auto &P : Summ.getArgEffects())
+    if (P.second.getKind() == RetainedOutParameterOnNonZero ||
+        P.second.getKind() == RetainedOutParameterOnZero)
+      SplitNecessary = true;
+
+  ProgramStateRef AssumeNonZeroReturn = State;
+  ProgramStateRef AssumeZeroReturn = State;
+
+  if (SplitNecessary) {
+    if (auto DL = L.getAs<DefinedOrUnknownSVal>()) {
+      AssumeNonZeroReturn = AssumeNonZeroReturn->assume(*DL, true);
+      AssumeZeroReturn = AssumeZeroReturn->assume(*DL, false);
+    }
   }
 
-  return State;
+  for (unsigned idx = 0, e = CE.getNumArgs(); idx != e; ++idx) {
+    SVal ArgVal = CE.getArgSVal(idx);
+    ArgEffect AE = Summ.getArg(idx);
+
+    auto *ArgRegion = dyn_cast_or_null<TypedValueRegion>(ArgVal.getAsRegion());
+    if (!ArgRegion)
+      continue;
+
+    QualType PointeeTy = ArgRegion->getValueType();
+    SVal PointeeVal = State->getSVal(ArgRegion);
+    SymbolRef Pointee = PointeeVal.getAsLocSymbol();
+    if (!Pointee)
+      continue;
+
+    if (shouldEscapeRegion(ArgRegion))
+      continue;
+
+    auto makeNotOwnedParameter = [&](ProgramStateRef St) {
+      return setRefBinding(St, Pointee,
+                           RefVal::makeNotOwned(AE.getObjKind(), PointeeTy));
+    };
+    auto makeOwnedParameter = [&](ProgramStateRef St) {
+      return setRefBinding(St, Pointee,
+                           RefVal::makeOwned(ObjKind::OS, PointeeTy));
+    };
+
+    switch (AE.getKind()) {
+    case UnretainedOutParameter:
+      AssumeNonZeroReturn = makeNotOwnedParameter(AssumeNonZeroReturn);
+      AssumeZeroReturn = makeNotOwnedParameter(AssumeZeroReturn);
+      break;
+    case RetainedOutParameter:
+      AssumeNonZeroReturn = makeOwnedParameter(AssumeNonZeroReturn);
+      AssumeZeroReturn = makeOwnedParameter(AssumeZeroReturn);
+      break;
+    case RetainedOutParameterOnNonZero:
+      AssumeNonZeroReturn = makeOwnedParameter(AssumeNonZeroReturn);
+      break;
+    case RetainedOutParameterOnZero:
+      AssumeZeroReturn = makeOwnedParameter(AssumeZeroReturn);
+      break;
+    default:
+      break;
+    }
+  }
+
+  if (SplitNecessary) {
+    return {AssumeNonZeroReturn, AssumeZeroReturn};
+  } else {
+    assert(AssumeZeroReturn == AssumeNonZeroReturn);
+    return {AssumeZeroReturn};
+  }
 }
 
 void RetainCountChecker::checkSummary(const RetainSummary &Summ,
@@ -582,10 +636,7 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
     SVal V = CallOrMsg.getArgSVal(idx);
 
     ArgEffect Effect = Summ.getArg(idx);
-    if (Effect.getKind() == RetainedOutParameter ||
-        Effect.getKind() == UnretainedOutParameter) {
-      state = updateOutParameter(state, V, Effect.getKind());
-    } else if (SymbolRef Sym = V.getAsLocSymbol()) {
+    if (SymbolRef Sym = V.getAsLocSymbol()) {
       if (const RefVal *T = getRefBinding(state, Sym)) {
 
         if (shouldEscapeOSArgumentOnCall(CallOrMsg, idx, T))
@@ -661,10 +712,15 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
       state = setRefBinding(state, Sym, *updatedRefVal);
   }
 
-  if (DeallocSent) {
-    C.addTransition(state, C.getPredecessor(), &DeallocSentTag);
-  } else {
-    C.addTransition(state);
+  SmallVector<ProgramStateRef, 2> Out =
+      updateOutParameters(state, Summ, CallOrMsg);
+
+  for (ProgramStateRef St : Out) {
+    if (DeallocSent) {
+      C.addTransition(St, C.getPredecessor(), &DeallocSentTag);
+    } else {
+      C.addTransition(St);
+    }
   }
 }
 
@@ -700,6 +756,8 @@ ProgramStateRef RetainCountChecker::updateSymbol(ProgramStateRef state,
   switch (AE.getKind()) {
     case UnretainedOutParameter:
     case RetainedOutParameter:
+    case RetainedOutParameterOnZero:
+    case RetainedOutParameterOnNonZero:
       llvm_unreachable("Applies to pointer-to-pointer parameters, which should "
                        "not have ref state.");
 
@@ -1094,29 +1152,10 @@ void RetainCountChecker::checkBind(SVal loc, SVal val, const Stmt *S,
   //
   // (1) we are binding to something that is not a memory region.
   // (2) we are binding to a memregion that does not have stack storage
-  // (3) we are binding to a memregion with stack storage that the store
-  //     does not understand.
   ProgramStateRef state = C.getState();
 
   if (auto regionLoc = loc.getAs<loc::MemRegionVal>()) {
-    escapes = !regionLoc->getRegion()->hasStackStorage();
-
-    if (!escapes) {
-      // To test (3), generate a new state with the binding added.  If it is
-      // the same state, then it escapes (since the store cannot represent
-      // the binding).
-      // Do this only if we know that the store is not supposed to generate the
-      // same state.
-      SVal StoredVal = state->getSVal(regionLoc->getRegion());
-      if (StoredVal != val)
-        escapes = (state == (state->bindLoc(*regionLoc, val, C.getLocationContext())));
-    }
-    if (!escapes) {
-      // Case 4: We do not currently model what happens when a symbol is
-      // assigned to a struct field, so be conservative here and let the symbol
-      // go. TODO: This could definitely be improved upon.
-      escapes = !isa<VarRegion>(regionLoc->getRegion());
-    }
+    escapes = shouldEscapeRegion(regionLoc->getRegion());
   }
 
   // If we are storing the value into an auto function scope variable annotated

@@ -12,7 +12,7 @@
 // template <class... Types> class tuple;
 
 // template <class... Types>
-//   class tuple_size<tuple<Types...>>
+//   struct tuple_size<tuple<Types...>>
 //     : public integral_constant<size_t, sizeof...(Types)> { };
 
 // XFAIL: gcc-4.9
@@ -31,7 +31,7 @@ struct Dummy1 {};
 struct Dummy2 {};
 
 namespace std {
-template <> class tuple_size<Dummy1> : public integral_constant<size_t, 0> {};
+template <> struct tuple_size<Dummy1> : public integral_constant<size_t, 0> {};
 }
 
 template <class T>
