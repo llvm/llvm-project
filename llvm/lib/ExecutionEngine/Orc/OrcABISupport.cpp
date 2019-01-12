@@ -610,23 +610,19 @@ void OrcMips32_Base::writeResolverCode(uint8_t *ResolverMem,
       0x8fa40008,                    // 0xe8: lw $a0,8($sp)
       0x27bd0068,                    // 0xec: addiu $sp,$sp,104
       0x0300f825,                    // 0xf0: move $ra, $t8
-      0x00000000                     // 0xf4: jr $v0/v1
+      0x03200008,                    // 0xf4: jr $t9
+      0x00000000,                    // 0xf8: move $t9, $v0/v1
   };
 
   const unsigned ReentryFnAddrOffset = 0x7c;   // JIT re-entry fn addr lui
   const unsigned CallbackMgrAddrOffset = 0x6c; // Callback manager addr lui
-  const unsigned offsett = 0xf4;
+  const unsigned Offsett = 0xf8;
 
   memcpy(ResolverMem, ResolverCode, sizeof(ResolverCode));
 
-  //Depending on endian return value will be in v0 or v1.
-  uint32_t JumpV0 = 0x00400008;
-  uint32_t JumpV1 = 0x00600008;
-
-  if(isBigEndian == true)
-    memcpy(ResolverMem + offsett, &JumpV1, sizeof(JumpV1));
-  else
-    memcpy(ResolverMem + offsett, &JumpV0, sizeof(JumpV0));
+  // Depending on endian return value will be in v0 or v1.
+  uint32_t MoveVxT9 = isBigEndian ? 0x0060c825 : 0x0040c825;
+  memcpy(ResolverMem + Offsett, &MoveVxT9, sizeof(MoveVxT9));
 
   uint64_t CallMgrAddr = reinterpret_cast<uint64_t>(CallbackMgr);
   uint32_t CallMgrLUi = 0x3c040000 | (((CallMgrAddr + 0x8000) >> 16) & 0xFFFF);
@@ -814,7 +810,8 @@ void OrcMips64::writeResolverCode(uint8_t *ResolverMem, JITReentryFn ReentryFn,
       0xdfa30008,                     // 0x10c: ld v1, 8(sp)
       0x67bd00d0,                     // 0x110: daddiu $sp,$sp,208
       0x0300f825,                     // 0x114: move $ra, $t8
-      0x00400008                      // 0x118: jr $v0
+      0x03200008,                     // 0x118: jr $t9
+      0x0040c825,                     // 0x11c: move $t9, $v0
   };
 
   const unsigned ReentryFnAddrOffset = 0x8c;   // JIT re-entry fn addr lui

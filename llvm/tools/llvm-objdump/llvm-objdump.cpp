@@ -2301,8 +2301,7 @@ static void printFileHeaders(const ObjectFile *o) {
   StringRef Fmt = o->getBytesInAddress() > 4 ? "%016" PRIx64 : "%08" PRIx64;
   uint64_t Address = StartAddrOrErr.get();
   outs() << "start address: "
-         << "0x" << format(Fmt.data(), Address)
-         << "\n";
+         << "0x" << format(Fmt.data(), Address) << "\n\n";
 }
 
 static void printArchiveChild(StringRef Filename, const Archive::Child &C) {
@@ -2382,6 +2381,8 @@ static void DumpObject(ObjectFile *o, const Archive *a = nullptr,
     outs() << ":\tfile format " << o->getFileFormatName() << "\n\n";
   }
 
+  if (FileHeaders)
+    printFileHeaders(o);
   if (ArchiveHeaders && !MachOOpt && c)
     printArchiveChild(ArchiveName, *c);
   if (Disassemble)
@@ -2400,8 +2401,6 @@ static void DumpObject(ObjectFile *o, const Archive *a = nullptr,
     PrintUnwindInfo(o);
   if (PrivateHeaders || FirstPrivateHeader)
     printPrivateFileHeaders(o, FirstPrivateHeader);
-  if (FileHeaders)
-    printFileHeaders(o);
   if (ExportsTrie)
     printExportsTrie(o);
   if (Rebase)
@@ -2510,7 +2509,8 @@ int main(int argc, char **argv) {
     InputFilenames.push_back("a.out");
 
   if (AllHeaders)
-    PrivateHeaders = Relocations = SectionHeaders = SymbolTable = true;
+    FileHeaders = PrivateHeaders = Relocations = SectionHeaders = SymbolTable =
+        true;
 
   if (DisassembleAll || PrintSource || PrintLines)
     Disassemble = true;
