@@ -19,7 +19,7 @@ void foo(CFAllocatorRef allocator) {
   int width = 0;
   int height = 0;
   CFTypeRef* values = (CFTypeRef[]){
-    CFNumberCreate(allocator, kCFNumberSInt32Type, &width), //expected-warning{{Potential leak of an object of type CFNumberRef}}
-    CFNumberCreate(allocator, kCFNumberSInt32Type, &height), //expected-warning{{Potential leak of an object of type CFNumberRef}}
+    CFNumberCreate(allocator, kCFNumberSInt32Type, &width), //expected-warning{{Potential leak of an object of type 'CFNumberRef'}}
+    CFNumberCreate(allocator, kCFNumberSInt32Type, &height), //expected-warning{{Potential leak of an object of type 'CFNumberRef'}}
   };
 }

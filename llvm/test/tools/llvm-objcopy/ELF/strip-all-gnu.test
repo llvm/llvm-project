@@ -2,7 +2,7 @@
 # RUN: cp %t %t1
 # RUN: llvm-objcopy --strip-all-gnu %t %t2
 # RUN: llvm-strip --strip-all-gnu %t -o %t3
-# RUN: llvm-readobj -file-headers -sections %t2 | FileCheck %s
+# RUN: llvm-readobj --file-headers --sections %t2 | FileCheck %s
 # RUN: cmp %t2 %t3
 
 !ELF

@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objcopy -R .test %t %t2
-# RUN: llvm-readobj -file-headers -symbols %t2 | FileCheck %s
+# RUN: llvm-readobj --file-headers --symbols %t2 | FileCheck %s
 
 !ELF
 FileHeader:

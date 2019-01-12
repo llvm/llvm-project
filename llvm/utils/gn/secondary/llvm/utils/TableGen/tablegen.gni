@@ -39,9 +39,9 @@ template("tablegen") {
     if (defined(invoker.tblgen_target)) {
       tblgen_target = invoker.tblgen_target
     } else {
-      # FIXME: In cross builds, this should depend on the host binary.
       tblgen_target = "//llvm/utils/TableGen:llvm-tblgen"
     }
+    tblgen_target += "($host_toolchain)"
     tblgen_executable = get_label_info(tblgen_target, "root_out_dir") +
                         "/bin/" + get_label_info(tblgen_target, "name")
     deps = [

@@ -1964,7 +1964,7 @@
     </dict>
    </array>
    <key>description</key><string>Object autoreleased too many times</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Object autoreleased too many times</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->

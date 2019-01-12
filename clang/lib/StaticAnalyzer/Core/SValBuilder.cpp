@@ -271,8 +271,8 @@ DefinedSVal SValBuilder::getBlockPointer(const BlockDecl *block,
 /// Return a memory region for the 'this' object reference.
 loc::MemRegionVal SValBuilder::getCXXThis(const CXXMethodDecl *D,
                                           const StackFrameContext *SFC) {
-  return loc::MemRegionVal(getRegionManager().
-                           getCXXThisRegion(D->getThisType(getContext()), SFC));
+  return loc::MemRegionVal(
+      getRegionManager().getCXXThisRegion(D->getThisType(), SFC));
 }
 
 /// Return a memory region for the 'this' object reference.

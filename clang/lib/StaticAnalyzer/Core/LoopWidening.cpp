@@ -85,9 +85,8 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
   // have 'this' pointers.
   const CXXMethodDecl *CXXMD = dyn_cast<CXXMethodDecl>(STC->getDecl());
   if (CXXMD && !CXXMD->isStatic()) {
-    const CXXThisRegion *ThisR = MRMgr.getCXXThisRegion(
-        CXXMD->getThisType(STC->getAnalysisDeclContext()->getASTContext()),
-        STC);
+    const CXXThisRegion *ThisR =
+        MRMgr.getCXXThisRegion(CXXMD->getThisType(), STC);
     ITraits.setTrait(ThisR,
                      RegionAndSymbolInvalidationTraits::TK_PreserveContents);
   }

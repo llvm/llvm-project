@@ -24,44 +24,39 @@ namespace clang {
 namespace ento {
 namespace retaincountchecker {
 
-class CFRefBug : public BugType {
+class RefCountBug : public BugType {
 protected:
-  CFRefBug(const CheckerBase *checker, StringRef name)
-      : BugType(checker, name, categories::MemoryCoreFoundationObjectiveC) {}
+  RefCountBug(const CheckerBase *checker, StringRef name)
+      : BugType(checker, name, categories::MemoryRefCount) {}
 
 public:
-
-  // FIXME: Eventually remove.
   virtual const char *getDescription() const = 0;
 
   virtual bool isLeak() const { return false; }
 };
 
-typedef ::llvm::DenseMap<const ExplodedNode *, const RetainSummary *>
-  SummaryLogTy;
-
-class CFRefReport : public BugReport {
+class RefCountReport : public BugReport {
 protected:
   SymbolRef Sym;
 
 public:
-  CFRefReport(CFRefBug &D, const LangOptions &LOpts,
-              const SummaryLogTy &Log, ExplodedNode *n, SymbolRef sym,
+  RefCountReport(RefCountBug &D, const LangOptions &LOpts,
+              ExplodedNode *n, SymbolRef sym,
               bool registerVisitor = true);
 
-  CFRefReport(CFRefBug &D, const LangOptions &LOpts,
-              const SummaryLogTy &Log, ExplodedNode *n, SymbolRef sym,
+  RefCountReport(RefCountBug &D, const LangOptions &LOpts,
+              ExplodedNode *n, SymbolRef sym,
               StringRef endText);
 
   llvm::iterator_range<ranges_iterator> getRanges() override {
-    const CFRefBug& BugTy = static_cast<CFRefBug&>(getBugType());
+    const RefCountBug& BugTy = static_cast<RefCountBug&>(getBugType());
     if (!BugTy.isLeak())
       return BugReport::getRanges();
     return llvm::make_range(ranges_iterator(), ranges_iterator());
   }
 };
 
-class CFRefLeakReport : public CFRefReport {
+class RefLeakReport : public RefCountReport {
   const MemRegion* AllocBinding;
   const Stmt *AllocStmt;
 
@@ -74,9 +69,8 @@ class CFRefLeakReport : public CFRefReport {
   void createDescription(CheckerContext &Ctx);
 
 public:
-  CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts,
-                  const SummaryLogTy &Log, ExplodedNode *n, SymbolRef sym,
-                  CheckerContext &Ctx);
+  RefLeakReport(RefCountBug &D, const LangOptions &LOpts, ExplodedNode *n,
+                SymbolRef sym, CheckerContext &Ctx);
 
   PathDiagnosticLocation getLocation(const SourceManager &SM) const override {
     assert(Location.isValid());

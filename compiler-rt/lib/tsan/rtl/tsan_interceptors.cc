@@ -42,16 +42,12 @@ using namespace __tsan;  // NOLINT
 
 #if SANITIZER_NETBSD
 #define dirfd(dirp) (*(int *)(dirp))
-#define fileno_unlocked fileno
+#define fileno_unlocked(fp) \
+  (((__sanitizer_FILE*)fp)->_file == -1 ? -1 : \
+   (int)(unsigned short)(((__sanitizer_FILE*)fp)->_file))  // NOLINT
 
-#if _LP64
-#define __sF_size 152
-#else
-#define __sF_size 88
-#endif
-
-#define stdout ((char*)&__sF + (__sF_size * 1))
-#define stderr ((char*)&__sF + (__sF_size * 2))
+#define stdout ((__sanitizer_FILE*)&__sF[1])
+#define stderr ((__sanitizer_FILE*)&__sF[2])
 
 #define nanosleep __nanosleep50
 #define vfork __vfork14
@@ -96,8 +92,8 @@ DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr size)
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *ptr)
 extern "C" void *pthread_self();
 extern "C" void _exit(int status);
-extern "C" int fileno_unlocked(void *stream);
 #if !SANITIZER_NETBSD
+extern "C" int fileno_unlocked(void *stream);
 extern "C" int dirfd(void *dirp);
 #endif
 #if !SANITIZER_FREEBSD && !SANITIZER_ANDROID && !SANITIZER_NETBSD
@@ -258,8 +254,7 @@ ScopedInterceptor::ScopedInterceptor(ThreadState *thr, const char *fname,
   if (!thr_->ignore_interceptors) FuncEntry(thr, pc);
   DPrintf("#%d: intercept %s()\n", thr_->tid, fname);
   ignoring_ =
-      !thr_->in_ignored_lib && (flags()->ignore_interceptors_accesses ||
-                                libignore()->IsIgnored(pc, &in_ignored_lib_));
+      !thr_->in_ignored_lib && libignore()->IsIgnored(pc, &in_ignored_lib_);
   EnableIgnores();
 }
 

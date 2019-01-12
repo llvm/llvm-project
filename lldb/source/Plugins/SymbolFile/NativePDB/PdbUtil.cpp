@@ -17,8 +17,8 @@
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 
+#include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "lldb/Utility/LLDBAssert.h"
-
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb_private;
@@ -449,16 +449,7 @@ TypeIndex lldb_private::npdb::LookThroughModifierRecord(CVType modifier) {
 }
 
 llvm::StringRef lldb_private::npdb::DropNameScope(llvm::StringRef name) {
-  // Not all PDB names can be parsed with CPlusPlusNameParser.
-  // E.g. it fails on names containing `anonymous namespace'.
-  // So we simply drop everything before '::'
-
-  auto offset = name.rfind("::");
-  if (offset == llvm::StringRef::npos)
-    return name;
-  assert(offset + 2 <= name.size());
-
-  return name.substr(offset + 2);
+  return MSVCUndecoratedNameParser::DropScope(name);
 }
 
 VariableInfo lldb_private::npdb::GetVariableNameInfo(CVSymbol sym) {
@@ -558,10 +549,6 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
       result.ranges = MakeRangeList(index, loc.Range, loc.Gaps);
     } else {
       // FIXME: Handle other kinds
-      llvm::APSInt value;
-      value = 42;
-      result.location = MakeConstantLocationExpression(
-          TypeIndex::Int32(), index.tpi(), value, module);
     }
     return result;
   }

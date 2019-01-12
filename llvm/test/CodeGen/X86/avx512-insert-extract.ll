@@ -270,7 +270,7 @@ define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    movq %rdi, %rax
 ; SKX-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
-; SKX-NEXT:    kshiftrw $4, %k0, %k0
+; SKX-NEXT:    kshiftrb $4, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %ecx
 ; SKX-NEXT:    testb $1, %cl
 ; SKX-NEXT:    cmoveq %rsi, %rax
@@ -976,7 +976,7 @@ define zeroext i8 @test_extractelement_v4i1(<4 x i32> %a, <4 x i32> %b) {
 ; SKX-LABEL: test_extractelement_v4i1:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpnleud %xmm1, %xmm0, %k0
-; SKX-NEXT:    kshiftrw $3, %k0, %k0
+; SKX-NEXT:    kshiftrb $3, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    retq

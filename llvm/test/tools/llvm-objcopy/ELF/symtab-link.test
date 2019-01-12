@@ -1,9 +1,9 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objcopy %t %t2
-# RUN: llvm-readobj -sections %t2 | FileCheck %s
+# RUN: llvm-readobj --sections %t2 | FileCheck %s
 # RUN: cp %t %t3
 # RUN: llvm-strip --strip-debug %t3
-# RUN: llvm-readobj -sections %t3 | FileCheck %s
+# RUN: llvm-readobj --sections %t3 | FileCheck %s
 
 !ELF
 FileHeader:

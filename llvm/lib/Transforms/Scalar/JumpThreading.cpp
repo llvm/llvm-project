@@ -1171,6 +1171,9 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
     }
   }
 
+  if (SwitchInst *SI = dyn_cast<SwitchInst>(BB->getTerminator()))
+    TryToUnfoldSelect(SI, BB);
+
   // Check for some cases that are worth simplifying.  Right now we want to look
   // for loads that are used by a switch or by the condition for the branch.  If
   // we see one, check to see if it's partially redundant.  If so, insert a PHI
@@ -2388,6 +2391,72 @@ bool JumpThreadingPass::DuplicateCondBranchOnPHIIntoPred(
   return true;
 }
 
+// Pred is a predecessor of BB with an unconditional branch to BB. SI is
+// a Select instruction in Pred. BB has other predecessors and SI is used in
+// a PHI node in BB. SI has no other use.
+// A new basic block, NewBB, is created and SI is converted to compare and 
+// conditional branch. SI is erased from parent.
+void JumpThreadingPass::UnfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
+                                          SelectInst *SI, PHINode *SIUse,
+                                          unsigned Idx) {
+  // Expand the select.
+  //
+  // Pred --
+  //  |    v
+  //  |  NewBB
+  //  |    |
+  //  |-----
+  //  v
+  // BB
+  BranchInst *PredTerm = dyn_cast<BranchInst>(Pred->getTerminator());
+  BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "select.unfold",
+                                         BB->getParent(), BB);
+  // Move the unconditional branch to NewBB.
+  PredTerm->removeFromParent();
+  NewBB->getInstList().insert(NewBB->end(), PredTerm);
+  // Create a conditional branch and update PHI nodes.
+  BranchInst::Create(NewBB, BB, SI->getCondition(), Pred);
+  SIUse->setIncomingValue(Idx, SI->getFalseValue());
+  SIUse->addIncoming(SI->getTrueValue(), NewBB);
+
+  // The select is now dead.
+  SI->eraseFromParent();
+  DTU->applyUpdates({{DominatorTree::Insert, NewBB, BB},
+                    {DominatorTree::Insert, Pred, NewBB}});
+
+  // Update any other PHI nodes in BB.
+  for (BasicBlock::iterator BI = BB->begin();
+       PHINode *Phi = dyn_cast<PHINode>(BI); ++BI)
+    if (Phi != SIUse)
+      Phi->addIncoming(Phi->getIncomingValueForBlock(Pred), NewBB);
+}
+
+bool JumpThreadingPass::TryToUnfoldSelect(SwitchInst *SI, BasicBlock *BB) {
+  PHINode *CondPHI = dyn_cast<PHINode>(SI->getCondition());
+
+  if (!CondPHI || CondPHI->getParent() != BB)
+    return false;
+
+  for (unsigned I = 0, E = CondPHI->getNumIncomingValues(); I != E; ++I) {
+    BasicBlock *Pred = CondPHI->getIncomingBlock(I);
+    SelectInst *PredSI = dyn_cast<SelectInst>(CondPHI->getIncomingValue(I));
+
+    // The second and third condition can be potentially relaxed. Currently
+    // the conditions help to simplify the code and allow us to reuse existing
+    // code, developed for TryToUnfoldSelect(CmpInst *, BasicBlock *)
+    if (!PredSI || PredSI->getParent() != Pred || !PredSI->hasOneUse())
+      continue;
+
+    BranchInst *PredTerm = dyn_cast<BranchInst>(Pred->getTerminator());
+    if (!PredTerm || !PredTerm->isUnconditional())
+      continue;
+
+    UnfoldSelectInstr(Pred, BB, PredSI, CondPHI, I);
+    return true;
+  }
+  return false;
+}
+
 /// TryToUnfoldSelect - Look for blocks of the form
 /// bb1:
 ///   %a = select
@@ -2438,34 +2507,7 @@ bool JumpThreadingPass::TryToUnfoldSelect(CmpInst *CondCmp, BasicBlock *BB) {
     if ((LHSFolds != LazyValueInfo::Unknown ||
          RHSFolds != LazyValueInfo::Unknown) &&
         LHSFolds != RHSFolds) {
-      // Expand the select.
-      //
-      // Pred --
-      //  |    v
-      //  |  NewBB
-      //  |    |
-      //  |-----
-      //  v
-      // BB
-      BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "select.unfold",
-                                             BB->getParent(), BB);
-      // Move the unconditional branch to NewBB.
-      PredTerm->removeFromParent();
-      NewBB->getInstList().insert(NewBB->end(), PredTerm);
-      // Create a conditional branch and update PHI nodes.
-      BranchInst::Create(NewBB, BB, SI->getCondition(), Pred);
-      CondLHS->setIncomingValue(I, SI->getFalseValue());
-      CondLHS->addIncoming(SI->getTrueValue(), NewBB);
-      // The select is now dead.
-      SI->eraseFromParent();
-
-      DTU->applyUpdates({{DominatorTree::Insert, NewBB, BB},
-                         {DominatorTree::Insert, Pred, NewBB}});
-      // Update any other PHI nodes in BB.
-      for (BasicBlock::iterator BI = BB->begin();
-           PHINode *Phi = dyn_cast<PHINode>(BI); ++BI)
-        if (Phi != CondLHS)
-          Phi->addIncoming(Phi->getIncomingValueForBlock(Pred), NewBB);
+      UnfoldSelectInstr(Pred, BB, SI, CondLHS, I);
       return true;
     }
   }

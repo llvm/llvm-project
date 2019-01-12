@@ -176,7 +176,7 @@ define <16 x i32> @test16_v16i32_undef(<16 x i32> %a, <16 x i32> %b) {
 ;
 ; AVX512-LABEL: test16_v16i32_undef:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %vecext = extractelement <16 x i32> %a, i32 0
   %vecext1 = extractelement <16 x i32> %a, i32 1
@@ -252,7 +252,7 @@ define <16 x i32> @test17_v16i32_undef(<16 x i32> %a, <16 x i32> %b) {
 ; AVX512-LABEL: test17_v16i32_undef:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %vecext = extractelement <16 x i32> %a, i32 0
   %vecext1 = extractelement <16 x i32> %a, i32 1

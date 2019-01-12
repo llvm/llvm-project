@@ -363,3 +363,81 @@ cond.false.15.i:                                  ; preds = %cond.false.10.i
 ; CHECK: br i1 %cmp13.i, label %.exit, label %cond.false.15.i
 ; CHECK: br label %.exit
 }
+
+; When a select has a constant operand in one branch, and it feeds a phi node
+; and the phi node feeds a switch we unfold the select
+define void @test_func(i32* nocapture readonly %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %n) local_unnamed_addr #0 {
+entry:
+  br label %for.cond
+
+for.cond:                                         ; preds = %sw.default, %entry
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %sw.default ]
+  %cmp = icmp slt i32 %i.0, %n
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond
+  ret void
+
+for.body:                                         ; preds = %for.cond
+  %0 = zext i32 %i.0 to i64
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %0
+  %1 = load i32, i32* %arrayidx, align 4
+  %cmp1 = icmp eq i32 %1, 4
+  br i1 %cmp1, label %land.lhs.true, label %if.end
+
+land.lhs.true:                                    ; preds = %for.body
+  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %0
+  %2 = load i32, i32* %arrayidx3, align 4
+  %arrayidx5 = getelementptr inbounds i32, i32* %c, i64 %0
+  %3 = load i32, i32* %arrayidx5, align 4
+  %cmp6 = icmp eq i32 %2, %3
+  %spec.select = select i1 %cmp6, i32 2, i32 4
+  br label %if.end
+
+if.end:                                           ; preds = %land.lhs.true, %for.body
+  %local_var.0 = phi i32 [ %1, %for.body ], [ %spec.select, %land.lhs.true ]
+  switch i32 %local_var.0, label %sw.default [
+    i32 2, label %sw.bb
+    i32 4, label %sw.bb7
+    i32 5, label %sw.bb8
+    i32 7, label %sw.bb9
+  ]
+
+sw.bb:                                            ; preds = %if.end
+  call void @foo()
+  br label %sw.bb7
+
+sw.bb7:                                           ; preds = %if.end, %sw.bb
+  call void @bar()
+  br label %sw.bb8
+
+sw.bb8:                                           ; preds = %if.end, %sw.bb7
+  call void @baz()
+  br label %sw.bb9
+
+sw.bb9:                                           ; preds = %if.end, %sw.bb8
+  call void @quux()
+  br label %sw.default
+
+sw.default:                                       ; preds = %if.end, %sw.bb9
+  call void @baz()
+  %inc = add nuw nsw i32 %i.0, 1
+  br label %for.cond
+
+; CHECK-LABEL: @test_func(
+; CHECK: [[REG:%[0-9]+]] = load
+; CHECK-NOT: select
+; CHECK: br i1
+; CHECK-NOT: select
+; CHECK: br i1 {{.*}}, label [[DEST1:%.*]], label [[DEST2:%.*]]
+
+; The following line checks existence of a phi node, and makes sure
+; it only has one incoming value. To do this, we check every '%'. Note
+; that REG and REG2 each contain one '%;. There is another one in the
+; beginning of the incoming block name. After that there should be no other '%'.
+
+; CHECK: [[REG2:%.*]] = phi i32 {{[^%]*}}[[REG]]{{[^%]*%[^%]*}}
+; CHECK: switch i32 [[REG2]]
+; CHECK: i32 2, label [[DEST1]]
+; CHECK: i32 4, label [[DEST2]]
+}

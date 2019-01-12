@@ -938,4 +938,67 @@ define float @test_sitofp_fadd_i32(i32 %a, half* %b) #0 {
   ret float %tmp3
 }
 
+define half @PR40273(half) #0 {
+; CHECK-LIBCALL-LABEL: PR40273:
+; CHECK-LIBCALL:       # %bb.0:
+; CHECK-LIBCALL-NEXT:    pushq %rax
+; CHECK-LIBCALL-NEXT:    callq __gnu_f2h_ieee
+; CHECK-LIBCALL-NEXT:    movzwl %ax, %edi
+; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee
+; CHECK-LIBCALL-NEXT:    xorps %xmm1, %xmm1
+; CHECK-LIBCALL-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-LIBCALL-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-LIBCALL-NEXT:    jne .LBB17_3
+; CHECK-LIBCALL-NEXT:  # %bb.1:
+; CHECK-LIBCALL-NEXT:    jp .LBB17_3
+; CHECK-LIBCALL-NEXT:  # %bb.2:
+; CHECK-LIBCALL-NEXT:    xorps %xmm0, %xmm0
+; CHECK-LIBCALL-NEXT:  .LBB17_3:
+; CHECK-LIBCALL-NEXT:    popq %rax
+; CHECK-LIBCALL-NEXT:    retq
+;
+; BWON-F16C-LABEL: PR40273:
+; BWON-F16C:       # %bb.0:
+; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; BWON-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; BWON-F16C-NEXT:    vucomiss %xmm1, %xmm0
+; BWON-F16C-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; BWON-F16C-NEXT:    jne .LBB17_3
+; BWON-F16C-NEXT:  # %bb.1:
+; BWON-F16C-NEXT:    jp .LBB17_3
+; BWON-F16C-NEXT:  # %bb.2:
+; BWON-F16C-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; BWON-F16C-NEXT:  .LBB17_3:
+; BWON-F16C-NEXT:    retq
+;
+; CHECK-I686-LABEL: PR40273:
+; CHECK-I686:       # %bb.0:
+; CHECK-I686-NEXT:    subl $12, %esp
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss %xmm0, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_f2h_ieee
+; CHECK-I686-NEXT:    movzwl %ax, %eax
+; CHECK-I686-NEXT:    movl %eax, (%esp)
+; CHECK-I686-NEXT:    calll __gnu_h2f_ieee
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    xorps %xmm1, %xmm1
+; CHECK-I686-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    jne .LBB17_3
+; CHECK-I686-NEXT:  # %bb.1:
+; CHECK-I686-NEXT:    jp .LBB17_3
+; CHECK-I686-NEXT:  # %bb.2:
+; CHECK-I686-NEXT:    xorps %xmm0, %xmm0
+; CHECK-I686-NEXT:  .LBB17_3:
+; CHECK-I686-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    addl $12, %esp
+; CHECK-I686-NEXT:    retl
+  %2 = fcmp une half %0, 0xH0000
+  %3 = uitofp i1 %2 to half
+  ret half %3
+}
+
 attributes #0 = { nounwind }

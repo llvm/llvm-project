@@ -36,9 +36,26 @@ using namespace ento;
 namespace clang {
 namespace ento {
 
-/// An ArgEffect summarizes the retain count behavior on an argument or receiver
-/// to a function or method.
-enum ArgEffect {
+/// Determines the object kind of a tracked object.
+enum class ObjKind {
+  /// Indicates that the tracked object is a CF object.
+  CF,
+
+  /// Indicates that the tracked object is an Objective-C object.
+  ObjC,
+
+  /// Indicates that the tracked object could be a CF or Objective-C object.
+  AnyObj,
+
+  /// Indicates that the tracked object is a generalized object.
+  Generalized,
+
+  /// Indicates that the tracking object is a descendant of a
+  /// referenced-counted OSObject, used in the Darwin kernel.
+  OS
+};
+
+enum ArgEffectKind {
   /// There is no effect.
   DoNothing,
 
@@ -46,43 +63,34 @@ enum ArgEffect {
   /// the referenced object.
   Autorelease,
 
-  /// The argument is treated as if an -dealloc message had been sent to
-  /// the referenced object.
+  /// The argument is treated as if the referenced object was deallocated.
   Dealloc,
 
-  /// The argument has its reference count decreased by 1.  This is as
-  /// if CFRelease has been called on the argument.
+  /// The argument has its reference count decreased by 1.
   DecRef,
-
-  /// The argument has its reference count decreased by 1.  This is as
-  /// if a -release message has been sent to the argument.  This differs
-  /// in behavior from DecRef when ARC is enabled.
-  DecRefMsg,
 
   /// The argument has its reference count decreased by 1 to model
   /// a transferred bridge cast under ARC.
   DecRefBridgedTransferred,
 
-  /// The argument has its reference count increased by 1.  This is as
-  /// if a -retain message has been sent to the argument.  This differs
-  /// in behavior from IncRef when ARC is enabled.
-  IncRefMsg,
-
-  /// The argument has its reference count increased by 1.  This is as
-  /// if CFRetain has been called on the argument.
+  /// The argument has its reference count increased by 1.
   IncRef,
 
-  /// The argument acts as if has been passed to CFMakeCollectable, which
-  /// transfers the object to the Garbage Collector under GC.
-  MakeCollectable,
-
   /// The argument is a pointer to a retain-counted object; on exit, the new
-  /// value of the pointer is a +0 value or NULL.
+  /// value of the pointer is a +0 value.
   UnretainedOutParameter,
 
   /// The argument is a pointer to a retain-counted object; on exit, the new
-  /// value of the pointer is a +1 value or NULL.
+  /// value of the pointer is a +1 value.
   RetainedOutParameter,
+
+  /// The argument is a pointer to a retain-counted object; on exit, the new
+  /// value of the pointer is a +1 value iff the return code is zero.
+  RetainedOutParameterOnZero,
+
+  /// The argument is a pointer to a retain-counted object; on exit, the new
+  /// value of the pointer is a +1 value iff the return code is non-zero.
+  RetainedOutParameterOnNonZero,
 
   /// The argument is treated as potentially escaping, meaning that
   /// even when its reference count hits 0 it should be treated as still
@@ -108,13 +116,27 @@ enum ArgEffect {
   /// count of the argument and all typestate tracking on that argument
   /// should cease.
   DecRefAndStopTrackingHard,
+};
 
-  /// Performs the combined functionality of DecRefMsg and StopTrackingHard.
-  ///
-  /// The models the effect that the called function decrements the reference
-  /// count of the argument and all typestate tracking on that argument
-  /// should cease.
-  DecRefMsgAndStopTrackingHard
+/// An ArgEffect summarizes the retain count behavior on an argument or receiver
+/// to a function or method.
+class ArgEffect {
+  ArgEffectKind K;
+  ObjKind O;
+public:
+  explicit ArgEffect(ArgEffectKind K = DoNothing, ObjKind O = ObjKind::AnyObj)
+      : K(K), O(O) {}
+
+  ArgEffectKind getKind() const { return K; }
+  ObjKind getObjKind() const { return O; }
+
+  ArgEffect withKind(ArgEffectKind NewK) {
+    return ArgEffect(NewK, O);
+  }
+
+  bool operator==(const ArgEffect &Other) const {
+    return K == Other.K && O == Other.O;
+  }
 };
 
 /// RetEffect summarizes a call's retain/release behavior with respect
@@ -125,18 +147,19 @@ public:
     /// Indicates that no retain count information is tracked for
     /// the return value.
     NoRet,
+
     /// Indicates that the returned value is an owned (+1) symbol.
     OwnedSymbol,
+
     /// Indicates that the returned value is an object with retain count
     /// semantics but that it is not owned (+0).  This is the default
     /// for getters, etc.
     NotOwnedSymbol,
-    /// Indicates that the object is not owned and controlled by the
-    /// Garbage collector.
-    GCNotOwnedSymbol,
+
     /// Indicates that the return value is an owned object when the
     /// receiver is also a tracked object.
     OwnedWhenTrackedReceiver,
+
     // Treat this function as returning a non-tracked symbol even if
     // the function has been inlined. This is used where the call
     // site summary is more precise than the summary indirectly produced
@@ -144,27 +167,11 @@ public:
     NoRetHard
   };
 
-  /// Determines the object kind of a tracked object.
-  enum ObjKind {
-    /// Indicates that the tracked object is a CF object.  This is
-    /// important between GC and non-GC code.
-    CF,
-    /// Indicates that the tracked object is an Objective-C object.
-    ObjC,
-    /// Indicates that the tracked object could be a CF or Objective-C object.
-    AnyObj,
-    /// Indicates that the tracked object is a generalized object.
-    Generalized,
-
-    /// A descendant of OSObject.
-    OS
-  };
-
 private:
   Kind K;
   ObjKind O;
 
-  RetEffect(Kind k, ObjKind o = AnyObj) : K(k), O(o) {}
+  RetEffect(Kind k, ObjKind o = ObjKind::AnyObj) : K(k), O(o) {}
 
 public:
   Kind getKind() const { return K; }
@@ -184,7 +191,7 @@ public:
   }
 
   static RetEffect MakeOwnedWhenTrackedReceiver() {
-    return RetEffect(OwnedWhenTrackedReceiver, ObjC);
+    return RetEffect(OwnedWhenTrackedReceiver, ObjKind::ObjC);
   }
 
   static RetEffect MakeOwned(ObjKind o) {
@@ -192,9 +199,6 @@ public:
   }
   static RetEffect MakeNotOwned(ObjKind o) {
     return RetEffect(NotOwnedSymbol, o);
-  }
-  static RetEffect MakeGCNotOwned() {
-    return RetEffect(GCNotOwnedSymbol, ObjC);
   }
   static RetEffect MakeNoRet() {
     return RetEffect(NoRet);
@@ -217,7 +221,9 @@ class CallEffects {
   RetEffect Ret;
   ArgEffect Receiver;
 
-  CallEffects(const RetEffect &R) : Ret(R) {}
+  CallEffects(const RetEffect &R,
+              ArgEffect Receiver = ArgEffect(DoNothing, ObjKind::AnyObj))
+      : Ret(R), Receiver(Receiver) {}
 
 public:
   /// Returns the argument effects for a call.
@@ -262,7 +268,8 @@ namespace llvm {
 
 template <> struct FoldingSetTrait<ArgEffect> {
 static inline void Profile(const ArgEffect X, FoldingSetNodeID &ID) {
-  ID.AddInteger((unsigned) X);
+  ID.AddInteger((unsigned) X.getKind());
+  ID.AddInteger((unsigned) X.getObjKind());
 }
 };
 template <> struct FoldingSetTrait<RetEffect> {
@@ -370,14 +377,15 @@ public:
   ArgEffect getReceiverEffect() const { return Receiver; }
 
   /// \return the effect on the "this" receiver of the method call.
+  /// This is only meaningful if the summary applies to CXXMethodDecl*.
   ArgEffect getThisEffect() const { return This; }
 
   /// Set the effect of the method on "this".
   void setThisEffect(ArgEffect e) { This = e; }
 
   bool isNoop() const {
-    return Ret == RetEffect::MakeNoRet() && Receiver == DoNothing
-      && DefaultArgEffect == MayEscape && This == DoNothing
+    return Ret == RetEffect::MakeNoRet() && Receiver.getKind() == DoNothing
+      && DefaultArgEffect.getKind() == MayEscape && This.getKind() == DoNothing
       && Args.isEmpty();
   }
 
@@ -535,10 +543,8 @@ class RetainSummaryManager {
   /// Free the OS object.
   const RetainSummary *getOSSummaryFreeRule(const FunctionDecl *FD);
 
-  enum UnaryFuncKind { cfretain, cfrelease, cfautorelease, cfmakecollectable };
-
   const RetainSummary *getUnarySummary(const FunctionType* FT,
-                                       UnaryFuncKind func);
+                                       ArgEffectKind AE);
 
   const RetainSummary *getCFSummaryCreateRule(const FunctionDecl *FD);
   const RetainSummary *getCFSummaryGetRule(const FunctionDecl *FD);
@@ -546,32 +552,31 @@ class RetainSummaryManager {
 
   const RetainSummary *getPersistentSummary(const RetainSummary &OldSumm);
 
-  const RetainSummary *getPersistentSummary(RetEffect RetEff,
-                                            ArgEffects ScratchArgs,
-                                            ArgEffect ReceiverEff = DoNothing,
-                                            ArgEffect DefaultEff = MayEscape,
-                                            ArgEffect ThisEff = DoNothing) {
-    RetainSummary Summ(ScratchArgs, RetEff, DefaultEff, ReceiverEff,
-                       ThisEff);
+  const RetainSummary *
+  getPersistentSummary(RetEffect RetEff, ArgEffects ScratchArgs,
+                       ArgEffect ReceiverEff = ArgEffect(DoNothing),
+                       ArgEffect DefaultEff = ArgEffect(MayEscape),
+                       ArgEffect ThisEff = ArgEffect(DoNothing)) {
+    RetainSummary Summ(ScratchArgs, RetEff, DefaultEff, ReceiverEff, ThisEff);
     return getPersistentSummary(Summ);
   }
 
   const RetainSummary *getDoNothingSummary() {
     return getPersistentSummary(RetEffect::MakeNoRet(),
                                 ArgEffects(AF.getEmptyMap()),
-                                DoNothing, DoNothing);
+                                ArgEffect(DoNothing), ArgEffect(DoNothing));
   }
 
   const RetainSummary *getDefaultSummary() {
     return getPersistentSummary(RetEffect::MakeNoRet(),
                                 ArgEffects(AF.getEmptyMap()),
-                                DoNothing, MayEscape);
+                                ArgEffect(DoNothing), ArgEffect(MayEscape));
   }
 
   const RetainSummary *getPersistentStopSummary() {
-    return getPersistentSummary(RetEffect::MakeNoRet(),
-                                ArgEffects(AF.getEmptyMap()),
-                                StopTracking, StopTracking);
+    return getPersistentSummary(
+        RetEffect::MakeNoRet(), ArgEffects(AF.getEmptyMap()),
+        ArgEffect(StopTracking), ArgEffect(StopTracking));
   }
 
   void InitializeClassMethodSummaries();
@@ -644,10 +649,9 @@ class RetainSummaryManager {
   /// Apply the annotation of {@code pd} in function {@code FD}
   /// to the resulting summary stored in out-parameter {@code Template}.
   /// \return whether an annotation was applied.
-  bool applyFunctionParamAnnotationEffect(const ParmVarDecl *pd,
-                                        unsigned parm_idx,
-                                        const FunctionDecl *FD,
-                                        RetainSummaryTemplate &Template);
+  bool applyParamAnnotationEffect(const ParmVarDecl *pd, unsigned parm_idx,
+                                  const NamedDecl *FD,
+                                  RetainSummaryTemplate &Template);
 
 public:
   RetainSummaryManager(ASTContext &ctx,
@@ -659,9 +663,9 @@ public:
      TrackObjCAndCFObjects(trackObjCAndCFObjects),
      TrackOSObjects(trackOSObjects),
      AF(BPAlloc),
-     ObjCAllocRetE(usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
-                               : RetEffect::MakeOwned(RetEffect::ObjC)),
-     ObjCInitRetE(usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
+     ObjCAllocRetE(usesARC ? RetEffect::MakeNotOwned(ObjKind::ObjC)
+                               : RetEffect::MakeOwned(ObjKind::ObjC)),
+     ObjCInitRetE(usesARC ? RetEffect::MakeNotOwned(ObjKind::ObjC)
                                : RetEffect::MakeOwnedWhenTrackedReceiver()) {
     InitializeClassMethodSummaries();
     InitializeMethodSummaries();
@@ -742,16 +746,18 @@ public:
 
   RetEffect getObjAllocRetEffect() const { return ObjCAllocRetE; }
 
-  /// \return True if the declaration has an attribute {@code T},
-  /// AND we are tracking that attribute. False otherwise.
+  /// Determine whether a declaration {@code D} of correspondent type (return
+  /// type for functions/methods) {@code QT} has any of the given attributes,
+  /// provided they pass necessary validation checks AND tracking the given
+  /// attribute is enabled.
+  /// Returns the object kind corresponding to the present attribute, or None,
+  /// if none of the specified attributes are present.
+  /// Crashes if passed an attribute which is not explicitly handled.
   template <class T>
-  bool hasEnabledAttr(const Decl *D) {
-    return isAttrEnabled<T>() && D->hasAttr<T>();
-  }
+  Optional<ObjKind> hasAnyEnabledAttrOf(const Decl *D, QualType QT);
 
-  /// Check whether we are tracking properties specified by the attributes.
-  template <class T>
-  bool isAttrEnabled();
+  template <class T1, class T2, class... Others>
+  Optional<ObjKind> hasAnyEnabledAttrOf(const Decl *D, QualType QT);
 
   friend class RetainSummaryTemplate;
 };

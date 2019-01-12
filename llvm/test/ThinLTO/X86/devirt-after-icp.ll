@@ -42,7 +42,7 @@
 ; will use the same vtable pointer. Without a dominance check, we could
 ; incorrectly devirtualize a->foo() to B::foo();
 
-; RUN: opt -thinlto-bc -o %t.o %s
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
 
 ; Legacy PM
 ; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39436.

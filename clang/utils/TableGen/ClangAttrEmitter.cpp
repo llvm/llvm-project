@@ -603,14 +603,15 @@ namespace {
       OS << "    OS << \"";
     }
 
-    void writeDump(raw_ostream &OS) const override {}
+    void writeDump(raw_ostream &OS) const override {
+      OS << "    if (!SA->is" << getUpperName() << "Expr())\n";
+      OS << "      dumpType(SA->get" << getUpperName()
+         << "Type()->getType());\n";
+    }
 
     void writeDumpChildren(raw_ostream &OS) const override {
       OS << "    if (SA->is" << getUpperName() << "Expr())\n";
       OS << "      dumpStmt(SA->get" << getUpperName() << "Expr());\n";
-      OS << "    else\n";
-      OS << "      dumpType(SA->get" << getUpperName()
-         << "Type()->getType());\n";
     }
 
     void writeHasChildren(raw_ostream &OS) const override {
@@ -3697,39 +3698,67 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
 }
 
 // Emits the code to dump an attribute.
-void EmitClangAttrDump(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("Attribute dumper", OS);
+void EmitClangAttrTextNodeDump(RecordKeeper &Records, raw_ostream &OS) {
+  emitSourceFileHeader("Attribute text node dumper", OS);
 
-  OS << "  switch (A->getKind()) {\n";
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr"), Args;
   for (const auto *Attr : Attrs) {
     const Record &R = *Attr;
     if (!R.getValueAsBit("ASTNode"))
       continue;
-    OS << "  case attr::" << R.getName() << ": {\n";
 
     // If the attribute has a semantically-meaningful name (which is determined
     // by whether there is a Spelling enumeration for it), then write out the
     // spelling used for the attribute.
+
+    std::string FunctionContent;
+    llvm::raw_string_ostream SS(FunctionContent);
+
     std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(R);
     if (Spellings.size() > 1 && !SpellingNamesAreCommon(Spellings))
-      OS << "    OS << \" \" << A->getSpelling();\n";
+      SS << "    OS << \" \" << A->getSpelling();\n";
 
     Args = R.getValueAsListOfDefs("Args");
-    if (!Args.empty()) {
-      OS << "    const auto *SA = cast<" << R.getName()
-         << "Attr>(A);\n";
-      for (const auto *Arg : Args)
-        createArgument(*Arg, R.getName())->writeDump(OS);
+    for (const auto *Arg : Args)
+      createArgument(*Arg, R.getName())->writeDump(SS);
 
-      for (const auto *AI : Args)
-        createArgument(*AI, R.getName())->writeDumpChildren(OS);
+    if (SS.tell()) {
+      OS << "  void Visit" << R.getName() << "Attr(const " << R.getName()
+         << "Attr *A) {\n";
+      if (!Args.empty())
+        OS << "    const auto *SA = cast<" << R.getName()
+           << "Attr>(A); (void)SA;\n";
+      OS << SS.str();
+      OS << "  }\n";
     }
-    OS <<
-      "    break;\n"
-      "  }\n";
   }
-  OS << "  }\n";
+}
+
+void EmitClangAttrNodeTraverse(RecordKeeper &Records, raw_ostream &OS) {
+  emitSourceFileHeader("Attribute text node traverser", OS);
+
+  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr"), Args;
+  for (const auto *Attr : Attrs) {
+    const Record &R = *Attr;
+    if (!R.getValueAsBit("ASTNode"))
+      continue;
+
+    std::string FunctionContent;
+    llvm::raw_string_ostream SS(FunctionContent);
+
+    Args = R.getValueAsListOfDefs("Args");
+    for (const auto *Arg : Args)
+      createArgument(*Arg, R.getName())->writeDumpChildren(SS);
+    if (SS.tell()) {
+      OS << "  void Visit" << R.getName() << "Attr(const " << R.getName()
+         << "Attr *A) {\n";
+      if (!Args.empty())
+        OS << "    const auto *SA = cast<" << R.getName()
+           << "Attr>(A); (void)SA;\n";
+      OS << SS.str();
+      OS << "  }\n";
+    }
+  }
 }
 
 void EmitClangAttrParserStringSwitches(RecordKeeper &Records,

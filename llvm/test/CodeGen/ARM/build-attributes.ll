@@ -1623,7 +1623,7 @@
 ; EXYNOS-M4:  .eabi_attribute 8, 1
 ; EXYNOS-M4:  .eabi_attribute 9, 2
 ; EXYNOS-M4:  .fpu crypto-neon-fp-armv8
-; EXYNOS-M4:  .eabi_attribute 12, 3
+; EXYNOS-M4:  .eabi_attribute 12, 4
 ; EXYNOS-M4-NOT:  .eabi_attribute 27
 ; EXYNOS-M4:  .eabi_attribute 36, 1
 ; EXYNOS-M4:  .eabi_attribute 42, 1

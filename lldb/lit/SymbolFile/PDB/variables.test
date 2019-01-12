@@ -9,7 +9,7 @@ RUN: FileCheck --check-prefix=FUNC-CONSTRUCTOR --input-file=%T/VariablesTest.out
 RUN: FileCheck --check-prefix=FUNC-MEMBER --input-file=%T/VariablesTest.out %s
 
 GLOBALS: Module [[MOD:.*]]
-GLOBALS: SymbolVendor ([[MOD]])
+GLOBALS: SymbolVendor pdb ([[MOD]])
 GLOBALS:     CompileUnit{{.*}}, language = "c++", file = '{{.*}}\VariablesTest.cpp'
 GLOBALS-DAG:   Variable{{.*}}, name = "g_IntVar"
 GLOBALS-SAME:  scope = global, location = {{.*}}, external

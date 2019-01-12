@@ -139,7 +139,11 @@ public:
   bool ProcessImpliedCondition(BasicBlock *BB);
 
   bool SimplifyPartiallyRedundantLoad(LoadInst *LI);
+  void UnfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB, SelectInst *SI,
+                         PHINode *SIUse, unsigned Idx);
+
   bool TryToUnfoldSelect(CmpInst *CondCmp, BasicBlock *BB);
+  bool TryToUnfoldSelect(SwitchInst *SI, BasicBlock *BB);
   bool TryToUnfoldSelectInCurrBB(BasicBlock *BB);
 
   bool ProcessGuards(BasicBlock *BB);

@@ -5294,18 +5294,30 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
     case bitc::FS_FLAGS: {  // [flags]
       uint64_t Flags = Record[0];
-      // Scan flags (set only on the combined index).
-      assert(Flags <= 0x3 && "Unexpected bits in flag");
+      // Scan flags.
+      assert(Flags <= 0x1f && "Unexpected bits in flag");
 
       // 1 bit: WithGlobalValueDeadStripping flag.
+      // Set on combined index only.
       if (Flags & 0x1)
         TheIndex.setWithGlobalValueDeadStripping();
       // 1 bit: SkipModuleByDistributedBackend flag.
+      // Set on combined index only.
       if (Flags & 0x2)
         TheIndex.setSkipModuleByDistributedBackend();
       // 1 bit: HasSyntheticEntryCounts flag.
+      // Set on combined index only.
       if (Flags & 0x4)
         TheIndex.setHasSyntheticEntryCounts();
+      // 1 bit: DisableSplitLTOUnit flag.
+      // Set on per module indexes. It is up to the client to validate
+      // the consistency of this flag across modules being linked.
+      if (Flags & 0x8)
+        TheIndex.setEnableSplitLTOUnit();
+      // 1 bit: PartiallySplitLTOUnits flag.
+      // Set on combined index only.
+      if (Flags & 0x10)
+        TheIndex.setPartiallySplitLTOUnits();
       break;
     }
     case bitc::FS_VALUE_GUID: { // [valueid, refguid]
@@ -5917,6 +5929,46 @@ Expected<std::unique_ptr<ModuleSummaryIndex>> BitcodeModule::getSummary() {
   return std::move(Index);
 }
 
+static Expected<bool> getEnableSplitLTOUnitFlag(BitstreamCursor &Stream,
+                                                unsigned ID) {
+  if (Stream.EnterSubBlock(ID))
+    return error("Invalid record");
+  SmallVector<uint64_t, 64> Record;
+
+  while (true) {
+    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+
+    switch (Entry.Kind) {
+    case BitstreamEntry::SubBlock: // Handled for us already.
+    case BitstreamEntry::Error:
+      return error("Malformed block");
+    case BitstreamEntry::EndBlock:
+      // If no flags record found, conservatively return true to mimic
+      // behavior before this flag was added.
+      return true;
+    case BitstreamEntry::Record:
+      // The interesting case.
+      break;
+    }
+
+    // Look for the FS_FLAGS record.
+    Record.clear();
+    auto BitCode = Stream.readRecord(Entry.ID, Record);
+    switch (BitCode) {
+    default: // Default behavior: ignore.
+      break;
+    case bitc::FS_FLAGS: { // [flags]
+      uint64_t Flags = Record[0];
+      // Scan flags.
+      assert(Flags <= 0x1f && "Unexpected bits in flag");
+
+      return Flags & 0x8;
+    }
+    }
+  }
+  llvm_unreachable("Exit infinite loop");
+}
+
 // Check if the given bitcode buffer contains a global value summary block.
 Expected<BitcodeLTOInfo> BitcodeModule::getLTOInfo() {
   BitstreamCursor Stream(Buffer);
@@ -5932,14 +5984,27 @@ Expected<BitcodeLTOInfo> BitcodeModule::getLTOInfo() {
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      return BitcodeLTOInfo{/*IsThinLTO=*/false, /*HasSummary=*/false};
+      return BitcodeLTOInfo{/*IsThinLTO=*/false, /*HasSummary=*/false,
+                            /*EnableSplitLTOUnit=*/false};
 
     case BitstreamEntry::SubBlock:
-      if (Entry.ID == bitc::GLOBALVAL_SUMMARY_BLOCK_ID)
-        return BitcodeLTOInfo{/*IsThinLTO=*/true, /*HasSummary=*/true};
+      if (Entry.ID == bitc::GLOBALVAL_SUMMARY_BLOCK_ID) {
+        Expected<bool> EnableSplitLTOUnit =
+            getEnableSplitLTOUnitFlag(Stream, Entry.ID);
+        if (!EnableSplitLTOUnit)
+          return EnableSplitLTOUnit.takeError();
+        return BitcodeLTOInfo{/*IsThinLTO=*/true, /*HasSummary=*/true,
+                              *EnableSplitLTOUnit};
+      }
 
-      if (Entry.ID == bitc::FULL_LTO_GLOBALVAL_SUMMARY_BLOCK_ID)
-        return BitcodeLTOInfo{/*IsThinLTO=*/false, /*HasSummary=*/true};
+      if (Entry.ID == bitc::FULL_LTO_GLOBALVAL_SUMMARY_BLOCK_ID) {
+        Expected<bool> EnableSplitLTOUnit =
+            getEnableSplitLTOUnitFlag(Stream, Entry.ID);
+        if (!EnableSplitLTOUnit)
+          return EnableSplitLTOUnit.takeError();
+        return BitcodeLTOInfo{/*IsThinLTO=*/false, /*HasSummary=*/true,
+                              *EnableSplitLTOUnit};
+      }
 
       // Ignore other sub-blocks.
       if (Stream.SkipBlock())

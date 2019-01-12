@@ -10,7 +10,7 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // <optional>
 
-// optional<T>& operator=(const optional<T>& rhs);
+// optional<T>& operator=(const optional<T>& rhs); // constexpr in C++20
 
 #include <optional>
 #include <type_traits>
@@ -53,15 +53,19 @@ int main()
 {
     {
         using O = optional<int>;
+#if TEST_STD_VER > 17
         LIBCPP_STATIC_ASSERT(assign_empty(O{42}), "");
         LIBCPP_STATIC_ASSERT(assign_value(O{42}), "");
+#endif
         assert(assign_empty(O{42}));
         assert(assign_value(O{42}));
     }
     {
         using O = optional<TrivialTestTypes::TestType>;
+#if TEST_STD_VER > 17
         LIBCPP_STATIC_ASSERT(assign_empty(O{42}), "");
         LIBCPP_STATIC_ASSERT(assign_value(O{42}), "");
+#endif
         assert(assign_empty(O{42}));
         assert(assign_value(O{42}));
     }

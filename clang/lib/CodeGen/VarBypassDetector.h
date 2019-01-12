@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_VARBYPASSDETECTOR_H
 #define LLVM_CLANG_LIB_CODEGEN_VARBYPASSDETECTOR_H
 
+#include "clang/AST/Decl.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"

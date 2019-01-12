@@ -391,6 +391,7 @@ include "AArch64SchedFalkor.td"
 include "AArch64SchedKryo.td"
 include "AArch64SchedExynosM1.td"
 include "AArch64SchedExynosM3.td"
+include "AArch64SchedExynosM4.td"
 include "AArch64SchedThunderX.td"
 include "AArch64SchedThunderX2T99.td"
 
@@ -540,6 +541,25 @@ def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                      FeaturePredictableSelectIsExpensive,
                                      FeatureZCZeroingFP]>;
 
+def ProcExynosM4 : SubtargetFeature<"exynosm4", "ARMProcFamily", "ExynosM3",
+                                    "Samsung Exynos-M4 processors",
+                                    [HasV8_2aOps,
+                                     FeatureArithmeticBccFusion,
+                                     FeatureArithmeticCbzFusion,
+                                     FeatureCrypto,
+                                     FeatureDotProd,
+                                     FeatureExynosCheapAsMoveHandling,
+                                     FeatureForce32BitJumpTables,
+                                     FeatureFP16FML,
+                                     FeatureFuseAddress,
+                                     FeatureFuseAES,
+                                     FeatureFuseCCSelect,
+                                     FeatureFuseLiterals,
+                                     FeatureLSLFast,
+                                     FeaturePerfMon,
+                                     FeaturePostRAScheduler,
+                                     FeatureZCZeroing]>;
+
 def ProcKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
                                    "Qualcomm Kryo processors", [
                                    FeatureCRC,
@@ -677,7 +697,7 @@ def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;
 def : ProcessorModel<"exynos-m1", ExynosM1Model, [ProcExynosM1]>;
 def : ProcessorModel<"exynos-m2", ExynosM1Model, [ProcExynosM2]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, [ProcExynosM3]>;
-def : ProcessorModel<"exynos-m4", ExynosM3Model, [ProcExynosM3]>;
+def : ProcessorModel<"exynos-m4", ExynosM4Model, [ProcExynosM4]>;
 def : ProcessorModel<"falkor", FalkorModel, [ProcFalkor]>;
 def : ProcessorModel<"saphira", FalkorModel, [ProcSaphira]>;
 def : ProcessorModel<"kryo", KryoModel, [ProcKryo]>;

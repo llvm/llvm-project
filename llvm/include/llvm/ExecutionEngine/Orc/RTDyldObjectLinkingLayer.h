@@ -443,11 +443,14 @@ public:
 private:
   ExecutionSession &ES;
 
-  std::map<VModuleKey, std::unique_ptr<LinkedObject>> LinkedObjects;
   ResourcesGetter GetResources;
   NotifyLoadedFtor NotifyLoaded;
   NotifyFinalizedFtor NotifyFinalized;
   NotifyFreedFtor NotifyFreed;
+
+  // NB!  `LinkedObjects` needs to be destroyed before `NotifyFreed` because
+  // `~ConcreteLinkedObject` calls `NotifyFreed`
+  std::map<VModuleKey, std::unique_ptr<LinkedObject>> LinkedObjects;
   bool ProcessAllSections = false;
 };
 

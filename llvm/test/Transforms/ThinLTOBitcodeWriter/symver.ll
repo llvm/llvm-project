@@ -1,4 +1,4 @@
-; RUN: opt -thinlto-bc -o %t %s
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s
 ; RUN: llvm-modextract -n 1 -o - %t | llvm-dis | FileCheck %s
 
 ; The target assembly parser is required to parse the symver directives

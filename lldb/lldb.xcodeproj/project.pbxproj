@@ -905,6 +905,7 @@
 		268900DD13353E6F00698AC0 /* Symbol.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F1B10F1B8EC00F91463 /* Symbol.cpp */; };
 		268900DE13353E6F00698AC0 /* SymbolContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F1C10F1B8EC00F91463 /* SymbolContext.cpp */; };
 		268900DF13353E6F00698AC0 /* SymbolFile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F1D10F1B8EC00F91463 /* SymbolFile.cpp */; };
+		AF97744721E9947E006876A7 /* SymbolFileBreakpad.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF97744621E9947B006876A7 /* SymbolFileBreakpad.cpp */; };
 		268900CA13353E5F00698AC0 /* SymbolFileDWARF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89D910F57C5600BB2B04 /* SymbolFileDWARF.cpp */; };
 		268900CC13353E5F00698AC0 /* SymbolFileDWARFDebugMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89DB10F57C5600BB2B04 /* SymbolFileDWARFDebugMap.cpp */; };
 		6D95DC021B9DC057000E318A /* SymbolFileDWARFDwo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D95DBFF1B9DC057000E318A /* SymbolFileDWARFDwo.cpp */; };
@@ -2975,6 +2976,8 @@
 		26BC7C6110F1B6E900F91463 /* SymbolContextScope.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SymbolContextScope.h; path = include/lldb/Symbol/SymbolContextScope.h; sourceTree = "<group>"; };
 		26BC7F1D10F1B8EC00F91463 /* SymbolFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SymbolFile.cpp; path = source/Symbol/SymbolFile.cpp; sourceTree = "<group>"; };
 		26BC7C6210F1B6E900F91463 /* SymbolFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SymbolFile.h; path = include/lldb/Symbol/SymbolFile.h; sourceTree = "<group>"; };
+		AF97744621E9947B006876A7 /* SymbolFileBreakpad.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SymbolFileBreakpad.cpp; path = source/Plugins/SymbolFile/Breakpad/SymbolFileBreakpad.cpp; sourceTree = SOURCE_ROOT; };
+		AF97744521E9947B006876A7 /* SymbolFileBreakpad.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SymbolFileBreakpad.h; path = source/Plugins/SymbolFile/Breakpad/SymbolFileBreakpad.h; sourceTree = SOURCE_ROOT; };
 		260C89D910F57C5600BB2B04 /* SymbolFileDWARF.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolFileDWARF.cpp; sourceTree = "<group>"; };
 		260C89DA10F57C5600BB2B04 /* SymbolFileDWARF.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SymbolFileDWARF.h; sourceTree = "<group>"; };
 		260C89DB10F57C5600BB2B04 /* SymbolFileDWARFDebugMap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolFileDWARFDebugMap.cpp; sourceTree = "<group>"; };
@@ -4024,6 +4027,7 @@
 		260C89B110F57C5600BB2B04 /* SymbolFile */ = {
 			isa = PBXGroup;
 			children = (
+				AF97744421E99467006876A7 /* Breakpad */,
 				AFD966B321714099006714AC /* NativePDB */,
 				AF6335DF1C87B20A00F7D554 /* PDB */,
 				260C89B210F57C5600BB2B04 /* DWARF */,
@@ -6804,6 +6808,16 @@
 			path = ../Disassembler;
 			sourceTree = "<group>";
 		};
+		AF97744421E99467006876A7 /* Breakpad */ = {
+			isa = PBXGroup;
+			children = (
+				AF97744621E9947B006876A7 /* SymbolFileBreakpad.cpp */,
+				AF97744521E9947B006876A7 /* SymbolFileBreakpad.h */,
+			);
+			name = Breakpad;
+			path = "New Group";
+			sourceTree = "<group>";
+		};
 		AFAFD8081E57E19E0017A14F /* Target */ = {
 			isa = PBXGroup;
 			children = (
@@ -8328,6 +8342,7 @@
 				3FBA69E11B6067120008F44A /* ScriptInterpreterNone.cpp in Sources */,
 				AF9113FD1FBE78EA004320CD /* RegisterContextPOSIXCore_ppc64le.cpp in Sources */,
 				266DFE9713FD656E00D0C574 /* OperatingSystem.cpp in Sources */,
+				AF97744721E9947E006876A7 /* SymbolFileBreakpad.cpp in Sources */,
 				AF8AD6391BEC28C400150209 /* PlatformRemoteAppleWatch.cpp in Sources */,
 				26954EBE1401EE8B00294D09 /* DynamicRegisterInfo.cpp in Sources */,
 				6D9AB3DD1BB2B74E003F2289 /* TypeMap.cpp in Sources */,

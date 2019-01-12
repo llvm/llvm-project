@@ -84,14 +84,16 @@ Error COFFReader::readSections(Object &Obj) const {
 }
 
 Error COFFReader::readSymbols(Object &Obj, bool IsBigObj) const {
+  std::vector<Symbol> Symbols;
+  Symbols.reserve(COFFObj.getRawNumberOfSymbols());
   for (uint32_t I = 0, E = COFFObj.getRawNumberOfSymbols(); I < E;) {
     Expected<COFFSymbolRef> SymOrErr = COFFObj.getSymbol(I);
     if (!SymOrErr)
       return SymOrErr.takeError();
     COFFSymbolRef SymRef = *SymOrErr;
 
-    Obj.Symbols.push_back(Symbol());
-    Symbol &Sym = Obj.Symbols.back();
+    Symbols.push_back(Symbol());
+    Symbol &Sym = Symbols.back();
     // Copy symbols from the original form into an intermediate coff_symbol32.
     if (IsBigObj)
       copySymbol(Sym.Sym,
@@ -105,6 +107,30 @@ Error COFFReader::readSymbols(Object &Obj, bool IsBigObj) const {
     assert((Sym.AuxData.size() %
             (IsBigObj ? sizeof(coff_symbol32) : sizeof(coff_symbol16))) == 0);
     I += 1 + SymRef.getNumberOfAuxSymbols();
+  }
+  Obj.addSymbols(Symbols);
+  return Error::success();
+}
+
+Error COFFReader::setRelocTargets(Object &Obj) const {
+  std::vector<const Symbol *> RawSymbolTable;
+  for (const Symbol &Sym : Obj.getSymbols()) {
+    RawSymbolTable.push_back(&Sym);
+    for (size_t I = 0; I < Sym.Sym.NumberOfAuxSymbols; I++)
+      RawSymbolTable.push_back(nullptr);
+  }
+  for (Section &Sec : Obj.Sections) {
+    for (Relocation &R : Sec.Relocs) {
+      if (R.Reloc.SymbolTableIndex >= RawSymbolTable.size())
+        return make_error<StringError>("SymbolTableIndex out of range",
+                                       object_error::parse_failed);
+      const Symbol *Sym = RawSymbolTable[R.Reloc.SymbolTableIndex];
+      if (Sym == nullptr)
+        return make_error<StringError>("Invalid SymbolTableIndex",
+                                       object_error::parse_failed);
+      R.Target = Sym->UniqueId;
+      R.TargetName = Sym->Name;
+    }
   }
   return Error::success();
 }
@@ -135,6 +161,8 @@ Expected<std::unique_ptr<Object>> COFFReader::create() const {
   if (Error E = readSections(*Obj))
     return std::move(E);
   if (Error E = readSymbols(*Obj, IsBigObj))
+    return std::move(E);
+  if (Error E = setRelocTargets(*Obj))
     return std::move(E);
 
   return std::move(Obj);

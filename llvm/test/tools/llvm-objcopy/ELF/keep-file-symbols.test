@@ -1,8 +1,8 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objcopy --strip-all --keep-file-symbols %t %t2
-# RUN: llvm-readobj -symbols %t2 | FileCheck %s --check-prefix=STRIPALL
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefix=STRIPALL
 # RUN: llvm-objcopy --keep-file-symbols --strip-symbol foo %t %t2
-# RUN: llvm-readobj -symbols %t2 | FileCheck %s --check-prefix=STRIP
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefix=STRIP
 
 !ELF
 FileHeader:

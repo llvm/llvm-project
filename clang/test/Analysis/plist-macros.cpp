@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -analyzer-output=plist-multi-file %s -o %t.plist
-// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/plist-macros.cpp.plist
+// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/plist-macros.cpp.plist -
 
 
 typedef __typeof(sizeof(int)) size_t;
