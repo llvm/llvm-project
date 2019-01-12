@@ -1,0 +1,20 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objdump --all-headers %t | FileCheck %s
+
+## Check we print file format, architecture and start address before
+## anything else when using --all-headers.
+
+# CHECK:       file format ELF64-x86-64
+# CHECK-EMPTY:
+# CHECK-NEXT:  architecture: x86_64
+# CHECK-NEXT:  start address: 0x0000000000000000
+# CHECK-EMPTY:
+# CHECK-NEXT:  Sections:
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:

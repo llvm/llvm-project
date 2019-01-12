@@ -8726,12 +8726,28 @@ let Predicates = [HasVLX] in {
 
 multiclass avx512_cvtps2ph<X86VectorVTInfo _dest, X86VectorVTInfo _src,
                            X86MemOperand x86memop, SchedWrite RR, SchedWrite MR> {
-  defm rr : AVX512_maskable<0x1D, MRMDestReg, _dest ,(outs _dest.RC:$dst),
-                   (ins _src.RC:$src1, i32u8imm:$src2),
-                   "vcvtps2ph", "$src2, $src1", "$src1, $src2",
-                   (X86cvtps2ph (_src.VT _src.RC:$src1),
-                                (i32 imm:$src2)), 0, 0>,
-                   AVX512AIi8Base, Sched<[RR]>;
+let ExeDomain = GenericDomain in {
+  def rr : AVX512AIi8<0x1D, MRMDestReg, (outs _dest.RC:$dst),
+             (ins _src.RC:$src1, i32u8imm:$src2),
+             "vcvtps2ph\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+             [(set _dest.RC:$dst,
+                   (X86cvtps2ph (_src.VT _src.RC:$src1), (i32 imm:$src2)))]>,
+             Sched<[RR]>;
+  let Constraints = "$src0 = $dst" in
+  def rrk : AVX512AIi8<0x1D, MRMDestReg, (outs _dest.RC:$dst),
+             (ins _dest.RC:$src0, _src.KRCWM:$mask, _src.RC:$src1, i32u8imm:$src2),
+             "vcvtps2ph\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}",
+             [(set _dest.RC:$dst,
+                   (X86mcvtps2ph (_src.VT _src.RC:$src1), (i32 imm:$src2),
+                                 _dest.RC:$src0, _src.KRCWM:$mask))]>,
+             Sched<[RR]>, EVEX_K;
+  def rrkz : AVX512AIi8<0x1D, MRMDestReg, (outs _dest.RC:$dst),
+             (ins _src.KRCWM:$mask, _src.RC:$src1, i32u8imm:$src2),
+             "vcvtps2ph\t{$src2, $src1, $dst {${mask}} {z}|$dst {${mask}} {z}, $src1, $src2}",
+             [(set _dest.RC:$dst,
+                   (X86mcvtps2ph (_src.VT _src.RC:$src1), (i32 imm:$src2),
+                                 _dest.ImmAllZerosV, _src.KRCWM:$mask))]>,
+             Sched<[RR]>, EVEX_KZ;
   let hasSideEffects = 0, mayStore = 1 in {
     def mr : AVX512AIi8<0x1D, MRMDestMem, (outs),
                (ins x86memop:$dst, _src.RC:$src1, i32u8imm:$src2),
@@ -8742,6 +8758,7 @@ multiclass avx512_cvtps2ph<X86VectorVTInfo _dest, X86VectorVTInfo _src,
                "vcvtps2ph\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}", []>,
                 EVEX_K, Sched<[MR]>, NotMemoryFoldable;
   }
+}
 }
 
 multiclass avx512_cvtps2ph_sae<X86VectorVTInfo _dest, X86VectorVTInfo _src,

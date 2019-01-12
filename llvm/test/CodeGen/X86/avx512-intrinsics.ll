@@ -990,8 +990,8 @@ define <16 x i16> @test_x86_vcvtps2ph_256(<16 x float> %a0, <16 x i16> %src, i16
 ; CHECK-LABEL: test_x86_vcvtps2ph_256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vcvtps2ph $2, %zmm0, %ymm1 {%k1}
 ; CHECK-NEXT:    vcvtps2ph $2, %zmm0, %ymm2 {%k1} {z}
+; CHECK-NEXT:    vcvtps2ph $2, %zmm0, %ymm1 {%k1}
 ; CHECK-NEXT:    vpaddw %ymm1, %ymm2, %ymm1
 ; CHECK-NEXT:    vcvtps2ph $2, %zmm0, (%rsi)
 ; CHECK-NEXT:    vmovdqa %ymm1, %ymm0

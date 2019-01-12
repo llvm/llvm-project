@@ -64,6 +64,19 @@ void TextNodeDumper::Visit(const Attr *A) {
   ConstAttrVisitor<TextNodeDumper>::Visit(A);
 }
 
+void TextNodeDumper::Visit(const TemplateArgument &TA, SourceRange R,
+                           const Decl *From, StringRef Label) {
+  OS << "TemplateArgument";
+  if (R.isValid())
+    dumpSourceRange(R);
+
+  if (From) {
+    dumpDeclRef(From, Label);
+  }
+
+  ConstTemplateArgumentVisitor<TextNodeDumper>::Visit(TA);
+}
+
 void TextNodeDumper::dumpPointer(const void *Ptr) {
   ColorScope Color(OS, ShowColors, AddressColor);
   OS << ' ' << Ptr;
@@ -184,12 +197,12 @@ void TextNodeDumper::dumpCXXTemporary(const CXXTemporary *Temporary) {
   OS << ")";
 }
 
-void TextNodeDumper::dumpDeclRef(const Decl *D, const char *Label) {
+void TextNodeDumper::dumpDeclRef(const Decl *D, StringRef Label) {
   if (!D)
     return;
 
   AddChild([=] {
-    if (Label)
+    if (!Label.empty())
       OS << Label << ' ';
     dumpBareDeclRef(D);
   });
@@ -316,4 +329,46 @@ void TextNodeDumper::visitVerbatimBlockLineComment(
 void TextNodeDumper::visitVerbatimLineComment(
     const comments::VerbatimLineComment *C, const comments::FullComment *) {
   OS << " Text=\"" << C->getText() << "\"";
+}
+
+void TextNodeDumper::VisitNullTemplateArgument(const TemplateArgument &) {
+  OS << " null";
+}
+
+void TextNodeDumper::VisitTypeTemplateArgument(const TemplateArgument &TA) {
+  OS << " type";
+  dumpType(TA.getAsType());
+}
+
+void TextNodeDumper::VisitDeclarationTemplateArgument(
+    const TemplateArgument &TA) {
+  OS << " decl";
+  dumpDeclRef(TA.getAsDecl());
+}
+
+void TextNodeDumper::VisitNullPtrTemplateArgument(const TemplateArgument &) {
+  OS << " nullptr";
+}
+
+void TextNodeDumper::VisitIntegralTemplateArgument(const TemplateArgument &TA) {
+  OS << " integral " << TA.getAsIntegral();
+}
+
+void TextNodeDumper::VisitTemplateTemplateArgument(const TemplateArgument &TA) {
+  OS << " template ";
+  TA.getAsTemplate().dump(OS);
+}
+
+void TextNodeDumper::VisitTemplateExpansionTemplateArgument(
+    const TemplateArgument &TA) {
+  OS << " template expansion ";
+  TA.getAsTemplateOrTemplatePattern().dump(OS);
+}
+
+void TextNodeDumper::VisitExpressionTemplateArgument(const TemplateArgument &) {
+  OS << " expr";
+}
+
+void TextNodeDumper::VisitPackTemplateArgument(const TemplateArgument &) {
+  OS << " pack";
 }

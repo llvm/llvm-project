@@ -24,6 +24,7 @@
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/LocInfoType.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/TemplateArgumentVisitor.h"
 #include "clang/AST/TextNodeDumper.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
@@ -44,7 +45,8 @@ namespace  {
         public ConstStmtVisitor<ASTDumper>,
         public ConstCommentVisitor<ASTDumper, void, const FullComment *>,
         public TypeVisitor<ASTDumper>,
-        public ConstAttrVisitor<ASTDumper> {
+        public ConstAttrVisitor<ASTDumper>,
+        public ConstTemplateArgumentVisitor<ASTDumper> {
 
     TextNodeDumper NodeDumper;
 
@@ -440,6 +442,14 @@ namespace  {
     // Comments.
     void dumpComment(const Comment *C, const FullComment *FC);
 
+    void VisitExpressionTemplateArgument(const TemplateArgument &TA) {
+      dumpStmt(TA.getAsExpr());
+    }
+    void VisitPackTemplateArgument(const TemplateArgument &TA) {
+      for (const auto& TArg : TA.pack_elements())
+        dumpTemplateArgument(TArg);
+    }
+
 // Implements Visit methods for Attrs.
 #include "clang/AST/AttrNodeTraverse.inc"
   };
@@ -670,49 +680,8 @@ void ASTDumper::dumpTemplateArgumentList(const TemplateArgumentList &TAL) {
 void ASTDumper::dumpTemplateArgument(const TemplateArgument &A, SourceRange R,
                                      const Decl *From, const char *Label) {
   dumpChild([=] {
-    OS << "TemplateArgument";
-    if (R.isValid())
-      NodeDumper.dumpSourceRange(R);
-
-    if (From)
-      NodeDumper.dumpDeclRef(From, Label);
-
-    switch (A.getKind()) {
-    case TemplateArgument::Null:
-      OS << " null";
-      break;
-    case TemplateArgument::Type:
-      OS << " type";
-      NodeDumper.dumpType(A.getAsType());
-      break;
-    case TemplateArgument::Declaration:
-      OS << " decl";
-      NodeDumper.dumpDeclRef(A.getAsDecl());
-      break;
-    case TemplateArgument::NullPtr:
-      OS << " nullptr";
-      break;
-    case TemplateArgument::Integral:
-      OS << " integral " << A.getAsIntegral();
-      break;
-    case TemplateArgument::Template:
-      OS << " template ";
-      A.getAsTemplate().dump(OS);
-      break;
-    case TemplateArgument::TemplateExpansion:
-      OS << " template expansion ";
-      A.getAsTemplateOrTemplatePattern().dump(OS);
-      break;
-    case TemplateArgument::Expression:
-      OS << " expr";
-      dumpStmt(A.getAsExpr());
-      break;
-    case TemplateArgument::Pack:
-      OS << " pack";
-      for (const auto& TArg : A.pack_elements())
-        dumpTemplateArgument(TArg);
-      break;
-    }
+    NodeDumper.Visit(A, R, From, Label);
+    ConstTemplateArgumentVisitor<ASTDumper>::Visit(A);
   });
 }
 

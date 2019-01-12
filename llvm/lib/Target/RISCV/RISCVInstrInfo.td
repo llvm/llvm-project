@@ -654,6 +654,30 @@ class PatGprUimmLog2XLen<SDPatternOperator OpNode, RVInstIShift Inst>
 def IsOrAdd: PatFrag<(ops node:$A, node:$B), (or node:$A, node:$B), [{
   return isOrEquivalentToAdd(N);
 }]>;
+def assertsexti32 : PatFrag<(ops node:$src), (assertsext node:$src), [{
+  return cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i32;
+}]>;
+def sexti32 : PatFrags<(ops node:$src),
+                       [(sext_inreg node:$src, i32),
+                        (assertsexti32 node:$src)]>;
+def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
+  return cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i32;
+}]>;
+def assertzexti5 : PatFrag<(ops node:$src), (assertzext node:$src), [{
+  return cast<VTSDNode>(N->getOperand(1))->getVT().getSizeInBits() <= 5;
+}]>;
+def zexti32 : PatFrags<(ops node:$src),
+                       [(and node:$src, 0xffffffff),
+                        (assertzexti32 node:$src)]>;
+// Defines a legal mask for (assertzexti5 (and src, mask)) to be combinable
+// with a shiftw operation. The mask mustn't modify the lower 5 bits or the
+// upper 32 bits.
+def shiftwamt_mask : ImmLeaf<XLenVT, [{
+  return countTrailingOnes<uint64_t>(Imm) >= 5 && isUInt<32>(Imm);
+}]>;
+def shiftwamt : PatFrags<(ops node:$src),
+                         [(assertzexti5 (and node:$src, shiftwamt_mask)),
+                          (assertzexti5 node:$src)]>;
 
 /// Immediates
 
@@ -911,7 +935,28 @@ def : Pat<(sext_inreg (shl GPR:$rs1, uimm5:$shamt), i32),
 def : Pat<(sra (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
           (SRAIW GPR:$rs1, uimm5:$shamt)>;
 
-// TODO: patterns for SLLW/SRLW/SRAW.
+// For variable-length shifts, we rely on assertzexti5 being inserted during
+// lowering (see RISCVTargetLowering::PerformDAGCombine). This enables us to
+// guarantee that selecting a 32-bit variable shift is legal (as the variable
+// shift is known to be <= 32). We must also be careful not to create
+// semantically incorrect patterns. For instance, selecting SRLW for
+// (srl (zexti32 GPR:$rs1), (shiftwamt GPR:$rs2)),
+// is not guaranteed to be safe, as we don't know whether the upper 32-bits of
+// the result are used or not (in the case where rs2=0, this is a
+// sign-extension operation).
+
+def : Pat<(sext_inreg (shl GPR:$rs1, (shiftwamt GPR:$rs2)), i32),
+          (SLLW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(zexti32 (shl GPR:$rs1, (shiftwamt GPR:$rs2))),
+          (SRLI (SLLI (SLLW GPR:$rs1, GPR:$rs2), 32), 32)>;
+
+def : Pat<(sext_inreg (srl (zexti32 GPR:$rs1), (shiftwamt GPR:$rs2)), i32),
+          (SRLW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(zexti32 (srl (zexti32 GPR:$rs1), (shiftwamt GPR:$rs2))),
+          (SRLI (SLLI (SRLW GPR:$rs1, GPR:$rs2), 32), 32)>;
+
+def : Pat<(sra (sexti32 GPR:$rs1), (shiftwamt GPR:$rs2)),
+          (SRAW GPR:$rs1, GPR:$rs2)>;
 
 /// Loads
 
