@@ -25,8 +25,6 @@ namespace coff {
 using namespace object;
 using namespace COFF;
 
-Writer::~Writer() {}
-
 Error COFFWriter::finalizeRelocTargets() {
   for (Section &Sec : Obj.Sections) {
     for (Relocation &R : Sec.Relocs) {

@@ -2645,6 +2645,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   SDValue Tmp1, Tmp2, Tmp3, Tmp4;
   bool NeedInvert;
   switch (Node->getOpcode()) {
+  case ISD::ABS:
+    if (TLI.expandABS(Node, Tmp1, DAG))
+      Results.push_back(Tmp1);
+    break;
   case ISD::CTPOP:
     if (TLI.expandCTPOP(Node, Tmp1, DAG))
       Results.push_back(Tmp1);

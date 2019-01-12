@@ -542,7 +542,8 @@ define <1 x i64> @abs_1d(<1 x i64> %A) nounwind {
 
 define i64 @abs_1d_honestly(i64 %A) nounwind {
 ; CHECK-LABEL: abs_1d_honestly:
-; CHECK: abs d0, d0
+; CHECK:       cmp x0, #0
+; CHECK-NEXT:  cneg x0, x0, mi
   %abs = call i64 @llvm.aarch64.neon.abs.i64(i64 %A)
   ret i64 %abs
 }

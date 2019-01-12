@@ -23,13 +23,7 @@ struct Object;
 
 using object::COFFObjectFile;
 
-class Reader {
-public:
-  virtual ~Reader();
-  virtual Expected<std::unique_ptr<Object>> create() const = 0;
-};
-
-class COFFReader : public Reader {
+class COFFReader {
   const COFFObjectFile &COFFObj;
 
   Error readExecutableHeaders(Object &Obj) const;
@@ -39,7 +33,7 @@ class COFFReader : public Reader {
 
 public:
   explicit COFFReader(const COFFObjectFile &O) : COFFObj(O) {}
-  Expected<std::unique_ptr<Object>> create() const override;
+  Expected<std::unique_ptr<Object>> create() const;
 };
 
 } // end namespace coff
