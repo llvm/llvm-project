@@ -627,7 +627,7 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
 
   if (!MightBeCxx11UnevalField && !isAddressOfOperand && !IsEnum &&
       isa<CXXMethodDecl>(DC) && cast<CXXMethodDecl>(DC)->isInstance()) {
-    QualType ThisType = cast<CXXMethodDecl>(DC)->getThisType(Context);
+    QualType ThisType = cast<CXXMethodDecl>(DC)->getThisType();
 
     // Since the 'this' expression is synthesized, we don't need to
     // perform the double-lookup check.

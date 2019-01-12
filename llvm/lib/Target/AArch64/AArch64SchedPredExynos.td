@@ -48,7 +48,10 @@ def ExynosArithFn   : TIIPredicate<
                                                CheckExtBy3]>]>]>>>,
                            MCOpcodeSwitchCase<
                              IsArithShiftOp.ValidOpcodes,
-                             MCReturnStatement<ExynosCheckShift>>],
+                             MCReturnStatement<ExynosCheckShift>>,
+                           MCOpcodeSwitchCase<
+                             IsArithUnshiftOp.ValidOpcodes,
+                             MCReturnStatement<TruePred>>],
                           MCReturnStatement<FalsePred>>>;
 def ExynosArithPred : MCSchedPredicate<ExynosArithFn>;
 
@@ -58,7 +61,10 @@ def ExynosLogicFn   : TIIPredicate<
                         MCOpcodeSwitchStatement<
                           [MCOpcodeSwitchCase<
                              IsLogicShiftOp.ValidOpcodes,
-                             MCReturnStatement<ExynosCheckShift>>],
+                             MCReturnStatement<ExynosCheckShift>>,
+                           MCOpcodeSwitchCase<
+                             IsLogicUnshiftOp.ValidOpcodes,
+                             MCReturnStatement<TruePred>>],
                           MCReturnStatement<FalsePred>>>;
 def ExynosLogicPred : MCSchedPredicate<ExynosLogicFn>;
 
@@ -73,7 +79,10 @@ def ExynosLogicExFn   : TIIPredicate<
                                    [ExynosCheckShift,
                                     CheckAll<
                                      [CheckShiftLSL,
-                                      CheckShiftBy8]>]>>>],
+                                      CheckShiftBy8]>]>>>,
+                             MCOpcodeSwitchCase<
+                               IsLogicUnshiftOp.ValidOpcodes,
+                               MCReturnStatement<TruePred>>],
                             MCReturnStatement<FalsePred>>>;
 def ExynosLogicExPred : MCSchedPredicate<ExynosLogicExFn>;
 

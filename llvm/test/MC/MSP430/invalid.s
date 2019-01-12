@@ -4,7 +4,6 @@ foo:
   mov    r7        ; CHECK: :[[@LINE]]:3: error: too few operands for instruction
 
   ;; invalid destination addressing modes
-  mov    r7, @r15  ; CHECK: :[[@LINE]]:14: error: invalid operand for instruction
   mov    r7, @r15+ ; CHECK: :[[@LINE]]:14: error: invalid operand for instruction
   mov    r7, #0    ; CHECK: :[[@LINE]]:14: error: invalid operand for instruction
   mov    r7, #123  ; CHECK: :[[@LINE]]:14: error: invalid operand for instruction

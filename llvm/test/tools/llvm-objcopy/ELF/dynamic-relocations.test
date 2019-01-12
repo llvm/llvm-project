@@ -1,5 +1,5 @@
 # RUN: llvm-objcopy %p/Inputs/dynrel.elf %t
-# RUN: llvm-readobj -sections -section-data %t | FileCheck %s
+# RUN: llvm-readobj --sections --section-data %t | FileCheck %s
 
 #CHECK:         Name: .rela.plt
 #CHECK-NEXT:    Type: SHT_RELA

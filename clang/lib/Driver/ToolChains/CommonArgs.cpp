@@ -1159,11 +1159,8 @@ static void AddLibgcc(const llvm::Triple &Triple, const Driver &D,
   bool StaticLibgcc = Args.hasArg(options::OPT_static_libgcc) ||
                       Args.hasArg(options::OPT_static);
 
-  // The driver ignores -shared-libgcc and therefore treats such cases as
-  // unspecified.  Breaking out the two variables as below makes the current
-  // behavior explicit.
-  bool UnspecifiedLibgcc = !StaticLibgcc;
-  bool SharedLibgcc = !StaticLibgcc;
+  bool SharedLibgcc = Args.hasArg(options::OPT_shared_libgcc);
+  bool UnspecifiedLibgcc = !StaticLibgcc && !SharedLibgcc;
 
   // Gcc adds libgcc arguments in various ways:
   //
@@ -1180,7 +1177,7 @@ static void AddLibgcc(const llvm::Triple &Triple, const Driver &D,
   if (LibGccFirst)
     CmdArgs.push_back("-lgcc");
 
-  bool AsNeeded = D.CCCIsCC() && !StaticLibgcc && !isAndroid && !isCygMing;
+  bool AsNeeded = D.CCCIsCC() && UnspecifiedLibgcc && !isAndroid && !isCygMing;
   if (AsNeeded)
     CmdArgs.push_back("--as-needed");
 

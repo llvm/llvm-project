@@ -1281,19 +1281,15 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ; KNL-NEXT:    kmovw %edi, %k0
 ; KNL-NEXT:    kmovw %esi, %k1
 ; KNL-NEXT:    kshiftrw $8, %k1, %k2
-; KNL-NEXT:    kmovw %k2, %eax
 ; KNL-NEXT:    kshiftrw $9, %k1, %k1
-; KNL-NEXT:    kmovw %k1, %ecx
-; KNL-NEXT:    kshiftrw $6, %k0, %k1
-; KNL-NEXT:    kmovw %ecx, %k2
-; KNL-NEXT:    kxorw %k2, %k1, %k1
+; KNL-NEXT:    kshiftrw $6, %k0, %k3
+; KNL-NEXT:    kxorw %k1, %k3, %k1
 ; KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; KNL-NEXT:    kshiftrw $9, %k1, %k1
 ; KNL-NEXT:    kxorw %k1, %k0, %k0
 ; KNL-NEXT:    kshiftlw $9, %k0, %k0
 ; KNL-NEXT:    kshiftrw $9, %k0, %k0
-; KNL-NEXT:    kmovw %eax, %k1
-; KNL-NEXT:    kshiftlw $7, %k1, %k1
+; KNL-NEXT:    kshiftlw $7, %k2, %k1
 ; KNL-NEXT:    korw %k1, %k0, %k1
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
@@ -1303,37 +1299,37 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ;
 ; SKX-LABEL: test18:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    kmovd %edi, %k1
-; SKX-NEXT:    kmovd %esi, %k2
-; SKX-NEXT:    kshiftrw $8, %k2, %k0
-; SKX-NEXT:    kshiftrw $9, %k2, %k2
-; SKX-NEXT:    kshiftrb $6, %k1, %k3
-; SKX-NEXT:    kxorb %k2, %k3, %k2
-; SKX-NEXT:    kshiftlb $7, %k2, %k2
-; SKX-NEXT:    kshiftrb $1, %k2, %k2
-; SKX-NEXT:    kxorb %k2, %k1, %k1
-; SKX-NEXT:    kshiftlb $1, %k1, %k1
+; SKX-NEXT:    kmovd %edi, %k0
+; SKX-NEXT:    kmovd %esi, %k1
+; SKX-NEXT:    kshiftrw $8, %k1, %k2
+; SKX-NEXT:    kshiftrw $9, %k1, %k1
+; SKX-NEXT:    kshiftrb $6, %k0, %k3
+; SKX-NEXT:    kxorb %k1, %k3, %k1
+; SKX-NEXT:    kshiftlb $7, %k1, %k1
 ; SKX-NEXT:    kshiftrb $1, %k1, %k1
-; SKX-NEXT:    kshiftlb $7, %k0, %k0
-; SKX-NEXT:    korb %k0, %k1, %k0
+; SKX-NEXT:    kxorb %k1, %k0, %k0
+; SKX-NEXT:    kshiftlb $1, %k0, %k0
+; SKX-NEXT:    kshiftrb $1, %k0, %k0
+; SKX-NEXT:    kshiftlb $7, %k2, %k1
+; SKX-NEXT:    korb %k1, %k0, %k0
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test18:
 ; AVX512BW:       ## %bb.0:
-; AVX512BW-NEXT:    kmovd %edi, %k1
-; AVX512BW-NEXT:    kmovd %esi, %k2
-; AVX512BW-NEXT:    kshiftrw $8, %k2, %k0
-; AVX512BW-NEXT:    kshiftrw $9, %k2, %k2
-; AVX512BW-NEXT:    kshiftrw $6, %k1, %k3
-; AVX512BW-NEXT:    kxorw %k2, %k3, %k2
-; AVX512BW-NEXT:    kshiftlw $15, %k2, %k2
-; AVX512BW-NEXT:    kshiftrw $9, %k2, %k2
-; AVX512BW-NEXT:    kxorw %k2, %k1, %k1
-; AVX512BW-NEXT:    kshiftlw $9, %k1, %k1
+; AVX512BW-NEXT:    kmovd %edi, %k0
+; AVX512BW-NEXT:    kmovd %esi, %k1
+; AVX512BW-NEXT:    kshiftrw $8, %k1, %k2
 ; AVX512BW-NEXT:    kshiftrw $9, %k1, %k1
-; AVX512BW-NEXT:    kshiftlw $7, %k0, %k0
-; AVX512BW-NEXT:    korw %k0, %k1, %k0
+; AVX512BW-NEXT:    kshiftrw $6, %k0, %k3
+; AVX512BW-NEXT:    kxorw %k1, %k3, %k1
+; AVX512BW-NEXT:    kshiftlw $15, %k1, %k1
+; AVX512BW-NEXT:    kshiftrw $9, %k1, %k1
+; AVX512BW-NEXT:    kxorw %k1, %k0, %k0
+; AVX512BW-NEXT:    kshiftlw $9, %k0, %k0
+; AVX512BW-NEXT:    kshiftrw $9, %k0, %k0
+; AVX512BW-NEXT:    kshiftlw $7, %k2, %k1
+; AVX512BW-NEXT:    korw %k1, %k0, %k0
 ; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0
 ; AVX512BW-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512BW-NEXT:    vzeroupper
@@ -1344,19 +1340,15 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ; AVX512DQ-NEXT:    kmovw %edi, %k0
 ; AVX512DQ-NEXT:    kmovw %esi, %k1
 ; AVX512DQ-NEXT:    kshiftrw $8, %k1, %k2
-; AVX512DQ-NEXT:    kmovw %k2, %eax
 ; AVX512DQ-NEXT:    kshiftrw $9, %k1, %k1
-; AVX512DQ-NEXT:    kmovw %k1, %ecx
-; AVX512DQ-NEXT:    kshiftrb $6, %k0, %k1
-; AVX512DQ-NEXT:    kmovw %ecx, %k2
-; AVX512DQ-NEXT:    kxorb %k2, %k1, %k1
+; AVX512DQ-NEXT:    kshiftrb $6, %k0, %k3
+; AVX512DQ-NEXT:    kxorb %k1, %k3, %k1
 ; AVX512DQ-NEXT:    kshiftlb $7, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrb $1, %k1, %k1
 ; AVX512DQ-NEXT:    kxorb %k1, %k0, %k0
 ; AVX512DQ-NEXT:    kshiftlb $1, %k0, %k0
 ; AVX512DQ-NEXT:    kshiftrb $1, %k0, %k0
-; AVX512DQ-NEXT:    kmovw %eax, %k1
-; AVX512DQ-NEXT:    kshiftlb $7, %k1, %k1
+; AVX512DQ-NEXT:    kshiftlb $7, %k2, %k1
 ; AVX512DQ-NEXT:    korb %k1, %k0, %k0
 ; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
 ; AVX512DQ-NEXT:    vpmovdw %zmm0, %ymm0
@@ -1368,16 +1360,16 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k0
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    kshiftrw $9, %k1, %k2
-; X86-NEXT:    kshiftrw $8, %k1, %k1
-; X86-NEXT:    kshiftlb $7, %k1, %k1
+; X86-NEXT:    kshiftrw $8, %k1, %k2
+; X86-NEXT:    kshiftrw $9, %k1, %k1
 ; X86-NEXT:    kshiftrb $6, %k0, %k3
-; X86-NEXT:    kxorb %k2, %k3, %k2
-; X86-NEXT:    kshiftlb $7, %k2, %k2
-; X86-NEXT:    kshiftrb $1, %k2, %k2
-; X86-NEXT:    kxorb %k2, %k0, %k0
+; X86-NEXT:    kxorb %k1, %k3, %k1
+; X86-NEXT:    kshiftlb $7, %k1, %k1
+; X86-NEXT:    kshiftrb $1, %k1, %k1
+; X86-NEXT:    kxorb %k1, %k0, %k0
 ; X86-NEXT:    kshiftlb $1, %k0, %k0
 ; X86-NEXT:    kshiftrb $1, %k0, %k0
+; X86-NEXT:    kshiftlb $7, %k2, %k1
 ; X86-NEXT:    korb %k1, %k0, %k0
 ; X86-NEXT:    vpmovm2w %k0, %xmm0
 ; X86-NEXT:    retl

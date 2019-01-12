@@ -5,6 +5,7 @@
 
 ; CHECK:       <GLOBALVAL_SUMMARY_BLOCK
 ; CHECK-NEXT:    <VERSION
+; CHECK-NEXT:    <FLAGS
 ; "op7" is a call to "callee" function.
 ; CHECK-NEXT:    <PERMODULE {{.*}} op8=3 op9=[[ALIASID:[0-9]+]]/>
 ; "another_caller" has only references but no calls.

@@ -3,7 +3,7 @@
 # RUN: llvm-objcopy --strip-unneeded %t %t2
 # Verify that llvm-objcopy has not modified the input.
 # RUN: cmp %t %t1
-# RUN: llvm-readobj -symbols %t2 | FileCheck %s
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s
 
 # Verify that llvm-strip modifies the symbol table the same way.
 # RUN: llvm-strip --strip-unneeded %t

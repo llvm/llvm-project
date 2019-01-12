@@ -1,4 +1,4 @@
-executable("clang-func-mapping") {
+executable("clang-extdef-mapping") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang/lib/AST",
@@ -12,6 +12,6 @@ executable("clang-func-mapping") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "ClangFnMapGen.cpp",
+    "ClangExtDefMapGen.cpp",
   ]
 }

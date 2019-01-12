@@ -634,7 +634,7 @@ bb10:                                             ; preds = %bb9, %bb
 ; NOREGS-LABEL: stackpointer_dependency:
 ; NOREGS:      call stackpointer_callee@FUNCTION
 ; NOREGS:      global.set __stack_pointer
-declare i32 @stackpointer_callee(i8* readnone, i8* readnone)
+declare i32 @stackpointer_callee(i8* readnone, i8* readnone) nounwind readnone
 declare i8* @llvm.frameaddress(i32)
 define i32 @stackpointer_dependency(i8* readnone) {
   %2 = tail call i8* @llvm.frameaddress(i32 0)

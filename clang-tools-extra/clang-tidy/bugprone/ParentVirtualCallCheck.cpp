@@ -50,9 +50,7 @@ static BasesVector getParentsByGrandParent(const CXXRecordDecl &GrandParent,
     // TypePtr is the nearest base class to ThisClass between ThisClass and
     // GrandParent, where MemberDecl is overridden. TypePtr is the class the
     // check proposes to fix to.
-    const Type *TypePtr =
-        ActualMemberDecl->getThisType(ActualMemberDecl->getASTContext())
-            .getTypePtr();
+    const Type *TypePtr = ActualMemberDecl->getThisType().getTypePtr();
     const CXXRecordDecl *RecordDeclType = TypePtr->getPointeeCXXRecordDecl();
     assert(RecordDeclType && "TypePtr is not a pointer to CXXRecordDecl!");
     if (RecordDeclType->getCanonicalDecl()->isDerivedFrom(&GrandParent))

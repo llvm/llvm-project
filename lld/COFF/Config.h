@@ -197,6 +197,7 @@ struct Configuration {
   bool MinGW = false;
   bool WarnMissingOrderSymbol = true;
   bool WarnLocallyDefinedImported = true;
+  bool WarnDebugInfoUnusable = true;
   bool Incremental = true;
   bool IntegrityCheck = false;
   bool KillAt = false;

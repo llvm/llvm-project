@@ -77,12 +77,20 @@ enum ArgEffectKind {
   IncRef,
 
   /// The argument is a pointer to a retain-counted object; on exit, the new
-  /// value of the pointer is a +0 value or NULL.
+  /// value of the pointer is a +0 value.
   UnretainedOutParameter,
 
   /// The argument is a pointer to a retain-counted object; on exit, the new
-  /// value of the pointer is a +1 value or NULL.
+  /// value of the pointer is a +1 value.
   RetainedOutParameter,
+
+  /// The argument is a pointer to a retain-counted object; on exit, the new
+  /// value of the pointer is a +1 value iff the return code is zero.
+  RetainedOutParameterOnZero,
+
+  /// The argument is a pointer to a retain-counted object; on exit, the new
+  /// value of the pointer is a +1 value iff the return code is non-zero.
+  RetainedOutParameterOnNonZero,
 
   /// The argument is treated as potentially escaping, meaning that
   /// even when its reference count hits 0 it should be treated as still

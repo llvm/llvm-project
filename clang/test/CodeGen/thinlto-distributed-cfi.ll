@@ -2,7 +2,7 @@
 
 ; Backend test for distribute ThinLTO with CFI.
 
-; RUN: opt -thinlto-bc -o %t.o %s
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
 
 ; RUN: llvm-lto2 run -thinlto-distributed-indexes %t.o \
 ; RUN:   -o %t2.index \

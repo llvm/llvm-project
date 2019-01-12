@@ -23,8 +23,15 @@ include "llvm/Target/Target.td"
 // WebAssembly Subtarget features.
 //===----------------------------------------------------------------------===//
 
-def FeatureSIMD128 : SubtargetFeature<"simd128", "HasSIMD128", "true",
+def FeatureSIMD128 : SubtargetFeature<"simd128", "SIMDLevel", "SIMD128",
                                       "Enable 128-bit SIMD">;
+
+def FeatureUnimplementedSIMD128 :
+      SubtargetFeature<"unimplemented-simd128",
+                       "SIMDLevel", "UnimplementedSIMD128",
+                       "Enable 128-bit SIMD not yet implemented in engines",
+                       [FeatureSIMD128]>;
+
 def FeatureAtomics : SubtargetFeature<"atomics", "HasAtomics", "true",
                                       "Enable Atomics">;
 def FeatureNontrappingFPToInt :

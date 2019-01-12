@@ -497,7 +497,11 @@ bool MSP430AsmParser::ParseOperand(OperandVector &Operands) {
         getLexer().Lex(); // Eat '+'
         return false;
       }
-      Operands.push_back(MSP430Operand::CreateIndReg(RegNo, StartLoc, EndLoc));
+      if (Operands.size() > 1) // Emulate @rd in destination position as 0(rd)
+        Operands.push_back(MSP430Operand::CreateMem(RegNo,
+            MCConstantExpr::create(0, getContext()), StartLoc, EndLoc));
+      else
+        Operands.push_back(MSP430Operand::CreateIndReg(RegNo, StartLoc, EndLoc));
       return false;
     }
     case AsmToken::Hash:

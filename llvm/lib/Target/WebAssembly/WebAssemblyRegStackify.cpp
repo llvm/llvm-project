@@ -181,19 +181,6 @@ static void Query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
   // Check for stores.
   if (MI.mayStore()) {
     Write = true;
-
-    // Check for stores to __stack_pointer.
-    for (auto MMO : MI.memoperands()) {
-      const MachinePointerInfo &MPI = MMO->getPointerInfo();
-      if (MPI.V.is<const PseudoSourceValue *>()) {
-        auto PSV = MPI.V.get<const PseudoSourceValue *>();
-        if (const ExternalSymbolPseudoSourceValue *EPSV =
-                dyn_cast<ExternalSymbolPseudoSourceValue>(PSV))
-          if (StringRef(EPSV->getSymbol()) == "__stack_pointer") {
-            StackPointer = true;
-          }
-      }
-    }
   } else if (MI.hasOrderedMemoryRef()) {
     switch (MI.getOpcode()) {
     case WebAssembly::DIV_S_I32:
@@ -257,6 +244,11 @@ static void Query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
       break;
     }
   }
+
+  // Check for writes to __stack_pointer global.
+  if (MI.getOpcode() == WebAssembly::GLOBAL_SET_I32 &&
+      strcmp(MI.getOperand(0).getSymbolName(), "__stack_pointer") == 0)
+    StackPointer = true;
 
   // Analyze calls.
   if (MI.isCall()) {

@@ -448,8 +448,36 @@ struct __sanitizer_wordexp_t {
   uptr we_nbytes;
 };
 
-typedef char __sanitizer_FILE;
-#define SANITIZER_HAS_STRUCT_FILE 0
+struct __sanitizer_FILE {
+  unsigned char *_p;
+  int _r;
+  int _w;
+  unsigned short _flags;
+  short _file;
+  struct {
+    unsigned char *_base;
+    int _size;
+  } _bf;
+  int _lbfsize;
+  void *_cookie;
+  int (*_close)(void *ptr);
+  u64 (*_read)(void *, void *, uptr);
+  u64 (*_seek)(void *, u64, int);
+  uptr (*_write)(void *, const void *, uptr);
+  struct {
+    unsigned char *_base;
+    int _size;
+  } _ext;
+  unsigned char *_up;
+  int _ur;
+  unsigned char _ubuf[3];
+  unsigned char _nbuf[1];
+  int (*_flush)(void *ptr);
+  char _lb_unused[sizeof(uptr)];
+  int _blksize;
+  u64 _offset;
+};
+#define SANITIZER_HAS_STRUCT_FILE 1
 
 extern int shmctl_ipc_stat;
 

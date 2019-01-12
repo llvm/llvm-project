@@ -128,7 +128,7 @@ unsigned MSP430MCCodeEmitter::getMemOpValue(const MCInst &MI, unsigned Op,
   const MCOperand &MO2 = MI.getOperand(Op + 1);
   if (MO2.isImm()) {
     Offset += 2;
-    return (MO2.getImm() << 4) | Reg;
+    return ((unsigned)MO2.getImm() << 4) | Reg;
   }
 
   assert(MO2.isExpr() && "Expr operand expected");

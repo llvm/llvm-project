@@ -46,6 +46,7 @@
 ; CHECK-NEXT: <FUNCTION op0=42 op1=5
 ; CHECK-LABEL:       <GLOBALVAL_SUMMARY_BLOCK
 ; CHECK-NEXT:    <VERSION
+; CHECK-NEXT:    <FLAGS
 ; CHECK-NEXT:    <VALUE_GUID op0=25 op1=123/>
 ; op4=hot1 op6=cold op8=hot2 op10=hot4 op12=none1 op14=hot3 op16=none2 op18=none3 op20=123
 ; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op6=1 op7=3 op8=5 op9=1 op10=2 op11=3 op12=4 op13=1 op14=6 op15=2 op16=3 op17=3 op18=7 op19=2 op20=8 op21=2 op22=25 op23=4/>

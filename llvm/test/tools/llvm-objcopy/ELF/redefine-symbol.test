@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objcopy --redefine-sym foo=oof --redefine-sym empty= %t %t2
-# RUN: llvm-readobj -symbols %t2 | FileCheck %s
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s
 # RUN: not llvm-objcopy --redefine-sym barbar %t %t2 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
 # RUN: not llvm-objcopy --redefine-sym foo=f1 --redefine-sym foo=f2 %t %t2 2>&1 | FileCheck %s --check-prefix=MULTIPLE-REDEFINITION
 

@@ -1702,6 +1702,13 @@ bool LowerTypeTestsModule::lower() {
       !ExportSummary && !ImportSummary)
     return false;
 
+  // If only some of the modules were split, we cannot correctly handle
+  // code that contains type tests.
+  if (TypeTestFunc && !TypeTestFunc->use_empty() &&
+      ((ExportSummary && ExportSummary->partiallySplitLTOUnits()) ||
+       (ImportSummary && ImportSummary->partiallySplitLTOUnits())))
+    report_fatal_error("inconsistent LTO Unit splitting with llvm.type.test");
+
   if (ImportSummary) {
     if (TypeTestFunc) {
       for (auto UI = TypeTestFunc->use_begin(), UE = TypeTestFunc->use_end();

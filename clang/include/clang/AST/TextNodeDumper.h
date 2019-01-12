@@ -16,6 +16,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDumperUtils.h"
+#include "clang/AST/AttrVisitor.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentVisitor.h"
 #include "clang/AST/ExprCXX.h"
@@ -27,7 +28,7 @@ class TextTreeStructure {
   const bool ShowColors;
 
   /// Pending[i] is an action to dump an entity at level i.
-  llvm::SmallVector<std::function<void(bool isLastChild)>, 32> Pending;
+  llvm::SmallVector<std::function<void(bool IsLastChild)>, 32> Pending;
 
   /// Indicates whether we're at the top level.
   bool TopLevel = true;
@@ -39,13 +40,19 @@ class TextTreeStructure {
   std::string Prefix;
 
 public:
-  /// Add a child of the current node.  Calls doAddChild without arguments
-  template <typename Fn> void addChild(Fn doAddChild) {
+  /// Add a child of the current node.  Calls DoAddChild without arguments
+  template <typename Fn> void AddChild(Fn DoAddChild) {
+    return AddChild("", DoAddChild);
+  }
+
+  /// Add a child of the current node with an optional label.
+  /// Calls DoAddChild without arguments.
+  template <typename Fn> void AddChild(StringRef Label, Fn DoAddChild) {
     // If we're at the top level, there's nothing interesting to do; just
     // run the dumper.
     if (TopLevel) {
       TopLevel = false;
-      doAddChild();
+      DoAddChild();
       while (!Pending.empty()) {
         Pending.back()(true);
         Pending.pop_back();
@@ -56,7 +63,10 @@ public:
       return;
     }
 
-    auto dumpWithIndent = [this, doAddChild](bool isLastChild) {
+    // We need to capture an owning-string in the lambda because the lambda
+    // is invoked in a deferred manner.
+    std::string LabelStr = Label;
+    auto DumpWithIndent = [this, DoAddChild, LabelStr](bool IsLastChild) {
       // Print out the appropriate tree structure and work out the prefix for
       // children of this node. For instance:
       //
@@ -72,15 +82,18 @@ public:
       {
         OS << '\n';
         ColorScope Color(OS, ShowColors, IndentColor);
-        OS << Prefix << (isLastChild ? '`' : '|') << '-';
-        this->Prefix.push_back(isLastChild ? ' ' : '|');
+        OS << Prefix << (IsLastChild ? '`' : '|') << '-';
+        if (!LabelStr.empty())
+          OS << LabelStr << ": ";
+
+        this->Prefix.push_back(IsLastChild ? ' ' : '|');
         this->Prefix.push_back(' ');
       }
 
       FirstChild = true;
       unsigned Depth = Pending.size();
 
-      doAddChild();
+      DoAddChild();
 
       // If any children are left, they're the last at their nesting level.
       // Dump those ones out now.
@@ -94,10 +107,10 @@ public:
     };
 
     if (FirstChild) {
-      Pending.push_back(std::move(dumpWithIndent));
+      Pending.push_back(std::move(DumpWithIndent));
     } else {
       Pending.back()(false);
-      Pending.back() = std::move(dumpWithIndent);
+      Pending.back() = std::move(DumpWithIndent);
     }
     FirstChild = false;
   }
@@ -109,7 +122,8 @@ public:
 class TextNodeDumper
     : public TextTreeStructure,
       public comments::ConstCommentVisitor<TextNodeDumper, void,
-                                           const comments::FullComment *> {
+                                           const comments::FullComment *>,
+      public ConstAttrVisitor<TextNodeDumper> {
   raw_ostream &OS;
   const bool ShowColors;
 
@@ -133,6 +147,8 @@ public:
                  const comments::CommandTraits *Traits);
 
   void Visit(const comments::Comment *C, const comments::FullComment *FC);
+
+  void Visit(const Attr *A);
 
   void dumpPointer(const void *Ptr);
   void dumpLocation(SourceLocation Loc);
@@ -167,6 +183,9 @@ public:
                                 const comments::FullComment *);
   void visitVerbatimLineComment(const comments::VerbatimLineComment *C,
                                 const comments::FullComment *);
+
+// Implements Visit methods for Attrs.
+#include "clang/AST/AttrTextNodeDump.inc"
 };
 
 } // namespace clang

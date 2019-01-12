@@ -1,4 +1,4 @@
-; RUN: opt -thinlto-bc %s -o %t1.bc
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit %s -o %t1.bc
 ; RUN: llvm-lto2 run  -thinlto-distributed-indexes %t1.bc -o %t.out -save-temps \
 ; RUN:   -r %t1.bc,foo,plx \
 ; RUN:   -r %t1.bc,bar,x \

@@ -53,3 +53,21 @@ define void @xor() nounwind {
 	ret void
 }
 
+define void @cmp(i8* %g, i8* %i) {
+entry:
+; CHECK-LABEL: cmp:
+; CHECK: cmp.b 4(r12), 2(r13)
+  %add.ptr = getelementptr inbounds i8, i8* %g, i16 4
+  %0 = load i8, i8* %add.ptr, align 1
+  %add.ptr1 = getelementptr inbounds i8, i8* %i, i16 2
+  %1 = load i8, i8* %add.ptr1, align 1
+  %cmp = icmp sgt i8 %0, %1
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  store i8 0, i8* %g, align 2
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
+  ret void
+}

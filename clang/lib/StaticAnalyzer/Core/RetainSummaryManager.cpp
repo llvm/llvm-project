@@ -88,7 +88,9 @@ Optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
       return None;
     K = ObjKind::ObjC;
   } else if (isOneOf<T, OSConsumedAttr, OSConsumesThisAttr,
-                     OSReturnsNotRetainedAttr, OSReturnsRetainedAttr>()) {
+                     OSReturnsNotRetainedAttr, OSReturnsRetainedAttr,
+                     OSReturnsRetainedOnZeroAttr,
+                     OSReturnsRetainedOnNonZeroAttr>()) {
     if (!TrackOSObjects)
       return None;
     K = ObjKind::OS;
@@ -522,6 +524,8 @@ static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {
   case IncRef:
   case UnretainedOutParameter:
   case RetainedOutParameter:
+  case RetainedOutParameterOnZero:
+  case RetainedOutParameterOnNonZero:
   case MayEscape:
   case StopTracking:
   case StopTrackingHard:
@@ -811,6 +815,29 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
   return None;
 }
 
+/// \return Whether the chain of typedefs starting from {@code QT}
+/// has a typedef with a given name {@code Name}.
+static bool hasTypedefNamed(QualType QT,
+                            StringRef Name) {
+  while (auto *T = dyn_cast<TypedefType>(QT)) {
+    const auto &Context = T->getDecl()->getASTContext();
+    if (T->getDecl()->getIdentifier() == &Context.Idents.get(Name))
+      return true;
+    QT = T->getDecl()->getUnderlyingType();
+  }
+  return false;
+}
+
+static QualType getCallableReturnType(const NamedDecl *ND) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
+    return FD->getReturnType();
+  } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(ND)) {
+    return MD->getReturnType();
+  } else {
+    llvm_unreachable("Unexpected decl");
+  }
+}
+
 bool RetainSummaryManager::applyParamAnnotationEffect(
     const ParmVarDecl *pd, unsigned parm_idx, const NamedDecl *FD,
     RetainSummaryTemplate &Template) {
@@ -820,21 +847,54 @@ bool RetainSummaryManager::applyParamAnnotationEffect(
                               GeneralizedConsumedAttr>(pd, QT)) {
     Template->addArg(AF, parm_idx, ArgEffect(DecRef, *K));
     return true;
-  } else if (auto K =
-                 hasAnyEnabledAttrOf<CFReturnsRetainedAttr,
-                                     GeneralizedReturnsRetainedAttr>(pd, QT)) {
-    Template->addArg(AF, parm_idx, ArgEffect(RetainedOutParameter, *K));
+  } else if (auto K = hasAnyEnabledAttrOf<
+                 CFReturnsRetainedAttr, OSReturnsRetainedAttr,
+                 OSReturnsRetainedOnNonZeroAttr, OSReturnsRetainedOnZeroAttr,
+                 GeneralizedReturnsRetainedAttr>(pd, QT)) {
+
+    // For OSObjects, we try to guess whether the object is created based
+    // on the return value.
+    if (K == ObjKind::OS) {
+      QualType QT = getCallableReturnType(FD);
+
+      bool HasRetainedOnZero = pd->hasAttr<OSReturnsRetainedOnZeroAttr>();
+      bool HasRetainedOnNonZero = pd->hasAttr<OSReturnsRetainedOnNonZeroAttr>();
+
+      // The usual convention is to create an object on non-zero return, but
+      // it's reverted if the typedef chain has a typedef kern_return_t,
+      // because kReturnSuccess constant is defined as zero.
+      // The convention can be overwritten by custom attributes.
+      bool SuccessOnZero =
+          HasRetainedOnZero ||
+          (hasTypedefNamed(QT, "kern_return_t") && !HasRetainedOnNonZero);
+      bool ShouldSplit = !QT.isNull() && !QT->isVoidType();
+      ArgEffectKind AK = RetainedOutParameter;
+      if (ShouldSplit && SuccessOnZero) {
+        AK = RetainedOutParameterOnZero;
+      } else if (ShouldSplit && (!SuccessOnZero || HasRetainedOnNonZero)) {
+        AK = RetainedOutParameterOnNonZero;
+      }
+      Template->addArg(AF, parm_idx, ArgEffect(AK, ObjKind::OS));
+    }
+
+    // For others:
+    // Do nothing. Retained out parameters will either point to a +1 reference
+    // or NULL, but the way you check for failure differs depending on the
+    // API. Consequently, we don't have a good way to track them yet.
     return true;
-  } else if (auto K = hasAnyEnabledAttrOf<CFReturnsNotRetainedAttr>(pd, QT)) {
+  } else if (auto K = hasAnyEnabledAttrOf<CFReturnsNotRetainedAttr,
+                                          OSReturnsNotRetainedAttr,
+                                          GeneralizedReturnsNotRetainedAttr>(
+                 pd, QT)) {
     Template->addArg(AF, parm_idx, ArgEffect(UnretainedOutParameter, *K));
     return true;
-  } else {
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-      for (const auto *OD : MD->overridden_methods()) {
-        const ParmVarDecl *OP = OD->parameters()[parm_idx];
-        if (applyParamAnnotationEffect(OP, parm_idx, OD, Template))
-          return true;
-      }
+  }
+
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+    for (const auto *OD : MD->overridden_methods()) {
+      const ParmVarDecl *OP = OD->parameters()[parm_idx];
+      if (applyParamAnnotationEffect(OP, parm_idx, OD, Template))
+        return true;
     }
   }
 
