@@ -292,6 +292,12 @@ namespace llvm {
       // Vector integer truncate with unsigned/signed saturation.
       VTRUNCUS, VTRUNCS,
 
+      // Masked version of the above. Used when less than a 128-bit result is
+      // produced since the mask only applies to the lower elements and can't
+      // be represented by a select.
+      // SRC, PASSTHRU, MASK
+      VMTRUNC, VMTRUNCUS, VMTRUNCS,
+
       // Vector FP extend.
       VFPEXT, VFPEXT_RND, VFPEXTS_RND,
 

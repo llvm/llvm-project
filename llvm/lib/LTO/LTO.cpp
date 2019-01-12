@@ -546,6 +546,15 @@ Error LTO::addModule(InputFile &Input, unsigned ModI,
   if (!LTOInfo)
     return LTOInfo.takeError();
 
+  if (EnableSplitLTOUnit.hasValue()) {
+    // If only some modules were split, flag this in the index so that
+    // we can skip or error on optimizations that need consistently split
+    // modules (whole program devirt and lower type tests).
+    if (EnableSplitLTOUnit.getValue() != LTOInfo->EnableSplitLTOUnit)
+      ThinLTO.CombinedIndex.setPartiallySplitLTOUnits();
+  } else
+    EnableSplitLTOUnit = LTOInfo->EnableSplitLTOUnit;
+
   BitcodeModule BM = Input.Mods[ModI];
   auto ModSyms = Input.module_symbols(ModI);
   addModuleToGlobalRes(ModSyms, {ResI, ResE},

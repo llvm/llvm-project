@@ -5,7 +5,7 @@
 # RUN:     -L Weak \
 # RUN:     -L GlobalCommon \
 # RUN:     %t %t2
-# RUN: llvm-readobj -symbols %t2 | FileCheck %s
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s
 
 !ELF
 FileHeader:

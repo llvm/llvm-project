@@ -2,13 +2,13 @@
 # RUN: cp %t %t1
 
 # RUN: llvm-objcopy -R .test2 %t %t2
-# RUN: llvm-readobj -file-headers -sections %t2 | FileCheck %s
+# RUN: llvm-readobj --file-headers --sections %t2 | FileCheck %s
 
 # Verify that the first run of llvm-objcopy
 # has not modified the input binary.
 # RUN: cmp %t %t1
 
-# RUN: llvm-objcopy -remove-section=.test2 %t1 %t3
+# RUN: llvm-objcopy --remove-section=.test2 %t1 %t3
 # RUN: cmp %t2 %t3
 
 !ELF

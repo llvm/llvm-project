@@ -1276,7 +1276,8 @@ defm : CMOVmr<X86_COND_NO, CMOVO16rm , CMOVO32rm , CMOVO64rm>;
 // i1 stored in one byte in zero-extended form.
 // Upper bits cleanup should be executed before Store.
 def : Pat<(zextloadi8i1  addr:$src), (MOV8rm addr:$src)>;
-def : Pat<(zextloadi16i1 addr:$src), (MOVZX16rm8 addr:$src)>;
+def : Pat<(zextloadi16i1 addr:$src),
+          (EXTRACT_SUBREG (MOVZX32rm8 addr:$src), sub_16bit)>;
 def : Pat<(zextloadi32i1 addr:$src), (MOVZX32rm8 addr:$src)>;
 def : Pat<(zextloadi64i1 addr:$src),
           (SUBREG_TO_REG (i64 0), (MOVZX32rm8 addr:$src), sub_32bit)>;
@@ -1287,9 +1288,11 @@ def : Pat<(zextloadi64i1 addr:$src),
 // defined, avoiding partial-register updates.
 
 def : Pat<(extloadi8i1 addr:$src),   (MOV8rm      addr:$src)>;
-def : Pat<(extloadi16i1 addr:$src),  (MOVZX16rm8  addr:$src)>;
+def : Pat<(extloadi16i1 addr:$src),
+          (EXTRACT_SUBREG (MOVZX32rm8 addr:$src), sub_16bit)>;
 def : Pat<(extloadi32i1 addr:$src),  (MOVZX32rm8  addr:$src)>;
-def : Pat<(extloadi16i8 addr:$src),  (MOVZX16rm8  addr:$src)>;
+def : Pat<(extloadi16i8 addr:$src),
+          (EXTRACT_SUBREG (MOVZX32rm8 addr:$src), sub_16bit)>;
 def : Pat<(extloadi32i8 addr:$src),  (MOVZX32rm8  addr:$src)>;
 def : Pat<(extloadi32i16 addr:$src), (MOVZX32rm16 addr:$src)>;
 

@@ -7,10 +7,8 @@ declare i16 @llvm.x86.avx512.kunpck.bw(i16, i16) nounwind readnone
 define i16 @unpckbw_test(i16 %a0, i16 %a1) {
 ; X86-LABEL: unpckbw_test:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
-; X86-NEXT:    kmovw %eax, %k0 ## encoding: [0xc5,0xf8,0x92,0xc0]
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x08]
-; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k0 ## encoding: [0xc5,0xf8,0x90,0x44,0x24,0x04]
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x08]
 ; X86-NEXT:    kunpckbw %k1, %k0, %k0 ## encoding: [0xc5,0xfd,0x4b,0xc1]
 ; X86-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
 ; X86-NEXT:    ## kill: def $ax killed $ax killed $eax

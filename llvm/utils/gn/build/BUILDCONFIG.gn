@@ -25,8 +25,17 @@ set_defaults("source_set") {
   configs = shared_binary_target_configs
 }
 
-if (host_os == "win") {
-  set_default_toolchain("//llvm/utils/gn/build/toolchain:win")
-} else {
-  set_default_toolchain("//llvm/utils/gn/build/toolchain:unix")
+if (target_os == "") {
+  target_os = host_os
 }
+if (current_os == "") {
+  current_os = target_os
+}
+
+if (host_os == "win") {
+  host_toolchain = "//llvm/utils/gn/build/toolchain:win"
+} else {
+  host_toolchain = "//llvm/utils/gn/build/toolchain:unix"
+}
+
+set_default_toolchain(host_toolchain)

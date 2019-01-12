@@ -154,12 +154,11 @@ Error COFFWriter::finalize(bool IsBigObj) {
   size_t PointerToSymbolTable = FileSize;
   // StrTabSize <= 4 is the size of an empty string table, only consisting
   // of the length field.
-  if (SymTabSize == 0 && StrTabSize <= 4) {
-    // Don't point to the symbol table if empty.
+  if (SymTabSize == 0 && StrTabSize <= 4 && Obj.IsPE) {
+    // For executables, don't point to the symbol table and skip writing
+    // the length field, if both the symbol and string tables are empty.
     PointerToSymbolTable = 0;
-    // For executables, skip the length field of an empty string table.
-    if (Obj.IsPE)
-      StrTabSize = 0;
+    StrTabSize = 0;
   }
 
   size_t NumRawSymbols = SymTabSize / SymbolSize;

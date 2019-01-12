@@ -17,6 +17,7 @@
 ; CHECK-NEXT: <FUNCTION op0=17 op1=4
 ; CHECK:       <GLOBALVAL_SUMMARY_BLOCK
 ; CHECK-NEXT:    <VERSION
+; CHECK-NEXT:    <FLAGS
 ; See if the call to func is registered
 ; CHECK-NEXT:    <PERMODULE {{.*}} op4=1
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>

@@ -2,8 +2,9 @@ static_library("AST") {
   output_name = "clangAST"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
-    "//clang/include/clang/AST:AttrDump",
     "//clang/include/clang/AST:AttrImpl",
+    "//clang/include/clang/AST:AttrNodeTraverse",
+    "//clang/include/clang/AST:AttrTextNodeDump",
     "//clang/include/clang/AST:CommentCommandInfo",
     "//clang/include/clang/AST:CommentHTMLNamedCharacterReferences",
     "//clang/include/clang/AST:CommentHTMLTags",

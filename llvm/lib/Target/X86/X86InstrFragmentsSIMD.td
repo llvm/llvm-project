@@ -104,12 +104,21 @@ def X86vzload  : SDNode<"X86ISD::VZEXT_LOAD", SDTLoad,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 def SDTVtrunc    : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>,
-                                       SDTCisInt<0>, SDTCisInt<1>,
-                                       SDTCisOpSmallerThanOp<0, 1>]>;
+                                        SDTCisInt<0>, SDTCisInt<1>,
+                                        SDTCisOpSmallerThanOp<0, 1>]>;
+def SDTVmtrunc   : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisVec<1>,
+                                        SDTCisInt<0>, SDTCisInt<1>,
+                                        SDTCisOpSmallerThanOp<0, 1>,
+                                        SDTCisSameAs<0, 2>,
+                                        SDTCVecEltisVT<3, i1>,
+                                        SDTCisSameNumEltsAs<1, 3>]>;
 
 def X86vtrunc    : SDNode<"X86ISD::VTRUNC",   SDTVtrunc>;
 def X86vtruncs   : SDNode<"X86ISD::VTRUNCS",  SDTVtrunc>;
 def X86vtruncus  : SDNode<"X86ISD::VTRUNCUS", SDTVtrunc>;
+def X86vmtrunc   : SDNode<"X86ISD::VMTRUNC",   SDTVmtrunc>;
+def X86vmtruncs  : SDNode<"X86ISD::VMTRUNCS",  SDTVmtrunc>;
+def X86vmtruncus : SDNode<"X86ISD::VMTRUNCUS", SDTVmtrunc>;
 
 def X86vfpext  : SDNode<"X86ISD::VFPEXT",
                         SDTypeProfile<1, 1, [SDTCVecEltisVT<0, f64>,
