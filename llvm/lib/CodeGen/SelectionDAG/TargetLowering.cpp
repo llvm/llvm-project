@@ -4719,6 +4719,7 @@ bool TargetLowering::expandABS(SDNode *N, SDValue &Result,
                                SelectionDAG &DAG) const {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
+  EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
   SDValue Op = N->getOperand(0);
 
   // Only expand vector types if we have the appropriate vector operations.
@@ -4729,7 +4730,7 @@ bool TargetLowering::expandABS(SDNode *N, SDValue &Result,
 
   SDValue Shift =
       DAG.getNode(ISD::SRA, dl, VT, Op,
-                  DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, VT));
+                  DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, ShVT));
   SDValue Add = DAG.getNode(ISD::ADD, dl, VT, Op, Shift);
   Result = DAG.getNode(ISD::XOR, dl, VT, Add, Shift);
   return true;
