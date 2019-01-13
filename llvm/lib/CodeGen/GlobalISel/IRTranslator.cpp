@@ -105,6 +105,7 @@ IRTranslator::IRTranslator() : MachineFunctionPass(ID) {
 }
 
 #ifndef NDEBUG
+namespace {
 /// Verify that every instruction created has the same DILocation as the
 /// instruction being translated.
 class DILocationVerifier : MachineFunction::Delegate {
@@ -131,6 +132,7 @@ public:
   }
   void MF_HandleRemoval(const MachineInstr &MI) override {}
 };
+} // namespace
 #endif // ifndef NDEBUG
 
 

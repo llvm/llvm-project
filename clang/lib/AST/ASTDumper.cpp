@@ -372,72 +372,26 @@ namespace  {
     // Stmts.
     void VisitDeclStmt(const DeclStmt *Node);
     void VisitAttributedStmt(const AttributedStmt *Node);
-    void VisitIfStmt(const IfStmt *Node);
-    void VisitSwitchStmt(const SwitchStmt *Node);
-    void VisitWhileStmt(const WhileStmt *Node);
-    void VisitLabelStmt(const LabelStmt *Node);
-    void VisitGotoStmt(const GotoStmt *Node);
     void VisitCXXCatchStmt(const CXXCatchStmt *Node);
-    void VisitCaseStmt(const CaseStmt *Node);
     void VisitCapturedStmt(const CapturedStmt *Node);
 
     // OpenMP
     void VisitOMPExecutableDirective(const OMPExecutableDirective *Node);
 
     // Exprs
-    void VisitCallExpr(const CallExpr *Node);
-    void VisitCastExpr(const CastExpr *Node);
-    void VisitImplicitCastExpr(const ImplicitCastExpr *Node);
-    void VisitDeclRefExpr(const DeclRefExpr *Node);
-    void VisitPredefinedExpr(const PredefinedExpr *Node);
-    void VisitCharacterLiteral(const CharacterLiteral *Node);
-    void VisitIntegerLiteral(const IntegerLiteral *Node);
-    void VisitFixedPointLiteral(const FixedPointLiteral *Node);
-    void VisitFloatingLiteral(const FloatingLiteral *Node);
-    void VisitStringLiteral(const StringLiteral *Str);
     void VisitInitListExpr(const InitListExpr *ILE);
-    void VisitUnaryOperator(const UnaryOperator *Node);
-    void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Node);
-    void VisitMemberExpr(const MemberExpr *Node);
-    void VisitExtVectorElementExpr(const ExtVectorElementExpr *Node);
-    void VisitBinaryOperator(const BinaryOperator *Node);
-    void VisitCompoundAssignOperator(const CompoundAssignOperator *Node);
-    void VisitAddrLabelExpr(const AddrLabelExpr *Node);
     void VisitBlockExpr(const BlockExpr *Node);
     void VisitOpaqueValueExpr(const OpaqueValueExpr *Node);
     void VisitGenericSelectionExpr(const GenericSelectionExpr *E);
 
     // C++
-    void VisitCXXNamedCastExpr(const CXXNamedCastExpr *Node);
-    void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *Node);
-    void VisitCXXThisExpr(const CXXThisExpr *Node);
-    void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *Node);
-    void VisitCXXUnresolvedConstructExpr(const CXXUnresolvedConstructExpr *Node);
-    void VisitCXXConstructExpr(const CXXConstructExpr *Node);
-    void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *Node);
-    void VisitCXXNewExpr(const CXXNewExpr *Node);
-    void VisitCXXDeleteExpr(const CXXDeleteExpr *Node);
-    void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *Node);
-    void VisitExprWithCleanups(const ExprWithCleanups *Node);
-    void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *Node);
     void VisitLambdaExpr(const LambdaExpr *Node) {
       dumpDecl(Node->getLambdaClass());
     }
     void VisitSizeOfPackExpr(const SizeOfPackExpr *Node);
-    void
-    VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *Node);
 
     // ObjC
     void VisitObjCAtCatchStmt(const ObjCAtCatchStmt *Node);
-    void VisitObjCEncodeExpr(const ObjCEncodeExpr *Node);
-    void VisitObjCMessageExpr(const ObjCMessageExpr *Node);
-    void VisitObjCBoxedExpr(const ObjCBoxedExpr *Node);
-    void VisitObjCSelectorExpr(const ObjCSelectorExpr *Node);
-    void VisitObjCProtocolExpr(const ObjCProtocolExpr *Node);
-    void VisitObjCPropertyRefExpr(const ObjCPropertyRefExpr *Node);
-    void VisitObjCSubscriptRefExpr(const ObjCSubscriptRefExpr *Node);
-    void VisitObjCIvarRefExpr(const ObjCIvarRefExpr *Node);
-    void VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *Node);
 
     // Comments.
     void dumpComment(const Comment *C, const FullComment *FC);
@@ -1647,54 +1601,10 @@ void ASTDumper::VisitBlockDecl(const BlockDecl *D) {
 
 void ASTDumper::dumpStmt(const Stmt *S, StringRef Label) {
   dumpChild(Label, [=] {
+    NodeDumper.Visit(S);
+
     if (!S) {
-      ColorScope Color(OS, ShowColors, NullColor);
-      OS << "<<<NULL>>>";
       return;
-    }
-    {
-      ColorScope Color(OS, ShowColors, StmtColor);
-      OS << S->getStmtClassName();
-    }
-    NodeDumper.dumpPointer(S);
-    NodeDumper.dumpSourceRange(S->getSourceRange());
-
-    if (const auto *E = dyn_cast<Expr>(S)) {
-      NodeDumper.dumpType(E->getType());
-
-      {
-        ColorScope Color(OS, ShowColors, ValueKindColor);
-        switch (E->getValueKind()) {
-        case VK_RValue:
-          break;
-        case VK_LValue:
-          OS << " lvalue";
-          break;
-        case VK_XValue:
-          OS << " xvalue";
-          break;
-        }
-      }
-
-      {
-        ColorScope Color(OS, ShowColors, ObjectKindColor);
-        switch (E->getObjectKind()) {
-        case OK_Ordinary:
-          break;
-        case OK_BitField:
-          OS << " bitfield";
-          break;
-        case OK_ObjCProperty:
-          OS << " objcproperty";
-          break;
-        case OK_ObjCSubscript:
-          OS << " objcsubscript";
-          break;
-        case OK_VectorComponent:
-          OS << " vectorcomponent";
-          break;
-        }
-      }
     }
 
     ConstStmtVisitor<ASTDumper>::Visit(S);
@@ -1723,43 +1633,8 @@ void ASTDumper::VisitAttributedStmt(const AttributedStmt *Node) {
     dumpAttr(*I);
 }
 
-void ASTDumper::VisitIfStmt(const IfStmt *Node) {
-  if (Node->hasInitStorage())
-    OS << " has_init";
-  if (Node->hasVarStorage())
-    OS << " has_var";
-  if (Node->hasElseStorage())
-    OS << " has_else";
-}
-
-void ASTDumper::VisitSwitchStmt(const SwitchStmt *Node) {
-  if (Node->hasInitStorage())
-    OS << " has_init";
-  if (Node->hasVarStorage())
-    OS << " has_var";
-}
-
-void ASTDumper::VisitWhileStmt(const WhileStmt *Node) {
-  if (Node->hasVarStorage())
-    OS << " has_var";
-}
-
-void ASTDumper::VisitLabelStmt(const LabelStmt *Node) {
-  OS << " '" << Node->getName() << "'";
-}
-
-void ASTDumper::VisitGotoStmt(const GotoStmt *Node) {
-  OS << " '" << Node->getLabel()->getName() << "'";
-  NodeDumper.dumpPointer(Node->getLabel());
-}
-
 void ASTDumper::VisitCXXCatchStmt(const CXXCatchStmt *Node) {
   dumpDecl(Node->getExceptionDecl());
-}
-
-void ASTDumper::VisitCaseStmt(const CaseStmt *Node) {
-  if (Node->caseStmtIsGNURange())
-    OS << " gnu_range";
 }
 
 void ASTDumper::VisitCapturedStmt(const CapturedStmt *Node) {
@@ -1799,178 +1674,11 @@ void ASTDumper::VisitOMPExecutableDirective(
 //  Expr dumping methods.
 //===----------------------------------------------------------------------===//
 
-static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
-  if (Node->path_empty())
-    return;
-
-  OS << " (";
-  bool First = true;
-  for (CastExpr::path_const_iterator I = Node->path_begin(),
-                                     E = Node->path_end();
-       I != E; ++I) {
-    const CXXBaseSpecifier *Base = *I;
-    if (!First)
-      OS << " -> ";
-
-    const CXXRecordDecl *RD =
-    cast<CXXRecordDecl>(Base->getType()->getAs<RecordType>()->getDecl());
-
-    if (Base->isVirtual())
-      OS << "virtual ";
-    OS << RD->getName();
-    First = false;
-  }
-
-  OS << ')';
-}
-
-void ASTDumper::VisitCallExpr(const CallExpr *Node) {
-  if (Node->usesADL())
-    OS << " adl";
-}
-
-void ASTDumper::VisitCastExpr(const CastExpr *Node) {
-  OS << " <";
-  {
-    ColorScope Color(OS, ShowColors, CastColor);
-    OS << Node->getCastKindName();
-  }
-  dumpBasePath(OS, Node);
-  OS << ">";
-}
-
-void ASTDumper::VisitImplicitCastExpr(const ImplicitCastExpr *Node) {
-  VisitCastExpr(Node);
-  if (Node->isPartOfExplicitCast())
-    OS << " part_of_explicit_cast";
-}
-
-void ASTDumper::VisitDeclRefExpr(const DeclRefExpr *Node) {
-  OS << " ";
-  NodeDumper.dumpBareDeclRef(Node->getDecl());
-  if (Node->getDecl() != Node->getFoundDecl()) {
-    OS << " (";
-    NodeDumper.dumpBareDeclRef(Node->getFoundDecl());
-    OS << ")";
-  }
-}
-
-void ASTDumper::VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *Node) {
-  OS << " (";
-  if (!Node->requiresADL())
-    OS << "no ";
-  OS << "ADL) = '" << Node->getName() << '\'';
-
-  UnresolvedLookupExpr::decls_iterator
-    I = Node->decls_begin(), E = Node->decls_end();
-  if (I == E)
-    OS << " empty";
-  for (; I != E; ++I)
-    NodeDumper.dumpPointer(*I);
-}
-
-void ASTDumper::VisitObjCIvarRefExpr(const ObjCIvarRefExpr *Node) {
-  {
-    ColorScope Color(OS, ShowColors, DeclKindNameColor);
-    OS << " " << Node->getDecl()->getDeclKindName() << "Decl";
-  }
-  OS << "='" << *Node->getDecl() << "'";
-  NodeDumper.dumpPointer(Node->getDecl());
-  if (Node->isFreeIvar())
-    OS << " isFreeIvar";
-}
-
-void ASTDumper::VisitPredefinedExpr(const PredefinedExpr *Node) {
-  OS << " " << PredefinedExpr::getIdentKindName(Node->getIdentKind());
-}
-
-void ASTDumper::VisitCharacterLiteral(const CharacterLiteral *Node) {
-  ColorScope Color(OS, ShowColors, ValueColor);
-  OS << " " << Node->getValue();
-}
-
-void ASTDumper::VisitIntegerLiteral(const IntegerLiteral *Node) {
-  bool isSigned = Node->getType()->isSignedIntegerType();
-  ColorScope Color(OS, ShowColors, ValueColor);
-  OS << " " << Node->getValue().toString(10, isSigned);
-}
-
-void ASTDumper::VisitFixedPointLiteral(const FixedPointLiteral *Node) {
-  ColorScope Color(OS, ShowColors, ValueColor);
-  OS << " " << Node->getValueAsString(/*Radix=*/10);
-}
-
-void ASTDumper::VisitFloatingLiteral(const FloatingLiteral *Node) {
-  ColorScope Color(OS, ShowColors, ValueColor);
-  OS << " " << Node->getValueAsApproximateDouble();
-}
-
-void ASTDumper::VisitStringLiteral(const StringLiteral *Str) {
-  ColorScope Color(OS, ShowColors, ValueColor);
-  OS << " ";
-  Str->outputString(OS);
-}
 
 void ASTDumper::VisitInitListExpr(const InitListExpr *ILE) {
-  if (auto *Field = ILE->getInitializedFieldInUnion()) {
-    OS << " field ";
-    NodeDumper.dumpBareDeclRef(Field);
-  }
   if (auto *Filler = ILE->getArrayFiller()) {
     dumpStmt(Filler, "array_filler");
   }
-}
-
-void ASTDumper::VisitUnaryOperator(const UnaryOperator *Node) {
-  OS << " " << (Node->isPostfix() ? "postfix" : "prefix")
-     << " '" << UnaryOperator::getOpcodeStr(Node->getOpcode()) << "'";
-  if (!Node->canOverflow())
-    OS << " cannot overflow";
-}
-
-void ASTDumper::VisitUnaryExprOrTypeTraitExpr(
-    const UnaryExprOrTypeTraitExpr *Node) {
-  switch(Node->getKind()) {
-  case UETT_SizeOf:
-    OS << " sizeof";
-    break;
-  case UETT_AlignOf:
-    OS << " alignof";
-    break;
-  case UETT_VecStep:
-    OS << " vec_step";
-    break;
-  case UETT_OpenMPRequiredSimdAlign:
-    OS << " __builtin_omp_required_simd_align";
-    break;
-  case UETT_PreferredAlignOf:
-    OS << " __alignof";
-    break;
-  }
-  if (Node->isArgumentType())
-    NodeDumper.dumpType(Node->getArgumentType());
-}
-
-void ASTDumper::VisitMemberExpr(const MemberExpr *Node) {
-  OS << " " << (Node->isArrow() ? "->" : ".") << *Node->getMemberDecl();
-  NodeDumper.dumpPointer(Node->getMemberDecl());
-}
-
-void ASTDumper::VisitExtVectorElementExpr(const ExtVectorElementExpr *Node) {
-  OS << " " << Node->getAccessor().getNameStart();
-}
-
-void ASTDumper::VisitBinaryOperator(const BinaryOperator *Node) {
-  OS << " '" << BinaryOperator::getOpcodeStr(Node->getOpcode()) << "'";
-}
-
-void ASTDumper::VisitCompoundAssignOperator(
-    const CompoundAssignOperator *Node) {
-  OS << " '" << BinaryOperator::getOpcodeStr(Node->getOpcode())
-     << "' ComputeLHSTy=";
-  NodeDumper.dumpBareType(Node->getComputationLHSType());
-  OS << " ComputeResultTy=";
-  NodeDumper.dumpBareType(Node->getComputationResultType());
 }
 
 void ASTDumper::VisitBlockExpr(const BlockExpr *Node) {
@@ -2007,218 +1715,23 @@ void ASTDumper::VisitGenericSelectionExpr(const GenericSelectionExpr *E) {
   }
 }
 
-// GNU extensions.
-
-void ASTDumper::VisitAddrLabelExpr(const AddrLabelExpr *Node) {
-  OS << " " << Node->getLabel()->getName();
-  NodeDumper.dumpPointer(Node->getLabel());
-}
-
 //===----------------------------------------------------------------------===//
 // C++ Expressions
 //===----------------------------------------------------------------------===//
 
-void ASTDumper::VisitCXXNamedCastExpr(const CXXNamedCastExpr *Node) {
-  OS << " " << Node->getCastName()
-     << "<" << Node->getTypeAsWritten().getAsString() << ">"
-     << " <" << Node->getCastKindName();
-  dumpBasePath(OS, Node);
-  OS << ">";
-}
-
-void ASTDumper::VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *Node) {
-  OS << " " << (Node->getValue() ? "true" : "false");
-}
-
-void ASTDumper::VisitCXXThisExpr(const CXXThisExpr *Node) {
-  OS << " this";
-}
-
-void ASTDumper::VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *Node) {
-  OS << " functional cast to " << Node->getTypeAsWritten().getAsString()
-     << " <" << Node->getCastKindName() << ">";
-}
-
-void ASTDumper::VisitCXXUnresolvedConstructExpr(
-    const CXXUnresolvedConstructExpr *Node) {
-  NodeDumper.dumpType(Node->getTypeAsWritten());
-  if (Node->isListInitialization())
-    OS << " list";
-}
-
-void ASTDumper::VisitCXXConstructExpr(const CXXConstructExpr *Node) {
-  CXXConstructorDecl *Ctor = Node->getConstructor();
-  NodeDumper.dumpType(Ctor->getType());
-  if (Node->isElidable())
-    OS << " elidable";
-  if (Node->isListInitialization())
-    OS << " list";
-  if (Node->isStdInitListInitialization())
-    OS << " std::initializer_list";
-  if (Node->requiresZeroInitialization())
-    OS << " zeroing";
-}
-
-void ASTDumper::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *Node) {
-  OS << " ";
-  NodeDumper.dumpCXXTemporary(Node->getTemporary());
-}
-
-void ASTDumper::VisitCXXNewExpr(const CXXNewExpr *Node) {
-  if (Node->isGlobalNew())
-    OS << " global";
-  if (Node->isArray())
-    OS << " array";
-  if (Node->getOperatorNew()) {
-    OS << ' ';
-    NodeDumper.dumpBareDeclRef(Node->getOperatorNew());
-  }
-  // We could dump the deallocation function used in case of error, but it's
-  // usually not that interesting.
-}
-
-void ASTDumper::VisitCXXDeleteExpr(const CXXDeleteExpr *Node) {
-  if (Node->isGlobalDelete())
-    OS << " global";
-  if (Node->isArrayForm())
-    OS << " array";
-  if (Node->getOperatorDelete()) {
-    OS << ' ';
-    NodeDumper.dumpBareDeclRef(Node->getOperatorDelete());
-  }
-}
-
-void
-ASTDumper::VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *Node) {
-  if (const ValueDecl *VD = Node->getExtendingDecl()) {
-    OS << " extended by ";
-    NodeDumper.dumpBareDeclRef(VD);
-  }
-}
-
-void ASTDumper::VisitExprWithCleanups(const ExprWithCleanups *Node) {
-  for (unsigned i = 0, e = Node->getNumObjects(); i != e; ++i)
-    NodeDumper.dumpDeclRef(Node->getObject(i), "cleanup");
-}
-
 void ASTDumper::VisitSizeOfPackExpr(const SizeOfPackExpr *Node) {
-  NodeDumper.dumpPointer(Node->getPack());
-  NodeDumper.dumpName(Node->getPack());
   if (Node->isPartiallySubstituted())
     for (const auto &A : Node->getPartialArguments())
       dumpTemplateArgument(A);
-}
-
-void ASTDumper::VisitCXXDependentScopeMemberExpr(
-    const CXXDependentScopeMemberExpr *Node) {
-  OS << " " << (Node->isArrow() ? "->" : ".") << Node->getMember();
 }
 
 //===----------------------------------------------------------------------===//
 // Obj-C Expressions
 //===----------------------------------------------------------------------===//
 
-void ASTDumper::VisitObjCMessageExpr(const ObjCMessageExpr *Node) {
-  OS << " selector=";
-  Node->getSelector().print(OS);
-  switch (Node->getReceiverKind()) {
-  case ObjCMessageExpr::Instance:
-    break;
-
-  case ObjCMessageExpr::Class:
-    OS << " class=";
-    NodeDumper.dumpBareType(Node->getClassReceiver());
-    break;
-
-  case ObjCMessageExpr::SuperInstance:
-    OS << " super (instance)";
-    break;
-
-  case ObjCMessageExpr::SuperClass:
-    OS << " super (class)";
-    break;
-  }
-}
-
-void ASTDumper::VisitObjCBoxedExpr(const ObjCBoxedExpr *Node) {
-  if (auto *BoxingMethod = Node->getBoxingMethod()) {
-    OS << " selector=";
-    BoxingMethod->getSelector().print(OS);
-  }
-}
-
 void ASTDumper::VisitObjCAtCatchStmt(const ObjCAtCatchStmt *Node) {
   if (const VarDecl *CatchParam = Node->getCatchParamDecl())
     dumpDecl(CatchParam);
-  else
-    OS << " catch all";
-}
-
-void ASTDumper::VisitObjCEncodeExpr(const ObjCEncodeExpr *Node) {
-  NodeDumper.dumpType(Node->getEncodedType());
-}
-
-void ASTDumper::VisitObjCSelectorExpr(const ObjCSelectorExpr *Node) {
-  OS << " ";
-  Node->getSelector().print(OS);
-}
-
-void ASTDumper::VisitObjCProtocolExpr(const ObjCProtocolExpr *Node) {
-  OS << ' ' << *Node->getProtocol();
-}
-
-void ASTDumper::VisitObjCPropertyRefExpr(const ObjCPropertyRefExpr *Node) {
-  if (Node->isImplicitProperty()) {
-    OS << " Kind=MethodRef Getter=\"";
-    if (Node->getImplicitPropertyGetter())
-      Node->getImplicitPropertyGetter()->getSelector().print(OS);
-    else
-      OS << "(null)";
-
-    OS << "\" Setter=\"";
-    if (ObjCMethodDecl *Setter = Node->getImplicitPropertySetter())
-      Setter->getSelector().print(OS);
-    else
-      OS << "(null)";
-    OS << "\"";
-  } else {
-    OS << " Kind=PropertyRef Property=\"" << *Node->getExplicitProperty() <<'"';
-  }
-
-  if (Node->isSuperReceiver())
-    OS << " super";
-
-  OS << " Messaging=";
-  if (Node->isMessagingGetter() && Node->isMessagingSetter())
-    OS << "Getter&Setter";
-  else if (Node->isMessagingGetter())
-    OS << "Getter";
-  else if (Node->isMessagingSetter())
-    OS << "Setter";
-}
-
-void ASTDumper::VisitObjCSubscriptRefExpr(const ObjCSubscriptRefExpr *Node) {
-  if (Node->isArraySubscriptRefExpr())
-    OS << " Kind=ArraySubscript GetterForArray=\"";
-  else
-    OS << " Kind=DictionarySubscript GetterForDictionary=\"";
-  if (Node->getAtIndexMethodDecl())
-    Node->getAtIndexMethodDecl()->getSelector().print(OS);
-  else
-    OS << "(null)";
-
-  if (Node->isArraySubscriptRefExpr())
-    OS << "\" SetterForArray=\"";
-  else
-    OS << "\" SetterForDictionary=\"";
-  if (Node->setAtIndexMethodDecl())
-    Node->setAtIndexMethodDecl()->getSelector().print(OS);
-  else
-    OS << "(null)";
-}
-
-void ASTDumper::VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *Node) {
-  OS << " " << (Node->getValue() ? "__objc_yes" : "__objc_no");
 }
 
 //===----------------------------------------------------------------------===//

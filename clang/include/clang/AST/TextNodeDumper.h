@@ -20,6 +20,7 @@
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentVisitor.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateArgumentVisitor.h"
 
 namespace clang {
@@ -125,7 +126,8 @@ class TextNodeDumper
       public comments::ConstCommentVisitor<TextNodeDumper, void,
                                            const comments::FullComment *>,
       public ConstAttrVisitor<TextNodeDumper>,
-      public ConstTemplateArgumentVisitor<TextNodeDumper> {
+      public ConstTemplateArgumentVisitor<TextNodeDumper>,
+      public ConstStmtVisitor<TextNodeDumper> {
   raw_ostream &OS;
   const bool ShowColors;
 
@@ -155,6 +157,8 @@ public:
   void Visit(const TemplateArgument &TA, SourceRange R,
              const Decl *From = nullptr, StringRef Label = {});
 
+  void Visit(const Stmt *Node);
+
   void dumpPointer(const void *Ptr);
   void dumpLocation(SourceLocation Loc);
   void dumpSourceRange(SourceRange R);
@@ -163,7 +167,6 @@ public:
   void dumpBareDeclRef(const Decl *D);
   void dumpName(const NamedDecl *ND);
   void dumpAccessSpecifier(AccessSpecifier AS);
-  void dumpCXXTemporary(const CXXTemporary *Temporary);
 
   void dumpDeclRef(const Decl *D, StringRef Label = {});
 
@@ -201,6 +204,59 @@ public:
   void VisitTemplateExpansionTemplateArgument(const TemplateArgument &TA);
   void VisitExpressionTemplateArgument(const TemplateArgument &TA);
   void VisitPackTemplateArgument(const TemplateArgument &TA);
+
+  void VisitIfStmt(const IfStmt *Node);
+  void VisitSwitchStmt(const SwitchStmt *Node);
+  void VisitWhileStmt(const WhileStmt *Node);
+  void VisitLabelStmt(const LabelStmt *Node);
+  void VisitGotoStmt(const GotoStmt *Node);
+  void VisitCaseStmt(const CaseStmt *Node);
+  void VisitCallExpr(const CallExpr *Node);
+  void VisitCastExpr(const CastExpr *Node);
+  void VisitImplicitCastExpr(const ImplicitCastExpr *Node);
+  void VisitDeclRefExpr(const DeclRefExpr *Node);
+  void VisitPredefinedExpr(const PredefinedExpr *Node);
+  void VisitCharacterLiteral(const CharacterLiteral *Node);
+  void VisitIntegerLiteral(const IntegerLiteral *Node);
+  void VisitFixedPointLiteral(const FixedPointLiteral *Node);
+  void VisitFloatingLiteral(const FloatingLiteral *Node);
+  void VisitStringLiteral(const StringLiteral *Str);
+  void VisitInitListExpr(const InitListExpr *ILE);
+  void VisitUnaryOperator(const UnaryOperator *Node);
+  void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Node);
+  void VisitMemberExpr(const MemberExpr *Node);
+  void VisitExtVectorElementExpr(const ExtVectorElementExpr *Node);
+  void VisitBinaryOperator(const BinaryOperator *Node);
+  void VisitCompoundAssignOperator(const CompoundAssignOperator *Node);
+  void VisitAddrLabelExpr(const AddrLabelExpr *Node);
+  void VisitCXXNamedCastExpr(const CXXNamedCastExpr *Node);
+  void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *Node);
+  void VisitCXXThisExpr(const CXXThisExpr *Node);
+  void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *Node);
+  void VisitCXXUnresolvedConstructExpr(const CXXUnresolvedConstructExpr *Node);
+  void VisitCXXConstructExpr(const CXXConstructExpr *Node);
+  void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *Node);
+  void VisitCXXNewExpr(const CXXNewExpr *Node);
+  void VisitCXXDeleteExpr(const CXXDeleteExpr *Node);
+  void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *Node);
+  void VisitExprWithCleanups(const ExprWithCleanups *Node);
+  void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *Node);
+  void VisitSizeOfPackExpr(const SizeOfPackExpr *Node);
+  void
+  VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *Node);
+  void VisitObjCAtCatchStmt(const ObjCAtCatchStmt *Node);
+  void VisitObjCEncodeExpr(const ObjCEncodeExpr *Node);
+  void VisitObjCMessageExpr(const ObjCMessageExpr *Node);
+  void VisitObjCBoxedExpr(const ObjCBoxedExpr *Node);
+  void VisitObjCSelectorExpr(const ObjCSelectorExpr *Node);
+  void VisitObjCProtocolExpr(const ObjCProtocolExpr *Node);
+  void VisitObjCPropertyRefExpr(const ObjCPropertyRefExpr *Node);
+  void VisitObjCSubscriptRefExpr(const ObjCSubscriptRefExpr *Node);
+  void VisitObjCIvarRefExpr(const ObjCIvarRefExpr *Node);
+  void VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *Node);
+
+private:
+  void dumpCXXTemporary(const CXXTemporary *Temporary);
 };
 
 } // namespace clang
