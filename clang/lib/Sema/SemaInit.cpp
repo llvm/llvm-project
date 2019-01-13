@@ -7261,20 +7261,12 @@ ExprResult Sema::TemporaryMaterializationConversion(Expr *E) {
   return CreateMaterializeTemporaryExpr(E->getType(), E, false);
 }
 
-ExprResult Sema::PerformQualificationConversion(Expr *E, QualType Ty,
-                                                ExprValueKind VK,
-                                                CheckedConversionKind CCK) {
-  CastKind CK = (Ty.getAddressSpace() != E->getType().getAddressSpace())
-                    ? CK_AddressSpaceConversion
-                    : CK_NoOp;
-  return ImpCastExprToType(E, Ty, CK, VK, /*BasePath=*/nullptr, CCK);
-}
-
-ExprResult InitializationSequence::Perform(Sema &S,
-                                           const InitializedEntity &Entity,
-                                           const InitializationKind &Kind,
-                                           MultiExprArg Args,
-                                           QualType *ResultType) {
+ExprResult
+InitializationSequence::Perform(Sema &S,
+                                const InitializedEntity &Entity,
+                                const InitializationKind &Kind,
+                                MultiExprArg Args,
+                                QualType *ResultType) {
   if (Failed()) {
     Diagnose(S, Entity, Kind, Args);
     return ExprError();
@@ -7662,11 +7654,12 @@ ExprResult InitializationSequence::Perform(Sema &S,
     case SK_QualificationConversionRValue: {
       // Perform a qualification conversion; these can never go wrong.
       ExprValueKind VK =
-          Step->Kind == SK_QualificationConversionLValue
-              ? VK_LValue
-              : (Step->Kind == SK_QualificationConversionXValue ? VK_XValue
-                                                                : VK_RValue);
-      CurInit = S.PerformQualificationConversion(CurInit.get(), Step->Type, VK);
+          Step->Kind == SK_QualificationConversionLValue ?
+              VK_LValue :
+              (Step->Kind == SK_QualificationConversionXValue ?
+                   VK_XValue :
+                   VK_RValue);
+      CurInit = S.ImpCastExprToType(CurInit.get(), Step->Type, CK_NoOp, VK);
       break;
     }
 
