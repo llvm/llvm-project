@@ -12,6 +12,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/CodeGen/OclCxxRewrite/BifNameReflower.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
@@ -39,6 +40,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -800,6 +802,10 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
   legacy::FunctionPassManager PerFunctionPasses(TheModule);
   PerFunctionPasses.add(
       createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
+
+  if (LangOpts.SYCL) {
+    PerModulePasses.add(createOclCxxBifNameReflowerPass());
+  }
 
   CreatePasses(PerModulePasses, PerFunctionPasses);
 
