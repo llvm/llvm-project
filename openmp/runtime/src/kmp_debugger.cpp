@@ -1,3 +1,5 @@
+#include "kmp_config.h"
+
 #if USE_DEBUGGER
 /*
  * kmp_debugger.cpp -- debugger support.
