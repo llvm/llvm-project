@@ -7969,26 +7969,53 @@ multiclass avx512_vcvt_fp<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                           X86VectorVTInfo _Src, SDNode OpNode,
                           X86FoldableSchedWrite sched,
                           string Broadcast = _.BroadcastStr,
-                          string Alias = "", X86MemOperand MemOp = _Src.MemOp> {
+                          string Alias = "", X86MemOperand MemOp = _Src.MemOp,
+                          RegisterClass MaskRC = _.KRCWM> {
 
-  defm rr : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
-                         (ins _Src.RC:$src), OpcodeStr, "$src", "$src",
-                         (_.VT (OpNode (_Src.VT _Src.RC:$src)))>,
+  defm rr : AVX512_maskable_common<opc, MRMSrcReg, _, (outs _.RC:$dst),
+                         (ins _Src.RC:$src),
+                         (ins _.RC:$src0, MaskRC:$mask, _Src.RC:$src),
+                         (ins MaskRC:$mask, _Src.RC:$src),
+                          OpcodeStr, "$src", "$src",
+                         (_.VT (OpNode (_Src.VT _Src.RC:$src))),
+                         (vselect MaskRC:$mask,
+                                  (_.VT (OpNode (_Src.VT _Src.RC:$src))),
+                                  _.RC:$src0),
+                         vselect, "$src0 = $dst">,
                          EVEX, Sched<[sched]>;
 
-  defm rm : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
-                         (ins MemOp:$src), OpcodeStr#Alias, "$src", "$src",
+  defm rm : AVX512_maskable_common<opc, MRMSrcMem, _, (outs _.RC:$dst),
+                         (ins MemOp:$src),
+                         (ins _.RC:$src0, MaskRC:$mask, MemOp:$src),
+                         (ins MaskRC:$mask, MemOp:$src),
+                         OpcodeStr#Alias, "$src", "$src",
                          (_.VT (OpNode (_Src.VT
-                             (_Src.LdFrag addr:$src))))>,
+                             (_Src.LdFrag addr:$src)))),
+                         (vselect MaskRC:$mask,
+                                  (_.VT (OpNode (_Src.VT
+                                                 (_Src.LdFrag addr:$src)))),
+                                  _.RC:$src0),
+                         vselect, "$src0 = $dst">,
                          EVEX, Sched<[sched.Folded]>;
 
-  defm rmb : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
-                         (ins _Src.ScalarMemOp:$src), OpcodeStr,
+  defm rmb : AVX512_maskable_common<opc, MRMSrcMem, _, (outs _.RC:$dst),
+                         (ins _Src.ScalarMemOp:$src),
+                         (ins _.RC:$src0, MaskRC:$mask, _Src.ScalarMemOp:$src),
+                         (ins MaskRC:$mask, _Src.ScalarMemOp:$src),
+                         OpcodeStr,
                          "${src}"##Broadcast, "${src}"##Broadcast,
                          (_.VT (OpNode (_Src.VT
                                   (X86VBroadcast (_Src.ScalarLdFrag addr:$src)))
-                            ))>, EVEX, EVEX_B,
-                         Sched<[sched.Folded]>;
+                            )),
+                         (vselect MaskRC:$mask,
+                                  (_.VT
+                                   (OpNode
+                                    (_Src.VT
+                                     (X86VBroadcast
+                                      (_Src.ScalarLdFrag addr:$src))))),
+                                  _.RC:$src0),
+                         vselect, "$src0 = $dst">,
+                         EVEX, EVEX_B, Sched<[sched.Folded]>;
 }
 // Coversion with SAE - suppress all exceptions
 multiclass avx512_vcvt_fp_sae<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
@@ -8039,7 +8066,8 @@ multiclass avx512_cvtpd2ps<bits<8> opc, string OpcodeStr, X86SchedWriteWidths sc
   }
   let Predicates = [HasVLX] in {
     defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v4f32x_info, v2f64x_info,
-                               X86vfpround, sched.XMM, "{1to2}", "{x}">, EVEX_V128;
+                               null_frag, sched.XMM, "{1to2}", "{x}", f128mem, VK2WM>,
+                               EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4f32x_info, v4f64x_info, fpround,
                                sched.YMM, "{1to4}", "{y}">, EVEX_V256;
 
@@ -8073,6 +8101,35 @@ let Predicates = [HasVLX] in {
               (VCVTPS2PDZ128rm addr:$src)>;
   def : Pat<(v4f64 (extloadv4f32 addr:$src)),
               (VCVTPS2PDZ256rm addr:$src)>;
+
+  // Special patterns to allow use of X86vmfpround for masking. Instruction
+  // patterns have been disabled with null_frag.
+  def : Pat<(X86vfpround (v2f64 VR128X:$src)),
+            (VCVTPD2PSZ128rr VR128X:$src)>;
+  def : Pat<(X86vmfpround (v2f64 VR128X:$src), (v4f32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTPD2PSZ128rrk VR128X:$src0, VK2WM:$mask, VR128X:$src)>;
+  def : Pat<(X86vmfpround (v2f64 VR128X:$src), v4f32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTPD2PSZ128rrkz VK2WM:$mask, VR128X:$src)>;
+
+  def : Pat<(X86vfpround (loadv2f64 addr:$src)),
+            (VCVTPD2PSZ128rm addr:$src)>;
+  def : Pat<(X86vmfpround (loadv2f64 addr:$src), (v4f32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTPD2PSZ128rmk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86vmfpround (loadv2f64 addr:$src), v4f32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTPD2PSZ128rmkz VK2WM:$mask, addr:$src)>;
+
+  def : Pat<(X86vfpround (v2f64 (X86VBroadcast (loadf64 addr:$src)))),
+            (VCVTPD2PSZ128rmb addr:$src)>;
+  def : Pat<(X86vmfpround (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          (v4f32 VR128X:$src0), VK2WM:$mask),
+            (VCVTPD2PSZ128rmbk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86vmfpround (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          v4f32x_info.ImmAllZerosV, VK2WM:$mask),
+            (VCVTPD2PSZ128rmbkz VK2WM:$mask, addr:$src)>;
 }
 
 // Convert Signed/Unsigned Doubleword to Double
@@ -8157,7 +8214,8 @@ multiclass avx512_cvttpd2dq<bits<8> opc, string OpcodeStr, SDNode OpNode,
     // dest type - 'v4i32x_info'. We also specify the broadcast string explicitly
     // due to the same reason.
     defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v2f64x_info,
-                               OpNode, sched.XMM, "{1to2}", "{x}">, EVEX_V128;
+                               null_frag, sched.XMM, "{1to2}", "{x}", f128mem,
+                               VK2WM>, EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v4f64x_info, OpNode,
                                sched.YMM, "{1to4}", "{y}">, EVEX_V256;
 
@@ -8186,8 +8244,9 @@ multiclass avx512_cvtpd2dq<bits<8> opc, string OpcodeStr, SDNode OpNode,
     // memory forms of these instructions in Asm Parcer. They have the same
     // dest type - 'v4i32x_info'. We also specify the broadcast string explicitly
     // due to the same reason.
-    defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v2f64x_info, OpNode,
-                               sched.XMM, "{1to2}", "{x}">, EVEX_V128;
+    defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v2f64x_info,
+                               null_frag, sched.XMM, "{1to2}", "{x}", f128mem,
+                               VK2WM>, EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v4f64x_info, OpNode,
                                sched.YMM, "{1to4}", "{y}">, EVEX_V256;
 
@@ -8470,6 +8529,122 @@ let Predicates = [HasVLX] in {
             (VCVTTPD2UDQZ256rr VR256X:$src)>;
   def : Pat<(v4i32 (fp_to_uint (loadv4f64 addr:$src))),
             (VCVTTPD2UDQZ256rm addr:$src)>;
+
+  // Special patterns to allow use of X86mcvtp2Int for masking. Instruction
+  // patterns have been disabled with null_frag.
+  def : Pat<(v4i32 (X86cvtp2Int (v2f64 VR128X:$src))),
+            (VCVTPD2DQZ128rr VR128X:$src)>;
+  def : Pat<(X86mcvtp2Int (v2f64 VR128X:$src), (v4i32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTPD2DQZ128rrk VR128X:$src0, VK2WM:$mask, VR128X:$src)>;
+  def : Pat<(X86mcvtp2Int (v2f64 VR128X:$src), v4i32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTPD2DQZ128rrkz VK2WM:$mask, VR128X:$src)>;
+
+  def : Pat<(v4i32 (X86cvtp2Int (loadv2f64 addr:$src))),
+            (VCVTPD2DQZ128rm addr:$src)>;
+  def : Pat<(X86mcvtp2Int (loadv2f64 addr:$src), (v4i32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTPD2DQZ128rmk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvtp2Int (loadv2f64 addr:$src), v4i32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTPD2DQZ128rmkz VK2WM:$mask, addr:$src)>;
+
+  def : Pat<(v4i32 (X86cvtp2Int (v2f64 (X86VBroadcast (loadf64 addr:$src))))),
+            (VCVTPD2DQZ128rmb addr:$src)>;
+  def : Pat<(X86mcvtp2Int (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          (v4i32 VR128X:$src0), VK2WM:$mask),
+            (VCVTPD2DQZ128rmbk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvtp2Int (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          v4i32x_info.ImmAllZerosV, VK2WM:$mask),
+            (VCVTPD2DQZ128rmbkz VK2WM:$mask, addr:$src)>;
+
+  // Special patterns to allow use of X86mcvttp2si for masking. Instruction
+  // patterns have been disabled with null_frag.
+  def : Pat<(v4i32 (X86cvttp2si (v2f64 VR128X:$src))),
+            (VCVTTPD2DQZ128rr VR128X:$src)>;
+  def : Pat<(X86mcvttp2si (v2f64 VR128X:$src), (v4i32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTTPD2DQZ128rrk VR128X:$src0, VK2WM:$mask, VR128X:$src)>;
+  def : Pat<(X86mcvttp2si (v2f64 VR128X:$src), v4i32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTTPD2DQZ128rrkz VK2WM:$mask, VR128X:$src)>;
+
+  def : Pat<(v4i32 (X86cvttp2si (loadv2f64 addr:$src))),
+            (VCVTTPD2DQZ128rm addr:$src)>;
+  def : Pat<(X86mcvttp2si (loadv2f64 addr:$src), (v4i32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTTPD2DQZ128rmk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvttp2si (loadv2f64 addr:$src), v4i32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTTPD2DQZ128rmkz VK2WM:$mask, addr:$src)>;
+
+  def : Pat<(v4i32 (X86cvttp2si (v2f64 (X86VBroadcast (loadf64 addr:$src))))),
+            (VCVTTPD2DQZ128rmb addr:$src)>;
+  def : Pat<(X86mcvttp2si (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          (v4i32 VR128X:$src0), VK2WM:$mask),
+            (VCVTTPD2DQZ128rmbk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvttp2si (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          v4i32x_info.ImmAllZerosV, VK2WM:$mask),
+            (VCVTTPD2DQZ128rmbkz VK2WM:$mask, addr:$src)>;
+
+  // Special patterns to allow use of X86mcvtp2UInt for masking. Instruction
+  // patterns have been disabled with null_frag.
+  def : Pat<(v4i32 (X86cvtp2UInt (v2f64 VR128X:$src))),
+            (VCVTPD2UDQZ128rr VR128X:$src)>;
+  def : Pat<(X86mcvtp2UInt (v2f64 VR128X:$src), (v4i32 VR128X:$src0),
+                           VK2WM:$mask),
+            (VCVTPD2UDQZ128rrk VR128X:$src0, VK2WM:$mask, VR128X:$src)>;
+  def : Pat<(X86mcvtp2UInt (v2f64 VR128X:$src), v4i32x_info.ImmAllZerosV,
+                           VK2WM:$mask),
+            (VCVTPD2UDQZ128rrkz VK2WM:$mask, VR128X:$src)>;
+
+  def : Pat<(v4i32 (X86cvtp2UInt (loadv2f64 addr:$src))),
+            (VCVTPD2UDQZ128rm addr:$src)>;
+  def : Pat<(X86mcvtp2UInt (loadv2f64 addr:$src), (v4i32 VR128X:$src0),
+                           VK2WM:$mask),
+            (VCVTPD2UDQZ128rmk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvtp2UInt (loadv2f64 addr:$src), v4i32x_info.ImmAllZerosV,
+                           VK2WM:$mask),
+            (VCVTPD2UDQZ128rmkz VK2WM:$mask, addr:$src)>;
+
+  def : Pat<(v4i32 (X86cvtp2UInt (v2f64 (X86VBroadcast (loadf64 addr:$src))))),
+            (VCVTPD2UDQZ128rmb addr:$src)>;
+  def : Pat<(X86mcvtp2UInt (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                           (v4i32 VR128X:$src0), VK2WM:$mask),
+            (VCVTPD2UDQZ128rmbk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvtp2UInt (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                           v4i32x_info.ImmAllZerosV, VK2WM:$mask),
+            (VCVTPD2UDQZ128rmbkz VK2WM:$mask, addr:$src)>;
+
+  // Special patterns to allow use of X86mcvtp2UInt for masking. Instruction
+  // patterns have been disabled with null_frag.
+  def : Pat<(v4i32 (X86cvttp2ui (v2f64 VR128X:$src))),
+            (VCVTTPD2UDQZ128rr VR128X:$src)>;
+  def : Pat<(X86mcvttp2ui (v2f64 VR128X:$src), (v4i32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTTPD2UDQZ128rrk VR128X:$src0, VK2WM:$mask, VR128X:$src)>;
+  def : Pat<(X86mcvttp2ui (v2f64 VR128X:$src), v4i32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTTPD2UDQZ128rrkz VK2WM:$mask, VR128X:$src)>;
+
+  def : Pat<(v4i32 (X86cvttp2ui (loadv2f64 addr:$src))),
+            (VCVTTPD2UDQZ128rm addr:$src)>;
+  def : Pat<(X86mcvttp2ui (loadv2f64 addr:$src), (v4i32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTTPD2UDQZ128rmk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvttp2ui (loadv2f64 addr:$src), v4i32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTTPD2UDQZ128rmkz VK2WM:$mask, addr:$src)>;
+
+  def : Pat<(v4i32 (X86cvttp2ui (v2f64 (X86VBroadcast (loadf64 addr:$src))))),
+            (VCVTTPD2UDQZ128rmb addr:$src)>;
+  def : Pat<(X86mcvttp2ui (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          (v4i32 VR128X:$src0), VK2WM:$mask),
+            (VCVTTPD2UDQZ128rmbk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvttp2ui (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          v4i32x_info.ImmAllZerosV, VK2WM:$mask),
+            (VCVTTPD2UDQZ128rmbkz VK2WM:$mask, addr:$src)>;
 }
 
 let Predicates = [HasDQI] in {

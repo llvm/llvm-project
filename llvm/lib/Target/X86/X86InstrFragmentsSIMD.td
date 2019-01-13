@@ -143,6 +143,14 @@ def X86fpextRnd  : SDNode<"X86ISD::VFPEXTS_RND",
                                              SDTCisSameSizeAs<0, 2>,
                                              SDTCisVT<3, i32>]>>;
 
+def X86vmfpround: SDNode<"X86ISD::VMFPROUND",
+                         SDTypeProfile<1, 3, [SDTCVecEltisVT<0, f32>,
+                                              SDTCVecEltisVT<1, f64>,
+                                              SDTCisSameSizeAs<0, 1>,
+                                              SDTCisSameAs<0, 2>,
+                                              SDTCVecEltisVT<3, i1>,
+                                              SDTCisSameNumEltsAs<1, 3>]>>;
+
 def X86vshiftimm : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                         SDTCisVT<2, i8>, SDTCisInt<0>]>;
 
@@ -580,6 +588,19 @@ def X86VUintToFP      : SDNode<"X86ISD::CVTUI2P",  SDTVintToFP>;
 // cvt int-to-fp staff
 def X86cvtp2Int      : SDNode<"X86ISD::CVTP2SI",  SDTFloatToInt>;
 def X86cvtp2UInt     : SDNode<"X86ISD::CVTP2UI",  SDTFloatToInt>;
+
+
+def SDTMFloatToInt: SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisVec<1>,
+                                         SDTCisInt<0>, SDTCisFP<1>,
+                                         SDTCisSameSizeAs<0, 1>,
+                                         SDTCisSameAs<0, 2>,
+                                         SDTCVecEltisVT<3, i1>,
+                                         SDTCisSameNumEltsAs<1, 3>]>;
+
+def X86mcvtp2Int     : SDNode<"X86ISD::MCVTP2SI",  SDTMFloatToInt>;
+def X86mcvtp2UInt    : SDNode<"X86ISD::MCVTP2UI",  SDTMFloatToInt>;
+def X86mcvttp2si     : SDNode<"X86ISD::MCVTTP2SI", SDTMFloatToInt>;
+def X86mcvttp2ui     : SDNode<"X86ISD::MCVTTP2UI", SDTMFloatToInt>;
 
 
 def X86cvtph2ps     : SDNode<"X86ISD::CVTPH2PS",
