@@ -298,14 +298,6 @@ public:
   bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
                              Expr *Init);
 
-  /// Recursively visit the body of a lambda expression.
-  ///
-  /// This provides a hook for visitors that need more context when visiting
-  /// \c LE->getBody().
-  ///
-  /// \returns false if the visitation was terminated early, true otherwise.
-  bool TraverseLambdaBody(LambdaExpr *LE, DataRecursionQueue *Queue = nullptr);
-
   /// Recursively visit the syntactic or semantic form of an
   /// initialization list.
   ///
@@ -933,13 +925,6 @@ RecursiveASTVisitor<Derived>::TraverseLambdaCapture(LambdaExpr *LE,
     TRY_TO(TraverseDecl(C->getCapturedVar()));
   else
     TRY_TO(TraverseStmt(Init));
-  return true;
-}
-
-template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseLambdaBody(
-    LambdaExpr *LE, DataRecursionQueue *Queue) {
-  TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(LE->getBody());
   return true;
 }
 
@@ -2404,6 +2389,7 @@ DEF_TRAVERSE_STMT(CXXTemporaryObjectExpr, {
 
 // Walk only the visible parts of lambda expressions.
 DEF_TRAVERSE_STMT(LambdaExpr, {
+  // Visit the capture list.
   for (unsigned I = 0, N = S->capture_size(); I != N; ++I) {
     const LambdaCapture *C = S->capture_begin() + I;
     if (C->isExplicit() || getDerived().shouldVisitImplicitCode()) {
@@ -2411,25 +2397,31 @@ DEF_TRAVERSE_STMT(LambdaExpr, {
     }
   }
 
-  TypeLoc TL = S->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
-  FunctionProtoTypeLoc Proto = TL.getAsAdjusted<FunctionProtoTypeLoc>();
+  if (getDerived().shouldVisitImplicitCode()) {
+    // The implicit model is simple: everything else is in the lambda class.
+    TRY_TO(TraverseDecl(S->getLambdaClass()));
+  } else {
+    // We need to poke around to find the bits that might be explicitly written.
+    TypeLoc TL = S->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
+    FunctionProtoTypeLoc Proto = TL.getAsAdjusted<FunctionProtoTypeLoc>();
 
-  if (S->hasExplicitParameters()) {
-    // Visit parameters.
-    for (unsigned I = 0, N = Proto.getNumParams(); I != N; ++I)
-      TRY_TO(TraverseDecl(Proto.getParam(I)));
+    if (S->hasExplicitParameters()) {
+      // Visit parameters.
+      for (unsigned I = 0, N = Proto.getNumParams(); I != N; ++I)
+        TRY_TO(TraverseDecl(Proto.getParam(I)));
+    }
+    if (S->hasExplicitResultType())
+      TRY_TO(TraverseTypeLoc(Proto.getReturnLoc()));
+
+    auto *T = Proto.getTypePtr();
+    for (const auto &E : T->exceptions())
+      TRY_TO(TraverseType(E));
+
+    if (Expr *NE = T->getNoexceptExpr())
+      TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(NE);
+
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getBody());
   }
-  if (S->hasExplicitResultType())
-    TRY_TO(TraverseTypeLoc(Proto.getReturnLoc()));
-
-  auto *T = Proto.getTypePtr();
-  for (const auto &E : T->exceptions())
-    TRY_TO(TraverseType(E));
-
-  if (Expr *NE = T->getNoexceptExpr())
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(NE);
-
-  ReturnValue = TRAVERSE_STMT_BASE(LambdaBody, LambdaExpr, S, Queue);
   ShouldVisitChildren = false;
 })
 
