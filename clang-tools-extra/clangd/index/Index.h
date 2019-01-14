@@ -241,6 +241,8 @@ struct Symbol {
     Deprecated = 1 << 1,
     // Symbol is an implementation detail.
     ImplementationDetail = 1 << 2,
+    // Symbol is visible to other files (not e.g. a static helper function).
+    VisibleOutsideFile = 1 << 3,
   };
 
   SymbolFlag Flags = SymbolFlag::None;
