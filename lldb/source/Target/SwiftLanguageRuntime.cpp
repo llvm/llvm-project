@@ -2142,6 +2142,9 @@ SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
 
   if (base_type.GetTypeInfo() & lldb::eTypeIsSwift) {
     swift::Type target_swift_type(GetSwiftType(base_type));
+    if (target_swift_type->hasArchetype())
+      target_swift_type = target_swift_type->mapTypeOutOfContext().getPointer();
+
     target_swift_type = target_swift_type.transform(
         [this, &stack_frame,
          &scratch_ctx](swift::Type candidate_type) -> swift::Type {
