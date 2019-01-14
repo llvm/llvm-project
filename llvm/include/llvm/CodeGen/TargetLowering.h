@@ -3787,6 +3787,14 @@ public:
   /// \returns True, if the expansion was successful, false otherwise
   bool expandCTTZ(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
 
+  /// Expand ABS nodes. Expands vector/scalar ABS nodes,
+  /// vector nodes can only succeed if all operations are legal/custom.
+  /// (ABS x) -> (XOR (ADD x, (SRA x, type_size)), (SRA x, type_size))
+  /// \param N Node to expand
+  /// \param Result output after conversion
+  /// \returns True, if the expansion was successful, false otherwise
+  bool expandABS(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+
   /// Turn load of vector type into a load of the individual elements.
   /// \param LD load to expand
   /// \returns MERGE_VALUEs of the scalar loads with their chains.
@@ -3826,8 +3834,7 @@ public:
 
   /// Method for building the DAG expansion of ISD::[US][ADD|SUB]SAT. This
   /// method accepts integers as its arguments.
-  SDValue getExpandedSaturationAdditionSubtraction(SDNode *Node,
-                                                   SelectionDAG &DAG) const;
+  SDValue expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Method for building the DAG expansion of ISD::SMULFIX. This method accepts
   /// integers as its arguments.

@@ -35,7 +35,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/TypeBuilder.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Object/Archive.h"
@@ -317,23 +316,18 @@ static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
   M->setTargetTriple(TargetTripleStr);
 
   // Create an empty function named "__main".
-  Function *Result;
-  if (TargetTriple.isArch64Bit()) {
-    Result = Function::Create(
-      TypeBuilder<int64_t(void), false>::get(Context),
-      GlobalValue::ExternalLinkage, "__main", M.get());
-  } else {
-    Result = Function::Create(
-      TypeBuilder<int32_t(void), false>::get(Context),
-      GlobalValue::ExternalLinkage, "__main", M.get());
-  }
+  Type *ReturnTy;
+  if (TargetTriple.isArch64Bit())
+    ReturnTy = Type::getInt64Ty(Context);
+  else
+    ReturnTy = Type::getInt32Ty(Context);
+  Function *Result =
+      Function::Create(FunctionType::get(ReturnTy, {}, false),
+                       GlobalValue::ExternalLinkage, "__main", M.get());
+
   BasicBlock *BB = BasicBlock::Create(Context, "__main", Result);
   Builder.SetInsertPoint(BB);
-  Value *ReturnVal;
-  if (TargetTriple.isArch64Bit())
-    ReturnVal = ConstantInt::get(Context, APInt(64, 0));
-  else
-    ReturnVal = ConstantInt::get(Context, APInt(32, 0));
+  Value *ReturnVal = ConstantInt::get(ReturnTy, 0);
   Builder.CreateRet(ReturnVal);
 
   // Add this new module to the ExecutionEngine.

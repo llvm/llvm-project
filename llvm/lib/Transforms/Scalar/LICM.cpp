@@ -480,6 +480,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
   return Changed;
 }
 
+namespace {
 // This is a helper class for hoistRegion to make it able to hoist control flow
 // in order to be able to hoist phis. The way this works is that we initially
 // start hoisting to the loop preheader, and when we see a loop invariant branch
@@ -706,6 +707,7 @@ public:
     return HoistDestinationMap[BB];
   }
 };
+} // namespace
 
 /// Walk the specified region of the CFG (defined by all blocks dominated by
 /// the specified block, and that are in the current loop) in depth first

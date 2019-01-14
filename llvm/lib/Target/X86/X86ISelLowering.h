@@ -98,7 +98,7 @@ namespace llvm {
       SETCC,
 
       /// X86 Select
-      SELECT, SELECTS,
+      SELECTS,
 
       // Same as SETCC except it's materialized with a sbb and the value is all
       // one's or all zero's.
@@ -292,11 +292,21 @@ namespace llvm {
       // Vector integer truncate with unsigned/signed saturation.
       VTRUNCUS, VTRUNCS,
 
+      // Masked version of the above. Used when less than a 128-bit result is
+      // produced since the mask only applies to the lower elements and can't
+      // be represented by a select.
+      // SRC, PASSTHRU, MASK
+      VMTRUNC, VMTRUNCUS, VMTRUNCS,
+
       // Vector FP extend.
       VFPEXT, VFPEXT_RND, VFPEXTS_RND,
 
       // Vector FP round.
       VFPROUND, VFPROUND_RND, VFPROUNDS_RND,
+
+      // Masked version of above. Used for v2f64->v4f32.
+      // SRC, PASSTHRU, MASK
+      VMFPROUND,
 
       // 128-bit vector logical left / right shift
       VSHLDQ, VSRLDQ,
@@ -503,6 +513,10 @@ namespace llvm {
       // Vector signed/unsigned integer to float/double.
       CVTSI2P, CVTUI2P,
 
+      // Masked versions of above. Used for v2f64->v4f32.
+      // SRC, PASSTHRU, MASK
+      MCVTP2SI, MCVTP2UI, MCVTTP2SI, MCVTTP2UI,
+
       // Save xmm argument registers to the stack, according to %al. An operator
       // is needed so that this can be expanded with control flow.
       VASTART_SAVE_XMM_REGS,
@@ -549,6 +563,10 @@ namespace llvm {
 
       // Conversions between float and half-float.
       CVTPS2PH, CVTPH2PS, CVTPH2PS_RND,
+
+      // Masked version of above.
+      // SRC, RND, PASSTHRU, MASK
+      MCVTPS2PH,
 
       // Galois Field Arithmetic Instructions
       GF2P8AFFINEINVQB, GF2P8AFFINEQB, GF2P8MULB,

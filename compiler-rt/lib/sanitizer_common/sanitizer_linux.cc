@@ -1077,11 +1077,9 @@ uptr GetMaxUserVirtualAddress() {
   return addr;
 }
 
+#if !SANITIZER_ANDROID
 uptr GetPageSize() {
-// Android post-M sysconf(_SC_PAGESIZE) crashes if called from .preinit_array.
-#if SANITIZER_ANDROID
-  return 4096;
-#elif SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__))
+#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__))
   return EXEC_PAGESIZE;
 #elif SANITIZER_USE_GETAUXVAL
   return getauxval(AT_PAGESZ);
@@ -1097,6 +1095,7 @@ uptr GetPageSize() {
   return sysconf(_SC_PAGESIZE);  // EXEC_PAGESIZE may not be trustworthy.
 #endif
 }
+#endif // !SANITIZER_ANDROID
 
 #if !SANITIZER_OPENBSD
 uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {

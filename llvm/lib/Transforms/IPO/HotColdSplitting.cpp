@@ -295,6 +295,7 @@ Function *HotColdSplitting::extractColdRegion(const BlockSequence &Region,
 /// A pair of (basic block, score).
 using BlockTy = std::pair<BasicBlock *, unsigned>;
 
+namespace {
 /// A maximal outlining region. This contains all blocks post-dominated by a
 /// sink block, the sink block itself, and all blocks dominated by the sink.
 class OutliningRegion {
@@ -458,6 +459,7 @@ public:
     return SubRegion;
   }
 };
+} // namespace
 
 bool HotColdSplitting::outlineColdRegions(Function &F, ProfileSummaryInfo &PSI,
                                           BlockFrequencyInfo *BFI,

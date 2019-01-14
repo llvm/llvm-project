@@ -75,6 +75,12 @@ template <typename T> struct make_const_ptr {
   using type =
       typename std::add_pointer<typename std::add_const<T>::type>::type;
 };
+
+template <typename T> struct make_const_ref {
+  using type = typename std::add_lvalue_reference<
+      typename std::add_const<T>::type>::type;
+};
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <functional>
 //===----------------------------------------------------------------------===//

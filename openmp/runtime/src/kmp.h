@@ -3160,9 +3160,9 @@ extern kmp_global_t __kmp_global; /* global status */
 
 extern kmp_info_t __kmp_monitor;
 // For Debugging Support Library
-extern std::atomic<kmp_uint32> __kmp_team_counter;
+extern std::atomic<kmp_int32> __kmp_team_counter;
 // For Debugging Support Library
-extern std::atomic<kmp_uint32> __kmp_task_counter;
+extern std::atomic<kmp_int32> __kmp_task_counter;
 
 #if USE_DEBUGGER
 #define _KMP_GEN_ID(counter)                                                   \

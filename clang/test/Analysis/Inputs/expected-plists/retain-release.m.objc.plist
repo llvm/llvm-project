@@ -25854,9 +25854,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;getViaParam&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count</string>
+     <string>Call to function &apos;getViaParam&apos; writes a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count into an out parameter &apos;outObj&apos;</string>
      <key>message</key>
-     <string>Call to function &apos;getViaParam&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count</string>
+     <string>Call to function &apos;getViaParam&apos; writes a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count into an out parameter &apos;outObj&apos;</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -26010,9 +26010,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;getViaParam2&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count</string>
+     <string>Call to function &apos;getViaParam2&apos; writes a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count into an out parameter &apos;outObj&apos;</string>
      <key>message</key>
-     <string>Call to function &apos;getViaParam2&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count</string>
+     <string>Call to function &apos;getViaParam2&apos; writes a Core Foundation object of type &apos;CFTypeRef&apos; with a +0 retain count into an out parameter &apos;outObj&apos;</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>

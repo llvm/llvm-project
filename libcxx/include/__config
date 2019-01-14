@@ -1424,6 +1424,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  endif // defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_BUILDING_LIBRARY)
 #endif // _LIBCPP_NO_AUTO_LINK
 
+#define _LIBCPP_UNUSED_VAR(x) ((void)(x))
+
 #endif // __cplusplus
 
 #endif // _LIBCPP_CONFIG

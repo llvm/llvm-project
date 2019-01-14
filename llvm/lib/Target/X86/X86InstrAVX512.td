@@ -2887,6 +2887,8 @@ let Predicates = [HasDQI] in {
 let Predicates = [HasAVX512] in {
   def : Pat<(v8i1 (bitconvert (i8 (load addr:$src)))),
             (COPY_TO_REGCLASS (MOVZX32rm8 addr:$src), VK8)>;
+  def : Pat<(v16i1 (bitconvert (loadi16 addr:$src))),
+            (KMOVWkm addr:$src)>;
 }
 
 def X86kextract : SDNode<"ISD::EXTRACT_VECTOR_ELT",
@@ -7967,26 +7969,53 @@ multiclass avx512_vcvt_fp<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                           X86VectorVTInfo _Src, SDNode OpNode,
                           X86FoldableSchedWrite sched,
                           string Broadcast = _.BroadcastStr,
-                          string Alias = "", X86MemOperand MemOp = _Src.MemOp> {
+                          string Alias = "", X86MemOperand MemOp = _Src.MemOp,
+                          RegisterClass MaskRC = _.KRCWM> {
 
-  defm rr : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
-                         (ins _Src.RC:$src), OpcodeStr, "$src", "$src",
-                         (_.VT (OpNode (_Src.VT _Src.RC:$src)))>,
+  defm rr : AVX512_maskable_common<opc, MRMSrcReg, _, (outs _.RC:$dst),
+                         (ins _Src.RC:$src),
+                         (ins _.RC:$src0, MaskRC:$mask, _Src.RC:$src),
+                         (ins MaskRC:$mask, _Src.RC:$src),
+                          OpcodeStr, "$src", "$src",
+                         (_.VT (OpNode (_Src.VT _Src.RC:$src))),
+                         (vselect MaskRC:$mask,
+                                  (_.VT (OpNode (_Src.VT _Src.RC:$src))),
+                                  _.RC:$src0),
+                         vselect, "$src0 = $dst">,
                          EVEX, Sched<[sched]>;
 
-  defm rm : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
-                         (ins MemOp:$src), OpcodeStr#Alias, "$src", "$src",
+  defm rm : AVX512_maskable_common<opc, MRMSrcMem, _, (outs _.RC:$dst),
+                         (ins MemOp:$src),
+                         (ins _.RC:$src0, MaskRC:$mask, MemOp:$src),
+                         (ins MaskRC:$mask, MemOp:$src),
+                         OpcodeStr#Alias, "$src", "$src",
                          (_.VT (OpNode (_Src.VT
-                             (_Src.LdFrag addr:$src))))>,
+                             (_Src.LdFrag addr:$src)))),
+                         (vselect MaskRC:$mask,
+                                  (_.VT (OpNode (_Src.VT
+                                                 (_Src.LdFrag addr:$src)))),
+                                  _.RC:$src0),
+                         vselect, "$src0 = $dst">,
                          EVEX, Sched<[sched.Folded]>;
 
-  defm rmb : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
-                         (ins _Src.ScalarMemOp:$src), OpcodeStr,
+  defm rmb : AVX512_maskable_common<opc, MRMSrcMem, _, (outs _.RC:$dst),
+                         (ins _Src.ScalarMemOp:$src),
+                         (ins _.RC:$src0, MaskRC:$mask, _Src.ScalarMemOp:$src),
+                         (ins MaskRC:$mask, _Src.ScalarMemOp:$src),
+                         OpcodeStr,
                          "${src}"##Broadcast, "${src}"##Broadcast,
                          (_.VT (OpNode (_Src.VT
                                   (X86VBroadcast (_Src.ScalarLdFrag addr:$src)))
-                            ))>, EVEX, EVEX_B,
-                         Sched<[sched.Folded]>;
+                            )),
+                         (vselect MaskRC:$mask,
+                                  (_.VT
+                                   (OpNode
+                                    (_Src.VT
+                                     (X86VBroadcast
+                                      (_Src.ScalarLdFrag addr:$src))))),
+                                  _.RC:$src0),
+                         vselect, "$src0 = $dst">,
+                         EVEX, EVEX_B, Sched<[sched.Folded]>;
 }
 // Coversion with SAE - suppress all exceptions
 multiclass avx512_vcvt_fp_sae<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
@@ -8037,7 +8066,8 @@ multiclass avx512_cvtpd2ps<bits<8> opc, string OpcodeStr, X86SchedWriteWidths sc
   }
   let Predicates = [HasVLX] in {
     defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v4f32x_info, v2f64x_info,
-                               X86vfpround, sched.XMM, "{1to2}", "{x}">, EVEX_V128;
+                               null_frag, sched.XMM, "{1to2}", "{x}", f128mem, VK2WM>,
+                               EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4f32x_info, v4f64x_info, fpround,
                                sched.YMM, "{1to4}", "{y}">, EVEX_V256;
 
@@ -8071,6 +8101,35 @@ let Predicates = [HasVLX] in {
               (VCVTPS2PDZ128rm addr:$src)>;
   def : Pat<(v4f64 (extloadv4f32 addr:$src)),
               (VCVTPS2PDZ256rm addr:$src)>;
+
+  // Special patterns to allow use of X86vmfpround for masking. Instruction
+  // patterns have been disabled with null_frag.
+  def : Pat<(X86vfpround (v2f64 VR128X:$src)),
+            (VCVTPD2PSZ128rr VR128X:$src)>;
+  def : Pat<(X86vmfpround (v2f64 VR128X:$src), (v4f32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTPD2PSZ128rrk VR128X:$src0, VK2WM:$mask, VR128X:$src)>;
+  def : Pat<(X86vmfpround (v2f64 VR128X:$src), v4f32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTPD2PSZ128rrkz VK2WM:$mask, VR128X:$src)>;
+
+  def : Pat<(X86vfpround (loadv2f64 addr:$src)),
+            (VCVTPD2PSZ128rm addr:$src)>;
+  def : Pat<(X86vmfpround (loadv2f64 addr:$src), (v4f32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTPD2PSZ128rmk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86vmfpround (loadv2f64 addr:$src), v4f32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTPD2PSZ128rmkz VK2WM:$mask, addr:$src)>;
+
+  def : Pat<(X86vfpround (v2f64 (X86VBroadcast (loadf64 addr:$src)))),
+            (VCVTPD2PSZ128rmb addr:$src)>;
+  def : Pat<(X86vmfpround (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          (v4f32 VR128X:$src0), VK2WM:$mask),
+            (VCVTPD2PSZ128rmbk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86vmfpround (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          v4f32x_info.ImmAllZerosV, VK2WM:$mask),
+            (VCVTPD2PSZ128rmbkz VK2WM:$mask, addr:$src)>;
 }
 
 // Convert Signed/Unsigned Doubleword to Double
@@ -8155,7 +8214,8 @@ multiclass avx512_cvttpd2dq<bits<8> opc, string OpcodeStr, SDNode OpNode,
     // dest type - 'v4i32x_info'. We also specify the broadcast string explicitly
     // due to the same reason.
     defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v2f64x_info,
-                               OpNode, sched.XMM, "{1to2}", "{x}">, EVEX_V128;
+                               null_frag, sched.XMM, "{1to2}", "{x}", f128mem,
+                               VK2WM>, EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v4f64x_info, OpNode,
                                sched.YMM, "{1to4}", "{y}">, EVEX_V256;
 
@@ -8184,8 +8244,9 @@ multiclass avx512_cvtpd2dq<bits<8> opc, string OpcodeStr, SDNode OpNode,
     // memory forms of these instructions in Asm Parcer. They have the same
     // dest type - 'v4i32x_info'. We also specify the broadcast string explicitly
     // due to the same reason.
-    defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v2f64x_info, OpNode,
-                               sched.XMM, "{1to2}", "{x}">, EVEX_V128;
+    defm Z128 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v2f64x_info,
+                               null_frag, sched.XMM, "{1to2}", "{x}", f128mem,
+                               VK2WM>, EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v4i32x_info, v4f64x_info, OpNode,
                                sched.YMM, "{1to4}", "{y}">, EVEX_V256;
 
@@ -8468,6 +8529,122 @@ let Predicates = [HasVLX] in {
             (VCVTTPD2UDQZ256rr VR256X:$src)>;
   def : Pat<(v4i32 (fp_to_uint (loadv4f64 addr:$src))),
             (VCVTTPD2UDQZ256rm addr:$src)>;
+
+  // Special patterns to allow use of X86mcvtp2Int for masking. Instruction
+  // patterns have been disabled with null_frag.
+  def : Pat<(v4i32 (X86cvtp2Int (v2f64 VR128X:$src))),
+            (VCVTPD2DQZ128rr VR128X:$src)>;
+  def : Pat<(X86mcvtp2Int (v2f64 VR128X:$src), (v4i32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTPD2DQZ128rrk VR128X:$src0, VK2WM:$mask, VR128X:$src)>;
+  def : Pat<(X86mcvtp2Int (v2f64 VR128X:$src), v4i32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTPD2DQZ128rrkz VK2WM:$mask, VR128X:$src)>;
+
+  def : Pat<(v4i32 (X86cvtp2Int (loadv2f64 addr:$src))),
+            (VCVTPD2DQZ128rm addr:$src)>;
+  def : Pat<(X86mcvtp2Int (loadv2f64 addr:$src), (v4i32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTPD2DQZ128rmk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvtp2Int (loadv2f64 addr:$src), v4i32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTPD2DQZ128rmkz VK2WM:$mask, addr:$src)>;
+
+  def : Pat<(v4i32 (X86cvtp2Int (v2f64 (X86VBroadcast (loadf64 addr:$src))))),
+            (VCVTPD2DQZ128rmb addr:$src)>;
+  def : Pat<(X86mcvtp2Int (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          (v4i32 VR128X:$src0), VK2WM:$mask),
+            (VCVTPD2DQZ128rmbk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvtp2Int (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          v4i32x_info.ImmAllZerosV, VK2WM:$mask),
+            (VCVTPD2DQZ128rmbkz VK2WM:$mask, addr:$src)>;
+
+  // Special patterns to allow use of X86mcvttp2si for masking. Instruction
+  // patterns have been disabled with null_frag.
+  def : Pat<(v4i32 (X86cvttp2si (v2f64 VR128X:$src))),
+            (VCVTTPD2DQZ128rr VR128X:$src)>;
+  def : Pat<(X86mcvttp2si (v2f64 VR128X:$src), (v4i32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTTPD2DQZ128rrk VR128X:$src0, VK2WM:$mask, VR128X:$src)>;
+  def : Pat<(X86mcvttp2si (v2f64 VR128X:$src), v4i32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTTPD2DQZ128rrkz VK2WM:$mask, VR128X:$src)>;
+
+  def : Pat<(v4i32 (X86cvttp2si (loadv2f64 addr:$src))),
+            (VCVTTPD2DQZ128rm addr:$src)>;
+  def : Pat<(X86mcvttp2si (loadv2f64 addr:$src), (v4i32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTTPD2DQZ128rmk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvttp2si (loadv2f64 addr:$src), v4i32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTTPD2DQZ128rmkz VK2WM:$mask, addr:$src)>;
+
+  def : Pat<(v4i32 (X86cvttp2si (v2f64 (X86VBroadcast (loadf64 addr:$src))))),
+            (VCVTTPD2DQZ128rmb addr:$src)>;
+  def : Pat<(X86mcvttp2si (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          (v4i32 VR128X:$src0), VK2WM:$mask),
+            (VCVTTPD2DQZ128rmbk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvttp2si (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          v4i32x_info.ImmAllZerosV, VK2WM:$mask),
+            (VCVTTPD2DQZ128rmbkz VK2WM:$mask, addr:$src)>;
+
+  // Special patterns to allow use of X86mcvtp2UInt for masking. Instruction
+  // patterns have been disabled with null_frag.
+  def : Pat<(v4i32 (X86cvtp2UInt (v2f64 VR128X:$src))),
+            (VCVTPD2UDQZ128rr VR128X:$src)>;
+  def : Pat<(X86mcvtp2UInt (v2f64 VR128X:$src), (v4i32 VR128X:$src0),
+                           VK2WM:$mask),
+            (VCVTPD2UDQZ128rrk VR128X:$src0, VK2WM:$mask, VR128X:$src)>;
+  def : Pat<(X86mcvtp2UInt (v2f64 VR128X:$src), v4i32x_info.ImmAllZerosV,
+                           VK2WM:$mask),
+            (VCVTPD2UDQZ128rrkz VK2WM:$mask, VR128X:$src)>;
+
+  def : Pat<(v4i32 (X86cvtp2UInt (loadv2f64 addr:$src))),
+            (VCVTPD2UDQZ128rm addr:$src)>;
+  def : Pat<(X86mcvtp2UInt (loadv2f64 addr:$src), (v4i32 VR128X:$src0),
+                           VK2WM:$mask),
+            (VCVTPD2UDQZ128rmk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvtp2UInt (loadv2f64 addr:$src), v4i32x_info.ImmAllZerosV,
+                           VK2WM:$mask),
+            (VCVTPD2UDQZ128rmkz VK2WM:$mask, addr:$src)>;
+
+  def : Pat<(v4i32 (X86cvtp2UInt (v2f64 (X86VBroadcast (loadf64 addr:$src))))),
+            (VCVTPD2UDQZ128rmb addr:$src)>;
+  def : Pat<(X86mcvtp2UInt (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                           (v4i32 VR128X:$src0), VK2WM:$mask),
+            (VCVTPD2UDQZ128rmbk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvtp2UInt (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                           v4i32x_info.ImmAllZerosV, VK2WM:$mask),
+            (VCVTPD2UDQZ128rmbkz VK2WM:$mask, addr:$src)>;
+
+  // Special patterns to allow use of X86mcvtp2UInt for masking. Instruction
+  // patterns have been disabled with null_frag.
+  def : Pat<(v4i32 (X86cvttp2ui (v2f64 VR128X:$src))),
+            (VCVTTPD2UDQZ128rr VR128X:$src)>;
+  def : Pat<(X86mcvttp2ui (v2f64 VR128X:$src), (v4i32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTTPD2UDQZ128rrk VR128X:$src0, VK2WM:$mask, VR128X:$src)>;
+  def : Pat<(X86mcvttp2ui (v2f64 VR128X:$src), v4i32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTTPD2UDQZ128rrkz VK2WM:$mask, VR128X:$src)>;
+
+  def : Pat<(v4i32 (X86cvttp2ui (loadv2f64 addr:$src))),
+            (VCVTTPD2UDQZ128rm addr:$src)>;
+  def : Pat<(X86mcvttp2ui (loadv2f64 addr:$src), (v4i32 VR128X:$src0),
+                          VK2WM:$mask),
+            (VCVTTPD2UDQZ128rmk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvttp2ui (loadv2f64 addr:$src), v4i32x_info.ImmAllZerosV,
+                          VK2WM:$mask),
+            (VCVTTPD2UDQZ128rmkz VK2WM:$mask, addr:$src)>;
+
+  def : Pat<(v4i32 (X86cvttp2ui (v2f64 (X86VBroadcast (loadf64 addr:$src))))),
+            (VCVTTPD2UDQZ128rmb addr:$src)>;
+  def : Pat<(X86mcvttp2ui (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          (v4i32 VR128X:$src0), VK2WM:$mask),
+            (VCVTTPD2UDQZ128rmbk VR128X:$src0, VK2WM:$mask, addr:$src)>;
+  def : Pat<(X86mcvttp2ui (v2f64 (X86VBroadcast (loadf64 addr:$src))),
+                          v4i32x_info.ImmAllZerosV, VK2WM:$mask),
+            (VCVTTPD2UDQZ128rmbkz VK2WM:$mask, addr:$src)>;
 }
 
 let Predicates = [HasDQI] in {
@@ -8724,12 +8901,28 @@ let Predicates = [HasVLX] in {
 
 multiclass avx512_cvtps2ph<X86VectorVTInfo _dest, X86VectorVTInfo _src,
                            X86MemOperand x86memop, SchedWrite RR, SchedWrite MR> {
-  defm rr : AVX512_maskable<0x1D, MRMDestReg, _dest ,(outs _dest.RC:$dst),
-                   (ins _src.RC:$src1, i32u8imm:$src2),
-                   "vcvtps2ph", "$src2, $src1", "$src1, $src2",
-                   (X86cvtps2ph (_src.VT _src.RC:$src1),
-                                (i32 imm:$src2)), 0, 0>,
-                   AVX512AIi8Base, Sched<[RR]>;
+let ExeDomain = GenericDomain in {
+  def rr : AVX512AIi8<0x1D, MRMDestReg, (outs _dest.RC:$dst),
+             (ins _src.RC:$src1, i32u8imm:$src2),
+             "vcvtps2ph\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+             [(set _dest.RC:$dst,
+                   (X86cvtps2ph (_src.VT _src.RC:$src1), (i32 imm:$src2)))]>,
+             Sched<[RR]>;
+  let Constraints = "$src0 = $dst" in
+  def rrk : AVX512AIi8<0x1D, MRMDestReg, (outs _dest.RC:$dst),
+             (ins _dest.RC:$src0, _src.KRCWM:$mask, _src.RC:$src1, i32u8imm:$src2),
+             "vcvtps2ph\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}",
+             [(set _dest.RC:$dst,
+                   (X86mcvtps2ph (_src.VT _src.RC:$src1), (i32 imm:$src2),
+                                 _dest.RC:$src0, _src.KRCWM:$mask))]>,
+             Sched<[RR]>, EVEX_K;
+  def rrkz : AVX512AIi8<0x1D, MRMDestReg, (outs _dest.RC:$dst),
+             (ins _src.KRCWM:$mask, _src.RC:$src1, i32u8imm:$src2),
+             "vcvtps2ph\t{$src2, $src1, $dst {${mask}} {z}|$dst {${mask}} {z}, $src1, $src2}",
+             [(set _dest.RC:$dst,
+                   (X86mcvtps2ph (_src.VT _src.RC:$src1), (i32 imm:$src2),
+                                 _dest.ImmAllZerosV, _src.KRCWM:$mask))]>,
+             Sched<[RR]>, EVEX_KZ;
   let hasSideEffects = 0, mayStore = 1 in {
     def mr : AVX512AIi8<0x1D, MRMDestMem, (outs),
                (ins x86memop:$dst, _src.RC:$src1, i32u8imm:$src2),
@@ -8740,6 +8933,7 @@ multiclass avx512_cvtps2ph<X86VectorVTInfo _dest, X86VectorVTInfo _src,
                "vcvtps2ph\t{$src2, $src1, $dst {${mask}}|$dst {${mask}}, $src1, $src2}", []>,
                 EVEX_K, Sched<[MR]>, NotMemoryFoldable;
   }
+}
 }
 
 multiclass avx512_cvtps2ph_sae<X86VectorVTInfo _dest, X86VectorVTInfo _src,
@@ -9318,14 +9512,47 @@ defm : avx512_masked_scalar_imm<fceil, "RNDSCALESD", X86Movsd,
 // Integer truncate and extend operations
 //-------------------------------------------------
 
+// PatFrags that contain a select and a truncate op. The take operands in the
+// same order as X86vmtrunc, X86vmtruncs, X86vmtruncus. This allows us to pass
+// either to the multiclasses.
+def select_trunc : PatFrag<(ops node:$src, node:$src0, node:$mask),
+                           (vselect node:$mask,
+                                    (trunc node:$src), node:$src0)>;
+def select_truncs : PatFrag<(ops node:$src, node:$src0, node:$mask),
+                            (vselect node:$mask,
+                                     (X86vtruncs node:$src), node:$src0)>;
+def select_truncus : PatFrag<(ops node:$src, node:$src0, node:$mask),
+                             (vselect node:$mask,
+                                      (X86vtruncus node:$src), node:$src0)>;
+
 multiclass avx512_trunc_common<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                              SDPatternOperator MaskNode,
                               X86FoldableSchedWrite sched, X86VectorVTInfo SrcInfo,
                               X86VectorVTInfo DestInfo, X86MemOperand x86memop> {
-  let ExeDomain = DestInfo.ExeDomain in
-  defm rr  : AVX512_maskable<opc, MRMDestReg, DestInfo, (outs DestInfo.RC:$dst),
-                      (ins SrcInfo.RC:$src1), OpcodeStr ,"$src1", "$src1",
-                      (DestInfo.VT (OpNode (SrcInfo.VT SrcInfo.RC:$src1)))>,
-                      EVEX, T8XS, Sched<[sched]>;
+  let ExeDomain = DestInfo.ExeDomain in {
+  def rr : AVX512XS8I<opc, MRMDestReg, (outs DestInfo.RC:$dst),
+             (ins SrcInfo.RC:$src),
+             OpcodeStr # "\t{$src, $dst|$dst, $src}",
+             [(set DestInfo.RC:$dst,
+                   (DestInfo.VT (OpNode (SrcInfo.VT SrcInfo.RC:$src))))]>,
+             EVEX, Sched<[sched]>;
+  let Constraints = "$src0 = $dst" in
+  def rrk : AVX512XS8I<opc, MRMDestReg, (outs DestInfo.RC:$dst),
+             (ins DestInfo.RC:$src0, SrcInfo.KRCWM:$mask, SrcInfo.RC:$src),
+             OpcodeStr # "\t{$src, $dst {${mask}}|$dst {${mask}}, $src}",
+             [(set DestInfo.RC:$dst,
+                   (MaskNode (SrcInfo.VT SrcInfo.RC:$src),
+                             (DestInfo.VT DestInfo.RC:$src0),
+                             SrcInfo.KRCWM:$mask))]>,
+             EVEX, EVEX_K, Sched<[sched]>;
+  def rrkz : AVX512XS8I<opc, MRMDestReg, (outs DestInfo.RC:$dst),
+             (ins SrcInfo.KRCWM:$mask, SrcInfo.RC:$src),
+             OpcodeStr # "\t{$src, $dst {${mask}} {z}|$dst {${mask}} {z}, $src}",
+             [(set DestInfo.RC:$dst,
+                   (DestInfo.VT (MaskNode (SrcInfo.VT SrcInfo.RC:$src),
+                             DestInfo.ImmAllZerosV, SrcInfo.KRCWM:$mask)))]>,
+             EVEX, EVEX_KZ, Sched<[sched]>;
+  }
 
   let mayStore = 1, hasSideEffects = 0, ExeDomain = DestInfo.ExeDomain in {
     def mr : AVX512XS8I<opc, MRMDestMem, (outs),
@@ -9356,7 +9583,11 @@ multiclass avx512_trunc_mr_lowering<X86VectorVTInfo SrcInfo,
 }
 
 multiclass avx512_trunc<bits<8> opc, string OpcodeStr, SDNode OpNode128,
-                        SDNode OpNode256, SDNode OpNode512, X86FoldableSchedWrite sched,
+                        SDNode OpNode256, SDNode OpNode512,
+                        SDPatternOperator MaskNode128,
+                        SDPatternOperator MaskNode256,
+                        SDPatternOperator MaskNode512,
+                        X86FoldableSchedWrite sched,
                         AVX512VLVectorVTInfo VTSrcInfo,
                         X86VectorVTInfo DestInfoZ128,
                         X86VectorVTInfo DestInfoZ256, X86VectorVTInfo DestInfoZ,
@@ -9365,118 +9596,167 @@ multiclass avx512_trunc<bits<8> opc, string OpcodeStr, SDNode OpNode128,
                         PatFrag mtruncFrag, Predicate prd = HasAVX512>{
 
   let Predicates = [HasVLX, prd] in {
-    defm Z128:  avx512_trunc_common<opc, OpcodeStr, OpNode128, sched,
+    defm Z128:  avx512_trunc_common<opc, OpcodeStr, OpNode128, MaskNode128, sched,
                              VTSrcInfo.info128, DestInfoZ128, x86memopZ128>,
                 avx512_trunc_mr_lowering<VTSrcInfo.info128, DestInfoZ128,
                              truncFrag, mtruncFrag, NAME>, EVEX_V128;
 
-    defm Z256:  avx512_trunc_common<opc, OpcodeStr, OpNode256, sched,
+    defm Z256:  avx512_trunc_common<opc, OpcodeStr, OpNode256, MaskNode256, sched,
                              VTSrcInfo.info256, DestInfoZ256, x86memopZ256>,
                 avx512_trunc_mr_lowering<VTSrcInfo.info256, DestInfoZ256,
                              truncFrag, mtruncFrag, NAME>, EVEX_V256;
   }
   let Predicates = [prd] in
-    defm Z:     avx512_trunc_common<opc, OpcodeStr, OpNode512, sched,
+    defm Z:     avx512_trunc_common<opc, OpcodeStr, OpNode512, MaskNode512, sched,
                              VTSrcInfo.info512, DestInfoZ, x86memopZ>,
                 avx512_trunc_mr_lowering<VTSrcInfo.info512, DestInfoZ,
                              truncFrag, mtruncFrag, NAME>, EVEX_V512;
 }
 
 multiclass avx512_trunc_qb<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                           SDPatternOperator MaskNode,
                            X86FoldableSchedWrite sched, PatFrag StoreNode,
-                           PatFrag MaskedStoreNode, SDNode InVecNode = OpNode> {
-  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, InVecNode, InVecNode, sched,
+                           PatFrag MaskedStoreNode, SDNode InVecNode,
+                           SDPatternOperator InVecMaskNode> {
+  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, InVecNode, InVecNode,
+                          InVecMaskNode, InVecMaskNode, InVecMaskNode, sched,
                           avx512vl_i64_info, v16i8x_info, v16i8x_info,
                           v16i8x_info, i16mem, i32mem, i64mem, StoreNode,
                           MaskedStoreNode>, EVEX_CD8<8, CD8VO>;
 }
 
 multiclass avx512_trunc_qw<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                           SDPatternOperator MaskNode,
                            X86FoldableSchedWrite sched, PatFrag StoreNode,
-                           PatFrag MaskedStoreNode, SDNode InVecNode = OpNode> {
-  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, InVecNode, OpNode, sched,
+                           PatFrag MaskedStoreNode, SDNode InVecNode,
+                           SDPatternOperator InVecMaskNode> {
+  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, InVecNode, OpNode,
+                          InVecMaskNode, InVecMaskNode, MaskNode, sched,
                           avx512vl_i64_info, v8i16x_info, v8i16x_info,
                           v8i16x_info, i32mem, i64mem, i128mem, StoreNode,
                           MaskedStoreNode>, EVEX_CD8<16, CD8VQ>;
 }
 
 multiclass avx512_trunc_qd<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                           SDPatternOperator MaskNode,
                            X86FoldableSchedWrite sched, PatFrag StoreNode,
-                           PatFrag MaskedStoreNode, SDNode InVecNode = OpNode> {
-  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, OpNode, OpNode, sched,
+                           PatFrag MaskedStoreNode, SDNode InVecNode,
+                           SDPatternOperator InVecMaskNode> {
+  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, OpNode, OpNode,
+                          InVecMaskNode, MaskNode, MaskNode, sched,
                           avx512vl_i64_info, v4i32x_info, v4i32x_info,
                           v8i32x_info, i64mem, i128mem, i256mem, StoreNode,
                           MaskedStoreNode>, EVEX_CD8<32, CD8VH>;
 }
 
 multiclass avx512_trunc_db<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                           SDPatternOperator MaskNode,
                            X86FoldableSchedWrite sched, PatFrag StoreNode,
-                           PatFrag MaskedStoreNode, SDNode InVecNode = OpNode> {
-  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, InVecNode, OpNode, sched,
+                           PatFrag MaskedStoreNode, SDNode InVecNode,
+                           SDPatternOperator InVecMaskNode> {
+  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, InVecNode, OpNode,
+                          InVecMaskNode, InVecMaskNode, MaskNode, sched,
                           avx512vl_i32_info, v16i8x_info, v16i8x_info,
                           v16i8x_info, i32mem, i64mem, i128mem, StoreNode,
                           MaskedStoreNode>, EVEX_CD8<8, CD8VQ>;
 }
 
 multiclass avx512_trunc_dw<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                           SDPatternOperator MaskNode,
                            X86FoldableSchedWrite sched, PatFrag StoreNode,
-                           PatFrag MaskedStoreNode, SDNode InVecNode = OpNode> {
-  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, OpNode, OpNode, sched,
+                           PatFrag MaskedStoreNode, SDNode InVecNode,
+                           SDPatternOperator InVecMaskNode> {
+  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, OpNode, OpNode,
+                          InVecMaskNode, MaskNode, MaskNode, sched,
                           avx512vl_i32_info, v8i16x_info, v8i16x_info,
                           v16i16x_info, i64mem, i128mem, i256mem, StoreNode,
                           MaskedStoreNode>, EVEX_CD8<16, CD8VH>;
 }
 
 multiclass avx512_trunc_wb<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                           SDPatternOperator MaskNode,
                            X86FoldableSchedWrite sched, PatFrag StoreNode,
-                           PatFrag MaskedStoreNode, SDNode InVecNode = OpNode> {
+                           PatFrag MaskedStoreNode, SDNode InVecNode,
+                           SDPatternOperator InVecMaskNode> {
   defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, OpNode, OpNode,
-                          sched, avx512vl_i16_info, v16i8x_info, v16i8x_info,
+                          InVecMaskNode, MaskNode, MaskNode, sched,
+                          avx512vl_i16_info, v16i8x_info, v16i8x_info,
                           v32i8x_info, i64mem, i128mem, i256mem, StoreNode,
                           MaskedStoreNode, HasBWI>, EVEX_CD8<16, CD8VH>;
 }
 
-defm VPMOVQB    : avx512_trunc_qb<0x32, "vpmovqb",   trunc, WriteShuffle256,
-                                  truncstorevi8, masked_truncstorevi8, X86vtrunc>;
-defm VPMOVSQB   : avx512_trunc_qb<0x22, "vpmovsqb",  X86vtruncs, WriteShuffle256,
-                                  truncstore_s_vi8, masked_truncstore_s_vi8>;
-defm VPMOVUSQB  : avx512_trunc_qb<0x12, "vpmovusqb", X86vtruncus, WriteShuffle256,
-                                  truncstore_us_vi8, masked_truncstore_us_vi8>;
+defm VPMOVQB    : avx512_trunc_qb<0x32, "vpmovqb",   trunc, select_trunc,
+                                  WriteShuffle256, truncstorevi8,
+                                  masked_truncstorevi8, X86vtrunc, X86vmtrunc>;
+defm VPMOVSQB   : avx512_trunc_qb<0x22, "vpmovsqb",  X86vtruncs, select_truncs,
+                                  WriteShuffle256, truncstore_s_vi8,
+                                  masked_truncstore_s_vi8, X86vtruncs,
+                                  X86vmtruncs>;
+defm VPMOVUSQB  : avx512_trunc_qb<0x12, "vpmovusqb", X86vtruncus,
+                                  select_truncus, WriteShuffle256,
+                                  truncstore_us_vi8, masked_truncstore_us_vi8,
+                                  X86vtruncus, X86vmtruncus>;
 
-defm VPMOVQW    : avx512_trunc_qw<0x34, "vpmovqw",   trunc, WriteShuffle256,
-                                  truncstorevi16, masked_truncstorevi16, X86vtrunc>;
-defm VPMOVSQW   : avx512_trunc_qw<0x24, "vpmovsqw",  X86vtruncs, WriteShuffle256,
-                                  truncstore_s_vi16, masked_truncstore_s_vi16>;
-defm VPMOVUSQW  : avx512_trunc_qw<0x14, "vpmovusqw", X86vtruncus, WriteShuffle256,
-                                  truncstore_us_vi16, masked_truncstore_us_vi16>;
+defm VPMOVQW    : avx512_trunc_qw<0x34, "vpmovqw", trunc, select_trunc,
+                                  WriteShuffle256, truncstorevi16,
+                                  masked_truncstorevi16, X86vtrunc, X86vmtrunc>;
+defm VPMOVSQW   : avx512_trunc_qw<0x24, "vpmovsqw",  X86vtruncs, select_truncs,
+                                  WriteShuffle256, truncstore_s_vi16,
+                                  masked_truncstore_s_vi16, X86vtruncs,
+                                  X86vmtruncs>;
+defm VPMOVUSQW  : avx512_trunc_qw<0x14, "vpmovusqw", X86vtruncus,
+                                  select_truncus, WriteShuffle256,
+                                  truncstore_us_vi16, masked_truncstore_us_vi16,
+                                  X86vtruncus, X86vmtruncus>;
 
-defm VPMOVQD    : avx512_trunc_qd<0x35, "vpmovqd",   trunc, WriteShuffle256,
-                                  truncstorevi32, masked_truncstorevi32, X86vtrunc>;
-defm VPMOVSQD   : avx512_trunc_qd<0x25, "vpmovsqd",  X86vtruncs, WriteShuffle256,
-                                  truncstore_s_vi32, masked_truncstore_s_vi32>;
-defm VPMOVUSQD  : avx512_trunc_qd<0x15, "vpmovusqd", X86vtruncus, WriteShuffle256,
-                                  truncstore_us_vi32, masked_truncstore_us_vi32>;
+defm VPMOVQD    : avx512_trunc_qd<0x35, "vpmovqd", trunc, select_trunc,
+                                  WriteShuffle256, truncstorevi32,
+                                  masked_truncstorevi32, X86vtrunc, X86vmtrunc>;
+defm VPMOVSQD   : avx512_trunc_qd<0x25, "vpmovsqd",  X86vtruncs, select_truncs,
+                                  WriteShuffle256, truncstore_s_vi32,
+                                  masked_truncstore_s_vi32, X86vtruncs,
+                                  X86vmtruncs>;
+defm VPMOVUSQD  : avx512_trunc_qd<0x15, "vpmovusqd", X86vtruncus,
+                                  select_truncus, WriteShuffle256,
+                                  truncstore_us_vi32, masked_truncstore_us_vi32,
+                                  X86vtruncus, X86vmtruncus>;
 
-defm VPMOVDB    : avx512_trunc_db<0x31, "vpmovdb", trunc, WriteShuffle256,
-                                  truncstorevi8, masked_truncstorevi8, X86vtrunc>;
-defm VPMOVSDB   : avx512_trunc_db<0x21, "vpmovsdb",   X86vtruncs, WriteShuffle256,
-                                  truncstore_s_vi8, masked_truncstore_s_vi8>;
-defm VPMOVUSDB  : avx512_trunc_db<0x11, "vpmovusdb",  X86vtruncus, WriteShuffle256,
-                                  truncstore_us_vi8, masked_truncstore_us_vi8>;
+defm VPMOVDB    : avx512_trunc_db<0x31, "vpmovdb", trunc, select_trunc,
+                                  WriteShuffle256, truncstorevi8,
+                                  masked_truncstorevi8, X86vtrunc, X86vmtrunc>;
+defm VPMOVSDB   : avx512_trunc_db<0x21, "vpmovsdb", X86vtruncs, select_truncs,
+                                  WriteShuffle256, truncstore_s_vi8,
+                                  masked_truncstore_s_vi8, X86vtruncs,
+                                  X86vmtruncs>;
+defm VPMOVUSDB  : avx512_trunc_db<0x11, "vpmovusdb",  X86vtruncus,
+                                  select_truncus, WriteShuffle256,
+                                  truncstore_us_vi8, masked_truncstore_us_vi8,
+                                  X86vtruncus, X86vmtruncus>;
 
-defm VPMOVDW    : avx512_trunc_dw<0x33, "vpmovdw", trunc, WriteShuffle256,
-                                  truncstorevi16, masked_truncstorevi16, X86vtrunc>;
-defm VPMOVSDW   : avx512_trunc_dw<0x23, "vpmovsdw",   X86vtruncs, WriteShuffle256,
-                                  truncstore_s_vi16, masked_truncstore_s_vi16>;
-defm VPMOVUSDW  : avx512_trunc_dw<0x13, "vpmovusdw",  X86vtruncus, WriteShuffle256,
-                                  truncstore_us_vi16, masked_truncstore_us_vi16>;
+defm VPMOVDW    : avx512_trunc_dw<0x33, "vpmovdw", trunc, select_trunc,
+                                  WriteShuffle256, truncstorevi16,
+                                  masked_truncstorevi16, X86vtrunc, X86vmtrunc>;
+defm VPMOVSDW   : avx512_trunc_dw<0x23, "vpmovsdw", X86vtruncs, select_truncs,
+                                  WriteShuffle256, truncstore_s_vi16,
+                                  masked_truncstore_s_vi16, X86vtruncs,
+                                  X86vmtruncs>;
+defm VPMOVUSDW  : avx512_trunc_dw<0x13, "vpmovusdw", X86vtruncus,
+                                  select_truncus, WriteShuffle256,
+                                  truncstore_us_vi16, masked_truncstore_us_vi16,
+                                  X86vtruncus, X86vmtruncus>;
 
-defm VPMOVWB    : avx512_trunc_wb<0x30, "vpmovwb", trunc, WriteShuffle256,
-                                  truncstorevi8, masked_truncstorevi8, X86vtrunc>;
-defm VPMOVSWB   : avx512_trunc_wb<0x20, "vpmovswb",   X86vtruncs, WriteShuffle256,
-                                  truncstore_s_vi8, masked_truncstore_s_vi8>;
-defm VPMOVUSWB  : avx512_trunc_wb<0x10, "vpmovuswb",  X86vtruncus, WriteShuffle256,
-                                  truncstore_us_vi8, masked_truncstore_us_vi8>;
+defm VPMOVWB    : avx512_trunc_wb<0x30, "vpmovwb", trunc, select_trunc,
+                                  WriteShuffle256, truncstorevi8,
+                                  masked_truncstorevi8, X86vtrunc,
+                                  X86vmtrunc>;
+defm VPMOVSWB   : avx512_trunc_wb<0x20, "vpmovswb", X86vtruncs, select_truncs,
+                                  WriteShuffle256, truncstore_s_vi8,
+                                  masked_truncstore_s_vi8, X86vtruncs,
+                                  X86vmtruncs>;
+defm VPMOVUSWB  : avx512_trunc_wb<0x10, "vpmovuswb", X86vtruncus,
+                                  select_truncus, WriteShuffle256,
+                                  truncstore_us_vi8, masked_truncstore_us_vi8,
+                                  X86vtruncus, X86vmtruncus>;
 
 let Predicates = [HasAVX512, NoVLX] in {
 def: Pat<(v8i16 (trunc (v8i32 VR256X:$src))),
@@ -9493,6 +9773,44 @@ let Predicates = [HasBWI, NoVLX] in {
 def: Pat<(v16i8 (trunc (v16i16 VR256X:$src))),
          (v16i8 (EXTRACT_SUBREG (VPMOVWBZrr (v32i16 (INSERT_SUBREG (IMPLICIT_DEF),
                                             VR256X:$src, sub_ymm))), sub_xmm))>;
+}
+
+// Without BWI we can't use vXi16/vXi8 vselect so we have to use vmtrunc nodes.
+multiclass mtrunc_lowering<string InstrName, SDNode OpNode,
+                           X86VectorVTInfo DestInfo,
+                           X86VectorVTInfo SrcInfo> {
+  def : Pat<(DestInfo.VT (OpNode (SrcInfo.VT SrcInfo.RC:$src),
+                                 DestInfo.RC:$src0,
+                                 SrcInfo.KRCWM:$mask)),
+            (!cast<Instruction>(InstrName#"rrk") DestInfo.RC:$src0,
+                                                 SrcInfo.KRCWM:$mask,
+                                                 SrcInfo.RC:$src)>;
+
+  def : Pat<(DestInfo.VT (OpNode (SrcInfo.VT SrcInfo.RC:$src),
+                                 DestInfo.ImmAllZerosV,
+                                 SrcInfo.KRCWM:$mask)),
+            (!cast<Instruction>(InstrName#"rrkz") SrcInfo.KRCWM:$mask,
+                                                  SrcInfo.RC:$src)>;
+}
+
+let Predicates = [HasVLX] in {
+defm : mtrunc_lowering<"VPMOVDWZ256", X86vmtrunc, v8i16x_info, v8i32x_info>;
+defm : mtrunc_lowering<"VPMOVSDWZ256", X86vmtruncs, v8i16x_info, v8i32x_info>;
+defm : mtrunc_lowering<"VPMOVUSDWZ256", X86vmtruncus, v8i16x_info, v8i32x_info>;
+}
+
+let Predicates = [HasAVX512] in {
+defm : mtrunc_lowering<"VPMOVDWZ", X86vmtrunc, v16i16x_info, v16i32_info>;
+defm : mtrunc_lowering<"VPMOVSDWZ", X86vmtruncs, v16i16x_info, v16i32_info>;
+defm : mtrunc_lowering<"VPMOVUSDWZ", X86vmtruncus, v16i16x_info, v16i32_info>;
+
+defm : mtrunc_lowering<"VPMOVDBZ", X86vmtrunc, v16i8x_info, v16i32_info>;
+defm : mtrunc_lowering<"VPMOVSDBZ", X86vmtruncs, v16i8x_info, v16i32_info>;
+defm : mtrunc_lowering<"VPMOVUSDBZ", X86vmtruncus, v16i8x_info, v16i32_info>;
+
+defm : mtrunc_lowering<"VPMOVQWZ", X86vmtrunc, v8i16x_info, v8i64_info>;
+defm : mtrunc_lowering<"VPMOVSQWZ", X86vmtruncs, v8i16x_info, v8i64_info>;
+defm : mtrunc_lowering<"VPMOVUSQWZ", X86vmtruncus, v8i16x_info, v8i64_info>;
 }
 
 multiclass WriteShuffle256_common<bits<8> opc, string OpcodeStr, X86FoldableSchedWrite sched,

@@ -1,6 +1,6 @@
 import("//llvm/version.gni")
 
-lto_target_type = "loadable_module"
+lto_target_type = "shared_library"
 if (host_os == "linux") {
   # Linux needs -fPIC to build shared libs but they aren't on by default.
   # For now, make libclang a static lib there.
@@ -8,7 +8,7 @@ if (host_os == "linux") {
 }
 
 target(lto_target_type, "lto") {
-  output_name = "libLTO"
+  output_name = "LTO"
   deps = [
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/IR",

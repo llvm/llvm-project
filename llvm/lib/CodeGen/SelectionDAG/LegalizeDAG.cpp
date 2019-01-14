@@ -2645,6 +2645,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   SDValue Tmp1, Tmp2, Tmp3, Tmp4;
   bool NeedInvert;
   switch (Node->getOpcode()) {
+  case ISD::ABS:
+    if (TLI.expandABS(Node, Tmp1, DAG))
+      Results.push_back(Tmp1);
+    break;
   case ISD::CTPOP:
     if (TLI.expandCTPOP(Node, Tmp1, DAG))
       Results.push_back(Tmp1);
@@ -3283,14 +3287,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
-  case ISD::USUBSAT: {
-    Results.push_back(TLI.getExpandedSaturationAdditionSubtraction(Node, DAG));
+  case ISD::USUBSAT:
+    Results.push_back(TLI.expandAddSubSat(Node, DAG));
     break;
-  }
-  case ISD::SMULFIX: {
+  case ISD::SMULFIX:
     Results.push_back(TLI.getExpandedFixedPointMultiplication(Node, DAG));
     break;
-  }
   case ISD::SADDO:
   case ISD::SSUBO: {
     SDValue LHS = Node->getOperand(0);
@@ -3683,10 +3685,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     (void)Legalized;
     assert(Legalized && "Can't legalize BR_CC with legal condition!");
 
-    // If we expanded the SETCC by inverting the condition code, then wrap
-    // the existing SETCC in a NOT to restore the intended condition.
-    if (NeedInvert)
-      Tmp4 = DAG.getNOT(dl, Tmp4, Tmp4->getValueType(0));
+    assert(!NeedInvert && "Don't know how to invert BR_CC!");
 
     // If we expanded the SETCC by swapping LHS and RHS, create a new BR_CC
     // node.

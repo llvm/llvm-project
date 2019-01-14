@@ -245,7 +245,7 @@ class OrcMips32_Base {
 public:
   static const unsigned PointerSize = 4;
   static const unsigned TrampolineSize = 20;
-  static const unsigned ResolverCodeSize = 0xf8;
+  static const unsigned ResolverCodeSize = 0xfc;
   using IndirectStubsInfo = GenericIndirectStubsInfo<16>;
 
   using JITReentryFn = JITTargetAddress (*)(void *CallbackMgr,
@@ -287,7 +287,7 @@ class OrcMips64 {
 public:
   static const unsigned PointerSize = 8;
   static const unsigned TrampolineSize = 40;
-  static const unsigned ResolverCodeSize = 0x11C;
+  static const unsigned ResolverCodeSize = 0x120;
 
   using IndirectStubsInfo = GenericIndirectStubsInfo<32>;
   using JITReentryFn = JITTargetAddress (*)(void *CallbackMgr,
