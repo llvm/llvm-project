@@ -1,0 +1,19 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import sys
+
+config.clang = "@CLANG_IN_BUILD@"
+config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+config.llvm_build_libs_dir = "@LLVM_BUILD_LIBRARY_DIRS@"
+config.llvm_binary_dir = "@LLVM_BINARY_DIR@"
+config.opencl_include = "@OPENCL_INCLUDE@"
+config.sycl_include = "@SYCL_INCLUDE@"
+
+config.sycl_tests_binary_dir = "@SYCL_TESTS_BINARY_DIR@"
+config.sycl_dir = "@SYCL_BINARY_DIR@"
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@SYCL_TESTS_ROOT_DIR@/lit.cfg")

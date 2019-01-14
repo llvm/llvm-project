@@ -11,6 +11,7 @@ foreach(entry ${entries})
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/libunwind) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/test-suite) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/parallel-libs) AND
+       (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/sycl) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/llvm-spirv) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/openmp) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/debuginfo-tests))
@@ -43,6 +44,7 @@ endif()
 add_llvm_external_project(dragonegg)
 add_llvm_external_project(parallel-libs)
 add_llvm_external_project(openmp)
+add_llvm_external_project(sycl)
 add_llvm_external_project(llvm-spirv)
 
 if(LLVM_INCLUDE_TESTS)

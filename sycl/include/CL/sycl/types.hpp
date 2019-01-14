@@ -1,0 +1,1546 @@
+//==---------------- types.hpp --- SYCL types ------------------------------==//
+//
+// The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#pragma once
+
+#include <CL/sycl/detail/common.hpp>
+
+#ifndef __SYCL_DEVICE_ONLY__
+#include <algorithm>
+#include <functional>
+#endif // __SYCL_DEVICE_ONLY__
+// 4.10.1: Scalar data types
+// 4.10.2: SYCL vector types
+
+namespace cl {
+namespace sycl {
+
+enum class rounding_mode { automatic, rte, rtz, rtp, rtn };
+struct elem {
+  static constexpr int x = 0;
+  static constexpr int y = 1;
+  static constexpr int z = 2;
+  static constexpr int w = 3;
+  static constexpr int r = 0;
+  static constexpr int g = 1;
+  static constexpr int b = 2;
+  static constexpr int a = 3;
+  static constexpr int s0 = 0;
+  static constexpr int s1 = 1;
+  static constexpr int s2 = 2;
+  static constexpr int s3 = 3;
+  static constexpr int s4 = 4;
+  static constexpr int s5 = 5;
+  static constexpr int s6 = 6;
+  static constexpr int s7 = 7;
+  static constexpr int s8 = 8;
+  static constexpr int s9 = 9;
+  static constexpr int sA = 10;
+  static constexpr int sB = 11;
+  static constexpr int sC = 12;
+  static constexpr int sD = 13;
+  static constexpr int sE = 14;
+  static constexpr int sF = 15;
+};
+
+/**
+ * A signed 8-bit integer.
+ */
+typedef signed char schar;
+
+/**
+ * An unsigned 8-bit integer.
+ */
+typedef unsigned char uchar;
+
+/**
+ * An unsigned 16-bit integer.
+ */
+typedef unsigned short ushort;
+
+/**
+ * An unsigned 32-bit integer.
+ */
+typedef unsigned int uint;
+
+/**
+ * An unsigned 64-bit integer.
+ */
+typedef unsigned long ulong;
+
+/**
+ * An signed integer with width of at least 64-bit.
+ */
+typedef long long longlong;
+
+/**
+ * An unsigned integer with width of at least 64-bit.
+ */
+typedef unsigned long long ulonglong;
+
+namespace detail {
+
+template <typename VecT, typename OperationLeftT, typename OperationRightT,
+          template <typename> class OperationCurrentT, int... Indexes>
+class SwizzleOp;
+
+template <typename T, int N> class BaseCLTypeConverter;
+
+// Element type for relational operator return value.
+template <typename DataT>
+using rel_t = typename std::conditional<
+    sizeof(DataT) == sizeof(cl_char), cl_char,
+    typename std::conditional<
+        sizeof(DataT) == sizeof(cl_short), cl_short,
+        typename std::conditional<
+            sizeof(DataT) == sizeof(cl_int), cl_int,
+            typename std::conditional<sizeof(DataT) == sizeof(cl_long), cl_long,
+                                      bool>::type>::type>::type>::type;
+
+// Special type indicating that SwizzleOp should just read value from vector -
+// not trying to perform any operations. Should not be called.
+template <typename DataT> class GetOp {
+public:
+  DataT getValue(size_t Index) const;
+  DataT operator()(DataT LHS, DataT Rhs);
+};
+
+// Special type for working SwizzleOp with scalars, stores a scalar and gives
+// the scalar at any index. Provides interface is compatible with SwizzleOp
+// operations
+template <typename DataT> class GetScalarOp {
+public:
+  GetScalarOp(DataT Data) : m_Data(Data) {}
+  DataT getValue(size_t Index) const { return m_Data; }
+
+private:
+  DataT m_Data;
+};
+
+template <typename T> struct EqualTo {
+  constexpr rel_t<T> operator()(const T &Lhs, const T &Rhs) const {
+    return (Lhs == Rhs) ? -1 : 0;
+  }
+};
+
+template <typename T> struct NotEqualTo {
+  constexpr rel_t<T> operator()(const T &Lhs, const T &Rhs) const {
+    return (Lhs != Rhs) ? -1 : 0;
+  }
+};
+
+template <typename T> struct GreaterEqualTo {
+  constexpr rel_t<T> operator()(const T &Lhs, const T &Rhs) const {
+    return (Lhs >= Rhs) ? -1 : 0;
+  }
+};
+
+template <typename T> struct LessEqualTo {
+  constexpr rel_t<T> operator()(const T &Lhs, const T &Rhs) const {
+    return (Lhs <= Rhs) ? -1 : 0;
+  }
+};
+
+template <typename T> struct GreaterThan {
+  constexpr rel_t<T> operator()(const T &Lhs, const T &Rhs) const {
+    return (Lhs > Rhs) ? -1 : 0;
+  }
+};
+
+template <typename T> struct LessThan {
+  constexpr rel_t<T> operator()(const T &Lhs, const T &Rhs) const {
+    return (Lhs < Rhs) ? -1 : 0;
+  }
+};
+
+template <typename T> struct LogicalAnd {
+  constexpr rel_t<T> operator()(const T &Lhs, const T &Rhs) const {
+    return (Lhs && Rhs) ? -1 : 0;
+  }
+};
+
+template <typename T> struct LogicalOr {
+  constexpr rel_t<T> operator()(const T &Lhs, const T &Rhs) const {
+    return (Lhs || Rhs) ? -1 : 0;
+  }
+};
+
+template <typename T> struct RShift {
+  constexpr T operator()(const T &Lhs, const T &Rhs) const {
+    return Lhs >> Rhs;
+  }
+};
+
+template <typename T> struct LShift {
+  constexpr T operator()(const T &Lhs, const T &Rhs) const {
+    return Lhs << Rhs;
+  }
+};
+
+} // namespace detail
+
+template <typename DataT, int NumElements> class vec {
+  // This represent type of underlying value. There should be only one field
+  // in the class, so vec<float, 16> should be equal to float16 in memory.
+  using DataType =
+      typename detail::BaseCLTypeConverter<DataT, NumElements>::DataType;
+
+  template <bool B, class T, class F>
+  using conditional_t = typename std::conditional<B, T, F>::type;
+
+  static constexpr int getNumElements() { return NumElements; }
+
+  // SizeChecker is needed for vec(const argTN &... args) ctor to validate args.
+  template <int Counter, int MaxValue, class...>
+  struct SizeChecker
+      : conditional_t<Counter == MaxValue, std::true_type, std::false_type> {};
+
+  template <int Counter, int MaxValue, typename DataT_, class... tail>
+  struct SizeChecker<Counter, MaxValue, DataT_, tail...>
+      : conditional_t<Counter + 1 <= MaxValue,
+                      SizeChecker<Counter + 1, MaxValue, tail...>,
+                      std::false_type> {};
+
+#define ALLOW_VECTOR_SIZES(num_elements)                                       \
+  template <int Counter, int MaxValue, typename DataT_, class... tail>         \
+  struct SizeChecker<Counter, MaxValue, vec<DataT_, num_elements>, tail...>    \
+      : conditional_t<Counter + num_elements <= MaxValue,                      \
+                      SizeChecker<Counter + num_elements, MaxValue, tail...>,  \
+                      std::false_type> {};                                     \
+  template <int Counter, int MaxValue, typename DataT_, typename T2,           \
+            typename T3, template <typename> class T4, int... T5,              \
+            class... tail>                                                     \
+  struct SizeChecker<                                                          \
+      Counter, MaxValue,                                                       \
+      detail::SwizzleOp<vec<DataT_, num_elements>, T2, T3, T4, T5...>,         \
+      tail...>                                                                 \
+      : conditional_t<Counter + sizeof...(T5) <= MaxValue,                     \
+                      SizeChecker<Counter + sizeof...(T5), MaxValue, tail...>, \
+                      std::false_type> {};                                     \
+  template <int Counter, int MaxValue, typename DataT_, typename T2,           \
+            typename T3, template <typename> class T4, int... T5,              \
+            class... tail>                                                     \
+  struct SizeChecker<                                                          \
+      Counter, MaxValue,                                                       \
+      detail::SwizzleOp<const vec<DataT_, num_elements>, T2, T3, T4, T5...>,   \
+      tail...>                                                                 \
+      : conditional_t<Counter + sizeof...(T5) <= MaxValue,                     \
+                      SizeChecker<Counter + sizeof...(T5), MaxValue, tail...>, \
+                      std::false_type> {};
+
+  ALLOW_VECTOR_SIZES(1)
+  ALLOW_VECTOR_SIZES(2)
+  ALLOW_VECTOR_SIZES(3)
+  ALLOW_VECTOR_SIZES(4)
+  ALLOW_VECTOR_SIZES(8)
+  ALLOW_VECTOR_SIZES(16)
+#undef ALLOW_VECTOR_SIZES
+
+  template <class...> struct conjunction : std::true_type {};
+  template <class B1, class... tail>
+  struct conjunction<B1, tail...>
+      : conditional_t<bool(B1::value), conjunction<tail...>, B1> {};
+
+  // TypeChecker is needed for vec(const argTN &... args) ctor to validate args.
+  template <typename T, typename DataT_>
+  struct TypeChecker : std::is_convertible<T, DataT_> {};
+#define ALLOW_VECTOR_TYPES(num_elements)                                       \
+  template <typename DataT_>                                                   \
+  struct TypeChecker<vec<DataT_, num_elements>, DataT_> : std::true_type {};   \
+  template <typename DataT_, typename T2, typename T3,                         \
+            template <typename> class T4, int... T5>                           \
+  struct TypeChecker<                                                          \
+      detail::SwizzleOp<vec<DataT_, num_elements>, T2, T3, T4, T5...>, DataT_> \
+      : std::true_type {};                                                     \
+  template <typename DataT_, typename T2, typename T3,                         \
+            template <typename> class T4, int... T5>                           \
+  struct TypeChecker<                                                          \
+      detail::SwizzleOp<const vec<DataT_, num_elements>, T2, T3, T4, T5...>,   \
+      DataT_> : std::true_type {};
+
+  ALLOW_VECTOR_TYPES(1)
+  ALLOW_VECTOR_TYPES(2)
+  ALLOW_VECTOR_TYPES(3)
+  ALLOW_VECTOR_TYPES(4)
+  ALLOW_VECTOR_TYPES(8)
+  ALLOW_VECTOR_TYPES(16)
+#undef ALLOW_VECTOR_TYPES
+
+  template <int... Indexes>
+  using Swizzle =
+      detail::SwizzleOp<vec, detail::GetOp<DataT>, detail::GetOp<DataT>,
+                        detail::GetOp, Indexes...>;
+
+  template <int... Indexes>
+  using ConstSwizzle =
+      detail::SwizzleOp<const vec, detail::GetOp<DataT>, detail::GetOp<DataT>,
+                        detail::GetOp, Indexes...>;
+
+  // Shortcuts for args validation in vec(const argTN &... args) ctor.
+  template <typename... argTN>
+  using EnableIfSuitableTypes = typename std::enable_if<
+      conjunction<TypeChecker<argTN, DataT>...>::value>::type;
+
+  template <typename... argTN>
+  using EnableIfSuitableNumElements = typename std::enable_if<
+      SizeChecker<0, NumElements, argTN...>::value>::type;
+
+public:
+  using element_type = DataT;
+  using rel_t = detail::rel_t<DataT>;
+
+#ifdef __SYCL_DEVICE_ONLY__
+  using vector_t = DataType;
+#endif
+
+  vec() { m_Data = {0}; }
+
+  vec(const vec &Rhs) : m_Data(Rhs.m_Data) {}
+
+  vec(vec &&Rhs) : m_Data(std::move(Rhs.m_Data)) {}
+
+  vec &operator=(const vec &Rhs) {
+    m_Data = Rhs.m_Data;
+    return *this;
+  }
+
+  // W/o this, things like "vec<char,*> = vec<signed char, *>" doesn't work.
+  template <typename Ty = DataT>
+  typename std::enable_if<!std::is_same<Ty, rel_t>::value &&
+                              std::is_convertible<Ty, rel_t>::value,
+                          vec &>::type
+  operator=(const vec<rel_t, NumElements> &Rhs) {
+    *this = Rhs.template as<vec>();
+    return *this;
+  }
+
+  explicit vec(const DataT &arg) {
+    for (int i = 0; i < NumElements; ++i) {
+      setValue(i, arg);
+    }
+  }
+
+  // Constructor from values of base type or vec of base type. Checks that
+  // base types are match and that the NumElements == sum of lenghts of args.
+  template <typename... argTN, typename = EnableIfSuitableTypes<argTN...>,
+            typename = EnableIfSuitableNumElements<argTN...>>
+  vec(const argTN &... args) {
+    vaargCtorHelper(0, args...);
+  }
+
+  // TODO: Remove, for debug purposes only.
+  void dump() {
+#ifndef __SYCL_DEVICE_ONLY__
+    for (int I = 0; I < NumElements; ++I) {
+      std::cout << "  " << I << ": " << m_Data.s[I] << std::endl;
+    }
+    std::cout << std::endl;
+#endif // __SYCL_DEVICE_ONLY__
+  }
+
+#ifdef __SYCL_DEVICE_ONLY__
+
+  template <typename vector_t_ = vector_t,
+            typename = typename std::enable_if<
+                std::is_same<vector_t_, vector_t>::value &&
+                !std::is_same<vector_t_, DataT>::value>::type>
+  vec(vector_t openclVector) : m_Data(openclVector) {}
+  operator vector_t() const { return m_Data; }
+#endif
+  // Available only when: NumElements == 1
+  template <int N = NumElements>
+  operator typename std::enable_if<N == 1, DataT>::type() const {
+    return m_Data;
+  }
+  size_t get_count() const { return NumElements; }
+  size_t get_size() const { return sizeof(m_Data); }
+
+  // TODO: convert() for FP types. Also, check whether rounding mode handling
+  // is needed for integers to FP convert.
+  // template <typename convertT, rounding_mode roundingMode>
+  // vec<convertT, NumElements> convert() const;
+  template <typename convertT, rounding_mode roundingMode>
+  typename std::enable_if<std::is_integral<DataT>::value,
+                          vec<convertT, NumElements>>::type
+  convert() const {
+    vec<convertT, NumElements> Result;
+    for (size_t I = 0; I < NumElements; ++I) {
+      Result.setValue(I, static_cast<convertT>(getValue(I)));
+    }
+    return Result;
+  }
+
+  template <typename asT>
+  typename std::enable_if<sizeof(asT) == sizeof(DataType), asT>::type
+  as() const {
+    asT Result;
+    *static_cast<DataType *>(static_cast<void *>(&Result.m_Data)) = m_Data;
+    return Result;
+  }
+
+  template <int... SwizzleIndexes> Swizzle<SwizzleIndexes...> swizzle() {
+    return this;
+  }
+
+  template <int... SwizzleIndexes>
+  ConstSwizzle<SwizzleIndexes...> swizzle() const {
+    return this;
+  }
+
+  // Begin hi/lo, even/odd, xyzw, and rgba swizzles.
+private:
+  // Indexer used in the swizzles.def
+  static constexpr int Indexer(int index) { return index; }
+
+public:
+#ifdef __SYCL_ACCESS_RETURN
+#error "Undefine __SYCL_ACCESS_RETURN macro"
+#endif
+#define __SYCL_ACCESS_RETURN this
+#include "swizzles.def"
+#undef __SYCL_ACCESS_RETURN
+  // End of hi/lo, even/odd, xyzw, and rgba swizzles.
+
+  // TODO: make templated address space to work.
+  // Somehow, access<> to multi_ptr<> conversion doesn't work w/o making
+  // address space explicitly specified.
+#ifdef __SYCL_LOADSTORE
+#error "Undefine __SYCL_LOADSTORE macro"
+#endif
+#define __SYCL_LOADSTORE(Space)                                                \
+  void load(size_t Offset, multi_ptr<DataT, Space> Ptr) {                      \
+    m_Data = *multi_ptr<DataType, Space>(static_cast<DataType *>(              \
+        static_cast<void *>(Ptr + Offset * NumElements)));                     \
+  }                                                                            \
+  void store(size_t Offset, multi_ptr<DataT, Space> Ptr) const {               \
+    *multi_ptr<DataType, Space>(static_cast<DataType *>(                       \
+        static_cast<void *>(Ptr + Offset * NumElements))) = m_Data;            \
+  }
+
+  __SYCL_LOADSTORE(access::address_space::global_space)
+  __SYCL_LOADSTORE(access::address_space::local_space)
+  __SYCL_LOADSTORE(access::address_space::constant_space)
+  __SYCL_LOADSTORE(access::address_space::private_space)
+#undef __SYCL_LOADSTORE
+
+#ifdef __SYCL_BINOP
+#error "Undefine __SYCL_BINOP macro"
+#endif
+
+#ifdef __SYCL_DEVICE_ONLY__
+#define __SYCL_BINOP(BINOP, OPASSIGN)                                          \
+  vec operator BINOP(const vec &Rhs) const {                                   \
+    vec Ret;                                                                   \
+    Ret.m_Data = m_Data BINOP Rhs.m_Data;                                      \
+    return Ret;                                                                \
+  }                                                                            \
+  template <typename T>                                                        \
+  typename std::enable_if<std::is_convertible<T, DataT>::value &&              \
+                              std::is_fundamental<T>::value,                   \
+                          vec>::type                                           \
+  operator BINOP(const T &Rhs) const {                                         \
+    return *this BINOP vec(static_cast<const DataT &>(Rhs));                   \
+  }                                                                            \
+  vec &operator OPASSIGN(const vec &Rhs) {                                     \
+    *this = *this BINOP Rhs;                                                   \
+    return *this;                                                              \
+  }                                                                            \
+  template <int Num = NumElements>                                             \
+  typename std::enable_if<Num != 1, vec &>::type operator OPASSIGN(            \
+      const DataT &Rhs) {                                                      \
+    *this = *this BINOP vec(Rhs);                                              \
+    return *this;                                                              \
+  }
+#else // __SYCL_DEVICE_ONLY__
+#define __SYCL_BINOP(BINOP, OPASSIGN)                                          \
+  vec operator BINOP(const vec &Rhs) const {                                   \
+    vec Ret;                                                                   \
+    for (size_t I = 0; I < NumElements; ++I) {                                 \
+      Ret.setValue(I, (getValue(I) BINOP Rhs.getValue(I)));                    \
+    }                                                                          \
+    return Ret;                                                                \
+  }                                                                            \
+  template <typename T>                                                        \
+  typename std::enable_if<std::is_convertible<T, DataT>::value &&              \
+                              std::is_fundamental<T>::value,                   \
+                          vec>::type                                           \
+  operator BINOP(const T &Rhs) const {                                         \
+    return *this BINOP vec(static_cast<const DataT &>(Rhs));                   \
+  }                                                                            \
+  vec &operator OPASSIGN(const vec &Rhs) {                                     \
+    *this = *this BINOP Rhs;                                                   \
+    return *this;                                                              \
+  }                                                                            \
+  template <int Num = NumElements>                                             \
+  typename std::enable_if<Num != 1, vec &>::type operator OPASSIGN(            \
+      const DataT &Rhs) {                                                      \
+    *this = *this BINOP vec(Rhs);                                              \
+    return *this;                                                              \
+  }
+#endif // __SYCL_DEVICE_ONLY__
+
+  __SYCL_BINOP(+, +=)
+  __SYCL_BINOP(-, -=)
+  __SYCL_BINOP(*, *=)
+  __SYCL_BINOP(/, /=)
+
+  // TODO: The following OPs are available only when: DataT != cl_float &&
+  // DataT != cl_double && DataT != cl_half
+  __SYCL_BINOP(%, %=)
+  __SYCL_BINOP(|, |=)
+  __SYCL_BINOP(&, &=)
+  __SYCL_BINOP(^, ^=)
+  __SYCL_BINOP(>>, >>=)
+  __SYCL_BINOP(<<, <<=)
+#undef __SYCL_BINOP
+#undef __SYCL_BINOP_HELP
+
+  // Note: vec<>/SwizzleOp logical value is 0/-1 logic, as opposed to 0/1 logic.
+  // As far as CTS validation is concerned, 0/-1 logic also applies when
+  // NumElements is equal to one, which is somewhat inconsistent with being
+  // tranparent with scalar data.
+  //
+  // TODO, at least for the device: Use direct comparison on aggregate data,
+  // e.g., Ret.m_Data = m_Data RELLOGOP Rhs.m_Data, as opposed to looping
+  // around scalar operations.
+#ifdef __SYCL_RELLOGOP
+#error "Undefine __SYCL_RELLOGOP macro"
+#endif
+#define __SYCL_RELLOGOP(RELLOGOP)                                              \
+  vec<rel_t, NumElements> operator RELLOGOP(const vec &Rhs) const {            \
+    vec<rel_t, NumElements> Ret;                                               \
+    for (size_t I = 0; I < NumElements; ++I) {                                 \
+      Ret.setValue(I, -(getValue(I) RELLOGOP Rhs.getValue(I)));                \
+    }                                                                          \
+    return Ret;                                                                \
+  }                                                                            \
+  template <typename T>                                                        \
+  typename std::enable_if<std::is_convertible<T, DataT>::value &&              \
+                              std::is_fundamental<T>::value,                   \
+                          vec<rel_t, NumElements>>::type                       \
+  operator RELLOGOP(const T &Rhs) const {                                      \
+    return *this RELLOGOP vec(static_cast<const DataT &>(Rhs));                \
+  }
+
+  __SYCL_RELLOGOP(==)
+  __SYCL_RELLOGOP(!=)
+  __SYCL_RELLOGOP(>)
+  __SYCL_RELLOGOP(<)
+  __SYCL_RELLOGOP(>=)
+  __SYCL_RELLOGOP(<=)
+  // TODO: limit to integral types.
+  __SYCL_RELLOGOP(&&)
+  __SYCL_RELLOGOP(||)
+#undef __SYCL_RELLOGOP
+
+#ifdef __SYCL_UOP
+#error "Undefine __SYCL_UOP macro"
+#endif
+#define __SYCL_UOP(UOP, OPASSIGN)                                              \
+  vec &operator UOP() {                                                        \
+    *this OPASSIGN 1;                                                          \
+    return *this;                                                              \
+  }                                                                            \
+  vec operator UOP(int) {                                                      \
+    vec Ret(*this);                                                            \
+    *this OPASSIGN 1;                                                          \
+    return Ret;                                                                \
+  }
+
+  __SYCL_UOP(++, +=)
+  __SYCL_UOP(--, -=)
+#undef __SYCL_UOP
+
+  template <typename T = DataT>
+  typename std::enable_if<std::is_integral<T>::value, vec>::type
+  operator~() const {
+    vec Ret;
+    for (size_t I = 0; I < NumElements; ++I) {
+      Ret.setValue(I, ~getValue(I));
+    }
+    return Ret;
+  }
+
+  vec<rel_t, NumElements> operator!() const {
+    vec<rel_t, NumElements> Ret;
+    for (size_t I = 0; I < NumElements; ++I) {
+      Ret.setValue(I, !getValue(I));
+    }
+    return Ret;
+  }
+
+  // OP is: &&, ||
+  // vec<RET, NumElements> operatorOP(const vec<DataT, NumElements> &Rhs) const;
+  // vec<RET, NumElements> operatorOP(const DataT &Rhs) const;
+
+  // OP is: ==, !=, <, >, <=, >=
+  // vec<RET, NumElements> operatorOP(const vec<DataT, NumElements> &Rhs) const;
+  // vec<RET, NumElements> operatorOP(const DataT &Rhs) const;
+private:
+  // Generic method that execute "Operation" on underlying values.
+  template <template <typename> class Operation>
+  vec<DataT, NumElements>
+  operatorHelper(const vec<DataT, NumElements> &Rhs) const {
+    vec<DataT, NumElements> Result;
+#ifdef __SYCL_DEVICE_ONLY__
+    Operation<DataType> Op;
+    Result.m_Data = Op(m_Data, Rhs.m_Data);
+#else  // __SYCL_DEVICE_ONLY__
+    Operation<DataT> Op;
+    for (size_t I = 0; I < NumElements; ++I) {
+      Result.setValue(I, Op(Rhs.getValue(I), getValue(I)));
+    }
+#endif // __SYCL_DEVICE_ONLY__
+    return Result;
+  }
+
+// setValue and getValue should be able to operate on different underlying
+// types: enum cl_float#N , builtin vector float#N, builtin type float.
+#ifdef __SYCL_DEVICE_ONLY__
+  template <int Num = NumElements,
+            typename = typename std::enable_if<1 != Num>::type>
+  void setValue(int Index, const DataT &Value, int) {
+    m_Data[Index] = Value;
+  }
+
+  template <int Num = NumElements,
+            typename = typename std::enable_if<1 != Num>::type>
+  DataT getValue(int Index, int) const {
+    return m_Data[Index];
+  }
+#else
+  template <int Num = NumElements,
+            typename = typename std::enable_if<1 != Num>::type>
+  void setValue(int Index, const DataT &Value, int) {
+    m_Data.s[Index] = Value;
+  }
+
+  template <int Num = NumElements,
+            typename = typename std::enable_if<1 != Num>::type>
+  DataT getValue(int Index, int) const {
+    return m_Data.s[Index];
+  }
+#endif
+
+  template <int Num = NumElements,
+            typename = typename std::enable_if<1 == Num>::type>
+  void setValue(int Index, const DataT &Value, float) {
+    m_Data = Value;
+  }
+
+  template <int Num = NumElements,
+            typename = typename std::enable_if<1 == Num>::type>
+  DataT getValue(int Index, float) const {
+    return m_Data;
+  }
+
+  // Special proxies as specialization is not allowed in class scope.
+  void setValue(int Index, const DataT &Value) {
+    if (NumElements == 1) {
+      setValue(Index, Value, (int)0);
+    } else {
+      setValue(Index, Value, (float)0);
+    }
+  }
+
+  DataT getValue(int Index) const {
+    if (NumElements == 1) {
+      return getValue(Index, (int)0);
+    } else {
+      return getValue(Index, (float)0);
+    }
+  }
+
+  // Helpers for variadic template constructor of vec.
+  template <typename T, typename... argTN>
+  int vaargCtorHelper(int Idx, const T &arg) {
+    setValue(Idx, arg);
+    return Idx + 1;
+  }
+
+  template <typename DataT_, int NumElements_>
+  int vaargCtorHelper(int Idx, const vec<DataT_, NumElements_> &arg) {
+    for (size_t I = 0; I < NumElements_; ++I) {
+      setValue(Idx + I, arg.getValue(I));
+    }
+    return Idx + NumElements_;
+  }
+
+  template <typename DataT_, int NumElements_, typename T2, typename T3,
+            template <typename> class T4, int... T5>
+  int vaargCtorHelper(int Idx,
+                      const detail::SwizzleOp<vec<DataT_, NumElements_>, T2, T3,
+                                              T4, T5...> &arg) {
+    size_t NumElems = sizeof...(T5);
+    for (size_t I = 0; I < NumElems; ++I) {
+      setValue(Idx + I, arg.getValue(I));
+    }
+    return Idx + NumElems;
+  }
+
+  template <typename DataT_, int NumElements_, typename T2, typename T3,
+            template <typename> class T4, int... T5>
+  int vaargCtorHelper(int Idx,
+                      const detail::SwizzleOp<const vec<DataT_, NumElements_>,
+                                              T2, T3, T4, T5...> &arg) {
+    size_t NumElems = sizeof...(T5);
+    for (size_t I = 0; I < NumElems; ++I) {
+      setValue(Idx + I, arg.getValue(I));
+    }
+    return Idx + NumElems;
+  }
+
+  template <typename T1, typename... argTN>
+  void vaargCtorHelper(int Idx, const T1 &arg, const argTN &... args) {
+    int NewIdx = vaargCtorHelper(Idx, arg);
+    vaargCtorHelper(NewIdx, args...);
+  }
+
+  template <typename DataT_, int NumElements_, typename... argTN>
+  void vaargCtorHelper(int Idx, const vec<DataT_, NumElements_> &arg,
+                       const argTN &... args) {
+    int NewIdx = vaargCtorHelper(Idx, arg);
+    vaargCtorHelper(NewIdx, args...);
+  }
+
+  // fields
+  DataType m_Data;
+
+  // friends
+  template <typename T1, typename T2, typename T3, template <typename> class T4,
+            int... T5>
+  friend class detail::SwizzleOp;
+  template <typename T1, int T2> friend class vec;
+};
+
+namespace detail {
+
+// SwizzleOP represents expression templates that operate on vec.
+// Actual computation performed on conversion or assignment operators.
+template <typename VecT, typename OperationLeftT, typename OperationRightT,
+          template <typename> class OperationCurrentT, int... Indexes>
+class SwizzleOp {
+  using DataT = typename VecT::element_type;
+  using rel_t = detail::rel_t<DataT>;
+  static constexpr int getNumElements() { return sizeof...(Indexes); }
+
+  template <typename OperationRightT_,
+            template <typename> class OperationCurrentT_, int... Idx_>
+  using NewLHOp = SwizzleOp<VecT,
+                            SwizzleOp<VecT, OperationLeftT, OperationRightT,
+                                      OperationCurrentT, Indexes...>,
+                            OperationRightT_, OperationCurrentT_, Idx_...>;
+
+  template <typename OperationRightT_,
+            template <typename> class OperationCurrentT_, int... Idx_>
+  using NewRelOp = SwizzleOp<vec<rel_t, VecT::getNumElements()>,
+                             SwizzleOp<VecT, OperationLeftT, OperationRightT,
+                                       OperationCurrentT, Indexes...>,
+                             OperationRightT_, OperationCurrentT_, Idx_...>;
+
+  template <typename OperationLeftT_,
+            template <typename> class OperationCurrentT_, int... Idx_>
+  using NewRHOp = SwizzleOp<VecT, OperationLeftT_,
+                            SwizzleOp<VecT, OperationLeftT, OperationRightT,
+                                      OperationCurrentT, Indexes...>,
+                            OperationCurrentT_, Idx_...>;
+
+  template <int IdxNum>
+  using EnableIfOneIndex =
+      typename std::enable_if<1 == IdxNum &&
+                              SwizzleOp::getNumElements() == IdxNum>::type;
+
+  template <int IdxNum>
+  using EnableIfMultipleIndexes =
+      typename std::enable_if<1 != IdxNum &&
+                              SwizzleOp::getNumElements() == IdxNum>::type;
+
+  template <typename T>
+  using EnableIfScalarType =
+      typename std::enable_if<std::is_convertible<DataT, T>::value &&
+                              std::is_fundamental<T>::value>::type;
+
+  template <typename T>
+  using EnableIfNoScalarType =
+      typename std::enable_if<!std::is_convertible<DataT, T>::value ||
+                              !std::is_fundamental<T>::value>::type;
+
+  template <int... Indices>
+  using Swizzle =
+      SwizzleOp<VecT, GetOp<DataT>, GetOp<DataT>, GetOp, Indices...>;
+
+  template <int... Indices>
+  using ConstSwizzle =
+      SwizzleOp<const VecT, GetOp<DataT>, GetOp<DataT>, GetOp, Indices...>;
+
+public:
+  size_t get_count() const { return getNumElements(); }
+  template <int Num = getNumElements()> size_t get_size() const {
+    return sizeof(DataT) * (Num == 3 ? 4 : Num);
+  }
+
+  template <typename T, int IdxNum = getNumElements(),
+            typename = EnableIfOneIndex<IdxNum>,
+            typename = EnableIfScalarType<T>>
+  operator T() const {
+    return getValue(0);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  friend NewRHOp<GetScalarOp<T>, std::multiplies, Indexes...>
+  operator*(const T &Lhs, const SwizzleOp &Rhs) {
+    return NewRHOp<GetScalarOp<T>, std::multiplies, Indexes...>(
+        Rhs.m_Vector, GetScalarOp<T>(Lhs), Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  friend NewRHOp<GetScalarOp<T>, std::plus, Indexes...>
+  operator+(const T &Lhs, const SwizzleOp &Rhs) {
+    return NewRHOp<GetScalarOp<T>, std::plus, Indexes...>(
+        Rhs.m_Vector, GetScalarOp<T>(Lhs), Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  friend NewRHOp<GetScalarOp<T>, std::divides, Indexes...>
+  operator/(const T &Lhs, const SwizzleOp &Rhs) {
+    return NewRHOp<GetScalarOp<T>, std::divides, Indexes...>(
+        Rhs.m_Vector, GetScalarOp<T>(Lhs), Rhs);
+  }
+
+  // TODO: Check that Rhs arg is suitable.
+#ifdef __SYCL_OPASSIGN
+#error "Undefine __SYCL_OPASSIGN macro."
+#endif
+#define __SYCL_OPASSIGN(OPASSIGN, OP)                                          \
+  SwizzleOp &operator OPASSIGN(const DataT &Rhs) {                             \
+    operatorHelper<OP>(vec<DataT, getNumElements()>(Rhs));                     \
+    return *this;                                                              \
+  }                                                                            \
+  template <typename RhsOperation>                                             \
+  SwizzleOp &operator OPASSIGN(const RhsOperation &Rhs) {                      \
+    operatorHelper<OP>(Rhs);                                                   \
+    return *this;                                                              \
+  }
+
+  __SYCL_OPASSIGN(+=, std::plus)
+  __SYCL_OPASSIGN(-=, std::minus)
+  __SYCL_OPASSIGN(*=, std::multiplies)
+  __SYCL_OPASSIGN(/=, std::divides)
+  __SYCL_OPASSIGN(%=, std::modulus)
+  __SYCL_OPASSIGN(&=, std::bit_and)
+  __SYCL_OPASSIGN(|=, std::bit_or)
+  __SYCL_OPASSIGN(^=, std::bit_xor)
+  __SYCL_OPASSIGN(>>=, RShift)
+  __SYCL_OPASSIGN(<<=, LShift)
+#undef __SYCL_OPASSIGN
+
+#ifdef __SYCL_UOP
+#error "Undefine __SYCL_UOP macro"
+#endif
+#define __SYCL_UOP(UOP, OPASSIGN)                                              \
+  SwizzleOp &operator UOP() {                                                  \
+    *this OPASSIGN static_cast<DataT>(1);                                      \
+    return *this;                                                              \
+  }                                                                            \
+  vec<DataT, getNumElements()> operator UOP(int) {                             \
+    vec<DataT, getNumElements()> Ret = *this;                                  \
+    *this OPASSIGN static_cast<DataT>(1);                                      \
+    return Ret;                                                                \
+  }
+
+  __SYCL_UOP(++, +=)
+  __SYCL_UOP(--, -=)
+#undef __SYCL_UOP
+
+  template <typename T = DataT>
+  typename std::enable_if<std::is_integral<T>::value,
+                          vec<T, getNumElements()>>::type
+  operator~() {
+    vec<T, getNumElements()> Tmp = *this;
+    return ~Tmp;
+  }
+
+  vec<rel_t, getNumElements()> operator!() {
+    vec<DataT, getNumElements()> Tmp = *this;
+    return !Tmp;
+  }
+
+  template <int IdxNum = getNumElements(),
+            typename = EnableIfMultipleIndexes<IdxNum>>
+  SwizzleOp &operator=(const vec<DataT, IdxNum> &Rhs) {
+    std::array<int, IdxNum> Idxs{Indexes...};
+    for (size_t I = 0; I < Idxs.size(); ++I) {
+      m_Vector->setValue(Idxs[I], Rhs.getValue(I));
+    }
+    return *this;
+  }
+
+  template <int IdxNum = getNumElements(), typename = EnableIfOneIndex<IdxNum>>
+  SwizzleOp &operator=(const DataT &Rhs) {
+    std::array<int, IdxNum> Idxs{Indexes...};
+    m_Vector->setValue(Idxs[0], Rhs);
+    return *this;
+  }
+
+  template <int IdxNum = getNumElements(), typename = EnableIfOneIndex<IdxNum>>
+  SwizzleOp &operator=(DataT &&Rhs) {
+    std::array<int, IdxNum> Idxs{Indexes...};
+    m_Vector->setValue(Idxs[0], Rhs);
+    return *this;
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewLHOp<GetScalarOp<T>, std::multiplies, Indexes...>
+  operator*(const T &Rhs) const {
+    return NewLHOp<GetScalarOp<T>, std::multiplies, Indexes...>(
+        m_Vector, *this, GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewLHOp<RhsOperation, std::multiplies, Indexes...>
+  operator*(const RhsOperation &Rhs) const {
+    return NewLHOp<RhsOperation, std::multiplies, Indexes...>(m_Vector, *this,
+                                                              Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewLHOp<GetScalarOp<T>, std::plus, Indexes...> operator+(const T &Rhs) const {
+    return NewLHOp<GetScalarOp<T>, std::plus, Indexes...>(m_Vector, *this,
+                                                          GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewLHOp<RhsOperation, std::plus, Indexes...>
+  operator+(const RhsOperation &Rhs) const {
+    return NewLHOp<RhsOperation, std::plus, Indexes...>(m_Vector, *this, Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewLHOp<GetScalarOp<T>, std::minus, Indexes...>
+  operator-(const T &Rhs) const {
+    return NewLHOp<GetScalarOp<T>, std::minus, Indexes...>(m_Vector, *this,
+                                                           GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewLHOp<RhsOperation, std::minus, Indexes...>
+  operator-(const RhsOperation &Rhs) const {
+    return NewLHOp<RhsOperation, std::minus, Indexes...>(m_Vector, *this, Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewLHOp<GetScalarOp<T>, std::divides, Indexes...>
+  operator/(const T &Rhs) const {
+    return NewLHOp<GetScalarOp<T>, std::divides, Indexes...>(
+        m_Vector, *this, GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewLHOp<RhsOperation, std::divides, Indexes...>
+  operator/(const RhsOperation &Rhs) const {
+    return NewLHOp<RhsOperation, std::divides, Indexes...>(m_Vector, *this,
+                                                           Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewLHOp<GetScalarOp<T>, std::bit_and, Indexes...>
+  operator&(const T &Rhs) const {
+    return NewLHOp<GetScalarOp<T>, std::bit_and, Indexes...>(
+        m_Vector, *this, GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewLHOp<RhsOperation, std::bit_and, Indexes...>
+  operator&(const RhsOperation &Rhs) const {
+    return NewLHOp<RhsOperation, std::bit_and, Indexes...>(m_Vector, *this,
+                                                           Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewLHOp<GetScalarOp<T>, std::bit_or, Indexes...>
+  operator|(const T &Rhs) const {
+    return NewLHOp<GetScalarOp<T>, std::bit_or, Indexes...>(
+        m_Vector, *this, GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewLHOp<RhsOperation, std::bit_or, Indexes...>
+  operator|(const RhsOperation &Rhs) const {
+    return NewLHOp<RhsOperation, std::bit_or, Indexes...>(m_Vector, *this, Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewLHOp<GetScalarOp<T>, std::bit_xor, Indexes...>
+  operator^(const T &Rhs) const {
+    return NewLHOp<GetScalarOp<T>, std::bit_xor, Indexes...>(
+        m_Vector, *this, GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewLHOp<RhsOperation, std::bit_xor, Indexes...>
+  operator^(const RhsOperation &Rhs) const {
+    return NewLHOp<RhsOperation, std::bit_xor, Indexes...>(m_Vector, *this,
+                                                           Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewLHOp<GetScalarOp<T>, RShift, Indexes...> operator>>(const T &Rhs) const {
+    return NewLHOp<GetScalarOp<T>, RShift, Indexes...>(m_Vector, *this,
+                                                       GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewLHOp<RhsOperation, RShift, Indexes...>
+  operator>>(const RhsOperation &Rhs) const {
+    return NewLHOp<RhsOperation, RShift, Indexes...>(m_Vector, *this, Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewLHOp<GetScalarOp<T>, LShift, Indexes...> operator<<(const T &Rhs) const {
+    return NewLHOp<GetScalarOp<T>, LShift, Indexes...>(m_Vector, *this,
+                                                       GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewLHOp<RhsOperation, LShift, Indexes...>
+  operator<<(const RhsOperation &Rhs) const {
+    return NewLHOp<RhsOperation, LShift, Indexes...>(m_Vector, *this, Rhs);
+  }
+
+  template <typename T1, typename T2, typename T3, template <typename> class T4,
+            int... T5,
+            typename = typename std::enable_if<sizeof...(T5) ==
+                                               getNumElements()>::type>
+  SwizzleOp &operator=(const SwizzleOp<T1, T2, T3, T4, T5...> &Rhs) {
+    std::array<int, getNumElements()> Idxs{Indexes...};
+    for (size_t I = 0; I < Idxs.size(); ++I) {
+      m_Vector->setValue(Idxs[I], Rhs.getValue(I));
+    }
+    return *this;
+  }
+
+  template <typename T1, typename T2, typename T3, template <typename> class T4,
+            int... T5,
+            typename = typename std::enable_if<sizeof...(T5) ==
+                                               getNumElements()>::type>
+  SwizzleOp &operator=(SwizzleOp<T1, T2, T3, T4, T5...> &&Rhs) {
+    std::array<int, getNumElements()> Idxs{Indexes...};
+    for (size_t I = 0; I < Idxs.size(); ++I) {
+      m_Vector->setValue(Idxs[I], Rhs.getValue(I));
+    }
+    return *this;
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewRelOp<GetScalarOp<T>, EqualTo, Indexes...> operator==(const T &Rhs) const {
+    return NewRelOp<GetScalarOp<T>, EqualTo, Indexes...>(NULL, *this,
+                                                         GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewRelOp<RhsOperation, EqualTo, Indexes...>
+  operator==(const RhsOperation &Rhs) const {
+    return NewRelOp<RhsOperation, EqualTo, Indexes...>(NULL, *this, Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewRelOp<GetScalarOp<T>, NotEqualTo, Indexes...>
+  operator!=(const T &Rhs) const {
+    return NewRelOp<GetScalarOp<T>, NotEqualTo, Indexes...>(
+        NULL, *this, GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewRelOp<RhsOperation, NotEqualTo, Indexes...>
+  operator!=(const RhsOperation &Rhs) const {
+    return NewRelOp<RhsOperation, NotEqualTo, Indexes...>(NULL, *this, Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewRelOp<GetScalarOp<T>, GreaterEqualTo, Indexes...>
+  operator>=(const T &Rhs) const {
+    return NewRelOp<GetScalarOp<T>, GreaterEqualTo, Indexes...>(
+        NULL, *this, GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewRelOp<RhsOperation, GreaterEqualTo, Indexes...>
+  operator>=(const RhsOperation &Rhs) const {
+    return NewRelOp<RhsOperation, GreaterEqualTo, Indexes...>(NULL, *this, Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewRelOp<GetScalarOp<T>, LessEqualTo, Indexes...>
+  operator<=(const T &Rhs) const {
+    return NewRelOp<GetScalarOp<T>, LessEqualTo, Indexes...>(
+        NULL, *this, GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewRelOp<RhsOperation, LessEqualTo, Indexes...>
+  operator<=(const RhsOperation &Rhs) const {
+    return NewRelOp<RhsOperation, LessEqualTo, Indexes...>(NULL, *this, Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewRelOp<GetScalarOp<T>, GreaterThan, Indexes...>
+  operator>(const T &Rhs) const {
+    return NewRelOp<GetScalarOp<T>, GreaterThan, Indexes...>(
+        NULL, *this, GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewRelOp<RhsOperation, GreaterThan, Indexes...>
+  operator>(const RhsOperation &Rhs) const {
+    return NewRelOp<RhsOperation, GreaterThan, Indexes...>(NULL, *this, Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewRelOp<GetScalarOp<T>, LessThan, Indexes...> operator<(const T &Rhs) const {
+    return NewRelOp<GetScalarOp<T>, LessThan, Indexes...>(NULL, *this,
+                                                          GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewRelOp<RhsOperation, LessThan, Indexes...>
+  operator<(const RhsOperation &Rhs) const {
+    return NewRelOp<RhsOperation, LessThan, Indexes...>(NULL, *this, Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewRelOp<GetScalarOp<T>, LogicalAnd, Indexes...>
+  operator&&(const T &Rhs) const {
+    return NewRelOp<GetScalarOp<T>, LogicalAnd, Indexes...>(
+        NULL, *this, GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewRelOp<RhsOperation, LogicalAnd, Indexes...>
+  operator&&(const RhsOperation &Rhs) const {
+    return NewRelOp<RhsOperation, LogicalAnd, Indexes...>(NULL, *this, Rhs);
+  }
+
+  template <typename T, typename = EnableIfScalarType<T>>
+  NewRelOp<GetScalarOp<T>, LogicalOr, Indexes...>
+  operator||(const T &Rhs) const {
+    return NewRelOp<GetScalarOp<T>, LogicalOr, Indexes...>(NULL, *this,
+                                                           GetScalarOp<T>(Rhs));
+  }
+
+  template <typename RhsOperation,
+            typename = EnableIfNoScalarType<RhsOperation>>
+  NewRelOp<RhsOperation, LogicalOr, Indexes...>
+  operator||(const RhsOperation &Rhs) const {
+    return NewRelOp<RhsOperation, LogicalOr, Indexes...>(NULL, *this, Rhs);
+  }
+
+  // Begin hi/lo, even/odd, xyzw, and rgba swizzles.
+private:
+  // Indexer used in the swizzles.def. C++14
+  static constexpr int Indexer(int index) {
+    const constexpr int IDXs[] = {Indexes...};
+    return IDXs[index >= getNumElements() ? 0 : index];
+  }
+
+public:
+#ifdef __SYCL_ACCESS_RETURN
+#error "Undefine __SYCL_ACCESS_RETURN macro"
+#endif
+#define __SYCL_ACCESS_RETURN m_Vector
+#include "swizzles.def"
+#undef __SYCL_ACCESS_RETURN
+  // End of hi/lo, even/odd, xyzw, and rgba swizzles.
+
+  // TODO: make templated address space to work.
+  // Somehow, access<> to multi_ptr<> conversion doesn't work w/o making
+  // address space explicitly specified.
+  //
+  // Leave store() interface to automatic conversion to vec<>.
+  // Load to vec<DataT, getNumElements()> and then assign to swizzle.
+#ifdef __SYCL_LOAD
+#error "Undefine __SYCL_LOAD macro"
+#endif
+#define __SYCL_LOAD(Space)                                                     \
+  void load(size_t offset, multi_ptr<DataT, Space> ptr) {                      \
+    vec<DataT, getNumElements()> Tmp;                                          \
+    Tmp.template load(offset, ptr);                                            \
+    *this = Tmp;                                                               \
+  }
+
+  __SYCL_LOAD(access::address_space::global_space)
+  __SYCL_LOAD(access::address_space::local_space)
+  __SYCL_LOAD(access::address_space::constant_space)
+  __SYCL_LOAD(access::address_space::private_space)
+#undef __SYCL_LOAD
+
+  template <typename convertT, rounding_mode roundingMode>
+  vec<convertT, getNumElements()> convert() const {
+    // First materialize the swizzle to vec<DataT, getNumElements()>
+    // and then apply convert() to it.
+    vec<DataT, getNumElements()> Tmp = *this;
+    return Tmp.template convert<convertT, roundingMode>();
+  }
+
+  template <typename asT>
+  typename std::enable_if<asT::getNumElements() == getNumElements(), asT>::type
+  as() const {
+    // First materialize the swizzle to vec<DataT, getNumElements()>
+    // and then apply as() to it.
+    vec<DataT, getNumElements()> Tmp = *this;
+    return Tmp.template as<asT>();
+  }
+
+private:
+  SwizzleOp(const SwizzleOp &Rhs)
+      : m_Vector(Rhs.m_Vector), m_LeftOperation(Rhs.m_LeftOperation),
+        m_RightOperation(Rhs.m_RightOperation) {}
+
+  SwizzleOp(VecT *Vector, OperationLeftT LeftOperation,
+            OperationRightT RightOperation)
+      : m_Vector(Vector), m_LeftOperation(LeftOperation),
+        m_RightOperation(RightOperation) {}
+
+  SwizzleOp(VecT *Vector) : m_Vector(Vector) {}
+
+  SwizzleOp(SwizzleOp &&Rhs)
+      : m_Vector(Rhs.m_Vector), m_LeftOperation(std::move(Rhs.m_LeftOperation)),
+        m_RightOperation(std::move(Rhs.m_RightOperation)) {}
+
+  // Either performing CurrentOperation on results of left and right operands
+  // or reading values from actual vector.
+  DataT getValue(size_t Index) const {
+    if (std::is_same<OperationCurrentT<DataT>, GetOp<DataT>>::value) {
+      std::array<int, getNumElements()> Idxs{Indexes...};
+      return m_Vector->getValue(Idxs[Index]);
+    }
+    auto Op = OperationCurrentT<DataT>();
+    return Op(m_LeftOperation.getValue(Index),
+              m_RightOperation.getValue(Index));
+  }
+
+  template <template <typename> class Operation, typename RhsOperation>
+  void operatorHelper(const RhsOperation &Rhs) {
+    Operation<DataT> Op;
+    std::array<int, getNumElements()> Idxs{Indexes...};
+    for (size_t I = 0; I < Idxs.size(); ++I) {
+      DataT Res = Op(m_Vector->getValue(Idxs[I]), Rhs.getValue(I));
+      m_Vector->setValue(Idxs[I], Res);
+    }
+  }
+
+  // fields
+  VecT *m_Vector;
+
+  OperationLeftT m_LeftOperation;
+  OperationRightT m_RightOperation;
+
+  // friends
+  template <typename T1, int T2> friend class cl::sycl::vec;
+
+  template <typename T1, typename T2, typename T3, template <typename> class T4,
+            int... T5>
+  friend class SwizzleOp;
+};
+} // namespace detail
+
+// scalar BINOP vec<>
+// scalar BINOP SwizzleOp
+// vec<> BINOP SwizzleOp
+#ifdef __SYCL_BINOP
+#error "Undefine __SYCL_BINOP macro"
+#endif
+#define __SYCL_BINOP(BINOP)                                                    \
+  template <typename T, int Num>                                               \
+  typename std::enable_if<std::is_fundamental<T>::value, vec<T, Num>>::type    \
+  operator BINOP(const T &Lhs, const vec<T, Num> &Rhs) {                       \
+    return vec<T, Num>(static_cast<T>(Lhs)) BINOP Rhs;                         \
+  }                                                                            \
+  template <typename VecT, typename OperationLeftT, typename OperationRightT,  \
+            template <typename> class OperationCurrentT, int... Indexes,       \
+            typename T, typename T1 = typename VecT::element_type,             \
+            int Num = sizeof...(Indexes)>                                      \
+  typename std::enable_if<std::is_convertible<T, T1>::value &&                 \
+                              std::is_fundamental<T>::value,                   \
+                          vec<T1, Num>>::type                                  \
+  operator BINOP(                                                              \
+      const T &Lhs,                                                            \
+      const detail::SwizzleOp<VecT, OperationLeftT, OperationRightT,           \
+                              OperationCurrentT, Indexes...> &Rhs) {           \
+    vec<T1, Num> Tmp = Rhs;                                                    \
+    return Lhs BINOP Tmp;                                                      \
+  }                                                                            \
+  template <typename VecT, typename OperationLeftT, typename OperationRightT,  \
+            template <typename> class OperationCurrentT, int... Indexes,       \
+            typename T = typename VecT::element_type,                          \
+            int Num = sizeof...(Indexes)>                                      \
+  vec<T, Num> operator BINOP(                                                  \
+      const vec<T, Num> &Lhs,                                                  \
+      const detail::SwizzleOp<VecT, OperationLeftT, OperationRightT,           \
+                              OperationCurrentT, Indexes...> &Rhs) {           \
+    vec<T, Num> Tmp = Rhs;                                                     \
+    return Lhs BINOP Tmp;                                                      \
+  }
+
+__SYCL_BINOP(+)
+__SYCL_BINOP(-)
+__SYCL_BINOP(*)
+__SYCL_BINOP(/)
+__SYCL_BINOP(&)
+__SYCL_BINOP(|)
+__SYCL_BINOP(^)
+__SYCL_BINOP(>>)
+__SYCL_BINOP(<<)
+#undef __SYCL_BINOP
+
+// scalar RELLOGOP vec<>
+// scalar RELLOGOP SwizzleOp
+// vec<> RELLOGOP SwizzleOp
+#ifdef __SYCL_RELLOGOP
+#error "Undefine __SYCL_RELLOGOP macro"
+#endif
+#define __SYCL_RELLOGOP(RELLOGOP)                                              \
+  template <typename T, typename DataT, int Num>                               \
+  typename std::enable_if<std::is_convertible<T, DataT>::value &&              \
+                              std::is_fundamental<T>::value,                   \
+                          vec<detail::rel_t<DataT>, Num>>::type                \
+  operator RELLOGOP(const T &Lhs, const vec<DataT, Num> &Rhs) {                \
+    return vec<T, Num>(static_cast<T>(Lhs)) RELLOGOP Rhs;                      \
+  }                                                                            \
+  template <typename VecT, typename OperationLeftT, typename OperationRightT,  \
+            template <typename> class OperationCurrentT, int... Indexes,       \
+            typename T, typename T1 = typename VecT::element_type,             \
+            int Num = sizeof...(Indexes)>                                      \
+  typename std::enable_if<std::is_convertible<T, T1>::value &&                 \
+                              std::is_fundamental<T>::value,                   \
+                          vec<detail::rel_t<T1>, Num>>::type                   \
+  operator RELLOGOP(                                                           \
+      const T &Lhs,                                                            \
+      const detail::SwizzleOp<VecT, OperationLeftT, OperationRightT,           \
+                              OperationCurrentT, Indexes...> &Rhs) {           \
+    vec<T1, Num> Tmp = Rhs;                                                    \
+    return Lhs RELLOGOP Tmp;                                                   \
+  }                                                                            \
+  template <typename VecT, typename OperationLeftT, typename OperationRightT,  \
+            template <typename> class OperationCurrentT, int... Indexes,       \
+            typename T = typename VecT::element_type,                          \
+            int Num = sizeof...(Indexes)>                                      \
+  vec<detail::rel_t<T>, Num> operator RELLOGOP(                                \
+      const vec<T, Num> &Lhs,                                                  \
+      const detail::SwizzleOp<VecT, OperationLeftT, OperationRightT,           \
+                              OperationCurrentT, Indexes...> &Rhs) {           \
+    vec<T, Num> Tmp = Rhs;                                                     \
+    return Lhs RELLOGOP Tmp;                                                   \
+  }
+
+__SYCL_RELLOGOP(==)
+__SYCL_RELLOGOP(!=)
+__SYCL_RELLOGOP(>)
+__SYCL_RELLOGOP(<)
+__SYCL_RELLOGOP(>=)
+__SYCL_RELLOGOP(<=)
+// TODO: limit to integral types.
+__SYCL_RELLOGOP(&&)
+__SYCL_RELLOGOP(||)
+#undef __SYCL_RELLOGOP
+} // namespace sycl
+} // namespace cl
+
+#ifdef __SYCL_DEVICE_ONLY__
+typedef char __char_t;
+typedef char __char2_vec_t __attribute__((ext_vector_type(2)));
+typedef char __char3_vec_t __attribute__((ext_vector_type(3)));
+typedef char __char4_vec_t __attribute__((ext_vector_type(4)));
+typedef char __char8_vec_t __attribute__((ext_vector_type(8)));
+typedef char __char16_vec_t __attribute__((ext_vector_type(16)));
+typedef signed char __schar_t;
+typedef signed char __schar2_vec_t __attribute__((ext_vector_type(2)));
+typedef signed char __schar3_vec_t __attribute__((ext_vector_type(3)));
+typedef signed char __schar4_vec_t __attribute__((ext_vector_type(4)));
+typedef signed char __schar8_vec_t __attribute__((ext_vector_type(8)));
+typedef signed char __schar16_vec_t __attribute__((ext_vector_type(16)));
+typedef unsigned char __uchar_t;
+typedef unsigned char __uchar2_vec_t __attribute__((ext_vector_type(2)));
+typedef unsigned char __uchar3_vec_t __attribute__((ext_vector_type(3)));
+typedef unsigned char __uchar4_vec_t __attribute__((ext_vector_type(4)));
+typedef unsigned char __uchar8_vec_t __attribute__((ext_vector_type(8)));
+typedef unsigned char __uchar16_vec_t __attribute__((ext_vector_type(16)));
+typedef short __short_t;
+typedef short __short2_vec_t __attribute__((ext_vector_type(2)));
+typedef short __short3_vec_t __attribute__((ext_vector_type(3)));
+typedef short __short4_vec_t __attribute__((ext_vector_type(4)));
+typedef short __short8_vec_t __attribute__((ext_vector_type(8)));
+typedef short __short16_vec_t __attribute__((ext_vector_type(16)));
+typedef unsigned short __ushort_t;
+typedef unsigned short __ushort2_vec_t __attribute__((ext_vector_type(2)));
+typedef unsigned short __ushort3_vec_t __attribute__((ext_vector_type(3)));
+typedef unsigned short __ushort4_vec_t __attribute__((ext_vector_type(4)));
+typedef unsigned short __ushort8_vec_t __attribute__((ext_vector_type(8)));
+typedef unsigned short __ushort16_vec_t __attribute__((ext_vector_type(16)));
+typedef int __int_t;
+typedef int __int2_vec_t __attribute__((ext_vector_type(2)));
+typedef int __int3_vec_t __attribute__((ext_vector_type(3)));
+typedef int __int4_vec_t __attribute__((ext_vector_type(4)));
+typedef int __int8_vec_t __attribute__((ext_vector_type(8)));
+typedef int __int16_vec_t __attribute__((ext_vector_type(16)));
+typedef unsigned int __uint_t;
+typedef unsigned int __uint2_vec_t __attribute__((ext_vector_type(2)));
+typedef unsigned int __uint3_vec_t __attribute__((ext_vector_type(3)));
+typedef unsigned int __uint4_vec_t __attribute__((ext_vector_type(4)));
+typedef unsigned int __uint8_vec_t __attribute__((ext_vector_type(8)));
+typedef unsigned int __uint16_vec_t __attribute__((ext_vector_type(16)));
+typedef long __long_t;
+typedef long __long2_vec_t __attribute__((ext_vector_type(2)));
+typedef long __long3_vec_t __attribute__((ext_vector_type(3)));
+typedef long __long4_vec_t __attribute__((ext_vector_type(4)));
+typedef long __long8_vec_t __attribute__((ext_vector_type(8)));
+typedef long __long16_vec_t __attribute__((ext_vector_type(16)));
+typedef unsigned long __ulong_t;
+typedef unsigned long __ulong2_vec_t __attribute__((ext_vector_type(2)));
+typedef unsigned long __ulong3_vec_t __attribute__((ext_vector_type(3)));
+typedef unsigned long __ulong4_vec_t __attribute__((ext_vector_type(4)));
+typedef unsigned long __ulong8_vec_t __attribute__((ext_vector_type(8)));
+typedef unsigned long __ulong16_vec_t __attribute__((ext_vector_type(16)));
+typedef long long __longlong_t;
+typedef long long __longlong2_vec_t __attribute__((ext_vector_type(2)));
+typedef long long __longlong3_vec_t __attribute__((ext_vector_type(3)));
+typedef long long __longlong4_vec_t __attribute__((ext_vector_type(4)));
+typedef long long __longlong8_vec_t __attribute__((ext_vector_type(8)));
+typedef long long __longlong16_vec_t __attribute__((ext_vector_type(16)));
+typedef unsigned long long __ulonglong_t;
+typedef unsigned long long __ulonglong2_vec_t
+    __attribute__((ext_vector_type(2)));
+typedef unsigned long long __ulonglong3_vec_t
+    __attribute__((ext_vector_type(3)));
+typedef unsigned long long __ulonglong4_vec_t
+    __attribute__((ext_vector_type(4)));
+typedef unsigned long long __ulonglong8_vec_t
+    __attribute__((ext_vector_type(8)));
+typedef unsigned long long __ulonglong16_vec_t
+    __attribute__((ext_vector_type(16)));
+typedef float __float_t;
+typedef float __float2_vec_t __attribute__((ext_vector_type(2)));
+typedef float __float3_vec_t __attribute__((ext_vector_type(3)));
+typedef float __float4_vec_t __attribute__((ext_vector_type(4)));
+typedef float __float8_vec_t __attribute__((ext_vector_type(8)));
+typedef float __float16_vec_t __attribute__((ext_vector_type(16)));
+// TODO: Add support for half builtin type in clang for sycl target.
+// typedef half __half_t;
+// typedef half __half2_vec_t __attribute__((ext_vector_type(2)));
+// typedef half __half3_vec_t __attribute__((ext_vector_type(3)));
+// typedef half __half4_vec_t __attribute__((ext_vector_type(4)));
+// typedef half __half8_vec_t __attribute__((ext_vector_type(8)));
+// typedef half __half16_vec_t __attribute__((ext_vector_type(16)));
+typedef double __double_t;
+typedef double __double2_vec_t __attribute__((ext_vector_type(2)));
+typedef double __double3_vec_t __attribute__((ext_vector_type(3)));
+typedef double __double4_vec_t __attribute__((ext_vector_type(4)));
+typedef double __double8_vec_t __attribute__((ext_vector_type(8)));
+typedef double __double16_vec_t __attribute__((ext_vector_type(16)));
+
+#define GET_CL_TYPE(target, num) __##target##num##_vec_t
+#define GET_SCALAR_CL_TYPE(target) target
+#else // __SYCL_DEVICE_ONLY__
+// For signed char. OpenCL doesn't have any type about `signed char`, therefore
+// we use type alias of cl_char instead.
+using cl_schar = cl_char;
+using cl_schar2 = cl_char2;
+using cl_schar3 = cl_char3;
+using cl_schar4 = cl_char4;
+using cl_schar8 = cl_char8;
+using cl_schar16 = cl_char16;
+
+#define GET_CL_TYPE(target, num) cl_##target##num
+#define GET_SCALAR_CL_TYPE(target) cl_##target
+#endif // __SYCL_DEVICE_ONLY__
+
+namespace cl {
+namespace sycl {
+
+#define DECLARE_CONVERTER(base, num)                                           \
+  template <> class BaseCLTypeConverter<base, num> {                           \
+  public:                                                                      \
+    using DataType = GET_CL_TYPE(base, num);                                   \
+  };
+
+#define DECLARE_VECTOR_CONVERTERS(base)                                        \
+  namespace detail {                                                           \
+  DECLARE_CONVERTER(base, 2)                                                   \
+  DECLARE_CONVERTER(base, 3)                                                   \
+  DECLARE_CONVERTER(base, 4)                                                   \
+  DECLARE_CONVERTER(base, 8)                                                   \
+  DECLARE_CONVERTER(base, 16)                                                  \
+  template <> class BaseCLTypeConverter<base, 1> {                             \
+  public:                                                                      \
+    using DataType = GET_SCALAR_CL_TYPE(base);                                 \
+  };                                                                           \
+  } // namespace detail
+
+#define DECLARE_SYCL_VEC_WO_CONVERTERS(base)                                   \
+  using cl_##base##16 = vec<base, 16>;                                         \
+  using cl_##base##8 = vec<base, 8>;                                           \
+  using cl_##base##4 = vec<base, 4>;                                           \
+  using cl_##base##3 = vec<base, 3>;                                           \
+  using cl_##base##2 = vec<base, 2>;                                           \
+  using cl_##base = GET_SCALAR_CL_TYPE(base);                                  \
+  using base##16 = cl_##base##16;                                              \
+  using base##8 = cl_##base##8;                                                \
+  using base##4 = cl_##base##4;                                                \
+  using base##3 = cl_##base##3;                                                \
+  using base##2 = cl_##base##2;
+
+#define DECLARE_SYCL_VEC(base)                                                 \
+  DECLARE_VECTOR_CONVERTERS(base)                                              \
+  DECLARE_SYCL_VEC_WO_CONVERTERS(base)
+
+DECLARE_SYCL_VEC(char)
+DECLARE_SYCL_VEC(schar)
+DECLARE_SYCL_VEC(uchar)
+DECLARE_SYCL_VEC(short)
+DECLARE_SYCL_VEC(ushort)
+DECLARE_SYCL_VEC(int)
+DECLARE_SYCL_VEC(uint)
+DECLARE_SYCL_VEC(long)
+DECLARE_SYCL_VEC(ulong)
+// TODO: Fix long long and unsigned long long.
+// DECLARE_SYCL_VEC(longlong)
+// DECLARE_SYCL_VEC(ulonglong)
+DECLARE_SYCL_VEC(float)
+DECLARE_SYCL_VEC(double)
+// TODO: Fix half.
+typedef ::cl_half half;
+DECLARE_SYCL_VEC_WO_CONVERTERS(half)
+
+using cl_bool = ::cl_bool;
+using byte = uchar;
+
+#undef GET_CL_TYPE
+#undef GET_SCALAR_CL_TYPE
+#undef DECLARE_CONVERTER
+#undef DECLARE_VECTOR_CONVERTERS
+#undef DECLARE_SYCL_VEC
+#undef DECLARE_SYCL_VEC_WO_CONVERTERS
+
+} // namespace sycl
+} // namespace cl
