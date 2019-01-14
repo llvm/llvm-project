@@ -468,7 +468,7 @@ bool lldb_private::formatters::swift::SwiftSharedString_SummaryProvider_2(
   if (error.Fail())
     return false;
   lldb::addr_t raw0 =
-      process->ReadPointerFromMemory(address + startOffset + 8, error);
+      process->ReadPointerFromMemory(address + startOffset + ptr_size, error);
   if (error.Fail())
     return false;
 
