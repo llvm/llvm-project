@@ -3568,6 +3568,7 @@ messages<_CharT>::do_open(const basic_string<char>& __nm, const locale&) const
         __cat = static_cast<catalog>((static_cast<size_t>(__cat) >> 1));
     return __cat;
 #else // !_LIBCPP_HAS_CATOPEN
+    _LIBCPP_UNUSED_VAR(__nm);
     return -1;
 #endif // _LIBCPP_HAS_CATOPEN
 }
@@ -3591,6 +3592,9 @@ messages<_CharT>::do_get(catalog __c, int __set, int __msgid,
                                                         __n, __n + strlen(__n));
     return __w;
 #else // !_LIBCPP_HAS_CATOPEN
+    _LIBCPP_UNUSED_VAR(__c);
+    _LIBCPP_UNUSED_VAR(__set);
+    _LIBCPP_UNUSED_VAR(__msgid);
     return __dflt;
 #endif // _LIBCPP_HAS_CATOPEN
 }
@@ -3604,6 +3608,8 @@ messages<_CharT>::do_close(catalog __c) const
         __c <<= 1;
     nl_catd __cat = (nl_catd)__c;
     catclose(__cat);
+#else // !_LIBCPP_HAS_CATOPEN
+    _LIBCPP_UNUSED_VAR(__c);
 #endif // _LIBCPP_HAS_CATOPEN
 }
 
