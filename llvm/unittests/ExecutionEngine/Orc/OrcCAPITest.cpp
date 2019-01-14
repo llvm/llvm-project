@@ -27,8 +27,15 @@ class OrcCAPIExecutionTest : public testing::Test, public OrcExecutionTest {
 protected:
   std::unique_ptr<Module> createTestModule(const Triple &TT) {
     ModuleBuilder MB(Context, TT.str(), "");
-    Function *TestFunc = MB.createFunctionDecl<int()>("testFunc");
-    Function *Main = MB.createFunctionDecl<int(int, char*[])>("main");
+    Type *IntTy = Type::getScalarTy<int>(Context);
+    Function *TestFunc =
+        MB.createFunctionDecl(FunctionType::get(IntTy, {}, false), "testFunc");
+    Function *Main = MB.createFunctionDecl(
+        FunctionType::get(
+            IntTy,
+            {IntTy, Type::getInt8PtrTy(Context)->getPointerTo()},
+            false),
+        "main");
 
     Main->getBasicBlockList().push_back(BasicBlock::Create(Context));
     IRBuilder<> B(&Main->back());

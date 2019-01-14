@@ -33,7 +33,6 @@ unittest("IRTests") {
     "PassBuilderCallbacksTest.cpp",
     "PassManagerTest.cpp",
     "PatternMatch.cpp",
-    "TypeBuilderTest.cpp",
     "TypesTest.cpp",
     "UseTest.cpp",
     "UserTest.cpp",

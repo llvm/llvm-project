@@ -131,13 +131,17 @@ TEST(RTDyldObjectLinkingLayerTest, TestOverrideObjectFlags) {
     ModuleBuilder MB(*TSCtx.getContext(), TM->getTargetTriple().str(), "dummy");
     MB.getModule()->setDataLayout(TM->createDataLayout());
 
-    Function *FooImpl = MB.createFunctionDecl<void()>("foo");
+    Function *FooImpl = MB.createFunctionDecl(
+        FunctionType::get(Type::getVoidTy(*TSCtx.getContext()), {}, false),
+        "foo");
     BasicBlock *FooEntry =
         BasicBlock::Create(*TSCtx.getContext(), "entry", FooImpl);
     IRBuilder<> B1(FooEntry);
     B1.CreateRetVoid();
 
-    Function *BarImpl = MB.createFunctionDecl<void()>("bar");
+    Function *BarImpl = MB.createFunctionDecl(
+        FunctionType::get(Type::getVoidTy(*TSCtx.getContext()), {}, false),
+        "bar");
     BasicBlock *BarEntry =
         BasicBlock::Create(*TSCtx.getContext(), "entry", BarImpl);
     IRBuilder<> B2(BarEntry);
@@ -181,9 +185,9 @@ TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
     FunkySimpleCompiler(TargetMachine &TM) : SimpleCompiler(TM) {}
 
     CompileResult operator()(Module &M) {
-      Function *BarImpl =
-          Function::Create(TypeBuilder<void(), false>::get(M.getContext()),
-                           GlobalValue::ExternalLinkage, "bar", &M);
+      Function *BarImpl = Function::Create(
+          FunctionType::get(Type::getVoidTy(M.getContext()), {}, false),
+          GlobalValue::ExternalLinkage, "bar", &M);
       BasicBlock *BarEntry =
           BasicBlock::Create(M.getContext(), "entry", BarImpl);
       IRBuilder<> B(BarEntry);
@@ -200,7 +204,9 @@ TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
     ModuleBuilder MB(*TSCtx.getContext(), TM->getTargetTriple().str(), "dummy");
     MB.getModule()->setDataLayout(TM->createDataLayout());
 
-    Function *FooImpl = MB.createFunctionDecl<void()>("foo");
+    Function *FooImpl = MB.createFunctionDecl(
+        FunctionType::get(Type::getVoidTy(*TSCtx.getContext()), {}, false),
+        "foo");
     BasicBlock *FooEntry =
         BasicBlock::Create(*TSCtx.getContext(), "entry", FooImpl);
     IRBuilder<> B(FooEntry);

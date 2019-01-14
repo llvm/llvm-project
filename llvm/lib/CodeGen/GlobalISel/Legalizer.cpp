@@ -73,6 +73,7 @@ static bool isArtifact(const MachineInstr &MI) {
 using InstListTy = GISelWorkList<256>;
 using ArtifactListTy = GISelWorkList<128>;
 
+namespace {
 class LegalizerWorkListManager : public GISelChangeObserver {
   InstListTy &InstList;
   ArtifactListTy &ArtifactList;
@@ -111,6 +112,7 @@ public:
     createdInstr(MI);
   }
 };
+} // namespace
 
 bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   // If the ISel pipeline failed, do not bother running that pass.

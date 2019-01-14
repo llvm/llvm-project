@@ -21378,14 +21378,6 @@ static SDValue getVectorMaskingNode(SDValue Op, SDValue Mask,
 
   SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
 
-  switch (Op.getOpcode()) {
-  default: break;
-  case X86ISD::CMPM:
-  case X86ISD::CMPM_RND:
-  case X86ISD::VPSHUFBITQMB:
-  case X86ISD::VFPCLASS:
-    return DAG.getNode(ISD::AND, dl, VT, Op, VMask);
-  }
   if (PreservedSrc.isUndef())
     PreservedSrc = getZeroVector(VT, Subtarget, DAG, dl);
   return DAG.getNode(OpcodeSelect, dl, VT, VMask, Op, PreservedSrc);
@@ -21796,7 +21788,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       // does not change the value. Set it to 0 since it can change.
       return DAG.getNode(IntrData->Opc0, dl, VT, Op.getOperand(1),
                          DAG.getIntPtrConstant(0, dl));
-    case CVTPD2PS_MASK: {
+    case CVTPD2PS_RND_MASK: {
       SDValue Src = Op.getOperand(1);
       SDValue PassThru = Op.getOperand(2);
       SDValue Mask = Op.getOperand(3);
@@ -21840,32 +21832,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                 DAG.getConstant(0, dl, MVT::v8i1),
                                 FPclassMask, DAG.getIntPtrConstant(0, dl));
       return DAG.getBitcast(MVT::i8, Ins);
-    }
-    case CMP_MASK: {
-      // Comparison intrinsics with masks.
-      // Example of transformation:
-      // (i8 (int_x86_avx512_mask_pcmpeq_q_128
-      //             (v2i64 %a), (v2i64 %b), (i8 %mask))) ->
-      // (i8 (bitcast
-      //   (v8i1 (insert_subvector zero,
-      //           (v2i1 (and (PCMPEQM %a, %b),
-      //                      (extract_subvector
-      //                         (v8i1 (bitcast %mask)), 0))), 0))))
-      MVT VT = Op.getOperand(1).getSimpleValueType();
-      MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
-      SDValue Mask = Op.getOperand((IntrData->Type == CMP_MASK_CC) ? 4 : 3);
-      MVT BitcastVT = MVT::getVectorVT(MVT::i1,
-                                       Mask.getSimpleValueType().getSizeInBits());
-      SDValue Cmp = DAG.getNode(IntrData->Opc0, dl, MaskVT, Op.getOperand(1),
-                                Op.getOperand(2));
-      SDValue CmpMask = getVectorMaskingNode(Cmp, Mask, SDValue(),
-                                             Subtarget, DAG);
-      // Need to fill with zeros to ensure the bitcast will produce zeroes
-      // for the upper bits in the v2i1/v4i1 case.
-      SDValue Res = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, BitcastVT,
-                                DAG.getConstant(0, dl, BitcastVT),
-                                CmpMask, DAG.getIntPtrConstant(0, dl));
-      return DAG.getBitcast(Op.getValueType(), Res);
     }
 
     case CMP_MASK_CC: {
@@ -22058,6 +22024,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue Results[] = { SetCC, Res };
       return DAG.getMergeValues(Results, dl);
     }
+    case CVTPD2PS_MASK:
+    case CVTPD2I_MASK:
     case TRUNCATE_TO_REG: {
       SDValue Src = Op.getOperand(1);
       SDValue PassThru = Op.getOperand(2);
@@ -27217,6 +27185,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VFPEXT_RND:         return "X86ISD::VFPEXT_RND";
   case X86ISD::VFPEXTS_RND:        return "X86ISD::VFPEXTS_RND";
   case X86ISD::VFPROUND:           return "X86ISD::VFPROUND";
+  case X86ISD::VMFPROUND:          return "X86ISD::VMFPROUND";
   case X86ISD::VFPROUND_RND:       return "X86ISD::VFPROUND_RND";
   case X86ISD::VFPROUNDS_RND:      return "X86ISD::VFPROUNDS_RND";
   case X86ISD::VSHLDQ:             return "X86ISD::VSHLDQ";
@@ -27374,6 +27343,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::UINT_TO_FP_RND:     return "X86ISD::UINT_TO_FP_RND";
   case X86ISD::CVTTP2SI:           return "X86ISD::CVTTP2SI";
   case X86ISD::CVTTP2UI:           return "X86ISD::CVTTP2UI";
+  case X86ISD::MCVTTP2SI:          return "X86ISD::MCVTTP2SI";
+  case X86ISD::MCVTTP2UI:          return "X86ISD::MCVTTP2UI";
   case X86ISD::CVTTP2SI_RND:       return "X86ISD::CVTTP2SI_RND";
   case X86ISD::CVTTP2UI_RND:       return "X86ISD::CVTTP2UI_RND";
   case X86ISD::CVTTS2SI:           return "X86ISD::CVTTS2SI";
@@ -27393,6 +27364,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::CVTPH2PS_RND:       return "X86ISD::CVTPH2PS_RND";
   case X86ISD::CVTP2SI:            return "X86ISD::CVTP2SI";
   case X86ISD::CVTP2UI:            return "X86ISD::CVTP2UI";
+  case X86ISD::MCVTP2SI:           return "X86ISD::MCVTP2SI";
+  case X86ISD::MCVTP2UI:           return "X86ISD::MCVTP2UI";
   case X86ISD::CVTP2SI_RND:        return "X86ISD::CVTP2SI_RND";
   case X86ISD::CVTP2UI_RND:        return "X86ISD::CVTP2UI_RND";
   case X86ISD::CVTS2SI:            return "X86ISD::CVTS2SI";

@@ -5275,8 +5275,7 @@ SDValue TargetLowering::lowerCmpEqZeroToCtlzSrl(SDValue Op,
   return SDValue();
 }
 
-SDValue TargetLowering::getExpandedSaturationAdditionSubtraction(
-    SDNode *Node, SelectionDAG &DAG) const {
+SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   unsigned Opcode = Node->getOpcode();
   unsigned OverflowOp;
   switch (Opcode) {

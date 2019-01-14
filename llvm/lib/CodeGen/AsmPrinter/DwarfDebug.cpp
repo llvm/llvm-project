@@ -2376,8 +2376,8 @@ static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm,
   }
 }
 
-void emitDebugRangesImpl(DwarfDebug &DD, AsmPrinter *Asm,
-                         const DwarfFile &Holder, MCSymbol *TableEnd) {
+static void emitDebugRangesImpl(DwarfDebug &DD, AsmPrinter *Asm,
+                                const DwarfFile &Holder, MCSymbol *TableEnd) {
   for (const RangeSpanList &List : Holder.getRangeLists())
     emitRangeList(DD, Asm, List);
 

@@ -19,7 +19,10 @@ namespace {
 TEST(IndirectionUtilsTest, MakeStub) {
   LLVMContext Context;
   ModuleBuilder MB(Context, "x86_64-apple-macosx10.10", "");
-  Function *F = MB.createFunctionDecl<void(DummyStruct, DummyStruct)>("");
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Context),
+      {getDummyStructTy(Context), getDummyStructTy(Context)}, false);
+  Function *F = MB.createFunctionDecl(FTy, "");
   AttributeSet FnAttrs = AttributeSet::get(
       Context, AttrBuilder().addAttribute(Attribute::NoUnwind));
   AttributeSet RetAttrs; // None

@@ -123,6 +123,8 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
   if (!SupportsJIT)
     return;
 
+  Type *Int32Ty = IntegerType::get(Context, 32);
+
   ExecutionSession ES;
 
   auto MM = std::make_shared<SectionMemoryManagerWrapper>();
@@ -153,7 +155,8 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
   ModuleBuilder MB1(Context, "", "dummy");
   {
     MB1.getModule()->setDataLayout(TM->createDataLayout());
-    Function *BarImpl = MB1.createFunctionDecl<int32_t(void)>("bar");
+    Function *BarImpl =
+        MB1.createFunctionDecl(FunctionType::get(Int32Ty, {}, false), "bar");
     BasicBlock *BarEntry = BasicBlock::Create(Context, "entry", BarImpl);
     IRBuilder<> Builder(BarEntry);
     IntegerType *Int32Ty = IntegerType::get(Context, 32);
@@ -166,8 +169,10 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
   ModuleBuilder MB2(Context, "", "dummy");
   {
     MB2.getModule()->setDataLayout(TM->createDataLayout());
-    Function *BarDecl = MB2.createFunctionDecl<int32_t(void)>("bar");
-    Function *FooImpl = MB2.createFunctionDecl<int32_t(void)>("foo");
+    Function *BarDecl =
+        MB2.createFunctionDecl(FunctionType::get(Int32Ty, {}, false), "bar");
+    Function *FooImpl =
+        MB2.createFunctionDecl(FunctionType::get(Int32Ty, {}, false), "foo");
     BasicBlock *FooEntry = BasicBlock::Create(Context, "entry", FooImpl);
     IRBuilder<> Builder(FooEntry);
     Builder.CreateRet(Builder.CreateCall(BarDecl));
@@ -207,6 +212,8 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
   if (!SupportsJIT)
     return;
 
+  Type *Int32Ty = IntegerType::get(Context, 32);
+
   ExecutionSession ES;
 
   auto MM = std::make_shared<SectionMemoryManagerWrapper>();
@@ -233,7 +240,8 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
   ModuleBuilder MB1(Context, "", "dummy");
   {
     MB1.getModule()->setDataLayout(TM->createDataLayout());
-    Function *BarImpl = MB1.createFunctionDecl<int32_t(void)>("foo");
+    Function *BarImpl =
+        MB1.createFunctionDecl(FunctionType::get(Int32Ty, {}, false), "foo");
     BasicBlock *BarEntry = BasicBlock::Create(Context, "entry", BarImpl);
     IRBuilder<> Builder(BarEntry);
     IntegerType *Int32Ty = IntegerType::get(Context, 32);
@@ -246,7 +254,8 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
   ModuleBuilder MB2(Context, "", "dummy");
   {
     MB2.getModule()->setDataLayout(TM->createDataLayout());
-    Function *BarImpl = MB2.createFunctionDecl<int32_t(void)>("bar");
+    Function *BarImpl =
+        MB2.createFunctionDecl(FunctionType::get(Int32Ty, {}, false), "bar");
     BasicBlock *BarEntry = BasicBlock::Create(Context, "entry", BarImpl);
     IRBuilder<> Builder(BarEntry);
     IntegerType *Int32Ty = IntegerType::get(Context, 32);

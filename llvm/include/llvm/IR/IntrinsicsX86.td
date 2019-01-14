@@ -1312,21 +1312,12 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
 // BITALG bits shuffle
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_avx512_mask_vpshufbitqmb_128 :
-    GCCBuiltin<"__builtin_ia32_vpshufbitqmb128_mask">,
-    Intrinsic<[llvm_i16_ty],
-              [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i16_ty],
-              [IntrNoMem]>;
-  def int_x86_avx512_mask_vpshufbitqmb_256 :
-    GCCBuiltin<"__builtin_ia32_vpshufbitqmb256_mask">,
-    Intrinsic<[llvm_i32_ty],
-              [llvm_v32i8_ty, llvm_v32i8_ty, llvm_i32_ty],
-              [IntrNoMem]>;
-  def int_x86_avx512_mask_vpshufbitqmb_512 :
-    GCCBuiltin<"__builtin_ia32_vpshufbitqmb512_mask">,
-    Intrinsic<[llvm_i64_ty],
-              [llvm_v64i8_ty, llvm_v64i8_ty, llvm_i64_ty],
-              [IntrNoMem]>;
+  def int_x86_avx512_vpshufbitqmb_128 :
+    Intrinsic<[llvm_v16i1_ty], [llvm_v16i8_ty, llvm_v16i8_ty], [IntrNoMem]>;
+  def int_x86_avx512_vpshufbitqmb_256 :
+    Intrinsic<[llvm_v32i1_ty], [llvm_v32i8_ty, llvm_v32i8_ty], [IntrNoMem]>;
+  def int_x86_avx512_vpshufbitqmb_512 :
+    Intrinsic<[llvm_v64i1_ty], [llvm_v64i8_ty, llvm_v64i8_ty], [IntrNoMem]>;
 }
 
 //===----------------------------------------------------------------------===//
