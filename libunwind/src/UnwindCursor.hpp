@@ -981,6 +981,10 @@ private:
   }
 #endif
 
+#if defined(_LIBUNWIND_TARGET_SPARC)
+  int stepWithCompactEncoding(Registers_sparc &) { return UNW_EINVAL; }
+#endif
+
   bool compactSaysUseDwarf(uint32_t *offset=NULL) const {
     R dummy;
     return compactSaysUseDwarf(dummy, offset);
@@ -1042,6 +1046,11 @@ private:
     return true;
   }
 #endif
+
+#if defined(_LIBUNWIND_TARGET_SPARC)
+  bool compactSaysUseDwarf(Registers_sparc &, uint32_t *) const { return true; }
+#endif
+
 #endif // defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
@@ -1103,6 +1112,11 @@ private:
     return 0;
   }
 #endif
+
+#if defined(_LIBUNWIND_TARGET_SPARC)
+  compact_unwind_encoding_t dwarfEncoding(Registers_sparc &) const { return 0; }
+#endif
+
 #endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
 #if defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
@@ -1443,7 +1457,7 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(pint_t pc,
   if (foundFDE) {
     typename CFI_Parser<A>::PrologInfo prolog;
     if (CFI_Parser<A>::parseFDEInstructions(_addressSpace, fdeInfo, cieInfo, pc,
-                                            &prolog)) {
+                                            R::getArch(), &prolog)) {
       // Save off parsed FDE info
       _info.start_ip          = fdeInfo.pcStart;
       _info.end_ip            = fdeInfo.pcEnd;
@@ -1858,7 +1872,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
     if (msg == NULL) {
       typename CFI_Parser<A>::PrologInfo prolog;
       if (CFI_Parser<A>::parseFDEInstructions(_addressSpace, fdeInfo, cieInfo,
-                                                                pc, &prolog)) {
+                                              pc, R::getArch(), &prolog)) {
         // save off parsed FDE info
         _info.start_ip         = fdeInfo.pcStart;
         _info.end_ip           = fdeInfo.pcEnd;
@@ -1887,8 +1901,8 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
       // Double check this FDE is for a function that includes the pc.
       if ((fdeInfo.pcStart <= pc) && (pc < fdeInfo.pcEnd)) {
         typename CFI_Parser<A>::PrologInfo prolog;
-        if (CFI_Parser<A>::parseFDEInstructions(_addressSpace, fdeInfo,
-                                                cieInfo, pc, &prolog)) {
+        if (CFI_Parser<A>::parseFDEInstructions(_addressSpace, fdeInfo, cieInfo,
+                                                pc, R::getArch(), &prolog)) {
           // save off parsed FDE info
           _info.start_ip         = fdeInfo.pcStart;
           _info.end_ip           = fdeInfo.pcEnd;

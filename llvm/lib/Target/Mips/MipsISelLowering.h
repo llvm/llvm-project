@@ -699,6 +699,8 @@ class TargetRegisterClass;
     MachineBasicBlock *emitSEL_D(MachineInstr &MI, MachineBasicBlock *BB) const;
     MachineBasicBlock *emitPseudoSELECT(MachineInstr &MI, MachineBasicBlock *BB,
                                         bool isFPCmp, unsigned Opc) const;
+    MachineBasicBlock *emitPseudoD_SELECT(MachineInstr &MI,
+                                          MachineBasicBlock *BB) const;
   };
 
   /// Create MipsTargetLowering objects.

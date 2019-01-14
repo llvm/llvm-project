@@ -834,6 +834,7 @@ bool GCNPassConfig::addInstSelector() {
   addPass(&SIFixSGPRCopiesID);
   addPass(createSILowerI1CopiesPass());
   addPass(createSIFixupVectorISelPass());
+  addPass(createSIAddIMGInitPass());
   return false;
 }
 

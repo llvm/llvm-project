@@ -57,6 +57,11 @@ namespace llvm {
     };
   }
 
+  // Specify effect of frame pointer elimination optimization.
+  namespace FramePointer {
+    enum FP {All, NonLeaf, None};
+  }
+
 }  // end llvm namespace
 
 #endif

@@ -1,9 +1,9 @@
 ; RUN: llc < %s -mtriple armv7-none-linux-gnueabi -O1 | FileCheck %s --check-prefix=DISABLE-FP-ELIM
-; RUN: llc < %s -mtriple armv7-none-linux-gnueabi -disable-fp-elim -O1 | FileCheck %s --check-prefix=DISABLE-FP-ELIM
-; RUN: llc < %s -mtriple armv7-none-linux-gnueabi -disable-fp-elim=false -O1 | FileCheck %s --check-prefix=ENABLE-FP-ELIM
-; RUN: llc < %s -mtriple armv7-none-linux-gnueabi -disable-fp-elim=false -O0 | FileCheck %s --check-prefix=DISABLE-FP-ELIM
+; RUN: llc < %s -mtriple armv7-none-linux-gnueabi -frame-pointer=all -O1 | FileCheck %s --check-prefix=DISABLE-FP-ELIM
+; RUN: llc < %s -mtriple armv7-none-linux-gnueabi -frame-pointer=none -O1 | FileCheck %s --check-prefix=ENABLE-FP-ELIM
+; RUN: llc < %s -mtriple armv7-none-linux-gnueabi -frame-pointer=none -O0 | FileCheck %s --check-prefix=DISABLE-FP-ELIM
 
-; Check that command line option "-disable-fp-elim" overrides function attribute
+; Check that command line option "-frame-pointer=all" overrides function attribute
 ; "no-frame-pointer-elim". Also, check frame pointer elimination is disabled
 ; when fast-isel is used.
 

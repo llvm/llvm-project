@@ -1,4 +1,4 @@
-; RUN: llc -O1 -mtriple=x86_64-unknown-linux-gnu -mcpu=core2 -relocation-model=pic -disable-fp-elim < %s | FileCheck %s
+; RUN: llc -O1 -mtriple=x86_64-unknown-linux-gnu -mcpu=core2 -relocation-model=pic -frame-pointer=all < %s | FileCheck %s
 ; <rdar://problem/8124405>
 
 %struct.type = type { %struct.subtype*, i32, i8, i32, i8, i32, i32, i32, i32, i32, i8, i32, i32, i32, i32, i32, [256 x i32], i32, [257 x i32], [257 x i32], i32*, i16*, i8*, i32, i32, i32, i32, i32, [256 x i8], [16 x i8], [256 x i8], [4096 x i8], [16 x i32], [18002 x i8], [18002 x i8], [6 x [258 x i8]], [6 x [258 x i32]], [6 x [258 x i32]], [6 x [258 x i32]], [6 x i32], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32*, i32*, i32* }

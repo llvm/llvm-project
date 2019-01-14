@@ -2812,8 +2812,7 @@ LLVMBasicBlockRef LLVMGetEntryBasicBlock(LLVMValueRef Fn);
  * @see llvm::BasicBlock::Create()
  */
 LLVMBasicBlockRef LLVMCreateBasicBlockInContext(LLVMContextRef C,
-                                                const char *Name,
-                                                size_t NameLen);
+                                                const char *Name);
 
 /**
  * Append a basic block to the end of a function.
@@ -3644,7 +3643,7 @@ LLVMValueRef LLVMBuildPointerCast(LLVMBuilderRef, LLVMValueRef Val,
                                   LLVMTypeRef DestTy, const char *Name);
 LLVMValueRef LLVMBuildIntCast2(LLVMBuilderRef, LLVMValueRef Val,
                                LLVMTypeRef DestTy, LLVMBool IsSigned,
-                               const char *Name, size_t NameLen);
+                               const char *Name);
 LLVMValueRef LLVMBuildFPCast(LLVMBuilderRef, LLVMValueRef Val,
                              LLVMTypeRef DestTy, const char *Name);
 

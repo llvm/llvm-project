@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=i686-- -asm-verbose=false                           | FileCheck %s -check-prefix=FP-ELIM
-; RUN: llc < %s -mtriple=i686-- -asm-verbose=false -disable-fp-elim          | FileCheck %s -check-prefix=NO-ELIM
+; RUN: llc < %s -mtriple=i686-- -asm-verbose=false -frame-pointer=all          | FileCheck %s -check-prefix=NO-ELIM
 
 ; Implement -momit-leaf-frame-pointer
 ; rdar://7886181

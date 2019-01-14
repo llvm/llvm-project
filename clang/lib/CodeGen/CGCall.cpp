@@ -74,7 +74,7 @@ static CanQualType GetThisType(ASTContext &Context, const CXXRecordDecl *RD,
                                const CXXMethodDecl *MD) {
   QualType RecTy = Context.getTagDeclType(RD)->getCanonicalTypeInternal();
   if (MD)
-    RecTy = Context.getAddrSpaceQualType(RecTy, MD->getType().getAddressSpace());
+    RecTy = Context.getAddrSpaceQualType(RecTy, MD->getTypeQualifiers().getAddressSpace());
   return Context.getPointerType(CanQualType::CreateUnsafe(RecTy));
 }
 

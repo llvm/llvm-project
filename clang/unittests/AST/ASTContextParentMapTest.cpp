@@ -106,5 +106,16 @@ TEST(GetParents, RespectsTraversalScope) {
   EXPECT_THAT(Ctx.getParents(Foo), ElementsAre(DynTypedNode::create(TU)));
 }
 
+TEST(GetParents, ImplicitLambdaNodes) {
+  MatchVerifier<Decl> LambdaVerifier;
+  EXPECT_TRUE(LambdaVerifier.match(
+      "auto x = []{int y;};",
+      varDecl(hasName("y"), hasAncestor(functionDecl(
+                                hasOverloadedOperatorName("()"),
+                                hasParent(cxxRecordDecl(
+                                    isImplicit(), hasParent(lambdaExpr())))))),
+      Lang_CXX11));
+}
+
 } // end namespace ast_matchers
 } // end namespace clang

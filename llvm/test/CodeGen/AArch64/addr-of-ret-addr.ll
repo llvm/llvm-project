@@ -1,4 +1,4 @@
-; RUN: llc < %s -disable-fp-elim -mtriple=arm64-windows | FileCheck %s
+; RUN: llc < %s -frame-pointer=all -mtriple=arm64-windows | FileCheck %s
 
 ; Test generated from C code:
 ; #include <stdarg.h>

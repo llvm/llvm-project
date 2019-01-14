@@ -2533,9 +2533,8 @@ LLVMBasicBlockRef LLVMGetPreviousBasicBlock(LLVMBasicBlockRef BB) {
 }
 
 LLVMBasicBlockRef LLVMCreateBasicBlockInContext(LLVMContextRef C,
-                                                const char *Name,
-                                                size_t NameLen) {
-  return wrap(llvm::BasicBlock::Create(*unwrap(C), StringRef(Name, NameLen)));
+                                                const char *Name) {
+  return wrap(llvm::BasicBlock::Create(*unwrap(C), Name));
 }
 
 LLVMBasicBlockRef LLVMAppendBasicBlockInContext(LLVMContextRef C,
@@ -3542,9 +3541,9 @@ LLVMValueRef LLVMBuildPointerCast(LLVMBuilderRef B, LLVMValueRef Val,
 
 LLVMValueRef LLVMBuildIntCast2(LLVMBuilderRef B, LLVMValueRef Val,
                                LLVMTypeRef DestTy, LLVMBool IsSigned,
-                               const char *Name, size_t NameLen) {
-  return wrap(unwrap(B)->CreateIntCast(unwrap(Val), unwrap(DestTy),
-                                       IsSigned, StringRef(Name, NameLen)));
+                               const char *Name) {
+  return wrap(
+      unwrap(B)->CreateIntCast(unwrap(Val), unwrap(DestTy), IsSigned, Name));
 }
 
 LLVMValueRef LLVMBuildIntCast(LLVMBuilderRef B, LLVMValueRef Val,

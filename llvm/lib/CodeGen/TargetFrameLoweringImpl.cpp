@@ -30,12 +30,6 @@ using namespace llvm;
 
 TargetFrameLowering::~TargetFrameLowering() = default;
 
-/// The default implementation just looks at attribute "no-frame-pointer-elim".
-bool TargetFrameLowering::noFramePointerElim(const MachineFunction &MF) const {
-  auto Attr = MF.getFunction().getFnAttribute("no-frame-pointer-elim");
-  return Attr.getValueAsString() == "true";
-}
-
 bool TargetFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const {
   assert(MF.getFunction().hasFnAttribute(Attribute::NoReturn) &&
          MF.getFunction().hasFnAttribute(Attribute::NoUnwind) &&

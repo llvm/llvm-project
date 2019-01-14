@@ -722,7 +722,20 @@ def arm_i32imm : PatLeaf<(imm), [{
   if (Subtarget->useMovt(*MF))
     return true;
   return ARM_AM::isSOImmTwoPartVal((unsigned)N->getZExtValue());
-}]>;
+}]> {
+  // Ideally this would be an IntImmLeaf, but then we wouldn't have access to
+  // the MachineFunction.
+  let GISelPredicateCode = [{
+    const auto &MF = *MI.getParent()->getParent();
+    if (STI.useMovt(MF))
+      return true;
+
+    const auto &MO = MI.getOperand(1);
+    if (!MO.isCImm())
+      return false;
+    return ARM_AM::isSOImmTwoPartVal(MO.getCImm()->getZExtValue());
+  }];
+}
 
 /// imm0_1 predicate - Immediate in the range [0,1].
 def Imm0_1AsmOperand: ImmAsmOperand<0,1> { let Name = "Imm0_1"; }

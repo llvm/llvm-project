@@ -795,6 +795,24 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   switch(Opcode) {
   default: break;
 
+  case Mips::PseudoD_SELECT_I:
+  case Mips::PseudoD_SELECT_I64: {
+    MVT VT = Subtarget->isGP64bit() ? MVT::i64 : MVT::i32;
+    SDValue cond = Node->getOperand(0);
+    SDValue Hi1 = Node->getOperand(1);
+    SDValue Lo1 = Node->getOperand(2);
+    SDValue Hi2 = Node->getOperand(3);
+    SDValue Lo2 = Node->getOperand(4);
+
+    SDValue ops[] = {cond, Hi1, Lo1, Hi2, Lo2};
+    EVT NodeTys[] = {VT, VT};
+    ReplaceNode(Node, CurDAG->getMachineNode(Subtarget->isGP64bit()
+                                                 ? Mips::PseudoD_SELECT_I64
+                                                 : Mips::PseudoD_SELECT_I,
+                                             DL, NodeTys, ops));
+    return true;
+  }
+
   case ISD::ADDE: {
     selectAddE(Node, DL);
     return true;
