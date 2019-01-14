@@ -342,8 +342,6 @@ public:
 
   void processObjCLiterals(CheckerContext &C, const Expr *Ex) const;
 
-  const ProgramPointTag *getDeadSymbolTag(SymbolRef sym) const;
-
   ProgramStateRef handleSymbolDeath(ProgramStateRef state,
                                     SymbolRef sid, RefVal V,
                                     SmallVectorImpl<SymbolRef> &Leaked) const;
