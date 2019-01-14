@@ -14,14 +14,23 @@
 void bothPreviouslyAvailable() AVAILABLE_PREV_MAC AVAILABLE_PREV_IOS;
 void bothCurrentlyAvailable() AVAILABLE_CURRENT_MAC AVAILABLE_CURRENT_IOS;
 void bothWillBeAvailable() AVAILABLE_NEXT_MAC AVAILABLE_NEXT_IOS;
-// expected-note@-1 4 {{'bothWillBeAvailable' has been explicitly marked partial here}}
+#ifndef INVERTED
+// expected-note@-2 3 {{'bothWillBeAvailable' has been marked as being introduced in macOS 10.15 here, but the deployment target is macOS 10.14.0}}
+// expected-note@-3 {{'bothWillBeAvailable' has been marked as being introduced in iOS (on macOS) 14 here, but the deployment target is iOS (on macOS) 13.0.0}}
+#else
+// expected-note@-5 3 {{'bothWillBeAvailable' has been marked as being introduced in iOS (on macOS) 14 here, but the deployment target is iOS (on macOS) 13.0.0}}
+// expected-note@-6 {{'bothWillBeAvailable' has been marked as being introduced in macOS 10.15 here, but the deployment target is macOS 10.14.0}}
+#endif
 
 void macOSCurrentlyAvailable() AVAILABLE_CURRENT_MAC AVAILABLE_NEXT_IOS;
-// expected-note@-1 2 {{'macOSCurrentlyAvailable' has been explicitly marked partial here}}
+// #ifndef INVERTED
+// expected-note@-2 2 {{'macOSCurrentlyAvailable' has been marked as being introduced in iOS (on macOS) 14 here, but the deployment target is iOS (on macOS) 13.0.0}}
+// #else
+// #endif
 
 void macOSNextAvailableiOSNotAvailable() AVAILABLE_NEXT_MAC __attribute__((availability(ios, unavailable)));
 // expected-note@-1 2 {{'macOSNextAvailableiOSNotAvailable' has been explicitly marked unavailable here}}
-// expected-note@-2 {{'macOSNextAvailableiOSNotAvailable' has been explicitly marked partial here}}
+// expected-note@-2 {{'macOSNextAvailableiOSNotAvailable' has been marked as being introduced in macOS 10.15 here, but the deployment target is macOS 10.14.0}}
 
 void test() {
   bothPreviouslyAvailable();

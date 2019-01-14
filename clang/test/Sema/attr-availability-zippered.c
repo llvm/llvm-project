@@ -156,8 +156,12 @@ void a() {
 }
 
 
-struct IntroducedLaterBoth { } __attribute__((availability(macos, introduced=10.15), availability(ios, introduced=13)));
-// expected-note@-1 {{'IntroducedLaterBoth' has been explicitly marked partial here}}
+struct IntroducedLaterBoth { } __attribute__((availability(macos, introduced=10.15), availability(ios, introduced=14)));
+#ifndef INVERTED
+// expected-note@-2 {{'IntroducedLaterBoth' has been marked as being introduced in macOS 10.15 here, but the deployment target is macOS 10.14.0}}
+#else
+// expected-note@-4 {{'IntroducedLaterBoth' has been marked as being introduced in macCatalyst 14 here, but the deployment target is macCatalyst 13.0.0}}
+#endif
 
 struct NotYetIntroduced { // expected-note {{annotate 'NotYetIntroduced' with an availability attribute to silence this warning}}
   struct IntroducedLaterBoth x;
