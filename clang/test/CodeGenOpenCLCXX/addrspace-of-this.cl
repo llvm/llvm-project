@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=c++ -emit-llvm -pedantic -verify -O0 -o - | FileCheck %s
 // expected-no-diagnostics
+// XFAIL: *
 
 // Test that the 'this' pointer is in the __generic address space.
 

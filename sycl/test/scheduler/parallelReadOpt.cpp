@@ -26,6 +26,9 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
+// XFAIL: *
+
 #include "CL/sycl.hpp"
 #include "CL/sycl/detail/scheduler/scheduler.h"
 

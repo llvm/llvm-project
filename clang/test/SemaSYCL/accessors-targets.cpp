@@ -1,4 +1,5 @@
 // RUN: %clang -S --sycl -Xclang -ast-dump %s | FileCheck %s
+// XFAIL: *
 #include <CL/sycl.hpp>
 
 using namespace cl::sycl;

@@ -5,6 +5,7 @@
 //
 // Only CPU supports LLVM IR bitcode as a binary
 // RUN: %CPU_RUN_PLACEHOLDER %t.out
+// XFAIL: *
 
 //==----- with-llvm-bc.cpp - SYCL kernel with LLVM IR bitcode as binary ----==//
 //

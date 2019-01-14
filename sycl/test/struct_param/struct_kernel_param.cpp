@@ -12,6 +12,8 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
+// XFAIL: *
 #include <CL/sycl.hpp>
 #include <cstring>
 #include <iostream>

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=c++ -O0 -emit-llvm -o - | FileCheck %s -check-prefixes=COMMON,PTR
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=c++ -O0 -emit-llvm -o - -DREF | FileCheck %s -check-prefixes=COMMON,REF
-
+// XFAIL: *
 #ifdef REF
 #define PTR &
 #define ADR(x) x

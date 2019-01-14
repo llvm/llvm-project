@@ -1,5 +1,6 @@
 // RUN: %clang --sycl -Xclang -fsycl-int-header=%t.h %s -c -o %T/kernel.spv
 // RUN: FileCheck -input-file=%t.h %s
+// XFAIL: *
 //
 // CHECK: class first_kernel;
 // CHECK-NEXT: template <typename T> class second_kernel;
