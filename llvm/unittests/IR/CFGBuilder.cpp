@@ -11,7 +11,6 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/TypeBuilder.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
@@ -23,7 +22,7 @@ using namespace llvm;
 CFGHolder::CFGHolder(StringRef ModuleName, StringRef FunctionName)
     : Context(llvm::make_unique<LLVMContext>()),
       M(llvm::make_unique<Module>(ModuleName, *Context)) {
-  FunctionType *FTy = TypeBuilder<void(), false>::get(*Context);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Context), {}, false);
   F = cast<Function>(M->getOrInsertFunction(FunctionName, FTy));
 }
 CFGHolder::~CFGHolder() = default;

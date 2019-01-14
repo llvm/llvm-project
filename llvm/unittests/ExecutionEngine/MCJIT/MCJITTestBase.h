@@ -24,7 +24,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/TypeBuilder.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/CodeGen.h"
 
 namespace llvm {
@@ -45,11 +45,9 @@ protected:
     return M;
   }
 
-  template<typename FuncType>
-  Function *startFunction(Module *M, StringRef Name) {
-    Function *Result = Function::Create(
-      TypeBuilder<FuncType, false>::get(Context),
-      GlobalValue::ExternalLinkage, Name, M);
+  Function *startFunction(Module *M, FunctionType *FT, StringRef Name) {
+    Function *Result =
+        Function::Create(FT, GlobalValue::ExternalLinkage, Name, M);
 
     BasicBlock *BB = BasicBlock::Create(Context, Name, Result);
     Builder.SetInsertPoint(BB);
@@ -63,9 +61,8 @@ protected:
 
   // Inserts a simple function that invokes Callee and takes the same arguments:
   //    int Caller(...) { return Callee(...); }
-  template<typename Signature>
   Function *insertSimpleCallFunction(Module *M, Function *Callee) {
-    Function *Result = startFunction<Signature>(M, "caller");
+    Function *Result = startFunction(M, Callee->getFunctionType(), "caller");
 
     SmallVector<Value*, 1> CallArgs;
 
@@ -81,7 +78,8 @@ protected:
   //    int32_t main() { return X; }
   // where X is given by returnCode
   Function *insertMainFunction(Module *M, uint32_t returnCode) {
-    Function *Result = startFunction<int32_t(void)>(M, "main");
+    Function *Result = startFunction(
+        M, FunctionType::get(Type::getInt32Ty(Context), {}, false), "main");
 
     Value *ReturnVal = ConstantInt::get(Context, APInt(32, returnCode));
     endFunctionWithRet(Result, ReturnVal);
@@ -93,7 +91,12 @@ protected:
   //    int32_t add(int32_t a, int32_t b) { return a + b; }
   // in the current module and returns a pointer to it.
   Function *insertAddFunction(Module *M, StringRef Name = "add") {
-    Function *Result = startFunction<int32_t(int32_t, int32_t)>(M, Name);
+    Function *Result = startFunction(
+        M,
+        FunctionType::get(
+            Type::getInt32Ty(Context),
+            {Type::getInt32Ty(Context), Type::getInt32Ty(Context)}, false),
+        Name);
 
     Function::arg_iterator args = Result->arg_begin();
     Value *Arg1 = &*args;
@@ -106,20 +109,10 @@ protected:
   }
 
   // Inserts a declaration to a function defined elsewhere
-  template <typename FuncType>
-  Function *insertExternalReferenceToFunction(Module *M, StringRef Name) {
-    Function *Result = Function::Create(
-                         TypeBuilder<FuncType, false>::get(Context),
-                         GlobalValue::ExternalLinkage, Name, M);
-    return Result;
-  }
-
-  // Inserts an declaration to a function defined elsewhere
-  Function *insertExternalReferenceToFunction(Module *M, StringRef Name,
-                                              FunctionType *FuncTy) {
-    Function *Result = Function::Create(FuncTy,
-                                        GlobalValue::ExternalLinkage,
-                                        Name, M);
+  Function *insertExternalReferenceToFunction(Module *M, FunctionType *FTy,
+                                              StringRef Name) {
+    Function *Result =
+        Function::Create(FTy, GlobalValue::ExternalLinkage, Name, M);
     return Result;
   }
 
@@ -136,7 +129,7 @@ protected:
   GlobalVariable *insertGlobalInt32(Module *M,
                                     StringRef name,
                                     int32_t InitialValue) {
-    Type *GlobalTy = TypeBuilder<types::i<32>, true>::get(Context);
+    Type *GlobalTy = Type::getInt32Ty(Context);
     Constant *IV = ConstantInt::get(Context, APInt(32, InitialValue));
     GlobalVariable *Global = new GlobalVariable(*M,
                                                 GlobalTy,
@@ -160,7 +153,11 @@ protected:
   Function *insertAccumulateFunction(Module *M,
                                      Function *Helper = nullptr,
                                      StringRef Name = "accumulate") {
-    Function *Result = startFunction<int32_t(int32_t)>(M, Name);
+    Function *Result =
+        startFunction(M,
+                      FunctionType::get(Type::getInt32Ty(Context),
+                                        {Type::getInt32Ty(Context)}, false),
+                      Name);
     if (!Helper)
       Helper = Result;
 
@@ -225,11 +222,11 @@ protected:
 
     B.reset(createEmptyModule("B"));
     Function *FAExtern_in_B = insertExternalReferenceToFunction(B.get(), FA);
-    FB = insertSimpleCallFunction<int32_t(int32_t, int32_t)>(B.get(), FAExtern_in_B);
+    FB = insertSimpleCallFunction(B.get(), FAExtern_in_B);
 
     C.reset(createEmptyModule("C"));
     Function *FBExtern_in_C = insertExternalReferenceToFunction(C.get(), FB);
-    FC = insertSimpleCallFunction<int32_t(int32_t, int32_t)>(C.get(), FBExtern_in_C);
+    FC = insertSimpleCallFunction(C.get(), FBExtern_in_C);
   }
 
   // Module A { Function FA },
@@ -253,8 +250,7 @@ protected:
 
     B.reset(createEmptyModule("B"));
     Function *FAExtern_in_B = insertExternalReferenceToFunction(B.get(), FA);
-    FB = insertSimpleCallFunction<int32_t(int32_t, int32_t)>(B.get(),
-                                                             FAExtern_in_B);
+    FB = insertSimpleCallFunction(B.get(), FAExtern_in_B);
   }
 
   // Module A { Function FA },
@@ -268,11 +264,11 @@ protected:
 
     B.reset(createEmptyModule("B"));
     Function *FAExtern_in_B = insertExternalReferenceToFunction(B.get(), FA);
-    FB = insertSimpleCallFunction<int32_t(int32_t, int32_t)>(B.get(), FAExtern_in_B);
+    FB = insertSimpleCallFunction(B.get(), FAExtern_in_B);
 
     C.reset(createEmptyModule("C"));
     Function *FAExtern_in_C = insertExternalReferenceToFunction(C.get(), FA);
-    FC = insertSimpleCallFunction<int32_t(int32_t, int32_t)>(C.get(), FAExtern_in_C);
+    FC = insertSimpleCallFunction(C.get(), FAExtern_in_C);
   }
 };
 

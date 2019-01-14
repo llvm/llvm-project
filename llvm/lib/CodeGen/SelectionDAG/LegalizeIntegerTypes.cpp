@@ -2577,7 +2577,7 @@ void DAGTypeLegalizer::ExpandIntRes_READCYCLECOUNTER(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::ExpandIntRes_ADDSUBSAT(SDNode *N, SDValue &Lo,
                                               SDValue &Hi) {
-  SDValue Result = TLI.getExpandedSaturationAdditionSubtraction(N, DAG);
+  SDValue Result = TLI.expandAddSubSat(N, DAG);
   SplitInteger(Result, Lo, Hi);
 }
 

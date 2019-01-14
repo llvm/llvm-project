@@ -3834,8 +3834,7 @@ public:
 
   /// Method for building the DAG expansion of ISD::[US][ADD|SUB]SAT. This
   /// method accepts integers as its arguments.
-  SDValue getExpandedSaturationAdditionSubtraction(SDNode *Node,
-                                                   SelectionDAG &DAG) const;
+  SDValue expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Method for building the DAG expansion of ISD::SMULFIX. This method accepts
   /// integers as its arguments.
