@@ -7,7 +7,7 @@
 // RUN: %env_asan_opts=hard_rss_limit_mb=20                         not  %run %t          2>&1 | FileCheck %s  --check-prefix=RSS_LIMIT
 
 // https://github.com/google/sanitizers/issues/981
-// UNSUPPORTED: android-26, arm
+// UNSUPPORTED: android-26
 
 #include <string.h>
 char *g;

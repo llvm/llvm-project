@@ -29,6 +29,7 @@ class MIMGBaseOpcode {
   bit Atomic = 0;
   bit AtomicX2 = 0; // (f)cmpswap
   bit Sampler = 0;
+  bit Gather4 = 0;
   bits<8> NumExtraArgs = 0;
   bit Gradients = 0;
   bit Coordinates = 1;
@@ -43,7 +44,7 @@ def MIMGBaseOpcode : GenericEnum {
 def MIMGBaseOpcodesTable : GenericTable {
   let FilterClass = "MIMGBaseOpcode";
   let CppTypeName = "MIMGBaseOpcodeInfo";
-  let Fields = ["BaseOpcode", "Store", "Atomic", "AtomicX2", "Sampler",
+  let Fields = ["BaseOpcode", "Store", "Atomic", "AtomicX2", "Sampler", "Gather4",
                 "NumExtraArgs", "Gradients", "Coordinates", "LodOrClampOrMip",
                 "HasD16"];
   GenericEnum TypeOf_BaseOpcode = MIMGBaseOpcode;
@@ -179,6 +180,8 @@ multiclass MIMG_NoSampler <bits<7> op, string asm, bit has_d16, bit mip = 0,
     defm _V3 : MIMG_NoSampler_Src_Helper <op, asm, VReg_96, 0>;
     let VDataDwords = 4 in
     defm _V4 : MIMG_NoSampler_Src_Helper <op, asm, VReg_128, 0>;
+    let VDataDwords = 8 in
+    defm _V8 : MIMG_NoSampler_Src_Helper <op, asm, VReg_256, 0>;
   }
 }
 
@@ -411,6 +414,8 @@ multiclass MIMG_Sampler <bits<7> op, AMDGPUSampleVariant sample, bit wqm = 0,
     defm _V3 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_96>;
     let VDataDwords = 4 in
     defm _V4 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_128>;
+    let VDataDwords = 8 in
+    defm _V8 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_256>;
   }
 }
 
@@ -421,6 +426,7 @@ multiclass MIMG_Gather <bits<7> op, AMDGPUSampleVariant sample, bit wqm = 0,
                         string asm = "image_gather4"#sample.LowerCaseMod> {
   def "" : MIMG_Sampler_BaseOpcode<sample> {
     let HasD16 = 1;
+    let Gather4 = 1;
   }
 
   let BaseOpcode = !cast<MIMGBaseOpcode>(NAME), WQM = wqm,
@@ -429,6 +435,8 @@ multiclass MIMG_Gather <bits<7> op, AMDGPUSampleVariant sample, bit wqm = 0,
     defm _V2 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_64>; /* for packed D16 only */
     let VDataDwords = 4 in
     defm _V4 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_128, 1>;
+    let VDataDwords = 8 in
+    defm _V8 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_256>;
   }
 }
 

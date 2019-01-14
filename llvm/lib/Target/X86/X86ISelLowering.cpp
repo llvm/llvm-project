@@ -21508,12 +21508,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       }
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Op.getOperand(1));
     }
-    case INTR_TYPE_2OP:
-    case INTR_TYPE_2OP_IMM8: {
+    case INTR_TYPE_2OP: {
       SDValue Src2 = Op.getOperand(2);
-
-      if (IntrData->Type == INTR_TYPE_2OP_IMM8)
-        Src2 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, Src2);
 
       // We specify 2 possible opcodes for intrinsics with rounding modes.
       // First, we check if the intrinsic may have non-default rounding mode,
@@ -21746,38 +21742,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       // Swap Src1 and Src2 in the node creation
       return DAG.getNode(IntrData->Opc0, dl, VT,Src2, Src1);
     }
-    case FMA_OP_MASKZ:
-    case FMA_OP_MASK: {
-      SDValue Src1 = Op.getOperand(1);
-      SDValue Src2 = Op.getOperand(2);
-      SDValue Src3 = Op.getOperand(3);
-      SDValue Mask = Op.getOperand(4);
-      MVT VT = Op.getSimpleValueType();
-      SDValue PassThru = SDValue();
-
-      // set PassThru element
-      if (IntrData->Type == FMA_OP_MASKZ)
-        PassThru = getZeroVector(VT, Subtarget, DAG, dl);
-      else
-        PassThru = Src1;
-
-      // We specify 2 possible opcodes for intrinsics with rounding modes.
-      // First, we check if the intrinsic may have non-default rounding mode,
-      // (IntrData->Opc1 != 0), then we check the rounding mode operand.
-      unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
-      if (IntrWithRoundingModeOpcode != 0) {
-        SDValue Rnd = Op.getOperand(5);
-        if (!isRoundModeCurDirection(Rnd))
-          return getVectorMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
-                                                  dl, Op.getValueType(),
-                                                  Src1, Src2, Src3, Rnd),
-                                      Mask, PassThru, Subtarget, DAG);
-      }
-      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0,
-                                              dl, Op.getValueType(),
-                                              Src1, Src2, Src3),
-                                  Mask, PassThru, Subtarget, DAG);
-    }
     case IFMA_OP:
       // NOTE: We need to swizzle the operands to pass the multiply operands
       // first.
@@ -21811,13 +21775,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, Src,
                                               DAG.getIntPtrConstant(0, dl)),
                                   Mask, PassThru, Subtarget, DAG);
-    }
-    case FPCLASS: {
-      // FPclass intrinsics
-      SDValue Src1 = Op.getOperand(1);
-      MVT MaskVT = Op.getSimpleValueType();
-      SDValue Imm = Op.getOperand(2);
-      return DAG.getNode(IntrData->Opc0, dl, MaskVT, Src1, Imm);
     }
     case FPCLASSS: {
       SDValue Src1 = Op.getOperand(1);

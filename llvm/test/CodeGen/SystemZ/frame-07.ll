@@ -1,7 +1,7 @@
 ; Test the saving and restoring of FPRs in large frames.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 | FileCheck -check-prefix=CHECK-NOFP %s
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 -disable-fp-elim | FileCheck -check-prefix=CHECK-FP %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 -frame-pointer=all | FileCheck -check-prefix=CHECK-FP %s
 
 ; Test a frame size that requires some FPRs to be saved and loaded using
 ; the 20-bit STDY and LDY while others can use the 12-bit STD and LD.

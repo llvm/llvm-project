@@ -3192,12 +3192,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
   if (RequiresAdjustment) {
     const FunctionType *AdjustedType = New->getType()->getAs<FunctionType>();
     AdjustedType = Context.adjustFunctionType(AdjustedType, NewTypeInfo);
-
-    QualType AdjustedQT = QualType(AdjustedType, 0);
-    LangAS AS = Old->getType().getAddressSpace();
-    AdjustedQT = Context.getAddrSpaceQualType(AdjustedQT, AS);
-
-    New->setType(AdjustedQT);
+    New->setType(QualType(AdjustedType, 0));
     NewQType = Context.getCanonicalType(New->getType());
     NewType = cast<FunctionType>(NewQType);
   }

@@ -1,4 +1,4 @@
-; RUN: llc < %s -O0 -disable-fp-elim -relocation-model=pic
+; RUN: llc < %s -O0 -frame-pointer=all -relocation-model=pic
 ; PR7313
 ;
 ; The inline asm in this function clobbers almost all allocatable registers.

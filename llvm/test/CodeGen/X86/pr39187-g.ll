@@ -7,22 +7,8 @@
 ; location keep references to its basic block, causing the debug information
 ; to become ambiguous. It causes the debugger to display unreached lines.
 
-; Change the debug location associated with the hoisted instruction, to
-; the debug location from the insertion point in the 'if' block.
-
-; The insertion point is the previous non-debug instruction before the
-; terminator in the parent basic block of the hoisted instruction.
-
-; IR with '-g':
-;
-;  [...]
-;  %frombool = zext i1 %cmp to i8, !dbg !26
-;  call void @llvm.dbg.value(metadata i8 %frombool, metadata !15, metadata !DIExpression()), !dbg !26
-;  call void @llvm.dbg.value(metadata i32 0, metadata !17, metadata !DIExpression()), !dbg !27
-;  br i1 %cmp, label %if.then, label %if.else
-;  [...]
-;
-; Insertion point is: %frombool = zext i1 %cmp to i8, !dbg !26
+; Check that hoisted instructions get unknown-location line numbers -- there
+; is no correct line number for code that has been common'd in this way.
 
 ; IR generated with:
 ; clang -S -g -gno-column-info -O2 -emit-llvm pr39187.cpp -o pr39187-g.ll -mllvm -opt-bisect-limit=10
@@ -54,7 +40,8 @@
 ; CHECK:  %frombool = zext i1 %cmp to i8, !dbg !16
 ; CHECK:  call void @llvm.dbg.value(metadata i8 %frombool, metadata !13, metadata !DIExpression()), !dbg !16
 ; CHECK:  call void @llvm.dbg.value(metadata i32 0, metadata !15, metadata !DIExpression()), !dbg !17
-; CHECK:  %. = select i1 %cmp, i32 8, i32 4, !dbg !16
+; CHECK:  %. = select i1 %cmp, i32 8, i32 4, !dbg ![[MERGEDLOC:[0-9]+]]
+; CHECK:  ![[MERGEDLOC]] = !DILocation(line: 0, scope: !7)
 
 ; ModuleID = 'pr39187.cpp'
 source_filename = "pr39187.cpp"
@@ -77,11 +64,11 @@ entry:
 
 if.then:                                          ; preds = %entry
   call void @llvm.dbg.value(metadata i32 8, metadata !14, metadata !DIExpression()), !dbg !25
-  br label %if.end
+  br label %if.end, !dbg !25
 
 if.else:                                          ; preds = %entry
-  call void @llvm.dbg.value(metadata i32 4, metadata !14, metadata !DIExpression()), !dbg !25
-  br label %if.end
+  call void @llvm.dbg.value(metadata i32 4, metadata !14, metadata !DIExpression()), !dbg !27
+  br label %if.end, !dbg !27
 
 if.end:                                           ; preds = %if.else, %if.then
   %beards.0 = phi i32 [ 8, %if.then ], [ 4, %if.else ]

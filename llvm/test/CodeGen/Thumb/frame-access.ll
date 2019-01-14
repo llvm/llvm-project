@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumbv6m-eabi -disable-fp-elim=false %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv6m-eabi -frame-pointer=none %s -o - | FileCheck %s
 
 ; struct S { int x[128]; } s;
 ; int f(int *, int, int, int, struct S);

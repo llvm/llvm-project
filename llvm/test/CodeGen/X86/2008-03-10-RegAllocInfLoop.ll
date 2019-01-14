@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-pc-linux-gnu -relocation-model=pic -disable-fp-elim
+; RUN: llc < %s -mtriple=i386-pc-linux-gnu -relocation-model=pic -frame-pointer=all
 ; PR2134
 
 declare fastcc i8* @w_addchar(i8*, i32*, i32*, i8 signext ) nounwind 

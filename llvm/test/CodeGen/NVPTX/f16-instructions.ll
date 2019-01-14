@@ -1,20 +1,20 @@
 ; ## Full FP16 support enabled by default.
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
-; RUN:          -O0 -disable-post-ra -disable-fp-elim -verify-machineinstrs \
+; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOFTZ,CHECK-F16,CHECK-F16-NOFTZ %s
 ; ## Full FP16 with FTZ
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
-; RUN:          -O0 -disable-post-ra -disable-fp-elim -verify-machineinstrs \
+; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:          -nvptx-f32ftz \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-F16,CHECK-F16-FTZ %s
 ; ## FP16 support explicitly disabled.
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
-; RUN:          -O0 -disable-post-ra -disable-fp-elim --nvptx-no-f16-math \
+; RUN:          -O0 -disable-post-ra -frame-pointer=all --nvptx-no-f16-math \
 ; RUN:           -verify-machineinstrs \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOFTZ,CHECK-NOF16 %s
 ; ## FP16 is not supported by hardware.
 ; RUN: llc < %s -O0 -mtriple=nvptx64-nvidia-cuda -mcpu=sm_52 -asm-verbose=false \
-; RUN:          -disable-post-ra -disable-fp-elim -verify-machineinstrs \
+; RUN:          -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOFTZ,CHECK-NOF16 %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
