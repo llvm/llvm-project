@@ -1,5 +1,5 @@
-; RUN: llc -disable-fp-elim -relocation-model=pic < %s
-; RUN: llc -disable-fp-elim -relocation-model=pic -O0 -pre-RA-sched=source < %s | FileCheck %s --check-prefix=SOURCE-SCHED
+; RUN: llc -frame-pointer=all -relocation-model=pic < %s
+; RUN: llc -frame-pointer=all -relocation-model=pic -O0 -pre-RA-sched=source < %s | FileCheck %s --check-prefix=SOURCE-SCHED
 target triple = "armv6-apple-ios"
 
 ; Reduced from 177.mesa. This test causes a live range split before an LDR_POST instruction.

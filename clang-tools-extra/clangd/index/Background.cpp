@@ -476,29 +476,33 @@ BackgroundIndex::loadShard(const tooling::CompileCommand &Cmd,
   // Dependencies of this TU, paired with the information about whether they
   // need to be re-indexed or not.
   std::vector<Source> Dependencies;
+  std::queue<Source> ToVisit;
   std::string AbsolutePath = getAbsolutePath(Cmd).str();
   // Up until we load the shard related to a dependency it needs to be
   // re-indexed.
-  Dependencies.emplace_back(AbsolutePath, true);
+  ToVisit.emplace(AbsolutePath, true);
   InQueue.insert(AbsolutePath);
   // Goes over each dependency.
-  for (size_t CurrentDependency = 0; CurrentDependency < Dependencies.size();
-       CurrentDependency++) {
-    llvm::StringRef CurDependencyPath = Dependencies[CurrentDependency].Path;
+  while (!ToVisit.empty()) {
+    Dependencies.push_back(std::move(ToVisit.front()));
+    // Dependencies is not modified during the rest of the loop, so it is safe
+    // to keep the reference.
+    auto &CurDependency = Dependencies.back();
+    ToVisit.pop();
     // If we have already seen this shard before(either loaded or failed) don't
     // re-try again. Since the information in the shard won't change from one TU
     // to another.
-    if (!LoadedShards.try_emplace(CurDependencyPath).second) {
+    if (!LoadedShards.try_emplace(CurDependency.Path).second) {
       // If the dependency needs to be re-indexed, first occurence would already
       // have detected that, so we don't need to issue it again.
-      Dependencies[CurrentDependency].NeedsReIndexing = false;
+      CurDependency.NeedsReIndexing = false;
       continue;
     }
 
-    auto Shard = IndexStorage->loadShard(CurDependencyPath);
+    auto Shard = IndexStorage->loadShard(CurDependency.Path);
     if (!Shard || !Shard->Sources) {
       // File will be returned as requiring re-indexing to caller.
-      vlog("Failed to load shard: {0}", CurDependencyPath);
+      vlog("Failed to load shard: {0}", CurDependency.Path);
       continue;
     }
     // These are the edges in the include graph for current dependency.
@@ -506,34 +510,34 @@ BackgroundIndex::loadShard(const tooling::CompileCommand &Cmd,
       auto U = URI::parse(I.getKey());
       if (!U)
         continue;
-      auto AbsolutePath = URI::resolve(*U, CurDependencyPath);
+      auto AbsolutePath = URI::resolve(*U, CurDependency.Path);
       if (!AbsolutePath)
         continue;
       // Add file as dependency if haven't seen before.
       if (InQueue.try_emplace(*AbsolutePath).second)
-        Dependencies.emplace_back(*AbsolutePath, true);
+        ToVisit.emplace(*AbsolutePath, true);
       // The node contains symbol information only for current file, the rest is
       // just edges.
-      if (*AbsolutePath != CurDependencyPath)
+      if (*AbsolutePath != CurDependency.Path)
         continue;
 
       // We found source file info for current dependency.
       assert(I.getValue().Digest != FileDigest{{0}} && "Digest is empty?");
       ShardInfo SI;
-      SI.AbsolutePath = CurDependencyPath;
+      SI.AbsolutePath = CurDependency.Path;
       SI.Shard = std::move(Shard);
       SI.Digest = I.getValue().Digest;
       IntermediateSymbols.push_back(std::move(SI));
       // Check if the source needs re-indexing.
       // Get the digest, skip it if file doesn't exist.
-      auto Buf = FS->getBufferForFile(CurDependencyPath);
+      auto Buf = FS->getBufferForFile(CurDependency.Path);
       if (!Buf) {
-        elog("Couldn't get buffer for file: {0}: {1}", CurDependencyPath,
+        elog("Couldn't get buffer for file: {0}: {1}", CurDependency.Path,
              Buf.getError().message());
         continue;
       }
       // If digests match then dependency doesn't need re-indexing.
-      Dependencies[CurrentDependency].NeedsReIndexing =
+      CurDependency.NeedsReIndexing =
           digest(Buf->get()->getBuffer()) != I.getValue().Digest;
     }
   }

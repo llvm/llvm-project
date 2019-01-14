@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-linux-gnu | FileCheck -check-prefix=LINUX-NO-FP %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-linux-gnu -disable-fp-elim | FileCheck -check-prefix=LINUX-FP %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-linux-gnu -frame-pointer=all | FileCheck -check-prefix=LINUX-FP %s
 
 define void @func() {
 entry:

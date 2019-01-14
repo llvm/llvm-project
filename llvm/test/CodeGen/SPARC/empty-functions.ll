@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=sparc-linux-gnu | FileCheck -check-prefix=LINUX-NO-FP %s
-; RUN: llc < %s -mtriple=sparc-linux-gnu -disable-fp-elim | FileCheck -check-prefix=LINUX-FP %s
+; RUN: llc < %s -mtriple=sparc-linux-gnu -frame-pointer=all | FileCheck -check-prefix=LINUX-FP %s
 
 define void @func() {
 entry:

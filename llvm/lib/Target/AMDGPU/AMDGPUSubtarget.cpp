@@ -74,6 +74,9 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // We want to be able to turn these off, but making this a subtarget feature
   // for SI has the unhelpful behavior that it unsets everything else if you
   // disable it.
+  //
+  // Similarly we want enable-prt-strict-null to be on by default and not to
+  // unset everything else if it is disabled
 
   SmallString<256> FullFS("+promote-alloca,+dx10-clamp,+load-store-opt,");
 
@@ -88,6 +91,8 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   } else {
     FullFS += "-fp32-denormals,";
   }
+
+  FullFS += "+enable-prt-strict-null,"; // This is overridden by a disable in FS
 
   FullFS += FS;
 
@@ -175,6 +180,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     EnableUnsafeDSOffsetFolding(false),
     EnableSIScheduler(false),
     EnableDS128(false),
+    EnablePRTStrictNull(false),
     DumpCode(false),
 
     FP64(false),

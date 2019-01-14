@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -relocation-model=pic -disable-fp-elim | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -relocation-model=pic -frame-pointer=all | FileCheck %s
 ; <rdar://problem/7604010>
 
 %cmd.type = type { }

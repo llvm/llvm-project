@@ -4836,11 +4836,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           LangAS AS =
               (CurAS == LangAS::Default ? LangAS::opencl_generic : CurAS);
           EPI.TypeQuals.addAddressSpace(AS);
-          T = Context.getFunctionType(T, ParamTys, EPI);
-          T = state.getSema().Context.getAddrSpaceQualType(T, AS);
-        } else {
-          T = Context.getFunctionType(T, ParamTys, EPI);
         }
+        T = Context.getFunctionType(T, ParamTys, EPI);
       }
       break;
     }

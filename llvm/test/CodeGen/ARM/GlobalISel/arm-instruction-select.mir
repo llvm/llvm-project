@@ -64,8 +64,12 @@
   define void @test_stores() #0 { ret void }
 
   define void @test_gep() { ret void }
+
+  define void @test_MOVi32imm() #3 { ret void }
+
   define void @test_constant_imm() { ret void }
   define void @test_constant_cimm() { ret void }
+
   define void @test_pointer_constant_unconstrained() { ret void }
   define void @test_pointer_constant_constrained() { ret void }
 
@@ -1478,6 +1482,23 @@ body:             |
     ; CHECK: %[[GEP:[0-9]+]]:gpr = ADDrr %[[PTR]], %[[OFF]], 14, $noreg, $noreg
 
     $r0 = COPY %2(p0)
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_MOVi32imm
+# CHECK-LABEL: name: test_MOVi32imm
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+body:             |
+  bb.0:
+    %0(s32) = G_CONSTANT 65537
+    ; CHECK: %[[C:[0-9]+]]:gpr = MOVi32imm 65537
+
+    $r0 = COPY %0(s32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---

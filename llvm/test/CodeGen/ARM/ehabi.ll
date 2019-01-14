@@ -13,13 +13,13 @@
 ;     nounwind function attribute.
 
 ; We have to check several cases:
-; (1) arm with -disable-fp-elim
-; (2) arm without -disable-fp-elim
-; (3) armv7 with -disable-fp-elim
-; (4) armv7 without -disable-fp-elim
+; (1) arm with -frame-pointer=all
+; (2) arm without -frame-pointer=all
+; (3) armv7 with -frame-pointer=all
+; (4) armv7 without -frame-pointer=all
 
 ; RUN: llc -mtriple arm-unknown-linux-gnueabi \
-; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-FP
 
 ; RUN: llc -mtriple arm-unknown-linux-gnueabi \
@@ -27,7 +27,7 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-FP-ELIM
 
 ; RUN: llc -mtriple armv7-unknown-linux-gnueabi \
-; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-V7-FP
 
 ; RUN: llc -mtriple armv7-unknown-linux-gnueabi \
@@ -35,7 +35,7 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-V7-FP-ELIM
 
 ; RUN: llc -mtriple arm-unknown-linux-musleabi \
-; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-FP
 
 ; RUN: llc -mtriple arm-unknown-linux-musleabi \
@@ -43,7 +43,7 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-FP-ELIM
 
 ; RUN: llc -mtriple armv7-unknown-linux-musleabi \
-; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-V7-FP
 
 ; RUN: llc -mtriple armv7-unknown-linux-musleabi \
@@ -51,7 +51,7 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-V7-FP-ELIM
 
 ; RUN: llc -mtriple arm-unknown-linux-androideabi \
-; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-FP
 
 ; RUN: llc -mtriple arm-unknown-linux-androideabi \
@@ -59,7 +59,7 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-FP-ELIM
 
 ; RUN: llc -mtriple armv7-unknown-linux-androideabi \
-; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-V7-FP
 
 ; RUN: llc -mtriple armv7-unknown-linux-androideabi \
@@ -67,7 +67,7 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-V7-FP-ELIM
 
 ; RUN: llc -mtriple arm-unknown-netbsd-eabi \
-; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=DWARF-FP
 
 ; RUN: llc -mtriple arm-unknown-netbsd-eabi \
@@ -75,7 +75,7 @@
 ; RUN:   | FileCheck %s --check-prefix=DWARF-FP-ELIM
 
 ; RUN: llc -mtriple armv7-unknown-netbsd-eabi \
-; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=DWARF-V7-FP
 
 ; RUN: llc -mtriple armv7-unknown-netbsd-eabi \

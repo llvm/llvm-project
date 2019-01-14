@@ -125,7 +125,7 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
   EXPECT_THAT(
       runFuzzyFind(Idx, ""),
-      UnorderedElementsAre(Named("common"), Named("A_CC"),
+      UnorderedElementsAre(Named("common"), Named("A_CC"), Named("g"),
                            AllOf(Named("f_b"), Declared(), Not(Defined()))));
 
   Cmd.Filename = testPath("root/B.cc");
@@ -135,7 +135,7 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
   // B_CC is dropped as we don't collect symbols from A.h in this compilation.
   EXPECT_THAT(runFuzzyFind(Idx, ""),
-              UnorderedElementsAre(Named("common"), Named("A_CC"),
+              UnorderedElementsAre(Named("common"), Named("A_CC"), Named("g"),
                                    AllOf(Named("f_b"), Declared(), Defined())));
 
   auto Syms = runFuzzyFind(Idx, "common");
@@ -198,7 +198,7 @@ TEST_F(BackgroundIndexTest, ShardStorageTest) {
 
   auto ShardSource = MSS.loadShard(testPath("root/A.cc"));
   EXPECT_NE(ShardSource, nullptr);
-  EXPECT_THAT(*ShardSource->Symbols, UnorderedElementsAre());
+  EXPECT_THAT(*ShardSource->Symbols, UnorderedElementsAre(Named("g")));
   EXPECT_THAT(*ShardSource->Refs, RefsAre({FileURI("unittest:///root/A.cc")}));
 }
 

@@ -307,6 +307,10 @@ class Sema {
   }
   bool shouldLinkPossiblyHiddenDecl(LookupResult &Old, const NamedDecl *New);
 
+  void setupImplicitSpecialMemberType(CXXMethodDecl *SpecialMem,
+                                      QualType ResultTy,
+                                      ArrayRef<QualType> Args);
+
 public:
   typedef OpaquePtr<DeclGroupRef> DeclGroupPtrTy;
   typedef OpaquePtr<TemplateName> TemplateTy;

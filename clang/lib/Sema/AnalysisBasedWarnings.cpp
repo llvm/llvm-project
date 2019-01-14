@@ -1153,7 +1153,12 @@ namespace {
     bool TraverseDecl(Decl *D) { return true; }
 
     // We analyze lambda bodies separately. Skip them here.
-    bool TraverseLambdaBody(LambdaExpr *LE) { return true; }
+    bool TraverseLambdaExpr(LambdaExpr *LE) {
+      // Traverse the captures, but not the body.
+      for (const auto &C : zip(LE->captures(), LE->capture_inits()))
+        TraverseLambdaCapture(LE, &std::get<0>(C), std::get<1>(C));
+      return true;
+    }
 
   private:
 

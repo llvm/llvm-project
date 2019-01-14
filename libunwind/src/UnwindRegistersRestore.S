@@ -1000,6 +1000,28 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind21Registers_mips_newabi6jumptoEv)
   ld    $4, (8 * 4)($4)
   .set pop
 
+#elif defined(__sparc__)
+
+//
+// void libunwind::Registers_sparc_o32::jumpto()
+//
+// On entry:
+//  thread_state pointer is in o0
+//
+DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind15Registers_sparc6jumptoEv)
+  ta 3
+  ldd [%o0 + 64],  %l0
+  ldd [%o0 + 72],  %l2
+  ldd [%o0 + 80],  %l4
+  ldd [%o0 + 88],  %l6
+  ldd [%o0 + 96],  %i0
+  ldd [%o0 + 104], %i2
+  ldd [%o0 + 112], %i4
+  ldd [%o0 + 120], %i6
+  ld  [%o0 + 60],  %o7
+  jmp %o7
+   nop
+
 #endif
 
 #endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */

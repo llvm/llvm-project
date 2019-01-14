@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple arm-unknown-linux-gnueabi -filetype asm -o - %s | FileCheck %s --check-prefix=CHECK-FP
-; RUN: llc -mtriple arm-unknown-linux-gnueabi -filetype asm -o - %s -disable-fp-elim | FileCheck %s --check-prefix=CHECK-FP-ELIM
+; RUN: llc -mtriple arm-unknown-linux-gnueabi -filetype asm -o - %s -frame-pointer=all | FileCheck %s --check-prefix=CHECK-FP-ELIM
 ; RUN: llc -mtriple thumb-unknown-linux-gnueabi -filetype asm -o - %s | FileCheck %s --check-prefix=CHECK-THUMB-FP
-; RUN: llc -mtriple thumb-unknown-linux-gnueabi -filetype asm -o - %s -disable-fp-elim | FileCheck %s --check-prefix=CHECK-THUMB-FP-ELIM
+; RUN: llc -mtriple thumb-unknown-linux-gnueabi -filetype asm -o - %s -frame-pointer=all | FileCheck %s --check-prefix=CHECK-THUMB-FP-ELIM
 
 ; Tests that the initial space allocated to the varargs on the stack is
 ; taken into account in the .cfi_ directives.

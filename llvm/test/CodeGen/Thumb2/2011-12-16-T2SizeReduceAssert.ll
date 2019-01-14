@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-ios -relocation-model=pic -disable-fp-elim -mcpu=cortex-a8
+; RUN: llc < %s -mtriple=thumbv7-apple-ios -relocation-model=pic -frame-pointer=all -mcpu=cortex-a8
 ; RUN: llc < %s -mtriple=thumbv8-none-linux-gnueabi
 
 %struct.LIST_NODE.0.16 = type { %struct.LIST_NODE.0.16*, i8* }

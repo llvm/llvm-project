@@ -79,12 +79,11 @@ ARMFrameLowering::ARMFrameLowering(const ARMSubtarget &sti)
     : TargetFrameLowering(StackGrowsDown, sti.getStackAlignment(), 0, 4),
       STI(sti) {}
 
-bool ARMFrameLowering::noFramePointerElim(const MachineFunction &MF) const {
+bool ARMFrameLowering::keepFramePointer(const MachineFunction &MF) const {
   // iOS always has a FP for backtracking, force other targets to keep their FP
   // when doing FastISel. The emitted code is currently superior, and in cases
   // like test-suite's lencod FastISel isn't quite correct when FP is eliminated.
-  return TargetFrameLowering::noFramePointerElim(MF) ||
-         MF.getSubtarget<ARMSubtarget>().useFastISel();
+  return MF.getSubtarget<ARMSubtarget>().useFastISel();
 }
 
 /// Returns true if the target can safely skip saving callee-saved registers

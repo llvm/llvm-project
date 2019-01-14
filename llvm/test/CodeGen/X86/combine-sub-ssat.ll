@@ -11,13 +11,75 @@ declare  i32 @llvm.ssub.sat.i32  (i32, i32)
 declare  i64 @llvm.ssub.sat.i64  (i64, i64)
 declare  <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16>, <8 x i16>)
 
-; fold (ssub_sat c, 0) -> x
+; fold (ssub_sat x, undef) -> 0
+define i32 @combine_undef_i32(i32 %a0) {
+; CHECK-LABEL: combine_undef_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %res = call i32 @llvm.ssub.sat.i32(i32 %a0, i32 undef)
+  ret i32 %res
+}
+
+define <8 x i16> @combine_undef_v8i16(<8 x i16> %a0) {
+; SSE-LABEL: combine_undef_v8i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_undef_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %res = call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> undef, <8 x i16> %a0)
+  ret <8 x i16> %res
+}
+
+; fold (ssub_sat c1, c2) -> c3
+define i32 @combine_constfold_i32() {
+; CHECK-LABEL: combine_constfold_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $-2147483547, %eax # imm = 0x80000065
+; CHECK-NEXT:    retq
+  %res = call i32 @llvm.ssub.sat.i32(i32 100, i32 2147483647)
+  ret i32 %res
+}
+
+define <8 x i16> @combine_constfold_v8i16() {
+; SSE-LABEL: combine_constfold_v8i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [65535,2,254,0,65534,65282,32786,2]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_constfold_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [65535,2,254,0,65534,65282,32786,2]
+; AVX-NEXT:    retq
+  %res = call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> <i16 0, i16 1, i16 255, i16 65535, i16 -1, i16 -255, i16 -32760, i16 1>, <8 x i16> <i16 1, i16 65535, i16 1, i16 65535, i16 1, i16 65535, i16 -10, i16 65535>)
+  ret <8 x i16> %res
+}
+
+define <8 x i16> @combine_constfold_undef_v8i16() {
+; SSE-LABEL: combine_constfold_undef_v8i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,65534,65282,32786,2]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_constfold_undef_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,65534,65282,32786,2]
+; AVX-NEXT:    retq
+  %res = call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> <i16 undef, i16 1, i16 undef, i16 65535, i16 -1, i16 -255, i16 -32760, i16 1>, <8 x i16> <i16 1, i16 undef, i16 undef, i16 65535, i16 1, i16 65535, i16 -10, i16 65535>)
+  ret <8 x i16> %res
+}
+
+; fold (ssub_sat x, 0) -> x
 define i32 @combine_zero_i32(i32 %a0) {
 ; CHECK-LABEL: combine_zero_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
-  %1 = call i32 @llvm.ssub.sat.i32(i32 %a0, i32 0);
+  %1 = call i32 @llvm.ssub.sat.i32(i32 %a0, i32 0)
   ret i32 %1
 }
 
@@ -25,6 +87,30 @@ define <8 x i16> @combine_zero_v8i16(<8 x i16> %a0) {
 ; CHECK-LABEL: combine_zero_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
-  %1 = call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> %a0, <8 x i16> zeroinitializer);
+  %1 = call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> %a0, <8 x i16> zeroinitializer)
+  ret <8 x i16> %1
+}
+
+; fold (ssub_sat x, x) -> 0
+define i32 @combine_self_i32(i32 %a0) {
+; CHECK-LABEL: combine_self_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %1 = call i32 @llvm.ssub.sat.i32(i32 %a0, i32 %a0)
+  ret i32 %1
+}
+
+define <8 x i16> @combine_self_v8i16(<8 x i16> %a0) {
+; SSE-LABEL: combine_self_v8i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_self_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> %a0, <8 x i16> %a0)
   ret <8 x i16> %1
 }

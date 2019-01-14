@@ -145,7 +145,12 @@ void FunctionSizeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void FunctionSizeCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(functionDecl(unless(isInstantiated())).bind("func"), this);
+  // Lambdas ignored - historically considered part of enclosing function.
+  // FIXME: include them instead? Top-level lambdas are currently never counted.
+  Finder->addMatcher(functionDecl(unless(isInstantiated()),
+                                  unless(cxxMethodDecl(ofClass(isLambda()))))
+                         .bind("func"),
+                     this);
 }
 
 void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-ios -relocation-model=pic -disable-fp-elim -mcpu=cortex-a8 | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv7-apple-ios -relocation-model=pic -frame-pointer=all -mcpu=cortex-a8 | FileCheck %s
 ; rdar://10676853
 
 %struct.Dict_node_struct = type { i8*, %struct.Word_file_struct*, %struct.Exp_struct*, %struct.Dict_node_struct*, %struct.Dict_node_struct* }

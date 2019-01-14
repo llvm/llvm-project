@@ -1,6 +1,6 @@
 ; Test the handling of the frame pointer (%r11).
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -disable-fp-elim | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -frame-pointer=all | FileCheck %s
 
 ; We should always initialise %r11 when FP elimination is disabled.
 ; We don't need to allocate any more than the caller-provided 160-byte

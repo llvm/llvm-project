@@ -1821,9 +1821,9 @@ TARGET_BUILTIN(__builtin_ia32_cvtsd2ss_round_mask, "V4fV4fV2dV4fUcIi", "ncV:128:
 TARGET_BUILTIN(__builtin_ia32_cvtsi2ss32, "V4fV4fiIi", "ncV:128:", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_cvtss2sd_round_mask, "V2dV2dV4fV2dUcIi", "ncV:128:", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_cvtusi2ss32, "V4fV4fUiIi", "ncV:128:", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_vpmultishiftqb512_mask, "V64cV64cV64cV64cULLi", "ncV:512:", "avx512vbmi")
-TARGET_BUILTIN(__builtin_ia32_vpmultishiftqb128_mask, "V16cV16cV16cV16cUs", "ncV:128:", "avx512vbmi,avx512vl")
-TARGET_BUILTIN(__builtin_ia32_vpmultishiftqb256_mask, "V32cV32cV32cV32cUi", "ncV:256:", "avx512vbmi,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vpmultishiftqb512, "V64cV64cV64c", "ncV:512:", "avx512vbmi")
+TARGET_BUILTIN(__builtin_ia32_vpmultishiftqb128, "V16cV16cV16c", "ncV:128:", "avx512vbmi,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vpmultishiftqb256, "V32cV32cV32c", "ncV:256:", "avx512vbmi,avx512vl")
 
 // generic select intrinsics
 TARGET_BUILTIN(__builtin_ia32_selectb_128, "V16cUsV16cV16c", "ncV:128:", "avx512bw,avx512vl")
