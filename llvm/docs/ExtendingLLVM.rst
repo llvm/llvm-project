@@ -253,10 +253,6 @@ Adding a fundamental type
    add enum ``LLVMTypeKind`` and modify
    ``LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty)`` for the new type
 
-#. ``llvm/include/llvm/IR/TypeBuilder.h``:
-
-   add new class to represent new type in the hierarchy
-
 #. ``llvm/lib/AsmParser/LLLexer.cpp``:
 
    add ability to parse in the type from text assembly
@@ -298,10 +294,6 @@ Adding a derived type
 
    add enum ``LLVMTypeKind`` and modify
    `LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty)` for the new type
-
-#. ``llvm/include/llvm/IR/TypeBuilder.h``:
-
-   add new class to represent new class in the hierarchy
 
 #. ``llvm/lib/AsmParser/LLLexer.cpp``:
 

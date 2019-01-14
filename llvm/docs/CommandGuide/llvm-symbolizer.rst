@@ -106,7 +106,7 @@ OPTIONS
  location, look for the debug info at the .dSYM path provided via the
  ``-dsym-hint`` flag. This flag can be used multiple times.
 
-.. option:: -print-address
+.. option:: -print-address, -addresses, -a
 
  Print address before the source code location. Defaults to false.
 

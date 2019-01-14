@@ -298,6 +298,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.max.p") || // Added in 7.0. 128/256 in 5.0
       Name.startswith("avx512.mask.min.p") || // Added in 7.0. 128/256 in 5.0
       Name.startswith("avx512.mask.fpclass.p") || // Added in 7.0
+      Name.startswith("avx512.mask.vpshufbitqmb.") || // Added in 8.0
+      Name.startswith("avx512.mask.pmultishift.qb.") || // Added in 8.0
       Name == "sse.cvtsi2ss" || // Added in 7.0
       Name == "sse.cvtsi642ss" || // Added in 7.0
       Name == "sse2.cvtsi2sd" || // Added in 7.0
@@ -1447,6 +1449,15 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
       IID = Intrinsic::x86_avx512_dbpsadbw_512;
     else
       llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("pmultishift.qb.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_avx512_pmultishift_qb_128;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx512_pmultishift_qb_256;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_pmultishift_qb_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
   } else
     return false;
 
@@ -1758,6 +1769,20 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       // "avx512.mask.pcmpeq." or "avx512.mask.pcmpgt."
       bool CmpEq = Name[16] == 'e';
       Rep = upgradeMaskedCompare(Builder, *CI, CmpEq ? 0 : 6, true);
+    } else if (IsX86 && Name.startswith("avx512.mask.vpshufbitqmb.")) {
+      Type *OpTy = CI->getArgOperand(0)->getType();
+      unsigned VecWidth = OpTy->getPrimitiveSizeInBits();
+      Intrinsic::ID IID;
+      switch (VecWidth) {
+      default: llvm_unreachable("Unexpected intrinsic");
+      case 128: IID = Intrinsic::x86_avx512_vpshufbitqmb_128; break;
+      case 256: IID = Intrinsic::x86_avx512_vpshufbitqmb_256; break;
+      case 512: IID = Intrinsic::x86_avx512_vpshufbitqmb_512; break;
+      }
+
+      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
+                               { CI->getOperand(0), CI->getArgOperand(1) });
+      Rep = ApplyX86MaskOn1BitsVec(Builder, Rep, CI->getArgOperand(2));
     } else if (IsX86 && Name.startswith("avx512.mask.fpclass.p")) {
       Type *OpTy = CI->getArgOperand(0)->getType();
       unsigned VecWidth = OpTy->getPrimitiveSizeInBits();

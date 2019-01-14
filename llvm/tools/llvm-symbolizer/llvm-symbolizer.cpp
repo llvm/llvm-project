@@ -83,9 +83,17 @@ static cl::list<std::string>
 ClDsymHint("dsym-hint", cl::ZeroOrMore,
            cl::desc("Path to .dSYM bundles to search for debug info for the "
                     "object files"));
+
+// -print-address, -addresses, -a
 static cl::opt<bool>
-    ClPrintAddress("print-address", cl::init(false),
-                   cl::desc("Show address before line information"));
+ClPrintAddress("print-address", cl::init(false),
+               cl::desc("Show address before line information"));
+static cl::alias
+ClPrintAddressAliasAddresses("addresses", cl::desc("Alias for -print-address"),
+                             cl::NotHidden, cl::aliasopt(ClPrintAddress));
+static cl::alias
+ClPrintAddressAliasA("a", cl::desc("Alias for -print-address"),
+                     cl::NotHidden, cl::aliasopt(ClPrintAddress));
 
 // -pretty-print, -p
 static cl::opt<bool>

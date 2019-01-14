@@ -75,7 +75,7 @@ def X86dbpsadbw : SDNode<"X86ISD::DBPSADBW",
                   SDTypeProfile<1, 3, [SDTCVecEltisVT<0, i16>,
                                        SDTCVecEltisVT<1, i8>,
                                        SDTCisSameSizeAs<0,1>,
-                                       SDTCisSameAs<1,2>, SDTCisInt<3>]>>;
+                                       SDTCisSameAs<1,2>, SDTCisVT<3, i8>]>>;
 def X86andnp   : SDNode<"X86ISD::ANDNP",
                  SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                       SDTCisSameAs<0,2>]>>;

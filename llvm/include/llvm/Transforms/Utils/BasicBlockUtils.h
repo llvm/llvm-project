@@ -43,6 +43,13 @@ class Value;
 /// Delete the specified block, which must have no predecessors.
 void DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 
+/// Delete the specified blocks from \p BB. The set of deleted blocks must have
+/// no predecessors that are not being deleted themselves. \p BBs must have no
+/// duplicating blocks. If there are loops among this set of blocks, all
+/// relevant loop info updates should be done before this function is called.
+void DeleteDeadBlocks(SmallVectorImpl <BasicBlock *> &BBs,
+                      DomTreeUpdater *DTU = nullptr);
+
 /// We know that BB has one predecessor. If there are any single-entry PHI nodes
 /// in it, fold them away. This handles the case when all entries to the PHI
 /// nodes in a block are guaranteed equal, such as when the block has exactly
