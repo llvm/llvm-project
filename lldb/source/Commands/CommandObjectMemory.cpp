@@ -519,15 +519,15 @@ protected:
         --pointer_count;
       }
 
-      m_format_options.GetByteSizeValue() = clang_ast_type.GetByteSize(nullptr);
-
-      if (m_format_options.GetByteSizeValue() == 0) {
+      auto size = clang_ast_type.GetByteSize(nullptr);
+      if (!size) {
         result.AppendErrorWithFormat(
             "unable to get the byte size of the type '%s'\n",
             view_as_type_cstr);
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
+      m_format_options.GetByteSizeValue() = *size;
 
       if (!m_format_options.GetCountValue().OptionWasSet())
         m_format_options.GetCountValue() = 1;
@@ -642,12 +642,15 @@ protected:
       if (!m_format_options.GetFormatValue().OptionWasSet())
         m_format_options.GetFormatValue().SetCurrentValue(eFormatDefault);
 
-      bytes_read = clang_ast_type.GetByteSize(nullptr) *
-                   m_format_options.GetCountValue().GetCurrentValue();
+      auto size = clang_ast_type.GetByteSize(nullptr);
+      if (!size) {
+        result.AppendError("can't get size of type");
+        return false;
+      }
+      bytes_read = *size * m_format_options.GetCountValue().GetCurrentValue();
 
       if (argc > 0)
-        addr = addr + (clang_ast_type.GetByteSize(nullptr) *
-                       m_memory_options.m_offset.GetCurrentValue());
+        addr = addr + (*size * m_memory_options.m_offset.GetCurrentValue());
     } else if (m_format_options.GetFormatValue().GetCurrentValue() !=
                eFormatCString) {
       data_sp.reset(new DataBufferHeap(total_byte_size, '\0'));
@@ -1061,7 +1064,10 @@ protected:
                m_memory_options.m_expr.GetStringValue(), frame, result_sp)) &&
           result_sp) {
         uint64_t value = result_sp->GetValueAsUnsigned(0);
-        switch (result_sp->GetCompilerType().GetByteSize(nullptr)) {
+        auto size = result_sp->GetCompilerType().GetByteSize(nullptr);
+        if (!size)
+          return false;
+        switch (*size) {
         case 1: {
           uint8_t byte = (uint8_t)value;
           buffer.CopyData(&byte, 1);

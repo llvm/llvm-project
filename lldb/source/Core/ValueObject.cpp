@@ -756,10 +756,12 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
-  const uint64_t item_type_size = pointee_or_element_compiler_type.GetByteSize(
+  auto item_type_size = pointee_or_element_compiler_type.GetByteSize(
       exe_ctx.GetBestExecutionContextScope());
-  const uint64_t bytes = item_count * item_type_size;
-  const uint64_t offset = item_idx * item_type_size;
+  if (!item_type_size)
+    return 0;
+  const uint64_t bytes = item_count * *item_type_size;
+  const uint64_t offset = item_idx * *item_type_size;
 
   if (item_idx == 0 && item_count == 1) // simply a deref
   {
@@ -822,10 +824,10 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
       }
     } break;
     case eAddressTypeHost: {
-      const uint64_t max_bytes =
+      auto max_bytes =
           GetCompilerType().GetByteSize(exe_ctx.GetBestExecutionContextScope());
-      if (max_bytes > offset) {
-        size_t bytes_read = std::min<uint64_t>(max_bytes - offset, bytes);
+      if (max_bytes && *max_bytes > offset) {
+        size_t bytes_read = std::min<uint64_t>(*max_bytes - offset, bytes);
         addr = m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
         if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
           break;
@@ -1818,14 +1820,15 @@ ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
     return synthetic_child_sp;
 
   if (!can_create)
-    return ValueObjectSP();
+    return {};
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
-
-  ValueObjectChild *synthetic_child = new ValueObjectChild(
-      *this, type, name_const_str,
-      type.GetByteSize(exe_ctx.GetBestExecutionContextScope()), offset, 0, 0,
-      false, false, eAddressTypeInvalid, 0);
+  auto size = type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  if (!size)
+    return {};
+  ValueObjectChild *synthetic_child =
+      new ValueObjectChild(*this, type, name_const_str, *size, offset, 0, 0,
+                           false, false, eAddressTypeInvalid, 0);
   if (synthetic_child) {
     AddSyntheticChild(name_const_str, synthetic_child);
     synthetic_child_sp = synthetic_child->GetSP();
@@ -1856,16 +1859,17 @@ ValueObjectSP ValueObject::GetSyntheticBase(uint32_t offset,
     return synthetic_child_sp;
 
   if (!can_create)
-    return ValueObjectSP();
+    return {};
 
   const bool is_base_class = true;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
-
-  ValueObjectChild *synthetic_child = new ValueObjectChild(
-      *this, type, name_const_str,
-      type.GetByteSize(exe_ctx.GetBestExecutionContextScope()), offset, 0, 0,
-      is_base_class, false, eAddressTypeInvalid, 0);
+  auto size = type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  if (!size)
+    return {};
+  ValueObjectChild *synthetic_child =
+      new ValueObjectChild(*this, type, name_const_str, *size, offset, 0, 0,
+                           is_base_class, false, eAddressTypeInvalid, 0);
   if (synthetic_child) {
     AddSyntheticChild(name_const_str, synthetic_child);
     synthetic_child_sp = synthetic_child->GetSP();

@@ -376,18 +376,19 @@ bool ABISysV_s390x::GetArgumentValues(Thread &thread, ValueList &values) const {
     // We currently only support extracting values with Clang QualTypes. Do we
     // care about others?
     CompilerType compiler_type = value->GetCompilerType();
-    if (!compiler_type)
+    auto bit_size = compiler_type.GetBitSize(&thread);
+    if (!bit_size)
       return false;
     bool is_signed;
 
     if (compiler_type.IsIntegerOrEnumerationType(is_signed)) {
-      ReadIntegerArgument(value->GetScalar(), compiler_type.GetBitSize(&thread),
-                          is_signed, thread, argument_register_ids,
-                          current_argument_register, current_stack_argument);
+      ReadIntegerArgument(value->GetScalar(), *bit_size, is_signed, thread,
+                          argument_register_ids, current_argument_register,
+                          current_stack_argument);
     } else if (compiler_type.IsPointerType()) {
-      ReadIntegerArgument(value->GetScalar(), compiler_type.GetBitSize(&thread),
-                          false, thread, argument_register_ids,
-                          current_argument_register, current_stack_argument);
+      ReadIntegerArgument(value->GetScalar(), *bit_size, false, thread,
+                          argument_register_ids, current_argument_register,
+                          current_stack_argument);
     }
   }
 
@@ -445,8 +446,12 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       error.SetErrorString(
           "We don't support returning complex values at present");
     else {
-      size_t bit_width = compiler_type.GetBitSize(frame_sp.get());
-      if (bit_width <= 64) {
+      auto bit_width = compiler_type.GetBitSize(frame_sp.get());
+      if (!bit_width) {
+        error.SetErrorString("can't get type size");
+        return error;
+      }
+      if (*bit_width <= 64) {
         const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
         RegisterValue f0_value;
         DataExtractor data;
@@ -508,11 +513,13 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectSimple(
     if (type_flags & eTypeIsInteger) {
       // Extract the register context so we can read arguments from registers
 
-      const size_t byte_size = return_compiler_type.GetByteSize(nullptr);
+      auto byte_size = return_compiler_type.GetByteSize(nullptr);
+      if (!byte_size)
+        return return_valobj_sp;
       uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(
           reg_ctx->GetRegisterInfoByName("r2", 0), 0);
       const bool is_signed = (type_flags & eTypeIsSigned) != 0;
-      switch (byte_size) {
+      switch (*byte_size) {
       default:
         break;
 
@@ -552,21 +559,21 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectSimple(
       if (type_flags & eTypeIsComplex) {
         // Don't handle complex yet.
       } else {
-        const size_t byte_size = return_compiler_type.GetByteSize(nullptr);
-        if (byte_size <= sizeof(long double)) {
+        auto byte_size = return_compiler_type.GetByteSize(nullptr);
+        if (byte_size && *byte_size <= sizeof(long double)) {
           const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
           RegisterValue f0_value;
           if (reg_ctx->ReadRegister(f0_info, f0_value)) {
             DataExtractor data;
             if (f0_value.GetData(data)) {
               lldb::offset_t offset = 0;
-              if (byte_size == sizeof(float)) {
+              if (*byte_size == sizeof(float)) {
                 value.GetScalar() = (float)data.GetFloat(&offset);
                 success = true;
-              } else if (byte_size == sizeof(double)) {
+              } else if (*byte_size == sizeof(double)) {
                 value.GetScalar() = (double)data.GetDouble(&offset);
                 success = true;
-              } else if (byte_size == sizeof(long double)) {
+              } else if (*byte_size == sizeof(long double)) {
                 // Don't handle long double yet.
               }
             }

@@ -174,10 +174,10 @@ static size_t CalculateNumChildren(
   auto container_size = container_type.GetByteSize(exe_scope);
   auto element_size = element_type.GetByteSize(exe_scope);
 
-  if (element_size) {
-    if (container_size % element_size)
+  if (container_size && element_size && *element_size) {
+    if (*container_size % *element_size)
       return 0;
-    return container_size / element_size;
+    return *container_size / *element_size;
   }
   return 0;
 }
@@ -197,8 +197,11 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
     if (idx >= CalculateNumChildren())
-      return lldb::ValueObjectSP();
-    auto offset = idx * m_child_type.GetByteSize(nullptr);
+      return {};
+    auto size = m_child_type.GetByteSize(nullptr);
+    if (!size)
+      return {};
+    auto offset = idx * *size;
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     ValueObjectSP child_sp(m_backend.GetSyntheticChildAtOffset(

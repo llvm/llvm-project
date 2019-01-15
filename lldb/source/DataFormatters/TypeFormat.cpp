@@ -94,16 +94,18 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
             return false;
         }
 
+        ExecutionContextScope *exe_scope =
+            exe_ctx.GetBestExecutionContextScope();
+        auto size = compiler_type.GetByteSize(exe_scope);
+        if (!size)
+          return false;
         StreamString sstr;
-        ExecutionContextScope *exe_scope(
-            exe_ctx.GetBestExecutionContextScope());
         compiler_type.DumpTypeValue(
-            &sstr,       // The stream to use for display
-            GetFormat(), // Format to display this type with
-            data,        // Data to extract from
-            0,           // Byte offset into "m_data"
-            compiler_type.GetByteSize(
-                exe_scope),                 // Byte size of item in "m_data"
+            &sstr,                          // The stream to use for display
+            GetFormat(),                    // Format to display this type with
+            data,                           // Data to extract from
+            0,                              // Byte offset into "m_data"
+            *size,                          // Byte size of item in "m_data"
             valobj->GetBitfieldBitSize(),   // Bitfield bit size
             valobj->GetBitfieldBitOffset(), // Bitfield bit offset
             exe_scope);

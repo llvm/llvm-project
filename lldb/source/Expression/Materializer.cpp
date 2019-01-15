@@ -46,7 +46,8 @@ uint32_t Materializer::AddStructMember(Entity &entity) {
 }
 
 void Materializer::Entity::SetSizeAndAlignmentFromType(CompilerType &type) {
-  m_size = type.GetByteSize(nullptr);
+  if (auto size = type.GetByteSize(nullptr))
+    m_size = *size;
 
   uint32_t bit_alignment = type.GetTypeBitAlign();
 
@@ -794,7 +795,11 @@ public:
 
       ExecutionContextScope *exe_scope = map.GetBestExecutionContextScope();
 
-      size_t byte_size = m_type.GetByteSize(exe_scope);
+      auto byte_size = m_type.GetByteSize(exe_scope);
+      if (!byte_size) {
+        err.SetErrorString("can't get size of type");
+        return;
+      }
       size_t bit_align = m_type.GetTypeBitAlign();
       size_t byte_align = (bit_align + 7) / 8;
 
@@ -805,10 +810,10 @@ public:
       const bool zero_memory = true;
 
       m_temporary_allocation = map.Malloc(
-          byte_size, byte_align,
+          *byte_size, byte_align,
           lldb::ePermissionsReadable | lldb::ePermissionsWritable,
           IRMemoryMap::eAllocationPolicyMirror, zero_memory, alloc_error);
-      m_temporary_allocation_size = byte_size;
+      m_temporary_allocation_size = *byte_size;
 
       if (!alloc_error.Success()) {
         err.SetErrorStringWithFormat(

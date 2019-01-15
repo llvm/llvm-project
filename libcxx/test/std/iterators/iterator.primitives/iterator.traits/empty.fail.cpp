@@ -68,55 +68,55 @@ int main()
 {
     {
     typedef std::iterator_traits<NotAnIteratorEmpty> T;
-    typedef T::difference_type   DT; // expected-error-re {{no type named 'difference_type' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::value_type        VT; // expected-error-re {{no type named 'value_type' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::pointer           PT; // expected-error-re {{no type named 'pointer' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std::__1::iterator_traits<{{.+}}>}}
+    typedef T::difference_type   DT; // expected-error-re {{no type named 'difference_type' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::value_type        VT; // expected-error-re {{no type named 'value_type' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::pointer           PT; // expected-error-re {{no type named 'pointer' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
     }
 
     {
     typedef std::iterator_traits<NotAnIteratorNoDifference> T;
-    typedef T::difference_type   DT; // expected-error-re {{no type named 'difference_type' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::value_type        VT; // expected-error-re {{no type named 'value_type' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::pointer           PT; // expected-error-re {{no type named 'pointer' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std::__1::iterator_traits<{{.+}}>}}
+    typedef T::difference_type   DT; // expected-error-re {{no type named 'difference_type' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::value_type        VT; // expected-error-re {{no type named 'value_type' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::pointer           PT; // expected-error-re {{no type named 'pointer' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
     }
 
     {
     typedef std::iterator_traits<NotAnIteratorNoValue> T;
-    typedef T::difference_type   DT; // expected-error-re {{no type named 'difference_type' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::value_type        VT; // expected-error-re {{no type named 'value_type' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::pointer           PT; // expected-error-re {{no type named 'pointer' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std::__1::iterator_traits<{{.+}}>}}
+    typedef T::difference_type   DT; // expected-error-re {{no type named 'difference_type' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::value_type        VT; // expected-error-re {{no type named 'value_type' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::pointer           PT; // expected-error-re {{no type named 'pointer' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
     }
 
     {
     typedef std::iterator_traits<NotAnIteratorNoPointer> T;
-    typedef T::difference_type   DT; // expected-error-re {{no type named 'difference_type' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::value_type        VT; // expected-error-re {{no type named 'value_type' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::pointer           PT; // expected-error-re {{no type named 'pointer' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std::__1::iterator_traits<{{.+}}>}}
+    typedef T::difference_type   DT; // expected-error-re {{no type named 'difference_type' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::value_type        VT; // expected-error-re {{no type named 'value_type' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::pointer           PT; // expected-error-re {{no type named 'pointer' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
     }
 
     {
     typedef std::iterator_traits<NotAnIteratorNoReference> T;
-    typedef T::difference_type   DT; // expected-error-re {{no type named 'difference_type' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::value_type        VT; // expected-error-re {{no type named 'value_type' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::pointer           PT; // expected-error-re {{no type named 'pointer' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std::__1::iterator_traits<{{.+}}>}}
+    typedef T::difference_type   DT; // expected-error-re {{no type named 'difference_type' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::value_type        VT; // expected-error-re {{no type named 'value_type' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::pointer           PT; // expected-error-re {{no type named 'pointer' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
     }
 
     {
     typedef std::iterator_traits<NotAnIteratorNoCategory> T;
-    typedef T::difference_type   DT; // expected-error-re {{no type named 'difference_type' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::value_type        VT; // expected-error-re {{no type named 'value_type' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::pointer           PT; // expected-error-re {{no type named 'pointer' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std::__1::iterator_traits<{{.+}}>}}
-    typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std::__1::iterator_traits<{{.+}}>}}
+    typedef T::difference_type   DT; // expected-error-re {{no type named 'difference_type' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::value_type        VT; // expected-error-re {{no type named 'value_type' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::pointer           PT; // expected-error-re {{no type named 'pointer' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
+    typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
     }
 }

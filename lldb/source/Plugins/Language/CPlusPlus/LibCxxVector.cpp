@@ -145,14 +145,16 @@ bool lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
   if (!data_type_finder_sp)
     return false;
   m_element_type = data_type_finder_sp->GetCompilerType().GetPointeeType();
-  m_element_size = m_element_type.GetByteSize(nullptr);
+  if (auto size = m_element_type.GetByteSize(nullptr)) {
+    m_element_size = *size;
 
-  if (m_element_size > 0) {
-    // store raw pointers or end up with a circular dependency
-    m_start =
-        m_backend.GetChildMemberWithName(ConstString("__begin_"), true).get();
-    m_finish =
-        m_backend.GetChildMemberWithName(ConstString("__end_"), true).get();
+    if (m_element_size > 0) {
+      // store raw pointers or end up with a circular dependency
+      m_start =
+          m_backend.GetChildMemberWithName(ConstString("__begin_"), true).get();
+      m_finish =
+          m_backend.GetChildMemberWithName(ConstString("__end_"), true).get();
+    }
   }
   return false;
 }
@@ -192,27 +194,29 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::GetChildAtIndex(
   if (iter != end)
     return iter->second;
   if (idx >= m_count)
-    return ValueObjectSP();
+    return {};
   if (m_base_data_address == 0 || m_count == 0)
-    return ValueObjectSP();
+    return {};
   if (!m_bool_type)
-    return ValueObjectSP();
+    return {};
   size_t byte_idx = (idx >> 3); // divide by 8 to get byte index
   size_t bit_index = (idx & 7); // efficient idx % 8 for bit index
   lldb::addr_t byte_location = m_base_data_address + byte_idx;
   ProcessSP process_sp(m_exe_ctx_ref.GetProcessSP());
   if (!process_sp)
-    return ValueObjectSP();
+    return {};
   uint8_t byte = 0;
   uint8_t mask = 0;
   Status err;
   size_t bytes_read = process_sp->ReadMemory(byte_location, &byte, 1, err);
   if (err.Fail() || bytes_read == 0)
-    return ValueObjectSP();
+    return {};
   mask = 1 << bit_index;
   bool bit_set = ((byte & mask) != 0);
-  DataBufferSP buffer_sp(
-      new DataBufferHeap(m_bool_type.GetByteSize(nullptr), 0));
+  auto size = m_bool_type.GetByteSize(nullptr);
+  if (!size)
+    return {};
+  DataBufferSP buffer_sp(new DataBufferHeap(*size, 0));
   if (bit_set && buffer_sp && buffer_sp->GetBytes()) {
     // regardless of endianness, anything non-zero is true
     *(buffer_sp->GetBytes()) = 1;
