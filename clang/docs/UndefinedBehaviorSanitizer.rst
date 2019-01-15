@@ -72,7 +72,7 @@ Available checks
 Available checks are:
 
   -  ``-fsanitize=alignment``: Use of a misaligned pointer or creation
-     of a misaligned reference.
+     of a misaligned reference. Also sanitizes assume_aligned-like attributes.
   -  ``-fsanitize=bool``: Load of a ``bool`` value which is neither
      ``true`` nor ``false``.
   -  ``-fsanitize=builtin``: Passing invalid values to compiler builtins.

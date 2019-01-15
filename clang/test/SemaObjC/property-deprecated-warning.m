@@ -9,7 +9,7 @@ typedef signed char BOOL;
 @property(nonatomic,assign) id ptarget __attribute__((availability(ios,introduced=2.0,deprecated=3.0))); // expected-note {{property 'ptarget' is declared deprecated here}} expected-note {{'ptarget' has been explicitly marked deprecated here}}
 
 #if defined(WARN_PARTIAL)
-// expected-note@+2 {{'partialPtarget' has been explicitly marked partial here}}
+// expected-note@+2 {{'partialPtarget' has been marked as being introduced in iOS 5.0 here, but the deployment target is iOS 3.0.0}}
 #endif
 @property(nonatomic,assign) id partialPtarget __attribute__((availability(ios,introduced=5.0)));
 @end
@@ -24,7 +24,7 @@ typedef signed char BOOL;
 @property(nonatomic,assign) id target __attribute__((availability(ios,introduced=2.0,deprecated=3.0))); // expected-note {{property 'target' is declared deprecated here}} expected-note {{'setTarget:' has been explicitly marked deprecated here}}
 
 #if defined(WARN_PARTIAL)
-// expected-note@+2 {{'setPartialTarget:' has been explicitly marked partial here}}
+// expected-note@+2 {{'setPartialTarget:' has been marked as being introduced in iOS 5.0 here, but the deployment target is iOS 3.0.0}}
 #endif
 @property(nonatomic,assign) id partialTarget __attribute__((availability(ios,introduced=5.0)));
 @end
@@ -40,7 +40,8 @@ typedef signed char BOOL;
                                                                                     // expected-note 2 {{'setDep_target:' has been explicitly marked deprecated here}}
 
 #if defined(WARN_PARTIAL)
-// expected-note@+2 2 {{'partial_dep_target' has been explicitly marked partial here}} expected-note@+2 2 {{'setPartial_dep_target:' has been explicitly marked partial here}}
+// expected-note@+3 2 {{'partial_dep_target' has been marked as being introduced in iOS 5.0 here, but the deployment target is iOS 3.0.0}}
+// expected-note@+2 2 {{'setPartial_dep_target:' has been marked as being introduced in iOS 5.0 here, but the deployment target is iOS 3.0.0}}
 #endif
 @property(nonatomic,assign) id partial_dep_target  __attribute__((availability(ios,introduced=5.0)));
 @end
@@ -100,12 +101,12 @@ typedef signed char BOOL;
 @property(setter=setNewDelegate:,assign) id delegate __attribute__((availability(ios,introduced=2.0,deprecated=3.0))); // expected-note {{'setNewDelegate:' has been explicitly marked deprecated here}} expected-note {{property 'delegate' is declared deprecated here}}
 
 #if defined(WARN_PARTIAL)
-// expected-note@+2 {{'partialIsEnabled' has been explicitly marked partial here}}
+// expected-note@+2 {{'partialIsEnabled' has been marked as being introduced in iOS 5.0 here, but the deployment target is iOS 3.0.0}}
 #endif
 @property(getter=partialIsEnabled,assign) BOOL partialEnabled __attribute__((availability(ios,introduced=5.0)));
 
 #if defined(WARN_PARTIAL)
-// expected-note@+2 {{'partialSetNewDelegate:' has been explicitly marked partial here}}
+// expected-note@+2 {{'partialSetNewDelegate:' has been marked as being introduced in iOS 5.0 here, but the deployment target is iOS 3.0.0}}
 #endif
 @property(setter=partialSetNewDelegate:,assign) id partialDelegate __attribute__((availability(ios,introduced=5.0)));
 @end

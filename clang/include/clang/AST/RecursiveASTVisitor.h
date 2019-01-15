@@ -1368,9 +1368,14 @@ DEF_TRAVERSE_TYPELOC(PipeType, { TRY_TO(TraverseTypeLoc(TL.getValueLoc())); })
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::canIgnoreChildDeclWhileTraversingDeclContext(
     const Decl *Child) {
-  // BlockDecls and CapturedDecls are traversed through BlockExprs and
-  // CapturedStmts respectively.
-  return isa<BlockDecl>(Child) || isa<CapturedDecl>(Child);
+  // BlockDecls are traversed through BlockExprs,
+  // CapturedDecls are traversed through CapturedStmts.
+  if (isa<BlockDecl>(Child) || isa<CapturedDecl>(Child))
+    return true;
+  // Lambda classes are traversed through LambdaExprs.
+  if (const CXXRecordDecl* Cls = dyn_cast<CXXRecordDecl>(Child))
+    return Cls->isLambda();
+  return false;
 }
 
 template <typename Derived>

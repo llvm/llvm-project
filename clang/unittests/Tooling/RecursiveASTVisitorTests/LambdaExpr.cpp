@@ -65,6 +65,17 @@ TEST(RecursiveASTVisitor, LambdaInLambda) {
   EXPECT_FALSE(Visitor.allClassesHaveBeenTraversed());
 }
 
+TEST(RecursiveASTVisitor, TopLevelLambda) {
+  LambdaExprVisitor Visitor;
+  Visitor.VisitImplicitCode = true;
+  Visitor.ExpectMatch("", 1, 10);
+  Visitor.ExpectMatch("", 1, 14);
+  EXPECT_TRUE(Visitor.runOver("auto x = []{ [] {}; };",
+                              LambdaExprVisitor::Lang_CXX11));
+  EXPECT_TRUE(Visitor.allBodiesHaveBeenTraversed());
+  EXPECT_TRUE(Visitor.allClassesHaveBeenTraversed());
+}
+
 TEST(RecursiveASTVisitor, VisitsLambdaExprAndImplicitClass) {
   LambdaExprVisitor Visitor;
   Visitor.VisitImplicitCode = true;

@@ -4635,7 +4635,10 @@ def warn_unavailable_fwdclass_message : Warning<
     InGroup<UnavailableDeclarations>;
 def note_availability_specified_here : Note<
   "%0 has been explicitly marked "
-  "%select{unavailable|deleted|deprecated|partial}1 here">;
+  "%select{unavailable|deleted|deprecated}1 here">;
+def note_partial_availability_specified_here : Note<
+  "%0 has been marked as being introduced in %1 %2 here, "
+  "but the deployment target is %1 %3">;
 def note_implicitly_deleted : Note<
   "explicitly defaulted function was implicitly deleted here">;
 def warn_not_enough_argument : Warning<
@@ -5945,7 +5948,8 @@ def ext_typecheck_comparison_of_fptr_to_void : Extension<
 def err_typecheck_comparison_of_fptr_to_void : Error<
   "equality comparison between function pointer and void pointer (%0 and %1)">;
 def ext_typecheck_comparison_of_pointer_integer : ExtWarn<
-  "comparison between pointer and integer (%0 and %1)">;
+  "comparison between pointer and integer (%0 and %1)">,
+  InGroup<DiagGroup<"pointer-integer-compare">>;
 def err_typecheck_comparison_of_pointer_integer : Error<
   "comparison between pointer and integer (%0 and %1)">;
 def ext_typecheck_comparison_of_distinct_pointers : ExtWarn<
