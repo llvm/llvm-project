@@ -1,4 +1,4 @@
-// RUN: %clangxx_asan -O0 %s -o %t
+// RUN: %clangxx_asan -std=c++11 -O0 %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=debug=1,verbosity=2 %run %t 2>&1 | FileCheck %s
 
