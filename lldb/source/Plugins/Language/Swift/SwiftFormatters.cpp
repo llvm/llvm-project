@@ -320,7 +320,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
   }
 
   if ((discriminator & 0xF0) == 0x00) { // Shared string
-    // FIXME: Verify that there is a _SharedStringStorage instance at `address`.
+    // FIXME: Verify that there is a __SharedStringStorage instance at `address`.
     lldbassert((flags & 0x3000) == 0);
     uint64_t startOffset = (ptrSize == 8 ? 24 : 12);
     auto address = objectAddress + startOffset;
