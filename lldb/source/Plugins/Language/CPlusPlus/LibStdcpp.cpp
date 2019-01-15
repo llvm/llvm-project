@@ -297,8 +297,11 @@ bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
       if (!wchar_compiler_type)
         return false;
 
-      const uint32_t wchar_size = wchar_compiler_type.GetBitSize(
-          nullptr); // Safe to pass NULL for exe_scope here
+      // Safe to pass nullptr for exe_scope here.
+      auto size = wchar_compiler_type.GetBitSize(nullptr);
+      if (!size)
+        return false;
+      const uint32_t wchar_size = *size;
 
       StringPrinter::ReadStringAndDumpToStreamOptions options(valobj);
       Status error;

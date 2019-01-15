@@ -117,7 +117,7 @@ attributes #3 = { nounwind }
 !llvm.ident = !{!1}
 
 !0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{!"clang version 5.0.0 (http://llvm.org/git/clang 98cf823022d1d71065c71e9338226ebf8bfa36ba) (http://llvm.org/git/llvm.git 4efa61f12928015bad233274ffa2e60c918e9a10)"}
+!1 = !{!"clang version 5.0.0"}
 !2 = !{!3, !3, i64 0}
 !3 = !{!"int", !4, i64 0}
 !4 = !{!"omnipotent char", !5, i64 0}

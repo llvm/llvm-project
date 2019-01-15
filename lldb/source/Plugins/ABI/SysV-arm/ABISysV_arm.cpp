@@ -1471,10 +1471,10 @@ bool ABISysV_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
     if (compiler_type) {
       bool is_signed = false;
       size_t bit_width = 0;
-      if (compiler_type.IsIntegerOrEnumerationType(is_signed)) {
-        bit_width = compiler_type.GetBitSize(&thread);
-      } else if (compiler_type.IsPointerOrReferenceType()) {
-        bit_width = compiler_type.GetBitSize(&thread);
+      if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
+          compiler_type.IsPointerOrReferenceType()) {
+        if (auto size = compiler_type.GetBitSize(&thread))
+          bit_width = *size;
       } else {
         // We only handle integer, pointer and reference types currently...
         return false;
@@ -1580,11 +1580,13 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
 
   const RegisterInfo *r0_reg_info =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
-  size_t bit_width = compiler_type.GetBitSize(&thread);
-  size_t byte_size = compiler_type.GetByteSize(&thread);
+  auto bit_width = compiler_type.GetBitSize(&thread);
+  auto byte_size = compiler_type.GetByteSize(&thread);
+  if (!bit_width || !byte_size)
+    return return_valobj_sp;
 
   if (compiler_type.IsIntegerOrEnumerationType(is_signed)) {
-    switch (bit_width) {
+    switch (*bit_width) {
     default:
       return return_valobj_sp;
     case 64: {
@@ -1631,28 +1633,28 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
         UINT32_MAX;
     value.GetScalar() = ptr;
   } else if (compiler_type.IsVectorType(nullptr, nullptr)) {
-    if (IsArmHardFloat(thread) && (byte_size == 8 || byte_size == 16)) {
+    if (IsArmHardFloat(thread) && (*byte_size == 8 || *byte_size == 16)) {
       is_vfp_candidate = true;
       vfp_byte_size = 8;
-      vfp_count = (byte_size == 8 ? 1 : 2);
-    } else if (byte_size <= 16) {
+      vfp_count = (*byte_size == 8 ? 1 : 2);
+    } else if (*byte_size <= 16) {
       DataBufferHeap buffer(16, 0);
       uint32_t *buffer_ptr = (uint32_t *)buffer.GetBytes();
 
-      for (uint32_t i = 0; 4 * i < byte_size; ++i) {
+      for (uint32_t i = 0; 4 * i < *byte_size; ++i) {
         const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(
             eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1 + i);
         buffer_ptr[i] =
             reg_ctx->ReadRegisterAsUnsigned(reg_info, 0) & UINT32_MAX;
       }
-      value.SetBytes(buffer.GetBytes(), byte_size);
+      value.SetBytes(buffer.GetBytes(), *byte_size);
     } else {
-      if (!GetReturnValuePassedInMemory(thread, reg_ctx, byte_size, value))
+      if (!GetReturnValuePassedInMemory(thread, reg_ctx, *byte_size, value))
         return return_valobj_sp;
     }
   } else if (compiler_type.IsFloatingPointType(float_count, is_complex)) {
     if (float_count == 1 && !is_complex) {
-      switch (bit_width) {
+      switch (*bit_width) {
       default:
         return return_valobj_sp;
       case 64: {
@@ -1700,9 +1702,9 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
     } else if (is_complex && float_count == 2) {
       if (IsArmHardFloat(thread)) {
         is_vfp_candidate = true;
-        vfp_byte_size = byte_size / 2;
+        vfp_byte_size = *byte_size / 2;
         vfp_count = 2;
-      } else if (!GetReturnValuePassedInMemory(thread, reg_ctx, bit_width / 8,
+      } else if (!GetReturnValuePassedInMemory(thread, reg_ctx, *bit_width / 8,
                                                value))
         return return_valobj_sp;
     } else
@@ -1715,19 +1717,20 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
           compiler_type.IsHomogeneousAggregate(&base_type);
 
       if (homogeneous_count > 0 && homogeneous_count <= 4) {
+        auto base_byte_size = base_type.GetByteSize(nullptr);
         if (base_type.IsVectorType(nullptr, nullptr)) {
-          uint64_t base_byte_size = base_type.GetByteSize(nullptr);
-          if (base_byte_size == 8 || base_byte_size == 16) {
+          if (base_byte_size &&
+              (*base_byte_size == 8 || *base_byte_size == 16)) {
             is_vfp_candidate = true;
             vfp_byte_size = 8;
-            vfp_count =
-                (base_type.GetByteSize(nullptr) == 8 ? homogeneous_count
-                                                     : homogeneous_count * 2);
+            vfp_count = (*base_byte_size == 8 ? homogeneous_count
+                                              : homogeneous_count * 2);
           }
         } else if (base_type.IsFloatingPointType(float_count, is_complex)) {
           if (float_count == 1 && !is_complex) {
             is_vfp_candidate = true;
-            vfp_byte_size = base_type.GetByteSize(nullptr);
+            if (base_byte_size)
+              vfp_byte_size = *base_byte_size;
             vfp_count = homogeneous_count;
           }
         }
@@ -1742,12 +1745,13 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
                 compiler_type.GetFieldAtIndex(index, name, NULL, NULL, NULL);
 
             if (base_type.IsFloatingPointType(float_count, is_complex)) {
+              auto base_byte_size = base_type.GetByteSize(nullptr);
               if (float_count == 2 && is_complex) {
-                if (index != 0 &&
-                    vfp_byte_size != base_type.GetByteSize(nullptr))
+                if (index != 0 && base_byte_size &&
+                    vfp_byte_size != *base_byte_size)
                   break;
-                else
-                  vfp_byte_size = base_type.GetByteSize(nullptr);
+                else if (base_byte_size)
+                  vfp_byte_size = *base_byte_size;
               } else
                 break;
             } else
@@ -1763,13 +1767,13 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
       }
     }
 
-    if (byte_size <= 4) {
+    if (*byte_size <= 4) {
       RegisterValue r0_reg_value;
       uint32_t raw_value =
           reg_ctx->ReadRegisterAsUnsigned(r0_reg_info, 0) & UINT32_MAX;
-      value.SetBytes(&raw_value, byte_size);
+      value.SetBytes(&raw_value, *byte_size);
     } else if (!is_vfp_candidate) {
-      if (!GetReturnValuePassedInMemory(thread, reg_ctx, byte_size, value))
+      if (!GetReturnValuePassedInMemory(thread, reg_ctx, *byte_size, value))
         return return_valobj_sp;
     }
   } else {
@@ -1781,7 +1785,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
     ProcessSP process_sp(thread.GetProcess());
     ByteOrder byte_order = process_sp->GetByteOrder();
 
-    DataBufferSP data_sp(new DataBufferHeap(byte_size, 0));
+    DataBufferSP data_sp(new DataBufferHeap(*byte_size, 0));
     uint32_t data_offset = 0;
 
     for (uint32_t reg_index = 0; reg_index < vfp_count; reg_index++) {
@@ -1816,7 +1820,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
       }
     }
 
-    if (data_offset == byte_size) {
+    if (data_offset == *byte_size) {
       DataExtractor data;
       data.SetByteOrder(byte_order);
       data.SetAddressByteSize(process_sp->GetAddressByteSize());

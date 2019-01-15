@@ -1767,10 +1767,13 @@ bool ABISysV_arm64::GetArgumentValues(Thread &thread, ValueList &values) const {
     if (value_type) {
       bool is_signed = false;
       size_t bit_width = 0;
+      auto bit_size = value_type.GetBitSize(&thread);
+      if (!bit_size)
+        return false;
       if (value_type.IsIntegerOrEnumerationType(is_signed)) {
-        bit_width = value_type.GetBitSize(&thread);
+        bit_width = *bit_size;
       } else if (value_type.IsPointerOrReferenceType()) {
-        bit_width = value_type.GetBitSize(&thread);
+        bit_width = *bit_size;
       } else {
         // We only handle integer, pointer and reference types currently...
         return false;
@@ -2083,13 +2086,13 @@ static bool LoadValueFromConsecutiveGPRRegisters(
     uint32_t &NGRN,       // NGRN (see ABI documentation)
     uint32_t &NSRN,       // NSRN (see ABI documentation)
     DataExtractor &data) {
-  const size_t byte_size = value_type.GetByteSize(nullptr);
+  auto byte_size = value_type.GetByteSize(nullptr);
 
-  if (byte_size == 0)
+  if (byte_size || *byte_size == 0)
     return false;
 
   std::unique_ptr<DataBufferHeap> heap_data_ap(
-      new DataBufferHeap(byte_size, 0));
+      new DataBufferHeap(*byte_size, 0));
   const ByteOrder byte_order = exe_ctx.GetProcessRef().GetByteOrder();
   Status error;
 
@@ -2101,7 +2104,9 @@ static bool LoadValueFromConsecutiveGPRRegisters(
     if (NSRN < 8 && (8 - NSRN) >= homogeneous_count) {
       if (!base_type)
         return false;
-      const size_t base_byte_size = base_type.GetByteSize(nullptr);
+      auto base_byte_size = base_type.GetByteSize(nullptr);
+      if (!base_byte_size)
+        return false;
       uint32_t data_offset = 0;
 
       for (uint32_t i = 0; i < homogeneous_count; ++i) {
@@ -2112,7 +2117,7 @@ static bool LoadValueFromConsecutiveGPRRegisters(
         if (reg_info == nullptr)
           return false;
 
-        if (base_byte_size > reg_info->byte_size)
+        if (*base_byte_size > reg_info->byte_size)
           return false;
 
         RegisterValue reg_value;
@@ -2121,11 +2126,11 @@ static bool LoadValueFromConsecutiveGPRRegisters(
           return false;
 
         // Make sure we have enough room in "heap_data_ap"
-        if ((data_offset + base_byte_size) <= heap_data_ap->GetByteSize()) {
+        if ((data_offset + *base_byte_size) <= heap_data_ap->GetByteSize()) {
           const size_t bytes_copied = reg_value.GetAsMemoryData(
-              reg_info, heap_data_ap->GetBytes() + data_offset, base_byte_size,
+              reg_info, heap_data_ap->GetBytes() + data_offset, *base_byte_size,
               byte_order, error);
-          if (bytes_copied != base_byte_size)
+          if (bytes_copied != *base_byte_size)
             return false;
           data_offset += bytes_copied;
           ++NSRN;
@@ -2140,10 +2145,10 @@ static bool LoadValueFromConsecutiveGPRRegisters(
   }
 
   const size_t max_reg_byte_size = 16;
-  if (byte_size <= max_reg_byte_size) {
-    size_t bytes_left = byte_size;
+  if (*byte_size <= max_reg_byte_size) {
+    size_t bytes_left = *byte_size;
     uint32_t data_offset = 0;
-    while (data_offset < byte_size) {
+    while (data_offset < *byte_size) {
       if (NGRN >= 8)
         return false;
 
@@ -2228,7 +2233,9 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
   if (!reg_ctx)
     return return_valobj_sp;
 
-  const size_t byte_size = return_compiler_type.GetByteSize(nullptr);
+  auto byte_size = return_compiler_type.GetByteSize(nullptr);
+  if (!byte_size)
+    return return_valobj_sp;
 
   const uint32_t type_flags = return_compiler_type.GetTypeInfo(nullptr);
   if (type_flags & eTypeIsScalar || type_flags & eTypeIsPointer) {
@@ -2237,7 +2244,7 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
     bool success = false;
     if (type_flags & eTypeIsInteger || type_flags & eTypeIsPointer) {
       // Extract the register context so we can read arguments from registers
-      if (byte_size <= 8) {
+      if (*byte_size <= 8) {
         const RegisterInfo *x0_reg_info = nullptr;
         x0_reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
                                                LLDB_REGNUM_GENERIC_ARG1);
@@ -2246,7 +2253,7 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
               thread.GetRegisterContext()->ReadRegisterAsUnsigned(x0_reg_info,
                                                                   0);
           const bool is_signed = (type_flags & eTypeIsSigned) != 0;
-          switch (byte_size) {
+          switch (*byte_size) {
           default:
             break;
           case 16: // uint128_t
@@ -2257,10 +2264,10 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
                                                      LLDB_REGNUM_GENERIC_ARG2);
 
               if (x1_reg_info) {
-                if (byte_size <=
+                if (*byte_size <=
                     x0_reg_info->byte_size + x1_reg_info->byte_size) {
                   std::unique_ptr<DataBufferHeap> heap_data_ap(
-                      new DataBufferHeap(byte_size, 0));
+                      new DataBufferHeap(*byte_size, 0));
                   const ByteOrder byte_order =
                       exe_ctx.GetProcessRef().GetByteOrder();
                   RegisterValue x0_reg_value;
@@ -2325,7 +2332,7 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
       if (type_flags & eTypeIsComplex) {
         // Don't handle complex yet.
       } else {
-        if (byte_size <= sizeof(long double)) {
+        if (*byte_size <= sizeof(long double)) {
           const RegisterInfo *v0_reg_info =
               reg_ctx->GetRegisterInfoByName("v0", 0);
           RegisterValue v0_value;
@@ -2333,13 +2340,13 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
             DataExtractor data;
             if (v0_value.GetData(data)) {
               lldb::offset_t offset = 0;
-              if (byte_size == sizeof(float)) {
+              if (*byte_size == sizeof(float)) {
                 value.GetScalar() = data.GetFloat(&offset);
                 success = true;
-              } else if (byte_size == sizeof(double)) {
+              } else if (*byte_size == sizeof(double)) {
                 value.GetScalar() = data.GetDouble(&offset);
                 success = true;
-              } else if (byte_size == sizeof(long double)) {
+              } else if (*byte_size == sizeof(long double)) {
                 value.GetScalar() = data.GetLongDouble(&offset);
                 success = true;
               }
@@ -2352,13 +2359,13 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
     if (success)
       return_valobj_sp = ValueObjectConstResult::Create(
           thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
-  } else if (type_flags & eTypeIsVector && byte_size <= 16) {
-    if (byte_size > 0) {
+  } else if (type_flags & eTypeIsVector && *byte_size <= 16) {
+    if (*byte_size > 0) {
       const RegisterInfo *v0_info = reg_ctx->GetRegisterInfoByName("v0", 0);
 
       if (v0_info) {
         std::unique_ptr<DataBufferHeap> heap_data_ap(
-            new DataBufferHeap(byte_size, 0));
+            new DataBufferHeap(*byte_size, 0));
         const ByteOrder byte_order = exe_ctx.GetProcessRef().GetByteOrder();
         RegisterValue reg_value;
         if (reg_ctx->ReadRegister(v0_info, reg_value)) {
@@ -2375,7 +2382,7 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
       }
     }
   } else if (type_flags & eTypeIsStructUnion || type_flags & eTypeIsClass ||
-             (type_flags & eTypeIsVector && byte_size > 16)) {
+             (type_flags & eTypeIsVector && *byte_size > 16)) {
     DataExtractor data;
 
     uint32_t NGRN = 0; // Search ABI docs for NGRN

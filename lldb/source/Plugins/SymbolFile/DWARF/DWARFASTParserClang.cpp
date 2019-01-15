@@ -1850,12 +1850,13 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           clang_type = ClangASTContext::CreateMemberPointerType(
               class_clang_type, pointee_clang_type);
 
-          byte_size = clang_type.GetByteSize(nullptr);
-
-          type_sp.reset(new Type(die.GetID(), dwarf, type_name_const_str,
-                                 byte_size, NULL, LLDB_INVALID_UID,
-                                 Type::eEncodingIsUID, NULL, clang_type,
-                                 Type::eResolveStateForward));
+          if (auto clang_type_size = clang_type.GetByteSize(nullptr)) {
+            byte_size = *clang_type_size;
+            type_sp.reset(new Type(die.GetID(), dwarf, type_name_const_str,
+                                   byte_size, NULL, LLDB_INVALID_UID,
+                                   Type::eEncodingIsUID, NULL, clang_type,
+                                   Type::eResolveStateForward));
+          }
         }
 
         break;
@@ -2045,7 +2046,10 @@ bool DWARFASTParserClang::ParseTemplateDIE(
         clang_type.IsIntegerOrEnumerationType(is_signed);
 
         if (tag == DW_TAG_template_value_parameter && uval64_valid) {
-          llvm::APInt apint(clang_type.GetBitSize(nullptr), uval64, is_signed);
+          auto size = clang_type.GetBitSize(nullptr);
+          if (!size)
+            return false;
+          llvm::APInt apint(*size, uval64, is_signed);
           template_param_infos.args.push_back(
               clang::TemplateArgument(*ast, llvm::APSInt(apint, !is_signed),
                                       ClangUtil::GetQualType(clang_type)));

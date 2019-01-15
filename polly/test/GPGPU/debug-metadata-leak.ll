@@ -66,13 +66,13 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !llvm.module.flags = !{!3, !4, !5}
 !llvm.ident = !{!6}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 5.0.0 (http://llvm.org/git/clang.git 23e042ffe07a923db2dbebf4d2a3692c5a454fee) (http://llvm.org/git/llvm.git 39c5686a1f54884f12120927b1753a750fdb5e02)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 5.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "vec_add_1.c", directory: "/tmp")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
-!6 = !{!"clang version 5.0.0 (http://llvm.org/git/clang.git 23e042ffe07a923db2dbebf4d2a3692c5a454fee) (http://llvm.org/git/llvm.git 39c5686a1f54884f12120927b1753a750fdb5e02)"}
+!6 = !{!"clang version 5.0.0"}
 !7 = distinct !DISubprogram(name: "vec_add_1", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null, !10, !11}

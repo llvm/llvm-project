@@ -280,18 +280,19 @@ bool ABISysV_ppc64::GetArgumentValues(Thread &thread, ValueList &values) const {
     // We currently only support extracting values with Clang QualTypes. Do we
     // care about others?
     CompilerType compiler_type = value->GetCompilerType();
-    if (!compiler_type)
+    auto bit_size = compiler_type.GetBitSize(&thread);
+    if (!bit_size)
       return false;
     bool is_signed;
 
     if (compiler_type.IsIntegerOrEnumerationType(is_signed)) {
-      ReadIntegerArgument(value->GetScalar(), compiler_type.GetBitSize(&thread),
-                          is_signed, thread, argument_register_ids,
-                          current_argument_register, current_stack_argument);
+      ReadIntegerArgument(value->GetScalar(), *bit_size, is_signed, thread,
+                          argument_register_ids, current_argument_register,
+                          current_stack_argument);
     } else if (compiler_type.IsPointerType()) {
-      ReadIntegerArgument(value->GetScalar(), compiler_type.GetBitSize(&thread),
-                          false, thread, argument_register_ids,
-                          current_argument_register, current_stack_argument);
+      ReadIntegerArgument(value->GetScalar(), *bit_size, false, thread,
+                          argument_register_ids, current_argument_register,
+                          current_stack_argument);
     }
   }
 
@@ -349,8 +350,12 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       error.SetErrorString(
           "We don't support returning complex values at present");
     else {
-      size_t bit_width = compiler_type.GetBitSize(frame_sp.get());
-      if (bit_width <= 64) {
+      auto bit_width = compiler_type.GetBitSize(frame_sp.get());
+      if (!bit_width) {
+        error.SetErrorString("can't get size of type");
+        return error;
+      }
+      if (*bit_width <= 64) {
         DataExtractor data;
         Status data_error;
         size_t num_bytes = new_value_sp->GetData(data, data_error);
@@ -571,7 +576,8 @@ private:
   ReturnValueExtractor(Thread &thread, CompilerType &type,
                        RegisterContext *reg_ctx, ProcessSP process_sp)
       : m_thread(thread), m_type(type),
-        m_byte_size(m_type.GetByteSize(nullptr)),
+        m_byte_size(m_type.GetByteSize(nullptr) ? *m_type.GetByteSize(nullptr)
+                                                : 0),
         m_data_ap(new DataBufferHeap(m_byte_size, 0)), m_reg_ctx(reg_ctx),
         m_process_sp(process_sp), m_byte_order(process_sp->GetByteOrder()),
         m_addr_size(
@@ -639,7 +645,7 @@ private:
     uint64_t raw_data;
     auto reg = GetFPR(reg_index);
     if (!reg.GetRawData(raw_data))
-      return ValueSP();
+      return {};
 
     // build value from data
     ValueSP value_sp(NewScalarValue(type));
@@ -647,8 +653,10 @@ private:
     DataExtractor de(&raw_data, sizeof(raw_data), m_byte_order, m_addr_size);
 
     offset_t offset = 0;
-    size_t byte_size = type.GetByteSize(nullptr);
-    switch (byte_size) {
+    auto byte_size = type.GetByteSize(nullptr);
+    if (!byte_size)
+      return {};
+    switch (*byte_size) {
     case sizeof(float):
       value_sp->GetScalar() = (float)de.GetDouble(&offset);
       break;
@@ -755,7 +763,7 @@ private:
       uint64_t addr;
       auto reg = GetGPR(0);
       if (!reg.GetRawData(addr))
-        return ValueObjectSP();
+        return {};
 
       Status error;
       size_t rc = m_process_sp->ReadMemory(addr, m_data_ap->GetBytes(),
@@ -772,34 +780,36 @@ private:
     uint32_t n = m_type.GetNumChildren(omit_empty_base_classes, nullptr);
     if (!n) {
       LLDB_LOG(m_log, LOG_PREFIX "No children found in struct");
-      return ValueObjectSP();
+      return {};
     }
 
     // case 2: homogeneous double or float aggregate
     CompilerType elem_type;
     if (m_type.IsHomogeneousAggregate(&elem_type)) {
       uint32_t type_flags = elem_type.GetTypeInfo();
-      uint64_t elem_size = elem_type.GetByteSize(nullptr);
+      auto elem_size = elem_type.GetByteSize(nullptr);
+      if (!elem_size)
+        return {};
       if (type_flags & eTypeIsComplex || !(type_flags & eTypeIsFloat)) {
         LLDB_LOG(m_log,
                  LOG_PREFIX "Unexpected type found in homogeneous aggregate");
-        return ValueObjectSP();
+        return {};
       }
 
       for (uint32_t i = 0; i < n; i++) {
         ValueSP val_sp = GetFloatValue(elem_type, i);
         if (!val_sp)
-          return ValueObjectSP();
+          return {};
 
         // copy to buffer
         Status error;
         size_t rc = val_sp->GetScalar().GetAsMemoryData(
-            m_data_ap->GetBytes() + m_dst_offs, elem_size, m_byte_order, error);
-        if (rc != elem_size) {
+            m_data_ap->GetBytes() + m_dst_offs, *elem_size, m_byte_order, error);
+        if (rc != *elem_size) {
           LLDB_LOG(m_log, LOG_PREFIX "Failed to get float data");
-          return ValueObjectSP();
+          return {};
         }
-        m_dst_offs += elem_size;
+        m_dst_offs += *elem_size;
       }
       return BuildValueObject();
     }
