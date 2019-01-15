@@ -30,4 +30,4 @@ attributes #2 = { nounwind }
 
 !llvm.ident = !{!0}
 
-!0 = !{!"clang version 3.8.0 (http://llvm.org/git/clang.git 65eeefc97d2eee4d075ec7d9ed56b5f0786b6421)"}
+!0 = !{!"clang version 3.8.0"}

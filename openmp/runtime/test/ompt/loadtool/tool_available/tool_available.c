@@ -49,7 +49,7 @@ int main()
 #ifdef TOOL
 
 #include <stdio.h>
-#include <ompt.h>
+#include <omp-tools.h>
 
 int ompt_initialize(
   ompt_function_lookup_t lookup,

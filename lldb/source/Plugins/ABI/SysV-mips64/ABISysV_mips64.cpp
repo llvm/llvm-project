@@ -762,7 +762,9 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
   Target *target = exe_ctx.GetTargetPtr();
   const ArchSpec target_arch = target->GetArchitecture();
   ByteOrder target_byte_order = target_arch.GetByteOrder();
-  const size_t byte_size = return_compiler_type.GetByteSize(nullptr);
+  auto byte_size = return_compiler_type.GetByteSize(nullptr);
+  if (!byte_size)
+    return return_valobj_sp;
   const uint32_t type_flags = return_compiler_type.GetTypeInfo(nullptr);
   uint32_t fp_flag =
       target_arch.GetFlags() & lldb_private::ArchSpec::eMIPS_ABI_FP_mask;
@@ -781,7 +783,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
       uint64_t raw_value = reg_ctx->ReadRegisterAsUnsigned(r2_info, 0);
 
       const bool is_signed = (type_flags & eTypeIsSigned) != 0;
-      switch (byte_size) {
+      switch (*byte_size) {
       default:
         break;
 
@@ -822,7 +824,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
         // Don't handle complex yet.
       } else if (IsSoftFloat(fp_flag)) {
         uint64_t raw_value = reg_ctx->ReadRegisterAsUnsigned(r2_info, 0);
-        switch (byte_size) {
+        switch (*byte_size) {
         case 4:
           value.GetScalar() = *((float *)(&raw_value));
           success = true;
@@ -847,7 +849,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
         }
 
       } else {
-        if (byte_size <= sizeof(long double)) {
+        if (*byte_size <= sizeof(long double)) {
           const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
 
           RegisterValue f0_value;
@@ -858,13 +860,13 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
           f0_value.GetData(f0_data);
 
           lldb::offset_t offset = 0;
-          if (byte_size == sizeof(float)) {
+          if (*byte_size == sizeof(float)) {
             value.GetScalar() = (float)f0_data.GetFloat(&offset);
             success = true;
-          } else if (byte_size == sizeof(double)) {
+          } else if (*byte_size == sizeof(double)) {
             value.GetScalar() = (double)f0_data.GetDouble(&offset);
             success = true;
-          } else if (byte_size == sizeof(long double)) {
+          } else if (*byte_size == sizeof(long double)) {
             const RegisterInfo *f2_info =
                 reg_ctx->GetRegisterInfoByName("f2", 0);
             RegisterValue f2_value;
@@ -879,21 +881,21 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
             if (target_byte_order == eByteOrderLittle) {
               copy_from_extractor = &f0_data;
               copy_from_extractor->CopyByteOrderedData(
-                  0, 8, data_sp->GetBytes(), byte_size - 8, target_byte_order);
+                  0, 8, data_sp->GetBytes(), *byte_size - 8, target_byte_order);
               f2_value.GetData(f2_data);
               copy_from_extractor = &f2_data;
               copy_from_extractor->CopyByteOrderedData(
-                  0, 8, data_sp->GetBytes() + 8, byte_size - 8,
+                  0, 8, data_sp->GetBytes() + 8, *byte_size - 8,
                   target_byte_order);
             } else {
               copy_from_extractor = &f0_data;
               copy_from_extractor->CopyByteOrderedData(
-                  0, 8, data_sp->GetBytes() + 8, byte_size - 8,
+                  0, 8, data_sp->GetBytes() + 8, *byte_size - 8,
                   target_byte_order);
               f2_value.GetData(f2_data);
               copy_from_extractor = &f2_data;
               copy_from_extractor->CopyByteOrderedData(
-                  0, 8, data_sp->GetBytes(), byte_size - 8, target_byte_order);
+                  0, 8, data_sp->GetBytes(), *byte_size - 8, target_byte_order);
             }
 
             return_valobj_sp = ValueObjectConstResult::Create(
@@ -910,7 +912,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
   } else if (type_flags & eTypeIsStructUnion || type_flags & eTypeIsClass ||
              type_flags & eTypeIsVector) {
     // Any structure of up to 16 bytes in size is returned in the registers.
-    if (byte_size <= 16) {
+    if (*byte_size <= 16) {
       DataBufferSP data_sp(new DataBufferHeap(16, 0));
       DataExtractor return_ext(data_sp, target_byte_order,
                                target->GetArchitecture().GetAddressByteSize());
@@ -968,8 +970,9 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
             CompilerType field_compiler_type =
                 return_compiler_type.GetFieldAtIndex(
                     idx, name, &field_bit_offset, nullptr, nullptr);
-            const size_t field_byte_width =
-                field_compiler_type.GetByteSize(nullptr);
+            auto field_byte_width = field_compiler_type.GetByteSize(nullptr);
+            if (!field_byte_width)
+              return return_valobj_sp;
 
             DataExtractor *copy_from_extractor = nullptr;
             uint64_t return_value[2];
@@ -977,7 +980,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
 
             if (idx == 0) {
               // This case is for long double type.
-              if (field_byte_width == 16) {
+              if (*field_byte_width == 16) {
 
                 // If structure contains long double type, then it is returned
                 // in fp0/fp1 registers.
@@ -995,7 +998,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
                   return_value[0] = f1_data.GetU64(&offset);
                 }
 
-                f0_data.SetData(return_value, field_byte_width,
+                f0_data.SetData(return_value, *field_byte_width,
                                 target_byte_order);
               }
               copy_from_extractor = &f0_data; // This is in f0, copy from
@@ -1009,13 +1012,13 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
 
             // Sanity check to avoid crash
             if (!copy_from_extractor ||
-                field_byte_width > copy_from_extractor->GetByteSize())
+                *field_byte_width > copy_from_extractor->GetByteSize())
               return return_valobj_sp;
 
             // copy the register contents into our data buffer
             copy_from_extractor->CopyByteOrderedData(
-                0, field_byte_width,
-                data_sp->GetBytes() + (field_bit_offset / 8), field_byte_width,
+                0, *field_byte_width,
+                data_sp->GetBytes() + (field_bit_offset / 8), *field_byte_width,
                 target_byte_order);
           }
 
@@ -1038,12 +1041,11 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
 
         CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
             idx, name, &field_bit_offset, nullptr, nullptr);
-        const size_t field_byte_width =
-            field_compiler_type.GetByteSize(nullptr);
+        auto field_byte_width = field_compiler_type.GetByteSize(nullptr);
 
         // if we don't know the size of the field (e.g. invalid type), just
         // bail out
-        if (field_byte_width == 0)
+        if (!field_byte_width || *field_byte_width == 0)
           break;
 
         uint32_t field_byte_offset = field_bit_offset / 8;
@@ -1055,24 +1057,24 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
 
           if (integer_bytes < 8) {
             // We have not yet consumed r2 completely.
-            if (integer_bytes + field_byte_width + padding <= 8) {
+            if (integer_bytes + *field_byte_width + padding <= 8) {
               // This field fits in r2, copy its value from r2 to our result
               // structure
-              integer_bytes = integer_bytes + field_byte_width +
+              integer_bytes = integer_bytes + *field_byte_width +
                               padding; // Increase the consumed bytes.
               use_r2 = 1;
             } else {
               // There isn't enough space left in r2 for this field, so this
               // will be in r3.
-              integer_bytes = integer_bytes + field_byte_width +
+              integer_bytes = integer_bytes + *field_byte_width +
                               padding; // Increase the consumed bytes.
               use_r3 = 1;
             }
           }
           // We already have consumed at-least 8 bytes that means r2 is done,
           // and this field will be in r3. Check if this field can fit in r3.
-          else if (integer_bytes + field_byte_width + padding <= 16) {
-            integer_bytes = integer_bytes + field_byte_width + padding;
+          else if (integer_bytes + *field_byte_width + padding <= 16) {
+            integer_bytes = integer_bytes + *field_byte_width + padding;
             use_r3 = 1;
           } else {
             // There isn't any space left for this field, this should not
@@ -1085,7 +1087,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
       }
       // Vector types up to 16 bytes are returned in GP return registers
       if (type_flags & eTypeIsVector) {
-        if (byte_size <= 8)
+        if (*byte_size <= 8)
           use_r2 = 1;
         else {
           use_r2 = 1;

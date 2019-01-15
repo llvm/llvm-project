@@ -140,7 +140,7 @@ static inline void __ompt_implicit_task_end(kmp_info_t *this_thr,
     if (!KMP_MASTER_TID(ds_tid)) {
       if (ompt_enabled.ompt_callback_implicit_task) {
         ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
-            ompt_scope_end, NULL, tId, 0, ds_tid);
+            ompt_scope_end, NULL, tId, 0, ds_tid, ompt_task_implicit);
       }
       // return to idle state
       this_thr->th.ompt_thread_info.state = ompt_state_idle;

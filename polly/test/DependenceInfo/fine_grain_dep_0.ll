@@ -72,4 +72,4 @@ attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fp
 
 !llvm.ident = !{!0}
 
-!0 = !{!"clang version 3.9.0 (http://llvm.org/git/clang.git 3d5d4c39659f11dfbe8e11c857cadf5c449b559b) (http://llvm.org/git/llvm.git 801561e2bba12f2aa0285feb1105e110df443761)"}
+!0 = !{!"clang version 3.9.0"}
