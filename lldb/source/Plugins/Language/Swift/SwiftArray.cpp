@@ -93,10 +93,10 @@ SwiftArrayNativeBufferHandler::SwiftArrayNativeBufferHandler(
     return;
   next_read += ptr_size;
   m_reserved_word =
-      process_sp->ReadUnsignedIntegerFromMemory(next_read, 8, 0, error);
+      process_sp->ReadUnsignedIntegerFromMemory(next_read, ptr_size, 0, error);
   if (error.Fail())
     return;
-  next_read += 8;
+  next_read += ptr_size;
   m_size =
       process_sp->ReadUnsignedIntegerFromMemory(next_read, ptr_size, 0, error);
   if (error.Fail())
