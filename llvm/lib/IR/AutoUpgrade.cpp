@@ -299,6 +299,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.min.p") || // Added in 7.0. 128/256 in 5.0
       Name.startswith("avx512.mask.fpclass.p") || // Added in 7.0
       Name.startswith("avx512.mask.vpshufbitqmb.") || // Added in 8.0
+      Name.startswith("avx512.mask.pmultishift.qb.") || // Added in 8.0
       Name == "sse.cvtsi2ss" || // Added in 7.0
       Name == "sse.cvtsi642ss" || // Added in 7.0
       Name == "sse2.cvtsi2sd" || // Added in 7.0
@@ -1446,6 +1447,15 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
       IID = Intrinsic::x86_avx512_dbpsadbw_256;
     else if (VecWidth == 512)
       IID = Intrinsic::x86_avx512_dbpsadbw_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("pmultishift.qb.")) {
+    if (VecWidth == 128)
+      IID = Intrinsic::x86_avx512_pmultishift_qb_128;
+    else if (VecWidth == 256)
+      IID = Intrinsic::x86_avx512_pmultishift_qb_256;
+    else if (VecWidth == 512)
+      IID = Intrinsic::x86_avx512_pmultishift_qb_512;
     else
       llvm_unreachable("Unexpected intrinsic");
   } else

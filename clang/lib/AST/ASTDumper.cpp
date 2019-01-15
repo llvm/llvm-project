@@ -122,6 +122,9 @@ namespace  {
     void VisitComplexType(const ComplexType *T) {
       dumpTypeAsChild(T->getElementType());
     }
+    void VisitLocInfoType(const LocInfoType *T) {
+      dumpTypeAsChild(T->getTypeSourceInfo()->getType());
+    }
     void VisitPointerType(const PointerType *T) {
       dumpTypeAsChild(T->getPointeeType());
     }
@@ -131,98 +134,38 @@ namespace  {
     void VisitReferenceType(const ReferenceType *T) {
       dumpTypeAsChild(T->getPointeeType());
     }
-    void VisitRValueReferenceType(const ReferenceType *T) {
-      if (T->isSpelledAsLValue())
-        OS << " written as lvalue reference";
-      VisitReferenceType(T);
-    }
     void VisitMemberPointerType(const MemberPointerType *T) {
       dumpTypeAsChild(T->getClass());
       dumpTypeAsChild(T->getPointeeType());
     }
     void VisitArrayType(const ArrayType *T) {
-      switch (T->getSizeModifier()) {
-        case ArrayType::Normal: break;
-        case ArrayType::Static: OS << " static"; break;
-        case ArrayType::Star: OS << " *"; break;
-      }
-      OS << " " << T->getIndexTypeQualifiers().getAsString();
       dumpTypeAsChild(T->getElementType());
     }
-    void VisitConstantArrayType(const ConstantArrayType *T) {
-      OS << " " << T->getSize();
-      VisitArrayType(T);
-    }
     void VisitVariableArrayType(const VariableArrayType *T) {
-      OS << " ";
-      NodeDumper.dumpSourceRange(T->getBracketsRange());
       VisitArrayType(T);
       dumpStmt(T->getSizeExpr());
     }
     void VisitDependentSizedArrayType(const DependentSizedArrayType *T) {
-      switch (T->getSizeModifier()) {
-        case ArrayType::Normal: break;
-        case ArrayType::Static: OS << " static"; break;
-        case ArrayType::Star: OS << " *"; break;
-      }
-      OS << " " << T->getIndexTypeQualifiers().getAsString();
-      OS << " ";
-      NodeDumper.dumpSourceRange(T->getBracketsRange());
       dumpTypeAsChild(T->getElementType());
       dumpStmt(T->getSizeExpr());
     }
     void VisitDependentSizedExtVectorType(
         const DependentSizedExtVectorType *T) {
-      OS << " ";
-      NodeDumper.dumpLocation(T->getAttributeLoc());
       dumpTypeAsChild(T->getElementType());
       dumpStmt(T->getSizeExpr());
     }
     void VisitVectorType(const VectorType *T) {
-      switch (T->getVectorKind()) {
-        case VectorType::GenericVector: break;
-        case VectorType::AltiVecVector: OS << " altivec"; break;
-        case VectorType::AltiVecPixel: OS << " altivec pixel"; break;
-        case VectorType::AltiVecBool: OS << " altivec bool"; break;
-        case VectorType::NeonVector: OS << " neon"; break;
-        case VectorType::NeonPolyVector: OS << " neon poly"; break;
-      }
-      OS << " " << T->getNumElements();
       dumpTypeAsChild(T->getElementType());
     }
     void VisitFunctionType(const FunctionType *T) {
-      auto EI = T->getExtInfo();
-      if (EI.getNoReturn()) OS << " noreturn";
-      if (EI.getProducesResult()) OS << " produces_result";
-      if (EI.getHasRegParm()) OS << " regparm " << EI.getRegParm();
-      OS << " " << FunctionType::getNameForCallConv(EI.getCC());
       dumpTypeAsChild(T->getReturnType());
     }
     void VisitFunctionProtoType(const FunctionProtoType *T) {
-      auto EPI = T->getExtProtoInfo();
-      if (EPI.HasTrailingReturn) OS << " trailing_return";
-
-      if (!T->getTypeQuals().empty())
-        OS << " " << T->getTypeQuals().getAsString();
-
-      switch (EPI.RefQualifier) {
-        case RQ_None: break;
-        case RQ_LValue: OS << " &"; break;
-        case RQ_RValue: OS << " &&"; break;
-      }
-      // FIXME: Exception specification.
-      // FIXME: Consumed parameters.
       VisitFunctionType(T);
       for (QualType PT : T->getParamTypes())
         dumpTypeAsChild(PT);
-      if (EPI.Variadic)
+      if (T->getExtProtoInfo().Variadic)
         dumpChild([=] { OS << "..."; });
-    }
-    void VisitUnresolvedUsingType(const UnresolvedUsingType *T) {
-      NodeDumper.dumpDeclRef(T->getDecl());
-    }
-    void VisitTypedefType(const TypedefType *T) {
-      NodeDumper.dumpDeclRef(T->getDecl());
     }
     void VisitTypeOfExprType(const TypeOfExprType *T) {
       dumpStmt(T->getUnderlyingExpr());
@@ -231,24 +174,11 @@ namespace  {
       dumpStmt(T->getUnderlyingExpr());
     }
     void VisitUnaryTransformType(const UnaryTransformType *T) {
-      switch (T->getUTTKind()) {
-      case UnaryTransformType::EnumUnderlyingType:
-        OS << " underlying_type";
-        break;
-      }
       dumpTypeAsChild(T->getBaseType());
-    }
-    void VisitTagType(const TagType *T) {
-      NodeDumper.dumpDeclRef(T->getDecl());
     }
     void VisitAttributedType(const AttributedType *T) {
       // FIXME: AttrKind
       dumpTypeAsChild(T->getModifiedType());
-    }
-    void VisitTemplateTypeParmType(const TemplateTypeParmType *T) {
-      OS << " depth " << T->getDepth() << " index " << T->getIndex();
-      if (T->isParameterPack()) OS << " pack";
-      NodeDumper.dumpDeclRef(T->getDecl());
     }
     void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T) {
       dumpTypeAsChild(T->getReplacedParameter());
@@ -258,24 +188,11 @@ namespace  {
       dumpTypeAsChild(T->getReplacedParameter());
       dumpTemplateArgument(T->getArgumentPack());
     }
-    void VisitAutoType(const AutoType *T) {
-      if (T->isDecltypeAuto()) OS << " decltype(auto)";
-      if (!T->isDeduced())
-        OS << " undeduced";
-    }
     void VisitTemplateSpecializationType(const TemplateSpecializationType *T) {
-      if (T->isTypeAlias()) OS << " alias";
-      OS << " "; T->getTemplateName().dump(OS);
       for (auto &Arg : *T)
         dumpTemplateArgument(Arg);
       if (T->isTypeAlias())
         dumpTypeAsChild(T->getAliasedType());
-    }
-    void VisitInjectedClassNameType(const InjectedClassNameType *T) {
-      NodeDumper.dumpDeclRef(T->getDecl());
-    }
-    void VisitObjCInterfaceType(const ObjCInterfaceType *T) {
-      NodeDumper.dumpDeclRef(T->getDecl());
     }
     void VisitObjCObjectPointerType(const ObjCObjectPointerType *T) {
       dumpTypeAsChild(T->getPointeeType());
@@ -290,7 +207,6 @@ namespace  {
       dumpTypeAsChild(T->getOriginalType());
     }
     void VisitPackExpansionType(const PackExpansionType *T) {
-      if (auto N = T->getNumExpansions()) OS << " expansions " << *N;
       if (!T->isSugared())
         dumpTypeAsChild(T->getPattern());
     }
@@ -400,7 +316,7 @@ namespace  {
       dumpStmt(TA.getAsExpr());
     }
     void VisitPackTemplateArgument(const TemplateArgument &TA) {
-      for (const auto& TArg : TA.pack_elements())
+      for (const auto &TArg : TA.pack_elements())
         dumpTemplateArgument(TArg);
     }
 
@@ -419,57 +335,20 @@ void ASTDumper::dumpTypeAsChild(QualType T) {
     return dumpTypeAsChild(SQT.Ty);
 
   dumpChild([=] {
-    OS << "QualType";
-    NodeDumper.dumpPointer(T.getAsOpaquePtr());
-    OS << " ";
-    NodeDumper.dumpBareType(T, false);
-    OS << " " << T.split().Quals.getAsString();
+    NodeDumper.Visit(T);
     dumpTypeAsChild(T.split().Ty);
   });
 }
 
 void ASTDumper::dumpTypeAsChild(const Type *T) {
   dumpChild([=] {
-    if (!T) {
-      ColorScope Color(OS, ShowColors, NullColor);
-      OS << "<<<NULL>>>";
+    NodeDumper.Visit(T);
+    if (!T)
       return;
-    }
-    if (const LocInfoType *LIT = llvm::dyn_cast<LocInfoType>(T)) {
-      {
-        ColorScope Color(OS, ShowColors, TypeColor);
-        OS << "LocInfo Type";
-      }
-      NodeDumper.dumpPointer(T);
-      dumpTypeAsChild(LIT->getTypeSourceInfo()->getType());
-      return;
-    }
-
-    {
-      ColorScope Color(OS, ShowColors, TypeColor);
-      OS << T->getTypeClassName() << "Type";
-    }
-    NodeDumper.dumpPointer(T);
-    OS << " ";
-    NodeDumper.dumpBareType(QualType(T, 0), false);
+    TypeVisitor<ASTDumper>::Visit(T);
 
     QualType SingleStepDesugar =
         T->getLocallyUnqualifiedSingleStepDesugaredType();
-    if (SingleStepDesugar != QualType(T, 0))
-      OS << " sugar";
-    if (T->isDependentType())
-      OS << " dependent";
-    else if (T->isInstantiationDependentType())
-      OS << " instantiation_dependent";
-    if (T->isVariablyModifiedType())
-      OS << " variably_modified";
-    if (T->containsUnexpandedParameterPack())
-      OS << " contains_unexpanded_pack";
-    if (T->isFromAST())
-      OS << " imported";
-
-    TypeVisitor<ASTDumper>::Visit(T);
-
     if (SingleStepDesugar != QualType(T, 0))
       dumpTypeAsChild(SingleStepDesugar);
   });
@@ -556,35 +435,6 @@ void ASTDumper::dumpAttr(const Attr *A) {
   });
 }
 
-static void dumpPreviousDeclImpl(raw_ostream &OS, ...) {}
-
-template<typename T>
-static void dumpPreviousDeclImpl(raw_ostream &OS, const Mergeable<T> *D) {
-  const T *First = D->getFirstDecl();
-  if (First != D)
-    OS << " first " << First;
-}
-
-template<typename T>
-static void dumpPreviousDeclImpl(raw_ostream &OS, const Redeclarable<T> *D) {
-  const T *Prev = D->getPreviousDecl();
-  if (Prev)
-    OS << " prev " << Prev;
-}
-
-/// Dump the previous declaration in the redeclaration chain for a declaration,
-/// if any.
-static void dumpPreviousDecl(raw_ostream &OS, const Decl *D) {
-  switch (D->getKind()) {
-#define DECL(DERIVED, BASE) \
-  case Decl::DERIVED: \
-    return dumpPreviousDeclImpl(OS, cast<DERIVED##Decl>(D));
-#define ABSTRACT_DECL(DECL)
-#include "clang/AST/DeclNodes.inc"
-  }
-  llvm_unreachable("Decl that isn't part of DeclNodes.inc!");
-}
-
 //===----------------------------------------------------------------------===//
 //  C++ Utilities
 //===----------------------------------------------------------------------===//
@@ -657,46 +507,9 @@ void ASTDumper::dumpObjCTypeParamList(const ObjCTypeParamList *typeParams) {
 
 void ASTDumper::dumpDecl(const Decl *D) {
   dumpChild([=] {
-    if (!D) {
-      ColorScope Color(OS, ShowColors, NullColor);
-      OS << "<<<NULL>>>";
+    NodeDumper.Visit(D);
+    if (!D)
       return;
-    }
-
-    {
-      ColorScope Color(OS, ShowColors, DeclKindNameColor);
-      OS << D->getDeclKindName() << "Decl";
-    }
-    NodeDumper.dumpPointer(D);
-    if (D->getLexicalDeclContext() != D->getDeclContext())
-      OS << " parent " << cast<Decl>(D->getDeclContext());
-    dumpPreviousDecl(OS, D);
-    NodeDumper.dumpSourceRange(D->getSourceRange());
-    OS << ' ';
-    NodeDumper.dumpLocation(D->getLocation());
-    if (D->isFromASTFile())
-      OS << " imported";
-    if (Module *M = D->getOwningModule())
-      OS << " in " << M->getFullModuleName();
-    if (auto *ND = dyn_cast<NamedDecl>(D))
-      for (Module *M : D->getASTContext().getModulesWithMergedDefinition(
-               const_cast<NamedDecl *>(ND)))
-        dumpChild([=] { OS << "also in " << M->getFullModuleName(); });
-    if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
-      if (ND->isHidden())
-        OS << " hidden";
-    if (D->isImplicit())
-      OS << " implicit";
-    if (D->isUsed())
-      OS << " used";
-    else if (D->isThisDeclarationReferenced())
-      OS << " referenced";
-    if (D->isInvalidDecl())
-      OS << " invalid";
-    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
-      if (FD->isConstexpr())
-        OS << " constexpr";
-
 
     ConstDeclVisitor<ASTDumper>::Visit(D);
 

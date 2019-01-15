@@ -3760,6 +3760,11 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         // Promote to next legal integer type.
         unsigned Width = CmpType->getBitWidth();
         unsigned NewWidth = Width;
+
+        // Don't do anything for i1 comparisons.
+        if (Width == 1)
+          break;
+
         if (Width <= 16)
           NewWidth = 16;
         else if (Width <= 32)

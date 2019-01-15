@@ -95,6 +95,17 @@ Changes to the AVR Target
 
  During this release ...
 
+Changes to the WebAssembly Target
+---------------------------------
+
+The WebAssembly target is no longer "experimental"! It's now built by default,
+rather than needing to be enabled with LLVM_EXPERIMENTAL_TARGETS_TO_BUILD.
+
+The object file format and core C ABI are now considered stable. That said,
+the object file format has an ABI versioning capability, and one anticipated
+use for it will be to add support for returning small structs as multiple
+return values, once the underlying WebAssembly platform itself supports it.
+
 Changes to the OCaml bindings
 -----------------------------
 

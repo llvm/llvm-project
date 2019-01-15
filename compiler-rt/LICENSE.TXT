@@ -14,7 +14,7 @@ Full text of the relevant licenses is included below.
 University of Illinois/NCSA
 Open Source License
 
-Copyright (c) 2009-2018 by the contributors listed in CREDITS.TXT
+Copyright (c) 2009-2019 by the contributors listed in CREDITS.TXT
 
 All rights reserved.
 

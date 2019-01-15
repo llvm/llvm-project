@@ -116,14 +116,14 @@ def _SLASH_J : CLFlag<"J">, HelpText<"Make char type unsigned">,
 // The _SLASH_O option handles all the /O flags, but we also provide separate
 // aliased options to provide separate help messages.
 def _SLASH_O : CLJoined<"O">,
-  HelpText<"Set multiple /O flags at once; e.g. '/O2y-' is the same as '/O2 /y-'">,
+  HelpText<"Set multiple /O flags at once; e.g. '/O2y-' for '/O2 /Oy-'">,
   MetaVarName<"<flags>">;
 // FIXME: Not sure why we have -O0 here; MSVC doesn't support that.
 def : CLFlag<"O0">, Alias<O0>, HelpText<"Disable optimization">;
 def : CLFlag<"O1">, Alias<_SLASH_O>, AliasArgs<["1"]>,
-  HelpText<"Optimize for size (equivalent to /Og /Os /Oy /Ob2 /GF /Gy)">;
+  HelpText<"Optimize for size  (same as /Og     /Os /Oy /Ob2 /GF /Gy)">;
 def : CLFlag<"O2">, Alias<_SLASH_O>, AliasArgs<["2"]>,
-  HelpText<"Optimize for speed (equivalent to /Og /Oi /Ot /Oy /Ob2 /GF /Gy)">;
+  HelpText<"Optimize for speed (same as /Og /Oi /Ot /Oy /Ob2 /GF /Gy)">;
 def : CLFlag<"Ob0">, Alias<_SLASH_O>, AliasArgs<["b0"]>,
   HelpText<"Disable function inlining">;
 def : CLFlag<"Ob1">, Alias<_SLASH_O>, AliasArgs<["b1"]>,
@@ -143,7 +143,7 @@ def : CLFlag<"Os">, Alias<_SLASH_O>, AliasArgs<["s"]>,
 def : CLFlag<"Ot">, Alias<_SLASH_O>, AliasArgs<["t"]>,
   HelpText<"Optimize for speed">;
 def : CLFlag<"Ox">, Alias<_SLASH_O>, AliasArgs<["x"]>,
-  HelpText<"Deprecated (equivalent to /Og /Oi /Ot /Oy /Ob2); use /O2 instead">;
+  HelpText<"Deprecated (same as /Og /Oi /Ot /Oy /Ob2); use /O2 instead">;
 def : CLFlag<"Oy">, Alias<_SLASH_O>, AliasArgs<["y"]>,
   HelpText<"Enable frame pointer omission (x86 only)">;
 def : CLFlag<"Oy-">, Alias<_SLASH_O>, AliasArgs<["y-"]>,

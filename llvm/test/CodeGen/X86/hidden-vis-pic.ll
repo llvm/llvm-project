@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin9 -relocation-model=pic -disable-fp-elim | FileCheck %s
+; RUN: llc < %s -mtriple=i386-apple-darwin9 -relocation-model=pic -frame-pointer=all | FileCheck %s
 
 
 

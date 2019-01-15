@@ -544,10 +544,10 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   if (!FS)
     return std::error_code();
 
-  // Ignore all intrinsics and branch instructions.
-  // Branch instruction usually contains debug info from sources outside of
+  // Ignore all intrinsics, phinodes and branch instructions.
+  // Branch and phinodes instruction usually contains debug info from sources outside of
   // the residing basic block, thus we ignore them during annotation.
-  if (isa<BranchInst>(Inst) || isa<IntrinsicInst>(Inst))
+  if (isa<BranchInst>(Inst) || isa<IntrinsicInst>(Inst) || isa<PHINode>(Inst))
     return std::error_code();
 
   // If a direct call/invoke instruction is inlined in profile

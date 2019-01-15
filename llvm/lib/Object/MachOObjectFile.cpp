@@ -2438,7 +2438,7 @@ basic_symbol_iterator MachOObjectFile::symbol_end() const {
   return basic_symbol_iterator(SymbolRef(DRI, this));
 }
 
-basic_symbol_iterator MachOObjectFile::getSymbolByIndex(unsigned Index) const {
+symbol_iterator MachOObjectFile::getSymbolByIndex(unsigned Index) const {
   MachO::symtab_command Symtab = getSymtabLoadCommand();
   if (!SymtabLoadCmd || Index >= Symtab.nsyms)
     report_fatal_error("Requested symbol index is out of range.");

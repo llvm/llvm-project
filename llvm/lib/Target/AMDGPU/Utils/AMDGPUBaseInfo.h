@@ -184,6 +184,7 @@ struct MIMGBaseOpcodeInfo {
   bool Atomic;
   bool AtomicX2;
   bool Sampler;
+  bool Gather4;
 
   uint8_t NumExtraArgs;
   bool Gradients;

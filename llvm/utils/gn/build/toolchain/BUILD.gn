@@ -39,6 +39,16 @@ template("unix_toolchain") {
       ]
     }
 
+    tool("asm") {
+      depfile = "{{output}}.d"
+      command = "$cc -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{asmflags}} $target_cflags"
+      depsformat = "gcc"
+      description = "ASM {{output}}"
+      outputs = [
+        "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
+      ]
+    }
+
     tool("alink") {
       if (current_os == "mac") {
         command = "libtool -static -no_warning_for_no_symbols {{arflags}} -o {{output}} {{inputs}}"
@@ -62,7 +72,7 @@ template("unix_toolchain") {
         command = "$ld -shared {{ldflags}} -o $outfile {{libs}} {{inputs}} $target_ldflags"
         default_output_extension = ".dylib"
       } else {
-        command = "$ld -shared {{ldflags}} -Wl,-z,defs -o $outfile {{libs}} {{inputs}} $target_ldflags"
+        command = "$ld -shared {{ldflags}} -Wl,-z,defs -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{libs}} {{inputs}} $target_ldflags"
         default_output_extension = ".so"
       }
       description = "SOLINK $outfile"
@@ -80,7 +90,7 @@ template("unix_toolchain") {
         command = "$ld -shared {{ldflags}} -Wl,-flat_namespace -Wl,-undefined,suppress -o $outfile {{libs}} {{inputs}} $target_ldflags"
         default_output_extension = ".dylib"
       } else {
-        command = "$ld -shared {{ldflags}} -o $outfile {{libs}} {{inputs}} $target_ldflags"
+        command = "$ld -shared {{ldflags}} -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{libs}} {{inputs}} $target_ldflags"
         default_output_extension = ".so"
       }
       description = "SOLINK $outfile"
@@ -137,10 +147,13 @@ unix_toolchain("unix") {
     cxx = "$goma_dir/gomacc $cxx"
   }
 
-  ar = "ar"
+  if (current_os != "mac") {
+    ar = "ar"
+  }
 
   toolchain_args = {
     current_os = host_os
+    current_cpu = host_cpu
   }
 }
 
@@ -159,6 +172,7 @@ if (android_ndk_path != "") {
 
     toolchain_args = {
       current_os = "android"
+      current_cpu = "arm64"
     }
 
     libcxx_path = "$android_ndk_path/sources/cxx-stl/llvm-libc++"
@@ -281,5 +295,6 @@ toolchain("win") {
 
   toolchain_args = {
     current_os = "win"
+    current_cpu = host_cpu
   }
 }

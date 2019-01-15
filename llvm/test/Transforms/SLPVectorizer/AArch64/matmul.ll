@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 ; This test is reduced from the matrix multiplication benchmark in the test-suite:
-; http://www.llvm.org/viewvc/llvm-project/test-suite/trunk/SingleSource/Benchmarks/Misc/matmul_f64_4x4.c
+; https://github.com/llvm/llvm-test-suite/tree/master/SingleSource/Benchmarks/Misc/matmul_f64_4x4.c
 ; The operations here are expected to be vectorized to <2 x double>.
 ; Otherwise, performance will suffer on Cortex-A53.
 

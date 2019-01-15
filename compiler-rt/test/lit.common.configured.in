@@ -36,6 +36,7 @@ set_default("use_thinlto", False)
 set_default("use_lto", config.use_thinlto)
 set_default("use_newpm", False)
 set_default("android", @ANDROID_PYBOOL@)
+set_default("have_rpc_xdr_h", @HAVE_RPC_XDR_H@)
 config.available_features.add('target-is-%s' % config.target_arch)
 
 if config.enable_per_target_runtime_dir:

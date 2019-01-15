@@ -374,7 +374,7 @@ Performance
 -----------
 
 This section shows the execution time of Clang on a simple benchmark:
-`gcc-loops <http://llvm.org/viewvc/llvm-project/test-suite/trunk/SingleSource/UnitTests/Vectorizer/>`_.
+`gcc-loops <https://github.com/llvm/llvm-test-suite/tree/master/SingleSource/UnitTests/Vectorizer>`_.
 This benchmarks is a collection of loops from the GCC autovectorization
 `page <http://gcc.gnu.org/projects/tree-ssa/vectorization.html>`_ by Dorit Nuzman.
 

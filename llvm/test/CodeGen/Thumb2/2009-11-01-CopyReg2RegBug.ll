@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin -relocation-model=pic -disable-fp-elim -mcpu=cortex-a8
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin -relocation-model=pic -frame-pointer=all -mcpu=cortex-a8
 
 define void @get_initial_mb16x16_cost() nounwind {
 entry:

@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=thumb-apple-darwin -relocation-model=pic -disable-fp-elim | FileCheck %s -check-prefix=THUMB
-; RUN: llc < %s -mtriple=arm-apple-darwin -relocation-model=pic -disable-fp-elim   | FileCheck %s -check-prefix=ARM
-; RUN: llc < %s -mtriple=arm-apple-darwin -relocation-model=pic -disable-fp-elim -mattr=+v6t2 | FileCheck %s -check-prefix=MOVT
+; RUN: llc < %s -mtriple=thumb-apple-darwin -relocation-model=pic -frame-pointer=all | FileCheck %s -check-prefix=THUMB
+; RUN: llc < %s -mtriple=arm-apple-darwin -relocation-model=pic -frame-pointer=all   | FileCheck %s -check-prefix=ARM
+; RUN: llc < %s -mtriple=arm-apple-darwin -relocation-model=pic -frame-pointer=all -mattr=+v6t2 | FileCheck %s -check-prefix=MOVT
 ; rdar://7353541
 ; rdar://7354376
 ; rdar://8887598

@@ -542,7 +542,7 @@ ModuleSP ModuleList::FindModule(const UUID &uuid) const {
 }
 
 size_t
-ModuleList::FindTypes(const SymbolContext &sc, const ConstString &name,
+ModuleList::FindTypes(Module *search_first, const ConstString &name,
                       bool name_is_fully_qualified, size_t max_matches,
                       llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                       TypeList &types) const {
@@ -550,14 +550,12 @@ ModuleList::FindTypes(const SymbolContext &sc, const ConstString &name,
 
   size_t total_matches = 0;
   collection::const_iterator pos, end = m_modules.end();
-  if (sc.module_sp) {
-    // The symbol context "sc" contains a module so we want to search that one
-    // first if it is in our list...
+  if (search_first) {
     for (pos = m_modules.begin(); pos != end; ++pos) {
-      if (sc.module_sp.get() == (*pos).get()) {
+      if (search_first == pos->get()) {
         total_matches +=
-            (*pos)->FindTypes(sc, name, name_is_fully_qualified, max_matches,
-                              searched_symbol_files, types);
+            search_first->FindTypes(name, name_is_fully_qualified, max_matches,
+                                    searched_symbol_files, types);
 
         if (total_matches >= max_matches)
           break;
@@ -566,15 +564,14 @@ ModuleList::FindTypes(const SymbolContext &sc, const ConstString &name,
   }
 
   if (total_matches < max_matches) {
-    SymbolContext world_sc;
     for (pos = m_modules.begin(); pos != end; ++pos) {
       // Search the module if the module is not equal to the one in the symbol
       // context "sc". If "sc" contains a empty module shared pointer, then the
       // comparison will always be true (valid_module_ptr != nullptr).
-      if (sc.module_sp.get() != (*pos).get())
+      if (search_first != pos->get())
         total_matches +=
-            (*pos)->FindTypes(world_sc, name, name_is_fully_qualified,
-                              max_matches, searched_symbol_files, types);
+            (*pos)->FindTypes(name, name_is_fully_qualified, max_matches,
+                              searched_symbol_files, types);
 
       if (total_matches >= max_matches)
         break;

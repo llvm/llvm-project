@@ -1677,10 +1677,10 @@ bool CastExpr::CastConsistency() const {
     auto Ty = getType();
     auto SETy = getSubExpr()->getType();
     assert(getValueKindForType(Ty) == Expr::getValueKindForType(SETy));
-    if (!isGLValue())
+    if (isRValue()) {
       Ty = Ty->getPointeeType();
-    if (!isGLValue())
       SETy = SETy->getPointeeType();
+    }
     assert(!Ty.isNull() && !SETy.isNull() &&
            Ty.getAddressSpace() != SETy.getAddressSpace());
     goto CheckNoBasePath;

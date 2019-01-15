@@ -1,6 +1,6 @@
-; RUN: llc -fast-isel-sink-local-values -O0 -fast-isel -fast-isel-abort=2 -code-model=small -verify-machineinstrs -disable-fp-elim -mtriple=arm64-apple-darwin   < %s | FileCheck %s
-; RUN: llc -fast-isel-sink-local-values -O0 -fast-isel -fast-isel-abort=2 -code-model=large -verify-machineinstrs -disable-fp-elim -mtriple=arm64-apple-darwin   < %s | FileCheck %s --check-prefix=LARGE
-; RUN: llc -fast-isel-sink-local-values -O0 -fast-isel -fast-isel-abort=2 -code-model=small -verify-machineinstrs -disable-fp-elim -mtriple=aarch64_be-linux-gnu < %s | FileCheck %s --check-prefix=CHECK-BE
+; RUN: llc -fast-isel-sink-local-values -O0 -fast-isel -fast-isel-abort=2 -code-model=small -verify-machineinstrs -frame-pointer=all -mtriple=arm64-apple-darwin   < %s | FileCheck %s
+; RUN: llc -fast-isel-sink-local-values -O0 -fast-isel -fast-isel-abort=2 -code-model=large -verify-machineinstrs -frame-pointer=all -mtriple=arm64-apple-darwin   < %s | FileCheck %s --check-prefix=LARGE
+; RUN: llc -fast-isel-sink-local-values -O0 -fast-isel -fast-isel-abort=2 -code-model=small -verify-machineinstrs -frame-pointer=all -mtriple=aarch64_be-linux-gnu < %s | FileCheck %s --check-prefix=CHECK-BE
 
 define void @call0() nounwind {
 entry:

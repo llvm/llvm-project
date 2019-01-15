@@ -1,4 +1,4 @@
-; RUN: llc < %s -regalloc=greedy -mcpu=cortex-a8 -relocation-model=pic -disable-fp-elim -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -regalloc=greedy -mcpu=cortex-a8 -relocation-model=pic -frame-pointer=all -verify-machineinstrs | FileCheck %s
 ;
 ; ARM tests that crash or fail with the greedy register allocator.
 

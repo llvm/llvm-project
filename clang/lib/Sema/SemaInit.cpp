@@ -4669,11 +4669,22 @@ static void TryReferenceInitializationCore(Sema &S,
     //   If the converted initializer is a prvalue, its type T4 is adjusted
     //   to type "cv1 T4" and the temporary materialization conversion is
     //   applied.
+    // Postpone address space conversions to after the temporary materialization
+    // conversion to allow creating temporaries in the alloca address space.
+    auto AS1 = T1Quals.getAddressSpace();
+    auto AS2 = T2Quals.getAddressSpace();
+    T1Quals.removeAddressSpace();
+    T2Quals.removeAddressSpace();
     QualType cv1T4 = S.Context.getQualifiedType(cv2T2, T1Quals);
     if (T1Quals != T2Quals)
       Sequence.AddQualificationConversionStep(cv1T4, ValueKind);
     Sequence.AddReferenceBindingStep(cv1T4, ValueKind == VK_RValue);
     ValueKind = isLValueRef ? VK_LValue : VK_XValue;
+    if (AS1 != AS2) {
+      T1Quals.addAddressSpace(AS1);
+      QualType cv1AST4 = S.Context.getQualifiedType(cv2T2, T1Quals);
+      Sequence.AddQualificationConversionStep(cv1AST4, ValueKind);
+    }
 
     //   In any case, the reference is bound to the resulting glvalue (or to
     //   an appropriate base class subobject).

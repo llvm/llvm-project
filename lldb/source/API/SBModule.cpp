@@ -440,13 +440,12 @@ lldb::SBTypeList SBModule::FindTypes(const char *type) {
 
   ModuleSP module_sp(GetSP());
   if (type && module_sp) {
-    SymbolContext sc;
     TypeList type_list;
     const bool exact_match = false;
     ConstString name(type);
     llvm::DenseSet<SymbolFile *> searched_symbol_files;
     const uint32_t num_matches = module_sp->FindTypes(
-        sc, name, exact_match, UINT32_MAX, searched_symbol_files, type_list);
+        name, exact_match, UINT32_MAX, searched_symbol_files, type_list);
 
     if (num_matches > 0) {
       for (size_t idx = 0; idx < num_matches; idx++) {

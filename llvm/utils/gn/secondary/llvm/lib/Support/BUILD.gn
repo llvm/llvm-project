@@ -155,7 +155,7 @@ static_library("Support") {
 
   libs = []
 
-  if (host_os == "linux") {
+  if (current_os == "linux" || current_os == "android") {
     libs += [ "dl" ]
   }
 }

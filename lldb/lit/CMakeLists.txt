@@ -26,6 +26,9 @@ list(APPEND LLDB_TEST_DEPS
   llvm-config
   llvm-mc
   llvm-objcopy
+  FileCheck
+  count
+  not
   )
 
 if(TARGET lld)
@@ -51,14 +54,6 @@ configure_lit_site_cfg(
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/Suite/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/Suite/lit.site.cfg)
-
-if(NOT LLDB_BUILT_STANDALONE)
-  list(APPEND LLDB_TEST_DEPS
-    FileCheck
-    count
-    not
-    )
-endif()
 
 add_lit_testsuite(check-lldb-lit "Running lldb lit test suite"
   ${CMAKE_CURRENT_BINARY_DIR}

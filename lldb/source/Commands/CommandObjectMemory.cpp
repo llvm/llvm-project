@@ -382,7 +382,6 @@ protected:
     if (view_as_type_cstr && view_as_type_cstr[0]) {
       // We are viewing memory as a type
 
-      SymbolContext sc;
       const bool exact_match = false;
       TypeList type_list;
       uint32_t reference_count = 0;
@@ -467,17 +466,13 @@ protected:
       llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
       ConstString lookup_type_name(type_str.c_str());
       StackFrame *frame = m_exe_ctx.GetFramePtr();
+      ModuleSP search_first;
       if (frame) {
-        sc = frame->GetSymbolContext(eSymbolContextModule);
-        if (sc.module_sp) {
-          sc.module_sp->FindTypes(sc, lookup_type_name, exact_match, 1,
-                                  searched_symbol_files, type_list);
-        }
+        search_first = frame->GetSymbolContext(eSymbolContextModule).module_sp;
       }
-      if (type_list.GetSize() == 0) {
-        target->GetImages().FindTypes(sc, lookup_type_name, exact_match, 1,
-                                      searched_symbol_files, type_list);
-      }
+      target->GetImages().FindTypes(search_first.get(), lookup_type_name,
+                                    exact_match, 1, searched_symbol_files,
+                                    type_list);
 
       if (type_list.GetSize() == 0 && lookup_type_name.GetCString() &&
           *lookup_type_name.GetCString() == '$') {

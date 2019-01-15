@@ -154,3 +154,7 @@ mov $v_eax, %ecx
 // 32: error: unexpected token in argument list
 // 64: error: unexpected token in argument list
 mov v_ecx(%eax), %ecx	
+
+// 32: 7: error: invalid operand for instruction
+// 64: 7: error: invalid operand for instruction
+addb (%dx), %al

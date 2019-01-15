@@ -240,22 +240,20 @@ void SymbolCollector::initialize(ASTContext &Ctx) {
 
 bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
                                           const ASTContext &ASTCtx,
-                                          const Options &Opts) {
+                                          const Options &Opts,
+                                          bool IsMainFileOnly) {
   if (ND.isImplicit())
     return false;
   // Skip anonymous declarations, e.g (anonymous enum/class/struct).
   if (ND.getDeclName().isEmpty())
     return false;
 
-  // FIXME: figure out a way to handle internal linkage symbols (e.g. static
-  // variables, function) defined in the .cc files. Also we skip the symbols
-  // in anonymous namespace as the qualifier names of these symbols are like
-  // `foo::<anonymous>::bar`, which need a special handling.
-  // In real world projects, we have a relatively large set of header files
-  // that define static variables (like "static const int A = 1;"), we still
-  // want to collect these symbols, although they cause potential ODR
-  // violations.
-  if (ND.isInAnonymousNamespace())
+  // Skip main-file symbols if we are not collecting them.
+  if (IsMainFileOnly && !Opts.CollectMainFileSymbols)
+    return false;
+
+  // Skip symbols in anonymous namespaces in header files.
+  if (!IsMainFileOnly && ND.isInAnonymousNamespace())
     return false;
 
   // We want most things but not "local" symbols such as symbols inside
@@ -285,10 +283,6 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
       explicitTemplateSpecialization<VarDecl>(ND))
     return false;
 
-  const auto &SM = ASTCtx.getSourceManager();
-  // Skip decls in the main file.
-  if (SM.isInMainFile(SM.getExpansionLoc(ND.getBeginLoc())))
-    return false;
   // Avoid indexing internal symbols in protobuf generated headers.
   if (isPrivateProtoDecl(ND))
     return false;
@@ -335,9 +329,15 @@ bool SymbolCollector::handleDeclOccurence(
 
   if (IsOnlyRef && !CollectRef)
     return true;
-  if (!shouldCollectSymbol(*ND, *ASTCtx, Opts))
+
+  // ND is the canonical (i.e. first) declaration. If it's in the main file,
+  // then no public declaration was visible, so assume it's main-file only.
+  bool IsMainFileOnly = SM.isWrittenInMainFile(SM.getExpansionLoc(
+    ND->getBeginLoc()));
+  if (!shouldCollectSymbol(*ND, *ASTCtx, Opts, IsMainFileOnly))
     return true;
-  if (CollectRef && !isa<NamespaceDecl>(ND) &&
+  // Do not store references to main-file symbols.
+  if (CollectRef && !IsMainFileOnly && !isa<NamespaceDecl>(ND) &&
       (Opts.RefsInHeaders || SM.getFileID(SpellingLoc) == SM.getMainFileID()))
     DeclRefs[ND].emplace_back(SpellingLoc, Roles);
   // Don't continue indexing if this is a mere reference.
@@ -351,13 +351,13 @@ bool SymbolCollector::handleDeclOccurence(
   const NamedDecl &OriginalDecl = *cast<NamedDecl>(ASTNode.OrigD);
   const Symbol *BasicSymbol = Symbols.find(*ID);
   if (!BasicSymbol) // Regardless of role, ND is the canonical declaration.
-    BasicSymbol = addDeclaration(*ND, std::move(*ID));
+    BasicSymbol = addDeclaration(*ND, std::move(*ID), IsMainFileOnly);
   else if (isPreferredDeclaration(OriginalDecl, Roles))
     // If OriginalDecl is preferred, replace the existing canonical
     // declaration (e.g. a class forward declaration). There should be at most
     // one duplicate as we expect to see only one preferred declaration per
     // TU, because in practice they are definitions.
-    BasicSymbol = addDeclaration(OriginalDecl, std::move(*ID));
+    BasicSymbol = addDeclaration(OriginalDecl, std::move(*ID), IsMainFileOnly);
 
   if (Roles & static_cast<unsigned>(index::SymbolRole::Definition))
     addDefinition(OriginalDecl, *BasicSymbol);
@@ -506,7 +506,8 @@ void SymbolCollector::finish() {
 }
 
 const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
-                                              SymbolID ID) {
+                                              SymbolID ID,
+                                              bool IsMainFileOnly) {
   auto &Ctx = ND.getASTContext();
   auto &SM = Ctx.getSourceManager();
 
@@ -517,10 +518,13 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   // FIXME: this returns foo:bar: for objective-C methods, we prefer only foo:
   // for consistency with CodeCompletionString and a clean name/signature split.
 
-  if (isIndexedForCodeCompletion(ND, Ctx))
+  // We collect main-file symbols, but do not use them for code completion.
+  if (!IsMainFileOnly && isIndexedForCodeCompletion(ND, Ctx))
     S.Flags |= Symbol::IndexedForCodeCompletion;
   if (isImplementationDetail(&ND))
     S.Flags |= Symbol::ImplementationDetail;
+  if (!IsMainFileOnly)
+    S.Flags |= Symbol::VisibleOutsideFile;
   S.SymInfo = index::getSymbolInfo(&ND);
   std::string FileURI;
   auto Loc = findNameLoc(&ND);

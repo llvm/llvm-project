@@ -1,4 +1,4 @@
-; RUN: llc < %s -disable-fp-elim -mtriple=i686-pc-mingw32 -no-integrated-as
+; RUN: llc < %s -frame-pointer=all -mtriple=i686-pc-mingw32 -no-integrated-as
 
 %struct.__SEH2Frame = type {}
 

@@ -99,7 +99,7 @@ public:
   ParseImportedModules(const SymbolContext &sc,
                        std::vector<ConstString> &imported_modules) override;
 
-  size_t ParseFunctionBlocks(const SymbolContext &sc) override;
+  size_t ParseBlocksRecursive(Function &func) override;
 
   uint32_t FindGlobalVariables(const ConstString &name,
                                const CompilerDeclContext *parent_decl_ctx,
@@ -139,7 +139,7 @@ public:
   uint32_t FindFunctions(const RegularExpression &regex, bool include_inlines,
                          bool append, SymbolContextList &sc_list) override;
 
-  uint32_t FindTypes(const SymbolContext &sc, const ConstString &name,
+  uint32_t FindTypes(const ConstString &name,
                      const CompilerDeclContext *parent_decl_ctx, bool append,
                      uint32_t max_matches,
                      llvm::DenseSet<SymbolFile *> &searched_symbol_files,
@@ -151,7 +151,7 @@ public:
   TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
   CompilerDeclContext
-  FindNamespace(const SymbolContext &sc, const ConstString &name,
+  FindNamespace(const ConstString &name,
                 const CompilerDeclContext *parent_decl_ctx) override;
 
   ConstString GetPluginName() override;

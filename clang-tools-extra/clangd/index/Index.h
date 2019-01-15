@@ -241,6 +241,8 @@ struct Symbol {
     Deprecated = 1 << 1,
     // Symbol is an implementation detail.
     ImplementationDetail = 1 << 2,
+    // Symbol is visible to other files (not e.g. a static helper function).
+    VisibleOutsideFile = 1 << 3,
   };
 
   SymbolFlag Flags = SymbolFlag::None;
@@ -474,6 +476,10 @@ struct LookupRequest {
 struct RefsRequest {
   llvm::DenseSet<SymbolID> IDs;
   RefKind Filter = RefKind::All;
+  /// If set, limit the number of refers returned from the index. The index may
+  /// choose to return less than this, e.g. it tries to avoid returning stale
+  /// results.
+  llvm::Optional<uint32_t> Limit;
 };
 
 /// Interface for symbol indexes that can be used for searching or

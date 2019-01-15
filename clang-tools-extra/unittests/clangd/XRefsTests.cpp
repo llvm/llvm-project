@@ -1219,7 +1219,7 @@ TEST(FindReferences, WithinAST) {
     std::vector<Matcher<Location>> ExpectedLocations;
     for (const auto &R : T.ranges())
       ExpectedLocations.push_back(RangeIs(R));
-    EXPECT_THAT(findReferences(AST, T.point()),
+    EXPECT_THAT(findReferences(AST, T.point(), 0),
                 ElementsAreArray(ExpectedLocations))
         << Test;
   }
@@ -1266,7 +1266,7 @@ TEST(FindReferences, ExplicitSymbols) {
     std::vector<Matcher<Location>> ExpectedLocations;
     for (const auto &R : T.ranges())
       ExpectedLocations.push_back(RangeIs(R));
-    EXPECT_THAT(findReferences(AST, T.point()),
+    EXPECT_THAT(findReferences(AST, T.point(), 0),
                 ElementsAreArray(ExpectedLocations))
         << Test;
   }
@@ -1281,7 +1281,7 @@ TEST(FindReferences, NeedsIndex) {
   auto AST = TU.build();
 
   // References in main file are returned without index.
-  EXPECT_THAT(findReferences(AST, Main.point(), /*Index=*/nullptr),
+  EXPECT_THAT(findReferences(AST, Main.point(), 0, /*Index=*/nullptr),
               ElementsAre(RangeIs(Main.range())));
   Annotations IndexedMain(R"cpp(
     int main() { [[f^oo]](); }
@@ -1292,13 +1292,17 @@ TEST(FindReferences, NeedsIndex) {
   IndexedTU.Code = IndexedMain.code();
   IndexedTU.Filename = "Indexed.cpp";
   IndexedTU.HeaderCode = Header;
-  EXPECT_THAT(findReferences(AST, Main.point(), IndexedTU.index().get()),
+  EXPECT_THAT(findReferences(AST, Main.point(), 0, IndexedTU.index().get()),
               ElementsAre(RangeIs(Main.range()), RangeIs(IndexedMain.range())));
+
+  EXPECT_EQ(1u, findReferences(AST, Main.point(), /*Limit*/ 1,
+                               IndexedTU.index().get())
+                    .size());
 
   // If the main file is in the index, we don't return duplicates.
   // (even if the references are in a different location)
   TU.Code = ("\n\n" + Main.code()).str();
-  EXPECT_THAT(findReferences(AST, Main.point(), TU.index().get()),
+  EXPECT_THAT(findReferences(AST, Main.point(), 0, TU.index().get()),
               ElementsAre(RangeIs(Main.range())));
 }
 
@@ -1328,7 +1332,7 @@ TEST(FindReferences, NoQueryForLocalSymbols) {
     Annotations File(T.AnnotatedCode);
     RecordingIndex Rec;
     auto AST = TestTU::withCode(File.code()).build();
-    findReferences(AST, File.point(), &Rec);
+    findReferences(AST, File.point(), 0, &Rec);
     if (T.WantQuery)
       EXPECT_NE(Rec.RefIDs, None) << T.AnnotatedCode;
     else

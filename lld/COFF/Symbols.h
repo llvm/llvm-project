@@ -39,7 +39,7 @@ class Symbol {
 public:
   enum Kind {
     // The order of these is significant. We start with the regular defined
-    // symbols as those are the most prevelant and the zero tag is the cheapest
+    // symbols as those are the most prevalent and the zero tag is the cheapest
     // to set. Among the defined kinds, the lower the kind is preferred over
     // the higher kind when testing whether one symbol should take precedence
     // over another.

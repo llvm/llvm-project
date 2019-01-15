@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=arm64-none-linux-gnu -disable-fp-elim -disable-post-ra < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=arm64-none-linux-gnu -frame-pointer=all -disable-post-ra < %s | FileCheck %s
 declare void @use_addr(i8*)
 
 @addr = global i8* null

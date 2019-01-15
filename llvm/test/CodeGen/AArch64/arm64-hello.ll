@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -disable-post-ra -disable-fp-elim | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -disable-post-ra -frame-pointer=all | FileCheck %s
 ; RUN: llc < %s -mtriple=arm64-linux-gnu -disable-post-ra | FileCheck %s --check-prefix=CHECK-LINUX
 
 ; CHECK-LABEL: main:

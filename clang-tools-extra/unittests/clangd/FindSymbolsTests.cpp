@@ -62,6 +62,7 @@ public:
       : Server(CDB, FSProvider, DiagConsumer, optsForTests()) {
     // Make sure the test root directory is created.
     FSProvider.Files[testPath("unused")] = "";
+    CDB.ExtraClangFlags = {"-xc++"};
   }
 
 protected:
@@ -141,10 +142,11 @@ TEST_F(WorkspaceSymbolsTest, Unnamed) {
 
 TEST_F(WorkspaceSymbolsTest, InMainFile) {
   addFile("foo.cpp", R"cpp(
-      int test() {
-      }
+      int test() {}
+      static test2() {}
       )cpp");
-  EXPECT_THAT(getSymbols("test"), IsEmpty());
+  EXPECT_THAT(getSymbols("test"), 
+              ElementsAre(QName("test"), QName("test2")));
 }
 
 TEST_F(WorkspaceSymbolsTest, Namespaces) {
@@ -184,7 +186,7 @@ TEST_F(WorkspaceSymbolsTest, AnonymousNamespace) {
   addFile("foo.cpp", R"cpp(
       #include "foo.h"
       )cpp");
-  EXPECT_THAT(getSymbols("test"), IsEmpty());
+  EXPECT_THAT(getSymbols("test"), ElementsAre(QName("test")));
 }
 
 TEST_F(WorkspaceSymbolsTest, MultiFile) {

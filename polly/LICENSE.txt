@@ -4,7 +4,7 @@ Polly Release License
 University of Illinois/NCSA
 Open Source License
 
-Copyright (c) 2009-2016 Polly Team
+Copyright (c) 2009-2019 Polly Team
 All rights reserved.
 
 Developed by:

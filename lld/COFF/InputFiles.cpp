@@ -155,9 +155,10 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
                                    const coff_aux_section_definition *Def,
                                    StringRef LeaderName) {
   const coff_section *Sec;
-  StringRef Name;
   if (auto EC = COFFObj->getSection(SectionNumber, Sec))
     fatal("getSection failed: #" + Twine(SectionNumber) + ": " + EC.message());
+
+  StringRef Name;
   if (auto EC = COFFObj->getSectionName(Sec, Name))
     fatal("getSectionName failed: #" + Twine(SectionNumber) + ": " +
           EC.message());
@@ -181,8 +182,8 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
   // of the linker; they are just a data section containing relocations.
   // We can just link them to complete debug info.
   //
-  // CodeView needs a linker support. We need to interpret and debug
-  // info, and then write it to a separate .pdb file.
+  // CodeView needs linker support. We need to interpret debug info,
+  // and then write it to a separate .pdb file.
 
   // Ignore DWARF debug info unless /debug is given.
   if (!Config->Debug && Name.startswith(".debug_"))
@@ -290,7 +291,7 @@ Symbol *ObjFile::createRegular(COFFSymbolRef Sym) {
     return Symtab->addUndefined(Name, this, false);
   }
   if (SC)
-    return make<DefinedRegular>(this, /*Name*/ "", false,
+    return make<DefinedRegular>(this, /*Name*/ "", /*IsCOMDAT*/ false,
                                 /*IsExternal*/ false, Sym.getGeneric(), SC);
   return nullptr;
 }
@@ -338,7 +339,7 @@ void ObjFile::initializeSymbols() {
 
   for (uint32_t I : PendingIndexes) {
     COFFSymbolRef Sym = check(COFFObj->getSymbol(I));
-    if (auto *Def = Sym.getSectionDefinition()) {
+    if (const coff_aux_section_definition *Def = Sym.getSectionDefinition()) {
       if (Def->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
         readAssociativeDefinition(Sym, Def);
       else if (Config->MinGW)
@@ -421,7 +422,7 @@ Optional<Symbol *> ObjFile::createDefined(
       std::tie(Leader, Prevailing) =
           Symtab->addComdat(this, GetName(), Sym.getGeneric());
     } else {
-      Leader = make<DefinedRegular>(this, /*Name*/ "", false,
+      Leader = make<DefinedRegular>(this, /*Name*/ "", /*IsCOMDAT*/ false,
                                     /*IsExternal*/ false, Sym.getGeneric());
       Prevailing = true;
     }
@@ -441,7 +442,7 @@ Optional<Symbol *> ObjFile::createDefined(
   // leader symbol by setting the section's ComdatDefs pointer if we encounter a
   // non-associative comdat.
   if (SparseChunks[SectionNumber] == PendingComdat) {
-    if (auto *Def = Sym.getSectionDefinition()) {
+    if (const coff_aux_section_definition *Def = Sym.getSectionDefinition()) {
       if (Def->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
         readAssociativeDefinition(Sym, Def);
       else
@@ -449,8 +450,10 @@ Optional<Symbol *> ObjFile::createDefined(
     }
   }
 
+  // readAssociativeDefinition() writes to SparseChunks, so need to check again.
   if (SparseChunks[SectionNumber] == PendingComdat)
     return None;
+
   return createRegular(Sym);
 }
 

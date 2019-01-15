@@ -667,18 +667,26 @@ TEST(DexTests, Refs) {
   auto Foo = symbol("foo");
   auto Bar = symbol("bar");
   AddRef(Foo, "foo.h", RefKind::Declaration);
+  AddRef(Foo, "foo.cc", RefKind::Definition);
   AddRef(Foo, "reffoo.h", RefKind::Reference);
   AddRef(Bar, "bar.h", RefKind::Declaration);
 
-  std::vector<std::string> Files;
   RefsRequest Req;
   Req.IDs.insert(Foo.ID);
   Req.Filter = RefKind::Declaration | RefKind::Definition;
+
+  std::vector<std::string> Files;
   Dex(std::vector<Symbol>{Foo, Bar}, Refs).refs(Req, [&](const Ref &R) {
     Files.push_back(R.Location.FileURI);
   });
+  EXPECT_THAT(Files, UnorderedElementsAre("foo.h", "foo.cc"));
 
-  EXPECT_THAT(Files, ElementsAre("foo.h"));
+  Req.Limit = 1;
+  Files.clear();
+  Dex(std::vector<Symbol>{Foo, Bar}, Refs).refs(Req, [&](const Ref &R) {
+    Files.push_back(R.Location.FileURI);
+  });
+  EXPECT_THAT(Files, ElementsAre(AnyOf("foo.h", "foo.cc")));
 }
 
 } // namespace

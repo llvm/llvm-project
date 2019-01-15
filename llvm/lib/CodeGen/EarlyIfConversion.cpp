@@ -398,6 +398,13 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB) {
     return false;
   }
 
+  // Make sure the analyzed branch is conditional; one of the successors
+  // could be a landing pad. (Empty landing pads can be generated on Windows.)
+  if (Cond.empty()) {
+    LLVM_DEBUG(dbgs() << "AnalyzeBranch found an unconditional branch.\n");
+    return false;
+  }
+
   // AnalyzeBranch doesn't set FBB on a fall-through branch.
   // Make sure it is always set.
   FBB = TBB == Succ0 ? Succ1 : Succ0;
