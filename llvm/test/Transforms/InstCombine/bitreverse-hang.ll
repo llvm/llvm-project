@@ -46,7 +46,7 @@ attributes #0 = { norecurse nounwind ssp uwtable "disable-tail-calls"="false" "l
 !llvm.ident = !{!1}
 
 !0 = !{i32 1, !"PIC Level", i32 2}
-!1 = !{!"clang version 3.8.0 (http://llvm.org/git/clang.git eb70f4e9cc9a4dc3dd57b032fb858d56b4b64a0e)"}
+!1 = !{!"clang version 3.8.0"}
 !2 = !{!3, !3, i64 0}
 !3 = !{!"int", !4, i64 0}
 !4 = !{!"omnipotent char", !5, i64 0}

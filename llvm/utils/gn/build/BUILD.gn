@@ -5,11 +5,6 @@ import("//llvm/utils/gn/build/toolchain/compiler.gni")
 config("compiler_defaults") {
   defines = []
 
-  # FIXME: Don't define this globally here.
-  if (host_os != "win") {
-    defines += [ "LLVM_ON_UNIX" ]
-  }
-
   if (!llvm_enable_assertions) {
     defines += [ "NDEBUG" ]
   }
@@ -33,7 +28,6 @@ config("compiler_defaults") {
     cflags_cc = [
       "-std=c++11",
       "-fno-exceptions",
-      "-fno-rtti",
       "-fvisibility-inlines-hidden",
     ]
   } else {
@@ -57,10 +51,7 @@ config("compiler_defaults") {
       "_UNICODE",
       "UNICODE",
     ]
-    cflags += [
-      "/EHs-c-",
-      "/GR-",
-    ]
+    cflags += [ "/EHs-c-" ]
 
     # The MSVC default value (1 MB) is not enough for parsing recursive C++
     # templates in Clang.
@@ -112,6 +103,14 @@ config("compiler_defaults") {
       # warning.
       cflags += [ "-Wno-nonportable-include-path" ]
     }
+  }
+}
+
+config("no_rtti") {
+  if (current_os == "win") {
+    cflags_cc = [ "/GR-" ]
+  } else {
+    cflags_cc = [ "-fno-rtti" ]
   }
 }
 

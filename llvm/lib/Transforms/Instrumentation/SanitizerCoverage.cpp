@@ -264,7 +264,7 @@ SanitizerCoverageModule::CreateSecStartEnd(Module &M, const char *Section,
   SecEnd->setVisibility(GlobalValue::HiddenVisibility);
   IRBuilder<> IRB(M.getContext());
   Value *SecEndPtr = IRB.CreatePointerCast(SecEnd, Ty);
-  if (TargetTriple.getObjectFormat() != Triple::COFF)
+  if (!TargetTriple.isOSBinFormatCOFF())
     return std::make_pair(IRB.CreatePointerCast(SecStart, Ty), SecEndPtr);
 
   // Account for the fact that on windows-msvc __start_* symbols actually
@@ -293,24 +293,15 @@ Function *SanitizerCoverageModule::CreateInitCallsForSections(
     appendToGlobalCtors(M, CtorFunc, SanCtorAndDtorPriority);
   }
 
-  if (TargetTriple.getObjectFormat() == Triple::COFF) {
+  if (TargetTriple.isOSBinFormatCOFF()) {
     // In COFF files, if the contructors are set as COMDAT (they are because
     // COFF supports COMDAT) and the linker flag /OPT:REF (strip unreferenced
     // functions and data) is used, the constructors get stripped. To prevent
-    // this, give the constructors weak ODR linkage and tell the linker to
-    // always include the sancov constructor. This way the linker can
-    // deduplicate the constructors but always leave one copy.
+    // this, give the constructors weak ODR linkage and ensure the linker knows
+    // to include the sancov constructor. This way the linker can deduplicate
+    // the constructors but always leave one copy.
     CtorFunc->setLinkage(GlobalValue::WeakODRLinkage);
-    SmallString<20> PartialIncDirective("/include:");
-    // Get constructor's mangled name in order to support i386.
-    SmallString<40> MangledName;
-    Mangler().getNameWithPrefix(MangledName, CtorFunc, true);
-    Twine IncDirective = PartialIncDirective + MangledName;
-    Metadata *Args[1] = {MDString::get(*C, IncDirective.str())};
-    MDNode *MetadataNode = MDNode::get(*C, Args);
-    NamedMDNode *NamedMetadata =
-        M.getOrInsertNamedMetadata("llvm.linker.options");
-    NamedMetadata->addOperand(MetadataNode);
+    appendToUsed(M, CtorFunc);
   }
   return CtorFunc;
 }
@@ -833,7 +824,7 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
 
 std::string
 SanitizerCoverageModule::getSectionName(const std::string &Section) const {
-  if (TargetTriple.getObjectFormat() == Triple::COFF) {
+  if (TargetTriple.isOSBinFormatCOFF()) {
     if (Section == SanCovCountersSectionName)
       return ".SCOV$CM";
     if (Section == SanCovPCsSectionName)

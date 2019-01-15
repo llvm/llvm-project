@@ -225,9 +225,14 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
         m_pair_ptr = nullptr;
         return false;
       }
-      CompilerType pair_type(__i_->GetCompilerType().GetTypeTemplateArgument(0));
-      std::string name; uint64_t bit_offset_ptr; uint32_t bitfield_bit_size_ptr; bool is_bitfield_ptr;
-      pair_type = pair_type.GetFieldAtIndex(0, name, &bit_offset_ptr, &bitfield_bit_size_ptr, &is_bitfield_ptr);
+      CompilerType pair_type(
+          __i_->GetCompilerType().GetTypeTemplateArgument(0));
+      std::string name;
+      uint64_t bit_offset_ptr;
+      uint32_t bitfield_bit_size_ptr;
+      bool is_bitfield_ptr;
+      pair_type = pair_type.GetFieldAtIndex(
+          0, name, &bit_offset_ptr, &bitfield_bit_size_ptr, &is_bitfield_ptr);
       if (!pair_type) {
         m_pair_ptr = nullptr;
         return false;
@@ -235,27 +240,38 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
 
       auto addr(m_pair_ptr->GetValueAsUnsigned(LLDB_INVALID_ADDRESS));
       m_pair_ptr = nullptr;
-      if (addr && addr!=LLDB_INVALID_ADDRESS) {
-        ClangASTContext *ast_ctx = llvm::dyn_cast_or_null<ClangASTContext>(pair_type.GetTypeSystem());
+      if (addr && addr != LLDB_INVALID_ADDRESS) {
+        ClangASTContext *ast_ctx =
+            llvm::dyn_cast_or_null<ClangASTContext>(pair_type.GetTypeSystem());
         if (!ast_ctx)
           return false;
-        CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(ConstString(), {
-          {"ptr0",ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
-          {"ptr1",ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
-          {"ptr2",ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
-          {"cw",ast_ctx->GetBasicType(lldb::eBasicTypeBool)},
-          {"payload",pair_type}
-        });
-        DataBufferSP buffer_sp(new DataBufferHeap(tree_node_type.GetByteSize(nullptr),0));
+        CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
+            ConstString(),
+            {{"ptr0",
+              ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+             {"ptr1",
+              ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+             {"ptr2",
+              ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
+             {"cw", ast_ctx->GetBasicType(lldb::eBasicTypeBool)},
+             {"payload", pair_type}});
+        auto size = tree_node_type.GetByteSize(nullptr);
+        if (!size)
+          return false;
+        DataBufferSP buffer_sp(new DataBufferHeap(*size, 0));
         ProcessSP process_sp(target_sp->GetProcessSP());
         Status error;
-        process_sp->ReadMemory(addr, buffer_sp->GetBytes(), buffer_sp->GetByteSize(), error);
+        process_sp->ReadMemory(addr, buffer_sp->GetBytes(),
+                               buffer_sp->GetByteSize(), error);
         if (error.Fail())
           return false;
-        DataExtractor extractor(buffer_sp, process_sp->GetByteOrder(), process_sp->GetAddressByteSize());
-        auto pair_sp = CreateValueObjectFromData("pair", extractor, valobj_sp->GetExecutionContextRef(), tree_node_type);
+        DataExtractor extractor(buffer_sp, process_sp->GetByteOrder(),
+                                process_sp->GetAddressByteSize());
+        auto pair_sp = CreateValueObjectFromData(
+            "pair", extractor, valobj_sp->GetExecutionContextRef(),
+            tree_node_type);
         if (pair_sp)
-          m_pair_sp = pair_sp->GetChildAtIndex(4,true);
+          m_pair_sp = pair_sp->GetChildAtIndex(4, true);
       }
     }
   }
@@ -560,6 +576,8 @@ bool lldb_private::formatters::LibcxxWStringSummaryProvider(
                           ->GetScratchClangASTContext()
                           ->GetBasicType(lldb::eBasicTypeWChar)
                           .GetByteSize(nullptr);
+  if (!wchar_t_size)
+    return false;
 
   options.SetData(extractor);
   options.SetStream(&stream);
@@ -568,7 +586,7 @@ bool lldb_private::formatters::LibcxxWStringSummaryProvider(
   options.SetSourceSize(size);
   options.SetBinaryZeroIsTerminator(false);
 
-  switch (wchar_t_size) {
+  switch (*wchar_t_size) {
   case 1:
     StringPrinter::ReadBufferAndDumpToStream<
         lldb_private::formatters::StringPrinter::StringElementType::UTF8>(

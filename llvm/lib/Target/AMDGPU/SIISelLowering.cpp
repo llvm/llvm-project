@@ -5355,6 +5355,11 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Denominator, Numerator);
   }
   case Intrinsic::amdgcn_icmp: {
+    // There is a Pat that handles this variant, so return it as-is.
+    if (Op.getOperand(1).getValueType() == MVT::i1 &&
+        Op.getConstantOperandVal(2) == 0 &&
+        Op.getConstantOperandVal(3) == ICmpInst::Predicate::ICMP_NE)
+      return Op;
     return lowerICMPIntrinsic(*this, Op.getNode(), DAG);
   }
   case Intrinsic::amdgcn_fcmp: {

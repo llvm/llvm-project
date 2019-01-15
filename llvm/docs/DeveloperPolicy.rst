@@ -22,7 +22,7 @@ This policy is also designed to accomplish the following objectives:
 
 #. Make life as simple and easy for contributors as possible.
 
-#. Keep the top of Subversion trees as stable as possible.
+#. Keep the tip of tree as stable as possible.
 
 #. Establish awareness of the project's :ref:`copyright, license, and patent
    policies <copyright-license-patents>` with contributors to the project.
@@ -80,22 +80,18 @@ Making and Submitting a Patch
 When making a patch for review, the goal is to make it as easy for the reviewer
 to read it as possible.  As such, we recommend that you:
 
-#. Make your patch against the Subversion trunk, not a branch, and not an old
-   version of LLVM.  This makes it easy to apply the patch.  For information on
-   how to check out SVN trunk, please see the `Getting Started
-   Guide <GettingStarted.html#checkout>`_.
+#. Make your patch against git master, not a branch, and not an old version
+   of LLVM.  This makes it easy to apply the patch.  For information on how to
+   clone from git, please see the :ref:`Getting Started Guide
+   <checkout>`.
 
 #. Similarly, patches should be submitted soon after they are generated.  Old
    patches may not apply correctly if the underlying code changes between the
    time the patch was created and the time it is applied.
 
-#. Patches should be made with ``svn diff``, or similar. If you use a
+#. Patches should be made with ``git format-patch``, or similar. If you use a
    different tool, make sure it uses the ``diff -u`` format and that it
    doesn't contain clutter which makes it hard to read.
-
-#. If you are modifying generated files, such as the top-level ``configure``
-   script, please separate out those changes into a separate patch from the rest
-   of your changes.
 
 Once your patch is ready, submit it by emailing it to the appropriate project's
 commit mailing list (or commit it directly if applicable). Alternatively, some
@@ -187,9 +183,9 @@ someone else will review it, allowing the patch to go unreviewed.  To solve this
 problem, we have a notion of an 'owner' for a piece of the code.  The sole
 responsibility of a code owner is to ensure that a commit to their area of the
 code is appropriately reviewed, either by themself or by someone else.  The list
-of current code owners can be found in the file
-`CODE_OWNERS.TXT <http://git.llvm.org/klaus/llvm/blob/master/CODE_OWNERS.TXT>`_
-in the root of the LLVM source tree.
+of current code owners can be found in the file `CODE_OWNERS.TXT
+<https://github.com/llvm/llvm-project/blob/master/llvm/CODE_OWNERS.TXT>`_ in the
+root of the LLVM source tree.
 
 Note that code ownership is completely different than reviewers: anyone can
 review a piece of code, and we welcome code review from anyone who is

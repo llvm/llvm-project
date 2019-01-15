@@ -131,6 +131,7 @@ enum TypeEvaluationKind {
   SANITIZER_CHECK(ShiftOutOfBounds, shift_out_of_bounds, 0)                    \
   SANITIZER_CHECK(SubOverflow, sub_overflow, 0)                                \
   SANITIZER_CHECK(TypeMismatch, type_mismatch, 1)                              \
+  SANITIZER_CHECK(AlignmentAssumption, alignment_assumption, 0)                \
   SANITIZER_CHECK(VLABoundNotPositive, vla_bound_not_positive, 0)
 
 enum SanitizerHandler {
@@ -2633,12 +2634,6 @@ public:
   ComplexPairTy EmitComplexPrePostIncDec(const UnaryOperator *E, LValue LV,
                                          bool isInc, bool isPre);
 
-  void EmitAlignmentAssumption(llvm::Value *PtrValue, unsigned Alignment,
-                               llvm::Value *OffsetValue = nullptr) {
-    Builder.CreateAlignmentAssumption(CGM.getDataLayout(), PtrValue, Alignment,
-                                      OffsetValue);
-  }
-
   /// Converts Location to a DebugLoc, if debug information is enabled.
   llvm::DebugLoc SourceLocToDebugLoc(SourceLocation Location);
 
@@ -2802,11 +2797,27 @@ public:
   PeepholeProtection protectFromPeepholes(RValue rvalue);
   void unprotectFromPeepholes(PeepholeProtection protection);
 
-  void EmitAlignmentAssumption(llvm::Value *PtrValue, llvm::Value *Alignment,
-                               llvm::Value *OffsetValue = nullptr) {
-    Builder.CreateAlignmentAssumption(CGM.getDataLayout(), PtrValue, Alignment,
-                                      OffsetValue);
-  }
+  void EmitAlignmentAssumptionCheck(llvm::Value *Ptr, QualType Ty,
+                                    SourceLocation Loc,
+                                    SourceLocation AssumptionLoc,
+                                    llvm::Value *Alignment,
+                                    llvm::Value *OffsetValue,
+                                    llvm::Value *TheCheck,
+                                    llvm::Instruction *Assumption);
+
+  void EmitAlignmentAssumption(llvm::Value *PtrValue, QualType Ty,
+                               SourceLocation Loc, SourceLocation AssumptionLoc,
+                               llvm::Value *Alignment,
+                               llvm::Value *OffsetValue = nullptr);
+
+  void EmitAlignmentAssumption(llvm::Value *PtrValue, QualType Ty,
+                               SourceLocation Loc, SourceLocation AssumptionLoc,
+                               unsigned Alignment,
+                               llvm::Value *OffsetValue = nullptr);
+
+  void EmitAlignmentAssumption(llvm::Value *PtrValue, const Expr *E,
+                               SourceLocation AssumptionLoc, unsigned Alignment,
+                               llvm::Value *OffsetValue = nullptr);
 
   //===--------------------------------------------------------------------===//
   //                             Statement Emission

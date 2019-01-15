@@ -2610,8 +2610,8 @@ bool Sema::CheckHexagonBuiltinCpu(unsigned BuiltinID, CallExpr *TheCall) {
     return LHS.BuiltinID < RHS.BuiltinID;
   };
   static const bool SortOnce =
-      (std::sort(std::begin(ValidCPU), std::end(ValidCPU), SortCmp),
-       std::sort(std::begin(ValidHVX), std::end(ValidHVX), SortCmp), true);
+      (llvm::sort(ValidCPU, SortCmp),
+       llvm::sort(ValidHVX, SortCmp), true);
   (void)SortOnce;
   auto LowerBoundCmp = [](const BuiltinAndString &BI, unsigned BuiltinID) {
     return BI.BuiltinID < BuiltinID;
@@ -2860,7 +2860,7 @@ bool Sema::CheckHexagonBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall) {
   // Use a dynamically initialized static to sort the table exactly once on
   // first run.
   static const bool SortOnce =
-      (std::sort(std::begin(Infos), std::end(Infos),
+      (llvm::sort(Infos,
                  [](const BuiltinInfo &LHS, const BuiltinInfo &RHS) {
                    return LHS.BuiltinID < RHS.BuiltinID;
                  }),

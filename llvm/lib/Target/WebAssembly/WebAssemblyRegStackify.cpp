@@ -22,6 +22,7 @@
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h" // for WebAssembly::ARGUMENT_*
 #include "WebAssembly.h"
+#include "WebAssemblyDebugValueManager.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
@@ -466,27 +467,6 @@ static void ShrinkToUses(LiveInterval &LI, LiveIntervals &LIS) {
   }
 }
 
-static void MoveDebugValues(unsigned Reg, MachineInstr *Insert,
-                            MachineBasicBlock &MBB, MachineRegisterInfo &MRI) {
-  for (auto &Op : MRI.reg_operands(Reg)) {
-    MachineInstr *MI = Op.getParent();
-    assert(MI != nullptr);
-    if (MI->isDebugValue() && MI->getParent() == &MBB)
-      MBB.splice(Insert, &MBB, MI);
-  }
-}
-
-static void UpdateDebugValuesReg(unsigned Reg, unsigned NewReg,
-                                 MachineBasicBlock &MBB,
-                                 MachineRegisterInfo &MRI) {
-  for (auto &Op : MRI.reg_operands(Reg)) {
-    MachineInstr *MI = Op.getParent();
-    assert(MI != nullptr);
-    if (MI->isDebugValue() && MI->getParent() == &MBB)
-      Op.setReg(NewReg);
-  }
-}
-
 /// A single-use def in the same block with no intervening memory or register
 /// dependencies; move the def down and nest it with the current instruction.
 static MachineInstr *MoveForSingleUse(unsigned Reg, MachineOperand &Op,
@@ -496,8 +476,9 @@ static MachineInstr *MoveForSingleUse(unsigned Reg, MachineOperand &Op,
                                       MachineRegisterInfo &MRI) {
   LLVM_DEBUG(dbgs() << "Move for single use: "; Def->dump());
 
+  WebAssemblyDebugValueManager DefDIs(Def);
   MBB.splice(Insert, &MBB, Def);
-  MoveDebugValues(Reg, Insert, MBB, MRI);
+  DefDIs.move(Insert);
   LIS.handleMove(*Def);
 
   if (MRI.hasOneDef(Reg) && MRI.hasOneUse(Reg)) {
@@ -522,36 +503,13 @@ static MachineInstr *MoveForSingleUse(unsigned Reg, MachineOperand &Op,
 
     MFI.stackifyVReg(NewReg);
 
-    UpdateDebugValuesReg(Reg, NewReg, MBB, MRI);
+    DefDIs.updateReg(NewReg);
 
     LLVM_DEBUG(dbgs() << " - Replaced register: "; Def->dump());
   }
 
   ImposeStackOrdering(Def);
   return Def;
-}
-
-static void CloneDebugValues(unsigned Reg, MachineInstr *Insert,
-                             unsigned TargetReg, MachineBasicBlock &MBB,
-                             MachineRegisterInfo &MRI,
-                             const WebAssemblyInstrInfo *TII) {
-  SmallPtrSet<MachineInstr *, 4> Instrs;
-  for (auto &Op : MRI.reg_operands(Reg)) {
-    MachineInstr *MI = Op.getParent();
-    assert(MI != nullptr);
-    if (MI->isDebugValue() && MI->getParent() == &MBB &&
-        Instrs.find(MI) == Instrs.end())
-      Instrs.insert(MI);
-  }
-  for (const auto &MI : Instrs) {
-    MachineInstr &Clone = TII->duplicate(MBB, Insert, *MI);
-    for (unsigned i = 0, e = Clone.getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = Clone.getOperand(i);
-      if (MO.isReg() && MO.getReg() == Reg)
-        MO.setReg(TargetReg);
-    }
-    LLVM_DEBUG(dbgs() << " - - Cloned DBG_VALUE: "; Clone.dump());
-  }
 }
 
 /// A trivially cloneable instruction; clone it and nest the new copy with the
@@ -563,6 +521,8 @@ static MachineInstr *RematerializeCheapDef(
     const WebAssemblyInstrInfo *TII, const WebAssemblyRegisterInfo *TRI) {
   LLVM_DEBUG(dbgs() << "Rematerializing cheap def: "; Def.dump());
   LLVM_DEBUG(dbgs() << " - for use in "; Op.getParent()->dump());
+
+  WebAssemblyDebugValueManager DefDIs(&Def);
 
   unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(Reg));
   TII->reMaterialize(MBB, Insert, NewReg, 0, Def, *TRI);
@@ -593,10 +553,10 @@ static MachineInstr *RematerializeCheapDef(
     LIS.RemoveMachineInstrFromMaps(Def);
     Def.eraseFromParent();
 
-    MoveDebugValues(Reg, &*Insert, MBB, MRI);
-    UpdateDebugValuesReg(Reg, NewReg, MBB, MRI);
+    DefDIs.move(&*Insert);
+    DefDIs.updateReg(NewReg);
   } else {
-    CloneDebugValues(Reg, &*Insert, NewReg, MBB, MRI, TII);
+    DefDIs.clone(&*Insert, NewReg);
   }
 
   return Clone;
@@ -628,6 +588,8 @@ static MachineInstr *MoveAndTeeForMultiUse(
     MachineRegisterInfo &MRI, const WebAssemblyInstrInfo *TII) {
   LLVM_DEBUG(dbgs() << "Move and tee for multi-use:"; Def->dump());
 
+  WebAssemblyDebugValueManager DefDIs(Def);
+
   // Move Def into place.
   MBB.splice(Insert, &MBB, Def);
   LIS.handleMove(*Def);
@@ -646,7 +608,7 @@ static MachineInstr *MoveAndTeeForMultiUse(
   SlotIndex TeeIdx = LIS.InsertMachineInstrInMaps(*Tee).getRegSlot();
   SlotIndex DefIdx = LIS.getInstructionIndex(*Def).getRegSlot();
 
-  MoveDebugValues(Reg, Insert, MBB, MRI);
+  DefDIs.move(Insert);
 
   // Tell LiveIntervals we moved the original vreg def from Def to Tee.
   LiveInterval &LI = LIS.getInterval(Reg);
@@ -664,8 +626,8 @@ static MachineInstr *MoveAndTeeForMultiUse(
   ImposeStackOrdering(Def);
   ImposeStackOrdering(Tee);
 
-  CloneDebugValues(Reg, Tee, DefReg, MBB, MRI, TII);
-  CloneDebugValues(Reg, Insert, TeeReg, MBB, MRI, TII);
+  DefDIs.clone(Tee, DefReg);
+  DefDIs.clone(Insert, TeeReg);
 
   LLVM_DEBUG(dbgs() << " - Replaced register: "; Def->dump());
   LLVM_DEBUG(dbgs() << " - Tee instruction: "; Tee->dump());

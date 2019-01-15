@@ -44,7 +44,7 @@ GN only works in the monorepo layout.
 
 #. Obtain a `gn binary <https://gn.googlesource.com/gn/#getting-started>`_.
 
-#. In the root of the monorepo, run `llvm/utils/gn/build/gn.py gen out/gn`.
+#. In the root of the monorepo, run `llvm/utils/gn/gn.py gen out/gn`.
    `out/gn` is the build directory, it can have any name, and you can have as
    many as you want, each with different build settings.  (The `gn.py` script
    adds `--dotfile=llvm/utils/gn/.gn --root=.` and just runs regular `gn`;
@@ -57,7 +57,7 @@ GN only works in the monorepo layout.
 By default, you get a release build with assertions enabled that targets
 the host arch. You can set various build options by editing `out/gn/args.gn`,
 for example putting `is_debug = true` in there gives you a debug build. Run
-`llvm/utils/gn/build/gn.py args --list out/gn` to see a list of all possible
+`llvm/utils/gn/gn.py args --list out/gn` to see a list of all possible
 options. After touching `out/gn/args.gn`, just run ninja, it will re-invoke gn
 before starting the build.
 

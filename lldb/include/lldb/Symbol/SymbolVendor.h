@@ -64,7 +64,7 @@ public:
   virtual bool ParseImportedModules(const SymbolContext &sc,
                                     std::vector<ConstString> &imported_modules);
 
-  virtual size_t ParseFunctionBlocks(const SymbolContext &sc);
+  virtual size_t ParseBlocksRecursive(Function &func);
 
   virtual size_t ParseVariablesForContext(const SymbolContext &sc);
 
@@ -99,9 +99,8 @@ public:
                                SymbolContextList &sc_list);
 
   virtual size_t
-  FindTypes(const SymbolContext &sc, const ConstString &name,
-            const CompilerDeclContext *parent_decl_ctx, bool append,
-            size_t max_matches,
+  FindTypes(const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+            bool append, size_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeMap &types);
 
@@ -109,7 +108,7 @@ public:
                            bool append, TypeMap &types);
 
   virtual CompilerDeclContext
-  FindNamespace(const SymbolContext &sc, const ConstString &name,
+  FindNamespace(const ConstString &name,
                 const CompilerDeclContext *parent_decl_ctx);
 
   virtual size_t GetNumCompileUnits();

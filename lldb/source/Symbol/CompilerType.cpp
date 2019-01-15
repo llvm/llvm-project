@@ -504,15 +504,18 @@ CompilerType::GetBasicTypeFromAST(lldb::BasicType basic_type) const {
 // Exploring the type
 //----------------------------------------------------------------------
 
-uint64_t CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
-  if (IsValid()) {
+llvm::Optional<uint64_t>
+CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
+  if (IsValid())
     return m_type_system->GetBitSize(m_type, exe_scope);
-  }
-  return 0;
+  return {};
 }
 
-uint64_t CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
-  return (GetBitSize(exe_scope) + 7) / 8;
+llvm::Optional<uint64_t>
+CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
+  if (auto bit_size = GetBitSize(exe_scope))
+    return (*bit_size + 7) / 8;
+  return {};
 }
 
 size_t CompilerType::GetTypeBitAlign() const {
@@ -816,7 +819,9 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
     if (encoding == lldb::eEncodingInvalid || count != 1)
       return false;
 
-    const uint64_t byte_size = GetByteSize(nullptr);
+    auto byte_size = GetByteSize(nullptr);
+    if (!byte_size)
+      return false;
     lldb::offset_t offset = data_byte_offset;
     switch (encoding) {
     case lldb::eEncodingInvalid:
@@ -824,15 +829,15 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
     case lldb::eEncodingVector:
       break;
     case lldb::eEncodingUint:
-      if (byte_size <= sizeof(unsigned long long)) {
-        uint64_t uval64 = data.GetMaxU64(&offset, byte_size);
-        if (byte_size <= sizeof(unsigned int)) {
+      if (*byte_size <= sizeof(unsigned long long)) {
+        uint64_t uval64 = data.GetMaxU64(&offset, *byte_size);
+        if (*byte_size <= sizeof(unsigned int)) {
           value = (unsigned int)uval64;
           return true;
-        } else if (byte_size <= sizeof(unsigned long)) {
+        } else if (*byte_size <= sizeof(unsigned long)) {
           value = (unsigned long)uval64;
           return true;
-        } else if (byte_size <= sizeof(unsigned long long)) {
+        } else if (*byte_size <= sizeof(unsigned long long)) {
           value = (unsigned long long)uval64;
           return true;
         } else
@@ -841,15 +846,15 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
       break;
 
     case lldb::eEncodingSint:
-      if (byte_size <= sizeof(long long)) {
-        int64_t sval64 = data.GetMaxS64(&offset, byte_size);
-        if (byte_size <= sizeof(int)) {
+      if (*byte_size <= sizeof(long long)) {
+        int64_t sval64 = data.GetMaxS64(&offset, *byte_size);
+        if (*byte_size <= sizeof(int)) {
           value = (int)sval64;
           return true;
-        } else if (byte_size <= sizeof(long)) {
+        } else if (*byte_size <= sizeof(long)) {
           value = (long)sval64;
           return true;
-        } else if (byte_size <= sizeof(long long)) {
+        } else if (*byte_size <= sizeof(long long)) {
           value = (long long)sval64;
           return true;
         } else
@@ -858,10 +863,10 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
       break;
 
     case lldb::eEncodingIEEE754:
-      if (byte_size <= sizeof(long double)) {
+      if (*byte_size <= sizeof(long double)) {
         uint32_t u32;
         uint64_t u64;
-        if (byte_size == sizeof(float)) {
+        if (*byte_size == sizeof(float)) {
           if (sizeof(float) == sizeof(uint32_t)) {
             u32 = data.GetU32(&offset);
             value = *((float *)&u32);
@@ -871,7 +876,7 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
             value = *((float *)&u64);
             return true;
           }
-        } else if (byte_size == sizeof(double)) {
+        } else if (*byte_size == sizeof(double)) {
           if (sizeof(double) == sizeof(uint32_t)) {
             u32 = data.GetU32(&offset);
             value = *((double *)&u32);
@@ -881,7 +886,7 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
             value = *((double *)&u64);
             return true;
           }
-        } else if (byte_size == sizeof(long double)) {
+        } else if (*byte_size == sizeof(long double)) {
           if (sizeof(long double) == sizeof(uint32_t)) {
             u32 = data.GetU32(&offset);
             value = *((long double *)&u32);
@@ -912,12 +917,15 @@ bool CompilerType::SetValueFromScalar(const Scalar &value, Stream &strm) {
     if (encoding == lldb::eEncodingInvalid || count != 1)
       return false;
 
-    const uint64_t bit_width = GetBitSize(nullptr);
-    // This function doesn't currently handle non-byte aligned assignments
-    if ((bit_width % 8) != 0)
+    auto bit_width = GetBitSize(nullptr);
+    if (!bit_width)
       return false;
 
-    const uint64_t byte_size = (bit_width + 7) / 8;
+    // This function doesn't currently handle non-byte aligned assignments
+    if ((*bit_width % 8) != 0)
+      return false;
+
+    const uint64_t byte_size = (*bit_width + 7) / 8;
     switch (encoding) {
     case lldb::eEncodingInvalid:
       break;
@@ -994,20 +1002,23 @@ bool CompilerType::ReadFromMemory(lldb_private::ExecutionContext *exe_ctx,
   if (!GetCompleteType())
     return false;
 
-  const uint64_t byte_size =
+  auto byte_size =
       GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
-  if (data.GetByteSize() < byte_size) {
-    lldb::DataBufferSP data_sp(new DataBufferHeap(byte_size, '\0'));
+  if (!byte_size)
+    return false;
+
+  if (data.GetByteSize() < *byte_size) {
+    lldb::DataBufferSP data_sp(new DataBufferHeap(*byte_size, '\0'));
     data.SetData(data_sp);
   }
 
-  uint8_t *dst = const_cast<uint8_t *>(data.PeekData(0, byte_size));
+  uint8_t *dst = const_cast<uint8_t *>(data.PeekData(0, *byte_size));
   if (dst != nullptr) {
     if (address_type == eAddressTypeHost) {
       if (addr == 0)
         return false;
       // The address is an address in this process, so just copy it
-      memcpy(dst, reinterpret_cast<uint8_t *>(addr), byte_size);
+      memcpy(dst, reinterpret_cast<uint8_t *>(addr), *byte_size);
       return true;
     } else {
       Process *process = nullptr;
@@ -1015,7 +1026,7 @@ bool CompilerType::ReadFromMemory(lldb_private::ExecutionContext *exe_ctx,
         process = exe_ctx->GetProcessPtr();
       if (process) {
         Status error;
-        return process->ReadMemory(addr, dst, byte_size, error) == byte_size;
+        return process->ReadMemory(addr, dst, *byte_size, error) == *byte_size;
       }
     }
   }
@@ -1036,13 +1047,15 @@ bool CompilerType::WriteToMemory(lldb_private::ExecutionContext *exe_ctx,
   if (!GetCompleteType())
     return false;
 
-  const uint64_t byte_size =
+  auto byte_size =
       GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
+  if (!byte_size)
+    return false;
 
-  if (byte_size > 0) {
+  if (*byte_size > 0) {
     if (address_type == eAddressTypeHost) {
       // The address is an address in this process, so just copy it
-      memcpy((void *)addr, new_value.GetData(), byte_size);
+      memcpy((void *)addr, new_value.GetData(), *byte_size);
       return true;
     } else {
       Process *process = nullptr;
@@ -1050,8 +1063,8 @@ bool CompilerType::WriteToMemory(lldb_private::ExecutionContext *exe_ctx,
         process = exe_ctx->GetProcessPtr();
       if (process) {
         Status error;
-        return process->WriteMemory(addr, new_value.GetData(), byte_size,
-                                    error) == byte_size;
+        return process->WriteMemory(addr, new_value.GetData(), *byte_size,
+                                    error) == *byte_size;
       }
     }
   }

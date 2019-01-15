@@ -46,8 +46,9 @@ void COFFWriter::layoutSections() {
       S.Header.PointerToRawData = FileSize;
     FileSize += S.Header.SizeOfRawData; // For executables, this is already
                                         // aligned to FileAlignment.
-    if (S.Header.NumberOfRelocations > 0)
-      S.Header.PointerToRelocations = FileSize;
+    S.Header.NumberOfRelocations = S.Relocs.size();
+    S.Header.PointerToRelocations =
+        S.Header.NumberOfRelocations > 0 ? FileSize : 0;
     FileSize += S.Relocs.size() * sizeof(coff_relocation);
     FileSize = alignTo(FileSize, FileAlignment);
 

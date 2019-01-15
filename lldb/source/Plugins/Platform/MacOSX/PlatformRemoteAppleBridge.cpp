@@ -94,7 +94,7 @@ PlatformSP PlatformRemoteAppleBridge::CreateInstance(bool force,
       // Only accept "unknown" for the vendor if the host is Apple and
       // it "unknown" wasn't specified (it was just returned because it
       // was NOT specified)
-      case llvm::Triple::UnknownArch:
+      case llvm::Triple::UnknownVendor:
         create = !arch->TripleVendorWasSpecified();
         break;
 

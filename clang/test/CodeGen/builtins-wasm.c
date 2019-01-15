@@ -26,30 +26,6 @@ __SIZE_TYPE__ memory_grow(__SIZE_TYPE__ delta) {
   // WEBASSEMBLY64: call i64 @llvm.wasm.memory.grow.i64(i32 0, i64 %{{.*}})
 }
 
-__SIZE_TYPE__ mem_size(void) {
-  return __builtin_wasm_mem_size(0);
-  // WEBASSEMBLY32: call {{i.*}} @llvm.wasm.mem.size.i32(i32 0)
-  // WEBASSEMBLY64: call {{i.*}} @llvm.wasm.mem.size.i64(i32 0)
-}
-
-__SIZE_TYPE__ mem_grow(__SIZE_TYPE__ delta) {
-  return __builtin_wasm_mem_grow(0, delta);
-  // WEBASSEMBLY32: call i32 @llvm.wasm.mem.grow.i32(i32 0, i32 %{{.*}})
-  // WEBASSEMBLY64: call i64 @llvm.wasm.mem.grow.i64(i32 0, i64 %{{.*}})
-}
-
-__SIZE_TYPE__ current_memory(void) {
-  return __builtin_wasm_current_memory();
-  // WEBASSEMBLY32: call {{i.*}} @llvm.wasm.current.memory.i32()
-  // WEBASSEMBLY64: call {{i.*}} @llvm.wasm.current.memory.i64()
-}
-
-__SIZE_TYPE__ grow_memory(__SIZE_TYPE__ delta) {
-  return __builtin_wasm_grow_memory(delta);
-  // WEBASSEMBLY32: call i32 @llvm.wasm.grow.memory.i32(i32 %{{.*}})
-  // WEBASSEMBLY64: call i64 @llvm.wasm.grow.memory.i64(i64 %{{.*}})
-}
-
 void throw(unsigned int tag, void *obj) {
   return __builtin_wasm_throw(tag, obj);
   // WEBASSEMBLY32: call void @llvm.wasm.throw(i32 %{{.*}}, i8* %{{.*}})

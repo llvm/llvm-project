@@ -26,14 +26,6 @@
 BUILTIN(__builtin_wasm_memory_size, "zIi", "n")
 BUILTIN(__builtin_wasm_memory_grow, "zIiz", "n")
 
-// These are the old names.
-BUILTIN(__builtin_wasm_mem_size, "zIi", "n")
-BUILTIN(__builtin_wasm_mem_grow, "zIiz", "n")
-
-// These are the old old names. They also lack the immediate field.
-BUILTIN(__builtin_wasm_current_memory, "z", "n")
-BUILTIN(__builtin_wasm_grow_memory, "zz", "n")
-
 // Floating point min/max
 BUILTIN(__builtin_wasm_min_f32, "fff", "nc")
 BUILTIN(__builtin_wasm_max_f32, "fff", "nc")

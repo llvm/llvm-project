@@ -210,8 +210,9 @@
 
 // FIXME: Fix this feature check when either (A) a compiler provides a complete
 // implementation, or (b) a feature check macro is specified
+#if !defined(_MSC_VER) || defined(__clang__) || _MSC_VER < 1920 || _MSVC_LANG <= 201703L
 #define TEST_HAS_NO_SPACESHIP_OPERATOR
-
+#endif
 
 #if TEST_STD_VER < 11
 #define ASSERT_NOEXCEPT(...)

@@ -108,14 +108,13 @@ ObjCLanguageRuntime::LookupInCompleteClassCache(ConstString &name) {
     if (!module_sp)
       return TypeSP();
 
-    const SymbolContext null_sc;
     const bool exact_match = true;
     const uint32_t max_matches = UINT32_MAX;
     TypeList types;
 
     llvm::DenseSet<SymbolFile *> searched_symbol_files;
     const uint32_t num_types = module_sp->FindTypes(
-        null_sc, name, exact_match, max_matches, searched_symbol_files, types);
+        name, exact_match, max_matches, searched_symbol_files, types);
 
     if (num_types) {
       uint32_t i;

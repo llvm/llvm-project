@@ -12,8 +12,41 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/TextNodeDumper.h"
+#include "clang/AST/DeclFriend.h"
+#include "clang/AST/DeclOpenMP.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/LocInfoType.h"
 
 using namespace clang;
+
+static void dumpPreviousDeclImpl(raw_ostream &OS, ...) {}
+
+template <typename T>
+static void dumpPreviousDeclImpl(raw_ostream &OS, const Mergeable<T> *D) {
+  const T *First = D->getFirstDecl();
+  if (First != D)
+    OS << " first " << First;
+}
+
+template <typename T>
+static void dumpPreviousDeclImpl(raw_ostream &OS, const Redeclarable<T> *D) {
+  const T *Prev = D->getPreviousDecl();
+  if (Prev)
+    OS << " prev " << Prev;
+}
+
+/// Dump the previous declaration in the redeclaration chain for a declaration,
+/// if any.
+static void dumpPreviousDecl(raw_ostream &OS, const Decl *D) {
+  switch (D->getKind()) {
+#define DECL(DERIVED, BASE)                                                    \
+  case Decl::DERIVED:                                                          \
+    return dumpPreviousDeclImpl(OS, cast<DERIVED##Decl>(D));
+#define ABSTRACT_DECL(DECL)
+#include "clang/AST/DeclNodes.inc"
+  }
+  llvm_unreachable("Decl that isn't part of DeclNodes.inc!");
+}
 
 TextNodeDumper::TextNodeDumper(raw_ostream &OS, bool ShowColors,
                                const SourceManager *SM,
@@ -70,9 +103,8 @@ void TextNodeDumper::Visit(const TemplateArgument &TA, SourceRange R,
   if (R.isValid())
     dumpSourceRange(R);
 
-  if (From) {
+  if (From)
     dumpDeclRef(From, Label);
-  }
 
   ConstTemplateArgumentVisitor<TextNodeDumper>::Visit(TA);
 }
@@ -129,6 +161,101 @@ void TextNodeDumper::Visit(const Stmt *Node) {
   }
 
   ConstStmtVisitor<TextNodeDumper>::Visit(Node);
+}
+
+void TextNodeDumper::Visit(const Type *T) {
+  if (!T) {
+    ColorScope Color(OS, ShowColors, NullColor);
+    OS << "<<<NULL>>>";
+    return;
+  }
+  if (isa<LocInfoType>(T)) {
+    {
+      ColorScope Color(OS, ShowColors, TypeColor);
+      OS << "LocInfo Type";
+    }
+    dumpPointer(T);
+    return;
+  }
+
+  {
+    ColorScope Color(OS, ShowColors, TypeColor);
+    OS << T->getTypeClassName() << "Type";
+  }
+  dumpPointer(T);
+  OS << " ";
+  dumpBareType(QualType(T, 0), false);
+
+  QualType SingleStepDesugar =
+      T->getLocallyUnqualifiedSingleStepDesugaredType();
+  if (SingleStepDesugar != QualType(T, 0))
+    OS << " sugar";
+
+  if (T->isDependentType())
+    OS << " dependent";
+  else if (T->isInstantiationDependentType())
+    OS << " instantiation_dependent";
+
+  if (T->isVariablyModifiedType())
+    OS << " variably_modified";
+  if (T->containsUnexpandedParameterPack())
+    OS << " contains_unexpanded_pack";
+  if (T->isFromAST())
+    OS << " imported";
+
+  TypeVisitor<TextNodeDumper>::Visit(T);
+}
+
+void TextNodeDumper::Visit(QualType T) {
+  OS << "QualType";
+  dumpPointer(T.getAsOpaquePtr());
+  OS << " ";
+  dumpBareType(T, false);
+  OS << " " << T.split().Quals.getAsString();
+}
+
+void TextNodeDumper::Visit(const Decl *D) {
+  if (!D) {
+    ColorScope Color(OS, ShowColors, NullColor);
+    OS << "<<<NULL>>>";
+    return;
+  }
+
+  {
+    ColorScope Color(OS, ShowColors, DeclKindNameColor);
+    OS << D->getDeclKindName() << "Decl";
+  }
+  dumpPointer(D);
+  if (D->getLexicalDeclContext() != D->getDeclContext())
+    OS << " parent " << cast<Decl>(D->getDeclContext());
+  dumpPreviousDecl(OS, D);
+  dumpSourceRange(D->getSourceRange());
+  OS << ' ';
+  dumpLocation(D->getLocation());
+  if (D->isFromASTFile())
+    OS << " imported";
+  if (Module *M = D->getOwningModule())
+    OS << " in " << M->getFullModuleName();
+  if (auto *ND = dyn_cast<NamedDecl>(D))
+    for (Module *M : D->getASTContext().getModulesWithMergedDefinition(
+             const_cast<NamedDecl *>(ND)))
+      AddChild([=] { OS << "also in " << M->getFullModuleName(); });
+  if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
+    if (ND->isHidden())
+      OS << " hidden";
+  if (D->isImplicit())
+    OS << " implicit";
+
+  if (D->isUsed())
+    OS << " used";
+  else if (D->isThisDeclarationReferenced())
+    OS << " referenced";
+
+  if (D->isInvalidDecl())
+    OS << " invalid";
+  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
+    if (FD->isConstexpr())
+      OS << " constexpr";
 }
 
 void TextNodeDumper::dumpPointer(const void *Ptr) {
@@ -836,4 +963,162 @@ void TextNodeDumper::VisitObjCSubscriptRefExpr(
 
 void TextNodeDumper::VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *Node) {
   OS << " " << (Node->getValue() ? "__objc_yes" : "__objc_no");
+}
+
+void TextNodeDumper::VisitRValueReferenceType(const ReferenceType *T) {
+  if (T->isSpelledAsLValue())
+    OS << " written as lvalue reference";
+}
+
+void TextNodeDumper::VisitArrayType(const ArrayType *T) {
+  switch (T->getSizeModifier()) {
+  case ArrayType::Normal:
+    break;
+  case ArrayType::Static:
+    OS << " static";
+    break;
+  case ArrayType::Star:
+    OS << " *";
+    break;
+  }
+  OS << " " << T->getIndexTypeQualifiers().getAsString();
+}
+
+void TextNodeDumper::VisitConstantArrayType(const ConstantArrayType *T) {
+  OS << " " << T->getSize();
+  VisitArrayType(T);
+}
+
+void TextNodeDumper::VisitVariableArrayType(const VariableArrayType *T) {
+  OS << " ";
+  dumpSourceRange(T->getBracketsRange());
+  VisitArrayType(T);
+}
+
+void TextNodeDumper::VisitDependentSizedArrayType(
+    const DependentSizedArrayType *T) {
+  VisitArrayType(T);
+  OS << " ";
+  dumpSourceRange(T->getBracketsRange());
+}
+
+void TextNodeDumper::VisitDependentSizedExtVectorType(
+    const DependentSizedExtVectorType *T) {
+  OS << " ";
+  dumpLocation(T->getAttributeLoc());
+}
+
+void TextNodeDumper::VisitVectorType(const VectorType *T) {
+  switch (T->getVectorKind()) {
+  case VectorType::GenericVector:
+    break;
+  case VectorType::AltiVecVector:
+    OS << " altivec";
+    break;
+  case VectorType::AltiVecPixel:
+    OS << " altivec pixel";
+    break;
+  case VectorType::AltiVecBool:
+    OS << " altivec bool";
+    break;
+  case VectorType::NeonVector:
+    OS << " neon";
+    break;
+  case VectorType::NeonPolyVector:
+    OS << " neon poly";
+    break;
+  }
+  OS << " " << T->getNumElements();
+}
+
+void TextNodeDumper::VisitFunctionType(const FunctionType *T) {
+  auto EI = T->getExtInfo();
+  if (EI.getNoReturn())
+    OS << " noreturn";
+  if (EI.getProducesResult())
+    OS << " produces_result";
+  if (EI.getHasRegParm())
+    OS << " regparm " << EI.getRegParm();
+  OS << " " << FunctionType::getNameForCallConv(EI.getCC());
+}
+
+void TextNodeDumper::VisitFunctionProtoType(const FunctionProtoType *T) {
+  auto EPI = T->getExtProtoInfo();
+  if (EPI.HasTrailingReturn)
+    OS << " trailing_return";
+  if (T->isConst())
+    OS << " const";
+  if (T->isVolatile())
+    OS << " volatile";
+  if (T->isRestrict())
+    OS << " restrict";
+  switch (EPI.RefQualifier) {
+  case RQ_None:
+    break;
+  case RQ_LValue:
+    OS << " &";
+    break;
+  case RQ_RValue:
+    OS << " &&";
+    break;
+  }
+  // FIXME: Exception specification.
+  // FIXME: Consumed parameters.
+  VisitFunctionType(T);
+}
+
+void TextNodeDumper::VisitUnresolvedUsingType(const UnresolvedUsingType *T) {
+  dumpDeclRef(T->getDecl());
+}
+
+void TextNodeDumper::VisitTypedefType(const TypedefType *T) {
+  dumpDeclRef(T->getDecl());
+}
+
+void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
+  switch (T->getUTTKind()) {
+  case UnaryTransformType::EnumUnderlyingType:
+    OS << " underlying_type";
+    break;
+  }
+}
+
+void TextNodeDumper::VisitTagType(const TagType *T) {
+  dumpDeclRef(T->getDecl());
+}
+
+void TextNodeDumper::VisitTemplateTypeParmType(const TemplateTypeParmType *T) {
+  OS << " depth " << T->getDepth() << " index " << T->getIndex();
+  if (T->isParameterPack())
+    OS << " pack";
+  dumpDeclRef(T->getDecl());
+}
+
+void TextNodeDumper::VisitAutoType(const AutoType *T) {
+  if (T->isDecltypeAuto())
+    OS << " decltype(auto)";
+  if (!T->isDeduced())
+    OS << " undeduced";
+}
+
+void TextNodeDumper::VisitTemplateSpecializationType(
+    const TemplateSpecializationType *T) {
+  if (T->isTypeAlias())
+    OS << " alias";
+  OS << " ";
+  T->getTemplateName().dump(OS);
+}
+
+void TextNodeDumper::VisitInjectedClassNameType(
+    const InjectedClassNameType *T) {
+  dumpDeclRef(T->getDecl());
+}
+
+void TextNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *T) {
+  dumpDeclRef(T->getDecl());
+}
+
+void TextNodeDumper::VisitPackExpansionType(const PackExpansionType *T) {
+  if (auto N = T->getNumExpansions())
+    OS << " expansions " << *N;
 }

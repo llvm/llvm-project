@@ -185,7 +185,8 @@ static unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
     }
 
     for (auto CS : AvailableRegs)
-      if (!Uses.count(CS) && CS != X86::RIP)
+      if (!Uses.count(CS) && CS != X86::RIP && CS != X86::RSP &&
+          CS != X86::ESP)
         return CS;
   }
   }

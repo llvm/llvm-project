@@ -91,10 +91,11 @@ public:
   blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds = 10);
 
 private:
-  /// Given index results from a TU, only update files in \p FilesToUpdate.
-  /// Also stores new index information on IndexStorage.
+  /// Given index results from a TU, only update symbols coming from files with
+  /// different digests than \p DigestsSnapshot. Also stores new index
+  /// information on IndexStorage.
   void update(llvm::StringRef MainFile, IndexFileIn Index,
-              const llvm::StringMap<FileDigest> &FilesToUpdate,
+              const llvm::StringMap<FileDigest> &DigestsSnapshot,
               BackgroundIndexStorage *IndexStorage);
 
   // configuration

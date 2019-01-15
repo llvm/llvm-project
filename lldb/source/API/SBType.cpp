@@ -103,10 +103,10 @@ bool SBType::IsValid() const {
 }
 
 uint64_t SBType::GetByteSize() {
-  if (!IsValid())
-    return 0;
-
-  return m_opaque_sp->GetCompilerType(false).GetByteSize(nullptr);
+  if (IsValid())
+    if (auto size = m_opaque_sp->GetCompilerType(false).GetByteSize(nullptr))
+      return *size;
+  return 0;
 }
 
 bool SBType::IsPointerType() {

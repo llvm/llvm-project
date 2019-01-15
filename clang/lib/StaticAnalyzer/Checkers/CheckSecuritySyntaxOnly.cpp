@@ -651,14 +651,14 @@ void WalkAST::checkCall_strcpy(const CallExpr *CE, const FunctionDecl *FD) {
 
   const auto *Target = CE->getArg(0)->IgnoreImpCasts(),
              *Source = CE->getArg(1)->IgnoreImpCasts();
-  if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Target))
-    if (const auto *Array = dyn_cast<ConstantArrayType>(DeclRef->getType())) {
-      uint64_t ArraySize = BR.getContext().getTypeSize(Array) / 8;
-      if (const auto *String = dyn_cast<StringLiteral>(Source)) {
-        if (ArraySize >= String->getLength() + 1)
-          return;
-      }
+
+  if (const auto *Array = dyn_cast<ConstantArrayType>(Target->getType())) {
+    uint64_t ArraySize = BR.getContext().getTypeSize(Array) / 8;
+    if (const auto *String = dyn_cast<StringLiteral>(Source)) {
+      if (ArraySize >= String->getLength() + 1)
+        return;
     }
+  }
 
   // Issue a warning.
   PathDiagnosticLocation CELoc =

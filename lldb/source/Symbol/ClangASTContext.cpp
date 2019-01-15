@@ -1141,9 +1141,10 @@ CompilerType ClangASTContext::GetBasicType(ASTContext *ast,
 
 uint32_t ClangASTContext::GetPointerByteSize() {
   if (m_pointer_byte_size == 0)
-    m_pointer_byte_size = GetBasicType(lldb::eBasicTypeVoid)
-                              .GetPointerType()
-                              .GetByteSize(nullptr);
+    if (auto size = GetBasicType(lldb::eBasicTypeVoid)
+                        .GetPointerType()
+                        .GetByteSize(nullptr))
+      m_pointer_byte_size = *size;
   return m_pointer_byte_size;
 }
 
@@ -4505,7 +4506,8 @@ ClangASTContext::GetArrayElementType(lldb::opaque_compiler_type_t type,
 
     // TODO: the real stride will be >= this value.. find the real one!
     if (stride)
-      *stride = element_type.GetByteSize(nullptr);
+      if (auto size = element_type.GetByteSize(nullptr))
+        *stride = *size;
 
     return element_type;
   }
@@ -6682,9 +6684,11 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
             CompilerType base_class_clang_type(getASTContext(),
                                                base_class->getType());
             child_name = base_class_clang_type.GetTypeName().AsCString("");
-            uint64_t base_class_clang_type_bit_size =
-                base_class_clang_type.GetBitSize(
-                    exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
+            auto size = base_class_clang_type.GetBitSize(
+                exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
+            if (!size)
+              return {};
+            uint64_t base_class_clang_type_bit_size = *size;
 
             // Base classes bit sizes should be a multiple of 8 bits in size
             assert(base_class_clang_type_bit_size % 8 == 0);
@@ -6712,8 +6716,11 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
           // alignment (field_type_info.second) from the AST context.
           CompilerType field_clang_type(getASTContext(), field->getType());
           assert(field_idx < record_layout.getFieldCount());
-          child_byte_size = field_clang_type.GetByteSize(
+          auto size = field_clang_type.GetByteSize(
               exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
+          if (!size)
+            return {};
+          child_byte_size = *size;
           const uint32_t child_bit_size = child_byte_size * 8;
 
           // Figure out the field offset within the current struct/union/class
@@ -6884,10 +6891,12 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
 
         // We have a pointer to an simple type
         if (idx == 0 && pointee_clang_type.GetCompleteType()) {
-          child_byte_size = pointee_clang_type.GetByteSize(
-              exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
-          child_byte_offset = 0;
-          return pointee_clang_type;
+          if (auto size = pointee_clang_type.GetByteSize(
+                  exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL)) {
+            child_byte_size = *size;
+            child_byte_offset = 0;
+            return pointee_clang_type;
+          }
         }
       }
     }
@@ -6905,10 +6914,12 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
           ::snprintf(element_name, sizeof(element_name), "[%" PRIu64 "]",
                      static_cast<uint64_t>(idx));
           child_name.assign(element_name);
-          child_byte_size = element_type.GetByteSize(
-              exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
-          child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
-          return element_type;
+          if (auto size = element_type.GetByteSize(
+                  exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL)) {
+            child_byte_size = *size;
+            child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
+            return element_type;
+          }
         }
       }
     }
@@ -6922,10 +6933,12 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
         CompilerType element_type(getASTContext(), array->getElementType());
         if (element_type.GetCompleteType()) {
           child_name = llvm::formatv("[{0}]", idx);
-          child_byte_size = element_type.GetByteSize(
-              exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
-          child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
-          return element_type;
+          if (auto size = element_type.GetByteSize(
+                  exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL)) {
+            child_byte_size = *size;
+            child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
+            return element_type;
+          }
         }
       }
     }
@@ -6959,10 +6972,12 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
 
       // We have a pointer to an simple type
       if (idx == 0) {
-        child_byte_size = pointee_clang_type.GetByteSize(
-            exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
-        child_byte_offset = 0;
-        return pointee_clang_type;
+        if (auto size = pointee_clang_type.GetByteSize(
+                exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL)) {
+          child_byte_size = *size;
+          child_byte_offset = 0;
+          return pointee_clang_type;
+        }
       }
     }
     break;
@@ -6994,10 +7009,12 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
 
         // We have a pointer to an simple type
         if (idx == 0) {
-          child_byte_size = pointee_clang_type.GetByteSize(
-              exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
-          child_byte_offset = 0;
-          return pointee_clang_type;
+          if (auto size = pointee_clang_type.GetByteSize(
+                  exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL)) {
+            child_byte_size = *size;
+            child_byte_offset = 0;
+            return pointee_clang_type;
+          }
         }
       }
     }

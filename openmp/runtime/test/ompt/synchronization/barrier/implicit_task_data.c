@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <inttypes.h>
 #include <omp.h>
-#include <ompt.h>
+#include <omp-tools.h>
 
 static const char* ompt_thread_t_values[] = {
   NULL,

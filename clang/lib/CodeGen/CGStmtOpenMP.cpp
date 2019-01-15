@@ -1472,7 +1472,8 @@ static void emitAlignedClause(CodeGenFunction &CGF,
              "alignment is not power of 2");
       if (Alignment != 0) {
         llvm::Value *PtrValue = CGF.EmitScalarExpr(E);
-        CGF.EmitAlignmentAssumption(PtrValue, Alignment);
+        CGF.EmitAlignmentAssumption(
+            PtrValue, E, /*No second loc needed*/ SourceLocation(), Alignment);
       }
     }
   }

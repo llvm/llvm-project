@@ -1,0 +1,112 @@
+# RUN: llc -o /dev/null 2>&1 %s -mtriple aarch64-unknown -mattr=fuse-arith-logic -run-pass=machine-scheduler -misched-print-dags | FileCheck %s
+# RUN: llc -o /dev/null 2>&1 %s -mtriple aarch64-unknown -mcpu=exynos-m4         -run-pass=machine-scheduler -misched-print-dags | FileCheck %s
+# REQUIRES: asserts
+
+---
+name: arith
+body: |
+  bb.0.entry:
+    %0:gpr32 = SUBWrr undef $w0, undef $w1
+    %1:gpr32 = ADDWrr undef $w1, undef $w2
+    %2:gpr32 = SUBWrs %0, undef $w2, 0
+    %3:gpr32 = ADDWrs %1, undef $w3, 0
+
+    ; CHECK: SU(0): %0:gpr32 = SUBWrr undef $w0, undef $w1
+    ; CHECK: Successors:
+    ; CHECK: SU(2): Ord  Latency=0 Cluster
+    ; CHECK: SU(1): %1:gpr32 = ADDWrr undef $w1, undef $w2
+    ; CHECK: Successors:
+    ; CHECK: SU(3): Ord  Latency=0 Cluster
+    ; CHECK: SU(2): dead %2:gpr32 = SUBWrs %0:gpr32, undef $w2, 0
+    ; CHECK: Predecessors:
+    ; CHECK: SU(0): Ord  Latency=0 Cluster
+    ; CHECK: SU(3): dead %3:gpr32 = ADDWrs %1:gpr32, undef $w3, 0
+    ; CHECK: Predecessors:
+    ; CHECK: SU(1): Ord  Latency=0 Cluster
+...
+---
+name: compare
+body: |
+  bb.0.entry:
+    %0:gpr64 = ADDXrr undef $x0, undef $x1
+    %1:gpr64 = SUBXrs undef $x1, undef $x2, 0
+    %2:gpr64 = ADDSXrr %0, undef $x3, implicit-def $nzcv
+    %3:gpr64 = SUBSXrs %1, undef $x4, 0, implicit-def $nzcv
+
+    ; CHECK: SU(0): %0:gpr64 = ADDXrr undef $x0, undef $x1
+    ; CHECK: Successors:
+    ; CHECK: SU(2): Ord  Latency=0 Cluster
+    ; CHECK: SU(1): %1:gpr64 = SUBXrs undef $x1, undef $x2, 0
+    ; CHECK: Successors:
+    ; CHECK: SU(3): Ord  Latency=0 Cluster
+    ; CHECK: SU(2): dead %2:gpr64 = ADDSXrr %0:gpr64, undef $x3, implicit-def $nzcv
+    ; CHECK: Predecessors:
+    ; CHECK: SU(0): Ord  Latency=0 Cluster
+    ; CHECK: SU(3): dead %3:gpr64 = SUBSXrs %1:gpr64, undef $x4, 0, implicit-def $nzcv
+    ; CHECK: Predecessors:
+    ; CHECK: SU(1): Ord  Latency=0 Cluster
+...
+---
+name: logic
+body: |
+  bb.0.entry:
+    %0:gpr32 = ADDWrr undef $w0, undef $w1
+    %1:gpr64 = SUBXrs undef $x1, undef $x2, 0
+    %3:gpr32 = ANDWrs %0, undef $w3, 0
+    %4:gpr64 = ORRXrr %1, undef $x4
+
+    ; CHECK: SU(0): %0:gpr32 = ADDWrr undef $w0, undef $w1
+    ; CHECK: Successors:
+    ; CHECK: SU(2): Ord  Latency=0 Cluster
+    ; CHECK: SU(1): %1:gpr64 = SUBXrs undef $x1, undef $x2, 0
+    ; CHECK: Successors:
+    ; CHECK: SU(3): Ord  Latency=0 Cluster
+    ; CHECK: SU(2): dead %2:gpr32 = ANDWrs %0:gpr32, undef $w3, 0
+    ; CHECK: Predecessors:
+    ; CHECK: SU(0): Ord  Latency=0 Cluster
+    ; CHECK: SU(3): dead %3:gpr64 = ORRXrr %1:gpr64, undef $x4
+    ; CHECK: Predecessors:
+    ; CHECK: SU(1): Ord  Latency=0 Cluster
+...
+---
+name: nope
+body: |
+  bb.0.entry:
+    ; Shifted register.
+    %0:gpr32 = SUBWrr undef $w0, undef $w1
+    %1:gpr32 = SUBWrs %0, undef $w2, 1
+    ; CHECK: SU(0): %0:gpr32 = SUBWrr undef $w0, undef $w1
+    ; CHECK: Successors:
+    ; CHECK-NOT: SU(1): Ord  Latency=0 Cluster
+    ; CHECK: SU(1): dead %1:gpr32 = SUBWrs %0:gpr32, undef $w2, 1
+
+    ; Multiple successors.
+    %2:gpr64 = ADDXrr undef $x0, undef $x1
+    %3:gpr32 = EXTRACT_SUBREG %2, %subreg.sub_32
+    %4:gpr32 = ANDWrs %3, undef $w2, 0
+    %5:gpr64 = ADDSXrr %2, undef $x3, implicit-def $nzcv
+    ; CHECK: SU(2): %2:gpr64 = ADDXrr undef $x0, undef $x1
+    ; CHECK: Successors:
+    ; CHECK-NOT: SU(3): Ord  Latency=0 Cluster
+    ; CHECK: SU(5): Ord  Latency=0 Cluster
+    ; CHECK: SU(3): %3:gpr32 = EXTRACT_SUBREG %2:gpr64, %subreg.sub_32
+    ; CHECK: SU(5): dead %5:gpr64 = ADDSXrr %2:gpr64, undef $x3, implicit-def $nzcv
+
+    ; Different register sizes.
+    %6:gpr32 = SUBWrr undef $w0, undef $w1
+    %7:gpr64 = ADDXrr undef $x1, undef $x2
+    %8:gpr64 = SUBXrr %7, undef $x3
+    %9:gpr32 = ADDWrr %6, undef $w4
+    ; CHECK: SU(6): %6:gpr32 = SUBWrr undef $w0, undef $w1
+    ; CHECK: Successors:
+    ; CHECK-NOT: SU(8): Ord  Latency=0 Cluster
+    ; CHECK: SU(7): %7:gpr64 = ADDXrr undef $x1, undef $x2
+    ; CHECK: Successors:
+    ; CHECK-NOT: SU(9): Ord  Latency=0 Cluster
+    ; CHECK: SU(8): dead %8:gpr64 = SUBXrr %7:gpr64, undef $x3
+    ; CHECK: Predecessors:
+    ; CHECK: SU(7): Ord  Latency=0 Cluster
+    ; CHECK: SU(9): dead %9:gpr32 = ADDWrr %6:gpr32, undef $w4
+    ; CHECK: Predecessors:
+    ; CHECK: SU(6): Ord  Latency=0 Cluster
+...

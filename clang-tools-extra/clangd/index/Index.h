@@ -476,6 +476,10 @@ struct LookupRequest {
 struct RefsRequest {
   llvm::DenseSet<SymbolID> IDs;
   RefKind Filter = RefKind::All;
+  /// If set, limit the number of refers returned from the index. The index may
+  /// choose to return less than this, e.g. it tries to avoid returning stale
+  /// results.
+  llvm::Optional<uint32_t> Limit;
 };
 
 /// Interface for symbol indexes that can be used for searching or

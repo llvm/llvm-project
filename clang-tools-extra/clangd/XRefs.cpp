@@ -704,7 +704,9 @@ llvm::Optional<Hover> getHover(ParsedAST &AST, Position Pos) {
 }
 
 std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
-                                     const SymbolIndex *Index) {
+                                     uint32_t Limit, const SymbolIndex *Index) {
+  if (!Limit)
+    Limit = std::numeric_limits<uint32_t>::max();
   std::vector<Location> Results;
   const SourceManager &SM = AST.getASTContext().getSourceManager();
   auto MainFilePath =
@@ -733,26 +735,30 @@ std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
   }
 
   // Now query the index for references from other files.
-  if (!Index)
-    return Results;
-  RefsRequest Req;
-  for (const Decl *D : TargetDecls) {
-    // Not all symbols can be referenced from outside (e.g. function-locals).
-    // TODO: we could skip TU-scoped symbols here (e.g. static functions) if
-    // we know this file isn't a header. The details might be tricky.
-    if (D->getParentFunctionOrMethod())
-      continue;
-    if (auto ID = getSymbolID(D))
-      Req.IDs.insert(*ID);
+  if (Index && Results.size() < Limit) {
+    RefsRequest Req;
+    Req.Limit = Limit;
+
+    for (const Decl *D : TargetDecls) {
+      // Not all symbols can be referenced from outside (e.g. function-locals).
+      // TODO: we could skip TU-scoped symbols here (e.g. static functions) if
+      // we know this file isn't a header. The details might be tricky.
+      if (D->getParentFunctionOrMethod())
+        continue;
+      if (auto ID = getSymbolID(D))
+        Req.IDs.insert(*ID);
+    }
+    if (Req.IDs.empty())
+      return Results;
+    Index->refs(Req, [&](const Ref &R) {
+      auto LSPLoc = toLSPLocation(R.Location, *MainFilePath);
+      // Avoid indexed results for the main file - the AST is authoritative.
+      if (LSPLoc && LSPLoc->uri.file() != *MainFilePath)
+        Results.push_back(std::move(*LSPLoc));
+    });
   }
-  if (Req.IDs.empty())
-    return Results;
-  Index->refs(Req, [&](const Ref &R) {
-    auto LSPLoc = toLSPLocation(R.Location, *MainFilePath);
-    // Avoid indexed results for the main file - the AST is authoritative.
-    if (LSPLoc && LSPLoc->uri.file() != *MainFilePath)
-      Results.push_back(std::move(*LSPLoc));
-  });
+  if (Results.size() > Limit)
+    Results.resize(Limit);
   return Results;
 }
 

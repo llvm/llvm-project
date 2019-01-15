@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 ; This test is reduced from the TSVC evaluation of vectorizers:
-; http://www.llvm.org/viewvc/llvm-project/test-suite/trunk/MultiSource/Benchmarks/TSVC/LoopRerolling-flt/tsc.c?view=log
+; https://github.com/llvm/llvm-test-suite/commits/master/MultiSource/Benchmarks/TSVC/LoopRerolling-flt/tsc.c
 ; Two loads and an fmul are expected to be vectorized to <2 x float>.
 ; Otherwise, performance will suffer on Cortex-A53.
 ; See https://bugs.llvm.org/show_bug.cgi?id=36280 for more details.

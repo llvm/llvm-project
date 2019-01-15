@@ -106,6 +106,62 @@ void __ubsan::__ubsan_handle_type_mismatch_v1_abort(TypeMismatchData *Data,
   Die();
 }
 
+static void handleAlignmentAssumptionImpl(AlignmentAssumptionData *Data,
+                                          ValueHandle Pointer,
+                                          ValueHandle Alignment,
+                                          ValueHandle Offset,
+                                          ReportOptions Opts) {
+  Location Loc = Data->Loc.acquire();
+  SourceLocation AssumptionLoc = Data->AssumptionLoc.acquire();
+
+  ErrorType ET = ErrorType::AlignmentAssumption;
+
+  if (ignoreReport(Loc.getSourceLocation(), Opts, ET))
+    return;
+
+  ScopedReport R(Opts, Loc, ET);
+
+  uptr RealPointer = Pointer - Offset;
+  uptr LSB = LeastSignificantSetBitIndex(RealPointer);
+  uptr ActualAlignment = uptr(1) << LSB;
+
+  uptr Mask = Alignment - 1;
+  uptr MisAlignmentOffset = RealPointer & Mask;
+
+  if (!Offset) {
+    Diag(Loc, DL_Error, ET,
+         "assumption of %0 byte alignment for pointer of type %1 failed")
+        << Alignment << Data->Type;
+  } else {
+    Diag(Loc, DL_Error, ET,
+         "assumption of %0 byte alignment (with offset of %1 byte) for pointer "
+         "of type %2 failed")
+        << Alignment << Offset << Data->Type;
+  }
+
+  if (!AssumptionLoc.isInvalid())
+    Diag(AssumptionLoc, DL_Note, ET, "alignment assumption was specified here");
+
+  Diag(RealPointer, DL_Note, ET,
+       "%0address is %1 aligned, misalignment offset is %2 bytes")
+      << (Offset ? "offset " : "") << ActualAlignment << MisAlignmentOffset;
+}
+
+void __ubsan::__ubsan_handle_alignment_assumption(AlignmentAssumptionData *Data,
+                                                  ValueHandle Pointer,
+                                                  ValueHandle Alignment,
+                                                  ValueHandle Offset) {
+  GET_REPORT_OPTIONS(false);
+  handleAlignmentAssumptionImpl(Data, Pointer, Alignment, Offset, Opts);
+}
+void __ubsan::__ubsan_handle_alignment_assumption_abort(
+    AlignmentAssumptionData *Data, ValueHandle Pointer, ValueHandle Alignment,
+    ValueHandle Offset) {
+  GET_REPORT_OPTIONS(true);
+  handleAlignmentAssumptionImpl(Data, Pointer, Alignment, Offset, Opts);
+  Die();
+}
+
 /// \brief Common diagnostic emission for various forms of integer overflow.
 template <typename T>
 static void handleIntegerOverflowImpl(OverflowData *Data, ValueHandle LHS,
