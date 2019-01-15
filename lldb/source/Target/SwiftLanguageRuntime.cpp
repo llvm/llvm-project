@@ -2269,11 +2269,13 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct(
     Address &address) {
   class_type_or_name.SetCompilerType(bound_type);
 
+  llvm::Optional<uint64_t> size = bound_type.GetByteSize(
+      in_value.GetExecutionContextRef().GetFrameSP().get());
+  if (!size)
+    return false;
   lldb::addr_t struct_address = in_value.GetAddressOf(true, nullptr);
-  if (!struct_address || struct_address == LLDB_INVALID_ADDRESS)
-    if (!SwiftASTContext::IsPossibleZeroSizeType(
-            bound_type, in_value.GetExecutionContextRef().GetFrameSP().get()))
-      return false;
+  if (*size && (!struct_address || struct_address == LLDB_INVALID_ADDRESS))
+    return false;
 
   address.SetLoadAddress(struct_address, in_value.GetTargetSP().get());
   return true;
@@ -2285,11 +2287,13 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Enum(
     Address &address) {
   class_type_or_name.SetCompilerType(bound_type);
 
+  llvm::Optional<uint64_t> size = bound_type.GetByteSize(
+      in_value.GetExecutionContextRef().GetFrameSP().get());
+  if (!size)
+    return false;
   lldb::addr_t enum_address = in_value.GetAddressOf(true, nullptr);
-  if (!enum_address || LLDB_INVALID_ADDRESS == enum_address)
-    if (!SwiftASTContext::IsPossibleZeroSizeType(
-            bound_type, in_value.GetExecutionContextRef().GetFrameSP().get()))
-      return false;
+  if (*size && (!enum_address || LLDB_INVALID_ADDRESS == enum_address))
+    return false;
 
   address.SetLoadAddress(enum_address, in_value.GetTargetSP().get());
   return true;
@@ -3765,7 +3769,8 @@ protected:
           CompilerType base_type(base_object_sp->GetCompilerType());
           ConstString base_type_name(base_type.GetTypeName());
           if (base_type_name.IsEmpty() ||
-              !SwiftLanguageRuntime::IsSwiftClassName(base_type_name.GetCString()))
+              !SwiftLanguageRuntime::IsSwiftClassName(
+                  base_type_name.GetCString()))
             return base_object_sp;
           base_object_sp = m_backend.GetSyntheticBase(
               0, base_type, true,
@@ -3880,12 +3885,14 @@ void SwiftLanguageRuntime::WillStartExecutingUserExpression() {
       return;
     }
     ConstString BoolName("bool");
-    size_t bool_size =
-      type_system->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
+    llvm::Optional<uint64_t> bool_size =
+        type_system->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
+    if (!bool_size)
+      return;
 
     Scalar original_value;
     m_process->ReadScalarIntegerFromMemory(*m_dynamic_exclusivity_flag_addr,
-                                           bool_size, false, original_value,
+                                           *bool_size, false, original_value,
                                            error);
 
     m_original_dynamic_exclusivity_flag_state = original_value.UInt() != 0;
@@ -3898,7 +3905,7 @@ void SwiftLanguageRuntime::WillStartExecutingUserExpression() {
     } else {
       Scalar new_value(1U);
       m_process->WriteScalarToMemory(*m_dynamic_exclusivity_flag_addr,
-                                     new_value, bool_size, error);
+                                     new_value, *bool_size, error);
       if (error.Fail()) {
         if (log)
           log->Printf("SwiftLanguageRuntime: Unable to set "
@@ -3944,12 +3951,14 @@ void SwiftLanguageRuntime::DidFinishExecutingUserExpression() {
       return;
     }
     ConstString BoolName("bool");
-    size_t bool_size =
-      type_system->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
+    llvm::Optional<uint64_t> bool_size =
+        type_system->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
+    if (!bool_size)
+      return;
 
     Scalar original_value(m_original_dynamic_exclusivity_flag_state ? 1U : 0U);
     m_process->WriteScalarToMemory(*m_dynamic_exclusivity_flag_addr,
-                                   original_value, bool_size, error);
+                                   original_value, *bool_size, error);
     if (error.Fail()) {
       if (log)
         log->Printf("SwiftLanguageRuntime: Unable to reset "

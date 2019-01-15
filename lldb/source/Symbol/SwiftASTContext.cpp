@@ -4532,11 +4532,11 @@ SwiftASTContext *SwiftASTContext::GetSwiftASTContext(swift::ASTContext *ast) {
 uint32_t SwiftASTContext::GetPointerByteSize() {
   VALID_OR_RETURN(0);
 
-  if (m_pointer_byte_size == 0) {
-    swift::ASTContext *ast = GetASTContext();
+  if (m_pointer_byte_size == 0)
     m_pointer_byte_size =
-        CompilerType(ast->TheRawPointerType.getPointer()).GetByteSize(nullptr);
-  }
+        CompilerType(GetASTContext()->TheRawPointerType.getPointer())
+            .GetByteSize(nullptr)
+            .getValueOr(0);
   return m_pointer_byte_size;
 }
 
@@ -5100,34 +5100,6 @@ static CompilerType BindAllArchetypes(CompilerType type,
   ExecutionContext exe_ctx;
   exe_scope->CalculateExecutionContext(exe_ctx);
   return runtime->DoArchetypeBindingForType(*frame, type);
-}
-
-bool SwiftASTContext::IsPossibleZeroSizeType(const CompilerType &compiler_type,
-                                             ExecutionContextScope *exe_scope) {
-  if (compiler_type && exe_scope) {
-    swift::CanType swift_can_type(GetCanonicalSwiftType(compiler_type));
-    if (swift_can_type->hasTypeParameter()) {
-      ExecutionContext exe_ctx;
-      exe_scope->CalculateExecutionContext(exe_ctx);
-      auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
-      return IsPossibleZeroSizeType(BindAllArchetypes(compiler_type, exe_scope),
-                                    nullptr);
-    }
-  }
-
-  if (!SwiftASTContext::IsFullyRealized(compiler_type))
-    return false;
-  auto ast =
-    llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem());
-  if (!ast)
-    return false;
-  const swift::irgen::TypeInfo *type_info =
-    ast->GetSwiftTypeInfo(compiler_type.GetOpaqueQualType());
-  if (!type_info->isFixedSize())
-    return false;
-  auto *fixed_type_info =
-    swift::cast<const swift::irgen::FixedTypeInfo>(type_info);
-  return fixed_type_info->getFixedSize().getValue() == 0;
 }
 
 bool SwiftASTContext::IsErrorType(const CompilerType &compiler_type) {
@@ -5930,7 +5902,7 @@ uint64_t SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
     auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
     CompilerType bound_type = BindAllArchetypes({this, type}, exe_scope);
     // Note thay the bound type may be in a different AST context.
-    return bound_type.GetBitSize(nullptr);
+    return bound_type.GetBitSize(nullptr).getValueOr(0);
   }
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
@@ -6611,9 +6583,11 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
       GetExistentialTypeChild(GetASTContext(), compiler_type, protocol_info,
                               idx);
 
-    uint64_t child_size = child_type.GetByteSize(nullptr);
+    llvm::Optional<uint64_t> child_size = child_type.GetByteSize(nullptr);
+    if (!child_size)
+      return {};
     if (bit_offset_ptr)
-      *bit_offset_ptr = idx * child_size * 8;
+      *bit_offset_ptr = idx * *child_size * 8;
     if (bitfield_bit_size_ptr)
       *bitfield_bit_size_ptr = 0;
     if (is_bitfield_ptr)
@@ -6858,6 +6832,16 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   if (!type)
     return CompilerType();
 
+  auto get_type_size = [&exe_ctx](uint32_t &result, CompilerType type) {
+    auto *exe_scope =
+        exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
+    llvm::Optional<uint64_t> size = type.GetByteSize(exe_scope);
+    if (!size)
+      return false;
+    result = *size;
+    return true;
+  };
+
   language_flags = 0;
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   assert(&swift_can_type->getASTContext() == GetASTContext());
@@ -6896,8 +6880,8 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
       const SwiftEnumDescriptor::ElementInfo *element_info =
           cached_enum_info->GetElementWithPayloadAtIndex(idx);
       child_name.assign(element_info->name.GetCString());
-      child_byte_size = element_info->payload_type.GetByteSize(
-          exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
+      if (!get_type_size(child_byte_size, element_info->payload_type))
+        return {};
       child_byte_offset = 0;
       child_bitfield_bit_size = 0;
       child_bitfield_bit_offset = 0;
@@ -6940,14 +6924,12 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     // Format the integer.
     llvm::SmallString<16> printed_idx;
     llvm::raw_svector_ostream(printed_idx) << idx;
+    child_name = GetTupleElementName(tuple_type, idx, printed_idx);
 
     CompilerType child_type(child.getType().getPointer());
-
-    auto exe_ctx_scope =
-      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL;
-    child_name = GetTupleElementName(tuple_type, idx, printed_idx);
-    child_byte_size = child_type.GetByteSize(exe_ctx_scope);
-      child_is_base_class = false;
+    if (!get_type_size(child_byte_size, child_type))
+      return {};
+    child_is_base_class = false;
     child_is_deref_of_parent = false;
 
     CompilerType compiler_type(GetSwiftType(type));
@@ -6970,10 +6952,8 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
         CompilerType superclass_type(superclass_swift_type.getPointer());
 
         child_name = GetSuperclassName(superclass_type);
-
-        auto exe_ctx_scope =
-          exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL;
-        child_byte_size = superclass_type.GetByteSize(exe_ctx_scope);
+        if (!get_type_size(child_byte_size, superclass_type))
+          return {};
         child_is_base_class = true;
         child_is_deref_of_parent = false;
 
@@ -7003,12 +6983,9 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
         nominal->getModuleContext(), property, nullptr);
 
     CompilerType child_type(child_swift_type.getPointer());
-
-    auto exe_ctx_scope =
-      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL;
-
     child_name = property->getBaseName().userFacingName();
-    child_byte_size = child_type.GetByteSize(exe_ctx_scope);
+    if (!get_type_size(child_byte_size, child_type))
+      return {};
     child_is_base_class = false;
     child_is_deref_of_parent = false;
 
@@ -7033,11 +7010,8 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     CompilerType child_type;
     std::tie(child_type, child_name) = GetExistentialTypeChild(
         GetASTContext(), compiler_type, protocol_info, idx);
-
-    auto exe_ctx_scope =
-      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
-
-    child_byte_size = child_type.GetByteSize(exe_ctx_scope);
+    if (!get_type_size(child_byte_size, child_type))
+      return {};
     child_byte_offset = idx * child_byte_size;
     child_bitfield_bit_size = 0;
     child_bitfield_bit_offset = 0;
@@ -7071,8 +7045,8 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
 
       // We have a pointer to a simple type
       if (idx == 0) {
-        child_byte_size = pointee_clang_type.GetByteSize(
-            exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
+        if (!get_type_size(child_byte_size, pointee_clang_type))
+          return {};
         child_byte_offset = 0;
         return pointee_clang_type;
       }

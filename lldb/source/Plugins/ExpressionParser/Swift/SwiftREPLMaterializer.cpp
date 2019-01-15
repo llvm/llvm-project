@@ -189,8 +189,9 @@ public:
       demangle_ctx.clear();
     }
 
-    if (SwiftASTContext::IsPossibleZeroSizeType(m_type,
-            execution_unit->GetBestExecutionContextScope())) {
+    llvm::Optional<uint64_t> size =
+        m_type.GetByteSize(execution_unit->GetBestExecutionContextScope());
+    if (size && *size == 0) {
       MakeREPLResult(*execution_unit, err, nullptr);
       return;
     }

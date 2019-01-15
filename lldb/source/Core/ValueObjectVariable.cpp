@@ -146,8 +146,9 @@ bool ValueObjectVariable::UpdateValue() {
       CompilerType var_type(GetCompilerTypeImpl());
       if (var_type.IsValid()) {
         ExecutionContext exe_ctx(GetExecutionContextRef());
-        if (SwiftASTContext::IsPossibleZeroSizeType(
-                var_type, exe_ctx.GetBestExecutionContextScope()))
+        llvm::Optional<uint64_t> size =
+            var_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+        if (size && *size == 0)
           m_value.SetCompilerType(var_type);
         else
           m_error.SetErrorString("empty constant data");
