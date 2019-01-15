@@ -79,18 +79,12 @@ Preprocessor::AllocateVisibilityMacroDirective(SourceLocation Loc,
 
 /// Read and discard all tokens remaining on the current line until
 /// the tok::eod token is found.
-SourceRange Preprocessor::DiscardUntilEndOfDirective() {
+void Preprocessor::DiscardUntilEndOfDirective() {
   Token Tmp;
-  SourceRange Res;
-
-  LexUnexpandedToken(Tmp);
-  Res.setBegin(Tmp.getLocation());
-  while (Tmp.isNot(tok::eod)) {
-    assert(Tmp.isNot(tok::eof) && "EOF seen while discarding directive tokens");
+  do {
     LexUnexpandedToken(Tmp);
-  }
-  Res.setEnd(Tmp.getLocation());
-  return Res;
+    assert(Tmp.isNot(tok::eof) && "EOF seen while discarding directive tokens");
+  } while (Tmp.isNot(tok::eod));
 }
 
 /// Enumerates possible cases of #define/#undef a reserved identifier.
@@ -544,19 +538,19 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
         if (CondInfo.WasSkipping || CondInfo.FoundNonSkip) {
           DiscardUntilEndOfDirective();
         } else {
+          const SourceLocation CondBegin = CurPPLexer->getSourceLocation();
           // Restore the value of LexingRawMode so that identifiers are
           // looked up, etc, inside the #elif expression.
           assert(CurPPLexer->LexingRawMode && "We have to be skipping here!");
           CurPPLexer->LexingRawMode = false;
           IdentifierInfo *IfNDefMacro = nullptr;
-          DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
-          const bool CondValue = DER.Conditional;
+          const bool CondValue = EvaluateDirectiveExpression(IfNDefMacro).Conditional;
           CurPPLexer->LexingRawMode = true;
           if (Callbacks) {
-            Callbacks->Elif(
-                Tok.getLocation(), DER.ExprRange,
-                (CondValue ? PPCallbacks::CVK_True : PPCallbacks::CVK_False),
-                CondInfo.IfLoc);
+            const SourceLocation CondEnd = CurPPLexer->getSourceLocation();
+            Callbacks->Elif(Tok.getLocation(),
+                            SourceRange(CondBegin, CondEnd),
+                            (CondValue ? PPCallbacks::CVK_True : PPCallbacks::CVK_False), CondInfo.IfLoc);
           }
           // If this condition is true, enter it!
           if (CondValue) {
@@ -1122,24 +1116,19 @@ void Preprocessor::HandleLineDirective() {
     ; // ok
   else if (StrTok.isNot(tok::string_literal)) {
     Diag(StrTok, diag::err_pp_line_invalid_filename);
-    DiscardUntilEndOfDirective();
-    return;
+    return DiscardUntilEndOfDirective();
   } else if (StrTok.hasUDSuffix()) {
     Diag(StrTok, diag::err_invalid_string_udl);
-    DiscardUntilEndOfDirective();
-    return;
+    return DiscardUntilEndOfDirective();
   } else {
     // Parse and validate the string, converting it into a unique ID.
     StringLiteralParser Literal(StrTok, *this);
     assert(Literal.isAscii() && "Didn't allow wide strings in");
-    if (Literal.hadError) {
-      DiscardUntilEndOfDirective();
-      return;
-    }
+    if (Literal.hadError)
+      return DiscardUntilEndOfDirective();
     if (Literal.Pascal) {
       Diag(StrTok, diag::err_pp_linemarker_invalid_filename);
-      DiscardUntilEndOfDirective();
-      return;
+      return DiscardUntilEndOfDirective();
     }
     FilenameID = SourceMgr.getLineTableFilenameID(Literal.GetString());
 
@@ -1272,24 +1261,19 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     FileKind = SourceMgr.getFileCharacteristic(DigitTok.getLocation());
   } else if (StrTok.isNot(tok::string_literal)) {
     Diag(StrTok, diag::err_pp_linemarker_invalid_filename);
-    DiscardUntilEndOfDirective();
-    return;
+    return DiscardUntilEndOfDirective();
   } else if (StrTok.hasUDSuffix()) {
     Diag(StrTok, diag::err_invalid_string_udl);
-    DiscardUntilEndOfDirective();
-    return;
+    return DiscardUntilEndOfDirective();
   } else {
     // Parse and validate the string, converting it into a unique ID.
     StringLiteralParser Literal(StrTok, *this);
     assert(Literal.isAscii() && "Didn't allow wide strings in");
-    if (Literal.hadError) {
-      DiscardUntilEndOfDirective();
-      return;
-    }
+    if (Literal.hadError)
+      return DiscardUntilEndOfDirective();
     if (Literal.Pascal) {
       Diag(StrTok, diag::err_pp_linemarker_invalid_filename);
-      DiscardUntilEndOfDirective();
-      return;
+      return DiscardUntilEndOfDirective();
     }
     FilenameID = SourceMgr.getLineTableFilenameID(Literal.GetString());
 
@@ -1359,8 +1343,7 @@ void Preprocessor::HandleIdentSCCSDirective(Token &Tok) {
 
   if (StrTok.hasUDSuffix()) {
     Diag(StrTok, diag::err_invalid_string_udl);
-    DiscardUntilEndOfDirective();
-    return;
+    return DiscardUntilEndOfDirective();
   }
 
   // Verify that there is nothing after the string, other than EOD.
@@ -2800,8 +2783,10 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
 
   // Parse and evaluate the conditional expression.
   IdentifierInfo *IfNDefMacro = nullptr;
+  const SourceLocation ConditionalBegin = CurPPLexer->getSourceLocation();
   const DirectiveEvalResult DER = EvaluateDirectiveExpression(IfNDefMacro);
   const bool ConditionalTrue = DER.Conditional;
+  const SourceLocation ConditionalEnd = CurPPLexer->getSourceLocation();
 
   // If this condition is equivalent to #ifndef X, and if this is the first
   // directive seen, handle it for the multiple-include optimization.
@@ -2814,9 +2799,9 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
   }
 
   if (Callbacks)
-    Callbacks->If(
-        IfToken.getLocation(), DER.ExprRange,
-        (ConditionalTrue ? PPCallbacks::CVK_True : PPCallbacks::CVK_False));
+    Callbacks->If(IfToken.getLocation(),
+                  SourceRange(ConditionalBegin, ConditionalEnd),
+                  (ConditionalTrue ? PPCallbacks::CVK_True : PPCallbacks::CVK_False));
 
   // Should we include the stuff contained by this directive?
   if (PPOpts->SingleFileParseMode && DER.IncludedUndefinedIds) {
@@ -2909,7 +2894,9 @@ void Preprocessor::HandleElifDirective(Token &ElifToken,
   // #elif directive in a non-skipping conditional... start skipping.
   // We don't care what the condition is, because we will always skip it (since
   // the block immediately before it was included).
-  SourceRange ConditionRange = DiscardUntilEndOfDirective();
+  const SourceLocation ConditionalBegin = CurPPLexer->getSourceLocation();
+  DiscardUntilEndOfDirective();
+  const SourceLocation ConditionalEnd = CurPPLexer->getSourceLocation();
 
   PPConditionalInfo CI;
   if (CurPPLexer->popConditionalLevel(CI)) {
@@ -2925,7 +2912,8 @@ void Preprocessor::HandleElifDirective(Token &ElifToken,
   if (CI.FoundElse) Diag(ElifToken, diag::pp_err_elif_after_else);
 
   if (Callbacks)
-    Callbacks->Elif(ElifToken.getLocation(), ConditionRange,
+    Callbacks->Elif(ElifToken.getLocation(),
+                    SourceRange(ConditionalBegin, ConditionalEnd),
                     PPCallbacks::CVK_NotEvaluated, CI.IfLoc);
 
   if (PPOpts->SingleFileParseMode && !CI.FoundNonSkip) {

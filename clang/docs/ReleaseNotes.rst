@@ -321,6 +321,49 @@ Undefined Behavior Sanitizer (UBSan)
 * The Implicit Conversion Sanitizer (``-fsanitize=implicit-conversion``) has
   learned to sanitize compound assignment operators.
 
+* ``alignment`` check has learned to sanitize the assume_aligned-like attributes:
+
+  .. code-block:: c++
+
+      typedef char **__attribute__((align_value(1024))) aligned_char;
+      struct ac_struct {
+        aligned_char a;
+      };
+      char **load_from_ac_struct(struct ac_struct *x) {
+        return x->a; // <- check that loaded 'a' is aligned
+      }
+
+      char **passthrough(__attribute__((align_value(1024))) char **x) {
+        return x; // <- check the pointer passed as function argument
+      }
+
+      char **__attribute__((alloc_align(2)))
+      alloc_align(int size, unsigned long alignment);
+
+      char **caller(int size) {
+        return alloc_align(size, 1024); // <- check returned pointer
+      }
+
+      char **__attribute__((assume_aligned(1024))) get_ptr();
+
+      char **caller2() {
+        return get_ptr(); // <- check returned pointer
+      }
+
+      void *caller3(char **x) {
+        return __builtin_assume_aligned(x, 1024);  // <- check returned pointer
+      }
+
+      void *caller4(char **x, unsigned long offset) {
+        return __builtin_assume_aligned(x, 1024, offset);  // <- check returned pointer accounting for the offest
+      }
+
+      void process(char *data, int width) {
+          #pragma omp for simd aligned(data : 1024) // <- aligned clause will be checked.
+          for (int x = 0; x < width; x++)
+          data[x] *= data[x];
+      }
+
 Core Analysis Improvements
 ==========================
 

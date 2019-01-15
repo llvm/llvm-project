@@ -1,0 +1,7 @@
+RUN: rm -f %t-AlignmentAssumptionTest-Ubsan
+RUN: %cpp_compiler -fsanitize=alignment -fno-sanitize-recover=all %S/AlignmentAssumptionTest.cpp -o %t-AlignmentAssumptionTest-Ubsan
+RUN: not %run %t-AlignmentAssumptionTest-Ubsan 2>&1 | FileCheck %s
+CHECK: AlignmentAssumptionTest.cpp:22:39:  runtime error: assumption of 32768 byte alignment for pointer of type 'const {{.*}} *' (aka 'const unsigned char *') failed
+CHECK: 0x{{.*}}: note: address is {{.*}} aligned, misalignment offset is {{.*}} byte
+
+CHECK: Test unit written to ./crash-

@@ -3,8 +3,8 @@ set(LIBFUZZER_SOURCES
   FuzzerDataFlowTrace.cpp
   FuzzerDriver.cpp
   FuzzerExtFunctionsDlsym.cpp
-  FuzzerExtFunctionsWeakAlias.cpp
   FuzzerExtFunctionsWeak.cpp
+  FuzzerExtFunctionsWindows.cpp
   FuzzerExtraCounters.cpp
   FuzzerIO.cpp
   FuzzerIOPosix.cpp

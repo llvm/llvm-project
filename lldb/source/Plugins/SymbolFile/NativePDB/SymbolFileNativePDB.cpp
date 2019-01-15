@@ -1142,9 +1142,8 @@ bool SymbolFileNativePDB::ParseImportedModules(
   return false;
 }
 
-size_t SymbolFileNativePDB::ParseFunctionBlocks(const SymbolContext &sc) {
-  lldbassert(sc.comp_unit && sc.function);
-  GetOrCreateBlock(PdbSymUid(sc.function->GetID()).asCompilandSym());
+size_t SymbolFileNativePDB::ParseBlocksRecursive(Function &func) {
+  GetOrCreateBlock(PdbSymUid(func.GetID()).asCompilandSym());
   // FIXME: Parse child blocks
   return 1;
 }
@@ -1220,10 +1219,9 @@ uint32_t SymbolFileNativePDB::FindFunctions(const RegularExpression &regex,
 }
 
 uint32_t SymbolFileNativePDB::FindTypes(
-    const SymbolContext &sc, const ConstString &name,
-    const CompilerDeclContext *parent_decl_ctx, bool append,
-    uint32_t max_matches, llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-    TypeMap &types) {
+    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+    bool append, uint32_t max_matches,
+    llvm::DenseSet<SymbolFile *> &searched_symbol_files, TypeMap &types) {
   if (!append)
     types.Clear();
   if (!name)
@@ -1551,8 +1549,7 @@ size_t SymbolFileNativePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
 }
 
 CompilerDeclContext
-SymbolFileNativePDB::FindNamespace(const SymbolContext &sc,
-                                   const ConstString &name,
+SymbolFileNativePDB::FindNamespace(const ConstString &name,
                                    const CompilerDeclContext *parent_decl_ctx) {
   return {};
 }

@@ -9414,6 +9414,59 @@ INTERCEPTOR(char *, getusershell) {
 #define INIT_GETUSERSHELL
 #endif
 
+#if SANITIZER_INTERCEPT_SL_INIT
+INTERCEPTOR(void *, sl_init) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, sl_init);
+  void *res = REAL(sl_init)();
+  if (res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, __sanitizer::struct_StringList_sz);
+  return res;
+}
+
+INTERCEPTOR(int, sl_add, void *sl, char *item) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, sl_add, sl, item);
+  if (sl)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, sl, __sanitizer::struct_StringList_sz);
+  if (item)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, item, REAL(strlen)(item) + 1);
+  int res = REAL(sl_add)(sl, item);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, sl, __sanitizer::struct_StringList_sz);
+  return res;
+}
+
+INTERCEPTOR(char *, sl_find, void *sl, const char *item) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, sl_find, sl, item);
+  if (sl)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, sl, __sanitizer::struct_StringList_sz);
+  if (item)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, item, REAL(strlen)(item) + 1);
+  char *res = REAL(sl_find)(sl, item);
+  if (res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, REAL(strlen)(res) + 1);
+  return res;
+}
+
+INTERCEPTOR(void, sl_free, void *sl, int freeall) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, sl_free, sl, freeall);
+  if (sl)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, sl, __sanitizer::struct_StringList_sz);
+  REAL(sl_free)(sl, freeall);
+}
+
+#define INIT_SL_INIT                  \
+  COMMON_INTERCEPT_FUNCTION(sl_init); \
+  COMMON_INTERCEPT_FUNCTION(sl_add);  \
+  COMMON_INTERCEPT_FUNCTION(sl_find); \
+  COMMON_INTERCEPT_FUNCTION(sl_free);
+#else
+#define INIT_SL_INIT
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map =
@@ -9703,6 +9756,7 @@ static void InitializeCommonInterceptors() {
   INIT_FUNOPEN2;
   INIT_FDEVNAME;
   INIT_GETUSERSHELL;
+  INIT_SL_INIT;
 
   INIT___PRINTF_CHK;
 }

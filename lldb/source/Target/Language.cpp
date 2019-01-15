@@ -385,11 +385,10 @@ bool Language::ImageListTypeScavenger::Find_Impl(
   Target *target = exe_scope->CalculateTarget().get();
   if (target) {
     const auto &images(target->GetImages());
-    SymbolContext null_sc;
     ConstString cs_key(key);
     llvm::DenseSet<SymbolFile *> searched_sym_files;
     TypeList matches;
-    images.FindTypes(null_sc, cs_key, false, UINT32_MAX, searched_sym_files,
+    images.FindTypes(nullptr, cs_key, false, UINT32_MAX, searched_sym_files,
                      matches);
     for (const auto &match : matches.Types()) {
       if (match.get()) {

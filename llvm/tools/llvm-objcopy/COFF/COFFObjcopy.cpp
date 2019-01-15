@@ -28,6 +28,11 @@ using namespace object;
 using namespace COFF;
 
 static Error handleArgs(const CopyConfig &Config, Object &Obj) {
+  // StripAll removes all symbols and thus also removes all relocations.
+  if (Config.StripAll || Config.StripAllGNU)
+    for (Section &Sec : Obj.Sections)
+      Sec.Relocs.clear();
+
   // If we need to do per-symbol removals, initialize the Referenced field.
   if (Config.StripUnneeded || Config.DiscardAll ||
       !Config.SymbolsToRemove.empty())
@@ -36,6 +41,11 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
 
   // Actually do removals of symbols.
   Obj.removeSymbols([&](const Symbol &Sym) {
+    // For StripAll, all relocations have been stripped and we remove all
+    // symbols.
+    if (Config.StripAll || Config.StripAllGNU)
+      return true;
+
     if (is_contained(Config.SymbolsToRemove, Sym.Name)) {
       // Explicitly removing a referenced symbol is an error.
       if (Sym.Referenced)
@@ -47,13 +57,19 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       return true;
     }
 
-    if (!Sym.Referenced && Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC) {
-      if (Config.StripUnneeded)
+    if (!Sym.Referenced) {
+      // With --strip-unneeded, GNU objcopy removes all unreferenced local
+      // symbols, and any unreferenced undefined external.
+      if (Config.StripUnneeded &&
+          (Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC ||
+           Sym.Sym.SectionNumber == 0))
         return true;
+
       // GNU objcopy keeps referenced local symbols and external symbols
       // if --discard-all is set, similar to what --strip-unneeded does,
       // but undefined local symbols are kept when --discard-all is set.
-      if (Config.DiscardAll && Sym.Sym.SectionNumber != 0)
+      if (Config.DiscardAll && Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC &&
+          Sym.Sym.SectionNumber != 0)
         return true;
     }
 

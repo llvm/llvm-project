@@ -91,12 +91,10 @@ IncludeGraph getSubGraph(const URI &U, const IncludeGraph &FullGraph) {
 
 // Creates a filter to not collect index results from files with unchanged
 // digests.
-// \p FileDigests contains file digests for the current indexed files, and all
-// changed files will be added to \p FilesToUpdate.
+// \p FileDigests contains file digests for the current indexed files.
 decltype(SymbolCollector::Options::FileFilter)
-createFileFilter(const llvm::StringMap<FileDigest> &FileDigests,
-                 llvm::StringMap<FileDigest> &FilesToUpdate) {
-  return [&FileDigests, &FilesToUpdate](const SourceManager &SM, FileID FID) {
+createFileFilter(const llvm::StringMap<FileDigest> &FileDigests) {
+  return [&FileDigests](const SourceManager &SM, FileID FID) {
     const auto *F = SM.getFileEntryForID(FID);
     if (!F)
       return false; // Skip invalid files.
@@ -109,8 +107,6 @@ createFileFilter(const llvm::StringMap<FileDigest> &FileDigests,
     auto D = FileDigests.find(*AbsPath);
     if (D != FileDigests.end() && D->second == Digest)
       return false; // Skip files that haven't changed.
-
-    FilesToUpdate[*AbsPath] = *Digest;
     return true;
   };
 }
@@ -264,22 +260,34 @@ void BackgroundIndex::enqueueTask(Task T, ThreadPriority Priority) {
   QueueCV.notify_all();
 }
 
-/// Given index results from a TU, only update files in \p FilesToUpdate.
+/// Given index results from a TU, only update symbols coming from files that
+/// are different or missing from than \p DigestsSnapshot. Also stores new index
+/// information on IndexStorage.
 void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
-                             const llvm::StringMap<FileDigest> &FilesToUpdate,
+                             const llvm::StringMap<FileDigest> &DigestsSnapshot,
                              BackgroundIndexStorage *IndexStorage) {
   // Partition symbols/references into files.
   struct File {
     llvm::DenseSet<const Symbol *> Symbols;
     llvm::DenseSet<const Ref *> Refs;
+    FileDigest Digest;
   };
   llvm::StringMap<File> Files;
   URIToFileCache URICache(MainFile);
+  for (const auto &IndexIt : *Index.Sources) {
+    const auto &IGN = IndexIt.getValue();
+    const auto AbsPath = URICache.resolve(IGN.URI);
+    const auto DigestIt = DigestsSnapshot.find(AbsPath);
+    // File has different contents.
+    if (DigestIt == DigestsSnapshot.end() || DigestIt->getValue() != IGN.Digest)
+      Files.try_emplace(AbsPath).first->getValue().Digest = IGN.Digest;
+  }
   for (const auto &Sym : *Index.Symbols) {
     if (Sym.CanonicalDeclaration) {
       auto DeclPath = URICache.resolve(Sym.CanonicalDeclaration.FileURI);
-      if (FilesToUpdate.count(DeclPath) != 0)
-        Files[DeclPath].Symbols.insert(&Sym);
+      const auto FileIt = Files.find(DeclPath);
+      if (FileIt != Files.end())
+        FileIt->second.Symbols.insert(&Sym);
     }
     // For symbols with different declaration and definition locations, we store
     // the full symbol in both the header file and the implementation file, so
@@ -288,16 +296,18 @@ void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
     if (Sym.Definition &&
         Sym.Definition.FileURI != Sym.CanonicalDeclaration.FileURI) {
       auto DefPath = URICache.resolve(Sym.Definition.FileURI);
-      if (FilesToUpdate.count(DefPath) != 0)
-        Files[DefPath].Symbols.insert(&Sym);
+      const auto FileIt = Files.find(DefPath);
+      if (FileIt != Files.end())
+        FileIt->second.Symbols.insert(&Sym);
     }
   }
   llvm::DenseMap<const Ref *, SymbolID> RefToIDs;
   for (const auto &SymRefs : *Index.Refs) {
     for (const auto &R : SymRefs.second) {
       auto Path = URICache.resolve(R.Location.FileURI);
-      if (FilesToUpdate.count(Path) != 0) {
-        auto &F = Files[Path];
+      const auto FileIt = Files.find(Path);
+      if (FileIt != Files.end()) {
+        auto &F = FileIt->getValue();
         RefToIDs[&R] = SymRefs.first;
         F.Refs.insert(&R);
       }
@@ -305,18 +315,14 @@ void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
   }
 
   // Build and store new slabs for each updated file.
-  for (const auto &I : *Index.Sources) {
-    std::string Path = URICache.resolve(I.first());
+  for (const auto &FileIt : Files) {
+    llvm::StringRef Path = FileIt.getKey();
     SymbolSlab::Builder Syms;
     RefSlab::Builder Refs;
-    auto FileIt = Files.find(Path);
-    if (FileIt != Files.end()) {
-      auto &F = *FileIt;
-      for (const auto *S : F.second.Symbols)
-        Syms.insert(*S);
-      for (const auto *R : F.second.Refs)
-        Refs.insert(RefToIDs[R], *R);
-    }
+    for (const auto *S : FileIt.second.Symbols)
+      Syms.insert(*S);
+    for (const auto *R : FileIt.second.Refs)
+      Refs.insert(RefToIDs[R], *R);
     auto SS = llvm::make_unique<SymbolSlab>(std::move(Syms).build());
     auto RS = llvm::make_unique<RefSlab>(std::move(Refs).build());
     auto IG = llvm::make_unique<IncludeGraph>(
@@ -335,7 +341,7 @@ void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
     }
     {
       std::lock_guard<std::mutex> Lock(DigestsMu);
-      auto Hash = I.second.Digest;
+      auto Hash = FileIt.second.Digest;
       // Skip if file is already up to date.
       auto DigestIt = IndexedFileDigests.try_emplace(Path);
       if (!DigestIt.second && DigestIt.first->second == Hash)
@@ -410,8 +416,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
                                    "Couldn't build compiler instance");
 
   SymbolCollector::Options IndexOpts;
-  llvm::StringMap<FileDigest> FilesToUpdate;
-  IndexOpts.FileFilter = createFileFilter(DigestsSnapshot, FilesToUpdate);
+  IndexOpts.FileFilter = createFileFilter(DigestsSnapshot);
   IndexFileIn Index;
   auto Action = createStaticIndexingAction(
       IndexOpts, [&](SymbolSlab S) { Index.Symbols = std::move(S); },
@@ -448,7 +453,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
   SPAN_ATTACH(Tracer, "refs", int(Index.Refs->numRefs()));
   SPAN_ATTACH(Tracer, "sources", int(Index.Sources->size()));
 
-  update(AbsolutePath, std::move(Index), FilesToUpdate, IndexStorage);
+  update(AbsolutePath, std::move(Index), DigestsSnapshot, IndexStorage);
 
   if (BuildIndexPeriodMs > 0)
     SymbolsUpdatedSinceLastIndex = true;

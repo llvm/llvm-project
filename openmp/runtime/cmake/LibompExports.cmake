@@ -57,7 +57,7 @@ add_custom_command(TARGET omp POST_BUILD
 )
 if(${LIBOMP_OMPT_SUPPORT})
   add_custom_command(TARGET omp POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ompt.h ${LIBOMP_EXPORTS_CMN_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy omp-tools.h ${LIBOMP_EXPORTS_CMN_DIR}
   )
 endif()
 if(${LIBOMP_FORTRAN_MODULES})

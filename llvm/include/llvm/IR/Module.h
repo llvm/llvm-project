@@ -367,6 +367,11 @@ public:
     return getOrInsertFunction(Name, AttributeList{}, RetTy, Args...);
   }
 
+  // Avoid an incorrect ordering that'd otherwise compile incorrectly.
+  template <typename... ArgsTy>
+  Constant *getOrInsertFunction(StringRef Name, AttributeList AttributeList,
+                                FunctionType *Invalid, ArgsTy... Args) = delete;
+
   /// Look up the specified function in the module symbol table. If it does not
   /// exist, return null.
   Function *getFunction(StringRef Name) const;

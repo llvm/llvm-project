@@ -13,6 +13,20 @@ RUN:   | FileCheck %s -check-prefix MACHO-PPC64
 RUN: llvm-readobj -expand-relocs -s -st -sr -sd %p/Inputs/trivial.obj.macho-arm \
 RUN:   | FileCheck %s -check-prefix MACHO-ARM
 
+# Check the two-letter aliases above (-st, -sr, -sd) are equivalent to their
+# full flag names.
+RUN: llvm-readobj -s -st %p/Inputs/trivial.obj.elf-i386 > %t.readobj-st-alias
+RUN: llvm-readobj -s --section-symbols %p/Inputs/trivial.obj.elf-i386 > %t.readobj-st-no-alias
+RUN: diff %t.readobj-st-alias %t.readobj-st-no-alias
+
+RUN: llvm-readobj -s -sr %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sr-alias
+RUN: llvm-readobj -s --section-relocations %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sr-no-alias
+RUN: diff %t.readobj-sr-alias %t.readobj-sr-no-alias
+
+RUN: llvm-readobj -s -sd %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sd-alias
+RUN: llvm-readobj -s --section-data %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sd-no-alias
+RUN: diff %t.readobj-sd-alias %t.readobj-sd-no-alias
+
 COFF:      Sections [
 COFF-NEXT:   Section {
 COFF-NEXT:     Number: 1

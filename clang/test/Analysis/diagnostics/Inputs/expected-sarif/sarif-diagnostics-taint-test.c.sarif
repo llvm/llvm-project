@@ -106,7 +106,7 @@
         "fullName": "clang static analyzer",
         "language": "en-US",
         "name": "clang",
-        "version": "clang version 8.0.0 (https://github.com/llvm-project/clang.git a5ccb257a7a70928ede717a7c282f5fc8cbed310) (https://github.com/llvm-mirror/llvm.git 73cebd79c512f7129eca16b0f3a7abd21d2881e8)"
+        "version": "clang version 8.0.0"
       }
     }
   ],

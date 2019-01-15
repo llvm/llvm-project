@@ -166,8 +166,9 @@ protected:
   bool HasArithmeticCbzFusion = false;
   bool HasFuseAddress = false;
   bool HasFuseAES = false;
-  bool HasFuseCryptoEOR = false;
+  bool HasFuseArithmeticLogic = false;
   bool HasFuseCCSelect = false;
+  bool HasFuseCryptoEOR = false;
   bool HasFuseLiterals = false;
   bool DisableLatencySchedHeuristic = false;
   bool UseRSqrt = false;
@@ -311,14 +312,16 @@ public:
   bool hasArithmeticCbzFusion() const { return HasArithmeticCbzFusion; }
   bool hasFuseAddress() const { return HasFuseAddress; }
   bool hasFuseAES() const { return HasFuseAES; }
-  bool hasFuseCryptoEOR() const { return HasFuseCryptoEOR; }
+  bool hasFuseArithmeticLogic() const { return HasFuseArithmeticLogic; }
   bool hasFuseCCSelect() const { return HasFuseCCSelect; }
+  bool hasFuseCryptoEOR() const { return HasFuseCryptoEOR; }
   bool hasFuseLiterals() const { return HasFuseLiterals; }
 
   /// Return true if the CPU supports any kind of instruction fusion.
   bool hasFusion() const {
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
-           hasFuseAES() || hasFuseCCSelect() || hasFuseLiterals();
+           hasFuseAES() || hasFuseArithmeticLogic() ||
+           hasFuseCCSelect() || hasFuseLiterals();
   }
 
   bool useRSqrt() const { return UseRSqrt; }

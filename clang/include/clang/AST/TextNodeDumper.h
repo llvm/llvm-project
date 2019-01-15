@@ -22,6 +22,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateArgumentVisitor.h"
+#include "clang/AST/TypeVisitor.h"
 
 namespace clang {
 
@@ -127,7 +128,8 @@ class TextNodeDumper
                                            const comments::FullComment *>,
       public ConstAttrVisitor<TextNodeDumper>,
       public ConstTemplateArgumentVisitor<TextNodeDumper>,
-      public ConstStmtVisitor<TextNodeDumper> {
+      public ConstStmtVisitor<TextNodeDumper>,
+      public TypeVisitor<TextNodeDumper> {
   raw_ostream &OS;
   const bool ShowColors;
 
@@ -158,6 +160,12 @@ public:
              const Decl *From = nullptr, StringRef Label = {});
 
   void Visit(const Stmt *Node);
+
+  void Visit(const Type *T);
+
+  void Visit(QualType T);
+
+  void Visit(const Decl *D);
 
   void dumpPointer(const void *Ptr);
   void dumpLocation(SourceLocation Loc);
@@ -254,6 +262,26 @@ public:
   void VisitObjCSubscriptRefExpr(const ObjCSubscriptRefExpr *Node);
   void VisitObjCIvarRefExpr(const ObjCIvarRefExpr *Node);
   void VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *Node);
+
+  void VisitRValueReferenceType(const ReferenceType *T);
+  void VisitArrayType(const ArrayType *T);
+  void VisitConstantArrayType(const ConstantArrayType *T);
+  void VisitVariableArrayType(const VariableArrayType *T);
+  void VisitDependentSizedArrayType(const DependentSizedArrayType *T);
+  void VisitDependentSizedExtVectorType(const DependentSizedExtVectorType *T);
+  void VisitVectorType(const VectorType *T);
+  void VisitFunctionType(const FunctionType *T);
+  void VisitFunctionProtoType(const FunctionProtoType *T);
+  void VisitUnresolvedUsingType(const UnresolvedUsingType *T);
+  void VisitTypedefType(const TypedefType *T);
+  void VisitUnaryTransformType(const UnaryTransformType *T);
+  void VisitTagType(const TagType *T);
+  void VisitTemplateTypeParmType(const TemplateTypeParmType *T);
+  void VisitAutoType(const AutoType *T);
+  void VisitTemplateSpecializationType(const TemplateSpecializationType *T);
+  void VisitInjectedClassNameType(const InjectedClassNameType *T);
+  void VisitObjCInterfaceType(const ObjCInterfaceType *T);
+  void VisitPackExpansionType(const PackExpansionType *T);
 
 private:
   void dumpCXXTemporary(const CXXTemporary *Temporary);

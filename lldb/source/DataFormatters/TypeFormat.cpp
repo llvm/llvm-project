@@ -159,11 +159,10 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
     if (!target_sp)
       return false;
     const ModuleList &images(target_sp->GetImages());
-    SymbolContext sc;
     TypeList types;
     llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-    images.FindTypes(sc, m_enum_type, false, UINT32_MAX, searched_symbol_files,
-                     types);
+    images.FindTypes(nullptr, m_enum_type, false, UINT32_MAX,
+                     searched_symbol_files, types);
     if (types.GetSize() == 0)
       return false;
     for (lldb::TypeSP type_sp : types.Types()) {

@@ -1672,12 +1672,11 @@ static size_t LookupTypeInModule(CommandInterpreter &interpreter, Stream &strm,
     const uint32_t max_num_matches = UINT32_MAX;
     size_t num_matches = 0;
     bool name_is_fully_qualified = false;
-    SymbolContext sc;
 
     ConstString name(name_cstr);
     llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
     num_matches =
-        module->FindTypes(sc, name, name_is_fully_qualified, max_num_matches,
+        module->FindTypes(name, name_is_fully_qualified, max_num_matches,
                           searched_symbol_files, type_list);
 
     if (num_matches) {
@@ -1715,11 +1714,8 @@ static size_t LookupTypeInModule(CommandInterpreter &interpreter, Stream &strm,
 }
 
 static size_t LookupTypeHere(CommandInterpreter &interpreter, Stream &strm,
-                             const SymbolContext &sym_ctx,
-                             const char *name_cstr, bool name_is_regex) {
-  if (!sym_ctx.module_sp)
-    return 0;
-
+                             Module &module, const char *name_cstr,
+                             bool name_is_regex) {
   TypeList type_list;
   const uint32_t max_num_matches = UINT32_MAX;
   size_t num_matches = 1;
@@ -1727,14 +1723,13 @@ static size_t LookupTypeHere(CommandInterpreter &interpreter, Stream &strm,
 
   ConstString name(name_cstr);
   llvm::DenseSet<SymbolFile *> searched_symbol_files;
-  num_matches = sym_ctx.module_sp->FindTypes(
-      sym_ctx, name, name_is_fully_qualified, max_num_matches,
-      searched_symbol_files, type_list);
+  num_matches = module.FindTypes(name, name_is_fully_qualified, max_num_matches,
+                                 searched_symbol_files, type_list);
 
   if (num_matches) {
     strm.Indent();
     strm.PutCString("Best match found in ");
-    DumpFullpath(strm, &sym_ctx.module_sp->GetFileSpec(), 0);
+    DumpFullpath(strm, &module.GetFileSpec(), 0);
     strm.PutCString(":\n");
 
     TypeSP type_sp(type_list.GetTypeAtIndex(0));
@@ -3832,8 +3827,9 @@ public:
       return false;
     case eLookupTypeType:
       if (!m_options.m_str.empty()) {
-        if (LookupTypeHere(m_interpreter, result.GetOutputStream(), sym_ctx,
-                           m_options.m_str.c_str(), m_options.m_use_regex)) {
+        if (LookupTypeHere(m_interpreter, result.GetOutputStream(),
+                           *sym_ctx.module_sp, m_options.m_str.c_str(),
+                           m_options.m_use_regex)) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
           return true;
         }

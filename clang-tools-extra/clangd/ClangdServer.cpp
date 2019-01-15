@@ -500,13 +500,13 @@ void ClangdServer::documentSymbols(llvm::StringRef File,
                            Bind(Action, std::move(CB)));
 }
 
-void ClangdServer::findReferences(PathRef File, Position Pos,
+void ClangdServer::findReferences(PathRef File, Position Pos, uint32_t Limit,
                                   Callback<std::vector<Location>> CB) {
-  auto Action = [Pos, this](Callback<std::vector<Location>> CB,
-                            llvm::Expected<InputsAndAST> InpAST) {
+  auto Action = [Pos, Limit, this](Callback<std::vector<Location>> CB,
+                                   llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::findReferences(InpAST->AST, Pos, Index));
+    CB(clangd::findReferences(InpAST->AST, Pos, Limit, Index));
   };
 
   WorkScheduler.runWithAST("References", File, Bind(Action, std::move(CB)));

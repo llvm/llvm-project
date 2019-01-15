@@ -2281,7 +2281,10 @@ static void unswitchNontrivialInvariants(
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 
-  ++NumBranches;
+  if (BI)
+    ++NumBranches;
+  else
+    ++NumSwitches;
 }
 
 /// Recursively compute the cost of a dominator subtree based on the per-block

@@ -558,7 +558,7 @@ AppleObjCDeclVendor::FindDecls(const ConstString &name, bool append,
       LIBLLDB_LOG_EXPRESSIONS)); // FIXME - a more appropriate log channel?
 
   if (log)
-    log->Printf("AppleObjCDeclVendor::FindTypes [%u] ('%s', %s, %u, )",
+    log->Printf("AppleObjCDeclVendor::FindDecls [%u] ('%s', %s, %u, )",
                 current_id, (const char *)name.AsCString(),
                 append ? "true" : "false", max_matches);
 

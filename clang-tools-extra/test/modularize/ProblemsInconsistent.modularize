@@ -60,6 +60,16 @@ Inputs/InconsistentHeader2.h
 # CHECK-NEXT:     {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentHeader2.h
 # CHECK-NEXT:       {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h
 # CHECK-NEXT: (no macro definition)
+# CHECK-NEXT: {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h:11:2
+# CHECK-NEXT: #if SYMBOL == 1
+# CHECK-NEXT: ^
+# CHECK-NEXT: error: Conditional expression instance 'SYMBOL == 1' has different values in this header, depending on how it was included.
+# CHECK-NEXT:   'SYMBOL == 1' expanded to: 'true' with respect to these inclusion paths:
+# CHECK-NEXT:     {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentHeader1.h
+# CHECK-NEXT:       {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h
+# CHECK-NEXT:   'SYMBOL == 1' expanded to: 'false' with respect to these inclusion paths:
+# CHECK-NEXT:     {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentHeader2.h
+# CHECK-NEXT:       {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h
 # CHECK-NEXT: {{.*}}{{[/\\]}}Inputs{{[/\\]}}InconsistentSubHeader.h:2:2
 # CHECK-NEXT: #ifdef SYMBOL1
 # CHECK-NEXT: ^

@@ -1155,6 +1155,31 @@ WebAssemblyTargetLowering::LowerAccessVectorElement(SDValue Op,
     return SDValue();
 }
 
+static SDValue UnrollVectorShift(SDValue Op, SelectionDAG &DAG) {
+  EVT LaneT = Op.getSimpleValueType().getVectorElementType();
+  // 32-bit and 64-bit unrolled shifts will have proper semantics
+  if (LaneT.bitsGE(MVT::i32))
+    return DAG.UnrollVectorOp(Op.getNode());
+  // Otherwise mask the shift value to get proper semantics from 32-bit shift
+  SDLoc DL(Op);
+  SDValue ShiftVal = Op.getOperand(1);
+  uint64_t MaskVal = LaneT.getSizeInBits() - 1;
+  SDValue MaskedShiftVal = DAG.getNode(
+      ISD::AND,                    // mask opcode
+      DL, ShiftVal.getValueType(), // masked value type
+      ShiftVal,                    // original shift value operand
+      DAG.getConstant(MaskVal, DL, ShiftVal.getValueType()) // mask operand
+  );
+
+  return DAG.UnrollVectorOp(
+      DAG.getNode(Op.getOpcode(),        // original shift opcode
+                  DL, Op.getValueType(), // original return type
+                  Op.getOperand(0),      // original vector operand,
+                  MaskedShiftVal         // new masked shift value operand
+                  )
+          .getNode());
+}
+
 SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -1162,12 +1187,17 @@ SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
   // Only manually lower vector shifts
   assert(Op.getSimpleValueType().isVector());
 
+  // Expand all vector shifts until V8 fixes its implementation
+  // TODO: remove this once V8 is fixed
+  if (!Subtarget->hasUnimplementedSIMD128())
+    return UnrollVectorShift(Op, DAG);
+
   // Unroll non-splat vector shifts
   BuildVectorSDNode *ShiftVec;
   SDValue SplatVal;
   if (!(ShiftVec = dyn_cast<BuildVectorSDNode>(Op.getOperand(1).getNode())) ||
       !(SplatVal = ShiftVec->getSplatValue()))
-    return DAG.UnrollVectorOp(Op.getNode());
+    return UnrollVectorShift(Op, DAG);
 
   // All splats except i64x2 const splats are handled by patterns
   ConstantSDNode *SplatConst = dyn_cast<ConstantSDNode>(SplatVal);

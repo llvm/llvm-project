@@ -710,7 +710,7 @@ void ClangdLSPServer::onChangeConfiguration(
 void ClangdLSPServer::onReference(const ReferenceParams &Params,
                                   Callback<std::vector<Location>> Reply) {
   Server->findReferences(Params.textDocument.uri.file(), Params.position,
-                         std::move(Reply));
+                         CCOpts.Limit, std::move(Reply));
 }
 
 void ClangdLSPServer::onSymbolInfo(const TextDocumentPositionParams &Params,

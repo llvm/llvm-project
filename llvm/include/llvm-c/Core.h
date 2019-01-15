@@ -2085,9 +2085,14 @@ LLVMValueRef LLVMConstLShr(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstAShr(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstGEP(LLVMValueRef ConstantVal,
                           LLVMValueRef *ConstantIndices, unsigned NumIndices);
+LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+                           LLVMValueRef *ConstantIndices, unsigned NumIndices);
 LLVMValueRef LLVMConstInBoundsGEP(LLVMValueRef ConstantVal,
                                   LLVMValueRef *ConstantIndices,
                                   unsigned NumIndices);
+LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+                                   LLVMValueRef *ConstantIndices,
+                                   unsigned NumIndices);
 LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
 LLVMValueRef LLVMConstSExt(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
 LLVMValueRef LLVMConstZExt(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
@@ -2812,8 +2817,7 @@ LLVMBasicBlockRef LLVMGetEntryBasicBlock(LLVMValueRef Fn);
  * @see llvm::BasicBlock::Create()
  */
 LLVMBasicBlockRef LLVMCreateBasicBlockInContext(LLVMContextRef C,
-                                                const char *Name,
-                                                size_t NameLen);
+                                                const char *Name);
 
 /**
  * Append a basic block to the end of a function.
@@ -3099,6 +3103,13 @@ void LLVMRemoveCallSiteEnumAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
                                      unsigned KindID);
 void LLVMRemoveCallSiteStringAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
                                        const char *K, unsigned KLen);
+
+/**
+ * Obtain the function type called by this instruction.
+ *
+ * @see llvm::CallBase::getFunctionType()
+ */
+LLVMTypeRef LLVMGetCalledFunctionType(LLVMValueRef C);
 
 /**
  * Obtain the pointer to the function invoked by this instruction.
@@ -3392,10 +3403,16 @@ LLVMValueRef LLVMBuildSwitch(LLVMBuilderRef, LLVMValueRef V,
                              LLVMBasicBlockRef Else, unsigned NumCases);
 LLVMValueRef LLVMBuildIndirectBr(LLVMBuilderRef B, LLVMValueRef Addr,
                                  unsigned NumDests);
+// LLVMBuildInvoke is deprecated in favor of LLVMBuildInvoke2, in preparation
+// for opaque pointer types.
 LLVMValueRef LLVMBuildInvoke(LLVMBuilderRef, LLVMValueRef Fn,
                              LLVMValueRef *Args, unsigned NumArgs,
                              LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
                              const char *Name);
+LLVMValueRef LLVMBuildInvoke2(LLVMBuilderRef, LLVMTypeRef Ty, LLVMValueRef Fn,
+                              LLVMValueRef *Args, unsigned NumArgs,
+                              LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,
+                              const char *Name);
 LLVMValueRef LLVMBuildUnreachable(LLVMBuilderRef);
 
 /* Exception Handling */
@@ -3585,9 +3602,15 @@ LLVMValueRef LLVMBuildAlloca(LLVMBuilderRef, LLVMTypeRef Ty, const char *Name);
 LLVMValueRef LLVMBuildArrayAlloca(LLVMBuilderRef, LLVMTypeRef Ty,
                                   LLVMValueRef Val, const char *Name);
 LLVMValueRef LLVMBuildFree(LLVMBuilderRef, LLVMValueRef PointerVal);
+// LLVMBuildLoad is deprecated in favor of LLVMBuildLoad2, in preparation for
+// opaque pointer types.
 LLVMValueRef LLVMBuildLoad(LLVMBuilderRef, LLVMValueRef PointerVal,
                            const char *Name);
+LLVMValueRef LLVMBuildLoad2(LLVMBuilderRef, LLVMTypeRef Ty,
+                            LLVMValueRef PointerVal, const char *Name);
 LLVMValueRef LLVMBuildStore(LLVMBuilderRef, LLVMValueRef Val, LLVMValueRef Ptr);
+// LLVMBuildGEP, LLVMBuildInBoundsGEP, and LLVMBuildStructGEP are deprecated in
+// favor of LLVMBuild*GEP2, in preparation for opaque pointer types.
 LLVMValueRef LLVMBuildGEP(LLVMBuilderRef B, LLVMValueRef Pointer,
                           LLVMValueRef *Indices, unsigned NumIndices,
                           const char *Name);
@@ -3596,6 +3619,15 @@ LLVMValueRef LLVMBuildInBoundsGEP(LLVMBuilderRef B, LLVMValueRef Pointer,
                                   const char *Name);
 LLVMValueRef LLVMBuildStructGEP(LLVMBuilderRef B, LLVMValueRef Pointer,
                                 unsigned Idx, const char *Name);
+LLVMValueRef LLVMBuildGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
+                           LLVMValueRef Pointer, LLVMValueRef *Indices,
+                           unsigned NumIndices, const char *Name);
+LLVMValueRef LLVMBuildInBoundsGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
+                                   LLVMValueRef Pointer, LLVMValueRef *Indices,
+                                   unsigned NumIndices, const char *Name);
+LLVMValueRef LLVMBuildStructGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
+                                 LLVMValueRef Pointer, unsigned Idx,
+                                 const char *Name);
 LLVMValueRef LLVMBuildGlobalString(LLVMBuilderRef B, const char *Str,
                                    const char *Name);
 LLVMValueRef LLVMBuildGlobalStringPtr(LLVMBuilderRef B, const char *Str,
@@ -3644,7 +3676,7 @@ LLVMValueRef LLVMBuildPointerCast(LLVMBuilderRef, LLVMValueRef Val,
                                   LLVMTypeRef DestTy, const char *Name);
 LLVMValueRef LLVMBuildIntCast2(LLVMBuilderRef, LLVMValueRef Val,
                                LLVMTypeRef DestTy, LLVMBool IsSigned,
-                               const char *Name, size_t NameLen);
+                               const char *Name);
 LLVMValueRef LLVMBuildFPCast(LLVMBuilderRef, LLVMValueRef Val,
                              LLVMTypeRef DestTy, const char *Name);
 
@@ -3662,9 +3694,14 @@ LLVMValueRef LLVMBuildFCmp(LLVMBuilderRef, LLVMRealPredicate Op,
 
 /* Miscellaneous instructions */
 LLVMValueRef LLVMBuildPhi(LLVMBuilderRef, LLVMTypeRef Ty, const char *Name);
+// LLVMBuildCall is deprecated in favor of LLVMBuildCall2, in preparation for
+// opaque pointer types.
 LLVMValueRef LLVMBuildCall(LLVMBuilderRef, LLVMValueRef Fn,
                            LLVMValueRef *Args, unsigned NumArgs,
                            const char *Name);
+LLVMValueRef LLVMBuildCall2(LLVMBuilderRef, LLVMTypeRef, LLVMValueRef Fn,
+                            LLVMValueRef *Args, unsigned NumArgs,
+                            const char *Name);
 LLVMValueRef LLVMBuildSelect(LLVMBuilderRef, LLVMValueRef If,
                              LLVMValueRef Then, LLVMValueRef Else,
                              const char *Name);

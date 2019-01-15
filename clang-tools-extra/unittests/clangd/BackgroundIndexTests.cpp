@@ -351,10 +351,81 @@ TEST_F(BackgroundIndexTest, ShardStorageLoad) {
   EXPECT_EQ(CacheHits, 2U); // Check both A.cc and A.h loaded from cache.
 
   // Check if the new symbol has arrived.
-  auto ShardSource = MSS.loadShard(testPath("root/A.cc"));
+  ShardHeader = MSS.loadShard(testPath("root/A.h"));
   EXPECT_NE(ShardHeader, nullptr);
+  EXPECT_THAT(*ShardHeader->Symbols, Contains(Named("A_CCnew")));
+  auto ShardSource = MSS.loadShard(testPath("root/A.cc"));
+  EXPECT_NE(ShardSource, nullptr);
   EXPECT_THAT(*ShardSource->Symbols,
               Contains(AllOf(Named("f_b"), Declared(), Defined())));
+}
+
+TEST_F(BackgroundIndexTest, ShardStorageEmptyFile) {
+  MockFSProvider FS;
+  FS.Files[testPath("root/A.h")] = R"cpp(
+      void common();
+      void f_b();
+      class A_CC {};
+      )cpp";
+  FS.Files[testPath("root/B.h")] = R"cpp(
+      #include "A.h"
+      )cpp";
+  FS.Files[testPath("root/A.cc")] =
+      "#include \"B.h\"\nvoid g() { (void)common; }";
+
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+
+  tooling::CompileCommand Cmd;
+  Cmd.Filename = testPath("root/A.cc");
+  Cmd.Directory = testPath("root");
+  Cmd.CommandLine = {"clang++", testPath("root/A.cc")};
+  // Check that A.cc, A.h and B.h has been stored.
+  {
+    OverlayCDB CDB(/*Base=*/nullptr);
+    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+                        [&](llvm::StringRef) { return &MSS; });
+    CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
+    ASSERT_TRUE(Idx.blockUntilIdleForTest());
+  }
+  EXPECT_THAT(Storage.keys(),
+              UnorderedElementsAre(testPath("root/A.cc"), testPath("root/A.h"),
+                                   testPath("root/B.h")));
+  auto ShardHeader = MSS.loadShard(testPath("root/B.h"));
+  EXPECT_NE(ShardHeader, nullptr);
+  EXPECT_TRUE(ShardHeader->Symbols->empty());
+
+  // Check that A.cc, A.h and B.h has been loaded.
+  {
+    CacheHits = 0;
+    OverlayCDB CDB(/*Base=*/nullptr);
+    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+                        [&](llvm::StringRef) { return &MSS; });
+    CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
+    ASSERT_TRUE(Idx.blockUntilIdleForTest());
+  }
+  EXPECT_EQ(CacheHits, 3U);
+
+  // Update B.h to contain some symbols.
+  FS.Files[testPath("root/B.h")] = R"cpp(
+      #include "A.h"
+      void new_func();
+      )cpp";
+  // Check that B.h has been stored with new contents.
+  {
+    CacheHits = 0;
+    OverlayCDB CDB(/*Base=*/nullptr);
+    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+                        [&](llvm::StringRef) { return &MSS; });
+    CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
+    ASSERT_TRUE(Idx.blockUntilIdleForTest());
+  }
+  EXPECT_EQ(CacheHits, 3U);
+  ShardHeader = MSS.loadShard(testPath("root/B.h"));
+  EXPECT_NE(ShardHeader, nullptr);
+  EXPECT_THAT(*ShardHeader->Symbols,
+              Contains(AllOf(Named("new_func"), Declared(), Not(Defined()))));
 }
 
 } // namespace clangd
