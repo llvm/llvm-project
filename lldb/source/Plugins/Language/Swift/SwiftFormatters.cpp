@@ -165,7 +165,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     uint64_t count = count_sp->GetValueAsUnsigned(0);
 
     auto discriminator_sp =
-        object_sp->GetChildAtNamePath({g__discriminator, g__value, g__value});
+        object_sp->GetChildAtNamePath({g__discriminator, g__value});
     if (!discriminator_sp)
       return false;
     uint64_t discriminator = discriminator_sp->GetValueAsUnsigned(0) & 0xff;
@@ -173,9 +173,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     auto flags_sp = object_sp->GetChildAtNamePath({g__flags, g__value});
     if (!flags_sp)
       return false;
-    uint64_t flags = flags_sp->GetValueAsUnsigned(0);
-    if (flags > 0xFFFF)
-      return false;
+    uint64_t flags = flags_sp->GetValueAsUnsigned(0) & 0xffff;
 
     auto variant_sp = object_sp->GetChildMemberWithName(g__variant, true);
     if (!variant_sp)
