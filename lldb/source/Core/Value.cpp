@@ -210,39 +210,31 @@ bool Value::ValueOf(ExecutionContext *exe_ctx) {
 }
 
 uint64_t Value::GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx) {
-  uint64_t byte_size = 0;
-
   switch (m_context_type) {
   case eContextTypeRegisterInfo: // RegisterInfo *
-    if (GetRegisterInfo())
-      byte_size = GetRegisterInfo()->byte_size;
+    if (GetRegisterInfo()) {
+      if (error_ptr)
+        error_ptr->Clear();
+      return GetRegisterInfo()->byte_size;
+    }
     break;
 
   case eContextTypeInvalid:
   case eContextTypeLLDBType: // Type *
   case eContextTypeVariable: // Variable *
   {
-    const CompilerType &ast_type = GetCompilerType();
-    ExecutionContextScope *exe_scope =
-        exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
-    if (auto size = ast_type.GetByteSize(
-              exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr))
-        byte_size = *size;
-    if (byte_size == 0 &&
-        SwiftASTContext::IsPossibleZeroSizeType(ast_type, exe_scope))
-      return 0;
-  } break;
-  }
-
-  if (error_ptr) {
-    if (byte_size == 0) {
-      if (error_ptr->Success())
-        error_ptr->SetErrorString("Unable to determine byte size.");
-    } else {
-      error_ptr->Clear();
+    auto *scope = exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
+    if (llvm::Optional<uint64_t> size = GetCompilerType().GetByteSize(scope)) {
+      if (error_ptr)
+        error_ptr->Clear();
+      return *size;
     }
+    break;
   }
-  return byte_size;
+  }
+  if (error_ptr && error_ptr->Success())
+    error_ptr->SetErrorString("Unable to determine byte size.");
+  return 0;
 }
 
 const CompilerType &Value::GetCompilerType() {
@@ -350,7 +342,7 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     uint32_t limit_byte_size = UINT32_MAX;
 
     if (ast_type.IsValid()) {
-      if (auto size = ast_type.GetByteSize(
+      if (llvm::Optional<uint64_t> size = ast_type.GetByteSize(
               exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr))
         limit_byte_size = *size;
     }

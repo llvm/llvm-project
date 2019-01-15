@@ -145,7 +145,7 @@ bool lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
   if (!data_type_finder_sp)
     return false;
   m_element_type = data_type_finder_sp->GetCompilerType().GetPointeeType();
-  if (auto size = m_element_type.GetByteSize(nullptr)) {
+  if (llvm::Optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
     m_element_size = *size;
 
     if (m_element_size > 0) {
@@ -213,7 +213,7 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::GetChildAtIndex(
     return {};
   mask = 1 << bit_index;
   bool bit_set = ((byte & mask) != 0);
-  auto size = m_bool_type.GetByteSize(nullptr);
+  llvm::Optional<uint64_t> size = m_bool_type.GetByteSize(nullptr);
   if (!size)
     return {};
   DataBufferSP buffer_sp(new DataBufferHeap(*size, 0));

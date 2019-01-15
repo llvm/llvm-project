@@ -118,7 +118,8 @@ uint64_t ValueObjectVariable::GetByteSize() {
   if (!type.IsValid())
     return 0;
 
-  auto size = type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  llvm::Optional<uint64_t> size =
+      type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   return size ? *size : 0;
 }
 

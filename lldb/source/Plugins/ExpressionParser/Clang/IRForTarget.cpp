@@ -310,7 +310,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
   lldb::TargetSP target_sp(m_execution_unit.GetTarget());
   lldb_private::ExecutionContext exe_ctx(target_sp, true);
-  auto bit_size =
+  llvm::Optional<uint64_t> bit_size =
       m_result_type.GetBitSize(exe_ctx.GetBestExecutionContextScope());
   if (!bit_size) {
     lldb_private::StreamString type_desc_stream;
@@ -1372,7 +1372,7 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
       value_type = global_variable->getType();
     }
 
-    auto value_size = compiler_type.GetByteSize(nullptr);
+    llvm::Optional<uint64_t> value_size = compiler_type.GetByteSize(nullptr);
     if (!value_size)
       return false;
     lldb::offset_t value_alignment =

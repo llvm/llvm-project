@@ -298,7 +298,9 @@ public:
 
   struct IntegralTemplateArgument;
 
+  /// Return the size of the type in bytes.
   llvm::Optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope) const;
+  /// Return the size of the type in bits.
   llvm::Optional<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
 
   uint64_t GetByteStride() const;
