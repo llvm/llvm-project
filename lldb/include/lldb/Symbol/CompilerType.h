@@ -287,9 +287,8 @@ public:
 
   struct IntegralTemplateArgument;
 
-  uint64_t GetByteSize(ExecutionContextScope *exe_scope) const;
-
-  uint64_t GetBitSize(ExecutionContextScope *exe_scope) const;
+  llvm::Optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope) const;
+  llvm::Optional<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
 
   lldb::Encoding GetEncoding(uint64_t &count) const;
 

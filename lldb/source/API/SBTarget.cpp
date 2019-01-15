@@ -1850,11 +1850,10 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
     ModuleList &images = target_sp->GetImages();
     ConstString const_typename(typename_cstr);
     bool exact_match = false;
-    SymbolContext sc;
     TypeList type_list;
     llvm::DenseSet<SymbolFile *> searched_symbol_files;
     uint32_t num_matches =
-        images.FindTypes(sc, const_typename, exact_match, UINT32_MAX,
+        images.FindTypes(nullptr, const_typename, exact_match, UINT32_MAX,
                          searched_symbol_files, type_list);
 
     if (num_matches > 0) {

@@ -19,7 +19,9 @@ RUN: cmp %t.out.o %t.strip-discard-all.o
 SYMBOLS: SYMBOL TABLE:
 SYMBOLS-NEXT: external
 SYMBOLS-NEXT: external_undefined
+SYMBOLS-NEXT: external_undefined_unreferenced
 SYMBOLS-PRE-NEXT: local_unreferenced
 SYMBOLS-NEXT: local_referenced
 SYMBOLS-NEXT: local_undefined_unreferenced
+SYMBOLS-PRE-NEXT: @feat.00
 SYMBOLS-EMPTY:

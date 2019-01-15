@@ -198,10 +198,11 @@ lldb::ValueType ValueObjectConstResult::GetValueType() const {
 
 uint64_t ValueObjectConstResult::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
-
-  if (m_byte_size == 0)
-    SetByteSize(
-        GetCompilerType().GetByteSize(exe_ctx.GetBestExecutionContextScope()));
+  if (m_byte_size == 0) {
+    if (auto size =
+        GetCompilerType().GetByteSize(exe_ctx.GetBestExecutionContextScope()))
+      SetByteSize(*size);
+  }
   return m_byte_size;
 }
 

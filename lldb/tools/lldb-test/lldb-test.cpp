@@ -441,9 +441,8 @@ Error opts::symbols::findNamespaces(lldb_private::Module &Module) {
   CompilerDeclContext *ContextPtr =
       ContextOr->IsValid() ? &*ContextOr : nullptr;
 
-  SymbolContext SC;
   CompilerDeclContext Result =
-      Vendor.FindNamespace(SC, ConstString(Name), ContextPtr);
+      Vendor.FindNamespace(ConstString(Name), ContextPtr);
   if (Result)
     outs() << "Found namespace: "
            << Result.GetScopeQualifiedName().GetStringRef() << "\n";
@@ -460,10 +459,9 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
   CompilerDeclContext *ContextPtr =
       ContextOr->IsValid() ? &*ContextOr : nullptr;
 
-  SymbolContext SC;
   DenseSet<SymbolFile *> SearchedFiles;
   TypeMap Map;
-  Vendor.FindTypes(SC, ConstString(Name), ContextPtr, true, UINT32_MAX,
+  Vendor.FindTypes(ConstString(Name), ContextPtr, true, UINT32_MAX,
                    SearchedFiles, Map);
 
   outs() << formatv("Found {0} types:\n", Map.GetSize());

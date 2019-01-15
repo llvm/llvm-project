@@ -14610,6 +14610,7 @@ int4 __purefn __ovld read_imagei(read_only image3d_t image, sampler_t sampler, f
 uint4 __purefn __ovld read_imageui(read_only image3d_t image, sampler_t sampler, int4 coord);
 uint4 __purefn __ovld read_imageui(read_only image3d_t image, sampler_t sampler, float4 coord);
 
+#if __OPENCL_C_VERSION__ >= CL_VERSION_1_2
 float4 __purefn __ovld read_imagef(read_only image2d_array_t image_array, sampler_t sampler, int4 coord);
 float4 __purefn __ovld read_imagef(read_only image2d_array_t image_array, sampler_t sampler, float4 coord);
 
@@ -14617,6 +14618,7 @@ int4 __purefn __ovld read_imagei(read_only image2d_array_t image_array, sampler_
 int4 __purefn __ovld read_imagei(read_only image2d_array_t image_array, sampler_t sampler, float4 coord);
 uint4 __purefn __ovld read_imageui(read_only image2d_array_t image_array, sampler_t sampler, int4 coord);
 uint4 __purefn __ovld read_imageui(read_only image2d_array_t image_array, sampler_t sampler, float4 coord);
+#endif // __OPENCL_C_VERSION__ >= CL_VERSION_1_2
 
 float4 __purefn __ovld read_imagef(read_only image1d_t image, sampler_t sampler, int coord);
 float4 __purefn __ovld read_imagef(read_only image1d_t image, sampler_t sampler, float coord);
@@ -14626,6 +14628,7 @@ int4 __purefn __ovld read_imagei(read_only image1d_t image, sampler_t sampler, f
 uint4 __purefn __ovld read_imageui(read_only image1d_t image, sampler_t sampler, int coord);
 uint4 __purefn __ovld read_imageui(read_only image1d_t image, sampler_t sampler, float coord);
 
+#if __OPENCL_C_VERSION__ >= CL_VERSION_1_2
 float4 __purefn __ovld read_imagef(read_only image1d_array_t image_array, sampler_t sampler, int2 coord);
 float4 __purefn __ovld read_imagef(read_only image1d_array_t image_array, sampler_t sampler, float2 coord);
 
@@ -14633,6 +14636,7 @@ int4 __purefn __ovld read_imagei(read_only image1d_array_t image_array, sampler_
 int4 __purefn __ovld read_imagei(read_only image1d_array_t image_array, sampler_t sampler, float2 coord);
 uint4 __purefn __ovld read_imageui(read_only image1d_array_t image_array, sampler_t sampler, int2 coord);
 uint4 __purefn __ovld read_imageui(read_only image1d_array_t image_array, sampler_t sampler, float2 coord);
+#endif // __OPENCL_C_VERSION__ >= CL_VERSION_1_2
 
 #ifdef cl_khr_depth_images
 float __purefn __ovld read_imagef(read_only image2d_depth_t image, sampler_t sampler, float2 coord);
@@ -14735,6 +14739,8 @@ uint4 __purefn __ovld read_imageui(read_only image3d_t image, sampler_t sampler,
 #endif //cl_khr_mipmap_image
 #endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
+#if __OPENCL_C_VERSION__ >= CL_VERSION_1_2
+
 /**
 * Sampler-less Image Access
 */
@@ -14768,24 +14774,31 @@ float4 __purefn __ovld read_imagef(read_only image3d_t image, int4 coord);
 int4 __purefn __ovld read_imagei(read_only image3d_t image, int4 coord);
 uint4 __purefn __ovld read_imageui(read_only image3d_t image, int4 coord);
 
+#endif // __OPENCL_C_VERSION__ >= CL_VERSION_1_2
+
 // Image read functions returning half4 type
 #ifdef cl_khr_fp16
 half4 __purefn __ovld read_imageh(read_only image1d_t image, sampler_t sampler, int coord);
 half4 __purefn __ovld read_imageh(read_only image1d_t image, sampler_t sampler, float coord);
-half4 __purefn __ovld read_imageh(read_only image1d_array_t image, sampler_t sampler, int2 coord);
-half4 __purefn __ovld read_imageh(read_only image1d_array_t image, sampler_t sampler, float2 coord);
 half4 __purefn __ovld read_imageh(read_only image2d_t image, sampler_t sampler, int2 coord);
 half4 __purefn __ovld read_imageh(read_only image2d_t image, sampler_t sampler, float2 coord);
 half4 __purefn __ovld read_imageh(read_only image3d_t image, sampler_t sampler, int4 coord);
 half4 __purefn __ovld read_imageh(read_only image3d_t image, sampler_t sampler, float4 coord);
+#if __OPENCL_C_VERSION__ >= CL_VERSION_1_2
+half4 __purefn __ovld read_imageh(read_only image1d_array_t image, sampler_t sampler, int2 coord);
+half4 __purefn __ovld read_imageh(read_only image1d_array_t image, sampler_t sampler, float2 coord);
 half4 __purefn __ovld read_imageh(read_only image2d_array_t image, sampler_t sampler, int4 coord);
 half4 __purefn __ovld read_imageh(read_only image2d_array_t image, sampler_t sampler, float4 coord);
+/**
+ * Sampler-less Image Access
+ */
 half4 __purefn __ovld read_imageh(read_only image1d_t image, int coord);
 half4 __purefn __ovld read_imageh(read_only image2d_t image, int2 coord);
 half4 __purefn __ovld read_imageh(read_only image3d_t image, int4 coord);
 half4 __purefn __ovld read_imageh(read_only image1d_array_t image, int2 coord);
 half4 __purefn __ovld read_imageh(read_only image2d_array_t image, int4 coord);
 half4 __purefn __ovld read_imageh(read_only image1d_buffer_t image, int coord);
+#endif // __OPENCL_C_VERSION__ >= CL_VERSION_1_2
 #endif //cl_khr_fp16
 
 // Image read functions for read_write images

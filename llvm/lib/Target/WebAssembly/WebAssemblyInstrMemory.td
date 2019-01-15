@@ -436,17 +436,6 @@ defm MEMORY_SIZE_I32 : I<(outs I32:$dst), (ins i32imm:$flags),
                          "memory.size\t$dst, $flags", "memory.size\t$flags",
                          0x3f>,
                        Requires<[HasAddr32]>;
-defm MEM_SIZE_I32 : I<(outs I32:$dst), (ins i32imm:$flags),
-                      (outs), (ins i32imm:$flags),
-                      [(set I32:$dst, (int_wasm_mem_size (i32 imm:$flags)))],
-                      "mem.size\t$dst, $flags", "mem.size\t$flags", 0x3f>,
-                    Requires<[HasAddr32]>;
-defm CURRENT_MEMORY_I32 : I<(outs I32:$dst), (ins i32imm:$flags),
-                            (outs), (ins i32imm:$flags),
-                            [],
-                            "current_memory\t$dst",
-                            "current_memory\t$flags", 0x3f>,
-                          Requires<[HasAddr32]>;
 
 // Grow memory.
 defm MEMORY_GROW_I32 : I<(outs I32:$dst), (ins i32imm:$flags, I32:$delta),
@@ -457,21 +446,3 @@ defm MEMORY_GROW_I32 : I<(outs I32:$dst), (ins i32imm:$flags, I32:$delta),
                          "memory.grow\t$dst, $flags, $delta",
                          "memory.grow\t$flags", 0x40>,
                        Requires<[HasAddr32]>;
-defm MEM_GROW_I32 : I<(outs I32:$dst), (ins i32imm:$flags, I32:$delta),
-                      (outs), (ins i32imm:$flags),
-                      [(set I32:$dst,
-                            (int_wasm_mem_grow (i32 imm:$flags), I32:$delta))],
-                      "mem.grow\t$dst, $flags, $delta", "mem.grow\t$flags",
-                      0x40>,
-                    Requires<[HasAddr32]>;
-defm GROW_MEMORY_I32 : I<(outs I32:$dst), (ins i32imm:$flags, I32:$delta),
-                         (outs), (ins i32imm:$flags),
-                         [],
-                         "grow_memory\t$dst, $delta", "grow_memory\t$flags",
-                         0x40>,
-                       Requires<[HasAddr32]>;
-
-def : Pat<(int_wasm_current_memory),
-          (CURRENT_MEMORY_I32 0)>;
-def : Pat<(int_wasm_grow_memory I32:$delta),
-          (GROW_MEMORY_I32 0, $delta)>;

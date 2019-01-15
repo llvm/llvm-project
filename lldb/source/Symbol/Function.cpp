@@ -286,14 +286,14 @@ llvm::MutableArrayRef<CallEdge> Function::GetTailCallingEdges() {
 
 Block &Function::GetBlock(bool can_create) {
   if (!m_block.BlockInfoHasBeenParsed() && can_create) {
-    SymbolContext sc;
-    CalculateSymbolContext(&sc);
-    if (sc.module_sp) {
-      sc.module_sp->GetSymbolVendor()->ParseFunctionBlocks(sc);
+    ModuleSP module_sp = CalculateSymbolContextModule();
+    if (module_sp) {
+      module_sp->GetSymbolVendor()->ParseBlocksRecursive(*this);
     } else {
-      Host::SystemLog(Host::eSystemLogError, "error: unable to find module "
-                                             "shared pointer for function '%s' "
-                                             "in %s\n",
+      Host::SystemLog(Host::eSystemLogError,
+                      "error: unable to find module "
+                      "shared pointer for function '%s' "
+                      "in %s\n",
                       GetName().GetCString(), m_comp_unit->GetPath().c_str());
     }
     m_block.SetBlockInfoHasBeenParsed(true, true);

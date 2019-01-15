@@ -473,14 +473,14 @@ attributes #1 = { nounwind readnone speculatable }
 !llvm.module.flags = !{!3, !4, !5, !6}
 !llvm.ident = !{!7}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 8.0.0 (https://github.com/llvm-mirror/clang.git 9884fc1d0881576784e9b50da9eb61a5eb427f1c) (https://github.com/llvm-mirror/llvm.git 33b1a96b81ba4e33cfc4a129ce43b5331e16936b)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 8.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
 !1 = !DIFile(filename: "function-options.cpp", directory: "\5Ctest\5CDebugInfo\5CCOFF", checksumkind: CSK_MD5, checksum: "e73e74ea0bd81174051f0a4746343e00")
 !2 = !{}
 !3 = !{i32 2, !"CodeView", i32 1}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 2}
 !6 = !{i32 7, !"PIC Level", i32 2}
-!7 = !{!"clang version 8.0.0 (https://github.com/llvm-mirror/clang.git 9884fc1d0881576784e9b50da9eb61a5eb427f1c) (https://github.com/llvm-mirror/llvm.git 33b1a96b81ba4e33cfc4a129ce43b5331e16936b)"}
+!7 = !{!"clang version 8.0.0"}
 !8 = distinct !DISubprogram(name: "Func_AClass", linkageName: "?Func_AClass@@YA?AVAClass@@AEAV1@@Z", scope: !9, file: !9, line: 6, type: !10, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
 !9 = !DIFile(filename: "function-options.cpp", directory: "D:\5Cupstream\5Cllvm\5Ctest\5CDebugInfo\5CCOFF")
 !10 = !DISubroutineType(types: !11)

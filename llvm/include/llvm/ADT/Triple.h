@@ -187,7 +187,8 @@ public:
     AMDPAL,     // AMD PAL Runtime
     HermitCore, // HermitCore Unikernel/Multikernel
     Hurd,       // GNU/Hurd
-    LastOSType = Hurd
+    COWS,       // Capability-Oriented WebAssembly Syscalls
+    LastOSType = COWS
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -586,6 +587,11 @@ public:
   /// Tests whether the OS is Hurd.
   bool isOSHurd() const {
     return getOS() == Triple::Hurd;
+  }
+
+  /// Tests whether the OS is COWS.
+  bool isOSCOWS() const {
+    return getOS() == Triple::COWS;
   }
 
   /// Tests whether the OS uses glibc.

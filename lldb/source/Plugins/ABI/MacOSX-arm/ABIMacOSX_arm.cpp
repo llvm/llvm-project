@@ -1470,14 +1470,16 @@ bool ABIMacOSX_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
     if (compiler_type) {
       bool is_signed = false;
       size_t bit_width = 0;
-      if (compiler_type.IsIntegerOrEnumerationType(is_signed)) {
-        bit_width = compiler_type.GetBitSize(&thread);
-      } else if (compiler_type.IsPointerOrReferenceType()) {
-        bit_width = compiler_type.GetBitSize(&thread);
-      } else {
+      auto bit_size = compiler_type.GetBitSize(&thread);
+      if (!bit_size)
+        return false;
+      if (compiler_type.IsIntegerOrEnumerationType(is_signed))
+        bit_width = *bit_size;
+      else if (compiler_type.IsPointerOrReferenceType())
+        bit_width = *bit_size;
+      else
         // We only handle integer, pointer and reference types currently...
         return false;
-      }
 
       if (bit_width <= (exe_ctx.GetProcessRef().GetAddressByteSize() * 8)) {
         if (value_idx < 4) {
@@ -1574,9 +1576,11 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
 
   const RegisterInfo *r0_reg_info = reg_ctx->GetRegisterInfoByName("r0", 0);
   if (compiler_type.IsIntegerOrEnumerationType(is_signed)) {
-    size_t bit_width = compiler_type.GetBitSize(&thread);
+    auto bit_width = compiler_type.GetBitSize(&thread);
+    if (!bit_width)
+      return return_valobj_sp;
 
-    switch (bit_width) {
+    switch (*bit_width) {
     default:
       return return_valobj_sp;
     case 128:
@@ -1592,14 +1596,16 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
           const RegisterInfo *r3_reg_info =
               reg_ctx->GetRegisterInfoByName("r3", 0);
           if (r1_reg_info && r2_reg_info && r3_reg_info) {
-            const size_t byte_size = compiler_type.GetByteSize(&thread);
+            auto byte_size = compiler_type.GetByteSize(&thread);
+            if (!byte_size)
+              return return_valobj_sp;
             ProcessSP process_sp(thread.GetProcess());
-            if (byte_size <= r0_reg_info->byte_size + r1_reg_info->byte_size +
-                                 r2_reg_info->byte_size +
-                                 r3_reg_info->byte_size &&
+            if (*byte_size <= r0_reg_info->byte_size + r1_reg_info->byte_size +
+                                  r2_reg_info->byte_size +
+                                  r3_reg_info->byte_size &&
                 process_sp) {
               std::unique_ptr<DataBufferHeap> heap_data_ap(
-                  new DataBufferHeap(byte_size, 0));
+                  new DataBufferHeap(*byte_size, 0));
               const ByteOrder byte_order = process_sp->GetByteOrder();
               RegisterValue r0_reg_value;
               RegisterValue r1_reg_value;

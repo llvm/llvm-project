@@ -87,6 +87,8 @@ void MergedIndex::lookup(
 void MergedIndex::refs(const RefsRequest &Req,
                        llvm::function_ref<void(const Ref &)> Callback) const {
   trace::Span Tracer("MergedIndex refs");
+  uint32_t Remaining =
+      Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
   // We don't want duplicated refs from the static/dynamic indexes,
   // and we can't reliably duplicate them because offsets may differ slightly.
   // We consider the dynamic index authoritative and report all its refs,
@@ -99,10 +101,18 @@ void MergedIndex::refs(const RefsRequest &Req,
   Dynamic->refs(Req, [&](const Ref &O) {
     DynamicIndexFileURIs.insert(O.Location.FileURI);
     Callback(O);
+    --Remaining;
   });
+  assert(Remaining >= 0);
+  if (Remaining == 0)
+    return;
+  // We return less than Req.Limit if static index returns more refs for dirty
+  // files.
   Static->refs(Req, [&](const Ref &O) {
-    if (!DynamicIndexFileURIs.count(O.Location.FileURI))
+    if (Remaining > 0 && !DynamicIndexFileURIs.count(O.Location.FileURI)) {
+      --Remaining;
       Callback(O);
+    }
   });
 }
 

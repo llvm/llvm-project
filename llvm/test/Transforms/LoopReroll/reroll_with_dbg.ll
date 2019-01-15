@@ -85,7 +85,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!17, !18, !19, !20}
 !llvm.ident = !{!21}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (http://llvm.org/git/clang.git b1fbc23058e7fa1cdd954ab97ba84f1c549c9879) (http://llvm.org/git/llvm.git 054da58c5398a721d4dab7af63d7de8d7a1e1a1c)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "test.c", directory: "/home/weimingz/llvm-build/release/community-tip")
 !2 = !{}
 !4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !11)
@@ -105,7 +105,7 @@ attributes #1 = { nounwind readnone }
 !18 = !{i32 2, !"Debug Info Version", i32 3}
 !19 = !{i32 1, !"wchar_size", i32 4}
 !20 = !{i32 1, !"min_enum_size", i32 4}
-!21 = !{!"clang version 3.8.0 (http://llvm.org/git/clang.git b1fbc23058e7fa1cdd954ab97ba84f1c549c9879) (http://llvm.org/git/llvm.git 054da58c5398a721d4dab7af63d7de8d7a1e1a1c)"}
+!21 = !{!"clang version 3.8.0"}
 !22 = !DIExpression()
 !23 = !DILocation(line: 1, column: 27, scope: !4)
 !24 = !DILocation(line: 1, column: 47, scope: !4)

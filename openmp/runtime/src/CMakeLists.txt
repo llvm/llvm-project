@@ -9,11 +9,11 @@
 #//===----------------------------------------------------------------------===//
 #
 
-# Configure omp.h, kmp_config.h and ompt.h if necessary
+# Configure omp.h, kmp_config.h and omp-tools.h if necessary
 configure_file(${LIBOMP_INC_DIR}/omp.h.var omp.h @ONLY)
 configure_file(kmp_config.h.cmake kmp_config.h @ONLY)
 if(${LIBOMP_OMPT_SUPPORT})
-  configure_file(${LIBOMP_INC_DIR}/ompt.h.var ompt.h @ONLY)
+  configure_file(${LIBOMP_INC_DIR}/omp-tools.h.var omp-tools.h @ONLY)
 endif()
 
 # Generate message catalog files: kmp_i18n_id.inc and kmp_i18n_default.inc
@@ -319,7 +319,9 @@ install(
   DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
 )
 if(${LIBOMP_OMPT_SUPPORT})
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ompt.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
+  # install under legacy name ompt.h
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
 endif()
 if(${LIBOMP_FORTRAN_MODULES})
   install(FILES

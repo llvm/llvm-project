@@ -52,4 +52,4 @@ attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 
 !llvm.ident = !{!0}
 
-!0 = !{!"clang version 4.0.0 (http://llvm.org/git/clang.git 5864a13abf4490e76ae2eb0896198e1305927df2)"}
+!0 = !{!"clang version 4.0.0"}

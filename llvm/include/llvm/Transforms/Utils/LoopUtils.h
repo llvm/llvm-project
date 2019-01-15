@@ -323,6 +323,23 @@ Value *createTargetReduction(IRBuilder<> &B, const TargetTransformInfo *TTI,
 /// Flag set: NSW, NUW, exact, and all of fast-math.
 void propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue = nullptr);
 
+/// Returns true if we can prove that \p S is defined and always negative in
+/// loop \p L.
+bool isKnownNegativeInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE);
+
+/// Returns true if we can prove that \p S is defined and always non-negative in
+/// loop \p L.
+bool isKnownNonNegativeInLoop(const SCEV *S, const Loop *L,
+                              ScalarEvolution &SE);
+
+/// Returns true if \p S is defined and never is equal to signed/unsigned max.
+bool cannotBeMaxInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE,
+                       bool Signed);
+
+/// Returns true if \p S is defined and never is equal to signed/unsigned min.
+bool cannotBeMinInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE,
+                       bool Signed);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_LOOPUTILS_H

@@ -4,6 +4,7 @@
 declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) #0
 declare i64 @llvm.amdgcn.icmp.i64(i64, i64, i32) #0
 declare i64 @llvm.amdgcn.icmp.i16(i16, i16, i32) #0
+declare i64 @llvm.amdgcn.icmp.i1(i1, i1, i32) #0
 
 ; No crash on invalid input
 ; GCN-LABEL: {{^}}v_icmp_i32_dynamic_cc:
@@ -310,6 +311,23 @@ define amdgpu_kernel void @v_icmp_i16_slt(i64 addrspace(1)* %out, i16 %src) {
 ; SI: v_cmp_le_i32_e64 s{{\[[0-9]+:[0-9]+\]}}, [[CVT]], [[K]]
 define amdgpu_kernel void @v_icmp_i16_sle(i64 addrspace(1)* %out, i16 %src) {
   %result = call i64 @llvm.amdgcn.icmp.i16(i16 %src, i16 100, i32 41)
+  store i64 %result, i64 addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_icmp_i1_ne0:
+; GCN: v_cmp_gt_u32_e64 s[[C0:\[[0-9]+:[0-9]+\]]],
+; GCN: v_cmp_gt_u32_e64 s[[C1:\[[0-9]+:[0-9]+\]]],
+; GCN: s_and_b64 s[[SRC:\[[0-9]+:[0-9]+\]]], s[[C0]], s[[C1]]
+; SI-NEXT: s_mov_b32 s{{[0-9]+}}, -1
+; GCN-NEXT: v_mov_b32_e32
+; GCN-NEXT: v_mov_b32_e32
+; GCN-NEXT: {{global|flat|buffer}}_store_dwordx2
+define amdgpu_kernel void @v_icmp_i1_ne0(i64 addrspace(1)* %out, i32 %a, i32 %b) {
+  %c0 = icmp ugt i32 %a, 1
+  %c1 = icmp ugt i32 %b, 2
+  %src = and i1 %c0, %c1
+  %result = call i64 @llvm.amdgcn.icmp.i1(i1 %src, i1 false, i32 33)
   store i64 %result, i64 addrspace(1)* %out
   ret void
 }

@@ -6,10 +6,13 @@ sections:
   - Name:            .text
     Characteristics: [  ]
     Alignment:       4
-    SectionData:     E800000000C3C3C3
+    SectionData:     E800000000E800000000C3C3C3
     Relocations:     
       - VirtualAddress:  1
         SymbolName:      local_referenced
+        Type:            IMAGE_REL_AMD64_REL32
+      - VirtualAddress:  5
+        SymbolName:      external_undefined
         Type:            IMAGE_REL_AMD64_REL32
 symbols:         
   - Name:            external
@@ -19,6 +22,12 @@ symbols:
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
   - Name:            external_undefined
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            external_undefined_unreferenced
     Value:           0
     SectionNumber:   0
     SimpleType:      IMAGE_SYM_TYPE_NULL
@@ -39,6 +48,12 @@ symbols:
   - Name:            local_undefined_unreferenced
     Value:           0
     SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '@feat.00'
+    Value:           0
+    SectionNumber:   -1
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC

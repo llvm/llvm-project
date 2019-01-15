@@ -130,7 +130,7 @@ constexpr bool test_constexpr() {
   };
   for (auto TC : SpaceshipTestCases)
   {
-    std::partial_ordering Res = (0 <=> TC.Value);
+    std::partial_ordering Res = (TC.Value <=> 0);
     switch (TC.Expect) {
     case ER_Equiv:
       assert(Res == 0);

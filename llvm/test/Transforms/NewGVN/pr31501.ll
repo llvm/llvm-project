@@ -123,7 +123,7 @@ attributes #0 = { norecurse nounwind ssp uwtable "correctly-rounded-divide-sqrt-
 !llvm.ident = !{!1}
 
 !0 = !{i32 1, !"PIC Level", i32 2}
-!1 = !{!"clang version 4.0.0 (http://llvm.org/git/clang.git b63fa9e2bb8aac0a80c3e3467991c6b1a4b01e6a) (llvm/trunk 290779)"}
+!1 = !{!"clang version 4.0.0"}
 !2 = !{!3, !4, i64 0}
 !3 = !{!"_ZTSN4llvm15SmallVectorBaseE", !4, i64 0, !4, i64 8, !4, i64 16}
 !4 = !{!"any pointer", !5, i64 0}

@@ -431,58 +431,16 @@ TEST_F(PPCallbacksTest, OpenCLExtensionPragmaDisabled) {
 }
 
 TEST_F(PPCallbacksTest, DirectiveExprRanges) {
-  const auto &Results1 = DirectiveExprRange("#if FLUZZY_FLOOF\n#endif\n");
-  EXPECT_EQ(Results1.size(), 1U);
+  const auto &Results8 =
+      DirectiveExprRange("#define FLOOFY 0\n#if __FILE__ > FLOOFY\n#endif\n");
+  EXPECT_EQ(Results8.size(), 1U);
   EXPECT_EQ(
-      GetSourceStringToEnd(CharSourceRange(Results1[0].ConditionRange, false)),
-      "FLUZZY_FLOOF");
-
-  const auto &Results2 = DirectiveExprRange("#if 1 + 4 < 7\n#endif\n");
-  EXPECT_EQ(Results2.size(), 1U);
+      GetSourceStringToEnd(CharSourceRange(Results8[0].ConditionRange, false)),
+      " __FILE__ > FLOOFY\n#");
   EXPECT_EQ(
-      GetSourceStringToEnd(CharSourceRange(Results2[0].ConditionRange, false)),
-      "1 + 4 < 7");
-
-  const auto &Results3 = DirectiveExprRange("#if 1 + \\\n  2\n#endif\n");
-  EXPECT_EQ(Results3.size(), 1U);
-  EXPECT_EQ(
-      GetSourceStringToEnd(CharSourceRange(Results3[0].ConditionRange, false)),
-      "1 + \\\n  2");
-
-  const auto &Results4 = DirectiveExprRange("#if 0\n#elif FLOOFY\n#endif\n");
-  EXPECT_EQ(Results4.size(), 2U);
-  EXPECT_EQ(
-      GetSourceStringToEnd(CharSourceRange(Results4[0].ConditionRange, false)),
-      "0");
-  EXPECT_EQ(
-      GetSourceStringToEnd(CharSourceRange(Results4[1].ConditionRange, false)),
-      "FLOOFY");
-
-  const auto &Results5 = DirectiveExprRange("#if 1\n#elif FLOOFY\n#endif\n");
-  EXPECT_EQ(Results5.size(), 2U);
-  EXPECT_EQ(
-      GetSourceStringToEnd(CharSourceRange(Results5[0].ConditionRange, false)),
-      "1");
-  EXPECT_EQ(
-      GetSourceStringToEnd(CharSourceRange(Results5[1].ConditionRange, false)),
-      "FLOOFY");
-
-  const auto &Results6 =
-      DirectiveExprRange("#if defined(FLUZZY_FLOOF)\n#endif\n");
-  EXPECT_EQ(Results6.size(), 1U);
-  EXPECT_EQ(
-      GetSourceStringToEnd(CharSourceRange(Results6[0].ConditionRange, false)),
-      "defined(FLUZZY_FLOOF)");
-
-  const auto &Results7 =
-      DirectiveExprRange("#if 1\n#elif defined(FLOOFY)\n#endif\n");
-  EXPECT_EQ(Results7.size(), 2U);
-  EXPECT_EQ(
-      GetSourceStringToEnd(CharSourceRange(Results7[0].ConditionRange, false)),
-      "1");
-  EXPECT_EQ(
-      GetSourceStringToEnd(CharSourceRange(Results7[1].ConditionRange, false)),
-      "defined(FLOOFY)");
+      Lexer::getSourceText(CharSourceRange(Results8[0].ConditionRange, false),
+                           SourceMgr, LangOpts),
+      " __FILE__ > FLOOFY\n");
 }
 
 } // namespace

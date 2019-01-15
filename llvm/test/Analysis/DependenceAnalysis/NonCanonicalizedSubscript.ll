@@ -100,4 +100,4 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 
 !llvm.ident = !{!0}
 
-!0 = !{!"clang version 3.7.0 (https://vaivaswatha@bitbucket.org/compilertree/amd_clang.git 93a05fb75ee3411d24e8b2b184fc766a5318403e) (https://vaivaswatha@bitbucket.org/compilertree/amd_llvm.git 166d93d26efc912b517739f64d054a435e8e95cd)"}
+!0 = !{!"clang version 3.7.0"}

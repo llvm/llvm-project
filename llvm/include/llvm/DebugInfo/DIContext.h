@@ -81,7 +81,7 @@ class DIInliningInfo {
 public:
   DIInliningInfo() = default;
 
-  DILineInfo getFrame(unsigned Index) const {
+  const DILineInfo & getFrame(unsigned Index) const {
     assert(Index < Frames.size());
     return Frames[Index];
   }
@@ -98,6 +98,11 @@ public:
   void addFrame(const DILineInfo &Frame) {
     Frames.push_back(Frame);
   }
+  
+  void resize(unsigned i) {
+    Frames.resize(i);
+  }
+  
 };
 
 /// Container for description of a global variable.

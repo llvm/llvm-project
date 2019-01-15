@@ -39,6 +39,17 @@ struct TypeMismatchData {
 /// type.
 RECOVERABLE(type_mismatch_v1, TypeMismatchData *Data, ValueHandle Pointer)
 
+struct AlignmentAssumptionData {
+  SourceLocation Loc;
+  SourceLocation AssumptionLoc;
+  const TypeDescriptor &Type;
+};
+
+/// \brief Handle a runtime alignment assumption check failure,
+/// caused by a misaligned pointer.
+RECOVERABLE(alignment_assumption, AlignmentAssumptionData *Data,
+            ValueHandle Pointer, ValueHandle Alignment, ValueHandle Offset)
+
 struct OverflowData {
   SourceLocation Loc;
   const TypeDescriptor &Type;

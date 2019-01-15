@@ -75,10 +75,9 @@ clang::clangd::RealFileSystemProvider::getFileSystem() const {
 // FIXME: Try to use a similar approach in Sema instead of relying on
 //        propagation of the 'isVolatile' flag through all layers.
 #ifdef _WIN32
-  return new VolatileFileSystem(
-      llvm::vfs::createPhysicalFileSystem().release());
+  return new VolatileFileSystem(llvm::vfs::getRealFileSystem());
 #else
-  return llvm::vfs::createPhysicalFileSystem().release();
+  return llvm::vfs::getRealFileSystem();
 #endif
 }
 } // namespace clangd
