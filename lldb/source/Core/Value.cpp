@@ -341,11 +341,9 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
 
     uint32_t limit_byte_size = UINT32_MAX;
 
-    if (ast_type.IsValid()) {
-      if (llvm::Optional<uint64_t> size = ast_type.GetByteSize(
-              exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr))
-        limit_byte_size = *size;
-    }
+    if (llvm::Optional<uint64_t> size = ast_type.GetByteSize(
+            exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr))
+      limit_byte_size = *size;
 
     if (limit_byte_size <= m_value.GetByteSize()) {
       if (m_value.GetData(data, limit_byte_size))
