@@ -1323,7 +1323,7 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
       bool InvalidSize = (info.bytes == 0) || (info.bytes > buf.size());
       if (InvalidAST) {
         swift::ASTContext &ast_ctx = *swift_ast.GetASTContext();
-        StringRef module_spec = module.GetSpecificationDescription();
+        std::string module_spec = module.GetSpecificationDescription();
         swift::Identifier module_id = ast_ctx.getIdentifier(module_spec);
         std::unique_ptr<swift::ModuleFile> loaded_module_file;
         std::unique_ptr<llvm::MemoryBuffer> module_input_buffer =
