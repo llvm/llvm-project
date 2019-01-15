@@ -280,7 +280,7 @@ bool ABISysV_ppc64::GetArgumentValues(Thread &thread, ValueList &values) const {
     // We currently only support extracting values with Clang QualTypes. Do we
     // care about others?
     CompilerType compiler_type = value->GetCompilerType();
-    auto bit_size = compiler_type.GetBitSize(&thread);
+    llvm::Optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
     if (!bit_size)
       return false;
     bool is_signed;
@@ -350,7 +350,8 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       error.SetErrorString(
           "We don't support returning complex values at present");
     else {
-      auto bit_width = compiler_type.GetBitSize(frame_sp.get());
+      llvm::Optional<uint64_t> bit_width =
+          compiler_type.GetBitSize(frame_sp.get());
       if (!bit_width) {
         error.SetErrorString("can't get size of type");
         return error;
@@ -653,7 +654,7 @@ private:
     DataExtractor de(&raw_data, sizeof(raw_data), m_byte_order, m_addr_size);
 
     offset_t offset = 0;
-    auto byte_size = type.GetByteSize(nullptr);
+    llvm::Optional<uint64_t> byte_size = type.GetByteSize(nullptr);
     if (!byte_size)
       return {};
     switch (*byte_size) {
@@ -787,7 +788,7 @@ private:
     CompilerType elem_type;
     if (m_type.IsHomogeneousAggregate(&elem_type)) {
       uint32_t type_flags = elem_type.GetTypeInfo();
-      auto elem_size = elem_type.GetByteSize(nullptr);
+      llvm::Optional<uint64_t> elem_size = elem_type.GetByteSize(nullptr);
       if (!elem_size)
         return {};
       if (type_flags & eTypeIsComplex || !(type_flags & eTypeIsFloat)) {

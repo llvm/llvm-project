@@ -513,7 +513,7 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
     CompilerType ivar_type =
         encoding_to_type_sp->RealizeType(type, for_expression);
     if (ivar_type) {
-      auto ivar_size = ivar_type.GetByteSize(nullptr);
+      llvm::Optional<uint64_t> ivar_size = ivar_type.GetByteSize(nullptr);
       LLDB_LOGV(log,
                 "name = {0}, encoding = {1}, offset_ptr = {2:x}, size = "
                 "{3}, type_size = {4}",

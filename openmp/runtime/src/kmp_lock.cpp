@@ -2874,6 +2874,47 @@ static int __kmp_unset_indirect_lock_with_checks(kmp_dyna_lock_t *lock,
 static int __kmp_test_indirect_lock_with_checks(kmp_dyna_lock_t *lock,
                                                 kmp_int32);
 
+// Lock function definitions for the union parameter type
+#define KMP_FOREACH_LOCK_KIND(m, a) m(ticket, a) m(queuing, a) m(drdpa, a)
+
+#define expand1(lk, op)                                                        \
+  static void __kmp_##op##_##lk##_##lock(kmp_user_lock_p lock) {               \
+    __kmp_##op##_##lk##_##lock(&lock->lk);                                     \
+  }
+#define expand2(lk, op)                                                        \
+  static int __kmp_##op##_##lk##_##lock(kmp_user_lock_p lock,                  \
+                                        kmp_int32 gtid) {                      \
+    return __kmp_##op##_##lk##_##lock(&lock->lk, gtid);                        \
+  }
+#define expand3(lk, op)                                                        \
+  static void __kmp_set_##lk##_##lock_flags(kmp_user_lock_p lock,              \
+                                            kmp_lock_flags_t flags) {          \
+    __kmp_set_##lk##_lock_flags(&lock->lk, flags);                             \
+  }
+#define expand4(lk, op)                                                        \
+  static void __kmp_set_##lk##_##lock_location(kmp_user_lock_p lock,           \
+                                               const ident_t *loc) {           \
+    __kmp_set_##lk##_lock_location(&lock->lk, loc);                            \
+  }
+
+KMP_FOREACH_LOCK_KIND(expand1, init)
+KMP_FOREACH_LOCK_KIND(expand1, init_nested)
+KMP_FOREACH_LOCK_KIND(expand1, destroy)
+KMP_FOREACH_LOCK_KIND(expand1, destroy_nested)
+KMP_FOREACH_LOCK_KIND(expand2, acquire)
+KMP_FOREACH_LOCK_KIND(expand2, acquire_nested)
+KMP_FOREACH_LOCK_KIND(expand2, release)
+KMP_FOREACH_LOCK_KIND(expand2, release_nested)
+KMP_FOREACH_LOCK_KIND(expand2, test)
+KMP_FOREACH_LOCK_KIND(expand2, test_nested)
+KMP_FOREACH_LOCK_KIND(expand3, )
+KMP_FOREACH_LOCK_KIND(expand4, )
+
+#undef expand1
+#undef expand2
+#undef expand3
+#undef expand4
+
 // Jump tables for the indirect lock functions
 // Only fill in the odd entries, that avoids the need to shift out the low bit
 

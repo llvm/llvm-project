@@ -4505,6 +4505,7 @@ static void __kmp_aux_affinity_initialize(void) {
         KMP_WARNING(AffNoValidProcID);
       }
       __kmp_affinity_type = affinity_none;
+      __kmp_create_affinity_none_places();
       return;
     }
     break;
@@ -4557,11 +4558,9 @@ static void __kmp_aux_affinity_initialize(void) {
         KMP_WARNING(AffBalancedNotAvail, "KMP_AFFINITY");
       }
       __kmp_affinity_type = affinity_none;
+      __kmp_create_affinity_none_places();
       return;
-    } else if (__kmp_affinity_uniform_topology()) {
-      break;
-    } else { // Non-uniform topology
-
+    } else if (!__kmp_affinity_uniform_topology()) {
       // Save the depth for further usage
       __kmp_aff_depth = depth;
 
@@ -4602,8 +4601,9 @@ static void __kmp_aux_affinity_initialize(void) {
 
         procarr[core * maxprocpercore + inlastcore] = proc;
       }
-
-      break;
+    }
+    if (__kmp_affinity_compact >= depth) {
+      __kmp_affinity_compact = depth - 1;
     }
 
   sortAddresses:
@@ -4779,6 +4779,11 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
   th->th.th_current_place = i;
   if (isa_root) {
     th->th.th_new_place = i;
+    th->th.th_first_place = 0;
+    th->th.th_last_place = __kmp_affinity_num_masks - 1;
+  } else if (KMP_AFFINITY_NON_PROC_BIND) {
+    // When using a Non-OMP_PROC_BIND affinity method,
+    // set all threads' place-partition-var to the entire place list
     th->th.th_first_place = 0;
     th->th.th_last_place = __kmp_affinity_num_masks - 1;
   }

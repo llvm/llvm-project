@@ -858,9 +858,6 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PARTITION_NUM_PLACES)(void) {
   }
   if (!KMP_AFFINITY_CAPABLE())
     return 0;
-  if (KMP_AFFINITY_NON_PROC_BIND) {
-    return 1;
-  }
   gtid = __kmp_entry_gtid();
   thread = __kmp_thread_from_gtid(gtid);
   first_place = thread->th.th_first_place;
@@ -889,10 +886,6 @@ void
     return;
   gtid = __kmp_entry_gtid();
   thread = __kmp_thread_from_gtid(gtid);
-  if (KMP_AFFINITY_NON_PROC_BIND) {
-    place_nums[0] = thread->th.th_current_place;
-    return;
-  }
   first_place = thread->th.th_first_place;
   last_place = thread->th.th_last_place;
   if (first_place < 0 || last_place < 0)
