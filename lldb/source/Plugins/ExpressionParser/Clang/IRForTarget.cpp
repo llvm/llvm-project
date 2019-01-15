@@ -337,9 +337,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   if (log)
     log->Printf("Creating a new result global: \"%s\" with size 0x%" PRIx64,
                 m_result_name.GetCString(),
-                m_result_type.GetByteSize(nullptr)
-                    ? *m_result_type.GetByteSize(nullptr)
-                    : 0);
+                m_result_type.GetByteSize(nullptr).getValueOr(0));
 
   // Construct a new result global and set up its metadata
 

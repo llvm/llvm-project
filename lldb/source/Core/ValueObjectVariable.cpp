@@ -118,9 +118,7 @@ uint64_t ValueObjectVariable::GetByteSize() {
   if (!type.IsValid())
     return 0;
 
-  llvm::Optional<uint64_t> size =
-      type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
-  return size ? *size : 0;
+  return type.GetByteSize(exe_ctx.GetBestExecutionContextScope()).getValueOr(0);
 }
 
 lldb::ValueType ValueObjectVariable::GetValueType() const {
