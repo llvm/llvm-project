@@ -138,7 +138,9 @@ size_t ValueObjectMemory::CalculateNumChildren(uint32_t max) {
 uint64_t ValueObjectMemory::GetByteSize() {
   if (m_type_sp)
     return m_type_sp->GetByteSize();
-  return m_compiler_type.GetByteSize(nullptr);
+  if (auto size = m_compiler_type.GetByteSize(nullptr))
+    return *size;
+  return 0;
 }
 
 lldb::ValueType ValueObjectMemory::GetValueType() const {

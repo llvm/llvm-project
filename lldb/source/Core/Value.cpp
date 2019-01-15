@@ -225,9 +225,10 @@ uint64_t Value::GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx) {
     const CompilerType &ast_type = GetCompilerType();
     ExecutionContextScope *exe_scope =
         exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
-    if (ast_type.IsValid())
-      byte_size = ast_type.GetByteSize(exe_scope);
-    if (byte_size == 0 &&
+    if (auto size = ast_type.GetByteSize(
+            exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr))
+      byte_size = *size;
+    if (*byte_size == 0 &&
         SwiftASTContext::IsPossibleZeroSizeType(ast_type, exe_scope))
       return 0;
   } break;
@@ -349,8 +350,9 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     uint32_t limit_byte_size = UINT32_MAX;
 
     if (ast_type.IsValid()) {
-      limit_byte_size = ast_type.GetByteSize(
-          exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
+      if (auto size = ast_type.GetByteSize(
+              exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr))
+        limit_byte_size = *size;
     }
 
     if (limit_byte_size <= m_value.GetByteSize()) {
