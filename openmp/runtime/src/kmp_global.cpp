@@ -60,8 +60,8 @@ int __kmp_init_counter = 0;
 int __kmp_root_counter = 0;
 int __kmp_version = 0;
 
-std::atomic<kmp_uint32> __kmp_team_counter = ATOMIC_VAR_INIT(0);
-std::atomic<kmp_uint32> __kmp_task_counter = ATOMIC_VAR_INIT(0);
+std::atomic<kmp_int32> __kmp_team_counter = ATOMIC_VAR_INIT(0);
+std::atomic<kmp_int32> __kmp_task_counter = ATOMIC_VAR_INIT(0);
 
 unsigned int __kmp_init_wait =
     KMP_DEFAULT_INIT_WAIT; /* initial number of spin-tests   */

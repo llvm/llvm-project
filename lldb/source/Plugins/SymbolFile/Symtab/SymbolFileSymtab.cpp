@@ -223,9 +223,7 @@ bool SymbolFileSymtab::ParseImportedModules(
   return false;
 }
 
-size_t SymbolFileSymtab::ParseFunctionBlocks(const SymbolContext &sc) {
-  return 0;
-}
+size_t SymbolFileSymtab::ParseBlocksRecursive(Function &func) { return 0; }
 
 size_t SymbolFileSymtab::ParseVariablesForContext(const SymbolContext &sc) {
   return 0;
