@@ -311,7 +311,7 @@ static const uint8_t ImportThunkARM64[] = {
 };
 
 // Windows-specific.
-// A chunk for DLL import jump table entry. In a final output, it's
+// A chunk for DLL import jump table entry. In a final output, its
 // contents will be a JMP instruction to some __imp_ symbol.
 class ImportThunkChunkX64 : public Chunk {
 public:

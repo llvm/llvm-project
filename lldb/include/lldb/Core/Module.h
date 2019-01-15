@@ -499,10 +499,6 @@ public:
   /// have to specify complete scoping on all expressions, but it also allows
   /// for exact matching when required.
   ///
-  /// @param[in] sc
-  ///     A symbol context that scopes where to extract a type list
-  ///     from.
-  ///
   /// @param[in] type_name
   ///     The name of the type we are looking for that is a fully
   ///     or partially qualified type name.
@@ -521,8 +517,7 @@ public:
   ///     The number of matches added to \a type_list.
   //------------------------------------------------------------------
   size_t
-  FindTypes(const SymbolContext &sc, const ConstString &type_name,
-            bool exact_match, size_t max_matches,
+  FindTypes(const ConstString &type_name, bool exact_match, size_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeList &types);
 
@@ -533,10 +528,6 @@ public:
   /// Find types by name that are in a namespace. This function is used by the
   /// expression parser when searches need to happen in an exact namespace
   /// scope.
-  ///
-  /// @param[in] sc
-  ///     A symbol context that scopes where to extract a type list
-  ///     from.
   ///
   /// @param[in] type_name
   ///     The name of a type within a namespace that should not include
@@ -551,8 +542,7 @@ public:
   /// @return
   ///     The number of matches added to \a type_list.
   //------------------------------------------------------------------
-  size_t FindTypesInNamespace(const SymbolContext &sc,
-                              const ConstString &type_name,
+  size_t FindTypesInNamespace(const ConstString &type_name,
                               const CompilerDeclContext *parent_decl_ctx,
                               size_t max_matches, TypeList &type_list);
 
@@ -1182,9 +1172,8 @@ private:
   Module(); // Only used internally by CreateJITModule ()
 
   size_t FindTypes_Impl(
-      const SymbolContext &sc, const ConstString &name,
-      const CompilerDeclContext *parent_decl_ctx, bool append,
-      size_t max_matches,
+      const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+      bool append, size_t max_matches,
       llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
       TypeMap &types);
 
