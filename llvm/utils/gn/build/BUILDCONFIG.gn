@@ -5,6 +5,7 @@
 shared_binary_target_configs = [
   "//llvm/utils/gn/build:compiler_defaults",
   "//llvm/utils/gn/build:llvm_code",
+  "//llvm/utils/gn/build:no_rtti",
   "//llvm/utils/gn/build:warn_covered_switch_default",
 ]
 
@@ -30,6 +31,13 @@ if (target_os == "") {
 }
 if (current_os == "") {
   current_os = target_os
+}
+
+if (target_cpu == "") {
+  target_cpu = host_cpu
+}
+if (current_cpu == "") {
+  current_cpu = target_cpu
 }
 
 if (host_os == "win") {

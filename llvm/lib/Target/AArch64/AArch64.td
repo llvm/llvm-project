@@ -188,13 +188,17 @@ def FeatureFuseAES : SubtargetFeature<
     "fuse-aes", "HasFuseAES", "true",
     "CPU fuses AES crypto operations">;
 
-def FeatureFuseCryptoEOR : SubtargetFeature<
-    "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
-    "CPU fuses AES/PMULL and EOR operations">;
+def FeatureFuseArithmeticLogic : SubtargetFeature<
+    "fuse-arith-logic", "HasFuseArithmeticLogic", "true",
+    "CPU fuses arithmetic and logic operations">;
 
 def FeatureFuseCCSelect : SubtargetFeature<
     "fuse-csel", "HasFuseCCSelect", "true",
     "CPU fuses conditional select operations">;
+
+def FeatureFuseCryptoEOR : SubtargetFeature<
+    "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
+    "CPU fuses AES/PMULL and EOR operations">;
 
 def FeatureFuseLiterals : SubtargetFeature<
     "fuse-literals", "HasFuseLiterals", "true",
@@ -553,6 +557,7 @@ def ProcExynosM4 : SubtargetFeature<"exynosm4", "ARMProcFamily", "ExynosM3",
                                      FeatureFP16FML,
                                      FeatureFuseAddress,
                                      FeatureFuseAES,
+                                     FeatureFuseArithmeticLogic,
                                      FeatureFuseCCSelect,
                                      FeatureFuseLiterals,
                                      FeatureLSLFast,

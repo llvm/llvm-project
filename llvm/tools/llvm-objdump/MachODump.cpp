@@ -1627,9 +1627,9 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   if (Relocations)
     PrintRelocations(MachOOF, !NonVerbose);
   if (SectionHeaders)
-    PrintSectionHeaders(MachOOF);
+    printSectionHeaders(MachOOF);
   if (SectionContents)
-    PrintSectionContents(MachOOF);
+    printSectionContents(MachOOF);
   if (!FilterSections.empty())
     DumpSectionContents(FileName, MachOOF, !NonVerbose);
   if (InfoPlist)
@@ -1639,7 +1639,7 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   if (DylibId)
     PrintDylibs(MachOOF, true);
   if (SymbolTable)
-    PrintSymbolTable(MachOOF, ArchiveName, ArchitectureName);
+    printSymbolTable(MachOOF, ArchiveName, ArchitectureName);
   if (UnwindInfo)
     printMachOUnwindInfo(MachOOF);
   if (PrivateHeaders) {
@@ -1959,7 +1959,7 @@ static bool ValidateArchFlags() {
 // -arch flags selecting just those slices as specified by them and also parses
 // archive files.  Then for each individual Mach-O file ProcessMachO() is
 // called to process the file based on the command line options.
-void llvm::ParseInputMachO(StringRef Filename) {
+void llvm::parseInputMachO(StringRef Filename) {
   if (!ValidateArchFlags())
     return;
 
@@ -1998,7 +1998,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
     return;
   }
   if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Bin)) {
-    ParseInputMachO(UB);
+    parseInputMachO(UB);
     return;
   }
   if (ObjectFile *O = dyn_cast<ObjectFile>(&Bin)) {
@@ -2015,7 +2015,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
   llvm_unreachable("Input object can't be invalid at this point");
 }
 
-void llvm::ParseInputMachO(MachOUniversalBinary *UB) {
+void llvm::parseInputMachO(MachOUniversalBinary *UB) {
   if (!ValidateArchFlags())
     return;
 

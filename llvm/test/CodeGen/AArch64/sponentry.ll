@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64-windows-msvc -disable-fp-elim %s -o - | FileCheck %s
-; RUN: llc -mtriple=aarch64-windows-msvc -fast-isel -disable-fp-elim %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-windows-msvc -frame-pointer=all %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-windows-msvc -fast-isel -frame-pointer=all %s -o - | FileCheck %s
 ; RUN: llc -mtriple=aarch64-windows-msvc %s -o - | FileCheck %s --check-prefix=NOFP
 ; RUN: llc -mtriple=aarch64-windows-msvc -fast-isel %s -o - | FileCheck %s --check-prefix=NOFP
 

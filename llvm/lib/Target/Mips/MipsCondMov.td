@@ -296,3 +296,13 @@ def PseudoSELECTFP_F_I64 : SelectFP_Pseudo_F<GPR64Opnd>;
 def PseudoSELECTFP_F_S : SelectFP_Pseudo_F<FGR32Opnd>;
 def PseudoSELECTFP_F_D32 : SelectFP_Pseudo_F<AFGR64Opnd>, FGR_32;
 def PseudoSELECTFP_F_D64 : SelectFP_Pseudo_F<FGR64Opnd>, FGR_64;
+
+let usesCustomInserter = 1 in {
+class D_SELECT_CLASS<RegisterOperand RC> :
+  PseudoSE<(outs RC:$dst1, RC:$dst2),
+           (ins GPR32Opnd:$cond, RC:$a1, RC:$a2, RC:$b1, RC:$b2), []>,
+  ISA_MIPS1_NOT_4_32;
+}
+
+def PseudoD_SELECT_I   : D_SELECT_CLASS<GPR32Opnd>;
+def PseudoD_SELECT_I64 : D_SELECT_CLASS<GPR64Opnd>;

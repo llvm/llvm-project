@@ -24,18 +24,6 @@ def int_wasm_memory_grow : Intrinsic<[llvm_anyint_ty],
                                      [llvm_i32_ty, LLVMMatchType<0>],
                                      []>;
 
-// These are the old names.
-def int_wasm_mem_size : Intrinsic<[llvm_anyint_ty],
-                                  [llvm_i32_ty],
-                                  [IntrReadMem]>;
-def int_wasm_mem_grow : Intrinsic<[llvm_anyint_ty],
-                                  [llvm_i32_ty, LLVMMatchType<0>],
-                                  []>;
-
-// These are the old old names. They also lack the immediate field.
-def int_wasm_current_memory : Intrinsic<[llvm_anyint_ty], [], [IntrReadMem]>;
-def int_wasm_grow_memory : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], []>;
-
 //===----------------------------------------------------------------------===//
 // Saturating float-to-int conversions
 //===----------------------------------------------------------------------===//

@@ -322,7 +322,7 @@ write_cmake_config("llvm-config") {
     "LINK_POLLY_INTO_TOOLS=",
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
     "LLVM_HAS_ATOMICS=1",
-    "LLVM_HOST_TRIPLE=$llvm_host_triple",
+    "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_NATIVE_ARCH=$native_target",
     "LLVM_NATIVE_ASMPARSER=1",
     "LLVM_NATIVE_ASMPRINTER=1",

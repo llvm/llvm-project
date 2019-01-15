@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s -check-prefix=PPC32-FP
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -disable-fp-elim | FileCheck %s -check-prefix=PPC32-NOFP
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -frame-pointer=all | FileCheck %s -check-prefix=PPC32-NOFP
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s -check-prefix=PPC64-FP
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -disable-fp-elim | FileCheck %s -check-prefix=PPC64-NOFP
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -frame-pointer=all | FileCheck %s -check-prefix=PPC64-NOFP
 
 ;PPC32-FP: f1:
 ;PPC32-FP: stwu 1, -16400(1)

@@ -536,52 +536,53 @@ static void performReadOperation(ArchiveOperation Operation,
   exit(1);
 }
 
-static void addMember(std::vector<NewArchiveMember> &Members,
-                      StringRef FileName, int Pos = -1) {
-  Expected<NewArchiveMember> NMOrErr =
-      NewArchiveMember::getFile(FileName, Deterministic);
-  failIfError(NMOrErr.takeError(), FileName);
-
-  // Use the basename of the object path for the member name.
-  NMOrErr->MemberName = sys::path::filename(NMOrErr->MemberName);
-
-  if (Pos == -1)
-    Members.push_back(std::move(*NMOrErr));
-  else
-    Members[Pos] = std::move(*NMOrErr);
-}
-
-static void addMember(std::vector<NewArchiveMember> &Members,
-                      const object::Archive::Child &M, int Pos = -1) {
+static void addChildMember(std::vector<NewArchiveMember> &Members,
+                           const object::Archive::Child &M,
+                           bool FlattenArchive = false) {
   if (Thin && !M.getParent()->isThin())
     fail("Cannot convert a regular archive to a thin one");
   Expected<NewArchiveMember> NMOrErr =
       NewArchiveMember::getOldMember(M, Deterministic);
   failIfError(NMOrErr.takeError());
-  if (Pos == -1)
-    Members.push_back(std::move(*NMOrErr));
-  else
-    Members[Pos] = std::move(*NMOrErr);
+  if (FlattenArchive &&
+      identify_magic(NMOrErr->Buf->getBuffer()) == file_magic::archive) {
+    Expected<StringRef> FileNameOrErr = M.getName();
+    failIfError(FileNameOrErr.takeError());
+    object::Archive &Lib = readLibrary(*FileNameOrErr);
+    // When creating thin archives, only flatten if the member is also thin.
+    if (!Thin || Lib.isThin()) {
+      Error Err = Error::success();
+      // Only Thin archives are recursively flattened.
+      for (auto &Child : Lib.children(Err))
+        addChildMember(Members, Child, /*FlattenArchive=*/Thin);
+      failIfError(std::move(Err));
+      return;
+    }
+  }
+  Members.push_back(std::move(*NMOrErr));
 }
 
-static void addLibMember(std::vector<NewArchiveMember> &Members,
-                         StringRef FileName) {
+static void addMember(std::vector<NewArchiveMember> &Members,
+                      StringRef FileName, bool FlattenArchive = false) {
   Expected<NewArchiveMember> NMOrErr =
       NewArchiveMember::getFile(FileName, Deterministic);
   failIfError(NMOrErr.takeError(), FileName);
-  if (identify_magic(NMOrErr->Buf->getBuffer()) == file_magic::archive) {
+  if (FlattenArchive &&
+      identify_magic(NMOrErr->Buf->getBuffer()) == file_magic::archive) {
     object::Archive &Lib = readLibrary(FileName);
-    Error Err = Error::success();
-
-    for (auto &Child : Lib.children(Err))
-      addMember(Members, Child);
-
-    failIfError(std::move(Err));
-  } else {
-    // Use the basename of the object path for the member name.
-    NMOrErr->MemberName = sys::path::filename(NMOrErr->MemberName);
-    Members.push_back(std::move(*NMOrErr));
+    // When creating thin archives, only flatten if the member is also thin.
+    if (!Thin || Lib.isThin()) {
+      Error Err = Error::success();
+      // Only Thin archives are recursively flattened.
+      for (auto &Child : Lib.children(Err))
+        addChildMember(Members, Child, /*FlattenArchive=*/Thin);
+      failIfError(std::move(Err));
+      return;
+    }
   }
+  // Use the basename of the object path for the member name.
+  NMOrErr->MemberName = sys::path::filename(NMOrErr->MemberName);
+  Members.push_back(std::move(*NMOrErr));
 }
 
 enum InsertAction {
@@ -670,7 +671,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
           computeInsertAction(Operation, Child, Name, MemberI);
       switch (Action) {
       case IA_AddOldMember:
-        addMember(Ret, Child);
+        addChildMember(Ret, Child);
         break;
       case IA_AddNewMember:
         addMember(Ret, *MemberI);
@@ -678,7 +679,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
       case IA_Delete:
         break;
       case IA_MoveOldMember:
-        addMember(Moved, Child);
+        addChildMember(Moved, Child);
         break;
       case IA_MoveNewMember:
         addMember(Moved, *MemberI);
@@ -709,17 +710,16 @@ computeNewArchiveMembers(ArchiveOperation Operation,
   if (AddLibrary) {
     assert(Operation == QuickAppend);
     for (auto &Member : Members)
-      addLibMember(Ret, Member);
+      addMember(Ret, Member, /*FlattenArchive=*/true);
     return Ret;
   }
 
-  for (unsigned I = 0; I != Members.size(); ++I)
-    Ret.insert(Ret.begin() + InsertPos, NewArchiveMember());
-  Pos = InsertPos;
-  for (auto &Member : Members) {
-    addMember(Ret, Member, Pos);
-    ++Pos;
-  }
+  std::vector<NewArchiveMember> NewMembers;
+  for (auto &Member : Members)
+    addMember(NewMembers, Member, /*FlattenArchive=*/Thin);
+  Ret.reserve(Ret.size() + NewMembers.size());
+  std::move(NewMembers.begin(), NewMembers.end(),
+            std::inserter(Ret, std::next(Ret.begin(), InsertPos)));
 
   return Ret;
 }
@@ -897,7 +897,7 @@ static void runMRIScript() {
       {
         Error Err = Error::success();
         for (auto &Member : Lib.children(Err))
-          addMember(NewMembers, Member);
+          addChildMember(NewMembers, Member);
         failIfError(std::move(Err));
       }
       break;

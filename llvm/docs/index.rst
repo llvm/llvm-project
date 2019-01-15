@@ -232,7 +232,7 @@ For developers of applications which use LLVM as a library.
 
 `Documentation for Go bindings <http://godoc.org/llvm.org/llvm/bindings/go/llvm>`_
 
-`ViewVC Repository Browser <http://llvm.org/viewvc/>`_
+`Github Source Repository Browser <http://github.com/llvm/llvm-project//>`_
    ..
 
 :doc:`CompilerWriterInfo`

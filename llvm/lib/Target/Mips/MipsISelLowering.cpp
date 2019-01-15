@@ -1396,6 +1396,9 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case Mips::PseudoSELECTFP_T_D32:
   case Mips::PseudoSELECTFP_T_D64:
     return emitPseudoSELECT(MI, BB, true, Mips::BC1T);
+  case Mips::PseudoD_SELECT_I:
+  case Mips::PseudoD_SELECT_I64:
+    return emitPseudoD_SELECT(MI, BB);
   }
 }
 
@@ -2427,6 +2430,16 @@ SDValue MipsTargetLowering::lowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
                              DAG.getConstant(VT.getSizeInBits(), DL, MVT::i32));
   SDValue Ext = DAG.getNode(ISD::SRA, DL, VT, Hi,
                             DAG.getConstant(VT.getSizeInBits() - 1, DL, VT));
+
+  if (!(Subtarget.hasMips4() || Subtarget.hasMips32())) {
+    SDVTList VTList = DAG.getVTList(VT, VT);
+    return DAG.getNode(Subtarget.isGP64bit() ? Mips::PseudoD_SELECT_I64
+                                             : Mips::PseudoD_SELECT_I,
+                       DL, VTList, Cond, ShiftRightHi,
+                       IsSRA ? Ext : DAG.getConstant(0, DL, VT), Or,
+                       ShiftRightHi);
+  }
+
   Lo = DAG.getNode(ISD::SELECT, DL, VT, Cond, ShiftRightHi, Or);
   Hi = DAG.getNode(ISD::SELECT, DL, VT, Cond,
                    IsSRA ? Ext : DAG.getConstant(0, DL, VT), ShiftRightHi);
@@ -4338,6 +4351,81 @@ MachineBasicBlock *MipsTargetLowering::emitPseudoSELECT(MachineInstr &MI,
       .addReg(MI.getOperand(2).getReg())
       .addMBB(thisMBB)
       .addReg(MI.getOperand(3).getReg())
+      .addMBB(copy0MBB);
+
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
+
+  return BB;
+}
+
+MachineBasicBlock *MipsTargetLowering::emitPseudoD_SELECT(MachineInstr &MI,
+                                                          MachineBasicBlock *BB) const {
+  assert(!(Subtarget.hasMips4() || Subtarget.hasMips32()) &&
+         "Subtarget already supports SELECT nodes with the use of"
+         "conditional-move instructions.");
+
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  // D_SELECT substitutes two SELECT nodes that goes one after another and
+  // have the same condition operand. On machines which don't have
+  // conditional-move instruction, it reduces unnecessary branch instructions
+  // which are result of using two diamond patterns that are result of two
+  // SELECT pseudo instructions.
+  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+  MachineFunction::iterator It = ++BB->getIterator();
+
+  //  thisMBB:
+  //  ...
+  //   TrueVal = ...
+  //   setcc r1, r2, r3
+  //   bNE   r1, r0, copy1MBB
+  //   fallthrough --> copy0MBB
+  MachineBasicBlock *thisMBB = BB;
+  MachineFunction *F = BB->getParent();
+  MachineBasicBlock *copy0MBB = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *sinkMBB = F->CreateMachineBasicBlock(LLVM_BB);
+  F->insert(It, copy0MBB);
+  F->insert(It, sinkMBB);
+
+  // Transfer the remainder of BB and its successor edges to sinkMBB.
+  sinkMBB->splice(sinkMBB->begin(), BB,
+                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  sinkMBB->transferSuccessorsAndUpdatePHIs(BB);
+
+  // Next, add the true and fallthrough blocks as its successors.
+  BB->addSuccessor(copy0MBB);
+  BB->addSuccessor(sinkMBB);
+
+  // bne rs, $0, sinkMBB
+  BuildMI(BB, DL, TII->get(Mips::BNE))
+      .addReg(MI.getOperand(2).getReg())
+      .addReg(Mips::ZERO)
+      .addMBB(sinkMBB);
+
+  //  copy0MBB:
+  //   %FalseValue = ...
+  //   # fallthrough to sinkMBB
+  BB = copy0MBB;
+
+  // Update machine-CFG edges
+  BB->addSuccessor(sinkMBB);
+
+  //  sinkMBB:
+  //   %Result = phi [ %TrueValue, thisMBB ], [ %FalseValue, copy0MBB ]
+  //  ...
+  BB = sinkMBB;
+
+  // Use two PHI nodes to select two reults
+  BuildMI(*BB, BB->begin(), DL, TII->get(Mips::PHI), MI.getOperand(0).getReg())
+      .addReg(MI.getOperand(3).getReg())
+      .addMBB(thisMBB)
+      .addReg(MI.getOperand(5).getReg())
+      .addMBB(copy0MBB);
+  BuildMI(*BB, BB->begin(), DL, TII->get(Mips::PHI), MI.getOperand(1).getReg())
+      .addReg(MI.getOperand(4).getReg())
+      .addMBB(thisMBB)
+      .addReg(MI.getOperand(6).getReg())
       .addMBB(copy0MBB);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.

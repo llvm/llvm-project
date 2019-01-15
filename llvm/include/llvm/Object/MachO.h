@@ -356,7 +356,7 @@ public:
   basic_symbol_iterator symbol_end() const override;
 
   // MachO specific.
-  basic_symbol_iterator getSymbolByIndex(unsigned Index) const;
+  symbol_iterator getSymbolByIndex(unsigned Index) const;
   uint64_t getSymbolIndex(DataRefImpl Symb) const;
 
   section_iterator section_begin() const override;
