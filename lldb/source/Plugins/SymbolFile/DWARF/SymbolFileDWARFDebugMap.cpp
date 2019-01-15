@@ -1188,7 +1188,6 @@ uint32_t SymbolFileDWARFDebugMap::FindTypes(
     types.Clear();
 
   const uint32_t initial_types_size = types.GetSize();
-  SymbolFileDWARF *oso_dwarf;
 
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
     oso_dwarf->FindTypes(name, parent_decl_ctx, append, max_matches,
