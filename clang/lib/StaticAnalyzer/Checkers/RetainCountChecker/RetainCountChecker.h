@@ -371,11 +371,6 @@ private:
 
 const RefVal *getRefBinding(ProgramStateRef State, SymbolRef Sym);
 
-ProgramStateRef setRefBinding(ProgramStateRef State, SymbolRef Sym,
-                                     RefVal Val);
-
-ProgramStateRef removeRefBinding(ProgramStateRef State, SymbolRef Sym);
-
 /// Returns true if this stack frame is for an Objective-C method that is a
 /// property getter or setter whose body has been synthesized by the analyzer.
 inline bool isSynthesizedAccessor(const StackFrameContext *SFC) {
