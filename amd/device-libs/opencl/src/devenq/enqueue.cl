@@ -2,7 +2,7 @@
 #include "devenq.h"
 
 #define LSIZE_LIMIT 65536U
-#define LOCAL_ALIGN 4
+#define LOCAL_ALIGN 16
 
 struct rtinfo {
     ulong kernel_object;
