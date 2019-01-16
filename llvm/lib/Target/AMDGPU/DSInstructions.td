@@ -817,6 +817,11 @@ defm : DSAtomicRetPat_mc<DS_MAX_RTN_U64, i64, "atomic_load_umax_local">;
 
 defm : DSAtomicCmpXChg_mc<DS_CMPST_RTN_B64, i64, "atomic_cmp_swap_local">;
 
+def : Pat <
+  (SIds_ordered_count i32:$value, i16:$offset),
+  (DS_ORDERED_COUNT $value, (as_i16imm $offset))
+>;
+
 //===----------------------------------------------------------------------===//
 // Real instructions
 //===----------------------------------------------------------------------===//

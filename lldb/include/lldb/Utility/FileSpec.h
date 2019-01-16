@@ -326,6 +326,10 @@ public:
   //------------------------------------------------------------------
   bool IsAbsolute() const;
 
+  /// Make the FileSpec absolute by treating it relative to \a dir. Absolute
+  /// FileSpecs are never changed by this function.
+  void MakeAbsolute(const FileSpec &dir);
+
   /// Temporary helper for FileSystem change.
   void SetPath(llvm::StringRef p) { SetFile(p); }
 

@@ -1549,3 +1549,39 @@ define arm_aapcscc i64 @test26(i64* nocapture %p) {
   %and = and i64 %1, -281474976710656
   ret i64 %and
 }
+
+; ARM-LABEL: test27:
+; ARM:       @ %bb.0:
+; ARM-NEXT:    ldrb r1, [r0, #1]
+; ARM-NEXT:    lsl r1, r1, #16
+; ARM-NEXT:    str r1, [r0]
+; ARM-NEXT:    bx lr
+;
+; ARMEB-LABEL: test27:
+; ARMEB:     @ %bb.0:
+; ARMEB-NEXT:  ldrb r1, [r0, #2]
+; ARMEB-NEXT:  lsl r1, r1, #16
+; ARMEB-NEXT:  str r1, [r0]
+; ARMEB-NEXT:  bx lr
+;
+; THUMB1-LABEL: test27:
+; THUMB1:     @ %bb.0:
+; THUMB1-NEXT:  ldrb r1, [r0, #1]
+; THUMB1-NEXT:  lsls r1, r1, #16
+; THUMB1-NEXT:  str r1, [r0]
+; THUMB1-NEXT:  bx lr
+;
+; THUMB2-LABEL: test27:
+; THUMB2:       @ %bb.0:
+; THUMB2-NEXT:    ldrb r1, [r0, #1]
+; THUMB2-NEXT:    lsls r1, r1, #16
+; THUMB2-NEXT:    str r1, [r0]
+; THUMB2-NEXT:    bx lr
+define void @test27(i32* nocapture %ptr) {
+entry:
+  %0 = load i32, i32* %ptr, align 4
+  %and = and i32 %0, 65280
+  %shl = shl i32 %and, 8
+  store i32 %shl, i32* %ptr, align 4
+  ret void
+}

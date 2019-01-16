@@ -5344,14 +5344,15 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       return nullptr;
     }
 
-    // PHI nodes have already been selected, so we should know which VReg that
-    // is assigns to already.
-    if (isa<PHINode>(V)) {
+    // The value is not used in this block yet (or it would have an SDNode).
+    // We still want the value to appear for the user if possible -- if it has
+    // an associated VReg, we can refer to that instead.
+    if (!isa<Argument>(V)) {
       auto VMI = FuncInfo.ValueMap.find(V);
       if (VMI != FuncInfo.ValueMap.end()) {
         unsigned Reg = VMI->second;
-        // The PHI node may be split up into several MI PHI nodes (in
-        // FunctionLoweringInfo::set).
+        // If this is a PHI node, it may be split up into several MI PHI nodes
+        // (in FunctionLoweringInfo::set).
         RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), Reg,
                          V->getType(), None);
         if (RFV.occupiesMultipleRegs()) {
@@ -6181,6 +6182,8 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
           .addSym(FrameAllocSym)
           .addFrameIndex(FI);
     }
+
+    MF.setHasLocalEscape(true);
 
     return nullptr;
   }

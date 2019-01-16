@@ -169,6 +169,9 @@ public:
 
   bool GetIsOptimized();
 
+  const lldb_private::FileSpec &GetCompilationDirectory();
+  lldb_private::FileSpec::Style GetPathStyle();
+
   SymbolFileDWARFDwo *GetDwoSymbolFile() const;
 
   dw_offset_t GetBaseObjOffset() const;
@@ -214,6 +217,7 @@ protected:
   lldb::LanguageType m_language_type = lldb::eLanguageTypeUnknown;
   bool m_is_dwarf64 = false;
   lldb_private::LazyBool m_is_optimized = lldb_private::eLazyBoolCalculate;
+  llvm::Optional<lldb_private::FileSpec> m_comp_dir;
   dw_addr_t m_addr_base = 0;   // Value of DW_AT_addr_base
   dw_addr_t m_ranges_base = 0; // Value of DW_AT_ranges_base
   // If this is a dwo compile unit this is the offset of the base compile unit
@@ -248,6 +252,8 @@ private:
 
   void AddUnitDIE(const DWARFDebugInfoEntry &cu_die);
   void ExtractDIEsEndCheck(lldb::offset_t offset) const;
+
+  void ComputeCompDirAndGuessPathStyle();
 
   DISALLOW_COPY_AND_ASSIGN(DWARFUnit);
 };

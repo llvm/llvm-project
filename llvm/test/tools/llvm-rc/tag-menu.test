@@ -1,9 +1,9 @@
-; RUN: llvm-rc /FO %t %p/Inputs/tag-menu.rc
+; RUN: llvm-rc /FO %t -- %p/Inputs/tag-menu.rc
 ; RUN: llvm-readobj %t | FileCheck %s --check-prefix=MENU
 
 ; Test running llvm-rc without an explicit output file.
 ; RUN: cp %p/Inputs/tag-menu.rc %t.implicit.rc
-; RUN: llvm-rc %t.implicit.rc
+; RUN: llvm-rc -- %t.implicit.rc
 ; RUN: llvm-readobj %t.implicit.res | FileCheck --check-prefix=MENU %s
 
 ; MENU: Resource type (int): 4

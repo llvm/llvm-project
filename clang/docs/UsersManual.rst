@@ -2928,20 +2928,23 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /GA                     Assume thread-local variables are defined in the executable
       /Gd                     Set __cdecl as a default calling convention
       /GF-                    Disable string pooling
+      /GF                     Enable string pooling (default)
       /GR-                    Disable emission of RTTI data
       /Gregcall               Set __regcall as a default calling convention
       /GR                     Enable emission of RTTI data
       /Gr                     Set __fastcall as a default calling convention
       /GS-                    Disable buffer security check
-      /GS                     Enable buffer security check
-      /Gs<value>              Set stack probe size
-      /guard:<value>          Enable Control Flow Guard with /guard:cf
+      /GS                     Enable buffer security check (default)
+      /Gs                     Use stack probes (default)
+      /Gs<value>              Set stack probe size (default 4096)
+      /guard:<value>          Enable Control Flow Guard with /guard:cf,
+                              or only the table with /guard:cf,nochecks
       /Gv                     Set __vectorcall as a default calling convention
       /Gw-                    Don't put each data item in its own section
       /Gw                     Put each data item in its own section
       /GX-                    Disable exception handling
       /GX                     Enable exception handling
-      /Gy-                    Don't put each function in its own section
+      /Gy-                    Don't put each function in its own section (default)
       /Gy                     Put each function in its own section
       /Gz                     Set __stdcall as a default calling convention
       /help                   Display available options
@@ -2955,16 +2958,28 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /MD                     Use DLL run-time
       /MTd                    Use static debug run-time
       /MT                     Use static run-time
+      /O0                     Disable optimization
+      /O1                     Optimize for size  (same as /Og     /Os /Oy /Ob2 /GF /Gy)
+      /O2                     Optimize for speed (same as /Og /Oi /Ot /Oy /Ob2 /GF /Gy)
+      /Ob0                    Disable function inlining
+      /Ob1                    Only inline functions which are (explicitly or implicitly) marked inline
+      /Ob2                    Inline functions as deemed beneficial by the compiler
       /Od                     Disable optimization
+      /Og                     No effect
       /Oi-                    Disable use of builtin functions
       /Oi                     Enable use of builtin functions
       /Os                     Optimize for size
       /Ot                     Optimize for speed
-      /O<value>               Optimization level
+      /Ox                     Deprecated (same as /Og /Oi /Ot /Oy /Ob2); use /O2 instead
+      /Oy-                    Disable frame pointer omission (x86 only, default)
+      /Oy                     Enable frame pointer omission (x86 only)
+      /O<flags>               Set multiple /O flags at once; e.g. '/O2y-' for '/O2 /Oy-'
       /o <file or directory>  Set output file or directory (ends in / or \)
       /P                      Preprocess to file
       /Qvec-                  Disable the loop vectorization passes
       /Qvec                   Enable the loop vectorization passes
+      /showFilenames-         Don't print the name of each compiled file (default)
+      /showFilenames          Print the name of each compiled file
       /showIncludes           Print info about included files to stderr
       /source-charset:<value> Source encoding, supports only UTF-8
       /std:<value>            Language standard to compile for
@@ -3049,6 +3064,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fno-complete-member-pointers
                               Do not require member pointer base types to be complete if they would be significant under the Microsoft ABI
       -fno-coverage-mapping   Disable code coverage analysis
+      -fno-crash-diagnostics  Disable auto-generation of preprocessed source files and a script for reproduction during a clang crash
       -fno-debug-macro        Do not emit macro debug information
       -fno-delayed-template-parsing
                               Disable delayed template parsing
@@ -3056,6 +3072,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Disable poisoning array cookies when using custom operator new[] in AddressSanitizer
       -fno-sanitize-address-use-after-scope
                               Disable use-after-scope detection in AddressSanitizer
+      -fno-sanitize-address-use-odr-indicator
+                              Disable ODR indicator globals
       -fno-sanitize-blacklist Don't use blacklist file for sanitizers
       -fno-sanitize-cfi-cross-dso
                               Disable control flow integrity (CFI) checks for cross-DSO calls.
@@ -3077,6 +3095,11 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fno-sanitize-trap=<value>
                               Disable trapping for specified sanitizers
       -fno-standalone-debug   Limit debug information produced to reduce size of debug binary
+      -fobjc-runtime=<value>  Specify the target Objective-C runtime kind and version
+      -fprofile-exclude-files=<value>
+                              Instrument only functions from files where names don't match all the regexes separated by a semi-colon
+      -fprofile-filter-files=<value>
+                              Instrument only functions from files where names match any regex separated by a semi-colon
       -fprofile-instr-generate=<file>
                               Generate instrumented code to collect execution counts into <file>
                               (overridden by LLVM_PROFILE_FILE env var)
@@ -3085,16 +3108,18 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               (overridden by '=' form of option or LLVM_PROFILE_FILE env var)
       -fprofile-instr-use=<value>
                               Use instrumentation data for profile-guided optimization
+      -fprofile-remapping-file=<file>
+                              Use the remappings described in <file> to match the profile data against names in the program
       -fsanitize-address-field-padding=<value>
                               Level of field padding for AddressSanitizer
       -fsanitize-address-globals-dead-stripping
                               Enable linker dead stripping of globals in AddressSanitizer
-      -fsanitize-address-use-odr-indicator
-                              Enable ODR indicator globals to avoid false ODR violation reports in partially sanitized programs at the cost of an increase in binary size
       -fsanitize-address-poison-custom-array-cookie
                               Enable poisoning array cookies when using custom operator new[] in AddressSanitizer
       -fsanitize-address-use-after-scope
                               Enable use-after-scope detection in AddressSanitizer
+      -fsanitize-address-use-odr-indicator
+                              Enable ODR indicator globals to avoid false ODR violation reports in partially sanitized programs at the cost of an increase in binary size
       -fsanitize-blacklist=<value>
                               Path to blacklist file for sanitizers
       -fsanitize-cfi-cross-dso
@@ -3103,6 +3128,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Generalize pointers in CFI indirect call type signature checks
       -fsanitize-coverage=<value>
                               Specify the type of coverage instrumentation for Sanitizers
+      -fsanitize-hwaddress-abi=<value>
+                              Select the HWAddressSanitizer ABI to target (interceptor or platform, default interceptor)
       -fsanitize-memory-track-origins=<value>
                               Enable origins tracking in MemorySanitizer
       -fsanitize-memory-track-origins
@@ -3123,9 +3150,12 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Strip (or keep only, if negative) a given number of path components when emitting check metadata.
       -fsanitize=<check>      Turn on runtime checks for various forms of undefined or suspicious
                               behavior. See user manual for available checks
+      -fsplit-lto-unit        Enables splitting of the LTO unit.
       -fstandalone-debug      Emit full debug info for all types used by the program
       -fwhole-program-vtables Enables whole-program vtable optimization. Requires -flto
+      -gcodeview-ghash        Emit type record hashes in a .debug$H section
       -gcodeview              Generate CodeView debug information
+      -gline-directives-only  Emit debug line info directives only
       -gline-tables-only      Emit debug line number tables only
       -miamcu                 Use Intel MCU ABI
       -mllvm <value>          Additional arguments to forward to LLVM's option processing

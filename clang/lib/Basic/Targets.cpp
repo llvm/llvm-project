@@ -571,7 +571,7 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
         !Triple.isOSBinFormatWasm())
       return nullptr;
     if (Triple.getOS() != llvm::Triple::UnknownOS &&
-        Triple.getOS() != llvm::Triple::COWS)
+        Triple.getOS() != llvm::Triple::WASI)
       return nullptr;
     return new WebAssemblyOSTargetInfo<WebAssembly32TargetInfo>(Triple, Opts);
   case llvm::Triple::wasm64:
@@ -580,7 +580,7 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
         !Triple.isOSBinFormatWasm())
       return nullptr;
     if (Triple.getOS() != llvm::Triple::UnknownOS &&
-        Triple.getOS() != llvm::Triple::COWS)
+        Triple.getOS() != llvm::Triple::WASI)
       return nullptr;
     return new WebAssemblyOSTargetInfo<WebAssembly64TargetInfo>(Triple, Opts);
 

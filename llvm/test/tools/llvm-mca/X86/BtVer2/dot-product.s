@@ -7,12 +7,12 @@ vhaddps  %xmm3, %xmm3, %xmm4
 
 # CHECK:      Iterations:        300
 # CHECK-NEXT: Instructions:      900
-# CHECK-NEXT: Total Cycles:      610
+# CHECK-NEXT: Total Cycles:      611
 # CHECK-NEXT: Total uOps:        900
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.48
-# CHECK-NEXT: IPC:               1.48
+# CHECK-NEXT: uOps Per Cycle:    1.47
+# CHECK-NEXT: IPC:               1.47
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
@@ -25,8 +25,8 @@ vhaddps  %xmm3, %xmm3, %xmm4
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      2     1.00                        vmulps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  1      3     1.00                        vhaddps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT:  1      3     1.00                        vhaddps	%xmm3, %xmm3, %xmm4
+# CHECK-NEXT:  1      4     1.00                        vhaddps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT:  1      4     1.00                        vhaddps	%xmm3, %xmm3, %xmm4
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0
@@ -59,14 +59,14 @@ vhaddps  %xmm3, %xmm3, %xmm4
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DeeER.    .    .   vmulps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [0,1]     D==eeeER  .    .   vhaddps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [0,2]     .D====eeeER    .   vhaddps	%xmm3, %xmm3, %xmm4
-# CHECK-NEXT: [1,0]     .DeeE-----R    .   vmulps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [1,1]     . D=eeeE---R   .   vhaddps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [1,2]     . D====eeeER   .   vhaddps	%xmm3, %xmm3, %xmm4
-# CHECK-NEXT: [2,0]     .  DeeE-----R  .   vmulps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [2,1]     .  D====eeeER  .   vhaddps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [2,2]     .   D======eeeER   vhaddps	%xmm3, %xmm3, %xmm4
+# CHECK-NEXT: [0,1]     D==eeeeER .    .   vhaddps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: [0,2]     .D=====eeeeER  .   vhaddps	%xmm3, %xmm3, %xmm4
+# CHECK-NEXT: [1,0]     .DeeE-------R  .   vmulps	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: [1,1]     . D=eeeeE----R .   vhaddps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: [1,2]     . D=====eeeeER .   vhaddps	%xmm3, %xmm3, %xmm4
+# CHECK-NEXT: [2,0]     .  DeeE-------R.   vmulps	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: [2,1]     .  D==eeeeE---R.   vhaddps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: [2,2]     .   D=====eeeeER   vhaddps	%xmm3, %xmm3, %xmm4
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -75,6 +75,6 @@ vhaddps  %xmm3, %xmm3, %xmm4
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     1.0    1.0    3.3       vmulps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: 1.     3     3.3    0.7    1.0       vhaddps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: 2.     3     5.7    0.0    0.0       vhaddps	%xmm3, %xmm3, %xmm4
+# CHECK-NEXT: 0.     3     1.0    1.0    4.7       vmulps	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: 1.     3     2.7    0.0    2.3       vhaddps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: 2.     3     6.0    0.0    0.0       vhaddps	%xmm3, %xmm3, %xmm4

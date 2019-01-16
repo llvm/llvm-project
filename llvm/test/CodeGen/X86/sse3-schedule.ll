@@ -356,14 +356,14 @@ define <2 x double> @test_haddpd(<2 x double> %a0, <2 x double> %a1, <2 x double
 ;
 ; BTVER2-SSE-LABEL: test_haddpd:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    haddpd %xmm1, %xmm0 # sched: [3:1.00]
-; BTVER2-SSE-NEXT:    haddpd (%rdi), %xmm0 # sched: [8:1.00]
+; BTVER2-SSE-NEXT:    haddpd %xmm1, %xmm0 # sched: [4:1.00]
+; BTVER2-SSE-NEXT:    haddpd (%rdi), %xmm0 # sched: [9:1.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_haddpd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vhaddpd (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vhaddpd %xmm1, %xmm0, %xmm0 # sched: [4:1.00]
+; BTVER2-NEXT:    vhaddpd (%rdi), %xmm0, %xmm0 # sched: [9:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_haddpd:
@@ -477,14 +477,14 @@ define <4 x float> @test_haddps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%
 ;
 ; BTVER2-SSE-LABEL: test_haddps:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    haddps %xmm1, %xmm0 # sched: [3:1.00]
-; BTVER2-SSE-NEXT:    haddps (%rdi), %xmm0 # sched: [8:1.00]
+; BTVER2-SSE-NEXT:    haddps %xmm1, %xmm0 # sched: [4:1.00]
+; BTVER2-SSE-NEXT:    haddps (%rdi), %xmm0 # sched: [9:1.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_haddps:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vhaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vhaddps (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vhaddps %xmm1, %xmm0, %xmm0 # sched: [4:1.00]
+; BTVER2-NEXT:    vhaddps (%rdi), %xmm0, %xmm0 # sched: [9:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_haddps:
@@ -598,14 +598,14 @@ define <2 x double> @test_hsubpd(<2 x double> %a0, <2 x double> %a1, <2 x double
 ;
 ; BTVER2-SSE-LABEL: test_hsubpd:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    hsubpd %xmm1, %xmm0 # sched: [3:1.00]
-; BTVER2-SSE-NEXT:    hsubpd (%rdi), %xmm0 # sched: [8:1.00]
+; BTVER2-SSE-NEXT:    hsubpd %xmm1, %xmm0 # sched: [4:1.00]
+; BTVER2-SSE-NEXT:    hsubpd (%rdi), %xmm0 # sched: [9:1.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_hsubpd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vhsubpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vhsubpd (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vhsubpd %xmm1, %xmm0, %xmm0 # sched: [4:1.00]
+; BTVER2-NEXT:    vhsubpd (%rdi), %xmm0, %xmm0 # sched: [9:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_hsubpd:
@@ -719,14 +719,14 @@ define <4 x float> @test_hsubps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%
 ;
 ; BTVER2-SSE-LABEL: test_hsubps:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    hsubps %xmm1, %xmm0 # sched: [3:1.00]
-; BTVER2-SSE-NEXT:    hsubps (%rdi), %xmm0 # sched: [8:1.00]
+; BTVER2-SSE-NEXT:    hsubps %xmm1, %xmm0 # sched: [4:1.00]
+; BTVER2-SSE-NEXT:    hsubps (%rdi), %xmm0 # sched: [9:1.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_hsubps:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vhsubps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vhsubps (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vhsubps %xmm1, %xmm0, %xmm0 # sched: [4:1.00]
+; BTVER2-NEXT:    vhsubps (%rdi), %xmm0, %xmm0 # sched: [9:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_hsubps:

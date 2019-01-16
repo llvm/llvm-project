@@ -58,6 +58,19 @@ std::pair<Function *, Function *> createSanitizerCtorAndInitFunctions(
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
     StringRef VersionCheckName = StringRef());
 
+/// Creates sanitizer constructor function lazily. If a constructor and init
+/// function already exist, this function returns it. Otherwise it calls \c
+/// createSanitizerCtorAndInitFunctions. The FunctionsCreatedCallback is invoked
+/// in that case, passing the new Ctor and Init function.
+///
+/// \return Returns pair of pointers to constructor, and init functions
+/// respectively.
+std::pair<Function *, Function *> getOrCreateSanitizerCtorAndInitFunctions(
+    Module &M, StringRef CtorName, StringRef InitName,
+    ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
+    function_ref<void(Function *, Function *)> FunctionsCreatedCallback,
+    StringRef VersionCheckName = StringRef());
+
 // Creates and returns a sanitizer init function without argument if it doesn't
 // exist, and adds it to the global constructors list. Otherwise it returns the
 // existing function.

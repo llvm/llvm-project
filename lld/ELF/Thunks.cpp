@@ -722,7 +722,7 @@ Thunk::~Thunk() = default;
 static Thunk *addThunkAArch64(RelType Type, Symbol &S) {
   if (Type != R_AARCH64_CALL26 && Type != R_AARCH64_JUMP26)
     fatal("unrecognized relocation type");
-  if (Config->Pic)
+  if (Config->PicThunk)
     return make<AArch64ADRPThunk>(S);
   return make<AArch64ABSLongThunk>(S);
 }
@@ -739,7 +739,7 @@ static Thunk *addThunkPreArmv7(RelType Reloc, Symbol &S) {
   case R_ARM_JUMP24:
   case R_ARM_CALL:
   case R_ARM_THM_CALL:
-    if (Config->Pic)
+    if (Config->PicThunk)
       return make<ARMV5PILongThunk>(S);
     return make<ARMV5ABSLongThunk>(S);
   }
@@ -794,13 +794,13 @@ static Thunk *addThunkArm(RelType Reloc, Symbol &S) {
   case R_ARM_PLT32:
   case R_ARM_JUMP24:
   case R_ARM_CALL:
-    if (Config->Pic)
+    if (Config->PicThunk)
       return make<ARMV7PILongThunk>(S);
     return make<ARMV7ABSLongThunk>(S);
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
   case R_ARM_THM_CALL:
-    if (Config->Pic)
+    if (Config->PicThunk)
       return make<ThumbV7PILongThunk>(S);
     return make<ThumbV7ABSLongThunk>(S);
   }
@@ -820,7 +820,7 @@ static Thunk *addThunkPPC64(RelType Type, Symbol &S) {
   if (S.isInPlt())
     return make<PPC64PltCallStub>(S);
 
-  if (Config->Pic)
+  if (Config->PicThunk)
     return make<PPC64PILongBranchThunk>(S);
 
   return make<PPC64PDLongBranchThunk>(S);

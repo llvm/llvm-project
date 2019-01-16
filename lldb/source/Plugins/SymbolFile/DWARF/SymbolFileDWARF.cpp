@@ -158,64 +158,8 @@ static const SymbolFileDWARFPropertiesSP &GetGlobalPluginProperties() {
 
 } // anonymous namespace end
 
-static const char *removeHostnameFromPathname(const char *path_from_dwarf) {
-  if (!path_from_dwarf || !path_from_dwarf[0]) {
-    return path_from_dwarf;
-  }
-
-  const char *colon_pos = strchr(path_from_dwarf, ':');
-  if (nullptr == colon_pos) {
-    return path_from_dwarf;
-  }
-
-  const char *slash_pos = strchr(path_from_dwarf, '/');
-  if (slash_pos && (slash_pos < colon_pos)) {
-    return path_from_dwarf;
-  }
-
-  // check whether we have a windows path, and so the first character is a
-  // drive-letter not a hostname.
-  if (colon_pos == path_from_dwarf + 1 && isalpha(*path_from_dwarf) &&
-      strlen(path_from_dwarf) > 2 && '\\' == path_from_dwarf[2]) {
-    return path_from_dwarf;
-  }
-
-  return colon_pos + 1;
-}
-
-static FileSpec resolveCompDir(const char *path_from_dwarf) {
-  if (!path_from_dwarf)
-    return FileSpec();
-
-  // DWARF2/3 suggests the form hostname:pathname for compilation directory.
-  // Remove the host part if present.
-  const char *local_path = removeHostnameFromPathname(path_from_dwarf);
-  if (!local_path)
-    return FileSpec();
-
-  bool is_symlink = false;
-  // Always normalize our compile unit directory to get rid of redundant
-  // slashes and other path anomalies before we use it for path prepending
-  FileSpec local_spec(local_path);
-  const auto &file_specs = GetGlobalPluginProperties()->GetSymLinkPaths();
-  for (size_t i = 0; i < file_specs.GetSize() && !is_symlink; ++i)
-    is_symlink = FileSpec::Equal(file_specs.GetFileSpecAtIndex(i),
-                                 local_spec, true);
-
-  if (!is_symlink)
-    return local_spec;
-
-  namespace fs = llvm::sys::fs;
-  if (fs::get_file_type(local_spec.GetPath(), false) !=
-      fs::file_type::symlink_file)
-    return local_spec;
-
-  FileSpec resolved_symlink;
-  const auto error = FileSystem::Instance().Readlink(local_spec, resolved_symlink);
-  if (error.Success())
-    return resolved_symlink;
-
-  return local_spec;
+const FileSpecList &SymbolFileDWARF::GetSymlinkPaths() {
+  return GetGlobalPluginProperties()->GetSymLinkPaths();
 }
 
 DWARFUnit *SymbolFileDWARF::GetBaseCompileUnit() {
@@ -810,17 +754,12 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu,
         if (module_sp) {
           const DWARFDIE cu_die = dwarf_cu->DIE();
           if (cu_die) {
-            FileSpec cu_file_spec(cu_die.GetName());
+            FileSpec cu_file_spec(cu_die.GetName(), dwarf_cu->GetPathStyle());
             if (cu_file_spec) {
               // If we have a full path to the compile unit, we don't need to
               // resolve the file.  This can be expensive e.g. when the source
-              // files are
-              // NFS mounted.
-              if (cu_file_spec.IsRelative()) {
-                const char *cu_comp_dir{
-                    cu_die.GetAttributeValueAsString(DW_AT_comp_dir, nullptr)};
-                cu_file_spec.PrependPathComponent(resolveCompDir(cu_comp_dir));
-              }
+              // files are NFS mounted.
+              cu_file_spec.MakeAbsolute(dwarf_cu->GetCompilationDirectory());
 
               std::string remapped_file;
               if (module_sp->RemapSourceFile(cu_file_spec.GetPath(),
@@ -947,8 +886,6 @@ bool SymbolFileDWARF::ParseSupportFiles(CompileUnit &comp_unit,
     const DWARFBaseDIE cu_die = dwarf_cu->GetUnitDIEOnly();
 
     if (cu_die) {
-      FileSpec cu_comp_dir = resolveCompDir(
-          cu_die.GetAttributeValueAsString(DW_AT_comp_dir, nullptr));
       const dw_offset_t stmt_list = cu_die.GetAttributeValueAsUnsigned(
           DW_AT_stmt_list, DW_INVALID_OFFSET);
       if (stmt_list != DW_INVALID_OFFSET) {
@@ -956,8 +893,8 @@ bool SymbolFileDWARF::ParseSupportFiles(CompileUnit &comp_unit,
         // supposed to be the compile unit itself.
         support_files.Append(comp_unit);
         return DWARFDebugLine::ParseSupportFiles(
-            comp_unit.GetModule(), get_debug_line_data(), cu_comp_dir,
-            stmt_list, support_files, dwarf_cu);
+            comp_unit.GetModule(), get_debug_line_data(), stmt_list,
+            support_files, dwarf_cu);
       }
     }
   }

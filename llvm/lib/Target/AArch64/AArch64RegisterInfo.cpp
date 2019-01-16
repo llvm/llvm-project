@@ -466,6 +466,13 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   // Modify MI as necessary to handle as much of 'Offset' as possible
   Offset = TFI->resolveFrameIndexReference(MF, FrameIndex, FrameReg);
+
+  if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE) {
+    MachineOperand &FI = MI.getOperand(FIOperandNum);
+    FI.ChangeToImmediate(Offset);
+    return;
+  }
+
   if (rewriteAArch64FrameIndex(MI, FIOperandNum, FrameReg, Offset, TII))
     return;
 
