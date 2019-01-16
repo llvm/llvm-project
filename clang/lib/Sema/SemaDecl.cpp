@@ -9822,7 +9822,8 @@ static bool CheckMultiVersionAdditionalDecl(
     return true;
   }
 
-  if (CheckMultiVersionAdditionalRules(S, OldFD, NewFD, false, NewMVType)) {
+  if (CheckMultiVersionAdditionalRules(S, OldFD, NewFD,
+                                       !OldFD->isMultiVersion(), NewMVType)) {
     NewFD->setInvalidDecl();
     return true;
   }

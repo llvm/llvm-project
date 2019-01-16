@@ -84,10 +84,6 @@
 // PPC-SAME: pwr7, power8, pwr8, power9, pwr9, powerpc, ppc, powerpc64, ppc64,
 // PPC-SAME: powerpc64le, ppc64le
 
-// RUN: not %clang_cc1 -triple nios2--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix NIOS
-// NIOS: error: unknown target CPU 'not-a-cpu'
-// NIOS: note: valid target CPU values are: nios2r1, nios2r2
-
 // RUN: not %clang_cc1 -triple mips--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix MIPS
 // MIPS: error: unknown target CPU 'not-a-cpu'
 // MIPS: note: valid target CPU values are: mips1, mips2, mips3, mips4, mips5,

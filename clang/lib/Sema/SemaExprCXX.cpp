@@ -1511,11 +1511,19 @@ namespace {
         Destroying = true;
         ++NumBaseParams;
       }
-      if (FD->getNumParams() == NumBaseParams + 2)
-        HasAlignValT = HasSizeT = true;
-      else if (FD->getNumParams() == NumBaseParams + 1) {
-        HasSizeT = FD->getParamDecl(NumBaseParams)->getType()->isIntegerType();
-        HasAlignValT = !HasSizeT;
+
+      if (NumBaseParams < FD->getNumParams() &&
+          S.Context.hasSameUnqualifiedType(
+              FD->getParamDecl(NumBaseParams)->getType(),
+              S.Context.getSizeType())) {
+        ++NumBaseParams;
+        HasSizeT = true;
+      }
+
+      if (NumBaseParams < FD->getNumParams() &&
+          FD->getParamDecl(NumBaseParams)->getType()->isAlignValT()) {
+        ++NumBaseParams;
+        HasAlignValT = true;
       }
 
       // In CUDA, determine how much we'd like / dislike to call this.
