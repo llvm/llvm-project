@@ -255,6 +255,9 @@ defm use_android_relr_tags: B<"use-android-relr-tags",
     "Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*",
     "Use SHT_RELR / DT_RELR* tags (default)">;
 
+def pic_veneer: F<"pic-veneer">,
+  HelpText<"Always generate position independent thunks (veneers)">;
+
 defm pie: B<"pie",
     "Create a position independent executable",
     "Do not create a position independent executable (default)">;
