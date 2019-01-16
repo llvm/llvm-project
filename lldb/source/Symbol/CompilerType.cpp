@@ -513,7 +513,7 @@ CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
 
 llvm::Optional<uint64_t>
 CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
-  if (auto bit_size = GetBitSize(exe_scope))
+  if (llvm::Optional<uint64_t> bit_size = GetBitSize(exe_scope))
     return (*bit_size + 7) / 8;
   return {};
 }
@@ -819,7 +819,7 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
     if (encoding == lldb::eEncodingInvalid || count != 1)
       return false;
 
-    auto byte_size = GetByteSize(nullptr);
+    llvm::Optional<uint64_t> byte_size = GetByteSize(nullptr);
     if (!byte_size)
       return false;
     lldb::offset_t offset = data_byte_offset;
@@ -917,7 +917,7 @@ bool CompilerType::SetValueFromScalar(const Scalar &value, Stream &strm) {
     if (encoding == lldb::eEncodingInvalid || count != 1)
       return false;
 
-    auto bit_width = GetBitSize(nullptr);
+    llvm::Optional<uint64_t> bit_width = GetBitSize(nullptr);
     if (!bit_width)
       return false;
 

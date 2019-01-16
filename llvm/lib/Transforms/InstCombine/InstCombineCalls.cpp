@@ -136,6 +136,14 @@ Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   if (Size > 8 || (Size&(Size-1)))
     return nullptr;  // If not 1/2/4/8 bytes, exit.
 
+  // If it is an atomic and alignment is less than the size then we will
+  // introduce the unaligned memory access which will be later transformed
+  // into libcall in CodeGen. This is not evident performance gain so disable
+  // it now.
+  if (isa<AtomicMemTransferInst>(MI))
+    if (CopyDstAlign < Size || CopySrcAlign < Size)
+      return nullptr;
+
   // Use an integer load+store unless we can find something better.
   unsigned SrcAddrSp =
     cast<PointerType>(MI->getArgOperand(1)->getType())->getAddressSpace();
@@ -220,6 +228,18 @@ Instruction *InstCombiner::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   Alignment = MI->getDestAlignment();
   assert(Len && "0-sized memory setting should be removed already.");
 
+  // Alignment 0 is identity for alignment 1 for memset, but not store.
+  if (Alignment == 0)
+    Alignment = 1;
+
+  // If it is an atomic and alignment is less than the size then we will
+  // introduce the unaligned memory access which will be later transformed
+  // into libcall in CodeGen. This is not evident performance gain so disable
+  // it now.
+  if (isa<AtomicMemSetInst>(MI))
+    if (Alignment < Len)
+      return nullptr;
+
   // memset(s,c,n) -> store s, c (for n=1,2,4,8)
   if (Len <= 8 && isPowerOf2_32((uint32_t)Len)) {
     Type *ITy = IntegerType::get(MI->getContext(), Len*8);  // n=1 -> i8.
@@ -228,9 +248,6 @@ Instruction *InstCombiner::SimplifyAnyMemSet(AnyMemSetInst *MI) {
     unsigned DstAddrSp = cast<PointerType>(Dest->getType())->getAddressSpace();
     Type *NewDstPtrTy = PointerType::get(ITy, DstAddrSp);
     Dest = Builder.CreateBitCast(Dest, NewDstPtrTy);
-
-    // Alignment 0 is identity for alignment 1 for memset, but not store.
-    if (Alignment == 0) Alignment = 1;
 
     // Extract the fill value and store.
     uint64_t Fill = FillC->getZExtValue()*0x0101010101010101ULL;

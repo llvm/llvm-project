@@ -2035,6 +2035,7 @@ def mfloat_abi_EQ : Joined<["-"], "mfloat-abi=">, Group<m_Group>, Values<"soft,s
 def mfpmath_EQ : Joined<["-"], "mfpmath=">, Group<m_Group>;
 def mfpu_EQ : Joined<["-"], "mfpu=">, Group<m_Group>;
 def mhwdiv_EQ : Joined<["-"], "mhwdiv=">, Group<m_Group>;
+def mhwmult_EQ : Joined<["-"], "mhwmult=">, Group<m_Group>;
 def mglobal_merge : Flag<["-"], "mglobal-merge">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Enable merging of globals">;
 def mhard_float : Flag<["-"], "mhard-float">, Group<m_Group>;

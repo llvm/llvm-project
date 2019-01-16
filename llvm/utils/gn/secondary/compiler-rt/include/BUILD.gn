@@ -1,0 +1,26 @@
+import("//clang/resource_dir.gni")
+
+copy("include") {
+  sources = [
+    "sanitizer/allocator_interface.h",
+    "sanitizer/asan_interface.h",
+    "sanitizer/common_interface_defs.h",
+    "sanitizer/coverage_interface.h",
+    "sanitizer/dfsan_interface.h",
+    "sanitizer/esan_interface.h",
+    "sanitizer/hwasan_interface.h",
+    "sanitizer/linux_syscall_hooks.h",
+    "sanitizer/lsan_interface.h",
+    "sanitizer/msan_interface.h",
+    "sanitizer/netbsd_syscall_hooks.h",
+    "sanitizer/scudo_interface.h",
+    "sanitizer/tsan_interface.h",
+    "sanitizer/tsan_interface_atomic.h",
+    "xray/xray_interface.h",
+    "xray/xray_log_interface.h",
+    "xray/xray_records.h",
+  ]
+  outputs = [
+    "$clang_resource_dir/include/{{source_target_relative}}",
+  ]
+}

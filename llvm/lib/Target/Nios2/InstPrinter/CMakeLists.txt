@@ -1,1 +1,0 @@
-add_llvm_library(LLVMNios2AsmPrinter Nios2InstPrinter.cpp)

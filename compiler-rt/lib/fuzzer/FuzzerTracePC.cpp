@@ -58,59 +58,6 @@ size_t TracePC::GetTotalPCCoverage() {
   return Res;
 }
 
-template<class CallBack>
-void TracePC::IterateInline8bitCounters(CallBack CB) const {
-  if (NumInline8bitCounters && NumInline8bitCounters == NumPCsInPCTables) {
-    size_t CounterIdx = 0;
-    for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
-      uint8_t *Beg = ModuleCounters[i].Start;
-      size_t Size = ModuleCounters[i].Stop - Beg;
-      assert(Size == (size_t)(ModulePCTable[i].Stop - ModulePCTable[i].Start));
-      for (size_t j = 0; j < Size; j++, CounterIdx++)
-        CB(i, j, CounterIdx);
-    }
-  }
-}
-
-// Initializes unstable counters by copying Inline8bitCounters to unstable
-// counters.
-void TracePC::InitializeUnstableCounters() {
-  IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
-    UnstableCounters[UnstableIdx].Counter = ModuleCounters[i].Start[j];
-  });
-}
-
-// Compares the current counters with counters from previous runs
-// and records differences as unstable edges.
-bool TracePC::UpdateUnstableCounters(int UnstableMode) {
-  bool Updated = false;
-  IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
-    if (ModuleCounters[i].Start[j] != UnstableCounters[UnstableIdx].Counter) {
-      Updated = true;
-      UnstableCounters[UnstableIdx].IsUnstable = true;
-      if (UnstableMode == ZeroUnstable)
-        UnstableCounters[UnstableIdx].Counter = 0;
-      else if (UnstableMode == MinUnstable)
-        UnstableCounters[UnstableIdx].Counter = std::min(
-            ModuleCounters[i].Start[j], UnstableCounters[UnstableIdx].Counter);
-    }
-  });
-  return Updated;
-}
-
-// Updates and applies unstable counters to ModuleCounters in single iteration
-void TracePC::UpdateAndApplyUnstableCounters(int UnstableMode) {
-  IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
-    if (ModuleCounters[i].Start[j] != UnstableCounters[UnstableIdx].Counter) {
-      UnstableCounters[UnstableIdx].IsUnstable = true;
-      if (UnstableMode == ZeroUnstable)
-        ModuleCounters[i].Start[j] = 0;
-      else if (UnstableMode == MinUnstable)
-        ModuleCounters[i].Start[j] = std::min(
-            ModuleCounters[i].Start[j], UnstableCounters[UnstableIdx].Counter);
-    }
-  });
-}
 
 void TracePC::HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop) {
   if (Start == Stop) return;
@@ -245,10 +192,15 @@ void TracePC::UpdateObservedPCs() {
 
   if (NumPCsInPCTables) {
     if (NumInline8bitCounters == NumPCsInPCTables) {
-      IterateInline8bitCounters([&](int i, int j, int CounterIdx) {
-        if (ModuleCounters[i].Start[j])
-          Observe(ModulePCTable[i].Start[j]);
-      });
+      for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
+        uint8_t *Beg = ModuleCounters[i].Start;
+        size_t Size = ModuleCounters[i].Stop - Beg;
+        assert(Size ==
+               (size_t)(ModulePCTable[i].Stop - ModulePCTable[i].Start));
+        for (size_t j = 0; j < Size; j++)
+          if (Beg[j])
+            Observe(ModulePCTable[i].Start[j]);
+      }
     } else if (NumGuards == NumPCsInPCTables) {
       size_t GuardIdx = 1;
       for (size_t i = 0; i < NumModules; i++) {
@@ -378,27 +330,6 @@ void TracePC::DumpCoverage() {
       PCsCopy[i] = PCs()[i] ? GetPreviousInstructionPc(PCs()[i]) : 0;
     EF->__sanitizer_dump_coverage(PCsCopy.data(), PCsCopy.size());
   }
-}
-
-void TracePC::PrintUnstableStats() {
-  size_t count = 0;
-  Printf("UNSTABLE_FUNCTIONS:\n");
-  IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
-    const PCTableEntry &TE = ModulePCTable[i].Start[j];
-    if (UnstableCounters[UnstableIdx].IsUnstable) {
-      count++;
-      if (ObservedFuncs.count(TE.PC)) {
-        auto VisualizePC = GetNextInstructionPc(TE.PC);
-        std::string FunctionStr = DescribePC("%F", VisualizePC);
-        if (FunctionStr.find("in ") == 0)
-          FunctionStr = FunctionStr.substr(3);
-        Printf("%s\n", FunctionStr.c_str());
-      }
-    }
-  });
-
-  Printf("stat::stability_rate: %.2f\n",
-         100 - static_cast<float>(count * 100) / NumInline8bitCounters);
 }
 
 // Value profile.

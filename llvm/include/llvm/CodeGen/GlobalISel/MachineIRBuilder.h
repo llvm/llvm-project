@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_MACHINEIRBUILDER_H
 #define LLVM_CODEGEN_GLOBALISEL_MACHINEIRBUILDER_H
 
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/Types.h"
 
 #include "llvm/CodeGen/LowLevelType.h"
@@ -52,6 +53,8 @@ struct MachineIRBuilderState {
   /// @}
 
   GISelChangeObserver *Observer;
+
+  GISelCSEInfo *CSEInfo;
 };
 
 class DstOp {
@@ -81,8 +84,6 @@ public:
     }
   }
 
-  DstType getType() const { return Ty; }
-
   LLT getLLTTy(const MachineRegisterInfo &MRI) const {
     switch (Ty) {
     case DstType::Ty_RC:
@@ -93,6 +94,20 @@ public:
       return MRI.getType(Reg);
     }
     llvm_unreachable("Unrecognised DstOp::DstType enum");
+  }
+
+  unsigned getReg() const {
+    assert(Ty == DstType::Ty_Reg && "Not a register");
+    return Reg;
+  }
+
+  const TargetRegisterClass *getRegClass() const {
+    switch (Ty) {
+    case DstType::Ty_RC:
+      return RC;
+    default:
+      llvm_unreachable("Not a RC Operand");
+    }
   }
 
   DstType getDstOpKind() const { return Ty; }
@@ -220,15 +235,24 @@ public:
 
   /// Getter for MRI
   MachineRegisterInfo *getMRI() { return State.MRI; }
+  const MachineRegisterInfo *getMRI() const { return State.MRI; }
 
   /// Getter for the State
   MachineIRBuilderState &getState() { return State; }
 
   /// Getter for the basic block we currently build.
-  MachineBasicBlock &getMBB() {
+  const MachineBasicBlock &getMBB() const {
     assert(State.MBB && "MachineBasicBlock is not set");
     return *State.MBB;
   }
+
+  MachineBasicBlock &getMBB() {
+    return const_cast<MachineBasicBlock &>(
+        const_cast<const MachineIRBuilder *>(this)->getMBB());
+  }
+
+  GISelCSEInfo *getCSEInfo() { return State.CSEInfo; }
+  const GISelCSEInfo *getCSEInfo() const { return State.CSEInfo; }
 
   /// Current insertion point for new instructions.
   MachineBasicBlock::iterator getInsertPt() { return State.II; }
@@ -239,10 +263,12 @@ public:
   void setInsertPt(MachineBasicBlock &MBB, MachineBasicBlock::iterator II);
   /// @}
 
+  void setCSEInfo(GISelCSEInfo *Info);
+
   /// \name Setters for the insertion point.
   /// @{
   /// Set the MachineFunction where to build instructions.
-  void setMF(MachineFunction &);
+  void setMF(MachineFunction &MF);
 
   /// Set the insertion point to the  end of \p MBB.
   /// \pre \p MBB must be contained by getMF().
@@ -534,7 +560,8 @@ public:
   ///      type.
   ///
   /// \return The newly created instruction.
-  MachineInstrBuilder buildConstant(const DstOp &Res, const ConstantInt &Val);
+  virtual MachineInstrBuilder buildConstant(const DstOp &Res,
+                                            const ConstantInt &Val);
 
   /// Build and insert \p Res = G_CONSTANT \p Val
   ///
@@ -555,7 +582,8 @@ public:
   /// \pre \p Res must be a generic virtual register with scalar type.
   ///
   /// \return The newly created instruction.
-  MachineInstrBuilder buildFConstant(const DstOp &Res, const ConstantFP &Val);
+  virtual MachineInstrBuilder buildFConstant(const DstOp &Res,
+                                             const ConstantFP &Val);
 
   MachineInstrBuilder buildFConstant(const DstOp &Res, double Val);
 

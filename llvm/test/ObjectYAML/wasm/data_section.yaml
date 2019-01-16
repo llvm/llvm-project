@@ -24,7 +24,7 @@ Sections:
         Addend:          -6
   - Type:            CUSTOM
     Name:            linking
-    Version:         1
+    Version:         2
     SymbolTable:
       - Index:           0
         Kind:            DATA

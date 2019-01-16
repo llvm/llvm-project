@@ -617,10 +617,6 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.PrintFinalStats = Flags.print_final_stats;
   Options.PrintCorpusStats = Flags.print_corpus_stats;
   Options.PrintCoverage = Flags.print_coverage;
-  Options.PrintUnstableStats = Flags.print_unstable_stats;
-  if (Flags.handle_unstable == TracePC::MinUnstable ||
-      Flags.handle_unstable == TracePC::ZeroUnstable)
-    Options.HandleUnstable = Flags.handle_unstable;
   Options.DumpCoverage = Flags.dump_coverage;
   if (Flags.exit_on_src_pos)
     Options.ExitOnSrcPos = Flags.exit_on_src_pos;

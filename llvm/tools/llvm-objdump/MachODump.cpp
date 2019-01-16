@@ -1610,8 +1610,19 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   if (Disassemble || IndirectSymbols || !FilterSections.empty() || UnwindInfo)
     if (Error Err = MachOOF->checkSymbolTable())
       report_error(ArchiveName, FileName, std::move(Err), ArchitectureName);
-
-  if (Disassemble) {
+  
+  if (DisassembleAll) {
+    for (const SectionRef &Section : MachOOF->sections()) {
+      StringRef SectName;
+      Section.getName(SectName);
+      if (SectName.equals("__text")) {
+        DataRefImpl Ref = Section.getRawDataRefImpl();
+        StringRef SegName = MachOOF->getSectionFinalSegmentName(Ref);
+        DisassembleMachO(FileName, MachOOF, SegName, SectName);
+      }
+    }
+  }
+  else if (Disassemble) {
     if (MachOOF->getHeader().filetype == MachO::MH_KEXT_BUNDLE &&
         MachOOF->getHeader().cputype == MachO::CPU_TYPE_ARM64)
       DisassembleMachO(FileName, MachOOF, "__TEXT_EXEC", "__text");

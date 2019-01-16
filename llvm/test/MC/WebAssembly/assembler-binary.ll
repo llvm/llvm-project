@@ -77,7 +77,7 @@ entry:
 ; CHECK-NEXT:         Body:            1080808080000B
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     Version:         1
+; CHECK-NEXT:     Version:         2
 ; CHECK-NEXT:     SymbolTable:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            FUNCTION

@@ -756,8 +756,9 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
-  auto item_type_size = pointee_or_element_compiler_type.GetByteSize(
-      exe_ctx.GetBestExecutionContextScope());
+  llvm::Optional<uint64_t> item_type_size =
+      pointee_or_element_compiler_type.GetByteSize(
+          exe_ctx.GetBestExecutionContextScope());
   if (!item_type_size)
     return 0;
   const uint64_t bytes = item_count * *item_type_size;
@@ -1823,7 +1824,8 @@ ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
     return {};
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  auto size = type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  llvm::Optional<uint64_t> size =
+      type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!size)
     return {};
   ValueObjectChild *synthetic_child =
@@ -1864,7 +1866,8 @@ ValueObjectSP ValueObject::GetSyntheticBase(uint32_t offset,
   const bool is_base_class = true;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  auto size = type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  llvm::Optional<uint64_t> size =
+      type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!size)
     return {};
   ValueObjectChild *synthetic_child =

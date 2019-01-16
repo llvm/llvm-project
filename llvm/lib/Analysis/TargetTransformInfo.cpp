@@ -625,6 +625,12 @@ bool TargetTransformInfo::areInlineCompatible(const Function *Caller,
   return TTIImpl->areInlineCompatible(Caller, Callee);
 }
 
+bool TargetTransformInfo::areFunctionArgsABICompatible(
+    const Function *Caller, const Function *Callee,
+    SmallPtrSetImpl<Argument *> &Args) const {
+  return TTIImpl->areFunctionArgsABICompatible(Caller, Callee, Args);
+}
+
 bool TargetTransformInfo::isIndexedLoadLegal(MemIndexedMode Mode,
                                              Type *Ty) const {
   return TTIImpl->isIndexedLoadLegal(Mode, Ty);

@@ -255,7 +255,7 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
               ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
              {"cw", ast_ctx->GetBasicType(lldb::eBasicTypeBool)},
              {"payload", pair_type}});
-        auto size = tree_node_type.GetByteSize(nullptr);
+        llvm::Optional<uint64_t> size = tree_node_type.GetByteSize(nullptr);
         if (!size)
           return false;
         DataBufferSP buffer_sp(new DataBufferHeap(*size, 0));

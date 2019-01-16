@@ -21,7 +21,7 @@ extern "C" void test_freefunc(int p1) {
 // CHECK: invoke void @might_crash()
 
 // CHECK-LABEL: define internal i32 @"?filt$0@0@test_freefunc@@"(i8* %exception_pointers, i8* %frame_pointer)
-// CHECK: %[[fp:[^ ]*]] = call i8* @llvm.x86.seh.recoverfp(i8* bitcast (void (i32)* @test_freefunc to i8*), i8* %frame_pointer)
+// CHECK: %[[fp:[^ ]*]] = call i8* @llvm.eh.recoverfp(i8* bitcast (void (i32)* @test_freefunc to i8*), i8* %frame_pointer)
 // CHECK: %[[p1_i8:[^ ]*]] = call i8* @llvm.localrecover(i8* bitcast (void (i32)* @test_freefunc to i8*), i8* %[[fp]], i32 0)
 // CHECK: %[[p1_ptr:[^ ]*]] = bitcast i8* %[[p1_i8]] to i32*
 // CHECK: %[[l1_i8:[^ ]*]] = call i8* @llvm.localrecover(i8* bitcast (void (i32)* @test_freefunc to i8*), i8* %[[fp]], i32 1)
@@ -51,7 +51,7 @@ void S::test_method() {
 // CHECK: invoke void @might_crash()
 
 // CHECK-LABEL: define internal i32 @"?filt$0@0@test_method@S@@"(i8* %exception_pointers, i8* %frame_pointer)
-// CHECK: %[[fp:[^ ]*]] = call i8* @llvm.x86.seh.recoverfp(i8* bitcast (void (%struct.S*)* @"?test_method@S@@QEAAXXZ" to i8*), i8* %frame_pointer)
+// CHECK: %[[fp:[^ ]*]] = call i8* @llvm.eh.recoverfp(i8* bitcast (void (%struct.S*)* @"?test_method@S@@QEAAXXZ" to i8*), i8* %frame_pointer)
 // CHECK: %[[l1_i8:[^ ]*]] = call i8* @llvm.localrecover(i8* bitcast (void (%struct.S*)* @"?test_method@S@@QEAAXXZ" to i8*), i8* %[[fp]], i32 0)
 // CHECK: %[[l1_ptr:[^ ]*]] = bitcast i8* %[[l1_i8]] to i32*
 // CHECK: %[[l1:[^ ]*]] = load i32, i32* %[[l1_ptr]]
@@ -76,7 +76,7 @@ void test_lambda() {
 // CHECK: invoke void @might_crash()
 
 // CHECK-LABEL: define internal i32 @"?filt$0@0@?R<lambda_0>@?0??test_lambda@@YAXXZ@"(i8* %exception_pointers, i8* %frame_pointer)
-// CHECK: %[[fp:[^ ]*]] = call i8* @llvm.x86.seh.recoverfp(i8* bitcast (void (%class.anon*)* @"??R<lambda_0>@?0??test_lambda@@YAXXZ@QEBA@XZ" to i8*), i8* %frame_pointer)
+// CHECK: %[[fp:[^ ]*]] = call i8* @llvm.eh.recoverfp(i8* bitcast (void (%class.anon*)* @"??R<lambda_0>@?0??test_lambda@@YAXXZ@QEBA@XZ" to i8*), i8* %frame_pointer)
 // CHECK: %[[l2_i8:[^ ]*]] = call i8* @llvm.localrecover(i8* bitcast (void (%class.anon*)* @"??R<lambda_0>@?0??test_lambda@@YAXXZ@QEBA@XZ" to i8*), i8* %[[fp]], i32 0)
 // CHECK: %[[l2_ptr:[^ ]*]] = bitcast i8* %[[l2_i8]] to i32*
 // CHECK: %[[l2:[^ ]*]] = load i32, i32* %[[l2_ptr]]

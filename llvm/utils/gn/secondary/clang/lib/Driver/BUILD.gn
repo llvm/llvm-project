@@ -68,6 +68,7 @@ static_library("Driver") {
     "ToolChains/Hexagon.cpp",
     "ToolChains/Hurd.cpp",
     "ToolChains/Linux.cpp",
+    "ToolChains/MSP430.cpp",
     "ToolChains/MSVC.cpp",
     "ToolChains/MinGW.cpp",
     "ToolChains/Minix.cpp",

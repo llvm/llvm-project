@@ -139,12 +139,12 @@ MachineFunction::MachineFunction(const Function &F,
   init();
 }
 
-void MachineFunction::handleInsertion(const MachineInstr &MI) {
+void MachineFunction::handleInsertion(MachineInstr &MI) {
   if (TheDelegate)
     TheDelegate->MF_HandleInsertion(MI);
 }
 
-void MachineFunction::handleRemoval(const MachineInstr &MI) {
+void MachineFunction::handleRemoval(MachineInstr &MI) {
   if (TheDelegate)
     TheDelegate->MF_HandleRemoval(MI);
 }

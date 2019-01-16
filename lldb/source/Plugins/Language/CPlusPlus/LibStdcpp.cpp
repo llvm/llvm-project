@@ -298,7 +298,7 @@ bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
         return false;
 
       // Safe to pass nullptr for exe_scope here.
-      auto size = wchar_compiler_type.GetBitSize(nullptr);
+      llvm::Optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
       if (!size)
         return false;
       const uint32_t wchar_size = *size;

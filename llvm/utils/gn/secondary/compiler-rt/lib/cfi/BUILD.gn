@@ -1,0 +1,10 @@
+import("//clang/resource_dir.gni")
+
+copy("blacklist") {
+  sources = [
+    "cfi_blacklist.txt",
+  ]
+  outputs = [
+    "$clang_resource_dir/share/{{source_target_relative}}",
+  ]
+}

@@ -5277,6 +5277,22 @@ SDValue TargetLowering::lowerCmpEqZeroToCtlzSrl(SDValue Op,
 
 SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   unsigned Opcode = Node->getOpcode();
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+  EVT VT = LHS.getValueType();
+  SDLoc dl(Node);
+
+  // usub.sat(a, b) -> umax(a, b) - b
+  if (Opcode == ISD::USUBSAT && isOperationLegalOrCustom(ISD::UMAX, VT)) {
+    SDValue Max = DAG.getNode(ISD::UMAX, dl, VT, LHS, RHS);
+    return DAG.getNode(ISD::SUB, dl, VT, Max, RHS);
+  }
+
+  if (VT.isVector()) {
+    // TODO: Consider not scalarizing here.
+    return SDValue();
+  }
+
   unsigned OverflowOp;
   switch (Opcode) {
   case ISD::SADDSAT:
@@ -5295,11 +5311,7 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
     llvm_unreachable("Expected method to receive signed or unsigned saturation "
                      "addition or subtraction node.");
   }
-  assert(Node->getNumOperands() == 2 && "Expected node to have 2 operands.");
 
-  SDLoc dl(Node);
-  SDValue LHS = Node->getOperand(0);
-  SDValue RHS = Node->getOperand(1);
   assert(LHS.getValueType().isScalarInteger() &&
          "Expected operands to be integers. Vector of int arguments should "
          "already be unrolled.");

@@ -108,5 +108,8 @@ APFloat getAPFloatFromSize(double Val, unsigned Size);
 /// fallback.
 void getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU);
 
+Optional<APInt> ConstantFoldBinOp(unsigned Opcode, const unsigned Op1,
+                                  const unsigned Op2,
+                                  const MachineRegisterInfo &MRI);
 } // End namespace llvm.
 #endif

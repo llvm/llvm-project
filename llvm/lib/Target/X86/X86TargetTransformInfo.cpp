@@ -1780,6 +1780,10 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::CTPOP,      MVT::v16i32, 24 },
     { ISD::CTTZ,       MVT::v8i64,  20 },
     { ISD::CTTZ,       MVT::v16i32, 28 },
+    { ISD::USUBSAT,    MVT::v16i32,  2 }, // pmaxud + psubd
+    { ISD::USUBSAT,    MVT::v2i64,   2 }, // pmaxuq + psubq
+    { ISD::USUBSAT,    MVT::v4i64,   2 }, // pmaxuq + psubq
+    { ISD::USUBSAT,    MVT::v8i64,   2 }, // pmaxuq + psubq
   };
   static const CostTblEntry XOPCostTbl[] = {
     { ISD::BITREVERSE, MVT::v4i64,   4 },
@@ -1823,6 +1827,7 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::UADDSAT,    MVT::v32i8,   1 },
     { ISD::USUBSAT,    MVT::v16i16,  1 },
     { ISD::USUBSAT,    MVT::v32i8,   1 },
+    { ISD::USUBSAT,    MVT::v8i32,   2 }, // pmaxud + psubd
     { ISD::FSQRT,      MVT::f32,     7 }, // Haswell from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f32,   7 }, // Haswell from http://www.agner.org/
     { ISD::FSQRT,      MVT::v8f32,  14 }, // Haswell from http://www.agner.org/
@@ -1858,6 +1863,7 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::UADDSAT,    MVT::v32i8,   4 }, // 2 x 128-bit Op + extract/insert
     { ISD::USUBSAT,    MVT::v16i16,  4 }, // 2 x 128-bit Op + extract/insert
     { ISD::USUBSAT,    MVT::v32i8,   4 }, // 2 x 128-bit Op + extract/insert
+    { ISD::USUBSAT,    MVT::v8i32,   6 }, // 2 x 128-bit Op + extract/insert
     { ISD::FSQRT,      MVT::f32,    14 }, // SNB from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f32,  14 }, // SNB from http://www.agner.org/
     { ISD::FSQRT,      MVT::v8f32,  28 }, // SNB from http://www.agner.org/
@@ -1878,6 +1884,7 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::FSQRT, MVT::v2f64, 70 }, // sqrtpd
   };
   static const CostTblEntry SSE42CostTbl[] = {
+    { ISD::USUBSAT,    MVT::v4i32,   2 }, // pmaxud + psubd
     { ISD::FSQRT,      MVT::f32,    18 }, // Nehalem from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f32,  18 }, // Nehalem from http://www.agner.org/
   };

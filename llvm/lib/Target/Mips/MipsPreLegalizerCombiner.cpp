@@ -73,7 +73,7 @@ bool MipsPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   auto *TPC = &getAnalysis<TargetPassConfig>();
   MipsPreLegalizerCombinerInfo PCInfo;
   Combiner C(PCInfo, TPC);
-  return C.combineMachineInstrs(MF);
+  return C.combineMachineInstrs(MF, nullptr);
 }
 
 char MipsPreLegalizerCombiner::ID = 0;
