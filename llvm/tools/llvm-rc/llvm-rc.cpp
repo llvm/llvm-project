@@ -31,6 +31,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <algorithm>
 #include <system_error>
 
 using namespace llvm;
@@ -85,7 +86,10 @@ int main(int Argc, const char **Argv) {
 
   RcOptTable T;
   unsigned MAI, MAC;
-  ArrayRef<const char *> ArgsArr = makeArrayRef(Argv + 1, Argc - 1);
+  const char **DashDash = std::find_if(
+      Argv + 1, Argv + Argc, [](StringRef Str) { return Str == "--"; });
+  ArrayRef<const char *> ArgsArr = makeArrayRef(Argv + 1, DashDash);
+
   opt::InputArgList InputArgs = T.ParseArgs(ArgsArr, MAI, MAC);
 
   // The tool prints nothing when invoked with no command-line arguments.
@@ -97,6 +101,8 @@ int main(int Argc, const char **Argv) {
   const bool BeVerbose = InputArgs.hasArg(OPT_VERBOSE);
 
   std::vector<std::string> InArgsInfo = InputArgs.getAllArgValues(OPT_INPUT);
+  if (DashDash != Argv + Argc)
+    InArgsInfo.insert(InArgsInfo.end(), DashDash + 1, Argv + Argc);
   if (InArgsInfo.size() != 1) {
     fatalError("Exactly one input file should be provided.");
   }

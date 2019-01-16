@@ -1,0 +1,12 @@
+# RUN: llvm-nm --size-sort %p/Inputs/hello.obj.elf-x86_64 | FileCheck --check-prefix=SIZE-SORT-NO-ADDR %s
+# RUN: llvm-nm --size-sort -S %p/Inputs/hello.obj.elf-x86_64 | FileCheck --check-prefix=SIZE-SORT-PRINT-ADDR %s
+# RUN: llvm-nm -S %p/Inputs/hello.obj.elf-x86_64 | FileCheck --check-prefix=NO-SIZE-SORT-PRINT-ADDR %s
+
+# SIZE-SORT-NO-ADDR:                  U puts
+# SIZE-SORT-NO-ADDR: 0000000000000015 T main
+
+# SIZE-SORT-PRINT-ADDR:                                   U puts
+# SIZE-SORT-PRINT-ADDR: 0000000000000000 0000000000000015 T main
+
+# NO-SIZE-SORT-PRINT-ADDR: 0000000000000000 0000000000000015 T main
+# NO-SIZE-SORT-PRINT-ADDR:                                   U puts

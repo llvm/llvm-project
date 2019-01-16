@@ -231,13 +231,8 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
   bool FirstFile = true;
   for (auto &FI : LocationInfo) {
     SmallString<128> FileName(FI.first);
-    if (!InputRelDir.empty()) {
-      if (std::error_code EC = sys::fs::make_absolute(InputRelDir, FileName)) {
-        WithColor::error() << "Can't resolve file path to " << FileName << ": "
-                           << EC.message() << "\n";
-        return false;
-      }
-    }
+    if (!InputRelDir.empty())
+      sys::fs::make_absolute(InputRelDir, FileName);
 
     const auto &FileInfo = FI.second;
 

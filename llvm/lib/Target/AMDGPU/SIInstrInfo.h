@@ -450,6 +450,8 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::DS;
   }
 
+  bool isAlwaysGDS(uint16_t Opcode) const;
+
   static bool isMIMG(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::MIMG;
   }

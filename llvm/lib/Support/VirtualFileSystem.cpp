@@ -128,7 +128,8 @@ std::error_code FileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
   if (!WorkingDir)
     return WorkingDir.getError();
 
-  return llvm::sys::fs::make_absolute(WorkingDir.get(), Path);
+  llvm::sys::fs::make_absolute(WorkingDir.get(), Path);
+  return {};
 }
 
 std::error_code FileSystem::getRealPath(const Twine &Path,
