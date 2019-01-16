@@ -75,6 +75,11 @@ std::string rewriteExprFromNumberToDuration(
     const ast_matchers::MatchFinder::MatchResult &Result, DurationScale Scale,
     const Expr *Node);
 
+/// Return `true` if `E` is a either: not a macro at all; or an argument to
+/// one.  In the both cases, we often want to do the transformation.
+bool isNotInMacro(const ast_matchers::MatchFinder::MatchResult &Result,
+                  const Expr *E);
+
 AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
                      DurationConversionFunction) {
   using namespace clang::ast_matchers;

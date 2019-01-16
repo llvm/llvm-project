@@ -1006,6 +1006,7 @@ static void setConfigs(opt::InputArgList &Args) {
   Config->Endianness = Config->IsLE ? endianness::little : endianness::big;
   Config->IsMips64EL = (K == ELF64LEKind && M == EM_MIPS);
   Config->Pic = Config->Pie || Config->Shared;
+  Config->PicThunk = Args.hasArg(OPT_pic_veneer, Config->Pic);
   Config->Wordsize = Config->Is64 ? 8 : 4;
 
   // ELF defines two different ways to store relocation addends as shown below:

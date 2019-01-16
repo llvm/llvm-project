@@ -766,6 +766,80 @@ bool DWARFUnit::GetIsOptimized() {
   return m_is_optimized == eLazyBoolYes;
 }
 
+FileSpec::Style DWARFUnit::GetPathStyle() {
+  if (!m_comp_dir)
+    ComputeCompDirAndGuessPathStyle();
+  return m_comp_dir->GetPathStyle();
+}
+
+const FileSpec &DWARFUnit::GetCompilationDirectory() {
+  if (!m_comp_dir)
+    ComputeCompDirAndGuessPathStyle();
+  return *m_comp_dir;
+}
+
+// DWARF2/3 suggests the form hostname:pathname for compilation directory.
+// Remove the host part if present.
+static llvm::StringRef
+removeHostnameFromPathname(llvm::StringRef path_from_dwarf) {
+  llvm::StringRef host, path;
+  std::tie(host, path) = path_from_dwarf.split(':');
+
+  if (host.contains('/'))
+    return path_from_dwarf;
+
+  // check whether we have a windows path, and so the first character is a
+  // drive-letter not a hostname.
+  if (host.size() == 1 && llvm::isAlpha(host[0]) && path.startswith("\\"))
+    return path_from_dwarf;
+
+  return path;
+}
+
+static FileSpec resolveCompDir(const FileSpec &path) {
+  bool is_symlink = SymbolFileDWARF::GetSymlinkPaths().FindFileIndex(
+                        0, path, /*full*/ true) != UINT32_MAX;
+
+  if (!is_symlink)
+    return path;
+
+  namespace fs = llvm::sys::fs;
+  if (fs::get_file_type(path.GetPath(), false) != fs::file_type::symlink_file)
+    return path;
+
+  FileSpec resolved_symlink;
+  const auto error = FileSystem::Instance().Readlink(path, resolved_symlink);
+  if (error.Success())
+    return resolved_symlink;
+
+  return path;
+}
+
+void DWARFUnit::ComputeCompDirAndGuessPathStyle() {
+  m_comp_dir = FileSpec();
+  const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
+  if (!die)
+    return;
+
+  auto guess = [](llvm::StringRef str) {
+    if (str.startswith("/"))
+      return FileSpec::Style::posix;
+    if (str.size() > 3 && llvm::isAlpha(str[0]) && str.substr(1, 2) == ":\\")
+      return FileSpec::Style::windows;
+    return FileSpec::Style::native;
+  };
+  llvm::StringRef comp_dir = removeHostnameFromPathname(
+      die->GetAttributeValueAsString(m_dwarf, this, DW_AT_comp_dir, NULL));
+  if (!comp_dir.empty()) {
+    m_comp_dir = resolveCompDir(FileSpec(comp_dir, guess(comp_dir)));
+  } else {
+    // Try to detect the style based on the DW_AT_name attribute, but just store
+    // the detected style in the m_comp_dir field.
+    m_comp_dir = FileSpec("", guess(die->GetAttributeValueAsString(
+                                  m_dwarf, this, DW_AT_name, NULL)));
+  }
+}
+
 SymbolFileDWARFDwo *DWARFUnit::GetDwoSymbolFile() const {
   return m_dwo_symbol_file.get();
 }
