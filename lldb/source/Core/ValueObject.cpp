@@ -468,19 +468,6 @@ const char *ValueObject::GetLocationAsCStringImpl(const Value &value,
   return m_location_str.c_str();
 }
 
-lldb_private::Status
-ValueObject::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
-                            uint32_t data_offset, Module *module,
-                            bool mask_error_on_zerosize_type) {
-  Status err = m_value.GetValueAsData(exe_ctx, data, data_offset, module);
-  if (err.Fail() && mask_error_on_zerosize_type &&
-      SwiftASTContext::IsPossibleZeroSizeType(
-          GetCompilerType(),
-          exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr))
-    return Status();
-  return err;
-}
-
 Value &ValueObject::GetValue() { return m_value; }
 
 const Value &ValueObject::GetValue() const { return m_value; }

@@ -218,7 +218,8 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   if (compiler_type) {
     type_sp = TypeSP(new Type(
         die.GetID(), die.GetDWARF(), compiler_type.GetTypeName(),
-        is_clang_type ? dwarf_byte_size : compiler_type.GetByteSize(nullptr),
+        is_clang_type ? dwarf_byte_size
+                      : compiler_type.GetByteSize(nullptr).getValueOr(0),
         NULL, LLDB_INVALID_UID, Type::eEncodingIsUID, &decl, compiler_type,
         is_clang_type ? Type::eResolveStateForward : Type::eResolveStateFull));
     // FIXME: This ought to work lazily, too.
