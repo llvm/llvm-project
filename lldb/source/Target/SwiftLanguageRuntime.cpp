@@ -1932,6 +1932,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
       in_value.GetStaticValue()->GetChildAtIndex(0, true));
   if (!payload0_sp)
     return false;
+
+  auto ptr_size = m_process->GetAddressByteSize();
+
   // @objc protocols are automatically class-only, and there is no
   // static/dynamic to deal with
   bool is_class = protocol_info.m_is_objc || protocol_info.m_is_class_only ||
@@ -2002,7 +2005,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
       return true;
     case SwiftASTContext::TypeAllocationStrategy::ePointer:
       address.SetRawAddress(payload0_sp->GetValueAsUnsigned(0) +
-                            (sizeof(lldb::addr_t) * 2));
+                            (ptr_size * 2));
       return true;
     default:
       // TODO we don't know how to deal with the dynamic case quite yet
