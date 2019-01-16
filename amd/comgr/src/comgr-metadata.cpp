@@ -231,8 +231,10 @@ static amd_comgr_status_t GetNoteIsaName(StringRef VendorName,
   else
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  if (EFlags != 0 && (EFlags & ELF::EF_AMDGPU_XNACK))
+  if (EFlags & ELF::EF_AMDGPU_XNACK)
     NoteIsaName = NoteIsaName + "+xnack";
+  if (EFlags & ELF::EF_AMDGPU_SRAM_ECC)
+    NoteIsaName = NoteIsaName + "+sram-ecc";
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -429,6 +431,8 @@ static amd_comgr_status_t getElfIsaNameV3(const ELFObjectFile<ELFT> *Obj,
 
   if (EHdr->e_flags & ELF::EF_AMDGPU_XNACK)
     ElfIsaName += "+xnack";
+  if (EHdr->e_flags & ELF::EF_AMDGPU_SRAM_ECC)
+    ElfIsaName += "+sram-ecc";
 
   if (IsaName)
     memcpy(IsaName, ElfIsaName.c_str(), *Size);

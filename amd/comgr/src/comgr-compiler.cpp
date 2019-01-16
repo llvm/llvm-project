@@ -771,19 +771,25 @@ amd_comgr_status_t AMDGPUCompiler::AddTargetIdentifierFlags(llvm::StringRef Iden
     return Status;
   Triple = (Twine(Ident.Arch) + "-" + Ident.Vendor + "-" + Ident.OS).str();
   CPU = (Twine("-mcpu=") + Ident.Processor).str();
-  for (auto &Feature : Ident.Features)
-    Features.push_back(Feature);
 
   Args.push_back("-target");
   Args.push_back(Triple.c_str());
 
   Args.push_back(CPU.c_str());
 
-  for (auto &Feature : Features)
+  bool EnableXNACK = false;
+  bool EnableSRAMECC = false;
+
+  for (auto &Feature : Ident.Features)
     if (Feature == "xnack")
-      Args.push_back("-mxnack");
+      EnableXNACK = true;
+    else if (Feature == "sram-ecc")
+      EnableSRAMECC = true;
     else
       return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+  Args.push_back(EnableXNACK ? "-mxnack" : "-mno-xnack");
+  Args.push_back(EnableSRAMECC ? "-msram-ecc" : "-mno-sram-ecc");
 
   return AMD_COMGR_STATUS_SUCCESS;
 }

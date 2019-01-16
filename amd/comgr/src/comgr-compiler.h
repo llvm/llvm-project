@@ -97,8 +97,6 @@ class AMDGPUCompiler {
   std::string Triple;
   /// User supplied target CPU.
   std::string CPU;
-  /// User supplied target features.
-  llvm::SmallVector<std::string, 2> Features;
   /// Precompiled header file paths.
   llvm::SmallVector<llvm::SmallString<128>, 2> PrecompiledHeaders;
   /// User supplied options to the compiler.

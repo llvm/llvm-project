@@ -303,7 +303,7 @@ amd_comgr_status_t COMGR::SetCStr(char *&Dest, StringRef Src, size_t *Size) {
 amd_comgr_status_t COMGR::ParseTargetIdentifier(StringRef IdentStr,
                                                 TargetIdentifier &Ident) {
   SmallVector<StringRef, 5> IsaNameComponents;
-  IdentStr.split(IsaNameComponents, '-');
+  IdentStr.split(IsaNameComponents, '-', 4);
   if (IsaNameComponents.size() != 5)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
