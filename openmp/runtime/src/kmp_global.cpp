@@ -533,5 +533,9 @@ int _You_must_link_with_Microsoft_OpenMP_library = 1;
 
 #if OMP_50_ENABLED
 kmp_target_offload_kind_t __kmp_target_offload = tgt_default;
-#endif
+
+// OMP Pause Resources
+kmp_pause_status_t __kmp_pause_status = kmp_not_paused;
+#endif // OMP_50_ENABLED
+
 // end of file //

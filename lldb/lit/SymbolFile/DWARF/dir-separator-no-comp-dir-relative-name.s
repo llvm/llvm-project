@@ -1,5 +1,6 @@
-# Test that parsing of line tables works reasonably, even if the host directory
-# separator does not match the separator of the compile unit.
+# Test that parsing of line tables works reasonably. In this case the debug info
+# does not have enough information for our heuristics to determine the path
+# style, so we will just treat them as native host paths.
 
 # REQUIRES: lld
 
@@ -8,10 +9,10 @@
 # RUN: %lldb %t -s %S/Inputs/dir-separator-no-comp-dir-relative-name.lldbinit -o exit | FileCheck %s
 
 # CHECK-LABEL: image dump line-table a.c
-# CHECK: Line table for foo/a.c
-# CHECK-NEXT: 0x0000000000201000: foo/a.c:1
-# CHECK-NEXT: 0x0000000000201001: foo/b.c:1
-# CHECK-NEXT: 0x0000000000201002: foo/b.c:1
+# CHECK: Line table for foo{{.}}a.c
+# CHECK-NEXT: 0x0000000000201000: foo{{.}}a.c:1
+# CHECK-NEXT: 0x0000000000201001: foo{{.}}b.c:1
+# CHECK-NEXT: 0x0000000000201002: foo{{.}}b.c:1
 # CHECK-EMPTY:
 
 # CHECK-LABEL: breakpoint set -f a.c -l 1

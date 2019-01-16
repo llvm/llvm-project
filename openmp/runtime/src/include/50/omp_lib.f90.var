@@ -33,6 +33,8 @@
         integer, parameter :: omp_control_tool_result_kind = omp_integer_kind
         integer, parameter :: omp_allocator_kind = c_intptr_t
 
+        integer, parameter :: omp_pause_resource_kind = omp_integer_kind
+
       end module omp_lib_kinds
 
       module omp_lib
@@ -96,6 +98,10 @@
         integer (kind=omp_allocator_kind), parameter :: omp_cgroup_mem_alloc = 6
         integer (kind=omp_allocator_kind), parameter :: omp_pteam_mem_alloc = 7
         integer (kind=omp_allocator_kind), parameter :: omp_thread_mem_alloc = 8
+
+        integer (kind=omp_pause_resource_kind), parameter :: omp_pause_resume = 0
+        integer (kind=omp_pause_resource_kind), parameter :: omp_pause_soft = 1
+        integer (kind=omp_pause_resource_kind), parameter :: omp_pause_hard = 2
 
         interface
 
@@ -298,6 +304,19 @@
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_device_num
           end function omp_get_device_num
+
+          function omp_pause_resource(kind, device_num) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_pause_resource_kind), value :: kind
+            integer (kind=omp_integer_kind), value :: device_num
+            integer (kind=omp_integer_kind) omp_pause_resource
+          end function omp_pause_resource
+
+          function omp_pause_resource_all(kind) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_pause_resource_kind), value :: kind
+            integer (kind=omp_integer_kind) omp_pause_resource_all
+          end function omp_pause_resource_all
 
           subroutine omp_init_lock(svar) bind(c)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
