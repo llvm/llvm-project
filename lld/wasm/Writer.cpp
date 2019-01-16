@@ -477,7 +477,7 @@ void Writer::createDylinkSection() {
   raw_ostream &OS = Section->getStream();
 
   writeUleb128(OS, MemSize, "MemSize");
-  writeUleb128(OS, int(log2(MemAlign)), "MemAlign");
+  writeUleb128(OS, MemAlign, "MemAlign");
   writeUleb128(OS, IndirectFunctions.size(), "TableSize");
   writeUleb128(OS, 0, "TableAlign");
   writeUleb128(OS, 0, "Needed");  // TODO: Support "needed" shared libraries
@@ -691,7 +691,7 @@ void Writer::layoutMemory() {
   MemAlign = 0;
   for (OutputSegment *Seg : Segments) {
     MemAlign = std::max(MemAlign, Seg->Alignment);
-    MemoryPtr = alignTo(MemoryPtr, Seg->Alignment);
+    MemoryPtr = alignTo(MemoryPtr, 1 << Seg->Alignment);
     Seg->StartVA = MemoryPtr;
     log(formatv("mem: {0,-15} offset={1,-8} size={2,-8} align={3}", Seg->Name,
                 MemoryPtr, Seg->Size, Seg->Alignment));
