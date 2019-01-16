@@ -519,7 +519,7 @@ protected:
         --pointer_count;
       }
 
-      auto size = clang_ast_type.GetByteSize(nullptr);
+      llvm::Optional<uint64_t> size = clang_ast_type.GetByteSize(nullptr);
       if (!size) {
         result.AppendErrorWithFormat(
             "unable to get the byte size of the type '%s'\n",
@@ -642,7 +642,7 @@ protected:
       if (!m_format_options.GetFormatValue().OptionWasSet())
         m_format_options.GetFormatValue().SetCurrentValue(eFormatDefault);
 
-      auto size = clang_ast_type.GetByteSize(nullptr);
+      llvm::Optional<uint64_t> size = clang_ast_type.GetByteSize(nullptr);
       if (!size) {
         result.AppendError("can't get size of type");
         return false;
@@ -1064,7 +1064,8 @@ protected:
                m_memory_options.m_expr.GetStringValue(), frame, result_sp)) &&
           result_sp) {
         uint64_t value = result_sp->GetValueAsUnsigned(0);
-        auto size = result_sp->GetCompilerType().GetByteSize(nullptr);
+        llvm::Optional<uint64_t> size =
+            result_sp->GetCompilerType().GetByteSize(nullptr);
         if (!size)
           return false;
         switch (*size) {

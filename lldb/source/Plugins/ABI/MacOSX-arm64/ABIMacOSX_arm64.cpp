@@ -1762,7 +1762,7 @@ bool ABIMacOSX_arm64::GetArgumentValues(Thread &thread,
       return false;
 
     CompilerType value_type = value->GetCompilerType();
-    auto bit_size = value_type.GetBitSize(&thread);
+    llvm::Optional<uint64_t> bit_size = value_type.GetBitSize(&thread);
     if (!bit_size)
       return false;
 
@@ -2111,7 +2111,7 @@ static bool LoadValueFromConsecutiveGPRRegisters(
     uint32_t &NGRN,       // NGRN (see ABI documentation)
     uint32_t &NSRN,       // NSRN (see ABI documentation)
     DataExtractor &data) {
-  auto byte_size = value_type.GetByteSize(nullptr);
+  llvm::Optional<uint64_t> byte_size = value_type.GetByteSize(nullptr);
   if (!byte_size || *byte_size == 0)
     return false;
 
@@ -2128,7 +2128,7 @@ static bool LoadValueFromConsecutiveGPRRegisters(
     if (NSRN < 8 && (8 - NSRN) >= homogeneous_count) {
       if (!base_type)
         return false;
-      auto base_byte_size = base_type.GetByteSize(nullptr);
+      llvm::Optional<uint64_t> base_byte_size = base_type.GetByteSize(nullptr);
       if (!base_byte_size)
         return false;
       uint32_t data_offset = 0;
@@ -2264,7 +2264,8 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
   if (!reg_ctx)
     return return_valobj_sp;
 
-  auto byte_size = return_compiler_type.GetByteSize(nullptr);
+  llvm::Optional<uint64_t> byte_size =
+      return_compiler_type.GetByteSize(nullptr);
   if (!byte_size)
     return return_valobj_sp;
 

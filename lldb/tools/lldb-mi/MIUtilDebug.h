@@ -24,7 +24,6 @@ class CMICmnLog;
 class CMIUtilDebug {
   // Statics:
 public:
-  static void ShowDlgWaitForDbgAttach();
   static void WaitForDbgAttachInfinteLoop();
 
   // Methods:

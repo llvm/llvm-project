@@ -1850,7 +1850,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           clang_type = ClangASTContext::CreateMemberPointerType(
               class_clang_type, pointee_clang_type);
 
-          if (auto clang_type_size = clang_type.GetByteSize(nullptr)) {
+          if (llvm::Optional<uint64_t> clang_type_size =
+                  clang_type.GetByteSize(nullptr)) {
             byte_size = *clang_type_size;
             type_sp.reset(new Type(die.GetID(), dwarf, type_name_const_str,
                                    byte_size, NULL, LLDB_INVALID_UID,
@@ -2046,7 +2047,7 @@ bool DWARFASTParserClang::ParseTemplateDIE(
         clang_type.IsIntegerOrEnumerationType(is_signed);
 
         if (tag == DW_TAG_template_value_parameter && uval64_valid) {
-          auto size = clang_type.GetBitSize(nullptr);
+          llvm::Optional<uint64_t> size = clang_type.GetBitSize(nullptr);
           if (!size)
             return false;
           llvm::APInt apint(*size, uval64, is_signed);
