@@ -308,14 +308,14 @@ typedef struct ValueProfRecord {
 
 #ifdef __cplusplus
   /*!
-   * \brief Return the number of value sites.
+   * Return the number of value sites.
    */
   uint32_t getNumValueSites() const { return NumValueSites; }
   /*!
-   * \brief Read data from this record and save it to Record.
+   * Read data from this record and save it to Record.
    */
   void deserializeTo(InstrProfRecord &Record,
-                     InstrProfRecord::ValueMapType *VMap);
+                     InstrProfSymtab *SymTab);
   /*
    * In-place byte swap:
    * Do byte swap for this instance. \c Old is the original order before
@@ -393,7 +393,7 @@ typedef struct ValueProfData {
    * Read data from this data and save it to \c Record.
    */
   void deserializeTo(InstrProfRecord &Record,
-                     InstrProfRecord::ValueMapType *VMap);
+                     InstrProfSymtab *SymTab);
   void operator delete(void *ptr) { ::operator delete(ptr); }
 #endif
 } ValueProfData;
@@ -458,7 +458,7 @@ getValueProfRecordHeaderSize(uint32_t NumValueSites);
 #endif
 
 /*!
- * \brief Return the \c ValueProfRecord header size including the
+ * Return the \c ValueProfRecord header size including the
  * padding bytes.
  */
 INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
@@ -471,7 +471,7 @@ uint32_t getValueProfRecordHeaderSize(uint32_t NumValueSites) {
 }
 
 /*!
- * \brief Return the total size of the value profile record including the
+ * Return the total size of the value profile record including the
  * header and the value data.
  */
 INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
@@ -482,7 +482,7 @@ uint32_t getValueProfRecordSize(uint32_t NumValueSites,
 }
 
 /*!
- * \brief Return the pointer to the start of value data array.
+ * Return the pointer to the start of value data array.
  */
 INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
 InstrProfValueData *getValueProfRecordValueData(ValueProfRecord *This) {
@@ -491,7 +491,7 @@ InstrProfValueData *getValueProfRecordValueData(ValueProfRecord *This) {
 }
 
 /*!
- * \brief Return the total number of value data for \c This record.
+ * Return the total number of value data for \c This record.
  */
 INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
 uint32_t getValueProfRecordNumValueData(ValueProfRecord *This) {
@@ -503,7 +503,7 @@ uint32_t getValueProfRecordNumValueData(ValueProfRecord *This) {
 }
 
 /*!
- * \brief Use this method to advance to the next \c This \c ValueProfRecord.
+ * Use this method to advance to the next \c This \c ValueProfRecord.
  */
 INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
 ValueProfRecord *getValueProfRecordNext(ValueProfRecord *This) {
@@ -514,7 +514,7 @@ ValueProfRecord *getValueProfRecordNext(ValueProfRecord *This) {
 }
 
 /*!
- * \brief Return the first \c ValueProfRecord instance.
+ * Return the first \c ValueProfRecord instance.
  */
 INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
 ValueProfRecord *getFirstValueProfRecord(ValueProfData *This) {

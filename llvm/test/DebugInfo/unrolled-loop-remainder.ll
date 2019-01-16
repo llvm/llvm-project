@@ -68,7 +68,7 @@ attributes #0 = { norecurse nounwind readnone uwtable }
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "b", scope: !2, file: !3, line: 2, type: !9, isLocal: false, isDefinition: true)
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 6.0.0 (http://llvm.org/git/clang.git 044091b728654e62444a7ea10e6efb489c705bed) (http://llvm.org/git/llvm.git 1c7b55afdb1c5791e0557d9e32e2dd07c7acb2b0)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 6.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "loop.c", directory: "/work/projects/src/tests/unroll-debug-info")
 !4 = !{}
 !5 = !{!6, !0}
@@ -79,7 +79,7 @@ attributes #0 = { norecurse nounwind readnone uwtable }
 !10 = !{i32 2, !"Dwarf Version", i32 4}
 !11 = !{i32 2, !"Debug Info Version", i32 3}
 !12 = !{i32 1, !"wchar_size", i32 4}
-!13 = !{!"clang version 6.0.0 (http://llvm.org/git/clang.git 044091b728654e62444a7ea10e6efb489c705bed) (http://llvm.org/git/llvm.git 1c7b55afdb1c5791e0557d9e32e2dd07c7acb2b0)"}
+!13 = !{!"clang version 6.0.0"}
 !14 = distinct !DISubprogram(name: "c", scope: !3, file: !3, line: 3, type: !15, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: true, unit: !2, retainedNodes: !4)
 !15 = !DISubroutineType(types: !16)
 !16 = !{!9}

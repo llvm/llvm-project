@@ -321,7 +321,9 @@ uint64_t Type::GetByteSize() {
       if (encoding_type)
         m_byte_size = encoding_type->GetByteSize();
       if (m_byte_size == 0)
-        m_byte_size = GetLayoutCompilerType().GetByteSize(nullptr);
+        if (llvm::Optional<uint64_t> size =
+                GetLayoutCompilerType().GetByteSize(nullptr))
+          m_byte_size = *size;
     } break;
 
     // If we are a pointer or reference, then this is just a pointer size;

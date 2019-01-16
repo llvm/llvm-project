@@ -478,7 +478,7 @@ a C/C++ front-end would generate the following descriptors:
 
   ;; Define the compile unit.
   !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2,
-                               producer: "clang version 4.0.0 (http://llvm.org/git/clang.git ae4deadbea242e8ea517eef662c30443f75bd086) (http://llvm.org/git/llvm.git 818b4c1539df3e51dc7e62c89ead4abfd348827d)",
+                               producer: "clang version 4.0.0",
                                isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug,
                                enums: !3, globals: !4)
 
@@ -506,7 +506,7 @@ a C/C++ front-end would generate the following descriptors:
   !7 = !{i32 2, !"Debug Info Version", i32 3}
 
   ;; Compiler identification
-  !8 = !{!"clang version 4.0.0 (http://llvm.org/git/clang.git ae4deadbea242e8ea517eef662c30443f75bd086) (http://llvm.org/git/llvm.git 818b4c1539df3e51dc7e62c89ead4abfd348827d)"}
+  !8 = !{!"clang version 4.0.0"}
 
 
 The align value in DIGlobalVariable description specifies variable alignment in

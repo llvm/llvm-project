@@ -22,6 +22,6 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:     SegmentInfo:    
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data
-; CHECK-NEXT:         Alignment:       1
+; CHECK-NEXT:         Alignment:       0
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT: ...

@@ -46,6 +46,8 @@ void MachineIRBuilder::setInstr(MachineInstr &MI) {
   State.II = MI.getIterator();
 }
 
+void MachineIRBuilder::setCSEInfo(GISelCSEInfo *Info) { State.CSEInfo = Info; }
+
 void MachineIRBuilder::setInsertPt(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator II) {
   assert(MBB.getParent() == &getMF() &&

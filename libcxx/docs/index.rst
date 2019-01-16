@@ -40,6 +40,11 @@ Getting Started with libc++
    TestingLibcxx
 
 
+.. toctree::
+    :hidden:
+
+    FeatureTestMacroTable
+
 Current Status
 --------------
 
@@ -107,6 +112,7 @@ C++ Dialect Support
 * `C++14 - Complete <http://libcxx.llvm.org/cxx1y_status.html>`__
 * `C++17 - In Progress <http://libcxx.llvm.org/cxx1z_status.html>`__
 * `Post C++14 Technical Specifications - In Progress <http://libcxx.llvm.org/ts1z_status.html>`__
+* :ref:`C++ Feature Test Macro Status <feature-status>`
 
 Notes and Known Issues
 ----------------------
@@ -136,6 +142,7 @@ Design Documents
    DesignDocs/VisibilityMacros
    DesignDocs/ThreadingSupportAPI
    DesignDocs/FileTimeType
+   DesignDocs/FeatureTestMacros
 
 * `<atomic> design <http://libcxx.llvm.org/atomic_design.html>`_
 * `<type_traits> design <http://libcxx.llvm.org/type_traits_design.html>`_

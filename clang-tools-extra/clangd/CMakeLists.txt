@@ -1,3 +1,11 @@
+# Configure the Features.inc file.
+llvm_canonicalize_cmake_booleans(
+  CLANGD_BUILD_XPC)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Features.inc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Features.inc
+)
+
 set(LLVM_LINK_COMPONENTS
   Support
   )
@@ -109,3 +117,6 @@ add_subdirectory(index/dex/dexp)
 if (LLVM_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)
 endif()
+if ( CLANGD_BUILD_XPC )
+  add_subdirectory(xpc)
+endif ()

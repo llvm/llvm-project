@@ -13,7 +13,7 @@ Sections:
         GlobalMutable:   false
   - Type:            CUSTOM
     Name:            linking
-    Version:         1
+    Version:         2
     SymbolTable:
       - Index:           0
         Kind:            GLOBAL

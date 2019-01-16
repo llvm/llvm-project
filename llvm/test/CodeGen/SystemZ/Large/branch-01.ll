@@ -11889,7 +11889,7 @@ attributes #3 = { nounwind }
 
 !llvm.ident = !{!0}
 
-!0 = !{!"clang version 7.0.0 (http://llvm.org/git/clang.git a73a299e6b81e72cb50aa8ec5e8b04de7f4e1f81) (http://llvm.org/git/llvm.git 94cb0130bcb7244300ebde720d4e03b6910a1f1f)"}
+!0 = !{!"clang version 7.0.0"}
 !1 = !{!2, !4}
 !2 = distinct !{!2, !3, !"func_62: %agg.result"}
 !3 = distinct !{!3, !"func_62"}

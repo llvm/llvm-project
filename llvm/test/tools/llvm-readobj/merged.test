@@ -1,0 +1,13 @@
+# Check merged args produce identical output to when not merged.
+RUN: llvm-readelf -aeWhSrnudlVgIs %p/Inputs/trivial.obj.elf-i386 > %t.merged
+RUN: llvm-readelf -a -e -W -h -S -r -n -u -d -l -V -g -I -s %p/Inputs/trivial.obj.elf-i386 > %t.not-merged
+RUN: cmp %t.merged %t.not-merged
+RUN: FileCheck %s --input-file %t.merged
+
+# llvm-readobj does not support merged args, because it also supports some old
+# flags (-st, -sd, etc.), and it would be confusing if only some merged args
+# were supported.
+RUN: not llvm-readobj -aeWhSrnudlVgIs %p/Inputs/trivial.obj.elf-i386 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+
+CHECK-NOT: Unknown command line argument
+UNKNOWN:   Unknown command line argument

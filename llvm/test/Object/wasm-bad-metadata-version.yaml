@@ -8,4 +8,4 @@ Sections:
     Name:            linking
     Version:         0
 
-# CHECK: {{.*}}: Unexpected metadata version: 0 (Expected: 1)
+# CHECK: {{.*}}: Unexpected metadata version: 0 (Expected: 2)

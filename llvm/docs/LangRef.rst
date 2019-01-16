@@ -6666,7 +6666,7 @@ This instruction requires several arguments:
 #. The optional :ref:`Parameter Attributes <paramattrs>` list for return
    values. Only '``zeroext``', '``signext``', and '``inreg``' attributes
    are valid here.
-#. The optional addrspace attribute can be used to indicate the adress space
+#. The optional addrspace attribute can be used to indicate the address space
    of the called function. If it is not specified, the program address space
    from the :ref:`datalayout string<langref_datalayout>` will be used.
 #. '``ty``': the type of the call instruction itself which is also the
@@ -9802,7 +9802,7 @@ This instruction requires several arguments:
 #. The optional :ref:`Parameter Attributes <paramattrs>` list for return
    values. Only '``zeroext``', '``signext``', and '``inreg``' attributes
    are valid here.
-#. The optional addrspace attribute can be used to indicate the adress space
+#. The optional addrspace attribute can be used to indicate the address space
    of the called function. If it is not specified, the program address space
    from the :ref:`datalayout string<langref_datalayout>` will be used.
 #. '``ty``': the type of the call instruction itself which is also the

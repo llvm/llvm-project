@@ -92,6 +92,7 @@ write_cmake_config("config") {
     "HAVE_STRERROR=1",
     "HAVE_SYS_STAT_H=1",
     "HAVE_SYS_TYPES_H=1",
+    "HAVE_VALGRIND_VALGRIND_H=",
     "HAVE__ALLOCA=",
     "HAVE___ALLOCA=",
     "HAVE___ASHLDI3=",
@@ -150,12 +151,6 @@ write_cmake_config("config") {
       "HAVE_CPU_COUNT=",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=",
     ]
-  }
-
-  if (current_os == "linux") {
-    values += [ "HAVE_VALGRIND_VALGRIND_H=1" ]
-  } else {
-    values += [ "HAVE_VALGRIND_VALGRIND_H=" ]
   }
 
   if (current_os == "mac") {

@@ -1,5 +1,5 @@
+import("//clang/resource_dir.gni")
 import("//clang/utils/TableGen/clang_tablegen.gni")
-import("//llvm/version.gni")
 
 # Generate arm_neon.h
 clang_tablegen("arm_neon") {
@@ -15,8 +15,6 @@ clang_tablegen("arm_fp16") {
   output_name = "arm_fp16.h"
 }
 
-output_dir = "$root_out_dir/lib/clang/$llvm_version/include"
-
 copy("arm_headers") {
   visibility = [ ":Headers" ]
   deps = [
@@ -25,7 +23,7 @@ copy("arm_headers") {
   ]
   sources = get_target_outputs(":arm_neon") + get_target_outputs(":arm_fp16")
   outputs = [
-    "$output_dir/{{source_file_part}}",
+    "$clang_resource_dir/include/{{source_file_part}}",
   ]
 }
 
@@ -158,6 +156,6 @@ copy("Headers") {
     "cuda_wrappers/new",
   ]
   outputs = [
-    "$output_dir/{{source_target_relative}}",
+    "$clang_resource_dir/include/{{source_target_relative}}",
   ]
 }

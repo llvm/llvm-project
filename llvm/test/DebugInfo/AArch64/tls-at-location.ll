@@ -21,7 +21,7 @@ attributes #0 = { noinline nounwind optnone }
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "var", scope: !2, file: !3, line: 1, type: !6, isLocal: false, isDefinition: true)
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 7.0.0 (https://github.com/llvm-mirror/clang.git 43eac1f9d7d2c985831b485d9ccc807416d1cf29) (https://github.com/llvm-mirror/llvm.git d53cdbf4cc5414ea540174a036202c555ce8fc4b)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 7.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
 !3 = !DIFile(filename: "tls-at-location.c", directory: "/home/lliu0/llvm/tls-at-location/DebugInfo/AArch64")
 !4 = !{}
 !5 = !{!0}
@@ -29,7 +29,7 @@ attributes #0 = { noinline nounwind optnone }
 !7 = !{i32 2, !"Dwarf Version", i32 4}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{i32 1, !"wchar_size", i32 4}
-!10 = !{!"clang version 7.0.0 (https://github.com/llvm-mirror/clang.git 43eac1f9d7d2c985831b485d9ccc807416d1cf29) (https://github.com/llvm-mirror/llvm.git d53cdbf4cc5414ea540174a036202c555ce8fc4b)"}
+!10 = !{!"clang version 7.0.0"}
 !11 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 3, type: !12, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: false, unit: !2)
 !12 = !DISubroutineType(types: !13)
 !13 = !{!6}

@@ -12,16 +12,10 @@ declare_args() {
 template("unix_toolchain") {
   toolchain(target_name) {
     forward_variables_from(invoker, "*")
-    if (!defined(target_cflags)) {
-      target_cflags = ""
-    }
-    if (!defined(target_ldflags)) {
-      target_ldflags = ""
-    }
 
     tool("cc") {
       depfile = "{{output}}.d"
-      command = "$cc -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} $target_cflags"
+      command = "$cc -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}}"
       depsformat = "gcc"
       description = "CC {{output}}"
       outputs = [
@@ -31,7 +25,7 @@ template("unix_toolchain") {
 
     tool("cxx") {
       depfile = "{{output}}.d"
-      command = "$cxx -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} $target_cflags"
+      command = "$cxx -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}}"
       depsformat = "gcc"
       description = "CXX {{output}}"
       outputs = [
@@ -41,7 +35,7 @@ template("unix_toolchain") {
 
     tool("asm") {
       depfile = "{{output}}.d"
-      command = "$cc -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{asmflags}} $target_cflags"
+      command = "$cc -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{asmflags}}"
       depsformat = "gcc"
       description = "ASM {{output}}"
       outputs = [
@@ -69,10 +63,10 @@ template("unix_toolchain") {
     tool("solink") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       if (current_os == "mac") {
-        command = "$ld -shared {{ldflags}} -o $outfile {{libs}} {{inputs}} $target_ldflags"
+        command = "$ld -shared {{ldflags}} -o $outfile {{libs}} {{inputs}}"
         default_output_extension = ".dylib"
       } else {
-        command = "$ld -shared {{ldflags}} -Wl,-z,defs -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{libs}} {{inputs}} $target_ldflags"
+        command = "$ld -shared {{ldflags}} -Wl,-z,defs -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{libs}} {{inputs}}"
         default_output_extension = ".so"
       }
       description = "SOLINK $outfile"
@@ -87,10 +81,10 @@ template("unix_toolchain") {
     tool("solink_module") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       if (current_os == "mac") {
-        command = "$ld -shared {{ldflags}} -Wl,-flat_namespace -Wl,-undefined,suppress -o $outfile {{libs}} {{inputs}} $target_ldflags"
+        command = "$ld -shared {{ldflags}} -Wl,-flat_namespace -Wl,-undefined,suppress -o $outfile {{libs}} {{inputs}}"
         default_output_extension = ".dylib"
       } else {
-        command = "$ld -shared {{ldflags}} -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{libs}} {{inputs}} $target_ldflags"
+        command = "$ld -shared {{ldflags}} -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{libs}} {{inputs}}"
         default_output_extension = ".so"
       }
       description = "SOLINK $outfile"
@@ -104,10 +98,9 @@ template("unix_toolchain") {
     tool("link") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       if (current_os == "mac") {
-        command =
-            "$ld {{ldflags}} -o $outfile {{libs}} {{inputs}} $target_ldflags"
+        command = "$ld {{ldflags}} -o $outfile {{libs}} {{inputs}}"
       } else {
-        command = "$ld {{ldflags}} -o $outfile {{libs}} -Wl,--start-group {{inputs}} -Wl,--end-group $target_ldflags"
+        command = "$ld {{ldflags}} -o $outfile {{libs}} -Wl,--start-group {{inputs}} -Wl,--end-group"
       }
       description = "LINK $outfile"
       outputs = [
@@ -157,8 +150,10 @@ unix_toolchain("unix") {
   }
 }
 
-if (android_ndk_path != "") {
-  unix_toolchain("stage2_android_aarch64") {
+template("stage2_unix_toolchain") {
+  unix_toolchain(target_name) {
+    forward_variables_from(invoker, "*")
+
     cc = "bin/clang"
     cxx = "bin/clang++"
     ld = cxx
@@ -169,23 +164,24 @@ if (android_ndk_path != "") {
       "//:lld($host_toolchain)",
       "//:llvm-ar($host_toolchain)",
     ]
+  }
+}
 
+stage2_unix_toolchain("stage2_unix") {
+  toolchain_args = {
+    current_os = host_os
+    current_cpu = host_cpu
+    use_lld = host_os != "mac"
+  }
+}
+
+if (android_ndk_path != "") {
+  stage2_unix_toolchain("stage2_android_aarch64") {
     toolchain_args = {
       current_os = "android"
       current_cpu = "arm64"
+      use_lld = true
     }
-
-    libcxx_path = "$android_ndk_path/sources/cxx-stl/llvm-libc++"
-    platform_lib_path =
-        "$android_ndk_path/platforms/android-21/arch-arm64/usr/lib"
-    libgcc_path = "$android_ndk_path/toolchains/aarch64-linux-android-4.9/prebuilt/linux-x86_64/lib/gcc/aarch64-linux-android/4.9.x"
-
-    target_flags =
-        "--target=aarch64-linux-android21 --sysroot=$android_ndk_path/sysroot"
-    target_cflags = "$target_flags -isystem $libcxx_path/include"
-    target_ldflags = "$target_flags -fuse-ld=lld -B$platform_lib_path -L$platform_lib_path -L$libgcc_path"
-    target_ldflags +=
-        " -nostdlib++ -L$libcxx_path/libs/arm64-v8a -l:libc++.a.21"
   }
 }
 

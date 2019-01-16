@@ -180,7 +180,7 @@ if.end:                                           ; preds = %if.then, %__except.
 define internal i32 @"\01?filt$0@0@required_state_store@@"() {
 entry:
   %0 = tail call i8* @llvm.frameaddress(i32 1)
-  %1 = tail call i8* @llvm.x86.seh.recoverfp(i8* bitcast (void (i1)* @required_state_store to i8*), i8* %0)
+  %1 = tail call i8* @llvm.eh.recoverfp(i8* bitcast (void (i1)* @required_state_store to i8*), i8* %0)
   %2 = tail call i8* @llvm.localrecover(i8* bitcast (void (i1)* @required_state_store to i8*), i8* %1, i32 0)
   %__exception_code = bitcast i8* %2 to i32*
   %3 = getelementptr inbounds i8, i8* %0, i32 -20
@@ -203,7 +203,7 @@ declare i32 @__CxxFrameHandler3(...)
 
 declare i8* @llvm.frameaddress(i32)
 
-declare i8* @llvm.x86.seh.recoverfp(i8*, i8*)
+declare i8* @llvm.eh.recoverfp(i8*, i8*)
 
 declare i8* @llvm.localrecover(i8*, i8*, i32)
 

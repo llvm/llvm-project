@@ -100,8 +100,11 @@ bool lldb_private::formatters::WCharStringSummaryProvider(
   if (!wchar_compiler_type)
     return false;
 
-  const uint32_t wchar_size = wchar_compiler_type.GetBitSize(
-      nullptr); // Safe to pass NULL for exe_scope here
+  // Safe to pass nullptr for exe_scope here.
+  llvm::Optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
+  if (!size)
+    return false;
+  const uint32_t wchar_size = *size;
 
   StringPrinter::ReadStringAndDumpToStreamOptions options(valobj);
   options.SetLocation(valobj_addr);
@@ -194,8 +197,11 @@ bool lldb_private::formatters::WCharSummaryProvider(
   if (!wchar_compiler_type)
     return false;
 
-  const uint32_t wchar_size = wchar_compiler_type.GetBitSize(
-      nullptr); // Safe to pass NULL for exe_scope here
+    // Safe to pass nullptr for exe_scope here.
+  llvm::Optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
+  if (!size)
+    return false;
+  const uint32_t wchar_size = *size;
 
   StringPrinter::ReadBufferAndDumpToStreamOptions options(valobj);
   options.SetData(data);

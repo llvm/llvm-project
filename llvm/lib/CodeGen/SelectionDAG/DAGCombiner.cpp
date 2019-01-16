@@ -16195,6 +16195,78 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
   return Shuffle;
 }
 
+static SDValue reduceBuildVecToShuffleWithZero(SDNode *BV, SelectionDAG &DAG) {
+  assert(BV->getOpcode() == ISD::BUILD_VECTOR && "Expected build vector");
+
+  // First, determine where the build vector is not undef.
+  // TODO: We could extend this to handle zero elements as well as undefs.
+  int NumBVOps = BV->getNumOperands();
+  int ZextElt = -1;
+  for (int i = 0; i != NumBVOps; ++i) {
+    SDValue Op = BV->getOperand(i);
+    if (Op.isUndef())
+      continue;
+    if (ZextElt == -1)
+      ZextElt = i;
+    else
+      return SDValue();
+  }
+  // Bail out if there's no non-undef element.
+  if (ZextElt == -1)
+    return SDValue();
+
+  // The build vector contains some number of undef elements and exactly
+  // one other element. That other element must be a zero-extended scalar
+  // extracted from a vector at a constant index to turn this into a shuffle.
+  // TODO: This could be enhanced to allow ANY_EXTEND as well as ZERO_EXTEND.
+  SDValue Zext = BV->getOperand(ZextElt);
+  if (Zext.getOpcode() != ISD::ZERO_EXTEND || !Zext.hasOneUse() ||
+      Zext.getOperand(0).getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      !isa<ConstantSDNode>(Zext.getOperand(0).getOperand(1)))
+    return SDValue();
+
+  // The zero-extend must be a multiple of the source size.
+  SDValue Extract = Zext.getOperand(0);
+  unsigned DestSize = Zext.getValueSizeInBits();
+  unsigned SrcSize = Extract.getValueSizeInBits();
+  if (DestSize % SrcSize != 0)
+    return SDValue();
+
+  // Create a shuffle mask that will combine the extracted element with zeros
+  // and undefs.
+  int ZextRatio =  DestSize / SrcSize;
+  int NumMaskElts = NumBVOps * ZextRatio;
+  SmallVector<int, 32> ShufMask(NumMaskElts, -1);
+  for (int i = 0; i != NumMaskElts; ++i) {
+    if (i / ZextRatio == ZextElt) {
+      // The low bits of the (potentially translated) extracted element map to
+      // the source vector. The high bits map to zero. We will use a zero vector
+      // as the 2nd source operand of the shuffle, so use the 1st element of
+      // that vector (mask value is number-of-elements) for the high bits.
+      if (i % ZextRatio == 0)
+        ShufMask[i] = Extract.getConstantOperandVal(1);
+      else
+        ShufMask[i] = NumMaskElts;
+    }
+
+    // Undef elements of the build vector remain undef because we initialize
+    // the shuffle mask with -1.
+  }
+
+  // Turn this into a shuffle with zero if that's legal.
+  EVT VecVT = Extract.getOperand(0).getValueType();
+  if (!DAG.getTargetLoweringInfo().isShuffleMaskLegal(ShufMask, VecVT))
+    return SDValue();
+
+  // buildvec undef, ..., (zext (extractelt V, IndexC)), undef... -->
+  // bitcast (shuffle V, ZeroVec, VectorMask)
+  SDLoc DL(BV);
+  SDValue ZeroVec = DAG.getConstant(0, DL, VecVT);
+  SDValue Shuf = DAG.getVectorShuffle(VecVT, DL, Extract.getOperand(0), ZeroVec,
+                                      ShufMask);
+  return DAG.getBitcast(BV->getValueType(0), Shuf);
+}
+
 // Check to see if this is a BUILD_VECTOR of a bunch of EXTRACT_VECTOR_ELT
 // operations. If the types of the vectors we're extracting from allow it,
 // turn this into a vector_shuffle node.
@@ -16205,6 +16277,9 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   // Only type-legal BUILD_VECTOR nodes are converted to shuffle nodes.
   if (!isTypeLegal(VT))
     return SDValue();
+
+  if (SDValue V = reduceBuildVecToShuffleWithZero(N, DAG))
+    return V;
 
   // May only combine to shuffle after legalize if shuffle is legal.
   if (LegalOperations && !TLI.isOperationLegal(ISD::VECTOR_SHUFFLE, VT))

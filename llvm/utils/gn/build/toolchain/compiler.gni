@@ -19,4 +19,7 @@ declare_args() {
   # Set if the host compiler is clang.  On by default on Mac or if
   # clang_base_path is set.
   is_clang = host_os == "mac" || clang_base_path != ""
+
+  # Set this to true to link with LLD instead of the default linker.
+  use_lld = clang_base_path != "" && host_os != "mac"
 }

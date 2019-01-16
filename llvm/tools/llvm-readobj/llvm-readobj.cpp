@@ -92,26 +92,20 @@ namespace opts {
                                 cl::desc("Alias for --section-headers"),
                                 cl::aliasopt(SectionHeaders), cl::NotHidden);
 
-  // -section-relocations, -sr
+  // -section-relocations
+  // Also -sr in llvm-readobj mode.
   cl::opt<bool> SectionRelocations("section-relocations",
     cl::desc("Display relocations for each section shown."));
-  cl::alias SectionRelocationsShort("sr",
-    cl::desc("Alias for --section-relocations"),
-    cl::aliasopt(SectionRelocations));
 
-  // -section-symbols, -st
+  // -section-symbols
+  // Also -st in llvm-readobj mode.
   cl::opt<bool> SectionSymbols("section-symbols",
     cl::desc("Display symbols for each section shown."));
-  cl::alias SectionSymbolsShort("st",
-    cl::desc("Alias for --section-symbols"),
-    cl::aliasopt(SectionSymbols));
 
-  // -section-data, -sd
+  // -section-data
+  // Also -sd in llvm-readobj mode.
   cl::opt<bool> SectionData("section-data",
     cl::desc("Display section data for each section shown."));
-  cl::alias SectionDataShort("sd",
-    cl::desc("Alias for --section-data"),
-    cl::aliasopt(SectionData));
 
   // -relocations, -relocs, -r
   cl::opt<bool> Relocations("relocations",
@@ -136,12 +130,10 @@ namespace opts {
   cl::alias SymbolsGNU("syms", cl::desc("Alias for --symbols"),
                        cl::aliasopt(Symbols));
 
-  // -dyn-symbols, -dyn-syms, -dt
+  // -dyn-symbols, -dyn-syms
+  // Also -dt in llvm-readobj mode.
   cl::opt<bool> DynamicSymbols("dyn-symbols",
     cl::desc("Display the dynamic symbol table"));
-  cl::alias DynamicSymbolsShort("dt",
-    cl::desc("Alias for --dyn-symbols"),
-    cl::aliasopt(DynamicSymbols));
   cl::alias DynSymsGNU("dyn-syms", cl::desc("Alias for --dyn-symbols"),
                        cl::aliasopt(DynamicSymbols));
 
@@ -636,13 +628,36 @@ static void registerReadobjAliases() {
   // --section-details (not implemented yet).
   static cl::alias SymbolsShort("t", cl::desc("Alias for --symbols"),
                                 cl::aliasopt(opts::Symbols), cl::NotHidden);
+
+  // The following two-letter aliases are only provided for readobj, as readelf
+  // allows single-letter args to be grouped together.
+  static cl::alias SectionRelocationsShort(
+      "sr", cl::desc("Alias for --section-relocations"),
+      cl::aliasopt(opts::SectionRelocations));
+  static cl::alias SectionDataShort("sd", cl::desc("Alias for --section-data"),
+                                    cl::aliasopt(opts::SectionData));
+  static cl::alias SectionSymbolsShort("st",
+                                       cl::desc("Alias for --section-symbols"),
+                                       cl::aliasopt(opts::SectionSymbols));
+  static cl::alias DynamicSymbolsShort("dt",
+                                       cl::desc("Alias for --dyn-symbols"),
+                                       cl::aliasopt(opts::DynamicSymbols));
 }
 
 /// Registers aliases that should only be allowed by readelf.
 static void registerReadelfAliases() {
   // -s is here because for readobj it means --sections.
   static cl::alias SymbolsShort("s", cl::desc("Alias for --symbols"),
-                                cl::aliasopt(opts::Symbols), cl::NotHidden);
+                                cl::aliasopt(opts::Symbols), cl::NotHidden,
+                                cl::Grouping);
+
+  // Allow all single letter flags to be grouped together.
+  for (auto &OptEntry : cl::getRegisteredOptions()) {
+    StringRef ArgName = OptEntry.getKey();
+    cl::Option *Option = OptEntry.getValue();
+    if (ArgName.size() == 1)
+      Option->setFormattingFlag(cl::Grouping);
+  }
 }
 
 int main(int argc, const char *argv[]) {

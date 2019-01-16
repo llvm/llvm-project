@@ -105,6 +105,8 @@ The object file format and core C ABI are now considered stable. That said,
 the object file format has an ABI versioning capability, and one anticipated
 use for it will be to add support for returning small structs as multiple
 return values, once the underlying WebAssembly platform itself supports it.
+Additionally, multithreading support is not yet included in the stable ABI.
+
 
 Changes to the OCaml bindings
 -----------------------------
