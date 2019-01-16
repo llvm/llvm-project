@@ -10,7 +10,7 @@
 #
 # ------------------------------------------------------------------------------
 import lldb
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
@@ -21,9 +21,13 @@ class TestSwiftBackwardsCompatibilitySimple(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr", "swift-history"])
+    @swiftTest
+    @skipIf(compiler="swiftc", compiler_version=['<', '5.0'])
+    @add_test_categories(["swiftpr", "swift-history"])
     def test_simple(self):
+        version = self.getCompilerVersion(os.environ['SWIFTC'])
+        if version < '5.0':
+            self.skipTest('Swift compiler predates stable ABI')
         self.build()
         lldbutil.run_to_source_breakpoint(self, "break here",
                                           lldb.SBFileSpec('main.swift'))
