@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Features.inc"
 #include "ClangdLSPServer.h"
 #include "Path.h"
 #include "Trace.h"
@@ -222,9 +223,7 @@ public:
     Body = Body.ltrim('/');
     llvm::SmallVector<char, 16> Path(Body.begin(), Body.end());
     path::native(Path);
-    auto Err = fs::make_absolute(TestScheme::TestDir, Path);
-    if (Err)
-      llvm_unreachable("Failed to make absolute path in test scheme.");
+    fs::make_absolute(TestScheme::TestDir, Path);
     return std::string(Path.begin(), Path.end());
   }
 
@@ -254,6 +253,11 @@ const char TestScheme::TestDir[] = "/clangd-test";
 } // namespace
 } // namespace clangd
 } // namespace clang
+
+enum class ErrorResultCode : int {
+  NoShutdownRequest = 1,
+  CantRunAsXPCService = 2
+};
 
 int main(int argc, char *argv[]) {
   using namespace clang;
@@ -408,14 +412,26 @@ int main(int argc, char *argv[]) {
   // Initialize and run ClangdLSPServer.
   // Change stdin to binary to not lose \r\n on windows.
   llvm::sys::ChangeStdinToBinary();
-  auto Transport = newJSONTransport(
-      stdin, llvm::outs(),
-      InputMirrorStream ? InputMirrorStream.getPointer() : nullptr, PrettyPrint,
-      InputStyle);
+
+  std::unique_ptr<Transport> TransportLayer;
+  if (getenv("CLANGD_AS_XPC_SERVICE")) {
+#if CLANGD_BUILD_XPC
+    TransportLayer = newXPCTransport();
+#else
+    llvm::errs() << "This clangd binary wasn't built with XPC support.\n";
+    return (int)ErrorResultCode::CantRunAsXPCService;
+#endif
+  } else {
+    TransportLayer = newJSONTransport(
+        stdin, llvm::outs(),
+        InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,
+        PrettyPrint, InputStyle);
+  }
+
   ClangdLSPServer LSPServer(
-      *Transport, CCOpts, CompileCommandsDirPath,
+      *TransportLayer, CCOpts, CompileCommandsDirPath,
       /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs, Opts);
-  constexpr int NoShutdownRequestErrorCode = 1;
   llvm::set_thread_name("clangd.main");
-  return LSPServer.run() ? 0 : NoShutdownRequestErrorCode;
+  return LSPServer.run() ? 0
+                         : static_cast<int>(ErrorResultCode::NoShutdownRequest);
 }

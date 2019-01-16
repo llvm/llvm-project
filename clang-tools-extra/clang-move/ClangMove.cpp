@@ -76,10 +76,7 @@ std::string MakeAbsolutePath(StringRef CurrentDir, StringRef Path) {
     return "";
   llvm::SmallString<128> InitialDirectory(CurrentDir);
   llvm::SmallString<128> AbsolutePath(Path);
-  if (std::error_code EC =
-          llvm::sys::fs::make_absolute(InitialDirectory, AbsolutePath))
-    llvm::errs() << "Warning: could not make absolute file: '" << EC.message()
-                 << '\n';
+  llvm::sys::fs::make_absolute(InitialDirectory, AbsolutePath);
   return CleanPath(std::move(AbsolutePath));
 }
 
