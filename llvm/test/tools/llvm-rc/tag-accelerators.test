@@ -1,4 +1,4 @@
-; RUN: llvm-rc /FO %t %p/Inputs/tag-accelerators.rc
+; RUN: llvm-rc /FO %t -- %p/Inputs/tag-accelerators.rc
 ; RUN: llvm-readobj %t | FileCheck %s --check-prefix=ACCELERATORS
 
 ; ACCELERATORS: Resource type (int): 9

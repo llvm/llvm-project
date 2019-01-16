@@ -21,6 +21,8 @@ AST_MATCHER(FunctionDecl, isFuchsiaOverloadedOperator) {
     if (CXXMethodNode->isCopyAssignmentOperator() ||
         CXXMethodNode->isMoveAssignmentOperator())
       return false;
+    if (CXXMethodNode->getParent()->isLambda())
+      return false;
   }
   return Node.isOverloadedOperator();
 }

@@ -557,6 +557,11 @@ bool FileSpec::IsAbsolute() const {
   return llvm::sys::path::is_absolute(current_path, m_style);
 }
 
+void FileSpec::MakeAbsolute(const FileSpec &dir) {
+  if (IsRelative())
+    PrependPathComponent(dir);
+}
+
 void llvm::format_provider<FileSpec>::format(const FileSpec &F,
                                              raw_ostream &Stream,
                                              StringRef Style) {

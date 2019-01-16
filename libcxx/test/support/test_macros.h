@@ -11,7 +11,18 @@
 #ifndef SUPPORT_TEST_MACROS_HPP
 #define SUPPORT_TEST_MACROS_HPP
 
-#include <ciso646> // Get STL specific macros like _LIBCPP_VERSION
+// Attempt to get STL specific macros like _LIBCPP_VERSION using the most
+// minimal header possible. If we're testing libc++, we should use `<__config>`.
+// If <__config> isn't available, fall back to <ciso646>.
+#ifdef __has_include
+# if __has_include("<__config>")
+#   include <__config>
+#   define TEST_IMP_INCLUDED_HEADER
+# endif
+#endif
+#ifndef TEST_IMP_INCLUDED_HEADER
+#include <ciso646>
+#endif
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
@@ -116,7 +127,11 @@
 #   define TEST_THROW_SPEC(...) throw(__VA_ARGS__)
 # endif
 #else
-#define TEST_ALIGNOF(...) __alignof(__VA_ARGS__)
+#if defined(TEST_COMPILER_CLANG)
+# define TEST_ALIGNOF(...) _Alignof(__VA_ARGS__)
+#else
+# define TEST_ALIGNOF(...) __alignof(__VA_ARGS__)
+#endif
 #define TEST_ALIGNAS(...) __attribute__((__aligned__(__VA_ARGS__)))
 #define TEST_CONSTEXPR
 #define TEST_CONSTEXPR_CXX14

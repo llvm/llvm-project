@@ -207,7 +207,7 @@ void UseAfterMoveFinder::getUsesAndReinits(
 }
 
 bool isStandardSmartPointer(const ValueDecl *VD) {
-  const Type *TheType = VD->getType().getTypePtrOrNull();
+  const Type *TheType = VD->getType().getNonReferenceType().getTypePtrOrNull();
   if (!TheType)
     return false;
 

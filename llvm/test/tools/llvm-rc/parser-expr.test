@@ -1,4 +1,4 @@
-; RUN: llvm-rc /dry-run /V %p/Inputs/parser-expr.rc | FileCheck %s
+; RUN: llvm-rc /dry-run /V -- %p/Inputs/parser-expr.rc | FileCheck %s
 
 ; CHECK:  Language: 5, Sublanguage: 1
 ; CHECK-NEXT:  Language: 3, Sublanguage: 2

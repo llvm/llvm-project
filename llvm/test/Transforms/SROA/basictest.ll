@@ -1745,6 +1745,55 @@ entry:
   ret void
 }
 
+declare void @llvm.lifetime.start.isVoid.i64.p0i8(i64, [10 x float]* nocapture)
+declare void @llvm.lifetime.end.isVoid.i64.p0i8(i64, [10 x float]* nocapture)
+@array = dso_local global [10 x float] undef, align 4
+
+define void @test29(i32 %num, i32 %tid) {
+; CHECK-LABEL: @test29(
+; CHECK-NOT: alloca [10 x float]
+; CHECK: ret void
+
+entry:
+  %ra = alloca [10 x float], align 4
+  call void @llvm.lifetime.start.isVoid.i64.p0i8(i64 40, [10 x float]* nonnull %ra)
+
+  %cmp1 = icmp sgt i32 %num, 0
+  br i1 %cmp1, label %bb1, label %bb7
+
+bb1:
+  %tobool = icmp eq i32 %tid, 0
+  %conv.i = zext i32 %tid to i64
+  %0 = bitcast [10 x float]* %ra to i32*
+  %1 = load i32, i32* %0, align 4
+  %arrayidx5 = getelementptr inbounds [10 x float], [10 x float]* @array, i64 0, i64 %conv.i
+  %2 = bitcast float* %arrayidx5 to i32*
+  br label %bb2
+
+bb2:
+  %i.02 = phi i32 [ %num, %bb1 ], [ %sub, %bb5 ]
+  br i1 %tobool, label %bb3, label %bb4
+
+bb3:
+  br label %bb5
+
+bb4:
+  store i32 %1, i32* %2, align 4
+  br label %bb5
+
+bb5:
+  %sub = add i32 %i.02, -1
+  %cmp = icmp sgt i32 %sub, 0
+  br i1 %cmp, label %bb2, label %bb6
+
+bb6:
+  br label %bb7
+
+bb7:
+  call void @llvm.lifetime.end.isVoid.i64.p0i8(i64 40, [10 x float]* nonnull %ra)
+  ret void
+}
+
 !0 = !{!1, !1, i64 0, i64 1}
 !1 = !{!2, i64 1, !"type_0"}
 !2 = !{!"root"}
