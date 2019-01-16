@@ -749,11 +749,17 @@
 #   error "__cpp_lib_shared_ptr_weak_type should not be defined before c++17"
 # endif
 
-# ifndef __cpp_lib_shared_timed_mutex
-#   error "__cpp_lib_shared_timed_mutex should be defined in c++14"
-# endif
-# if __cpp_lib_shared_timed_mutex != 201402L
-#   error "__cpp_lib_shared_timed_mutex should have the value 201402L in c++14"
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   ifndef __cpp_lib_shared_timed_mutex
+#     error "__cpp_lib_shared_timed_mutex should be defined in c++14"
+#   endif
+#   if __cpp_lib_shared_timed_mutex != 201402L
+#     error "__cpp_lib_shared_timed_mutex should have the value 201402L in c++14"
+#   endif
+# else
+#   ifdef __cpp_lib_shared_timed_mutex
+#     error "__cpp_lib_shared_timed_mutex should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_string_udls
@@ -873,11 +879,17 @@
 #   error "__cpp_lib_as_const should have the value 201510L in c++17"
 # endif
 
-# ifndef __cpp_lib_atomic_is_always_lock_free
-#   error "__cpp_lib_atomic_is_always_lock_free should be defined in c++17"
-# endif
-# if __cpp_lib_atomic_is_always_lock_free != 201603L
-#   error "__cpp_lib_atomic_is_always_lock_free should have the value 201603L in c++17"
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   ifndef __cpp_lib_atomic_is_always_lock_free
+#     error "__cpp_lib_atomic_is_always_lock_free should be defined in c++17"
+#   endif
+#   if __cpp_lib_atomic_is_always_lock_free != 201603L
+#     error "__cpp_lib_atomic_is_always_lock_free should have the value 201603L in c++17"
+#   endif
+# else
+#   ifdef __cpp_lib_atomic_is_always_lock_free
+#     error "__cpp_lib_atomic_is_always_lock_free should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
+#   endif
 # endif
 
 # ifdef __cpp_lib_atomic_ref
@@ -1289,11 +1301,17 @@
 #   error "__cpp_lib_scoped_lock should have the value 201703L in c++17"
 # endif
 
-# ifndef __cpp_lib_shared_mutex
-#   error "__cpp_lib_shared_mutex should be defined in c++17"
-# endif
-# if __cpp_lib_shared_mutex != 201505L
-#   error "__cpp_lib_shared_mutex should have the value 201505L in c++17"
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   ifndef __cpp_lib_shared_mutex
+#     error "__cpp_lib_shared_mutex should be defined in c++17"
+#   endif
+#   if __cpp_lib_shared_mutex != 201505L
+#     error "__cpp_lib_shared_mutex should have the value 201505L in c++17"
+#   endif
+# else
+#   ifdef __cpp_lib_shared_mutex
+#     error "__cpp_lib_shared_mutex should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -1316,11 +1334,17 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++17"
 # endif
 
-# ifndef __cpp_lib_shared_timed_mutex
-#   error "__cpp_lib_shared_timed_mutex should be defined in c++17"
-# endif
-# if __cpp_lib_shared_timed_mutex != 201402L
-#   error "__cpp_lib_shared_timed_mutex should have the value 201402L in c++17"
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   ifndef __cpp_lib_shared_timed_mutex
+#     error "__cpp_lib_shared_timed_mutex should be defined in c++17"
+#   endif
+#   if __cpp_lib_shared_timed_mutex != 201402L
+#     error "__cpp_lib_shared_timed_mutex should have the value 201402L in c++17"
+#   endif
+# else
+#   ifdef __cpp_lib_shared_timed_mutex
+#     error "__cpp_lib_shared_timed_mutex should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_string_udls
@@ -1467,11 +1491,17 @@
 #   error "__cpp_lib_as_const should have the value 201510L in c++2a"
 # endif
 
-# ifndef __cpp_lib_atomic_is_always_lock_free
-#   error "__cpp_lib_atomic_is_always_lock_free should be defined in c++2a"
-# endif
-# if __cpp_lib_atomic_is_always_lock_free != 201603L
-#   error "__cpp_lib_atomic_is_always_lock_free should have the value 201603L in c++2a"
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   ifndef __cpp_lib_atomic_is_always_lock_free
+#     error "__cpp_lib_atomic_is_always_lock_free should be defined in c++2a"
+#   endif
+#   if __cpp_lib_atomic_is_always_lock_free != 201603L
+#     error "__cpp_lib_atomic_is_always_lock_free should have the value 201603L in c++2a"
+#   endif
+# else
+#   ifdef __cpp_lib_atomic_is_always_lock_free
+#     error "__cpp_lib_atomic_is_always_lock_free should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -1994,11 +2024,17 @@
 #   error "__cpp_lib_scoped_lock should have the value 201703L in c++2a"
 # endif
 
-# ifndef __cpp_lib_shared_mutex
-#   error "__cpp_lib_shared_mutex should be defined in c++2a"
-# endif
-# if __cpp_lib_shared_mutex != 201505L
-#   error "__cpp_lib_shared_mutex should have the value 201505L in c++2a"
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   ifndef __cpp_lib_shared_mutex
+#     error "__cpp_lib_shared_mutex should be defined in c++2a"
+#   endif
+#   if __cpp_lib_shared_mutex != 201505L
+#     error "__cpp_lib_shared_mutex should have the value 201505L in c++2a"
+#   endif
+# else
+#   ifdef __cpp_lib_shared_mutex
+#     error "__cpp_lib_shared_mutex should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -2021,11 +2057,17 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++2a"
 # endif
 
-# ifndef __cpp_lib_shared_timed_mutex
-#   error "__cpp_lib_shared_timed_mutex should be defined in c++2a"
-# endif
-# if __cpp_lib_shared_timed_mutex != 201402L
-#   error "__cpp_lib_shared_timed_mutex should have the value 201402L in c++2a"
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   ifndef __cpp_lib_shared_timed_mutex
+#     error "__cpp_lib_shared_timed_mutex should be defined in c++2a"
+#   endif
+#   if __cpp_lib_shared_timed_mutex != 201402L
+#     error "__cpp_lib_shared_timed_mutex should have the value 201402L in c++2a"
+#   endif
+# else
+#   ifdef __cpp_lib_shared_timed_mutex
+#     error "__cpp_lib_shared_timed_mutex should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_string_udls

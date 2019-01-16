@@ -135,7 +135,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_quoted_string_io                     201304L
 # define __cpp_lib_result_of_sfinae                     201210L
 # define __cpp_lib_robust_nonmodifying_seq_ops          201304L
-# define __cpp_lib_shared_timed_mutex                   201402L
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   define __cpp_lib_shared_timed_mutex                 201402L
+# endif
 # define __cpp_lib_string_udls                          201304L
 # define __cpp_lib_transformation_trait_aliases         201304L
 # define __cpp_lib_transparent_operators                201210L
@@ -152,7 +154,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_apply                                201603L
 # define __cpp_lib_array_constexpr                      201603L
 # define __cpp_lib_as_const                             201510L
-# define __cpp_lib_atomic_is_always_lock_free           201603L
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   define __cpp_lib_atomic_is_always_lock_free         201603L
+# endif
 # define __cpp_lib_bool_constant                        201505L
 // # define __cpp_lib_boyer_moore_searcher                 201603L
 # define __cpp_lib_byte                                 201603L
@@ -188,7 +192,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_raw_memory_algorithms                201606L
 # define __cpp_lib_sample                               201603L
 # define __cpp_lib_scoped_lock                          201703L
-# define __cpp_lib_shared_mutex                         201505L
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   define __cpp_lib_shared_mutex                       201505L
+# endif
 // # define __cpp_lib_shared_ptr_arrays                    201611L
 # define __cpp_lib_shared_ptr_weak_type                 201606L
 # define __cpp_lib_string_view                          201606L
@@ -203,7 +209,9 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #endif
 
 #if _LIBCPP_STD_VER > 17
-// # define __cpp_lib_atomic_ref                           201806L
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+// #   define __cpp_lib_atomic_ref                         201806L
+# endif
 // # define __cpp_lib_bind_front                           201811L
 // # define __cpp_lib_bit_cast                             201806L
 # if !defined(_LIBCPP_NO_HAS_CHAR8_T)
