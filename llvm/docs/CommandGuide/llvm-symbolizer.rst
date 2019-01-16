@@ -83,7 +83,7 @@ OPTIONS
  Prefer function names stored in symbol table to function names
  in debug info sections. Defaults to true.
 
-.. option:: -demangle
+.. option:: -demangle, -C
 
  Print demangled function names. Defaults to true.
 
