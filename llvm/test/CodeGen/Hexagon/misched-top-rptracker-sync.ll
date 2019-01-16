@@ -79,12 +79,12 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!3, !4}
 !llvm.ident = !{!5}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (http://llvm.org/git/clang.git 4b380bc1db8b0c72bdbdaf0e4697b1a84100a369) (http://llvm.org/git/llvm.git 6217a62bc009d55e160dbb694f2e94a22c80809f)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "bug.c", directory: "/")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = !{!"clang version 3.9.0 (http://llvm.org/git/clang.git 4b380bc1db8b0c72bdbdaf0e4697b1a84100a369) (http://llvm.org/git/llvm.git 6217a62bc009d55e160dbb694f2e94a22c80809f)"}
+!5 = !{!"clang version 3.9.0"}
 !6 = distinct !DISubprogram(name: "fred", scope: !1, file: !1, line: 138, type: !7, isLocal: false, isDefinition: true, scopeLine: 139, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !25)
 !7 = !DISubroutineType(types: !8)
 !8 = !{null, !9, !15}

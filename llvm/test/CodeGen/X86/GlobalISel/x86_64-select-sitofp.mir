@@ -41,7 +41,7 @@
   !llvm.ident = !{!1}
 
   !0 = !{i32 1, !"wchar_size", i32 4}
-  !1 = !{!"clang version 7.0.0 (http://llvm.org/git/clang.git a05f37359b23be7c068e19968c8f106edf6f2b34) (http://llvm.org/git/llvm.git d693de1fee74d455e20f96006aac50317ca1da6b)"}
+  !1 = !{!"clang version 7.0.0"}
 
 ...
 ---

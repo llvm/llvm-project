@@ -1649,15 +1649,14 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     // X - A*-B -> X + A*B
     // X - -A*B -> X + A*B
     Value *A, *B;
-    Constant *CI;
     if (match(Op1, m_c_Mul(m_Value(A), m_Neg(m_Value(B)))))
       return BinaryOperator::CreateAdd(Op0, Builder.CreateMul(A, B));
 
-    // X - A*CI -> X + A*-CI
+    // X - A*C -> X + A*-C
     // No need to handle commuted multiply because multiply handling will
     // ensure constant will be move to the right hand side.
-    if (match(Op1, m_Mul(m_Value(A), m_Constant(CI)))) {
-      Value *NewMul = Builder.CreateMul(A, ConstantExpr::getNeg(CI));
+    if (match(Op1, m_Mul(m_Value(A), m_Constant(C))) && !isa<ConstantExpr>(C)) {
+      Value *NewMul = Builder.CreateMul(A, ConstantExpr::getNeg(C));
       return BinaryOperator::CreateAdd(Op0, NewMul);
     }
   }

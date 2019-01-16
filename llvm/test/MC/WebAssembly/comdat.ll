@@ -75,7 +75,7 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:        Content:         '616263'
 ; CHECK-NEXT:  - Type:            CUSTOM
 ; CHECK-NEXT:    Name:            linking
-; CHECK-NEXT:    Version:         1
+; CHECK-NEXT:    Version:         2
 ; CHECK-NEXT:    SymbolTable:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            FUNCTION
@@ -106,7 +106,7 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:    SegmentInfo:
 ; CHECK-NEXT:      - Index:           0
 ; CHECK-NEXT:        Name:            .rodata.constantData
-; CHECK-NEXT:        Alignment:       1
+; CHECK-NEXT:        Alignment:       0
 ; CHECK-NEXT:        Flags:           [  ]
 ; CHECK-NEXT:    Comdats:
 ; CHECK-NEXT:        Name:            basicInlineFn

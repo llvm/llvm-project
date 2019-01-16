@@ -33,6 +33,7 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ToolDrivers/llvm-dlltool/DlltoolDriver.h"
 #include "llvm/ToolDrivers/llvm-lib/LibDriver.h"
@@ -115,7 +116,7 @@ void printHelpMessage() {
 
 // Show the error message and exit.
 LLVM_ATTRIBUTE_NORETURN static void fail(Twine Error) {
-  errs() << ToolName << ": " << Error << ".\n";
+  WithColor::error(errs(), ToolName) << Error << ".\n";
   printHelpMessage();
   exit(1);
 }
@@ -221,7 +222,7 @@ std::vector<std::unique_ptr<object::Archive>> Archives;
 
 static object::Archive &readLibrary(const Twine &Library) {
   auto BufOrErr = MemoryBuffer::getFile(Library, -1, false);
-  failIfError(BufOrErr.getError(), "Could not open library");
+  failIfError(BufOrErr.getError(), "Could not open library " + Library);
   ArchiveBuffers.push_back(std::move(*BufOrErr));
   auto LibOrErr =
       object::Archive::create(ArchiveBuffers.back()->getMemBufferRef());
@@ -532,7 +533,7 @@ static void performReadOperation(ArchiveOperation Operation,
   if (Members.empty())
     return;
   for (StringRef Name : Members)
-    errs() << Name << " was not found\n";
+    WithColor::error(errs(), ToolName) << "'" << Name << "' was not found\n";
   exit(1);
 }
 
@@ -546,7 +547,7 @@ static void addChildMember(std::vector<NewArchiveMember> &Members,
   failIfError(NMOrErr.takeError());
   if (FlattenArchive &&
       identify_magic(NMOrErr->Buf->getBuffer()) == file_magic::archive) {
-    Expected<StringRef> FileNameOrErr = M.getName();
+    Expected<std::string> FileNameOrErr = M.getFullName();
     failIfError(FileNameOrErr.takeError());
     object::Archive &Lib = readLibrary(*FileNameOrErr);
     // When creating thin archives, only flatten if the member is also thin.
@@ -853,7 +854,8 @@ static int performOperation(ArchiveOperation Operation,
   } else {
     if (!Create) {
       // Produce a warning if we should and we're creating the archive
-      errs() << ToolName << ": creating " << ArchiveName << "\n";
+      WithColor::warning(errs(), ToolName)
+          << "creating " << ArchiveName << "\n";
     }
   }
 

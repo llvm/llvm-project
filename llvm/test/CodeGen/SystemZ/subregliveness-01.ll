@@ -36,7 +36,7 @@ attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disa
 
 !llvm.ident = !{!0}
 
-!0 = !{!"clang version 8.0.0 (http://llvm.org/git/clang.git c0a5e830f198cf42d29f72f1ec06fbf4c5210e2c) (http://llvm.org/git/llvm.git ffc8c538b70b678031b8617f61f83ee120bcb884)"}
+!0 = !{!"clang version 8.0.0"}
 !1 = !{!2}
 !2 = distinct !{!2, !3, !"func_1: %agg.result"}
 !3 = distinct !{!3, !"func_1"}

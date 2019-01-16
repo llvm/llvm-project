@@ -1260,29 +1260,20 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
 
   // EnterLoopCond - is it okay to start executing this `LS'?
   Value *EnterLoopCond = nullptr;
-  if (Increasing)
-    EnterLoopCond = IsSignedPredicate
-                        ? B.CreateICmpSLT(LS.IndVarStart, ExitSubloopAt)
-                        : B.CreateICmpULT(LS.IndVarStart, ExitSubloopAt);
-  else
-    EnterLoopCond = IsSignedPredicate
-                        ? B.CreateICmpSGT(LS.IndVarStart, ExitSubloopAt)
-                        : B.CreateICmpUGT(LS.IndVarStart, ExitSubloopAt);
+  auto Pred =
+      Increasing
+          ? (IsSignedPredicate ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT)
+          : (IsSignedPredicate ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT);
+  EnterLoopCond = B.CreateICmp(Pred, LS.IndVarStart, ExitSubloopAt);
 
   B.CreateCondBr(EnterLoopCond, LS.Header, RRI.PseudoExit);
   PreheaderJump->eraseFromParent();
 
   LS.LatchBr->setSuccessor(LS.LatchBrExitIdx, RRI.ExitSelector);
   B.SetInsertPoint(LS.LatchBr);
-  Value *TakeBackedgeLoopCond = nullptr;
-  if (Increasing)
-    TakeBackedgeLoopCond = IsSignedPredicate
-                        ? B.CreateICmpSLT(LS.IndVarBase, ExitSubloopAt)
-                        : B.CreateICmpULT(LS.IndVarBase, ExitSubloopAt);
-  else
-    TakeBackedgeLoopCond = IsSignedPredicate
-                        ? B.CreateICmpSGT(LS.IndVarBase, ExitSubloopAt)
-                        : B.CreateICmpUGT(LS.IndVarBase, ExitSubloopAt);
+  Value *TakeBackedgeLoopCond = B.CreateICmp(Pred, LS.IndVarBase,
+                                             ExitSubloopAt);
+
   Value *CondForBranch = LS.LatchBrExitIdx == 1
                              ? TakeBackedgeLoopCond
                              : B.CreateNot(TakeBackedgeLoopCond);
@@ -1294,15 +1285,7 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   // IterationsLeft - are there any more iterations left, given the original
   // upper bound on the induction variable?  If not, we branch to the "real"
   // exit.
-  Value *IterationsLeft = nullptr;
-  if (Increasing)
-    IterationsLeft = IsSignedPredicate
-                         ? B.CreateICmpSLT(LS.IndVarBase, LS.LoopExitAt)
-                         : B.CreateICmpULT(LS.IndVarBase, LS.LoopExitAt);
-  else
-    IterationsLeft = IsSignedPredicate
-                         ? B.CreateICmpSGT(LS.IndVarBase, LS.LoopExitAt)
-                         : B.CreateICmpUGT(LS.IndVarBase, LS.LoopExitAt);
+  Value *IterationsLeft = B.CreateICmp(Pred, LS.IndVarBase, LS.LoopExitAt);
   B.CreateCondBr(IterationsLeft, RRI.PseudoExit, LS.LatchExit);
 
   BranchInst *BranchToContinuation =

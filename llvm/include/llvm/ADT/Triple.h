@@ -60,7 +60,6 @@ public:
     mips64,         // MIPS64: mips64, mips64r6, mipsn32, mipsn32r6
     mips64el,       // MIPS64EL: mips64el, mips64r6el, mipsn32el, mipsn32r6el
     msp430,         // MSP430: msp430
-    nios2,          // NIOSII: nios2
     ppc,            // PPC: powerpc
     ppc64,          // PPC64: powerpc64, ppu
     ppc64le,        // PPC64LE: powerpc64le
@@ -187,8 +186,8 @@ public:
     AMDPAL,     // AMD PAL Runtime
     HermitCore, // HermitCore Unikernel/Multikernel
     Hurd,       // GNU/Hurd
-    COWS,       // Capability-Oriented WebAssembly Syscalls
-    LastOSType = COWS
+    WASI,       // Experimental WebAssembly OS
+    LastOSType = WASI
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -589,9 +588,9 @@ public:
     return getOS() == Triple::Hurd;
   }
 
-  /// Tests whether the OS is COWS.
-  bool isOSCOWS() const {
-    return getOS() == Triple::COWS;
+  /// Tests whether the OS is WASI.
+  bool isOSWASI() const {
+    return getOS() == Triple::WASI;
   }
 
   /// Tests whether the OS uses glibc.

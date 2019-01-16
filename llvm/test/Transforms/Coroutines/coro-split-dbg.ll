@@ -77,12 +77,12 @@ attributes #9 = { noduplicate }
 !llvm.module.flags = !{!3, !4}
 !llvm.ident = !{!5}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 4.0.0 (http://llvm.org/git/clang.git 6c405f93921ac99ff5b8521bb1b3df4449deede4) (http://llvm.org/git/llvm.git 6e6d3247102a0f87ce14e906dcf6a3a5ed3faa65)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 4.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "coro.c", directory: "/home/gor/build/bin")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = !{!"clang version 4.0.0 (http://llvm.org/git/clang.git 6c405f93921ac99ff5b8521bb1b3df4449deede4) (http://llvm.org/git/llvm.git 6e6d3247102a0f87ce14e906dcf6a3a5ed3faa65)"}
+!5 = !{!"clang version 4.0.0"}
 !6 = distinct !DISubprogram(name: "print", scope: !1, file: !1, line: 6, type: !7, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !10)
 !7 = !DISubroutineType(types: !8)
 !8 = !{null, !9}

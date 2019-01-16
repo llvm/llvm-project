@@ -7429,13 +7429,8 @@ static void GetRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
 
   // Do not check for single registers.
   if (AssignedReg) {
-    Regs.push_back(AssignedReg);
-    --NumRegs;
-    if (NumRegs) {
       for (; *I != AssignedReg; ++I)
-        assert(I != RC->end() && "Didn't find reg!");
-      ++I;
-    }
+        assert(I != RC->end() && "AssignedReg should be member of RC");
   }
 
   for (; NumRegs; --NumRegs, ++I) {

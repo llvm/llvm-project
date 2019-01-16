@@ -49,9 +49,10 @@ public:
     UnableToLegalize,
   };
 
-  LegalizerHelper(MachineFunction &MF, GISelChangeObserver &Observer);
+  LegalizerHelper(MachineFunction &MF, GISelChangeObserver &Observer,
+                  MachineIRBuilder &B);
   LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
-                  GISelChangeObserver &Observer);
+                  GISelChangeObserver &Observer, MachineIRBuilder &B);
 
   /// Replace \p MI by a sequence of legal instructions that can implement the
   /// same operation. Note that this means \p MI may be deleted, so any iterator
@@ -90,7 +91,7 @@ public:
 
   /// Expose MIRBuilder so clients can set their own RecordInsertInstruction
   /// functions
-  MachineIRBuilder MIRBuilder;
+  MachineIRBuilder &MIRBuilder;
 
   /// Expose LegalizerInfo so the clients can re-use.
   const LegalizerInfo &getLegalizerInfo() const { return LI; }

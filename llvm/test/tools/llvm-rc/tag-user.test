@@ -2,7 +2,7 @@
 ; RUN: mkdir %t
 ; RUN: cd %t
 ; RUN: cp %p/Inputs/bitmap.bmp .
-; RUN: llvm-rc /FO %t/tag-user.res %p/Inputs/tag-user.rc
+; RUN: llvm-rc /FO %t/tag-user.res -- %p/Inputs/tag-user.rc
 ; RUN: llvm-readobj %t/tag-user.res | FileCheck %s
 
 ; CHECK:      Resource type (int): 500

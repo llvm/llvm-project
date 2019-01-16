@@ -526,6 +526,14 @@ public:
             Callee->getFnAttribute("target-features"));
   }
 
+  bool areFunctionArgsABICompatible(const Function *Caller, const Function *Callee,
+                                    SmallPtrSetImpl<Argument *> &Args) const {
+    return (Caller->getFnAttribute("target-cpu") ==
+            Callee->getFnAttribute("target-cpu")) &&
+           (Caller->getFnAttribute("target-features") ==
+            Callee->getFnAttribute("target-features"));
+  }
+
   bool isIndexedLoadLegal(TTI::MemIndexedMode Mode, Type *Ty,
                           const DataLayout &DL) const {
     return false;

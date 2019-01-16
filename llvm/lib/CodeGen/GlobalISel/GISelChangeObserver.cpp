@@ -29,3 +29,12 @@ void GISelChangeObserver::finishedChangingAllUsesOfReg() {
     changedInstr(*ChangedMI);
 }
 
+RAIIDelegateInstaller::RAIIDelegateInstaller(MachineFunction &MF,
+                                             MachineFunction::Delegate *Del)
+    : MF(MF), Delegate(Del) {
+  // Register this as the delegate for handling insertions and deletions of
+  // instructions.
+  MF.setDelegate(Del);
+}
+
+RAIIDelegateInstaller::~RAIIDelegateInstaller() { MF.resetDelegate(Delegate); }

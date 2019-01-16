@@ -266,12 +266,12 @@ cl::opt<unsigned long long>
                  cl::value_desc("address"), cl::init(0));
 cl::opt<unsigned long long>
     StopAddress("stop-address",
-                cl::desc("Do not skip blocks of zeroes when disassembling"),
+                cl::desc("Stop disassembly at address"),
                 cl::value_desc("address"), cl::init(UINT64_MAX));
 
-cl::opt<bool> DisassembleZeroes("disassemble-zeroes",
-                                cl::desc("Do not skip blocks of zeroes when "
-                                         "disassembling the blocks of zeroes"));
+cl::opt<bool> DisassembleZeroes(
+                "disassemble-zeroes",
+                cl::desc("Do not skip blocks of zeroes when disassembling"));
 cl::alias DisassembleZeroesShort("z",
                                  cl::desc("Alias for --disassemble-zeroes"),
                                  cl::aliasopt(DisassembleZeroes));

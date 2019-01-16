@@ -544,6 +544,10 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::thread_pointer);
       return true;
     }
+    if (Name == "x86.seh.recoverfp") {
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::eh_recoverfp);
+      return true;
+    }
     break;
   }
 
