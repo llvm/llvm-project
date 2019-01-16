@@ -1414,6 +1414,21 @@ void __kmp_suspend_uninitialize_thread(kmp_info_t *th) {
   }
 }
 
+// return true if lock obtained, false otherwise
+int __kmp_try_suspend_mx(kmp_info_t *th) {
+  return (pthread_mutex_trylock(&th->th.th_suspend_mx.m_mutex) == 0);
+}
+
+void __kmp_lock_suspend_mx(kmp_info_t *th) {
+  int status = pthread_mutex_lock(&th->th.th_suspend_mx.m_mutex);
+  KMP_CHECK_SYSFAIL("pthread_mutex_lock", status);
+}
+
+void __kmp_unlock_suspend_mx(kmp_info_t *th) {
+  int status = pthread_mutex_unlock(&th->th.th_suspend_mx.m_mutex);
+  KMP_CHECK_SYSFAIL("pthread_mutex_unlock", status);
+}
+
 /* This routine puts the calling thread to sleep after setting the
    sleep bit for the indicated flag variable to true. */
 template <class C>
@@ -1437,7 +1452,15 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
   /* TODO: shouldn't this use release semantics to ensure that
      __kmp_suspend_initialize_thread gets called first? */
   old_spin = flag->set_sleeping();
-
+#if OMP_50_ENABLED
+  if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
+      __kmp_pause_status != kmp_soft_paused) {
+    flag->unset_sleeping();
+    status = pthread_mutex_unlock(&th->th.th_suspend_mx.m_mutex);
+    KMP_CHECK_SYSFAIL("pthread_mutex_unlock", status);
+    return;
+  }
+#endif
   KF_TRACE(5, ("__kmp_suspend_template: T#%d set sleep bit for spin(%p)==%x,"
                " was %x\n",
                th_gtid, flag->get(), flag->load(), old_spin));

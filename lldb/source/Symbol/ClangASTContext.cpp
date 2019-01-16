@@ -5088,8 +5088,9 @@ CompilerType ClangASTContext::GetBasicTypeFromAST(lldb::BasicType basic_type) {
 // Exploring the type
 //----------------------------------------------------------------------
 
-uint64_t ClangASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
-                                     ExecutionContextScope *exe_scope) {
+Optional<uint64_t>
+ClangASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
+                            ExecutionContextScope *exe_scope) {
   if (GetCompleteType(type)) {
     clang::QualType qual_type(GetCanonicalQualType(type));
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -5098,7 +5099,7 @@ uint64_t ClangASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
       if (GetCompleteType(type))
         return getASTContext()->getTypeSize(qual_type);
       else
-        return 0;
+        return None;
       break;
 
     case clang::Type::ObjCInterface:
@@ -5143,10 +5144,14 @@ uint64_t ClangASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
         return bit_size +
                getASTContext()->getTypeSize(
                    getASTContext()->ObjCBuiltinClassTy);
-      return bit_size;
+      // Function types actually have a size of 0, that's not an error.
+      if (qual_type->isFunctionProtoType())
+        return bit_size;
+      if (bit_size)
+        return bit_size;
     }
   }
-  return 0;
+  return None;
 }
 
 uint64_t ClangASTContext::GetByteStride(lldb::opaque_compiler_type_t type) {
