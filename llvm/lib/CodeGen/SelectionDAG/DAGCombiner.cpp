@@ -4724,9 +4724,8 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     if (SDValue Res = ReduceLoadWidth(N)) {
       LoadSDNode *LN0 = N0->getOpcode() == ISD::ANY_EXTEND
         ? cast<LoadSDNode>(N0.getOperand(0)) : cast<LoadSDNode>(N0);
-
       AddToWorklist(N);
-      CombineTo(LN0, Res, Res.getValue(1));
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 0), Res);
       return SDValue(N, 0);
     }
   }
@@ -9486,18 +9485,15 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
     if (DAG.getDataLayout().isBigEndian())
       ShAmt = AdjustBigEndianShift(ShAmt);
 
-    // We're using a shifted mask, so the load now has an offset. This means we
-    // now need to shift right the mask to match the new load and then shift
-    // right the result of the AND.
-    const APInt &Mask = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
-    APInt ShiftedMask = Mask.lshr(ShAmt);
-    DAG.UpdateNodeOperands(N, Result, DAG.getConstant(ShiftedMask, DL, VT));
+    // We're using a shifted mask, so the load now has an offset. This means
+    // that data has been loaded into the lower bytes than it would have been
+    // before, so we need to shl the loaded data into the correct position in the
+    // register.
     SDValue ShiftC = DAG.getConstant(ShAmt, DL, VT);
-    SDValue Shifted = DAG.getNode(ISD::SHL, DL, VT, SDValue(N, 0),
-                                  ShiftC);
-    DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Shifted);
-    DAG.UpdateNodeOperands(Shifted.getNode(), SDValue(N, 0), ShiftC);
+    Result = DAG.getNode(ISD::SHL, DL, VT, Result, ShiftC);
+    DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
   }
+
   // Return the new loaded value.
   return Result;
 }

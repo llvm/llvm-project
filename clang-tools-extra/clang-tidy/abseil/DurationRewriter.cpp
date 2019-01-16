@@ -216,6 +216,23 @@ std::string rewriteExprFromNumberToDuration(
       .str();
 }
 
+bool isNotInMacro(const MatchFinder::MatchResult &Result, const Expr *E) {
+  if (!E->getBeginLoc().isMacroID())
+    return true;
+
+  SourceLocation Loc = E->getBeginLoc();
+  // We want to get closer towards the initial macro typed into the source only
+  // if the location is being expanded as a macro argument.
+  while (Result.SourceManager->isMacroArgExpansion(Loc)) {
+    // We are calling getImmediateMacroCallerLoc, but note it is essentially
+    // equivalent to calling getImmediateSpellingLoc in this context according
+    // to Clang implementation. We are not calling getImmediateSpellingLoc
+    // because Clang comment says it "should not generally be used by clients."
+    Loc = Result.SourceManager->getImmediateMacroCallerLoc(Loc);
+  }
+  return !Loc.isMacroID();
+}
+
 } // namespace abseil
 } // namespace tidy
 } // namespace clang

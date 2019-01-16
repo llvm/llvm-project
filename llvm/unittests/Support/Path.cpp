@@ -187,7 +187,7 @@ TEST(Support, Path) {
   }
 
   SmallString<32> Relative("foo.cpp");
-  ASSERT_NO_ERROR(sys::fs::make_absolute("/root", Relative));
+  sys::fs::make_absolute("/root", Relative);
   Relative[5] = '/'; // Fix up windows paths.
   ASSERT_EQ("/root/foo.cpp", Relative);
 }

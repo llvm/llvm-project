@@ -45,6 +45,11 @@ def SIsbuffer_load : SDNode<"AMDGPUISD::SBUFFER_LOAD",
   [SDNPMayLoad, SDNPMemOperand]
 >;
 
+def SIds_ordered_count : SDNode<"AMDGPUISD::DS_ORDERED_COUNT",
+  SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i16>]>,
+  [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain, SDNPInGlue]
+>;
+
 def SIatomic_inc : SDNode<"AMDGPUISD::ATOMIC_INC", SDTAtomic2,
   [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
 >;

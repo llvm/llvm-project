@@ -174,6 +174,8 @@ multiclass JWriteResYMMPair<X86FoldableSchedWrite SchedRW,
   }
 }
 
+// Instructions that have local forwarding disabled have an extra +1cy latency.
+
 // A folded store needs a cycle on the SAGU for the store data,
 // most RMW instructions don't need an extra uop.
 defm : X86WriteRes<WriteRMW, [JSAGU], 1, [1], 0>;
@@ -575,10 +577,10 @@ defm : JWriteResFpuPair<WriteAESDecEnc,   [JFPU01, JVALU, JFPU0, JVIMUL], 3, [1,
 // Horizontal add/sub  instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteFHAdd,         [JFPU0, JFPA], 3>;
-defm : JWriteResYMMPair<WriteFHAddY,        [JFPU0, JFPA], 3, [2,2], 2>;
-defm : JWriteResFpuPair<WritePHAdd,       [JFPU01, JVALU], 1>;
-defm : JWriteResFpuPair<WritePHAddX,      [JFPU01, JVALU], 1>;
+defm : JWriteResFpuPair<WriteFHAdd,         [JFPU0, JFPA], 4>;            // +1cy latency.
+defm : JWriteResYMMPair<WriteFHAddY,        [JFPU0, JFPA], 4, [2,2], 2>;  // +1cy latency.
+defm : JWriteResFpuPair<WritePHAdd,         [JFPU01, JVALU], 2>;          // +1cy latency.
+defm : JWriteResFpuPair<WritePHAddX,        [JFPU01, JVALU], 2>;          // +1cy latency.
 defm : X86WriteResPairUnsupported<WritePHAddY>;
 
 ////////////////////////////////////////////////////////////////////////////////

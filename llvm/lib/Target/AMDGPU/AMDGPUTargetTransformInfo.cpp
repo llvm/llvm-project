@@ -308,6 +308,8 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   switch (Inst->getIntrinsicID()) {
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
+  case Intrinsic::amdgcn_ds_ordered_add:
+  case Intrinsic::amdgcn_ds_ordered_swap:
   case Intrinsic::amdgcn_ds_fadd:
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax: {

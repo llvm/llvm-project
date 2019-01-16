@@ -1,4 +1,4 @@
-; RUN: llvm-rc /dry-run /V %p/Inputs/parser-correct-everything.rc | FileCheck %s --check-prefix PGOOD
+; RUN: llvm-rc /dry-run /V -- %p/Inputs/parser-correct-everything.rc | FileCheck %s --check-prefix PGOOD
 
 ; PGOOD:  Icon (meh): "hello.bmp"
 ; PGOOD-NEXT:  Icon (Icon): "Icon"

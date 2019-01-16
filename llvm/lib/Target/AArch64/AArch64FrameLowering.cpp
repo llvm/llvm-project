@@ -228,6 +228,10 @@ bool AArch64FrameLowering::hasFP(const MachineFunction &MF) const {
       MFI.getMaxCallFrameSize() > DefaultSafeSPDisplacement)
     return true;
 
+  // Win64 SEH requires frame pointer if funclets are present.
+  if (MF.hasLocalEscape())
+    return true;
+
   return false;
 }
 

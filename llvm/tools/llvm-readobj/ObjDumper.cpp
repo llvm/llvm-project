@@ -117,7 +117,8 @@ void ObjDumper::printSectionAsHex(const object::ObjectFile *Obj,
     uint8_t i;
     uint8_t k;
 
-    W.startLine() << format_hex(SecPtr - SecContent, 10);
+    W.startLine() << format_hex(Section.getAddress() + (SecPtr - SecContent),
+                                10);
     W.startLine() << ' ';
     for (i = 0; TmpSecPtr < SecEnd && i < 4; ++i) {
       for (k = 0; TmpSecPtr < SecEnd && k < 4; k++, TmpSecPtr++) {

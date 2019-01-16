@@ -910,6 +910,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   switch (IntrID) {
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
+  case Intrinsic::amdgcn_ds_ordered_add:
+  case Intrinsic::amdgcn_ds_ordered_swap:
   case Intrinsic::amdgcn_ds_fadd:
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax: {
@@ -937,6 +939,8 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   switch (II->getIntrinsicID()) {
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
+  case Intrinsic::amdgcn_ds_ordered_add:
+  case Intrinsic::amdgcn_ds_ordered_swap:
   case Intrinsic::amdgcn_ds_fadd:
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax: {
@@ -5438,6 +5442,63 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   SDLoc DL(Op);
 
   switch (IntrID) {
+  case Intrinsic::amdgcn_ds_ordered_add:
+  case Intrinsic::amdgcn_ds_ordered_swap: {
+    MemSDNode *M = cast<MemSDNode>(Op);
+    SDValue Chain = M->getOperand(0);
+    SDValue M0 = M->getOperand(2);
+    SDValue Value = M->getOperand(3);
+    unsigned OrderedCountIndex = M->getConstantOperandVal(7);
+    unsigned WaveRelease = M->getConstantOperandVal(8);
+    unsigned WaveDone = M->getConstantOperandVal(9);
+    unsigned ShaderType;
+    unsigned Instruction;
+
+    switch (IntrID) {
+    case Intrinsic::amdgcn_ds_ordered_add:
+      Instruction = 0;
+      break;
+    case Intrinsic::amdgcn_ds_ordered_swap:
+      Instruction = 1;
+      break;
+    }
+
+    if (WaveDone && !WaveRelease)
+      report_fatal_error("ds_ordered_count: wave_done requires wave_release");
+
+    switch (DAG.getMachineFunction().getFunction().getCallingConv()) {
+    case CallingConv::AMDGPU_CS:
+    case CallingConv::AMDGPU_KERNEL:
+      ShaderType = 0;
+      break;
+    case CallingConv::AMDGPU_PS:
+      ShaderType = 1;
+      break;
+    case CallingConv::AMDGPU_VS:
+      ShaderType = 2;
+      break;
+    case CallingConv::AMDGPU_GS:
+      ShaderType = 3;
+      break;
+    default:
+      report_fatal_error("ds_ordered_count unsupported for this calling conv");
+    }
+
+    unsigned Offset0 = OrderedCountIndex << 2;
+    unsigned Offset1 = WaveRelease | (WaveDone << 1) | (ShaderType << 2) |
+                       (Instruction << 4);
+    unsigned Offset = Offset0 | (Offset1 << 8);
+
+    SDValue Ops[] = {
+      Chain,
+      Value,
+      DAG.getTargetConstant(Offset, DL, MVT::i16),
+      copyToM0(DAG, Chain, DL, M0).getValue(1), // Glue
+    };
+    return DAG.getMemIntrinsicNode(AMDGPUISD::DS_ORDERED_COUNT, DL,
+                                   M->getVTList(), Ops, M->getMemoryVT(),
+                                   M->getMemOperand());
+  }
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
   case Intrinsic::amdgcn_ds_fadd:

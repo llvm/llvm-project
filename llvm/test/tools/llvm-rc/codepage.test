@@ -1,4 +1,4 @@
-; RUN: llvm-rc /C 65001 /FO %t.utf8.res %p/Inputs/utf8.rc
+; RUN: llvm-rc /C 65001 /FO %t.utf8.res -- %p/Inputs/utf8.rc
 ; RUN: llvm-readobj %t.utf8.res | FileCheck %s --check-prefix=UTF8
 
 ; UTF8:      Resource type (int): 6

@@ -294,6 +294,24 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:3, col:8> col:3 implicit __invoke 'auto ()' static inline
   // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:7, col:8>
 
+  [](int a, ...){};
+  // CHECK: LambdaExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:18> '(lambda at {{.*}}:[[@LINE-1]]:3)'
+  // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <col:3> col:3 implicit class definition
+  // CHECK-NEXT: DefinitionData lambda
+  // CHECK-NEXT: DefaultConstructor
+  // CHECK-NEXT: CopyConstructor
+  // CHECK-NEXT: MoveConstructor
+  // CHECK-NEXT: CopyAssignment
+  // CHECK-NEXT: MoveAssignment
+  // CHECK-NEXT: Destructor
+  // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:16, col:18> col:3 operator() 'auto (int, ...) const' inline
+  // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:6, col:10> col:10 a 'int'
+  // CHECK-NEXT: CompoundStmt
+  // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:18> col:3 implicit constexpr operator auto (*)(int, ...) 'auto (*() const)(int, ...)' inline
+  // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:3, col:18> col:3 implicit __invoke 'auto (int, ...)' static inline
+  // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:6, col:10> col:10 a 'int'
+  // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:17, col:18>
+
   [a...]{};
   // CHECK: LambdaExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:10> '(lambda at {{.*}}:[[@LINE-1]]:3)'
   // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <col:3> col:3 implicit class definition

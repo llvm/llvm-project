@@ -174,6 +174,28 @@ std::pair<Function *, Function *> llvm::createSanitizerCtorAndInitFunctions(
   return std::make_pair(Ctor, InitFunction);
 }
 
+std::pair<Function *, Function *>
+llvm::getOrCreateSanitizerCtorAndInitFunctions(
+    Module &M, StringRef CtorName, StringRef InitName,
+    ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
+    function_ref<void(Function *, Function *)> FunctionsCreatedCallback,
+    StringRef VersionCheckName) {
+  assert(!CtorName.empty() && "Expected ctor function name");
+
+  if (Function *Ctor = M.getFunction(CtorName))
+    // FIXME: Sink this logic into the module, similar to the handling of
+    // globals. This will make moving to a concurrent model much easier.
+    if (Ctor->arg_size() == 0 ||
+        Ctor->getReturnType() == Type::getVoidTy(M.getContext()))
+      return {Ctor, declareSanitizerInitFunction(M, InitName, InitArgTypes)};
+
+  Function *Ctor, *InitFunction;
+  std::tie(Ctor, InitFunction) = llvm::createSanitizerCtorAndInitFunctions(
+      M, CtorName, InitName, InitArgTypes, InitArgs, VersionCheckName);
+  FunctionsCreatedCallback(Ctor, InitFunction);
+  return std::make_pair(Ctor, InitFunction);
+}
+
 Function *llvm::getOrCreateInitFunction(Module &M, StringRef Name) {
   assert(!Name.empty() && "Expected init function name");
   if (Function *F = M.getFunction(Name)) {
