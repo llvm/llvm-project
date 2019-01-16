@@ -70,6 +70,11 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
     } else {
       CompilerType compiler_type = value.GetCompilerType();
       if (compiler_type) {
+        ExecutionContextScope *exe_scope =
+            exe_ctx.GetBestExecutionContextScope();
+        auto size = compiler_type.GetByteSize(exe_scope);
+        if (!size)
+          return false;
         // put custom bytes to display in the DataExtractor to override the
         // default value logic
         if (GetFormat() == eFormatCString) {
@@ -91,25 +96,20 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
                 data.SetData(buffer_sp);
             }
           }
-        } else {
+        } else if (!size || *size > 0) {
           Status error;
           valobj->GetData(data, error);
-          if (error.Fail() &&
-              !SwiftASTContext::IsPossibleZeroSizeType(
-                  compiler_type, exe_ctx.GetBestExecutionContextScope()))
+          if (error.Fail())
             return false;
         }
 
         StreamString sstr;
-        ExecutionContextScope *exe_scope(
-            exe_ctx.GetBestExecutionContextScope());
         compiler_type.DumpTypeValue(
-            &sstr,       // The stream to use for display
-            GetFormat(), // Format to display this type with
-            data,        // Data to extract from
-            0,           // Byte offset into "m_data"
-            compiler_type.GetByteSize(
-                exe_scope),                 // Byte size of item in "m_data"
+            &sstr,                          // The stream to use for display
+            GetFormat(),                    // Format to display this type with
+            data,                           // Data to extract from
+            0,                              // Byte offset into "m_data"
+            *size,                          // Byte size of item in "m_data"
             valobj->GetBitfieldBitSize(),   // Bitfield bit size
             valobj->GetBitfieldBitOffset(), // Bitfield bit offset
             exe_scope,

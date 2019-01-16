@@ -1168,8 +1168,9 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     // this check scattered in several places in the codebase, we should at
     // some point centralize it.
     lldb::StackFrameSP stack_frame_sp = stack_frame_wp.lock();
-    if (repl && SwiftASTContext::IsPossibleZeroSizeType(variable.GetType(),
-                                                        stack_frame_sp.get())) {
+    llvm::Optional<uint64_t> size =
+        variable.GetType().GetByteSize(stack_frame_sp.get());
+    if (repl && size && *size == 0) {
       auto &repl_mat = *llvm::cast<SwiftREPLMaterializer>(&materializer);
       offset = repl_mat.AddREPLResultVariable(
           variable.GetType(), variable.GetDecl(),
