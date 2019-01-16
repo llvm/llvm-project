@@ -67,7 +67,6 @@ public:
   static void StaticGracefulExitCallback();
 
   void ExecuteCallback(const uint8_t *Data, size_t Size);
-  void CheckForUnstableCounters(const uint8_t *Data, size_t Size);
   bool RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile = false,
               InputInfo *II = nullptr, bool *FoundUniqFeatures = nullptr);
 

@@ -989,6 +989,7 @@ extern unsigned struct_RF_ComponentLabel_sz;
 extern unsigned struct_RF_SingleComponent_sz;
 extern unsigned struct_RF_ProgressInfo_sz;
 extern unsigned struct_nvlist_ref_sz;
+extern unsigned struct_StringList_sz;
 
 
 // A special value to mark ioctls that are not present on the target platform,

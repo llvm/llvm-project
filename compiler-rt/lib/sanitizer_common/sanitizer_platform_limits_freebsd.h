@@ -630,6 +630,7 @@ namespace __sanitizer {
   extern unsigned struct_cap_rights_sz;
 
   extern unsigned struct_fstab_sz;
+  extern unsigned struct_StringList_sz;
 } // namespace __sanitizer
 
 #define CHECK_TYPE_SIZE(TYPE) \
