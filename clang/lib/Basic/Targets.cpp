@@ -26,7 +26,6 @@
 #include "Targets/MSP430.h"
 #include "Targets/Mips.h"
 #include "Targets/NVPTX.h"
-#include "Targets/Nios2.h"
 #include "Targets/OSTargets.h"
 #include "Targets/PNaCl.h"
 #include "Targets/PPC.h"
@@ -246,9 +245,6 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
 
   case llvm::Triple::msp430:
     return new MSP430TargetInfo(Triple, Opts);
-
-  case llvm::Triple::nios2:
-    return new LinuxTargetInfo<Nios2TargetInfo>(Triple, Opts);
 
   case llvm::Triple::mips:
     switch (os) {
@@ -575,7 +571,7 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
         !Triple.isOSBinFormatWasm())
       return nullptr;
     if (Triple.getOS() != llvm::Triple::UnknownOS &&
-        Triple.getOS() != llvm::Triple::COWS)
+        Triple.getOS() != llvm::Triple::WASI)
       return nullptr;
     return new WebAssemblyOSTargetInfo<WebAssembly32TargetInfo>(Triple, Opts);
   case llvm::Triple::wasm64:
@@ -584,7 +580,7 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
         !Triple.isOSBinFormatWasm())
       return nullptr;
     if (Triple.getOS() != llvm::Triple::UnknownOS &&
-        Triple.getOS() != llvm::Triple::COWS)
+        Triple.getOS() != llvm::Triple::WASI)
       return nullptr;
     return new WebAssemblyOSTargetInfo<WebAssembly64TargetInfo>(Triple, Opts);
 

@@ -232,15 +232,14 @@ static bool addDiscriminators(Function &F) {
   for (BasicBlock &B : F) {
     LocationSet CallLocations;
     for (auto &I : B.getInstList()) {
-      CallInst *Current = dyn_cast<CallInst>(&I);
       // We bypass intrinsic calls for the following two reasons:
       //  1) We want to avoid a non-deterministic assigment of
       //     discriminators.
       //  2) We want to minimize the number of base discriminators used.
-      if (!Current || isa<IntrinsicInst>(&I))
+      if (!isa<InvokeInst>(I) && (!isa<CallInst>(I) || isa<IntrinsicInst>(I)))  
         continue;
 
-      DILocation *CurrentDIL = Current->getDebugLoc();
+      DILocation *CurrentDIL = I.getDebugLoc();
       if (!CurrentDIL)
         continue;
       Location L =
@@ -255,7 +254,7 @@ static bool addDiscriminators(Function &F) {
                      << CurrentDIL->getLine() << ":" << CurrentDIL->getColumn()
                      << ":" << Discriminator << " " << I << "\n");
         } else {
-          Current->setDebugLoc(NewDIL.getValue());
+          I.setDebugLoc(NewDIL.getValue());
           Changed = true;
         }
       }

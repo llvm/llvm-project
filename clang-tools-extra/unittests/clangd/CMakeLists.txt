@@ -65,3 +65,7 @@ target_link_libraries(ClangdTests
   LLVMSupport
   LLVMTestingSupport
   )
+
+if (CLANGD_BUILD_XPC)
+  add_subdirectory(xpc)
+endif ()

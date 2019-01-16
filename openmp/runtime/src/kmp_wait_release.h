@@ -119,10 +119,10 @@ public:
 };
 
 #if OMPT_SUPPORT
-static inline void __ompt_implicit_task_end(kmp_info_t *this_thr,
-                                            ompt_state_t ompt_state,
-                                            ompt_data_t *tId,
-                                            ompt_data_t *pId) {
+OMPT_NOINLINE
+static void __ompt_implicit_task_end(kmp_info_t *this_thr,
+                                     ompt_state_t ompt_state,
+                                     ompt_data_t *tId) {
   int ds_tid = this_thr->th.th_info.ds.ds_tid;
   if (ompt_state == ompt_state_wait_barrier_implicit) {
     this_thr->th.ompt_thread_info.state = ompt_state_overhead;
@@ -242,7 +242,6 @@ final_spin=FALSE)
 */
 #if OMPT_SUPPORT
   ompt_state_t ompt_entry_state;
-  ompt_data_t *pId = NULL;
   ompt_data_t *tId;
   if (ompt_enabled.enabled) {
     ompt_entry_state = this_thr->th.ompt_thread_info.state;
@@ -251,20 +250,17 @@ final_spin=FALSE)
       ompt_lw_taskteam_t *team =
           this_thr->th.th_team->t.ompt_serialized_team_info;
       if (team) {
-        pId = &(team->ompt_team_info.parallel_data);
         tId = &(team->ompt_task_info.task_data);
       } else {
-        pId = OMPT_CUR_TEAM_DATA(this_thr);
         tId = OMPT_CUR_TASK_DATA(this_thr);
       }
     } else {
-      pId = NULL;
       tId = &(this_thr->th.ompt_thread_info.task_data);
     }
-        if (final_spin && (__kmp_tasking_mode == tskm_immediate_exec ||
-                           this_thr->th.th_task_team == NULL)) {
+    if (final_spin && (__kmp_tasking_mode == tskm_immediate_exec ||
+                       this_thr->th.th_task_team == NULL)) {
       // implicit task is done. Either no taskqueue, or task-team finished
-      __ompt_implicit_task_end(this_thr, ompt_entry_state, tId, pId);
+      __ompt_implicit_task_end(this_thr, ompt_entry_state, tId);
     }
   }
 #endif
@@ -334,7 +330,7 @@ final_spin=FALSE)
 #if OMPT_SUPPORT
           // task-team is done now, other cases should be catched above
           if (final_spin && ompt_enabled.enabled)
-            __ompt_implicit_task_end(this_thr, ompt_entry_state, tId, pId);
+            __ompt_implicit_task_end(this_thr, ompt_entry_state, tId);
 #endif
           this_thr->th.th_task_team = NULL;
           this_thr->th.th_reap_state = KMP_SAFE_TO_REAP;
@@ -436,7 +432,7 @@ final_spin=FALSE)
   if (ompt_enabled.enabled && ompt_exit_state != ompt_state_undefined) {
 #if OMPT_OPTIONAL
     if (final_spin) {
-      __ompt_implicit_task_end(this_thr, ompt_exit_state, tId, pId);
+      __ompt_implicit_task_end(this_thr, ompt_exit_state, tId);
       ompt_exit_state = this_thr->th.ompt_thread_info.state;
     }
 #endif

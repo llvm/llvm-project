@@ -910,12 +910,18 @@ void PhdrEntry::add(OutputSection *Sec) {
 template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   if (Config->Relocatable || needsInterpSection())
     return;
-  StringRef S = Config->IsRela ? "__rela_iplt_start" : "__rel_iplt_start";
-  addOptionalRegular(S, In.RelaIplt, 0, STV_HIDDEN, STB_WEAK);
 
-  S = Config->IsRela ? "__rela_iplt_end" : "__rel_iplt_end";
-  ElfSym::RelaIpltEnd =
-      addOptionalRegular(S, In.RelaIplt, 0, STV_HIDDEN, STB_WEAK);
+  // By default, __rela_iplt_{start,end} belong to a dummy section 0
+  // because .rela.plt might be empty and thus removed from output.
+  // We'll override Out::ElfHeader with In.RelaIplt later when we are
+  // sure that .rela.plt exists in output.
+  ElfSym::RelaIpltStart = addOptionalRegular(
+      Config->IsRela ? "__rela_iplt_start" : "__rel_iplt_start",
+      Out::ElfHeader, 0, STV_HIDDEN, STB_WEAK);
+
+  ElfSym::RelaIpltEnd = addOptionalRegular(
+      Config->IsRela ? "__rela_iplt_end" : "__rel_iplt_end",
+      Out::ElfHeader, 0, STV_HIDDEN, STB_WEAK);
 }
 
 template <class ELFT>
@@ -949,8 +955,12 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
     ElfSym::GlobalOffsetTable->Section = GotSection;
   }
 
-  if (ElfSym::RelaIpltEnd)
+  // .rela_iplt_{start,end} mark the start and the end of .rela.plt section.
+  if (ElfSym::RelaIpltStart && !In.RelaIplt->empty()) {
+    ElfSym::RelaIpltStart->Section = In.RelaIplt;
+    ElfSym::RelaIpltEnd->Section = In.RelaIplt;
     ElfSym::RelaIpltEnd->Value = In.RelaIplt->getSize();
+  }
 
   PhdrEntry *Last = nullptr;
   PhdrEntry *LastRO = nullptr;

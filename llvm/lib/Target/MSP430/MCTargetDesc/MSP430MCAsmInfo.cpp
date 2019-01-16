@@ -20,6 +20,7 @@ MSP430MCAsmInfo::MSP430MCAsmInfo(const Triple &TT) {
   CodePointerSize = CalleeSaveStackSlotSize = 2;
 
   CommentString = ";";
+  SeparatorString = "{";
 
   AlignmentIsInBytes = false;
   UsesELFSectionDirectiveForBSS = true;

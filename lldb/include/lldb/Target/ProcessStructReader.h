@@ -60,18 +60,20 @@ public:
         return;
       auto size = field_type.GetByteSize(nullptr);
       // no support for things larger than a uint64_t (yet)
-      if (size > 8)
+      if (!size || *size > 8)
         return;
       ConstString const_name = ConstString(name.c_str());
       size_t byte_index = static_cast<size_t>(bit_offset / 8);
       m_fields[const_name] =
-          FieldImpl{field_type, byte_index, static_cast<size_t>(size)};
+          FieldImpl{field_type, byte_index, static_cast<size_t>(*size)};
     }
-    size_t total_size = struct_type.GetByteSize(nullptr);
-    lldb::DataBufferSP buffer_sp(new DataBufferHeap(total_size, 0));
+    auto total_size = struct_type.GetByteSize(nullptr);
+    if (!total_size)
+      return;
+    lldb::DataBufferSP buffer_sp(new DataBufferHeap(*total_size, 0));
     Status error;
     process->ReadMemoryFromInferior(base_addr, buffer_sp->GetBytes(),
-                                    total_size, error);
+                                    *total_size, error);
     if (error.Fail())
       return;
     m_data = DataExtractor(buffer_sp, m_byte_order, m_addr_byte_size);

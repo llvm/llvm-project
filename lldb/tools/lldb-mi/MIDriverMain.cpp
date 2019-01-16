@@ -165,11 +165,7 @@ bool DriverSystemShutdown(const bool vbAppExitOk) {
 //--
 int main(int argc, char const *argv[]) {
 #if MICONFIG_DEBUG_SHOW_ATTACH_DBG_DLG
-#ifdef _WIN32
-  CMIUtilDebug::ShowDlgWaitForDbgAttach();
-#else
   CMIUtilDebug::WaitForDbgAttachInfinteLoop();
-#endif //  _WIN32
 #endif // MICONFIG_DEBUG_SHOW_ATTACH_DBG_DLG
 
   llvm::StringRef ToolName = argv[0];

@@ -207,6 +207,12 @@ def _SLASH_Zc_sizedDealloc : CLFlag<"Zc:sizedDealloc">,
 def _SLASH_Zc_sizedDealloc_ : CLFlag<"Zc:sizedDealloc-">,
   HelpText<"Disable C++14 sized global deallocation functions">,
   Alias<fno_sized_deallocation>;
+def _SLASH_Zc_alignedNew : CLFlag<"Zc:alignedNew">,
+  HelpText<"Enable C++17 aligned allocation functions">,
+  Alias<faligned_allocation>;
+def _SLASH_Zc_alignedNew_ : CLFlag<"Zc:alignedNew-">,
+  HelpText<"Disable C++17 aligned allocation functions">,
+  Alias<fno_aligned_allocation>;
 def _SLASH_Zc_strictStrings : CLFlag<"Zc:strictStrings">,
   HelpText<"Treat string literals as const">, Alias<W_Joined>,
   AliasArgs<["error=c++11-compat-deprecated-writable-strings"]>;

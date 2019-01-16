@@ -86,6 +86,12 @@ newJSONTransport(std::FILE *In, llvm::raw_ostream &Out,
                  llvm::raw_ostream *InMirror, bool Pretty,
                  JSONStreamStyle = JSONStreamStyle::Standard);
 
+#ifdef CLANGD_BUILD_XPC
+// Returns a Transport for macOS based on XPC.
+// Clangd with this transport is meant to be run as bundled XPC service.
+std::unique_ptr<Transport> newXPCTransport();
+#endif
+
 } // namespace clangd
 } // namespace clang
 

@@ -25,6 +25,7 @@
 #include <utility>
 #include <type_traits>
 #include <cstdlib>
+#include <cstddef>
 #include <cassert>
 
 #include "test_macros.h"
@@ -81,7 +82,7 @@ static_assert(HasTrivialABI<Trivial>::value, "");
 #endif
 
 
-int main()
+void test_trivial()
 {
     {
         typedef std::pair<int, short> P;
@@ -144,4 +145,16 @@ int main()
         static_assert(HasTrivialABI<P>::value, "");
     }
 #endif
+}
+
+void test_layout() {
+    typedef std::pair<std::pair<char, char>, char> PairT;
+    static_assert(sizeof(PairT) == 3, "");
+    static_assert(TEST_ALIGNOF(PairT) == TEST_ALIGNOF(char), "");
+    static_assert(offsetof(PairT, first) == 0, "");
+}
+
+int main() {
+    test_trivial();
+    test_layout();
 }

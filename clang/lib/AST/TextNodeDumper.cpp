@@ -258,6 +258,50 @@ void TextNodeDumper::Visit(const Decl *D) {
       OS << " constexpr";
 }
 
+void TextNodeDumper::Visit(const CXXCtorInitializer *Init) {
+  OS << "CXXCtorInitializer";
+  if (Init->isAnyMemberInitializer()) {
+    OS << ' ';
+    dumpBareDeclRef(Init->getAnyMember());
+  } else if (Init->isBaseInitializer()) {
+    dumpType(QualType(Init->getBaseClass(), 0));
+  } else if (Init->isDelegatingInitializer()) {
+    dumpType(Init->getTypeSourceInfo()->getType());
+  } else {
+    llvm_unreachable("Unknown initializer type");
+  }
+}
+
+void TextNodeDumper::Visit(const BlockDecl::Capture &C) {
+  OS << "capture";
+  if (C.isByRef())
+    OS << " byref";
+  if (C.isNested())
+    OS << " nested";
+  if (C.getVariable()) {
+    OS << ' ';
+    dumpBareDeclRef(C.getVariable());
+  }
+}
+
+void TextNodeDumper::Visit(const OMPClause *C) {
+  if (!C) {
+    ColorScope Color(OS, ShowColors, NullColor);
+    OS << "<<<NULL>>> OMPClause";
+    return;
+  }
+  {
+    ColorScope Color(OS, ShowColors, AttrColor);
+    StringRef ClauseName(getOpenMPClauseName(C->getClauseKind()));
+    OS << "OMP" << ClauseName.substr(/*Start=*/0, /*N=*/1).upper()
+       << ClauseName.drop_front() << "Clause";
+  }
+  dumpPointer(C);
+  dumpSourceRange(SourceRange(C->getBeginLoc(), C->getEndLoc()));
+  if (C->isImplicit())
+    OS << " <implicit>";
+}
+
 void TextNodeDumper::dumpPointer(const void *Ptr) {
   ColorScope Color(OS, ShowColors, AddressColor);
   OS << ' ' << Ptr;

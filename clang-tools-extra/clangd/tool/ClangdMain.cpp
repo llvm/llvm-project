@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Features.inc"
 #include "ClangdLSPServer.h"
 #include "Path.h"
 #include "Trace.h"
@@ -255,6 +256,11 @@ const char TestScheme::TestDir[] = "/clangd-test";
 } // namespace clangd
 } // namespace clang
 
+enum class ErrorResultCode : int {
+  NoShutdownRequest = 1,
+  CantRunAsXPCService = 2
+};
+
 int main(int argc, char *argv[]) {
   using namespace clang;
   using namespace clang::clangd;
@@ -408,14 +414,26 @@ int main(int argc, char *argv[]) {
   // Initialize and run ClangdLSPServer.
   // Change stdin to binary to not lose \r\n on windows.
   llvm::sys::ChangeStdinToBinary();
-  auto Transport = newJSONTransport(
-      stdin, llvm::outs(),
-      InputMirrorStream ? InputMirrorStream.getPointer() : nullptr, PrettyPrint,
-      InputStyle);
+
+  std::unique_ptr<Transport> TransportLayer;
+  if (getenv("CLANGD_AS_XPC_SERVICE")) {
+#ifdef CLANGD_BUILD_XPC
+    TransportLayer = newXPCTransport();
+#else
+    errs() << "This clangd binary wasn't built with XPC support.\n";
+    return ErrorResultCode::CantRunAsXPCService;
+#endif
+  } else {
+    TransportLayer = newJSONTransport(
+        stdin, llvm::outs(),
+        InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,
+        PrettyPrint, InputStyle);
+  }
+
   ClangdLSPServer LSPServer(
-      *Transport, CCOpts, CompileCommandsDirPath,
+      *TransportLayer, CCOpts, CompileCommandsDirPath,
       /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs, Opts);
-  constexpr int NoShutdownRequestErrorCode = 1;
   llvm::set_thread_name("clangd.main");
-  return LSPServer.run() ? 0 : NoShutdownRequestErrorCode;
+  return LSPServer.run() ? 0
+                         : static_cast<int>(ErrorResultCode::NoShutdownRequest);
 }

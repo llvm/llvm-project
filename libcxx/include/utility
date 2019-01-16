@@ -303,6 +303,7 @@ extern _LIBCPP_EXPORTED_FROM_ABI const piecewise_construct_t piecewise_construct
 #endif
 
 #if defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
+template <class, class>
 struct __non_trivially_copyable_base {
   _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
   __non_trivially_copyable_base() _NOEXCEPT {}
@@ -314,7 +315,7 @@ struct __non_trivially_copyable_base {
 template <class _T1, class _T2>
 struct _LIBCPP_TEMPLATE_VIS pair
 #if defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
-: private __non_trivially_copyable_base
+: private __non_trivially_copyable_base<_T1, _T2>
 #endif
 {
     typedef _T1 first_type;
