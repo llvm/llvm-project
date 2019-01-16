@@ -245,8 +245,8 @@ static void collectTypeReplacementData(Type *OldTy, Type *NewTy,
       Value *OldValUser = U.getUser();
 
       if (CallInst *Call = dyn_cast<CallInst>(OldValUser)) {
-        assert(Call->getCalledFunction() && "Indirect function call?");
         auto F = Call->getCalledFunction();
+        assert(F && "Indirect function call?");
         FunctionType *&FuncReplacementType = FTyMap[Call->getCalledFunction()];
         if (!FuncReplacementType)
           FuncReplacementType = F->getFunctionType();
@@ -346,9 +346,11 @@ static void traceAddressSpace(AddrSpaceCastInst *AS,
     if (auto Call = dyn_cast<CallInst>(User)) {
       WorkList.push(std::make_pair(AS, NewAS));
       auto F = Call->getCalledFunction();
+      assert(F && "No function info.");
       for (auto &Arg : F->args()) {
         if (Arg.getType() == OldTy) {
           auto ActArg = Call->getArgOperand(Arg.getArgNo());
+          assert(ActArg && "No argument info.");
           if (!isa<AddrSpaceCastInst>(ActArg)) {
             AddrSpaceCastInst *AddAS =
                 new AddrSpaceCastInst(ActArg, NewTy, "", Call);
@@ -481,8 +483,10 @@ static bool needToReplaceAlloca(AllocaInst *Alloca,
       Value *NextUsr = nullptr;
       if (CallInst *Call = dyn_cast<CallInst>(Usr)) {
         if (VMap[Call]) {
+          auto F = Call->getCalledFunction();
+          assert(F && "No function info.");
           NextUsr =
-              getAllocaOrArgValue(Call->getCalledFunction(), U.getOperandNo());
+              getAllocaOrArgValue(F, U.getOperandNo());
         }
       } else {
         NextUsr = Usr;

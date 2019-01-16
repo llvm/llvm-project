@@ -1190,7 +1190,7 @@ private:
 
     if (Value.isExpression()) {
       const auto &Expr = Value.getExpression();
-
+      assert(Expr && "No expression info");
       if (Expr->getKind() == DXK_Primary || IsUnwrappedExprAllowed)
         return encode(Out, Value.getExpression());
 

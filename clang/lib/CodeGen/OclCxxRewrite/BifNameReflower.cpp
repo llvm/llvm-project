@@ -336,6 +336,7 @@ private:
       if (!EffectiveTArg->isExpression())
         return nullptr;
       auto Expr = EffectiveTArg->getExpression();
+      assert(Expr && "No expression info.");
       switch (Expr->getKind()) {
       case DXK_TemplateParam:
         EffectiveTArg = Expr->getAs<DXK_TemplateParam>()
@@ -899,7 +900,9 @@ public:
 
     if (Node->getSpecialKind() != DSNK_TypeInfoNameString)
       return std::make_pair(printer::AR_Failure, nullptr);
-    auto RelTypeNameNode = Node->getRelatedType()->getAs<DTK_TypeName>();
+    auto RelType = Node->getRelatedType();
+    assert(RelType && "No related type info.");
+    auto RelTypeNameNode = RelType->getAs<DTK_TypeName>();
     if (RelTypeNameNode == nullptr)
       return std::make_pair(printer::AR_Failure, nullptr);
 

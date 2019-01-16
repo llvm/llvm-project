@@ -37,7 +37,8 @@ void ExecuteKernelCommand<
   if (m_Queue->is_host()) {
     detail::waitEvents(DepEvents);
     Event->setIsHostEvent(true);
-    return runOnHost();
+    runOnHost();
+    return;
   }
 
   if (!m_ClKernel) {

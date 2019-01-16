@@ -371,6 +371,7 @@ CreateSYCLKernelBody(Sema &S, FunctionDecl *KernelCallerFunc, DeclContext *DC) {
                           KernelObjClone, false, DeclarationNameInfo(),
                           QualType(LC->getTypeForDecl(), 0), VK_LValue);
   auto TargetFunc = dyn_cast<FunctionDecl>(DC);
+  assert(TargetFunc && "Not FunctionDecl");
   auto TargetFuncParam =
       TargetFunc->param_begin(); // Iterator to ParamVarDecl (VarDecl)
   if (TargetFuncParam) {
@@ -710,6 +711,7 @@ void Sema::ConstructSYCLKernel(FunctionDecl *KernelCallerFunc) {
   // Get Name for our kernel.
   const TemplateArgumentList *TemplateArgs =
       KernelCallerFunc->getTemplateSpecializationArgs();
+  assert(TemplateArgs && "No template argument info");
   // The first teamplate argument always describes the kernel name - whether
   // it is lambda or functor.
   QualType KernelNameType = TypeName::getFullyQualifiedType(

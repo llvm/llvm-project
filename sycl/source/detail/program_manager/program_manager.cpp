@@ -142,7 +142,6 @@ cl_program ProgramManager::getClProgramFromClKernel(cl_kernel ClKernel) {
 const vector_class<char> ProgramManager::getSpirvSource() {
   // TODO FIXME make this function thread-safe
   if (!m_SpirvSource) {
-    vector_class<char> *DataPtr = nullptr;
 
     if (DeviceImages && !std::getenv("SYCL_USE_KERNEL_SPV")) {
       assert(DeviceImages->NumDeviceImages == 1 &&
@@ -151,16 +150,17 @@ const vector_class<char> ProgramManager::getSpirvSource() {
       auto *BegPtr = reinterpret_cast<const char *>(Img.ImageStart);
       auto *EndPtr = reinterpret_cast<const char *>(Img.ImageEnd);
       ptrdiff_t ImgSize = EndPtr - BegPtr;
-      DataPtr = new vector_class<char>(static_cast<size_t>(ImgSize));
+      m_SpirvSource.reset(new vector_class<char>(static_cast<size_t>(ImgSize)));
       // TODO this code is expected to be heavily refactored, this copying
       // might be redundant (unless we don't want to work on live .rodata)
-      std::copy(BegPtr, EndPtr, DataPtr->begin());
+      std::copy(BegPtr, EndPtr, m_SpirvSource->begin());
 
       if (std::getenv("SYCL_DUMP_IMAGES")) {
         std::ofstream F("kernel.spv", std::ios::binary);
 
         if (!F.is_open())
           throw compile_program_error("Can not write kernel.spv\n");
+
         F.write(BegPtr, ImgSize);
         F.close();
       }
@@ -170,12 +170,11 @@ const vector_class<char> ProgramManager::getSpirvSource() {
         throw compile_program_error("Can not open kernel.spv\n");
       }
       File.seekg(0, std::ios::end);
-      DataPtr = new vector_class<char>(File.tellg());
+      m_SpirvSource.reset(new vector_class<char>(File.tellg()));
       File.seekg(0);
-      File.read(DataPtr->data(), DataPtr->size());
+      File.read(m_SpirvSource->data(), m_SpirvSource->size());
       File.close();
     }
-    m_SpirvSource.reset(DataPtr);
   }
   // TODO makes unnecessary copy of the data
   return *m_SpirvSource.get();
