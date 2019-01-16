@@ -263,6 +263,13 @@ void use_out_param_leak_osreturn() {
 } // expected-warning{{Potential leak of an object stored into 'obj'}}
   // expected-note@-1{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
 
+void cleanup(OSObject **obj);
+
+void test_cleanup_escaping() {
+  __attribute__((cleanup(cleanup))) OSObject *obj;
+  always_write_into_out_param(&obj); // no-warning, the value has escaped.
+}
+
 struct StructWithField {
   OSObject *obj;
 
