@@ -491,7 +491,7 @@ OMPT_API_ROUTINE int ompt_get_parallel_info(int ancestor_level,
 
 OMPT_API_ROUTINE int ompt_get_state(ompt_wait_id_t *wait_id) {
   if (!ompt_enabled.enabled)
-    return omp_state_work_serial;
+    return ompt_state_work_serial;
   int thread_state = __ompt_get_state_internal(wait_id);
 
   if (thread_state == ompt_state_undefined) {
