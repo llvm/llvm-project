@@ -1,0 +1,83 @@
+source_set("sources") {
+  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  deps = [
+    "//llvm/utils/gn/build/libs/pthread",
+  ]
+  libs = []
+  if (current_os == "linux" || current_os == "android") {
+    libs += [ "dl" ]
+  }
+  if (current_os == "linux") {
+    libs += [ "rt" ]
+  }
+  sources = [
+    "sancov_flags.cc",
+    "sanitizer_allocator.cc",
+    "sanitizer_allocator_checks.cc",
+    "sanitizer_allocator_report.cc",
+    "sanitizer_common.cc",
+    "sanitizer_common_libcdep.cc",
+    "sanitizer_coverage_fuchsia.cc",
+    "sanitizer_coverage_libcdep_new.cc",
+    "sanitizer_coverage_win_sections.cc",
+    "sanitizer_deadlock_detector1.cc",
+    "sanitizer_deadlock_detector2.cc",
+    "sanitizer_errno.cc",
+    "sanitizer_file.cc",
+    "sanitizer_flag_parser.cc",
+    "sanitizer_flags.cc",
+    "sanitizer_fuchsia.cc",
+    "sanitizer_libc.cc",
+    "sanitizer_libignore.cc",
+    "sanitizer_linux.cc",
+    "sanitizer_linux_libcdep.cc",
+    "sanitizer_linux_s390.cc",
+    "sanitizer_mac.cc",
+    "sanitizer_mac_libcdep.cc",
+    "sanitizer_netbsd.cc",
+    "sanitizer_openbsd.cc",
+    "sanitizer_persistent_allocator.cc",
+    "sanitizer_platform_limits_freebsd.cc",
+    "sanitizer_platform_limits_linux.cc",
+    "sanitizer_platform_limits_netbsd.cc",
+    "sanitizer_platform_limits_openbsd.cc",
+    "sanitizer_platform_limits_posix.cc",
+    "sanitizer_platform_limits_solaris.cc",
+    "sanitizer_posix.cc",
+    "sanitizer_posix_libcdep.cc",
+    "sanitizer_printf.cc",
+    "sanitizer_procmaps_bsd.cc",
+    "sanitizer_procmaps_common.cc",
+    "sanitizer_procmaps_linux.cc",
+    "sanitizer_procmaps_mac.cc",
+    "sanitizer_procmaps_solaris.cc",
+    "sanitizer_rtems.cc",
+    "sanitizer_solaris.cc",
+    "sanitizer_stackdepot.cc",
+    "sanitizer_stacktrace.cc",
+    "sanitizer_stacktrace_libcdep.cc",
+    "sanitizer_stacktrace_printer.cc",
+    "sanitizer_stacktrace_sparc.cc",
+    "sanitizer_stoptheworld_linux_libcdep.cc",
+    "sanitizer_stoptheworld_mac.cc",
+    "sanitizer_suppressions.cc",
+    "sanitizer_symbolizer.cc",
+    "sanitizer_symbolizer_libbacktrace.cc",
+    "sanitizer_symbolizer_libcdep.cc",
+    "sanitizer_symbolizer_mac.cc",
+    "sanitizer_symbolizer_markup.cc",
+    "sanitizer_symbolizer_posix_libcdep.cc",
+    "sanitizer_symbolizer_report.cc",
+    "sanitizer_symbolizer_win.cc",
+    "sanitizer_termination.cc",
+    "sanitizer_thread_registry.cc",
+    "sanitizer_tls_get_addr.cc",
+    "sanitizer_unwind_linux_libcdep.cc",
+    "sanitizer_unwind_win.cc",
+    "sanitizer_win.cc",
+  ]
+  if (current_cpu == "x64") {
+    sources += [ "sanitizer_linux_x86_64.S" ]
+  }
+}

@@ -238,12 +238,6 @@ class InputCorpus {
     return false;
   }
 
-  bool IsFeatureNew(size_t Idx, uint32_t NewSize, bool Shrink) {
-    assert(NewSize);
-    uint32_t OldSize = GetFeature(Idx % kFeatureSetSize);
-    return OldSize == 0 || (Shrink && OldSize > NewSize);
-  }
-
   size_t NumFeatures() const { return NumAddedFeatures; }
   size_t NumFeatureUpdates() const { return NumUpdatedFeatures; }
 

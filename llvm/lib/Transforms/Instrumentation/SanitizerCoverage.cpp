@@ -568,7 +568,7 @@ GlobalVariable *SanitizerCoverageModule::CreateFunctionLocalArrayInSection(
       *CurModule, ArrayTy, false, GlobalVariable::PrivateLinkage,
       Constant::getNullValue(ArrayTy), "__sancov_gen_");
 
-  if (TargetTriple.supportsCOMDAT())
+  if (TargetTriple.supportsCOMDAT() && !F.isInterposable())
     if (auto Comdat =
             GetOrCreateFunctionComdat(F, TargetTriple, CurModuleUniqueId))
       Array->setComdat(Comdat);

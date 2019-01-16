@@ -1872,7 +1872,7 @@ template <typename _Fun>
 struct __use_small_storage
     : public _VSTD::integral_constant<
           bool, sizeof(_Fun) <= sizeof(__policy_storage) &&
-                    alignof(_Fun) <= alignof(__policy_storage) &&
+                    _LIBCPP_ALIGNOF(_Fun) <= _LIBCPP_ALIGNOF(__policy_storage) &&
                     _VSTD::is_trivially_copy_constructible<_Fun>::value &&
                     _VSTD::is_trivially_destructible<_Fun>::value> {};
 

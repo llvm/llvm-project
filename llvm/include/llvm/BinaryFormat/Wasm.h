@@ -26,7 +26,7 @@ const char WasmMagic[] = {'\0', 'a', 's', 'm'};
 // Wasm binary format version
 const uint32_t WasmVersion = 0x1;
 // Wasm linking metadata version
-const uint32_t WasmMetadataVersion = 0x1;
+const uint32_t WasmMetadataVersion = 0x2;
 // Wasm uses a 64k page size
 const uint32_t WasmPageSize = 65536;
 

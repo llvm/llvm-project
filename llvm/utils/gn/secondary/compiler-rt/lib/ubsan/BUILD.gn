@@ -1,0 +1,30 @@
+source_set("sources") {
+  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  defines = [ "UBSAN_CAN_USE_CXXABI" ]
+  deps = [
+    "//compiler-rt/lib/interception:sources",
+    "//compiler-rt/lib/sanitizer_common:sources",
+  ]
+  sources = [
+    "ubsan_diag.cc",
+    "ubsan_flags.cc",
+    "ubsan_handlers.cc",
+    "ubsan_init.cc",
+    "ubsan_monitor.cc",
+    "ubsan_value.cc",
+  ]
+}
+
+source_set("cxx_sources") {
+  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
+  configs -= [ "//llvm/utils/gn/build:no_rtti" ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  defines = [ "UBSAN_CAN_USE_CXXABI" ]
+  sources = [
+    "ubsan_handlers_cxx.cc",
+    "ubsan_type_hash.cc",
+    "ubsan_type_hash_itanium.cc",
+    "ubsan_type_hash_win.cc",
+  ]
+}

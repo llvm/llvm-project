@@ -110,15 +110,6 @@ FUZZER_FLAG_INT(print_coverage, 0, "If 1, print coverage information as text"
 FUZZER_FLAG_INT(dump_coverage, 0, "Deprecated."
                                   " If 1, dump coverage information as a"
                                   " .sancov file at exit.")
-FUZZER_FLAG_INT(handle_unstable, 0, "Experimental."
-                   " Executes every input 3 times in total if a unique feature"
-                   " is found during the first execution."
-                   " If 1, we only use the minimum hit count from the 3 runs"
-                   " to determine whether an input is interesting."
-                   " If 2, we disregard edges that are found unstable for"
-                   " feature collection.")
-FUZZER_FLAG_INT(print_unstable_stats, 0, "Experimental."
-				  " If 1, print unstable statistics at exit.")
 FUZZER_FLAG_INT(handle_segv, 1, "If 1, try to intercept SIGSEGV.")
 FUZZER_FLAG_INT(handle_bus, 1, "If 1, try to intercept SIGBUS.")
 FUZZER_FLAG_INT(handle_abrt, 1, "If 1, try to intercept SIGABRT.")

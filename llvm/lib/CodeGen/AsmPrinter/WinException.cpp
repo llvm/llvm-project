@@ -546,7 +546,7 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
   };
 
   // Emit a label assignment with the SEH frame offset so we can use it for
-  // llvm.x86.seh.recoverfp.
+  // llvm.eh.recoverfp.
   StringRef FLinkageName =
       GlobalValue::dropLLVMManglingEscape(MF->getFunction().getName());
   MCSymbol *ParentFrameOffset =

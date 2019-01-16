@@ -1263,7 +1263,7 @@ bool ABISysV_x86_64::GetArgumentValues(Thread &thread,
     // We currently only support extracting values with Clang QualTypes. Do we
     // care about others?
     CompilerType compiler_type = value->GetCompilerType();
-    auto bit_size = compiler_type.GetBitSize(&thread);
+    llvm::Optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
     if (!bit_size)
       return false;
     bool is_signed;
@@ -1333,7 +1333,8 @@ Status ABISysV_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       error.SetErrorString(
           "We don't support returning complex values at present");
     else {
-      auto bit_width = compiler_type.GetBitSize(frame_sp.get());
+      llvm::Optional<uint64_t> bit_width =
+          compiler_type.GetBitSize(frame_sp.get());
       if (!bit_width) {
         error.SetErrorString("can't get type size");
         return error;
@@ -1401,7 +1402,8 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectSimple(
     if (type_flags & eTypeIsInteger) {
       // Extract the register context so we can read arguments from registers
 
-      auto byte_size = return_compiler_type.GetByteSize(nullptr);
+      llvm::Optional<uint64_t> byte_size =
+          return_compiler_type.GetByteSize(nullptr);
       if (!byte_size)
         return return_valobj_sp;
       uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(
@@ -1447,7 +1449,8 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectSimple(
       if (type_flags & eTypeIsComplex) {
         // Don't handle complex yet.
       } else {
-        auto byte_size = return_compiler_type.GetByteSize(nullptr);
+        llvm::Optional<uint64_t> byte_size =
+            return_compiler_type.GetByteSize(nullptr);
         if (byte_size && *byte_size <= sizeof(long double)) {
           const RegisterInfo *xmm0_info =
               reg_ctx->GetRegisterInfoByName("xmm0", 0);
@@ -1485,7 +1488,8 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectSimple(
     return_valobj_sp = ValueObjectConstResult::Create(
         thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
   } else if (type_flags & eTypeIsVector) {
-    auto byte_size = return_compiler_type.GetByteSize(nullptr);
+    llvm::Optional<uint64_t> byte_size =
+        return_compiler_type.GetByteSize(nullptr);
     if (byte_size && *byte_size > 0) {
       const RegisterInfo *altivec_reg =
           reg_ctx->GetRegisterInfoByName("xmm0", 0);
@@ -1571,7 +1575,7 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
   if (!reg_ctx_sp)
     return return_valobj_sp;
 
-  auto bit_width = return_compiler_type.GetBitSize(&thread);
+  llvm::Optional<uint64_t> bit_width = return_compiler_type.GetBitSize(&thread);
   if (!bit_width)
     return return_valobj_sp;
   if (return_compiler_type.IsAggregateType()) {
@@ -1624,7 +1628,8 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
 
         CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
             idx, name, &field_bit_offset, nullptr, nullptr);
-        auto field_bit_width = field_compiler_type.GetBitSize(&thread);
+        llvm::Optional<uint64_t> field_bit_width =
+            field_compiler_type.GetBitSize(&thread);
 
         // if we don't know the size of the field (e.g. invalid type), just
         // bail out

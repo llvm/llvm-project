@@ -46,7 +46,7 @@ uint32_t Materializer::AddStructMember(Entity &entity) {
 }
 
 void Materializer::Entity::SetSizeAndAlignmentFromType(CompilerType &type) {
-  if (auto size = type.GetByteSize(nullptr))
+  if (llvm::Optional<uint64_t> size = type.GetByteSize(nullptr))
     m_size = *size;
 
   uint32_t bit_alignment = type.GetTypeBitAlign();
@@ -795,7 +795,7 @@ public:
 
       ExecutionContextScope *exe_scope = map.GetBestExecutionContextScope();
 
-      auto byte_size = m_type.GetByteSize(exe_scope);
+      llvm::Optional<uint64_t> byte_size = m_type.GetByteSize(exe_scope);
       if (!byte_size) {
         err.SetErrorString("can't get size of type");
         return;

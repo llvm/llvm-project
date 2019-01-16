@@ -26,7 +26,6 @@
 #include "Targets/MSP430.h"
 #include "Targets/Mips.h"
 #include "Targets/NVPTX.h"
-#include "Targets/Nios2.h"
 #include "Targets/OSTargets.h"
 #include "Targets/PNaCl.h"
 #include "Targets/PPC.h"
@@ -246,9 +245,6 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
 
   case llvm::Triple::msp430:
     return new MSP430TargetInfo(Triple, Opts);
-
-  case llvm::Triple::nios2:
-    return new LinuxTargetInfo<Nios2TargetInfo>(Triple, Opts);
 
   case llvm::Triple::mips:
     switch (os) {

@@ -439,7 +439,8 @@ file_status posix_lstat(path const& p, error_code* ec) {
   return posix_lstat(p, path_stat, ec);
 }
 
-bool posix_ftruncate(const FileDescriptor& fd, size_t to_size, error_code& ec) {
+// http://pubs.opengroup.org/onlinepubs/9699919799/functions/ftruncate.html
+bool posix_ftruncate(const FileDescriptor& fd, off_t to_size, error_code& ec) {
   if (::ftruncate(fd.fd, to_size) == -1) {
     ec = capture_errno();
     return true;

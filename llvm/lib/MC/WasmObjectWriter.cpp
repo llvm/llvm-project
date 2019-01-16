@@ -1256,7 +1256,7 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
       Segment.Offset = DataSize;
       Segment.Section = &Section;
       addData(Segment.Data, Section);
-      Segment.Alignment = Section.getAlignment();
+      Segment.Alignment = Log2_32(Section.getAlignment());
       Segment.Flags = 0;
       DataSize += Segment.Data.size();
       Section.setSegmentIndex(SegmentIndex);

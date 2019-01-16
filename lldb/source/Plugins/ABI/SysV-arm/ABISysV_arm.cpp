@@ -1473,7 +1473,7 @@ bool ABISysV_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
       size_t bit_width = 0;
       if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
           compiler_type.IsPointerOrReferenceType()) {
-        if (auto size = compiler_type.GetBitSize(&thread))
+        if (llvm::Optional<uint64_t> size = compiler_type.GetBitSize(&thread))
           bit_width = *size;
       } else {
         // We only handle integer, pointer and reference types currently...
@@ -1580,8 +1580,8 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
 
   const RegisterInfo *r0_reg_info =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
-  auto bit_width = compiler_type.GetBitSize(&thread);
-  auto byte_size = compiler_type.GetByteSize(&thread);
+  llvm::Optional<uint64_t> bit_width = compiler_type.GetBitSize(&thread);
+  llvm::Optional<uint64_t> byte_size = compiler_type.GetByteSize(&thread);
   if (!bit_width || !byte_size)
     return return_valobj_sp;
 
@@ -1717,7 +1717,8 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
           compiler_type.IsHomogeneousAggregate(&base_type);
 
       if (homogeneous_count > 0 && homogeneous_count <= 4) {
-        auto base_byte_size = base_type.GetByteSize(nullptr);
+        llvm::Optional<uint64_t> base_byte_size =
+            base_type.GetByteSize(nullptr);
         if (base_type.IsVectorType(nullptr, nullptr)) {
           if (base_byte_size &&
               (*base_byte_size == 8 || *base_byte_size == 16)) {
@@ -1745,7 +1746,8 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
                 compiler_type.GetFieldAtIndex(index, name, NULL, NULL, NULL);
 
             if (base_type.IsFloatingPointType(float_count, is_complex)) {
-              auto base_byte_size = base_type.GetByteSize(nullptr);
+              llvm::Optional<uint64_t> base_byte_size =
+                  base_type.GetByteSize(nullptr);
               if (float_count == 2 && is_complex) {
                 if (index != 0 && base_byte_size &&
                     vfp_byte_size != *base_byte_size)

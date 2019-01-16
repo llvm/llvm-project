@@ -110,7 +110,7 @@ declare void @func3()
 ; CHECK-NEXT:         Content:         '01040000'
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     Version:         1
+; CHECK-NEXT:     Version:         2
 ; CHECK-NEXT:     SymbolTable:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            FUNCTION
@@ -170,7 +170,7 @@ declare void @func3()
 ; CHECK-NEXT:     SegmentInfo:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.global1
-; CHECK-NEXT:         Alignment:       8
+; CHECK-NEXT:         Alignment:       3
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT:     InitFunctions:     
 ; CHECK-NEXT:       - Priority: 42

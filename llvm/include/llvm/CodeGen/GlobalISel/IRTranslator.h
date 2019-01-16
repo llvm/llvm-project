@@ -21,11 +21,11 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Types.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/Allocator.h"
 #include <memory>
 #include <utility>
 
@@ -444,11 +444,13 @@ private:
   // I.e., compared to regular MIBuilder, this one also inserts the instruction
   // in the current block, it can creates block, etc., basically a kind of
   // IRBuilder, but for Machine IR.
-  MachineIRBuilder CurBuilder;
+  // CSEMIRBuilder CurBuilder;
+  std::unique_ptr<MachineIRBuilder> CurBuilder;
 
   // Builder set to the entry block (just after ABI lowering instructions). Used
   // as a convenient location for Constants.
-  MachineIRBuilder EntryBuilder;
+  // CSEMIRBuilder EntryBuilder;
+  std::unique_ptr<MachineIRBuilder> EntryBuilder;
 
   // The MachineFunction currently being translated.
   MachineFunction *MF;

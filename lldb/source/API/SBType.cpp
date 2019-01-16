@@ -104,7 +104,8 @@ bool SBType::IsValid() const {
 
 uint64_t SBType::GetByteSize() {
   if (IsValid())
-    if (auto size = m_opaque_sp->GetCompilerType(false).GetByteSize(nullptr))
+    if (llvm::Optional<uint64_t> size =
+            m_opaque_sp->GetCompilerType(false).GetByteSize(nullptr))
       return *size;
   return 0;
 }

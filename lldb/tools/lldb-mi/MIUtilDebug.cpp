@@ -39,25 +39,6 @@ CMIUtilDebug::~CMIUtilDebug() {}
 
 //++
 //------------------------------------------------------------------------------------
-// Details: Show a dialog to the process/application halts. It gives the
-// opportunity to
-//          attach a debugger.
-// Type:    Static method.
-// Args:    None.
-// Return:  None.
-// Throws:  None.
-//--
-void CMIUtilDebug::ShowDlgWaitForDbgAttach() {
-  const CMIUtilString strCaption(CMIDriver::Instance().GetAppNameShort());
-#ifdef _WIN32
-  ::MessageBoxA(NULL, "Attach your debugger now", strCaption.c_str(), MB_OK);
-#else
-// ToDo: Implement other platform version of an Ok to continue dialog box
-#endif // _WIN32
-}
-
-//++
-//------------------------------------------------------------------------------------
 // Details: Temporarily stall the process/application to give the programmer the
 //          opportunity to attach a debugger. How to use: Put a break in the
 //          programmer

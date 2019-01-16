@@ -1813,9 +1813,17 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
           return Filename;
         };
         StringRef TypoCorrectionName = CorrectTypoFilename(Filename);
+        SmallString<128> NormalizedTypoCorrectionPath;
+        if (LangOpts.MSVCCompat) {
+          NormalizedTypoCorrectionPath = TypoCorrectionName.str();
+#ifndef _WIN32
+          llvm::sys::path::native(NormalizedTypoCorrectionPath);
+#endif
+        }
         File = LookupFile(
             FilenameLoc,
-            LangOpts.MSVCCompat ? NormalizedPath.c_str() : TypoCorrectionName,
+            LangOpts.MSVCCompat ? NormalizedTypoCorrectionPath.c_str()
+                                : TypoCorrectionName,
             isAngled, LookupFrom, LookupFromFile, CurDir,
             Callbacks ? &SearchPath : nullptr,
             Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped);

@@ -96,7 +96,7 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
 
         ExecutionContextScope *exe_scope =
             exe_ctx.GetBestExecutionContextScope();
-        auto size = compiler_type.GetByteSize(exe_scope);
+        llvm::Optional<uint64_t> size = compiler_type.GetByteSize(exe_scope);
         if (!size)
           return false;
         StreamString sstr;

@@ -138,7 +138,7 @@ entry:
 ; CHECK-NEXT:         Content:         '01000000'
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     Version:         1
+; CHECK-NEXT:     Version:         2
 ; CHECK-NEXT:     SymbolTable:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            FUNCTION
@@ -197,15 +197,15 @@ entry:
 ; CHECK-NEXT:     SegmentInfo:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.bar
-; CHECK-NEXT:         Alignment:       8
+; CHECK-NEXT:         Alignment:       3
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            .data.direct_address
-; CHECK-NEXT:         Alignment:       8
+; CHECK-NEXT:         Alignment:       3
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Name:            .data.alias_address
-; CHECK-NEXT:         Alignment:       8
+; CHECK-NEXT:         Alignment:       3
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT: ...
 

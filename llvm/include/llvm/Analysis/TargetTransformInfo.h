@@ -934,6 +934,14 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
+  /// \returns True if the caller and callee agree on how \p Args will be passed
+  /// to the callee.
+  /// \param[out] Args The list of compatible arguments.  The implementation may
+  /// filter out any incompatible args from this list.
+  bool areFunctionArgsABICompatible(const Function *Caller,
+                                    const Function *Callee,
+                                    SmallPtrSetImpl<Argument *> &Args) const;
+
   /// The type of load/store indexing.
   enum MemIndexedMode {
     MIM_Unindexed,  ///< No indexing.
@@ -1179,6 +1187,9 @@ public:
       unsigned RemainingBytes, unsigned SrcAlign, unsigned DestAlign) const = 0;
   virtual bool areInlineCompatible(const Function *Caller,
                                    const Function *Callee) const = 0;
+  virtual bool
+  areFunctionArgsABICompatible(const Function *Caller, const Function *Callee,
+                               SmallPtrSetImpl<Argument *> &Args) const = 0;
   virtual bool isIndexedLoadLegal(MemIndexedMode Mode, Type *Ty) const = 0;
   virtual bool isIndexedStoreLegal(MemIndexedMode Mode,Type *Ty) const = 0;
   virtual unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const = 0;
@@ -1556,6 +1567,11 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const override {
     return Impl.areInlineCompatible(Caller, Callee);
+  }
+  bool areFunctionArgsABICompatible(
+      const Function *Caller, const Function *Callee,
+      SmallPtrSetImpl<Argument *> &Args) const override {
+    return Impl.areFunctionArgsABICompatible(Caller, Callee, Args);
   }
   bool isIndexedLoadLegal(MemIndexedMode Mode, Type *Ty) const override {
     return Impl.isIndexedLoadLegal(Mode, Ty, getDataLayout());
