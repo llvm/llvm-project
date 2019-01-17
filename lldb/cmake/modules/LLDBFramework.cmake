@@ -6,7 +6,7 @@ get_filename_component(
 
 message(STATUS "LLDB.framework: build path is '${framework_target_dir}'")
 message(STATUS "LLDB.framework: install path is '${LLDB_FRAMEWORK_INSTALL_DIR}'")
-message(STATUS "LLDB.framework: resources subdirectory is 'Versions/${LLDB_FRAMEWORK_VERSION}/Resources'")
+message(STATUS "LLDB.framework: resources subdirectory is '${LLDB_FRAMEWORK_RESOURCE_DIR}'")
 
 # Configure liblldb as a framework bundle
 set_target_properties(liblldb PROPERTIES
