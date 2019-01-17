@@ -54,7 +54,7 @@ svn.exe export -r %revision% http://llvm.org/svn/llvm-project/lldb/%branch% llvm
 REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.
 set cmake_flags=-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON -DCMAKE_INSTALL_UCRT_LIBRARIES=ON -DCLANG_FORMAT_VS_VERSION=%clang_format_vs_version% -DPACKAGE_VERSION=%package_version% -DLLDB_RELOCATABLE_PYTHON=1 -DLLDB_TEST_COMPILER=%cd%\build32_stage0\bin\clang.exe -DCMAKE_CL_SHOWINCLUDES_PREFIX="Note: including file: "
 
-REM TODO: Run all tests, including lld and compiler-rt.
+REM TODO: Run the "check-all" tests.
 
 set "VSCMD_START_DIR=%CD%"
 call "%vsdevcmd%" -arch=x86
@@ -66,7 +66,9 @@ REM Work around VS2017 bug by using MinSizeRel.
 cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python32_dir% -DCMAKE_BUILD_TYPE=MinSizeRel ..\llvm || exit /b
 ninja all || ninja all || ninja all || exit /b
 ninja check || ninja check || ninja check || exit /b
-ninja check-clang || ninja check-clang || ninja check-clang ||  exit /b
+ninja check-clang || ninja check-clang || ninja check-clang || exit /b
+ninja check-lld || ninja check-lld || ninja check-lld || exit /b
+ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit /b
 cd..
 
 mkdir build32
@@ -76,7 +78,9 @@ set CXX=..\build32_stage0\bin\clang-cl
 cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python32_dir% ..\llvm || exit /b
 ninja all || ninja all || ninja all || exit /b
 ninja check || ninja check || ninja check || exit /b
-ninja check-clang || ninja check-clang || ninja check-clang ||  exit /b
+ninja check-clang || ninja check-clang || ninja check-clang || exit /b
+ninja check-lld || ninja check-lld || ninja check-lld || exit /b
+ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit /b
 ninja package || exit /b
 cd ..
 
@@ -101,7 +105,9 @@ REM Work around VS2017 bug by using MinSizeRel.
 cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python64_dir% -DCMAKE_BUILD_TYPE=MinSizeRel ..\llvm || exit /b
 ninja all || ninja all || ninja all || exit /b
 ninja check || ninja check || ninja check || exit /b
-ninja check-clang || ninja check-clang || ninja check-clang ||  exit /b
+ninja check-clang || ninja check-clang || ninja check-clang || exit /b
+ninja check-lld || ninja check-lld || ninja check-lld || exit /b
+ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit /b
 cd..
 
 mkdir build64
@@ -111,6 +117,8 @@ set CXX=..\build64_stage0\bin\clang-cl
 cmake -GNinja %cmake_flags% -DPYTHON_HOME=%python64_dir% ..\llvm || exit /b
 ninja all || ninja all || ninja all || exit /b
 ninja check || ninja check || ninja check || exit /b
-ninja check-clang || ninja check-clang || ninja check-clang ||  exit /b
+ninja check-clang || ninja check-clang || ninja check-clang || exit /b
+ninja check-lld || ninja check-lld || ninja check-lld || exit /b
+ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit /b
 ninja package || exit /b
 cd ..
