@@ -5910,16 +5910,16 @@ SwiftASTContext::GetSwiftFixedTypeInfo(void *type) {
   return nullptr;
 }
 
-uint64_t SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
-                                     ExecutionContextScope *exe_scope) {
+llvm::Optional<uint64_t>
+SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
+                            ExecutionContextScope *exe_scope) {
   if (!type)
-    return 0;
+    return {};
 
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   if (swift_can_type->hasTypeParameter()) {
     if (!exe_scope)
-      // FIXME: Return an error instead.
-      return GetPointerByteSize() * 8;
+      return {};
     ExecutionContext exe_ctx;
     exe_scope->CalculateExecutionContext(exe_ctx);
     auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
@@ -5943,7 +5943,7 @@ uint64_t SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
   if (fixed_type_info)
     return fixed_type_info->getFixedSize().getValue() * 8;
 
-  return 0;
+  return {};
 }
 
 uint64_t SwiftASTContext::GetByteStride(lldb::opaque_compiler_type_t type) {
