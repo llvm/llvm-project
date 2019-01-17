@@ -52,10 +52,6 @@ namespace api_notes {
                        void *diagHandlerCtxt = nullptr);
 
   bool parseAndDumpAPINotes(llvm::StringRef yamlInput);
-
-  /// Converts API notes from the compiled binary format to the YAML format.
-  bool decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
-                         llvm::raw_ostream &os);
 } // end namespace api_notes
 } // end namespace clang
 
