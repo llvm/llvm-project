@@ -27,9 +27,6 @@ namespace api_notes {
 /// The file extension used for the source representation of API notes.
 static const char SOURCE_APINOTES_EXTENSION[] = "apinotes";
 
-/// The file extension used for the binary representation of API notes.
-static const char BINARY_APINOTES_EXTENSION[] = "apinotesc";
-
 /// Opaque context ID used to refer to an Objective-C class or protocol.
 class ContextID {
 public:
