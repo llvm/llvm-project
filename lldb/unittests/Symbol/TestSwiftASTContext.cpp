@@ -12,6 +12,7 @@
 
 #include "gtest/gtest.h"
 
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 
@@ -49,9 +50,14 @@ struct TestSwiftASTContext : public testing::Test {
     ASSERT_NO_ERROR(fs::remove_directories(m_base_dir));
   }
 
-  static void SetUpTestCase() { HostInfo::Initialize();  }
+  static void SetUpTestCase() {
+    FileSystem::Initialize();
+    HostInfo::Initialize();  }
 
-  static void TearDownTestCase() { HostInfo::Terminate(); }
+  static void TearDownTestCase() {
+    HostInfo::Terminate();
+    FileSystem::Terminate();
+  }
 };
 
 struct SwiftASTContextTester : public SwiftASTContext {
