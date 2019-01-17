@@ -281,6 +281,8 @@ void f0() {
 
   (void)__builtin_ia32_xsave(tmp_vp, tmp_ULLi);
   (void)__builtin_ia32_xsave64(tmp_vp, tmp_ULLi);
+  tmp_ULLi = __builtin_ia32_xgetbv(tmp_Ui);
+  (void)__builtin_ia32_xsetbv(tmp_Ui, tmp_ULLi);
   (void)__builtin_ia32_xrstor(tmp_vp, tmp_ULLi);
   (void)__builtin_ia32_xrstor64(tmp_vp, tmp_ULLi);
   (void)__builtin_ia32_xsaveopt(tmp_vp, tmp_ULLi);

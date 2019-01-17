@@ -274,6 +274,10 @@ def warn_riscv_interrupt_attribute : Warning<
    "RISC-V 'interrupt' attribute only applies to functions that have "
    "%select{no parameters|a 'void' return type}0">,
    InGroup<IgnoredAttributes>;
+def warn_msp430_interrupt_attribute : Warning<
+   "MSP430 'interrupt' attribute only applies to functions that have "
+   "%select{no parameters|a 'void' return type}0">,
+   InGroup<IgnoredAttributes>;
 def warn_unused_parameter : Warning<"unused parameter %0">,
   InGroup<UnusedParameter>, DefaultIgnore;
 def warn_unused_variable : Warning<"unused variable %0">,

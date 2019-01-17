@@ -214,19 +214,17 @@ void TestFixedPointCastSaturation() {
   // Only get overflow checking if signed fract to unsigned accum
   sat_ua = sat_sf;
   // DEFAULT:      [[FRACT:%[0-9a-z]+]] = load i8, i8* %sat_sf, align 1
-  // DEFAULT-NEXT: [[FRACT_EXT:%[0-9a-z]+]] = sext i8 [[FRACT]] to i17
-  // DEFAULT-NEXT: [[ACCUM:%[0-9a-z]+]] = shl i17 [[FRACT_EXT]], 9
-  // DEFAULT-NEXT: [[IS_NEG:%[0-9a-z]+]] = icmp slt i17 [[ACCUM]], 0
-  // DEFAULT-NEXT: [[RESULT:%[0-9a-z]+]] = select i1 [[IS_NEG]], i17 0, i17 [[ACCUM]]
-  // DEFAULT-NEXT: [[RESULT_EXT:%[0-9a-z]+]] = sext i17 [[RESULT]] to i32
-  // DEFAULT-NEXT: store i32 [[RESULT_EXT]], i32* %sat_ua, align 4
+  // DEFAULT-NEXT: [[FRACT_EXT:%[0-9a-z]+]] = sext i8 [[FRACT]] to i32
+  // DEFAULT-NEXT: [[ACCUM:%[0-9a-z]+]] = shl i32 [[FRACT_EXT]], 9
+  // DEFAULT-NEXT: [[IS_NEG:%[0-9a-z]+]] = icmp slt i32 [[ACCUM]], 0
+  // DEFAULT-NEXT: [[RESULT:%[0-9a-z]+]] = select i1 [[IS_NEG]], i32 0, i32 [[ACCUM]]
+  // DEFAULT-NEXT: store i32 [[RESULT]], i32* %sat_ua, align 4
   // SAME:      [[FRACT:%[0-9a-z]+]] = load i8, i8* %sat_sf, align 1
-  // SAME-NEXT: [[FRACT_EXT:%[0-9a-z]+]] = sext i8 [[FRACT]] to i16
-  // SAME-NEXT: [[ACCUM:%[0-9a-z]+]] = shl i16 [[FRACT_EXT]], 8
-  // SAME-NEXT: [[IS_NEG:%[0-9a-z]+]] = icmp slt i16 [[ACCUM]], 0
-  // SAME-NEXT: [[RESULT:%[0-9a-z]+]] = select i1 [[IS_NEG]], i16 0, i16 [[ACCUM]]
-  // SAME-NEXT: [[RESULT_EXT:%[0-9a-z]+]] = sext i16 [[RESULT]] to i32
-  // SAME-NEXT: store i32 [[RESULT_EXT]], i32* %sat_ua, align 4
+  // SAME-NEXT: [[FRACT_EXT:%[0-9a-z]+]] = sext i8 [[FRACT]] to i32
+  // SAME-NEXT: [[ACCUM:%[0-9a-z]+]] = shl i32 [[FRACT_EXT]], 8
+  // SAME-NEXT: [[IS_NEG:%[0-9a-z]+]] = icmp slt i32 [[ACCUM]], 0
+  // SAME-NEXT: [[RESULT:%[0-9a-z]+]] = select i1 [[IS_NEG]], i32 0, i32 [[ACCUM]]
+  // SAME-NEXT: store i32 [[RESULT]], i32* %sat_ua, align 4
 }
 
 void TestFixedPointCastBetFractAccum() {

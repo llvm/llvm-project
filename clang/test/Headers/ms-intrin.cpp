@@ -49,7 +49,9 @@ void f() {
   int info[4];
   __cpuid(info, 0);
   __cpuidex(info, 0, 0);
+#if defined(_M_X64) || defined(_M_IX86)
   _xgetbv(0);
+#endif
   __halt();
   __nop();
   __readmsr(0);

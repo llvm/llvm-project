@@ -118,6 +118,11 @@ void m(int) {}
 // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:8> col:11 'int'
 // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:13, col:14>
 
+void n(int, ...) {}
+// CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:19> col:6 n 'void (int, ...)'
+// CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:8> col:11 'int'
+// CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:18, col:19>
+
 int main() {
   // CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+2]]:1> line:[[@LINE-1]]:5 main 'int ()'
   a1(); // Causes this to be marked 'used'

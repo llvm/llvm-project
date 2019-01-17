@@ -1049,6 +1049,9 @@ PreprocessorFrontendAction::CreateASTConsumer(CompilerInstance &CI,
   llvm_unreachable("Invalid CreateASTConsumer on preprocessor action!");
 }
 
+bool WrapperFrontendAction::PrepareToExecuteAction(CompilerInstance &CI) {
+  return WrappedAction->PrepareToExecuteAction(CI);
+}
 std::unique_ptr<ASTConsumer>
 WrapperFrontendAction::CreateASTConsumer(CompilerInstance &CI,
                                          StringRef InFile) {
