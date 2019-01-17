@@ -58,6 +58,9 @@ normal:
 ; CHECK: sideeffect(i32 0)
 ; CHECK: sink
 
+; CHECK-LABEL: define {{.*}}@bar.cold.1(
+; CHECK: sideeffect(i32 1)
+
 declare void @sideeffect(i32)
 
 declare void @sink() cold
