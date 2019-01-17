@@ -6483,8 +6483,8 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
   unsigned NumElts = VT.getVectorNumElements();
   unsigned NumSizeInBits = VT.getSizeInBits();
   unsigned NumBitsPerElt = VT.getScalarSizeInBits();
-  assert((NumBitsPerElt % 8) == 0 && (NumSizeInBits % 8) == 0 &&
-         "Expected byte aligned value types");
+  if ((NumBitsPerElt % 8) != 0 || (NumSizeInBits % 8) != 0)
+    return false;
 
   unsigned Opcode = N.getOpcode();
   switch (Opcode) {
@@ -11629,6 +11629,81 @@ static SDValue lowerVectorShuffleAsTruncBroadcast(const SDLoc &DL, MVT VT,
                      DAG.getNode(ISD::TRUNCATE, DL, EltVT, Scalar));
 }
 
+/// Test whether this can be lowered with a single SHUFPS instruction.
+///
+/// This is used to disable more specialized lowerings when the shufps lowering
+/// will happen to be efficient.
+static bool isSingleSHUFPSMask(ArrayRef<int> Mask) {
+  // This routine only handles 128-bit shufps.
+  assert(Mask.size() == 4 && "Unsupported mask size!");
+  assert(Mask[0] >= -1 && Mask[0] < 8 && "Out of bound mask element!");
+  assert(Mask[1] >= -1 && Mask[1] < 8 && "Out of bound mask element!");
+  assert(Mask[2] >= -1 && Mask[2] < 8 && "Out of bound mask element!");
+  assert(Mask[3] >= -1 && Mask[3] < 8 && "Out of bound mask element!");
+
+  // To lower with a single SHUFPS we need to have the low half and high half
+  // each requiring a single input.
+  if (Mask[0] >= 0 && Mask[1] >= 0 && (Mask[0] < 4) != (Mask[1] < 4))
+    return false;
+  if (Mask[2] >= 0 && Mask[3] >= 0 && (Mask[2] < 4) != (Mask[3] < 4))
+    return false;
+
+  return true;
+}
+
+/// If we are extracting two 128-bit halves of a vector and shuffling the
+/// result, match that to a 256-bit AVX2 vperm* instruction to avoid a
+/// multi-shuffle lowering.
+static SDValue lowerShuffleOfExtractsAsVperm(const SDLoc &DL, SDValue N0,
+                                             SDValue N1, ArrayRef<int> Mask,
+                                             SelectionDAG &DAG) {
+  EVT VT = N0.getValueType();
+  assert((VT.is128BitVector() &&
+          (VT.getScalarSizeInBits() == 32 || VT.getScalarSizeInBits() == 64)) &&
+         "VPERM* family of shuffles requires 32-bit or 64-bit elements");
+
+  // Check that both sources are extracts of the same source vector.
+  if (!N0.hasOneUse() || !N1.hasOneUse() ||
+      N0.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+      N1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+      N0.getOperand(0) != N1.getOperand(0))
+    return SDValue();
+
+  SDValue WideVec = N0.getOperand(0);
+  EVT WideVT = WideVec.getValueType();
+  if (!WideVT.is256BitVector() || !isa<ConstantSDNode>(N0.getOperand(1)) ||
+      !isa<ConstantSDNode>(N1.getOperand(1)))
+    return SDValue();
+
+  // Match extracts of each half of the wide source vector. Commute the shuffle
+  // if the extract of the low half is N1.
+  unsigned NumElts = VT.getVectorNumElements();
+  SmallVector<int, 4> NewMask(Mask.begin(), Mask.end());
+  APInt ExtIndex0 = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
+  APInt ExtIndex1 = cast<ConstantSDNode>(N1.getOperand(1))->getAPIntValue();
+  if (ExtIndex1 == 0 && ExtIndex0 == NumElts) {
+    std::swap(ExtIndex0, ExtIndex1);
+    ShuffleVectorSDNode::commuteMask(NewMask);
+  }
+  if (ExtIndex0 != 0 || ExtIndex1 != NumElts)
+    return SDValue();
+
+  // Final bailout: if the mask is simple, we are better off using an extract
+  // and a simple narrow shuffle.
+  if (NumElts == 4 && isSingleSHUFPSMask(NewMask))
+    return SDValue();
+
+  // Extend the shuffle mask with undef elements.
+  NewMask.append(NumElts, -1);
+
+  // shuf (extract X, 0), (extract X, 4), M --> extract (shuf X, undef, M'), 0
+  SDValue Shuf = DAG.getVectorShuffle(WideVT, DL, WideVec, DAG.getUNDEF(WideVT),
+                                      NewMask);
+  // This is free: ymm -> xmm.
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Shuf,
+                     DAG.getIntPtrConstant(0, DL));
+}
+
 /// Try to lower broadcast of a single element.
 ///
 /// For convenience, this code also bundles all of the subtarget feature set
@@ -12116,6 +12191,10 @@ static SDValue lowerV2F64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   assert(Mask[0] < 2 && "We sort V1 to be the first input.");
   assert(Mask[1] >= 2 && "We sort V2 to be the second input.");
 
+  if (Subtarget.hasAVX2())
+    if (SDValue Extract = lowerShuffleOfExtractsAsVperm(DL, V1, V2, Mask, DAG))
+      return Extract;
+
   // When loading a scalar and then shuffling it into a vector we can often do
   // the insertion cheaply.
   if (SDValue Insertion = lowerVectorShuffleAsElementInsertion(
@@ -12193,6 +12272,10 @@ static SDValue lowerV2I64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   assert(Mask[0] < 2 && "We sort V1 to be the first input.");
   assert(Mask[1] >= 2 && "We sort V2 to be the second input.");
 
+  if (Subtarget.hasAVX2())
+    if (SDValue Extract = lowerShuffleOfExtractsAsVperm(DL, V1, V2, Mask, DAG))
+      return Extract;
+
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v2i64, V1, V2, Mask,
                                                 Zeroable, Subtarget, DAG))
@@ -12250,28 +12333,6 @@ static SDValue lowerV2I64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   V2 = DAG.getBitcast(MVT::v2f64, V2);
   return DAG.getBitcast(MVT::v2i64,
                         DAG.getVectorShuffle(MVT::v2f64, DL, V1, V2, Mask));
-}
-
-/// Test whether this can be lowered with a single SHUFPS instruction.
-///
-/// This is used to disable more specialized lowerings when the shufps lowering
-/// will happen to be efficient.
-static bool isSingleSHUFPSMask(ArrayRef<int> Mask) {
-  // This routine only handles 128-bit shufps.
-  assert(Mask.size() == 4 && "Unsupported mask size!");
-  assert(Mask[0] >= -1 && Mask[0] < 8 && "Out of bound mask element!");
-  assert(Mask[1] >= -1 && Mask[1] < 8 && "Out of bound mask element!");
-  assert(Mask[2] >= -1 && Mask[2] < 8 && "Out of bound mask element!");
-  assert(Mask[3] >= -1 && Mask[3] < 8 && "Out of bound mask element!");
-
-  // To lower with a single SHUFPS we need to have the low half and high half
-  // each requiring a single input.
-  if (Mask[0] >= 0 && Mask[1] >= 0 && (Mask[0] < 4) != (Mask[1] < 4))
-    return false;
-  if (Mask[2] >= 0 && Mask[3] >= 0 && (Mask[2] < 4) != (Mask[3] < 4))
-    return false;
-
-  return true;
 }
 
 /// Lower a vector shuffle using the SHUFPS instruction.
@@ -12413,6 +12474,10 @@ static SDValue lowerV4F32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
                        getV4X86ShuffleImm8ForMask(Mask, DL, DAG));
   }
 
+  if (Subtarget.hasAVX2())
+    if (SDValue Extract = lowerShuffleOfExtractsAsVperm(DL, V1, V2, Mask, DAG))
+      return Extract;
+
   // There are special ways we can lower some single-element blends. However, we
   // have custom ways we can lower more complex single-element blends below that
   // we defer to if both this and BLENDPS fail to match, so restrict this to
@@ -12500,6 +12565,10 @@ static SDValue lowerV4I32VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return DAG.getNode(X86ISD::PSHUFD, DL, MVT::v4i32, V1,
                        getV4X86ShuffleImm8ForMask(Mask, DL, DAG));
   }
+
+  if (Subtarget.hasAVX2())
+    if (SDValue Extract = lowerShuffleOfExtractsAsVperm(DL, V1, V2, Mask, DAG))
+      return Extract;
 
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v4i32, V1, V2, Mask,
@@ -21771,6 +21840,17 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                               Src1, Src2, Src3),
                                   Mask, PassThru, Subtarget, DAG);
     }
+    case BLENDV: {
+      SDValue Src1 = Op.getOperand(1);
+      SDValue Src2 = Op.getOperand(2);
+      SDValue Src3 = Op.getOperand(3);
+
+      EVT MaskVT = Src3.getValueType().changeVectorElementTypeToInteger();
+      Src3 = DAG.getBitcast(MaskVT, Src3);
+
+      // Reverse the operands to match VSELECT order.
+      return DAG.getNode(IntrData->Opc0, dl, VT, Src3, Src2, Src1);
+    }
     case VPERM_2OP : {
       SDValue Src1 = Op.getOperand(1);
       SDValue Src2 = Op.getOperand(2);
@@ -27202,6 +27282,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VSHLI:              return "X86ISD::VSHLI";
   case X86ISD::VSRLI:              return "X86ISD::VSRLI";
   case X86ISD::VSRAI:              return "X86ISD::VSRAI";
+  case X86ISD::VSHLV:              return "X86ISD::VSHLV";
+  case X86ISD::VSRLV:              return "X86ISD::VSRLV";
   case X86ISD::VSRAV:              return "X86ISD::VSRAV";
   case X86ISD::VROTLI:             return "X86ISD::VROTLI";
   case X86ISD::VROTRI:             return "X86ISD::VROTRI";
@@ -31555,6 +31637,14 @@ static SDValue combineX86ShufflesRecursively(
                                 AllowVariableMask, DAG, Subtarget);
 }
 
+/// Helper entry wrapper to combineX86ShufflesRecursively.
+static SDValue combineX86ShufflesRecursively(SDValue Op, SelectionDAG &DAG,
+                                             const X86Subtarget &Subtarget) {
+  return combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
+                                       /*HasVarMask*/ false,
+                                       /*AllowVarMask*/ true, DAG, Subtarget);
+}
+
 /// Get the PSHUF-style mask from PSHUF node.
 ///
 /// This is a very minor wrapper around getTargetShuffleMask to easy forming v4
@@ -32365,9 +32455,7 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     // specific PSHUF instruction sequences into their minimal form so that we
     // can evaluate how many specialized shuffle instructions are involved in
     // a particular chain.
-    if (SDValue Res = combineX86ShufflesRecursively(
-            {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-            /*HasVarMask*/ false, /*AllowVarMask*/ true, DAG, Subtarget))
+    if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
 
     // Simplify source operands based on shuffle mask.
@@ -33848,8 +33936,8 @@ combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
   bool FValIsAllZeros = ISD::isBuildVectorAllZeros(RHS.getNode());
 
   // Try to invert the condition if true value is not all 1s and false value is
-  // not all 0s.
-  if (!TValIsAllOnes && !FValIsAllZeros &&
+  // not all 0s. Only do this if the condition has one use.
+  if (!TValIsAllOnes && !FValIsAllZeros && Cond.hasOneUse() &&
       // Check if the selector will be produced by CMPP*/PCMP*.
       Cond.getOpcode() == ISD::SETCC &&
       // Check if SETCC has already been promoted.
@@ -35750,10 +35838,7 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
 
   // Attempt to combine as shuffle.
   SDValue Op(N, 0);
-  if (SDValue Res =
-          combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-                                        /*HasVarMask*/ false,
-                                        /*AllowVarMask*/ true, DAG, Subtarget))
+  if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
     return Res;
 
   return SDValue();
@@ -35829,9 +35914,7 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
   // We can decode 'whole byte' logical bit shifts as shuffles.
   if (LogicalShift && (ShiftVal % 8) == 0) {
     SDValue Op(N, 0);
-    if (SDValue Res = combineX86ShufflesRecursively(
-            {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-            /*HasVarMask*/ false, /*AllowVarMask*/ true, DAG, Subtarget))
+    if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
   }
 
@@ -35872,10 +35955,7 @@ static SDValue combineVectorInsert(SDNode *N, SelectionDAG &DAG,
 
   // Attempt to combine PINSRB/PINSRW patterns to a shuffle.
   SDValue Op(N, 0);
-  if (SDValue Res =
-          combineX86ShufflesRecursively({Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-                                        /*HasVarMask*/ false,
-                                        /*AllowVarMask*/ true, DAG, Subtarget))
+  if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
     return Res;
 
   return SDValue();
@@ -36392,9 +36472,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   // Attempt to recursively combine a bitmask AND with shuffles.
   if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
     SDValue Op(N, 0);
-    if (SDValue Res = combineX86ShufflesRecursively(
-            {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-            /*HasVarMask*/ false, /*AllowVarMask*/ true, DAG, Subtarget))
+    if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
   }
 
@@ -36708,9 +36786,7 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   // Attempt to recursively combine an OR of shuffles.
   if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
     SDValue Op(N, 0);
-    if (SDValue Res = combineX86ShufflesRecursively(
-            {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-            /*HasVarMask*/ false, /*AllowVarMask*/ true, DAG, Subtarget))
+    if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
   }
 
@@ -39014,9 +39090,7 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   // Attempt to recursively combine a bitmask ANDNP with shuffles.
   if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
     SDValue Op(N, 0);
-    if (SDValue Res = combineX86ShufflesRecursively(
-            {Op}, 0, Op, {0}, {}, /*Depth*/ 1,
-            /*HasVarMask*/ false, /*AllowVarMask*/ true, DAG, Subtarget))
+    if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
   }
 

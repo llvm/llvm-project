@@ -37,15 +37,25 @@ source_set("sources") {
   ]
   sources = [
     "hwasan.cc",
+    "hwasan.h",
     "hwasan_allocator.cc",
+    "hwasan_allocator.h",
     "hwasan_dynamic_shadow.cc",
+    "hwasan_dynamic_shadow.h",
+    "hwasan_flags.h",
     "hwasan_interceptors.cc",
+    "hwasan_interface_internal.h",
     "hwasan_linux.cc",
+    "hwasan_mapping.h",
     "hwasan_memintrinsics.cc",
     "hwasan_poisoning.cc",
+    "hwasan_poisoning.h",
     "hwasan_report.cc",
+    "hwasan_report.h",
     "hwasan_thread.cc",
+    "hwasan_thread.h",
     "hwasan_thread_list.cc",
+    "hwasan_thread_list.h",
   ]
 }
 

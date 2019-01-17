@@ -360,3 +360,27 @@ define void @atomic_store_relaxed(i128* %p, i128 %in) {
    store atomic i128 %in, i128* %p unordered, align 16
    ret void
 }
+
+
+@fsc128 = external global fp128
+
+define void @atomic_fetch_swapf128(fp128 %x) nounwind {
+; CHECK-LABEL: atomic_fetch_swapf128:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    movq %rsi, %rcx
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq _fsc128@{{.*}}(%rip), %rsi
+; CHECK-NEXT:    movq (%rsi), %rax
+; CHECK-NEXT:    movq 8(%rsi), %rdx
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  LBB14_1: ## %atomicrmw.start
+; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    lock cmpxchg16b (%rsi)
+; CHECK-NEXT:    jne LBB14_1
+; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    retq
+  %t1 = atomicrmw xchg fp128* @fsc128, fp128 %x acquire
+  ret void
+}

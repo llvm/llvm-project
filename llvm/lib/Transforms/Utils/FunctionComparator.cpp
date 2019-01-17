@@ -557,31 +557,20 @@ int FunctionComparator::cmpOperations(const Instruction *L,
   }
   if (const CmpInst *CI = dyn_cast<CmpInst>(L))
     return cmpNumbers(CI->getPredicate(), cast<CmpInst>(R)->getPredicate());
-  if (const CallInst *CI = dyn_cast<CallInst>(L)) {
-    if (int Res = cmpNumbers(CI->getCallingConv(),
-                             cast<CallInst>(R)->getCallingConv()))
+  if (auto CSL = CallSite(const_cast<Instruction *>(L))) {
+    auto CSR = CallSite(const_cast<Instruction *>(R));
+    if (int Res = cmpNumbers(CSL.getCallingConv(), CSR.getCallingConv()))
       return Res;
-    if (int Res =
-            cmpAttrs(CI->getAttributes(), cast<CallInst>(R)->getAttributes()))
+    if (int Res = cmpAttrs(CSL.getAttributes(), CSR.getAttributes()))
       return Res;
-    if (int Res = cmpOperandBundlesSchema(CI, R))
+    if (int Res = cmpOperandBundlesSchema(L, R))
       return Res;
-    return cmpRangeMetadata(
-        CI->getMetadata(LLVMContext::MD_range),
-        cast<CallInst>(R)->getMetadata(LLVMContext::MD_range));
-  }
-  if (const InvokeInst *II = dyn_cast<InvokeInst>(L)) {
-    if (int Res = cmpNumbers(II->getCallingConv(),
-                             cast<InvokeInst>(R)->getCallingConv()))
-      return Res;
-    if (int Res =
-            cmpAttrs(II->getAttributes(), cast<InvokeInst>(R)->getAttributes()))
-      return Res;
-    if (int Res = cmpOperandBundlesSchema(II, R))
-      return Res;
-    return cmpRangeMetadata(
-        II->getMetadata(LLVMContext::MD_range),
-        cast<InvokeInst>(R)->getMetadata(LLVMContext::MD_range));
+    if (const CallInst *CI = dyn_cast<CallInst>(L))
+      if (int Res = cmpNumbers(CI->getTailCallKind(),
+                               cast<CallInst>(R)->getTailCallKind()))
+        return Res;
+    return cmpRangeMetadata(L->getMetadata(LLVMContext::MD_range),
+                            R->getMetadata(LLVMContext::MD_range));
   }
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(L)) {
     ArrayRef<unsigned> LIndices = IVI->getIndices();

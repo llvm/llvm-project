@@ -27,3 +27,5 @@ define msp430_intrcc void @fpb_alloced() #0 {
   call void asm sideeffect "nop", "r"(i8 0)
   ret void
 }
+
+attributes #0 = { noinline nounwind optnone "interrupt"="2" }

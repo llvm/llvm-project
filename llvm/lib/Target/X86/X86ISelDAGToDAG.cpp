@@ -3381,13 +3381,17 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     }
     break;
 
-  case X86ISD::BLENDV: {
-    // BLENDV selects like a regular VSELECT.
-    SDValue VSelect = CurDAG->getNode(
-        ISD::VSELECT, SDLoc(Node), Node->getValueType(0), Node->getOperand(0),
+  case ISD::VSELECT: {
+    // Replace VSELECT with non-mask conditions with with BLENDV.
+    if (Node->getOperand(0).getValueType().getVectorElementType() == MVT::i1)
+      break;
+
+    assert(Subtarget->hasSSE41() && "Expected SSE4.1 support!");
+    SDValue Blendv = CurDAG->getNode(
+        X86ISD::BLENDV, SDLoc(Node), Node->getValueType(0), Node->getOperand(0),
         Node->getOperand(1), Node->getOperand(2));
-    ReplaceNode(Node, VSelect.getNode());
-    SelectCode(VSelect.getNode());
+    ReplaceNode(Node, Blendv.getNode());
+    SelectCode(Blendv.getNode());
     // We already called ReplaceUses.
     return;
   }
