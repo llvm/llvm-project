@@ -14,10 +14,8 @@ typedef struct _SchedulerParam {
     AmdVQueueHeader* vqueue_header;  //!< The vqueue
     uint   signal;                   //!< Signal to stop the child queue
     uint   eng_clk;                  //!< Engine clock in Mhz
-    uint   releaseHostCP;            //!< Releases CP on the host queue
     ulong  parentAQL;                //!< Host parent AmdAqlWrap packet
-    uint   dedicatedQueue;           //!< Scheduler uses a dedicated queue
-    uint   reserved[2];              //!< Processed mask groups by one thread
+    ulong  write_index;              //!< Write Index to the child queue
 } SchedulerParam;
 
 static inline int
@@ -64,9 +62,16 @@ min_command(uint slot_num, __global AmdAqlWrap* wraps)
 }
 
 static inline void
-EnqueueDispatch(__global hsa_kernel_dispatch_packet_t* aqlPkt, __global hsa_queue_t* child_queue)
+EnqueueDispatch(__global hsa_kernel_dispatch_packet_t* aqlPkt, __global SchedulerParam* param)
 {
-    ulong index = __ockl_hsa_queue_add_write_index(child_queue, 1, __ockl_memory_order_relaxed);
+    __global hsa_queue_t* child_queue = param->child_queue;
+
+
+    // ulong index = __ockl_hsa_queue_add_write_index(child_queue, 1, __ockl_memory_order_relaxed);
+    // The original code seen above relies on PCIe 3 atomics, which might not be supported on some systems, so use a device side global
+    // for workaround.
+    ulong index = atomic_fetch_add_explicit((__global atomic_ulong*)&param->write_index, (ulong)1, memory_order_relaxed, memory_scope_device);
+
     const ulong queueMask = child_queue->size - 1;
     __global hsa_kernel_dispatch_packet_t* dispatch_packet = &(((__global hsa_kernel_dispatch_packet_t*)(child_queue->base_address))[index & queueMask]);
     *dispatch_packet = *aqlPkt;
@@ -76,10 +81,19 @@ static inline void
 EnqueueScheduler(__global SchedulerParam* param)
 {
     __global hsa_queue_t* child_queue = param->child_queue;
-    ulong index = __ockl_hsa_queue_add_write_index(child_queue, 1, __ockl_memory_order_relaxed);
+
+    // ulong index = __ockl_hsa_queue_add_write_index(child_queue, 1, __ockl_memory_order_relaxed);
+    // The original code seen above relies on PCIe 3 atomics, which might not be supported on some systems, so use a device side global
+    // for workaround.
+    ulong index = atomic_fetch_add_explicit((__global atomic_ulong*)&param->write_index, (ulong)1, memory_order_relaxed, memory_scope_device);
+
     const ulong queueMask = child_queue->size - 1;
     __global hsa_kernel_dispatch_packet_t* dispatch_packet = &(((__global hsa_kernel_dispatch_packet_t*)(child_queue->base_address))[index & queueMask]);
     *dispatch_packet = param->scheduler_aql;
+
+     // This is part of the PCIe 3 atomics workaround, to write the final write_index value back to the child_queue
+    __ockl_hsa_queue_store_write_index(child_queue, index + 1, __ockl_memory_order_relaxed);
+
     __ockl_hsa_signal_store(child_queue->doorbell_signal, index, __ockl_memory_order_release);
 }
 
@@ -89,8 +103,6 @@ __amd_scheduler_rocm(__global SchedulerParam* param)
     __global AmdVQueueHeader* queue = (__global AmdVQueueHeader*)(param->vqueue_header);
     __global AmdAqlWrap* wraps = (__global AmdAqlWrap*)&queue[1];
     __global uint* amask = (__global uint *)queue->aql_slot_mask;
-
-    // unused? __global uint* signal = (__global uint*)(&param->signal);
 
     int launch = 0;
     int  grpId = get_group_id(0);
@@ -133,7 +145,7 @@ __amd_scheduler_rocm(__global SchedulerParam* param)
                         }
                         if (launch > 0) {
                             // Launch child kernel ....
-                            EnqueueDispatch(&disp->aql, param->child_queue);
+                            EnqueueDispatch(&disp->aql, param);
                         } else if (event != 0) {
                             event->state = -1;
                         }
