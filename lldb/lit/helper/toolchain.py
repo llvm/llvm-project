@@ -97,6 +97,17 @@ def use_support_substitutions(config):
     elif platform.system() in ['OpenBSD', 'Linux']:
         flags = ['-pthread']
 
+    # Swift support
+    swift_sdk = [' -sdk ', sdk_path] if platform.system() in ['Darwin'] else []
+    tools = [
+        ToolSubst(
+            '%target-swiftc', command=config.swiftc, extra_args=swift_sdk),
+        ToolSubst(
+            '%target-swift-frontend',
+            command=config.swiftc[:-1],
+            extra_args=swift_sdk)
+    ]
+    llvm_config.add_tool_substitutions(tools)
 
     additional_tool_dirs=[]
     if config.lldb_lit_tools_dir:
