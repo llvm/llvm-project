@@ -390,7 +390,8 @@ public:
 
     // Add SinkBB to the cold region. It's considered as an entry point before
     // any sink-successor blocks.
-    addBlockToRegion(&SinkBB, SinkScore);
+    if (mayExtractBlock(SinkBB))
+      addBlockToRegion(&SinkBB, SinkScore);
 
     // Find all successors of SinkBB dominated by SinkBB using DFS.
     auto SuccIt = ++df_begin(&SinkBB);
@@ -484,10 +485,6 @@ bool HotColdSplitting::outlineColdRegions(Function &F, ProfileSummaryInfo &PSI,
 
   // Find all cold regions.
   for (BasicBlock *BB : RPOT) {
-    // Skip blocks which can't be outlined.
-    if (!mayExtractBlock(*BB))
-      continue;
-
     // This block is already part of some outlining region.
     if (ColdBlocks.count(BB))
       continue;
