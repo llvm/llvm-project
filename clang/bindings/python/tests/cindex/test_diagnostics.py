@@ -51,7 +51,7 @@ class TestDiagnostics(unittest.TestCase):
         self.assertEqual(tu.diagnostics[0].fixits[0].value, '.f0 = ')
 
     def test_diagnostic_range(self):
-        tu = get_tu('void f() { int i = "a"; }')
+        tu = get_tu('void f() { int i = "a" + 1; }')
         self.assertEqual(len(tu.diagnostics), 1)
         self.assertEqual(tu.diagnostics[0].severity, Diagnostic.Warning)
         self.assertEqual(tu.diagnostics[0].location.line, 1)
@@ -63,7 +63,7 @@ class TestDiagnostics(unittest.TestCase):
         self.assertEqual(tu.diagnostics[0].ranges[0].start.line, 1)
         self.assertEqual(tu.diagnostics[0].ranges[0].start.column, 20)
         self.assertEqual(tu.diagnostics[0].ranges[0].end.line, 1)
-        self.assertEqual(tu.diagnostics[0].ranges[0].end.column, 23)
+        self.assertEqual(tu.diagnostics[0].ranges[0].end.column, 27)
         with self.assertRaises(IndexError):
             tu.diagnostics[0].ranges[1].start.line
 
