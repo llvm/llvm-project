@@ -1300,7 +1300,7 @@ class Base(unittest2.TestCase):
             Supports: llvm, clang.
         """
         compiler = self.getCompilerBinary()
-        getCompilerVersion(self, compiler)
+        self.getCompilerVersion(compiler)
 
     def getCompilerVersion(self, compiler):
         version = 'unknown'
