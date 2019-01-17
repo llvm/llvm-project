@@ -198,6 +198,8 @@ def X86vsra    : SDNode<"X86ISD::VSRA", X86vshiftuniform>;
 def X86vshiftvariable : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                              SDTCisSameAs<0,2>, SDTCisInt<0>]>;
 
+def X86vshlv   : SDNode<"X86ISD::VSHLV", X86vshiftvariable>;
+def X86vsrlv   : SDNode<"X86ISD::VSRLV", X86vshiftvariable>;
 def X86vsrav   : SDNode<"X86ISD::VSRAV", X86vshiftvariable>;
 
 def X86vshli   : SDNode<"X86ISD::VSHLI", X86vshiftimm>;

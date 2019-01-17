@@ -315,10 +315,8 @@ namespace llvm {
       // Vector shift elements
       VSHL, VSRL, VSRA,
 
-      // Vector variable shift right arithmetic.
-      // Unlike ISD::SRA, in case shift count greater then element size
-      // use sign bit to fill destination data element.
-      VSRAV,
+      // Vector variable shift
+      VSHLV, VSRLV, VSRAV,
 
       // Vector shift elements by immediate
       VSHLI, VSRLI, VSRAI,

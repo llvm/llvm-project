@@ -27202,6 +27202,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VSHLI:              return "X86ISD::VSHLI";
   case X86ISD::VSRLI:              return "X86ISD::VSRLI";
   case X86ISD::VSRAI:              return "X86ISD::VSRAI";
+  case X86ISD::VSHLV:              return "X86ISD::VSHLV";
+  case X86ISD::VSRLV:              return "X86ISD::VSRLV";
   case X86ISD::VSRAV:              return "X86ISD::VSRAV";
   case X86ISD::VROTLI:             return "X86ISD::VROTLI";
   case X86ISD::VROTRI:             return "X86ISD::VROTRI";
