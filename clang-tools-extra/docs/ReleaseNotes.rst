@@ -67,7 +67,11 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-- ...
+- New :doc:`abseil-duration-conversion-cast
+  <clang-tidy/checks/abseil-duration-conversion-cast>` check.
+
+  Checks for casts of ``absl::Duration`` conversion functions, and recommends
+  the right conversion function instead.
 
 Improvements to include-fixer
 -----------------------------
