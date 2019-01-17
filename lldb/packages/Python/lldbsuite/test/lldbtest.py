@@ -1292,7 +1292,7 @@ class Base(unittest2.TestCase):
         """ Returns a string that represents the compiler version.
             Supports: llvm, clang.
         """
-        if compiler is None:
+        if not compiler:
           compiler = self.getCompilerBinary()
         version = 'unknown'
         version_output = system([[compiler, "-v"]])[1]
