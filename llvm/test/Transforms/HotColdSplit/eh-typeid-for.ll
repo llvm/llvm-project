@@ -1,4 +1,4 @@
-; RUN: opt -hotcoldsplit -S < %s | FileCheck %s
+; RUN: opt -hotcoldsplit -hotcoldsplit-threshold=0 -S < %s | FileCheck %s
 
 ; Do not outline calls to @llvm.eh.typeid.for. See llvm.org/PR39545.
 
@@ -15,8 +15,6 @@ if.then:
 
 if.else:
   %t = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*))
-  call void @sink()
-  call void @sink()
   call void @sink()
   ret void
 }

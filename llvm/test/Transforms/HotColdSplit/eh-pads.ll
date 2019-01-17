@@ -1,4 +1,4 @@
-; RUN: opt -S -hotcoldsplit < %s | FileCheck %s
+; RUN: opt -S -hotcoldsplit -hotcoldsplit-threshold=0 < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
@@ -17,7 +17,6 @@ exception:
 
 continue_exception:
   call void @sideeffect(i32 0)
-  call void @sideeffect(i32 1)
   call void @sink()
   ret void
 
@@ -44,17 +43,19 @@ continue:
 exception:
   ; Note: EH pads are not candidates for region entry points.
   %cleanup = landingpad i8 cleanup
-  ret void
+  br label %trivial-eh-handler
+
+trivial-eh-handler:
+  call void @sideeffect(i32 1)
+  br label %normal
 
 normal:
   call void @sideeffect(i32 0)
-  call void @sideeffect(i32 1)
   ret void
 }
 
 ; CHECK-LABEL: define {{.*}}@foo.cold.1(
 ; CHECK: sideeffect(i32 0)
-; CHECK: sideeffect(i32 1)
 ; CHECK: sink
 
 declare void @sideeffect(i32)
