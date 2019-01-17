@@ -26,9 +26,8 @@ class TestSwiftBridgedMetatype(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.expectedFailureAll(bugnumber="rdar://problem/25899481")
     def test_swift_bridged_metatype(self):
-        """Test the formatting of briged Swift metatypes"""
+        """Test the formatting of bridged Swift metatypes"""
         self.build()
         self.do_test()
 
