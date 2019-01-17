@@ -643,7 +643,6 @@ namespace {
     const Module &TheModule;
     const FileEntry *SourceFile;
     APINotesWriter *Writer;
-    OSType TargetOS;
     llvm::raw_ostream &OS;
     llvm::SourceMgr::DiagHandlerTy DiagHandler;
     void *DiagHandlerCtxt;
@@ -661,22 +660,12 @@ namespace {
   public:
     YAMLConverter(const Module &module,
                   const FileEntry *sourceFile,
-                  OSType targetOS,
                   llvm::raw_ostream &os,
                   llvm::SourceMgr::DiagHandlerTy diagHandler,
                   void *diagHandlerCtxt) :
-      TheModule(module), SourceFile(sourceFile), Writer(0), TargetOS(targetOS), OS(os),
+      TheModule(module), SourceFile(sourceFile), Writer(0), OS(os),
       DiagHandler(diagHandler), DiagHandlerCtxt(diagHandlerCtxt),
       ErrorOccured(false) {}
-
-    bool isAvailable(const AvailabilityItem &in) {
-      // Check if the API is available on the OS for which we are building.
-      if (in.Mode == APIAvailability::OSX && TargetOS != OSType::OSX)
-        return false;
-      if (in.Mode == APIAvailability::IOS && TargetOS != OSType::IOS)
-        return false;
-      return true;
-    }
 
     bool convertAvailability(const AvailabilityItem &in,
                              CommonEntityInfo &outInfo,
@@ -742,9 +731,6 @@ namespace {
     template<typename T>
     bool convertCommon(const T& common, CommonEntityInfo &info,
                        StringRef apiName) {
-      if (!isAvailable(common.Availability))
-        return true;
-
       convertAvailability(common.Availability, info, apiName);
       info.setSwiftPrivate(common.SwiftPrivate);
       info.SwiftName = common.SwiftName;
@@ -869,8 +855,6 @@ namespace {
 
         // Translate from Property into ObjCPropertyInfo.
         ObjCPropertyInfo pInfo;
-        if (!isAvailable(prop.Availability))
-          continue;
         convertAvailability(prop.Availability, pInfo, prop.Name);
         pInfo.setSwiftPrivate(prop.SwiftPrivate);
         pInfo.SwiftName = prop.SwiftName;
@@ -928,8 +912,6 @@ namespace {
         }
 
         GlobalVariableInfo info;
-        if (!isAvailable(global.Availability))
-          continue;
         convertAvailability(global.Availability, info, global.Name);
         info.setSwiftPrivate(global.SwiftPrivate);
         info.SwiftName = global.SwiftName;
@@ -950,8 +932,6 @@ namespace {
         }
 
         GlobalFunctionInfo info;
-        if (!isAvailable(function.Availability))
-          continue;
         convertAvailability(function.Availability, info, function.Name);
         info.setSwiftPrivate(function.SwiftPrivate);
         info.SwiftName = function.SwiftName;
@@ -975,8 +955,6 @@ namespace {
         }
 
         EnumConstantInfo info;
-        if (!isAvailable(enumConstant.Availability))
-          continue;
         convertAvailability(enumConstant.Availability, info, enumConstant.Name);
         info.setSwiftPrivate(enumConstant.SwiftPrivate);
         info.SwiftName = enumConstant.SwiftName;
@@ -1053,9 +1031,6 @@ namespace {
     }
 
     bool convertModule() {
-      if (!isAvailable(TheModule.Availability))
-        return false;
-
       // Set up the writer.
       // FIXME: This is kindof ugly.
       APINotesWriter writer(TheModule.Name, SourceFile);
@@ -1086,12 +1061,11 @@ namespace {
 static bool compile(const Module &module,
                     const FileEntry *sourceFile,
                     llvm::raw_ostream &os,
-                    api_notes::OSType targetOS,
                     llvm::SourceMgr::DiagHandlerTy diagHandler,
                     void *diagHandlerCtxt){
   using namespace api_notes;
 
-  YAMLConverter c(module, sourceFile, targetOS, os, diagHandler, diagHandlerCtxt);
+  YAMLConverter c(module, sourceFile, os, diagHandler, diagHandlerCtxt);
   return c.convertModule();
 }
 
@@ -1115,7 +1089,6 @@ static void printDiagnostic(const llvm::SMDiagnostic &diag, void *context) {
 bool api_notes::compileAPINotes(StringRef yamlInput,
                                 const FileEntry *sourceFile,
                                 llvm::raw_ostream &os,
-                                OSType targetOS,
                                 llvm::SourceMgr::DiagHandlerTy diagHandler,
                                 void *diagHandlerCtxt) {
   Module module;
@@ -1127,5 +1100,5 @@ bool api_notes::compileAPINotes(StringRef yamlInput,
   if (parseAPINotes(yamlInput, module, diagHandler, diagHandlerCtxt))
     return true;
 
-  return compile(module, sourceFile, os, targetOS, diagHandler, diagHandlerCtxt);
+  return compile(module, sourceFile, os, diagHandler, diagHandlerCtxt);
 }

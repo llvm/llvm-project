@@ -105,7 +105,6 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
     if (api_notes::compileAPINotes(sourceBuffer->getBuffer(),
                                    SourceMgr.getFileEntryForID(sourceFileID),
                                    OS,
-                                   api_notes::OSType::Absent,
                                    srcMgrAdapter.getDiagHandler(),
                                    srcMgrAdapter.getDiagContext()))
       return nullptr;
