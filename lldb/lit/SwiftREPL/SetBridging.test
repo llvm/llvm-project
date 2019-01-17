@@ -11,7 +11,7 @@ let s0: Set<Int> = []
 
 // All empty sets use the same type-punned storage class.
 let s0b = s0 as NSSet
-// DICT-LABEL: s0b: {{(__RawNativeSetStorage|_EmptySetSingleton)}} = 0 values
+// DICT-LABEL: s0b: {{(__RawNativeSetStorage|__EmptySetSingleton)}} = 0 values
 
 // Baseline case: native Set of non-verbatim bridged elements
 let s1: Set<Int> = [1]

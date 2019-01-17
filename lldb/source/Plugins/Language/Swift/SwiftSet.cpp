@@ -46,9 +46,9 @@ SetConfig::SetConfig()
   // still used to name classes in the ObjC runtime.
 
   m_nativeStorageRoot_mangled =
-    ConstString("_TtCs14_RawSetStorage");
+    ConstString("_TtCs15__RawSetStorage");
   m_nativeStorageRoot_demangled =
-    ConstString("Swift._RawSetStorage");
+    ConstString("Swift.__RawSetStorage");
 
     // Native storage class
   m_nativeStorage_mangledRegex_ObjC =
@@ -59,8 +59,8 @@ SetConfig::SetConfig()
     ConstString("^Swift\\._SetStorage<.+>$");
 
   // Type-punned empty set
-  m_emptyStorage_mangled_ObjC = ConstString("_TtCs18_EmptySetSingleton");
-  m_emptyStorage_demangled = ConstString("Swift._EmptySetSingleton");
+  m_emptyStorage_mangled_ObjC = ConstString("_TtCs19__EmptySetSingleton");
+  m_emptyStorage_demangled = ConstString("Swift.__EmptySetSingleton");
 
   // Deferred non-verbatim bridged set
   m_deferredBridgedStorage_mangledRegex_ObjC
