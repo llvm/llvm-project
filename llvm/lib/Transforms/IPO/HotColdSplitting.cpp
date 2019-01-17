@@ -101,7 +101,7 @@ bool blockEndsInUnreachable(const BasicBlock &BB) {
 
 bool unlikelyExecuted(BasicBlock &BB) {
   // Exception handling blocks are unlikely executed.
-  if (BB.isEHPad())
+  if (BB.isEHPad() || isa<ResumeInst>(BB.getTerminator()))
     return true;
 
   // The block is cold if it calls/invokes a cold function.
