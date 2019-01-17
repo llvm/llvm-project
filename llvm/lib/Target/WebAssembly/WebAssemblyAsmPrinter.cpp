@@ -22,6 +22,7 @@
 #include "WebAssemblyMCInstLower.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -145,6 +146,35 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
       OutStreamer->EmitBytes(Contents->getString());
       OutStreamer->PopSection();
     }
+  }
+
+  if (const NamedMDNode *Ident = M.getNamedMetadata("llvm.ident")) {
+    llvm::SmallSet<StringRef, 4> SeenTools;
+    llvm::SmallVector<std::pair<StringRef, StringRef>, 4> Tools;
+    for (size_t i = 0, e = Ident->getNumOperands(); i < e; ++i) {
+      const auto *S = cast<MDString>(Ident->getOperand(i)->getOperand(0));
+      std::pair<StringRef, StringRef> Field = S->getString().split("version");
+      StringRef Name = Field.first.trim();
+      StringRef Version = Field.second.trim();
+      if (!SeenTools.insert(Name).second)
+        continue;
+      Tools.emplace_back(Name, Version);
+    }
+    MCSectionWasm *Producers = OutContext.getWasmSection(
+        ".custom_section.producers", SectionKind::getMetadata());
+    OutStreamer->PushSection();
+    OutStreamer->SwitchSection(Producers);
+    OutStreamer->EmitULEB128IntValue(1);
+    OutStreamer->EmitULEB128IntValue(strlen("processed-by"));
+    OutStreamer->EmitBytes("processed-by");
+    OutStreamer->EmitULEB128IntValue(Tools.size());
+    for (auto &Tool : Tools) {
+      OutStreamer->EmitULEB128IntValue(Tool.first.size());
+      OutStreamer->EmitBytes(Tool.first);
+      OutStreamer->EmitULEB128IntValue(Tool.second.size());
+      OutStreamer->EmitBytes(Tool.second);
+    }
+    OutStreamer->PopSection();
   }
 }
 

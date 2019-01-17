@@ -1,4 +1,4 @@
-//===- Transforms/Instrumentation/MemorySanitizer.h - TSan Pass -----------===//
+//===- Transforms/Instrumentation/ThreadSanitizer.h - TSan Pass -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

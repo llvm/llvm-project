@@ -305,6 +305,7 @@ class WrapperFrontendAction : public FrontendAction {
   std::unique_ptr<FrontendAction> WrappedAction;
 
 protected:
+  bool PrepareToExecuteAction(CompilerInstance &CI) override;
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
   bool BeginInvocation(CompilerInstance &CI) override;
