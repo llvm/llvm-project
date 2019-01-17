@@ -1,15 +1,15 @@
 # RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog \
 # RUN:   -disable-branch-fold  -filetype=obj \
 # RUN: | llvm-readobj -unwind | FileCheck %s
-# Check that identical multiple epilgoues are correctly shared in .xdata.
+# Check that non-identical multiple epilgoues are correctly shared in .xdata.
 
 # CHECK:        ExceptionData {
-# CHECK-NEXT:      FunctionLength: 164
+# CHECK-NEXT:      FunctionLength: 160
 # CHECK-NEXT:      Version: 0
 # CHECK-NEXT:      ExceptionData: No
 # CHECK-NEXT:      EpiloguePacked: No
 # CHECK-NEXT:      EpilogueScopes: 2
-# CHECK-NEXT:      ByteCodeLength: 32
+# CHECK-NEXT:      ByteCodeLength: 44
 # CHECK-NEXT:      Prologue [
 # CHECK-NEXT:        0xc80c              ; stp x19, x20, [sp, #96]
 # CHECK-NEXT:        0xc88a              ; stp x21, x22, [sp, #80]
@@ -29,15 +29,14 @@
 # CHECK-NEXT:            0xc88a              ; ldp x21, x22, [sp, #80]
 # CHECK-NEXT:            0xc908              ; ldp x23, x24, [sp, #64]
 # CHECK-NEXT:            0xc986              ; ldp x25, x26, [sp, #48]
-# CHECK-NEXT:            0xca04              ; ldp x27, x28, [sp, #32]
 # CHECK-NEXT:            0xd802              ; ldp d8, d9, [sp, #16]
 # CHECK-NEXT:            0xda8d              ; ldp d10, d11, [sp], #112
 # CHECK-NEXT:            0xe4                ; end
 # CHECK-NEXT:          ]
 # CHECK-NEXT:        }
 # CHECK-NEXT:        EpilogueScope {
-# CHECK-NEXT:          StartOffset: 33
-# CHECK-NEXT:          EpilogueStartIndex: 15
+# CHECK-NEXT:          StartOffset: 32
+# CHECK-NEXT:          EpilogueStartIndex: 28
 # CHECK-NEXT:          Opcodes [
 # CHECK-NEXT:            0xc80c              ; ldp x19, x20, [sp, #96]
 # CHECK-NEXT:            0xc88a              ; ldp x21, x22, [sp, #80]
@@ -216,8 +215,6 @@ body:             |
     frame-destroy SEH_SaveRegP 23, 24, 64
     $x25, $x26 = frame-destroy LDPXi $sp, 6 :: (load 8 from %stack.6), (load 8 from %stack.7)
     frame-destroy SEH_SaveRegP 25, 26, 48
-    $x27, $x28 = frame-destroy LDPXi $sp, 4 :: (load 8 from %stack.8), (load 8 from %stack.9)
-    frame-destroy SEH_SaveRegP 27, 28, 32
     $d8, $d9 = frame-destroy LDPDi $sp, 2 :: (load 8 from %stack.10), (load 8 from %stack.11)
     frame-destroy SEH_SaveFRegP 8, 9, 16
     early-clobber $sp, $d10, $d11 = frame-destroy LDPDpost $sp, 14 :: (load 8 from %stack.12), (load 8 from %stack.13)
