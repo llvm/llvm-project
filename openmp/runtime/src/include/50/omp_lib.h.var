@@ -41,6 +41,7 @@
       parameter(omp_control_tool_result_kind=omp_integer_kind)
       integer omp_allocator_kind
       parameter(omp_allocator_kind=int_ptr_kind())
+      integer, parameter :: omp_pause_resource_kind = omp_integer_kind
 
       integer(kind=omp_integer_kind)openmp_version
       parameter(openmp_version=@LIBOMP_OMP_YEAR_MONTH@)
@@ -136,6 +137,10 @@
       parameter(omp_pteam_mem_alloc=7)
       integer(kind=omp_allocator_kind)omp_thread_mem_alloc
       parameter(omp_thread_mem_alloc=8)
+
+      integer (kind=omp_pause_resource_kind), parameter :: omp_pause_resume = 0
+      integer (kind=omp_pause_resource_kind), parameter :: omp_pause_soft = 1
+      integer (kind=omp_pause_resource_kind), parameter :: omp_pause_hard = 2
 
       interface
 
@@ -331,6 +336,19 @@
           import
           integer (kind=omp_integer_kind) omp_get_device_num
         end function omp_get_device_num
+
+        function omp_pause_resource(kind, device_num) bind(c)
+          import
+          integer (kind=omp_pause_resource_kind), value :: kind
+          integer (kind=omp_integer_kind), value :: device_num
+          integer (kind=omp_integer_kind) omp_pause_resource
+        end function omp_pause_resource
+
+        function omp_pause_resource_all(kind) bind(c)
+          import
+          integer (kind=omp_pause_resource_kind), value :: kind
+          integer (kind=omp_integer_kind) omp_pause_resource_all
+        end function omp_pause_resource_all
 
         subroutine omp_init_lock(svar) bind(c)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
@@ -652,6 +670,8 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_initial_device
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_num_devices
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_device_num
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_pause_resource
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_pause_resource_all
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_num_teams
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_team_num
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_init_lock
@@ -731,6 +751,8 @@
 !$omp declare target(omp_get_initial_device )
 !$omp declare target(omp_get_num_devices )
 !$omp declare target(omp_get_device_num )
+!$omp declare target(omp_pause_resource )
+!$omp declare target(omp_pause_resource_all )
 !$omp declare target(omp_get_num_teams )
 !$omp declare target(omp_get_team_num )
 !$omp declare target(omp_init_lock )

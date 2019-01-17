@@ -485,6 +485,10 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
 
+#if OMP_50_ENABLED
+  __kmp_resume_if_soft_paused();
+#endif
+
   this_thr = __kmp_threads[global_tid];
   serial_team = this_thr->th.th_serial_team;
 
@@ -696,6 +700,10 @@ void __kmpc_barrier(ident_t *loc, kmp_int32 global_tid) {
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
 
+#if OMP_50_ENABLED
+  __kmp_resume_if_soft_paused();
+#endif
+
   if (__kmp_env_consistency_check) {
     if (loc == 0) {
       KMP_WARNING(ConstructIdentInvalid); // ??? What does it mean for the user?
@@ -743,6 +751,10 @@ kmp_int32 __kmpc_master(ident_t *loc, kmp_int32 global_tid) {
 
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
+
+#if OMP_50_ENABLED
+  __kmp_resume_if_soft_paused();
+#endif
 
   if (KMP_MASTER_GTID(global_tid)) {
     KMP_COUNT_BLOCK(OMP_MASTER);
@@ -833,6 +845,10 @@ void __kmpc_ordered(ident_t *loc, kmp_int32 gtid) {
 
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
+
+#if OMP_50_ENABLED
+  __kmp_resume_if_soft_paused();
+#endif
 
 #if USE_ITT_BUILD
   __kmp_itt_ordered_prep(gtid);
@@ -1590,6 +1606,10 @@ kmp_int32 __kmpc_barrier_master(ident_t *loc, kmp_int32 global_tid) {
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
 
+#if OMP_50_ENABLED
+  __kmp_resume_if_soft_paused();
+#endif
+
   if (__kmp_env_consistency_check)
     __kmp_check_barrier(global_tid, ct_barrier, loc);
 
@@ -1647,6 +1667,10 @@ kmp_int32 __kmpc_barrier_master_nowait(ident_t *loc, kmp_int32 global_tid) {
 
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
+
+#if OMP_50_ENABLED
+  __kmp_resume_if_soft_paused();
+#endif
 
   if (__kmp_env_consistency_check) {
     if (loc == 0) {
@@ -3366,6 +3390,10 @@ __kmpc_reduce_nowait(ident_t *loc, kmp_int32 global_tid, kmp_int32 num_vars,
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
 
+#if OMP_50_ENABLED
+  __kmp_resume_if_soft_paused();
+#endif
+
 // check correctness of reduce block nesting
 #if KMP_USE_DYNAMIC_LOCK
   if (__kmp_env_consistency_check)
@@ -3585,6 +3613,10 @@ kmp_int32 __kmpc_reduce(ident_t *loc, kmp_int32 global_tid, kmp_int32 num_vars,
   // possible detection of false-positive race by the threadchecker ???
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
+
+#if OMP_50_ENABLED
+  __kmp_resume_if_soft_paused();
+#endif
 
 // check correctness of reduce block nesting
 #if KMP_USE_DYNAMIC_LOCK
@@ -4158,6 +4190,13 @@ int __kmpc_get_target_offload(void) {
     __kmp_serial_initialize();
   }
   return __kmp_target_offload;
+}
+
+int __kmpc_pause_resource(kmp_pause_status_t level) {
+  if (!__kmp_init_serial) {
+    return 1; // Can't pause if runtime is not initialized
+  }
+  return __kmp_pause_resource(level);
 }
 #endif // OMP_50_ENABLED
 

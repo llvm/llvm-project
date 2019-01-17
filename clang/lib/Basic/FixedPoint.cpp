@@ -112,4 +112,56 @@ APFixedPoint APFixedPoint::getMin(const FixedPointSemantics &Sema) {
   return APFixedPoint(Val, Sema);
 }
 
+FixedPointSemantics FixedPointSemantics::getCommonSemantics(
+    const FixedPointSemantics &Other) const {
+  unsigned CommonScale = std::max(getScale(), Other.getScale());
+  unsigned CommonWidth =
+      std::max(getIntegralBits(), Other.getIntegralBits()) + CommonScale;
+
+  bool ResultIsSigned = isSigned() || Other.isSigned();
+  bool ResultIsSaturated = isSaturated() || Other.isSaturated();
+  bool ResultHasUnsignedPadding = false;
+  if (!ResultIsSigned) {
+    // Both are unsigned.
+    ResultHasUnsignedPadding = hasUnsignedPadding() &&
+                               Other.hasUnsignedPadding() && !ResultIsSaturated;
+  }
+
+  // If the result is signed, add an extra bit for the sign. Otherwise, if it is
+  // unsigned and has unsigned padding, we only need to add the extra padding
+  // bit back if we are not saturating.
+  if (ResultIsSigned || ResultHasUnsignedPadding)
+    CommonWidth++;
+
+  return FixedPointSemantics(CommonWidth, CommonScale, ResultIsSigned,
+                             ResultIsSaturated, ResultHasUnsignedPadding);
+}
+
+void APFixedPoint::toString(llvm::SmallVectorImpl<char> &Str) const {
+  llvm::APSInt Val = getValue();
+  unsigned Scale = getScale();
+
+  if (Val.isSigned() && Val.isNegative() && Val != -Val) {
+    Val = -Val;
+    Str.push_back('-');
+  }
+
+  llvm::APSInt IntPart = Val >> Scale;
+
+  // Add 4 digits to hold the value after multiplying 10 (the radix)
+  unsigned Width = Val.getBitWidth() + 4;
+  llvm::APInt FractPart = Val.zextOrTrunc(Scale).zext(Width);
+  llvm::APInt FractPartMask = llvm::APInt::getAllOnesValue(Scale).zext(Width);
+  llvm::APInt RadixInt = llvm::APInt(Width, 10);
+
+  IntPart.toString(Str, /*radix=*/10);
+  Str.push_back('.');
+  do {
+    (FractPart * RadixInt)
+        .lshr(Scale)
+        .toString(Str, /*radix=*/10, Val.isSigned());
+    FractPart = (FractPart * RadixInt) & FractPartMask;
+  } while (FractPart != 0);
+}
+
 }  // namespace clang

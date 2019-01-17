@@ -4016,25 +4016,8 @@ CXXRecordDecl *MemberPointerType::getMostRecentCXXRecordDecl() const {
 
 void clang::FixedPointValueToString(SmallVectorImpl<char> &Str,
                                     llvm::APSInt Val, unsigned Scale) {
-  if (Val.isSigned() && Val.isNegative() && Val != -Val) {
-    Val = -Val;
-    Str.push_back('-');
-  }
-
-  llvm::APSInt IntPart = Val >> Scale;
-
-  // Add 4 digits to hold the value after multiplying 10 (the radix)
-  unsigned Width = Val.getBitWidth() + 4;
-  llvm::APInt FractPart = Val.zextOrTrunc(Scale).zext(Width);
-  llvm::APInt FractPartMask = llvm::APInt::getAllOnesValue(Scale).zext(Width);
-  llvm::APInt RadixInt = llvm::APInt(Width, 10);
-
-  IntPart.toString(Str, /*radix=*/10);
-  Str.push_back('.');
-  do {
-    (FractPart * RadixInt)
-        .lshr(Scale)
-        .toString(Str, /*radix=*/10, Val.isSigned());
-    FractPart = (FractPart * RadixInt) & FractPartMask;
-  } while (FractPart != 0);
+  FixedPointSemantics FXSema(Val.getBitWidth(), Scale, Val.isSigned(),
+                             /*isSaturated=*/false,
+                             /*hasUnsignedPadding=*/false);
+  APFixedPoint(Val, FXSema).toString(Str);
 }

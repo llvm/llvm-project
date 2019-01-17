@@ -176,6 +176,11 @@ APValue::APValue(const APValue &RHS) : Kind(Uninitialized) {
     MakeFloat();
     setFloat(RHS.getFloat());
     break;
+  case FixedPoint: {
+    APFixedPoint FXCopy = RHS.getFixedPoint();
+    MakeFixedPoint(std::move(FXCopy));
+    break;
+  }
   case Vector:
     MakeVector();
     setVector(((const Vec *)(const char *)RHS.Data.buffer)->Elts,
@@ -233,6 +238,8 @@ void APValue::DestroyDataAndMakeUninit() {
     ((APSInt*)(char*)Data.buffer)->~APSInt();
   else if (Kind == Float)
     ((APFloat*)(char*)Data.buffer)->~APFloat();
+  else if (Kind == FixedPoint)
+    ((APFixedPoint *)(char *)Data.buffer)->~APFixedPoint();
   else if (Kind == Vector)
     ((Vec*)(char*)Data.buffer)->~Vec();
   else if (Kind == ComplexInt)
@@ -268,6 +275,8 @@ bool APValue::needsCleanup() const {
     return getInt().needsCleanup();
   case Float:
     return getFloat().needsCleanup();
+  case FixedPoint:
+    return getFixedPoint().getValue().needsCleanup();
   case ComplexFloat:
     assert(getComplexFloatImag().needsCleanup() ==
                getComplexFloatReal().needsCleanup() &&
@@ -320,6 +329,9 @@ void APValue::dump(raw_ostream &OS) const {
     return;
   case Float:
     OS << "Float: " << GetApproxValue(getFloat());
+    return;
+  case FixedPoint:
+    OS << "FixedPoint : " << getFixedPoint();
     return;
   case Vector:
     OS << "Vector: ";
@@ -396,6 +408,9 @@ void APValue::printPretty(raw_ostream &Out, ASTContext &Ctx, QualType Ty) const{
     return;
   case APValue::Float:
     Out << GetApproxValue(getFloat());
+    return;
+  case APValue::FixedPoint:
+    Out << getFixedPoint();
     return;
   case APValue::Vector: {
     Out << '{';

@@ -910,6 +910,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   switch (IntrID) {
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
+  case Intrinsic::amdgcn_ds_ordered_add:
+  case Intrinsic::amdgcn_ds_ordered_swap:
   case Intrinsic::amdgcn_ds_fadd:
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax: {
@@ -937,6 +939,8 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   switch (II->getIntrinsicID()) {
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
+  case Intrinsic::amdgcn_ds_ordered_add:
+  case Intrinsic::amdgcn_ds_ordered_swap:
   case Intrinsic::amdgcn_ds_fadd:
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax: {
@@ -5438,6 +5442,63 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   SDLoc DL(Op);
 
   switch (IntrID) {
+  case Intrinsic::amdgcn_ds_ordered_add:
+  case Intrinsic::amdgcn_ds_ordered_swap: {
+    MemSDNode *M = cast<MemSDNode>(Op);
+    SDValue Chain = M->getOperand(0);
+    SDValue M0 = M->getOperand(2);
+    SDValue Value = M->getOperand(3);
+    unsigned OrderedCountIndex = M->getConstantOperandVal(7);
+    unsigned WaveRelease = M->getConstantOperandVal(8);
+    unsigned WaveDone = M->getConstantOperandVal(9);
+    unsigned ShaderType;
+    unsigned Instruction;
+
+    switch (IntrID) {
+    case Intrinsic::amdgcn_ds_ordered_add:
+      Instruction = 0;
+      break;
+    case Intrinsic::amdgcn_ds_ordered_swap:
+      Instruction = 1;
+      break;
+    }
+
+    if (WaveDone && !WaveRelease)
+      report_fatal_error("ds_ordered_count: wave_done requires wave_release");
+
+    switch (DAG.getMachineFunction().getFunction().getCallingConv()) {
+    case CallingConv::AMDGPU_CS:
+    case CallingConv::AMDGPU_KERNEL:
+      ShaderType = 0;
+      break;
+    case CallingConv::AMDGPU_PS:
+      ShaderType = 1;
+      break;
+    case CallingConv::AMDGPU_VS:
+      ShaderType = 2;
+      break;
+    case CallingConv::AMDGPU_GS:
+      ShaderType = 3;
+      break;
+    default:
+      report_fatal_error("ds_ordered_count unsupported for this calling conv");
+    }
+
+    unsigned Offset0 = OrderedCountIndex << 2;
+    unsigned Offset1 = WaveRelease | (WaveDone << 1) | (ShaderType << 2) |
+                       (Instruction << 4);
+    unsigned Offset = Offset0 | (Offset1 << 8);
+
+    SDValue Ops[] = {
+      Chain,
+      Value,
+      DAG.getTargetConstant(Offset, DL, MVT::i16),
+      copyToM0(DAG, Chain, DL, M0).getValue(1), // Glue
+    };
+    return DAG.getMemIntrinsicNode(AMDGPUISD::DS_ORDERED_COUNT, DL,
+                                   M->getVTList(), Ops, M->getMemoryVT(),
+                                   M->getMemOperand());
+  }
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
   case Intrinsic::amdgcn_ds_fadd:
@@ -9237,6 +9298,51 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
 
     Ops.push_back(ImpDef.getValue(1));
     return DAG.getMachineNode(Opcode, SDLoc(Node), Node->getVTList(), Ops);
+  }
+  case AMDGPU::FLAT_LOAD_UBYTE_D16_HI:
+  case AMDGPU::FLAT_LOAD_SBYTE_D16_HI:
+  case AMDGPU::FLAT_LOAD_SHORT_D16_HI:
+  case AMDGPU::GLOBAL_LOAD_UBYTE_D16_HI:
+  case AMDGPU::GLOBAL_LOAD_SBYTE_D16_HI:
+  case AMDGPU::GLOBAL_LOAD_SHORT_D16_HI:
+  case AMDGPU::DS_READ_U16_D16_HI:
+  case AMDGPU::DS_READ_I8_D16_HI:
+  case AMDGPU::DS_READ_U8_D16_HI:
+  case AMDGPU::BUFFER_LOAD_SHORT_D16_HI_OFFSET:
+  case AMDGPU::BUFFER_LOAD_UBYTE_D16_HI_OFFSET:
+  case AMDGPU::BUFFER_LOAD_SBYTE_D16_HI_OFFSET:
+  case AMDGPU::BUFFER_LOAD_SHORT_D16_HI_OFFEN:
+  case AMDGPU::BUFFER_LOAD_UBYTE_D16_HI_OFFEN:
+  case AMDGPU::BUFFER_LOAD_SBYTE_D16_HI_OFFEN: {
+    // For these loads that write to the HI part of a register,
+    // we should chain them to the op that writes to the LO part
+    // of the register to maintain the order.
+    unsigned NumOps = Node->getNumOperands();
+    SDValue OldChain = Node->getOperand(NumOps-1);
+
+    if (OldChain.getValueType() != MVT::Other)
+      break;
+
+    // Look for the chain to replace to.
+    SDValue Lo = Node->getOperand(NumOps-2);
+    SDNode *LoNode = Lo.getNode();
+    if (LoNode->getNumValues() == 1 ||
+        LoNode->getValueType(LoNode->getNumValues() - 1) != MVT::Other)
+      break;
+
+    SDValue NewChain = Lo.getValue(LoNode->getNumValues() - 1);
+    if (NewChain == OldChain) // Already replaced.
+      break;
+
+    SmallVector<SDValue, 16> Ops;
+    for (unsigned I = 0; I < NumOps-1; ++I)
+      Ops.push_back(Node->getOperand(I));
+    // Repalce the Chain.
+    Ops.push_back(NewChain);
+    MachineSDNode *NewNode = DAG.getMachineNode(Opcode, SDLoc(Node),
+                                                Node->getVTList(), Ops);
+    DAG.setNodeMemRefs(NewNode, Node->memoperands());
+    return NewNode;
   }
   default:
     break;

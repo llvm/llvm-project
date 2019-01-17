@@ -142,6 +142,8 @@
 #define FTN_GET_AFFINITY_FORMAT omp_get_affinity_format
 #define FTN_DISPLAY_AFFINITY omp_display_affinity
 #define FTN_CAPTURE_AFFINITY omp_capture_affinity
+#define FTN_PAUSE_RESOURCE omp_pause_resource
+#define FTN_PAUSE_RESOURCE_ALL omp_pause_resource_all
 #endif
 
 #endif /* KMP_FTN_PLAIN */
@@ -271,6 +273,8 @@
 #define FTN_GET_AFFINITY_FORMAT omp_get_affinity_format_
 #define FTN_DISPLAY_AFFINITY omp_display_affinity_
 #define FTN_CAPTURE_AFFINITY omp_capture_affinity_
+#define FTN_PAUSE_RESOURCE omp_pause_resource_
+#define FTN_PAUSE_RESOURCE_ALL omp_pause_resource_all_
 #endif
 
 #endif /* KMP_FTN_APPEND */
@@ -400,6 +404,8 @@
 #define FTN_GET_AFFINITY_FORMAT OMP_GET_AFFINITY_FORMAT
 #define FTN_DISPLAY_AFFINITY OMP_DISPLAY_AFFINITY
 #define FTN_CAPTURE_AFFINITY OMP_CAPTURE_AFFINITY
+#define FTN_PAUSE_RESOURCE OMP_PAUSE_RESOURCE
+#define FTN_PAUSE_RESOURCE_ALL OMP_PAUSE_RESOURCE_ALL
 #endif
 
 #endif /* KMP_FTN_UPPER */
@@ -529,6 +535,8 @@
 #define FTN_GET_AFFINITY_FORMAT OMP_GET_AFFINITY_FORMAT_
 #define FTN_DISPLAY_AFFINITY OMP_DISPLAY_AFFINITY_
 #define FTN_CAPTURE_AFFINITY OMP_CAPTURE_AFFINITY_
+#define FTN_PAUSE_RESOURCE OMP_PAUSE_RESOURCE_
+#define FTN_PAUSE_RESOURCE_ALL OMP_PAUSE_RESOURCE_ALL_
 #endif
 
 #endif /* KMP_FTN_UAPPEND */

@@ -29,13 +29,13 @@ const RefVal *getRefBinding(ProgramStateRef State, SymbolRef Sym) {
   return State->get<RefBindings>(Sym);
 }
 
-ProgramStateRef setRefBinding(ProgramStateRef State, SymbolRef Sym,
+static ProgramStateRef setRefBinding(ProgramStateRef State, SymbolRef Sym,
                                      RefVal Val) {
   assert(Sym != nullptr);
   return State->set<RefBindings>(Sym, Val);
 }
 
-ProgramStateRef removeRefBinding(ProgramStateRef State, SymbolRef Sym) {
+static ProgramStateRef removeRefBinding(ProgramStateRef State, SymbolRef Sym) {
   return State->remove<RefBindings>(Sym);
 }
 
@@ -196,7 +196,7 @@ public:
   ProgramStateRef getState() const { return state; }
 
   bool VisitSymbol(SymbolRef sym) override {
-    state = state->remove<RefBindings>(sym);
+    state = removeRefBinding(state, sym);
     return true;
   }
 };
@@ -529,12 +529,24 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
   C.addTransition(state);
 }
 
+/// A value escapes in these possible cases:
+///
+/// - binding to something that is not a memory region.
+/// - binding to a memregion that does not have stack storage
+/// - binding to a variable that has a destructor attached using CleanupAttr
+///
+/// We do not currently model what happens when a symbol is
+/// assigned to a struct field, so be conservative here and let the symbol go.
+/// FIXME: This could definitely be improved upon.
 static bool shouldEscapeRegion(const MemRegion *R) {
+  const auto *VR = dyn_cast<VarRegion>(R);
+  if (!R->hasStackStorage() || !VR)
+    return true;
 
-  // We do not currently model what happens when a symbol is
-  // assigned to a struct field, so be conservative here and let the symbol
-  // go. TODO: This could definitely be improved upon.
-  return !R->hasStackStorage() || !isa<VarRegion>(R);
+  const VarDecl *VD = VR->getDecl();
+  if (!VD->hasAttr<CleanupAttr>())
+    return false; // CleanupAttr attaches destructors, which cause escaping.
+  return true;
 }
 
 static SmallVector<ProgramStateRef, 2>
@@ -1145,39 +1157,15 @@ ExplodedNode * RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
 
 void RetainCountChecker::checkBind(SVal loc, SVal val, const Stmt *S,
                                    CheckerContext &C) const {
-  // Are we storing to something that causes the value to "escape"?
-  bool escapes = true;
-
-  // A value escapes in three possible cases (this may change):
-  //
-  // (1) we are binding to something that is not a memory region.
-  // (2) we are binding to a memregion that does not have stack storage
   ProgramStateRef state = C.getState();
+  const MemRegion *MR = loc.getAsRegion();
 
-  if (auto regionLoc = loc.getAs<loc::MemRegionVal>()) {
-    escapes = shouldEscapeRegion(regionLoc->getRegion());
-  }
-
-  // If we are storing the value into an auto function scope variable annotated
-  // with (__attribute__((cleanup))), stop tracking the value to avoid leak
-  // false positives.
-  if (const auto *LVR = dyn_cast_or_null<VarRegion>(loc.getAsRegion())) {
-    const VarDecl *VD = LVR->getDecl();
-    if (VD->hasAttr<CleanupAttr>()) {
-      escapes = true;
-    }
-  }
-
-  // If our store can represent the binding and we aren't storing to something
-  // that doesn't have local storage then just return and have the simulation
-  // state continue as is.
-  if (!escapes)
-      return;
-
-  // Otherwise, find all symbols referenced by 'val' that we are tracking
+  // Find all symbols referenced by 'val' that we are tracking
   // and stop tracking them.
-  state = state->scanReachableSymbols<StopTrackingCallback>(val).getState();
-  C.addTransition(state);
+  if (MR && shouldEscapeRegion(MR)) {
+    state = state->scanReachableSymbols<StopTrackingCallback>(val).getState();
+    C.addTransition(state);
+  }
 }
 
 ProgramStateRef RetainCountChecker::evalAssume(ProgramStateRef state,
@@ -1196,14 +1184,14 @@ ProgramStateRef RetainCountChecker::evalAssume(ProgramStateRef state,
 
   bool changed = false;
   RefBindingsTy::Factory &RefBFactory = state->get_context<RefBindings>();
+  ConstraintManager &CMgr = state->getConstraintManager();
 
-  for (RefBindingsTy::iterator I = B.begin(), E = B.end(); I != E; ++I) {
+  for (auto &I : B) {
     // Check if the symbol is null stop tracking the symbol.
-    ConstraintManager &CMgr = state->getConstraintManager();
-    ConditionTruthVal AllocFailed = CMgr.isNull(state, I.getKey());
+    ConditionTruthVal AllocFailed = CMgr.isNull(state, I.first);
     if (AllocFailed.isConstrainedTrue()) {
       changed = true;
-      B = RefBFactory.remove(B, I.getKey());
+      B = RefBFactory.remove(B, I.first);
     }
   }
 
@@ -1213,25 +1201,21 @@ ProgramStateRef RetainCountChecker::evalAssume(ProgramStateRef state,
   return state;
 }
 
-ProgramStateRef
-RetainCountChecker::checkRegionChanges(ProgramStateRef state,
-                                       const InvalidatedSymbols *invalidated,
-                                       ArrayRef<const MemRegion *> ExplicitRegions,
-                                       ArrayRef<const MemRegion *> Regions,
-                                       const LocationContext *LCtx,
-                                       const CallEvent *Call) const {
+ProgramStateRef RetainCountChecker::checkRegionChanges(
+    ProgramStateRef state, const InvalidatedSymbols *invalidated,
+    ArrayRef<const MemRegion *> ExplicitRegions,
+    ArrayRef<const MemRegion *> Regions, const LocationContext *LCtx,
+    const CallEvent *Call) const {
   if (!invalidated)
     return state;
 
   llvm::SmallPtrSet<SymbolRef, 8> WhitelistedSymbols;
-  for (ArrayRef<const MemRegion *>::iterator I = ExplicitRegions.begin(),
-       E = ExplicitRegions.end(); I != E; ++I) {
-    if (const SymbolicRegion *SR = (*I)->StripCasts()->getAs<SymbolicRegion>())
-      WhitelistedSymbols.insert(SR->getSymbol());
-  }
 
-  for (SymbolRef sym :
-       llvm::make_range(invalidated->begin(), invalidated->end())) {
+  for (const MemRegion *I : ExplicitRegions)
+    if (const SymbolicRegion *SR = I->StripCasts()->getAs<SymbolicRegion>())
+      WhitelistedSymbols.insert(SR->getSymbol());
+
+  for (SymbolRef sym : *invalidated) {
     if (WhitelistedSymbols.count(sym))
       continue;
     // Remove any existing reference-count binding.
@@ -1356,18 +1340,15 @@ RetainCountChecker::processLeaks(ProgramStateRef state,
                                  ExplodedNode *Pred) const {
   // Generate an intermediate node representing the leak point.
   ExplodedNode *N = Ctx.addTransition(state, Pred);
+  const LangOptions &LOpts = Ctx.getASTContext().getLangOpts();
 
   if (N) {
-    for (SmallVectorImpl<SymbolRef>::iterator
-         I = Leaked.begin(), E = Leaked.end(); I != E; ++I) {
-
-      const LangOptions &LOpts = Ctx.getASTContext().getLangOpts();
+    for (SymbolRef L : Leaked) {
       RefCountBug *BT = Pred ? getLeakWithinFunctionBug(LOpts)
                           : getLeakAtReturnBug(LOpts);
       assert(BT && "BugType not initialized.");
 
-      Ctx.emitReport(
-          llvm::make_unique<RefLeakReport>(*BT, LOpts, N, *I, Ctx));
+      Ctx.emitReport(llvm::make_unique<RefLeakReport>(*BT, LOpts, N, L, Ctx));
     }
   }
 
@@ -1431,9 +1412,9 @@ void RetainCountChecker::checkEndFunction(const ReturnStmt *RS,
     return;
   }
 
-  for (RefBindingsTy::iterator I = B.begin(), E = B.end(); I != E; ++I) {
+  for (auto &I : B) {
     state = handleAutoreleaseCounts(state, Pred, /*Tag=*/nullptr, Ctx,
-                                    I->first, I->second);
+                                    I.first, I.second);
     if (!state)
       return;
   }
@@ -1448,8 +1429,8 @@ void RetainCountChecker::checkEndFunction(const ReturnStmt *RS,
   B = state->get<RefBindings>();
   SmallVector<SymbolRef, 10> Leaked;
 
-  for (RefBindingsTy::iterator I = B.begin(), E = B.end(); I != E; ++I)
-    state = handleSymbolDeath(state, I->first, I->second, Leaked);
+  for (auto &I : B)
+    state = handleSymbolDeath(state, I.first, I.second, Leaked);
 
   processLeaks(state, Leaked, Ctx, Pred);
 }
@@ -1459,7 +1440,6 @@ void RetainCountChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   ExplodedNode *Pred = C.getPredecessor();
 
   ProgramStateRef state = C.getState();
-  RefBindingsTy B = state->get<RefBindings>();
   SmallVector<SymbolRef, 10> Leaked;
 
   // Update counts from autorelease pools
@@ -1492,12 +1472,10 @@ void RetainCountChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   // Now generate a new node that nukes the old bindings.
   // The only bindings left at this point are the leaked symbols.
   RefBindingsTy::Factory &F = state->get_context<RefBindings>();
-  B = state->get<RefBindings>();
+  RefBindingsTy B = state->get<RefBindings>();
 
-  for (SmallVectorImpl<SymbolRef>::iterator I = Leaked.begin(),
-                                            E = Leaked.end();
-       I != E; ++I)
-    B = F.remove(B, *I);
+  for (SymbolRef L : Leaked)
+    B = F.remove(B, L);
 
   state = state->set<RefBindings>(B);
   C.addTransition(state, Pred);
@@ -1513,9 +1491,9 @@ void RetainCountChecker::printState(raw_ostream &Out, ProgramStateRef State,
 
   Out << Sep << NL;
 
-  for (RefBindingsTy::iterator I = B.begin(), E = B.end(); I != E; ++I) {
-    Out << I->first << " : ";
-    I->second.print(Out);
+  for (auto &I : B) {
+    Out << I.first << " : ";
+    I.second.print(Out);
     Out << NL;
   }
 }

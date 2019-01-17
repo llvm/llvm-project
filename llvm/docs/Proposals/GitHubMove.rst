@@ -105,8 +105,7 @@ A single revision number (e.g. r123456) thus identifies a consistent version of
 all LLVM sub-projects.
 
 Git does not use sequential integer revision number but instead uses a hash to
-identify each commit. (Linus mentioned that the lack of such revision number
-is "the only real design mistake" in Git [TorvaldRevNum]_.)
+identify each commit.
 
 The loss of a sequential integer revision number has been a sticking point in
 past discussions about Git:
@@ -860,7 +859,6 @@ References
 .. [LattnerRevNum] Chris Lattner, http://lists.llvm.org/pipermail/llvm-dev/2011-July/041739.html
 .. [TrickRevNum] Andrew Trick, http://lists.llvm.org/pipermail/llvm-dev/2011-July/041721.html
 .. [JSonnRevNum] Joerg Sonnenberg, http://lists.llvm.org/pipermail/llvm-dev/2011-July/041688.html
-.. [TorvaldRevNum] Linus Torvald, http://git.661346.n2.nabble.com/Git-commit-generation-numbers-td6584414.html
 .. [MatthewsRevNum] Chris Matthews, http://lists.llvm.org/pipermail/cfe-dev/2016-July/049886.html
 .. [submodules] Git submodules, https://git-scm.com/book/en/v2/Git-Tools-Submodules)
 .. [statuschecks] GitHub status-checks, https://help.github.com/articles/about-required-status-checks/

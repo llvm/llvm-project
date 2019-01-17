@@ -378,9 +378,8 @@ _storebe_i64(void * __P, long long __D) {
 #include <fxsrintrin.h>
 #endif
 
-#if !defined(_MSC_VER) || __has_feature(modules) || defined(__XSAVE__)
+/* No feature check desired due to internal MSC_VER checks */
 #include <xsaveintrin.h>
-#endif
 
 #if !defined(_MSC_VER) || __has_feature(modules) || defined(__XSAVEOPT__)
 #include <xsaveoptintrin.h>

@@ -1,0 +1,5 @@
+// Check dumping of the hexadecimal bytes of a section.
+RUN: llvm-readobj -x .text %p/../../Object/Inputs/hello-world.elf-x86-64 | FileCheck %s
+
+CHECK: Hex dump of section '.text':
+CHECK-NEXT: {{^}}0x00400460
