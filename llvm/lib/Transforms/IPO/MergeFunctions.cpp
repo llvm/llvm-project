@@ -383,6 +383,12 @@ bool MergeFunctions::doSanityCheck(std::vector<WeakTrackingVH> &Worklist) {
 }
 #endif
 
+/// Check whether \p F is eligible for function merging.
+static bool isEligibleForMerging(Function &F) {
+  return !F.isDeclaration() && !F.hasAvailableExternallyLinkage() &&
+         !F.isVarArg();
+}
+
 bool MergeFunctions::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
@@ -394,7 +400,7 @@ bool MergeFunctions::runOnModule(Module &M) {
   std::vector<std::pair<FunctionComparator::FunctionHash, Function *>>
     HashedFuncs;
   for (Function &Func : M) {
-    if (!Func.isDeclaration() && !Func.hasAvailableExternallyLinkage()) {
+    if (isEligibleForMerging(Func)) {
       HashedFuncs.push_back({FunctionComparator::functionHash(Func), &Func});
     }
   }
