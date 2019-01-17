@@ -4957,7 +4957,7 @@ ClangASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
 }
 
 uint64_t ClangASTContext::GetByteStride(lldb::opaque_compiler_type_t type) {
-  return GetByteSize(type, nullptr);
+  return GetByteSize(type, nullptr).getValueOr(0);
 }
 
 size_t ClangASTContext::GetTypeBitAlign(lldb::opaque_compiler_type_t type) {
