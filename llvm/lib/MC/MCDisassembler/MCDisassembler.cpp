@@ -8,12 +8,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
 using namespace llvm;
 
 MCDisassembler::~MCDisassembler() = default;
+
+MCDisassembler::DecodeStatus MCDisassembler::onSymbolStart(
+    StringRef Name, uint64_t &Size, ArrayRef<uint8_t> Bytes, uint64_t Address,
+    raw_ostream &VStream, raw_ostream &CStream) const {
+  Size = 0;
+  return MCDisassembler::Success;
+}
 
 bool MCDisassembler::tryAddingSymbolicOperand(MCInst &Inst, int64_t Value,
                                               uint64_t Address, bool IsBranch,

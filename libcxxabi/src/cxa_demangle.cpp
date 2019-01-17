@@ -11,12 +11,8 @@
 // file does not yet support:
 //   - C++ modules TS
 
-#define _LIBCPP_NO_EXCEPTIONS
-
-#include "__cxxabi_config.h"
-
 #include "demangle/ItaniumDemangle.h"
-
+#include "__cxxabi_config.h"
 #include <cassert>
 #include <cctype>
 #include <cstdio>
@@ -25,7 +21,6 @@
 #include <functional>
 #include <numeric>
 #include <utility>
-#include <vector>
 
 using namespace itanium_demangle;
 

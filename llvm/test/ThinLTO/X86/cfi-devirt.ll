@@ -20,8 +20,8 @@
 ; RUN:   -r=%t.o,_ZN1B1fEi, \
 ; RUN:   -r=%t.o,_ZN1C1fEi, \
 ; RUN:   -r=%t.o,_ZTV1B,px \
-; RUN:   -r=%t.o,_ZTV1C,px 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
+; RUN:   -r=%t.o,_ZTV1C,px 2>&1 | FileCheck %s --check-prefix=REMARK -dump-input=always
+; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR -dump-input=always
 
 ; New PM
 ; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39436.
@@ -39,8 +39,8 @@
 ; RUN:   -r=%t.o,_ZN1B1fEi, \
 ; RUN:   -r=%t.o,_ZN1C1fEi, \
 ; RUN:   -r=%t.o,_ZTV1B,px \
-; RUN:   -r=%t.o,_ZTV1C,px 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
+; RUN:   -r=%t.o,_ZTV1C,px 2>&1 | FileCheck %s --check-prefix=REMARK -dump-input=always
+; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR -dump-input=always
 
 ; REMARK: single-impl: devirtualized a call to _ZN1A1nEi
 
@@ -62,7 +62,7 @@
 ; RUN:   -r=%t.o,_ZN1B1fEi, \
 ; RUN:   -r=%t.o,_ZN1C1fEi, \
 ; RUN:   -r=%t.o,_ZTV1B,px \
-; RUN:   -r=%t.o,_ZTV1C,px 2>&1 | FileCheck %s --check-prefix=ERROR
+; RUN:   -r=%t.o,_ZTV1C,px 2>&1 | FileCheck %s --check-prefix=ERROR -dump-input=always
 ; ERROR: LLVM ERROR: inconsistent LTO Unit splitting with llvm.type.test or llvm.type.checked.load
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

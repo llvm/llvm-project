@@ -8,9 +8,9 @@ define amdgpu_ps void @phi1(<4 x i32> addrspace(4)* inreg %arg, <4 x i32> addrsp
 main_body:
   %tmp = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %arg, i32 0
   %tmp20 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp, !tbaa !0
-  %tmp21 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 0)
-  %tmp22 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 16)
-  %tmp23 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 32)
+  %tmp21 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 0, i32 0)
+  %tmp22 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 16, i32 0)
+  %tmp23 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 32, i32 0)
   %tmp24 = fptosi float %tmp22 to i32
   %tmp25 = icmp ne i32 %tmp24, 0
   br i1 %tmp25, label %ENDIF, label %ELSE
@@ -32,21 +32,21 @@ define amdgpu_ps void @phi2(<4 x i32> addrspace(4)* inreg %arg, <4 x i32> addrsp
 main_body:
   %tmp = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %arg, i32 0
   %tmp20 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp, !tbaa !0
-  %tmp21 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 16)
-  %tmp22 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 32)
-  %tmp23 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 36)
-  %tmp24 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 40)
-  %tmp25 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 48)
-  %tmp26 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 52)
-  %tmp27 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 56)
-  %tmp28 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 64)
-  %tmp29 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 68)
-  %tmp30 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 72)
-  %tmp31 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 76)
-  %tmp32 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 80)
-  %tmp33 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 84)
-  %tmp34 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 88)
-  %tmp35 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 92)
+  %tmp21 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 16, i32 0)
+  %tmp22 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 32, i32 0)
+  %tmp23 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 36, i32 0)
+  %tmp24 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 40, i32 0)
+  %tmp25 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 48, i32 0)
+  %tmp26 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 52, i32 0)
+  %tmp27 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 56, i32 0)
+  %tmp28 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 64, i32 0)
+  %tmp29 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 68, i32 0)
+  %tmp30 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 72, i32 0)
+  %tmp31 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 76, i32 0)
+  %tmp32 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 80, i32 0)
+  %tmp33 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 84, i32 0)
+  %tmp34 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 88, i32 0)
+  %tmp35 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 92, i32 0)
   %tmp36 = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %arg2, i32 0
   %tmp37 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp36, !tbaa !0
   %tmp38 = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %arg1, i32 0
@@ -172,10 +172,10 @@ define amdgpu_ps void @loop(<4 x i32> addrspace(4)* inreg %arg, <4 x i32> addrsp
 main_body:
   %tmp = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %arg, i32 0
   %tmp20 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp, !tbaa !0
-  %tmp21 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 0)
-  %tmp22 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 4)
-  %tmp23 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 8)
-  %tmp24 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp20, i32 12)
+  %tmp21 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 0, i32 0)
+  %tmp22 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 4, i32 0)
+  %tmp23 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 8, i32 0)
+  %tmp24 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 12, i32 0)
   %tmp25 = fptosi float %tmp24 to i32
   %tmp26 = bitcast i32 %tmp25 to float
   %tmp27 = bitcast float %tmp26 to i32
@@ -225,7 +225,7 @@ define amdgpu_ps void @sample_v3([17 x <4 x i32>] addrspace(4)* byval %arg, [32 
 entry:
   %tmp = getelementptr [17 x <4 x i32>], [17 x <4 x i32>] addrspace(4)* %arg, i64 0, i32 0
   %tmp21 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp, !tbaa !0
-  %tmp22 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp21, i32 16)
+  %tmp22 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 16, i32 0)
   %tmp23 = getelementptr [16 x <8 x i32>], [16 x <8 x i32>] addrspace(4)* %arg2, i64 0, i32 0
   %tmp24 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp23, !tbaa !0
   %tmp25 = getelementptr [32 x <4 x i32>], [32 x <4 x i32>] addrspace(4)* %arg1, i64 0, i32 0
@@ -325,7 +325,7 @@ define amdgpu_ps void @sample_rsrc([6 x <4 x i32>] addrspace(4)* byval %arg, [17
 bb:
   %tmp = getelementptr [17 x <4 x i32>], [17 x <4 x i32>] addrspace(4)* %arg1, i32 0, i32 0
   %tmp22 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp, !tbaa !3
-  %tmp23 = call float @llvm.SI.load.const.v4i32(<4 x i32> %tmp22, i32 16)
+  %tmp23 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp22, i32 16, i32 0)
   %tmp25 = getelementptr [32 x <8 x i32>], [32 x <8 x i32>] addrspace(4)* %arg3, i32 0, i32 0
   %tmp26 = load <8 x i32>, <8 x i32> addrspace(4)* %tmp25, !tbaa !3
   %tmp27 = getelementptr [16 x <4 x i32>], [16 x <4 x i32>] addrspace(4)* %arg2, i32 0, i32 0
@@ -409,7 +409,7 @@ declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) 
 declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
 declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
 declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-declare float @llvm.SI.load.const.v4i32(<4 x i32>, i32) #1
+declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

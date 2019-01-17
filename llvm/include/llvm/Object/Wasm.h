@@ -222,6 +222,7 @@ private:
   bool isValidDataSymbol(uint32_t Index) const;
   bool isValidSectionSymbol(uint32_t Index) const;
   wasm::WasmFunction &getDefinedFunction(uint32_t Index);
+  const wasm::WasmFunction &getDefinedFunction(uint32_t Index) const;
   wasm::WasmGlobal &getDefinedGlobal(uint32_t Index);
   wasm::WasmEvent &getDefinedEvent(uint32_t Index);
 

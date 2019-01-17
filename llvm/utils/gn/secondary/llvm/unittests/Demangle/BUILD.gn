@@ -5,6 +5,7 @@ unittest("DemangleTests") {
     "//llvm/lib/Demangle",
   ]
   sources = [
+    "DemangleTest.cpp",
     "ItaniumDemangleTest.cpp",
     "PartialDemangleTest.cpp",
   ]
