@@ -923,6 +923,17 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     if (NeedsWinCFI)
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PrologEnd))
           .setMIFlag(MachineInstr::FrameSetup);
+
+    // SEH funclets are passed the frame pointer in X1.  If the parent
+    // function uses the base register, then the base register is used
+    // directly, and is not retrieved from X1.
+    if (F.hasPersonalityFn()) {
+      EHPersonality Per = classifyEHPersonality(F.getPersonalityFn());
+      if (isAsynchronousEHPersonality(Per))
+        BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), AArch64::FP)
+            .addReg(AArch64::X1).setMIFlag(MachineInstr::FrameSetup);
+    }
+
     return;
   }
 

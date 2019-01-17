@@ -10,6 +10,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
@@ -659,6 +660,47 @@ Error WasmObjectFile::parseLinkingSectionComdat(ReadContext &Ctx) {
   return Error::success();
 }
 
+Error WasmObjectFile::parseProducersSection(ReadContext &Ctx) {
+  llvm::SmallSet<StringRef, 3> FieldsSeen;
+  uint32_t Fields = readVaruint32(Ctx);
+  for (size_t i = 0; i < Fields; ++i) {
+    StringRef FieldName = readString(Ctx);
+    if (!FieldsSeen.insert(FieldName).second)
+      return make_error<GenericBinaryError>(
+          "Producers section does not have unique fields",
+          object_error::parse_failed);
+    std::vector<std::pair<std::string, std::string>> *ProducerVec = nullptr;
+    if (FieldName == "language") {
+      ProducerVec = &ProducerInfo.Languages;
+    } else if (FieldName == "processed-by") {
+      ProducerVec = &ProducerInfo.Tools;
+    } else if (FieldName == "sdk") {
+      ProducerVec = &ProducerInfo.SDKs;
+    } else {
+      return make_error<GenericBinaryError>(
+          "Producers section field is not named one of language, processed-by, "
+          "or sdk",
+          object_error::parse_failed);
+    }
+    uint32_t ValueCount = readVaruint32(Ctx);
+    llvm::SmallSet<StringRef, 8> ProducersSeen;
+    for (size_t j = 0; j < ValueCount; ++j) {
+      StringRef Name = readString(Ctx);
+      StringRef Version = readString(Ctx);
+      if (!ProducersSeen.insert(Name).second) {
+        return make_error<GenericBinaryError>(
+            "Producers section contains repeated producer",
+            object_error::parse_failed);
+      }
+      ProducerVec->emplace_back(Name, Version);
+    }
+  }
+  if (Ctx.Ptr != Ctx.End)
+    return make_error<GenericBinaryError>("Producers section ended prematurely",
+                                          object_error::parse_failed);
+  return Error::success();
+}
+
 Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
   uint32_t SectionIndex = readVaruint32(Ctx);
   if (SectionIndex >= Sections.size())
@@ -756,6 +798,9 @@ Error WasmObjectFile::parseCustomSection(WasmSection &Sec, ReadContext &Ctx) {
       return Err;
   } else if (Sec.Name == "linking") {
     if (Error Err = parseLinkingSection(Ctx))
+      return Err;
+  } else if (Sec.Name == "producers") {
+    if (Error Err = parseProducersSection(Ctx))
       return Err;
   } else if (Sec.Name.startswith("reloc.")) {
     if (Error Err = parseRelocSection(Sec.Name, Ctx))

@@ -275,6 +275,19 @@ static cl::opt<std::string>
                     cl::desc("YAML output filename for pass remarks"),
                     cl::value_desc("filename"));
 
+cl::opt<PGOKind>
+    PGOKindFlag("pgo-kind", cl::init(NoPGO), cl::Hidden,
+                cl::desc("The kind of profile guided optimization"),
+                cl::values(clEnumValN(NoPGO, "nopgo", "Do not use PGO."),
+                           clEnumValN(InstrGen, "pgo-instr-gen-pipeline",
+                                      "Instrument the IR to generate profile."),
+                           clEnumValN(InstrUse, "pgo-instr-use-pipeline",
+                                      "Use instrumented profile to guide PGO."),
+                           clEnumValN(SampleUse, "pgo-sample-use-pipeline",
+                                      "Use sampled profile to guide PGO.")));
+cl::opt<std::string> ProfileFile("profile-file",
+                                 cl::desc("Path to the profile."), cl::Hidden);
+
 class OptCustomPassManager : public legacy::PassManager {
   DebugifyStatsMap DIStatsMap;
 
@@ -368,6 +381,21 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
 
   if (Coroutines)
     addCoroutinePassesToExtensionPoints(Builder);
+
+  switch (PGOKindFlag) {
+  case InstrGen:
+    Builder.EnablePGOInstrGen = true;
+    Builder.PGOInstrGen = ProfileFile;
+    break;
+  case InstrUse:
+    Builder.PGOInstrUse = ProfileFile;
+    break;
+  case SampleUse:
+    Builder.PGOSampleUse = ProfileFile;
+    break;
+  default:
+    break;
+  }
 
   Builder.populateFunctionPassManager(FPM);
   Builder.populateModulePassManager(MPM);
