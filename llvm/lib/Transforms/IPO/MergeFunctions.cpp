@@ -845,7 +845,7 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // If G was internal then we may have replaced all uses of G with F. If so,
     // stop here and delete G. There's no need for a thunk. (See note on
     // MergeFunctionsPDI above).
-    if (G->hasLocalLinkage() && G->use_empty() && !MergeFunctionsPDI) {
+    if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
       G->eraseFromParent();
       ++NumFunctionsMerged;
       return;
