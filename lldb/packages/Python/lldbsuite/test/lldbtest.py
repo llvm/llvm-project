@@ -1288,14 +1288,12 @@ class Base(unittest2.TestCase):
         """Returns the compiler binary the test suite is running with."""
         return self.getCompiler().split()[0]
 
-    def getCompilerVersion(self):
+    def getCompilerVersion(self, compiler=None):
         """ Returns a string that represents the compiler version.
             Supports: llvm, clang.
         """
-        compiler = self.getCompilerBinary()
-        self.getCompilerVersion(compiler)
-
-    def getCompilerVersion(self, compiler):
+        if not compiler:
+          compiler = self.getCompilerBinary()
         version = 'unknown'
         version_output = system([[compiler, "-v"]])[1]
         for line in version_output.split(os.linesep):
