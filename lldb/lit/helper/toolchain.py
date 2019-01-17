@@ -105,7 +105,7 @@ def use_support_substitutions(config):
         ToolSubst(
             '%target-swift-frontend',
             command=config.swiftc[:-1],
-            extra_args=swift_sdk)
+            extra_args=['-frontend'] + swift_sdk)
     ]
     llvm_config.add_tool_substitutions(tools)
 
