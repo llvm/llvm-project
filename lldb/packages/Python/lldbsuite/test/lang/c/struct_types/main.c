@@ -29,6 +29,10 @@ int main (int argc, char const *argv[])
        //% self.expect("expression -- (pt.padding[0])", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["(char)", " = "])
        //% self.expect("image lookup -t point_tag", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ['padding[]']) # Once rdar://problem/12566646 is fixed, this should display correctly
 
+    struct {} empty;
+    //% self.expect("frame variable empty", substrs = ["empty = {}"])
+    //% self.expect("expression -- sizeof(empty)", substrs = ["= 0"])
+
     struct rect_tag {
         struct point_tag bottom_left;
         struct point_tag top_right;

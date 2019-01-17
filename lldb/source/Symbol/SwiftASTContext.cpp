@@ -5887,15 +5887,17 @@ SwiftASTContext::GetSwiftFixedTypeInfo(void *type) {
   return nullptr;
 }
 
-uint64_t SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
-                                     ExecutionContextScope *exe_scope) {
+llvm::Optional<uint64_t>
+SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
+                            ExecutionContextScope *exe_scope) {
   if (!type)
-    return 0;
+    return {};
 
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   if (swift_can_type->hasTypeParameter()) {
     if (!exe_scope)
-      // FIXME: Return an error instead.
+      // FIMXE: This should be {}. lldb::Type also needs to also take an
+      //        optional size and resolve it at runtime if it is None.
       return GetPointerByteSize() * 8;
     ExecutionContext exe_ctx;
     exe_scope->CalculateExecutionContext(exe_ctx);
@@ -5920,6 +5922,7 @@ uint64_t SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
   if (fixed_type_info)
     return fixed_type_info->getFixedSize().getValue() * 8;
 
+  // FIXME: This should be {}.
   return 0;
 }
 

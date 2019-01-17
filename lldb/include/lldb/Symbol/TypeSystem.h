@@ -305,8 +305,9 @@ public:
   // Exploring the type
   //----------------------------------------------------------------------
 
-  virtual uint64_t GetBitSize(lldb::opaque_compiler_type_t type,
-                              ExecutionContextScope *exe_scope) = 0;
+  virtual llvm::Optional<uint64_t>
+  GetBitSize(lldb::opaque_compiler_type_t type,
+             ExecutionContextScope *exe_scope) = 0;
 
   virtual uint64_t GetByteStride(lldb::opaque_compiler_type_t type) = 0;
 
