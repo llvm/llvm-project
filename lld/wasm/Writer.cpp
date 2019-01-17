@@ -21,6 +21,7 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Object/WasmTraits.h"
@@ -95,6 +96,7 @@ private:
   void createRelocSections();
   void createLinkingSection();
   void createNameSection();
+  void createProducersSection();
 
   void writeHeader();
   void writeSections();
@@ -327,7 +329,8 @@ void Writer::calculateCustomSections() {
       StringRef Name = Section->getName();
       // These custom sections are known the linker and synthesized rather than
       // blindly copied
-      if (Name == "linking" || Name == "name" || Name.startswith("reloc."))
+      if (Name == "linking" || Name == "name" || Name == "producers" ||
+          Name.startswith("reloc."))
         continue;
       // .. or it is a debug section
       if (StripDebug && Name.startswith(".debug_"))
@@ -633,6 +636,45 @@ void Writer::createNameSection() {
   Sub.writeTo(Section->getStream());
 }
 
+void Writer::createProducersSection() {
+  SmallVector<std::pair<std::string, std::string>, 8> Languages;
+  SmallVector<std::pair<std::string, std::string>, 8> Tools;
+  SmallVector<std::pair<std::string, std::string>, 8> SDKs;
+  for (ObjFile *File : Symtab->ObjectFiles) {
+    const WasmProducerInfo &Info = File->getWasmObj()->getProducerInfo();
+    for (auto &Producers : {std::make_pair(&Info.Languages, &Languages),
+                            std::make_pair(&Info.Tools, &Tools),
+                            std::make_pair(&Info.SDKs, &SDKs)})
+      for (auto &Producer : *Producers.first)
+        if (Producers.second->end() ==
+            std::find_if(Producers.second->begin(), Producers.second->end(),
+                         [&](std::pair<std::string, std::string> Seen) {
+                           return Seen.first == Producer.first;
+                         }))
+          Producers.second->push_back(Producer);
+  }
+  int FieldCount =
+      int(!Languages.empty()) + int(!Tools.empty()) + int(!SDKs.empty());
+  if (FieldCount == 0)
+    return;
+  SyntheticSection *Section =
+      createSyntheticSection(WASM_SEC_CUSTOM, "producers");
+  auto &OS = Section->getStream();
+  writeUleb128(OS, FieldCount, "field count");
+  for (auto &Field :
+       {std::make_pair("language", Languages),
+        std::make_pair("processed-by", Tools), std::make_pair("sdk", SDKs)}) {
+    if (Field.second.empty())
+      continue;
+    writeStr(OS, Field.first, "field name");
+    writeUleb128(OS, Field.second.size(), "number of entries");
+    for (auto &Entry : Field.second) {
+      writeStr(OS, Entry.first, "producer name");
+      writeStr(OS, Entry.second, "producer version");
+    }
+  }
+}
+
 void Writer::writeHeader() {
   memcpy(Buffer->getBufferStart(), Header.data(), Header.size());
 }
@@ -772,8 +814,12 @@ void Writer::createSections() {
     createLinkingSection();
     createRelocSections();
   }
+
   if (!Config->StripDebug && !Config->StripAll)
     createNameSection();
+
+  if (!Config->StripAll)
+    createProducersSection();
 
   for (OutputSection *S : OutputSections) {
     S->setOffset(FileSize);

@@ -43,6 +43,12 @@ struct WasmDylinkInfo {
   std::vector<StringRef> Needed; // Shared library depenedencies
 };
 
+struct WasmProducerInfo {
+  std::vector<std::pair<std::string, std::string>> Languages;
+  std::vector<std::pair<std::string, std::string>> Tools;
+  std::vector<std::pair<std::string, std::string>> SDKs;
+};
+
 struct WasmExport {
   StringRef Name;
   uint8_t Kind;

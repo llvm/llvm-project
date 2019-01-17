@@ -40,6 +40,12 @@ enum VerifierKind {
   VK_VerifyInAndOut,
   VK_VerifyEachPass
 };
+enum PGOKind {
+  NoPGO,
+  InstrGen,
+  InstrUse,
+  SampleUse
+};
 }
 
 /// Driver function to run the new pass manager over a module.

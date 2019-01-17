@@ -268,12 +268,20 @@ final_spin=FALSE)
   // Setup for waiting
   KMP_INIT_YIELD(spins);
 
-  if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) {
+  if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME
+#if OMP_50_ENABLED
+      || __kmp_pause_status == kmp_soft_paused
+#endif
+      ) {
 #if KMP_USE_MONITOR
 // The worker threads cannot rely on the team struct existing at this point.
 // Use the bt values cached in the thread struct instead.
 #ifdef KMP_ADJUST_BLOCKTIME
-    if (__kmp_zero_bt && !this_thr->th.th_team_bt_set)
+    if (
+#if OMP_50_ENABLED
+        __kmp_pause_status == kmp_soft_paused ||
+#endif
+        (__kmp_zero_bt && !this_thr->th.th_team_bt_set))
       // Force immediate suspend if not set by user and more threads than
       // available procs
       hibernate = 0;
@@ -296,7 +304,13 @@ final_spin=FALSE)
                   th_gtid, __kmp_global.g.g_time.dt.t_value, hibernate,
                   hibernate - __kmp_global.g.g_time.dt.t_value));
 #else
-    hibernate_goal = KMP_NOW() + this_thr->th.th_team_bt_intervals;
+#if OMP_50_ENABLED
+    if (__kmp_pause_status == kmp_soft_paused) {
+      // Force immediate suspend
+      hibernate_goal = KMP_NOW();
+    } else
+#endif
+      hibernate_goal = KMP_NOW() + this_thr->th.th_team_bt_intervals;
     poll_count = 0;
 #endif // KMP_USE_MONITOR
   }
@@ -389,7 +403,11 @@ final_spin=FALSE)
 #endif
 
     // Don't suspend if KMP_BLOCKTIME is set to "infinite"
-    if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME)
+    if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME
+#if OMP_50_ENABLED
+        && __kmp_pause_status != kmp_soft_paused
+#endif
+        )
       continue;
 
     // Don't suspend if there is a likelihood of new tasks being spawned.
@@ -405,7 +423,14 @@ final_spin=FALSE)
       continue;
 #endif
 
+#if OMP_50_ENABLED
+    if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
+        __kmp_pause_status != kmp_soft_paused)
+      continue;
+#endif
+
     KF_TRACE(50, ("__kmp_wait_sleep: T#%d suspend time reached\n", th_gtid));
+
 #if KMP_OS_UNIX
     if (final_spin)
       KMP_ATOMIC_ST_REL(&this_thr->th.th_blocking, false);

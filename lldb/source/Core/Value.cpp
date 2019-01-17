@@ -210,35 +210,31 @@ bool Value::ValueOf(ExecutionContext *exe_ctx) {
 }
 
 uint64_t Value::GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx) {
-  uint64_t byte_size = 0;
-
   switch (m_context_type) {
   case eContextTypeRegisterInfo: // RegisterInfo *
-    if (GetRegisterInfo())
-      byte_size = GetRegisterInfo()->byte_size;
+    if (GetRegisterInfo()) {
+      if (error_ptr)
+        error_ptr->Clear();
+      return GetRegisterInfo()->byte_size;
+    }
     break;
 
   case eContextTypeInvalid:
   case eContextTypeLLDBType: // Type *
   case eContextTypeVariable: // Variable *
   {
-    const CompilerType &ast_type = GetCompilerType();
-    if (ast_type.IsValid())
-      if (llvm::Optional<uint64_t> size = ast_type.GetByteSize(
-              exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr))
-        byte_size = *size;
-  } break;
-  }
-
-  if (error_ptr) {
-    if (byte_size == 0) {
-      if (error_ptr->Success())
-        error_ptr->SetErrorString("Unable to determine byte size.");
-    } else {
-      error_ptr->Clear();
+    auto *scope = exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
+    if (llvm::Optional<uint64_t> size = GetCompilerType().GetByteSize(scope)) {
+      if (error_ptr)
+        error_ptr->Clear();
+      return *size;
     }
+    break;
   }
-  return byte_size;
+  }
+  if (error_ptr && error_ptr->Success())
+    error_ptr->SetErrorString("Unable to determine byte size.");
+  return 0;
 }
 
 const CompilerType &Value::GetCompilerType() {
@@ -517,6 +513,10 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
 
   // Bail if we encountered any errors getting the byte size
   if (error.Fail())
+    return error;
+
+  // No memory to read for zero-sized types.
+  if (byte_size == 0)
     return error;
 
   // Make sure we have enough room within "data", and if we don't make

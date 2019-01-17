@@ -8,9 +8,8 @@
 // Install the mock libc++ (simulates the libc++ directory structure).
 // RUN: cp -r %S/Inputs/mock-libcxx %t/
 //
-// RUN: cp $(which clang-check) %t/mock-libcxx/bin/
-// RUN: cp "%s" "%t/test.cpp"
-// RUN: %t/mock-libcxx/bin/clang-check -p "%t" "%t/test.cpp" -- -stdlib=libc++ -target x86_64-apple-darwin
-// REQUIRES: system-darwin
+// RUN: cp clang-check %t/mock-libcxx/bin/
+// RUN: cp %s %t/test.cpp
+// RUN: "%t/mock-libcxx/bin/clang-check" -p %t %t/test.cpp -- -stdlib=libc++ -target x86_64-apple-darwin
 #include <mock_vector>
 vector v;

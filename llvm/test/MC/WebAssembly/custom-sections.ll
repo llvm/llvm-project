@@ -9,6 +9,9 @@ target triple = "wasm32-unknown-unknown"
 !2 = !{ !"green", !"qux" }
 !wasm.custom_sections = !{ !0, !1, !2 }
 
+!3 = !{ !"clang version 123"}
+!llvm.ident = !{!3}
+
 ; CHECK:  Section {
 ; CHECK:    Type: CUSTOM (0x0)
 ; CHECK:    Size: 3
@@ -20,4 +23,10 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK:    Size: 6
 ; CHECK:    Offset: 85
 ; CHECK:    Name: green
+; CHECK:  }
+; CHECK:  Section {
+; CHECK:    Type: CUSTOM (0x0)
+; CHECK:    Size: 25
+; CHECK:    Offset: 118
+; CHECK:    Name: producers
 ; CHECK:  }

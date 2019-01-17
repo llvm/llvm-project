@@ -133,6 +133,29 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
     }
 
     CustomSec = std::move(LinkingSec);
+  } else if (WasmSec.Name == "producers") {
+    std::unique_ptr<WasmYAML::ProducersSection> ProducersSec =
+        make_unique<WasmYAML::ProducersSection>();
+    const llvm::wasm::WasmProducerInfo &Info = Obj.getProducerInfo();
+    for (auto &E : Info.Languages) {
+      WasmYAML::ProducerEntry Producer;
+      Producer.Name = E.first;
+      Producer.Version = E.second;
+      ProducersSec->Languages.push_back(Producer);
+    }
+    for (auto &E : Info.Tools) {
+      WasmYAML::ProducerEntry Producer;
+      Producer.Name = E.first;
+      Producer.Version = E.second;
+      ProducersSec->Tools.push_back(Producer);
+    }
+    for (auto &E : Info.SDKs) {
+      WasmYAML::ProducerEntry Producer;
+      Producer.Name = E.first;
+      Producer.Version = E.second;
+      ProducersSec->SDKs.push_back(Producer);
+    }
+    CustomSec = std::move(ProducersSec);
   } else {
     CustomSec = make_unique<WasmYAML::CustomSection>(WasmSec.Name);
   }

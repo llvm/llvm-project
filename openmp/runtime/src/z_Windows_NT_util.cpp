@@ -159,6 +159,10 @@ void __kmp_win32_mutex_lock(kmp_win32_mutex_t *mx) {
   EnterCriticalSection(&mx->cs);
 }
 
+int __kmp_win32_mutex_trylock(kmp_win32_mutex_t *mx) {
+  return TryEnterCriticalSection(&mx->cs);
+}
+
 void __kmp_win32_mutex_unlock(kmp_win32_mutex_t *mx) {
   LeaveCriticalSection(&mx->cs);
 }
@@ -300,6 +304,18 @@ void __kmp_suspend_uninitialize_thread(kmp_info_t *th) {
   }
 }
 
+int __kmp_try_suspend_mx(kmp_info_t *th) {
+  return __kmp_win32_mutex_trylock(&th->th.th_suspend_mx);
+}
+
+void __kmp_lock_suspend_mx(kmp_info_t *th) {
+  __kmp_win32_mutex_lock(&th->th.th_suspend_mx);
+}
+
+void __kmp_unlock_suspend_mx(kmp_info_t *th) {
+  __kmp_win32_mutex_unlock(&th->th.th_suspend_mx);
+}
+
 /* This routine puts the calling thread to sleep after setting the
    sleep bit for the indicated flag variable to true. */
 template <class C>
@@ -321,6 +337,14 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
   /* TODO: shouldn't this use release semantics to ensure that
      __kmp_suspend_initialize_thread gets called first? */
   old_spin = flag->set_sleeping();
+#if OMP_50_ENABLED
+  if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
+      __kmp_pause_status != kmp_soft_paused) {
+    flag->unset_sleeping();
+    __kmp_win32_mutex_unlock(&th->th.th_suspend_mx);
+    return;
+  }
+#endif
 
   KF_TRACE(5, ("__kmp_suspend_template: T#%d set sleep bit for flag's"
                " loc(%p)==%d\n",

@@ -752,6 +752,10 @@ int __kmp_enter_single(int gtid, ident_t *id_ref, int push_ws) {
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
 
+#if OMP_50_ENABLED
+  __kmp_resume_if_soft_paused();
+#endif
+
   th = __kmp_threads[gtid];
   team = th->th.th_team;
   status = 0;
@@ -1189,6 +1193,10 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
 
+#if OMP_50_ENABLED
+  __kmp_resume_if_soft_paused();
+#endif
+
   this_thr = __kmp_threads[global_tid];
   serial_team = this_thr->th.th_serial_team;
 
@@ -1491,6 +1499,10 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         __kmp_init_serial); // AC: potentially unsafe, not in sync with shutdown
     if (!TCR_4(__kmp_init_parallel))
       __kmp_parallel_initialize();
+
+#if OMP_50_ENABLED
+    __kmp_resume_if_soft_paused();
+#endif
 
     /* setup current data */
     master_th = __kmp_threads[gtid]; // AC: potentially unsafe, not in sync with
@@ -5851,7 +5863,6 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
   gtid = thread->th.th_info.ds.ds_gtid;
 
   if (!is_root) {
-
     if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) {
       /* Assume the threads are at the fork barrier here */
       KA_TRACE(
@@ -6272,8 +6283,10 @@ void __kmp_internal_end_thread(int gtid_req) {
   // OM: Removed Linux* OS restriction to fix the crash on OS X* (DPD200239966)
   // and Windows(DPD200287443) that occurs when using critical sections from
   // foreign threads.
-  KA_TRACE(10, ("__kmp_internal_end_thread: exiting T#%d\n", gtid_req));
-  return;
+  if (__kmp_pause_status != kmp_hard_paused) {
+    KA_TRACE(10, ("__kmp_internal_end_thread: exiting T#%d\n", gtid_req));
+    return;
+  }
 #endif
   /* synchronize the termination process */
   __kmp_acquire_bootstrap_lock(&__kmp_initz_lock);
@@ -6919,6 +6932,10 @@ void __kmp_parallel_initialize(void) {
   if (!__kmp_init_middle) {
     __kmp_do_middle_initialize();
   }
+
+#if OMP_50_ENABLED
+  __kmp_resume_if_hard_paused();
+#endif
 
   /* begin initialization */
   KA_TRACE(10, ("__kmp_parallel_initialize: enter\n"));
@@ -8190,3 +8207,82 @@ __kmp_determine_reduction_method(
 kmp_int32 __kmp_get_reduce_method(void) {
   return ((__kmp_entry_thread()->th.th_local.packed_reduction_method) >> 8);
 }
+
+#if OMP_50_ENABLED
+
+// Soft pause sets up threads to ignore blocktime and just go to sleep.
+// Spin-wait code checks __kmp_pause_status and reacts accordingly.
+void __kmp_soft_pause() { __kmp_pause_status = kmp_soft_paused; }
+
+// Hard pause shuts down the runtime completely.  Resume happens naturally when
+// OpenMP is used subsequently.
+void __kmp_hard_pause() {
+  __kmp_pause_status = kmp_hard_paused;
+  __kmp_internal_end_thread(-1);
+}
+
+// Soft resume sets __kmp_pause_status, and wakes up all threads.
+void __kmp_resume_if_soft_paused() {
+  if (__kmp_pause_status == kmp_soft_paused) {
+    __kmp_pause_status = kmp_not_paused;
+
+    for (int gtid = 1; gtid < __kmp_threads_capacity; ++gtid) {
+      kmp_info_t *thread = __kmp_threads[gtid];
+      if (thread) { // Wake it if sleeping
+        kmp_flag_64 fl(&thread->th.th_bar[bs_forkjoin_barrier].bb.b_go, thread);
+        if (fl.is_sleeping())
+          fl.resume(gtid);
+        else if (__kmp_try_suspend_mx(thread)) { // got suspend lock
+          __kmp_unlock_suspend_mx(thread); // unlock it; it won't sleep
+        } else { // thread holds the lock and may sleep soon
+          do { // until either the thread sleeps, or we can get the lock
+            if (fl.is_sleeping()) {
+              fl.resume(gtid);
+              break;
+            } else if (__kmp_try_suspend_mx(thread)) {
+              __kmp_unlock_suspend_mx(thread);
+              break;
+            }
+          } while (1);
+        }
+      }
+    }
+  }
+}
+
+// This function is called via __kmpc_pause_resource. Returns 0 if successful.
+// TODO: add warning messages
+int __kmp_pause_resource(kmp_pause_status_t level) {
+  if (level == kmp_not_paused) { // requesting resume
+    if (__kmp_pause_status == kmp_not_paused) {
+      // error message about runtime not being paused, so can't resume
+      return 1;
+    } else {
+      KMP_DEBUG_ASSERT(__kmp_pause_status == kmp_soft_paused ||
+                       __kmp_pause_status == kmp_hard_paused);
+      __kmp_pause_status = kmp_not_paused;
+      return 0;
+    }
+  } else if (level == kmp_soft_paused) { // requesting soft pause
+    if (__kmp_pause_status != kmp_not_paused) {
+      // error message about already being paused
+      return 1;
+    } else {
+      __kmp_soft_pause();
+      return 0;
+    }
+  } else if (level == kmp_hard_paused) { // requesting hard pause
+    if (__kmp_pause_status != kmp_not_paused) {
+      // error message about already being paused
+      return 1;
+    } else {
+      __kmp_hard_pause();
+      return 0;
+    }
+  } else {
+    // error message about invalid level
+    return 1;
+  }
+}
+
+#endif // OMP_50_ENABLED
