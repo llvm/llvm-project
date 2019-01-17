@@ -35,27 +35,14 @@ namespace api_notes {
     Dump,
   };
 
-  enum class OSType {
-    OSX,
-    IOS,
-    TvOS,
-    WatchOS,
-    Absent
-  };
-
   /// Converts API notes from YAML format to binary format.
   bool compileAPINotes(llvm::StringRef yamlInput,
                        const FileEntry *sourceFile,
                        llvm::raw_ostream &os,
-                       OSType targetOS,
                        llvm::SourceMgr::DiagHandlerTy diagHandler = nullptr,
                        void *diagHandlerCtxt = nullptr);
 
   bool parseAndDumpAPINotes(llvm::StringRef yamlInput);
-
-  /// Converts API notes from the compiled binary format to the YAML format.
-  bool decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
-                         llvm::raw_ostream &os);
 } // end namespace api_notes
 } // end namespace clang
 

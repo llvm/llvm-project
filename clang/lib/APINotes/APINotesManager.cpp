@@ -83,21 +83,6 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
   PrettyStackTraceDoubleString trace("Loading API notes from ",
                                      apiNotesFile->getName());
 
-  // If the API notes file is already in the binary form, load it directly.
-  StringRef apiNotesFileName = apiNotesFile->getName();
-  StringRef apiNotesFileExt = llvm::sys::path::extension(apiNotesFileName);
-  if (!apiNotesFileExt.empty() &&
-      apiNotesFileExt.substr(1) == BINARY_APINOTES_EXTENSION) {
-    auto compiledFileID = SourceMgr.createFileID(apiNotesFile, SourceLocation(), SrcMgr::C_User);
-
-    // Load the file.
-    auto buffer = SourceMgr.getBuffer(compiledFileID, SourceLocation());
-    if (!buffer) return nullptr;
-
-    // Load the binary form.
-    return APINotesReader::getUnmanaged(buffer, SwiftVersion);
-  }
-
   // Open the source file.
   auto sourceFileID = SourceMgr.createFileID(apiNotesFile, SourceLocation(), SrcMgr::C_User);
   auto sourceBuffer = SourceMgr.getBuffer(sourceFileID, SourceLocation());
@@ -120,7 +105,6 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
     if (api_notes::compileAPINotes(sourceBuffer->getBuffer(),
                                    SourceMgr.getFileEntryForID(sourceFileID),
                                    OS,
-                                   api_notes::OSType::Absent,
                                    srcMgrAdapter.getDiagHandler(),
                                    srcMgrAdapter.getDiagContext()))
       return nullptr;
@@ -156,19 +140,8 @@ const FileEntry *APINotesManager::findAPINotesFile(const DirectoryEntry *directo
   llvm::SmallString<128> path;
   path += directory->getName();
 
-  unsigned pathLen = path.size();
-
   StringRef basenameSuffix = "";
   if (!wantPublic) basenameSuffix = "_private";
-
-  // Look for a binary API notes file.
-  llvm::sys::path::append(path, 
-    llvm::Twine(basename) + basenameSuffix + "." + BINARY_APINOTES_EXTENSION);
-  if (const FileEntry *binaryFile = fileMgr.getFile(path, /*Open*/true))
-    return binaryFile;
-
-  // Go back to the original path.
-  path.resize(pathLen);
 
   // Look for the source API notes file.
   llvm::sys::path::append(path, 
