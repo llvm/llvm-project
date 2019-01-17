@@ -1299,9 +1299,11 @@ class Base(unittest2.TestCase):
         """ Returns a string that represents the compiler version.
             Supports: llvm, clang.
         """
-        version = 'unknown'
-
         compiler = self.getCompilerBinary()
+        getCompilerVersion(self, compiler)
+
+    def getCompilerVersion(self, compiler):
+        version = 'unknown'
         version_output = system([[compiler, "-v"]])[1]
         for line in version_output.split(os.linesep):
             m = re.search('version ([0-9\.]+)', line)
