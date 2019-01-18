@@ -604,12 +604,26 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
                                     ExplodedNode *Pred,
                                     ExplodedNodeSet &Dst,
                                     const EvalCallOptions &CallOpts) {
+  assert(S && "A destructor without a trigger!");
   const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
 
   const CXXRecordDecl *RecordDecl = ObjectType->getAsCXXRecordDecl();
   assert(RecordDecl && "Only CXXRecordDecls should have destructors");
   const CXXDestructorDecl *DtorDecl = RecordDecl->getDestructor();
+
+  // FIXME: There should always be a Decl, otherwise the destructor call
+  // shouldn't have been added to the CFG in the first place.
+  if (!DtorDecl) {
+    // Skip the invalid destructor. We cannot simply return because
+    // it would interrupt the analysis instead.
+    static SimpleProgramPointTag T("ExprEngine", "SkipInvalidDestructor");
+    // FIXME: PostImplicitCall with a null decl may crash elsewhere anyway.
+    PostImplicitCall PP(/*Decl=*/nullptr, S->getEndLoc(), LCtx, &T);
+    NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+    Bldr.generateNode(PP, Pred->getState(), Pred);
+    return;
+  }
 
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<CXXDestructorCall> Call =
@@ -629,7 +643,6 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
        I != E; ++I)
     defaultEvalCall(Bldr, *I, *Call, CallOpts);
 
-  ExplodedNodeSet DstPostCall;
   getCheckerManager().runCheckersForPostCall(Dst, DstInvalidated,
                                              *Call, *this);
 }
