@@ -61,6 +61,10 @@ ArgumentsAdjuster getInsertArgumentAdjuster(
     const char *Extra,
     ArgumentInsertPosition Pos = ArgumentInsertPosition::END);
 
+/// Gets an argument adjuster which strips plugin related command line
+/// arguments.
+ArgumentsAdjuster getStripPluginsAdjuster();
+
 /// Gets an argument adjuster which adjusts the arguments in sequence
 /// with the \p First adjuster and then with the \p Second one.
 ArgumentsAdjuster combineAdjusters(ArgumentsAdjuster First,
