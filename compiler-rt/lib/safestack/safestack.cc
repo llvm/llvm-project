@@ -14,21 +14,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "safestack_platform.h"
+#include "safestack_util.h"
+
 #include <errno.h>
-#include <limits.h>
-#include <pthread.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <stdlib.h>
+#include <sys/mman.h>
 #include <sys/resource.h>
-#include <sys/types.h>
-#if !defined(__NetBSD__)
-#include <sys/user.h>
-#endif
 
 #include "interception/interception.h"
-#include "sanitizer_common/sanitizer_common.h"
+
+using namespace safestack;
 
 // TODO: To make accessing the unsafe stack pointer faster, we plan to
 // eventually store it directly in the thread control block data structure on
@@ -98,20 +93,20 @@ __thread void *unsafe_stack_start = nullptr;
 __thread size_t unsafe_stack_size = 0;
 __thread size_t unsafe_stack_guard = 0;
 
-using namespace __sanitizer;
-
 inline void *unsafe_stack_alloc(size_t size, size_t guard) {
-  CHECK_GE(size + guard, size);
-  void *addr = MmapOrDie(size + guard, "unsafe_stack_alloc");
-  MprotectNoAccess((uptr)addr, (uptr)guard);
+  SFS_CHECK(size + guard >= size);
+  void *addr = mmap(nullptr, RoundUpTo(size + guard, pageSize),
+                    PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+  SFS_CHECK(MAP_FAILED != addr);
+  mprotect(addr, guard, PROT_NONE);
   return (char *)addr + guard;
 }
 
 inline void unsafe_stack_setup(void *start, size_t size, size_t guard) {
-  CHECK_GE((char *)start + size, (char *)start);
-  CHECK_GE((char *)start + guard, (char *)start);
+  SFS_CHECK((char *)start + size >= (char *)start);
+  SFS_CHECK((char *)start + guard >= (char *)start);
   void *stack_ptr = (char *)start + size;
-  CHECK_EQ((((size_t)stack_ptr) & (kStackAlign - 1)), 0);
+  SFS_CHECK((((size_t)stack_ptr) & (kStackAlign - 1)) == 0);
 
   __safestack_unsafe_stack_ptr = stack_ptr;
   unsafe_stack_start = start;
@@ -156,7 +151,7 @@ struct thread_stack_ll {
   void *stack_base;
   size_t size;
   pid_t pid;
-  tid_t tid;
+  pid_t tid;
 };
 
 /// Linked list of unsafe stacks for threads that are exiting. We delay
@@ -168,7 +163,7 @@ pthread_mutex_t thread_stacks_mutex = PTHREAD_MUTEX_INITIALIZER;
 /// this thread is terminated. libc can call functions in safestack-instrumented
 /// code (like free) after thread-specific data destructors have run.
 void thread_cleanup_handler(void *_iter) {
-  CHECK_NE(unsafe_stack_start, nullptr);
+  SFS_CHECK(unsafe_stack_start != nullptr);
   pthread_setspecific(thread_cleanup_key, NULL);
 
   pthread_mutex_lock(&thread_stacks_mutex);
@@ -179,17 +174,15 @@ void thread_cleanup_handler(void *_iter) {
   pthread_mutex_unlock(&thread_stacks_mutex);
 
   pid_t pid = getpid();
-  tid_t tid = GetTid();
+  pid_t tid = GetTid();
 
   // Free stacks for dead threads
   thread_stack_ll **stackp = &temp_stacks;
   while (*stackp) {
     thread_stack_ll *stack = *stackp;
-    int error;
     if (stack->pid != pid ||
-        (internal_iserror(TgKill(stack->pid, stack->tid, 0), &error) &&
-         error == ESRCH)) {
-      UnmapOrDie(stack->stack_base, stack->size);
+        (-1 == TgKill(stack->pid, stack->tid, 0) && errno == ESRCH)) {
+      munmap(stack->stack_base, stack->size);
       *stackp = stack->next;
       free(stack);
     } else
@@ -236,9 +229,9 @@ INTERCEPTOR(int, pthread_create, pthread_t *thread,
     pthread_attr_destroy(&tmpattr);
   }
 
-  CHECK_NE(size, 0);
-  CHECK_EQ((size & (kStackAlign - 1)), 0);
-  CHECK_EQ((guard & (pageSize - 1)), 0);
+  SFS_CHECK(size);
+  SFS_CHECK((size & (kStackAlign - 1)) == 0);
+  SFS_CHECK((guard & (pageSize - 1)) == 0);
 
   void *addr = unsafe_stack_alloc(size, guard);
   struct tinfo *tinfo =
@@ -252,12 +245,13 @@ INTERCEPTOR(int, pthread_create, pthread_t *thread,
   return REAL(pthread_create)(thread, attr, thread_start, tinfo);
 }
 
-BlockingMutex interceptor_init_lock(LINKER_INITIALIZED);
+pthread_mutex_t interceptor_init_mutex = PTHREAD_MUTEX_INITIALIZER;
 bool interceptors_inited = false;
 
 void EnsureInterceptorsInitialized() {
-  BlockingMutexLock lock(&interceptor_init_lock);
-  if (interceptors_inited) return;
+  MutexLock lock(interceptor_init_mutex);
+  if (interceptors_inited)
+    return;
 
   // Initialize pthread interceptors for thread allocation
   INTERCEPT_FUNCTION(pthread_create);
@@ -273,6 +267,8 @@ extern "C" __attribute__((visibility("default")))
 __attribute__((constructor(0)))
 #endif
 void __safestack_init() {
+  pageSize = sysconf(_SC_PAGESIZE);
+
   // Determine the stack size for the main thread.
   size_t size = kDefaultUnsafeStackSize;
   size_t guard = 4096;
@@ -285,7 +281,6 @@ void __safestack_init() {
   void *addr = unsafe_stack_alloc(size, guard);
 
   unsafe_stack_setup(addr, size, guard);
-  pageSize = sysconf(_SC_PAGESIZE);
 
   // Setup the cleanup handler
   pthread_key_create(&thread_cleanup_key, thread_cleanup_handler);
