@@ -23,7 +23,6 @@ class TestClassConstrainedProtocol(TestBase):
         self.build()
         self.do_self_test("Break here for weak self")
 
-    @expectedFailureAll(bugnumber="rdar://31822722")
     def test_extension_self (self):
         """Test that we can reconstruct self in method of a class constrained protocol."""
         self.build()
