@@ -31,24 +31,14 @@ enum class ReproducerMode {
   Off,
 };
 
-/// Abstraction for information associated with a provider. This information
-/// is serialized into an index which is used by the loader.
-struct ProviderInfo {
-  std::string name;
-  std::vector<std::string> files;
-};
-
 /// The provider defines an interface for generating files needed for
-/// reproducing. The provider must populate its ProviderInfo to communicate
-/// its name and files to the index, before registering with the generator,
-/// i.e. in the constructor.
+/// reproducing.
 ///
 /// Different components will implement different providers.
 class ProviderBase {
 public:
   virtual ~ProviderBase() = default;
 
-  const ProviderInfo &GetInfo() const { return m_info; }
   const FileSpec &GetRoot() const { return m_root; }
 
   /// The Keep method is called when it is decided that we need to keep the
@@ -65,11 +55,12 @@ public:
   // Returns the class ID for the dynamic type of this Provider instance.
   virtual const void *DynamicClassID() const = 0;
 
+  virtual llvm::StringRef GetName() const = 0;
+  virtual llvm::StringRef GetFile() const = 0;
+
 protected:
   ProviderBase(const FileSpec &root) : m_root(root) {}
 
-  /// Every provider keeps track of its own files.
-  ProviderInfo m_info;
 private:
   /// Every provider knows where to dump its potential files.
   FileSpec m_root;
@@ -83,6 +74,9 @@ public:
   static const void *ClassID() { return &ThisProviderT::ID; }
 
   const void *DynamicClassID() const override { return &ThisProviderT::ID; }
+
+  llvm::StringRef GetName() const override { return ThisProviderT::info::name; }
+  llvm::StringRef GetFile() const override { return ThisProviderT::info::file; }
 
 protected:
   using ProviderBase::ProviderBase; // Inherit constructor.
@@ -152,14 +146,22 @@ class Loader final {
 public:
   Loader(const FileSpec &root);
 
-  llvm::Optional<ProviderInfo> GetProviderInfo(llvm::StringRef name);
+  template <typename T> FileSpec GetFile() {
+    if (!HasFile(T::file))
+      return {};
+
+    return GetRoot().CopyByAppendingPathComponent(T::file);
+  }
+
   llvm::Error LoadIndex();
 
   const FileSpec &GetRoot() const { return m_root; }
 
 private:
-  llvm::StringMap<ProviderInfo> m_provider_info;
+  bool HasFile(llvm::StringRef file);
+
   FileSpec m_root;
+  std::vector<std::string> m_files;
   bool m_loaded;
 };
 
@@ -197,19 +199,5 @@ private:
 
 } // namespace repro
 } // namespace lldb_private
-
-LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(lldb_private::repro::ProviderInfo)
-
-namespace llvm {
-namespace yaml {
-
-template <> struct MappingTraits<lldb_private::repro::ProviderInfo> {
-  static void mapping(IO &io, lldb_private::repro::ProviderInfo &info) {
-    io.mapRequired("name", info.name);
-    io.mapOptional("files", info.files);
-  }
-};
-} // namespace yaml
-} // namespace llvm
 
 #endif // LLDB_UTILITY_REPRODUCER_H

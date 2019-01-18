@@ -157,17 +157,24 @@ static const ProcessKDPPropertiesSP &GetGlobalPluginProperties() {
   return g_settings_sp;
 }
 
+struct ProcessGDBRemoteInfo {
+  static const char *name;
+  static const char *file;
+};
+
+const char *ProcessGDBRemoteInfo::name = "gdb-remote";
+const char *ProcessGDBRemoteInfo::file = "gdb-remote.yaml";
+
 class ProcessGDBRemoteProvider
     : public repro::Provider<ProcessGDBRemoteProvider> {
 public:
+  typedef ProcessGDBRemoteInfo info;
+
   ProcessGDBRemoteProvider(const FileSpec &directory) : Provider(directory) {
-    m_info.name = "gdb-remote";
-    m_info.files.push_back("gdb-remote.yaml");
   }
 
   raw_ostream *GetHistoryStream() {
-    FileSpec history_file =
-        GetRoot().CopyByAppendingPathComponent("gdb-remote.yaml");
+    FileSpec history_file = GetRoot().CopyByAppendingPathComponent(info::file);
 
     std::error_code EC;
     m_stream_up = llvm::make_unique<raw_fd_ostream>(history_file.GetPath(), EC,
@@ -3432,16 +3439,10 @@ Status ProcessGDBRemote::ConnectToReplayServer(repro::Loader *loader) {
   if (!loader)
     return Status("No loader provided.");
 
-  auto provider_info = loader->GetProviderInfo("gdb-remote");
-  if (!provider_info)
-    return Status("No provider for gdb-remote.");
-
-  if (provider_info->files.empty())
-    return Status("Provider for  gdb-remote contains no files.");
-
   // Construct replay history path.
-  FileSpec history_file = loader->GetRoot().CopyByAppendingPathComponent(
-      provider_info->files.front());
+  FileSpec history_file = loader->GetFile<ProcessGDBRemoteInfo>();
+  if (!history_file)
+    return Status("No provider for gdb-remote.");
 
   // Enable replay mode.
   m_replay_mode = true;
