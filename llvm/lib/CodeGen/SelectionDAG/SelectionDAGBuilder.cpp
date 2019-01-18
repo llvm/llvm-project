@@ -1035,7 +1035,7 @@ SDValue SelectionDAGBuilder::getRoot() {
   // If we have >= 2^16 loads then split across multiple token factors as
   // there's a 64k limit on the number of SDNode operands.
   SDValue Root;
-  size_t Limit = (1 << 16) - 1;
+  size_t Limit = SDNode::getMaxNumOperands();
   while (PendingLoads.size() > Limit) {
     unsigned SliceIdx = PendingLoads.size() - Limit;
     auto ExtractedTFs = ArrayRef<SDValue>(PendingLoads).slice(SliceIdx, Limit);

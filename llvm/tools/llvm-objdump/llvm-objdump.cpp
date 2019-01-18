@@ -75,7 +75,7 @@ cl::opt<bool>
     llvm::AllHeaders("all-headers",
                      cl::desc("Display all available header information"));
 static cl::alias AllHeadersShort("x", cl::desc("Alias for --all-headers"),
-                                 cl::aliasopt(AllHeaders));
+                                 cl::NotHidden, cl::aliasopt(AllHeaders));
 
 static cl::list<std::string>
 InputFilenames(cl::Positional, cl::desc("<input object files>"),cl::ZeroOrMore);
@@ -83,22 +83,20 @@ InputFilenames(cl::Positional, cl::desc("<input object files>"),cl::ZeroOrMore);
 cl::opt<bool>
 llvm::Disassemble("disassemble",
   cl::desc("Display assembler mnemonics for the machine instructions"));
-static cl::alias
-Disassembled("d", cl::desc("Alias for --disassemble"),
-             cl::aliasopt(Disassemble));
+static cl::alias Disassembled("d", cl::desc("Alias for --disassemble"),
+                              cl::NotHidden, cl::aliasopt(Disassemble));
 
 cl::opt<bool>
 llvm::DisassembleAll("disassemble-all",
   cl::desc("Display assembler mnemonics for the machine instructions"));
-static cl::alias
-DisassembleAlld("D", cl::desc("Alias for --disassemble-all"),
-             cl::aliasopt(DisassembleAll));
+static cl::alias DisassembleAlld("D", cl::desc("Alias for --disassemble-all"),
+                                 cl::NotHidden, cl::aliasopt(DisassembleAll));
 
 cl::opt<bool> llvm::Demangle("demangle", cl::desc("Demangle symbols names"),
                              cl::init(false));
 
 static cl::alias DemangleShort("C", cl::desc("Alias for --demangle"),
-                               cl::aliasopt(llvm::Demangle));
+                               cl::NotHidden, cl::aliasopt(llvm::Demangle));
 
 static cl::list<std::string>
 DisassembleFunctions("df",
@@ -116,15 +114,16 @@ static cl::alias RelocationsShort("r", cl::desc("Alias for --reloc"),
 cl::opt<bool>
 llvm::DynamicRelocations("dynamic-reloc",
   cl::desc("Display the dynamic relocation entries in the file"));
-static cl::alias
-DynamicRelocationsd("R", cl::desc("Alias for --dynamic-reloc"),
-             cl::aliasopt(DynamicRelocations));
+static cl::alias DynamicRelocationsd("R", cl::desc("Alias for --dynamic-reloc"),
+                                     cl::NotHidden,
+                                     cl::aliasopt(DynamicRelocations));
 
 cl::opt<bool>
     llvm::SectionContents("full-contents",
                           cl::desc("Display the content of each section"));
 static cl::alias SectionContentsShort("s",
                                       cl::desc("Alias for --full-contents"),
+                                      cl::NotHidden,
                                       cl::aliasopt(SectionContents));
 
 cl::opt<bool> llvm::SymbolTable("syms", cl::desc("Display the symbol table"));
@@ -153,8 +152,8 @@ llvm::RawClangAST("raw-clang-ast",
 
 static cl::opt<bool>
 MachOOpt("macho", cl::desc("Use MachO specific object file parser"));
-static cl::alias
-MachOm("m", cl::desc("Alias for --macho"), cl::aliasopt(MachOOpt));
+static cl::alias MachOm("m", cl::desc("Alias for --macho"), cl::NotHidden,
+                        cl::aliasopt(MachOOpt));
 
 cl::opt<std::string>
 llvm::TripleName("triple", cl::desc("Target triple to disassemble for, "
@@ -173,19 +172,21 @@ llvm::ArchName("arch-name", cl::desc("Target arch to disassemble for, "
 cl::opt<bool>
 llvm::SectionHeaders("section-headers", cl::desc("Display summaries of the "
                                                  "headers for each section."));
-static cl::alias
-SectionHeadersShort("headers", cl::desc("Alias for --section-headers"),
-                    cl::aliasopt(SectionHeaders));
-static cl::alias
-SectionHeadersShorter("h", cl::desc("Alias for --section-headers"),
-                      cl::aliasopt(SectionHeaders));
+static cl::alias SectionHeadersShort("headers",
+                                     cl::desc("Alias for --section-headers"),
+                                     cl::NotHidden,
+                                     cl::aliasopt(SectionHeaders));
+static cl::alias SectionHeadersShorter("h",
+                                       cl::desc("Alias for --section-headers"),
+                                       cl::NotHidden,
+                                       cl::aliasopt(SectionHeaders));
 
 cl::list<std::string>
 llvm::FilterSections("section", cl::desc("Operate on the specified sections only. "
                                          "With -macho dump segment,section"));
-cl::alias
-static FilterSectionsj("j", cl::desc("Alias for --section"),
-                 cl::aliasopt(llvm::FilterSections));
+cl::alias static FilterSectionsj("j", cl::desc("Alias for --section"),
+                                 cl::NotHidden,
+                                 cl::aliasopt(llvm::FilterSections));
 
 cl::list<std::string>
 llvm::MAttrs("mattr",
@@ -203,9 +204,8 @@ llvm::NoLeadingAddr("no-leading-addr", cl::desc("Print no leading address"));
 cl::opt<bool>
 llvm::UnwindInfo("unwind-info", cl::desc("Display unwind information"));
 
-static cl::alias
-UnwindInfoShort("u", cl::desc("Alias for --unwind-info"),
-                cl::aliasopt(UnwindInfo));
+static cl::alias UnwindInfoShort("u", cl::desc("Alias for --unwind-info"),
+                                 cl::NotHidden, cl::aliasopt(UnwindInfo));
 
 cl::opt<bool>
 llvm::PrivateHeaders("private-headers",
@@ -216,24 +216,24 @@ llvm::FirstPrivateHeader("private-header",
                          cl::desc("Display only the first format specific file "
                                   "header"));
 
-static cl::alias
-PrivateHeadersShort("p", cl::desc("Alias for --private-headers"),
-                    cl::aliasopt(PrivateHeaders));
+static cl::alias PrivateHeadersShort("p",
+                                     cl::desc("Alias for --private-headers"),
+                                     cl::NotHidden,
+                                     cl::aliasopt(PrivateHeaders));
 
 cl::opt<bool> llvm::FileHeaders(
     "file-headers",
     cl::desc("Display the contents of the overall file header"));
 
 static cl::alias FileHeadersShort("f", cl::desc("Alias for --file-headers"),
-                                  cl::aliasopt(FileHeaders));
+                                  cl::NotHidden, cl::aliasopt(FileHeaders));
 
 cl::opt<bool>
     llvm::ArchiveHeaders("archive-headers",
                          cl::desc("Display archive header information"));
 
-cl::alias
-ArchiveHeadersShort("a", cl::desc("Alias for --archive-headers"),
-                    cl::aliasopt(ArchiveHeaders));
+cl::alias ArchiveHeadersShort("a", cl::desc("Alias for --archive-headers"),
+                              cl::NotHidden, cl::aliasopt(ArchiveHeaders));
 
 cl::opt<bool>
     llvm::PrintImmHex("print-imm-hex",
@@ -251,7 +251,7 @@ cl::opt<bool> PrintSource(
     cl::desc(
         "Display source inlined with disassembly. Implies disassemble object"));
 
-cl::alias PrintSourceShort("S", cl::desc("Alias for -source"),
+cl::alias PrintSourceShort("S", cl::desc("Alias for -source"), cl::NotHidden,
                            cl::aliasopt(PrintSource));
 
 cl::opt<bool> PrintLines("line-numbers",
@@ -259,7 +259,7 @@ cl::opt<bool> PrintLines("line-numbers",
                                   "disassembly. Implies disassemble object"));
 
 cl::alias PrintLinesShort("l", cl::desc("Alias for -line-numbers"),
-                          cl::aliasopt(PrintLines));
+                          cl::NotHidden, cl::aliasopt(PrintLines));
 
 cl::opt<unsigned long long>
     StartAddress("start-address", cl::desc("Disassemble beginning at address"),
@@ -274,6 +274,7 @@ cl::opt<bool> DisassembleZeroes(
                 cl::desc("Do not skip blocks of zeroes when disassembling"));
 cl::alias DisassembleZeroesShort("z",
                                  cl::desc("Alias for --disassemble-zeroes"),
+                                 cl::NotHidden,
                                  cl::aliasopt(DisassembleZeroes));
 
 static StringRef ToolName;
