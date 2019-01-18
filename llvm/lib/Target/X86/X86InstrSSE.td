@@ -8363,7 +8363,7 @@ multiclass avx2_gather<bits<8> opc, string OpcodeStr, ValueType VTx,
             VEX, VEX_L, Sched<[WriteLoad]>;
 }
 
-let Predicates = [UseAVX2] in {
+let Predicates = [HasAVX2] in {
   let mayLoad = 1, hasSideEffects = 0, Constraints
     = "@earlyclobber $dst,@earlyclobber $mask_wb, $src1 = $dst, $mask = $mask_wb"
     in {

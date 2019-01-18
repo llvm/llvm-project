@@ -1,5 +1,39 @@
-// RUN: %clang_cc1 -ffixed-point -S -emit-llvm %s -o - | FileCheck %s -check-prefix=DEFAULT
-// RUN: %clang_cc1 -ffixed-point -S -emit-llvm %s -o - -fpadding-on-unsigned-fixed-point | FileCheck %s -check-prefix=SAME
+// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck %s -check-prefix=DEFAULT
+// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -S -emit-llvm %s -o - -fpadding-on-unsigned-fixed-point | FileCheck %s -check-prefix=SAME
+
+// Between different fixed point types
+short _Accum sa_const = 2.5hk; // DEFAULT-DAG: @sa_const  = {{.*}}global i16 320, align 2
+_Accum a_const = 2.5hk;        // DEFAULT-DAG: @a_const   = {{.*}}global i32 81920, align 4
+short _Accum sa_const2 = 2.5k; // DEFAULT-DAG: @sa_const2 = {{.*}}global i16 320, align 2
+
+short _Accum sa_from_f_const = 0.5r; // DEFAULT-DAG: sa_from_f_const = {{.*}}global i16 64, align 2
+_Fract f_from_sa_const = 0.5hk;      // DEFAULT-DAG: f_from_sa_const = {{.*}}global i16 16384, align 2
+
+unsigned short _Accum usa_const = 2.5uk;
+unsigned _Accum ua_const = 2.5uhk;
+// DEFAULT-DAG: @usa_const  = {{.*}}global i16 640, align 2
+// DEFAULT-DAG: @ua_const   = {{.*}}global i32 163840, align 4
+// SAME-DAG:    @usa_const  = {{.*}}global i16 320, align 2
+// SAME-DAG:    @ua_const   = {{.*}}global i32 81920, align 4
+
+// Signedness
+unsigned short _Accum usa_const2 = 2.5hk;
+// DEFAULT-DAG: @usa_const2  = {{.*}}global i16 640, align 2
+// SAME-DAG:    @usa_const2  = {{.*}}global i16 320, align 2
+short _Accum sa_const3 = 2.5hk; // DEFAULT-DAG: @sa_const3 = {{.*}}global i16 320, align 2
+
+// Overflow (this is undefined but allowed)
+short _Accum sa_const4 = 256.0k;
+
+// Saturation
+_Sat short _Accum sat_sa_const = 2.5hk;   // DEFAULT-DAG: @sat_sa_const  = {{.*}}global i16 320, align 2
+_Sat short _Accum sat_sa_const2 = 256.0k; // DEFAULT-DAG: @sat_sa_const2 = {{.*}}global i16 32767, align 2
+_Sat unsigned short _Accum sat_usa_const = -1.0hk;
+// DEFAULT-DAG: @sat_usa_const = {{.*}}global i16 0, align 2
+// SAME-DAG:    @sat_usa_const = {{.*}}global i16 0, align 2
+_Sat unsigned short _Accum sat_usa_const2 = 256.0k;
+// DEFAULT-DAG: @sat_usa_const2 = {{.*}}global i16 -1, align 2
+// SAME-DAG:    @sat_usa_const2 = {{.*}}global i16 32767, align 2
 
 void TestFixedPointCastSameType() {
   _Accum a = 2.5k;

@@ -52,7 +52,7 @@ struct _Unwind_FunctionContext {
 #else
 # if __STDC_VERSION__ >= 201112L
 #  define _LIBUNWIND_THREAD_LOCAL _Thread_local
-# elif defined(_WIN32)
+# elif defined(_MSC_VER)
 #  define _LIBUNWIND_THREAD_LOCAL __declspec(thread)
 # elif defined(__GNUC__) || defined(__clang__)
 #  define _LIBUNWIND_THREAD_LOCAL __thread

@@ -19,13 +19,14 @@ namespace llvm {
 class StringRef;
 
 namespace object {
-  class COFFObjectFile;
-  class COFFImportFile;
-  class MachOObjectFile;
-  class MachOUniversalBinary;
-  class ObjectFile;
-  class Archive;
-  class RelocationRef;
+class COFFObjectFile;
+class COFFImportFile;
+class ELFObjectFileBase;
+class MachOObjectFile;
+class MachOUniversalBinary;
+class ObjectFile;
+class Archive;
+class RelocationRef;
 }
 
 extern cl::opt<std::string> TripleName;
@@ -68,7 +69,75 @@ extern cl::opt<bool> UnwindInfo;
 extern cl::opt<bool> PrintImmHex;
 extern cl::opt<DIDumpType> DwarfDumpType;
 
+typedef std::function<bool(llvm::object::SectionRef const &)> FilterPredicate;
+
+class SectionFilterIterator {
+public:
+  SectionFilterIterator(FilterPredicate P,
+                        llvm::object::section_iterator const &I,
+                        llvm::object::section_iterator const &E)
+      : Predicate(std::move(P)), Iterator(I), End(E) {
+    ScanPredicate();
+  }
+  const llvm::object::SectionRef &operator*() const { return *Iterator; }
+  SectionFilterIterator &operator++() {
+    ++Iterator;
+    ScanPredicate();
+    return *this;
+  }
+  bool operator!=(SectionFilterIterator const &Other) const {
+    return Iterator != Other.Iterator;
+  }
+
+private:
+  void ScanPredicate() {
+    while (Iterator != End && !Predicate(*Iterator)) {
+      ++Iterator;
+    }
+  }
+  FilterPredicate Predicate;
+  llvm::object::section_iterator Iterator;
+  llvm::object::section_iterator End;
+};
+
+class SectionFilter {
+public:
+  SectionFilter(FilterPredicate P, llvm::object::ObjectFile const &O)
+      : Predicate(std::move(P)), Object(O) {}
+  SectionFilterIterator begin() {
+    return SectionFilterIterator(Predicate, Object.section_begin(),
+                                 Object.section_end());
+  }
+  SectionFilterIterator end() {
+    return SectionFilterIterator(Predicate, Object.section_end(),
+                                 Object.section_end());
+  }
+
+private:
+  FilterPredicate Predicate;
+  llvm::object::ObjectFile const &Object;
+};
+
 // Various helper functions.
+SectionFilter ToolSectionFilter(llvm::object::ObjectFile const &O);
+
+std::error_code
+getELFRelocationValueString(const object::ELFObjectFileBase *Obj,
+                            const object::RelocationRef &Rel,
+                            llvm::SmallVectorImpl<char> &Result);
+std::error_code
+getCOFFRelocationValueString(const object::COFFObjectFile *Obj,
+                             const object::RelocationRef &Rel,
+                             llvm::SmallVectorImpl<char> &Result);
+std::error_code
+getWasmRelocationValueString(const object::WasmObjectFile *Obj,
+                             const object::RelocationRef &RelRef,
+                             llvm::SmallVectorImpl<char> &Result);
+std::error_code
+getMachORelocationValueString(const object::MachOObjectFile *Obj,
+                              const object::RelocationRef &RelRef,
+                              llvm::SmallVectorImpl<char> &Result);
+
 void error(std::error_code ec);
 bool isRelocAddressLess(object::RelocationRef A, object::RelocationRef B);
 void parseInputMachO(StringRef Filename);

@@ -31,6 +31,7 @@ struct DynamicEntries {
   uint64_t StrTabAddr = 0;
   uint64_t StrSize = 0;
   Optional<uint64_t> SONameOffset;
+  std::vector<uint64_t> NeededLibNames;
 };
 
 /// This function behaves similarly to StringRef::substr(), but attempts to
@@ -94,6 +95,9 @@ static Error populateDynamic(DynamicEntries &Dyn,
       Dyn.StrSize = Entry.d_un.d_val;
       FoundDynStrSz = true;
       break;
+    case DT_NEEDED:
+      Dyn.NeededLibNames.push_back(Entry.d_un.d_val);
+      break;
     }
   }
 
@@ -110,6 +114,14 @@ static Error populateDynamic(DynamicEntries &Dyn,
         object_error::parse_failed,
         "DT_SONAME string offset (0x%016x) outside of dynamic string table",
         *Dyn.SONameOffset);
+  }
+  for (uint64_t Offset : Dyn.NeededLibNames) {
+    if (Offset >= Dyn.StrSize) {
+      return createStringError(
+          object_error::parse_failed,
+          "DT_NEEDED string offset (0x%016x) outside of dynamic string table",
+          Offset);
+    }
   }
 
   return Error::success();
@@ -164,7 +176,16 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
     DestStub->SoName = *NameOrErr;
   }
 
-  // TODO: Populate NeededLibs from .dynamic entries and linked string table.
+  // Populate NeededLibs from .dynamic entries and dynamic string table.
+  for (uint64_t NeededStrOffset : DynEnt.NeededLibNames) {
+    Expected<StringRef> LibNameOrErr =
+        terminatedSubstr(DynStr, NeededStrOffset);
+    if (!LibNameOrErr) {
+      return appendToError(LibNameOrErr.takeError(), "when reading DT_NEEDED");
+    }
+    DestStub->NeededLibs.push_back(*LibNameOrErr);
+  }
+
   // TODO: Populate Symbols from .dynsym table and linked string table.
 
   return std::move(DestStub);

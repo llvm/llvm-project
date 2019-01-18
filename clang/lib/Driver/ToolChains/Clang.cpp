@@ -1716,6 +1716,14 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
     } else
       D.Diag(diag::warn_target_unsupported_compact_branches) << CPUName;
   }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mrelax_pic_calls,
+                               options::OPT_mno_relax_pic_calls)) {
+    if (A->getOption().matches(options::OPT_mno_relax_pic_calls)) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-mips-jalr-reloc=0");
+    }
+  }
 }
 
 void Clang::AddPPCTargetArgs(const ArgList &Args,

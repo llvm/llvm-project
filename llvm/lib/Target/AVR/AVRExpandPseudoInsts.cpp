@@ -583,8 +583,8 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtr>(Block &MBB, BlockIt MBBI) {
   unsigned TmpReg = 0; // 0 for no temporary register
   unsigned SrcReg = MI.getOperand(1).getReg();
   bool SrcIsKill = MI.getOperand(1).isKill();
-  OpLo = AVR::LDRdPtrPi;
-  OpHi = AVR::LDRdPtr;
+  OpLo = AVR::LDRdPtr;
+  OpHi = AVR::LDDRdPtrQ;
   TRI->splitReg(DstReg, DstLoReg, DstHiReg);
 
   // Use a temporary register if src and dst registers are the same.
@@ -597,8 +597,7 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtr>(Block &MBB, BlockIt MBBI) {
   // Load low byte.
   auto MIBLO = buildMI(MBB, MBBI, OpLo)
     .addReg(CurDstLoReg, RegState::Define)
-    .addReg(SrcReg, RegState::Define)
-    .addReg(SrcReg);
+    .addReg(SrcReg, RegState::Define);
 
   // Push low byte onto stack if necessary.
   if (TmpReg)
@@ -607,7 +606,8 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtr>(Block &MBB, BlockIt MBBI) {
   // Load high byte.
   auto MIBHI = buildMI(MBB, MBBI, OpHi)
     .addReg(CurDstHiReg, RegState::Define)
-    .addReg(SrcReg, getKillRegState(SrcIsKill));
+    .addReg(SrcReg, getKillRegState(SrcIsKill))
+    .addImm(1);
 
   if (TmpReg) {
     // Move the high byte into the final destination.

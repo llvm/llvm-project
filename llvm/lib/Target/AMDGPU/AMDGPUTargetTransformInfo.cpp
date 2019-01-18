@@ -579,6 +579,8 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
       return false;
     case Intrinsic::amdgcn_readfirstlane:
     case Intrinsic::amdgcn_readlane:
+    case Intrinsic::amdgcn_icmp:
+    case Intrinsic::amdgcn_fcmp:
       return true;
     }
   }

@@ -45,7 +45,6 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUHSAMetadataStreamer.cpp
   AMDGPUInstrInfo.cpp
   AMDGPUInstructionSelector.cpp
-  AMDGPUIntrinsicInfo.cpp
   AMDGPUISelDAGToDAG.cpp
   AMDGPUISelLowering.cpp
   AMDGPULegalizerInfo.cpp

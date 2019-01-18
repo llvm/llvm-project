@@ -3190,6 +3190,10 @@ def warn_impcast_bitfield_precision_constant : Warning<
   "implicit truncation from %2 to bit-field changes value from %0 to %1">,
   InGroup<BitFieldConstantConversion>;
 
+def warn_impcast_fixed_point_range : Warning<
+  "implicit conversion from %0 cannot fit within the range of values for %1">,
+  InGroup<ImplicitFixedPointConversion>;
+
 def warn_impcast_literal_float_to_integer : Warning<
   "implicit conversion from %0 to %1 changes value from %2 to %3">,
   InGroup<LiteralConversion>;

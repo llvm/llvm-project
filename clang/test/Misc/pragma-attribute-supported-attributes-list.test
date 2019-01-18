@@ -80,6 +80,7 @@
 // CHECK-NEXT: NoMips16 (SubjectMatchRule_function)
 // CHECK-NEXT: NoSanitize (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_variable_is_global)
 // CHECK-NEXT: NoSanitizeSpecific (SubjectMatchRule_function, SubjectMatchRule_variable_is_global)
+// CHECK-NEXT: NoSpeculativeLoadHardening (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: NoSplitStack (SubjectMatchRule_function)
 // CHECK-NEXT: NoStackProtector (SubjectMatchRule_function)
 // CHECK-NEXT: NoThreadSafetyAnalysis (SubjectMatchRule_function)

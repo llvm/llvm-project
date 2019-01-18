@@ -1868,7 +1868,7 @@ static void sortJavaImports(const FormatStyle &Style,
     JavaImportGroups.push_back(
         findJavaImportGroup(Style, Imports[i].Identifier));
   }
-  llvm::sort(Indices.begin(), Indices.end(), [&](unsigned LHSI, unsigned RHSI) {
+  llvm::sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
         // Negating IsStatic to push static imports above non-static imports.
         return std::make_tuple(!Imports[LHSI].IsStatic, JavaImportGroups[LHSI],
                                Imports[LHSI].Identifier) <

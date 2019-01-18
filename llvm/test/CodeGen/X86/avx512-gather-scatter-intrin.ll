@@ -881,9 +881,8 @@ define <8 x float> @gather_global(<8 x i64>, i32* nocapture readnone) {
 ; CHECK-LABEL: gather_global:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
-; CHECK-NEXT:    movl $x, %eax
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vgatherqps (%rax,%zmm0,4), %ymm1 {%k1}
+; CHECK-NEXT:    vgatherqps x(,%zmm0,4), %ymm1 {%k1}
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %3 = tail call <8 x float> @llvm.x86.avx512.mask.gather.qps.512(<8 x float> zeroinitializer, i8* bitcast ([1024 x float]* @x to i8*), <8 x i64> %0, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 4)

@@ -2939,6 +2939,29 @@ void RegReductionPQBase::PrescheduleNodesWithMultipleUses() {
             (cast<RegisterSDNode>(N->getOperand(1))->getReg()))
         continue;
 
+    SDNode *PredFrameSetup = nullptr;
+    for (const SDep &Pred : SU.Preds)
+      if (Pred.isCtrl() && Pred.getSUnit()) {
+        // Find the predecessor which is not data dependence.
+        SDNode *PredND = Pred.getSUnit()->getNode();
+
+        // If PredND is FrameSetup, we should not pre-scheduled the node,
+        // or else, when bottom up scheduling, ADJCALLSTACKDOWN and
+        // ADJCALLSTACKUP may hold CallResource too long and make other
+        // calls can't be scheduled. If there's no other available node
+        // to schedule, the schedular will try to rename the register by
+        // creating copy to avoid the conflict which will fail because
+        // CallResource is not a real physical register.
+        if (PredND && PredND->isMachineOpcode() &&
+            (PredND->getMachineOpcode() == TII->getCallFrameSetupOpcode())) {
+          PredFrameSetup = PredND;
+          break;
+        }
+      }
+    // Skip the node has FrameSetup parent.
+    if (PredFrameSetup != nullptr)
+      continue;
+
     // Locate the single data predecessor.
     SUnit *PredSU = nullptr;
     for (const SDep &Pred : SU.Preds)

@@ -33,6 +33,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   };
 
   const LLT S1 = LLT::scalar(1);
+  const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
   const LLT S512 = LLT::scalar(512);
@@ -109,7 +110,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   setAction({G_BITCAST, 1, V2S16}, Legal);
 
   getActionDefinitionsBuilder(G_FCONSTANT)
-    .legalFor({S32, S64});
+    .legalFor({S32, S64, S16});
 
   // G_IMPLICIT_DEF is a no-op so we can make it legal for any value type that
   // can fit in a register.
@@ -121,13 +122,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     })
     .clampScalar(0, S1, S512);
 
-  getActionDefinitionsBuilder(G_CONSTANT)
-    .legalFor({S1, S32, S64});
 
   // FIXME: i1 operands to intrinsics should always be legal, but other i1
   // values may not be legal.  We need to figure out how to distinguish
   // between these two scenarios.
-  setAction({G_CONSTANT, S1}, Legal);
+  // FIXME: Pointer types
+  getActionDefinitionsBuilder(G_CONSTANT)
+    .legalFor({S1, S32, S64, V2S32, V2S16})
+    .clampScalar(0, S32, S64)
+    .widenScalarToNextPow2(0);
 
   setAction({G_FRAME_INDEX, PrivatePtr}, Legal);
 
@@ -155,7 +158,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   setAction({G_SEXT, 1, S32}, Legal);
 
   setAction({G_ANYEXT, S64}, Legal);
+  setAction({G_ANYEXT, S32}, Legal);
   setAction({G_ANYEXT, 1, S32}, Legal);
+  setAction({G_ANYEXT, 1, S16}, Legal);
 
   setAction({G_FPTOSI, S32}, Legal);
   setAction({G_FPTOSI, 1, S32}, Legal);

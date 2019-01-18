@@ -986,11 +986,24 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     break;
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
+  case TargetOpcode::G_ZEXTLOAD:
+  case TargetOpcode::G_SEXTLOAD:
     // Generic loads and stores must have a single MachineMemOperand
     // describing that access.
-    if (!MI->hasOneMemOperand())
+    if (!MI->hasOneMemOperand()) {
       report("Generic instruction accessing memory must have one mem operand",
              MI);
+    } else {
+      if (MI->getOpcode() == TargetOpcode::G_ZEXTLOAD ||
+          MI->getOpcode() == TargetOpcode::G_SEXTLOAD) {
+        const MachineMemOperand &MMO = **MI->memoperands_begin();
+        LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+        if (MMO.getSize() * 8 >= DstTy.getSizeInBits()) {
+          report("Generic extload must have a narrower memory type", MI);
+        }
+      }
+    }
+
     break;
   case TargetOpcode::G_PHI: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
@@ -1007,6 +1020,19 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       report("Generic Instruction G_PHI has operands with incompatible/missing "
              "types",
              MI);
+    break;
+  }
+  case TargetOpcode::G_BITCAST: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    if (!DstTy.isValid() || !SrcTy.isValid())
+      break;
+
+    if (SrcTy.isPointer() != DstTy.isPointer())
+      report("bitcast cannot convert between pointers and other types", MI);
+
+    if (SrcTy.getSizeInBits() != DstTy.getSizeInBits())
+      report("bitcast sizes must match", MI);
     break;
   }
   case TargetOpcode::G_SEXT:
@@ -1172,6 +1198,17 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
                  << "\n";
         }
     }
+    break;
+  }
+  case TargetOpcode::G_ICMP:
+  case TargetOpcode::G_FCMP: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(2).getReg());
+
+    if ((DstTy.isVector() != SrcTy.isVector()) ||
+        (DstTy.isVector() && DstTy.getNumElements() != SrcTy.getNumElements()))
+      report("Generic vector icmp/fcmp must preserve number of lanes", MI);
+
     break;
   }
   case TargetOpcode::STATEPOINT:
