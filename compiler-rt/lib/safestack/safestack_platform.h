@@ -16,13 +16,20 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 
+#include <stdint.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
 
+#if SANITIZER_NETBSD
+#include <lwp.h>
+#endif
+
 namespace safestack {
 
-inline pid_t GetTid() {
+using ThreadId = uint64_t;
+
+inline ThreadId GetTid() {
 #if SANITIZER_NETBSD
   return _lwp_self();
 #elif SANITIZER_FREEBSD
@@ -38,7 +45,7 @@ inline pid_t GetTid() {
 #endif
 }
 
-inline int TgKill(pid_t pid, pid_t tid, int sig) {
+inline int TgKill(pid_t pid, ThreadId tid, int sig) {
 #if SANITIZER_NETBSD
   (void)pid;
   return _lwp_kill(tid, sig);

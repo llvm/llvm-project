@@ -151,7 +151,7 @@ struct thread_stack_ll {
   void *stack_base;
   size_t size;
   pid_t pid;
-  pid_t tid;
+  ThreadId tid;
 };
 
 /// Linked list of unsafe stacks for threads that are exiting. We delay
@@ -174,7 +174,7 @@ void thread_cleanup_handler(void *_iter) {
   pthread_mutex_unlock(&thread_stacks_mutex);
 
   pid_t pid = getpid();
-  pid_t tid = GetTid();
+  ThreadId tid = GetTid();
 
   // Free stacks for dead threads
   thread_stack_ll **stackp = &temp_stacks;

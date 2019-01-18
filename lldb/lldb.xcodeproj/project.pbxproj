@@ -120,6 +120,7 @@
 		AFC2DCE91E6E2F2C00283714 /* Baton.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC2DCE81E6E2F2C00283714 /* Baton.cpp */; };
 		268900D013353E6F00698AC0 /* Block.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F1310F1B8EC00F91463 /* Block.cpp */; };
 		49DEF1251CD7C6DF006A7C7D /* BlockPointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DEF11F1CD7BD90006A7C7D /* BlockPointer.cpp */; };
+		4CAEC6A821F26D15007C3DD5 /* BreakpadRecords.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CAEC6A621F26D15007C3DD5 /* BreakpadRecords.cpp */; };
 		2689FFEF13353DB600698AC0 /* Breakpoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E0A10F1B83100F91463 /* Breakpoint.cpp */; };
 		2660387E211CA98200329572 /* BreakpointBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2660387D211CA98200329572 /* BreakpointBase.cpp */; };
 		2689FFF113353DB600698AC0 /* BreakpointID.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E0B10F1B83100F91463 /* BreakpointID.cpp */; };
@@ -1459,6 +1460,8 @@
 		26BC7C5510F1B6E900F91463 /* Block.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Block.h; path = include/lldb/Symbol/Block.h; sourceTree = "<group>"; };
 		49DEF11F1CD7BD90006A7C7D /* BlockPointer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BlockPointer.cpp; path = Language/CPlusPlus/BlockPointer.cpp; sourceTree = "<group>"; };
 		49DEF1201CD7BD90006A7C7D /* BlockPointer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BlockPointer.h; path = Language/CPlusPlus/BlockPointer.h; sourceTree = "<group>"; };
+		4CAEC6A621F26D15007C3DD5 /* BreakpadRecords.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BreakpadRecords.cpp; sourceTree = "<group>"; };
+		4CAEC6A721F26D15007C3DD5 /* BreakpadRecords.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BreakpadRecords.h; sourceTree = "<group>"; };
 		26BC7E0A10F1B83100F91463 /* Breakpoint.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Breakpoint.cpp; path = source/Breakpoint/Breakpoint.cpp; sourceTree = "<group>"; };
 		26BC7CEE10F1B71400F91463 /* Breakpoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Breakpoint.h; path = include/lldb/Breakpoint/Breakpoint.h; sourceTree = "<group>"; };
 		2660387D211CA98200329572 /* BreakpointBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointBase.cpp; path = "tools/lldb-vscode/BreakpointBase.cpp"; sourceTree = "<group>"; };
@@ -6185,6 +6188,8 @@
 		4C9BF11621C0467700FA4036 /* Breakpad */ = {
 			isa = PBXGroup;
 			children = (
+				4CAEC6A721F26D15007C3DD5 /* BreakpadRecords.h */,
+				4CAEC6A621F26D15007C3DD5 /* BreakpadRecords.cpp */,
 				4C9BF11821C0467700FA4036 /* ObjectFileBreakpad.h */,
 				4C9BF11921C0467700FA4036 /* ObjectFileBreakpad.cpp */,
 			);
@@ -8211,6 +8216,7 @@
 				232CB61B191E00CD00EF39FC /* NativeThreadProtocol.cpp in Sources */,
 				4CD44CFB20B37C440003557C /* DWARFIndex.cpp in Sources */,
 				2689010113353E6F00698AC0 /* ThreadPlanStepOut.cpp in Sources */,
+				4CAEC6A821F26D15007C3DD5 /* BreakpadRecords.cpp in Sources */,
 				2689010213353E6F00698AC0 /* ThreadPlanStepOverBreakpoint.cpp in Sources */,
 				3FDFED2919BA6D96009756A7 /* ThreadLauncher.cpp in Sources */,
 				4C719395207D235400FDF430 /* OptionArgParser.cpp in Sources */,
