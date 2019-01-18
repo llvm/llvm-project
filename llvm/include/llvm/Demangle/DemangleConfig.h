@@ -1,14 +1,16 @@
-//===--- Compiler.h ---------------------------------------------*- C++ -*-===//
+//===--- DemangleConfig.h ---------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
+//===----------------------------------------------------------------------===//
 //
 // This file contains a variety of feature test macros copied from
 // include/llvm/Support/Compiler.h so that LLVMDemangle does not need to take
 // a dependency on LLVMSupport.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_DEMANGLE_COMPILER_H
@@ -37,57 +39,62 @@
 #define __has_builtin(x) 0
 #endif
 
-#ifndef LLVM_GNUC_PREREQ
+#ifndef DEMANGLE_GNUC_PREREQ
 #if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
-#define LLVM_GNUC_PREREQ(maj, min, patch)                                      \
+#define DEMANGLE_GNUC_PREREQ(maj, min, patch)                           \
   ((__GNUC__ << 20) + (__GNUC_MINOR__ << 10) + __GNUC_PATCHLEVEL__ >=          \
    ((maj) << 20) + ((min) << 10) + (patch))
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__)
-#define LLVM_GNUC_PREREQ(maj, min, patch)                                      \
+#define DEMANGLE_GNUC_PREREQ(maj, min, patch)                           \
   ((__GNUC__ << 20) + (__GNUC_MINOR__ << 10) >= ((maj) << 20) + ((min) << 10))
 #else
-#define LLVM_GNUC_PREREQ(maj, min, patch) 0
+#define DEMANGLE_GNUC_PREREQ(maj, min, patch) 0
 #endif
 #endif
 
-#if __has_attribute(used) || LLVM_GNUC_PREREQ(3, 1, 0)
-#define LLVM_ATTRIBUTE_USED __attribute__((__used__))
+#if __has_attribute(used) || DEMANGLE_GNUC_PREREQ(3, 1, 0)
+#define DEMANGLE_ATTRIBUTE_USED __attribute__((__used__))
 #else
-#define LLVM_ATTRIBUTE_USED
+#define DEMANGLE_ATTRIBUTE_USED
 #endif
 
-#if __has_builtin(__builtin_unreachable) || LLVM_GNUC_PREREQ(4, 5, 0)
-#define LLVM_BUILTIN_UNREACHABLE __builtin_unreachable()
+#if __has_builtin(__builtin_unreachable) || DEMANGLE_GNUC_PREREQ(4, 5, 0)
+#define DEMANGLE_UNREACHABLE __builtin_unreachable()
 #elif defined(_MSC_VER)
-#define LLVM_BUILTIN_UNREACHABLE __assume(false)
+#define DEMANGLE_UNREACHABLE __assume(false)
+#else
+#define DEMANGLE_UNREACHABLE
 #endif
 
-#if __has_attribute(noinline) || LLVM_GNUC_PREREQ(3, 4, 0)
-#define LLVM_ATTRIBUTE_NOINLINE __attribute__((noinline))
+#if __has_attribute(noinline) || DEMANGLE_GNUC_PREREQ(3, 4, 0)
+#define DEMANGLE_ATTRIBUTE_NOINLINE __attribute__((noinline))
 #elif defined(_MSC_VER)
-#define LLVM_ATTRIBUTE_NOINLINE __declspec(noinline)
+#define DEMANGLE_ATTRIBUTE_NOINLINE __declspec(noinline)
 #else
-#define LLVM_ATTRIBUTE_NOINLINE
+#define DEMANGLE_ATTRIBUTE_NOINLINE
 #endif
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-#define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_USED
+#if !defined(NDEBUG)
+#define DEMANGLE_DUMP_METHOD DEMANGLE_ATTRIBUTE_NOINLINE DEMANGLE_ATTRIBUTE_USED
 #else
-#define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE
+#define DEMANGLE_DUMP_METHOD DEMANGLE_ATTRIBUTE_NOINLINE
 #endif
 
 #if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
-#define LLVM_FALLTHROUGH [[fallthrough]]
+#define DEMANGLE_FALLTHROUGH [[fallthrough]]
 #elif __has_cpp_attribute(gnu::fallthrough)
-#define LLVM_FALLTHROUGH [[gnu::fallthrough]]
+#define DEMANGLE_FALLTHROUGH [[gnu::fallthrough]]
 #elif !__cplusplus
 // Workaround for llvm.org/PR23435, since clang 3.6 and below emit a spurious
 // error when __has_cpp_attribute is given a scoped attribute in C mode.
-#define LLVM_FALLTHROUGH
+#define DEMANGLE_FALLTHROUGH
 #elif __has_cpp_attribute(clang::fallthrough)
-#define LLVM_FALLTHROUGH [[clang::fallthrough]]
+#define DEMANGLE_FALLTHROUGH [[clang::fallthrough]]
 #else
-#define LLVM_FALLTHROUGH
+#define DEMANGLE_FALLTHROUGH
 #endif
+
+#define DEMANGLE_NAMESPACE_BEGIN namespace llvm { namespace itanium_demangle {
+#define DEMANGLE_NAMESPACE_END } }
 
 #endif

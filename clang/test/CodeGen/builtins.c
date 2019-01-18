@@ -246,6 +246,9 @@ void test_float_builtins(float F, double D, long double LD) {
   // CHECK: fcmp uge float {{.*}}, 0x3810000000000000
   // CHECK: and i1
   // CHECK: and i1
+
+  res = __builtin_flt_rounds();
+  // CHECK: call i32 @llvm.flt.rounds(
 }
 
 // CHECK-LABEL: define void @test_float_builtin_ops

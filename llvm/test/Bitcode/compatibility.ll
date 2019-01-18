@@ -761,6 +761,12 @@ define void @atomics(i32* %word) {
   ret void
 }
 
+define void @fp_atomics(float* %word) {
+; CHECK: %atomicrmw.xchg = atomicrmw xchg float* %word, float 1.000000e+00 monotonic
+  %atomicrmw.xchg = atomicrmw xchg float* %word, float 1.0 monotonic
+  ret void
+}
+
 ;; Fast Math Flags
 define void @fastmathflags_unop(float %op1) {
   %f.nnan = fneg nnan float %op1

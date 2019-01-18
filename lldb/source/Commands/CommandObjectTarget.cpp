@@ -1348,7 +1348,7 @@ static void DumpModuleUUID(Stream &strm, Module *module) {
 static uint32_t DumpCompileUnitLineTable(CommandInterpreter &interpreter,
                                          Stream &strm, Module *module,
                                          const FileSpec &file_spec,
-                                         bool load_addresses) {
+                                         lldb::DescriptionLevel desc_level) {
   uint32_t num_matches = 0;
   if (module) {
     SymbolContextList sc_list;
@@ -1367,7 +1367,7 @@ static uint32_t DumpCompileUnitLineTable(CommandInterpreter &interpreter,
         if (line_table)
           line_table->GetDescription(
               &strm, interpreter.GetExecutionContext().GetTargetPtr(),
-              lldb::eDescriptionLevelBrief);
+              desc_level);
         else
           strm << "No line table";
       }
@@ -2406,6 +2406,8 @@ public:
 
   ~CommandObjectTargetModulesDumpLineTable() override = default;
 
+  Options *GetOptions() override { return &m_options; }
+
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target = m_exe_ctx.GetTargetPtr();
@@ -2438,8 +2440,9 @@ protected:
             if (DumpCompileUnitLineTable(
                     m_interpreter, result.GetOutputStream(),
                     target_modules.GetModulePointerAtIndexUnlocked(i),
-                    file_spec, m_exe_ctx.GetProcessPtr() &&
-                                   m_exe_ctx.GetProcessRef().IsAlive()))
+                    file_spec,
+                    m_options.m_verbose ? eDescriptionLevelFull
+                                        : eDescriptionLevelBrief))
               num_dumped++;
           }
           if (num_dumped == 0)
@@ -2459,6 +2462,43 @@ protected:
     }
     return result.Succeeded();
   }
+
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() : Options() { OptionParsingStarting(nullptr); }
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      assert(option_idx == 0 && "We only have one option.");
+      m_verbose = true;
+
+      return Status();
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_verbose = false;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      static constexpr OptionDefinition g_options[] = {
+          {LLDB_OPT_SET_ALL,
+           false,
+           "verbose",
+           'v',
+           OptionParser::eNoArgument,
+           nullptr,
+           {},
+           0,
+           eArgTypeNone,
+           "Enable verbose dump."},
+      };
+      return llvm::makeArrayRef(g_options);
+    }
+
+    bool m_verbose;
+  };
+
+  CommandOptions m_options;
 };
 
 #pragma mark CommandObjectTargetModulesDump

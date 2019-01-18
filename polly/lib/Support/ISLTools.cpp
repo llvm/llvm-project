@@ -719,7 +719,7 @@ static void printSortedPolyhedra(isl::union_set USet, llvm::raw_ostream &OS,
   }
 
   // Sort the polyhedra.
-  llvm::sort(BSets.begin(), BSets.end(), orderComparer);
+  llvm::sort(BSets, orderComparer);
 
   // Print the polyhedra.
   bool First = true;

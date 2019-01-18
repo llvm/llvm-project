@@ -33,7 +33,7 @@ cl::opt<bool> DumpBackReferences("backrefs", cl::Optional,
 cl::list<std::string> Symbols(cl::Positional, cl::desc("<input symbols>"),
                               cl::ZeroOrMore);
 
-static void demangle(const std::string &S) {
+static void msDemangle(const std::string &S) {
   int Status;
   MSDemangleFlags Flags = MSDF_None;
   if (DumpBackReferences)
@@ -75,14 +75,14 @@ int main(int argc, char **argv) {
         outs() << Line << "\n";
         outs().flush();
       }
-      demangle(Line);
+      msDemangle(Line);
       outs() << "\n";
     }
   } else {
     for (StringRef S : Symbols) {
       outs() << S << "\n";
       outs().flush();
-      demangle(S);
+      msDemangle(S);
       outs() << "\n";
     }
   }

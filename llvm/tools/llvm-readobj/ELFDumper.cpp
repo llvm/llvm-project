@@ -30,6 +30,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
@@ -271,7 +272,7 @@ public:
   void getSectionNameIndex(const Elf_Sym *Symbol, const Elf_Sym *FirstSym,
                            StringRef &SectionName,
                            unsigned &SectionIndex) const;
-  StringRef getStaticSymbolName(uint32_t Index) const;
+  std::string getStaticSymbolName(uint32_t Index) const;
 
   void printSymbolsHelper(bool IsDynamic) const;
   const Elf_Shdr *getDotSymtabSec() const { return DotSymtabSec; }
@@ -795,34 +796,37 @@ StringRef ELFDumper<ELFT>::getSymbolVersion(StringRef StrTab,
   return StringRef(StrTab.data() + name_offset);
 }
 
+static std::string maybeDemangle(StringRef Name) {
+  return opts::Demangle ? demangle(Name) : Name.str();
+}
+
 template <typename ELFT>
-StringRef ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
+std::string ELFDumper<ELFT>::getStaticSymbolName(uint32_t Index) const {
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
   StringRef StrTable = unwrapOrError(Obj->getStringTableForSymtab(*DotSymtabSec));
   Elf_Sym_Range Syms = unwrapOrError(Obj->symbols(DotSymtabSec));
   if (Index >= Syms.size())
     reportError("Invalid symbol index");
   const Elf_Sym *Sym = &Syms[Index];
-  return unwrapOrError(Sym->getName(StrTable));
+  return maybeDemangle(unwrapOrError(Sym->getName(StrTable)));
 }
 
 template <typename ELFT>
 std::string ELFDumper<ELFT>::getFullSymbolName(const Elf_Sym *Symbol,
                                                StringRef StrTable,
                                                bool IsDynamic) const {
-  StringRef SymbolName = unwrapOrError(Symbol->getName(StrTable));
+  std::string SymbolName =
+      maybeDemangle(unwrapOrError(Symbol->getName(StrTable)));
   if (!IsDynamic)
     return SymbolName;
-
-  std::string FullSymbolName(SymbolName);
 
   bool IsDefault;
   StringRef Version = getSymbolVersion(StrTable, &*Symbol, IsDefault);
   if (!Version.empty()) {
-    FullSymbolName += (IsDefault ? "@@" : "@");
-    FullSymbolName += Version;
+    SymbolName += (IsDefault ? "@@" : "@");
+    SymbolName += Version;
   }
-  return FullSymbolName;
+  return SymbolName;
 }
 
 template <typename ELFT>
@@ -2599,7 +2603,7 @@ struct GroupMember {
 
 struct GroupSection {
   StringRef Name;
-  StringRef Signature;
+  std::string Signature;
   uint64_t ShName;
   uint64_t Index;
   uint32_t Link;
@@ -2630,13 +2634,13 @@ std::vector<GroupSection> getGroups(const ELFFile<ELFT> *Obj) {
 
     StringRef Name = unwrapOrError(Obj->getSectionName(&Sec));
     StringRef Signature = StrTable.data() + Sym->st_name;
-    Ret.push_back({Name, 
-                   Signature, 
-                   Sec.sh_name, 
+    Ret.push_back({Name,
+                   maybeDemangle(Signature),
+                   Sec.sh_name,
                    I - 1,
                    Sec.sh_link,
                    Sec.sh_info,
-                   Data[0], 
+                   Data[0],
                    {}});
 
     std::vector<GroupMember> &GM = Ret.back().Members;
@@ -2693,7 +2697,7 @@ void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Shdr *SymTab,
                                      const Elf_Rela &R, bool IsRela) {
   std::string Offset, Info, Addend, Value;
   SmallString<32> RelocName;
-  StringRef TargetName;
+  std::string TargetName;
   const Elf_Sym *Sym = nullptr;
   unsigned Width = ELFT::Is64Bits ? 16 : 8;
   unsigned Bias = ELFT::Is64Bits ? 8 : 0;
@@ -2709,7 +2713,7 @@ void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Shdr *SymTab,
     TargetName = unwrapOrError(Obj->getSectionName(Sec));
   } else if (Sym) {
     StringRef StrTable = unwrapOrError(Obj->getStringTableForSymtab(*SymTab));
-    TargetName = unwrapOrError(Sym->getName(StrTable));
+    TargetName = maybeDemangle(unwrapOrError(Sym->getName(StrTable)));
   }
 
   if (Sym && IsRela) {
@@ -3375,7 +3379,7 @@ template <class ELFT>
 void GNUStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, Elf_Rela R,
                                             bool IsRela) {
   SmallString<32> RelocName;
-  StringRef SymbolName;
+  std::string SymbolName;
   unsigned Width = ELFT::Is64Bits ? 16 : 8;
   unsigned Bias = ELFT::Is64Bits ? 8 : 0;
   // First two fields are bit width dependent. The rest of them are after are
@@ -3385,8 +3389,8 @@ void GNUStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, Elf_Rela R,
   uint32_t SymIndex = R.getSymbol(Obj->isMips64EL());
   const Elf_Sym *Sym = this->dumper()->dynamic_symbols().begin() + SymIndex;
   Obj->getRelocationTypeName(R.getType(Obj->isMips64EL()), RelocName);
-  SymbolName =
-      unwrapOrError(Sym->getName(this->dumper()->getDynamicStringTable()));
+  SymbolName = maybeDemangle(
+      unwrapOrError(Sym->getName(this->dumper()->getDynamicStringTable())));
   std::string Addend, Info, Offset, Value;
   Offset = to_string(format_hex_no_prefix(R.r_offset, Width));
   Info = to_string(format_hex_no_prefix(R.r_info, Width));
@@ -4249,7 +4253,7 @@ void LLVMStyle<ELFT>::printRelocation(const ELFO *Obj, Elf_Rela Rel,
                                       const Elf_Shdr *SymTab) {
   SmallString<32> RelocName;
   Obj->getRelocationTypeName(Rel.getType(Obj->isMips64EL()), RelocName);
-  StringRef TargetName;
+  std::string TargetName;
   const Elf_Sym *Sym = unwrapOrError(Obj->getRelocationSymbol(&Rel, SymTab));
   if (Sym && Sym->getType() == ELF::STT_SECTION) {
     const Elf_Shdr *Sec = unwrapOrError(
@@ -4257,7 +4261,7 @@ void LLVMStyle<ELFT>::printRelocation(const ELFO *Obj, Elf_Rela Rel,
     TargetName = unwrapOrError(Obj->getSectionName(Sec));
   } else if (Sym) {
     StringRef StrTable = unwrapOrError(Obj->getStringTableForSymtab(*SymTab));
-    TargetName = unwrapOrError(Sym->getName(StrTable));
+    TargetName = maybeDemangle(unwrapOrError(Sym->getName(StrTable)));
   }
 
   if (opts::ExpandRelocs) {
@@ -4459,11 +4463,11 @@ template <class ELFT>
 void LLVMStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, Elf_Rela Rel) {
   SmallString<32> RelocName;
   Obj->getRelocationTypeName(Rel.getType(Obj->isMips64EL()), RelocName);
-  StringRef SymbolName;
+  std::string SymbolName;
   uint32_t SymIndex = Rel.getSymbol(Obj->isMips64EL());
   const Elf_Sym *Sym = this->dumper()->dynamic_symbols().begin() + SymIndex;
-  SymbolName =
-      unwrapOrError(Sym->getName(this->dumper()->getDynamicStringTable()));
+  SymbolName = maybeDemangle(
+      unwrapOrError(Sym->getName(this->dumper()->getDynamicStringTable())));
   if (opts::ExpandRelocs) {
     DictScope Group(W, "Relocation");
     W.printHex("Offset", Rel.r_offset);

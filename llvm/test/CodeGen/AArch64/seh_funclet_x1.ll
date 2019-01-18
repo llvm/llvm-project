@@ -1,4 +1,4 @@
-; RUN: llc -o - %s -mtriple=aarch64-windows | FileCheck %s
+; RUN: llc -o - %s -verify-machineinstrs -mtriple=aarch64-windows | FileCheck %s
 
 ; Windows runtime passes the establisher frame as the second argument to the
 ; termination handler.  Check that we copy it into fp.

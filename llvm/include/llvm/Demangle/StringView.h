@@ -5,17 +5,21 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
+//===----------------------------------------------------------------------===//
 //
-// This file contains a limited version of LLVM's StringView class.  It is
-// copied here so that LLVMDemangle need not take a dependency on LLVMSupport.
+// FIXME: Use std::string_view instead when we support C++17.
+//
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEMANGLE_STRINGVIEW_H
-#define LLVM_DEMANGLE_STRINGVIEW_H
+#ifndef DEMANGLE_STRINGVIEW_H
+#define DEMANGLE_STRINGVIEW_H
 
+#include "DemangleConfig.h"
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+
+DEMANGLE_NAMESPACE_BEGIN
 
 class StringView {
   const char *First;
@@ -43,7 +47,7 @@ public:
     if (FindBegin < size()) {
       // Just forward to memchr, which is faster than a hand-rolled loop.
       if (const void *P = ::memchr(First + FindBegin, C, size() - FindBegin))
-        return static_cast<const char *>(P) - First;
+        return size_t(static_cast<const char *>(P) - First);
     }
     return npos;
   }
@@ -117,5 +121,7 @@ inline bool operator==(const StringView &LHS, const StringView &RHS) {
   return LHS.size() == RHS.size() &&
          std::equal(LHS.begin(), LHS.end(), RHS.begin());
 }
+
+DEMANGLE_NAMESPACE_END
 
 #endif

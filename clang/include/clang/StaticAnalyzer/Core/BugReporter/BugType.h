@@ -38,12 +38,14 @@ private:
   virtual void anchor();
 
 public:
-  BugType(CheckName Check, StringRef Name, StringRef Cat)
+  BugType(CheckName Check, StringRef Name, StringRef Cat,
+          bool SuppressOnSink=false)
       : Check(Check), Name(Name), Category(Cat), Checker(nullptr),
-        SuppressOnSink(false) {}
-  BugType(const CheckerBase *Checker, StringRef Name, StringRef Cat)
+        SuppressOnSink(SuppressOnSink) {}
+  BugType(const CheckerBase *Checker, StringRef Name, StringRef Cat,
+          bool SuppressOnSink=false)
       : Check(Checker->getCheckName()), Name(Name), Category(Cat),
-        Checker(Checker), SuppressOnSink(false) {}
+        Checker(Checker), SuppressOnSink(SuppressOnSink) {}
   virtual ~BugType() = default;
 
   StringRef getName() const { return Name; }
@@ -64,7 +66,6 @@ public:
   ///  type should be suppressed if the end node of the report is post-dominated
   ///  by a sink node.
   bool isSuppressOnSink() const { return SuppressOnSink; }
-  void setSuppressOnSink(bool x) { SuppressOnSink = x; }
 };
 
 class BuiltinBug : public BugType {

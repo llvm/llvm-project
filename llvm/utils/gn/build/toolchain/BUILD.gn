@@ -157,13 +157,17 @@ template("stage2_unix_toolchain") {
     cc = "bin/clang"
     cxx = "bin/clang++"
     ld = cxx
-    ar = "bin/llvm-ar"
+    if (current_os != "mac") {
+      ar = "bin/llvm-ar"
+    }
 
     deps = [
       "//:clang($host_toolchain)",
       "//:lld($host_toolchain)",
-      "//:llvm-ar($host_toolchain)",
     ]
+    if (current_os != "mac") {
+      deps += [ "//:llvm-ar($host_toolchain)" ]
+    }
   }
 }
 

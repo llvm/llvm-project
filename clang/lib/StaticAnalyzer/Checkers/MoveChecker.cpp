@@ -502,9 +502,9 @@ bool MoveChecker::isStateResetMethod(const CXXMethodDecl *MethodDec) const {
     std::string MethodName = MethodDec->getName().lower();
     // TODO: Some of these methods (eg., resize) are not always resetting
     // the state, so we should consider looking at the arguments.
-    if (MethodName == "reset" || MethodName == "clear" ||
-        MethodName == "destroy" || MethodName == "resize" ||
-        MethodName == "shrink")
+    if (MethodName == "assign" || MethodName == "clear" ||
+        MethodName == "destroy" || MethodName == "reset" ||
+        MethodName == "resize" || MethodName == "shrink")
       return true;
   }
   return false;

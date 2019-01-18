@@ -69,9 +69,9 @@ static cl::opt<bool> EnableStaticAnalyis("hot-cold-static-analysis",
                               cl::init(true), cl::Hidden);
 
 static cl::opt<int>
-    MinOutliningThreshold("min-outlining-thresh", cl::init(3), cl::Hidden,
-                          cl::desc("Code size threshold for outlining within a "
-                                   "single BB (as a multiple of TCC_Basic)"));
+    SplittingThreshold("hotcoldsplit-threshold", cl::init(3), cl::Hidden,
+                       cl::desc("Code size threshold for splitting cold code "
+                                "(as a multiple of TCC_Basic)"));
 
 namespace {
 
@@ -101,7 +101,7 @@ bool blockEndsInUnreachable(const BasicBlock &BB) {
 
 bool unlikelyExecuted(BasicBlock &BB) {
   // Exception handling blocks are unlikely executed.
-  if (BB.isEHPad())
+  if (BB.isEHPad() || isa<ResumeInst>(BB.getTerminator()))
     return true;
 
   // The block is cold if it calls/invokes a cold function.
@@ -131,6 +131,11 @@ static bool mayExtractBlock(const BasicBlock &BB) {
 /// Check whether \p Region is profitable to outline.
 static bool isProfitableToOutline(const BlockSequence &Region,
                                   TargetTransformInfo &TTI) {
+  // If the splitting threshold is set at or below zero, skip the usual
+  // profitability check.
+  if (SplittingThreshold <= 0)
+    return true;
+
   if (Region.size() > 1)
     return true;
 
@@ -142,7 +147,7 @@ static bool isProfitableToOutline(const BlockSequence &Region,
 
     Cost += TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
 
-    if (Cost >= (MinOutliningThreshold * TargetTransformInfo::TCC_Basic))
+    if (Cost >= (SplittingThreshold * TargetTransformInfo::TCC_Basic))
       return true;
   }
   return false;
@@ -247,16 +252,6 @@ Function *HotColdSplitting::extractColdRegion(const BlockSequence &Region,
                    /* AllowAlloca */ false,
                    /* Suffix */ "cold." + std::to_string(Count));
 
-  SetVector<Value *> Inputs, Outputs, Sinks;
-  CE.findInputsOutputs(Inputs, Outputs, Sinks);
-
-  // Do not extract regions that have live exit variables.
-  if (Outputs.size() > 0) {
-    LLVM_DEBUG(llvm::dbgs() << "Not outlining; live outputs\n");
-    return nullptr;
-  }
-
-  // TODO: Run MergeBasicBlockIntoOnlyPred on the outlined function.
   Function *OrigF = Region[0]->getParent();
   if (Function *OutF = CE.extractCodeRegion()) {
     User *U = *OutF->user_begin();
@@ -386,7 +381,8 @@ public:
 
     // Add SinkBB to the cold region. It's considered as an entry point before
     // any sink-successor blocks.
-    addBlockToRegion(&SinkBB, SinkScore);
+    if (mayExtractBlock(SinkBB))
+      addBlockToRegion(&SinkBB, SinkScore);
 
     // Find all successors of SinkBB dominated by SinkBB using DFS.
     auto SuccIt = ++df_begin(&SinkBB);
@@ -481,10 +477,6 @@ bool HotColdSplitting::outlineColdRegions(Function &F, ProfileSummaryInfo &PSI,
 
   // Find all cold regions.
   for (BasicBlock *BB : RPOT) {
-    // Skip blocks which can't be outlined.
-    if (!mayExtractBlock(*BB))
-      continue;
-
     // This block is already part of some outlining region.
     if (ColdBlocks.count(BB))
       continue;

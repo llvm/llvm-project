@@ -178,10 +178,13 @@ void Generator::AddProvidersToIndex() {
                                                 sys::fs::OpenFlags::F_None);
   yaml::Output yout(*strm);
 
+  std::vector<std::string> files;
+  files.reserve(m_providers.size());
   for (auto &provider : m_providers) {
-    auto &provider_info = provider.second->GetInfo();
-    yout << const_cast<ProviderInfo &>(provider_info);
+    files.emplace_back(provider.second->GetFile());
   }
+
+  yout << files;
 }
 
 Loader::Loader(const FileSpec &root) : m_root(root), m_loaded(false) {}
@@ -196,29 +199,24 @@ llvm::Error Loader::LoadIndex() {
   if (auto err = error_or_file.getError())
     return make_error<StringError>("unable to load reproducer index", err);
 
-  std::vector<ProviderInfo> provider_info;
   yaml::Input yin((*error_or_file)->getBuffer());
-  yin >> provider_info;
-
+  yin >> m_files;
   if (auto err = yin.error())
     return make_error<StringError>("unable to read reproducer index", err);
 
-  for (auto &info : provider_info)
-    m_provider_info[info.name] = info;
+  // Sort files to speed up search.
+  llvm::sort(m_files);
 
+  // Remember that we've loaded the index.
   m_loaded = true;
 
   return llvm::Error::success();
 }
 
-llvm::Optional<ProviderInfo> Loader::GetProviderInfo(StringRef name) {
+bool Loader::HasFile(StringRef file) {
   assert(m_loaded);
-
-  auto it = m_provider_info.find(name);
-  if (it == m_provider_info.end())
-    return llvm::None;
-
-  return it->second;
+  auto it = std::lower_bound(m_files.begin(), m_files.end(), file.str());
+  return (it != m_files.end()) && (*it == file);
 }
 
 void ProviderBase::anchor() {}

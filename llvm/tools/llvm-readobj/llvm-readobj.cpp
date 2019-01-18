@@ -176,6 +176,12 @@ namespace opts {
   cl::alias HexDumpShort("x", cl::desc("Alias for --hex-dump"),
                          cl::aliasopt(HexDump));
 
+  // -demangle, -C
+  cl::opt<bool> Demangle("demangle",
+                         cl::desc("Demangle symbol names in output"));
+  cl::alias DemangleShort("C", cl::desc("Alias for --demangle"),
+                          cl::aliasopt(Demangle), cl::NotHidden);
+
   // -hash-table
   cl::opt<bool> HashTable("hash-table",
     cl::desc("Display ELF hash table"));

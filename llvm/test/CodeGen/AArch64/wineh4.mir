@@ -1,7 +1,7 @@
 # RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog \
 # RUN:   -disable-branch-fold  -filetype=obj \
 # RUN: | llvm-readobj -unwind | FileCheck %s
-# Check that multiple epilgoues are correctly placed in .xdata.
+# Check that identical multiple epilgoues are correctly shared in .xdata.
 
 # CHECK:        ExceptionData {
 # CHECK-NEXT:      FunctionLength: 164
@@ -9,7 +9,7 @@
 # CHECK-NEXT:      ExceptionData: No
 # CHECK-NEXT:      EpiloguePacked: No
 # CHECK-NEXT:      EpilogueScopes: 2
-# CHECK-NEXT:      ByteCodeLength: 48
+# CHECK-NEXT:      ByteCodeLength: 32
 # CHECK-NEXT:      Prologue [
 # CHECK-NEXT:        0xc80c              ; stp x19, x20, [sp, #96]
 # CHECK-NEXT:        0xc88a              ; stp x21, x22, [sp, #80]
@@ -37,7 +37,7 @@
 # CHECK-NEXT:        }
 # CHECK-NEXT:        EpilogueScope {
 # CHECK-NEXT:          StartOffset: 33
-# CHECK-NEXT:          EpilogueStartIndex: 30
+# CHECK-NEXT:          EpilogueStartIndex: 15
 # CHECK-NEXT:          Opcodes [
 # CHECK-NEXT:            0xc80c              ; ldp x19, x20, [sp, #96]
 # CHECK-NEXT:            0xc88a              ; ldp x21, x22, [sp, #80]

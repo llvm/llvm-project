@@ -298,6 +298,8 @@ public:
         Type == "i32x4" || Type == "i64x2" || Type == "f32x4" ||
         Type == "f64x2")
       return wasm::ValType::V128;
+    if (Type == "except_ref")
+      return wasm::ValType::EXCEPT_REF;
     return Optional<wasm::ValType>();
   }
 
@@ -317,7 +319,7 @@ public:
     while (Lexer.is(AsmToken::Identifier)) {
       auto Type = parseType(Lexer.getTok().getString());
       if (!Type)
-        return true;
+        return error("unknown type: ", Lexer.getTok());
       Types.push_back(Type.getValue());
       Parser.Lex();
       if (!isNext(AsmToken::Comma))
@@ -561,6 +563,7 @@ public:
     auto &Out = getStreamer();
     auto &TOut =
         reinterpret_cast<WebAssemblyTargetStreamer &>(*Out.getTargetStreamer());
+    auto &Ctx = Out.getContext();
 
     // TODO: any time we return an error, at least one token must have been
     // consumed, otherwise this will not signal an error to the caller.
@@ -578,8 +581,7 @@ public:
       if (!Type)
         return error("Unknown type in .globaltype directive: ", TypeTok);
       // Now set this symbol with the correct type.
-      auto WasmSym = cast<MCSymbolWasm>(
-          TOut.getStreamer().getContext().getOrCreateSymbol(SymName));
+      auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
       WasmSym->setGlobalType(
           wasm::WasmGlobalType{uint8_t(Type.getValue()), true});
@@ -597,8 +599,7 @@ public:
       auto SymName = expectIdent();
       if (SymName.empty())
         return true;
-      auto WasmSym = cast<MCSymbolWasm>(
-          TOut.getStreamer().getContext().getOrCreateSymbol(SymName));
+      auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       if (CurrentState == Label && WasmSym == LastLabel) {
         // This .functype indicates a start of a function.
         if (ensureEmptyNestingStack())
@@ -621,8 +622,7 @@ public:
       auto SymName = expectIdent();
       if (SymName.empty())
         return true;
-      auto WasmSym = cast<MCSymbolWasm>(
-          TOut.getStreamer().getContext().getOrCreateSymbol(SymName));
+      auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       auto Signature = make_unique<wasm::WasmSignature>();
       if (parseRegTypeList(Signature->Params))
         return true;

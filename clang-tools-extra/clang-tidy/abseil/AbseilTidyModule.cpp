@@ -11,6 +11,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "DurationComparisonCheck.h"
+#include "DurationConversionCastCheck.h"
 #include "DurationDivisionCheck.h"
 #include "DurationFactoryFloatCheck.h"
 #include "DurationFactoryScaleCheck.h"
@@ -32,6 +33,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<DurationComparisonCheck>(
         "abseil-duration-comparison");
+    CheckFactories.registerCheck<DurationConversionCastCheck>(
+        "abseil-duration-conversion-cast");
     CheckFactories.registerCheck<DurationDivisionCheck>(
         "abseil-duration-division");
     CheckFactories.registerCheck<DurationFactoryFloatCheck>(

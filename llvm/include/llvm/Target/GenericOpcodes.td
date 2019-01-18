@@ -689,7 +689,9 @@ def G_MERGE_VALUES : GenericInstruction {
   let hasSideEffects = 0;
 }
 
-/// Create a vector from multiple scalar registers.
+/// Create a vector from multiple scalar registers. No implicit
+/// conversion is performed (i.e. the result element type must be the
+/// same as all source operands)
 def G_BUILD_VECTOR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src0, variable_ops);

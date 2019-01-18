@@ -59,7 +59,6 @@ write_lit_config("lit_site_cfg") {
     "LLVM_LINK_LLVM_DYLIB=0",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_NATIVE_ARCH=$native_target",
-    "LLVM_TOOL_LTO_BUILD=1",  # The GN build always builds //llvm/tools/lto.
     "LLVM_USE_INTEL_JITEVENTS=0",
     "LLVM_USE_SANITIZER=",
     "PYTHON_EXECUTABLE=$python_path",

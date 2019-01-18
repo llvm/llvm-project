@@ -1,5 +1,5 @@
 ; The magic number 6 comes from (1 * TCC_Expensive) + (1 * CostOfCallX86).
-; RUN: opt -hotcoldsplit -min-outlining-thresh=6 -S < %s | FileCheck %s
+; RUN: opt -hotcoldsplit -hotcoldsplit-threshold=6 -S < %s | FileCheck %s
 
 ; Test that we outline even though there are only two cold instructions. TTI
 ; should determine that they are expensive in terms of code size.

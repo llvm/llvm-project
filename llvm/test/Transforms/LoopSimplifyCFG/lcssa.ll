@@ -3,9 +3,6 @@
 ; RUN: opt -S -enable-loop-simplifycfg-term-folding=true -loop-simplifycfg -verify-loop-info -verify-dom-info -verify-loop-lcssa < %s | FileCheck %s
 ; RUN: opt -S -enable-loop-simplifycfg-term-folding=true -passes='require<domtree>,loop(simplify-cfg)' -verify-loop-info -verify-dom-info -verify-loop-lcssa < %s | FileCheck %s
 ; RUN: opt -S -enable-loop-simplifycfg-term-folding=true -loop-simplifycfg -enable-mssa-loop-dependency=true -verify-memoryssa -verify-loop-info -verify-dom-info -verify-loop-lcssa < %s | FileCheck %s
-; XFAIL: *
-; test_01 is currently failing because the loop is not in LCSSA form after the
-; transform.
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
@@ -56,6 +53,24 @@ if.end.8:                                         ; preds = %if.end.7
 }
 
 define void @test_01() {
+; CHECK-LABEL: @test_01(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[INC41_LCSSA3:%.*]] = phi i16 [ undef, [[FOR_COND_LOOPEXIT:%.*]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    switch i32 0, label [[FOR_COND_SPLIT:%.*]] [
+; CHECK-NEXT:    i32 1, label [[FOR_COND_LOOPEXIT]]
+; CHECK-NEXT:    ]
+; CHECK:       for.cond-split:
+; CHECK-NEXT:    [[INC41_LCSSA3_LCSSA:%.*]] = phi i16 [ [[INC41_LCSSA3]], [[FOR_COND]] ]
+; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
+; CHECK:       while.cond:
+; CHECK-NEXT:    [[INC41:%.*]] = phi i16 [ [[INC4:%.*]], [[WHILE_COND]] ], [ [[INC41_LCSSA3_LCSSA]], [[FOR_COND_SPLIT]] ]
+; CHECK-NEXT:    [[INC4]] = add nsw i16 [[INC41]], 1
+; CHECK-NEXT:    br label [[WHILE_COND]]
+;
 entry:
   br label %for.cond
 

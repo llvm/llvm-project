@@ -210,13 +210,13 @@ entry:
 ; CHECK-NEXT: ...
 
 ; CHECK-SYMS: SYMBOL TABLE:
-; CHECK-SYMS-NEXT: 00000000 g     F CODE	.hidden foo
-; CHECK-SYMS-NEXT: 00000001 g     F CODE	.hidden call_direct
-; CHECK-SYMS-NEXT: 00000002 g     F CODE	.hidden call_alias
-; CHECK-SYMS-NEXT: 00000000 gw    F CODE	.hidden foo_alias
-; CHECK-SYMS-NEXT: 00000003 g     F CODE	.hidden call_direct_ptr
+; CHECK-SYMS-NEXT: 00000001 g     F CODE	.hidden foo
+; CHECK-SYMS-NEXT: 00000006 g     F CODE	.hidden call_direct
+; CHECK-SYMS-NEXT: 0000000f g     F CODE	.hidden call_alias
+; CHECK-SYMS-NEXT: 00000001 gw    F CODE	.hidden foo_alias
+; CHECK-SYMS-NEXT: 00000018 g     F CODE	.hidden call_direct_ptr
 ; CHECK-SYMS-NEXT: 00000008 g     O DATA	direct_address
-; CHECK-SYMS-NEXT: 00000004 g     F CODE	.hidden call_alias_ptr
+; CHECK-SYMS-NEXT: 0000002b g     F CODE	.hidden call_alias_ptr
 ; CHECK-SYMS-NEXT: 00000010 g     O DATA	alias_address
 ; CHECK-SYMS-NEXT: 00000000 g     O DATA	bar
 ; CHECK-SYMS-NEXT: 00000000 gw    O DATA	.hidden bar_alias
