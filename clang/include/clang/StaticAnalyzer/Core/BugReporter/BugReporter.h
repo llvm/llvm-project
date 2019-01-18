@@ -95,7 +95,7 @@ protected:
   friend class BugReportEquivClass;
   friend class BugReporter;
 
-  const BugType& BT;
+  BugType& BT;
   const Decl *DeclWithIssue = nullptr;
   std::string ShortDescription;
   std::string Description;
@@ -164,15 +164,15 @@ private:
   void popInterestingSymbolsAndRegions();
 
 public:
-  BugReport(const BugType& bt, StringRef desc, const ExplodedNode *errornode)
+  BugReport(BugType& bt, StringRef desc, const ExplodedNode *errornode)
       : BT(bt), Description(desc), ErrorNode(errornode) {}
 
-  BugReport(const BugType& bt, StringRef shortDesc, StringRef desc,
+  BugReport(BugType& bt, StringRef shortDesc, StringRef desc,
             const ExplodedNode *errornode)
       : BT(bt), ShortDescription(shortDesc), Description(desc),
         ErrorNode(errornode) {}
 
-  BugReport(const BugType &bt, StringRef desc, PathDiagnosticLocation l)
+  BugReport(BugType &bt, StringRef desc, PathDiagnosticLocation l)
       : BT(bt), Description(desc), Location(l) {}
 
   /// Create a BugReport with a custom uniqueing location.
@@ -190,7 +190,7 @@ public:
   virtual ~BugReport();
 
   const BugType& getBugType() const { return BT; }
-  //BugType& getBugType() { return BT; }
+  BugType& getBugType() { return BT; }
 
   /// True when the report has an execution path associated with it.
   ///
@@ -481,7 +481,7 @@ public:
     return {};
   }
 
-  void Register(const BugType *BT);
+  void Register(BugType *BT);
 
   /// Add the given report to the set of reports tracked by BugReporter.
   ///

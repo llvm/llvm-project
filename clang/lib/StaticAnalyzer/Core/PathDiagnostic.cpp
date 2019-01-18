@@ -735,12 +735,6 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
     return getLocationForCaller(CEE->getCalleeContext(),
                                 CEE->getLocationContext(),
                                 SMng);
-  } else if (auto CEB = P.getAs<CallExitBegin>()) {
-    if (const ReturnStmt *RS = CEB->getReturnStmt())
-      return PathDiagnosticLocation::createBegin(RS, SMng,
-                                                 CEB->getLocationContext());
-    return PathDiagnosticLocation(
-        CEB->getLocationContext()->getDecl()->getSourceRange().getEnd(), SMng);
   } else if (Optional<BlockEntrance> BE = P.getAs<BlockEntrance>()) {
     CFGElement BlockFront = BE->getBlock()->front();
     if (auto StmtElt = BlockFront.getAs<CFGStmt>()) {
