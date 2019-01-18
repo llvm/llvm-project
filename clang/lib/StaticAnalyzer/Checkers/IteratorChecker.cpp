@@ -399,14 +399,14 @@ bool isZero(ProgramStateRef State, const NonLoc &Val);
 
 IteratorChecker::IteratorChecker() {
   OutOfRangeBugType.reset(
-      new BugType(this, "Iterator out of range", "Misuse of STL APIs"));
-  OutOfRangeBugType->setSuppressOnSink(true);
+      new BugType(this, "Iterator out of range", "Misuse of STL APIs",
+                  /*SuppressOnSink=*/true));
   MismatchedBugType.reset(
-      new BugType(this, "Iterator(s) mismatched", "Misuse of STL APIs"));
-  MismatchedBugType->setSuppressOnSink(true);
+      new BugType(this, "Iterator(s) mismatched", "Misuse of STL APIs",
+                  /*SuppressOnSink=*/true));
   InvalidatedBugType.reset(
-      new BugType(this, "Iterator invalidated", "Misuse of STL APIs"));
-  InvalidatedBugType->setSuppressOnSink(true);
+      new BugType(this, "Iterator invalidated", "Misuse of STL APIs",
+                  /*SuppressOnSink=*/true));
 }
 
 void IteratorChecker::checkPreCall(const CallEvent &Call,

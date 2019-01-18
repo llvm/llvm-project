@@ -26,8 +26,10 @@ namespace retaincountchecker {
 
 class RefCountBug : public BugType {
 protected:
-  RefCountBug(const CheckerBase *checker, StringRef name)
-      : BugType(checker, name, categories::MemoryRefCount) {}
+  RefCountBug(const CheckerBase *checker, StringRef name,
+              bool SuppressOnSink=false)
+      : BugType(checker, name, categories::MemoryRefCount,
+                SuppressOnSink) {}
 
 public:
   virtual const char *getDescription() const = 0;
