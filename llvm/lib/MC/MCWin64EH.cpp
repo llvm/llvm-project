@@ -517,7 +517,6 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
     auto &EpilogInstrs = I.second;
     uint32_t CodeBytes = ARM64CountOfUnwindCodes(EpilogInstrs);
 
-    uint32_t NumUnwindCodes = EpilogInstrs.size();
     MCSymbol* MatchingEpilog =
       FindMatchingEpilog(EpilogInstrs, AddedEpilogs, info);
     if (MatchingEpilog) {
