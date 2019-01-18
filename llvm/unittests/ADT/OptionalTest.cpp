@@ -8,6 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/raw_ostream.h"
+#include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -518,5 +521,52 @@ TEST_F(OptionalTest, OperatorGreaterEqual) {
   CheckRelation<GreaterEqual>(InequalityLhs, InequalityRhs, !IsLess);
 }
 
-} // end anonymous namespace
+struct ComparableAndStreamable {
+  friend bool operator==(ComparableAndStreamable,
+                         ComparableAndStreamable) LLVM_ATTRIBUTE_USED {
+    return true;
+  }
 
+  friend raw_ostream &operator<<(raw_ostream &OS, ComparableAndStreamable) {
+    return OS << "ComparableAndStreamable";
+  }
+
+  static Optional<ComparableAndStreamable> get() {
+    return ComparableAndStreamable();
+  }
+};
+
+TEST_F(OptionalTest, StreamOperator) {
+  auto to_string = [](Optional<ComparableAndStreamable> O) {
+    SmallString<16> S;
+    raw_svector_ostream OS(S);
+    OS << O;
+    return S;
+  };
+  EXPECT_EQ("ComparableAndStreamable",
+            to_string(ComparableAndStreamable::get()));
+  EXPECT_EQ("None", to_string(None));
+}
+
+struct Comparable {
+  friend bool operator==(Comparable, Comparable) LLVM_ATTRIBUTE_USED {
+    return true;
+  }
+  static Optional<Comparable> get() { return Comparable(); }
+};
+
+TEST_F(OptionalTest, UseInUnitTests) {
+  // Test that we invoke the streaming operators when pretty-printing values in
+  // EXPECT macros.
+  EXPECT_NONFATAL_FAILURE(EXPECT_EQ(llvm::None, ComparableAndStreamable::get()),
+                          R"(Expected: llvm::None
+      Which is: None
+To be equal to: ComparableAndStreamable::get()
+      Which is: ComparableAndStreamable)");
+
+  // Test that it is still possible to compare objects which do not have a
+  // custom streaming operator.
+  EXPECT_NONFATAL_FAILURE(EXPECT_EQ(llvm::None, Comparable::get()), "object");
+}
+
+} // end anonymous namespace

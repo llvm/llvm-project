@@ -160,6 +160,22 @@ public:
     addExpr(Inst, getImm());
   }
 
+  void addImmCom8Operands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    // The operand is actually a imm8, but we have its bitwise
+    // negation in the assembly source, so twiddle it here.
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    Inst.addOperand(MCOperand::createImm(~(uint8_t)CE->getValue()));
+  }
+
+  bool isImmCom8() const {
+    if (!isImm()) return false;
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    if (!CE) return false;
+    int64_t Value = CE->getValue();
+    return isUInt<8>(Value);
+  }
+
   bool isReg() const { return Kind == k_Register; }
   bool isImm() const { return Kind == k_Immediate; }
   bool isToken() const { return Kind == k_Token; }

@@ -79,7 +79,8 @@ bool formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 ///
 /// Looks at all instructions in the loop which have uses outside of the
 /// current loop. For each, an LCSSA PHI node is inserted and the uses outside
-/// the loop are rewritten to use this node.
+/// the loop are rewritten to use this node. Sub-loops must be in LCSSA form
+/// already.
 ///
 /// LoopInfo and DominatorTree are required and preserved.
 ///

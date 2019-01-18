@@ -1004,7 +1004,7 @@ private:
   }
 
   Value *foldConstant(Instruction::BinaryOps Opc, Value *L,
-                      Value *R, const Twine &Name = nullptr) const {
+                      Value *R, const Twine &Name) const {
     auto *LC = dyn_cast<Constant>(L);
     auto *RC = dyn_cast<Constant>(R);
     return (LC && RC) ? Insert(Folder.CreateBinOp(Opc, LC, RC), Name) : nullptr;

@@ -10485,9 +10485,9 @@ unsigned char ASTContext::getFixedPointIBits(QualType Ty) const {
 }
 
 FixedPointSemantics ASTContext::getFixedPointSemantics(QualType Ty) const {
-  assert(Ty->isFixedPointType() ||
-         Ty->isIntegerType() && "Can only get the fixed point semantics for a "
-                                "fixed point or integer type.");
+  assert((Ty->isFixedPointType() || Ty->isIntegerType()) &&
+         "Can only get the fixed point semantics for a "
+         "fixed point or integer type.");
   if (Ty->isIntegerType())
     return FixedPointSemantics::GetIntegerSemantics(getIntWidth(Ty),
                                                     Ty->isSignedIntegerType());

@@ -152,9 +152,8 @@ define <4 x float> @gather_global(<4 x i64>, i32* nocapture readnone) {
 ; X32-LABEL: gather_global:
 ; X32:       # %bb.0:
 ; X32-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; X32-NEXT:    movl $x, %eax
 ; X32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X32-NEXT:    vgatherqps %xmm2, (%eax,%ymm0,4), %xmm1
+; X32-NEXT:    vgatherqps %xmm2, x(,%ymm0,4), %xmm1
 ; X32-NEXT:    vmovaps %xmm1, %xmm0
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
@@ -162,9 +161,8 @@ define <4 x float> @gather_global(<4 x i64>, i32* nocapture readnone) {
 ; X64-LABEL: gather_global:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; X64-NEXT:    movl $x, %eax
 ; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vgatherqps %xmm2, (%rax,%ymm0,4), %xmm1
+; X64-NEXT:    vgatherqps %xmm2, x(,%ymm0,4), %xmm1
 ; X64-NEXT:    vmovaps %xmm1, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq

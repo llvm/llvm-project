@@ -232,3 +232,9 @@ void CheckSuffixOnIntegerLiterals() {
   auto auto_accum = 0k;  // expected-error{{invalid suffix 'k' on integer constant}}
                          // expected-warning@-1{{type specifier missing, defaults to 'int'}}
 }
+
+// Overflow
+short _Accum sa_const = 256.0k;   // expected-warning{{implicit conversion from 256.0 cannot fit within the range of values for 'short _Accum'}}
+short _Fract sf_const = 1.0hk;    // expected-warning{{implicit conversion from 1.0 cannot fit within the range of values for 'short _Fract'}}
+unsigned _Accum ua_const = -1.0k; // expected-warning{{implicit conversion from -1.0 cannot fit within the range of values for 'unsigned _Accum'}}
+short _Accum sa_const2 = 128.0k + 128.0k; // expected-warning{{implicit conversion from 256.0 cannot fit within the range of values for 'short _Accum'}}

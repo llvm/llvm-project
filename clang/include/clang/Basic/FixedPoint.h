@@ -118,8 +118,21 @@ class APFixedPoint {
 
    bool getBoolValue() const { return Val.getBoolValue(); }
 
-   // Convert this number to match the semantics provided.
-   APFixedPoint convert(const FixedPointSemantics &DstSema) const;
+   // Convert this number to match the semantics provided. If the overflow
+   // parameter is provided, set this value to true or false to indicate if this
+   // operation results in an overflow.
+   APFixedPoint convert(const FixedPointSemantics &DstSema,
+                        bool *Overflow = nullptr) const;
+
+   // Perform binary operations on a fixed point type. The resulting fixed point
+   // value will be in the common, full precision semantics that can represent
+   // the precision and ranges os both input values. See convert() for an
+   // explanation of the Overflow parameter.
+   APFixedPoint add(const APFixedPoint &Other, bool *Overflow = nullptr) const;
+
+   /// Perform a unary negation (-X) on this fixed point type, taking into
+   /// account saturation if applicable.
+   APFixedPoint negate(bool *Overflow = nullptr) const;
 
    APFixedPoint shr(unsigned Amt) const {
      return APFixedPoint(Val >> Amt, Sema);

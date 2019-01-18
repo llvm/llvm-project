@@ -81,17 +81,17 @@ namespace llvm {
 
     /// Iterators for registry entries.
     ///
-    class iterator {
+    class iterator
+        : public llvm::iterator_facade_base<iterator, std::forward_iterator_tag,
+                                            const entry> {
       const node *Cur;
 
     public:
       explicit iterator(const node *N) : Cur(N) {}
 
       bool operator==(const iterator &That) const { return Cur == That.Cur; }
-      bool operator!=(const iterator &That) const { return Cur != That.Cur; }
       iterator &operator++() { Cur = Cur->Next; return *this; }
       const entry &operator*() const { return Cur->Val; }
-      const entry *operator->() const { return &Cur->Val; }
     };
 
     // begin is not defined here in order to avoid usage of an undefined static

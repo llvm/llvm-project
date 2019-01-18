@@ -50,7 +50,7 @@ private:
 class RefCountReport : public BugReport {
 protected:
   SymbolRef Sym;
-  bool isLeak;
+  bool isLeak = false;
 
 public:
   RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
