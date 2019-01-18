@@ -1055,6 +1055,12 @@ wasm::WasmFunction &WasmObjectFile::getDefinedFunction(uint32_t Index) {
   return Functions[Index - NumImportedFunctions];
 }
 
+const wasm::WasmFunction &
+WasmObjectFile::getDefinedFunction(uint32_t Index) const {
+  assert(isDefinedFunctionIndex(Index));
+  return Functions[Index - NumImportedFunctions];
+}
+
 wasm::WasmGlobal &WasmObjectFile::getDefinedGlobal(uint32_t Index) {
   assert(isDefinedGlobalIndex(Index));
   return Globals[Index - NumImportedGlobals];
@@ -1221,7 +1227,12 @@ Expected<StringRef> WasmObjectFile::getSymbolName(DataRefImpl Symb) const {
 }
 
 Expected<uint64_t> WasmObjectFile::getSymbolAddress(DataRefImpl Symb) const {
-  return getSymbolValue(Symb);
+  auto &Sym = getWasmSymbol(Symb);
+  if (Sym.Info.Kind == wasm::WASM_SYMBOL_TYPE_FUNCTION &&
+      isDefinedFunctionIndex(Sym.Info.ElementIndex))
+    return getDefinedFunction(Sym.Info.ElementIndex).CodeSectionOffset;
+  else
+    return getSymbolValue(Symb);
 }
 
 uint64_t WasmObjectFile::getWasmSymbolValue(const WasmSymbol &Sym) const {

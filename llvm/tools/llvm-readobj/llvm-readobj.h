@@ -56,6 +56,7 @@ namespace opts {
   extern llvm::cl::opt<bool> ExpandRelocs;
   extern llvm::cl::opt<bool> RawRelr;
   extern llvm::cl::opt<bool> CodeViewSubsectionBytes;
+  extern llvm::cl::opt<bool> Demangle;
   enum OutputStyleTy { LLVM, GNU };
   extern llvm::cl::opt<OutputStyleTy> Output;
 } // namespace opts

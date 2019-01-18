@@ -1247,7 +1247,7 @@ static void generatePathDiagnosticsForNode(const ExplodedNode *N,
 
 static std::unique_ptr<PathDiagnostic>
 generateEmptyDiagnosticForReport(BugReport *R, SourceManager &SM) {
-  BugType &BT = R->getBugType();
+  const BugType &BT = R->getBugType();
   return llvm::make_unique<PathDiagnostic>(
       R->getBugType().getCheckName(), R->getDeclWithIssue(),
       R->getBugType().getName(), R->getDescription(),
@@ -2684,7 +2684,7 @@ GRBugReporter::generatePathDiagnostics(
   return Out;
 }
 
-void BugReporter::Register(BugType *BT) {
+void BugReporter::Register(const BugType *BT) {
   BugTypes = F.add(BugTypes, BT);
 }
 
@@ -2718,7 +2718,7 @@ void BugReporter::emitReport(std::unique_ptr<BugReport> R) {
   R->Profile(ID);
 
   // Lookup the equivance class.  If there isn't one, create it.
-  BugType& BT = R->getBugType();
+  const BugType& BT = R->getBugType();
   Register(&BT);
   void *InsertPos;
   BugReportEquivClass* EQ = EQClasses.FindNodeOrInsertPos(ID, InsertPos);
@@ -2836,7 +2836,7 @@ FindReportInEquivalenceClass(BugReportEquivClass& EQ,
                              SmallVectorImpl<BugReport*> &bugReports) {
   BugReportEquivClass::iterator I = EQ.begin(), E = EQ.end();
   assert(I != E);
-  BugType& BT = I->getBugType();
+  const BugType& BT = I->getBugType();
 
   // If we don't need to suppress any of the nodes because they are
   // post-dominated by a sink, simply add all the nodes in the equivalence class

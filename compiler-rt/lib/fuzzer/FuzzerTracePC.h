@@ -229,7 +229,7 @@ unsigned CounterToFeature(T Counter) {
 
 template <class Callback>  // void Callback(size_t Feature)
 ATTRIBUTE_NO_SANITIZE_ADDRESS
-__attribute__((noinline))
+ATTRIBUTE_NOINLINE
 void TracePC::CollectFeatures(Callback HandleFeature) const {
   uint8_t *Counters = this->Counters();
   size_t N = GetNumPCs();

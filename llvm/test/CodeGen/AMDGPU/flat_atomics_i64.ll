@@ -650,6 +650,15 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}atomic_xchg_f64_offset:
+; GCN: flat_atomic_swap_x2 v[{{[0-9]+:[0-9]+}}], v{{\[[0-9]+:[0-9]+\]$}}
+define amdgpu_kernel void @atomic_xchg_f64_offset(double* %out, double %in) {
+entry:
+  %gep = getelementptr double, double* %out, i64 4
+  %tmp0 = atomicrmw volatile xchg double* %gep, double %in seq_cst
+  ret void
+}
+
 ; GCN-LABEL: {{^}}atomic_xchg_i64_ret_offset:
 ; GCN: flat_atomic_swap_x2 [[RET:v\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v{{\[[0-9]+:[0-9]+\]}} glc{{$}}
 ; GCN: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, [[RET]]

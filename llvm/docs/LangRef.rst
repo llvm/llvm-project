@@ -6431,7 +6431,7 @@ The '``ret``' instruction optionally accepts a single argument, the
 return value. The type of the return value must be a ':ref:`first
 class <t_firstclass>`' type.
 
-A function is not :ref:`well formed <wellformed>` if it it has a non-void
+A function is not :ref:`well formed <wellformed>` if it has a non-void
 return type and contains a '``ret``' instruction with no return value or
 a return value with a type that does not match its type, or if it has a
 void return type and contains a '``ret``' instruction with a return
@@ -8584,13 +8584,14 @@ operation. The operation must be one of the following keywords:
 -  umax
 -  umin
 
-The type of '<value>' must be an integer type whose bit width is a power
-of two greater than or equal to eight and less than or equal to a
-target-specific size limit. The type of the '``<pointer>``' operand must
-be a pointer to that type. If the ``atomicrmw`` is marked as
-``volatile``, then the optimizer is not allowed to modify the number or
-order of execution of this ``atomicrmw`` with other :ref:`volatile
-operations <volatile>`.
+For most of these operations, the type of '<value>' must be an integer
+type whose bit width is a power of two greater than or equal to eight
+and less than or equal to a target-specific size limit. For xchg, this
+may also be a floating point type with the same size constraints as
+integers. The type of the '``<pointer>``' operand must be a pointer to
+that type. If the ``atomicrmw`` is marked as ``volatile``, then the
+optimizer is not allowed to modify the number or order of execution of
+this ``atomicrmw`` with other :ref:`volatile operations <volatile>`.
 
 A ``atomicrmw`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.

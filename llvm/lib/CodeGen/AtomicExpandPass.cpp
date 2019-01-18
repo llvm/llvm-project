@@ -496,11 +496,26 @@ static void createCmpXchgInstFun(IRBuilder<> &Builder, Value *Addr,
                                  Value *Loaded, Value *NewVal,
                                  AtomicOrdering MemOpOrder,
                                  Value *&Success, Value *&NewLoaded) {
+  Type *OrigTy = NewVal->getType();
+
+  // This code can go away when cmpxchg supports FP types.
+  bool NeedBitcast = OrigTy->isFloatingPointTy();
+  if (NeedBitcast) {
+    IntegerType *IntTy = Builder.getIntNTy(OrigTy->getPrimitiveSizeInBits());
+    unsigned AS = Addr->getType()->getPointerAddressSpace();
+    Addr = Builder.CreateBitCast(Addr, IntTy->getPointerTo(AS));
+    NewVal = Builder.CreateBitCast(NewVal, IntTy);
+    Loaded = Builder.CreateBitCast(Loaded, IntTy);
+  }
+
   Value* Pair = Builder.CreateAtomicCmpXchg(
       Addr, Loaded, NewVal, MemOpOrder,
       AtomicCmpXchgInst::getStrongestFailureOrdering(MemOpOrder));
   Success = Builder.CreateExtractValue(Pair, 1, "success");
   NewLoaded = Builder.CreateExtractValue(Pair, 0, "newloaded");
+
+  if (NeedBitcast)
+    NewLoaded = Builder.CreateBitCast(NewLoaded, OrigTy);
 }
 
 /// Emit IR to implement the given atomicrmw operation on values in registers,

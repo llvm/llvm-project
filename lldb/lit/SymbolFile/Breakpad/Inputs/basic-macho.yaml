@@ -1,0 +1,50 @@
+--- !mach-o
+FileHeader:      
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000002
+  ncmds:           9
+  sizeofcmds:      520
+  flags:           0x00000085
+  reserved:        0x00000000
+LoadCommands:    
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         7
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:        
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000100000FF0
+        size:            6
+        offset:          0x00000FF0
+        align:           4
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            B3051760-22B1-7D7B-39F9-240E077D625B
+...

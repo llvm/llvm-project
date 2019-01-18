@@ -131,6 +131,9 @@ private:
   /// SymMgr - Object that manages the symbol information.
   SymbolManager &SymMgr;
 
+  /// MRMgr - MemRegionManager object that creates memory regions.
+  MemRegionManager &MRMgr;
+
   /// svalBuilder - SValBuilder object that creates SVals from expressions.
   SValBuilder &svalBuilder;
 
@@ -179,6 +182,10 @@ public:
   ASTContext &getContext() const { return AMgr.getASTContext(); }
 
   AnalysisManager &getAnalysisManager() override { return AMgr; }
+
+  AnalysisDeclContextManager &getAnalysisDeclContextManager() {
+    return AMgr.getAnalysisDeclContextManager();
+  }
 
   CheckerManager &getCheckerManager() const {
     return *AMgr.getCheckerManager();
@@ -387,9 +394,9 @@ public:
     return StateMgr.getBasicVals();
   }
 
-  // FIXME: Remove when we migrate over to just using ValueManager.
   SymbolManager &getSymbolManager() { return SymMgr; }
-  const SymbolManager &getSymbolManager() const { return SymMgr; }
+  MemRegionManager &getRegionManager() { return MRMgr; }
+
 
   // Functions for external checking of whether we have unfinished work
   bool wasBlocksExhausted() const { return Engine.wasBlocksExhausted(); }

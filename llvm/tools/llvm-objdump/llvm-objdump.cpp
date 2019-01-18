@@ -463,21 +463,6 @@ bool llvm::isRelocAddressLess(RelocationRef A, RelocationRef B) {
   return A.getOffset() < B.getOffset();
 }
 
-static std::string demangle(StringRef Name) {
-  char *Demangled = nullptr;
-  if (Name.startswith("_Z"))
-    Demangled = itaniumDemangle(Name.data(), Demangled, nullptr, nullptr);
-  else if (Name.startswith("?"))
-    Demangled = microsoftDemangle(Name.data(), Demangled, nullptr, nullptr);
-
-  if (!Demangled)
-    return Name;
-
-  std::string Ret = Demangled;
-  free(Demangled);
-  return Ret;
-}
-
 template <class ELFT>
 static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
                                                 const RelocationRef &RelRef,
@@ -491,44 +476,32 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
   auto SecOrErr = EF.getSection(Rel.d.a);
   if (!SecOrErr)
     return errorToErrorCode(SecOrErr.takeError());
-  const Elf_Shdr *Sec = *SecOrErr;
-  auto SymTabOrErr = EF.getSection(Sec->sh_link);
-  if (!SymTabOrErr)
-    return errorToErrorCode(SymTabOrErr.takeError());
-  const Elf_Shdr *SymTab = *SymTabOrErr;
-  assert(SymTab->sh_type == ELF::SHT_SYMTAB ||
-         SymTab->sh_type == ELF::SHT_DYNSYM);
-  auto StrTabSec = EF.getSection(SymTab->sh_link);
-  if (!StrTabSec)
-    return errorToErrorCode(StrTabSec.takeError());
-  auto StrTabOrErr = EF.getStringTable(*StrTabSec);
-  if (!StrTabOrErr)
-    return errorToErrorCode(StrTabOrErr.takeError());
-  StringRef StrTab = *StrTabOrErr;
+
   int64_t Addend = 0;
   // If there is no Symbol associated with the relocation, we set the undef
   // boolean value to 'true'. This will prevent us from calling functions that
   // requires the relocation to be associated with a symbol.
+  //
+  // In SHT_REL case we would need to read the addend from section data.
+  // GNU objdump does not do that and we just follow for simplicity.
   bool Undef = false;
-  switch (Sec->sh_type) {
-  default:
-    return object_error::parse_failed;
-  case ELF::SHT_REL: {
-    // TODO: Read implicit addend from section data.
-    break;
-  }
-  case ELF::SHT_RELA: {
+  if ((*SecOrErr)->sh_type == ELF::SHT_RELA) {
     const Elf_Rela *ERela = Obj->getRela(Rel);
     Addend = ERela->r_addend;
     Undef = ERela->getSymbol(false) == 0;
-    break;
+  } else if ((*SecOrErr)->sh_type != ELF::SHT_REL) {
+    return object_error::parse_failed;
   }
-  }
-  std::string Target;
+
+  // Default scheme is to print Target, as well as "+ <addend>" for nonzero
+  // addend. Should be acceptable for all normal purposes.
+  std::string FmtBuf;
+  raw_string_ostream Fmt(FmtBuf);
+
   if (!Undef) {
     symbol_iterator SI = RelRef.getSymbol();
-    const Elf_Sym *symb = Obj->getSymbol(SI->getRawDataRefImpl());
-    if (symb->getType() == ELF::STT_SECTION) {
+    const Elf_Sym *Sym = Obj->getSymbol(SI->getRawDataRefImpl());
+    if (Sym->getType() == ELF::STT_SECTION) {
       Expected<section_iterator> SymSI = SI->getSection();
       if (!SymSI)
         return errorToErrorCode(SymSI.takeError());
@@ -536,24 +509,20 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
       auto SecName = EF.getSectionName(SymSec);
       if (!SecName)
         return errorToErrorCode(SecName.takeError());
-      Target = *SecName;
+      Fmt << *SecName;
     } else {
-      Expected<StringRef> SymName = symb->getName(StrTab);
+      Expected<StringRef> SymName = SI->getName();
       if (!SymName)
         return errorToErrorCode(SymName.takeError());
       if (Demangle)
-        Target = demangle(*SymName);
+        Fmt << demangle(*SymName);
       else
-        Target = *SymName;
+        Fmt << *SymName;
     }
-  } else
-    Target = "*ABS*";
+  } else {
+    Fmt << "*ABS*";
+  }
 
-  // Default scheme is to print Target, as well as "+ <addend>" for nonzero
-  // addend. Should be acceptable for all normal purposes.
-  std::string FmtBuf;
-  raw_string_ostream Fmt(FmtBuf);
-  Fmt << Target;
   if (Addend != 0)
     Fmt << (Addend < 0 ? "" : "+") << Addend;
   Fmt.flush();
@@ -1635,6 +1604,12 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 #else
       raw_ostream &DebugOut = nulls();
 #endif
+
+      // Some targets (like WebAssembly) have a special prelude at the start
+      // of each symbol.
+      DisAsm->onSymbolStart(SymbolName, Size, Bytes.slice(Start, End - Start),
+                            SectionAddr + Start, DebugOut, CommentStream);
+      Start += Size;
 
       for (Index = Start; Index < End; Index += Size) {
         MCInst Inst;

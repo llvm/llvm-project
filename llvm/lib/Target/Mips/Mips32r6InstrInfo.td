@@ -1105,7 +1105,7 @@ def : MipsPat<(select i32:$cond, immz, i32:$f),
 
 // Pseudo instructions
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
-    hasExtraSrcRegAllocReq = 1, isCTI = 1, Defs = [AT] in {
+    hasExtraSrcRegAllocReq = 1, isCTI = 1, Defs = [AT], hasPostISelHook = 1 in {
   class TailCallRegR6<Instruction JumpInst, Register RT, RegisterOperand RO> :
     PseudoSE<(outs), (ins RO:$rs), [(MipsTailCall RO:$rs)], II_JR>,
     PseudoInstExpansion<(JumpInst RT:$rt, RO:$rs)>;

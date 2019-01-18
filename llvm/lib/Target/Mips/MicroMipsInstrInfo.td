@@ -426,6 +426,7 @@ class JumpLinkRegMM16<string opstr, RegisterOperand RO> :
   let isCall = 1;
   let hasDelaySlot = 1;
   let Defs = [RA];
+  let hasPostISelHook = 1;
 }
 
 // 16-bit Jump Reg

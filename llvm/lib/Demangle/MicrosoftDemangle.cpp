@@ -18,7 +18,7 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/MicrosoftDemangleNodes.h"
 
-#include "llvm/Demangle/Compiler.h"
+#include "llvm/Demangle/DemangleConfig.h"
 #include "llvm/Demangle/StringView.h"
 #include "llvm/Demangle/Utility.h"
 
@@ -265,7 +265,7 @@ Demangler::demangleSpecialTableSymbolNode(StringView &MangledName,
     NI->Name = "`RTTI Complete Object Locator'";
     break;
   default:
-    LLVM_BUILTIN_UNREACHABLE;
+    DEMANGLE_UNREACHABLE;
   }
   QualifiedNameNode *QN = demangleNameScopeChain(MangledName, NI);
   SpecialTableSymbolNode *STSN = Arena.alloc<SpecialTableSymbolNode>();
@@ -632,7 +632,7 @@ translateIntrinsicFunctionCode(char CH, FunctionIdentifierCodeGroup Group) {
   case FunctionIdentifierCodeGroup::DoubleUnder:
     return DoubleUnder[Index];
   }
-  LLVM_BUILTIN_UNREACHABLE;
+  DEMANGLE_UNREACHABLE;
 }
 
 IdentifierNode *
@@ -1188,7 +1188,7 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
   switch (MangledName.popFront()) {
   case '1':
     IsWcharT = true;
-    LLVM_FALLTHROUGH;
+    DEMANGLE_FALLTHROUGH;
   case '0':
     break;
   default:
@@ -1255,7 +1255,7 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
       Result->Char = CharKind::Char32;
       break;
     default:
-      LLVM_BUILTIN_UNREACHABLE;
+      DEMANGLE_UNREACHABLE;
     }
     const unsigned NumChars = BytesDecoded / CharBytes;
     for (unsigned CharIndex = 0; CharIndex < NumChars; ++CharIndex) {
@@ -2083,15 +2083,15 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
       case 'J':
         TPRN->ThunkOffsets[TPRN->ThunkOffsetCount++] =
             demangleSigned(MangledName);
-        LLVM_FALLTHROUGH;
+        DEMANGLE_FALLTHROUGH;
       case 'I':
         TPRN->ThunkOffsets[TPRN->ThunkOffsetCount++] =
             demangleSigned(MangledName);
-        LLVM_FALLTHROUGH;
+        DEMANGLE_FALLTHROUGH;
       case 'H':
         TPRN->ThunkOffsets[TPRN->ThunkOffsetCount++] =
             demangleSigned(MangledName);
-        LLVM_FALLTHROUGH;
+        DEMANGLE_FALLTHROUGH;
       case '1':
         break;
       default:
@@ -2117,13 +2117,13 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
       case 'G':
         TPRN->ThunkOffsets[TPRN->ThunkOffsetCount++] =
             demangleSigned(MangledName);
-        LLVM_FALLTHROUGH;
+        DEMANGLE_FALLTHROUGH;
       case 'F':
         TPRN->ThunkOffsets[TPRN->ThunkOffsetCount++] =
             demangleSigned(MangledName);
         TPRN->ThunkOffsets[TPRN->ThunkOffsetCount++] =
             demangleSigned(MangledName);
-        LLVM_FALLTHROUGH;
+        DEMANGLE_FALLTHROUGH;
       case '0':
         break;
       default:

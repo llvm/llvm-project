@@ -57,6 +57,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
@@ -90,6 +91,8 @@ static cl::opt<bool>
 NoZeroDivCheck("mno-check-zero-division", cl::Hidden,
                cl::desc("MIPS: Don't trap on integer division by zero."),
                cl::init(false));
+
+extern cl::opt<bool> EmitJalrReloc;
 
 static const MCPhysReg Mips64DPRegs[8] = {
   Mips::D12_64, Mips::D13_64, Mips::D14_64, Mips::D15_64,
@@ -2879,6 +2882,54 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
     Ops.push_back(InFlag);
 }
 
+void MipsTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                                       SDNode *Node) const {
+  switch (MI.getOpcode()) {
+    default:
+      return;
+    case Mips::JALR:
+    case Mips::JALRPseudo:
+    case Mips::JALR64:
+    case Mips::JALR64Pseudo:
+    case Mips::JALR16_MM:
+    case Mips::JALRC16_MMR6:
+    case Mips::TAILCALLREG:
+    case Mips::TAILCALLREG64:
+    case Mips::TAILCALLR6REG:
+    case Mips::TAILCALL64R6REG:
+    case Mips::TAILCALLREG_MM:
+    case Mips::TAILCALLREG_MMR6: {
+      if (!EmitJalrReloc ||
+          Subtarget.inMips16Mode() ||
+          !isPositionIndependent() ||
+          Node->getNumOperands() < 1 ||
+          Node->getOperand(0).getNumOperands() < 2) {
+        return;
+      }
+      // We are after the callee address, set by LowerCall().
+      // If added to MI, asm printer will emit .reloc R_MIPS_JALR for the
+      // symbol.
+      const SDValue TargetAddr = Node->getOperand(0).getOperand(1);
+      StringRef Sym;
+      if (const GlobalAddressSDNode *G =
+              dyn_cast_or_null<const GlobalAddressSDNode>(TargetAddr)) {
+        Sym = G->getGlobal()->getName();
+      }
+      else if (const ExternalSymbolSDNode *ES =
+                   dyn_cast_or_null<const ExternalSymbolSDNode>(TargetAddr)) {
+        Sym = ES->getSymbol();
+      }
+
+      if (Sym.empty())
+        return;
+
+      MachineFunction *MF = MI.getParent()->getParent();
+      MCSymbol *S = MF->getContext().getOrCreateSymbol(Sym);
+      MI.addOperand(MachineOperand::CreateMCSymbol(S, MipsII::MO_JALR));
+    }
+  }
+}
+
 /// LowerCall - functions arguments are copied from virtual regs to
 /// (physical regs)/(stack frame), CALLSEQ_START and CALLSEQ_END are emitted.
 SDValue
@@ -2930,7 +2981,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // the maximum out going argument area (including the reserved area), and
   // preallocates the stack space on entrance to the caller.
   //
-  // FIXME: We should do the same for efficency and space.
+  // FIXME: We should do the same for efficiency and space.
 
   // Note: The check on the calling convention below must match
   //       MipsABIInfo::GetCalleeAllocdArgSizeInBytes().

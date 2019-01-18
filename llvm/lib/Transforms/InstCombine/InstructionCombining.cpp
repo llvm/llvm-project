@@ -3065,9 +3065,11 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
       I->isTerminator())
     return false;
 
-  // Do not sink alloca instructions out of the entry block.
-  if (isa<AllocaInst>(I) && I->getParent() ==
-        &DestBlock->getParent()->getEntryBlock())
+  // Do not sink static or dynamic alloca instructions. Static allocas must
+  // remain in the entry block, and dynamic allocas must not be sunk in between
+  // a stacksave / stackrestore pair, which would incorrectly shorten its
+  // lifetime.
+  if (isa<AllocaInst>(I))
     return false;
 
   // Do not sink into catchswitch blocks.

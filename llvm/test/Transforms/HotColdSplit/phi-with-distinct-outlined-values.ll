@@ -1,4 +1,4 @@
-; RUN: opt -S -hotcoldsplit < %s | FileCheck %s
+; RUN: opt -S -hotcoldsplit -hotcoldsplit-threshold=0 < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
@@ -18,7 +18,6 @@ entry:
 
 coldbb:
   call void @sink()
-  call void @sideeffect()
   call void @sideeffect()
   br i1 undef, label %if.end, label %coldbb2
 
