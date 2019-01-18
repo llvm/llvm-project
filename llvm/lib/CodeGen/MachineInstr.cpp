@@ -225,12 +225,13 @@ void MachineInstr::addOperand(MachineFunction &MF, const MachineOperand &Op) {
   }
 
 #ifndef NDEBUG
-  bool isMetaDataOp = Op.getType() == MachineOperand::MO_Metadata;
+  bool isDebugOp = Op.getType() == MachineOperand::MO_Metadata ||
+                   Op.getType() == MachineOperand::MO_MCSymbol;
   // OpNo now points as the desired insertion point.  Unless this is a variadic
   // instruction, only implicit regs are allowed beyond MCID->getNumOperands().
   // RegMask operands go between the explicit and implicit operands.
   assert((isImpReg || Op.isRegMask() || MCID->isVariadic() ||
-          OpNo < MCID->getNumOperands() || isMetaDataOp) &&
+          OpNo < MCID->getNumOperands() || isDebugOp) &&
          "Trying to add an operand to a machine instr that is already done!");
 #endif
 

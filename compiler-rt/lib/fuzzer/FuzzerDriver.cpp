@@ -29,7 +29,12 @@
 
 // This function should be present in the libFuzzer so that the client
 // binary can test for its existence.
+#if LIBFUZZER_MSVC
+extern "C" void __libfuzzer_is_present() {}
+#pragma comment(linker, "/include:__libfuzzer_is_present")
+#else
 extern "C" __attribute__((used)) void __libfuzzer_is_present() {}
+#endif  // LIBFUZZER_MSVC
 
 namespace fuzzer {
 

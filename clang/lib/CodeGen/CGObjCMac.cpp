@@ -1550,6 +1550,15 @@ private:
     return false;
   }
 
+  bool isClassLayoutKnownStatically(const ObjCInterfaceDecl *ID) {
+    // NSObject is a fixed size. If we can see the @implementation of a class
+    // which inherits from NSObject then we know that all it's offsets also must
+    // be fixed. FIXME: Can we do this if see a chain of super classes with
+    // implementations leading to NSObject?
+    return ID->getImplementation() && ID->getSuperClass() &&
+           ID->getSuperClass()->getName() == "NSObject";
+  }
+
 public:
   CGObjCNonFragileABIMac(CodeGen::CodeGenModule &cgm);
 
@@ -6702,6 +6711,12 @@ CGObjCNonFragileABIMac::EmitIvarOffsetVar(const ObjCInterfaceDecl *ID,
       IvarOffsetGV->setVisibility(llvm::GlobalValue::DefaultVisibility);
   }
 
+  // If ID's layout is known, then make the global constant. This serves as a
+  // useful assertion: we'll never use this variable to calculate ivar offsets,
+  // so if the runtime tries to patch it then we should crash.
+  if (isClassLayoutKnownStatically(ID))
+    IvarOffsetGV->setConstant(true);
+
   if (CGM.getTriple().isOSBinFormatMachO())
     IvarOffsetGV->setSection("__DATA, __objc_ivar");
   return IvarOffsetGV;
@@ -6990,17 +7005,24 @@ LValue CGObjCNonFragileABIMac::EmitObjCValueForIvar(
                                   Offset);
 }
 
-llvm::Value *CGObjCNonFragileABIMac::EmitIvarOffset(
-  CodeGen::CodeGenFunction &CGF,
-  const ObjCInterfaceDecl *Interface,
-  const ObjCIvarDecl *Ivar) {
-  llvm::Value *IvarOffsetValue = ObjCIvarOffsetVariable(Interface, Ivar);
-  IvarOffsetValue = CGF.Builder.CreateAlignedLoad(IvarOffsetValue,
-                                                  CGF.getSizeAlign(), "ivar");
-  if (IsIvarOffsetKnownIdempotent(CGF, Ivar))
-    cast<llvm::LoadInst>(IvarOffsetValue)
-        ->setMetadata(CGM.getModule().getMDKindID("invariant.load"),
-                      llvm::MDNode::get(VMContext, None));
+llvm::Value *
+CGObjCNonFragileABIMac::EmitIvarOffset(CodeGen::CodeGenFunction &CGF,
+                                       const ObjCInterfaceDecl *Interface,
+                                       const ObjCIvarDecl *Ivar) {
+  llvm::Value *IvarOffsetValue;
+  if (isClassLayoutKnownStatically(Interface)) {
+    IvarOffsetValue = llvm::ConstantInt::get(
+        ObjCTypes.IvarOffsetVarTy,
+        ComputeIvarBaseOffset(CGM, Interface->getImplementation(), Ivar));
+  } else {
+    llvm::GlobalVariable *GV = ObjCIvarOffsetVariable(Interface, Ivar);
+    IvarOffsetValue =
+        CGF.Builder.CreateAlignedLoad(GV, CGF.getSizeAlign(), "ivar");
+    if (IsIvarOffsetKnownIdempotent(CGF, Ivar))
+      cast<llvm::LoadInst>(IvarOffsetValue)
+          ->setMetadata(CGM.getModule().getMDKindID("invariant.load"),
+                        llvm::MDNode::get(VMContext, None));
+  }
 
   // This could be 32bit int or 64bit integer depending on the architecture.
   // Cast it to 64bit integer value, if it is a 32bit integer ivar offset value

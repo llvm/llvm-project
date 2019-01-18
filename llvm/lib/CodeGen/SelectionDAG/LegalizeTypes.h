@@ -640,6 +640,7 @@ private:
   SDValue PromoteFloatRes_SELECT_CC(SDNode *N);
   SDValue PromoteFloatRes_UnaryOp(SDNode *N);
   SDValue PromoteFloatRes_UNDEF(SDNode *N);
+  SDValue BitcastToInt_ATOMIC_SWAP(SDNode *N);
   SDValue PromoteFloatRes_XINT_TO_FP(SDNode *N);
 
   bool PromoteFloatOperand(SDNode *N, unsigned OpNo);

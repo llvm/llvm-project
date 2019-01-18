@@ -22,6 +22,7 @@ using namespace llvm;
 using llvm::itanium_demangle::ForwardTemplateReference;
 using llvm::itanium_demangle::Node;
 using llvm::itanium_demangle::NodeKind;
+using llvm::itanium_demangle::StringView;
 
 namespace {
 struct FoldingSetNodeIDBuilder {

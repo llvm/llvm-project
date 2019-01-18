@@ -460,6 +460,7 @@ class JALRC16_MMR6_DESC_BASE<string opstr, RegisterOperand RO>
   let isCall = 1;
   let hasDelaySlot = 0;
   let Defs = [RA];
+  let hasPostISelHook = 1;
 }
 class JALRC16_MMR6_DESC : JALRC16_MMR6_DESC_BASE<"jalr", GPR32Opnd>;
 

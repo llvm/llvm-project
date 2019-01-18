@@ -65,10 +65,7 @@ class MCInstrInfo;
 
 } // end namespace llvm
 
-static cl::opt<bool>
-EmitJalrReloc("mips-jalr-reloc", cl::Hidden,
-              cl::desc("MIPS: Emit R_{MICRO}MIPS_JALR relocation with jalr"),
-              cl::init(true));
+extern cl::opt<bool> EmitJalrReloc;
 
 namespace {
 

@@ -5,22 +5,24 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
+//===----------------------------------------------------------------------===//
 //
-// This file is copied from llvm/lib/Demangle/Utility.h.
+// Provide some utility classes for use in the demangler(s).
+//
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBCXX_DEMANGLE_UTILITY_H
-#define LIBCXX_DEMANGLE_UTILITY_H
+#ifndef DEMANGLE_UTILITY_H
+#define DEMANGLE_UTILITY_H
 
 #include "StringView.h"
-
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <iterator>
 #include <limits>
 
-namespace {
+DEMANGLE_NAMESPACE_BEGIN
+
 // Stream that AST nodes write their string representation into after the AST
 // has been parsed.
 class OutputStream {
@@ -185,6 +187,6 @@ inline bool initializeOutputStream(char *Buf, size_t *N, OutputStream &S,
   return true;
 }
 
-} // namespace
+DEMANGLE_NAMESPACE_END
 
 #endif

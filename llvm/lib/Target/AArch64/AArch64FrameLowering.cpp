@@ -929,9 +929,11 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     // directly, and is not retrieved from X1.
     if (F.hasPersonalityFn()) {
       EHPersonality Per = classifyEHPersonality(F.getPersonalityFn());
-      if (isAsynchronousEHPersonality(Per))
+      if (isAsynchronousEHPersonality(Per)) {
         BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), AArch64::FP)
             .addReg(AArch64::X1).setMIFlag(MachineInstr::FrameSetup);
+        MBB.addLiveIn(AArch64::X1);
+      }
     }
 
     return;

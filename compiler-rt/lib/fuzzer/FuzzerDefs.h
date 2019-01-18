@@ -120,7 +120,28 @@
 #  define ALWAYS_INLINE
 #endif // __clang__
 
+#if LIBFUZZER_WINDOWS
+#define ATTRIBUTE_NO_SANITIZE_ADDRESS
+#else
 #define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
+#endif
+
+#if LIBFUZZER_WINDOWS
+#define ATTRIBUTE_ALIGNED(X) __declspec(align(X))
+#define ATTRIBUTE_INTERFACE __declspec(dllexport)
+// This is used for __sancov_lowest_stack which is needed for
+// -fsanitize-coverage=stack-depth. That feature is not yet available on
+// Windows, so make the symbol static to avoid linking errors.
+#define ATTRIBUTES_INTERFACE_TLS_INITIAL_EXEC static
+#define ATTRIBUTE_NOINLINE __declspec(noinline)
+#else
+#define ATTRIBUTE_ALIGNED(X) __attribute__((aligned(X)))
+#define ATTRIBUTE_INTERFACE __attribute__((visibility("default")))
+#define ATTRIBUTES_INTERFACE_TLS_INITIAL_EXEC \
+  ATTRIBUTE_INTERFACE __attribute__((tls_model("initial-exec"))) thread_local
+
+#define ATTRIBUTE_NOINLINE __attribute__((noinline))
+#endif
 
 #if defined(__has_feature)
 #  if __has_feature(address_sanitizer)
@@ -132,19 +153,6 @@
 #  endif
 #else
 #  define ATTRIBUTE_NO_SANITIZE_ALL
-#endif
-
-#if LIBFUZZER_WINDOWS
-#define ATTRIBUTE_INTERFACE __declspec(dllexport)
-// This is used for __sancov_lowest_stack which is needed for
-// -fsanitize-coverage=stack-depth. That feature is not yet available on
-// Windows, so make the symbol static to avoid linking errors.
-#define ATTRIBUTES_INTERFACE_TLS_INITIAL_EXEC \
-  __attribute__((tls_model("initial-exec"))) thread_local static
-#else
-#define ATTRIBUTE_INTERFACE __attribute__((visibility("default")))
-#define ATTRIBUTES_INTERFACE_TLS_INITIAL_EXEC \
-  ATTRIBUTE_INTERFACE __attribute__((tls_model("initial-exec"))) thread_local
 #endif
 
 namespace fuzzer {

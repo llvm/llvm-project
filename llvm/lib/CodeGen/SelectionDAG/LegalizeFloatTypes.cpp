@@ -104,6 +104,7 @@ bool DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FSUB:        R = SoftenFloatRes_FSUB(N); break;
     case ISD::FTRUNC:      R = SoftenFloatRes_FTRUNC(N); break;
     case ISD::LOAD:        R = SoftenFloatRes_LOAD(N, ResNo); break;
+    case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
     case ISD::SELECT:      R = SoftenFloatRes_SELECT(N, ResNo); break;
     case ISD::SELECT_CC:   R = SoftenFloatRes_SELECT_CC(N, ResNo); break;
     case ISD::SINT_TO_FP:
@@ -1932,7 +1933,7 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::SINT_TO_FP:
     case ISD::UINT_TO_FP: R = PromoteFloatRes_XINT_TO_FP(N); break;
     case ISD::UNDEF:      R = PromoteFloatRes_UNDEF(N); break;
-
+    case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
   }
 
   if (R.getNode())
@@ -2164,5 +2165,31 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_XINT_TO_FP(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteFloatRes_UNDEF(SDNode *N) {
   return DAG.getUNDEF(TLI.getTypeToTransformTo(*DAG.getContext(),
                                                N->getValueType(0)));
+}
+
+SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+
+  AtomicSDNode *AM = cast<AtomicSDNode>(N);
+  SDLoc SL(N);
+
+  SDValue CastVal = BitConvertToInteger(AM->getVal());
+  EVT CastVT = CastVal.getValueType();
+
+  SDValue NewAtomic
+    = DAG.getAtomic(ISD::ATOMIC_SWAP, SL, CastVT,
+                    DAG.getVTList(CastVT, MVT::Other),
+                    { AM->getChain(), AM->getBasePtr(), CastVal },
+                    AM->getMemOperand());
+
+  SDValue ResultCast = DAG.getNode(GetPromotionOpcode(VT, NFPVT), SL, NFPVT,
+                                   NewAtomic);
+  // Legalize the chain result by replacing uses of the old value chain with the
+  // new one
+  ReplaceValueWith(SDValue(N, 1), NewAtomic.getValue(1));
+
+  return ResultCast;
+
 }
 

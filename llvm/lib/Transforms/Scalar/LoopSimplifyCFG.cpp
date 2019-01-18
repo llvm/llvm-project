@@ -379,6 +379,15 @@ private:
           StillReachable->addChildLoop(&L);
         else
           LI.addTopLevelLoop(&L);
+
+        // Some values from loops in [OuterLoop, StillReachable) could be used
+        // in the current loop. Now it is not their child anymore, so such uses
+        // require LCSSA Phis.
+        Loop *FixLCSSALoop = OuterLoop;
+        while (FixLCSSALoop->getParentLoop() != StillReachable)
+          FixLCSSALoop = FixLCSSALoop->getParentLoop();
+        assert(FixLCSSALoop && "Should be a loop!");
+        formLCSSARecursively(*FixLCSSALoop, DT, &LI, &SE);
       }
     }
   }
@@ -402,9 +411,10 @@ private:
         LI.erase(LI.getLoopFor(BB));
       }
       LI.removeBlock(BB);
-      DeleteDeadBlock(BB, &DTU);
-      ++NumLoopBlocksDeleted;
     }
+
+    DeleteDeadBlocks(DeadLoopBlocks, &DTU);
+    NumLoopBlocksDeleted += DeadLoopBlocks.size();
   }
 
   /// Constant-fold terminators of blocks acculumated in FoldCandidates into the

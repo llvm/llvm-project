@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
@@ -148,31 +149,55 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
     }
   }
 
+  EmitProducerInfo(M);
+}
+
+void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
+  llvm::SmallVector<std::pair<std::string, std::string>, 4> Languages;
+  if (const NamedMDNode *Debug = M.getNamedMetadata("llvm.dbg.cu")) {
+     llvm::SmallSet<StringRef, 4> SeenLanguages;
+    for (size_t i = 0, e = Debug->getNumOperands(); i < e; ++i) {
+      const auto *CU = cast<DICompileUnit>(Debug->getOperand(i));
+      StringRef Language = dwarf::LanguageString(CU->getSourceLanguage());
+      Language.consume_front("DW_LANG_");
+      if (SeenLanguages.insert(Language).second)
+        Languages.emplace_back(Language.str(), "");
+    }
+  }
+
+  llvm::SmallVector<std::pair<std::string, std::string>, 4> Tools;
   if (const NamedMDNode *Ident = M.getNamedMetadata("llvm.ident")) {
     llvm::SmallSet<StringRef, 4> SeenTools;
-    llvm::SmallVector<std::pair<StringRef, StringRef>, 4> Tools;
     for (size_t i = 0, e = Ident->getNumOperands(); i < e; ++i) {
       const auto *S = cast<MDString>(Ident->getOperand(i)->getOperand(0));
       std::pair<StringRef, StringRef> Field = S->getString().split("version");
       StringRef Name = Field.first.trim();
       StringRef Version = Field.second.trim();
-      if (!SeenTools.insert(Name).second)
-        continue;
-      Tools.emplace_back(Name, Version);
+      if (SeenTools.insert(Name).second)
+        Tools.emplace_back(Name.str(), Version.str());
     }
+  }
+
+  int FieldCount = int(!Languages.empty()) + int(!Tools.empty());
+  if (FieldCount != 0) {
     MCSectionWasm *Producers = OutContext.getWasmSection(
         ".custom_section.producers", SectionKind::getMetadata());
     OutStreamer->PushSection();
     OutStreamer->SwitchSection(Producers);
-    OutStreamer->EmitULEB128IntValue(1);
-    OutStreamer->EmitULEB128IntValue(strlen("processed-by"));
-    OutStreamer->EmitBytes("processed-by");
-    OutStreamer->EmitULEB128IntValue(Tools.size());
-    for (auto &Tool : Tools) {
-      OutStreamer->EmitULEB128IntValue(Tool.first.size());
-      OutStreamer->EmitBytes(Tool.first);
-      OutStreamer->EmitULEB128IntValue(Tool.second.size());
-      OutStreamer->EmitBytes(Tool.second);
+    OutStreamer->EmitULEB128IntValue(FieldCount);
+    for (auto &Producers : {std::make_pair("language", &Languages),
+            std::make_pair("processed-by", &Tools)}) {
+      if (Producers.second->empty())
+        continue;
+      OutStreamer->EmitULEB128IntValue(strlen(Producers.first));
+      OutStreamer->EmitBytes(Producers.first);
+      OutStreamer->EmitULEB128IntValue(Producers.second->size());
+      for (auto &Producer : *Producers.second) {
+        OutStreamer->EmitULEB128IntValue(Producer.first.size());
+        OutStreamer->EmitBytes(Producer.first);
+        OutStreamer->EmitULEB128IntValue(Producer.second.size());
+        OutStreamer->EmitBytes(Producer.second);
+      }
     }
     OutStreamer->PopSection();
   }

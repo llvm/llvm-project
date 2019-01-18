@@ -6850,10 +6850,18 @@ int LLParser::ParseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   if (cast<PointerType>(Ptr->getType())->getElementType() != Val->getType())
     return Error(ValLoc, "atomicrmw value and pointer type do not match");
 
-  if (!Val->getType()->isIntegerTy()) {
+  if (Operation != AtomicRMWInst::Xchg && !Val->getType()->isIntegerTy()) {
     return Error(ValLoc, "atomicrmw " +
                  AtomicRMWInst::getOperationName(Operation) +
                  " operand must be an integer");
+  }
+
+  if (Operation == AtomicRMWInst::Xchg &&
+      !Val->getType()->isIntegerTy() &&
+      !Val->getType()->isFloatingPointTy()) {
+    return Error(ValLoc, "atomicrmw " +
+                 AtomicRMWInst::getOperationName(Operation) +
+                 " operand must be an integer or floating point type");
   }
 
   unsigned Size = Val->getType()->getPrimitiveSizeInBits();

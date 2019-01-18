@@ -12,6 +12,8 @@
 #ifndef LIBCXX_DEMANGLE_COMPILER_H
 #define LIBCXX_DEMANGLE_COMPILER_H
 
+#include "__config"
+
 #ifdef _MSC_VER
 // snprintf is implemented in VS 2015
 #if _MSC_VER < 1900
@@ -25,10 +27,16 @@
 
 #ifndef NDEBUG
 #if __has_attribute(noinline) && __has_attribute(used)
-#define DUMP_METHOD __attribute__((noinline, used))
+#define DEMANGLE_DUMP_METHOD __attribute__((noinline, used))
 #else
-#define DUMP_METHOD
+#define DEMANGLE_DUMP_METHOD
 #endif
 #endif
+
+#define DEMANGLE_FALLTHROUGH _LIBCPP_FALLTHROUGH()
+#define DEMANGLE_UNREACHABLE _LIBCPP_UNREACHABLE()
+
+#define DEMANGLE_NAMESPACE_BEGIN namespace { namespace itanium_demangle {
+#define DEMANGLE_NAMESPACE_END } }
 
 #endif

@@ -30,69 +30,6 @@ check_library_exists(compression compression_encode_buffer "" HAVE_LIBCOMPRESSIO
 
 add_subdirectory(MacOSX)
 
-set(generated_mach_interfaces
-  ${CMAKE_CURRENT_BINARY_DIR}/mach_exc.h
-  ${CMAKE_CURRENT_BINARY_DIR}/mach_excServer.c
-  ${CMAKE_CURRENT_BINARY_DIR}/mach_excUser.c
-  )
-add_custom_command(OUTPUT ${generated_mach_interfaces}
-  COMMAND mig ${CMAKE_CURRENT_SOURCE_DIR}/MacOSX/dbgnub-mig.defs
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/MacOSX/dbgnub-mig.defs
-  )
-
-set(DEBUGSERVER_VERS_GENERATED_FILE ${CMAKE_CURRENT_BINARY_DIR}/debugserver_vers.c)
-set_source_files_properties(${DEBUGSERVER_VERS_GENERATED_FILE} PROPERTIES GENERATED 1)
-
-add_custom_command(OUTPUT ${DEBUGSERVER_VERS_GENERATED_FILE}
-  COMMAND ${LLDB_SOURCE_DIR}/scripts/generate-vers.pl
-          ${LLDB_SOURCE_DIR}/lldb.xcodeproj/project.pbxproj debugserver
-          > ${DEBUGSERVER_VERS_GENERATED_FILE}
-  DEPENDS ${LLDB_SOURCE_DIR}/scripts/generate-vers.pl
-          ${LLDB_SOURCE_DIR}/lldb.xcodeproj/project.pbxproj
-  )
-
-set(lldbDebugserverCommonSources
-  DNBArch.cpp
-  DNBBreakpoint.cpp
-  DNB.cpp
-  DNBDataRef.cpp
-  DNBError.cpp
-  DNBLog.cpp
-  DNBRegisterInfo.cpp
-  DNBThreadResumeActions.cpp
-  JSON.cpp
-  StdStringExtractor.cpp
-  # JSON reader depends on the following LLDB-common files
-  ${LLDB_SOURCE_DIR}/source/Host/common/StringConvert.cpp
-  ${LLDB_SOURCE_DIR}/source/Host/common/SocketAddress.cpp
-  # end JSON reader dependencies
-  libdebugserver.cpp
-  PseudoTerminal.cpp
-  PThreadEvent.cpp
-  PThreadMutex.cpp
-  RNBContext.cpp
-  RNBRemote.cpp
-  RNBServices.cpp
-  RNBSocket.cpp
-  SysSignal.cpp
-  TTYState.cpp
-
-  MacOSX/CFBundle.cpp
-  MacOSX/CFString.cpp
-  MacOSX/Genealogy.cpp
-  MacOSX/MachException.cpp
-  MacOSX/MachProcess.mm
-  MacOSX/MachTask.mm
-  MacOSX/MachThread.cpp
-  MacOSX/MachThreadList.cpp
-  MacOSX/MachVMMemory.cpp
-  MacOSX/MachVMRegion.cpp
-  MacOSX/OsLogger.cpp
-  ${generated_mach_interfaces}
-  ${DEBUGSERVER_VERS_GENERATED_FILE})
-
-add_library(lldbDebugserverCommon ${lldbDebugserverCommonSources})
-
 # LLDB-specific identity, currently used for code signing debugserver.
 set(LLDB_CODESIGN_IDENTITY "" CACHE STRING
     "Override code sign identity for debugserver and for use in tests; falls back to LLVM_CODESIGNING_IDENTITY if set or lldb_codesign otherwise (Darwin only)")
@@ -241,6 +178,69 @@ if(LLDB_USE_ENTITLEMENTS)
 endif()
 
 if(build_and_sign_debugserver)
+  set(generated_mach_interfaces
+    ${CMAKE_CURRENT_BINARY_DIR}/mach_exc.h
+    ${CMAKE_CURRENT_BINARY_DIR}/mach_excServer.c
+    ${CMAKE_CURRENT_BINARY_DIR}/mach_excUser.c
+    )
+  add_custom_command(OUTPUT ${generated_mach_interfaces}
+    COMMAND mig ${CMAKE_CURRENT_SOURCE_DIR}/MacOSX/dbgnub-mig.defs
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/MacOSX/dbgnub-mig.defs
+    )
+
+  set(DEBUGSERVER_VERS_GENERATED_FILE ${CMAKE_CURRENT_BINARY_DIR}/debugserver_vers.c)
+  set_source_files_properties(${DEBUGSERVER_VERS_GENERATED_FILE} PROPERTIES GENERATED 1)
+
+  add_custom_command(OUTPUT ${DEBUGSERVER_VERS_GENERATED_FILE}
+    COMMAND ${LLDB_SOURCE_DIR}/scripts/generate-vers.pl
+            ${LLDB_SOURCE_DIR}/lldb.xcodeproj/project.pbxproj debugserver
+            > ${DEBUGSERVER_VERS_GENERATED_FILE}
+    DEPENDS ${LLDB_SOURCE_DIR}/scripts/generate-vers.pl
+            ${LLDB_SOURCE_DIR}/lldb.xcodeproj/project.pbxproj
+    )
+
+  set(lldbDebugserverCommonSources
+    DNBArch.cpp
+    DNBBreakpoint.cpp
+    DNB.cpp
+    DNBDataRef.cpp
+    DNBError.cpp
+    DNBLog.cpp
+    DNBRegisterInfo.cpp
+    DNBThreadResumeActions.cpp
+    JSON.cpp
+    StdStringExtractor.cpp
+    # JSON reader depends on the following LLDB-common files
+    ${LLDB_SOURCE_DIR}/source/Host/common/StringConvert.cpp
+    ${LLDB_SOURCE_DIR}/source/Host/common/SocketAddress.cpp
+    # end JSON reader dependencies
+    libdebugserver.cpp
+    PseudoTerminal.cpp
+    PThreadEvent.cpp
+    PThreadMutex.cpp
+    RNBContext.cpp
+    RNBRemote.cpp
+    RNBServices.cpp
+    RNBSocket.cpp
+    SysSignal.cpp
+    TTYState.cpp
+
+    MacOSX/CFBundle.cpp
+    MacOSX/CFString.cpp
+    MacOSX/Genealogy.cpp
+    MacOSX/MachException.cpp
+    MacOSX/MachProcess.mm
+    MacOSX/MachTask.mm
+    MacOSX/MachThread.cpp
+    MacOSX/MachThreadList.cpp
+    MacOSX/MachVMMemory.cpp
+    MacOSX/MachVMRegion.cpp
+    MacOSX/OsLogger.cpp
+    ${generated_mach_interfaces}
+    ${DEBUGSERVER_VERS_GENERATED_FILE})
+
+  add_library(lldbDebugserverCommon ${lldbDebugserverCommonSources})
+
   target_link_libraries(lldbDebugserverCommon
                         INTERFACE ${COCOA_LIBRARY}
                         ${CORE_FOUNDATION_LIBRARY}
@@ -267,6 +267,7 @@ if(build_and_sign_debugserver)
     ENTITLEMENTS
       ${entitlements}
     )
+
   if(IOS)
     set_property(TARGET lldbDebugserverCommon APPEND PROPERTY COMPILE_DEFINITIONS
       WITH_LOCKDOWN
@@ -281,30 +282,28 @@ if(build_and_sign_debugserver)
     set_property(TARGET lldbDebugserverCommon APPEND PROPERTY COMPILE_FLAGS
       -F${CMAKE_OSX_SYSROOT}/System/Library/PrivateFrameworks
       )
+
+    add_library(lldbDebugserverCommon_NonUI ${lldbDebugserverCommonSources})
+    target_link_libraries(lldbDebugserverCommon_NonUI
+                        INTERFACE ${COCOA_LIBRARY}
+                        ${CORE_FOUNDATION_LIBRARY}
+                        ${FOUNDATION_LIBRARY}
+                        lldbDebugserverArchSupport
+                        lldbDebugserverDarwin_DarwinLog
+                        ${LIBCOMPRESSION})
+    if(HAVE_LIBCOMPRESSION)
+      set_property(TARGET lldbDebugserverCommon_NonUI APPEND PROPERTY
+                   COMPILE_DEFINITIONS HAVE_LIBCOMPRESSION)
+    endif()
+
+    add_lldb_tool(debugserver-nonui
+      debugserver.cpp
+
+      LINK_LIBS
+        lldbDebugserverCommon_NonUI
+
+      ENTITLEMENTS
+        ${entitlements}
+      )
   endif()
-endif()
-
-if(IOS)
-  add_library(lldbDebugserverCommon_NonUI ${lldbDebugserverCommonSources})
-  target_link_libraries(lldbDebugserverCommon_NonUI
-                      INTERFACE ${COCOA_LIBRARY}
-                      ${CORE_FOUNDATION_LIBRARY}
-                      ${FOUNDATION_LIBRARY}
-                      lldbDebugserverArchSupport
-                      lldbDebugserverDarwin_DarwinLog
-                      ${LIBCOMPRESSION})
-  if(HAVE_LIBCOMPRESSION)
-    set_property(TARGET lldbDebugserverCommon_NonUI APPEND PROPERTY
-                 COMPILE_DEFINITIONS HAVE_LIBCOMPRESSION)
-  endif()
-
-  add_lldb_tool(debugserver-nonui
-    debugserver.cpp
-
-    LINK_LIBS
-      lldbDebugserverCommon_NonUI
-
-    ENTITLEMENTS
-      ${entitlements}
-    )
 endif()

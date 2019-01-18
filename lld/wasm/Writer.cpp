@@ -733,7 +733,7 @@ void Writer::layoutMemory() {
   MemAlign = 0;
   for (OutputSegment *Seg : Segments) {
     MemAlign = std::max(MemAlign, Seg->Alignment);
-    MemoryPtr = alignTo(MemoryPtr, 1 << Seg->Alignment);
+    MemoryPtr = alignTo(MemoryPtr, 1ULL << Seg->Alignment);
     Seg->StartVA = MemoryPtr;
     log(formatv("mem: {0,-15} offset={1,-8} size={2,-8} align={3}", Seg->Name,
                 MemoryPtr, Seg->Size, Seg->Alignment));

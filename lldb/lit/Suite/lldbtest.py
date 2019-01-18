@@ -94,8 +94,11 @@ class LLDBTest(TestFormat):
                 litConfig.maxIndividualTestTime))
 
         if exitCode:
-            if 'FAIL:' in out or 'FAIL:' in err:
-                return lit.Test.FAIL, out + err
+            # Match FAIL but not XFAIL.
+            for line in out.splitlines() + err.splitlines():
+                if line.startswith('FAIL:'):
+                    return lit.Test.FAIL, out + err
+
             if 'XPASS:' in out or 'XPASS:' in err:
                 return lit.Test.XPASS, out + err
 

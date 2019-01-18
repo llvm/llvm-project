@@ -21,6 +21,7 @@ if (COMPILER_RT_BUILD_XRAY)
   set(XRAY_HEADERS
     xray/xray_interface.h
     xray/xray_log_interface.h
+    xray/xray_records.h
     )
 endif(COMPILER_RT_BUILD_XRAY)
 

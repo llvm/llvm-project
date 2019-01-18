@@ -43,12 +43,19 @@ SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
   }
   // The default implementation just tries to create debug information using
   // the file representation for the module.
-  instance_ap.reset(new SymbolVendor(module_sp));
-  if (instance_ap.get()) {
-    ObjectFile *objfile = module_sp->GetObjectFile();
-    if (objfile)
-      instance_ap->AddSymbolFileRepresentation(objfile->shared_from_this());
+  ObjectFileSP sym_objfile_sp;
+  FileSpec sym_spec = module_sp->GetSymbolFileFileSpec();
+  if (sym_spec && sym_spec != module_sp->GetObjectFile()->GetFileSpec()) {
+    DataBufferSP data_sp;
+    offset_t data_offset = 0;
+    sym_objfile_sp = ObjectFile::FindPlugin(
+        module_sp, &sym_spec, 0, FileSystem::Instance().GetByteSize(sym_spec),
+        data_sp, data_offset);
   }
+  if (!sym_objfile_sp)
+    sym_objfile_sp = module_sp->GetObjectFile()->shared_from_this();
+  instance_ap.reset(new SymbolVendor(module_sp));
+  instance_ap->AddSymbolFileRepresentation(sym_objfile_sp);
   return instance_ap.release();
 }
 
