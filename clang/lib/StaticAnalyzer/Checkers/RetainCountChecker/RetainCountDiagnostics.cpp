@@ -38,6 +38,7 @@ StringRef RefCountBug::bugTypeToName(RefCountBug::RefCountBugType BT) {
   case LeakAtReturn:
     return "Leak of returned object";
   }
+  llvm_unreachable("Unknown RefCountBugType");
 }
 
 StringRef RefCountBug::getDescription() const {
@@ -60,6 +61,7 @@ StringRef RefCountBug::getDescription() const {
   case LeakAtReturn:
     return "";
   }
+  llvm_unreachable("Unknown RefCountBugType");
 }
 
 RefCountBug::RefCountBug(const CheckerBase *Checker, RefCountBugType BT)
