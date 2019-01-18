@@ -20,14 +20,19 @@ using namespace llvm;
 using namespace lldb_private;
 using namespace lldb_private::repro;
 
+struct DummyInfo {
+  static const char *name;
+  static const char *file;
+};
+
+const char *DummyInfo::name = "dummy";
+const char *DummyInfo::file = "dummy.yaml";
+
 class DummyProvider : public repro::Provider<DummyProvider> {
 public:
-  static constexpr const char *NAME = "dummy";
+  typedef DummyInfo info;
 
-  DummyProvider(const FileSpec &directory) : Provider(directory) {
-    m_info.name = "dummy";
-    m_info.files.push_back("dummy.yaml");
-  }
+  DummyProvider(const FileSpec &directory) : Provider(directory) {}
 
   static char ID;
 };
@@ -97,9 +102,6 @@ TEST(GeneratorTest, Create) {
   auto *provider = generator.Create<DummyProvider>();
   EXPECT_NE(nullptr, provider);
   EXPECT_EQ(FileSpec("/bogus/path"), provider->GetRoot());
-  EXPECT_EQ(std::string("dummy"), provider->GetInfo().name);
-  EXPECT_EQ((size_t)1, provider->GetInfo().files.size());
-  EXPECT_EQ(std::string("dummy.yaml"), provider->GetInfo().files.front());
 }
 
 TEST(GeneratorTest, Get) {
@@ -125,9 +127,6 @@ TEST(GeneratorTest, GetOrCreate) {
 
   auto &provider = generator.GetOrCreate<DummyProvider>();
   EXPECT_EQ(FileSpec("/bogus/path"), provider.GetRoot());
-  EXPECT_EQ(std::string("dummy"), provider.GetInfo().name);
-  EXPECT_EQ((size_t)1, provider.GetInfo().files.size());
-  EXPECT_EQ(std::string("dummy.yaml"), provider.GetInfo().files.front());
 
   auto &provider_alt = generator.GetOrCreate<DummyProvider>();
   EXPECT_EQ(&provider, &provider_alt);
