@@ -1,44 +1,10 @@
 // RUN: %clang_analyze_cc1 -fblocks -analyze -analyzer-output=text\
 // RUN:                    -analyzer-checker=core,osx -verify %s
 
-struct OSMetaClass;
-
-#define OS_CONSUME __attribute__((os_consumed))
-#define OS_RETURNS_RETAINED __attribute__((os_returns_retained))
-#define OS_RETURNS_RETAINED_ON_ZERO __attribute__((os_returns_retained_on_zero))
-#define OS_RETURNS_RETAINED_ON_NONZERO __attribute__((os_returns_retained_on_non_zero))
-#define OS_RETURNS_NOT_RETAINED __attribute__((os_returns_not_retained))
-#define OS_CONSUMES_THIS __attribute__((os_consumes_this))
-
-#define OSTypeID(type)   (type::metaClass)
-
-#define OSDynamicCast(type, inst)   \
-    ((type *) OSMetaClassBase::safeMetaCast((inst), OSTypeID(type)))
-
-using size_t = decltype(sizeof(int));
-
-struct OSObject {
-  virtual void retain();
-  virtual void release() {};
-  virtual void free();
-  virtual ~OSObject(){}
-
-  unsigned int foo() { return 42; }
-
-  virtual OS_RETURNS_NOT_RETAINED OSObject *identity();
-
-  static OSObject *generateObject(int);
-
-  static OSObject *getObject();
-  static OSObject *GetObject();
-
-  static void * operator new(size_t size);
-
-  static const OSMetaClass * const metaClass;
-};
+#include "os_object_base.h"
+#include "os_smart_ptr.h"
 
 struct OSIterator : public OSObject {
-
   static const OSMetaClass * const metaClass;
 };
 
@@ -88,9 +54,6 @@ struct OtherStruct {
   OtherStruct(OSArray *arr);
 };
 
-struct OSMetaClassBase {
-  static OSObject *safeMetaCast(const OSObject *inst, const OSMetaClass *meta);
-};
 
 void escape(void *);
 void escape_with_source(void *p) {}
@@ -615,4 +578,52 @@ typedef bool (^Blk)(OSObject *);
 
 void test_escape_to_unknown_block(Blk blk) {
   blk(getObject()); // no-crash
+}
+
+using OSObjectPtr = os::smart_ptr<OSObject>;
+
+void test_smart_ptr_uaf() {
+  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}
+  {
+    OSObjectPtr p(obj); // expected-note{{Calling constructor for 'smart_ptr<OSObject>'}}
+   // expected-note@-1{{Returning from constructor for 'smart_ptr<OSObject>'}}
+    // expected-note@os_smart_ptr.h:13{{Taking true branch}}
+    // expected-note@os_smart_ptr.h:14{{Calling 'smart_ptr::_retain'}}
+    // expected-note@os_smart_ptr.h:72{{Reference count incremented. The object now has a +2 retain count}}
+    // expected-note@os_smart_ptr.h:14{{Returning from 'smart_ptr::_retain'}}
+  } // expected-note{{Calling '~smart_ptr'}}
+  // expected-note@os_smart_ptr.h:35{{Taking true branch}}
+  // expected-note@os_smart_ptr.h:36{{Calling 'smart_ptr::_release'}}
+  // expected-note@os_smart_ptr.h:77{{Reference count decremented. The object now has a +1 retain count}}
+  // expected-note@os_smart_ptr.h:36{{Returning from 'smart_ptr::_release'}}
+ // expected-note@-5{{Returning from '~smart_ptr'}}
+  obj->release(); // expected-note{{Object released}}
+  obj->release(); // expected-warning{{Reference-counted object is used after it is released}}
+// expected-note@-1{{Reference-counted object is used after it is released}}
+}
+
+void test_smart_ptr_leak() {
+  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}
+  {
+    OSObjectPtr p(obj); // expected-note{{Calling constructor for 'smart_ptr<OSObject>'}}
+   // expected-note@-1{{Returning from constructor for 'smart_ptr<OSObject>'}}
+    // expected-note@os_smart_ptr.h:13{{Taking true branch}}
+    // expected-note@os_smart_ptr.h:14{{Calling 'smart_ptr::_retain'}}
+    // expected-note@os_smart_ptr.h:72{{Reference count incremented. The object now has a +2 retain count}}
+    // expected-note@os_smart_ptr.h:14{{Returning from 'smart_ptr::_retain'}}
+  } // expected-note{{Calling '~smart_ptr'}}
+  // expected-note@os_smart_ptr.h:35{{Taking true branch}}
+  // expected-note@os_smart_ptr.h:36{{Calling 'smart_ptr::_release'}}
+  // expected-note@os_smart_ptr.h:77{{Reference count decremented. The object now has a +1 retain count}}
+  // expected-note@os_smart_ptr.h:36{{Returning from 'smart_ptr::_release'}}
+ // expected-note@-5{{Returning from '~smart_ptr'}}
+} // expected-warning{{Potential leak of an object stored into 'obj'}}
+// expected-note@-1{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
+
+void test_smart_ptr_no_leak() {
+  OSObject *obj = new OSObject;
+  {
+    OSObjectPtr p(obj);
+  }
+  obj->release();
 }

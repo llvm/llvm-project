@@ -529,6 +529,13 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
   C.addTransition(state);
 }
 
+static bool isSmartPtrField(const MemRegion *MR) {
+  const auto *TR = dyn_cast<TypedValueRegion>(
+    cast<SubRegion>(MR)->getSuperRegion());
+  return TR && RetainSummaryManager::isKnownSmartPointer(TR->getValueType());
+}
+
+
 /// A value escapes in these possible cases:
 ///
 /// - binding to something that is not a memory region.
@@ -536,10 +543,15 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
 /// - binding to a variable that has a destructor attached using CleanupAttr
 ///
 /// We do not currently model what happens when a symbol is
-/// assigned to a struct field, so be conservative here and let the symbol go.
+/// assigned to a struct field, unless it is a known smart pointer
+/// implementation, about which we know that it is inlined.
 /// FIXME: This could definitely be improved upon.
 static bool shouldEscapeRegion(const MemRegion *R) {
+  if (isSmartPtrField(R))
+    return false;
+
   const auto *VR = dyn_cast<VarRegion>(R);
+
   if (!R->hasStackStorage() || !VR)
     return true;
 
