@@ -35,6 +35,7 @@ func main() {
   var dm = DefaultMirror()
   var cm = CustomMirror()
   var cs = CustomSummary()
+  var patatino = "foo"
   print("yay I am done!") //% self.expect("po dm", substrs=['a', 'b', '12', '24'])
   //% self.expect("po cm", substrs=['c', '36'])
   //% self.expect("po cm", substrs=['12', '24'], matching=False)
@@ -44,6 +45,7 @@ func main() {
   //% self.expect("script lldb.frame.FindVariable('cs').GetObjectDescription()", substrs=['a', '12', 'b', '24'])
   //% self.expect("po (12,24,36,48)", substrs=['12', '24', '36', '48'])
   //% self.expect("po [dm as Any,cm as Any,48 as Any]", substrs=['12', '24', '36', '48'])
+  //% self.expect("po patatino", substrs=['foo'])
 }
 
 main()
