@@ -25,34 +25,43 @@ namespace ento {
 namespace retaincountchecker {
 
 class RefCountBug : public BugType {
-protected:
-  RefCountBug(const CheckerBase *checker, StringRef name,
-              bool SuppressOnSink=false)
-      : BugType(checker, name, categories::MemoryRefCount,
-                SuppressOnSink) {}
-
 public:
-  virtual const char *getDescription() const = 0;
+  enum RefCountBugType {
+    UseAfterRelease,
+    ReleaseNotOwned,
+    DeallocNotOwned,
+    OverAutorelease,
+    ReturnNotOwnedForOwned,
+    LeakWithinFunction,
+    LeakAtReturn,
+  };
+  RefCountBug(const CheckerBase *checker, RefCountBugType BT);
+  StringRef getDescription() const;
+  RefCountBugType getBugType() const {
+    return BT;
+  }
 
-  virtual bool isLeak() const { return false; }
+private:
+  RefCountBugType BT;
+  static StringRef bugTypeToName(RefCountBugType BT);
 };
 
 class RefCountReport : public BugReport {
 protected:
   SymbolRef Sym;
+  bool isLeak;
 
 public:
-  RefCountReport(RefCountBug &D, const LangOptions &LOpts,
+  RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
               ExplodedNode *n, SymbolRef sym,
-              bool registerVisitor = true);
+              bool isLeak=false);
 
-  RefCountReport(RefCountBug &D, const LangOptions &LOpts,
+  RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
               ExplodedNode *n, SymbolRef sym,
               StringRef endText);
 
   llvm::iterator_range<ranges_iterator> getRanges() override {
-    const RefCountBug& BugTy = static_cast<const RefCountBug&>(getBugType());
-    if (!BugTy.isLeak())
+    if (!isLeak)
       return BugReport::getRanges();
     return llvm::make_range(ranges_iterator(), ranges_iterator());
   }
@@ -71,7 +80,7 @@ class RefLeakReport : public RefCountReport {
   void createDescription(CheckerContext &Ctx);
 
 public:
-  RefLeakReport(RefCountBug &D, const LangOptions &LOpts, ExplodedNode *n,
+  RefLeakReport(const RefCountBug &D, const LangOptions &LOpts, ExplodedNode *n,
                 SymbolRef sym, CheckerContext &Ctx);
 
   PathDiagnosticLocation getLocation(const SourceManager &SM) const override {

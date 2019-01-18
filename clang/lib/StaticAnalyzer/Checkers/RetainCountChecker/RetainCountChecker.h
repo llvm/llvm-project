@@ -251,10 +251,14 @@ class RetainCountChecker
                     check::RegionChanges,
                     eval::Assume,
                     eval::Call > {
-  mutable std::unique_ptr<RefCountBug> useAfterRelease, releaseNotOwned;
-  mutable std::unique_ptr<RefCountBug> deallocNotOwned;
-  mutable std::unique_ptr<RefCountBug> overAutorelease, returnNotOwnedForOwned;
-  mutable std::unique_ptr<RefCountBug> leakWithinFunction, leakAtReturn;
+
+  RefCountBug useAfterRelease{this, RefCountBug::UseAfterRelease};
+  RefCountBug releaseNotOwned{this, RefCountBug::ReleaseNotOwned};
+  RefCountBug deallocNotOwned{this, RefCountBug::DeallocNotOwned};
+  RefCountBug overAutorelease{this, RefCountBug::OverAutorelease};
+  RefCountBug returnNotOwnedForOwned{this, RefCountBug::ReturnNotOwnedForOwned};
+  RefCountBug leakWithinFunction{this, RefCountBug::LeakWithinFunction};
+  RefCountBug leakAtReturn{this, RefCountBug::LeakAtReturn};
 
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
 public:
@@ -266,11 +270,7 @@ public:
   /// Track sublcasses of OSObject.
   bool TrackOSObjects = false;
 
-  RetainCountChecker() {}
-
-  RefCountBug *getLeakWithinFunctionBug(const LangOptions &LOpts) const;
-
-  RefCountBug *getLeakAtReturnBug(const LangOptions &LOpts) const;
+  RetainCountChecker() {};
 
   RetainSummaryManager &getSummaryManager(ASTContext &Ctx) const {
     // FIXME: We don't support ARC being turned on and off during one analysis.
@@ -335,6 +335,9 @@ public:
   ProgramStateRef updateSymbol(ProgramStateRef state, SymbolRef sym,
                                RefVal V, ArgEffect E, RefVal::Kind &hasErr,
                                CheckerContext &C) const;
+
+
+  const RefCountBug &errorKindToBugKind(RefVal::Kind ErrorKind) const;
 
   void processNonLeakError(ProgramStateRef St, SourceRange ErrorRange,
                            RefVal::Kind ErrorKind, SymbolRef Sym,
