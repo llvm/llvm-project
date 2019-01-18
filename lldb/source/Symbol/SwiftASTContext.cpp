@@ -3392,13 +3392,12 @@ bool SwiftASTContext::LoadOneImage(Process &process, FileSpec &link_lib_spec,
     return false;
 }
 
-static void
-GetLibrarySearchPaths(std::vector<std::string> &paths,
-                      const swift::SearchPathOptions &search_path_opts) {
-  paths.clear();
-  paths.assign(search_path_opts.LibrarySearchPaths.begin(),
-            search_path_opts.LibrarySearchPaths.end());
+static std::vector<std::string>
+GetLibrarySearchPaths(const swift::SearchPathOptions &search_path_opts) {
+  std::vector<std::string> paths(search_path_opts.LibrarySearchPaths.begin(),
+                                 search_path_opts.LibrarySearchPaths.end());
   paths.push_back(search_path_opts.RuntimeLibraryPath);
+  return paths;
 }
 
 void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
@@ -3565,10 +3564,8 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
                                  load_image_error.AsCString());
     } break;
     case swift::LibraryKind::Library: {
-      std::vector<std::string> search_paths;
-
-      GetLibrarySearchPaths(search_paths,
-                            swift_module->getASTContext().SearchPathOpts);
+      std::vector<std::string> search_paths =
+          GetLibrarySearchPaths(swift_module->getASTContext().SearchPathOpts);
 
       if (LoadLibraryUsingPaths(process, library_name, search_paths, true,
                                 all_dlopen_errors))
@@ -3720,10 +3717,8 @@ void SwiftASTContext::LoadExtraDylibs(Process &process, Status &error) {
       const char *library_name = link_lib.getName().data();
       StreamString errors;
 
-      std::vector<std::string> search_paths;
-
-      GetLibrarySearchPaths(search_paths,
-                            m_compiler_invocation_ap->getSearchPathOptions());
+      std::vector<std::string> search_paths = GetLibrarySearchPaths(
+          m_compiler_invocation_ap->getSearchPathOptions());
 
       bool success = LoadLibraryUsingPaths(process, library_name, search_paths,
                                            false, errors);
