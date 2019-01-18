@@ -1116,6 +1116,8 @@ public:
   unsigned getIntrinsicInstrCost(
       Intrinsic::ID IID, Type *RetTy, ArrayRef<Type *> Tys, FastMathFlags FMF,
       unsigned ScalarizationCostPassed = std::numeric_limits<unsigned>::max()) {
+    auto *ConcreteTTI = static_cast<T *>(this);
+
     SmallVector<unsigned, 2> ISDs;
     unsigned SingleCallCost = 10; // Library call cost. Make it expensive.
     switch (IID) {
@@ -1144,8 +1146,8 @@ public:
       if (ScalarCalls == 1)
         return 1; // Return cost of a scalar intrinsic. Assume it to be cheap.
 
-      unsigned ScalarCost = static_cast<T *>(this)->getIntrinsicInstrCost(
-          IID, ScalarRetTy, ScalarTys, FMF);
+      unsigned ScalarCost =
+          ConcreteTTI->getIntrinsicInstrCost(IID, ScalarRetTy, ScalarTys, FMF);
 
       return ScalarCalls * ScalarCost + ScalarizationCost;
     }
@@ -1227,42 +1229,41 @@ public:
     case Intrinsic::sideeffect:
       return 0;
     case Intrinsic::masked_store:
-      return static_cast<T *>(this)
-          ->getMaskedMemoryOpCost(Instruction::Store, Tys[0], 0, 0);
+      return ConcreteTTI->getMaskedMemoryOpCost(Instruction::Store, Tys[0], 0,
+                                                0);
     case Intrinsic::masked_load:
-      return static_cast<T *>(this)
-          ->getMaskedMemoryOpCost(Instruction::Load, RetTy, 0, 0);
+      return ConcreteTTI->getMaskedMemoryOpCost(Instruction::Load, RetTy, 0, 0);
     case Intrinsic::experimental_vector_reduce_add:
-      return static_cast<T *>(this)->getArithmeticReductionCost(
-          Instruction::Add, Tys[0], /*IsPairwiseForm=*/false);
+      return ConcreteTTI->getArithmeticReductionCost(Instruction::Add, Tys[0],
+                                                     /*IsPairwiseForm=*/false);
     case Intrinsic::experimental_vector_reduce_mul:
-      return static_cast<T *>(this)->getArithmeticReductionCost(
-          Instruction::Mul, Tys[0], /*IsPairwiseForm=*/false);
+      return ConcreteTTI->getArithmeticReductionCost(Instruction::Mul, Tys[0],
+                                                     /*IsPairwiseForm=*/false);
     case Intrinsic::experimental_vector_reduce_and:
-      return static_cast<T *>(this)->getArithmeticReductionCost(
-          Instruction::And, Tys[0], /*IsPairwiseForm=*/false);
+      return ConcreteTTI->getArithmeticReductionCost(Instruction::And, Tys[0],
+                                                     /*IsPairwiseForm=*/false);
     case Intrinsic::experimental_vector_reduce_or:
-      return static_cast<T *>(this)->getArithmeticReductionCost(
-          Instruction::Or, Tys[0], /*IsPairwiseForm=*/false);
+      return ConcreteTTI->getArithmeticReductionCost(Instruction::Or, Tys[0],
+                                                     /*IsPairwiseForm=*/false);
     case Intrinsic::experimental_vector_reduce_xor:
-      return static_cast<T *>(this)->getArithmeticReductionCost(
-          Instruction::Xor, Tys[0], /*IsPairwiseForm=*/false);
+      return ConcreteTTI->getArithmeticReductionCost(Instruction::Xor, Tys[0],
+                                                     /*IsPairwiseForm=*/false);
     case Intrinsic::experimental_vector_reduce_fadd:
-      return static_cast<T *>(this)->getArithmeticReductionCost(
-          Instruction::FAdd, Tys[0], /*IsPairwiseForm=*/false);
+      return ConcreteTTI->getArithmeticReductionCost(Instruction::FAdd, Tys[0],
+                                                     /*IsPairwiseForm=*/false);
     case Intrinsic::experimental_vector_reduce_fmul:
-      return static_cast<T *>(this)->getArithmeticReductionCost(
-          Instruction::FMul, Tys[0], /*IsPairwiseForm=*/false);
+      return ConcreteTTI->getArithmeticReductionCost(Instruction::FMul, Tys[0],
+                                                     /*IsPairwiseForm=*/false);
     case Intrinsic::experimental_vector_reduce_smax:
     case Intrinsic::experimental_vector_reduce_smin:
     case Intrinsic::experimental_vector_reduce_fmax:
     case Intrinsic::experimental_vector_reduce_fmin:
-      return static_cast<T *>(this)->getMinMaxReductionCost(
+      return ConcreteTTI->getMinMaxReductionCost(
           Tys[0], CmpInst::makeCmpResultType(Tys[0]), /*IsPairwiseForm=*/false,
           /*IsSigned=*/true);
     case Intrinsic::experimental_vector_reduce_umax:
     case Intrinsic::experimental_vector_reduce_umin:
-      return static_cast<T *>(this)->getMinMaxReductionCost(
+      return ConcreteTTI->getMinMaxReductionCost(
           Tys[0], CmpInst::makeCmpResultType(Tys[0]), /*IsPairwiseForm=*/false,
           /*IsSigned=*/false);
     case Intrinsic::ctpop:
@@ -1305,17 +1306,16 @@ public:
     if (MinLegalCostI != LegalCost.end())
       return *MinLegalCostI;
 
-    auto MinCustomCostI = std::min_element(CustomCost.begin(), CustomCost.end());
+    auto MinCustomCostI =
+        std::min_element(CustomCost.begin(), CustomCost.end());
     if (MinCustomCostI != CustomCost.end())
       return *MinCustomCostI;
 
     // If we can't lower fmuladd into an FMA estimate the cost as a floating
     // point mul followed by an add.
     if (IID == Intrinsic::fmuladd)
-      return static_cast<T *>(this)
-                 ->getArithmeticInstrCost(BinaryOperator::FMul, RetTy) +
-             static_cast<T *>(this)
-                 ->getArithmeticInstrCost(BinaryOperator::FAdd, RetTy);
+      return ConcreteTTI->getArithmeticInstrCost(BinaryOperator::FMul, RetTy) +
+             ConcreteTTI->getArithmeticInstrCost(BinaryOperator::FAdd, RetTy);
 
     // Else, assume that we need to scalarize this intrinsic. For math builtins
     // this will emit a costly libcall, adding call overhead and spills. Make it
@@ -1333,7 +1333,7 @@ public:
           Ty = Ty->getScalarType();
         ScalarTys.push_back(Ty);
       }
-      unsigned ScalarCost = static_cast<T *>(this)->getIntrinsicInstrCost(
+      unsigned ScalarCost = ConcreteTTI->getIntrinsicInstrCost(
           IID, RetTy->getScalarType(), ScalarTys, FMF);
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
         if (Tys[i]->isVectorTy()) {

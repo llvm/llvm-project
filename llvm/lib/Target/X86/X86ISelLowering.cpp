@@ -4810,6 +4810,29 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags |= MachineMemOperand::MOStore;
     break;
   }
+  case GATHER:
+  case GATHER_AVX2: {
+    Info.ptrVal = nullptr;
+    MVT DataVT = MVT::getVT(I.getType());
+    MVT IndexVT = MVT::getVT(I.getArgOperand(2)->getType());
+    unsigned NumElts = std::min(DataVT.getVectorNumElements(),
+                                IndexVT.getVectorNumElements());
+    Info.memVT = MVT::getVectorVT(DataVT.getVectorElementType(), NumElts);
+    Info.align = 1;
+    Info.flags |= MachineMemOperand::MOLoad;
+    break;
+  }
+  case SCATTER: {
+    Info.ptrVal = nullptr;
+    MVT DataVT = MVT::getVT(I.getArgOperand(3)->getType());
+    MVT IndexVT = MVT::getVT(I.getArgOperand(2)->getType());
+    unsigned NumElts = std::min(DataVT.getVectorNumElements(),
+                                IndexVT.getVectorNumElements());
+    Info.memVT = MVT::getVectorVT(DataVT.getVectorElementType(), NumElts);
+    Info.align = 1;
+    Info.flags |= MachineMemOperand::MOStore;
+    break;
+  }
   default:
     return false;
   }
@@ -22376,25 +22399,26 @@ static SDValue getAVX2GatherNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
   if (!C)
     return SDValue();
   SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl, MVT::i8);
-  EVT MaskVT = Mask.getValueType();
+  EVT MaskVT = Mask.getValueType().changeVectorElementTypeToInteger();
   SDVTList VTs = DAG.getVTList(Op.getValueType(), MaskVT, MVT::Other);
-  SDValue Disp = DAG.getTargetConstant(0, dl, MVT::i32);
-  SDValue Segment = DAG.getRegister(0, MVT::i32);
   // If source is undef or we know it won't be used, use a zero vector
   // to break register dependency.
   // TODO: use undef instead and let BreakFalseDeps deal with it?
   if (Src.isUndef() || ISD::isBuildVectorAllOnes(Mask.getNode()))
     Src = getZeroVector(Op.getSimpleValueType(), Subtarget, DAG, dl);
-  SDValue Ops[] = {Src, Base, Scale, Index, Disp, Segment, Mask, Chain};
-  SDNode *Res = DAG.getMachineNode(Opc, dl, VTs, Ops);
-  SDValue RetOps[] = { SDValue(Res, 0), SDValue(Res, 2) };
-  return DAG.getMergeValues(RetOps, dl);
+
+  MemIntrinsicSDNode *MemIntr = cast<MemIntrinsicSDNode>(Op);
+
+  SDValue Ops[] = {Chain, Src, Mask, Base, Index, Scale };
+  SDValue Res = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
+    VTs, Ops, dl, MemIntr->getMemoryVT(), MemIntr->getMemOperand());
+  return DAG.getMergeValues({ Res, Res.getValue(2) }, dl);
 }
 
-static SDValue getGatherNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
-                              SDValue Src, SDValue Mask, SDValue Base,
-                              SDValue Index, SDValue ScaleOp, SDValue Chain,
-                              const X86Subtarget &Subtarget) {
+static SDValue getGatherNode(SDValue Op, SelectionDAG &DAG,
+                             SDValue Src, SDValue Mask, SDValue Base,
+                             SDValue Index, SDValue ScaleOp, SDValue Chain,
+                             const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
   auto *C = dyn_cast<ConstantSDNode>(ScaleOp);
@@ -22412,17 +22436,18 @@ static SDValue getGatherNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
     Mask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
 
   SDVTList VTs = DAG.getVTList(Op.getValueType(), MaskVT, MVT::Other);
-  SDValue Disp = DAG.getTargetConstant(0, dl, MVT::i32);
-  SDValue Segment = DAG.getRegister(0, MVT::i32);
   // If source is undef or we know it won't be used, use a zero vector
   // to break register dependency.
   // TODO: use undef instead and let BreakFalseDeps deal with it?
   if (Src.isUndef() || ISD::isBuildVectorAllOnes(Mask.getNode()))
     Src = getZeroVector(Op.getSimpleValueType(), Subtarget, DAG, dl);
-  SDValue Ops[] = {Src, Mask, Base, Scale, Index, Disp, Segment, Chain};
-  SDNode *Res = DAG.getMachineNode(Opc, dl, VTs, Ops);
-  SDValue RetOps[] = { SDValue(Res, 0), SDValue(Res, 2) };
-  return DAG.getMergeValues(RetOps, dl);
+
+  MemIntrinsicSDNode *MemIntr = cast<MemIntrinsicSDNode>(Op);
+
+  SDValue Ops[] = {Chain, Src, Mask, Base, Index, Scale };
+  SDValue Res = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
+    VTs, Ops, dl, MemIntr->getMemoryVT(), MemIntr->getMemOperand());
+  return DAG.getMergeValues({ Res, Res.getValue(2) }, dl);
 }
 
 static SDValue getScatterNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
@@ -22435,8 +22460,6 @@ static SDValue getScatterNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
   if (!C)
     return SDValue();
   SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl, MVT::i8);
-  SDValue Disp = DAG.getTargetConstant(0, dl, MVT::i32);
-  SDValue Segment = DAG.getRegister(0, MVT::i32);
   unsigned MinElts = std::min(Index.getSimpleValueType().getVectorNumElements(),
                               Src.getSimpleValueType().getVectorNumElements());
   MVT MaskVT = MVT::getVectorVT(MVT::i1, MinElts);
@@ -22446,10 +22469,13 @@ static SDValue getScatterNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
   if (Mask.getValueType() != MaskVT)
     Mask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
 
+  MemIntrinsicSDNode *MemIntr = cast<MemIntrinsicSDNode>(Op);
+
   SDVTList VTs = DAG.getVTList(MaskVT, MVT::Other);
-  SDValue Ops[] = {Base, Scale, Index, Disp, Segment, Mask, Src, Chain};
-  SDNode *Res = DAG.getMachineNode(Opc, dl, VTs, Ops);
-  return SDValue(Res, 1);
+  SDValue Ops[] = {Chain, Src, Mask, Base, Index, Scale};
+  SDValue Res = DAG.getTargetMemSDNode<X86MaskedScatterSDNode>(
+      VTs, Ops, dl, MemIntr->getMemoryVT(), MemIntr->getMemOperand());
+  return Res.getValue(1);
 }
 
 static SDValue getPrefetchNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
@@ -22787,7 +22813,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     SDValue Index = Op.getOperand(4);
     SDValue Mask  = Op.getOperand(5);
     SDValue Scale = Op.getOperand(6);
-    return getGatherNode(IntrData->Opc0, Op, DAG, Src, Mask, Base, Index, Scale,
+    return getGatherNode(Op, DAG, Src, Mask, Base, Index, Scale,
                          Chain, Subtarget);
   }
   case SCATTER: {
@@ -32966,7 +32992,7 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
                                   const X86Subtarget &Subtarget) {
   EVT VT = BitCast.getValueType();
   SDValue N0 = BitCast.getOperand(0);
-  EVT VecVT = N0->getValueType(0);
+  EVT VecVT = N0.getValueType();
 
   if (!VT.isScalarInteger() || !VecVT.isSimple())
     return SDValue();
@@ -33006,8 +33032,8 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
     SExtVT = MVT::v4i32;
     // For cases such as (i4 bitcast (v4i1 setcc v4i64 v1, v2))
     // sign-extend to a 256-bit operation to avoid truncation.
-    if (N0->getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
-        N0->getOperand(0).getValueType().is256BitVector()) {
+    if (N0.getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
+        N0.getOperand(0).getValueType().is256BitVector()) {
       SExtVT = MVT::v4i64;
     }
     break;
@@ -33018,9 +33044,9 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
     // If the setcc operand is 128-bit, prefer sign-extending to 128-bit over
     // 256-bit because the shuffle is cheaper than sign extending the result of
     // the compare.
-    if (N0->getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
-        (N0->getOperand(0).getValueType().is256BitVector() ||
-         N0->getOperand(0).getValueType().is512BitVector())) {
+    if (N0.getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
+        (N0.getOperand(0).getValueType().is256BitVector() ||
+         N0.getOperand(0).getValueType().is512BitVector())) {
       SExtVT = MVT::v8i32;
     }
     break;
@@ -35765,8 +35791,8 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
   // Constant Folding.
   APInt UndefElts0, UndefElts1;
   SmallVector<APInt, 32> EltBits0, EltBits1;
-  if ((N0->isUndef() || N->isOnlyUserOf(N0.getNode())) &&
-      (N1->isUndef() || N->isOnlyUserOf(N1.getNode())) &&
+  if ((N0.isUndef() || N->isOnlyUserOf(N0.getNode())) &&
+      (N1.isUndef() || N->isOnlyUserOf(N1.getNode())) &&
       getTargetConstantBitsFromNode(N0, SrcBitsPerElt, UndefElts0, EltBits0) &&
       getTargetConstantBitsFromNode(N1, SrcBitsPerElt, UndefElts1, EltBits1)) {
     unsigned NumLanes = VT.getSizeInBits() / 128;
@@ -35974,8 +36000,8 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
   if (Subtarget.hasSSE2() && isAndOrOfSetCCs(SDValue(N, 0U), opcode)) {
     SDValue N0 = N->getOperand(0);
     SDValue N1 = N->getOperand(1);
-    SDValue CMP0 = N0->getOperand(1);
-    SDValue CMP1 = N1->getOperand(1);
+    SDValue CMP0 = N0.getOperand(1);
+    SDValue CMP1 = N1.getOperand(1);
     SDLoc DL(N);
 
     // The SETCCs should both refer to the same CMP.
@@ -36126,7 +36152,7 @@ static SDValue PromoteMaskArithmetic(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // The type of the truncated inputs.
-  if (N0->getOperand(0).getValueType() != VT)
+  if (N0.getOperand(0).getValueType() != VT)
     return SDValue();
 
   // The right side has to be a 'trunc' or a constant vector.
@@ -36142,9 +36168,9 @@ static SDValue PromoteMaskArithmetic(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Set N0 and N1 to hold the inputs to the new wide operation.
-  N0 = N0->getOperand(0);
+  N0 = N0.getOperand(0);
   if (RHSTrunc)
-    N1 = N1->getOperand(0);
+    N1 = N1.getOperand(0);
   else
     N1 = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N1);
 
@@ -39531,7 +39557,7 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(N);
 
   // Only do this combine with AVX512 for vector extends.
-  if (!Subtarget.hasAVX512() || !VT.isVector() || N0->getOpcode() != ISD::SETCC)
+  if (!Subtarget.hasAVX512() || !VT.isVector() || N0.getOpcode() != ISD::SETCC)
     return SDValue();
 
   // Only combine legal element types.
@@ -39547,7 +39573,7 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
 
   // Don't fold if the condition code can't be handled by PCMPEQ/PCMPGT since
   // that's the only integer compares with we have.
-  ISD::CondCode CC = cast<CondCodeSDNode>(N0->getOperand(2))->get();
+  ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
   if (ISD::isUnsignedIntSetCC(CC))
     return SDValue();
 

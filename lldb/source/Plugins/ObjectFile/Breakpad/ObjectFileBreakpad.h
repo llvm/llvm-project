@@ -12,7 +12,6 @@
 
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "llvm/ADT/Triple.h"
 
 namespace lldb_private {
 namespace breakpad {

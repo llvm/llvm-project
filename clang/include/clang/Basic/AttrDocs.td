@@ -3822,7 +3822,8 @@ def SpeculativeLoadHardeningDocs : Documentation {
   This attribute can be applied to a function declaration in order to indicate
   that `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_
   should be enabled for the function body. This can also be applied to a method
-  in Objective C.
+  in Objective C. This attribute will take precedence over the command line flag in
+  the case where `-mno-speculative-load-hardening <https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-mspeculative-load-hardening>`_ is specified.
 
   Speculative Load Hardening is a best-effort mitigation against
   information leak attacks that make use of control flow
@@ -3837,6 +3838,42 @@ def SpeculativeLoadHardeningDocs : Documentation {
   attribute. This is intended to provide a maximally conservative model
   where the code in a function annotated with this attribute will always
   (even after inlining) end up hardened.
+  }];
+}
+
+def NoSpeculativeLoadHardeningDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+  This attribute can be applied to a function declaration in order to indicate
+  that `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_
+  is *not* needed for the function body. This can also be applied to a method
+  in Objective C. This attribute will take precedence over the command line flag in
+  the case where `-mspeculative-load-hardening <https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-mspeculative-load-hardening>`_ is specified.
+
+  Warning: This attribute may not prevent Speculative Load Hardening from being
+  enabled for a function which inlines a function that has the
+  'speculative_load_hardening' attribute. This is intended to provide a
+  maximally conservative model where the code that is marked with the
+  'speculative_load_hardening' attribute will always (even when inlined)
+  be hardened. A user of this attribute may want to mark functions called by
+  a function they do not want to be hardened with the 'noinline' attribute.
+
+  For example:
+
+  .. code-block:: c
+
+    __attribute__((speculative_load_hardening))
+    int foo(int i) {
+      return i;
+    }
+
+    // Note: bar() may still have speculative load hardening enabled if
+    // foo() is inlined into bar(). Mark foo() with __attribute__((noinline))
+    // to avoid this situation.
+    __attribute__((no_speculative_load_hardening))
+    int bar(int i) {
+      return foo(i);
+    }
   }];
 }
 

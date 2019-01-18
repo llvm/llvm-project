@@ -898,6 +898,11 @@ public:
   /// Return the number of values used by this operation.
   unsigned getNumOperands() const { return NumOperands; }
 
+  /// Return the maximum number of operands that a SDNode can hold.
+  static constexpr size_t getMaxNumOperands() {
+    return std::numeric_limits<decltype(SDNode::NumOperands)>::max();
+  }
+
   /// Helper method returns the integer value of a ConstantSDNode operand.
   inline uint64_t getConstantOperandVal(unsigned Num) const;
 

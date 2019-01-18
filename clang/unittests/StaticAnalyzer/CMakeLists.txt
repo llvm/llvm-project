@@ -12,6 +12,9 @@ target_link_libraries(StaticAnalysisTests
   PRIVATE
   clangBasic
   clangAnalysis
+  clangAST
+  clangASTMatchers
+  clangCrossTU
   clangFrontend
   clangSerialization
   clangStaticAnalyzerCore

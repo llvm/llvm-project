@@ -1084,6 +1084,7 @@ private:
   OperandMatchResultTy parseExpTgtImpl(StringRef Str, uint8_t &Val);
 
   bool validateInstruction(const MCInst &Inst, const SMLoc &IDLoc);
+  bool validateSOPLiteral(const MCInst &Inst) const;
   bool validateConstantBusLimitations(const MCInst &Inst);
   bool validateEarlyClobberLimitations(const MCInst &Inst);
   bool validateIntClampSupported(const MCInst &Inst);
@@ -2461,8 +2462,46 @@ bool AMDGPUAsmParser::validateMIMGD16(const MCInst &Inst) {
   return true;
 }
 
+bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst) const {
+  unsigned Opcode = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opcode);
+  if (!(Desc.TSFlags & (SIInstrFlags::SOP2 | SIInstrFlags::SOPC)))
+    return true;
+
+  const int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
+  const int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
+
+  const int OpIndices[] = { Src0Idx, Src1Idx };
+
+  unsigned NumLiterals = 0;
+  uint32_t LiteralValue;
+
+  for (int OpIdx : OpIndices) {
+    if (OpIdx == -1) break;
+
+    const MCOperand &MO = Inst.getOperand(OpIdx);
+    if (MO.isImm() &&
+        // Exclude special imm operands (like that used by s_set_gpr_idx_on)
+        AMDGPU::isSISrcOperand(Desc, OpIdx) &&
+        !isInlineConstant(Inst, OpIdx)) {
+      uint32_t Value = static_cast<uint32_t>(MO.getImm());
+      if (NumLiterals == 0 || LiteralValue != Value) {
+        LiteralValue = Value;
+        ++NumLiterals;
+      }
+    }
+  }
+
+  return NumLiterals <= 1;
+}
+
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc) {
+  if (!validateSOPLiteral(Inst)) {
+    Error(IDLoc,
+      "only one literal operand is allowed");
+    return false;
+  }
   if (!validateConstantBusLimitations(Inst)) {
     Error(IDLoc,
       "invalid operand (violates constant bus restrictions)");

@@ -398,7 +398,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
     DigestsSnapshot = IndexedFileDigests;
   }
 
-  log("Indexing {0} (digest:={1})", Cmd.Filename, llvm::toHex(Hash));
+  vlog("Indexing {0} (digest:={1})", Cmd.Filename, llvm::toHex(Hash));
   ParseInputs Inputs;
   Inputs.FS = std::move(FS);
   Inputs.FS->setCurrentWorkingDirectory(Cmd.Directory);

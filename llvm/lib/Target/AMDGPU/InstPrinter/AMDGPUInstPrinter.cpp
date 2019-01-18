@@ -491,7 +491,7 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
     O << "-4.0";
   else if (Imm == 0x3fc45f306dc9c882 &&
            STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
-  O << "0.15915494";
+    O << "0.15915494309189532";
   else {
     assert(isUInt<32>(Imm) || Imm == 0x3fc45f306dc9c882);
 

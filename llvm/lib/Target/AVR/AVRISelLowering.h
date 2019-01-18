@@ -64,12 +64,14 @@ enum NodeType {
 
 } // end of namespace AVRISD
 
+class AVRSubtarget;
 class AVRTargetMachine;
 
 /// Performs target lowering for the AVR.
 class AVRTargetLowering : public TargetLowering {
 public:
-  explicit AVRTargetLowering(AVRTargetMachine &TM);
+  explicit AVRTargetLowering(const AVRTargetMachine &TM,
+                             const AVRSubtarget &STI);
 
 public:
   MVT getScalarShiftAmountTy(const DataLayout &, EVT LHSTy) const override {
@@ -163,6 +165,10 @@ private:
                           const SmallVectorImpl<ISD::InputArg> &Ins,
                           const SDLoc &dl, SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals) const;
+
+protected:
+
+  const AVRSubtarget &Subtarget;
 
 private:
   MachineBasicBlock *insertShift(MachineInstr &MI, MachineBasicBlock *BB) const;

@@ -90,6 +90,22 @@ def imm0_63_neg : PatLeaf<(imm),
 
 def uimm6 : PatLeaf<(imm), [{ return isUInt<6>(N->getZExtValue()); }]>;
 
+// imm_com8_XFORM - Return the complement of a t2_so_imm value
+def imm_com8_XFORM : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(~((uint8_t)N->getZExtValue()), SDLoc(N),
+                                   MVT::i8);
+}]>;
+
+// imm_com8 - Match an immediate that is a complement
+// of a 8-bit immediate.
+// Note: this pattern doesn't require an encoder method and such, as it's
+// only used on aliases (Pat<> and InstAlias<>). The actual encoding
+// is handled by the destination instructions, which use t2_so_imm.
+def imm_com8_asmoperand : AsmOperandClass { let Name = "ImmCom8"; }
+def imm_com8 : Operand<i8> {
+  let ParserMatchClass = imm_com8_asmoperand;
+}
+
 def ioaddr_XFORM : SDNodeXForm<imm,
 [{
   return CurDAG->getTargetConstant(uint8_t(N->getZExtValue()) - 0x20, SDLoc(N), MVT::i8);
@@ -155,13 +171,6 @@ def memri : Operand<iPTR>
 def memspi : Operand<iPTR>
 {
   let MIOperandInfo = (ops GPRSP, i16imm);
-}
-
-def imm_com8 : Operand<i8>
-{
-  let EncoderMethod = "encodeComplement";
-
-  let MIOperandInfo = (ops i8imm);
 }
 
 def relbrtarget_7 : Operand<OtherVT>
@@ -1729,20 +1738,7 @@ def BLD : FRdB<0b00,
                "bld\t$rd, $b",
                []>;
 
-// Set/clear bit in register operations.
-let Constraints = "$src = $rd",
-Defs = [SREG] in
-{
-  // CBR Rd, K
-  // Alias for `ANDI Rd, COM(K)` where COM(K) is the complement of K.
-  // FIXME: This uses the 'complement' encoder. We need it to also use the
-  // imm_ldi8 encoder. This will cause no fixups to be created on this instruction.
-  def CBRRdK : FRdK<0b0111,
-                    (outs LD8:$rd),
-                    (ins LD8:$src, imm_com8:$k),
-                    "cbr\t$rd, $k",
-                    []>;
-}
+def CBR : InstAlias<"cbr\t$rd, $k", (ANDIRdK LD8:$rd, imm_com8:$k), 0>;
 
 // CLR Rd
 // Alias for EOR Rd, Rd

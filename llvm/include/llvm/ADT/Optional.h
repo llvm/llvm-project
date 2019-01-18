@@ -27,6 +27,8 @@
 
 namespace llvm {
 
+class raw_ostream;
+
 namespace optional_detail {
 /// Storage for any type.
 template <typename T, bool = isPodLike<T>::value> struct OptionalStorage {
@@ -321,6 +323,18 @@ template <typename T> bool operator>=(const Optional<T> &X, const T &Y) {
 
 template <typename T> bool operator>=(const T &X, const Optional<T> &Y) {
   return !(X < Y);
+}
+
+raw_ostream &operator<<(raw_ostream &OS, NoneType);
+
+template <typename T, typename = decltype(std::declval<raw_ostream &>()
+                                          << std::declval<const T &>())>
+raw_ostream &operator<<(raw_ostream &OS, const Optional<T> &O) {
+  if (O)
+    OS << *O;
+  else
+    OS << None;
+  return OS;
 }
 
 } // end namespace llvm

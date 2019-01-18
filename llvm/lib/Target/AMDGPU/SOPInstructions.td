@@ -302,6 +302,8 @@ class SOP2_Real<bits<7> op, SOP_Pseudo ps> :
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
   let AsmMatchConverter  = ps.AsmMatchConverter;
+  let UseNamedOperandTable = ps.UseNamedOperandTable;
+  let TSFlags = ps.TSFlags;
 
   // encoding
   bits<7> sdst;

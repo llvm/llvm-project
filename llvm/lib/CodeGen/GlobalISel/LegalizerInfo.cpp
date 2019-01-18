@@ -180,16 +180,14 @@ void LegalizerInfo::computeTables() {
         if (TypeIdx < ScalarSizeChangeStrategies[OpcodeIdx].size() &&
             ScalarSizeChangeStrategies[OpcodeIdx][TypeIdx] != nullptr)
           S = ScalarSizeChangeStrategies[OpcodeIdx][TypeIdx];
-        llvm::sort(ScalarSpecifiedActions.begin(),
-                   ScalarSpecifiedActions.end());
+        llvm::sort(ScalarSpecifiedActions);
         checkPartialSizeAndActionsVector(ScalarSpecifiedActions);
         setScalarAction(Opcode, TypeIdx, S(ScalarSpecifiedActions));
       }
 
       // 2. Handle pointer types
       for (auto PointerSpecifiedActions : AddressSpace2SpecifiedActions) {
-        llvm::sort(PointerSpecifiedActions.second.begin(),
-                   PointerSpecifiedActions.second.end());
+        llvm::sort(PointerSpecifiedActions.second);
         checkPartialSizeAndActionsVector(PointerSpecifiedActions.second);
         // For pointer types, we assume that there isn't a meaningfull way
         // to change the number of bits used in the pointer.
@@ -201,8 +199,7 @@ void LegalizerInfo::computeTables() {
       // 3. Handle vector types
       SizeAndActionsVec ElementSizesSeen;
       for (auto VectorSpecifiedActions : ElemSize2SpecifiedActions) {
-        llvm::sort(VectorSpecifiedActions.second.begin(),
-                   VectorSpecifiedActions.second.end());
+        llvm::sort(VectorSpecifiedActions.second);
         const uint16_t ElementSize = VectorSpecifiedActions.first;
         ElementSizesSeen.push_back({ElementSize, Legal});
         checkPartialSizeAndActionsVector(VectorSpecifiedActions.second);

@@ -28,7 +28,7 @@
 #ifndef __XSAVEINTRIN_H
 #define __XSAVEINTRIN_H
 
-#ifndef _MSC_VER
+#ifdef _MSC_VER
 #define _XCR_XFEATURE_ENABLED_MASK 0
 #endif
 

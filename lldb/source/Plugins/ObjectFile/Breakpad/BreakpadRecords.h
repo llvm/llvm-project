@@ -1,0 +1,110 @@
+//===-- BreakpadRecords.h ------------------------------------- -*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLDB_PLUGINS_OBJECTFILE_BREAKPAD_BREAKPADRECORDS_H
+#define LLDB_PLUGINS_OBJECTFILE_BREAKPAD_BREAKPADRECORDS_H
+
+#include "lldb/Utility/UUID.h"
+#include "lldb/lldb-types.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/Support/FormatProviders.h"
+
+namespace lldb_private {
+namespace breakpad {
+
+class Record {
+public:
+  enum Kind { Module, Info, File, Func, Line, Public, Stack };
+
+  /// Attempt to guess the kind of the record present in the argument without
+  /// doing a full parse. The returned kind will always be correct for valid
+  /// records, but the full parse can still fail in case of corrupted input.
+  static Kind classify(llvm::StringRef Line);
+
+protected:
+  Record(Kind K) : TheKind(K) {}
+
+  ~Record() = default;
+
+public:
+  Kind getKind() { return TheKind; }
+
+private:
+  Kind TheKind;
+};
+
+llvm::StringRef toString(Record::Kind K);
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, Record::Kind K) {
+  OS << toString(K);
+  return OS;
+}
+
+class ModuleRecord : public Record {
+public:
+  static llvm::Optional<ModuleRecord> parse(llvm::StringRef Line);
+  ModuleRecord(llvm::Triple::OSType OS, llvm::Triple::ArchType Arch, UUID ID)
+      : Record(Module), OS(OS), Arch(Arch), ID(std::move(ID)) {}
+
+  llvm::Triple::OSType getOS() const { return OS; }
+  llvm::Triple::ArchType getArch() const { return Arch; }
+  const UUID &getID() const { return ID; }
+
+private:
+  llvm::Triple::OSType OS;
+  llvm::Triple::ArchType Arch;
+  UUID ID;
+};
+
+bool operator==(const ModuleRecord &L, const ModuleRecord &R);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const ModuleRecord &R);
+
+class InfoRecord : public Record {
+public:
+  static llvm::Optional<InfoRecord> parse(llvm::StringRef Line);
+  InfoRecord(UUID ID) : Record(Info), ID(std::move(ID)) {}
+
+  const UUID &getID() const { return ID; }
+
+private:
+  UUID ID;
+};
+
+inline bool operator==(const InfoRecord &L, const InfoRecord &R) {
+  return L.getID() == R.getID();
+}
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const InfoRecord &R);
+
+class PublicRecord : public Record {
+public:
+  static llvm::Optional<PublicRecord> parse(llvm::StringRef Line);
+  PublicRecord(bool Multiple, lldb::addr_t Address, lldb::addr_t ParamSize,
+               llvm::StringRef Name)
+      : Record(Module), Multiple(Multiple), Address(Address),
+        ParamSize(ParamSize), Name(Name) {}
+
+  bool getMultiple() const { return Multiple; }
+  lldb::addr_t getAddress() const { return Address; }
+  lldb::addr_t getParamSize() const { return ParamSize; }
+  llvm::StringRef getName() const { return Name; }
+
+private:
+  bool Multiple;
+  lldb::addr_t Address;
+  lldb::addr_t ParamSize;
+  llvm::StringRef Name;
+};
+
+bool operator==(const PublicRecord &L, const PublicRecord &R);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const PublicRecord &R);
+
+} // namespace breakpad
+} // namespace lldb_private
+
+#endif // LLDB_PLUGINS_OBJECTFILE_BREAKPAD_BREAKPADRECORDS_H

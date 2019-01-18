@@ -19349,7 +19349,7 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
   if (AddNewChain)
     TFOps.insert(TFOps.begin(), NewChain);
 
-  SDValue TF = DAG.getNode(ISD::TokenFactor, SDLoc(STChain), MVT::Other, TFOps);
+  SDValue TF = DAG.getTokenFactor(SDLoc(STChain), TFOps);
   CombineTo(St, TF);
 
   AddToWorklist(STChain);

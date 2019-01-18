@@ -44,6 +44,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/FixedPoint.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
@@ -609,6 +610,15 @@ namespace {
         precision = (precision * 59 + 195) / 196;
         SmallVector<char, 32> Buffer;
         F.toString(Buffer, precision);
+        *Diag << StringRef(Buffer.data(), Buffer.size());
+      }
+      return *this;
+    }
+
+    OptionalDiagnostic &operator<<(const APFixedPoint &FX) {
+      if (Diag) {
+        SmallVector<char, 32> Buffer;
+        FX.toString(Buffer);
         *Diag << StringRef(Buffer.data(), Buffer.size());
       }
       return *this;
@@ -1612,6 +1622,14 @@ static bool EvaluateComplex(const Expr *E, ComplexValue &Res, EvalInfo &Info);
 static bool EvaluateAtomic(const Expr *E, const LValue *This, APValue &Result,
                            EvalInfo &Info);
 static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result);
+
+/// Evaluate an integer or fixed point expression into an APResult.
+static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
+                                        EvalInfo &Info);
+
+/// Evaluate only a fixed point expression into an APResult.
+static bool EvaluateFixedPoint(const Expr *E, APFixedPoint &Result,
+                               EvalInfo &Info);
 
 //===----------------------------------------------------------------------===//
 // Misc utilities
@@ -7493,53 +7511,27 @@ class FixedPointExprEvaluator
   FixedPointExprEvaluator(EvalInfo &info, APValue &result)
       : ExprEvaluatorBaseTy(info), Result(result) {}
 
-  bool Success(const llvm::APSInt &SI, const Expr *E, APValue &Result) {
-    assert(E->getType()->isFixedPointType() && "Invalid evaluation result.");
-    assert(SI.isSigned() == E->getType()->isSignedFixedPointType() &&
-           "Invalid evaluation result.");
-    assert(SI.getBitWidth() == Info.Ctx.getIntWidth(E->getType()) &&
-           "Invalid evaluation result.");
-    Result = APValue(SI);
-    return true;
-  }
-  bool Success(const llvm::APSInt &SI, const Expr *E) {
-    return Success(SI, E, Result);
-  }
-
-  bool Success(const llvm::APInt &I, const Expr *E, APValue &Result) {
-    assert(E->getType()->isFixedPointType() && "Invalid evaluation result.");
-    assert(I.getBitWidth() == Info.Ctx.getIntWidth(E->getType()) &&
-           "Invalid evaluation result.");
-    Result = APValue(APSInt(I));
-    Result.getInt().setIsUnsigned(E->getType()->isUnsignedFixedPointType());
-    return true;
-  }
   bool Success(const llvm::APInt &I, const Expr *E) {
-    return Success(I, E, Result);
+    return Success(
+        APFixedPoint(I, Info.Ctx.getFixedPointSemantics(E->getType())), E);
   }
 
-  bool Success(uint64_t Value, const Expr *E, APValue &Result) {
-    assert(E->getType()->isFixedPointType() && "Invalid evaluation result.");
-    Result = APValue(Info.Ctx.MakeIntValue(Value, E->getType()));
-    return true;
-  }
   bool Success(uint64_t Value, const Expr *E) {
-    return Success(Value, E, Result);
-  }
-
-  bool Success(CharUnits Size, const Expr *E) {
-    return Success(Size.getQuantity(), E);
+    return Success(
+        APFixedPoint(Value, Info.Ctx.getFixedPointSemantics(E->getType())), E);
   }
 
   bool Success(const APValue &V, const Expr *E) {
-    if (V.isLValue() || V.isAddrLabelDiff()) {
-      Result = V;
-      return true;
-    }
-    return Success(V.getInt(), E);
+    return Success(V.getFixedPoint(), E);
   }
 
-  bool ZeroInitialization(const Expr *E) { return Success(0, E); }
+  bool Success(const APFixedPoint &V, const Expr *E) {
+    assert(E->getType()->isFixedPointType() && "Invalid evaluation result.");
+    assert(V.getWidth() == Info.Ctx.getIntWidth(E->getType()) &&
+           "Invalid evaluation result.");
+    Result = APValue(V);
+    return true;
+  }
 
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
@@ -7549,7 +7541,9 @@ class FixedPointExprEvaluator
     return Success(E->getValue(), E);
   }
 
+  bool VisitCastExpr(const CastExpr *E);
   bool VisitUnaryOperator(const UnaryOperator *E);
+  bool VisitBinaryOperator(const BinaryOperator *E);
 };
 } // end anonymous namespace
 
@@ -7579,6 +7573,36 @@ static bool EvaluateInteger(const Expr *E, APSInt &Result, EvalInfo &Info) {
   }
   Result = Val.getInt();
   return true;
+}
+
+static bool EvaluateFixedPoint(const Expr *E, APFixedPoint &Result,
+                               EvalInfo &Info) {
+  if (E->getType()->isFixedPointType()) {
+    APValue Val;
+    if (!FixedPointExprEvaluator(Info, Val).Visit(E))
+      return false;
+    if (!Val.isFixedPoint())
+      return false;
+
+    Result = Val.getFixedPoint();
+    return true;
+  }
+  return false;
+}
+
+static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
+                                        EvalInfo &Info) {
+  if (E->getType()->isIntegerType()) {
+    auto FXSema = Info.Ctx.getFixedPointSemantics(E->getType());
+    APSInt Val;
+    if (!EvaluateInteger(E, Val, Info))
+      return false;
+    Result = APFixedPoint(Val, FXSema);
+    return true;
+  } else if (E->getType()->isFixedPointType()) {
+    return EvaluateFixedPoint(E, Result, Info);
+  }
+  return false;
 }
 
 /// Check whether the given declaration can be directly converted to an integral
@@ -9781,7 +9805,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
     APValue Val;
     if (!Evaluate(Val, Info, SubExpr))
       return false;
-    return Success(Val.getInt().getBoolValue(), E);
+    return Success(Val.getFixedPoint().getBoolValue(), E);
   }
 
   case CK_IntegralCast: {
@@ -9901,16 +9925,13 @@ bool FixedPointExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
       return Visit(E->getSubExpr());
     case UO_Minus: {
       if (!Visit(E->getSubExpr())) return false;
-      if (!Result.isInt()) return Error(E);
-      const APSInt &Value = Result.getInt();
-      if (Value.isSigned() && Value.isMinSignedValue() && E->canOverflow()) {
-        SmallString<64> S;
-        FixedPointValueToString(S, Value,
-                                Info.Ctx.getTypeInfo(E->getType()).Width);
-        Info.CCEDiag(E, diag::note_constexpr_overflow) << S << E->getType();
-        if (Info.noteUndefinedBehavior()) return false;
-      }
-      return Success(-Value, E);
+      if (!Result.isFixedPoint())
+        return Error(E);
+      bool Overflowed;
+      APFixedPoint Negated = Result.getFixedPoint().negate(&Overflowed);
+      if (Overflowed && !HandleOverflow(Info, E, Negated, E->getType()))
+        return false;
+      return Success(Negated, E);
     }
     case UO_LNot: {
       bool bres;
@@ -9919,6 +9940,61 @@ bool FixedPointExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
       return Success(!bres, E);
     }
   }
+}
+
+bool FixedPointExprEvaluator::VisitCastExpr(const CastExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  QualType DestType = E->getType();
+  assert(DestType->isFixedPointType() &&
+         "Expected destination type to be a fixed point type");
+  auto DestFXSema = Info.Ctx.getFixedPointSemantics(DestType);
+
+  switch (E->getCastKind()) {
+  case CK_FixedPointCast: {
+    APFixedPoint Src(Info.Ctx.getFixedPointSemantics(SubExpr->getType()));
+    if (!EvaluateFixedPoint(SubExpr, Src, Info))
+      return false;
+    bool Overflowed;
+    APFixedPoint Result = Src.convert(DestFXSema, &Overflowed);
+    if (Overflowed && !HandleOverflow(Info, E, Result, DestType))
+      return false;
+    return Success(Result, E);
+  }
+  case CK_NoOp:
+  case CK_LValueToRValue:
+    return ExprEvaluatorBaseTy::VisitCastExpr(E);
+  default:
+    return Error(E);
+  }
+}
+
+bool FixedPointExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
+  FixedPointSemantics ResultFXSema =
+      Info.Ctx.getFixedPointSemantics(E->getType());
+
+  APFixedPoint LHSFX(Info.Ctx.getFixedPointSemantics(LHS->getType()));
+  if (!EvaluateFixedPointOrInteger(LHS, LHSFX, Info))
+    return false;
+  APFixedPoint RHSFX(Info.Ctx.getFixedPointSemantics(RHS->getType()));
+  if (!EvaluateFixedPointOrInteger(RHS, RHSFX, Info))
+    return false;
+
+  switch (E->getOpcode()) {
+  case BO_Add: {
+    bool AddOverflow, ConversionOverflow;
+    APFixedPoint Result = LHSFX.add(RHSFX, &AddOverflow)
+                              .convert(ResultFXSema, &ConversionOverflow);
+    if ((AddOverflow || ConversionOverflow) &&
+        !HandleOverflow(Info, E, Result, E->getType()))
+      return false;
+    return Success(Result, E);
+  }
+  default:
+    return false;
+  }
+  llvm_unreachable("Should've exited before this");
 }
 
 //===----------------------------------------------------------------------===//
@@ -10932,6 +11008,23 @@ static bool EvaluateAsInt(const Expr *E, Expr::EvalResult &ExprResult,
   return true;
 }
 
+static bool EvaluateAsFixedPoint(const Expr *E, Expr::EvalResult &ExprResult,
+                                 const ASTContext &Ctx,
+                                 Expr::SideEffectsKind AllowSideEffects,
+                                 EvalInfo &Info) {
+  if (!E->getType()->isFixedPointType())
+    return false;
+
+  if (!::EvaluateAsRValue(E, ExprResult, Ctx, Info))
+    return false;
+
+  if (!ExprResult.Val.isFixedPoint() ||
+      hasUnacceptableSideEffect(ExprResult, AllowSideEffects))
+    return false;
+
+  return true;
+}
+
 /// EvaluateAsRValue - Return true if this is a constant which we can fold using
 /// any crazy technique (that has nothing to do with language standards) that
 /// we want to.  If this function returns true, it returns the folded constant
@@ -10955,6 +11048,12 @@ bool Expr::EvaluateAsInt(EvalResult &Result, const ASTContext &Ctx,
                          SideEffectsKind AllowSideEffects) const {
   EvalInfo Info(Ctx, Result, EvalInfo::EM_IgnoreSideEffects);
   return ::EvaluateAsInt(this, Result, Ctx, AllowSideEffects, Info);
+}
+
+bool Expr::EvaluateAsFixedPoint(EvalResult &Result, const ASTContext &Ctx,
+                                SideEffectsKind AllowSideEffects) const {
+  EvalInfo Info(Ctx, Result, EvalInfo::EM_IgnoreSideEffects);
+  return ::EvaluateAsFixedPoint(this, Result, Ctx, AllowSideEffects, Info);
 }
 
 bool Expr::EvaluateAsFloat(APFloat &Result, const ASTContext &Ctx,
