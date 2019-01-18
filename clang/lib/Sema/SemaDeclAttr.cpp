@@ -7365,13 +7365,11 @@ ShouldDiagnoseAvailabilityInContext(Sema &S, AvailabilityResult K,
         return true;
     } else if (K == AR_Unavailable) {
       // It is perfectly fine to refer to an 'unavailable' Objective-C method
-      // when it's actually defined and is referenced from within the
-      // @implementation itself. In this context, we interpret unavailable as a
-      // form of access control.
+      // when it is referenced from within the @implementation itself. In this
+      // context, we interpret unavailable as a form of access control.
       if (const auto *MD = dyn_cast<ObjCMethodDecl>(OffendingDecl)) {
         if (const auto *Impl = dyn_cast<ObjCImplDecl>(C)) {
-          if (MD->getClassInterface() == Impl->getClassInterface() &&
-              MD->isDefined())
+          if (MD->getClassInterface() == Impl->getClassInterface())
             return true;
         }
       }

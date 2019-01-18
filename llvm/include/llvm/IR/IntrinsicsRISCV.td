@@ -41,4 +41,29 @@ def int_riscv_masked_cmpxchg_i32
                                 llvm_i32_ty, llvm_i32_ty],
                 [IntrArgMemOnly, NoCapture<0>]>;
 
+class MaskedAtomicRMW64Intrinsic
+    : Intrinsic<[llvm_i64_ty],
+                [llvm_anyptr_ty, llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
+                [IntrArgMemOnly, NoCapture<0>]>;
+
+class MaskedAtomicRMW64WithSextIntrinsic
+    : Intrinsic<[llvm_i64_ty],
+                [llvm_anyptr_ty, llvm_i64_ty, llvm_i64_ty, llvm_i64_ty,
+                 llvm_i64_ty],
+                [IntrArgMemOnly, NoCapture<0>]>;
+
+def int_riscv_masked_atomicrmw_xchg_i64 : MaskedAtomicRMW64Intrinsic;
+def int_riscv_masked_atomicrmw_add_i64  : MaskedAtomicRMW64Intrinsic;
+def int_riscv_masked_atomicrmw_sub_i64  : MaskedAtomicRMW64Intrinsic;
+def int_riscv_masked_atomicrmw_nand_i64 : MaskedAtomicRMW64Intrinsic;
+def int_riscv_masked_atomicrmw_max_i64  : MaskedAtomicRMW64WithSextIntrinsic;
+def int_riscv_masked_atomicrmw_min_i64  : MaskedAtomicRMW64WithSextIntrinsic;
+def int_riscv_masked_atomicrmw_umax_i64 : MaskedAtomicRMW64Intrinsic;
+def int_riscv_masked_atomicrmw_umin_i64 : MaskedAtomicRMW64Intrinsic;
+
+def int_riscv_masked_cmpxchg_i64
+    : Intrinsic<[llvm_i64_ty], [llvm_anyptr_ty, llvm_i64_ty, llvm_i64_ty,
+                                llvm_i64_ty, llvm_i64_ty],
+                [IntrArgMemOnly, NoCapture<0>]>;
+
 } // TargetPrefix = "riscv"

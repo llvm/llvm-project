@@ -1728,37 +1728,74 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 }
 
 static Intrinsic::ID
-getIntrinsicForMaskedAtomicRMWBinOp32(AtomicRMWInst::BinOp BinOp) {
-  switch (BinOp) {
-  default:
-    llvm_unreachable("Unexpected AtomicRMW BinOp");
-  case AtomicRMWInst::Xchg:
-    return Intrinsic::riscv_masked_atomicrmw_xchg_i32;
-  case AtomicRMWInst::Add:
-    return Intrinsic::riscv_masked_atomicrmw_add_i32;
-  case AtomicRMWInst::Sub:
-    return Intrinsic::riscv_masked_atomicrmw_sub_i32;
-  case AtomicRMWInst::Nand:
-    return Intrinsic::riscv_masked_atomicrmw_nand_i32;
-  case AtomicRMWInst::Max:
-    return Intrinsic::riscv_masked_atomicrmw_max_i32;
-  case AtomicRMWInst::Min:
-    return Intrinsic::riscv_masked_atomicrmw_min_i32;
-  case AtomicRMWInst::UMax:
-    return Intrinsic::riscv_masked_atomicrmw_umax_i32;
-  case AtomicRMWInst::UMin:
-    return Intrinsic::riscv_masked_atomicrmw_umin_i32;
+getIntrinsicForMaskedAtomicRMWBinOp(unsigned XLen, AtomicRMWInst::BinOp BinOp) {
+  if (XLen == 32) {
+    switch (BinOp) {
+    default:
+      llvm_unreachable("Unexpected AtomicRMW BinOp");
+    case AtomicRMWInst::Xchg:
+      return Intrinsic::riscv_masked_atomicrmw_xchg_i32;
+    case AtomicRMWInst::Add:
+      return Intrinsic::riscv_masked_atomicrmw_add_i32;
+    case AtomicRMWInst::Sub:
+      return Intrinsic::riscv_masked_atomicrmw_sub_i32;
+    case AtomicRMWInst::Nand:
+      return Intrinsic::riscv_masked_atomicrmw_nand_i32;
+    case AtomicRMWInst::Max:
+      return Intrinsic::riscv_masked_atomicrmw_max_i32;
+    case AtomicRMWInst::Min:
+      return Intrinsic::riscv_masked_atomicrmw_min_i32;
+    case AtomicRMWInst::UMax:
+      return Intrinsic::riscv_masked_atomicrmw_umax_i32;
+    case AtomicRMWInst::UMin:
+      return Intrinsic::riscv_masked_atomicrmw_umin_i32;
+    }
   }
+
+  if (XLen == 64) {
+    switch (BinOp) {
+    default:
+      llvm_unreachable("Unexpected AtomicRMW BinOp");
+    case AtomicRMWInst::Xchg:
+      return Intrinsic::riscv_masked_atomicrmw_xchg_i64;
+    case AtomicRMWInst::Add:
+      return Intrinsic::riscv_masked_atomicrmw_add_i64;
+    case AtomicRMWInst::Sub:
+      return Intrinsic::riscv_masked_atomicrmw_sub_i64;
+    case AtomicRMWInst::Nand:
+      return Intrinsic::riscv_masked_atomicrmw_nand_i64;
+    case AtomicRMWInst::Max:
+      return Intrinsic::riscv_masked_atomicrmw_max_i64;
+    case AtomicRMWInst::Min:
+      return Intrinsic::riscv_masked_atomicrmw_min_i64;
+    case AtomicRMWInst::UMax:
+      return Intrinsic::riscv_masked_atomicrmw_umax_i64;
+    case AtomicRMWInst::UMin:
+      return Intrinsic::riscv_masked_atomicrmw_umin_i64;
+    }
+  }
+
+  llvm_unreachable("Unexpected XLen\n");
 }
 
 Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
     IRBuilder<> &Builder, AtomicRMWInst *AI, Value *AlignedAddr, Value *Incr,
     Value *Mask, Value *ShiftAmt, AtomicOrdering Ord) const {
-  Value *Ordering = Builder.getInt32(static_cast<uint32_t>(AI->getOrdering()));
+  unsigned XLen = Subtarget.getXLen();
+  Value *Ordering =
+      Builder.getIntN(XLen, static_cast<uint64_t>(AI->getOrdering()));
   Type *Tys[] = {AlignedAddr->getType()};
   Function *LrwOpScwLoop = Intrinsic::getDeclaration(
       AI->getModule(),
-      getIntrinsicForMaskedAtomicRMWBinOp32(AI->getOperation()), Tys);
+      getIntrinsicForMaskedAtomicRMWBinOp(XLen, AI->getOperation()), Tys);
+
+  if (XLen == 64) {
+    Incr = Builder.CreateSExt(Incr, Builder.getInt64Ty());
+    Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
+    ShiftAmt = Builder.CreateSExt(ShiftAmt, Builder.getInt64Ty());
+  }
+
+  Value *Result;
 
   // Must pass the shift amount needed to sign extend the loaded value prior
   // to performing a signed comparison for min/max. ShiftAmt is the number of
@@ -1770,13 +1807,18 @@ Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
     const DataLayout &DL = AI->getModule()->getDataLayout();
     unsigned ValWidth =
         DL.getTypeStoreSizeInBits(AI->getValOperand()->getType());
-    Value *SextShamt = Builder.CreateSub(
-        Builder.getInt32(Subtarget.getXLen() - ValWidth), ShiftAmt);
-    return Builder.CreateCall(LrwOpScwLoop,
-                              {AlignedAddr, Incr, Mask, SextShamt, Ordering});
+    Value *SextShamt =
+        Builder.CreateSub(Builder.getIntN(XLen, XLen - ValWidth), ShiftAmt);
+    Result = Builder.CreateCall(LrwOpScwLoop,
+                                {AlignedAddr, Incr, Mask, SextShamt, Ordering});
+  } else {
+    Result =
+        Builder.CreateCall(LrwOpScwLoop, {AlignedAddr, Incr, Mask, Ordering});
   }
 
-  return Builder.CreateCall(LrwOpScwLoop, {AlignedAddr, Incr, Mask, Ordering});
+  if (XLen == 64)
+    Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+  return Result;
 }
 
 TargetLowering::AtomicExpansionKind
@@ -1791,10 +1833,21 @@ RISCVTargetLowering::shouldExpandAtomicCmpXchgInIR(
 Value *RISCVTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
     IRBuilder<> &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
     Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
-  Value *Ordering = Builder.getInt32(static_cast<uint32_t>(Ord));
+  unsigned XLen = Subtarget.getXLen();
+  Value *Ordering = Builder.getIntN(XLen, static_cast<uint64_t>(Ord));
+  Intrinsic::ID CmpXchgIntrID = Intrinsic::riscv_masked_cmpxchg_i32;
+  if (XLen == 64) {
+    CmpVal = Builder.CreateSExt(CmpVal, Builder.getInt64Ty());
+    NewVal = Builder.CreateSExt(NewVal, Builder.getInt64Ty());
+    Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
+    CmpXchgIntrID = Intrinsic::riscv_masked_cmpxchg_i64;
+  }
   Type *Tys[] = {AlignedAddr->getType()};
-  Function *MaskedCmpXchg = Intrinsic::getDeclaration(
-      CI->getModule(), Intrinsic::riscv_masked_cmpxchg_i32, Tys);
-  return Builder.CreateCall(MaskedCmpXchg,
-                            {AlignedAddr, CmpVal, NewVal, Mask, Ordering});
+  Function *MaskedCmpXchg =
+      Intrinsic::getDeclaration(CI->getModule(), CmpXchgIntrID, Tys);
+  Value *Result = Builder.CreateCall(
+      MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, Ordering});
+  if (XLen == 64)
+    Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+  return Result;
 }

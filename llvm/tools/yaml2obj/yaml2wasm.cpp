@@ -49,6 +49,7 @@ private:
   int writeSectionContent(raw_ostream &OS, WasmYAML::DylinkSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::NameSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &Section);
+  int writeSectionContent(raw_ostream &OS, WasmYAML::ProducersSection &Section);
   WasmYAML::Object &Obj;
   uint32_t NumImportedFunctions = 0;
   uint32_t NumImportedGlobals = 0;
@@ -256,6 +257,29 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
 }
 
 int WasmWriter::writeSectionContent(raw_ostream &OS,
+                                    WasmYAML::ProducersSection &Section) {
+  writeStringRef(Section.Name, OS);
+  int Fields = int(!Section.Languages.empty()) + int(!Section.Tools.empty()) +
+               int(!Section.SDKs.empty());
+  if (Fields == 0)
+    return 0;
+  encodeULEB128(Fields, OS);
+  for (auto &Field : {std::make_pair(StringRef("language"), &Section.Languages),
+                      std::make_pair(StringRef("processed-by"), &Section.Tools),
+                      std::make_pair(StringRef("sdk"), &Section.SDKs)}) {
+    if (Field.second->empty())
+      continue;
+    writeStringRef(Field.first, OS);
+    encodeULEB128(Field.second->size(), OS);
+    for (auto &Entry : *Field.second) {
+      writeStringRef(Entry.Name, OS);
+      writeStringRef(Entry.Version, OS);
+    }
+  }
+  return 0;
+}
+
+int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::CustomSection &Section) {
   if (auto S = dyn_cast<WasmYAML::DylinkSection>(&Section)) {
     if (auto Err = writeSectionContent(OS, *S))
@@ -264,6 +288,9 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
     if (auto Err = writeSectionContent(OS, *S))
       return Err;
   } else if (auto S = dyn_cast<WasmYAML::LinkingSection>(&Section)) {
+    if (auto Err = writeSectionContent(OS, *S))
+      return Err;
+  } else if (auto S = dyn_cast<WasmYAML::ProducersSection>(&Section)) {
     if (auto Err = writeSectionContent(OS, *S))
       return Err;
   } else {

@@ -1,4 +1,4 @@
-# UNSUPPORTED: windows, darwin
+# UNSUPPORTED: system-windows, system-darwin
 #
 # RUN: %clang -o %t %p/inputs/main.c -g
 # RUN: %python %p/inputs/target-select-so-path.py "%debugserver" "%lldbmi %t" %s

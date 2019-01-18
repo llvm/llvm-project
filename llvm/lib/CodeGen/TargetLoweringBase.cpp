@@ -583,6 +583,14 @@ void TargetLoweringBase::initActions() {
   std::fill(std::begin(TargetDAGCombineArray),
             std::end(TargetDAGCombineArray), 0);
 
+  for (MVT VT : MVT::fp_valuetypes()) {
+    MVT IntVT = MVT::getIntegerVT(VT.getSizeInBits());
+    if (IntVT.isValid()) {
+      setOperationAction(ISD::ATOMIC_SWAP, VT, Promote);
+      AddPromotedToType(ISD::ATOMIC_SWAP, VT, IntVT);
+    }
+  }
+
   // Set default actions for various operations.
   for (MVT VT : MVT::all_valuetypes()) {
     // Default all indexed load / store to expand.

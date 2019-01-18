@@ -65,7 +65,7 @@ struct ValueBitMap {
   }
 
  private:
-  uintptr_t Map[kMapSizeInWords] __attribute__((aligned(512)));
+  ATTRIBUTE_ALIGNED(512) uintptr_t Map[kMapSizeInWords];
 };
 
 }  // namespace fuzzer

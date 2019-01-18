@@ -1264,15 +1264,17 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
       Increasing
           ? (IsSignedPredicate ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT)
           : (IsSignedPredicate ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT);
-  EnterLoopCond = B.CreateICmp(Pred, LS.IndVarStart, ExitSubloopAt);
+  Value *IndVarStart = LS.IndVarStart;
+  Value *IndVarBase = LS.IndVarBase;
+  Value *LoopExitAt = LS.LoopExitAt;
+  EnterLoopCond = B.CreateICmp(Pred, IndVarStart, ExitSubloopAt);
 
   B.CreateCondBr(EnterLoopCond, LS.Header, RRI.PseudoExit);
   PreheaderJump->eraseFromParent();
 
   LS.LatchBr->setSuccessor(LS.LatchBrExitIdx, RRI.ExitSelector);
   B.SetInsertPoint(LS.LatchBr);
-  Value *TakeBackedgeLoopCond = B.CreateICmp(Pred, LS.IndVarBase,
-                                             ExitSubloopAt);
+  Value *TakeBackedgeLoopCond = B.CreateICmp(Pred, IndVarBase, ExitSubloopAt);
 
   Value *CondForBranch = LS.LatchBrExitIdx == 1
                              ? TakeBackedgeLoopCond
@@ -1285,7 +1287,7 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   // IterationsLeft - are there any more iterations left, given the original
   // upper bound on the induction variable?  If not, we branch to the "real"
   // exit.
-  Value *IterationsLeft = B.CreateICmp(Pred, LS.IndVarBase, LS.LoopExitAt);
+  Value *IterationsLeft = B.CreateICmp(Pred, IndVarBase, LoopExitAt);
   B.CreateCondBr(IterationsLeft, RRI.PseudoExit, LS.LatchExit);
 
   BranchInst *BranchToContinuation =
@@ -1304,10 +1306,10 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
     RRI.PHIValuesAtPseudoExit.push_back(NewPHI);
   }
 
-  RRI.IndVarEnd = PHINode::Create(LS.IndVarBase->getType(), 2, "indvar.end",
+  RRI.IndVarEnd = PHINode::Create(IndVarBase->getType(), 2, "indvar.end",
                                   BranchToContinuation);
-  RRI.IndVarEnd->addIncoming(LS.IndVarStart, Preheader);
-  RRI.IndVarEnd->addIncoming(LS.IndVarBase, RRI.ExitSelector);
+  RRI.IndVarEnd->addIncoming(IndVarStart, Preheader);
+  RRI.IndVarEnd->addIncoming(IndVarBase, RRI.ExitSelector);
 
   // The latch exit now has a branch from `RRI.ExitSelector' instead of
   // `LS.Latch'.  The PHI nodes need to be updated to reflect that.
