@@ -51,7 +51,7 @@ public:
               StringRef endText);
 
   llvm::iterator_range<ranges_iterator> getRanges() override {
-    const RefCountBug& BugTy = static_cast<RefCountBug&>(getBugType());
+    const RefCountBug& BugTy = static_cast<const RefCountBug&>(getBugType());
     if (!BugTy.isLeak())
       return BugReport::getRanges();
     return llvm::make_range(ranges_iterator(), ranges_iterator());
