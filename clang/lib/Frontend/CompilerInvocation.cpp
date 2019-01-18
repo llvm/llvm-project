@@ -600,6 +600,7 @@ parseCSIExtensionPoint(StringRef FlagName, ArgList &Args,
   } else if (Args.hasArg(OPT_fcsi))
     // Use TapirLate extension point by default, for backwards compatability.
     return LangOptions::CSI_TapirLate;
+  return LangOptions::CSI_None;
 }
 
 static void parseXRayInstrumentationBundle(StringRef FlagName, StringRef Bundle,
