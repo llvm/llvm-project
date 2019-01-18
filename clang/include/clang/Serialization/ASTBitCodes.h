@@ -347,6 +347,9 @@ namespace serialization {
       /// Record code for the diagnostic options table.
       DIAGNOSTIC_OPTIONS,
 
+      /// Record code for the headers search paths.
+      HEADER_SEARCH_PATHS,
+
       /// Record code for \#pragma diagnostic mappings.
       DIAG_PRAGMA_MAPPINGS,
     };
