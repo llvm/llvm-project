@@ -408,15 +408,7 @@ annotateConsumedSummaryMismatch(const ExplodedNode *N,
   if (os.str().empty())
     return nullptr;
 
-  // FIXME: remove the code duplication with NoStoreFuncVisitor.
-  PathDiagnosticLocation L;
-  if (const ReturnStmt *RS = CallExitLoc.getReturnStmt()) {
-    L = PathDiagnosticLocation::createBegin(RS, SM, N->getLocationContext());
-  } else {
-    L = PathDiagnosticLocation(
-        Call->getRuntimeDefinition().getDecl()->getSourceRange().getEnd(), SM);
-  }
-
+  PathDiagnosticLocation L = PathDiagnosticLocation::create(CallExitLoc, SM);
   return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
 }
 
