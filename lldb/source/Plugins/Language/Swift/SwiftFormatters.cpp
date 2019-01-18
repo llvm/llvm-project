@@ -158,6 +158,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     static ConstString g__variant("_variant");
     static ConstString g__discriminator("_discriminator");
     static ConstString g__flags("_flags");
+    static ConstString g_immortal("immortal");
 
     auto count_sp = object_sp->GetChildAtNamePath({g__count, g__value});
     if (!count_sp)
@@ -183,11 +184,9 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
 
     ValueObjectSP payload_sp;
     if (variantCase.startswith("immortal")) {
-      static ConstString g_immortal("immortal");
       payload_sp = variant_sp->GetChildAtNamePath({g_immortal, g__value});
     } else if (variantCase.startswith("native")) {
-      static ConstString g_native("native");
-      payload_sp = variant_sp->GetChildMemberWithName(g_native, true);
+      payload_sp = variant_sp->GetChildAtNamePath({g_immortal, g__value});
     } else if (variantCase.startswith("bridged")) {
       static ConstString g_bridged("bridged");
       auto anyobject_sp = variant_sp->GetChildMemberWithName(g_bridged, true);
