@@ -30,33 +30,35 @@ using namespace minidump;
 #define DEF_R(i)                                                               \
   {                                                                            \
     "r" #i, nullptr, 4, OFFSET(r) + i * 4, eEncodingUint, eFormatHex,          \
-        {INV, dwarf_r##i, INV, INV, reg_r##i}, nullptr, nullptr, nullptr, 0    \
+        {dwarf_r##i, dwarf_r##i, INV, INV, reg_r##i},                          \
+        nullptr, nullptr, nullptr, 0    \
   }
 
 #define DEF_R_ARG(i, n)                                                        \
   {                                                                            \
     "r" #i, "arg" #n, 4, OFFSET(r) + i * 4, eEncodingUint, eFormatHex,         \
-        {INV, dwarf_r##i, LLDB_REGNUM_GENERIC_ARG1 + i, INV, reg_r##i},        \
+        {dwarf_r##i, dwarf_r##i, LLDB_REGNUM_GENERIC_ARG1 + i, INV, reg_r##i}, \
         nullptr, nullptr, nullptr, 0                                           \
   }
 
 #define DEF_D(i)                                                               \
   {                                                                            \
     "d" #i, nullptr, 8, OFFSET(d) + i * 8, eEncodingVector,                    \
-        eFormatVectorOfUInt8, {INV, dwarf_d##i, INV, INV, reg_d##i},           \
+        eFormatVectorOfUInt8, {dwarf_d##i, dwarf_d##i, INV, INV, reg_d##i},    \
         nullptr, nullptr, nullptr, 0    \
   }
 
 #define DEF_S(i)                                                               \
   {                                                                            \
     "s" #i, nullptr, 4, OFFSET(s) + i * 4, eEncodingIEEE754, eFormatFloat,     \
-        {INV, dwarf_s##i, INV, INV, reg_s##i}, nullptr, nullptr, nullptr, 0    \
+        {dwarf_s##i, dwarf_s##i, INV, INV, reg_s##i},                          \
+        nullptr, nullptr, nullptr, 0                                           \
   }
 
 #define DEF_Q(i)                                                               \
   {                                                                            \
     "q" #i, nullptr, 16, OFFSET(q) + i * 16, eEncodingVector,                  \
-        eFormatVectorOfUInt8, {INV, dwarf_q##i, INV, INV, reg_q##i},           \
+        eFormatVectorOfUInt8, {dwarf_q##i, dwarf_q##i, INV, INV, reg_q##i},    \
         nullptr, nullptr, nullptr, 0    \
   }
 
