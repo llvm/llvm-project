@@ -2463,10 +2463,12 @@ ItaniumCXXABI::getOrCreateThreadLocalWrapper(const VarDecl *VD,
     CGM.SetLLVMFunctionAttributesForDefinition(nullptr, Wrapper);
 
   // Always resolve references to the wrapper at link time.
-  if (!Wrapper->hasLocalLinkage() && !(isThreadWrapperReplaceable(VD, CGM) &&
-      !llvm::GlobalVariable::isLinkOnceLinkage(Wrapper->getLinkage()) &&
-      !llvm::GlobalVariable::isWeakODRLinkage(Wrapper->getLinkage())))
-    Wrapper->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  if (!Wrapper->hasLocalLinkage())
+    if (!isThreadWrapperReplaceable(VD, CGM) ||
+        llvm::GlobalVariable::isLinkOnceLinkage(Wrapper->getLinkage()) ||
+        llvm::GlobalVariable::isWeakODRLinkage(Wrapper->getLinkage()) ||
+        VD->getVisibility() == HiddenVisibility)
+      Wrapper->setVisibility(llvm::GlobalValue::HiddenVisibility);
 
   if (isThreadWrapperReplaceable(VD, CGM)) {
     Wrapper->setCallingConv(llvm::CallingConv::CXX_FAST_TLS);
