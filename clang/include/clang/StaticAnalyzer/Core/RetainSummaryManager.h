@@ -685,6 +685,10 @@ public:
   Optional<BehaviorSummary> canEval(const CallExpr *CE, const FunctionDecl *FD,
                                     bool &hasTrustedImplementationAnnotation);
 
+  /// \return Whether the type corresponds to a known smart pointer
+  /// implementation (that is, everything about it is inlineable).
+  static bool isKnownSmartPointer(QualType QT);
+
   bool isTrustedReferenceCountImplementation(const FunctionDecl *FD);
 
   const RetainSummary *getSummary(const CallEvent &Call,
