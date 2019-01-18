@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/SymbolFile/Breakpad/SymbolFileBreakpad.h"
+#include "Plugins/ObjectFile/Breakpad/BreakpadRecords.h"
 #include "Plugins/ObjectFile/Breakpad/ObjectFileBreakpad.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -181,38 +182,29 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
 
   const SectionList &list = *module.GetSectionList();
   for (llvm::StringRef line : lines(*m_obj_file, ConstString("PUBLIC"))) {
-    // PUBLIC [m] address param_size name
-    // skip PUBLIC keyword
-    line = getToken(line).second;
-    llvm::StringRef token;
-    std::tie(token, line) = getToken(line);
-    if (token == "m")
-      std::tie(token, line) = getToken(line);
-
-    addr_t address;
-    if (!to_integer(token, address, 16))
+    auto record = PublicRecord::parse(line);
+    if (!record) {
+      LLDB_LOG(log, "Failed to parse: {0}. Skipping record.", line);
       continue;
-    address += base;
+    }
+    addr_t file_address = base + record->getAddress();
 
-    // skip param_size
-    line = getToken(line).second;
-
-    llvm::StringRef name = line.trim();
-
-    SectionSP section_sp = list.FindSectionContainingFileAddress(address);
+    SectionSP section_sp = list.FindSectionContainingFileAddress(file_address);
     if (!section_sp) {
       LLDB_LOG(log,
                "Ignoring symbol {0}, whose address ({1}) is outside of the "
                "object file. Mismatched symbol file?",
-               name, address);
+               record->getName(), file_address);
       continue;
     }
 
     symtab.AddSymbol(Symbol(
-        /*symID*/ 0, Mangled(name, /*is_mangled*/ false), eSymbolTypeCode,
+        /*symID*/ 0, Mangled(record->getName(), /*is_mangled*/ false),
+        eSymbolTypeCode,
         /*is_global*/ true, /*is_debug*/ false, /*is_trampoline*/ false,
         /*is_artificial*/ false,
-        AddressRange(section_sp, address - section_sp->GetFileAddress(), 0),
+        AddressRange(section_sp, file_address - section_sp->GetFileAddress(),
+                     0),
         /*size_is_valid*/ 0, /*contains_linker_annotations*/ false,
         /*flags*/ 0));
   }
