@@ -30,6 +30,7 @@ public:
     UseAfterRelease,
     ReleaseNotOwned,
     DeallocNotOwned,
+    FreeNotOwned,
     OverAutorelease,
     ReturnNotOwnedForOwned,
     LeakWithinFunction,

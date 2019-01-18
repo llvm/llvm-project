@@ -803,13 +803,16 @@ ProgramStateRef RetainCountChecker::updateSymbol(ProgramStateRef state,
 }
 
 const RefCountBug &
-RetainCountChecker::errorKindToBugKind(RefVal::Kind ErrorKind) const {
+RetainCountChecker::errorKindToBugKind(RefVal::Kind ErrorKind,
+                                       SymbolRef Sym) const {
   switch (ErrorKind) {
     case RefVal::ErrorUseAfterRelease:
       return useAfterRelease;
     case RefVal::ErrorReleaseNotOwned:
       return releaseNotOwned;
     case RefVal::ErrorDeallocNotOwned:
+      if (Sym->getType()->getPointeeCXXRecordDecl())
+        return freeNotOwned;
       return deallocNotOwned;
     default:
       llvm_unreachable("Unhandled error.");
@@ -836,7 +839,8 @@ void RetainCountChecker::processNonLeakError(ProgramStateRef St,
     return;
 
   auto report = llvm::make_unique<RefCountReport>(
-      errorKindToBugKind(ErrorKind), C.getASTContext().getLangOpts(), N, Sym);
+      errorKindToBugKind(ErrorKind, Sym),
+      C.getASTContext().getLangOpts(), N, Sym);
   report->addRange(ErrorRange);
   C.emitReport(std::move(report));
 }

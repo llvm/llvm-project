@@ -634,3 +634,13 @@ void test_ostypealloc_correct_diagnostic_name() {
   arr->release(); // expected-note{{Reference count decremented. The object now has a +1 retain count}}
 } // expected-note{{Object leaked: object allocated and stored into 'arr' is not referenced later in this execution path and has a retain count of +1}}
   // expected-warning@-1{{Potential leak of an object stored into 'arr'}}
+
+void escape_elsewhere(OSObject *obj);
+
+void test_free_on_escaped_object_diagnostics() {
+  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}
+  escape_elsewhere(obj); // expected-note{{Object is now not exclusively owned}}
+  obj->free(); // expected-note{{'free' called on an object that may be referenced elsewhere}}
+  // expected-warning@-1{{'free' called on an object that may be referenced elsewhere}}
+}
+

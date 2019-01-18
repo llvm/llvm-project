@@ -255,6 +255,7 @@ class RetainCountChecker
   RefCountBug useAfterRelease{this, RefCountBug::UseAfterRelease};
   RefCountBug releaseNotOwned{this, RefCountBug::ReleaseNotOwned};
   RefCountBug deallocNotOwned{this, RefCountBug::DeallocNotOwned};
+  RefCountBug freeNotOwned{this, RefCountBug::FreeNotOwned};
   RefCountBug overAutorelease{this, RefCountBug::OverAutorelease};
   RefCountBug returnNotOwnedForOwned{this, RefCountBug::ReturnNotOwnedForOwned};
   RefCountBug leakWithinFunction{this, RefCountBug::LeakWithinFunction};
@@ -336,8 +337,8 @@ public:
                                RefVal V, ArgEffect E, RefVal::Kind &hasErr,
                                CheckerContext &C) const;
 
-
-  const RefCountBug &errorKindToBugKind(RefVal::Kind ErrorKind) const;
+  const RefCountBug &errorKindToBugKind(RefVal::Kind ErrorKind,
+                                        SymbolRef Sym) const;
 
   void processNonLeakError(ProgramStateRef St, SourceRange ErrorRange,
                            RefVal::Kind ErrorKind, SymbolRef Sym,
