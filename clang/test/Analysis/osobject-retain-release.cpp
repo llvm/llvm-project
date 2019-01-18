@@ -627,3 +627,10 @@ void test_smart_ptr_no_leak() {
   }
   obj->release();
 }
+
+void test_ostypealloc_correct_diagnostic_name() {
+  OSArray *arr = OSTypeAlloc(OSArray); // expected-note{{Call to method 'OSMetaClass::alloc' returns an OSObject of type 'OSArray' with a +1 retain count}}
+  arr->retain(); // expected-note{{Reference count incremented. The object now has a +2 retain count}}
+  arr->release(); // expected-note{{Reference count decremented. The object now has a +1 retain count}}
+} // expected-note{{Object leaked: object allocated and stored into 'arr' is not referenced later in this execution path and has a retain count of +1}}
+  // expected-warning@-1{{Potential leak of an object stored into 'arr'}}
