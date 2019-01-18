@@ -18,6 +18,7 @@ class CommandLineExprCompletionTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
+    @expectedFailureAll(bugnumber="rdar://47370292")
     def test_expr_completion(self):
         self.build()
         self.main_source = "main.cpp"
@@ -194,6 +195,7 @@ class CommandLineExprCompletionTestCase(TestBase):
         self.complete_exactly('expr some_expr.Self(). FooNoArgs',
                               'expr some_expr.Self(). FooNoArgsBar()')
 
+    @expectedFailureAll(bugnumber="rdar://47370292")
     def test_expr_completion_with_descriptions(self):
         self.build()
         self.main_source = "main.cpp"
