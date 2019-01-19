@@ -807,6 +807,11 @@ Stmt *BodyFarm::getBody(const ObjCMethodDecl *D) {
 
   D = D->getCanonicalDecl();
 
+  // We should not try to synthesize explicitly redefined accessors.
+  // We do not know for sure how they behave.
+  if (!D->isImplicit())
+    return nullptr;
+
   Optional<Stmt *> &Val = Bodies[D];
   if (Val.hasValue())
     return Val.getValue();

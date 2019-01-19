@@ -11013,6 +11013,28 @@ CheckImplicitConversion(Sema &S, Expr *E, QualType T, SourceLocation CC,
     return;
   }
 
+  if (Source->isFixedPointType()) {
+    // TODO: Only CK_FixedPointCast is supported now. The other valid casts
+    // should be accounted for here.
+    if (Target->isFixedPointType()) {
+      Expr::EvalResult Result;
+      if (E->EvaluateAsFixedPoint(Result, S.Context,
+                                  Expr::SE_AllowSideEffects)) {
+        APFixedPoint Value = Result.Val.getFixedPoint();
+        APFixedPoint MaxVal = S.Context.getFixedPointMax(T);
+        APFixedPoint MinVal = S.Context.getFixedPointMin(T);
+        if (Value > MaxVal || Value < MinVal) {
+          S.DiagRuntimeBehavior(E->getExprLoc(), E,
+                                S.PDiag(diag::warn_impcast_fixed_point_range)
+                                    << Value.toString() << T
+                                    << E->getSourceRange()
+                                    << clang::SourceRange(CC));
+          return;
+        }
+      }
+    }
+  }
+
   DiagnoseNullConversion(S, E, T, CC);
 
   S.DiscardMisalignedMemberAddress(Target, E);

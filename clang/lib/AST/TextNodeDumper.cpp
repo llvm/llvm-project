@@ -1096,6 +1096,8 @@ void TextNodeDumper::VisitFunctionProtoType(const FunctionProtoType *T) {
     OS << " volatile";
   if (T->isRestrict())
     OS << " restrict";
+  if (T->getExtProtoInfo().Variadic)
+    OS << " variadic";
   switch (EPI.RefQualifier) {
   case RQ_None:
     break;
