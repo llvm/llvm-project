@@ -1,9 +1,8 @@
 //==--- DiagnosticSemaKinds.td - libsema diagnostics ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -2584,6 +2583,20 @@ def err_format_attribute_result_not : Error<"function does not return %0">;
 def err_format_attribute_implicit_this_format_string : Error<
   "format attribute cannot specify the implicit this argument as the format "
   "string">;
+def err_callback_attribute_no_callee : Error<
+  "'callback' attribute specifies no callback callee">;
+def err_callback_attribute_invalid_callee : Error<
+  "'callback' attribute specifies invalid callback callee">;
+def err_callback_attribute_multiple : Error<
+  "multiple 'callback' attributes specified">;
+def err_callback_attribute_argument_unknown : Error<
+  "'callback' attribute argument %0 is not a known function parameter">;
+def err_callback_callee_no_function_type : Error<
+  "'callback' attribute callee does not have function type">;
+def err_callback_callee_is_variadic : Error<
+  "'callback' attribute callee may not be variadic">;
+def err_callback_implicit_this_not_available : Error<
+  "'callback' argument at position %0 references unavailable implicit 'this'">;
 def err_init_method_bad_return_type : Error<
   "init methods must return an object pointer type, not %0">;
 def err_attribute_invalid_size : Error<

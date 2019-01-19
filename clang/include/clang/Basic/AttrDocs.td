@@ -1,9 +1,8 @@
 //==--- AttrDocs.td - Attribute documentation ----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
 
@@ -3844,6 +3843,55 @@ stack variables are uninitialized. This attribute is used to override the
 command-line parameter, forcing variables to remain uninitialized. It has no
 semantic meaning in that using uninitialized values is undefined behavior,
 it rather documents the programmer's intent.
+  }];
+}
+
+def CallbackDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``callback`` attribute specifies that the annotated function may invoke the
+specified callback zero or more times. The callback, as well as the passed
+arguments, are identified by their parameter name or position (starting with
+1!) in the annotated function. The first position in the attribute identifies
+the callback callee, the following positions declare describe its arguments.
+The callback callee is required to be callable with the number, and order, of
+the specified arguments. The index `0`, or the identifier `this`, is used to
+represent an implicit "this" pointer in class methods. If there is no implicit
+"this" pointer it shall not be referenced. The index '-1', or the name "__",
+represents an unknown callback callee argument. This can be a value which is
+not present in the declared parameter list, or one that is, but is potentially
+inspected, captured, or modified. Parameter names and indices can be mixed in
+the callback attribute.
+
+The ``callback`` attribute, which is directly translated to ``callback``
+metadata <http://llvm.org/docs/LangRef.html#callback-metadata>, make the
+connection between the call to the annotated function and the callback callee.
+This can enable interprocedural optimizations which were otherwise impossible.
+If a function parameter is mentioned in the ``callback`` attribute, through its
+position, it is undefined if that parameter is used for anything other than the
+actual callback. Inspected, captured, or modified parameters shall not be
+listed in the ``callback`` metadata.
+
+Example encodings for the callback performed by `pthread_create` are shown
+below. The explicit attribute annotation indicates that the third parameter
+(`start_routine`) is called zero or more times by the `pthread_create` function,
+and that the fourth parameter (`arg`) is passed along. Note that the callback
+behavior of `pthread_create` is automatically recognized by Clang. In addition,
+the declarations of `__kmpc_fork_teams` and `__kmpc_fork_call`, generated for 
+`#pragma omp target teams` and `#pragma omp parallel`, respectively, are also
+automatically recognized as broker functions. Further functions might be added
+in the future.
+
+  .. code-block:: c
+
+    __attribute__((callback (start_routine, arg)))
+    int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                       void *(*start_routine) (void *), void *arg);
+
+    __attribute__((callback (3, 4)))
+    int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                       void *(*start_routine) (void *), void *arg);
+
   }];
 }
 

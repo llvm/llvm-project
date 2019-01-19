@@ -82,9 +82,9 @@ int main (int argc, char **argv) {
 // CHECK-DEBUG-NEXT:  }
 
 // CHECK-DAG: define linkonce_odr {{.*}}void [[FOO]]({{i32[ ]?[a-z]*}} %argc)
-// CHECK-DAG: declare {{.*}}void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
+// CHECK-DAG: declare !callback ![[cbid:[0-9]+]] {{.*}}void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
 // CHECK-DEBUG-DAG: define linkonce_odr void [[FOO]](i32 %argc)
-// CHECK-DEBUG-DAG: declare void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
+// CHECK-DEBUG-DAG: declare !callback ![[cbid:[0-9]+]] void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
 // CHECK-DEBUG-DAG:       define internal void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i64 [[VLA_SIZE:%.+]], i32* {{.+}} [[VLA_ADDR:%[^)]+]])
 // CHECK-DEBUG-DAG:       call void [[OMP_OUTLINED_DEBUG]]
 
@@ -131,5 +131,6 @@ int main (int argc, char **argv) {
 
 // CHECK: attributes #[[FN_ATTRS]] = {{.+}} nounwind
 // CHECK-DEBUG: attributes #[[FN_ATTRS]] = {{.+}} nounwind
-
+// CHECK: ![[cbid]] = !{![[cbidb:[0-9]+]]}
+// CHECK: ![[cbidb]] = !{i64 2, i64 -1, i64 -1, i1 true}
 #endif
