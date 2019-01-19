@@ -300,6 +300,14 @@ void HIPToolChain::addClangTargetOptions(
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
                          options::OPT_fvisibility_ms_compat))
     CC1Args.append({"-fvisibility", "hidden"});
+
+  // Workaround for PyTorch sort index and put_accumulate issue.
+  // pre-linking optimization causes sort index to fail. see JIRA ticket
+  // SWDEV-176929. As a workaround, disable pre-linking optimization.
+  // This should not cause performance degradation since opt is done
+  // after linking.
+  CC1Args.push_back("-disable-llvm-passes");
+
 }
 
 llvm::opt::DerivedArgList *
