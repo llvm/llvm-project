@@ -14,15 +14,13 @@ const int GlobalVar = 0;
 
 static void *callee0(void *payload) {
 // IPCP:      define internal i8* @callee0
-// IPCP-NEXT:   entry:
-// IPCP-NEXT:     ret i8* null
+// IPCP:        ret i8* null
   return payload;
 }
 
 static void *callee1(void *payload) {
 // IPCP:      define internal i8* @callee1
-// IPCP-NEXT:   entry:
-// IPCP-NEXT:     ret i8* bitcast (i32* @GlobalVar to i8*)
+// IPCP:        ret i8* bitcast (i32* @GlobalVar to i8*)
   return payload;
 }
 
