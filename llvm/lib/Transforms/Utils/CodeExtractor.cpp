@@ -880,6 +880,71 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   return newFunction;
 }
 
+/// Scan the extraction region for lifetime markers which reference inputs.
+/// Erase these markers. Return the inputs which were referenced.
+///
+/// The extraction region is defined by a set of blocks (\p Blocks), and a set
+/// of allocas which will be moved from the caller function into the extracted
+/// function (\p SunkAllocas).
+static SetVector<Value *>
+eraseLifetimeMarkersOnInputs(const SetVector<BasicBlock *> &Blocks,
+                             const SetVector<Value *> &SunkAllocas) {
+  SetVector<Value *> InputObjectsWithLifetime;
+  for (BasicBlock *BB : Blocks) {
+    for (auto It = BB->begin(), End = BB->end(); It != End;) {
+      auto *II = dyn_cast<IntrinsicInst>(&*It);
+      ++It;
+      if (!II || !II->isLifetimeStartOrEnd())
+        continue;
+
+      // Get the memory operand of the lifetime marker. If the underlying
+      // object is a sunk alloca, or is otherwise defined in the extraction
+      // region, the lifetime marker must not be erased.
+      Value *Mem = II->getOperand(1)->stripInBoundsOffsets();
+      if (SunkAllocas.count(Mem) || definedInRegion(Blocks, Mem))
+        continue;
+
+      InputObjectsWithLifetime.insert(Mem);
+      II->eraseFromParent();
+    }
+  }
+  return InputObjectsWithLifetime;
+}
+
+/// Insert lifetime start/end markers surrounding the call to the new function
+/// for objects defined in the caller.
+static void insertLifetimeMarkersSurroundingCall(Module *M,
+                                                 ArrayRef<Value *> Objects,
+                                                 CallInst *TheCall) {
+  if (Objects.empty())
+    return;
+
+  LLVMContext &Ctx = M->getContext();
+  auto Int8PtrTy = Type::getInt8PtrTy(Ctx);
+  auto NegativeOne = ConstantInt::getSigned(Type::getInt64Ty(Ctx), -1);
+  auto StartFn = llvm::Intrinsic::getDeclaration(
+      M, llvm::Intrinsic::lifetime_start, Int8PtrTy);
+  auto EndFn = llvm::Intrinsic::getDeclaration(M, llvm::Intrinsic::lifetime_end,
+                                               Int8PtrTy);
+  Instruction *Term = TheCall->getParent()->getTerminator();
+  for (Value *Mem : Objects) {
+    assert((!isa<Instruction>(Mem) ||
+            cast<Instruction>(Mem)->getFunction() == TheCall->getFunction()) &&
+           "Input memory not defined in original function");
+    Value *MemAsI8Ptr = nullptr;
+    if (Mem->getType() == Int8PtrTy)
+      MemAsI8Ptr = Mem;
+    else
+      MemAsI8Ptr =
+          CastInst::CreatePointerCast(Mem, Int8PtrTy, "lt.cast", TheCall);
+
+    auto StartMarker = CallInst::Create(StartFn, {NegativeOne, MemAsI8Ptr});
+    StartMarker->insertBefore(TheCall);
+    auto EndMarker = CallInst::Create(EndFn, {NegativeOne, MemAsI8Ptr});
+    EndMarker->insertBefore(Term);
+  }
+}
+
 /// emitCallAndSwitchStatement - This method sets up the caller side by adding
 /// the call instruction, splitting any PHI nodes in the header block as
 /// necessary.
@@ -1119,6 +1184,10 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
     break;
   }
 
+  // Insert lifetime markers around the reloads of any output values. The
+  // allocas output values are stored in are only in-use in the codeRepl block.
+  insertLifetimeMarkersSurroundingCall(M, ReloadOutputs, call);
+
   return call;
 }
 
@@ -1179,71 +1248,6 @@ void CodeExtractor::calculateNewCallTerminatorWeights(
   TI->setMetadata(
       LLVMContext::MD_prof,
       MDBuilder(TI->getContext()).createBranchWeights(BranchWeights));
-}
-
-/// Scan the extraction region for lifetime markers which reference inputs.
-/// Erase these markers. Return the inputs which were referenced.
-///
-/// The extraction region is defined by a set of blocks (\p Blocks), and a set
-/// of allocas which will be moved from the caller function into the extracted
-/// function (\p SunkAllocas).
-static SetVector<Value *>
-eraseLifetimeMarkersOnInputs(const SetVector<BasicBlock *> &Blocks,
-                             const SetVector<Value *> &SunkAllocas) {
-  SetVector<Value *> InputObjectsWithLifetime;
-  for (BasicBlock *BB : Blocks) {
-    for (auto It = BB->begin(), End = BB->end(); It != End;) {
-      auto *II = dyn_cast<IntrinsicInst>(&*It);
-      ++It;
-      if (!II || !II->isLifetimeStartOrEnd())
-        continue;
-
-      // Get the memory operand of the lifetime marker. If the underlying
-      // object is a sunk alloca, or is otherwise defined in the extraction
-      // region, the lifetime marker must not be erased.
-      Value *Mem = II->getOperand(1)->stripInBoundsOffsets();
-      if (SunkAllocas.count(Mem) || definedInRegion(Blocks, Mem))
-        continue;
-
-      InputObjectsWithLifetime.insert(Mem);
-      II->eraseFromParent();
-    }
-  }
-  return InputObjectsWithLifetime;
-}
-
-/// Insert lifetime start/end markers surrounding the call to the new function
-/// for objects defined in the caller.
-static void insertLifetimeMarkersSurroundingCall(
-    Module *M, const SetVector<Value *> &InputObjectsWithLifetime,
-    CallInst *TheCall) {
-  if (InputObjectsWithLifetime.empty())
-    return;
-
-  LLVMContext &Ctx = M->getContext();
-  auto Int8PtrTy = Type::getInt8PtrTy(Ctx);
-  auto NegativeOne = ConstantInt::getSigned(Type::getInt64Ty(Ctx), -1);
-  auto LifetimeStartFn = llvm::Intrinsic::getDeclaration(
-      M, llvm::Intrinsic::lifetime_start, Int8PtrTy);
-  auto LifetimeEndFn = llvm::Intrinsic::getDeclaration(
-      M, llvm::Intrinsic::lifetime_end, Int8PtrTy);
-  for (Value *Mem : InputObjectsWithLifetime) {
-    assert((!isa<Instruction>(Mem) ||
-            cast<Instruction>(Mem)->getFunction() == TheCall->getFunction()) &&
-           "Input memory not defined in original function");
-    Value *MemAsI8Ptr = nullptr;
-    if (Mem->getType() == Int8PtrTy)
-      MemAsI8Ptr = Mem;
-    else
-      MemAsI8Ptr =
-          CastInst::CreatePointerCast(Mem, Int8PtrTy, "lt.cast", TheCall);
-
-    auto StartMarker =
-        CallInst::Create(LifetimeStartFn, {NegativeOne, MemAsI8Ptr});
-    StartMarker->insertBefore(TheCall);
-    auto EndMarker = CallInst::Create(LifetimeEndFn, {NegativeOne, MemAsI8Ptr});
-    EndMarker->insertAfter(TheCall);
-  }
 }
 
 Function *CodeExtractor::extractCodeRegion() {
@@ -1389,7 +1393,8 @@ Function *CodeExtractor::extractCodeRegion() {
   // Replicate the effects of any lifetime start/end markers which referenced
   // input objects in the extraction region by placing markers around the call.
   insertLifetimeMarkersSurroundingCall(oldFunction->getParent(),
-                                       InputObjectsWithLifetime, TheCall);
+                                       InputObjectsWithLifetime.getArrayRef(),
+                                       TheCall);
 
   // Propagate personality info to the new function if there is one.
   if (oldFunction->hasPersonalityFn())
