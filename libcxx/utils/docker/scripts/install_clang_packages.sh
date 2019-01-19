@@ -20,7 +20,7 @@ Available options:
 EOF
 }
 
-VERSION=""
+VERSION="9"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -39,12 +39,29 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-
+set -x
 
 curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
 add-apt-repository -s "deb http://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs) main"
 apt-get update
-apt-get install -y --no-install-recommends clang
+apt-get upgrade -y
+apt-get install -y --no-install-recommends "clang-$VERSION"
+
+# FIXME(EricWF): Remove this once the clang packages are no longer broken.
+if [ -f "/usr/local/bin/clang" ]; then
+  echo "clang already exists"
+  exit 1
+else
+  CC_BINARY="$(which clang-$VERSION)"
+  ln -s "$CC_BINARY" "/usr/local/bin/clang"
+fi
+if [ -f "/usr/local/bin/clang++" ]; then
+  echo "clang++ already exists"
+  exit 1
+else
+  CXX_BINARY="$(which clang++-$VERSION)"
+  ln -s "$CXX_BINARY" "/usr/local/bin/clang++"
+fi
 
 echo "Testing clang version..."
 clang --version
@@ -58,6 +75,7 @@ if [ "$VERSION" == "" ]; then
   echo "Installing version '$VERSION'"
 fi
 
+apt-get purge -y "libc++-$VERSION-dev" "libc++abi-$VERSION-dev"
 apt-get install -y --no-install-recommends "libc++-$VERSION-dev" "libc++abi-$VERSION-dev"
 
 echo "Done"
