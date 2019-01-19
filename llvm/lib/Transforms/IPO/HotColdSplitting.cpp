@@ -183,7 +183,6 @@ private:
   Function *extractColdRegion(const BlockSequence &Region, DominatorTree &DT,
                               BlockFrequencyInfo *BFI, TargetTransformInfo &TTI,
                               OptimizationRemarkEmitter &ORE, unsigned Count);
-  SmallPtrSet<const Function *, 2> OutlinedFunctions;
   ProfileSummaryInfo *PSI;
   function_ref<BlockFrequencyInfo *(Function &)> GetBFI;
   function_ref<TargetTransformInfo &(Function &)> GetTTI;
@@ -212,10 +211,6 @@ public:
 // Returns false if the function should not be considered for hot-cold split
 // optimization.
 bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
-  // Do not try to outline again from an already outlined cold function.
-  if (OutlinedFunctions.count(&F))
-    return false;
-
   if (F.size() <= 2)
     return false;
 
@@ -538,7 +533,6 @@ bool HotColdSplitting::outlineColdRegions(Function &F, ProfileSummaryInfo &PSI,
           extractColdRegion(SubRegion, DT, BFI, TTI, ORE, OutlinedFunctionID);
       if (Outlined) {
         ++OutlinedFunctionID;
-        OutlinedFunctions.insert(Outlined);
         Changed = true;
       }
     } while (!Region.empty());
@@ -549,8 +543,9 @@ bool HotColdSplitting::outlineColdRegions(Function &F, ProfileSummaryInfo &PSI,
 
 bool HotColdSplitting::run(Module &M) {
   bool Changed = false;
-  OutlinedFunctions.clear();
-  for (auto &F : M) {
+  for (auto It = M.begin(), End = M.end(); It != End; ++It) {
+    Function &F = *It;
+
     if (!shouldOutlineFrom(F)) {
       LLVM_DEBUG(llvm::dbgs() << "Skipping " << F.getName() << "\n");
       continue;
