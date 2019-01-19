@@ -132,7 +132,7 @@ D: Basic-block autovectorization, PowerPC backend improvements
 
 N: Eric Fiselier
 E: eric@efcs.ca
-D: LIT patches and documentation.
+D: LIT patches and documentation
 
 N: Ryan Flynn
 E: pizza@parseerror.com
