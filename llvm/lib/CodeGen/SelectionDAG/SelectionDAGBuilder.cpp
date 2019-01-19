@@ -1032,19 +1032,7 @@ SDValue SelectionDAGBuilder::getRoot() {
   }
 
   // Otherwise, we have to make a token factor node.
-  // If we have >= 2^16 loads then split across multiple token factors as
-  // there's a 64k limit on the number of SDNode operands.
-  SDValue Root;
-  size_t Limit = SDNode::getMaxNumOperands();
-  while (PendingLoads.size() > Limit) {
-    unsigned SliceIdx = PendingLoads.size() - Limit;
-    auto ExtractedTFs = ArrayRef<SDValue>(PendingLoads).slice(SliceIdx, Limit);
-    SDValue NewTF =
-        DAG.getNode(ISD::TokenFactor, getCurSDLoc(), MVT::Other, ExtractedTFs);
-    PendingLoads.erase(PendingLoads.begin() + SliceIdx, PendingLoads.end());
-    PendingLoads.emplace_back(NewTF);
-  }
-  Root = DAG.getNode(ISD::TokenFactor, getCurSDLoc(), MVT::Other, PendingLoads);
+  SDValue Root = DAG.getTokenFactor(getCurSDLoc(), PendingLoads);
   PendingLoads.clear();
   DAG.setRoot(Root);
   return Root;
@@ -7656,13 +7644,6 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
   AsmNodeOperands.push_back(DAG.getTargetConstant(
       ExtraInfo.get(), getCurSDLoc(), TLI.getPointerTy(DAG.getDataLayout())));
 
-  // Loop over all of the inputs, copying the operand values into the
-  // appropriate registers and processing the output regs.
-  RegsForValue RetValRegs;
-
-  // IndirectStoresToEmit - The set of stores to emit after the inline asm node.
-  std::vector<std::pair<RegsForValue, Value *>> IndirectStoresToEmit;
-
   for (SDISelAsmOperandInfo &OpInfo : ConstraintOperands) {
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
@@ -7683,38 +7664,26 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
                                                         MVT::i32));
         AsmNodeOperands.push_back(OpInfo.CallOperand);
         break;
+      } else if (OpInfo.ConstraintType == TargetLowering::C_Register ||
+                 OpInfo.ConstraintType == TargetLowering::C_RegisterClass) {
+        // Otherwise, this is a register or register class output.
+
+        // Copy the output from the appropriate register.  Find a register that
+        // we can use.
+        if (OpInfo.AssignedRegs.Regs.empty()) {
+          emitInlineAsmError(
+              CS, "couldn't allocate output register for constraint '" +
+                      Twine(OpInfo.ConstraintCode) + "'");
+          return;
+        }
+
+        // Add information to the INLINEASM node to know that this register is
+        // set.
+        OpInfo.AssignedRegs.AddInlineAsmOperands(
+            OpInfo.isEarlyClobber ? InlineAsm::Kind_RegDefEarlyClobber
+                                  : InlineAsm::Kind_RegDef,
+            false, 0, getCurSDLoc(), DAG, AsmNodeOperands);
       }
-
-      // Otherwise, this is a register or register class output.
-
-      // Copy the output from the appropriate register.  Find a register that
-      // we can use.
-      if (OpInfo.AssignedRegs.Regs.empty()) {
-        emitInlineAsmError(
-            CS, "couldn't allocate output register for constraint '" +
-                    Twine(OpInfo.ConstraintCode) + "'");
-        return;
-      }
-
-      // If this is an indirect operand, store through the pointer after the
-      // asm.
-      if (OpInfo.isIndirect) {
-        IndirectStoresToEmit.push_back(std::make_pair(OpInfo.AssignedRegs,
-                                                      OpInfo.CallOperandVal));
-      } else {
-        // This is the result value of the call.
-        assert(!CS.getType()->isVoidTy() && "Bad inline asm!");
-        // Concatenate this output onto the outputs list.
-        RetValRegs.append(OpInfo.AssignedRegs);
-      }
-
-      // Add information to the INLINEASM node to know that this register is
-      // set.
-      OpInfo.AssignedRegs
-          .AddInlineAsmOperands(OpInfo.isEarlyClobber
-                                    ? InlineAsm::Kind_RegDefEarlyClobber
-                                    : InlineAsm::Kind_RegDef,
-                                false, 0, getCurSDLoc(), DAG, AsmNodeOperands);
       break;
 
     case InlineAsm::isInput: {
@@ -7872,94 +7841,102 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
                       DAG.getVTList(MVT::Other, MVT::Glue), AsmNodeOperands);
   Flag = Chain.getValue(1);
 
-  // If this asm returns a register value, copy the result from that register
-  // and set it as the value of the call.
-  if (!RetValRegs.Regs.empty()) {
-    SDValue Val = RetValRegs.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(),
-                                             Chain, &Flag, CS.getInstruction());
+  // Do additional work to generate outputs.
 
-    llvm::Type *CSResultType = CS.getType();
-    unsigned numRet;
-    ArrayRef<Type *> ResultTypes;
-    SmallVector<SDValue, 1> ResultValues(1);
-    if (StructType *StructResult = dyn_cast<StructType>(CSResultType)) {
-      numRet = StructResult->getNumElements();
-      assert(Val->getNumOperands() == numRet &&
-             "Mismatch in number of output operands in asm result");
-      ResultTypes = StructResult->elements();
-      ArrayRef<SDUse> ValueUses = Val->ops();
-      ResultValues.resize(numRet);
-      std::transform(ValueUses.begin(), ValueUses.end(), ResultValues.begin(),
-                     [](const SDUse &u) -> SDValue { return u.get(); });
-    } else {
-      numRet = 1;
-      ResultValues[0] = Val;
-      ResultTypes = makeArrayRef(CSResultType);
-    }
-    SmallVector<EVT, 1> ResultVTs(numRet);
-    for (unsigned i = 0; i < numRet; i++) {
-      EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), ResultTypes[i]);
-      SDValue Val = ResultValues[i];
-      assert(ResultTypes[i]->isSized() && "Unexpected unsized type");
-      // If the type of the inline asm call site return value is different but
-      // has same size as the type of the asm output bitcast it.  One example
-      // of this is for vectors with different width / number of elements.
-      // This can happen for register classes that can contain multiple
-      // different value types.  The preg or vreg allocated may not have the
-      // same VT as was expected.
-      //
-      // This can also happen for a return value that disagrees with the
-      // register class it is put in, eg. a double in a general-purpose
-      // register on a 32-bit machine.
-      if (ResultVT != Val.getValueType() &&
-          ResultVT.getSizeInBits() == Val.getValueSizeInBits())
-        Val = DAG.getNode(ISD::BITCAST, getCurSDLoc(), ResultVT, Val);
-      else if (ResultVT != Val.getValueType() && ResultVT.isInteger() &&
-               Val.getValueType().isInteger()) {
-        // If a result value was tied to an input value, the computed result
-        // may have a wider width than the expected result.  Extract the
-        // relevant portion.
-        Val = DAG.getNode(ISD::TRUNCATE, getCurSDLoc(), ResultVT, Val);
-      }
-
-      assert(ResultVT == Val.getValueType() && "Asm result value mismatch!");
-      ResultVTs[i] = ResultVT;
-      ResultValues[i] = Val;
-    }
-
-    Val = DAG.getNode(ISD::MERGE_VALUES, getCurSDLoc(),
-                      DAG.getVTList(ResultVTs), ResultValues);
-    setValue(CS.getInstruction(), Val);
-    // Don't need to use this as a chain in this case.
-    if (!IA->hasSideEffects() && !hasMemory && IndirectStoresToEmit.empty())
-      return;
-  }
-
-  std::vector<std::pair<SDValue, const Value *>> StoresToEmit;
-
-  // Process indirect outputs, first output all of the flagged copies out of
-  // physregs.
-  for (unsigned i = 0, e = IndirectStoresToEmit.size(); i != e; ++i) {
-    RegsForValue &OutRegs = IndirectStoresToEmit[i].first;
-    const Value *Ptr = IndirectStoresToEmit[i].second;
-    SDValue OutVal = OutRegs.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(),
-                                             Chain, &Flag, IA);
-    StoresToEmit.push_back(std::make_pair(OutVal, Ptr));
-  }
-
-  // Emit the non-flagged stores from the physregs.
+  SmallVector<EVT, 1> ResultVTs;
+  SmallVector<SDValue, 1> ResultValues;
   SmallVector<SDValue, 8> OutChains;
-  for (unsigned i = 0, e = StoresToEmit.size(); i != e; ++i) {
-    SDValue Val = DAG.getStore(Chain, getCurSDLoc(), StoresToEmit[i].first,
-                               getValue(StoresToEmit[i].second),
-                               MachinePointerInfo(StoresToEmit[i].second));
-    OutChains.push_back(Val);
+
+  llvm::Type *CSResultType = CS.getType();
+  unsigned NumReturns = 0;
+  ArrayRef<Type *> ResultTypes;
+  if (StructType *StructResult = dyn_cast<StructType>(CSResultType)) {
+    NumReturns = StructResult->getNumElements();
+    ResultTypes = StructResult->elements();
+  } else if (!CSResultType->isVoidTy()) {
+    NumReturns = 1;
+    ResultTypes = makeArrayRef(CSResultType);
   }
 
+  auto CurResultType = ResultTypes.begin();
+  auto handleRegAssign = [&](SDValue V) {
+    assert(CurResultType != ResultTypes.end() && "Unexpected value");
+    assert((*CurResultType)->isSized() && "Unexpected unsized type");
+    EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), *CurResultType);
+    ++CurResultType;
+    // If the type of the inline asm call site return value is different but has
+    // same size as the type of the asm output bitcast it.  One example of this
+    // is for vectors with different width / number of elements.  This can
+    // happen for register classes that can contain multiple different value
+    // types.  The preg or vreg allocated may not have the same VT as was
+    // expected.
+    //
+    // This can also happen for a return value that disagrees with the register
+    // class it is put in, eg. a double in a general-purpose register on a
+    // 32-bit machine.
+    if (ResultVT != V.getValueType() &&
+        ResultVT.getSizeInBits() == V.getValueSizeInBits())
+      V = DAG.getNode(ISD::BITCAST, getCurSDLoc(), ResultVT, V);
+    else if (ResultVT != V.getValueType() && ResultVT.isInteger() &&
+             V.getValueType().isInteger()) {
+      // If a result value was tied to an input value, the computed result
+      // may have a wider width than the expected result.  Extract the
+      // relevant portion.
+      V = DAG.getNode(ISD::TRUNCATE, getCurSDLoc(), ResultVT, V);
+    }
+    assert(ResultVT == V.getValueType() && "Asm result value mismatch!");
+    ResultVTs.push_back(ResultVT);
+    ResultValues.push_back(V);
+  };
+
+  // Deal with assembly output fixups.
+  for (SDISelAsmOperandInfo &OpInfo : ConstraintOperands) {
+    if (OpInfo.Type == InlineAsm::isOutput &&
+        (OpInfo.ConstraintType == TargetLowering::C_Register ||
+         OpInfo.ConstraintType == TargetLowering::C_RegisterClass)) {
+      if (OpInfo.isIndirect) {
+        // Register indirect are manifest as stores.
+        const RegsForValue &OutRegs = OpInfo.AssignedRegs;
+        const Value *Ptr = OpInfo.CallOperandVal;
+        SDValue OutVal = OutRegs.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(),
+                                                 Chain, &Flag, IA);
+        SDValue Val = DAG.getStore(Chain, getCurSDLoc(), OutVal, getValue(Ptr),
+                                   MachinePointerInfo(Ptr));
+        OutChains.push_back(Val);
+      } else {
+        // generate CopyFromRegs to associated registers.
+        assert(!CS.getType()->isVoidTy() && "Bad inline asm!");
+        SDValue Val = OpInfo.AssignedRegs.getCopyFromRegs(
+            DAG, FuncInfo, getCurSDLoc(), Chain, &Flag, CS.getInstruction());
+        if (Val.getOpcode() == ISD::MERGE_VALUES) {
+          for (const SDValue &V : Val->op_values())
+            handleRegAssign(V);
+        } else
+          handleRegAssign(Val);
+      }
+    }
+  }
+
+  // Set results.
+  if (!ResultValues.empty()) {
+    assert(CurResultType == ResultTypes.end() &&
+           "Mismatch in number of ResultTypes");
+    assert(ResultValues.size() == NumReturns &&
+           "Mismatch in number of output operands in asm result");
+
+    SDValue V = DAG.getNode(ISD::MERGE_VALUES, getCurSDLoc(),
+                            DAG.getVTList(ResultVTs), ResultValues);
+    setValue(CS.getInstruction(), V);
+  }
+
+  // Collect store chains.
   if (!OutChains.empty())
     Chain = DAG.getNode(ISD::TokenFactor, getCurSDLoc(), MVT::Other, OutChains);
 
-  DAG.setRoot(Chain);
+  // Only Update Root if inline assembly has a memory effect.
+  if (ResultValues.empty() || IA->hasSideEffects() || hasMemory ||
+      !OutChains.empty())
+    DAG.setRoot(Chain);
 }
 
 void SelectionDAGBuilder::emitInlineAsmError(ImmutableCallSite CS,

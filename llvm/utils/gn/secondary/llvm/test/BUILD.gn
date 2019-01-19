@@ -140,7 +140,7 @@ write_lit_config("lit_site_cfg") {
   if (llvm_enable_libxml2) {
     extra_values += [ "LLVM_LIBXML2_ENABLED=1" ]
   } else {
-    extra_values += [ "LLVM_LIBXML2_ENABLED=" ]  # Must be empty.
+    extra_values += [ "LLVM_LIBXML2_ENABLED=0" ]  # Must be 0.
   }
 
   if (llvm_enable_threads) {

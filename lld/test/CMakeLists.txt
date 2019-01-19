@@ -14,7 +14,9 @@ if(LLD_BUILT_STANDALONE)
 endif()
 
 llvm_canonicalize_cmake_booleans(
-  HAVE_LIBZ)
+  HAVE_LIBZ
+  LLVM_LIBXML2_ENABLED
+  )
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in

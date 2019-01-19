@@ -33,11 +33,6 @@ public:
   enum {
     /// set the 'x' bit on the resulting file
     F_executable = 1,
-
-    /// the contents of the new file are initialized from the file that exists
-    /// at the location (if present).  This allows in-place modification of an
-    /// existing file.
-    F_modify = 2
   };
 
   /// Factory method to create an OutputBuffer object which manages a read/write

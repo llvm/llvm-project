@@ -136,7 +136,8 @@ public:
   /// dbg.addr is emitted twice.
   void clearIsEmitted() { Emitted = false; }
 
-  LLVM_DUMP_METHOD void dump(raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void print(raw_ostream &OS) const;
 };
 
 /// Holds the information from a dbg_label node through SDISel.

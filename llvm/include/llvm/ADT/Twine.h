@@ -274,6 +274,9 @@ namespace llvm {
 
       assert(isValid() && "Invalid twine!");
     }
+    /// Delete the implicit conversion from nullptr as Twine(const char *)
+    /// cannot take nullptr.
+    /*implicit*/ Twine(std::nullptr_t) = delete;
 
     /// Construct from an std::string.
     /*implicit*/ Twine(const std::string &Str) : LHSKind(StdStringKind) {
