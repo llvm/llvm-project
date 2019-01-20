@@ -15,9 +15,9 @@ apt-get upgrade -y
 # FIXME(EricWF): Remove this hack. It's only in place to temporarily fix linking libclang_rt from the
 # debian packages.
 # WARNING: If you're not a buildbot, DO NOT RUN!
-apt-get install lld-8
+apt-get install lld-9
 rm /usr/bin/ld
-ln -s /usr/bin/lld-8 /usr/bin/ld
+ln -s /usr/bin/lld-9 /usr/bin/ld
 
 systemctl set-property buildslave.service TasksMax=100000
 

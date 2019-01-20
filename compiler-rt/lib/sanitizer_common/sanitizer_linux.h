@@ -1,9 +1,8 @@
 //===-- sanitizer_linux.h ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -105,6 +104,17 @@ bool LibraryNameIs(const char *full_name, const char *base_name);
 
 // Call cb for each region mapped by map.
 void ForEachMappedRegion(link_map *map, void (*cb)(const void *, uptr));
+
+// Releases memory pages entirely within the [beg, end] address range.
+// The pages no longer count toward RSS; reads are guaranteed to return 0.
+// Requires (but does not verify!) that pages are MAP_PRIVATE.
+INLINE void ReleaseMemoryPagesToOSAndZeroFill(uptr beg, uptr end) {
+  // man madvise on Linux promises zero-fill for anonymous private pages.
+  // Testing shows the same behaviour for private (but not anonymous) mappings
+  // of shm_open() files, as long as the underlying file is untouched.
+  CHECK(SANITIZER_LINUX);
+  ReleaseMemoryPagesToOS(beg, end);
+}
 
 #if SANITIZER_ANDROID
 

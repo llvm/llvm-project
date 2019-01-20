@@ -12,8 +12,11 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-NEXT:  ]
 ;
 ; CHECK:  codeRepl:
+; CHECK-NEXT:    bitcast
+; CHECK-NEXT:    lifetime.start
 ; CHECK-NEXT:    call void @pluto.cold.1(i1* %tmp8.ce.loc)
 ; CHECK-NEXT:    %tmp8.ce.reload = load i1, i1* %tmp8.ce.loc
+; CHECK-NEXT:    lifetime.end
 ; CHECK-NEXT:    br label %bb7
 ;
 ; CHECK:  bb7:

@@ -113,8 +113,8 @@ a file inline, making it difficult to work with for reviewers using that
 program.
 
 When submitting patches, please do not add confidentiality or non-disclosure
-notices to the patches themselves.  These notices conflict with the `LLVM
-License`_ and may result in your contribution being excluded.
+notices to the patches themselves.  These notices conflict with the LLVM
+licensing terms and may result in your contribution being excluded.
 
 .. _code review:
 
@@ -646,44 +646,226 @@ Copyright, License, and Patents
 .. note::
 
    This section deals with legal matters but does not provide legal advice.  We
-   are not lawyers --- please seek legal counsel from an attorney.
+   are not lawyers --- please seek legal counsel from a licensed attorney.
 
 This section addresses the issues of copyright, license and patents for the LLVM
-project.  The copyright for the code is held by the individual contributors of
-the code and the terms of its license to LLVM users and developers is the
-`University of Illinois/NCSA Open Source License
-<http://www.opensource.org/licenses/UoI-NCSA.php>`_ (with portions dual licensed
-under the `MIT License <http://www.opensource.org/licenses/mit-license.php>`_,
-see below).  As contributor to the LLVM project, you agree to allow any
-contributions to the project to licensed under these terms.
+project.  The copyright for the code is held by the contributors of
+the code.  The code is licensed under permissive `open source licensing terms`_,
+namely the Apache 2 license, which includes a copyright and `patent license`_.
+When you contribute code to the LLVM project, you license it under these terms.
+
+If you have questions or comments about these topics, please contact the
+`LLVM Developer's Mailing List <mailto:llvm-dev@lists.llvm.org>`_.  However,
+please realize that most compiler developers are not lawyers, and therefore you
+will not be getting official legal advice.
 
 Copyright
 ---------
 
-The LLVM project does not require copyright assignments, which means that the
-copyright for the code in the project is held by its respective contributors who
-have each agreed to release their contributed code under the terms of the `LLVM
-License`_.
+The LLVM project does not collect copyright assignments, which means that the
+copyright for the code in the project is held by the respective contributors.
+Because you (or your company)
+retain ownership of the code you contribute, you know it may only be used under
+the terms of the open source license you contributed it under: the license for
+your contributions cannot be changed in the future without your approval.
 
-An implication of this is that the LLVM license is unlikely to ever change:
-changing it would require tracking down all the contributors to LLVM and getting
-them to agree that a license change is acceptable for their contribution.  Since
-there are no plans to change the license, this is not a cause for concern.
+Because the LLVM project does not require copyright assignments, changing the
+LLVM license requires tracking down the
+contributors to LLVM and getting them to agree that a license change is
+acceptable for their contributions.  We feel that a high burden for relicensing
+is good for the project, because contributors do not have to fear that their
+code will be used in a way with which they disagree.
 
-As a contributor to the project, this means that you (or your company) retain
-ownership of the code you contribute, that it cannot be used in a way that
-contradicts the license (which is a liberal BSD-style license), and that the
-license for your contributions won't change without your approval in the
-future.
+Relicensing
+-----------
 
-.. _LLVM License:
+The last paragraph notwithstanding, the LLVM Project is in the middle of a large
+effort to change licenses, which aims to solve several problems:
 
-License
+* The old licenses made it difficult to move code from (e.g.) the compiler to
+  runtime libraries, because runtime libraries used a different license from the
+  rest of the compiler.
+* Some contributions were not submitted to LLVM due to concerns that
+  the patent grant required by the project was overly broad.
+* The patent grant was unique to the LLVM Project, not written by a lawyer, and
+  was difficult to determine what was protection was provided (if any).
+
+The scope of relicensing is all code that is considered part of the LLVM
+project, including the main LLVM repository, runtime libraries (compiler_rt,
+OpenMP, etc), Polly, and all other subprojects.  There are a few exceptions:
+
+* Code imported from other projects (e.g. Google Test, Autoconf, etc) will
+  remain as it is.  This code isn't developed as part of the LLVM project, it
+  is used by LLVM.
+* Some subprojects are impractical or uninteresting to relicense (e.g. llvm-gcc
+  and dragonegg). These will be split off from the LLVM project (e.g. to
+  separate Github projects), allowing interested people to continue their
+  development elsewhere.
+
+To relicense LLVM, we will be seeking approval from all of the copyright holders
+of code in the repository, or potentially remove/rewrite code if we cannot.
+This is a large
+and challenging project which will take a significant amount of time to
+complete.  In the interim, **all contributions to the project will be made under
+the terms of both the new license and the legacy license scheme** (each of which
+is described below).  The exception to this is the legacy patent grant, which
+will not be required for new contributions.
+
+When all of the code in the project has been converted to the new license or
+removed, we will drop the requirement to contribute under the legacy license.
+This will achieve the goal of having
+a single standardized license for the entire codebase.
+
+If you are a prior contributor to LLVM and have not done so already, please do
+*TODO* to allow us to use your code. *Add a link to a separate page here, which
+is probably a click through web form or something like that.  Details to be
+determined later*.
+
+
+.. _open source licensing terms:
+
+New LLVM Project License Framework
+----------------------------------
+
+Contributions to LLVM are licensed under the `Apache License, Version 2.0
+<https://www.apache.org/licenses/LICENSE-2.0>`_, with two limited
+exceptions intended to ensure that LLVM is very permissively licensed.
+Collectively, the name of this license is "Apache 2.0 License with LLVM
+exceptions".  The exceptions read:
+
+::
+
+   ---- LLVM Exceptions to the Apache 2.0 License ----
+
+   As an exception, if, as a result of your compiling your source code, portions
+   of this Software are embedded into an Object form of such source code, you
+   may redistribute such embedded portions in such Object form without complying
+   with the conditions of Sections 4(a), 4(b) and 4(d) of the License.
+
+   In addition, if you combine or link compiled forms of this Software with
+   software that is licensed under the GPLv2 ("Combined Software") and if a
+   court of competent jurisdiction determines that the patent provision (Section
+   3), the indemnity provision (Section 9) or other Section of the License
+   conflicts with the conditions of the GPLv2, you may retroactively and
+   prospectively choose to deem waived or otherwise exclude such Section(s) of
+   the License, but only in their entirety and only with respect to the Combined
+   Software.
+
+
+We intend to keep LLVM perpetually open source and available under a permissive
+license - this fosters the widest adoption of LLVM by
+**allowing commercial products to be derived from LLVM** with few restrictions
+and without a requirement for making any derived works also open source.  In
+particular, LLVM's license is not a "copyleft" license like the GPL.
+
+The "Apache 2.0 License with LLVM exceptions" allows you to:
+
+* freely download and use LLVM (in whole or in part) for personal, internal, or
+  commercial purposes.
+* include LLVM in packages or distributions you create.
+* combine LLVM with code licensed under every other major open source
+  license (including BSD, MIT, GPLv2, GPLv3...).
+* make changes to LLVM code without being required to contribute it back
+  to the project - contributions are appreciated though!
+
+However, it imposes these limitations on you:
+
+* You must retain the copyright notice if you redistribute LLVM: You cannot
+  strip the copyright headers off or replace them with your own.
+* Binaries that include LLVM must reproduce the copyright notice (e.g. in an
+  included README file or in an "About" box), unless the LLVM code was added as
+  a by-product of compilation.  For example, if an LLVM runtime library like
+  compiler_rt or libc++ was automatically included into your application by the
+  compiler, you do not need to attribute it.
+* You can't use our names to promote your products (LLVM derived or not) -
+  though you can make truthful statements about your use of the LLVM code,
+  without implying our sponsorship.
+* There's no warranty on LLVM at all.
+
+We want LLVM code to be widely used, and believe that this provides a model that
+is great for contributors and users of the project.  For more information about
+the Apache 2.0 License, please see the `Apache License FAQ
+<http://www.apache.org/foundation/license-faq.html>`_, maintained by the
+Apache Project.
+
+
+.. note::
+
+   The LLVM Project includes some really old subprojects (dragonegg,
+   llvm-gcc-4.0, and llvm-gcc-4.2), which are licensed under **GPL
+   licenses**.  This code is not actively maintained - it does not even
+   build successfully.  This code is cleanly separated into distinct SVN
+   repositories from the rest of LLVM, and the LICENSE.txt files specifically
+   indicate that they contain GPL code.  When LLVM transitions from SVN to Git,
+   we plan to drop these code bases from the new repository structure.
+
+
+.. _patent license:
+
+Patents
 -------
 
-We intend to keep LLVM perpetually open source and to use a liberal open source
-license. **As a contributor to the project, you agree that any contributions be
-licensed under the terms of the corresponding subproject.** All of the code in
+Section 3 of the Apache 2.0 license is a patent grant under which
+contributors of code to the project contribute the rights to use any of
+their patents that would otherwise be infringed by that code contribution
+(protecting uses of that code).  Further, the patent grant is revoked
+from anyone who files a patent lawsuit about code in LLVM - this protects the
+community by providing a "patent commons" for the code base and reducing the
+odds of patent lawsuits in general.
+
+The license specifically scopes which patents are included with code
+contributions.  To help explain this, the `Apache License FAQ
+<http://www.apache.org/foundation/license-faq.html>`_ explains this scope using
+some questions and answers, which we reproduce here for your convenience (for
+reference, the "ASF" is the Apache Software Foundation, the guidance still
+holds though)::
+
+   Q1: If I own a patent and contribute to a Work, and, at the time my
+   contribution is included in that Work, none of my patent's claims are subject
+   to Apache's Grant of Patent License, is there a way any of those claims would
+   later become subject to the Grant of Patent License solely due to subsequent
+   contributions by other parties who are not licensees of that patent.
+
+   A1: No.
+
+   Q2: If at any time after my contribution, I am able to license other patent
+   claims that would have been subject to Apache's Grant of Patent License if
+   they were licenseable by me at the time of my contribution, do those other
+   claims become subject to the Grant of Patent License?
+
+   A2: Yes.
+
+   Q3: If I own or control a licensable patent and contribute code to a specific
+   Apache product, which of my patent claims are subject to Apache's Grant of
+   Patent License?
+
+   A3:  The only patent claims that are licensed to the ASF are those you own or
+   have the right to license that read on your contribution or on the
+   combination of your contribution with the specific Apache product to which
+   you contributed as it existed at the time of your contribution. No additional
+   patent claims become licensed as a result of subsequent combinations of your
+   contribution with any other software. Note, however, that licensable patent
+   claims include those that you acquire in the future, as long as they read on
+   your original contribution as made at the original time. Once a patent claim
+   is subject to Apache's Grant of Patent License, it is licensed under the
+   terms of that Grant to the ASF and to recipients of any software distributed
+   by the ASF for any Apache software product whatsoever.
+
+
+Legacy License Structure
+------------------------
+
+.. note::
+   The code base was previously licensed under the Terms described here.
+   We are in the middle of relicensing to a new approach (described above), but
+   until this effort is complete, the code is also still available under these
+   terms.  Once we finish the relicensing project, new versions of the code will
+   not be available under these terms.  However, nothing takes away your right
+   to use old versions under the licensing terms under which they were
+   originally released.
+
+We intend to keep LLVM perpetually open source and to use a permissive open
+source license.  The code in
 LLVM is available under the `University of Illinois/NCSA Open Source License
 <http://www.opensource.org/licenses/UoI-NCSA.php>`_, which boils down to
 this:
@@ -691,13 +873,13 @@ this:
 * You can freely distribute LLVM.
 * You must retain the copyright notice if you redistribute LLVM.
 * Binaries derived from LLVM must reproduce the copyright notice (e.g. in an
-  included readme file).
+  included README file).
 * You can't use our names to promote your LLVM derived products.
 * There's no warranty on LLVM at all.
 
 We believe this fosters the widest adoption of LLVM because it **allows
 commercial products to be derived from LLVM** with few restrictions and without
-a requirement for making any derived works also open source (i.e.  LLVM's
+a requirement for making any derived works also open source (i.e. LLVM's
 license is not a "copyleft" license like the GPL). We suggest that you read the
 `License <http://www.opensource.org/licenses/UoI-NCSA.php>`_ if further
 clarification is needed.
@@ -715,30 +897,3 @@ applications to the binary redistribution clause. This also means that it is ok
 to move code from (e.g.)  libc++ to the LLVM core without concern, but that code
 cannot be moved from the LLVM core to libc++ without the copyright owner's
 permission.
-
-Note that the LLVM Project does distribute dragonegg, **which is
-GPL.** This means that anything "linked" into dragonegg must itself be compatible
-with the GPL, and must be releasable under the terms of the GPL.  This implies
-that **any code linked into dragonegg and distributed to others may be subject to
-the viral aspects of the GPL** (for example, a proprietary code generator linked
-into dragonegg must be made available under the GPL).  This is not a problem for
-code already distributed under a more liberal license (like the UIUC license),
-and GPL-containing subprojects are kept in separate SVN repositories whose
-LICENSE.txt files specifically indicate that they contain GPL code.
-
-Patents
--------
-
-To the best of our knowledge, LLVM does not infringe on any patents (we have
-actually removed code from LLVM in the past that was found to infringe).  Having
-code in LLVM that infringes on patents would violate an important goal of the
-project by making it hard or impossible to reuse the code for arbitrary purposes
-(including commercial use).
-
-When contributing code, we expect contributors to notify us of any potential for
-patent-related trouble with their changes (including from third parties).  If
-you or your employer own the rights to a patent and would like to contribute
-code to LLVM that relies on it, we require that the copyright owner sign an
-agreement that allows any other user of LLVM to freely use your patent.  Please
-contact the `LLVM Foundation Board of Directors <mailto:board@llvm.org>`_ for more
-details.
