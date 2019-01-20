@@ -102,7 +102,9 @@ public:
 
   /// This allows a language runtime to adjust references depending on the type.
   /// \return true on success.
-  virtual bool FixupReference(lldb::addr_t &addr, CompilerType type) {}
+  virtual bool FixupReference(lldb::addr_t &addr, CompilerType type) {
+    return true;
+  }
 
   virtual void SetExceptionBreakpoints() {}
 
