@@ -204,7 +204,8 @@ template <typename AddressSpaceView>
 using AsanAllocatorASVT =
     CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>,
                       AllocatorCacheASVT<AddressSpaceView>,
-                      SecondaryAllocatorASVT<AddressSpaceView>>;
+                      SecondaryAllocatorASVT<AddressSpaceView>,
+                      AddressSpaceView>;
 using AsanAllocator = AsanAllocatorASVT<LocalAddressSpaceView>;
 
 struct AsanThreadLocalMallocStorage {
