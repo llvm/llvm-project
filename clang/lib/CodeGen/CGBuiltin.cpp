@@ -9198,6 +9198,46 @@ static Value *EmitX86FunnelShift(CodeGenFunction &CGF, Value *Op0, Value *Op1,
   return CGF.Builder.CreateCall(F, {Op0, Op1, Amt});
 }
 
+static Value *EmitX86vpcom(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
+                           bool IsSigned) {
+  Value *Op0 = Ops[0];
+  Value *Op1 = Ops[1];
+  llvm::Type *Ty = Op0->getType();
+  uint64_t Imm = cast<llvm::ConstantInt>(Ops[2])->getZExtValue() & 0x7;
+
+  CmpInst::Predicate Pred;
+  switch (Imm) {
+  case 0x0:
+    Pred = IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
+    break;
+  case 0x1:
+    Pred = IsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
+    break;
+  case 0x2:
+    Pred = IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
+    break;
+  case 0x3:
+    Pred = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
+    break;
+  case 0x4:
+    Pred = ICmpInst::ICMP_EQ;
+    break;
+  case 0x5:
+    Pred = ICmpInst::ICMP_NE;
+    break;
+  case 0x6:
+    return llvm::Constant::getNullValue(Ty); // FALSE
+  case 0x7:
+    return llvm::Constant::getAllOnesValue(Ty); // TRUE
+  default:
+    llvm_unreachable("Unexpected XOP vpcom/vpcomu predicate");
+  }
+
+  Value *Cmp = CGF.Builder.CreateICmp(Pred, Op0, Op1);
+  Value *Res = CGF.Builder.CreateSExt(Cmp, Ty);
+  return Res;
+}
+
 static Value *EmitX86Select(CodeGenFunction &CGF,
                             Value *Mask, Value *Op0, Value *Op1) {
 
@@ -10928,6 +10968,16 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     unsigned CC = cast<llvm::ConstantInt>(Ops[2])->getZExtValue() & 0x7;
     return EmitX86MaskedCompare(*this, CC, false, Ops);
   }
+  case X86::BI__builtin_ia32_vpcomb:
+  case X86::BI__builtin_ia32_vpcomw:
+  case X86::BI__builtin_ia32_vpcomd:
+  case X86::BI__builtin_ia32_vpcomq:
+    return EmitX86vpcom(*this, Ops, true);
+  case X86::BI__builtin_ia32_vpcomub:
+  case X86::BI__builtin_ia32_vpcomuw:
+  case X86::BI__builtin_ia32_vpcomud:
+  case X86::BI__builtin_ia32_vpcomuq:
+    return EmitX86vpcom(*this, Ops, false);
 
   case X86::BI__builtin_ia32_kortestcqi:
   case X86::BI__builtin_ia32_kortestchi:

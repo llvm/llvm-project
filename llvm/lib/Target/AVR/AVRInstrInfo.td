@@ -89,7 +89,7 @@ def imm0_63_neg : PatLeaf<(imm),
 
 def uimm6 : PatLeaf<(imm), [{ return isUInt<6>(N->getZExtValue()); }]>;
 
-// imm_com8_XFORM - Return the complement of a t2_so_imm value
+// imm_com8_XFORM - Return the complement of a imm_com8 value
 def imm_com8_XFORM : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(~((uint8_t)N->getZExtValue()), SDLoc(N),
                                    MVT::i8);
@@ -99,7 +99,7 @@ def imm_com8_XFORM : SDNodeXForm<imm, [{
 // of a 8-bit immediate.
 // Note: this pattern doesn't require an encoder method and such, as it's
 // only used on aliases (Pat<> and InstAlias<>). The actual encoding
-// is handled by the destination instructions, which use t2_so_imm.
+// is handled by the destination instructions, which use imm_com8.
 def imm_com8_asmoperand : AsmOperandClass { let Name = "ImmCom8"; }
 def imm_com8 : Operand<i8> {
   let ParserMatchClass = imm_com8_asmoperand;

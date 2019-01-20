@@ -90,6 +90,16 @@ static unsigned getAlignment(GlobalVariable *GV) {
   return GV->getParent()->getDataLayout().getPreferredAlignment(GV);
 }
 
+static bool
+isUnmergeableGlobal(GlobalVariable *GV,
+                    const SmallPtrSetImpl<const GlobalValue *> &UsedGlobals) {
+  // Only process constants with initializers in the default address space.
+  return !GV->isConstant() || !GV->hasDefinitiveInitializer() ||
+         GV->getType()->getAddressSpace() != 0 || GV->hasSection() ||
+         // Don't touch values marked with attribute(used).
+         UsedGlobals.count(GV);
+}
+
 enum class CanMerge { No, Yes };
 static CanMerge makeMergeable(GlobalVariable *Old, GlobalVariable *New) {
   if (!Old->hasGlobalUnnamedAddr() && !New->hasGlobalUnnamedAddr())
@@ -154,11 +164,7 @@ static bool mergeConstants(Module &M) {
         continue;
       }
 
-      // Only process constants with initializers in the default address space.
-      if (!GV->isConstant() || !GV->hasDefinitiveInitializer() ||
-          GV->getType()->getAddressSpace() != 0 || GV->hasSection() ||
-          // Don't touch values marked with attribute(used).
-          UsedGlobals.count(GV))
+      if (isUnmergeableGlobal(GV, UsedGlobals))
         continue;
 
       // This transformation is legal for weak ODR globals in the sense it
@@ -196,11 +202,7 @@ static bool mergeConstants(Module &M) {
          GVI != E; ) {
       GlobalVariable *GV = &*GVI++;
 
-      // Only process constants with initializers in the default address space.
-      if (!GV->isConstant() || !GV->hasDefinitiveInitializer() ||
-          GV->getType()->getAddressSpace() != 0 || GV->hasSection() ||
-          // Don't touch values marked with attribute(used).
-          UsedGlobals.count(GV))
+      if (isUnmergeableGlobal(GV, UsedGlobals))
         continue;
 
       // We can only replace constant with local linkage.

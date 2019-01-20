@@ -1278,7 +1278,6 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   // Add a register mask operand representing the call-preserved registers.
-  const AVRTargetMachine &TM = (const AVRTargetMachine &)getTargetMachine();
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   const uint32_t *Mask =
       TRI->getCallPreservedMask(DAG.getMachineFunction(), CallConv);
@@ -1441,7 +1440,6 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
   bool HasRepeatedOperand = false;
   MachineFunction *F = BB->getParent();
   MachineRegisterInfo &RI = F->getRegInfo();
-  const AVRTargetMachine &TM = (const AVRTargetMachine &)getTargetMachine();
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   DebugLoc dl = MI.getDebugLoc();
 
@@ -1582,7 +1580,6 @@ static bool isCopyMulResult(MachineBasicBlock::iterator const &I) {
 // it, but it works for now.
 MachineBasicBlock *AVRTargetLowering::insertMul(MachineInstr &MI,
                                                 MachineBasicBlock *BB) const {
-  const AVRTargetMachine &TM = (const AVRTargetMachine &)getTargetMachine();
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   MachineBasicBlock::iterator I(MI);
   ++I; // in any case insert *after* the mul instruction

@@ -1,4 +1,4 @@
-; RUN: opt < %s  -loop-vectorize -mcpu=core2 -debug-only=loop-vectorize 2>&1 -S | FileCheck %s
+; RUN: opt < %s  -loop-vectorize -mattr=+sse4.2 -debug-only=loop-vectorize 2>&1 -S | FileCheck %s
 ; REQUIRES: asserts
 ; Make sure we use the right select kind when querying select costs.
 
