@@ -1,9 +1,8 @@
 //===- Reader.cpp ---------------------------------------------------------===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,6 +11,7 @@
 #include "llvm-objcopy.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstddef>
@@ -22,6 +22,7 @@ namespace objcopy {
 namespace coff {
 
 using namespace object;
+using namespace COFF;
 
 Error COFFReader::readExecutableHeaders(Object &Obj) const {
   const dos_header *DH = COFFObj.getDOSHeader();
@@ -59,13 +60,14 @@ Error COFFReader::readExecutableHeaders(Object &Obj) const {
 }
 
 Error COFFReader::readSections(Object &Obj) const {
+  std::vector<Section> Sections;
   // Section indexing starts from 1.
   for (size_t I = 1, E = COFFObj.getNumberOfSections(); I <= E; I++) {
     const coff_section *Sec;
     if (auto EC = COFFObj.getSection(I, Sec))
       return errorCodeToError(EC);
-    Obj.Sections.push_back(Section());
-    Section &S = Obj.Sections.back();
+    Sections.push_back(Section());
+    Section &S = Sections.back();
     S.Header = *Sec;
     if (auto EC = COFFObj.getSectionContents(Sec, S.Contents))
       return errorCodeToError(EC);
@@ -78,12 +80,14 @@ Error COFFReader::readSections(Object &Obj) const {
       return make_error<StringError>("Extended relocations not supported yet",
                                      object_error::parse_failed);
   }
+  Obj.addSections(Sections);
   return Error::success();
 }
 
 Error COFFReader::readSymbols(Object &Obj, bool IsBigObj) const {
   std::vector<Symbol> Symbols;
   Symbols.reserve(COFFObj.getRawNumberOfSymbols());
+  ArrayRef<Section> Sections = Obj.getSections();
   for (uint32_t I = 0, E = COFFObj.getRawNumberOfSymbols(); I < E;) {
     Expected<COFFSymbolRef> SymOrErr = COFFObj.getSymbol(I);
     if (!SymOrErr)
@@ -104,6 +108,26 @@ Error COFFReader::readSymbols(Object &Obj, bool IsBigObj) const {
     Sym.AuxData = COFFObj.getSymbolAuxData(SymRef);
     assert((Sym.AuxData.size() %
             (IsBigObj ? sizeof(coff_symbol32) : sizeof(coff_symbol16))) == 0);
+    // Find the unique id of the section
+    if (SymRef.getSectionNumber() <=
+        0) // Special symbol (undefined/absolute/debug)
+      Sym.TargetSectionId = SymRef.getSectionNumber();
+    else if (static_cast<uint32_t>(SymRef.getSectionNumber() - 1) <
+             Sections.size())
+      Sym.TargetSectionId = Sections[SymRef.getSectionNumber() - 1].UniqueId;
+    else
+      return make_error<StringError>("Section number out of range",
+                                     object_error::parse_failed);
+    // For section definitions, check if it is comdat associative, and if
+    // it is, find the target section unique id.
+    const coff_aux_section_definition *SD = SymRef.getSectionDefinition();
+    if (SD && SD->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
+      int32_t Index = SD->getNumber(IsBigObj);
+      if (Index <= 0 || static_cast<uint32_t>(Index - 1) >= Sections.size())
+        return make_error<StringError>("Unexpected associative section index",
+                                       object_error::parse_failed);
+      Sym.AssociativeComdatTargetSectionId = Sections[Index - 1].UniqueId;
+    }
     I += 1 + SymRef.getNumberOfAuxSymbols();
   }
   Obj.addSymbols(Symbols);
@@ -117,7 +141,7 @@ Error COFFReader::setRelocTargets(Object &Obj) const {
     for (size_t I = 0; I < Sym.Sym.NumberOfAuxSymbols; I++)
       RawSymbolTable.push_back(nullptr);
   }
-  for (Section &Sec : Obj.Sections) {
+  for (Section &Sec : Obj.getMutableSections()) {
     for (Relocation &R : Sec.Relocs) {
       if (R.Reloc.SymbolTableIndex >= RawSymbolTable.size())
         return make_error<StringError>("SymbolTableIndex out of range",

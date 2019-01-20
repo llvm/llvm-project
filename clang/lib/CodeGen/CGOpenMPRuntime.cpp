@@ -1,9 +1,8 @@
 //===----- CGOpenMPRuntime.cpp - Interface to OpenMP Runtimes -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1677,6 +1676,22 @@ CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ true);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_fork_call");
+    if (auto *F = dyn_cast<llvm::Function>(RTLFn)) {
+      if (!F->hasMetadata(llvm::LLVMContext::MD_callback)) {
+        llvm::LLVMContext &Ctx = F->getContext();
+        llvm::MDBuilder MDB(Ctx);
+        // Annotate the callback behavior of the __kmpc_fork_call:
+        //  - The callback callee is argument number 2 (microtask).
+        //  - The first two arguments of the callback callee are unknown (-1).
+        //  - All variadic arguments to the __kmpc_fork_call are passed to the
+        //    callback callee.
+        F->addMetadata(
+            llvm::LLVMContext::MD_callback,
+            *llvm::MDNode::get(Ctx, {MDB.createCallbackEncoding(
+                                        2, {-1, -1},
+                                        /* VarArgsArePassed */ true)}));
+      }
+    }
     break;
   }
   case OMPRTL__kmpc_global_thread_num: {
@@ -2084,6 +2099,22 @@ CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ true);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_fork_teams");
+    if (auto *F = dyn_cast<llvm::Function>(RTLFn)) {
+      if (!F->hasMetadata(llvm::LLVMContext::MD_callback)) {
+        llvm::LLVMContext &Ctx = F->getContext();
+        llvm::MDBuilder MDB(Ctx);
+        // Annotate the callback behavior of the __kmpc_fork_teams:
+        //  - The callback callee is argument number 2 (microtask).
+        //  - The first two arguments of the callback callee are unknown (-1).
+        //  - All variadic arguments to the __kmpc_fork_teams are passed to the
+        //    callback callee.
+        F->addMetadata(
+            llvm::LLVMContext::MD_callback,
+            *llvm::MDNode::get(Ctx, {MDB.createCallbackEncoding(
+                                        2, {-1, -1},
+                                        /* VarArgsArePassed */ true)}));
+      }
+    }
     break;
   }
   case OMPRTL__kmpc_taskloop: {

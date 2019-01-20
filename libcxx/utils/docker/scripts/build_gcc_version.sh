@@ -10,36 +10,42 @@
 
 set -e
 
-
 function show_usage() {
   cat << EOF
-Usage: build-gcc.sh [options]
+Usage: build_gcc_version.sh [options]
 
 Run autoconf with the specified arguments. Used inside docker container.
 
 Available options:
   -h|--help           show this help message
-  --source            the source path from which to run the configuration.
-  --to                destination directory where to install the targets.
-Required options: --to, at least one --install-target.
+  --branch            the branch of gcc you want to build.
+  --cherry-pick       a commit hash to apply to the GCC sources.
+  --install           destination directory where to install the targets.
+Required options: --install and --branch
 
 All options after '--' are passed to CMake invocation.
 EOF
 }
 
 GCC_INSTALL_DIR=""
-GCC_SOURCE_DIR=""
+GCC_BRANCH=""
+CHERRY_PICK=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --to)
+    --install)
       shift
       GCC_INSTALL_DIR="$1"
       shift
       ;;
-    --source)
+    --branch)
       shift
-      GCC_SOURCE_DIR="$1"
+      GCC_BRANCH="$1"
+      shift
+      ;;
+    --cherry-pick)
+      shift
+      CHERRY_PICK="$1"
       shift
       ;;
     -h|--help)
@@ -53,20 +59,35 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ "$GCC_INSTALL_DIR" == "" ]; then
-  echo "No install directory. Please specify the --to argument."
+  echo "No install directory. Please specify the --install argument."
   exit 1
 fi
 
-if [ "$GCC_SOURCE_DIR" == "" ]; then
-  echo "No source directory. Please specify the --source argument."
+if [ "$GCC_BRANCH" == "" ]; then
+  echo "No branch specified. Please specify the --branch argument."
   exit 1
 fi
 
-GCC_NAME=`basename $GCC_SOURCE_DIR`
-GCC_BUILD_DIR="/tmp/gcc-build-root/build-$GCC_NAME"
+set -x
 
-mkdir -p "$GCC_INSTALL_DIR"
-mkdir -p "$GCC_BUILD_DIR"
+NPROC=`nproc`
+TMP_ROOT="$(mktemp -d -p /tmp)"
+GCC_SOURCE_DIR="$TMP_ROOT/gcc"
+GCC_BUILD_DIR="$TMP_ROOT/build"
+
+echo "Cloning source directory for branch $GCC_BRANCH"
+git clone --branch "$GCC_BRANCH" --single-branch --depth=1 git://gcc.gnu.org/git/gcc.git $GCC_SOURCE_DIR
+
+pushd "$GCC_SOURCE_DIR"
+if [ "$CHERRY_PICK" != "" ]; then
+  git fetch origin trunk --unshallow # Urg, we have to get the entire history. This will take a while.
+  git cherry-pick --no-commit -X theirs "$CHERRY_PICK"
+fi
+./contrib/download_prerequisites
+popd
+
+
+mkdir "$GCC_BUILD_DIR"
 pushd "$GCC_BUILD_DIR"
 
 # Run the build as specified in the build arguments.
@@ -76,16 +97,13 @@ $GCC_SOURCE_DIR/configure --prefix=$GCC_INSTALL_DIR \
   --disable-libvtv --disable-libcilkrts --disable-libmpx \
   --disable-liboffloadmic --disable-libcc1 --enable-languages=c,c++
 
-NPROC=`nproc`
 echo "Running build with $NPROC threads"
 make -j$NPROC
-
 echo "Installing to $GCC_INSTALL_DIR"
 make install -j$NPROC
-
 popd
 
 # Cleanup.
-rm -rf "$GCC_BUILD_DIR"
+rm -rf "$TMP_ROOT"
 
 echo "Done"

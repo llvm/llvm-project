@@ -1,9 +1,8 @@
 //===-- safestack.cc ------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -151,7 +150,7 @@ struct thread_stack_ll {
   void *stack_base;
   size_t size;
   pid_t pid;
-  pid_t tid;
+  ThreadId tid;
 };
 
 /// Linked list of unsafe stacks for threads that are exiting. We delay
@@ -174,7 +173,7 @@ void thread_cleanup_handler(void *_iter) {
   pthread_mutex_unlock(&thread_stacks_mutex);
 
   pid_t pid = getpid();
-  pid_t tid = GetTid();
+  ThreadId tid = GetTid();
 
   // Free stacks for dead threads
   thread_stack_ll **stackp = &temp_stacks;
