@@ -8,10 +8,9 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
-// Aligned allocation was not provided before macosx10.14 and as a result we
-// get availability errors when the deployment target is older than macosx10.14.
+// Aligned allocation was not provided before macosx10.12 and as a result we
+// get availability errors when the deployment target is older than macosx10.13.
 // However, AppleClang 10 (and older) don't trigger availability errors.
-// XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.13
 // XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.12
 // XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.11
 // XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.10
