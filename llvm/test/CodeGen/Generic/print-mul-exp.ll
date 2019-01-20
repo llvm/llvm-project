@@ -1,5 +1,4 @@
 ; RUN: llc < %s
-; XFAIL: avr
 
 @a_str = internal constant [8 x i8] c"a = %d\0A\00"		; <[8 x i8]*> [#uses=1]
 @a_mul_str = internal constant [13 x i8] c"a * %d = %d\0A\00"		; <[13 x i8]*> [#uses=1]

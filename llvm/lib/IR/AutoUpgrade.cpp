@@ -1052,6 +1052,45 @@ static Value *upgradeX86Rotate(IRBuilder<> &Builder, CallInst &CI,
   return Res;
 }
 
+static Value *upgradeX86vpcom(IRBuilder<> &Builder, CallInst &CI, unsigned Imm,
+                              bool IsSigned) {
+  Type *Ty = CI.getType();
+  Value *LHS = CI.getArgOperand(0);
+  Value *RHS = CI.getArgOperand(1);
+
+  CmpInst::Predicate Pred;
+  switch (Imm) {
+  case 0x0:
+    Pred = IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
+    break;
+  case 0x1:
+    Pred = IsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
+    break;
+  case 0x2:
+    Pred = IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
+    break;
+  case 0x3:
+    Pred = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
+    break;
+  case 0x4:
+    Pred = ICmpInst::ICMP_EQ;
+    break;
+  case 0x5:
+    Pred = ICmpInst::ICMP_NE;
+    break;
+  case 0x6:
+    return Constant::getNullValue(Ty); // FALSE
+  case 0x7:
+    return Constant::getAllOnesValue(Ty); // TRUE
+  default:
+    llvm_unreachable("Unknown XOP vpcom/vpcomu predicate");
+  }
+
+  Value *Cmp = Builder.CreateICmp(Pred, LHS, RHS);
+  Value *Ext = Builder.CreateSExt(Cmp, Ty);
+  return Ext;
+}
+
 static Value *upgradeX86ConcatShift(IRBuilder<> &Builder, CallInst &CI,
                                     bool IsShiftRight, bool ZeroMask) {
   Type *Ty = CI.getType();
@@ -1989,23 +2028,13 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                                 ResultTy);
       Rep = Builder.CreateCall(CSt, { CI->getArgOperand(1), Ptr, MaskVec });
     } else if (IsX86 && Name.startswith("xop.vpcom")) {
-      Intrinsic::ID intID;
-      if (Name.endswith("ub"))
-        intID = Intrinsic::x86_xop_vpcomub;
-      else if (Name.endswith("uw"))
-        intID = Intrinsic::x86_xop_vpcomuw;
-      else if (Name.endswith("ud"))
-        intID = Intrinsic::x86_xop_vpcomud;
-      else if (Name.endswith("uq"))
-        intID = Intrinsic::x86_xop_vpcomuq;
-      else if (Name.endswith("b"))
-        intID = Intrinsic::x86_xop_vpcomb;
-      else if (Name.endswith("w"))
-        intID = Intrinsic::x86_xop_vpcomw;
-      else if (Name.endswith("d"))
-        intID = Intrinsic::x86_xop_vpcomd;
-      else if (Name.endswith("q"))
-        intID = Intrinsic::x86_xop_vpcomq;
+      bool IsSigned;
+      if (Name.endswith("ub") || Name.endswith("uw") || Name.endswith("ud") ||
+          Name.endswith("uq"))
+        IsSigned = false;
+      else if (Name.endswith("b") || Name.endswith("w") || Name.endswith("d") ||
+               Name.endswith("q"))
+        IsSigned = true;
       else
         llvm_unreachable("Unknown suffix");
 
@@ -2029,11 +2058,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
         Imm = 7;
       else
         llvm_unreachable("Unknown condition");
-
-      Function *VPCOM = Intrinsic::getDeclaration(F->getParent(), intID);
-      Rep =
-          Builder.CreateCall(VPCOM, {CI->getArgOperand(0), CI->getArgOperand(1),
-                                     Builder.getInt8(Imm)});
+      Rep = upgradeX86vpcom(Builder, *CI, Imm, IsSigned);
     } else if (IsX86 && Name.startswith("xop.vpcmov")) {
       Value *Sel = CI->getArgOperand(2);
       Value *NotSel = Builder.CreateNot(Sel);
