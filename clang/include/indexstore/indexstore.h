@@ -74,6 +74,12 @@
 # define INDEXSTORE_HAS_BLOCKS 0
 #endif
 
+#if __has_attribute(noescape)
+# define INDEXSTORE_NOESCAPE __attribute__((noescape))
+#else
+# define INDEXSTORE_NOESCAPE
+#endif
+
 INDEXSTORE_BEGIN_DECLS
 
 typedef void *indexstore_error_t;
@@ -103,13 +109,13 @@ indexstore_store_dispose(indexstore_t);
 #if INDEXSTORE_HAS_BLOCKS
 INDEXSTORE_PUBLIC bool
 indexstore_store_units_apply(indexstore_t, unsigned sorted,
-                             bool(^applier)(indexstore_string_ref_t unit_name));
+                             INDEXSTORE_NOESCAPE bool(^applier)(indexstore_string_ref_t unit_name));
 #endif
 
 INDEXSTORE_PUBLIC bool
 indexstore_store_units_apply_f(indexstore_t, unsigned sorted,
                                void *context,
-              bool(*applier)(void *context, indexstore_string_ref_t unit_name));
+              INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_string_ref_t unit_name));
 
 typedef void *indexstore_unit_event_notification_t;
 typedef void *indexstore_unit_event_t;
@@ -149,8 +155,8 @@ indexstore_store_set_unit_event_handler(indexstore_t,
 
 INDEXSTORE_PUBLIC void
 indexstore_store_set_unit_event_handler_f(indexstore_t, void *context,
-            void(*handler)(void *context, indexstore_unit_event_notification_t),
-                                          void(*finalizer)(void *context));
+            INDEXSTORE_NOESCAPE void(*handler)(void *context, indexstore_unit_event_notification_t),
+                                          INDEXSTORE_NOESCAPE void(*finalizer)(void *context));
 
 typedef struct {
   /// If true, \c indexstore_store_start_unit_event_listening will block until
@@ -344,13 +350,13 @@ indexstore_occurrence_get_symbol(indexstore_occurrence_t);
 #if INDEXSTORE_HAS_BLOCKS
 INDEXSTORE_PUBLIC bool
 indexstore_occurrence_relations_apply(indexstore_occurrence_t,
-                      bool(^applier)(indexstore_symbol_relation_t symbol_rel));
+                      INDEXSTORE_NOESCAPE bool(^applier)(indexstore_symbol_relation_t symbol_rel));
 #endif
 
 INDEXSTORE_PUBLIC bool
 indexstore_occurrence_relations_apply_f(indexstore_occurrence_t,
                                         void *context,
-        bool(*applier)(void *context, indexstore_symbol_relation_t symbol_rel));
+        INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_symbol_relation_t symbol_rel));
 
 INDEXSTORE_PUBLIC uint64_t
 indexstore_occurrence_get_roles(indexstore_occurrence_t);
@@ -376,8 +382,8 @@ indexstore_record_reader_dispose(indexstore_record_reader_t);
 /// interested in.
 INDEXSTORE_PUBLIC bool
 indexstore_record_reader_search_symbols(indexstore_record_reader_t,
-    bool(^filter)(indexstore_symbol_t symbol, bool *stop),
-    void(^receiver)(indexstore_symbol_t symbol));
+    INDEXSTORE_NOESCAPE bool(^filter)(indexstore_symbol_t symbol, bool *stop),
+    INDEXSTORE_NOESCAPE void(^receiver)(indexstore_symbol_t symbol));
 
 /// \param nocache if true, avoids allocating memory for the symbols.
 /// Useful when the caller does not intend to keep \c indexstore_record_reader_t
@@ -385,17 +391,17 @@ indexstore_record_reader_search_symbols(indexstore_record_reader_t,
 INDEXSTORE_PUBLIC bool
 indexstore_record_reader_symbols_apply(indexstore_record_reader_t,
                                        bool nocache,
-                                    bool(^applier)(indexstore_symbol_t symbol));
+                                    INDEXSTORE_NOESCAPE bool(^applier)(indexstore_symbol_t symbol));
 
 INDEXSTORE_PUBLIC bool
 indexstore_record_reader_occurrences_apply(indexstore_record_reader_t,
-                                 bool(^applier)(indexstore_occurrence_t occur));
+                                 INDEXSTORE_NOESCAPE bool(^applier)(indexstore_occurrence_t occur));
 
 INDEXSTORE_PUBLIC bool
 indexstore_record_reader_occurrences_in_line_range_apply(indexstore_record_reader_t,
                                                          unsigned line_start,
                                                          unsigned line_count,
-                                 bool(^applier)(indexstore_occurrence_t occur));
+                                 INDEXSTORE_NOESCAPE bool(^applier)(indexstore_occurrence_t occur));
 
 /// \param symbols if non-zero \c symbols_count, indicates the list of symbols
 /// that we want to get occurrences for. An empty array indicates that we want
@@ -405,40 +411,40 @@ INDEXSTORE_PUBLIC bool
 indexstore_record_reader_occurrences_of_symbols_apply(indexstore_record_reader_t,
         indexstore_symbol_t *symbols, size_t symbols_count,
         indexstore_symbol_t *related_symbols, size_t related_symbols_count,
-        bool(^applier)(indexstore_occurrence_t occur));
+        INDEXSTORE_NOESCAPE bool(^applier)(indexstore_occurrence_t occur));
 #endif
 
 INDEXSTORE_PUBLIC bool
 indexstore_record_reader_search_symbols_f(indexstore_record_reader_t,
                                           void *filter_ctx,
-    bool(*filter)(void *filter_ctx, indexstore_symbol_t symbol, bool *stop),
+    INDEXSTORE_NOESCAPE bool(*filter)(void *filter_ctx, indexstore_symbol_t symbol, bool *stop),
                                           void *receiver_ctx,
-    void(*receiver)(void *receiver_ctx, indexstore_symbol_t symbol));
+    INDEXSTORE_NOESCAPE void(*receiver)(void *receiver_ctx, indexstore_symbol_t symbol));
 
 INDEXSTORE_PUBLIC bool
 indexstore_record_reader_symbols_apply_f(indexstore_record_reader_t,
                                          bool nocache,
                                          void *context,
-                     bool(*applier)(void *context, indexstore_symbol_t symbol));
+                     INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_symbol_t symbol));
 
 INDEXSTORE_PUBLIC bool
 indexstore_record_reader_occurrences_apply_f(indexstore_record_reader_t,
                                              void *context,
-                  bool(*applier)(void *context, indexstore_occurrence_t occur));
+                  INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_occurrence_t occur));
 
 INDEXSTORE_PUBLIC bool
 indexstore_record_reader_occurrences_in_line_range_apply_f(indexstore_record_reader_t,
                                                            unsigned line_start,
                                                            unsigned line_count,
                                                            void *context,
-                  bool(*applier)(void *context, indexstore_occurrence_t occur));
+                  INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_occurrence_t occur));
 
 INDEXSTORE_PUBLIC bool
 indexstore_record_reader_occurrences_of_symbols_apply_f(indexstore_record_reader_t,
         indexstore_symbol_t *symbols, size_t symbols_count,
         indexstore_symbol_t *related_symbols, size_t related_symbols_count,
         void *context,
-        bool(*applier)(void *context, indexstore_occurrence_t occur));
+        INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_occurrence_t occur));
 
 typedef void *indexstore_unit_reader_t;
 
@@ -526,22 +532,22 @@ indexstore_unit_include_get_source_line(indexstore_unit_include_t);
 #if INDEXSTORE_HAS_BLOCKS
 INDEXSTORE_PUBLIC bool
 indexstore_unit_reader_dependencies_apply(indexstore_unit_reader_t,
-                             bool(^applier)(indexstore_unit_dependency_t));
+                             INDEXSTORE_NOESCAPE bool(^applier)(indexstore_unit_dependency_t));
 
 INDEXSTORE_PUBLIC bool
 indexstore_unit_reader_includes_apply(indexstore_unit_reader_t,
-                             bool(^applier)(indexstore_unit_include_t));
+                             INDEXSTORE_NOESCAPE bool(^applier)(indexstore_unit_include_t));
 #endif
 
 INDEXSTORE_PUBLIC bool
 indexstore_unit_reader_dependencies_apply_f(indexstore_unit_reader_t,
                                             void *context,
-                   bool(*applier)(void *context, indexstore_unit_dependency_t));
+                   INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_unit_dependency_t));
 
 INDEXSTORE_PUBLIC bool
 indexstore_unit_reader_includes_apply_f(indexstore_unit_reader_t,
                                         void *context,
-                      bool(*applier)(void *context, indexstore_unit_include_t));
+                      INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_unit_include_t));
 
 INDEXSTORE_END_DECLS
 

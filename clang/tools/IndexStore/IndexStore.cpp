@@ -123,7 +123,7 @@ indexstore_store_dispose(indexstore_t store) {
 #if INDEXSTORE_HAS_BLOCKS
 bool
 indexstore_store_units_apply(indexstore_t c_store, unsigned sorted,
-                            bool(^applier)(indexstore_string_ref_t unit_name)) {
+                            INDEXSTORE_NOESCAPE bool(^applier)(indexstore_string_ref_t unit_name)) {
   IndexDataStore *store = static_cast<IndexDataStore*>(c_store);
   return store->foreachUnitName(sorted, [&](StringRef unitName) -> bool {
     return applier(toIndexStoreString(unitName));
@@ -134,7 +134,7 @@ indexstore_store_units_apply(indexstore_t c_store, unsigned sorted,
 bool
 indexstore_store_units_apply_f(indexstore_t c_store, unsigned sorted,
                                void *context,
-             bool(*applier)(void *context, indexstore_string_ref_t unit_name)) {
+             INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_string_ref_t unit_name)) {
   IndexDataStore *store = static_cast<IndexDataStore*>(c_store);
   return store->foreachUnitName(sorted, [&](StringRef unitName) -> bool {
     return applier(context, toIndexStoreString(unitName));
@@ -226,8 +226,8 @@ indexstore_store_set_unit_event_handler(indexstore_t c_store,
 
 void
 indexstore_store_set_unit_event_handler_f(indexstore_t c_store, void *context,
-         void(*fn_handler)(void *context, indexstore_unit_event_notification_t),
-                                          void(*finalizer)(void *context)) {
+         INDEXSTORE_NOESCAPE void(*fn_handler)(void *context, indexstore_unit_event_notification_t),
+                                          INDEXSTORE_NOESCAPE void(*finalizer)(void *context)) {
   IndexDataStore *store = static_cast<IndexDataStore*>(c_store);
   if (!fn_handler) {
     store->setUnitEventHandler(nullptr);
@@ -372,7 +372,7 @@ indexstore_occurrence_get_symbol(indexstore_occurrence_t occur) {
 #if INDEXSTORE_HAS_BLOCKS
 bool
 indexstore_occurrence_relations_apply(indexstore_occurrence_t occur,
-                      bool(^applier)(indexstore_symbol_relation_t symbol_rel)) {
+                      INDEXSTORE_NOESCAPE bool(^applier)(indexstore_symbol_relation_t symbol_rel)) {
   auto *recOccur = static_cast<IndexRecordOccurrence*>(occur);
   for (auto &rel : recOccur->Relations) {
     if (!applier(&rel))
@@ -385,7 +385,7 @@ indexstore_occurrence_relations_apply(indexstore_occurrence_t occur,
 bool
 indexstore_occurrence_relations_apply_f(indexstore_occurrence_t occur,
                                         void *context,
-       bool(*applier)(void *context, indexstore_symbol_relation_t symbol_rel)) {
+       INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_symbol_relation_t symbol_rel)) {
   auto *recOccur = static_cast<IndexRecordOccurrence*>(occur);
   for (auto &rel : recOccur->Relations) {
     if (!applier(context, &rel))
@@ -442,8 +442,8 @@ indexstore_record_reader_dispose(indexstore_record_reader_t rdr) {
 /// interested in.
 bool
 indexstore_record_reader_search_symbols(indexstore_record_reader_t rdr,
-    bool(^filter)(indexstore_symbol_t symbol, bool *stop),
-    void(^receiver)(indexstore_symbol_t symbol)) {
+    INDEXSTORE_NOESCAPE bool(^filter)(indexstore_symbol_t symbol, bool *stop),
+    INDEXSTORE_NOESCAPE void(^receiver)(indexstore_symbol_t symbol)) {
   auto *reader = static_cast<IndexRecordReader *>(rdr);
 
   auto filterFn = [&](const IndexRecordDecl &D) -> IndexRecordReader::DeclSearchReturn {
@@ -461,7 +461,7 @@ indexstore_record_reader_search_symbols(indexstore_record_reader_t rdr,
 bool
 indexstore_record_reader_symbols_apply(indexstore_record_reader_t rdr,
                                         bool nocache,
-                                   bool(^applier)(indexstore_symbol_t symbol)) {
+                                   INDEXSTORE_NOESCAPE bool(^applier)(indexstore_symbol_t symbol)) {
   auto *reader = static_cast<IndexRecordReader *>(rdr);
   auto receiverFn = [&](const IndexRecordDecl *D) -> bool {
     return applier((indexstore_symbol_t)D);
@@ -471,7 +471,7 @@ indexstore_record_reader_symbols_apply(indexstore_record_reader_t rdr,
 
 bool
 indexstore_record_reader_occurrences_apply(indexstore_record_reader_t rdr,
-                                bool(^applier)(indexstore_occurrence_t occur)) {
+                                INDEXSTORE_NOESCAPE bool(^applier)(indexstore_occurrence_t occur)) {
   auto *reader = static_cast<IndexRecordReader *>(rdr);
   auto receiverFn = [&](const IndexRecordOccurrence &RO) -> bool {
     return applier((indexstore_occurrence_t)&RO);
@@ -483,7 +483,7 @@ bool
 indexstore_record_reader_occurrences_in_line_range_apply(indexstore_record_reader_t rdr,
                                                          unsigned line_start,
                                                          unsigned line_count,
-                                bool(^applier)(indexstore_occurrence_t occur)) {
+                                INDEXSTORE_NOESCAPE bool(^applier)(indexstore_occurrence_t occur)) {
   auto *reader = static_cast<IndexRecordReader *>(rdr);
   auto receiverFn = [&](const IndexRecordOccurrence &RO) -> bool {
     return applier((indexstore_occurrence_t)&RO);
@@ -499,7 +499,7 @@ bool
 indexstore_record_reader_occurrences_of_symbols_apply(indexstore_record_reader_t rdr,
         indexstore_symbol_t *symbols, size_t symbols_count,
         indexstore_symbol_t *related_symbols, size_t related_symbols_count,
-        bool(^applier)(indexstore_occurrence_t occur)) {
+        INDEXSTORE_NOESCAPE bool(^applier)(indexstore_occurrence_t occur)) {
   auto *reader = static_cast<IndexRecordReader *>(rdr);
   auto receiverFn = [&](const IndexRecordOccurrence &RO) -> bool {
     return applier((indexstore_occurrence_t)&RO);
@@ -513,9 +513,9 @@ indexstore_record_reader_occurrences_of_symbols_apply(indexstore_record_reader_t
 bool
 indexstore_record_reader_search_symbols_f(indexstore_record_reader_t rdr,
                                           void *filter_ctx,
-    bool(*filter)(void *filter_ctx, indexstore_symbol_t symbol, bool *stop),
+    INDEXSTORE_NOESCAPE bool(*filter)(void *filter_ctx, indexstore_symbol_t symbol, bool *stop),
                                           void *receiver_ctx,
-              void(*receiver)(void *receiver_ctx, indexstore_symbol_t symbol)) {
+              INDEXSTORE_NOESCAPE void(*receiver)(void *receiver_ctx, indexstore_symbol_t symbol)) {
   auto *reader = static_cast<IndexRecordReader *>(rdr);
 
   auto filterFn = [&](const IndexRecordDecl &D) -> IndexRecordReader::DeclSearchReturn {
@@ -534,7 +534,7 @@ bool
 indexstore_record_reader_symbols_apply_f(indexstore_record_reader_t rdr,
                                          bool nocache,
                                          void *context,
-                    bool(*applier)(void *context, indexstore_symbol_t symbol)) {
+                    INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_symbol_t symbol)) {
   auto *reader = static_cast<IndexRecordReader *>(rdr);
   auto receiverFn = [&](const IndexRecordDecl *D) -> bool {
     return applier(context, (indexstore_symbol_t)D);
@@ -545,7 +545,7 @@ indexstore_record_reader_symbols_apply_f(indexstore_record_reader_t rdr,
 bool
 indexstore_record_reader_occurrences_apply_f(indexstore_record_reader_t rdr,
                                              void *context,
-                 bool(*applier)(void *context, indexstore_occurrence_t occur)) {
+                 INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_occurrence_t occur)) {
   auto *reader = static_cast<IndexRecordReader *>(rdr);
   auto receiverFn = [&](const IndexRecordOccurrence &RO) -> bool {
     return applier(context, (indexstore_occurrence_t)&RO);
@@ -558,7 +558,7 @@ indexstore_record_reader_occurrences_in_line_range_apply_f(indexstore_record_rea
                                                            unsigned line_start,
                                                            unsigned line_count,
                                                            void *context,
-                 bool(*applier)(void *context, indexstore_occurrence_t occur)) {
+                 INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_occurrence_t occur)) {
   auto *reader = static_cast<IndexRecordReader *>(rdr);
   auto receiverFn = [&](const IndexRecordOccurrence &RO) -> bool {
     return applier(context, (indexstore_occurrence_t)&RO);
@@ -571,7 +571,7 @@ indexstore_record_reader_occurrences_of_symbols_apply_f(indexstore_record_reader
         indexstore_symbol_t *symbols, size_t symbols_count,
         indexstore_symbol_t *related_symbols, size_t related_symbols_count,
         void *context,
-        bool(*applier)(void *context, indexstore_occurrence_t occur)) {
+        INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_occurrence_t occur)) {
   auto *reader = static_cast<IndexRecordReader *>(rdr);
   auto receiverFn = [&](const IndexRecordOccurrence &RO) -> bool {
     return applier(context, (indexstore_occurrence_t)&RO);
@@ -785,7 +785,7 @@ indexstore_unit_include_get_source_line(indexstore_unit_include_t c_inc) {
 #if INDEXSTORE_HAS_BLOCKS
 bool
 indexstore_unit_reader_dependencies_apply(indexstore_unit_reader_t rdr,
-                             bool(^applier)(indexstore_unit_dependency_t)) {
+                             INDEXSTORE_NOESCAPE bool(^applier)(indexstore_unit_dependency_t)) {
   auto reader = static_cast<IndexUnitReader*>(rdr);
   return reader->foreachDependency([&](const IndexUnitReader::DependencyInfo &depInfo) -> bool {
     return applier((void*)&depInfo);
@@ -794,7 +794,7 @@ indexstore_unit_reader_dependencies_apply(indexstore_unit_reader_t rdr,
 
 bool
 indexstore_unit_reader_includes_apply(indexstore_unit_reader_t rdr,
-                             bool(^applier)(indexstore_unit_include_t)) {
+                             INDEXSTORE_NOESCAPE bool(^applier)(indexstore_unit_include_t)) {
   auto reader = static_cast<IndexUnitReader*>(rdr);
   return reader->foreachInclude([&](const IndexUnitReader::IncludeInfo &incInfo) -> bool {
     return applier((void*)&incInfo);
@@ -805,7 +805,7 @@ indexstore_unit_reader_includes_apply(indexstore_unit_reader_t rdr,
 bool
 indexstore_unit_reader_dependencies_apply_f(indexstore_unit_reader_t rdr,
                                             void *context,
-                  bool(*applier)(void *context, indexstore_unit_dependency_t)) {
+                  INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_unit_dependency_t)) {
   auto reader = static_cast<IndexUnitReader*>(rdr);
   return reader->foreachDependency([&](const IndexUnitReader::DependencyInfo &depInfo) -> bool {
     return applier(context, (void*)&depInfo);
@@ -815,7 +815,7 @@ indexstore_unit_reader_dependencies_apply_f(indexstore_unit_reader_t rdr,
 bool
 indexstore_unit_reader_includes_apply_f(indexstore_unit_reader_t rdr,
                                         void *context,
-                     bool(*applier)(void *context, indexstore_unit_include_t)) {
+                     INDEXSTORE_NOESCAPE bool(*applier)(void *context, indexstore_unit_include_t)) {
   auto reader = static_cast<IndexUnitReader*>(rdr);
   return reader->foreachInclude([&](const IndexUnitReader::IncludeInfo &incInfo) -> bool {
     return applier(context, (void*)&incInfo);
