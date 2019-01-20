@@ -22118,7 +22118,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getMergeValues(Results, dl);
     }
     case CVTPD2PS_MASK:
-    case CVTPD2I_MASK:
+    case CVTPD2DQ_MASK:
+    case CVTQQ2PS_MASK:
     case TRUNCATE_TO_REG: {
       SDValue Src = Op.getOperand(1);
       SDValue PassThru = Op.getOperand(2);
@@ -27464,6 +27465,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::CVTTS2UI_RND:       return "X86ISD::CVTTS2UI_RND";
   case X86ISD::CVTSI2P:            return "X86ISD::CVTSI2P";
   case X86ISD::CVTUI2P:            return "X86ISD::CVTUI2P";
+  case X86ISD::MCVTSI2P:           return "X86ISD::MCVTSI2P";
+  case X86ISD::MCVTUI2P:           return "X86ISD::MCVTUI2P";
   case X86ISD::VFPCLASS:           return "X86ISD::VFPCLASS";
   case X86ISD::VFPCLASSS:          return "X86ISD::VFPCLASSS";
   case X86ISD::MULTISHIFT:         return "X86ISD::MULTISHIFT";
