@@ -1,9 +1,8 @@
 //===- lib/MC/MCWin64EH.cpp - MCWin64EH implementation --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -522,7 +521,7 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
     if (MatchingEpilog) {
       assert(EpilogInfo.find(MatchingEpilog) != EpilogInfo.end() &&
              "Duplicate epilog not found");
-      EpilogInfo[EpilogStart] = EpilogInfo[MatchingEpilog];
+      EpilogInfo[EpilogStart] = EpilogInfo.lookup(MatchingEpilog);
       // Clear the unwind codes in the EpilogMap, so that they don't get output
       // in the logic below.
       EpilogInstrs.clear();

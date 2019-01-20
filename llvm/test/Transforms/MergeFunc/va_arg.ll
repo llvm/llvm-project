@@ -1,14 +1,18 @@
 ; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -mergefunc -mergefunc-use-aliases < %s | FileCheck %s -check-prefix=ALIAS
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
+
+; ALIAS: @_Z9simple_vaPKcz = unnamed_addr alias void (i8*, ...), void (i8*, ...)* @_Z10simple_va2PKcz
+; ALIAS-NOT: @_Z9simple_vaPKcz
 
 %struct.__va_list_tag = type { i32, i32, i8*, i8* }
 
 ; CHECK-LABEL: define {{.*}}@_Z9simple_vaPKcz
 ; CHECK: call void @llvm.va_start
 ; CHECK: call void @llvm.va_end
-define dso_local void @_Z9simple_vaPKcz(i8* nocapture readnone, ...) local_unnamed_addr {
+define dso_local void @_Z9simple_vaPKcz(i8* nocapture readnone, ...) unnamed_addr {
   %2 = alloca [1 x %struct.__va_list_tag], align 16
   %3 = bitcast [1 x %struct.__va_list_tag]* %2 to i8*
   call void @llvm.va_start(i8* nonnull %3)
@@ -54,7 +58,7 @@ declare void @llvm.va_end(i8*)
 ; CHECK-LABEL: define {{.*}}@_Z10simple_va2PKcz
 ; CHECK: call void @llvm.va_start
 ; CHECK: call void @llvm.va_end
-define dso_local void @_Z10simple_va2PKcz(i8* nocapture readnone, ...) local_unnamed_addr {
+define dso_local void @_Z10simple_va2PKcz(i8* nocapture readnone, ...) unnamed_addr {
   %2 = alloca [1 x %struct.__va_list_tag], align 16
   %3 = bitcast [1 x %struct.__va_list_tag]* %2 to i8*
   call void @llvm.va_start(i8* nonnull %3)

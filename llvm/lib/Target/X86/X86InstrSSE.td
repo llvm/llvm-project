@@ -1,9 +1,8 @@
 //===-- X86InstrSSE.td - SSE Instruction Set ---------------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -8363,7 +8362,7 @@ multiclass avx2_gather<bits<8> opc, string OpcodeStr, ValueType VTx,
             VEX, VEX_L, Sched<[WriteLoad]>;
 }
 
-let Predicates = [UseAVX2] in {
+let Predicates = [HasAVX2] in {
   let mayLoad = 1, hasSideEffects = 0, Constraints
     = "@earlyclobber $dst,@earlyclobber $mask_wb, $src1 = $dst, $mask = $mask_wb"
     in {

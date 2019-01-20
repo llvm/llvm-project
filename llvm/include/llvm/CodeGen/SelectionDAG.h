@@ -1,9 +1,8 @@
 //===- llvm/CodeGen/SelectionDAG.h - InstSelection DAG ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1154,6 +1153,11 @@ public:
                                SDValue Op3, SDValue Op4, SDValue Op5);
   SDNode *UpdateNodeOperands(SDNode *N, ArrayRef<SDValue> Ops);
 
+  /// Creates a new TokenFactor containing \p Vals. If \p Vals contains 64k
+  /// values or more, move values into new TokenFactors in 64k-1 blocks, until
+  /// the final TokenFactor has less than 64k operands.
+  SDValue getTokenFactor(const SDLoc &DL, SmallVectorImpl<SDValue> &Vals);
+
   /// *Mutate* the specified machine node's memory references to the provided
   /// list.
   void setNodeMemRefs(MachineSDNode *N,
@@ -1358,21 +1362,20 @@ public:
   /// with this SelectionDAG.
   bool hasDebugValues() const { return !DbgInfo->empty(); }
 
-  SDDbgInfo::DbgIterator DbgBegin() { return DbgInfo->DbgBegin(); }
-  SDDbgInfo::DbgIterator DbgEnd()   { return DbgInfo->DbgEnd(); }
+  SDDbgInfo::DbgIterator DbgBegin() const { return DbgInfo->DbgBegin(); }
+  SDDbgInfo::DbgIterator DbgEnd() const  { return DbgInfo->DbgEnd(); }
 
-  SDDbgInfo::DbgIterator ByvalParmDbgBegin() {
+  SDDbgInfo::DbgIterator ByvalParmDbgBegin() const {
     return DbgInfo->ByvalParmDbgBegin();
   }
-
-  SDDbgInfo::DbgIterator ByvalParmDbgEnd()   {
+  SDDbgInfo::DbgIterator ByvalParmDbgEnd() const {
     return DbgInfo->ByvalParmDbgEnd();
   }
 
-  SDDbgInfo::DbgLabelIterator DbgLabelBegin() {
+  SDDbgInfo::DbgLabelIterator DbgLabelBegin() const {
     return DbgInfo->DbgLabelBegin();
   }
-  SDDbgInfo::DbgLabelIterator DbgLabelEnd() {
+  SDDbgInfo::DbgLabelIterator DbgLabelEnd() const {
     return DbgInfo->DbgLabelEnd();
   }
 

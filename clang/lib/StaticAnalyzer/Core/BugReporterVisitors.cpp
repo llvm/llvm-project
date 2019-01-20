@@ -1,9 +1,8 @@
 //===- BugReporterVisitors.cpp - Helpers for reporting bugs ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -308,9 +307,8 @@ public:
         if (RegionOfInterest->isSubRegionOf(SelfRegion) &&
             potentiallyWritesIntoIvar(Call->getRuntimeDefinition().getDecl(),
                                       IvarR->getDecl()))
-          return notModifiedDiagnostics(Ctx, *CallExitLoc, Call, {}, SelfRegion,
-                                        "self", /*FirstIsReferenceType=*/false,
-                                        1);
+          return notModifiedDiagnostics(N, {}, SelfRegion, "self",
+                                        /*FirstIsReferenceType=*/false, 1);
       }
     }
 
@@ -318,8 +316,7 @@ public:
       const MemRegion *ThisR = CCall->getCXXThisVal().getAsRegion();
       if (RegionOfInterest->isSubRegionOf(ThisR)
           && !CCall->getDecl()->isImplicit())
-        return notModifiedDiagnostics(Ctx, *CallExitLoc, Call, {}, ThisR,
-                                      "this",
+        return notModifiedDiagnostics(N, {}, ThisR, "this",
                                       /*FirstIsReferenceType=*/false, 1);
 
       // Do not generate diagnostics for not modified parameters in
@@ -338,18 +335,17 @@ public:
       QualType T = PVD->getType();
       while (const MemRegion *R = S.getAsRegion()) {
         if (RegionOfInterest->isSubRegionOf(R) && !isPointerToConst(T))
-          return notModifiedDiagnostics(Ctx, *CallExitLoc, Call, {}, R,
-                                        ParamName, ParamIsReferenceType,
-                                        IndirectionLevel);
+          return notModifiedDiagnostics(N, {}, R, ParamName,
+                                        ParamIsReferenceType, IndirectionLevel);
 
         QualType PT = T->getPointeeType();
         if (PT.isNull() || PT->isVoidType()) break;
 
         if (const RecordDecl *RD = PT->getAsRecordDecl())
           if (auto P = findRegionOfInterestInRecord(RD, State, R))
-            return notModifiedDiagnostics(
-              Ctx, *CallExitLoc, Call, *P, RegionOfInterest, ParamName,
-              ParamIsReferenceType, IndirectionLevel);
+            return notModifiedDiagnostics(N, *P, RegionOfInterest, ParamName,
+                                          ParamIsReferenceType,
+                                          IndirectionLevel);
 
         S = State->getSVal(R, PT);
         T = PT;
@@ -523,19 +519,12 @@ private:
 
   /// \return Diagnostics piece for region not modified in the current function.
   std::shared_ptr<PathDiagnosticPiece>
-  notModifiedDiagnostics(const LocationContext *Ctx, CallExitBegin &CallExitLoc,
-                         CallEventRef<> Call, const RegionVector &FieldChain,
+  notModifiedDiagnostics(const ExplodedNode *N, const RegionVector &FieldChain,
                          const MemRegion *MatchedRegion, StringRef FirstElement,
                          bool FirstIsReferenceType, unsigned IndirectionLevel) {
 
-    PathDiagnosticLocation L;
-    if (const ReturnStmt *RS = CallExitLoc.getReturnStmt()) {
-      L = PathDiagnosticLocation::createBegin(RS, SM, Ctx);
-    } else {
-      L = PathDiagnosticLocation(
-          Call->getRuntimeDefinition().getDecl()->getSourceRange().getEnd(),
-          SM);
-    }
+    PathDiagnosticLocation L =
+        PathDiagnosticLocation::create(N->getLocation(), SM);
 
     SmallString<256> sbuf;
     llvm::raw_svector_ostream os(sbuf);

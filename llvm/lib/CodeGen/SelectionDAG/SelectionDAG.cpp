@@ -1,9 +1,8 @@
 //===- SelectionDAG.cpp - Implement the SelectionDAG data structures ------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -9266,8 +9265,7 @@ SDNode *SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) {
 
 void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
   assert(!Node->OperandList && "Node already has operands");
-  assert(std::numeric_limits<decltype(SDNode::NumOperands)>::max() >=
-             Vals.size() &&
+  assert(SDNode::getMaxNumOperands() >= Vals.size() &&
          "too many operands to fit into SDNode");
   SDUse *Ops = OperandRecycler.allocate(
       ArrayRecycler<SDUse>::Capacity::get(Vals.size()), OperandAllocator);
@@ -9285,6 +9283,19 @@ void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
   if (!TLI->isSDNodeAlwaysUniform(Node))
     Node->SDNodeBits.IsDivergent = IsDivergent;
   checkForCycles(Node);
+}
+
+SDValue SelectionDAG::getTokenFactor(const SDLoc &DL,
+                                     SmallVectorImpl<SDValue> &Vals) {
+  size_t Limit = SDNode::getMaxNumOperands();
+  while (Vals.size() > Limit) {
+    unsigned SliceIdx = Vals.size() - Limit;
+    auto ExtractedTFs = ArrayRef<SDValue>(Vals).slice(SliceIdx, Limit);
+    SDValue NewTF = getNode(ISD::TokenFactor, DL, MVT::Other, ExtractedTFs);
+    Vals.erase(Vals.begin() + SliceIdx, Vals.end());
+    Vals.emplace_back(NewTF);
+  }
+  return getNode(ISD::TokenFactor, DL, MVT::Other, Vals);
 }
 
 #ifndef NDEBUG

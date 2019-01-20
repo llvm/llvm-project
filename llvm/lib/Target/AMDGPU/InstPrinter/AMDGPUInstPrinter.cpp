@@ -1,9 +1,8 @@
 //===-- AMDGPUInstPrinter.cpp - AMDGPU MC Inst -> ASM ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 // \file
 //===----------------------------------------------------------------------===//
@@ -491,7 +490,7 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
     O << "-4.0";
   else if (Imm == 0x3fc45f306dc9c882 &&
            STI.getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm])
-  O << "0.15915494";
+    O << "0.15915494309189532";
   else {
     assert(isUInt<32>(Imm) || Imm == 0x3fc45f306dc9c882);
 

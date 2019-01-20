@@ -1,9 +1,8 @@
 //===- Optional.h - Simple variant for passing optional values --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -26,6 +25,8 @@
 #include <utility>
 
 namespace llvm {
+
+class raw_ostream;
 
 namespace optional_detail {
 /// Storage for any type.
@@ -321,6 +322,18 @@ template <typename T> bool operator>=(const Optional<T> &X, const T &Y) {
 
 template <typename T> bool operator>=(const T &X, const Optional<T> &Y) {
   return !(X < Y);
+}
+
+raw_ostream &operator<<(raw_ostream &OS, NoneType);
+
+template <typename T, typename = decltype(std::declval<raw_ostream &>()
+                                          << std::declval<const T &>())>
+raw_ostream &operator<<(raw_ostream &OS, const Optional<T> &O) {
+  if (O)
+    OS << *O;
+  else
+    OS << None;
+  return OS;
 }
 
 } // end namespace llvm

@@ -1,9 +1,8 @@
 //==--- DiagnosticSemaKinds.td - libsema diagnostics ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -2578,6 +2577,20 @@ def err_format_attribute_result_not : Error<"function does not return %0">;
 def err_format_attribute_implicit_this_format_string : Error<
   "format attribute cannot specify the implicit this argument as the format "
   "string">;
+def err_callback_attribute_no_callee : Error<
+  "'callback' attribute specifies no callback callee">;
+def err_callback_attribute_invalid_callee : Error<
+  "'callback' attribute specifies invalid callback callee">;
+def err_callback_attribute_multiple : Error<
+  "multiple 'callback' attributes specified">;
+def err_callback_attribute_argument_unknown : Error<
+  "'callback' attribute argument %0 is not a known function parameter">;
+def err_callback_callee_no_function_type : Error<
+  "'callback' attribute callee does not have function type">;
+def err_callback_callee_is_variadic : Error<
+  "'callback' attribute callee may not be variadic">;
+def err_callback_implicit_this_not_available : Error<
+  "'callback' argument at position %0 references unavailable implicit 'this'">;
 def err_init_method_bad_return_type : Error<
   "init methods must return an object pointer type, not %0">;
 def err_attribute_invalid_size : Error<
@@ -3189,6 +3202,10 @@ def warn_impcast_integer_precision_constant : Warning<
 def warn_impcast_bitfield_precision_constant : Warning<
   "implicit truncation from %2 to bit-field changes value from %0 to %1">,
   InGroup<BitFieldConstantConversion>;
+
+def warn_impcast_fixed_point_range : Warning<
+  "implicit conversion from %0 cannot fit within the range of values for %1">,
+  InGroup<ImplicitFixedPointConversion>;
 
 def warn_impcast_literal_float_to_integer : Warning<
   "implicit conversion from %0 to %1 changes value from %2 to %3">,
@@ -6817,7 +6834,7 @@ def ext_typecheck_convert_int_pointer : ExtWarn<
   "; take the address with &|"
   "; remove *|"
   "; remove &}3">,
-  InGroup<IntConversion>;
+  InGroup<IntConversion>, SFINAEFailure;
 def ext_typecheck_convert_pointer_void_func : Extension<
   "%select{%diff{assigning to $ from $|assigning to different types}0,1"
   "|%diff{passing $ to parameter of type $|"

@@ -430,3 +430,36 @@ void factoryInMacros() {
   factoryTemplateAndMacro<ConvertibleTo<int>>();
   TemplateFactoryInMacro(ConvertibleTo<int>());
 }
+
+// This is a reduced test-case for PR39949 and manifested in this check.
+namespace std {
+template <typename _Tp>
+_Tp declval();
+
+template <typename _Functor, typename... _ArgTypes>
+struct __res {
+  template <typename... _Args>
+  static decltype(declval<_Functor>()(_Args()...)) _S_test(int);
+
+  template <typename...>
+  static void _S_test(...);
+
+  typedef decltype(_S_test<_ArgTypes...>(0)) type;
+};
+
+template <typename>
+struct function;
+
+template <typename... _ArgTypes>
+struct function<void(_ArgTypes...)> {
+  template <typename _Functor,
+            typename = typename __res<_Functor, _ArgTypes...>::type>
+  function(_Functor) {}
+};
+} // namespace std
+
+typedef std::function<void(void)> F;
+
+F foo() {
+  return F([] {});
+}

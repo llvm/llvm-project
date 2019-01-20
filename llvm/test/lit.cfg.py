@@ -278,7 +278,10 @@ if have_ld_plugin_support():
 
 
 def have_ld64_plugin_support():
-    if not config.llvm_tool_lto_build or config.ld64_executable == '':
+    if not os.path.exists(os.path.join(config.llvm_shlib_dir, 'libLTO' + config.llvm_shlib_ext)):
+        return False
+
+    if config.ld64_executable == '':
         return False
 
     ld_cmd = subprocess.Popen(
@@ -321,7 +324,7 @@ if config.have_libxar:
 if config.enable_threads:
     config.available_features.add('thread_support')
 
-if config.llvm_libxml2_enabled == '1':
+if config.llvm_libxml2_enabled:
     config.available_features.add('libxml2')
 
 if config.have_opt_viewer_modules:

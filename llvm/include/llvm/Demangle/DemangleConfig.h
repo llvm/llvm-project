@@ -1,9 +1,8 @@
 //===--- DemangleConfig.h ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -62,6 +61,8 @@
 #define DEMANGLE_UNREACHABLE __builtin_unreachable()
 #elif defined(_MSC_VER)
 #define DEMANGLE_UNREACHABLE __assume(false)
+#else
+#define DEMANGLE_UNREACHABLE
 #endif
 
 #if __has_attribute(noinline) || DEMANGLE_GNUC_PREREQ(3, 4, 0)

@@ -49,7 +49,7 @@
 ; that does not have a split LTO Unit.
 ; RUN: opt -thinlto-bc -o %t2.o %S/Inputs/empty.ll
 ; RUN: not llvm-lto2 run %t.o %t2.o -save-temps -pass-remarks=. \
-; RUN:   -verify-machineinstrs=0 \
+; RUN:   -verify-machineinstrs=0 -thinlto-threads=1 \
 ; RUN:   -o %t3 \
 ; RUN:   -r=%t.o,test,px \
 ; RUN:   -r=%t.o,_ZN1A1nEi,p \

@@ -43,6 +43,37 @@ entry:
   br i1 undef, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
+  call void @sink()
+  br label %if.end
+
+if.end:                                           ; preds = %entry
+  ret void
+}
+
+; Do not split `noinline` functions.
+; CHECK-LABEL: @noinline_func
+; CHECK-NOT: noinline_func.cold.1
+define void @noinline_func() noinline {
+entry:
+  br i1 undef, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  call void @sink()
+  br label %if.end
+
+if.end:                                           ; preds = %entry
+  ret void
+}
+
+; Do not split `alwaysinline` functions.
+; CHECK-LABEL: @alwaysinline_func
+; CHECK-NOT: alwaysinline_func.cold.1
+define void @alwaysinline_func() alwaysinline {
+entry:
+  br i1 undef, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  call void @sink()
   br label %if.end
 
 if.end:                                           ; preds = %entry

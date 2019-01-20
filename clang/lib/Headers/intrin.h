@@ -200,7 +200,6 @@ __attribute__((__deprecated__("use other intrinsics or C++11 atomics instead")))
 _WriteBarrier(void);
 unsigned __int32 xbegin(void);
 void _xend(void);
-#define _XCR_XFEATURE_ENABLED_MASK 0
 
 /* These additional intrinsics are turned on in x64/amd64/x86_64 mode. */
 #ifdef __x86_64__

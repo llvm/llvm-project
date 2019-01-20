@@ -1,9 +1,8 @@
 //===- llvm/CodeGen/SelectionDAGNodes.h - SelectionDAG Nodes ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -897,6 +896,11 @@ public:
 
   /// Return the number of values used by this operation.
   unsigned getNumOperands() const { return NumOperands; }
+
+  /// Return the maximum number of operands that a SDNode can hold.
+  static constexpr size_t getMaxNumOperands() {
+    return std::numeric_limits<decltype(SDNode::NumOperands)>::max();
+  }
 
   /// Helper method returns the integer value of a ConstantSDNode operand.
   inline uint64_t getConstantOperandVal(unsigned Num) const;

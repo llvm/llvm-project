@@ -1,9 +1,8 @@
 //===--- ASTDumper.cpp - Dumping implementation for ASTs ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -164,8 +163,6 @@ namespace  {
       VisitFunctionType(T);
       for (QualType PT : T->getParamTypes())
         dumpTypeAsChild(PT);
-      if (T->getExtProtoInfo().Variadic)
-        dumpChild([=] { OS << "..."; });
     }
     void VisitTypeOfExprType(const TypeOfExprType *T) {
       dumpStmt(T->getUnderlyingExpr());
@@ -515,11 +512,7 @@ void ASTDumper::dumpDecl(const Decl *D) {
 
     // Decls within functions are visited by the body.
     if (!isa<FunctionDecl>(*D) && !isa<ObjCMethodDecl>(*D)) {
-      auto DC = dyn_cast<DeclContext>(D);
-      if (DC &&
-          (DC->hasExternalLexicalStorage() ||
-           (Deserialize ? DC->decls_begin() != DC->decls_end()
-                        : DC->noload_decls_begin() != DC->noload_decls_end())))
+      if (const auto *DC = dyn_cast<DeclContext>(D))
         dumpDeclContext(DC);
     }
   });
@@ -635,13 +628,18 @@ void ASTDumper::VisitFunctionDecl(const FunctionDecl *D) {
     }
   }
 
+  // Since NumParams comes from the FunctionProtoType of the FunctionDecl and
+  // the Params are set later, it is possible for a dump during debugging to
+  // encounter a FunctionDecl that has been created but hasn't been assigned
+  // ParmVarDecls yet.
+  if (!D->param_empty() && !D->param_begin())
+    OS << " <<<NULL params x " << D->getNumParams() << ">>>";
+
   if (const auto *FTSI = D->getTemplateSpecializationInfo())
     dumpTemplateArgumentList(*FTSI->TemplateArguments);
 
-  if (!D->param_begin() && D->getNumParams())
-    dumpChild([=] { OS << "<<NULL params x " << D->getNumParams() << ">>"; });
-  else
-    for (const ParmVarDecl *Parameter : D->parameters())
+  if (D->param_begin())
+    for (const auto *Parameter : D->parameters())
       dumpDecl(Parameter);
 
   if (const auto *C = dyn_cast<CXXConstructorDecl>(D))
@@ -1236,15 +1234,14 @@ void ASTDumper::VisitObjCMethodDecl(const ObjCMethodDecl *D) {
   NodeDumper.dumpName(D);
   NodeDumper.dumpType(D->getReturnType());
 
-  if (D->isThisDeclarationADefinition()) {
+  if (D->isVariadic())
+    OS << " variadic";
+
+  if (D->isThisDeclarationADefinition())
     dumpDeclContext(D);
-  } else {
+  else
     for (const ParmVarDecl *Parameter : D->parameters())
       dumpDecl(Parameter);
-  }
-
-  if (D->isVariadic())
-    dumpChild([=] { OS << "..."; });
 
   if (D->hasBody())
     dumpStmt(D->getBody());
@@ -1378,14 +1375,14 @@ void ASTDumper::Visit(const BlockDecl::Capture &C) {
 }
 
 void ASTDumper::VisitBlockDecl(const BlockDecl *D) {
-  for (auto I : D->parameters())
-    dumpDecl(I);
-
   if (D->isVariadic())
-    dumpChild([=]{ OS << "..."; });
+    OS << " variadic";
 
   if (D->capturesCXXThis())
-    dumpChild([=]{ OS << "capture this"; });
+    OS << " captures_this";
+
+  for (auto I : D->parameters())
+    dumpDecl(I);
 
   for (const auto &I : D->captures())
     Visit(I);

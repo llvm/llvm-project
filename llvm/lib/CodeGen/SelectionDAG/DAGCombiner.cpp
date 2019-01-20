@@ -1,9 +1,8 @@
 //===- DAGCombiner.cpp - Implement a DAG node combiner --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19349,7 +19348,7 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
   if (AddNewChain)
     TFOps.insert(TFOps.begin(), NewChain);
 
-  SDValue TF = DAG.getNode(ISD::TokenFactor, SDLoc(STChain), MVT::Other, TFOps);
+  SDValue TF = DAG.getTokenFactor(SDLoc(STChain), TFOps);
   CombineTo(St, TF);
 
   AddToWorklist(STChain);

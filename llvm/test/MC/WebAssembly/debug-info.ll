@@ -126,7 +126,7 @@
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section {
 ; CHECK-NEXT:    Type: CUSTOM (0x0)
-; CHECK-NEXT:    Size: 62
+; CHECK-NEXT:    Size: 77
 ; CHECK-NEXT:    Offset: 1021
 ; CHECK-NEXT:    Name: producers
 ; CHECK-NEXT:  }

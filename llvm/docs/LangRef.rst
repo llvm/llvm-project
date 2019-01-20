@@ -5066,6 +5066,72 @@ For example, in the code below, the call instruction may only target the
     ...
     !0 = !{i64 (i64, i64)* @add, i64 (i64, i64)* @sub}
 
+'``callback``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^
+
+``callback`` metadata may be attached to a function declaration, or definition.
+(Call sites are excluded only due to the lack of a use case.) For ease of
+exposition, we'll refer to the function annotated w/ metadata as a broker
+function. The metadata describes how the arguments of a call to the broker are
+in turn passed to the callback function specified by the metadata. Thus, the
+``callback`` metadata provides a partial description of a call site inside the
+broker function with regards to the arguments of a call to the broker. The only
+semantic restriction on the broker function itself is that it is not allowed to
+inspect or modify arguments referenced in the ``callback`` metadata as
+pass-through to the callback function.
+
+The broker is not required to actually invoke the callback function at runtime.
+However, the assumptions about not inspecting or modifying arguments that would
+be passed to the specified callback function still hold, even if the callback
+function is not dynamically invoked. The broker is allowed to invoke the
+callback function more than once per invocation of the broker. The broker is
+also allowed to invoke (directly or indirectly) the function passed as a
+callback through another use. Finally, the broker is also allowed to relay the
+callback callee invocation to a different thread.
+
+The metadata is structured as follows: At the outer level, ``callback``
+metadata is a list of ``callback`` encodings. Each encoding starts with a
+constant ``i64`` which describes the argument position of the callback function
+in the call to the broker. The following elements, except the last, describe
+what arguments are passed to the callback function. Each element is again an
+``i64`` constant identifying the argument of the broker that is passed through,
+or ``i64 -1`` to indicate an unknown or inspected argument. The order in which
+they are listed has to be the same in which they are passed to the callback
+callee. The last element of the encoding is a boolean which specifies how
+variadic arguments of the broker are handled. If it is true, all variadic
+arguments of the broker are passed through to the callback function *after* the
+arguments encoded explicitly before.
+
+In the code below, the ``pthread_create`` function is marked as a broker
+through the ``!callback !1`` metadata. In the example, there is only one
+callback encoding, namely ``!2``, associated with the broker. This encoding
+identifies the callback function as the second argument of the broker (``i64
+2``) and the sole argument of the callback function as the third one of the
+broker function (``i64 3``).
+
+.. code-block:: llvm
+
+    declare !callback !1 dso_local i32 @pthread_create(i64*, %union.pthread_attr_t*, i8* (i8*)*, i8*)
+
+    ...
+    !2 = !{i64 2, i64 3, i1 false}
+    !1 = !{!2}
+
+Another example is shown below. The callback callee is the second argument of
+the ``__kmpc_fork_call`` function (``i64 2``). The callee is given two unknown
+values (each identified by a ``i64 -1``) and afterwards all
+variadic arguments that are passed to the ``__kmpc_fork_call`` call (due to the
+final ``i1 true``).
+
+.. code-block:: llvm
+
+    declare !callback !0 dso_local void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
+
+    ...
+    !1 = !{i64 2, i64 -1, i64 -1, i1 true}
+    !0 = !{!1}
+
+
 '``unpredictable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -6431,7 +6497,7 @@ The '``ret``' instruction optionally accepts a single argument, the
 return value. The type of the return value must be a ':ref:`first
 class <t_firstclass>`' type.
 
-A function is not :ref:`well formed <wellformed>` if it it has a non-void
+A function is not :ref:`well formed <wellformed>` if it has a non-void
 return type and contains a '``ret``' instruction with no return value or
 a return value with a type that does not match its type, or if it has a
 void return type and contains a '``ret``' instruction with a return

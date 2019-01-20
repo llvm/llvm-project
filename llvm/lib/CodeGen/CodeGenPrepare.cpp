@@ -1,9 +1,8 @@
 //===- CodeGenPrepare.cpp - Prepare a function for code generation --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -4664,13 +4663,27 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     // will look through it and provide only the integer value. In that case,
     // use it here.
     if (!DL->isNonIntegralPointerType(Addr->getType())) {
+      const auto getResultPtr = [MemoryInst, Addr,
+                                 &Builder](Value *Reg) -> Value * {
+        BasicBlock *BB = MemoryInst->getParent();
+        for (User *U : Reg->users())
+          if (auto *I2P = dyn_cast<IntToPtrInst>(U))
+            if (I2P->getType() == Addr->getType() && I2P->getParent() == BB) {
+              auto *RegInst = dyn_cast<Instruction>(Reg);
+              if (RegInst && RegInst->getParent() == BB &&
+                  !isa<PHINode>(RegInst) && !RegInst->isEHPad())
+                I2P->moveAfter(RegInst);
+              else
+                I2P->moveBefore(*BB, BB->getFirstInsertionPt());
+              return I2P;
+            }
+        return Builder.CreateIntToPtr(Reg, Addr->getType(), "sunkaddr");
+      };
       if (!ResultPtr && AddrMode.BaseReg) {
-        ResultPtr = Builder.CreateIntToPtr(AddrMode.BaseReg, Addr->getType(),
-                                           "sunkaddr");
+        ResultPtr = getResultPtr(AddrMode.BaseReg);
         AddrMode.BaseReg = nullptr;
       } else if (!ResultPtr && AddrMode.Scale == 1) {
-        ResultPtr = Builder.CreateIntToPtr(AddrMode.ScaledReg, Addr->getType(),
-                                           "sunkaddr");
+        ResultPtr = getResultPtr(AddrMode.ScaledReg);
         AddrMode.Scale = 0;
       }
     }

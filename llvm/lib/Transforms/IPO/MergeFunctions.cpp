@@ -1,9 +1,8 @@
 //===- MergeFunctions.cpp - Merge identical functions ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -281,8 +280,8 @@ private:
   // Replace G with an alias to F (deleting function G)
   void writeAlias(Function *F, Function *G);
 
-  // Replace G with an alias to F if possible, or a thunk to F if
-  // profitable. Returns false if neither is the case.
+  // Replace G with an alias to F if possible, or a thunk to F if possible.
+  // Returns false if neither is the case.
   bool writeThunkOrAlias(Function *F, Function *G);
 
   /// Replace function F with function G in the function tree.
@@ -385,8 +384,7 @@ bool MergeFunctions::doSanityCheck(std::vector<WeakTrackingVH> &Worklist) {
 
 /// Check whether \p F is eligible for function merging.
 static bool isEligibleForMerging(Function &F) {
-  return !F.isDeclaration() && !F.hasAvailableExternallyLinkage() &&
-         !F.isVarArg();
+  return !F.isDeclaration() && !F.hasAvailableExternallyLinkage();
 }
 
 bool MergeFunctions::runOnModule(Module &M) {
@@ -660,12 +658,16 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
   LLVM_DEBUG(dbgs() << " }\n");
 }
 
-// Don't merge tiny functions using a thunk, since it can just end up
-// making the function larger.
-static bool isThunkProfitable(Function * F) {
+/// Whether this function may be replaced by a forwarding thunk.
+static bool canCreateThunkFor(Function *F) {
+  if (F->isVarArg())
+    return false;
+
+  // Don't merge tiny functions using a thunk, since it can just end up
+  // making the function larger.
   if (F->size() == 1) {
     if (F->front().size() <= 2) {
-      LLVM_DEBUG(dbgs() << "isThunkProfitable: " << F->getName()
+      LLVM_DEBUG(dbgs() << "canCreateThunkFor: " << F->getName()
                         << " is too small to bother creating a thunk for\n");
       return false;
     }
@@ -793,7 +795,7 @@ bool MergeFunctions::writeThunkOrAlias(Function *F, Function *G) {
     writeAlias(F, G);
     return true;
   }
-  if (isThunkProfitable(F)) {
+  if (canCreateThunkFor(F)) {
     writeThunk(F, G);
     return true;
   }
@@ -808,9 +810,9 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // Both writeThunkOrAlias() calls below must succeed, either because we can
     // create aliases for G and NewF, or because a thunk for F is profitable.
     // F here has the same signature as NewF below, so that's what we check.
-    if (!isThunkProfitable(F) && (!canCreateAliasFor(F) || !canCreateAliasFor(G))) {
+    if (!canCreateThunkFor(F) &&
+        (!canCreateAliasFor(F) || !canCreateAliasFor(G)))
       return;
-    }
 
     // Make them both thunks to the same internal function.
     Function *NewF = Function::Create(F->getFunctionType(), F->getLinkage(),

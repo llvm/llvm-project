@@ -1,9 +1,8 @@
 //===-- SIISelLowering.cpp - SI DAG Lowering Implementation ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,7 +18,6 @@
 
 #include "SIISelLowering.h"
 #include "AMDGPU.h"
-#include "AMDGPUIntrinsicInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIDefines.h"
@@ -5267,12 +5265,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                           SDLoc(DAG.getEntryNode()),
                           MFI->getArgInfo().WorkItemIDZ);
-  case SIIntrinsic::SI_load_const: {
-    SDValue Load =
-        lowerSBuffer(MVT::i32, DL, Op.getOperand(1), Op.getOperand(2),
-                     DAG.getTargetConstant(0, DL, MVT::i1), DAG);
-    return DAG.getNode(ISD::BITCAST, DL, MVT::f32, Load);
-  }
   case Intrinsic::amdgcn_s_buffer_load: {
     unsigned Cache = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
     return lowerSBuffer(VT, DL, Op.getOperand(1), Op.getOperand(2),

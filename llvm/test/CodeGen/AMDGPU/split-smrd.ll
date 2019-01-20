@@ -8,7 +8,7 @@
 ; GCN: image_sample v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0x1
 define amdgpu_ps void @split_smrd_add_worklist([34 x <8 x i32>] addrspace(4)* byval %arg) #0 {
 bb:
-  %tmp = call float @llvm.SI.load.const.v4i32(<4 x i32> undef, i32 96)
+  %tmp = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 96, i32 0)
   %tmp1 = bitcast float %tmp to i32
   br i1 undef, label %bb2, label %bb3
 
@@ -31,7 +31,7 @@ bb3:                                              ; preds = %bb
 declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
 declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
 declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-declare float @llvm.SI.load.const.v4i32(<4 x i32>, i32) #1
+declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

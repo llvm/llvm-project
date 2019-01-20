@@ -1,9 +1,8 @@
 //===-- LCSSA.cpp - Convert loops into loop-closed SSA form ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -325,6 +324,10 @@ bool llvm::formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI,
   // Look at all the instructions in the loop, checking to see if they have uses
   // outside the loop.  If so, put them into the worklist to rewrite those uses.
   for (BasicBlock *BB : BlocksDominatingExits) {
+    // Skip blocks that are part of any sub-loops, they must be in LCSSA
+    // already.
+    if (LI->getLoopFor(BB) != &L)
+      continue;
     for (Instruction &I : *BB) {
       // Reject two common cases fast: instructions with no uses (like stores)
       // and instructions with one use that is in the same block as this.

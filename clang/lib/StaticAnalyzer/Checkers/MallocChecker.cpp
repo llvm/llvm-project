@@ -1,9 +1,8 @@
 //=== MallocChecker.cpp - A malloc/free checker -------------------*- C++ -*--//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -2301,14 +2300,14 @@ void MallocChecker::reportLeak(SymbolRef Sym, ExplodedNode *N,
 
   assert(N);
   if (!BT_Leak[*CheckKind]) {
-    BT_Leak[*CheckKind].reset(new BugType(CheckNames[*CheckKind], "Memory leak",
-                                          categories::MemoryError));
     // Leaks should not be reported if they are post-dominated by a sink:
     // (1) Sinks are higher importance bugs.
     // (2) NoReturnFunctionChecker uses sink nodes to represent paths ending
     //     with __noreturn functions such as assert() or exit(). We choose not
     //     to report leaks on such paths.
-    BT_Leak[*CheckKind]->setSuppressOnSink(true);
+    BT_Leak[*CheckKind].reset(new BugType(CheckNames[*CheckKind], "Memory leak",
+                                          categories::MemoryError,
+                                          /*SuppressOnSink=*/true));
   }
 
   // Most bug reports are cached at the location where they occurred.

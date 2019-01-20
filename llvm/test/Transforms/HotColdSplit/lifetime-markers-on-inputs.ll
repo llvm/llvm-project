@@ -30,13 +30,13 @@ normalPath:
 
 ; CHECK-LABEL: codeRepl:
 ; CHECK: [[local1_cast:%.*]] = bitcast i256* %local1 to i8*
-; CHECK: call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[local1_cast]])
-; CHECK: [[local2_cast:%.*]] = bitcast i256* %local2 to i8*
-; CHECK: call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[local2_cast]])
-; CHECK: call i1 @foo.cold.1(i8* %local1_cast, i8* %local2_cast)
-; CHECK: call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[local2_cast]])
-; CHECK: call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[local1_cast]])
-; CHECK: br i1
+; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[local1_cast]])
+; CHECK-NEXT: [[local2_cast:%.*]] = bitcast i256* %local2 to i8*
+; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[local2_cast]])
+; CHECK-NEXT: call i1 @foo.cold.1(i8* %local1_cast, i8* %local2_cast)
+; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[local1_cast]])
+; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[local2_cast]])
+; CHECK-NEXT: br i1
 
 outlinedPath:
   ; These two uses of stack slots are overlapping. This should prevent

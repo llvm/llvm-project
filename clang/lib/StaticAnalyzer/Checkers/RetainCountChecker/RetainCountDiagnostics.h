@@ -1,9 +1,8 @@
 //== RetainCountDiagnostics.h - Checks for leaks and other issues -*- C++ -*--//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -25,32 +24,44 @@ namespace ento {
 namespace retaincountchecker {
 
 class RefCountBug : public BugType {
-protected:
-  RefCountBug(const CheckerBase *checker, StringRef name)
-      : BugType(checker, name, categories::MemoryRefCount) {}
-
 public:
-  virtual const char *getDescription() const = 0;
+  enum RefCountBugType {
+    UseAfterRelease,
+    ReleaseNotOwned,
+    DeallocNotOwned,
+    FreeNotOwned,
+    OverAutorelease,
+    ReturnNotOwnedForOwned,
+    LeakWithinFunction,
+    LeakAtReturn,
+  };
+  RefCountBug(const CheckerBase *checker, RefCountBugType BT);
+  StringRef getDescription() const;
+  RefCountBugType getBugType() const {
+    return BT;
+  }
 
-  virtual bool isLeak() const { return false; }
+private:
+  RefCountBugType BT;
+  static StringRef bugTypeToName(RefCountBugType BT);
 };
 
 class RefCountReport : public BugReport {
 protected:
   SymbolRef Sym;
+  bool isLeak = false;
 
 public:
-  RefCountReport(RefCountBug &D, const LangOptions &LOpts,
+  RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
               ExplodedNode *n, SymbolRef sym,
-              bool registerVisitor = true);
+              bool isLeak=false);
 
-  RefCountReport(RefCountBug &D, const LangOptions &LOpts,
+  RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
               ExplodedNode *n, SymbolRef sym,
               StringRef endText);
 
   llvm::iterator_range<ranges_iterator> getRanges() override {
-    const RefCountBug& BugTy = static_cast<RefCountBug&>(getBugType());
-    if (!BugTy.isLeak())
+    if (!isLeak)
       return BugReport::getRanges();
     return llvm::make_range(ranges_iterator(), ranges_iterator());
   }
@@ -69,7 +80,7 @@ class RefLeakReport : public RefCountReport {
   void createDescription(CheckerContext &Ctx);
 
 public:
-  RefLeakReport(RefCountBug &D, const LangOptions &LOpts, ExplodedNode *n,
+  RefLeakReport(const RefCountBug &D, const LangOptions &LOpts, ExplodedNode *n,
                 SymbolRef sym, CheckerContext &Ctx);
 
   PathDiagnosticLocation getLocation(const SourceManager &SM) const override {

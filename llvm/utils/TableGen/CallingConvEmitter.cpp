@@ -1,9 +1,8 @@
 //===- CallingConvEmitter.cpp - Generate calling conventions --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -41,11 +40,17 @@ void CallingConvEmitter::run(raw_ostream &O) {
   // each other.
   for (Record *CC : CCs) {
     if (!CC->getValueAsBit("Custom")) {
-      O << "static bool " << CC->getName()
-        << "(unsigned ValNo, MVT ValVT,\n"
-        << std::string(CC->getName().size() + 13, ' ')
-        << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
-        << std::string(CC->getName().size() + 13, ' ')
+      unsigned Pad = CC->getName().size();
+      if (CC->getValueAsBit("Entry")) {
+        O << "bool llvm::";
+        Pad += 12;
+      } else {
+        O << "static bool ";
+        Pad += 13;
+      }
+      O << CC->getName() << "(unsigned ValNo, MVT ValVT,\n"
+        << std::string(Pad, ' ') << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
+        << std::string(Pad, ' ')
         << "ISD::ArgFlagsTy ArgFlags, CCState &State);\n";
     }
   }
@@ -62,12 +67,18 @@ void CallingConvEmitter::EmitCallingConv(Record *CC, raw_ostream &O) {
   ListInit *CCActions = CC->getValueAsListInit("Actions");
   Counter = 0;
 
-  O << "\n\nstatic bool " << CC->getName()
-    << "(unsigned ValNo, MVT ValVT,\n"
-    << std::string(CC->getName().size()+13, ' ')
-    << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
-    << std::string(CC->getName().size()+13, ' ')
-    << "ISD::ArgFlagsTy ArgFlags, CCState &State) {\n";
+  O << "\n\n";
+  unsigned Pad = CC->getName().size();
+  if (CC->getValueAsBit("Entry")) {
+    O << "bool llvm::";
+    Pad += 12;
+  } else {
+    O << "static bool ";
+    Pad += 13;
+  }
+  O << CC->getName() << "(unsigned ValNo, MVT ValVT,\n"
+    << std::string(Pad, ' ') << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
+    << std::string(Pad, ' ') << "ISD::ArgFlagsTy ArgFlags, CCState &State) {\n";
   // Emit all of the actions, in order.
   for (unsigned i = 0, e = CCActions->size(); i != e; ++i) {
     O << "\n";

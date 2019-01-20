@@ -1,9 +1,8 @@
 //===--- Expr.h - Classes for representing expressions ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -23,6 +22,7 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/FixedPoint.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TypeTraits.h"
@@ -610,6 +610,12 @@ public:
   bool
   EvaluateAsFloat(llvm::APFloat &Result, const ASTContext &Ctx,
                   SideEffectsKind AllowSideEffects = SE_NoSideEffects) const;
+
+  /// EvaluateAsFloat - Return true if this is a constant which we can fold and
+  /// convert to a fixed point value.
+  bool EvaluateAsFixedPoint(
+      EvalResult &Result, const ASTContext &Ctx,
+      SideEffectsKind AllowSideEffects = SE_NoSideEffects) const;
 
   /// isEvaluatable - Call EvaluateAsRValue to see if this expression can be
   /// constant folded without side-effects, but discard the result.

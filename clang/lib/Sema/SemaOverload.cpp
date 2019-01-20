@@ -1,9 +1,8 @@
 //===--- SemaOverload.cpp - C++ Overloading -------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -4019,9 +4018,12 @@ CompareQualificationConversions(Sema &S,
     // to unwrap. This essentially mimics what
     // IsQualificationConversion does, but here we're checking for a
     // strict subset of qualifiers.
-    if (T1.getCVRQualifiers() == T2.getCVRQualifiers())
+    if (T1.getQualifiers().withoutObjCLifetime() ==
+        T2.getQualifiers().withoutObjCLifetime())
       // The qualifiers are the same, so this doesn't tell us anything
       // about how the sequences rank.
+      // ObjC ownership quals are omitted above as they interfere with
+      // the ARC overload rule.
       ;
     else if (T2.isMoreQualifiedThan(T1)) {
       // T1 has fewer qualifiers, so it could be the better sequence.
