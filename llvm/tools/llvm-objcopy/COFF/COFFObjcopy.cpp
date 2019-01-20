@@ -1,9 +1,8 @@
 //===- COFFObjcopy.cpp ----------------------------------------------------===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,10 +26,45 @@ namespace coff {
 using namespace object;
 using namespace COFF;
 
+static bool isDebugSection(const Section &Sec) {
+  return Sec.Name.startswith(".debug");
+}
+
 static Error handleArgs(const CopyConfig &Config, Object &Obj) {
+  // Perform the actual section removals.
+  Obj.removeSections([&Config](const Section &Sec) {
+    // Contrary to --only-keep-debug, --only-section fully removes sections that
+    // aren't mentioned.
+    if (!Config.OnlySection.empty() &&
+        !is_contained(Config.OnlySection, Sec.Name))
+      return true;
+
+    if (Config.StripDebug || Config.StripAll || Config.StripAllGNU ||
+        Config.DiscardAll || Config.StripUnneeded) {
+      if (isDebugSection(Sec) &&
+          (Sec.Header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE) != 0)
+        return true;
+    }
+
+    if (is_contained(Config.ToRemove, Sec.Name))
+      return true;
+
+    return false;
+  });
+
+  if (Config.OnlyKeepDebug) {
+    // For --only-keep-debug, we keep all other sections, but remove their
+    // content. The VirtualSize field in the section header is kept intact.
+    Obj.truncateSections([](const Section &Sec) {
+      return !isDebugSection(Sec) && Sec.Name != ".buildid" &&
+             ((Sec.Header.Characteristics &
+               (IMAGE_SCN_CNT_CODE | IMAGE_SCN_CNT_INITIALIZED_DATA)) != 0);
+    });
+  }
+
   // StripAll removes all symbols and thus also removes all relocations.
   if (Config.StripAll || Config.StripAllGNU)
-    for (Section &Sec : Obj.Sections)
+    for (Section &Sec : Obj.getMutableSections())
       Sec.Relocs.clear();
 
   // If we need to do per-symbol removals, initialize the Referenced field.
@@ -79,7 +113,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
 }
 
 void executeObjcopyOnBinary(const CopyConfig &Config,
-                            object::COFFObjectFile &In, Buffer &Out) {
+                            COFFObjectFile &In, Buffer &Out) {
   COFFReader Reader(In);
   Expected<std::unique_ptr<Object>> ObjOrErr = Reader.create();
   if (!ObjOrErr)

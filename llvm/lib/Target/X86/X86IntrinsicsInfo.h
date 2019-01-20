@@ -1,9 +1,8 @@
 //===-- X86IntrinsicsInfo.h - X86 Intrinsics ------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -31,7 +30,7 @@ enum IntrinsicType : uint16_t {
   IFMA_OP, VPERM_2OP, INTR_TYPE_SCALAR_MASK,
   INTR_TYPE_SCALAR_MASK_RM, INTR_TYPE_3OP_SCALAR_MASK,
   COMPRESS_EXPAND_IN_REG,
-  TRUNCATE_TO_REG, CVTPS2PH_MASK, CVTPD2I_MASK,
+  TRUNCATE_TO_REG, CVTPS2PH_MASK, CVTPD2DQ_MASK, CVTQQ2PS_MASK,
   TRUNCATE_TO_MEM_VI8, TRUNCATE_TO_MEM_VI16, TRUNCATE_TO_MEM_VI32,
   FIXUPIMM, FIXUPIMM_MASKZ, FIXUPIMMS,
   FIXUPIMMS_MASKZ, GATHER_AVX2,
@@ -510,7 +509,7 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
                      X86ISD::CONFLICT, 0),
   X86_INTRINSIC_DATA(avx512_mask_cvtdq2ps_512, INTR_TYPE_1OP_MASK,
                      ISD::SINT_TO_FP, X86ISD::SINT_TO_FP_RND), //er
-  X86_INTRINSIC_DATA(avx512_mask_cvtpd2dq_128, CVTPD2I_MASK,
+  X86_INTRINSIC_DATA(avx512_mask_cvtpd2dq_128, CVTPD2DQ_MASK,
                      X86ISD::CVTP2SI, X86ISD::MCVTP2SI),
   X86_INTRINSIC_DATA(avx512_mask_cvtpd2dq_512, INTR_TYPE_1OP_MASK,
                      X86ISD::CVTP2SI, X86ISD::CVTP2SI_RND),
@@ -524,7 +523,7 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
                      X86ISD::CVTP2SI, 0),
   X86_INTRINSIC_DATA(avx512_mask_cvtpd2qq_512, INTR_TYPE_1OP_MASK,
                      X86ISD::CVTP2SI, X86ISD::CVTP2SI_RND),
-  X86_INTRINSIC_DATA(avx512_mask_cvtpd2udq_128, CVTPD2I_MASK,
+  X86_INTRINSIC_DATA(avx512_mask_cvtpd2udq_128, CVTPD2DQ_MASK,
                      X86ISD::CVTP2UI, X86ISD::MCVTP2UI),
   X86_INTRINSIC_DATA(avx512_mask_cvtpd2udq_256, INTR_TYPE_1OP_MASK,
                      X86ISD::CVTP2UI, 0),
@@ -564,8 +563,8 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
                      X86ISD::CVTP2UI, X86ISD::CVTP2UI_RND),
   X86_INTRINSIC_DATA(avx512_mask_cvtqq2pd_512, INTR_TYPE_1OP_MASK,
                      ISD::SINT_TO_FP, X86ISD::SINT_TO_FP_RND),
-  X86_INTRINSIC_DATA(avx512_mask_cvtqq2ps_128, INTR_TYPE_1OP_MASK,
-                     X86ISD::CVTSI2P, 0),
+  X86_INTRINSIC_DATA(avx512_mask_cvtqq2ps_128, CVTQQ2PS_MASK,
+                     X86ISD::CVTSI2P, X86ISD::MCVTSI2P),
   X86_INTRINSIC_DATA(avx512_mask_cvtqq2ps_256, INTR_TYPE_1OP_MASK,
                      ISD::SINT_TO_FP, 0),
   X86_INTRINSIC_DATA(avx512_mask_cvtqq2ps_512, INTR_TYPE_1OP_MASK,
@@ -574,7 +573,7 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
                      X86ISD::VFPROUNDS_RND, 0),
   X86_INTRINSIC_DATA(avx512_mask_cvtss2sd_round, INTR_TYPE_SCALAR_MASK_RM,
                      X86ISD::VFPEXTS_RND, 0),
-  X86_INTRINSIC_DATA(avx512_mask_cvttpd2dq_128, CVTPD2I_MASK,
+  X86_INTRINSIC_DATA(avx512_mask_cvttpd2dq_128, CVTPD2DQ_MASK,
                      X86ISD::CVTTP2SI, X86ISD::MCVTTP2SI),
   X86_INTRINSIC_DATA(avx512_mask_cvttpd2dq_512, INTR_TYPE_1OP_MASK,
                      X86ISD::CVTTP2SI, X86ISD::CVTTP2SI_RND),
@@ -584,7 +583,7 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
                      X86ISD::CVTTP2SI, 0),
   X86_INTRINSIC_DATA(avx512_mask_cvttpd2qq_512, INTR_TYPE_1OP_MASK,
                      X86ISD::CVTTP2SI, X86ISD::CVTTP2SI_RND),
-  X86_INTRINSIC_DATA(avx512_mask_cvttpd2udq_128, CVTPD2I_MASK,
+  X86_INTRINSIC_DATA(avx512_mask_cvttpd2udq_128, CVTPD2DQ_MASK,
                      X86ISD::CVTTP2UI, X86ISD::MCVTTP2UI),
   X86_INTRINSIC_DATA(avx512_mask_cvttpd2udq_256, INTR_TYPE_1OP_MASK,
                      X86ISD::CVTTP2UI, 0),
@@ -620,8 +619,8 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
                      ISD::UINT_TO_FP, X86ISD::UINT_TO_FP_RND),
   X86_INTRINSIC_DATA(avx512_mask_cvtuqq2pd_512, INTR_TYPE_1OP_MASK,
                      ISD::UINT_TO_FP, X86ISD::UINT_TO_FP_RND),
-  X86_INTRINSIC_DATA(avx512_mask_cvtuqq2ps_128, INTR_TYPE_1OP_MASK,
-                     X86ISD::CVTUI2P, 0),
+  X86_INTRINSIC_DATA(avx512_mask_cvtuqq2ps_128, CVTQQ2PS_MASK,
+                     X86ISD::CVTUI2P, X86ISD::MCVTUI2P),
   X86_INTRINSIC_DATA(avx512_mask_cvtuqq2ps_256, INTR_TYPE_1OP_MASK,
                      ISD::UINT_TO_FP, 0),
   X86_INTRINSIC_DATA(avx512_mask_cvtuqq2ps_512, INTR_TYPE_1OP_MASK,

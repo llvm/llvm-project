@@ -1,9 +1,8 @@
 //===- AMDGPULegalizerInfo.cpp -----------------------------------*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -245,8 +244,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     Atomics.legalFor({{S32, FlatPtr}, {S64, FlatPtr}});
   }
 
-  setAction({G_SELECT, S32}, Legal);
-  setAction({G_SELECT, 1, S1}, Legal);
+  // TODO: Pointer types, any 32-bit or 64-bit vector
+  getActionDefinitionsBuilder(G_SELECT)
+    .legalFor({{S32, S1}, {S64, S1}, {V2S32, S1}, {V2S16, S1}})
+    .clampScalar(0, S32, S64);
 
   setAction({G_SHL, S32}, Legal);
 

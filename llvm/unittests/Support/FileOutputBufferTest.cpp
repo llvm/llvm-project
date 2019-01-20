@@ -1,9 +1,8 @@
 //===- llvm/unittest/Support/FileOutputBuffer.cpp - unit tests ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -122,53 +121,4 @@ TEST(FileOutputBuffer, Test) {
   // Clean up.
   ASSERT_NO_ERROR(fs::remove(TestDirectory.str()));
 }
-
-TEST(FileOutputBuffer, TestModify) {
-  // Create unique temporary directory for these tests
-  SmallString<128> TestDirectory;
-  {
-    ASSERT_NO_ERROR(
-      fs::createUniqueDirectory("FileOutputBuffer-modify", TestDirectory));
-  }
-
-  SmallString<128> File1(TestDirectory);
-  File1.append("/file");
-  // First write some data.
-  {
-    Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
-      FileOutputBuffer::create(File1, 10);
-    ASSERT_NO_ERROR(errorToErrorCode(BufferOrErr.takeError()));
-    std::unique_ptr<FileOutputBuffer> &Buffer = *BufferOrErr;
-    memcpy(Buffer->getBufferStart(), "AAAAAAAAAA", 10);
-    ASSERT_NO_ERROR(errorToErrorCode(Buffer->commit()));
-  }
-
-  // Then re-open the file for modify and change only some bytes.
-  {
-    Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
-        FileOutputBuffer::create(File1, size_t(-1), FileOutputBuffer::F_modify);
-    ASSERT_NO_ERROR(errorToErrorCode(BufferOrErr.takeError()));
-    std::unique_ptr<FileOutputBuffer> &Buffer = *BufferOrErr;
-    ASSERT_EQ(10U, Buffer->getBufferSize());
-    uint8_t *Data = Buffer->getBufferStart();
-    Data[0] = 'X';
-    Data[9] = 'X';
-    ASSERT_NO_ERROR(errorToErrorCode(Buffer->commit()));
-  }
-
-  // Finally, re-open the file for read and verify that it has the modified
-  // contents.
-  {
-    ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr = MemoryBuffer::getFile(File1);
-    ASSERT_NO_ERROR(BufferOrErr.getError());
-    std::unique_ptr<MemoryBuffer> Buffer = std::move(*BufferOrErr);
-    ASSERT_EQ(10U, Buffer->getBufferSize());
-    EXPECT_EQ(StringRef("XAAAAAAAAX"), Buffer->getBuffer());
-  }
-
-  // Clean up.
-  ASSERT_NO_ERROR(fs::remove(File1));
-  ASSERT_NO_ERROR(fs::remove(TestDirectory));
-}
-
 } // anonymous namespace

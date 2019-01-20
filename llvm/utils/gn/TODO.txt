@@ -20,8 +20,6 @@ Ideas for things to do:
 - add dead code stripping
 - move run_tablegen.py from build to tablegen folder
 - figure out why -Iclang/Support gets added so often
-- make LLVM_LIBXML2_ENABLED use llvm_canonicalize_cmake_boolean (cf D28294),
-  clean up both GN and CMake builds
 - plugin() template with working rpath, exports thingers
   - then port clang_build_examples and enable by default so that clang
     plugin tests run by default

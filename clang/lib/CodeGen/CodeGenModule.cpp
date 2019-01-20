@@ -1,9 +1,8 @@
 //===--- CodeGenModule.cpp - Emit LLVM Code from ASTs for a Module --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1603,6 +1602,23 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
 
   if (getLangOpts().OpenMP && FD->hasAttr<OMPDeclareSimdDeclAttr>())
     getOpenMPRuntime().emitDeclareSimdFunction(FD, F);
+
+  if (const auto *CB = FD->getAttr<CallbackAttr>()) {
+    // Annotate the callback behavior as metadata:
+    //  - The callback callee (as argument number).
+    //  - The callback payloads (as argument numbers).
+    llvm::LLVMContext &Ctx = F->getContext();
+    llvm::MDBuilder MDB(Ctx);
+
+    // The payload indices are all but the first one in the encoding. The first
+    // identifies the callback callee.
+    int CalleeIdx = *CB->encoding_begin();
+    ArrayRef<int> PayloadIndices(CB->encoding_begin() + 1, CB->encoding_end());
+    F->addMetadata(llvm::LLVMContext::MD_callback,
+                   *llvm::MDNode::get(Ctx, {MDB.createCallbackEncoding(
+                                               CalleeIdx, PayloadIndices,
+                                               /* VarArgsArePassed */ false)}));
+  }
 }
 
 void CodeGenModule::addUsedGlobal(llvm::GlobalValue *GV) {

@@ -1,9 +1,8 @@
 //===- ClangAttrEmitter.cpp - Generate Clang attribute handling =-*- C++ -*--=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -776,6 +775,11 @@ namespace {
     }
   };
 
+  struct VariadicParamOrParamIdxArgument : public VariadicArgument {
+    VariadicParamOrParamIdxArgument(const Record &Arg, StringRef Attr)
+        : VariadicArgument(Arg, Attr, "int") {}
+  };
+
   // Unique the enums, but maintain the original declaration ordering.
   std::vector<StringRef>
   uniqueEnumsInOrder(const std::vector<StringRef> &enums) {
@@ -1284,6 +1288,8 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = llvm::make_unique<VariadicExprArgument>(Arg, Attr);
   else if (ArgName == "VariadicParamIdxArgument")
     Ptr = llvm::make_unique<VariadicParamIdxArgument>(Arg, Attr);
+  else if (ArgName == "VariadicParamOrParamIdxArgument")
+    Ptr = llvm::make_unique<VariadicParamOrParamIdxArgument>(Arg, Attr);
   else if (ArgName == "ParamIdxArgument")
     Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "ParamIdx");
   else if (ArgName == "VariadicIdentifierArgument")
@@ -2117,6 +2123,7 @@ static bool isVariadicIdentifierArgument(Record *Arg) {
          llvm::StringSwitch<bool>(
              Arg->getSuperClasses().back().first->getName())
              .Case("VariadicIdentifierArgument", true)
+             .Case("VariadicParamOrParamIdxArgument", true)
              .Default(false);
 }
 
@@ -2157,6 +2164,34 @@ static void emitClangAttrIdentifierArgList(RecordKeeper &Records, raw_ostream &O
     });
   }
   OS << "#endif // CLANG_ATTR_IDENTIFIER_ARG_LIST\n\n";
+}
+
+static bool keywordThisIsaIdentifierInArgument(const Record *Arg) {
+  return !Arg->getSuperClasses().empty() &&
+         llvm::StringSwitch<bool>(
+             Arg->getSuperClasses().back().first->getName())
+             .Case("VariadicParamOrParamIdxArgument", true)
+             .Default(false);
+}
+
+static void emitClangAttrThisIsaIdentifierArgList(RecordKeeper &Records,
+                                                  raw_ostream &OS) {
+  OS << "#if defined(CLANG_ATTR_THIS_ISA_IDENTIFIER_ARG_LIST)\n";
+  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
+  for (const auto *A : Attrs) {
+    // Determine whether the first argument is a variadic identifier.
+    std::vector<Record *> Args = A->getValueAsListOfDefs("Args");
+    if (Args.empty() || !keywordThisIsaIdentifierInArgument(Args[0]))
+      continue;
+
+    // All these spellings take an identifier argument.
+    forEachUniqueSpelling(*A, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.name() << "\", "
+         << "true"
+         << ")\n";
+    });
+  }
+  OS << "#endif // CLANG_ATTR_THIS_ISA_IDENTIFIER_ARG_LIST\n\n";
 }
 
 namespace clang {
@@ -3767,6 +3802,7 @@ void EmitClangAttrParserStringSwitches(RecordKeeper &Records,
   emitClangAttrArgContextList(Records, OS);
   emitClangAttrIdentifierArgList(Records, OS);
   emitClangAttrVariadicIdentifierArgList(Records, OS);
+  emitClangAttrThisIsaIdentifierArgList(Records, OS);
   emitClangAttrTypeArgList(Records, OS);
   emitClangAttrLateParsedList(Records, OS);
 }

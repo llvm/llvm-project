@@ -16,7 +16,7 @@ setup(
     author = lit.__author__,
     author_email = lit.__email__,
     url = 'http://llvm.org',
-    license = 'BSD',
+    license = 'Apache-2.0 with LLVM exception',
 
     description = "A Software Testing Tool",
     keywords = 'test C++ automatic discovery',
@@ -60,7 +60,7 @@ http://llvm.org/svn/llvm-project/llvm/trunk/utils/lit.
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: University of Illinois/NCSA Open Source License',
+        'License :: OSI Approved :: Apache-2.0 with LLVM exception',
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
