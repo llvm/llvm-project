@@ -117,7 +117,7 @@ func (san *sanitizerOptions) addPasses(mpm, fpm llvm.PassManager) {
 	case san.thread:
 		mpm.AddThreadSanitizerPass()
 	case san.memory:
-		mpm.AddMemorySanitizerPass()
+		mpm.AddMemorySanitizerLegacyPassPass()
 	case san.dataflow:
 		blacklist := san.blacklist
 		if blacklist == "" {
