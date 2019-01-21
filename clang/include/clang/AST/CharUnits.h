@@ -237,10 +237,6 @@ template<> struct DenseMapInfo<clang::CharUnits> {
   }
 };
 
-template <> struct isPodLike<clang::CharUnits> {
-  static const bool value = true;
-};
-
 } // end namespace llvm
 
 #endif // LLVM_CLANG_AST_CHARUNITS_H

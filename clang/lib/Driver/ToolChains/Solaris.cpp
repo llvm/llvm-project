@@ -100,7 +100,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // __start_SECNAME labels.
   CmdArgs.push_back("--whole-archive");
   CmdArgs.push_back(
-      getToolChain().getCompilerRTArgString(Args, "sancov_begin", false));
+      getToolChain().getCompilerRTArgString(Args, "sancov_begin"));
   CmdArgs.push_back("--no-whole-archive");
 
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
@@ -135,7 +135,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // __stop_SECNAME labels.
   CmdArgs.push_back("--whole-archive");
   CmdArgs.push_back(
-      getToolChain().getCompilerRTArgString(Args, "sancov_end", false));
+      getToolChain().getCompilerRTArgString(Args, "sancov_end"));
   CmdArgs.push_back("--no-whole-archive");
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {

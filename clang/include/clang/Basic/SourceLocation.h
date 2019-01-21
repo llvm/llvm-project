@@ -25,7 +25,6 @@
 namespace llvm {
 
 template <typename T> struct DenseMapInfo;
-template <typename T> struct isPodLike;
 
 } // namespace llvm
 
@@ -456,11 +455,6 @@ namespace llvm {
       return LHS == RHS;
     }
   };
-
-  template <>
-  struct isPodLike<clang::SourceLocation> { static const bool value = true; };
-  template <>
-  struct isPodLike<clang::FileID> { static const bool value = true; };
 
   // Teach SmallPtrSet how to handle SourceLocation.
   template<>

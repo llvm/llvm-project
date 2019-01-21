@@ -94,9 +94,6 @@ namespace llvm {
     enum { NumLowBitsAvailable = clang::TypeAlignmentInBits };
   };
 
-  template <>
-  struct isPodLike<clang::QualType> { static const bool value = true; };
-
 } // namespace llvm
 
 namespace clang {

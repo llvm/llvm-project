@@ -846,6 +846,8 @@ private:
       : BaseOffset(CharUnits::Zero()),
       BaseOffsetInLayoutClass(CharUnits::Zero()),
       VTableIndex(0) { }
+
+    MethodInfo(MethodInfo const&) = default;
   };
 
   typedef llvm::DenseMap<const CXXMethodDecl *, MethodInfo> MethodInfoMapTy;
