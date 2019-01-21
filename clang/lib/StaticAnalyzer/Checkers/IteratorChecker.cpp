@@ -2379,7 +2379,6 @@ bool compare(ProgramStateRef State, SymbolRef Sym1, SymbolRef Sym2,
   return compare(State, nonloc::SymbolVal(Sym1), nonloc::SymbolVal(Sym2), Opc);
 }
 
-
 bool compare(ProgramStateRef State, NonLoc NL1, NonLoc NL2,
              BinaryOperator::Opcode Opc) {
   auto &SVB = State->getStateManager().getSValBuilder();
