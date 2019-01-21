@@ -55,12 +55,15 @@ static cl::opt<bool>
     ClPrintInlining("inlining", cl::init(true),
                     cl::desc("Print all inlined frames for a given address"));
 
-// -demangle, -C
+// -demangle, -C, -no-demangle
 static cl::opt<bool>
 ClDemangle("demangle", cl::init(true), cl::desc("Demangle function names"));
 static cl::alias
 ClDemangleShort("C", cl::desc("Alias for -demangle"),
                 cl::NotHidden, cl::aliasopt(ClDemangle));
+static cl::opt<bool>
+ClNoDemangle("no-demangle", cl::init(false),
+             cl::desc("Don't demangle function names"));
 
 static cl::opt<std::string> ClDefaultArch("default-arch", cl::init(""),
                                           cl::desc("Default architecture "
@@ -201,8 +204,12 @@ int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
   llvm::sys::InitializeCOMRAII COM(llvm::sys::COMThreadingMode::MultiThreaded);
-
   cl::ParseCommandLineOptions(argc, argv, "llvm-symbolizer\n");
+
+  // If both --demangle and --no-demangle are specified then pick the last one.
+  if (ClNoDemangle.getPosition() > ClDemangle.getPosition())
+    ClDemangle = !ClNoDemangle;
+
   LLVMSymbolizer::Options Opts(ClPrintFunctions, ClUseSymbolTable, ClDemangle,
                                ClUseRelativeAddress, ClDefaultArch);
 
