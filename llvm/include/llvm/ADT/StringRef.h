@@ -927,10 +927,6 @@ namespace llvm {
   LLVM_NODISCARD
   hash_code hash_value(StringRef S);
 
-  // StringRefs can be treated like a POD type.
-  template <typename T> struct isPodLike;
-  template <> struct isPodLike<StringRef> { static const bool value = true; };
-
 } // end namespace llvm
 
 #endif // LLVM_ADT_STRINGREF_H

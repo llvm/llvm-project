@@ -204,6 +204,12 @@ LegalityPredicate typePairAndMemSizeInSet(
     std::initializer_list<TypePairAndMemSize> TypesAndMemSizeInit);
 /// True iff the specified type index is a scalar.
 LegalityPredicate isScalar(unsigned TypeIdx);
+/// True iff the specified type index is a pointer (with any address space).
+LegalityPredicate isPointer(unsigned TypeIdx);
+/// True iff the specified type index is a pointer with the specified address
+/// space.
+LegalityPredicate isPointer(unsigned TypeIdx, unsigned AddrSpace);
+
 /// True iff the specified type index is a scalar that's narrower than the given
 /// size.
 LegalityPredicate narrowerThan(unsigned TypeIdx, unsigned Size);

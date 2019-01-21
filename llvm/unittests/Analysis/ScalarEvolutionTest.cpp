@@ -1389,5 +1389,55 @@ TEST_F(ScalarEvolutionsTest, SCEVCacheNSW) {
   EXPECT_FALSE(I->hasNoSignedWrap());
 }
 
+// Check logic of SCEV expression size computation.
+TEST_F(ScalarEvolutionsTest, SCEVComputeExpressionSize) {
+  /*
+   * Create the following code:
+   * void func(i64 %a, i64 %b)
+   * entry:
+   *  %s1 = add i64 %a, 1
+   *  %s2 = udiv i64 %s1, %b
+   *  br label %exit
+   * exit:
+   *  ret
+   */
+
+  // Create a module.
+  Module M("SCEVComputeExpressionSize", Context);
+
+  Type *T_int64 = Type::getInt64Ty(Context);
+
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context), { T_int64, T_int64 }, false);
+  Function *F = cast<Function>(M.getOrInsertFunction("func", FTy));
+  Argument *A = &*F->arg_begin();
+  Argument *B = &*std::next(F->arg_begin());
+  ConstantInt *C = ConstantInt::get(Context, APInt(64, 1));
+
+  BasicBlock *Entry = BasicBlock::Create(Context, "entry", F);
+  BasicBlock *Exit = BasicBlock::Create(Context, "exit", F);
+
+  IRBuilder<> Builder(Entry);
+  auto *S1 = cast<Instruction>(Builder.CreateAdd(A, C, "s1"));
+  auto *S2 = cast<Instruction>(Builder.CreateUDiv(S1, B, "s2"));
+  Builder.CreateBr(Exit);
+
+  Builder.SetInsertPoint(Exit);
+  Builder.CreateRetVoid();
+
+  ScalarEvolution SE = buildSE(*F);
+  // Get S2 first to move it to cache.
+  const SCEV *AS = SE.getSCEV(A);
+  const SCEV *BS = SE.getSCEV(B);
+  const SCEV *CS = SE.getSCEV(C);
+  const SCEV *S1S = SE.getSCEV(S1);
+  const SCEV *S2S = SE.getSCEV(S2);
+  EXPECT_EQ(AS->getExpressionSize(), 1u);
+  EXPECT_EQ(BS->getExpressionSize(), 1u);
+  EXPECT_EQ(CS->getExpressionSize(), 1u);
+  EXPECT_EQ(S1S->getExpressionSize(), 3u);
+  EXPECT_EQ(S2S->getExpressionSize(), 5u);
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm

@@ -248,4 +248,7 @@ TEST(ArrayRefTest, makeArrayRef) {
   EXPECT_TRUE(AR2.equals(AR2Ref));
 }
 
+static_assert(is_trivially_copyable<ArrayRef<int>>::value,
+              "trivially copyable");
+
 } // end anonymous namespace

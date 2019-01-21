@@ -61,6 +61,9 @@ TEST(PointerIntPairTest, GetSet) {
   Pair2.setPointerAndInt(&s, E::Case3);
   EXPECT_EQ(&s, Pair2.getPointer());
   EXPECT_EQ(E::Case3, Pair2.getInt());
+
+  static_assert(is_trivially_copyable<PointerIntPair<S *, 2, E>>::value,
+                "trivially copyable");
 }
 
 TEST(PointerIntPairTest, DefaultInitialize) {
@@ -96,6 +99,11 @@ TEST(PointerIntPairTest, ManyUnusedBits) {
 
   EXPECT_EQ(FixnumPointerTraits::NumLowBitsAvailable - 1,
             PointerLikeTypeTraits<decltype(pair)>::NumLowBitsAvailable);
+
+  static_assert(
+      is_trivially_copyable<
+          PointerIntPair<Fixnum31, 1, bool, FixnumPointerTraits>>::value,
+      "trivially copyable");
 }
 
 } // end anonymous namespace

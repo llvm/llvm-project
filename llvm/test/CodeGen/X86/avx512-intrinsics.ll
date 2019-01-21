@@ -2813,24 +2813,26 @@ define void @test_int_x86_avx512_mask_pmovus_qw_mem_512(i8* %ptr, <8 x i64> %x1,
     ret void
 }
 
-declare <8 x i32> @llvm.x86.avx512.mask.pmov.qd.512(<8 x i64>, <8 x i32>, i8)
-
 define <8 x i32>@test_int_x86_avx512_mask_pmov_qd_512(<8 x i64> %x0, <8 x i32> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmov_qd_512:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpmovqd %zmm0, %ymm2
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpmovqd %zmm0, %ymm2 {%k1} {z}
 ; CHECK-NEXT:    vpmovqd %zmm0, %ymm1 {%k1}
-; CHECK-NEXT:    vpaddd %ymm2, %ymm1, %ymm1
-; CHECK-NEXT:    vpmovqd %zmm0, %ymm0
-; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpmovqd %zmm0, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; CHECK-NEXT:    retq
-    %res0 = call <8 x i32> @llvm.x86.avx512.mask.pmov.qd.512(<8 x i64> %x0, <8 x i32> %x1, i8 -1)
-    %res1 = call <8 x i32> @llvm.x86.avx512.mask.pmov.qd.512(<8 x i64> %x0, <8 x i32> %x1, i8 %x2)
-    %res2 = call <8 x i32> @llvm.x86.avx512.mask.pmov.qd.512(<8 x i64> %x0, <8 x i32> zeroinitializer, i8 %x2)
-    %res3 = add <8 x i32> %res0, %res1
-    %res4 = add <8 x i32> %res3, %res2
-    ret <8 x i32> %res4
+  %1 = trunc <8 x i64> %x0 to <8 x i32>
+  %2 = trunc <8 x i64> %x0 to <8 x i32>
+  %3 = bitcast i8 %x2 to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x i32> %2, <8 x i32> %x1
+  %5 = trunc <8 x i64> %x0 to <8 x i32>
+  %6 = bitcast i8 %x2 to <8 x i1>
+  %7 = select <8 x i1> %6, <8 x i32> %5, <8 x i32> zeroinitializer
+  %res3 = add <8 x i32> %1, %4
+  %res4 = add <8 x i32> %res3, %7
+  ret <8 x i32> %res4
 }
 
 declare void @llvm.x86.avx512.mask.pmov.qd.mem.512(i8* %ptr, <8 x i64>, i8)

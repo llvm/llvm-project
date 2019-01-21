@@ -1133,45 +1133,6 @@ static Value *simplifyX86vpermv(const IntrinsicInst &II,
   return Builder.CreateShuffleVector(V1, V2, ShuffleMask);
 }
 
-/// Decode XOP integer vector comparison intrinsics.
-static Value *simplifyX86vpcom(const IntrinsicInst &II,
-                               InstCombiner::BuilderTy &Builder,
-                               bool IsSigned) {
-  if (auto *CInt = dyn_cast<ConstantInt>(II.getArgOperand(2))) {
-    uint64_t Imm = CInt->getZExtValue() & 0x7;
-    VectorType *VecTy = cast<VectorType>(II.getType());
-    CmpInst::Predicate Pred = ICmpInst::BAD_ICMP_PREDICATE;
-
-    switch (Imm) {
-    case 0x0:
-      Pred = IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
-      break;
-    case 0x1:
-      Pred = IsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
-      break;
-    case 0x2:
-      Pred = IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
-      break;
-    case 0x3:
-      Pred = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
-      break;
-    case 0x4:
-      Pred = ICmpInst::ICMP_EQ; break;
-    case 0x5:
-      Pred = ICmpInst::ICMP_NE; break;
-    case 0x6:
-      return ConstantInt::getSigned(VecTy, 0); // FALSE
-    case 0x7:
-      return ConstantInt::getSigned(VecTy, -1); // TRUE
-    }
-
-    if (Value *Cmp = Builder.CreateICmp(Pred, II.getArgOperand(0),
-                                        II.getArgOperand(1)))
-      return Builder.CreateSExtOrTrunc(Cmp, VecTy);
-  }
-  return nullptr;
-}
-
 static bool maskIsAllOneOrUndef(Value *Mask) {
   auto *ConstMask = dyn_cast<Constant>(Mask);
   if (!ConstMask)
@@ -3165,22 +3126,6 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx2_maskstore_q_256:
     if (simplifyX86MaskedStore(*II, *this))
       return nullptr;
-    break;
-
-  case Intrinsic::x86_xop_vpcomb:
-  case Intrinsic::x86_xop_vpcomd:
-  case Intrinsic::x86_xop_vpcomq:
-  case Intrinsic::x86_xop_vpcomw:
-    if (Value *V = simplifyX86vpcom(*II, Builder, true))
-      return replaceInstUsesWith(*II, V);
-    break;
-
-  case Intrinsic::x86_xop_vpcomub:
-  case Intrinsic::x86_xop_vpcomud:
-  case Intrinsic::x86_xop_vpcomuq:
-  case Intrinsic::x86_xop_vpcomuw:
-    if (Value *V = simplifyX86vpcom(*II, Builder, false))
-      return replaceInstUsesWith(*II, V);
     break;
 
   case Intrinsic::ppc_altivec_vperm:

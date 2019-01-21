@@ -121,7 +121,7 @@ auto incomplete = &three<Incomplete*, Incomplete**, const Incomplete*>;
 // CHECK: |   `-CXXRecordDecl {{.*}} struct S
 // CHECK: |-NamespaceDecl {{.*}} A
 // CHECK: | |-CXXRecordDecl {{.*}} struct C
-// CHECK: | | |-CXXRecordDecl {{.*}} struct S
+// CHECK: | | `-CXXRecordDecl {{.*}} struct S
 // CHECK: | `-NamespaceDecl {{.*}} B
 // CHECK: |   `-CXXRecordDecl {{.*}} struct S
 // CHECK: |-VarDecl {{.*}} e 'A::B::S *(*)(B::A::S *, A::C::S &)'

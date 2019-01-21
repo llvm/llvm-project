@@ -159,10 +159,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, BlockMass X) {
 
 } // end namespace bfi_detail
 
-template <> struct isPodLike<bfi_detail::BlockMass> {
-  static const bool value = true;
-};
-
 /// Base class for BlockFrequencyInfoImpl
 ///
 /// BlockFrequencyInfoImplBase has supporting data structures and some
@@ -186,9 +182,9 @@ public:
   struct BlockNode {
     using IndexType = uint32_t;
 
-    IndexType Index = std::numeric_limits<uint32_t>::max();
+    IndexType Index;
 
-    BlockNode() = default;
+    BlockNode() : Index(std::numeric_limits<uint32_t>::max()) {}
     BlockNode(IndexType Index) : Index(Index) {}
 
     bool operator==(const BlockNode &X) const { return Index == X.Index; }
