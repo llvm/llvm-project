@@ -55,8 +55,8 @@ extern "C"  {
     int __rust_rwlock_rdlock(RWLock *rwlock);
     int __rust_rwlock_wrlock(RWLock *rwlock);
     int __rust_rwlock_unlock(RWLock *rwlock);
-    unsigned char *__rust_alloc(size_t, size_t);
-    void __rust_dealloc(unsigned char *, size_t, size_t);
+    unsigned char *__rust_c_alloc(size_t, size_t);
+    void __rust_c_dealloc(unsigned char *, size_t, size_t);
     void __rust_print_err(uint8_t *m, int s);
     __attribute__((noreturn)) void __rust_abort(void);
     unsigned char *__rust_encl_address(size_t);
