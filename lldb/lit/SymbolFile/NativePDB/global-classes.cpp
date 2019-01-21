@@ -362,8 +362,7 @@ constexpr References ReferencesInstance;
 // CHECK: | |-FieldDecl {{.*}} k 'double &'
 // CHECK: | |-FieldDecl {{.*}} l 'unsigned long long &'
 // CHECK: | `-FieldDecl {{.*}} m 'long long &'
-// CHECK: |-VarDecl {{.*}} ReferencesInstance 'const References'
-// CHECK: `-<undeserialized declarations>
+// CHECK: `-VarDecl {{.*}} ReferencesInstance 'const References'
 
 int main(int argc, char **argv) {
   return 0;
