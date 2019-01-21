@@ -234,7 +234,7 @@ mechanisms:
    file.
 
 ==============================================================================
-Legacy LLVM License (ttps://llvm.org/docs/DeveloperPolicy.html#legacy):
+Legacy LLVM License (https://llvm.org/docs/DeveloperPolicy.html#legacy):
 ==============================================================================
 The llgo distribution, excluding the contents of the 'include' and any third
 party software is licensed under the University of Illinois "BSD-Like" license.

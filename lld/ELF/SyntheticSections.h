@@ -316,8 +316,9 @@ private:
     size_t StartIndex = 0;
 
     struct PageBlock {
-      size_t FirstIndex = 0;
-      size_t Count = 0;
+      size_t FirstIndex;
+      size_t Count;
+      PageBlock() : FirstIndex(0), Count(0) {}
     };
 
     // Map output sections referenced by MIPS GOT relocations
