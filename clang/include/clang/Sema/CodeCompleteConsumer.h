@@ -655,14 +655,6 @@ public:
 
 } // namespace clang
 
-namespace llvm {
-
-template <> struct isPodLike<clang::CodeCompletionString::Chunk> {
-  static const bool value = true;
-};
-
-} // namespace llvm
-
 namespace clang {
 
 /// A builder class used to construct new code-completion strings.

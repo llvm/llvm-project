@@ -953,12 +953,21 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
     Observer.changedInstr(MI);
     return Legalized;
-
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_FMA:
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FREM:
   case TargetOpcode::G_FCEIL:
-    if (TypeIdx != 0)
-      return UnableToLegalize;
+    assert(TypeIdx == 0);
     Observer.changingInstr(MI);
-    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT);
+
+    for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I)
+      widenScalarSrc(MI, WideTy, I, TargetOpcode::G_FPEXT);
+
     widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
     Observer.changedInstr(MI);
     return Legalized;

@@ -377,7 +377,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (!Args.hasArg(options::OPT_shared))
       CmdArgs.push_back(
           Args.MakeArgString(std::string("-wholearchive:") +
-                             TC.getCompilerRTArgString(Args, "fuzzer", false)));
+                             TC.getCompilerRTArgString(Args, "fuzzer")));
     CmdArgs.push_back(Args.MakeArgString("-debug"));
     // Prevent the linker from padding sections we use for instrumentation
     // arrays.

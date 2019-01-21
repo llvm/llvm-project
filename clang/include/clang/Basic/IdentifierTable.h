@@ -938,9 +938,6 @@ struct DenseMapInfo<clang::Selector> {
   }
 };
 
-template <>
-struct isPodLike<clang::Selector> { static const bool value = true; };
-
 template<>
 struct PointerLikeTypeTraits<clang::Selector> {
   static const void *getAsVoidPointer(clang::Selector P) {

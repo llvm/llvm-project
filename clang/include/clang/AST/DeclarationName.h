@@ -861,9 +861,6 @@ struct DenseMapInfo<clang::DeclarationName> {
   }
 };
 
-template <>
-struct isPodLike<clang::DeclarationName> { static const bool value = true; };
-
 } // namespace llvm
 
 #endif // LLVM_CLANG_AST_DECLARATIONNAME_H

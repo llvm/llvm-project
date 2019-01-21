@@ -188,11 +188,11 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-lm");
     }
     if (NeedsSanitizerDeps) {
-      CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins", false));
+      CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins"));
       linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
     }
     if (NeedsXRayDeps) {
-      CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins", false));
+      CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins"));
       linkXRayRuntimeDeps(ToolChain, CmdArgs);
     }
     // FIXME: For some reason GCC passes -lgcc before adding

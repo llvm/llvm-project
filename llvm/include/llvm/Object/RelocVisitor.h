@@ -100,6 +100,8 @@ private:
     case Triple::arm:
     case Triple::armeb:
       return visitARM(Rel, R, Value);
+    case Triple::avr:
+      return visitAVR(Rel, R, Value);
     case Triple::lanai:
       return visitLanai(Rel, R, Value);
     case Triple::mipsel:
@@ -253,6 +255,16 @@ private:
       if ((int64_t)Value < INT32_MIN || (int64_t)Value > UINT32_MAX)
         HasError = true;
       return static_cast<uint32_t>(Value);
+    }
+    HasError = true;
+    return 0;
+  }
+
+  uint64_t visitAVR(uint32_t Rel, RelocationRef R, uint64_t Value) {
+    if (Rel == ELF::R_AVR_16) {
+      return (Value + getELFAddend(R)) & 0xFFFF;
+    } else if (Rel == ELF::R_AVR_32) {
+      return (Value + getELFAddend(R)) & 0xFFFFFFFF;
     }
     HasError = true;
     return 0;

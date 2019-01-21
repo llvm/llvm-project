@@ -23,6 +23,7 @@ AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT) {
   PrivateGlobalPrefix = ".L";
   UsesELFSectionDirectiveForBSS = true;
   UseIntegratedAssembler = true;
+  SupportsDebugInformation = true;
 }
 
 } // end of namespace llvm

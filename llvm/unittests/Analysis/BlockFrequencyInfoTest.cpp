@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/AsmParser/Parser.h"
@@ -89,6 +90,9 @@ TEST_F(BlockFrequencyInfoTest, Basic) {
   EXPECT_EQ(BFI.getBlockFreq(BB2).getFrequency(), 2 * BB2Freq);
   EXPECT_EQ(BFI.getBlockFreq(BB3).getFrequency(), BB3Freq);
 }
+
+static_assert(is_trivially_copyable<bfi_detail::BlockMass>::value,
+              "trivially copyable");
 
 } // end anonymous namespace
 } // end namespace llvm

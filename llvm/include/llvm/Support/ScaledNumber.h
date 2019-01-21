@@ -886,10 +886,6 @@ template <class DigitsT> void ScaledNumber<DigitsT>::shiftRight(int32_t Shift) {
   Digits >>= Shift;
 }
 
-template <typename T> struct isPodLike;
-template <typename T> struct isPodLike<ScaledNumber<T>> {
-  static const bool value = true;
-};
 
 } // end namespace llvm
 

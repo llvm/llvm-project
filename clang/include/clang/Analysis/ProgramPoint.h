@@ -777,9 +777,6 @@ static bool isEqual(const clang::ProgramPoint &L,
 
 };
 
-template <>
-struct isPodLike<clang::ProgramPoint> { static const bool value = true; };
-
 } // end namespace llvm
 
 #endif

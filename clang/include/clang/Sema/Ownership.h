@@ -128,9 +128,6 @@ namespace llvm {
     }
   };
 
-  template <class T>
-  struct isPodLike<clang::OpaquePtr<T>> { static const bool value = true; };
-
 } // namespace llvm
 
 namespace clang {

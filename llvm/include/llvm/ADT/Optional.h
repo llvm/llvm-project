@@ -30,7 +30,7 @@ class raw_ostream;
 
 namespace optional_detail {
 /// Storage for any type.
-template <typename T, bool = isPodLike<T>::value> struct OptionalStorage {
+template <typename T, bool = is_trivially_copyable<T>::value> struct OptionalStorage {
   AlignedCharArrayUnion<T> storage;
   bool hasVal = false;
 
@@ -183,11 +183,6 @@ public:
     return hasValue() ? std::move(getValue()) : std::forward<U>(value);
   }
 #endif
-};
-
-template <typename T> struct isPodLike<Optional<T>> {
-  // An Optional<T> is pod-like if T is.
-  static const bool value = isPodLike<T>::value;
 };
 
 template <typename T, typename U>
