@@ -50,6 +50,11 @@ if (RUST_SGX)
     list(APPEND LIBUNWIND_COMPILE_FLAGS -fno-stack-protector)
     list(APPEND LIBUNWIND_COMPILE_FLAGS -ffreestanding)
     list(APPEND LIBUNWIND_COMPILE_FLAGS -fexceptions)
+    # Avoid too new relocation types being emitted, which might prevent linking
+    # on older platforms.
+    #
+    # See https://github.com/rust-lang/rust/issues/34978
+    list(APPEND LIBUNWIND_COMPILE_FLAGS -Wa,-mrelax-relocations=no)
 
     # Sources
     list(APPEND LIBUNWIND_C_SOURCES UnwindRustSgx.c)
