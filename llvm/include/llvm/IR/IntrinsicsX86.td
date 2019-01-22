@@ -1908,31 +1908,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_xop_vfrcz_ps_256 : GCCBuiltin<"__builtin_ia32_vfrczps256">,
               Intrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty], [IntrNoMem]>;
 
-  def int_x86_xop_vpcomb :
-              Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_v16i8_ty,
-                         llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_xop_vpcomw :
-              Intrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty, llvm_v8i16_ty,
-                         llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_xop_vpcomd :
-              Intrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty,
-                         llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_xop_vpcomq :
-              Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty,
-                         llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_xop_vpcomub :
-              Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_v16i8_ty,
-                         llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_xop_vpcomuw :
-              Intrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty, llvm_v8i16_ty,
-                         llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_xop_vpcomud :
-              Intrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty,
-                         llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_xop_vpcomuq :
-              Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty,
-                         llvm_i8_ty], [IntrNoMem]>;
-
   def int_x86_xop_vphaddbd :
               GCCBuiltin<"__builtin_ia32_vphaddbd">,
               Intrinsic<[llvm_v4i32_ty], [llvm_v16i8_ty], [IntrNoMem]>;
@@ -4469,10 +4444,6 @@ let TargetPrefix = "x86" in {
           Intrinsic<[],
                     [llvm_ptr_ty, llvm_v2i64_ty, llvm_i8_ty],
                     [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_pmov_qd_256 : // FIXME: Replace with trunc+select.
-          Intrinsic<[llvm_v4i32_ty],
-                    [llvm_v4i64_ty, llvm_v4i32_ty, llvm_i8_ty],
-                    [IntrNoMem]>;
   def int_x86_avx512_mask_pmov_qd_mem_256 :
           GCCBuiltin<"__builtin_ia32_pmovqd256mem_mask">,
           Intrinsic<[],
@@ -4498,10 +4469,6 @@ let TargetPrefix = "x86" in {
           Intrinsic<[],
                     [llvm_ptr_ty, llvm_v4i64_ty, llvm_i8_ty],
                     [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_pmov_qd_512 : // FIXME: Replace with trunc+select.
-          Intrinsic<[llvm_v8i32_ty],
-                    [llvm_v8i64_ty, llvm_v8i32_ty, llvm_i8_ty],
-                    [IntrNoMem]>;
   def int_x86_avx512_mask_pmov_qd_mem_512 :
           GCCBuiltin<"__builtin_ia32_pmovqd512mem_mask">,
           Intrinsic<[],
@@ -4735,10 +4702,6 @@ let TargetPrefix = "x86" in {
           Intrinsic<[],
                     [llvm_ptr_ty, llvm_v8i16_ty, llvm_i8_ty],
                     [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_pmov_wb_256 : // FIXME: Replace with trunc+select.
-          Intrinsic<[llvm_v16i8_ty],
-                    [llvm_v16i16_ty, llvm_v16i8_ty, llvm_i16_ty],
-                    [IntrNoMem]>;
   def int_x86_avx512_mask_pmov_wb_mem_256 :
           GCCBuiltin<"__builtin_ia32_pmovwb256mem_mask">,
           Intrinsic<[],
@@ -4764,10 +4727,6 @@ let TargetPrefix = "x86" in {
           Intrinsic<[],
                     [llvm_ptr_ty, llvm_v16i16_ty, llvm_i16_ty],
                     [IntrArgMemOnly]>;
-  def int_x86_avx512_mask_pmov_wb_512 : // FIXME: Replace with trunc+select.
-          Intrinsic<[llvm_v32i8_ty],
-                    [llvm_v32i16_ty, llvm_v32i8_ty, llvm_i32_ty],
-                    [IntrNoMem]>;
   def int_x86_avx512_mask_pmov_wb_mem_512 :
           GCCBuiltin<"__builtin_ia32_pmovwb512mem_mask">,
           Intrinsic<[],

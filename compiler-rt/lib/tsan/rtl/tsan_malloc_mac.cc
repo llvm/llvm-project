@@ -63,6 +63,8 @@ using namespace __tsan;
   (void)zone_name; \
   Report("mz_realloc(%p) -- attempting to realloc unallocated memory.\n", ptr);
 #define COMMON_MALLOC_NAMESPACE __tsan
+#define COMMON_MALLOC_HAS_ZONE_ENUMERATOR 0
+#define COMMON_MALLOC_HAS_EXTRA_INTROSPECTION_INIT 0
 
 #include "sanitizer_common/sanitizer_malloc_mac.inc"
 

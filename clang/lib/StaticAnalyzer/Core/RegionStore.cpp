@@ -130,10 +130,6 @@ namespace llvm {
     return os;
   }
 
-  template <typename T> struct isPodLike;
-  template <> struct isPodLike<BindingKey> {
-    static const bool value = true;
-  };
 } // end llvm namespace
 
 #ifndef NDEBUG

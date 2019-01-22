@@ -237,10 +237,6 @@ public:
   }
 };
 
-template <typename T, typename U> struct isPodLike<SuccIterator<T, U>> {
-  static const bool value = isPodLike<T>::value;
-};
-
 using succ_iterator = SuccIterator<Instruction, BasicBlock>;
 using succ_const_iterator = SuccIterator<const Instruction, const BasicBlock>;
 using succ_range = iterator_range<succ_iterator>;

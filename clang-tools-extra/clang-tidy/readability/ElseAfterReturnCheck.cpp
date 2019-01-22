@@ -18,16 +18,22 @@ namespace tidy {
 namespace readability {
 
 void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
-  const auto ControlFlowInterruptorMatcher =
+  const auto InterruptsControlFlow =
       stmt(anyOf(returnStmt().bind("return"), continueStmt().bind("continue"),
                  breakStmt().bind("break"),
                  expr(ignoringImplicit(cxxThrowExpr().bind("throw")))));
   Finder->addMatcher(
       compoundStmt(forEach(
           ifStmt(unless(isConstexpr()),
-                 hasThen(stmt(
-                     anyOf(ControlFlowInterruptorMatcher,
-                           compoundStmt(has(ControlFlowInterruptorMatcher))))),
+                 // FIXME: Explore alternatives for the
+                 // `if (T x = ...) {... return; } else { <use x> }`
+                 // pattern:
+                 //   * warn, but don't fix;
+                 //   * fix by pulling out the variable declaration out of
+                 //     the condition.
+                 unless(hasConditionVariableStatement(anything())),
+                 hasThen(stmt(anyOf(InterruptsControlFlow,
+                                    compoundStmt(has(InterruptsControlFlow))))),
                  hasElse(stmt().bind("else")))
               .bind("if"))),
       this);

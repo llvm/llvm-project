@@ -837,7 +837,7 @@ public:
   void insertReturn(MachineBasicBlock &MBB) const;
   /// Return the number of wait states that result from executing this
   /// instruction.
-  unsigned getNumWaitStates(const MachineInstr &MI) const;
+  static unsigned getNumWaitStates(const MachineInstr &MI);
 
   /// Returns the operand named \p Op.  If \p MI does not have an
   /// operand named \c Op, this function returns nullptr.

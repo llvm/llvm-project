@@ -285,8 +285,8 @@ define void @test_fadd(float *%a0, double *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_fadd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fadd %st(0), %st(1) # sched: [3:1.00]
 ; BTVER2-NEXT:    fadd %st(2) # sched: [3:1.00]
@@ -421,8 +421,8 @@ define void @test_faddp_fiadd(i16 *%a0, i32 *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_faddp_fiadd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    faddp %st(1) # sched: [3:1.00]
 ; BTVER2-NEXT:    faddp %st(2) # sched: [3:1.00]
@@ -530,7 +530,7 @@ define void @test_fbld_fbstp(i8* %a0) optsize {
 ;
 ; BTVER2-LABEL: test_fbld_fbstp:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fbld (%eax) # sched: [100:0.50]
 ; BTVER2-NEXT:    fbstp (%eax) # sched: [100:0.50]
@@ -1072,8 +1072,8 @@ define void @test_fcom(float *%a0, double *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_fcom:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fcom %st(1) # sched: [3:1.00]
 ; BTVER2-NEXT:    fcom %st(3) # sched: [3:1.00]
@@ -1217,8 +1217,8 @@ define void @test_fcomp_fcompp(float *%a0, double *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_fcomp_fcompp:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fcomp %st(1) # sched: [3:1.00]
 ; BTVER2-NEXT:    fcomp %st(3) # sched: [3:1.00]
@@ -1609,8 +1609,8 @@ define void @test_fdiv(float *%a0, double *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_fdiv:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fdiv %st(0), %st(1) # sched: [19:19.00]
 ; BTVER2-NEXT:    fdiv %st(2) # sched: [19:19.00]
@@ -1745,8 +1745,8 @@ define void @test_fdivp_fidiv(i16 *%a0, i32 *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_fdivp_fidiv:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fdivp %st(1) # sched: [19:19.00]
 ; BTVER2-NEXT:    fdivp %st(2) # sched: [19:19.00]
@@ -1881,8 +1881,8 @@ define void @test_fdivr(float *%a0, double *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_fdivr:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fdivr %st(0), %st(1) # sched: [19:19.00]
 ; BTVER2-NEXT:    fdivr %st(2) # sched: [19:19.00]
@@ -2017,8 +2017,8 @@ define void @test_fdivrp_fidivr(i16 *%a0, i32 *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_fdivrp_fidivr:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fdivrp %st(1) # sched: [19:19.00]
 ; BTVER2-NEXT:    fdivrp %st(2) # sched: [19:19.00]
@@ -2234,8 +2234,8 @@ define void @test_ficom(i16 *%a0, i32 *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_ficom:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    ficoms (%ecx) # sched: [8:1.00]
 ; BTVER2-NEXT:    ficoml (%eax) # sched: [8:1.00]
@@ -2370,13 +2370,13 @@ define void @test_fild(i16 *%a0, i32 *%a1, i64 *%a2) optsize {
 ;
 ; BTVER2-LABEL: test_fild:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    filds (%edx) # sched: [5:1.00]
-; BTVER2-NEXT:    fildl (%ecx) # sched: [5:1.00]
-; BTVER2-NEXT:    fildll (%eax) # sched: [5:1.00]
+; BTVER2-NEXT:    filds (%edx) # sched: [3:1.00]
+; BTVER2-NEXT:    fildl (%ecx) # sched: [3:1.00]
+; BTVER2-NEXT:    fildll (%eax) # sched: [3:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -2805,9 +2805,9 @@ define void @test_fist_fistp_fisttp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ;
 ; BTVER2-LABEL: test_fist_fistp_fisttp:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fists (%edx) # sched: [1:1.00]
 ; BTVER2-NEXT:    fistl (%ecx) # sched: [1:1.00]
@@ -2960,14 +2960,14 @@ define void @test_fld(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ;
 ; BTVER2-LABEL: test_fld:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fld %st(0) # sched: [1:0.50]
-; BTVER2-NEXT:    flds (%edx) # sched: [5:1.00]
-; BTVER2-NEXT:    fldl (%ecx) # sched: [5:1.00]
-; BTVER2-NEXT:    fldt (%eax) # sched: [5:1.00]
+; BTVER2-NEXT:    flds (%edx) # sched: [3:1.00]
+; BTVER2-NEXT:    fldl (%ecx) # sched: [3:1.00]
+; BTVER2-NEXT:    fldt (%eax) # sched: [3:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -3071,9 +3071,9 @@ define void @test_fldcw_fldenv(i8* %a0) optsize {
 ;
 ; BTVER2-LABEL: test_fldcw_fldenv:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fldcw (%eax) # sched: [5:1.00]
+; BTVER2-NEXT:    fldcw (%eax) # sched: [3:1.00]
 ; BTVER2-NEXT:    fldenv (%eax) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
@@ -3348,8 +3348,8 @@ define void @test_fmul(float *%a0, double *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_fmul:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fmul %st(0), %st(1) # sched: [2:1.00]
 ; BTVER2-NEXT:    fmul %st(2) # sched: [2:1.00]
@@ -3484,8 +3484,8 @@ define void @test_fmulp_fimul(i16 *%a0, i32 *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_fmulp_fimul:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fmulp %st(1) # sched: [2:1.00]
 ; BTVER2-NEXT:    fmulp %st(2) # sched: [2:1.00]
@@ -4000,7 +4000,7 @@ define void @test_frstor(i8* %a0) optsize {
 ;
 ; BTVER2-LABEL: test_frstor:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    frstor (%eax) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
@@ -4101,7 +4101,7 @@ define void @test_fsave(i8* %a0) optsize {
 ;
 ; BTVER2-LABEL: test_fsave:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    wait # sched: [100:0.50]
 ; BTVER2-NEXT:    fnsave (%eax) # sched: [100:0.50]
@@ -4195,7 +4195,7 @@ define void @test_fnsave(i8* %a0) optsize {
 ;
 ; BTVER2-LABEL: test_fnsave:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fnsave (%eax) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
@@ -4683,9 +4683,9 @@ define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ;
 ; BTVER2-LABEL: test_fst_fstp:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fst %st(0) # sched: [1:0.50]
 ; BTVER2-NEXT:    fsts (%edx) # sched: [1:1.00]
@@ -4836,7 +4836,7 @@ define void @test_fstcw_fstenv_fstsw(i8* %a0) optsize {
 ;
 ; BTVER2-LABEL: test_fstcw_fstenv_fstsw:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    wait # sched: [100:0.50]
 ; BTVER2-NEXT:    fnstcw (%eax) # sched: [1:0.50]
@@ -4956,7 +4956,7 @@ define void @test_fnstcw_fnstenv_fnstsw(i8* %a0) optsize {
 ;
 ; BTVER2-LABEL: test_fnstcw_fnstenv_fnstsw:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fnstcw (%eax) # sched: [1:0.50]
 ; BTVER2-NEXT:    fnstenv (%eax) # sched: [100:0.50]
@@ -5088,8 +5088,8 @@ define void @test_fsub(float *%a0, double *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_fsub:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fsub %st(0), %st(1) # sched: [3:1.00]
 ; BTVER2-NEXT:    fsub %st(2) # sched: [3:1.00]
@@ -5224,8 +5224,8 @@ define void @test_fsubp_fisub(i16 *%a0, i32 *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_fsubp_fisub:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fsubp %st(1) # sched: [3:1.00]
 ; BTVER2-NEXT:    fsubp %st(2) # sched: [3:1.00]
@@ -5360,8 +5360,8 @@ define void @test_fsubr(float *%a0, double *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_fsubr:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fsubr %st(0), %st(1) # sched: [3:1.00]
 ; BTVER2-NEXT:    fsubr %st(2) # sched: [3:1.00]
@@ -5496,8 +5496,8 @@ define void @test_fsubrp_fisubr(i16 *%a0, i32 *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_fsubrp_fisubr:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fsubrp %st(1) # sched: [3:1.00]
 ; BTVER2-NEXT:    fsubrp %st(2) # sched: [3:1.00]
@@ -6157,7 +6157,7 @@ define void @test_fxrstor_fxsave(i8* %a0) optsize {
 ;
 ; BTVER2-LABEL: test_fxrstor_fxsave:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    fxrstor (%eax) # sched: [100:0.50]
 ; BTVER2-NEXT:    fxsave (%eax) # sched: [100:0.50]

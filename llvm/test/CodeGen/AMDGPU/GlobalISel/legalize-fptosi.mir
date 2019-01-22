@@ -2,13 +2,25 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -run-pass=legalizer %s -o - | FileCheck %s
 
 ---
-name: test_fptosi_f32_to_i32
+name: test_fptosi_s32_to_s32
 body: |
   bb.0:
     liveins: $vgpr0
 
-    ; CHECK-LABEL: name: test_fptosi_f32_to_i32
+    ; CHECK-LABEL: name: test_fptosi_s32_to_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = G_FPTOSI %0
+...
+
+---
+name: test_fptosi_s64_to_s32
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_fptosi_s64_to_s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_FPTOSI %0
 ...

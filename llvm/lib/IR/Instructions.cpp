@@ -1407,6 +1407,10 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
     return "umax";
   case AtomicRMWInst::UMin:
     return "umin";
+  case AtomicRMWInst::FAdd:
+    return "fadd";
+  case AtomicRMWInst::FSub:
+    return "fsub";
   case AtomicRMWInst::BAD_BINOP:
     return "<invalid operation>";
   }

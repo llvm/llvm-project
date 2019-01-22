@@ -328,9 +328,4 @@ struct PPConditionalInfo {
 
 } // end namespace clang
 
-namespace llvm {
-  template <>
-  struct isPodLike<clang::Token> { static const bool value = true; };
-} // end namespace llvm
-
 #endif // LLVM_CLANG_LEX_TOKEN_H

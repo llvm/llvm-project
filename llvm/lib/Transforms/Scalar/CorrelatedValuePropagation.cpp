@@ -462,6 +462,30 @@ static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
     }
   }
 
+  // Deopt bundle operands are intended to capture state with minimal
+  // perturbance of the code otherwise.  If we can find a constant value for
+  // any such operand and remove a use of the original value, that's
+  // desireable since it may allow further optimization of that value (e.g. via
+  // single use rules in instcombine).  Since deopt uses tend to,
+  // idiomatically, appear along rare conditional paths, it's reasonable likely
+  // we may have a conditional fact with which LVI can fold.   
+  if (auto DeoptBundle = CS.getOperandBundle(LLVMContext::OB_deopt)) {
+    bool Progress = false;
+    for (const Use &ConstU : DeoptBundle->Inputs) {
+      Use &U = const_cast<Use&>(ConstU);
+      Value *V = U.get();
+      if (V->getType()->isVectorTy()) continue;
+      if (isa<Constant>(V)) continue;
+
+      Constant *C = LVI->getConstant(V, CS.getParent(), CS.getInstruction());
+      if (!C) continue;
+      U.set(C);
+      Progress = true;
+    }
+    if (Progress)
+      return true;
+  }
+
   for (Value *V : CS.args()) {
     PointerType *Type = dyn_cast<PointerType>(V->getType());
     // Try to mark pointer typed parameters as non-null.  We skip the

@@ -19,6 +19,7 @@ static_library("IR") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "AbstractCallSite.cpp",
     "AsmWriter.cpp",
     "Attributes.cpp",
     "AutoUpgrade.cpp",

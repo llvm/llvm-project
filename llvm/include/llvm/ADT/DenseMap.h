@@ -145,7 +145,8 @@ public:
     }
 
     const KeyT EmptyKey = getEmptyKey(), TombstoneKey = getTombstoneKey();
-    if (isPodLike<KeyT>::value && isPodLike<ValueT>::value) {
+    if (is_trivially_copyable<KeyT>::value &&
+        is_trivially_copyable<ValueT>::value) {
       // Use a simpler loop when these are trivial types.
       for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P)
         P->getFirst() = EmptyKey;
@@ -421,7 +422,8 @@ protected:
     setNumEntries(other.getNumEntries());
     setNumTombstones(other.getNumTombstones());
 
-    if (isPodLike<KeyT>::value && isPodLike<ValueT>::value)
+    if (is_trivially_copyable<KeyT>::value &&
+        is_trivially_copyable<ValueT>::value)
       memcpy(reinterpret_cast<void *>(getBuckets()), other.getBuckets(),
              getNumBuckets() * sizeof(BucketT));
     else

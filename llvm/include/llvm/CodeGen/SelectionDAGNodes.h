@@ -231,7 +231,6 @@ template<> struct DenseMapInfo<SDValue> {
     return LHS == RHS;
   }
 };
-template <> struct isPodLike<SDValue> { static const bool value = true; };
 
 /// Allow casting operators to work directly on
 /// SDValues as if they were SDNode*'s.

@@ -272,4 +272,6 @@ TEST(MachineInstrPrintingTest, DebugLocPrinting) {
       StringRef(OS.str()).endswith("filename:1:5"));
 }
 
+static_assert(is_trivially_copyable<MCOperand>::value, "trivially copyable");
+
 } // end namespace

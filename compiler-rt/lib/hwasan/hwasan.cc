@@ -336,14 +336,14 @@ sptr __hwasan_test_shadow(const void *p, uptr sz) {
   if (sz == 0)
     return -1;
   tag_t ptr_tag = GetTagFromPointer((uptr)p);
-  if (ptr_tag == 0)
-    return -1;
   uptr ptr_raw = UntagAddr(reinterpret_cast<uptr>(p));
   uptr shadow_first = MemToShadow(ptr_raw);
   uptr shadow_last = MemToShadow(ptr_raw + sz - 1);
   for (uptr s = shadow_first; s <= shadow_last; ++s)
-    if (*(tag_t*)s != ptr_tag)
-      return ShadowToMem(s) - ptr_raw;
+    if (*(tag_t *)s != ptr_tag) {
+      sptr offset = ShadowToMem(s) - ptr_raw;
+      return offset < 0 ? 0 : offset;
+    }
   return -1;
 }
 

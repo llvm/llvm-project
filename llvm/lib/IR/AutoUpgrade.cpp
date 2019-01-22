@@ -299,6 +299,10 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.fpclass.p") || // Added in 7.0
       Name.startswith("avx512.mask.vpshufbitqmb.") || // Added in 8.0
       Name.startswith("avx512.mask.pmultishift.qb.") || // Added in 8.0
+      Name == "avx512.mask.pmov.qd.256" || // Added in 9.0
+      Name == "avx512.mask.pmov.qd.512" || // Added in 9.0
+      Name == "avx512.mask.pmov.wb.256" || // Added in 9.0
+      Name == "avx512.mask.pmov.wb.512" || // Added in 9.0
       Name == "sse.cvtsi2ss" || // Added in 7.0
       Name == "sse.cvtsi642ss" || // Added in 7.0
       Name == "sse2.cvtsi2sd" || // Added in 7.0
@@ -361,8 +365,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name == "xop.vpcmov.256" || // Added in 5.0
       Name.startswith("avx512.mask.move.s") || // Added in 4.0
       Name.startswith("avx512.cvtmask2") || // Added in 5.0
-      (Name.startswith("xop.vpcom") && // Added in 3.2
-       F->arg_size() == 2) ||
+      Name.startswith("xop.vpcom") || // Added in 3.2, Updated in 9.0
       Name.startswith("xop.vprot") || // Added in 8.0
       Name.startswith("avx512.prol") || // Added in 8.0
       Name.startswith("avx512.pror") || // Added in 8.0
@@ -2038,26 +2041,31 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       else
         llvm_unreachable("Unknown suffix");
 
-      Name = Name.substr(9); // strip off "xop.vpcom"
       unsigned Imm;
-      if (Name.startswith("lt"))
-        Imm = 0;
-      else if (Name.startswith("le"))
-        Imm = 1;
-      else if (Name.startswith("gt"))
-        Imm = 2;
-      else if (Name.startswith("ge"))
-        Imm = 3;
-      else if (Name.startswith("eq"))
-        Imm = 4;
-      else if (Name.startswith("ne"))
-        Imm = 5;
-      else if (Name.startswith("false"))
-        Imm = 6;
-      else if (Name.startswith("true"))
-        Imm = 7;
-      else
-        llvm_unreachable("Unknown condition");
+      if (CI->getNumArgOperands() == 3) {
+        Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+      } else {
+        Name = Name.substr(9); // strip off "xop.vpcom"
+        if (Name.startswith("lt"))
+          Imm = 0;
+        else if (Name.startswith("le"))
+          Imm = 1;
+        else if (Name.startswith("gt"))
+          Imm = 2;
+        else if (Name.startswith("ge"))
+          Imm = 3;
+        else if (Name.startswith("eq"))
+          Imm = 4;
+        else if (Name.startswith("ne"))
+          Imm = 5;
+        else if (Name.startswith("false"))
+          Imm = 6;
+        else if (Name.startswith("true"))
+          Imm = 7;
+        else
+          llvm_unreachable("Unknown condition");
+      }
+
       Rep = upgradeX86vpcom(Builder, *CI, Imm, IsSigned);
     } else if (IsX86 && Name.startswith("xop.vpcmov")) {
       Value *Sel = CI->getArgOperand(2);
@@ -2127,6 +2135,14 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       if (CI->getNumArgOperands() == 3)
         Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
                             CI->getArgOperand(1));
+    } else if (Name == "avx512.mask.pmov.qd.256" ||
+               Name == "avx512.mask.pmov.qd.512" ||
+               Name == "avx512.mask.pmov.wb.256" ||
+               Name == "avx512.mask.pmov.wb.512") {
+      Type *Ty = CI->getArgOperand(1)->getType();
+      Rep = Builder.CreateTrunc(CI->getArgOperand(0), Ty);
+      Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+                          CI->getArgOperand(1));
     } else if (IsX86 && (Name.startswith("avx.vbroadcastf128") ||
                          Name == "avx2.vbroadcasti128")) {
       // Replace vbroadcastf128/vbroadcasti128 with a vector load+shuffle.

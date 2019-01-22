@@ -93,9 +93,6 @@ typedef llvm::DenseSet<PPRegion> PPRegionSetTy;
 } // end anonymous namespace
 
 namespace llvm {
-  template <> struct isPodLike<PPRegion> {
-    static const bool value = true;
-  };
 
   template <>
   struct DenseMapInfo<PPRegion> {

@@ -3,7 +3,6 @@ import("//llvm/utils/gn/build/mac_sdk.gni")
 
 config("xml_config") {
   visibility = [ ":xml" ]
-  defines = [ "LLVM_LIBXML2_ENABLED" ]
   libs = [ "xml2" ]
   if (host_os == "mac") {
     include_dirs = [ "$mac_sdk_path/usr/include/libxml2" ]

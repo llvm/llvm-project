@@ -80,6 +80,31 @@ inline bool operator==(const InfoRecord &L, const InfoRecord &R) {
 }
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const InfoRecord &R);
 
+class FuncRecord : public Record {
+public:
+  static llvm::Optional<FuncRecord> parse(llvm::StringRef Line);
+  FuncRecord(bool Multiple, lldb::addr_t Address, lldb::addr_t Size,
+             lldb::addr_t ParamSize, llvm::StringRef Name)
+      : Record(Module), Multiple(Multiple), Address(Address), Size(Size),
+        ParamSize(ParamSize), Name(Name) {}
+
+  bool getMultiple() const { return Multiple; }
+  lldb::addr_t getAddress() const { return Address; }
+  lldb::addr_t getSize() const { return Size; }
+  lldb::addr_t getParamSize() const { return ParamSize; }
+  llvm::StringRef getName() const { return Name; }
+
+private:
+  bool Multiple;
+  lldb::addr_t Address;
+  lldb::addr_t Size;
+  lldb::addr_t ParamSize;
+  llvm::StringRef Name;
+};
+
+bool operator==(const FuncRecord &L, const FuncRecord &R);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FuncRecord &R);
+
 class PublicRecord : public Record {
 public:
   static llvm::Optional<PublicRecord> parse(llvm::StringRef Line);

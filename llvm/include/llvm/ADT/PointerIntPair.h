@@ -175,12 +175,6 @@ struct PointerIntPairInfo {
   }
 };
 
-template <typename T> struct isPodLike;
-template <typename PointerTy, unsigned IntBits, typename IntType>
-struct isPodLike<PointerIntPair<PointerTy, IntBits, IntType>> {
-  static const bool value = true;
-};
-
 // Provide specialization of DenseMapInfo for PointerIntPair.
 template <typename PointerTy, unsigned IntBits, typename IntType>
 struct DenseMapInfo<PointerIntPair<PointerTy, IntBits, IntType>> {

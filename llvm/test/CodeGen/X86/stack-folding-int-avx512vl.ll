@@ -1275,7 +1275,7 @@ declare <8 x i16> @llvm.x86.avx512.mask.pmov.dw.256(<8 x i32>, <8 x i16>, i8)
 define <4 x i32> @stack_fold_vpmovqd(<4 x i64> %a0) {
   ;CHECK-LABEL: stack_fold_vpmovqd
   ;CHECK:       vpmovqd %ymm0, {{-?[0-9]*}}(%rsp) # 16-byte Folded Spill
-  %1 = call <4 x i32> @llvm.x86.avx512.mask.pmov.qd.256(<4 x i64> %a0, <4 x i32> undef, i8 -1)
+  %1 = trunc <4 x i64> %a0 to <4 x i32>
   %2 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   ret <4 x i32> %1
 }
@@ -1284,7 +1284,7 @@ declare <4 x i32> @llvm.x86.avx512.mask.pmov.qd.256(<4 x i64>, <4 x i32>, i8)
 define <16 x i8> @stack_fold_vpmovwb(<16 x i16> %a0) {
   ;CHECK-LABEL: stack_fold_vpmovwb
   ;CHECK:       vpmovwb %ymm0, {{-?[0-9]*}}(%rsp) # 16-byte Folded Spill
-  %1 = call <16 x i8> @llvm.x86.avx512.mask.pmov.wb.256(<16 x i16> %a0, <16 x i8> undef, i16 -1)
+  %1 = trunc <16 x i16> %a0 to <16 x i8>
   %2 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   ret <16 x i8> %1
 }

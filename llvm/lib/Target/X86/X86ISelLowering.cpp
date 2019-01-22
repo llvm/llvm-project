@@ -9925,9 +9925,7 @@ static SDValue lowerVectorShuffleToEXPAND(const SDLoc &DL, MVT VT,
                               Subtarget, DAG, DL);
   SDValue ZeroVector = getZeroVector(VT, Subtarget, DAG, DL);
   SDValue ExpandedVector = IsLeftZeroSide ? V2 : V1;
-  return DAG.getSelect(DL, VT, VMask,
-                       DAG.getNode(X86ISD::EXPAND, DL, VT, ExpandedVector),
-                       ZeroVector);
+  return DAG.getNode(X86ISD::EXPAND, DL, VT, ExpandedVector, ZeroVector, VMask);
 }
 
 static bool matchVectorShuffleWithUNPCK(MVT VT, SDValue &V1, SDValue &V2,
@@ -21883,35 +21881,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       // first.
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
                          Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
-    case CVTPD2PS:
-      // ISD::FP_ROUND has a second argument that indicates if the truncation
-      // does not change the value. Set it to 0 since it can change.
-      return DAG.getNode(IntrData->Opc0, dl, VT, Op.getOperand(1),
-                         DAG.getIntPtrConstant(0, dl));
-    case CVTPD2PS_RND_MASK: {
-      SDValue Src = Op.getOperand(1);
-      SDValue PassThru = Op.getOperand(2);
-      SDValue Mask = Op.getOperand(3);
-      // We add rounding mode to the Node when
-      //   - RM Opcode is specified and
-      //   - RM is not "current direction".
-      unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
-      if (IntrWithRoundingModeOpcode != 0) {
-        SDValue Rnd = Op.getOperand(4);
-        if (!isRoundModeCurDirection(Rnd)) {
-          return getVectorMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode,
-                                      dl, Op.getValueType(),
-                                      Src, Rnd),
-                                      Mask, PassThru, Subtarget, DAG);
-        }
-      }
-      assert(IntrData->Opc0 == ISD::FP_ROUND && "Unexpected opcode!");
-      // ISD::FP_ROUND has a second argument that indicates if the truncation
-      // does not change the value. Set it to 0 since it can change.
-      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT, Src,
-                                              DAG.getIntPtrConstant(0, dl)),
-                                  Mask, PassThru, Subtarget, DAG);
-    }
     case FPCLASSS: {
       SDValue Src1 = Op.getOperand(1);
       SDValue Imm = Op.getOperand(2);
@@ -22043,9 +22012,15 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       if (isAllOnesConstant(Mask)) // return data as is
         return Op.getOperand(1);
 
-      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT,
-                                              DataToCompress),
-                                  Mask, PassThru, Subtarget, DAG);
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+      Mask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
+
+      // Avoid false dependency.
+      if (PassThru.isUndef())
+        PassThru = DAG.getConstant(0, dl, VT);
+
+      return DAG.getNode(IntrData->Opc0, dl, VT, DataToCompress, PassThru,
+                         Mask);
     }
     case FIXUPIMMS:
     case FIXUPIMMS_MASKZ:

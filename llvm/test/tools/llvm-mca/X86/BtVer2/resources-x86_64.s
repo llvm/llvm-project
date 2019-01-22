@@ -1576,7 +1576,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     0.50                        xchgq	%rbx, %rax
 # CHECK-NEXT:  1      1     0.50                        xchgq	%rbx, %rcx
 # CHECK-NEXT:  1      4     1.00    *      *            xchgq	%rax, (%rbx)
-# CHECK-NEXT:  1      5     1.00    *                   xlatb
+# CHECK-NEXT:  1      3     1.00    *                   xlatb
 # CHECK-NEXT:  1      1     0.50                        xorb	$7, %al
 # CHECK-NEXT:  1      1     0.50                        xorb	$7, %dil
 # CHECK-NEXT:  1      5     1.00    *      *            xorb	$7, (%rax)

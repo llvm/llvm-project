@@ -204,6 +204,7 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   const MCExpr *Expr = MO.getExpr();
   MCExpr::ExprKind Kind = Expr->getKind();
   RISCV::Fixups FixupKind = RISCV::fixup_riscv_invalid;
+  bool RelaxCandidate = false;
   if (Kind == MCExpr::Target) {
     const RISCVMCExpr *RVExpr = cast<RISCVMCExpr>(Expr);
 
@@ -218,9 +219,11 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
         FixupKind = RISCV::fixup_riscv_lo12_s;
       else
         llvm_unreachable("VK_RISCV_LO used with unexpected instruction format");
+      RelaxCandidate = true;
       break;
     case RISCVMCExpr::VK_RISCV_HI:
       FixupKind = RISCV::fixup_riscv_hi20;
+      RelaxCandidate = true;
       break;
     case RISCVMCExpr::VK_RISCV_PCREL_LO:
       if (MIFrm == RISCVII::InstFormatI)
@@ -230,12 +233,15 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       else
         llvm_unreachable(
             "VK_RISCV_PCREL_LO used with unexpected instruction format");
+      RelaxCandidate = true;
       break;
     case RISCVMCExpr::VK_RISCV_PCREL_HI:
       FixupKind = RISCV::fixup_riscv_pcrel_hi20;
+      RelaxCandidate = true;
       break;
     case RISCVMCExpr::VK_RISCV_CALL:
       FixupKind = RISCV::fixup_riscv_call;
+      RelaxCandidate = true;
       break;
     }
   } else if (Kind == MCExpr::SymbolRef &&
@@ -257,13 +263,15 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       MCFixup::create(0, Expr, MCFixupKind(FixupKind), MI.getLoc()));
   ++MCNumFixups;
 
-  if (EnableRelax) {
-    if (FixupKind == RISCV::fixup_riscv_call) {
-      Fixups.push_back(
-      MCFixup::create(0, Expr, MCFixupKind(RISCV::fixup_riscv_relax),
-                      MI.getLoc()));
-      ++MCNumFixups;
-    }
+  // Ensure an R_RISCV_RELAX relocation will be emitted if linker relaxation is
+  // enabled and the current fixup will result in a relocation that may be
+  // relaxed.
+  if (EnableRelax && RelaxCandidate) {
+    const MCConstantExpr *Dummy = MCConstantExpr::create(0, Ctx);
+    Fixups.push_back(
+    MCFixup::create(0, Dummy, MCFixupKind(RISCV::fixup_riscv_relax),
+                    MI.getLoc()));
+    ++MCNumFixups;
   }
 
   return 0;
