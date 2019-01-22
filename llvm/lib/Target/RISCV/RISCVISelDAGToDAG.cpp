@@ -155,6 +155,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         return;
       }
     }
+    break;
   }
   }
 

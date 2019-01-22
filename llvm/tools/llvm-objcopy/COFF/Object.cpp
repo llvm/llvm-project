@@ -56,9 +56,8 @@ Error Object::markSymbols() {
     for (const Relocation &R : Sec.Relocs) {
       auto It = SymbolMap.find(R.Target);
       if (It == SymbolMap.end())
-        return make_error<StringError>("Relocation target " + Twine(R.Target) +
-                                           " not found",
-                                       object_error::invalid_symbol_index);
+        return createStringError(object_error::invalid_symbol_index,
+                                 "Relocation target %zu not found", R.Target);
       It->second->Referenced = true;
     }
   }
@@ -130,7 +129,7 @@ void Object::removeSections(function_ref<bool(const Section &)> ToRemove) {
 void Object::truncateSections(function_ref<bool(const Section &)> ToTruncate) {
   for (Section &Sec : Sections) {
     if (ToTruncate(Sec)) {
-      Sec.Contents = ArrayRef<uint8_t>();
+      Sec.clearContents();
       Sec.Relocs.clear();
       Sec.Header.SizeOfRawData = 0;
     }

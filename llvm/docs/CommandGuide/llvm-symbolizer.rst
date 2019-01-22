@@ -119,6 +119,10 @@ OPTIONS
  Print human readable output. If ``-inlining`` is specified, enclosing scope is
  prefixed by (inlined by). Refer to listed examples.
 
+.. option:: -basenames, -s
+
+ Strip directories when printing the file path.
+
 EXIT STATUS
 -----------
 

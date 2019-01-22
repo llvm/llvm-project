@@ -5769,8 +5769,8 @@ define void @test_div(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32 
 ;
 ; BTVER2-LABEL: test_div:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %r10 # sched: [5:1.00]
-; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [5:1.00]
+; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %r10 # sched: [3:1.00]
+; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    divb %dil # sched: [12:12.00]
 ; BTVER2-NEXT:    divb (%r8) # sched: [15:12.00]
@@ -6041,8 +6041,8 @@ define void @test_idiv(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32
 ;
 ; BTVER2-LABEL: test_idiv:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %r10 # sched: [5:1.00]
-; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [5:1.00]
+; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %r10 # sched: [3:1.00]
+; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    idivb %dil # sched: [12:12.00]
 ; BTVER2-NEXT:    idivb (%r8) # sched: [15:12.00]
@@ -8869,8 +8869,8 @@ define void @test_mul(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32 
 ;
 ; BTVER2-LABEL: test_mul:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %r10 # sched: [5:1.00]
-; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [5:1.00]
+; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %r10 # sched: [3:1.00]
+; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    mulb %dil # sched: [3:1.00]
 ; BTVER2-NEXT:    mulb (%r8) # sched: [6:1.00]
@@ -9049,8 +9049,8 @@ define void @test_neg(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32 
 ;
 ; BTVER2-LABEL: test_neg:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %r10 # sched: [5:1.00]
-; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [5:1.00]
+; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %r10 # sched: [3:1.00]
+; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    negb %dil # sched: [1:0.50]
 ; BTVER2-NEXT:    negb (%r8) # sched: [5:1.00]
@@ -9376,8 +9376,8 @@ define void @test_not(i8 %a0, i16 %a1, i32 %a2, i64 %a3, i8 *%p0, i16 *%p1, i32 
 ;
 ; BTVER2-LABEL: test_not:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %r10 # sched: [5:1.00]
-; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [5:1.00]
+; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %r10 # sched: [3:1.00]
+; BTVER2-NEXT:    movq {{[0-9]+}}(%rsp), %rax # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    notb %dil # sched: [1:0.50]
 ; BTVER2-NEXT:    notb (%r8) # sched: [5:1.00]
@@ -10669,10 +10669,10 @@ define i16 @test_pop_push_16(i16 %a0, i16 *%a1) optsize {
 ; BTVER2-LABEL: test_pop_push_16:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    popw %ax # sched: [5:1.00]
-; BTVER2-NEXT:    popw (%rsi) # sched: [6:1.00]
+; BTVER2-NEXT:    popw %ax # sched: [3:1.00]
+; BTVER2-NEXT:    popw (%rsi) # sched: [4:1.00]
 ; BTVER2-NEXT:    pushw %di # sched: [1:1.00]
-; BTVER2-NEXT:    pushw (%rsi) # sched: [6:1.00]
+; BTVER2-NEXT:    pushw (%rsi) # sched: [4:1.00]
 ; BTVER2-NEXT:    pushw $4095 # imm = 0xFFF
 ; BTVER2-NEXT:    # sched: [1:1.00]
 ; BTVER2-NEXT:    pushw $7 # sched: [1:1.00]
@@ -10815,10 +10815,10 @@ define i64 @test_pop_push_64(i64 %a0, i64 *%a1) optsize {
 ; BTVER2-LABEL: test_pop_push_64:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    popq %rax # sched: [5:1.00]
-; BTVER2-NEXT:    popq (%rsi) # sched: [6:1.00]
+; BTVER2-NEXT:    popq %rax # sched: [3:1.00]
+; BTVER2-NEXT:    popq (%rsi) # sched: [4:1.00]
 ; BTVER2-NEXT:    pushq %rdi # sched: [1:1.00]
-; BTVER2-NEXT:    pushq (%rsi) # sched: [6:1.00]
+; BTVER2-NEXT:    pushq (%rsi) # sched: [4:1.00]
 ; BTVER2-NEXT:    pushq $4095 # imm = 0xFFF
 ; BTVER2-NEXT:    # sched: [1:1.00]
 ; BTVER2-NEXT:    pushq $7 # sched: [1:1.00]
@@ -10917,7 +10917,7 @@ define void @test_popf_pushf() optsize {
 ; BTVER2-LABEL: test_popf_pushf:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    popfq # sched: [5:1.00]
+; BTVER2-NEXT:    popfq # sched: [3:1.00]
 ; BTVER2-NEXT:    pushfq # sched: [1:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -18172,7 +18172,7 @@ define void @test_xlat() optsize {
 ; BTVER2-LABEL: test_xlat:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    xlatb # sched: [5:1.00]
+; BTVER2-NEXT:    xlatb # sched: [3:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;

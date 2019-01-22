@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -34,11 +35,35 @@ struct Relocation {
 
 struct Section {
   object::coff_section Header;
-  ArrayRef<uint8_t> Contents;
   std::vector<Relocation> Relocs;
   StringRef Name;
   ssize_t UniqueId;
   size_t Index;
+
+  ArrayRef<uint8_t> getContents() const {
+    if (!OwnedContents.empty())
+      return OwnedContents;
+    return ContentsRef;
+  }
+
+  void setContentsRef(ArrayRef<uint8_t> Data) {
+    OwnedContents.clear();
+    ContentsRef = Data;
+  }
+
+  void setOwnedContents(std::vector<uint8_t> &&Data) {
+    ContentsRef = ArrayRef<uint8_t>();
+    OwnedContents = std::move(Data);
+  }
+
+  void clearContents() {
+    ContentsRef = ArrayRef<uint8_t>();
+    OwnedContents.clear();
+  }
+
+private:
+  ArrayRef<uint8_t> ContentsRef;
+  std::vector<uint8_t> OwnedContents;
 };
 
 struct Symbol {
@@ -47,6 +72,7 @@ struct Symbol {
   std::vector<uint8_t> AuxData;
   ssize_t TargetSectionId;
   ssize_t AssociativeComdatTargetSectionId = 0;
+  Optional<size_t> WeakTargetSymbolId;
   size_t UniqueId;
   size_t RawIndex;
   bool Referenced;

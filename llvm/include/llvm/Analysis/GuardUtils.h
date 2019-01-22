@@ -16,10 +16,14 @@ namespace llvm {
 
 class User;
 
-/// Returns true iff \p U has semantics of a guard.
+/// Returns true iff \p U has semantics of a guard expressed in a form of call
+/// of llvm.experimental.guard intrinsic.
 bool isGuard(const User *U);
+
+/// Returns true iff \p U has semantics of a guard expressed in a form of a
+/// widenable conditional branch to deopt block.
+bool isGuardAsWidenableBranch(const User *U);
 
 } // llvm
 
 #endif // LLVM_ANALYSIS_GUARDUTILS_H
-

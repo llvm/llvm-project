@@ -1152,7 +1152,7 @@ void SIInstrInfo::insertReturn(MachineBasicBlock &MBB) const {
   }
 }
 
-unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) const {
+unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default: return 1; // FIXME: Do wait states equal cycles?
 

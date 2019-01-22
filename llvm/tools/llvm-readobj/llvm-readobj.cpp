@@ -136,6 +136,11 @@ namespace opts {
   cl::alias DynSymsGNU("dyn-syms", cl::desc("Alias for --dyn-symbols"),
                        cl::aliasopt(DynamicSymbols));
 
+  // -hash-symbols
+  cl::opt<bool> HashSymbols(
+      "hash-symbols",
+      cl::desc("Display the dynamic symbols derived from the hash section"));
+
   // -unwind, -u
   cl::opt<bool> UnwindInfo("unwind",
     cl::desc("Display unwind information"));
@@ -461,6 +466,8 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
     Dumper->printSymbols();
   if (opts::DynamicSymbols)
     Dumper->printDynamicSymbols();
+  if (opts::HashSymbols)
+    Dumper->printHashSymbols();
   if (opts::UnwindInfo)
     Dumper->printUnwindInfo();
   if (opts::DynamicTable)

@@ -1176,6 +1176,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
 
   if (Subtarget->hasV6Ops())
     setTargetDAGCombine(ISD::SRL);
+  if (Subtarget->isThumb1Only())
+    setTargetDAGCombine(ISD::SHL);
 
   setStackPointerRegisterToSaveRestore(ARM::SP);
 
@@ -10418,11 +10420,28 @@ ARMTargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
   if (Level == BeforeLegalizeTypes)
     return true;
 
-  if (Subtarget->isThumb() && Subtarget->isThumb1Only())
-    return true;
-
   if (N->getOpcode() != ISD::SHL)
     return true;
+
+  if (Subtarget->isThumb1Only()) {
+    // Avoid making expensive immediates by commuting shifts. (This logic
+    // only applies to Thumb1 because ARM and Thumb2 immediates can be shifted
+    // for free.)
+    if (N->getOpcode() != ISD::SHL)
+      return true;
+    SDValue N1 = N->getOperand(0);
+    if (N1->getOpcode() != ISD::ADD && N1->getOpcode() != ISD::AND &&
+        N1->getOpcode() != ISD::OR && N1->getOpcode() != ISD::XOR)
+      return true;
+    if (auto *Const = dyn_cast<ConstantSDNode>(N1->getOperand(1))) {
+      if (Const->getAPIntValue().ult(256))
+        return false;
+      if (N1->getOpcode() == ISD::ADD && Const->getAPIntValue().slt(0) &&
+          Const->getAPIntValue().sgt(-256))
+        return false;
+    }
+    return true;
+  }
 
   // Turn off commute-with-shift transform after legalization, so it doesn't
   // conflict with PerformSHLSimplify.  (We could try to detect when
@@ -12419,8 +12438,10 @@ static SDValue PerformIntrinsicCombine(SDNode *N, SelectionDAG &DAG) {
 /// combining instead of DAG legalizing because the build_vectors for 64-bit
 /// vector element shift counts are generally not legal, and it is hard to see
 /// their values after they get legalized to loads from a constant pool.
-static SDValue PerformShiftCombine(SDNode *N, SelectionDAG &DAG,
+static SDValue PerformShiftCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI,
                                    const ARMSubtarget *ST) {
+  SelectionDAG &DAG = DCI.DAG;
   EVT VT = N->getValueType(0);
   if (N->getOpcode() == ISD::SRL && VT == MVT::i32 && ST->hasV6Ops()) {
     // Canonicalize (srl (bswap x), 16) to (rotr (bswap x), 16) if the high
@@ -12432,6 +12453,40 @@ static SDValue PerformShiftCombine(SDNode *N, SelectionDAG &DAG,
           DAG.MaskedValueIsZero(N0.getOperand(0),
                                 APInt::getHighBitsSet(32, 16)))
         return DAG.getNode(ISD::ROTR, SDLoc(N), VT, N0, N1);
+    }
+  }
+
+  if (ST->isThumb1Only() && N->getOpcode() == ISD::SHL && VT == MVT::i32 &&
+      N->getOperand(0)->getOpcode() == ISD::AND &&
+      N->getOperand(0)->hasOneUse()) {
+    if (DCI.isBeforeLegalize() || DCI.isCalledByLegalizer())
+      return SDValue();
+    // Look for the pattern (shl (and x, AndMask), ShiftAmt). This doesn't
+    // usually show up because instcombine prefers to canonicalize it to
+    // (and (shl x, ShiftAmt) (shl AndMask, ShiftAmt)), but the shift can come
+    // out of GEP lowering in some cases.
+    SDValue N0 = N->getOperand(0);
+    ConstantSDNode *ShiftAmtNode = dyn_cast<ConstantSDNode>(N->getOperand(1));
+    if (!ShiftAmtNode)
+      return SDValue();
+    uint32_t ShiftAmt = static_cast<uint32_t>(ShiftAmtNode->getZExtValue());
+    ConstantSDNode *AndMaskNode = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+    if (!AndMaskNode)
+      return SDValue();
+    uint32_t AndMask = static_cast<uint32_t>(AndMaskNode->getZExtValue());
+    // Don't transform uxtb/uxth.
+    if (AndMask == 255 || AndMask == 65535)
+      return SDValue();
+    if (isMask_32(AndMask)) {
+      uint32_t MaskedBits = countLeadingZeros(AndMask);
+      if (MaskedBits > ShiftAmt) {
+        SDLoc DL(N);
+        SDValue SHL = DAG.getNode(ISD::SHL, DL, MVT::i32, N0->getOperand(0),
+                                  DAG.getConstant(MaskedBits, DL, MVT::i32));
+        return DAG.getNode(
+            ISD::SRL, DL, MVT::i32, SHL,
+            DAG.getConstant(MaskedBits - ShiftAmt, DL, MVT::i32));
+      }
     }
   }
 
@@ -12853,7 +12908,8 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::INTRINSIC_WO_CHAIN: return PerformIntrinsicCombine(N, DCI.DAG);
   case ISD::SHL:
   case ISD::SRA:
-  case ISD::SRL:        return PerformShiftCombine(N, DCI.DAG, Subtarget);
+  case ISD::SRL:
+    return PerformShiftCombine(N, DCI, Subtarget);
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
   case ISD::ANY_EXTEND: return PerformExtendCombine(N, DCI.DAG, Subtarget);

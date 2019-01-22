@@ -17,6 +17,8 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/JamCRC.h"
+#include "llvm/Support/Path.h"
 #include <cassert>
 
 namespace llvm {
@@ -28,6 +30,61 @@ using namespace COFF;
 
 static bool isDebugSection(const Section &Sec) {
   return Sec.Name.startswith(".debug");
+}
+
+static uint64_t getNextRVA(const Object &Obj) {
+  if (Obj.getSections().empty())
+    return 0;
+  const Section &Last = Obj.getSections().back();
+  return alignTo(Last.Header.VirtualAddress + Last.Header.VirtualSize,
+                 Obj.PeHeader.SectionAlignment);
+}
+
+static uint32_t getCRC32(StringRef Data) {
+  JamCRC CRC;
+  CRC.update(ArrayRef<char>(Data.data(), Data.size()));
+  // The CRC32 value needs to be complemented because the JamCRC dosn't
+  // finalize the CRC32 value. It also dosn't negate the initial CRC32 value
+  // but it starts by default at 0xFFFFFFFF which is the complement of zero.
+  return ~CRC.getCRC();
+}
+
+static std::vector<uint8_t> createGnuDebugLinkSectionContents(StringRef File) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> LinkTargetOrErr =
+      MemoryBuffer::getFile(File);
+  if (!LinkTargetOrErr)
+    error("'" + File + "': " + LinkTargetOrErr.getError().message());
+  auto LinkTarget = std::move(*LinkTargetOrErr);
+  uint32_t CRC32 = getCRC32(LinkTarget->getBuffer());
+
+  StringRef FileName = sys::path::filename(File);
+  size_t CRCPos = alignTo(FileName.size() + 1, 4);
+  std::vector<uint8_t> Data(CRCPos + 4);
+  memcpy(Data.data(), FileName.data(), FileName.size());
+  support::endian::write32le(Data.data() + CRCPos, CRC32);
+  return Data;
+}
+
+static void addGnuDebugLink(Object &Obj, StringRef DebugLinkFile) {
+  uint32_t StartRVA = getNextRVA(Obj);
+
+  std::vector<Section> Sections;
+  Section Sec;
+  Sec.setOwnedContents(createGnuDebugLinkSectionContents(DebugLinkFile));
+  Sec.Name = ".gnu_debuglink";
+  Sec.Header.VirtualSize = Sec.getContents().size();
+  Sec.Header.VirtualAddress = StartRVA;
+  Sec.Header.SizeOfRawData =
+      alignTo(Sec.Header.VirtualSize, Obj.PeHeader.FileAlignment);
+  // Sec.Header.PointerToRawData is filled in by the writer.
+  Sec.Header.PointerToRelocations = 0;
+  Sec.Header.PointerToLinenumbers = 0;
+  // Sec.Header.NumberOfRelocations is filled in by the writer.
+  Sec.Header.NumberOfLinenumbers = 0;
+  Sec.Header.Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA |
+                               IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_DISCARDABLE;
+  Sections.push_back(Sec);
+  Obj.addSections(Sections);
 }
 
 static Error handleArgs(const CopyConfig &Config, Object &Obj) {
@@ -84,10 +141,10 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       // Explicitly removing a referenced symbol is an error.
       if (Sym.Referenced)
         reportError(Config.OutputFilename,
-                    make_error<StringError>(
-                        "not stripping symbol '" + Sym.Name +
-                            "' because it is named in a relocation.",
-                        llvm::errc::invalid_argument));
+                    createStringError(llvm::errc::invalid_argument,
+                                      "not stripping symbol '%s' because it is "
+                                      "named in a relocation.",
+                                      Sym.Name.str().c_str()));
       return true;
     }
 
@@ -109,6 +166,10 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
 
     return false;
   });
+
+  if (!Config.AddGnuDebugLink.empty())
+    addGnuDebugLink(Obj, Config.AddGnuDebugLink);
+
   return Error::success();
 }
 

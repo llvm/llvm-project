@@ -272,6 +272,8 @@ class LoopPredication {
                                                         LoopICmp RangeCheck,
                                                         SCEVExpander &Expander,
                                                         IRBuilder<> &Builder);
+  unsigned collectChecks(SmallVectorImpl<Value *> &Checks, Value *Condition,
+                         SCEVExpander &Expander, IRBuilder<> &Builder);
   bool widenGuardConditions(IntrinsicInst *II, SCEVExpander &Expander);
 
   // If the loop always exits through another block in the loop, we should not
@@ -573,26 +575,18 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
   }
 }
 
-bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
-                                           SCEVExpander &Expander) {
-  LLVM_DEBUG(dbgs() << "Processing guard:\n");
-  LLVM_DEBUG(Guard->dump());
-
-  TotalConsidered++;
-
-  IRBuilder<> Builder(cast<Instruction>(Preheader->getTerminator()));
-
+unsigned LoopPredication::collectChecks(SmallVectorImpl<Value *> &Checks,
+                                        Value *Condition,
+                                        SCEVExpander &Expander,
+                                        IRBuilder<> &Builder) {
+  unsigned NumWidened = 0;
   // The guard condition is expected to be in form of:
   //   cond1 && cond2 && cond3 ...
   // Iterate over subconditions looking for icmp conditions which can be
   // widened across loop iterations. Widening these conditions remember the
   // resulting list of subconditions in Checks vector.
-  SmallVector<Value *, 4> Worklist(1, Guard->getOperand(0));
+  SmallVector<Value *, 4> Worklist(1, Condition);
   SmallPtrSet<Value *, 4> Visited;
-
-  SmallVector<Value *, 4> Checks;
-
-  unsigned NumWidened = 0;
   do {
     Value *Condition = Worklist.pop_back_val();
     if (!Visited.insert(Condition).second)
@@ -616,8 +610,20 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
 
     // Save the condition as is if we can't widen it
     Checks.push_back(Condition);
-  } while (Worklist.size() != 0);
+  } while (!Worklist.empty());
+  return NumWidened;
+}
 
+bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
+                                           SCEVExpander &Expander) {
+  LLVM_DEBUG(dbgs() << "Processing guard:\n");
+  LLVM_DEBUG(Guard->dump());
+
+  TotalConsidered++;
+  SmallVector<Value *, 4> Checks;
+  IRBuilder<> Builder(cast<Instruction>(Preheader->getTerminator()));
+  unsigned NumWidened = collectChecks(Checks, Guard->getOperand(0), Expander,
+                                      Builder);
   if (NumWidened == 0)
     return false;
 

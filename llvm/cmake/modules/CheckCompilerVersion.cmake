@@ -1,6 +1,6 @@
 # Check if the host compiler is new enough.
 # These versions are updated based on the following policy:
-#   llvm.org/docs/GettingStarted.html#host-c-toolchain-both-compiler-and-standard-library
+#   llvm.org/docs/DeveloperPolicy.html#toolchain
 
 include(CheckCXXSourceCompiles)
 
