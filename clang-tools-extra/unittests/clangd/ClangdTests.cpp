@@ -10,6 +10,7 @@
 #include "Annotations.h"
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
+#include "GlobalCompilationDatabase.h"
 #include "Matchers.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
@@ -1036,6 +1037,28 @@ TEST(ClangdTests, PreambleVFSStatCache) {
               ElementsAre(Field(&CodeCompletion::Name, "TestSym")));
 }
 #endif
+
+TEST_F(ClangdVFSTest, FlagsWithPlugins) {
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags = {
+      "-Xclang",
+      "-add-plugin",
+      "-Xclang",
+      "random-plugin",
+  };
+  OverlayCDB OCDB(&CDB);
+  ClangdServer Server(OCDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  auto FooCpp = testPath("foo.cpp");
+  const auto SourceContents = "int main() { return 0; }";
+  FS.Files[FooCpp] = FooCpp;
+  Server.addDocument(FooCpp, SourceContents);
+  auto Result = dumpASTWithoutMemoryLocs(Server, FooCpp);
+  EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
+  EXPECT_NE(Result, "<no-ast>");
+}
 
 } // namespace
 } // namespace clangd

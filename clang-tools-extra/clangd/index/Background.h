@@ -68,9 +68,7 @@ public:
   /// If BuildIndexPeriodMs is greater than 0, the symbol index will only be
   /// rebuilt periodically (one per \p BuildIndexPeriodMs); otherwise, index is
   /// rebuilt for each indexed file.
-  // FIXME: resource-dir injection should be hoisted somewhere common.
-  BackgroundIndex(Context BackgroundContext, llvm::StringRef ResourceDir,
-                  const FileSystemProvider &,
+  BackgroundIndex(Context BackgroundContext, const FileSystemProvider &,
                   const GlobalCompilationDatabase &CDB,
                   BackgroundIndexStorage::Factory IndexStorageFactory,
                   size_t BuildIndexPeriodMs = 0,
@@ -99,7 +97,6 @@ private:
               BackgroundIndexStorage *IndexStorage);
 
   // configuration
-  std::string ResourceDir;
   const FileSystemProvider &FSProvider;
   const GlobalCompilationDatabase &CDB;
   Context BackgroundContext;

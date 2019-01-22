@@ -76,7 +76,7 @@ TEST_F(BackgroundIndexTest, NoCrashOnErrorFile) {
   size_t CacheHits = 0;
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
-  BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+  BackgroundIndex Idx(Context::empty(), FS, CDB,
                       [&](llvm::StringRef) { return &MSS; });
 
   tooling::CompileCommand Cmd;
@@ -113,7 +113,7 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   size_t CacheHits = 0;
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
-  BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+  BackgroundIndex Idx(Context::empty(), FS, CDB,
                       [&](llvm::StringRef) { return &MSS; });
 
   tooling::CompileCommand Cmd;
@@ -168,7 +168,7 @@ TEST_F(BackgroundIndexTest, ShardStorageTest) {
   // Check nothing is loaded from Storage, but A.cc and A.h has been stored.
   {
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+    BackgroundIndex Idx(Context::empty(), FS, CDB,
                         [&](llvm::StringRef) { return &MSS; });
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
@@ -178,7 +178,7 @@ TEST_F(BackgroundIndexTest, ShardStorageTest) {
 
   {
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+    BackgroundIndex Idx(Context::empty(), FS, CDB,
                         [&](llvm::StringRef) { return &MSS; });
     CDB.setCompileCommand(testPath("root"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
@@ -224,7 +224,7 @@ TEST_F(BackgroundIndexTest, DirectIncludesTest) {
   Cmd.CommandLine = {"clang++", testPath("root/A.cc")};
   {
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+    BackgroundIndex Idx(Context::empty(), FS, CDB,
                         [&](llvm::StringRef) { return &MSS; });
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
@@ -262,7 +262,7 @@ TEST_F(BackgroundIndexTest, DISABLED_PeriodicalIndex) {
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
   BackgroundIndex Idx(
-      Context::empty(), "", FS, CDB, [&](llvm::StringRef) { return &MSS; },
+      Context::empty(), FS, CDB, [&](llvm::StringRef) { return &MSS; },
       /*BuildIndexPeriodMs=*/500);
 
   FS.Files[testPath("root/A.cc")] = "#include \"A.h\"";
@@ -310,7 +310,7 @@ TEST_F(BackgroundIndexTest, ShardStorageLoad) {
   // Check nothing is loaded from Storage, but A.cc and A.h has been stored.
   {
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+    BackgroundIndex Idx(Context::empty(), FS, CDB,
                         [&](llvm::StringRef) { return &MSS; });
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
@@ -325,7 +325,7 @@ TEST_F(BackgroundIndexTest, ShardStorageLoad) {
       )cpp";
   {
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+    BackgroundIndex Idx(Context::empty(), FS, CDB,
                         [&](llvm::StringRef) { return &MSS; });
     CDB.setCompileCommand(testPath("root"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
@@ -343,7 +343,7 @@ TEST_F(BackgroundIndexTest, ShardStorageLoad) {
   {
     CacheHits = 0;
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+    BackgroundIndex Idx(Context::empty(), FS, CDB,
                         [&](llvm::StringRef) { return &MSS; });
     CDB.setCompileCommand(testPath("root"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
@@ -384,7 +384,7 @@ TEST_F(BackgroundIndexTest, ShardStorageEmptyFile) {
   // Check that A.cc, A.h and B.h has been stored.
   {
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+    BackgroundIndex Idx(Context::empty(), FS, CDB,
                         [&](llvm::StringRef) { return &MSS; });
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
@@ -400,7 +400,7 @@ TEST_F(BackgroundIndexTest, ShardStorageEmptyFile) {
   {
     CacheHits = 0;
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+    BackgroundIndex Idx(Context::empty(), FS, CDB,
                         [&](llvm::StringRef) { return &MSS; });
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
@@ -416,7 +416,7 @@ TEST_F(BackgroundIndexTest, ShardStorageEmptyFile) {
   {
     CacheHits = 0;
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+    BackgroundIndex Idx(Context::empty(), FS, CDB,
                         [&](llvm::StringRef) { return &MSS; });
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
