@@ -77,7 +77,7 @@
 <tr><td><a href="https://wg21.link/LWG3112">3112</a></td><td>Yes</td><td><tt>system_error</tt> and <tt>filesystem_error</tt> constructors taking a <tt>string</tt> may not be able  to meet their postconditions</td><td>Kona</td><td></td></tr>
 <tr><td><a href="https://wg21.link/LWG3119">3119</a></td><td>Yes</td><td>Program-definedness of closure types</td><td>Kona</td><td><i>Nothing to do</i></td></tr>
 <tr><td><a href="https://wg21.link/LWG3133">3133</a></td><td>Yes</td><td>Modernizing numeric type requirements</td><td>Kona</td><td></td></tr>
-<tr><td><a href="https://wg21.link/LWG3144">3144</a></td><td>Yes</td><td><tt>span</tt> does not have a <tt>const_pointer</tt> typedef</td><td>Kona</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3144">3144</a></td><td>Yes</td><td><tt>span</tt> does not have a <tt>const_pointer</tt> typedef</td><td>Kona</td><td>Patch available</td></tr>
 <tr><td><a href="https://wg21.link/LWG3173">3173</a></td><td>Yes</td><td>Enable CTAD for <i><tt>ref-view</tt></i></td><td>Kona</td><td></td></tr>
 <tr><td><a href="https://wg21.link/LWG3179">3179</a></td><td>Yes</td><td><tt>subrange</tt> should always model <tt>Range</tt></td><td>Kona</td><td></td></tr>
 <tr><td><a href="https://wg21.link/LWG3180">3180</a></td><td>Yes</td><td>Inconsistently named return type for <tt>ranges::minmax_element</tt></td><td>Kona</td><td></td></tr>
@@ -102,7 +102,7 @@
 <li>3112 - Eric - can you take a look?</li>
 <li>3119 - No changes required</li>
 <li>3133 - </li>
-<li>3144 - I will take care of this; we already do this, but a "not in standard" note</li>
+<li>3144 - Patch: <a href="https://reviews.llvm.org/D57039">D57039</a></li>
 <li>3173 - We don't have ranges yet</li>
 <li>3179 - We don't have ranges yet</li>
 <li>3180 - We don't have ranges yet</li>
