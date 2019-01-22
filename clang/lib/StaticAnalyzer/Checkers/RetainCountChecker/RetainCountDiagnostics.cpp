@@ -67,7 +67,7 @@ StringRef RefCountBug::getDescription() const {
 RefCountBug::RefCountBug(const CheckerBase *Checker, RefCountBugType BT)
     : BugType(Checker, bugTypeToName(BT), categories::MemoryRefCount,
               /*SupressOnSink=*/BT == LeakWithinFunction || BT == LeakAtReturn),
-      BT(BT) {}
+      BT(BT), Checker(Checker) {}
 
 static bool isNumericLiteralExpression(const Expr *E) {
   // FIXME: This set of cases was copied from SemaExprObjC.
@@ -424,6 +424,8 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N,
                               BugReporterContext &BRC, BugReport &BR) {
 
   const auto &BT = static_cast<const RefCountBug&>(BR.getBugType());
+  const auto *Checker =
+      static_cast<const RetainCountChecker *>(BT.getChecker());
 
   bool IsFreeUnowned = BT.getBugType() == RefCountBug::FreeNotOwned ||
                        BT.getBugType() == RefCountBug::DeallocNotOwned;
@@ -510,8 +512,12 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N,
   bool DeallocSent = false;
 
   const ProgramPointTag *Tag = N->getLocation().getTag();
-  if (Tag && Tag->getTagDescription().contains(
-                 RetainCountChecker::DeallocTagDescription)) {
+
+  if (Tag == &Checker->getCastFailTag()) {
+    os << "Assuming dynamic cast returns null due to type mismatch";
+  }
+
+  if (Tag == &Checker->getDeallocSentTag()) {
     // We only have summaries attached to nodes after evaluating CallExpr and
     // ObjCMessageExprs.
     const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();

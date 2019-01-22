@@ -576,7 +576,6 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
 
   // Helper tag for providing diagnostics: indicate whether dealloc was sent
   // at this location.
-  static CheckerProgramPointTag DeallocSentTag(this, DeallocTagDescription);
   bool DeallocSent = false;
 
   for (unsigned idx = 0, e = CallOrMsg.getNumArgs(); idx != e; ++idx) {
@@ -904,8 +903,7 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
       // Assume that output is zero on the other branch.
       NullOutputState = NullOutputState->BindExpr(
           CE, LCtx, C.getSValBuilder().makeNull(), /*Invalidate=*/false);
-
-      C.addTransition(NullOutputState);
+      C.addTransition(NullOutputState, &CastFailTag);
 
       // And on the original branch assume that both input and
       // output are non-zero.

@@ -38,12 +38,18 @@ public:
   };
   RefCountBug(const CheckerBase *checker, RefCountBugType BT);
   StringRef getDescription() const;
+
   RefCountBugType getBugType() const {
     return BT;
   }
 
+  const CheckerBase *getChecker() const {
+    return Checker;
+  }
+
 private:
   RefCountBugType BT;
+  const CheckerBase *Checker;
   static StringRef bugTypeToName(RefCountBugType BT);
 };
 
