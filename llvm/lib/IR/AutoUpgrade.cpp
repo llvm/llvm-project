@@ -299,6 +299,10 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.fpclass.p") || // Added in 7.0
       Name.startswith("avx512.mask.vpshufbitqmb.") || // Added in 8.0
       Name.startswith("avx512.mask.pmultishift.qb.") || // Added in 8.0
+      Name == "avx512.mask.pmov.qd.256" || // Added in 9.0
+      Name == "avx512.mask.pmov.qd.512" || // Added in 9.0
+      Name == "avx512.mask.pmov.wb.256" || // Added in 9.0
+      Name == "avx512.mask.pmov.wb.512" || // Added in 9.0
       Name == "sse.cvtsi2ss" || // Added in 7.0
       Name == "sse.cvtsi642ss" || // Added in 7.0
       Name == "sse2.cvtsi2sd" || // Added in 7.0
@@ -2131,6 +2135,14 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       if (CI->getNumArgOperands() == 3)
         Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
                             CI->getArgOperand(1));
+    } else if (Name == "avx512.mask.pmov.qd.256" ||
+               Name == "avx512.mask.pmov.qd.512" ||
+               Name == "avx512.mask.pmov.wb.256" ||
+               Name == "avx512.mask.pmov.wb.512") {
+      Type *Ty = CI->getArgOperand(1)->getType();
+      Rep = Builder.CreateTrunc(CI->getArgOperand(0), Ty);
+      Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+                          CI->getArgOperand(1));
     } else if (IsX86 && (Name.startswith("avx.vbroadcastf128") ||
                          Name == "avx2.vbroadcasti128")) {
       // Replace vbroadcastf128/vbroadcasti128 with a vector load+shuffle.

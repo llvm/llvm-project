@@ -262,9 +262,9 @@ fyl2xp1
 # CHECK-NEXT:  1      8     1.00                  U     ficoml	(%eax)
 # CHECK-NEXT:  1      8     1.00                  U     ficomps	(%ecx)
 # CHECK-NEXT:  1      8     1.00                  U     ficompl	(%eax)
-# CHECK-NEXT:  1      5     1.00    *             U     filds	(%edx)
-# CHECK-NEXT:  1      5     1.00    *             U     fildl	(%ecx)
-# CHECK-NEXT:  1      5     1.00    *             U     fildll	(%eax)
+# CHECK-NEXT:  1      3     1.00    *             U     filds	(%edx)
+# CHECK-NEXT:  1      3     1.00    *             U     fildl	(%ecx)
+# CHECK-NEXT:  1      3     1.00    *             U     fildll	(%eax)
 # CHECK-NEXT:  1      100   0.50                  U     fincstp
 # CHECK-NEXT:  1      100   0.50                  U     fninit
 # CHECK-NEXT:  1      1     1.00           *      U     fists	(%edx)
@@ -276,10 +276,10 @@ fyl2xp1
 # CHECK-NEXT:  1      1     1.00           *      U     fisttpl	(%ecx)
 # CHECK-NEXT:  1      1     1.00           *      U     fisttpll	(%eax)
 # CHECK-NEXT:  1      1     0.50                  U     fld	%st(0)
-# CHECK-NEXT:  1      5     1.00    *             U     flds	(%edx)
-# CHECK-NEXT:  1      5     1.00    *             U     fldl	(%ecx)
-# CHECK-NEXT:  1      5     1.00    *             U     fldt	(%eax)
-# CHECK-NEXT:  1      5     1.00    *             U     fldcw	(%eax)
+# CHECK-NEXT:  1      3     1.00    *             U     flds	(%edx)
+# CHECK-NEXT:  1      3     1.00    *             U     fldl	(%ecx)
+# CHECK-NEXT:  1      3     1.00    *             U     fldt	(%eax)
+# CHECK-NEXT:  1      3     1.00    *             U     fldcw	(%eax)
 # CHECK-NEXT:  1      100   0.50                  U     fldenv	(%eax)
 # CHECK-NEXT:  1      3     1.00                  U     fld1
 # CHECK-NEXT:  1      3     1.00                  U     fldl2e

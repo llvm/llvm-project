@@ -559,6 +559,8 @@ static unsigned getEncodedRMWOperation(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::Min: return bitc::RMW_MIN;
   case AtomicRMWInst::UMax: return bitc::RMW_UMAX;
   case AtomicRMWInst::UMin: return bitc::RMW_UMIN;
+  case AtomicRMWInst::FAdd: return bitc::RMW_FADD;
+  case AtomicRMWInst::FSub: return bitc::RMW_FSUB;
   }
 }
 

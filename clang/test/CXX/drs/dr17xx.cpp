@@ -76,3 +76,15 @@ namespace dr1758 { // dr1758: 3.7
   A a{b};
 #endif
 }
+
+namespace dr1722 { // dr1722: 9.0
+#if __cplusplus >= 201103L
+void f() {
+  const auto lambda = [](int x) { return x + 1; };
+  // Without the DR applied, this static_assert would fail.
+  static_assert(
+      noexcept((int (*)(int))(lambda)),
+      "Lambda-to-function-pointer conversion is expected to be noexcept");
+}
+#endif
+} // namespace dr1722

@@ -1227,9 +1227,10 @@ static void addFunctionPointerConversion(Sema &S,
   FunctionProtoType::ExtProtoInfo ConvExtInfo(
       S.Context.getDefaultCallingConvention(
       /*IsVariadic=*/false, /*IsCXXMethod=*/true));
-  // The conversion function is always const.
+  // The conversion function is always const and noexcept.
   ConvExtInfo.TypeQuals = Qualifiers();
   ConvExtInfo.TypeQuals.addConst();
+  ConvExtInfo.ExceptionSpec.Type = EST_BasicNoexcept;
   QualType ConvTy =
       S.Context.getFunctionType(PtrToFunctionTy, None, ConvExtInfo);
 

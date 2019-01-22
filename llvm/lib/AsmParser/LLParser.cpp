@@ -6815,6 +6815,7 @@ int LLParser::ParseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
   SyncScope::ID SSID = SyncScope::System;
   bool isVolatile = false;
+  bool IsFP = false;
   AtomicRMWInst::BinOp Operation;
 
   if (EatIfPresent(lltok::kw_volatile))
@@ -6833,6 +6834,14 @@ int LLParser::ParseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   case lltok::kw_min: Operation = AtomicRMWInst::Min; break;
   case lltok::kw_umax: Operation = AtomicRMWInst::UMax; break;
   case lltok::kw_umin: Operation = AtomicRMWInst::UMin; break;
+  case lltok::kw_fadd:
+    Operation = AtomicRMWInst::FAdd;
+    IsFP = true;
+    break;
+  case lltok::kw_fsub:
+    Operation = AtomicRMWInst::FSub;
+    IsFP = true;
+    break;
   }
   Lex.Lex();  // Eat the operation.
 
@@ -6849,18 +6858,25 @@ int LLParser::ParseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   if (cast<PointerType>(Ptr->getType())->getElementType() != Val->getType())
     return Error(ValLoc, "atomicrmw value and pointer type do not match");
 
-  if (Operation != AtomicRMWInst::Xchg && !Val->getType()->isIntegerTy()) {
-    return Error(ValLoc, "atomicrmw " +
-                 AtomicRMWInst::getOperationName(Operation) +
-                 " operand must be an integer");
-  }
-
-  if (Operation == AtomicRMWInst::Xchg &&
-      !Val->getType()->isIntegerTy() &&
-      !Val->getType()->isFloatingPointTy()) {
-    return Error(ValLoc, "atomicrmw " +
-                 AtomicRMWInst::getOperationName(Operation) +
-                 " operand must be an integer or floating point type");
+  if (Operation == AtomicRMWInst::Xchg) {
+    if (!Val->getType()->isIntegerTy() &&
+        !Val->getType()->isFloatingPointTy()) {
+      return Error(ValLoc, "atomicrmw " +
+                   AtomicRMWInst::getOperationName(Operation) +
+                   " operand must be an integer or floating point type");
+    }
+  } else if (IsFP) {
+    if (!Val->getType()->isFloatingPointTy()) {
+      return Error(ValLoc, "atomicrmw " +
+                   AtomicRMWInst::getOperationName(Operation) +
+                   " operand must be a floating point type");
+    }
+  } else {
+    if (!Val->getType()->isIntegerTy()) {
+      return Error(ValLoc, "atomicrmw " +
+                   AtomicRMWInst::getOperationName(Operation) +
+                   " operand must be an integer");
+    }
   }
 
   unsigned Size = Val->getType()->getPrimitiveSizeInBits();

@@ -20,6 +20,8 @@
 // CHECK-DAG: @__func__.___ZN16ClassBlockConstrD2Ev_block_invoke = private unnamed_addr constant [31 x i8] c"~ClassBlockConstr_block_invoke\00"
 // CHECK-DAG: @__func__.___ZN16ClassBlockConstrC2Ev_block_invoke = private unnamed_addr constant [30 x i8] c"ClassBlockConstr_block_invoke\00"
 
+// CHECK-DAG: private unnamed_addr constant [32 x i8] c"const char *ConstexprPrettyFn()\00"
+
 int printf(const char * _Format, ...);
 
 class ClassInTopLevelNamespace {
@@ -82,6 +84,11 @@ public:
   FuncTemplate() : Func(__func__) {}
   const char *getFunc() const { return Func; }
 };
+
+constexpr const char* ConstexprPrettyFn() {
+  return __PRETTY_FUNCTION__;
+}
+const char* ConstexprPrettyVar = ConstexprPrettyFn();
 
 int
 main() {

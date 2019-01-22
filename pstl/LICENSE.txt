@@ -234,7 +234,7 @@ mechanisms:
    file.
 
 ==============================================================================
-Legacy LLVM License (ttps://llvm.org/docs/DeveloperPolicy.html#legacy):
+Legacy LLVM License (https://llvm.org/docs/DeveloperPolicy.html#legacy):
 ==============================================================================
 
 The software contained in this directory tree is dual licensed under both the

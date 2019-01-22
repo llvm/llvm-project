@@ -2,13 +2,32 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -run-pass=legalizer -global-isel %s -o - | FileCheck %s
 
 ---
-name: test_sitofp_f32_to_i32
+name: test_sitofp_s32_to_s32
 body: |
   bb.0:
     liveins: $vgpr0
 
-    ; CHECK-LABEL: name: test_sitofp_f32_to_i32
+    ; CHECK-LABEL: name: test_sitofp_s32_to_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[COPY]](s32)
+    ; CHECK: $vgpr0 = COPY [[SITOFP]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_SITOFP %0
+    $vgpr0 = COPY %1
 ...
+
+---
+name: test_sitofp_s32_to_s64
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_sitofp_s32_to_s64
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[COPY]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[SITOFP]](s64)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s64) = G_SITOFP %0
+    $vgpr0_vgpr1 = COPY %1
+...
+

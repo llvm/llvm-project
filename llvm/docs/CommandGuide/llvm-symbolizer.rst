@@ -87,6 +87,10 @@ OPTIONS
 
  Print demangled function names. Defaults to true.
 
+.. option:: -no-demangle
+
+ Don't print demangled function names.
+
 .. option:: -inlining 
 
  If a source code location is in an inlined function, prints all the

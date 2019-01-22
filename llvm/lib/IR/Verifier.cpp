@@ -3435,6 +3435,11 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
            AtomicRMWInst::getOperationName(Op) +
            " operand must have integer or floating point type!",
            &RMWI, ElTy);
+  } else if (AtomicRMWInst::isFPOperation(Op)) {
+    Assert(ElTy->isFloatingPointTy(), "atomicrmw " +
+           AtomicRMWInst::getOperationName(Op) +
+           " operand must have floating point type!",
+           &RMWI, ElTy);
   } else {
     Assert(ElTy->isIntegerTy(), "atomicrmw " +
            AtomicRMWInst::getOperationName(Op) +

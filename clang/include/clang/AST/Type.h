@@ -1982,7 +1982,7 @@ public:
   bool isObjCQualifiedClassType() const;        // Class<foo>
   bool isObjCObjectOrInterfaceType() const;
   bool isObjCIdType() const;                    // id
-
+  bool isDecltypeType() const;
   /// Was this type written with the special inert-in-ARC __unsafe_unretained
   /// qualifier?
   ///
@@ -6438,6 +6438,10 @@ inline bool Type::isObjCSelType() const {
 
 inline bool Type::isObjCBuiltinType() const {
   return isObjCIdType() || isObjCClassType() || isObjCSelType();
+}
+
+inline bool Type::isDecltypeType() const {
+  return isa<DecltypeType>(this);
 }
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \

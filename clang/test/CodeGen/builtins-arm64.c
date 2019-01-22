@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -triple arm64-unknown-linux -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-windows -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
+#include <stdint.h>
 
 void f0(void *a, void *b) {
 	__clear_cache(a,b);
@@ -55,7 +57,7 @@ unsigned rsr() {
   return __builtin_arm_rsr("1:2:3:4:5");
 }
 
-unsigned long rsr64() {
+uint64_t rsr64() {
   // CHECK: call i64 @llvm.read_register.i64(metadata ![[M0:[0-9]]])
   return __builtin_arm_rsr64("1:2:3:4:5");
 }
@@ -72,7 +74,7 @@ void wsr(unsigned v) {
   __builtin_arm_wsr("1:2:3:4:5", v);
 }
 
-void wsr64(unsigned long v) {
+void wsr64(uint64_t v) {
   // CHECK: call void @llvm.write_register.i64(metadata ![[M0:[0-9]]], i64 %v)
   __builtin_arm_wsr64("1:2:3:4:5", v);
 }

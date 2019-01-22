@@ -330,7 +330,7 @@ define void @lshift_mem_cl(i64 %a, i64 %c) nounwind readnone {
 ;
 ; BTVER2-LABEL: lshift_mem_cl:
 ; BTVER2:       # %bb.0: # %entry
-; BTVER2-NEXT:    movq {{.*}}(%rip), %rax # sched: [5:1.00]
+; BTVER2-NEXT:    movq {{.*}}(%rip), %rax # sched: [3:1.00]
 ; BTVER2-NEXT:    movq %rsi, %rcx # sched: [1:0.50]
 ; BTVER2-NEXT:    shlq %cl, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    negb %cl # sched: [1:0.50]
@@ -366,7 +366,7 @@ define void @lshift_mem(i64 %a) nounwind readnone {
 ;
 ; BTVER2-LABEL: lshift_mem:
 ; BTVER2:       # %bb.0: # %entry
-; BTVER2-NEXT:    movq {{.*}}(%rip), %rax # sched: [5:1.00]
+; BTVER2-NEXT:    movq {{.*}}(%rip), %rax # sched: [3:1.00]
 ; BTVER2-NEXT:    shrq $54, %rdi # sched: [1:0.50]
 ; BTVER2-NEXT:    shlq $10, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    orq %rax, %rdi # sched: [1:0.50]
@@ -424,7 +424,7 @@ define void @lshift_mem_b(i64 %b) nounwind readnone {
 ;
 ; BTVER2-LABEL: lshift_mem_b:
 ; BTVER2:       # %bb.0: # %entry
-; BTVER2-NEXT:    movq {{.*}}(%rip), %rax # sched: [5:1.00]
+; BTVER2-NEXT:    movq {{.*}}(%rip), %rax # sched: [3:1.00]
 ; BTVER2-NEXT:    shlq $10, %rdi # sched: [1:0.50]
 ; BTVER2-NEXT:    shrq $54, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    orq %rdi, %rax # sched: [1:0.50]
@@ -456,7 +456,7 @@ define void @lshift_mem_b_optsize(i64 %b) nounwind readnone optsize {
 ;
 ; BTVER2-LABEL: lshift_mem_b_optsize:
 ; BTVER2:       # %bb.0: # %entry
-; BTVER2-NEXT:    movq {{.*}}(%rip), %rax # sched: [5:1.00]
+; BTVER2-NEXT:    movq {{.*}}(%rip), %rax # sched: [3:1.00]
 ; BTVER2-NEXT:    shrdq $54, %rdi, %rax # sched: [3:3.00]
 ; BTVER2-NEXT:    movq %rax, {{.*}}(%rip) # sched: [1:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]

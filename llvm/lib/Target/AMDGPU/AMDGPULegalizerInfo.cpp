@@ -163,17 +163,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .legalFor({{S64, S32}, {S32, S16}, {S64, S16},
                {S32, S1}, {S64, S1}, {S16, S1}});
 
-  setAction({G_FPTOSI, S32}, Legal);
-  setAction({G_FPTOSI, 1, S32}, Legal);
+  getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
+    .legalFor({{S32, S32}, {S64, S32}});
 
-  setAction({G_SITOFP, S32}, Legal);
-  setAction({G_SITOFP, 1, S32}, Legal);
-
-  setAction({G_UITOFP, S32}, Legal);
-  setAction({G_UITOFP, 1, S32}, Legal);
-
-  setAction({G_FPTOUI, S32}, Legal);
-  setAction({G_FPTOUI, 1, S32}, Legal);
+  getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
+    .legalFor({{S32, S32}, {S32, S64}});
 
   setAction({G_FPOW, S32}, Legal);
   setAction({G_FEXP2, S32}, Legal);

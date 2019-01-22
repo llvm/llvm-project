@@ -3110,13 +3110,21 @@ Value *HexagonTargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
       AtomicOrdering Ord) const {
   BasicBlock *BB = Builder.GetInsertBlock();
   Module *M = BB->getParent()->getParent();
-  Type *Ty = cast<PointerType>(Addr->getType())->getElementType();
+  auto PT = cast<PointerType>(Addr->getType());
+  Type *Ty = PT->getElementType();
   unsigned SZ = Ty->getPrimitiveSizeInBits();
   assert((SZ == 32 || SZ == 64) && "Only 32/64-bit atomic loads supported");
   Intrinsic::ID IntID = (SZ == 32) ? Intrinsic::hexagon_L2_loadw_locked
                                    : Intrinsic::hexagon_L4_loadd_locked;
+
+  PointerType *NewPtrTy
+    = Builder.getIntNTy(SZ)->getPointerTo(PT->getAddressSpace());
+  Addr = Builder.CreateBitCast(Addr, NewPtrTy);
+
   Value *Fn = Intrinsic::getDeclaration(M, IntID);
-  return Builder.CreateCall(Fn, Addr, "larx");
+  Value *Call = Builder.CreateCall(Fn, Addr, "larx");
+
+  return Builder.CreateBitCast(Call, Ty);
 }
 
 /// Perform a store-conditional operation to Addr. Return the status of the
@@ -3127,10 +3135,17 @@ Value *HexagonTargetLowering::emitStoreConditional(IRBuilder<> &Builder,
   Module *M = BB->getParent()->getParent();
   Type *Ty = Val->getType();
   unsigned SZ = Ty->getPrimitiveSizeInBits();
+
+  Type *CastTy = Builder.getIntNTy(SZ);
   assert((SZ == 32 || SZ == 64) && "Only 32/64-bit atomic stores supported");
   Intrinsic::ID IntID = (SZ == 32) ? Intrinsic::hexagon_S2_storew_locked
                                    : Intrinsic::hexagon_S4_stored_locked;
   Value *Fn = Intrinsic::getDeclaration(M, IntID);
+
+  unsigned AS = Addr->getType()->getPointerAddressSpace();
+  Addr = Builder.CreateBitCast(Addr, CastTy->getPointerTo(AS));
+  Val = Builder.CreateBitCast(Val, CastTy);
+
   Value *Call = Builder.CreateCall(Fn, {Addr, Val}, "stcx");
   Value *Cmp = Builder.CreateICmpEQ(Call, Builder.getInt32(0), "");
   Value *Ext = Builder.CreateZExt(Cmp, Type::getInt32Ty(M->getContext()));
