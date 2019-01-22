@@ -66,6 +66,13 @@ MinGW Improvements
   linked in a different order than with GNU ld, inserting a DWARF exception
   table terminator too early.)
 
+* lld now supports COFF embedded directives for linking to nondefault
+  libraries, just like for the normal COFF target.
+
+* Actually generate a codeview build id signature, even if not creating a PDB.
+  Previously, the ``--build-id`` option did not actually generate a build id
+  unless ``--pdb`` was specified.
+
 MachO Improvements
 ------------------
 
