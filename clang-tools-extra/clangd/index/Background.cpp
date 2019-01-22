@@ -126,13 +126,12 @@ llvm::SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
 } // namespace
 
 BackgroundIndex::BackgroundIndex(
-    Context BackgroundContext, llvm::StringRef ResourceDir,
-    const FileSystemProvider &FSProvider, const GlobalCompilationDatabase &CDB,
+    Context BackgroundContext, const FileSystemProvider &FSProvider,
+    const GlobalCompilationDatabase &CDB,
     BackgroundIndexStorage::Factory IndexStorageFactory,
     size_t BuildIndexPeriodMs, size_t ThreadPoolSize)
-    : SwapIndex(llvm::make_unique<MemIndex>()), ResourceDir(ResourceDir),
-      FSProvider(FSProvider), CDB(CDB),
-      BackgroundContext(std::move(BackgroundContext)),
+    : SwapIndex(llvm::make_unique<MemIndex>()), FSProvider(FSProvider),
+      CDB(CDB), BackgroundContext(std::move(BackgroundContext)),
       BuildIndexPeriodMs(BuildIndexPeriodMs),
       SymbolsUpdatedSinceLastIndex(false),
       IndexStorageFactory(std::move(IndexStorageFactory)),
@@ -229,7 +228,6 @@ void BackgroundIndex::enqueue(tooling::CompileCommand Cmd,
                               BackgroundIndexStorage *Storage) {
   enqueueTask(Bind(
                   [this, Storage](tooling::CompileCommand Cmd) {
-                    Cmd.CommandLine.push_back("-resource-dir=" + ResourceDir);
                     // We can't use llvm::StringRef here since we are going to
                     // move from Cmd during the call below.
                     const std::string FileName = Cmd.Filename;

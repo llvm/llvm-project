@@ -13,9 +13,7 @@ define <4 x i64> @xor_insert_insert(<2 x i64> %x, <2 x i64> %y) {
 ;
 ; AVX-LABEL: xor_insert_insert:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %xw = shufflevector <2 x i64> %x, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %yw = shufflevector <2 x i64> %y, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
@@ -32,9 +30,9 @@ define <4 x i64> @xor_insert_insert_high_half(<2 x i64> %x, <2 x i64> %y) {
 ;
 ; AVX-LABEL: xor_insert_insert_high_half:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; AVX-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vxorps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
   %xw = shufflevector <2 x i64> %x, <2 x i64> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
   %yw = shufflevector <2 x i64> %y, <2 x i64> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
@@ -85,7 +83,28 @@ define <8 x i32> @sub_undef_elts(<4 x i32> %x) {
   ret <8 x i32> %arbitrary_shuf
 }
 
-; Verify that different types work.
+; and undef, C --> 0, so this tests that we are tracking known zero lanes.
+
+define <4 x i64> @and_undef_elts(<2 x i64> %x) {
+; SSE-LABEL: and_undef_elts:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: and_undef_elts:
+; AVX:       # %bb.0:
+; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,0,1,2]
+; AVX-NEXT:    retq
+  %extend = shufflevector <2 x i64> %x, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %bogus_bo = and <4 x i64> %extend, <i64 undef, i64 undef, i64 42, i64 43>
+  %arbitrary_shuf = shufflevector <4 x i64> %bogus_bo, <4 x i64> undef, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+  ret <4 x i64> %arbitrary_shuf
+}
+
+; or undef, C --> -1, so this tests that we are tracking known all-ones lanes.
 
 define <4 x i64> @or_undef_elts(<2 x i64> %x) {
 ; SSE-LABEL: or_undef_elts:
@@ -111,6 +130,37 @@ define <4 x i64> @or_undef_elts(<2 x i64> %x) {
 define <8 x i32> @xor_undef_elts(<4 x i32> %x) {
 ; SSE-LABEL: xor_undef_elts:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,1,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,2,2,3]
+; SSE-NEXT:    pxor {{.*}}(%rip), %xmm2
+; SSE-NEXT:    pxor {{.*}}(%rip), %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm2[2,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm2[1,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,0],xmm1[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,2],xmm2[2,0]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: xor_undef_elts:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,3,0,2]
+; AVX-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
+; AVX-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vmovaps {{.*#+}} ymm1 = [6,1,5,4,3,2,0,7]
+; AVX-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX-NEXT:    retq
+  %extend = shufflevector <4 x i32> %x, <4 x i32> undef, <8 x i32> <i32 undef, i32 undef, i32 1, i32 3, i32 0, i32 2, i32 undef, i32 undef>
+  %bogus_bo = xor <8 x i32> %extend, <i32 42, i32 43, i32 undef, i32 undef, i32 undef, i32 undef, i32 44, i32 12>
+  %arbitrary_shuf = shufflevector <8 x i32> %bogus_bo, <8 x i32> undef, <8 x i32> <i32 6, i32 1, i32 5, i32 4, i32 3, i32 2, i32 0, i32 7>
+  ret <8 x i32> %arbitrary_shuf
+}
+
+; Verify that this isn't limited to high/low halves
+; Special case: the undef-ness of the 1st shuffle may be lost if we turn that into vector concat.
+
+define <8 x i32> @xor_undef_elts_alt(<4 x i32> %x) {
+; SSE-LABEL: xor_undef_elts_alt:
+; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    movaps {{.*#+}} xmm2 = <u,u,44,12>
 ; SSE-NEXT:    xorps %xmm0, %xmm2
@@ -122,7 +172,7 @@ define <8 x i32> @xor_undef_elts(<4 x i32> %x) {
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,2],xmm2[2,0]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: xor_undef_elts:
+; AVX-LABEL: xor_undef_elts_alt:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0

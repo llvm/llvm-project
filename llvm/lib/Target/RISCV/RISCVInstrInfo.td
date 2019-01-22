@@ -16,36 +16,41 @@ include "RISCVInstrFormats.td"
 // RISC-V specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
-def SDT_RISCVCall         : SDTypeProfile<0, -1, [SDTCisVT<0, XLenVT>]>;
-def SDT_RISCVCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
-                                            SDTCisVT<1, i32>]>;
-def SDT_RISCVCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>,
-                                          SDTCisVT<1, i32>]>;
-def SDT_RISCVSelectCC     : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
-                                                 SDTCisSameAs<0, 4>,
-                                                 SDTCisSameAs<4, 5>]>;
+// Target-independent type requirements, but with target-specific formats.
+def SDT_CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
+                                       SDTCisVT<1, i32>]>;
+def SDT_CallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>,
+                                     SDTCisVT<1, i32>]>;
 
+// Target-dependent type requirements.
+def SDT_RISCVCall     : SDTypeProfile<0, -1, [SDTCisVT<0, XLenVT>]>;
+def SDT_RISCVSelectCC : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
+                                             SDTCisSameAs<0, 4>,
+                                             SDTCisSameAs<4, 5>]>;
 
-def Call         : SDNode<"RISCVISD::CALL", SDT_RISCVCall,
-                          [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                           SDNPVariadic]>;
-def CallSeqStart : SDNode<"ISD::CALLSEQ_START", SDT_RISCVCallSeqStart,
-                          [SDNPHasChain, SDNPOutGlue]>;
-def CallSeqEnd   : SDNode<"ISD::CALLSEQ_END", SDT_RISCVCallSeqEnd,
-                          [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
-def RetFlag      : SDNode<"RISCVISD::RET_FLAG", SDTNone,
-                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def URetFlag     : SDNode<"RISCVISD::URET_FLAG", SDTNone,
-                          [SDNPHasChain, SDNPOptInGlue]>;
-def SRetFlag     : SDNode<"RISCVISD::SRET_FLAG", SDTNone,
-                          [SDNPHasChain, SDNPOptInGlue]>;
-def MRetFlag     : SDNode<"RISCVISD::MRET_FLAG", SDTNone,
-                          [SDNPHasChain, SDNPOptInGlue]>;
-def SelectCC     : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC,
-                          [SDNPInGlue]>;
-def Tail         : SDNode<"RISCVISD::TAIL", SDT_RISCVCall,
-                          [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                           SDNPVariadic]>;
+// Target-independent nodes, but with target-specific formats.
+def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
+                           [SDNPHasChain, SDNPOutGlue]>;
+def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
+                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
+// Target-dependent nodes.
+def riscv_call      : SDNode<"RISCVISD::CALL", SDT_RISCVCall,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                              SDNPVariadic]>;
+def riscv_ret_flag  : SDNode<"RISCVISD::RET_FLAG", SDTNone,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def riscv_uret_flag : SDNode<"RISCVISD::URET_FLAG", SDTNone,
+                             [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_sret_flag : SDNode<"RISCVISD::SRET_FLAG", SDTNone,
+                             [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mret_flag : SDNode<"RISCVISD::MRET_FLAG", SDTNone,
+                             [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_selectcc  : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC,
+                             [SDNPInGlue]>;
+def riscv_tail      : SDNode<"RISCVISD::TAIL", SDT_RISCVCall,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                              SDNPVariadic]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -745,7 +750,7 @@ class SelectCC_rrirr<RegisterClass valty, RegisterClass cmpty>
     : Pseudo<(outs valty:$dst),
              (ins cmpty:$lhs, cmpty:$rhs, ixlenimm:$imm,
               valty:$truev, valty:$falsev),
-             [(set valty:$dst, (SelectCC cmpty:$lhs, cmpty:$rhs,
+             [(set valty:$dst, (riscv_selectcc cmpty:$lhs, cmpty:$rhs,
               (XLenVT imm:$imm), valty:$truev, valty:$falsev))]>;
 
 def Select_GPR_Using_CC_GPR : SelectCC_rrirr<GPR, GPR>;
@@ -801,22 +806,23 @@ def : Pat<(brind (add GPR:$rs1, simm12:$imm12)),
 // Define isCodeGenOnly = 0 to support parsing assembly "call" instruction.
 let isCall = 1, Defs = [X1], isCodeGenOnly = 0 in
 def PseudoCALL : Pseudo<(outs), (ins bare_symbol:$func),
-                        [(Call tglobaladdr:$func)]> {
+                        [(riscv_call tglobaladdr:$func)]> {
   let AsmString = "call\t$func";
 }
 
-def : Pat<(Call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
+def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
-def : Pat<(URetFlag), (URET X0, X0)>;
-def : Pat<(SRetFlag), (SRET X0, X0)>;
-def : Pat<(MRetFlag), (MRET X0, X0)>;
+def : Pat<(riscv_uret_flag), (URET X0, X0)>;
+def : Pat<(riscv_sret_flag), (SRET X0, X0)>;
+def : Pat<(riscv_mret_flag), (MRET X0, X0)>;
 
 let isCall = 1, Defs = [X1] in
-def PseudoCALLIndirect : Pseudo<(outs), (ins GPR:$rs1), [(Call GPR:$rs1)]>,
+def PseudoCALLIndirect : Pseudo<(outs), (ins GPR:$rs1),
+                                [(riscv_call GPR:$rs1)]>,
                          PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
-def PseudoRET : Pseudo<(outs), (ins), [(RetFlag)]>,
+def PseudoRET : Pseudo<(outs), (ins), [(riscv_ret_flag)]>,
                 PseudoInstExpansion<(JALR X0, X1, 0)>;
 
 // PseudoTAIL is a pseudo instruction similar to PseudoCALL and will eventually
@@ -829,12 +835,13 @@ def PseudoTAIL : Pseudo<(outs), (ins bare_symbol:$dst), []> {
 }
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2] in
-def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTC:$rs1), [(Tail GPRTC:$rs1)]>,
+def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTC:$rs1),
+                                [(riscv_tail GPRTC:$rs1)]>,
                          PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
 
-def : Pat<(Tail (iPTR tglobaladdr:$dst)),
+def : Pat<(riscv_tail (iPTR tglobaladdr:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
-def : Pat<(Tail (iPTR texternalsym:$dst)),
+def : Pat<(riscv_tail (iPTR texternalsym:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0,
@@ -905,9 +912,9 @@ def : Pat<(atomic_fence (XLenVT 7), (imm)), (FENCE 0b11, 0b11)>;
 // Pessimistically assume the stack pointer will be clobbered
 let Defs = [X2], Uses = [X2] in {
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
-                              [(CallSeqStart timm:$amt1, timm:$amt2)]>;
+                              [(callseq_start timm:$amt1, timm:$amt2)]>;
 def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
-                              [(CallSeqEnd timm:$amt1, timm:$amt2)]>;
+                              [(callseq_end timm:$amt1, timm:$amt2)]>;
 } // Defs = [X2], Uses = [X2]
 
 /// RV64 patterns

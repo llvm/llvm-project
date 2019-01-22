@@ -592,6 +592,9 @@ public:
   /// Emit all Dwarf sections that should come after the content.
   void endModule() override;
 
+  /// Emits inital debug location directive.
+  DebugLoc emitInitialLocDirective(const MachineFunction &MF, unsigned CUID);
+
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;
 

@@ -868,6 +868,23 @@ static size_t countSkippableZeroBytes(ArrayRef<uint8_t> Buf) {
   return N & ~0x3;
 }
 
+// Returns a map from sections to their relocations.
+static std::map<SectionRef, std::vector<RelocationRef>>
+getRelocsMap(llvm::object::ObjectFile const &Obj) {
+  std::map<SectionRef, std::vector<RelocationRef>> Ret;
+  for (const SectionRef &Section : ToolSectionFilter(Obj)) {
+    section_iterator RelSec = Section.getRelocatedSection();
+    if (RelSec == Obj.section_end())
+      continue;
+    std::vector<RelocationRef> &V = Ret[*RelSec];
+    for (const RelocationRef &R : Section.relocations())
+      V.push_back(R);
+    // Sort relocations by address.
+    llvm::sort(V, isRelocAddressLess);
+  }
+  return Ret;
+}
+
 static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
   if (StartAddress > StopAddress)
     error("Start address should be less than stop address");
@@ -929,15 +946,9 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
   SourcePrinter SP(Obj, TheTarget->getName());
 
-  // Create a mapping, RelocSecs = SectionRelocMap[S], where sections
-  // in RelocSecs contain the relocations for section S.
-  std::error_code EC;
-  std::map<SectionRef, SmallVector<SectionRef, 1>> SectionRelocMap;
-  for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
-    section_iterator Sec2 = Section.getRelocatedSection();
-    if (Sec2 != Obj->section_end())
-      SectionRelocMap[*Sec2].push_back(Section);
-  }
+  std::map<SectionRef, std::vector<RelocationRef>> RelocMap;
+  if (InlineRelocs)
+    RelocMap = getRelocsMap(*Obj);
 
   // Create a mapping from virtual address to symbol name.  This is used to
   // pretty print the symbols while disassembling.
@@ -1062,19 +1073,6 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
       }
     }
 
-    // Make a list of all the relocations for this section.
-    std::vector<RelocationRef> Rels;
-    if (InlineRelocs) {
-      for (const SectionRef &RelocSec : SectionRelocMap[Section]) {
-        for (const RelocationRef &Reloc : RelocSec.relocations()) {
-          Rels.push_back(Reloc);
-        }
-      }
-    }
-
-    // Sort relocations by address.
-    llvm::sort(Rels, isRelocAddressLess);
-
     StringRef SegmentName = "";
     if (const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(Obj)) {
       DataRefImpl DR = Section.getRawDataRefImpl();
@@ -1103,6 +1101,7 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     uint64_t Index;
     bool PrintedSection = false;
 
+    std::vector<RelocationRef> Rels = RelocMap[Section];
     std::vector<RelocationRef>::const_iterator RelCur = Rels.begin();
     std::vector<RelocationRef>::const_iterator RelEnd = Rels.end();
     // Disassemble symbol by symbol.

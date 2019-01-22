@@ -17,6 +17,7 @@ endif()
 target_link_libraries(clangd
   PRIVATE
   clangBasic
+  clangTidy
   clangDaemon
   clangFormat
   clangFrontend

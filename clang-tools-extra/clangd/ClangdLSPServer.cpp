@@ -289,7 +289,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (UseDirBasedCDB)
     BaseCDB = llvm::make_unique<DirectoryBasedGlobalCompilationDatabase>(
         CompileCommandsDir);
-  CDB.emplace(BaseCDB.get(), Params.initializationOptions.fallbackFlags);
+  CDB.emplace(BaseCDB.get(), Params.initializationOptions.fallbackFlags,
+              ClangdServerOpts.ResourceDir);
   Server.emplace(*CDB, FSProvider, static_cast<DiagnosticsConsumer &>(*this),
                  ClangdServerOpts);
   applyConfiguration(Params.initializationOptions.ConfigSettings);
@@ -719,11 +720,13 @@ void ClangdLSPServer::onSymbolInfo(const TextDocumentPositionParams &Params,
 }
 
 ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
+                                 const FileSystemProvider &FSProvider,
                                  const clangd::CodeCompleteOptions &CCOpts,
                                  llvm::Optional<Path> CompileCommandsDir,
                                  bool UseDirBasedCDB,
                                  const ClangdServer::Options &Opts)
-    : Transp(Transp), MsgHandler(new MessageHandler(*this)), CCOpts(CCOpts),
+    : Transp(Transp), MsgHandler(new MessageHandler(*this)),
+      FSProvider(FSProvider), CCOpts(CCOpts),
       SupportedSymbolKinds(defaultSymbolKinds()),
       SupportedCompletionItemKinds(defaultCompletionItemKinds()),
       UseDirBasedCDB(UseDirBasedCDB),

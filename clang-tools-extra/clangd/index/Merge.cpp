@@ -102,7 +102,6 @@ void MergedIndex::refs(const RefsRequest &Req,
     Callback(O);
     --Remaining;
   });
-  assert(Remaining >= 0);
   if (Remaining == 0)
     return;
   // We return less than Req.Limit if static index returns more refs for dirty

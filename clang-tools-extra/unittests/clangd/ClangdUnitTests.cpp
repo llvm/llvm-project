@@ -141,6 +141,9 @@ TEST(DiagnosticsTest, ClangTidy) {
   )cpp");
   auto TU = TestTU::withCode(Test.code());
   TU.HeaderFilename = "assert.h"; // Suppress "not found" error.
+  TU.ClangTidyChecks =
+      "-*, bugprone-sizeof-expression, bugprone-macro-repeated-side-effects, "
+      "modernize-deprecated-headers";
   EXPECT_THAT(
       TU.build().getDiagnostics(),
       UnorderedElementsAre(
