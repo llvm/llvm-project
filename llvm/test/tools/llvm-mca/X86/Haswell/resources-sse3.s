@@ -21,6 +21,8 @@ hsubps    (%rax), %xmm2
 
 lddqu     (%rax), %xmm2
 
+monitor
+
 movddup   %xmm0, %xmm2
 movddup   (%rax), %xmm2
 
@@ -29,6 +31,8 @@ movshdup  (%rax), %xmm2
 
 movsldup  %xmm0, %xmm2
 movsldup  (%rax), %xmm2
+
+mwait
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -52,12 +56,14 @@ movsldup  (%rax), %xmm2
 # CHECK-NEXT:  3      5     2.00                        hsubps	%xmm0, %xmm2
 # CHECK-NEXT:  4      11    2.00    *                   hsubps	(%rax), %xmm2
 # CHECK-NEXT:  1      6     0.50    *                   lddqu	(%rax), %xmm2
+# CHECK-NEXT:  1      100   0.25                  U     monitor
 # CHECK-NEXT:  1      1     1.00                        movddup	%xmm0, %xmm2
 # CHECK-NEXT:  1      5     0.50    *                   movddup	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        movshdup	%xmm0, %xmm2
 # CHECK-NEXT:  1      6     0.50    *                   movshdup	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        movsldup	%xmm0, %xmm2
 # CHECK-NEXT:  1      6     0.50    *                   movsldup	(%rax), %xmm2
+# CHECK-NEXT:  10     20    2.50    *      *      U     mwait
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - HWDivider
@@ -73,7 +79,7 @@ movsldup  (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -      -      -     12.00  5.00   5.00    -     19.00   -      -
+# CHECK-NEXT:  -      -     2.00   14.00  5.00   5.00    -     22.00  4.00    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -90,9 +96,11 @@ movsldup  (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -     2.00    -      -     hsubps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -     2.00    -      -     hsubps	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     lddqu	(%rax), %xmm2
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     monitor
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     movddup	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     movddup	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     movshdup	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     movshdup	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     movsldup	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     movsldup	(%rax), %xmm2
+# CHECK-NEXT:  -      -     1.75   1.75    -      -      -     2.75   3.75    -     mwait

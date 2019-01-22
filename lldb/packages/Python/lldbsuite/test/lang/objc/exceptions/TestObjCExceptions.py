@@ -37,7 +37,7 @@ class ObjCExceptionsTestCase(TestBase):
         target = self.dbg.GetSelectedTarget()
         thread = target.GetProcess().GetSelectedThread()
         frame = thread.GetSelectedFrame()
-        
+
         opts = lldb.SBVariablesOptions()
         opts.SetIncludeRecognizedArguments(True)
         variables = frame.GetVariables(opts)
@@ -142,8 +142,8 @@ class ObjCExceptionsTestCase(TestBase):
                 '(NSException *) exception = ',
                 'name: "ThrownException" - reason: "SomeReason"',
                 'libobjc.A.dylib`objc_exception_throw',
-                'a.out`foo', 'at main.mm:25',
-                'a.out`rethrow', 'at main.mm:36',
+                'a.out`foo', 'at main.mm:24',
+                'a.out`rethrow', 'at main.mm:35',
                 'a.out`main',
             ])
 
@@ -169,8 +169,8 @@ class ObjCExceptionsTestCase(TestBase):
         self.expect('thread exception', substrs=[
                 '(MyCustomException *) exception = ',
                 'libobjc.A.dylib`objc_exception_throw',
-                'a.out`foo', 'at main.mm:27',
-                'a.out`rethrow', 'at main.mm:36',
+                'a.out`foo', 'at main.mm:26',
+                'a.out`rethrow', 'at main.mm:35',
                 'a.out`main',
             ])
 

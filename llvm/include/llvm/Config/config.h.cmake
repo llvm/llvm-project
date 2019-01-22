@@ -338,6 +338,9 @@
 /* Define as the return type of signal handlers (`int' or `void'). */
 #cmakedefine RETSIGTYPE ${RETSIGTYPE}
 
+/* Define if std::is_trivially_copyable is supported */
+#cmakedefine HAVE_STD_IS_TRIVIALLY_COPYABLE ${HAVE_STD_IS_TRIVIALLY_COPYABLE}
+
 /* Define to a function implementing stricmp */
 #cmakedefine stricmp ${stricmp}
 

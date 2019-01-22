@@ -3091,12 +3091,28 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
         FromConstructor->isExplicit(),
         D->isInlineSpecified(), D->isImplicit(), D->isConstexpr()))
       return ToFunction;
-  } else if (isa<CXXDestructorDecl>(D)) {
+  } else if (CXXDestructorDecl *FromDtor = dyn_cast<CXXDestructorDecl>(D)) {
+
+    auto Imp =
+        importSeq(const_cast<FunctionDecl *>(FromDtor->getOperatorDelete()),
+                  FromDtor->getOperatorDeleteThisArg());
+
+    if (!Imp)
+      return Imp.takeError();
+
+    FunctionDecl *ToOperatorDelete;
+    Expr *ToThisArg;
+    std::tie(ToOperatorDelete, ToThisArg) = *Imp;
+
     if (GetImportedOrCreateDecl<CXXDestructorDecl>(
         ToFunction, D, Importer.getToContext(), cast<CXXRecordDecl>(DC),
         ToInnerLocStart, NameInfo, T, TInfo, D->isInlineSpecified(),
         D->isImplicit()))
       return ToFunction;
+
+    CXXDestructorDecl *ToDtor = cast<CXXDestructorDecl>(ToFunction);
+
+    ToDtor->setOperatorDelete(ToOperatorDelete, ToThisArg);
   } else if (CXXConversionDecl *FromConversion =
                  dyn_cast<CXXConversionDecl>(D)) {
     if (GetImportedOrCreateDecl<CXXConversionDecl>(

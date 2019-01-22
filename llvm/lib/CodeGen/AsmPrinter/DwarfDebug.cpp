@@ -1520,6 +1520,46 @@ static DebugLoc findPrologueEndLoc(const MachineFunction *MF) {
   return DebugLoc();
 }
 
+/// Register a source line with debug info. Returns the  unique label that was
+/// emitted and which provides correspondence to the source line list.
+static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
+                             const MDNode *S, unsigned Flags, unsigned CUID,
+                             uint16_t DwarfVersion,
+                             ArrayRef<std::unique_ptr<DwarfCompileUnit>> DCUs) {
+  StringRef Fn;
+  unsigned FileNo = 1;
+  unsigned Discriminator = 0;
+  if (auto *Scope = cast_or_null<DIScope>(S)) {
+    Fn = Scope->getFilename();
+    if (Line != 0 && DwarfVersion >= 4)
+      if (auto *LBF = dyn_cast<DILexicalBlockFile>(Scope))
+        Discriminator = LBF->getDiscriminator();
+
+    FileNo = static_cast<DwarfCompileUnit &>(*DCUs[CUID])
+                 .getOrCreateSourceID(Scope->getFile());
+  }
+  Asm.OutStreamer->EmitDwarfLocDirective(FileNo, Line, Col, Flags, 0,
+                                         Discriminator, Fn);
+}
+
+DebugLoc DwarfDebug::emitInitialLocDirective(const MachineFunction &MF,
+                                             unsigned CUID) {
+  // Get beginning of function.
+  if (DebugLoc PrologEndLoc = findPrologueEndLoc(&MF)) {
+    // Ensure the compile unit is created if the function is called before
+    // beginFunction().
+    (void)getOrCreateDwarfCompileUnit(
+        MF.getFunction().getSubprogram()->getUnit());
+    // We'd like to list the prologue as "not statements" but GDB behaves
+    // poorly if we do that. Revisit this with caution/GDB (7.5+) testing.
+    const DISubprogram *SP = PrologEndLoc->getInlinedAtScope()->getSubprogram();
+    ::recordSourceLine(*Asm, SP->getScopeLine(), 0, SP, DWARF2_FLAG_IS_STMT,
+                       CUID, getDwarfVersion(), getUnits());
+    return PrologEndLoc;
+  }
+  return DebugLoc();
+}
+
 // Gather pre-function debug information.  Assumes being called immediately
 // after the function entry point has been emitted.
 void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
@@ -1542,13 +1582,8 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
     Asm->OutStreamer->getContext().setDwarfCompileUnitID(CU.getUniqueID());
 
   // Record beginning of function.
-  PrologEndLoc = findPrologueEndLoc(MF);
-  if (PrologEndLoc) {
-    // We'd like to list the prologue as "not statements" but GDB behaves
-    // poorly if we do that. Revisit this with caution/GDB (7.5+) testing.
-    auto *SP = PrologEndLoc->getInlinedAtScope()->getSubprogram();
-    recordSourceLine(SP->getScopeLine(), 0, SP, DWARF2_FLAG_IS_STMT);
-  }
+  PrologEndLoc = emitInitialLocDirective(
+      *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
 }
 
 void DwarfDebug::skippedNonDebugFunction() {
@@ -1646,21 +1681,9 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 // emitted and which provides correspondence to the source line list.
 void DwarfDebug::recordSourceLine(unsigned Line, unsigned Col, const MDNode *S,
                                   unsigned Flags) {
-  StringRef Fn;
-  unsigned FileNo = 1;
-  unsigned Discriminator = 0;
-  if (auto *Scope = cast_or_null<DIScope>(S)) {
-    Fn = Scope->getFilename();
-    if (Line != 0 && getDwarfVersion() >= 4)
-      if (auto *LBF = dyn_cast<DILexicalBlockFile>(Scope))
-        Discriminator = LBF->getDiscriminator();
-
-    unsigned CUID = Asm->OutStreamer->getContext().getDwarfCompileUnitID();
-    FileNo = static_cast<DwarfCompileUnit &>(*InfoHolder.getUnits()[CUID])
-              .getOrCreateSourceID(Scope->getFile());
-  }
-  Asm->OutStreamer->EmitDwarfLocDirective(FileNo, Line, Col, Flags, 0,
-                                          Discriminator, Fn);
+  ::recordSourceLine(*Asm, Line, Col, S, Flags,
+                     Asm->OutStreamer->getContext().getDwarfCompileUnitID(),
+                     getDwarfVersion(), getUnits());
 }
 
 //===----------------------------------------------------------------------===//

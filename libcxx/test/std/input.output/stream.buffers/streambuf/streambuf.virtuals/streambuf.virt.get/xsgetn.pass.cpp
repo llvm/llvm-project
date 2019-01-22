@@ -15,6 +15,7 @@
 
 #include <streambuf>
 #include <cassert>
+#include <cstring>
 
 struct test
     : public std::basic_streambuf<char>
@@ -36,5 +37,5 @@ int main()
     t.setg(input, input, input+7);
     char output[sizeof(input)] = {0};
     assert(t.sgetn(output, 10) == 7);
-    assert(strcmp(input, output) == 0);
+    assert(std::strcmp(input, output) == 0);
 }

@@ -30233,6 +30233,27 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = Known.trunc(BitWidth);
     break;
   }
+  case X86ISD::ANDNP: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known2 = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+
+    // ANDNP = (~X & Y);
+    Known.One &= Known2.Zero;
+    Known.Zero |= Known2.One;
+    break;
+  }
+  case X86ISD::FOR: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known2 = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+
+    // Output known-0 bits are only known if clear in both the LHS & RHS.
+    Known.Zero &= Known2.Zero;
+    // Output known-1 are known to be set if set in either the LHS | RHS.
+    Known.One |= Known2.One;
+    break;
+  }
   case X86ISD::CMOV: {
     Known = DAG.computeKnownBits(Op.getOperand(1), Depth+1);
     // If we don't know any bits, early out.
@@ -36519,6 +36540,52 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Canonicalize OR(AND(X,C),AND(Y,~C)) -> OR(AND(X,C),ANDNP(C,Y))
+static SDValue canonicalizeBitSelect(SDNode *N, SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget) {
+  assert(N->getOpcode() == ISD::OR && "Unexpected Opcode");
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector())
+    return SDValue();
+
+  SDValue N0 = peekThroughBitcasts(N->getOperand(0));
+  SDValue N1 = peekThroughBitcasts(N->getOperand(1));
+  if (N0.getOpcode() != ISD::AND || N1.getOpcode() != ISD::AND)
+    return SDValue();
+
+  // On XOP we'll lower to PCMOV so accept one use, otherwise only
+  // do this if either mask has multiple uses already.
+  if (!(Subtarget.hasXOP() || !N0.getOperand(1).hasOneUse() ||
+        !N1.getOperand(1).hasOneUse()))
+    return SDValue();
+
+  // Attempt to extract constant byte masks.
+  APInt UndefElts0, UndefElts1;
+  SmallVector<APInt, 32> EltBits0, EltBits1;
+  if (!getTargetConstantBitsFromNode(N0.getOperand(1), 8, UndefElts0, EltBits0,
+                                     false, false))
+    return SDValue();
+  if (!getTargetConstantBitsFromNode(N1.getOperand(1), 8, UndefElts1, EltBits1,
+                                     false, false))
+    return SDValue();
+
+  for (unsigned i = 0, e = EltBits0.size(); i != e; ++i) {
+    // TODO - add UNDEF elts support.
+    if (UndefElts0[i] || UndefElts1[i])
+      return SDValue();
+    if (EltBits0[i] != ~EltBits1[i])
+      return SDValue();
+  }
+
+  SDLoc DL(N);
+  SDValue X = N->getOperand(0);
+  SDValue Y =
+      DAG.getNode(X86ISD::ANDNP, DL, VT, DAG.getBitcast(VT, N0.getOperand(1)),
+                  DAG.getBitcast(VT, N1.getOperand(0)));
+  return DAG.getNode(ISD::OR, DL, VT, X, Y);
+}
+
 // Try to match OR(AND(~MASK,X),AND(MASK,Y)) logic pattern.
 static bool matchLogicBlend(SDNode *N, SDValue &X, SDValue &Y, SDValue &Mask) {
   if (N->getOpcode() != ISD::OR)
@@ -36780,6 +36847,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, Subtarget))
     return FPLogic;
+
+  if (SDValue R = canonicalizeBitSelect(N, DAG, Subtarget))
+    return R;
 
   if (SDValue R = combineLogicBlendIntoPBLENDV(N, DAG, Subtarget))
     return R;

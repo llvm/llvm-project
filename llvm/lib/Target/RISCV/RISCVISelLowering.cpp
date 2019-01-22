@@ -575,7 +575,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         !(Subtarget.hasStdExtM() && isVariableSDivUDivURem(Src)))
       break;
     SDLoc DL(N);
-    return DCI.CombineTo(N, DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Src));
+    // Don't add the new node to the DAGCombiner worklist, in order to avoid
+    // an infinite cycle due to SimplifyDemandedBits converting the
+    // SIGN_EXTEND back to ANY_EXTEND.
+    return DCI.CombineTo(N, DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Src),
+                         false);
   }
   case RISCVISD::SplitF64: {
     // If the input to SplitF64 is just BuildPairF64 then the operation is

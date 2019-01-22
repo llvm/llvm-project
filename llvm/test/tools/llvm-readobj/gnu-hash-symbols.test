@@ -1,0 +1,107 @@
+# RUN: llvm-readelf --hash-symbols %p/Inputs/dynamic-table-exe.x86 \
+# RUN:   | FileCheck %s --check-prefix HASH
+
+# HASH:     Symbol table of .hash for image:
+# HASH-NEXT:   Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
+# HASH-NEXT:     9   0: 00000000     0 FUNC    GLOBAL DEFAULT UND __gxx_personality_v0@CXXABI_1.3
+# HASH-NEXT:    13   0: 00001b64     0 NOTYPE  GLOBAL DEFAULT ABS _edata{{$}}
+# HASH-NEXT:     7   0: 00000000     0 FUNC    GLOBAL DEFAULT UND _ZNSt14basic_ifstreamIcSt11char_traitsIcEEC1EPKcSt13_Ios_Openmode@GLIBCXX_3.4
+# HASH-NEXT:     2   0: 00000000     0 NOTYPE  WEAK   DEFAULT UND _Jv_RegisterClasses{{$}}
+# HASH-NEXT:     1   0: 00000000     0 NOTYPE  WEAK   DEFAULT UND __gmon_start__{{$}}
+# HASH-NEXT:    16   1: 00000850    81 FUNC    GLOBAL DEFAULT  14 main{{$}}
+# HASH-NEXT:    10   1: 00000000     0 FUNC    GLOBAL DEFAULT UND _Unwind_Resume@GCC_3.0
+# HASH-NEXT:     8   1: 00000000     0 FUNC    GLOBAL DEFAULT UND puts@GLIBC_2.0
+# HASH-NEXT:    12   1: 00001b68     0 NOTYPE  GLOBAL DEFAULT ABS _end{{$}}
+# HASH-NEXT:     6   1: 00000000     0 FUNC    GLOBAL DEFAULT UND _ZNSt14basic_ifstreamIcSt11char_traitsIcEED1Ev@GLIBCXX_3.4
+# HASH-NEXT:     5   1: 00000000     0 NOTYPE  WEAK   DEFAULT UND _ITM_registerTMCloneTable{{$}}
+# HASH-NEXT:     4   1: 00000000     0 NOTYPE  WEAK   DEFAULT UND _ITM_deregisterTMCloneTable{{$}}
+# HASH-NEXT:     3   1: 00000000     0 FUNC    GLOBAL DEFAULT UND __libc_start_main@GLIBC_2.0
+# HASH-NEXT:    11   2: 00000000     0 FUNC    WEAK   DEFAULT UND __cxa_finalize@GLIBC_2.1.3
+# HASH-NEXT:    15   2: 00001b64     0 NOTYPE  GLOBAL DEFAULT ABS __bss_start{{$}}
+# HASH-NEXT:    14   2: 0000093c     4 OBJECT  GLOBAL DEFAULT  16 _IO_stdin_used{{$}}
+# HASH:     Symbol table of .gnu.hash for image:
+# HASH-NEXT:   Num Buc:    Value  Size   Type   Bind Vis      Ndx Name
+# HASH-NEXT:    12   0: 00001b68     0 NOTYPE  GLOBAL DEFAULT ABS _end{{$}}
+# HASH-NEXT:    13   0: 00001b64     0 NOTYPE  GLOBAL DEFAULT ABS _edata{{$}}
+# HASH-NEXT:    14   1: 0000093c     4 OBJECT  GLOBAL DEFAULT  16 _IO_stdin_used{{$}}
+# HASH-NEXT:    15   1: 00001b64     0 NOTYPE  GLOBAL DEFAULT ABS __bss_start{{$}}
+# HASH-NEXT:    16   1: 00000850    81 FUNC    GLOBAL DEFAULT  14 main{{$}}
+
+## Show that if there are no hash sections, we do not print anything.
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readelf --hash-symbols %t.o \
+# RUN:   | FileCheck %s --check-prefix NO-HASH --allow-empty
+
+# NO-HASH-NOT: {{.}}
+
+## Sanity check that we can still find the dynamic symbols (i.e. the above test
+## doesn't pass due to a mistake in the dynamic section).
+# RUN: llvm-readelf --dyn-symbols %t.o | FileCheck %s --check-prefix DYNSYMS
+
+# DYNSYMS: Symbol table '.dynsym' contains 2 entries:
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  ## TODO:  Replace the raw section contents with more meaningful dynamic
+  ## tags/symbols/etc, once yaml2obj supports it.
+  ## FIXME: yaml2obj does not currently allow custom addresses for .dynstr and
+  ## .dynsym if DynamicSymbols are specified.
+  ## See https://bugs.llvm.org/show_bug.cgi?id=40339
+  - Name:         .dynstr
+    Type:         SHT_STRTAB
+    Flags:        [ SHF_ALLOC ]
+    AddressAlign: 0x100
+    EntSize:      0x1
+    ## "\0_Z3fooi\0"
+    Content: "005f5a33666f6f6900"
+  - Name:         .dynsym
+    Type:         SHT_DYNSYM
+    Flags:        [ SHF_ALLOC ]
+    Link:         .dynstr
+    Info:         1
+    Address:      0x100
+    AddressAlign: 0x100
+    EntSize:      0x18
+    ## Null symbol;
+    ## st_name: 1; st_info: Global | Func; st_other: 0;
+    ##   st_shndx: .text.foo; st_value: 0x2000; st_size: 0
+    Content: "000000000000000000000000000000000000000000000000010000001200040000200000000000000000000000000000"
+  - Name:         .dynamic
+    Type:         SHT_DYNAMIC
+    Flags:        [ SHF_ALLOC ]
+    Link:         .dynstr
+    Address:      0x1000
+    AddressAlign: 0x1000
+    ## DT_STRTAB  - 0x0
+    ## DT_STRSZ   - 0x9
+    ## DT_SYMTAB  - 0x100
+    ## DT_SYMENT  - 0x18
+    ## DT_NULL    - 0x0
+    Content: "050000000000000000000000000000000a000000000000000900000000000000060000000000000000010000000000000b00000000000000180000000000000000000000000000000000000000000000"
+  - Name:  .text.foo
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+    Size:  0x40
+    Address: 0x2000
+    AddressAlign: 0x2000
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    VAddr: 0x0
+    PAddr: 0x0
+    Sections:
+      - Section: .dynsym
+      - Section: .dynstr
+      - Section: .dynamic
+      - Section: .text.foo
+  - Type:  PT_DYNAMIC
+    Flags: [ PF_R ]
+    VAddr: 0x1000
+    PAddr: 0x1000
+    Sections:
+      - Section: .dynamic

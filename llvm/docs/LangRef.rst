@@ -2181,6 +2181,24 @@ volatile operations. The optimizers *may* change the order of volatile
 operations relative to non-volatile operations. This is not Java's
 "volatile" and has no cross-thread synchronization behavior.
 
+A volatile load or store may have additional target-specific semantics.
+Any volatile operation can have side effects, and any volatile operation
+can read and/or modify state which is not accessible via a regular load
+or store in this module. Volatile operations may use adresses which do
+not point to memory (like MMIO registers). This means the compiler may
+not use a volatile operation to prove a non-volatile access to that
+address has defined behavior.
+
+The allowed side-effects for volatile accesses are limited.  If a
+non-volatile store to a given address would be legal, a volatile
+operation may modify the memory at that address. A volatile operation
+may not modify any other memory accessible by the module being compiled.
+A volatile operation may not call any code in the current module.
+
+The compiler may assume execution will continue after a volatile operation,
+so operations which modify memory or may have undefined behavior can be
+hoisted past a volatile operation.
+
 IR-level volatile loads and stores cannot safely be optimized into
 llvm.memcpy or llvm.memmove intrinsics even when those intrinsics are
 flagged volatile. Likewise, the backend should never split or merge
@@ -4493,13 +4511,36 @@ DIGlobalVariable
 
 .. code-block:: text
 
-    !0 = !DIGlobalVariable(name: "foo", linkageName: "foo", scope: !1,
-                           file: !2, line: 7, type: !3, isLocal: true,
-                           isDefinition: false, variable: i32* @foo,
-                           declaration: !4)
+    @foo = global i32, !dbg !0
+    !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+    !1 = !DIGlobalVariable(name: "foo", linkageName: "foo", scope: !2,
+                           file: !3, line: 7, type: !4, isLocal: true,
+                           isDefinition: false, declaration: !5)
 
-All global variables should be referenced by the `globals:` field of a
-:ref:`compile unit <DICompileUnit>`.
+
+DIGlobalVariableExpression
+""""""""""""""""""""""""""
+
+``DIGlobalVariableExpression`` nodes tie a :ref:`DIGlobalVariable` together
+with a :ref:`DIExpression`.
+
+.. code-block:: text
+
+    @lower = global i32, !dbg !0
+    @upper = global i32, !dbg !1
+    !0 = !DIGlobalVariableExpression(
+             var: !2,
+             expr: !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+             )
+    !1 = !DIGlobalVariableExpression(
+             var: !2,
+             expr: !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+             )
+    !2 = !DIGlobalVariable(name: "split64", linkageName: "split64", scope: !3,
+                           file: !4, line: 8, type: !5, declaration: !6)
+
+All global variable expressions should be referenced by the `globals:` field of
+a :ref:`compile unit <DICompileUnit>`.
 
 .. _DISubprogram:
 

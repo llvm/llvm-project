@@ -132,6 +132,9 @@ public:
                      CompilerInstance &Clang) {
     auto &PP = Clang.getPreprocessor();
     auto *ExistingCallbacks = PP.getPPCallbacks();
+    // No need to replay events if nobody is listening.
+    if (!ExistingCallbacks)
+      return;
     PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(
         new ReplayPreamble(Includes, ExistingCallbacks,
                            Clang.getSourceManager(), PP, Clang.getLangOpts())));
@@ -227,7 +230,8 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
                  std::shared_ptr<const PreambleData> Preamble,
                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
                  std::shared_ptr<PCHContainerOperations> PCHs,
-                 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+                 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                 const tidy::ClangTidyOptions &ClangTidyOpts) {
   assert(CI);
   // Command-line parsing sets DisableFree to true by default, but we don't want
   // to leak memory in clangd.
@@ -264,15 +268,8 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
     tidy::ClangTidyCheckFactories CTFactories;
     for (const auto &E : tidy::ClangTidyModuleRegistry::entries())
       E.instantiate()->addCheckFactories(CTFactories);
-    auto CTOpts = tidy::ClangTidyOptions::getDefaults();
-    // FIXME: this needs to be configurable, and we need to support .clang-tidy
-    // files and other options providers.
-    // These checks exercise the matcher- and preprocessor-based hooks.
-    CTOpts.Checks = "bugprone-sizeof-expression,"
-                    "bugprone-macro-repeated-side-effects,"
-                    "modernize-deprecated-headers";
     CTContext.emplace(llvm::make_unique<tidy::DefaultOptionsProvider>(
-        tidy::ClangTidyGlobalOptions(), CTOpts));
+        tidy::ClangTidyGlobalOptions(), ClangTidyOpts));
     CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(MainInput.getFile());
@@ -421,34 +418,6 @@ ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
   assert(this->Action);
 }
 
-std::unique_ptr<CompilerInvocation>
-buildCompilerInvocation(const ParseInputs &Inputs) {
-  std::vector<const char *> ArgStrs;
-  for (const auto &S : Inputs.CompileCommand.CommandLine)
-    ArgStrs.push_back(S.c_str());
-
-  if (Inputs.FS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory)) {
-    log("Couldn't set working directory when creating compiler invocation.");
-    // We proceed anyway, our lit-tests rely on results for non-existing working
-    // dirs.
-  }
-
-  // FIXME(ibiryukov): store diagnostics from CommandLine when we start
-  // reporting them.
-  IgnoreDiagnostics IgnoreDiagnostics;
-  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> CommandLineDiagsEngine =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions,
-                                          &IgnoreDiagnostics, false);
-  std::unique_ptr<CompilerInvocation> CI = createInvocationFromCommandLine(
-      ArgStrs, CommandLineDiagsEngine, Inputs.FS);
-  if (!CI)
-    return nullptr;
-  // createInvocationFromCommandLine sets DisableFree.
-  CI->getFrontendOpts().DisableFree = false;
-  CI->getLangOpts()->CommentOpts.ParseAllComments = true;
-  return CI;
-}
-
 std::shared_ptr<const PreambleData>
 buildPreamble(PathRef FileName, CompilerInvocation &CI,
               std::shared_ptr<const PreambleData> OldPreamble,
@@ -538,7 +507,7 @@ buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
   return ParsedAST::build(llvm::make_unique<CompilerInvocation>(*Invocation),
                           Preamble,
                           llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents),
-                          PCHs, std::move(VFS));
+                          PCHs, std::move(VFS), Inputs.ClangTidyOpts);
 }
 
 SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,

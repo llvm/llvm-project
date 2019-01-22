@@ -38,7 +38,8 @@ class TUSchedulerTests : public ::testing::Test {
 protected:
   ParseInputs getInputs(PathRef File, std::string Contents) {
     return ParseInputs{*CDB.getCompileCommand(File),
-                       buildTestFS(Files, Timestamps), std::move(Contents)};
+                       buildTestFS(Files, Timestamps), std::move(Contents),
+                       tidy::ClangTidyOptions::getDefaults()};
   }
 
   void updateWithCallback(TUScheduler &S, PathRef File,

@@ -201,6 +201,12 @@ static llvm::cl::opt<bool> EnableFunctionArgSnippets(
                    "placeholders for method parameters."),
     llvm::cl::init(CodeCompleteOptions().EnableFunctionArgSnippets));
 
+static llvm::cl::opt<std::string> ClangTidyChecks(
+    "clang-tidy-checks",
+    llvm::cl::desc("List of clang-tidy checks to run (this will overrides "
+                   ".clang-tidy files)"),
+    llvm::cl::init(""), llvm::cl::Hidden);
+
 namespace {
 
 /// \brief Supports a test URI scheme with relaxed constraints for lit tests.
@@ -408,6 +414,7 @@ int main(int argc, char *argv[]) {
   CCOpts.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
   CCOpts.AllScopes = AllScopesCompletion;
 
+  RealFileSystemProvider FSProvider;
   // Initialize and run ClangdLSPServer.
   // Change stdin to binary to not lose \r\n on windows.
   llvm::sys::ChangeStdinToBinary();
@@ -427,8 +434,16 @@ int main(int argc, char *argv[]) {
         PrettyPrint, InputStyle);
   }
 
+  // Create an empty clang-tidy option.
+  auto OverrideClangTidyOptions = tidy::ClangTidyOptions::getDefaults();
+  OverrideClangTidyOptions.Checks = ClangTidyChecks;
+  tidy::FileOptionsProvider ClangTidyOptProvider(
+      tidy::ClangTidyGlobalOptions(),
+      /* Default */ tidy::ClangTidyOptions::getDefaults(),
+      /* Override */ OverrideClangTidyOptions, FSProvider.getFileSystem());
+  Opts.ClangTidyOptProvider = &ClangTidyOptProvider;
   ClangdLSPServer LSPServer(
-      *TransportLayer, CCOpts, CompileCommandsDirPath,
+      *TransportLayer, FSProvider, CCOpts, CompileCommandsDirPath,
       /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs, Opts);
   llvm::set_thread_name("clangd.main");
   return LSPServer.run() ? 0
