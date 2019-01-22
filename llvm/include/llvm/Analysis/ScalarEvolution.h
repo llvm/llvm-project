@@ -84,6 +84,9 @@ class SCEV : public FoldingSetNode {
   const unsigned short SCEVType;
 
 protected:
+  // Estimated complexity of this node's expression tree size.
+  const unsigned short ExpressionSize;
+
   /// This field is initialized to zero and may be used in subclasses to store
   /// miscellaneous information.
   unsigned short SubclassData = 0;
@@ -115,8 +118,9 @@ public:
     NoWrapMask = (1 << 3) - 1
   };
 
-  explicit SCEV(const FoldingSetNodeIDRef ID, unsigned SCEVTy)
-      : FastID(ID), SCEVType(SCEVTy) {}
+  explicit SCEV(const FoldingSetNodeIDRef ID, unsigned SCEVTy,
+                unsigned short ExpressionSize)
+      : FastID(ID), SCEVType(SCEVTy), ExpressionSize(ExpressionSize) {}
   SCEV(const SCEV &) = delete;
   SCEV &operator=(const SCEV &) = delete;
 
@@ -136,6 +140,19 @@ public:
 
   /// Return true if the specified scev is negated, but not a constant.
   bool isNonConstantNegative() const;
+
+  // Returns estimated size of the mathematical expression represented by this
+  // SCEV. The rules of its calculation are following:
+  // 1) Size of a SCEV without operands (like constants and SCEVUnknown) is 1;
+  // 2) Size SCEV with operands Op1, Op2, ..., OpN is calculated by formula:
+  //    (1 + Size(Op1) + ... + Size(OpN)).
+  // This value gives us an estimation of time we need to traverse through this
+  // SCEV and all its operands recursively. We may use it to avoid performing
+  // heavy transformations on SCEVs of excessive size for sake of saving the
+  // compilation time.
+  unsigned short getExpressionSize() const {
+    return ExpressionSize;
+  }
 
   /// Print out the internal representation of this scalar to the specified
   /// stream.  This should really only be used for debugging purposes.

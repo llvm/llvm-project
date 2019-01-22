@@ -131,6 +131,7 @@ MDNode *MDBuilder::mergeCallbackEncodings(MDNode *ExistingCallbacks,
   auto *NewCBCalleeIdxAsCM = cast<ConstantAsMetadata>(NewCB->getOperand(0));
   uint64_t NewCBCalleeIdx =
       cast<ConstantInt>(NewCBCalleeIdxAsCM->getValue())->getZExtValue();
+  (void)NewCBCalleeIdx;
 
   SmallVector<Metadata *, 4> Ops;
   unsigned NumExistingOps = ExistingCallbacks->getNumOperands();
@@ -142,6 +143,7 @@ MDNode *MDBuilder::mergeCallbackEncodings(MDNode *ExistingCallbacks,
     auto *OldCBCalleeIdxAsCM = cast<ConstantAsMetadata>(Ops[u]);
     uint64_t OldCBCalleeIdx =
       cast<ConstantInt>(OldCBCalleeIdxAsCM->getValue())->getZExtValue();
+    (void)OldCBCalleeIdx;
     assert(NewCBCalleeIdx != OldCBCalleeIdx &&
            "Cannot map a callback callee index twice!");
   }

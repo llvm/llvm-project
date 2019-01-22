@@ -2,17 +2,76 @@
 # RUN: llc -mtriple=amdgcn-- -O0 -run-pass=legalizer -o - %s | FileCheck %s
 
 ---
-name: test_unmerge_s64_s32
+name: test_unmerge_s32_s64
 body: |
   bb.0:
-    ; CHECK-LABEL: name: test_unmerge_s64_s32
+    ; CHECK-LABEL: name: test_unmerge_s32_s64
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
     ; CHECK: $vgpr0 = COPY [[UV]](s32)
-    ; CHECK: $vgpr2 = COPY [[UV1]](s32)
+    ; CHECK: $vgpr1 = COPY [[UV1]](s32)
     %0:_(s64) = G_CONSTANT i64 0
     %1:_(s32), %2:_(s32) = G_UNMERGE_VALUES %0:_(s64)
     $vgpr0 = COPY %1(s32)
-    $vgpr2 = COPY %2(s32)
+    $vgpr1 = COPY %2(s32)
+...
+
+---
+name: test_unmerge_s32_v2s32
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; CHECK-LABEL: name: test_unmerge_s32_v2s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: $vgpr0 = COPY [[UV]](s32)
+    ; CHECK: $vgpr21 = COPY [[UV1]](s32)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(s32), %2:_(s32) = G_UNMERGE_VALUES %0
+    $vgpr0 = COPY %1
+    $vgpr21= COPY %2
+...
+
+---
+name: test_unmerge_s16_v2s16
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: test_unmerge_s16_v2s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<2 x s16>)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
+    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CHECK: $vgpr1 = COPY [[ANYEXT1]](s32)
+    %0:_(<2 x s16>) = COPY $vgpr0
+    %1:_(s16), %2:_(s16) = G_UNMERGE_VALUES %0
+    %3:_(s32) = G_ANYEXT %1
+    %4:_(s32) = G_ANYEXT %2
+    $vgpr0 = COPY %3
+    $vgpr1 = COPY %4
+...
+
+---
+name: test_unmerge_s16_v3s16
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_unmerge_s16_v3s16
+    ; CHECK: [[DEF:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
+    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[DEF]](<3 x s16>)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
+    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
+    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CHECK: $vgpr1 = COPY [[ANYEXT1]](s32)
+    ; CHECK: $vgpr2 = COPY [[ANYEXT2]](s32)
+    %0:_(<3 x s16>) = G_IMPLICIT_DEF
+    %1:_(s16), %2:_(s16),  %3:_(s16) = G_UNMERGE_VALUES %0
+    %4:_(s32) = G_ANYEXT %1
+    %5:_(s32) = G_ANYEXT %2
+    %6:_(s32) = G_ANYEXT %3
+    $vgpr0 = COPY %4
+    $vgpr1 = COPY %5
+    $vgpr2 = COPY %6
 ...
 

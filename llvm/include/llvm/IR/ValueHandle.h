@@ -308,15 +308,6 @@ struct DenseMapInfo<AssertingVH<T>> {
   }
 };
 
-template <typename T>
-struct isPodLike<AssertingVH<T>> {
-#ifdef NDEBUG
-  static const bool value = true;
-#else
-  static const bool value = false;
-#endif
-};
-
 /// Value handle that tracks a Value across RAUW.
 ///
 /// TrackingVH is designed for situations where a client needs to hold a handle
@@ -546,14 +537,6 @@ template <typename T> struct DenseMapInfo<PoisoningVH<T>> {
     return DenseMapInfo<Value *>::isEqual(LHS.getRawValPtr(),
                                           RHS.getRawValPtr());
   }
-};
-
-template <typename T> struct isPodLike<PoisoningVH<T>> {
-#ifdef NDEBUG
-  static const bool value = true;
-#else
-  static const bool value = false;
-#endif
 };
 
 } // end namespace llvm

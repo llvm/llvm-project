@@ -241,10 +241,6 @@ template<typename T> struct DenseMapInfo<ImmutableList<T>> {
   }
 };
 
-template <typename T> struct isPodLike;
-template <typename T>
-struct isPodLike<ImmutableList<T>> { static const bool value = true; };
-
 } // end namespace llvm
 
 #endif // LLVM_ADT_IMMUTABLELIST_H

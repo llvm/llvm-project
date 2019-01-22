@@ -11662,12 +11662,12 @@ class SequenceChecker : public EvaluatedExprVisitor<SequenceChecker> {
     class Seq {
       friend class SequenceTree;
 
-      unsigned Index = 0;
+      unsigned Index;
 
       explicit Seq(unsigned N) : Index(N) {}
 
     public:
-      Seq() = default;
+      Seq() : Index(0) {}
     };
 
     SequenceTree() { Values.push_back(Value(0)); }
@@ -11731,19 +11731,19 @@ class SequenceChecker : public EvaluatedExprVisitor<SequenceChecker> {
   };
 
   struct Usage {
-    Expr *Use = nullptr;
+    Expr *Use;
     SequenceTree::Seq Seq;
 
-    Usage() = default;
+    Usage() : Use(nullptr), Seq() {}
   };
 
   struct UsageInfo {
     Usage Uses[UK_Count];
 
     /// Have we issued a diagnostic for this variable already?
-    bool Diagnosed = false;
+    bool Diagnosed;
 
-    UsageInfo() = default;
+    UsageInfo() : Uses(), Diagnosed(false) {}
   };
   using UsageInfoMap = llvm::SmallDenseMap<Object, UsageInfo, 16>;
 

@@ -799,7 +799,7 @@ class DIEUnit {
   const uint16_t Version; /// The Dwarf version number for this unit.
   const uint8_t AddrSize; /// The size in bytes of an address for this unit.
 protected:
-  ~DIEUnit() = default;
+  virtual ~DIEUnit() = default;
 
 public:
   DIEUnit(uint16_t Version, uint8_t AddrSize, dwarf::Tag UnitTag);

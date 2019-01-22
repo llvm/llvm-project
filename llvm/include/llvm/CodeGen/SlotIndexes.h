@@ -301,8 +301,6 @@ class raw_ostream;
     }
   };
 
-  template <> struct isPodLike<SlotIndex> { static const bool value = true; };
-
   inline raw_ostream& operator<<(raw_ostream &os, SlotIndex li) {
     li.print(os);
     return os;

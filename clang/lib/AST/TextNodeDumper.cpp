@@ -255,6 +255,17 @@ void TextNodeDumper::Visit(const Decl *D) {
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
     if (FD->isConstexpr())
       OS << " constexpr";
+
+  if (!isa<FunctionDecl>(*D)) {
+    const auto *MD = dyn_cast<ObjCMethodDecl>(D);
+    if (!MD || !MD->isThisDeclarationADefinition()) {
+      const auto *DC = dyn_cast<DeclContext>(D);
+      if (DC && DC->hasExternalLexicalStorage()) {
+        ColorScope Color(OS, ShowColors, UndeserializedColor);
+        OS << " <undeserialized declarations>";
+      }
+    }
+  }
 }
 
 void TextNodeDumper::Visit(const CXXCtorInitializer *Init) {

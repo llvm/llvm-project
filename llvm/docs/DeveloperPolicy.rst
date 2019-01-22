@@ -851,6 +851,7 @@ holds though)::
    terms of that Grant to the ASF and to recipients of any software distributed
    by the ASF for any Apache software product whatsoever.
 
+.. _legacy:
 
 Legacy License Structure
 ------------------------

@@ -37,12 +37,16 @@ struct Section {
   ArrayRef<uint8_t> Contents;
   std::vector<Relocation> Relocs;
   StringRef Name;
+  ssize_t UniqueId;
+  size_t Index;
 };
 
 struct Symbol {
   object::coff_symbol32 Sym;
   StringRef Name;
-  ArrayRef<uint8_t> AuxData;
+  std::vector<uint8_t> AuxData;
+  ssize_t TargetSectionId;
+  ssize_t AssociativeComdatTargetSectionId = 0;
   size_t UniqueId;
   size_t RawIndex;
   bool Referenced;
@@ -61,7 +65,6 @@ struct Object {
   uint32_t BaseOfData = 0; // pe32plus_header lacks this field.
 
   std::vector<object::data_directory> DataDirectories;
-  std::vector<Section> Sections;
 
   ArrayRef<Symbol> getSymbols() const { return Symbols; }
   // This allows mutating individual Symbols, but not mutating the list
@@ -79,14 +82,35 @@ struct Object {
   // all sections.
   Error markSymbols();
 
+  ArrayRef<Section> getSections() const { return Sections; }
+  // This allows mutating individual Sections, but not mutating the list
+  // of symbols itself.
+  iterator_range<std::vector<Section>::iterator> getMutableSections() {
+    return make_range(Sections.begin(), Sections.end());
+  }
+
+  const Section *findSection(ssize_t UniqueId) const;
+
+  void addSections(ArrayRef<Section> NewSections);
+  void removeSections(function_ref<bool(const Section &)> ToRemove);
+  void truncateSections(function_ref<bool(const Section &)> ToTruncate);
+
 private:
   std::vector<Symbol> Symbols;
   DenseMap<size_t, Symbol *> SymbolMap;
 
   size_t NextSymbolUniqueId = 0;
 
+  std::vector<Section> Sections;
+  DenseMap<ssize_t, Section *> SectionMap;
+
+  ssize_t NextSectionUniqueId = 1; // Allow a UniqueId 0 to mean undefined.
+
   // Update SymbolMap and RawIndex in each Symbol.
   void updateSymbols();
+
+  // Update SectionMap and Index in each Section.
+  void updateSections();
 };
 
 // Copy between coff_symbol16 and coff_symbol32.

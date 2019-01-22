@@ -25,7 +25,7 @@ using namespace object;
 using namespace COFF;
 
 Error COFFWriter::finalizeRelocTargets() {
-  for (Section &Sec : Obj.Sections) {
+  for (Section &Sec : Obj.getMutableSections()) {
     for (Relocation &R : Sec.Relocs) {
       const Symbol *Sym = Obj.findSymbol(R.Target);
       if (Sym == nullptr)
@@ -39,8 +39,48 @@ Error COFFWriter::finalizeRelocTargets() {
   return Error::success();
 }
 
+Error COFFWriter::finalizeSectionNumbers() {
+  for (Symbol &Sym : Obj.getMutableSymbols()) {
+    if (Sym.TargetSectionId <= 0) {
+      // Undefined, or a special kind of symbol. These negative values
+      // are stored in the SectionNumber field which is unsigned.
+      Sym.Sym.SectionNumber = static_cast<uint32_t>(Sym.TargetSectionId);
+    } else {
+      const Section *Sec = Obj.findSection(Sym.TargetSectionId);
+      if (Sec == nullptr)
+        return make_error<StringError>("Symbol " + Sym.Name +
+                                           " points to a removed section",
+                                       object_error::invalid_symbol_index);
+      Sym.Sym.SectionNumber = Sec->Index;
+
+      if (Sym.Sym.NumberOfAuxSymbols == 1 &&
+          Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC) {
+        coff_aux_section_definition *SD =
+            reinterpret_cast<coff_aux_section_definition *>(Sym.AuxData.data());
+        uint32_t SDSectionNumber;
+        if (Sym.AssociativeComdatTargetSectionId == 0) {
+          // Not a comdat associative section; just set the Number field to
+          // the number of the section itself.
+          SDSectionNumber = Sec->Index;
+        } else {
+          Sec = Obj.findSection(Sym.AssociativeComdatTargetSectionId);
+          if (Sec == nullptr)
+            return make_error<StringError>(
+                "Symbol " + Sym.Name + " is associative to a removed section",
+                object_error::invalid_symbol_index);
+          SDSectionNumber = Sec->Index;
+        }
+        // Update the section definition with the new section number.
+        SD->NumberLowPart = static_cast<uint16_t>(SDSectionNumber);
+        SD->NumberHighPart = static_cast<uint16_t>(SDSectionNumber >> 16);
+      }
+    }
+  }
+  return Error::success();
+}
+
 void COFFWriter::layoutSections() {
-  for (auto &S : Obj.Sections) {
+  for (auto &S : Obj.getMutableSections()) {
     if (S.Header.SizeOfRawData > 0)
       S.Header.PointerToRawData = FileSize;
     FileSize += S.Header.SizeOfRawData; // For executables, this is already
@@ -57,7 +97,7 @@ void COFFWriter::layoutSections() {
 }
 
 size_t COFFWriter::finalizeStringTable() {
-  for (auto &S : Obj.Sections)
+  for (const auto &S : Obj.getSections())
     if (S.Name.size() > COFF::NameSize)
       StrTabBuilder.add(S.Name);
 
@@ -67,7 +107,7 @@ size_t COFFWriter::finalizeStringTable() {
 
   StrTabBuilder.finalize();
 
-  for (auto &S : Obj.Sections) {
+  for (auto &S : Obj.getMutableSections()) {
     if (S.Name.size() > COFF::NameSize) {
       snprintf(S.Header.Name, sizeof(S.Header.Name), "/%d",
                (int)StrTabBuilder.getOffset(S.Name));
@@ -97,6 +137,8 @@ std::pair<size_t, size_t> COFFWriter::finalizeSymbolTable() {
 Error COFFWriter::finalize(bool IsBigObj) {
   if (Error E = finalizeRelocTargets())
     return E;
+  if (Error E = finalizeSectionNumbers())
+    return E;
 
   size_t SizeOfHeaders = 0;
   FileAlignment = 1;
@@ -113,10 +155,10 @@ Error COFFWriter::finalize(bool IsBigObj) {
     SizeOfHeaders +=
         PeHeaderSize + sizeof(data_directory) * Obj.DataDirectories.size();
   }
-  Obj.CoffFileHeader.NumberOfSections = Obj.Sections.size();
+  Obj.CoffFileHeader.NumberOfSections = Obj.getSections().size();
   SizeOfHeaders +=
       IsBigObj ? sizeof(coff_bigobj_file_header) : sizeof(coff_file_header);
-  SizeOfHeaders += sizeof(coff_section) * Obj.Sections.size();
+  SizeOfHeaders += sizeof(coff_section) * Obj.getSections().size();
   SizeOfHeaders = alignTo(SizeOfHeaders, FileAlignment);
 
   Obj.CoffFileHeader.SizeOfOptionalHeader =
@@ -131,8 +173,8 @@ Error COFFWriter::finalize(bool IsBigObj) {
     Obj.PeHeader.SizeOfHeaders = SizeOfHeaders;
     Obj.PeHeader.SizeOfInitializedData = SizeOfInitializedData;
 
-    if (!Obj.Sections.empty()) {
-      const Section &S = Obj.Sections.back();
+    if (!Obj.getSections().empty()) {
+      const Section &S = Obj.getSections().back();
       Obj.PeHeader.SizeOfImage =
           alignTo(S.Header.VirtualAddress + S.Header.VirtualSize,
                   Obj.PeHeader.SectionAlignment);
@@ -198,7 +240,7 @@ void COFFWriter::writeHeaders(bool IsBigObj) {
     BigObjHeader.unused4 = 0;
     // The value in Obj.CoffFileHeader.NumberOfSections is truncated, thus
     // get the original one instead.
-    BigObjHeader.NumberOfSections = Obj.Sections.size();
+    BigObjHeader.NumberOfSections = Obj.getSections().size();
     BigObjHeader.PointerToSymbolTable = Obj.CoffFileHeader.PointerToSymbolTable;
     BigObjHeader.NumberOfSymbols = Obj.CoffFileHeader.NumberOfSymbols;
 
@@ -223,14 +265,14 @@ void COFFWriter::writeHeaders(bool IsBigObj) {
       Ptr += sizeof(DD);
     }
   }
-  for (const auto &S : Obj.Sections) {
+  for (const auto &S : Obj.getSections()) {
     memcpy(Ptr, &S.Header, sizeof(S.Header));
     Ptr += sizeof(S.Header);
   }
 }
 
 void COFFWriter::writeSections() {
-  for (const auto &S : Obj.Sections) {
+  for (const auto &S : Obj.getSections()) {
     uint8_t *Ptr = Buf.getBufferStart() + S.Header.PointerToRawData;
     std::copy(S.Contents.begin(), S.Contents.end(), Ptr);
 
@@ -295,7 +337,7 @@ Error COFFWriter::patchDebugDirectory() {
   const data_directory *Dir = &Obj.DataDirectories[DEBUG_DIRECTORY];
   if (Dir->Size <= 0)
     return Error::success();
-  for (const auto &S : Obj.Sections) {
+  for (const auto &S : Obj.getSections()) {
     if (Dir->RelativeVirtualAddress >= S.Header.VirtualAddress &&
         Dir->RelativeVirtualAddress <
             S.Header.VirtualAddress + S.Header.SizeOfRawData) {
@@ -324,7 +366,7 @@ Error COFFWriter::patchDebugDirectory() {
 }
 
 Error COFFWriter::write() {
-  bool IsBigObj = Obj.Sections.size() > MaxNumberOfSections16;
+  bool IsBigObj = Obj.getSections().size() > MaxNumberOfSections16;
   if (IsBigObj && Obj.IsPE)
     return make_error<StringError>("Too many sections for executable",
                                    object_error::parse_failed);

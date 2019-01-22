@@ -667,13 +667,4 @@ private:
 
 } // namespace clang
 
-namespace llvm {
-
-template <typename T> struct isPodLike;
-template <> struct isPodLike<clang::ento::SVal> {
-  static const bool value = true;
-};
-
-} // namespace llvm
-
 #endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SVALS_H

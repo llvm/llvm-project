@@ -1,0 +1,58 @@
+RUN: yaml2obj %p/Inputs/only-keep-sections.yaml > %t.in.exe
+
+RUN: llvm-objcopy --only-keep-debug %t.in.exe %t.out.exe
+RUN: llvm-readobj --sections %t.out.exe | FileCheck %s --check-prefix=SECTIONS
+RUN: llvm-objdump -t %t.out.exe | FileCheck %s --check-prefix=SYMBOLS
+
+Check that all non-debug/buildid sections with IMAGE_SCN_CNT_CODE
+or IMAGE_SCN_CNT_INITIALIZED_DATA are truncated, and no others.
+
+SECTIONS:      Sections [
+SECTIONS-NEXT:  Section {
+SECTIONS-NEXT:   Number: 1
+SECTIONS-NEXT:   Name: .text
+SECTIONS-NEXT:   VirtualSize: 0x4
+SECTIONS-NEXT:   VirtualAddress:
+SECTIONS-NEXT:   RawDataSize: 0
+SECTIONS:       Section {
+SECTIONS-NEXT:   Number: 2
+SECTIONS-NEXT:   Name: .rdata
+SECTIONS-NEXT:   VirtualSize: 0x4
+SECTIONS-NEXT:   VirtualAddress:
+SECTIONS-NEXT:   RawDataSize: 0
+SECTIONS:       Section {
+SECTIONS-NEXT:   Number: 3
+SECTIONS-NEXT:   Name: .buildid
+SECTIONS-NEXT:   VirtualSize: 0x4
+SECTIONS-NEXT:   VirtualAddress:
+SECTIONS-NEXT:   RawDataSize: 512
+SECTIONS:       Section {
+SECTIONS-NEXT:   Number: 4
+SECTIONS-NEXT:   Name: .reloc
+SECTIONS-NEXT:   VirtualSize: 0x4
+SECTIONS-NEXT:   VirtualAddress:
+SECTIONS-NEXT:   RawDataSize: 0
+SECTIONS:       Section {
+SECTIONS-NEXT:   Number: 5
+SECTIONS-NEXT:   Name: .debug_discardable
+SECTIONS-NEXT:   VirtualSize: 0x4
+SECTIONS-NEXT:   VirtualAddress:
+SECTIONS-NEXT:   RawDataSize: 512
+SECTIONS:       Section {
+SECTIONS-NEXT:   Number: 6
+SECTIONS-NEXT:   Name: .debug_undiscardable
+SECTIONS-NEXT:   VirtualSize: 0x4
+SECTIONS-NEXT:   VirtualAddress:
+SECTIONS-NEXT:   RawDataSize: 512
+SECTIONS:       Section {
+SECTIONS-NEXT:   Number: 7
+SECTIONS-NEXT:   Name: .unflagged
+SECTIONS-NEXT:   VirtualSize: 0x4
+SECTIONS-NEXT:   VirtualAddress:
+SECTIONS-NEXT:   RawDataSize: 512
+
+SYMBOLS:      SYMBOL TABLE:
+SYMBOLS-NEXT: main
+SYMBOLS-NEXT: debug_discardable_sym
+SYMBOLS-NEXT: debug_undiscardable_sym
+SYMBOLS-EMPTY:

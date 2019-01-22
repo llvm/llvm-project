@@ -515,6 +515,7 @@ namespace llvm {
       // Masked versions of above. Used for v2f64->v4f32.
       // SRC, PASSTHRU, MASK
       MCVTP2SI, MCVTP2UI, MCVTTP2SI, MCVTTP2UI,
+      MCVTSI2P, MCVTUI2P,
 
       // Save xmm argument registers to the stack, according to %al. An operator
       // is needed so that this can be expanded with control flow.

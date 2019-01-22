@@ -5067,7 +5067,7 @@ For example, in the code below, the call instruction may only target the
     !0 = !{i64 (i64, i64)* @add, i64 (i64, i64)* @sub}
 
 '``callback``' Metadata
-^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
 
 ``callback`` metadata may be attached to a function declaration, or definition.
 (Call sites are excluded only due to the lack of a use case.) For ease of

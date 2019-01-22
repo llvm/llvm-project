@@ -139,13 +139,6 @@ namespace llvm {
     }
   };
 
-  // GlobalDecl isn't *technically* a POD type. However, its copy constructor,
-  // copy assignment operator, and destructor are all trivial.
-  template <>
-  struct isPodLike<clang::GlobalDecl> {
-    static const bool value = true;
-  };
-
 } // namespace llvm
 
 #endif // LLVM_CLANG_AST_GLOBALDECL_H

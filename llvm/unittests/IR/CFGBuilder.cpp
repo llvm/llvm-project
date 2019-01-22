@@ -8,6 +8,7 @@
 
 #include "CFGBuilder.h"
 
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Debug.h"
@@ -265,3 +266,11 @@ TEST(CFGBuilder, Rebuild) {
   EXPECT_TRUE(isa<SwitchInst>(B.getOrAddBlock("c")->getTerminator()));
   EXPECT_TRUE(isa<SwitchInst>(B.getOrAddBlock("d")->getTerminator()));
 }
+
+static_assert(is_trivially_copyable<succ_iterator>::value,
+              "trivially copyable");
+static_assert(is_trivially_copyable<succ_const_iterator>::value,
+              "trivially copyable");
+static_assert(is_trivially_copyable<succ_range>::value, "trivially copyable");
+static_assert(is_trivially_copyable<succ_const_range>::value,
+              "trivially copyable");

@@ -1061,4 +1061,6 @@ TEST(StringRefTest, StringLiteral) {
   EXPECT_EQ(StringRef("Bar"), Strings[1]);
 }
 
+static_assert(is_trivially_copyable<StringRef>::value, "trivially copyable");
+
 } // end anonymous namespace

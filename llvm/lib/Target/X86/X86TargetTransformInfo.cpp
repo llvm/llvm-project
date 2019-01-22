@@ -1650,17 +1650,36 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
-  static const CostTblEntry SSE2CostTbl[] = {
-    { ISD::SETCC,   MVT::v2i64,   8 },
-    { ISD::SETCC,   MVT::v4i32,   1 },
-    { ISD::SETCC,   MVT::v8i16,   1 },
-    { ISD::SETCC,   MVT::v16i8,   1 },
+  static const CostTblEntry AVX512BWCostTbl[] = {
+    { ISD::SETCC,   MVT::v32i16,  1 },
+    { ISD::SETCC,   MVT::v64i8,   1 },
+
+    { ISD::SELECT,  MVT::v32i16,  1 },
+    { ISD::SELECT,  MVT::v64i8,   1 },
   };
 
-  static const CostTblEntry SSE42CostTbl[] = {
-    { ISD::SETCC,   MVT::v2f64,   1 },
-    { ISD::SETCC,   MVT::v4f32,   1 },
-    { ISD::SETCC,   MVT::v2i64,   1 },
+  static const CostTblEntry AVX512CostTbl[] = {
+    { ISD::SETCC,   MVT::v8i64,   1 },
+    { ISD::SETCC,   MVT::v16i32,  1 },
+    { ISD::SETCC,   MVT::v8f64,   1 },
+    { ISD::SETCC,   MVT::v16f32,  1 },
+
+    { ISD::SELECT,  MVT::v8i64,   1 },
+    { ISD::SELECT,  MVT::v16i32,  1 },
+    { ISD::SELECT,  MVT::v8f64,   1 },
+    { ISD::SELECT,  MVT::v16f32,  1 },
+  };
+
+  static const CostTblEntry AVX2CostTbl[] = {
+    { ISD::SETCC,   MVT::v4i64,   1 },
+    { ISD::SETCC,   MVT::v8i32,   1 },
+    { ISD::SETCC,   MVT::v16i16,  1 },
+    { ISD::SETCC,   MVT::v32i8,   1 },
+
+    { ISD::SELECT,  MVT::v4i64,   1 }, // pblendvb
+    { ISD::SELECT,  MVT::v8i32,   1 }, // pblendvb
+    { ISD::SELECT,  MVT::v16i16,  1 }, // pblendvb
+    { ISD::SELECT,  MVT::v32i8,   1 }, // pblendvb
   };
 
   static const CostTblEntry AVX1CostTbl[] = {
@@ -1671,25 +1690,50 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
     { ISD::SETCC,   MVT::v8i32,   4 },
     { ISD::SETCC,   MVT::v16i16,  4 },
     { ISD::SETCC,   MVT::v32i8,   4 },
+
+    { ISD::SELECT,  MVT::v4f64,   1 }, // vblendvpd
+    { ISD::SELECT,  MVT::v8f32,   1 }, // vblendvps
+    { ISD::SELECT,  MVT::v4i64,   1 }, // vblendvpd
+    { ISD::SELECT,  MVT::v8i32,   1 }, // vblendvps
+    { ISD::SELECT,  MVT::v16i16,  3 }, // vandps + vandnps + vorps
+    { ISD::SELECT,  MVT::v32i8,   3 }, // vandps + vandnps + vorps
   };
 
-  static const CostTblEntry AVX2CostTbl[] = {
-    { ISD::SETCC,   MVT::v4i64,   1 },
-    { ISD::SETCC,   MVT::v8i32,   1 },
-    { ISD::SETCC,   MVT::v16i16,  1 },
-    { ISD::SETCC,   MVT::v32i8,   1 },
+  static const CostTblEntry SSE42CostTbl[] = {
+    { ISD::SETCC,   MVT::v2f64,   1 },
+    { ISD::SETCC,   MVT::v4f32,   1 },
+    { ISD::SETCC,   MVT::v2i64,   1 },
   };
 
-  static const CostTblEntry AVX512CostTbl[] = {
-    { ISD::SETCC,   MVT::v8i64,   1 },
-    { ISD::SETCC,   MVT::v16i32,  1 },
-    { ISD::SETCC,   MVT::v8f64,   1 },
-    { ISD::SETCC,   MVT::v16f32,  1 },
+  static const CostTblEntry SSE41CostTbl[] = {
+    { ISD::SELECT,  MVT::v2f64,   1 }, // blendvpd
+    { ISD::SELECT,  MVT::v4f32,   1 }, // blendvps
+    { ISD::SELECT,  MVT::v2i64,   1 }, // pblendvb
+    { ISD::SELECT,  MVT::v4i32,   1 }, // pblendvb
+    { ISD::SELECT,  MVT::v8i16,   1 }, // pblendvb
+    { ISD::SELECT,  MVT::v16i8,   1 }, // pblendvb
   };
 
-  static const CostTblEntry AVX512BWCostTbl[] = {
-    { ISD::SETCC,   MVT::v32i16,  1 },
-    { ISD::SETCC,   MVT::v64i8,   1 },
+  static const CostTblEntry SSE2CostTbl[] = {
+    { ISD::SETCC,   MVT::v2f64,   2 },
+    { ISD::SETCC,   MVT::f64,     1 },
+    { ISD::SETCC,   MVT::v2i64,   8 },
+    { ISD::SETCC,   MVT::v4i32,   1 },
+    { ISD::SETCC,   MVT::v8i16,   1 },
+    { ISD::SETCC,   MVT::v16i8,   1 },
+
+    { ISD::SELECT,  MVT::v2f64,   3 }, // andpd + andnpd + orpd
+    { ISD::SELECT,  MVT::v2i64,   3 }, // pand + pandn + por
+    { ISD::SELECT,  MVT::v4i32,   3 }, // pand + pandn + por
+    { ISD::SELECT,  MVT::v8i16,   3 }, // pand + pandn + por
+    { ISD::SELECT,  MVT::v16i8,   3 }, // pand + pandn + por
+  };
+
+  static const CostTblEntry SSE1CostTbl[] = {
+    { ISD::SETCC,   MVT::v4f32,   2 },
+    { ISD::SETCC,   MVT::f32,     1 },
+
+    { ISD::SELECT,  MVT::v4f32,   3 }, // andps + andnps + orps
   };
 
   if (ST->hasBWI())
@@ -1712,8 +1756,16 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
     if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
       return LT.first * Entry->Cost;
 
+  if (ST->hasSSE41())
+    if (const auto *Entry = CostTableLookup(SSE41CostTbl, ISD, MTy))
+      return LT.first * Entry->Cost;
+
   if (ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
+      return LT.first * Entry->Cost;
+
+  if (ST->hasSSE1())
+    if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
       return LT.first * Entry->Cost;
 
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);

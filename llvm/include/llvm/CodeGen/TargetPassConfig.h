@@ -74,9 +74,6 @@ public:
   }
 };
 
-template <> struct isPodLike<IdentifyingPassPtr> {
-  static const bool value = true;
-};
 
 /// Target-Independent Code Generator Pass Configuration Options.
 ///

@@ -110,7 +110,8 @@ template <typename AddressSpaceView>
 using AllocatorASVT =
     CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>,
                       AllocatorCacheASVT<AddressSpaceView>,
-                      SecondaryAllocatorASVT<AddressSpaceView>>;
+                      SecondaryAllocatorASVT<AddressSpaceView>,
+                      AddressSpaceView>;
 using Allocator = AllocatorASVT<LocalAddressSpaceView>;
 
 AllocatorCache *GetAllocatorCache();
