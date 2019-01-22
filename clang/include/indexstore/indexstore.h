@@ -155,8 +155,8 @@ indexstore_store_set_unit_event_handler(indexstore_t,
 
 INDEXSTORE_PUBLIC void
 indexstore_store_set_unit_event_handler_f(indexstore_t, void *context,
-            INDEXSTORE_NOESCAPE void(*handler)(void *context, indexstore_unit_event_notification_t),
-                                          INDEXSTORE_NOESCAPE void(*finalizer)(void *context));
+            void(*handler)(void *context, indexstore_unit_event_notification_t),
+                                          void(*finalizer)(void *context));
 
 typedef struct {
   /// If true, \c indexstore_store_start_unit_event_listening will block until

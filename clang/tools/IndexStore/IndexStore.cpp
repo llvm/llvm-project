@@ -226,8 +226,8 @@ indexstore_store_set_unit_event_handler(indexstore_t c_store,
 
 void
 indexstore_store_set_unit_event_handler_f(indexstore_t c_store, void *context,
-         INDEXSTORE_NOESCAPE void(*fn_handler)(void *context, indexstore_unit_event_notification_t),
-                                          INDEXSTORE_NOESCAPE void(*finalizer)(void *context)) {
+         void(*fn_handler)(void *context, indexstore_unit_event_notification_t),
+                                          void(*finalizer)(void *context)) {
   IndexDataStore *store = static_cast<IndexDataStore*>(c_store);
   if (!fn_handler) {
     store->setUnitEventHandler(nullptr);
