@@ -26,8 +26,9 @@ namespace {
 class LineIterator {
 public:
   // begin iterator for sections of given type
-  LineIterator(ObjectFile &obj, ConstString section_type)
-      : m_obj(&obj), m_section_type(section_type), m_next_section_idx(0) {
+  LineIterator(ObjectFile &obj, Record::Kind section_type)
+      : m_obj(&obj), m_section_type(toString(section_type)),
+        m_next_section_idx(0) {
     ++*this;
   }
 
@@ -77,7 +78,7 @@ const LineIterator &LineIterator::operator++() {
 }
 
 static llvm::iterator_range<LineIterator> lines(ObjectFile &obj,
-                                                ConstString section_type) {
+                                                Record::Kind section_type) {
   return llvm::make_range(LineIterator(obj, section_type), LineIterator(obj));
 }
 
@@ -180,35 +181,40 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
   }
 
   const SectionList &list = *module.GetSectionList();
-  for (llvm::StringRef line : lines(*m_obj_file, ConstString("PUBLIC"))) {
-    auto record = PublicRecord::parse(line);
-    if (!record) {
-      LLDB_LOG(log, "Failed to parse: {0}. Skipping record.", line);
-      continue;
-    }
-    addr_t file_address = base + record->getAddress();
-
-    SectionSP section_sp = list.FindSectionContainingFileAddress(file_address);
+  llvm::DenseMap<addr_t, Symbol> symbols;
+  auto add_symbol = [&](addr_t address, llvm::Optional<addr_t> size,
+                        llvm::StringRef name) {
+    address += base;
+    SectionSP section_sp = list.FindSectionContainingFileAddress(address);
     if (!section_sp) {
       LLDB_LOG(log,
                "Ignoring symbol {0}, whose address ({1}) is outside of the "
                "object file. Mismatched symbol file?",
-               record->getName(), file_address);
-      continue;
+               name, address);
+      return;
     }
+    symbols.try_emplace(
+        address, /*symID*/ 0, Mangled(name, /*is_mangled*/ false),
+        eSymbolTypeCode, /*is_global*/ true, /*is_debug*/ false,
+        /*is_trampoline*/ false, /*is_artificial*/ false,
+        AddressRange(section_sp, address - section_sp->GetFileAddress(),
+                     size.getValueOr(0)),
+        size.hasValue(), /*contains_linker_annotations*/ false, /*flags*/ 0);
+  };
 
-    symtab.AddSymbol(Symbol(
-        /*symID*/ 0, Mangled(record->getName(), /*is_mangled*/ false),
-        eSymbolTypeCode,
-        /*is_global*/ true, /*is_debug*/ false, /*is_trampoline*/ false,
-        /*is_artificial*/ false,
-        AddressRange(section_sp, file_address - section_sp->GetFileAddress(),
-                     0),
-        /*size_is_valid*/ 0, /*contains_linker_annotations*/ false,
-        /*flags*/ 0));
+  for (llvm::StringRef line : lines(*m_obj_file, Record::Func)) {
+    if (auto record = FuncRecord::parse(line))
+      add_symbol(record->getAddress(), record->getSize(), record->getName());
   }
 
-  // TODO: Process FUNC records as well.
+  for (llvm::StringRef line : lines(*m_obj_file, Record::Public)) {
+    if (auto record = PublicRecord::parse(line))
+      add_symbol(record->getAddress(), llvm::None, record->getName());
+    else
+      LLDB_LOG(log, "Failed to parse: {0}. Skipping record.", line);
+  }
 
+  for (auto &KV : symbols)
+    symtab.AddSymbol(std::move(KV.second));
   symtab.CalculateSymbolSizes();
 }

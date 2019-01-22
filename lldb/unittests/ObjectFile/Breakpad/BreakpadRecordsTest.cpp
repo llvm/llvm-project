@@ -50,12 +50,27 @@ TEST(InfoRecord, parse) {
   EXPECT_EQ(llvm::None, InfoRecord::parse("INFO CODE_ID"));
 }
 
+TEST(FuncRecord, parse) {
+  EXPECT_EQ(FuncRecord(true, 0x47, 0x7, 0x8, "foo"),
+            FuncRecord::parse("FUNC m 47 7 8 foo"));
+  EXPECT_EQ(FuncRecord(false, 0x47, 0x7, 0x8, "foo"),
+            FuncRecord::parse("FUNC 47 7 8 foo"));
+
+  EXPECT_EQ(llvm::None, FuncRecord::parse("PUBLIC 47 7 8 foo"));
+  EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC 47 7 8"));
+  EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC 47 7"));
+  EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC 47"));
+  EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC m"));
+  EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC"));
+}
+
 TEST(PublicRecord, parse) {
   EXPECT_EQ(PublicRecord(true, 0x47, 0x8, "foo"),
             PublicRecord::parse("PUBLIC m 47 8 foo"));
   EXPECT_EQ(PublicRecord(false, 0x47, 0x8, "foo"),
             PublicRecord::parse("PUBLIC 47 8 foo"));
 
+  EXPECT_EQ(llvm::None, PublicRecord::parse("FUNC 47 8 foo"));
   EXPECT_EQ(llvm::None, PublicRecord::parse("PUBLIC 47 8"));
   EXPECT_EQ(llvm::None, PublicRecord::parse("PUBLIC 47"));
   EXPECT_EQ(llvm::None, PublicRecord::parse("PUBLIC m"));
