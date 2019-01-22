@@ -191,32 +191,77 @@ llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
   return OS << "INFO CODE_ID " << R.getID().GetAsString();
 }
 
-llvm::Optional<PublicRecord> PublicRecord::parse(llvm::StringRef Line) {
+static bool parsePublicOrFunc(llvm::StringRef Line, bool &Multiple,
+                              lldb::addr_t &Address, lldb::addr_t *Size,
+                              lldb::addr_t &ParamSize, llvm::StringRef &Name) {
   // PUBLIC [m] address param_size name
+  // or
+  // FUNC [m] address size param_size name
+
+  Token Tok = Size ? Token::Func : Token::Public;
+
   llvm::StringRef Str;
   std::tie(Str, Line) = getToken(Line);
-  if (toToken(Str) != Token::Public)
-    return llvm::None;
+  if (toToken(Str) != Tok)
+    return false;
 
   std::tie(Str, Line) = getToken(Line);
-  bool Multiple = Str == "m";
+  Multiple = Str == "m";
 
   if (Multiple)
     std::tie(Str, Line) = getToken(Line);
-  lldb::addr_t Address;
   if (!to_integer(Str, Address, 16))
-    return llvm::None;
+    return false;
+
+  if (Tok == Token::Func) {
+    std::tie(Str, Line) = getToken(Line);
+    if (!to_integer(Str, *Size, 16))
+      return false;
+  }
 
   std::tie(Str, Line) = getToken(Line);
-  lldb::addr_t ParamSize;
   if (!to_integer(Str, ParamSize, 16))
-    return llvm::None;
+    return false;
 
-  llvm::StringRef Name = Line.trim();
+  Name = Line.trim();
   if (Name.empty())
-    return llvm::None;
+    return false;
 
-  return PublicRecord(Multiple, Address, ParamSize, Name);
+  return true;
+}
+
+llvm::Optional<FuncRecord> FuncRecord::parse(llvm::StringRef Line) {
+  bool Multiple;
+  lldb::addr_t Address, Size, ParamSize;
+  llvm::StringRef Name;
+
+  if (parsePublicOrFunc(Line, Multiple, Address, &Size, ParamSize, Name))
+    return FuncRecord(Multiple, Address, Size, ParamSize, Name);
+
+  return llvm::None;
+}
+
+bool breakpad::operator==(const FuncRecord &L, const FuncRecord &R) {
+  return L.getMultiple() == R.getMultiple() &&
+         L.getAddress() == R.getAddress() && L.getSize() == R.getSize() &&
+         L.getParamSize() == R.getParamSize() && L.getName() == R.getName();
+}
+llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
+                                        const FuncRecord &R) {
+  return OS << llvm::formatv("FUNC {0}{1:x-} {2:x-} {3:x-} {4}",
+                             R.getMultiple() ? "m " : "", R.getAddress(),
+                             R.getSize(), R.getParamSize(), R.getName());
+}
+
+llvm::Optional<PublicRecord> PublicRecord::parse(llvm::StringRef Line) {
+  bool Multiple;
+  lldb::addr_t Address, ParamSize;
+  llvm::StringRef Name;
+
+  if (parsePublicOrFunc(Line, Multiple, Address, nullptr, ParamSize, Name))
+    return PublicRecord(Multiple, Address, ParamSize, Name);
+
+  return llvm::None;
 }
 
 bool breakpad::operator==(const PublicRecord &L, const PublicRecord &R) {

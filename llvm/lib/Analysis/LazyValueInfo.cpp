@@ -823,7 +823,9 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   if (!GuardDecl || GuardDecl->use_empty())
     return;
 
-  for (Instruction &I : make_range(BBI->getIterator().getReverse(),
+  if (BBI->getIterator() == BBI->getParent()->begin())
+    return;
+  for (Instruction &I : make_range(std::next(BBI->getIterator().getReverse()),
                                    BBI->getParent()->rend())) {
     Value *Cond = nullptr;
     if (match(&I, m_Intrinsic<Intrinsic::experimental_guard>(m_Value(Cond))))

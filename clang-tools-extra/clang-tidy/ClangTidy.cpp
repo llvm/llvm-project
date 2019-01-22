@@ -528,24 +528,8 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
         return AdjustedArgs;
       };
 
-  // Remove plugins arguments.
-  ArgumentsAdjuster PluginArgumentsRemover =
-      [](const CommandLineArguments &Args, StringRef Filename) {
-        CommandLineArguments AdjustedArgs;
-        for (size_t I = 0, E = Args.size(); I < E; ++I) {
-          if (I + 4 < Args.size() && Args[I] == "-Xclang" &&
-              (Args[I + 1] == "-load" || Args[I + 1] == "-add-plugin" ||
-               StringRef(Args[I + 1]).startswith("-plugin-arg-")) &&
-              Args[I + 2] == "-Xclang") {
-            I += 3;
-          } else
-            AdjustedArgs.push_back(Args[I]);
-        }
-        return AdjustedArgs;
-      };
-
   Tool.appendArgumentsAdjuster(PerFileExtraArgumentsInserter);
-  Tool.appendArgumentsAdjuster(PluginArgumentsRemover);
+  Tool.appendArgumentsAdjuster(getStripPluginsAdjuster());
   Context.setEnableProfiling(EnableCheckProfile);
   Context.setProfileStoragePrefix(StoreCheckProfile);
 

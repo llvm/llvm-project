@@ -149,6 +149,7 @@ public:
   void printDynamicRelocations() override;
   void printSymbols() override;
   void printDynamicSymbols() override;
+  void printHashSymbols() override;
   void printUnwindInfo() override;
 
   void printDynamicTable() override;
@@ -330,8 +331,9 @@ public:
   virtual void printSectionHeaders(const ELFFile<ELFT> *Obj) = 0;
   virtual void printSymbols(const ELFFile<ELFT> *Obj) = 0;
   virtual void printDynamicSymbols(const ELFFile<ELFT> *Obj) = 0;
+  virtual void printHashSymbols(const ELFFile<ELFT> *Obj) {}
   virtual void printDynamicRelocations(const ELFFile<ELFT> *Obj) = 0;
-  virtual void printSymtabMessage(const ELFFile<ELFT> *obj, StringRef Name,
+  virtual void printSymtabMessage(const ELFFile<ELFT> *Obj, StringRef Name,
                                   size_t Offset) {}
   virtual void printSymbol(const ELFFile<ELFT> *Obj, const Elf_Sym *Symbol,
                            const Elf_Sym *FirstSym, StringRef StrTable,
@@ -365,6 +367,7 @@ public:
   void printSectionHeaders(const ELFO *Obj) override;
   void printSymbols(const ELFO *Obj) override;
   void printDynamicSymbols(const ELFO *Obj) override;
+  void printHashSymbols(const ELFO *Obj) override;
   void printDynamicRelocations(const ELFO *Obj) override;
   void printSymtabMessage(const ELFO *Obj, StringRef Name,
                           size_t Offset) override;
@@ -1627,6 +1630,11 @@ void ELFDumper<ELFT>::printSymbols() {
 template<class ELFT>
 void ELFDumper<ELFT>::printDynamicSymbols() {
   ELFDumperStyle->printDynamicSymbols(ObjF->getELFFile());
+}
+
+template<class ELFT>
+void ELFDumper<ELFT>::printHashSymbols() {
+  ELFDumperStyle->printHashSymbols(ObjF->getELFFile());
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printHashHistogram() {
@@ -3176,19 +3184,18 @@ template <class ELFT> void GNUStyle<ELFT>::printSymbols(const ELFO *Obj) {
 
 template <class ELFT>
 void GNUStyle<ELFT>::printDynamicSymbols(const ELFO *Obj) {
+  this->dumper()->printSymbolsHelper(true);
+}
+
+template <class ELFT> void GNUStyle<ELFT>::printHashSymbols(const ELFO *Obj) {
   if (this->dumper()->getDynamicStringTable().empty())
     return;
   auto StringTable = this->dumper()->getDynamicStringTable();
   auto DynSyms = this->dumper()->dynamic_symbols();
-  auto GnuHash = this->dumper()->getGnuHashTable();
   auto SysVHash = this->dumper()->getHashTable();
 
-  // If no hash or .gnu.hash found, try using symbol table
-  if (GnuHash == nullptr && SysVHash == nullptr)
-    this->dumper()->printSymbolsHelper(true);
-
   // Try printing .hash
-  if (this->dumper()->getHashTable()) {
+  if (SysVHash) {
     OS << "\n Symbol table of .hash for image:\n";
     if (ELFT::Is64Bits)
       OS << "  Num Buc:    Value          Size   Type   Bind Vis      Ndx Name";
@@ -3212,6 +3219,7 @@ void GNUStyle<ELFT>::printDynamicSymbols(const ELFO *Obj) {
   }
 
   // Try printing .gnu.hash
+  auto GnuHash = this->dumper()->getGnuHashTable();
   if (GnuHash) {
     OS << "\n Symbol table of .gnu.hash for image:\n";
     if (ELFT::Is64Bits)

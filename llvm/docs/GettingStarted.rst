@@ -220,15 +220,16 @@ Host C++ Toolchain, both Compiler and Standard Library
 ------------------------------------------------------
 
 LLVM is very demanding of the host C++ compiler, and as such tends to expose
-bugs in the compiler. We are also planning to follow improvements and
-developments in the C++ language and library reasonably closely. As such, we
-require a modern host C++ toolchain, both compiler and standard library, in
-order to build LLVM.
+bugs in the compiler. We also attempt to follow improvements and developments in
+the C++ language and library reasonably closely. As such, we require a modern
+host C++ toolchain, both compiler and standard library, in order to build LLVM.
 
-For the most popular host toolchains we check for specific minimum versions in
-our build systems:
+LLVM is written using the subset of C++ documented in :doc:`coding
+standards<CodingStandards>`. To enforce this language version, we check the most
+popular host toolchains for specific minimum versions in our build systems:
 
 * Clang 3.1
+* Apple Clang 3.1
 * GCC 4.8
 * Visual Studio 2015 (Update 3)
 
@@ -336,7 +337,7 @@ If you fail to set rpath, most LLVM binaries will fail on startup with a message
 from the loader similar to ``libstdc++.so.6: version `GLIBCXX_3.4.20' not
 found``. This means you need to tweak the -rpath linker flag.
 
-When you build Clang, you will need to give *it* access to modern C++11
+When you build Clang, you will need to give *it* access to modern C++
 standard library in order to use it as your new host in part of a bootstrap.
 There are two easy ways to do this, either build (and install) libc++ along
 with Clang and then use it with the ``-stdlib=libc++`` compile and link flag,

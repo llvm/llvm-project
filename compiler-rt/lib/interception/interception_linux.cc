@@ -18,16 +18,27 @@
 
 #include <dlfcn.h>   // for dlsym() and dlvsym()
 
+namespace __interception {
+
 #if SANITIZER_NETBSD
-#include "sanitizer_common/sanitizer_libc.h"
+static int StrCmp(const char *s1, const char *s2) {
+  while (true) {
+    if (*s1 != *s2)
+      return false;
+    if (*s1 == 0)
+      return true;
+    s1++;
+    s2++;
+  }
+}
 #endif
 
-namespace __interception {
 bool GetRealFunctionAddress(const char *func_name, uptr *func_addr,
     uptr real, uptr wrapper) {
 #if SANITIZER_NETBSD
-  // XXX: Find a better way to handle renames
-  if (internal_strcmp(func_name, "sigaction") == 0) func_name = "__sigaction14";
+  // FIXME: Find a better way to handle renames
+  if (StrCmp(func_name, "sigaction"))
+    func_name = "__sigaction14";
 #endif
   *func_addr = (uptr)dlsym(RTLD_NEXT, func_name);
   if (!*func_addr) {

@@ -1108,4 +1108,23 @@ TEST(ExprMutationAnalyzerTest, UniquePtr) {
   EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x->mf()"));
 }
 
+TEST(ExprMutationAnalyzerTest, ReproduceFailureMinimal) {
+  const std::string Reproducer =
+      "namespace std {"
+      "template <class T> T forward(T & A) { return static_cast<T&&>(A); }"
+      "template <class T> struct __bind {"
+      "  T f;"
+      "  template <class V> __bind(T v, V &&) : f(forward(v)) {}"
+      "};"
+      "}"
+      "void f() {"
+      "  int x = 42;"
+      "  auto Lambda = [] {};"
+      "  std::__bind<decltype(Lambda)>(Lambda, x);"
+      "}";
+  auto AST11 = buildASTFromCodeWithArgs(Reproducer, {"-std=c++11"});
+  auto Results11 =
+      match(withEnclosingCompound(declRefTo("x")), AST11->getASTContext());
+  EXPECT_FALSE(isMutated(Results11, AST11.get()));
+}
 } // namespace clang

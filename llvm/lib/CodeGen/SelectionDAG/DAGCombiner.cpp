@@ -16213,23 +16213,29 @@ static SDValue reduceBuildVecToShuffleWithZero(SDNode *BV, SelectionDAG &DAG) {
   // The build vector contains some number of undef elements and exactly
   // one other element. That other element must be a zero-extended scalar
   // extracted from a vector at a constant index to turn this into a shuffle.
+  // Also, require that the build vector does not implicitly truncate/extend
+  // its elements.
   // TODO: This could be enhanced to allow ANY_EXTEND as well as ZERO_EXTEND.
+  EVT VT = BV->getValueType(0);
   SDValue Zext = BV->getOperand(ZextElt);
   if (Zext.getOpcode() != ISD::ZERO_EXTEND || !Zext.hasOneUse() ||
       Zext.getOperand(0).getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-      !isa<ConstantSDNode>(Zext.getOperand(0).getOperand(1)))
+      !isa<ConstantSDNode>(Zext.getOperand(0).getOperand(1)) ||
+      Zext.getValueSizeInBits() != VT.getScalarSizeInBits())
     return SDValue();
 
-  // The zero-extend must be a multiple of the source size.
+  // The zero-extend must be a multiple of the source size, and we must be
+  // building a vector of the same size as the source of the extract element.
   SDValue Extract = Zext.getOperand(0);
   unsigned DestSize = Zext.getValueSizeInBits();
   unsigned SrcSize = Extract.getValueSizeInBits();
-  if (DestSize % SrcSize != 0)
+  if (DestSize % SrcSize != 0 ||
+      Extract.getOperand(0).getValueSizeInBits() != VT.getSizeInBits())
     return SDValue();
 
   // Create a shuffle mask that will combine the extracted element with zeros
   // and undefs.
-  int ZextRatio =  DestSize / SrcSize;
+  int ZextRatio = DestSize / SrcSize;
   int NumMaskElts = NumBVOps * ZextRatio;
   SmallVector<int, 32> ShufMask(NumMaskElts, -1);
   for (int i = 0; i != NumMaskElts; ++i) {
@@ -16259,7 +16265,7 @@ static SDValue reduceBuildVecToShuffleWithZero(SDNode *BV, SelectionDAG &DAG) {
   SDValue ZeroVec = DAG.getConstant(0, DL, VecVT);
   SDValue Shuf = DAG.getVectorShuffle(VecVT, DL, Extract.getOperand(0), ZeroVec,
                                       ShufMask);
-  return DAG.getBitcast(BV->getValueType(0), Shuf);
+  return DAG.getBitcast(VT, Shuf);
 }
 
 // Check to see if this is a BUILD_VECTOR of a bunch of EXTRACT_VECTOR_ELT

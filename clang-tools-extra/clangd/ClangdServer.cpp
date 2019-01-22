@@ -37,11 +37,6 @@ namespace clang {
 namespace clangd {
 namespace {
 
-std::string getStandardResourceDir() {
-  static int Dummy; // Just an address in this process.
-  return CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
-}
-
 class RefactoringResultCollector final
     : public tooling::RefactoringResultConsumer {
 public:
@@ -107,8 +102,6 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            DiagnosticsConsumer &DiagConsumer,
                            const Options &Opts)
     : CDB(CDB), FSProvider(FSProvider),
-      ResourceDir(Opts.ResourceDir ? *Opts.ResourceDir
-                                   : getStandardResourceDir()),
       DynamicIdx(Opts.BuildDynamicSymbolIndex
                      ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex)
                      : nullptr),
@@ -136,7 +129,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
     AddIndex(Opts.StaticIndex);
   if (Opts.BackgroundIndex) {
     BackgroundIdx = llvm::make_unique<BackgroundIndex>(
-        Context::current().clone(), ResourceDir, FSProvider, CDB,
+        Context::current().clone(), FSProvider, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(),
         Opts.BackgroundIndexRebuildPeriodMs);
     AddIndex(BackgroundIdx.get());
@@ -461,10 +454,6 @@ tooling::CompileCommand ClangdServer::getCompileCommand(PathRef File) {
   llvm::Optional<tooling::CompileCommand> C = CDB.getCompileCommand(File);
   if (!C) // FIXME: Suppress diagnostics? Let the user know?
     C = CDB.getFallbackCommand(File);
-
-  // Inject the resource dir.
-  // FIXME: Don't overwrite it if it's already there.
-  C->CommandLine.push_back("-resource-dir=" + ResourceDir);
   return std::move(*C);
 }
 

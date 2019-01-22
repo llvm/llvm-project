@@ -263,14 +263,13 @@ defm : X86WriteRes<WriteSHDmrcl,[JLAGU, JALU01], 9, [1, 22], 8>;
 // Loads, stores, and moves, not folded with other operations.
 ////////////////////////////////////////////////////////////////////////////////
 
-def : WriteRes<WriteLoad,    [JLAGU]> { let Latency = 5; }
+def : WriteRes<WriteLoad,    [JLAGU]> { let Latency = 3; }
 def : WriteRes<WriteStore,   [JSAGU]>;
 def : WriteRes<WriteStoreNT, [JSAGU]>;
 def : WriteRes<WriteMove,    [JALU01]>;
 
 // Load/store MXCSR.
-// FIXME: These are copy and pasted from WriteLoad/Store.
-def : WriteRes<WriteLDMXCSR, [JLAGU]> { let Latency = 5; }
+def : WriteRes<WriteLDMXCSR, [JLAGU]> { let Latency = 3; }
 def : WriteRes<WriteSTMXCSR, [JSAGU]>;
 
 // Treat misc copies as a move.
@@ -578,7 +577,7 @@ defm : JWriteResFpuPair<WriteAESDecEnc,   [JFPU01, JVALU, JFPU0, JVIMUL], 3, [1,
 
 defm : JWriteResFpuPair<WriteFHAdd,         [JFPU0, JFPA], 4>;            // +1cy latency.
 defm : JWriteResYMMPair<WriteFHAddY,        [JFPU0, JFPA], 4, [2,2], 2>;  // +1cy latency.
-defm : JWriteResFpuPair<WritePHAdd,         [JFPU01, JVALU], 2>;          // +1cy latency.
+defm : JWriteResFpuPair<WritePHAdd,         [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WritePHAddX,        [JFPU01, JVALU], 2>;          // +1cy latency.
 defm : X86WriteResPairUnsupported<WritePHAddY>;
 

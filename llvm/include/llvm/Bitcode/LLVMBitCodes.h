@@ -406,7 +406,9 @@ enum RMWOperations {
   RMW_MAX = 7,
   RMW_MIN = 8,
   RMW_UMAX = 9,
-  RMW_UMIN = 10
+  RMW_UMIN = 10,
+  RMW_FADD = 11,
+  RMW_FSUB = 12
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
