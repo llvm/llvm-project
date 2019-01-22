@@ -238,9 +238,6 @@ class TargetRegisterInfo;
     void dump(const TargetRegisterInfo *TRI = nullptr) const;
   };
 
-  template <>
-  struct isPodLike<SDep> { static const bool value = true; };
-
   /// Scheduling unit. This is a node in the scheduling DAG.
   class SUnit {
   private:

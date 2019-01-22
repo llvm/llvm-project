@@ -80,11 +80,6 @@ template<> struct DenseMapInfo<clang::BaseSubobject> {
   }
 };
 
-// It's OK to treat BaseSubobject as a POD type.
-template <> struct isPodLike<clang::BaseSubobject> {
-  static const bool value = true;
-};
-
 } // namespace llvm
 
 #endif // LLVM_CLANG_AST_BASESUBOBJECT_H

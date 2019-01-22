@@ -24,35 +24,6 @@
 
 namespace llvm {
 
-/// isPodLike - This is a type trait that is used to determine whether a given
-/// type can be copied around with memcpy instead of running ctors etc.
-template <typename T>
-struct isPodLike {
-  // std::is_trivially_copyable is available in libc++ with clang, libstdc++
-  // that comes with GCC 5.  MSVC 2015 and newer also have
-  // std::is_trivially_copyable.
-#if (__has_feature(is_trivially_copyable) && defined(_LIBCPP_VERSION)) ||      \
-    (defined(__GNUC__) && __GNUC__ >= 5) || defined(_MSC_VER)
-  // If the compiler supports the is_trivially_copyable trait use it, as it
-  // matches the definition of isPodLike closely.
-  static const bool value = std::is_trivially_copyable<T>::value;
-#elif __has_feature(is_trivially_copyable)
-  // Use the internal name if the compiler supports is_trivially_copyable but we
-  // don't know if the standard library does. This is the case for clang in
-  // conjunction with libstdc++ from GCC 4.x.
-  static const bool value = __is_trivially_copyable(T);
-#else
-  // If we don't know anything else, we can (at least) assume that all non-class
-  // types are PODs.
-  static const bool value = !std::is_class<T>::value;
-#endif
-};
-
-// std::pair's are pod-like if their elements are.
-template<typename T, typename U>
-struct isPodLike<std::pair<T, U>> {
-  static const bool value = isPodLike<T>::value && isPodLike<U>::value;
-};
 
 /// Metafunction that determines whether the given type is either an
 /// integral type or an enumeration type, including enum classes.
@@ -119,6 +90,11 @@ template<typename T> union move_construction_triviality_helper {
     move_construction_triviality_helper(move_construction_triviality_helper&&) = default;
     ~move_construction_triviality_helper() = default;
 };
+
+template<class T>
+union trivial_helper {
+    T t;
+};
 } // end namespace detail
 
 /// An implementation of `std::is_trivially_copy_constructible` since we have
@@ -142,6 +118,56 @@ template <typename T>
 struct is_trivially_move_constructible<T &> : std::true_type {};
 template <typename T>
 struct is_trivially_move_constructible<T &&> : std::true_type {};
+
+// An implementation of `std::is_trivially_copyable` since STL version
+// is not equally supported by all compilers, especially GCC 4.9.
+// Uniform implementation of this trait is important for ABI compatibility
+// as it has an impact on SmallVector's ABI (among others).
+template <typename T>
+class is_trivially_copyable {
+
+  // copy constructors
+  static constexpr bool has_trivial_copy_constructor =
+      std::is_copy_constructible<detail::trivial_helper<T>>::value;
+  static constexpr bool has_deleted_copy_constructor =
+      !std::is_copy_constructible<T>::value;
+
+  // move constructors
+  static constexpr bool has_trivial_move_constructor =
+      std::is_move_constructible<detail::trivial_helper<T>>::value;
+  static constexpr bool has_deleted_move_constructor =
+      !std::is_move_constructible<T>::value;
+
+  // copy assign
+  static constexpr bool has_trivial_copy_assign =
+      std::is_copy_assignable<detail::trivial_helper<T>>::value;
+  static constexpr bool has_deleted_copy_assign =
+      !std::is_copy_assignable<T>::value;
+
+  // move assign
+  static constexpr bool has_trivial_move_assign =
+      std::is_move_assignable<detail::trivial_helper<T>>::value;
+  static constexpr bool has_deleted_move_assign =
+      !std::is_move_assignable<T>::value;
+
+  // destructor
+  static constexpr bool has_trivial_destructor =
+      std::is_destructible<detail::trivial_helper<T>>::value;
+
+  public:
+
+  static constexpr bool value =
+      has_trivial_destructor &&
+      (has_deleted_move_assign || has_trivial_move_assign) &&
+      (has_deleted_move_constructor || has_trivial_move_constructor) &&
+      (has_deleted_copy_assign || has_trivial_copy_assign) &&
+      (has_deleted_copy_constructor || has_trivial_copy_constructor);
+
+#if (__has_feature(is_trivially_copyable) || (defined(__GNUC__) && __GNUC__ >= 5))
+  static_assert(value == std::is_trivially_copyable<T>::value, "inconsistent behavior between llvm:: and std:: implementation of is_trivially_copyable");
+#endif
+};
+
 
 } // end namespace llvm
 

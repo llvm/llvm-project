@@ -870,8 +870,7 @@ const wchar_t &CRWCP = WCP;
 // CHECK-NEXT: |-VarDecl {{.*}} CRC16_24 'const char16_t &'
 // CHECK-NEXT: |-VarDecl {{.*}} CRC32_42 'const char32_t &'
 // CHECK-NEXT: |-VarDecl {{.*}} CRWC1 'const wchar_t &'
-// CHECK-NEXT: |-VarDecl {{.*}} CRWCP 'const wchar_t &'
-// CHECK-NEXT: `-<undeserialized declarations>
+// CHECK-NEXT: `-VarDecl {{.*}} CRWCP 'const wchar_t &'
 
 // CHECK: (lldb) quit
 

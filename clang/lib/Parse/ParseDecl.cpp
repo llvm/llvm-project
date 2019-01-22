@@ -6177,6 +6177,20 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       Qualifiers Q = Qualifiers::fromCVRUMask(DS.getTypeQualifiers());
       if (D.getDeclSpec().isConstexprSpecified() && !getLangOpts().CPlusPlus14)
         Q.addConst();
+      // FIXME: Collect C++ address spaces.
+      // If there are multiple different address spaces, the source is invalid.
+      // Carry on using the first addr space for the qualifiers of 'this'.
+      // The diagnostic will be given later while creating the function
+      // prototype for the method.
+      if (getLangOpts().OpenCLCPlusPlus) {
+        for (ParsedAttr &attr : DS.getAttributes()) {
+          LangAS ASIdx = attr.asOpenCLLangAS();
+          if (ASIdx != LangAS::Default) {
+            Q.addAddressSpace(ASIdx);
+            break;
+          }
+        }
+      }
 
       Sema::CXXThisScopeRAII ThisScope(
           Actions, dyn_cast<CXXRecordDecl>(Actions.CurContext), Q,

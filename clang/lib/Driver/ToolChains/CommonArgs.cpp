@@ -757,9 +757,9 @@ bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args, ArgStringLis
 
   if (TC.getXRayArgs().needsXRayRt()) {
     CmdArgs.push_back("-whole-archive");
-    CmdArgs.push_back(TC.getCompilerRTArgString(Args, "xray", false));
+    CmdArgs.push_back(TC.getCompilerRTArgString(Args, "xray"));
     for (const auto &Mode : TC.getXRayArgs().modeList())
-      CmdArgs.push_back(TC.getCompilerRTArgString(Args, Mode, false));
+      CmdArgs.push_back(TC.getCompilerRTArgString(Args, Mode));
     CmdArgs.push_back("-no-whole-archive");
     return true;
   }

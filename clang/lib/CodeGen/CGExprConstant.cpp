@@ -1788,17 +1788,7 @@ ConstantLValueEmitter::VisitObjCStringLiteral(const ObjCStringLiteral *E) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *E) {
-  if (auto CGF = Emitter.CGF) {
-    LValue Res = CGF->EmitPredefinedLValue(E);
-    return cast<ConstantAddress>(Res.getAddress());
-  }
-
-  auto kind = E->getIdentKind();
-  if (kind == PredefinedExpr::PrettyFunction) {
-    return CGM.GetAddrOfConstantCString("top level", ".tmp");
-  }
-
-  return CGM.GetAddrOfConstantCString("", ".tmp");
+  return CGM.GetAddrOfConstantStringFromLiteral(E->getFunctionName());
 }
 
 ConstantLValue

@@ -131,10 +131,6 @@ public:
   }
 };
 
-template <> struct isPodLike<PressureChange> {
-   static const bool value = true;
-};
-
 /// List of PressureChanges in order of increasing, unique PSetID.
 ///
 /// Use a small fixed number, because we can fit more PressureChanges in an

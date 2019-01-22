@@ -234,7 +234,7 @@ mechanisms:
    file.
 
 ==============================================================================
-Legacy LLVM License (ttps://llvm.org/docs/DeveloperPolicy.html#legacy):
+Legacy LLVM License (https://llvm.org/docs/DeveloperPolicy.html#legacy):
 ==============================================================================
 
 The compiler_rt library is dual licensed under both the University of Illinois

@@ -10,6 +10,11 @@
 //
 // RUN: cp clang-check %t/mock-libcxx/bin/
 // RUN: cp %s %t/test.cpp
-// RUN: "%t/mock-libcxx/bin/clang-check" -p %t %t/test.cpp -- -stdlib=libc++ -target x86_64-apple-darwin
+// RUN: "%t/mock-libcxx/bin/clang-check" -p %t %t/test.cpp -- \
+// RUN:     -stdlib=libc++ -target x86_64-apple-darwin \
+// RUN:     -ccc-install-dir %t/mock-libcxx/bin
+//
+// ^ -ccc-install-dir passed to unbreak tests on *BSD where
+//   getMainExecutable() relies on real argv[0] being passed
 #include <mock_vector>
 vector v;

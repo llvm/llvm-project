@@ -2243,13 +2243,13 @@ define void @test_ldmxcsr(i32 %a0) {
 ; BTVER2-SSE-LABEL: test_ldmxcsr:
 ; BTVER2-SSE:       # %bb.0:
 ; BTVER2-SSE-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
-; BTVER2-SSE-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp) # sched: [5:1.00]
+; BTVER2-SSE-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp) # sched: [3:1.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_ldmxcsr:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
-; BTVER2-NEXT:    vldmxcsr -{{[0-9]+}}(%rsp) # sched: [5:1.00]
+; BTVER2-NEXT:    vldmxcsr -{{[0-9]+}}(%rsp) # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_ldmxcsr:
@@ -4562,20 +4562,20 @@ define void @test_prefetch(i8* %a0) optsize {
 ; BTVER2-SSE-LABEL: test_prefetch:
 ; BTVER2-SSE:       # %bb.0:
 ; BTVER2-SSE-NEXT:    #APP
-; BTVER2-SSE-NEXT:    prefetchnta (%rdi) # sched: [5:1.00]
-; BTVER2-SSE-NEXT:    prefetcht0 (%rdi) # sched: [5:1.00]
-; BTVER2-SSE-NEXT:    prefetcht1 (%rdi) # sched: [5:1.00]
-; BTVER2-SSE-NEXT:    prefetcht2 (%rdi) # sched: [5:1.00]
+; BTVER2-SSE-NEXT:    prefetchnta (%rdi) # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    prefetcht0 (%rdi) # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    prefetcht1 (%rdi) # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    prefetcht2 (%rdi) # sched: [3:1.00]
 ; BTVER2-SSE-NEXT:    #NO_APP
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_prefetch:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    prefetchnta (%rdi) # sched: [5:1.00]
-; BTVER2-NEXT:    prefetcht0 (%rdi) # sched: [5:1.00]
-; BTVER2-NEXT:    prefetcht1 (%rdi) # sched: [5:1.00]
-; BTVER2-NEXT:    prefetcht2 (%rdi) # sched: [5:1.00]
+; BTVER2-NEXT:    prefetchnta (%rdi) # sched: [3:1.00]
+; BTVER2-NEXT:    prefetcht0 (%rdi) # sched: [3:1.00]
+; BTVER2-NEXT:    prefetcht1 (%rdi) # sched: [3:1.00]
+; BTVER2-NEXT:    prefetcht2 (%rdi) # sched: [3:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -5860,13 +5860,13 @@ define i32 @test_stmxcsr() {
 ; BTVER2-SSE-LABEL: test_stmxcsr:
 ; BTVER2-SSE:       # %bb.0:
 ; BTVER2-SSE-NEXT:    stmxcsr -{{[0-9]+}}(%rsp) # sched: [1:1.00]
-; BTVER2-SSE-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # sched: [5:1.00]
+; BTVER2-SSE-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # sched: [3:1.00]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_stmxcsr:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vstmxcsr -{{[0-9]+}}(%rsp) # sched: [1:1.00]
-; BTVER2-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_stmxcsr:

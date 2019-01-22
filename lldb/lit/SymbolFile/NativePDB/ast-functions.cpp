@@ -23,7 +23,6 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} argc 'int'
 // CHECK-NEXT: | `-ParmVarDecl {{.*}} argv 'char **'
 // CHECK-NEXT: |-FunctionDecl {{.*}} static_fn 'int ()' static
-// CHECK-NEXT: |-FunctionDecl {{.*}} varargs_fn 'int (int, int, ...)'
-// CHECK-NEXT: | |-ParmVarDecl {{.*}} x 'int'
-// CHECK-NEXT: | `-ParmVarDecl {{.*}} y 'int'
-// CHECK-NEXT: `-<undeserialized declarations>
+// CHECK-NEXT: `-FunctionDecl {{.*}} varargs_fn 'int (int, int, ...)'
+// CHECK-NEXT:   |-ParmVarDecl {{.*}} x 'int'
+// CHECK-NEXT:   `-ParmVarDecl {{.*}} y 'int'

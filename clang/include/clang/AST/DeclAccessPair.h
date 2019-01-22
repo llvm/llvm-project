@@ -60,12 +60,4 @@ public:
 };
 }
 
-// Take a moment to tell SmallVector that DeclAccessPair is POD.
-namespace llvm {
-template<typename> struct isPodLike;
-template<> struct isPodLike<clang::DeclAccessPair> {
-   static const bool value = true;
-};
-}
-
 #endif

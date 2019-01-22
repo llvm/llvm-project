@@ -153,8 +153,6 @@ public:
   bool evaluateAsConstantImm(int64_t &Imm) const;
 };
 
-template <> struct isPodLike<MCOperand> { static const bool value = true; };
-
 /// Instances of this class represent a single low-level machine
 /// instruction.
 class MCInst {

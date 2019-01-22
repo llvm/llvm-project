@@ -94,9 +94,6 @@ namespace llvm {
     enum { NumLowBitsAvailable = clang::TypeAlignmentInBits };
   };
 
-  template <>
-  struct isPodLike<clang::QualType> { static const bool value = true; };
-
 } // namespace llvm
 
 namespace clang {
@@ -1985,7 +1982,7 @@ public:
   bool isObjCQualifiedClassType() const;        // Class<foo>
   bool isObjCObjectOrInterfaceType() const;
   bool isObjCIdType() const;                    // id
-
+  bool isDecltypeType() const;
   /// Was this type written with the special inert-in-ARC __unsafe_unretained
   /// qualifier?
   ///
@@ -6441,6 +6438,10 @@ inline bool Type::isObjCSelType() const {
 
 inline bool Type::isObjCBuiltinType() const {
   return isObjCIdType() || isObjCClassType() || isObjCSelType();
+}
+
+inline bool Type::isDecltypeType() const {
+  return isa<DecltypeType>(this);
 }
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \

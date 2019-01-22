@@ -40,11 +40,11 @@ template <typename To, typename From
           , typename = typename std::enable_if<__is_trivially_copyable(To)>::type
           , typename = typename std::enable_if<__is_trivially_copyable(From)>::type
 #else
-  // This case is GCC 4.x. clang with libc++ or libstdc++ never get here. Unlike
-  // llvm/Support/type_traits.h's isPodLike we don't want to provide a
-  // good-enough answer here: developers in that configuration will hit
-  // compilation failures on the bots instead of locally. That's acceptable
-  // because it's very few developers, and only until we move past C++11.
+// This case is GCC 4.x. clang with libc++ or libstdc++ never get here. Unlike
+// llvm/Support/type_traits.h's is_trivially_copyable we don't want to
+// provide a good-enough answer here: developers in that configuration will hit
+// compilation failures on the bots instead of locally. That's acceptable
+// because it's very few developers, and only until we move past C++11.
 #endif
 >
 inline To bit_cast(const From &from) noexcept {

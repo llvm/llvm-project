@@ -255,12 +255,6 @@ struct ObjCDictionaryElement {
 
 } // namespace clang
 
-namespace llvm {
-
-template <> struct isPodLike<clang::ObjCDictionaryElement> : std::true_type {};
-
-} // namespace llvm
-
 namespace clang {
 
 /// Internal struct for storing Key/value pair.

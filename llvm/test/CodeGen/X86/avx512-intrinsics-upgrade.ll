@@ -9703,3 +9703,34 @@ define <4 x float>@test_int_x86_avx512_maskz_vfmadd_ss_rm(<4 x float> %x0, <4 x 
   %res = call <4 x float> @llvm.x86.avx512.maskz.vfmadd.ss(<4 x float> %x0, <4 x float> %x1, <4 x float> %vecinit.i, i8 0, i32 4)
   ret < 4 x float> %res
 }
+
+declare <8 x i32> @llvm.x86.avx512.mask.pmov.qd.512(<8 x i64>, <8 x i32>, i8)
+
+define <8 x i32>@test_int_x86_avx512_mask_pmov_qd_512(<8 x i64> %x0, <8 x i32> %x1, i8 %x2) {
+; X86-LABEL: test_int_x86_avx512_mask_pmov_qd_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    vpmovqd %zmm0, %ymm2 ## encoding: [0x62,0xf2,0x7e,0x48,0x35,0xc2]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vpmovqd %zmm0, %ymm1 {%k1} ## encoding: [0x62,0xf2,0x7e,0x49,0x35,0xc1]
+; X86-NEXT:    vpmovqd %zmm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf2,0x7e,0xc9,0x35,0xc0]
+; X86-NEXT:    vpaddd %ymm0, %ymm1, %ymm0 ## encoding: [0xc5,0xf5,0xfe,0xc0]
+; X86-NEXT:    vpaddd %ymm0, %ymm2, %ymm0 ## encoding: [0xc5,0xed,0xfe,0xc0]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_int_x86_avx512_mask_pmov_qd_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    vpmovqd %zmm0, %ymm2 ## encoding: [0x62,0xf2,0x7e,0x48,0x35,0xc2]
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vpmovqd %zmm0, %ymm1 {%k1} ## encoding: [0x62,0xf2,0x7e,0x49,0x35,0xc1]
+; X64-NEXT:    vpmovqd %zmm0, %ymm0 {%k1} {z} ## encoding: [0x62,0xf2,0x7e,0xc9,0x35,0xc0]
+; X64-NEXT:    vpaddd %ymm0, %ymm1, %ymm0 ## encoding: [0xc5,0xf5,0xfe,0xc0]
+; X64-NEXT:    vpaddd %ymm0, %ymm2, %ymm0 ## encoding: [0xc5,0xed,0xfe,0xc0]
+; X64-NEXT:    retq ## encoding: [0xc3]
+    %res0 = call <8 x i32> @llvm.x86.avx512.mask.pmov.qd.512(<8 x i64> %x0, <8 x i32> %x1, i8 -1)
+    %res1 = call <8 x i32> @llvm.x86.avx512.mask.pmov.qd.512(<8 x i64> %x0, <8 x i32> %x1, i8 %x2)
+    %res2 = call <8 x i32> @llvm.x86.avx512.mask.pmov.qd.512(<8 x i64> %x0, <8 x i32> zeroinitializer, i8 %x2)
+    %res3 = add <8 x i32> %res0, %res1
+    %res4 = add <8 x i32> %res3, %res2
+    ret <8 x i32> %res4
+}

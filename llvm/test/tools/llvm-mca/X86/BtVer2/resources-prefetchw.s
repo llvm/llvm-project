@@ -13,8 +13,8 @@ prefetchw   (%rax)
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      5     1.00    *      *            prefetch	(%rax)
-# CHECK-NEXT:  1      5     1.00    *      *            prefetchw	(%rax)
+# CHECK-NEXT:  1      3     1.00    *      *            prefetch	(%rax)
+# CHECK-NEXT:  1      3     1.00    *      *            prefetchw	(%rax)
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0

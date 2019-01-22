@@ -525,12 +525,6 @@ namespace llvm {
 
   /// @}
 
-  // ArrayRefs can be treated like a POD type.
-  template <typename T> struct isPodLike;
-  template <typename T> struct isPodLike<ArrayRef<T>> {
-    static const bool value = true;
-  };
-
   template <typename T> hash_code hash_value(ArrayRef<T> S) {
     return hash_combine_range(S.begin(), S.end());
   }

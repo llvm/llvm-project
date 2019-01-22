@@ -221,13 +221,6 @@ public:
 
 } // end anonymous namespace
 
-namespace llvm {
-
-template <typename T> struct isPodLike;
-template <> struct isPodLike<Slice> { static const bool value = true; };
-
-} // end namespace llvm
-
 /// Representation of the alloca slices.
 ///
 /// This class represents the slices of an alloca which are formed by its
