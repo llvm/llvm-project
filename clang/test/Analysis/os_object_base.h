@@ -23,6 +23,8 @@ struct OSMetaClassBase {
   static OSMetaClassBase *safeMetaCast(const OSMetaClassBase *inst,
                                        const OSMetaClass *meta);
 
+  OSMetaClassBase *metaCast(const char *toMeta);
+
   virtual void retain() const;
   virtual void release() const;
   virtual void free();

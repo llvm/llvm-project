@@ -153,6 +153,10 @@ static bool isOSObjectDynamicCast(StringRef S) {
   return S == "safeMetaCast";
 }
 
+static bool isOSObjectThisCast(StringRef S) {
+  return S == "metaCast";
+}
+
 static bool isOSIteratorSubclass(const Decl *D) {
   return isSubclass(D, "OSIterator");
 }
@@ -220,13 +224,13 @@ RetainSummaryManager::getSummaryForOSObject(const FunctionDecl *FD,
     const CXXRecordDecl *PD = RetTy->getPointeeType()->getAsCXXRecordDecl();
     if (PD && isOSObjectSubclass(PD)) {
       if (const IdentifierInfo *II = FD->getIdentifier()) {
-        if (isOSObjectDynamicCast(II->getName()))
+        StringRef FuncName = II->getName();
+        if (isOSObjectDynamicCast(FuncName) || isOSObjectThisCast(FuncName))
           return getDefaultSummary();
 
         // All objects returned with functions *not* starting with
         // get, or iterators, are returned at +1.
-        if ((!II->getName().startswith("get") &&
-             !II->getName().startswith("Get")) ||
+        if ((!FuncName.startswith("get") && !FuncName.startswith("Get")) ||
             isOSIteratorSubclass(PD)) {
           return getOSSummaryCreateRule(FD);
         } else {
@@ -704,8 +708,13 @@ RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
     // the input was non-zero),
     // or that it returns zero (when the cast failed, or the input
     // was zero).
-    if (TrackOSObjects && isOSObjectDynamicCast(FName)) {
-      return BehaviorSummary::IdentityOrZero;
+    if (TrackOSObjects) {
+      if (isOSObjectDynamicCast(FName) && FD->param_size() >= 1) {
+        return BehaviorSummary::IdentityOrZero;
+      } else if (isOSObjectThisCast(FName) && isa<CXXMethodDecl>(FD) &&
+                 !cast<CXXMethodDecl>(FD)->isStatic()) {
+        return BehaviorSummary::IdentityThis;
+      }
     }
 
     const FunctionDecl* FDD = FD->getDefinition();
