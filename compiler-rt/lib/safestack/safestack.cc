@@ -17,7 +17,6 @@
 #include "safestack_util.h"
 
 #include <errno.h>
-#include <sys/mman.h>
 #include <sys/resource.h>
 
 #include "interception/interception.h"
@@ -94,10 +93,10 @@ __thread size_t unsafe_stack_guard = 0;
 
 inline void *unsafe_stack_alloc(size_t size, size_t guard) {
   SFS_CHECK(size + guard >= size);
-  void *addr = mmap(nullptr, RoundUpTo(size + guard, pageSize),
+  void *addr = Mmap(nullptr, RoundUpTo(size + guard, pageSize),
                     PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
   SFS_CHECK(MAP_FAILED != addr);
-  mprotect(addr, guard, PROT_NONE);
+  Mprotect(addr, guard, PROT_NONE);
   return (char *)addr + guard;
 }
 
@@ -181,7 +180,7 @@ void thread_cleanup_handler(void *_iter) {
     thread_stack_ll *stack = *stackp;
     if (stack->pid != pid ||
         (-1 == TgKill(stack->pid, stack->tid, 0) && errno == ESRCH)) {
-      munmap(stack->stack_base, stack->size);
+      Munmap(stack->stack_base, stack->size);
       *stackp = stack->next;
       free(stack);
     } else
