@@ -1650,6 +1650,47 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
+  unsigned ExtraCost = 0;
+  if (I && (Opcode == Instruction::ICmp || Opcode == Instruction::FCmp)) {
+    // Some vector comparison predicates cost extra instructions.
+    if (MTy.isVector() &&
+        !((ST->hasXOP() && (!ST->hasAVX2() || MTy.is128BitVector())) ||
+          (ST->hasAVX512() && 32 <= MTy.getScalarSizeInBits()) ||
+          ST->hasBWI())) {
+      switch (cast<CmpInst>(I)->getPredicate()) {
+      case CmpInst::Predicate::ICMP_NE:
+        // xor(cmpeq(x,y),-1)
+        ExtraCost = 1;
+        break;
+      case CmpInst::Predicate::ICMP_SGE:
+      case CmpInst::Predicate::ICMP_SLE:
+        // xor(cmpgt(x,y),-1)
+        ExtraCost = 1;
+        break;
+      case CmpInst::Predicate::ICMP_ULT:
+      case CmpInst::Predicate::ICMP_UGT:
+        // cmpgt(xor(x,signbit),xor(y,signbit))
+        // xor(cmpeq(pmaxu(x,y),x),-1)
+        ExtraCost = 2;
+        break;
+      case CmpInst::Predicate::ICMP_ULE:
+      case CmpInst::Predicate::ICMP_UGE:
+        if ((ST->hasSSE41() && MTy.getScalarSizeInBits() == 32) ||
+            (ST->hasSSE2() && MTy.getScalarSizeInBits() < 32)) {
+          // cmpeq(psubus(x,y),0)
+          // cmpeq(pminu(x,y),x)
+          ExtraCost = 1;
+        } else {
+          // xor(cmpgt(xor(x,signbit),xor(y,signbit)),-1)
+          ExtraCost = 3;
+        }
+        break;
+      default:
+        break;
+      }
+    }
+  }
+
   static const CostTblEntry AVX512BWCostTbl[] = {
     { ISD::SETCC,   MVT::v32i16,  1 },
     { ISD::SETCC,   MVT::v64i8,   1 },
@@ -1738,35 +1779,35 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
 
   if (ST->hasBWI())
     if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasAVX512())
     if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasAVX2())
     if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasSSE42())
     if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasSSE41())
     if (const auto *Entry = CostTableLookup(SSE41CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasSSE1())
     if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
+      return LT.first * (ExtraCost + Entry->Cost);
 
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
 }

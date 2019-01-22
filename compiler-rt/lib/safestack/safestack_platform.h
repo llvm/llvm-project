@@ -16,6 +16,7 @@
 #include "sanitizer_common/sanitizer_platform.h"
 
 #include <stdint.h>
+#include <sys/mman.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -56,6 +57,33 @@ inline int TgKill(pid_t pid, ThreadId tid, int sig) {
   return syscall(SYS_thr_kill2, pid, tid, sig);
 #else
   return syscall(SYS_tgkill, pid, tid, sig);
+#endif
+}
+
+inline void *Mmap(void *addr, size_t length, int prot, int flags, int fd,
+                  off_t offset) {
+#if SANITIZER_NETBSD
+  return mmap(addr, length, prot, flags, fd, offset);
+#elif defined(__x86_64__) && (SANITIZER_FREEBSD)
+  return (void *)__syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
+#else
+  return (void *)syscall(SYS_mmap, addr, length, prot, flags, fd, offset);
+#endif
+}
+
+inline int Munmap(void *addr, size_t length) {
+#if SANITIZER_NETBSD
+  return munmap(addr, length);
+#else
+  return syscall(SYS_munmap, addr, length);
+#endif
+}
+
+inline int Mprotect(void *addr, size_t length, int prot) {
+#if SANITIZER_NETBSD
+  return mprotect(addr, length, prot);
+#else
+  return syscall(SYS_mprotect, addr, length, prot);
 #endif
 }
 

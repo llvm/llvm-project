@@ -56,9 +56,8 @@ Error Object::markSymbols() {
     for (const Relocation &R : Sec.Relocs) {
       auto It = SymbolMap.find(R.Target);
       if (It == SymbolMap.end())
-        return make_error<StringError>("Relocation target " + Twine(R.Target) +
-                                           " not found",
-                                       object_error::invalid_symbol_index);
+        return createStringError(object_error::invalid_symbol_index,
+                                 "Relocation target %zu not found", R.Target);
       It->second->Referenced = true;
     }
   }

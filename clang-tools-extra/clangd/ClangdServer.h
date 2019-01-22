@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDSERVER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDSERVER_H
 
+#include "../clang-tidy/ClangTidyOptions.h"
 #include "Cancellation.h"
 #include "ClangdUnit.h"
 #include "CodeComplete.h"
@@ -91,6 +92,13 @@ public:
 
     /// If set, use this index to augment code completion results.
     SymbolIndex *StaticIndex = nullptr;
+
+    /// If set, enable clang-tidy in clangd, used to get clang-tidy
+    /// configurations for a particular file.
+    /// Clangd supports only a small subset of ClangTidyOptions, these options
+    /// (Checks, CheckOptions) are about which clang-tidy checks will be
+    /// enabled.
+    tidy::ClangTidyOptionsProvider *ClangTidyOptProvider = nullptr;
 
     /// Clangd's workspace root. Relevant for "workspace" operations not bound
     /// to a particular file.
@@ -256,6 +264,9 @@ private:
   std::unique_ptr<BackgroundIndex> BackgroundIdx;
   // Storage for merged views of the various indexes.
   std::vector<std::unique_ptr<SymbolIndex>> MergedIdx;
+
+  // The provider used to provide a clang-tidy option for a specific file.
+  tidy::ClangTidyOptionsProvider *ClangTidyOptProvider = nullptr;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<llvm::Optional<FuzzyFindRequest>>

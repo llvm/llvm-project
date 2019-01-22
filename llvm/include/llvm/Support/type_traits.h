@@ -95,6 +95,7 @@ template<class T>
 union trivial_helper {
     T t;
 };
+
 } // end namespace detail
 
 /// An implementation of `std::is_trivially_copy_constructible` since we have
@@ -119,6 +120,24 @@ struct is_trivially_move_constructible<T &> : std::true_type {};
 template <typename T>
 struct is_trivially_move_constructible<T &&> : std::true_type {};
 
+
+template <typename T>
+struct is_copy_assignable {
+  template<class F>
+    static auto get(F*) -> decltype(std::declval<F &>() = std::declval<const F &>(), std::true_type{});
+    static std::false_type get(...);
+    static constexpr bool value = decltype(get((T*)nullptr))::value;
+};
+
+template <typename T>
+struct is_move_assignable {
+  template<class F>
+    static auto get(F*) -> decltype(std::declval<F &>() = std::declval<F &&>(), std::true_type{});
+    static std::false_type get(...);
+    static constexpr bool value = decltype(get((T*)nullptr))::value;
+};
+
+
 // An implementation of `std::is_trivially_copyable` since STL version
 // is not equally supported by all compilers, especially GCC 4.9.
 // Uniform implementation of this trait is important for ABI compatibility
@@ -140,15 +159,15 @@ class is_trivially_copyable {
 
   // copy assign
   static constexpr bool has_trivial_copy_assign =
-      std::is_copy_assignable<detail::trivial_helper<T>>::value;
+      is_copy_assignable<detail::trivial_helper<T>>::value;
   static constexpr bool has_deleted_copy_assign =
-      !std::is_copy_assignable<T>::value;
+      !is_copy_assignable<T>::value;
 
   // move assign
   static constexpr bool has_trivial_move_assign =
-      std::is_move_assignable<detail::trivial_helper<T>>::value;
+      is_move_assignable<detail::trivial_helper<T>>::value;
   static constexpr bool has_deleted_move_assign =
-      !std::is_move_assignable<T>::value;
+      !is_move_assignable<T>::value;
 
   // destructor
   static constexpr bool has_trivial_destructor =
@@ -163,9 +182,13 @@ class is_trivially_copyable {
       (has_deleted_copy_assign || has_trivial_copy_assign) &&
       (has_deleted_copy_constructor || has_trivial_copy_constructor);
 
-#if (__has_feature(is_trivially_copyable) || (defined(__GNUC__) && __GNUC__ >= 5))
-  static_assert(value == std::is_trivially_copyable<T>::value, "inconsistent behavior between llvm:: and std:: implementation of is_trivially_copyable");
+#ifdef HAVE_STD_IS_TRIVIALLY_COPYABLE
+  static_assert(value == std::is_trivially_copyable<T>::value,
+                "inconsistent behavior between llvm:: and std:: implementation of is_trivially_copyable");
 #endif
+};
+template <typename T>
+class is_trivially_copyable<T*> : public std::true_type {
 };
 
 

@@ -5651,6 +5651,7 @@ let Constraints = "$src1 = $dst" in
 // vector. The next one matches the intrinsic and could zero arbitrary elements
 // in the target vector.
 multiclass SS41I_insertf32<bits<8> opc, string asm, bit Is2Addr = 1> {
+  let isCommutable = 1 in
   def rr : SS4AIi8<opc, MRMSrcReg, (outs VR128:$dst),
       (ins VR128:$src1, VR128:$src2, u8imm:$src3),
       !if(Is2Addr,

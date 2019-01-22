@@ -403,8 +403,8 @@ void StoreDiags::flushLastDiag() {
   if (mentionsMainFile(*LastDiag))
     Output.push_back(std::move(*LastDiag));
   else
-    log("Dropped diagnostic outside main file: {0}: {1}", LastDiag->File,
-        LastDiag->Message);
+    vlog("Dropped diagnostic outside main file: {0}: {1}", LastDiag->File,
+         LastDiag->Message);
   LastDiag.reset();
 }
 

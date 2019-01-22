@@ -185,9 +185,10 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
   for (auto &Sec : Obj.sections()) {
     if (Sec.Name == SecName) {
       if (Sec.OriginalData.empty())
-        return make_error<StringError>("Can't dump section \"" + SecName +
-                                           "\": it has no contents",
-                                       object_error::parse_failed);
+        return createStringError(
+            object_error::parse_failed,
+            "Can't dump section \"%s\": it has no contents",
+            SecName.str().c_str());
       Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
           FileOutputBuffer::create(Filename, Sec.OriginalData.size());
       if (!BufferOrErr)
@@ -200,8 +201,7 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
       return Error::success();
     }
   }
-  return make_error<StringError>("Section not found",
-                                 object_error::parse_failed);
+  return createStringError(object_error::parse_failed, "Section not found");
 }
 
 static bool isCompressed(const SectionBase &Section) {
