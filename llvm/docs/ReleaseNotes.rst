@@ -48,6 +48,10 @@ Non-comprehensive list of changes in this release
   functionality.  See `Writing an LLVM Pass
   <WritingAnLLVMPass.html#setting-up-the-build-environment>`_.
 
+* For MinGW, references to data variables that might need to be imported
+  from a dll are accessed via a stub, to allow the linker to convert it to
+  a dllimport if needed.
+
 .. NOTE
    If you would like to document a larger change, then you can add a
    subsection about it right here. You can copy the following boilerplate
@@ -60,6 +64,13 @@ Non-comprehensive list of changes in this release
 
 Changes to the LLVM IR
 ----------------------
+
+
+Changes to the AArch64 Target
+-----------------------------
+
+* Added support for the ``.arch_extension`` assembler directive, just like
+  on ARM.
 
 
 Changes to the ARM Backend
