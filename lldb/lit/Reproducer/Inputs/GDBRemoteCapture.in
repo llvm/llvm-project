@@ -1,4 +1,4 @@
-breakpoint set -f simple.c -l 13
+breakpoint set -f simple.c -l 12
 run
 bt
 cont
