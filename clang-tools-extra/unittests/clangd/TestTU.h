@@ -48,6 +48,8 @@ struct TestTU {
   // Extra arguments for the compiler invocation.
   std::vector<const char *> ExtraArgs;
 
+  llvm::Optional<std::string> ClangTidyChecks;
+
   ParsedAST build() const;
   SymbolSlab headerSymbols() const;
   std::unique_ptr<SymbolIndex> index() const;
