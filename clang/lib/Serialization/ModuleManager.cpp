@@ -175,9 +175,13 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     if (FileName == "-") {
       Buf = llvm::MemoryBuffer::getSTDIN();
     } else {
-      // Get a buffer of the file and close the file descriptor when done.
+      // Get a buffer of the file and close the file descriptor when done. Use
+      // IsVolatile=true since PCMs with same signature can have different sizes
+      // due to different content in the unhashed control block (e.g. diagnostic
+      // options). Tha said, concurrent creation & access of the same PCM
+      // filename can lead to reading past the buffer size otherwise.
       Buf = FileMgr.getBufferForFile(NewModule->File,
-                                     /*IsVolatile=*/false,
+                                     /*IsVolatile=*/true,
                                      /*ShouldClose=*/true);
     }
 
