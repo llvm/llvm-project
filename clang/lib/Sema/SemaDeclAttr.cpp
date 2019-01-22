@@ -3560,7 +3560,9 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   int CalleeIdx = EncodingIndices.front();
   // Check if the callee index is proper, thus not "this" and not "unknown".
-  if (CalleeIdx < HasImplicitThisParam) {
+  // This means the "CalleeIdx" has to be non-negative if "HasImplicitThisParam"
+  // is false and positive if "HasImplicitThisParam" is true.
+  if (CalleeIdx < (int)HasImplicitThisParam) {
     S.Diag(AL.getLoc(), diag::err_callback_attribute_invalid_callee)
         << AL.getRange();
     return;

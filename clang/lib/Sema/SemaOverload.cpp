@@ -1171,16 +1171,14 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
     // function yet (because we haven't yet resolved whether this is a static
     // or non-static member function). Add it now, on the assumption that this
     // is a redeclaration of OldMethod.
-    // FIXME: OpenCL: Need to consider address spaces
-    unsigned OldQuals = OldMethod->getTypeQualifiers().getCVRUQualifiers();
-    unsigned NewQuals = NewMethod->getTypeQualifiers().getCVRUQualifiers();
+    auto OldQuals = OldMethod->getTypeQualifiers();
+    auto NewQuals = NewMethod->getTypeQualifiers();
     if (!getLangOpts().CPlusPlus14 && NewMethod->isConstexpr() &&
         !isa<CXXConstructorDecl>(NewMethod))
-      NewQuals |= Qualifiers::Const;
-
+      NewQuals.addConst();
     // We do not allow overloading based off of '__restrict'.
-    OldQuals &= ~Qualifiers::Restrict;
-    NewQuals &= ~Qualifiers::Restrict;
+    OldQuals.removeRestrict();
+    NewQuals.removeRestrict();
     if (OldQuals != NewQuals)
       return true;
   }
@@ -5148,6 +5146,16 @@ TryObjectArgumentInitialization(Sema &S, SourceLocation Loc, QualType FromType,
     ICS.setBad(BadConversionSequence::bad_qualifiers,
                FromType, ImplicitParamType);
     return ICS;
+  }
+
+  if (FromTypeCanon.getQualifiers().hasAddressSpace()) {
+    Qualifiers QualsImplicitParamType = ImplicitParamType.getQualifiers();
+    Qualifiers QualsFromType = FromTypeCanon.getQualifiers();
+    if (!QualsImplicitParamType.isAddressSpaceSupersetOf(QualsFromType)) {
+      ICS.setBad(BadConversionSequence::bad_qualifiers,
+                 FromType, ImplicitParamType);
+      return ICS;
+    }
   }
 
   // Check that we have either the same type or a derived type. It

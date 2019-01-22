@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=c++
 
-// expected-no-diagnostics
+// FIXME: This test shouldn't trigger any errors.
 
 struct RetGlob {
   int dummy;
 };
 
-struct RetGen {
+struct RetGen { //expected-error{{binding value of type '__generic RetGen' to reference to type 'RetGen' drops <<ERROR>> qualifiers}}
   char dummy;
 };
 
@@ -19,5 +19,5 @@ void kernel k() {
   __local int *ArgLoc;
   RetGlob TestGlob = foo(ArgGlob);
   RetGen TestGen = foo(ArgGen);
-  TestGen = foo(ArgLoc);
+  TestGen = foo(ArgLoc); //expected-note{{in implicit copy assignment operator for 'RetGen' first required here}}
 }

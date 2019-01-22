@@ -134,7 +134,7 @@ auto incomplete = &three<Incomplete*, Incomplete**, const Incomplete*>;
 // CHECK: |-VarDecl {{.*}} h 'TC<void> (*)(TC<int>, TC<TC<int>>, TC<A::B::S>)'
 // CHECK: |-VarDecl {{.*}} i 'A::B::S (*)()'
 // CHECK: |-CXXRecordDecl {{.*}} struct Incomplete
-// CHECK: |-VarDecl {{.*}} incomplete 'Incomplete *(*)(Incomplete **, const Incomplete *)'
+// CHECK: `-VarDecl {{.*}} incomplete 'Incomplete *(*)(Incomplete **, const Incomplete *)'
 
 int main(int argc, char **argv) {
   return 0;
