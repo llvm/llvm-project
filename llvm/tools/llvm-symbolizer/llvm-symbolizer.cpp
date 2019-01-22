@@ -55,6 +55,12 @@ static cl::opt<bool>
     ClPrintInlining("inlining", cl::init(true),
                     cl::desc("Print all inlined frames for a given address"));
 
+// -basenames, -s
+static cl::opt<bool> ClBasenames("basenames", cl::init(false),
+                                 cl::desc("Strip directory names from paths"));
+static cl::alias ClBasenamesShort("s", cl::desc("Alias for -basenames"),
+                                  cl::NotHidden, cl::aliasopt(ClBasenames));
+
 // -demangle, -C, -no-demangle
 static cl::opt<bool>
 ClDemangle("demangle", cl::init(true), cl::desc("Demangle function names"));
@@ -224,7 +230,8 @@ int main(int argc, char **argv) {
   LLVMSymbolizer Symbolizer(Opts);
 
   DIPrinter Printer(outs(), ClPrintFunctions != FunctionNameKind::None,
-                    ClPrettyPrint, ClPrintSourceContextLines, ClVerbose);
+                    ClPrettyPrint, ClPrintSourceContextLines, ClVerbose,
+                    ClBasenames);
 
   if (ClInputAddresses.empty()) {
     const int kMaxInputStringLength = 1024;
