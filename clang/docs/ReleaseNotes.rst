@@ -136,6 +136,9 @@ New Compiler Flags
   instrumenting for gcov-based profiling.
   See the :doc:`UsersManual` for details.
 
+- When using a custom stack alignment, the ``stackrealign`` attribute is now
+  implicitly set on the main function.
+
 - ...
 
 Deprecated Compiler Flags
@@ -179,6 +182,15 @@ Windows Support
   `dllexport` and `dllimport` attributes not apply to inline member functions.
   This can significantly reduce compile and link times. See the `User's Manual
   <UsersManual.html#the-zc-dllexportinlines-option>`_ for more info.
+
+- For MinGW, ``-municode`` now correctly defines ``UNICODE`` during
+  preprocessing.
+
+- For MinGW, clang now produces vtables and RTTI for dllexported classes
+  without key functions. This fixes building Qt in debug mode.
+
+- Allow using Address Sanitizer and Undefined Behaviour Sanitizer on MinGW.
+
 - ...
 
 
