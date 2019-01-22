@@ -5,67 +5,31 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   option(LLVM_INSTALL_TOOLCHAIN_ONLY "Only include toolchain files in the 'install' target." OFF)
 
+  set(LLDB_PATH_TO_LLVM_BUILD "" CACHE PATH "Path to LLVM build tree")
+  set(LLDB_PATH_TO_CLANG_BUILD "${LLDB_PATH_TO_LLVM_BUILD}" CACHE PATH "Path to Clang build tree")
+
   file(TO_CMAKE_PATH "${LLDB_PATH_TO_LLVM_BUILD}" LLDB_PATH_TO_LLVM_BUILD)
   file(TO_CMAKE_PATH "${LLDB_PATH_TO_CLANG_BUILD}" LLDB_PATH_TO_CLANG_BUILD)
+
+  # BEGIN Swift Mods
   file(TO_CMAKE_PATH "${LLDB_PATH_TO_CMARK_BUILD}" LLDB_PATH_TO_CMARK_BUILD)
   file(TO_CMAKE_PATH "${LLDB_PATH_TO_SWIFT_BUILD}" LLDB_PATH_TO_SWIFT_BUILD)
 
   file(TO_CMAKE_PATH "${LLDB_PATH_TO_CLANG_SOURCE}" LLDB_PATH_TO_CLANG_SOURCE)
   file(TO_CMAKE_PATH "${LLDB_PATH_TO_SWIFT_SOURCE}" LLDB_PATH_TO_SWIFT_SOURCE)
+  # END Swift Mods
 
-  # Rely on llvm-config.
-  set(CONFIG_OUTPUT)
-  set(FIND_PATHS "")
-  if (LLDB_PATH_TO_LLVM_BUILD)
-    set(FIND_PATHS "${LLDB_PATH_TO_LLVM_BUILD}/bin")
-  endif()
-  find_program(LLVM_CONFIG "llvm-config"
-    HINTS ${FIND_PATHS} NO_CMAKE_FIND_ROOT_PATH)
+  find_package(LLVM REQUIRED CONFIG
+    HINTS "${LLDB_PATH_TO_LLVM_BUILD}" NO_CMAKE_FIND_ROOT_PATH)
+  #find_package(Clang REQUIRED CONFIG
+  #  HINTS "${LLDB_PATH_TO_CLANG_BUILD}" NO_CMAKE_FIND_ROOT_PATH)
 
-  if(LLVM_CONFIG)
-    message(STATUS "Found LLVM_CONFIG as ${LLVM_CONFIG}")
-    set(CONFIG_COMMAND ${LLVM_CONFIG}
-      "--assertion-mode"
-      "--bindir"
-      "--libdir"
-      "--includedir"
-      "--prefix"
-      "--src-root"
-      "--cmakedir")
-    execute_process(
-      COMMAND ${CONFIG_COMMAND}
-      RESULT_VARIABLE HAD_ERROR
-      OUTPUT_VARIABLE CONFIG_OUTPUT
-    )
-    if(NOT HAD_ERROR)
-      string(REGEX REPLACE
-        "[ \t]*[\r\n]+[ \t]*" ";"
-        CONFIG_OUTPUT ${CONFIG_OUTPUT})
+  # We set LLVM_MAIN_INCLUDE_DIR so that it gets included in TableGen flags.
+  #set(LLVM_MAIN_INCLUDE_DIR "${LLVM_BUILD_MAIN_INCLUDE_DIR}" CACHE PATH "Path to LLVM's source include dir")
+  # We set LLVM_CMAKE_PATH so that GetSVN.cmake is found correctly when building SVNVersion.inc
+  set(LLVM_CMAKE_PATH ${LLVM_CMAKE_DIR} CACHE PATH "Path to LLVM CMake modules")
 
-    else()
-      string(REPLACE ";" " " CONFIG_COMMAND_STR "${CONFIG_COMMAND}")
-      message(STATUS "${CONFIG_COMMAND_STR}")
-      message(FATAL_ERROR "llvm-config failed with status ${HAD_ERROR}")
-    endif()
-  else()
-    message(FATAL_ERROR "llvm-config not found -- ${LLVM_CONFIG}")
-  endif()
-
-  list(GET CONFIG_OUTPUT 0 ENABLE_ASSERTIONS)
-  list(GET CONFIG_OUTPUT 1 TOOLS_BINARY_DIR)
-  list(GET CONFIG_OUTPUT 2 LIBRARY_DIR)
-  list(GET CONFIG_OUTPUT 3 INCLUDE_DIR)
-  list(GET CONFIG_OUTPUT 4 LLVM_OBJ_ROOT)
-  list(GET CONFIG_OUTPUT 5 MAIN_SRC_DIR)
-  list(GET CONFIG_OUTPUT 6 LLVM_CMAKE_PATH)
-
-  if(NOT MSVC_IDE)
-    set(LLVM_ENABLE_ASSERTIONS ${ENABLE_ASSERTIONS}
-      CACHE BOOL "Enable assertions")
-    # Assertions should follow llvm-config's.
-    mark_as_advanced(LLVM_ENABLE_ASSERTIONS)
-  endif()
-
+  # BEGIN Swift Mods
   if (LLDB_PATH_TO_CLANG_SOURCE)
     get_filename_component(CLANG_MAIN_SRC_DIR ${LLDB_PATH_TO_CLANG_SOURCE} ABSOLUTE)
     set(CLANG_MAIN_INCLUDE_DIR "${CLANG_MAIN_SRC_DIR}/include")
@@ -84,11 +48,13 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(LLVM_DIR ${LLVM_OBJ_ROOT}/cmake/modules/CMakeFiles CACHE PATH "Path to LLVM build tree CMake files")
   set(LLVM_BINARY_DIR ${LLVM_OBJ_ROOT} CACHE PATH "Path to LLVM build tree")
   set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
-  set(LLVM_EXTERNAL_LIT ${LLVM_TOOLS_BINARY_DIR}/llvm-lit CACHE PATH "Path to llvm-lit")
+  # END Swift Mods
 
+  set(LLVM_EXTERNAL_LIT ${LLVM_TOOLS_BINARY_DIR}/llvm-lit CACHE PATH "Path to llvm-lit")
   find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR}
     NO_DEFAULT_PATH)
 
+  # BEGIN Swift Mods
   set(LLVMCONFIG_FILE "${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
   if(EXISTS ${LLVMCONFIG_FILE})
     file(TO_CMAKE_PATH "${LLVM_CMAKE_PATH}" LLVM_CMAKE_PATH)
@@ -98,12 +64,12 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     message(FATAL_ERROR "Not found: ${LLVMCONFIG_FILE}")
   endif()
 
-
   get_filename_component(PATH_TO_SWIFT_BUILD ${LLDB_PATH_TO_SWIFT_BUILD}
                          ABSOLUTE)
 
   get_filename_component(PATH_TO_CMARK_BUILD ${LLDB_PATH_TO_CMARK_BUILD}
                          ABSOLUTE)
+  # END Swift Mods
 
   # These variables are used by add_llvm_library.
   # They are used as destination of target generators.
@@ -116,6 +82,9 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(LLVM_SHLIB_OUTPUT_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
   endif()
 
+  # We append the directory in which LLVMConfig.cmake lives. We expect LLVM's
+  # CMake modules to be in that directory as well.
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
   include(AddLLVM)
   include(TableGen)
   include(HandleLLVMOptions)
@@ -134,32 +103,28 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     message("-- Found PythonInterp: ${PYTHON_EXECUTABLE}")
   endif()
 
-  # Start Swift Mods
+  # BEGIN Swift Mods
   find_package(Clang REQUIRED CONFIG
     HINTS "${LLDB_PATH_TO_CLANG_BUILD}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
   find_package(Swift REQUIRED CONFIG
     HINTS "${PATH_TO_SWIFT_BUILD}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-  # End Swift Mods
+  # END Swift Mods
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
   set(LLVM_INCLUDE_TESTS ON CACHE INTERNAL "")
 
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
-  include_directories("${CMAKE_BINARY_DIR}/include" "${LLVM_MAIN_INCLUDE_DIR}")
-  # Next three include directories are needed when llvm-config is located in build directory.
-  # LLVM and Clang are assumed to be built together
-  if (EXISTS "${LLVM_OBJ_ROOT}/include")
-    include_directories("${LLVM_OBJ_ROOT}/include")
-  endif()
-  if (EXISTS "${LLVM_MAIN_SRC_DIR}/tools/clang/include")
-    include_directories("${LLVM_MAIN_SRC_DIR}/tools/clang/include")
-  endif()
-  if (EXISTS "${LLVM_OBJ_ROOT}/tools/clang/include")
-    include_directories("${LLVM_OBJ_ROOT}/tools/clang/include")
-  endif()
+  include_directories(
+    "${CMAKE_BINARY_DIR}/include"
+    "${LLVM_INCLUDE_DIRS}"
+    "${CLANG_INCLUDE_DIRS}")
+
+  # BEGIN Swift Mods
   if (EXISTS "${SWIFT_MAIN_SRC_DIR}/include")
     include_directories("${SWIFT_MAIN_SRC_DIR}/include")
   endif()
+  # END Swift Mods
+
   link_directories("${LLVM_LIBRARY_DIR}")
 
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
