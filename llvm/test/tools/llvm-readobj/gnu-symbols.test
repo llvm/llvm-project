@@ -6,6 +6,8 @@ RUN: llvm-readobj --symbols %p/Inputs/gnuhash.so.elf-x86_64 --elf-output-style=G
 RUN:   | FileCheck %s --check-prefixes=SYMTAB,DYN
 RUN: llvm-readobj --dyn-symbols %p/Inputs/gnuhash.so.elf-x86_64 --elf-output-style=GNU \
 RUN:   | FileCheck %s --check-prefixes=NO-SYMTAB,DYN
+RUN: llvm-readobj --symbols --dyn-symbols %p/Inputs/gnuhash.so.elf-x86_64 --elf-output-style=GNU \
+RUN:   | FileCheck %s --check-prefixes=SYMTAB,DYN
 
 ELF32: Symbol table '.symtab' contains 5 entries:
 ELF32-NEXT:    Num:    Value  Size Type    Bind   Vis      Ndx Name
@@ -26,7 +28,7 @@ ELF64-NEXT:     5:  0000000000000000     0 TLS     GLOBAL DEFAULT  UND sym
 
 NO-SYMTAB-NOT: Symbol table '.symtab'
 
-DYN:Symbol table '.dynsym' contains 5 entries:
+DYN: Symbol table '.dynsym' contains 5 entries:
 DYN-NEXT:   Num:    Value          Size Type    Bind   Vis      Ndx Name
 DYN-NEXT:     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
 DYN-NEXT:     1: 00000000000001b8     0 NOTYPE  GLOBAL DEFAULT    4 foo
@@ -34,6 +36,7 @@ DYN-NEXT:     2: 0000000000200268     0 NOTYPE  GLOBAL DEFAULT    5 _edata
 DYN-NEXT:     3: 0000000000200268     0 NOTYPE  GLOBAL DEFAULT    5 _end
 DYN-NEXT:     4: 0000000000200268     0 NOTYPE  GLOBAL DEFAULT    5 __bss_start
 
+DYN-NOT: .dynsym
 NO-SYMTAB-NOT: Symbol table '.symtab'
 
 SYMTAB: Symbol table '.symtab' contains 12 entries:
@@ -50,3 +53,5 @@ SYMTAB-NEXT:     8: 0000000000200268     0 NOTYPE  GLOBAL DEFAULT    5 __bss_sta
 SYMTAB-NEXT:     9: 00000000000001b8     0 NOTYPE  GLOBAL DEFAULT    4 foo
 SYMTAB-NEXT:    10: 0000000000200268     0 NOTYPE  GLOBAL DEFAULT    5 _edata
 SYMTAB-NEXT:    11: 0000000000200268     0 NOTYPE  GLOBAL DEFAULT    5 _end
+
+DYN-NOT: .dynsym

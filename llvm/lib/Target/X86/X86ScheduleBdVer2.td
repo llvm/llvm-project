@@ -250,6 +250,8 @@ def : ReadAdvance<ReadAfterVecLd, 5>;
 def : ReadAdvance<ReadAfterVecXLd, 5>;
 def : ReadAdvance<ReadAfterVecYLd, 5>;
 
+def : ReadAdvance<ReadInt2Fpu, 0>;
+
 // A folded store needs a cycle on the PdStore for the store data.
 def : WriteRes<WriteRMW, [PdStore]>;
 

@@ -2679,15 +2679,15 @@ define <2 x i64> @test_pinsrq(<2 x i64> %a0, <2 x i64> %a1, i64 %a2, i64 *%a3) {
 ;
 ; BTVER2-SSE-LABEL: test_pinsrq:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    pinsrq $1, %rdi, %xmm0 # sched: [7:0.50]
 ; BTVER2-SSE-NEXT:    pinsrq $1, (%rsi), %xmm1 # sched: [4:1.00]
+; BTVER2-SSE-NEXT:    pinsrq $1, %rdi, %xmm0 # sched: [7:0.50]
 ; BTVER2-SSE-NEXT:    paddq %xmm1, %xmm0 # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_pinsrq:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0 # sched: [7:0.50]
 ; BTVER2-NEXT:    vpinsrq $1, (%rsi), %xmm1, %xmm1 # sched: [4:1.00]
+; BTVER2-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0 # sched: [7:0.50]
 ; BTVER2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;

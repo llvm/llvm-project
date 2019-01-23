@@ -2424,7 +2424,7 @@ bool HexagonInstrInfo::isPredicated(unsigned Opcode) const {
 
 bool HexagonInstrInfo::isPredicateLate(unsigned Opcode) const {
   const uint64_t F = get(Opcode).TSFlags;
-  return ~(F >> HexagonII::PredicateLatePos) & HexagonII::PredicateLateMask;
+  return (F >> HexagonII::PredicateLatePos) & HexagonII::PredicateLateMask;
 }
 
 bool HexagonInstrInfo::isPredictedTaken(unsigned Opcode) const {

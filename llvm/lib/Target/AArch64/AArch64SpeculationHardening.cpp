@@ -102,6 +102,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
@@ -145,25 +146,31 @@ private:
   BitVector RegsAlreadyMasked;
 
   bool functionUsesHardeningRegister(MachineFunction &MF) const;
-  bool instrumentControlFlow(MachineBasicBlock &MBB);
+  bool instrumentControlFlow(MachineBasicBlock &MBB,
+                             bool &UsesFullSpeculationBarrier);
   bool endsWithCondControlFlow(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                                MachineBasicBlock *&FBB,
                                AArch64CC::CondCode &CondCode) const;
   void insertTrackingCode(MachineBasicBlock &SplitEdgeBB,
                           AArch64CC::CondCode &CondCode, DebugLoc DL) const;
-  void insertSPToRegTaintPropagation(MachineBasicBlock *MBB,
+  void insertSPToRegTaintPropagation(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI) const;
-  void insertRegToSPTaintPropagation(MachineBasicBlock *MBB,
+  void insertRegToSPTaintPropagation(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
                                      unsigned TmpReg) const;
+  void insertFullSpeculationBarrier(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator MBBI,
+                                    DebugLoc DL) const;
 
   bool slhLoads(MachineBasicBlock &MBB);
   bool makeGPRSpeculationSafe(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI,
                               MachineInstr &MI, unsigned Reg);
-  bool lowerSpeculationSafeValuePseudos(MachineBasicBlock &MBB);
+  bool lowerSpeculationSafeValuePseudos(MachineBasicBlock &MBB,
+                                        bool UsesFullSpeculationBarrier);
   bool expandSpeculationSafeValue(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator MBBI);
+                                  MachineBasicBlock::iterator MBBI,
+                                  bool UsesFullSpeculationBarrier);
   bool insertCSDB(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                   DebugLoc DL);
 };
@@ -206,15 +213,19 @@ bool AArch64SpeculationHardening::endsWithCondControlFlow(
   return true;
 }
 
+void AArch64SpeculationHardening::insertFullSpeculationBarrier(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    DebugLoc DL) const {
+  // A full control flow speculation barrier consists of (DSB SYS + ISB)
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::DSB)).addImm(0xf);
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::ISB)).addImm(0xf);
+}
+
 void AArch64SpeculationHardening::insertTrackingCode(
     MachineBasicBlock &SplitEdgeBB, AArch64CC::CondCode &CondCode,
     DebugLoc DL) const {
   if (UseControlFlowSpeculationBarrier) {
-    // insert full control flow speculation barrier (DSB SYS + ISB)
-    BuildMI(SplitEdgeBB, SplitEdgeBB.begin(), DL, TII->get(AArch64::ISB))
-        .addImm(0xf);
-    BuildMI(SplitEdgeBB, SplitEdgeBB.begin(), DL, TII->get(AArch64::DSB))
-        .addImm(0xf);
+    insertFullSpeculationBarrier(SplitEdgeBB, SplitEdgeBB.begin(), DL);
   } else {
     BuildMI(SplitEdgeBB, SplitEdgeBB.begin(), DL, TII->get(AArch64::CSELXr))
         .addDef(MisspeculatingTaintReg)
@@ -226,7 +237,7 @@ void AArch64SpeculationHardening::insertTrackingCode(
 }
 
 bool AArch64SpeculationHardening::instrumentControlFlow(
-    MachineBasicBlock &MBB) {
+    MachineBasicBlock &MBB, bool &UsesFullSpeculationBarrier) {
   LLVM_DEBUG(dbgs() << "Instrument control flow tracking on MBB: " << MBB);
 
   bool Modified = false;
@@ -262,55 +273,105 @@ bool AArch64SpeculationHardening::instrumentControlFlow(
   }
 
   // Perform correct code generation around function calls and before returns.
-  {
-    SmallVector<MachineInstr *, 4> ReturnInstructions;
-    SmallVector<MachineInstr *, 4> CallInstructions;
+  // The below variables record the return/terminator instructions and the call
+  // instructions respectively; including which register is available as a
+  // temporary register just before the recorded instructions.
+  SmallVector<std::pair<MachineInstr *, unsigned>, 4> ReturnInstructions;
+  SmallVector<std::pair<MachineInstr *, unsigned>, 4> CallInstructions;
+  // if a temporary register is not available for at least one of the
+  // instructions for which we need to transfer taint to the stack pointer, we
+  // need to insert a full speculation barrier.
+  // TmpRegisterNotAvailableEverywhere tracks that condition.
+  bool TmpRegisterNotAvailableEverywhere = false;
 
-    for (MachineInstr &MI : MBB) {
-      if (MI.isReturn())
-        ReturnInstructions.push_back(&MI);
-      else if (MI.isCall())
-        CallInstructions.push_back(&MI);
-    }
+  RegScavenger RS;
+  RS.enterBasicBlock(MBB);
 
-    Modified |=
-        (ReturnInstructions.size() > 0) || (CallInstructions.size() > 0);
+  for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); I++) {
+    MachineInstr &MI = *I;
+    if (!MI.isReturn() && !MI.isCall())
+      continue;
 
-    for (MachineInstr *Return : ReturnInstructions)
-      insertRegToSPTaintPropagation(Return->getParent(), Return, AArch64::X17);
-    for (MachineInstr *Call : CallInstructions) {
-      // Just after the call:
-      MachineBasicBlock::iterator i = Call;
-      i++;
-      insertSPToRegTaintPropagation(Call->getParent(), i);
-      // Just before the call:
-      insertRegToSPTaintPropagation(Call->getParent(), Call, AArch64::X17);
-    }
+    // The RegScavenger represents registers available *after* the MI
+    // instruction pointed to by RS.getCurrentPosition().
+    // We need to have a register that is available *before* the MI is executed.
+    if (I != MBB.begin())
+      RS.forward(std::prev(I));
+    // FIXME: The below just finds *a* unused register. Maybe code could be
+    // optimized more if this looks for the register that isn't used for the
+    // longest time around this place, to enable more scheduling freedom. Not
+    // sure if that would actually result in a big performance difference
+    // though. Maybe RegisterScavenger::findSurvivorBackwards has some logic
+    // already to do this - but it's unclear if that could easily be used here.
+    unsigned TmpReg = RS.FindUnusedReg(&AArch64::GPR64commonRegClass);
+    LLVM_DEBUG(dbgs() << "RS finds "
+                      << ((TmpReg == 0) ? "no register " : "register ");
+               if (TmpReg != 0) dbgs() << printReg(TmpReg, TRI) << " ";
+               dbgs() << "to be available at MI " << MI);
+    if (TmpReg == 0)
+      TmpRegisterNotAvailableEverywhere = true;
+    if (MI.isReturn())
+      ReturnInstructions.push_back({&MI, TmpReg});
+    else if (MI.isCall())
+      CallInstructions.push_back({&MI, TmpReg});
   }
 
+  if (TmpRegisterNotAvailableEverywhere) {
+    // When a temporary register is not available everywhere in this basic
+    // basic block where a propagate-taint-to-sp operation is needed, just
+    // emit a full speculation barrier at the start of this basic block, which
+    // renders the taint/speculation tracking in this basic block unnecessary.
+    insertFullSpeculationBarrier(MBB, MBB.begin(),
+                                 (MBB.begin())->getDebugLoc());
+    UsesFullSpeculationBarrier = true;
+    Modified = true;
+  } else {
+    for (auto MI_Reg : ReturnInstructions) {
+      assert(MI_Reg.second != 0);
+      LLVM_DEBUG(
+          dbgs()
+          << " About to insert Reg to SP taint propagation with temp register "
+          << printReg(MI_Reg.second, TRI)
+          << " on instruction: " << *MI_Reg.first);
+      insertRegToSPTaintPropagation(MBB, MI_Reg.first, MI_Reg.second);
+      Modified = true;
+    }
+
+    for (auto MI_Reg : CallInstructions) {
+      assert(MI_Reg.second != 0);
+      LLVM_DEBUG(dbgs() << " About to insert Reg to SP and back taint "
+                           "propagation with temp register "
+                        << printReg(MI_Reg.second, TRI)
+                        << " around instruction: " << *MI_Reg.first);
+      // Just after the call:
+      insertSPToRegTaintPropagation(
+          MBB, std::next((MachineBasicBlock::iterator)MI_Reg.first));
+      // Just before the call:
+      insertRegToSPTaintPropagation(MBB, MI_Reg.first, MI_Reg.second);
+      Modified = true;
+    }
+  }
   return Modified;
 }
 
 void AArch64SpeculationHardening::insertSPToRegTaintPropagation(
-    MachineBasicBlock *MBB, MachineBasicBlock::iterator MBBI) const {
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   // If full control flow speculation barriers are used, emit a control flow
   // barrier to block potential miss-speculation in flight coming in to this
   // function.
   if (UseControlFlowSpeculationBarrier) {
-    // insert full control flow speculation barrier (DSB SYS + ISB)
-    BuildMI(*MBB, MBBI, DebugLoc(), TII->get(AArch64::DSB)).addImm(0xf);
-    BuildMI(*MBB, MBBI, DebugLoc(), TII->get(AArch64::ISB)).addImm(0xf);
+    insertFullSpeculationBarrier(MBB, MBBI, DebugLoc());
     return;
   }
 
   // CMP   SP, #0   === SUBS   xzr, SP, #0
-  BuildMI(*MBB, MBBI, DebugLoc(), TII->get(AArch64::SUBSXri))
+  BuildMI(MBB, MBBI, DebugLoc(), TII->get(AArch64::SUBSXri))
       .addDef(AArch64::XZR)
       .addUse(AArch64::SP)
       .addImm(0)
       .addImm(0); // no shift
   // CSETM x16, NE  === CSINV  x16, xzr, xzr, EQ
-  BuildMI(*MBB, MBBI, DebugLoc(), TII->get(AArch64::CSINVXr))
+  BuildMI(MBB, MBBI, DebugLoc(), TII->get(AArch64::CSINVXr))
       .addDef(MisspeculatingTaintReg)
       .addUse(AArch64::XZR)
       .addUse(AArch64::XZR)
@@ -318,7 +379,7 @@ void AArch64SpeculationHardening::insertSPToRegTaintPropagation(
 }
 
 void AArch64SpeculationHardening::insertRegToSPTaintPropagation(
-    MachineBasicBlock *MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     unsigned TmpReg) const {
   // If full control flow speculation barriers are used, there will not be
   // miss-speculation when returning from this function, and therefore, also
@@ -327,19 +388,19 @@ void AArch64SpeculationHardening::insertRegToSPTaintPropagation(
     return;
 
   // mov   Xtmp, SP  === ADD  Xtmp, SP, #0
-  BuildMI(*MBB, MBBI, DebugLoc(), TII->get(AArch64::ADDXri))
+  BuildMI(MBB, MBBI, DebugLoc(), TII->get(AArch64::ADDXri))
       .addDef(TmpReg)
       .addUse(AArch64::SP)
       .addImm(0)
       .addImm(0); // no shift
   // and   Xtmp, Xtmp, TaintReg === AND Xtmp, Xtmp, TaintReg, #0
-  BuildMI(*MBB, MBBI, DebugLoc(), TII->get(AArch64::ANDXrs))
+  BuildMI(MBB, MBBI, DebugLoc(), TII->get(AArch64::ANDXrs))
       .addDef(TmpReg, RegState::Renamable)
       .addUse(TmpReg, RegState::Kill | RegState::Renamable)
       .addUse(MisspeculatingTaintReg, RegState::Kill)
       .addImm(0);
   // mov   SP, Xtmp === ADD SP, Xtmp, #0
-  BuildMI(*MBB, MBBI, DebugLoc(), TII->get(AArch64::ADDXri))
+  BuildMI(MBB, MBBI, DebugLoc(), TII->get(AArch64::ADDXri))
       .addDef(AArch64::SP)
       .addUse(TmpReg, RegState::Kill)
       .addImm(0)
@@ -483,7 +544,8 @@ bool AArch64SpeculationHardening::slhLoads(MachineBasicBlock &MBB) {
 /// \brief If MBBI references a pseudo instruction that should be expanded
 /// here, do the expansion and return true. Otherwise return false.
 bool AArch64SpeculationHardening::expandSpeculationSafeValue(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    bool UsesFullSpeculationBarrier) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
   bool Is64Bit = true;
@@ -498,7 +560,7 @@ bool AArch64SpeculationHardening::expandSpeculationSafeValue(
     // Just remove the SpeculationSafe pseudo's if control flow
     // miss-speculation isn't happening because we're already inserting barriers
     // to guarantee that.
-    if (!UseControlFlowSpeculationBarrier) {
+    if (!UseControlFlowSpeculationBarrier && !UsesFullSpeculationBarrier) {
       unsigned DstReg = MI.getOperand(0).getReg();
       unsigned SrcReg = MI.getOperand(1).getReg();
       // Mark this register and all its aliasing registers as needing to be
@@ -536,7 +598,7 @@ bool AArch64SpeculationHardening::insertCSDB(MachineBasicBlock &MBB,
 }
 
 bool AArch64SpeculationHardening::lowerSpeculationSafeValuePseudos(
-    MachineBasicBlock &MBB) {
+    MachineBasicBlock &MBB, bool UsesFullSpeculationBarrier) {
   bool Modified = false;
 
   RegsNeedingCSDBBeforeUse.reset();
@@ -571,15 +633,16 @@ bool AArch64SpeculationHardening::lowerSpeculationSafeValuePseudos(
           break;
         }
 
-    if (NeedToEmitBarrier)
+    if (NeedToEmitBarrier && !UsesFullSpeculationBarrier)
       Modified |= insertCSDB(MBB, MBBI, DL);
 
-    Modified |= expandSpeculationSafeValue(MBB, MBBI);
+    Modified |=
+        expandSpeculationSafeValue(MBB, MBBI, UsesFullSpeculationBarrier);
 
     MBBI = NMBBI;
   }
 
-  if (RegsNeedingCSDBBeforeUse.any())
+  if (RegsNeedingCSDBBeforeUse.any() && !UsesFullSpeculationBarrier)
     Modified |= insertCSDB(MBB, MBBI, DL);
 
   return Modified;
@@ -608,7 +671,7 @@ bool AArch64SpeculationHardening::runOnMachineFunction(MachineFunction &MF) {
       Modified |= slhLoads(MBB);
   }
 
-  // 2.a Add instrumentation code to function entry and exits.
+  // 2. Add instrumentation code to function entry and exits.
   LLVM_DEBUG(
       dbgs()
       << "***** AArch64SpeculationHardening - track control flow *****\n");
@@ -619,17 +682,15 @@ bool AArch64SpeculationHardening::runOnMachineFunction(MachineFunction &MF) {
     EntryBlocks.push_back(LPI.LandingPadBlock);
   for (auto Entry : EntryBlocks)
     insertSPToRegTaintPropagation(
-        Entry, Entry->SkipPHIsLabelsAndDebug(Entry->begin()));
+        *Entry, Entry->SkipPHIsLabelsAndDebug(Entry->begin()));
 
-  // 2.b Add instrumentation code to every basic block.
-  for (auto &MBB : MF)
-    Modified |= instrumentControlFlow(MBB);
-
-  LLVM_DEBUG(dbgs() << "***** AArch64SpeculationHardening - Lowering "
-                       "SpeculationSafeValue Pseudos *****\n");
-  // Step 3: Lower SpeculationSafeValue pseudo instructions.
-  for (auto &MBB : MF)
-    Modified |= lowerSpeculationSafeValuePseudos(MBB);
+  // 3. Add instrumentation code to every basic block.
+  for (auto &MBB : MF) {
+    bool UsesFullSpeculationBarrier = false;
+    Modified |= instrumentControlFlow(MBB, UsesFullSpeculationBarrier);
+    Modified |=
+        lowerSpeculationSafeValuePseudos(MBB, UsesFullSpeculationBarrier);
+  }
 
   return Modified;
 }

@@ -80,8 +80,6 @@ public:
   void printFileHeaders() override;
   void printSectionHeaders() override;
   void printRelocations() override;
-  void printSymbols() override;
-  void printDynamicSymbols() override;
   void printUnwindInfo() override;
 
   void printNeededLibraries() override;
@@ -100,6 +98,8 @@ public:
   void printStackMap() const override;
   void printAddrsig() override;
 private:
+  void printSymbols() override;
+  void printDynamicSymbols() override;
   void printSymbol(const SymbolRef &Sym);
   void printRelocation(const SectionRef &Section, const RelocationRef &Reloc,
                        uint64_t Bias = 0);

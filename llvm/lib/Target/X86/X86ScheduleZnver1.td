@@ -94,6 +94,8 @@ def : ReadAdvance<ReadAfterVecLd, 8>;
 def : ReadAdvance<ReadAfterVecXLd, 8>;
 def : ReadAdvance<ReadAfterVecYLd, 8>;
 
+def : ReadAdvance<ReadInt2Fpu, 0>;
+
 // The Integer PRF for Zen is 168 entries, and it holds the architectural and
 // speculative version of the 64-bit integer registers.
 // Reference: "Software Optimization Guide for AMD Family 17h Processors"

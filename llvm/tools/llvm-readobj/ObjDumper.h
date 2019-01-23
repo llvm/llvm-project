@@ -34,8 +34,12 @@ public:
   virtual void printFileHeaders() = 0;
   virtual void printSectionHeaders() = 0;
   virtual void printRelocations() = 0;
-  virtual void printSymbols() = 0;
-  virtual void printDynamicSymbols() = 0;
+  virtual void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols) {
+    if (PrintSymbols)
+      printSymbols();
+    if (PrintDynamicSymbols)
+      printDynamicSymbols();
+  }
   virtual void printUnwindInfo() = 0;
 
   // Only implemented for ELF at this time.
@@ -93,6 +97,10 @@ public:
 
 protected:
   ScopedPrinter &W;
+
+private:
+  virtual void printSymbols() {};
+  virtual void printDynamicSymbols() {};
 };
 
 std::error_code createCOFFDumper(const object::ObjectFile *Obj,

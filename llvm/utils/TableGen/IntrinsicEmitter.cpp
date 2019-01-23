@@ -269,7 +269,7 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
       Sig.push_back(IIT_TRUNC_ARG);
     else if (R->isSubClassOf("LLVMHalfElementsVectorType"))
       Sig.push_back(IIT_HALF_VEC_ARG);
-    else if (R->isSubClassOf("LLVMVectorSameWidth")) {
+    else if (R->isSubClassOf("LLVMScalarOrSameVectorWidth")) {
       Sig.push_back(IIT_SAME_VEC_WIDTH_ARG);
       Sig.push_back((Number << 3) | ArgCodes[Number]);
       MVT::SimpleValueType VT = getValueType(R->getValueAsDef("ElTy"));

@@ -9,12 +9,12 @@ vpinsrb $1, %eax, %xmm0, %xmm0
 
 # CHECK:      Iterations:        500
 # CHECK-NEXT: Instructions:      1500
-# CHECK-NEXT: Total Cycles:      7004
+# CHECK-NEXT: Total Cycles:      1509
 # CHECK-NEXT: Total uOps:        2500
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.36
-# CHECK-NEXT: IPC:               0.21
+# CHECK-NEXT: uOps Per Cycle:    1.66
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Instruction Info:
@@ -57,18 +57,18 @@ vpinsrb $1, %eax, %xmm0, %xmm0
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -     vpinsrb	$1, %eax, %xmm0, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789          0123456789
-# CHECK-NEXT: Index     0123456789          0123456789          012345
+# CHECK-NEXT:                     01234567
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeER .    .    .    .    .    .    .    .    .   addl	%eax, %eax
-# CHECK-NEXT: [0,1]     .DeeeeeeeER    .    .    .    .    .    .    .   vpinsrb	$0, %eax, %xmm0, %xmm0
-# CHECK-NEXT: [0,2]     . D======eeeeeeeER  .    .    .    .    .    .   vpinsrb	$1, %eax, %xmm0, %xmm0
-# CHECK-NEXT: [1,0]     .  DeE-----------R  .    .    .    .    .    .   addl	%eax, %eax
-# CHECK-NEXT: [1,1]     .   D===========eeeeeeeER.    .    .    .    .   vpinsrb	$0, %eax, %xmm0, %xmm0
-# CHECK-NEXT: [1,2]     .    D=================eeeeeeeER   .    .    .   vpinsrb	$1, %eax, %xmm0, %xmm0
-# CHECK-NEXT: [2,0]     .    .DeE----------------------R   .    .    .   addl	%eax, %eax
-# CHECK-NEXT: [2,1]     .    . D======================eeeeeeeER .    .   vpinsrb	$0, %eax, %xmm0, %xmm0
-# CHECK-NEXT: [2,2]     .    .  D============================eeeeeeeER   vpinsrb	$1, %eax, %xmm0, %xmm0
+# CHECK:      [0,0]     DeER .    .    . .   addl	%eax, %eax
+# CHECK-NEXT: [0,1]     .D======eER    . .   vpinsrb	$0, %eax, %xmm0, %xmm0
+# CHECK-NEXT: [0,2]     . D======eER   . .   vpinsrb	$1, %eax, %xmm0, %xmm0
+# CHECK-NEXT: [1,0]     .  DeE-----R   . .   addl	%eax, %eax
+# CHECK-NEXT: [1,1]     .   D======eER . .   vpinsrb	$0, %eax, %xmm0, %xmm0
+# CHECK-NEXT: [1,2]     .    D======eER. .   vpinsrb	$1, %eax, %xmm0, %xmm0
+# CHECK-NEXT: [2,0]     .    .DeE-----R. .   addl	%eax, %eax
+# CHECK-NEXT: [2,1]     .    . D======eER.   vpinsrb	$0, %eax, %xmm0, %xmm0
+# CHECK-NEXT: [2,2]     .    .  D======eER   vpinsrb	$1, %eax, %xmm0, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -77,6 +77,6 @@ vpinsrb $1, %eax, %xmm0, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     1.0    1.0    11.0      addl	%eax, %eax
-# CHECK-NEXT: 1.     3     12.0   0.0    0.0       vpinsrb	$0, %eax, %xmm0, %xmm0
-# CHECK-NEXT: 2.     3     18.0   0.0    0.0       vpinsrb	$1, %eax, %xmm0, %xmm0
+# CHECK-NEXT: 0.     3     1.0    1.0    3.3       addl	%eax, %eax
+# CHECK-NEXT: 1.     3     7.0    0.0    0.0       vpinsrb	$0, %eax, %xmm0, %xmm0
+# CHECK-NEXT: 2.     3     7.0    0.0    0.0       vpinsrb	$1, %eax, %xmm0, %xmm0

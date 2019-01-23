@@ -332,6 +332,10 @@ struct InstrDesc {
   unsigned MaxLatency;
   // Number of MicroOps for this instruction.
   unsigned NumMicroOps;
+  // SchedClassID used to construct this InstrDesc.
+  // This information is currently used by views to do fast queries on the
+  // subtarget when computing the reciprocal throughput.
+  unsigned SchedClassID;
 
   bool MayLoad;
   bool MayStore;
