@@ -101,3 +101,13 @@ namespace rdar12078752 {
     __autoreleasing auto o3 = o;
   }
 }
+
+namespace test_err_arc_array_param_no_ownership {
+  template <class T>
+  void func(T a) {}
+
+  void test() {
+    func([](A *a[]){}); // expected-error{{must explicitly describe intended ownership of an object array parameter}}
+    func(^(A *a[]){}); // expected-error{{must explicitly describe intended ownership of an object array parameter}}
+  }
+}
