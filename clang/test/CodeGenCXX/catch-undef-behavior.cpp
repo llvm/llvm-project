@@ -533,6 +533,7 @@ namespace NothrowNew {
 
     // CHECK: [[nonnull]]:
     // CHECK: llvm.objectsize
+    // CHECK: icmp uge i64 {{.*}}, 123456,
     // CHECK: br i1
     //
     // CHECK: call {{.*}}__ubsan_handle_type_mismatch
@@ -550,6 +551,7 @@ namespace NothrowNew {
 
     // CHECK: [[nonnull]]:
     // CHECK: llvm.objectsize
+    // CHECK: icmp uge i64 {{.*}}, 123456,
     // CHECK: br i1
     //
     // CHECK: call {{.*}}__ubsan_handle_type_mismatch
@@ -560,6 +562,47 @@ namespace NothrowNew {
     // CHECK-NOT: {{ }}br{{ }}
     // CHECK: ret
     return new (nothrow{}) X[123456];
+  }
+
+  // CHECK-LABEL: define{{.*}}throwing_new
+  void *throwing_new(int size) {
+    // CHECK: icmp ne i8*{{.*}}, null
+    // CHECK: %[[size:.*]] = mul
+    // CHECK: llvm.objectsize
+    // CHECK: icmp uge i64 {{.*}}, %[[size]],
+    // CHECK: %[[ok:.*]] = and
+    // CHECK: br i1 %[[ok]], label %[[good:.*]], label %[[bad:[^,]*]]
+    //
+    // CHECK: [[bad]]:
+    // CHECK: call {{.*}}__ubsan_handle_type_mismatch
+    //
+    // CHECK: [[good]]:
+    // CHECK-NOT: {{ }}br{{ }}
+    // CHECK: ret
+    return new char[size];
+  }
+
+  // CHECK-LABEL: define{{.*}}nothrow_new_zero_size
+  void *nothrow_new_zero_size() {
+    // CHECK: %[[nonnull:.*]] = icmp ne i8*{{.*}}, null
+    // CHECK-NOT: llvm.objectsize
+    // CHECK: br i1 %[[nonnull]], label %[[good:.*]], label %[[bad:[^,]*]]
+    //
+    // CHECK: [[bad]]:
+    // CHECK: call {{.*}}__ubsan_handle_type_mismatch
+    //
+    // CHECK: [[good]]:
+    // CHECK-NOT: {{ }}br{{ }}
+    // CHECK: ret
+    return new char[0];
+  }
+
+  // CHECK-LABEL: define{{.*}}throwing_new_zero_size
+  void *throwing_new_zero_size() {
+    // Nothing to check here.
+    // CHECK-NOT: __ubsan_handle_type_mismatch
+    return new (nothrow{}) char[0];
+    // CHECK: ret
   }
 }
 
