@@ -1,4 +1,4 @@
-RUN: llvm-symbolizer -inlining -apC -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
+RUN: llvm-symbolizer -inlining -apfC -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
 
 CHECK: some text
 CHECK: 0x40054d: inctwo
