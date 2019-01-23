@@ -2023,7 +2023,8 @@ public:
                                           SourceLocation Loc,
                                           QualType T);
   QualType adjustParameterTypeForObjCAutoRefCount(QualType T,
-                                                  SourceLocation Loc);
+                                                  SourceLocation NameLoc,
+                                                  TypeSourceInfo *TSInfo);
   ParmVarDecl *CheckParameter(DeclContext *DC, SourceLocation StartLoc,
                               SourceLocation NameLoc, IdentifierInfo *Name,
                               QualType T, TypeSourceInfo *TSInfo,

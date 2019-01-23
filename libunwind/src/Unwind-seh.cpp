@@ -52,6 +52,7 @@ static const uint64_t kSEHExceptionClass = 0x434C4E4753454800; // CLNGSEH\0
 /// Exception cleanup routine used by \c _GCC_specific_handler to
 /// free foreign exceptions.
 static void seh_exc_cleanup(_Unwind_Reason_Code urc, _Unwind_Exception *exc) {
+  (void)urc;
   if (exc->exception_class != kSEHExceptionClass)
     _LIBUNWIND_ABORT("SEH cleanup called on non-SEH exception");
   free(exc);
@@ -210,6 +211,8 @@ extern "C" _Unwind_Reason_Code
 __libunwind_seh_personality(int version, _Unwind_Action state,
                             uint64_t klass, _Unwind_Exception *exc,
                             struct _Unwind_Context *context) {
+  (void)version;
+  (void)klass;
   EXCEPTION_RECORD ms_exc;
   bool phase2 = (state & (_UA_SEARCH_PHASE|_UA_CLEANUP_PHASE)) == _UA_CLEANUP_PHASE;
   ms_exc.ExceptionCode = STATUS_GCC_THROW;

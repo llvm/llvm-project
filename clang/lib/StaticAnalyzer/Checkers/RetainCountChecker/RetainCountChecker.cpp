@@ -575,7 +575,6 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
 
   // Helper tag for providing diagnostics: indicate whether dealloc was sent
   // at this location.
-  static CheckerProgramPointTag DeallocSentTag(this, DeallocTagDescription);
   bool DeallocSent = false;
 
   for (unsigned idx = 0, e = CallOrMsg.getNumArgs(); idx != e; ++idx) {
@@ -849,7 +848,6 @@ void RetainCountChecker::processNonLeakError(ProgramStateRef St,
 //===----------------------------------------------------------------------===//
 
 bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
-  // Get the callee. We're only interested in simple C functions.
   ProgramStateRef state = C.getState();
   const FunctionDecl *FD = C.getCalleeDecl(CE);
   if (!FD)
@@ -874,18 +872,27 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
 
   // Bind the return value.
   if (BSmr == BehaviorSummary::Identity ||
-      BSmr == BehaviorSummary::IdentityOrZero) {
-    SVal RetVal = state->getSVal(CE->getArg(0), LCtx);
+      BSmr == BehaviorSummary::IdentityOrZero ||
+      BSmr == BehaviorSummary::IdentityThis) {
+
+    const Expr *BindReturnTo =
+        (BSmr == BehaviorSummary::IdentityThis)
+            ? cast<CXXMemberCallExpr>(CE)->getImplicitObjectArgument()
+            : CE->getArg(0);
+    SVal RetVal = state->getSVal(BindReturnTo, LCtx);
 
     // If the receiver is unknown or the function has
     // 'rc_ownership_trusted_implementation' annotate attribute, conjure a
     // return value.
+    // FIXME: this branch is very strange.
     if (RetVal.isUnknown() ||
         (hasTrustedImplementationAnnotation && !ResultTy.isNull())) {
       SValBuilder &SVB = C.getSValBuilder();
       RetVal =
           SVB.conjureSymbolVal(nullptr, CE, LCtx, ResultTy, C.blockCount());
     }
+
+    // Bind the value.
     state = state->BindExpr(CE, LCtx, RetVal, /*Invalidate=*/false);
 
     if (BSmr == BehaviorSummary::IdentityOrZero) {
@@ -895,8 +902,7 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
       // Assume that output is zero on the other branch.
       NullOutputState = NullOutputState->BindExpr(
           CE, LCtx, C.getSValBuilder().makeNull(), /*Invalidate=*/false);
-
-      C.addTransition(NullOutputState);
+      C.addTransition(NullOutputState, &CastFailTag);
 
       // And on the original branch assume that both input and
       // output are non-zero.

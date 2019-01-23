@@ -386,7 +386,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
         // Make adjustments to parameter types.
         if (isa<ParmVarDecl>(var)) {
           type = S.adjustParameterTypeForObjCAutoRefCount(type,
-                                                          D->getLocation());
+                                                          D->getLocation(),
+                                                          typeInfo);
           type = S.Context.getAdjustedParameterType(type);
         }
 
