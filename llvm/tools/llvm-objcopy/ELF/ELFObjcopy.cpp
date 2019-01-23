@@ -176,8 +176,10 @@ static void splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
     DWOFile->Machine = Config.OutputArch.getValue().EMachine;
   FileBuffer FB(File);
   auto Writer = createWriter(Config, *DWOFile, FB, OutputElfType);
-  Writer->finalize();
-  Writer->write();
+  if (Error E = Writer->finalize())
+    error(std::move(E));
+  if (Error E = Writer->write())
+    error(std::move(E));
 }
 
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
@@ -185,9 +187,10 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
   for (auto &Sec : Obj.sections()) {
     if (Sec.Name == SecName) {
       if (Sec.OriginalData.empty())
-        return make_error<StringError>("Can't dump section \"" + SecName +
-                                           "\": it has no contents",
-                                       object_error::parse_failed);
+        return createStringError(
+            object_error::parse_failed,
+            "Can't dump section \"%s\": it has no contents",
+            SecName.str().c_str());
       Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
           FileOutputBuffer::create(Filename, Sec.OriginalData.size());
       if (!BufferOrErr)
@@ -200,8 +203,7 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
       return Error::success();
     }
   }
-  return make_error<StringError>("Section not found",
-                                 object_error::parse_failed);
+  return createStringError(object_error::parse_failed, "Section not found");
 }
 
 static bool isCompressed(const SectionBase &Section) {
@@ -542,8 +544,10 @@ void executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
   handleArgs(Config, *Obj, Reader, OutputElfType);
   std::unique_ptr<Writer> Writer =
       createWriter(Config, *Obj, Out, OutputElfType);
-  Writer->finalize();
-  Writer->write();
+  if (Error E = Writer->finalize())
+    error(std::move(E));
+  if (Error E = Writer->write())
+    error(std::move(E));
 }
 
 void executeObjcopyOnBinary(const CopyConfig &Config,
@@ -570,8 +574,10 @@ void executeObjcopyOnBinary(const CopyConfig &Config,
   handleArgs(Config, *Obj, Reader, OutputElfType);
   std::unique_ptr<Writer> Writer =
       createWriter(Config, *Obj, Out, OutputElfType);
-  Writer->finalize();
-  Writer->write();
+  if (Error E = Writer->finalize())
+    error(std::move(E));
+  if (Error E = Writer->write())
+    error(std::move(E));
   if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkOutput) {
     linkToBuildIdDir(Config, Config.OutputFilename,
                      Config.BuildIdLinkOutput.getValue(), BuildIdBytes);

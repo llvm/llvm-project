@@ -105,6 +105,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       DynamicIdx(Opts.BuildDynamicSymbolIndex
                      ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex)
                      : nullptr),
+      ClangTidyOptProvider(Opts.ClangTidyOptProvider),
       WorkspaceRoot(Opts.WorkspaceRoot),
       PCHs(std::make_shared<PCHContainerOperations>()),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
@@ -140,13 +141,16 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
 
 void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
                                WantDiagnostics WantDiags) {
+  tidy::ClangTidyOptions Options = tidy::ClangTidyOptions::getDefaults();
+  if (ClangTidyOptProvider)
+    Options = ClangTidyOptProvider->getOptions(File);
   // FIXME: some build systems like Bazel will take time to preparing
   // environment to build the file, it would be nice if we could emit a
   // "PreparingBuild" status to inform users, it is non-trivial given the
   // current implementation.
-  WorkScheduler.update(File,
-                       ParseInputs{getCompileCommand(File),
-                                   FSProvider.getFileSystem(), Contents.str()},
+  WorkScheduler.update(File, ParseInputs{getCompileCommand(File),
+                                         FSProvider.getFileSystem(),
+                                         Contents.str(), Options},
                        WantDiags);
 }
 

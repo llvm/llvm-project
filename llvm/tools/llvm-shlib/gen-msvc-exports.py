@@ -83,6 +83,10 @@ def main():
     parser = argparse.ArgumentParser('gen-msvc-exports')
 
     parser.add_argument(
+        '-i', '--libsfile', help='file with list of libs, new line separated',
+        action='store', default=None
+    )
+    parser.add_argument(
         '-o', '--output', help='output filename', default='LLVM-C.exports'
     )
     parser.add_argument('-u', '--underscore',
@@ -93,12 +97,19 @@ def main():
         '--nm', help='path to the llvm-nm executable', default='llvm-nm'
     )
     parser.add_argument(
-        'libs', metavar='LIBS', nargs='+', help='list of libraries to generate export from'
+        'libs', metavar='LIBS', nargs='*', help='list of libraries to generate export from'
     )
 
     ns = parser.parse_args()
 
-    gen_llvm_c_export(ns.output, ns.underscore, ns.libs, ns.nm)
+    libs = ns.libs
+
+    # Add if we where given a libsfile add it to the libs.
+    if ns.libsfile:
+        with open(ns.libsfile) as f:
+            libs.extend(f.read().splitlines())
+
+    gen_llvm_c_export(ns.output, ns.underscore, libs, ns.nm)
 
 
 if __name__ == '__main__':

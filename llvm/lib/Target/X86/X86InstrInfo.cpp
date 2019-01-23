@@ -1569,6 +1569,28 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
                                                    OpIdx1, OpIdx2);
   }
+  case X86::INSERTPSrr:
+  case X86::VINSERTPSrr:
+  case X86::VINSERTPSZrr: {
+    unsigned Imm = MI.getOperand(MI.getNumOperands() - 1).getImm();
+    unsigned ZMask = Imm & 15;
+    unsigned DstIdx = (Imm >> 4) & 3;
+    unsigned SrcIdx = (Imm >> 6) & 3;
+
+    // We can commute insertps if we zero 2 of the elements, the insertion is
+    // "inline" and we don't override the insertion with a zero.
+    if (DstIdx == SrcIdx && (ZMask & (1 << DstIdx)) == 0 &&
+        countPopulation(ZMask) == 2) {
+      unsigned AltIdx = findFirstSet((ZMask | (1 << DstIdx)) ^ 15);
+      assert(AltIdx < 4 && "Illegal insertion index");
+      unsigned AltImm = (AltIdx << 6) | (AltIdx << 4) | ZMask;
+      auto &WorkingMI = cloneIfNew(MI);
+      WorkingMI.getOperand(MI.getNumOperands() - 1).setImm(AltImm);
+      return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
+                                                     OpIdx1, OpIdx2);
+    }
+    return nullptr;
+  }
   case X86::MOVSDrr:
   case X86::MOVSSrr:
   case X86::VMOVSDrr:

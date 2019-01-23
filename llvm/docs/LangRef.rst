@@ -4511,13 +4511,36 @@ DIGlobalVariable
 
 .. code-block:: text
 
-    !0 = !DIGlobalVariable(name: "foo", linkageName: "foo", scope: !1,
-                           file: !2, line: 7, type: !3, isLocal: true,
-                           isDefinition: false, variable: i32* @foo,
-                           declaration: !4)
+    @foo = global i32, !dbg !0
+    !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+    !1 = !DIGlobalVariable(name: "foo", linkageName: "foo", scope: !2,
+                           file: !3, line: 7, type: !4, isLocal: true,
+                           isDefinition: false, declaration: !5)
 
-All global variables should be referenced by the `globals:` field of a
-:ref:`compile unit <DICompileUnit>`.
+
+DIGlobalVariableExpression
+""""""""""""""""""""""""""
+
+``DIGlobalVariableExpression`` nodes tie a :ref:`DIGlobalVariable` together
+with a :ref:`DIExpression`.
+
+.. code-block:: text
+
+    @lower = global i32, !dbg !0
+    @upper = global i32, !dbg !1
+    !0 = !DIGlobalVariableExpression(
+             var: !2,
+             expr: !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+             )
+    !1 = !DIGlobalVariableExpression(
+             var: !2,
+             expr: !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+             )
+    !2 = !DIGlobalVariable(name: "split64", linkageName: "split64", scope: !3,
+                           file: !4, line: 8, type: !5, declaration: !6)
+
+All global variable expressions should be referenced by the `globals:` field of
+a :ref:`compile unit <DICompileUnit>`.
 
 .. _DISubprogram:
 

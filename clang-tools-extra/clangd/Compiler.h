@@ -15,9 +15,11 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H
 
+#include "../clang-tidy/ClangTidyOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
+#include "clang/Tooling/CompilationDatabase.h"
 
 namespace clang {
 namespace clangd {
@@ -30,6 +32,18 @@ public:
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const clang::Diagnostic &Info) override;
 };
+
+/// Information required to run clang, e.g. to parse AST or do code completion.
+struct ParseInputs {
+  tooling::CompileCommand CompileCommand;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
+  std::string Contents;
+  tidy::ClangTidyOptions ClangTidyOpts;
+};
+
+/// Builds compiler invocation that could be used to build AST or preamble.
+std::unique_ptr<CompilerInvocation>
+buildCompilerInvocation(const ParseInputs &Inputs);
 
 /// Creates a compiler instance, configured so that:
 ///   - Contents of the parsed file are remapped to \p MainFile.

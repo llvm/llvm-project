@@ -94,6 +94,8 @@ maxpd       (%rax), %xmm2
 maxsd       %xmm0, %xmm2
 maxsd       (%rax), %xmm2
 
+mfence
+
 minpd       %xmm0, %xmm2
 minpd       (%rax), %xmm2
 
@@ -228,6 +230,9 @@ pcmpgtw     %xmm0, %xmm2
 pcmpgtw     (%rax), %xmm2
 
 pextrw      $1, %xmm0, %rcx
+
+pinsrw      $1, %rax, %xmm0
+pinsrw      $1, (%rax), %xmm0
 
 pmaddwd     %xmm0, %xmm2
 pmaddwd     (%rax), %xmm2
@@ -465,6 +470,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  2      10    0.50    *                   maxpd	(%rax), %xmm2
 # CHECK-NEXT:  1      4     0.50                        maxsd	%xmm0, %xmm2
 # CHECK-NEXT:  2      9     0.50    *                   maxsd	(%rax), %xmm2
+# CHECK-NEXT:  3      3     0.50    *      *      U     mfence
 # CHECK-NEXT:  1      4     0.50                        minpd	%xmm0, %xmm2
 # CHECK-NEXT:  2      10    0.50    *                   minpd	(%rax), %xmm2
 # CHECK-NEXT:  1      4     0.50                        minsd	%xmm0, %xmm2
@@ -555,6 +561,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        pcmpgtw	%xmm0, %xmm2
 # CHECK-NEXT:  2      7     0.50    *                   pcmpgtw	(%rax), %xmm2
 # CHECK-NEXT:  2      3     1.00                        pextrw	$1, %xmm0, %ecx
+# CHECK-NEXT:  2      2     2.00                        pinsrw	$1, %eax, %xmm0
+# CHECK-NEXT:  2      6     1.00    *                   pinsrw	$1, (%rax), %xmm0
 # CHECK-NEXT:  1      4     0.50                        pmaddwd	%xmm0, %xmm2
 # CHECK-NEXT:  2      10    0.50    *                   pmaddwd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        pmaxsw	%xmm0, %xmm2
@@ -681,7 +689,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     38.00  110.42 78.42  62.67  62.67  14.00  93.42  1.75   4.67
+# CHECK-NEXT:  -     38.00  110.92 78.92  63.50  63.50  14.00  96.92  2.25   5.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -748,6 +756,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -     maxpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     maxsd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -     maxsd	(%rax), %xmm2
+# CHECK-NEXT:  -      -     0.50   0.50   0.33   0.33    -     0.50   0.50   0.33   mfence
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     minpd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -     minpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     minsd	%xmm0, %xmm2
@@ -838,6 +847,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     pcmpgtw	%xmm0, %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -     pcmpgtw	(%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -     pextrw	$1, %xmm0, %ecx
+# CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -     pinsrw	$1, %eax, %xmm0
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     pinsrw	$1, (%rax), %xmm0
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     pmaddwd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -     pmaddwd	(%rax), %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     pmaxsw	%xmm0, %xmm2

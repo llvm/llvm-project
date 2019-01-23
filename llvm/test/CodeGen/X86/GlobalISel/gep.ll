@@ -8,10 +8,8 @@ define i32* @test_gep_i8(i32 *%arr, i8 %ind) {
 ; X64_GISEL-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64_GISEL-NEXT:    movq $4, %rax
 ; X64_GISEL-NEXT:    movq $56, %rcx
-; X64_GISEL-NEXT:    # kill: def $cl killed $rcx
 ; X64_GISEL-NEXT:    shlq %cl, %rsi
 ; X64_GISEL-NEXT:    movq $56, %rcx
-; X64_GISEL-NEXT:    # kill: def $cl killed $rcx
 ; X64_GISEL-NEXT:    sarq %cl, %rsi
 ; X64_GISEL-NEXT:    imulq %rax, %rsi
 ; X64_GISEL-NEXT:    leaq (%rdi,%rsi), %rax
@@ -48,10 +46,8 @@ define i32* @test_gep_i16(i32 *%arr, i16 %ind) {
 ; X64_GISEL-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64_GISEL-NEXT:    movq $4, %rax
 ; X64_GISEL-NEXT:    movq $48, %rcx
-; X64_GISEL-NEXT:    # kill: def $cl killed $rcx
 ; X64_GISEL-NEXT:    shlq %cl, %rsi
 ; X64_GISEL-NEXT:    movq $48, %rcx
-; X64_GISEL-NEXT:    # kill: def $cl killed $rcx
 ; X64_GISEL-NEXT:    sarq %cl, %rsi
 ; X64_GISEL-NEXT:    imulq %rax, %rsi
 ; X64_GISEL-NEXT:    leaq (%rdi,%rsi), %rax

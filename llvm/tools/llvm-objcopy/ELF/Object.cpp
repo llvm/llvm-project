@@ -1488,17 +1488,16 @@ template <class ELFT> size_t ELFWriter<ELFT>::totalSize() const {
          NullSectionSize;
 }
 
-template <class ELFT> void ELFWriter<ELFT>::write() {
+template <class ELFT> Error ELFWriter<ELFT>::write() {
   writeEhdr();
   writePhdrs();
   writeSectionData();
   if (WriteSectionHeaders)
     writeShdrs();
-  if (auto E = Buf.commit())
-    reportError(Buf.getName(), errorToErrorCode(std::move(E)));
+  return Buf.commit();
 }
 
-template <class ELFT> void ELFWriter<ELFT>::finalize() {
+template <class ELFT> Error ELFWriter<ELFT>::finalize() {
   // It could happen that SectionNames has been removed and yet the user wants
   // a section header table output. We need to throw an error if a user tries
   // to do that.
@@ -1582,21 +1581,22 @@ template <class ELFT> void ELFWriter<ELFT>::finalize() {
     Section.finalize();
   }
 
-  Buf.allocate(totalSize());
+  if (Error E = Buf.allocate(totalSize()))
+    return E;
   SecWriter = llvm::make_unique<ELFSectionWriter<ELFT>>(Buf);
+  return Error::success();
 }
 
-void BinaryWriter::write() {
+Error BinaryWriter::write() {
   for (auto &Section : Obj.sections()) {
     if ((Section.Flags & SHF_ALLOC) == 0)
       continue;
     Section.accept(*SecWriter);
   }
-  if (auto E = Buf.commit())
-    reportError(Buf.getName(), errorToErrorCode(std::move(E)));
+  return Buf.commit();
 }
 
-void BinaryWriter::finalize() {
+Error BinaryWriter::finalize() {
   // TODO: Create a filter range to construct OrderedSegments from so that this
   // code can be deduped with assignOffsets above. This should also solve the
   // todo below for LayoutSections.
@@ -1675,8 +1675,10 @@ void BinaryWriter::finalize() {
       TotalSize = std::max(TotalSize, Section->Offset + Section->Size);
   }
 
-  Buf.allocate(TotalSize);
+  if (Error E = Buf.allocate(TotalSize))
+    return E;
   SecWriter = llvm::make_unique<BinarySectionWriter>(Buf);
+  return Error::success();
 }
 
 template class ELFBuilder<ELF64LE>;

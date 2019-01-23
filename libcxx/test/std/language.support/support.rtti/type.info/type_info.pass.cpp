@@ -25,8 +25,8 @@ int main()
     const std::type_info& t3 = typeid(short);
     assert(t1 != t3);
     assert(!t1.before(t2));
-    assert(strcmp(t1.name(), t2.name()) == 0);
-    assert(strcmp(t1.name(), t3.name()) != 0);
+    assert(std::strcmp(t1.name(), t2.name()) == 0);
+    assert(std::strcmp(t1.name(), t3.name()) != 0);
   }
   {
     // type_info has a protected constructor taking a string literal. This

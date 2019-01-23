@@ -791,6 +791,9 @@ public:
     return HasScalarAtomics;
   }
 
+  bool hasLDSFPAtomics() const {
+    return VIInsts;
+  }
 
   bool hasDPP() const {
     return HasDPP;

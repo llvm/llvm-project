@@ -84,10 +84,10 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       // Explicitly removing a referenced symbol is an error.
       if (Sym.Referenced)
         reportError(Config.OutputFilename,
-                    make_error<StringError>(
-                        "not stripping symbol '" + Sym.Name +
-                            "' because it is named in a relocation.",
-                        llvm::errc::invalid_argument));
+                    createStringError(llvm::errc::invalid_argument,
+                                      "not stripping symbol '%s' because it is "
+                                      "named in a relocation.",
+                                      Sym.Name.str().c_str()));
       return true;
     }
 

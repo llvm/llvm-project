@@ -21,6 +21,8 @@ hsubps    (%rax), %xmm2
 
 lddqu     (%rax), %xmm2
 
+monitor
+
 movddup   %xmm0, %xmm2
 movddup   (%rax), %xmm2
 
@@ -29,6 +31,8 @@ movshdup  (%rax), %xmm2
 
 movsldup  %xmm0, %xmm2
 movsldup  (%rax), %xmm2
+
+mwait
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -52,12 +56,14 @@ movsldup  (%rax), %xmm2
 # CHECK-NEXT:  3      11    1.00                        hsubps	%xmm0, %xmm2
 # CHECK-NEXT:  4      16    1.00    *                   hsubps	(%rax), %xmm2
 # CHECK-NEXT:  1      5     0.50    *                   lddqu	(%rax), %xmm2
+# CHECK-NEXT:  1      100   0.50                  U     monitor
 # CHECK-NEXT:  1      2     0.50                        movddup	%xmm0, %xmm2
 # CHECK-NEXT:  1      7     0.50    *                   movddup	(%rax), %xmm2
 # CHECK-NEXT:  1      2     0.50                        movshdup	%xmm0, %xmm2
 # CHECK-NEXT:  1      7     0.50    *                   movshdup	(%rax), %xmm2
 # CHECK-NEXT:  1      2     0.50                        movsldup	%xmm0, %xmm2
 # CHECK-NEXT:  1      7     0.50    *                   movsldup	(%rax), %xmm2
+# CHECK-NEXT:  1      100   0.50    *      *      U     mwait
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -86,7 +92,7 @@ movsldup  (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT: 5.00   5.00    -      -      -      -      -      -     9.00   9.00   0.50   0.50    -      -     15.50  3.50    -      -      -     5.00   5.00    -      -
+# CHECK-NEXT: 5.00   5.00    -      -      -     1.00   1.00    -     9.00   9.00   0.50   0.50    -      -     15.50  3.50    -      -      -     5.00   5.00    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
@@ -103,9 +109,11 @@ movsldup  (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -      -      -      -      -     hsubps	%xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     1.00    -      -      -      -     0.50   0.50    -      -     hsubps	(%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -     0.50   0.50    -      -     lddqu	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     monitor
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     movddup	%xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -     0.50   0.50    -      -     movddup	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     movshdup	%xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -     0.50   0.50    -      -     movshdup	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     movsldup	%xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -     0.50   0.50    -      -     movsldup	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mwait

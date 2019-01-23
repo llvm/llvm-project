@@ -363,7 +363,8 @@ TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
   auto AST =
       ParsedAST::build(createInvocationFromCommandLine(Cmd), PreambleData,
                        llvm::MemoryBuffer::getMemBufferCopy(Main.code()),
-                       std::make_shared<PCHContainerOperations>(), PI.FS);
+                       std::make_shared<PCHContainerOperations>(), PI.FS,
+                       tidy::ClangTidyOptions::getDefaults());
   ASSERT_TRUE(AST);
   FileIndex Index;
   Index.updateMain(MainFile, *AST);

@@ -20,10 +20,10 @@ Use
 =====
 
 :program:`clang-doc` is a `LibTooling
-<http://clang.llvm.org/docs/LibTooling.html>`_-based tool, and so requires a
+<https://clang.llvm.org/docs/LibTooling.html>`_-based tool, and so requires a
 compile command database for your project (for an example of how to do this 
 see `How To Setup Tooling For LLVM
-<http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html>`_).
+<https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html>`_).
 
 The tool can be used on a single file or multiple files as defined in 
 the compile commands database:

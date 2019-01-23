@@ -666,8 +666,9 @@ public:
                  Query.Types[TypeIdx].getSizeInBits();
         },
         [=](const LegalityQuery &Query) {
+          LLT T = Query.Types[LargeTypeIdx];
           return std::make_pair(TypeIdx,
-                                Query.Types[LargeTypeIdx].getElementType());
+                                T.isVector() ? T.getElementType() : T);
         });
   }
 

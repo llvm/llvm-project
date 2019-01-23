@@ -18174,6 +18174,7 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   SDValue Ops[] = {LHS, RHS};
+  EVT VT = N->getValueType(0);
 
   // See if we can constant fold the vector operation.
   if (SDValue Fold = DAG.FoldConstantVectorArithmetic(
@@ -18191,7 +18192,6 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
     ShuffleVectorSDNode *SVN1 = cast<ShuffleVectorSDNode>(RHS);
 
     if (SVN0->getMask().equals(SVN1->getMask())) {
-      EVT VT = N->getValueType(0);
       SDValue UndefVector = LHS.getOperand(1);
       SDValue NewBinOp = DAG.getNode(N->getOpcode(), SDLoc(N), VT,
                                      LHS.getOperand(0), RHS.getOperand(0),
@@ -18199,6 +18199,29 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
       AddUsersToWorklist(N);
       return DAG.getVectorShuffle(VT, SDLoc(N), NewBinOp, UndefVector,
                                   SVN0->getMask());
+    }
+  }
+
+  // The following pattern is likely to emerge with vector reduction ops. Moving
+  // the binary operation ahead of insertion may allow using a narrower vector
+  // instruction that has better performance than the wide version of the op:
+  // VBinOp (ins undef, X, Z), (ins undef, Y, Z) --> ins VecC, (VBinOp X, Y), Z
+  if (LHS.getOpcode() == ISD::INSERT_SUBVECTOR && LHS.getOperand(0).isUndef() &&
+      RHS.getOpcode() == ISD::INSERT_SUBVECTOR && RHS.getOperand(0).isUndef() &&
+      LHS.getOperand(2) == RHS.getOperand(2) &&
+      (LHS.hasOneUse() || RHS.hasOneUse())) {
+    SDValue X = LHS.getOperand(1);
+    SDValue Y = RHS.getOperand(1);
+    SDValue Z = LHS.getOperand(2);
+    EVT NarrowVT = X.getValueType();
+    if (NarrowVT == Y.getValueType() &&
+        TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), NarrowVT)) {
+      // (binop undef, undef) may not return undef, so compute that result.
+      SDLoc DL(N);
+      SDValue VecC = DAG.getNode(N->getOpcode(), DL, VT, DAG.getUNDEF(VT),
+                                 DAG.getUNDEF(VT));
+      SDValue NarrowBO = DAG.getNode(N->getOpcode(), DL, NarrowVT, X, Y);
+      return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, VecC, NarrowBO, Z);
     }
   }
 

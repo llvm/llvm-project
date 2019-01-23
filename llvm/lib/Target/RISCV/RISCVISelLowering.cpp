@@ -575,7 +575,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         !(Subtarget.hasStdExtM() && isVariableSDivUDivURem(Src)))
       break;
     SDLoc DL(N);
-    return DCI.CombineTo(N, DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Src));
+    // Don't add the new node to the DAGCombiner worklist, in order to avoid
+    // an infinite cycle due to SimplifyDemandedBits converting the
+    // SIGN_EXTEND back to ANY_EXTEND.
+    return DCI.CombineTo(N, DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Src),
+                         false);
   }
   case RISCVISD::SplitF64: {
     // If the input to SplitF64 is just BuildPairF64 then the operation is
@@ -1720,9 +1724,9 @@ Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilder<> &Builder,
 
 TargetLowering::AtomicExpansionKind
 RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
-  // atomicrmw {fadd,fsub} must be expanded to use compare-exchange, as
-  // floating point operations can't be used in an lr/sc sequence without
-  // brekaing the forward-progress guarantee.
+  // atomicrmw {fadd,fsub} must be expanded to use compare-exchange, as floating
+  // point operations can't be used in an lr/sc sequence without breaking the
+  // forward-progress guarantee.
   if (AI->isFloatingPointOperation())
     return AtomicExpansionKind::CmpXChg;
 

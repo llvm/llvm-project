@@ -15,6 +15,7 @@
 
 #include <streambuf>
 #include <cassert>
+#include <cstring>
 
 struct test
     : public std::basic_streambuf<char>
@@ -38,6 +39,6 @@ int main()
         char out[sizeof(in)] = {0};
         t.setp(out, out+sizeof(out));
         assert(t.sputn(in, sizeof(in)) == sizeof(in));
-        assert(strcmp(in, out) == 0);
+        assert(std::strcmp(in, out) == 0);
     }
 }

@@ -231,6 +231,12 @@ void AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
   S.EmitInstruction(Inst, getSubtargetInfo());
 }
 
+void AsmPrinter::emitInitialRawDwarfLocDirective(const MachineFunction &MF) {
+  assert(DD && "Dwarf debug file is not defined.");
+  assert(OutStreamer->hasRawTextSupport() && "Expected assembly output mode.");
+  (void)DD->emitInitialLocDirective(MF, /*CUID=*/0);
+}
+
 /// getCurrentSection() - Return the current section we are emitting to.
 const MCSection *AsmPrinter::getCurrentSection() const {
   return OutStreamer->getCurrentSectionOnly();

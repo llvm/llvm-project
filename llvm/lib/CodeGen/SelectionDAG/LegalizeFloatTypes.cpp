@@ -1748,6 +1748,8 @@ static ISD::NodeType GetPromotionOpcode(EVT OpVT, EVT RetVT) {
 }
 
 bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
+  LLVM_DEBUG(dbgs() << "Promote float operand " << OpNo << ": "; N->dump(&DAG);
+             dbgs() << "\n");
   SDValue R = SDValue();
 
   if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false)) {
@@ -1762,6 +1764,10 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
   // a part of PromoteFloatResult.
   switch (N->getOpcode()) {
     default:
+  #ifndef NDEBUG
+      dbgs() << "PromoteFloatOperand Op #" << OpNo << ": ";
+      N->dump(&DAG); dbgs() << "\n";
+  #endif
       llvm_unreachable("Do not know how to promote this operator's operand!");
 
     case ISD::BITCAST:    R = PromoteFloatOp_BITCAST(N, OpNo); break;
@@ -1872,6 +1878,8 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_STORE(SDNode *N, unsigned OpNo) {
 //===----------------------------------------------------------------------===//
 
 void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
+  LLVM_DEBUG(dbgs() << "Promote float result " << ResNo << ": "; N->dump(&DAG);
+             dbgs() << "\n");
   SDValue R = SDValue();
 
   switch (N->getOpcode()) {
@@ -1880,6 +1888,10 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FP16_TO_FP:
     case ISD::FP_TO_FP16:
     default:
+#ifndef NDEBUG
+      dbgs() << "PromoteFloatResult #" << ResNo << ": ";
+      N->dump(&DAG); dbgs() << "\n";
+#endif
       llvm_unreachable("Do not know how to promote this operator's result!");
 
     case ISD::BITCAST:    R = PromoteFloatRes_BITCAST(N); break;

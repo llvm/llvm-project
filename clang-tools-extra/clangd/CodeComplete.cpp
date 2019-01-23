@@ -1016,33 +1016,20 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
                       const SemaCompleteInput &Input,
                       IncludeStructure *Includes = nullptr) {
   trace::Span Tracer("Sema completion");
-  std::vector<const char *> ArgStrs;
-  for (const auto &S : Input.Command.CommandLine)
-    ArgStrs.push_back(S.c_str());
-
-  if (Input.VFS->setCurrentWorkingDirectory(Input.Command.Directory)) {
-    log("Couldn't set working directory");
-    // We run parsing anyway, our lit-tests rely on results for non-existing
-    // working dirs.
-  }
-
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = Input.VFS;
   if (Input.Preamble && Input.Preamble->StatCache)
     VFS = Input.Preamble->StatCache->getConsumingFS(std::move(VFS));
-  IgnoreDiagnostics DummyDiagsConsumer;
-  auto CI = createInvocationFromCommandLine(
-      ArgStrs,
-      CompilerInstance::createDiagnostics(new DiagnosticOptions,
-                                          &DummyDiagsConsumer, false),
-      VFS);
+  ParseInputs PInput;
+  PInput.CompileCommand = Input.Command;
+  PInput.FS = VFS;
+  PInput.Contents = Input.Contents;
+  auto CI = buildCompilerInvocation(PInput);
   if (!CI) {
     elog("Couldn't create CompilerInvocation");
     return false;
   }
   auto &FrontendOpts = CI->getFrontendOpts();
-  FrontendOpts.DisableFree = false;
   FrontendOpts.SkipFunctionBodies = true;
-  CI->getLangOpts()->CommentOpts.ParseAllComments = true;
   // Disable typo correction in Sema.
   CI->getLangOpts()->SpellChecking = false;
   // Setup code completion.
@@ -1072,6 +1059,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
       *Offset;
   // NOTE: we must call BeginSourceFile after prepareCompilerInstance. Otherwise
   // the remapped buffers do not get freed.
+  IgnoreDiagnostics DummyDiagsConsumer;
   auto Clang = prepareCompilerInstance(
       std::move(CI),
       (Input.Preamble && !CompletingInPreamble) ? &Input.Preamble->Preamble

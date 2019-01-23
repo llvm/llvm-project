@@ -73,7 +73,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .clampScalar(0, s16, s64)
       .widenScalarToNextPow2(0);
 
-  getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR, G_SHL})
+  getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
       .legalFor({s32, s64, v2s32, v4s32, v2s64})
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
@@ -81,16 +81,31 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .clampNumElements(0, v2s64, v2s64)
       .moreElementsToNextPow2(0);
 
+  getActionDefinitionsBuilder(G_SHL)
+    .legalFor({{s32, s32}, {s64, s64},
+               {v2s32, v2s32}, {v4s32, v4s32}, {v2s64, v2s64}})
+    .clampScalar(0, s32, s64)
+    .widenScalarToNextPow2(0)
+    .clampNumElements(0, v2s32, v4s32)
+    .clampNumElements(0, v2s64, v2s64)
+    .moreElementsToNextPow2(0)
+    .minScalarSameAs(1, 0);
+
   getActionDefinitionsBuilder(G_GEP)
       .legalFor({{p0, s64}})
       .clampScalar(1, s64, s64);
 
   getActionDefinitionsBuilder(G_PTR_MASK).legalFor({p0});
 
-  getActionDefinitionsBuilder({G_LSHR, G_ASHR, G_SDIV, G_UDIV})
+  getActionDefinitionsBuilder({G_SDIV, G_UDIV})
       .legalFor({s32, s64})
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0);
+
+  getActionDefinitionsBuilder({G_LSHR, G_ASHR})
+    .legalFor({{s32, s32}, {s64, s64}})
+    .clampScalar(0, s32, s64)
+    .minScalarSameAs(1, 0);
 
   getActionDefinitionsBuilder({G_SREM, G_UREM})
       .lowerFor({s1, s8, s16, s32, s64});

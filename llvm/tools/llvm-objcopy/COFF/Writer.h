@@ -31,7 +31,7 @@ class COFFWriter {
   StringTableBuilder StrTabBuilder;
 
   Error finalizeRelocTargets();
-  Error finalizeSectionNumbers();
+  Error finalizeSymbolContents();
   void layoutSections();
   size_t finalizeStringTable();
   template <class SymbolTy> std::pair<size_t, size_t> finalizeSymbolTable();
