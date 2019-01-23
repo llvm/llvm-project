@@ -205,6 +205,11 @@ def tcGPR64 : RegisterClass<"AArch64", [i64], 64, (sub GPR64common, X19, X20, X2
 // BTI-protected function.
 def rtcGPR64 : RegisterClass<"AArch64", [i64], 64, (add X16, X17)>;
 
+// Register set that excludes registers that are reserved for procedure calls.
+// This is used for pseudo-instructions that are actually implemented using a
+// procedure call.
+def GPR64noip : RegisterClass<"AArch64", [i64], 64, (sub GPR64, X16, X17, LR)>;
+
 // GPR register classes for post increment amount of vector load/store that
 // has alternate printing when Rm=31 and prints a constant immediate value
 // equal to the total number of bytes transferred.

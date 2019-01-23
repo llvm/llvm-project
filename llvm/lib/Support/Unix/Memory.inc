@@ -91,9 +91,6 @@ Memory::allocateMappedMemory(size_t NumBytes,
   if (NumBytes == 0)
     return MemoryBlock();
 
-  static const size_t PageSize = Process::getPageSize();
-  const size_t NumPages = (NumBytes+PageSize-1)/PageSize;
-
   int fd = -1;
 
   int MMFlags = MAP_PRIVATE |
@@ -113,11 +110,12 @@ Memory::allocateMappedMemory(size_t NumBytes,
   // Use any near hint and the page size to set a page-aligned starting address
   uintptr_t Start = NearBlock ? reinterpret_cast<uintptr_t>(NearBlock->base()) +
                                       NearBlock->size() : 0;
+  static const size_t PageSize = Process::getPageSize();
   if (Start && Start % PageSize)
     Start += PageSize - Start % PageSize;
 
-  void *Addr = ::mmap(reinterpret_cast<void*>(Start), PageSize*NumPages,
-                      Protect, MMFlags, fd, 0);
+  void *Addr = ::mmap(reinterpret_cast<void *>(Start), NumBytes, Protect,
+                      MMFlags, fd, 0);
   if (Addr == MAP_FAILED) {
     if (NearBlock) //Try again without a near hint
       return allocateMappedMemory(NumBytes, nullptr, PFlags, EC);
@@ -128,7 +126,7 @@ Memory::allocateMappedMemory(size_t NumBytes,
 
   MemoryBlock Result;
   Result.Address = Addr;
-  Result.Size = NumPages*PageSize;
+  Result.Size = NumBytes;
 
   // Rely on protectMappedMemory to invalidate instruction cache.
   if (PFlags & MF_EXEC) {

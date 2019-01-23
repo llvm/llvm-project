@@ -2569,10 +2569,8 @@ define <32 x i8> @splatconstant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwi
 ; XOPAVX2-LABEL: splatconstant_funnnel_v32i8:
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vpsrlw $4, %ymm1, %ymm1
-; XOPAVX2-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
 ; XOPAVX2-NEXT:    vpsllw $4, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
-; XOPAVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpcmov {{.*}}(%rip), %ymm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
   %res = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>)
   ret <32 x i8> %res

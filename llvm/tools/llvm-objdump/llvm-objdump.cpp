@@ -868,76 +868,31 @@ static size_t countSkippableZeroBytes(ArrayRef<uint8_t> Buf) {
   return N & ~0x3;
 }
 
-static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
-  if (StartAddress > StopAddress)
-    error("Start address should be less than stop address");
-
-  const Target *TheTarget = getTarget(Obj);
-
-  // Package up features to be passed to target/subtarget
-  SubtargetFeatures Features = Obj->getFeatures();
-  if (!MAttrs.empty())
-    for (unsigned I = 0; I != MAttrs.size(); ++I)
-      Features.AddFeature(MAttrs[I]);
-
-  std::unique_ptr<const MCRegisterInfo> MRI(
-      TheTarget->createMCRegInfo(TripleName));
-  if (!MRI)
-    report_error(Obj->getFileName(), "no register info for target " +
-                 TripleName);
-
-  // Set up disassembler.
-  std::unique_ptr<const MCAsmInfo> AsmInfo(
-      TheTarget->createMCAsmInfo(*MRI, TripleName));
-  if (!AsmInfo)
-    report_error(Obj->getFileName(), "no assembly info for target " +
-                 TripleName);
-  std::unique_ptr<const MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, Features.getString()));
-  if (!STI)
-    report_error(Obj->getFileName(), "no subtarget info for target " +
-                 TripleName);
-  std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
-  if (!MII)
-    report_error(Obj->getFileName(), "no instruction info for target " +
-                 TripleName);
-  MCObjectFileInfo MOFI;
-  MCContext Ctx(AsmInfo.get(), MRI.get(), &MOFI);
-  // FIXME: for now initialize MCObjectFileInfo with default values
-  MOFI.InitMCObjectFileInfo(Triple(TripleName), false, Ctx);
-
-  std::unique_ptr<MCDisassembler> DisAsm(
-    TheTarget->createMCDisassembler(*STI, Ctx));
-  if (!DisAsm)
-    report_error(Obj->getFileName(), "no disassembler for target " +
-                 TripleName);
-
-  std::unique_ptr<const MCInstrAnalysis> MIA(
-      TheTarget->createMCInstrAnalysis(MII.get()));
-
-  int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
-  std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
-      Triple(TripleName), AsmPrinterVariant, *AsmInfo, *MII, *MRI));
-  if (!IP)
-    report_error(Obj->getFileName(), "no instruction printer for target " +
-                 TripleName);
-  IP->setPrintImmHex(PrintImmHex);
-  PrettyPrinter &PIP = selectPrettyPrinter(Triple(TripleName));
-
-  StringRef Fmt = Obj->getBytesInAddress() > 4 ? "\t\t%016" PRIx64 ":  " :
-                                                 "\t\t\t%08" PRIx64 ":  ";
-
-  SourcePrinter SP(Obj, TheTarget->getName());
-
-  // Create a mapping, RelocSecs = SectionRelocMap[S], where sections
-  // in RelocSecs contain the relocations for section S.
-  std::error_code EC;
-  std::map<SectionRef, SmallVector<SectionRef, 1>> SectionRelocMap;
-  for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
-    section_iterator Sec2 = Section.getRelocatedSection();
-    if (Sec2 != Obj->section_end())
-      SectionRelocMap[*Sec2].push_back(Section);
+// Returns a map from sections to their relocations.
+static std::map<SectionRef, std::vector<RelocationRef>>
+getRelocsMap(llvm::object::ObjectFile const &Obj) {
+  std::map<SectionRef, std::vector<RelocationRef>> Ret;
+  for (const SectionRef &Section : ToolSectionFilter(Obj)) {
+    section_iterator RelSec = Section.getRelocatedSection();
+    if (RelSec == Obj.section_end())
+      continue;
+    std::vector<RelocationRef> &V = Ret[*RelSec];
+    for (const RelocationRef &R : Section.relocations())
+      V.push_back(R);
+    // Sort relocations by address.
+    llvm::sort(V, isRelocAddressLess);
   }
+  return Ret;
+}
+
+static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
+                              MCContext &Ctx, MCDisassembler *DisAsm,
+                              const MCInstrAnalysis *MIA, MCInstPrinter *IP,
+                              const MCSubtargetInfo *STI, PrettyPrinter &PIP,
+                              SourcePrinter &SP, bool InlineRelocs) {
+  std::map<SectionRef, std::vector<RelocationRef>> RelocMap;
+  if (InlineRelocs)
+    RelocMap = getRelocsMap(*Obj);
 
   // Create a mapping from virtual address to symbol name.  This is used to
   // pretty print the symbols while disassembling.
@@ -1062,19 +1017,6 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
       }
     }
 
-    // Make a list of all the relocations for this section.
-    std::vector<RelocationRef> Rels;
-    if (InlineRelocs) {
-      for (const SectionRef &RelocSec : SectionRelocMap[Section]) {
-        for (const RelocationRef &Reloc : RelocSec.relocations()) {
-          Rels.push_back(Reloc);
-        }
-      }
-    }
-
-    // Sort relocations by address.
-    llvm::sort(Rels, isRelocAddressLess);
-
     StringRef SegmentName = "";
     if (const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(Obj)) {
       DataRefImpl DR = Section.getRawDataRefImpl();
@@ -1103,6 +1045,7 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     uint64_t Index;
     bool PrintedSection = false;
 
+    std::vector<RelocationRef> Rels = RelocMap[Section];
     std::vector<RelocationRef>::const_iterator RelCur = Rels.begin();
     std::vector<RelocationRef>::const_iterator RelEnd = Rels.end();
     // Disassemble symbol by symbol.
@@ -1392,7 +1335,10 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
         outs() << "\n";
 
         // Hexagon does this in pretty printer
-        if (Obj->getArch() != Triple::hexagon)
+        if (Obj->getArch() != Triple::hexagon) {
+          StringRef Fmt = Obj->getBytesInAddress() > 4 ? "\t\t%016" PRIx64 ":  "
+                                                       : "\t\t\t%08" PRIx64
+                                                         ":  ";
           // Print relocation for instruction.
           while (RelCur != RelEnd) {
             uint64_t Addr = RelCur->getOffset();
@@ -1414,9 +1360,72 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
                    << Val << "\n";
             ++RelCur;
           }
+        }
       }
     }
   }
+}
+
+static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
+  if (StartAddress > StopAddress)
+    error("Start address should be less than stop address");
+
+  const Target *TheTarget = getTarget(Obj);
+
+  // Package up features to be passed to target/subtarget
+  SubtargetFeatures Features = Obj->getFeatures();
+  if (!MAttrs.empty())
+    for (unsigned I = 0; I != MAttrs.size(); ++I)
+      Features.AddFeature(MAttrs[I]);
+
+  std::unique_ptr<const MCRegisterInfo> MRI(
+      TheTarget->createMCRegInfo(TripleName));
+  if (!MRI)
+    report_error(Obj->getFileName(),
+                 "no register info for target " + TripleName);
+
+  // Set up disassembler.
+  std::unique_ptr<const MCAsmInfo> AsmInfo(
+      TheTarget->createMCAsmInfo(*MRI, TripleName));
+  if (!AsmInfo)
+    report_error(Obj->getFileName(),
+                 "no assembly info for target " + TripleName);
+  std::unique_ptr<const MCSubtargetInfo> STI(
+      TheTarget->createMCSubtargetInfo(TripleName, MCPU, Features.getString()));
+  if (!STI)
+    report_error(Obj->getFileName(),
+                 "no subtarget info for target " + TripleName);
+  std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
+  if (!MII)
+    report_error(Obj->getFileName(),
+                 "no instruction info for target " + TripleName);
+  MCObjectFileInfo MOFI;
+  MCContext Ctx(AsmInfo.get(), MRI.get(), &MOFI);
+  // FIXME: for now initialize MCObjectFileInfo with default values
+  MOFI.InitMCObjectFileInfo(Triple(TripleName), false, Ctx);
+
+  std::unique_ptr<MCDisassembler> DisAsm(
+      TheTarget->createMCDisassembler(*STI, Ctx));
+  if (!DisAsm)
+    report_error(Obj->getFileName(),
+                 "no disassembler for target " + TripleName);
+
+  std::unique_ptr<const MCInstrAnalysis> MIA(
+      TheTarget->createMCInstrAnalysis(MII.get()));
+
+  int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
+  std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
+      Triple(TripleName), AsmPrinterVariant, *AsmInfo, *MII, *MRI));
+  if (!IP)
+    report_error(Obj->getFileName(),
+                 "no instruction printer for target " + TripleName);
+  IP->setPrintImmHex(PrintImmHex);
+
+  PrettyPrinter &PIP = selectPrettyPrinter(Triple(TripleName));
+  SourcePrinter SP(Obj, TheTarget->getName());
+
+  disassembleObject(TheTarget, Obj, Ctx, DisAsm.get(), MIA.get(), IP.get(),
+                    STI.get(), PIP, SP, InlineRelocs);
 }
 
 void llvm::printRelocations(const ObjectFile *Obj) {

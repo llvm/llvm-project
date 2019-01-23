@@ -19,6 +19,7 @@ namespace llvm {
 namespace objcopy {
 
 LLVM_ATTRIBUTE_NORETURN extern void error(Twine Message);
+LLVM_ATTRIBUTE_NORETURN extern void error(Error E);
 LLVM_ATTRIBUTE_NORETURN extern void reportError(StringRef File, Error E);
 LLVM_ATTRIBUTE_NORETURN extern void reportError(StringRef File,
                                                 std::error_code EC);

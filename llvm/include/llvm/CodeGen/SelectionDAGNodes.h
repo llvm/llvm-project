@@ -1359,6 +1359,8 @@ public:
            N->getOpcode() == ISD::ATOMIC_LOAD_MAX     ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UMIN    ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UMAX    ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FADD    ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FSUB    ||
            N->getOpcode() == ISD::ATOMIC_LOAD         ||
            N->getOpcode() == ISD::ATOMIC_STORE        ||
            N->getOpcode() == ISD::MLOAD               ||
@@ -1411,6 +1413,8 @@ public:
            N->getOpcode() == ISD::ATOMIC_LOAD_MAX     ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UMIN    ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UMAX    ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FADD    ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FSUB    ||
            N->getOpcode() == ISD::ATOMIC_LOAD         ||
            N->getOpcode() == ISD::ATOMIC_STORE;
   }

@@ -351,6 +351,7 @@ public:
                                     const SelectionDAG &DAG,
                                     bool SNaN = false,
                                     unsigned Depth = 0) const override;
+  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
 };
 
 } // End namespace llvm

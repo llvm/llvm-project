@@ -1529,15 +1529,14 @@ bool X86InstructionSelector::selectShift(MachineInstr &I,
 
   const static struct ShiftEntry {
     unsigned SizeInBits;
-    unsigned CReg;
     unsigned OpLSHR;
     unsigned OpASHR;
     unsigned OpSHL;
   } OpTable[] = {
-      {8, X86::CL, X86::SHR8rCL, X86::SAR8rCL, X86::SHL8rCL},      // i8
-      {16, X86::CX, X86::SHR16rCL, X86::SAR16rCL, X86::SHL16rCL},  // i16
-      {32, X86::ECX, X86::SHR32rCL, X86::SAR32rCL, X86::SHL32rCL}, // i32
-      {64, X86::RCX, X86::SHR64rCL, X86::SAR64rCL, X86::SHL64rCL}  // i64
+      {8, X86::SHR8rCL, X86::SAR8rCL, X86::SHL8rCL},     // i8
+      {16, X86::SHR16rCL, X86::SAR16rCL, X86::SHL16rCL}, // i16
+      {32, X86::SHR32rCL, X86::SAR32rCL, X86::SHL32rCL}, // i32
+      {64, X86::SHR64rCL, X86::SAR64rCL, X86::SHL64rCL}  // i64
   };
 
   if (DstRB.getID() != X86::GPRRegBankID)
@@ -1550,7 +1549,6 @@ bool X86InstructionSelector::selectShift(MachineInstr &I,
   if (ShiftEntryIt == std::end(OpTable))
     return false;
 
-  unsigned CReg = ShiftEntryIt->CReg;
   unsigned Opcode = 0;
   switch (I.getOpcode()) {
   case TargetOpcode::G_SHL:
@@ -1569,16 +1567,11 @@ bool X86InstructionSelector::selectShift(MachineInstr &I,
   unsigned Op0Reg = I.getOperand(1).getReg();
   unsigned Op1Reg = I.getOperand(2).getReg();
 
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
-          ShiftEntryIt->CReg)
-      .addReg(Op1Reg);
+  assert(MRI.getType(Op1Reg).getSizeInBits() == 8);
 
-  // The shift instruction uses X86::CL. If we defined a super-register
-  // of X86::CL, emit a subreg KILL to precisely describe what we're doing here.
-  if (CReg != X86::CL)
-    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::KILL),
-            X86::CL)
-        .addReg(CReg, RegState::Kill);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
+          X86::CL)
+    .addReg(Op1Reg);
 
   MachineInstr &ShiftInst =
       *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode), DstReg)

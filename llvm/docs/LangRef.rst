@@ -4511,13 +4511,36 @@ DIGlobalVariable
 
 .. code-block:: text
 
-    !0 = !DIGlobalVariable(name: "foo", linkageName: "foo", scope: !1,
-                           file: !2, line: 7, type: !3, isLocal: true,
-                           isDefinition: false, variable: i32* @foo,
-                           declaration: !4)
+    @foo = global i32, !dbg !0
+    !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+    !1 = !DIGlobalVariable(name: "foo", linkageName: "foo", scope: !2,
+                           file: !3, line: 7, type: !4, isLocal: true,
+                           isDefinition: false, declaration: !5)
 
-All global variables should be referenced by the `globals:` field of a
-:ref:`compile unit <DICompileUnit>`.
+
+DIGlobalVariableExpression
+""""""""""""""""""""""""""
+
+``DIGlobalVariableExpression`` nodes tie a :ref:`DIGlobalVariable` together
+with a :ref:`DIExpression`.
+
+.. code-block:: text
+
+    @lower = global i32, !dbg !0
+    @upper = global i32, !dbg !1
+    !0 = !DIGlobalVariableExpression(
+             var: !2,
+             expr: !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+             )
+    !1 = !DIGlobalVariableExpression(
+             var: !2,
+             expr: !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+             )
+    !2 = !DIGlobalVariable(name: "split64", linkageName: "split64", scope: !3,
+                           file: !4, line: 8, type: !5, declaration: !6)
+
+All global variable expressions should be referenced by the `globals:` field of
+a :ref:`compile unit <DICompileUnit>`.
 
 .. _DISubprogram:
 
@@ -8667,15 +8690,18 @@ operation. The operation must be one of the following keywords:
 -  min
 -  umax
 -  umin
+-  fadd
+-  fsub
 
 For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight
 and less than or equal to a target-specific size limit. For xchg, this
 may also be a floating point type with the same size constraints as
-integers. The type of the '``<pointer>``' operand must be a pointer to
-that type. If the ``atomicrmw`` is marked as ``volatile``, then the
-optimizer is not allowed to modify the number or order of execution of
-this ``atomicrmw`` with other :ref:`volatile operations <volatile>`.
+integers.  For fadd/fsub, this must be a floating point type.  The
+type of the '``<pointer>``' operand must be a pointer to that type. If
+the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not
+allowed to modify the number or order of execution of this
+``atomicrmw`` with other :ref:`volatile operations <volatile>`.
 
 A ``atomicrmw`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.
@@ -8701,6 +8727,8 @@ operation argument:
    comparison)
 -  umin: ``*ptr = *ptr < val ? *ptr : val`` (using an unsigned
    comparison)
+- fadd: ``*ptr = *ptr + val`` (using floating point arithmetic)
+- fsub: ``*ptr = *ptr - val`` (using floating point arithmetic)
 
 Example:
 """"""""

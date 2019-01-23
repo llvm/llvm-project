@@ -108,7 +108,7 @@ functions.
 
 You may also build Scudo like this: 
 
-.. code::
+.. code:: console
 
   cd $LLVM/projects/compiler-rt/lib
   clang++ -fPIC -std=c++11 -msse4.2 -O2 -I. scudo/*.cpp \
@@ -117,7 +117,7 @@ You may also build Scudo like this:
 
 and then use it with existing binaries as follows:
 
-.. code::
+.. code:: console
 
   LD_PRELOAD=`pwd`/libscudo.so ./a.out
 
@@ -151,7 +151,7 @@ can be assigned in the same string, separated by colons.
 
 For example, using the environment variable:
 
-.. code::
+.. code:: console
 
   SCUDO_OPTIONS="DeleteSizeMismatch=1:QuarantineSizeKb=64" ./a.out
 
@@ -201,3 +201,53 @@ Allocator related common Sanitizer options can also be passed through Scudo
 options, such as ``allocator_may_return_null`` or ``abort_on_error``. A detailed
 list including those can be found here:
 https://github.com/google/sanitizers/wiki/SanitizerCommonFlags.
+
+Error Types
+===========
+
+The allocator will output an error message, and potentially terminate the
+process, when an unexpected behavior is detected. The output usually starts with
+``"Scudo ERROR:"`` followed by a short summary of the problem that occurred as
+well as the pointer(s) involved. Once again, Scudo is meant to be a mitigation,
+and might not be the most useful of tools to help you root-cause the issue,
+please consider `ASan <https://github.com/google/sanitizers/wiki/AddressSanitizer>`_
+for this purpose.
+
+Here is a list of the current error messages and their potential cause:
+
+- ``"corrupted chunk header"``: the checksum verification of the chunk header
+  has failed. This is likely due to one of two things: the header was
+  overwritten (partially or totally), or the pointer passed to the function is
+  not a chunk at all;
+
+- ``"race on chunk header"``: two different threads are attempting to manipulate
+  the same header at the same time. This is usually symptomatic of a
+  race-condition or general lack of locking when performing operations on that
+  chunk;
+
+- ``"invalid chunk state"``: the chunk is not in the expected state for a given
+  operation, eg: it is not allocated when trying to free it, or it's not
+  quarantined when trying to recycle it, etc. A double-free is the typical
+  reason this error would occur;
+
+- ``"misaligned pointer"``: we strongly enforce basic alignment requirements, 8
+  bytes on 32-bit platforms, 16 bytes on 64-bit platforms. If a pointer passed
+  to our functions does not fit those, something is definitely wrong.
+
+- ``"allocation type mismatch"``: when the optional deallocation type mismatch
+  check is enabled, a deallocation function called on a chunk has to match the
+  type of function that was called to allocate it. Security implications of such
+  a mismatch are not necessarily obvious but situational at best;
+
+- ``"invalid sized delete"``: when the C++14 sized delete operator is used, and
+  the optional check enabled, this indicates that the size passed when
+  deallocating a chunk is not congruent with the one requested when allocating
+  it. This is likely to be a `compiler issue <https://software.intel.com/en-us/forums/intel-c-compiler/topic/783942>`_,
+  as was the case with Intel C++ Compiler, or some type confusion on the object
+  being deallocated;
+
+- ``"RSS limit exhausted"``: the maximum RSS optionally specified has been
+  exceeded;
+
+Several other error messages relate to parameter checking on the libc allocation
+APIs and are fairly straightforward to understand.

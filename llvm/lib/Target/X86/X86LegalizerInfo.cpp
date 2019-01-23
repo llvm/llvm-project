@@ -133,9 +133,15 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
 
     // Shifts and SDIV
     getActionDefinitionsBuilder(
-        {G_SHL, G_LSHR, G_ASHR, G_SDIV, G_SREM, G_UDIV, G_UREM})
-        .legalFor({s8, s16, s32})
-        .clampScalar(0, s8, s32);
+        {G_SDIV, G_SREM, G_UDIV, G_UREM})
+      .legalFor({s8, s16, s32})
+      .clampScalar(0, s8, s32);
+
+    getActionDefinitionsBuilder(
+        {G_SHL, G_LSHR, G_ASHR})
+      .legalFor({{s8, s8}, {s16, s8}, {s32, s8}})
+      .clampScalar(0, s8, s32)
+      .clampScalar(1, s8, s8);
   }
 
   // Control-flow
@@ -235,11 +241,18 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
       .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(1);
 
-  // Shifts and SDIV
+  // Divisions
   getActionDefinitionsBuilder(
-      {G_SHL, G_LSHR, G_ASHR, G_SDIV, G_SREM, G_UDIV, G_UREM})
+      {G_SDIV, G_SREM, G_UDIV, G_UREM})
       .legalFor({s8, s16, s32, s64})
       .clampScalar(0, s8, s64);
+
+  // Shifts
+  getActionDefinitionsBuilder(
+    {G_SHL, G_LSHR, G_ASHR})
+    .legalFor({{s8, s8}, {s16, s8}, {s32, s8}, {s64, s8}})
+    .clampScalar(0, s8, s64)
+    .clampScalar(1, s8, s8);
 
   // Merge/Unmerge
   setAction({G_MERGE_VALUES, s128}, Legal);

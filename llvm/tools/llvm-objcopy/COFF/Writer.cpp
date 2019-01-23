@@ -121,6 +121,7 @@ size_t COFFWriter::finalizeStringTable() {
 
   for (auto &S : Obj.getMutableSections()) {
     if (S.Name.size() > COFF::NameSize) {
+      memset(S.Header.Name, 0, sizeof(S.Header.Name));
       snprintf(S.Header.Name, sizeof(S.Header.Name), "/%d",
                (int)StrTabBuilder.getOffset(S.Name));
     } else {
@@ -325,7 +326,8 @@ Error COFFWriter::write(bool IsBigObj) {
   if (Error E = finalize(IsBigObj))
     return E;
 
-  Buf.allocate(FileSize);
+  if (Error E = Buf.allocate(FileSize))
+    return E;
 
   writeHeaders(IsBigObj);
   writeSections();

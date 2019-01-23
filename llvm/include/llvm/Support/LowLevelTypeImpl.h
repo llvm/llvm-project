@@ -103,6 +103,10 @@ public:
     return getScalarSizeInBits() * getNumElements();
   }
 
+  LLT getScalarType() const {
+    return isVector() ? getElementType() : *this;
+  }
+
   unsigned getScalarSizeInBits() const {
     assert(RawData != 0 && "Invalid Type");
     if (!IsVector) {

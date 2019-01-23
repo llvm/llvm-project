@@ -108,8 +108,10 @@ public:
     unsigned TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLT DstTy = MRI.getType(DstReg);
-      if (isInstUnsupported({TargetOpcode::G_SHL, {DstTy}}) ||
-          isInstUnsupported({TargetOpcode::G_ASHR, {DstTy}}) ||
+      // Guess on the RHS shift amount type, which should be re-legalized if
+      // applicable.
+      if (isInstUnsupported({TargetOpcode::G_SHL, {DstTy, DstTy}}) ||
+          isInstUnsupported({TargetOpcode::G_ASHR, {DstTy, DstTy}}) ||
           isInstUnsupported({TargetOpcode::G_CONSTANT, {DstTy}}))
         return false;
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);

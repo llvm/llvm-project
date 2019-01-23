@@ -1715,8 +1715,9 @@ public:
 
   /// Returns how the IR-level AtomicExpand pass should expand the given
   /// AtomicRMW, if at all. Default is to never expand.
-  virtual AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const {
-    return AtomicExpansionKind::None;
+  virtual AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+    return RMW->isFloatingPointOperation() ?
+      AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
   }
 
   /// On some platforms, an AtomicRMW that never actually modifies the value
