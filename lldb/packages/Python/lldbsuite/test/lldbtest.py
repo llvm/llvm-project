@@ -1228,12 +1228,7 @@ class Base(unittest2.TestCase):
                         remove_file(dst)
 
                     lldbutil.mkdir_p(os.path.dirname(dst))
-                    try:
-                        os.rename(src, dst)
-                    except OSError:
-                        print("src (exists={}): {}".format(os.path.exists(src), src))
-                        print("dst (exists={}): {}".format(os.path.exists(dst), dst))
-                        raise
+                    os.rename(src, dst)
         else:
             # success!  (and we don't want log files) delete log files
             for log_file in log_files_for_this_test:
