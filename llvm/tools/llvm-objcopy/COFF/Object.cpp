@@ -26,12 +26,8 @@ void Object::addSymbols(ArrayRef<Symbol> NewSymbols) {
 
 void Object::updateSymbols() {
   SymbolMap = DenseMap<size_t, Symbol *>(Symbols.size());
-  size_t RawSymIndex = 0;
-  for (Symbol &Sym : Symbols) {
+  for (Symbol &Sym : Symbols)
     SymbolMap[Sym.UniqueId] = &Sym;
-    Sym.RawIndex = RawSymIndex;
-    RawSymIndex += 1 + Sym.Sym.NumberOfAuxSymbols;
-  }
 }
 
 const Symbol *Object::findSymbol(size_t UniqueId) const {
@@ -129,7 +125,7 @@ void Object::removeSections(function_ref<bool(const Section &)> ToRemove) {
 void Object::truncateSections(function_ref<bool(const Section &)> ToTruncate) {
   for (Section &Sec : Sections) {
     if (ToTruncate(Sec)) {
-      Sec.Contents = ArrayRef<uint8_t>();
+      Sec.clearContents();
       Sec.Relocs.clear();
       Sec.Header.SizeOfRawData = 0;
     }

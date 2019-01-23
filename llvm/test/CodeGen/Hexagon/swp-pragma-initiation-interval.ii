@@ -2,9 +2,9 @@
 ; RUN:     -debug-only=pipeliner < %s 2>&1 > /dev/null | FileCheck %s
 ; REQUIRES: asserts
 ;
-; Test that checks if the ResMII is 1.
+; Test that checks if the II set by pragma was taken by pipeliner.
 
-; CHECK: MII = 1 MAX_II = 11 (rec=1, res=1)
+; CHECK: MII = 2 MAX_II = 2 
 
 ; Function Attrs: nounwind
 define void @f0(i32* nocapture %a0, i32 %a1) #0 {
@@ -34,10 +34,16 @@ b2:                                               ; preds = %b2, %b1
   br i1 %v13, label %b3, label %b2
 
 b3:                                               ; preds = %b2
-  br label %b4
+  br label %b4 , !llvm.loop !2
 
 b4:                                               ; preds = %b3, %b0
   ret void
 }
 
 attributes #0 = { nounwind }
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{!2, !2, i64 0}
+!2 = distinct !{!2, !3}
+!3 = !{!"llvm.loop.pipeline.initiationinterval", i32 2}
+

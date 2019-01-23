@@ -35,17 +35,55 @@ struct Relocation {
 
 struct Section {
   object::coff_section Header;
-  ArrayRef<uint8_t> Contents;
   std::vector<Relocation> Relocs;
   StringRef Name;
   ssize_t UniqueId;
   size_t Index;
+
+  ArrayRef<uint8_t> getContents() const {
+    if (!OwnedContents.empty())
+      return OwnedContents;
+    return ContentsRef;
+  }
+
+  void setContentsRef(ArrayRef<uint8_t> Data) {
+    OwnedContents.clear();
+    ContentsRef = Data;
+  }
+
+  void setOwnedContents(std::vector<uint8_t> &&Data) {
+    ContentsRef = ArrayRef<uint8_t>();
+    OwnedContents = std::move(Data);
+  }
+
+  void clearContents() {
+    ContentsRef = ArrayRef<uint8_t>();
+    OwnedContents.clear();
+  }
+
+private:
+  ArrayRef<uint8_t> ContentsRef;
+  std::vector<uint8_t> OwnedContents;
+};
+
+struct AuxSymbol {
+  AuxSymbol(ArrayRef<uint8_t> In) {
+    assert(In.size() == sizeof(Opaque));
+    std::copy(In.begin(), In.end(), Opaque);
+  }
+
+  ArrayRef<uint8_t> getRef() const {
+    return ArrayRef<uint8_t>(Opaque, sizeof(Opaque));
+  }
+
+  uint8_t Opaque[sizeof(object::coff_symbol16)];
 };
 
 struct Symbol {
   object::coff_symbol32 Sym;
   StringRef Name;
-  std::vector<uint8_t> AuxData;
+  std::vector<AuxSymbol> AuxData;
+  StringRef AuxFile;
   ssize_t TargetSectionId;
   ssize_t AssociativeComdatTargetSectionId = 0;
   Optional<size_t> WeakTargetSymbolId;
@@ -108,7 +146,7 @@ private:
 
   ssize_t NextSectionUniqueId = 1; // Allow a UniqueId 0 to mean undefined.
 
-  // Update SymbolMap and RawIndex in each Symbol.
+  // Update SymbolMap.
   void updateSymbols();
 
   // Update SectionMap and Index in each Section.

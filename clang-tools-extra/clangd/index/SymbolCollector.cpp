@@ -347,19 +347,25 @@ bool SymbolCollector::handleDeclOccurence(
   if (!ID)
     return true;
 
-  const NamedDecl &OriginalDecl = *cast<NamedDecl>(ASTNode.OrigD);
+  // FIXME: ObjCPropertyDecl are not properly indexed here:
+  // - ObjCPropertyDecl may have an OrigD of ObjCPropertyImplDecl, which is
+  // not a NamedDecl.
+  auto *OriginalDecl = dyn_cast<NamedDecl>(ASTNode.OrigD);
+  if (!OriginalDecl)
+    return true;
+
   const Symbol *BasicSymbol = Symbols.find(*ID);
   if (!BasicSymbol) // Regardless of role, ND is the canonical declaration.
     BasicSymbol = addDeclaration(*ND, std::move(*ID), IsMainFileOnly);
-  else if (isPreferredDeclaration(OriginalDecl, Roles))
+  else if (isPreferredDeclaration(*OriginalDecl, Roles))
     // If OriginalDecl is preferred, replace the existing canonical
     // declaration (e.g. a class forward declaration). There should be at most
     // one duplicate as we expect to see only one preferred declaration per
     // TU, because in practice they are definitions.
-    BasicSymbol = addDeclaration(OriginalDecl, std::move(*ID), IsMainFileOnly);
+    BasicSymbol = addDeclaration(*OriginalDecl, std::move(*ID), IsMainFileOnly);
 
   if (Roles & static_cast<unsigned>(index::SymbolRole::Definition))
-    addDefinition(OriginalDecl, *BasicSymbol);
+    addDefinition(*OriginalDecl, *BasicSymbol);
   return true;
 }
 

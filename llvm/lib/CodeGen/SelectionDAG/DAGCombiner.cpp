@@ -12652,7 +12652,13 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   // Check #2.
   if (!isLoad) {
     SDValue Val = cast<StoreSDNode>(N)->getValue();
-    if (Val == BasePtr || BasePtr.getNode()->isPredecessorOf(Val.getNode()))
+
+    // Would require a copy.
+    if (Val == BasePtr)
+      return false;
+
+    // Would create a cycle.
+    if (Val == Ptr || Ptr->isPredecessorOf(Val.getNode()))
       return false;
   }
 

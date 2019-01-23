@@ -71,7 +71,7 @@ if (CMAKE_CXX_FLAGS MATCHES "fsanitize-coverage")
   list(APPEND LIBFUZZER_CFLAGS -fno-sanitize-coverage=trace-pc-guard,edge,trace-cmp,indirect-calls,8bit-counters)
 endif()
 
-if(OS_NAME MATCHES "Windows")
+if(MSVC)
   # Silence warnings with /Ehsc and avoid an error by unecessarily defining
   # thread_local when it isn't even used on Windows.
   list(APPEND LIBFUZZER_CFLAGS /EHsc)
