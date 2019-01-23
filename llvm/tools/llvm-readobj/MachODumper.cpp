@@ -33,8 +33,6 @@ public:
   void printFileHeaders() override;
   void printSectionHeaders() override;
   void printRelocations() override;
-  void printSymbols() override;
-  void printDynamicSymbols() override;
   void printUnwindInfo() override;
   void printStackMap() const override;
 
@@ -52,6 +50,8 @@ private:
   template<class MachHeader>
   void printFileHeaders(const MachHeader &Header);
 
+  void printSymbols() override;
+  void printDynamicSymbols() override;
   void printSymbol(const SymbolRef &Symbol);
 
   void printRelocation(const RelocationRef &Reloc);

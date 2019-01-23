@@ -152,6 +152,16 @@ public:
     return 0;
   }
 
+  /// Return the set of ReadAdvance entries declared by the scheduling class
+  /// descriptor in input.
+  ArrayRef<MCReadAdvanceEntry>
+  getReadAdvanceEntries(const MCSchedClassDesc &SC) const {
+    if (!SC.NumReadAdvanceEntries)
+      return ArrayRef<MCReadAdvanceEntry>();
+    return ArrayRef<MCReadAdvanceEntry>(&ReadAdvanceTable[SC.ReadAdvanceIdx],
+                                        SC.NumReadAdvanceEntries);
+  }
+
   /// Get scheduling itinerary of a CPU.
   InstrItineraryData getInstrItineraryForCPU(StringRef CPU) const;
 

@@ -48,6 +48,10 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::cttz:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
+  case Intrinsic::sadd_sat:
+  case Intrinsic::ssub_sat:
+  case Intrinsic::uadd_sat:
+  case Intrinsic::usub_sat:
   case Intrinsic::sqrt: // Begin floating-point.
   case Intrinsic::sin:
   case Intrinsic::cos:
@@ -73,10 +77,6 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::fmuladd:
   case Intrinsic::powi:
   case Intrinsic::canonicalize:
-  case Intrinsic::sadd_sat:
-  case Intrinsic::ssub_sat:
-  case Intrinsic::uadd_sat:
-  case Intrinsic::usub_sat:
     return true;
   default:
     return false;

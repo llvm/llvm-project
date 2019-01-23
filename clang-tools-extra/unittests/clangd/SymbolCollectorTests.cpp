@@ -437,6 +437,23 @@ TEST_F(SymbolCollectorTest, ObjCSymbols) {
                   QName("MyProtocol"), QName("MyProtocol::someMethodName3:")));
 }
 
+TEST_F(SymbolCollectorTest, ObjCPropertyImpl) {
+  const std::string Header = R"(
+    @interface Container
+    @property(nonatomic) int magic;
+    @end
+
+    @implementation Container
+    @end
+  )";
+  TestFileName = testPath("test.m");
+  runSymbolCollector(Header, /*Main=*/"", {"-xobjective-c++"});
+  EXPECT_THAT(Symbols, Contains(QName("Container")));
+  EXPECT_THAT(Symbols, Contains(QName("Container::magic")));
+  // FIXME: Results also contain Container::_magic on some platforms.
+  //        Figure out why it's platform-dependent.
+}
+
 TEST_F(SymbolCollectorTest, Locations) {
   Annotations Header(R"cpp(
     // Declared in header, defined in main.

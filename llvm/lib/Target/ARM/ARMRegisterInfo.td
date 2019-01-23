@@ -204,13 +204,21 @@ def FPINST2 : ARMReg<10, "fpinst2">;
 def GPR : RegisterClass<"ARM", [i32], 32, (add (sequence "R%u", 0, 12),
                                                SP, LR, PC)> {
   // Allocate LR as the first CSR since it is always saved anyway.
+  // For Thumb2, using LR would force 32bit Thumb2 instructions, not the smaller
+  // Thumb1 ones. It is a little better for codesize on average to use the
+  // default order.
   // For Thumb1 mode, we don't want to allocate hi regs at all, as we don't
   // know how to spill them. If we make our prologue/epilogue code smarter at
   // some point, we can go back to using the above allocation orders for the
   // Thumb1 instructions that know how to use hi regs.
   let AltOrders = [(add LR, GPR), (trunc GPR, 8)];
   let AltOrderSelect = [{
-      return 1 + MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+      if (MF.getSubtarget<ARMSubtarget>().isThumb1Only())
+        return 2;
+      if (MF.getSubtarget<ARMSubtarget>().isThumb2() &&
+          MF.getFunction().optForMinSize())
+        return 0;
+      return 1;
   }];
   let DiagnosticString = "operand must be a register in range [r0, r15]";
 }
@@ -221,7 +229,12 @@ def GPR : RegisterClass<"ARM", [i32], 32, (add (sequence "R%u", 0, 12),
 def GPRnopc : RegisterClass<"ARM", [i32], 32, (sub GPR, PC)> {
   let AltOrders = [(add LR, GPRnopc), (trunc GPRnopc, 8)];
   let AltOrderSelect = [{
-      return 1 + MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+      if (MF.getSubtarget<ARMSubtarget>().isThumb1Only())
+        return 2;
+      if (MF.getSubtarget<ARMSubtarget>().isThumb2() &&
+          MF.getFunction().optForMinSize())
+        return 0;
+      return 1;
   }];
   let DiagnosticString = "operand must be a register in range [r0, r14]";
 }
@@ -232,7 +245,12 @@ def GPRnopc : RegisterClass<"ARM", [i32], 32, (sub GPR, PC)> {
 def GPRwithAPSR : RegisterClass<"ARM", [i32], 32, (add (sub GPR, PC), APSR_NZCV)> {
   let AltOrders = [(add LR, GPRnopc), (trunc GPRnopc, 8)];
   let AltOrderSelect = [{
-      return 1 + MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+      if (MF.getSubtarget<ARMSubtarget>().isThumb1Only())
+        return 2;
+      if (MF.getSubtarget<ARMSubtarget>().isThumb2() &&
+          MF.getFunction().optForMinSize())
+        return 0;
+      return 1;
   }];
   let DiagnosticString = "operand must be a register in range [r0, r14] or apsr_nzcv";
 }
@@ -253,7 +271,12 @@ def GPRsp : RegisterClass<"ARM", [i32], 32, (add SP)> {
 def rGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, SP, PC)> {
   let AltOrders = [(add LR, rGPR), (trunc rGPR, 8)];
   let AltOrderSelect = [{
-      return 1 + MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+      if (MF.getSubtarget<ARMSubtarget>().isThumb1Only())
+        return 2;
+      if (MF.getSubtarget<ARMSubtarget>().isThumb2() &&
+          MF.getFunction().optForMinSize())
+        return 0;
+      return 1;
   }];
   let DiagnosticType = "rGPR";
 }

@@ -48,8 +48,6 @@ public:
   void printFileHeaders() override;
   void printSectionHeaders() override;
   void printRelocations() override;
-  void printSymbols() override;
-  void printDynamicSymbols() override { llvm_unreachable("unimplemented"); }
   void printUnwindInfo() override { llvm_unreachable("unimplemented"); }
   void printStackMap() const override { llvm_unreachable("unimplemented"); }
 
@@ -58,6 +56,9 @@ protected:
   void printRelocation(const SectionRef &Section, const RelocationRef &Reloc);
 
 private:
+  void printSymbols() override;
+  void printDynamicSymbols() override { llvm_unreachable("unimplemented"); }
+
   const WasmObjectFile *Obj;
 };
 

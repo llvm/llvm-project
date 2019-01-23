@@ -6212,7 +6212,8 @@ static void createPHIsForSelects(MachineBasicBlock::iterator MIItBegin,
   // destination registers, and the registers that went into the PHI.
   DenseMap<unsigned, std::pair<unsigned, unsigned>> RegRewriteTable;
 
-  for (MachineBasicBlock::iterator MIIt = MIItBegin; MIIt != MIItEnd; ++MIIt) {
+  for (MachineBasicBlock::iterator MIIt = MIItBegin; MIIt != MIItEnd;
+       MIIt = skipDebugInstructionsForward(++MIIt, MIItEnd)) {
     unsigned DestReg = MIIt->getOperand(0).getReg();
     unsigned TrueReg = MIIt->getOperand(1).getReg();
     unsigned FalseReg = MIIt->getOperand(2).getReg();
@@ -6253,8 +6254,8 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
   // same condition code value, we want to expand all of them into
   // a single pair of basic blocks using the same condition.
   MachineInstr *LastMI = &MI;
-  MachineBasicBlock::iterator NextMIIt =
-      std::next(MachineBasicBlock::iterator(MI));
+  MachineBasicBlock::iterator NextMIIt = skipDebugInstructionsForward(
+      std::next(MachineBasicBlock::iterator(MI)), MBB->end());
 
   if (isSelectPseudo(MI))
     while (NextMIIt != MBB->end() && isSelectPseudo(*NextMIIt) &&
@@ -6262,7 +6263,7 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
            (NextMIIt->getOperand(4).getImm() == CCMask ||
             NextMIIt->getOperand(4).getImm() == (CCValid ^ CCMask))) {
       LastMI = &*NextMIIt;
-      ++NextMIIt;
+      NextMIIt = skipDebugInstructionsForward(++NextMIIt, MBB->end());
     }
 
   MachineBasicBlock *StartMBB = MBB;
@@ -6295,8 +6296,8 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
   //  ...
   MBB = JoinMBB;
   MachineBasicBlock::iterator MIItBegin = MachineBasicBlock::iterator(MI);
-  MachineBasicBlock::iterator MIItEnd =
-      std::next(MachineBasicBlock::iterator(LastMI));
+  MachineBasicBlock::iterator MIItEnd = skipDebugInstructionsForward(
+      std::next(MachineBasicBlock::iterator(LastMI)), MBB->end());
   createPHIsForSelects(MIItBegin, MIItEnd, StartMBB, FalseMBB, MBB);
 
   StartMBB->erase(MIItBegin, MIItEnd);

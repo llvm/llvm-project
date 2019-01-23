@@ -146,6 +146,9 @@ static bool resultTests(MachineInstr &MI, unsigned Reg) {
 // Describe the references to Reg or any of its aliases in MI.
 Reference SystemZElimCompare::getRegReferences(MachineInstr &MI, unsigned Reg) {
   Reference Ref;
+  if (MI.isDebugInstr())
+    return Ref;
+
   for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
     const MachineOperand &MO = MI.getOperand(I);
     if (MO.isReg()) {
