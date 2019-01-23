@@ -176,8 +176,10 @@ static void splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
     DWOFile->Machine = Config.OutputArch.getValue().EMachine;
   FileBuffer FB(File);
   auto Writer = createWriter(Config, *DWOFile, FB, OutputElfType);
-  Writer->finalize();
-  Writer->write();
+  if (Error E = Writer->finalize())
+    error(std::move(E));
+  if (Error E = Writer->write())
+    error(std::move(E));
 }
 
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
@@ -542,8 +544,10 @@ void executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
   handleArgs(Config, *Obj, Reader, OutputElfType);
   std::unique_ptr<Writer> Writer =
       createWriter(Config, *Obj, Out, OutputElfType);
-  Writer->finalize();
-  Writer->write();
+  if (Error E = Writer->finalize())
+    error(std::move(E));
+  if (Error E = Writer->write())
+    error(std::move(E));
 }
 
 void executeObjcopyOnBinary(const CopyConfig &Config,
@@ -570,8 +574,10 @@ void executeObjcopyOnBinary(const CopyConfig &Config,
   handleArgs(Config, *Obj, Reader, OutputElfType);
   std::unique_ptr<Writer> Writer =
       createWriter(Config, *Obj, Out, OutputElfType);
-  Writer->finalize();
-  Writer->write();
+  if (Error E = Writer->finalize())
+    error(std::move(E));
+  if (Error E = Writer->write())
+    error(std::move(E));
   if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkOutput) {
     linkToBuildIdDir(Config, Config.OutputFilename,
                      Config.BuildIdLinkOutput.getValue(), BuildIdBytes);

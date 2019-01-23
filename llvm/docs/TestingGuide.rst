@@ -107,6 +107,13 @@ To run all of the LLVM regression tests use the check-llvm target:
 
     % make check-llvm
 
+In order to get reasonable testing performance, build LLVM and subprojects
+in release mode, i.e.
+
+.. code-block:: bash
+
+    % cmake -DCMAKE_BUILD_TYPE="Release"
+
 If you have `Clang <http://clang.llvm.org/>`_ checked out and built, you
 can run the LLVM and Clang tests simultaneously using:
 

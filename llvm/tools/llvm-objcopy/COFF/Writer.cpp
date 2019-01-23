@@ -324,7 +324,8 @@ Error COFFWriter::write(bool IsBigObj) {
   if (Error E = finalize(IsBigObj))
     return E;
 
-  Buf.allocate(FileSize);
+  if (Error E = Buf.allocate(FileSize))
+    return E;
 
   writeHeaders(IsBigObj);
   writeSections();

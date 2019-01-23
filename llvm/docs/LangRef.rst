@@ -8690,15 +8690,18 @@ operation. The operation must be one of the following keywords:
 -  min
 -  umax
 -  umin
+-  fadd
+-  fsub
 
 For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight
 and less than or equal to a target-specific size limit. For xchg, this
 may also be a floating point type with the same size constraints as
-integers. The type of the '``<pointer>``' operand must be a pointer to
-that type. If the ``atomicrmw`` is marked as ``volatile``, then the
-optimizer is not allowed to modify the number or order of execution of
-this ``atomicrmw`` with other :ref:`volatile operations <volatile>`.
+integers.  For fadd/fsub, this must be a floating point type.  The
+type of the '``<pointer>``' operand must be a pointer to that type. If
+the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not
+allowed to modify the number or order of execution of this
+``atomicrmw`` with other :ref:`volatile operations <volatile>`.
 
 A ``atomicrmw`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.
@@ -8724,6 +8727,8 @@ operation argument:
    comparison)
 -  umin: ``*ptr = *ptr < val ? *ptr : val`` (using an unsigned
    comparison)
+- fadd: ``*ptr = *ptr + val`` (using floating point arithmetic)
+- fsub: ``*ptr = *ptr - val`` (using floating point arithmetic)
 
 Example:
 """"""""

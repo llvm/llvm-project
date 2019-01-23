@@ -412,6 +412,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_SUB:
   case AMDGPU::G_MUL:
   case AMDGPU::G_SHL:
+  case AMDGPU::G_LSHR:
+  case AMDGPU::G_ASHR:
   case AMDGPU::G_UADDO:
   case AMDGPU::G_SADDO:
   case AMDGPU::G_USUBO:

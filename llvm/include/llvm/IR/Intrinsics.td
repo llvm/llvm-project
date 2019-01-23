@@ -1048,6 +1048,9 @@ def int_icall_branch_funnel : Intrinsic<[], [llvm_vararg_ty], []>;
 def int_load_relative: Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_anyint_ty],
                                  [IntrReadMem, IntrArgMemOnly]>;
 
+def int_hwasan_check_memaccess :
+  Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty], [IntrInaccessibleMemOnly]>;
+
 // Xray intrinsics
 //===----------------------------------------------------------------------===//
 // Custom event logging for x-ray.

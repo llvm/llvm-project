@@ -33,21 +33,21 @@ template <typename D = std::chrono::nanoseconds>
 using TimePoint = std::chrono::time_point<std::chrono::system_clock, D>;
 
 /// Convert a TimePoint to std::time_t
-LLVM_ATTRIBUTE_ALWAYS_INLINE inline std::time_t toTimeT(TimePoint<> TP) {
+inline std::time_t toTimeT(TimePoint<> TP) {
   using namespace std::chrono;
   return system_clock::to_time_t(
       time_point_cast<system_clock::time_point::duration>(TP));
 }
 
 /// Convert a std::time_t to a TimePoint
-LLVM_ATTRIBUTE_ALWAYS_INLINE inline TimePoint<std::chrono::seconds>
+inline TimePoint<std::chrono::seconds>
 toTimePoint(std::time_t T) {
   using namespace std::chrono;
   return time_point_cast<seconds>(system_clock::from_time_t(T));
 }
 
 /// Convert a std::time_t + nanoseconds to a TimePoint
-LLVM_ATTRIBUTE_ALWAYS_INLINE inline TimePoint<>
+inline TimePoint<>
 toTimePoint(std::time_t T, uint32_t nsec) {
   using namespace std::chrono;
   return time_point_cast<nanoseconds>(system_clock::from_time_t(T))

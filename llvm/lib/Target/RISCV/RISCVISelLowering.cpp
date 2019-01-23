@@ -1724,6 +1724,12 @@ Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilder<> &Builder,
 
 TargetLowering::AtomicExpansionKind
 RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+  // atomicrmw {fadd,fsub} must be expanded to use compare-exchange, as floating
+  // point operations can't be used in an lr/sc sequence without breaking the
+  // forward-progress guarantee.
+  if (AI->isFloatingPointOperation())
+    return AtomicExpansionKind::CmpXChg;
+
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (Size == 8 || Size == 16)
     return AtomicExpansionKind::MaskedIntrinsic;

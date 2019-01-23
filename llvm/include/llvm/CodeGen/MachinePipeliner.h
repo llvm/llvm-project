@@ -62,6 +62,8 @@ public:
   const InstrItineraryData *InstrItins;
   const TargetInstrInfo *TII = nullptr;
   RegisterClassInfo RegClassInfo;
+  bool disabledByPragma = false;
+  unsigned II_setByPragma = 0;
 
 #ifndef NDEBUG
   static int NumTries;
@@ -99,6 +101,7 @@ private:
   bool canPipelineLoop(MachineLoop &L);
   bool scheduleLoop(MachineLoop &L);
   bool swingModuloScheduler(MachineLoop &L);
+  void setPragmaPipelineOptions(MachineLoop &L);
 };
 
 /// This class builds the dependence graph for the instructions in a loop,
@@ -107,11 +110,14 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
   MachinePipeliner &Pass;
   /// The minimum initiation interval between iterations for this schedule.
   unsigned MII = 0;
+  /// The maximum initiation interval between iterations for this schedule.
+  unsigned MAX_II = 0;
   /// Set to true if a valid pipelined schedule is found for the loop.
   bool Scheduled = false;
   MachineLoop &Loop;
   LiveIntervals &LIS;
   const RegisterClassInfo &RegClassInfo;
+  unsigned II_setByPragma = 0;
 
   /// A toplogical ordering of the SUnits, which is needed for changing
   /// dependences and iterating over the SUnits.
@@ -189,9 +195,9 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
 
 public:
   SwingSchedulerDAG(MachinePipeliner &P, MachineLoop &L, LiveIntervals &lis,
-                    const RegisterClassInfo &rci)
+                    const RegisterClassInfo &rci, unsigned II)
       : ScheduleDAGInstrs(*P.MF, P.MLI, false), Pass(P), Loop(L), LIS(lis),
-        RegClassInfo(rci), Topo(SUnits, &ExitSU) {
+        RegClassInfo(rci), II_setByPragma(II), Topo(SUnits, &ExitSU) {
     P.MF->getSubtarget().getSMSMutations(Mutations);
     if (SwpEnableCopyToPhi)
       Mutations.push_back(llvm::make_unique<CopyToPhiMutation>());
@@ -251,9 +257,6 @@ public:
       return 1;
     return 0;
   }
-
-  /// Set the Minimum Initiation Interval for this schedule attempt.
-  void setMII(unsigned mii) { MII = mii; }
 
   void applyInstrChange(MachineInstr *MI, SMSchedule &Schedule);
 
@@ -345,6 +348,10 @@ private:
                              unsigned &OffsetPos, unsigned &NewBase,
                              int64_t &NewOffset);
   void postprocessDAG();
+  /// Set the Minimum Initiation Interval for this schedule attempt.
+  void setMII(unsigned ResMII, unsigned RecMII);
+  /// Set the Maximum Initiation Interval for this schedule attempt.
+  void setMAX_II();
 };
 
 /// A NodeSet contains a set of SUnit DAG nodes with additional information

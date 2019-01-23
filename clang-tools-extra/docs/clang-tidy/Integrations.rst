@@ -64,7 +64,7 @@ static analysis using :program:`clang-tidy`. The plugin launches the
 output to provide a list of issues.
 
 .. _QtCreator: https://www.qt.io/
-.. _Clang Code Model: http://doc.qt.io/qtcreator/creator-clang-codemodel.html
+.. _Clang Code Model: https://doc.qt.io/qtcreator/creator-clang-codemodel.html
 
 QtCreator_ 4.6 integrates :program:`clang-tidy` warnings into the editor
 diagnostics under the `Clang Code Model`_. To employ :program:`clang-tidy`

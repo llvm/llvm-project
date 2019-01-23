@@ -225,7 +225,7 @@ An overview of all the command-line options:
           CMake option to get this output). When no build path is specified,
           a search for compile_commands.json will be attempted through all
           parent paths of the first input file . See:
-          http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html for an
+          https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html for an
           example of setting up Clang Tooling on a source tree.
 
   <source0> ... specify the paths of source files. These paths are
@@ -309,5 +309,5 @@ parenthesis are not allowed (in this case the comment will be treated just as
 ``NOLINT``/``NOLINTNEXTLINE``), whereas in check names list (inside the
 parenthesis) whitespaces can be used and will be ignored.
 
-.. _LibTooling: http://clang.llvm.org/docs/LibTooling.html
-.. _How To Setup Tooling For LLVM: http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
+.. _LibTooling: https://clang.llvm.org/docs/LibTooling.html
+.. _How To Setup Tooling For LLVM: https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html

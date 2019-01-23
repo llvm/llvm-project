@@ -28,6 +28,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -43,6 +44,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
@@ -94,6 +96,10 @@ public:
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
   void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
   void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
+
+  std::map<std::pair<unsigned, uint32_t>, MCSymbol *> HwasanMemaccessSymbols;
+  void LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI);
+  void EmitHwasanMemaccessSymbols(Module &M);
 
   void EmitSled(const MachineInstr &MI, SledKind Kind);
 
@@ -229,7 +235,109 @@ void AArch64AsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
   recordSled(CurSled, MI, Kind);
 }
 
+void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
+  unsigned Reg = MI.getOperand(0).getReg();
+  uint32_t AccessInfo = MI.getOperand(1).getImm();
+  MCSymbol *&Sym = HwasanMemaccessSymbols[{Reg, AccessInfo}];
+  if (!Sym) {
+    // FIXME: Make this work on non-ELF.
+    if (!TM.getTargetTriple().isOSBinFormatELF())
+      report_fatal_error("llvm.hwasan.check.memaccess only supported on ELF");
+
+    std::string SymName = "__hwasan_check_x" + utostr(Reg - AArch64::X0) + "_" +
+                          utostr(AccessInfo);
+    Sym = OutContext.getOrCreateSymbol(SymName);
+  }
+
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(AArch64::BL)
+                     .addExpr(MCSymbolRefExpr::create(Sym, OutContext)));
+}
+
+void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
+  if (HwasanMemaccessSymbols.empty())
+    return;
+
+  const Triple &TT = TM.getTargetTriple();
+  assert(TT.isOSBinFormatELF());
+  std::unique_ptr<MCSubtargetInfo> STI(
+      TM.getTarget().createMCSubtargetInfo(TT.str(), "", ""));
+
+  MCSymbol *HwasanTagMismatchSym =
+      OutContext.getOrCreateSymbol("__hwasan_tag_mismatch");
+
+  for (auto &P : HwasanMemaccessSymbols) {
+    unsigned Reg = P.first.first;
+    uint32_t AccessInfo = P.first.second;
+    MCSymbol *Sym = P.second;
+
+    OutStreamer->SwitchSection(OutContext.getELFSection(
+        ".text.hot", ELF::SHT_PROGBITS,
+        ELF::SHF_EXECINSTR | ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
+        Sym->getName()));
+
+    OutStreamer->EmitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+    OutStreamer->EmitSymbolAttribute(Sym, MCSA_Weak);
+    OutStreamer->EmitSymbolAttribute(Sym, MCSA_Hidden);
+    OutStreamer->EmitLabel(Sym);
+
+    OutStreamer->EmitInstruction(MCInstBuilder(AArch64::UBFMXri)
+                                     .addReg(AArch64::X16)
+                                     .addReg(Reg)
+                                     .addImm(4)
+                                     .addImm(55),
+                                 *STI);
+    OutStreamer->EmitInstruction(MCInstBuilder(AArch64::LDRBBroX)
+                                     .addReg(AArch64::W16)
+                                     .addReg(AArch64::X9)
+                                     .addReg(AArch64::X16)
+                                     .addImm(0)
+                                     .addImm(0),
+                                 *STI);
+    OutStreamer->EmitInstruction(MCInstBuilder(AArch64::UBFMXri)
+                                     .addReg(AArch64::X17)
+                                     .addReg(Reg)
+                                     .addImm(56)
+                                     .addImm(63),
+                                 *STI);
+    OutStreamer->EmitInstruction(MCInstBuilder(AArch64::SUBSWrs)
+                                     .addReg(AArch64::WZR)
+                                     .addReg(AArch64::W16)
+                                     .addReg(AArch64::W17)
+                                     .addImm(0),
+                                 *STI);
+    MCSymbol *HandleMismatchSym = OutContext.createTempSymbol();
+    OutStreamer->EmitInstruction(
+        MCInstBuilder(AArch64::Bcc)
+            .addImm(AArch64CC::NE)
+            .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)),
+        *STI);
+    OutStreamer->EmitInstruction(
+        MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
+
+    OutStreamer->EmitLabel(HandleMismatchSym);
+    if (Reg != AArch64::X0)
+      OutStreamer->EmitInstruction(MCInstBuilder(AArch64::ORRXrs)
+                                       .addReg(AArch64::X0)
+                                       .addReg(AArch64::XZR)
+                                       .addReg(Reg)
+                                       .addImm(0),
+                                   *STI);
+    OutStreamer->EmitInstruction(MCInstBuilder(AArch64::MOVZXi)
+                                     .addReg(AArch64::X1)
+                                     .addImm(AccessInfo)
+                                     .addImm(0),
+                                 *STI);
+    OutStreamer->EmitInstruction(
+        MCInstBuilder(AArch64::B)
+            .addExpr(MCSymbolRefExpr::create(HwasanTagMismatchSym, OutContext)),
+        *STI);
+  }
+}
+
 void AArch64AsmPrinter::EmitEndOfAsmFile(Module &M) {
+  EmitHwasanMemaccessSymbols(M);
+
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
     // Funny Darwin hack: This flag tells the linker that no global symbols
@@ -881,6 +989,10 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   case TargetOpcode::PATCHABLE_TAIL_CALL:
     LowerPATCHABLE_TAIL_CALL(*MI);
+    return;
+
+  case AArch64::HWASAN_CHECK_MEMACCESS:
+    LowerHWASAN_CHECK_MEMACCESS(*MI);
     return;
 
   case AArch64::SEH_StackAlloc:

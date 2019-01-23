@@ -456,6 +456,8 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
 #elif defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32)
   // Don't even bother, since Windows has functions that do all this stuff
   // for us.
+  (void)targetAddr;
+  (void)info;
   return true;
 #elif defined(_LIBUNWIND_ARM_EHABI) && defined(__BIONIC__) &&                  \
     (__ANDROID_API__ < 21)
@@ -596,6 +598,11 @@ inline bool LocalAddressSpace::findFunctionName(pint_t addr, char *buf,
       return true;
     }
   }
+#else
+  (void)addr;
+  (void)buf;
+  (void)bufLen;
+  (void)offset;
 #endif
   return false;
 }
