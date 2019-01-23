@@ -1,6 +1,8 @@
 # Overview
 
-The SYCL* Compiler compiles C++\-based SYCL source files with code for both CPU and a wide range of compute accelerators. The compiler uses Khronos* OpenCL&trade; API to offload computations to accelerators.
+The SYCL* Compiler compiles C++\-based SYCL source files with code for both CPU
+and a wide range of compute accelerators. The compiler uses Khronos*
+OpenCL&trade; API to offload computations to accelerators.
 
 # Before You Begin
 
@@ -9,31 +11,48 @@ Software requirements:
 Installing OpenCL 2.1 compatible software stack:
 1. OpenCL headers:
 
-   a. Download the OpenCL headers from [github.com/KhronosGroup/OpenCL-Headers](https://github.com/KhronosGroup/OpenCL-Headers) to your local machine. e.g. `/usr/local/include/CL` with environment var `$OPENCL_HEADERS`.
+   a. Download the OpenCL headers from
+[github.com/KhronosGroup/OpenCL-Headers](https://github.com/KhronosGroup/OpenCL-Headers)
+to your local machine. e.g. `/usr/local/include/CL` with environment var
+`$OPENCL_HEADERS`.
 2. OpenCL runtime for CPU and GPU:
 
-   a. OpenCL runtime for GPU: follow instructions on [github.com/intel/compute-runtime/releases](https://github.com/intel/compute-runtime/releases) to install.
+   a. OpenCL runtime for GPU: follow instructions on
+[github.com/intel/compute-runtime/releases](https://github.com/intel/compute-runtime/releases)
+to install.
 
-   b. OpenCL runtime for CPU: follow instructions under section "Intel&reg; CPU Runtime for OpenCL. Applications 18.1 for Linux* OS (64bit only)" on [https://software.intel.com/en-us/articles/opencl-drivers#cpu-section](https://software.intel.com/en-us/articles/opencl-drivers#cpu-section) and click on orange "Download" button to download & install.
+   b. OpenCL runtime for CPU: follow instructions under section "Intel&reg; CPU
+Runtime for OpenCL. Applications 18.1 for Linux* OS (64bit only)" on
+[https://software.intel.com/en-us/articles/opencl-drivers#cpu-section](https://software.intel.com/en-us/articles/opencl-drivers#cpu-section)
+and click on orange "Download" button to download & install.
 
 # Build the SYCL compiler
 
-Download the LLVM* repository with SYCL support to your local machine folder e.g. `$HOME/sycl` (assuming environment var `$SYCL_HOME`) folder using following command:
+Download the LLVM* repository with SYCL support to your local machine folder
+e.g. `$HOME/sycl` (assuming environment var `$SYCL_HOME`) folder using
+following command:
 
-```
+```bash
 git clone https://github.com/intel/llvm -b sycl $HOME/sycl
 ```
 
-Follow regular LLVM build instructions under: [llvm.org/docs/CMake.html](https://llvm.org/docs/CMake.html). To build SYCL runtime use modified CMake command below:
+Follow regular LLVM build instructions under:
+[llvm.org/docs/CMake.html](https://llvm.org/docs/CMake.html). To build SYCL
+runtime use modified CMake command below:
 
-```
+```bash
 mkdir $SYCL_HOME/build
 cd $SYCL_HOME/build
-cmake -DCMAKE_BUILD_TYPE=Release -DOpenCL_INCLUDE_DIR=$OPENCL_HEADERS -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_EXTERNAL_PROJECTS="sycl;llvm-spirv" -DLLVM_EXTERNAL_SYCL_SOURCE_DIR=$SYCL_HOME/sycl -DLLVM_EXTERNAL_LLVM_SPIRV_SOURCE_DIR=$SYCL_HOME/llvm-spirv -DLLVM_TOOL_SYCL_BUILD=ON -DLLVM_TOOL_LLVM_SPIRV_BUILD=ON $SYCL_HOME/llvm
+cmake -DCMAKE_BUILD_TYPE=Release -DOpenCL_INCLUDE_DIR=$OPENCL_HEADERS \
+-DLLVM_ENABLE_PROJECTS="clang" -DLLVM_EXTERNAL_PROJECTS="sycl;llvm-spirv" \
+-DLLVM_EXTERNAL_SYCL_SOURCE_DIR=$SYCL_HOME/sycl \
+-DLLVM_EXTERNAL_LLVM_SPIRV_SOURCE_DIR=$SYCL_HOME/llvm-spirv \
+-DLLVM_TOOL_SYCL_BUILD=ON -DLLVM_TOOL_LLVM_SPIRV_BUILD=ON $SYCL_HOME/llvm
 make -j`nproc` check-all
 ```
 
-After the build completed, the SYCL compiler/include/libraries can be found under `$SYCL_HOME/build` directory.
+After the build completed, the SYCL compiler/include/libraries can be found
+under `$SYCL_HOME/build` directory.
 
 # Creating a simple SYCL program
 
@@ -48,7 +67,7 @@ A simple SYCL program consists of following parts:
 
 Creating a file `simple-sycl-app.cpp` with the following C++ SYCL code in it:
 
-```
+```c++
 
 #include <CL/sycl.hpp>
 
@@ -103,15 +122,16 @@ The SYCL Compiler supports two types of compilation:
 
 1. Simplified one step that compiles to binary directly
 
-   ```
+   ```bash
    clang++ -std=c++11 -fsycl simple-sycl-app.cpp -o simple-sycl-app -lsycl -lOpenCL
    ```
 
-2. Manual two steps compilation that compiles device (to SPIR-V) and host code separately (to binary)
+2. Manual two steps compilation that compiles device (to SPIR-V) and host code
+   separately (to binary)
 
    a. Compile the device code from the C++ file into the SPIR-V file:
 
-   ```
+   ```bash
    clang++ --sycl -Xclang -fsycl-int-header=simple-sycl-app-int-header.h -c simple-sycl-app.cpp -o kernel.spv
    # NOTE: The section "-Xclang -fsycl-int-header=simple-sycl-app-int-header.h"
    #       generates `integration header` file.
@@ -121,30 +141,45 @@ The SYCL Compiler supports two types of compilation:
 
    b. Compile host code from the same C++ file into an executable:
 
-   ```
+   ```bash
    clang++ -std=c++11 -include simple-sycl-app-int-header.h simple-sycl-app.cpp -o simple-sycl-app -lsycl -lOpenCL
    # NOTE: The section "-include simple-sycl-app-int-header.h" includes
    #       integration header file, which is produced by the device compiler.
    ```
 
-This `simple-sycl-app` application doesn't specify SYCL device for execution, so SYCL runtime will first try to execute on OpenCL GPU device first, if OpenCL GPU device is not found, it will try to run OpenCL CPU device; and if OpenCL CPU device is also not available, SYCL runtime will run on SYCL host device.
+This `simple-sycl-app` application doesn't specify SYCL device for execution,
+so SYCL runtime will first try to execute on OpenCL GPU device first, if OpenCL
+GPU device is not found, it will try to run OpenCL CPU device; and if OpenCL
+CPU device is also not available, SYCL runtime will run on SYCL host device.
 
 To run the `simple-sycl-app`:
 
     LD_LIBRARY_PATH=$SYCL_HOME/build/lib ./simple-sycl-app
     The results are correct!
 
-NOTE: SYCL developer can specify SYCL device for execution using device selectors (e.g. `cl::sycl::cpu_selector`, `cl::sycl::gpu_selector`) as explained in following section [Code the program for a specific GPU](#code-the-program-for-a-specific-gpu).
+NOTE: SYCL developer can specify SYCL device for execution using device
+selectors (e.g. `cl::sycl::cpu_selector`, `cl::sycl::gpu_selector`) as
+explained in following section [Code the program for a specific
+GPU](#code-the-program-for-a-specific-gpu).
 
 # Code the program for a specific GPU
 
-To specify OpenCL device SYCL provides the abstract `cl::sycl::device_selector` class which the can be used to define how the runtime should select the best device.
+To specify OpenCL device SYCL provides the abstract `cl::sycl::device_selector`
+class which the can be used to define how the runtime should select the best
+device.
 
-The method `cl::sycl::device_selector::operator()` of the SYCL `cl::sycl::device_selector` is an abstract member function which takes a reference to a SYCL device and returns an integer score. This abstract member function can be implemented in a derived class to provide a logic for selecting a SYCL device. SYCL runtime uses the device for with the highest score is returned. Such object can be passed to `cl::sycl::queue` and `cl::sycl::device` constructors.
+The method `cl::sycl::device_selector::operator()` of the SYCL
+`cl::sycl::device_selector` is an abstract member function which takes a
+reference to a SYCL device and returns an integer score. This abstract member
+function can be implemented in a derived class to provide a logic for selecting
+a SYCL device. SYCL runtime uses the device for with the highest score is
+returned. Such object can be passed to `cl::sycl::queue` and `cl::sycl::device`
+constructors.
 
-The example below illustrates how to use `cl::sycl::device_selector` to create device and queue objects bound to Intel GPU device:
+The example below illustrates how to use `cl::sycl::device_selector` to create
+device and queue objects bound to Intel GPU device:
 
-```
+```c++
 #include <CL/sycl.hpp>
 
 int main() {
@@ -174,12 +209,14 @@ int main() {
 
 # Known Issues or Limitations
 
-- SYCL device compiler fails if the same kernel was used in different translation units.
+- SYCL device compiler fails if the same kernel was used in different
+  translation units.
 - SYCL host device is not fully supported.
 - SYCL works only with OpenCL implementations supporting out-of-order queues.
-- `math.h` header is conflicting with SYCL headers. Please use `cmath` as a workaround for now like below:
+- `math.h` header is conflicting with SYCL headers. Please use `cmath` as a
+  workaround for now like below:
 
-```
+```c++
 //#include <math.h>  // conflicting
 #include <cmath>
 ```
