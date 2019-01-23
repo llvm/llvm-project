@@ -38,12 +38,17 @@ ClUseSymbolTable("use-symbol-table", cl::init(true),
 
 static cl::opt<FunctionNameKind> ClPrintFunctions(
     "functions", cl::init(FunctionNameKind::LinkageName),
-    cl::desc("Print function name for a given address:"),
+    cl::desc("Print function name for a given address:"), cl::ValueOptional,
     cl::values(clEnumValN(FunctionNameKind::None, "none", "omit function name"),
                clEnumValN(FunctionNameKind::ShortName, "short",
                           "print short function name"),
                clEnumValN(FunctionNameKind::LinkageName, "linkage",
-                          "print function linkage name")));
+                          "print function linkage name (default)"),
+               // Sentinel value for unspecified value.
+               clEnumValN(FunctionNameKind::LinkageName, "", "")));
+static cl::alias ClPrintFunctionsShort("f", cl::desc("Alias for -functions"),
+                                       cl::NotHidden, cl::Grouping,
+                                       cl::aliasopt(ClPrintFunctions));
 
 static cl::opt<bool>
     ClUseRelativeAddress("relative-address", cl::init(false),
@@ -65,7 +70,7 @@ static cl::opt<bool>
 ClDemangle("demangle", cl::init(true), cl::desc("Demangle function names"));
 static cl::alias
 ClDemangleShort("C", cl::desc("Alias for -demangle"),
-                cl::NotHidden, cl::aliasopt(ClDemangle));
+                cl::NotHidden, cl::aliasopt(ClDemangle), cl::Grouping);
 static cl::opt<bool>
 ClNoDemangle("no-demangle", cl::init(false),
              cl::desc("Don't demangle function names"));
@@ -105,7 +110,7 @@ ClPrintAddressAliasAddresses("addresses", cl::desc("Alias for -print-address"),
                              cl::NotHidden, cl::aliasopt(ClPrintAddress));
 static cl::alias
 ClPrintAddressAliasA("a", cl::desc("Alias for -print-address"),
-                     cl::NotHidden, cl::aliasopt(ClPrintAddress));
+                     cl::NotHidden, cl::aliasopt(ClPrintAddress), cl::Grouping);
 
 // -pretty-print, -p
 static cl::opt<bool>
@@ -113,7 +118,7 @@ static cl::opt<bool>
                   cl::desc("Make the output more human friendly"));
 static cl::alias ClPrettyPrintShort("p", cl::desc("Alias for -pretty-print"),
                                     cl::NotHidden,
-                                    cl::aliasopt(ClPrettyPrint));
+                                    cl::aliasopt(ClPrettyPrint), cl::Grouping);
 
 static cl::opt<int> ClPrintSourceContextLines(
     "print-source-context-lines", cl::init(0),

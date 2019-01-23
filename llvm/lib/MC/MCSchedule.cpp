@@ -149,3 +149,19 @@ MCSchedModel::getReciprocalThroughput(unsigned SchedClass,
   // that it can execute at the maximum default issue width.
   return 1.0 / DefaultIssueWidth;
 }
+
+unsigned
+MCSchedModel::getForwardingDelayCycles(ArrayRef<MCReadAdvanceEntry> Entries,
+                                       unsigned WriteResourceID) {
+  if (Entries.empty())
+    return 0;
+
+  int DelayCycles = 0;
+  for (const MCReadAdvanceEntry &E : Entries) {
+    if (E.WriteResourceID != WriteResourceID)
+      continue;
+    DelayCycles = std::min(DelayCycles, E.Cycles);
+  }
+
+  return std::abs(DelayCycles);
+}

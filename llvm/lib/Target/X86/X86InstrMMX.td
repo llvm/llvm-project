@@ -543,7 +543,7 @@ let Predicates = [HasMMX, HasSSE1] in {
                     "pinsrw\t{$src3, $src2, $dst|$dst, $src2, $src3}",
                     [(set VR64:$dst, (int_x86_mmx_pinsr_w VR64:$src1,
                                       GR32orGR64:$src2, imm:$src3))]>,
-                    Sched<[WriteVecInsert]>;
+                    Sched<[WriteVecInsert, ReadDefault, ReadInt2Fpu]>;
 
   def MMX_PINSRWrm : MMXIi8<0xC4, MRMSrcMem,
                    (outs VR64:$dst),
