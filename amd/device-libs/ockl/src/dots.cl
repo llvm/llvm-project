@@ -50,7 +50,7 @@ __ockl_fdot2(half2 a, half2 b, float c, bool s)
     if (SWDOT)
         return fmuladd((float)a.s1, (float)b.s1, fmuladd((float)a.s0, (float)b.s0, c));
     else
-        return __llvm_amdgcn_fdot2(a, b, c, s);
+        return __llvm_amdgcn_fdot2(a, b, c, true);
 }
 
 ATTR int
@@ -67,7 +67,10 @@ __ockl_sdot2(short2 a, short2 b, int c, bool s)
         else
             return (int)r;
     } else {
-        return __llvm_amdgcn_sdot2(a, b, c, s);
+        if (s)
+            return __llvm_amdgcn_sdot2(a, b, c, true);
+        else
+            return __llvm_amdgcn_sdot2(a, b, c, false);
     }
 }
 
@@ -80,7 +83,10 @@ __ockl_udot2(ushort2 a, ushort2 b, uint c, bool s)
         ulong r = (ulong)c + (ulong)p0 + (ulong)p1;
         return (s & (r > (ulong)0xffffffff)) ? 0xffffffff : (uint)r;
     } else {
-        return __llvm_amdgcn_udot2(a, b, c, s);
+        if (s)
+            return __llvm_amdgcn_udot2(a, b, c, true);
+        else
+            return __llvm_amdgcn_udot2(a, b, c, false);
     }
 }
 
@@ -96,7 +102,10 @@ __ockl_sdot4(char4 a, char4 b, int c, bool s)
             (int)a.s3 * (int)b.s3;
         return s ? __ockl_add_sat_i32(t, c) : (t + c);
     } else {
-        return __llvm_amdgcn_sdot4(AS_INT(a), AS_INT(b), c, s);
+        if (s)
+            return __llvm_amdgcn_sdot4(AS_INT(a), AS_INT(b), c, true);
+        else
+            return __llvm_amdgcn_sdot4(AS_INT(a), AS_INT(b), c, false);
     }
 }
 
@@ -111,7 +120,10 @@ __ockl_udot4(uchar4 a, uchar4 b, uint c, bool s)
             (uint)a.s3 * (uint)b.s3;
         return s ? __ockl_add_sat_u32(t, c) : (t + c);
     } else {
-        return __llvm_amdgcn_udot4(AS_UINT(a), AS_UINT(b), c, s);
+        if (s)
+            return __llvm_amdgcn_udot4(AS_UINT(a), AS_UINT(b), c, true);
+        else
+            return __llvm_amdgcn_udot4(AS_UINT(a), AS_UINT(b), c, false);
     }
 }
 
@@ -131,7 +143,10 @@ __ockl_sdot8(int a, int b, int c, bool s)
             ( a        >> 28) * ( b        >> 28);
         return s ? __ockl_add_sat_i32(t, c) : (t + c);
     } else {
-        return __llvm_amdgcn_sdot8(a, b, c, s);
+        if (s)
+            return __llvm_amdgcn_sdot8(a, b, c, true);
+        else
+            return __llvm_amdgcn_sdot8(a, b, c, false);
     }
 }
 
@@ -150,7 +165,10 @@ __ockl_udot8(uint a, uint b, uint c, bool s)
             ((a >> 28)      ) * ((b >> 28)      );
         return s ? __ockl_add_sat_u32(t, c) : (t + c);
     } else {
-        return __llvm_amdgcn_udot8(a, b, c, s);
+        if (s)
+            return __llvm_amdgcn_udot8(a, b, c, true);
+        else
+            return __llvm_amdgcn_udot8(a, b, c, false);
     }
 }
 
