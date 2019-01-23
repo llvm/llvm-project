@@ -71,8 +71,14 @@ if (CMAKE_CXX_FLAGS MATCHES "fsanitize-coverage")
   list(APPEND LIBFUZZER_CFLAGS -fno-sanitize-coverage=trace-pc-guard,edge,trace-cmp,indirect-calls,8bit-counters)
 endif()
 
-if(NOT HAS_THREAD_LOCAL)
-  list(APPEND LIBFUZZER_CFLAGS -Dthread_local=__thread)
+if(OS_NAME MATCHES "Windows")
+  # Silence warnings with /Ehsc and avoid an error by unecessarily defining
+  # thread_local when it isn't even used on Windows.
+  list(APPEND LIBFUZZER_CFLAGS /EHsc)
+else()
+  if(NOT HAS_THREAD_LOCAL)
+    list(APPEND LIBFUZZER_CFLAGS -Dthread_local=__thread)
+  endif()
 endif()
 
 set(FUZZER_SUPPORTED_OS ${SANITIZER_COMMON_SUPPORTED_OS})

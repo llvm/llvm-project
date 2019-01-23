@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Demangle/Demangle.h"
+#include <cstdlib>
 
 static bool isItaniumEncoding(const std::string &MangledName) {
   size_t Pos = MangledName.find_first_not_of('_');

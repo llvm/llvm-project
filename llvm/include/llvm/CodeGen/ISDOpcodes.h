@@ -818,6 +818,8 @@ namespace ISD {
     ATOMIC_LOAD_MAX,
     ATOMIC_LOAD_UMIN,
     ATOMIC_LOAD_UMAX,
+    ATOMIC_LOAD_FADD,
+    ATOMIC_LOAD_FSUB,
 
     // Masked load and store - consecutive vector load and store operations
     // with additional mask operand that prevents memory accesses to the

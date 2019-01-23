@@ -87,6 +87,12 @@ public:
   size_t getBufferSize() const override { return Buffer.size(); }
 
   Error commit() override {
+    if (FinalPath == "-") {
+      llvm::outs() << StringRef((const char *)Buffer.base(), Buffer.size());
+      llvm::outs().flush();
+      return Error::success();
+    }
+
     using namespace sys::fs;
     int FD;
     std::error_code EC;
@@ -114,7 +120,7 @@ createInMemoryBuffer(StringRef Path, size_t Size, unsigned Mode) {
   return llvm::make_unique<InMemoryBuffer>(Path, MB, Mode);
 }
 
-static Expected<std::unique_ptr<OnDiskBuffer>>
+static Expected<std::unique_ptr<FileOutputBuffer>>
 createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode) {
   Expected<fs::TempFile> FileOrErr =
       fs::TempFile::create(Path + ".tmp%%%%%%%", Mode);
@@ -138,10 +144,14 @@ createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode) {
   std::error_code EC;
   auto MappedFile = llvm::make_unique<fs::mapped_file_region>(
       File.FD, fs::mapped_file_region::readwrite, Size, 0, EC);
+
+  // mmap(2) can fail if the underlying filesystem does not support it.
+  // If that happens, we fall back to in-memory buffer as the last resort.
   if (EC) {
     consumeError(File.discard());
-    return errorCodeToError(EC);
+    return createInMemoryBuffer(Path, Size, Mode);
   }
+
   return llvm::make_unique<OnDiskBuffer>(Path, std::move(File),
                                          std::move(MappedFile));
 }
@@ -149,6 +159,10 @@ createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode) {
 // Create an instance of FileOutputBuffer.
 Expected<std::unique_ptr<FileOutputBuffer>>
 FileOutputBuffer::create(StringRef Path, size_t Size, unsigned Flags) {
+  // Handle "-" as stdout just like llvm::raw_ostream does.
+  if (Path == "-")
+    return createInMemoryBuffer("-", Size, /*Mode=*/0);
+
   unsigned Mode = fs::all_read | fs::all_write;
   if (Flags & F_executable)
     Mode |= fs::all_exe;

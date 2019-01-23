@@ -73,6 +73,8 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   if (EXISTS ${LLVM_CMAKE_PATH})
+    # Enable warnings, otherwise -w gets added to the cflags by HandleLLVMOptions.
+    set(LLVM_ENABLE_WARNINGS ON)
     list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
     include("${LLVM_CMAKE_PATH}/AddLLVM.cmake")
     include("${LLVM_CMAKE_PATH}/HandleLLVMOptions.cmake")

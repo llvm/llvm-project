@@ -17,23 +17,31 @@ namespace objcopy {
 
 Buffer::~Buffer() {}
 
-void FileBuffer::allocate(size_t Size) {
+Error FileBuffer::allocate(size_t Size) {
   Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(getName(), Size, FileOutputBuffer::F_executable);
-  handleAllErrors(BufferOrErr.takeError(), [this](const ErrorInfoBase &E) {
-    error("failed to open " + getName() + ": " + E.message());
-  });
+  // FileOutputBuffer::create() returns an Error that is just a wrapper around
+  // std::error_code. Wrap it in FileError to include the actual filename.
+  if (!BufferOrErr)
+    return createFileError(getName(), BufferOrErr.takeError());
   Buf = std::move(*BufferOrErr);
+  return Error::success();
 }
 
-Error FileBuffer::commit() { return Buf->commit(); }
+Error FileBuffer::commit() {
+  Error Err = Buf->commit();
+  // FileOutputBuffer::commit() returns an Error that is just a wrapper around
+  // std::error_code. Wrap it in FileError to include the actual filename.
+  return Err ? createFileError(getName(), std::move(Err)) : std::move(Err);
+}
 
 uint8_t *FileBuffer::getBufferStart() {
   return reinterpret_cast<uint8_t *>(Buf->getBufferStart());
 }
 
-void MemBuffer::allocate(size_t Size) {
+Error MemBuffer::allocate(size_t Size) {
   Buf = WritableMemoryBuffer::getNewMemBuffer(Size, getName());
+  return Error::success();
 }
 
 Error MemBuffer::commit() { return Error::success(); }

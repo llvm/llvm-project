@@ -2419,12 +2419,12 @@ def mno_odd_spreg : Flag<["-"], "mno-odd-spreg">, Group<m_mips_Features_Group>,
   Flags<[HelpHidden]>;
 def mrelax_pic_calls : Flag<["-"], "mrelax-pic-calls">,
   Group<m_mips_Features_Group>,
-  HelpText<"Try turning PIC calls (j{al}r{c} $25) into direct calls "
-  "(MIPS only)">, Flags<[HelpHidden]>;
+  HelpText<"Produce relaxation hints for linkers to try optimizing PIC "
+           "call sequences into direct calls (MIPS only)">, Flags<[HelpHidden]>;
 def mno_relax_pic_calls : Flag<["-"], "mno-relax-pic-calls">,
   Group<m_mips_Features_Group>,
-  HelpText<"Do not try turning PIC calls (j{al}r{c} $25) into direct calls "
-  "(MIPS only)">, Flags<[HelpHidden]>;
+  HelpText<"Do not produce relaxation hints for linkers to try optimizing PIC "
+           "call sequences into direct calls (MIPS only)">, Flags<[HelpHidden]>;
 def mglibc : Flag<["-"], "mglibc">, Group<m_libc_Group>, Flags<[HelpHidden]>;
 def muclibc : Flag<["-"], "muclibc">, Group<m_libc_Group>, Flags<[HelpHidden]>;
 def module_file_info : Flag<["-"], "module-file-info">, Flags<[DriverOption,CC1Option]>, Group<Action_Group>,

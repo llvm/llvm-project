@@ -31,7 +31,7 @@ Installing Clangd
 ==================
 
 Packages are available for debian-based distributions, see the `LLVM packages
-page <http://apt.llvm.org/>`_. :program:`Clangd` is included in the
+page <https://apt.llvm.org/>`_. :program:`Clangd` is included in the
 `clang-tools` package.
 However, it is a good idea to check your distribution's packaging system first
 as it might already be available.
@@ -147,14 +147,14 @@ Getting Involved
 ==================
 
 A good place for interested contributors is the `Clangd developer mailing list
-<http://lists.llvm.org/mailman/listinfo/clangd-dev>`_. For discussions with the
+<https://lists.llvm.org/mailman/listinfo/clangd-dev>`_. For discussions with the
 broader community on topics not only related to Clangd, use
 `Clang developer mailing list
-<http://lists.llvm.org/mailman/listinfo/cfe-dev>`_.
+<https://lists.llvm.org/mailman/listinfo/cfe-dev>`_.
 If you're also interested in contributing patches to :program:`Clangd`, take a
 look at the `LLVM Developer Policy
-<http://llvm.org/docs/DeveloperPolicy.html>`_ and `Code Reviews
-<http://llvm.org/docs/Phabricator.html>`_ page. Contributions of new features
+<https://llvm.org/docs/DeveloperPolicy.html>`_ and `Code Reviews
+<https://llvm.org/docs/Phabricator.html>`_ page. Contributions of new features
 to the `Language Server Protocol
 <https://github.com/Microsoft/language-server-protocol>`_ itself would also be
 very useful, so that :program:`Clangd` can eventually implement them in a

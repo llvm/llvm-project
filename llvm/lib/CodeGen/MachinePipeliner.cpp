@@ -210,8 +210,11 @@ bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
   }
 #endif
 
-  if (!canPipelineLoop(L))
+  setPragmaPipelineOptions(L);
+  if (!canPipelineLoop(L)) {
+    LLVM_DEBUG(dbgs() << "\n!!! Can not pipeline loop.\n");
     return Changed;
+  }
 
   ++NumTrytoPipeline;
 
@@ -220,11 +223,58 @@ bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
   return Changed;
 }
 
+void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
+  MachineBasicBlock *LBLK = L.getTopBlock();
+
+  if (LBLK == nullptr)
+    return;
+
+  const BasicBlock *BBLK = LBLK->getBasicBlock();
+  if (BBLK == nullptr)
+    return;
+
+  const Instruction *TI = BBLK->getTerminator();
+  if (TI == nullptr)
+    return;
+
+  MDNode *LoopID = TI->getMetadata(LLVMContext::MD_loop);
+  if (LoopID == nullptr)
+    return;
+
+  assert(LoopID->getNumOperands() > 0 && "requires atleast one operand");
+  assert(LoopID->getOperand(0) == LoopID && "invalid loop");
+
+  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
+    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+
+    if (MD == nullptr)
+      continue;
+
+    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+
+    if (S == nullptr)
+      continue;
+
+    if (S->getString() == "llvm.loop.pipeline.initiationinterval") {
+      assert(MD->getNumOperands() == 2 &&
+             "Pipeline initiation interval hint metadata should have two operands.");
+      II_setByPragma =
+          mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+      assert(II_setByPragma >= 1 && "Pipeline initiation interval must be positive.");
+    } else if (S->getString() == "llvm.loop.pipeline.disable") {
+      disabledByPragma = true;
+    }
+  }
+}
+
 /// Return true if the loop can be software pipelined.  The algorithm is
 /// restricted to loops with a single basic block.  Make sure that the
 /// branch in the loop can be analyzed.
 bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
   if (L.getNumBlocks() != 1)
+    return false;
+
+  if (disabledByPragma)
     return false;
 
   // Check if the branch can't be understood because we can't do pipelining
@@ -285,7 +335,8 @@ void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
 bool MachinePipeliner::swingModuloScheduler(MachineLoop &L) {
   assert(L.getBlocks().size() == 1 && "SMS works on single blocks only.");
 
-  SwingSchedulerDAG SMS(*this, L, getAnalysis<LiveIntervals>(), RegClassInfo);
+  SwingSchedulerDAG SMS(*this, L, getAnalysis<LiveIntervals>(), RegClassInfo,
+                        II_setByPragma);
 
   MachineBasicBlock *MBB = L.getHeader();
   // The kernel should not include any terminator instructions.  These
@@ -306,6 +357,20 @@ bool MachinePipeliner::swingModuloScheduler(MachineLoop &L) {
 
   SMS.finishBlock();
   return SMS.hasNewSchedule();
+}
+
+void SwingSchedulerDAG::setMII(unsigned ResMII, unsigned RecMII) {
+  if (II_setByPragma > 0)
+    MII = II_setByPragma;
+  else
+    MII = std::max(ResMII, RecMII);
+}
+
+void SwingSchedulerDAG::setMAX_II() {
+  if (II_setByPragma > 0)
+    MAX_II = II_setByPragma;
+  else
+    MAX_II = MII + 10;
 }
 
 /// We override the schedule function in ScheduleDAGInstrs to implement the
@@ -334,9 +399,11 @@ void SwingSchedulerDAG::schedule() {
   if (SwpIgnoreRecMII)
     RecMII = 0;
 
-  MII = std::max(ResMII, RecMII);
-  LLVM_DEBUG(dbgs() << "MII = " << MII << " (rec=" << RecMII
-                    << ", res=" << ResMII << ")\n");
+  setMII(ResMII, RecMII);
+  setMAX_II();
+
+  LLVM_DEBUG(dbgs() << "MII = " << MII << " MAX_II = " << MAX_II
+                    << " (rec=" << RecMII << ", res=" << ResMII << ")\n");
 
   // Can't schedule a loop without a valid MII.
   if (MII == 0)
@@ -1744,8 +1811,9 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
     return false;
 
   bool scheduleFound = false;
+  unsigned II = 0;
   // Keep increasing II until a valid schedule is found.
-  for (unsigned II = MII; II < MII + 10 && !scheduleFound; ++II) {
+  for (II = MII; II <= MAX_II && !scheduleFound; ++II) {
     Schedule.reset();
     Schedule.setInitiationInterval(II);
     LLVM_DEBUG(dbgs() << "Try to schedule with " << II << "\n");
@@ -1817,7 +1885,8 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
       scheduleFound = Schedule.isValidSchedule(this);
   }
 
-  LLVM_DEBUG(dbgs() << "Schedule Found? " << scheduleFound << "\n");
+  LLVM_DEBUG(dbgs() << "Schedule Found? " << scheduleFound << " (II=" << II
+                    << ")\n");
 
   if (scheduleFound)
     Schedule.finalizeSchedule(this);

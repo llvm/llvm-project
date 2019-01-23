@@ -699,6 +699,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::ATOMIC_LOAD_MAX);
   setTargetDAGCombine(ISD::ATOMIC_LOAD_UMIN);
   setTargetDAGCombine(ISD::ATOMIC_LOAD_UMAX);
+  setTargetDAGCombine(ISD::ATOMIC_LOAD_FADD);
 
   setSchedulingPreference(Sched::RegPressure);
 
@@ -5491,9 +5492,21 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                    M->getVTList(), Ops, M->getMemoryVT(),
                                    M->getMemOperand());
   }
+  case Intrinsic::amdgcn_ds_fadd: {
+    MemSDNode *M = cast<MemSDNode>(Op);
+    unsigned Opc;
+    switch (IntrID) {
+    case Intrinsic::amdgcn_ds_fadd:
+      Opc = ISD::ATOMIC_LOAD_FADD;
+      break;
+    }
+
+    return DAG.getAtomic(Opc, SDLoc(Op), M->getMemoryVT(),
+                         M->getOperand(0), M->getOperand(2), M->getOperand(3),
+                         M->getMemOperand());
+  }
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
-  case Intrinsic::amdgcn_ds_fadd:
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax: {
     MemSDNode *M = cast<MemSDNode>(Op);
@@ -5504,9 +5517,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       break;
     case Intrinsic::amdgcn_atomic_dec:
       Opc = AMDGPUISD::ATOMIC_DEC;
-      break;
-    case Intrinsic::amdgcn_ds_fadd:
-      Opc = AMDGPUISD::ATOMIC_LOAD_FADD;
       break;
     case Intrinsic::amdgcn_ds_fmin:
       Opc = AMDGPUISD::ATOMIC_LOAD_FMIN;
@@ -8926,11 +8936,11 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ATOMIC_LOAD_MAX:
   case ISD::ATOMIC_LOAD_UMIN:
   case ISD::ATOMIC_LOAD_UMAX:
+  case ISD::ATOMIC_LOAD_FADD:
   case AMDGPUISD::ATOMIC_INC:
   case AMDGPUISD::ATOMIC_DEC:
-  case AMDGPUISD::ATOMIC_LOAD_FADD:
   case AMDGPUISD::ATOMIC_LOAD_FMIN:
-  case AMDGPUISD::ATOMIC_LOAD_FMAX:  // TODO: Target mem intrinsics.
+  case AMDGPUISD::ATOMIC_LOAD_FMAX: // TODO: Target mem intrinsics.
     if (DCI.isBeforeLegalize())
       break;
     return performMemSDNodeCombine(cast<MemSDNode>(N), DCI);
@@ -9721,4 +9731,30 @@ bool SITargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
 
   return AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(Op, DAG,
                                                             SNaN, Depth);
+}
+
+TargetLowering::AtomicExpansionKind
+SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  switch (RMW->getOperation()) {
+  case AtomicRMWInst::FAdd: {
+    Type *Ty = RMW->getType();
+
+    // We don't have a way to support 16-bit atomics now, so just leave them
+    // as-is.
+    if (Ty->isHalfTy())
+      return AtomicExpansionKind::None;
+
+    if (!Ty->isFloatTy())
+      return AtomicExpansionKind::CmpXChg;
+
+    // TODO: Do have these for flat. Older targets also had them for buffers.
+    unsigned AS = RMW->getPointerAddressSpace();
+    return (AS == AMDGPUAS::LOCAL_ADDRESS && Subtarget->hasLDSFPAtomics()) ?
+      AtomicExpansionKind::None : AtomicExpansionKind::CmpXChg;
+  }
+  default:
+    break;
+  }
+
+  return AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(RMW);
 }

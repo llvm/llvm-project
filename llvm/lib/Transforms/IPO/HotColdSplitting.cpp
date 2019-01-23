@@ -74,10 +74,6 @@ static cl::opt<int>
 
 namespace {
 
-struct PostDomTree : PostDomTreeBase<BasicBlock> {
-  PostDomTree(Function &F) { recalculate(F); }
-};
-
 /// A sequence of basic blocks.
 ///
 /// A 0-sized SmallVector is slightly cheaper to move than a std::vector.
@@ -180,10 +176,7 @@ public:
 private:
   bool isFunctionCold(const Function &F) const;
   bool shouldOutlineFrom(const Function &F) const;
-  bool outlineColdRegions(Function &F, ProfileSummaryInfo &PSI,
-                          BlockFrequencyInfo *BFI, TargetTransformInfo &TTI,
-                          DominatorTree &DT, PostDomTree &PDT,
-                          OptimizationRemarkEmitter &ORE);
+  bool outlineColdRegions(Function &F, bool HasProfileSummary);
   Function *extractColdRegion(const BlockSequence &Region, DominatorTree &DT,
                               BlockFrequencyInfo *BFI, TargetTransformInfo &TTI,
                               OptimizationRemarkEmitter &ORE, unsigned Count);
@@ -327,7 +320,7 @@ public:
   OutliningRegion &operator=(OutliningRegion &&) = default;
 
   static OutliningRegion create(BasicBlock &SinkBB, const DominatorTree &DT,
-                                const PostDomTree &PDT) {
+                                const PostDominatorTree &PDT) {
     OutliningRegion ColdRegion;
 
     SmallPtrSet<BasicBlock *, 4> RegionBlocks;
@@ -455,11 +448,7 @@ public:
 };
 } // namespace
 
-bool HotColdSplitting::outlineColdRegions(Function &F, ProfileSummaryInfo &PSI,
-                                          BlockFrequencyInfo *BFI,
-                                          TargetTransformInfo &TTI,
-                                          DominatorTree &DT, PostDomTree &PDT,
-                                          OptimizationRemarkEmitter &ORE) {
+bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
   bool Changed = false;
 
   // The set of cold blocks.
@@ -473,13 +462,27 @@ bool HotColdSplitting::outlineColdRegions(Function &F, ProfileSummaryInfo &PSI,
   // the first region to contain a block.
   ReversePostOrderTraversal<Function *> RPOT(&F);
 
+  // Calculate domtrees lazily. This reduces compile-time significantly.
+  std::unique_ptr<DominatorTree> DT;
+  std::unique_ptr<PostDominatorTree> PDT;
+
+  // Calculate BFI lazily (it's only used to query ProfileSummaryInfo). This
+  // reduces compile-time significantly. TODO: When we *do* use BFI, we should
+  // be able to salvage its domtrees instead of recomputing them.
+  BlockFrequencyInfo *BFI = nullptr;
+  if (HasProfileSummary)
+    BFI = GetBFI(F);
+
+  TargetTransformInfo &TTI = GetTTI(F);
+  OptimizationRemarkEmitter &ORE = (*GetORE)(F);
+
   // Find all cold regions.
   for (BasicBlock *BB : RPOT) {
     // This block is already part of some outlining region.
     if (ColdBlocks.count(BB))
       continue;
 
-    bool Cold = PSI.isColdBlock(BB, BFI) ||
+    bool Cold = (BFI && PSI->isColdBlock(BB, BFI)) ||
                 (EnableStaticAnalyis && unlikelyExecuted(*BB));
     if (!Cold)
       continue;
@@ -489,7 +492,12 @@ bool HotColdSplitting::outlineColdRegions(Function &F, ProfileSummaryInfo &PSI,
       BB->dump();
     });
 
-    auto Region = OutliningRegion::create(*BB, DT, PDT);
+    if (!DT)
+      DT = make_unique<DominatorTree>(F);
+    if (!PDT)
+      PDT = make_unique<PostDominatorTree>(F);
+
+    auto Region = OutliningRegion::create(*BB, *DT, *PDT);
     if (Region.empty())
       continue;
 
@@ -519,7 +527,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, ProfileSummaryInfo &PSI,
     OutliningRegion Region = OutliningWorklist.pop_back_val();
     assert(!Region.empty() && "Empty outlining region in worklist");
     do {
-      BlockSequence SubRegion = Region.takeSingleEntrySubRegion(DT);
+      BlockSequence SubRegion = Region.takeSingleEntrySubRegion(*DT);
       if (!isProfitableToOutline(SubRegion, TTI)) {
         LLVM_DEBUG({
           dbgs() << "Skipping outlining; not profitable to outline\n";
@@ -535,7 +543,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, ProfileSummaryInfo &PSI,
       });
 
       Function *Outlined =
-          extractColdRegion(SubRegion, DT, BFI, TTI, ORE, OutlinedFunctionID);
+          extractColdRegion(SubRegion, *DT, BFI, TTI, ORE, OutlinedFunctionID);
       if (Outlined) {
         ++OutlinedFunctionID;
         Changed = true;
@@ -548,6 +556,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, ProfileSummaryInfo &PSI,
 
 bool HotColdSplitting::run(Module &M) {
   bool Changed = false;
+  bool HasProfileSummary = M.getProfileSummary();
   for (auto It = M.begin(), End = M.end(); It != End; ++It) {
     Function &F = *It;
 
@@ -571,13 +580,7 @@ bool HotColdSplitting::run(Module &M) {
     }
 
     LLVM_DEBUG(llvm::dbgs() << "Outlining in " << F.getName() << "\n");
-    DominatorTree DT(F);
-    PostDomTree PDT(F);
-    PDT.recalculate(F);
-    BlockFrequencyInfo *BFI = GetBFI(F);
-    TargetTransformInfo &TTI = GetTTI(F);
-    OptimizationRemarkEmitter &ORE = (*GetORE)(F);
-    Changed |= outlineColdRegions(F, *PSI, BFI, TTI, DT, PDT, ORE);
+    Changed |= outlineColdRegions(F, HasProfileSummary);
   }
   return Changed;
 }

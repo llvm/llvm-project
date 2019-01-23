@@ -1835,7 +1835,10 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
 
   unsigned Index = 0;
   SmallVector<TypeIndex, 8> ArgTypeIndices;
-  TypeIndex ReturnTypeIndex = getTypeIndex(ReturnAndArgs[Index++]);
+  TypeIndex ReturnTypeIndex = TypeIndex::Void();
+  if (ReturnAndArgs.size() > Index) {
+    ReturnTypeIndex = getTypeIndex(ReturnAndArgs[Index++]);
+  }
 
   // If the first argument is a pointer type and this isn't a static method,
   // treat it as the special 'this' parameter, which is encoded separately from

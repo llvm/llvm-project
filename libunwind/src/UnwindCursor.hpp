@@ -788,6 +788,8 @@ bool UnwindCursor<A, R>::validFloatReg(int regNum) {
   if (regNum >= UNW_ARM_D0 && regNum <= UNW_ARM_D31) return true;
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
   if (regNum >= UNW_ARM64_D0 && regNum <= UNW_ARM64_D31) return true;
+#else
+  (void)regNum;
 #endif
   return false;
 }
@@ -815,6 +817,7 @@ unw_fpreg_t UnwindCursor<A, R>::getFloatReg(int regNum) {
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
   return _msContext.V[regNum - UNW_ARM64_D0].D[0];
 #else
+  (void)regNum;
   _LIBUNWIND_ABORT("float registers unimplemented");
 #endif
 }
@@ -842,6 +845,8 @@ void UnwindCursor<A, R>::setFloatReg(int regNum, unw_fpreg_t value) {
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
   _msContext.V[regNum - UNW_ARM64_D0].D[0] = value;
 #else
+  (void)regNum;
+  (void)value;
   _LIBUNWIND_ABORT("float registers unimplemented");
 #endif
 }
