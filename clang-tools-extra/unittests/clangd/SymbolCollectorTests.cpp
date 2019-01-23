@@ -437,6 +437,21 @@ TEST_F(SymbolCollectorTest, ObjCSymbols) {
                   QName("MyProtocol"), QName("MyProtocol::someMethodName3:")));
 }
 
+TEST_F(SymbolCollectorTest, ObjCPropertyImpl) {
+  const std::string Header = R"(
+    @interface Container
+    @property(nonatomic) int magic;
+    @end
+
+    @implementation Container
+    @end
+  )";
+  TestFileName = testPath("test.m");
+  runSymbolCollector(Header, /*Main=*/"", {"-xobjective-c++"});
+  EXPECT_THAT(Symbols, UnorderedElementsAre(QName("Container"),
+                                            QName("Container::magic")));
+}
+
 TEST_F(SymbolCollectorTest, Locations) {
   Annotations Header(R"cpp(
     // Declared in header, defined in main.
