@@ -113,16 +113,6 @@ public:
   // True if this is an argument for --just-symbols. Usually false.
   bool JustSymbols = false;
 
-  // On PPC64 we need to keep track of which files contain small code model
-  // relocations. To minimize the chance of a relocation overflow files that do
-  // contain small code model relocations should have their .toc sections sorted
-  // closer to the .got section than files that do not contain any small code
-  // model relocations. Thats because the toc-pointer is defined to point at
-  // .got + 0x8000 and the instructions used with small code model relocations
-  // support immediates in the range [-0x8000, 0x7FFC], making the addressable
-  // range relative to the toc pointer [.got, .got + 0xFFFC].
-  bool PPC64SmallCodeModelRelocs = false;
-
   // GroupId is used for --warn-backrefs which is an optional error
   // checking feature. All files within the same --{start,end}-group or
   // --{start,end}-lib get the same group ID. Otherwise, each file gets a new

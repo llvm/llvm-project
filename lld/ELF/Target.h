@@ -176,8 +176,6 @@ static inline std::string getErrorLocation(const uint8_t *Loc) {
 // to the local entry-point.
 unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t StOther);
 
-bool isPPC64SmallCodeModelReloc(RelType Type);
-
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t Expr);
 

@@ -1000,9 +1000,6 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   if (isRelExprOneOf<R_HINT, R_NONE>(Expr))
     return;
 
-  if (Config->EMachine == EM_PPC64 && isPPC64SmallCodeModelReloc(Type))
-    Sec.File->PPC64SmallCodeModelRelocs = true;
-
   // Strenghten or relax relocations.
   //
   // GNU ifunc symbols must be accessed via PLT because their addresses

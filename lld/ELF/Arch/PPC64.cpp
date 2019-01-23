@@ -98,15 +98,6 @@ unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(uint8_t StOther) {
   return 0;
 }
 
-bool elf::isPPC64SmallCodeModelReloc(RelType Type) {
-  // List is not yet complete, at the very least the got based tls related
-  // relocations need to be added, and we need to determine how the section
-  // sorting interacts with the thread pointer and dynamic thread pointer
-  // relative tls relocations.
-  return Type == R_PPC64_GOT16 || Type == R_PPC64_TOC16 ||
-         Type == R_PPC64_TOC16_DS;
-}
-
 namespace {
 class PPC64 final : public TargetInfo {
 public:
