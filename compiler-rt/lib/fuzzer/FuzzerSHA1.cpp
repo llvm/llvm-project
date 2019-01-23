@@ -31,7 +31,8 @@ namespace {  // Added for LibFuzzer
 
 #ifdef __BIG_ENDIAN__
 # define SHA_BIG_ENDIAN
-#elif defined __LITTLE_ENDIAN__
+// Windows is always little endian and MSVC doesn't have <endian.h>
+#elif defined __LITTLE_ENDIAN__ || LIBFUZZER_WINDOWS
 /* override */
 #elif defined __BYTE_ORDER
 # if __BYTE_ORDER__ ==  __ORDER_BIG_ENDIAN__
