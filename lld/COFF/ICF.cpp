@@ -272,7 +272,7 @@ void ICF::run(ArrayRef<Chunk *> Vec) {
     uint32_t Hash = SC->Class[1];
     for (Symbol *B : SC->symbols())
       if (auto *Sym = dyn_cast_or_null<DefinedRegular>(B))
-        Hash ^= Sym->getChunk()->Class[1];
+        Hash += Sym->getChunk()->Class[1];
     // Set MSB to 1 to avoid collisions with non-hash classs.
     SC->Class[0] = Hash | (1U << 31);
   });

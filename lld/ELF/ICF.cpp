@@ -432,7 +432,7 @@ static void combineRelocHashes(InputSection *IS, ArrayRef<RelTy> Rels) {
     Symbol &S = IS->template getFile<ELFT>()->getRelocTargetSym(Rel);
     if (auto *D = dyn_cast<Defined>(&S))
       if (auto *RelSec = dyn_cast_or_null<InputSection>(D->Section))
-        Hash ^= RelSec->Class[1];
+        Hash += RelSec->Class[1];
   }
   // Set MSB to 1 to avoid collisions with non-hash IDs.
   IS->Class[0] = Hash | (1U << 31);
