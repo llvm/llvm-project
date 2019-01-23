@@ -111,13 +111,16 @@ and from the command line.
 
 .. option:: -v
 
-  Print directive pattern matches.
+  Print good directive pattern matches.  However, if ``-input-dump=fail`` or
+  ``-input-dump=always``, add those matches as input annotations instead.
 
 .. option:: -vv
 
   Print information helpful in diagnosing internal FileCheck issues, such as
   discarded overlapping ``CHECK-DAG:`` matches, implicit EOF pattern matches,
   and ``CHECK-NOT:`` patterns that do not have matches.  Implies ``-v``.
+  However, if ``-input-dump=fail`` or ``-input-dump=always``, just add that
+  information as input annotations instead.
 
 .. option:: --allow-deprecated-dag-overlap
 

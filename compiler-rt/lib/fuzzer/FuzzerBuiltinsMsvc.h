@@ -24,7 +24,7 @@
 
 // __builtin_return_address() cannot be compiled with MSVC. Use the equivalent
 // from <intrin.h>
-#define GET_CALLER_PC() reinterpret_cast<uintptr_t>(_ReturnAddress())
+#define GET_CALLER_PC() _ReturnAddress()
 
 namespace fuzzer {
 

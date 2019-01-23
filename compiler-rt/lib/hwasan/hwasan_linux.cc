@@ -368,22 +368,27 @@ static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
   return AccessInfo{addr, size, is_store, !is_store, recover};
 }
 
-static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
-  AccessInfo ai = GetAccessInfo(info, uc);
-  if (!ai.is_store && !ai.is_load)
-    return false;
-
+static void HandleTagMismatch(AccessInfo ai, uptr pc, uptr frame,
+                              ucontext_t *uc) {
   InternalMmapVector<BufferedStackTrace> stack_buffer(1);
   BufferedStackTrace *stack = stack_buffer.data();
   stack->Reset();
-  SignalContext sig{info, uc};
-  GetStackTrace(stack, kStackTraceMax, StackTrace::GetNextInstructionPc(sig.pc),
-                sig.bp, uc, common_flags()->fast_unwind_on_fatal);
+  GetStackTrace(stack, kStackTraceMax, pc, frame, uc,
+                common_flags()->fast_unwind_on_fatal);
 
   ++hwasan_report_count;
 
   bool fatal = flags()->halt_on_error || !ai.recover;
   ReportTagMismatch(stack, ai.addr, ai.size, ai.is_store, fatal);
+}
+
+static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
+  AccessInfo ai = GetAccessInfo(info, uc);
+  if (!ai.is_store && !ai.is_load)
+    return false;
+
+  SignalContext sig{info, uc};
+  HandleTagMismatch(ai, StackTrace::GetNextInstructionPc(sig.pc), sig.bp, uc);
 
 #if defined(__aarch64__)
   uc->uc_mcontext.pc += 4;
@@ -392,6 +397,19 @@ static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
 # error Unsupported architecture
 #endif
   return true;
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __hwasan_tag_mismatch(
+    uptr addr, uptr access_info) {
+  AccessInfo ai;
+  ai.is_store = access_info & 0x10;
+  ai.recover = false;
+  ai.addr = addr;
+  ai.size = 1 << (access_info & 0xf);
+
+  HandleTagMismatch(ai, (uptr)__builtin_return_address(0),
+                    (uptr)__builtin_frame_address(0), nullptr);
+  __builtin_unreachable();
 }
 
 static void OnStackUnwind(const SignalContext &sig, const void *,

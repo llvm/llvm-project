@@ -242,7 +242,11 @@ public:
   allocateMappedMemory(SectionMemoryManager::AllocationPurpose Purpose,
                        size_t NumBytes, const sys::MemoryBlock *const NearBlock,
                        unsigned Flags, std::error_code &EC) override {
-    return sys::Memory::allocateMappedMemory(NumBytes, NearBlock, Flags, EC);
+    // allocateMappedMemory calls mmap(2). We round up a request size
+    // to page size to get extra space for free.
+    static const size_t PageSize = sys::Process::getPageSize();
+    size_t ReqBytes = (NumBytes + PageSize - 1) & ~(PageSize - 1);
+    return sys::Memory::allocateMappedMemory(ReqBytes, NearBlock, Flags, EC);
   }
 
   std::error_code protectMappedMemory(const sys::MemoryBlock &Block,

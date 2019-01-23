@@ -81,12 +81,11 @@ typename A::pint_t DwarfInstructions<A, R>::getSavedRegister(
     const RegisterLocation &savedReg) {
   switch (savedReg.location) {
   case CFI_Parser<A>::kRegisterInCFA:
-    return addressSpace.getRegister(cfa + (pint_t)savedReg.value);
+    return (pint_t)addressSpace.getRegister(cfa + (pint_t)savedReg.value);
 
   case CFI_Parser<A>::kRegisterAtExpression:
-    return addressSpace.getRegister(
-        evaluateExpression((pint_t)savedReg.value, addressSpace,
-                            registers, cfa));
+    return (pint_t)addressSpace.getRegister(evaluateExpression(
+        (pint_t)savedReg.value, addressSpace, registers, cfa));
 
   case CFI_Parser<A>::kRegisterIsExpression:
     return evaluateExpression((pint_t)savedReg.value, addressSpace,

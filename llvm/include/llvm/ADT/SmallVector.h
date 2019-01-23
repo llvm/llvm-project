@@ -124,13 +124,9 @@ public:
   using const_pointer = const T *;
 
   // forward iterator creation methods.
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
   iterator begin() { return (iterator)this->BeginX; }
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
   const_iterator begin() const { return (const_iterator)this->BeginX; }
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
   iterator end() { return begin() + size(); }
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
   const_iterator end() const { return begin() + size(); }
 
   // reverse iterator creation methods.
@@ -149,12 +145,10 @@ public:
   /// Return a pointer to the vector's buffer, even if empty().
   const_pointer data() const { return const_pointer(begin()); }
 
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
   reference operator[](size_type idx) {
     assert(idx < size());
     return begin()[idx];
   }
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
   const_reference operator[](size_type idx) const {
     assert(idx < size());
     return begin()[idx];

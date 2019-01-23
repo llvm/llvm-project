@@ -28,6 +28,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
                                          const GCNTargetMachine &TM) {
   using namespace TargetOpcode;
 
+  auto scalarize = [=](const LegalityQuery &Query, unsigned TypeIdx) {
+    const LLT &Ty = Query.Types[TypeIdx];
+    return std::make_pair(TypeIdx, Ty.getElementType());
+  };
+
   auto GetAddrSpacePtr = [&TM](unsigned AS) {
     return LLT::pointer(AS, TM.getPointerSizeInBits(AS));
   };
@@ -93,6 +98,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
   setAction({G_ADD, S32}, Legal);
   setAction({G_ASHR, S32}, Legal);
+  setAction({G_ASHR, 1, S32}, Legal);
   setAction({G_SUB, S32}, Legal);
   setAction({G_MUL, S32}, Legal);
 
@@ -130,16 +136,18 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   // between these two scenarios.
   // FIXME: Pointer types
   getActionDefinitionsBuilder(G_CONSTANT)
-    .legalFor({S1, S32, S64, V2S32, V2S16})
+    .legalFor({S1, S32, S64})
     .clampScalar(0, S32, S64)
     .widenScalarToNextPow2(0);
 
   setAction({G_FRAME_INDEX, PrivatePtr}, Legal);
 
-  getActionDefinitionsBuilder(
-    { G_FADD, G_FMUL, G_FNEG, G_FABS, G_FMA})
-    .legalFor({S32, S64})
-    .clampScalar(0, S32, S64);
+  getActionDefinitionsBuilder({G_FADD, G_FMUL, G_FNEG, G_FABS, G_FMA})
+      .legalFor({S32, S64})
+      .fewerElementsIf(
+          [=](const LegalityQuery &Query) { return Query.Types[0].isVector(); },
+          [=](const LegalityQuery &Query) { return scalarize(Query, 0); })
+      .clampScalar(0, S32, S64);
 
   getActionDefinitionsBuilder(G_FPTRUNC)
     .legalFor({{S32, S64}, {S16, S32}});
@@ -149,11 +157,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .lowerFor({{S64, S16}}); // FIXME: Implement
 
   getActionDefinitionsBuilder(G_FSUB)
-    // Use actual fsub instruction
-    .legalFor({S32})
-    // Must use fadd + fneg
-    .lowerFor({S64, S16})
-    .clampScalar(0, S32, S64);
+      // Use actual fsub instruction
+      .legalFor({S32})
+      // Must use fadd + fneg
+      .lowerFor({S64, S16, V2S16})
+      .fewerElementsIf(
+          [=](const LegalityQuery &Query) { return Query.Types[0].isVector(); },
+          [=](const LegalityQuery &Query) { return scalarize(Query, 0); })
+      .clampScalar(0, S32, S64);
 
   setAction({G_FCMP, S1}, Legal);
   setAction({G_FCMP, 1, S32}, Legal);
@@ -229,6 +240,24 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
       });
 
 
+  auto &ExtLoads = getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
+    .legalForTypesWithMemSize({
+        {S32, GlobalPtr, 8},
+        {S32, GlobalPtr, 16},
+        {S32, LocalPtr, 8},
+        {S32, LocalPtr, 16},
+        {S32, PrivatePtr, 8},
+        {S32, PrivatePtr, 16}});
+  if (ST.hasFlatAddressSpace()) {
+    ExtLoads.legalForTypesWithMemSize({{S32, FlatPtr, 8},
+                                       {S32, FlatPtr, 16}});
+  }
+
+  ExtLoads.clampScalar(0, S32, S32)
+          .widenScalarToNextPow2(0)
+          .unsupportedIfMemSizeNotPow2()
+          .lower();
+
   auto &Atomics = getActionDefinitionsBuilder(
     {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB,
      G_ATOMICRMW_AND, G_ATOMICRMW_OR, G_ATOMICRMW_XOR,
@@ -245,8 +274,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .legalFor({{S32, S1}, {S64, S1}, {V2S32, S1}, {V2S16, S1}})
     .clampScalar(0, S32, S64);
 
-  setAction({G_SHL, S32}, Legal);
-
+  // TODO: Only the low 4/5/6 bits of the shift amount are observed, so we can
+  // be more flexible with the shift amount type.
+  auto &Shifts = getActionDefinitionsBuilder({G_SHL, G_LSHR, G_ASHR})
+    .legalFor({{S32, S32}, {S64, S32}});
+  if (ST.has16BitInsts())
+    Shifts.legalFor({{S16, S32}, {S16, S16}});
+  else
+    Shifts.clampScalar(0, S32, S64);
+  Shifts.clampScalar(1, S32, S32);
 
   // FIXME: When RegBankSelect inserts copies, it will only create new
   // registers with scalar types.  This means we can end up with
@@ -257,15 +293,28 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   setAction({G_GEP, S64}, Legal);
 
   for (unsigned Op : {G_EXTRACT_VECTOR_ELT, G_INSERT_VECTOR_ELT}) {
+    unsigned VecTypeIdx = Op == G_EXTRACT_VECTOR_ELT ? 1 : 0;
+    unsigned EltTypeIdx = Op == G_EXTRACT_VECTOR_ELT ? 0 : 1;
+    unsigned IdxTypeIdx = 2;
+
     getActionDefinitionsBuilder(Op)
       .legalIf([=](const LegalityQuery &Query) {
-          const LLT &VecTy = Query.Types[1];
-          const LLT &IdxTy = Query.Types[2];
+          const LLT &VecTy = Query.Types[VecTypeIdx];
+          const LLT &IdxTy = Query.Types[IdxTypeIdx];
           return VecTy.getSizeInBits() % 32 == 0 &&
             VecTy.getSizeInBits() <= 512 &&
             IdxTy.getSizeInBits() == 32;
-        });
+        })
+      .clampScalar(EltTypeIdx, S32, S64)
+      .clampScalar(VecTypeIdx, S32, S64)
+      .clampScalar(IdxTypeIdx, S32, S32);
   }
+
+  getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
+    .unsupportedIf([=](const LegalityQuery &Query) {
+        const LLT &EltTy = Query.Types[1].getElementType();
+        return Query.Types[0] != EltTy;
+      });
 
   // FIXME: Doesn't handle extract of illegal sizes.
   getActionDefinitionsBuilder({G_EXTRACT, G_INSERT})
@@ -277,11 +326,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
       });
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
-    .legalForCartesianProduct(AllS32Vectors, {S32})
-    .legalForCartesianProduct(AllS64Vectors, {S64})
-    .clampNumElements(0, V16S32, V16S32)
-    .clampNumElements(0, V2S64, V8S64)
-    .minScalarSameAs(1, 0);
+      .legalForCartesianProduct(AllS32Vectors, {S32})
+      .legalForCartesianProduct(AllS64Vectors, {S64})
+      .clampNumElements(0, V16S32, V16S32)
+      .clampNumElements(0, V2S64, V8S64)
+      .minScalarSameAs(1, 0)
+      // FIXME: Sort of a hack to make progress on other legalizations.
+      .legalIf([=](const LegalityQuery &Query) {
+        return Query.Types[0].getScalarSizeInBits() < 32;
+      });
 
   // TODO: Support any combination of v2s32
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
@@ -308,12 +361,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
           return true;
       }
       return false;
-    };
-
-    auto scalarize =
-      [=](const LegalityQuery &Query, unsigned TypeIdx) {
-      const LLT &Ty = Query.Types[TypeIdx];
-      return std::make_pair(TypeIdx, Ty.getElementType());
     };
 
     getActionDefinitionsBuilder(Op)

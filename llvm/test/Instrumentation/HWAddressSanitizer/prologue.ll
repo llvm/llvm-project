@@ -23,10 +23,10 @@ define i32 @test_load(i32* %a) sanitize_hwaddress {
 ; CHECK-LABEL: @test_load
 ; CHECK: entry:
 
-; CHECK-IFUNC:   %[[A:[^ ]*]] = call i64 asm "", "=r,0"([0 x i8]* @__hwasan_shadow)
-; CHECK-IFUNC:   add i64 %{{.*}}, %[[A]]
+; CHECK-IFUNC:   %[[A:[^ ]*]] = call i8* asm "", "=r,0"([0 x i8]* @__hwasan_shadow)
+; CHECK-IFUNC:   @llvm.hwasan.check.memaccess(i8* %[[A]]
 
-; CHECK-GLOBAL: load i64, i64* @__hwasan_shadow_memory_dynamic_address
+; CHECK-GLOBAL: load i8*, i8** @__hwasan_shadow_memory_dynamic_address
 
 ; CHECK-TLS:   %[[A:[^ ]*]] = call i8* @llvm.thread.pointer()
 ; CHECK-TLS:   %[[B:[^ ]*]] = getelementptr i8, i8* %[[A]], i32 48
@@ -54,10 +54,10 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-LABEL: @test_alloca
 ; CHECK: entry:
 
-; CHECK-IFUNC:   %[[A:[^ ]*]] = call i64 asm "", "=r,0"([0 x i8]* @__hwasan_shadow)
-; CHECK-IFUNC:   add i64 %{{.*}}, %[[A]]
+; CHECK-IFUNC:   %[[A:[^ ]*]] = call i8* asm "", "=r,0"([0 x i8]* @__hwasan_shadow)
+; CHECK-IFUNC:   getelementptr i8, i8* %[[A]]
 
-; CHECK-GLOBAL: load i64, i64* @__hwasan_shadow_memory_dynamic_address
+; CHECK-GLOBAL: load i8*, i8** @__hwasan_shadow_memory_dynamic_address
 
 ; CHECK-TLS:   %[[A:[^ ]*]] = call i8* @llvm.thread.pointer()
 ; CHECK-TLS:   %[[B:[^ ]*]] = getelementptr i8, i8* %[[A]], i32 48

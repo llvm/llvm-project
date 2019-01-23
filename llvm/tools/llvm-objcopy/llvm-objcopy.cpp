@@ -56,6 +56,16 @@ LLVM_ATTRIBUTE_NORETURN void error(Twine Message) {
   exit(1);
 }
 
+LLVM_ATTRIBUTE_NORETURN void error(Error E) {
+  assert(E);
+  std::string Buf;
+  raw_string_ostream OS(Buf);
+  logAllUnhandledErrors(std::move(E), OS);
+  OS.flush();
+  WithColor::error(errs(), ToolName) << Buf;
+  exit(1);
+}
+
 LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, std::error_code EC) {
   assert(EC);
   WithColor::error(errs(), ToolName)
@@ -100,10 +110,11 @@ static Error deepWriteArchive(StringRef ArcName,
     // NewArchiveMember still requires them even though writeArchive does not
     // write them on disk.
     FileBuffer FB(Member.MemberName);
-    FB.allocate(Member.Buf->getBufferSize());
+    if (Error E = FB.allocate(Member.Buf->getBufferSize()))
+      return E;
     std::copy(Member.Buf->getBufferStart(), Member.Buf->getBufferEnd(),
               FB.getBufferStart());
-    if (auto E = FB.commit())
+    if (Error E = FB.commit())
       return E;
   }
   return Error::success();

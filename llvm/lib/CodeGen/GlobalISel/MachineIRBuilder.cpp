@@ -242,13 +242,28 @@ MachineInstrBuilder MachineIRBuilder::buildCopy(const DstOp &Res,
 MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
                                                     const ConstantInt &Val) {
   LLT Ty = Res.getLLTTy(*getMRI());
-
-  assert((Ty.isScalar() || Ty.isPointer()) && "invalid operand type");
+  LLT EltTy = Ty.getScalarType();
 
   const ConstantInt *NewVal = &Val;
-  if (Ty.getSizeInBits() != Val.getBitWidth())
-    NewVal = ConstantInt::get(getMF().getFunction().getContext(),
-                              Val.getValue().sextOrTrunc(Ty.getSizeInBits()));
+  if (EltTy.getSizeInBits() != Val.getBitWidth()) {
+    NewVal = ConstantInt::get(
+      getMF().getFunction().getContext(),
+      Val.getValue().sextOrTrunc(EltTy.getSizeInBits()));
+  }
+
+  if (Ty.isVector()) {
+    unsigned EltReg = getMRI()->createGenericVirtualRegister(EltTy);
+    buildInstr(TargetOpcode::G_CONSTANT)
+      .addDef(EltReg)
+      .addCImm(NewVal);
+
+    auto MIB = buildInstr(TargetOpcode::G_BUILD_VECTOR);
+    Res.addDefToMIB(*getMRI(), MIB);
+
+    for (unsigned I = 0, E = Ty.getNumElements(); I != E; ++I)
+      MIB.addUse(EltReg);
+    return MIB;
+  }
 
   auto MIB = buildInstr(TargetOpcode::G_CONSTANT);
   Res.addDefToMIB(*getMRI(), MIB);
@@ -266,7 +281,24 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
 
 MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
                                                      const ConstantFP &Val) {
-  assert(Res.getLLTTy(*getMRI()).isScalar() && "invalid operand type");
+  LLT Ty = Res.getLLTTy(*getMRI());
+
+  assert(!Ty.isPointer() && "invalid operand type");
+
+  if (Ty.isVector()) {
+    unsigned EltReg
+      = getMRI()->createGenericVirtualRegister(Ty.getElementType());
+    buildInstr(TargetOpcode::G_FCONSTANT)
+      .addDef(EltReg)
+      .addFPImm(&Val);
+
+    auto MIB = buildInstr(TargetOpcode::G_BUILD_VECTOR);
+    Res.addDefToMIB(*getMRI(), MIB);
+
+    for (unsigned I = 0, E = Ty.getNumElements(); I != E; ++I)
+      MIB.addUse(EltReg);
+    return MIB;
+  }
 
   auto MIB = buildInstr(TargetOpcode::G_FCONSTANT);
   Res.addDefToMIB(*getMRI(), MIB);

@@ -4204,6 +4204,8 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   case AtomicRMWInst::Min:  NT = ISD::ATOMIC_LOAD_MIN; break;
   case AtomicRMWInst::UMax: NT = ISD::ATOMIC_LOAD_UMAX; break;
   case AtomicRMWInst::UMin: NT = ISD::ATOMIC_LOAD_UMIN; break;
+  case AtomicRMWInst::FAdd: NT = ISD::ATOMIC_LOAD_FADD; break;
+  case AtomicRMWInst::FSub: NT = ISD::ATOMIC_LOAD_FSUB; break;
   }
   AtomicOrdering Order = I.getOrdering();
   SyncScope::ID SSID = I.getSyncScopeID();
@@ -7565,8 +7567,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
   else
     Chain = DAG.getRoot();
 
-  // Second pass over the constraints: compute which constraint option to use
-  // and assign registers to constraints that want a specific physreg.
+  // Second pass over the constraints: compute which constraint option to use.
   for (SDISelAsmOperandInfo &OpInfo : ConstraintOperands) {
     // If this is an output operand with a matching input operand, look up the
     // matching input. If their types mismatch, e.g. one is an integer, the
@@ -7602,14 +7603,6 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
       OpInfo.isIndirect = true;
     }
 
-    // If this constraint is for a specific register, allocate it before
-    // anything else.
-    SDISelAsmOperandInfo &RefOpInfo =
-        OpInfo.isMatchingInputConstraint()
-            ? ConstraintOperands[OpInfo.getMatchedOperand()]
-            : OpInfo;
-    if (RefOpInfo.ConstraintType == TargetLowering::C_Register)
-      GetRegistersForValue(DAG, getCurSDLoc(), OpInfo, RefOpInfo);
   }
 
   // Third pass - Loop over all of the operands, assigning virtual or physregs
@@ -7620,9 +7613,8 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
             ? ConstraintOperands[OpInfo.getMatchedOperand()]
             : OpInfo;
 
-    // C_Register operands have already been allocated, Other/Memory don't need
-    // to be.
-    if (RefOpInfo.ConstraintType == TargetLowering::C_RegisterClass)
+    if (RefOpInfo.ConstraintType == TargetLowering::C_Register ||
+        RefOpInfo.ConstraintType == TargetLowering::C_RegisterClass)
       GetRegistersForValue(DAG, getCurSDLoc(), OpInfo, RefOpInfo);
   }
 

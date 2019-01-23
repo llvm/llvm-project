@@ -193,8 +193,8 @@ protected:
 
 public:
   virtual ~Writer();
-  virtual void finalize() = 0;
-  virtual void write() = 0;
+  virtual Error finalize() = 0;
+  virtual Error write() = 0;
 
   Writer(Object &O, Buffer &B) : Obj(O), Buf(B) {}
 };
@@ -226,8 +226,8 @@ public:
   virtual ~ELFWriter() {}
   bool WriteSectionHeaders = true;
 
-  void finalize() override;
-  void write() override;
+  Error finalize() override;
+  Error write() override;
   ELFWriter(Object &Obj, Buffer &Buf, bool WSH)
       : Writer(Obj, Buf), WriteSectionHeaders(WSH) {}
 };
@@ -240,8 +240,8 @@ private:
 
 public:
   ~BinaryWriter() {}
-  void finalize() override;
-  void write() override;
+  Error finalize() override;
+  Error write() override;
   BinaryWriter(Object &Obj, Buffer &Buf) : Writer(Obj, Buf) {}
 };
 
