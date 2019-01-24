@@ -881,11 +881,6 @@ std::vector<ConstString> SwiftLanguage::GetPossibleFormattersMatches(
     } while (false);
   }
 
-#if 0
-    if (llvm::isa<SwiftASTContext>(compiler_type.GetTypeSystem()))
-        result.push_back(compiler_type.GetMangledTypeName());
-#endif
-
   return result;
 }
 
