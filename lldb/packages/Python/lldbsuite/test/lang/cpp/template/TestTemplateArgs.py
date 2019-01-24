@@ -113,7 +113,7 @@ class TemplateArgsTestCase(TestBase):
     # Gcc does not generate the necessary DWARF attribute for enum template
     # parameters.
     @expectedFailureAll(bugnumber="llvm.org/pr28354", compiler="gcc")
-    @expectedFailureAll(oslist=["windows"])
+    @skipIf(dwarf_version=['<', '4'])
     def test_enum_args(self):
         frame = self.prepareProcess()
 
