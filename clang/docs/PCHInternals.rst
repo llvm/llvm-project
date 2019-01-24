@@ -332,7 +332,7 @@ expression is stored as a separate record (which keeps most records to a fixed
 size).  Within the AST file, the subexpressions of an expression are stored, in
 reverse order, prior to the expression that owns those expression, using a form
 of `Reverse Polish Notation
-<http://en.wikipedia.org/wiki/Reverse_Polish_notation>`_.  For example, an
+<https://en.wikipedia.org/wiki/Reverse_Polish_notation>`_. For example, an
 expression ``3 - 4 + 5`` would be represented as follows:
 
 +-----------------------+

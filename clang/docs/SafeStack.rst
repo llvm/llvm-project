@@ -18,14 +18,14 @@ buffer overflows on the unsafe stack cannot be used to overwrite anything
 on the safe stack.
 
 SafeStack is a part of the `Code-Pointer Integrity (CPI) Project
-<http://dslab.epfl.ch/proj/cpi/>`_.
+<https://dslab.epfl.ch/proj/cpi/>`_.
 
 Performance
 -----------
 
 The performance overhead of the SafeStack instrumentation is less than 0.1% on
 average across a variety of benchmarks (see the `Code-Pointer Integrity
-<http://dslab.epfl.ch/pubs/cpi.pdf>`__ paper for details). This is mainly
+<https://dslab.epfl.ch/pubs/cpi.pdf>`__ paper for details). This is mainly
 because most small functions do not have any variables that require the unsafe
 stack and, hence, do not need unsafe stack frames to be created. The cost of
 creating unsafe stack frames for large functions is amortized by the cost of
@@ -84,9 +84,9 @@ Known security limitations
 A complete protection against control-flow hijack attacks requires combining
 SafeStack with another mechanism that enforces the integrity of code pointers
 that are stored on the heap or the unsafe stack, such as `CPI
-<http://dslab.epfl.ch/proj/cpi/>`_, or a forward-edge control flow integrity
+<https://dslab.epfl.ch/proj/cpi/>`_, or a forward-edge control flow integrity
 mechanism that enforces correct calling conventions at indirect call sites,
-such as `IFCC <http://research.google.com/pubs/archive/42808.pdf>`_ with arity
+such as `IFCC <https://research.google.com/pubs/archive/42808.pdf>`_ with arity
 checks. Clang has control-flow integrity protection scheme for :doc:`C++ virtual
 calls <ControlFlowIntegrity>`, but not non-virtual indirect calls. With
 SafeStack alone, an attacker can overwrite a function pointer on the heap or
@@ -106,7 +106,7 @@ prevented by adjusting such functions to either encrypt the stack pointer when
 storing it in the heap (as already done e.g., by ``setjmp``/``longjmp``
 implementation in glibc), or store it in a safe region instead.
 
-The `CPI paper <http://dslab.epfl.ch/pubs/cpi.pdf>`_ describes two alternative,
+The `CPI paper <https://dslab.epfl.ch/pubs/cpi.pdf>`_ describes two alternative,
 stronger safe stack protection mechanisms, that rely on software fault
 isolation, or hardware segmentation (as available on x86-32 and some x86-64
 CPUs).
@@ -186,14 +186,14 @@ Deprecated: This builtin function is an alias for
 Design
 ======
 
-Please refer to the `Code-Pointer Integrity <http://dslab.epfl.ch/proj/cpi/>`__
+Please refer to the `Code-Pointer Integrity <https://dslab.epfl.ch/proj/cpi/>`__
 project page for more information about the design of the SafeStack and its
 related technologies.
 
 setjmp and exception handling
 -----------------------------
 
-The `OSDI'14 paper <http://dslab.epfl.ch/pubs/cpi.pdf>`_ mentions that
+The `OSDI'14 paper <https://dslab.epfl.ch/pubs/cpi.pdf>`_ mentions that
 on Linux the instrumentation pass finds calls to setjmp or functions that
 may throw an exception, and inserts required instrumentation at their call
 sites. Specifically, the instrumentation pass saves the shadow stack pointer
@@ -204,7 +204,7 @@ in the function ``SafeStack::createStackRestorePoints``.
 Publications
 ------------
 
-`Code-Pointer Integrity <http://dslab.epfl.ch/pubs/cpi.pdf>`__.
+`Code-Pointer Integrity <https://dslab.epfl.ch/pubs/cpi.pdf>`__.
 Volodymyr Kuznetsov, Laszlo Szekeres, Mathias Payer, George Candea, R. Sekar, Dawn Song.
 USENIX Symposium on Operating Systems Design and Implementation
 (`OSDI <https://www.usenix.org/conference/osdi14>`_), Broomfield, CO, October 2014
