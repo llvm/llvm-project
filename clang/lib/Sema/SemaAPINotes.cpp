@@ -280,6 +280,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                                                          info.UnavailableMsg),
                                               /*Strict=*/false,
                                               /*Replacement=*/StringRef(),
+                                              /*Priority=*/Sema::AP_Explicit,
                                               /*SpellingIndex*/0);
     },
     [](const Decl *decl) {
