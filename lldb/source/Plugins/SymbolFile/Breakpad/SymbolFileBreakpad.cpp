@@ -204,12 +204,12 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
 
   for (llvm::StringRef line : lines(*m_obj_file, Record::Func)) {
     if (auto record = FuncRecord::parse(line))
-      add_symbol(record->getAddress(), record->getSize(), record->getName());
+      add_symbol(record->Address, record->Size, record->Name);
   }
 
   for (llvm::StringRef line : lines(*m_obj_file, Record::Public)) {
     if (auto record = PublicRecord::parse(line))
-      add_symbol(record->getAddress(), llvm::None, record->getName());
+      add_symbol(record->Address, llvm::None, record->Name);
     else
       LLDB_LOG(log, "Failed to parse: {0}. Skipping record.", line);
   }
