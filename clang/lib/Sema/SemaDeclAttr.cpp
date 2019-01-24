@@ -2266,18 +2266,11 @@ static bool versionsMatch(const VersionTuple &X, const VersionTuple &Y,
   return false;
 }
 
-AvailabilityAttr *Sema::mergeAvailabilityAttr(NamedDecl *D, SourceRange Range,
-                                              IdentifierInfo *Platform,
-                                              bool Implicit,
-                                              VersionTuple Introduced,
-                                              VersionTuple Deprecated,
-                                              VersionTuple Obsoleted,
-                                              bool IsUnavailable,
-                                              StringRef Message,
-                                              bool IsStrict,
-                                              StringRef Replacement,
-                                              AvailabilityMergeKind AMK,
-                                              unsigned AttrSpellingListIndex) {
+AvailabilityAttr *Sema::mergeAvailabilityAttr(
+    NamedDecl *D, SourceRange Range, IdentifierInfo *Platform, bool Implicit,
+    VersionTuple Introduced, VersionTuple Deprecated, VersionTuple Obsoleted,
+    bool IsUnavailable, StringRef Message, bool IsStrict, StringRef Replacement,
+    AvailabilityMergeKind AMK, int Priority, unsigned AttrSpellingListIndex) {
   VersionTuple MergedIntroduced = Introduced;
   VersionTuple MergedDeprecated = Deprecated;
   VersionTuple MergedObsoleted = Obsoleted;
@@ -2311,16 +2304,15 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(NamedDecl *D, SourceRange Range,
       }
 
       // If there is an existing availability attribute for this platform that
-      // is explicit and the new one is implicit use the explicit one and
-      // discard the new implicit attribute.
-      if (!OldAA->isImplicit() && Implicit) {
+      // has a lower priority use the existing one and discard the new
+      // attribute.
+      if (OldAA->getPriority() < Priority)
         return nullptr;
-      }
 
-      // If there is an existing attribute for this platform that is implicit
-      // and the new attribute is explicit then erase the old one and
-      // continue processing the attributes.
-      if (!Implicit && OldAA->isImplicit()) {
+      // If there is an existing attribute for this platform that has a higher
+      // priority than the new attribute then erase the old one and continue
+      // processing the attributes.
+      if (OldAA->getPriority() > Priority) {
         Attrs.erase(Attrs.begin() + i);
         --e;
         continue;
@@ -2419,11 +2411,10 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(NamedDecl *D, SourceRange Range,
   if (!checkAvailabilityAttr(*this, Range, Platform, MergedIntroduced,
                              MergedDeprecated, MergedObsoleted) &&
       !OverrideOrImpl) {
-    auto *Avail =  ::new (Context) AvailabilityAttr(Range, Context, Platform,
-                                            Introduced, Deprecated,
-                                            Obsoleted, IsUnavailable, Message,
-                                            IsStrict, Replacement,
-                                            AttrSpellingListIndex);
+    auto *Avail = ::new (Context)
+        AvailabilityAttr(Range, Context, Platform, Introduced, Deprecated,
+                         Obsoleted, IsUnavailable, Message, IsStrict,
+                         Replacement, Priority, AttrSpellingListIndex);
     Avail->setImplicit(Implicit);
     return Avail;
   }
@@ -2466,15 +2457,13 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(ND, AL.getRange(), II,
-                                                      false/*Implicit*/,
-                                                      Introduced.Version,
-                                                      Deprecated.Version,
-                                                      Obsoleted.Version,
-                                                      IsUnavailable, Str,
-                                                      IsStrict, Replacement,
-                                                      Sema::AMK_None,
-                                                      Index);
+  int PriorityModifier = AL.isPragmaClangAttribute()
+                             ? Sema::AP_PragmaClangAttribute
+                             : Sema::AP_Explicit;
+  AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
+      ND, AL.getRange(), II, false /*Implicit*/, Introduced.Version,
+      Deprecated.Version, Obsoleted.Version, IsUnavailable, Str, IsStrict,
+      Replacement, Sema::AMK_None, PriorityModifier, Index);
   if (NewAttr)
     D->addAttr(NewAttr);
 
@@ -2510,18 +2499,11 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         auto NewDeprecated = adjustWatchOSVersion(Deprecated.Version);
         auto NewObsoleted = adjustWatchOSVersion(Obsoleted.Version);
 
-        AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(ND,
-                                                            AL.getRange(),
-                                                            NewII,
-                                                            true/*Implicit*/,
-                                                            NewIntroduced,
-                                                            NewDeprecated,
-                                                            NewObsoleted,
-                                                            IsUnavailable, Str,
-                                                            IsStrict,
-                                                            Replacement,
-                                                            Sema::AMK_None,
-                                                            Index);
+        AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
+            ND, AL.getRange(), NewII, true /*Implicit*/, NewIntroduced,
+            NewDeprecated, NewObsoleted, IsUnavailable, Str, IsStrict,
+            Replacement, Sema::AMK_None,
+            PriorityModifier + Sema::AP_InferredFromOtherPlatform, Index);
         if (NewAttr)
           D->addAttr(NewAttr);
       }
@@ -2535,20 +2517,13 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       NewII = &S.Context.Idents.get("tvos_app_extension");
 
     if (NewII) {
-        AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(ND,
-                                                            AL.getRange(),
-                                                            NewII,
-                                                            true/*Implicit*/,
-                                                            Introduced.Version,
-                                                            Deprecated.Version,
-                                                            Obsoleted.Version,
-                                                            IsUnavailable, Str,
-                                                            IsStrict,
-                                                            Replacement,
-                                                            Sema::AMK_None,
-                                                            Index);
-        if (NewAttr)
-          D->addAttr(NewAttr);
+      AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
+          ND, AL.getRange(), NewII, true /*Implicit*/, Introduced.Version,
+          Deprecated.Version, Obsoleted.Version, IsUnavailable, Str, IsStrict,
+          Replacement, Sema::AMK_None,
+          PriorityModifier + Sema::AP_InferredFromOtherPlatform, Index);
+      if (NewAttr)
+        D->addAttr(NewAttr);
       }
   }
 }

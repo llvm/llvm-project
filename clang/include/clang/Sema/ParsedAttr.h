@@ -208,6 +208,9 @@ private:
   /// A cached value.
   mutable unsigned ProcessingCache : 8;
 
+  /// True if the attribute is specified using '#pragma clang attribute'.
+  mutable unsigned IsPragmaClangAttribute : 1;
+
   /// The location of the 'unavailable' keyword in an
   /// availability attribute.
   SourceLocation UnavailableLoc;
@@ -239,7 +242,8 @@ private:
         ScopeLoc(scopeLoc), EllipsisLoc(ellipsisLoc), NumArgs(numArgs),
         SyntaxUsed(syntaxUsed), Invalid(false), UsedAsTypeAttr(false),
         IsAvailability(false), IsTypeTagForDatatype(false), IsProperty(false),
-        HasParsedType(false), HasProcessingCache(false) {
+        HasParsedType(false), HasProcessingCache(false),
+        IsPragmaClangAttribute(false) {
     if (numArgs) memcpy(getArgsBuffer(), args, numArgs * sizeof(ArgsUnion));
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
@@ -256,8 +260,8 @@ private:
         ScopeLoc(scopeLoc), NumArgs(1), SyntaxUsed(syntaxUsed), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(true),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
-        HasProcessingCache(false), UnavailableLoc(unavailable),
-        MessageExpr(messageExpr) {
+        HasProcessingCache(false), IsPragmaClangAttribute(false),
+        UnavailableLoc(unavailable), MessageExpr(messageExpr) {
     ArgsUnion PVal(Parm);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
     new (getAvailabilityData()) detail::AvailabilityData(
@@ -274,7 +278,7 @@ private:
         ScopeLoc(scopeLoc), NumArgs(3), SyntaxUsed(syntaxUsed), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
-        HasProcessingCache(false) {
+        HasProcessingCache(false), IsPragmaClangAttribute(false) {
     ArgsUnion *Args = getArgsBuffer();
     Args[0] = Parm1;
     Args[1] = Parm2;
@@ -291,7 +295,7 @@ private:
         ScopeLoc(scopeLoc), NumArgs(1), SyntaxUsed(syntaxUsed), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(true), IsProperty(false), HasParsedType(false),
-        HasProcessingCache(false) {
+        HasProcessingCache(false), IsPragmaClangAttribute(false) {
     ArgsUnion PVal(ArgKind);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
     detail::TypeTagForDatatypeData &ExtraData = getTypeTagForDatatypeDataSlot();
@@ -309,7 +313,7 @@ private:
         ScopeLoc(scopeLoc), NumArgs(0), SyntaxUsed(syntaxUsed), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(true),
-        HasProcessingCache(false) {
+        HasProcessingCache(false), IsPragmaClangAttribute(false) {
     new (&getTypeBuffer()) ParsedType(typeArg);
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
@@ -323,7 +327,7 @@ private:
         ScopeLoc(scopeLoc), NumArgs(0), SyntaxUsed(syntaxUsed), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(false), IsProperty(true), HasParsedType(false),
-        HasProcessingCache(false) {
+        HasProcessingCache(false), IsPragmaClangAttribute(false) {
     new (&getPropertyDataBuffer()) detail::PropertyData(getterId, setterId);
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
@@ -436,6 +440,11 @@ public:
 
   bool isUsedAsTypeAttr() const { return UsedAsTypeAttr; }
   void setUsedAsTypeAttr() { UsedAsTypeAttr = true; }
+
+  /// True if the attribute is specified using '#pragma clang attribute'.
+  bool isPragmaClangAttribute() const { return IsPragmaClangAttribute; }
+
+  void setIsPragmaClangAttribute() { IsPragmaClangAttribute = true; }
 
   bool isPackExpansion() const { return EllipsisLoc.isValid(); }
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
