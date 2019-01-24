@@ -128,7 +128,9 @@ CXType cxtype::MakeCXType(QualType T, CXTranslationUnit TU) {
     // Handle attributed types as the original type
     if (auto *ATT = T->getAs<AttributedType>()) {
       if (!(TU->ParsingOptions & CXTranslationUnit_IncludeAttributedTypes)) {
-        return MakeCXType(ATT->getModifiedType(), TU);
+        // Return the equivalent type which represents the canonically
+        // equivalent type.
+        return MakeCXType(ATT->getEquivalentType(), TU);
       }
     }
     // Handle paren types as the original type

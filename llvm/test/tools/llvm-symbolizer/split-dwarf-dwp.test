@@ -1,0 +1,12 @@
+RUN: rm -rf %t
+RUN: mkdir -p %t
+
+RUN: cp %p/Inputs/split-dwarf-dwp.o %t/split-dwarf-dwp-different-name.o
+
+RUN: llvm-symbolizer --dwp=%p/Inputs/split-dwarf-dwp.o.dwp \
+RUN:     --obj=%t/split-dwarf-dwp-different-name.o 0x54 | FileCheck %s
+
+CHECK:      f2
+CHECK-NEXT: split-dwarf-dwp.cpp:3:3
+CHECK-NEXT: main
+CHECK-NEXT: split-dwarf-dwp.cpp:10:0

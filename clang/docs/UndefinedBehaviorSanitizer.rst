@@ -338,4 +338,4 @@ More Information
   <http://blog.llvm.org/2011/05/what-every-c-programmer-should-know.html>`_
 * From John Regehr's *Embedded in Academia* blog:
   `A Guide to Undefined Behavior in C and C++
-  <http://blog.regehr.org/archives/213>`_
+  <https://blog.regehr.org/archives/213>`_

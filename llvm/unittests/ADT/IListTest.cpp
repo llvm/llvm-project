@@ -207,6 +207,12 @@ struct NodeWithCallback : ilist_node<NodeWithCallback> {
 } // end namespace
 
 namespace llvm {
+// These nodes are stack-allocated for testing purposes, so don't let the ilist
+// own or delete them.
+template <> struct ilist_alloc_traits<NodeWithCallback> {
+  static void deleteNode(NodeWithCallback *) {}
+};
+
 template <> struct ilist_callback_traits<NodeWithCallback> {
   void addNodeToList(NodeWithCallback *N) { N->IsInList = true; }
   void removeNodeFromList(NodeWithCallback *N) { N->IsInList = false; }
@@ -245,6 +251,30 @@ TEST(IListTest, addNodeToList) {
   ASSERT_EQ(0u, L1.size());
   ASSERT_FALSE(N.IsInList);
   ASSERT_TRUE(N.WasTransferred);
+}
+
+TEST(IListTest, sameListSplice) {
+  NodeWithCallback N1(1);
+  NodeWithCallback N2(2);
+  ASSERT_FALSE(N1.WasTransferred);
+  ASSERT_FALSE(N2.WasTransferred);
+
+  ilist<NodeWithCallback> L1;
+  L1.insert(L1.end(), &N1);
+  L1.insert(L1.end(), &N2);
+  ASSERT_EQ(2u, L1.size());
+  ASSERT_EQ(&N1, &L1.front());
+  ASSERT_FALSE(N1.WasTransferred);
+  ASSERT_FALSE(N2.WasTransferred);
+
+  // Swap the nodes with splice inside the same list. Check that we get the
+  // transfer callback.
+  L1.splice(L1.begin(), L1, std::next(L1.begin()), L1.end());
+  ASSERT_EQ(2u, L1.size());
+  ASSERT_EQ(&N1, &L1.back());
+  ASSERT_EQ(&N2, &L1.front());
+  ASSERT_FALSE(N1.WasTransferred);
+  ASSERT_TRUE(N2.WasTransferred);
 }
 
 struct PrivateNode : private ilist_node<PrivateNode> {

@@ -258,9 +258,9 @@ LANGOPT(
 
 ENUM_LANGOPT(GC, GCMode, 2, NonGC, "Objective-C Garbage Collection mode")
 ENUM_LANGOPT(ValueVisibilityMode, Visibility, 3, DefaultVisibility,
-             "value symbol visibility")
+             "default visibility for functions and variables [-fvisibility]")
 ENUM_LANGOPT(TypeVisibilityMode, Visibility, 3, DefaultVisibility,
-             "type symbol visibility")
+             "default visibility for types [-ftype-visibility]")
 ENUM_LANGOPT(StackProtector, StackProtectorMode, 2, SSPOff,
              "stack protector mode")
 ENUM_LANGOPT(TrivialAutoVarInit, TrivialAutoVarInitKind, 2, TrivialAutoVarInitKind::Uninitialized,

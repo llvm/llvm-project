@@ -901,9 +901,8 @@ void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
     if (HasFullDebugInfo)
       break;
   }
-  // FIXME: remove comment once debug info is properly supported.
   if (MMI && MMI->hasDebugInfo() && HasFullDebugInfo)
-    O << "//, debug";
+    O << ", debug";
 
   O << "\n";
 
@@ -954,10 +953,10 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
   clearAnnotationCache(&M);
 
   delete[] gv_array;
-  // FIXME: remove comment once debug info is properly supported.
   // Close the last emitted section
   if (HasDebugInfo)
-    OutStreamer->EmitRawText("//\t}");
+    static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())
+        ->closeLastSection();
 
   // Output last DWARF .file directives, if any.
   static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())

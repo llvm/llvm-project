@@ -18,6 +18,7 @@ class MCSection;
 class NVPTXTargetStreamer : public MCTargetStreamer {
 private:
   SmallVector<std::string, 4> DwarfFiles;
+  bool HasSections = false;
 
 public:
   NVPTXTargetStreamer(MCStreamer &S);
@@ -25,6 +26,8 @@ public:
 
   /// Outputs the list of the DWARF '.file' directives to the streamer.
   void outputDwarfFileDirectives();
+  /// Close last section.
+  void closeLastSection();
 
   /// Record DWARF file directives for later output.
   /// According to PTX ISA, CUDA Toolkit documentation, 11.5.3. Debugging

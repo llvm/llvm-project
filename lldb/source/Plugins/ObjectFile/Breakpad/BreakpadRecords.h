@@ -51,17 +51,14 @@ public:
   ModuleRecord(llvm::Triple::OSType OS, llvm::Triple::ArchType Arch, UUID ID)
       : Record(Module), OS(OS), Arch(Arch), ID(std::move(ID)) {}
 
-  llvm::Triple::OSType getOS() const { return OS; }
-  llvm::Triple::ArchType getArch() const { return Arch; }
-  const UUID &getID() const { return ID; }
-
-private:
   llvm::Triple::OSType OS;
   llvm::Triple::ArchType Arch;
   UUID ID;
 };
 
-bool operator==(const ModuleRecord &L, const ModuleRecord &R);
+bool operator==(const ModuleRecord &L, const ModuleRecord &R) {
+  return L.OS == R.OS && L.Arch == R.Arch && L.ID == R.ID;
+}
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const ModuleRecord &R);
 
 class InfoRecord : public Record {
@@ -69,14 +66,11 @@ public:
   static llvm::Optional<InfoRecord> parse(llvm::StringRef Line);
   InfoRecord(UUID ID) : Record(Info), ID(std::move(ID)) {}
 
-  const UUID &getID() const { return ID; }
-
-private:
   UUID ID;
 };
 
 inline bool operator==(const InfoRecord &L, const InfoRecord &R) {
-  return L.getID() == R.getID();
+  return L.ID == R.ID;
 }
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const InfoRecord &R);
 
@@ -88,13 +82,6 @@ public:
       : Record(Module), Multiple(Multiple), Address(Address), Size(Size),
         ParamSize(ParamSize), Name(Name) {}
 
-  bool getMultiple() const { return Multiple; }
-  lldb::addr_t getAddress() const { return Address; }
-  lldb::addr_t getSize() const { return Size; }
-  lldb::addr_t getParamSize() const { return ParamSize; }
-  llvm::StringRef getName() const { return Name; }
-
-private:
   bool Multiple;
   lldb::addr_t Address;
   lldb::addr_t Size;
@@ -113,12 +100,6 @@ public:
       : Record(Module), Multiple(Multiple), Address(Address),
         ParamSize(ParamSize), Name(Name) {}
 
-  bool getMultiple() const { return Multiple; }
-  lldb::addr_t getAddress() const { return Address; }
-  lldb::addr_t getParamSize() const { return ParamSize; }
-  llvm::StringRef getName() const { return Name; }
-
-private:
   bool Multiple;
   lldb::addr_t Address;
   lldb::addr_t ParamSize;

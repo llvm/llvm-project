@@ -145,7 +145,7 @@ value in different moments of time, but at most one of them represents the
 actual metadata value. So we'd be escaping more stuff than necessary.
 
 If only we had "ghost fields"
-(http://lists.llvm.org/pipermail/cfe-dev/2016-May/049000.html), it would have
+(https://lists.llvm.org/pipermail/cfe-dev/2016-May/049000.html), it would have
 been much easier, because the ghost field would only contain the actual
 metadata, and the Store would always know about it. This example adds to my
 belief that ghost fields are exactly what we need for most C++ checkers.
