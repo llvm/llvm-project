@@ -223,14 +223,23 @@ void ObjFile::readAssociativeDefinition(
 
 void ObjFile::readAssociativeDefinition(COFFSymbolRef Sym,
                                         const coff_aux_section_definition *Def,
-                                        uint32_t ParentSection) {
-  SectionChunk *Parent = SparseChunks[ParentSection];
+                                        uint32_t ParentIndex) {
+  SectionChunk *Parent = SparseChunks[ParentIndex];
 
-  // If the parent is pending, it probably means that its section definition
-  // appears after us in the symbol table. Leave the associated section as
-  // pending; we will handle it during the second pass in initializeSymbols().
-  if (Parent == PendingComdat)
+  if (Parent == PendingComdat) {
+    // This can happen if an associative comdat refers to another associative
+    // comdat that appears after it (invalid per COFF spec) or to a section
+    // without any symbols.
+    StringRef Name, ParentName;
+    COFFObj->getSymbolName(Sym, Name);
+
+    const coff_section *ParentSec;
+    COFFObj->getSection(ParentIndex, ParentSec);
+    COFFObj->getSectionName(ParentSec, ParentName);
+    error(toString(this) + ": associative comdat " + Name +
+          " has invalid reference to section " + ParentName);
     return;
+  }
 
   // Check whether the parent is prevailing. If it is, so are we, and we read
   // the section; otherwise mark it as discarded.
@@ -326,8 +335,7 @@ void ObjFile::initializeSymbols() {
       // was pending at the point when the symbol was read. This can happen in
       // two cases:
       // 1) section definition symbol for a comdat leader;
-      // 2) symbol belongs to a comdat section associated with a section whose
-      //    section definition symbol appears later in the symbol table.
+      // 2) symbol belongs to a comdat section associated with another section.
       // In both of these cases, we can expect the section to be resolved by
       // the time we finish visiting the remaining symbols in the symbol
       // table. So we postpone the handling of this symbol until that time.
@@ -437,21 +445,15 @@ Optional<Symbol *> ObjFile::createDefined(
     return Leader;
   }
 
-  // Read associative section definitions and prepare to handle the comdat
-  // leader symbol by setting the section's ComdatDefs pointer if we encounter a
-  // non-associative comdat.
+  // Prepare to handle the comdat leader symbol by setting the section's
+  // ComdatDefs pointer if we encounter a non-associative comdat.
   if (SparseChunks[SectionNumber] == PendingComdat) {
     if (const coff_aux_section_definition *Def = Sym.getSectionDefinition()) {
-      if (Def->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
-        readAssociativeDefinition(Sym, Def);
-      else
+      if (Def->Selection != IMAGE_COMDAT_SELECT_ASSOCIATIVE)
         ComdatDefs[SectionNumber] = Def;
     }
-  }
-
-  // readAssociativeDefinition() writes to SparseChunks, so need to check again.
-  if (SparseChunks[SectionNumber] == PendingComdat)
     return None;
+  }
 
   return createRegular(Sym);
 }
