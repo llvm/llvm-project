@@ -155,6 +155,9 @@ endif()
 set(LIBCXXABI_LIBCXX_PATH "${LIBCXXABI_LIBCXX_PATH}" CACHE PATH
     "Specify path to libc++ source." FORCE)
 
+option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
+  "Do not export any symbols from the static library." OFF)
+
 #===============================================================================
 # Configure System
 #===============================================================================

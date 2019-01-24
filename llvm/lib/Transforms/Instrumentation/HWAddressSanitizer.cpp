@@ -160,6 +160,10 @@ static cl::opt<bool> ClInlineAllChecks("hwasan-inline-all-checks",
                                        cl::desc("inline all checks"),
                                        cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClAllowIfunc("hwasan-allow-ifunc",
+                                  cl::desc("allow the use of ifunc"),
+                                  cl::Hidden, cl::init(false));
+
 namespace {
 
 /// An instrumentation pass implementing detection of addressability bugs
@@ -183,6 +187,7 @@ public:
 
   void initializeCallbacks(Module &M);
 
+  Value *getDynamicShadowIfunc(IRBuilder<> &IRB);
   Value *getDynamicShadowNonTls(IRBuilder<> &IRB);
 
   void untagPointerOperand(Instruction *I, Value *Addr);
@@ -384,9 +389,8 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
   HwasanGenerateTagFunc = checkSanitizerInterfaceFunction(
       M.getOrInsertFunction("__hwasan_generate_tag", Int8Ty));
 
-  if (Mapping.InGlobal)
-    ShadowGlobal = M.getOrInsertGlobal("__hwasan_shadow",
-                                       ArrayType::get(IRB.getInt8Ty(), 0));
+  ShadowGlobal = M.getOrInsertGlobal("__hwasan_shadow",
+                                     ArrayType::get(IRB.getInt8Ty(), 0));
 
   const std::string MemIntrinCallbackPrefix =
       CompileKernel ? std::string("") : ClMemoryAccessCallbackPrefix;
@@ -404,19 +408,23 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
       M.getOrInsertFunction("__hwasan_thread_enter", IRB.getVoidTy()));
 }
 
+Value *HWAddressSanitizer::getDynamicShadowIfunc(IRBuilder<> &IRB) {
+  // An empty inline asm with input reg == output reg.
+  // An opaque no-op cast, basically.
+  InlineAsm *Asm = InlineAsm::get(
+      FunctionType::get(Int8PtrTy, {ShadowGlobal->getType()}, false),
+      StringRef(""), StringRef("=r,0"),
+      /*hasSideEffects=*/false);
+  return IRB.CreateCall(Asm, {ShadowGlobal}, ".hwasan.shadow");
+}
+
 Value *HWAddressSanitizer::getDynamicShadowNonTls(IRBuilder<> &IRB) {
   // Generate code only when dynamic addressing is needed.
   if (Mapping.Offset != kDynamicShadowSentinel)
     return nullptr;
 
   if (Mapping.InGlobal) {
-    // An empty inline asm with input reg == output reg.
-    // An opaque no-op cast, basically.
-    InlineAsm *Asm = InlineAsm::get(
-        FunctionType::get(Int8PtrTy, {ShadowGlobal->getType()}, false),
-        StringRef(""), StringRef("=r,0"),
-        /*hasSideEffects=*/false);
-    return IRB.CreateCall(Asm, {ShadowGlobal}, ".hwasan.shadow");
+    return getDynamicShadowIfunc(IRB);
   } else {
     Value *GlobalDynamicAddress =
         IRB.GetInsertBlock()->getParent()->getParent()->getOrInsertGlobal(
@@ -827,6 +835,9 @@ Value *HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB,
                                         bool WithFrameRecord) {
   if (!Mapping.InTls)
     return getDynamicShadowNonTls(IRB);
+
+  if (ClAllowIfunc && !WithFrameRecord && TargetTriple.isAndroid())
+    return getDynamicShadowIfunc(IRB);
 
   Value *SlotPtr = getHwasanThreadSlotPtr(IRB, IntptrTy);
   assert(SlotPtr);

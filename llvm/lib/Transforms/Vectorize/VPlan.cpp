@@ -560,6 +560,19 @@ void VPlanPrinter::dumpBasicBlock(const VPBasicBlock *BasicBlock) {
   bumpIndent(1);
   OS << Indent << "\"" << DOT::EscapeString(BasicBlock->getName()) << ":\\n\"";
   bumpIndent(1);
+
+  // Dump the block predicate.
+  const VPValue *Pred = BasicBlock->getPredicate();
+  if (Pred) {
+    OS << " +\n" << Indent << " \"BlockPredicate: ";
+    if (const VPInstruction *PredI = dyn_cast<VPInstruction>(Pred)) {
+      PredI->printAsOperand(OS);
+      OS << " (" << DOT::EscapeString(PredI->getParent()->getName())
+         << ")\\l\"";
+    } else
+      Pred->printAsOperand(OS);
+  }
+
   for (const VPRecipeBase &Recipe : *BasicBlock)
     Recipe.print(OS, Indent);
 

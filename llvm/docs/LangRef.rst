@@ -1458,6 +1458,10 @@ example:
     This function attribute indicates that the function never returns
     normally. This produces undefined behavior at runtime if the
     function ever does dynamically return.
+``expect_noreturn``
+    This function attribute indicates that the function is unlikely to return
+    normally, but that it still allowed to do so. This is useful in cases where
+    ``noreturn`` is too strong a guarantee.
 ``norecurse``
     This function attribute indicates that the function does not call itself
     either directly or indirectly down any possible call path. This produces

@@ -222,9 +222,9 @@ It contains 3 basic blocks, let's name them A, B, C:
 If blocks A, B, and C are all covered we know for certain that the edges A=>B
 and B=>C were executed, but we still don't know if the edge A=>C was executed.
 Such edges of control flow graph are called
-`critical <http://en.wikipedia.org/wiki/Control_flow_graph#Special_edges>`_. The
-edge-level coverage simply splits all critical
-edges by introducing new dummy blocks and then instruments those blocks:
+`critical <https://en.wikipedia.org/wiki/Control_flow_graph#Special_edges>`_.
+The edge-level coverage simply splits all critical edges by introducing new
+dummy blocks and then instruments those blocks:
 
 .. code-block:: none
 
