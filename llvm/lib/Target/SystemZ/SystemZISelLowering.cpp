@@ -6237,6 +6237,8 @@ static void createPHIsForSelects(MachineBasicBlock::iterator MIItBegin,
     // Add this PHI to the rewrite table.
     RegRewriteTable[DestReg] = std::make_pair(TrueReg, FalseReg);
   }
+
+  MF->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
 }
 
 // Implement EmitInstrWithCustomInserter for pseudo Select* instruction MI.

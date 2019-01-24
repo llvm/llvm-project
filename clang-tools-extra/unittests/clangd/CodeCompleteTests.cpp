@@ -2319,6 +2319,17 @@ TEST(CompletionTest, ObjectiveCMethodTwoArgumentsFromMiddle) {
   EXPECT_THAT(C, ElementsAre(SnippetSuffix("${1:(unsigned int)}")));
 }
 
+TEST(CompletionTest, WorksWithNullType) {
+  auto R = completions(R"cpp(
+    int main() {
+      for (auto [loopVar] : y ) { // y has to be unresolved.
+        int z = loopV^;
+      }
+    }
+  )cpp");
+  EXPECT_THAT(R.Completions, ElementsAre(Named("loopVar")));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

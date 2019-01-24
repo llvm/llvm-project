@@ -5068,13 +5068,25 @@ static bool isUndefOrZero(int Val) {
   return ((Val == SM_SentinelUndef) || (Val == SM_SentinelZero));
 }
 
-/// Return true if every element in Mask, beginning
-/// from position Pos and ending in Pos+Size is the undef sentinel value.
+/// Return true if every element in Mask, beginning from position Pos and ending
+/// in Pos+Size is the undef sentinel value.
 static bool isUndefInRange(ArrayRef<int> Mask, unsigned Pos, unsigned Size) {
   for (unsigned i = Pos, e = Pos + Size; i != e; ++i)
     if (Mask[i] != SM_SentinelUndef)
       return false;
   return true;
+}
+
+/// Return true if the mask creates a vector whose lower half is undefined.
+static bool isUndefLowerHalf(ArrayRef<int> Mask) {
+  unsigned NumElts = Mask.size();
+  return isUndefInRange(Mask, 0, NumElts / 2);
+}
+
+/// Return true if the mask creates a vector whose upper half is undefined.
+static bool isUndefUpperHalf(ArrayRef<int> Mask) {
+  unsigned NumElts = Mask.size();
+  return isUndefInRange(Mask, NumElts / 2, NumElts / 2);
 }
 
 /// Return true if Val falls within the specified range (L, H].
@@ -11045,7 +11057,7 @@ static bool matchVectorShuffleAsEXTRQ(MVT VT, SDValue &V1, SDValue &V2,
   assert(!Zeroable.isAllOnesValue() && "Fully zeroable shuffle mask");
 
   // Upper half must be undefined.
-  if (!isUndefInRange(Mask, HalfSize, HalfSize))
+  if (!isUndefUpperHalf(Mask))
     return false;
 
   // Determine the extraction length from the part of the
@@ -11100,7 +11112,7 @@ static bool matchVectorShuffleAsINSERTQ(MVT VT, SDValue &V1, SDValue &V2,
   assert(Size == (int)VT.getVectorNumElements() && "Unexpected mask size");
 
   // Upper half must be undefined.
-  if (!isUndefInRange(Mask, HalfSize, HalfSize))
+  if (!isUndefUpperHalf(Mask))
     return false;
 
   for (int Idx = 0; Idx != HalfSize; ++Idx) {
@@ -11271,8 +11283,7 @@ static SDValue lowerVectorShuffleAsSpecificZeroOrAnyExtend(
                                 DAG.getConstant(EltBits, DL, MVT::i8),
                                 DAG.getConstant(LoIdx, DL, MVT::i8)));
 
-    if (isUndefInRange(Mask, NumElements / 2, NumElements / 2) ||
-        !SafeOffset(Offset + 1))
+    if (isUndefUpperHalf(Mask) || !SafeOffset(Offset + 1))
       return DAG.getBitcast(VT, Lo);
 
     int HiIdx = (Offset + 1) * EltBits;
@@ -14352,8 +14363,8 @@ static SDValue lowerVectorShuffleWithUndefHalf(const SDLoc &DL, MVT VT,
   unsigned HalfNumElts = NumElts / 2;
   MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(), HalfNumElts);
 
-  bool UndefLower = isUndefInRange(Mask, 0, HalfNumElts);
-  bool UndefUpper = isUndefInRange(Mask, HalfNumElts, HalfNumElts);
+  bool UndefLower = isUndefLowerHalf(Mask);
+  bool UndefUpper = isUndefUpperHalf(Mask);
   if (!UndefLower && !UndefUpper)
     return SDValue();
 

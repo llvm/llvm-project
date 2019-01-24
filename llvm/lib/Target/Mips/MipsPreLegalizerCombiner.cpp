@@ -13,6 +13,7 @@
 
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
+#include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -34,6 +35,16 @@ public:
 bool MipsPreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                            MachineInstr &MI,
                                            MachineIRBuilder &B) const {
+  CombinerHelper Helper(Observer, B);
+
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_SEXTLOAD:
+  case TargetOpcode::G_ZEXTLOAD:
+    return Helper.tryCombineExtendingLoads(MI);
+  }
   return false;
 }
 

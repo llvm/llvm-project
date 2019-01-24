@@ -2877,3 +2877,108 @@ entry:
   %tmp6 = insertelement <8 x float> %tmp5, float %z, i32 5
   ret <8 x float> %tmp6
 }
+
+; FIXME: AVX1 lowering is better than AVX2 (and AVX512?)
+; PR40434: https://bugs.llvm.org/show_bug.cgi?id=40434
+
+define <8 x i32> @unpckh_v8i32(<8 x i32> %x, <8 x i32> %y) {
+; AVX1-LABEL: unpckh_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: unpckh_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = <2,6,3,7,u,u,u,u>
+; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: unpckh_v8i32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = <2,14,3,15,u,u,u,u>
+; AVX512VL-NEXT:    vpermt2d %ymm1, %ymm2, %ymm0
+; AVX512VL-NEXT:    retq
+  %unpckh = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 2, i32 14, i32 3, i32 15, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <8 x i32> %unpckh
+}
+
+; FIXME: Same as above but with floats. AVX1 lowering is better than AVX2 (and AVX512?)
+
+define <8 x float> @unpckh_v8f32(<8 x float> %x, <8 x float> %y) {
+; AVX1-LABEL: unpckh_v8f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vunpckhps {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: unpckh_v8f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = <2,6,3,7,u,u,u,u>
+; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: unpckh_v8f32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovaps {{.*#+}} ymm2 = <2,14,3,15,u,u,u,u>
+; AVX512VL-NEXT:    vpermt2ps %ymm1, %ymm2, %ymm0
+; AVX512VL-NEXT:    retq
+  %unpckh = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 2, i32 14, i32 3, i32 15, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <8 x float> %unpckh
+}
+
+; FIXME: Why are integer and FP (below) lowering different for AVX1?
+
+define <8 x i32> @lowhalf_v8i32(<8 x i32> %x, <8 x i32> %y) {
+; AVX1-LABEL: lowhalf_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,2,2,2]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: lowhalf_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = <2,6,3,6,u,u,u,u>
+; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: lowhalf_v8i32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = <2,14,3,14,u,u,u,u>
+; AVX512VL-NEXT:    vpermt2d %ymm1, %ymm2, %ymm0
+; AVX512VL-NEXT:    retq
+  %r = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 2, i32 14, i32 3, i32 14, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <8 x i32> %r
+}
+
+; FIXME: AVX1 lowering is better than AVX2 (and AVX512?)
+
+define <8 x float> @lowhalf_v8f32(<8 x float> %x, <8 x float> %y) {
+; AVX1-LABEL: lowhalf_v8f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3],xmm1[2,2]
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: lowhalf_v8f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = <2,6,3,6,u,u,u,u>
+; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: lowhalf_v8f32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovaps {{.*#+}} ymm2 = <2,14,3,14,u,u,u,u>
+; AVX512VL-NEXT:    vpermt2ps %ymm1, %ymm2, %ymm0
+; AVX512VL-NEXT:    retq
+  %r = shufflevector <8 x float> %x, <8 x float> %y, <8 x i32> <i32 2, i32 14, i32 3, i32 14, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <8 x float> %r
+}
+

@@ -680,7 +680,8 @@ QualType clang::getDeclUsageType(ASTContext &C, const NamedDecl *ND) {
     T = Property->getType();
   else if (const auto *Value = dyn_cast<ValueDecl>(ND))
     T = Value->getType();
-  else
+
+  if (T.isNull())
     return QualType();
 
   // Dig through references, function pointers, and block pointers to

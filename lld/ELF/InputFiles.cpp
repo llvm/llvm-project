@@ -319,17 +319,6 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
   return Signature;
 }
 
-template <class ELFT>
-ArrayRef<typename ObjFile<ELFT>::Elf_Word>
-ObjFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
-  const ELFFile<ELFT> &Obj = this->getObj();
-  ArrayRef<Elf_Word> Entries =
-      CHECK(Obj.template getSectionContentsAsArray<Elf_Word>(&Sec), this);
-  if (Entries.empty() || Entries[0] != GRP_COMDAT)
-    fatal(toString(this) + ": unsupported SHT_GROUP format");
-  return Entries.slice(1);
-}
-
 template <class ELFT> bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   // On a regular link we don't merge sections if -O0 (default is -O1). This
   // sometimes makes the linker significantly faster, although the output will
@@ -439,26 +428,34 @@ void ObjFile<ELFT>::initializeSections(
     case SHT_GROUP: {
       // De-duplicate section groups by their signatures.
       StringRef Signature = getShtGroupSignature(ObjSections, Sec);
-      bool IsNew = ComdatGroups.insert(CachedHashStringRef(Signature)).second;
       this->Sections[I] = &InputSection::Discarded;
 
-      // We only support GRP_COMDAT type of group. Get the all entries of the
-      // section here to let getShtGroupEntries to check the type early for us.
-      ArrayRef<Elf_Word> Entries = getShtGroupEntries(Sec);
 
-      // If it is a new section group, we want to keep group members.
-      // Group leader sections, which contain indices of group members, are
-      // discarded because they are useless beyond this point. The only
-      // exception is the -r option because in order to produce re-linkable
-      // object files, we want to pass through basically everything.
+      ArrayRef<Elf_Word> Entries =
+          CHECK(Obj.template getSectionContentsAsArray<Elf_Word>(&Sec), this);
+      if (Entries.empty())
+        fatal(toString(this) + ": empty SHT_GROUP");
+
+      // The first word of a SHT_GROUP section contains flags. Currently,
+      // the standard defines only "GRP_COMDAT" flag for the COMDAT group.
+      // An group with the empty flag doesn't define anything; such sections
+      // are just skipped.
+      if (Entries[0] == 0)
+        continue;
+
+      if (Entries[0] != GRP_COMDAT)
+        fatal(toString(this) + ": unsupported SHT_GROUP format");
+
+      bool IsNew = ComdatGroups.insert(CachedHashStringRef(Signature)).second;
       if (IsNew) {
         if (Config->Relocatable)
           this->Sections[I] = createInputSection(Sec);
-        continue;
+	continue;
       }
 
+
       // Otherwise, discard group members.
-      for (uint32_t SecIndex : Entries) {
+      for (uint32_t SecIndex : Entries.slice(1)) {
         if (SecIndex >= Size)
           fatal(toString(this) +
                 ": invalid section index in group: " + Twine(SecIndex));
