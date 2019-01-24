@@ -4401,16 +4401,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     if (UnusedReturnSizePtr)
       PopCleanupBlock();
 
-    // Replace the noreturn attribute to better diagnose unreachable UB.
+    // Strip away the noreturn attribute to better diagnose unreachable UB.
     if (SanOpts.has(SanitizerKind::Unreachable)) {
-      // Also remove from function since CS.hasFnAttr(..) also checks attributes
-      // of the called function.
       if (auto *F = CS.getCalledFunction())
         F->removeFnAttr(llvm::Attribute::NoReturn);
       CS.removeAttribute(llvm::AttributeList::FunctionIndex,
                          llvm::Attribute::NoReturn);
-      CS.addAttribute(llvm::AttributeList::FunctionIndex,
-                      llvm::Attribute::ExpectNoReturn);
     }
 
     EmitUnreachable(Loc);
