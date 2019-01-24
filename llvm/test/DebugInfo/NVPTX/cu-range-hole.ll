@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
 
-; CHECK: .target sm_{{[0-9]+}}//, debug
+; CHECK: .target sm_{{[0-9]+}}, debug
 
 ; CHECK: .visible .func  (.param .b32 func_retval0) b(
 ; CHECK: .param .b32 b_param_0
@@ -72,145 +72,145 @@ entry:
   ret i32 %add, !dbg !16
 }
 
-; CHECK: // .section .debug_abbrev
-; CHECK-NEXT: // {
-; CHECK-NEXT: // .b8 1                                // Abbreviation Code
-; CHECK-NEXT: // .b8 17                               // DW_TAG_compile_unit
-; CHECK-NEXT: // .b8 1                                // DW_CHILDREN_yes
-; CHECK-NEXT: // .b8 37                               // DW_AT_producer
-; CHECK-NEXT: // .b8 8                                // DW_FORM_string
-; CHECK-NEXT: // .b8 19                               // DW_AT_language
-; CHECK-NEXT: // .b8 5                                // DW_FORM_data2
-; CHECK-NEXT: // .b8 3                                // DW_AT_name
-; CHECK-NEXT: // .b8 8                                // DW_FORM_string
-; CHECK-NEXT: // .b8 16                               // DW_AT_stmt_list
-; CHECK-NEXT: // .b8 6                                // DW_FORM_data4
-; CHECK-NEXT: // .b8 27                               // DW_AT_comp_dir
-; CHECK-NEXT: // .b8 8                                // DW_FORM_string
-; CHECK-NEXT: // .b8 17                               // DW_AT_low_pc
-; CHECK-NEXT: // .b8 1                                // DW_FORM_addr
-; CHECK-NEXT: // .b8 18                               // DW_AT_high_pc
-; CHECK-NEXT: // .b8 1                                // DW_FORM_addr
-; CHECK-NEXT: // .b8 0                                // EOM(1)
-; CHECK-NEXT: // .b8 0                                // EOM(2)
-; CHECK-NEXT: // .b8 2                                // Abbreviation Code
-; CHECK-NEXT: // .b8 46                               // DW_TAG_subprogram
-; CHECK-NEXT: // .b8 1                                // DW_CHILDREN_yes
-; CHECK-NEXT: // .b8 17                               // DW_AT_low_pc
-; CHECK-NEXT: // .b8 1                                // DW_FORM_addr
-; CHECK-NEXT: // .b8 18                               // DW_AT_high_pc
-; CHECK-NEXT: // .b8 1                                // DW_FORM_addr
-; CHECK-NEXT: // .b8 64                               // DW_AT_frame_base
-; CHECK-NEXT: // .b8 10                               // DW_FORM_block1
-; CHECK-NEXT: // .b8 3                                // DW_AT_name
-; CHECK-NEXT: // .b8 8                                // DW_FORM_string
-; CHECK-NEXT: // .b8 58                               // DW_AT_decl_file
-; CHECK-NEXT: // .b8 11                               // DW_FORM_data1
-; CHECK-NEXT: // .b8 59                               // DW_AT_decl_line
-; CHECK-NEXT: // .b8 11                               // DW_FORM_data1
-; CHECK-NEXT: // .b8 39                               // DW_AT_prototyped
-; CHECK-NEXT: // .b8 12                               // DW_FORM_flag
-; CHECK-NEXT: // .b8 73                               // DW_AT_type
-; CHECK-NEXT: // .b8 19                               // DW_FORM_ref4
-; CHECK-NEXT: // .b8 63                               // DW_AT_external
-; CHECK-NEXT: // .b8 12                               // DW_FORM_flag
-; CHECK-NEXT: // .b8 0                                // EOM(1)
-; CHECK-NEXT: // .b8 0                                // EOM(2)
-; CHECK-NEXT: // .b8 3                                // Abbreviation Code
-; CHECK-NEXT: // .b8 5                                // DW_TAG_formal_parameter
-; CHECK-NEXT: // .b8 0                                // DW_CHILDREN_no
-; CHECK-NEXT: // .b8 3                                // DW_AT_name
-; CHECK-NEXT: // .b8 8                                // DW_FORM_string
-; CHECK-NEXT: // .b8 58                               // DW_AT_decl_file
-; CHECK-NEXT: // .b8 11                               // DW_FORM_data1
-; CHECK-NEXT: // .b8 59                               // DW_AT_decl_line
-; CHECK-NEXT: // .b8 11                               // DW_FORM_data1
-; CHECK-NEXT: // .b8 73                               // DW_AT_type
-; CHECK-NEXT: // .b8 19                               // DW_FORM_ref4
-; CHECK-NEXT: // .b8 0                                // EOM(1)
-; CHECK-NEXT: // .b8 0                                // EOM(2)
-; CHECK-NEXT: // .b8 4                                // Abbreviation Code
-; CHECK-NEXT: // .b8 36                               // DW_TAG_base_type
-; CHECK-NEXT: // .b8 0                                // DW_CHILDREN_no
-; CHECK-NEXT: // .b8 3                                // DW_AT_name
-; CHECK-NEXT: // .b8 8                                // DW_FORM_string
-; CHECK-NEXT: // .b8 62                               // DW_AT_encoding
-; CHECK-NEXT: // .b8 11                               // DW_FORM_data1
-; CHECK-NEXT: // .b8 11                               // DW_AT_byte_size
-; CHECK-NEXT: // .b8 11                               // DW_FORM_data1
-; CHECK-NEXT: // .b8 0                                // EOM(1)
-; CHECK-NEXT: // .b8 0                                // EOM(2)
-; CHECK-NEXT: // .b8 0                                // EOM(3)
-; CHECK-NEXT: // }
-; CHECK-NEXT: // .section .debug_info
-; CHECK-NEXT: // {
-; CHECK-NEXT: // .b32 183                             // Length of Unit
-; CHECK-NEXT: // .b8 2                                // DWARF version number
-; CHECK-NEXT: // .b8 0
-; CHECK-NEXT: // .b32 .debug_abbrev                   // Offset Into Abbrev. Section
-; CHECK-NEXT: // .b8 8                                // Address Size (in bytes)
-; CHECK-NEXT: // .b8 1                                // Abbrev [1] 0xb:0xb0 DW_TAG_compile_unit
-; CHECK-NEXT: // .b8 99,108,97,110,103,32,118,101,114,115,105,111,110,32,51,46,53,46,48,32,40,116,114,117,110,107,32,50,48,52,49,54,52,41,32,40,108,108,118,109 // DW_AT_producer
-; CHECK-NEXT: // .b8 47,116,114,117,110,107,32,50,48,52,49,56,51,41
-; CHECK-NEXT: // .b8 0
-; CHECK-NEXT: // .b8 12                               // DW_AT_language
-; CHECK-NEXT: // .b8 0
-; CHECK-NEXT: // .b8 98,46,99                         // DW_AT_name
-; CHECK-NEXT: // .b8 0
-; CHECK-NEXT: // .b32 .debug_line                     // DW_AT_stmt_list
-; CHECK-NEXT: // .b8 47,115,111,117,114,99,101        // DW_AT_comp_dir
-; CHECK-NEXT: // .b8 0
-; CHECK-NEXT: // .b64 Lfunc_begin0                    // DW_AT_low_pc
-; CHECK-NEXT: // .b64 Lfunc_end2                      // DW_AT_high_pc
-; CHECK-NEXT: // .b8 2                                // Abbrev [2] 0x65:0x27 DW_TAG_subprogram
-; CHECK-NEXT: // .b64 Lfunc_begin0                    // DW_AT_low_pc
-; CHECK-NEXT: // .b64 Lfunc_end0                      // DW_AT_high_pc
-; CHECK-NEXT: // .b8 1                                // DW_AT_frame_base
-; CHECK-NEXT: // .b8 156
-; CHECK-NEXT: // .b8 98                               // DW_AT_name
-; CHECK-NEXT: // .b8 0
-; CHECK-NEXT: // .b8 1                                // DW_AT_decl_file
-; CHECK-NEXT: // .b8 1                                // DW_AT_decl_line
-; CHECK-NEXT: // .b8 1                                // DW_AT_prototyped
-; CHECK-NEXT: // .b32 179                             // DW_AT_type
-; CHECK-NEXT: // .b8 1                                // DW_AT_external
-; CHECK-NEXT: // .b8 3                                // Abbrev [3] 0x82:0x9 DW_TAG_formal_parameter
-; CHECK-NEXT: // .b8 99                               // DW_AT_name
-; CHECK-NEXT: // .b8 0
-; CHECK-NEXT: // .b8 1                                // DW_AT_decl_file
-; CHECK-NEXT: // .b8 1                                // DW_AT_decl_line
-; CHECK-NEXT: // .b32 179                             // DW_AT_type
-; CHECK-NEXT: // .b8 0                                // End Of Children Mark
-; CHECK-NEXT: // .b8 2                                // Abbrev [2] 0x8c:0x27 DW_TAG_subprogram
-; CHECK-NEXT: // .b64 Lfunc_begin2                    // DW_AT_low_pc
-; CHECK-NEXT: // .b64 Lfunc_end2                      // DW_AT_high_pc
-; CHECK-NEXT: // .b8 1                                // DW_AT_frame_base
-; CHECK-NEXT: // .b8 156
-; CHECK-NEXT: // .b8 100                              // DW_AT_name
-; CHECK-NEXT: // .b8 0
-; CHECK-NEXT: // .b8 1                                // DW_AT_decl_file
-; CHECK-NEXT: // .b8 3                                // DW_AT_decl_line
-; CHECK-NEXT: // .b8 1                                // DW_AT_prototyped
-; CHECK-NEXT: // .b32 179                             // DW_AT_type
-; CHECK-NEXT: // .b8 1                                // DW_AT_external
-; CHECK-NEXT: // .b8 3                                // Abbrev [3] 0xa9:0x9 DW_TAG_formal_parameter
-; CHECK-NEXT: // .b8 101                              // DW_AT_name
-; CHECK-NEXT: // .b8 0
-; CHECK-NEXT: // .b8 1                                // DW_AT_decl_file
-; CHECK-NEXT: // .b8 3                                // DW_AT_decl_line
-; CHECK-NEXT: // .b32 179                             // DW_AT_type
-; CHECK-NEXT: // .b8 0                                // End Of Children Mark
-; CHECK-NEXT: // .b8 4                                // Abbrev [4] 0xb3:0x7 DW_TAG_base_type
-; CHECK-NEXT: // .b8 105,110,116                      // DW_AT_name
-; CHECK-NEXT: // .b8 0
-; CHECK-NEXT: // .b8 5                                // DW_AT_encoding
-; CHECK-NEXT: // .b8 4                                // DW_AT_byte_size
-; CHECK-NEXT: // .b8 0                                // End Of Children Mark
-; CHECK-NEXT: // }
-; CHECK-NEXT: // .section .debug_macinfo
-; CHECK-NEXT: // {
-; CHECK-NEXT: // .b8 0                                // End Of Macro List Mark
-; CHECK:      // }
+; CHECK: .section .debug_abbrev
+; CHECK-NEXT: {
+; CHECK-NEXT: .b8 1                                // Abbreviation Code
+; CHECK-NEXT: .b8 17                               // DW_TAG_compile_unit
+; CHECK-NEXT: .b8 1                                // DW_CHILDREN_yes
+; CHECK-NEXT: .b8 37                               // DW_AT_producer
+; CHECK-NEXT: .b8 8                                // DW_FORM_string
+; CHECK-NEXT: .b8 19                               // DW_AT_language
+; CHECK-NEXT: .b8 5                                // DW_FORM_data2
+; CHECK-NEXT: .b8 3                                // DW_AT_name
+; CHECK-NEXT: .b8 8                                // DW_FORM_string
+; CHECK-NEXT: .b8 16                               // DW_AT_stmt_list
+; CHECK-NEXT: .b8 6                                // DW_FORM_data4
+; CHECK-NEXT: .b8 27                               // DW_AT_comp_dir
+; CHECK-NEXT: .b8 8                                // DW_FORM_string
+; CHECK-NEXT: .b8 17                               // DW_AT_low_pc
+; CHECK-NEXT: .b8 1                                // DW_FORM_addr
+; CHECK-NEXT: .b8 18                               // DW_AT_high_pc
+; CHECK-NEXT: .b8 1                                // DW_FORM_addr
+; CHECK-NEXT: .b8 0                                // EOM(1)
+; CHECK-NEXT: .b8 0                                // EOM(2)
+; CHECK-NEXT: .b8 2                                // Abbreviation Code
+; CHECK-NEXT: .b8 46                               // DW_TAG_subprogram
+; CHECK-NEXT: .b8 1                                // DW_CHILDREN_yes
+; CHECK-NEXT: .b8 17                               // DW_AT_low_pc
+; CHECK-NEXT: .b8 1                                // DW_FORM_addr
+; CHECK-NEXT: .b8 18                               // DW_AT_high_pc
+; CHECK-NEXT: .b8 1                                // DW_FORM_addr
+; CHECK-NEXT: .b8 64                               // DW_AT_frame_base
+; CHECK-NEXT: .b8 10                               // DW_FORM_block1
+; CHECK-NEXT: .b8 3                                // DW_AT_name
+; CHECK-NEXT: .b8 8                                // DW_FORM_string
+; CHECK-NEXT: .b8 58                               // DW_AT_decl_file
+; CHECK-NEXT: .b8 11                               // DW_FORM_data1
+; CHECK-NEXT: .b8 59                               // DW_AT_decl_line
+; CHECK-NEXT: .b8 11                               // DW_FORM_data1
+; CHECK-NEXT: .b8 39                               // DW_AT_prototyped
+; CHECK-NEXT: .b8 12                               // DW_FORM_flag
+; CHECK-NEXT: .b8 73                               // DW_AT_type
+; CHECK-NEXT: .b8 19                               // DW_FORM_ref4
+; CHECK-NEXT: .b8 63                               // DW_AT_external
+; CHECK-NEXT: .b8 12                               // DW_FORM_flag
+; CHECK-NEXT: .b8 0                                // EOM(1)
+; CHECK-NEXT: .b8 0                                // EOM(2)
+; CHECK-NEXT: .b8 3                                // Abbreviation Code
+; CHECK-NEXT: .b8 5                                // DW_TAG_formal_parameter
+; CHECK-NEXT: .b8 0                                // DW_CHILDREN_no
+; CHECK-NEXT: .b8 3                                // DW_AT_name
+; CHECK-NEXT: .b8 8                                // DW_FORM_string
+; CHECK-NEXT: .b8 58                               // DW_AT_decl_file
+; CHECK-NEXT: .b8 11                               // DW_FORM_data1
+; CHECK-NEXT: .b8 59                               // DW_AT_decl_line
+; CHECK-NEXT: .b8 11                               // DW_FORM_data1
+; CHECK-NEXT: .b8 73                               // DW_AT_type
+; CHECK-NEXT: .b8 19                               // DW_FORM_ref4
+; CHECK-NEXT: .b8 0                                // EOM(1)
+; CHECK-NEXT: .b8 0                                // EOM(2)
+; CHECK-NEXT: .b8 4                                // Abbreviation Code
+; CHECK-NEXT: .b8 36                               // DW_TAG_base_type
+; CHECK-NEXT: .b8 0                                // DW_CHILDREN_no
+; CHECK-NEXT: .b8 3                                // DW_AT_name
+; CHECK-NEXT: .b8 8                                // DW_FORM_string
+; CHECK-NEXT: .b8 62                               // DW_AT_encoding
+; CHECK-NEXT: .b8 11                               // DW_FORM_data1
+; CHECK-NEXT: .b8 11                               // DW_AT_byte_size
+; CHECK-NEXT: .b8 11                               // DW_FORM_data1
+; CHECK-NEXT: .b8 0                                // EOM(1)
+; CHECK-NEXT: .b8 0                                // EOM(2)
+; CHECK-NEXT: .b8 0                                // EOM(3)
+; CHECK-NEXT: }
+; CHECK-NEXT: .section .debug_info
+; CHECK-NEXT: {
+; CHECK-NEXT: .b32 183                             // Length of Unit
+; CHECK-NEXT: .b8 2                                // DWARF version number
+; CHECK-NEXT: .b8 0
+; CHECK-NEXT: .b32 .debug_abbrev                   // Offset Into Abbrev. Section
+; CHECK-NEXT: .b8 8                                // Address Size (in bytes)
+; CHECK-NEXT: .b8 1                                // Abbrev [1] 0xb:0xb0 DW_TAG_compile_unit
+; CHECK-NEXT: .b8 99,108,97,110,103,32,118,101,114,115,105,111,110,32,51,46,53,46,48,32,40,116,114,117,110,107,32,50,48,52,49,54,52,41,32,40,108,108,118,109 // DW_AT_producer
+; CHECK-NEXT: .b8 47,116,114,117,110,107,32,50,48,52,49,56,51,41
+; CHECK-NEXT: .b8 0
+; CHECK-NEXT: .b8 12                               // DW_AT_language
+; CHECK-NEXT: .b8 0
+; CHECK-NEXT: .b8 98,46,99                         // DW_AT_name
+; CHECK-NEXT: .b8 0
+; CHECK-NEXT: .b32 .debug_line                     // DW_AT_stmt_list
+; CHECK-NEXT: .b8 47,115,111,117,114,99,101        // DW_AT_comp_dir
+; CHECK-NEXT: .b8 0
+; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
+; CHECK-NEXT: .b64 Lfunc_end2                      // DW_AT_high_pc
+; CHECK-NEXT: .b8 2                                // Abbrev [2] 0x65:0x27 DW_TAG_subprogram
+; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
+; CHECK-NEXT: .b64 Lfunc_end0                      // DW_AT_high_pc
+; CHECK-NEXT: .b8 1                                // DW_AT_frame_base
+; CHECK-NEXT: .b8 156
+; CHECK-NEXT: .b8 98                               // DW_AT_name
+; CHECK-NEXT: .b8 0
+; CHECK-NEXT: .b8 1                                // DW_AT_decl_file
+; CHECK-NEXT: .b8 1                                // DW_AT_decl_line
+; CHECK-NEXT: .b8 1                                // DW_AT_prototyped
+; CHECK-NEXT: .b32 179                             // DW_AT_type
+; CHECK-NEXT: .b8 1                                // DW_AT_external
+; CHECK-NEXT: .b8 3                                // Abbrev [3] 0x82:0x9 DW_TAG_formal_parameter
+; CHECK-NEXT: .b8 99                               // DW_AT_name
+; CHECK-NEXT: .b8 0
+; CHECK-NEXT: .b8 1                                // DW_AT_decl_file
+; CHECK-NEXT: .b8 1                                // DW_AT_decl_line
+; CHECK-NEXT: .b32 179                             // DW_AT_type
+; CHECK-NEXT: .b8 0                                // End Of Children Mark
+; CHECK-NEXT: .b8 2                                // Abbrev [2] 0x8c:0x27 DW_TAG_subprogram
+; CHECK-NEXT: .b64 Lfunc_begin2                    // DW_AT_low_pc
+; CHECK-NEXT: .b64 Lfunc_end2                      // DW_AT_high_pc
+; CHECK-NEXT: .b8 1                                // DW_AT_frame_base
+; CHECK-NEXT: .b8 156
+; CHECK-NEXT: .b8 100                              // DW_AT_name
+; CHECK-NEXT: .b8 0
+; CHECK-NEXT: .b8 1                                // DW_AT_decl_file
+; CHECK-NEXT: .b8 3                                // DW_AT_decl_line
+; CHECK-NEXT: .b8 1                                // DW_AT_prototyped
+; CHECK-NEXT: .b32 179                             // DW_AT_type
+; CHECK-NEXT: .b8 1                                // DW_AT_external
+; CHECK-NEXT: .b8 3                                // Abbrev [3] 0xa9:0x9 DW_TAG_formal_parameter
+; CHECK-NEXT: .b8 101                              // DW_AT_name
+; CHECK-NEXT: .b8 0
+; CHECK-NEXT: .b8 1                                // DW_AT_decl_file
+; CHECK-NEXT: .b8 3                                // DW_AT_decl_line
+; CHECK-NEXT: .b32 179                             // DW_AT_type
+; CHECK-NEXT: .b8 0                                // End Of Children Mark
+; CHECK-NEXT: .b8 4                                // Abbrev [4] 0xb3:0x7 DW_TAG_base_type
+; CHECK-NEXT: .b8 105,110,116                      // DW_AT_name
+; CHECK-NEXT: .b8 0
+; CHECK-NEXT: .b8 5                                // DW_AT_encoding
+; CHECK-NEXT: .b8 4                                // DW_AT_byte_size
+; CHECK-NEXT: .b8 0                                // End Of Children Mark
+; CHECK-NEXT: }
+; CHECK-NEXT: .section .debug_macinfo
+; CHECK-NEXT: {
+; CHECK-NEXT: .b8 0                                // End Of Macro List Mark
+; CHECK:      }
 
 attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

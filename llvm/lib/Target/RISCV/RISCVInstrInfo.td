@@ -353,8 +353,12 @@ def ADDI  : ALU_ri<0b000, "addi">;
 
 def SLTI  : ALU_ri<0b010, "slti">;
 def SLTIU : ALU_ri<0b011, "sltiu">;
+
+let isReMaterializable = 1 in {
 def XORI  : ALU_ri<0b100, "xori">;
 def ORI   : ALU_ri<0b110, "ori">;
+}
+
 def ANDI  : ALU_ri<0b111, "andi">;
 
 def SLLI : Shift_ri<0, 0b001, "slli">;

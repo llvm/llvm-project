@@ -22,6 +22,10 @@ RUN: llvm-symbolizer -addresses -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | F
 RUN: llvm-symbolizer -a -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
 RUN: llvm-symbolizer -inlining -print-address -pretty-print -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s 
 RUN: llvm-symbolizer -inlining -print-address -p -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s
+RUN: llvm-symbolizer -inlines -print-address -pretty-print -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s
+RUN: llvm-symbolizer -inlines -print-address -p -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s
+RUN: llvm-symbolizer -i -print-address -pretty-print -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s
+RUN: llvm-symbolizer -i -print-address -p -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s
 RUN: echo "0x1" > %t.input
 RUN: llvm-symbolizer -obj=%p/Inputs/zero < %t.input | FileCheck -check-prefix="ZERO" %s
 

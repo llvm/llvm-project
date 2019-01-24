@@ -91,7 +91,7 @@ OPTIONS
 
  Don't print demangled function names.
 
-.. option:: -inlining 
+.. option:: -inlining, -inlines, -i
 
  If a source code location is in an inlined function, prints all the
  inlnied frames. Defaults to true.

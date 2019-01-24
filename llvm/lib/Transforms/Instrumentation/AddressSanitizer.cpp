@@ -2568,7 +2568,8 @@ bool AddressSanitizer::runOnFunction(Function &F) {
         if (CS) {
           // A call inside BB.
           TempsToInstrument.clear();
-          if (CS.doesNotReturn()) NoReturnCalls.push_back(CS.getInstruction());
+          if (CS.doesNotReturn() || CS.hasFnAttr(Attribute::ExpectNoReturn))
+            NoReturnCalls.push_back(CS.getInstruction());
         }
         if (CallInst *CI = dyn_cast<CallInst>(&Inst))
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, TLI);

@@ -654,6 +654,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_RED_ZONE;
   case Attribute::NoReturn:
     return bitc::ATTR_KIND_NO_RETURN;
+  case Attribute::ExpectNoReturn:
+    return bitc::ATTR_KIND_EXPECT_NO_RETURN;
   case Attribute::NoCfCheck:
     return bitc::ATTR_KIND_NOCF_CHECK;
   case Attribute::NoUnwind:

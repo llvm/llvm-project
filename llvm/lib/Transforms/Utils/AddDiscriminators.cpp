@@ -208,7 +208,7 @@ static bool addDiscriminators(Function &F) {
       // Only the lowest 7 bits are used to represent a discriminator to fit
       // it in 1 byte ULEB128 representation.
       unsigned Discriminator = R.second ? ++LDM[L] : LDM[L];
-      auto NewDIL = DIL->setBaseDiscriminator(Discriminator);
+      auto NewDIL = DIL->cloneWithBaseDiscriminator(Discriminator);
       if (!NewDIL) {
         LLVM_DEBUG(dbgs() << "Could not encode discriminator: "
                           << DIL->getFilename() << ":" << DIL->getLine() << ":"
@@ -245,7 +245,7 @@ static bool addDiscriminators(Function &F) {
           std::make_pair(CurrentDIL->getFilename(), CurrentDIL->getLine());
       if (!CallLocations.insert(L).second) {
         unsigned Discriminator = ++LDM[L];
-        auto NewDIL = CurrentDIL->setBaseDiscriminator(Discriminator);
+        auto NewDIL = CurrentDIL->cloneWithBaseDiscriminator(Discriminator);
         if (!NewDIL) {
           LLVM_DEBUG(dbgs()
                      << "Could not encode discriminator: "

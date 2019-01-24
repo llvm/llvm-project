@@ -85,7 +85,7 @@ template <> struct ilist_callback_traits<MachineBasicBlock> {
 
   template <class Iterator>
   void transferNodesFromList(ilist_callback_traits &OldList, Iterator, Iterator) {
-    llvm_unreachable("Never transfer between lists");
+    assert(this == &OldList && "never transfer MBBs between functions");
   }
 };
 

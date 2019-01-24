@@ -22,6 +22,8 @@ using namespace llvm;
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
+extern cl::opt<bool> EnableVPlanPredication;
+
 static cl::opt<bool>
     EnableIfConversion("enable-if-conversion", cl::init(true), cl::Hidden,
                        cl::desc("Enable if-conversion during vectorization."));
@@ -487,7 +489,10 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     // Check whether the BranchInst is a supported one. Only unconditional
     // branches, conditional branches with an outer loop invariant condition or
     // backedges are supported.
-    if (Br && Br->isConditional() &&
+    // FIXME: We skip these checks when VPlan predication is enabled as we
+    // want to allow divergent branches. This whole check will be removed
+    // once VPlan predication is on by default.
+    if (!EnableVPlanPredication && Br && Br->isConditional() &&
         !TheLoop->isLoopInvariant(Br->getCondition()) &&
         !LI->isLoopHeader(Br->getSuccessor(0)) &&
         !LI->isLoopHeader(Br->getSuccessor(1))) {

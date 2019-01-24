@@ -300,7 +300,7 @@ LoopUnrollResult llvm::UnrollAndJamLoop(
       for (Instruction &I : *BB)
         if (!isa<DbgInfoIntrinsic>(&I))
           if (const DILocation *DIL = I.getDebugLoc()) {
-            auto NewDIL = DIL->cloneWithDuplicationFactor(Count);
+            auto NewDIL = DIL->cloneByMultiplyingDuplicationFactor(Count);
             if (NewDIL)
               I.setDebugLoc(NewDIL.getValue());
             else
