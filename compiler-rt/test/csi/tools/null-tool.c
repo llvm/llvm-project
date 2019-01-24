@@ -55,7 +55,8 @@ __attribute__((always_inline))
 WEAK void __csi_detach(const csi_id_t detach_id) {}
 
 __attribute__((always_inline))
-WEAK void __csi_task(const csi_id_t task_id, const csi_id_t detach_id) {}
+WEAK void __csi_task(const csi_id_t task_id, const csi_id_t detach_id)
+{}
 
 __attribute__((always_inline))
 WEAK void __csi_task_exit(const csi_id_t task_exit_id,
@@ -73,13 +74,34 @@ __attribute__((always_inline))
 WEAK void __csi_after_sync(const csi_id_t sync_id) {}
 
 __attribute__((always_inline))
+WEAK void __csi_before_alloca(const csi_id_t alloca_id,
+                              uint64_t num_bytes,
+                              const alloca_prop_t prop) {}
+
+__attribute__((always_inline))
 WEAK void __csi_after_alloca(const csi_id_t alloca_id,
                              const void *addr,
                              uint64_t num_bytes,
                              const alloca_prop_t prop) {}
 
 __attribute__((always_inline))
-WEAK void __csi_before_alloca(const csi_id_t alloca_id,
-                              uint64_t num_bytes,
-                              const alloca_prop_t prop) {}
+WEAK void __csi_before_allocfn(const csi_id_t allocfn_id,
+                               uint64_t size, uint64_t num, uint64_t alignment,
+                               const void *oldaddr, const allocfn_prop_t prop) {}
+
+__attribute__((always_inline))
+WEAK void __csi_after_allocfn(const csi_id_t allocfn_id, const void *addr,
+                              uint64_t size, uint64_t num, uint64_t alignment,
+                              const void *oldaddr, const allocfn_prop_t prop)
+{}
+
+__attribute__((always_inline))
+WEAK void __csi_before_free(const csi_id_t free_id,
+                            const void *ptr,
+                            const free_prop_t prop) {}
+
+__attribute__((always_inline))
+WEAK void __csi_after_free(const csi_id_t free_id,
+                           const void *ptr,
+                           const free_prop_t prop) {}
 

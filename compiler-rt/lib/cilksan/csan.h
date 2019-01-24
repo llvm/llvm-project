@@ -38,20 +38,6 @@ struct obj_source_loc_t {
 
 EXTERN_C
 
-typedef struct {
-  // Type of the allocation function (e.g., malloc, calloc, new).
-  unsigned allocfn_ty : 8;
-  // Pad struct to 64 total bits.
-  uint64_t _padding : 56;
-} allocfn_prop_t;
-
-typedef struct {
-  // Type of the free function (e.g., free, delete).
-  unsigned free_ty : 8;
-  // Pad struct to 64 total bits.
-  uint64_t _padding : 56;
-} free_prop_t;
-
 const csan_source_loc_t *__csan_get_func_source_loc(const csi_id_t func_id);
 const csan_source_loc_t *__csan_get_func_exit_source_loc(const csi_id_t func_exit_id);
 const csan_source_loc_t *__csan_get_bb_source_loc(const csi_id_t bb_id);

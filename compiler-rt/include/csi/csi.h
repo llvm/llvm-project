@@ -41,6 +41,8 @@ typedef struct {
   csi_id_t num_detach_continue;
   csi_id_t num_sync;
   csi_id_t num_alloca;
+  csi_id_t num_allocfn;
+  csi_id_t num_free;
 } instrumentation_counts_t;
 
 // Property bitfields.
@@ -116,6 +118,20 @@ typedef struct {
   uint64_t _padding : 63;
 } alloca_prop_t;
 
+typedef struct {
+  // Type of the allocation function (e.g., malloc, calloc, new).
+  unsigned allocfn_ty : 8;
+  // Pad struct to 64 total bits.
+  uint64_t _padding : 56;
+} allocfn_prop_t;
+
+typedef struct {
+  // Type of the free function (e.g., free, delete).
+  unsigned free_ty : 8;
+  // Pad struct to 64 total bits.
+  uint64_t _padding : 56;
+} free_prop_t;
+
 WEAK void __csi_init();
 
 WEAK void __csi_unit_init(const char * const file_name,
@@ -179,6 +195,22 @@ WEAK void __csi_after_alloca(const csi_id_t alloca_id,
                              uint64_t num_bytes,
                              const alloca_prop_t prop);
 
+WEAK void __csi_before_allocfn(const csi_id_t allocfn_id,
+                               uint64_t size, uint64_t num, uint64_t alignment,
+                               const void *oldaddr, const allocfn_prop_t prop);
+
+WEAK void __csi_after_allocfn(const csi_id_t alloca_id, const void *addr,
+                              uint64_t size, uint64_t num, uint64_t alignment,
+                              const void *oldaddr, const allocfn_prop_t prop);
+
+WEAK void __csi_before_free(const csi_id_t free_id,
+                            const void *ptr,
+                            const free_prop_t prop);
+
+WEAK void __csi_after_free(const csi_id_t free_id,
+                           const void *ptr,
+                           const free_prop_t prop);
+
 // This struct is mirrored in ComprehensiveStaticInstrumentation.cpp,
 // FrontEndDataTable::getSourceLocStructType.
 typedef struct {
@@ -189,7 +221,7 @@ typedef struct {
     char *filename;
 } source_loc_t;
 
-typedef struct sizeinfo_t {
+typedef struct {
     int32_t full_ir_size;
     int32_t non_empty_size;
 } sizeinfo_t;
@@ -207,7 +239,12 @@ const source_loc_t * __csi_get_task_exit_source_loc(const csi_id_t task_exit_id)
 const source_loc_t * __csi_get_detach_continue_source_loc(const csi_id_t detach_continue_id);
 const source_loc_t * __csi_get_sync_source_loc(const csi_id_t sync_id);
 const source_loc_t * __csi_get_alloca_source_loc(const csi_id_t alloca_id);
+const source_loc_t * __csi_get_allocfn_source_loc(const csi_id_t allocfn_id);
+const source_loc_t * __csi_get_free_source_loc(const csi_id_t free_id);
 const sizeinfo_t *__csi_get_bb_sizeinfo(const csi_id_t bb_id);
+
+const char *__csan_get_allocfn_str(const allocfn_prop_t prop);
+const char *__csan_get_free_str(const free_prop_t prop);
 
 // Load property:
 //#define CSI_PROP_LOAD_READ_BEFORE_WRITE_IN_BB 0x1

@@ -34,6 +34,11 @@ typedef enum {
   NUM_FED_TYPES // Must be last
 } fed_type_t;
 
+static_assert(sizeof(csan_instrumentation_counts_t) ==
+              sizeof(csi_id_t) * NUM_FED_TYPES,
+              "Mismatch between NUM_FED_TYPES and size of "
+              "csan_instrumentation_counts_t");
+
 // An object table is a flat list of object source-location entries indexed by
 // CSI ID.
 typedef struct {
@@ -410,6 +415,7 @@ CSIRT_API
 const csan_source_loc_t *__csan_get_allocfn_source_loc(const csi_id_t allocfn_id) {
   return get_fed_entry(FED_TYPE_ALLOCFN, allocfn_id);
 }
+
 CSIRT_API
 const csan_source_loc_t *__csan_get_free_source_loc(const csi_id_t free_id) {
   return get_fed_entry(FED_TYPE_FREE, free_id);

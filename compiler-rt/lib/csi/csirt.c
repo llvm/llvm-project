@@ -11,6 +11,9 @@ static_assert(sizeof(bb_prop_t) == 8, "Size of bb_prop_t is not 64 bits.");
 static_assert(sizeof(call_prop_t) == 8, "Size of call_prop_t is not 64 bits.");
 static_assert(sizeof(load_prop_t) == 8, "Size of load_prop_t is not 64 bits.");
 static_assert(sizeof(store_prop_t) == 8, "Size of store_prop_t is not 64 bits.");
+static_assert(sizeof(alloca_prop_t) == 8, "Size of alloca_prop_t is not 64 bits.");
+static_assert(sizeof(allocfn_prop_t) == 8, "Size of allocfn_prop_t is not 64 bits.");
+static_assert(sizeof(free_prop_t) == 8, "Size of free_prop_t is not 64 bits.");
 
 #define CSIRT_API __attribute__((visibility("default")))
 
@@ -39,8 +42,16 @@ typedef enum {
     FED_TYPE_DETACH_CONTINUE,
     FED_TYPE_SYNC,
     FED_TYPE_ALLOCA,
+    FED_TYPE_ALLOCFN,
+    FED_TYPE_FREE,
     NUM_FED_TYPES // Must be last
 } fed_type_t;
+
+static_assert(sizeof(instrumentation_counts_t) ==
+              sizeof(csi_id_t) * NUM_FED_TYPES,
+              "Mismatch between NUM_FED_TYPES and size of "
+              "instrumentation_counts_t");
+
 // A SizeInfo table is a flat list of SizeInfo entries, indexed by a CSI ID.
 typedef struct {
   int64_t num_entries;
@@ -52,6 +63,56 @@ typedef enum {
   SIZEINFO_TYPE_BASICBLOCK,
   NUM_SIZEINFO_TYPES // Must be last
 } sizeinfo_type_t;
+
+const char *allocfn_str[] =
+  {
+   "void *malloc(size_t size)",
+   "void *valloc(size_t size)",
+   "void *calloc(size_t count, size_t size)",
+   "void *realloc(void *ptr, size_t size)",
+   "void *reallocf(void *ptr, size_t size)",
+   "void *operator new(unsigned int)",
+   "void *operator new(unsigned int, nothrow)",
+   "void *operator new(unsigned long)",
+   "void *operator new(unsigned long, nothrow)",
+   "void *operator new[](unsigned int)",
+   "void *operator new[](unsigned int, nothrow)",
+   "void *operator new[](unsigned long)",
+   "void *operator new[](unsigned long, nothrow)",
+   "void *operator new(unsigned int)",
+   "void *operator new(unsigned int, nothrow)",
+   "void *operator new(unsigned long long)",
+   "void *operator new(unsigned long long, nothrow)",
+   "void *operator new[](unsigned int)",
+   "void *operator new[](unsigned int, nothrow)",
+   "void *operator new[](unsigned long long)",
+   "void *operator new[](unsigned long long, nothrow)",
+  };
+
+const char *free_str[] =
+  {
+   "void free(void *ptr)",
+   "void operator delete(void*)",
+   "void operator delete(void*, nothrow)",
+   "void operator delete(void*, unsigned int)",
+   "void operator delete(void*, unsigned long)",
+   "void operator delete[](void*)",
+   "void operator delete[](void*, nothrow)",
+   "void operator delete[](void*, unsigned int)",
+   "void operator delete[](void*, unsigned long)",
+   "void operator delete(void*)",
+   "void operator delete(void*, nothrow)",
+   "void operator delete(void*, unsigned int)",
+   "void operator delete(void*)",
+   "void operator delete(void*, nothrow)",
+   "void operator delete(void*, unsigned long long)",
+   "void operator delete[](void*)",
+   "void operator delete[](void*, nothrow)",
+   "void operator delete[](void*, unsigned int)",
+   "void operator delete[](void*)",
+   "void operator delete[](void*, nothrow)",
+   "void operator delete[](void*, unsigned long long)"
+  };
 
 // ------------------------------------------------------------------------
 // Globals
@@ -339,13 +400,33 @@ const source_loc_t *__csi_get_sync_source_loc(const csi_id_t sync_id) {
 }
 
 CSIRT_API
+const source_loc_t * __csi_get_alloca_source_loc(const csi_id_t alloca_id) {
+  return get_fed_entry(FED_TYPE_ALLOCA, alloca_id);
+}
+
+CSIRT_API
+const source_loc_t *__csi_get_allocfn_source_loc(const csi_id_t allocfn_id) {
+  return get_fed_entry(FED_TYPE_ALLOCFN, allocfn_id);
+}
+
+CSIRT_API
+const source_loc_t *__csi_get_free_source_loc(const csi_id_t free_id) {
+  return get_fed_entry(FED_TYPE_FREE, free_id);
+}
+
+CSIRT_API
 const sizeinfo_t *__csi_get_bb_sizeinfo(const csi_id_t bb_id) {
   return get_sizeinfo_entry(SIZEINFO_TYPE_BASICBLOCK, bb_id);
 }
 
 CSIRT_API
-const source_loc_t * __csi_get_alloca_source_loc(const csi_id_t alloca_id) {
-  return get_fed_entry(FED_TYPE_ALLOCA, alloca_id);
+const char *__csi_get_allocfn_str(const allocfn_prop_t prop) {
+  return allocfn_str[prop.allocfn_ty];
+}
+
+CSIRT_API
+const char *__csi_get_free_str(const free_prop_t prop) {
+  return free_str[prop.free_ty];
 }
 
 EXTERN_C_END
