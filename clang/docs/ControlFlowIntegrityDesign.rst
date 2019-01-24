@@ -92,7 +92,7 @@ The compiler relies on co-operation from the linker in order to assemble
 the bit vectors for the whole program. It currently does this using LLVM's
 `type metadata`_ mechanism together with link-time optimization.
 
-.. _address point: http://itanium-cxx-abi.github.io/cxx-abi/abi.html#vtable-general
+.. _address point: https://itanium-cxx-abi.github.io/cxx-abi/abi.html#vtable-general
 .. _type metadata: https://llvm.org/docs/TypeMetadata.html
 .. _ByteArrayBuilder: https://llvm.org/docs/doxygen/html/structllvm_1_1ByteArrayBuilder.html
 
@@ -746,7 +746,7 @@ RCFI does not protect `RET` instructions:
   * embedded into other instructions (e.g. `0f4fc3 cmovg %ebx,%eax`).
 
 .. _SafeStack: https://clang.llvm.org/docs/SafeStack.html
-.. _RFG: http://xlab.tencent.com/en/2016/11/02/return-flow-guard
+.. _RFG: https://xlab.tencent.com/en/2016/11/02/return-flow-guard
 .. _Intel CET: https://software.intel.com/en-us/blogs/2016/06/09/intel-release-new-technology-specifications-protect-rop-attacks
 
 Hardware support

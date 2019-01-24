@@ -207,22 +207,21 @@ RUN:   | FileCheck %s --check-prefix=STRIPPED
 
 STRIPPED:  global_func
 
-RUN: echo "%p/Inputs/dwarfdump-test4.elf-x86-64 0x62c" > %t.input7
-RUN: llvm-symbolizer --functions=short --demangle=false < %t.input7 \
-RUN:    | FileCheck %s --check-prefix=SHORT_FUNCTION_NAME
-RUN: llvm-symbolizer --functions=short -C=false < %t.input7 \
-RUN:    | FileCheck %s --check-prefix=SHORT_FUNCTION_NAME
-
-SHORT_FUNCTION_NAME-NOT: _Z1cv
-
 ; Check that the last of --demangle and --no-demangle wins.
+RUN: echo "%p/Inputs/dwarfdump-test4.elf-x86-64 0x62c" > %t.input7
 RUN: llvm-symbolizer --demangle < %t.input7 \
+RUN:    | FileCheck %s --check-prefix=DEMANGLED_FUNCTION_NAME
+RUN: llvm-symbolizer -C < %t.input7 \
 RUN:    | FileCheck %s --check-prefix=DEMANGLED_FUNCTION_NAME
 RUN: llvm-symbolizer --no-demangle < %t.input7 \
 RUN:    | FileCheck %s --check-prefix=MANGLED_FUNCTION_NAME
 RUN: llvm-symbolizer --demangle --no-demangle < %t.input7 \
 RUN:    | FileCheck %s --check-prefix=MANGLED_FUNCTION_NAME
+RUN: llvm-symbolizer -C --no-demangle < %t.input7 \
+RUN:    | FileCheck %s --check-prefix=MANGLED_FUNCTION_NAME
 RUN: llvm-symbolizer --no-demangle --demangle < %t.input7 \
+RUN:    | FileCheck %s --check-prefix=DEMANGLED_FUNCTION_NAME
+RUN: llvm-symbolizer --no-demangle -C < %t.input7 \
 RUN:    | FileCheck %s --check-prefix=DEMANGLED_FUNCTION_NAME
 
 MANGLED_FUNCTION_NAME: _Z1cv

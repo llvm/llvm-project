@@ -1775,8 +1775,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
           static_cast<char>(unsigned(dwarf::DW_OP_breg18)),
           static_cast<char>(-8) & 0x7f, // addend (sleb128)
       };
-      unsigned CFIIndex =
-          MF.addFrameInst(MCCFIInstruction::createEscape(nullptr, CFIInst));
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createEscape(
+          nullptr, StringRef(CFIInst, sizeof(CFIInst))));
       BuildMI(MBB, MI, DL, TII.get(AArch64::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlag(MachineInstr::FrameSetup);

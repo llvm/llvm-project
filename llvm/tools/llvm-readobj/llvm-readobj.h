@@ -51,7 +51,6 @@ namespace opts {
   extern llvm::cl::opt<bool> SectionRelocations;
   extern llvm::cl::opt<bool> SectionSymbols;
   extern llvm::cl::opt<bool> SectionData;
-  extern llvm::cl::opt<bool> DynamicSymbols;
   extern llvm::cl::opt<bool> ExpandRelocs;
   extern llvm::cl::opt<bool> RawRelr;
   extern llvm::cl::opt<bool> CodeViewSubsectionBytes;

@@ -67,24 +67,18 @@
 # LLVM-COMMON-NEXT:   ]
 
 ## Check GNU output style.
-## FIXME: The extra run for --symbols is because GNU mode only prints the dynamic symbols,
-## if --dyn-symbols is specified, even if --symbols is specified.
-# RUN: llvm-readelf --relocations --dyn-symbols --dyn-relocations \
+# RUN: llvm-readelf --symbols --relocations --dyn-symbols --dyn-relocations \
 # RUN:              --elf-section-groups --demangle %t.so > %t.gnu.long
-# RUN: llvm-readelf --symbols --demangle %t.so >> %t.gnu.long
-# RUN: llvm-readelf --relocations --dyn-symbols --dyn-relocations \
+# RUN: llvm-readelf --symbols --relocations --dyn-symbols --dyn-relocations \
 # RUN:              --elf-section-groups -C %t.so > %t.gnu.short
-# RUN: llvm-readelf --symbols -C %t.so >> %t.gnu.short
 # RUN: FileCheck %s --input-file %t.gnu.long --check-prefixes=GNU-COMMON,GNU-DEMANGLE
 # RUN: diff %t.gnu.long %t.gnu.short
 
 ## Check that default is no demangling.
-# RUN: llvm-readelf --relocations --dyn-symbols --dyn-relocations \
+# RUN: llvm-readelf --symbols --relocations --dyn-symbols --dyn-relocations \
 # RUN:              --elf-section-groups %t.so > %t.gnu.default
-# RUN: llvm-readelf --symbols %t.so >> %t.gnu.default
-# RUN: llvm-readelf --relocations --dyn-symbols --dyn-relocations \
+# RUN: llvm-readelf --symbols --relocations --dyn-symbols --dyn-relocations \
 # RUN:              --elf-section-groups --demangle=false %t.so > %t.gnu.nodemangle
-# RUN: llvm-readelf --symbols --demangle=false %t.so >> %t.gnu.nodemangle
 # RUN: FileCheck %s --input-file %t.gnu.default --check-prefixes=GNU-COMMON,GNU-MANGLED
 # RUN: diff %t.gnu.default %t.gnu.nodemangle
 
@@ -104,10 +98,6 @@
 # GNU-DEMANGLE-NEXT:       foo(int){{$}}
 # GNU-MANGLED-NEXT:        _Z3fooi{{$}}
 
-# GNU-COMMON:        COMDAT group section [{{.*}}] `.group'
-# GNU-DEMANGLE-SAME: [foo(char)]
-# GNU-MANGLED-SAME:  [_Z3fooc]
-
 # GNU-COMMON:        Symbol table '.symtab' contains 3 entries:
 # GNU-COMMON-NEXT:     Num: Value            Size Type   Bind  Vis     Ndx Name
 # GNU-COMMON-NEXT:       0: 0000000000000000    0 NOTYPE LOCAL DEFAULT UND
@@ -115,6 +105,10 @@
 # GNU-DEMANGLE-NEXT:       blah(float){{$}}
 # GNU-MANGLED-NEXT:        _Z3fooc{{$}}
 # GNU-MANGLED-NEXT:        _Z4blahf{{$}}
+
+# GNU-COMMON:        COMDAT group section [{{.*}}] `.group'
+# GNU-DEMANGLE-SAME: [foo(char)]
+# GNU-MANGLED-SAME:  [_Z3fooc]
 
 !ELF
 FileHeader:

@@ -955,7 +955,8 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
   delete[] gv_array;
   // Close the last emitted section
   if (HasDebugInfo)
-    OutStreamer->EmitRawText("\t}");
+    static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())
+        ->closeLastSection();
 
   // Output last DWARF .file directives, if any.
   static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())

@@ -46,6 +46,8 @@ def : ReadAdvance<ReadAfterVecLd, 3>;
 def : ReadAdvance<ReadAfterVecXLd, 3>;
 def : ReadAdvance<ReadAfterVecYLd, 3>;
 
+def : ReadAdvance<ReadInt2Fpu, 0>;
+
 // Many SchedWrites are defined in pairs with and without a folded load.
 // Instructions with folded loads are usually micro-fused, so they only appear
 // as two micro-ops when dispatched by the schedulers.

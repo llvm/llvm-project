@@ -108,6 +108,11 @@ def : ReadAdvance<ReadAfterVecLd, 5>;
 def : ReadAdvance<ReadAfterVecXLd, 5>;
 def : ReadAdvance<ReadAfterVecYLd, 5>;
 
+/// "Additional 6 cycle transfer operation which moves a floating point
+/// operation input value from the integer unit to the floating point unit.
+/// Reference: AMDfam16h SOG (Appendix A "Instruction Latencies", Section A.2).
+def : ReadAdvance<ReadInt2Fpu, -6>;
+
 // Many SchedWrites are defined in pairs with and without a folded load.
 // Instructions with folded loads are usually micro-fused, so they only appear
 // as two micro-ops when dispatched by the schedulers.
@@ -540,7 +545,7 @@ defm : X86WriteResPairUnsupported<WriteVarShuffle256>;
 // Vector insert/extract operations.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : X86WriteRes<WriteVecInsert,      [JFPU01, JVALU], 7, [1,1], 2>;
+defm : X86WriteRes<WriteVecInsert,      [JFPU01, JVALU], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecInsertLd,    [JFPU01, JVALU, JLAGU], 4, [1,1,1], 1>;
 defm : X86WriteRes<WriteVecExtract,     [JFPU0, JFPA, JALU0], 3, [1,1,1], 1>;
 defm : X86WriteRes<WriteVecExtractSt,   [JFPU1, JSTC, JSAGU], 3, [1,1,1], 1>;
