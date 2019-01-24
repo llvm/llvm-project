@@ -129,6 +129,8 @@ void SwiftLanguageRuntime::SetupReflection() {
 
   auto &target = m_process->GetTarget();
   auto M = target.GetExecutableModule();
+  if (!M)
+    return;
   auto *obj_file = M->GetObjectFile();
   if (!obj_file)
       return;
