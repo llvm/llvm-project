@@ -1,9 +1,9 @@
-; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu | FileCheck %s --check-prefixes=CHECK,SLH --dump-input-on-failure
-; RUN: sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu | FileCheck %s --check-prefixes=CHECK,NOSLH --dump-input-on-failure
-; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -global-isel | FileCheck %s --check-prefixes=CHECK,SLH --dump-input-on-failure
-; RUN sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -global-isel | FileCheck %s --check-prefixes=CHECK,NOSLH --dump-input-on-failure
-; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -fast-isel | FileCheck %s --check-prefixes=CHECK,SLH --dump-input-on-failure
-; RUN: sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -fast-isel | FileCheck %s --check-prefixes=CHECK,NOSLH --dump-input-on-failure
+; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu | FileCheck %s --check-prefixes=CHECK,SLH,NOGISELSLH --dump-input-on-failure
+; RUN: sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu | FileCheck %s --check-prefixes=CHECK,NOSLH,NOGISELNOSLH --dump-input-on-failure
+; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -global-isel | FileCheck %s --check-prefixes=CHECK,SLH,GISELSLH --dump-input-on-failure
+; RUN sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -global-isel | FileCheck %s --check-prefixes=CHECK,NOSLH,GISELNOSLH --dump-input-on-failure
+; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -fast-isel | FileCheck %s --check-prefixes=CHECK,SLH,NOGISELSLH --dump-input-on-failure
+; RUN: sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -fast-isel | FileCheck %s --check-prefixes=CHECK,NOSLH,NOGISELNOSLH --dump-input-on-failure
 
 define i32 @f(i8* nocapture readonly %p, i32 %i, i32 %N) local_unnamed_addr SLHATTR {
 ; CHECK-LABEL: f
@@ -13,12 +13,12 @@ entry:
 ; NOSLH-NOT:  cmp sp, #0
 ; NOSLH-NOT:  csetm x16, ne
 
-; SLH:  mov x17, sp
-; SLH:  and x17, x17, x16
-; SLH:  mov sp, x17
-; NOSLH-NOT:  mov x17, sp
-; NOSLH-NOT:  and x17, x17, x16
-; NOSLH-NOT:  mov sp, x17
+; SLH:  mov [[TMPREG:x[0-9]+]], sp
+; SLH:  and [[TMPREG]], [[TMPREG]], x16
+; SLH:  mov sp, [[TMPREG]]
+; NOSLH-NOT:  mov [[TMPREG:x[0-9]+]], sp
+; NOSLH-NOT:  and [[TMPREG]], [[TMPREG]], x16
+; NOSLH-NOT:  mov sp, [[TMPREG]]
   %call = tail call i32 @tail_callee(i32 %i)
 ; SLH:  cmp sp, #0
 ; SLH:  csetm x16, ne
@@ -43,29 +43,37 @@ if.then:                                          ; preds = %entry
 ; NOSLH-NOT: csel x16, x16, xzr, [[COND]]
 return:                                           ; preds = %entry, %if.then
   %retval.0 = phi i32 [ %conv, %if.then ], [ 0, %entry ]
-; SLH:  mov x17, sp
-; SLH:  and x17, x17, x16
-; SLH:  mov sp, x17
-; NOSLH-NOT:  mov x17, sp
-; NOSLH-NOT:  and x17, x17, x16
-; NOSLH-NOT:  mov sp, x17
+; SLH:  mov [[TMPREG:x[0-9]+]], sp
+; SLH:  and [[TMPREG]], [[TMPREG]], x16
+; SLH:  mov sp, [[TMPREG]]
+; NOSLH-NOT:  mov [[TMPREG:x[0-9]+]], sp
+; NOSLH-NOT:  and [[TMPREG]], [[TMPREG]], x16
+; NOSLH-NOT:  mov sp, [[TMPREG]]
   ret i32 %retval.0
 }
 
 ; Make sure that for a tail call, taint doesn't get put into SP twice.
 define i32 @tail_caller(i32 %a) local_unnamed_addr SLHATTR {
 ; CHECK-LABEL: tail_caller:
-; SLH:     mov     x17, sp
-; SLH:     and     x17, x17, x16
-; SLH:     mov     sp, x17
-; NOSLH-NOT:     mov     x17, sp
-; NOSLH-NOT:     and     x17, x17, x16
-; NOSLH-NOT:     mov     sp, x17
+; NOGISELSLH:     mov [[TMPREG:x[0-9]+]], sp
+; NOGISELSLH:     and [[TMPREG]], [[TMPREG]], x16
+; NOGISELSLH:     mov sp, [[TMPREG]]
+; NOGISELNOSLH-NOT:     mov [[TMPREG:x[0-9]+]], sp
+; NOGISELNOSLH-NOT:     and [[TMPREG]], [[TMPREG]], x16
+; NOGISELNOSLH-NOT:     mov sp, [[TMPREG]]
+; GISELSLH:     mov [[TMPREG:x[0-9]+]], sp
+; GISELSLH:     and [[TMPREG]], [[TMPREG]], x16
+; GISELSLH:     mov sp, [[TMPREG]]
+; GISELNOSLH-NOT:     mov [[TMPREG:x[0-9]+]], sp
+; GISELNOSLH-NOT:     and [[TMPREG]], [[TMPREG]], x16
+; GISELNOSLH-NOT:     mov sp, [[TMPREG]]
 ;  GlobalISel doesn't optimize tail calls (yet?), so only check that
 ;  cross-call taint register setup code is missing if a tail call was
 ;  actually produced.
-; SLH:     {{(bl tail_callee[[:space:]] cmp sp, #0)|(b tail_callee)}}
-; SLH-NOT: cmp sp, #0
+; NOGISELSLH:     b tail_callee
+; GISELSLH:       bl tail_callee
+; GISELSLH:       cmp sp, #0
+; SLH-NOT:        cmp sp, #0
   %call = tail call i32 @tail_callee(i32 %a)
   ret i32 %call
 }
