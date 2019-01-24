@@ -117,7 +117,7 @@
 #include "lldb/Host/windows/windows.h"
 #endif
 
-#if defined(__APPLE__) || defined(__linux__)
+#if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
 #include "Plugins/Language/Swift/SwiftLanguage.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #endif
@@ -285,14 +285,14 @@ SystemInitializerFull::SystemInitializerFull() {}
 SystemInitializerFull::~SystemInitializerFull() {}
 
 static void SwiftInitialize() {
-#if defined(__APPLE__) || defined(__linux__)
+#if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
   SwiftLanguage::Initialize();
   SwiftLanguageRuntime::Initialize();
 #endif
 }
 
 static void SwiftTerminate() {
-#if defined(__APPLE__) || defined(__linux__)
+#if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
   SwiftLanguage::Terminate();
   SwiftLanguageRuntime::Terminate();
 #endif
