@@ -42,22 +42,14 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   list(APPEND CMAKE_MODULE_PATH "${LLDB_PATH_TO_LLVM_BUILD}/share/llvm/cmake")
   list(APPEND CMAKE_MODULE_PATH "${LLDB_PATH_TO_SWIFT_SOURCE}/cmake/modules")
-  set(LLVM_TOOLS_BINARY_DIR ${TOOLS_BINARY_DIR} CACHE PATH "Path to llvm/bin")
-  set(LLVM_LIBRARY_DIR ${LIBRARY_DIR} CACHE PATH "Path to llvm/lib")
-  set(LLVM_DIR ${LLVM_OBJ_ROOT}/cmake/modules/CMakeFiles CACHE PATH "Path to LLVM build tree CMake files")
-  set(LLVM_BINARY_DIR ${LLVM_OBJ_ROOT} CACHE PATH "Path to LLVM build tree")
-  set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
-
-  set(LLVMCONFIG_FILE "${LLDB_PATH_TO_LLVM_BUILD}/lib/cmake/llvm/LLVMConfig.cmake")
-  if(EXISTS ${LLVMCONFIG_FILE})
-    list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
-    include(${LLVMCONFIG_FILE})
-  else()
-    message(FATAL_ERROR "Not found: ${LLVMCONFIG_FILE}")
-  endif()
   # END Swift Mods
 
+  set(LLVM_MAIN_SRC_DIR ${LLVM_BUILD_MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
+  set(LLVM_MAIN_INCLUDE_DIR ${LLVM_BUILD_MAIN_INCLUDE_DIR} CACHE PATH "Path to llvm/include")
+  set(LLVM_LIBRARY_DIR ${LLVM_BUILD_LIBRARY_DIR} CACHE PATH "Path to llvm/lib")
+  set(LLVM_BINARY_DIR ${LLVM_BUILD_BINARY_DIR} CACHE PATH "Path to LLVM build tree")
   set(LLVM_EXTERNAL_LIT ${LLVM_TOOLS_BINARY_DIR}/llvm-lit CACHE PATH "Path to llvm-lit")
+
   find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR}
     NO_DEFAULT_PATH)
 
