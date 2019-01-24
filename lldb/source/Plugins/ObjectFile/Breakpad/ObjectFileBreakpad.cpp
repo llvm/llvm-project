@@ -32,13 +32,13 @@ llvm::Optional<Header> Header::parse(llvm::StringRef text) {
     return llvm::None;
 
   llvm::Triple triple;
-  triple.setArch(Module->getArch());
-  triple.setOS(Module->getOS());
+  triple.setArch(Module->Arch);
+  triple.setOS(Module->OS);
 
   std::tie(line, text) = text.split('\n');
 
   auto Info = InfoRecord::parse(line);
-  UUID uuid = Info && Info->getID() ? Info->getID() : Module->getID();
+  UUID uuid = Info && Info->ID ? Info->ID : Module->ID;
   return Header{ArchSpec(triple), std::move(uuid)};
 }
 
