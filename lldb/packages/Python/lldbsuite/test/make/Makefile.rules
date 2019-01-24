@@ -756,8 +756,9 @@ ifeq "$(USESWIFTDRIVER)" "1"
 #----------------------------------------------------------------------
 ifeq "$(OS)" "Darwin"
 DYLIB_SWIFT_FLAGS=  \
+	 -toolchain-stdlib-rpath \
 	 -Xlinker -dylib \
-         -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule \
+	 -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule \
 	 -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@) \
 	 $(LD_EXTRAS)
 else
