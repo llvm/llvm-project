@@ -20,12 +20,3 @@ add_lldb_tool(repl_swift
 # confused.
 set_target_properties(repl_swift PROPERTIES
     COMPILE_FLAGS "-g0")
-
-if (LLDB_BUILD_FRAMEWORK)
-  # lldb --repl expects the dummy executable to be located in the framework resource dir,
-  # so we copy it.
-  add_custom_command(TARGET repl_swift POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_BINARY_DIR}/bin/repl_swift
-            ${framework_target_dir}/LLDB.framework/${LLDB_FRAMEWORK_RESOURCE_DIR}/repl_swift)
-endif()

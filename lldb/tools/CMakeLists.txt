@@ -13,4 +13,8 @@ endif()
 if (LLDB_CAN_USE_LLDB_SERVER AND NOT SKIP_LLDB_SERVER_BUILD)
   add_subdirectory(lldb-server)
 endif()
+
+# BEGIN Swift Mods
 add_subdirectory(repl/swift)
+# END Swift Mods
+
