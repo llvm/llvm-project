@@ -35,8 +35,10 @@ static llvm::Optional<QualType>
 typeOfCompletion(const CodeCompletionResult &R) {
   auto *VD = dyn_cast_or_null<ValueDecl>(R.Declaration);
   if (!VD)
-    return None; // We handle only variables and functions below.
+    return llvm::None; // We handle only variables and functions below.
   auto T = VD->getType();
+  if (T.isNull())
+    return llvm::None;
   if (auto FuncT = T->getAs<FunctionType>()) {
     // Functions are a special case. They are completed as 'foo()' and we want
     // to match their return type rather than the function type itself.
