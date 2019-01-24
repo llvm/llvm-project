@@ -1,10 +1,12 @@
 # Set the correct rpath to locate libswiftCore.
 if (LLDB_BUILD_FRAMEWORK)
   get_target_property(framework_target_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
-  set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath -Wl,${framework_target_dir}/LLDB.framework/${LLDB_FRAMEWORK_RESOURCE_DIR}/Swift/macosx")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath \
+      -Wl,${framework_target_dir}/LLDB.framework/${LLDB_FRAMEWORK_RESOURCE_DIR}/Swift/macosx")
 elseif( CMAKE_SYSTEM_NAME MATCHES "Linux" )
   # Set the correct rpath to locate libswiftCore
-  set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath,${CMAKE_BINARY_DIR}/../swift-linux-x86_64/lib${LLVM_LIBDIR_SUFFIX}/swift/linux -Wl,-ldl")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} \
+      -Wl,-rpath,${CMAKE_BINARY_DIR}/../swift-linux-x86_64/lib${LLVM_LIBDIR_SUFFIX}/swift/linux -Wl,-ldl")
   set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib/swift/linux:${CMAKE_INSTALL_RPATH}")
 endif()
 
