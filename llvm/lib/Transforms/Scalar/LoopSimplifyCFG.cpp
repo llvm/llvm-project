@@ -207,12 +207,13 @@ private:
       // folding. Only handle blocks from current loop: branches in child loops
       // are skipped because if they can be folded, they should be folded during
       // the processing of child loops.
-      if (TheOnlySucc && LI.getLoopFor(BB) == &L)
+      bool TakeFoldCandidate = TheOnlySucc && LI.getLoopFor(BB) == &L;
+      if (TakeFoldCandidate)
         FoldCandidates.push_back(BB);
 
       // Handle successors.
       for (BasicBlock *Succ : successors(BB))
-        if (!TheOnlySucc || TheOnlySucc == Succ) {
+        if (!TakeFoldCandidate || TheOnlySucc == Succ) {
           if (L.contains(Succ))
             LiveLoopBlocks.insert(Succ);
           else

@@ -1,8 +1,8 @@
 # Check that the backend can handle consecutive select instructions also in
 # the presence of DEBUG_VALUE machine instructions.
 #
-# RUN: llc %s -mtriple=s390x-linux-gnu -mcpu=z13 -start-before=expand-isel-pseudos \
-# RUN:   -o - 2>&1 | FileCheck %s
+# RUN: llc %s -verify-machineinstrs -mtriple=s390x-linux-gnu -mcpu=z13 \
+# RUN:   -start-before=expand-isel-pseudos -o - 2>&1 | FileCheck %s
 #
 # CHECK-LABEL: %bb.1:
 # CHECK:       ldr

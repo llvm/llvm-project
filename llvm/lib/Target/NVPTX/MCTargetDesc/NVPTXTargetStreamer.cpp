@@ -30,6 +30,11 @@ void NVPTXTargetStreamer::outputDwarfFileDirectives() {
   DwarfFiles.clear();
 }
 
+void NVPTXTargetStreamer::closeLastSection() {
+  if (HasSections)
+    getStreamer().EmitRawText("\t}");
+}
+
 void NVPTXTargetStreamer::emitDwarfFileDirective(StringRef Directive) {
   DwarfFiles.emplace_back(Directive);
 }
@@ -87,11 +92,12 @@ void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
   if (isDwarfSection(FI, Section)) {
     // Emit DWARF .file directives in the outermost scope.
     outputDwarfFileDirectives();
-    OS << "//\t.section";
+    OS << "\t.section";
     Section->PrintSwitchToSection(*getStreamer().getContext().getAsmInfo(),
                                   FI->getTargetTriple(), OS, SubSection);
     // DWARF sections are enclosed into braces - emit the open one.
     OS << "\t{\n";
+    HasSections = true;
   }
 }
 

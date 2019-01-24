@@ -106,6 +106,10 @@ def NoRedZone : EnumAttr<"noredzone">;
 /// Mark the function as not returning.
 def NoReturn : EnumAttr<"noreturn">;
 
+/// Mark the function as unlikely to return. This is useful in cases where
+/// `noreturn` is too strong a guarantee.
+def ExpectNoReturn : EnumAttr<"expect_noreturn">;
+
 /// Disable Indirect Branch Tracking.
 def NoCfCheck : EnumAttr<"nocf_check">;
 

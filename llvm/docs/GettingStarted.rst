@@ -416,7 +416,7 @@ Simply run:
 
 .. code-block:: console
 
-  % git clone https://github.com/llvm/llvm-project.git`
+  % git clone https://github.com/llvm/llvm-project.git
 
 or on Windows,
 

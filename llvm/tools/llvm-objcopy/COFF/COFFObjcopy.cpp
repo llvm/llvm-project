@@ -37,7 +37,7 @@ static uint64_t getNextRVA(const Object &Obj) {
     return 0;
   const Section &Last = Obj.getSections().back();
   return alignTo(Last.Header.VirtualAddress + Last.Header.VirtualSize,
-                 Obj.PeHeader.SectionAlignment);
+                 Obj.IsPE ? Obj.PeHeader.SectionAlignment : 1);
 }
 
 static uint32_t getCRC32(StringRef Data) {
@@ -74,8 +74,8 @@ static void addGnuDebugLink(Object &Obj, StringRef DebugLinkFile) {
   Sec.Name = ".gnu_debuglink";
   Sec.Header.VirtualSize = Sec.getContents().size();
   Sec.Header.VirtualAddress = StartRVA;
-  Sec.Header.SizeOfRawData =
-      alignTo(Sec.Header.VirtualSize, Obj.PeHeader.FileAlignment);
+  Sec.Header.SizeOfRawData = alignTo(Sec.Header.VirtualSize,
+                                     Obj.IsPE ? Obj.PeHeader.FileAlignment : 1);
   // Sec.Header.PointerToRawData is filled in by the writer.
   Sec.Header.PointerToRelocations = 0;
   Sec.Header.PointerToLinenumbers = 0;
@@ -169,6 +169,21 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
 
   if (!Config.AddGnuDebugLink.empty())
     addGnuDebugLink(Obj, Config.AddGnuDebugLink);
+
+  if (!Config.BuildIdLinkDir.empty() || Config.BuildIdLinkInput ||
+      Config.BuildIdLinkOutput || !Config.SplitDWO.empty() ||
+      !Config.SymbolsPrefix.empty() || !Config.AddSection.empty() ||
+      !Config.DumpSection.empty() || !Config.KeepSection.empty() ||
+      !Config.SymbolsToGlobalize.empty() || !Config.SymbolsToKeep.empty() ||
+      !Config.SymbolsToLocalize.empty() || !Config.SymbolsToWeaken.empty() ||
+      !Config.SymbolsToKeepGlobal.empty() || !Config.SectionsToRename.empty() ||
+      !Config.SymbolsToRename.empty() || Config.ExtractDWO ||
+      Config.KeepFileSymbols || Config.LocalizeHidden || Config.PreserveDates ||
+      Config.StripDWO || Config.StripNonAlloc || Config.StripSections ||
+      Config.Weaken || Config.DecompressDebugSections) {
+    return createStringError(llvm::errc::invalid_argument,
+                             "Option not supported by llvm-objcopy for COFF");
+  }
 
   return Error::success();
 }

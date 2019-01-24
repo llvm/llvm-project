@@ -72,7 +72,7 @@ OPTIONS
 
   Path to object file to be symbolized.
 
-.. option:: -functions=[none|short|linkage]
+.. option:: -functions[=<none|short|linkage>], -f
 
   Specify the way function names are printed (omit function name,
   print short function name, or print full linkage name, respectively).
@@ -91,7 +91,7 @@ OPTIONS
 
  Don't print demangled function names.
 
-.. option:: -inlining 
+.. option:: -inlining, -inlines, -i
 
  If a source code location is in an inlined function, prints all the
  inlnied frames. Defaults to true.

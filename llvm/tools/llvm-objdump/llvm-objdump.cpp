@@ -558,6 +558,17 @@ static bool isArmElf(const ObjectFile *Obj) {
            Obj->getArch() == Triple::thumbeb));
 }
 
+static void printRelocation(const RelocationRef &Rel, uint64_t Address,
+                            uint8_t AddrSize) {
+  StringRef Fmt =
+      AddrSize > 4 ? "\t\t%016" PRIx64 ":  " : "\t\t\t%08" PRIx64 ":  ";
+  SmallString<16> Name;
+  SmallString<32> Val;
+  Rel.getTypeName(Name);
+  error(getRelocationValueString(Rel, Val));
+  outs() << format(Fmt.data(), Address) << Name << "\t" << Val << "\n";
+}
+
 class PrettyPrinter {
 public:
   virtual ~PrettyPrinter() = default;
@@ -618,21 +629,15 @@ public:
     auto HeadTail = PacketBundle.first.split('\n');
     auto Preamble = " { ";
     auto Separator = "";
-    StringRef Fmt = "\t\t\t%08" PRIx64 ":  ";
-    std::vector<RelocationRef>::const_iterator RelCur = Rels->begin();
-    std::vector<RelocationRef>::const_iterator RelEnd = Rels->end();
 
     // Hexagon's packets require relocations to be inline rather than
     // clustered at the end of the packet.
+    std::vector<RelocationRef>::const_iterator RelCur = Rels->begin();
+    std::vector<RelocationRef>::const_iterator RelEnd = Rels->end();
     auto PrintReloc = [&]() -> void {
       while ((RelCur != RelEnd) && (RelCur->getOffset() <= Address)) {
         if (RelCur->getOffset() == Address) {
-          SmallString<16> Name;
-          SmallString<32> Val;
-          RelCur->getTypeName(Name);
-          error(getRelocationValueString(*RelCur, Val));
-          OS << Separator << format(Fmt.data(), Address) << Name << "\t" << Val
-                << "\n";
+          printRelocation(*RelCur, Address, 4);
           return;
         }
         ++RelCur;
@@ -1044,7 +1049,6 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
     uint64_t Size;
     uint64_t Index;
     bool PrintedSection = false;
-
     std::vector<RelocationRef> Rels = RelocMap[Section];
     std::vector<RelocationRef>::const_iterator RelCur = Rels.begin();
     std::vector<RelocationRef>::const_iterator RelEnd = Rels.end();
@@ -1336,28 +1340,21 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
         // Hexagon does this in pretty printer
         if (Obj->getArch() != Triple::hexagon) {
-          StringRef Fmt = Obj->getBytesInAddress() > 4 ? "\t\t%016" PRIx64 ":  "
-                                                       : "\t\t\t%08" PRIx64
-                                                         ":  ";
           // Print relocation for instruction.
           while (RelCur != RelEnd) {
-            uint64_t Addr = RelCur->getOffset();
-            SmallString<16> Name;
-            SmallString<32> Val;
-
+            uint64_t Offset = RelCur->getOffset();
             // If this relocation is hidden, skip it.
-            if (getHidden(*RelCur) || ((SectionAddr + Addr) < StartAddress)) {
+            if (getHidden(*RelCur) || ((SectionAddr + Offset) < StartAddress)) {
               ++RelCur;
               continue;
             }
 
             // Stop when rel_cur's address is past the current instruction.
-            if (Addr >= Index + Size)
+            if (Offset >= Index + Size)
               break;
-            RelCur->getTypeName(Name);
-            error(getRelocationValueString(*RelCur, Val));
-            outs() << format(Fmt.data(), SectionAddr + Addr) << Name << "\t"
-                   << Val << "\n";
+
+            printRelocation(*RelCur, SectionAddr + Offset,
+                            Obj->getBytesInAddress());
             ++RelCur;
           }
         }

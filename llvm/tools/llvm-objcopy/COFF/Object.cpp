@@ -26,12 +26,8 @@ void Object::addSymbols(ArrayRef<Symbol> NewSymbols) {
 
 void Object::updateSymbols() {
   SymbolMap = DenseMap<size_t, Symbol *>(Symbols.size());
-  size_t RawSymIndex = 0;
-  for (Symbol &Sym : Symbols) {
+  for (Symbol &Sym : Symbols)
     SymbolMap[Sym.UniqueId] = &Sym;
-    Sym.RawIndex = RawSymIndex;
-    RawSymIndex += 1 + Sym.Sym.NumberOfAuxSymbols;
-  }
 }
 
 const Symbol *Object::findSymbol(size_t UniqueId) const {

@@ -532,6 +532,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   // Create a new empty descriptor.
   std::unique_ptr<InstrDesc> ID = llvm::make_unique<InstrDesc>();
   ID->NumMicroOps = SCDesc.NumMicroOps;
+  ID->SchedClassID = SchedClassID;
 
   if (MCDesc.isCall() && FirstCallInst) {
     // We don't correctly model calls.

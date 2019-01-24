@@ -27,12 +27,12 @@ vpinsrq $1, %rax, %xmm0, %xmm0
 
 # CHECK:      Iterations:        500
 # CHECK-NEXT: Instructions:      1000
-# CHECK-NEXT: Total Cycles:      7003
+# CHECK-NEXT: Total Cycles:      1003
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.29
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    1.99
+# CHECK-NEXT: IPC:               1.00
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
@@ -76,12 +76,12 @@ vpinsrq $1, %rax, %xmm0, %xmm0
 
 # CHECK:      Iterations:        500
 # CHECK-NEXT: Instructions:      1000
-# CHECK-NEXT: Total Cycles:      7003
+# CHECK-NEXT: Total Cycles:      1003
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.29
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    1.99
+# CHECK-NEXT: IPC:               1.00
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
@@ -125,12 +125,12 @@ vpinsrq $1, %rax, %xmm0, %xmm0
 
 # CHECK:      Iterations:        500
 # CHECK-NEXT: Instructions:      1000
-# CHECK-NEXT: Total Cycles:      7003
+# CHECK-NEXT: Total Cycles:      1003
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.29
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    1.99
+# CHECK-NEXT: IPC:               1.00
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
@@ -174,12 +174,12 @@ vpinsrq $1, %rax, %xmm0, %xmm0
 
 # CHECK:      Iterations:        500
 # CHECK-NEXT: Instructions:      1000
-# CHECK-NEXT: Total Cycles:      7003
+# CHECK-NEXT: Total Cycles:      1003
 # CHECK-NEXT: Total uOps:        2000
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.29
-# CHECK-NEXT: IPC:               0.14
+# CHECK-NEXT: uOps Per Cycle:    1.99
+# CHECK-NEXT: IPC:               1.00
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:

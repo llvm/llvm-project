@@ -656,6 +656,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(nonnull);
   KEYWORD(noredzone);
   KEYWORD(noreturn);
+  KEYWORD(expect_noreturn);
   KEYWORD(nocf_check);
   KEYWORD(nounwind);
   KEYWORD(optforfuzzing);

@@ -43,6 +43,9 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     const MCSchedClassDesc &SCDesc = *SM.getSchedClassDesc(SchedClassID);
     unsigned NumMicroOpcodes = SCDesc.NumMicroOps;
     unsigned Latency = MCSchedModel::computeInstrLatency(STI, SCDesc);
+    // Add extra latency due to delays in the forwarding data paths.
+    Latency += MCSchedModel::getForwardingDelayCycles(
+        STI.getReadAdvanceEntries(SCDesc));
     Optional<double> RThroughput =
         MCSchedModel::getReciprocalThroughput(STI, SCDesc);
 

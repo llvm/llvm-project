@@ -66,10 +66,24 @@ private:
   std::vector<uint8_t> OwnedContents;
 };
 
+struct AuxSymbol {
+  AuxSymbol(ArrayRef<uint8_t> In) {
+    assert(In.size() == sizeof(Opaque));
+    std::copy(In.begin(), In.end(), Opaque);
+  }
+
+  ArrayRef<uint8_t> getRef() const {
+    return ArrayRef<uint8_t>(Opaque, sizeof(Opaque));
+  }
+
+  uint8_t Opaque[sizeof(object::coff_symbol16)];
+};
+
 struct Symbol {
   object::coff_symbol32 Sym;
   StringRef Name;
-  std::vector<uint8_t> AuxData;
+  std::vector<AuxSymbol> AuxData;
+  StringRef AuxFile;
   ssize_t TargetSectionId;
   ssize_t AssociativeComdatTargetSectionId = 0;
   Optional<size_t> WeakTargetSymbolId;
@@ -132,7 +146,7 @@ private:
 
   ssize_t NextSectionUniqueId = 1; // Allow a UniqueId 0 to mean undefined.
 
-  // Update SymbolMap and RawIndex in each Symbol.
+  // Update SymbolMap.
   void updateSymbols();
 
   // Update SectionMap and Index in each Section.

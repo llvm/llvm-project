@@ -107,9 +107,24 @@ Error COFFReader::readSymbols(Object &Obj, bool IsBigObj) const {
                  *reinterpret_cast<const coff_symbol16 *>(SymRef.getRawPtr()));
     if (auto EC = COFFObj.getSymbolName(SymRef, Sym.Name))
       return errorCodeToError(EC);
-    Sym.AuxData = COFFObj.getSymbolAuxData(SymRef);
-    assert((Sym.AuxData.size() %
-            (IsBigObj ? sizeof(coff_symbol32) : sizeof(coff_symbol16))) == 0);
+
+    ArrayRef<uint8_t> AuxData = COFFObj.getSymbolAuxData(SymRef);
+    size_t SymSize = IsBigObj ? sizeof(coff_symbol32) : sizeof(coff_symbol16);
+    assert(AuxData.size() == SymSize * SymRef.getNumberOfAuxSymbols());
+    // The auxillary symbols are structs of sizeof(coff_symbol16) each.
+    // In the big object format (where symbols are coff_symbol32), each
+    // auxillary symbol is padded with 2 bytes at the end. Copy each
+    // auxillary symbol to the Sym.AuxData vector. For file symbols,
+    // the whole range of aux symbols are interpreted as one null padded
+    // string instead.
+    if (SymRef.isFileRecord())
+      Sym.AuxFile = StringRef(reinterpret_cast<const char *>(AuxData.data()),
+                              AuxData.size())
+                        .rtrim('\0');
+    else
+      for (size_t I = 0; I < SymRef.getNumberOfAuxSymbols(); I++)
+        Sym.AuxData.push_back(AuxData.slice(I * SymSize, sizeof(AuxSymbol)));
+
     // Find the unique id of the section
     if (SymRef.getSectionNumber() <=
         0) // Special symbol (undefined/absolute/debug)

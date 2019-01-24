@@ -85,6 +85,8 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_ADD:
   case G_LOAD:
   case G_STORE:
+  case G_ZEXTLOAD:
+  case G_SEXTLOAD:
   case G_GEP:
   case G_AND:
   case G_OR:

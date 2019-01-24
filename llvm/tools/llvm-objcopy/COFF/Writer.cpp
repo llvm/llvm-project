@@ -55,7 +55,8 @@ Error COFFWriter::finalizeSymbolContents() {
       if (Sym.Sym.NumberOfAuxSymbols == 1 &&
           Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC) {
         coff_aux_section_definition *SD =
-            reinterpret_cast<coff_aux_section_definition *>(Sym.AuxData.data());
+            reinterpret_cast<coff_aux_section_definition *>(
+                Sym.AuxData[0].Opaque);
         uint32_t SDSectionNumber;
         if (Sym.AssociativeComdatTargetSectionId == 0) {
           // Not a comdat associative section; just set the Number field to
@@ -79,7 +80,7 @@ Error COFFWriter::finalizeSymbolContents() {
     // we want to set. Only >= 1 would be required, but only == 1 makes sense.
     if (Sym.WeakTargetSymbolId && Sym.Sym.NumberOfAuxSymbols == 1) {
       coff_aux_weak_external *WE =
-          reinterpret_cast<coff_aux_weak_external *>(Sym.AuxData.data());
+          reinterpret_cast<coff_aux_weak_external *>(Sym.AuxData[0].Opaque);
       const Symbol *Target = Obj.findSymbol(*Sym.WeakTargetSymbolId);
       if (Target == nullptr)
         return createStringError(object_error::invalid_symbol_index,
@@ -141,13 +142,26 @@ size_t COFFWriter::finalizeStringTable() {
 
 template <class SymbolTy>
 std::pair<size_t, size_t> COFFWriter::finalizeSymbolTable() {
-  size_t SymTabSize = Obj.getSymbols().size() * sizeof(SymbolTy);
-  for (const auto &S : Obj.getSymbols())
-    SymTabSize += S.AuxData.size();
-  return std::make_pair(SymTabSize, sizeof(SymbolTy));
+  size_t RawSymIndex = 0;
+  for (auto &S : Obj.getMutableSymbols()) {
+    // Symbols normally have NumberOfAuxSymbols set correctly all the time.
+    // For file symbols, we need to know the output file's symbol size to be
+    // able to calculate the number of slots it occupies.
+    if (!S.AuxFile.empty())
+      S.Sym.NumberOfAuxSymbols =
+          alignTo(S.AuxFile.size(), sizeof(SymbolTy)) / sizeof(SymbolTy);
+    S.RawIndex = RawSymIndex;
+    RawSymIndex += 1 + S.Sym.NumberOfAuxSymbols;
+  }
+  return std::make_pair(RawSymIndex * sizeof(SymbolTy), sizeof(SymbolTy));
 }
 
 Error COFFWriter::finalize(bool IsBigObj) {
+  size_t SymTabSize, SymbolSize;
+  std::tie(SymTabSize, SymbolSize) = IsBigObj
+                                         ? finalizeSymbolTable<coff_symbol32>()
+                                         : finalizeSymbolTable<coff_symbol16>();
+
   if (Error E = finalizeRelocTargets())
     return E;
   if (Error E = finalizeSymbolContents())
@@ -199,10 +213,6 @@ Error COFFWriter::finalize(bool IsBigObj) {
   }
 
   size_t StrTabSize = finalizeStringTable();
-  size_t SymTabSize, SymbolSize;
-  std::tie(SymTabSize, SymbolSize) = IsBigObj
-                                         ? finalizeSymbolTable<coff_symbol32>()
-                                         : finalizeSymbolTable<coff_symbol16>();
 
   size_t PointerToSymbolTable = FileSize;
   // StrTabSize <= 4 is the size of an empty string table, only consisting
@@ -312,8 +322,23 @@ template <class SymbolTy> void COFFWriter::writeSymbolStringTables() {
     copySymbol<SymbolTy, coff_symbol32>(*reinterpret_cast<SymbolTy *>(Ptr),
                                         S.Sym);
     Ptr += sizeof(SymbolTy);
-    std::copy(S.AuxData.begin(), S.AuxData.end(), Ptr);
-    Ptr += S.AuxData.size();
+    if (!S.AuxFile.empty()) {
+      // For file symbols, just write the string into the aux symbol slots,
+      // assuming that the unwritten parts are initialized to zero in the memory
+      // mapped file.
+      std::copy(S.AuxFile.begin(), S.AuxFile.end(), Ptr);
+      Ptr += S.Sym.NumberOfAuxSymbols * sizeof(SymbolTy);
+    } else {
+      // For other auxillary symbols, write their opaque payload into one symbol
+      // table slot each. For big object files, the symbols are larger than the
+      // opaque auxillary symbol struct and we leave padding at the end of each
+      // entry.
+      for (const AuxSymbol &AuxSym : S.AuxData) {
+        ArrayRef<uint8_t> Ref = AuxSym.getRef();
+        std::copy(Ref.begin(), Ref.end(), Ptr);
+        Ptr += sizeof(SymbolTy);
+      }
+    }
   }
   if (StrTabBuilder.getSize() > 4 || !Obj.IsPE) {
     // Always write a string table in object files, even an empty one.
