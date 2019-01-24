@@ -56,7 +56,7 @@ public:
   UUID ID;
 };
 
-bool operator==(const ModuleRecord &L, const ModuleRecord &R) {
+inline bool operator==(const ModuleRecord &L, const ModuleRecord &R) {
   return L.OS == R.OS && L.Arch == R.Arch && L.ID == R.ID;
 }
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const ModuleRecord &R);
