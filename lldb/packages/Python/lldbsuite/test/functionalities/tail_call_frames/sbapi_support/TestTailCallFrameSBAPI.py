@@ -10,11 +10,6 @@ from lldbsuite.test.lldbtest import *
 class TestTailCallFrameSBAPI(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    # If your test case doesn't stress debug info, the
-    # set this to true.  That way it won't be run once for
-    # each debug info format.
-    NO_DEBUG_INFO_TESTCASE = True
-
     @skipIf(compiler="clang", compiler_version=['<', '8.0'])
     @skipIf(dwarf_version=['<', '4'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")
