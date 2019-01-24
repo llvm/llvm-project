@@ -2667,7 +2667,6 @@ bool SwiftLanguageRuntime::FixupReference(lldb::addr_t &addr,
       addr &= ~SWIFT_ABI_X86_64_SWIFT_SPARE_BITS_MASK;
       break;
     default:
-      llvm_unreachable("unsupported arch");
       break;
     }
     break;
