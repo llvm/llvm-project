@@ -121,7 +121,11 @@ bool unlikelyExecuted(BasicBlock &BB) {
 
 /// Check whether it's safe to outline \p BB.
 static bool mayExtractBlock(const BasicBlock &BB) {
-  return !BB.hasAddressTaken() && !BB.isEHPad();
+  // EH pads are unsafe to outline because doing so breaks EH type tables. It
+  // follows that invoke instructions cannot be extracted, because CodeExtractor
+  // requires unwind destinations to be within the extraction region.
+  return !BB.hasAddressTaken() && !BB.isEHPad() &&
+         !isa<InvokeInst>(BB.getTerminator());
 }
 
 /// Check whether \p Region is profitable to outline.
@@ -284,6 +288,8 @@ using BlockTy = std::pair<BasicBlock *, unsigned>;
 
 /// A maximal outlining region. This contains all blocks post-dominated by a
 /// sink block, the sink block itself, and all blocks dominated by the sink.
+/// If sink-predecessors and sink-successors cannot be extracted in one region,
+/// the static constructor returns a list of suitable extraction regions.
 class OutliningRegion {
   /// A list of (block, score) pairs. A block's score is non-zero iff it's a
   /// viable sub-region entry point. Blocks with higher scores are better entry
@@ -298,12 +304,9 @@ class OutliningRegion {
   /// Whether the entire function is cold.
   bool EntireFunctionCold = false;
 
-  /// Whether or not \p BB could be the entry point of an extracted region.
-  static bool isViableEntryPoint(BasicBlock &BB) { return !BB.isEHPad(); }
-
   /// If \p BB is a viable entry point, return \p Score. Return 0 otherwise.
   static unsigned getEntryPointScore(BasicBlock &BB, unsigned Score) {
-    return isViableEntryPoint(BB) ? Score : 0;
+    return mayExtractBlock(BB) ? Score : 0;
   }
 
   /// These scores should be lower than the score for predecessor blocks,
@@ -319,21 +322,23 @@ public:
   OutliningRegion(OutliningRegion &&) = default;
   OutliningRegion &operator=(OutliningRegion &&) = default;
 
-  static OutliningRegion create(BasicBlock &SinkBB, const DominatorTree &DT,
-                                const PostDominatorTree &PDT) {
-    OutliningRegion ColdRegion;
-
+  static std::vector<OutliningRegion> create(BasicBlock &SinkBB,
+                                             const DominatorTree &DT,
+                                             const PostDominatorTree &PDT) {
+    std::vector<OutliningRegion> Regions;
     SmallPtrSet<BasicBlock *, 4> RegionBlocks;
+
+    Regions.emplace_back();
+    OutliningRegion *ColdRegion = &Regions.back();
 
     auto addBlockToRegion = [&](BasicBlock *BB, unsigned Score) {
       RegionBlocks.insert(BB);
-      ColdRegion.Blocks.emplace_back(BB, Score);
-      assert(RegionBlocks.size() == ColdRegion.Blocks.size() && "Duplicate BB");
+      ColdRegion->Blocks.emplace_back(BB, Score);
     };
 
     // The ancestor farthest-away from SinkBB, and also post-dominated by it.
     unsigned SinkScore = getEntryPointScore(SinkBB, ScoreForSinkBlock);
-    ColdRegion.SuggestedEntryPoint = (SinkScore > 0) ? &SinkBB : nullptr;
+    ColdRegion->SuggestedEntryPoint = (SinkScore > 0) ? &SinkBB : nullptr;
     unsigned BestScore = SinkScore;
 
     // Visit SinkBB's ancestors using inverse DFS.
@@ -346,8 +351,8 @@ public:
       // If the predecessor is cold and has no predecessors, the entire
       // function must be cold.
       if (SinkPostDom && pred_empty(&PredBB)) {
-        ColdRegion.EntireFunctionCold = true;
-        return ColdRegion;
+        ColdRegion->EntireFunctionCold = true;
+        return Regions;
       }
 
       // If SinkBB does not post-dominate a predecessor, do not mark the
@@ -362,7 +367,7 @@ public:
       // considered as entry points before the sink block.
       unsigned PredScore = getEntryPointScore(PredBB, PredIt.getPathLength());
       if (PredScore > BestScore) {
-        ColdRegion.SuggestedEntryPoint = &PredBB;
+        ColdRegion->SuggestedEntryPoint = &PredBB;
         BestScore = PredScore;
       }
 
@@ -370,10 +375,19 @@ public:
       ++PredIt;
     }
 
-    // Add SinkBB to the cold region. It's considered as an entry point before
-    // any sink-successor blocks.
-    if (mayExtractBlock(SinkBB))
+    // If the sink can be added to the cold region, do so. It's considered as
+    // an entry point before any sink-successor blocks.
+    //
+    // Otherwise, split cold sink-successor blocks using a separate region.
+    // This satisfies the requirement that all extraction blocks other than the
+    // first have predecessors within the extraction region.
+    if (mayExtractBlock(SinkBB)) {
       addBlockToRegion(&SinkBB, SinkScore);
+    } else {
+      Regions.emplace_back();
+      ColdRegion = &Regions.back();
+      BestScore = 0;
+    }
 
     // Find all successors of SinkBB dominated by SinkBB using DFS.
     auto SuccIt = ++df_begin(&SinkBB);
@@ -394,7 +408,7 @@ public:
 
       unsigned SuccScore = getEntryPointScore(SuccBB, ScoreForSuccBlock);
       if (SuccScore > BestScore) {
-        ColdRegion.SuggestedEntryPoint = &SuccBB;
+        ColdRegion->SuggestedEntryPoint = &SuccBB;
         BestScore = SuccScore;
       }
 
@@ -402,7 +416,7 @@ public:
       ++SuccIt;
     }
 
-    return ColdRegion;
+    return Regions;
   }
 
   /// Whether this region has nothing to extract.
@@ -496,28 +510,30 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
     if (!PDT)
       PDT = make_unique<PostDominatorTree>(F);
 
-    auto Region = OutliningRegion::create(*BB, *DT, *PDT);
-    if (Region.empty())
-      continue;
+    auto Regions = OutliningRegion::create(*BB, *DT, *PDT);
+    for (OutliningRegion &Region : Regions) {
+      if (Region.empty())
+        continue;
 
-    if (Region.isEntireFunctionCold()) {
-      LLVM_DEBUG(dbgs() << "Entire function is cold\n");
-      return markFunctionCold(F);
+      if (Region.isEntireFunctionCold()) {
+        LLVM_DEBUG(dbgs() << "Entire function is cold\n");
+        return markFunctionCold(F);
+      }
+
+      // If this outlining region intersects with another, drop the new region.
+      //
+      // TODO: It's theoretically possible to outline more by only keeping the
+      // largest region which contains a block, but the extra bookkeeping to do
+      // this is tricky/expensive.
+      bool RegionsOverlap = any_of(Region.blocks(), [&](const BlockTy &Block) {
+        return !ColdBlocks.insert(Block.first).second;
+      });
+      if (RegionsOverlap)
+        continue;
+
+      OutliningWorklist.emplace_back(std::move(Region));
+      ++NumColdRegionsFound;
     }
-
-    // If this outlining region intersects with another, drop the new region.
-    //
-    // TODO: It's theoretically possible to outline more by only keeping the
-    // largest region which contains a block, but the extra bookkeeping to do
-    // this is tricky/expensive.
-    bool RegionsOverlap = any_of(Region.blocks(), [&](const BlockTy &Block) {
-      return !ColdBlocks.insert(Block.first).second;
-    });
-    if (RegionsOverlap)
-      continue;
-
-    OutliningWorklist.emplace_back(std::move(Region));
-    ++NumColdRegionsFound;
   }
 
   // Outline single-entry cold regions, splitting up larger regions as needed.
