@@ -133,11 +133,11 @@ TEST(SourceCodeTests, OffsetToPosition) {
 }
 
 TEST(SourceCodeTests, IsRangeConsecutive) {
-  EXPECT_TRUE(IsRangeConsecutive(range({2, 2}, {2, 3}), range({2, 3}, {2, 4})));
+  EXPECT_TRUE(isRangeConsecutive(range({2, 2}, {2, 3}), range({2, 3}, {2, 4})));
   EXPECT_FALSE(
-      IsRangeConsecutive(range({0, 2}, {0, 3}), range({2, 3}, {2, 4})));
+      isRangeConsecutive(range({0, 2}, {0, 3}), range({2, 3}, {2, 4})));
   EXPECT_FALSE(
-      IsRangeConsecutive(range({2, 2}, {2, 3}), range({2, 4}, {2, 5})));
+      isRangeConsecutive(range({2, 2}, {2, 3}), range({2, 4}, {2, 5})));
 }
 
 } // namespace

@@ -454,13 +454,11 @@ bool BreakpointLocation::ResolveBreakpointSite() {
   if (new_id == LLDB_INVALID_BREAK_ID) {
     Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS);
     if (log)
-      log->Warning("Tried to add breakpoint site at 0x%" PRIx64
-                   " but it was already present.\n",
+      log->Warning("Failed to add breakpoint site at 0x%" PRIx64,
                    m_address.GetOpcodeLoadAddress(&m_owner.GetTarget()));
-    return false;
   }
 
-  return true;
+  return IsResolved();
 }
 
 bool BreakpointLocation::SetBreakpointSite(BreakpointSiteSP &bp_site_sp) {
