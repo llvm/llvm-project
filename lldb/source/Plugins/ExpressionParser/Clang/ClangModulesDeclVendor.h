@@ -103,7 +103,7 @@ public:
   //------------------------------------------------------------------
   /// Query whether Clang supports modules for a particular language.
   /// LLDB uses this to decide whether to try to find the modules loaded
-  /// by a gaiven compile unit.
+  /// by a given compile unit.
   ///
   /// @param[in] language
   ///     The language to query for.
