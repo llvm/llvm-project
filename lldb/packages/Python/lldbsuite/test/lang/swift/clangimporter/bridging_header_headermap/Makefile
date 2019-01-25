@@ -1,11 +1,12 @@
 LEVEL = ../../../../make
 SWIFT_OBJC_INTEROP := 1
-USESWIFTDRIVER := 1
-# This Makefile overwrites the default rules.
+SWIFT_SOURCES := main.swift
 MAKE_DSYM := NO
-EXE :=
+LD_EXTRAS := -ldylib -L.
+SWIFTFLAGS_EXTRAS = -import-objc-header $(SRCDIR)/bridging-header.h \
+                    -Xcc -I$(SRCDIR)/foo.hmap -I. -I$(SRCDIR)
 
-all: a.out
+all: libdylib.dylib a.out
 
 # This test builds a .dylib whose .swiftmodule imports a Clang module
 # which uses a header file "Foo.h". The main swift program also
@@ -15,35 +16,11 @@ all: a.out
 
 include $(LEVEL)/Makefile.rules
 
-.PHONY: libDylib
-
-a.out: main.swift libDylib
-#       Avoid building a dSYM for the main application.
-	$(SWIFT_FE) -c -primary-file $< $(SWIFT_FEFLAGS) \
-	  -module-name main -o main.o \
-          -emit-module-path main.part.swiftmodule \
-	  -import-objc-header $(SRCDIR)/bridging-header.h \
-          -Xcc -I$(SRCDIR)/foo.hmap -I. -I$(SRCDIR)
-	$(SWIFT_FE) $(SWIFT_FEFLAGS) \
-	  -merge-modules -emit-module main.part.swiftmodule \
-	  -parse-as-library -sil-merge-partial-modules \
-	  -disable-diagnostic-passes -disable-sil-perf-optzns \
-	  -import-objc-header $(SRCDIR)/bridging-header.h \
-          -Xcc -I$(SRCDIR)/foo.hmap \
-          -module-name main -o main.swiftmodule -I$(SRCDIR)
-	$(SWIFTC) -o $@ main.o -Xlinker -add_ast_path -Xlinker main.swiftmodule \
-          -lDylib -L.
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
-	$(DSYMUTIL) a.out
-
-libDylib: dylib.swift
-	$(SWIFTC) -g -Onone $^ -emit-library -module-name Dylib -emit-module \
-	  -Xlinker -install_name -Xlinker @executable_path/$@.dylib $(SWIFTFLAGS)
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
+libdylib.dylib: dylib.swift
+	$(MAKE) MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
+		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
+		DYLIB_NAME=$(shell basename $< .swift) \
+		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
 
 clean::
 	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o

@@ -12,18 +12,11 @@ ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
 
-
 lib%.dylib: %.swift
-	$(SWIFTC) $(SWIFTFLAGS) -sdk "$(SWIFTSDKROOT)" $^ -emit-library \
-		-module-name $(shell basename $< .swift) -emit-module \
-		-Xlinker -install_name -Xlinker @executable_path/$@ \
-		-Xcc -I$(SRCDIR) \
-		-emit-objc-header-path $(shell basename $< .swift)-Swift.h \
-		-import-objc-header \
-$(SRCDIR)/$(shell basename $< .swift)/$(shell basename $< .swift)-Bridging.h
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
+	$(MAKE) MAKE_DSYM=YES X=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
+		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
+		DYLIB_NAME=$(shell basename $< .swift) \
+		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
 
 clean::
 	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o

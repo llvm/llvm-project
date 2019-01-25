@@ -10,7 +10,10 @@ a.out: main.m libFoo.dylib libBar.dylib
 	$(CC) $(CFLAGS) $(MANDATORY_MODULE_BUILD_CFLAGS) -I$(shell pwd) -lFoo -lBar -L$(shell pwd) -o $@ $<
 
 lib%.dylib: %.swift
-	$(SWIFTC) -g -Onone $^ -emit-library -module-name $(shell basename $< .swift) -emit-module -Xlinker -install_name -Xlinker @executable_path/$@ -Xcc -I$(SRCDIR) -Xcc -I$(SRCDIR)/$(shell basename $< .swift) $(SWIFTFLAGS) -emit-objc-header-path $(shell basename $< .swift).h
+	$(MAKE) MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
+		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
+		BASENAME=$(shell basename $< .swift) \
+		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
 
 clean::
 	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o

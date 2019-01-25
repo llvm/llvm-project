@@ -1,4 +1,4 @@
-import Dylib
+import dylib
 
 func use<T>(_ t: T) {}
 
