@@ -11,12 +11,12 @@
 # it is written as a LIT test.
 
 # RUN: rm -rf %t && mkdir %t && cd %t
-# RUN: %target-swiftc -g -Onone -Xfrontend -serialize-debugging-options %p/../../packages/Python/lldbsuite/test/lang/swift/clangimporter/dynamic_type_resolution_import_conflict/Library.swift -emit-library -module-name Dylib -emit-module -Xlinker -install_name -Xlinker @executable_path/libDylib.dylib
+# RUN: %target-swiftc -g -Onone -Xfrontend -serialize-debugging-options %p/../../packages/Python/lldbsuite/test/lang/swift/clangimporter/dynamic_type_resolution_import_conflict/Dylib.swift -emit-library -module-name Dylib -emit-module -Xlinker -install_name -Xlinker @executable_path/libDylib.dylib
 # RUN: %target-swiftc -g -Onone -Xfrontend -serialize-debugging-options %p/../../packages/Python/lldbsuite/test/lang/swift/clangimporter/dynamic_type_resolution_import_conflict/Conflict.swift -Xcc -I%p/../../packages/Python/lldbsuite/test/lang/swift/clangimporter/dynamic_type_resolution_import_conflict/hidden/Foo -emit-library -module-name Conflict -emit-module -Xlinker -install_name -Xlinker @executable_path/libConflict.dylib
 # RUN: %target-swiftc -g -Onone -Xfrontend -serialize-debugging-options %p/../../packages/Python/lldbsuite/test/lang/swift/clangimporter/dynamic_type_resolution_import_conflict/main.swift -lDylib -lConflict -L%t -o a.out -Xcc -I%p/../../packages/Python/lldbsuite/test/lang/swift/clangimporter/dynamic_type_resolution_import_conflict/hidden/Bar -I. -import-objc-header %p/../../packages/Python/lldbsuite/test/lang/swift/clangimporter/dynamic_type_resolution_import_conflict/bridging.h
 # RUN: %lldb a.out -s %s 2>&1 | FileCheck %s
 
-b Library.swift:9
+b Dylib.swift:9
 run
 target v foofoo
 p input

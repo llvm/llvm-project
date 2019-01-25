@@ -50,7 +50,7 @@ class TestSwiftBridgingHeaderHeadermap(TestBase):
                                           lldb.SBFileSpec('dylib.swift'))
         self.runCmd('log enable lldb types')
         self.expect("fr v -d run-target -- a",
-                    substrs=['(Dylib.C<main.Wrapper>.Something)', "hello"])
+                    substrs=['(dylib.C<a.Wrapper>.Something)', "hello"])
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
         
 

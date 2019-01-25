@@ -1,6 +1,8 @@
 LEVEL = ../../../../make
-SRCDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 SWIFT_OBJC_INTEROP := 1
+SWIFT_SOURCES := main.swift
+SWIFTFLAGS_EXTRAS = -Xcc -I$(SRCDIR) -Xcc -I$(SRCDIR)/Bar -I.
+LD_EXTRAS := -ldylib -L$(shell pwd)
 
 # This test builds a .dylib whose .swiftmodule imports a Clang module
 # which uses a header file "Foo.h". The main swift program also
@@ -8,23 +10,15 @@ SWIFT_OBJC_INTEROP := 1
 # but it is in a different directory. We are using a headermap to
 # switch between the two versions of "Foo.h" during build time.
 
-all: libDylib.dylib a.out
+all: libdylib.dylib a.out
 
 include $(LEVEL)/Makefile.rules
 
-a.out: main.swift
-	$(SWIFTC) -g -Onone $^ -lDylib -L$(shell pwd) -o $@ -Xcc -I$(SRCDIR) $(SWIFTFLAGS)
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
-
-libDylib.dylib: dylib.swift
-	$(SWIFTC) -g -Onone $^ -emit-library -module-name Dylib -emit-module -Xlinker -install_name -Xlinker @executable_path/$@ -Xcc -I$(SRCDIR)/foo.hmap  -Xcc -I$(SRCDIR) $(SWIFTFLAGS)
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
+libdylib.dylib: dylib.swift
+	$(MAKE) MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
+		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
+		DYLIB_NAME=$(shell basename $< .swift) \
+		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
 
 clean::
 	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o
-
-SWIFTFLAGS += -Xcc -I$(SRCDIR)/Bar -I.
