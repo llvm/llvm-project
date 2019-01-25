@@ -13,7 +13,7 @@ a.out: main.swift
 	# be able to find the source files.
 	mkdir $(BUILDDIR)/srcroot
 	cp $^ $(BUILDDIR)/srcroot
-	$(SWIFTC) srcroot/main.swift -debug-prefix-map $(BUILDDIR)=. -o $@ $(SWIFTFLAGS)
+	$(SWIFTC) srcroot/main.swift -debug-prefix-map $(BUILDDIR)=. -o $@ $(SWIFTFLAGS) -toolchain-stdlib-rpath
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
