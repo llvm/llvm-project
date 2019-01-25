@@ -139,24 +139,53 @@ if (LLVM_ENABLE_MODULES)
   string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 endif()
 
-# Add a object library that contains the compiled source files.
-add_library(cxxabi_objects OBJECT ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
-set_target_properties(cxxabi_objects
-                      PROPERTIES
-                        CXX_EXTENSIONS
-                          OFF
-                        CXX_STANDARD
-                          11
-                        CXX_STANDARD_REQUIRED
-                          ON
-                        COMPILE_FLAGS
-                          "${LIBCXXABI_COMPILE_FLAGS}"
-                        POSITION_INDEPENDENT_CODE
-                          ON)
+macro(cxxabi_object_library name)
+  cmake_parse_arguments(ARGS "" "" "DEFINES;FLAGS" ${ARGN})
+
+  # Add a object library that contains the compiled source files.
+  add_library(${name} OBJECT ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
+  set_target_properties(${name}
+                        PROPERTIES
+                          CXX_EXTENSIONS
+                            OFF
+                          CXX_STANDARD
+                            11
+                          CXX_STANDARD_REQUIRED
+                            ON
+                          COMPILE_FLAGS
+                            "${LIBCXXABI_COMPILE_FLAGS}"
+                          POSITION_INDEPENDENT_CODE
+                            ON)
+
+  if(ARGS_DEFINES)
+    target_compile_definitions(${name} PRIVATE ${ARGS_DEFINES})
+  endif()
+
+  if(ARGS_FLAGS)
+    target_compile_options(${name} PRIVATE ${ARGS_FLAGS})
+  endif()
+endmacro()
+
+if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
+  append_flags_if_supported(CXXABI_STATIC_OBJECTS_FLAGS -fvisibility=hidden)
+  append_flags_if_supported(CXXABI_STATIC_OBJECTS_FLAGS -fvisibility-global-new-delete-hidden)
+  cxxabi_object_library(cxxabi_static_objects
+    DEFINES
+      _LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS
+      _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS
+    FLAGS ${CXXABI_STATIC_OBJECTS_FLAGS})
+  cxxabi_object_library(cxxabi_shared_objects)
+  set(cxxabi_static_sources $<TARGET_OBJECTS:cxxabi_static_objects>)
+  set(cxxabi_shared_sources $<TARGET_OBJECTS:cxxabi_shared_objects>)
+else()
+  cxxabi_object_library(cxxabi_objects)
+  set(cxxabi_static_sources $<TARGET_OBJECTS:cxxabi_objects>)
+  set(cxxabi_shared_sources $<TARGET_OBJECTS:cxxabi_objects>)
+endif()
 
 # Build the shared library.
 if (LIBCXXABI_ENABLE_SHARED)
-  add_library(cxxabi_shared SHARED $<TARGET_OBJECTS:cxxabi_objects>)
+  add_library(cxxabi_shared SHARED ${cxxabi_shared_sources})
   if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(cxxabi_shared)
   endif()
@@ -187,7 +216,6 @@ endif()
 
 # Build the static library.
 if (LIBCXXABI_ENABLE_STATIC)
-  set(cxxabi_static_sources $<TARGET_OBJECTS:cxxabi_objects>)
   if (LIBCXXABI_USE_LLVM_UNWINDER AND LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
     if (TARGET unwind_static OR HAVE_LIBUNWIND)
       list(APPEND cxxabi_static_sources $<TARGET_OBJECTS:unwind_objects>)

@@ -1412,6 +1412,21 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
   if (DumpExtras) {
     P.NewLine();
+    support::ulittle32_t Version;
+
+    support::ulittle16_t HashStreamIndex;
+    support::ulittle16_t HashAuxStreamIndex;
+    support::ulittle32_t HashKeySize;
+    support::ulittle32_t NumHashBuckets;
+
+    P.formatLine("Header Version: {0}",
+                 static_cast<uint32_t>(Stream.getTpiVersion()));
+    P.formatLine("Hash Stream Index: {0}", Stream.getTypeHashStreamIndex());
+    P.formatLine("Aux Hash Stream Index: {0}",
+                 Stream.getTypeHashStreamAuxIndex());
+    P.formatLine("Hash Key Size: {0}", Stream.getHashKeySize());
+    P.formatLine("Num Hash Buckets: {0}", Stream.getNumHashBuckets());
+
     auto IndexOffsets = Stream.getTypeIndexOffsets();
     P.formatLine("Type Index Offsets:");
     for (const auto &IO : IndexOffsets) {

@@ -6987,9 +6987,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     return;
   }
 
-  MachineModuleInfo &MMI = DAG.getMachineFunction().getMMI();
-  computeUsesVAFloatArgument(I, MMI);
-
   const char *RenameFn = nullptr;
   if (Function *F = I.getCalledFunction()) {
     if (F->isDeclaration()) {
@@ -7345,6 +7342,10 @@ static void GetRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
   SmallVector<unsigned, 4> Regs;
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
 
+  // No work to do for memory operations.
+  if (OpInfo.ConstraintType == TargetLowering::C_Memory)
+    return;
+
   // If this is a constraint for a single physreg, or a constraint for a
   // register class, find it.
   unsigned AssignedReg;
@@ -7501,9 +7502,9 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
   TargetLowering::AsmOperandInfoVector TargetConstraints = TLI.ParseConstraints(
       DAG.getDataLayout(), DAG.getSubtarget().getRegisterInfo(), CS);
 
-  bool hasMemory = false;
-
-  // Remember the HasSideEffect, AlignStack, AsmDialect, MayLoad and MayStore
+  // First Pass: Calculate HasSideEffects and ExtraFlags (AlignStack,
+  // AsmDialect, MayLoad, MayStore).
+  bool HasSideEffect = IA->hasSideEffects();
   ExtraFlags ExtraInfo(CS);
 
   unsigned ArgNo = 0;   // ArgNo - The argument of the CallInst.
@@ -7546,8 +7547,8 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
       OpInfo.ConstraintVT = MVT::Other;
     }
 
-    if (!hasMemory)
-      hasMemory = OpInfo.hasMemory(TLI);
+    if (!HasSideEffect)
+      HasSideEffect = OpInfo.hasMemory(TLI);
 
     // Determine if this InlineAsm MayLoad or MayStore based on the constraints.
     // FIXME: Could we compute this on OpInfo rather than T?
@@ -7558,14 +7559,9 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     ExtraInfo.update(T);
   }
 
-  SDValue Chain, Flag;
-
   // We won't need to flush pending loads if this asm doesn't touch
   // memory and is nonvolatile.
-  if (hasMemory || IA->hasSideEffects())
-    Chain = getRoot();
-  else
-    Chain = DAG.getRoot();
+  SDValue Flag, Chain = (HasSideEffect) ? getRoot() : DAG.getRoot();
 
   // Second pass over the constraints: compute which constraint option to use.
   for (SDISelAsmOperandInfo &OpInfo : ConstraintOperands) {
@@ -7605,19 +7601,6 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
 
   }
 
-  // Third pass - Loop over all of the operands, assigning virtual or physregs
-  // to register class operands.
-  for (SDISelAsmOperandInfo &OpInfo : ConstraintOperands) {
-    SDISelAsmOperandInfo &RefOpInfo =
-        OpInfo.isMatchingInputConstraint()
-            ? ConstraintOperands[OpInfo.getMatchedOperand()]
-            : OpInfo;
-
-    if (RefOpInfo.ConstraintType == TargetLowering::C_Register ||
-        RefOpInfo.ConstraintType == TargetLowering::C_RegisterClass)
-      GetRegistersForValue(DAG, getCurSDLoc(), OpInfo, RefOpInfo);
-  }
-
   // AsmNodeOperands - The operands for the ISD::INLINEASM node.
   std::vector<SDValue> AsmNodeOperands;
   AsmNodeOperands.push_back(SDValue());  // reserve space for input chain
@@ -7635,7 +7618,16 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
   AsmNodeOperands.push_back(DAG.getTargetConstant(
       ExtraInfo.get(), getCurSDLoc(), TLI.getPointerTy(DAG.getDataLayout())));
 
+  // Third pass: Loop over operands to prepare DAG-level operands.. As part of
+  // this, assign virtual and physical registers for inputs and otput.
   for (SDISelAsmOperandInfo &OpInfo : ConstraintOperands) {
+    // Assign Registers.
+    SDISelAsmOperandInfo &RefOpInfo =
+        OpInfo.isMatchingInputConstraint()
+            ? ConstraintOperands[OpInfo.getMatchedOperand()]
+            : OpInfo;
+    GetRegistersForValue(DAG, getCurSDLoc(), OpInfo, RefOpInfo);
+
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
       if (OpInfo.ConstraintType != TargetLowering::C_RegisterClass &&
@@ -7925,8 +7917,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     Chain = DAG.getNode(ISD::TokenFactor, getCurSDLoc(), MVT::Other, OutChains);
 
   // Only Update Root if inline assembly has a memory effect.
-  if (ResultValues.empty() || IA->hasSideEffects() || hasMemory ||
-      !OutChains.empty())
+  if (ResultValues.empty() || HasSideEffect || !OutChains.empty())
     DAG.setRoot(Chain);
 }
 

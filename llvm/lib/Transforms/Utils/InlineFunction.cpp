@@ -1447,47 +1447,45 @@ static void updateCallProfile(Function *Callee, const ValueToValueMapTy &VMap,
       CalleeEntryCount.getCount() < 1)
     return;
   auto CallSiteCount = PSI ? PSI->getProfileCount(TheCall, CallerBFI) : None;
-  uint64_t CallCount =
+  int64_t CallCount =
       std::min(CallSiteCount.hasValue() ? CallSiteCount.getValue() : 0,
                CalleeEntryCount.getCount());
-
-  for (auto const &Entry : VMap)
-    if (isa<CallInst>(Entry.first))
-      if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second))
-        CI->updateProfWeight(CallCount, CalleeEntryCount.getCount());
-  for (BasicBlock &BB : *Callee)
-    // No need to update the callsite if it is pruned during inlining.
-    if (VMap.count(&BB))
-      for (Instruction &I : BB)
-        if (CallInst *CI = dyn_cast<CallInst>(&I))
-          CI->updateProfWeight(CalleeEntryCount.getCount() - CallCount,
-                               CalleeEntryCount.getCount());
+  updateProfileCallee(Callee, -CallCount, &VMap);
 }
 
-/// Update the entry count of callee after inlining.
-///
-/// The callsite's block count is subtracted from the callee's function entry
-/// count.
-static void updateCalleeCount(BlockFrequencyInfo *CallerBFI, BasicBlock *CallBB,
-                              Instruction *CallInst, Function *Callee,
-                              ProfileSummaryInfo *PSI) {
-  // If the callee has a original count of N, and the estimated count of
-  // callsite is M, the new callee count is set to N - M. M is estimated from
-  // the caller's entry count, its entry block frequency and the block frequency
-  // of the callsite.
+void llvm::updateProfileCallee(
+    Function *Callee, int64_t entryDelta,
+    const ValueMap<const Value *, WeakTrackingVH> *VMap) {
   auto CalleeCount = Callee->getEntryCount();
-  if (!CalleeCount.hasValue() || !PSI)
+  if (!CalleeCount.hasValue())
     return;
-  auto CallCount = PSI->getProfileCount(CallInst, CallerBFI);
-  if (!CallCount.hasValue())
-    return;
+
+  uint64_t priorEntryCount = CalleeCount.getCount();
+  uint64_t newEntryCount = priorEntryCount;
+
   // Since CallSiteCount is an estimate, it could exceed the original callee
-  // count and has to be set to 0.
-  if (CallCount.getValue() > CalleeCount.getCount())
-    CalleeCount.setCount(0);
+  // count and has to be set to 0 so guard against underflow.
+  if (entryDelta < 0 && static_cast<uint64_t>(-entryDelta) > priorEntryCount)
+    newEntryCount = 0;
   else
-    CalleeCount.setCount(CalleeCount.getCount() - CallCount.getValue());
-  Callee->setEntryCount(CalleeCount);
+    newEntryCount = priorEntryCount + entryDelta;
+
+  Callee->setEntryCount(newEntryCount);
+
+  // During inlining ?
+  if (VMap) {
+    uint64_t cloneEntryCount = priorEntryCount - newEntryCount;
+    for (auto const &Entry : *VMap)
+      if (isa<CallInst>(Entry.first))
+        if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second))
+          CI->updateProfWeight(cloneEntryCount, priorEntryCount);
+  }
+  for (BasicBlock &BB : *Callee)
+    // No need to update the callsite if it is pruned during inlining.
+    if (!VMap || VMap->count(&BB))
+      for (Instruction &I : BB)
+        if (CallInst *CI = dyn_cast<CallInst>(&I))
+          CI->updateProfWeight(newEntryCount, priorEntryCount);
 }
 
 /// This function inlines the called function into the basic block of the
@@ -1683,8 +1681,6 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
 
     updateCallProfile(CalledFunc, VMap, CalledFunc->getEntryCount(), TheCall,
                       IFI.PSI, IFI.CallerBFI);
-    // Update the profile count of callee.
-    updateCalleeCount(IFI.CallerBFI, OrigBB, TheCall, CalledFunc, IFI.PSI);
 
     // Inject byval arguments initialization.
     for (std::pair<Value*, Value*> &Init : ByValInit)

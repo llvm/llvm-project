@@ -56,17 +56,31 @@ static llvm::Triple::ArchType toArch(llvm::StringRef str) {
       .Default(Triple::UnknownArch);
 }
 
-static llvm::StringRef consume_front(llvm::StringRef &str, size_t n) {
-  llvm::StringRef result = str.take_front(n);
-  str = str.drop_front(n);
-  return result;
+/// Return the number of hex digits needed to encode an (POD) object of a given
+/// type.
+template <typename T> static constexpr size_t hex_digits() {
+  return 2 * sizeof(T);
+}
+
+/// Consume the right number of digits from the input StringRef and convert it
+/// to the endian-specific integer N. Return true on success.
+template <typename T> static bool consume_hex_integer(llvm::StringRef &str, T &N) {
+  llvm::StringRef chunk = str.take_front(hex_digits<T>());
+  uintmax_t t;
+  if (!to_integer(chunk, t, 16))
+    return false;
+  N = t;
+  str = str.drop_front(hex_digits<T>());
+  return true;
 }
 
 static UUID parseModuleId(llvm::Triple::OSType os, llvm::StringRef str) {
-  struct uuid_data {
-    llvm::support::ulittle32_t uuid1;
-    llvm::support::ulittle16_t uuid2[2];
-    uint8_t uuid3[8];
+  struct data_t {
+    struct uuid_t {
+      llvm::support::ulittle32_t part1;
+      llvm::support::ulittle16_t part2[2];
+      uint8_t part3[8];
+    } uuid;
     llvm::support::ulittle32_t age;
   } data;
   static_assert(sizeof(data) == 20, "");
@@ -74,31 +88,28 @@ static UUID parseModuleId(llvm::Triple::OSType os, llvm::StringRef str) {
   // depending on the size of the age field, which is of variable length.
   // The first three chunks of the id are encoded in big endian, so we need to
   // byte-swap those.
-  if (str.size() < 33 || str.size() > 40)
+  if (str.size() <= hex_digits<data_t::uuid_t>() ||
+      str.size() > hex_digits<data_t>())
     return UUID();
-  uint32_t t;
-  if (to_integer(consume_front(str, 8), t, 16))
-    data.uuid1 = t;
-  else
+  if (!consume_hex_integer(str, data.uuid.part1))
     return UUID();
-  for (int i = 0; i < 2; ++i) {
-    if (to_integer(consume_front(str, 4), t, 16))
-      data.uuid2[i] = t;
-    else
+  for (auto &t : data.uuid.part2) {
+    if (!consume_hex_integer(str, t))
       return UUID();
   }
-  for (int i = 0; i < 8; ++i) {
-    if (!to_integer(consume_front(str, 2), data.uuid3[i], 16))
+  for (auto &t : data.uuid.part3) {
+    if (!consume_hex_integer(str, t))
       return UUID();
   }
-  if (to_integer(str, t, 16))
-    data.age = t;
-  else
+  uint32_t age;
+  if (!to_integer(str, age, 16))
     return UUID();
+  data.age = age;
 
   // On non-windows, the age field should always be zero, so we don't include to
   // match the native uuid format of these platforms.
-  return UUID::fromData(&data, os == llvm::Triple::Win32 ? 20 : 16);
+  return UUID::fromData(&data, os == llvm::Triple::Win32 ? sizeof(data)
+                                                         : sizeof(data.uuid));
 }
 
 Record::Kind Record::classify(llvm::StringRef Line) {
@@ -153,15 +164,11 @@ llvm::Optional<ModuleRecord> ModuleRecord::parse(llvm::StringRef Line) {
   return ModuleRecord(OS, Arch, std::move(ID));
 }
 
-bool breakpad::operator==(const ModuleRecord &L, const ModuleRecord &R) {
-  return L.getOS() == R.getOS() && L.getArch() == R.getArch() &&
-         L.getID() == R.getID();
-}
 llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
                                         const ModuleRecord &R) {
-  return OS << "MODULE " << llvm::Triple::getOSTypeName(R.getOS()) << " "
-            << llvm::Triple::getArchTypeName(R.getArch()) << " "
-            << R.getID().GetAsString();
+  return OS << "MODULE " << llvm::Triple::getOSTypeName(R.OS) << " "
+            << llvm::Triple::getArchTypeName(R.Arch) << " "
+            << R.ID.GetAsString();
 }
 
 llvm::Optional<InfoRecord> InfoRecord::parse(llvm::StringRef Line) {
@@ -188,7 +195,7 @@ llvm::Optional<InfoRecord> InfoRecord::parse(llvm::StringRef Line) {
 
 llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
                                         const InfoRecord &R) {
-  return OS << "INFO CODE_ID " << R.getID().GetAsString();
+  return OS << "INFO CODE_ID " << R.ID.GetAsString();
 }
 
 static bool parsePublicOrFunc(llvm::StringRef Line, bool &Multiple,
@@ -242,15 +249,14 @@ llvm::Optional<FuncRecord> FuncRecord::parse(llvm::StringRef Line) {
 }
 
 bool breakpad::operator==(const FuncRecord &L, const FuncRecord &R) {
-  return L.getMultiple() == R.getMultiple() &&
-         L.getAddress() == R.getAddress() && L.getSize() == R.getSize() &&
-         L.getParamSize() == R.getParamSize() && L.getName() == R.getName();
+  return L.Multiple == R.Multiple && L.Address == R.Address &&
+         L.Size == R.Size && L.ParamSize == R.ParamSize && L.Name == R.Name;
 }
 llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
                                         const FuncRecord &R) {
   return OS << llvm::formatv("FUNC {0}{1:x-} {2:x-} {3:x-} {4}",
-                             R.getMultiple() ? "m " : "", R.getAddress(),
-                             R.getSize(), R.getParamSize(), R.getName());
+                             R.Multiple ? "m " : "", R.Address, R.Size,
+                             R.ParamSize, R.Name);
 }
 
 llvm::Optional<PublicRecord> PublicRecord::parse(llvm::StringRef Line) {
@@ -265,15 +271,14 @@ llvm::Optional<PublicRecord> PublicRecord::parse(llvm::StringRef Line) {
 }
 
 bool breakpad::operator==(const PublicRecord &L, const PublicRecord &R) {
-  return L.getMultiple() == R.getMultiple() &&
-         L.getAddress() == R.getAddress() &&
-         L.getParamSize() == R.getParamSize() && L.getName() == R.getName();
+  return L.Multiple == R.Multiple && L.Address == R.Address &&
+         L.ParamSize == R.ParamSize && L.Name == R.Name;
 }
 llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
                                         const PublicRecord &R) {
   return OS << llvm::formatv("PUBLIC {0}{1:x-} {2:x-} {3}",
-                             R.getMultiple() ? "m " : "", R.getAddress(),
-                             R.getParamSize(), R.getName());
+                             R.Multiple ? "m " : "", R.Address, R.ParamSize,
+                             R.Name);
 }
 
 llvm::StringRef breakpad::toString(Record::Kind K) {

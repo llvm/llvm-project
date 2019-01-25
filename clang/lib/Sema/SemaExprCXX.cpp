@@ -6854,8 +6854,9 @@ canRecoverDotPseudoDestructorCallsOnPointerObjects(Sema &SemaRef,
                                                    QualType DestructedType) {
   // If this is a record type, check if its destructor is callable.
   if (auto *RD = DestructedType->getAsCXXRecordDecl()) {
-    if (CXXDestructorDecl *D = SemaRef.LookupDestructor(RD))
-      return SemaRef.CanUseDecl(D, /*TreatUnavailableAsInvalid=*/false);
+    if (RD->hasDefinition())
+      if (CXXDestructorDecl *D = SemaRef.LookupDestructor(RD))
+        return SemaRef.CanUseDecl(D, /*TreatUnavailableAsInvalid=*/false);
     return false;
   }
 

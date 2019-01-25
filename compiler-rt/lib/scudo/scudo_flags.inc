@@ -36,7 +36,9 @@ SCUDO_FLAG(int, QuarantineChunksUpToSize, -1,
           "Size in bytes up to which chunks will be quarantined (if lower than"
           "or equal to). Defaults to 256 (32-bit) or 2048 (64-bit)")
 
-SCUDO_FLAG(bool, DeallocationTypeMismatch, true,
+// Disable the deallocation type check by default on Android, it causes too many
+// issues with third party libraries.
+SCUDO_FLAG(bool, DeallocationTypeMismatch, !SANITIZER_ANDROID,
           "Report errors on malloc/delete, new/free, new/delete[], etc.")
 
 SCUDO_FLAG(bool, DeleteSizeMismatch, true,

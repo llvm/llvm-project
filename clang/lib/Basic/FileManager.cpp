@@ -188,20 +188,14 @@ const FileEntry *FileManager::getFile(StringRef Filename, bool openFile,
       *SeenFileEntries.insert(std::make_pair(Filename, nullptr)).first;
 
   // See if there is already an entry in the map.
-  if (NamedFileEnt.second) {
-    if (NamedFileEnt.second == NON_EXISTENT_FILE)
-      return nullptr;
-    // Entry exists: return it *unless* it wasn't opened and open is requested.
-    if (!(NamedFileEnt.second->DeferredOpen && openFile))
-      return NamedFileEnt.second;
-    // We previously stat()ed the file, but didn't open it: do that below.
-    // FIXME: the below does other redundant work too (stats the dir and file).
-  } else {
-    // By default, initialize it to invalid.
-    NamedFileEnt.second = NON_EXISTENT_FILE;
-  }
+  if (NamedFileEnt.second)
+    return NamedFileEnt.second == NON_EXISTENT_FILE ? nullptr
+                                                    : NamedFileEnt.second;
 
   ++NumFileCacheMisses;
+
+  // By default, initialize it to invalid.
+  NamedFileEnt.second = NON_EXISTENT_FILE;
 
   // Get the null-terminated file name as stored as the key of the
   // SeenFileEntries map.
@@ -240,7 +234,6 @@ const FileEntry *FileManager::getFile(StringRef Filename, bool openFile,
   // It exists.  See if we have already opened a file with the same inode.
   // This occurs when one dir is symlinked to another, for example.
   FileEntry &UFE = UniqueRealFiles[Data.UniqueID];
-  UFE.DeferredOpen = !openFile;
 
   NamedFileEnt.second = &UFE;
 
@@ -255,15 +248,6 @@ const FileEntry *FileManager::getFile(StringRef Filename, bool openFile,
       assert(NamedFileEnt.second == &UFE &&
              "filename from getStatValue() refers to wrong file");
     InterndFileName = NamedFileEnt.first().data();
-  }
-
-  // If we opened the file for the first time, record the resulting info.
-  // Do this even if the cache entry was valid, maybe we didn't previously open.
-  if (F && !UFE.File) {
-    if (auto PathName = F->getName())
-      fillRealPathName(&UFE, *PathName);
-    UFE.File = std::move(F);
-    assert(!UFE.DeferredOpen && "we just opened it!");
   }
 
   if (UFE.isValid()) { // Already have an entry with this inode, return it.
@@ -296,9 +280,13 @@ const FileEntry *FileManager::getFile(StringRef Filename, bool openFile,
   UFE.UniqueID = Data.UniqueID;
   UFE.IsNamedPipe = Data.IsNamedPipe;
   UFE.InPCH = Data.InPCH;
+  UFE.File = std::move(F);
   UFE.IsValid = true;
-  // Note File and DeferredOpen were initialized above.
 
+  if (UFE.File) {
+    if (auto PathName = UFE.File->getName())
+      fillRealPathName(&UFE, *PathName);
+  }
   return &UFE;
 }
 
@@ -370,7 +358,6 @@ FileManager::getVirtualFile(StringRef Filename, off_t Size,
   UFE->UID     = NextFileUID++;
   UFE->IsValid = true;
   UFE->File.reset();
-  UFE->DeferredOpen = false;
   return UFE;
 }
 

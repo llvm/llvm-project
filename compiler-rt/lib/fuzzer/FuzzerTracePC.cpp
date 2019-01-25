@@ -536,24 +536,44 @@ void __sanitizer_cov_trace_switch(uint64_t Val, uint64_t *Cases) {
   uint64_t N = Cases[0];
   uint64_t ValSizeInBits = Cases[1];
   uint64_t *Vals = Cases + 2;
-  // Skip the most common and the most boring case.
-  if (Vals[N - 1]  < 256 && Val < 256)
+  // Skip the most common and the most boring case: all switch values are small.
+  // We may want to skip this at compile-time, but it will make the
+  // instrumentation less general.
+  if (Vals[N - 1]  < 256)
+    return;
+  // Also skip small inputs values, they won't give good signal.
+  if (Val < 256)
     return;
   uintptr_t PC = reinterpret_cast<uintptr_t>(GET_CALLER_PC());
   size_t i;
-  uint64_t Token = 0;
+  uint64_t Smaller = 0;
+  uint64_t Larger = ~(uint64_t)0;
+  // Find two switch values such that Smaller < Val < Larger.
+  // Use 0 and 0xfff..f as the defaults.
   for (i = 0; i < N; i++) {
-    Token = Val ^ Vals[i];
-    if (Val < Vals[i])
+    if (Val < Vals[i]) {
+      Larger = Vals[i];
       break;
+    }
+    if (Val > Vals[i]) Smaller = Vals[i];
   }
 
-  if (ValSizeInBits == 16)
-    fuzzer::TPC.HandleCmp(PC + i, static_cast<uint16_t>(Token), (uint16_t)(0));
-  else if (ValSizeInBits == 32)
-    fuzzer::TPC.HandleCmp(PC + i, static_cast<uint32_t>(Token), (uint32_t)(0));
-  else
-    fuzzer::TPC.HandleCmp(PC + i, Token, (uint64_t)(0));
+  // Apply HandleCmp to {Val,Smaller} and {Val, Larger},
+  // use i as the PC modifier for HandleCmp.
+  if (ValSizeInBits == 16) {
+    fuzzer::TPC.HandleCmp(PC + 2 * i, static_cast<uint16_t>(Val),
+                          (uint16_t)(Smaller));
+    fuzzer::TPC.HandleCmp(PC + 2 * i + 1, static_cast<uint16_t>(Val),
+                          (uint16_t)(Larger));
+  } else if (ValSizeInBits == 32) {
+    fuzzer::TPC.HandleCmp(PC + 2 * i, static_cast<uint32_t>(Val),
+                          (uint32_t)(Smaller));
+    fuzzer::TPC.HandleCmp(PC + 2 * i + 1, static_cast<uint32_t>(Val),
+                          (uint32_t)(Larger));
+  } else {
+    fuzzer::TPC.HandleCmp(PC + 2*i, Val, Smaller);
+    fuzzer::TPC.HandleCmp(PC + 2*i + 1, Val, Larger);
+  }
 }
 
 ATTRIBUTE_INTERFACE

@@ -3290,7 +3290,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(TLI.expandAddSubSat(Node, DAG));
     break;
   case ISD::SMULFIX:
-    Results.push_back(TLI.getExpandedFixedPointMultiplication(Node, DAG));
+    Results.push_back(TLI.expandFixedPointMul(Node, DAG));
     break;
   case ISD::SADDO:
   case ISD::SSUBO: {

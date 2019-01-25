@@ -102,7 +102,7 @@ X86FixupSetCCPass::findFlagsImpDef(MachineBasicBlock *MBB,
   auto MBBStart = MBB->rend();
   for (int i = 0; (i < SearchBound) && (MI != MBBStart); ++i, ++MI)
     for (auto &Op : MI->implicit_operands())
-      if ((Op.getReg() == X86::EFLAGS) && (Op.isDef()))
+      if (Op.isReg() && (Op.getReg() == X86::EFLAGS) && Op.isDef())
         return &*MI;
 
   return nullptr;
@@ -110,7 +110,7 @@ X86FixupSetCCPass::findFlagsImpDef(MachineBasicBlock *MBB,
 
 bool X86FixupSetCCPass::impUsesFlags(MachineInstr *MI) {
   for (auto &Op : MI->implicit_operands())
-    if ((Op.getReg() == X86::EFLAGS) && (Op.isUse()))
+    if (Op.isReg() && (Op.getReg() == X86::EFLAGS) && Op.isUse())
       return true;
 
   return false;

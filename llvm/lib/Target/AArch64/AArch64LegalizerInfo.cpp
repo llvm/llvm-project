@@ -124,6 +124,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   getActionDefinitionsBuilder({G_FREM, G_FPOW}).libcallFor({s32, s64});
 
   getActionDefinitionsBuilder(G_FCEIL)
+      // If we don't have full FP16 support, then scalarize the elements of
+      // vectors containing fp16 types.
+      .fewerElementsIf(
+          [=, &ST](const LegalityQuery &Query) {
+            const auto &Ty = Query.Types[0];
+            return Ty.isVector() && Ty.getElementType() == s16 &&
+                   !ST.hasFullFP16();
+          },
+          [=](const LegalityQuery &Query) { return std::make_pair(0, s16); })
       // If we don't have full FP16 support, then widen s16 to s32 if we
       // encounter it.
       .widenScalarIf(
@@ -131,7 +140,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
             return Query.Types[0] == s16 && !ST.hasFullFP16();
           },
           [=](const LegalityQuery &Query) { return std::make_pair(0, s32); })
-      .legalFor({s16, s32, s64, v2s32, v4s32, v2s64});
+      .legalFor({s16, s32, s64, v2s32, v4s32, v2s64, v2s16, v4s16, v8s16});
 
   getActionDefinitionsBuilder(G_INSERT)
       .unsupportedIf([=](const LegalityQuery &Query) {
@@ -435,7 +444,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       });
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
-      .legalFor({{v4s32, s32}, {v2s64, s64}})
+      .legalFor({{v4s16, s16}, {v8s16, s16}, {v4s32, s32}, {v2s64, s64}})
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
 

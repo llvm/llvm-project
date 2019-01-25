@@ -3205,6 +3205,7 @@ bool AttributedType::isQualifier() const {
   case attr::TypeNullable:
   case attr::TypeNullUnspecified:
   case attr::LifetimeBound:
+  case attr::AddressSpace:
     return true;
 
   // All other type attributes aren't qualifiers; they rewrite the modified

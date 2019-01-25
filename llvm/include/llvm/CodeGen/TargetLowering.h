@@ -3840,8 +3840,7 @@ public:
 
   /// Method for building the DAG expansion of ISD::SMULFIX. This method accepts
   /// integers as its arguments.
-  SDValue getExpandedFixedPointMultiplication(SDNode *Node,
-                                              SelectionDAG &DAG) const;
+  SDValue expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

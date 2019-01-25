@@ -3,6 +3,13 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -mattr=+fullfp16 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FP16
 
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -mattr=-fullfp16 \
+; RUN:     -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* \
+; RUN:     2>&1 | FileCheck %s --check-prefixes=GISEL,GISEL-NOFP16,FALLBACK
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -mattr=+fullfp16 \
+; RUN:     -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* \
+; RUN:     2>&1 | FileCheck %s --check-prefixes=GISEL,GISEL-FP16,FALLBACK
+
 ;;; Half vectors
 
 %v4f16 = type <4 x half>
@@ -111,6 +118,12 @@ define %v4f16 @test_v4f16.ceil(%v4f16 %a) {
   ; CHECK-FP16-NOT:       fcvt
   ; CHECK-FP16:           frintp.4h
   ; CHECK-FP16-NEXT:      ret
+  ; FALLBACK-NOT: remark{{.*}}test_v4f16.ceil:
+  ; GISEL-LABEL:          test_v4f16.ceil:
+  ; GISEL-NOFP16-COUNT-4: frintp s{{[0-9]+}}, s{{[0-9]+}}
+  ; GISEL-FP16-NOT:       fcvt
+  ; GISEL-FP16:           frintp.4h
+  ; GISEL-FP16-NEXT:      ret
   %1 = call %v4f16 @llvm.ceil.v4f16(%v4f16 %a)
   ret %v4f16 %1
 }
@@ -268,6 +281,12 @@ define %v8f16 @test_v8f16.ceil(%v8f16 %a) {
   ; CHECK-FP16-NOT:       fcvt
   ; CHECK-FP16:           frintp.8h
   ; CHECK-FP16-NEXT:      ret
+  ; FALLBACK-NOT:         remark{{.*}}test_v8f16.ceil:
+  ; GISEL-LABEL:          test_v8f16.ceil:
+  ; GISEL-NOFP16-COUNT-8: frintp s{{[0-9]+}}, s{{[0-9]+}}
+  ; GISEL-FP16-NOT:       fcvt
+  ; GISEL-FP16:           frintp.8h
+  ; GISEL-FP16-NEXT:      ret
   %1 = call %v8f16 @llvm.ceil.v8f16(%v8f16 %a)
   ret %v8f16 %1
 }
@@ -400,8 +419,11 @@ define %v2f32 @test_v2f32.floor(%v2f32 %a) {
   ret %v2f32 %1
 }
 ; CHECK-LABEL: test_v2f32.ceil:
+; FALLBACK-NOT: remark{{.*}}test_v2f32.ceil
+; GISEL-LABEL: test_v2f32.ceil:
 define %v2f32 @test_v2f32.ceil(%v2f32 %a) {
   ; CHECK: frintp.2s
+  ; GISEL: frintp.2s
   %1 = call %v2f32 @llvm.ceil.v2f32(%v2f32 %a)
   ret %v2f32 %1
 }
@@ -525,8 +547,11 @@ define %v4f32 @test_v4f32.floor(%v4f32 %a) {
   ret %v4f32 %1
 }
 ; CHECK: test_v4f32.ceil:
+; FALLBACK-NOT: remark{{.*}}test_v4f32.ceil
+; GISEL-LABEL: test_v4f32.ceil:
 define %v4f32 @test_v4f32.ceil(%v4f32 %a) {
   ; CHECK: frintp.4s
+  ; GISEL: frintp.4s
   %1 = call %v4f32 @llvm.ceil.v4f32(%v4f32 %a)
   ret %v4f32 %1
 }
@@ -649,8 +674,11 @@ define %v2f64 @test_v2f64.floor(%v2f64 %a) {
   ret %v2f64 %1
 }
 ; CHECK: test_v2f64.ceil:
+; FALLBACK-NOT: remark{{.*}}test_v2f64.ceil
+; GISEL-LABEL: test_v2f64.ceil:
 define %v2f64 @test_v2f64.ceil(%v2f64 %a) {
   ; CHECK: frintp.2d
+  ; GISEL: frintp.2d
   %1 = call %v2f64 @llvm.ceil.v2f64(%v2f64 %a)
   ret %v2f64 %1
 }

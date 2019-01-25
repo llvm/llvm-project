@@ -1250,6 +1250,24 @@ static void sortSection(OutputSection *Sec,
   if (Name == ".init" || Name == ".fini")
     return;
 
+  // .toc is allocated just after .got and is accessed using GOT-relative
+  // relocations. Object files compiled with small code model have an
+  // addressable range of [.got, .got + 0xFFFC] for GOT-relative relocations.
+  // To reduce the risk of relocation overflow, .toc contents are sorted so that
+  // sections having smaller relocation offsets are at beginning of .toc
+  if (Config->EMachine == EM_PPC64 && Name == ".toc") {
+    if (Script->HasSectionsCommand)
+      return;
+    assert(Sec->SectionCommands.size() == 1);
+    auto *ISD = cast<InputSectionDescription>(Sec->SectionCommands[0]);
+    std::stable_sort(ISD->Sections.begin(), ISD->Sections.end(),
+                     [](const InputSection *A, const InputSection *B) -> bool {
+                       return A->File->PPC64SmallCodeModelRelocs &&
+                              !B->File->PPC64SmallCodeModelRelocs;
+                     });
+    return;
+  }
+
   // Sort input sections by priority using the list provided
   // by --symbol-ordering-file.
   if (!Order.empty())

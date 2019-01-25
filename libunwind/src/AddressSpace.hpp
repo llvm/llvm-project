@@ -535,11 +535,11 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
 #endif
             cbdata->sects->dwarf_index_section = eh_frame_hdr_start;
             cbdata->sects->dwarf_index_section_length = phdr->p_memsz;
-            EHHeaderParser<LocalAddressSpace>::decodeEHHdr(
+            found_hdr = EHHeaderParser<LocalAddressSpace>::decodeEHHdr(
                 *cbdata->addressSpace, eh_frame_hdr_start, phdr->p_memsz,
                 hdrInfo);
-            cbdata->sects->dwarf_section = hdrInfo.eh_frame_ptr;
-            found_hdr = true;
+            if (found_hdr)
+              cbdata->sects->dwarf_section = hdrInfo.eh_frame_ptr;
           }
         }
 

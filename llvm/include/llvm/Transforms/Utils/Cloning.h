@@ -268,6 +268,13 @@ BasicBlock *DuplicateInstructionsInSplitBetween(BasicBlock *BB,
                                                 ValueToValueMapTy &ValueMapping,
                                                 DomTreeUpdater &DTU);
 
+/// Updates profile information by adjusting the entry count by adding
+/// entryDelta then scaling callsite information by the new count divided by the
+/// old count. VMap is used during inlinng to also update the new clone
+void updateProfileCallee(
+    Function *Callee, int64_t entryDelta,
+    const ValueMap<const Value *, WeakTrackingVH> *VMap = nullptr);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_CLONING_H

@@ -1411,6 +1411,10 @@ public:
   QualType BuildVectorType(QualType T, Expr *VecSize, SourceLocation AttrLoc);
   QualType BuildExtVectorType(QualType T, Expr *ArraySize,
                               SourceLocation AttrLoc);
+  QualType BuildAddressSpaceAttr(QualType &T, LangAS ASIdx, Expr *AddrSpace,
+                                 SourceLocation AttrLoc);
+
+  /// Same as above, but constructs the AddressSpace index if not provided.
   QualType BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
                                  SourceLocation AttrLoc);
 
@@ -2455,18 +2459,38 @@ public:
     AMK_ProtocolImplementation,
   };
 
+  /// Describes the kind of priority given to an availability attribute.
+  ///
+  /// The sum of priorities deteremines the final priority of the attribute.
+  /// The final priority determines how the attribute will be merged.
+  /// An attribute with a lower priority will always remove higher priority
+  /// attributes for the specified platform when it is being applied. An
+  /// attribute with a higher priority will not be applied if the declaration
+  /// already has an availability attribute with a lower priority for the
+  /// specified platform. The final prirority values are not expected to match
+  /// the values in this enumeration, but instead should be treated as a plain
+  /// integer value. This enumeration just names the priority weights that are
+  /// used to calculate that final vaue.
+  enum AvailabilityPriority : int {
+    /// The availability attribute was specified explicitly next to the
+    /// declaration.
+    AP_Explicit = 0,
+
+    /// The availability attribute was applied using '#pragma clang attribute'.
+    AP_PragmaClangAttribute = 1,
+
+    /// The availability attribute for a specific platform was inferred from
+    /// an availability attribute for another platform.
+    AP_InferredFromOtherPlatform = 2
+  };
+
   /// Attribute merging methods. Return true if a new attribute was added.
-  AvailabilityAttr *mergeAvailabilityAttr(NamedDecl *D, SourceRange Range,
-                                          IdentifierInfo *Platform,
-                                          bool Implicit,
-                                          VersionTuple Introduced,
-                                          VersionTuple Deprecated,
-                                          VersionTuple Obsoleted,
-                                          bool IsUnavailable,
-                                          StringRef Message,
-                                          bool IsStrict, StringRef Replacement,
-                                          AvailabilityMergeKind AMK,
-                                          unsigned AttrSpellingListIndex);
+  AvailabilityAttr *mergeAvailabilityAttr(
+      NamedDecl *D, SourceRange Range, IdentifierInfo *Platform, bool Implicit,
+      VersionTuple Introduced, VersionTuple Deprecated, VersionTuple Obsoleted,
+      bool IsUnavailable, StringRef Message, bool IsStrict,
+      StringRef Replacement, AvailabilityMergeKind AMK, int Priority,
+      unsigned AttrSpellingListIndex);
   TypeVisibilityAttr *mergeTypeVisibilityAttr(Decl *D, SourceRange Range,
                                        TypeVisibilityAttr::VisibilityType Vis,
                                               unsigned AttrSpellingListIndex);
