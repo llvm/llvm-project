@@ -109,3 +109,15 @@ size_t UUID::SetFromStringRef(llvm::StringRef str, uint32_t num_uuid_bytes) {
   // Else return zero to indicate we were not able to parse a UUID value
   return 0;
 }
+
+size_t UUID::SetFromOptionalStringRef(llvm::StringRef str, 
+                                      uint32_t num_uuid_bytes) {
+  size_t num_chars_consumed = SetFromStringRef(str, num_uuid_bytes);
+  if (num_chars_consumed) {
+    if (llvm::all_of(m_bytes, [](uint8_t b) { return b == 0; }))
+        Clear();
+  }
+  
+  return num_chars_consumed;
+}
+

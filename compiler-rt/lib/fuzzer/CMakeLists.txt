@@ -72,9 +72,10 @@ if (CMAKE_CXX_FLAGS MATCHES "fsanitize-coverage")
 endif()
 
 if(MSVC)
-  # Silence warnings with /Ehsc and avoid an error by unecessarily defining
-  # thread_local when it isn't even used on Windows.
-  list(APPEND LIBFUZZER_CFLAGS /EHsc)
+  # Silence warnings by turning off exceptions in MSVC headers and avoid an
+  # error by unecessarily defining thread_local when it isn't even used on
+  # Windows.
+  list(APPEND LIBFUZZER_CFLAGS -D_HAS_EXCEPTIONS=0)
 else()
   if(NOT HAS_THREAD_LOCAL)
     list(APPEND LIBFUZZER_CFLAGS -Dthread_local=__thread)

@@ -34,15 +34,21 @@ class ScopedReport {
   ScopedReport(bool fatal = false) : error_message_(1), fatal(fatal) {
     BlockingMutexLock lock(&error_message_lock_);
     error_message_ptr_ = fatal ? &error_message_ : nullptr;
+    ++hwasan_report_count;
   }
 
   ~ScopedReport() {
-    BlockingMutexLock lock(&error_message_lock_);
-    if (fatal) {
-      SetAbortMessage(error_message_.data());
-      Die();
+    {
+      BlockingMutexLock lock(&error_message_lock_);
+      if (fatal)
+        SetAbortMessage(error_message_.data());
+      error_message_ptr_ = nullptr;
     }
-    error_message_ptr_ = nullptr;
+    if (common_flags()->print_module_map >= 2 ||
+        (fatal && common_flags()->print_module_map))
+      DumpProcessMap();
+    if (fatal)
+      Die();
   }
 
   static void MaybeAppendToErrorMessage(const char *msg) {
