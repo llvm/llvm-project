@@ -334,6 +334,7 @@ enum {
   N_WEAK_DEF = 0x0080u,
   N_SYMBOL_RESOLVER = 0x0100u,
   N_ALT_ENTRY = 0x0200u,
+  N_COLD_FUNC = 0x0400u,
   // For undefined symbols coming from libraries, see GET_LIBRARY_ORDINAL()
   // as these are in the top 8 bits.
   SELF_LIBRARY_ORDINAL = 0x0,

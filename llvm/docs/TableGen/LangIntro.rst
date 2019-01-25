@@ -258,6 +258,16 @@ supported include:
 ``!if(a,b,c)``
   'b' if the result of 'int' or 'bit' operator 'a' is nonzero, 'c' otherwise.
 
+``!cond(condition_1 : val1, condition_2 : val2, ..., condition_n : valn)``
+    Instead of embedding !if inside !if which can get cumbersome,
+    one can use !cond. !cond returns 'val1' if the result of 'int' or 'bit'
+    operator 'condition1' is nonzero. Otherwise, it checks 'condition2'.
+    If 'condition2' is nonzero, returns 'val2', and so on.
+    If all conditions are zero, it reports an error.  
+
+    For example, to convert an integer 'x' into a string:
+      !cond(!lt(x,0) : "negative", !eq(x,0) : "zero", 1 : "positive")
+
 ``!eq(a,b)``
     'bit 1' if string a is equal to string b, 0 otherwise.  This only operates
     on string, int and bit objects.  Use !cast<string> to compare other types of

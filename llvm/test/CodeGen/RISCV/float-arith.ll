@@ -81,50 +81,58 @@ define float @fsgnj_s(float %a, float %b) nounwind {
   ret float %1
 }
 
-define float @fneg_s(float %a) nounwind {
-; TODO: doesn't test the fneg selection pattern because
-; DAGCombiner::visitBITCAST will generate a xor on the incoming integer
-; argument
+; This function performs extra work to ensure that
+; DAGCombiner::visitBITCAST doesn't replace the fneg with an xor.
+define i32 @fneg_s(float %a, float %b) nounwind {
 ; RV32IF-LABEL: fneg_s:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    lui a1, 524288
-; RV32IF-NEXT:    xor a0, a0, a1
+; RV32IF-NEXT:    fmv.w.x ft0, a0
+; RV32IF-NEXT:    fadd.s ft0, ft0, ft0
+; RV32IF-NEXT:    fneg.s ft1, ft0
+; RV32IF-NEXT:    feq.s a0, ft0, ft1
 ; RV32IF-NEXT:    ret
-  %1 = fsub float -0.0, %a
-  ret float %1
+  %1 = fadd float %a, %a
+  %2 = fneg float %1
+  %3 = fcmp oeq float %1, %2
+  %4 = zext i1 %3 to i32
+  ret i32 %4
 }
 
+; This function performs extra work to ensure that
+; DAGCombiner::visitBITCAST doesn't replace the fneg with an xor.
 define float @fsgnjn_s(float %a, float %b) nounwind {
-; TODO: fsgnjn.s isn't selected because DAGCombiner::visitBITCAST will convert
-; (bitconvert (fneg x)) to a xor
 ; RV32IF-LABEL: fsgnjn_s:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    lui a2, 524288
-; RV32IF-NEXT:    xor a1, a1, a2
 ; RV32IF-NEXT:    fmv.w.x ft0, a1
 ; RV32IF-NEXT:    fmv.w.x ft1, a0
-; RV32IF-NEXT:    fsgnj.s ft0, ft1, ft0
+; RV32IF-NEXT:    fadd.s ft0, ft1, ft0
+; RV32IF-NEXT:    fsgnjn.s ft0, ft1, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
-  %1 = fsub float -0.0, %b
-  %2 = call float @llvm.copysign.f32(float %a, float %1)
-  ret float %2
+  %1 = fadd float %a, %b
+  %2 = fneg float %1
+  %3 = call float @llvm.copysign.f32(float %a, float %2)
+  ret float %3
 }
 
 declare float @llvm.fabs.f32(float)
 
-define float @fabs_s(float %a) nounwind {
-; TODO: doesn't test the fabs selection pattern because
-; DAGCombiner::visitBITCAST will generate an and on the incoming integer
-; argument
+; This function performs extra work to ensure that
+; DAGCombiner::visitBITCAST doesn't replace the fabs with an and.
+define float @fabs_s(float %a, float %b) nounwind {
 ; RV32IF-LABEL: fabs_s:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    lui a1, 524288
-; RV32IF-NEXT:    addi a1, a1, -1
-; RV32IF-NEXT:    and a0, a0, a1
+; RV32IF-NEXT:    fmv.w.x ft0, a1
+; RV32IF-NEXT:    fmv.w.x ft1, a0
+; RV32IF-NEXT:    fadd.s ft0, ft1, ft0
+; RV32IF-NEXT:    fabs.s ft1, ft0
+; RV32IF-NEXT:    fadd.s ft0, ft1, ft0
+; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
-  %1 = call float @llvm.fabs.f32(float %a)
-  ret float %1
+  %1 = fadd float %a, %b
+  %2 = call float @llvm.fabs.f32(float %1)
+  %3 = fadd float %2, %1
+  ret float %3
 }
 
 declare float @llvm.minnum.f32(float, float)

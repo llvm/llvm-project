@@ -34,49 +34,45 @@
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_conflict_epi64 (__m512i __A)
 {
-  return (__m512i) __builtin_ia32_vpconflictdi_512_mask ((__v8di) __A,
-                 (__v8di) _mm512_setzero_si512 (),
-                 (__mmask8) -1);
+  return (__m512i) __builtin_ia32_vpconflictdi_512 ((__v8di) __A);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask_conflict_epi64 (__m512i __W, __mmask8 __U, __m512i __A)
 {
-  return (__m512i) __builtin_ia32_vpconflictdi_512_mask ((__v8di) __A,
-               (__v8di) __W,
-               (__mmask8) __U);
+  return (__m512i)__builtin_ia32_selectq_512((__mmask8)__U,
+                                             (__v8di)_mm512_conflict_epi64(__A),
+                                             (__v8di)__W);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_conflict_epi64 (__mmask8 __U, __m512i __A)
 {
-  return (__m512i) __builtin_ia32_vpconflictdi_512_mask ((__v8di) __A,
-                 (__v8di) _mm512_setzero_si512 (),
-                 (__mmask8) __U);
+  return (__m512i)__builtin_ia32_selectq_512((__mmask8)__U,
+                                             (__v8di)_mm512_conflict_epi64(__A),
+                                             (__v8di)_mm512_setzero_si512 ());
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_conflict_epi32 (__m512i __A)
 {
-  return (__m512i) __builtin_ia32_vpconflictsi_512_mask ((__v16si) __A,
-                 (__v16si) _mm512_setzero_si512 (),
-                 (__mmask16) -1);
+  return (__m512i) __builtin_ia32_vpconflictsi_512 ((__v16si) __A);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask_conflict_epi32 (__m512i __W, __mmask16 __U, __m512i __A)
 {
-  return (__m512i) __builtin_ia32_vpconflictsi_512_mask ((__v16si) __A,
-               (__v16si) __W,
-               (__mmask16) __U);
+  return (__m512i)__builtin_ia32_selectd_512((__mmask16)__U,
+                                            (__v16si)_mm512_conflict_epi32(__A),
+                                            (__v16si)__W);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_maskz_conflict_epi32 (__mmask16 __U, __m512i __A)
 {
-  return (__m512i) __builtin_ia32_vpconflictsi_512_mask ((__v16si) __A,
-                 (__v16si) _mm512_setzero_si512 (),
-                 (__mmask16) __U);
+  return (__m512i)__builtin_ia32_selectd_512((__mmask16)__U,
+                                            (__v16si)_mm512_conflict_epi32(__A),
+                                            (__v16si)_mm512_setzero_si512());
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS

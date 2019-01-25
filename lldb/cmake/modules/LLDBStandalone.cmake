@@ -25,8 +25,31 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(LLVM_BINARY_DIR ${LLVM_BUILD_BINARY_DIR} CACHE PATH "Path to LLVM build tree")
   set(LLVM_EXTERNAL_LIT ${LLVM_TOOLS_BINARY_DIR}/llvm-lit CACHE PATH "Path to llvm-lit")
 
-  find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR}
-    NO_DEFAULT_PATH)
+  if(CMAKE_CROSSCOMPILING)
+    set(LLVM_NATIVE_BUILD "${LLDB_PATH_TO_LLVM_BUILD}/NATIVE")
+    if (NOT EXISTS "${LLVM_NATIVE_BUILD}")
+      message(FATAL_ERROR
+        "Attempting to cross-compile LLDB standalone but no native LLVM build
+        found. Please cross-compile LLVM as well.")
+    endif()
+
+    if (CMAKE_HOST_SYSTEM_NAME MATCHES "Windows")
+      set(HOST_EXECUTABLE_SUFFIX ".exe")
+    endif()
+
+    if (NOT CMAKE_CONFIGURATION_TYPES)
+      set(LLVM_TABLEGEN_EXE
+        "${LLVM_NATIVE_BUILD}/bin/llvm-tblgen${HOST_EXECUTABLE_SUFFIX}")
+    else()
+      # NOTE: LLVM NATIVE build is always built Release, as is specified in
+      # CrossCompile.cmake
+      set(LLVM_TABLEGEN_EXE
+        "${LLVM_NATIVE_BUILD}/Release/bin/llvm-tblgen${HOST_EXECUTABLE_SUFFIX}")
+    endif()
+  else()
+    find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR}
+      NO_DEFAULT_PATH)
+  endif()
 
   # They are used as destination of target generators.
   set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)

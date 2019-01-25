@@ -34,6 +34,7 @@ class MCSymbolMachO : public MCSymbol {
     SF_WeakDefinition                       = 0x0080,
     SF_SymbolResolver                       = 0x0100,
     SF_AltEntry                             = 0x0200,
+    SF_Cold                                 = 0x0400,
 
     // Common alignment
     SF_CommonAlignmentMask                  = 0xF0FF,
@@ -96,6 +97,10 @@ public:
   bool isAltEntry() const {
     return getFlags() & SF_AltEntry;
   }
+
+  void setCold() const { modifyFlags(SF_Cold, SF_Cold); }
+
+  bool isCold() const { return getFlags() & SF_Cold; }
 
   void setDesc(unsigned Value) const {
     assert(Value == (Value & SF_DescFlagsMask) &&

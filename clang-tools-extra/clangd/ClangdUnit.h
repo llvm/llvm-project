@@ -31,7 +31,7 @@ class raw_ostream;
 
 namespace vfs {
 class FileSystem;
-}
+} // namespace vfs
 } // namespace llvm
 
 namespace clang {
@@ -39,7 +39,7 @@ class PCHContainerOperations;
 
 namespace tooling {
 struct CompileCommand;
-}
+} // namespace tooling
 
 namespace clangd {
 

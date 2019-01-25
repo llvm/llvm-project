@@ -86,7 +86,7 @@ define double @fdiv_d(double %a, double %b) nounwind {
   ret double %1
 }
 
-declare double @llvm.sqrt.f32(double)
+declare double @llvm.sqrt.f64(double)
 
 define double @fsqrt_d(double %a) nounwind {
 ; RV32IFD-LABEL: fsqrt_d:
@@ -101,11 +101,11 @@ define double @fsqrt_d(double %a) nounwind {
 ; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
-  %1 = call double @llvm.sqrt.f32(double %a)
+  %1 = call double @llvm.sqrt.f64(double %a)
   ret double %1
 }
 
-declare double @llvm.copysign.f32(double, double)
+declare double @llvm.copysign.f64(double, double)
 
 define double @fsgnj_d(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: fsgnj_d:
@@ -123,7 +123,7 @@ define double @fsgnj_d(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
-  %1 = call double @llvm.copysign.f32(double %a, double %b)
+  %1 = call double @llvm.copysign.f64(double %a, double %b)
   ret double %1
 }
 
@@ -161,11 +161,11 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
   %1 = fsub double -0.0, %b
-  %2 = call double @llvm.copysign.f32(double %a, double %1)
+  %2 = call double @llvm.copysign.f64(double %a, double %1)
   ret double %2
 }
 
-declare double @llvm.fabs.f32(double)
+declare double @llvm.fabs.f64(double)
 
 define double @fabs_d(double %a) nounwind {
 ; RV32IFD-LABEL: fabs_d:
@@ -180,11 +180,11 @@ define double @fabs_d(double %a) nounwind {
 ; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
-  %1 = call double @llvm.fabs.f32(double %a)
+  %1 = call double @llvm.fabs.f64(double %a)
   ret double %1
 }
 
-declare double @llvm.minnum.f32(double, double)
+declare double @llvm.minnum.f64(double, double)
 
 define double @fmin_d(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: fmin_d:
@@ -202,11 +202,11 @@ define double @fmin_d(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
-  %1 = call double @llvm.minnum.f32(double %a, double %b)
+  %1 = call double @llvm.minnum.f64(double %a, double %b)
   ret double %1
 }
 
-declare double @llvm.maxnum.f32(double, double)
+declare double @llvm.maxnum.f64(double, double)
 
 define double @fmax_d(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: fmax_d:
@@ -224,7 +224,7 @@ define double @fmax_d(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
-  %1 = call double @llvm.maxnum.f32(double %a, double %b)
+  %1 = call double @llvm.maxnum.f64(double %a, double %b)
   ret double %1
 }
 

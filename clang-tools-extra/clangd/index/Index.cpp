@@ -53,12 +53,12 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, SymbolOrigin O) {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, Symbol::SymbolFlag F) {
   if (F == Symbol::None)
     return OS << "None";
-  std::string s;
+  std::string S;
   if (F & Symbol::Deprecated)
-    s += "deprecated|";
+    S += "deprecated|";
   if (F & Symbol::IndexedForCodeCompletion)
-    s += "completion|";
-  return OS << llvm::StringRef(s).rtrim('|');
+    S += "completion|";
+  return OS << llvm::StringRef(S).rtrim('|');
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S) {

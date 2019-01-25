@@ -490,10 +490,10 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   auto CheckCopy = [&]() {
     // If we have a bitcast or something, we can't have physical registers.
     assert(
-        I.isCopy() ||
-        (!TargetRegisterInfo::isPhysicalRegister(I.getOperand(0).getReg()) &&
-         !TargetRegisterInfo::isPhysicalRegister(I.getOperand(1).getReg())) &&
-            "No phys reg on generic operator!");
+        (I.isCopy() ||
+         (!TargetRegisterInfo::isPhysicalRegister(I.getOperand(0).getReg()) &&
+          !TargetRegisterInfo::isPhysicalRegister(I.getOperand(1).getReg()))) &&
+        "No phys reg on generic operator!");
     assert(KnownValid || isValidCopy(I, DstRegBank, MRI, TRI, RBI));
     return true;
   };
