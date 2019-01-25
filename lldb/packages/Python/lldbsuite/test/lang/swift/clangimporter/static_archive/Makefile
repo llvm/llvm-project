@@ -14,7 +14,8 @@ include $(LEVEL)/Makefile.rules
 a.out: main.o
 	$(SWIFTC) $(SWIFTFLAGS) $< -lFoo -lBar -L$(shell pwd) -o $@ \
 	    -Xlinker -add_ast_path -Xlinker $(shell pwd)/Foo.swiftmodule \
-	    -Xlinker -add_ast_path -Xlinker $(shell pwd)/Bar.swiftmodule
+	    -Xlinker -add_ast_path -Xlinker $(shell pwd)/Bar.swiftmodule \
+	    -toolchain-stdlib-rpath
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif

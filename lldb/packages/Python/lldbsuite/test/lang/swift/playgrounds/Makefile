@@ -15,8 +15,9 @@ include $(LEVEL)/Makefile.rules
 LD_EXTRAS=-lPlaygroundsRuntime -L$(shell pwd)
 
 libPlaygroundsRuntime.dylib: PlaygroundsRuntime.swift
-	$(SWIFTC) $(SWIFTFLAGS_NOLINK) -module-name PlaygroundsRuntime -emit-library -o $@ -Xlinker -install_name -Xlinker @executable_path/$@ $<
-ifneq "$(CODESIGN)" ""#
+	$(SWIFTC) $(SWIFTFLAGS_NOLINK) -module-name PlaygroundsRuntime -emit-library -o $@ -Xlinker -install_name -Xlinker @executable_path/$@ $< \
+	  -toolchain-stdlib-rpath
+ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
 

@@ -13,7 +13,8 @@ ifneq "$(CODESIGN)" ""
 endif
 
 lib%.dylib: %.swift
-	$(SWIFTC) -g -Onone $^ -emit-library -module-name $(shell basename $< .swift) -emit-module -Xlinker -install_name -Xlinker @executable_path/$@ -Xcc -I$(SRCDIR) -Xcc -I$(SRCDIR)/$(shell basename $< .swift) $(SWIFTFLAGS) -emit-objc-header-path $(shell basename $< .swift).h
+	$(SWIFTC) -g -Onone $^ -emit-library -module-name $(shell basename $< .swift) -emit-module -Xlinker -install_name -Xlinker @executable_path/$@ -Xcc -I$(SRCDIR) -Xcc -I$(SRCDIR)/$(shell basename $< .swift) $(SWIFTFLAGS) -emit-objc-header-path $(shell basename $< .swift).h \
+           -toolchain-stdlib-rpath
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif

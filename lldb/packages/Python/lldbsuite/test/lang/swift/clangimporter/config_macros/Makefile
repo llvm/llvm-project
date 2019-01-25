@@ -7,7 +7,8 @@ include $(LEVEL)/Makefile.rules
 
 a.out: main.swift libDylib.dylib
 	$(SWIFTC) -g -Onone $^ -lDylib -L$(shell pwd) -o $@ $(SWIFTFLAGS) -I. \
-	  -Xcc -DDEBUG=1 -Xcc -DSPACE -Xcc -UNDEBUG
+	  -Xcc -DDEBUG=1 -Xcc -DSPACE -Xcc -UNDEBUG \
+	  -toolchain-stdlib-rpath
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
@@ -15,7 +16,8 @@ endif
 libDylib.dylib: dylib.swift
 	$(SWIFTC) -g -Onone $^ -emit-library -module-name Dylib -emit-module \
 	  -Xlinker -install_name -Xlinker @executable_path/$@ \
-	  -Xcc -DDEBUG=1 -Xcc -D -Xcc SPACE -Xcc -U -Xcc NDEBUG
+	  -Xcc -DDEBUG=1 -Xcc -D -Xcc SPACE -Xcc -U -Xcc NDEBUG \
+          -toolchain-stdlib-rpath
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
