@@ -53,8 +53,8 @@ class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
         self.expect("target var -- foofoo",
                     substrs=['(Conflict.C) foofoo'])
         lldbutil.run_to_source_breakpoint(self, "break here",
-                                          lldb.SBFileSpec('Library.swift'))
-        self.expect("bt", substrs=['Library.swift'])
+                                          lldb.SBFileSpec('Dylib.swift'))
+        self.expect("bt", substrs=['Dylib.swift'])
         self.expect("fr v -d no-dynamic-values -- input",
                     substrs=['(LibraryProtocol) input'])
         self.expect("fr v -d run-target -- input",

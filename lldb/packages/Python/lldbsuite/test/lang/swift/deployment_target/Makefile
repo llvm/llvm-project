@@ -1,5 +1,4 @@
 LEVEL = ../../../make
-SRCDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 all: a.out dlopen_module
 
