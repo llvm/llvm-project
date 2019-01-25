@@ -12,13 +12,11 @@
 ; DEFAULT-Os: Combine redundant instructions
 
 ; LTO-PRELINK-Os-LABEL: Starting llvm::Module pass manager run.
-; LTO-PRELINK-Os: Running pass: ModuleToFunctionPassAdaptor<llvm::PromotePass>
+; LTO-PRELINK-Os: Running pass: {{.*}}PromotePass
 ; LTO-PRELINK-Os: Running pass: HotColdSplittingPass
-; LTO-PRELINK-Os: Running pass: ModuleToFunctionPassAdaptor<llvm::PassManager<llvm::Function> >
 
 ; THINLTO-PRELINK-Os-LABEL: Running analysis: PassInstrumentationAnalysis
-; THINLTO-PRELINK-Os: Running pass: ModuleToFunctionPassAdaptor<llvm::PromotePass>
+; THINLTO-PRELINK-Os: Running pass: {{.*}}PromotePass
 ; THINLTO-PRELINK-Os: Running pass: HotColdSplittingPass
-; THINLTO-PRELINK-Os: Running pass: ModuleToFunctionPassAdaptor<llvm::PassManager<llvm::Function> >
 
 ; THINLTO-POSTLINK-Os-NOT: HotColdSplitting
