@@ -18,8 +18,11 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TapirTaskInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -62,6 +65,9 @@ static cl::opt<bool>  ClInstrumentTapir(
 static cl::opt<bool>  ClInstrumentAllocas(
     "csi-instrument-alloca", cl::init(true),
     cl::desc("Instrument allocas"), cl::Hidden);
+static cl::opt<bool>  ClInstrumentAllocFns(
+    "csi-instrument-allocfn", cl::init(true),
+    cl::desc("Instrument allocation functions"), cl::Hidden);
 
 namespace {
 
@@ -74,6 +80,7 @@ static CSIOptions OverrideFromCL(CSIOptions Options) {
   Options.InstrumentMemIntrinsics |= ClInstrumentMemIntrinsics;
   Options.InstrumentTapir |= ClInstrumentTapir;
   Options.InstrumentAllocas |= ClInstrumentAllocas;
+  Options.InstrumentAllocFns |= ClInstrumentAllocFns;
   return Options;
 }
 
@@ -106,6 +113,7 @@ INITIALIZE_PASS_BEGIN(ComprehensiveStaticInstrumentationLegacyPass, "csi",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TaskInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(ComprehensiveStaticInstrumentationLegacyPass, "csi",
                     "ComprehensiveStaticInstrumentation pass",
@@ -448,7 +456,7 @@ void CSIImpl::initializeAllocaHooks() {
   IRBuilder<> IRB(C);
   Type *IDType = IRB.getInt64Ty();
   Type *AddrType = IRB.getInt8PtrTy();
-  Type *PropType = IRB.getInt64Ty();
+  Type *PropType = CsiAllocaProperty::getType(C);
 
   CsiBeforeAlloca = checkCsiInterfaceFunction(
       M.getOrInsertFunction("__csi_before_alloca", IRB.getVoidTy(),
@@ -456,6 +464,41 @@ void CSIImpl::initializeAllocaHooks() {
   CsiAfterAlloca = checkCsiInterfaceFunction(
       M.getOrInsertFunction("__csi_after_alloca", IRB.getVoidTy(),
                             IDType, AddrType, IntptrTy, PropType));
+}
+
+// Non-local-variable allocation/free hook initialization
+void CSIImpl::initializeAllocFnHooks() {
+  LLVMContext &C = M.getContext();
+  IRBuilder<> IRB(C);
+  Type *RetType = IRB.getVoidTy();
+  Type *IDType = IRB.getInt64Ty();
+  Type *AddrType = IRB.getInt8PtrTy();
+  Type *LargeNumBytesType = IntptrTy;
+  Type *AllocFnPropType = CsiAllocFnProperty::getType(C);
+  Type *FreePropType = CsiFreeProperty::getType(C);
+
+  CsiBeforeAllocFn = checkCsiInterfaceFunction(
+      M.getOrInsertFunction("__csi_before_allocfn", RetType, IDType,
+                            LargeNumBytesType,
+                            LargeNumBytesType,
+                            LargeNumBytesType,
+                            AddrType,
+                            AllocFnPropType));
+  CsiAfterAllocFn = checkCsiInterfaceFunction(
+      M.getOrInsertFunction("__csi_after_allocfn", RetType, IDType,
+                            /* new ptr */ AddrType,
+                            /* size */ LargeNumBytesType,
+                            /* num elements */ LargeNumBytesType,
+                            /* alignment */ LargeNumBytesType,
+                            /* old ptr */ AddrType,
+                            /* property */ AllocFnPropType));
+
+  CsiBeforeFree = checkCsiInterfaceFunction(
+      M.getOrInsertFunction("__csi_before_free", RetType, IDType, AddrType,
+                            FreePropType));
+  CsiAfterFree = checkCsiInterfaceFunction(
+      M.getOrInsertFunction("__csi_after_free", RetType, IDType, AddrType,
+                            FreePropType));
 }
 
 // Load and store hook initialization
@@ -540,15 +583,30 @@ void CSIImpl::setupCalls(Function &F) {
   // calls act like terminators?
 }
 
+static BasicBlock *SplitOffPreds(
+    BasicBlock *BB, SmallVectorImpl<BasicBlock *> &Preds, DominatorTree *DT) {
+  if (BB->isLandingPad()) {
+    SmallVector<BasicBlock *, 2> NewBBs;
+    SplitLandingPadPredecessors(BB, Preds, ".csi-split-lp", ".csi-split",
+                                NewBBs, DT);
+    return NewBBs[1];
+  }
+
+  SplitBlockPredecessors(BB, Preds, ".csi-split", DT);
+  return BB;
+}
+
 // Setup each block such that all of its predecessors belong to the same CSI ID
 // space.
-static void setupBlock(BasicBlock *BB, DominatorTree *DT) {
+static void setupBlock(BasicBlock *BB, const TargetLibraryInfo *TLI,
+                       DominatorTree *DT) {
   if (BB->getUniquePredecessor())
     return;
 
   SmallVector<BasicBlock *, 4> DetachPreds;
   SmallVector<BasicBlock *, 4> DetRethrowPreds;
   SmallVector<BasicBlock *, 4> SyncPreds;
+  SmallVector<BasicBlock *, 4> AllocFnPreds;
   SmallVector<BasicBlock *, 4> InvokePreds;
   bool HasOtherPredTypes = false;
   unsigned NumPredTypes = 0;
@@ -561,6 +619,8 @@ static void setupBlock(BasicBlock *BB, DominatorTree *DT) {
       DetRethrowPreds.push_back(Pred);
     else if (isa<SyncInst>(Pred->getTerminator()))
       SyncPreds.push_back(Pred);
+    else if (isAllocationFn(Pred->getTerminator(), TLI))
+      AllocFnPreds.push_back(Pred);
     else if (isa<InvokeInst>(Pred->getTerminator()))
       InvokePreds.push_back(Pred);
     else
@@ -570,43 +630,51 @@ static void setupBlock(BasicBlock *BB, DominatorTree *DT) {
   NumPredTypes = static_cast<unsigned>(!DetachPreds.empty()) +
     static_cast<unsigned>(!DetRethrowPreds.empty()) +
     static_cast<unsigned>(!SyncPreds.empty()) +
+    static_cast<unsigned>(!AllocFnPreds.empty()) +
     static_cast<unsigned>(!InvokePreds.empty()) +
     static_cast<unsigned>(HasOtherPredTypes);
 
+  BasicBlock *BBToSplit = BB;
   // Split off the predecessors of each type.
   if (!DetachPreds.empty() && NumPredTypes > 1) {
-    SplitBlockPredecessors(BB, DetachPreds, ".csi-split", DT);
+    BBToSplit = SplitOffPreds(BBToSplit, DetachPreds, DT);
     NumPredTypes--;
   }
   if (!DetRethrowPreds.empty() && NumPredTypes > 1) {
-    SplitBlockPredecessors(BB, DetRethrowPreds, ".csi-split", DT);
+    BBToSplit = SplitOffPreds(BBToSplit, DetRethrowPreds, DT);
     NumPredTypes--;
   }
   if (!SyncPreds.empty() && NumPredTypes > 1) {
-    SplitBlockPredecessors(BB, SyncPreds, ".csi-split", DT);
+    BBToSplit = SplitOffPreds(BBToSplit, SyncPreds, DT);
+    NumPredTypes--;
+  }
+  if (!AllocFnPreds.empty() && NumPredTypes > 1) {
+    BBToSplit = SplitOffPreds(BBToSplit, AllocFnPreds, DT);
     NumPredTypes--;
   }
   if (!InvokePreds.empty() && NumPredTypes > 1) {
-    SplitBlockPredecessors(BB, InvokePreds, ".csi-split", DT);
+    BBToSplit = SplitOffPreds(BBToSplit, InvokePreds, DT);
     NumPredTypes--;
   }
 }
 
 // Setup all basic blocks such that each block's predecessors belong entirely to
 // one CSI ID space.
-void CSIImpl::setupBlocks(Function &F, DominatorTree *DT) {
+void CSIImpl::setupBlocks(Function &F, const TargetLibraryInfo *TLI,
+                          DominatorTree *DT) {
   SmallPtrSet<BasicBlock *, 8> BlocksToSetup;
   for (BasicBlock &BB : F) {
+    if (BB.isLandingPad())
+      BlocksToSetup.insert(&BB);
+
     if (InvokeInst *II = dyn_cast<InvokeInst>(BB.getTerminator()))
       BlocksToSetup.insert(II->getNormalDest());
     else if (SyncInst *SI = dyn_cast<SyncInst>(BB.getTerminator()))
       BlocksToSetup.insert(SI->getSuccessor(0));
-    else if (BB.isLandingPad())
-      BlocksToSetup.insert(&BB);
   }
 
   for (BasicBlock *BB : BlocksToSetup)
-    setupBlock(BB, DT);
+    setupBlock(BB, TLI, DT);
 }
 
 int CSIImpl::getNumBytesAccessed(Value *Addr, const DataLayout &DL) {
@@ -773,66 +841,62 @@ void CSIImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
   }
 }
 
-// TODO: Replace this using TaskInfo.
 static void getTaskExits(
     DetachInst *DI, SmallVectorImpl<BasicBlock *> &TaskReturns,
     SmallVectorImpl<BasicBlock *> &TaskResumes,
-    DominatorTree *DT) {
-  BasicBlock *Detached = DI->getDetached();
-  BasicBlockEdge DetachEdge(DI->getParent(), Detached);
-  SmallVector<BasicBlock *, 4> WorkList;
-  SmallPtrSet<BasicBlock *, 8> Visited;
-  WorkList.push_back(Detached);
-  while (!WorkList.empty()) {
-    BasicBlock *CurBB = WorkList.pop_back_val();
-    if (!Visited.insert(CurBB).second)
-      continue;
+    SmallVectorImpl<Spindle *> &SharedEHExits,
+    TaskInfo &TI) {
+  BasicBlock *DetachedBlock = DI->getDetached();
+  Task *T = TI.getTaskFor(DetachedBlock);
+  BasicBlock *ContinueBlock = DI->getContinue();
 
-    // TODO: Exit blocks of a detached task might be shared between tasks.  Add
-    // code to these exit blocks to properly compute the CSI ID of the hook.
+  // Examine the predecessors of the continue block and save any predecessors in
+  // the task as a task return.
+  for (BasicBlock *Pred : predecessors(ContinueBlock)) {
+    if (T->simplyEncloses(Pred)) {
+      assert(isa<ReattachInst>(Pred->getTerminator()));
+      TaskReturns.push_back(Pred);
+    }
+  }
 
-    // Handle nested detached tasks recursively.
-    if (DetachInst *NestedDI = dyn_cast<DetachInst>(CurBB->getTerminator())) {
-      // Only add the continuations of the detach for additional search.
-      WorkList.push_back(NestedDI->getContinue());
-      if (NestedDI->hasUnwindDest())
-        WorkList.push_back(NestedDI->getUnwindDest());
+  // If the detach cannot throw, we're done.
+  if (!DI->hasUnwindDest())
+    return;
+
+  // Detached-rethrow exits can appear in strange places within a task-exiting
+  // spindle.  Hence we loop over all blocks in the spindle to find
+  // detached rethrows.
+  for (Spindle *S : depth_first<InTask<Spindle *>>(T->getEntrySpindle())) {
+    if (S->isSharedEH()) {
+      if (llvm::any_of(predecessors(S),
+                       [](const Spindle *Pred){ return !Pred->isSharedEH(); }))
+        SharedEHExits.push_back(S);
       continue;
     }
 
-    // Terminate search at matching reattaches and detached rethrows.
-    if (ReattachInst *RI = dyn_cast<ReattachInst>(CurBB->getTerminator()))
-      if (ReattachMatchesDetach(RI, DI)) {
-        TaskReturns.push_back(CurBB);
-        continue;
-      }
-    if (isDetachedRethrow(CurBB->getTerminator(), DI->getSyncRegion())) {
-      TaskResumes.push_back(CurBB);
-      continue;
-    }
-
-    // Add successors of this basic block.
-    for (BasicBlock *Succ : successors(CurBB))
-      WorkList.push_back(Succ);
+    for (BasicBlock *B : S->blocks())
+      if (isDetachedRethrow(B->getTerminator()))
+        TaskResumes.push_back(B);
   }
 }
 
-void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
+void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT,
+                               TaskInfo &TI) {
   // Instrument the detach instruction itself
   Value *DetachID;
   {
     IRBuilder<> IRB(DI);
     uint64_t LocalID = DetachFED.add(*DI);
     DetachID = DetachFED.localToGlobalId(LocalID, IRB);
-    Instruction *Call = IRB.CreateCall(CsiDetach, {DetachID});
-    setInstrumentationDebugLoc(DI, Call);
+    insertHookCall(DI, CsiDetach, {DetachID});
   }
 
   // Find the detached block, continuation, and associated reattaches.
   BasicBlock *DetachedBlock = DI->getDetached();
   BasicBlock *ContinueBlock = DI->getContinue();
   SmallVector<BasicBlock *, 8> TaskExits, TaskResumes;
-  getTaskExits(DI, TaskExits, TaskResumes, DT);
+  SmallVector<Spindle *, 2> SharedEHExits;
+  getTaskExits(DI, TaskExits, TaskResumes, SharedEHExits, TI);
 
   // Instrument the entry and exit points of the detached task.
   {
@@ -840,6 +904,8 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
     IRBuilder<> IRB(&*DetachedBlock->getFirstInsertionPt());
     uint64_t LocalID = TaskFED.add(*DetachedBlock);
     Value *TaskID = TaskFED.localToGlobalId(LocalID, IRB);
+    // Value *StackSave = IRB.CreateCall(
+    //     Intrinsic::getDeclaration(&M, Intrinsic::stacksave));
     Instruction *Call = IRB.CreateCall(CsiTaskEntry,
                                        {TaskID, DetachID});
     setInstrumentationDebugLoc(*DetachedBlock, Call);
@@ -849,19 +915,24 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
       IRBuilder<> IRB(Exit->getTerminator());
       uint64_t LocalID = TaskExitFED.add(*Exit->getTerminator());
       Value *ExitID = TaskExitFED.localToGlobalId(LocalID, IRB);
-      Instruction *Call = IRB.CreateCall(CsiTaskExit,
-                                         {ExitID, TaskID, DetachID});
-      setInstrumentationDebugLoc(Exit->getTerminator(), Call);
+      insertHookCall(Exit->getTerminator(),
+                     CsiTaskExit, {ExitID, TaskID, DetachID});
     }
     // Instrument the EH exits of the detached task.
     for (BasicBlock *Exit : TaskResumes) {
       IRBuilder<> IRB(Exit->getTerminator());
       uint64_t LocalID = TaskExitFED.add(*Exit->getTerminator());
       Value *ExitID = TaskExitFED.localToGlobalId(LocalID, IRB);
-      Instruction *Call = IRB.CreateCall(CsiTaskExit,
-                                         {ExitID, TaskID, DetachID});
-      setInstrumentationDebugLoc(Exit->getTerminator(), Call);
+      insertHookCall(Exit->getTerminator(),
+                     CsiTaskExit, {ExitID, TaskID, DetachID});
     }
+
+    Task *T = TI.getTaskFor(DetachedBlock);
+    Value *DefaultID = getDefaultID(IRB);
+    for (Spindle *SharedEH : SharedEHExits)
+      insertHookCallAtSharedEHSpindleExits(
+          SharedEH, T, CsiTaskExit, TaskExitFED, {TaskID, DetachID},
+          {DefaultID, DefaultID});
   }
 
   // Instrument the continuation of the detach.
@@ -888,6 +959,18 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
     insertHookCallInSuccessorBB(UnwindBlock, DI->getParent(), CsiDetachContinue,
                                 {ContinueID, DetachID}, {DefaultID, DefaultID});
   }
+}
+
+void CSIImpl::instrumentSync(SyncInst *SI) {
+  IRBuilder<> IRB(SI);
+  Value *DefaultID = getDefaultID(IRB);
+  // Get the ID of this sync.
+  uint64_t LocalID = SyncFED.add(*SI);
+  Value *SyncID = SyncFED.localToGlobalId(LocalID, IRB);
+  // Insert instrumentation before the sync.
+  insertHookCall(SI, CsiBeforeSync, {SyncID});
+  insertHookCallInSuccessorBB(SI->getSuccessor(0), SI->getParent(),
+                              CsiAfterSync, {SyncID}, {DefaultID});
 }
 
 void CSIImpl::instrumentAlloca(Instruction *I) {
@@ -917,16 +1000,189 @@ void CSIImpl::instrumentAlloca(Instruction *I) {
   insertHookCall(&*Iter, CsiAfterAlloca, {CsiId, Addr, SizeVal, PropVal});
 }
 
-void CSIImpl::instrumentSync(SyncInst *SI) {
-  IRBuilder<> IRB(SI);
+void CSIImpl::getAllocFnArgs(
+    const Instruction *I, SmallVectorImpl<Value*> &AllocFnArgs,
+    Type *SizeTy, Type *AddrTy, const TargetLibraryInfo &TLI) {
+  const Function *Called = nullptr;
+  if (const CallInst *CI = dyn_cast<CallInst>(I))
+    Called = CI->getCalledFunction();
+  else if (const InvokeInst *II = dyn_cast<InvokeInst>(I))
+    Called = II->getCalledFunction();
+
+  LibFunc F;
+  bool FoundLibFunc = TLI.getLibFunc(*Called, F);
+  if (!FoundLibFunc)
+    return;
+
+  switch(F) {
+  default: return;
+    // TODO: Add aligned new's to this list after they're added to TLI.
+  case LibFunc_malloc:
+  case LibFunc_valloc:
+  case LibFunc_Znwj:
+  case LibFunc_ZnwjRKSt9nothrow_t:
+  case LibFunc_Znwm:
+  case LibFunc_ZnwmRKSt9nothrow_t:
+  case LibFunc_Znaj:
+  case LibFunc_ZnajRKSt9nothrow_t:
+  case LibFunc_Znam:
+  case LibFunc_ZnamRKSt9nothrow_t:
+  case LibFunc_msvc_new_int:
+  case LibFunc_msvc_new_int_nothrow:
+  case LibFunc_msvc_new_longlong:
+  case LibFunc_msvc_new_longlong_nothrow:
+  case LibFunc_msvc_new_array_int:
+  case LibFunc_msvc_new_array_int_nothrow:
+  case LibFunc_msvc_new_array_longlong:
+  case LibFunc_msvc_new_array_longlong_nothrow:
+    {
+      // Allocated size
+      if (isa<CallInst>(I))
+        AllocFnArgs.push_back(cast<CallInst>(I)->getArgOperand(0));
+      else
+        AllocFnArgs.push_back(cast<InvokeInst>(I)->getArgOperand(0));
+      // Number of elements = 1
+      AllocFnArgs.push_back(ConstantInt::get(SizeTy, 1));
+      // Alignment = 0
+      // TODO: Fix this for aligned new's, once they're added to TLI.
+      AllocFnArgs.push_back(ConstantInt::get(SizeTy, 0));
+      // Old pointer = NULL
+      AllocFnArgs.push_back(Constant::getNullValue(AddrTy));
+      return;
+    }
+  case LibFunc_calloc:
+    {
+      const CallInst *CI = cast<CallInst>(I);
+      // Allocated size
+      AllocFnArgs.push_back(CI->getArgOperand(1));
+      // Number of elements
+      AllocFnArgs.push_back(CI->getArgOperand(0));
+      // Alignment = 0
+      AllocFnArgs.push_back(ConstantInt::get(SizeTy, 0));
+      // Old pointer = NULL
+      AllocFnArgs.push_back(Constant::getNullValue(AddrTy));
+      return;
+    }
+  case LibFunc_realloc:
+  case LibFunc_reallocf:
+    {
+      const CallInst *CI = cast<CallInst>(I);
+      // Allocated size
+      AllocFnArgs.push_back(CI->getArgOperand(1));
+      // Number of elements = 1
+      AllocFnArgs.push_back(ConstantInt::get(SizeTy, 1));
+      // Alignment = 0
+      AllocFnArgs.push_back(ConstantInt::get(SizeTy, 0));
+      // Old pointer
+      AllocFnArgs.push_back(CI->getArgOperand(0));
+      return;
+    }
+  }
+}
+
+void CSIImpl::instrumentAllocFn(Instruction *I, DominatorTree *DT) {
+  bool IsInvoke = isa<InvokeInst>(I);
+  Function *Called = nullptr;
+  if (CallInst *CI = dyn_cast<CallInst>(I))
+    Called = CI->getCalledFunction();
+  else if (InvokeInst *II = dyn_cast<InvokeInst>(I))
+    Called = II->getCalledFunction();
+
+  assert(Called && "Could not get called function for allocation fn.");
+
+  IRBuilder<> IRB(I);
   Value *DefaultID = getDefaultID(IRB);
-  // Get the ID of this sync.
-  uint64_t LocalID = SyncFED.add(*SI);
-  Value *SyncID = SyncFED.localToGlobalId(LocalID, IRB);
-  // Insert instrumentation before the sync.
-  insertHookCall(SI, CsiBeforeSync, {SyncID});
-  insertHookCallInSuccessorBB(SI->getSuccessor(0), SI->getParent(),
-                              CsiAfterSync, {SyncID}, {DefaultID});
+  uint64_t LocalId = AllocFnFED.add(*I);
+  Value *AllocFnId = AllocFnFED.localToGlobalId(LocalId, IRB);
+
+  SmallVector<Value *, 4> AllocFnArgs;
+  getAllocFnArgs(I, AllocFnArgs, IntptrTy, IRB.getInt8PtrTy(), *TLI);
+  SmallVector<Value *, 4> DefaultAllocFnArgs(
+      {/* Allocated size */ Constant::getNullValue(IntptrTy),
+       /* Number of elements */ Constant::getNullValue(IntptrTy),
+       /* Alignment */ Constant::getNullValue(IntptrTy),
+       /* Old pointer */ Constant::getNullValue(IRB.getInt8PtrTy()),});
+
+  CsiAllocFnProperty Prop;
+  Value *DefaultPropVal = Prop.getValue(IRB);
+  LibFunc AllocLibF;
+  TLI->getLibFunc(*Called, AllocLibF);
+  Prop.setAllocFnTy(static_cast<unsigned>(getAllocFnTy(AllocLibF)));
+  AllocFnArgs.push_back(Prop.getValue(IRB));
+  DefaultAllocFnArgs.push_back(DefaultPropVal);
+
+  BasicBlock::iterator Iter(I);
+  if (IsInvoke) {
+    // There are two "after" positions for invokes: the normal block and the
+    // exception block.
+    InvokeInst *II = cast<InvokeInst>(I);
+
+    BasicBlock *NormalBB = II->getNormalDest();
+    unsigned SuccNum = GetSuccessorNumber(II->getParent(), NormalBB);
+    if (isCriticalEdge(II, SuccNum))
+      NormalBB = SplitCriticalEdge(II, SuccNum,
+                                   CriticalEdgeSplittingOptions(DT));
+    // Insert hook into normal destination.
+    {
+      IRB.SetInsertPoint(&*NormalBB->getFirstInsertionPt());
+      SmallVector<Value *, 4> AfterAllocFnArgs;
+      AfterAllocFnArgs.push_back(AllocFnId);
+      AfterAllocFnArgs.push_back(IRB.CreatePointerCast(I, IRB.getInt8PtrTy()));
+      AfterAllocFnArgs.append(AllocFnArgs.begin(), AllocFnArgs.end());
+      insertHookCall(&*IRB.GetInsertPoint(), CsiAfterAllocFn,
+                     AfterAllocFnArgs);
+    }
+    // Insert hook into unwind destination.
+    {
+      // The return value of the allocation function is not valid in the unwind
+      // destination.
+      SmallVector<Value *, 4> AfterAllocFnArgs, DefaultAfterAllocFnArgs;
+      AfterAllocFnArgs.push_back(AllocFnId);
+      AfterAllocFnArgs.push_back(Constant::getNullValue(IRB.getInt8PtrTy()));
+      AfterAllocFnArgs.append(AllocFnArgs.begin(), AllocFnArgs.end());
+      DefaultAfterAllocFnArgs.push_back(DefaultID);
+      DefaultAfterAllocFnArgs.push_back(
+          Constant::getNullValue(IRB.getInt8PtrTy()));
+      DefaultAfterAllocFnArgs.append(DefaultAllocFnArgs.begin(),
+                                     DefaultAllocFnArgs.end());
+      insertHookCallInSuccessorBB(
+          II->getUnwindDest(), II->getParent(), CsiAfterAllocFn,
+          AfterAllocFnArgs, DefaultAfterAllocFnArgs);
+    }
+  } else {
+    // Simple call instruction; there is only one "after" position.
+    Iter++;
+    IRB.SetInsertPoint(&*Iter);
+    SmallVector<Value *, 4> AfterAllocFnArgs;
+    AfterAllocFnArgs.push_back(AllocFnId);
+    AfterAllocFnArgs.push_back(IRB.CreatePointerCast(I, IRB.getInt8PtrTy()));
+    AfterAllocFnArgs.append(AllocFnArgs.begin(), AllocFnArgs.end());
+    insertHookCall(&*Iter, CsiAfterAllocFn, AfterAllocFnArgs);
+  }
+}
+
+void CSIImpl::instrumentFree(Instruction *I) {
+  // It appears that frees (and deletes) never throw.
+  assert(isa<CallInst>(I) && "Free call is not a call instruction");
+
+  CallInst *FC = cast<CallInst>(I);
+  Function *Called = FC->getCalledFunction();
+  assert(Called && "Could not get called function for free.");
+
+  IRBuilder<> IRB(I);
+  uint64_t LocalId = FreeFED.add(*I);
+  Value *FreeId = FreeFED.localToGlobalId(LocalId, IRB);
+
+  Value *Addr = FC->getArgOperand(0);
+  CsiFreeProperty Prop;
+  LibFunc FreeLibF;
+  TLI->getLibFunc(*Called, FreeLibF);
+  Prop.setFreeTy(static_cast<unsigned>(getFreeTy(FreeLibF)));
+
+  insertHookCall(I, CsiBeforeFree, {FreeId, Addr, Prop.getValue(IRB)});
+  BasicBlock::iterator Iter(I);
+  Iter++;
+  insertHookCall(&*Iter, CsiAfterFree, {FreeId, Addr, Prop.getValue(IRB)});
 }
 
 void CSIImpl::insertHookCall(Instruction *I, Function *HookFunction,
@@ -1001,10 +1257,8 @@ void CSIImpl::insertHookCallAtSharedEHSpindleExits(
   // Get the set of shared EH spindles to examine.  Store them in post order, so
   // they can be evaluated in reverse post order.
   SmallVector<Spindle *, 2> WorkList;
-  for (Spindle *S : post_order<InTask<Spindle *>>(SharedEHSpindle)) {
-    // dbgs() << "SharedEH spindle " << S->getEntry()->getName() << "\n";
+  for (Spindle *S : post_order<InTask<Spindle *>>(SharedEHSpindle))
     WorkList.push_back(S);
-  }
 
   // Traverse the shared-EH spindles in reverse post order, updating the
   // hook-argument PHI's along the way.
@@ -1073,6 +1327,8 @@ void CSIImpl::initializeFEDTables() {
   TaskExitFED = FrontEndDataTable(M, CsiTaskExitBaseIdName);
   DetachContinueFED = FrontEndDataTable(M, CsiDetachContinueBaseIdName);
   SyncFED = FrontEndDataTable(M, CsiSyncBaseIdName);
+  AllocFnFED = FrontEndDataTable(M, CsiAllocFnBaseIdName);
+  FreeFED = FrontEndDataTable(M, CsiFreeBaseIdName);
 }
 
 void CSIImpl::initializeSizeTables() {
@@ -1127,6 +1383,8 @@ void CSIImpl::initializeCsi() {
     initializeTapirHooks();
   if (Options.InstrumentAllocas)
     initializeAllocaHooks();
+  if (Options.InstrumentAllocFns)
+    initializeAllocFnHooks();
 
   FunctionType *FnType =
     FunctionType::get(Type::getVoidTy(M.getContext()), {}, false);
@@ -1197,6 +1455,10 @@ void CSIImpl::collectUnitFEDTables() {
       fedTableToUnitFedTable(M, UnitFedTableType, SyncFED));
   UnitFedTables.push_back(
       fedTableToUnitFedTable(M, UnitFedTableType, AllocaFED));
+  UnitFedTables.push_back(
+      fedTableToUnitFedTable(M, UnitFedTableType, AllocFnFED));
+  UnitFedTables.push_back(
+      fedTableToUnitFedTable(M, UnitFedTableType, FreeFED));
 }
 
 // Create a struct type to match the unit_obj_entry_t type in csirt.c.
@@ -1438,10 +1700,12 @@ void CSIImpl::instrumentFunction(Function &F) {
     return;
 
   setupCalls(F);
-  setupBlocks(F);
+  setupBlocks(F, TLI);
 
   SmallVector<std::pair<Instruction *, CsiLoadStoreProperty>, 8>
     LoadAndStoreProperties;
+  SmallVector<Instruction *, 8> AllocationFnCalls;
+  SmallVector<Instruction *, 8> FreeCalls;
   SmallVector<Instruction *, 8> MemIntrinsics;
   SmallVector<Instruction *, 8> Callsites;
   SmallVector<BasicBlock *, 8> BasicBlocks;
@@ -1452,6 +1716,7 @@ void CSIImpl::instrumentFunction(Function &F) {
   bool MaySpawn = false;
 
   DominatorTree *DT = &GetDomTree(F);
+  TaskInfo &TI = GetTaskInfo(F);
 
   // Compile lists of all instrumentation points before anything is modified.
   for (BasicBlock &BB : F) {
@@ -1467,11 +1732,19 @@ void CSIImpl::instrumentFunction(Function &F) {
       } else if (SyncInst *SI = dyn_cast<SyncInst>(&I)) {
         Syncs.push_back(SI);
       } else if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
-        if (isa<MemIntrinsic>(I)) {
+
+        // Record this function call as either an allocation function, a call to
+        // free (or delete), a memory intrinsic, or an ordinary real function
+        // call.
+        if (isAllocationFn(&I, TLI))
+          AllocationFnCalls.push_back(&I);
+        else if (isFreeCall(&I, TLI))
+          FreeCalls.push_back(&I);
+        else if (isa<MemIntrinsic>(I))
           MemIntrinsics.push_back(&I);
-        } else {
+        else
           Callsites.push_back(&I);
-        }
+
         computeLoadAndStoreProperties(LoadAndStoreProperties, BBLoadsAndStores,
                                       DL);
       } else if (isa<AllocaInst>(I)) {
@@ -1494,7 +1767,7 @@ void CSIImpl::instrumentFunction(Function &F) {
   // Instrument Tapir constructs.
   if (Options.InstrumentTapir) {
     for (DetachInst *DI : Detaches)
-      instrumentDetach(DI, DT);
+      instrumentDetach(DI, DT, TI);
     for (SyncInst *SI : Syncs)
       instrumentSync(SI);
   }
@@ -1523,6 +1796,13 @@ void CSIImpl::instrumentFunction(Function &F) {
   if (Options.InstrumentAllocas)
     for (Instruction *I : Allocas)
       instrumentAlloca(I);
+
+  if (Options.InstrumentAllocFns) {
+    for (Instruction *I : AllocationFnCalls)
+      instrumentAllocFn(I, DT);
+    for (Instruction *I : FreeCalls)
+      instrumentFree(I);
+  }
 
   // Instrument function entry/exit points.
   if (Options.InstrumentFuncEntryExit) {
@@ -1555,6 +1835,8 @@ void ComprehensiveStaticInstrumentationLegacyPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.addRequired<CallGraphWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addRequired<TaskInfoWrapperPass>();
+  AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
 
 bool ComprehensiveStaticInstrumentationLegacyPass::runOnModule(Module &M) {
@@ -1562,11 +1844,16 @@ bool ComprehensiveStaticInstrumentationLegacyPass::runOnModule(Module &M) {
     return false;
 
   CallGraph *CG = &getAnalysis<CallGraphWrapperPass>().getCallGraph();
+  const TargetLibraryInfo *TLI =
+      &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   auto GetDomTree = [this](Function &F) -> DominatorTree & {
     return this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
   };
+  auto GetTaskInfo = [this](Function &F) -> TaskInfo & {
+    return this->getAnalysis<TaskInfoWrapperPass>(F).getTaskInfo();
+  };
 
-  return CSIImpl(M, CG, GetDomTree, Options).run();
+  return CSIImpl(M, CG, GetDomTree, GetTaskInfo, TLI, Options).run();
 }
 
 ComprehensiveStaticInstrumentationPass::ComprehensiveStaticInstrumentationPass(
@@ -1581,8 +1868,12 @@ PreservedAnalyses ComprehensiveStaticInstrumentationPass::run(
   auto GetDT = [&FAM](Function &F) -> DominatorTree & {
     return FAM.getResult<DominatorTreeAnalysis>(F);
   };
+  auto GetTI = [&FAM](Function &F) -> TaskInfo & {
+    return FAM.getResult<TaskAnalysis>(F);
+  };
+  auto *TLI = &AM.getResult<TargetLibraryAnalysis>(M);
 
-  if (!CSIImpl(M, &CG, GetDT, Options).run())
+  if (!CSIImpl(M, &CG, GetDT, GetTI, TLI, Options).run())
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

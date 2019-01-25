@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -28,6 +29,7 @@ namespace llvm {
 
 class Spindle;
 class Task;
+class TaskInfo;
 
 static const char *const CsiRtUnitInitName = "__csirt_unit_init";
 static const char *const CsiRtUnitCtorName = "csirt.unit_ctor";
@@ -45,6 +47,9 @@ static const char *const CsiTaskExitBaseIdName =
 static const char *const CsiDetachContinueBaseIdName =
   "__csi_unit_detach_continue_base_id";
 static const char *const CsiSyncBaseIdName = "__csi_unit_sync_base_id";
+static const char *const CsiAllocFnBaseIdName = "__csi_unit_allocfn_base_id";
+static const char *const CsiFreeBaseIdName = "__csi_unit_free_base_id";
+
 static const char *const CsiUnitSizeTableName = "__csi_unit_size_table";
 static const char *const CsiUnitFedTableName = "__csi_unit_fed_table";
 static const char *const CsiFuncIdVariablePrefix = "__csi_func_id_";
@@ -617,13 +622,105 @@ private:
   static constexpr PropertyBits PropBits = { 1, (64-1) };
 };
 
+class CsiAllocFnProperty : public CsiProperty {
+public:
+  CsiAllocFnProperty() {
+    PropValue.Bits = 0;
+  }
+  /// Return the Type of a property.
+  static Type *getType(LLVMContext &C) {
+    // Must match the definition of property type in csi.h
+    return CsiProperty::getCoercedType(
+        C, StructType::get(IntegerType::get(C, PropBits.AllocFnTy),
+                           IntegerType::get(C, PropBits.Padding)));
+  }
+  /// Return a constant value holding this property.
+  Constant *getValueImpl(LLVMContext &C) const override {
+    // Must match the definition of property type in csan.h
+    return ConstantInt::get(getType(C), PropValue.Bits);
+  }
+
+  /// Set the value of the allocation function type (e.g., malloc, calloc, new).
+  void setAllocFnTy(unsigned v) {
+    PropValue.Fields.AllocFnTy = v;
+  }
+
+private:
+  typedef union {
+    // Must match the definition of property type in csi.h
+    struct {
+      unsigned AllocFnTy : 8;
+      uint64_t Padding : 56;
+    } Fields;
+    uint64_t Bits;
+  } Property;
+
+  /// The underlying values of the properties.
+  Property PropValue;
+
+  typedef struct {
+    int AllocFnTy;
+    int Padding;
+  } PropertyBits;
+
+  /// The number of bits representing each property.
+  static constexpr PropertyBits PropBits = { 8, (64-8) };
+};
+
+class CsiFreeProperty : public CsiProperty {
+public:
+  CsiFreeProperty() {
+    PropValue.Bits = 0;
+  }
+  /// Return the Type of a property.
+  static Type *getType(LLVMContext &C) {
+    // Must match the definition of property type in csi.h
+    return CsiProperty::getCoercedType(
+        C, StructType::get(IntegerType::get(C, PropBits.FreeTy),
+                           IntegerType::get(C, PropBits.Padding)));
+  }
+  /// Return a constant value holding this property.
+  Constant *getValueImpl(LLVMContext &C) const override {
+    // Must match the definition of property type in csan.h
+    return ConstantInt::get(getType(C), PropValue.Bits);
+  }
+
+  /// Set the value of the allocation function type (e.g., malloc, calloc, new).
+  void setFreeTy(unsigned v) {
+    PropValue.Fields.FreeTy = v;
+  }
+
+private:
+  typedef union {
+    // Must match the definition of property type in csi.h
+    struct {
+      unsigned FreeTy : 8;
+      uint64_t Padding : 56;
+    } Fields;
+    uint64_t Bits;
+  } Property;
+
+  /// The underlying values of the properties.
+  Property PropValue;
+
+  typedef struct {
+    int FreeTy;
+    int Padding;
+  } PropertyBits;
+
+  /// The number of bits representing each property.
+  static constexpr PropertyBits PropBits = { 8, (64-8) };
+};
+
 struct CSIImpl {
 public:
   CSIImpl(Module &M, CallGraph *CG,
           function_ref<DominatorTree &(Function &)> GetDomTree,
+          function_ref<TaskInfo &(Function &)> GetTaskInfo,
+          const TargetLibraryInfo *TLI,
           const CSIOptions &Options = CSIOptions())
       : M(M), DL(M.getDataLayout()), CG(CG), GetDomTree(GetDomTree),
-        Options(Options)
+        GetTaskInfo(GetTaskInfo), TLI(TLI), Options(Options)
   {}
 
   virtual ~CSIImpl() {}
@@ -637,10 +734,14 @@ public:
   static bool isVtableAccess(Instruction *I);
   static bool addrPointsToConstantData(Value *Addr);
   static bool isAtomic(Instruction *I);
+  static void getAllocFnArgs(
+      const Instruction *I, SmallVectorImpl<Value*> &AllocFnArgs,
+      Type *SizeTy, Type *AddrTy, const TargetLibraryInfo &TLI);
 
   /// Helper functions to deal with calls to functions that can throw.
   static void setupCalls(Function &F);
-  static void setupBlocks(Function &F, DominatorTree *DT = nullptr);
+  static void setupBlocks(Function &F, const TargetLibraryInfo *TLI,
+                          DominatorTree *DT = nullptr);
 
   /// Helper function that identifies calls or invokes of placeholder functions,
   /// such as debug-info intrinsics or lifetime intrinsics.
@@ -665,6 +766,7 @@ protected:
   void initializeAllocaHooks();
   void initializeMemIntrinsicsHooks();
   void initializeTapirHooks();
+  void initializeAllocFnHooks();
   /// @}
 
   static StructType *getUnitFedTableType(LLVMContext &C,
@@ -712,10 +814,13 @@ protected:
   void instrumentAtomic(Instruction *I, const DataLayout &DL);
   bool instrumentMemIntrinsic(Instruction *I);
   void instrumentCallsite(Instruction *I, DominatorTree *DT);
-  void instrumentAlloca(Instruction *I);
   void instrumentBasicBlock(BasicBlock &BB);
-  void instrumentDetach(DetachInst *DI, DominatorTree *DT);
+  void instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI);
   void instrumentSync(SyncInst *SI);
+  void instrumentAlloca(Instruction *I);
+  void instrumentAllocFn(Instruction *I, DominatorTree *DT);
+  void instrumentFree(Instruction *I);
+
   void instrumentFunction(Function &F);
   /// @}
 
@@ -739,18 +844,143 @@ protected:
   // Update the attributes on the instrumented function that might be
   // invalidated by the inserted instrumentation.
   void updateInstrumentedFnAttrs(Function &F);
+  // List of all allocation function types.  This list needs to remain
+  // consistent with TargetLibraryInfo and with csan.h.
+  enum class AllocFnTy
+    {
+     malloc = 0,
+     valloc,
+     calloc,
+     realloc,
+     reallocf,
+     Znwj,
+     ZnwjRKSt9nothrow_t,
+     Znwm,
+     ZnwmRKSt9nothrow_t,
+     Znaj,
+     ZnajRKSt9nothrow_t,
+     Znam,
+     ZnamRKSt9nothrow_t,
+     msvc_new_int,
+     msvc_new_int_nothrow,
+     msvc_new_longlong,
+     msvc_new_longlong_nothrow,
+     msvc_new_array_int,
+     msvc_new_array_int_nothrow,
+     msvc_new_array_longlong,
+     msvc_new_array_longlong_nothrow,
+     LAST_ALLOCFNTY
+    };
+
+  static AllocFnTy getAllocFnTy(const LibFunc &F) {
+    switch (F) {
+    default: return AllocFnTy::LAST_ALLOCFNTY;
+    case LibFunc_malloc: return AllocFnTy::malloc;
+    case LibFunc_valloc: return AllocFnTy::valloc;
+    case LibFunc_calloc: return AllocFnTy::calloc;
+    case LibFunc_realloc: return AllocFnTy::realloc;
+    case LibFunc_reallocf: return AllocFnTy::reallocf;
+    case LibFunc_Znwj: return AllocFnTy::Znwj;
+    case LibFunc_ZnwjRKSt9nothrow_t: return AllocFnTy::ZnwjRKSt9nothrow_t;
+    case LibFunc_Znwm: return AllocFnTy::Znwm;
+    case LibFunc_ZnwmRKSt9nothrow_t: return AllocFnTy::ZnwmRKSt9nothrow_t;
+    case LibFunc_Znaj: return AllocFnTy::Znaj;
+    case LibFunc_ZnajRKSt9nothrow_t: return AllocFnTy::ZnajRKSt9nothrow_t;
+    case LibFunc_Znam: return AllocFnTy::Znam;
+    case LibFunc_ZnamRKSt9nothrow_t: return AllocFnTy::ZnamRKSt9nothrow_t;
+    case LibFunc_msvc_new_int: return AllocFnTy::msvc_new_int;
+    case LibFunc_msvc_new_int_nothrow: return AllocFnTy::msvc_new_int_nothrow;
+    case LibFunc_msvc_new_longlong: return AllocFnTy::msvc_new_longlong;
+    case LibFunc_msvc_new_longlong_nothrow:
+      return AllocFnTy::msvc_new_longlong_nothrow;
+    case LibFunc_msvc_new_array_int: return AllocFnTy::msvc_new_array_int;
+    case LibFunc_msvc_new_array_int_nothrow:
+      return AllocFnTy::msvc_new_array_int_nothrow;
+    case LibFunc_msvc_new_array_longlong:
+      return AllocFnTy::msvc_new_array_longlong;
+    case LibFunc_msvc_new_array_longlong_nothrow:
+      return AllocFnTy::msvc_new_array_longlong_nothrow;
+    }
+  }
+
+  // List of all free function types.  This list needs to remain consistent with
+  // TargetLibraryInfo and with csi.h.
+  enum class FreeTy
+    {
+     free = 0,
+     ZdlPv,
+     ZdlPvRKSt9nothrow_t,
+     ZdlPvj,
+     ZdlPvm,
+     ZdaPv,
+     ZdaPvRKSt9nothrow_t,
+     ZdaPvj,
+     ZdaPvm,
+     msvc_delete_ptr32,
+     msvc_delete_ptr32_nothrow,
+     msvc_delete_ptr32_int,
+     msvc_delete_ptr64,
+     msvc_delete_ptr64_nothrow,
+     msvc_delete_ptr64_longlong,
+     msvc_delete_array_ptr32,
+     msvc_delete_array_ptr32_nothrow,
+     msvc_delete_array_ptr32_int,
+     msvc_delete_array_ptr64,
+     msvc_delete_array_ptr64_nothrow,
+     msvc_delete_array_ptr64_longlong,
+     LAST_FREETY
+    };
+
+  static FreeTy getFreeTy(const LibFunc &F) {
+    switch (F) {
+    default: return FreeTy::LAST_FREETY;
+    case LibFunc_free: return FreeTy::free;
+    case LibFunc_ZdlPv: return FreeTy::ZdlPv;
+    case LibFunc_ZdlPvRKSt9nothrow_t: return FreeTy::ZdlPvRKSt9nothrow_t;
+    case LibFunc_ZdlPvj: return FreeTy::ZdlPvj;
+    case LibFunc_ZdlPvm: return FreeTy::ZdlPvm;
+    case LibFunc_ZdaPv: return FreeTy::ZdaPv;
+    case LibFunc_ZdaPvRKSt9nothrow_t: return FreeTy::ZdaPvRKSt9nothrow_t;
+    case LibFunc_ZdaPvj: return FreeTy::ZdaPvj;
+    case LibFunc_ZdaPvm: return FreeTy::ZdaPvm;
+    case LibFunc_msvc_delete_ptr32: return FreeTy::msvc_delete_ptr32;
+    case LibFunc_msvc_delete_ptr32_nothrow:
+      return FreeTy::msvc_delete_ptr32_nothrow;
+    case LibFunc_msvc_delete_ptr32_int: return FreeTy::msvc_delete_ptr32_int;
+    case LibFunc_msvc_delete_ptr64: return FreeTy::msvc_delete_ptr64;
+    case LibFunc_msvc_delete_ptr64_nothrow:
+      return FreeTy::msvc_delete_ptr64_nothrow;
+    case LibFunc_msvc_delete_ptr64_longlong:
+      return FreeTy::msvc_delete_ptr64_longlong;
+    case LibFunc_msvc_delete_array_ptr32:
+      return FreeTy::msvc_delete_array_ptr32;
+    case LibFunc_msvc_delete_array_ptr32_nothrow:
+      return FreeTy::msvc_delete_array_ptr32_nothrow;
+    case LibFunc_msvc_delete_array_ptr32_int:
+      return FreeTy::msvc_delete_array_ptr32_int;
+    case LibFunc_msvc_delete_array_ptr64:
+      return FreeTy::msvc_delete_array_ptr64;
+    case LibFunc_msvc_delete_array_ptr64_nothrow:
+      return FreeTy::msvc_delete_array_ptr64_nothrow;
+    case LibFunc_msvc_delete_array_ptr64_longlong:
+      return FreeTy::msvc_delete_array_ptr64_longlong;
+    }
+  }
 
   Module &M;
   const DataLayout &DL;
   CallGraph *CG;
   function_ref<DominatorTree &(Function &)> GetDomTree;
+  function_ref<TaskInfo &(Function &)> GetTaskInfo;
+  const TargetLibraryInfo *TLI;
   CSIOptions Options;
 
   FrontEndDataTable FunctionFED, FunctionExitFED, BasicBlockFED, CallsiteFED,
     LoadFED, StoreFED, 
     AllocaFED, 
     DetachFED, TaskFED, TaskExitFED, DetachContinueFED,
-    SyncFED;
+    SyncFED,
+    AllocFnFED, FreeFED;
 
   SmallVector<Constant *, 12> UnitFedTables;
 
@@ -767,6 +997,8 @@ protected:
   Function *CsiDetach = nullptr, *CsiDetachContinue = nullptr;
   Function *CsiTaskEntry = nullptr, *CsiTaskExit = nullptr;
   Function *CsiBeforeSync = nullptr, *CsiAfterSync = nullptr;
+  Function *CsiBeforeAllocFn = nullptr, *CsiAfterAllocFn = nullptr;
+  Function *CsiBeforeFree = nullptr, *CsiAfterFree = nullptr;
 
   Function *MemmoveFn = nullptr, *MemcpyFn = nullptr, *MemsetFn = nullptr;
   Function *InitCallsiteToFunction = nullptr;

@@ -85,101 +85,8 @@ static cl::opt<bool>
         "ignore-inaccessible-memory", cl::init(false), cl::Hidden,
         cl::desc("Ignore inaccessible memory when checking for races."));
 
-static const char *const CsiAllocFnBaseIdName = "__csi_unit_allocfn_base_id";
-static const char *const CsiFreeBaseIdName = "__csi_unit_free_base_id";
-
 static const char *const CsiUnitObjTableName = "__csi_unit_obj_table";
 static const char *const CsiUnitObjTableArrayName = "__csi_unit_obj_tables";
-
-class CsanAllocFnProperty : public CsiProperty {
-public:
-  CsanAllocFnProperty() {
-    PropValue.Bits = 0;
-  }
-  /// Return the Type of a property.
-  static Type *getType(LLVMContext &C) {
-    // Must match the definition of property type in csi.h
-    return CsiProperty::getCoercedType(
-        C, StructType::get(IntegerType::get(C, PropBits.AllocFnTy),
-                           IntegerType::get(C, PropBits.Padding)));
-  }
-  /// Return a constant value holding this property.
-  Constant *getValueImpl(LLVMContext &C) const override {
-    // Must match the definition of property type in csan.h
-    return ConstantInt::get(getType(C), PropValue.Bits);
-  }
-
-  /// Set the value of the allocation function type (e.g., malloc, calloc, new).
-  void setAllocFnTy(unsigned v) {
-    PropValue.Fields.AllocFnTy = v;
-  }
-
-private:
-  typedef union {
-    // Must match the definition of property type in csi.h
-    struct {
-      unsigned AllocFnTy : 8;
-      uint64_t Padding : 56;
-    } Fields;
-    uint64_t Bits;
-  } Property;
-
-  /// The underlying values of the properties.
-  Property PropValue;
-
-  typedef struct {
-    int AllocFnTy;
-    int Padding;
-  } PropertyBits;
-
-  /// The number of bits representing each property.
-  static constexpr PropertyBits PropBits = { 8, (64-8) };
-};
-
-class CsanFreeProperty : public CsiProperty {
-public:
-  CsanFreeProperty() {
-    PropValue.Bits = 0;
-  }
-  /// Return the Type of a property.
-  static Type *getType(LLVMContext &C) {
-    // Must match the definition of property type in csi.h
-    return CsiProperty::getCoercedType(
-        C, StructType::get(IntegerType::get(C, PropBits.FreeTy),
-                           IntegerType::get(C, PropBits.Padding)));
-  }
-  /// Return a constant value holding this property.
-  Constant *getValueImpl(LLVMContext &C) const override {
-    // Must match the definition of property type in csan.h
-    return ConstantInt::get(getType(C), PropValue.Bits);
-  }
-
-  /// Set the value of the allocation function type (e.g., malloc, calloc, new).
-  void setFreeTy(unsigned v) {
-    PropValue.Fields.FreeTy = v;
-  }
-
-private:
-  typedef union {
-    // Must match the definition of property type in csi.h
-    struct {
-      unsigned FreeTy : 8;
-      uint64_t Padding : 56;
-    } Fields;
-    uint64_t Bits;
-  } Property;
-
-  /// The underlying values of the properties.
-  Property PropValue;
-
-  typedef struct {
-    int FreeTy;
-    int Padding;
-  } PropertyBits;
-
-  /// The number of bits representing each property.
-  static constexpr PropertyBits PropBits = { 8, (64-8) };
-};
 
 /// Maintains a mapping from CSI ID of a load or store to the source information
 /// of the object accessed by that load or store.
@@ -285,8 +192,8 @@ struct CilkSanitizerImpl : public CSIImpl {
                     function_ref<LoopInfo &(Function &)> GetLoopInfo,
                     function_ref<DependenceInfo &(Function &)> GetDepInfo,
                     const TargetLibraryInfo *TLI)
-      : CSIImpl(M, CG, GetDomTree), GetTaskInfo(GetTaskInfo),
-        GetLoopInfo(GetLoopInfo), GetDepInfo(GetDepInfo), TLI(TLI) {
+      : CSIImpl(M, CG, GetDomTree, GetTaskInfo, TLI),
+        GetLoopInfo(GetLoopInfo), GetDepInfo(GetDepInfo) {
     // Even though we're doing our own instrumentation, we want the CSI setup
     // for the instrumentation of function entry/exit, memory accesses (i.e.,
     // loads and stores), atomics, memory intrinsics.  We also want call sites,
@@ -314,19 +221,8 @@ struct CilkSanitizerImpl : public CSIImpl {
   void setupBlocks(Function &F, DominatorTree *DT = nullptr);
 
   // Methods for handling FED tables
-  void initializeFEDTables() {
-    AllocFnFED = FrontEndDataTable(M, CsiAllocFnBaseIdName);
-    FreeFED = FrontEndDataTable(M, CsiFreeBaseIdName);
-  }
-  void collectUnitFEDTables() {
-    LLVMContext &C = M.getContext();
-    StructType *UnitFedTableType =
-      getUnitFedTableType(C, FrontEndDataTable::getPointerType(C));
-    UnitFedTables.push_back(
-        fedTableToUnitFedTable(M, UnitFedTableType, AllocFnFED));
-    UnitFedTables.push_back(
-        fedTableToUnitFedTable(M, UnitFedTableType, FreeFED));
-  }
+  void initializeFEDTables() {}
+  void collectUnitFEDTables() {}
 
   // Methods for handling object tables
   void initializeCsanObjectTables();
@@ -509,10 +405,8 @@ private:
   }
 
   // Analysis results
-  function_ref<TaskInfo &(Function &)> GetTaskInfo;
   function_ref<LoopInfo &(Function &)> GetLoopInfo;
   function_ref<DependenceInfo &(Function &)> GetDepInfo;
-  const TargetLibraryInfo *TLI;
 
   // Instrumentation hooks
   Function *CsanFuncEntry = nullptr;
@@ -535,7 +429,6 @@ private:
   Function *CsanEnableChecking = nullptr;
 
   // CilkSanitizer custom forensic tables
-  FrontEndDataTable AllocFnFED, FreeFED;
   ObjectTable LoadObj, StoreObj, AllocaObj, AllocFnObj;
 
   SmallVector<Constant *, 4> UnitObjTables;
@@ -845,8 +738,8 @@ void CilkSanitizerImpl::initializeCsanHooks() {
   Type *FuncExitPropertyTy = CsiFuncExitProperty::getType(C);
   Type *LoadPropertyTy = CsiLoadStoreProperty::getType(C);
   Type *StorePropertyTy = CsiLoadStoreProperty::getType(C);
-  Type *AllocFnPropertyTy = CsanAllocFnProperty::getType(C);
-  Type *FreePropertyTy = CsanFreeProperty::getType(C);
+  Type *AllocFnPropertyTy = CsiAllocFnProperty::getType(C);
+  Type *FreePropertyTy = CsiFreeProperty::getType(C);
   Type *RetType = IRB.getVoidTy();
   Type *AddrType = IRB.getInt8PtrTy();
   Type *NumBytesType = IRB.getInt32Ty();
@@ -996,6 +889,7 @@ void CilkSanitizerImpl::setupBlocks(Function &F, DominatorTree *DT) {
   for (BasicBlock &BB : F) {
     if (BB.isLandingPad())
       BlocksToSetup.insert(&BB);
+
     if (InvokeInst *II = dyn_cast<InvokeInst>(BB.getTerminator()))
       BlocksToSetup.insert(II->getNormalDest());
     else if (SyncInst *SI = dyn_cast<SyncInst>(BB.getTerminator()))
@@ -2792,7 +2686,7 @@ bool CilkSanitizerImpl::instrumentAllocationFn(Instruction *I,
        /* Alignment */ Constant::getNullValue(IntptrTy),
        /* Old pointer */ Constant::getNullValue(IRB.getInt8PtrTy()),});
 
-  CsanAllocFnProperty Prop;
+  CsiAllocFnProperty Prop;
   Value *DefaultPropVal = Prop.getValue(IRB);
   LibFunc AllocLibF;
   TLI->getLibFunc(*Called, AllocLibF);
@@ -2869,7 +2763,7 @@ bool CilkSanitizerImpl::instrumentFree(Instruction *I) {
   //        "Allocation fn received different ID's in FED and object tables.");
 
   Value *Addr = FC->getArgOperand(0);
-  CsanFreeProperty Prop;
+  CsiFreeProperty Prop;
   LibFunc FreeLibF;
   TLI->getLibFunc(*Called, FreeLibF);
   Prop.setFreeTy(static_cast<unsigned>(getFreeTy(FreeLibF)));
