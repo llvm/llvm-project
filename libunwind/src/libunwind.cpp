@@ -14,8 +14,6 @@
 #ifndef NDEBUG
 #include <cstdlib> // getenv
 #endif
-#include <new>
-#include <algorithm>
 
 #include "libunwind_ext.h"
 #include "config.h"
@@ -122,12 +120,14 @@ static bool is64bit(task_t task) {
 _LIBUNWIND_EXPORT unw_addr_space_t unw_create_addr_space_for_task(task_t task) {
 #if __i386__
   if (is64bit(task)) {
-    unw_addr_space_x86_64 *as = new unw_addr_space_x86_64(task);
+    unw_addr_space_x86_64 *as = malloc(sizeof(unw_addr_space_x86_64));
+    new (as) unw_addr_space_x86_64(task);
     as->taskPort = task;
     as->cpuType = CPU_TYPE_X86_64;
     //as->oas
   } else {
-    unw_addr_space_i386 *as = new unw_addr_space_i386(task);
+    unw_addr_space_i386 *as = malloc(sizeof(unw_addr_space_i386));
+    new (as) unw_addr_space_i386(task);
     as->taskPort = task;
     as->cpuType = CPU_TYPE_I386;
     //as->oas
@@ -144,18 +144,21 @@ _LIBUNWIND_EXPORT void unw_destroy_addr_space(unw_addr_space_t asp) {
 #if __i386__ || __x86_64__
   case CPU_TYPE_I386: {
     unw_addr_space_i386 *as = (unw_addr_space_i386 *)asp;
-    delete as;
+    as->~unw_addr_space_i386();
+    free(as);
   }
   break;
   case CPU_TYPE_X86_64: {
     unw_addr_space_x86_64 *as = (unw_addr_space_x86_64 *)asp;
-    delete as;
+    as->~unw_addr_space_x86_64();
+    free(as);
   }
   break;
 #endif
   case CPU_TYPE_POWERPC: {
     unw_addr_space_ppc *as = (unw_addr_space_ppc *)asp;
-    delete as;
+    as->~unw_addr_space_ppc();
+    free(as);
   }
   break;
   }
