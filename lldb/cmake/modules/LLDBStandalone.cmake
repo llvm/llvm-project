@@ -65,16 +65,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     mark_as_advanced(LLVM_ENABLE_ASSERTIONS)
   endif()
 
-  if (LLDB_PATH_TO_CLANG_SOURCE)
-    get_filename_component(CLANG_MAIN_SRC_DIR ${LLDB_PATH_TO_CLANG_SOURCE} ABSOLUTE)
-    set(CLANG_MAIN_INCLUDE_DIR "${CLANG_MAIN_SRC_DIR}/include")
-  endif()
-
-  if (LLDB_PATH_TO_SWIFT_SOURCE)
-      get_filename_component(SWIFT_MAIN_SRC_DIR ${LLDB_PATH_TO_SWIFT_SOURCE}
-                             ABSOLUTE)
-  endif()
-
   list(APPEND CMAKE_MODULE_PATH "${LLDB_PATH_TO_LLVM_BUILD}/share/llvm/cmake")
   list(APPEND CMAKE_MODULE_PATH "${LLDB_PATH_TO_SWIFT_SOURCE}/cmake/modules")
   set(LLVM_TOOLS_BINARY_DIR ${TOOLS_BINARY_DIR} CACHE PATH "Path to llvm/bin")
@@ -141,18 +131,14 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   # Why are we doing this?
   # set(LLVM_BINARY_DIR ${CMAKE_BINARY_DIR})
 
-  set(CLANG_MAIN_INCLUDE_DIR "${CLANG_MAIN_SRC_DIR}/include")
-
-  set(SWIFT_MAIN_INCLUDE_DIR "${SWIFT_MAIN_SRC_DIR}/include")
-
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
   include_directories("${LLVM_BINARY_DIR}/include"
                       "${LLVM_BINARY_DIR}/tools/clang/include"
                       "${LLVM_MAIN_INCLUDE_DIR}"
                       "${PATH_TO_CLANG_BUILD}/include"
-                      "${CLANG_MAIN_INCLUDE_DIR}"
+                      "${LLDB_PATH_TO_CLANG_SOURCE}/include"
                       "${PATH_TO_SWIFT_BUILD}/include"
-                      "${SWIFT_MAIN_INCLUDE_DIR}"
+                      "${LLDB_PATH_TO_SWIFT_SOURCE}/include"
                       "${CMAKE_CURRENT_SOURCE_DIR}/source")
 
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
