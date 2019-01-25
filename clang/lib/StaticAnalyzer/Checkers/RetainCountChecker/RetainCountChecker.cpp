@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RetainCountChecker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 
 using namespace clang;
 using namespace ento;
@@ -327,6 +328,31 @@ void RetainCountChecker::checkPostStmt(const ObjCIvarRefExpr *IRE,
   C.addTransition(State);
 }
 
+static bool isReceiverUnconsumedSelf(const CallEvent &Call) {
+  if (const auto *MC = dyn_cast<ObjCMethodCall>(&Call)) {
+
+    // Check if the message is not consumed, we know it will not be used in
+    // an assignment, ex: "self = [super init]".
+    return MC->getMethodFamily() == OMF_init && MC->isReceiverSelfOrSuper() &&
+           !Call.getLocationContext()
+                ->getAnalysisDeclContext()
+                ->getParentMap()
+                .isConsumedExpr(Call.getOriginExpr());
+  }
+  return false;
+}
+
+const static RetainSummary *getSummary(RetainSummaryManager &Summaries,
+                                       const CallEvent &Call,
+                                       QualType ReceiverType) {
+  const Expr *CE = Call.getOriginExpr();
+  AnyCall C =
+      CE ? *AnyCall::forExpr(CE)
+         : AnyCall::forDestructorCall(cast<CXXDestructorDecl>(Call.getDecl()));
+  return Summaries.getSummary(C, Call.hasNonZeroCallbackArg(),
+                              isReceiverUnconsumedSelf(Call), ReceiverType);
+}
+
 void RetainCountChecker::checkPostCall(const CallEvent &Call,
                                        CheckerContext &C) const {
   RetainSummaryManager &Summaries = getSummaryManager(C);
@@ -342,7 +368,7 @@ void RetainCountChecker::checkPostCall(const CallEvent &Call,
     }
   }
 
-  const RetainSummary *Summ = Summaries.getSummary(Call, ReceiverType);
+  const RetainSummary *Summ = getSummary(Summaries, Call, ReceiverType);
 
   if (C.wasInlined) {
     processSummaryOfInlined(*Summ, Call, C);

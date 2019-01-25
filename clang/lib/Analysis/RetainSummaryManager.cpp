@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Core/RetainSummaryManager.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
+#include "clang/Analysis/RetainSummaryManager.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -559,8 +559,11 @@ static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {
 }
 
 void RetainSummaryManager::updateSummaryForCall(const RetainSummary *&S,
-                                                const CallEvent &Call) {
-  if (Call.hasNonZeroCallbackArg()) {
+                                                AnyCall C,
+                                                bool HasNonZeroCallbackArg,
+                                                bool IsReceiverUnconsumedSelf) {
+
+  if (HasNonZeroCallbackArg) {
     ArgEffect RecEffect =
       getStopTrackingHardEquivalent(S->getReceiverEffect());
     ArgEffect DefEffect =
@@ -581,8 +584,8 @@ void RetainSummaryManager::updateSummaryForCall(const RetainSummary *&S,
     // Special cases where the callback argument CANNOT free the return value.
     // This can generally only happen if we know that the callback will only be
     // called when the return value is already being deallocated.
-    if (const SimpleFunctionCall *FC = dyn_cast<SimpleFunctionCall>(&Call)) {
-      if (IdentifierInfo *Name = FC->getDecl()->getIdentifier()) {
+    if (C.getKind() == AnyCall::Function) {
+      if (const IdentifierInfo *Name = C.getIdentifier()) {
         // When the CGBitmapContext is deallocated, the callback here will free
         // the associated data buffer.
         // The callback in dispatch_data_create frees the buffer, but not
@@ -608,50 +611,42 @@ void RetainSummaryManager::updateSummaryForCall(const RetainSummary *&S,
   // Note, we don't want to just stop tracking the value since we want the
   // RetainCount checker to report leaks and use-after-free if SelfInit checker
   // is turned off.
-  if (const ObjCMethodCall *MC = dyn_cast<ObjCMethodCall>(&Call)) {
-    if (MC->getMethodFamily() == OMF_init && MC->isReceiverSelfOrSuper()) {
-
-      // Check if the message is not consumed, we know it will not be used in
-      // an assignment, ex: "self = [super init]".
-      const Expr *ME = MC->getOriginExpr();
-      const LocationContext *LCtx = MC->getLocationContext();
-      ParentMap &PM = LCtx->getAnalysisDeclContext()->getParentMap();
-      if (!PM.isConsumedExpr(ME)) {
-        RetainSummaryTemplate ModifiableSummaryTemplate(S, *this);
-        ModifiableSummaryTemplate->setReceiverEffect(ArgEffect(DoNothing));
-        ModifiableSummaryTemplate->setRetEffect(RetEffect::MakeNoRet());
-      }
-    }
+  if (IsReceiverUnconsumedSelf) {
+    RetainSummaryTemplate ModifiableSummaryTemplate(S, *this);
+    ModifiableSummaryTemplate->setReceiverEffect(ArgEffect(DoNothing));
+    ModifiableSummaryTemplate->setRetEffect(RetEffect::MakeNoRet());
   }
 }
 
 const RetainSummary *
-RetainSummaryManager::getSummary(const CallEvent &Call,
+RetainSummaryManager::getSummary(AnyCall C,
+                                 bool HasNonZeroCallbackArg,
+                                 bool IsReceiverUnconsumedSelf,
                                  QualType ReceiverType) {
   const RetainSummary *Summ;
-  switch (Call.getKind()) {
-  case CE_Function:
-  case CE_CXXMember:
-  case CE_CXXMemberOperator:
-  case CE_CXXConstructor:
-  case CE_CXXAllocator:
-    Summ = getFunctionSummary(cast_or_null<FunctionDecl>(Call.getDecl()));
+  switch (C.getKind()) {
+  case AnyCall::Function:
+  case AnyCall::Constructor:
+  case AnyCall::Allocator:
+  case AnyCall::Deallocator:
+    Summ = getFunctionSummary(cast_or_null<FunctionDecl>(C.getDecl()));
     break;
-  case CE_Block:
-  case CE_CXXDestructor:
+  case AnyCall::Block:
+  case AnyCall::Destructor:
     // FIXME: These calls are currently unsupported.
     return getPersistentStopSummary();
-  case CE_ObjCMessage: {
-    const ObjCMethodCall &Msg = cast<ObjCMethodCall>(Call);
-    if (Msg.isInstanceMessage())
-      Summ = getInstanceMethodSummary(Msg, ReceiverType);
+  case AnyCall::ObjCMethod: {
+    const auto *ME = cast<ObjCMessageExpr>(C.getExpr());
+    if (ME->isInstanceMessage())
+      Summ = getInstanceMethodSummary(ME, ReceiverType);
     else
-      Summ = getClassMethodSummary(Msg);
+      Summ = getClassMethodSummary(ME);
     break;
   }
   }
 
-  updateSummaryForCall(Summ, Call);
+  updateSummaryForCall(Summ, C, HasNonZeroCallbackArg,
+                       IsReceiverUnconsumedSelf);
 
   assert(Summ && "Unknown call type?");
   return Summ;
@@ -1068,8 +1063,17 @@ RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
                               ArgEffect(ReceiverEff), ArgEffect(MayEscape));
 }
 
+const RetainSummary *
+RetainSummaryManager::getClassMethodSummary(const ObjCMessageExpr *ME) {
+  assert(!ME->isInstanceMessage());
+  const ObjCInterfaceDecl *Class = ME->getReceiverInterface();
+
+  return getMethodSummary(ME->getSelector(), Class, ME->getMethodDecl(),
+                          ME->getType(), ObjCClassMethodSummaries);
+}
+
 const RetainSummary *RetainSummaryManager::getInstanceMethodSummary(
-    const ObjCMethodCall &Msg,
+    const ObjCMessageExpr *ME,
     QualType ReceiverType) {
   const ObjCInterfaceDecl *ReceiverClass = nullptr;
 
@@ -1081,18 +1085,18 @@ const RetainSummary *RetainSummaryManager::getInstanceMethodSummary(
 
   // If we don't know what kind of object this is, fall back to its static type.
   if (!ReceiverClass)
-    ReceiverClass = Msg.getReceiverInterface();
+    ReceiverClass = ME->getReceiverInterface();
 
   // FIXME: The receiver could be a reference to a class, meaning that
   //  we should use the class method.
   // id x = [NSObject class];
   // [x performSelector:... withObject:... afterDelay:...];
-  Selector S = Msg.getSelector();
-  const ObjCMethodDecl *Method = Msg.getDecl();
+  Selector S = ME->getSelector();
+  const ObjCMethodDecl *Method = ME->getMethodDecl();
   if (!Method && ReceiverClass)
     Method = ReceiverClass->getInstanceMethod(S);
 
-  return getMethodSummary(S, ReceiverClass, Method, Msg.getResultType(),
+  return getMethodSummary(S, ReceiverClass, Method, ME->getType(),
                           ObjCMethodSummaries);
 }
 
@@ -1221,10 +1225,24 @@ void RetainSummaryManager::InitializeMethodSummaries() {
   addInstMethSummary("CIContext", CFAllocSumm, "createCGLayerWithSize", "info");
 }
 
+const RetainSummary *
+RetainSummaryManager::getMethodSummary(const ObjCMethodDecl *MD) {
+  const ObjCInterfaceDecl *ID = MD->getClassInterface();
+  Selector S = MD->getSelector();
+  QualType ResultTy = MD->getReturnType();
+
+  ObjCMethodSummariesTy *CachedSummaries;
+  if (MD->isInstanceMethod())
+    CachedSummaries = &ObjCMethodSummaries;
+  else
+    CachedSummaries = &ObjCClassMethodSummaries;
+
+  return getMethodSummary(S, ID, MD, ResultTy, *CachedSummaries);
+}
+
 CallEffects CallEffects::getEffect(const ObjCMethodDecl *MD) {
   ASTContext &Ctx = MD->getASTContext();
-  LangOptions L = Ctx.getLangOpts();
-  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount,
+  RetainSummaryManager M(Ctx,
                          /*TrackNSAndCFObjects=*/true,
                          /*TrackOSObjects=*/false);
   const RetainSummary *S = M.getMethodSummary(MD);
@@ -1238,8 +1256,7 @@ CallEffects CallEffects::getEffect(const ObjCMethodDecl *MD) {
 
 CallEffects CallEffects::getEffect(const FunctionDecl *FD) {
   ASTContext &Ctx = FD->getASTContext();
-  LangOptions L = Ctx.getLangOpts();
-  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount,
+  RetainSummaryManager M(Ctx,
                          /*TrackNSAndCFObjects=*/true,
                          /*TrackOSObjects=*/false);
   const RetainSummary *S = M.getFunctionSummary(FD);

@@ -13,25 +13,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYZER_CORE_RETAINSUMMARYMANAGER
-#define LLVM_CLANG_ANALYZER_CORE_RETAINSUMMARYMANAGER
+#ifndef LLVM_CLANG_ANALYSIS_RETAINSUMMARY_MANAGER_H
+#define LLVM_CLANG_ANALYSIS_RETAINSUMMARY_MANAGER_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/ImmutableMap.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/Analysis/AnyCall.h"
 #include "clang/Analysis/SelectorExtras.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "llvm/ADT/STLExtras.h"
 
-//===----------------------------------------------------------------------===//
-// Adapters for FoldingSet.
-//===----------------------------------------------------------------------===//
-
 using namespace clang;
-using namespace ento;
 
 namespace clang {
 namespace ento {
@@ -263,9 +259,13 @@ public:
 } // end namespace ento
 } // end namespace clang
 
+using namespace ento;
 
 namespace llvm {
 
+//===----------------------------------------------------------------------===//
+// Adapters for FoldingSet.
+//===----------------------------------------------------------------------===//
 template <> struct FoldingSetTrait<ArgEffect> {
 static inline void Profile(const ArgEffect X, FoldingSetNodeID &ID) {
   ID.AddInteger((unsigned) X.getKind());
@@ -654,19 +654,15 @@ class RetainSummaryManager {
                                   RetainSummaryTemplate &Template);
 
 public:
-  RetainSummaryManager(ASTContext &ctx,
-                       bool usesARC,
-                       bool trackObjCAndCFObjects,
+  RetainSummaryManager(ASTContext &ctx, bool trackObjCAndCFObjects,
                        bool trackOSObjects)
-   : Ctx(ctx),
-     ARCEnabled(usesARC),
-     TrackObjCAndCFObjects(trackObjCAndCFObjects),
-     TrackOSObjects(trackOSObjects),
-     AF(BPAlloc),
-     ObjCAllocRetE(usesARC ? RetEffect::MakeNotOwned(ObjKind::ObjC)
-                               : RetEffect::MakeOwned(ObjKind::ObjC)),
-     ObjCInitRetE(usesARC ? RetEffect::MakeNotOwned(ObjKind::ObjC)
-                               : RetEffect::MakeOwnedWhenTrackedReceiver()) {
+      : Ctx(ctx), ARCEnabled((bool)Ctx.getLangOpts().ObjCAutoRefCount),
+        TrackObjCAndCFObjects(trackObjCAndCFObjects),
+        TrackOSObjects(trackOSObjects), AF(BPAlloc),
+        ObjCAllocRetE(ARCEnabled ? RetEffect::MakeNotOwned(ObjKind::ObjC)
+                                 : RetEffect::MakeOwned(ObjKind::ObjC)),
+        ObjCInitRetE(ARCEnabled ? RetEffect::MakeNotOwned(ObjKind::ObjC)
+                                : RetEffect::MakeOwnedWhenTrackedReceiver()) {
     InitializeClassMethodSummaries();
     InitializeMethodSummaries();
   }
@@ -694,43 +690,29 @@ public:
 
   bool isTrustedReferenceCountImplementation(const FunctionDecl *FD);
 
-  const RetainSummary *getSummary(const CallEvent &Call,
+  const RetainSummary *getSummary(AnyCall C,
+                                  bool HasNonZeroCallbackArg,
+                                  bool IsReceiverUnconsumedSelf,
                                   QualType ReceiverType=QualType());
+
+  /// getMethodSummary - This version of getMethodSummary is used to query
+  ///  the summary for the current method being analyzed.
+  const RetainSummary *getMethodSummary(const ObjCMethodDecl *MD);
 
   const RetainSummary *getFunctionSummary(const FunctionDecl *FD);
 
+  RetEffect getObjAllocRetEffect() const { return ObjCAllocRetE; }
+
+private:
   const RetainSummary *getMethodSummary(Selector S, const ObjCInterfaceDecl *ID,
                                         const ObjCMethodDecl *MD,
                                         QualType RetTy,
                                         ObjCMethodSummariesTy &CachedSummaries);
 
   const RetainSummary *
-  getInstanceMethodSummary(const ObjCMethodCall &M,
-                           QualType ReceiverType);
+  getInstanceMethodSummary(const ObjCMessageExpr *ME, QualType ReceiverType);
 
-  const RetainSummary *getClassMethodSummary(const ObjCMethodCall &M) {
-    assert(!M.isInstanceMessage());
-    const ObjCInterfaceDecl *Class = M.getReceiverInterface();
-
-    return getMethodSummary(M.getSelector(), Class, M.getDecl(),
-                            M.getResultType(), ObjCClassMethodSummaries);
-  }
-
-  /// getMethodSummary - This version of getMethodSummary is used to query
-  ///  the summary for the current method being analyzed.
-  const RetainSummary *getMethodSummary(const ObjCMethodDecl *MD) {
-    const ObjCInterfaceDecl *ID = MD->getClassInterface();
-    Selector S = MD->getSelector();
-    QualType ResultTy = MD->getReturnType();
-
-    ObjCMethodSummariesTy *CachedSummaries;
-    if (MD->isInstanceMethod())
-      CachedSummaries = &ObjCMethodSummaries;
-    else
-      CachedSummaries = &ObjCClassMethodSummaries;
-
-    return getMethodSummary(S, ID, MD, ResultTy, *CachedSummaries);
-  }
+  const RetainSummary *getClassMethodSummary(const ObjCMessageExpr *ME);
 
   const RetainSummary *getStandardMethodSummary(const ObjCMethodDecl *MD,
                                                 Selector S, QualType RetTy);
@@ -745,13 +727,10 @@ public:
   void updateSummaryFromAnnotations(const RetainSummary *&Summ,
                                     const FunctionDecl *FD);
 
-
   void updateSummaryForCall(const RetainSummary *&Summ,
-                            const CallEvent &Call);
-
-  bool isARCEnabled() const { return ARCEnabled; }
-
-  RetEffect getObjAllocRetEffect() const { return ObjCAllocRetE; }
+                            AnyCall C,
+                            bool HasNonZeroCallbackArg,
+                            bool IsReceiverUnconsumedSelf);
 
   /// Determine whether a declaration {@code D} of correspondent type (return
   /// type for functions/methods) {@code QT} has any of the given attributes,
