@@ -6,11 +6,24 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// Outline cold regions to a separate function.
-// TODO: Update BFI and BPI
-// TODO: Add all the outlined functions to a separate section.
-//
+///
+/// \file
+/// The goal of hot/cold splitting is to improve the memory locality of code.
+/// The splitting pass does this by identifying cold blocks and moving them into
+/// separate functions.
+///
+/// When the splitting pass finds a cold block (referred to as "the sink"), it
+/// grows a maximal cold region around that block. The maximal region contains
+/// all blocks (post-)dominated by the sink [*]. In theory, these blocks are as
+/// cold as the sink. Once a region is found, it's split out of the original
+/// function provided it's profitable to do so.
+///
+/// [*] In practice, there is some added complexity because some blocks are not
+/// safe to extract.
+///
+/// TODO: Use the PM to get domtrees, and preserve BFI/BPI.
+/// TODO: Reorder outlined functions.
+///
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/PostOrderIterator.h"
