@@ -129,10 +129,8 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
   include_directories("${LLVM_BINARY_DIR}/include"
-                      "${LLVM_BINARY_DIR}/tools/clang/include"
                       "${LLVM_MAIN_INCLUDE_DIR}"
-                      "${PATH_TO_CLANG_BUILD}/include"
-                      "${LLDB_PATH_TO_CLANG_SOURCE}/include"
+                      "${CLANG_INCLUDE_DIRS}"
                       "${LLDB_PATH_TO_SWIFT_BUILD}/include"
                       "${LLDB_PATH_TO_SWIFT_SOURCE}/include"
                       "${CMAKE_CURRENT_SOURCE_DIR}/source")
