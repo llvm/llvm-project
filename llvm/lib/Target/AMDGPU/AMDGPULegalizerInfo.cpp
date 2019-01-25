@@ -22,16 +22,12 @@
 
 using namespace llvm;
 using namespace LegalizeActions;
+using namespace LegalizeMutations;
 using namespace LegalityPredicates;
 
 AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
                                          const GCNTargetMachine &TM) {
   using namespace TargetOpcode;
-
-  auto scalarize = [=](const LegalityQuery &Query, unsigned TypeIdx) {
-    const LLT &Ty = Query.Types[TypeIdx];
-    return std::make_pair(TypeIdx, Ty.getElementType());
-  };
 
   auto GetAddrSpacePtr = [&TM](unsigned AS) {
     return LLT::pointer(AS, TM.getPointerSizeInBits(AS));
@@ -41,6 +37,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
+  const LLT S128 = LLT::scalar(128);
   const LLT S256 = LLT::scalar(256);
   const LLT S512 = LLT::scalar(512);
 
@@ -144,9 +141,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
   getActionDefinitionsBuilder({G_FADD, G_FMUL, G_FNEG, G_FABS, G_FMA})
       .legalFor({S32, S64})
-      .fewerElementsIf(
-          [=](const LegalityQuery &Query) { return Query.Types[0].isVector(); },
-          [=](const LegalityQuery &Query) { return scalarize(Query, 0); })
+      .scalarize(0)
       .clampScalar(0, S32, S64);
 
   getActionDefinitionsBuilder(G_FPTRUNC)
@@ -154,16 +149,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
   getActionDefinitionsBuilder(G_FPEXT)
     .legalFor({{S64, S32}, {S32, S16}})
-    .lowerFor({{S64, S16}}); // FIXME: Implement
+    .lowerFor({{S64, S16}}) // FIXME: Implement
+    .scalarize(0);
 
   getActionDefinitionsBuilder(G_FSUB)
       // Use actual fsub instruction
       .legalFor({S32})
       // Must use fadd + fneg
       .lowerFor({S64, S16, V2S16})
-      .fewerElementsIf(
-          [=](const LegalityQuery &Query) { return Query.Types[0].isVector(); },
-          [=](const LegalityQuery &Query) { return scalarize(Query, 0); })
+      .scalarize(0)
       .clampScalar(0, S32, S64);
 
   setAction({G_FCMP, S1}, Legal);
@@ -172,7 +166,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
   getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
     .legalFor({{S64, S32}, {S32, S16}, {S64, S16},
-               {S32, S1}, {S64, S1}, {S16, S1}});
+               {S32, S1}, {S64, S1}, {S16, S1},
+               // FIXME: Hack
+               {S128, S32}})
+    .scalarize(0);
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
     .legalFor({{S32, S32}, {S64, S32}});
@@ -272,7 +269,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   // TODO: Pointer types, any 32-bit or 64-bit vector
   getActionDefinitionsBuilder(G_SELECT)
     .legalFor({{S32, S1}, {S64, S1}, {V2S32, S1}, {V2S16, S1}})
-    .clampScalar(0, S32, S64);
+    .clampScalar(0, S32, S64)
+    .scalarize(0);
 
   // TODO: Only the low 4/5/6 bits of the shift amount are observed, so we can
   // be more flexible with the shift amount type.
@@ -367,10 +365,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
       // Break up vectors with weird elements into scalars
       .fewerElementsIf(
         [=](const LegalityQuery &Query) { return notValidElt(Query, 0); },
-        [=](const LegalityQuery &Query) { return scalarize(Query, 0); })
+        scalarize(0))
       .fewerElementsIf(
         [=](const LegalityQuery &Query) { return notValidElt(Query, 1); },
-        [=](const LegalityQuery &Query) { return scalarize(Query, 1); })
+        scalarize(1))
       .clampScalar(BigTyIdx, S32, S512)
       .widenScalarIf(
         [=](const LegalityQuery &Query) {
@@ -410,21 +408,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
                  BigTy.getSizeInBits() <= 512;
         })
       // Any vectors left are the wrong size. Scalarize them.
-      .fewerElementsIf([](const LegalityQuery &Query) {
-          return Query.Types[0].isVector();
-        },
-        [](const LegalityQuery &Query) {
-          return std::make_pair(
-            0, Query.Types[0].getElementType());
-        })
-      .fewerElementsIf([](const LegalityQuery &Query) {
-          return Query.Types[1].isVector();
-        },
-        [](const LegalityQuery &Query) {
-          return std::make_pair(
-            1, Query.Types[1].getElementType());
-        });
-
+      .scalarize(0)
+      .scalarize(1);
   }
 
   computeTables();

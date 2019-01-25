@@ -112,3 +112,6 @@ int __attribute__((cpu_specific(pentium_4))) called_invalid_value(void){ return 
 int use3(void) {
   return called_invalid_value();
 }
+
+// expected-warning@+1 {{CPU list contains duplicate entries; attribute ignored}}
+int __attribute__((cpu_dispatch(pentium_iii, pentium_iii_no_xmm_regs))) dupe_p3(void);

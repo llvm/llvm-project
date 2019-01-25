@@ -1038,6 +1038,21 @@ bool HWAddressSanitizer::runOnFunction(Function &F) {
     Changed |= instrumentStack(AllocasToInstrument, RetVec, StackTag);
   }
 
+  // If we split the entry block, move any allocas that were originally in the
+  // entry block back into the entry block so that they aren't treated as
+  // dynamic allocas.
+  if (EntryIRB.GetInsertBlock() != &F.getEntryBlock()) {
+    InsertPt = &*F.getEntryBlock().begin();
+    for (auto II = EntryIRB.GetInsertBlock()->begin(),
+              IE = EntryIRB.GetInsertBlock()->end();
+         II != IE;) {
+      Instruction *I = &*II++;
+      if (auto *AI = dyn_cast<AllocaInst>(I))
+        if (isa<ConstantInt>(AI->getArraySize()))
+          I->moveBefore(InsertPt);
+    }
+  }
+
   for (auto Inst : ToInstrument)
     Changed |= instrumentMemAccess(Inst);
 

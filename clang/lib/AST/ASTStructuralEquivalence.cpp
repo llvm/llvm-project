@@ -296,6 +296,32 @@ static bool IsArrayStructurallyEquivalent(StructuralEquivalenceContext &Context,
   return true;
 }
 
+/// Determine structural equivalence based on the ExtInfo of functions. This
+/// is inspired by ASTContext::mergeFunctionTypes(), we compare calling
+/// conventions bits but must not compare some other bits.
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     FunctionType::ExtInfo EI1,
+                                     FunctionType::ExtInfo EI2) {
+  // Compatible functions must have compatible calling conventions.
+  if (EI1.getCC() != EI2.getCC())
+    return false;
+
+  // Regparm is part of the calling convention.
+  if (EI1.getHasRegParm() != EI2.getHasRegParm())
+    return false;
+  if (EI1.getRegParm() != EI2.getRegParm())
+    return false;
+
+  if (EI1.getProducesResult() != EI2.getProducesResult())
+    return false;
+  if (EI1.getNoCallerSavedRegs() != EI2.getNoCallerSavedRegs())
+    return false;
+  if (EI1.getNoCfCheck() != EI2.getNoCfCheck())
+    return false;
+
+  return true;
+}
+
 /// Determine structural equivalence of two types.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      QualType T1, QualType T2) {
@@ -539,7 +565,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Context, Function1->getReturnType(),
                                   Function2->getReturnType()))
       return false;
-    if (Function1->getExtInfo() != Function2->getExtInfo())
+    if (!IsStructurallyEquivalent(Context, Function1->getExtInfo(),
+                                  Function2->getExtInfo()))
       return false;
     break;
   }

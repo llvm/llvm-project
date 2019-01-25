@@ -17,7 +17,8 @@
 //                                            = regex_constants::match_default);
 
 // TODO: investigation needed
-// XFAIL: linux-gnu
+// TODO(netbsd): incomplete support for locales
+// XFAIL: linux-gnu, netbsd
 
 #include <regex>
 #include <cassert>

@@ -569,19 +569,27 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
         Triple.getVendor() != llvm::Triple::UnknownVendor ||
         !Triple.isOSBinFormatWasm())
       return nullptr;
-    if (Triple.getOS() != llvm::Triple::UnknownOS &&
-        Triple.getOS() != llvm::Triple::WASI)
-      return nullptr;
-    return new WebAssemblyOSTargetInfo<WebAssembly32TargetInfo>(Triple, Opts);
+    switch (Triple.getOS()) {
+      case llvm::Triple::WASI:
+        return new WASITargetInfo<WebAssembly32TargetInfo>(Triple, Opts);
+      case llvm::Triple::UnknownOS:
+        return new WebAssemblyOSTargetInfo<WebAssembly32TargetInfo>(Triple, Opts);
+      default:
+        return nullptr;
+    }
   case llvm::Triple::wasm64:
     if (Triple.getSubArch() != llvm::Triple::NoSubArch ||
         Triple.getVendor() != llvm::Triple::UnknownVendor ||
         !Triple.isOSBinFormatWasm())
       return nullptr;
-    if (Triple.getOS() != llvm::Triple::UnknownOS &&
-        Triple.getOS() != llvm::Triple::WASI)
-      return nullptr;
-    return new WebAssemblyOSTargetInfo<WebAssembly64TargetInfo>(Triple, Opts);
+    switch (Triple.getOS()) {
+      case llvm::Triple::WASI:
+        return new WASITargetInfo<WebAssembly64TargetInfo>(Triple, Opts);
+      case llvm::Triple::UnknownOS:
+        return new WebAssemblyOSTargetInfo<WebAssembly64TargetInfo>(Triple, Opts);
+      default:
+        return nullptr;
+    }
 
   case llvm::Triple::renderscript32:
     return new LinuxTargetInfo<RenderScript32TargetInfo>(Triple, Opts);

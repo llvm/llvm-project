@@ -682,26 +682,31 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
     // stripping. Since LLVM never generates code that does this, it is always
     // safe to set.
     OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
-    return;
-  }
-
-  if (TT.isKnownWindowsMSVCEnvironment() && MMI->usesVAFloatArgument()) {
-    StringRef SymbolName =
-        (TT.getArch() == Triple::x86_64) ? "_fltused" : "__fltused";
-    MCSymbol *S = MMI->getContext().getOrCreateSymbol(SymbolName);
-    OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
-    return;
-  }
-
-  if (TT.isOSBinFormatCOFF()) {
+  } else if (TT.isOSBinFormatCOFF()) {
+    if (MMI->usesMSVCFloatingPoint()) {
+      // In Windows' libcmt.lib, there is a file which is linked in only if the
+      // symbol _fltused is referenced. Linking this in causes some
+      // side-effects:
+      //
+      // 1. For x86-32, it will set the x87 rounding mode to 53-bit instead of
+      // 64-bit mantissas at program start.
+      //
+      // 2. It links in support routines for floating-point in scanf and printf.
+      //
+      // MSVC emits an undefined reference to _fltused when there are any
+      // floating point operations in the program (including calls). A program
+      // that only has: `scanf("%f", &global_float);` may fail to trigger this,
+      // but oh well...that's a documented issue.
+      StringRef SymbolName =
+          (TT.getArch() == Triple::x86) ? "__fltused" : "_fltused";
+      MCSymbol *S = MMI->getContext().getOrCreateSymbol(SymbolName);
+      OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
+      return;
+    }
     emitStackMaps(SM);
-    return;
-  }
-
-  if (TT.isOSBinFormatELF()) {
+  } else if (TT.isOSBinFormatELF()) {
     emitStackMaps(SM);
     FM.serializeToFaultMapSection();
-    return;
   }
 }
 

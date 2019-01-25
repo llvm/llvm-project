@@ -11,6 +11,7 @@ unittest("VectorizeTests") {
     "VPlanDominatorTreeTest.cpp",
     "VPlanHCFGTest.cpp",
     "VPlanLoopInfoTest.cpp",
+    "VPlanPredicatorTest.cpp",
     "VPlanSlpTest.cpp",
     "VPlanTest.cpp",
   ]

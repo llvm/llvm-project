@@ -41,11 +41,18 @@ TEST(UUIDTest, Validity) {
   UUID a20 = UUID::fromData(zeroes.data(), 20);
   UUID a16_0 = UUID::fromOptionalData(zeroes.data(), 16);
   UUID a20_0 = UUID::fromOptionalData(zeroes.data(), 20);
+  UUID from_str;
+  from_str.SetFromStringRef("00000000-0000-0000-0000-000000000000");
+  UUID opt_from_str;
+  opt_from_str.SetFromOptionalStringRef("00000000-0000-0000-0000-000000000000");
+  
   EXPECT_FALSE(empty);
   EXPECT_TRUE(a16);
   EXPECT_TRUE(a20);
+  EXPECT_TRUE(from_str);
   EXPECT_FALSE(a16_0);
   EXPECT_FALSE(a20_0);
+  EXPECT_FALSE(opt_from_str);
 }
 
 TEST(UUIDTest, SetFromStringRef) {

@@ -148,7 +148,8 @@ static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
                              AliasSetTracker *AST, MemorySSAUpdater *MSSAU);
 
 static void moveInstructionBefore(Instruction &I, Instruction &Dest,
-                                  ICFLoopSafetyInfo &SafetyInfo);
+                                  ICFLoopSafetyInfo &SafetyInfo,
+                                  MemorySSAUpdater *MSSAU);
 
 namespace {
 struct LoopInvariantCodeMotion {
@@ -866,7 +867,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
         LLVM_DEBUG(dbgs() << "LICM rehoisting to "
                           << HoistPoint->getParent()->getName()
                           << ": " << *I << "\n");
-        moveInstructionBefore(*I, *HoistPoint, *SafetyInfo);
+        moveInstructionBefore(*I, *HoistPoint, *SafetyInfo, MSSAU);
         HoistPoint = I;
         Changed = true;
       }
@@ -1309,10 +1310,15 @@ static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
 }
 
 static void moveInstructionBefore(Instruction &I, Instruction &Dest,
-                                  ICFLoopSafetyInfo &SafetyInfo) {
+                                  ICFLoopSafetyInfo &SafetyInfo,
+                                  MemorySSAUpdater *MSSAU) {
   SafetyInfo.removeInstruction(&I);
   SafetyInfo.insertInstructionTo(&I, Dest.getParent());
   I.moveBefore(&Dest);
+  if (MSSAU)
+    if (MemoryUseOrDef *OldMemAcc = cast_or_null<MemoryUseOrDef>(
+            MSSAU->getMemorySSA()->getMemoryAccess(&I)))
+      MSSAU->moveToPlace(OldMemAcc, Dest.getParent(), MemorySSA::End);
 }
 
 static Instruction *sinkThroughTriviallyReplaceablePHI(
@@ -1548,17 +1554,10 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
 
   if (isa<PHINode>(I))
     // Move the new node to the end of the phi list in the destination block.
-    moveInstructionBefore(I, *Dest->getFirstNonPHI(), *SafetyInfo);
+    moveInstructionBefore(I, *Dest->getFirstNonPHI(), *SafetyInfo, MSSAU);
   else
     // Move the new node to the destination block, before its terminator.
-    moveInstructionBefore(I, *Dest->getTerminator(), *SafetyInfo);
-  if (MSSAU) {
-    // If moving, I just moved a load or store, so update MemorySSA.
-    MemoryUseOrDef *OldMemAcc = cast_or_null<MemoryUseOrDef>(
-        MSSAU->getMemorySSA()->getMemoryAccess(&I));
-    if (OldMemAcc)
-      MSSAU->moveToPlace(OldMemAcc, Dest, MemorySSA::End);
-  }
+    moveInstructionBefore(I, *Dest->getTerminator(), *SafetyInfo, MSSAU);
 
   // Do not retain debug locations when we are moving instructions to different
   // basic blocks, because we want to avoid jumpy line tables. Calls, however,

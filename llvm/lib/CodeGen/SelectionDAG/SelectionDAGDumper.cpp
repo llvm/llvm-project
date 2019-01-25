@@ -652,6 +652,36 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
       OS << ", " << AM;
 
     OS << ">";
+  } else if (const MaskedLoadSDNode *MLd = dyn_cast<MaskedLoadSDNode>(this)) {
+    OS << "<";
+
+    printMemOperand(OS, *MLd->getMemOperand(), G);
+
+    bool doExt = true;
+    switch (MLd->getExtensionType()) {
+    default: doExt = false; break;
+    case ISD::EXTLOAD:  OS << ", anyext"; break;
+    case ISD::SEXTLOAD: OS << ", sext"; break;
+    case ISD::ZEXTLOAD: OS << ", zext"; break;
+    }
+    if (doExt)
+      OS << " from " << MLd->getMemoryVT().getEVTString();
+
+    if (MLd->isExpandingLoad())
+      OS << ", expanding";
+
+    OS << ">";
+  } else if (const MaskedStoreSDNode *MSt = dyn_cast<MaskedStoreSDNode>(this)) {
+    OS << "<";
+    printMemOperand(OS, *MSt->getMemOperand(), G);
+
+    if (MSt->isTruncatingStore())
+      OS << ", trunc to " << MSt->getMemoryVT().getEVTString();
+
+    if (MSt->isCompressingStore())
+      OS << ", compressing";
+
+    OS << ">";
   } else if (const MemSDNode* M = dyn_cast<MemSDNode>(this)) {
     OS << "<";
     printMemOperand(OS, *M->getMemOperand(), G);

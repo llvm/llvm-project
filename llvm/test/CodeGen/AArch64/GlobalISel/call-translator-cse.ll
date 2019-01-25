@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -O1 -stop-after=irtranslator -enable-cse-in-irtranslator=1 -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -stop-after=irtranslator -enable-cse-in-irtranslator=1 -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: name: test_split_struct
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = COPY $x0

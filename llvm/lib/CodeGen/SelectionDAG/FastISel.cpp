@@ -1303,9 +1303,6 @@ bool FastISel::selectCall(const User *I) {
     return true;
   }
 
-  MachineModuleInfo &MMI = FuncInfo.MF->getMMI();
-  computeUsesVAFloatArgument(*Call, MMI);
-
   // Handle intrinsic function calls.
   if (const auto *II = dyn_cast<IntrinsicInst>(Call))
     return selectIntrinsicCall(II);
