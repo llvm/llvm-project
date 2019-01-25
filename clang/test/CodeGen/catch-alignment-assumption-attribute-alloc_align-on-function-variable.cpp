@@ -30,9 +30,7 @@ char **caller(char **x, unsigned long alignment) {
   // CHECK-NEXT:                        %[[X_RELOADED:.*]] = load i8**, i8*** %[[X_ADDR]], align 8
   // CHECK-NEXT:                        %[[ALIGNMENT_RELOADED:.*]] = load i64, i64* %[[ALIGNMENT_ADDR]], align 8
   // CHECK-NEXT:                        %[[X_RETURNED:.*]] = call i8** @[[PASSTHROUGH]](i8** %[[X_RELOADED]], i64 %[[ALIGNMENT_RELOADED]])
-  // CHECK-NEXT:                        %[[ISPOSITIVE:.*]] = icmp sgt i64 %[[ALIGNMENT_RELOADED]], 0
-  // CHECK-NEXT:                        %[[POSITIVEMASK:.*]] = sub i64 %[[ALIGNMENT_RELOADED]], 1
-  // CHECK-NEXT:                        %[[MASK:.*]] = select i1 %[[ISPOSITIVE]], i64 %[[POSITIVEMASK]], i64 0
+  // CHECK-NEXT:                        %[[MASK:.*]] = sub i64 %[[ALIGNMENT_RELOADED]], 1
   // CHECK-NEXT:                        %[[PTRINT:.*]] = ptrtoint i8** %[[X_RETURNED]] to i64
   // CHECK-NEXT:                        %[[MASKEDPTR:.*]] = and i64 %[[PTRINT]], %[[MASK]]
   // CHECK-NEXT:                        %[[MASKCOND:.*]] = icmp eq i64 %[[MASKEDPTR]], 0

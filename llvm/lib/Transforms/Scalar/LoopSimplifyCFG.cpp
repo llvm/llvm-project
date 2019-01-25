@@ -239,7 +239,7 @@ private:
       if (!LiveLoopBlocks.count(From))
         return false;
       BasicBlock *TheOnlySucc = getOnlyLiveSuccessor(From);
-      return !TheOnlySucc || TheOnlySucc == To;
+      return !TheOnlySucc || TheOnlySucc == To || LI.getLoopFor(From) != &L;
     };
 
     // The loop will not be destroyed if its latch is live.

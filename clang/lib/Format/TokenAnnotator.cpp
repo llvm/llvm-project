@@ -494,9 +494,14 @@ private:
       if (CurrentToken->is(tok::r_square)) {
         if (IsCpp11AttributeSpecifier)
           CurrentToken->Type = TT_AttributeSquare;
-        else if (CurrentToken->Next && CurrentToken->Next->is(tok::l_paren) &&
+        else if (((CurrentToken->Next &&
+                   CurrentToken->Next->is(tok::l_paren)) ||
+                  (CurrentToken->Previous &&
+                   CurrentToken->Previous->Previous == Left)) &&
                  Left->is(TT_ObjCMethodExpr)) {
-          // An ObjC method call is rarely followed by an open parenthesis.
+          // An ObjC method call is rarely followed by an open parenthesis. It
+          // also can't be composed of just one token, unless it's a macro that
+          // will be expanded to more tokens.
           // FIXME: Do we incorrectly label ":" with this?
           StartsObjCMethodExpr = false;
           Left->Type = TT_Unknown;

@@ -2989,7 +2989,7 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last)
     {
         _Dp __uid;
         __rs_default __g = __rs_get();
-        for (--__last, --__d; __first < __last; ++__first, --__d)
+        for (--__last, (void) --__d; __first < __last; ++__first, (void) --__d)
         {
             difference_type __i = __uid(__g, _Pp(0, __d));
             if (__i != difference_type(0))
@@ -3011,7 +3011,7 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
     difference_type __d = __last - __first;
     if (__d > 1)
     {
-        for (--__last; __first < __last; ++__first, --__d)
+        for (--__last; __first < __last; ++__first, (void) --__d)
         {
             difference_type __i = __rand(__d);
             if (__i != difference_type(0))

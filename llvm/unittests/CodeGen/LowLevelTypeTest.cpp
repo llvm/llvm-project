@@ -103,6 +103,21 @@ TEST(LowLevelTypeTest, Vector) {
   }
 }
 
+TEST(LowLevelTypeTest, ScalarOrVector) {
+  // Test version with number of bits for scalar type.
+  EXPECT_EQ(LLT::scalar(32), LLT::scalarOrVector(1, 32));
+  EXPECT_EQ(LLT::vector(2, 32), LLT::scalarOrVector(2, 32));
+
+  // Test version with LLT for scalar type.
+  EXPECT_EQ(LLT::scalar(32), LLT::scalarOrVector(1, LLT::scalar(32)));
+  EXPECT_EQ(LLT::vector(2, 32), LLT::scalarOrVector(2, LLT::scalar(32)));
+
+  // Test with pointer elements.
+  EXPECT_EQ(LLT::pointer(1, 32), LLT::scalarOrVector(1, LLT::pointer(1, 32)));
+  EXPECT_EQ(LLT::vector(2, LLT::pointer(1, 32)),
+            LLT::scalarOrVector(2, LLT::pointer(1, 32)));
+}
+
 TEST(LowLevelTypeTest, Pointer) {
   LLVMContext C;
   DataLayout DL("");

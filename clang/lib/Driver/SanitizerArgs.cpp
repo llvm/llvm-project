@@ -251,7 +251,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       if (RemoveObjectSizeAtO0) {
         AllRemove |= SanitizerKind::ObjectSize;
 
-        // The user explicitly enabled the object size sanitizer. Warn that
+        // The user explicitly enabled the object size sanitizer. Warn
         // that this does nothing at -O0.
         if (Add & SanitizerKind::ObjectSize)
           D.Diag(diag::warn_drv_object_size_disabled_O0)

@@ -2,9 +2,10 @@
 
 target triple = "aarch64--linux-android"
 
-declare void @bar([16 x i32]* %p)
+declare i32 @bar([16 x i32]* %p)
 
 define void @alloca() sanitize_hwaddress "hwasan-abi"="interceptor" {
+  ; CHECK: alloca [16 x i32]
   ; CHECK: [[A:%[^ ]*]] = call i8* @llvm.thread.pointer()
   ; CHECK: [[B:%[^ ]*]] = getelementptr i8, i8* [[A]], i32 48
   ; CHECK: [[C:%[^ ]*]] = bitcast i8* [[B]] to i64*
@@ -19,9 +20,11 @@ define void @alloca() sanitize_hwaddress "hwasan-abi"="interceptor" {
 
   ; CHECK: [[CONT]]:
   ; CHECK: phi i64 [ [[LOAD]], %0 ], [ [[RELOAD]], %[[INIT]] ]
+  ; CHECK: alloca i8
 
   %p = alloca [16 x i32]
-  call void @bar([16 x i32]* %p)
+  %size = call i32 @bar([16 x i32]* %p)
+  %q = alloca i8, i32 %size
   ret void
 }
 

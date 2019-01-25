@@ -43,7 +43,6 @@ add_clang_library(clangStaticAnalyzerCore
   RangeConstraintManager.cpp
   RangedConstraintManager.cpp
   RegionStore.cpp
-  RetainSummaryManager.cpp
   SarifDiagnostics.cpp
   SimpleConstraintManager.cpp
   SimpleSValBuilder.cpp

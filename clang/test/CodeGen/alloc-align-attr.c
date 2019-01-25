@@ -6,11 +6,9 @@ __INT32_TYPE__*m1(__INT32_TYPE__ i) __attribute__((alloc_align(1)));
 __INT32_TYPE__ test1(__INT32_TYPE__ a) {
 // CHECK: define i32 @test1
   return *m1(a);
-// CHECK: call i32* @m1(i32 [[PARAM1:%[^\)]+]]) 
-// CHECK: [[ALIGNCAST1:%.+]] = sext i32 [[PARAM1]] to i64
-// CHECK: [[ISPOS1:%.+]] = icmp sgt i64 [[ALIGNCAST1]], 0
-// CHECK: [[POSMASK1:%.+]] = sub i64 [[ALIGNCAST1]], 1
-// CHECK: [[MASK1:%.+]] = select i1 [[ISPOS1]], i64 [[POSMASK1]], i64 0
+// CHECK: call i32* @m1(i32 [[PARAM1:%[^\)]+]])
+// CHECK: [[ALIGNCAST1:%.+]] = zext i32 [[PARAM1]] to i64
+// CHECK: [[MASK1:%.+]] = sub i64 [[ALIGNCAST1]], 1
 // CHECK: [[PTRINT1:%.+]] = ptrtoint
 // CHECK: [[MASKEDPTR1:%.+]] = and i64 [[PTRINT1]], [[MASK1]]
 // CHECK: [[MASKCOND1:%.+]] = icmp eq i64 [[MASKEDPTR1]], 0
@@ -22,10 +20,8 @@ __INT32_TYPE__ test2(__SIZE_TYPE__ a) {
   return *m1(a);
 // CHECK: [[CONV2:%.+]] = trunc i64 %{{.+}} to i32
 // CHECK: call i32* @m1(i32 [[CONV2]])
-// CHECK: [[ALIGNCAST2:%.+]] = sext i32 [[CONV2]] to i64
-// CHECK: [[ISPOS2:%.+]] = icmp sgt i64 [[ALIGNCAST2]], 0
-// CHECK: [[POSMASK2:%.+]] = sub i64 [[ALIGNCAST2]], 1
-// CHECK: [[MASK2:%.+]] = select i1 [[ISPOS2]], i64 [[POSMASK2]], i64 0
+// CHECK: [[ALIGNCAST2:%.+]] = zext i32 [[CONV2]] to i64
+// CHECK: [[MASK2:%.+]] = sub i64 [[ALIGNCAST2]], 1
 // CHECK: [[PTRINT2:%.+]] = ptrtoint
 // CHECK: [[MASKEDPTR2:%.+]] = and i64 [[PTRINT2]], [[MASK2]]
 // CHECK: [[MASKCOND2:%.+]] = icmp eq i64 [[MASKEDPTR2]], 0
@@ -39,9 +35,7 @@ __INT32_TYPE__ test3(__INT32_TYPE__ a) {
   return *m2(a);
 // CHECK: [[CONV3:%.+]] = sext i32 %{{.+}} to i64
 // CHECK: call i32* @m2(i64 [[CONV3]])
-// CHECK: [[ISPOS3:%.+]] = icmp sgt i64 [[CONV3]], 0
-// CHECK: [[POSMASK3:%.+]] = sub i64 [[CONV3]], 1
-// CHECK: [[MASK3:%.+]] = select i1 [[ISPOS3]], i64 [[POSMASK3]], i64 0
+// CHECK: [[MASK3:%.+]] = sub i64 [[CONV3]], 1
 // CHECK: [[PTRINT3:%.+]] = ptrtoint
 // CHECK: [[MASKEDPTR3:%.+]] = and i64 [[PTRINT3]], [[MASK3]]
 // CHECK: [[MASKCOND3:%.+]] = icmp eq i64 [[MASKEDPTR3]], 0
@@ -52,10 +46,8 @@ __INT32_TYPE__ test3(__INT32_TYPE__ a) {
 __INT32_TYPE__ test4(__SIZE_TYPE__ a) {
 // CHECK: define i32 @test4
   return *m2(a);
-// CHECK: call i32* @m2(i64 [[PARAM4:%[^\)]+]]) 
-// CHECK: [[ISPOS4:%.+]] = icmp sgt i64 [[PARAM4]], 0
-// CHECK: [[POSMASK4:%.+]] = sub i64 [[PARAM4]], 1
-// CHECK: [[MASK4:%.+]] = select i1 [[ISPOS4]], i64 [[POSMASK4]], i64 0
+// CHECK: call i32* @m2(i64 [[PARAM4:%[^\)]+]])
+// CHECK: [[MASK4:%.+]] = sub i64 [[PARAM4]], 1
 // CHECK: [[PTRINT4:%.+]] = ptrtoint
 // CHECK: [[MASKEDPTR4:%.+]] = and i64 [[PTRINT4]], [[MASK4]]
 // CHECK: [[MASKCOND4:%.+]] = icmp eq i64 [[MASKEDPTR4]], 0
@@ -72,11 +64,9 @@ __INT32_TYPE__ test5(__int128_t a) {
 // CHECK: define i32 @test5
   struct Empty e;
   return *m3(e, a);
-// CHECK: call i32* @m3(i64 %{{.*}}, i64 %{{.*}}) 
+// CHECK: call i32* @m3(i64 %{{.*}}, i64 %{{.*}})
 // CHECK: [[ALIGNCAST5:%.+]] = trunc i128 %{{.*}} to i64
-// CHECK: [[ISPOS5:%.+]] = icmp sgt i64 [[ALIGNCAST5]], 0
-// CHECK: [[POSMASK5:%.+]] = sub i64 [[ALIGNCAST5]], 1
-// CHECK: [[MASK5:%.+]] = select i1 [[ISPOS5]], i64 [[POSMASK5]], i64 0
+// CHECK: [[MASK5:%.+]] = sub i64 [[ALIGNCAST5]], 1
 // CHECK: [[PTRINT5:%.+]] = ptrtoint
 // CHECK: [[MASKEDPTR5:%.+]] = and i64 [[PTRINT5]], [[MASK5]]
 // CHECK: [[MASKCOND5:%.+]] = icmp eq i64 [[MASKEDPTR5]], 0
@@ -88,11 +78,9 @@ __INT32_TYPE__ test6(__int128_t a) {
 // CHECK: define i32 @test6
   struct MultiArgs e;
   return *m4(e, a);
-// CHECK: call i32* @m4(i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}}) 
+// CHECK: call i32* @m4(i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
 // CHECK: [[ALIGNCAST6:%.+]] = trunc i128 %{{.*}} to i64
-// CHECK: [[ISPOS6:%.+]] = icmp sgt i64 [[ALIGNCAST6]], 0
-// CHECK: [[POSMASK6:%.+]] = sub i64 [[ALIGNCAST6]], 1
-// CHECK: [[MASK6:%.+]] = select i1 [[ISPOS6]], i64 [[POSMASK6]], i64 0
+// CHECK: [[MASK6:%.+]] = sub i64 [[ALIGNCAST6]], 1
 // CHECK: [[PTRINT6:%.+]] = ptrtoint
 // CHECK: [[MASKEDPTR6:%.+]] = and i64 [[PTRINT6]], [[MASK6]]
 // CHECK: [[MASKCOND6:%.+]] = icmp eq i64 [[MASKEDPTR6]], 0

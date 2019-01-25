@@ -20,6 +20,8 @@
 #include <cstddef>
 
 #include "test_macros.h"
+#include "test_iterators.h"
+
 
 struct gen
 {
@@ -29,13 +31,28 @@ struct gen
     }
 };
 
-int main()
+
+template <class Iter>
+void
+test_with_iterator()
 {
+
     int ia[] = {1, 2, 3, 4};
     int ia1[] = {4, 1, 2, 3};
     const unsigned sa = sizeof(ia)/sizeof(ia[0]);
     gen r;
+
     std::random_shuffle(ia, ia+sa, r);
     LIBCPP_ASSERT(std::equal(ia, ia+sa, ia1));
     assert(std::is_permutation(ia, ia+sa, ia1));
+
+    std::random_shuffle(ia, ia+sa, r);
+    assert(std::is_permutation(ia, ia+sa, ia1));
+}
+
+
+int main()
+{
+    test_with_iterator<random_access_iterator<int*> >();
+    test_with_iterator<int*>();
 }

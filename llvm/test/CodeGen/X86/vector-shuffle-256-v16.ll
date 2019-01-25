@@ -4605,3 +4605,20 @@ define <16 x i16> @insert_dup_elt3_mem_v16i16_i32(i32* %ptr) #0 {
   %tmp3 = shufflevector <8 x i16> %tmp2, <8 x i16> undef, <16 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   ret <16 x i16> %tmp3
 }
+
+define <16 x i16> @unpckh_v16i16(<16 x i16> %x, <16 x i16> %y) {
+; AVX1-LABEL: unpckh_v16i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX1-NEXT:    retq
+;
+; AVX2OR512VL-LABEL: unpckh_v16i16:
+; AVX2OR512VL:       # %bb.0:
+; AVX2OR512VL-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX2OR512VL-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX2OR512VL-NEXT:    retq
+  %unpckh = shufflevector <16 x i16> %x, <16 x i16> %y, <16 x i32> <i32 4, i32 28, i32 5, i32 29, i32 6, i32 30, i32 7, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <16 x i16> %unpckh
+}
+

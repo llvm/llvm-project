@@ -5354,8 +5354,7 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
 }
 
 SDValue
-TargetLowering::getExpandedFixedPointMultiplication(SDNode *Node,
-                                                    SelectionDAG &DAG) const {
+TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   assert(Node->getOpcode() == ISD::SMULFIX && "Expected opcode to be SMULFIX.");
   assert(Node->getNumOperands() == 3 &&
          "Expected signed fixed point multiplication to have 3 operands.");

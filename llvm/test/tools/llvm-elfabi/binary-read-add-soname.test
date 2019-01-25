@@ -18,11 +18,12 @@ Sections:
     Flags:           [ SHF_ALLOC ]
     Address:         0x0008
     AddressAlign:    8
-    Content:         "0a0000000000000001000000000000000500000000000000000000000000000000000000000000000000000000000000"
+    Content:         "0a000000000000000100000000000000050000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000"
       # DT_STRSZ      1 (0x1)
       # DT_STRTAB     0x0
+      # DT_SYMTAB     0x0
       # DT_NULL       0x0
-    Size:            48
+    Size:            64
     Link:            .dynstr
 ProgramHeaders:
   - Type: PT_LOAD

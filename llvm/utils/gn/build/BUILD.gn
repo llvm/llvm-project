@@ -93,12 +93,27 @@ config("compiler_defaults") {
         "-Wextra",
       ]
     }
-    cflags += [
-      "-Wno-unused-parameter",
-      "-Wstring-conversion",
-    ]
+    cflags += [ "-Wno-unused-parameter" ]
     if (is_clang) {
-      cflags += [ "-Wdelete-non-virtual-dtor" ]
+      cflags += [
+        "-Wdelete-non-virtual-dtor",
+        "-Wstring-conversion",
+      ]
+    } else {
+      cflags += [
+        # GCC's -Wcomment complains about // comments ending with '\' if the
+        # next line is also a // comment.
+        "-Wno-comment",
+
+        # Disable gcc's potentially uninitialized use analysis as it presents
+        # lots of false positives.
+        "-Wno-maybe-uninitialized",
+      ]
+      cflags_cc += [
+        # The LLVM libraries have no stable C++ API, so -Wnoexcept-type is not
+        # useful.
+        "-Wno-noexcept-type",
+      ]
     }
     if (is_clang && use_goma) {
       # goma converts all paths to lowercase on the server, breaking this
@@ -135,6 +150,9 @@ config("lld_code") {
 }
 
 config("clang_code") {
+  if (host_os != "win") {
+    cflags = [ "-fno-strict-aliasing" ]
+  }
   include_dirs = [
     "//clang/include",
     "$root_gen_dir/clang/include",

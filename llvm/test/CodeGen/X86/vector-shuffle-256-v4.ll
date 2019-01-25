@@ -1903,3 +1903,64 @@ define <8 x i32> @shuffle_v8i32_0zzzzzzz_optsize(<8 x i32> %a) optsize {
   %b = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i32> %b
 }
+
+; FIXME: AVX1 lowering is better than AVX2 (and AVX512?)
+
+define <4 x i64> @unpckh_v4i64(<4 x i64> %x, <4 x i64> %y) {
+; AVX1-LABEL: unpckh_v4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: unpckh_v4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-SLOW-LABEL: unpckh_v4i64:
+; AVX512VL-SLOW:       # %bb.0:
+; AVX512VL-SLOW-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; AVX512VL-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX512VL-SLOW-NEXT:    retq
+;
+; AVX512VL-FAST-LABEL: unpckh_v4i64:
+; AVX512VL-FAST:       # %bb.0:
+; AVX512VL-FAST-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,7,3,7]
+; AVX512VL-FAST-NEXT:    vpermt2q %ymm1, %ymm2, %ymm0
+; AVX512VL-FAST-NEXT:    retq
+  %unpckh = shufflevector <4 x i64> %x, <4 x i64> %y, <4 x i32> <i32 1, i32 7, i32 undef, i32 undef>
+  ret <4 x i64> %unpckh
+}
+
+; FIXME: AVX1 lowering is better than AVX2 (and AVX512?)
+
+define <4 x double> @unpckh_v4f64(<4 x double> %x, <4 x double> %y) {
+; AVX1-LABEL: unpckh_v4f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: unpckh_v4f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    retq
+;
+; AVX512VL-SLOW-LABEL: unpckh_v4f64:
+; AVX512VL-SLOW:       # %bb.0:
+; AVX512VL-SLOW-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
+; AVX512VL-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX512VL-SLOW-NEXT:    retq
+;
+; AVX512VL-FAST-LABEL: unpckh_v4f64:
+; AVX512VL-FAST:       # %bb.0:
+; AVX512VL-FAST-NEXT:    vmovapd {{.*#+}} ymm2 = [1,7,3,7]
+; AVX512VL-FAST-NEXT:    vpermt2pd %ymm1, %ymm2, %ymm0
+; AVX512VL-FAST-NEXT:    retq
+  %unpckh = shufflevector <4 x double> %x, <4 x double> %y, <4 x i32> <i32 1, i32 7, i32 undef, i32 undef>
+  ret <4 x double> %unpckh
+}
+

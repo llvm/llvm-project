@@ -69,15 +69,14 @@ class FileEntry {
   bool IsNamedPipe;
   bool InPCH;
   bool IsValid;               // Is this \c FileEntry initialized and valid?
-  bool DeferredOpen;          // Created by getFile(OpenFile=0); may open later.
 
   /// The open file, if it is owned by the \p FileEntry.
   mutable std::unique_ptr<llvm::vfs::File> File;
 
 public:
   FileEntry()
-      : UniqueID(0, 0), IsNamedPipe(false), InPCH(false), IsValid(false),
-        DeferredOpen(false) {}
+      : UniqueID(0, 0), IsNamedPipe(false), InPCH(false), IsValid(false)
+  {}
 
   FileEntry(const FileEntry &) = delete;
   FileEntry &operator=(const FileEntry &) = delete;

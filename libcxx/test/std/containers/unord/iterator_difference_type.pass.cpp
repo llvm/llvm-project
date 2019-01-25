@@ -51,10 +51,10 @@ void testUnorderedMap() {
 
 template <class Set, class ValueTp, class CPtrT>
 void testUnorderedSet() {
-  static_assert((std::is_same<typename Set::iterator,
-                             typename Set::const_iterator>::value), "");
-  static_assert((std::is_same<typename Set::local_iterator,
-                             typename Set::const_local_iterator>::value), "");
+  static_assert((std::is_convertible<typename Set::iterator,
+                                     typename Set::const_iterator>::value), "");
+  static_assert((std::is_convertible<typename Set::local_iterator,
+                                     typename Set::const_local_iterator>::value), "");
   typedef typename Set::difference_type Diff;
   {
     typedef typename Set::iterator It;

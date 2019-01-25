@@ -394,7 +394,7 @@ def _SLASH_Zo_ : CLIgnoredFlag<"Zo-">;
 
 // Unsupported:
 
-def _SLASH_AI : CLJoined<"AI">;
+def _SLASH_AI : CLJoinedOrSeparate<"AI">;
 def _SLASH_Bt : CLFlag<"Bt">;
 def _SLASH_Bt_plus : CLFlag<"Bt+">;
 def _SLASH_clr : CLJoined<"clr">;
