@@ -481,6 +481,7 @@ private:
   mutable llvm::AlignedCharArrayUnion<bool, double, int64_t, llvm::StringRef,
                                       std::string, json::Array, json::Object>
       Union;
+  friend bool operator==(const Value &, const Value &);
 };
 
 bool operator==(const Value &, const Value &);
