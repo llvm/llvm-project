@@ -231,7 +231,7 @@ TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
   return Result;
 }
 
-bool IsRangeConsecutive(const Range &Left, const Range &Right) {
+bool isRangeConsecutive(const Range &Left, const Range &Right) {
   return Left.end.line == Right.start.line &&
          Left.end.character == Right.start.character;
 }

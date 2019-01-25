@@ -663,6 +663,9 @@ void AsmPrinter::EmitFunctionHeader() {
   if (MAI->hasDotTypeDotSizeDirective())
     OutStreamer->EmitSymbolAttribute(CurrentFnSym, MCSA_ELF_TypeFunction);
 
+  if (F.hasFnAttribute(Attribute::Cold))
+    OutStreamer->EmitSymbolAttribute(CurrentFnSym, MCSA_Cold);
+
   if (isVerbose()) {
     F.printAsOperand(OutStreamer->GetCommentOS(),
                    /*PrintType=*/false, F.getParent());

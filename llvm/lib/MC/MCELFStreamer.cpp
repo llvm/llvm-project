@@ -201,6 +201,7 @@ bool MCELFStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   // In the future it might be worth trying to make these operations more well
   // defined.
   switch (Attribute) {
+  case MCSA_Cold:
   case MCSA_LazyReference:
   case MCSA_Reference:
   case MCSA_SymbolResolver:

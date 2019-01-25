@@ -177,8 +177,8 @@ bool RegBankSelect::repairReg(
     // would require an agreement on the type of registers with the
     // target. Currently createVRegs just uses scalar types, and expects the
     // target code to replace this type (which we won't know about here)
-    assert(RegTy.isScalar() ||
-           (RegTy.getNumElements() == ValMapping.NumBreakDowns) &&
+    assert((RegTy.isScalar() ||
+            RegTy.getNumElements() == ValMapping.NumBreakDowns) &&
            "only basic vector breakdowns currently supported");
 
     if (MO.isDef()) {

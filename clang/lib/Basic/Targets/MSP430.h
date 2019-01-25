@@ -33,6 +33,10 @@ public:
     LongWidth = 32;
     LongLongWidth = 64;
     LongAlign = LongLongAlign = 16;
+    FloatWidth = 32;
+    FloatAlign = 16;
+    DoubleWidth = LongDoubleWidth = 64;
+    DoubleAlign = LongDoubleAlign = 16;
     PointerWidth = 16;
     PointerAlign = 16;
     SuitableAlign = 16;
@@ -50,6 +54,8 @@ public:
     // FIXME: Implement.
     return None;
   }
+
+  bool allowsLargerPreferedTypeAlignment() const override { return false; }
 
   bool hasFeature(StringRef Feature) const override {
     return Feature == "msp430";

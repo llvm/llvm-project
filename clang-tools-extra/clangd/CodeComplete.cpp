@@ -1588,9 +1588,9 @@ speculateCompletionFilter(llvm::StringRef Content, Position Pos) {
   // Start from the character before the cursor.
   int St = *Offset - 1;
   // FIXME(ioeric): consider UTF characters?
-  auto IsValidIdentifierChar = [](char c) {
-    return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-            (c >= '0' && c <= '9') || (c == '_'));
+  auto IsValidIdentifierChar = [](char C) {
+    return ((C >= 'a' && C <= 'z') || (C >= 'A' && C <= 'Z') ||
+            (C >= '0' && C <= '9') || (C == '_'));
   };
   size_t Len = 0;
   for (; (St >= 0) && IsValidIdentifierChar(Content[St]); --St, ++Len) {
@@ -1682,7 +1682,7 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   // is mainly to help LSP clients again, so that changes do not effect each
   // other.
   for (const auto &FixIt : FixIts) {
-    if (IsRangeConsecutive(FixIt.range, LSP.textEdit->range)) {
+    if (isRangeConsecutive(FixIt.range, LSP.textEdit->range)) {
       LSP.textEdit->newText = FixIt.newText + LSP.textEdit->newText;
       LSP.textEdit->range.start = FixIt.range.start;
     } else {

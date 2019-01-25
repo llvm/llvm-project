@@ -108,9 +108,7 @@ define i32 @load_crash(i64* nocapture readonly %a, i64* nocapture readonly %b, i
 define void @allzeros() {
 ; CHECK-LABEL: allzeros:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; CHECK-NEXT:    addq $0, %rax ## encoding: [0x48,0x83,0xc0,0x00]
-; CHECK-NEXT:    movq %rax, 0 ## encoding: [0x48,0x89,0x04,0x25,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:    movq $0, 0 ## encoding: [0x48,0xc7,0x04,0x25,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
 entry:
   %0 = tail call i8 @llvm.x86.addcarryx.u64(i8 0, i64 0, i64 0, i8* null)

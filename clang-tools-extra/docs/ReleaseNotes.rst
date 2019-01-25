@@ -73,6 +73,14 @@ Improvements to clang-tidy
   Checks for casts of ``absl::Duration`` conversion functions, and recommends
   the right conversion function instead.
 
+- New :doc:`google-readability-avoid-underscore-in-googletest-name
+  <clang-tidy/checks/google-readability-avoid-underscore-in-googletest-name>`
+  check.
+
+  Checks whether there are underscores in googletest test and test case names in
+  test macros, which is prohibited by the Googletest FAQ.
+
+
 Improvements to include-fixer
 -----------------------------
 
