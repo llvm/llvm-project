@@ -209,7 +209,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
       diag(Call->getBeginLoc(), "internal duration scaling can be removed")
           << FixItHint::CreateReplacement(
                  Call->getSourceRange(),
-                 (llvm::Twine(getFactoryForScale(*NewScale)) + "(" +
+                 (llvm::Twine(getDurationFactoryForScale(*NewScale)) + "(" +
                   tooling::fixit::getText(*Remainder, *Result.Context) + ")")
                      .str());
     }
@@ -222,7 +222,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
     diag(Call->getBeginLoc(), "internal duration scaling can be removed")
         << FixItHint::CreateReplacement(
                Call->getSourceRange(),
-               (llvm::Twine(getFactoryForScale(*NewScale)) + "(" +
+               (llvm::Twine(getDurationFactoryForScale(*NewScale)) + "(" +
                 tooling::fixit::getText(*Remainder, *Result.Context) + ")")
                    .str());
   }

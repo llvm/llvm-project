@@ -61,8 +61,8 @@ define void @cmpxchg_i8_monotonic_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
 ;
 ; RV64IA-LABEL: cmpxchg_i8_monotonic_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a3, a0, 3
-; RV64IA-NEXT:    slli a3, a3, 3
+; RV64IA-NEXT:    slli a3, a0, 3
+; RV64IA-NEXT:    andi a3, a3, 24
 ; RV64IA-NEXT:    addi a4, zero, 255
 ; RV64IA-NEXT:    sllw a4, a4, a3
 ; RV64IA-NEXT:    andi a2, a2, 255
@@ -139,8 +139,8 @@ define void @cmpxchg_i8_acquire_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
 ;
 ; RV64IA-LABEL: cmpxchg_i8_acquire_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a3, a0, 3
-; RV64IA-NEXT:    slli a3, a3, 3
+; RV64IA-NEXT:    slli a3, a0, 3
+; RV64IA-NEXT:    andi a3, a3, 24
 ; RV64IA-NEXT:    addi a4, zero, 255
 ; RV64IA-NEXT:    sllw a4, a4, a3
 ; RV64IA-NEXT:    andi a2, a2, 255
@@ -217,8 +217,8 @@ define void @cmpxchg_i8_acquire_acquire(i8* %ptr, i8 %cmp, i8 %val) {
 ;
 ; RV64IA-LABEL: cmpxchg_i8_acquire_acquire:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a3, a0, 3
-; RV64IA-NEXT:    slli a3, a3, 3
+; RV64IA-NEXT:    slli a3, a0, 3
+; RV64IA-NEXT:    andi a3, a3, 24
 ; RV64IA-NEXT:    addi a4, zero, 255
 ; RV64IA-NEXT:    sllw a4, a4, a3
 ; RV64IA-NEXT:    andi a2, a2, 255
@@ -295,8 +295,8 @@ define void @cmpxchg_i8_release_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
 ;
 ; RV64IA-LABEL: cmpxchg_i8_release_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a3, a0, 3
-; RV64IA-NEXT:    slli a3, a3, 3
+; RV64IA-NEXT:    slli a3, a0, 3
+; RV64IA-NEXT:    andi a3, a3, 24
 ; RV64IA-NEXT:    addi a4, zero, 255
 ; RV64IA-NEXT:    sllw a4, a4, a3
 ; RV64IA-NEXT:    andi a2, a2, 255
@@ -373,8 +373,8 @@ define void @cmpxchg_i8_release_acquire(i8* %ptr, i8 %cmp, i8 %val) {
 ;
 ; RV64IA-LABEL: cmpxchg_i8_release_acquire:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a3, a0, 3
-; RV64IA-NEXT:    slli a3, a3, 3
+; RV64IA-NEXT:    slli a3, a0, 3
+; RV64IA-NEXT:    andi a3, a3, 24
 ; RV64IA-NEXT:    addi a4, zero, 255
 ; RV64IA-NEXT:    sllw a4, a4, a3
 ; RV64IA-NEXT:    andi a2, a2, 255
@@ -451,8 +451,8 @@ define void @cmpxchg_i8_acq_rel_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
 ;
 ; RV64IA-LABEL: cmpxchg_i8_acq_rel_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a3, a0, 3
-; RV64IA-NEXT:    slli a3, a3, 3
+; RV64IA-NEXT:    slli a3, a0, 3
+; RV64IA-NEXT:    andi a3, a3, 24
 ; RV64IA-NEXT:    addi a4, zero, 255
 ; RV64IA-NEXT:    sllw a4, a4, a3
 ; RV64IA-NEXT:    andi a2, a2, 255
@@ -529,8 +529,8 @@ define void @cmpxchg_i8_acq_rel_acquire(i8* %ptr, i8 %cmp, i8 %val) {
 ;
 ; RV64IA-LABEL: cmpxchg_i8_acq_rel_acquire:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a3, a0, 3
-; RV64IA-NEXT:    slli a3, a3, 3
+; RV64IA-NEXT:    slli a3, a0, 3
+; RV64IA-NEXT:    andi a3, a3, 24
 ; RV64IA-NEXT:    addi a4, zero, 255
 ; RV64IA-NEXT:    sllw a4, a4, a3
 ; RV64IA-NEXT:    andi a2, a2, 255
@@ -607,8 +607,8 @@ define void @cmpxchg_i8_seq_cst_monotonic(i8* %ptr, i8 %cmp, i8 %val) {
 ;
 ; RV64IA-LABEL: cmpxchg_i8_seq_cst_monotonic:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a3, a0, 3
-; RV64IA-NEXT:    slli a3, a3, 3
+; RV64IA-NEXT:    slli a3, a0, 3
+; RV64IA-NEXT:    andi a3, a3, 24
 ; RV64IA-NEXT:    addi a4, zero, 255
 ; RV64IA-NEXT:    sllw a4, a4, a3
 ; RV64IA-NEXT:    andi a2, a2, 255
@@ -685,8 +685,8 @@ define void @cmpxchg_i8_seq_cst_acquire(i8* %ptr, i8 %cmp, i8 %val) {
 ;
 ; RV64IA-LABEL: cmpxchg_i8_seq_cst_acquire:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a3, a0, 3
-; RV64IA-NEXT:    slli a3, a3, 3
+; RV64IA-NEXT:    slli a3, a0, 3
+; RV64IA-NEXT:    andi a3, a3, 24
 ; RV64IA-NEXT:    addi a4, zero, 255
 ; RV64IA-NEXT:    sllw a4, a4, a3
 ; RV64IA-NEXT:    andi a2, a2, 255
@@ -763,8 +763,8 @@ define void @cmpxchg_i8_seq_cst_seq_cst(i8* %ptr, i8 %cmp, i8 %val) {
 ;
 ; RV64IA-LABEL: cmpxchg_i8_seq_cst_seq_cst:
 ; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    andi a3, a0, 3
-; RV64IA-NEXT:    slli a3, a3, 3
+; RV64IA-NEXT:    slli a3, a0, 3
+; RV64IA-NEXT:    andi a3, a3, 24
 ; RV64IA-NEXT:    addi a4, zero, 255
 ; RV64IA-NEXT:    sllw a4, a4, a3
 ; RV64IA-NEXT:    andi a2, a2, 255
@@ -846,8 +846,8 @@ define void @cmpxchg_i16_monotonic_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    and a2, a2, a3
-; RV64IA-NEXT:    andi a4, a0, 3
-; RV64IA-NEXT:    slli a4, a4, 3
+; RV64IA-NEXT:    slli a4, a0, 3
+; RV64IA-NEXT:    andi a4, a4, 24
 ; RV64IA-NEXT:    sllw a3, a3, a4
 ; RV64IA-NEXT:    sllw a2, a2, a4
 ; RV64IA-NEXT:    sllw a1, a1, a4
@@ -926,8 +926,8 @@ define void @cmpxchg_i16_acquire_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    and a2, a2, a3
-; RV64IA-NEXT:    andi a4, a0, 3
-; RV64IA-NEXT:    slli a4, a4, 3
+; RV64IA-NEXT:    slli a4, a0, 3
+; RV64IA-NEXT:    andi a4, a4, 24
 ; RV64IA-NEXT:    sllw a3, a3, a4
 ; RV64IA-NEXT:    sllw a2, a2, a4
 ; RV64IA-NEXT:    sllw a1, a1, a4
@@ -1006,8 +1006,8 @@ define void @cmpxchg_i16_acquire_acquire(i16* %ptr, i16 %cmp, i16 %val) {
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    and a2, a2, a3
-; RV64IA-NEXT:    andi a4, a0, 3
-; RV64IA-NEXT:    slli a4, a4, 3
+; RV64IA-NEXT:    slli a4, a0, 3
+; RV64IA-NEXT:    andi a4, a4, 24
 ; RV64IA-NEXT:    sllw a3, a3, a4
 ; RV64IA-NEXT:    sllw a2, a2, a4
 ; RV64IA-NEXT:    sllw a1, a1, a4
@@ -1086,8 +1086,8 @@ define void @cmpxchg_i16_release_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    and a2, a2, a3
-; RV64IA-NEXT:    andi a4, a0, 3
-; RV64IA-NEXT:    slli a4, a4, 3
+; RV64IA-NEXT:    slli a4, a0, 3
+; RV64IA-NEXT:    andi a4, a4, 24
 ; RV64IA-NEXT:    sllw a3, a3, a4
 ; RV64IA-NEXT:    sllw a2, a2, a4
 ; RV64IA-NEXT:    sllw a1, a1, a4
@@ -1166,8 +1166,8 @@ define void @cmpxchg_i16_release_acquire(i16* %ptr, i16 %cmp, i16 %val) {
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    and a2, a2, a3
-; RV64IA-NEXT:    andi a4, a0, 3
-; RV64IA-NEXT:    slli a4, a4, 3
+; RV64IA-NEXT:    slli a4, a0, 3
+; RV64IA-NEXT:    andi a4, a4, 24
 ; RV64IA-NEXT:    sllw a3, a3, a4
 ; RV64IA-NEXT:    sllw a2, a2, a4
 ; RV64IA-NEXT:    sllw a1, a1, a4
@@ -1246,8 +1246,8 @@ define void @cmpxchg_i16_acq_rel_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    and a2, a2, a3
-; RV64IA-NEXT:    andi a4, a0, 3
-; RV64IA-NEXT:    slli a4, a4, 3
+; RV64IA-NEXT:    slli a4, a0, 3
+; RV64IA-NEXT:    andi a4, a4, 24
 ; RV64IA-NEXT:    sllw a3, a3, a4
 ; RV64IA-NEXT:    sllw a2, a2, a4
 ; RV64IA-NEXT:    sllw a1, a1, a4
@@ -1326,8 +1326,8 @@ define void @cmpxchg_i16_acq_rel_acquire(i16* %ptr, i16 %cmp, i16 %val) {
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    and a2, a2, a3
-; RV64IA-NEXT:    andi a4, a0, 3
-; RV64IA-NEXT:    slli a4, a4, 3
+; RV64IA-NEXT:    slli a4, a0, 3
+; RV64IA-NEXT:    andi a4, a4, 24
 ; RV64IA-NEXT:    sllw a3, a3, a4
 ; RV64IA-NEXT:    sllw a2, a2, a4
 ; RV64IA-NEXT:    sllw a1, a1, a4
@@ -1406,8 +1406,8 @@ define void @cmpxchg_i16_seq_cst_monotonic(i16* %ptr, i16 %cmp, i16 %val) {
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    and a2, a2, a3
-; RV64IA-NEXT:    andi a4, a0, 3
-; RV64IA-NEXT:    slli a4, a4, 3
+; RV64IA-NEXT:    slli a4, a0, 3
+; RV64IA-NEXT:    andi a4, a4, 24
 ; RV64IA-NEXT:    sllw a3, a3, a4
 ; RV64IA-NEXT:    sllw a2, a2, a4
 ; RV64IA-NEXT:    sllw a1, a1, a4
@@ -1486,8 +1486,8 @@ define void @cmpxchg_i16_seq_cst_acquire(i16* %ptr, i16 %cmp, i16 %val) {
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    and a2, a2, a3
-; RV64IA-NEXT:    andi a4, a0, 3
-; RV64IA-NEXT:    slli a4, a4, 3
+; RV64IA-NEXT:    slli a4, a0, 3
+; RV64IA-NEXT:    andi a4, a4, 24
 ; RV64IA-NEXT:    sllw a3, a3, a4
 ; RV64IA-NEXT:    sllw a2, a2, a4
 ; RV64IA-NEXT:    sllw a1, a1, a4
@@ -1566,8 +1566,8 @@ define void @cmpxchg_i16_seq_cst_seq_cst(i16* %ptr, i16 %cmp, i16 %val) {
 ; RV64IA-NEXT:    addiw a3, a3, -1
 ; RV64IA-NEXT:    and a1, a1, a3
 ; RV64IA-NEXT:    and a2, a2, a3
-; RV64IA-NEXT:    andi a4, a0, 3
-; RV64IA-NEXT:    slli a4, a4, 3
+; RV64IA-NEXT:    slli a4, a0, 3
+; RV64IA-NEXT:    andi a4, a4, 24
 ; RV64IA-NEXT:    sllw a3, a3, a4
 ; RV64IA-NEXT:    sllw a2, a2, a4
 ; RV64IA-NEXT:    sllw a1, a1, a4

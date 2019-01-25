@@ -1709,9 +1709,10 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   // Set the CSEConfig and run the analysis.
   GISelCSEInfo *CSEInfo = nullptr;
   TPC = &getAnalysis<TargetPassConfig>();
-  bool IsO0 = TPC->getOptLevel() == CodeGenOpt::Level::None;
-  // Disable CSE for O0.
-  bool EnableCSE = !IsO0 && EnableCSEInIRTranslator;
+  bool EnableCSE = EnableCSEInIRTranslator.getNumOccurrences()
+                       ? EnableCSEInIRTranslator
+                       : TPC->isGISelCSEEnabled();
+
   if (EnableCSE) {
     EntryBuilder = make_unique<CSEMIRBuilder>(CurMF);
     std::unique_ptr<CSEConfig> Config = make_unique<CSEConfig>();

@@ -497,6 +497,19 @@ void RegisterBankInfo::PartialMapping::print(raw_ostream &OS) const {
     OS << "nullptr";
 }
 
+bool RegisterBankInfo::ValueMapping::partsAllUniform() const {
+  if (NumBreakDowns < 2)
+    return true;
+
+  const PartialMapping *First = begin();
+  for (const PartialMapping *Part = First + 1; Part != end(); ++Part) {
+    if (Part->Length != First->Length || Part->RegBank != First->RegBank)
+      return false;
+  }
+
+  return true;
+}
+
 bool RegisterBankInfo::ValueMapping::verify(unsigned MeaningfulBitWidth) const {
   assert(NumBreakDowns && "Value mapped nowhere?!");
   unsigned OrigValueBitWidth = 0;

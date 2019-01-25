@@ -1220,3 +1220,7 @@ bool TargetPassConfig::isGlobalISelAbortEnabled() const {
 bool TargetPassConfig::reportDiagnosticWhenGlobalISelFallback() const {
   return TM->Options.GlobalISelAbort == GlobalISelAbortMode::DisableWithDiag;
 }
+
+bool TargetPassConfig::isGISelCSEEnabled() const {
+  return getOptLevel() != CodeGenOpt::Level::None;
+}

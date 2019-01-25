@@ -31,7 +31,17 @@ enum NodeType : unsigned {
   SELECT_CC,
   BuildPairF64,
   SplitF64,
-  TAIL
+  TAIL,
+  // RV64I shifts, directly matching the semantics of the named RISC-V
+  // instructions.
+  SLLW,
+  SRAW,
+  SRLW,
+  // 32-bit operations from RV64M that can't be simply matched with a pattern
+  // at instruction selection time.
+  DIVW,
+  DIVUW,
+  REMUW
 };
 }
 
@@ -57,8 +67,15 @@ public:
 
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+  void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                          SelectionDAG &DAG) const override;
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
+  unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
+                                           const APInt &DemandedElts,
+                                           const SelectionDAG &DAG,
+                                           unsigned Depth) const override;
 
   // This method returns the name of a target specific DAG node.
   const char *getTargetNodeName(unsigned Opcode) const override;

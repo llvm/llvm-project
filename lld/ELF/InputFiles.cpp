@@ -450,7 +450,7 @@ void ObjFile<ELFT>::initializeSections(
       if (IsNew) {
         if (Config->Relocatable)
           this->Sections[I] = createInputSection(Sec);
-	continue;
+        continue;
       }
 
 

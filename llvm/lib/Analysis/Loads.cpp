@@ -280,9 +280,17 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, unsigned Align,
     Value *AccessedPtr;
     unsigned AccessedAlign;
     if (LoadInst *LI = dyn_cast<LoadInst>(BBI)) {
+      // Ignore volatile loads. The execution of a volatile load cannot
+      // be used to prove an address is backed by regular memory; it can,
+      // for example, point to an MMIO register.
+      if (LI->isVolatile())
+        continue;
       AccessedPtr = LI->getPointerOperand();
       AccessedAlign = LI->getAlignment();
     } else if (StoreInst *SI = dyn_cast<StoreInst>(BBI)) {
+      // Ignore volatile stores (see comment for loads).
+      if (SI->isVolatile())
+        continue;
       AccessedPtr = SI->getPointerOperand();
       AccessedAlign = SI->getAlignment();
     } else

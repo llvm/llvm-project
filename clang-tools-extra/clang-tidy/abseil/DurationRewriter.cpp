@@ -37,7 +37,7 @@ truncateIfIntegral(const FloatingLiteral &FloatLiteral) {
 }
 
 const std::pair<llvm::StringRef, llvm::StringRef> &
-getInverseForScale(DurationScale Scale) {
+getDurationInverseForScale(DurationScale Scale) {
   static const llvm::IndexedMap<std::pair<llvm::StringRef, llvm::StringRef>,
                                 DurationScale2IndexFunctor>
       InverseMap = []() {
@@ -71,7 +71,7 @@ static llvm::Optional<std::string>
 rewriteInverseDurationCall(const MatchFinder::MatchResult &Result,
                            DurationScale Scale, const Expr &Node) {
   const std::pair<llvm::StringRef, llvm::StringRef> &InverseFunctions =
-      getInverseForScale(Scale);
+      getDurationInverseForScale(Scale);
   if (const auto *MaybeCallArg = selectFirst<const Expr>(
           "e",
           match(callExpr(callee(functionDecl(hasAnyName(
@@ -85,7 +85,7 @@ rewriteInverseDurationCall(const MatchFinder::MatchResult &Result,
 }
 
 /// Returns the factory function name for a given `Scale`.
-llvm::StringRef getFactoryForScale(DurationScale Scale) {
+llvm::StringRef getDurationFactoryForScale(DurationScale Scale) {
   switch (Scale) {
   case DurationScale::Hours:
     return "absl::Hours";
@@ -175,7 +175,7 @@ std::string simplifyDurationFactoryArg(const MatchFinder::MatchResult &Result,
   return tooling::fixit::getText(Node, *Result.Context).str();
 }
 
-llvm::Optional<DurationScale> getScaleForInverse(llvm::StringRef Name) {
+llvm::Optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name) {
   static const llvm::StringMap<DurationScale> ScaleMap(
       {{"ToDoubleHours", DurationScale::Hours},
        {"ToInt64Hours", DurationScale::Hours},
@@ -210,7 +210,7 @@ std::string rewriteExprFromNumberToDuration(
   if (IsLiteralZero(Result, RootNode))
     return std::string("absl::ZeroDuration()");
 
-  return (llvm::Twine(getFactoryForScale(Scale)) + "(" +
+  return (llvm::Twine(getDurationFactoryForScale(Scale)) + "(" +
           simplifyDurationFactoryArg(Result, RootNode) + ")")
       .str();
 }

@@ -165,6 +165,20 @@ TEST(FormatTestObjCStyle, DetectsObjCInHeaders) {
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 }
 
+TEST(FormatTestObjCStyle, AvoidDetectingDesignatedInitializersAsObjCInHeaders) {
+  auto Style = getStyle("LLVM", "a.h", "none",
+                        "static const char *names[] = {[0] = \"foo\",\n"
+                        "[kBar] = \"bar\"};");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
+
+  Style = getStyle("LLVM", "a.h", "none",
+                   "static const char *names[] = {[0] EQ \"foo\",\n"
+                   "[kBar] EQ \"bar\"};");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
+}
+
 TEST_F(FormatTestObjC, FormatObjCTryCatch) {
   verifyFormat("@try {\n"
                "  f();\n"

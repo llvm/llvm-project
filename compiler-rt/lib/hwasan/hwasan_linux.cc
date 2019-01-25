@@ -218,6 +218,8 @@ bool MemIsApp(uptr p) {
 }
 
 static void HwasanAtExit(void) {
+  if (common_flags()->print_module_map)
+    DumpProcessMap();
   if (flags()->print_stats && (flags()->atexit || hwasan_report_count > 0))
     ReportStats();
   if (hwasan_report_count > 0) {
@@ -375,8 +377,6 @@ static void HandleTagMismatch(AccessInfo ai, uptr pc, uptr frame,
   stack->Reset();
   GetStackTrace(stack, kStackTraceMax, pc, frame, uc,
                 common_flags()->fast_unwind_on_fatal);
-
-  ++hwasan_report_count;
 
   bool fatal = flags()->halt_on_error || !ai.recover;
   ReportTagMismatch(stack, ai.addr, ai.size, ai.is_store, fatal);

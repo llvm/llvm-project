@@ -11,6 +11,7 @@ add_lldb_library(lldbPluginProcessNetBSD PLUGIN
     lldbUtility
     lldbPluginProcessPOSIX
     lldbPluginProcessUtility
+    util
   LINK_COMPONENTS
     Support
   )
