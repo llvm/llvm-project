@@ -120,9 +120,6 @@ lldb::ValueType ValueObjectDynamicValue::GetValueType() const {
 bool ValueObjectDynamicValue::UpdateValue() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-  Log *verbose_log(
-      GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-
   SetValueIsValid(false);
   m_error.Clear();
 
@@ -191,9 +188,9 @@ bool ValueObjectDynamicValue::UpdateValue() {
   m_update_point.SetUpdated();
 
   if (runtime && found_dynamic_type) {
-    if (verbose_log)
-      verbose_log->Printf("[%s %p] might have a dynamic type",
-                          GetName().GetCString(), (void *)this);
+    if (log)
+      log->Printf("[%s %p] might have a dynamic type", GetName().GetCString(),
+                  (void *)this);
     if (class_type_or_name.HasType()) {
       // TypeSP are always generated from debug info
       const bool prefer_parent_type = false;
