@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic -triple aarch64-linux-gnu %s
 float a = 1.0h; // expected-error{{no matching literal operator for call to 'operator""h' with argument of type 'long double' or 'const char *', and no matching literal operator template}}
 float b = 1.0H; // expected-error{{invalid suffix 'H' on floating constant}}
 

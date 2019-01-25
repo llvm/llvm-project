@@ -122,6 +122,8 @@ private:
 
   LegalizeResult fewerElementsVectorCasts(MachineInstr &MI, unsigned TypeIdx,
                                           LLT NarrowTy);
+  LegalizeResult
+  fewerElementsVectorCmp(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
 
   LegalizeResult lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 

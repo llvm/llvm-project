@@ -438,11 +438,33 @@ template <> struct MappingTraits<DiagnosticLocation> {
   static const bool flow = true;
 };
 
+/// Helper struct for multiline string block literals. Use this type to preserve
+/// newlines in strings.
+struct StringBlockVal {
+  StringRef Value;
+  StringBlockVal(const std::string &Value) : Value(Value) {}
+};
+
+template <> struct BlockScalarTraits<StringBlockVal> {
+  static void output(const StringBlockVal &S, void *Ctx, raw_ostream &OS) {
+    return ScalarTraits<StringRef>::output(S.Value, Ctx, OS);
+  }
+
+  static StringRef input(StringRef Scalar, void *Ctx, StringBlockVal &S) {
+    return ScalarTraits<StringRef>::input(Scalar, Ctx, S.Value);
+  }
+};
+
 // Implement this as a mapping for now to get proper quotation for the value.
 template <> struct MappingTraits<DiagnosticInfoOptimizationBase::Argument> {
   static void mapping(IO &io, DiagnosticInfoOptimizationBase::Argument &A) {
     assert(io.outputting() && "input not yet implemented");
-    io.mapRequired(A.Key.data(), A.Val);
+    // Emit a string block scalar for multiline strings, to preserve newlines.
+    if (StringRef(A.Val).count('\n') > 1) {
+      StringBlockVal S(A.Val);
+      io.mapRequired(A.Key.data(), S);
+    } else
+      io.mapRequired(A.Key.data(), A.Val);
     if (A.Loc.isValid())
       io.mapOptional("DebugLoc", A.Loc);
   }

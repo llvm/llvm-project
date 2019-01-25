@@ -181,6 +181,12 @@ bool operator==(const Value &L, const Value &R) {
   case Value::Boolean:
     return *L.getAsBoolean() == *R.getAsBoolean();
   case Value::Number:
+    // Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=323
+    // The same integer must convert to the same double, per the standard.
+    // However we see 64-vs-80-bit precision comparisons with gcc-7 -O3 -m32.
+    // So we avoid floating point promotion for exact comparisons.
+    if (L.Type == Value::T_Integer || R.Type == Value::T_Integer)
+      return L.getAsInteger() == R.getAsInteger();
     return *L.getAsNumber() == *R.getAsNumber();
   case Value::String:
     return *L.getAsString() == *R.getAsString();

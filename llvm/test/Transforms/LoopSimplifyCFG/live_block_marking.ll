@@ -4,11 +4,13 @@
 ; RUN: opt -S -enable-loop-simplifycfg-term-folding=true -passes='require<domtree>,loop(indvars,simplify-cfg)' -debug-only=loop-simplifycfg -verify-loop-info -verify-dom-info -verify-loop-lcssa 2>&1 < %s | FileCheck %s
 ; RUN: opt -S -enable-loop-simplifycfg-term-folding=true -indvars -loop-simplifycfg -enable-mssa-loop-dependency=true -verify-memoryssa -debug-only=loop-simplifycfg -verify-loop-info -verify-dom-info -verify-loop-lcssa 2>&1 < %s | FileCheck %s
 
-; This test demonstrates a bug in live blocks markup that is only catchable in
-; inter-pass interaction.
 define void @test(i1 %c) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 0, label [[ENTRY_SPLIT:%.*]] [
+; CHECK-NEXT:    i32 1, label [[DEAD_EXIT:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       entry-split:
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[TO_FOLD:%.*]], label [[LATCH:%.*]]
@@ -25,7 +27,7 @@ define void @test(i1 %c) {
 ; CHECK:       latch.loopexit:
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    br i1 true, label [[OUTER]], label [[DEAD_EXIT:%.*]]
+; CHECK-NEXT:    br label [[OUTER]]
 ; CHECK:       dead_exit:
 ; CHECK-NEXT:    ret void
 ;

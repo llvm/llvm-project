@@ -5158,7 +5158,7 @@
 // MSP430:#define __SIZE_MAX__ 65535U
 // MSP430:#define __SIZE_TYPE__ unsigned int
 // MSP430:#define __SIZE_WIDTH__ 16
-// MSP430-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
+// MSP430-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 2U
 // MSP430:#define __UINT16_C_SUFFIX__ U
 // MSP430:#define __UINT16_MAX__ 65535U
 // MSP430:#define __UINT16_TYPE__ unsigned short

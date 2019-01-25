@@ -315,6 +315,7 @@ QualType ObjCMessageExpr::getCallReturnType(ASTContext &Ctx) const {
   case VK_RValue:
     return QT;
   }
+  llvm_unreachable("Unsupported ExprValueKind");
 }
 
 SourceRange ObjCMessageExpr::getReceiverRange() const {

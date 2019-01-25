@@ -4035,34 +4035,48 @@ let TargetPrefix = "x86" in {
 // AVX-512 conflict detection instruction
 // Instructions that count the number of leading zero bits
 let TargetPrefix = "x86" in {
-  def int_x86_avx512_mask_conflict_d_128 :
-          GCCBuiltin<"__builtin_ia32_vpconflictsi_128_mask">,
+  def int_x86_avx512_conflict_d_128 :
+          GCCBuiltin<"__builtin_ia32_vpconflictsi_128">,
+          Intrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty], [IntrNoMem]>;
+  def int_x86_avx512_conflict_d_256 :
+          GCCBuiltin<"__builtin_ia32_vpconflictsi_256">,
+          Intrinsic<[llvm_v8i32_ty], [llvm_v8i32_ty], [IntrNoMem]>;
+  def int_x86_avx512_conflict_d_512 :
+          GCCBuiltin<"__builtin_ia32_vpconflictsi_512">,
+          Intrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty], [IntrNoMem]>;
+
+  def int_x86_avx512_conflict_q_128 :
+          GCCBuiltin<"__builtin_ia32_vpconflictdi_128">,
+          Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty], [IntrNoMem]>;
+  def int_x86_avx512_conflict_q_256 :
+          GCCBuiltin<"__builtin_ia32_vpconflictdi_256">,
+          Intrinsic<[llvm_v4i64_ty], [llvm_v4i64_ty], [IntrNoMem]>;
+  def int_x86_avx512_conflict_q_512 :
+          GCCBuiltin<"__builtin_ia32_vpconflictdi_512">,
+          Intrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty], [IntrNoMem]>;
+
+  def int_x86_avx512_mask_conflict_d_128 : // FIXME: remove
           Intrinsic<[llvm_v4i32_ty],
                     [llvm_v4i32_ty, llvm_v4i32_ty, llvm_i8_ty],
                     [IntrNoMem]>;
-  def int_x86_avx512_mask_conflict_d_256 :
-          GCCBuiltin<"__builtin_ia32_vpconflictsi_256_mask">,
+  def int_x86_avx512_mask_conflict_d_256 : // FIXME: remove
           Intrinsic<[llvm_v8i32_ty],
                     [llvm_v8i32_ty, llvm_v8i32_ty, llvm_i8_ty],
                     [IntrNoMem]>;
-  def int_x86_avx512_mask_conflict_d_512 :
-          GCCBuiltin<"__builtin_ia32_vpconflictsi_512_mask">,
+  def int_x86_avx512_mask_conflict_d_512 : // FIXME: remove
           Intrinsic<[llvm_v16i32_ty],
                     [llvm_v16i32_ty, llvm_v16i32_ty, llvm_i16_ty],
                     [IntrNoMem]>;
 
-  def int_x86_avx512_mask_conflict_q_128 :
-          GCCBuiltin<"__builtin_ia32_vpconflictdi_128_mask">,
+  def int_x86_avx512_mask_conflict_q_128 : // FIXME: remove
           Intrinsic<[llvm_v2i64_ty],
                     [llvm_v2i64_ty, llvm_v2i64_ty, llvm_i8_ty],
                     [IntrNoMem]>;
-  def int_x86_avx512_mask_conflict_q_256 :
-          GCCBuiltin<"__builtin_ia32_vpconflictdi_256_mask">,
+  def int_x86_avx512_mask_conflict_q_256 : // FIXME: remove
           Intrinsic<[llvm_v4i64_ty],
                     [llvm_v4i64_ty, llvm_v4i64_ty, llvm_i8_ty],
                     [IntrNoMem]>;
-  def int_x86_avx512_mask_conflict_q_512 :
-          GCCBuiltin<"__builtin_ia32_vpconflictdi_512_mask">,
+  def int_x86_avx512_mask_conflict_q_512 : // FIXME: remove
           Intrinsic<[llvm_v8i64_ty],
                     [llvm_v8i64_ty, llvm_v8i64_ty, llvm_i8_ty],
                     [IntrNoMem]>;

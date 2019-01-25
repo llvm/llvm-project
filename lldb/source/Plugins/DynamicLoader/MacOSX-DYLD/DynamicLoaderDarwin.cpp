@@ -255,15 +255,7 @@ bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
 
               changed = m_process->GetTarget().SetSectionLoadAddress(
                   section_sp, new_section_load_addr, warn_multiple);
-            } else {
-              Host::SystemLog(
-                  Host::eSystemLogWarning,
-                  "warning: unable to find and load segment named '%s' at "
-                  "0x%" PRIx64 " in '%s' in macosx dynamic loader plug-in.\n",
-                  info.segments[i].name.AsCString("<invalid>"),
-                  (uint64_t)new_section_load_addr,
-                  image_object_file->GetFileSpec().GetPath().c_str());
-            }
+            } 
           }
         }
 

@@ -1,0 +1,147 @@
+# RUN: llc -O0 -mtriple arm-- -mattr=+v6 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,ARM
+# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,THUMB
+--- |
+  define void @test_shifts_to_revsh() { ret void }
+  define void @test_shifts_to_revsh_commutative() { ret void }
+  define void @test_shifts_no_revsh_constants() { ret void }
+...
+---
+name:            test_shifts_to_revsh
+# CHECK-LABEL: name: test_shifts_to_revsh
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
+  - { id: 6, class: gprb }
+  - { id: 7, class: gprb }
+  - { id: 8, class: gprb }
+  - { id: 9, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; ARM: [[VREGX:%[0-9]+]]:gpr = COPY $r0
+    ; THUMB: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+
+    %1(s32) = G_CONSTANT i32 24
+    %2(s32) = G_SHL %0(s32), %1(s32)
+
+    %3(s32) = G_CONSTANT i32 16
+    %4(s32) = G_ASHR %2(s32), %3(s32)
+
+    %5(s32) = G_CONSTANT i32 8
+    %6(s32) = G_LSHR %0(s32), %5(s32)
+
+    %7(s32) = G_CONSTANT 255
+    %8(s32) = G_AND %6(s32), %7(s32)
+
+    %9(s32) = G_OR %4(s32), %8(s32)
+    ; ARM: [[VREGR:%[0-9]+]]:gpr = REVSH [[VREGX]]
+    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2REVSH [[VREGX]]
+
+    $r0 = COPY %9(s32)
+    ; CHECK: $r0 = COPY [[VREGR]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_shifts_to_revsh_commutative
+# CHECK-LABEL: name: test_shifts_to_revsh_commutative
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
+  - { id: 6, class: gprb }
+  - { id: 7, class: gprb }
+  - { id: 8, class: gprb }
+  - { id: 9, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; ARM: [[VREGX:%[0-9]+]]:gpr = COPY $r0
+    ; THUMB: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+
+    %1(s32) = G_CONSTANT i32 24
+    %2(s32) = G_SHL %0(s32), %1(s32)
+
+    %3(s32) = G_CONSTANT i32 16
+    %4(s32) = G_ASHR %2(s32), %3(s32)
+
+    %5(s32) = G_CONSTANT i32 8
+    %6(s32) = G_LSHR %0(s32), %5(s32)
+
+    %7(s32) = G_CONSTANT 255
+    %8(s32) = G_AND %6(s32), %7(s32)
+
+    %9(s32) = G_OR %8(s32), %4(s32)
+    ; ARM: [[VREGR:%[0-9]+]]:gpr = REVSH [[VREGX]]
+    ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2REVSH [[VREGX]]
+
+    $r0 = COPY %9(s32)
+    ; CHECK: $r0 = COPY [[VREGR]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_shifts_no_revsh_constants
+# CHECK-LABEL: name: test_shifts_no_revsh_constants
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+  - { id: 5, class: gprb }
+  - { id: 6, class: gprb }
+  - { id: 7, class: gprb }
+  - { id: 8, class: gprb }
+  - { id: 9, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+
+    %1(s32) = G_CONSTANT i32 16 ; REVSH needs 24 here
+    %2(s32) = G_SHL %0(s32), %1(s32)
+
+    %3(s32) = G_CONSTANT i32 24 ; REVSH needs 16 here
+    %4(s32) = G_ASHR %2(s32), %3(s32)
+
+    %5(s32) = G_CONSTANT i32 8
+    %6(s32) = G_LSHR %0(s32), %5(s32)
+
+    %7(s32) = G_CONSTANT 255
+    %8(s32) = G_AND %6(s32), %7(s32)
+
+    %9(s32) = G_OR %4(s32), %8(s32)
+    ; We don't really care how this is folded as long as it's not into a REVSH.
+    ; CHECK-NOT: REVSH
+
+    $r0 = COPY %9(s32)
+
+    BX_RET 14, $noreg, implicit $r0
+...

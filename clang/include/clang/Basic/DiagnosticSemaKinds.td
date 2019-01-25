@@ -1585,6 +1585,9 @@ def err_explicit_non_ctor_or_conv_function : Error<
 def err_static_not_bitfield : Error<"static member %0 cannot be a bit-field">;
 def err_static_out_of_line : Error<
   "'static' can only be specified inside the class definition">;
+def ext_static_out_of_line : ExtWarn<
+  err_static_out_of_line.Text>,
+  InGroup<MicrosoftTemplate>;
 def err_storage_class_for_static_member : Error<
   "static data member definition cannot specify a storage class">;
 def err_typedef_not_bitfield : Error<"typedef member %0 cannot be a bit-field">;
