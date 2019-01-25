@@ -29,7 +29,7 @@ enum class DurationScale : std::uint8_t {
 
 /// Given a `Scale`, return the appropriate factory function call for
 /// constructing a `Duration` for that scale.
-llvm::StringRef getFactoryForScale(DurationScale Scale);
+llvm::StringRef getDurationFactoryForScale(DurationScale Scale);
 
 // Determine if `Node` represents a literal floating point or integral zero.
 bool IsLiteralZero(const ast_matchers::MatchFinder::MatchResult &Result,
@@ -60,13 +60,13 @@ simplifyDurationFactoryArg(const ast_matchers::MatchFinder::MatchResult &Result,
 
 /// Given the name of an inverse Duration function (e.g., `ToDoubleSeconds`),
 /// return its `DurationScale`, or `None` if a match is not found.
-llvm::Optional<DurationScale> getScaleForInverse(llvm::StringRef Name);
+llvm::Optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name);
 
 /// Given a `Scale` return the fully qualified inverse functions for it.
 /// The first returned value is the inverse for `double`, and the second
 /// returned value is the inverse for `int64`.
 const std::pair<llvm::StringRef, llvm::StringRef> &
-getInverseForScale(DurationScale Scale);
+getDurationInverseForScale(DurationScale Scale);
 
 /// Assuming `Node` has type `double` or `int` representing a time interval of
 /// `Scale`, return the expression to make it a suitable `Duration`.

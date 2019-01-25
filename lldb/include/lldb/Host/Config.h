@@ -25,6 +25,8 @@
 
 #define HAVE_SIGACTION 1
 
+#define HAVE_LIBCOMPRESSION 1
+
 #else
 
 #error This file is only used by the Xcode build.

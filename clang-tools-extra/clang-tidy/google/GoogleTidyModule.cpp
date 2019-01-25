@@ -14,6 +14,7 @@
 #include "../readability/NamespaceCommentCheck.h"
 #include "AvoidCStyleCastsCheck.h"
 #include "AvoidThrowingObjCExceptionCheck.h"
+#include "AvoidUnderscoreInGoogletestNameCheck.h"
 #include "DefaultArgumentsCheck.h"
 #include "ExplicitConstructorCheck.h"
 #include "ExplicitMakePairCheck.h"
@@ -60,6 +61,9 @@ class GoogleModule : public ClangTidyModule {
         "google-runtime-operator");
     CheckFactories.registerCheck<runtime::NonConstReferences>(
         "google-runtime-references");
+    CheckFactories
+        .registerCheck<readability::AvoidUnderscoreInGoogletestNameCheck>(
+            "google-readability-avoid-underscore-in-googletest-name");
     CheckFactories.registerCheck<readability::AvoidCStyleCastsCheck>(
         "google-readability-casting");
     CheckFactories.registerCheck<readability::TodoCommentCheck>(
