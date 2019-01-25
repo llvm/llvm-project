@@ -1,25 +1,26 @@
 LEVEL = ../../../make
 
-all: libmoda.dylib libmodb.dylib main
-
 EXE=main
 SWIFT_SOURCES=main.swift
-LINKFLAGS=-I$(shell pwd)/moda_dir -I$(shell pwd)/modb_dir -I$(SRCDIR)/moda_dir/cdeps -I$(SRCDIR)/modb_dir/cdeps -L$(shell pwd) -lmoda -lmodb
-SWIFTFLAGS=-g -Onone $(LINKFLAGS) -Xfrontend -serialize-debugging-options
+SWIFTFLAGS_EXTRAS = -I$(shell pwd)/moda_dir -I$(shell pwd)/modb_dir -I$(SRCDIR)/moda_dir/cdeps -I$(SRCDIR)/modb_dir/cdeps
+LD_EXTRAS = -L$(shell pwd) -lmoda -lmodb
+
+all: libmoda.dylib libmodb.dylib main
 
 include $(LEVEL)/Makefile.rules
-
-SWIFTFLAGS_NOLINK = $(subst $(LINKFLAGS),,$(SWIFTFLAGS))
 
 libmoda.dylib: moda_dir/moda.swift
 libmodb.dylib: modb_dir/modb.swift
 
 libmod%.dylib:
+	echo '#############################' $<
 	rm -rf mod$*_dir; mkdir mod$*_dir
-	cd mod$*_dir; $(SWIFTC) $(SWIFTFLAGS_NOLINK) -emit-module -module-name mod$* $< -I$(dir $<)/cdeps -emit-library -o $@ -Xlinker -install_name -Xlinker @executable_path/$@
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
+	$(MAKE) -C mod$*_dir SWIFTFLAGS_EXTRAS=-I$(dir $<)/cdeps \
+                MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
+		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
+		BASENAME=$(shell basename $< .swift) \
+		VPATH=$(SRCDIR)/mod$*_dir -I $(SRCDIR)/mod$*_dir \
+                -f $(SRCDIR)/dylib.mk all
 	ln -sf $(shell pwd)/mod$*_dir/$@ $@
 	ln -sf $(shell pwd)/mod$*_dir/$@.dSYM $@.dSYM
 

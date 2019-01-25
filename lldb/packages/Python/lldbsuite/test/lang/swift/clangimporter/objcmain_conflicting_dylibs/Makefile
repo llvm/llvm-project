@@ -1,5 +1,4 @@
 LEVEL = ../../../../make
-SRCDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 SWIFT_OBJC_INTEROP := 1
 
 # This test builds an Objective-C main program that imports two Swift

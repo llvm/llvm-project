@@ -1,5 +1,4 @@
 LEVEL = ../../../../make
-SRCDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 SWIFT_OBJC_INTEROP := 1
 
 include $(LEVEL)/Makefile.rules
@@ -13,25 +12,16 @@ a.out: main.m libFoo.dylib
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
-
 	mv $(BOTDIR) $(USERDIR)
 
 libFoo.dylib: Foo.swift
 	mkdir -p $(BOTDIR)
 	cp -r $(SRCDIR)/Foo $(BOTDIR)/
-	$(SWIFTC) -g -Onone $^ -emit-library \
-            -module-name $(shell basename $< .swift) -emit-module \
-            -Xlinker -install_name -Xlinker @executable_path/$@ \
-            -Xcc -I$(BOTDIR)/Foo $(SWIFTFLAGS) -emit-objc-header-path Foo.h \
-	    -Xcc -iquote -Xcc ./buildbot/iquote-path \
-	    -Xcc -I -Xcc ./buildbot/I-double \
-	    -Xcc -I./buildbot/I-single \
-	    -Xcc -F./buildbot/Frameworks \
-	    -Xcc -F -Xcc buildbot/Frameworks \
-	    -sdk "$(SWIFTSDKROOT)" -import-objc-header $(BOTDIR)/Foo/bridge.h
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
+	$(MAKE) MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
+		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
+		BASENAME=$(shell basename $< .swift) \
+		BOTDIR=$(BOTDIR) \
+		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
 	UUID=$$(dwarfdump --uuid "$@.dSYM" | awk '{ print $$2 }') ; \
 	echo "UUID = $$UUID" ; \
 	PLIST="$@.dSYM/Contents/Resources/$$UUID.plist" ; \
