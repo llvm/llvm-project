@@ -76,7 +76,7 @@ Error TpiStreamBuilder::finalize() {
   H->HashStreamIndex = HashStreamIndex;
   H->HashAuxStreamIndex = kInvalidStreamIndex;
   H->HashKeySize = sizeof(ulittle32_t);
-  H->NumHashBuckets = MinTpiHashBuckets;
+  H->NumHashBuckets = MaxTpiHashBuckets - 1;
 
   // Recall that hash values go into a completely different stream identified by
   // the `HashStreamIndex` field of the `TpiStreamHeader`.  Therefore, the data
@@ -129,7 +129,7 @@ Error TpiStreamBuilder::finalizeMsfLayout() {
     ulittle32_t *H = Allocator.Allocate<ulittle32_t>(TypeHashes.size());
     MutableArrayRef<ulittle32_t> HashBuffer(H, TypeHashes.size());
     for (uint32_t I = 0; I < TypeHashes.size(); ++I) {
-      HashBuffer[I] = TypeHashes[I] % MinTpiHashBuckets;
+      HashBuffer[I] = TypeHashes[I] % (MaxTpiHashBuckets - 1);
     }
     ArrayRef<uint8_t> Bytes(
         reinterpret_cast<const uint8_t *>(HashBuffer.data()),

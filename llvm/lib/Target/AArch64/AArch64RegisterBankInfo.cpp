@@ -635,6 +635,62 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         OpRegBankIdx[0] = PMI_FirstFPR;
       break;
     }
+    break;
+  case TargetOpcode::G_UNMERGE_VALUES: {
+    // If the first operand belongs to a FPR register bank, then make sure that
+    // we preserve that.
+    if (OpRegBankIdx[0] != PMI_FirstGPR)
+      break;
+
+    // Helper lambda that returns true if MI has floating point constraints.
+    auto HasFPConstraints = [&TRI, &MRI, this](MachineInstr &MI) {
+      unsigned Op = MI.getOpcode();
+
+      // Do we have an explicit floating point instruction?
+      if (isPreISelGenericFloatingPointOpcode(Op))
+        return true;
+
+      // No. Check if we have a copy-like instruction. If we do, then we could
+      // still be fed by floating point instructions.
+      if (Op != TargetOpcode::COPY && !MI.isPHI())
+        return false;
+
+      // MI is copy-like. Return true if it's using an FPR.
+      return getRegBank(MI.getOperand(0).getReg(), MRI, TRI) ==
+             &AArch64::FPRRegBank;
+    };
+
+    if (any_of(MRI.use_instructions(MI.getOperand(0).getReg()),
+               [&](MachineInstr &MI) { return HasFPConstraints(MI); })) {
+      // Set the register bank of every operand to FPR.
+      for (unsigned Idx = 0, NumOperands = MI.getNumOperands();
+           Idx < NumOperands; ++Idx)
+        OpRegBankIdx[Idx] = PMI_FirstFPR;
+    }
+    break;
+  }
+
+  case TargetOpcode::G_BUILD_VECTOR:
+    // If the first source operand belongs to a FPR register bank, then make
+    // sure that we preserve that.
+    if (OpRegBankIdx[1] != PMI_FirstGPR)
+      break;
+    unsigned VReg = MI.getOperand(1).getReg();
+    if (!VReg)
+      break;
+
+    // Get the instruction that defined the source operand reg, and check if
+    // it's a floating point operation.
+    MachineInstr *DefMI = MRI.getVRegDef(VReg);
+    unsigned DefOpc = DefMI->getOpcode();
+    if (isPreISelGenericFloatingPointOpcode(DefOpc)) {
+      // Have a floating point op.
+      // Make sure every operand gets mapped to a FPR register class.
+      unsigned NumOperands = MI.getNumOperands();
+      for (unsigned Idx = 0; Idx < NumOperands; ++Idx)
+        OpRegBankIdx[Idx] = PMI_FirstFPR;
+    }
+    break;
   }
 
   // Finally construct the computed mapping.

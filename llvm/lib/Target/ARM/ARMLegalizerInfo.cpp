@@ -88,6 +88,10 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
       .legalFor({s32})
       .minScalar(0, s32);
 
+  getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
+    .legalFor({{s32, s32}})
+    .clampScalar(1, s32, s32);
+
   getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, s32}});
   getActionDefinitionsBuilder(G_PTRTOINT).legalFor({{s32, p0}});
 
@@ -134,13 +138,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     else
       setAction({Op, s32}, Libcall);
   }
-
-  getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, s32}});
-  getActionDefinitionsBuilder(G_PTRTOINT).legalFor({{s32, p0}});
-
-  getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
-    .legalFor({{s32, s32}})
-    .clampScalar(1, s32, s32);
 
   if (ST.hasV5TOps()) {
     getActionDefinitionsBuilder(G_CTLZ)

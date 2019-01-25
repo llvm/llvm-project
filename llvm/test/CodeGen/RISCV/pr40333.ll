@@ -7,17 +7,10 @@
 ; loop would be created in DAGCombine, converting ANY_EXTEND to SIGN_EXTEND
 ; and back again.
 
-; TODO: This test case is also an example of where it would be cheaper to
-; select SRLW, but the current lowering strategy fails to do so.
-
 define signext i8 @foo(i32 %a, i32 %b) nounwind {
 ; RV64I-LABEL: foo:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    srl a0, a0, a1
+; RV64I-NEXT:    srlw a0, a0, a1
 ; RV64I-NEXT:    slli a0, a0, 56
 ; RV64I-NEXT:    srai a0, a0, 56
 ; RV64I-NEXT:    ret

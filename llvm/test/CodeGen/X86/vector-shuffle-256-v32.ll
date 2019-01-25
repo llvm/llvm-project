@@ -3321,3 +3321,20 @@ define <32 x i8> @zeroable_src_to_zext(<32 x i8> %a0) {
   %2 = shufflevector <32 x i8> %1, <32 x i8> <i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <32 x i32> <i32 8, i32 9, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 10, i32 11, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 20, i32 21, i32 48, i32 48, i32 48, i32 48, i32 48, i32 48, i32 22, i32 23, i32 48, i32 48, i32 48, i32 48, i32 48, i32 48>
   ret <32 x i8> %2
 }
+
+define <32 x i8> @unpckh_v32i8(<32 x i8> %x, <32 x i8> %y) {
+; AVX1-LABEL: unpckh_v32i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
+; AVX1-NEXT:    retq
+;
+; AVX2OR512VL-LABEL: unpckh_v32i8:
+; AVX2OR512VL:       # %bb.0:
+; AVX2OR512VL-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX2OR512VL-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
+; AVX2OR512VL-NEXT:    retq
+  %unpckh = shufflevector <32 x i8> %x, <32 x i8> %y, <32 x i32> <i32 8, i32 56, i32 9, i32 57, i32 10, i32 58, i32 11, i32 59, i32 12, i32 60, i32 13, i32 61, i32 14, i32 62, i32 15, i32 63, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <32 x i8> %unpckh
+}
+

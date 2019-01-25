@@ -113,12 +113,12 @@ void MSP430AsmPrinter::printSrcMemOperand(const MachineInstr *MI, int OpNum,
   // Print displacement first
 
   // Imm here is in fact global address - print extra modifier.
-  if (Disp.isImm() && !Base.getReg())
+  if (Disp.isImm() && Base.getReg() == MSP430::SR)
     O << '&';
   printOperand(MI, OpNum+1, O, "nohash");
 
   // Print register base field
-  if (Base.getReg()) {
+  if (Base.getReg() != MSP430::SR && Base.getReg() != MSP430::PC) {
     O << '(';
     printOperand(MI, OpNum, O);
     O << ')';

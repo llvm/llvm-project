@@ -873,7 +873,10 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
 
   unsigned CmpOpc;
   bool NeedsExt = false;
-  auto RC = MRI.getRegClass(SrcReg1);
+
+  auto RC1 = MRI.getRegClass(SrcReg1);
+  auto RC2 = SrcReg2 != 0 ? MRI.getRegClass(SrcReg2) : nullptr;
+
   switch (SrcVT.SimpleTy) {
     default: return false;
     case MVT::f32:
@@ -892,11 +895,17 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
         }
       } else {
         CmpOpc = PPC::FCMPUS;
-        if (isVSSRCRegClass(RC)) {
+        if (isVSSRCRegClass(RC1)) {
           unsigned TmpReg = createResultReg(&PPC::F4RCRegClass);
           BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                   TII.get(TargetOpcode::COPY), TmpReg).addReg(SrcReg1);
           SrcReg1 = TmpReg;
+        }
+        if (RC2 && isVSSRCRegClass(RC2)) {
+          unsigned TmpReg = createResultReg(&PPC::F4RCRegClass);
+          BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+                  TII.get(TargetOpcode::COPY), TmpReg).addReg(SrcReg2);
+          SrcReg2 = TmpReg;
         }
       }
       break;
@@ -914,7 +923,7 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
             CmpOpc = PPC::EFDCMPGT;
             break;
         }
-      } else if (isVSFRCRegClass(RC)) {
+      } else if (isVSFRCRegClass(RC1) || (RC2 && isVSFRCRegClass(RC2))) {
         CmpOpc = PPC::XSCMPUDP;
       } else {
         CmpOpc = PPC::FCMPUD;

@@ -193,6 +193,7 @@ private:  // Parser methods.
   bool ParseRangePiece(SmallVectorImpl<unsigned> &Ranges);
   RecTy *ParseType();
   Init *ParseOperation(Record *CurRec, RecTy *ItemType);
+  Init *ParseOperationCond(Record *CurRec, RecTy *ItemType);
   RecTy *ParseOperatorType();
   Init *ParseObjectName(MultiClass *CurMultiClass);
   Record *ParseClassID();

@@ -23,6 +23,7 @@
 
 using namespace llvm;
 using namespace LegalizeActions;
+using namespace LegalizeMutations;
 using namespace LegalityPredicates;
 
 AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
@@ -124,6 +125,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   getActionDefinitionsBuilder({G_FREM, G_FPOW}).libcallFor({s32, s64});
 
   getActionDefinitionsBuilder(G_FCEIL)
+      // If we don't have full FP16 support, then scalarize the elements of
+      // vectors containing fp16 types.
+      .fewerElementsIf(
+          [=, &ST](const LegalityQuery &Query) {
+            const auto &Ty = Query.Types[0];
+            return Ty.isVector() && Ty.getElementType() == s16 &&
+                   !ST.hasFullFP16();
+          },
+          [=](const LegalityQuery &Query) { return std::make_pair(0, s16); })
       // If we don't have full FP16 support, then widen s16 to s32 if we
       // encounter it.
       .widenScalarIf(
@@ -131,7 +141,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
             return Query.Types[0] == s16 && !ST.hasFullFP16();
           },
           [=](const LegalityQuery &Query) { return std::make_pair(0, s32); })
-      .legalFor({s16, s32, s64, v2s32, v4s32, v2s64});
+      .legalFor({s16, s32, s64, v2s32, v4s32, v2s64, v2s16, v4s16, v8s16});
 
   getActionDefinitionsBuilder(G_INSERT)
       .unsupportedIf([=](const LegalityQuery &Query) {
@@ -349,11 +359,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       }
       return false;
     };
-    auto scalarize =
-        [](const LegalityQuery &Query, unsigned TypeIdx) {
-          const LLT &Ty = Query.Types[TypeIdx];
-          return std::make_pair(TypeIdx, Ty.getElementType());
-        };
 
     // FIXME: This rule is horrible, but specifies the same as what we had
     // before with the particularly strange definitions removed (e.g.
@@ -367,10 +372,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
         // Break up vectors with weird elements into scalars
         .fewerElementsIf(
             [=](const LegalityQuery &Query) { return notValidElt(Query, 0); },
-            [=](const LegalityQuery &Query) { return scalarize(Query, 0); })
+            scalarize(0))
         .fewerElementsIf(
             [=](const LegalityQuery &Query) { return notValidElt(Query, 1); },
-            [=](const LegalityQuery &Query) { return scalarize(Query, 1); })
+            scalarize(1))
         // Clamp the big scalar to s8-s512 and make it either a power of 2, 192,
         // or 384.
         .clampScalar(BigTyIdx, s8, s512)
@@ -411,16 +416,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
           return BigTy.getSizeInBits() % LitTy.getSizeInBits() == 0;
         })
         // Any vectors left are the wrong size. Scalarize them.
-        .fewerElementsIf([](const LegalityQuery &Query) { return true; },
-                         [](const LegalityQuery &Query) {
-                           return std::make_pair(
-                               0, Query.Types[0].getElementType());
-                         })
-        .fewerElementsIf([](const LegalityQuery &Query) { return true; },
-                         [](const LegalityQuery &Query) {
-                           return std::make_pair(
-                               1, Query.Types[1].getElementType());
-                         });
+      .scalarize(0)
+      .scalarize(1);
   }
 
   getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
@@ -435,7 +432,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       });
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
-      .legalFor({{v4s32, s32}, {v2s64, s64}})
+      .legalFor({{v4s16, s16}, {v8s16, s16}, {v4s32, s32}, {v2s64, s64}})
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
 

@@ -1248,8 +1248,6 @@ bool LLParser::ParseFnAttributeValuePairs(AttrBuilder &B,
     case lltok::kw_nonlazybind: B.addAttribute(Attribute::NonLazyBind); break;
     case lltok::kw_noredzone: B.addAttribute(Attribute::NoRedZone); break;
     case lltok::kw_noreturn: B.addAttribute(Attribute::NoReturn); break;
-    case lltok::kw_expect_noreturn:
-      B.addAttribute(Attribute::ExpectNoReturn); break;
     case lltok::kw_nocf_check: B.addAttribute(Attribute::NoCfCheck); break;
     case lltok::kw_norecurse: B.addAttribute(Attribute::NoRecurse); break;
     case lltok::kw_nounwind: B.addAttribute(Attribute::NoUnwind); break;
@@ -1613,7 +1611,6 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
     case lltok::kw_nonlazybind:
     case lltok::kw_noredzone:
     case lltok::kw_noreturn:
-    case lltok::kw_expect_noreturn:
     case lltok::kw_nocf_check:
     case lltok::kw_nounwind:
     case lltok::kw_optforfuzzing:
@@ -1711,7 +1708,6 @@ bool LLParser::ParseOptionalReturnAttrs(AttrBuilder &B) {
     case lltok::kw_nonlazybind:
     case lltok::kw_noredzone:
     case lltok::kw_noreturn:
-    case lltok::kw_expect_noreturn:
     case lltok::kw_nocf_check:
     case lltok::kw_nounwind:
     case lltok::kw_optforfuzzing:

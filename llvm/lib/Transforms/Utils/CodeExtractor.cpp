@@ -779,7 +779,6 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::NoBuiltin:
       case Attribute::NoCapture:
       case Attribute::NoReturn:
-      case Attribute::ExpectNoReturn:
       case Attribute::None:
       case Attribute::NonNull:
       case Attribute::ReadNone:

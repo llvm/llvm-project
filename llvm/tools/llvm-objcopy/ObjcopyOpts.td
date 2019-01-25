@@ -95,6 +95,8 @@ def strip_all_gnu : Flag<["-", "--"], "strip-all-gnu">,
                     HelpText<"Compatible with GNU objcopy's --strip-all">;
 def strip_debug : Flag<["-", "--"], "strip-debug">,
                   HelpText<"Remove all debug information">;
+def g : Flag<["-"], "g">, Alias<strip_debug>,
+        HelpText<"Alias for --strip-debug">;
 def strip_dwo : Flag<["-", "--"], "strip-dwo">,
                 HelpText<"Remove all DWARF .dwo sections from file">;
 def strip_sections : Flag<["-", "--"], "strip-sections">,

@@ -1244,11 +1244,125 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
-                                     LLT NarrowTy) {
-  // FIXME: Don't know how to handle secondary types yet.
+LegalizerHelper::fewerElementsVectorCasts(MachineInstr &MI, unsigned TypeIdx,
+                                          LLT NarrowTy) {
   if (TypeIdx != 0)
     return UnableToLegalize;
+
+  unsigned DstReg = MI.getOperand(0).getReg();
+  unsigned SrcReg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(SrcReg);
+
+  LLT NarrowTy0 = NarrowTy;
+  LLT NarrowTy1;
+  unsigned NumParts;
+
+  if (NarrowTy.isScalar()) {
+    NumParts = DstTy.getNumElements();
+    NarrowTy1 = SrcTy.getElementType();
+  } else {
+    // Uneven breakdown not handled.
+    NumParts = DstTy.getNumElements() / NarrowTy.getNumElements();
+    if (NumParts * NarrowTy.getNumElements() != DstTy.getNumElements())
+      return UnableToLegalize;
+
+    NarrowTy1 = LLT::vector(NumParts, SrcTy.getElementType().getSizeInBits());
+  }
+
+  SmallVector<unsigned, 4> SrcRegs, DstRegs;
+  extractParts(SrcReg, NarrowTy1, NumParts, SrcRegs);
+
+  for (unsigned I = 0; I < NumParts; ++I) {
+    unsigned DstReg = MRI.createGenericVirtualRegister(NarrowTy0);
+    MachineInstr *NewInst = MIRBuilder.buildInstr(MI.getOpcode())
+      .addDef(DstReg)
+      .addUse(SrcRegs[I]);
+
+    NewInst->setFlags(MI.getFlags());
+    DstRegs.push_back(DstReg);
+  }
+
+  if (NarrowTy.isVector())
+        MIRBuilder.buildConcatVectors(DstReg, DstRegs);
+  else
+    MIRBuilder.buildBuildVector(DstReg, DstRegs);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::fewerElementsVectorCmp(MachineInstr &MI, unsigned TypeIdx,
+                                        LLT NarrowTy) {
+  unsigned DstReg = MI.getOperand(0).getReg();
+  unsigned Src0Reg = MI.getOperand(2).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(Src0Reg);
+
+  unsigned NumParts;
+  LLT NarrowTy0, NarrowTy1;
+
+  if (TypeIdx == 0) {
+    unsigned NewElts = NarrowTy.isVector() ? NarrowTy.getNumElements() : 1;
+    unsigned OldElts = DstTy.getNumElements();
+
+    NarrowTy0 = NarrowTy;
+    NumParts = NarrowTy.isVector() ? (OldElts / NewElts) : DstTy.getNumElements();
+    NarrowTy1 = NarrowTy.isVector() ?
+      LLT::vector(NarrowTy.getNumElements(), SrcTy.getScalarSizeInBits()) :
+      SrcTy.getElementType();
+
+  } else {
+    unsigned NewElts = NarrowTy.isVector() ? NarrowTy.getNumElements() : 1;
+    unsigned OldElts = SrcTy.getNumElements();
+
+    NumParts = NarrowTy.isVector() ? (OldElts / NewElts) :
+      NarrowTy.getNumElements();
+    NarrowTy0 = LLT::vector(NarrowTy.getNumElements(),
+                            DstTy.getScalarSizeInBits());
+    NarrowTy1 = NarrowTy;
+  }
+
+  // FIXME: Don't know how to handle the situation where the small vectors
+  // aren't all the same size yet.
+  if (NarrowTy1.isVector() &&
+      NarrowTy1.getNumElements() * NumParts != DstTy.getNumElements())
+    return UnableToLegalize;
+
+  CmpInst::Predicate Pred
+    = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+
+  SmallVector<unsigned, 2> Src1Regs, Src2Regs, DstRegs;
+  extractParts(MI.getOperand(2).getReg(), NarrowTy1, NumParts, Src1Regs);
+  extractParts(MI.getOperand(3).getReg(), NarrowTy1, NumParts, Src2Regs);
+
+  for (unsigned I = 0; I < NumParts; ++I) {
+    unsigned DstReg = MRI.createGenericVirtualRegister(NarrowTy0);
+    DstRegs.push_back(DstReg);
+
+    if (MI.getOpcode() == TargetOpcode::G_ICMP)
+      MIRBuilder.buildICmp(Pred, DstReg, Src1Regs[I], Src2Regs[I]);
+    else {
+      MachineInstr *NewCmp
+        = MIRBuilder.buildFCmp(Pred, DstReg, Src1Regs[I], Src2Regs[I]);
+      NewCmp->setFlags(MI.getFlags());
+    }
+  }
+
+  if (NarrowTy0.isVector())
+    MIRBuilder.buildConcatVectors(DstReg, DstRegs);
+  else
+    MIRBuilder.buildBuildVector(DstReg, DstRegs);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
+                                     LLT NarrowTy) {
+  using namespace TargetOpcode;
 
   MIRBuilder.setInstr(MI);
   unsigned Opc = MI.getOpcode();
@@ -1282,6 +1396,10 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return Legalized;
   }
   case TargetOpcode::G_ADD:
+  case TargetOpcode::G_SUB:
+  case TargetOpcode::G_MUL:
+  case TargetOpcode::G_SMULH:
+  case TargetOpcode::G_UMULH:
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FSUB:
@@ -1289,7 +1407,14 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FABS:
   case TargetOpcode::G_FDIV:
   case TargetOpcode::G_FREM:
-  case TargetOpcode::G_FMA: {
+  case TargetOpcode::G_FMA:
+  case TargetOpcode::G_FPOW:
+  case TargetOpcode::G_FEXP:
+  case TargetOpcode::G_FEXP2:
+  case TargetOpcode::G_FLOG:
+  case TargetOpcode::G_FLOG2:
+  case TargetOpcode::G_FLOG10:
+  case TargetOpcode::G_FCEIL: {
     unsigned NarrowSize = NarrowTy.getSizeInBits();
     unsigned DstReg = MI.getOperand(0).getReg();
     unsigned Flags = MI.getFlags();
@@ -1334,8 +1459,15 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_ICMP:
+  case TargetOpcode::G_FCMP:
+    return fewerElementsVectorCmp(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE: {
+    // FIXME: Don't know how to handle secondary types yet.
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
     bool IsLoad = MI.getOpcode() == TargetOpcode::G_LOAD;
     unsigned ValReg = MI.getOperand(0).getReg();
     unsigned AddrReg = MI.getOperand(1).getReg();
@@ -1376,6 +1508,16 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ANYEXT:
+  case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP:
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
+    return fewerElementsVectorCasts(MI, TypeIdx, NarrowTy);
   }
 }
 

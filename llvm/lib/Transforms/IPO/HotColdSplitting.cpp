@@ -5,11 +5,24 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Outline cold regions to a separate function.
-// TODO: Update BFI and BPI
-// TODO: Add all the outlined functions to a separate section.
-//
+///
+/// \file
+/// The goal of hot/cold splitting is to improve the memory locality of code.
+/// The splitting pass does this by identifying cold blocks and moving them into
+/// separate functions.
+///
+/// When the splitting pass finds a cold block (referred to as "the sink"), it
+/// grows a maximal cold region around that block. The maximal region contains
+/// all blocks (post-)dominated by the sink [*]. In theory, these blocks are as
+/// cold as the sink. Once a region is found, it's split out of the original
+/// function provided it's profitable to do so.
+///
+/// [*] In practice, there is some added complexity because some blocks are not
+/// safe to extract.
+///
+/// TODO: Use the PM to get domtrees, and preserve BFI/BPI.
+/// TODO: Reorder outlined functions.
+///
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/PostOrderIterator.h"
@@ -119,7 +132,11 @@ bool unlikelyExecuted(BasicBlock &BB) {
 
 /// Check whether it's safe to outline \p BB.
 static bool mayExtractBlock(const BasicBlock &BB) {
-  return !BB.hasAddressTaken() && !BB.isEHPad();
+  // EH pads are unsafe to outline because doing so breaks EH type tables. It
+  // follows that invoke instructions cannot be extracted, because CodeExtractor
+  // requires unwind destinations to be within the extraction region.
+  return !BB.hasAddressTaken() && !BB.isEHPad() &&
+         !isa<InvokeInst>(BB.getTerminator());
 }
 
 /// Check whether \p Region is profitable to outline.
@@ -168,11 +185,8 @@ public:
   HotColdSplitting(ProfileSummaryInfo *ProfSI,
                    function_ref<BlockFrequencyInfo *(Function &)> GBFI,
                    function_ref<TargetTransformInfo &(Function &)> GTTI,
-                   function_ref<DominatorTree *(Function &)> GetDT,
-                   function_ref<PostDominatorTree *(Function &)> GetPDT,
                    std::function<OptimizationRemarkEmitter &(Function &)> *GORE)
-      : PSI(ProfSI), GetBFI(GBFI), GetTTI(GTTI), GetDT(GetDT), GetPDT(GetPDT),
-        GetORE(GORE) {}
+      : PSI(ProfSI), GetBFI(GBFI), GetTTI(GTTI), GetORE(GORE) {}
   bool run(Module &M);
 
 private:
@@ -185,8 +199,6 @@ private:
   ProfileSummaryInfo *PSI;
   function_ref<BlockFrequencyInfo *(Function &)> GetBFI;
   function_ref<TargetTransformInfo &(Function &)> GetTTI;
-  function_ref<DominatorTree *(Function &)> GetDT;
-  function_ref<PostDominatorTree *(Function &)> GetPDT;
   std::function<OptimizationRemarkEmitter &(Function &)> *GetORE;
 };
 
@@ -200,8 +212,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<PostDominatorTreeWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
   }
@@ -290,6 +300,8 @@ using BlockTy = std::pair<BasicBlock *, unsigned>;
 namespace {
 /// A maximal outlining region. This contains all blocks post-dominated by a
 /// sink block, the sink block itself, and all blocks dominated by the sink.
+/// If sink-predecessors and sink-successors cannot be extracted in one region,
+/// the static constructor returns a list of suitable extraction regions.
 class OutliningRegion {
   /// A list of (block, score) pairs. A block's score is non-zero iff it's a
   /// viable sub-region entry point. Blocks with higher scores are better entry
@@ -304,12 +316,9 @@ class OutliningRegion {
   /// Whether the entire function is cold.
   bool EntireFunctionCold = false;
 
-  /// Whether or not \p BB could be the entry point of an extracted region.
-  static bool isViableEntryPoint(BasicBlock &BB) { return !BB.isEHPad(); }
-
   /// If \p BB is a viable entry point, return \p Score. Return 0 otherwise.
   static unsigned getEntryPointScore(BasicBlock &BB, unsigned Score) {
-    return isViableEntryPoint(BB) ? Score : 0;
+    return mayExtractBlock(BB) ? Score : 0;
   }
 
   /// These scores should be lower than the score for predecessor blocks,
@@ -325,21 +334,23 @@ public:
   OutliningRegion(OutliningRegion &&) = default;
   OutliningRegion &operator=(OutliningRegion &&) = default;
 
-  static OutliningRegion create(BasicBlock &SinkBB, const DominatorTree &DT,
-                                const PostDominatorTree &PDT) {
-    OutliningRegion ColdRegion;
-
+  static std::vector<OutliningRegion> create(BasicBlock &SinkBB,
+                                             const DominatorTree &DT,
+                                             const PostDominatorTree &PDT) {
+    std::vector<OutliningRegion> Regions;
     SmallPtrSet<BasicBlock *, 4> RegionBlocks;
+
+    Regions.emplace_back();
+    OutliningRegion *ColdRegion = &Regions.back();
 
     auto addBlockToRegion = [&](BasicBlock *BB, unsigned Score) {
       RegionBlocks.insert(BB);
-      ColdRegion.Blocks.emplace_back(BB, Score);
-      assert(RegionBlocks.size() == ColdRegion.Blocks.size() && "Duplicate BB");
+      ColdRegion->Blocks.emplace_back(BB, Score);
     };
 
     // The ancestor farthest-away from SinkBB, and also post-dominated by it.
     unsigned SinkScore = getEntryPointScore(SinkBB, ScoreForSinkBlock);
-    ColdRegion.SuggestedEntryPoint = (SinkScore > 0) ? &SinkBB : nullptr;
+    ColdRegion->SuggestedEntryPoint = (SinkScore > 0) ? &SinkBB : nullptr;
     unsigned BestScore = SinkScore;
 
     // Visit SinkBB's ancestors using inverse DFS.
@@ -352,8 +363,8 @@ public:
       // If the predecessor is cold and has no predecessors, the entire
       // function must be cold.
       if (SinkPostDom && pred_empty(&PredBB)) {
-        ColdRegion.EntireFunctionCold = true;
-        return ColdRegion;
+        ColdRegion->EntireFunctionCold = true;
+        return Regions;
       }
 
       // If SinkBB does not post-dominate a predecessor, do not mark the
@@ -368,7 +379,7 @@ public:
       // considered as entry points before the sink block.
       unsigned PredScore = getEntryPointScore(PredBB, PredIt.getPathLength());
       if (PredScore > BestScore) {
-        ColdRegion.SuggestedEntryPoint = &PredBB;
+        ColdRegion->SuggestedEntryPoint = &PredBB;
         BestScore = PredScore;
       }
 
@@ -376,10 +387,19 @@ public:
       ++PredIt;
     }
 
-    // Add SinkBB to the cold region. It's considered as an entry point before
-    // any sink-successor blocks.
-    if (mayExtractBlock(SinkBB))
+    // If the sink can be added to the cold region, do so. It's considered as
+    // an entry point before any sink-successor blocks.
+    //
+    // Otherwise, split cold sink-successor blocks using a separate region.
+    // This satisfies the requirement that all extraction blocks other than the
+    // first have predecessors within the extraction region.
+    if (mayExtractBlock(SinkBB)) {
       addBlockToRegion(&SinkBB, SinkScore);
+    } else {
+      Regions.emplace_back();
+      ColdRegion = &Regions.back();
+      BestScore = 0;
+    }
 
     // Find all successors of SinkBB dominated by SinkBB using DFS.
     auto SuccIt = ++df_begin(&SinkBB);
@@ -400,7 +420,7 @@ public:
 
       unsigned SuccScore = getEntryPointScore(SuccBB, ScoreForSuccBlock);
       if (SuccScore > BestScore) {
-        ColdRegion.SuggestedEntryPoint = &SuccBB;
+        ColdRegion->SuggestedEntryPoint = &SuccBB;
         BestScore = SuccScore;
       }
 
@@ -408,7 +428,7 @@ public:
       ++SuccIt;
     }
 
-    return ColdRegion;
+    return Regions;
   }
 
   /// Whether this region has nothing to extract.
@@ -469,11 +489,12 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
   ReversePostOrderTraversal<Function *> RPOT(&F);
 
   // Calculate domtrees lazily. This reduces compile-time significantly.
-  DominatorTree *DT = nullptr;
-  PostDominatorTree *PDT = nullptr;
+  std::unique_ptr<DominatorTree> DT;
+  std::unique_ptr<PostDominatorTree> PDT;
 
   // Calculate BFI lazily (it's only used to query ProfileSummaryInfo). This
-  // reduces compile-time significantly.
+  // reduces compile-time significantly. TODO: When we *do* use BFI, we should
+  // be able to salvage its domtrees instead of recomputing them.
   BlockFrequencyInfo *BFI = nullptr;
   if (HasProfileSummary)
     BFI = GetBFI(F);
@@ -498,32 +519,34 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
     });
 
     if (!DT)
-      DT = GetDT(F);
+      DT = make_unique<DominatorTree>(F);
     if (!PDT)
-      PDT = GetPDT(F);
+      PDT = make_unique<PostDominatorTree>(F);
 
-    auto Region = OutliningRegion::create(*BB, *DT, *PDT);
-    if (Region.empty())
-      continue;
+    auto Regions = OutliningRegion::create(*BB, *DT, *PDT);
+    for (OutliningRegion &Region : Regions) {
+      if (Region.empty())
+        continue;
 
-    if (Region.isEntireFunctionCold()) {
-      LLVM_DEBUG(dbgs() << "Entire function is cold\n");
-      return markFunctionCold(F);
+      if (Region.isEntireFunctionCold()) {
+        LLVM_DEBUG(dbgs() << "Entire function is cold\n");
+        return markFunctionCold(F);
+      }
+
+      // If this outlining region intersects with another, drop the new region.
+      //
+      // TODO: It's theoretically possible to outline more by only keeping the
+      // largest region which contains a block, but the extra bookkeeping to do
+      // this is tricky/expensive.
+      bool RegionsOverlap = any_of(Region.blocks(), [&](const BlockTy &Block) {
+        return !ColdBlocks.insert(Block.first).second;
+      });
+      if (RegionsOverlap)
+        continue;
+
+      OutliningWorklist.emplace_back(std::move(Region));
+      ++NumColdRegionsFound;
     }
-
-    // If this outlining region intersects with another, drop the new region.
-    //
-    // TODO: It's theoretically possible to outline more by only keeping the
-    // largest region which contains a block, but the extra bookkeeping to do
-    // this is tricky/expensive.
-    bool RegionsOverlap = any_of(Region.blocks(), [&](const BlockTy &Block) {
-      return !ColdBlocks.insert(Block.first).second;
-    });
-    if (RegionsOverlap)
-      continue;
-
-    OutliningWorklist.emplace_back(std::move(Region));
-    ++NumColdRegionsFound;
   }
 
   // Outline single-entry cold regions, splitting up larger regions as needed.
@@ -601,13 +624,6 @@ bool HotColdSplittingLegacyPass::runOnModule(Module &M) {
   auto GBFI = [this](Function &F) {
     return &this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
   };
-  auto GetDT = [this](Function &F) {
-    return &this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-  };
-  auto GetPDT = [this](Function &F) {
-    return &this->getAnalysis<PostDominatorTreeWrapperPass>(F).getPostDomTree();
-  };
-
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
   std::function<OptimizationRemarkEmitter &(Function &)> GetORE =
       [&ORE](Function &F) -> OptimizationRemarkEmitter & {
@@ -615,7 +631,7 @@ bool HotColdSplittingLegacyPass::runOnModule(Module &M) {
     return *ORE.get();
   };
 
-  return HotColdSplitting(PSI, GBFI, GTTI, GetDT, GetPDT, &GetORE).run(M);
+  return HotColdSplitting(PSI, GBFI, GTTI, &GetORE).run(M);
 }
 
 PreservedAnalyses
@@ -636,14 +652,6 @@ HotColdSplittingPass::run(Module &M, ModuleAnalysisManager &AM) {
     return FAM.getResult<TargetIRAnalysis>(F);
   };
 
-  auto GetDT = [&FAM](Function &F) {
-    return &FAM.getResult<DominatorTreeAnalysis>(F);
-  };
-
-  auto GetPDT = [&FAM](Function &F) {
-    return &FAM.getResult<PostDominatorTreeAnalysis>(F);
-  };
-
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
   std::function<OptimizationRemarkEmitter &(Function &)> GetORE =
       [&ORE](Function &F) -> OptimizationRemarkEmitter & {
@@ -653,7 +661,7 @@ HotColdSplittingPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
 
-  if (HotColdSplitting(PSI, GBFI, GTTI, GetDT, GetPDT, &GetORE).run(M))
+  if (HotColdSplitting(PSI, GBFI, GTTI, &GetORE).run(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
@@ -663,8 +671,6 @@ INITIALIZE_PASS_BEGIN(HotColdSplittingLegacyPass, "hotcoldsplit",
                       "Hot Cold Splitting", false, false)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(HotColdSplittingLegacyPass, "hotcoldsplit",
                     "Hot Cold Splitting", false, false)
 

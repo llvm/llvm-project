@@ -315,6 +315,10 @@ public:
   /// when GlobalISel failed and isGlobalISelAbortEnabled is false.
   virtual bool reportDiagnosticWhenGlobalISelFallback() const;
 
+  /// Check whether continuous CSE should be enabled in GISel passes.
+  /// By default, it's enabled for non O0 levels.
+  virtual bool isGISelCSEEnabled() const;
+
 protected:
   // Helper to verify the analysis is really immutable.
   void setOpt(bool &Opt, bool Val);
