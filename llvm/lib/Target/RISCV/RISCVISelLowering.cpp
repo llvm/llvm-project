@@ -584,16 +584,41 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+
   switch (N->getOpcode()) {
   default:
     break;
   case RISCVISD::SplitF64: {
+    SDValue Op0 = N->getOperand(0);
     // If the input to SplitF64 is just BuildPairF64 then the operation is
     // redundant. Instead, use BuildPairF64's operands directly.
-    SDValue Op0 = N->getOperand(0);
-    if (Op0->getOpcode() != RISCVISD::BuildPairF64)
+    if (Op0->getOpcode() == RISCVISD::BuildPairF64)
+      return DCI.CombineTo(N, Op0.getOperand(0), Op0.getOperand(1));
+
+    SDLoc DL(N);
+    // This is a target-specific version of a DAGCombine performed in
+    // DAGCombiner::visitBITCAST. It performs the equivalent of:
+    // fold (bitconvert (fneg x)) -> (xor (bitconvert x), signbit)
+    // fold (bitconvert (fabs x)) -> (and (bitconvert x), (not signbit))
+    if (!(Op0.getOpcode() == ISD::FNEG || Op0.getOpcode() == ISD::FABS) ||
+        !Op0.getNode()->hasOneUse())
       break;
-    return DCI.CombineTo(N, Op0.getOperand(0), Op0.getOperand(1));
+    SDValue NewSplitF64 =
+        DAG.getNode(RISCVISD::SplitF64, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                    Op0.getOperand(0));
+    SDValue Lo = NewSplitF64.getValue(0);
+    SDValue Hi = NewSplitF64.getValue(1);
+    APInt SignBit = APInt::getSignMask(32);
+    if (Op0.getOpcode() == ISD::FNEG) {
+      SDValue NewHi = DAG.getNode(ISD::XOR, DL, MVT::i32, Hi,
+                                  DAG.getConstant(SignBit, DL, MVT::i32));
+      return DCI.CombineTo(N, Lo, NewHi);
+    }
+    assert(Op0.getOpcode() == ISD::FABS);
+    SDValue NewHi = DAG.getNode(ISD::AND, DL, MVT::i32, Hi,
+                                DAG.getConstant(~SignBit, DL, MVT::i32));
+    return DCI.CombineTo(N, Lo, NewHi);
   }
   case RISCVISD::SLLW:
   case RISCVISD::SRAW:

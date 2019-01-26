@@ -22,18 +22,17 @@
 ; CHECK:        #DEBUG_VALUE: main:aa <- 0
 ; CHECK: 	#DEBUG_VALUE: main:aa <- $[[REG:[0-9a-z]+]]
 ; CHECK: 	jmp	.LBB0_1
-; CHECK: .LBB0_3:
-; CHECK: 	#DEBUG_VALUE: main:aa <- $[[REG]]
-; CHECK: 	incl	%[[REG]]
-; CHECK: 	#DEBUG_VALUE: main:aa <- $[[REG]]
+; CHECK: .LBB0_2:
+; CHECK:        #DEBUG_VALUE: main:aa <- $[[REG]]
+; CHECK:        jne     .LBB0_1
+; CHECK: # %bb.{{.*}}:
+; CHECK:        #DEBUG_VALUE: main:aa <- $[[REG]]
+; CHECK:        incl    %[[REG]]
+; CHECK:        #DEBUG_VALUE: main:aa <- $[[REG]]
 ; CHECK: .LBB0_1:
 ; CHECK: 	#DEBUG_VALUE: main:aa <- $[[REG]]
-; CHECK: 	je	.LBB0_4
+; CHECK:        jne     .LBB0_2
 ; CHECK: # %bb.{{.*}}:
-; CHECK: 	#DEBUG_VALUE: main:aa <- $[[REG]]
-; CHECK: 	jne	.LBB0_1
-; CHECK: 	jmp	.LBB0_3
-; CHECK: .LBB0_4:
 ; CHECK: 	#DEBUG_VALUE: main:aa <- $[[REG]]
 ; CHECK: 	retq
 

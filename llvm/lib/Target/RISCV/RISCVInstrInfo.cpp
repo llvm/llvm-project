@@ -447,3 +447,16 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   }
   }
 }
+
+bool RISCVInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
+  const unsigned Opcode = MI.getOpcode();
+  switch(Opcode) {
+    default:
+      break;
+    case RISCV::ADDI:
+    case RISCV::ORI:
+    case RISCV::XORI:
+      return (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0);
+  }
+  return MI.isAsCheapAsAMove();
+}

@@ -9734,3 +9734,51 @@ define <8 x i32>@test_int_x86_avx512_mask_pmov_qd_512(<8 x i64> %x0, <8 x i32> %
     %res4 = add <8 x i32> %res3, %res2
     ret <8 x i32> %res4
 }
+
+declare <16 x float> @llvm.x86.avx512.mask.cvtdq2ps.512(<16 x i32>, <16 x float>, i16, i32)
+
+define <16 x float> @test_int_x86_avx512_mask_cvt_dq2ps_512(<16 x i32> %x0, <16 x float> %x1, i16 %x2) {
+; X86-LABEL: test_int_x86_avx512_mask_cvt_dq2ps_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vcvtdq2ps %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf1,0x7c,0x49,0x5b,0xc8]
+; X86-NEXT:    vcvtdq2ps {rn-sae}, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0x7c,0x18,0x5b,0xc0]
+; X86-NEXT:    vaddps %zmm0, %zmm1, %zmm0 ## encoding: [0x62,0xf1,0x74,0x48,0x58,0xc0]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_int_x86_avx512_mask_cvt_dq2ps_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vcvtdq2ps %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf1,0x7c,0x49,0x5b,0xc8]
+; X64-NEXT:    vcvtdq2ps {rn-sae}, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0x7c,0x18,0x5b,0xc0]
+; X64-NEXT:    vaddps %zmm0, %zmm1, %zmm0 ## encoding: [0x62,0xf1,0x74,0x48,0x58,0xc0]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x float> @llvm.x86.avx512.mask.cvtdq2ps.512(<16 x i32> %x0, <16 x float> %x1, i16 %x2, i32 4)
+  %res1 = call <16 x float> @llvm.x86.avx512.mask.cvtdq2ps.512(<16 x i32> %x0, <16 x float> %x1, i16 -1, i32 0)
+  %res2 = fadd <16 x float> %res, %res1
+  ret <16 x float> %res2
+}
+
+declare <16 x float> @llvm.x86.avx512.mask.cvtudq2ps.512(<16 x i32>, <16 x float>, i16, i32)
+
+define <16 x float> @test_int_x86_avx512_mask_cvt_udq2ps_512(<16 x i32> %x0, <16 x float> %x1, i16 %x2) {
+; X86-LABEL: test_int_x86_avx512_mask_cvt_udq2ps_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vcvtudq2ps %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf1,0x7f,0x49,0x7a,0xc8]
+; X86-NEXT:    vcvtudq2ps {rn-sae}, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0x7f,0x18,0x7a,0xc0]
+; X86-NEXT:    vaddps %zmm0, %zmm1, %zmm0 ## encoding: [0x62,0xf1,0x74,0x48,0x58,0xc0]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_int_x86_avx512_mask_cvt_udq2ps_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vcvtudq2ps %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf1,0x7f,0x49,0x7a,0xc8]
+; X64-NEXT:    vcvtudq2ps {rn-sae}, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0x7f,0x18,0x7a,0xc0]
+; X64-NEXT:    vaddps %zmm0, %zmm1, %zmm0 ## encoding: [0x62,0xf1,0x74,0x48,0x58,0xc0]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x float> @llvm.x86.avx512.mask.cvtudq2ps.512(<16 x i32> %x0, <16 x float> %x1, i16 %x2, i32 4)
+  %res1 = call <16 x float> @llvm.x86.avx512.mask.cvtudq2ps.512(<16 x i32> %x0, <16 x float> %x1, i16 -1, i32 0)
+  %res2 = fadd <16 x float> %res, %res1
+  ret <16 x float> %res2
+}

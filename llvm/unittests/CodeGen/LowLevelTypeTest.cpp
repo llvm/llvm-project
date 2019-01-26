@@ -120,39 +120,46 @@ TEST(LowLevelTypeTest, ScalarOrVector) {
 
 TEST(LowLevelTypeTest, Pointer) {
   LLVMContext C;
-  DataLayout DL("");
+  DataLayout DL("p64:64:64-p127:512:512:512-p16777215:65528:8");
 
-  for (unsigned AS : {0U, 1U, 127U, 0xffffU}) {
-    const LLT Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
-    const LLT VTy = LLT::vector(4, Ty);
+  for (unsigned AS : {0U, 1U, 127U, 0xffffU,
+        static_cast<unsigned>(maxUIntN(23)),
+        static_cast<unsigned>(maxUIntN(24))}) {
+    for (unsigned NumElts : {2, 3, 4, 256, 65535}) {
+      const LLT Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
+      const LLT VTy = LLT::vector(NumElts, Ty);
 
-    // Test kind.
-    ASSERT_TRUE(Ty.isValid());
-    ASSERT_TRUE(Ty.isPointer());
+      // Test kind.
+      ASSERT_TRUE(Ty.isValid());
+      ASSERT_TRUE(Ty.isPointer());
 
-    ASSERT_FALSE(Ty.isScalar());
-    ASSERT_FALSE(Ty.isVector());
+      ASSERT_FALSE(Ty.isScalar());
+      ASSERT_FALSE(Ty.isVector());
 
-    ASSERT_TRUE(VTy.isValid());
-    ASSERT_TRUE(VTy.isVector());
-    ASSERT_TRUE(VTy.getElementType().isPointer());
+      ASSERT_TRUE(VTy.isValid());
+      ASSERT_TRUE(VTy.isVector());
+      ASSERT_TRUE(VTy.getElementType().isPointer());
 
-    // Test addressspace.
-    EXPECT_EQ(AS, Ty.getAddressSpace());
-    EXPECT_EQ(AS, VTy.getElementType().getAddressSpace());
+      EXPECT_EQ(Ty, VTy.getElementType());
+      EXPECT_EQ(Ty.getSizeInBits(), VTy.getScalarSizeInBits());
 
-    // Test equality operators.
-    EXPECT_TRUE(Ty == Ty);
-    EXPECT_FALSE(Ty != Ty);
-    EXPECT_TRUE(VTy == VTy);
-    EXPECT_FALSE(VTy != VTy);
+      // Test address space.
+      EXPECT_EQ(AS, Ty.getAddressSpace());
+      EXPECT_EQ(AS, VTy.getElementType().getAddressSpace());
 
-    // Test Type->LLT conversion.
-    Type *IRTy = PointerType::get(IntegerType::get(C, 8), AS);
-    EXPECT_EQ(Ty, getLLTForType(*IRTy, DL));
-    Type *IRVTy =
-        VectorType::get(PointerType::get(IntegerType::get(C, 8), AS), 4);
-    EXPECT_EQ(VTy, getLLTForType(*IRVTy, DL));
+      // Test equality operators.
+      EXPECT_TRUE(Ty == Ty);
+      EXPECT_FALSE(Ty != Ty);
+      EXPECT_TRUE(VTy == VTy);
+      EXPECT_FALSE(VTy != VTy);
+
+      // Test Type->LLT conversion.
+      Type *IRTy = PointerType::get(IntegerType::get(C, 8), AS);
+      EXPECT_EQ(Ty, getLLTForType(*IRTy, DL));
+      Type *IRVTy =
+        VectorType::get(PointerType::get(IntegerType::get(C, 8), AS), NumElts);
+      EXPECT_EQ(VTy, getLLTForType(*IRVTy, DL));
+    }
   }
 }
 

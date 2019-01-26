@@ -107,6 +107,7 @@ void PPCSubtarget::initializeEnvironment() {
   IsISA3_0 = false;
   UseLongCalls = false;
   SecurePlt = false;
+  VectorsUseTwoUnits = false;
 
   HasPOPCNTD = POPCNTD_Unavailable;
 }

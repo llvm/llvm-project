@@ -45,8 +45,8 @@ public:
                SizeInBits, /*AddressSpace=*/0};
   }
 
-  /// Get a low-level pointer in the given address space (defaulting to 0).
-  static LLT pointer(uint16_t AddressSpace, unsigned SizeInBits) {
+  /// Get a low-level pointer in the given address space.
+  static LLT pointer(unsigned AddressSpace, unsigned SizeInBits) {
     assert(SizeInBits > 0 && "invalid pointer size");
     return LLT{/*isPointer=*/true, /*isVector=*/false, /*NumElements=*/0,
                SizeInBits, AddressSpace};
@@ -181,10 +181,10 @@ private:
   static const constexpr BitFieldInfo ScalarSizeFieldInfo{32, 0};
   /// * Pointer (isPointer == 1 && isVector == 0):
   ///   SizeInBits: 16;
-  ///   AddressSpace: 23;
+  ///   AddressSpace: 24;
   static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 0};
   static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{
-      23, PointerSizeFieldInfo[0] + PointerSizeFieldInfo[1]};
+      24, PointerSizeFieldInfo[0] + PointerSizeFieldInfo[1]};
   /// * Vector-of-non-pointer (isPointer == 0 && isVector == 1):
   ///   NumElements: 16;
   ///   SizeOfElement: 32;
@@ -194,13 +194,13 @@ private:
   /// * Vector-of-pointer (isPointer == 1 && isVector == 1):
   ///   NumElements: 16;
   ///   SizeOfElement: 16;
-  ///   AddressSpace: 23;
+  ///   AddressSpace: 24;
   static const constexpr BitFieldInfo PointerVectorElementsFieldInfo{16, 0};
   static const constexpr BitFieldInfo PointerVectorSizeFieldInfo{
       16,
       PointerVectorElementsFieldInfo[1] + PointerVectorElementsFieldInfo[0]};
   static const constexpr BitFieldInfo PointerVectorAddressSpaceFieldInfo{
-      23, PointerVectorSizeFieldInfo[1] + PointerVectorSizeFieldInfo[0]};
+      24, PointerVectorSizeFieldInfo[1] + PointerVectorSizeFieldInfo[0]};
 
   uint64_t IsPointer : 1;
   uint64_t IsVector : 1;

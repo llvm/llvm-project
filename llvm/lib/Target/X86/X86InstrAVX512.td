@@ -8184,12 +8184,6 @@ let Predicates = [HasVLX] in {
                      v4f32x_info.ImmAllZerosV),
             (VCVTPD2PSZ256rmbkz VK4WM:$mask, addr:$src)>;
 
-  def : Pat<(X86vzmovl (v2f64 (bitconvert
-                               (v4f32 (X86vfpround (v2f64 VR128X:$src)))))),
-            (VCVTPD2PSZ128rr VR128X:$src)>;
-  def : Pat<(X86vzmovl (v2f64 (bitconvert
-                               (v4f32 (X86vfpround (loadv2f64 addr:$src)))))),
-            (VCVTPD2PSZ128rm addr:$src)>;
   def : Pat<(v2f64 (extloadv2f32 addr:$src)),
               (VCVTPS2PDZ128rm addr:$src)>;
   def : Pat<(v4f64 (extloadv4f32 addr:$src)),
@@ -8831,25 +8825,6 @@ def : Pat<(v2f64 (X86VUintToFP (v4i32 VR128X:$src1))),
 }
 
 let Predicates = [HasAVX512, HasVLX] in {
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                              (v4i32 (X86cvtp2Int (v2f64 VR128X:$src)))))),
-            (VCVTPD2DQZ128rr VR128X:$src)>;
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                              (v4i32 (X86cvtp2Int (loadv2f64 addr:$src)))))),
-            (VCVTPD2DQZ128rm addr:$src)>;
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                               (v4i32 (X86cvtp2UInt (v2f64 VR128X:$src)))))),
-            (VCVTPD2UDQZ128rr VR128X:$src)>;
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                              (v4i32 (X86cvttp2si (v2f64 VR128X:$src)))))),
-            (VCVTTPD2DQZ128rr VR128X:$src)>;
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                              (v4i32 (X86cvttp2si (loadv2f64 addr:$src)))))),
-            (VCVTTPD2DQZ128rm addr:$src)>;
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                               (v4i32 (X86cvttp2ui (v2f64 VR128X:$src)))))),
-            (VCVTTPD2UDQZ128rr VR128X:$src)>;
-
   def : Pat<(v2f64 (X86VSintToFP (bc_v4i32 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
             (VCVTDQ2PDZ128rm addr:$src)>;
   def : Pat<(v2f64 (X86VSintToFP (bc_v4i32 (v2i64 (X86vzload addr:$src))))),
@@ -8862,13 +8837,6 @@ let Predicates = [HasAVX512, HasVLX] in {
 }
 
 let Predicates = [HasDQI, HasVLX] in {
-  def : Pat<(X86vzmovl (v2f64 (bitconvert
-                              (v4f32 (X86VSintToFP (v2i64 VR128X:$src)))))),
-            (VCVTQQ2PSZ128rr VR128X:$src)>;
-  def : Pat<(X86vzmovl (v2f64 (bitconvert
-                              (v4f32 (X86VUintToFP (v2i64 VR128X:$src)))))),
-            (VCVTUQQ2PSZ128rr VR128X:$src)>;
-
   // Special patterns to allow use of X86VMSintToFP for masking. Instruction
   // patterns have been disabled with null_frag.
   def : Pat<(v4f32 (X86VSintToFP (v2i64 VR128X:$src))),
