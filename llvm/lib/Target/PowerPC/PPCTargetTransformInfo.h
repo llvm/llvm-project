@@ -70,6 +70,7 @@ public:
   unsigned getCacheLineSize();
   unsigned getPrefetchDistance();
   unsigned getMaxInterleaveFactor(unsigned VF);
+  int vectorCostAdjustment(int Cost, unsigned Opcode, Type *Ty1, Type *Ty2);
   int getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,

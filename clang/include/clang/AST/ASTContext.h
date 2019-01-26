@@ -2088,6 +2088,16 @@ public:
   CharUnits getTypeSizeInChars(QualType T) const;
   CharUnits getTypeSizeInChars(const Type *T) const;
 
+  Optional<CharUnits> getTypeSizeInCharsIfKnown(QualType Ty) const {
+    if (Ty->isIncompleteType() || Ty->isDependentType())
+      return None;
+    return getTypeSizeInChars(Ty);
+  }
+
+  Optional<CharUnits> getTypeSizeInCharsIfKnown(const Type *Ty) const {
+    return getTypeSizeInCharsIfKnown(QualType(Ty, 0));
+  }
+
   /// Return the ABI-specified alignment of a (complete) type \p T, in
   /// bits.
   unsigned getTypeAlign(QualType T) const { return getTypeInfo(T).Align; }

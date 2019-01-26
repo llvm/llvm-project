@@ -226,10 +226,7 @@ void ObjFile::readAssociativeDefinition(COFFSymbolRef Sym,
                                         uint32_t ParentIndex) {
   SectionChunk *Parent = SparseChunks[ParentIndex];
 
-  if (Parent == PendingComdat) {
-    // This can happen if an associative comdat refers to another associative
-    // comdat that appears after it (invalid per COFF spec) or to a section
-    // without any symbols.
+  auto Diag = [&]() {
     StringRef Name, ParentName;
     COFFObj->getSymbolName(Sym, Name);
 
@@ -238,6 +235,13 @@ void ObjFile::readAssociativeDefinition(COFFSymbolRef Sym,
     COFFObj->getSectionName(ParentSec, ParentName);
     error(toString(this) + ": associative comdat " + Name +
           " has invalid reference to section " + ParentName);
+  };
+
+  if (Parent == PendingComdat) {
+    // This can happen if an associative comdat refers to another associative
+    // comdat that appears after it (invalid per COFF spec) or to a section
+    // without any symbols.
+    Diag();
     return;
   }
 
@@ -245,7 +249,14 @@ void ObjFile::readAssociativeDefinition(COFFSymbolRef Sym,
   // the section; otherwise mark it as discarded.
   int32_t SectionNumber = Sym.getSectionNumber();
   if (Parent) {
-    SparseChunks[SectionNumber] = readSection(SectionNumber, Def, "");
+    if (Parent->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
+      Diag();
+      return;
+    }
+
+    SectionChunk *C = readSection(SectionNumber, Def, "");
+    C->Selection = IMAGE_COMDAT_SELECT_ASSOCIATIVE;
+    SparseChunks[SectionNumber] = C;
     if (SparseChunks[SectionNumber])
       Parent->addAssociative(SparseChunks[SectionNumber]);
   } else {

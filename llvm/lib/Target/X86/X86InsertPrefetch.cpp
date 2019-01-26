@@ -33,7 +33,8 @@ using namespace sampleprof;
 
 static cl::opt<std::string>
     PrefetchHintsFile("prefetch-hints-file",
-                      cl::desc("Path to the prefetch hints profile."),
+                      cl::desc("Path to the prefetch hints profile. See also "
+                               "-x86-discriminate-memops"),
                       cl::Hidden);
 namespace {
 

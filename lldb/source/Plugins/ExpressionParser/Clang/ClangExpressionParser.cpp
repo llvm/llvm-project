@@ -362,6 +362,7 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
 
   // 5. Set language options.
   lldb::LanguageType language = expr.Language();
+  LangOptions &lang_opts = m_compiler->getLangOpts();
 
   switch (language) {
   case lldb::eLanguageTypeC:
@@ -373,13 +374,13 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
     // For now, the expression parser must use C++ anytime the language is a C
     // family language, because the expression parser uses features of C++ to
     // capture values.
-    m_compiler->getLangOpts().CPlusPlus = true;
+    lang_opts.CPlusPlus = true;
     break;
   case lldb::eLanguageTypeObjC:
-    m_compiler->getLangOpts().ObjC = true;
+    lang_opts.ObjC = true;
     // FIXME: the following language option is a temporary workaround,
     // to "ask for ObjC, get ObjC++" (see comment above).
-    m_compiler->getLangOpts().CPlusPlus = true;
+    lang_opts.CPlusPlus = true;
 
     // Clang now sets as default C++14 as the default standard (with
     // GNU extensions), so we do the same here to avoid mismatches that
@@ -387,71 +388,67 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
     // as it's a C++11 feature). Currently lldb evaluates C++14 as C++11 (see
     // two lines below) so we decide to be consistent with that, but this could
     // be re-evaluated in the future.
-    m_compiler->getLangOpts().CPlusPlus11 = true;
+    lang_opts.CPlusPlus11 = true;
     break;
   case lldb::eLanguageTypeC_plus_plus:
   case lldb::eLanguageTypeC_plus_plus_11:
   case lldb::eLanguageTypeC_plus_plus_14:
-    m_compiler->getLangOpts().CPlusPlus11 = true;
+    lang_opts.CPlusPlus11 = true;
     m_compiler->getHeaderSearchOpts().UseLibcxx = true;
     LLVM_FALLTHROUGH;
   case lldb::eLanguageTypeC_plus_plus_03:
-    m_compiler->getLangOpts().CPlusPlus = true;
+    lang_opts.CPlusPlus = true;
     if (process_sp)
-      m_compiler->getLangOpts().ObjC =
+      lang_opts.ObjC =
           process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC) != nullptr;
     break;
   case lldb::eLanguageTypeObjC_plus_plus:
   case lldb::eLanguageTypeUnknown:
   default:
-    m_compiler->getLangOpts().ObjC = true;
-    m_compiler->getLangOpts().CPlusPlus = true;
-    m_compiler->getLangOpts().CPlusPlus11 = true;
+    lang_opts.ObjC = true;
+    lang_opts.CPlusPlus = true;
+    lang_opts.CPlusPlus11 = true;
     m_compiler->getHeaderSearchOpts().UseLibcxx = true;
     break;
   }
 
-  m_compiler->getLangOpts().Bool = true;
-  m_compiler->getLangOpts().WChar = true;
-  m_compiler->getLangOpts().Blocks = true;
-  m_compiler->getLangOpts().DebuggerSupport =
+  lang_opts.Bool = true;
+  lang_opts.WChar = true;
+  lang_opts.Blocks = true;
+  lang_opts.DebuggerSupport =
       true; // Features specifically for debugger clients
   if (expr.DesiredResultType() == Expression::eResultTypeId)
-    m_compiler->getLangOpts().DebuggerCastResultToId = true;
+    lang_opts.DebuggerCastResultToId = true;
 
-  m_compiler->getLangOpts().CharIsSigned =
-      ArchSpec(m_compiler->getTargetOpts().Triple.c_str())
-          .CharIsSignedByDefault();
+  lang_opts.CharIsSigned = ArchSpec(m_compiler->getTargetOpts().Triple.c_str())
+                               .CharIsSignedByDefault();
 
   // Spell checking is a nice feature, but it ends up completing a lot of types
   // that we didn't strictly speaking need to complete. As a result, we spend a
   // long time parsing and importing debug information.
-  m_compiler->getLangOpts().SpellChecking = false;
+  lang_opts.SpellChecking = false;
 
-  if (process_sp && m_compiler->getLangOpts().ObjC) {
+  if (process_sp && lang_opts.ObjC) {
     if (process_sp->GetObjCLanguageRuntime()) {
       if (process_sp->GetObjCLanguageRuntime()->GetRuntimeVersion() ==
           ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2)
-        m_compiler->getLangOpts().ObjCRuntime.set(ObjCRuntime::MacOSX,
-                                                  VersionTuple(10, 7));
+        lang_opts.ObjCRuntime.set(ObjCRuntime::MacOSX, VersionTuple(10, 7));
       else
-        m_compiler->getLangOpts().ObjCRuntime.set(ObjCRuntime::FragileMacOSX,
-                                                  VersionTuple(10, 7));
+        lang_opts.ObjCRuntime.set(ObjCRuntime::FragileMacOSX,
+                                  VersionTuple(10, 7));
 
       if (process_sp->GetObjCLanguageRuntime()->HasNewLiteralsAndIndexing())
-        m_compiler->getLangOpts().DebuggerObjCLiteral = true;
+        lang_opts.DebuggerObjCLiteral = true;
     }
   }
 
-  m_compiler->getLangOpts().ThreadsafeStatics = false;
-  m_compiler->getLangOpts().AccessControl =
-      false; // Debuggers get universal access
-  m_compiler->getLangOpts().DollarIdents =
-      true; // $ indicates a persistent variable name
+  lang_opts.ThreadsafeStatics = false;
+  lang_opts.AccessControl = false; // Debuggers get universal access
+  lang_opts.DollarIdents = true;   // $ indicates a persistent variable name
   // We enable all builtin functions beside the builtins from libc/libm (e.g.
   // 'fopen'). Those libc functions are already correctly handled by LLDB, and
   // additionally enabling them as expandable builtins is breaking Clang.
-  m_compiler->getLangOpts().NoBuiltin = true;
+  lang_opts.NoBuiltin = true;
 
   // Set CodeGen options
   m_compiler->getCodeGenOpts().EmitDeclMetadata = true;

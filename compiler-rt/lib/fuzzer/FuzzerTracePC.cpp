@@ -245,8 +245,7 @@ void TracePC::IterateCoveredFunctions(CallBack CB) {
       do {
         NextFE++;
       } while (NextFE < M.Stop && !(NextFE->PCFlags & 1));
-      if (ObservedFuncs.count(FE->PC))
-        CB(FE, NextFE, ObservedFuncs[FE->PC]);
+      CB(FE, NextFE, ObservedFuncs[FE->PC]);
     }
   }
 }
@@ -311,12 +310,13 @@ void TracePC::PrintCoverage() {
     for (auto TE = First; TE < Last; TE++)
       if (!ObservedPCs.count(TE->PC))
         UncoveredPCs.push_back(TE->PC);
-    Printf("COVERED_FUNC: hits: %zd", Counter);
+    Printf("%sCOVERED_FUNC: hits: %zd", Counter ? "" : "UN", Counter);
     Printf(" edges: %zd/%zd", NumEdges - UncoveredPCs.size(), NumEdges);
     Printf(" %s %s:%zd\n", FunctionStr.c_str(), FileStr.c_str(), Line);
-    for (auto PC: UncoveredPCs)
-      Printf("  UNCOVERED_PC: %s\n",
-             DescribePC("%s:%l", GetNextInstructionPc(PC)).c_str());
+    if (Counter)
+      for (auto PC : UncoveredPCs)
+        Printf("  UNCOVERED_PC: %s\n",
+               DescribePC("%s:%l", GetNextInstructionPc(PC)).c_str());
   };
 
   IterateCoveredFunctions(CoveredFunctionCallback);
