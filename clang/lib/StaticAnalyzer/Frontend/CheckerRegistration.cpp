@@ -34,35 +34,36 @@ std::unique_ptr<CheckerManager> ento::createCheckerManager(
     DiagnosticsEngine &diags) {
   auto checkerMgr = llvm::make_unique<CheckerManager>(context, opts);
 
-  CheckerRegistry allCheckers(plugins, diags, context.getLangOpts());
+  CheckerRegistry allCheckers(plugins, diags, opts, context.getLangOpts());
 
   for (const auto &Fn : checkerRegistrationFns)
     Fn(allCheckers);
 
-  allCheckers.initializeManager(*checkerMgr, opts);
-  allCheckers.validateCheckerOptions(opts);
+  allCheckers.initializeManager(*checkerMgr);
+  allCheckers.validateCheckerOptions();
   checkerMgr->finishedCheckerRegistration();
 
   return checkerMgr;
 }
 
 void ento::printCheckerHelp(raw_ostream &out, ArrayRef<std::string> plugins,
+                            AnalyzerOptions &anopts,
                             DiagnosticsEngine &diags,
                             const LangOptions &langOpts) {
   out << "OVERVIEW: Clang Static Analyzer Checkers List\n\n";
   out << "USAGE: -analyzer-checker <CHECKER or PACKAGE,...>\n\n";
 
-  CheckerRegistry(plugins, diags, langOpts).printHelp(out);
+  CheckerRegistry(plugins, diags, anopts, langOpts).printHelp(out);
 }
 
 void ento::printEnabledCheckerList(raw_ostream &out,
                                    ArrayRef<std::string> plugins,
-                                   const AnalyzerOptions &opts,
+                                   AnalyzerOptions &anopts,
                                    DiagnosticsEngine &diags,
                                    const LangOptions &langOpts) {
   out << "OVERVIEW: Clang Static Analyzer Enabled Checkers List\n\n";
 
-  CheckerRegistry(plugins, diags, langOpts).printList(out, opts);
+  CheckerRegistry(plugins, diags, anopts, langOpts).printList(out);
 }
 
 void ento::printAnalyzerConfigList(raw_ostream &out) {

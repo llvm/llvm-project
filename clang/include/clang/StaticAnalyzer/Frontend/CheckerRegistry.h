@@ -83,7 +83,7 @@ namespace ento {
 class CheckerRegistry {
 public:
   CheckerRegistry(ArrayRef<std::string> plugins, DiagnosticsEngine &diags,
-                  const LangOptions &LangOpts);
+                  AnalyzerOptions &AnOpts, const LangOptions &LangOpts);
 
   /// Initialization functions perform any necessary setup for a checker.
   /// They should include a call to CheckerManager::registerChecker.
@@ -138,24 +138,24 @@ public:
   /// all checkers specified by the given CheckerOptInfo list. The order of this
   /// list is significant; later options can be used to reverse earlier ones.
   /// This can be used to exclude certain checkers in an included package.
-  void initializeManager(CheckerManager &mgr,
-                         const AnalyzerOptions &Opts) const;
+  void initializeManager(CheckerManager &mgr) const;
 
   /// Check if every option corresponds to a specific checker or package.
-  void validateCheckerOptions(const AnalyzerOptions &opts) const;
+  void validateCheckerOptions() const;
 
   /// Prints the name and description of all checkers in this registry.
   /// This output is not intended to be machine-parseable.
   void printHelp(raw_ostream &out, size_t maxNameChars = 30) const;
-  void printList(raw_ostream &out, const AnalyzerOptions &opts) const;
+  void printList(raw_ostream &out) const;
 
 private:
-  CheckerInfoSet getEnabledCheckers(const AnalyzerOptions &Opts) const;
+  CheckerInfoSet getEnabledCheckers() const;
 
   mutable CheckerInfoList Checkers;
   mutable llvm::StringMap<size_t> Packages;
 
   DiagnosticsEngine &Diags;
+  AnalyzerOptions &AnOpts;
   const LangOptions &LangOpts;
 };
 
