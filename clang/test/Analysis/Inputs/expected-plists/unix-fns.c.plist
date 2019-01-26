@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
  <key>clang_version</key>
-<string>clang version 8.0.0 </string>
+<string>clang version 8.0.0</string>
  <key>diagnostics</key>
  <array>
   <dict>
@@ -744,9 +744,9 @@
    <key>description</key><string>Call to &apos;malloc&apos; has an allocation size of 0 bytes</string>
    <key>category</key><string>Unix API</string>
    <key>type</key><string>Undefined allocation of 0 bytes (CERT MEM04-C; CWE-131)</string>
-   <key>check_name</key><string>unix.API</string>
+   <key>check_name</key><string>optin.portability.UnixAPI</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>0e841458f0cb7cf161d35f9db5862dcf</string>
+   <key>issue_hash_content_of_line_in_context</key><string>4ddbefeb3fa802a0636dc63d679bdc89</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>pr2899</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -835,9 +835,9 @@
    <key>description</key><string>Call to &apos;calloc&apos; has an allocation size of 0 bytes</string>
    <key>category</key><string>Unix API</string>
    <key>type</key><string>Undefined allocation of 0 bytes (CERT MEM04-C; CWE-131)</string>
-   <key>check_name</key><string>unix.API</string>
+   <key>check_name</key><string>optin.portability.UnixAPI</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>a267ff573c7e8b959a3f886677893eb0</string>
+   <key>issue_hash_content_of_line_in_context</key><string>9f12ad2f0a645cb7e4485fed526f536e</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_calloc</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -926,9 +926,9 @@
    <key>description</key><string>Call to &apos;calloc&apos; has an allocation size of 0 bytes</string>
    <key>category</key><string>Unix API</string>
    <key>type</key><string>Undefined allocation of 0 bytes (CERT MEM04-C; CWE-131)</string>
-   <key>check_name</key><string>unix.API</string>
+   <key>check_name</key><string>optin.portability.UnixAPI</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>14eb72957baab3c63bac610a10e6f48b</string>
+   <key>issue_hash_content_of_line_in_context</key><string>835b2375daee5b05ac48f24ac578de4c</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_calloc2</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -1017,9 +1017,9 @@
    <key>description</key><string>Call to &apos;realloc&apos; has an allocation size of 0 bytes</string>
    <key>category</key><string>Unix API</string>
    <key>type</key><string>Undefined allocation of 0 bytes (CERT MEM04-C; CWE-131)</string>
-   <key>check_name</key><string>unix.API</string>
+   <key>check_name</key><string>optin.portability.UnixAPI</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>7f6f67ebe3d481aed7750005bea7e371</string>
+   <key>issue_hash_content_of_line_in_context</key><string>bbdabcb6c5a3783012ae34bfea2a10fb</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_realloc</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -1108,9 +1108,9 @@
    <key>description</key><string>Call to &apos;reallocf&apos; has an allocation size of 0 bytes</string>
    <key>category</key><string>Unix API</string>
    <key>type</key><string>Undefined allocation of 0 bytes (CERT MEM04-C; CWE-131)</string>
-   <key>check_name</key><string>unix.API</string>
+   <key>check_name</key><string>optin.portability.UnixAPI</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>4941698efbd81601653dff10ef9c645b</string>
+   <key>issue_hash_content_of_line_in_context</key><string>5d222055bbf58b08ec345f0ebfd7b9d1</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_reallocf</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -1199,9 +1199,9 @@
    <key>description</key><string>Call to &apos;alloca&apos; has an allocation size of 0 bytes</string>
    <key>category</key><string>Unix API</string>
    <key>type</key><string>Undefined allocation of 0 bytes (CERT MEM04-C; CWE-131)</string>
-   <key>check_name</key><string>unix.API</string>
+   <key>check_name</key><string>optin.portability.UnixAPI</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>b7ca3488e81d9d9d4b8dc545258ce97c</string>
+   <key>issue_hash_content_of_line_in_context</key><string>f7bdefde93c0a58ec236918fb0c3a54e</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_alloca</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -1290,9 +1290,9 @@
    <key>description</key><string>Call to &apos;alloca&apos; has an allocation size of 0 bytes</string>
    <key>category</key><string>Unix API</string>
    <key>type</key><string>Undefined allocation of 0 bytes (CERT MEM04-C; CWE-131)</string>
-   <key>check_name</key><string>unix.API</string>
+   <key>check_name</key><string>optin.portability.UnixAPI</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>1ec52551362b070237f47f6bb6c3847d</string>
+   <key>issue_hash_content_of_line_in_context</key><string>4247526f8da82479508f2d364c2992d5</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_builtin_alloca</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -1381,9 +1381,9 @@
    <key>description</key><string>Call to &apos;valloc&apos; has an allocation size of 0 bytes</string>
    <key>category</key><string>Unix API</string>
    <key>type</key><string>Undefined allocation of 0 bytes (CERT MEM04-C; CWE-131)</string>
-   <key>check_name</key><string>unix.API</string>
+   <key>check_name</key><string>optin.portability.UnixAPI</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>675741e04c8d0071d280324e23f41d35</string>
+   <key>issue_hash_content_of_line_in_context</key><string>e16dfa9598fd2fafe6dc5563990c1dd3</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_valloc</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -3015,7 +3015,7 @@
  </array>
  <key>files</key>
  <array>
-  <string>/clang/test/Analysis/unix-fns.c</string>
+  <string>/home/szelethus/Documents/analyzer_opts/clang/test/Analysis/unix-fns.c</string>
  </array>
 </dict>
 </plist>
