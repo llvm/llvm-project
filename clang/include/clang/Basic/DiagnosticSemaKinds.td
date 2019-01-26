@@ -7841,7 +7841,8 @@ def warn_format_mix_positional_nonpositional_args : Warning<
   "cannot mix positional and non-positional arguments in format string">,
   InGroup<Format>;
 def warn_static_array_too_small : Warning<
-  "array argument is too small; contains %0 elements, callee requires at least %1">,
+  "array argument is too small; %select{contains %0 elements|is of size %0}2,"
+  " callee requires at least %1">,
   InGroup<ArrayBounds>;
 def note_callee_static_array : Note<
   "callee declares array parameter as static here">;

@@ -1583,7 +1583,7 @@ void SwingSchedulerDAG::groupRemainingNodes(NodeSetType &NodeSets) {
   }
 }
 
-/// Add the node to the set, and add all is its connected nodes to the set.
+/// Add the node to the set, and add all of its connected nodes to the set.
 void SwingSchedulerDAG::addConnectedNodes(SUnit *SU, NodeSet &NewSet,
                                           SetVector<SUnit *> &NodesAdded) {
   NewSet.insert(SU);

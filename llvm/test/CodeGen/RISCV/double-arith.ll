@@ -127,21 +127,25 @@ define double @fsgnj_d(double %a, double %b) nounwind {
   ret double %1
 }
 
-define double @fneg_d(double %a) nounwind {
+; This function performs extra work to ensure that
+; DAGCombiner::visitBITCAST doesn't replace the fneg with an xor.
+define i32 @fneg_d(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: fneg_d:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    sw a0, 8(sp)
 ; RV32IFD-NEXT:    sw a1, 12(sp)
 ; RV32IFD-NEXT:    fld ft0, 8(sp)
-; RV32IFD-NEXT:    fneg.d ft0, ft0
-; RV32IFD-NEXT:    fsd ft0, 8(sp)
-; RV32IFD-NEXT:    lw a0, 8(sp)
-; RV32IFD-NEXT:    lw a1, 12(sp)
+; RV32IFD-NEXT:    fadd.d ft0, ft0, ft0
+; RV32IFD-NEXT:    fneg.d ft1, ft0
+; RV32IFD-NEXT:    feq.d a0, ft0, ft1
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
-  %1 = fsub double -0.0, %a
-  ret double %1
+  %1 = fadd double %a, %a
+  %2 = fneg double %1
+  %3 = fcmp oeq double %1, %2
+  %4 = zext i1 %3 to i32
+  ret i32 %4
 }
 
 define double @fsgnjn_d(double %a, double %b) nounwind {
@@ -167,21 +171,30 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 
 declare double @llvm.fabs.f64(double)
 
-define double @fabs_d(double %a) nounwind {
+; This function performs extra work to ensure that
+; DAGCombiner::visitBITCAST doesn't replace the fabs with an and.
+define double @fabs_d(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: fabs_d:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    sw a2, 8(sp)
+; RV32IFD-NEXT:    sw a3, 12(sp)
+; RV32IFD-NEXT:    fld ft0, 8(sp)
 ; RV32IFD-NEXT:    sw a0, 8(sp)
 ; RV32IFD-NEXT:    sw a1, 12(sp)
-; RV32IFD-NEXT:    fld ft0, 8(sp)
-; RV32IFD-NEXT:    fabs.d ft0, ft0
+; RV32IFD-NEXT:    fld ft1, 8(sp)
+; RV32IFD-NEXT:    fadd.d ft0, ft1, ft0
+; RV32IFD-NEXT:    fabs.d ft1, ft0
+; RV32IFD-NEXT:    fadd.d ft0, ft1, ft0
 ; RV32IFD-NEXT:    fsd ft0, 8(sp)
 ; RV32IFD-NEXT:    lw a0, 8(sp)
 ; RV32IFD-NEXT:    lw a1, 12(sp)
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
-  %1 = call double @llvm.fabs.f64(double %a)
-  ret double %1
+  %1 = fadd double %a, %b
+  %2 = call double @llvm.fabs.f64(double %1)
+  %3 = fadd double %2, %1
+  ret double %3
 }
 
 declare double @llvm.minnum.f64(double, double)

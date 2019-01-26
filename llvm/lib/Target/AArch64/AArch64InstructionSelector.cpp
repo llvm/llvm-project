@@ -1807,7 +1807,7 @@ bool AArch64InstructionSelector::selectUnmergeValues(
   assert(WideTy.getSizeInBits() > NarrowTy.getSizeInBits() &&
          "source register size too small!");
 
-  // TODO: Handle unmerging into scalars.
+  // TODO: Handle unmerging into vectors.
   if (!NarrowTy.isScalar()) {
     LLVM_DEBUG(dbgs() << "Vector-to-vector unmerges not supported yet.\n");
     return false;

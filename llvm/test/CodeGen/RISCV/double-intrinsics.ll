@@ -254,15 +254,9 @@ declare double @llvm.fabs.f64(double)
 define double @fabs_f64(double %a) nounwind {
 ; RV32IFD-LABEL: fabs_f64:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw a0, 8(sp)
-; RV32IFD-NEXT:    sw a1, 12(sp)
-; RV32IFD-NEXT:    fld ft0, 8(sp)
-; RV32IFD-NEXT:    fabs.d ft0, ft0
-; RV32IFD-NEXT:    fsd ft0, 8(sp)
-; RV32IFD-NEXT:    lw a0, 8(sp)
-; RV32IFD-NEXT:    lw a1, 12(sp)
-; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    lui a2, 524288
+; RV32IFD-NEXT:    addi a2, a2, -1
+; RV32IFD-NEXT:    and a1, a1, a2
 ; RV32IFD-NEXT:    ret
   %1 = call double @llvm.fabs.f64(double %a)
   ret double %1

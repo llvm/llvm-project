@@ -32499,6 +32499,32 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
       return SDValue(N, 0);
   }
 
+  // Look for a v2i64/v2f64 VZEXT_MOVL of a node that already produces zeros
+  // in the upper 64 bits.
+  // TODO: Can we generalize this using computeKnownBits.
+  if (N->getOpcode() == X86ISD::VZEXT_MOVL &&
+      (VT == MVT::v2f64 || VT == MVT::v2i64) &&
+      N->getOperand(0).getOpcode() == ISD::BITCAST &&
+      (N->getOperand(0).getOperand(0).getValueType() == MVT::v4f32 ||
+       N->getOperand(0).getOperand(0).getValueType() == MVT::v4i32)) {
+    SDValue In = N->getOperand(0).getOperand(0);
+    switch (In.getOpcode()) {
+    default:
+      break;
+    case X86ISD::CVTP2SI:   case X86ISD::CVTP2UI:
+    case X86ISD::MCVTP2SI:  case X86ISD::MCVTP2UI:
+    case X86ISD::CVTTP2SI:  case X86ISD::CVTTP2UI:
+    case X86ISD::MCVTTP2SI: case X86ISD::MCVTTP2UI:
+    case X86ISD::CVTSI2P:   case X86ISD::CVTUI2P:
+    case X86ISD::MCVTSI2P:  case X86ISD::MCVTUI2P:
+    case X86ISD::VFPROUND:  case X86ISD::VMFPROUND:
+      if (In.getOperand(0).getValueType() == MVT::v2f64 ||
+          In.getOperand(0).getValueType() == MVT::v2i64)
+        return N->getOperand(0); // return the bitcast
+      break;
+    }
+  }
+
   // Look for a truncating shuffle to v2i32 of a PMULUDQ where one of the
   // operands is an extend from v2i32 to v2i64. Turn it into a pmulld.
   // FIXME: This can probably go away once we default to widening legalization.

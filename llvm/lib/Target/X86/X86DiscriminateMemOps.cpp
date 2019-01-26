@@ -26,6 +26,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-discriminate-memops"
 
+static cl::opt<bool> EnableDiscriminateMemops(
+    DEBUG_TYPE, cl::init(false),
+    cl::desc("Generate unique debug info for each instruction with a memory "
+             "operand. Should be enabled for profile-drived cache prefetching, "
+             "both in the build of the binary being profiled, as well as in "
+             "the build of the binary consuming the profile."),
+    cl::Hidden);
+
 namespace {
 
 using Location = std::pair<StringRef, unsigned>;
@@ -66,6 +74,9 @@ char X86DiscriminateMemOps::ID = 0;
 X86DiscriminateMemOps::X86DiscriminateMemOps() : MachineFunctionPass(ID) {}
 
 bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
+  if (!EnableDiscriminateMemops)
+    return false;
+
   DISubprogram *FDI = MF.getFunction().getSubprogram();
   if (!FDI || !FDI->getUnit()->getDebugInfoForProfiling())
     return false;

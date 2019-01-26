@@ -1617,21 +1617,6 @@ let Predicates = [HasAVX, NoVLX] in {
             (VCVTTPD2DQYrm addr:$src)>;
 }
 
-let Predicates = [HasAVX, NoVLX] in {
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                               (v4i32 (X86cvtp2Int (v2f64 VR128:$src)))))),
-            (VCVTPD2DQrr VR128:$src)>;
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                               (v4i32 (X86cvtp2Int (loadv2f64 addr:$src)))))),
-            (VCVTPD2DQrm addr:$src)>;
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                               (v4i32 (X86cvttp2si (v2f64 VR128:$src)))))),
-            (VCVTTPD2DQrr VR128:$src)>;
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                               (v4i32 (X86cvttp2si (loadv2f64 addr:$src)))))),
-            (VCVTTPD2DQrm addr:$src)>;
-} // Predicates = [HasAVX, NoVLX]
-
 def CVTTPD2DQrr : PDI<0xE6, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                       "cvttpd2dq\t{$src, $dst|$dst, $src}",
                       [(set VR128:$dst,
@@ -1642,21 +1627,6 @@ def CVTTPD2DQrm : PDI<0xE6, MRMSrcMem, (outs VR128:$dst),(ins f128mem:$src),
                       [(set VR128:$dst,
                         (v4i32 (X86cvttp2si (memopv2f64 addr:$src))))]>,
                       Sched<[WriteCvtPD2ILd]>;
-
-let Predicates = [UseSSE2] in {
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                               (v4i32 (X86cvtp2Int (v2f64 VR128:$src)))))),
-            (CVTPD2DQrr VR128:$src)>;
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                               (v4i32 (X86cvtp2Int (memopv2f64 addr:$src)))))),
-            (CVTPD2DQrm addr:$src)>;
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                               (v4i32 (X86cvttp2si (v2f64 VR128:$src)))))),
-            (CVTTPD2DQrr VR128:$src)>;
-  def : Pat<(X86vzmovl (v2i64 (bitconvert
-                               (v4i32 (X86cvttp2si (memopv2f64 addr:$src)))))),
-            (CVTTPD2DQrm addr:$src)>;
-} // Predicates = [UseSSE2]
 
 // Convert packed single to packed double
 let Predicates = [HasAVX, NoVLX] in {
@@ -1790,33 +1760,11 @@ def CVTPD2PSrm : PDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                      [(set VR128:$dst, (X86vfpround (memopv2f64 addr:$src)))]>,
                      Sched<[WriteCvtPD2PS.Folded]>;
 
-// AVX 256-bit register conversion intrinsics
-// FIXME: Migrate SSE conversion intrinsics matching to use patterns as below
-// whenever possible to avoid declaring two versions of each one.
-
 let Predicates = [HasAVX, NoVLX] in {
   def : Pat<(v4f32 (fpround (v4f64 VR256:$src))),
             (VCVTPD2PSYrr VR256:$src)>;
   def : Pat<(v4f32 (fpround (loadv4f64 addr:$src))),
             (VCVTPD2PSYrm addr:$src)>;
-
-  // Match fpround and fpextend for 128/256-bit conversions
-  def : Pat<(X86vzmovl (v2f64 (bitconvert
-                               (v4f32 (X86vfpround (v2f64 VR128:$src)))))),
-            (VCVTPD2PSrr VR128:$src)>;
-  def : Pat<(X86vzmovl (v2f64 (bitconvert
-                               (v4f32 (X86vfpround (loadv2f64 addr:$src)))))),
-            (VCVTPD2PSrm addr:$src)>;
-}
-
-let Predicates = [UseSSE2] in {
-  // Match fpround and fpextend for 128 conversions
-  def : Pat<(X86vzmovl (v2f64 (bitconvert
-                               (v4f32 (X86vfpround (v2f64 VR128:$src)))))),
-            (CVTPD2PSrr VR128:$src)>;
-  def : Pat<(X86vzmovl (v2f64 (bitconvert
-                               (v4f32 (X86vfpround (memopv2f64 addr:$src)))))),
-            (CVTPD2PSrm addr:$src)>;
 }
 
 //===----------------------------------------------------------------------===//

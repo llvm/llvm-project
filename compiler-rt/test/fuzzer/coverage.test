@@ -17,3 +17,4 @@ DSO-DAG: COVERED_FUNC:{{.*}}LLVMFuzzerTestOneInput{{.*}}DSOTestMain
 DSO-DAG: UNCOVERED_PC:{{.*}}1
 DSO-DAG: UNCOVERED_PC:{{.*}}2
 DSO-DAG: UNCOVERED_PC:{{.*}}DSOTestMain
+DSO-DAG: UNCOVERED_FUNC:{{.*}}Uncovered1

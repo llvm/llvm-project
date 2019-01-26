@@ -1,5 +1,5 @@
-; RUN: llc < %s -prefetch-hints-file=%S/insert-prefetch.afdo | FileCheck %s
-; RUN: llc < %s -prefetch-hints-file=%S/insert-prefetch-other.afdo | FileCheck %s -check-prefix=OTHERS
+; RUN: llc < %s -x86-discriminate-memops -prefetch-hints-file=%S/insert-prefetch.afdo | FileCheck %s
+; RUN: llc < %s -x86-discriminate-memops -prefetch-hints-file=%S/insert-prefetch-other.afdo | FileCheck %s -check-prefix=OTHERS
 ;
 ; original source, compiled with -O3 -gmlt -fdebug-info-for-profiling:
 ; int sum(int* arr, int pos1, int pos2) {

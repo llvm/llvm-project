@@ -63,10 +63,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     addRegisterClass(MVT::v8i16, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v4i32, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v4f32, &WebAssembly::V128RegClass);
-    if (Subtarget->hasUnimplementedSIMD128()) {
-      addRegisterClass(MVT::v2i64, &WebAssembly::V128RegClass);
-      addRegisterClass(MVT::v2f64, &WebAssembly::V128RegClass);
-    }
+  }
+  if (Subtarget->hasUnimplementedSIMD128()) {
+    addRegisterClass(MVT::v2i64, &WebAssembly::V128RegClass);
+    addRegisterClass(MVT::v2f64, &WebAssembly::V128RegClass);
   }
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget->getRegisterInfo());
@@ -110,56 +110,55 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTruncStoreAction(T, MVT::f16, Expand);
   }
 
-  // Support saturating add for i8x16 and i16x8
-  if (Subtarget->hasSIMD128())
-    for (auto T : {MVT::v16i8, MVT::v8i16})
-      for (auto Op : {ISD::SADDSAT, ISD::UADDSAT})
-        setOperationAction(Op, T, Legal);
-
   // Expand unavailable integer operations.
   for (auto Op :
        {ISD::BSWAP, ISD::SMUL_LOHI, ISD::UMUL_LOHI, ISD::MULHS, ISD::MULHU,
         ISD::SDIVREM, ISD::UDIVREM, ISD::SHL_PARTS, ISD::SRA_PARTS,
         ISD::SRL_PARTS, ISD::ADDC, ISD::ADDE, ISD::SUBC, ISD::SUBE}) {
-    for (auto T : {MVT::i32, MVT::i64}) {
+    for (auto T : {MVT::i32, MVT::i64})
       setOperationAction(Op, T, Expand);
-    }
-    if (Subtarget->hasSIMD128()) {
-      for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32}) {
+    if (Subtarget->hasSIMD128())
+      for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
         setOperationAction(Op, T, Expand);
-      }
-      if (Subtarget->hasUnimplementedSIMD128()) {
-        setOperationAction(Op, MVT::v2i64, Expand);
-      }
-    }
-  }
-
-  // There is no i64x2.mul instruction
-  setOperationAction(ISD::MUL, MVT::v2i64, Expand);
-
-  // We have custom shuffle lowering to expose the shuffle mask
-  if (Subtarget->hasSIMD128()) {
-    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32}) {
-      setOperationAction(ISD::VECTOR_SHUFFLE, T, Custom);
-    }
-    if (Subtarget->hasUnimplementedSIMD128()) {
-      setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2i64, Custom);
-      setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2f64, Custom);
-    }
-  }
-
-  // Custom lowering since wasm shifts must have a scalar shift amount
-  if (Subtarget->hasSIMD128()) {
-    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
-      for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
-        setOperationAction(Op, T, Custom);
     if (Subtarget->hasUnimplementedSIMD128())
-      for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
-        setOperationAction(Op, MVT::v2i64, Custom);
+      setOperationAction(Op, MVT::v2i64, Expand);
   }
 
-  // There are no select instructions for vectors
-  if (Subtarget->hasSIMD128())
+  // SIMD-specific configuration
+  if (Subtarget->hasSIMD128()) {
+    // Support saturating add for i8x16 and i16x8
+    for (auto Op : {ISD::SADDSAT, ISD::UADDSAT})
+      for (auto T : {MVT::v16i8, MVT::v8i16})
+        setOperationAction(Op, T, Legal);
+
+    // We have custom shuffle lowering to expose the shuffle mask
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32})
+      setOperationAction(ISD::VECTOR_SHUFFLE, T, Custom);
+    if (Subtarget->hasUnimplementedSIMD128())
+      for (auto T: {MVT::v2i64, MVT::v2f64})
+        setOperationAction(ISD::VECTOR_SHUFFLE, T, Custom);
+
+    // Custom lowering since wasm shifts must have a scalar shift amount
+    for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL}) {
+      for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
+        setOperationAction(Op, T, Custom);
+      if (Subtarget->hasUnimplementedSIMD128())
+        setOperationAction(Op, MVT::v2i64, Custom);
+    }
+
+    // Custom lower lane accesses to expand out variable indices
+    for (auto Op : {ISD::EXTRACT_VECTOR_ELT, ISD::INSERT_VECTOR_ELT}) {
+      for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32})
+        setOperationAction(Op, T, Custom);
+      if (Subtarget->hasUnimplementedSIMD128())
+        for (auto T : {MVT::v2i64, MVT::v2f64})
+          setOperationAction(Op, T, Custom);
+    }
+
+    // There is no i64x2.mul instruction
+    setOperationAction(ISD::MUL, MVT::v2i64, Expand);
+
+    // There are no vector select instructions
     for (auto Op : {ISD::VSELECT, ISD::SELECT_CC, ISD::SELECT}) {
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32})
         setOperationAction(Op, T, Expand);
@@ -167,6 +166,13 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         for (auto T : {MVT::v2i64, MVT::v2f64})
           setOperationAction(Op, T, Expand);
     }
+
+    // Expand additional SIMD ops that V8 hasn't implemented yet
+    if (!Subtarget->hasUnimplementedSIMD128()) {
+      setOperationAction(ISD::FSQRT, MVT::v4f32, Expand);
+      setOperationAction(ISD::FDIV, MVT::v4f32, Expand);
+    }
+  }
 
   // As a special case, these operators use the type to mean the type to
   // sign-extend from.
@@ -215,26 +221,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
           for (auto Ext : {ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD})
             setLoadExtAction(Ext, T, MemT, Expand);
         }
-      }
-    }
-  }
-
-  // Expand additional SIMD ops that V8 hasn't implemented yet
-  if (Subtarget->hasSIMD128() && !Subtarget->hasUnimplementedSIMD128()) {
-    setOperationAction(ISD::FSQRT, MVT::v4f32, Expand);
-    setOperationAction(ISD::FDIV, MVT::v4f32, Expand);
-  }
-
-  // Custom lower lane accesses to expand out variable indices
-  if (Subtarget->hasSIMD128()) {
-    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32}) {
-      setOperationAction(ISD::EXTRACT_VECTOR_ELT, T, Custom);
-      setOperationAction(ISD::INSERT_VECTOR_ELT, T, Custom);
-    }
-    if (Subtarget->hasUnimplementedSIMD128()) {
-      for (auto T : {MVT::v2i64, MVT::v2f64}) {
-        setOperationAction(ISD::EXTRACT_VECTOR_ELT, T, Custom);
-        setOperationAction(ISD::INSERT_VECTOR_ELT, T, Custom);
       }
     }
   }
