@@ -92,10 +92,11 @@ CheckerRegistry::getMutableCheckersForCmdLineArg(StringRef CmdLineArg) {
   return { it, it + size };
 }
 
-CheckerRegistry::CheckerRegistry(ArrayRef<std::string> plugins,
-                                 DiagnosticsEngine &diags,
-                                 AnalyzerOptions &AnOpts,
-                                 const LangOptions &LangOpts)
+CheckerRegistry::CheckerRegistry(
+     ArrayRef<std::string> plugins, DiagnosticsEngine &diags,
+     AnalyzerOptions &AnOpts, const LangOptions &LangOpts,
+     ArrayRef<std::function<void(CheckerRegistry &)>>
+         checkerRegistrationFns)
   : Diags(diags), AnOpts(AnOpts), LangOpts(LangOpts) {
 
   // Register builtin checkers.
@@ -137,6 +138,13 @@ CheckerRegistry::CheckerRegistry(ArrayRef<std::string> plugins,
     if (registerPluginCheckers)
       registerPluginCheckers(*this);
   }
+
+  // Register statically linked checkers, that aren't generated from the tblgen
+  // file, but rather passed their registry function as a parameter in 
+  // checkerRegistrationFns. 
+
+  for (const auto &Fn : checkerRegistrationFns)
+    Fn(*this);
 
   // Sort checkers for efficient collection.
   // FIXME: Alphabetical sort puts 'experimental' in the middle.

@@ -82,8 +82,11 @@ namespace ento {
 /// "core.builtin", or the full name "core.builtin.NoReturnFunctionChecker".
 class CheckerRegistry {
 public:
-  CheckerRegistry(ArrayRef<std::string> plugins, DiagnosticsEngine &diags,
-                  AnalyzerOptions &AnOpts, const LangOptions &LangOpts);
+  CheckerRegistry(
+      ArrayRef<std::string> plugins, DiagnosticsEngine &diags,
+      AnalyzerOptions &AnOpts, const LangOptions &LangOpts,
+      ArrayRef<std::function<void(CheckerRegistry &)>>
+          checkerRegistrationFns = {});
 
   /// Initialization functions perform any necessary setup for a checker.
   /// They should include a call to CheckerManager::registerChecker.
