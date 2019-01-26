@@ -368,11 +368,11 @@ bool ento::shouldRegisterStackAddrEscapeBase(const LangOptions &LO) {
   return true;
 }
 
-#define REGISTER_CHECKER(name) \
-  void ento::register##name(CheckerManager &Mgr) { \
-    StackAddrEscapeChecker *Chk = \
-        Mgr.registerChecker<StackAddrEscapeChecker>(); \
-    Chk->ChecksEnabled[StackAddrEscapeChecker::CK_##name] = true; \
+#define REGISTER_CHECKER(name)                                                 \
+  void ento::register##name(CheckerManager &Mgr) {                             \
+    StackAddrEscapeChecker *Chk =                                              \
+        Mgr.getChecker<StackAddrEscapeChecker>();                              \
+    Chk->ChecksEnabled[StackAddrEscapeChecker::CK_##name] = true;              \
   }                                                                            \
                                                                                \
   bool ento::shouldRegister##name(const LangOptions &LO) {                     \

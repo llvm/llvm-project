@@ -988,8 +988,7 @@ DynamicTypePropagation::GenericsBugVisitor::VisitNode(const ExplodedNode *N,
 
 /// Register checkers.
 void ento::registerObjCGenericsChecker(CheckerManager &mgr) {
-  DynamicTypePropagation *checker =
-      mgr.registerChecker<DynamicTypePropagation>();
+  DynamicTypePropagation *checker = mgr.getChecker<DynamicTypePropagation>();
   checker->CheckGenerics = true;
 }
 

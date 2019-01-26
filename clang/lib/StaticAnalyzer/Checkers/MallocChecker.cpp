@@ -3090,16 +3090,16 @@ markReleased(ProgramStateRef State, SymbolRef Sym, const Expr *Origin) {
 // Intended to be used in InnerPointerChecker to register the part of
 // MallocChecker connected to it.
 void ento::registerInnerPointerCheckerAux(CheckerManager &mgr) {
-    MallocChecker *checker = mgr.registerChecker<MallocChecker>();
-    checker->IsOptimistic = mgr.getAnalyzerOptions().getCheckerBooleanOption(
-                                                  "Optimistic", false, checker);
-    checker->ChecksEnabled[MallocChecker::CK_InnerPointerChecker] = true;
-    checker->CheckNames[MallocChecker::CK_InnerPointerChecker] =
-        mgr.getCurrentCheckName();
+  MallocChecker *checker = mgr.getChecker<MallocChecker>();
+  checker->ChecksEnabled[MallocChecker::CK_InnerPointerChecker] = true;
+  checker->CheckNames[MallocChecker::CK_InnerPointerChecker] =
+      mgr.getCurrentCheckName();
 }
 
 void ento::registerDynamicMemoryModeling(CheckerManager &mgr) {
-  mgr.registerChecker<MallocChecker>();
+  auto *checker = mgr.registerChecker<MallocChecker>();
+  checker->IsOptimistic = mgr.getAnalyzerOptions().getCheckerBooleanOption(
+                                                  "Optimistic", false, checker);
 }
 
 bool ento::shouldRegisterDynamicMemoryModeling(const LangOptions &LO) {
@@ -3108,9 +3108,7 @@ bool ento::shouldRegisterDynamicMemoryModeling(const LangOptions &LO) {
 
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &mgr) {                             \
-    MallocChecker *checker = mgr.registerChecker<MallocChecker>();             \
-    checker->IsOptimistic = mgr.getAnalyzerOptions().getCheckerBooleanOption(  \
-        "Optimistic", false, checker);                                         \
+    MallocChecker *checker = mgr.getChecker<MallocChecker>();                  \
     checker->ChecksEnabled[MallocChecker::CK_##name] = true;                   \
     checker->CheckNames[MallocChecker::CK_##name] = mgr.getCurrentCheckName(); \
   }                                                                            \

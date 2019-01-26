@@ -2486,7 +2486,7 @@ bool ento::shouldRegisterCStringModeling(const LangOptions &LO) {
 
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &mgr) {                             \
-    CStringChecker *checker = mgr.registerChecker<CStringChecker>();           \
+    CStringChecker *checker = mgr.getChecker<CStringChecker>();                \
     checker->Filter.Check##name = true;                                        \
     checker->Filter.CheckName##name = mgr.getCurrentCheckName();               \
   }                                                                            \
