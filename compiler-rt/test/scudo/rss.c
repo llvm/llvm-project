@@ -30,7 +30,8 @@ static void *allocs[kNumAllocs];
 int main(int argc, char *argv[]) {
   int returned_null = 0;
   for (int i = 0; i < kNumAllocs; i++) {
-    if ((i & 0xf) == 0)
+    // sleep for 100ms every 8 allocations, to allow the RSS check to catch up.
+    if (i != 0 && (i & 0x7) == 0)
       usleep(100000);
     allocs[i] = malloc(kAllocSize);
     if (allocs[i])

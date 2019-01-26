@@ -184,7 +184,6 @@ template <class ELFT> class ObjFile : public ELFFileBase<ELFT> {
 
   StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
                                  const Elf_Shdr &Sec);
-  ArrayRef<Elf_Word> getShtGroupEntries(const Elf_Shdr &Sec);
 
 public:
   static bool classof(const InputFile *F) { return F->kind() == Base::ObjKind; }
