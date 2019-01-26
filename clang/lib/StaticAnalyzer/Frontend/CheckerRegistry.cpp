@@ -152,6 +152,15 @@ CheckerRegistry::CheckerRegistry(
   // that's ASCIIbetically last?
   llvm::sort(Checkers, checkerNameLT);
 
+#define GET_CHECKER_DEPENDENCIES
+
+#define CHECKER_DEPENDENCY(FULLNAME, DEPENDENCY)                               \
+  addDependency(FULLNAME, DEPENDENCY);
+
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER_DEPENDENCY
+#undef GET_CHECKER_DEPENDENCIES
+
   // Parse '-analyzer-checker' and '-analyzer-disable-checker' options from the
   // command line.
   for (const std::pair<std::string, bool> &opt : AnOpts.CheckersControlList) {
@@ -170,13 +179,69 @@ CheckerRegistry::CheckerRegistry(
   }
 }
 
+/// Collects dependencies in \p ret, returns false on failure.
+static bool collectDependenciesImpl(
+                              const CheckerRegistry::ConstCheckerInfoList &deps,
+                              const LangOptions &LO,
+                              CheckerRegistry::CheckerInfoSet &ret);
+
+/// Collects dependenies in \p enabledCheckers. Return None on failure.
+LLVM_NODISCARD
+static llvm::Optional<CheckerRegistry::CheckerInfoSet> collectDependencies(
+     const CheckerRegistry::CheckerInfo &checker, const LangOptions &LO) {
+
+  CheckerRegistry::CheckerInfoSet ret;
+  // Add dependencies to the enabled checkers only if all of them can be
+  // enabled.
+  if (!collectDependenciesImpl(checker.Dependencies, LO, ret))
+    return None;
+
+  return ret;
+}
+
+static bool collectDependenciesImpl(
+                              const CheckerRegistry::ConstCheckerInfoList &deps,
+                              const LangOptions &LO,
+                              CheckerRegistry::CheckerInfoSet &ret) {
+
+  for (const CheckerRegistry::CheckerInfo *dependency : deps) {
+
+    if (dependency->isDisabled(LO))
+      return false;
+
+    // Collect dependencies recursively.
+    if (!collectDependenciesImpl(dependency->Dependencies, LO, ret))
+      return false;
+
+    ret.insert(dependency);
+  }
+
+  return true;
+}
+
 CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers() const {
 
   CheckerInfoSet enabledCheckers;
 
   for (const CheckerInfo &checker : Checkers) {
-    if (checker.isEnabled(LangOpts))
-      enabledCheckers.insert(&checker);
+    if (!checker.isEnabled(LangOpts))
+      continue;
+
+    // Recursively enable it's dependencies.
+    llvm::Optional<CheckerInfoSet> deps =
+        collectDependencies(checker, LangOpts);
+
+    if (!deps) {
+      // If we failed to enable any of the dependencies, don't enable this
+      // checker.
+      continue;
+    }
+
+    // Note that set_union also preserves the order of insertion.
+    enabledCheckers.set_union(*deps);
+
+    // Enable the checker.
+    enabledCheckers.insert(&checker);
   }
 
   return enabledCheckers;
@@ -197,7 +262,6 @@ void CheckerRegistry::addChecker(InitializationFunction Rfn,
 }
 
 void CheckerRegistry::initializeManager(CheckerManager &checkerMgr) const {
-
   // Collect checkers enabled by the options.
   CheckerInfoSet enabledCheckers = getEnabledCheckers();
 

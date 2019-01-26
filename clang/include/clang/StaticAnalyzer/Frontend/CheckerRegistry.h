@@ -93,6 +93,13 @@ public:
   using InitializationFunction = void (*)(CheckerManager &);
   using ShouldRegisterFunction = bool (*)(const LangOptions &);
 
+  struct CheckerInfo;
+
+  using CheckerInfoList = std::vector<CheckerInfo>;
+  using CheckerInfoListRange = llvm::iterator_range<CheckerInfoList::iterator>;
+  using ConstCheckerInfoList = llvm::SmallVector<const CheckerInfo *, 0>;
+  using CheckerInfoSet = llvm::SetVector<const CheckerInfo *>;
+
   struct CheckerInfo {
     enum class StateFromCmdLine {
       // This checker wasn't explicitly enabled or disabled.
@@ -110,8 +117,14 @@ public:
     StringRef DocumentationUri;
     StateFromCmdLine State = StateFromCmdLine::State_Unspecified;
 
+    ConstCheckerInfoList Dependencies;
+
     bool isEnabled(const LangOptions &LO) const {
       return State == StateFromCmdLine::State_Enabled && ShouldRegister(LO);
+    }
+
+    bool isDisabled(const LangOptions &LO) const {
+      return State == StateFromCmdLine::State_Disabled && ShouldRegister(LO);
     }
 
     CheckerInfo(InitializationFunction Fn, ShouldRegisterFunction sfn,
@@ -121,9 +134,6 @@ public:
   };
 
   using StateFromCmdLine = CheckerInfo::StateFromCmdLine;
-  using CheckerInfoList = std::vector<CheckerInfo>;
-  using CheckerInfoListRange = llvm::iterator_range<CheckerInfoList::iterator>;
-  using CheckerInfoSet = llvm::SetVector<const CheckerRegistry::CheckerInfo *>;
 
 private:
   template <typename T>
@@ -153,6 +163,28 @@ public:
                &CheckerRegistry::returnTrue<T>, FullName, Desc, DocsUri);
   }
 
+  /// Makes the checker with the full name \p fullName depends on the checker
+  /// called \p dependency.
+  void addDependency(StringRef fullName, StringRef dependency) {
+    auto CheckerThatNeedsDeps =
+       [&fullName](const CheckerInfo &Chk) { return Chk.FullName == fullName; };
+    auto Dependency =
+      [&dependency](const CheckerInfo &Chk) {
+        return Chk.FullName == dependency;
+      };
+
+    auto CheckerIt = llvm::find_if(Checkers, CheckerThatNeedsDeps);
+    assert(CheckerIt != Checkers.end() &&
+           "Failed to find the checker while attempting to set up it's "
+           "dependencies!");
+
+    auto DependencyIt = llvm::find_if(Checkers, Dependency);
+    assert(DependencyIt != Checkers.end() &&
+           "Failed to find the dependency of a checker!");
+
+    CheckerIt->Dependencies.push_back(&*DependencyIt);
+  }
+
   // FIXME: This *really* should be added to the frontend flag descriptions.
   /// Initializes a CheckerManager by calling the initialization functions for
   /// all checkers specified by the given CheckerOptInfo list. The order of this
@@ -169,6 +201,9 @@ public:
   void printList(raw_ostream &out) const;
 
 private:
+  /// Collect all enabled checkers. The returned container preserves the order
+  /// of insertion, as dependencies have to be enabled before the checkers that
+  /// depend on them.
   CheckerInfoSet getEnabledCheckers() const;
 
   /// Return an iterator range of mutable CheckerInfos \p CmdLineArg applies to.

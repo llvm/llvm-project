@@ -906,6 +906,14 @@ public:
 };
 }
 
+void ento::registerSecuritySyntaxChecker(CheckerManager &mgr) {
+  mgr.registerChecker<SecuritySyntaxChecker>();
+}
+
+bool ento::shouldRegisterSecuritySyntaxChecker(const LangOptions &LO) {
+  return true;
+}
+
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &mgr) {                             \
     SecuritySyntaxChecker *checker =                                           \

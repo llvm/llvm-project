@@ -1192,6 +1192,14 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
   }
 }
 
+void ento::registerNullabilityBase(CheckerManager &mgr) {
+  mgr.registerChecker<NullabilityChecker>();
+}
+
+bool ento::shouldRegisterNullabilityBase(const LangOptions &LO) {
+  return true;
+}
+
 #define REGISTER_CHECKER(name, trackingRequired)                               \
   void ento::register##name##Checker(CheckerManager &mgr) {                    \
     NullabilityChecker *checker = mgr.registerChecker<NullabilityChecker>();   \

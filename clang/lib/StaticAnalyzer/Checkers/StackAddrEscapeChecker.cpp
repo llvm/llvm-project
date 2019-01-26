@@ -360,6 +360,14 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   }
 }
 
+void ento::registerStackAddrEscapeBase(CheckerManager &mgr) {
+  mgr.registerChecker<StackAddrEscapeChecker>();
+}
+
+bool ento::shouldRegisterStackAddrEscapeBase(const LangOptions &LO) {
+  return true;
+}
+
 #define REGISTER_CHECKER(name) \
   void ento::register##name(CheckerManager &Mgr) { \
     StackAddrEscapeChecker *Chk = \

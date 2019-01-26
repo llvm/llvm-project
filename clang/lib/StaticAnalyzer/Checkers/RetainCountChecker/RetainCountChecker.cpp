@@ -1456,6 +1456,14 @@ void RetainCountChecker::printState(raw_ostream &Out, ProgramStateRef State,
 // Checker registration.
 //===----------------------------------------------------------------------===//
 
+void ento::registerRetainCountBase(CheckerManager &Mgr) {
+  Mgr.registerChecker<RetainCountChecker>();
+}
+
+bool ento::shouldRegisterRetainCountBase(const LangOptions &LO) {
+  return true;
+}
+
 void ento::registerRetainCountChecker(CheckerManager &Mgr) {
   auto *Chk = Mgr.registerChecker<RetainCountChecker>();
   Chk->TrackObjCAndCFObjects = true;

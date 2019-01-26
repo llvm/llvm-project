@@ -736,6 +736,14 @@ public:
 };
 } // end anonymous namespace
 
+void ento::registerIvarInvalidationModeling(CheckerManager &mgr) {
+  mgr.registerChecker<IvarInvalidationChecker>();
+}
+
+bool ento::shouldRegisterIvarInvalidationModeling(const LangOptions &LO) {
+  return true;
+}
+
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &mgr) {                             \
     IvarInvalidationChecker *checker =                                         \
