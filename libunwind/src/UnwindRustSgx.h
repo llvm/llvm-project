@@ -13,6 +13,7 @@
 
 #ifdef RUST_SGX
 
+#undef _GNU_SOURCE
 #define _GNU_SOURCE
 #include <link.h>
 #include <stdarg.h>
@@ -70,22 +71,18 @@ extern "C"  {
 #undef pthread_rwlock_rdlock
 #undef pthread_rwlock_wrlock
 #undef pthread_rwlock_unlock
+#undef PTHREAD_RWLOCK_INITIALIZER
 
 #define pthread_rwlock_t RWLock
-#define PTHREAD_RWLOCK_INITIALIZER RWLOCK_INIT
-
-
 #define pthread_rwlock_rdlock __rust_rwlock_rdlock
 #define pthread_rwlock_wrlock __rust_rwlock_wrlock
 #define pthread_rwlock_unlock __rust_rwlock_unlock
-
+#define PTHREAD_RWLOCK_INITIALIZER RWLOCK_INIT
 
 #define malloc libuw_malloc
 #define free libuw_free
 
-#ifdef dl_iterate_phdr
 #undef dl_iterate_phdr
-#endif
 #define dl_iterate_phdr libuw_dl_iterate_phdr
 
 #ifdef __cplusplus
@@ -95,6 +92,8 @@ extern "C" {
 void *libuw_malloc(size_t size);
 
 void libuw_free(void *p);
+
+struct dl_phdr_info;
 
 int
 libuw_dl_iterate_phdr (int (*callback) (struct dl_phdr_info *,

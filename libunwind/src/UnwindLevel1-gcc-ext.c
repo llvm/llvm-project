@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>

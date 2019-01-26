@@ -42,11 +42,13 @@ endif()
 if (RUST_SGX)
     # Compile Flags
     add_definitions(-DRUST_SGX)
-    add_definitions(-DU_FORTIFY_SOURCE)
-    add_definitions(-D_FORTIFY_SOURCE=0)
     add_definitions(-D__NO_STRING_INLINES)
     add_definitions(-D__NO_MATH_INLINES)
     add_definitions(-D_LIBUNWIND_IS_BAREMETAL)
+    # Can't use add_definitions because CMake will reorder these arguments
+    list(APPEND LIBUNWIND_COMPILE_FLAGS -U_FORTIFY_SOURCE)
+    list(APPEND LIBUNWIND_COMPILE_FLAGS -D_FORTIFY_SOURCE=0)
+
     list(APPEND LIBUNWIND_COMPILE_FLAGS -fno-stack-protector)
     list(APPEND LIBUNWIND_COMPILE_FLAGS -ffreestanding)
     list(APPEND LIBUNWIND_COMPILE_FLAGS -fexceptions)
