@@ -912,6 +912,10 @@ public:
         mgr.registerChecker<SecuritySyntaxChecker>();                          \
     checker->filter.check_##name = true;                                       \
     checker->filter.checkName_##name = mgr.getCurrentCheckName();              \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
+    return true;                                                               \
   }
 
 REGISTER_CHECKER(bcmp)

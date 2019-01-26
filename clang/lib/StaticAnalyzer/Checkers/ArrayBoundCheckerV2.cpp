@@ -354,3 +354,7 @@ RegionRawOffsetV2 RegionRawOffsetV2::computeOffset(ProgramStateRef state,
 void ento::registerArrayBoundCheckerV2(CheckerManager &mgr) {
   mgr.registerChecker<ArrayBoundCheckerV2>();
 }
+
+bool ento::shouldRegisterArrayBoundCheckerV2(const LangOptions &LO) {
+  return true;
+}

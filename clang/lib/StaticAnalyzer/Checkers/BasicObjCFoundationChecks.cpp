@@ -1243,27 +1243,54 @@ void ento::registerNilArgChecker(CheckerManager &mgr) {
   mgr.registerChecker<NilArgChecker>();
 }
 
+bool ento::shouldRegisterNilArgChecker(const LangOptions &LO) {
+  return true;
+}
+
 void ento::registerCFNumberChecker(CheckerManager &mgr) {
   mgr.registerChecker<CFNumberChecker>();
+}
+
+bool ento::shouldRegisterCFNumberChecker(const LangOptions &LO) {
+  return true;
 }
 
 void ento::registerCFRetainReleaseChecker(CheckerManager &mgr) {
   mgr.registerChecker<CFRetainReleaseChecker>();
 }
 
+bool ento::shouldRegisterCFRetainReleaseChecker(const LangOptions &LO) {
+  return true;
+}
+
 void ento::registerClassReleaseChecker(CheckerManager &mgr) {
   mgr.registerChecker<ClassReleaseChecker>();
+}
+
+bool ento::shouldRegisterClassReleaseChecker(const LangOptions &LO) {
+  return true;
 }
 
 void ento::registerVariadicMethodTypeChecker(CheckerManager &mgr) {
   mgr.registerChecker<VariadicMethodTypeChecker>();
 }
 
+bool ento::shouldRegisterVariadicMethodTypeChecker(const LangOptions &LO) {
+  return true;
+}
+
 void ento::registerObjCLoopChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCLoopChecker>();
 }
 
-void
-ento::registerObjCNonNilReturnValueChecker(CheckerManager &mgr) {
+bool ento::shouldRegisterObjCLoopChecker(const LangOptions &LO) {
+  return true;
+}
+
+void ento::registerObjCNonNilReturnValueChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCNonNilReturnValueChecker>();
+}
+
+bool ento::shouldRegisterObjCNonNilReturnValueChecker(const LangOptions &LO) {
+  return true;
 }

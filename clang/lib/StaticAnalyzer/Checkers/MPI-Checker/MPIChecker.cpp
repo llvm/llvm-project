@@ -188,3 +188,7 @@ void MPIChecker::allRegionsUsedByWait(
 void clang::ento::registerMPIChecker(CheckerManager &MGR) {
   MGR.registerChecker<clang::ento::mpi::MPIChecker>();
 }
+
+bool clang::ento::shouldRegisterMPIChecker(const LangOptions &LO) {
+  return true;
+}

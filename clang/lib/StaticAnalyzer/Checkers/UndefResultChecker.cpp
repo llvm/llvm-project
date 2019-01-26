@@ -186,3 +186,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
 void ento::registerUndefResultChecker(CheckerManager &mgr) {
   mgr.registerChecker<UndefResultChecker>();
 }
+
+bool ento::shouldRegisterUndefResultChecker(const LangOptions &LO) {
+  return true;
+}

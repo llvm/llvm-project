@@ -536,3 +536,7 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
       AnOpts.getCheckerStringOption("IgnoreRecordsWithField",
                                /*DefaultVal*/ "", Chk);
 }
+
+bool ento::shouldRegisterUninitializedObjectChecker(const LangOptions &LO) {
+  return true;
+}

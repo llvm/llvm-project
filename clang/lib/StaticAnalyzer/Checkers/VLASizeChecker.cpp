@@ -183,3 +183,7 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
 void ento::registerVLASizeChecker(CheckerManager &mgr) {
   mgr.registerChecker<VLASizeChecker>();
 }
+
+bool ento::shouldRegisterVLASizeChecker(const LangOptions &LO) {
+  return true;
+}

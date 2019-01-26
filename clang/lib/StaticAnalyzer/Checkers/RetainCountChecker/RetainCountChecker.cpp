@@ -1461,6 +1461,10 @@ void ento::registerRetainCountChecker(CheckerManager &Mgr) {
   Chk->TrackObjCAndCFObjects = true;
 }
 
+bool ento::shouldRegisterRetainCountChecker(const LangOptions &LO) {
+  return true;
+}
+
 // FIXME: remove this, hack for backwards compatibility:
 // it should be possible to enable the NS/CF retain count checker as
 // osx.cocoa.RetainCount, and it should be possible to disable
@@ -1476,4 +1480,8 @@ void ento::registerOSObjectRetainCountChecker(CheckerManager &Mgr) {
   auto *Chk = Mgr.registerChecker<RetainCountChecker>();
   if (!hasPrevCheckOSObjectOptionDisabled(Mgr.getAnalyzerOptions()))
     Chk->TrackOSObjects = true;
+}
+
+bool ento::shouldRegisterOSObjectRetainCountChecker(const LangOptions &LO) {
+  return true;
 }

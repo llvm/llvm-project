@@ -91,3 +91,7 @@ void ArrayBoundChecker::checkLocation(SVal l, bool isLoad, const Stmt* LoadS,
 void ento::registerArrayBoundChecker(CheckerManager &mgr) {
   mgr.registerChecker<ArrayBoundChecker>();
 }
+
+bool ento::shouldRegisterArrayBoundChecker(const LangOptions &LO) {
+  return true;
+}

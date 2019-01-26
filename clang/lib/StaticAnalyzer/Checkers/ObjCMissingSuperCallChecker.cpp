@@ -222,6 +222,9 @@ void ento::registerObjCSuperCallChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ObjCSuperCallChecker>();
 }
 
+bool ento::shouldRegisterObjCSuperCallChecker(const LangOptions &LO) {
+  return true;
+}
 
 /*
  ToDo list for expanding this check in the future, the list is not exhaustive.

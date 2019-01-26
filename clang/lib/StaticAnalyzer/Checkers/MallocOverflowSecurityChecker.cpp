@@ -334,7 +334,10 @@ void MallocOverflowSecurityChecker::checkASTCodeBody(const Decl *D,
   OutputPossibleOverflows(PossibleMallocOverflows, D, BR, mgr);
 }
 
-void
-ento::registerMallocOverflowSecurityChecker(CheckerManager &mgr) {
+void ento::registerMallocOverflowSecurityChecker(CheckerManager &mgr) {
   mgr.registerChecker<MallocOverflowSecurityChecker>();
+}
+
+bool ento::shouldRegisterMallocOverflowSecurityChecker(const LangOptions &LO) {
+  return true;
 }

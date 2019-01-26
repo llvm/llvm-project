@@ -304,3 +304,7 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
 void ento::registerDereferenceChecker(CheckerManager &mgr) {
   mgr.registerChecker<DereferenceChecker>();
 }
+
+bool ento::shouldRegisterDereferenceChecker(const LangOptions &LO) {
+  return true;
+}

@@ -2481,6 +2481,10 @@ void CStringChecker::checkDeadSymbols(SymbolReaper &SR,
     CStringChecker *checker = mgr.registerChecker<CStringChecker>();           \
     checker->Filter.Check##name = true;                                        \
     checker->Filter.CheckName##name = mgr.getCurrentCheckName();               \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
+    return true;                                                               \
   }
 
   REGISTER_CHECKER(CStringNullArg)

@@ -153,3 +153,7 @@ void ChrootChecker::checkPreStmt(const CallExpr *CE, CheckerContext &C) const {
 void ento::registerChrootChecker(CheckerManager &mgr) {
   mgr.registerChecker<ChrootChecker>();
 }
+
+bool ento::shouldRegisterChrootChecker(const LangOptions &LO) {
+  return true;
+}

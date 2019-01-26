@@ -409,3 +409,7 @@ void StreamChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 void ento::registerStreamChecker(CheckerManager &mgr) {
   mgr.registerChecker<StreamChecker>();
 }
+
+bool ento::shouldRegisterStreamChecker(const LangOptions &LO) {
+  return true;
+}

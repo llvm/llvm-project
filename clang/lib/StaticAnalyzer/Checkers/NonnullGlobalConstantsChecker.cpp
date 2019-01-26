@@ -138,3 +138,7 @@ bool NonnullGlobalConstantsChecker::isNonnullType(QualType Ty) const {
 void ento::registerNonnullGlobalConstantsChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<NonnullGlobalConstantsChecker>();
 }
+
+bool ento::shouldRegisterNonnullGlobalConstantsChecker(const LangOptions &LO) {
+  return true;
+}

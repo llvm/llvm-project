@@ -742,6 +742,10 @@ public:
         mgr.registerChecker<IvarInvalidationChecker>();                        \
     checker->Filter.check_##name = true;                                       \
     checker->Filter.checkName_##name = mgr.getCurrentCheckName();              \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
+    return true;                                                               \
   }
 
 REGISTER_CHECKER(InstanceVariableInvalidation)

@@ -187,3 +187,7 @@ void ObjCContainersChecker::printState(raw_ostream &OS, ProgramStateRef State,
 void ento::registerObjCContainersChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCContainersChecker>();
 }
+
+bool ento::shouldRegisterObjCContainersChecker(const LangOptions &LO) {
+  return true;
+}

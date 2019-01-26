@@ -62,3 +62,7 @@ UndefinedArraySubscriptChecker::checkPreStmt(const ArraySubscriptExpr *A,
 void ento::registerUndefinedArraySubscriptChecker(CheckerManager &mgr) {
   mgr.registerChecker<UndefinedArraySubscriptChecker>();
 }
+
+bool ento::shouldRegisterUndefinedArraySubscriptChecker(const LangOptions &LO) {
+  return true;
+}

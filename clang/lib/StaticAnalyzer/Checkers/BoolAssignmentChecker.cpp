@@ -155,3 +155,7 @@ void BoolAssignmentChecker::checkBind(SVal loc, SVal val, const Stmt *S,
 void ento::registerBoolAssignmentChecker(CheckerManager &mgr) {
     mgr.registerChecker<BoolAssignmentChecker>();
 }
+
+bool ento::shouldRegisterBoolAssignmentChecker(const LangOptions &LO) {
+  return true;
+}

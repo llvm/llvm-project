@@ -349,3 +349,7 @@ void ento::registerNumberObjectConversionChecker(CheckerManager &Mgr) {
   Chk->Pedantic =
       Mgr.getAnalyzerOptions().getCheckerBooleanOption("Pedantic", false, Chk);
 }
+
+bool ento::shouldRegisterNumberObjectConversionChecker(const LangOptions &LO) {
+  return true;
+}
