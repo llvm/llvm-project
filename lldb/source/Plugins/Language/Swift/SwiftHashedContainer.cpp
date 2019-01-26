@@ -493,8 +493,6 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
   if (!scale_sp)
     return;
   auto scale = scale_sp->GetValueAsUnsigned(0);
-  if (scale > m_ptr_size)
-    return;
   m_scale = scale;
 
   auto keys_ivar = value_type ? g__rawKeys : g__rawElements;
@@ -580,7 +578,7 @@ NativeHashedStorageHandler::UpdateBuckets() {
     }
     if (wordCount == 1) {
       // Mask off out-of-bounds bits from first partial word.
-      word &= (1 << bucketCount) - 1;
+      word &= (1ULL << bucketCount) - 1;
     }
     for (size_t bit = 0; bit < wordWidth; bit++) {
       if ((word & (1ULL << bit)) != 0) {
