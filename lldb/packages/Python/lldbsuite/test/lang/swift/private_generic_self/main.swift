@@ -18,7 +18,7 @@ struct MyStruct<S : MyKey> : MyProtocol {
 }
 extension MyProtocol {
   func decode() {
-        return //% lldbutil.check_variable(self, self.frame().FindVariable("self"),use_dynamic=True,use_synthetic=True,typename='(a.MyStruct<a.Outer.CodingKeys>)')
+        return //% lldbutil.check_variable(self, self.frame().FindVariable("self"),use_dynamic=True,use_synthetic=True,typename='a.MyStruct<a.Outer.CodingKeys>')
     }
 }
 
