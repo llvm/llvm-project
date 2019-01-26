@@ -109,16 +109,12 @@ define float @fhsub_16(<16 x float> %x225) {
 define <16 x i32> @hadd_16_3(<16 x i32> %x225, <16 x i32> %x227) {
 ; KNL-LABEL: hadd_16_3:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vshufps {{.*#+}} ymm2 = ymm0[0,2],ymm1[0,2],ymm0[4,6],ymm1[4,6]
-; KNL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm1[1,3],ymm0[5,7],ymm1[5,7]
-; KNL-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; KNL-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: hadd_16_3:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vshufps {{.*#+}} ymm2 = ymm0[0,2],ymm1[0,2],ymm0[4,6],ymm1[4,6]
-; SKX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm1[1,3],ymm0[5,7],ymm1[5,7]
-; SKX-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; SKX-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; SKX-NEXT:    retq
   %x226 = shufflevector <16 x i32> %x225, <16 x i32> %x227, <16 x i32> <i32 0, i32 2, i32 16, i32 18
 , i32 4, i32 6, i32 20, i32 22, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -132,16 +128,12 @@ define <16 x i32> @hadd_16_3(<16 x i32> %x225, <16 x i32> %x227) {
 define <16 x float> @fhadd_16_3(<16 x float> %x225, <16 x float> %x227) {
 ; KNL-LABEL: fhadd_16_3:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vshufps {{.*#+}} ymm2 = ymm0[0,2],ymm1[0,2],ymm0[4,6],ymm1[4,6]
-; KNL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm1[1,3],ymm0[5,7],ymm1[5,7]
-; KNL-NEXT:    vaddps %ymm0, %ymm2, %ymm0
+; KNL-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: fhadd_16_3:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vshufps {{.*#+}} ymm2 = ymm0[0,2],ymm1[0,2],ymm0[4,6],ymm1[4,6]
-; SKX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm1[1,3],ymm0[5,7],ymm1[5,7]
-; SKX-NEXT:    vaddps %ymm0, %ymm2, %ymm0
+; SKX-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
 ; SKX-NEXT:    retq
   %x226 = shufflevector <16 x float> %x225, <16 x float> %x227, <16 x i32> <i32 0, i32 2, i32 16, i32 18
 , i32 4, i32 6, i32 20, i32 22, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -154,16 +146,12 @@ define <16 x float> @fhadd_16_3(<16 x float> %x225, <16 x float> %x227) {
 define <8 x double> @fhadd_16_4(<8 x double> %x225, <8 x double> %x227) {
 ; KNL-LABEL: fhadd_16_4:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; KNL-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; KNL-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; KNL-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: fhadd_16_4:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; SKX-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; SKX-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; SKX-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
 ; SKX-NEXT:    retq
   %x226 = shufflevector <8 x double> %x225, <8 x double> %x227, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 undef, i32 undef, i32 undef, i32 undef>
   %x228 = shufflevector <8 x double> %x225, <8 x double> %x227, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 undef ,i32 undef, i32 undef, i32 undef>
@@ -174,16 +162,12 @@ define <8 x double> @fhadd_16_4(<8 x double> %x225, <8 x double> %x227) {
 define <4 x double> @fadd_noundef_low(<8 x double> %x225, <8 x double> %x227) {
 ; KNL-LABEL: fadd_noundef_low:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; KNL-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; KNL-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; KNL-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: fadd_noundef_low:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; SKX-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; SKX-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; SKX-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
 ; SKX-NEXT:    retq
   %x226 = shufflevector <8 x double> %x225, <8 x double> %x227, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
   %x228 = shufflevector <8 x double> %x225, <8 x double> %x227, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5 ,i32 13, i32 7, i32 15>
@@ -221,16 +205,12 @@ define <4 x double> @fadd_noundef_high(<8 x double> %x225, <8 x double> %x227) {
 define <8 x i32> @hadd_16_3_sv(<16 x i32> %x225, <16 x i32> %x227) {
 ; KNL-LABEL: hadd_16_3_sv:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vshufps {{.*#+}} ymm2 = ymm0[0,2],ymm1[0,2],ymm0[4,6],ymm1[4,6]
-; KNL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm1[1,3],ymm0[5,7],ymm1[5,7]
-; KNL-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; KNL-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: hadd_16_3_sv:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vshufps {{.*#+}} ymm2 = ymm0[0,2],ymm1[0,2],ymm0[4,6],ymm1[4,6]
-; SKX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm1[1,3],ymm0[5,7],ymm1[5,7]
-; SKX-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; SKX-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; SKX-NEXT:    retq
   %x226 = shufflevector <16 x i32> %x225, <16 x i32> %x227, <16 x i32> <i32 0, i32 2, i32 16, i32 18
 , i32 4, i32 6, i32 20, i32 22, i32 8, i32 10, i32 24, i32 26, i32 12, i32 14, i32 28, i32 30>

@@ -48,3 +48,9 @@ LegalizeMutation LegalizeMutations::moreElementsToNextPow2(unsigned TypeIdx,
         TypeIdx, LLT::vector(NewNumElements, VecTy.getScalarSizeInBits()));
   };
 }
+
+LegalizeMutation LegalizeMutations::scalarize(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    return std::make_pair(TypeIdx, Query.Types[TypeIdx].getElementType());
+  };
+}

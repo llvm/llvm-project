@@ -314,7 +314,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
       IsDarwin(A->TM.getTargetTriple().isOSDarwin()) {
   const Triple &TT = Asm->TM.getTargetTriple();
 
-  // Make sure we know our "debugger tuning."  The target option takes
+  // Make sure we know our "debugger tuning".  The target option takes
   // precedence; fall back to triple-based defaults.
   if (Asm->TM.Options.DebuggerTuning != DebuggerKind::Default)
     DebuggerTuning = Asm->TM.Options.DebuggerTuning;

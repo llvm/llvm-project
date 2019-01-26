@@ -80,10 +80,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
 
   if (Subtarget.is64Bit()) {
-    setTargetDAGCombine(ISD::SHL);
-    setTargetDAGCombine(ISD::SRL);
-    setTargetDAGCombine(ISD::SRA);
-    setTargetDAGCombine(ISD::ANY_EXTEND);
+    setOperationAction(ISD::SHL, MVT::i32, Custom);
+    setOperationAction(ISD::SRA, MVT::i32, Custom);
+    setOperationAction(ISD::SRL, MVT::i32, Custom);
   }
 
   if (!Subtarget.hasStdExtM()) {
@@ -94,6 +93,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UDIV, XLenVT, Expand);
     setOperationAction(ISD::SREM, XLenVT, Expand);
     setOperationAction(ISD::UREM, XLenVT, Expand);
+  }
+
+  if (Subtarget.is64Bit() && Subtarget.hasStdExtM()) {
+    setOperationAction(ISD::SDIV, MVT::i32, Custom);
+    setOperationAction(ISD::UDIV, MVT::i32, Custom);
+    setOperationAction(ISD::UREM, MVT::i32, Custom);
   }
 
   setOperationAction(ISD::SDIVREM, XLenVT, Expand);
@@ -512,29 +517,68 @@ SDValue RISCVTargetLowering::lowerRETURNADDR(SDValue Op,
   return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, XLenVT);
 }
 
-// Return true if the given node is a shift with a non-constant shift amount.
-static bool isVariableShift(SDValue Val) {
-  switch (Val.getOpcode()) {
+// Returns the opcode of the target-specific SDNode that implements the 32-bit
+// form of the given Opcode.
+static RISCVISD::NodeType getRISCVWOpcode(unsigned Opcode) {
+  switch (Opcode) {
   default:
-    return false;
+    llvm_unreachable("Unexpected opcode");
   case ISD::SHL:
+    return RISCVISD::SLLW;
   case ISD::SRA:
+    return RISCVISD::SRAW;
   case ISD::SRL:
-    return Val.getOperand(1).getOpcode() != ISD::Constant;
+    return RISCVISD::SRLW;
+  case ISD::SDIV:
+    return RISCVISD::DIVW;
+  case ISD::UDIV:
+    return RISCVISD::DIVUW;
+  case ISD::UREM:
+    return RISCVISD::REMUW;
   }
 }
 
-// Returns true if the given node is an sdiv, udiv, or urem with non-constant
-// operands.
-static bool isVariableSDivUDivURem(SDValue Val) {
-  switch (Val.getOpcode()) {
+// Converts the given 32-bit operation to a target-specific SelectionDAG node.
+// Because i32 isn't a legal type for RV64, these operations would otherwise
+// be promoted to i64, making it difficult to select the SLLW/DIVUW/.../*W
+// later one because the fact the operation was originally of type i32 is
+// lost.
+static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  RISCVISD::NodeType WOpcode = getRISCVWOpcode(N->getOpcode());
+  SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
+  SDValue NewOp1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+  SDValue NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOp0, NewOp1);
+  // ReplaceNodeResults requires we maintain the same type for the return value.
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes);
+}
+
+void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
+                                             SmallVectorImpl<SDValue> &Results,
+                                             SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  switch (N->getOpcode()) {
   default:
-    return false;
+    llvm_unreachable("Don't know how to custom type legalize this operation!");
+  case ISD::SHL:
+  case ISD::SRA:
+  case ISD::SRL:
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    if (N->getOperand(1).getOpcode() == ISD::Constant)
+      return;
+    Results.push_back(customLegalizeToWOp(N, DAG));
+    break;
   case ISD::SDIV:
   case ISD::UDIV:
   case ISD::UREM:
-    return Val.getOperand(0).getOpcode() != ISD::Constant &&
-           Val.getOperand(1).getOpcode() != ISD::Constant;
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           Subtarget.hasStdExtM() && "Unexpected custom legalisation");
+    if (N->getOperand(0).getOpcode() == ISD::Constant ||
+        N->getOperand(1).getOpcode() == ISD::Constant)
+      return;
+    Results.push_back(customLegalizeToWOp(N, DAG));
+    break;
   }
 }
 
@@ -545,53 +589,74 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   default:
     break;
-  case ISD::SHL:
-  case ISD::SRL:
-  case ISD::SRA: {
-    assert(Subtarget.getXLen() == 64 && "Combine should be 64-bit only");
-    if (!DCI.isBeforeLegalize())
-      break;
-    SDValue RHS = N->getOperand(1);
-    if (N->getValueType(0) != MVT::i32 || RHS->getOpcode() == ISD::Constant ||
-        (RHS->getOpcode() == ISD::AssertZext &&
-         cast<VTSDNode>(RHS->getOperand(1))->getVT().getSizeInBits() <= 5))
-      break;
-    SDValue LHS = N->getOperand(0);
-    SDLoc DL(N);
-    SDValue NewRHS =
-        DAG.getNode(ISD::AssertZext, DL, RHS.getValueType(), RHS,
-                    DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), 5)));
-    return DCI.CombineTo(
-        N, DAG.getNode(N->getOpcode(), DL, LHS.getValueType(), LHS, NewRHS));
-  }
-  case ISD::ANY_EXTEND: {
-    // If any-extending an i32 variable-length shift or sdiv/udiv/urem to i64,
-    // then instead sign-extend in order to increase the chance of being able
-    // to select the sllw/srlw/sraw/divw/divuw/remuw instructions.
-    SDValue Src = N->getOperand(0);
-    if (N->getValueType(0) != MVT::i64 || Src.getValueType() != MVT::i32)
-      break;
-    if (!isVariableShift(Src) &&
-        !(Subtarget.hasStdExtM() && isVariableSDivUDivURem(Src)))
-      break;
-    SDLoc DL(N);
-    // Don't add the new node to the DAGCombiner worklist, in order to avoid
-    // an infinite cycle due to SimplifyDemandedBits converting the
-    // SIGN_EXTEND back to ANY_EXTEND.
-    return DCI.CombineTo(N, DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Src),
-                         false);
-  }
   case RISCVISD::SplitF64: {
+    SDValue Op0 = N->getOperand(0);
     // If the input to SplitF64 is just BuildPairF64 then the operation is
     // redundant. Instead, use BuildPairF64's operands directly.
-    SDValue Op0 = N->getOperand(0);
-    if (Op0->getOpcode() != RISCVISD::BuildPairF64)
+    if (Op0->getOpcode() == RISCVISD::BuildPairF64)
+      return DCI.CombineTo(N, Op0.getOperand(0), Op0.getOperand(1));
+
+    SDLoc DL(N);
+    // This is a target-specific version of a DAGCombine performed in
+    // DAGCombiner::visitBITCAST. It performs the equivalent of:
+    // fold (bitconvert (fneg x)) -> (xor (bitconvert x), signbit)
+    // fold (bitconvert (fabs x)) -> (and (bitconvert x), (not signbit))
+    if (!(Op0.getOpcode() == ISD::FNEG || Op0.getOpcode() == ISD::FABS) ||
+        !Op0.getNode()->hasOneUse())
       break;
-    return DCI.CombineTo(N, Op0.getOperand(0), Op0.getOperand(1));
+    SDValue NewSplitF64 =
+        DAG.getNode(RISCVISD::SplitF64, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                    Op0.getOperand(0));
+    SDValue Lo = NewSplitF64.getValue(0);
+    SDValue Hi = NewSplitF64.getValue(1);
+    APInt SignBit = APInt::getSignMask(32);
+    if (Op0.getOpcode() == ISD::FNEG) {
+      SDValue NewHi = DAG.getNode(ISD::XOR, DL, MVT::i32, Hi,
+                                  DAG.getConstant(SignBit, DL, MVT::i32));
+      return DCI.CombineTo(N, Lo, NewHi);
+    }
+    assert(Op0.getOpcode() == ISD::FABS);
+    SDValue NewHi = DAG.getNode(ISD::AND, DL, MVT::i32, Hi,
+                                DAG.getConstant(~SignBit, DL, MVT::i32));
+    return DCI.CombineTo(N, Lo, NewHi);
+  }
+  case RISCVISD::SLLW:
+  case RISCVISD::SRAW:
+  case RISCVISD::SRLW: {
+    // Only the lower 32 bits of LHS and lower 5 bits of RHS are read.
+    SDValue LHS = N->getOperand(0);
+    SDValue RHS = N->getOperand(1);
+    APInt LHSMask = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 32);
+    APInt RHSMask = APInt::getLowBitsSet(RHS.getValueSizeInBits(), 5);
+    if ((SimplifyDemandedBits(N->getOperand(0), LHSMask, DCI)) ||
+        (SimplifyDemandedBits(N->getOperand(1), RHSMask, DCI)))
+      return SDValue();
+    break;
   }
   }
 
   return SDValue();
+}
+
+unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    unsigned Depth) const {
+  switch (Op.getOpcode()) {
+  default:
+    break;
+  case RISCVISD::SLLW:
+  case RISCVISD::SRAW:
+  case RISCVISD::SRLW:
+  case RISCVISD::DIVW:
+  case RISCVISD::DIVUW:
+  case RISCVISD::REMUW:
+    // TODO: As the result is sign-extended, this is conservatively correct. A
+    // more precise answer could be calculated for SRAW depending on known
+    // bits in the shift amount.
+    return 33;
+  }
+
+  return 1;
 }
 
 static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
@@ -1682,6 +1747,18 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "RISCVISD::SplitF64";
   case RISCVISD::TAIL:
     return "RISCVISD::TAIL";
+  case RISCVISD::SLLW:
+    return "RISCVISD::SLLW";
+  case RISCVISD::SRAW:
+    return "RISCVISD::SRAW";
+  case RISCVISD::SRLW:
+    return "RISCVISD::SRLW";
+  case RISCVISD::DIVW:
+    return "RISCVISD::DIVW";
+  case RISCVISD::DIVUW:
+    return "RISCVISD::DIVUW";
+  case RISCVISD::REMUW:
+    return "RISCVISD::REMUW";
   }
   return nullptr;
 }

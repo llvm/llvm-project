@@ -152,9 +152,9 @@ define i32 @_Z10test_shortPsS_i_256(i16* nocapture readonly, i16* nocapture read
 ; AVX256-NEXT:    jne .LBB1_1
 ; AVX256-NEXT:  # %bb.2: # %middle.block
 ; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX256-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX256-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX256-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vmovd %xmm0, %eax
@@ -277,9 +277,9 @@ define i32 @_Z10test_shortPsS_i_512(i16* nocapture readonly, i16* nocapture read
 ; AVX2-NEXT:  # %bb.2: # %middle.block
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
@@ -465,9 +465,9 @@ define i32 @_Z10test_shortPsS_i_1024(i16* nocapture readonly, i16* nocapture rea
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
@@ -726,9 +726,9 @@ define i32 @_Z9test_charPcS_i_256(i8* nocapture readonly, i8* nocapture readonly
 ; AVX256-NEXT:    jne .LBB5_1
 ; AVX256-NEXT:  # %bb.2: # %middle.block
 ; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX256-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX256-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX256-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vmovd %xmm0, %eax
@@ -860,9 +860,9 @@ define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly
 ; AVX2-NEXT:  # %bb.2: # %middle.block
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
@@ -1067,9 +1067,9 @@ define i32 @_Z9test_charPcS_i_1024(i8* nocapture readonly, i8* nocapture readonl
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
@@ -1335,9 +1335,9 @@ define i32 @test_unsigned_short_256(i16* nocapture readonly, i16* nocapture read
 ; AVX256-NEXT:    jne .LBB9_1
 ; AVX256-NEXT:  # %bb.2: # %middle.block
 ; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX256-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX256-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX256-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vmovd %xmm0, %eax
@@ -1490,9 +1490,9 @@ define i32 @test_unsigned_short_512(i16* nocapture readonly, i16* nocapture read
 ; AVX2-NEXT:  # %bb.2: # %middle.block
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
@@ -1743,9 +1743,9 @@ define i32 @test_unsigned_short_1024(i16* nocapture readonly, i16* nocapture rea
 ; AVX2-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
@@ -2695,9 +2695,9 @@ define i32 @madd_double_reduction(<8 x i16>* %arg, <8 x i16>* %arg1, <8 x i16>* 
 ; AVX256-NEXT:    vpmaddwd (%rcx), %xmm1, %xmm1
 ; AVX256-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX256-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX256-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX256-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vmovd %xmm0, %eax

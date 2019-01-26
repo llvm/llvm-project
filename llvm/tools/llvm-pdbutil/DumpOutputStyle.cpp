@@ -1412,12 +1412,6 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
   if (DumpExtras) {
     P.NewLine();
-    support::ulittle32_t Version;
-
-    support::ulittle16_t HashStreamIndex;
-    support::ulittle16_t HashAuxStreamIndex;
-    support::ulittle32_t HashKeySize;
-    support::ulittle32_t NumHashBuckets;
 
     P.formatLine("Header Version: {0}",
                  static_cast<uint32_t>(Stream.getTpiVersion()));

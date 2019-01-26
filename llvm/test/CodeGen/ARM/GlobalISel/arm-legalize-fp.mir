@@ -1,6 +1,6 @@
-# RUN: llc -mtriple arm-linux-gnueabihf -mattr=+vfp2 -float-abi=hard -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix HARD
-# RUN: llc -mtriple arm-linux-gnueabi -mattr=+vfp2,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-AEABI
-# RUN: llc -mtriple arm-linux-gnu -mattr=+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-DEFAULT
+# RUN: llc -O0 -mtriple arm-linux-gnueabihf -mattr=+vfp2 -float-abi=hard -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix HARD
+# RUN: llc -O0 -mtriple arm-linux-gnueabi -mattr=+vfp2,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-AEABI
+# RUN: llc -O0 -mtriple arm-linux-gnu -mattr=+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-DEFAULT
 --- |
   define void @test_frem_float() { ret void }
   define void @test_frem_double() { ret void }

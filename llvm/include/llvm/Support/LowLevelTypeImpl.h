@@ -70,6 +70,14 @@ public:
                ScalarTy.isPointer() ? ScalarTy.getAddressSpace() : 0};
   }
 
+  static LLT scalarOrVector(uint16_t NumElements, LLT ScalarTy) {
+    return NumElements == 1 ? ScalarTy : LLT::vector(NumElements, ScalarTy);
+  }
+
+  static LLT scalarOrVector(uint16_t NumElements, unsigned ScalarSize) {
+    return scalarOrVector(NumElements, LLT::scalar(ScalarSize));
+  }
+
   explicit LLT(bool isPointer, bool isVector, uint16_t NumElements,
                unsigned SizeInBits, unsigned AddressSpace) {
     init(isPointer, isVector, NumElements, SizeInBits, AddressSpace);

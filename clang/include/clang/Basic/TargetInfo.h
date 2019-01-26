@@ -63,6 +63,7 @@ protected:
   bool HasLegalHalfType; // True if the backend supports operations on the half
                          // LLVM IR type.
   bool HasFloat128;
+  bool HasFloat16;
   unsigned char PointerWidth, PointerAlign;
   unsigned char BoolWidth, BoolAlign;
   unsigned char IntWidth, IntAlign;
@@ -515,6 +516,9 @@ public:
 
   /// Determine whether the __float128 type is supported on this target.
   virtual bool hasFloat128Type() const { return HasFloat128; }
+
+  /// Determine whether the _Float16 type is supported on this target.
+  virtual bool hasFloat16Type() const { return HasFloat16; }
 
   /// Return the alignment that is suitable for storing any
   /// object with a fundamental alignment requirement.

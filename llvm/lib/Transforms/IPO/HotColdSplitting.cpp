@@ -5,11 +5,24 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Outline cold regions to a separate function.
-// TODO: Update BFI and BPI
-// TODO: Add all the outlined functions to a separate section.
-//
+///
+/// \file
+/// The goal of hot/cold splitting is to improve the memory locality of code.
+/// The splitting pass does this by identifying cold blocks and moving them into
+/// separate functions.
+///
+/// When the splitting pass finds a cold block (referred to as "the sink"), it
+/// grows a maximal cold region around that block. The maximal region contains
+/// all blocks (post-)dominated by the sink [*]. In theory, these blocks are as
+/// cold as the sink. Once a region is found, it's split out of the original
+/// function provided it's profitable to do so.
+///
+/// [*] In practice, there is some added complexity because some blocks are not
+/// safe to extract.
+///
+/// TODO: Use the PM to get domtrees, and preserve BFI/BPI.
+/// TODO: Reorder outlined functions.
+///
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/PostOrderIterator.h"
@@ -67,9 +80,9 @@ static cl::opt<bool> EnableStaticAnalyis("hot-cold-static-analysis",
                               cl::init(true), cl::Hidden);
 
 static cl::opt<int>
-    SplittingThreshold("hotcoldsplit-threshold", cl::init(3), cl::Hidden,
-                       cl::desc("Code size threshold for splitting cold code "
-                                "(as a multiple of TCC_Basic)"));
+    SplittingThreshold("hotcoldsplit-threshold", cl::init(2), cl::Hidden,
+                       cl::desc("Base penalty for splitting cold code (as a "
+                                "multiple of TCC_Basic)"));
 
 namespace {
 
@@ -119,32 +132,11 @@ bool unlikelyExecuted(BasicBlock &BB) {
 
 /// Check whether it's safe to outline \p BB.
 static bool mayExtractBlock(const BasicBlock &BB) {
-  return !BB.hasAddressTaken() && !BB.isEHPad();
-}
-
-/// Check whether \p Region is profitable to outline.
-static bool isProfitableToOutline(const BlockSequence &Region,
-                                  TargetTransformInfo &TTI) {
-  // If the splitting threshold is set at or below zero, skip the usual
-  // profitability check.
-  if (SplittingThreshold <= 0)
-    return true;
-
-  if (Region.size() > 1)
-    return true;
-
-  int Cost = 0;
-  const BasicBlock &BB = *Region[0];
-  for (const Instruction &I : BB) {
-    if (isa<DbgInfoIntrinsic>(&I) || &I == BB.getTerminator())
-      continue;
-
-    Cost += TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
-
-    if (Cost >= (SplittingThreshold * TargetTransformInfo::TCC_Basic))
-      return true;
-  }
-  return false;
+  // EH pads are unsafe to outline because doing so breaks EH type tables. It
+  // follows that invoke instructions cannot be extracted, because CodeExtractor
+  // requires unwind destinations to be within the extraction region.
+  return !BB.hasAddressTaken() && !BB.isEHPad() &&
+         !isa<InvokeInst>(BB.getTerminator());
 }
 
 /// Mark \p F cold. Based on this assumption, also optimize it for minimum size.
@@ -230,6 +222,82 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
   return true;
 }
 
+/// Get the benefit score of outlining \p Region.
+static int getOutliningBenefit(ArrayRef<BasicBlock *> Region,
+                               TargetTransformInfo &TTI) {
+  // Sum up the code size costs of non-terminator instructions. Tight coupling
+  // with \ref getOutliningPenalty is needed to model the costs of terminators.
+  int Benefit = 0;
+  for (BasicBlock *BB : Region)
+    for (Instruction &I : BB->instructionsWithoutDebug())
+      if (&I != BB->getTerminator())
+        Benefit +=
+            TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
+
+  return Benefit;
+}
+
+/// Get the penalty score for outlining \p Region.
+static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
+                               unsigned NumInputs, unsigned NumOutputs) {
+  int Penalty = SplittingThreshold;
+  LLVM_DEBUG(dbgs() << "Applying penalty for splitting: " << Penalty << "\n");
+
+  // If the splitting threshold is set at or below zero, skip the usual
+  // profitability check.
+  if (SplittingThreshold <= 0)
+    return Penalty;
+
+  // The typical code size cost for materializing an argument for the outlined
+  // call.
+  LLVM_DEBUG(dbgs() << "Applying penalty for: " << NumInputs << " inputs\n");
+  const int CostForArgMaterialization = TargetTransformInfo::TCC_Basic;
+  Penalty += CostForArgMaterialization * NumInputs;
+
+  // The typical code size cost for an output alloca, its associated store, and
+  // its associated reload.
+  LLVM_DEBUG(dbgs() << "Applying penalty for: " << NumOutputs << " outputs\n");
+  const int CostForRegionOutput = 3 * TargetTransformInfo::TCC_Basic;
+  Penalty += CostForRegionOutput * NumOutputs;
+
+  // Find the number of distinct exit blocks for the region. Use a conservative
+  // check to determine whether control returns from the region.
+  bool NoBlocksReturn = true;
+  SmallPtrSet<BasicBlock *, 2> SuccsOutsideRegion;
+  for (BasicBlock *BB : Region) {
+    // If a block has no successors, only assume it does not return if it's
+    // unreachable.
+    if (succ_empty(BB)) {
+      NoBlocksReturn &= isa<UnreachableInst>(BB->getTerminator());
+      continue;
+    }
+
+    for (BasicBlock *SuccBB : successors(BB)) {
+      if (find(Region, SuccBB) == Region.end()) {
+        NoBlocksReturn = false;
+        SuccsOutsideRegion.insert(SuccBB);
+      }
+    }
+  }
+
+  // Apply a `noreturn` bonus.
+  if (NoBlocksReturn) {
+    LLVM_DEBUG(dbgs() << "Applying bonus for: " << Region.size()
+                      << " non-returning terminators\n");
+    Penalty -= Region.size();
+  }
+
+  // Apply a penalty for having more than one successor outside of the region.
+  // This penalty accounts for the switch needed in the caller.
+  if (!SuccsOutsideRegion.empty()) {
+    LLVM_DEBUG(dbgs() << "Applying penalty for: " << SuccsOutsideRegion.size()
+                      << " non-region successors\n");
+    Penalty += (SuccsOutsideRegion.size() - 1) * TargetTransformInfo::TCC_Basic;
+  }
+
+  return Penalty;
+}
+
 Function *HotColdSplitting::extractColdRegion(const BlockSequence &Region,
                                               DominatorTree &DT,
                                               BlockFrequencyInfo *BFI,
@@ -243,6 +311,18 @@ Function *HotColdSplitting::extractColdRegion(const BlockSequence &Region,
                    /* BPI */ nullptr, /* AllowVarArgs */ false,
                    /* AllowAlloca */ false,
                    /* Suffix */ "cold." + std::to_string(Count));
+
+  // Perform a simple cost/benefit analysis to decide whether or not to permit
+  // splitting.
+  SetVector<Value *> Inputs, Outputs, Sinks;
+  CE.findInputsOutputs(Inputs, Outputs, Sinks);
+  int OutliningBenefit = getOutliningBenefit(Region, TTI);
+  int OutliningPenalty =
+      getOutliningPenalty(Region, Inputs.size(), Outputs.size());
+  LLVM_DEBUG(dbgs() << "Split profitability: benefit = " << OutliningBenefit
+                    << ", penalty = " << OutliningPenalty << "\n");
+  if (OutliningBenefit <= OutliningPenalty)
+    return nullptr;
 
   Function *OrigF = Region[0]->getParent();
   if (Function *OutF = CE.extractCodeRegion()) {
@@ -283,6 +363,8 @@ using BlockTy = std::pair<BasicBlock *, unsigned>;
 namespace {
 /// A maximal outlining region. This contains all blocks post-dominated by a
 /// sink block, the sink block itself, and all blocks dominated by the sink.
+/// If sink-predecessors and sink-successors cannot be extracted in one region,
+/// the static constructor returns a list of suitable extraction regions.
 class OutliningRegion {
   /// A list of (block, score) pairs. A block's score is non-zero iff it's a
   /// viable sub-region entry point. Blocks with higher scores are better entry
@@ -297,12 +379,9 @@ class OutliningRegion {
   /// Whether the entire function is cold.
   bool EntireFunctionCold = false;
 
-  /// Whether or not \p BB could be the entry point of an extracted region.
-  static bool isViableEntryPoint(BasicBlock &BB) { return !BB.isEHPad(); }
-
   /// If \p BB is a viable entry point, return \p Score. Return 0 otherwise.
   static unsigned getEntryPointScore(BasicBlock &BB, unsigned Score) {
-    return isViableEntryPoint(BB) ? Score : 0;
+    return mayExtractBlock(BB) ? Score : 0;
   }
 
   /// These scores should be lower than the score for predecessor blocks,
@@ -318,21 +397,23 @@ public:
   OutliningRegion(OutliningRegion &&) = default;
   OutliningRegion &operator=(OutliningRegion &&) = default;
 
-  static OutliningRegion create(BasicBlock &SinkBB, const DominatorTree &DT,
-                                const PostDominatorTree &PDT) {
-    OutliningRegion ColdRegion;
-
+  static std::vector<OutliningRegion> create(BasicBlock &SinkBB,
+                                             const DominatorTree &DT,
+                                             const PostDominatorTree &PDT) {
+    std::vector<OutliningRegion> Regions;
     SmallPtrSet<BasicBlock *, 4> RegionBlocks;
+
+    Regions.emplace_back();
+    OutliningRegion *ColdRegion = &Regions.back();
 
     auto addBlockToRegion = [&](BasicBlock *BB, unsigned Score) {
       RegionBlocks.insert(BB);
-      ColdRegion.Blocks.emplace_back(BB, Score);
-      assert(RegionBlocks.size() == ColdRegion.Blocks.size() && "Duplicate BB");
+      ColdRegion->Blocks.emplace_back(BB, Score);
     };
 
     // The ancestor farthest-away from SinkBB, and also post-dominated by it.
     unsigned SinkScore = getEntryPointScore(SinkBB, ScoreForSinkBlock);
-    ColdRegion.SuggestedEntryPoint = (SinkScore > 0) ? &SinkBB : nullptr;
+    ColdRegion->SuggestedEntryPoint = (SinkScore > 0) ? &SinkBB : nullptr;
     unsigned BestScore = SinkScore;
 
     // Visit SinkBB's ancestors using inverse DFS.
@@ -345,8 +426,8 @@ public:
       // If the predecessor is cold and has no predecessors, the entire
       // function must be cold.
       if (SinkPostDom && pred_empty(&PredBB)) {
-        ColdRegion.EntireFunctionCold = true;
-        return ColdRegion;
+        ColdRegion->EntireFunctionCold = true;
+        return Regions;
       }
 
       // If SinkBB does not post-dominate a predecessor, do not mark the
@@ -361,7 +442,7 @@ public:
       // considered as entry points before the sink block.
       unsigned PredScore = getEntryPointScore(PredBB, PredIt.getPathLength());
       if (PredScore > BestScore) {
-        ColdRegion.SuggestedEntryPoint = &PredBB;
+        ColdRegion->SuggestedEntryPoint = &PredBB;
         BestScore = PredScore;
       }
 
@@ -369,10 +450,19 @@ public:
       ++PredIt;
     }
 
-    // Add SinkBB to the cold region. It's considered as an entry point before
-    // any sink-successor blocks.
-    if (mayExtractBlock(SinkBB))
+    // If the sink can be added to the cold region, do so. It's considered as
+    // an entry point before any sink-successor blocks.
+    //
+    // Otherwise, split cold sink-successor blocks using a separate region.
+    // This satisfies the requirement that all extraction blocks other than the
+    // first have predecessors within the extraction region.
+    if (mayExtractBlock(SinkBB)) {
       addBlockToRegion(&SinkBB, SinkScore);
+    } else {
+      Regions.emplace_back();
+      ColdRegion = &Regions.back();
+      BestScore = 0;
+    }
 
     // Find all successors of SinkBB dominated by SinkBB using DFS.
     auto SuccIt = ++df_begin(&SinkBB);
@@ -393,7 +483,7 @@ public:
 
       unsigned SuccScore = getEntryPointScore(SuccBB, ScoreForSuccBlock);
       if (SuccScore > BestScore) {
-        ColdRegion.SuggestedEntryPoint = &SuccBB;
+        ColdRegion->SuggestedEntryPoint = &SuccBB;
         BestScore = SuccScore;
       }
 
@@ -401,7 +491,7 @@ public:
       ++SuccIt;
     }
 
-    return ColdRegion;
+    return Regions;
   }
 
   /// Whether this region has nothing to extract.
@@ -496,28 +586,30 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
     if (!PDT)
       PDT = make_unique<PostDominatorTree>(F);
 
-    auto Region = OutliningRegion::create(*BB, *DT, *PDT);
-    if (Region.empty())
-      continue;
+    auto Regions = OutliningRegion::create(*BB, *DT, *PDT);
+    for (OutliningRegion &Region : Regions) {
+      if (Region.empty())
+        continue;
 
-    if (Region.isEntireFunctionCold()) {
-      LLVM_DEBUG(dbgs() << "Entire function is cold\n");
-      return markFunctionCold(F);
+      if (Region.isEntireFunctionCold()) {
+        LLVM_DEBUG(dbgs() << "Entire function is cold\n");
+        return markFunctionCold(F);
+      }
+
+      // If this outlining region intersects with another, drop the new region.
+      //
+      // TODO: It's theoretically possible to outline more by only keeping the
+      // largest region which contains a block, but the extra bookkeeping to do
+      // this is tricky/expensive.
+      bool RegionsOverlap = any_of(Region.blocks(), [&](const BlockTy &Block) {
+        return !ColdBlocks.insert(Block.first).second;
+      });
+      if (RegionsOverlap)
+        continue;
+
+      OutliningWorklist.emplace_back(std::move(Region));
+      ++NumColdRegionsFound;
     }
-
-    // If this outlining region intersects with another, drop the new region.
-    //
-    // TODO: It's theoretically possible to outline more by only keeping the
-    // largest region which contains a block, but the extra bookkeeping to do
-    // this is tricky/expensive.
-    bool RegionsOverlap = any_of(Region.blocks(), [&](const BlockTy &Block) {
-      return !ColdBlocks.insert(Block.first).second;
-    });
-    if (RegionsOverlap)
-      continue;
-
-    OutliningWorklist.emplace_back(std::move(Region));
-    ++NumColdRegionsFound;
   }
 
   // Outline single-entry cold regions, splitting up larger regions as needed.
@@ -527,14 +619,6 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
     assert(!Region.empty() && "Empty outlining region in worklist");
     do {
       BlockSequence SubRegion = Region.takeSingleEntrySubRegion(*DT);
-      if (!isProfitableToOutline(SubRegion, TTI)) {
-        LLVM_DEBUG({
-          dbgs() << "Skipping outlining; not profitable to outline\n";
-          SubRegion[0]->dump();
-        });
-        continue;
-      }
-
       LLVM_DEBUG({
         dbgs() << "Hot/cold splitting attempting to outline these blocks:\n";
         for (BasicBlock *BB : SubRegion)

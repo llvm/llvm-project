@@ -24,8 +24,8 @@ define linkonce_odr void @ZN6snappyDecompressor_(%"class.snappy::SnappyDecompres
 ; CHECK-DAG:   addi 25, 3, _ZN6snappy8internalL8wordmaskE@toc@l
 ; CHECK-DAG:   addis 5, 2, _ZN6snappy8internalL10char_tableE@toc@ha
 ; CHECK-DAG:   addi 24, 5, _ZN6snappy8internalL10char_tableE@toc@l
-; CHECK:       b .LBB0_2
-; CHECK:       .LBB0_2: # %for.cond
+; CHECK:       b .[[LABEL1:[A-Z0-9_]+]]
+; CHECK:       .[[LABEL1]]: # %for.cond
 ; CHECK-NOT:   addis {{[0-9]+}}, 2, _ZN6snappy8internalL8wordmaskE@toc@ha
 ; CHECK-NOT:   addis {{[0-9]+}}, 2, _ZN6snappy8internalL10char_tableE@toc@ha
 ; CHECK:       bctrl

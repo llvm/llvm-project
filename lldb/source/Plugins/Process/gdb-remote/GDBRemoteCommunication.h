@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "lldb/Core/Communication.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Listener.h"
@@ -217,8 +218,10 @@ private:
   HostThread m_listen_thread;
   std::string m_listen_url;
 
-  CompressionType m_decompression_scratch_type;
-  void *m_decompression_scratch;
+#if defined(HAVE_LIBCOMPRESSION)
+  CompressionType m_decompression_scratch_type = CompressionType::None;
+  void *m_decompression_scratch = nullptr;
+#endif
 
   DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunication);
 };

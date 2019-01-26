@@ -14315,53 +14315,30 @@ static SDValue lowerShuffleByMerging128BitLanes(
   return DAG.getVectorShuffle(VT, DL, NewV1, NewV2, NewMask);
 }
 
-/// Lower shuffles where an entire half of a 256 or 512-bit vector is UNDEF.
-/// This allows for fast cases such as subvector extraction/insertion
-/// or shuffling smaller vector types which can lower more efficiently.
-static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
-                                         SDValue V2, ArrayRef<int> Mask,
-                                         const X86Subtarget &Subtarget,
-                                         SelectionDAG &DAG) {
-  assert((VT.is256BitVector() || VT.is512BitVector()) &&
-         "Expected 256-bit or 512-bit vector");
+/// If the input shuffle mask results in a vector that is undefined in all upper
+/// or lower half elements and that mask accesses only 2 halves of the
+/// shuffle's operands, return true. A mask of half the width with mask indexes
+/// adjusted to access the extracted halves of the original shuffle operands is
+/// returned in HalfMask. HalfIdx1 and HalfIdx2 return whether the upper or
+/// lower half of each input operand is accessed.
+static bool
+getHalfShuffleMask(ArrayRef<int> Mask, MutableArrayRef<int> HalfMask,
+                   int &HalfIdx1, int &HalfIdx2) {
+  assert((Mask.size() == HalfMask.size() * 2) &&
+         "Expected input mask to be twice as long as output");
 
-  unsigned NumElts = VT.getVectorNumElements();
-  unsigned HalfNumElts = NumElts / 2;
-  MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(), HalfNumElts);
-
+  // Exactly one half of the result must be undef to allow narrowing.
   bool UndefLower = isUndefLowerHalf(Mask);
   bool UndefUpper = isUndefUpperHalf(Mask);
-  if (!UndefLower && !UndefUpper)
-    return SDValue();
+  if (UndefLower == UndefUpper)
+    return false;
 
-  // Upper half is undef and lower half is whole upper subvector.
-  // e.g. vector_shuffle <4, 5, 6, 7, u, u, u, u> or <2, 3, u, u>
-  if (UndefUpper &&
-      isSequentialOrUndefInRange(Mask, 0, HalfNumElts, HalfNumElts)) {
-    SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V1,
-                             DAG.getIntPtrConstant(HalfNumElts, DL));
-    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), Hi,
-                       DAG.getIntPtrConstant(0, DL));
-  }
-
-  // Lower half is undef and upper half is whole lower subvector.
-  // e.g. vector_shuffle <u, u, u, u, 0, 1, 2, 3> or <u, u, 0, 1>
-  if (UndefLower &&
-      isSequentialOrUndefInRange(Mask, HalfNumElts, HalfNumElts, 0)) {
-    SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V1,
-                             DAG.getIntPtrConstant(0, DL));
-    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), Hi,
-                       DAG.getIntPtrConstant(HalfNumElts, DL));
-  }
-
-  // If the shuffle only uses two of the four halves of the input operands,
-  // then extract them and perform the 'half' shuffle at half width.
-  // e.g. vector_shuffle <X, X, X, X, u, u, u, u> or <X, X, u, u>
-  int HalfIdx1 = -1, HalfIdx2 = -1;
-  SmallVector<int, 8> HalfMask(HalfNumElts);
-  unsigned Offset = UndefLower ? HalfNumElts : 0;
+  unsigned HalfNumElts = HalfMask.size();
+  unsigned MaskIndexOffset = UndefLower ? HalfNumElts : 0;
+  HalfIdx1 = -1;
+  HalfIdx2 = -1;
   for (unsigned i = 0; i != HalfNumElts; ++i) {
-    int M = Mask[i + Offset];
+    int M = Mask[i + MaskIndexOffset];
     if (M < 0) {
       HalfMask[i] = M;
       continue;
@@ -14388,8 +14365,58 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
     }
 
     // Too many half vectors referenced.
-    return SDValue();
+    return false;
   }
+
+  return true;
+}
+
+/// Lower shuffles where an entire half of a 256 or 512-bit vector is UNDEF.
+/// This allows for fast cases such as subvector extraction/insertion
+/// or shuffling smaller vector types which can lower more efficiently.
+static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
+                                         SDValue V2, ArrayRef<int> Mask,
+                                         const X86Subtarget &Subtarget,
+                                         SelectionDAG &DAG) {
+  assert((VT.is256BitVector() || VT.is512BitVector()) &&
+         "Expected 256-bit or 512-bit vector");
+
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned HalfNumElts = NumElts / 2;
+  MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(), HalfNumElts);
+
+  bool UndefLower = isUndefLowerHalf(Mask);
+  if (!UndefLower && !isUndefUpperHalf(Mask))
+    return SDValue();
+
+  assert((!UndefLower || !isUndefUpperHalf(Mask)) &&
+         "Completely undef shuffle mask should have been simplified already");
+
+  // Upper half is undef and lower half is whole upper subvector.
+  // e.g. vector_shuffle <4, 5, 6, 7, u, u, u, u> or <2, 3, u, u>
+  if (!UndefLower &&
+      isSequentialOrUndefInRange(Mask, 0, HalfNumElts, HalfNumElts)) {
+    SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V1,
+                             DAG.getIntPtrConstant(HalfNumElts, DL));
+    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), Hi,
+                       DAG.getIntPtrConstant(0, DL));
+  }
+
+  // Lower half is undef and upper half is whole lower subvector.
+  // e.g. vector_shuffle <u, u, u, u, 0, 1, 2, 3> or <u, u, 0, 1>
+  if (UndefLower &&
+      isSequentialOrUndefInRange(Mask, HalfNumElts, HalfNumElts, 0)) {
+    SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V1,
+                             DAG.getIntPtrConstant(0, DL));
+    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), Hi,
+                       DAG.getIntPtrConstant(HalfNumElts, DL));
+  }
+
+  int HalfIdx1, HalfIdx2;
+  SmallVector<int, 8> HalfMask(HalfNumElts);
+  if (!getHalfShuffleMask(Mask, HalfMask, HalfIdx1, HalfIdx2))
+    return SDValue();
+
   assert(HalfMask.size() == HalfNumElts && "Unexpected shuffle mask length");
 
   // Only shuffle the halves of the inputs when useful.
@@ -14403,24 +14430,24 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
     return SDValue();
 
   // XXXXuuuu - don't extract both uppers, instead shuffle and then extract.
-  if (UndefUpper && NumUpperHalves == 2)
+  if (!UndefLower && NumUpperHalves == 2)
     return SDValue();
 
   // AVX2 - XXXXuuuu - always extract lowers.
-  if (Subtarget.hasAVX2() && !(UndefUpper && NumUpperHalves == 0)) {
+  if (Subtarget.hasAVX2() && (UndefLower || NumUpperHalves != 0)) {
     // AVX2 supports efficient immediate 64-bit element cross-lane shuffles.
     if (VT == MVT::v4f64 || VT == MVT::v4i64)
       return SDValue();
     // AVX2 supports variable 32-bit element cross-lane shuffles.
     if (VT == MVT::v8f32 || VT == MVT::v8i32) {
       // XXXXuuuu - don't extract lowers and uppers.
-      if (UndefUpper && NumLowerHalves != 0 && NumUpperHalves != 0)
+      if (!UndefLower && NumLowerHalves != 0 && NumUpperHalves != 0)
         return SDValue();
     }
   }
 
   // AVX512 - XXXXuuuu - always extract lowers.
-  if (VT.is512BitVector() && !(UndefUpper && NumUpperHalves == 0))
+  if (VT.is512BitVector() && (UndefLower || NumUpperHalves != 0))
     return SDValue();
 
   auto GetHalfVector = [&](int HalfIdx) {
@@ -14435,6 +14462,7 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
   SDValue Half1 = GetHalfVector(HalfIdx1);
   SDValue Half2 = GetHalfVector(HalfIdx2);
   SDValue V = DAG.getVectorShuffle(HalfVT, DL, Half1, Half2, HalfMask);
+  unsigned Offset = UndefLower ? HalfNumElts : 0;
   return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), V,
                      DAG.getIntPtrConstant(Offset, DL));
 }
@@ -32302,14 +32330,59 @@ static SDValue foldShuffleOfHorizOp(SDNode *N) {
   return SDValue();
 }
 
+/// If we have a shuffle of AVX/AVX512 (256/512 bit) vectors that only uses the
+/// low half of each source vector and does not set any high half elements in
+/// the destination vector, narrow the shuffle to half its original size.
+static SDValue narrowShuffle(ShuffleVectorSDNode *Shuf, SelectionDAG &DAG) {
+  if (!Shuf->getValueType(0).isSimple())
+    return SDValue();
+  MVT VT = Shuf->getSimpleValueType(0);
+  if (!VT.is256BitVector() && !VT.is512BitVector())
+    return SDValue();
+
+  // See if we can ignore all of the high elements of the shuffle.
+  ArrayRef<int> Mask = Shuf->getMask();
+  if (!isUndefUpperHalf(Mask))
+    return SDValue();
+
+  // Check if the shuffle mask accesses only the low half of each input vector
+  // (half-index output is 0 or 2).
+  int HalfIdx1, HalfIdx2;
+  SmallVector<int, 8> HalfMask(Mask.size() / 2);
+  if (!getHalfShuffleMask(Mask, HalfMask, HalfIdx1, HalfIdx2) ||
+      (HalfIdx1 % 2 == 1) || (HalfIdx2 % 2 == 1))
+    return SDValue();
+
+  // Create 4 instructions to replace the unnecessarily wide shuffle.
+  // The trick is knowing that all of the insert/extract are actually free
+  // subregister (zmm->ymm or ymm->xmm) ops. That leaves us with a shuffle
+  // of narrow inputs into a narrow output, and that is always cheaper than
+  // the wide shuffle that we started with.
+  unsigned NumElts = Mask.size();
+  SDValue Op0 = Shuf->getOperand(0);
+  SDValue Op1 = Shuf->getOperand(1);
+  SDLoc DL(Shuf);
+  SDValue Index0 = DAG.getIntPtrConstant(0, DL);
+  MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(), NumElts / 2);
+  SDValue Extr0 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Op0, Index0);
+  SDValue Extr1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Op1, Index0);
+  SDValue NewShuf = DAG.getVectorShuffle(HalfVT, DL, Extr0, Extr1, HalfMask);
+  SDValue UndefV = DAG.getUNDEF(VT);
+  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, UndefV, NewShuf, Index0);
+}
+
 static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
                               TargetLowering::DAGCombinerInfo &DCI,
                               const X86Subtarget &Subtarget) {
+  if (auto *Shuf = dyn_cast<ShuffleVectorSDNode>(N))
+    if (SDValue V = narrowShuffle(Shuf, DAG))
+      return V;
+
+  // If we have legalized the vector types, look for blends of FADD and FSUB
+  // nodes that we can fuse into an ADDSUB, FMADDSUB, or FMSUBADD node.
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  // If we have legalized the vector types, look for blends of FADD and FSUB
-  // nodes that we can fuse into an ADDSUB, FMADDSUB, or FMSUBADD node.
   if (TLI.isTypeLegal(VT)) {
     if (SDValue AddSub = combineShuffleToAddSubOrFMAddSub(N, Subtarget, DAG))
       return AddSub;
@@ -37519,7 +37592,7 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
         return Blend;
   }
 
-  if (Mld->getExtensionType() != ISD::SEXTLOAD)
+  if (Mld->getExtensionType() != ISD::EXTLOAD)
     return SDValue();
 
   // Resolve extending loads.
@@ -37589,8 +37662,20 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
                                      Mld->getBasePtr(), NewMask, WidePassThru,
                                      Mld->getMemoryVT(), Mld->getMemOperand(),
                                      ISD::NON_EXTLOAD);
-  SDValue NewVec = getExtendInVec(/*Signed*/true, dl, VT, WideLd, DAG);
-  return DCI.CombineTo(N, NewVec, WideLd.getValue(1), true);
+
+  SDValue SlicedVec = DAG.getBitcast(WideVecVT, WideLd);
+  SmallVector<int, 16> ShuffleVec(NumElems * SizeRatio, -1);
+  for (unsigned i = 0; i != NumElems; ++i)
+    ShuffleVec[i * SizeRatio] = i;
+
+  // Can't shuffle using an illegal type.
+  assert(DAG.getTargetLoweringInfo().isTypeLegal(WideVecVT) &&
+         "WideVecVT should be legal");
+  SlicedVec = DAG.getVectorShuffle(WideVecVT, dl, SlicedVec,
+                                   DAG.getUNDEF(WideVecVT), ShuffleVec);
+  SlicedVec = DAG.getBitcast(VT, SlicedVec);
+
+  return DCI.CombineTo(N, SlicedVec, WideLd.getValue(1), true);
 }
 
 /// If exactly one element of the mask is set for a non-truncating masked store,
@@ -37628,6 +37713,10 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   EVT VT = Mst->getValue().getValueType();
+  EVT StVT = Mst->getMemoryVT();
+  SDLoc dl(Mst);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
   if (!Mst->isTruncatingStore()) {
     if (SDValue ScalarStore = reduceMaskedStoreToScalarStore(Mst, DAG))
       return ScalarStore;
@@ -37636,7 +37725,6 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
     // simplify ops leading up to it. We only demand the MSB of each lane.
     SDValue Mask = Mst->getMask();
     if (Mask.getScalarValueSizeInBits() != 1) {
-      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       APInt DemandedMask(APInt::getSignMask(VT.getScalarSizeInBits()));
       if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI))
         return SDValue(N, 0);
@@ -37646,19 +37734,24 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
     // pattern above, but that pattern will be different. It will either need to
     // match setcc more generally or match PCMPGTM later (in tablegen?).
 
+    SDValue Value = Mst->getValue();
+    if (Value.getOpcode() == ISD::TRUNCATE && Value.getNode()->hasOneUse() &&
+        TLI.isTruncStoreLegal(Value.getOperand(0).getValueType(),
+                              Mst->getMemoryVT())) {
+      return DAG.getMaskedStore(Mst->getChain(), SDLoc(N), Value.getOperand(0),
+                                Mst->getBasePtr(), Mask,
+                                Mst->getMemoryVT(), Mst->getMemOperand(), true);
+    }
+
     return SDValue();
   }
 
   // Resolve truncating stores.
   unsigned NumElems = VT.getVectorNumElements();
-  EVT StVT = Mst->getMemoryVT();
-  SDLoc dl(Mst);
 
   assert(StVT != VT && "Cannot truncate to the same type");
   unsigned FromSz = VT.getScalarSizeInBits();
   unsigned ToSz = StVT.getScalarSizeInBits();
-
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // The truncating store is legal in some cases. For example
   // vpmovqb, vpmovqw, vpmovqd, vpmovdb, vpmovdw
@@ -40420,6 +40513,22 @@ static SDValue combineCMP(SDNode *N, SelectionDAG &DAG) {
   return Op.getValue(1);
 }
 
+static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG) {
+  assert((X86ISD::ADD == N->getOpcode() || X86ISD::SUB == N->getOpcode()) &&
+         "Expected X86ISD::ADD or X86ISD::SUB");
+
+  // If we don't use the flag result, simplify back to a simple ADD/SUB.
+  if (N->hasAnyUseOfValue(1))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue Res = DAG.getNode(X86ISD::ADD == N->getOpcode() ? ISD::ADD : ISD::SUB,
+                            DL, LHS.getSimpleValueType(), LHS, RHS);
+  return DAG.getMergeValues({Res, DAG.getConstant(0, DL, MVT::i32)}, DL);
+}
+
 static SDValue combineSBB(SDNode *N, SelectionDAG &DAG) {
   if (SDValue Flags = combineCarryThroughADD(N->getOperand(2))) {
     MVT VT = N->getSimpleValueType(0);
@@ -41589,6 +41698,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::CMP:         return combineCMP(N, DAG);
   case ISD::ADD:            return combineAdd(N, DAG, Subtarget);
   case ISD::SUB:            return combineSub(N, DAG, Subtarget);
+  case X86ISD::ADD:
+  case X86ISD::SUB:         return combineX86AddSub(N, DAG);
   case X86ISD::SBB:         return combineSBB(N, DAG);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);

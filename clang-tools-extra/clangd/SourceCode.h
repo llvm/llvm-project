@@ -90,7 +90,7 @@ TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
 llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
                                              const SourceManager &SourceMgr);
 
-bool IsRangeConsecutive(const Range &Left, const Range &Right);
+bool isRangeConsecutive(const Range &Left, const Range &Right);
 } // namespace clangd
 } // namespace clang
 #endif

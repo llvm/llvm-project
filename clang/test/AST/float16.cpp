@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -ast-dump %s | FileCheck %s --strict-whitespace
-// RUN: %clang_cc1 -std=c++11 -ast-dump -fnative-half-type %s | FileCheck %s --check-prefix=CHECK-NATIVE --strict-whitespace
+// RUN: %clang_cc1 -std=c++11 -ast-dump -triple aarch64-linux-gnu %s | FileCheck %s --strict-whitespace
+// RUN: %clang_cc1 -std=c++11 -ast-dump -triple aarch64-linux-gnu -fnative-half-type %s | FileCheck %s --check-prefix=CHECK-NATIVE --strict-whitespace
 
 /*  Various contexts where type _Float16 can appear. */
 

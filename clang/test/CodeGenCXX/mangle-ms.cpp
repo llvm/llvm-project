@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -triple=i386-pc-win32 -std=c++98 | FileCheck %s
 // RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -triple=x86_64-pc-win32 -std=c++98| FileCheck -check-prefix X64 %s
+// RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -triple=aarch64-pc-win32 -std=c++98 -DARM | FileCheck -check-prefixes=X64,ARM %s
 
 int a;
 // CHECK-DAG: @"?a@@3HA"
@@ -466,10 +467,12 @@ namespace Complex {
 // CHECK-DAG: define dso_local void @"?f@Complex@@YAXU?$_Complex@H@__clang@@@Z"(
 void f(_Complex int) {}
 }
+#ifdef ARM
 namespace Float16 {
-// CHECK-DAG: define dso_local void @"?f@Float16@@YAXU_Float16@__clang@@@Z"(
+// ARM-DAG: define dso_local void @"?f@Float16@@YAXU_Float16@__clang@@@Z"(
 void f(_Float16) {}
 }
+#endif // ARM
 
 namespace PR26029 {
 template <class>

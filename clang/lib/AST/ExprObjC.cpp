@@ -292,6 +292,32 @@ void ObjCMessageExpr::getSelectorLocs(
     SelLocs.push_back(getSelectorLoc(i));
 }
 
+
+QualType ObjCMessageExpr::getCallReturnType(ASTContext &Ctx) const {
+  if (const ObjCMethodDecl *MD = getMethodDecl()) {
+    QualType QT = MD->getReturnType();
+    if (QT == Ctx.getObjCInstanceType()) {
+      // instancetype corresponds to expression types.
+      return getType();
+    }
+    return QT;
+  }
+
+  // Expression type might be different from an expected call return type,
+  // as expression type would never be a reference even if call returns a
+  // reference. Reconstruct the original expression type.
+  QualType QT = getType();
+  switch (getValueKind()) {
+  case VK_LValue:
+    return Ctx.getLValueReferenceType(QT);
+  case VK_XValue:
+    return Ctx.getRValueReferenceType(QT);
+  case VK_RValue:
+    return QT;
+  }
+  llvm_unreachable("Unsupported ExprValueKind");
+}
+
 SourceRange ObjCMessageExpr::getReceiverRange() const {
   switch (getReceiverKind()) {
   case Instance:

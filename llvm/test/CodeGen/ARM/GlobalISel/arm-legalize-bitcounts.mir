@@ -1,5 +1,5 @@
-# RUN: llc -mtriple arm-linux-gnueabi -mattr=+v5t -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,CLZ
-# RUN: llc -mtriple arm-linux-gnueabi -mattr=-v5t -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,LIBCALLS
+# RUN: llc -O0 -mtriple arm-linux-gnueabi -mattr=+v5t -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,CLZ
+# RUN: llc -O0 -mtriple arm-linux-gnueabi -mattr=-v5t -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,LIBCALLS
 --- |
   define void @test_ctlz_s32() { ret void }
   define void @test_ctlz_zero_undef_s32() { ret void }

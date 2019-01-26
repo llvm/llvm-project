@@ -61,7 +61,7 @@ using std::chrono::steady_clock;
 
 namespace {
 class ASTWorker;
-}
+} // namespace
 
 static clang::clangd::Key<std::string> kFileBeingProcessed;
 

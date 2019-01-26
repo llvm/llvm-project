@@ -396,6 +396,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   SoftFloat = SoftFloatABI = false;
   HWDiv = 0;
   DotProd = 0;
+  HasFloat16 = true;
 
   // This does not diagnose illegal cases like having both
   // "+vfpv2" and "+vfpv3" or having "+neon" and "+fp-only-sp".

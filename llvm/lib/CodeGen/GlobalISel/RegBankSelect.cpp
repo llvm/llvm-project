@@ -135,33 +135,78 @@ bool RegBankSelect::repairReg(
     MachineOperand &MO, const RegisterBankInfo::ValueMapping &ValMapping,
     RegBankSelect::RepairingPlacement &RepairPt,
     const iterator_range<SmallVectorImpl<unsigned>::const_iterator> &NewVRegs) {
-  if (ValMapping.NumBreakDowns != 1 && !TPC->isGlobalISelAbortEnabled())
-    return false;
-  assert(ValMapping.NumBreakDowns == 1 && "Not yet implemented");
+
+  assert(ValMapping.NumBreakDowns == size(NewVRegs) && "need new vreg for each breakdown");
+
   // An empty range of new register means no repairing.
   assert(!empty(NewVRegs) && "We should not have to repair");
 
-  // Assume we are repairing a use and thus, the original reg will be
-  // the source of the repairing.
-  unsigned Src = MO.getReg();
-  unsigned Dst = *NewVRegs.begin();
+  MachineInstr *MI;
+  if (ValMapping.NumBreakDowns == 1) {
+    // Assume we are repairing a use and thus, the original reg will be
+    // the source of the repairing.
+    unsigned Src = MO.getReg();
+    unsigned Dst = *NewVRegs.begin();
 
-  // If we repair a definition, swap the source and destination for
-  // the repairing.
-  if (MO.isDef())
-    std::swap(Src, Dst);
+    // If we repair a definition, swap the source and destination for
+    // the repairing.
+    if (MO.isDef())
+      std::swap(Src, Dst);
 
-  assert((RepairPt.getNumInsertPoints() == 1 ||
-          TargetRegisterInfo::isPhysicalRegister(Dst)) &&
-         "We are about to create several defs for Dst");
+    assert((RepairPt.getNumInsertPoints() == 1 ||
+            TargetRegisterInfo::isPhysicalRegister(Dst)) &&
+           "We are about to create several defs for Dst");
 
-  // Build the instruction used to repair, then clone it at the right
-  // places. Avoiding buildCopy bypasses the check that Src and Dst have the
-  // same types because the type is a placeholder when this function is called.
-  MachineInstr *MI =
-      MIRBuilder.buildInstrNoInsert(TargetOpcode::COPY).addDef(Dst).addUse(Src);
-  LLVM_DEBUG(dbgs() << "Copy: " << printReg(Src) << " to: " << printReg(Dst)
-                    << '\n');
+    // Build the instruction used to repair, then clone it at the right
+    // places. Avoiding buildCopy bypasses the check that Src and Dst have the
+    // same types because the type is a placeholder when this function is called.
+    MI = MIRBuilder.buildInstrNoInsert(TargetOpcode::COPY)
+      .addDef(Dst)
+      .addUse(Src);
+    LLVM_DEBUG(dbgs() << "Copy: " << printReg(Src) << " to: " << printReg(Dst)
+               << '\n');
+  } else {
+    // TODO: Support with G_IMPLICIT_DEF + G_INSERT sequence or G_EXTRACT
+    // sequence.
+    assert(ValMapping.partsAllUniform() && "irregular breakdowns not supported");
+
+    LLT RegTy = MRI->getType(MO.getReg());
+    assert(!RegTy.isPointer() && "not implemented");
+
+    // FIXME: We could handle split vectors with concat_vectors easily, but this
+    // would require an agreement on the type of registers with the
+    // target. Currently createVRegs just uses scalar types, and expects the
+    // target code to replace this type (which we won't know about here)
+    assert((RegTy.isScalar() ||
+            RegTy.getNumElements() == ValMapping.NumBreakDowns) &&
+           "only basic vector breakdowns currently supported");
+
+    if (MO.isDef()) {
+      unsigned MergeOp = RegTy.isScalar() ?
+        TargetOpcode::G_MERGE_VALUES : TargetOpcode::G_BUILD_VECTOR;
+
+      auto MergeBuilder =
+        MIRBuilder.buildInstrNoInsert(MergeOp)
+        .addDef(MO.getReg());
+
+      for (unsigned SrcReg : NewVRegs)
+        MergeBuilder.addUse(SrcReg);
+
+      MI = MergeBuilder;
+    } else {
+      MachineInstrBuilder UnMergeBuilder =
+        MIRBuilder.buildInstrNoInsert(TargetOpcode::G_UNMERGE_VALUES);
+      for (unsigned DefReg : NewVRegs)
+        UnMergeBuilder.addDef(DefReg);
+
+      UnMergeBuilder.addUse(MO.getReg());
+      MI = UnMergeBuilder;
+    }
+  }
+
+  if (RepairPt.getNumInsertPoints() != 1)
+    report_fatal_error("need testcase to support multiple insertion points");
+
   // TODO:
   // Check if MI is legal. if not, we need to legalize all the
   // instructions we are going to insert.
@@ -194,7 +239,8 @@ uint64_t RegBankSelect::getRepairCost(
   const RegisterBank *CurRegBank = RBI->getRegBank(MO.getReg(), *MRI, *TRI);
   // If MO does not have a register bank, we should have just been
   // able to set one unless we have to break the value down.
-  assert((!IsSameNumOfValues || CurRegBank) && "We should not have to repair");
+  assert(CurRegBank || MO.isDef());
+
   // Def: Val <- NewDefs
   //     Same number of values: copy
   //     Different number: Val = build_sequence Defs1, Defs2, ...
@@ -204,6 +250,9 @@ uint64_t RegBankSelect::getRepairCost(
   //           extract_value Val, Src1Begin, Src1Len, Src2Begin, Src2Len, ...
   // We should remember that this value is available somewhere else to
   // coalesce the value.
+
+  if (ValMapping.NumBreakDowns != 1)
+    return RBI->getBreakDownCost(ValMapping, CurRegBank);
 
   if (IsSameNumOfValues) {
     const RegisterBank *DesiredRegBrank = ValMapping.BreakDown[0].RegBank;
