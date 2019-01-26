@@ -10,6 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#pragma GCC diagnostic ignored "-Wmissing-braces"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wstrict-overflow"
+
 #include <libunwind.h>
 
 #ifndef NDEBUG

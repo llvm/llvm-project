@@ -21,7 +21,7 @@
 #define max_log 256
 
 
-__attribute__((weak)) struct _IO_FILE *stderr  = -1;
+__attribute__((weak)) struct _IO_FILE *stderr  = (_IO_FILE *)-1;
 
 static int vwrite_err(const char *format, va_list ap)
 {
@@ -55,7 +55,7 @@ __attribute__((weak)) int fprintf (FILE *__restrict __stream,
         return -1;
     } else {
         va_list args;
-        int ret = 0;
+        ret = 0;
         va_start(args, __format);
         ret += vwrite_err(__format, args);
         va_end(args);
@@ -102,7 +102,7 @@ extern uint64_t TEXT_BASE;
 extern uint64_t TEXT_SIZE;
 extern uint64_t EH_FRM_HDR_BASE;
 extern uint64_t EH_FRM_HDR_SIZE;
-extern void IMAGE_BASE;
+extern char IMAGE_BASE;
 
 typedef Elf64_Phdr Elf_Phdr; 
 int
@@ -121,7 +121,7 @@ dl_iterate_phdr (int (*callback) (struct dl_phdr_info *,
 
     memset(pinfo, 0, sizeof(*pinfo));
 
-    pinfo->dlpi_addr = &IMAGE_BASE;
+    pinfo->dlpi_addr = (ElfW(Addr))&IMAGE_BASE;
     pinfo->dlpi_phnum = 2;
 
     pinfo->dlpi_phdr = phdr;
@@ -154,7 +154,7 @@ void *libuw_malloc(size_t size)
 {
     struct libwu_rs_alloc_meta *meta;
     size_t alloc_size = size + sizeof(struct libwu_rs_alloc_meta);
-    meta = (void *)__rust_alloc(alloc_size, sizeof(size_t));
+    meta = (void *)__rust_c_alloc(alloc_size, sizeof(size_t));
     if (!meta) {
         return NULL;
     }
@@ -169,5 +169,5 @@ void libuw_free(void *p)
         return;
     }
     meta = META_FROM_PTR(p);
-    __rust_dealloc((unsigned char *)meta, meta->alloc_size, sizeof(size_t));
+    __rust_c_dealloc((unsigned char *)meta, meta->alloc_size, sizeof(size_t));
 }
