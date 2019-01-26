@@ -263,14 +263,10 @@ supported include:
     one can use !cond. !cond returns 'val1' if the result of 'int' or 'bit'
     operator 'condition1' is nonzero. Otherwise, it checks 'condition2'.
     If 'condition2' is nonzero, returns 'val2', and so on.
-    If all conditions are zero, it reports an error.
+    If all conditions are zero, it reports an error.  
 
-    Below is an example to convert an integer 'x' into a string:
-
-    !cond(!lt(x,0) : "Negative",
-          !eq(x,0) : "Zero",
-          !eq(x,1) : "One,
-          1        : "MoreThanOne")
+    For example, to convert an integer 'x' into a string:
+      !cond(!lt(x,0) : "negative", !eq(x,0) : "zero", 1 : "positive")
 
 ``!eq(a,b)``
     'bit 1' if string a is equal to string b, 0 otherwise.  This only operates

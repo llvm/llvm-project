@@ -80,9 +80,9 @@ static cl::opt<bool> EnableStaticAnalyis("hot-cold-static-analysis",
                               cl::init(true), cl::Hidden);
 
 static cl::opt<int>
-    SplittingThreshold("hotcoldsplit-threshold", cl::init(3), cl::Hidden,
-                       cl::desc("Code size threshold for splitting cold code "
-                                "(as a multiple of TCC_Basic)"));
+    SplittingThreshold("hotcoldsplit-threshold", cl::init(2), cl::Hidden,
+                       cl::desc("Base penalty for splitting cold code (as a "
+                                "multiple of TCC_Basic)"));
 
 namespace {
 
@@ -137,31 +137,6 @@ static bool mayExtractBlock(const BasicBlock &BB) {
   // requires unwind destinations to be within the extraction region.
   return !BB.hasAddressTaken() && !BB.isEHPad() &&
          !isa<InvokeInst>(BB.getTerminator());
-}
-
-/// Check whether \p Region is profitable to outline.
-static bool isProfitableToOutline(const BlockSequence &Region,
-                                  TargetTransformInfo &TTI) {
-  // If the splitting threshold is set at or below zero, skip the usual
-  // profitability check.
-  if (SplittingThreshold <= 0)
-    return true;
-
-  if (Region.size() > 1)
-    return true;
-
-  int Cost = 0;
-  const BasicBlock &BB = *Region[0];
-  for (const Instruction &I : BB) {
-    if (isa<DbgInfoIntrinsic>(&I) || &I == BB.getTerminator())
-      continue;
-
-    Cost += TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
-
-    if (Cost >= (SplittingThreshold * TargetTransformInfo::TCC_Basic))
-      return true;
-  }
-  return false;
 }
 
 /// Mark \p F cold. Based on this assumption, also optimize it for minimum size.
@@ -247,6 +222,82 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
   return true;
 }
 
+/// Get the benefit score of outlining \p Region.
+static int getOutliningBenefit(ArrayRef<BasicBlock *> Region,
+                               TargetTransformInfo &TTI) {
+  // Sum up the code size costs of non-terminator instructions. Tight coupling
+  // with \ref getOutliningPenalty is needed to model the costs of terminators.
+  int Benefit = 0;
+  for (BasicBlock *BB : Region)
+    for (Instruction &I : BB->instructionsWithoutDebug())
+      if (&I != BB->getTerminator())
+        Benefit +=
+            TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
+
+  return Benefit;
+}
+
+/// Get the penalty score for outlining \p Region.
+static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
+                               unsigned NumInputs, unsigned NumOutputs) {
+  int Penalty = SplittingThreshold;
+  LLVM_DEBUG(dbgs() << "Applying penalty for splitting: " << Penalty << "\n");
+
+  // If the splitting threshold is set at or below zero, skip the usual
+  // profitability check.
+  if (SplittingThreshold <= 0)
+    return Penalty;
+
+  // The typical code size cost for materializing an argument for the outlined
+  // call.
+  LLVM_DEBUG(dbgs() << "Applying penalty for: " << NumInputs << " inputs\n");
+  const int CostForArgMaterialization = TargetTransformInfo::TCC_Basic;
+  Penalty += CostForArgMaterialization * NumInputs;
+
+  // The typical code size cost for an output alloca, its associated store, and
+  // its associated reload.
+  LLVM_DEBUG(dbgs() << "Applying penalty for: " << NumOutputs << " outputs\n");
+  const int CostForRegionOutput = 3 * TargetTransformInfo::TCC_Basic;
+  Penalty += CostForRegionOutput * NumOutputs;
+
+  // Find the number of distinct exit blocks for the region. Use a conservative
+  // check to determine whether control returns from the region.
+  bool NoBlocksReturn = true;
+  SmallPtrSet<BasicBlock *, 2> SuccsOutsideRegion;
+  for (BasicBlock *BB : Region) {
+    // If a block has no successors, only assume it does not return if it's
+    // unreachable.
+    if (succ_empty(BB)) {
+      NoBlocksReturn &= isa<UnreachableInst>(BB->getTerminator());
+      continue;
+    }
+
+    for (BasicBlock *SuccBB : successors(BB)) {
+      if (find(Region, SuccBB) == Region.end()) {
+        NoBlocksReturn = false;
+        SuccsOutsideRegion.insert(SuccBB);
+      }
+    }
+  }
+
+  // Apply a `noreturn` bonus.
+  if (NoBlocksReturn) {
+    LLVM_DEBUG(dbgs() << "Applying bonus for: " << Region.size()
+                      << " non-returning terminators\n");
+    Penalty -= Region.size();
+  }
+
+  // Apply a penalty for having more than one successor outside of the region.
+  // This penalty accounts for the switch needed in the caller.
+  if (!SuccsOutsideRegion.empty()) {
+    LLVM_DEBUG(dbgs() << "Applying penalty for: " << SuccsOutsideRegion.size()
+                      << " non-region successors\n");
+    Penalty += (SuccsOutsideRegion.size() - 1) * TargetTransformInfo::TCC_Basic;
+  }
+
+  return Penalty;
+}
+
 Function *HotColdSplitting::extractColdRegion(const BlockSequence &Region,
                                               DominatorTree &DT,
                                               BlockFrequencyInfo *BFI,
@@ -260,6 +311,18 @@ Function *HotColdSplitting::extractColdRegion(const BlockSequence &Region,
                    /* BPI */ nullptr, /* AllowVarArgs */ false,
                    /* AllowAlloca */ false,
                    /* Suffix */ "cold." + std::to_string(Count));
+
+  // Perform a simple cost/benefit analysis to decide whether or not to permit
+  // splitting.
+  SetVector<Value *> Inputs, Outputs, Sinks;
+  CE.findInputsOutputs(Inputs, Outputs, Sinks);
+  int OutliningBenefit = getOutliningBenefit(Region, TTI);
+  int OutliningPenalty =
+      getOutliningPenalty(Region, Inputs.size(), Outputs.size());
+  LLVM_DEBUG(dbgs() << "Split profitability: benefit = " << OutliningBenefit
+                    << ", penalty = " << OutliningPenalty << "\n");
+  if (OutliningBenefit <= OutliningPenalty)
+    return nullptr;
 
   Function *OrigF = Region[0]->getParent();
   if (Function *OutF = CE.extractCodeRegion()) {
@@ -556,14 +619,6 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
     assert(!Region.empty() && "Empty outlining region in worklist");
     do {
       BlockSequence SubRegion = Region.takeSingleEntrySubRegion(*DT);
-      if (!isProfitableToOutline(SubRegion, TTI)) {
-        LLVM_DEBUG({
-          dbgs() << "Skipping outlining; not profitable to outline\n";
-          SubRegion[0]->dump();
-        });
-        continue;
-      }
-
       LLVM_DEBUG({
         dbgs() << "Hot/cold splitting attempting to outline these blocks:\n";
         for (BasicBlock *BB : SubRegion)

@@ -139,6 +139,16 @@ td:first-child {
 td:last-child {
   border-right: none;
 }
+.expanded {
+  background-color: #f2f2f2;
+  padding-top: 5px;
+  padding-left: 5px;
+}
+.col-left {
+  float: left;
+  margin-bottom: -99999px;
+  padding-bottom: 99999px;
+}
 
 /* Generated with pygmentize -S colorful -f html >> style.css */
 

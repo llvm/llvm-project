@@ -554,6 +554,11 @@ static void darwinPrintSymbol(SymbolicFile &Obj, SymbolListT::iterator I,
       (NDesc & MachO::N_ALT_ENTRY) == MachO::N_ALT_ENTRY)
     outs() << "[alt entry] ";
 
+  if (Filetype == MachO::MH_OBJECT &&
+      ((NType & MachO::N_TYPE) != MachO::N_UNDF) &&
+      (NDesc & MachO::N_COLD_FUNC) == MachO::N_COLD_FUNC)
+    outs() << "[cold func] ";
+
   if ((NDesc & MachO::N_ARM_THUMB_DEF) == MachO::N_ARM_THUMB_DEF)
     outs() << "[Thumb] ";
 

@@ -996,7 +996,7 @@ public:
     // inside the loop.
     if (UseMaskForGaps)
       Cost += static_cast<T *>(this)->getArithmeticInstrCost(
-          BinaryOperator::And, MaskVT); 
+          BinaryOperator::And, MaskVT);
 
     return Cost;
   }

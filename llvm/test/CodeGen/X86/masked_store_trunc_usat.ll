@@ -8,30 +8,26 @@ define void @truncstore_v8i64_v8i32(<8 x i64> %x, <8 x i32>* %p, <8 x i32> %mask
 ; AVX512F-LABEL: truncstore_v8i64_v8i32:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
-; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
-; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
-; AVX512F-NEXT:    vpmovusqd %zmm0, %ymm0
-; AVX512F-NEXT:    vmovdqu32 %zmm0, (%rdi) {%k1}
+; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; AVX512F-NEXT:    vpminuq {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512F-NEXT:    vpmovqd %zmm0, (%rdi) {%k1}
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: truncstore_v8i64_v8i32:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vptestmd %ymm1, %ymm1, %k1
-; AVX512VL-NEXT:    vpmovusqd %zmm0, %ymm0
-; AVX512VL-NEXT:    vmovdqu32 %ymm0, (%rdi) {%k1}
+; AVX512VL-NEXT:    vpminuq {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512VL-NEXT:    vpmovqd %zmm0, (%rdi) {%k1}
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: truncstore_v8i64_v8i32:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; AVX512BW-NEXT:    vptestmd %zmm1, %zmm1, %k0
-; AVX512BW-NEXT:    kshiftlw $8, %k0, %k0
-; AVX512BW-NEXT:    kshiftrw $8, %k0, %k1
-; AVX512BW-NEXT:    vpmovusqd %zmm0, %ymm0
-; AVX512BW-NEXT:    vmovdqu32 %zmm0, (%rdi) {%k1}
+; AVX512BW-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; AVX512BW-NEXT:    vpminuq {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmovqd %zmm0, (%rdi) {%k1}
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %a = icmp ne <8 x i32> %mask, zeroinitializer
@@ -116,19 +112,17 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, <8 x i16>* %p, <8 x i32> %mask
 ; AVX512BW-LABEL: truncstore_v8i64_v8i16:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; AVX512BW-NEXT:    vptestmd %zmm1, %zmm1, %k0
-; AVX512BW-NEXT:    kshiftld $24, %k0, %k0
-; AVX512BW-NEXT:    kshiftrd $24, %k0, %k1
-; AVX512BW-NEXT:    vpmovusqw %zmm0, %xmm0
-; AVX512BW-NEXT:    vmovdqu16 %zmm0, (%rdi) {%k1}
+; AVX512BW-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; AVX512BW-NEXT:    vpminuq {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmovqw %zmm0, (%rdi) {%k1}
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: truncstore_v8i64_v8i16:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vptestmd %ymm1, %ymm1, %k1
-; AVX512BWVL-NEXT:    vpmovusqw %zmm0, %xmm0
-; AVX512BWVL-NEXT:    vmovdqu16 %xmm0, (%rdi) {%k1}
+; AVX512BWVL-NEXT:    vpminuq {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpmovqw %zmm0, (%rdi) {%k1}
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %a = icmp ne <8 x i32> %mask, zeroinitializer
@@ -214,13 +208,9 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, <8 x i8>* %p, <8 x i32> %mask) 
 ; AVX512BW-LABEL: truncstore_v8i64_v8i8:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; AVX512BW-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; AVX512BW-NEXT:    vptestmd %zmm1, %zmm1, %k1
 ; AVX512BW-NEXT:    vpminuq {{.*}}(%rip){1to8}, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpmovqw %zmm0, %xmm0
-; AVX512BW-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
-; AVX512BW-NEXT:    kshiftlq $56, %k0, %k0
-; AVX512BW-NEXT:    kshiftrq $56, %k0, %k1
-; AVX512BW-NEXT:    vmovdqu8 %zmm0, (%rdi) {%k1}
+; AVX512BW-NEXT:    vpmovqb %zmm0, (%rdi) {%k1}
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -228,8 +218,7 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, <8 x i8>* %p, <8 x i32> %mask) 
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vptestmd %ymm1, %ymm1, %k1
 ; AVX512BWVL-NEXT:    vpminuq {{.*}}(%rip){1to8}, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpmovqw %zmm0, %xmm0
-; AVX512BWVL-NEXT:    vpmovwb %xmm0, (%rdi) {%k1}
+; AVX512BWVL-NEXT:    vpmovqb %zmm0, (%rdi) {%k1}
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %a = icmp ne <8 x i32> %mask, zeroinitializer
@@ -258,8 +247,8 @@ define void @truncstore_v4i64_v4i32(<4 x i64> %x, <4 x i32>* %p, <4 x i32> %mask
 ; AVX512VL-LABEL: truncstore_v4i64_v4i32:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vptestmd %xmm1, %xmm1, %k1
-; AVX512VL-NEXT:    vpmovusqd %ymm0, %xmm0
-; AVX512VL-NEXT:    vmovdqu32 %xmm0, (%rdi) {%k1}
+; AVX512VL-NEXT:    vpminuq {{.*}}(%rip){1to4}, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpmovqd %ymm0, (%rdi) {%k1}
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -345,8 +334,7 @@ define void @truncstore_v4i64_v4i16(<4 x i64> %x, <4 x i16>* %p, <4 x i32> %mask
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vptestmd %xmm1, %xmm1, %k1
 ; AVX512BWVL-NEXT:    vpminuq {{.*}}(%rip){1to4}, %ymm0, %ymm0
-; AVX512BWVL-NEXT:    vpmovqd %ymm0, %xmm0
-; AVX512BWVL-NEXT:    vpmovdw %xmm0, (%rdi) {%k1}
+; AVX512BWVL-NEXT:    vpmovqw %ymm0, (%rdi) {%k1}
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %a = icmp ne <4 x i32> %mask, zeroinitializer
@@ -418,8 +406,7 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, <4 x i8>* %p, <4 x i32> %mask) 
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vptestmd %xmm1, %xmm1, %k1
 ; AVX512BWVL-NEXT:    vpminuq {{.*}}(%rip){1to4}, %ymm0, %ymm0
-; AVX512BWVL-NEXT:    vpmovqd %ymm0, %xmm0
-; AVX512BWVL-NEXT:    vpmovdb %xmm0, (%rdi) {%k1}
+; AVX512BWVL-NEXT:    vpmovqb %ymm0, (%rdi) {%k1}
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %a = icmp ne <4 x i32> %mask, zeroinitializer
@@ -710,16 +697,16 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, <16 x i16>* %p, <16 x i32> 
 ; AVX512BW-LABEL: truncstore_v16i32_v16i16:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vptestmd %zmm1, %zmm1, %k1
-; AVX512BW-NEXT:    vpmovusdw %zmm0, %ymm0
-; AVX512BW-NEXT:    vmovdqu16 %zmm0, (%rdi) {%k1}
+; AVX512BW-NEXT:    vpminud {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmovdw %zmm0, (%rdi) {%k1}
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: truncstore_v16i32_v16i16:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vptestmd %zmm1, %zmm1, %k1
-; AVX512BWVL-NEXT:    vpmovusdw %zmm0, %ymm0
-; AVX512BWVL-NEXT:    vmovdqu16 %ymm0, (%rdi) {%k1}
+; AVX512BWVL-NEXT:    vpminud {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpmovdw %zmm0, (%rdi) {%k1}
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %a = icmp ne <16 x i32> %mask, zeroinitializer
@@ -852,16 +839,16 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, <16 x i8>* %p, <16 x i32> %m
 ; AVX512BW-LABEL: truncstore_v16i32_v16i8:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vptestmd %zmm1, %zmm1, %k1
-; AVX512BW-NEXT:    vpmovusdb %zmm0, %xmm0
-; AVX512BW-NEXT:    vmovdqu8 %zmm0, (%rdi) {%k1}
+; AVX512BW-NEXT:    vpminud {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmovdb %zmm0, (%rdi) {%k1}
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: truncstore_v16i32_v16i8:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vptestmd %zmm1, %zmm1, %k1
-; AVX512BWVL-NEXT:    vpmovusdb %zmm0, %xmm0
-; AVX512BWVL-NEXT:    vmovdqu8 %xmm0, (%rdi) {%k1}
+; AVX512BWVL-NEXT:    vpminud {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpmovdb %zmm0, (%rdi) {%k1}
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %a = icmp ne <16 x i32> %mask, zeroinitializer
@@ -961,8 +948,8 @@ define void @truncstore_v8i32_v8i16(<8 x i32> %x, <8 x i16>* %p, <8 x i32> %mask
 ; AVX512BWVL-LABEL: truncstore_v8i32_v8i16:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vptestmd %ymm1, %ymm1, %k1
-; AVX512BWVL-NEXT:    vpmovusdw %ymm0, %xmm0
-; AVX512BWVL-NEXT:    vmovdqu16 %xmm0, (%rdi) {%k1}
+; AVX512BWVL-NEXT:    vpminud {{.*}}(%rip){1to8}, %ymm0, %ymm0
+; AVX512BWVL-NEXT:    vpmovdw %ymm0, (%rdi) {%k1}
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %a = icmp ne <8 x i32> %mask, zeroinitializer
@@ -1064,8 +1051,7 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, <8 x i8>* %p, <8 x i32> %mask) 
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vptestmd %ymm1, %ymm1, %k1
 ; AVX512BWVL-NEXT:    vpminud {{.*}}(%rip){1to8}, %ymm0, %ymm0
-; AVX512BWVL-NEXT:    vpmovdw %ymm0, %xmm0
-; AVX512BWVL-NEXT:    vpmovwb %xmm0, (%rdi) {%k1}
+; AVX512BWVL-NEXT:    vpmovdb %ymm0, (%rdi) {%k1}
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %a = icmp ne <8 x i32> %mask, zeroinitializer
@@ -1617,18 +1603,17 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, <32 x i8>* %p, <32 x i8> %ma
 ; AVX512BW-LABEL: truncstore_v32i16_v32i8:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; AVX512BW-NEXT:    vptestmb %zmm1, %zmm1, %k0
-; AVX512BW-NEXT:    kmovd %k0, %k1
-; AVX512BW-NEXT:    vpmovuswb %zmm0, %ymm0
-; AVX512BW-NEXT:    vmovdqu8 %zmm0, (%rdi) {%k1}
+; AVX512BW-NEXT:    vptestmb %zmm1, %zmm1, %k1
+; AVX512BW-NEXT:    vpminuw {{.*}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmovwb %zmm0, (%rdi) {%k1}
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: truncstore_v32i16_v32i8:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vptestmb %ymm1, %ymm1, %k1
-; AVX512BWVL-NEXT:    vpmovuswb %zmm0, %ymm0
-; AVX512BWVL-NEXT:    vmovdqu8 %ymm0, (%rdi) {%k1}
+; AVX512BWVL-NEXT:    vpminuw {{.*}}(%rip), %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpmovwb %zmm0, (%rdi) {%k1}
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %a = icmp ne <32 x i8> %mask, zeroinitializer
@@ -1845,8 +1830,8 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, <16 x i8>* %p, <16 x i8> %ma
 ; AVX512BWVL-LABEL: truncstore_v16i16_v16i8:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vptestmb %xmm1, %xmm1, %k1
-; AVX512BWVL-NEXT:    vpmovuswb %ymm0, %xmm0
-; AVX512BWVL-NEXT:    vmovdqu8 %xmm0, (%rdi) {%k1}
+; AVX512BWVL-NEXT:    vpminuw {{.*}}(%rip), %ymm0, %ymm0
+; AVX512BWVL-NEXT:    vpmovwb %ymm0, (%rdi) {%k1}
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %a = icmp ne <16 x i8> %mask, zeroinitializer
