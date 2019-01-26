@@ -9328,6 +9328,25 @@ static Value *EmitX86ConvertToMask(CodeGenFunction &CGF, Value *In) {
   return EmitX86MaskedCompare(CGF, 1, true, { In, Zero });
 }
 
+static Value *EmitX86ConvertIntToFp(CodeGenFunction &CGF,
+                                    ArrayRef<Value *> Ops, bool IsSigned) {
+  unsigned Rnd = cast<llvm::ConstantInt>(Ops[3])->getZExtValue();
+  llvm::Type *Ty = Ops[1]->getType();
+
+  Value *Res;
+  if (Rnd != 4) {
+    Intrinsic::ID IID = IsSigned ? Intrinsic::x86_avx512_sitofp_round
+                                 : Intrinsic::x86_avx512_uitofp_round;
+    Function *F = CGF.CGM.getIntrinsic(IID, { Ty, Ops[0]->getType() });
+    Res = CGF.Builder.CreateCall(F, { Ops[0], Ops[3] });
+  } else {
+    Res = IsSigned ? CGF.Builder.CreateSIToFP(Ops[0], Ty)
+                   : CGF.Builder.CreateUIToFP(Ops[0], Ty);
+  }
+
+  return EmitX86Select(CGF, Ops[2], Res, Ops[1]);
+}
+
 static Value *EmitX86Abs(CodeGenFunction &CGF, ArrayRef<Value *> Ops) {
 
   llvm::Type *Ty = Ops[0]->getType();
@@ -9988,6 +10007,15 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_cvtq2mask256:
   case X86::BI__builtin_ia32_cvtq2mask512:
     return EmitX86ConvertToMask(*this, Ops[0]);
+
+  case X86::BI__builtin_ia32_cvtdq2ps512_mask:
+  case X86::BI__builtin_ia32_cvtqq2ps512_mask:
+  case X86::BI__builtin_ia32_cvtqq2pd512_mask:
+    return EmitX86ConvertIntToFp(*this, Ops, /*IsSigned*/true);
+  case X86::BI__builtin_ia32_cvtudq2ps512_mask:
+  case X86::BI__builtin_ia32_cvtuqq2ps512_mask:
+  case X86::BI__builtin_ia32_cvtuqq2pd512_mask:
+    return EmitX86ConvertIntToFp(*this, Ops, /*IsSigned*/false);
 
   case X86::BI__builtin_ia32_vfmaddss3:
   case X86::BI__builtin_ia32_vfmaddsd3:

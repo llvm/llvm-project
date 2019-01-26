@@ -5022,42 +5022,46 @@ __m512 test_mm512_maskz_cvt_roundph_ps(__mmask16 __U, __m256i __A)
 __m512 test_mm512_cvt_roundepi32_ps( __m512i __A)
 {
   // CHECK-LABEL: @test_mm512_cvt_roundepi32_ps
-  // CHECK: @llvm.x86.avx512.mask.cvtdq2ps.512
+  // CHECK: @llvm.x86.avx512.sitofp.round.v16f32.v16i32
   return _mm512_cvt_roundepi32_ps(__A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 
 __m512 test_mm512_mask_cvt_roundepi32_ps(__m512 __W, __mmask16 __U, __m512i __A)
 {
   // CHECK-LABEL: @test_mm512_mask_cvt_roundepi32_ps
-  // CHECK: @llvm.x86.avx512.mask.cvtdq2ps.512
+  // CHECK: @llvm.x86.avx512.sitofp.round.v16f32.v16i32
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_cvt_roundepi32_ps(__W,__U,__A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 
 __m512 test_mm512_maskz_cvt_roundepi32_ps(__mmask16 __U, __m512i __A)
 {
   // CHECK-LABEL: @test_mm512_maskz_cvt_roundepi32_ps
-  // CHECK: @llvm.x86.avx512.mask.cvtdq2ps.512
+  // CHECK: @llvm.x86.avx512.sitofp.round.v16f32.v16i32
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_cvt_roundepi32_ps(__U,__A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 
 __m512 test_mm512_cvt_roundepu32_ps(__m512i __A)
 {
   // CHECK-LABEL: @test_mm512_cvt_roundepu32_ps
-  // CHECK: @llvm.x86.avx512.mask.cvtudq2ps.512
+  // CHECK: @llvm.x86.avx512.uitofp.round.v16f32.v16i32
   return _mm512_cvt_roundepu32_ps(__A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 
 __m512 test_mm512_mask_cvt_roundepu32_ps(__m512 __W, __mmask16 __U,__m512i __A)
 {
   // CHECK-LABEL: @test_mm512_mask_cvt_roundepu32_ps
-  // CHECK: @llvm.x86.avx512.mask.cvtudq2ps.512
+  // CHECK: @llvm.x86.avx512.uitofp.round.v16f32.v16i32
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_cvt_roundepu32_ps(__W,__U,__A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 
 __m512 test_mm512_maskz_cvt_roundepu32_ps(__mmask16 __U,__m512i __A)
 {
   // CHECK-LABEL: @test_mm512_maskz_cvt_roundepu32_ps
-  // CHECK: @llvm.x86.avx512.mask.cvtudq2ps.512
+  // CHECK: @llvm.x86.avx512.uitofp.round.v16f32.v16i32
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_cvt_roundepu32_ps(__U,__A, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 
