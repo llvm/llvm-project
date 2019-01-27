@@ -343,6 +343,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_MUL:
+    return narrowScalarMul(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_EXTRACT: {
     if (TypeIdx != 1)
       return UnableToLegalize;
@@ -1524,6 +1526,51 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FPTOUI:
     return fewerElementsVectorCasts(MI, TypeIdx, NarrowTy);
   }
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::narrowScalarMul(MachineInstr &MI, unsigned TypeIdx, LLT NewTy) {
+  unsigned DstReg = MI.getOperand(0).getReg();
+  unsigned Src0 = MI.getOperand(1).getReg();
+  unsigned Src1 = MI.getOperand(2).getReg();
+  LLT Ty = MRI.getType(DstReg);
+  if (Ty.isVector())
+    return UnableToLegalize;
+
+  unsigned Size = Ty.getSizeInBits();
+  unsigned NewSize = Size / 2;
+  if (Size != 2 * NewSize)
+    return UnableToLegalize;
+
+  LLT HalfTy = LLT::scalar(NewSize);
+  // TODO: if HalfTy != NewTy, handle the breakdown all at once?
+
+  unsigned ShiftAmt = MRI.createGenericVirtualRegister(Ty);
+  unsigned Lo = MRI.createGenericVirtualRegister(HalfTy);
+  unsigned Hi = MRI.createGenericVirtualRegister(HalfTy);
+  unsigned ExtLo = MRI.createGenericVirtualRegister(Ty);
+  unsigned ExtHi = MRI.createGenericVirtualRegister(Ty);
+  unsigned ShiftedHi = MRI.createGenericVirtualRegister(Ty);
+
+  SmallVector<unsigned, 2> Src0Parts;
+  SmallVector<unsigned, 2> Src1Parts;
+
+  extractParts(Src0, HalfTy, 2, Src0Parts);
+  extractParts(Src1, HalfTy, 2, Src1Parts);
+
+  MIRBuilder.buildMul(Lo, Src0Parts[0], Src1Parts[0]);
+
+  // TODO: Use smulh or umulh depending on what the target has.
+  MIRBuilder.buildUMulH(Hi, Src0Parts[1], Src1Parts[1]);
+
+  MIRBuilder.buildConstant(ShiftAmt, NewSize);
+  MIRBuilder.buildAnyExt(ExtHi, Hi);
+  MIRBuilder.buildShl(ShiftedHi, ExtHi, ShiftAmt);
+
+  MIRBuilder.buildZExt(ExtLo, Lo);
+  MIRBuilder.buildOr(DstReg, ExtLo, ShiftedHi);
+  MI.eraseFromParent();
+  return Legalized;
 }
 
 LegalizerHelper::LegalizeResult

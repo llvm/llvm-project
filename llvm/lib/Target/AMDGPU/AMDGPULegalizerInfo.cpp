@@ -95,6 +95,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_UMULH, G_SMULH})
     .legalFor({S32})
+    .clampScalar(0, S32, S32)
     .scalarize(0);
 
   // Report legal for any types we can handle anywhere. For the cases only legal
