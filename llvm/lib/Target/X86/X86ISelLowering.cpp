@@ -14413,10 +14413,6 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
   assert((VT.is256BitVector() || VT.is512BitVector()) &&
          "Expected 256-bit or 512-bit vector");
 
-  unsigned NumElts = VT.getVectorNumElements();
-  unsigned HalfNumElts = NumElts / 2;
-  MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(), HalfNumElts);
-
   bool UndefLower = isUndefLowerHalf(Mask);
   if (!UndefLower && !isUndefUpperHalf(Mask))
     return SDValue();
@@ -14426,6 +14422,9 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
 
   // Upper half is undef and lower half is whole upper subvector.
   // e.g. vector_shuffle <4, 5, 6, 7, u, u, u, u> or <2, 3, u, u>
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned HalfNumElts = NumElts / 2;
+  MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(), HalfNumElts);
   if (!UndefLower &&
       isSequentialOrUndefInRange(Mask, 0, HalfNumElts, HalfNumElts)) {
     SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V1,
@@ -14452,38 +14451,60 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
   assert(HalfMask.size() == HalfNumElts && "Unexpected shuffle mask length");
 
   // Only shuffle the halves of the inputs when useful.
-  int NumLowerHalves =
+  unsigned NumLowerHalves =
       (HalfIdx1 == 0 || HalfIdx1 == 2) + (HalfIdx2 == 0 || HalfIdx2 == 2);
-  int NumUpperHalves =
+  unsigned NumUpperHalves =
       (HalfIdx1 == 1 || HalfIdx1 == 3) + (HalfIdx2 == 1 || HalfIdx2 == 3);
+  assert(NumLowerHalves + NumUpperHalves <= 2 && "Only 1 or 2 halves allowed");
 
-  // uuuuXXXX - don't extract uppers just to insert again.
-  if (UndefLower && NumUpperHalves != 0)
-    return SDValue();
+  // Determine the larger pattern of undef/halves, then decide if it's worth
+  // splitting the shuffle based on subtarget capabilities and types.
+  unsigned EltWidth = VT.getVectorElementType().getSizeInBits();
+  if (!UndefLower) {
+    // XXXXuuuu: no insert is needed.
+    // Always extract lowers when setting lower - these are all free subreg ops.
+    if (NumUpperHalves == 0)
+      return getShuffleHalfVectors(DL, V1, V2, HalfMask, HalfIdx1, HalfIdx2,
+                                   UndefLower, DAG);
 
-  // XXXXuuuu - don't extract both uppers, instead shuffle and then extract.
-  if (!UndefLower && NumUpperHalves == 2)
-    return SDValue();
-
-  // AVX2 - XXXXuuuu - always extract lowers.
-  if (Subtarget.hasAVX2() && (UndefLower || NumUpperHalves != 0)) {
-    // AVX2 supports efficient immediate 64-bit element cross-lane shuffles.
-    if (VT == MVT::v4f64 || VT == MVT::v4i64)
-      return SDValue();
-    // AVX2 supports variable 32-bit element cross-lane shuffles.
-    if (VT == MVT::v8f32 || VT == MVT::v8i32) {
-      // XXXXuuuu - don't extract lowers and uppers.
-      if (!UndefLower && NumLowerHalves != 0 && NumUpperHalves != 0)
+    if (NumUpperHalves == 1) {
+      // AVX2 has efficient 32/64-bit element cross-lane shuffles.
+      if (Subtarget.hasAVX2()) {
+        // TODO: Refine to account for unary shuffle, splat, and other masks?
+        if (EltWidth == 32 && NumLowerHalves == 1)
+          return SDValue();
+        if (EltWidth == 64)
+          return SDValue();
+      }
+      // AVX512 has efficient cross-lane shuffles for all legal 512-bit types.
+      if (Subtarget.hasAVX512() && VT.is512BitVector())
         return SDValue();
+      // Extract + narrow shuffle is better than the wide alternative.
+      return getShuffleHalfVectors(DL, V1, V2, HalfMask, HalfIdx1, HalfIdx2,
+                                   UndefLower, DAG);
     }
+
+    // Don't extract both uppers, instead shuffle and then extract.
+    assert(NumUpperHalves == 2 && "Half vector count went wrong");
+    return SDValue();
   }
 
-  // AVX512 - XXXXuuuu - always extract lowers.
-  if (VT.is512BitVector() && (UndefLower || NumUpperHalves != 0))
-    return SDValue();
+  // UndefLower - uuuuXXXX: an insert to high half is required if we split this.
+  if (NumUpperHalves == 0) {
+    // AVX2 has efficient 64-bit element cross-lane shuffles.
+    // TODO: Refine to account for unary shuffle, splat, and other masks?
+    if (Subtarget.hasAVX2() && EltWidth == 64)
+      return SDValue();
+    // AVX512 has efficient cross-lane shuffles for all legal 512-bit types.
+    if (Subtarget.hasAVX512() && VT.is512BitVector())
+      return SDValue();
+    // Narrow shuffle + insert is better than the wide alternative.
+    return getShuffleHalfVectors(DL, V1, V2, HalfMask, HalfIdx1, HalfIdx2,
+                                 UndefLower, DAG);
+  }
 
-  return getShuffleHalfVectors(DL, V1, V2, HalfMask, HalfIdx1, HalfIdx2,
-                               UndefLower, DAG);
+  // NumUpperHalves != 0: don't bother with extract, shuffle, and then insert.
+  return SDValue();
 }
 
 /// Test whether the specified input (0 or 1) is in-place blended by the
