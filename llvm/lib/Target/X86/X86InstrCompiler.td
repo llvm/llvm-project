@@ -1350,6 +1350,8 @@ def def32 : PatLeaf<(i32 GR32:$src), [{
 // we can use a SUBREG_TO_REG.
 def : Pat<(i64 (zext def32:$src)),
           (SUBREG_TO_REG (i64 0), GR32:$src, sub_32bit)>;
+def : Pat<(i64 (and (anyext def32:$src), 0x00000000FFFFFFFF)),
+          (SUBREG_TO_REG (i64 0), GR32:$src, sub_32bit)>;
 
 //===----------------------------------------------------------------------===//
 // Pattern match OR as ADD

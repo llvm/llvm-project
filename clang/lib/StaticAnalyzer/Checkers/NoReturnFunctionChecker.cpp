@@ -142,3 +142,7 @@ void NoReturnFunctionChecker::checkPostObjCMessage(const ObjCMethodCall &Msg,
 void ento::registerNoReturnFunctionChecker(CheckerManager &mgr) {
   mgr.registerChecker<NoReturnFunctionChecker>();
 }
+
+bool ento::shouldRegisterNoReturnFunctionChecker(const LangOptions &LO) {
+  return true;
+}

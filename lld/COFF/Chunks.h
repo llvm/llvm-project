@@ -224,7 +224,7 @@ public:
   DefinedRegular *Sym = nullptr;
 
   // The COMDAT selection if this is a COMDAT chunk.
-  llvm::COFF::COMDATType Selection;
+  llvm::COFF::COMDATType Selection = (llvm::COFF::COMDATType)0;
 
   ArrayRef<coff_relocation> Relocs;
 

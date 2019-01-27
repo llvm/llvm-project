@@ -2036,10 +2036,32 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
     if (isKnownNonNullFromDominatingCondition(V, Q.CxtI, Q.DT))
       return true;
 
+    // Look through bitcast operations, GEPs, and int2ptr instructions as they
+    // do not alter the value, or at least not the nullness property of the
+    // value, e.g., int2ptr is allowed to zero/sign extend the value.
+    //
+    // Note that we have to take special care to avoid looking through
+    // truncating casts, e.g., int2ptr/ptr2int with appropriate sizes, as well
+    // as casts that can alter the value, e.g., AddrSpaceCasts.
     if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V))
       if (isGEPKnownNonNull(GEP, Depth, Q))
         return true;
+
+    if (auto *BCO = dyn_cast<BitCastOperator>(V))
+      return isKnownNonZero(BCO->getOperand(0), Depth, Q);
+
+    if (auto *I2P = dyn_cast<IntToPtrInst>(V))
+      if (Q.DL.getTypeSizeInBits(I2P->getSrcTy()) <=
+          Q.DL.getTypeSizeInBits(I2P->getDestTy()))
+        return isKnownNonZero(I2P->getOperand(0), Depth, Q);
   }
+
+  // Similar to int2ptr above, we can look through ptr2int here if the cast
+  // is a no-op or an extend and not a truncate.
+  if (auto *P2I = dyn_cast<PtrToIntInst>(V))
+    if (Q.DL.getTypeSizeInBits(P2I->getSrcTy()) <=
+        Q.DL.getTypeSizeInBits(P2I->getDestTy()))
+      return isKnownNonZero(P2I->getOperand(0), Depth, Q);
 
   unsigned BitWidth = getBitWidth(V->getType()->getScalarType(), Q.DL);
 

@@ -141,7 +141,7 @@ public:
   using CheckerDtor = CheckerFn<void ()>;
 
 //===----------------------------------------------------------------------===//
-// registerChecker
+// Checker registration.
 //===----------------------------------------------------------------------===//
 
   /// Used to register checkers.
@@ -153,8 +153,7 @@ public:
   CHECKER *registerChecker(AT &&... Args) {
     CheckerTag tag = getTag<CHECKER>();
     CheckerRef &ref = CheckerTags[tag];
-    if (ref)
-      return static_cast<CHECKER *>(ref); // already registered.
+    assert(!ref && "Checker already registered, use getChecker!");
 
     CHECKER *checker = new CHECKER(std::forward<AT>(Args)...);
     checker->Name = CurrentCheckName;
@@ -164,8 +163,17 @@ public:
     return checker;
   }
 
+  template <typename CHECKER>
+  CHECKER *getChecker() {
+    CheckerTag tag = getTag<CHECKER>();
+    assert(CheckerTags.count(tag) != 0 &&
+           "Requested checker is not registered! Maybe you should add it as a "
+           "dependency in Checkers.td?");
+    return static_cast<CHECKER *>(CheckerTags[tag]);
+  }
+
 //===----------------------------------------------------------------------===//
-// Functions for running checkers for AST traversing..
+// Functions for running checkers for AST traversing.
 //===----------------------------------------------------------------------===//
 
   /// Run checkers handling Decls.

@@ -2387,6 +2387,11 @@ def xor_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
   return hasNoCarryFlagUses(SDValue(N, 1));
 }]>;
 
+def and_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
+                            (X86and_flag node:$lhs, node:$rhs), [{
+  return hasNoCarryFlagUses(SDValue(N, 1));
+}]>;
+
 let Predicates = [HasBMI] in {
   // FIXME: patterns for the load versions are not implemented
   def : Pat<(and GR32:$src, (add GR32:$src, -1)),
@@ -2405,12 +2410,15 @@ let Predicates = [HasBMI] in {
             (BLSI64rr GR64:$src)>;
 
   // Versions to match flag producing ops.
-  // X86and_flag nodes are rarely created. Those should use CMP+AND. We do
-  // TESTrr matching in PostProcessISelDAG to allow BLSR/BLSI to be formed.
   def : Pat<(xor_flag_nocf GR32:$src, (add GR32:$src, -1)),
             (BLSMSK32rr GR32:$src)>;
   def : Pat<(xor_flag_nocf GR64:$src, (add GR64:$src, -1)),
             (BLSMSK64rr GR64:$src)>;
+
+  def : Pat<(and_flag_nocf GR32:$src, (add GR32:$src, -1)),
+            (BLSR32rr GR32:$src)>;
+  def : Pat<(and_flag_nocf GR64:$src, (add GR64:$src, -1)),
+            (BLSR64rr GR64:$src)>;
 }
 
 multiclass bmi_bextr<bits<8> opc, string mnemonic, RegisterClass RC,

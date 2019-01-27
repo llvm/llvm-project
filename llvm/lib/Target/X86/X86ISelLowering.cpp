@@ -14371,6 +14371,38 @@ getHalfShuffleMask(ArrayRef<int> Mask, MutableArrayRef<int> HalfMask,
   return true;
 }
 
+/// Given the output values from getHalfShuffleMask(), create a half width
+/// shuffle of extracted vectors followed by an insert back to full width.
+static SDValue getShuffleHalfVectors(const SDLoc &DL, SDValue V1, SDValue V2,
+                                     ArrayRef<int> HalfMask, int HalfIdx1,
+                                     int HalfIdx2, bool UndefLower,
+                                     SelectionDAG &DAG) {
+  assert(V1.getValueType() == V2.getValueType() && "Different sized vectors?");
+  assert(V1.getValueType().isSimple() && "Expecting only simple types");
+
+  MVT VT = V1.getSimpleValueType();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned HalfNumElts = NumElts / 2;
+  MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(), HalfNumElts);
+
+  auto getHalfVector = [&](int HalfIdx) {
+    if (HalfIdx < 0)
+      return DAG.getUNDEF(HalfVT);
+    SDValue V = (HalfIdx < 2 ? V1 : V2);
+    HalfIdx = (HalfIdx % 2) * HalfNumElts;
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V,
+                       DAG.getIntPtrConstant(HalfIdx, DL));
+  };
+
+  // ins undef, (shuf (ext V1, HalfIdx1), (ext V2, HalfIdx2), HalfMask), Offset
+  SDValue Half1 = getHalfVector(HalfIdx1);
+  SDValue Half2 = getHalfVector(HalfIdx2);
+  SDValue V = DAG.getVectorShuffle(HalfVT, DL, Half1, Half2, HalfMask);
+  unsigned Offset = UndefLower ? HalfNumElts : 0;
+  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), V,
+                     DAG.getIntPtrConstant(Offset, DL));
+}
+
 /// Lower shuffles where an entire half of a 256 or 512-bit vector is UNDEF.
 /// This allows for fast cases such as subvector extraction/insertion
 /// or shuffling smaller vector types which can lower more efficiently.
@@ -14450,21 +14482,8 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
   if (VT.is512BitVector() && (UndefLower || NumUpperHalves != 0))
     return SDValue();
 
-  auto GetHalfVector = [&](int HalfIdx) {
-    if (HalfIdx < 0)
-      return DAG.getUNDEF(HalfVT);
-    SDValue V = (HalfIdx < 2 ? V1 : V2);
-    HalfIdx = (HalfIdx % 2) * HalfNumElts;
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V,
-                       DAG.getIntPtrConstant(HalfIdx, DL));
-  };
-
-  SDValue Half1 = GetHalfVector(HalfIdx1);
-  SDValue Half2 = GetHalfVector(HalfIdx2);
-  SDValue V = DAG.getVectorShuffle(HalfVT, DL, Half1, Half2, HalfMask);
-  unsigned Offset = UndefLower ? HalfNumElts : 0;
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), V,
-                     DAG.getIntPtrConstant(Offset, DL));
+  return getShuffleHalfVectors(DL, V1, V2, HalfMask, HalfIdx1, HalfIdx2,
+                               UndefLower, DAG);
 }
 
 /// Test whether the specified input (0 or 1) is in-place blended by the
@@ -19585,17 +19604,20 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
       TLI.isOperationLegal(ISD::UMIN, VT)) {
     // If we have a constant operand, increment/decrement it and change the
     // condition to avoid an invert.
-    // TODO: This could be extended to handle a non-splat constant by checking
-    // that each element of the constant is not the max/null value.
-    APInt C;
-    if (Cond == ISD::SETUGT && isConstantSplat(Op1, C) && !C.isMaxValue()) {
+    if (Cond == ISD::SETUGT &&
+        ISD::matchUnaryPredicate(Op1, [](ConstantSDNode *C) {
+          return !C->getAPIntValue().isMaxValue();
+        })) {
       // X > C --> X >= (C+1) --> X == umax(X, C+1)
-      Op1 = DAG.getConstant(C + 1, dl, VT);
+      Op1 = DAG.getNode(ISD::ADD, dl, VT, Op1, DAG.getConstant(1, dl, VT));
       Cond = ISD::SETUGE;
     }
-    if (Cond == ISD::SETULT && isConstantSplat(Op1, C) && !C.isNullValue()) {
+    if (Cond == ISD::SETULT &&
+        ISD::matchUnaryPredicate(Op1, [](ConstantSDNode *C) {
+          return !C->getAPIntValue().isNullValue();
+        })) {
       // X < C --> X <= (C-1) --> X == umin(X, C-1)
-      Op1 = DAG.getConstant(C - 1, dl, VT);
+      Op1 = DAG.getNode(ISD::SUB, dl, VT, Op1, DAG.getConstant(1, dl, VT));
       Cond = ISD::SETULE;
     }
     bool Invert = false;
@@ -32353,22 +32375,14 @@ static SDValue narrowShuffle(ShuffleVectorSDNode *Shuf, SelectionDAG &DAG) {
       (HalfIdx1 % 2 == 1) || (HalfIdx2 % 2 == 1))
     return SDValue();
 
-  // Create 4 instructions to replace the unnecessarily wide shuffle.
+  // Create a half-width shuffle to replace the unnecessarily wide shuffle.
   // The trick is knowing that all of the insert/extract are actually free
-  // subregister (zmm->ymm or ymm->xmm) ops. That leaves us with a shuffle
+  // subregister (zmm<->ymm or ymm<->xmm) ops. That leaves us with a shuffle
   // of narrow inputs into a narrow output, and that is always cheaper than
   // the wide shuffle that we started with.
-  unsigned NumElts = Mask.size();
-  SDValue Op0 = Shuf->getOperand(0);
-  SDValue Op1 = Shuf->getOperand(1);
-  SDLoc DL(Shuf);
-  SDValue Index0 = DAG.getIntPtrConstant(0, DL);
-  MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(), NumElts / 2);
-  SDValue Extr0 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Op0, Index0);
-  SDValue Extr1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Op1, Index0);
-  SDValue NewShuf = DAG.getVectorShuffle(HalfVT, DL, Extr0, Extr1, HalfMask);
-  SDValue UndefV = DAG.getUNDEF(VT);
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, UndefV, NewShuf, Index0);
+  return getShuffleHalfVectors(SDLoc(Shuf), Shuf->getOperand(0),
+                               Shuf->getOperand(1), HalfMask, HalfIdx1,
+                               HalfIdx2, false, DAG);
 }
 
 static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
@@ -34862,7 +34876,7 @@ static bool checkBoolTestAndOrSetCCCombine(SDValue Cond, X86::CondCode &CC0,
 // When legalizing carry, we create carries via add X, -1
 // If that comes from an actual carry, via setcc, we use the
 // carry directly.
-static SDValue combineCarryThroughADD(SDValue EFLAGS) {
+static SDValue combineCarryThroughADD(SDValue EFLAGS, SelectionDAG &DAG) {
   if (EFLAGS.getOpcode() == X86ISD::ADD) {
     if (isAllOnesConstant(EFLAGS.getOperand(1))) {
       SDValue Carry = EFLAGS.getOperand(0);
@@ -34875,8 +34889,28 @@ static SDValue combineCarryThroughADD(SDValue EFLAGS) {
         Carry = Carry.getOperand(0);
       if (Carry.getOpcode() == X86ISD::SETCC ||
           Carry.getOpcode() == X86ISD::SETCC_CARRY) {
-        if (Carry.getConstantOperandVal(0) == X86::COND_B)
-          return Carry.getOperand(1);
+        // TODO: Merge this code with equivalent in combineAddOrSubToADCOrSBB?
+        uint64_t CarryCC = Carry.getConstantOperandVal(0);
+        SDValue CarryOp1 = Carry.getOperand(1);
+        if (CarryCC == X86::COND_B)
+          return CarryOp1;
+        if (CarryCC == X86::COND_A) {
+          // Try to convert COND_A into COND_B in an attempt to facilitate
+          // materializing "setb reg".
+          //
+          // Do not flip "e > c", where "c" is a constant, because Cmp
+          // instruction cannot take an immediate as its first operand.
+          //
+          if (CarryOp1.getOpcode() == X86ISD::SUB &&
+              CarryOp1.getNode()->hasOneUse() &&
+              CarryOp1.getValueType().isInteger() &&
+              !isa<ConstantSDNode>(CarryOp1.getOperand(1))) {
+            SDValue SubCommute =
+                DAG.getNode(X86ISD::SUB, SDLoc(CarryOp1), CarryOp1->getVTList(),
+                            CarryOp1.getOperand(1), CarryOp1.getOperand(0));
+            return SDValue(SubCommute.getNode(), CarryOp1.getResNo());
+          }
+        }
       }
     }
   }
@@ -34891,7 +34925,7 @@ static SDValue combineSetCCEFLAGS(SDValue EFLAGS, X86::CondCode &CC,
                                   SelectionDAG &DAG,
                                   const X86Subtarget &Subtarget) {
   if (CC == X86::COND_B)
-    if (SDValue Flags = combineCarryThroughADD(EFLAGS))
+    if (SDValue Flags = combineCarryThroughADD(EFLAGS, DAG))
       return Flags;
 
   if (SDValue R = checkBoolTestSetCCCombine(EFLAGS, CC))
@@ -40544,13 +40578,22 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG) {
 }
 
 static SDValue combineSBB(SDNode *N, SelectionDAG &DAG) {
-  if (SDValue Flags = combineCarryThroughADD(N->getOperand(2))) {
+  if (SDValue Flags = combineCarryThroughADD(N->getOperand(2), DAG)) {
     MVT VT = N->getSimpleValueType(0);
     SDVTList VTs = DAG.getVTList(VT, MVT::i32);
     return DAG.getNode(X86ISD::SBB, SDLoc(N), VTs,
                        N->getOperand(0), N->getOperand(1),
                        Flags);
   }
+
+  // Fold SBB(SUB(X,Y),0,Carry) -> SBB(X,Y,Carry)
+  // iff the flag result is dead.
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  if (Op0.getOpcode() == ISD::SUB && isNullConstant(Op1) &&
+      !N->hasAnyUseOfValue(1))
+    return DAG.getNode(X86ISD::SBB, SDLoc(N), N->getVTList(), Op0.getOperand(0),
+                       Op0.getOperand(1), N->getOperand(2));
 
   return SDValue();
 }
@@ -40578,7 +40621,7 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
     return DCI.CombineTo(N, Res1, CarryOut);
   }
 
-  if (SDValue Flags = combineCarryThroughADD(N->getOperand(2))) {
+  if (SDValue Flags = combineCarryThroughADD(N->getOperand(2), DAG)) {
     MVT VT = N->getSimpleValueType(0);
     SDVTList VTs = DAG.getVTList(VT, MVT::i32);
     return DAG.getNode(X86ISD::ADC, SDLoc(N), VTs,
@@ -40674,7 +40717,7 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
     // Do not flip "e > c", where "c" is a constant, because Cmp instruction
     // cannot take an immediate as its first operand.
     //
-    if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.hasOneUse() &&
+    if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.getNode()->hasOneUse() &&
         EFLAGS.getValueType().isInteger() &&
         !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
       SDValue NewSub = DAG.getNode(X86ISD::SUB, SDLoc(EFLAGS),

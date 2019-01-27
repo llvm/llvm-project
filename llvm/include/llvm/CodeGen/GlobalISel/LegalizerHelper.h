@@ -125,6 +125,8 @@ private:
   LegalizeResult
   fewerElementsVectorCmp(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
 
+  LegalizeResult narrowScalarMul(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+
   LegalizeResult lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
   MachineRegisterInfo &MRI;
