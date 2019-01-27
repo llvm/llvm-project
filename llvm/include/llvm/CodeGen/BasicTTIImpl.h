@@ -1266,6 +1266,28 @@ public:
       return ConcreteTTI->getMinMaxReductionCost(
           Tys[0], CmpInst::makeCmpResultType(Tys[0]), /*IsPairwiseForm=*/false,
           /*IsSigned=*/false);
+    case Intrinsic::sadd_sat:
+    case Intrinsic::ssub_sat: {
+      Type *CondTy = Type::getInt1Ty(RetTy->getContext());
+      if (RetVF > 1)
+        CondTy = VectorType::get(CondTy, RetVF);
+
+      Type *OpTy = StructType::create({RetTy, CondTy});
+      Intrinsic::ID OverflowOp = IID == Intrinsic::sadd_sat
+                                     ? Intrinsic::sadd_with_overflow
+                                     : Intrinsic::ssub_with_overflow;
+
+      // SatMax -> Overflow && SumDiff < 0
+      // SatMin -> Overflow && SumDiff >= 0
+      unsigned Cost = 0;
+      Cost += ConcreteTTI->getIntrinsicInstrCost(
+          OverflowOp, OpTy, {RetTy, RetTy}, FMF, ScalarizationCostPassed);
+      Cost += ConcreteTTI->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy,
+                                              CondTy, nullptr);
+      Cost += 2 * ConcreteTTI->getCmpSelInstrCost(BinaryOperator::Select, RetTy,
+                                                  CondTy, nullptr);
+      return Cost;
+    }
     case Intrinsic::uadd_sat:
     case Intrinsic::usub_sat: {
       Type *CondTy = Type::getInt1Ty(RetTy->getContext());

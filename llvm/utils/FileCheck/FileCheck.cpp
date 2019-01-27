@@ -50,10 +50,9 @@ static cl::list<std::string> ImplicitCheckNot(
              "this pattern occur which are not matched by a positive pattern"),
     cl::value_desc("pattern"));
 
-static cl::list<std::string>
-    GlobalDefines("D", cl::AlwaysPrefix,
-                  cl::desc("Define a variable to be used in capture patterns."),
-                  cl::value_desc("VAR=VALUE"));
+static cl::list<std::string> GlobalDefines("D", cl::Prefix,
+    cl::desc("Define a variable to be used in capture patterns."),
+    cl::value_desc("VAR=VALUE"));
 
 static cl::opt<bool> AllowEmptyInput(
     "allow-empty", cl::init(false),
@@ -526,25 +525,8 @@ int main(int argc, char **argv) {
   for (auto CheckNot : ImplicitCheckNot)
     Req.ImplicitCheckNot.push_back(CheckNot);
 
-  bool GlobalDefineError = false;
-  for (auto G : GlobalDefines) {
-    size_t EqIdx = G.find('=');
-    if (EqIdx == std::string::npos) {
-      errs() << "Missing equal sign in command-line definition '-D" << G
-             << "'\n";
-      GlobalDefineError = true;
-      continue;
-    }
-    if (EqIdx == 0) {
-      errs() << "Missing pattern variable name in command-line definition '-D"
-             << G << "'\n";
-      GlobalDefineError = true;
-      continue;
-    }
+  for (auto G : GlobalDefines)
     Req.GlobalDefines.push_back(G);
-  }
-  if (GlobalDefineError)
-    return 2;
 
   Req.AllowEmptyInput = AllowEmptyInput;
   Req.EnableVarScope = EnableVarScope;
