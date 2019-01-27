@@ -64,6 +64,10 @@ void ento::registerTraversalDumper(CheckerManager &mgr) {
   mgr.registerChecker<TraversalDumper>();
 }
 
+bool ento::shouldRegisterTraversalDumper(const LangOptions &LO) {
+  return true;
+}
+
 //------------------------------------------------------------------------------
 
 namespace {
@@ -110,4 +114,8 @@ void CallDumper::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
 
 void ento::registerCallDumper(CheckerManager &mgr) {
   mgr.registerChecker<CallDumper>();
+}
+
+bool ento::shouldRegisterCallDumper(const LangOptions &LO) {
+  return true;
 }

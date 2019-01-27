@@ -478,3 +478,7 @@ public:
 void ento::registerDeadStoresChecker(CheckerManager &mgr) {
   mgr.registerChecker<DeadStoresChecker>();
 }
+
+bool ento::shouldRegisterDeadStoresChecker(const LangOptions &LO) {
+  return true;
+}

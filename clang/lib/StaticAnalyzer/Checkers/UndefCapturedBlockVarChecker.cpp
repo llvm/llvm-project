@@ -99,3 +99,7 @@ UndefCapturedBlockVarChecker::checkPostStmt(const BlockExpr *BE,
 void ento::registerUndefCapturedBlockVarChecker(CheckerManager &mgr) {
   mgr.registerChecker<UndefCapturedBlockVarChecker>();
 }
+
+bool ento::shouldRegisterUndefCapturedBlockVarChecker(const LangOptions &LO) {
+  return true;
+}

@@ -139,3 +139,7 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
 void ento::registerAnalyzerStatsChecker(CheckerManager &mgr) {
   mgr.registerChecker<AnalyzerStatsChecker>();
 }
+
+bool ento::shouldRegisterAnalyzerStatsChecker(const LangOptions &LO) {
+  return true;
+}

@@ -173,3 +173,7 @@ void MacOSXAPIChecker::checkPreStmt(const CallExpr *CE,
 void ento::registerMacOSXAPIChecker(CheckerManager &mgr) {
   mgr.registerChecker<MacOSXAPIChecker>();
 }
+
+bool ento::shouldRegisterMacOSXAPIChecker(const LangOptions &LO) {
+  return true;
+}

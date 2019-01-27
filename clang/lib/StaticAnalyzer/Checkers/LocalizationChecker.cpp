@@ -1401,10 +1401,22 @@ void ento::registerNonLocalizedStringChecker(CheckerManager &mgr) {
                                                        false, checker);
 }
 
+bool ento::shouldRegisterNonLocalizedStringChecker(const LangOptions &LO) {
+  return true;
+}
+
 void ento::registerEmptyLocalizationContextChecker(CheckerManager &mgr) {
   mgr.registerChecker<EmptyLocalizationContextChecker>();
 }
 
+bool ento::shouldRegisterEmptyLocalizationContextChecker(const LangOptions &LO) {
+  return true;
+}
+
 void ento::registerPluralMisuseChecker(CheckerManager &mgr) {
   mgr.registerChecker<PluralMisuseChecker>();
+}
+
+bool ento::shouldRegisterPluralMisuseChecker(const LangOptions &LO) {
+  return true;
 }
