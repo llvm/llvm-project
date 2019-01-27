@@ -399,11 +399,23 @@ std::shared_ptr<PathDiagnosticPiece> ValistChecker::ValistBugVisitor::VisitNode(
   return std::make_shared<PathDiagnosticEventPiece>(Pos, Msg, true);
 }
 
+void ento::registerValistBase(CheckerManager &mgr) {
+  mgr.registerChecker<ValistChecker>();
+}
+
+bool ento::shouldRegisterValistBase(const LangOptions &LO) {
+  return true;
+}
+
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name##Checker(CheckerManager &mgr) {                    \
-    ValistChecker *checker = mgr.registerChecker<ValistChecker>();             \
+    ValistChecker *checker = mgr.getChecker<ValistChecker>();                  \
     checker->ChecksEnabled[ValistChecker::CK_##name] = true;                   \
     checker->CheckNames[ValistChecker::CK_##name] = mgr.getCurrentCheckName(); \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name##Checker(const LangOptions &LO) {            \
+    return true;                                                               \
   }
 
 REGISTER_CHECKER(Uninitialized)

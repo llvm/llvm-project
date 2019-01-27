@@ -3,7 +3,6 @@
 <plist version="1.0">
 <dict>
  <key>clang_version</key>
-<string>clang version 8.0.0 </string>
  <key>diagnostics</key>
  <array>
   <dict>
@@ -1268,9 +1267,9 @@
    <key>description</key><string>Potential leak of an object of type &apos;NSNumber *&apos;</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCount</string>
+   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>500e2bbda41c8086771ad98b6bcfdc50</string>
+   <key>issue_hash_content_of_line_in_context</key><string>c204ce6cce660a7714c801bdf9183431</string>
   <key>location</key>
   <dict>
    <key>line</key><integer>53</integer>
@@ -1303,7 +1302,6 @@
  </array>
  <key>files</key>
  <array>
-  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/objc-radar17039661.m</string>
  </array>
 </dict>
 </plist>

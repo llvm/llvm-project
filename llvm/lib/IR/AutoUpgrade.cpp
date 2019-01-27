@@ -299,6 +299,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.fpclass.p") || // Added in 7.0
       Name.startswith("avx512.mask.vpshufbitqmb.") || // Added in 8.0
       Name.startswith("avx512.mask.pmultishift.qb.") || // Added in 8.0
+      Name.startswith("avx512.mask.conflict.") || // Added in 9.0
       Name == "avx512.mask.pmov.qd.256" || // Added in 9.0
       Name == "avx512.mask.pmov.qd.512" || // Added in 9.0
       Name == "avx512.mask.pmov.wb.256" || // Added in 9.0
@@ -1501,6 +1502,21 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
       IID = Intrinsic::x86_avx512_pmultishift_qb_256;
     else if (VecWidth == 512)
       IID = Intrinsic::x86_avx512_pmultishift_qb_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("conflict.")) {
+    if (Name[9] == 'd' && VecWidth == 128)
+      IID = Intrinsic::x86_avx512_conflict_d_128;
+    else if (Name[9] == 'd' && VecWidth == 256)
+      IID = Intrinsic::x86_avx512_conflict_d_256;
+    else if (Name[9] == 'd' && VecWidth == 512)
+      IID = Intrinsic::x86_avx512_conflict_d_512;
+    else if (Name[9] == 'q' && VecWidth == 128)
+      IID = Intrinsic::x86_avx512_conflict_q_128;
+    else if (Name[9] == 'q' && VecWidth == 256)
+      IID = Intrinsic::x86_avx512_conflict_q_256;
+    else if (Name[9] == 'q' && VecWidth == 512)
+      IID = Intrinsic::x86_avx512_conflict_q_512;
     else
       llvm_unreachable("Unexpected intrinsic");
   } else

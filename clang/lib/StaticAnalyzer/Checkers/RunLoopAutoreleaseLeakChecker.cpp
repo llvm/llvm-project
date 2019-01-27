@@ -202,3 +202,7 @@ void RunLoopAutoreleaseLeakChecker::checkASTCodeBody(const Decl *D,
 void ento::registerRunLoopAutoreleaseLeakChecker(CheckerManager &mgr) {
   mgr.registerChecker<RunLoopAutoreleaseLeakChecker>();
 }
+
+bool ento::shouldRegisterRunLoopAutoreleaseLeakChecker(const LangOptions &LO) {
+  return true;
+}

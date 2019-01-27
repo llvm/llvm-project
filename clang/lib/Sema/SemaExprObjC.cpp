@@ -4342,13 +4342,10 @@ Expr *Sema::stripARCUnbridgedCast(Expr *e) {
       subExprs[i] = sub;
     }
 
-    return new (Context) GenericSelectionExpr(Context, gse->getGenericLoc(),
-                                              gse->getControllingExpr(),
-                                              subTypes, subExprs,
-                                              gse->getDefaultLoc(),
-                                              gse->getRParenLoc(),
-                                       gse->containsUnexpandedParameterPack(),
-                                              gse->getResultIndex());
+    return GenericSelectionExpr::Create(
+        Context, gse->getGenericLoc(), gse->getControllingExpr(), subTypes,
+        subExprs, gse->getDefaultLoc(), gse->getRParenLoc(),
+        gse->containsUnexpandedParameterPack(), gse->getResultIndex());
   } else {
     assert(isa<ImplicitCastExpr>(e) && "bad form of unbridged cast!");
     return cast<ImplicitCastExpr>(e)->getSubExpr();

@@ -97,13 +97,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .legalFor({S32})
     .scalarize(0);
 
-  // FIXME: 64-bit ones only legal for scalar
+  // Report legal for any types we can handle anywhere. For the cases only legal
+  // on the SALU, RegBankSelect will be able to re-legalize.
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
-    .legalFor({S32, S1, S64, V2S32});
+    .legalFor({S32, S1, S64, V2S32, V2S16, V4S16})
+    .clampScalar(0, S32, S64)
+    .scalarize(0);
 
   getActionDefinitionsBuilder({G_UADDO, G_SADDO, G_USUBO, G_SSUBO,
                                G_UADDE, G_SADDE, G_USUBE, G_SSUBE})
-    .legalFor({{S32, S1}});
+    .legalFor({{S32, S1}})
+    .clampScalar(0, S32, S32);
 
   getActionDefinitionsBuilder(G_BITCAST)
     .legalForCartesianProduct({S32, V2S16})
@@ -175,7 +179,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .scalarize(0);
 
   getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND})
-    .legalFor({S32, S64});
+    .legalFor({S32, S64})
+    .scalarize(0);
 
   for (LLT PtrTy : AddrSpaces) {
     LLT IdxTy = LLT::scalar(PtrTy.getSizeInBits());
@@ -197,8 +202,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .legalFor({{S1, S32}, {S1, S64}})
     .widenScalarToNextPow2(1)
     .clampScalar(1, S32, S64)
-    .clampMaxNumElements(0, S1, 1)
-    .clampMaxNumElements(1, S32, 1);
+    .scalarize(0);
 
   // FIXME: fexp, flog2, flog10 needs to be custom lowered.
   getActionDefinitionsBuilder({G_FPOW, G_FEXP, G_FEXP2,
@@ -322,8 +326,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .legalIf([=](const LegalityQuery &Query) {
         const LLT &Ty0 = Query.Types[0];
         const LLT &Ty1 = Query.Types[1];
-        return (Ty0.getSizeInBits() % 32 == 0) &&
-               (Ty1.getSizeInBits() % 32 == 0);
+        return (Ty0.getSizeInBits() % 16 == 0) &&
+               (Ty1.getSizeInBits() % 16 == 0);
       });
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR)

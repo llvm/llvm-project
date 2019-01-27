@@ -59,3 +59,7 @@ void CXXSelfAssignmentChecker::checkBeginFunction(CheckerContext &C) const {
 void ento::registerCXXSelfAssignmentChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<CXXSelfAssignmentChecker>();
 }
+
+bool ento::shouldRegisterCXXSelfAssignmentChecker(const LangOptions &LO) {
+  return true;
+}
