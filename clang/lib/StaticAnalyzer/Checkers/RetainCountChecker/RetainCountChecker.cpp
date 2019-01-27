@@ -1455,9 +1455,21 @@ void RetainCountChecker::printState(raw_ostream &Out, ProgramStateRef State,
 // Checker registration.
 //===----------------------------------------------------------------------===//
 
+void ento::registerRetainCountBase(CheckerManager &Mgr) {
+  Mgr.registerChecker<RetainCountChecker>();
+}
+
+bool ento::shouldRegisterRetainCountBase(const LangOptions &LO) {
+  return true;
+}
+
 void ento::registerRetainCountChecker(CheckerManager &Mgr) {
-  auto *Chk = Mgr.registerChecker<RetainCountChecker>();
+  auto *Chk = Mgr.getChecker<RetainCountChecker>();
   Chk->TrackObjCAndCFObjects = true;
+}
+
+bool ento::shouldRegisterRetainCountChecker(const LangOptions &LO) {
+  return true;
 }
 
 // FIXME: remove this, hack for backwards compatibility:
@@ -1472,7 +1484,11 @@ static bool hasPrevCheckOSObjectOptionDisabled(AnalyzerOptions &Options) {
 }
 
 void ento::registerOSObjectRetainCountChecker(CheckerManager &Mgr) {
-  auto *Chk = Mgr.registerChecker<RetainCountChecker>();
+  auto *Chk = Mgr.getChecker<RetainCountChecker>();
   if (!hasPrevCheckOSObjectOptionDisabled(Mgr.getAnalyzerOptions()))
     Chk->TrackOSObjects = true;
+}
+
+bool ento::shouldRegisterOSObjectRetainCountChecker(const LangOptions &LO) {
+  return true;
 }

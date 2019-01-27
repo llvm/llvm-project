@@ -173,9 +173,9 @@
    <key>description</key><string>Nullable pointer is passed to a callee that requires a non-null 1st parameter</string>
    <key>category</key><string>Memory error</string>
    <key>type</key><string>Nullability</string>
-   <key>check_name</key><string>nullability.NullPassedToNonnull</string>
+   <key>check_name</key><string>nullability.NullabilityBase</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>b6bc8126de8e6eb3375483a656fe858d</string>
+   <key>issue_hash_content_of_line_in_context</key><string>ff735bea0eb12d4d172b139143c32365</string>
   <key>issue_context_kind</key><string>Objective-C method</string>
   <key>issue_context</key><string>method</string>
   <key>issue_hash_function_offset</key><string>3</string>

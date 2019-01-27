@@ -103,7 +103,6 @@ define i64 @test8(i8* %data) {
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    shrl $2, %eax
 ; CHECK-NEXT:    orl $60, %eax
-; CHECK-NEXT:    movl %eax, %eax
 ; CHECK-NEXT:    retq
 entry:
   %bf.load = load i8, i8* %data, align 4

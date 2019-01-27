@@ -974,7 +974,7 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
            "type mismatch in input list");
     assert(SrcOps.size() * SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
                DstOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
-           "input scalars do not exactly cover the outpur vector register");
+           "input scalars do not exactly cover the output vector register");
     break;
   }
   case TargetOpcode::G_BUILD_VECTOR_TRUNC: {
@@ -1007,7 +1007,7 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
            "type mismatch in input list");
     assert(SrcOps.size() * SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
                DstOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
-           "input vectors do not exactly cover the outpur vector register");
+           "input vectors do not exactly cover the output vector register");
     break;
   }
   case TargetOpcode::G_UADDE: {

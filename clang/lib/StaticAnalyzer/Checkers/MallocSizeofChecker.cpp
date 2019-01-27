@@ -249,3 +249,7 @@ public:
 void ento::registerMallocSizeofChecker(CheckerManager &mgr) {
   mgr.registerChecker<MallocSizeofChecker>();
 }
+
+bool ento::shouldRegisterMallocSizeofChecker(const LangOptions &LO) {
+  return true;
+}

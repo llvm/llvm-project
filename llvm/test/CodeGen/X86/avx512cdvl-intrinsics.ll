@@ -118,109 +118,145 @@ define <4 x i64> @test_int_x86_avx512_mask_vplzcnt_q_256(<4 x i64> %x0, <4 x i64
 }
 declare <4 x i64> @llvm.ctlz.v4i64(<4 x i64>, i1) #0
 
-declare <4 x i32> @llvm.x86.avx512.mask.conflict.d.128(<4 x i32>, <4 x i32>, i8)
-
-define <4 x i32>@test_int_x86_avx512_mask_vpconflict_d_128(<4 x i32> %x0, <4 x i32> %x1, i8 %x2) {
+define <4 x i32> @test_int_x86_avx512_mask_vpconflict_d_128(<4 x i32> %x0, <4 x i32> %x1, i8 %x2) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpconflict_d_128:
 ; X86:       # %bb.0:
+; X86-NEXT:    vpconflictd %xmm0, %xmm2
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpconflictd %xmm0, %xmm1 {%k1}
-; X86-NEXT:    vpconflictd %xmm0, %xmm2 {%k1} {z}
-; X86-NEXT:    vpconflictd %xmm0, %xmm0
-; X86-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
+; X86-NEXT:    vpconflictd %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
 ; X86-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_vpconflict_d_128:
 ; X64:       # %bb.0:
+; X64-NEXT:    vpconflictd %xmm0, %xmm2
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpconflictd %xmm0, %xmm2 {%k1} {z}
 ; X64-NEXT:    vpconflictd %xmm0, %xmm1 {%k1}
-; X64-NEXT:    vpconflictd %xmm0, %xmm0
-; X64-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
+; X64-NEXT:    vpconflictd %xmm0, %xmm0 {%k1} {z}
+; X64-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
 ; X64-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <4 x i32> @llvm.x86.avx512.mask.conflict.d.128(<4 x i32> %x0, <4 x i32> %x1, i8 %x2)
-  %res1 = call <4 x i32> @llvm.x86.avx512.mask.conflict.d.128(<4 x i32> %x0, <4 x i32> %x1, i8 -1)
-  %res3 = call <4 x i32> @llvm.x86.avx512.mask.conflict.d.128(<4 x i32> %x0, <4 x i32> zeroinitializer, i8 %x2)
-  %res2 = add <4 x i32> %res, %res1
-  %res4 = add <4 x i32> %res2, %res3
+  %1 = call <4 x i32> @llvm.x86.avx512.conflict.d.128(<4 x i32> %x0)
+  %2 = bitcast i8 %x2 to <8 x i1>
+  %extract1 = shufflevector <8 x i1> %2, <8 x i1> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = select <4 x i1> %extract1, <4 x i32> %1, <4 x i32> %x1
+  %4 = call <4 x i32> @llvm.x86.avx512.conflict.d.128(<4 x i32> %x0)
+  %5 = call <4 x i32> @llvm.x86.avx512.conflict.d.128(<4 x i32> %x0)
+  %6 = bitcast i8 %x2 to <8 x i1>
+  %extract = shufflevector <8 x i1> %6, <8 x i1> %6, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %7 = select <4 x i1> %extract, <4 x i32> %5, <4 x i32> zeroinitializer
+  %res2 = add <4 x i32> %3, %4
+  %res4 = add <4 x i32> %res2, %7
   ret <4 x i32> %res4
 }
 
-declare <8 x i32> @llvm.x86.avx512.mask.conflict.d.256(<8 x i32>, <8 x i32>, i8)
-
-define <8 x i32>@test_int_x86_avx512_mask_vpconflict_d_256(<8 x i32> %x0, <8 x i32> %x1, i8 %x2) {
+define <8 x i32> @test_int_x86_avx512_mask_vpconflict_d_256(<8 x i32> %x0, <8 x i32> %x1, i8 %x2) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpconflict_d_256:
 ; X86:       # %bb.0:
+; X86-NEXT:    vpconflictd %ymm0, %ymm2
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpconflictd %ymm0, %ymm1 {%k1}
-; X86-NEXT:    vpconflictd %ymm0, %ymm0
+; X86-NEXT:    vpconflictd %ymm0, %ymm0 {%k1} {z}
+; X86-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; X86-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_vpconflict_d_256:
 ; X64:       # %bb.0:
+; X64-NEXT:    vpconflictd %ymm0, %ymm2
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vpconflictd %ymm0, %ymm1 {%k1}
-; X64-NEXT:    vpconflictd %ymm0, %ymm0
+; X64-NEXT:    vpconflictd %ymm0, %ymm0 {%k1} {z}
+; X64-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; X64-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
-  %res = call <8 x i32> @llvm.x86.avx512.mask.conflict.d.256(<8 x i32> %x0, <8 x i32> %x1, i8 %x2)
-  %res1 = call <8 x i32> @llvm.x86.avx512.mask.conflict.d.256(<8 x i32> %x0, <8 x i32> %x1, i8 -1)
-  %res2 = add <8 x i32> %res, %res1
-  ret <8 x i32> %res2
+  %1 = call <8 x i32> @llvm.x86.avx512.conflict.d.256(<8 x i32> %x0)
+  %2 = bitcast i8 %x2 to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x i32> %1, <8 x i32> %x1
+  %4 = call <8 x i32> @llvm.x86.avx512.conflict.d.256(<8 x i32> %x0)
+  %5 = call <8 x i32> @llvm.x86.avx512.conflict.d.256(<8 x i32> %x0)
+  %6 = bitcast i8 %x2 to <8 x i1>
+  %7 = select <8 x i1> %6, <8 x i32> %5, <8 x i32> zeroinitializer
+  %res3 = add <8 x i32> %3, %4
+  %res4 = add <8 x i32> %7, %res3
+  ret <8 x i32> %res4
 }
 
-declare <2 x i64> @llvm.x86.avx512.mask.conflict.q.128(<2 x i64>, <2 x i64>, i8)
-
-define <2 x i64>@test_int_x86_avx512_mask_vpconflict_q_128(<2 x i64> %x0, <2 x i64> %x1, i8 %x2) {
+define <2 x i64> @test_int_x86_avx512_mask_vpconflict_q_128(<2 x i64> %x0, <2 x i64> %x1, i8 %x2) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpconflict_q_128:
 ; X86:       # %bb.0:
+; X86-NEXT:    vpconflictq %xmm0, %xmm2
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpconflictq %xmm0, %xmm1 {%k1}
-; X86-NEXT:    vpconflictq %xmm0, %xmm0
+; X86-NEXT:    vpconflictq %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; X86-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_vpconflict_q_128:
 ; X64:       # %bb.0:
+; X64-NEXT:    vpconflictq %xmm0, %xmm2
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vpconflictq %xmm0, %xmm1 {%k1}
-; X64-NEXT:    vpconflictq %xmm0, %xmm0
+; X64-NEXT:    vpconflictq %xmm0, %xmm0 {%k1} {z}
+; X64-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; X64-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x i64> @llvm.x86.avx512.mask.conflict.q.128(<2 x i64> %x0, <2 x i64> %x1, i8 %x2)
-  %res1 = call <2 x i64> @llvm.x86.avx512.mask.conflict.q.128(<2 x i64> %x0, <2 x i64> %x1, i8 -1)
-  %res2 = add <2 x i64> %res, %res1
-  ret <2 x i64> %res2
+  %1 = call <2 x i64> @llvm.x86.avx512.conflict.q.128(<2 x i64> %x0)
+  %2 = bitcast i8 %x2 to <8 x i1>
+  %extract1 = shufflevector <8 x i1> %2, <8 x i1> %2, <2 x i32> <i32 0, i32 1>
+  %3 = select <2 x i1> %extract1, <2 x i64> %1, <2 x i64> %x1
+  %4 = call <2 x i64> @llvm.x86.avx512.conflict.q.128(<2 x i64> %x0)
+  %5 = call <2 x i64> @llvm.x86.avx512.conflict.q.128(<2 x i64> %x0)
+  %6 = bitcast i8 %x2 to <8 x i1>
+  %extract = shufflevector <8 x i1> %6, <8 x i1> %6, <2 x i32> <i32 0, i32 1>
+  %7 = select <2 x i1> %extract, <2 x i64> %5, <2 x i64> zeroinitializer
+  %res3 = add <2 x i64> %3, %4
+  %res4 = add <2 x i64> %7, %res3
+  ret <2 x i64> %res4
 }
 
-declare <4 x i64> @llvm.x86.avx512.mask.conflict.q.256(<4 x i64>, <4 x i64>, i8)
-
-define <4 x i64>@test_int_x86_avx512_mask_vpconflict_q_256(<4 x i64> %x0, <4 x i64> %x1, i8 %x2) {
+define <4 x i64> @test_int_x86_avx512_mask_vpconflict_q_256(<4 x i64> %x0, <4 x i64> %x1, i8 %x2) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpconflict_q_256:
 ; X86:       # %bb.0:
+; X86-NEXT:    vpconflictq %ymm0, %ymm2
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpconflictq %ymm0, %ymm1 {%k1}
-; X86-NEXT:    vpconflictq %ymm0, %ymm0
+; X86-NEXT:    vpconflictq %ymm0, %ymm0 {%k1} {z}
+; X86-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; X86-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_int_x86_avx512_mask_vpconflict_q_256:
 ; X64:       # %bb.0:
+; X64-NEXT:    vpconflictq %ymm0, %ymm2
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vpconflictq %ymm0, %ymm1 {%k1}
-; X64-NEXT:    vpconflictq %ymm0, %ymm0
+; X64-NEXT:    vpconflictq %ymm0, %ymm0 {%k1} {z}
+; X64-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; X64-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
-  %res = call <4 x i64> @llvm.x86.avx512.mask.conflict.q.256(<4 x i64> %x0, <4 x i64> %x1, i8 %x2)
-  %res1 = call <4 x i64> @llvm.x86.avx512.mask.conflict.q.256(<4 x i64> %x0, <4 x i64> %x1, i8 -1)
-  %res2 = add <4 x i64> %res, %res1
-  ret <4 x i64> %res2
+  %1 = call <4 x i64> @llvm.x86.avx512.conflict.q.256(<4 x i64> %x0)
+  %2 = bitcast i8 %x2 to <8 x i1>
+  %extract1 = shufflevector <8 x i1> %2, <8 x i1> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = select <4 x i1> %extract1, <4 x i64> %1, <4 x i64> %x1
+  %4 = call <4 x i64> @llvm.x86.avx512.conflict.q.256(<4 x i64> %x0)
+  %5 = call <4 x i64> @llvm.x86.avx512.conflict.q.256(<4 x i64> %x0)
+  %6 = bitcast i8 %x2 to <8 x i1>
+  %extract = shufflevector <8 x i1> %6, <8 x i1> %6, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %7 = select <4 x i1> %extract, <4 x i64> %5, <4 x i64> zeroinitializer
+  %res3 = add <4 x i64> %3, %4
+  %res4 = add <4 x i64> %7, %res3
+  ret <4 x i64> %res4
 }
 
+declare <4 x i32> @llvm.x86.avx512.conflict.d.128(<4 x i32>)
+declare <8 x i32> @llvm.x86.avx512.conflict.d.256(<8 x i32>)
+declare <2 x i64> @llvm.x86.avx512.conflict.q.128(<2 x i64>)
+declare <4 x i64> @llvm.x86.avx512.conflict.q.256(<4 x i64>)

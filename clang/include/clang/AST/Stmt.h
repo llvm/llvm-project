@@ -520,6 +520,16 @@ protected:
     unsigned NumExprs;
   };
 
+  class GenericSelectionExprBitfields {
+    friend class ASTStmtReader;
+    friend class GenericSelectionExpr;
+
+    unsigned : NumExprBits;
+
+    /// The location of the "_Generic".
+    SourceLocation GenericLoc;
+  };
+
   class PseudoObjectExprBitfields {
     friend class ASTStmtReader; // deserialization
     friend class PseudoObjectExpr;
@@ -915,6 +925,7 @@ protected:
     BinaryOperatorBitfields BinaryOperatorBits;
     InitListExprBitfields InitListExprBits;
     ParenListExprBitfields ParenListExprBits;
+    GenericSelectionExprBitfields GenericSelectionExprBits;
     PseudoObjectExprBitfields PseudoObjectExprBits;
 
     // C++ Expressions

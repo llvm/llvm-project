@@ -268,3 +268,8 @@ SimpleStreamChecker::checkPointerEscape(ProgramStateRef State,
 void ento::registerSimpleStreamChecker(CheckerManager &mgr) {
   mgr.registerChecker<SimpleStreamChecker>();
 }
+
+// This checker should be enabled regardless of how language options are set.
+bool ento::shouldRegisterSimpleStreamChecker(const LangOptions &LO) {
+  return true;
+}

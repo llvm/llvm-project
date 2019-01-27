@@ -108,3 +108,7 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
 void ento::registerUndefBranchChecker(CheckerManager &mgr) {
   mgr.registerChecker<UndefBranchChecker>();
 }
+
+bool ento::shouldRegisterUndefBranchChecker(const LangOptions &LO) {
+  return true;
+}

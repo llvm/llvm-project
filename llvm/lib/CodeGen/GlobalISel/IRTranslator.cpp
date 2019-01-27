@@ -343,7 +343,7 @@ bool IRTranslator::translateFSub(const User &U, MachineIRBuilder &MIRBuilder) {
 bool IRTranslator::translateFNeg(const User &U, MachineIRBuilder &MIRBuilder) {
   MIRBuilder.buildInstr(TargetOpcode::G_FNEG)
       .addDef(getOrCreateVReg(U))
-      .addUse(getOrCreateVReg(*U.getOperand(1)));
+      .addUse(getOrCreateVReg(*U.getOperand(0)));
   return true;
 }
 

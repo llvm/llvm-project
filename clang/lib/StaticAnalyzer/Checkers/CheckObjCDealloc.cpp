@@ -1093,3 +1093,7 @@ void ento::registerObjCDeallocChecker(CheckerManager &Mgr) {
 
   Mgr.registerChecker<ObjCDeallocChecker>();
 }
+
+bool ento::shouldRegisterObjCDeallocChecker(const LangOptions &LO) {
+  return true;
+}

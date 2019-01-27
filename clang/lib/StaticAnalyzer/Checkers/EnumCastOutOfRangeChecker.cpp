@@ -125,3 +125,7 @@ void EnumCastOutOfRangeChecker::checkPreStmt(const CastExpr *CE,
 void ento::registerEnumCastOutOfRangeChecker(CheckerManager &mgr) {
   mgr.registerChecker<EnumCastOutOfRangeChecker>();
 }
+
+bool ento::shouldRegisterEnumCastOutOfRangeChecker(const LangOptions &LO) {
+  return true;
+}

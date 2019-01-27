@@ -120,3 +120,7 @@ void ReturnUndefChecker::checkReference(CheckerContext &C, const Expr *RetE,
 void ento::registerReturnUndefChecker(CheckerManager &mgr) {
   mgr.registerChecker<ReturnUndefChecker>();
 }
+
+bool ento::shouldRegisterReturnUndefChecker(const LangOptions &LO) {
+  return true;
+}
