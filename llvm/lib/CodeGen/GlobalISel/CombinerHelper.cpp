@@ -181,6 +181,14 @@ bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
   if (!LoadValueTy.isScalar())
     return false;
 
+  // Most architectures are going to legalize <s8 loads into at least a 1 byte
+  // load, and the MMOs can only describe memory accesses in multiples of bytes.
+  // If we try to perform extload combining on those, we can end up with
+  // %a(s8) = extload %ptr (load 1 byte from %ptr)
+  // ... which is an illegal extload instruction.
+  if (LoadValueTy.getSizeInBits() < 8)
+    return false;
+
   // Find the preferred type aside from the any-extends (unless it's the only
   // one) and non-extending ops. We'll emit an extending load to that type and
   // and emit a variant of (extend (trunc X)) for the others according to the
