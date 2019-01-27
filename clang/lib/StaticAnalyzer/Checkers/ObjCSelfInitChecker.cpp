@@ -436,3 +436,7 @@ static bool isInitMessage(const ObjCMethodCall &Call) {
 void ento::registerObjCSelfInitChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCSelfInitChecker>();
 }
+
+bool ento::shouldRegisterObjCSelfInitChecker(const LangOptions &LO) {
+  return true;
+}

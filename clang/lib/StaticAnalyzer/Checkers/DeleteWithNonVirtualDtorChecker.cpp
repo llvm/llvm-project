@@ -147,3 +147,8 @@ DeleteWithNonVirtualDtorChecker::DeleteBugVisitor::VisitNode(
 void ento::registerDeleteWithNonVirtualDtorChecker(CheckerManager &mgr) {
   mgr.registerChecker<DeleteWithNonVirtualDtorChecker>();
 }
+
+bool ento::shouldRegisterDeleteWithNonVirtualDtorChecker(
+                                                        const LangOptions &LO) {
+  return true;
+}

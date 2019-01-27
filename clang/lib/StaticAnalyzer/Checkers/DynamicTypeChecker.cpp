@@ -205,3 +205,7 @@ void DynamicTypeChecker::checkPostStmt(const ImplicitCastExpr *CE,
 void ento::registerDynamicTypeChecker(CheckerManager &mgr) {
   mgr.registerChecker<DynamicTypeChecker>();
 }
+
+bool ento::shouldRegisterDynamicTypeChecker(const LangOptions &LO) {
+  return true;
+}

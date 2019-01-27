@@ -1123,6 +1123,24 @@ public:
     return buildInstr(TargetOpcode::G_MUL, {Dst}, {Src0, Src1}, Flags);
   }
 
+  MachineInstrBuilder buildUMulH(const DstOp &Dst, const SrcOp &Src0,
+                                 const SrcOp &Src1,
+                                 Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_UMULH, {Dst}, {Src0, Src1}, Flags);
+  }
+
+  MachineInstrBuilder buildSMulH(const DstOp &Dst, const SrcOp &Src0,
+                                 const SrcOp &Src1,
+                                 Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_SMULH, {Dst}, {Src0, Src1}, Flags);
+  }
+
+  MachineInstrBuilder buildShl(const DstOp &Dst, const SrcOp &Src0,
+                               const SrcOp &Src1,
+                               Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_SHL, {Dst}, {Src0, Src1}, Flags);
+  }
+
   /// Build and insert \p Res = G_AND \p Op0, \p Op1
   ///
   /// G_AND sets \p Res to the bitwise and of integer parameters \p Op0 and \p

@@ -359,11 +359,23 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   }
 }
 
-#define REGISTER_CHECKER(name) \
-  void ento::register##name(CheckerManager &Mgr) { \
-    StackAddrEscapeChecker *Chk = \
-        Mgr.registerChecker<StackAddrEscapeChecker>(); \
-    Chk->ChecksEnabled[StackAddrEscapeChecker::CK_##name] = true; \
+void ento::registerStackAddrEscapeBase(CheckerManager &mgr) {
+  mgr.registerChecker<StackAddrEscapeChecker>();
+}
+
+bool ento::shouldRegisterStackAddrEscapeBase(const LangOptions &LO) {
+  return true;
+}
+
+#define REGISTER_CHECKER(name)                                                 \
+  void ento::register##name(CheckerManager &Mgr) {                             \
+    StackAddrEscapeChecker *Chk =                                              \
+        Mgr.getChecker<StackAddrEscapeChecker>();                              \
+    Chk->ChecksEnabled[StackAddrEscapeChecker::CK_##name] = true;              \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
+    return true;                                                               \
   }
 
 REGISTER_CHECKER(StackAddrEscapeChecker)

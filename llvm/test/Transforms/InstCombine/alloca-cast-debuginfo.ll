@@ -45,7 +45,7 @@ entry:
 ; Another dbg.value for "local" would be redundant here.
 ; CHECK-NOT: call void @llvm.dbg.value(metadata i8* [[simplified]], metadata !22, metadata !DIExpression())
 ;
-; CHECK: call void @escape(i8* [[simplified]])
+; CHECK: call void @escape(i8* nonnull [[simplified]])
 ; CHECK: ret void
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)

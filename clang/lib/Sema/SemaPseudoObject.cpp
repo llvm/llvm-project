@@ -150,15 +150,10 @@ namespace {
           assocTypes[i] = gse->getAssocTypeSourceInfo(i);
         }
 
-        return new (S.Context) GenericSelectionExpr(S.Context,
-                                                    gse->getGenericLoc(),
-                                                    gse->getControllingExpr(),
-                                                    assocTypes,
-                                                    assocs,
-                                                    gse->getDefaultLoc(),
-                                                    gse->getRParenLoc(),
-                                      gse->containsUnexpandedParameterPack(),
-                                                    resultIndex);
+        return GenericSelectionExpr::Create(
+            S.Context, gse->getGenericLoc(), gse->getControllingExpr(),
+            assocTypes, assocs, gse->getDefaultLoc(), gse->getRParenLoc(),
+            gse->containsUnexpandedParameterPack(), resultIndex);
       }
 
       if (ChooseExpr *ce = dyn_cast<ChooseExpr>(e)) {

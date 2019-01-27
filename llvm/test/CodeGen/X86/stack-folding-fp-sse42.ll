@@ -1091,19 +1091,17 @@ define <2 x double> @stack_fold_sqrtpd(<2 x double> %a0) {
   ;CHECK-LABEL: stack_fold_sqrtpd
   ;CHECK:       sqrtpd {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <2 x double> @llvm.x86.sse2.sqrt.pd(<2 x double> %a0)
+  %2 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> %a0)
   ret <2 x double> %2
 }
-declare <2 x double> @llvm.x86.sse2.sqrt.pd(<2 x double>) nounwind readnone
 
 define <4 x float> @stack_fold_sqrtps(<4 x float> %a0) {
   ;CHECK-LABEL: stack_fold_sqrtps
   ;CHECK:       sqrtps {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float> %a0)
+  %2 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %a0)
   ret <4 x float> %2
 }
-declare <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float>) nounwind readnone
 
 define double @stack_fold_sqrtsd(double %a0) optsize {
   ;CHECK-LABEL: stack_fold_sqrtsd
@@ -1118,12 +1116,13 @@ define <2 x double> @stack_fold_sqrtsd_int(<2 x double> %a0, <2 x double> %a1) o
   ;CHECK-LABEL: stack_fold_sqrtsd_int
   ;CHECK:       sqrtsd {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double> %a1)
-  %3 = extractelement <2 x double> %2, i32 0
-  %4 = insertelement <2 x double> %a0, double %3, i32 0
-  ret <2 x double> %4
+  %2 = extractelement <2 x double> %a1, i64 0
+  %3 = call double @llvm.sqrt.f64(double %2)
+  %4 = insertelement <2 x double> %a1, double %3, i64 0
+  %5 = extractelement <2 x double> %4, i32 0
+  %6 = insertelement <2 x double> %a0, double %5, i32 0
+  ret <2 x double> %6
 }
-declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
 
 define float @stack_fold_sqrtss(float %a0) minsize {
   ;CHECK-LABEL: stack_fold_sqrtss
@@ -1301,6 +1300,9 @@ define <4 x float> @stack_fold_xorps(<4 x float> %a0, <4 x float> %a1) {
   %6 = fadd <4 x float> %5, <float 0x0, float 0x0, float 0x0, float 0x0>
   ret <4 x float> %6
 }
+
+declare <2 x double> @llvm.sqrt.v2f64(<2 x double>)
+declare <4 x float> @llvm.sqrt.v4f32(<4 x float>)
 
 attributes #0 = { "unsafe-fp-math"="false" }
 attributes #1 = { "unsafe-fp-math"="true" }

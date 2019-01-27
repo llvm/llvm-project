@@ -323,6 +323,32 @@ unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   return 2;
 }
 
+// Adjust the cost of vector instructions on targets which there is overlap
+// between the vector and scalar units, thereby reducing the overall throughput
+// of vector code wrt. scalar code.
+int PPCTTIImpl::vectorCostAdjustment(int Cost, unsigned Opcode, Type *Ty1,
+                                     Type *Ty2) {
+  if (!ST->vectorsUseTwoUnits() || !Ty1->isVectorTy())
+    return Cost;
+
+  std::pair<int, MVT> LT1 = TLI->getTypeLegalizationCost(DL, Ty1);
+  // If type legalization involves splitting the vector, we don't want to
+  // double the cost at every step - only the last step.
+  if (LT1.first != 1 || !LT1.second.isVector())
+    return Cost;
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  if (TLI->isOperationExpand(ISD, LT1.second))
+    return Cost;
+
+  if (Ty2) {
+    std::pair<int, MVT> LT2 = TLI->getTypeLegalizationCost(DL, Ty2);
+    if (LT2.first != 1 || !LT2.second.isVector())
+      return Cost;
+  }
+
+  return Cost * 2;
+}
+
 int PPCTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::OperandValueKind Op1Info,
     TTI::OperandValueKind Op2Info, TTI::OperandValueProperties Opd1PropInfo,
@@ -330,8 +356,9 @@ int PPCTTIImpl::getArithmeticInstrCost(
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
 
   // Fallback to the default implementation.
-  return BaseT::getArithmeticInstrCost(Opcode, Ty, Op1Info, Op2Info,
-                                       Opd1PropInfo, Opd2PropInfo);
+  int Cost = BaseT::getArithmeticInstrCost(Opcode, Ty, Op1Info, Op2Info,
+                                           Opd1PropInfo, Opd2PropInfo);
+  return vectorCostAdjustment(Cost, Opcode, Ty, nullptr);
 }
 
 int PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
@@ -344,19 +371,22 @@ int PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
   // instruction). We need one such shuffle instruction for each actual
   // register (this is not true for arbitrary shuffles, but is true for the
   // structured types of shuffles covered by TTI::ShuffleKind).
-  return LT.first;
+  return vectorCostAdjustment(LT.first, Instruction::ShuffleVector, Tp,
+                              nullptr);
 }
 
 int PPCTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                  const Instruction *I) {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
 
-  return BaseT::getCastInstrCost(Opcode, Dst, Src);
+  int Cost = BaseT::getCastInstrCost(Opcode, Dst, Src);
+  return vectorCostAdjustment(Cost, Opcode, Dst, Src);
 }
 
 int PPCTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                    const Instruction *I) {
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
+  int Cost = BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, I);
+  return vectorCostAdjustment(Cost, Opcode, ValTy, nullptr);
 }
 
 int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
@@ -365,18 +395,22 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
+  int Cost = BaseT::getVectorInstrCost(Opcode, Val, Index);
+  Cost = vectorCostAdjustment(Cost, Opcode, Val, nullptr);
+
   if (ST->hasVSX() && Val->getScalarType()->isDoubleTy()) {
-    // Double-precision scalars are already located in index #0.
-    if (Index == 0)
+    // Double-precision scalars are already located in index #0 (or #1 if LE).
+    if (ISD == ISD::EXTRACT_VECTOR_ELT && Index == ST->isLittleEndian() ? 1 : 0)
       return 0;
 
-    return BaseT::getVectorInstrCost(Opcode, Val, Index);
+    return Cost;
+
   } else if (ST->hasQPX() && Val->getScalarType()->isFloatingPointTy()) {
     // Floating point scalars are already located in index #0.
     if (Index == 0)
       return 0;
 
-    return BaseT::getVectorInstrCost(Opcode, Val, Index);
+    return Cost;
   }
 
   // Estimated cost of a load-hit-store delay.  This was obtained
@@ -393,9 +427,9 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
   // these need to be estimated as very costly.
   if (ISD == ISD::EXTRACT_VECTOR_ELT ||
       ISD == ISD::INSERT_VECTOR_ELT)
-    return LHSPenalty + BaseT::getVectorInstrCost(Opcode, Val, Index);
+    return LHSPenalty + Cost;
 
-  return BaseT::getVectorInstrCost(Opcode, Val, Index);
+  return Cost;
 }
 
 int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
@@ -406,6 +440,7 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
          "Invalid Opcode");
 
   int Cost = BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace);
+  Cost = vectorCostAdjustment(Cost, Opcode, Src, nullptr);
 
   bool IsAltivecType = ST->hasAltivec() &&
                        (LT.second == MVT::v16i8 || LT.second == MVT::v8i16 ||

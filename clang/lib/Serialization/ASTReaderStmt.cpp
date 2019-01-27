@@ -1022,21 +1022,24 @@ void ASTStmtReader::VisitBlockExpr(BlockExpr *E) {
 
 void ASTStmtReader::VisitGenericSelectionExpr(GenericSelectionExpr *E) {
   VisitExpr(E);
-  E->NumAssocs = Record.readInt();
-  E->AssocTypes = new (Record.getContext()) TypeSourceInfo*[E->NumAssocs];
-  E->SubExprs =
-   new(Record.getContext()) Stmt*[GenericSelectionExpr::END_EXPR+E->NumAssocs];
 
-  E->SubExprs[GenericSelectionExpr::CONTROLLING] = Record.readSubExpr();
-  for (unsigned I = 0, N = E->getNumAssocs(); I != N; ++I) {
-    E->AssocTypes[I] = GetTypeSourceInfo();
-    E->SubExprs[GenericSelectionExpr::END_EXPR+I] = Record.readSubExpr();
-  }
+  unsigned NumAssocs = Record.readInt();
+  assert(NumAssocs == E->getNumAssocs() && "Wrong NumAssocs!");
   E->ResultIndex = Record.readInt();
-
-  E->GenericLoc = ReadSourceLocation();
+  E->GenericSelectionExprBits.GenericLoc = ReadSourceLocation();
   E->DefaultLoc = ReadSourceLocation();
   E->RParenLoc = ReadSourceLocation();
+
+  Stmt **Stmts = E->getTrailingObjects<Stmt *>();
+  // Add 1 to account for the controlling expression which is the first
+  // expression in the trailing array of Stmt *. This is not needed for
+  // the trailing array of TypeSourceInfo *.
+  for (unsigned I = 0, N = NumAssocs + 1; I < N; ++I)
+    Stmts[I] = Record.readSubExpr();
+
+  TypeSourceInfo **TSIs = E->getTrailingObjects<TypeSourceInfo *>();
+  for (unsigned I = 0, N = NumAssocs; I < N; ++I)
+    TSIs[I] = GetTypeSourceInfo();
 }
 
 void ASTStmtReader::VisitPseudoObjectExpr(PseudoObjectExpr *E) {
@@ -2675,7 +2678,9 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_GENERIC_SELECTION:
-      S = new (Context) GenericSelectionExpr(Empty);
+      S = GenericSelectionExpr::CreateEmpty(
+          Context,
+          /*NumAssocs=*/Record[ASTStmtReader::NumExprFields]);
       break;
 
     case EXPR_OBJC_STRING_LITERAL:

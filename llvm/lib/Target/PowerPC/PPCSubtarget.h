@@ -135,6 +135,7 @@ protected:
   bool IsISA3_0;
   bool UseLongCalls;
   bool SecurePlt;
+  bool VectorsUseTwoUnits;
 
   POPCNTDKind HasPOPCNTD;
 
@@ -259,6 +260,7 @@ public:
   bool isPPC4xx() const { return IsPPC4xx; }
   bool isPPC6xx() const { return IsPPC6xx; }
   bool isSecurePlt() const {return SecurePlt; }
+  bool vectorsUseTwoUnits() const {return VectorsUseTwoUnits; }
   bool isE500() const { return IsE500; }
   bool isFeatureMFTB() const { return FeatureMFTB; }
   bool isDeprecatedDST() const { return DeprecatedDST; }

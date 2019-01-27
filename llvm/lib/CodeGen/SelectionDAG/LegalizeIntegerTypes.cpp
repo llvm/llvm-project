@@ -554,7 +554,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MLOAD(MaskedLoadSDNode *N) {
   SDLoc dl(N);
   SDValue Res = DAG.getMaskedLoad(NVT, dl, N->getChain(), N->getBasePtr(),
                                   N->getMask(), ExtPassThru, N->getMemoryVT(),
-                                  N->getMemOperand(), ISD::EXTLOAD);
+                                  N->getMemOperand(), ISD::SEXTLOAD);
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
