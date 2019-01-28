@@ -9719,6 +9719,21 @@ static bool isUnpackWdShuffleMask(ArrayRef<int> Mask, MVT VT) {
   return IsUnpackwdMask;
 }
 
+static bool is128BitUnpackShuffleMask(ArrayRef<int> Mask) {
+  // Create 128-bit vector type based on mask size.
+  MVT EltVT = MVT::getIntegerVT(128 / Mask.size());
+  MVT VT = MVT::getVectorVT(EltVT, Mask.size());
+
+  // Match any of unary/binary or low/high.
+  for (unsigned i = 0; i != 4; ++i) {
+    SmallVector<int, 16> UnpackMask;
+    createUnpackShuffleMask(VT, UnpackMask, (i >> 1) % 2, i % 2);
+    if (isTargetShuffleEquivalent(Mask, UnpackMask))
+      return true;
+  }
+  return false;
+}
+
 /// Get a 4-lane 8-bit shuffle immediate for a mask.
 ///
 /// This helper function produces an 8-bit shuffle immediate corresponding to
@@ -11709,8 +11724,10 @@ static SDValue lowerShuffleOfExtractsAsVperm(const SDLoc &DL, SDValue N0,
     return SDValue();
 
   // Final bailout: if the mask is simple, we are better off using an extract
-  // and a simple narrow shuffle.
-  if (NumElts == 4 && isSingleSHUFPSMask(NewMask))
+  // and a simple narrow shuffle. Prefer extract+unpack(h/l)ps to vpermps
+  // because that avoids a constant load from memory.
+  if (NumElts == 4 &&
+      (isSingleSHUFPSMask(NewMask) || is128BitUnpackShuffleMask(NewMask)))
     return SDValue();
 
   // Extend the shuffle mask with undef elements.
@@ -14413,10 +14430,6 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
   assert((VT.is256BitVector() || VT.is512BitVector()) &&
          "Expected 256-bit or 512-bit vector");
 
-  unsigned NumElts = VT.getVectorNumElements();
-  unsigned HalfNumElts = NumElts / 2;
-  MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(), HalfNumElts);
-
   bool UndefLower = isUndefLowerHalf(Mask);
   if (!UndefLower && !isUndefUpperHalf(Mask))
     return SDValue();
@@ -14426,6 +14439,9 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
 
   // Upper half is undef and lower half is whole upper subvector.
   // e.g. vector_shuffle <4, 5, 6, 7, u, u, u, u> or <2, 3, u, u>
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned HalfNumElts = NumElts / 2;
+  MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(), HalfNumElts);
   if (!UndefLower &&
       isSequentialOrUndefInRange(Mask, 0, HalfNumElts, HalfNumElts)) {
     SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V1,
@@ -14452,38 +14468,60 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
   assert(HalfMask.size() == HalfNumElts && "Unexpected shuffle mask length");
 
   // Only shuffle the halves of the inputs when useful.
-  int NumLowerHalves =
+  unsigned NumLowerHalves =
       (HalfIdx1 == 0 || HalfIdx1 == 2) + (HalfIdx2 == 0 || HalfIdx2 == 2);
-  int NumUpperHalves =
+  unsigned NumUpperHalves =
       (HalfIdx1 == 1 || HalfIdx1 == 3) + (HalfIdx2 == 1 || HalfIdx2 == 3);
+  assert(NumLowerHalves + NumUpperHalves <= 2 && "Only 1 or 2 halves allowed");
 
-  // uuuuXXXX - don't extract uppers just to insert again.
-  if (UndefLower && NumUpperHalves != 0)
-    return SDValue();
+  // Determine the larger pattern of undef/halves, then decide if it's worth
+  // splitting the shuffle based on subtarget capabilities and types.
+  unsigned EltWidth = VT.getVectorElementType().getSizeInBits();
+  if (!UndefLower) {
+    // XXXXuuuu: no insert is needed.
+    // Always extract lowers when setting lower - these are all free subreg ops.
+    if (NumUpperHalves == 0)
+      return getShuffleHalfVectors(DL, V1, V2, HalfMask, HalfIdx1, HalfIdx2,
+                                   UndefLower, DAG);
 
-  // XXXXuuuu - don't extract both uppers, instead shuffle and then extract.
-  if (!UndefLower && NumUpperHalves == 2)
-    return SDValue();
-
-  // AVX2 - XXXXuuuu - always extract lowers.
-  if (Subtarget.hasAVX2() && (UndefLower || NumUpperHalves != 0)) {
-    // AVX2 supports efficient immediate 64-bit element cross-lane shuffles.
-    if (VT == MVT::v4f64 || VT == MVT::v4i64)
-      return SDValue();
-    // AVX2 supports variable 32-bit element cross-lane shuffles.
-    if (VT == MVT::v8f32 || VT == MVT::v8i32) {
-      // XXXXuuuu - don't extract lowers and uppers.
-      if (!UndefLower && NumLowerHalves != 0 && NumUpperHalves != 0)
+    if (NumUpperHalves == 1) {
+      // AVX2 has efficient 32/64-bit element cross-lane shuffles.
+      if (Subtarget.hasAVX2()) {
+        // TODO: Refine to account for unary shuffle, splat, and other masks?
+        if (EltWidth == 32 && NumLowerHalves == 1)
+          return SDValue();
+        if (EltWidth == 64)
+          return SDValue();
+      }
+      // AVX512 has efficient cross-lane shuffles for all legal 512-bit types.
+      if (Subtarget.hasAVX512() && VT.is512BitVector())
         return SDValue();
+      // Extract + narrow shuffle is better than the wide alternative.
+      return getShuffleHalfVectors(DL, V1, V2, HalfMask, HalfIdx1, HalfIdx2,
+                                   UndefLower, DAG);
     }
+
+    // Don't extract both uppers, instead shuffle and then extract.
+    assert(NumUpperHalves == 2 && "Half vector count went wrong");
+    return SDValue();
   }
 
-  // AVX512 - XXXXuuuu - always extract lowers.
-  if (VT.is512BitVector() && (UndefLower || NumUpperHalves != 0))
-    return SDValue();
+  // UndefLower - uuuuXXXX: an insert to high half is required if we split this.
+  if (NumUpperHalves == 0) {
+    // AVX2 has efficient 64-bit element cross-lane shuffles.
+    // TODO: Refine to account for unary shuffle, splat, and other masks?
+    if (Subtarget.hasAVX2() && EltWidth == 64)
+      return SDValue();
+    // AVX512 has efficient cross-lane shuffles for all legal 512-bit types.
+    if (Subtarget.hasAVX512() && VT.is512BitVector())
+      return SDValue();
+    // Narrow shuffle + insert is better than the wide alternative.
+    return getShuffleHalfVectors(DL, V1, V2, HalfMask, HalfIdx1, HalfIdx2,
+                                 UndefLower, DAG);
+  }
 
-  return getShuffleHalfVectors(DL, V1, V2, HalfMask, HalfIdx1, HalfIdx2,
-                               UndefLower, DAG);
+  // NumUpperHalves != 0: don't bother with extract, shuffle, and then insert.
+  return SDValue();
 }
 
 /// Test whether the specified input (0 or 1) is in-place blended by the
@@ -34499,14 +34537,16 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
           // If the RHS is a constant we have to reverse the const
           // canonicalization.
           // x > C-1 ? x+-C : 0 --> subus x, C
-          // TODO: Handle build_vectors with undef elements.
           auto MatchUSUBSAT = [](ConstantSDNode *Op, ConstantSDNode *Cond) {
-            return Cond->getAPIntValue() == (-Op->getAPIntValue() - 1);
+            return (!Op && !Cond) ||
+                   (Op && Cond &&
+                    Cond->getAPIntValue() == (-Op->getAPIntValue() - 1));
           };
           if (CC == ISD::SETUGT && Other->getOpcode() == ISD::ADD &&
-              ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchUSUBSAT)) {
-            OpRHS = DAG.getNode(ISD::SUB, DL, VT,
-                                DAG.getConstant(0, DL, VT), OpRHS);
+              ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchUSUBSAT,
+                                        /*AllowUndefs*/ true)) {
+            OpRHS = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
+                                OpRHS);
             return DAG.getNode(ISD::USUBSAT, DL, VT, OpLHS, OpRHS);
           }
 
@@ -41085,11 +41125,12 @@ static SDValue combineAddToSUBUS(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // The add should have a constant that is the negative of the max.
-  // TODO: Handle build_vectors with undef elements.
   auto MatchUSUBSAT = [](ConstantSDNode *Max, ConstantSDNode *Op) {
-    return Max->getAPIntValue() == (-Op->getAPIntValue());
+    return (!Max && !Op) ||
+           (Max && Op && Max->getAPIntValue() == (-Op->getAPIntValue()));
   };
-  if (!ISD::matchBinaryPredicate(Op0.getOperand(1), Op1, MatchUSUBSAT))
+  if (!ISD::matchBinaryPredicate(Op0.getOperand(1), Op1, MatchUSUBSAT,
+                                 /*AllowUndefs*/ true))
     return SDValue();
 
   SDLoc DL(N);

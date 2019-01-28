@@ -1,4 +1,4 @@
-; RUN: not llvm-as -disable-output <%s 2>&1 | FileCheck %s
+; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
 define void @test() personality i32 (...)* @dummy_personality {
 ; CHECK: The landingpad instruction should have a consistent result type inside a function

@@ -20,7 +20,7 @@ body: |
     ; GCN: [[VGPR:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr0
 
-    %2:vgpr(s64) = COPY $vgpr3_vgpr4
+    %2:vgpr(p1) = COPY $vgpr3_vgpr4
 
     ; fptoui s
     ; GCN: V_CVT_U32_F32_e64 0, [[SGPR]], 0, 0
