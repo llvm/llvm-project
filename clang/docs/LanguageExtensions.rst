@@ -474,44 +474,58 @@ Half-Precision Floating Point
 =============================
 
 Clang supports two half-precision (16-bit) floating point types: ``__fp16`` and
-``_Float16``. ``__fp16`` is defined in the ARM C Language Extensions (`ACLE
-<http://infocenter.arm.com/help/topic/com.arm.doc.ihi0053d/IHI0053D_acle_2_1.pdf>`_)
-and ``_Float16`` in ISO/IEC TS 18661-3:2015.
+``_Float16``.  These types are supported in all language modes.
 
-``__fp16`` is a storage and interchange format only. This means that values of
-``__fp16`` promote to (at least) float when used in arithmetic operations.
-There are two ``__fp16`` formats. Clang supports the IEEE 754-2008 format and
-not the ARM alternative format.
+``__fp16`` is supported on every target, as it is purely a storage format; see below.
+``_Float16`` is currently only supported on the following targets, with further
+targets pending ABI standardization:
+- 32-bit ARM
+- 64-bit ARM (AArch64)
+- SPIR
+``_Float16`` will be supported on more targets as they define ABIs for it.
 
-ISO/IEC TS 18661-3:2015 defines C support for additional floating point types.
-``_FloatN`` is defined as a binary floating type, where the N suffix denotes
-the number of bits and is 16, 32, 64, or greater and equal to 128 and a
-multiple of 32. Clang supports ``_Float16``. The difference from ``__fp16`` is
-that arithmetic on ``_Float16`` is performed in half-precision, thus it is not
-a storage-only format. ``_Float16`` is available as a source language type in
-both C and C++ mode.
+``__fp16`` is a storage and interchange format only.  This means that values of
+``__fp16`` are immediately promoted to (at least) ``float`` when used in arithmetic
+operations, so that e.g. the result of adding two ``__fp16`` values has type ``float``.
+The behavior of ``__fp16`` is specified by the ARM C Language Extensions (`ACLE <http://infocenter.arm.com/help/topic/com.arm.doc.ihi0053d/IHI0053D_acle_2_1.pdf>`_).
+Clang uses the ``binary16`` format from IEEE 754-2008 for ``__fp16``, not the ARM
+alternative format.
 
-It is recommended that portable code use the ``_Float16`` type because
-``__fp16`` is an ARM C-Language Extension (ACLE), whereas ``_Float16`` is
-defined by the C standards committee, so using ``_Float16`` will not prevent
-code from being ported to architectures other than Arm.  Also, ``_Float16``
-arithmetic and operations will directly map on half-precision instructions when
-they are available (e.g. Armv8.2-A), avoiding conversions to/from
-single-precision, and thus will result in more performant code. If
-half-precision instructions are unavailable, values will be promoted to
-single-precision, similar to the semantics of ``__fp16`` except that the
-results will be stored in single-precision.
+``_Float16`` is an extended floating-point type.  This means that, just like arithmetic on
+``float`` or ``double``, arithmetic on ``_Float16`` operands is formally performed in the
+``_Float16`` type, so that e.g. the result of adding two ``_Float16`` values has type
+``_Float16``.  The behavior of ``_Float16`` is specified by ISO/IEC TS 18661-3:2015
+("Floating-point extensions for C").  As with ``__fp16``, Clang uses the ``binary16``
+format from IEEE 754-2008 for ``_Float16``.
 
-In an arithmetic operation where one operand is of ``__fp16`` type and the
-other is of ``_Float16`` type, the ``_Float16`` type is first converted to
-``__fp16`` type and then the operation is completed as if both operands were of
-``__fp16`` type.
+``_Float16`` arithmetic will be performed using native half-precision support
+when available on the target (e.g. on ARMv8.2a); otherwise it will be performed
+at a higher precision (currently always ``float``) and then truncated down to
+``_Float16``.  Note that C and C++ allow intermediate floating-point operands
+of an expression to be computed with greater precision than is expressible in
+their type, so Clang may avoid intermediate truncations in certain cases; this may
+lead to results that are inconsistent with native arithmetic.
 
-To define a ``_Float16`` literal, suffix ``f16`` can be appended to the compile-time
-constant declaration. There is no default argument promotion for ``_Float16``; this
-applies to the standard floating types only. As a consequence, for example, an
-explicit cast is required for printing a ``_Float16`` value (there is no string
-format specifier for ``_Float16``).
+It is recommended that portable code use ``_Float16`` instead of ``__fp16``,
+as it has been defined by the C standards committee and has behavior that is
+more familiar to most programmers.
+
+Because ``__fp16`` operands are always immediately promoted to ``float``, the
+common real type of ``__fp16`` and ``_Float16`` for the purposes of the usual
+arithmetic conversions is ``float``.
+
+A literal can be given ``_Float16`` type using the suffix ``f16``; for example:
+```
+3.14f16
+```
+
+Because default argument promotion only applies to the standard floating-point
+types, ``_Float16`` values are not promoted to ``double`` when passed as variadic
+or untyped arguments.  As a consequence, some caution must be taken when using
+certain library facilities with ``_Float16``; for example, there is no ``printf`` format
+specifier for ``_Float16``, and (unlike ``float``) it will not be implicitly promoted to
+``double`` when passed to ``printf``, so the programmer must explicitly cast it to
+``double`` before using it with an ``%f`` or similar specifier.
 
 Messages on ``deprecated`` and ``unavailable`` Attributes
 =========================================================
