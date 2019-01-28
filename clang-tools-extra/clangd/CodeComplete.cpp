@@ -177,28 +177,6 @@ std::string getOptionalParameters(const CodeCompletionString &CCS,
   return Result;
 }
 
-/// Creates a `HeaderFile` from \p Header which can be either a URI or a literal
-/// include.
-static llvm::Expected<HeaderFile> toHeaderFile(llvm::StringRef Header,
-                                               llvm::StringRef HintPath) {
-  if (isLiteralInclude(Header))
-    return HeaderFile{Header.str(), /*Verbatim=*/true};
-  auto U = URI::parse(Header);
-  if (!U)
-    return U.takeError();
-
-  auto IncludePath = URI::includeSpelling(*U);
-  if (!IncludePath)
-    return IncludePath.takeError();
-  if (!IncludePath->empty())
-    return HeaderFile{std::move(*IncludePath), /*Verbatim=*/true};
-
-  auto Resolved = URI::resolve(*U, HintPath);
-  if (!Resolved)
-    return Resolved.takeError();
-  return HeaderFile{std::move(*Resolved), /*Verbatim=*/false};
-}
-
 /// A code completion result, in clang-native form.
 /// It may be promoted to a CompletionItem if it's among the top-ranked results.
 struct CompletionCandidate {
@@ -1019,11 +997,12 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = Input.VFS;
   if (Input.Preamble && Input.Preamble->StatCache)
     VFS = Input.Preamble->StatCache->getConsumingFS(std::move(VFS));
-  ParseInputs PInput;
-  PInput.CompileCommand = Input.Command;
-  PInput.FS = VFS;
-  PInput.Contents = Input.Contents;
-  auto CI = buildCompilerInvocation(PInput);
+  ParseInputs ParseInput;
+  ParseInput.CompileCommand = Input.Command;
+  ParseInput.FS = VFS;
+  ParseInput.Contents = Input.Contents;
+  ParseInput.Opts = ParseOptions();
+  auto CI = buildCompilerInvocation(ParseInput);
   if (!CI) {
     elog("Couldn't create CompilerInvocation");
     return false;
@@ -1143,24 +1122,6 @@ speculativeFuzzyFindRequestForCompletion(FuzzyFindRequest CachedReq,
   return CachedReq;
 }
 
-// Returns the most popular include header for \p Sym. If two headers are
-// equally popular, prefer the shorter one. Returns empty string if \p Sym has
-// no include header.
-llvm::SmallVector<llvm::StringRef, 1> getRankedIncludes(const Symbol &Sym) {
-  auto Includes = Sym.IncludeHeaders;
-  // Sort in descending order by reference count and header length.
-  llvm::sort(Includes, [](const Symbol::IncludeHeaderWithReferences &LHS,
-                          const Symbol::IncludeHeaderWithReferences &RHS) {
-    if (LHS.References == RHS.References)
-      return LHS.IncludeHeader.size() < RHS.IncludeHeader.size();
-    return LHS.References > RHS.References;
-  });
-  llvm::SmallVector<llvm::StringRef, 1> Headers;
-  for (const auto &Include : Includes)
-    Headers.push_back(Include.IncludeHeader);
-  return Headers;
-}
-
 // Runs Sema-based (AST) and Index-based completion, returns merged results.
 //
 // There are a few tricky considerations:
@@ -1241,19 +1202,12 @@ public:
     CodeCompleteResult Output;
     auto RecorderOwner = llvm::make_unique<CompletionRecorder>(Opts, [&]() {
       assert(Recorder && "Recorder is not set");
-      auto Style =
-          format::getStyle(format::DefaultFormatStyle, SemaCCInput.FileName,
-                           format::DefaultFallbackStyle, SemaCCInput.Contents,
-                           SemaCCInput.VFS.get());
-      if (!Style) {
-        log("getStyle() failed for file {0}: {1}. Fallback is LLVM style.",
-            SemaCCInput.FileName, Style.takeError());
-        Style = format::getLLVMStyle();
-      }
+      auto Style = getFormatStyleForFile(
+          SemaCCInput.FileName, SemaCCInput.Contents, SemaCCInput.VFS.get());
       // If preprocessor was run, inclusions from preprocessor callback should
       // already be added to Includes.
       Inserter.emplace(
-          SemaCCInput.FileName, SemaCCInput.Contents, *Style,
+          SemaCCInput.FileName, SemaCCInput.Contents, Style,
           SemaCCInput.Command.Directory,
           Recorder->CCSema->getPreprocessor().getHeaderSearchInfo());
       for (const auto &Inc : Includes.MainFileIncludes)

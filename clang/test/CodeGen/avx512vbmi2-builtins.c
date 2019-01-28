@@ -4,25 +4,25 @@
 
 __m512i test_mm512_mask_compress_epi16(__m512i __S, __mmask32 __U, __m512i __D) {
   // CHECK-LABEL: @test_mm512_mask_compress_epi16
-  // CHECK: @llvm.x86.avx512.mask.compress.w.512
+  // CHECK: @llvm.x86.avx512.mask.compress
   return _mm512_mask_compress_epi16(__S, __U, __D);
 }
 
 __m512i test_mm512_maskz_compress_epi16(__mmask32 __U, __m512i __D) {
   // CHECK-LABEL: @test_mm512_maskz_compress_epi16
-  // CHECK: @llvm.x86.avx512.mask.compress.w.512
+  // CHECK: @llvm.x86.avx512.mask.compress
   return _mm512_maskz_compress_epi16(__U, __D);
 }
 
 __m512i test_mm512_mask_compress_epi8(__m512i __S, __mmask64 __U, __m512i __D) {
   // CHECK-LABEL: @test_mm512_mask_compress_epi8
-  // CHECK: @llvm.x86.avx512.mask.compress.b.512
+  // CHECK: @llvm.x86.avx512.mask.compress
   return _mm512_mask_compress_epi8(__S, __U, __D);
 }
 
 __m512i test_mm512_maskz_compress_epi8(__mmask64 __U, __m512i __D) {
   // CHECK-LABEL: @test_mm512_maskz_compress_epi8
-  // CHECK: @llvm.x86.avx512.mask.compress.b.512
+  // CHECK: @llvm.x86.avx512.mask.compress
   return _mm512_maskz_compress_epi8(__U, __D);
 }
 
@@ -40,25 +40,25 @@ void test_mm512_mask_compressstoreu_epi8(void *__P, __mmask64 __U, __m512i __D) 
 
 __m512i test_mm512_mask_expand_epi16(__m512i __S, __mmask32 __U, __m512i __D) {
   // CHECK-LABEL: @test_mm512_mask_expand_epi16
-  // CHECK: @llvm.x86.avx512.mask.expand.w.512
+  // CHECK: @llvm.x86.avx512.mask.expand
   return _mm512_mask_expand_epi16(__S, __U, __D);
 }
 
 __m512i test_mm512_maskz_expand_epi16(__mmask32 __U, __m512i __D) {
   // CHECK-LABEL: @test_mm512_maskz_expand_epi16
-  // CHECK: @llvm.x86.avx512.mask.expand.w.512
+  // CHECK: @llvm.x86.avx512.mask.expand
   return _mm512_maskz_expand_epi16(__U, __D);
 }
 
 __m512i test_mm512_mask_expand_epi8(__m512i __S, __mmask64 __U, __m512i __D) {
   // CHECK-LABEL: @test_mm512_mask_expand_epi8
-  // CHECK: @llvm.x86.avx512.mask.expand.b.512
+  // CHECK: @llvm.x86.avx512.mask.expand
   return _mm512_mask_expand_epi8(__S, __U, __D);
 }
 
 __m512i test_mm512_maskz_expand_epi8(__mmask64 __U, __m512i __D) {
   // CHECK-LABEL: @test_mm512_maskz_expand_epi8
-  // CHECK: @llvm.x86.avx512.mask.expand.b.512
+  // CHECK: @llvm.x86.avx512.mask.expand
   return _mm512_maskz_expand_epi8(__U, __D);
 }
 

@@ -207,6 +207,12 @@ static llvm::cl::opt<std::string> ClangTidyChecks(
                    ".clang-tidy files)"),
     llvm::cl::init(""), llvm::cl::Hidden);
 
+static llvm::cl::opt<bool> SuggestMissingIncludes(
+    "suggest-missing-includes",
+    llvm::cl::desc("Attempts to fix diagnostic errors caused by missing "
+                   "includes using index."),
+    llvm::cl::init(false));
+
 namespace {
 
 /// \brief Supports a test URI scheme with relaxed constraints for lit tests.
@@ -442,6 +448,7 @@ int main(int argc, char *argv[]) {
       /* Default */ tidy::ClangTidyOptions::getDefaults(),
       /* Override */ OverrideClangTidyOptions, FSProvider.getFileSystem());
   Opts.ClangTidyOptProvider = &ClangTidyOptProvider;
+  Opts.SuggestMissingIncludes = SuggestMissingIncludes;
   ClangdLSPServer LSPServer(
       *TransportLayer, FSProvider, CCOpts, CompileCommandsDirPath,
       /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs, Opts);

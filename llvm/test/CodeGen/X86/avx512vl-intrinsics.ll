@@ -17,8 +17,10 @@ define <2 x double> @test_mask_compress_pd_128(<2 x double> %data, <2 x double> 
 ; X64-NEXT:    vcompresspd %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0x8a,0xc1]
 ; X64-NEXT:    vmovdqa %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <2 x double> @llvm.x86.avx512.mask.compress.pd.128(<2 x double> %data, <2 x double> %passthru, i8 %mask)
-  ret <2 x double> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <2 x i32> <i32 0, i32 1>
+  %2 = call <2 x double> @llvm.x86.avx512.mask.compress.v2f64(<2 x double> %data, <2 x double> %passthru, <2 x i1> %extract)
+  ret <2 x double> %2
 }
 
 define <2 x double> @test_maskz_compress_pd_128(<2 x double> %data, i8 %mask) {
@@ -34,19 +36,19 @@ define <2 x double> @test_maskz_compress_pd_128(<2 x double> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vcompresspd %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0x8a,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <2 x double> @llvm.x86.avx512.mask.compress.pd.128(<2 x double> %data, <2 x double> zeroinitializer, i8 %mask)
-  ret <2 x double> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <2 x i32> <i32 0, i32 1>
+  %2 = call <2 x double> @llvm.x86.avx512.mask.compress.v2f64(<2 x double> %data, <2 x double> zeroinitializer, <2 x i1> %extract)
+  ret <2 x double> %2
 }
 
 define <2 x double> @test_compress_pd_128(<2 x double> %data) {
 ; CHECK-LABEL: test_compress_pd_128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <2 x double> @llvm.x86.avx512.mask.compress.pd.128(<2 x double> %data, <2 x double> undef, i8 -1)
-  ret <2 x double> %res
+  %1 = call <2 x double> @llvm.x86.avx512.mask.compress.v2f64(<2 x double> %data, <2 x double> undef, <2 x i1> <i1 true, i1 true>)
+  ret <2 x double> %1
 }
-
-declare <2 x double> @llvm.x86.avx512.mask.compress.pd.128(<2 x double> %data, <2 x double> %src0, i8 %mask)
 
 define <4 x float> @test_mask_compress_ps_128(<4 x float> %data, <4 x float> %passthru, i8 %mask) {
 ; X86-LABEL: test_mask_compress_ps_128:
@@ -63,8 +65,10 @@ define <4 x float> @test_mask_compress_ps_128(<4 x float> %data, <4 x float> %pa
 ; X64-NEXT:    vcompressps %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0x7d,0x09,0x8a,0xc1]
 ; X64-NEXT:    vmovdqa %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.avx512.mask.compress.ps.128(<4 x float> %data, <4 x float> %passthru, i8 %mask)
-  ret <4 x float> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x float> @llvm.x86.avx512.mask.compress.v4f32(<4 x float> %data, <4 x float> %passthru, <4 x i1> %extract)
+  ret <4 x float> %2
 }
 
 define <4 x float> @test_maskz_compress_ps_128(<4 x float> %data, i8 %mask) {
@@ -80,19 +84,19 @@ define <4 x float> @test_maskz_compress_ps_128(<4 x float> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vcompressps %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0x89,0x8a,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.avx512.mask.compress.ps.128(<4 x float> %data, <4 x float> zeroinitializer, i8 %mask)
-  ret <4 x float> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x float> @llvm.x86.avx512.mask.compress.v4f32(<4 x float> %data, <4 x float> zeroinitializer, <4 x i1> %extract)
+  ret <4 x float> %2
 }
 
 define <4 x float> @test_compress_ps_128(<4 x float> %data) {
 ; CHECK-LABEL: test_compress_ps_128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.avx512.mask.compress.ps.128(<4 x float> %data, <4 x float> undef, i8 -1)
-  ret <4 x float> %res
+  %1 = call <4 x float> @llvm.x86.avx512.mask.compress.v4f32(<4 x float> %data, <4 x float> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret <4 x float> %1
 }
-
-declare <4 x float> @llvm.x86.avx512.mask.compress.ps.128(<4 x float> %data, <4 x float> %src0, i8 %mask)
 
 define <2 x i64> @test_mask_compress_q_128(<2 x i64> %data, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_mask_compress_q_128:
@@ -109,8 +113,10 @@ define <2 x i64> @test_mask_compress_q_128(<2 x i64> %data, <2 x i64> %passthru,
 ; X64-NEXT:    vpcompressq %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0x8b,0xc1]
 ; X64-NEXT:    vmovdqa %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <2 x i64> @llvm.x86.avx512.mask.compress.q.128(<2 x i64> %data, <2 x i64> %passthru, i8 %mask)
-  ret <2 x i64> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <2 x i32> <i32 0, i32 1>
+  %2 = call <2 x i64> @llvm.x86.avx512.mask.compress.v2i64(<2 x i64> %data, <2 x i64> %passthru, <2 x i1> %extract)
+  ret <2 x i64> %2
 }
 
 define <2 x i64> @test_maskz_compress_q_128(<2 x i64> %data, i8 %mask) {
@@ -126,19 +132,19 @@ define <2 x i64> @test_maskz_compress_q_128(<2 x i64> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpcompressq %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0x8b,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <2 x i64> @llvm.x86.avx512.mask.compress.q.128(<2 x i64> %data, <2 x i64> zeroinitializer, i8 %mask)
-  ret <2 x i64> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <2 x i32> <i32 0, i32 1>
+  %2 = call <2 x i64> @llvm.x86.avx512.mask.compress.v2i64(<2 x i64> %data, <2 x i64> zeroinitializer, <2 x i1> %extract)
+  ret <2 x i64> %2
 }
 
 define <2 x i64> @test_compress_q_128(<2 x i64> %data) {
 ; CHECK-LABEL: test_compress_q_128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <2 x i64> @llvm.x86.avx512.mask.compress.q.128(<2 x i64> %data, <2 x i64> undef, i8 -1)
-  ret <2 x i64> %res
+  %1 = call <2 x i64> @llvm.x86.avx512.mask.compress.v2i64(<2 x i64> %data, <2 x i64> undef, <2 x i1> <i1 true, i1 true>)
+  ret <2 x i64> %1
 }
-
-declare <2 x i64> @llvm.x86.avx512.mask.compress.q.128(<2 x i64> %data, <2 x i64> %src0, i8 %mask)
 
 define <4 x i32> @test_mask_compress_d_128(<4 x i32> %data, <4 x i32> %passthru, i8 %mask) {
 ; X86-LABEL: test_mask_compress_d_128:
@@ -155,8 +161,10 @@ define <4 x i32> @test_mask_compress_d_128(<4 x i32> %data, <4 x i32> %passthru,
 ; X64-NEXT:    vpcompressd %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0x7d,0x09,0x8b,0xc1]
 ; X64-NEXT:    vmovdqa %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx512.mask.compress.d.128(<4 x i32> %data, <4 x i32> %passthru, i8 %mask)
-  ret <4 x i32> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x i32> @llvm.x86.avx512.mask.compress.v4i32(<4 x i32> %data, <4 x i32> %passthru, <4 x i1> %extract)
+  ret <4 x i32> %2
 }
 
 define <4 x i32> @test_maskz_compress_d_128(<4 x i32> %data, i8 %mask) {
@@ -172,26 +180,26 @@ define <4 x i32> @test_maskz_compress_d_128(<4 x i32> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0x89,0x8b,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx512.mask.compress.d.128(<4 x i32> %data, <4 x i32> zeroinitializer, i8 %mask)
-  ret <4 x i32> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x i32> @llvm.x86.avx512.mask.compress.v4i32(<4 x i32> %data, <4 x i32> zeroinitializer, <4 x i1> %extract)
+  ret <4 x i32> %2
 }
 
 define <4 x i32> @test_compress_d_128(<4 x i32> %data) {
 ; CHECK-LABEL: test_compress_d_128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx512.mask.compress.d.128(<4 x i32> %data, <4 x i32> undef, i8 -1)
-  ret <4 x i32> %res
+  %1 = call <4 x i32> @llvm.x86.avx512.mask.compress.v4i32(<4 x i32> %data, <4 x i32> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret <4 x i32> %1
 }
-
-declare <4 x i32> @llvm.x86.avx512.mask.compress.d.128(<4 x i32> %data, <4 x i32> %src0, i8 %mask)
 
 define <2 x double> @test_expand_pd_128(<2 x double> %data) {
 ; CHECK-LABEL: test_expand_pd_128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <2 x double> @llvm.x86.avx512.mask.expand.pd.128(<2 x double> %data, <2 x double> undef, i8 -1)
-  ret <2 x double> %res
+  %1 = call <2 x double> @llvm.x86.avx512.mask.expand.v2f64(<2 x double> %data, <2 x double> undef, <2 x i1> <i1 true, i1 true>)
+  ret <2 x double> %1
 }
 
 define <2 x double> @test_mask_expand_pd_128(<2 x double> %data, <2 x double> %passthru, i8 %mask) {
@@ -209,8 +217,10 @@ define <2 x double> @test_mask_expand_pd_128(<2 x double> %data, <2 x double> %p
 ; X64-NEXT:    vexpandpd %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0x88,0xc8]
 ; X64-NEXT:    vmovdqa %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <2 x double> @llvm.x86.avx512.mask.expand.pd.128(<2 x double> %data, <2 x double> %passthru, i8 %mask)
-  ret <2 x double> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <2 x i32> <i32 0, i32 1>
+  %2 = call <2 x double> @llvm.x86.avx512.mask.expand.v2f64(<2 x double> %data, <2 x double> %passthru, <2 x i1> %extract)
+  ret <2 x double> %2
 }
 
 define <2 x double> @test_maskz_expand_pd_128(<2 x double> %data, i8 %mask) {
@@ -226,18 +236,18 @@ define <2 x double> @test_maskz_expand_pd_128(<2 x double> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vexpandpd %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0x88,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <2 x double> @llvm.x86.avx512.mask.expand.pd.128(<2 x double> %data, <2 x double> zeroinitializer, i8 %mask)
-  ret <2 x double> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <2 x i32> <i32 0, i32 1>
+  %2 = call <2 x double> @llvm.x86.avx512.mask.expand.v2f64(<2 x double> %data, <2 x double> zeroinitializer, <2 x i1> %extract)
+  ret <2 x double> %2
 }
-
-declare <2 x double> @llvm.x86.avx512.mask.expand.pd.128(<2 x double> %data, <2 x double> %src0, i8 %mask)
 
 define <4 x float> @test_expand_ps_128(<4 x float> %data) {
 ; CHECK-LABEL: test_expand_ps_128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.avx512.mask.expand.ps.128(<4 x float> %data, <4 x float> undef, i8 -1)
-  ret <4 x float> %res
+  %1 = call <4 x float> @llvm.x86.avx512.mask.expand.v4f32(<4 x float> %data, <4 x float> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret <4 x float> %1
 }
 
 define <4 x float> @test_mask_expand_ps_128(<4 x float> %data, <4 x float> %passthru, i8 %mask) {
@@ -255,8 +265,10 @@ define <4 x float> @test_mask_expand_ps_128(<4 x float> %data, <4 x float> %pass
 ; X64-NEXT:    vexpandps %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0x7d,0x09,0x88,0xc8]
 ; X64-NEXT:    vmovdqa %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.avx512.mask.expand.ps.128(<4 x float> %data, <4 x float> %passthru, i8 %mask)
-  ret <4 x float> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x float> @llvm.x86.avx512.mask.expand.v4f32(<4 x float> %data, <4 x float> %passthru, <4 x i1> %extract)
+  ret <4 x float> %2
 }
 
 define <4 x float> @test_maskz_expand_ps_128(<4 x float> %data, i8 %mask) {
@@ -272,18 +284,18 @@ define <4 x float> @test_maskz_expand_ps_128(<4 x float> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vexpandps %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0x89,0x88,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.avx512.mask.expand.ps.128(<4 x float> %data, <4 x float> zeroinitializer, i8 %mask)
-  ret <4 x float> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x float> @llvm.x86.avx512.mask.expand.v4f32(<4 x float> %data, <4 x float> zeroinitializer, <4 x i1> %extract)
+  ret <4 x float> %2
 }
-
-declare <4 x float> @llvm.x86.avx512.mask.expand.ps.128(<4 x float> %data, <4 x float> %src0, i8 %mask)
 
 define <2 x i64> @test_expand_q_128(<2 x i64> %data) {
 ; CHECK-LABEL: test_expand_q_128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <2 x i64> @llvm.x86.avx512.mask.expand.q.128(<2 x i64> %data, <2 x i64> undef, i8 -1)
-  ret <2 x i64> %res
+  %1 = call <2 x i64> @llvm.x86.avx512.mask.expand.v2i64(<2 x i64> %data, <2 x i64> undef, <2 x i1> <i1 true, i1 true>)
+  ret <2 x i64> %1
 }
 
 define <2 x i64> @test_mask_expand_q_128(<2 x i64> %data, <2 x i64> %passthru, i8 %mask) {
@@ -301,8 +313,10 @@ define <2 x i64> @test_mask_expand_q_128(<2 x i64> %data, <2 x i64> %passthru, i
 ; X64-NEXT:    vpexpandq %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0x89,0xc8]
 ; X64-NEXT:    vmovdqa %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <2 x i64> @llvm.x86.avx512.mask.expand.q.128(<2 x i64> %data, <2 x i64> %passthru, i8 %mask)
-  ret <2 x i64> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <2 x i32> <i32 0, i32 1>
+  %2 = call <2 x i64> @llvm.x86.avx512.mask.expand.v2i64(<2 x i64> %data, <2 x i64> %passthru, <2 x i1> %extract)
+  ret <2 x i64> %2
 }
 
 define <2 x i64> @test_maskz_expand_q_128(<2 x i64> %data, i8 %mask) {
@@ -318,18 +332,18 @@ define <2 x i64> @test_maskz_expand_q_128(<2 x i64> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpexpandq %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0x89,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <2 x i64> @llvm.x86.avx512.mask.expand.q.128(<2 x i64> %data, <2 x i64> zeroinitializer, i8 %mask)
-  ret <2 x i64> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <2 x i32> <i32 0, i32 1>
+  %2 = call <2 x i64> @llvm.x86.avx512.mask.expand.v2i64(<2 x i64> %data, <2 x i64> zeroinitializer, <2 x i1> %extract)
+  ret <2 x i64> %2
 }
-
-declare <2 x i64> @llvm.x86.avx512.mask.expand.q.128(<2 x i64> %data, <2 x i64> %src0, i8 %mask)
 
 define <4 x i32> @test_expand_d_128(<4 x i32> %data) {
 ; CHECK-LABEL: test_expand_d_128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx512.mask.expand.d.128(<4 x i32> %data, <4 x i32> undef, i8 -1)
-  ret <4 x i32> %res
+  %1 = call <4 x i32> @llvm.x86.avx512.mask.expand.v4i32(<4 x i32> %data, <4 x i32> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret <4 x i32> %1
 }
 
 define <4 x i32> @test_mask_expand_d_128(<4 x i32> %data, <4 x i32> %passthru, i8 %mask) {
@@ -347,8 +361,10 @@ define <4 x i32> @test_mask_expand_d_128(<4 x i32> %data, <4 x i32> %passthru, i
 ; X64-NEXT:    vpexpandd %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0x7d,0x09,0x89,0xc8]
 ; X64-NEXT:    vmovdqa %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx512.mask.expand.d.128(<4 x i32> %data, <4 x i32> %passthru, i8 %mask)
-  ret <4 x i32> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x i32> @llvm.x86.avx512.mask.expand.v4i32(<4 x i32> %data, <4 x i32> %passthru, <4 x i1> %extract)
+  ret <4 x i32> %2
 }
 
 define <4 x i32> @test_maskz_expand_d_128(<4 x i32> %data, i8 %mask) {
@@ -364,11 +380,11 @@ define <4 x i32> @test_maskz_expand_d_128(<4 x i32> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpexpandd %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0x89,0x89,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x i32> @llvm.x86.avx512.mask.expand.d.128(<4 x i32> %data, <4 x i32> zeroinitializer, i8 %mask)
-  ret <4 x i32> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x i32> @llvm.x86.avx512.mask.expand.v4i32(<4 x i32> %data, <4 x i32> zeroinitializer, <4 x i1> %extract)
+  ret <4 x i32> %2
 }
-
-declare <4 x i32> @llvm.x86.avx512.mask.expand.d.128(<4 x i32> %data, <4 x i32> %src0, i8 %mask)
 
 define <4 x double> @test_mask_compress_pd_256(<4 x double> %data, <4 x double> %passthru, i8 %mask) {
 ; X86-LABEL: test_mask_compress_pd_256:
@@ -385,8 +401,10 @@ define <4 x double> @test_mask_compress_pd_256(<4 x double> %data, <4 x double> 
 ; X64-NEXT:    vcompresspd %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x29,0x8a,0xc1]
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x double> @llvm.x86.avx512.mask.compress.pd.256(<4 x double> %data, <4 x double> %passthru, i8 %mask)
-  ret <4 x double> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x double> @llvm.x86.avx512.mask.compress.v4f64(<4 x double> %data, <4 x double> %passthru, <4 x i1> %extract)
+  ret <4 x double> %2
 }
 
 define <4 x double> @test_maskz_compress_pd_256(<4 x double> %data, i8 %mask) {
@@ -402,19 +420,19 @@ define <4 x double> @test_maskz_compress_pd_256(<4 x double> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vcompresspd %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0xa9,0x8a,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x double> @llvm.x86.avx512.mask.compress.pd.256(<4 x double> %data, <4 x double> zeroinitializer, i8 %mask)
-  ret <4 x double> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x double> @llvm.x86.avx512.mask.compress.v4f64(<4 x double> %data, <4 x double> zeroinitializer, <4 x i1> %extract)
+  ret <4 x double> %2
 }
 
 define <4 x double> @test_compress_pd_256(<4 x double> %data) {
 ; CHECK-LABEL: test_compress_pd_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <4 x double> @llvm.x86.avx512.mask.compress.pd.256(<4 x double> %data, <4 x double> undef, i8 -1)
-  ret <4 x double> %res
+  %1 = call <4 x double> @llvm.x86.avx512.mask.compress.v4f64(<4 x double> %data, <4 x double> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret <4 x double> %1
 }
-
-declare <4 x double> @llvm.x86.avx512.mask.compress.pd.256(<4 x double> %data, <4 x double> %src0, i8 %mask)
 
 define <8 x float> @test_mask_compress_ps_256(<8 x float> %data, <8 x float> %passthru, i8 %mask) {
 ; X86-LABEL: test_mask_compress_ps_256:
@@ -431,8 +449,9 @@ define <8 x float> @test_mask_compress_ps_256(<8 x float> %data, <8 x float> %pa
 ; X64-NEXT:    vcompressps %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf2,0x7d,0x29,0x8a,0xc1]
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x float> @llvm.x86.avx512.mask.compress.ps.256(<8 x float> %data, <8 x float> %passthru, i8 %mask)
-  ret <8 x float> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x float> @llvm.x86.avx512.mask.compress.v8f32(<8 x float> %data, <8 x float> %passthru, <8 x i1> %1)
+  ret <8 x float> %2
 }
 
 define <8 x float> @test_maskz_compress_ps_256(<8 x float> %data, i8 %mask) {
@@ -448,19 +467,18 @@ define <8 x float> @test_maskz_compress_ps_256(<8 x float> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vcompressps %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0xa9,0x8a,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x float> @llvm.x86.avx512.mask.compress.ps.256(<8 x float> %data, <8 x float> zeroinitializer, i8 %mask)
-  ret <8 x float> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x float> @llvm.x86.avx512.mask.compress.v8f32(<8 x float> %data, <8 x float> zeroinitializer, <8 x i1> %1)
+  ret <8 x float> %2
 }
 
 define <8 x float> @test_compress_ps_256(<8 x float> %data) {
 ; CHECK-LABEL: test_compress_ps_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <8 x float> @llvm.x86.avx512.mask.compress.ps.256(<8 x float> %data, <8 x float> undef, i8 -1)
-  ret <8 x float> %res
+  %1 = call <8 x float> @llvm.x86.avx512.mask.compress.v8f32(<8 x float> %data, <8 x float> undef, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret <8 x float> %1
 }
-
-declare <8 x float> @llvm.x86.avx512.mask.compress.ps.256(<8 x float> %data, <8 x float> %src0, i8 %mask)
 
 define <4 x i64> @test_mask_compress_q_256(<4 x i64> %data, <4 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_mask_compress_q_256:
@@ -477,8 +495,10 @@ define <4 x i64> @test_mask_compress_q_256(<4 x i64> %data, <4 x i64> %passthru,
 ; X64-NEXT:    vpcompressq %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x29,0x8b,0xc1]
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx512.mask.compress.q.256(<4 x i64> %data, <4 x i64> %passthru, i8 %mask)
-  ret <4 x i64> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x i64> @llvm.x86.avx512.mask.compress.v4i64(<4 x i64> %data, <4 x i64> %passthru, <4 x i1> %extract)
+  ret <4 x i64> %2
 }
 
 define <4 x i64> @test_maskz_compress_q_256(<4 x i64> %data, i8 %mask) {
@@ -494,19 +514,19 @@ define <4 x i64> @test_maskz_compress_q_256(<4 x i64> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpcompressq %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0xa9,0x8b,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx512.mask.compress.q.256(<4 x i64> %data, <4 x i64> zeroinitializer, i8 %mask)
-  ret <4 x i64> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x i64> @llvm.x86.avx512.mask.compress.v4i64(<4 x i64> %data, <4 x i64> zeroinitializer, <4 x i1> %extract)
+  ret <4 x i64> %2
 }
 
 define <4 x i64> @test_compress_q_256(<4 x i64> %data) {
 ; CHECK-LABEL: test_compress_q_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx512.mask.compress.q.256(<4 x i64> %data, <4 x i64> undef, i8 -1)
-  ret <4 x i64> %res
+  %1 = call <4 x i64> @llvm.x86.avx512.mask.compress.v4i64(<4 x i64> %data, <4 x i64> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret <4 x i64> %1
 }
-
-declare <4 x i64> @llvm.x86.avx512.mask.compress.q.256(<4 x i64> %data, <4 x i64> %src0, i8 %mask)
 
 define <8 x i32> @test_mask_compress_d_256(<8 x i32> %data, <8 x i32> %passthru, i8 %mask) {
 ; X86-LABEL: test_mask_compress_d_256:
@@ -523,8 +543,9 @@ define <8 x i32> @test_mask_compress_d_256(<8 x i32> %data, <8 x i32> %passthru,
 ; X64-NEXT:    vpcompressd %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf2,0x7d,0x29,0x8b,0xc1]
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx512.mask.compress.d.256(<8 x i32> %data, <8 x i32> %passthru, i8 %mask)
-  ret <8 x i32> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x i32> @llvm.x86.avx512.mask.compress.v8i32(<8 x i32> %data, <8 x i32> %passthru, <8 x i1> %1)
+  ret <8 x i32> %2
 }
 
 define <8 x i32> @test_maskz_compress_d_256(<8 x i32> %data, i8 %mask) {
@@ -540,26 +561,25 @@ define <8 x i32> @test_maskz_compress_d_256(<8 x i32> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpcompressd %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0xa9,0x8b,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx512.mask.compress.d.256(<8 x i32> %data, <8 x i32> zeroinitializer, i8 %mask)
-  ret <8 x i32> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x i32> @llvm.x86.avx512.mask.compress.v8i32(<8 x i32> %data, <8 x i32> zeroinitializer, <8 x i1> %1)
+  ret <8 x i32> %2
 }
 
 define <8 x i32> @test_compress_d_256(<8 x i32> %data) {
 ; CHECK-LABEL: test_compress_d_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx512.mask.compress.d.256(<8 x i32> %data, <8 x i32> undef, i8 -1)
-  ret <8 x i32> %res
+  %1 = call <8 x i32> @llvm.x86.avx512.mask.compress.v8i32(<8 x i32> %data, <8 x i32> undef, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret <8 x i32> %1
 }
-
-declare <8 x i32> @llvm.x86.avx512.mask.compress.d.256(<8 x i32> %data, <8 x i32> %src0, i8 %mask)
 
 define <4 x double> @test_expand_pd_256(<4 x double> %data) {
 ; CHECK-LABEL: test_expand_pd_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <4 x double> @llvm.x86.avx512.mask.expand.pd.256(<4 x double> %data, <4 x double> undef, i8 -1)
-  ret <4 x double> %res
+  %1 = call <4 x double> @llvm.x86.avx512.mask.expand.v4f64(<4 x double> %data, <4 x double> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret <4 x double> %1
 }
 
 define <4 x double> @test_mask_expand_pd_256(<4 x double> %data, <4 x double> %passthru, i8 %mask) {
@@ -577,8 +597,10 @@ define <4 x double> @test_mask_expand_pd_256(<4 x double> %data, <4 x double> %p
 ; X64-NEXT:    vexpandpd %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x29,0x88,0xc8]
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x double> @llvm.x86.avx512.mask.expand.pd.256(<4 x double> %data, <4 x double> %passthru, i8 %mask)
-  ret <4 x double> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x double> @llvm.x86.avx512.mask.expand.v4f64(<4 x double> %data, <4 x double> %passthru, <4 x i1> %extract)
+  ret <4 x double> %2
 }
 
 define <4 x double> @test_maskz_expand_pd_256(<4 x double> %data, i8 %mask) {
@@ -594,18 +616,18 @@ define <4 x double> @test_maskz_expand_pd_256(<4 x double> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vexpandpd %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0xa9,0x88,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x double> @llvm.x86.avx512.mask.expand.pd.256(<4 x double> %data, <4 x double> zeroinitializer, i8 %mask)
-  ret <4 x double> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x double> @llvm.x86.avx512.mask.expand.v4f64(<4 x double> %data, <4 x double> zeroinitializer, <4 x i1> %extract)
+  ret <4 x double> %2
 }
-
-declare <4 x double> @llvm.x86.avx512.mask.expand.pd.256(<4 x double> %data, <4 x double> %src0, i8 %mask)
 
 define <8 x float> @test_expand_ps_256(<8 x float> %data) {
 ; CHECK-LABEL: test_expand_ps_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <8 x float> @llvm.x86.avx512.mask.expand.ps.256(<8 x float> %data, <8 x float> undef, i8 -1)
-  ret <8 x float> %res
+  %1 = call <8 x float> @llvm.x86.avx512.mask.expand.v8f32(<8 x float> %data, <8 x float> undef, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret <8 x float> %1
 }
 
 define <8 x float> @test_mask_expand_ps_256(<8 x float> %data, <8 x float> %passthru, i8 %mask) {
@@ -623,8 +645,9 @@ define <8 x float> @test_mask_expand_ps_256(<8 x float> %data, <8 x float> %pass
 ; X64-NEXT:    vexpandps %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf2,0x7d,0x29,0x88,0xc8]
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x float> @llvm.x86.avx512.mask.expand.ps.256(<8 x float> %data, <8 x float> %passthru, i8 %mask)
-  ret <8 x float> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x float> @llvm.x86.avx512.mask.expand.v8f32(<8 x float> %data, <8 x float> %passthru, <8 x i1> %1)
+  ret <8 x float> %2
 }
 
 define <8 x float> @test_maskz_expand_ps_256(<8 x float> %data, i8 %mask) {
@@ -640,18 +663,17 @@ define <8 x float> @test_maskz_expand_ps_256(<8 x float> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vexpandps %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0xa9,0x88,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x float> @llvm.x86.avx512.mask.expand.ps.256(<8 x float> %data, <8 x float> zeroinitializer, i8 %mask)
-  ret <8 x float> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x float> @llvm.x86.avx512.mask.expand.v8f32(<8 x float> %data, <8 x float> zeroinitializer, <8 x i1> %1)
+  ret <8 x float> %2
 }
-
-declare <8 x float> @llvm.x86.avx512.mask.expand.ps.256(<8 x float> %data, <8 x float> %src0, i8 %mask)
 
 define <4 x i64> @test_expand_q_256(<4 x i64> %data) {
 ; CHECK-LABEL: test_expand_q_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx512.mask.expand.q.256(<4 x i64> %data, <4 x i64> undef, i8 -1)
-  ret <4 x i64> %res
+  %1 = call <4 x i64> @llvm.x86.avx512.mask.expand.v4i64(<4 x i64> %data, <4 x i64> undef, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret <4 x i64> %1
 }
 
 define <4 x i64> @test_mask_expand_q_256(<4 x i64> %data, <4 x i64> %passthru, i8 %mask) {
@@ -669,8 +691,10 @@ define <4 x i64> @test_mask_expand_q_256(<4 x i64> %data, <4 x i64> %passthru, i
 ; X64-NEXT:    vpexpandq %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x29,0x89,0xc8]
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx512.mask.expand.q.256(<4 x i64> %data, <4 x i64> %passthru, i8 %mask)
-  ret <4 x i64> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x i64> @llvm.x86.avx512.mask.expand.v4i64(<4 x i64> %data, <4 x i64> %passthru, <4 x i1> %extract)
+  ret <4 x i64> %2
 }
 
 define <4 x i64> @test_maskz_expand_q_256(<4 x i64> %data, i8 %mask) {
@@ -686,18 +710,18 @@ define <4 x i64> @test_maskz_expand_q_256(<4 x i64> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpexpandq %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0xa9,0x89,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x i64> @llvm.x86.avx512.mask.expand.q.256(<4 x i64> %data, <4 x i64> zeroinitializer, i8 %mask)
-  ret <4 x i64> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %extract = shufflevector <8 x i1> %1, <8 x i1> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = call <4 x i64> @llvm.x86.avx512.mask.expand.v4i64(<4 x i64> %data, <4 x i64> zeroinitializer, <4 x i1> %extract)
+  ret <4 x i64> %2
 }
-
-declare <4 x i64> @llvm.x86.avx512.mask.expand.q.256(<4 x i64> %data, <4 x i64> %src0, i8 %mask)
 
 define <8 x i32> @test_expand_d_256(<8 x i32> %data) {
 ; CHECK-LABEL: test_expand_d_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx512.mask.expand.d.256(<8 x i32> %data, <8 x i32> undef, i8 -1)
-  ret <8 x i32> %res
+  %1 = call <8 x i32> @llvm.x86.avx512.mask.expand.v8i32(<8 x i32> %data, <8 x i32> undef, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret <8 x i32> %1
 }
 
 define <8 x i32> @test_mask_expand_d_256(<8 x i32> %data, <8 x i32> %passthru, i8 %mask) {
@@ -715,8 +739,9 @@ define <8 x i32> @test_mask_expand_d_256(<8 x i32> %data, <8 x i32> %passthru, i
 ; X64-NEXT:    vpexpandd %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf2,0x7d,0x29,0x89,0xc8]
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc1]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx512.mask.expand.d.256(<8 x i32> %data, <8 x i32> %passthru, i8 %mask)
-  ret <8 x i32> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x i32> @llvm.x86.avx512.mask.expand.v8i32(<8 x i32> %data, <8 x i32> %passthru, <8 x i1> %1)
+  ret <8 x i32> %2
 }
 
 define <8 x i32> @test_maskz_expand_d_256(<8 x i32> %data, i8 %mask) {
@@ -732,11 +757,10 @@ define <8 x i32> @test_maskz_expand_d_256(<8 x i32> %data, i8 %mask) {
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vpexpandd %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0xa9,0x89,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx512.mask.expand.d.256(<8 x i32> %data, <8 x i32> zeroinitializer, i8 %mask)
-  ret <8 x i32> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x i32> @llvm.x86.avx512.mask.expand.v8i32(<8 x i32> %data, <8 x i32> zeroinitializer, <8 x i1> %1)
+  ret <8 x i32> %2
 }
-
-declare <8 x i32> @llvm.x86.avx512.mask.expand.d.256(<8 x i32> %data, <8 x i32> %src0, i8 %mask)
 
 define i8 @test_cmpps_256(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: test_cmpps_256:
@@ -6915,3 +6939,19 @@ declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>)
 declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
 declare <4 x double> @llvm.fma.v4f64(<4 x double>, <4 x double>, <4 x double>)
 declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>)
+declare <2 x double> @llvm.x86.avx512.mask.compress.v2f64(<2 x double>, <2 x double>, <2 x i1>)
+declare <4 x float> @llvm.x86.avx512.mask.compress.v4f32(<4 x float>, <4 x float>, <4 x i1>)
+declare <2 x i64> @llvm.x86.avx512.mask.compress.v2i64(<2 x i64>, <2 x i64>, <2 x i1>)
+declare <4 x i32> @llvm.x86.avx512.mask.compress.v4i32(<4 x i32>, <4 x i32>, <4 x i1>)
+declare <2 x double> @llvm.x86.avx512.mask.expand.v2f64(<2 x double>, <2 x double>, <2 x i1>)
+declare <4 x float> @llvm.x86.avx512.mask.expand.v4f32(<4 x float>, <4 x float>, <4 x i1>)
+declare <2 x i64> @llvm.x86.avx512.mask.expand.v2i64(<2 x i64>, <2 x i64>, <2 x i1>)
+declare <4 x i32> @llvm.x86.avx512.mask.expand.v4i32(<4 x i32>, <4 x i32>, <4 x i1>)
+declare <4 x double> @llvm.x86.avx512.mask.compress.v4f64(<4 x double>, <4 x double>, <4 x i1>)
+declare <8 x float> @llvm.x86.avx512.mask.compress.v8f32(<8 x float>, <8 x float>, <8 x i1>)
+declare <4 x i64> @llvm.x86.avx512.mask.compress.v4i64(<4 x i64>, <4 x i64>, <4 x i1>)
+declare <8 x i32> @llvm.x86.avx512.mask.compress.v8i32(<8 x i32>, <8 x i32>, <8 x i1>)
+declare <4 x double> @llvm.x86.avx512.mask.expand.v4f64(<4 x double>, <4 x double>, <4 x i1>)
+declare <8 x float> @llvm.x86.avx512.mask.expand.v8f32(<8 x float>, <8 x float>, <8 x i1>)
+declare <4 x i64> @llvm.x86.avx512.mask.expand.v4i64(<4 x i64>, <4 x i64>, <4 x i1>)
+declare <8 x i32> @llvm.x86.avx512.mask.expand.v8i32(<8 x i32>, <8 x i32>, <8 x i1>)

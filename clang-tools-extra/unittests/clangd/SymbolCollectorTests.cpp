@@ -1069,21 +1069,27 @@ TEST_F(SymbolCollectorTest, CollectMacros) {
 
     MAC(p);
   )");
-  const std::string Main = R"(
-    #define MAIN 1  // not indexed
-    USED(t);
-  )";
+
+  Annotations Main(R"(
+    #define $main[[MAIN]] 1
+     USED(t);
+  )");
   CollectorOpts.CountReferences = true;
   CollectorOpts.CollectMacro = true;
-  runSymbolCollector(Header.code(), Main);
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(QName("p"), QName("t"),
-                                   AllOf(QName("X"), DeclURI(TestHeaderURI),
-                                         IncludeHeader(TestHeaderURI)),
-                                   AllOf(Labeled("MAC(x)"), RefCount(0),
-                                         DeclRange(Header.range("mac"))),
-                                   AllOf(Labeled("USED(y)"), RefCount(1),
-                                         DeclRange(Header.range("used")))));
+  runSymbolCollector(Header.code(), Main.code());
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          QName("p"), QName("t"),
+          AllOf(QName("X"), DeclURI(TestHeaderURI),
+                IncludeHeader(TestHeaderURI)),
+          AllOf(Labeled("MAC(x)"), RefCount(0),
+
+                DeclRange(Header.range("mac")), VisibleOutsideFile()),
+          AllOf(Labeled("USED(y)"), RefCount(1),
+                DeclRange(Header.range("used")), VisibleOutsideFile()),
+          AllOf(Labeled("MAIN"), RefCount(0), DeclRange(Main.range("main")),
+                Not(VisibleOutsideFile()))));
 }
 
 TEST_F(SymbolCollectorTest, DeprecatedSymbols) {

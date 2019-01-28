@@ -21,6 +21,7 @@ namespace object {
 class COFFObjectFile;
 class COFFImportFile;
 class ELFObjectFileBase;
+class ELFSectionRef;
 class MachOObjectFile;
 class MachOUniversalBinary;
 class ObjectFile;
@@ -136,6 +137,8 @@ std::error_code
 getMachORelocationValueString(const object::MachOObjectFile *Obj,
                               const object::RelocationRef &RelRef,
                               llvm::SmallVectorImpl<char> &Result);
+
+uint64_t getELFSectionLMA(const object::ELFSectionRef& Sec);
 
 void error(std::error_code ec);
 bool isRelocAddressLess(object::RelocationRef A, object::RelocationRef B);

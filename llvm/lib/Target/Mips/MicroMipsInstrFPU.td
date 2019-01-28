@@ -123,7 +123,7 @@ multiclass ABSS_MMM<string opstr, InstrItinClass Itin,
 defm FSQRT : ABSS_MMM<"sqrt.d", II_SQRT_D, fsqrt>, ROUND_W_FM_MM<1, 0x28>;
 defm FABS : ABSS_MMM<"abs.d", II_SQRT_D, fabs>, ABS_FM_MM<1, 0xd>;
 
-let DecoderNamespace = "MicroMips" in {
+let DecoderNamespace = "MicroMips", AdditionalPredicates = [UseAbs] in {
   def FABS_S_MM : MMRel, ABSS_FT<"abs.s", FGR32Opnd, FGR32Opnd, II_ABS, fabs>,
                   ABS_FM_MM<0, 0xd>, ISA_MICROMIPS;
 }

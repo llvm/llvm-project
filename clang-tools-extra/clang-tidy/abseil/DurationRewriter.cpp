@@ -103,6 +103,25 @@ llvm::StringRef getDurationFactoryForScale(DurationScale Scale) {
   llvm_unreachable("unknown scaling factor");
 }
 
+/// Returns the Time factory function name for a given `Scale`.
+llvm::StringRef getTimeFactoryForScale(DurationScale scale) {
+  switch (scale) {
+  case DurationScale::Hours:
+    return "absl::ToUnixHours";
+  case DurationScale::Minutes:
+    return "absl::ToUnixMinutes";
+  case DurationScale::Seconds:
+    return "absl::ToUnixSeconds";
+  case DurationScale::Milliseconds:
+    return "absl::ToUnixMillis";
+  case DurationScale::Microseconds:
+    return "absl::ToUnixMicros";
+  case DurationScale::Nanoseconds:
+    return "absl::ToUnixNanos";
+  }
+  llvm_unreachable("unknown scaling factor");
+}
+
 /// Returns `true` if `Node` is a value which evaluates to a literal `0`.
 bool IsLiteralZero(const MatchFinder::MatchResult &Result, const Expr &Node) {
   auto ZeroMatcher =
@@ -189,6 +208,22 @@ llvm::Optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name) {
        {"ToInt64Microseconds", DurationScale::Microseconds},
        {"ToDoubleNanoseconds", DurationScale::Nanoseconds},
        {"ToInt64Nanoseconds", DurationScale::Nanoseconds}});
+
+  auto ScaleIter = ScaleMap.find(std::string(Name));
+  if (ScaleIter == ScaleMap.end())
+    return llvm::None;
+
+  return ScaleIter->second;
+}
+
+llvm::Optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name) {
+  static const llvm::StringMap<DurationScale> ScaleMap(
+      {{"ToUnixHours", DurationScale::Hours},
+       {"ToUnixMinutes", DurationScale::Minutes},
+       {"ToUnixSeconds", DurationScale::Seconds},
+       {"ToUnixMillis", DurationScale::Milliseconds},
+       {"ToUnixMicros", DurationScale::Microseconds},
+       {"ToUnixNanos", DurationScale::Nanoseconds}});
 
   auto ScaleIter = ScaleMap.find(std::string(Name));
   if (ScaleIter == ScaleMap.end())

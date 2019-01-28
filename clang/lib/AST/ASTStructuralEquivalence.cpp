@@ -528,7 +528,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (Proto1->isVariadic() != Proto2->isVariadic())
       return false;
 
-    if (Proto1->getTypeQuals() != Proto2->getTypeQuals())
+    if (Proto1->getMethodQuals() != Proto2->getMethodQuals())
       return false;
 
     // Check exceptions, this information is lost in canonical type.

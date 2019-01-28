@@ -12240,19 +12240,22 @@ integer type.
       declare i16 @llvm.bitreverse.i16(i16 <id>)
       declare i32 @llvm.bitreverse.i32(i32 <id>)
       declare i64 @llvm.bitreverse.i64(i64 <id>)
+      declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> <id>)
 
 Overview:
 """""""""
 
 The '``llvm.bitreverse``' family of intrinsics is used to reverse the
-bitpattern of an integer value; for example ``0b10110110`` becomes
-``0b01101101``.
+bitpattern of an integer value or vector of integer values; for example
+``0b10110110`` becomes ``0b01101101``.
 
 Semantics:
 """"""""""
 
 The ``llvm.bitreverse.iN`` intrinsic returns an iN value that has bit
-``M`` in the input moved to bit ``N-M`` in the output.
+``M`` in the input moved to bit ``N-M`` in the output. The vector
+intrinsics, such as ``llvm.bitreverse.v4i32``, operate on a per-element
+basis and the element order is not affected.
 
 '``llvm.bswap.*``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -12268,14 +12271,14 @@ integer type that is an even number of bytes (i.e. BitWidth % 16 == 0).
       declare i16 @llvm.bswap.i16(i16 <id>)
       declare i32 @llvm.bswap.i32(i32 <id>)
       declare i64 @llvm.bswap.i64(i64 <id>)
+      declare <4 x i32> @llvm.bswap.v4i32(<4 x i32> <id>)
 
 Overview:
 """""""""
 
-The '``llvm.bswap``' family of intrinsics is used to byte swap integer
-values with an even number of bytes (positive multiple of 16 bits).
-These are useful for performing operations on data that is not in the
-target's native byte order.
+The '``llvm.bswap``' family of intrinsics is used to byte swap an integer
+value or vector of integer values with an even number of bytes (positive
+multiple of 16 bits).
 
 Semantics:
 """"""""""
@@ -12287,7 +12290,8 @@ swapped, so that if the input bytes are numbered 0, 1, 2, 3 then the
 returned i32 will have its bytes in 3, 2, 1, 0 order. The
 ``llvm.bswap.i48``, ``llvm.bswap.i64`` and other intrinsics extend this
 concept to additional even-byte lengths (6 bytes, 8 bytes and more,
-respectively).
+respectively). The vector intrinsics, such as ``llvm.bswap.v4i32``,
+operate on a per-element basis and the element order is not affected.
 
 '``llvm.ctpop.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

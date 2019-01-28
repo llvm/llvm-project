@@ -1,0 +1,48 @@
+# RUN: yaml2obj %s > %t
+
+## Check we print both VMA and LMA correctly when dumping section headers.
+# RUN: llvm-objdump --section-headers %t | FileCheck %s
+
+# CHECK:      Sections:
+# CHECK-NEXT: Idx Name  Size     VMA              LMA              Type
+# CHECK-NEXT:   0       00000000 0000000000000000 0000000000000000
+# CHECK-NEXT:   1 .text 00000004 0000000000001000 0000000000002000 TEXT
+# CHECK-NEXT:   2 .init 00000004 0000000000001010 0000000000001010 TEXT
+# CHECK-NEXT:   3 .data 00000004 0000000000002000 0000000000003000 DATA
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content:         "00000000"
+    Address:         0x00001000
+  - Name:            .init
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content:         "00000000"
+    Address:         0x00001010
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "00000000"
+    Address:         0x00002000
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x00001000
+    PAddr: 0x00002000
+    Sections:
+      - Section: .text
+      - Section: .init
+  - Type: PT_LOAD
+    Flags: [ PF_R ]
+    VAddr: 0x00002000
+    PAddr: 0x00003000
+    Sections:
+      - Section: .data
