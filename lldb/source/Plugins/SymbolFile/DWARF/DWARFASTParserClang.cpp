@@ -264,7 +264,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
       const char *mangled_name_cstr = NULL;
       ConstString type_name_const_str;
       Type::ResolveState resolve_state = Type::eResolveStateUnresolved;
-      uint64_t byte_size = 0;
+      llvm::Optional<uint64_t> byte_size;
       Declaration decl;
 
       Type::EncodingDataType encoding_data_type = Type::eEncodingIsUID;
@@ -386,7 +386,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         case DW_TAG_base_type:
           resolve_state = Type::eResolveStateFull;
           clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
-              type_name_cstr, encoding, byte_size * 8);
+              type_name_cstr, encoding, byte_size.getValueOr(0) * 8);
           break;
 
         case DW_TAG_pointer_type:
@@ -535,7 +535,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
       case DW_TAG_class_type: {
         // Set a bit that lets us know that we are currently parsing this
         dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
-        bool byte_size_valid = false;
 
         LanguageType class_language = eLanguageTypeUnknown;
         bool is_complete_objc_class = false;
@@ -569,7 +568,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
               case DW_AT_byte_size:
                 byte_size = form_value.Unsigned();
-                byte_size_valid = true;
                 break;
 
               case DW_AT_accessibility:
@@ -629,7 +627,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
           if (dwarf->GetUniqueDWARFASTTypeMap().Find(
                   unique_typename, die, unique_decl,
-                  byte_size_valid ? byte_size : -1, *unique_ast_entry_ap)) {
+                  byte_size ? *byte_size : -1, *unique_ast_entry_ap)) {
             type_sp = unique_ast_entry_ap->m_type_sp;
             if (type_sp) {
               dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
@@ -654,7 +652,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           default_accessibility = eAccessPrivate;
         }
 
-        if (byte_size_valid && byte_size == 0 && type_name_cstr &&
+        if (byte_size && *byte_size == 0 && type_name_cstr &&
             !die.HasChildren() &&
             sc.comp_unit->GetLanguage() == eLanguageTypeObjC) {
           // Work around an issue with clang at the moment where forward
@@ -857,7 +855,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         unique_ast_entry_ap->m_type_sp = type_sp;
         unique_ast_entry_ap->m_die = die;
         unique_ast_entry_ap->m_declaration = unique_decl;
-        unique_ast_entry_ap->m_byte_size = byte_size;
+        unique_ast_entry_ap->m_byte_size = byte_size.getValueOr(0);
         dwarf->GetUniqueDWARFASTTypeMap().Insert(unique_typename,
                                                  *unique_ast_entry_ap);
 
@@ -1084,10 +1082,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
             }
 
             if (!enumerator_clang_type) {
-              if (byte_size > 0) {
+              if (byte_size) {
                 enumerator_clang_type =
                     m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
-                        NULL, DW_ATE_signed, byte_size * 8);
+                        NULL, DW_ATE_signed, *byte_size * 8);
               } else {
                 enumerator_clang_type = m_ast.GetBasicType(eBasicTypeInt);
               }
@@ -1115,7 +1113,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
               bool is_signed = false;
               enumerator_clang_type.IsIntegerType(is_signed);
               ParseChildEnumerators(cu_sc, clang_type, is_signed,
-                                    type_sp->GetByteSize(), die);
+                                    type_sp->GetByteSize().getValueOr(0), die);
             }
             ClangASTContext::CompleteTagDeclarationDefinition(clang_type);
           } else {
@@ -1653,9 +1651,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
             }
           }
         }
-        type_sp.reset(new Type(die.GetID(), dwarf, type_name_const_str, 0, NULL,
-                               LLDB_INVALID_UID, Type::eEncodingIsUID, &decl,
-                               clang_type, Type::eResolveStateFull));
+        type_sp.reset(new Type(die.GetID(), dwarf, type_name_const_str,
+                               llvm::None, NULL, LLDB_INVALID_UID,
+                               Type::eEncodingIsUID, &decl, clang_type,
+                               Type::eResolveStateFull));
         assert(type_sp.get());
       } break;
 
@@ -1739,7 +1738,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
               bit_stride = array_info->bit_stride;
             }
             if (byte_stride == 0 && bit_stride == 0)
-              byte_stride = element_type->GetByteSize();
+              byte_stride = element_type->GetByteSize().getValueOr(0);
             CompilerType array_element_type =
                 element_type->GetForwardCompilerType();
 
@@ -2312,7 +2311,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
         !layout_info.base_offsets.empty() ||
         !layout_info.vbase_offsets.empty()) {
       if (type)
-        layout_info.bit_size = type->GetByteSize() * 8;
+        layout_info.bit_size = type->GetByteSize().getValueOr(0) * 8;
       if (layout_info.bit_size == 0)
         layout_info.bit_size =
             die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
@@ -2396,8 +2395,8 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
         SymbolContext sc(die.GetLLDBCompileUnit());
         bool is_signed = false;
         clang_type.IsIntegerType(is_signed);
-        ParseChildEnumerators(sc, clang_type, is_signed, type->GetByteSize(),
-                              die);
+        ParseChildEnumerators(sc, clang_type, is_signed,
+                              type->GetByteSize().getValueOr(0), die);
       }
       ClangASTContext::CompleteTagDeclarationDefinition(clang_type);
     }
@@ -2721,7 +2720,7 @@ bool DWARFASTParserClang::ParseChildMembers(
         AccessType accessibility = eAccessNone;
         uint32_t member_byte_offset =
             (parent_die.Tag() == DW_TAG_union_type) ? 0 : UINT32_MAX;
-        size_t byte_size = 0;
+        llvm::Optional<uint64_t> byte_size;
         int64_t bit_offset = 0;
         uint64_t data_bit_offset = UINT64_MAX;
         size_t bit_size = 0;
@@ -2864,7 +2863,7 @@ bool DWARFASTParserClang::ParseChildMembers(
         // with a crash if we try to use this type in an expression when clang
         // becomes unhappy with its recycled debug info.
 
-        if (byte_size == 0 && bit_offset < 0) {
+        if (byte_size.getValueOr(0) == 0 && bit_offset < 0) {
           bit_size = 0;
           bit_offset = 0;
         }
@@ -2926,12 +2925,12 @@ bool DWARFASTParserClang::ParseChildMembers(
                 if (data_bit_offset != UINT64_MAX) {
                   this_field_info.bit_offset = data_bit_offset;
                 } else {
-                  if (byte_size == 0)
+                  if (!byte_size)
                     byte_size = member_type->GetByteSize();
 
                   ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
                   if (objfile->GetByteOrder() == eByteOrderLittle) {
-                    this_field_info.bit_offset += byte_size * 8;
+                    this_field_info.bit_offset += byte_size.getValueOr(0) * 8;
                     this_field_info.bit_offset -= (bit_offset + bit_size);
                   } else {
                     this_field_info.bit_offset += bit_offset;
