@@ -9114,6 +9114,12 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=wasm64-unknown-unknown \
 // RUN:   < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=wasm32-unknown-wasi \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY32,WEBASSEMBLY-WASI %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=wasm64-unknown-wasi \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64,WEBASSEMBLY-WASI %s
 //
 // WEBASSEMBLY32:#define _ILP32 1
 // WEBASSEMBLY32-NOT:#define _LP64
@@ -9467,6 +9473,7 @@
 // WEBASSEMBLY-NEXT:#define __llvm__ 1
 // WEBASSEMBLY-NOT:#define __unix
 // WEBASSEMBLY-NOT:#define __unix__
+// WEBASSEMBLY-WASI-NEXT:#define __wasi__ 1
 // WEBASSEMBLY-NOT:#define __wasm_simd128__
 // WEBASSEMBLY-NOT:#define __wasm_simd256__
 // WEBASSEMBLY-NOT:#define __wasm_simd512__
