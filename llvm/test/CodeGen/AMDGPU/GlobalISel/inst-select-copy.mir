@@ -19,8 +19,8 @@ body: |
     ; GCN: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[COPY]]
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN: FLAT_STORE_DWORD [[COPY1]], [[DEF]], 0, 0, 0, implicit $exec, implicit $flat_scr
-    %0:sgpr(s64) = COPY $sgpr2_sgpr3
-    %1:vgpr(s64) = COPY %0
+    %0:sgpr(p1) = COPY $sgpr2_sgpr3
+    %1:vgpr(p1) = COPY %0
     %2:vgpr(s32) = G_IMPLICIT_DEF
     G_STORE %2, %1 :: (store 4 into %ir.global0)
 ...

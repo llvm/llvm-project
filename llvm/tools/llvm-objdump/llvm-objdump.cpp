@@ -70,6 +70,11 @@
 using namespace llvm;
 using namespace object;
 
+cl::opt<unsigned long long> AdjustVMA(
+    "adjust-vma",
+    cl::desc("Increase the displayed address by the specified offset"),
+    cl::value_desc("offset"), cl::init(0));
+
 cl::opt<bool>
     llvm::AllHeaders("all-headers",
                      cl::desc("Display all available header information"));
@@ -890,6 +895,18 @@ getRelocsMap(llvm::object::ObjectFile const &Obj) {
   return Ret;
 }
 
+// Used for --adjust-vma to check if address should be adjusted by the
+// specified value for a given section.
+// For ELF we do not adjust non-allocatable sections like debug ones,
+// because they are not loadable.
+// TODO: implement for other file formats.
+static bool shouldAdjustVA(const SectionRef &Section) {
+  const ObjectFile *Obj = Section.getObject();
+  if (isa<object::ELFObjectFileBase>(Obj))
+    return ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC;
+  return false;
+}
+
 static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
                               MCContext &Ctx, MCDisassembler *DisAsm,
                               const MCInstrAnalysis *MIA, MCInstPrinter *IP,
@@ -1046,6 +1063,10 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
     ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(BytesStr.data()),
                             BytesStr.size());
 
+    uint64_t VMAAdjustment = 0;
+    if (shouldAdjustVA(Section))
+      VMAAdjustment = AdjustVMA;
+
     uint64_t Size;
     uint64_t Index;
     bool PrintedSection = false;
@@ -1110,7 +1131,8 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
       outs() << '\n';
       if (!NoLeadingAddr)
-        outs() << format("%016" PRIx64 " ", SectionAddr + Start);
+        outs() << format("%016" PRIx64 " ",
+                         SectionAddr + Start + VMAAdjustment);
 
       StringRef SymbolName = std::get<1>(Symbols[SI]);
       if (Demangle)
@@ -1271,9 +1293,9 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         if (Size == 0)
           Size = 1;
 
-        PIP.printInst(*IP, Disassembled ? &Inst : nullptr,
-                      Bytes.slice(Index, Size), SectionAddr + Index, outs(), "",
-                      *STI, &SP, &Rels);
+        PIP.printInst(
+            *IP, Disassembled ? &Inst : nullptr, Bytes.slice(Index, Size),
+            SectionAddr + Index + VMAAdjustment, outs(), "", *STI, &SP, &Rels);
         outs() << CommentStream.str();
         Comments.clear();
 
@@ -1349,9 +1371,18 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
               continue;
             }
 
-            // Stop when rel_cur's address is past the current instruction.
+            // Stop when RelCur's offset is past the current instruction.
             if (Offset >= Index + Size)
               break;
+
+            // When --adjust-vma is used, update the address printed.
+            if (RelCur->getSymbol() != Obj->symbol_end()) {
+              Expected<section_iterator> SymSI =
+                  RelCur->getSymbol()->getSection();
+              if (SymSI && *SymSI != Obj->section_end() &&
+                  (shouldAdjustVA(**SymSI)))
+                Offset += AdjustVMA;
+            }
 
             printRelocation(*RelCur, SectionAddr + Offset,
                             Obj->getBytesInAddress());
@@ -1493,6 +1524,9 @@ void llvm::printSectionHeaders(const ObjectFile *Obj) {
     StringRef Name;
     error(Section.getName(Name));
     uint64_t Address = Section.getAddress();
+    if (shouldAdjustVA(Section))
+      Address += AdjustVMA;
+
     uint64_t Size = Section.getSize();
     bool Text = Section.isText();
     bool Data = Section.isData();

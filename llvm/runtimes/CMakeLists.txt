@@ -98,7 +98,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   include(CheckLibraryExists)
   include(CheckCCompilerFlag)
 
-  check_library_exists(c fopen "" LLVM_HAS_C_LIB)
+  check_library_exists(c __libc_start_main "" LLVM_HAS_C_LIB)
   check_c_compiler_flag(-nodefaultlibs LLVM_HAS_NODEFAULTLIBS_FLAG)
   if(LLVM_HAS_NODEFAULTLIBS_FLAG)
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
