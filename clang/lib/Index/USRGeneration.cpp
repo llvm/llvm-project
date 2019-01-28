@@ -270,7 +270,7 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
     if (MD->isStatic())
       Out << 'S';
     // FIXME: OpenCL: Need to consider address spaces
-    if (unsigned quals = MD->getTypeQualifiers().getCVRUQualifiers())
+    if (unsigned quals = MD->getMethodQualifiers().getCVRUQualifiers())
       Out << (char)('0' + quals);
     switch (MD->getRefQualifier()) {
     case RQ_None: break;

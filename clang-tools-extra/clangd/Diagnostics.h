@@ -99,9 +99,15 @@ public:
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const clang::Diagnostic &Info) override;
 
+  using DiagFixer = std::function<std::vector<Fix>(DiagnosticsEngine::Level,
+                                                   const clang::Diagnostic &)>;
+  /// If set, possibly adds fixes for diagnostics using \p Fixer.
+  void contributeFixes(DiagFixer Fixer) { this->Fixer = Fixer; }
+
 private:
   void flushLastDiag();
 
+  DiagFixer Fixer = nullptr;
   std::vector<Diag> Output;
   llvm::Optional<LangOptions> LangOpts;
   llvm::Optional<Diag> LastDiag;

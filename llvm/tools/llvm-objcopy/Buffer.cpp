@@ -9,7 +9,9 @@
 #include "Buffer.h"
 #include "llvm-objcopy.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Process.h"
 #include <memory>
 
 namespace llvm {
@@ -17,7 +19,23 @@ namespace objcopy {
 
 Buffer::~Buffer() {}
 
+static Error createEmptyFile(StringRef FileName) {
+  // Create an empty tempfile and atomically swap it in place with the desired
+  // output file.
+  Expected<sys::fs::TempFile> Temp =
+      sys::fs::TempFile::create(FileName + ".temp-empty-%%%%%%%");
+  return Temp ? Temp->keep(FileName) : Temp.takeError();
+}
+
 Error FileBuffer::allocate(size_t Size) {
+  // When a 0-sized file is requested, skip allocation but defer file
+  // creation/truncation until commit() to avoid side effects if something
+  // happens between allocate() and commit().
+  if (Size == 0) {
+    EmptyFile = true;
+    return Error::success();
+  }
+
   Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(getName(), Size, FileOutputBuffer::F_executable);
   // FileOutputBuffer::create() returns an Error that is just a wrapper around
@@ -29,6 +47,10 @@ Error FileBuffer::allocate(size_t Size) {
 }
 
 Error FileBuffer::commit() {
+  if (EmptyFile)
+    return createEmptyFile(getName());
+
+  assert(Buf && "allocate() not called before commit()!");
   Error Err = Buf->commit();
   // FileOutputBuffer::commit() returns an Error that is just a wrapper around
   // std::error_code. Wrap it in FileError to include the actual filename.

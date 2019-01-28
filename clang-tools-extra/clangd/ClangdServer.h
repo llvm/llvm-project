@@ -114,6 +114,8 @@ public:
     /// Time to wait after a new file version before computing diagnostics.
     std::chrono::steady_clock::duration UpdateDebounce =
         std::chrono::milliseconds(500);
+
+    bool SuggestMissingIncludes = false;
   };
   // Sensible default options for use in tests.
   // Features like indexing must be enabled if desired.
@@ -267,6 +269,10 @@ private:
 
   // The provider used to provide a clang-tidy option for a specific file.
   tidy::ClangTidyOptionsProvider *ClangTidyOptProvider = nullptr;
+
+  // If this is true, suggest include insertion fixes for diagnostic errors that
+  // can be caused by missing includes (e.g. member access in incomplete type).
+  bool SuggestMissingIncludes = false;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<llvm::Optional<FuzzyFindRequest>>

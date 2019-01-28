@@ -1670,8 +1670,8 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
       const FunctionProtoType *FunctionProtoParam =
         cast<FunctionProtoType>(Param);
 
-      if (FunctionProtoParam->getTypeQuals()
-            != FunctionProtoArg->getTypeQuals() ||
+      if (FunctionProtoParam->getMethodQuals()
+            != FunctionProtoArg->getMethodQuals() ||
           FunctionProtoParam->getRefQualifier()
             != FunctionProtoArg->getRefQualifier() ||
           FunctionProtoParam->isVariadic() != FunctionProtoArg->isVariadic())
@@ -3081,7 +3081,7 @@ Sema::SubstituteExplicitTemplateArguments(
     CXXRecordDecl *ThisContext = nullptr;
     if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Function)) {
       ThisContext = Method->getParent();
-      ThisTypeQuals = Method->getTypeQualifiers();
+      ThisTypeQuals = Method->getMethodQualifiers();
     }
 
     CXXThisScopeRAII ThisScope(*this, ThisContext, ThisTypeQuals,
@@ -4660,7 +4660,7 @@ AddImplicitObjectParameterType(ASTContext &Context,
   // The standard doesn't say explicitly, but we pick the appropriate kind of
   // reference type based on [over.match.funcs]p4.
   QualType ArgTy = Context.getTypeDeclType(Method->getParent());
-  ArgTy = Context.getQualifiedType(ArgTy, Method->getTypeQualifiers());
+  ArgTy = Context.getQualifiedType(ArgTy, Method->getMethodQualifiers());
   if (Method->getRefQualifier() == RQ_RValue)
     ArgTy = Context.getRValueReferenceType(ArgTy);
   else

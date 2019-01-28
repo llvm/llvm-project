@@ -37,6 +37,9 @@ public:
 
 class FileBuffer : public Buffer {
   std::unique_ptr<FileOutputBuffer> Buf;
+  // Indicates that allocate(0) was called, and commit() should create or
+  // truncate a file instead of using a FileOutputBuffer.
+  bool EmptyFile = false;
 
 public:
   Error allocate(size_t Size) override;

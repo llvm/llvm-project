@@ -87,13 +87,16 @@ protected:
 
 } // namespace
 
-TEST_F(WorkspaceSymbolsTest, NoMacro) {
+TEST_F(WorkspaceSymbolsTest, Macros) {
   addFile("foo.cpp", R"cpp(
-      #define MACRO X
-      )cpp");
+       #define MACRO X
+       )cpp");
 
-  // Macros are not in the index.
-  EXPECT_THAT(getSymbols("macro"), IsEmpty());
+  // LSP's SymbolKind doesn't have a "Macro" kind, and
+  // indexSymbolKindToSymbolKind() currently maps macros
+  // to SymbolKind::String.
+  EXPECT_THAT(getSymbols("macro"),
+              ElementsAre(AllOf(QName("MACRO"), WithKind(SymbolKind::String))));
 }
 
 TEST_F(WorkspaceSymbolsTest, NoLocals) {

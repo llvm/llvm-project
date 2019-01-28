@@ -2176,7 +2176,7 @@ QualType CXXMethodDecl::getThisType(const FunctionProtoType *FPT,
                                     const CXXRecordDecl *Decl) {
   ASTContext &C = Decl->getASTContext();
   QualType ClassTy = C.getTypeDeclType(Decl);
-  ClassTy = C.getQualifiedType(ClassTy, FPT->getTypeQuals());
+  ClassTy = C.getQualifiedType(ClassTy, FPT->getMethodQuals());
   return C.getPointerType(ClassTy);
 }
 

@@ -1699,7 +1699,8 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
                         location_result.GetScalar().ULongLong();
                     lldb::addr_t byte_size = 1;
                     if (var_sp->GetType())
-                      byte_size = var_sp->GetType()->GetByteSize();
+                      byte_size =
+                          var_sp->GetType()->GetByteSize().getValueOr(0);
                     m_global_aranges_ap->Append(GlobalVariableMap::Entry(
                         file_addr, byte_size, var_sp.get()));
                   }
@@ -3534,9 +3535,10 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             new SymbolFileType(*this, DIERef(type_die_form).GetUID(this)));
 
         if (const_value.Form() && type_sp && type_sp->GetType())
-          location.CopyOpcodeData(const_value.Unsigned(),
-                                  type_sp->GetType()->GetByteSize(),
-                                  die.GetCU()->GetAddressByteSize());
+          location.CopyOpcodeData(
+              const_value.Unsigned(),
+              type_sp->GetType()->GetByteSize().getValueOr(0),
+              die.GetCU()->GetAddressByteSize());
 
         var_sp.reset(new Variable(die.GetID(), name, mangled, type_sp, scope,
                                   symbol_context_scope, scope_ranges, &decl,

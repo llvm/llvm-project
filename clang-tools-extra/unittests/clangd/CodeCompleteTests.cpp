@@ -16,6 +16,7 @@
 #include "SourceCode.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
+#include "TestIndex.h"
 #include "index/MemIndex.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/Support/Error.h"
@@ -137,53 +138,6 @@ CodeCompleteResult completions(llvm::StringRef Text,
                      FilePath);
 }
 
-std::string replace(llvm::StringRef Haystack, llvm::StringRef Needle,
-                    llvm::StringRef Repl) {
-  std::string Result;
-  llvm::raw_string_ostream OS(Result);
-  std::pair<llvm::StringRef, llvm::StringRef> Split;
-  for (Split = Haystack.split(Needle); !Split.second.empty();
-       Split = Split.first.split(Needle))
-    OS << Split.first << Repl;
-  Result += Split.first;
-  OS.flush();
-  return Result;
-}
-
-// Helpers to produce fake index symbols for memIndex() or completions().
-// USRFormat is a regex replacement string for the unqualified part of the USR.
-Symbol sym(llvm::StringRef QName, index::SymbolKind Kind,
-           llvm::StringRef USRFormat) {
-  Symbol Sym;
-  std::string USR = "c:"; // We synthesize a few simple cases of USRs by hand!
-  size_t Pos = QName.rfind("::");
-  if (Pos == llvm::StringRef::npos) {
-    Sym.Name = QName;
-    Sym.Scope = "";
-  } else {
-    Sym.Name = QName.substr(Pos + 2);
-    Sym.Scope = QName.substr(0, Pos + 2);
-    USR += "@N@" + replace(QName.substr(0, Pos), "::", "@N@"); // ns:: -> @N@ns
-  }
-  USR += llvm::Regex("^.*$").sub(USRFormat, Sym.Name); // e.g. func -> @F@func#
-  Sym.ID = SymbolID(USR);
-  Sym.SymInfo.Kind = Kind;
-  Sym.Flags |= Symbol::IndexedForCodeCompletion;
-  Sym.Origin = SymbolOrigin::Static;
-  return Sym;
-}
-Symbol func(llvm::StringRef Name) { // Assumes the function has no args.
-  return sym(Name, index::SymbolKind::Function, "@F@\\0#"); // no args
-}
-Symbol cls(llvm::StringRef Name) {
-  return sym(Name, index::SymbolKind::Class, "@S@\\0");
-}
-Symbol var(llvm::StringRef Name) {
-  return sym(Name, index::SymbolKind::Variable, "@\\0");
-}
-Symbol ns(llvm::StringRef Name) {
-  return sym(Name, index::SymbolKind::Namespace, "@N@\\0");
-}
 Symbol withReferences(int N, Symbol S) {
   S.References = N;
   return S;

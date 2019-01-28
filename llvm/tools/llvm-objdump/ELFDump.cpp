@@ -133,6 +133,35 @@ llvm::getELFRelocationValueString(const ELFObjectFileBase *Obj,
 }
 
 template <class ELFT>
+static uint64_t getSectionLMA(const ELFFile<ELFT> *Obj,
+                              const object::ELFSectionRef &Sec) {
+  auto PhdrRangeOrErr = Obj->program_headers();
+  if (!PhdrRangeOrErr)
+    report_fatal_error(errorToErrorCode(PhdrRangeOrErr.takeError()).message());
+
+  // Search for a PT_LOAD segment containing the requested section. Use this
+  // segment's p_addr to calculate the section's LMA.
+  for (const typename ELFFile<ELFT>::Elf_Phdr &Phdr : *PhdrRangeOrErr)
+    if ((Phdr.p_type == ELF::PT_LOAD) && (Phdr.p_vaddr <= Sec.getAddress()) &&
+        (Phdr.p_vaddr + Phdr.p_memsz > Sec.getAddress()))
+      return Sec.getAddress() - Phdr.p_vaddr + Phdr.p_paddr;
+
+  // Return section's VMA if it isn't in a PT_LOAD segment.
+  return Sec.getAddress();
+}
+
+uint64_t llvm::getELFSectionLMA(const object::ELFSectionRef &Sec) {
+  if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Sec.getObject()))
+    return getSectionLMA(ELFObj->getELFFile(), Sec);
+  else if (const auto *ELFObj = dyn_cast<ELF32BEObjectFile>(Sec.getObject()))
+    return getSectionLMA(ELFObj->getELFFile(), Sec);
+  else if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(Sec.getObject()))
+    return getSectionLMA(ELFObj->getELFFile(), Sec);
+  const auto *ELFObj = cast<ELF64BEObjectFile>(Sec.getObject());
+  return getSectionLMA(ELFObj->getELFFile(), Sec);
+}
+
+template <class ELFT>
 void printDynamicSection(const ELFFile<ELFT> *Elf, StringRef Filename) {
   auto ProgramHeaderOrError = Elf->program_headers();
   if (!ProgramHeaderOrError)
