@@ -28,8 +28,6 @@ def building_with_ubsan_enabled():
 def build_dir_san_suffix():
     if building_with_asan_enabled():
         return "+asan"
-    elif building_with_ubsan_enabled():
-        return "+ubsan"
     else:
         return ""
 
