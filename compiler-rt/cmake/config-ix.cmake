@@ -12,7 +12,7 @@ function(check_linker_flag flag out_var)
   cmake_pop_check_state()
 endfunction()
 
-check_library_exists(c fopen "" COMPILER_RT_HAS_LIBC)
+check_library_exists(c __libc_start_main "" COMPILER_RT_HAS_LIBC)
 if (COMPILER_RT_USE_BUILTINS_LIBRARY)
   include(HandleCompilerRT)
   find_compiler_rt_library(builtins COMPILER_RT_BUILTINS_LIBRARY)

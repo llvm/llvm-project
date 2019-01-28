@@ -479,7 +479,7 @@ static bool HasSameVirtualSignature(const CXXMethodDecl *LHS,
   // Force the signatures to match.  We can't rely on the overrides
   // list here because there isn't necessarily an inheritance
   // relationship between the two methods.
-  if (LT->getTypeQuals() != RT->getTypeQuals())
+  if (LT->getMethodQuals() != RT->getMethodQuals())
     return false;
   return LT->getParamTypes() == RT->getParamTypes();
 }

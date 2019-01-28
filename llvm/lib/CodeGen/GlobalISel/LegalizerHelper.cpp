@@ -343,6 +343,38 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_SUB: {
+    // FIXME: add support for when SizeOp0 isn't an exact multiple of
+    // NarrowSize.
+    if (SizeOp0 % NarrowSize != 0)
+      return UnableToLegalize;
+
+    int NumParts = SizeOp0 / NarrowTy.getSizeInBits();
+
+    SmallVector<unsigned, 2> Src1Regs, Src2Regs, DstRegs;
+    extractParts(MI.getOperand(1).getReg(), NarrowTy, NumParts, Src1Regs);
+    extractParts(MI.getOperand(2).getReg(), NarrowTy, NumParts, Src2Regs);
+
+    unsigned DstReg = MRI.createGenericVirtualRegister(NarrowTy);
+    unsigned BorrowOut = MRI.createGenericVirtualRegister(LLT::scalar(1));
+    MIRBuilder.buildInstr(TargetOpcode::G_USUBO, {DstReg, BorrowOut},
+                          {Src1Regs[0], Src2Regs[0]});
+    DstRegs.push_back(DstReg);
+    unsigned BorrowIn = BorrowOut;
+    for (int i = 1; i < NumParts; ++i) {
+      DstReg = MRI.createGenericVirtualRegister(NarrowTy);
+      BorrowOut = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+      MIRBuilder.buildInstr(TargetOpcode::G_USUBE, {DstReg, BorrowOut},
+                            {Src1Regs[i], Src2Regs[i], BorrowIn});
+
+      DstRegs.push_back(DstReg);
+      BorrowIn = BorrowOut;
+    }
+    MIRBuilder.buildMerge(MI.getOperand(0).getReg(), DstRegs);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_MUL:
     return narrowScalarMul(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_EXTRACT: {
@@ -1238,6 +1270,40 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     MIRBuilder.buildZExt(ZExtCarryIn, CarryIn);
     MIRBuilder.buildAdd(Res, TmpRes, ZExtCarryIn);
     MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CarryOut, Res, LHS);
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  case G_USUBO: {
+    unsigned Res = MI.getOperand(0).getReg();
+    unsigned BorrowOut = MI.getOperand(1).getReg();
+    unsigned LHS = MI.getOperand(2).getReg();
+    unsigned RHS = MI.getOperand(3).getReg();
+
+    MIRBuilder.buildSub(Res, LHS, RHS);
+    MIRBuilder.buildICmp(CmpInst::ICMP_ULT, BorrowOut, LHS, RHS);
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  case G_USUBE: {
+    unsigned Res = MI.getOperand(0).getReg();
+    unsigned BorrowOut = MI.getOperand(1).getReg();
+    unsigned LHS = MI.getOperand(2).getReg();
+    unsigned RHS = MI.getOperand(3).getReg();
+    unsigned BorrowIn = MI.getOperand(4).getReg();
+
+    unsigned TmpRes = MRI.createGenericVirtualRegister(Ty);
+    unsigned ZExtBorrowIn = MRI.createGenericVirtualRegister(Ty);
+    unsigned LHS_EQ_RHS = MRI.createGenericVirtualRegister(LLT::scalar(1));
+    unsigned LHS_ULT_RHS = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+    MIRBuilder.buildSub(TmpRes, LHS, RHS);
+    MIRBuilder.buildZExt(ZExtBorrowIn, BorrowIn);
+    MIRBuilder.buildSub(Res, TmpRes, ZExtBorrowIn);
+    MIRBuilder.buildICmp(CmpInst::ICMP_EQ, LHS_EQ_RHS, LHS, RHS);
+    MIRBuilder.buildICmp(CmpInst::ICMP_ULT, LHS_ULT_RHS, LHS, RHS);
+    MIRBuilder.buildSelect(BorrowOut, LHS_EQ_RHS, BorrowIn, LHS_ULT_RHS);
 
     MI.eraseFromParent();
     return Legalized;

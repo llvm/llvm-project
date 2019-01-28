@@ -22037,11 +22037,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue Mask = Op.getOperand(3);
       SDValue DataToCompress = Op.getOperand(1);
       SDValue PassThru = Op.getOperand(2);
-      if (isAllOnesConstant(Mask)) // return data as is
+      if (ISD::isBuildVectorAllOnes(Mask.getNode())) // return data as is
         return Op.getOperand(1);
-
-      MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
-      Mask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
 
       // Avoid false dependency.
       if (PassThru.isUndef())

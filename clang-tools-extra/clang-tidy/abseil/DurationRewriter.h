@@ -31,6 +31,9 @@ enum class DurationScale : std::uint8_t {
 /// constructing a `Duration` for that scale.
 llvm::StringRef getDurationFactoryForScale(DurationScale Scale);
 
+/// Returns the Time factory function name for a given `Scale`.
+llvm::StringRef getTimeFactoryForScale(DurationScale scale);
+
 // Determine if `Node` represents a literal floating point or integral zero.
 bool IsLiteralZero(const ast_matchers::MatchFinder::MatchResult &Result,
                    const Expr &Node);
@@ -61,6 +64,10 @@ simplifyDurationFactoryArg(const ast_matchers::MatchFinder::MatchResult &Result,
 /// Given the name of an inverse Duration function (e.g., `ToDoubleSeconds`),
 /// return its `DurationScale`, or `None` if a match is not found.
 llvm::Optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name);
+
+/// Given the name of an inverse Time function (e.g., `ToUnixSeconds`),
+/// return its `DurationScale`, or `None` if a match is not found.
+llvm::Optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name);
 
 /// Given a `Scale` return the fully qualified inverse functions for it.
 /// The first returned value is the inverse for `double`, and the second
@@ -97,6 +104,14 @@ AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
   return functionDecl(hasAnyName("::absl::Nanoseconds", "::absl::Microseconds",
                                  "::absl::Milliseconds", "::absl::Seconds",
                                  "::absl::Minutes", "::absl::Hours"));
+}
+
+AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
+                     TimeFactoryFunction) {
+  using namespace clang::ast_matchers;
+  return functionDecl(hasAnyName(
+      "::absl::ToUnixHours", "::absl::ToUnixMinutes", "::absl::ToUnixSeconds",
+      "::absl::ToUnixMillis", "::absl::ToUnixMicros", "::absl::ToUnixNanos"));
 }
 
 } // namespace abseil

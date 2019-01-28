@@ -82,7 +82,9 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const ValueMapping *OperandsMapping = &Mips::ValueMappings[Mips::GPRIdx];
 
   switch (Opc) {
+  case G_TRUNC:
   case G_ADD:
+  case G_SUB:
   case G_LOAD:
   case G_STORE:
   case G_ZEXTLOAD:

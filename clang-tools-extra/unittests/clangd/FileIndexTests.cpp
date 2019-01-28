@@ -364,7 +364,7 @@ TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
       ParsedAST::build(createInvocationFromCommandLine(Cmd), PreambleData,
                        llvm::MemoryBuffer::getMemBufferCopy(Main.code()),
                        std::make_shared<PCHContainerOperations>(), PI.FS,
-                       tidy::ClangTidyOptions::getDefaults());
+                       /*Index=*/nullptr, ParseOptions());
   ASSERT_TRUE(AST);
   FileIndex Index;
   Index.updateMain(MainFile, *AST);
