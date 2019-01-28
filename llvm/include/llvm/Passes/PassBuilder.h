@@ -578,6 +578,10 @@ public:
     TopLevelPipelineParsingCallbacks.push_back(C);
   }
 
+  /// Enable or disable the hot/cold splitting optimization. By default, it is
+  /// disabled.
+  void setEnableHotColdSplitting(bool Enabled);
+
 private:
   static Optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
@@ -665,6 +669,8 @@ private:
   // AA callbacks
   SmallVector<std::function<bool(StringRef Name, AAManager &AA)>, 2>
       AAParsingCallbacks;
+  // Tunable passes
+  bool SplitColdCode = false;
 };
 
 /// This utility template takes care of adding require<> and invalidate<>

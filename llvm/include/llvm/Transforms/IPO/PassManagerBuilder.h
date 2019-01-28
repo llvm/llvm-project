@@ -153,6 +153,7 @@ public:
   bool VerifyInput;
   bool VerifyOutput;
   bool MergeFunctions;
+  bool SplitColdCode;
   bool PrepareForLTO;
   bool PrepareForThinLTO;
   bool PerformThinLTO;

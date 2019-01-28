@@ -174,6 +174,7 @@ PassManagerBuilder::PassManagerBuilder() {
     VerifyInput = false;
     VerifyOutput = false;
     MergeFunctions = false;
+    SplitColdCode = false;
     PrepareForLTO = false;
     EnablePGOInstrGen = RunPGOInstrGen;
     PGOInstrGen = PGOOutputFile;
@@ -518,7 +519,7 @@ void PassManagerBuilder::populateModulePassManager(
 
   // Split out cold code before inlining. See comment in the new PM
   // (\ref buildModuleSimplificationPipeline).
-  if (EnableHotColdSplit && DefaultOrPreLinkPipeline)
+  if ((EnableHotColdSplit || SplitColdCode) && DefaultOrPreLinkPipeline)
     MPM.add(createHotColdSplittingPass());
 
   addInstructionCombiningPass(MPM); // Clean up after IPCP & DAE
