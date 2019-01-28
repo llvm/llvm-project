@@ -14,9 +14,9 @@ body: |
     ; GCN: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN: FLAT_STORE_DWORD [[COPY]], [[DEF]], 0, 0, 0, implicit $exec, implicit $flat_scr
-    %0:vgpr(s64) = COPY $vgpr3_vgpr4
+    %0:vgpr(p1) = COPY $vgpr3_vgpr4
     %1:vgpr(s32) = G_IMPLICIT_DEF
-    G_STORE %1, %0 :: (store 4)
+    G_STORE %1, %0 :: (store 4, addrspace 1)
 ...
 ---
 
@@ -31,9 +31,9 @@ body: |
     ; GCN: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
     ; GCN: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; GCN: FLAT_STORE_DWORDX2 [[COPY]], [[DEF]], 0, 0, 0, implicit $exec, implicit $flat_scr
-    %0:vgpr(s64) = COPY $vgpr3_vgpr4
+    %0:vgpr(p1) = COPY $vgpr3_vgpr4
     %1:vgpr(s64) = G_IMPLICIT_DEF
-    G_STORE %1, %0 :: (store 8)
+    G_STORE %1, %0 :: (store 8, addrspace 1)
 ---
 
 ---
@@ -63,7 +63,7 @@ body: |
     ; GCN: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, 0, implicit $exec, implicit $flat_scr
     %0:vgpr(p1) = G_IMPLICIT_DEF
     %1:vgpr(s32) = G_CONSTANT 4
-    G_STORE %1, %0 :: (store 4)
+    G_STORE %1, %0 :: (store 4, addrspace 1)
 ...
 ---
 
@@ -79,7 +79,7 @@ body: |
     ; GCN: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, 0, implicit $exec, implicit $flat_scr
     %0:vgpr(p3) = G_IMPLICIT_DEF
     %1:vgpr(s32) = G_CONSTANT 4
-    G_STORE %1, %0 :: (store 4)
+    G_STORE %1, %0 :: (store 4, addrspace 1)
 ...
 ---
 
@@ -95,5 +95,5 @@ body: |
     ; GCN: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, 0, implicit $exec, implicit $flat_scr
     %0:vgpr(p4) = G_IMPLICIT_DEF
     %1:vgpr(s32) = G_CONSTANT 4
-    G_STORE %1, %0 :: (store 4)
+    G_STORE %1, %0 :: (store 4, addrspace 1)
 ...

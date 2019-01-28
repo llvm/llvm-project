@@ -18,9 +18,9 @@ body: |
   bb.0:
     liveins: $sgpr0, $vgpr3_vgpr4
     %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s64) = COPY $vgpr3_vgpr4
+    %1:vgpr(p1) = COPY $vgpr3_vgpr4
     %2:vgpr(<2 x s16>) = G_BITCAST %0
     %3:vgpr(s32) = G_BITCAST %2
-    G_STORE %3, %1 :: (store 4 into %ir.global0)
+    G_STORE %3, %1 :: (store 4 into %ir.global0, addrspace 1)
 ...
 ---

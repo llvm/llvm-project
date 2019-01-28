@@ -1002,12 +1002,30 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   }
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
+  case TargetOpcode::G_ZEXTLOAD:
+  case TargetOpcode::G_SEXTLOAD: {
+    LLT PtrTy = MRI->getType(MI->getOperand(1).getReg());
+    if (!PtrTy.isPointer())
+      report("Generic memory instruction must access a pointer", MI);
+
     // Generic loads and stores must have a single MachineMemOperand
     // describing that access.
-    if (!MI->hasOneMemOperand())
+    if (!MI->hasOneMemOperand()) {
       report("Generic instruction accessing memory must have one mem operand",
              MI);
+    } else {
+      if (MI->getOpcode() == TargetOpcode::G_ZEXTLOAD ||
+          MI->getOpcode() == TargetOpcode::G_SEXTLOAD) {
+        const MachineMemOperand &MMO = **MI->memoperands_begin();
+        LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+        if (MMO.getSize() * 8 >= DstTy.getSizeInBits()) {
+          report("Generic extload must have a narrower memory type", MI);
+        }
+      }
+    }
+
     break;
+  }
   case TargetOpcode::G_PHI: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     if (!DstTy.isValid() ||
