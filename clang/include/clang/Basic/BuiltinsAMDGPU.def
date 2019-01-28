@@ -106,6 +106,15 @@ TARGET_BUILTIN(__builtin_amdgcn_s_dcache_inv_vol, "v", "n", "ci-insts")
 TARGET_BUILTIN(__builtin_amdgcn_buffer_wbinvl1_vol, "v", "n", "ci-insts")
 
 //===----------------------------------------------------------------------===//
+// Interpolation builtins.
+//===----------------------------------------------------------------------===//
+BUILTIN(__builtin_amdgcn_interp_p1_f16, "ffUiUibUi", "nc")
+BUILTIN(__builtin_amdgcn_interp_p2_f16, "hffUiUibUi", "nc")
+BUILTIN(__builtin_amdgcn_interp_p1, "ffUiUiUi", "nc")
+BUILTIN(__builtin_amdgcn_interp_p2, "fffUiUiUi", "nc")
+BUILTIN(__builtin_amdgcn_interp_mov, "fUiUiUiUi", "nc")
+
+//===----------------------------------------------------------------------===//
 // VI+ only builtins.
 //===----------------------------------------------------------------------===//
 

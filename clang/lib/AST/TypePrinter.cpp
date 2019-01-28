@@ -816,7 +816,7 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
 
   printFunctionAfter(Info, OS);
 
-  Qualifiers quals = T->getTypeQuals();
+  Qualifiers quals = T->getMethodQuals();
   if (IgnoreFunctionProtoTypeConstQual)
     quals.removeConst();
   if (!quals.empty())
