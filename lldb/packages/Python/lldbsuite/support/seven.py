@@ -15,7 +15,7 @@ else:
                 subprocess.check_output(
                     command,
                     shell=True,
-                    universal_newlines=True))
+                    universal_newlines=True).rstrip())
         except subprocess.CalledProcessError as e:
             return (e.returncode, e.output)
 
