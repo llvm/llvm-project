@@ -663,7 +663,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // not grow after inlining, and 2) inhibiting inlining of cold code improves
   // code size & compile time. Split after Mem2Reg to make code model estimates
   // more accurate, but before InstCombine to allow it to clean things up.
-  if (EnableHotColdSplit && Phase != ThinLTOPhase::PostLink)
+  if ((EnableHotColdSplit || SplitColdCode) && Phase != ThinLTOPhase::PostLink)
     MPM.addPass(HotColdSplittingPass());
 
   // Create a small function pass pipeline to cleanup after all the global
@@ -2078,4 +2078,8 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
   }
 
   return Error::success();
+}
+
+void PassBuilder::setEnableHotColdSplitting(bool Enabled) {
+  SplitColdCode = Enabled;
 }
