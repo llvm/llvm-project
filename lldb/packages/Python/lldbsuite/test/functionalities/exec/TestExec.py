@@ -7,19 +7,9 @@ from __future__ import print_function
 import lldb
 import os
 import time
-from lldbsuite.support import seven
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
-
-def execute_command(command):
-    #print('%% %s' % (command))
-    (exit_status, output) = seven.get_command_status_output(command)
-    # if output:
-    #    print(output)
-    #print('status = %u' % (exit_status))
-    return exit_status
 
 
 class ExecTestCase(TestBase):
