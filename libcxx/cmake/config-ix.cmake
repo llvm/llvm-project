@@ -7,7 +7,7 @@ if(WIN32 AND NOT MINGW)
   # let the default linking take care of that.
   set(LIBCXX_HAS_C_LIB NO)
 else()
-  check_library_exists(c fopen "" LIBCXX_HAS_C_LIB)
+  check_library_exists(c __libc_start_main "" LIBCXX_HAS_C_LIB)
 endif()
 
 if (NOT LIBCXX_USE_COMPILER_RT)
