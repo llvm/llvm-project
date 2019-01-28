@@ -16,7 +16,9 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Format/Format.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SHA1.h"
 
 namespace clang {
@@ -91,6 +93,11 @@ llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
                                              const SourceManager &SourceMgr);
 
 bool isRangeConsecutive(const Range &Left, const Range &Right);
+
+format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
+                                          llvm::StringRef Content,
+                                          llvm::vfs::FileSystem *FS);
+
 } // namespace clangd
 } // namespace clang
 #endif

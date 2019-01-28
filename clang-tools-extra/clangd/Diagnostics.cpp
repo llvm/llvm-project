@@ -374,6 +374,11 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 
     if (!Info.getFixItHints().empty())
       AddFix(true /* try to invent a message instead of repeating the diag */);
+    if (Fixer) {
+      auto ExtraFixes = Fixer(DiagLevel, Info);
+      LastDiag->Fixes.insert(LastDiag->Fixes.end(), ExtraFixes.begin(),
+                             ExtraFixes.end());
+    }
   } else {
     // Handle a note to an existing diagnostic.
     if (!LastDiag) {

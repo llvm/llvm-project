@@ -248,5 +248,18 @@ llvm::Optional<FileDigest> digestFile(const SourceManager &SM, FileID FID) {
   return digest(Content);
 }
 
+format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
+                                          llvm::StringRef Content,
+                                          llvm::vfs::FileSystem *FS) {
+  auto Style = format::getStyle(format::DefaultFormatStyle, File,
+                                format::DefaultFallbackStyle, Content, FS);
+  if (!Style) {
+    log("getStyle() failed for file {0}: {1}. Fallback is LLVM style.", File,
+        Style.takeError());
+    Style = format::getLLVMStyle();
+  }
+  return *Style;
+}
+
 } // namespace clangd
 } // namespace clang

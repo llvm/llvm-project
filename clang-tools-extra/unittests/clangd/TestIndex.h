@@ -18,6 +18,19 @@ namespace clangd {
 // Creates Symbol instance and sets SymbolID to given QualifiedName.
 Symbol symbol(llvm::StringRef QName);
 
+// Helpers to produce fake index symbols with proper SymbolID.
+// USRFormat is a regex replacement string for the unqualified part of the USR.
+Symbol sym(llvm::StringRef QName, index::SymbolKind Kind,
+           llvm::StringRef USRFormat);
+// Creats a function symbol assuming no function arg.
+Symbol func(llvm::StringRef Name);
+// Creates a class symbol.
+Symbol cls(llvm::StringRef Name);
+// Creates a variable symbol.
+Symbol var(llvm::StringRef Name);
+// Creates a namespace symbol.
+Symbol ns(llvm::StringRef Name);
+
 // Create a slab of symbols with the given qualified names as IDs and names.
 SymbolSlab generateSymbols(std::vector<std::string> QualifiedNames);
 

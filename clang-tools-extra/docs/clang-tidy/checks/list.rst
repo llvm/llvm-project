@@ -4,6 +4,7 @@ Clang-Tidy Checks
 =================
 
 .. toctree::
+   abseil-duration-addition
    abseil-duration-comparison
    abseil-duration-conversion-cast
    abseil-duration-division
