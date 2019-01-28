@@ -7,7 +7,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   file(TO_CMAKE_PATH "${LLDB_PATH_TO_LLVM_BUILD}" LLDB_PATH_TO_LLVM_BUILD)
   file(TO_CMAKE_PATH "${LLDB_PATH_TO_CLANG_BUILD}" LLDB_PATH_TO_CLANG_BUILD)
-  file(TO_CMAKE_PATH "${LLDB_PATH_TO_CMARK_BUILD}" LLDB_PATH_TO_CMARK_BUILD)
   file(TO_CMAKE_PATH "${LLDB_PATH_TO_SWIFT_BUILD}" LLDB_PATH_TO_SWIFT_BUILD)
 
   file(TO_CMAKE_PATH "${LLDB_PATH_TO_CLANG_SOURCE}" LLDB_PATH_TO_CLANG_SOURCE)
@@ -66,16 +65,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     mark_as_advanced(LLVM_ENABLE_ASSERTIONS)
   endif()
 
-  if (LLDB_PATH_TO_CLANG_SOURCE)
-    get_filename_component(CLANG_MAIN_SRC_DIR ${LLDB_PATH_TO_CLANG_SOURCE} ABSOLUTE)
-    set(CLANG_MAIN_INCLUDE_DIR "${CLANG_MAIN_SRC_DIR}/include")
-  endif()
-
-  if (LLDB_PATH_TO_SWIFT_SOURCE)
-      get_filename_component(SWIFT_MAIN_SRC_DIR ${LLDB_PATH_TO_SWIFT_SOURCE}
-                             ABSOLUTE)
-  endif()
-
   list(APPEND CMAKE_MODULE_PATH "${LLDB_PATH_TO_LLVM_BUILD}/share/llvm/cmake")
   list(APPEND CMAKE_MODULE_PATH "${LLDB_PATH_TO_SWIFT_SOURCE}/cmake/modules")
   set(LLVM_TOOLS_BINARY_DIR ${TOOLS_BINARY_DIR} CACHE PATH "Path to llvm/bin")
@@ -97,13 +86,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   else()
     message(FATAL_ERROR "Not found: ${LLVMCONFIG_FILE}")
   endif()
-
-
-  get_filename_component(PATH_TO_SWIFT_BUILD ${LLDB_PATH_TO_SWIFT_BUILD}
-                         ABSOLUTE)
-
-  get_filename_component(PATH_TO_CMARK_BUILD ${LLDB_PATH_TO_CMARK_BUILD}
-                         ABSOLUTE)
 
   # These variables are used by add_llvm_library.
   # They are used as destination of target generators.
@@ -137,7 +119,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   find_package(Clang REQUIRED CONFIG
     HINTS "${LLDB_PATH_TO_CLANG_BUILD}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
   find_package(Swift REQUIRED CONFIG
-    HINTS "${PATH_TO_SWIFT_BUILD}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+    HINTS "${LLDB_PATH_TO_SWIFT_BUILD}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
   # End Swift Mods
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
@@ -145,18 +127,12 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   # Why are we doing this?
   # set(LLVM_BINARY_DIR ${CMAKE_BINARY_DIR})
 
-  set(CLANG_MAIN_INCLUDE_DIR "${CLANG_MAIN_SRC_DIR}/include")
-
-  set(SWIFT_MAIN_INCLUDE_DIR "${SWIFT_MAIN_SRC_DIR}/include")
-
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
   include_directories("${LLVM_BINARY_DIR}/include"
-                      "${LLVM_BINARY_DIR}/tools/clang/include"
                       "${LLVM_MAIN_INCLUDE_DIR}"
-                      "${PATH_TO_CLANG_BUILD}/include"
-                      "${CLANG_MAIN_INCLUDE_DIR}"
-                      "${PATH_TO_SWIFT_BUILD}/include"
-                      "${SWIFT_MAIN_INCLUDE_DIR}"
+                      "${CLANG_INCLUDE_DIRS}"
+                      "${LLDB_PATH_TO_SWIFT_BUILD}/include"
+                      "${LLDB_PATH_TO_SWIFT_SOURCE}/include"
                       "${CMAKE_CURRENT_SOURCE_DIR}/source")
 
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
