@@ -553,6 +553,7 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
 
   PMBuilder.DisableUnrollLoops = !CodeGenOpts.UnrollLoops;
   PMBuilder.MergeFunctions = CodeGenOpts.MergeFunctions;
+  PMBuilder.SplitColdCode = CodeGenOpts.SplitColdCode;
   PMBuilder.PrepareForThinLTO = CodeGenOpts.PrepareForThinLTO;
   PMBuilder.PrepareForLTO = CodeGenOpts.PrepareForLTO;
   PMBuilder.RerollLoops = CodeGenOpts.RerollLoops;
@@ -1003,6 +1004,9 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       // Map our optimization levels into one of the distinct levels used to
       // configure the pipeline.
       PassBuilder::OptimizationLevel Level = mapToLevel(CodeGenOpts);
+
+      // -f[no-]split-cold-code
+      PB.setEnableHotColdSplitting(CodeGenOpts.SplitColdCode);
 
       // Register callbacks to schedule sanitizer passes at the appropriate part of
       // the pipeline.
