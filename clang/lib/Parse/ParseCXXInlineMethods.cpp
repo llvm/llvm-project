@@ -415,7 +415,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       Method = cast<CXXMethodDecl>(LM.Method);
 
     Sema::CXXThisScopeRAII ThisScope(Actions, Method->getParent(),
-                                     Method->getTypeQualifiers(),
+                                     Method->getMethodQualifiers(),
                                      getLangOpts().CPlusPlus11);
 
     // Parse the exception-specification.

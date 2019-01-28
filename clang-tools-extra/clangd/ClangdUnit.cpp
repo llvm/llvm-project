@@ -11,9 +11,12 @@
 #include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
+#include "Headers.h"
+#include "IncludeFixer.h"
 #include "Logger.h"
 #include "SourceCode.h"
 #include "Trace.h"
+#include "index/Index.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -30,10 +33,12 @@
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <memory>
 
 namespace clang {
 namespace clangd {
@@ -231,7 +236,7 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
                  std::shared_ptr<PCHContainerOperations> PCHs,
                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                 const tidy::ClangTidyOptions &ClangTidyOpts) {
+                 const SymbolIndex *Index, const ParseOptions &Opts) {
   assert(CI);
   // Command-line parsing sets DisableFree to true by default, but we don't want
   // to leak memory in clangd.
@@ -240,9 +245,11 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
       Preamble ? &Preamble->Preamble : nullptr;
 
   StoreDiags ASTDiags;
+  std::string Content = Buffer->getBuffer();
+
   auto Clang =
       prepareCompilerInstance(std::move(CI), PreamblePCH, std::move(Buffer),
-                              std::move(PCHs), std::move(VFS), ASTDiags);
+                              std::move(PCHs), VFS, ASTDiags);
   if (!Clang)
     return None;
 
@@ -266,12 +273,12 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
   {
     trace::Span Tracer("ClangTidyInit");
     vlog("ClangTidy configuration for file {0}: {1}", MainInput.getFile(),
-         tidy::configurationAsText(ClangTidyOpts));
+         tidy::configurationAsText(Opts.ClangTidyOpts));
     tidy::ClangTidyCheckFactories CTFactories;
     for (const auto &E : tidy::ClangTidyModuleRegistry::entries())
       E.instantiate()->addCheckFactories(CTFactories);
     CTContext.emplace(llvm::make_unique<tidy::DefaultOptionsProvider>(
-        tidy::ClangTidyGlobalOptions(), ClangTidyOpts));
+        tidy::ClangTidyGlobalOptions(), Opts.ClangTidyOpts));
     CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(MainInput.getFile());
@@ -282,6 +289,27 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
       Check->registerPPCallbacks(*Clang);
       Check->registerMatchers(&CTFinder);
     }
+  }
+
+  // Add IncludeFixer which can recorver diagnostics caused by missing includes
+  // (e.g. incomplete type) and attach include insertion fixes to diagnostics.
+  llvm::Optional<IncludeFixer> FixIncludes;
+  auto BuildDir = VFS->getCurrentWorkingDirectory();
+  if (Opts.SuggestMissingIncludes && Index && !BuildDir.getError()) {
+    auto Style = getFormatStyleForFile(MainInput.getFile(), Content, VFS.get());
+    auto Inserter = std::make_shared<IncludeInserter>(
+        MainInput.getFile(), Content, Style, BuildDir.get(),
+        Clang->getPreprocessor().getHeaderSearchInfo());
+    if (Preamble) {
+      for (const auto &Inc : Preamble->Includes.MainFileIncludes)
+        Inserter->addExisting(Inc);
+    }
+    FixIncludes.emplace(MainInput.getFile(), Inserter, *Index,
+                        /*IndexRequestLimit=*/5);
+    ASTDiags.contributeFixes([&FixIncludes](DiagnosticsEngine::Level DiagLevl,
+                                            const clang::Diagnostic &Info) {
+      return FixIncludes->fix(DiagLevl, Info);
+    });
   }
 
   // Copy over the includes from the preamble, then combine with the
@@ -506,10 +534,10 @@ buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
     // dirs.
   }
 
-  return ParsedAST::build(llvm::make_unique<CompilerInvocation>(*Invocation),
-                          Preamble,
-                          llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents),
-                          PCHs, std::move(VFS), Inputs.ClangTidyOpts);
+  return ParsedAST::build(
+      llvm::make_unique<CompilerInvocation>(*Invocation), Preamble,
+      llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents), PCHs,
+      std::move(VFS), Inputs.Index ? Inputs.Index : nullptr, Inputs.Opts);
 }
 
 SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,

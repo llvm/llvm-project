@@ -342,6 +342,16 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.load.") || // Added in 3.9
       Name.startswith("avx512.mask.expand.load.") || // Added in 7.0
       Name.startswith("avx512.mask.compress.store.") || // Added in 7.0
+      Name.startswith("avx512.mask.expand.b") || // Added in 9.0
+      Name.startswith("avx512.mask.expand.w") || // Added in 9.0
+      Name.startswith("avx512.mask.expand.d") || // Added in 9.0
+      Name.startswith("avx512.mask.expand.q") || // Added in 9.0
+      Name.startswith("avx512.mask.expand.p") || // Added in 9.0
+      Name.startswith("avx512.mask.compress.b") || // Added in 9.0
+      Name.startswith("avx512.mask.compress.w") || // Added in 9.0
+      Name.startswith("avx512.mask.compress.d") || // Added in 9.0
+      Name.startswith("avx512.mask.compress.q") || // Added in 9.0
+      Name.startswith("avx512.mask.compress.p") || // Added in 9.0
       Name == "sse42.crc32.64.8" || // Added in 3.4
       Name.startswith("avx.vbroadcast.s") || // Added in 3.5
       Name.startswith("avx512.vbroadcast.s") || // Added in 7.0
@@ -2055,6 +2065,19 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                                 Intrinsic::masked_compressstore,
                                                 ResultTy);
       Rep = Builder.CreateCall(CSt, { CI->getArgOperand(1), Ptr, MaskVec });
+    } else if (IsX86 && (Name.startswith("avx512.mask.compress.") ||
+                         Name.startswith("avx512.mask.expand."))) {
+      Type *ResultTy = CI->getType();
+
+      Value *MaskVec = getX86MaskVec(Builder, CI->getArgOperand(2),
+                                     ResultTy->getVectorNumElements());
+
+      bool IsCompress = Name[12] == 'c';
+      Intrinsic::ID IID = IsCompress ? Intrinsic::x86_avx512_mask_compress
+                                     : Intrinsic::x86_avx512_mask_expand;
+      Function *Intr = Intrinsic::getDeclaration(F->getParent(), IID, ResultTy);
+      Rep = Builder.CreateCall(Intr, { CI->getOperand(0), CI->getOperand(1),
+                                       MaskVec });
     } else if (IsX86 && Name.startswith("xop.vpcom")) {
       bool IsSigned;
       if (Name.endswith("ub") || Name.endswith("uw") || Name.endswith("ud") ||

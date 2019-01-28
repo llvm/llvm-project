@@ -70,6 +70,11 @@
 using namespace llvm;
 using namespace object;
 
+cl::opt<unsigned long long> AdjustVMA(
+    "adjust-vma",
+    cl::desc("Increase the displayed address by the specified offset"),
+    cl::value_desc("offset"), cl::init(0));
+
 cl::opt<bool>
     llvm::AllHeaders("all-headers",
                      cl::desc("Display all available header information"));
@@ -179,6 +184,10 @@ static cl::alias SectionHeadersShorter("h",
                                        cl::desc("Alias for --section-headers"),
                                        cl::NotHidden,
                                        cl::aliasopt(SectionHeaders));
+
+static cl::opt<bool>
+    ShowLMA("show-lma",
+            cl::desc("Display LMA column when dumping ELF section headers"));
 
 cl::list<std::string>
 llvm::FilterSections("section", cl::desc("Operate on the specified sections only. "
@@ -890,6 +899,18 @@ getRelocsMap(llvm::object::ObjectFile const &Obj) {
   return Ret;
 }
 
+// Used for --adjust-vma to check if address should be adjusted by the
+// specified value for a given section.
+// For ELF we do not adjust non-allocatable sections like debug ones,
+// because they are not loadable.
+// TODO: implement for other file formats.
+static bool shouldAdjustVA(const SectionRef &Section) {
+  const ObjectFile *Obj = Section.getObject();
+  if (isa<object::ELFObjectFileBase>(Obj))
+    return ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC;
+  return false;
+}
+
 static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
                               MCContext &Ctx, MCDisassembler *DisAsm,
                               const MCInstrAnalysis *MIA, MCInstPrinter *IP,
@@ -1046,6 +1067,10 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
     ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(BytesStr.data()),
                             BytesStr.size());
 
+    uint64_t VMAAdjustment = 0;
+    if (shouldAdjustVA(Section))
+      VMAAdjustment = AdjustVMA;
+
     uint64_t Size;
     uint64_t Index;
     bool PrintedSection = false;
@@ -1110,7 +1135,8 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
       outs() << '\n';
       if (!NoLeadingAddr)
-        outs() << format("%016" PRIx64 " ", SectionAddr + Start);
+        outs() << format("%016" PRIx64 " ",
+                         SectionAddr + Start + VMAAdjustment);
 
       StringRef SymbolName = std::get<1>(Symbols[SI]);
       if (Demangle)
@@ -1271,9 +1297,9 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         if (Size == 0)
           Size = 1;
 
-        PIP.printInst(*IP, Disassembled ? &Inst : nullptr,
-                      Bytes.slice(Index, Size), SectionAddr + Index, outs(), "",
-                      *STI, &SP, &Rels);
+        PIP.printInst(
+            *IP, Disassembled ? &Inst : nullptr, Bytes.slice(Index, Size),
+            SectionAddr + Index + VMAAdjustment, outs(), "", *STI, &SP, &Rels);
         outs() << CommentStream.str();
         Comments.clear();
 
@@ -1349,9 +1375,18 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
               continue;
             }
 
-            // Stop when rel_cur's address is past the current instruction.
+            // Stop when RelCur's offset is past the current instruction.
             if (Offset >= Index + Size)
               break;
+
+            // When --adjust-vma is used, update the address printed.
+            if (RelCur->getSymbol() != Obj->symbol_end()) {
+              Expected<section_iterator> SymSI =
+                  RelCur->getSymbol()->getSection();
+              if (SymSI && *SymSI != Obj->section_end() &&
+                  (shouldAdjustVA(**SymSI)))
+                Offset += AdjustVMA;
+            }
 
             printRelocation(*RelCur, SectionAddr + Offset,
                             Obj->getBytesInAddress());
@@ -1486,22 +1521,51 @@ void llvm::printDynamicRelocations(const ObjectFile *Obj) {
   }
 }
 
+// Returns true if we need to show LMA column when dumping section headers. We
+// show it only when the platform is ELF and either we have at least one section
+// whose VMA and LMA are different and/or when --show-lma flag is used.
+static bool shouldDisplayLMA(const ObjectFile *Obj) {
+  if (!Obj->isELF())
+    return false;
+  for (const SectionRef &S : ToolSectionFilter(*Obj))
+    if (S.getAddress() != getELFSectionLMA(S))
+      return true;
+  return ShowLMA;
+}
+
 void llvm::printSectionHeaders(const ObjectFile *Obj) {
-  outs() << "Sections:\n"
-            "Idx Name          Size      Address          Type\n";
+  bool HasLMAColumn = shouldDisplayLMA(Obj);
+  if (HasLMAColumn)
+    outs() << "Sections:\n"
+              "Idx Name          Size     VMA              LMA              "
+              "Type\n";
+  else
+    outs() << "Sections:\n"
+              "Idx Name          Size     VMA          Type\n";
+
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
     StringRef Name;
     error(Section.getName(Name));
-    uint64_t Address = Section.getAddress();
+    uint64_t VMA = Section.getAddress();
+    if (shouldAdjustVA(Section))
+      VMA += AdjustVMA;
+
     uint64_t Size = Section.getSize();
     bool Text = Section.isText();
     bool Data = Section.isData();
     bool BSS = Section.isBSS();
     std::string Type = (std::string(Text ? "TEXT " : "") +
                         (Data ? "DATA " : "") + (BSS ? "BSS" : ""));
-    outs() << format("%3d %-13s %08" PRIx64 " %016" PRIx64 " %s\n",
-                     (unsigned)Section.getIndex(), Name.str().c_str(), Size,
-                     Address, Type.c_str());
+
+    if (HasLMAColumn)
+      outs() << format("%3d %-13s %08" PRIx64 " %016" PRIx64 " %016" PRIx64
+                       " %s\n",
+                       (unsigned)Section.getIndex(), Name.str().c_str(), Size,
+                       VMA, getELFSectionLMA(Section), Type.c_str());
+    else
+      outs() << format("%3d %-13s %08" PRIx64 " %016" PRIx64 " %s\n",
+                       (unsigned)Section.getIndex(), Name.str().c_str(), Size,
+                       VMA, Type.c_str());
   }
   outs() << "\n";
 }

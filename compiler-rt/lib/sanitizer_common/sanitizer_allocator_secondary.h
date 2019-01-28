@@ -183,22 +183,25 @@ class LargeMmapAllocator {
     uptr p = reinterpret_cast<uptr>(ptr);
     SpinMutexLock l(&mutex_);
     uptr nearest_chunk = 0;
+    Header *const *chunks = AddressSpaceView::Load(chunks_, n_chunks_);
     // Cache-friendly linear search.
     for (uptr i = 0; i < n_chunks_; i++) {
-      uptr ch = reinterpret_cast<uptr>(chunks_[i]);
+      uptr ch = reinterpret_cast<uptr>(chunks[i]);
       if (p < ch) continue;  // p is at left to this chunk, skip it.
       if (p - ch < p - nearest_chunk)
         nearest_chunk = ch;
     }
     if (!nearest_chunk)
       return nullptr;
-    Header *h = reinterpret_cast<Header *>(nearest_chunk);
+    const Header *h =
+        AddressSpaceView::Load(reinterpret_cast<Header *>(nearest_chunk));
+    Header *h_ptr = reinterpret_cast<Header *>(nearest_chunk);
     CHECK_GE(nearest_chunk, h->map_beg);
     CHECK_LT(nearest_chunk, h->map_beg + h->map_size);
     CHECK_LE(nearest_chunk, p);
     if (h->map_beg + h->map_size <= p)
       return nullptr;
-    return GetUser(h);
+    return GetUser(h_ptr);
   }
 
   void EnsureSortedChunks() {
@@ -218,9 +221,10 @@ class LargeMmapAllocator {
     uptr n = n_chunks_;
     if (!n) return nullptr;
     EnsureSortedChunks();
-    auto min_mmap_ = reinterpret_cast<uptr>(chunks_[0]);
-    auto max_mmap_ =
-        reinterpret_cast<uptr>(chunks_[n - 1]) + chunks_[n - 1]->map_size;
+    Header *const *chunks = AddressSpaceView::Load(chunks_, n_chunks_);
+    auto min_mmap_ = reinterpret_cast<uptr>(chunks[0]);
+    auto max_mmap_ = reinterpret_cast<uptr>(chunks[n - 1]) +
+                     AddressSpaceView::Load(chunks[n - 1])->map_size;
     if (p < min_mmap_ || p >= max_mmap_)
       return nullptr;
     uptr beg = 0, end = n - 1;
@@ -228,23 +232,24 @@ class LargeMmapAllocator {
     // to avoid expensive cache-thrashing loads.
     while (end - beg >= 2) {
       uptr mid = (beg + end) / 2;  // Invariant: mid >= beg + 1
-      if (p < reinterpret_cast<uptr>(chunks_[mid]))
-        end = mid - 1;  // We are not interested in chunks_[mid].
+      if (p < reinterpret_cast<uptr>(chunks[mid]))
+        end = mid - 1;  // We are not interested in chunks[mid].
       else
-        beg = mid;  // chunks_[mid] may still be what we want.
+        beg = mid;  // chunks[mid] may still be what we want.
     }
 
     if (beg < end) {
       CHECK_EQ(beg + 1, end);
       // There are 2 chunks left, choose one.
-      if (p >= reinterpret_cast<uptr>(chunks_[end]))
+      if (p >= reinterpret_cast<uptr>(chunks[end]))
         beg = end;
     }
 
-    Header *h = chunks_[beg];
+    const Header *h = AddressSpaceView::Load(chunks[beg]);
+    Header *h_ptr = chunks[beg];
     if (h->map_beg + h->map_size <= p || p < h->map_beg)
       return nullptr;
-    return GetUser(h);
+    return GetUser(h_ptr);
   }
 
   void PrintStats() {

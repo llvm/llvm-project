@@ -9719,6 +9719,21 @@ static bool isUnpackWdShuffleMask(ArrayRef<int> Mask, MVT VT) {
   return IsUnpackwdMask;
 }
 
+static bool is128BitUnpackShuffleMask(ArrayRef<int> Mask) {
+  // Create 128-bit vector type based on mask size.
+  MVT EltVT = MVT::getIntegerVT(128 / Mask.size());
+  MVT VT = MVT::getVectorVT(EltVT, Mask.size());
+
+  // Match any of unary/binary or low/high.
+  for (unsigned i = 0; i != 4; ++i) {
+    SmallVector<int, 16> UnpackMask;
+    createUnpackShuffleMask(VT, UnpackMask, (i >> 1) % 2, i % 2);
+    if (isTargetShuffleEquivalent(Mask, UnpackMask))
+      return true;
+  }
+  return false;
+}
+
 /// Get a 4-lane 8-bit shuffle immediate for a mask.
 ///
 /// This helper function produces an 8-bit shuffle immediate corresponding to
@@ -11709,8 +11724,10 @@ static SDValue lowerShuffleOfExtractsAsVperm(const SDLoc &DL, SDValue N0,
     return SDValue();
 
   // Final bailout: if the mask is simple, we are better off using an extract
-  // and a simple narrow shuffle.
-  if (NumElts == 4 && isSingleSHUFPSMask(NewMask))
+  // and a simple narrow shuffle. Prefer extract+unpack(h/l)ps to vpermps
+  // because that avoids a constant load from memory.
+  if (NumElts == 4 &&
+      (isSingleSHUFPSMask(NewMask) || is128BitUnpackShuffleMask(NewMask)))
     return SDValue();
 
   // Extend the shuffle mask with undef elements.
@@ -14149,8 +14166,6 @@ static SDValue lowerV2X128Shuffle(const SDLoc &DL, MVT VT, SDValue V1,
 /// or two of the lanes of the inputs. The lanes of the input vectors are
 /// shuffled in one or two independent shuffles to get the lanes into the
 /// position needed by the final shuffle.
-///
-/// FIXME: This should be generalized to 512-bit shuffles.
 static SDValue lowerShuffleByMerging128BitLanes(
     const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
     const X86Subtarget &Subtarget, SelectionDAG &DAG) {
@@ -14160,12 +14175,10 @@ static SDValue lowerShuffleByMerging128BitLanes(
     return SDValue();
 
   int Size = Mask.size();
+  int NumLanes = VT.getSizeInBits() / 128;
   int LaneSize = 128 / VT.getScalarSizeInBits();
-  int NumLanes = Size / LaneSize;
-  assert(NumLanes == 2 && "Only handles 256-bit shuffles.");
-
   SmallVector<int, 16> RepeatMask(LaneSize, -1);
-  int LaneSrcs[2][2] = { { -1, -1 }, { -1 , -1 } };
+  SmallVector<std::array<int, 2>, 2> LaneSrcs(NumLanes, {-1, -1});
 
   // First pass will try to fill in the RepeatMask from lanes that need two
   // sources.
@@ -14176,7 +14189,7 @@ static SDValue lowerShuffleByMerging128BitLanes(
       int M = Mask[(Lane * LaneSize) + i];
       if (M < 0)
         continue;
-      // Determine which of the 4 possible input lanes (2 from each source)
+      // Determine which of the possible input lanes (NumLanes from each source)
       // this element comes from. Assign that as one of the sources for this
       // lane. We can assign up to 2 sources for this lane. If we run out
       // sources we can't do anything.
@@ -14470,8 +14483,10 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
     if (NumUpperHalves == 1) {
       // AVX2 has efficient 32/64-bit element cross-lane shuffles.
       if (Subtarget.hasAVX2()) {
+        // extract128 + vunpckhps, is better than vblend + vpermps.
         // TODO: Refine to account for unary shuffle, splat, and other masks?
-        if (EltWidth == 32 && NumLowerHalves == 1)
+        if (EltWidth == 32 && NumLowerHalves &&
+            HalfVT.is128BitVector() && !is128BitUnpackShuffleMask(HalfMask))
           return SDValue();
         if (EltWidth == 64)
           return SDValue();
@@ -15846,6 +15861,13 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue Blend = lowerShuffleAsBlend(DL, MVT::v64i8, V1, V2, Mask,
                                           Zeroable, Subtarget, DAG))
     return Blend;
+
+  // Try to simplify this by merging 128-bit lanes to enable a lane-based
+  // shuffle.
+  if (!V2.isUndef())
+    if (SDValue Result = lowerShuffleByMerging128BitLanes(
+            DL, MVT::v64i8, V1, V2, Mask, Subtarget, DAG))
+      return Result;
 
   // FIXME: Implement direct support for this type!
   return splitAndLowerShuffle(DL, MVT::v64i8, V1, V2, Mask, DAG);
@@ -22020,11 +22042,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue Mask = Op.getOperand(3);
       SDValue DataToCompress = Op.getOperand(1);
       SDValue PassThru = Op.getOperand(2);
-      if (isAllOnesConstant(Mask)) // return data as is
+      if (ISD::isBuildVectorAllOnes(Mask.getNode())) // return data as is
         return Op.getOperand(1);
-
-      MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
-      Mask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
 
       // Avoid false dependency.
       if (PassThru.isUndef())
@@ -34520,14 +34539,16 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
           // If the RHS is a constant we have to reverse the const
           // canonicalization.
           // x > C-1 ? x+-C : 0 --> subus x, C
-          // TODO: Handle build_vectors with undef elements.
           auto MatchUSUBSAT = [](ConstantSDNode *Op, ConstantSDNode *Cond) {
-            return Cond->getAPIntValue() == (-Op->getAPIntValue() - 1);
+            return (!Op && !Cond) ||
+                   (Op && Cond &&
+                    Cond->getAPIntValue() == (-Op->getAPIntValue() - 1));
           };
           if (CC == ISD::SETUGT && Other->getOpcode() == ISD::ADD &&
-              ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchUSUBSAT)) {
-            OpRHS = DAG.getNode(ISD::SUB, DL, VT,
-                                DAG.getConstant(0, DL, VT), OpRHS);
+              ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchUSUBSAT,
+                                        /*AllowUndefs*/ true)) {
+            OpRHS = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
+                                OpRHS);
             return DAG.getNode(ISD::USUBSAT, DL, VT, OpLHS, OpRHS);
           }
 
@@ -41106,11 +41127,12 @@ static SDValue combineAddToSUBUS(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // The add should have a constant that is the negative of the max.
-  // TODO: Handle build_vectors with undef elements.
   auto MatchUSUBSAT = [](ConstantSDNode *Max, ConstantSDNode *Op) {
-    return Max->getAPIntValue() == (-Op->getAPIntValue());
+    return (!Max && !Op) ||
+           (Max && Op && Max->getAPIntValue() == (-Op->getAPIntValue()));
   };
-  if (!ISD::matchBinaryPredicate(Op0.getOperand(1), Op1, MatchUSUBSAT))
+  if (!ISD::matchBinaryPredicate(Op0.getOperand(1), Op1, MatchUSUBSAT,
+                                 /*AllowUndefs*/ true))
     return SDValue();
 
   SDLoc DL(N);

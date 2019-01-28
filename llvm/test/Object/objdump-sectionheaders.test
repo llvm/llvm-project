@@ -5,7 +5,7 @@
 ; results in a way that we don't emulate.
 
 ; CHECK: Sections:
-; CHECK: Idx Name          Size      Address          Type
+; CHECK: Idx Name          Size     VMA              Type
 ; CHECK:   0               00000000 0000000000000000
 ; CHECK:   1 .text         00000026 0000000000000000 TEXT
 ; CHECK:   2 .rodata.str1.1 0000000d 0000000000000026 DATA

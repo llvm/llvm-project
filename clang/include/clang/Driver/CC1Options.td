@@ -702,6 +702,8 @@ def fvisibility : Separate<["-"], "fvisibility">,
   HelpText<"Default type and symbol visibility">;
 def ftype_visibility : Separate<["-"], "ftype-visibility">,
   HelpText<"Default type visibility">;
+def fapply_global_visibility_to_externs : Flag<["-"], "fapply-global-visibility-to-externs">,
+  HelpText<"Apply global symbol visibility to external declarations without an explicit visibility">;
 def ftemplate_depth : Separate<["-"], "ftemplate-depth">,
   HelpText<"Maximum depth of recursive template instantiation">;
 def foperator_arrow_depth : Separate<["-"], "foperator-arrow-depth">,

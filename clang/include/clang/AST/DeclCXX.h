@@ -2184,8 +2184,8 @@ public:
   static QualType getThisType(const FunctionProtoType *FPT,
                               const CXXRecordDecl *Decl);
 
-  Qualifiers getTypeQualifiers() const {
-    return getType()->getAs<FunctionProtoType>()->getTypeQuals();
+  Qualifiers getMethodQualifiers() const {
+    return getType()->getAs<FunctionProtoType>()->getMethodQuals();
   }
 
   /// Retrieve the ref-qualifier associated with this method.

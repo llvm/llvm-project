@@ -379,11 +379,19 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
 
   const auto &SM = PP->getSourceManager();
   auto DefLoc = MI->getDefinitionLoc();
-  if (SM.isInMainFile(SM.getExpansionLoc(DefLoc)))
-    return true;
+
   // Header guards are not interesting in index. Builtin macros don't have
   // useful locations and are not needed for code completions.
   if (MI->isUsedForHeaderGuard() || MI->isBuiltinMacro())
+    return true;
+
+  // Skip main-file symbols if we are not collecting them.
+  bool IsMainFileSymbol = SM.isInMainFile(SM.getExpansionLoc(DefLoc));
+  if (IsMainFileSymbol && !Opts.CollectMainFileSymbols)
+    return false;
+
+  // Also avoid storing predefined macros like __DBL_MIN__.
+  if (SM.isWrittenInBuiltinFile(DefLoc))
     return true;
 
   // Mark the macro as referenced if this is a reference coming from the main
@@ -410,7 +418,10 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
   Symbol S;
   S.ID = std::move(*ID);
   S.Name = Name->getName();
-  S.Flags |= Symbol::IndexedForCodeCompletion;
+  if (!IsMainFileSymbol) {
+    S.Flags |= Symbol::IndexedForCodeCompletion;
+    S.Flags |= Symbol::VisibleOutsideFile;
+  }
   S.SymInfo = index::getSymbolInfoForMacro(*MI);
   std::string FileURI;
   // FIXME: use the result to filter out symbols.

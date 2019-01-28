@@ -1,0 +1,131 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objdump --all-headers -D -z %t | FileCheck %s --check-prefixes=COMMON,NOADJUST
+# RUN: llvm-objdump --all-headers -D -z --adjust-vma=0x0 %t | FileCheck %s --check-prefixes=COMMON,NOADJUST
+# RUN: llvm-objdump --all-headers -D -z --adjust-vma=0x123000 %t | FileCheck %s --check-prefixes=COMMON,ADJUST
+
+# NOADJUST:      Disassembly of section .text:
+# NOADJUST-NEXT: 0000000000000000 sym:
+# NOADJUST-NEXT:   0: {{.*}}  nop
+# NOADJUST:      0000000000000001 func:
+# NOADJUST-NEXT:   1: {{.*}}  retq
+
+# ADJUST:        Disassembly of section .text:
+# ADJUST-NEXT:   0000000000123000 sym:
+# ADJUST-NEXT:     123000: {{.*}} nop
+# ADJUST:        0000000000123001 func:
+# ADJUST-NEXT:     123001: {{.*}} retq
+
+# NOADJUST:      Disassembly of section .debug_str:
+# NOADJUST-NEXT: 0000000000000000 .debug_str:
+# NOADJUST-NEXT:   0: {{.*}}  %al, (%rax)
+# NOADJUST-NEXT:      0000000000000001:  R_X86_64_32  .text
+# NOADJUST-NEXT:   2: {{.*}}  addb    %al, (%rax)
+
+# ADJUST:        Disassembly of section .debug_str:
+# ADJUST-NEXT:   0000000000000000 .debug_str:
+# ADJUST-NEXT:     0: {{.*}}  %al, (%rax)
+# ADJUST-NEXT:        0000000000123001:  R_X86_64_32  .text
+# ADJUST-NEXT:     2: {{.*}}  addb    %al, (%rax)
+
+# COMMON:        Disassembly of section .rela.debug_str:
+# COMMON-NEXT:   0000000000000000    .rela.debug_str:
+# COMMON-NEXT:     0: {{.*}}  addl %eax, (%rax)
+## ... There are more lines here. We do not care.
+
+# NOADJUST:      Disassembly of section .data:
+# NOADJUST-NEXT: 0000000000000000  .data:
+# NOADJUST-NEXT:  0: {{.*}} addb    %al, (%rax)
+# NOADJUST-NEXT: 0000000000000000: R_X86_64_32  .text
+# NOADJUST-NEXT:  2: {{.*}} addb    %al, (%rax)
+
+# ADJUST:        Disassembly of section .data:
+# ADJUST-NEXT:   0000000000123000  .data:
+# ADJUST-NEXT:    123000: {{.*}}  addb    %al, (%rax)
+# ADJUST-NEXT:   0000000000123000: R_X86_64_32  .text
+# ADJUST-NEXT:    123002: {{.*}}  addb    %al, (%rax)
+
+# COMMON:        Disassembly of section .rela.data:
+# COMMON-NEXT:   0000000000000000   .rela.data:
+# COMMON-NEXT:    0: {{.*}} addb %al, (%rax)
+## ... There are more lines here. We do not care.
+
+# NOADJUST:      Sections:
+# NOADJUST-NEXT: Idx Name           Size     VMA              Type
+# NOADJUST-NEXT:  0                 00000000 0000000000000000
+# NOADJUST-NEXT:  1 .text           00000002 0000000000000000 TEXT
+# NOADJUST-NEXT:  2 .debug_str      00000004 0000000000000000
+# NOADJUST-NEXT:  3 .rela.debug_str 00000018 0000000000000000
+# NOADJUST-NEXT:  4 .data           00000004 0000000000000000 DATA
+# NOADJUST-NEXT:  5 .rela.data      00000018 0000000000000000
+# NOADJUST-NEXT:  6 .symtab         00000060 0000000000000000
+# NOADJUST-NEXT:  7 .strtab         00000010 0000000000000000
+# NOADJUST-NEXT:  8 .shstrtab       0000003c 0000000000000000
+
+# ADJUST:        Sections:
+# ADJUST-NEXT:   Idx Name           Size     VMA              Type
+# ADJUST-NEXT:    0                 00000000 0000000000000000
+# ADJUST-NEXT:    1 .text           00000002 0000000000123000 TEXT
+# ADJUST-NEXT:    2 .debug_str      00000004 0000000000000000
+# ADJUST-NEXT:    3 .rela.debug_str 00000018 0000000000000000
+# ADJUST-NEXT:    4 .data           00000004 0000000000123000 DATA
+# ADJUST-NEXT:    5 .rela.data      00000018 0000000000000000
+# ADJUST-NEXT:    6 .symtab         00000060 0000000000000000
+# ADJUST-NEXT:    7 .strtab         00000010 0000000000000000
+# ADJUST-NEXT:    8 .shstrtab       0000003c 0000000000000000
+
+# COMMON:      SYMBOL TABLE:
+# COMMON-NEXT:  0000000000000001  l F .text 00000000 func
+# COMMON-NEXT:  0000000000000000      .text 00000000 sym
+# COMMON-NEXT:  0000000000000000  l d .text 00000000 .text
+
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:        
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000004
+    Content:         90C3
+  - Name:            .debug_str
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x0000000000000001
+    Content:         '00000000'
+  - Name:            .rela.debug_str
+    Type:            SHT_RELA
+    Link:            .symtab
+    AddressAlign:    0x0000000000000008
+    Info:            .debug_str
+    Relocations:     
+      - Offset:          0x0000000000000001
+        Symbol:          .text
+        Type:            R_X86_64_32
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x0000000000000001
+    Content:         '00000000'
+  - Name:            .rela.data
+    Type:            SHT_RELA
+    Link:            .symtab
+    AddressAlign:    0x0000000000000008
+    Info:            .data
+    Relocations:     
+      - Offset:      0x0000000000000000
+        Symbol:      .text
+        Type:        R_X86_64_32
+Symbols:
+  Local:
+    - Name:            func
+      Type:            STT_FUNC
+      Section:         .text
+      Value:           0x0000000000000001
+    - Name:            sym
+      Section:         .text
+    - Name:            .text
+      Type:            STT_SECTION
+      Section:         .text

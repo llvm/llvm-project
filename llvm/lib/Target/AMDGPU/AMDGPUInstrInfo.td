@@ -369,6 +369,17 @@ def AMDGPUinterp_p2 : SDNode<"AMDGPUISD::INTERP_P2",
                       SDTypeProfile<1, 4, [SDTCisFP<0>]>,
                       [SDNPInGlue]>;
 
+def AMDGPUinterp_p1ll_f16 : SDNode<"AMDGPUISD::INTERP_P1LL_F16",
+                            SDTypeProfile<1, 7, [SDTCisFP<0>]>,
+                            [SDNPInGlue, SDNPOutGlue]>;
+
+def AMDGPUinterp_p1lv_f16 : SDNode<"AMDGPUISD::INTERP_P1LV_F16",
+                            SDTypeProfile<1, 9, [SDTCisFP<0>]>,
+                            [SDNPInGlue, SDNPOutGlue]>;
+
+def AMDGPUinterp_p2_f16 : SDNode<"AMDGPUISD::INTERP_P2_F16",
+                          SDTypeProfile<1, 8, [SDTCisFP<0>]>,
+                          [SDNPInGlue]>;
 
 def AMDGPUkill : SDNode<"AMDGPUISD::KILL", AMDGPUKillSDT,
   [SDNPHasChain, SDNPSideEffect]>;

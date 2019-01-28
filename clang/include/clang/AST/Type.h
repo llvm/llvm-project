@@ -3901,7 +3901,7 @@ public:
     EPI.Variadic = isVariadic();
     EPI.HasTrailingReturn = hasTrailingReturn();
     EPI.ExceptionSpec.Type = getExceptionSpecType();
-    EPI.TypeQuals = getTypeQuals();
+    EPI.TypeQuals = getMethodQuals();
     EPI.RefQualifier = getRefQualifier();
     if (EPI.ExceptionSpec.Type == EST_Dynamic) {
       EPI.ExceptionSpec.Exceptions = exceptions();
@@ -4011,7 +4011,7 @@ public:
   /// Whether this function prototype has a trailing return type.
   bool hasTrailingReturn() const { return FunctionTypeBits.HasTrailingReturn; }
 
-  Qualifiers getTypeQuals() const {
+  Qualifiers getMethodQuals() const {
     if (hasExtQualifiers())
       return *getTrailingObjects<Qualifiers>();
     else

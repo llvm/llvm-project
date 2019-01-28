@@ -7,6 +7,7 @@
 //===-------------------------------------------------------------------===//
 
 #include "ClangdServer.h"
+#include "ClangdUnit.h"
 #include "CodeComplete.h"
 #include "FindSymbols.h"
 #include "Headers.h"
@@ -106,6 +107,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                      ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex)
                      : nullptr),
       ClangTidyOptProvider(Opts.ClangTidyOptProvider),
+      SuggestMissingIncludes(Opts.SuggestMissingIncludes),
       WorkspaceRoot(Opts.WorkspaceRoot),
       PCHs(std::make_shared<PCHContainerOperations>()),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
@@ -141,17 +143,22 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
 
 void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
                                WantDiagnostics WantDiags) {
-  tidy::ClangTidyOptions Options = tidy::ClangTidyOptions::getDefaults();
+  ParseOptions Opts;
+  Opts.ClangTidyOpts = tidy::ClangTidyOptions::getDefaults();
   if (ClangTidyOptProvider)
-    Options = ClangTidyOptProvider->getOptions(File);
+    Opts.ClangTidyOpts = ClangTidyOptProvider->getOptions(File);
+  Opts.SuggestMissingIncludes = SuggestMissingIncludes;
   // FIXME: some build systems like Bazel will take time to preparing
   // environment to build the file, it would be nice if we could emit a
   // "PreparingBuild" status to inform users, it is non-trivial given the
   // current implementation.
-  WorkScheduler.update(File, ParseInputs{getCompileCommand(File),
-                                         FSProvider.getFileSystem(),
-                                         Contents.str(), Options},
-                       WantDiags);
+  ParseInputs Inputs;
+  Inputs.CompileCommand = getCompileCommand(File);
+  Inputs.FS = FSProvider.getFileSystem();
+  Inputs.Contents = Contents;
+  Inputs.Opts = std::move(Opts);
+  Inputs.Index = Index;
+  WorkScheduler.update(File, Inputs, WantDiags);
 }
 
 void ClangdServer::removeDocument(PathRef File) { WorkScheduler.remove(File); }

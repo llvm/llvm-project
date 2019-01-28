@@ -2130,6 +2130,7 @@ public:
   OMPClauseEnqueue(EnqueueVisitor *Visitor) : Visitor(Visitor) { }
 #define OPENMP_CLAUSE(Name, Class)                                             \
   void Visit##Class(const Class *C);
+  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   void VisitOMPClauseWithPreInit(const OMPClauseWithPreInit *C);
   void VisitOMPClauseWithPostUpdate(const OMPClauseWithPostUpdate *C);
@@ -8360,7 +8361,7 @@ unsigned clang_CXXMethod_isConst(CXCursor C) {
   const Decl *D = cxcursor::getCursorDecl(C);
   const CXXMethodDecl *Method =
       D ? dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()) : nullptr;
-  return (Method && Method->getTypeQualifiers().hasConst()) ? 1 : 0;
+  return (Method && Method->getMethodQualifiers().hasConst()) ? 1 : 0;
 }
 
 unsigned clang_CXXMethod_isDefaulted(CXCursor C) {

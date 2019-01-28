@@ -82,6 +82,8 @@ def FeatureFPXX        : SubtargetFeature<"fpxx", "IsFPXX", "true",
                                 "Support for FPXX">;
 def FeatureNaN2008     : SubtargetFeature<"nan2008", "IsNaN2008bit", "true",
                                 "IEEE 754-2008 NaN encoding">;
+def FeatureAbs2008     : SubtargetFeature<"abs2008", "Abs2008", "true",
+                                          "Disable IEEE 754-2008 abs.fmt mode">;
 def FeatureSingleFloat : SubtargetFeature<"single-float", "IsSingleFloat",
                                 "true", "Only supports single precision float">;
 def FeatureSoftFloat   : SubtargetFeature<"soft-float", "IsSoftFloat", "true",
@@ -141,7 +143,7 @@ def FeatureMips32r6    : SubtargetFeature<"mips32r6", "MipsArchVersion",
                                 "Mips32r6",
                                 "Mips32r6 ISA Support [experimental]",
                                 [FeatureMips32r5, FeatureFP64Bit,
-                                 FeatureNaN2008]>;
+                                 FeatureNaN2008, FeatureAbs2008]>;
 def FeatureMips64      : SubtargetFeature<"mips64", "MipsArchVersion",
                                 "Mips64", "Mips64 ISA Support",
                                 [FeatureMips5, FeatureMips32]>;
@@ -158,7 +160,7 @@ def FeatureMips64r6    : SubtargetFeature<"mips64r6", "MipsArchVersion",
                                 "Mips64r6",
                                 "Mips64r6 ISA Support [experimental]",
                                 [FeatureMips32r6, FeatureMips64r5,
-                                 FeatureNaN2008]>;
+                                 FeatureNaN2008, FeatureAbs2008]>;
 def FeatureSym32       : SubtargetFeature<"sym32", "HasSym32", "true",
                                           "Symbols are 32 bit on Mips64">;
 

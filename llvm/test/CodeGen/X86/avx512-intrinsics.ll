@@ -9,8 +9,9 @@ define <8 x double> @test_mask_compress_pd_512(<8 x double> %data, <8 x double> 
 ; CHECK-NEXT:    vcompresspd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.compress.pd.512(<8 x double> %data, <8 x double> %passthru, i8 %mask)
-  ret <8 x double> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x double> @llvm.x86.avx512.mask.compress.v8f64(<8 x double> %data, <8 x double> %passthru, <8 x i1> %1)
+  ret <8 x double> %2
 }
 
 define <8 x double> @test_maskz_compress_pd_512(<8 x double> %data, i8 %mask) {
@@ -19,19 +20,18 @@ define <8 x double> @test_maskz_compress_pd_512(<8 x double> %data, i8 %mask) {
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vcompresspd %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.compress.pd.512(<8 x double> %data, <8 x double> zeroinitializer, i8 %mask)
-  ret <8 x double> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x double> @llvm.x86.avx512.mask.compress.v8f64(<8 x double> %data, <8 x double> zeroinitializer, <8 x i1> %1)
+  ret <8 x double> %2
 }
 
 define <8 x double> @test_compress_pd_512(<8 x double> %data) {
 ; CHECK-LABEL: test_compress_pd_512:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.compress.pd.512(<8 x double> %data, <8 x double> undef, i8 -1)
-  ret <8 x double> %res
+  %1 = call <8 x double> @llvm.x86.avx512.mask.compress.v8f64(<8 x double> %data, <8 x double> undef, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret <8 x double> %1
 }
-
-declare <8 x double> @llvm.x86.avx512.mask.compress.pd.512(<8 x double> %data, <8 x double> %src0, i8 %mask)
 
 define <16 x float> @test_mask_compress_ps_512(<16 x float> %data, <16 x float> %passthru, i16 %mask) {
 ; CHECK-LABEL: test_mask_compress_ps_512:
@@ -40,8 +40,9 @@ define <16 x float> @test_mask_compress_ps_512(<16 x float> %data, <16 x float> 
 ; CHECK-NEXT:    vcompressps %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.compress.ps.512(<16 x float> %data, <16 x float> %passthru, i16 %mask)
-  ret <16 x float> %res
+  %1 = bitcast i16 %mask to <16 x i1>
+  %2 = call <16 x float> @llvm.x86.avx512.mask.compress.v16f32(<16 x float> %data, <16 x float> %passthru, <16 x i1> %1)
+  ret <16 x float> %2
 }
 
 define <16 x float> @test_maskz_compress_ps_512(<16 x float> %data, i16 %mask) {
@@ -50,19 +51,18 @@ define <16 x float> @test_maskz_compress_ps_512(<16 x float> %data, i16 %mask) {
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vcompressps %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.compress.ps.512(<16 x float> %data, <16 x float> zeroinitializer, i16 %mask)
-  ret <16 x float> %res
+  %1 = bitcast i16 %mask to <16 x i1>
+  %2 = call <16 x float> @llvm.x86.avx512.mask.compress.v16f32(<16 x float> %data, <16 x float> zeroinitializer, <16 x i1> %1)
+  ret <16 x float> %2
 }
 
 define <16 x float> @test_compress_ps_512(<16 x float> %data) {
 ; CHECK-LABEL: test_compress_ps_512:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.compress.ps.512(<16 x float> %data, <16 x float> undef, i16 -1)
-  ret <16 x float> %res
+  %1 = call <16 x float> @llvm.x86.avx512.mask.compress.v16f32(<16 x float> %data, <16 x float> undef, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret <16 x float> %1
 }
-
-declare <16 x float> @llvm.x86.avx512.mask.compress.ps.512(<16 x float> %data, <16 x float> %src0, i16 %mask)
 
 define <8 x i64> @test_mask_compress_q_512(<8 x i64> %data, <8 x i64> %passthru, i8 %mask) {
 ; CHECK-LABEL: test_mask_compress_q_512:
@@ -71,8 +71,9 @@ define <8 x i64> @test_mask_compress_q_512(<8 x i64> %data, <8 x i64> %passthru,
 ; CHECK-NEXT:    vpcompressq %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x i64> @llvm.x86.avx512.mask.compress.q.512(<8 x i64> %data, <8 x i64> %passthru, i8 %mask)
-  ret <8 x i64> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x i64> @llvm.x86.avx512.mask.compress.v8i64(<8 x i64> %data, <8 x i64> %passthru, <8 x i1> %1)
+  ret <8 x i64> %2
 }
 
 define <8 x i64> @test_maskz_compress_q_512(<8 x i64> %data, i8 %mask) {
@@ -81,19 +82,18 @@ define <8 x i64> @test_maskz_compress_q_512(<8 x i64> %data, i8 %mask) {
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %res = call <8 x i64> @llvm.x86.avx512.mask.compress.q.512(<8 x i64> %data, <8 x i64> zeroinitializer, i8 %mask)
-  ret <8 x i64> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x i64> @llvm.x86.avx512.mask.compress.v8i64(<8 x i64> %data, <8 x i64> zeroinitializer, <8 x i1> %1)
+  ret <8 x i64> %2
 }
 
 define <8 x i64> @test_compress_q_512(<8 x i64> %data) {
 ; CHECK-LABEL: test_compress_q_512:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    retq
-  %res = call <8 x i64> @llvm.x86.avx512.mask.compress.q.512(<8 x i64> %data, <8 x i64> undef, i8 -1)
-  ret <8 x i64> %res
+  %1 = call <8 x i64> @llvm.x86.avx512.mask.compress.v8i64(<8 x i64> %data, <8 x i64> undef, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret <8 x i64> %1
 }
-
-declare <8 x i64> @llvm.x86.avx512.mask.compress.q.512(<8 x i64> %data, <8 x i64> %src0, i8 %mask)
 
 define <16 x i32> @test_mask_compress_d_512(<16 x i32> %data, <16 x i32> %passthru, i16 %mask) {
 ; CHECK-LABEL: test_mask_compress_d_512:
@@ -102,8 +102,9 @@ define <16 x i32> @test_mask_compress_d_512(<16 x i32> %data, <16 x i32> %passth
 ; CHECK-NEXT:    vpcompressd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.compress.d.512(<16 x i32> %data, <16 x i32> %passthru, i16 %mask)
-  ret <16 x i32> %res
+  %1 = bitcast i16 %mask to <16 x i1>
+  %2 = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> %data, <16 x i32> %passthru, <16 x i1> %1)
+  ret <16 x i32> %2
 }
 
 define <16 x i32> @test_maskz_compress_d_512(<16 x i32> %data, i16 %mask) {
@@ -112,26 +113,25 @@ define <16 x i32> @test_maskz_compress_d_512(<16 x i32> %data, i16 %mask) {
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.compress.d.512(<16 x i32> %data, <16 x i32> zeroinitializer, i16 %mask)
-  ret <16 x i32> %res
+  %1 = bitcast i16 %mask to <16 x i1>
+  %2 = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> %data, <16 x i32> zeroinitializer, <16 x i1> %1)
+  ret <16 x i32> %2
 }
 
 define <16 x i32> @test_compress_d_512(<16 x i32> %data) {
 ; CHECK-LABEL: test_compress_d_512:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.compress.d.512(<16 x i32> %data, <16 x i32> undef, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> %data, <16 x i32> undef, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret <16 x i32> %1
 }
-
-declare <16 x i32> @llvm.x86.avx512.mask.compress.d.512(<16 x i32> %data, <16 x i32> %src0, i16 %mask)
 
 define <8 x double> @test_expand_pd_512(<8 x double> %data) {
 ; CHECK-LABEL: test_expand_pd_512:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.expand.pd.512(<8 x double> %data, <8 x double> undef, i8 -1)
-  ret <8 x double> %res
+  %1 = call <8 x double> @llvm.x86.avx512.mask.expand.v8f64(<8 x double> %data, <8 x double> undef, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret <8 x double> %1
 }
 
 define <8 x double> @test_mask_expand_pd_512(<8 x double> %data, <8 x double> %passthru, i8 %mask) {
@@ -141,8 +141,9 @@ define <8 x double> @test_mask_expand_pd_512(<8 x double> %data, <8 x double> %p
 ; CHECK-NEXT:    vexpandpd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.expand.pd.512(<8 x double> %data, <8 x double> %passthru, i8 %mask)
-  ret <8 x double> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x double> @llvm.x86.avx512.mask.expand.v8f64(<8 x double> %data, <8 x double> %passthru, <8 x i1> %1)
+  ret <8 x double> %2
 }
 
 define <8 x double> @test_maskz_expand_pd_512(<8 x double> %data, i8 %mask) {
@@ -151,18 +152,17 @@ define <8 x double> @test_maskz_expand_pd_512(<8 x double> %data, i8 %mask) {
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vexpandpd %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.expand.pd.512(<8 x double> %data, <8 x double> zeroinitializer, i8 %mask)
-  ret <8 x double> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x double> @llvm.x86.avx512.mask.expand.v8f64(<8 x double> %data, <8 x double> zeroinitializer, <8 x i1> %1)
+  ret <8 x double> %2
 }
-
-declare <8 x double> @llvm.x86.avx512.mask.expand.pd.512(<8 x double> %data, <8 x double> %src0, i8 %mask)
 
 define <16 x float> @test_expand_ps_512(<16 x float> %data) {
 ; CHECK-LABEL: test_expand_ps_512:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.expand.ps.512(<16 x float> %data, <16 x float> undef, i16 -1)
-  ret <16 x float> %res
+  %1 = call <16 x float> @llvm.x86.avx512.mask.expand.v16f32(<16 x float> %data, <16 x float> undef, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret <16 x float> %1
 }
 
 define <16 x float> @test_mask_expand_ps_512(<16 x float> %data, <16 x float> %passthru, i16 %mask) {
@@ -172,8 +172,9 @@ define <16 x float> @test_mask_expand_ps_512(<16 x float> %data, <16 x float> %p
 ; CHECK-NEXT:    vexpandps %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.expand.ps.512(<16 x float> %data, <16 x float> %passthru, i16 %mask)
-  ret <16 x float> %res
+  %1 = bitcast i16 %mask to <16 x i1>
+  %2 = call <16 x float> @llvm.x86.avx512.mask.expand.v16f32(<16 x float> %data, <16 x float> %passthru, <16 x i1> %1)
+  ret <16 x float> %2
 }
 
 define <16 x float> @test_maskz_expand_ps_512(<16 x float> %data, i16 %mask) {
@@ -182,18 +183,17 @@ define <16 x float> @test_maskz_expand_ps_512(<16 x float> %data, i16 %mask) {
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vexpandps %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.expand.ps.512(<16 x float> %data, <16 x float> zeroinitializer, i16 %mask)
-  ret <16 x float> %res
+  %1 = bitcast i16 %mask to <16 x i1>
+  %2 = call <16 x float> @llvm.x86.avx512.mask.expand.v16f32(<16 x float> %data, <16 x float> zeroinitializer, <16 x i1> %1)
+  ret <16 x float> %2
 }
-
-declare <16 x float> @llvm.x86.avx512.mask.expand.ps.512(<16 x float> %data, <16 x float> %src0, i16 %mask)
 
 define <8 x i64> @test_expand_q_512(<8 x i64> %data) {
 ; CHECK-LABEL: test_expand_q_512:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    retq
-  %res = call <8 x i64> @llvm.x86.avx512.mask.expand.q.512(<8 x i64> %data, <8 x i64> undef, i8 -1)
-  ret <8 x i64> %res
+  %1 = call <8 x i64> @llvm.x86.avx512.mask.expand.v8i64(<8 x i64> %data, <8 x i64> undef, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret <8 x i64> %1
 }
 
 define <8 x i64> @test_mask_expand_q_512(<8 x i64> %data, <8 x i64> %passthru, i8 %mask) {
@@ -203,8 +203,9 @@ define <8 x i64> @test_mask_expand_q_512(<8 x i64> %data, <8 x i64> %passthru, i
 ; CHECK-NEXT:    vpexpandq %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x i64> @llvm.x86.avx512.mask.expand.q.512(<8 x i64> %data, <8 x i64> %passthru, i8 %mask)
-  ret <8 x i64> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x i64> @llvm.x86.avx512.mask.expand.v8i64(<8 x i64> %data, <8 x i64> %passthru, <8 x i1> %1)
+  ret <8 x i64> %2
 }
 
 define <8 x i64> @test_maskz_expand_q_512(<8 x i64> %data, i8 %mask) {
@@ -213,18 +214,17 @@ define <8 x i64> @test_maskz_expand_q_512(<8 x i64> %data, i8 %mask) {
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %res = call <8 x i64> @llvm.x86.avx512.mask.expand.q.512(<8 x i64> %data, <8 x i64> zeroinitializer, i8 %mask)
-  ret <8 x i64> %res
+  %1 = bitcast i8 %mask to <8 x i1>
+  %2 = call <8 x i64> @llvm.x86.avx512.mask.expand.v8i64(<8 x i64> %data, <8 x i64> zeroinitializer, <8 x i1> %1)
+  ret <8 x i64> %2
 }
-
-declare <8 x i64> @llvm.x86.avx512.mask.expand.q.512(<8 x i64> %data, <8 x i64> %src0, i8 %mask)
 
 define <16 x i32> @test_expand_d_512(<16 x i32> %data) {
 ; CHECK-LABEL: test_expand_d_512:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.expand.d.512(<16 x i32> %data, <16 x i32> undef, i16 -1)
-  ret <16 x i32> %res
+  %1 = call <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32> %data, <16 x i32> undef, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret <16 x i32> %1
 }
 
 define <16 x i32> @test_mask_expand_d_512(<16 x i32> %data, <16 x i32> %passthru, i16 %mask) {
@@ -234,8 +234,9 @@ define <16 x i32> @test_mask_expand_d_512(<16 x i32> %data, <16 x i32> %passthru
 ; CHECK-NEXT:    vpexpandd %zmm0, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.expand.d.512(<16 x i32> %data, <16 x i32> %passthru, i16 %mask)
-  ret <16 x i32> %res
+  %1 = bitcast i16 %mask to <16 x i1>
+  %2 = call <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32> %data, <16 x i32> %passthru, <16 x i1> %1)
+  ret <16 x i32> %2
 }
 
 define <16 x i32> @test_maskz_expand_d_512(<16 x i32> %data, i16 %mask) {
@@ -244,11 +245,10 @@ define <16 x i32> @test_maskz_expand_d_512(<16 x i32> %data, i16 %mask) {
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
-  %res = call <16 x i32> @llvm.x86.avx512.mask.expand.d.512(<16 x i32> %data, <16 x i32> zeroinitializer, i16 %mask)
-  ret <16 x i32> %res
+  %1 = bitcast i16 %mask to <16 x i1>
+  %2 = call <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32> %data, <16 x i32> zeroinitializer, <16 x i1> %1)
+  ret <16 x i32> %2
 }
-
-declare <16 x i32> @llvm.x86.avx512.mask.expand.d.512(<16 x i32> %data, <16 x i32> %src0, i16 %mask)
 
 define <16 x float> @test_rcp_ps_512(<16 x float> %a0) {
 ; CHECK-LABEL: test_rcp_ps_512:
@@ -5546,3 +5546,12 @@ entry:
   %3 = select <16 x i1> %2, <16 x float> %f, <16 x float> %e
   ret <16 x float> %3
 }
+
+declare <8 x double> @llvm.x86.avx512.mask.compress.v8f64(<8 x double>, <8 x double>, <8 x i1>)
+declare <16 x float> @llvm.x86.avx512.mask.compress.v16f32(<16 x float>, <16 x float>, <16 x i1>)
+declare <8 x i64> @llvm.x86.avx512.mask.compress.v8i64(<8 x i64>, <8 x i64>, <8 x i1>)
+declare <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32>, <16 x i32>, <16 x i1>)
+declare <8 x double> @llvm.x86.avx512.mask.expand.v8f64(<8 x double>, <8 x double>, <8 x i1>)
+declare <16 x float> @llvm.x86.avx512.mask.expand.v16f32(<16 x float>, <16 x float>, <16 x i1>)
+declare <8 x i64> @llvm.x86.avx512.mask.expand.v8i64(<8 x i64>, <8 x i64>, <8 x i1>)
+declare <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32>, <16 x i32>, <16 x i1>)

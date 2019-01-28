@@ -33,6 +33,7 @@ enum OpenMPClauseKind {
 #define OPENMP_CLAUSE(Name, Class) \
   OMPC_##Name,
 #include "clang/Basic/OpenMPKinds.def"
+  OMPC_flush,
   OMPC_threadprivate,
   OMPC_uniform,
   OMPC_unknown
