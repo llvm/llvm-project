@@ -802,6 +802,25 @@ TEST_F(StructuralEquivalenceEnumTest, EnumsWithDifferentBody) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+struct StructuralEquivalenceTemplateTest : StructuralEquivalenceTest {};
+
+TEST_F(StructuralEquivalenceTemplateTest, ExactlySameTemplates) {
+  auto t = makeNamedDecls("template <class T> struct foo;",
+                          "template <class T> struct foo;", Lang_CXX);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceTemplateTest, DifferentTemplateArgName) {
+  auto t = makeNamedDecls("template <class T> struct foo;",
+                          "template <class U> struct foo;", Lang_CXX);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceTemplateTest, DifferentTemplateArgKind) {
+  auto t = makeNamedDecls("template <class T> struct foo;",
+                          "template <int T> struct foo;", Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
 
 } // end namespace ast_matchers
 } // end namespace clang
