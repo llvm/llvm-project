@@ -2,14 +2,14 @@
 # associated comdat later in the file produces an error.
 # RUN: sed -e s/ASSOC1/2/ -e s/ASSOC2/3/ %s | yaml2obj > %t.obj
 # RUN: not lld-link /include:symbol /dll /noentry /nodefaultlib %t.obj /out:%t.exe 2>&1 | FileCheck --check-prefix=FORWARD %s
-# FORWARD: lld-link: error: {{.*}}: associative comdat .text$ac1 has invalid reference to section .text$ac2
+# FORWARD: lld-link: error: {{.*}}: associative comdat .text$ac1 (sec 1) has invalid reference to section .text$ac2 (sec 2)
 # FORWARD-NOT: lld-link: error:
 
 # Tests that an associative comdat being associated with another
 # associated comdat earlier in the file produces an error.
 # RUN: sed -e s/ASSOC1/3/ -e s/ASSOC2/1/ %s | yaml2obj > %t.obj
 # RUN: not lld-link /include:symbol /dll /noentry /nodefaultlib %t.obj /out:%t.exe 2>&1 | FileCheck --check-prefix=BACKWARD %s
-# BACKWARD: lld-link: error: {{.*}}: associative comdat .text$ac2 has invalid reference to section .text$ac1
+# BACKWARD: lld-link: error: {{.*}}: associative comdat .text$ac2 (sec 2) has invalid reference to section .text$ac1 (sec 1)
 # BACKWARD-NOT: lld-link: error:
 
 --- !COFF
