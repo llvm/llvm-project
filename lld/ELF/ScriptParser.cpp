@@ -384,39 +384,23 @@ void ScriptParser::readOutputArch() {
     skip();
 }
 
-std::tuple<ELFKind, uint16_t, bool> ScriptParser::readBfdName() {
-  StringRef S = unquote(next());
-  if (S == "elf32-i386")
-    return std::make_tuple(ELF32LEKind, EM_386, false);
-  if (S == "elf32-iamcu")
-    return std::make_tuple(ELF32LEKind, EM_IAMCU, false);
-  if (S == "elf32-littlearm")
-    return std::make_tuple(ELF32LEKind, EM_ARM, false);
-  if (S == "elf32-x86-64")
-    return std::make_tuple(ELF32LEKind, EM_X86_64, false);
-  if (S == "elf64-littleaarch64")
-    return std::make_tuple(ELF64LEKind, EM_AARCH64, false);
-  if (S == "elf64-powerpc")
-    return std::make_tuple(ELF64BEKind, EM_PPC64, false);
-  if (S == "elf64-powerpcle")
-    return std::make_tuple(ELF64LEKind, EM_PPC64, false);
-  if (S == "elf64-x86-64")
-    return std::make_tuple(ELF64LEKind, EM_X86_64, false);
-  if (S == "elf32-tradbigmips")
-    return std::make_tuple(ELF32BEKind, EM_MIPS, false);
-  if (S == "elf32-ntradbigmips")
-    return std::make_tuple(ELF32BEKind, EM_MIPS, true);
-  if (S == "elf32-tradlittlemips")
-    return std::make_tuple(ELF32LEKind, EM_MIPS, false);
-  if (S == "elf32-ntradlittlemips")
-    return std::make_tuple(ELF32LEKind, EM_MIPS, true);
-  if (S == "elf64-tradbigmips")
-    return std::make_tuple(ELF64BEKind, EM_MIPS, false);
-  if (S == "elf64-tradlittlemips")
-    return std::make_tuple(ELF64LEKind, EM_MIPS, false);
-
-  setError("unknown output format name: " + S);
-  return std::make_tuple(ELFNoneKind, EM_NONE, false);
+static std::tuple<ELFKind, uint16_t> parseBfdName(StringRef S) {
+  return StringSwitch<std::tuple<ELFKind, uint16_t>>(S)
+      .Case("elf32-i386", {ELF32LEKind, EM_386})
+      .Case("elf32-iamcu", {ELF32LEKind, EM_IAMCU})
+      .Case("elf32-littlearm", {ELF32LEKind, EM_ARM})
+      .Case("elf32-x86-64", {ELF32LEKind, EM_X86_64})
+      .Case("elf64-littleaarch64", {ELF64LEKind, EM_AARCH64})
+      .Case("elf64-powerpc", {ELF64BEKind, EM_PPC64})
+      .Case("elf64-powerpcle", {ELF64LEKind, EM_PPC64})
+      .Case("elf64-x86-64", {ELF64LEKind, EM_X86_64})
+      .Case("elf32-tradbigmips", {ELF32BEKind, EM_MIPS})
+      .Case("elf32-ntradbigmips", {ELF32BEKind, EM_MIPS})
+      .Case("elf32-tradlittlemips", {ELF32LEKind, EM_MIPS})
+      .Case("elf32-ntradlittlemips", {ELF32LEKind, EM_MIPS})
+      .Case("elf64-tradbigmips", {ELF64BEKind, EM_MIPS})
+      .Case("elf64-tradlittlemips", {ELF64LEKind, EM_MIPS})
+      .Default({ELFNoneKind, EM_NONE});
 }
 
 // Parse OUTPUT_FORMAT(bfdname) or OUTPUT_FORMAT(bfdname, big, little).
@@ -424,9 +408,13 @@ std::tuple<ELFKind, uint16_t, bool> ScriptParser::readBfdName() {
 void ScriptParser::readOutputFormat() {
   expect("(");
 
-  std::tuple<ELFKind, uint16_t, bool> BfdTuple = readBfdName();
-  if (Config->EKind == ELFNoneKind)
-    std::tie(Config->EKind, Config->EMachine, Config->MipsN32Abi) = BfdTuple;
+  StringRef S = unquote(next());
+
+  std::tie(Config->EKind, Config->EMachine) = parseBfdName(S);
+  if (Config->EMachine == EM_NONE)
+    setError("unknown output format name: " + S);
+  if (S == "elf32-ntradlittlemips" || S == "elf32-ntradbigmips")
+    Config->MipsN32Abi = true;
 
   if (consume(")"))
     return;

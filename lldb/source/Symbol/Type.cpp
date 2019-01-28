@@ -147,12 +147,6 @@ Type::Type(const Type &rhs)
       m_byte_size_has_value(rhs.m_byte_size_has_value), m_decl(rhs.m_decl),
       m_compiler_type(rhs.m_compiler_type), m_flags(rhs.m_flags) {}
 
-const Type &Type::operator=(const Type &rhs) {
-  if (this != &rhs) {
-  }
-  return *this;
-}
-
 void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
                           bool show_name) {
   *s << "id = " << (const UserID &)*this;
