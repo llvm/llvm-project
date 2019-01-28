@@ -187,6 +187,7 @@ void ScalarEnumerationTraits<COFF::RelocationTypesARM>::enumeration(
   ECase(IMAGE_REL_ARM_TOKEN);
   ECase(IMAGE_REL_ARM_BLX24);
   ECase(IMAGE_REL_ARM_BLX11);
+  ECase(IMAGE_REL_ARM_REL32);
   ECase(IMAGE_REL_ARM_SECTION);
   ECase(IMAGE_REL_ARM_SECREL);
   ECase(IMAGE_REL_ARM_MOV32A);
@@ -194,6 +195,7 @@ void ScalarEnumerationTraits<COFF::RelocationTypesARM>::enumeration(
   ECase(IMAGE_REL_ARM_BRANCH20T);
   ECase(IMAGE_REL_ARM_BRANCH24T);
   ECase(IMAGE_REL_ARM_BLX23T);
+  ECase(IMAGE_REL_ARM_PAIR);
 }
 
 void ScalarEnumerationTraits<COFF::RelocationTypesARM64>::enumeration(
@@ -215,6 +217,7 @@ void ScalarEnumerationTraits<COFF::RelocationTypesARM64>::enumeration(
   ECase(IMAGE_REL_ARM64_ADDR64);
   ECase(IMAGE_REL_ARM64_BRANCH19);
   ECase(IMAGE_REL_ARM64_BRANCH14);
+  ECase(IMAGE_REL_ARM64_REL32);
 }
 
 void ScalarEnumerationTraits<COFF::WindowsSubsystem>::enumeration(

@@ -9719,6 +9719,21 @@ static bool isUnpackWdShuffleMask(ArrayRef<int> Mask, MVT VT) {
   return IsUnpackwdMask;
 }
 
+static bool is128BitUnpackShuffleMask(ArrayRef<int> Mask) {
+  // Create 128-bit vector type based on mask size.
+  MVT EltVT = MVT::getIntegerVT(128 / Mask.size());
+  MVT VT = MVT::getVectorVT(EltVT, Mask.size());
+
+  // Match any of unary/binary or low/high.
+  for (unsigned i = 0; i != 4; ++i) {
+    SmallVector<int, 16> UnpackMask;
+    createUnpackShuffleMask(VT, UnpackMask, (i >> 1) % 2, i % 2);
+    if (isTargetShuffleEquivalent(Mask, UnpackMask))
+      return true;
+  }
+  return false;
+}
+
 /// Get a 4-lane 8-bit shuffle immediate for a mask.
 ///
 /// This helper function produces an 8-bit shuffle immediate corresponding to
@@ -11709,8 +11724,10 @@ static SDValue lowerShuffleOfExtractsAsVperm(const SDLoc &DL, SDValue N0,
     return SDValue();
 
   // Final bailout: if the mask is simple, we are better off using an extract
-  // and a simple narrow shuffle.
-  if (NumElts == 4 && isSingleSHUFPSMask(NewMask))
+  // and a simple narrow shuffle. Prefer extract+unpack(h/l)ps to vpermps
+  // because that avoids a constant load from memory.
+  if (NumElts == 4 &&
+      (isSingleSHUFPSMask(NewMask) || is128BitUnpackShuffleMask(NewMask)))
     return SDValue();
 
   // Extend the shuffle mask with undef elements.
@@ -34520,14 +34537,16 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
           // If the RHS is a constant we have to reverse the const
           // canonicalization.
           // x > C-1 ? x+-C : 0 --> subus x, C
-          // TODO: Handle build_vectors with undef elements.
           auto MatchUSUBSAT = [](ConstantSDNode *Op, ConstantSDNode *Cond) {
-            return Cond->getAPIntValue() == (-Op->getAPIntValue() - 1);
+            return (!Op && !Cond) ||
+                   (Op && Cond &&
+                    Cond->getAPIntValue() == (-Op->getAPIntValue() - 1));
           };
           if (CC == ISD::SETUGT && Other->getOpcode() == ISD::ADD &&
-              ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchUSUBSAT)) {
-            OpRHS = DAG.getNode(ISD::SUB, DL, VT,
-                                DAG.getConstant(0, DL, VT), OpRHS);
+              ISD::matchBinaryPredicate(OpRHS, CondRHS, MatchUSUBSAT,
+                                        /*AllowUndefs*/ true)) {
+            OpRHS = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
+                                OpRHS);
             return DAG.getNode(ISD::USUBSAT, DL, VT, OpLHS, OpRHS);
           }
 
@@ -41106,11 +41125,12 @@ static SDValue combineAddToSUBUS(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // The add should have a constant that is the negative of the max.
-  // TODO: Handle build_vectors with undef elements.
   auto MatchUSUBSAT = [](ConstantSDNode *Max, ConstantSDNode *Op) {
-    return Max->getAPIntValue() == (-Op->getAPIntValue());
+    return (!Max && !Op) ||
+           (Max && Op && Max->getAPIntValue() == (-Op->getAPIntValue()));
   };
-  if (!ISD::matchBinaryPredicate(Op0.getOperand(1), Op1, MatchUSUBSAT))
+  if (!ISD::matchBinaryPredicate(Op0.getOperand(1), Op1, MatchUSUBSAT,
+                                 /*AllowUndefs*/ true))
     return SDValue();
 
   SDLoc DL(N);

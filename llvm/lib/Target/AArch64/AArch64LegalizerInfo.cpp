@@ -119,8 +119,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   getActionDefinitionsBuilder({G_UADDE, G_USUBE, G_SADDO, G_SSUBO})
       .legalFor({{s32, s1}, {s64, s1}});
 
-  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMA, G_FMUL, G_FDIV})
-      .legalFor({s32, s64});
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMA, G_FMUL, G_FDIV, G_FNEG})
+    .legalFor({s32, s64, v2s64, v4s32, v2s32});
 
   getActionDefinitionsBuilder({G_FREM, G_FPOW}).libcallFor({s32, s64});
 
@@ -270,14 +270,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
 
   // Conversions
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-      .legalForCartesianProduct({s32, s64})
+      .legalForCartesianProduct({s32, s64, v2s64, v4s32, v2s32})
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(1);
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
-      .legalForCartesianProduct({s32, s64})
+      .legalForCartesianProduct({s32, s64, v2s64, v4s32, v2s32})
       .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(1)
       .clampScalar(0, s32, s64)

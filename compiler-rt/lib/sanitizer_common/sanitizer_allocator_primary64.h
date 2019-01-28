@@ -188,7 +188,7 @@ class SizeClassAllocator64 {
     uptr beg = chunk_idx * size;
     uptr next_beg = beg + size;
     if (class_id >= kNumClasses) return nullptr;
-    RegionInfo *region = GetRegionInfo(class_id);
+    const RegionInfo *region = AddressSpaceView::Load(GetRegionInfo(class_id));
     if (region->mapped_user >= next_beg)
       return reinterpret_cast<void*>(reg_beg + beg);
     return nullptr;

@@ -59,14 +59,19 @@
   define void @test_fptrunc_s32_s64() { ret void }
 
   define void @test_fconstant_s32() { ret void }
+  define void @test_fneg_s32() { ret void }
 
   define void @test_fcmp_s32() { ret void }
 
   define void @test_sitofp_s64_s32() { ret void }
+  define void @test_sitofp_v4s32() { ret void }
   define void @test_uitofp_s32_s64() { ret void }
+  define void @test_uitofp_v4s32() { ret void }
 
   define void @test_fptosi_s64_s32() { ret void }
+  define void @test_fptosi_v4s32() { ret void }
   define void @test_fptoui_s32_s64() { ret void }
+  define void @test_fptoui_v4s32() { ret void }
 
   define void @test_gphi_ptr() { ret void }
 
@@ -275,7 +280,7 @@ body: |
     liveins: $w0
     ; CHECK-LABEL: name: test_shl_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
-    ; CHECK: [[SHL:%[0-9]+]]:gpr(s32) = G_SHL [[COPY]], [[COPY]]
+    ; CHECK: [[SHL:%[0-9]+]]:gpr(s32) = G_SHL [[COPY]], [[COPY]](s32)
     %0(s32) = COPY $w0
     %1(s32) = G_SHL %0, %0
 ...
@@ -291,7 +296,7 @@ body: |
     liveins: $q0
     ; CHECK-LABEL: name: test_shl_v4s32
     ; CHECK: [[COPY:%[0-9]+]]:fpr(<4 x s32>) = COPY $q0
-    ; CHECK: [[SHL:%[0-9]+]]:fpr(<4 x s32>) = G_SHL [[COPY]], [[COPY]]
+    ; CHECK: [[SHL:%[0-9]+]]:fpr(<4 x s32>) = G_SHL [[COPY]], [[COPY]](<4 x s32>)
     %0(<4 x s32>) = COPY $q0
     %1(<4 x s32>) = G_SHL %0, %0
 ...
@@ -307,7 +312,7 @@ body: |
     liveins: $w0
     ; CHECK-LABEL: name: test_lshr_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
-    ; CHECK: [[LSHR:%[0-9]+]]:gpr(s32) = G_LSHR [[COPY]], [[COPY]]
+    ; CHECK: [[LSHR:%[0-9]+]]:gpr(s32) = G_LSHR [[COPY]], [[COPY]](s32)
     %0(s32) = COPY $w0
     %1(s32) = G_LSHR %0, %0
 ...
@@ -323,7 +328,7 @@ body: |
     liveins: $w0
     ; CHECK-LABEL: name: test_ashr_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
-    ; CHECK: [[ASHR:%[0-9]+]]:gpr(s32) = G_ASHR [[COPY]], [[COPY]]
+    ; CHECK: [[ASHR:%[0-9]+]]:gpr(s32) = G_ASHR [[COPY]], [[COPY]](s32)
     %0(s32) = COPY $w0
     %1(s32) = G_ASHR %0, %0
 ...
@@ -675,6 +680,19 @@ body: |
 ...
 
 ---
+name:            test_fneg_s32
+legalized:       true
+body: |
+  bb.0:
+  liveins: $s0
+    ; CHECK-LABEL: name: test_fneg_s32
+    ; CHECK: [[COPY:%[0-9]+]]:fpr(s32) = COPY $s0
+    ; CHECK: [[FNEG:%[0-9]+]]:fpr(s32) = G_FNEG [[COPY]]
+    %0:_(s32) = COPY $s0
+    %1:_(s32) = G_FNEG %0(s32)
+...
+
+---
 name:            test_fcmp_s32
 legalized:       true
 registers:
@@ -710,6 +728,22 @@ body: |
 ...
 
 ---
+name:            test_sitofp_v4s32
+legalized:       true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body: |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name: test_sitofp_v4s32
+    ; CHECK: [[COPY:%[0-9]+]]:fpr(<4 x s32>) = COPY $q0
+    ; CHECK: [[SITOFP:%[0-9]+]]:fpr(<4 x s32>) = G_SITOFP [[COPY]](<4 x s32>)
+    %0(<4 x s32>) = COPY $q0
+    %1(<4 x s32>) = G_SITOFP %0
+...
+
+---
 name:            test_uitofp_s32_s64
 legalized:       true
 registers:
@@ -723,6 +757,22 @@ body: |
     ; CHECK: [[UITOFP:%[0-9]+]]:fpr(s32) = G_UITOFP [[COPY]](s64)
     %0(s64) = COPY $x0
     %1(s32) = G_UITOFP %0
+...
+
+---
+name:            test_uitofp_v4s32
+legalized:       true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body: |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name: test_uitofp_v4s32
+    ; CHECK: [[COPY:%[0-9]+]]:fpr(<4 x s32>) = COPY $q0
+    ; CHECK: [[UITOFP:%[0-9]+]]:fpr(<4 x s32>) = G_UITOFP [[COPY]](<4 x s32>)
+    %0(<4 x s32>) = COPY $q0
+    %1(<4 x s32>) = G_UITOFP %0
 ...
 
 ---
@@ -742,6 +792,22 @@ body: |
 ...
 
 ---
+name:            test_fptosi_v4s32
+legalized:       true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body: |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name: test_fptosi_v4s32
+    ; CHECK: [[COPY:%[0-9]+]]:fpr(<4 x s32>) = COPY $q0
+    ; CHECK: [[FPTOSI:%[0-9]+]]:fpr(<4 x s32>) = G_FPTOSI [[COPY]](<4 x s32>)
+    %0(<4 x s32>) = COPY $q0
+    %1(<4 x s32>) = G_FPTOSI %0
+...
+
+---
 name:            test_fptoui_s32_s64
 legalized:       true
 registers:
@@ -755,6 +821,22 @@ body: |
     ; CHECK: [[FPTOUI:%[0-9]+]]:gpr(s32) = G_FPTOUI [[COPY]](s64)
     %0(s64) = COPY $d0
     %1(s32) = G_FPTOUI %0
+...
+
+---
+name:            test_fptoui_v4s32
+legalized:       true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body: |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name: test_fptoui_v4s32
+    ; CHECK: [[COPY:%[0-9]+]]:fpr(<4 x s32>) = COPY $q0
+    ; CHECK: [[FPTOUI:%[0-9]+]]:fpr(<4 x s32>) = G_FPTOUI [[COPY]](<4 x s32>)
+    %0(<4 x s32>) = COPY $q0
+    %1(<4 x s32>) = G_FPTOUI %0
 ...
 
 ---

@@ -120,10 +120,22 @@ private:
   void extractParts(unsigned Reg, LLT Ty, int NumParts,
                     SmallVectorImpl<unsigned> &VRegs);
 
+  LegalizeResult fewerElementsVectorImplicitDef(MachineInstr &MI,
+                                                unsigned TypeIdx, LLT NarrowTy);
+
+  /// Legalize a simple vector instruction where all operands are the same type
+  /// by splitting into multiple components.
+  LegalizeResult fewerElementsVectorBasic(MachineInstr &MI, unsigned TypeIdx,
+                                          LLT NarrowTy);
+
   LegalizeResult fewerElementsVectorCasts(MachineInstr &MI, unsigned TypeIdx,
                                           LLT NarrowTy);
+
   LegalizeResult
   fewerElementsVectorCmp(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
+
+  LegalizeResult
+  fewerElementsVectorLoadStore(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
 
   LegalizeResult narrowScalarMul(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
