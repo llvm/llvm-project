@@ -287,9 +287,6 @@ unwind_append_if(LIBUNWIND_CXX_FLAGS LIBUNWIND_HAS_EHSC_FLAG -EHsc)
 
 unwind_append_if(LIBUNWIND_C_FLAGS LIBUNWIND_HAS_FUNWIND_TABLES -funwind-tables)
 
-# Ensure that we don't depend on C++ standard library.
-unwind_append_if(LIBUNWIND_CXX_FLAGS LIBUNWIND_HAS_NOSTDINCXX_FLAG -nostdinc++)
-
 # Assert
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 if (LIBUNWIND_ENABLE_ASSERTIONS)
@@ -343,6 +340,28 @@ endif()
 #===============================================================================
 
 include_directories(include)
+
+find_path(
+  LIBUNWIND_LIBCXX_INCLUDES_INTERNAL
+  __libcpp_version
+  PATHS ${LLVM_MAIN_SRC_DIR}/projects/libcxx/include
+        ${LLVM_MAIN_SRC_DIR}/runtimes/libcxx/include
+        ${LLVM_MAIN_SRC_DIR}/../libcxx/include
+  NO_DEFAULT_PATH
+  NO_CMAKE_FIND_ROOT_PATH
+  )
+if ((NOT LIBUNWIND_STANDALONE_BUILD OR HAVE_LIBCXX) AND
+    IS_DIRECTORY "${LIBUNWIND_LIBCXX_INCLUDES_INTERNAL}")
+  set(LIBUNWIND_CXX_INCLUDE_PATHS_DEFAULT "${LIBUNWIND_LIBCXX_INCLUDES_INTERNAL}")
+endif()
+
+set(LIBUNWIND_CXX_INCLUDE_PATHS "${LIBUNWIND_CXX_INCLUDE_PATHS_DEFAULT}" CACHE PATH
+    "Paths to C++ header directories separated by ';'.")
+
+if (NOT LIBUNWIND_CXX_INCLUDE_PATHS STREQUAL "")
+  list(APPEND LIBUNWIND_CXX_FLAGS -nostdinc++)
+  include_directories("${LIBUNWIND_CXX_INCLUDE_PATHS}")
+endif()
 
 add_subdirectory(src)
 
