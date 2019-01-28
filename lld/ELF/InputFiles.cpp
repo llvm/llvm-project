@@ -736,7 +736,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // sections. Drop those sections to avoid duplicate symbol errors.
   // FIXME: This is glibc PR20543, we should remove this hack once that has been
   // fixed for a while.
-  if (Name.startswith(".gnu.linkonce."))
+  if (Name == ".gnu.linkonce.t.__x86.get_pc_thunk.bx" ||
+      Name == ".gnu.linkonce.t.__i686.get_pc_thunk.bx")
     return &InputSection::Discarded;
 
   // If we are creating a new .build-id section, strip existing .build-id
