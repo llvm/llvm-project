@@ -41,6 +41,7 @@ add_dependencies(lldb-framework liblldb)
 
 # Dependencies are defined once tools are added (see AddLLDB.cmake)
 if(LLDB_FRAMEWORK_TOOLS)
+  message(STATUS "LLDB.framework: adding tools ${LLDB_FRAMEWORK_TOOLS}")
   foreach(tool ${LLDB_FRAMEWORK_TOOLS})
     add_custom_command(TARGET lldb-framework POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${tool}> $<TARGET_FILE_DIR:liblldb>/Resources

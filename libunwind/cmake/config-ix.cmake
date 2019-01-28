@@ -3,7 +3,7 @@ include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckLibraryExists)
 
-check_library_exists(c __libc_start_main "" LIBUNWIND_HAS_C_LIB)
+check_library_exists(c fopen "" LIBUNWIND_HAS_C_LIB)
 
 if (NOT LIBUNWIND_USE_COMPILER_RT)
   check_library_exists(gcc_s __gcc_personality_v0 "" LIBUNWIND_HAS_GCC_S_LIB)
