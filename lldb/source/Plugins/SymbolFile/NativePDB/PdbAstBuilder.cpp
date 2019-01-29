@@ -933,7 +933,14 @@ clang::QualType PdbAstBuilder::CreateType(PdbTypeSymId type) {
   if (cvt.kind() == LF_PROCEDURE) {
     ProcedureRecord pr;
     llvm::cantFail(TypeDeserializer::deserializeAs<ProcedureRecord>(cvt, pr));
-    return CreateProcedureType(pr);
+    return CreateFunctionType(pr.ArgumentList, pr.ReturnType, pr.CallConv);
+  }
+
+  if (cvt.kind() == LF_MFUNCTION) {
+    MemberFunctionRecord mfr;
+    llvm::cantFail(
+        TypeDeserializer::deserializeAs<MemberFunctionRecord>(cvt, mfr));
+    return CreateFunctionType(mfr.ArgumentList, mfr.ReturnType, mfr.CallConv);
   }
 
   return {};
@@ -1117,10 +1124,11 @@ clang::QualType PdbAstBuilder::CreateArrayType(const ArrayRecord &ar) {
   return clang::QualType::getFromOpaquePtr(array_ct.GetOpaqueQualType());
 }
 
-clang::QualType
-PdbAstBuilder::CreateProcedureType(const ProcedureRecord &proc) {
+clang::QualType PdbAstBuilder::CreateFunctionType(
+    TypeIndex args_type_idx, TypeIndex return_type_idx,
+    llvm::codeview::CallingConvention calling_convention) {
   TpiStream &stream = m_index.tpi();
-  CVType args_cvt = stream.getType(proc.ArgumentList);
+  CVType args_cvt = stream.getType(args_type_idx);
   ArgListRecord args;
   llvm::cantFail(
       TypeDeserializer::deserializeAs<ArgListRecord>(args_cvt, args));
@@ -1138,10 +1146,10 @@ PdbAstBuilder::CreateProcedureType(const ProcedureRecord &proc) {
     arg_types.push_back(ToCompilerType(arg_type));
   }
 
-  clang::QualType return_type = GetOrCreateType(proc.ReturnType);
+  clang::QualType return_type = GetOrCreateType(return_type_idx);
 
   llvm::Optional<clang::CallingConv> cc =
-      TranslateCallingConvention(proc.CallConv);
+      TranslateCallingConvention(calling_convention);
   if (!cc)
     return {};
 

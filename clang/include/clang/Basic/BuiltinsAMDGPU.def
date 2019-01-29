@@ -98,6 +98,8 @@ BUILTIN(__builtin_amdgcn_fmed3f, "ffff", "nc")
 BUILTIN(__builtin_amdgcn_ds_faddf, "ff*3fIiIiIb", "n")
 BUILTIN(__builtin_amdgcn_ds_fminf, "ff*3fIiIiIb", "n")
 BUILTIN(__builtin_amdgcn_ds_fmaxf, "ff*3fIiIiIb", "n")
+BUILTIN(__builtin_amdgcn_ds_append, "ii*3", "n")
+BUILTIN(__builtin_amdgcn_ds_consume, "ii*3", "n")
 
 //===----------------------------------------------------------------------===//
 // CI+ only builtins.

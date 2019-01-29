@@ -437,6 +437,8 @@ namespace clang {
 
     Error ImportTemplateInformation(FunctionDecl *FromFD, FunctionDecl *ToFD);
 
+    Error ImportFunctionDeclBody(FunctionDecl *FromFD, FunctionDecl *ToFD);
+
     bool IsStructuralMatch(Decl *From, Decl *To, bool Complain);
     bool IsStructuralMatch(RecordDecl *FromRecord, RecordDecl *ToRecord,
                            bool Complain = true);
@@ -2944,6 +2946,17 @@ ASTNodeImporter::FindFunctionTemplateSpecialization(FunctionDecl *FromFD) {
   return FoundSpec;
 }
 
+Error ASTNodeImporter::ImportFunctionDeclBody(FunctionDecl *FromFD,
+                                              FunctionDecl *ToFD) {
+  if (Stmt *FromBody = FromFD->getBody()) {
+    if (ExpectedStmt ToBodyOrErr = import(FromBody))
+      ToFD->setBody(*ToBodyOrErr);
+    else
+      return ToBodyOrErr.takeError();
+  }
+  return Error::success();
+}
+
 ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
 
   SmallVector<Decl *, 2> Redecls = getCanonicalForwardRedeclChain(D);
@@ -2967,7 +2980,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   if (ToD)
     return ToD;
 
-  const FunctionDecl *FoundByLookup = nullptr;
+  FunctionDecl *FoundByLookup = nullptr;
   FunctionTemplateDecl *FromFT = D->getDescribedFunctionTemplate();
 
   // If this is a function template specialization, then try to find the same
@@ -3035,6 +3048,25 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
                                          ConflictingDecls.size());
       if (!Name)
         return make_error<ImportError>(ImportError::NameConflict);
+    }
+  }
+
+  // We do not allow more than one in-class declaration of a function. This is
+  // because AST clients like VTableBuilder asserts on this. VTableBuilder
+  // assumes there is only one in-class declaration. Building a redecl
+  // chain would result in more than one in-class declaration for
+  // overrides (even if they are part of the same redecl chain inside the
+  // derived class.)
+  if (FoundByLookup) {
+    if (isa<CXXMethodDecl>(FoundByLookup)) {
+      if (D->getLexicalDeclContext() == D->getDeclContext()) {
+        if (!D->doesThisDeclarationHaveABody())
+          return Importer.MapImported(D, FoundByLookup);
+        else {
+          // Let's continue and build up the redecl chain in this case.
+          // FIXME Merge the functions into one decl.
+        }
+      }
     }
   }
 
@@ -3199,12 +3231,10 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   if (D->doesThisDeclarationHaveABody()) {
-    if (Stmt *FromBody = D->getBody()) {
-      if (ExpectedStmt ToBodyOrErr = import(FromBody))
-        ToFunction->setBody(*ToBodyOrErr);
-      else
-        return ToBodyOrErr.takeError();
-    }
+    Error Err = ImportFunctionDeclBody(D, ToFunction);
+
+    if (Err)
+      return std::move(Err);
   }
 
   // FIXME: Other bits to merge?

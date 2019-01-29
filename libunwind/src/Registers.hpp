@@ -2103,16 +2103,16 @@ private:
     uint32_t __pc;    // Program counter r15
   };
 
-  static void saveVFPWithFSTMD(unw_fpreg_t*);
-  static void saveVFPWithFSTMX(unw_fpreg_t*);
-  static void saveVFPv3(unw_fpreg_t*);
-  static void restoreVFPWithFLDMD(unw_fpreg_t*);
-  static void restoreVFPWithFLDMX(unw_fpreg_t*);
-  static void restoreVFPv3(unw_fpreg_t*);
+  static void saveVFPWithFSTMD(void*);
+  static void saveVFPWithFSTMX(void*);
+  static void saveVFPv3(void*);
+  static void restoreVFPWithFLDMD(void*);
+  static void restoreVFPWithFLDMX(void*);
+  static void restoreVFPv3(void*);
 #if defined(__ARM_WMMX)
-  static void saveiWMMX(unw_fpreg_t*);
+  static void saveiWMMX(void*);
   static void saveiWMMXControl(uint32_t*);
-  static void restoreiWMMX(unw_fpreg_t*);
+  static void restoreiWMMX(void*);
   static void restoreiWMMXControl(uint32_t*);
 #endif
   void restoreCoreAndJumpTo();

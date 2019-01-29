@@ -20,6 +20,7 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
 // CHECK-SAME: "-fcuda-is-device" "-fvisibility" "hidden"
+// CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: {{.*}} "-o" [[A_BC_803:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC:".*a.cu"]]
 
@@ -47,6 +48,7 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx900"
 // CHECK-SAME: "-fcuda-is-device" "-fvisibility" "hidden"
+// CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: {{.*}} "-o" [[A_BC_900:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
@@ -89,6 +91,7 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
 // CHECK-SAME: "-fcuda-is-device" "-fvisibility" "hidden"
+// CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: {{.*}} "-o" [[B_BC_803:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC:".*b.hip"]]
 
@@ -116,6 +119,7 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx900"
 // CHECK-SAME: "-fcuda-is-device" "-fvisibility" "hidden"
+// CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: {{.*}} "-o" [[B_BC_900:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 

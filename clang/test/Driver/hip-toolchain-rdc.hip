@@ -12,10 +12,11 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s
 
-// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa" 
+// CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
 // CHECK-SAME: "-fcuda-is-device" "-fgpu-rdc" "-fvisibility" "hidden"
+// CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: {{.*}} "-o" [[A_BC:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC:".*a.cu"]]
 
@@ -23,6 +24,7 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
 // CHECK-SAME: "-fcuda-is-device" "-fgpu-rdc" "-fvisibility" "hidden"
+// CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: {{.*}} "-o" [[B_BC:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC:".*b.hip"]]
 
