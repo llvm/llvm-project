@@ -347,7 +347,7 @@ const static RetainSummary *getSummary(RetainSummaryManager &Summaries,
   const Expr *CE = Call.getOriginExpr();
   AnyCall C =
       CE ? *AnyCall::forExpr(CE)
-         : AnyCall::forDestructorCall(cast<CXXDestructorDecl>(Call.getDecl()));
+         : AnyCall(cast<CXXDestructorDecl>(Call.getDecl()));
   return Summaries.getSummary(C, Call.hasNonZeroCallbackArg(),
                               isReceiverUnconsumedSelf(Call), ReceiverType);
 }
@@ -1031,11 +1031,11 @@ ExplodedNode * RetainCountChecker::processReturn(const ReturnStmt *S,
 
   // FIXME: What is the convention for blocks? Is there one?
   if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(CD)) {
-    const RetainSummary *Summ = Summaries.getMethodSummary(MD);
+    const RetainSummary *Summ = Summaries.getSummary(AnyCall(MD));
     RE = Summ->getRetEffect();
   } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CD)) {
     if (!isa<CXXMethodDecl>(FD)) {
-      const RetainSummary *Summ = Summaries.getFunctionSummary(FD);
+      const RetainSummary *Summ = Summaries.getSummary(AnyCall(FD));
       RE = Summ->getRetEffect();
     }
   }
@@ -1308,10 +1308,6 @@ RetainCountChecker::processLeaks(ProgramStateRef state,
   return N;
 }
 
-static bool isISLObjectRef(QualType Ty) {
-  return StringRef(Ty.getAsString()).startswith("isl_");
-}
-
 void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
   if (!Ctx.inTopFrame())
     return;
@@ -1324,7 +1320,7 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
     return;
 
   ProgramStateRef state = Ctx.getState();
-  const RetainSummary *FunctionSummary = SmrMgr.getFunctionSummary(FD);
+  const RetainSummary *FunctionSummary = SmrMgr.getSummary(AnyCall(FD));
   ArgEffects CalleeSideArgEffects = FunctionSummary->getArgEffects();
 
   for (unsigned idx = 0, e = FD->getNumParams(); idx != e; ++idx) {
@@ -1333,13 +1329,14 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
 
     QualType Ty = Param->getType();
     const ArgEffect *AE = CalleeSideArgEffects.lookup(idx);
-    if (AE && AE->getKind() == DecRef && isISLObjectRef(Ty)) {
-      state = setRefBinding(
-          state, Sym, RefVal::makeOwned(ObjKind::Generalized, Ty));
-    } else if (isISLObjectRef(Ty)) {
-      state = setRefBinding(
-          state, Sym,
-          RefVal::makeNotOwned(ObjKind::Generalized, Ty));
+    if (AE) {
+      ObjKind K = AE->getObjKind();
+      if (K == ObjKind::Generalized || K == ObjKind::OS ||
+          (TrackNSCFStartParam && (K == ObjKind::ObjC || K == ObjKind::CF))) {
+        RefVal NewVal = AE->getKind() == DecRef ? RefVal::makeOwned(K, Ty)
+                                                : RefVal::makeNotOwned(K, Ty);
+        state = setRefBinding(state, Sym, NewVal);
+      }
     }
   }
 
@@ -1463,29 +1460,37 @@ bool ento::shouldRegisterRetainCountBase(const LangOptions &LO) {
   return true;
 }
 
+// FIXME: remove this, hack for backwards compatibility:
+// it should be possible to enable the NS/CF retain count checker as
+// osx.cocoa.RetainCount, and it should be possible to disable
+// osx.OSObjectRetainCount using osx.cocoa.RetainCount:CheckOSObject=false.
+static bool getOption(AnalyzerOptions &Options,
+                      StringRef Postfix,
+                      StringRef Value) {
+  auto I = Options.Config.find(
+    (StringRef("osx.cocoa.RetainCount:") + Postfix).str());
+  if (I != Options.Config.end())
+    return I->getValue() == Value;
+  return false;
+}
+
 void ento::registerRetainCountChecker(CheckerManager &Mgr) {
   auto *Chk = Mgr.getChecker<RetainCountChecker>();
   Chk->TrackObjCAndCFObjects = true;
+  Chk->TrackNSCFStartParam = getOption(Mgr.getAnalyzerOptions(),
+                                       "TrackNSCFStartParam",
+                                       "true");
 }
 
 bool ento::shouldRegisterRetainCountChecker(const LangOptions &LO) {
   return true;
 }
 
-// FIXME: remove this, hack for backwards compatibility:
-// it should be possible to enable the NS/CF retain count checker as
-// osx.cocoa.RetainCount, and it should be possible to disable
-// osx.OSObjectRetainCount using osx.cocoa.RetainCount:CheckOSObject=false.
-static bool hasPrevCheckOSObjectOptionDisabled(AnalyzerOptions &Options) {
-  auto I = Options.Config.find("osx.cocoa.RetainCount:CheckOSObject");
-  if (I != Options.Config.end())
-    return I->getValue() == "false";
-  return false;
-}
-
 void ento::registerOSObjectRetainCountChecker(CheckerManager &Mgr) {
   auto *Chk = Mgr.getChecker<RetainCountChecker>();
-  if (!hasPrevCheckOSObjectOptionDisabled(Mgr.getAnalyzerOptions()))
+  if (!getOption(Mgr.getAnalyzerOptions(),
+                 "CheckOSObject",
+                 "false"))
     Chk->TrackOSObjects = true;
 }
 
