@@ -27,7 +27,7 @@ extern "C" {
 
 // Define FUZZER_INTERFACE_VISIBILITY to set default visibility in a way that
 // doesn't break MSVC.
-#if defined(_MSC_VER) && !defined(__clang__)
+#if defined(_WIN32)
 #define FUZZER_INTERFACE_VISIBILITY __declspec(dllexport)
 #else
 #define FUZZER_INTERFACE_VISIBILITY __attribute__((visibility("default")))
