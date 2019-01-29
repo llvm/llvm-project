@@ -17,6 +17,7 @@
 #include <map>
 #include <cassert>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 #include "../../../test_compare.h"
 #include "test_allocator.h"
@@ -62,7 +63,7 @@ int main()
         assert(m3 == m2);
         assert(m3.get_allocator() == A(7));
         assert(m3.key_comp() == C(5));
-        assert(m1.empty());
+        LIBCPP_ASSERT(m1.empty());
     }
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
@@ -101,7 +102,7 @@ int main()
         assert(m3 == m2);
         assert(m3.get_allocator() == A(5));
         assert(m3.key_comp() == C(5));
-        assert(m1.empty());
+        LIBCPP_ASSERT(m1.empty());
     }
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
@@ -140,7 +141,7 @@ int main()
         assert(m3 == m2);
         assert(m3.get_allocator() == A(5));
         assert(m3.key_comp() == C(5));
-        assert(m1.empty());
+        LIBCPP_ASSERT(m1.empty());
     }
     {
         typedef Counter<int> T;
@@ -176,14 +177,14 @@ int main()
 
             M m3(std::move(m1), A());
             assert(m3 == m2);
-            assert(m1.empty());
+            LIBCPP_ASSERT(m1.empty());
             assert(Counter_base::gConstructed == num+6);
 
             {
             M m4(std::move(m2), A(5));
             assert(Counter_base::gConstructed == num+6);
             assert(m4 == m3);
-            assert(m2.empty());
+            LIBCPP_ASSERT(m2.empty());
             }
             assert(Counter_base::gConstructed == num+3);
         }
@@ -226,7 +227,7 @@ int main()
         assert(m3 == m2);
         assert(m3.get_allocator() == A());
         assert(m3.key_comp() == C(5));
-        assert(m1.empty());
+        LIBCPP_ASSERT(m1.empty());
     }
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
@@ -265,6 +266,6 @@ int main()
         assert(m3 == m2);
         assert(m3.get_allocator() == A{});
         assert(m3.key_comp() == C(5));
-        assert(m1.empty());
+        LIBCPP_ASSERT(m1.empty());
     }
 }
