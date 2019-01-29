@@ -33,20 +33,14 @@ chmod +x polly.sh
 <h2> Manual </h2>
 <h3 id="source"> Get the code </h3>
 
-<p><b>Warning:</b> Polly/LLVM/clang need to be checked out at the same time.</p>
-
 <pre>
-git clone http://llvm.org/git/llvm.git llvm_git
-git clone http://llvm.org/git/polly.git llvm_git/tools/polly
-
-# Also build the matching clang-version (optional)
-git clone http://llvm.org/git/clang.git llvm_git/tools/clang
+git clone http://github.com/llvm/llvm-project.git llvm_git
 </pre>
 <h3 id="build">Build Polly</h3>
 
 <pre>
 mkdir llvm_build && cd llvm_build
-cmake ../llvm_git && make
+cmake -DLLVM_ENABLE_PROJECTS='polly;clang' ../llvm_git/llvm && make
 </pre>
 
 <h3> Test Polly</h3>
@@ -59,7 +53,7 @@ also building LLVM. All you need is an installed version of LLVM or a previous
 build. To configure Polly to use a pre-built LLVM, set the
 <code>-DCMAKE_PREFIX_PATH</code> option:
 
-<pre>cmake -DCMAKE_PREFIX_PATH=${LLVM_PREFIX}/lib/cmake/llvm</pre>
+<pre>cmake -DCMAKE_PREFIX_PATH=${LLVM_PREFIX}/lib/cmake/llvm ../llvm_git/polly</pre>
 
 To run unittests, however, you need to have the LLVM source directory around.
 Polly will use the <code>llvm-config</code> of the LLVM you're building against
