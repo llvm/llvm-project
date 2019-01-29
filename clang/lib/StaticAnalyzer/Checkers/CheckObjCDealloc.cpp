@@ -715,6 +715,10 @@ bool ObjCDeallocChecker::diagnoseExtraRelease(SymbolRef ReleasedValue,
 bool ObjCDeallocChecker::diagnoseMistakenDealloc(SymbolRef DeallocedValue,
                                                  const ObjCMethodCall &M,
                                                  CheckerContext &C) const {
+  // TODO: Apart from unknown/undefined receivers, this may happen when
+  // dealloc is called as a class method. Should we warn?
+  if (!DeallocedValue)
+    return false;
 
   // Find the property backing the instance variable that M
   // is dealloc'ing.

@@ -23,12 +23,8 @@ using namespace llvm::opt;
 const char *x86::getX86TargetCPU(const ArgList &Args,
                                  const llvm::Triple &Triple) {
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
-    if (StringRef(A->getValue()) != "native") {
-      if (Triple.isOSDarwin() && Triple.getArchName() == "x86_64h")
-        return "core-avx2";
-
+    if (StringRef(A->getValue()) != "native")
       return A->getValue();
-    }
 
     // FIXME: Reject attempts to use -march=native unless the target matches
     // the host.

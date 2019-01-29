@@ -224,13 +224,20 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
                    options::OPT_fno_application_extension, false))
     CmdArgs.push_back("-application_extension");
 
-  if (D.isUsingLTO()) {
-    // If we are using LTO, then automatically create a temporary file path for
-    // the linker to use, so that it's lifetime will extend past a possible
-    // dsymutil step.
-    if (Version[0] >= 116 && NeedsTempPath(Inputs)) {
-      const char *TmpPath = C.getArgs().MakeArgString(
-          D.GetTemporaryPath("cc", types::getTypeTempSuffix(types::TY_Object)));
+  if (D.isUsingLTO() && Version[0] >= 116 && NeedsTempPath(Inputs)) {
+    std::string TmpPathName;
+    if (D.getLTOMode() == LTOK_Full) {
+      // If we are using full LTO, then automatically create a temporary file
+      // path for the linker to use, so that it's lifetime will extend past a
+      // possible dsymutil step.
+      TmpPathName =
+          D.GetTemporaryPath("cc", types::getTypeTempSuffix(types::TY_Object));
+    } else if (D.getLTOMode() == LTOK_Thin)
+      // If we are using thin LTO, then create a directory instead.
+      TmpPathName = D.GetTemporaryDirectory("thinlto");
+
+    if (!TmpPathName.empty()) {
+      auto *TmpPath = C.getArgs().MakeArgString(TmpPathName);
       C.addTempFile(TmpPath);
       CmdArgs.push_back("-object_path_lto");
       CmdArgs.push_back(TmpPath);
@@ -1317,6 +1324,18 @@ struct DarwinPlatform {
     return DarwinPlatform(InferredFromArch, getPlatformFromOS(OS), Value);
   }
 
+  /// Constructs an inferred SDKInfo value based on the version inferred from
+  /// the SDK path itself. Only works for values that were created by inferring
+  /// the platform from the SDKPath.
+  DarwinSDKInfo inferSDKInfo() {
+    assert(Kind == InferredFromSDK && "can infer SDK info only");
+    llvm::VersionTuple Version;
+    bool IsValid = !Version.tryParse(OSVersion);
+    (void)IsValid;
+    assert(IsValid && "invalid SDK version");
+    return DarwinSDKInfo(Version);
+  }
+
 private:
   DarwinPlatform(SourceKind Kind, DarwinPlatformKind Platform, Arg *Argument)
       : Kind(Kind), Platform(Platform), Argument(Argument) {}
@@ -1450,8 +1469,11 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
 }
 
 /// Tries to infer the deployment target from the SDK specified by -isysroot
-/// (or SDKROOT).
-Optional<DarwinPlatform> inferDeploymentTargetFromSDK(DerivedArgList &Args) {
+/// (or SDKROOT). Uses the version specified in the SDKSettings.json file if
+/// it's available.
+Optional<DarwinPlatform>
+inferDeploymentTargetFromSDK(DerivedArgList &Args,
+                             const Optional<DarwinSDKInfo> &SDKInfo) {
   const Arg *A = Args.getLastArg(options::OPT_isysroot);
   if (!A)
     return None;
@@ -1459,28 +1481,37 @@ Optional<DarwinPlatform> inferDeploymentTargetFromSDK(DerivedArgList &Args) {
   StringRef SDK = Darwin::getSDKName(isysroot);
   if (!SDK.size())
     return None;
-  // Slice the version number out.
-  // Version number is between the first and the last number.
-  size_t StartVer = SDK.find_first_of("0123456789");
-  size_t EndVer = SDK.find_last_of("0123456789");
-  if (StartVer != StringRef::npos && EndVer > StartVer) {
-    StringRef Version = SDK.slice(StartVer, EndVer + 1);
-    if (SDK.startswith("iPhoneOS") || SDK.startswith("iPhoneSimulator"))
-      return DarwinPlatform::createFromSDK(
-          Darwin::IPhoneOS, Version,
-          /*IsSimulator=*/SDK.startswith("iPhoneSimulator"));
-    else if (SDK.startswith("MacOSX"))
-      return DarwinPlatform::createFromSDK(Darwin::MacOS,
-                                           getSystemOrSDKMacOSVersion(Version));
-    else if (SDK.startswith("WatchOS") || SDK.startswith("WatchSimulator"))
-      return DarwinPlatform::createFromSDK(
-          Darwin::WatchOS, Version,
-          /*IsSimulator=*/SDK.startswith("WatchSimulator"));
-    else if (SDK.startswith("AppleTVOS") || SDK.startswith("AppleTVSimulator"))
-      return DarwinPlatform::createFromSDK(
-          Darwin::TvOS, Version,
-          /*IsSimulator=*/SDK.startswith("AppleTVSimulator"));
+
+  std::string Version;
+  if (SDKInfo) {
+    // Get the version from the SDKSettings.json if it's available.
+    Version = SDKInfo->getVersion().getAsString();
+  } else {
+    // Slice the version number out.
+    // Version number is between the first and the last number.
+    size_t StartVer = SDK.find_first_of("0123456789");
+    size_t EndVer = SDK.find_last_of("0123456789");
+    if (StartVer != StringRef::npos && EndVer > StartVer)
+      Version = SDK.slice(StartVer, EndVer + 1);
   }
+  if (Version.empty())
+    return None;
+
+  if (SDK.startswith("iPhoneOS") || SDK.startswith("iPhoneSimulator"))
+    return DarwinPlatform::createFromSDK(
+        Darwin::IPhoneOS, Version,
+        /*IsSimulator=*/SDK.startswith("iPhoneSimulator"));
+  else if (SDK.startswith("MacOSX"))
+    return DarwinPlatform::createFromSDK(Darwin::MacOS,
+                                         getSystemOrSDKMacOSVersion(Version));
+  else if (SDK.startswith("WatchOS") || SDK.startswith("WatchSimulator"))
+    return DarwinPlatform::createFromSDK(
+        Darwin::WatchOS, Version,
+        /*IsSimulator=*/SDK.startswith("WatchSimulator"));
+  else if (SDK.startswith("AppleTVOS") || SDK.startswith("AppleTVSimulator"))
+    return DarwinPlatform::createFromSDK(
+        Darwin::TvOS, Version,
+        /*IsSimulator=*/SDK.startswith("AppleTVSimulator"));
   return None;
 }
 
@@ -1555,6 +1586,22 @@ Optional<DarwinPlatform> getDeploymentTargetFromTargetArg(
                                           Args.getLastArg(options::OPT_target));
 }
 
+Optional<DarwinSDKInfo> parseSDKSettings(vfs::FileSystem &VFS,
+                                         const ArgList &Args,
+                                         const Driver &TheDriver) {
+  const Arg *A = Args.getLastArg(options::OPT_isysroot);
+  if (!A)
+    return None;
+  StringRef isysroot = A->getValue();
+  auto SDKInfoOrErr = driver::parseDarwinSDKInfo(VFS, isysroot);
+  if (!SDKInfoOrErr) {
+    llvm::consumeError(SDKInfoOrErr.takeError());
+    TheDriver.Diag(diag::warn_drv_darwin_sdk_invalid_settings);
+    return None;
+  }
+  return *SDKInfoOrErr;
+}
+
 } // namespace
 
 void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
@@ -1578,6 +1625,10 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
       }
     }
   }
+
+  // Read the SDKSettings.json file for more information, like the SDK version
+  // that we can pass down to the compiler.
+  SDKInfo = parseSDKSettings(getVFS(), Args, getDriver());
 
   // The OS and the version can be specified using the -target argument.
   Optional<DarwinPlatform> OSTarget =
@@ -1624,16 +1675,22 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
           getDeploymentTargetFromEnvironmentVariables(getDriver(), getTriple());
       if (OSTarget) {
         // Don't infer simulator from the arch when the SDK is also specified.
-        Optional<DarwinPlatform> SDKTarget = inferDeploymentTargetFromSDK(Args);
+        Optional<DarwinPlatform> SDKTarget =
+            inferDeploymentTargetFromSDK(Args, SDKInfo);
         if (SDKTarget)
           OSTarget->setEnvironment(SDKTarget->getEnvironment());
       }
     }
     // If there is no command-line argument to specify the Target version and
     // no environment variable defined, see if we can set the default based
-    // on -isysroot.
-    if (!OSTarget)
-      OSTarget = inferDeploymentTargetFromSDK(Args);
+    // on -isysroot using SDKSettings.json if it exists.
+    if (!OSTarget) {
+      OSTarget = inferDeploymentTargetFromSDK(Args, SDKInfo);
+      /// If the target was successfully constructed from the SDK path, try to
+      /// infer the SDK info if the SDK doesn't have it.
+      if (OSTarget && !SDKInfo)
+        SDKInfo = OSTarget->inferSDKInfo();
+    }
     // If no OS targets have been specified, try to guess platform from -target
     // or arch name and compute the version from the triple.
     if (!OSTarget)
@@ -1965,12 +2022,8 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
     else if (Name == "pentIIm3")
       DAL->AddJoinedArg(nullptr, MArch, "pentium2");
 
-    else if (Name == "x86_64")
+    else if (Name == "x86_64" || Name == "x86_64h")
       DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_m64));
-    else if (Name == "x86_64h") {
-      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_m64));
-      DAL->AddJoinedArg(nullptr, MArch, "x86_64h");
-    }
 
     else if (Name == "arm")
       DAL->AddJoinedArg(nullptr, MArch, "armv4t");
@@ -2044,6 +2097,15 @@ void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                 options::OPT_fno_aligned_allocation) &&
       isAlignedAllocationUnavailable())
     CC1Args.push_back("-faligned-alloc-unavailable");
+
+  if (SDKInfo) {
+    /// Pass the SDK version to the compiler when the SDK information is
+    /// available.
+    std::string Arg;
+    llvm::raw_string_ostream OS(Arg);
+    OS << "-target-sdk-version=" << SDKInfo->getVersion();
+    CC1Args.push_back(DriverArgs.MakeArgString(OS.str()));
+  }
 }
 
 DerivedArgList *
@@ -2297,6 +2359,9 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::Function;
+
+  // Apple-Clang: Don't support LSan. rdar://problem/45841334
+  Res &= ~SanitizerKind::Leak;
 
   // Prior to 10.9, macOS shipped a version of the C++ standard library without
   // C++11 support. The same is true of iOS prior to version 5. These OS'es are

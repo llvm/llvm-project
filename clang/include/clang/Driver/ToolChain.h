@@ -11,6 +11,7 @@
 #define LLVM_CLANG_DRIVER_TOOLCHAIN_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Multilib.h"
@@ -338,6 +339,12 @@ public:
   /// this tool chain (0=off, 1=on, 2=strong, 3=all).
   virtual unsigned GetDefaultStackProtectorLevel(bool KernelOrKext) const {
     return 0;
+  }
+
+  /// Get the default trivial automatic variable initialization.
+  virtual LangOptions::TrivialAutoVarInitKind
+  GetDefaultTrivialAutoVarInit() const {
+    return LangOptions::TrivialAutoVarInitKind::Uninitialized;
   }
 
   /// GetDefaultLinker - Get the default linker to use.

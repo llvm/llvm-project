@@ -2229,9 +2229,6 @@ static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,
   // Treat blocks as analysis entry points.
   CmdArgs.push_back("-analyzer-opt-analyze-nested-blocks");
 
-  // Enable compatilibily mode to avoid analyzer-config related errors.
-  CmdArgs.push_back("-analyzer-config-compatibility-mode=true");
-
   // Add default argument set.
   if (!Args.hasArg(options::OPT__analyzer_no_default_checks)) {
     CmdArgs.push_back("-analyzer-checker=core");
@@ -2338,6 +2335,50 @@ static void RenderSSPOptions(const ToolChain &TC, const ArgList &Args,
       }
       A->claim();
     }
+  }
+}
+
+static void RenderTrivialAutoVarInitOptions(const Driver &D,
+                                            const ToolChain &TC,
+                                            const ArgList &Args,
+                                            ArgStringList &CmdArgs) {
+  auto DefaultTrivialAutoVarInit = TC.GetDefaultTrivialAutoVarInit();
+  StringRef TrivialAutoVarInit = "";
+
+  for (const Arg *A : Args) {
+    switch (A->getOption().getID()) {
+    default:
+      continue;
+    case options::OPT_ftrivial_auto_var_init: {
+      A->claim();
+      StringRef Val = A->getValue();
+      if (Val == "uninitialized" || Val == "zero" || Val == "pattern")
+        TrivialAutoVarInit = Val;
+      else
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << A->getOption().getName() << Val;
+      break;
+    }
+    }
+  }
+
+  if (TrivialAutoVarInit.empty())
+    switch (DefaultTrivialAutoVarInit) {
+    case LangOptions::TrivialAutoVarInitKind::Uninitialized:
+      break;
+    case LangOptions::TrivialAutoVarInitKind::Pattern:
+      TrivialAutoVarInit = "pattern";
+      break;
+    case LangOptions::TrivialAutoVarInitKind::Zero:
+      TrivialAutoVarInit = "zero";
+      break;
+    }
+
+  if (!TrivialAutoVarInit.empty()) {
+    if (TrivialAutoVarInit == "zero" && !Args.hasArg(options::OPT_enable_trivial_var_init_zero))
+      D.Diag(diag::err_drv_trivial_auto_var_init_zero_disabled);
+    CmdArgs.push_back(
+        Args.MakeArgString("-ftrivial-auto-var-init=" + TrivialAutoVarInit));
   }
 }
 
@@ -3350,6 +3391,24 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (isa<AnalyzeJobAction>(JA))
     RenderAnalyzerOptions(Args, CmdArgs, Triple, Input);
 
+  // Enable compatilibily mode to avoid analyzer-config related errors.
+  // Since we can't access frontend flags through hasArg, let's manually iterate
+  // through them.
+  bool FoundAnalyzerConfig = false;
+  for (auto Arg : Args.filtered(options::OPT_Xclang))
+    if (StringRef(Arg->getValue()) == "-analyzer-config") {
+      FoundAnalyzerConfig = true;
+      break;
+    }
+  if (!FoundAnalyzerConfig)
+    for (auto Arg : Args.filtered(options::OPT_Xanalyzer))
+      if (StringRef(Arg->getValue()) == "-analyzer-config") {
+        FoundAnalyzerConfig = true;
+        break;
+      }
+  if (FoundAnalyzerConfig)
+    CmdArgs.push_back("-analyzer-config-compatibility-mode=true");
+
   CheckCodeGenerationOptions(D, Args);
 
   unsigned FunctionAlignment = ParseFunctionAlignment(getToolChain(), Args);
@@ -4132,6 +4191,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_pthread);
 
   RenderSSPOptions(getToolChain(), Args, CmdArgs, KernelOrKext);
+  RenderTrivialAutoVarInitOptions(D, getToolChain(), Args, CmdArgs);
 
   // Translate -mstackrealign
   if (Args.hasFlag(options::OPT_mstackrealign, options::OPT_mno_stackrealign,

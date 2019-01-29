@@ -11,6 +11,7 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_DARWIN_H
 
 #include "Cuda.h"
+#include "clang/Driver/DarwinSDKInfo.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 
@@ -282,6 +283,9 @@ public:
 
   /// The OS version we are targeting.
   mutable VersionTuple TargetVersion;
+
+  /// The information about the darwin SDK that was used.
+  mutable Optional<DarwinSDKInfo> SDKInfo;
 
   CudaInstallationDetector CudaInstallation;
 

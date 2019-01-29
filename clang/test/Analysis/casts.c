@@ -213,3 +213,35 @@ void no_crash_on_symsym_cast_to_long() {
 }
 
 #endif
+
+char no_crash_SymbolCast_of_float_type_aux(int *p) {
+  *p += 1;
+  return *p;
+}
+
+void no_crash_SymbolCast_of_float_type() {
+  extern float x;
+  char (*f)() = no_crash_SymbolCast_of_float_type_aux;
+  f(&x);
+}
+
+double no_crash_reinterpret_double_as_int(double a) {
+  *(int *)&a = 1;
+  return a * a;
+}
+
+double no_crash_reinterpret_double_as_ptr(double a) {
+  *(void **)&a = 0;
+  return a * a;
+}
+
+double no_crash_reinterpret_double_as_sym_int(double a, int b) {
+  *(int *)&a = b;
+  return a * a;
+}
+
+double no_crash_reinterpret_double_as_sym_ptr(double a, void * b) {
+  *(void **)&a = b;
+  return a * a;
+}
+

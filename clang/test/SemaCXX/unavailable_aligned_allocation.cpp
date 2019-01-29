@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.12.0 -fexceptions -faligned-alloc-unavailable -std=c++1z -verify %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.12.0 -fexceptions -std=c++1z -verify -DNO_ERRORS %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.12.0 -fexceptions -faligned-allocation -faligned-alloc-unavailable -std=c++14 -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fexceptions -faligned-alloc-unavailable -std=c++1z -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fexceptions -std=c++1z -verify -DNO_ERRORS %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.13.0 -fexceptions -faligned-allocation -faligned-alloc-unavailable -std=c++14 -verify %s
 // RUN: %clang_cc1 -triple arm64-apple-ios10.0.0 -fexceptions -faligned-alloc-unavailable -std=c++1z -verify -DIOS %s
 // RUN: %clang_cc1 -triple arm64-apple-ios10.0.0 -fexceptions -std=c++1z -verify -DNO_ERRORS %s
 // RUN: %clang_cc1 -triple arm64-apple-tvos10.0.0 -fexceptions -faligned-alloc-unavailable -std=c++1z -verify -DTVOS %s
@@ -117,11 +117,78 @@ void testOveralignedCheckOS() {
 // expected-error@-13 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on watchOS 4 or newer}}}
 // expected-error@-14 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on watchOS 4 or newer}}}
 #else
-// expected-error@-16 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on macOS 10.13 or newer}}}
-// expected-error@-17 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on macOS 10.13 or newer}}}
+// expected-error@-16 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on macOS 10.14 or newer}}}
+// expected-error@-17 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on macOS 10.14 or newer}}}
 #endif
 
 // expected-note@-20 2 {{if you supply your own aligned allocation functions}}
+#endif
+
+// Test that diagnostics are produced when an unavailable aligned deallocation
+// function is called from a deleting destructor.
+struct alignas(256) OveralignedS2 {
+  int a[4];
+  virtual ~OveralignedS2();
+};
+
+OveralignedS2::~OveralignedS2() {}
+
+#ifdef NO_ERRORS
+// expected-no-diagnostics
+#else
+#if defined(IOS)
+// expected-error@-6 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on iOS 11 or newer}}}
+// expected-note@-7 {{if you supply your own aligned allocation functions}}
+#elif defined(TVOS)
+// expected-error@-9 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on tvOS 11 or newer}}}
+// expected-note@-10 {{if you supply your own aligned allocation functions}}
+#elif defined(WATCHOS)
+// expected-error@-12 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on watchOS 4 or newer}}}
+// expected-note@-13 {{if you supply your own aligned allocation functions}}
+#else
+// expected-error@-15 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on macOS 10.14 or newer}}}
+// expected-note@-16 {{if you supply your own aligned allocation functions}}
+#endif
+#endif
+
+void testExplicitOperatorNewDelete() {
+  void *p = operator new(128);
+  operator delete(p);
+  p = operator new[](128);
+  operator delete[](p);
+  p = __builtin_operator_new(128);
+  __builtin_operator_delete(p);
+}
+
+void testExplicitOperatorNewDeleteOveraligned() {
+  void *p = operator new(128, (std::align_val_t)64);
+  operator delete(p, (std::align_val_t)64);
+  p = operator new[](128, (std::align_val_t)64);
+  operator delete[](p, (std::align_val_t)64);
+  p = __builtin_operator_new(128, (std::align_val_t)64);
+  __builtin_operator_delete(p, (std::align_val_t)64);
+}
+
+#ifdef NO_ERRORS
+// expected-no-diagnostics
+#else
+// expected-error@-11 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on}}
+// expected-note@-12 {{if you supply your own aligned allocation functions}}
+
+// expected-error@-13 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on}}
+// expected-note@-14 {{if you supply your own aligned allocation functions}}
+
+// expected-error@-15 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on}}
+// expected-note@-16 {{if you supply your own aligned allocation functions}}
+
+// expected-error@-17 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on}}
+// expected-note@-18 {{if you supply your own aligned allocation functions}}
+
+// expected-error@-19 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on}}
+// expected-note@-20 {{if you supply your own aligned allocation functions}}
+
+// expected-error@-21 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on}}
+// expected-note@-22 {{if you supply your own aligned allocation functions}}
 #endif
 
 // No errors if user-defined aligned allocation functions are available.

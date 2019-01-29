@@ -502,6 +502,25 @@ static Optional<RefVal> refValFromRetEffect(RetEffect RE,
   return None;
 }
 
+static bool isPointerToObject(QualType QT) {
+  QualType PT = QT->getPointeeType();
+  if (!PT.isNull())
+    if (PT->getAsCXXRecordDecl())
+      return true;
+  return false;
+}
+
+/// Whether the tracked value should be escaped on a given call.
+/// OSObjects are escaped when passed to void * / etc.
+static bool shouldEscapeArgumentOnCall(const CallEvent &CE, unsigned ArgIdx,
+                                       const RefVal *TrackedValue) {
+  if (TrackedValue->getObjKind() != RetEffect::OS)
+    return false;
+  if (ArgIdx >= CE.parameters().size())
+    return false;
+  return !isPointerToObject(CE.parameters()[ArgIdx]->getType());
+}
+
 // We don't always get the exact modeling of the function with regards to the
 // retain count checker even when the function is inlined. For example, we need
 // to stop tracking the symbols which were marked with StopTrackingHard.
@@ -512,11 +531,16 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
 
   // Evaluate the effect of the arguments.
   for (unsigned idx = 0, e = CallOrMsg.getNumArgs(); idx != e; ++idx) {
-    if (Summ.getArg(idx) == StopTrackingHard) {
-      SVal V = CallOrMsg.getArgSVal(idx);
-      if (SymbolRef Sym = V.getAsLocSymbol()) {
+    SVal V = CallOrMsg.getArgSVal(idx);
+
+    if (SymbolRef Sym = V.getAsLocSymbol()) {
+      bool ShouldRemoveBinding = Summ.getArg(idx) == StopTrackingHard;
+      if (const RefVal *T = getRefBinding(state, Sym))
+        if (shouldEscapeArgumentOnCall(CallOrMsg, idx, T))
+          ShouldRemoveBinding = true;
+
+      if (ShouldRemoveBinding)
         state = removeRefBinding(state, Sym);
-      }
     }
   }
 
@@ -572,25 +596,6 @@ static ProgramStateRef updateOutParameter(ProgramStateRef State,
   }
 
   return State;
-}
-
-static bool isPointerToObject(QualType QT) {
-  QualType PT = QT->getPointeeType();
-  if (!PT.isNull())
-    if (PT->getAsCXXRecordDecl())
-      return true;
-  return false;
-}
-
-/// Whether the tracked value should be escaped on a given call.
-/// OSObjects are escaped when passed to void * / etc.
-static bool shouldEscapeArgumentOnCall(const CallEvent &CE, unsigned ArgIdx,
-                                       const RefVal *TrackedValue) {
-  if (TrackedValue->getObjKind() != RetEffect::OS)
-    return false;
-  if (ArgIdx >= CE.parameters().size())
-    return false;
-  return !isPointerToObject(CE.parameters()[ArgIdx]->getType());
 }
 
 void RetainCountChecker::checkSummary(const RetainSummary &Summ,

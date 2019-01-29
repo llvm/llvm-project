@@ -237,6 +237,13 @@ namespace std {
     return static_cast<RvalRef>(a);
   }
 
+  template <class T>
+  void swap(T &a, T &b) {
+    T c(std::move(a));
+    a = std::move(b);
+    b = std::move(c);
+  }
+
   template<typename T>
   class vector {
     typedef T value_type;
@@ -769,6 +776,22 @@ namespace std {
                       OutputIterator result);
 
 }
+
+#if __cplusplus >= 201103L
+namespace std {
+  template <typename T> // TODO: Implement the stub for deleter.
+  class unique_ptr {
+  public:
+    unique_ptr(const unique_ptr &) = delete;
+    unique_ptr(unique_ptr &&);
+
+    T *get() const;
+
+    typename std::add_lvalue_reference<T>::type operator*() const;
+    T *operator->() const;
+  };
+}
+#endif
 
 #ifdef TEST_INLINABLE_ALLOCATORS
 namespace std {

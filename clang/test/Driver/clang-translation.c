@@ -33,6 +33,11 @@
 // AVX2: "-target-cpu"
 // AVX2: "core-avx2"
 
+// RUN: %clang -target x86_64h-apple-darwin -march=skx -### %s -o /dev/null 2>&1 | \
+// RUN: FileCheck -check-prefix=X8664HSKX %s
+// X8664HSKX: "-target-cpu"
+// X8664HSKX: "skx"
+
 // RUN: %clang -target i386-apple-macosx10.12 -### -S %s -o %t.s 2>&1 | \
 // RUN: FileCheck -check-prefix=PENRYN %s
 // RUN: %clang -target x86_64-apple-macosx10.12 -### -S %s -o %t.s 2>&1 | \

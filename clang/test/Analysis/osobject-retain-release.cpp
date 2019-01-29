@@ -90,8 +90,20 @@ struct OSMetaClassBase {
   static OSObject *safeMetaCast(const OSObject *inst, const OSMetaClass *meta);
 };
 
+typedef unsigned long MYTYPE;
+
 void escape(void *);
+void escape_with_source(MYTYPE p) {}
 bool coin();
+
+bool os_consume_violation_two_args(OS_CONSUME OSObject *obj, bool extra) {
+  if (coin()) { // expected-note{{Assuming the condition is false}}
+                // expected-note@-1{{Taking false branch}}
+    escape(obj);
+    return true;
+  }
+  return false; // expected-note{{Parameter 'obj' is marked as consuming, but the function does not consume the reference}}
+}
 
 bool os_consume_violation(OS_CONSUME OSObject *obj) {
   if (coin()) { // expected-note{{Assuming the condition is false}}
@@ -113,6 +125,13 @@ void use_os_consume_violation() {
 } // expected-note{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
   // expected-warning@-1{{Potential leak of an object stored into 'obj'}}
 
+void use_os_consume_violation_two_args() {
+  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type OSObject with a +1 retain count}}
+  os_consume_violation_two_args(obj, coin()); // expected-note{{Calling 'os_consume_violation_two_args'}}
+                             // expected-note@-1{{Returning from 'os_consume_violation_two_args'}}
+} // expected-note{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
+  // expected-warning@-1{{Potential leak of an object stored into 'obj'}}
+
 void use_os_consume_ok() {
   OSObject *obj = new OSObject;
   os_consume_ok(obj);
@@ -121,6 +140,13 @@ void use_os_consume_ok() {
 void test_escaping_into_voidstar() {
   OSObject *obj = new OSObject;
   escape(obj);
+}
+
+void test_escape_has_source() {
+  OSObject *obj = new OSObject;
+  if (obj)
+    escape_with_source((MYTYPE)obj);
+  return;
 }
 
 void test_no_infinite_check_recursion(MyArray *arr) {

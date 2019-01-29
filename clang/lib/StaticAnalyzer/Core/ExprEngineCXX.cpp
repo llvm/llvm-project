@@ -113,7 +113,9 @@ SVal ExprEngine::makeZeroElementRegion(ProgramStateRef State, SVal LValue,
 std::pair<ProgramStateRef, SVal> ExprEngine::prepareForObjectConstruction(
     const Expr *E, ProgramStateRef State, const LocationContext *LCtx,
     const ConstructionContext *CC, EvalCallOptions &CallOpts) {
-  MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
+  SValBuilder &SVB = getSValBuilder();
+  MemRegionManager &MRMgr = SVB.getRegionManager();
+  ASTContext &ACtx = SVB.getContext();
 
   // See if we're constructing an existing region by looking at the
   // current construction context.
@@ -139,7 +141,7 @@ std::pair<ProgramStateRef, SVal> ExprEngine::prepareForObjectConstruction(
       assert(Init->isAnyMemberInitializer());
       const CXXMethodDecl *CurCtor = cast<CXXMethodDecl>(LCtx->getDecl());
       Loc ThisPtr =
-      getSValBuilder().getCXXThis(CurCtor, LCtx->getStackFrame());
+      SVB.getCXXThis(CurCtor, LCtx->getStackFrame());
       SVal ThisVal = State->getSVal(ThisPtr);
 
       const ValueDecl *Field;
@@ -199,12 +201,25 @@ std::pair<ProgramStateRef, SVal> ExprEngine::prepareForObjectConstruction(
             cast<Expr>(SFC->getCallSite()), State, CallerLCtx,
             RTC->getConstructionContext(), CallOpts);
       } else {
-        // We are on the top frame of the analysis.
-        // TODO: What exactly happens when we are? Does the temporary object
-        // live long enough in the region store in this case? Would checkers
-        // think that this object immediately goes out of scope?
-        CallOpts.IsTemporaryCtorOrDtor = true;
-        SVal V = loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(E, LCtx));
+        // We are on the top frame of the analysis. We do not know where is the
+        // object returned to. Conjure a symbolic region for the return value.
+        // TODO: We probably need a new MemRegion kind to represent the storage
+        // of that SymbolicRegion, so that we cound produce a fancy symbol
+        // instead of an anonymous conjured symbol.
+        // TODO: Do we need to track the region to avoid having it dead
+        // too early? It does die too early, at least in C++17, but because
+        // putting anything into a SymbolicRegion causes an immediate escape,
+        // it doesn't cause any leak false positives.
+        const auto *RCC = cast<ReturnedValueConstructionContext>(CC);
+        // Make sure that this doesn't coincide with any other symbol
+        // conjured for the returned expression.
+        static const int TopLevelSymRegionTag = 0;
+        const Expr *RetE = RCC->getReturnStmt()->getRetValue();
+        assert(RetE && "Void returns should not have a construction context");
+        QualType ReturnTy = RetE->getType();
+        QualType RegionTy = ACtx.getPointerType(ReturnTy);
+        SVal V = SVB.conjureSymbolVal(&TopLevelSymRegionTag, RetE, SFC,
+                                      RegionTy, currBldrCtx->blockCount());
         return std::make_pair(State, V);
       }
       llvm_unreachable("Unhandled return value construction context!");
@@ -589,12 +604,26 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
                                     ExplodedNode *Pred,
                                     ExplodedNodeSet &Dst,
                                     const EvalCallOptions &CallOpts) {
+  assert(S && "A destructor without a trigger!");
   const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
 
   const CXXRecordDecl *RecordDecl = ObjectType->getAsCXXRecordDecl();
   assert(RecordDecl && "Only CXXRecordDecls should have destructors");
   const CXXDestructorDecl *DtorDecl = RecordDecl->getDestructor();
+
+  // FIXME: There should always be a Decl, otherwise the destructor call
+  // shouldn't have been added to the CFG in the first place.
+  if (!DtorDecl) {
+    // Skip the invalid destructor. We cannot simply return because
+    // it would interrupt the analysis instead.
+    static SimpleProgramPointTag T("ExprEngine", "SkipInvalidDestructor");
+    // FIXME: PostImplicitCall with a null decl may crash elsewhere anyway.
+    PostImplicitCall PP(/*Decl=*/nullptr, S->getLocEnd(), LCtx, &T);
+    NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+    Bldr.generateNode(PP, Pred->getState(), Pred);
+    return;
+  }
 
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<CXXDestructorCall> Call =
@@ -614,7 +643,6 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
        I != E; ++I)
     defaultEvalCall(Bldr, *I, *Call, CallOpts);
 
-  ExplodedNodeSet DstPostCall;
   getCheckerManager().runCheckersForPostCall(Dst, DstInvalidated,
                                              *Call, *this);
 }

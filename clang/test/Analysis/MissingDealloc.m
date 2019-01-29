@@ -183,4 +183,17 @@ __attribute__((objc_root_class))
 @implementation NonNSObjectMissingDealloc
 @end
 
-// CHECK: 4 warnings generated.
+
+//===------------------------------------------------------------------------===
+// Don't crash on calls to dealloc as a class method.
+
+@interface DeallocingClass : NSObject {}
+@end
+@implementation DeallocingClass
+- (void)dealloc {
+  [DeallocingClass dealloc]; // FIXME: Should we warn on this specifically?
+}
+#if NON_ARC
+// expected-warning@-2{{method possibly missing a [super dealloc] call}}
+#endif
+@end
