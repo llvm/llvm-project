@@ -137,20 +137,13 @@ if(MSVC)
     list(APPEND FULL_LIB_NAMES ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib/${lib}.lib)
   endforeach()
 
-  # Need to seperate lib names with newlines.
-  string(REPLACE ";" "\n" FILE_CONTENT "${FULL_LIB_NAMES}")
-
-  # Write out the full lib names into file to be read by the python script.
-  set(LIBSFILE ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.args)
-  file(WRITE ${LIBSFILE} "${FILE_CONTENT}")
-
   # Generate the exports file dynamically.
   set(GEN_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/gen-msvc-exports.py)
 
   set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.exports)
 
   add_custom_command(OUTPUT ${LLVM_EXPORTED_SYMBOL_FILE}
-    COMMAND ${PYTHON_EXECUTABLE} ${GEN_SCRIPT} --libsfile ${LIBSFILE} ${GEN_UNDERSCORE} --nm ${LLVM_TOOLS_BINARY_DIR}/llvm-nm -o ${LLVM_EXPORTED_SYMBOL_FILE}
+    COMMAND ${PYTHON_EXECUTABLE} ${GEN_SCRIPT} ${FULL_LIB_NAMES} ${GEN_UNDERSCORE} --nm ${LLVM_TOOLS_BINARY_DIR}/llvm-nm -o ${LLVM_EXPORTED_SYMBOL_FILE}
     DEPENDS ${LIB_NAMES} llvm-nm
     COMMENT "Generating export list for LLVM-C"
     VERBATIM )

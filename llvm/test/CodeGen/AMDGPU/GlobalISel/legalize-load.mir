@@ -129,3 +129,71 @@ body: |
 
     $vgpr0_vgpr1_vgpr2 = COPY %1
 ...
+
+---
+name: test_ext_load_global_s64_from_1_align1
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_ext_load_global_s64_from_1_align1
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 1, align 4, addrspace 1)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(s64) = G_LOAD %0 :: (load 1, addrspace 1, align 4)
+
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_ext_load_global_s64_from_2_align2
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_ext_load_global_s64_from_2_align2
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 2, align 4, addrspace 1)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(s64) = G_LOAD %0 :: (load 2, addrspace 1, align 4)
+
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_ext_load_global_s64_from_4_align4
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_ext_load_global_s64_from_4_align4
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 4, addrspace 1)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(s64) = G_LOAD %0 :: (load 4, addrspace 1, align 4)
+
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_ext_load_global_s128_from_4_align4
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_ext_load_global_s128_from_4_align4
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 4, addrspace 1)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[LOAD]](s32)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[ANYEXT]](s128)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(s128) = G_LOAD %0 :: (load 4, addrspace 1, align 4)
+
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+...

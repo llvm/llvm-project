@@ -165,15 +165,9 @@ or the :doc:`lit man page <CommandGuide/lit>`.
 Debugging Information tests
 ---------------------------
 
-To run debugging information tests simply checkout the tests inside
-clang/test directory.
-
-.. code-block:: bash
-
-    % cd clang/test
-    % svn co http://llvm.org/svn/llvm-project/debuginfo-tests/trunk debuginfo-tests
-
-These tests are already set up to run as part of clang regression tests.
+To run debugging information tests simply add the ``debuginfo-tests``
+project to your ``LLVM_ENABLE_PROJECTS`` define on the cmake
+command-line.
 
 Regression test structure
 =========================

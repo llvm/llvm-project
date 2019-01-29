@@ -7846,15 +7846,11 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
   SmallVector<SDValue, 8> OutChains;
 
   llvm::Type *CSResultType = CS.getType();
-  unsigned NumReturns = 0;
   ArrayRef<Type *> ResultTypes;
-  if (StructType *StructResult = dyn_cast<StructType>(CSResultType)) {
-    NumReturns = StructResult->getNumElements();
+  if (StructType *StructResult = dyn_cast<StructType>(CSResultType))
     ResultTypes = StructResult->elements();
-  } else if (!CSResultType->isVoidTy()) {
-    NumReturns = 1;
+  else if (!CSResultType->isVoidTy())
     ResultTypes = makeArrayRef(CSResultType);
-  }
 
   auto CurResultType = ResultTypes.begin();
   auto handleRegAssign = [&](SDValue V) {
@@ -7919,7 +7915,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
   if (!ResultValues.empty()) {
     assert(CurResultType == ResultTypes.end() &&
            "Mismatch in number of ResultTypes");
-    assert(ResultValues.size() == NumReturns &&
+    assert(ResultValues.size() == ResultTypes.size() &&
            "Mismatch in number of output operands in asm result");
 
     SDValue V = DAG.getNode(ISD::MERGE_VALUES, getCurSDLoc(),

@@ -128,6 +128,32 @@ static SectionFlag parseSectionRenameFlag(StringRef SectionName) {
       .Default(SectionFlag::SecNone);
 }
 
+static uint64_t parseSectionFlagSet(ArrayRef<StringRef> SectionFlags) {
+  SectionFlag ParsedFlags = SectionFlag::SecNone;
+  for (StringRef Flag : SectionFlags) {
+    SectionFlag ParsedFlag = parseSectionRenameFlag(Flag);
+    if (ParsedFlag == SectionFlag::SecNone)
+      error("Unrecognized section flag '" + Flag +
+            "'. Flags supported for GNU compatibility: alloc, load, noload, "
+            "readonly, debug, code, data, rom, share, contents, merge, "
+            "strings.");
+    ParsedFlags |= ParsedFlag;
+  }
+
+  uint64_t NewFlags = 0;
+  if (ParsedFlags & SectionFlag::SecAlloc)
+    NewFlags |= ELF::SHF_ALLOC;
+  if (!(ParsedFlags & SectionFlag::SecReadonly))
+    NewFlags |= ELF::SHF_WRITE;
+  if (ParsedFlags & SectionFlag::SecCode)
+    NewFlags |= ELF::SHF_EXECINSTR;
+  if (ParsedFlags & SectionFlag::SecMerge)
+    NewFlags |= ELF::SHF_MERGE;
+  if (ParsedFlags & SectionFlag::SecStrings)
+    NewFlags |= ELF::SHF_STRINGS;
+  return NewFlags;
+}
+
 static SectionRename parseRenameSectionValue(StringRef FlagValue) {
   if (!FlagValue.contains('='))
     error("Bad format for --rename-section: missing '='");
@@ -142,32 +168,27 @@ static SectionRename parseRenameSectionValue(StringRef FlagValue) {
   Old2New.second.split(NameAndFlags, ',');
   SR.NewName = NameAndFlags[0];
 
-  if (NameAndFlags.size() > 1) {
-    SectionFlag Flags = SectionFlag::SecNone;
-    for (size_t I = 1, Size = NameAndFlags.size(); I < Size; ++I) {
-      SectionFlag Flag = parseSectionRenameFlag(NameAndFlags[I]);
-      if (Flag == SectionFlag::SecNone)
-        error("Unrecognized section flag '" + NameAndFlags[I] +
-              "'. Flags supported for GNU compatibility: alloc, load, noload, "
-              "readonly, debug, code, data, rom, share, contents, merge, "
-              "strings.");
-      Flags |= Flag;
-    }
-
-    SR.NewFlags = 0;
-    if (Flags & SectionFlag::SecAlloc)
-      *SR.NewFlags |= ELF::SHF_ALLOC;
-    if (!(Flags & SectionFlag::SecReadonly))
-      *SR.NewFlags |= ELF::SHF_WRITE;
-    if (Flags & SectionFlag::SecCode)
-      *SR.NewFlags |= ELF::SHF_EXECINSTR;
-    if (Flags & SectionFlag::SecMerge)
-      *SR.NewFlags |= ELF::SHF_MERGE;
-    if (Flags & SectionFlag::SecStrings)
-      *SR.NewFlags |= ELF::SHF_STRINGS;
-  }
+  if (NameAndFlags.size() > 1)
+    SR.NewFlags = parseSectionFlagSet(makeArrayRef(NameAndFlags).drop_front());
 
   return SR;
+}
+
+static SectionFlagsUpdate parseSetSectionFlagValue(StringRef FlagValue) {
+  if (!StringRef(FlagValue).contains('='))
+    error("Bad format for --set-section-flags: missing '='");
+
+  // Initial split: ".foo" = "f1,f2,..."
+  auto Section2Flags = StringRef(FlagValue).split('=');
+  SectionFlagsUpdate SFU;
+  SFU.Name = Section2Flags.first;
+
+  // Flags split: "f1" "f2" ...
+  SmallVector<StringRef, 6> SectionFlags;
+  Section2Flags.second.split(SectionFlags, ',');
+  SFU.NewFlags = parseSectionFlagSet(SectionFlags);
+
+  return SFU;
 }
 
 static const StringMap<MachineInfo> ArchMap{
@@ -326,6 +347,24 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     SectionRename SR = parseRenameSectionValue(StringRef(Arg->getValue()));
     if (!Config.SectionsToRename.try_emplace(SR.OriginalName, SR).second)
       error("Multiple renames of section " + SR.OriginalName);
+  }
+  for (auto Arg : InputArgs.filtered(OBJCOPY_set_section_flags)) {
+    SectionFlagsUpdate SFU = parseSetSectionFlagValue(Arg->getValue());
+    if (!Config.SetSectionFlags.try_emplace(SFU.Name, SFU).second)
+      error("--set-section-flags set multiple times for section " + SFU.Name);
+  }
+  // Prohibit combinations of --set-section-flags when the section name is used
+  // by --rename-section, either as a source or a destination.
+  for (const auto &E : Config.SectionsToRename) {
+    const SectionRename &SR = E.second;
+    if (Config.SetSectionFlags.count(SR.OriginalName))
+      error("--set-section-flags=" + SR.OriginalName +
+            " conflicts with --rename-section=" + SR.OriginalName + "=" +
+            SR.NewName);
+    if (Config.SetSectionFlags.count(SR.NewName))
+      error("--set-section-flags=" + SR.NewName +
+            " conflicts with --rename-section=" + SR.OriginalName + "=" +
+            SR.NewName);
   }
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_remove_section))
