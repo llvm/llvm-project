@@ -67,12 +67,11 @@ protected:
     }
 
     auto &r = repro::Reproducer::Instance();
-    if (auto generator = r.GetGenerator()) {
+    if (r.GetGenerator()) {
       result.GetOutputStream() << "Reproducer is in capture mode.\n";
-    } else if (auto generator = r.GetLoader()) {
+    } else if (r.GetLoader()) {
       result.GetOutputStream() << "Reproducer is in replay mode.\n";
     } else {
-
       result.GetOutputStream() << "Reproducer is off.\n";
     }
 

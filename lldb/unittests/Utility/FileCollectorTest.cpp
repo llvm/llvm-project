@@ -151,7 +151,7 @@ TEST(FileCollectorTest, CopyFiles) {
   EXPECT_FALSE(ec);
 }
 
-#ifndef WINDOWS
+#ifndef _WIN32
 TEST(FileCollectorTest, Symlinks) {
   // Root where the original files live.
   ScopedDir file_root("file_root", true);
