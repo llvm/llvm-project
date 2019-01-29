@@ -679,33 +679,6 @@ ToolChain::RuntimeLibType ToolChain::GetRuntimeLibType(
   return GetDefaultRuntimeLibType();
 }
 
-ToolChain::RuntimeLibType ToolChain
-::GetUnwindLibType(
-    const ArgList &Args) const {
-  const Arg *A = Args.getLastArg(options::OPT_unwindlib_EQ);
-  // If nothing has been specified, follow the runtime lib type.
-  if (!A)
-    return GetRuntimeLibType(Args);
-
-  StringRef LibName = A->getValue();
-  if (LibName == "compiler-rt") {
-    if (GetRuntimeLibType(Args) == RLT_Libgcc)
-      getDriver().Diag(diag::err_drv_incompatible_unwindlib);
-    return ToolChain::RLT_CompilerRT;
-  }
-  else if (LibName == "libgcc")
-    return ToolChain::RLT_Libgcc;
-  else if (LibName == "platform") {
-    return GetRuntimeLibType(Args);
-  }
-
-  if (A)
-    getDriver().Diag(diag::err_drv_invalid_unwindlib_name)
-        << A->getAsString(Args);
-
-  return GetDefaultUnwindLibType();
-}
-
 ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   const Arg *A = Args.getLastArg(options::OPT_stdlib_EQ);
   StringRef LibName = A ? A->getValue() : CLANG_DEFAULT_CXX_STDLIB;

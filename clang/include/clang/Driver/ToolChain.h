@@ -367,10 +367,6 @@ public:
     return ToolChain::CST_Libstdcxx;
   }
 
-  virtual RuntimeLibType GetDefaultUnwindLibType() const {
-    return ToolChain::RLT_Libgcc;
-  }
-
   virtual std::string getCompilerRTPath() const;
 
   virtual std::string getCompilerRT(const llvm::opt::ArgList &Args,
@@ -514,10 +510,6 @@ public:
   // GetCXXStdlibType - Determine the C++ standard library type to use with the
   // given compilation arguments.
   virtual CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const;
-
-  // GetUnwindLibType - Determine the unwind library type to use with the
-  // given compilation arguments.
-  virtual RuntimeLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const;
 
   /// AddClangCXXStdlibIncludeArgs - Add the clang -cc1 level arguments to set
   /// the include paths to use for the given C++ standard library type.

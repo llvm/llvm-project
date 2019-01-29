@@ -140,19 +140,23 @@ namespace {
         unsigned resultIndex = gse->getResultIndex();
         unsigned numAssocs = gse->getNumAssocs();
 
-        SmallVector<Expr*, 8> assocs(numAssocs);
-        SmallVector<TypeSourceInfo*, 8> assocTypes(numAssocs);
+        SmallVector<Expr *, 8> assocExprs;
+        SmallVector<TypeSourceInfo *, 8> assocTypes;
+        assocExprs.reserve(numAssocs);
+        assocTypes.reserve(numAssocs);
 
-        for (unsigned i = 0; i != numAssocs; ++i) {
-          Expr *assoc = gse->getAssocExpr(i);
-          if (i == resultIndex) assoc = rebuild(assoc);
-          assocs[i] = assoc;
-          assocTypes[i] = gse->getAssocTypeSourceInfo(i);
+        for (const GenericSelectionExpr::Association &assoc :
+             gse->associations()) {
+          Expr *assocExpr = assoc.getAssociationExpr();
+          if (assoc.isSelected())
+            assocExpr = rebuild(assocExpr);
+          assocExprs.push_back(assocExpr);
+          assocTypes.push_back(assoc.getTypeSourceInfo());
         }
 
         return GenericSelectionExpr::Create(
             S.Context, gse->getGenericLoc(), gse->getControllingExpr(),
-            assocTypes, assocs, gse->getDefaultLoc(), gse->getRParenLoc(),
+            assocTypes, assocExprs, gse->getDefaultLoc(), gse->getRParenLoc(),
             gse->containsUnexpandedParameterPack(), resultIndex);
       }
 
