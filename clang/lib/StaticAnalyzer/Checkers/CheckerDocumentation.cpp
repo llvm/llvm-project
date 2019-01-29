@@ -216,7 +216,7 @@ public:
 
   /// Evaluates function call.
   ///
-  /// The analysis core threats all function calls in the same way. However, some
+  /// The analysis core treats all function calls in the same way. However, some
   /// functions have special meaning, which should be reflected in the program
   /// state. This callback allows a checker to provide domain specific knowledge
   /// about the particular functions it knows about.
