@@ -309,10 +309,10 @@ private:
   }
 
 public:
-  /// Return true if the specified pointer "may" (or must) alias one of the
-  /// members in the set.
-  bool aliasesPointer(const Value *Ptr, LocationSize Size,
-                      const AAMDNodes &AAInfo, AliasAnalysis &AA) const;
+  /// If the specified pointer "may" (or must) alias one of the members in the
+  /// set return the appropriate AliasResult. Otherwise return NoAlias.
+  AliasResult aliasesPointer(const Value *Ptr, LocationSize Size,
+                             const AAMDNodes &AAInfo, AliasAnalysis &AA) const;
   bool aliasesUnknownInst(const Instruction *Inst, AliasAnalysis &AA) const;
 };
 

@@ -225,6 +225,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     }
   }
 
+  // Don't do anything clever with build_pairs
+  setOperationAction(ISD::BUILD_PAIR, MVT::i64, Expand);
+
   // Trap lowers to wasm unreachable
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
 

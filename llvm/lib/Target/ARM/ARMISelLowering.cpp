@@ -1591,8 +1591,6 @@ static void FPCCToARMCC(ISD::CondCode CC, ARMCC::CondCodes &CondCode,
 //                      Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
-#include "ARMGenCallingConv.inc"
-
 /// getEffectiveCallingConv - Get the effective calling convention, taking into
 /// account presence of floating point hardware and calling convention
 /// limitations, such as support for variadic functions.

@@ -183,14 +183,15 @@ void AliasSet::addUnknownInst(Instruction *I, AliasAnalysis &AA) {
   Access = ModRefAccess;
 }
 
-/// aliasesPointer - Return true if the specified pointer "may" (or must)
-/// alias one of the members in the set.
+/// aliasesPointer - If the specified pointer "may" (or must) alias one of the
+/// members in the set return the appropriate AliasResult. Otherwise return
+/// NoAlias.
 ///
-bool AliasSet::aliasesPointer(const Value *Ptr, LocationSize Size,
-                              const AAMDNodes &AAInfo,
-                              AliasAnalysis &AA) const {
+AliasResult AliasSet::aliasesPointer(const Value *Ptr, LocationSize Size,
+                                     const AAMDNodes &AAInfo,
+                                     AliasAnalysis &AA) const {
   if (AliasAny)
-    return true;
+    return MayAlias;
 
   if (Alias == SetMustAlias) {
     assert(UnknownInsts.empty() && "Illegal must alias set!");
@@ -207,9 +208,10 @@ bool AliasSet::aliasesPointer(const Value *Ptr, LocationSize Size,
   // If this is a may-alias set, we have to check all of the pointers in the set
   // to be sure it doesn't alias the set...
   for (iterator I = begin(), E = end(); I != E; ++I)
-    if (AA.alias(MemoryLocation(Ptr, Size, AAInfo),
-                 MemoryLocation(I.getPointer(), I.getSize(), I.getAAInfo())))
-      return true;
+    if (AliasResult AR = AA.alias(
+            MemoryLocation(Ptr, Size, AAInfo),
+            MemoryLocation(I.getPointer(), I.getSize(), I.getAAInfo())))
+      return AR;
 
   // Check the unknown instructions...
   if (!UnknownInsts.empty()) {
@@ -217,10 +219,10 @@ bool AliasSet::aliasesPointer(const Value *Ptr, LocationSize Size,
       if (auto *Inst = getUnknownInst(i))
         if (isModOrRefSet(
                 AA.getModRefInfo(Inst, MemoryLocation(Ptr, Size, AAInfo))))
-          return true;
+          return MayAlias;
   }
 
-  return false;
+  return NoAlias;
 }
 
 bool AliasSet::aliasesUnknownInst(const Instruction *Inst,
@@ -299,10 +301,12 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
     iterator Cur = I++;
     if (Cur->Forward || !Cur->aliasesPointer(Ptr, Size, AAInfo, AA)) continue;
 
-    if (!FoundSet) {      // If this is the first alias set ptr can go into.
-      FoundSet = &*Cur;   // Remember it.
-    } else {              // Otherwise, we must merge the sets.
-      FoundSet->mergeSetIn(*Cur, *this);     // Merge in contents.
+    if (!FoundSet) {
+      // If this is the first alias set ptr can go into, remember it.
+      FoundSet = &*Cur;
+    } else {
+      // Otherwise, we must merge the sets.
+      FoundSet->mergeSetIn(*Cur, *this);
     }
   }
 
@@ -315,10 +319,13 @@ AliasSet *AliasSetTracker::findAliasSetForUnknownInst(Instruction *Inst) {
     iterator Cur = I++;
     if (Cur->Forward || !Cur->aliasesUnknownInst(Inst, AA))
       continue;
-    if (!FoundSet)            // If this is the first alias set ptr can go into.
-      FoundSet = &*Cur;       // Remember it.
-    else   // Otherwise, we must merge the sets.
-      FoundSet->mergeSetIn(*Cur, *this);     // Merge in contents.
+    if (!FoundSet) {
+      // If this is the first alias set ptr can go into, remember it.
+      FoundSet = &*Cur;
+    } else {
+      // Otherwise, we must merge the sets.
+      FoundSet->mergeSetIn(*Cur, *this);
+    }
   }
   return FoundSet;
 }
@@ -328,7 +335,7 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
   Value * const Pointer = const_cast<Value*>(MemLoc.Ptr);
   const LocationSize Size = MemLoc.Size;
   const AAMDNodes &AAInfo = MemLoc.AATags;
-  
+
   AliasSet::PointerRec &Entry = getEntryFor(Pointer);
 
   if (AliasAnyAS) {

@@ -2972,8 +2972,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
 //                      Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
-#include "AArch64GenCallingConv.inc"
-
 /// Selects the correct CCAssignFn for a given CallingConvention value.
 CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
                                                      bool IsVarArg) const {

@@ -304,8 +304,6 @@ public:
 
 } // end anonymous namespace
 
-#include "AArch64GenCallingConv.inc"
-
 /// Check if the sign-/zero-extend will be a noop.
 static bool isIntExtFree(const Instruction *I) {
   assert((isa<ZExtInst>(I) || isa<SExtInst>(I)) &&
@@ -5170,10 +5168,6 @@ bool AArch64FastISel::fastSelectInstruction(const Instruction *I) {
   case Instruction::AtomicCmpXchg:
     return selectAtomicCmpXchg(cast<AtomicCmpXchgInst>(I));
   }
-
-  // Silence warnings.
-  (void)&CC_AArch64_DarwinPCS_VarArg;
-  (void)&CC_AArch64_Win64_VarArg;
 
   // fall-back to target-independent instruction selection.
   return selectOperator(I, I->getOpcode());

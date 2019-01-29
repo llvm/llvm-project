@@ -2301,10 +2301,10 @@ bool RecursiveASTVisitor<Derived>::TraverseInitListExpr(
 // generic associations).
 DEF_TRAVERSE_STMT(GenericSelectionExpr, {
   TRY_TO(TraverseStmt(S->getControllingExpr()));
-  for (const GenericSelectionExpr::Association &Assoc : S->associations()) {
-    if (TypeSourceInfo *TSI = Assoc.getTypeSourceInfo())
-      TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(Assoc.getAssociationExpr());
+  for (unsigned i = 0; i != S->getNumAssocs(); ++i) {
+    if (TypeSourceInfo *TS = S->getAssocTypeSourceInfo(i))
+      TRY_TO(TraverseTypeLoc(TS->getTypeLoc()));
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getAssocExpr(i));
   }
   ShouldVisitChildren = false;
 })

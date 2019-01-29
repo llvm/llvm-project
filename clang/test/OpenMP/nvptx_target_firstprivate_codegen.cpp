@@ -16,6 +16,7 @@ struct TT {
 // TCHECK:  [[TT:%.+]] = type { i64, i8 }
 // TCHECK:  [[S1:%.+]] = type { double }
 
+// TCHECK: @{{.*}}_$_{{.*}} = common global i32 0, !dbg !{{[0-9]+}}
 int foo(int n, double *ptr) {
   int a = 0;
   short aa = 0;
