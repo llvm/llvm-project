@@ -1,5 +1,4 @@
-#ifndef __CSI_H__
-#define __CSI_H__
+#pragma once 
 
 #include <stdint.h>
 
@@ -134,13 +133,13 @@ typedef struct {
 
 WEAK void __csi_init();
 
-WEAK void __csi_unit_init(const char * const file_name,
+WEAK void __csi_unit_init(const char *const file_name,
                           const instrumentation_counts_t counts);
 
 WEAK void __csi_func_entry(const csi_id_t func_id, const func_prop_t prop);
 
-WEAK void __csi_func_exit(const csi_id_t func_exit_id,
-                          const csi_id_t func_id, const func_exit_prop_t prop);
+WEAK void __csi_func_exit(const csi_id_t func_exit_id, const csi_id_t func_id,
+                          const func_exit_prop_t prop);
 
 WEAK void __csi_bb_entry(const csi_id_t bb_id, const bb_prop_t prop);
 
@@ -152,95 +151,82 @@ WEAK void __csi_before_call(const csi_id_t call_id, const csi_id_t func_id,
 WEAK void __csi_after_call(const csi_id_t call_id, const csi_id_t func_id,
                            const call_prop_t prop);
 
-WEAK void __csi_before_load(const csi_id_t load_id,
-                            const void *addr,
-                            const int32_t num_bytes,
-                            const load_prop_t prop);
+WEAK void __csi_before_load(const csi_id_t load_id, const void *addr,
+                            const int32_t num_bytes, const load_prop_t prop);
 
-WEAK void __csi_after_load(const csi_id_t load_id,
-                           const void *addr,
-                           const int32_t num_bytes,
-                           const load_prop_t prop);
+WEAK void __csi_after_load(const csi_id_t load_id, const void *addr,
+                           const int32_t num_bytes, const load_prop_t prop);
 
-WEAK void __csi_before_store(const csi_id_t store_id,
-                             const void *addr,
-                             const int32_t num_bytes,
-                             const store_prop_t prop);
+WEAK void __csi_before_store(const csi_id_t store_id, const void *addr,
+                             const int32_t num_bytes, const store_prop_t prop);
 
-WEAK void __csi_after_store(const csi_id_t store_id,
-                            const void *addr,
-                            const int32_t num_bytes,
-                            const store_prop_t prop);
+WEAK void __csi_after_store(const csi_id_t store_id, const void *addr,
+                            const int32_t num_bytes, const store_prop_t prop);
 
-WEAK void __csi_detach(const csi_id_t detach_id);
+WEAK void __csi_detach(const csi_id_t detach_id, const int32_t *has_spawned);
 
 WEAK void __csi_task(const csi_id_t task_id, const csi_id_t detach_id);
 
-WEAK void __csi_task_exit(const csi_id_t task_exit_id,
-                          const csi_id_t task_id,
+WEAK void __csi_task_exit(const csi_id_t task_exit_id, const csi_id_t task_id,
                           const csi_id_t detach_id);
 
 WEAK void __csi_detach_continue(const csi_id_t detach_continue_id,
                                 const csi_id_t detach_id);
 
-WEAK void __csi_before_sync(const csi_id_t sync_id);
-WEAK void __csi_after_sync(const csi_id_t sync_id);
+WEAK void __csi_before_sync(const csi_id_t sync_id, const int32_t *has_spawned);
+WEAK void __csi_after_sync(const csi_id_t sync_id, const int32_t *has_spawned);
 
-WEAK void __csi_before_alloca(const csi_id_t alloca_id,
-                              uint64_t num_bytes,
+WEAK void __csi_before_alloca(const csi_id_t alloca_id, uint64_t num_bytes,
                               const alloca_prop_t prop);
 
-WEAK void __csi_after_alloca(const csi_id_t alloca_id,
-                             const void *addr,
-                             uint64_t num_bytes,
-                             const alloca_prop_t prop);
+WEAK void __csi_after_alloca(const csi_id_t alloca_id, const void *addr,
+                             uint64_t num_bytes, const alloca_prop_t prop);
 
-WEAK void __csi_before_allocfn(const csi_id_t allocfn_id,
-                               uint64_t size, uint64_t num, uint64_t alignment,
+WEAK void __csi_before_allocfn(const csi_id_t allocfn_id, uint64_t size,
+                               uint64_t num, uint64_t alignment,
                                const void *oldaddr, const allocfn_prop_t prop);
 
 WEAK void __csi_after_allocfn(const csi_id_t alloca_id, const void *addr,
                               uint64_t size, uint64_t num, uint64_t alignment,
                               const void *oldaddr, const allocfn_prop_t prop);
 
-WEAK void __csi_before_free(const csi_id_t free_id,
-                            const void *ptr,
+WEAK void __csi_before_free(const csi_id_t free_id, const void *ptr,
                             const free_prop_t prop);
 
-WEAK void __csi_after_free(const csi_id_t free_id,
-                           const void *ptr,
+WEAK void __csi_after_free(const csi_id_t free_id, const void *ptr,
                            const free_prop_t prop);
 
 // This struct is mirrored in ComprehensiveStaticInstrumentation.cpp,
 // FrontEndDataTable::getSourceLocStructType.
 typedef struct {
-    char *name;
-    // TODO(ddoucet): Why is this 32 bits?
-    int32_t line_number;
-    int32_t column_number;
-    char *filename;
+  char *name;
+  // TODO(ddoucet): Why is this 32 bits?
+  int32_t line_number;
+  int32_t column_number;
+  char *filename;
 } source_loc_t;
 
 typedef struct {
-    int32_t full_ir_size;
-    int32_t non_empty_size;
+  int32_t full_ir_size;
+  int32_t non_empty_size;
 } sizeinfo_t;
 
 // Front-end data (FED) table accessors.
-const source_loc_t * __csi_get_func_source_loc(const csi_id_t func_id);
-const source_loc_t * __csi_get_func_exit_source_loc(const csi_id_t func_exit_id);
-const source_loc_t * __csi_get_bb_source_loc(const csi_id_t bb_id);
-const source_loc_t * __csi_get_callsite_source_loc(const csi_id_t call_id);
-const source_loc_t * __csi_get_load_source_loc(const csi_id_t load_id);
-const source_loc_t * __csi_get_store_source_loc(const csi_id_t store_id);
-const source_loc_t * __csi_get_detach_source_loc(const csi_id_t detach_id);
-const source_loc_t * __csi_get_task_source_loc(const csi_id_t task_id);
-const source_loc_t * __csi_get_task_exit_source_loc(const csi_id_t task_exit_id);
-const source_loc_t * __csi_get_detach_continue_source_loc(const csi_id_t detach_continue_id);
-const source_loc_t * __csi_get_sync_source_loc(const csi_id_t sync_id);
-const source_loc_t * __csi_get_alloca_source_loc(const csi_id_t alloca_id);
-const source_loc_t * __csi_get_allocfn_source_loc(const csi_id_t allocfn_id);
-const source_loc_t * __csi_get_free_source_loc(const csi_id_t free_id);
+const source_loc_t *__csi_get_func_source_loc(const csi_id_t func_id);
+const source_loc_t *__csi_get_func_exit_source_loc(const csi_id_t func_exit_id);
+const source_loc_t *__csi_get_bb_source_loc(const csi_id_t bb_id);
+const source_loc_t *__csi_get_callsite_source_loc(const csi_id_t call_id);
+const source_loc_t *__csi_get_load_source_loc(const csi_id_t load_id);
+const source_loc_t *__csi_get_store_source_loc(const csi_id_t store_id);
+const source_loc_t *__csi_get_detach_source_loc(const csi_id_t detach_id);
+const source_loc_t *__csi_get_task_source_loc(const csi_id_t task_id);
+const source_loc_t *__csi_get_task_exit_source_loc(const csi_id_t task_exit_id);
+const source_loc_t *
+__csi_get_detach_continue_source_loc(const csi_id_t detach_continue_id);
+const source_loc_t *__csi_get_sync_source_loc(const csi_id_t sync_id);
+const source_loc_t *__csi_get_alloca_source_loc(const csi_id_t alloca_id);
+const source_loc_t *__csi_get_allocfn_source_loc(const csi_id_t allocfn_id);
+const source_loc_t *__csi_get_free_source_loc(const csi_id_t free_id);
 const sizeinfo_t *__csi_get_bb_sizeinfo(const csi_id_t bb_id);
 
 const char *__csan_get_allocfn_str(const allocfn_prop_t prop);
@@ -250,5 +236,3 @@ const char *__csan_get_free_str(const free_prop_t prop);
 //#define CSI_PROP_LOAD_READ_BEFORE_WRITE_IN_BB 0x1
 
 EXTERN_C_END
-
-#endif
