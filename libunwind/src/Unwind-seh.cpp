@@ -49,6 +49,10 @@ using namespace libunwind;
 /// Class of foreign exceptions based on unrecognized SEH exceptions.
 static const uint64_t kSEHExceptionClass = 0x434C4E4753454800; // CLNGSEH\0
 
+// libunwind does not and should not depend on C++ library which means that we
+// need our own declaration of global placement new.
+void *operator new(size_t, void*);
+
 /// Exception cleanup routine used by \c _GCC_specific_handler to
 /// free foreign exceptions.
 static void seh_exc_cleanup(_Unwind_Reason_Code urc, _Unwind_Exception *exc) {

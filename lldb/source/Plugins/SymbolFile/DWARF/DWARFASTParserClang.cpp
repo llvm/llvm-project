@@ -1663,7 +1663,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
 
         DWARFFormValue type_die_form;
-        int64_t first_index = 0;
         uint32_t byte_stride = 0;
         uint32_t bit_stride = 0;
         bool is_vector = false;
@@ -1733,7 +1732,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           if (element_type) {
             auto array_info = ParseChildArrayInfo(die);
             if (array_info) {
-              first_index = array_info->first_index;
               byte_stride = array_info->byte_stride;
               bit_stride = array_info->bit_stride;
             }
