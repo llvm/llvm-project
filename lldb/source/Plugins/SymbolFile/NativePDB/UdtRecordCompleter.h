@@ -66,6 +66,10 @@ public:
 private:
   clang::QualType AddBaseClassForTypeIndex(llvm::codeview::TypeIndex ti,
                                            llvm::codeview::MemberAccess access);
+  void AddMethod(llvm::StringRef name, llvm::codeview::TypeIndex type_idx,
+                 llvm::codeview::MemberAccess access,
+                 llvm::codeview::MethodOptions options,
+                 llvm::codeview::MemberAttributes attrs);
 };
 
 } // namespace npdb
