@@ -847,6 +847,10 @@ static bool unswitchAllTrivialConditions(Loop &L, DominatorTree &DT,
     // Check if there are any side-effecting instructions (e.g. stores, calls,
     // volatile loads) in the part of the loop that the code *would* execute
     // without unswitching.
+    if (MSSAU) // Possible early exit with MSSA
+      if (auto *Defs = MSSAU->getMemorySSA()->getBlockDefs(CurrentBB))
+        if (!isa<MemoryPhi>(*Defs->begin()) || (++Defs->begin() != Defs->end()))
+          return Changed;
     if (llvm::any_of(*CurrentBB,
                      [](Instruction &I) { return I.mayHaveSideEffects(); }))
       return Changed;

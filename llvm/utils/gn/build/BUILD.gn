@@ -122,7 +122,8 @@ config("compiler_defaults") {
     }
   }
 
-  if (use_lld) {
+  # On Windows, the linker is not invoked through the compiler driver.
+  if (use_lld && host_os != "win") {
     ldflags += [ "-fuse-ld=lld" ]
   }
 }

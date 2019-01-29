@@ -1845,10 +1845,8 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB) {
   // return is the first instruction in the block.
   if (PN) {
     BasicBlock::iterator BI = BB->begin();
-    do { ++BI; } while (isa<DbgInfoIntrinsic>(BI));
-    if (&*BI == BCI)
-      // Also skip over the bitcast.
-      ++BI;
+    // Skip over debug and the bitcast.
+    do { ++BI; } while (isa<DbgInfoIntrinsic>(BI) || &*BI == BCI);
     if (&*BI != RetI)
       return false;
   } else {

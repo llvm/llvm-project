@@ -244,8 +244,6 @@ class ARMFastISel final : public FastISel {
 
 } // end anonymous namespace
 
-#include "ARMGenCallingConv.inc"
-
 // DefinesOptionalPredicate - This is different from DefinesPredicate in that
 // we don't care about implicit defs here, just places we'll need to add a
 // default CCReg argument. Sets CPSR if we're setting CPSR instead of CCR.

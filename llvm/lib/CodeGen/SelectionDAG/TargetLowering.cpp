@@ -5287,6 +5287,12 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::SUB, dl, VT, Max, RHS);
   }
 
+  if (Opcode == ISD::UADDSAT && isOperationLegalOrCustom(ISD::UMIN, VT)) {
+    SDValue InvRHS = DAG.getNOT(dl, RHS, VT);
+    SDValue Min = DAG.getNode(ISD::UMIN, dl, VT, LHS, InvRHS);
+    return DAG.getNode(ISD::ADD, dl, VT, Min, RHS);
+  }
+
   if (VT.isVector()) {
     // TODO: Consider not scalarizing here.
     return SDValue();

@@ -926,7 +926,20 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     return true;
   }
+  case Intrinsic::amdgcn_ds_append:
+  case Intrinsic::amdgcn_ds_consume: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(CI.getType());
+    Info.ptrVal = CI.getOperand(0);
+    Info.align = 0;
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
+    const ConstantInt *Vol = dyn_cast<ConstantInt>(CI.getOperand(1));
+    if (!Vol || !Vol->isZero())
+      Info.flags |= MachineMemOperand::MOVolatile;
+
+    return true;
+  }
   default:
     return false;
   }
@@ -1978,7 +1991,8 @@ SDValue SITargetLowering::LowerFormalArguments(
       auto *ParamTy =
         dyn_cast<PointerType>(FType->getParamType(Ins[i].getOrigArgIndex()));
       if (Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS &&
-          ParamTy && ParamTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+          ParamTy && (ParamTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
+                      ParamTy->getAddressSpace() == AMDGPUAS::REGION_ADDRESS)) {
         // On SI local pointers are just offsets into LDS, so they are always
         // less than 16-bits.  On CI and newer they could potentially be
         // real pointers, so we can't guarantee their size.
@@ -5291,6 +5305,59 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::INTERP_P2, DL, MVT::f32, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(4),
                        Glue);
+  }
+  case Intrinsic::amdgcn_interp_p1_f16: {
+    SDValue M0 = copyToM0(DAG, DAG.getEntryNode(), DL, Op.getOperand(5));
+    SDValue Glue = M0.getValue(1);
+    if (getSubtarget()->getLDSBankCount() == 16) {
+      // 16 bank LDS
+      SDValue S = DAG.getNode(AMDGPUISD::INTERP_MOV, DL, MVT::f32,
+                              DAG.getConstant(2, DL, MVT::i32), // P0
+                              Op.getOperand(2), // Attrchan
+                              Op.getOperand(3), // Attr
+                              Glue);
+      SDValue Ops[] = {
+        Op.getOperand(1), // Src0
+        Op.getOperand(2), // Attrchan
+        Op.getOperand(3), // Attr
+        DAG.getConstant(0, DL, MVT::i32), // $src0_modifiers
+        S, // Src2 - holds two f16 values selected by high
+        DAG.getConstant(0, DL, MVT::i32), // $src2_modifiers
+        Op.getOperand(4), // high
+        DAG.getConstant(0, DL, MVT::i1), // $clamp
+        DAG.getConstant(0, DL, MVT::i32) // $omod
+      };
+      return DAG.getNode(AMDGPUISD::INTERP_P1LV_F16, DL, MVT::f32, Ops);
+    } else {
+      // 32 bank LDS
+      SDValue Ops[] = {
+        Op.getOperand(1), // Src0
+        Op.getOperand(2), // Attrchan
+        Op.getOperand(3), // Attr
+        DAG.getConstant(0, DL, MVT::i32), // $src0_modifiers
+        Op.getOperand(4), // high
+        DAG.getConstant(0, DL, MVT::i1), // $clamp
+        DAG.getConstant(0, DL, MVT::i32), // $omod
+        Glue
+      };
+      return DAG.getNode(AMDGPUISD::INTERP_P1LL_F16, DL, MVT::f32, Ops);
+    }
+  }
+  case Intrinsic::amdgcn_interp_p2_f16: {
+    SDValue M0 = copyToM0(DAG, DAG.getEntryNode(), DL, Op.getOperand(6));
+    SDValue Glue = SDValue(M0.getNode(), 1);
+    SDValue Ops[] = {
+      Op.getOperand(2), // Src0
+      Op.getOperand(3), // Attrchan
+      Op.getOperand(4), // Attr
+      DAG.getConstant(0, DL, MVT::i32), // $src0_modifiers
+      Op.getOperand(1), // Src2
+      DAG.getConstant(0, DL, MVT::i32), // $src2_modifiers
+      Op.getOperand(5), // high
+      DAG.getConstant(0, DL, MVT::i1), // $clamp
+      Glue
+    };
+    return DAG.getNode(AMDGPUISD::INTERP_P2_F16, DL, MVT::f16, Ops);
   }
   case Intrinsic::amdgcn_sin:
     return DAG.getNode(AMDGPUISD::SIN_HW, DL, VT, Op.getOperand(1));

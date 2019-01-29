@@ -197,7 +197,9 @@ toolchain("win") {
 
   if (clang_base_path != "") {
     cl = "$clang_base_path/bin/clang-cl"
-    link = "$clang_base_path/bin/lld-link"
+    if (use_lld) {
+      link = "$clang_base_path/bin/lld-link"
+    }
   }
 
   if (use_goma) {

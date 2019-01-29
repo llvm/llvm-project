@@ -5320,6 +5320,21 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       return nullptr;
     }
 
+    // If the Value is a frame index, we can create a FrameIndex debug value
+    // without relying on the DAG at all.
+    if (const AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
+      auto SI = FuncInfo.StaticAllocaMap.find(AI);
+      if (SI != FuncInfo.StaticAllocaMap.end()) {
+        auto SDV =
+            DAG.getFrameIndexDbgValue(Variable, Expression, SI->second,
+                                      /*IsIndirect*/ false, dl, SDNodeOrder);
+        // Do not attach the SDNodeDbgValue to an SDNode: this variable location
+        // is still available even if the SDNode gets optimized out.
+        DAG.AddDbgValue(SDV, nullptr, false);
+        return nullptr;
+      }
+    }
+
     // Do not use getValue() in here; we don't want to generate code at
     // this point if it hasn't been done yet.
     SDValue N = NodeMap[V];

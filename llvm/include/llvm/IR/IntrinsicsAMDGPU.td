@@ -406,8 +406,19 @@ class AMDGPUDSOrderedIntrinsic : Intrinsic<
   [NoCapture<0>]
 >;
 
+class AMDGPUDSAppendConsumedIntrinsic : Intrinsic<
+  [llvm_i32_ty],
+  [llvm_anyptr_ty, // LDS or GDS ptr
+   llvm_i1_ty], // isVolatile
+   [IntrConvergent, IntrArgMemOnly, NoCapture<0>]
+>;
+
 def int_amdgcn_ds_ordered_add : AMDGPUDSOrderedIntrinsic;
 def int_amdgcn_ds_ordered_swap : AMDGPUDSOrderedIntrinsic;
+
+// The pointer argument is assumed to be dynamically uniform if a VGPR.
+def int_amdgcn_ds_append : AMDGPUDSAppendConsumedIntrinsic;
+def int_amdgcn_ds_consume : AMDGPUDSAppendConsumedIntrinsic;
 
 def int_amdgcn_ds_fadd : AMDGPULDSF32Intrin<"__builtin_amdgcn_ds_faddf">;
 def int_amdgcn_ds_fmin : AMDGPULDSF32Intrin<"__builtin_amdgcn_ds_fminf">;
@@ -1164,6 +1175,20 @@ def int_amdgcn_interp_p2 :
             [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrSpeculatable]>;
           // See int_amdgcn_v_interp_p1 for why this is IntrNoMem.
+
+// __builtin_amdgcn_interp_p1_f16 <i>, <attr_chan>, <attr>, <high>, <m0>
+def int_amdgcn_interp_p1_f16 :
+  GCCBuiltin<"__builtin_amdgcn_interp_p1_f16">,
+  Intrinsic<[llvm_float_ty],
+            [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
+// __builtin_amdgcn_interp_p2_f16 <p1>, <j>, <attr_chan>, <attr>, <high>, <m0>
+def int_amdgcn_interp_p2_f16 :
+  GCCBuiltin<"__builtin_amdgcn_interp_p2_f16">,
+  Intrinsic<[llvm_half_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable]>;
 
 // Pixel shaders only: whether the current pixel is live (i.e. not a helper
 // invocation for derivative computation).

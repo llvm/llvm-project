@@ -317,6 +317,8 @@ std::error_code ELFDumper<ELFT>::dumpCommonSection(const Elf_Shdr *Shdr,
   S.Flags = Shdr->sh_flags;
   S.Address = Shdr->sh_addr;
   S.AddressAlign = Shdr->sh_addralign;
+  if (Shdr->sh_entsize)
+    S.EntSize = static_cast<llvm::yaml::Hex64>(Shdr->sh_entsize);
 
   auto NameOrErr = getUniquedSectionName(Shdr);
   if (!NameOrErr)

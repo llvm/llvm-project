@@ -1,8 +1,4 @@
 ; REQUIRES: object-emission
-; This test is failing for powerpc64, because a location list for the
-; variable 'c' is not generated at all. Temporary marking this test as XFAIL
-; for powerpc, until PR21881 is fixed.
-; XFAIL: powerpc64
 
 ; RUN: %llc_dwarf -O2  -dwarf-version 2 -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s  --check-prefix=DWARF23
 ; RUN: %llc_dwarf -O2  -dwarf-version 3 -filetype=obj < %s | llvm-dwarfdump - | FileCheck %s  --check-prefix=DWARF23

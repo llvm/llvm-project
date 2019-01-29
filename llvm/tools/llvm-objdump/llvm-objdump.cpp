@@ -185,6 +185,10 @@ static cl::alias SectionHeadersShorter("h",
                                        cl::NotHidden,
                                        cl::aliasopt(SectionHeaders));
 
+static cl::opt<bool>
+    ShowLMA("show-lma",
+            cl::desc("Display LMA column when dumping ELF section headers"));
+
 cl::list<std::string>
 llvm::FilterSections("section", cl::desc("Operate on the specified sections only. "
                                          "With -macho dump segment,section"));
@@ -1517,15 +1521,34 @@ void llvm::printDynamicRelocations(const ObjectFile *Obj) {
   }
 }
 
+// Returns true if we need to show LMA column when dumping section headers. We
+// show it only when the platform is ELF and either we have at least one section
+// whose VMA and LMA are different and/or when --show-lma flag is used.
+static bool shouldDisplayLMA(const ObjectFile *Obj) {
+  if (!Obj->isELF())
+    return false;
+  for (const SectionRef &S : ToolSectionFilter(*Obj))
+    if (S.getAddress() != getELFSectionLMA(S))
+      return true;
+  return ShowLMA;
+}
+
 void llvm::printSectionHeaders(const ObjectFile *Obj) {
-  outs() << "Sections:\n"
-            "Idx Name          Size      Address          Type\n";
+  bool HasLMAColumn = shouldDisplayLMA(Obj);
+  if (HasLMAColumn)
+    outs() << "Sections:\n"
+              "Idx Name          Size     VMA              LMA              "
+              "Type\n";
+  else
+    outs() << "Sections:\n"
+              "Idx Name          Size     VMA          Type\n";
+
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
     StringRef Name;
     error(Section.getName(Name));
-    uint64_t Address = Section.getAddress();
+    uint64_t VMA = Section.getAddress();
     if (shouldAdjustVA(Section))
-      Address += AdjustVMA;
+      VMA += AdjustVMA;
 
     uint64_t Size = Section.getSize();
     bool Text = Section.isText();
@@ -1533,9 +1556,16 @@ void llvm::printSectionHeaders(const ObjectFile *Obj) {
     bool BSS = Section.isBSS();
     std::string Type = (std::string(Text ? "TEXT " : "") +
                         (Data ? "DATA " : "") + (BSS ? "BSS" : ""));
-    outs() << format("%3d %-13s %08" PRIx64 " %016" PRIx64 " %s\n",
-                     (unsigned)Section.getIndex(), Name.str().c_str(), Size,
-                     Address, Type.c_str());
+
+    if (HasLMAColumn)
+      outs() << format("%3d %-13s %08" PRIx64 " %016" PRIx64 " %016" PRIx64
+                       " %s\n",
+                       (unsigned)Section.getIndex(), Name.str().c_str(), Size,
+                       VMA, getELFSectionLMA(Section), Type.c_str());
+    else
+      outs() << format("%3d %-13s %08" PRIx64 " %016" PRIx64 " %s\n",
+                       (unsigned)Section.getIndex(), Name.str().c_str(), Size,
+                       VMA, Type.c_str());
   }
   outs() << "\n";
 }
