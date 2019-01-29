@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_REPRODUCER_H
 #define LLDB_UTILITY_REPRODUCER_H
 
+#include "lldb/Utility/FileCollector.h"
 #include "lldb/Utility/FileSpec.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -79,6 +80,35 @@ public:
 
 protected:
   using ProviderBase::ProviderBase; // Inherit constructor.
+};
+
+struct FileInfo {
+  static const char *name;
+  static const char *file;
+};
+
+class FileProvider : public Provider<FileProvider> {
+public:
+  typedef FileInfo info;
+
+  FileProvider(const FileSpec &directory)
+      : Provider(directory),
+        m_collector(directory.CopyByAppendingPathComponent("root")) {}
+
+  FileCollector &GetFileCollector() { return m_collector; }
+
+  void Keep() override {
+    auto mapping = GetRoot().CopyByAppendingPathComponent(info::file);
+    // Temporary files that are removed during execution can cause copy errors.
+    if (auto ec = m_collector.CopyFiles(/*stop_on_error=*/false))
+      return;
+    m_collector.WriteMapping(mapping);
+  }
+
+  static char ID;
+
+private:
+  FileCollector m_collector;
 };
 
 /// The generator is responsible for the logic needed to generate a

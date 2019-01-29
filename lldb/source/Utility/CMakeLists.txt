@@ -54,6 +54,7 @@ add_lldb_library(lldbUtility
   DataEncoder.cpp
   DataExtractor.cpp
   Environment.cpp
+  FileCollector.cpp
   Event.cpp
   FileSpec.cpp
   IOObject.cpp
