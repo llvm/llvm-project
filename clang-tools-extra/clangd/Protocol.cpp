@@ -421,6 +421,9 @@ bool fromJSON(const llvm::json::Value &Params, WorkspaceEdit &R) {
 
 const llvm::StringLiteral ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND =
     "clangd.applyFix";
+const llvm::StringLiteral ExecuteCommandParams::CLANGD_APPLY_TWEAK =
+    "clangd.applyTweak";
+
 bool fromJSON(const llvm::json::Value &Params, ExecuteCommandParams &R) {
   llvm::json::ObjectMapper O(Params);
   if (!O || !O.map("command", R.command))
@@ -431,6 +434,8 @@ bool fromJSON(const llvm::json::Value &Params, ExecuteCommandParams &R) {
     return Args && Args->size() == 1 &&
            fromJSON(Args->front(), R.workspaceEdit);
   }
+  if (R.command == ExecuteCommandParams::CLANGD_APPLY_TWEAK)
+    return Args && Args->size() == 1 && fromJSON(Args->front(), R.tweakArgs);
   return false; // Unrecognized command.
 }
 
@@ -497,10 +502,13 @@ llvm::json::Value toJSON(const Command &C) {
   auto Cmd = llvm::json::Object{{"title", C.title}, {"command", C.command}};
   if (C.workspaceEdit)
     Cmd["arguments"] = {*C.workspaceEdit};
+  if (C.tweakArgs)
+    Cmd["arguments"] = {*C.tweakArgs};
   return std::move(Cmd);
 }
 
 const llvm::StringLiteral CodeAction::QUICKFIX_KIND = "quickfix";
+const llvm::StringLiteral CodeAction::REFACTOR_KIND = "refactor";
 
 llvm::json::Value toJSON(const CodeAction &CA) {
   auto CodeAction = llvm::json::Object{{"title", CA.title}};
@@ -542,6 +550,17 @@ llvm::json::Value toJSON(const WorkspaceEdit &WE) {
   for (auto &Change : *WE.changes)
     FileChanges[Change.first] = llvm::json::Array(Change.second);
   return llvm::json::Object{{"changes", std::move(FileChanges)}};
+}
+
+bool fromJSON(const llvm::json::Value &Params, TweakArgs &A) {
+  llvm::json::ObjectMapper O(Params);
+  return O && O.map("file", A.file) && O.map("selection", A.selection) &&
+         O.map("tweakID", A.tweakID);
+}
+
+llvm::json::Value toJSON(const TweakArgs &A) {
+  return llvm::json::Object{
+      {"tweakID", A.tweakID}, {"selection", A.selection}, {"file", A.file}};
 }
 
 llvm::json::Value toJSON(const ApplyWorkspaceEditParams &Params) {

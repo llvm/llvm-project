@@ -229,12 +229,31 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     });
 
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
+    .narrowScalarIf([](const LegalityQuery &Query) {
+        unsigned Size = Query.Types[0].getSizeInBits();
+        unsigned MemSize = Query.MMODescrs[0].SizeInBits;
+        return (Size > 32 && MemSize < Size);
+      },
+      [](const LegalityQuery &Query) {
+        return std::make_pair(0, LLT::scalar(32));
+      })
     .legalIf([=, &ST](const LegalityQuery &Query) {
         const LLT &Ty0 = Query.Types[0];
 
+        unsigned Size = Ty0.getSizeInBits();
+        unsigned MemSize = Query.MMODescrs[0].SizeInBits;
+        if (Size > 32 && MemSize < Size)
+          return false;
+
+        if (Ty0.isVector() && Size != MemSize)
+          return false;
+
         // TODO: Decompose private loads into 4-byte components.
         // TODO: Illegal flat loads on SI
-        switch (Ty0.getSizeInBits()) {
+        switch (MemSize) {
+        case 8:
+        case 16:
+          return Size == 32;
         case 32:
         case 64:
         case 128:
@@ -250,7 +269,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
         default:
           return false;
         }
-      });
+      })
+    .clampScalar(0, S32, S64);
 
 
   auto &ExtLoads = getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})

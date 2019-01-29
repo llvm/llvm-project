@@ -120,3 +120,67 @@ body: |
     %1:_(<3 x s32>) = COPY $vgpr2_vgpr3_vgpr4
     G_STORE %1, %0 :: (store 12, align 4, addrspace 1)
 ...
+
+---
+name: test_truncstore_global_s64_to_s8
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_truncstore_global_s64_to_s8
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK: G_STORE [[TRUNC]](s32), [[COPY]](p1) :: (store 1, addrspace 1)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(s64) = COPY $vgpr2_vgpr3
+    G_STORE %1, %0 :: (store 1, addrspace 1)
+...
+
+---
+name: test_truncstore_global_s64_to_s16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_truncstore_global_s64_to_s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK: G_STORE [[TRUNC]](s32), [[COPY]](p1) :: (store 1, addrspace 1)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(s64) = COPY $vgpr2_vgpr3
+    G_STORE %1, %0 :: (store 1, addrspace 1)
+...
+
+---
+name: test_truncstore_global_s64_to_s32
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_truncstore_global_s64_to_s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK: G_STORE [[TRUNC]](s32), [[COPY]](p1) :: (store 4, addrspace 1)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(s64) = COPY $vgpr2_vgpr3
+    G_STORE %1, %0 :: (store 4, addrspace 1)
+...
+
+---
+name: test_truncstore_global_s128_to_s16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
+
+    ; CHECK-LABEL: name: test_truncstore_global_s128_to_s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s128) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s128)
+    ; CHECK: G_STORE [[TRUNC]](s32), [[COPY]](p1) :: (store 1, addrspace 1)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(s128) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
+    G_STORE %1, %0 :: (store 1, addrspace 1)
+...

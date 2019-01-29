@@ -52,8 +52,8 @@ Command Guide: http://llvm.org/cmds/lit.html.
 Source
 ======
 
-The *lit* source is available as part of LLVM, in the LLVM SVN repository:
-http://llvm.org/svn/llvm-project/llvm/trunk/utils/lit.
+The *lit* source is available as part of LLVM, in the LLVM source repository:
+https://github.com/llvm/llvm-project/tree/master/llvm/utils/lit
 """,
 
     classifiers=[

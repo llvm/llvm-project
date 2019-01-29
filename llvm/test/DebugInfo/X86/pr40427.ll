@@ -9,6 +9,8 @@
 
 ; CHECK: ![[DBGVAR:[0-9]+]] = !DILocalVariable(name: "bees",
 
+target triple = "x86_64-unknown-linux-gnu"
+
 define i16 @lolwat(i1 %spoons, i64 *%bees, i16 %yellow, i64 *%more) {
 entry:
   br i1 %spoons, label %trueb, label %falseb

@@ -30,7 +30,7 @@ __extension__ typedef __int128 __tsan_atomic128;
 #endif
 
 // Part of ABI, do not change.
-// http://llvm.org/viewvc/llvm-project/libcxx/trunk/include/atomic?view=markup
+// https://github.com/llvm/llvm-project/blob/master/libcxx/include/atomic
 typedef enum {
   __tsan_memory_order_relaxed,
   __tsan_memory_order_consume,

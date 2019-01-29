@@ -8,11 +8,14 @@
 
 #include "ClangdLSPServer.h"
 #include "Diagnostics.h"
+#include "Protocol.h"
 #include "SourceCode.h"
 #include "Trace.h"
 #include "URI.h"
+#include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -28,6 +31,28 @@ public:
   std::error_code convertToErrorCode() const override {
     return std::make_error_code(std::errc::operation_canceled);
   }
+};
+
+/// Transforms a tweak into a code action that would apply it if executed.
+/// EXPECTS: T.prepare() was called and returned true.
+CodeAction toCodeAction(const ClangdServer::TweakRef &T, const URIForFile &File,
+                        Range Selection) {
+  CodeAction CA;
+  CA.title = T.Title;
+  CA.kind = CodeAction::REFACTOR_KIND;
+  // This tweak may have an expensive second stage, we only run it if the user
+  // actually chooses it in the UI. We reply with a command that would run the
+  // corresponding tweak.
+  // FIXME: for some tweaks, computing the edits is cheap and we could send them
+  //        directly.
+  CA.command.emplace();
+  CA.command->title = T.Title;
+  CA.command->command = Command::CLANGD_APPLY_TWEAK;
+  CA.command->tweakArgs.emplace();
+  CA.command->tweakArgs->file = File;
+  CA.command->tweakArgs->tweakID = T.ID;
+  CA.command->tweakArgs->selection = Selection;
+  return CA;
 };
 
 void adjustSymbolKinds(llvm::MutableArrayRef<DocumentSymbol> Syms,
@@ -338,7 +363,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"referencesProvider", true},
             {"executeCommandProvider",
              llvm::json::Object{
-                 {"commands", {ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND}},
+                 {"commands",
+                  {ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND,
+                   ExecuteCommandParams::CLANGD_APPLY_TWEAK}},
              }},
         }}}});
 }
@@ -400,7 +427,7 @@ void ClangdLSPServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
 
 void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
                                 Callback<llvm::json::Value> Reply) {
-  auto ApplyEdit = [&](WorkspaceEdit WE) {
+  auto ApplyEdit = [this](WorkspaceEdit WE) {
     ApplyWorkspaceEditParams Edit;
     Edit.edit = std::move(WE);
     // Ideally, we would wait for the response and if there is no error, we
@@ -420,6 +447,31 @@ void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
 
     Reply("Fix applied.");
     ApplyEdit(*Params.workspaceEdit);
+  } else if (Params.command == ExecuteCommandParams::CLANGD_APPLY_TWEAK &&
+             Params.tweakArgs) {
+    auto Code = DraftMgr.getDraft(Params.tweakArgs->file.file());
+    if (!Code)
+      return Reply(llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "trying to apply a code action for a non-added file"));
+
+    auto Action = [ApplyEdit](decltype(Reply) Reply, URIForFile File,
+                              std::string Code,
+                              llvm::Expected<tooling::Replacements> R) {
+      if (!R)
+        return Reply(R.takeError());
+
+      WorkspaceEdit WE;
+      WE.changes.emplace();
+      (*WE.changes)[File.uri()] = replacementsToEdits(Code, *R);
+
+      Reply("Fix applied.");
+      ApplyEdit(std::move(WE));
+    };
+    Server->applyTweak(Params.tweakArgs->file.file(),
+                       Params.tweakArgs->selection, Params.tweakArgs->tweakID,
+                       Bind(Action, std::move(Reply), Params.tweakArgs->file,
+                            std::move(*Code)));
   } else {
     // We should not get here because ExecuteCommandParams would not have
     // parsed in the first place and this handler should not be called. But if
@@ -601,28 +653,53 @@ static llvm::Optional<Command> asCommand(const CodeAction &Action) {
 
 void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
                                    Callback<llvm::json::Value> Reply) {
-  auto Code = DraftMgr.getDraft(Params.textDocument.uri.file());
+  URIForFile File = Params.textDocument.uri;
+  auto Code = DraftMgr.getDraft(File.file());
   if (!Code)
     return Reply(llvm::make_error<LSPError>(
         "onCodeAction called for non-added file", ErrorCode::InvalidParams));
   // We provide a code action for Fixes on the specified diagnostics.
-  std::vector<CodeAction> Actions;
+  std::vector<CodeAction> FixIts;
   for (const Diagnostic &D : Params.context.diagnostics) {
-    for (auto &F : getFixes(Params.textDocument.uri.file(), D)) {
-      Actions.push_back(toCodeAction(F, Params.textDocument.uri));
-      Actions.back().diagnostics = {D};
+    for (auto &F : getFixes(File.file(), D)) {
+      FixIts.push_back(toCodeAction(F, Params.textDocument.uri));
+      FixIts.back().diagnostics = {D};
     }
   }
 
-  if (SupportsCodeAction)
-    Reply(llvm::json::Array(Actions));
-  else {
-    std::vector<Command> Commands;
-    for (const auto &Action : Actions)
-      if (auto Command = asCommand(Action))
-        Commands.push_back(std::move(*Command));
-    Reply(llvm::json::Array(Commands));
-  }
+  // Now enumerate the semantic code actions.
+  auto ConsumeActions =
+      [this](decltype(Reply) Reply, URIForFile File, std::string Code,
+             Range Selection, std::vector<CodeAction> FixIts,
+             llvm::Expected<std::vector<ClangdServer::TweakRef>> Tweaks) {
+        if (!Tweaks) {
+          auto Err = Tweaks.takeError();
+          if (Err.isA<CancelledError>())
+            return Reply(std::move(Err)); // do no logging, this is expected.
+          elog("error while getting semantic code actions: {0}",
+               std::move(Err));
+          return Reply(llvm::json::Array(FixIts));
+        }
+
+        std::vector<CodeAction> Actions = std::move(FixIts);
+        Actions.reserve(Actions.size() + Tweaks->size());
+        for (const auto &T : *Tweaks)
+          Actions.push_back(toCodeAction(T, File, Selection));
+
+        if (SupportsCodeAction)
+          return Reply(llvm::json::Array(Actions));
+        std::vector<Command> Commands;
+        for (const auto &Action : Actions) {
+          if (auto Command = asCommand(Action))
+            Commands.push_back(std::move(*Command));
+        }
+        return Reply(llvm::json::Array(Commands));
+      };
+
+  Server->enumerateTweaks(File.file(), Params.range,
+                          Bind(ConsumeActions, std::move(Reply),
+                               std::move(File), std::move(*Code), Params.range,
+                               std::move(FixIts)));
 }
 
 void ClangdLSPServer::onCompletion(const CompletionParams &Params,

@@ -21,8 +21,10 @@
 #include "index/Background.h"
 #include "index/FileIndex.h"
 #include "index/Index.h"
+#include "refactor/Tweak.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -210,6 +212,18 @@ public:
   /// \p NewName.
   void rename(PathRef File, Position Pos, llvm::StringRef NewName,
               Callback<std::vector<tooling::Replacement>> CB);
+
+  struct TweakRef {
+    TweakID ID;        /// ID to pass for applyTweak.
+    std::string Title; /// A single-line message to show in the UI.
+  };
+  /// Enumerate the code tweaks available to the user at a specified point.
+  void enumerateTweaks(PathRef File, Range Sel,
+                       Callback<std::vector<TweakRef>> CB);
+
+  /// Apply the code tweak with a specified \p ID.
+  void applyTweak(PathRef File, Range Sel, TweakID ID,
+                  Callback<tooling::Replacements> CB);
 
   /// Only for testing purposes.
   /// Waits until all requests to worker thread are finished and dumps AST for

@@ -794,7 +794,8 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
     SymbolDetails NewMacro;
     NewMacro.name = Macro.Name;
     llvm::SmallString<32> USR;
-    if (!index::generateUSRForMacro(NewMacro.name, Loc, SM, USR)) {
+    if (!index::generateUSRForMacro(NewMacro.name,
+                                    Macro.Info->getDefinitionLoc(), SM, USR)) {
       NewMacro.USR = USR.str();
       NewMacro.ID = SymbolID(NewMacro.USR);
     }

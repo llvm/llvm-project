@@ -198,6 +198,30 @@ llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
   return OS << "INFO CODE_ID " << R.ID.GetAsString();
 }
 
+llvm::Optional<FileRecord> FileRecord::parse(llvm::StringRef Line) {
+  // FILE number name
+  llvm::StringRef Str;
+  std::tie(Str, Line) = getToken(Line);
+  if (toToken(Str) != Token::File)
+    return llvm::None;
+
+  size_t Number;
+  std::tie(Str, Line) = getToken(Line);
+  if (!to_integer(Str, Number))
+    return llvm::None;
+
+  llvm::StringRef Name = Line.trim();
+  if (Name.empty())
+    return llvm::None;
+
+  return FileRecord(Number, Name);
+}
+
+llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
+                                        const FileRecord &R) {
+  return OS << "FILE " << R.Number << " " << R.Name;
+}
+
 static bool parsePublicOrFunc(llvm::StringRef Line, bool &Multiple,
                               lldb::addr_t &Address, lldb::addr_t *Size,
                               lldb::addr_t &ParamSize, llvm::StringRef &Name) {
@@ -257,6 +281,41 @@ llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
   return OS << llvm::formatv("FUNC {0}{1:x-} {2:x-} {3:x-} {4}",
                              R.Multiple ? "m " : "", R.Address, R.Size,
                              R.ParamSize, R.Name);
+}
+
+llvm::Optional<LineRecord> LineRecord::parse(llvm::StringRef Line) {
+  lldb::addr_t Address;
+  llvm::StringRef Str;
+  std::tie(Str, Line) = getToken(Line);
+  if (!to_integer(Str, Address, 16))
+    return llvm::None;
+
+  lldb::addr_t Size;
+  std::tie(Str, Line) = getToken(Line);
+  if (!to_integer(Str, Size, 16))
+    return llvm::None;
+
+  uint32_t LineNum;
+  std::tie(Str, Line) = getToken(Line);
+  if (!to_integer(Str, LineNum))
+    return llvm::None;
+
+  size_t FileNum;
+  std::tie(Str, Line) = getToken(Line);
+  if (!to_integer(Str, FileNum))
+    return llvm::None;
+
+  return LineRecord(Address, Size, LineNum, FileNum);
+}
+
+bool breakpad::operator==(const LineRecord &L, const LineRecord &R) {
+  return L.Address == R.Address && L.Size == R.Size && L.LineNum == R.LineNum &&
+         L.FileNum == R.FileNum;
+}
+llvm::raw_ostream &breakpad::operator<<(llvm::raw_ostream &OS,
+                                        const LineRecord &R) {
+  return OS << llvm::formatv("{0:x-} {1:x-} {2} {3}", R.Address, R.Size,
+                             R.LineNum, R.FileNum);
 }
 
 llvm::Optional<PublicRecord> PublicRecord::parse(llvm::StringRef Line) {

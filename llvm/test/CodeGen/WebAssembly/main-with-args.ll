@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -wasm-temporary-workarounds=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false | FileCheck %s
 
 ; Test that main function with expected signature is not wrapped
 

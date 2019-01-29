@@ -1,0 +1,14 @@
+# RUN: yaml2obj %s > %t
+
+# RUN: not llvm-objcopy --rename-section=.foo=.bar --set-section-flags=.foo=alloc %t %t.2 2>&1 | FileCheck %s --check-prefix=SET-FOO
+# RUN: not llvm-objcopy --rename-section=.foo=.bar --set-section-flags=.bar=alloc %t %t.2 2>&1 | FileCheck %s --check-prefix=SET-BAR
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+
+# SET-FOO: --set-section-flags=.foo conflicts with --rename-section=.foo=.bar.
+# SET-BAR: --set-section-flags=.bar conflicts with --rename-section=.foo=.bar.

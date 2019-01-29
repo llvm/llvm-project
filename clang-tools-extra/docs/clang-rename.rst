@@ -139,8 +139,8 @@ Vim Integration
 
 You can call :program:`clang-rename` directly from Vim! To set up
 :program:`clang-rename` integration for Vim see
-`clang-rename/tool/clang-rename.py
-<https://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-rename/tool/clang-rename.py>`_.
+`clang/tools/clang-rename/clang-rename.py
+<https://github.com/llvm/llvm-project/blob/master/clang/tools/clang-rename/clang-rename.py>`_.
 
 Please note that **you have to save all buffers, in which the replacement will
 happen before running the tool**.
@@ -157,7 +157,7 @@ Emacs Integration
 You can also use :program:`clang-rename` while using Emacs! To set up
 :program:`clang-rename` integration for Emacs see
 `clang-rename/tool/clang-rename.el
-<https://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-rename/tool/clang-rename.el>`_.
+<https://github.com/llvm/llvm-project/blob/master/clang/tools/clang-rename/clang-rename.el>`_.
 
 Once installed, you can point your cursor to symbols you want to rename, press
 `M-X`, type `clang-rename` and new desired name.

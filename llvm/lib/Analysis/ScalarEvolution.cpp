@@ -2294,7 +2294,7 @@ CollectAddOperandsWithScales(DenseMap<const SCEV *, APInt> &M,
 // can't-overflow flags for the operation if possible.
 static SCEV::NoWrapFlags
 StrengthenNoWrapFlags(ScalarEvolution *SE, SCEVTypes Type,
-                      const SmallVectorImpl<const SCEV *> &Ops,
+                      const ArrayRef<const SCEV *> Ops,
                       SCEV::NoWrapFlags Flags) {
   using namespace std::placeholders;
 
@@ -2742,7 +2742,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
 }
 
 const SCEV *
-ScalarEvolution::getOrCreateAddExpr(SmallVectorImpl<const SCEV *> &Ops,
+ScalarEvolution::getOrCreateAddExpr(ArrayRef<const SCEV *> Ops,
                                     SCEV::NoWrapFlags Flags) {
   FoldingSetNodeID ID;
   ID.AddInteger(scAddExpr);
@@ -2764,7 +2764,7 @@ ScalarEvolution::getOrCreateAddExpr(SmallVectorImpl<const SCEV *> &Ops,
 }
 
 const SCEV *
-ScalarEvolution::getOrCreateAddRecExpr(SmallVectorImpl<const SCEV *> &Ops,
+ScalarEvolution::getOrCreateAddRecExpr(ArrayRef<const SCEV *> Ops,
                                        const Loop *L, SCEV::NoWrapFlags Flags) {
   FoldingSetNodeID ID;
   ID.AddInteger(scAddRecExpr);
@@ -2787,7 +2787,7 @@ ScalarEvolution::getOrCreateAddRecExpr(SmallVectorImpl<const SCEV *> &Ops,
 }
 
 const SCEV *
-ScalarEvolution::getOrCreateMulExpr(SmallVectorImpl<const SCEV *> &Ops,
+ScalarEvolution::getOrCreateMulExpr(ArrayRef<const SCEV *> Ops,
                                     SCEV::NoWrapFlags Flags) {
   FoldingSetNodeID ID;
   ID.AddInteger(scMulExpr);
@@ -6971,8 +6971,8 @@ ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E, const SCEV *M,
 /// Allocate memory for BackedgeTakenInfo and copy the not-taken count of each
 /// computable exit into a persistent ExitNotTakenInfo array.
 ScalarEvolution::BackedgeTakenInfo::BackedgeTakenInfo(
-    SmallVectorImpl<ScalarEvolution::BackedgeTakenInfo::EdgeExitInfo>
-        &&ExitCounts,
+    ArrayRef<ScalarEvolution::BackedgeTakenInfo::EdgeExitInfo>
+        ExitCounts,
     bool Complete, const SCEV *MaxCount, bool MaxOrZero)
     : MaxAndComplete(MaxCount, Complete), MaxOrZero(MaxOrZero) {
   using EdgeExitInfo = ScalarEvolution::BackedgeTakenInfo::EdgeExitInfo;

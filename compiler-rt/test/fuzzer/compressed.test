@@ -1,4 +1,5 @@
 REQUIRES: linux
+REQUIRES: zlib
 # Custom mutator should find this bug, w/o custom -- no chance.
 RUN: %cpp_compiler %S/CompressedTest.cpp -o %t-CompressedTestCustom -DCUSTOM_MUTATOR -lz
 RUN: %cpp_compiler %S/CompressedTest.cpp -o %t-CompressedTestPlain -lz
