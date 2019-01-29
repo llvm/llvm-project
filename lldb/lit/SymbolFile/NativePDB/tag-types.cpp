@@ -208,7 +208,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: }
 // CHECK-NEXT: (lldb) type lookup -- Derived
 // CHECK-NEXT: class Derived : public Class {
-// CHECK-NEXT:     Derived &Reference;
+// CHECK:          Derived &Reference;
 // CHECK-NEXT:     OneMember Member;
 // CHECK-NEXT:     const OneMember ConstMember;
 // CHECK-NEXT:     volatile OneMember VolatileMember;
@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT:     OneMember *PtrMember;
 // CHECK-NEXT:     OneMember &RefMember;
 // CHECK-NEXT:     OneMember &&RValueRefMember;
-// CHECK-NEXT: }
+// CHECK:      }
 // CHECK-NEXT: (lldb) type lookup -- Derived2
 // CHECK-NEXT: class Derived2 : protected Class, private Struct {
 // CHECK-NEXT:     static unsigned int StaticDataMember;
