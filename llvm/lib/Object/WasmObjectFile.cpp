@@ -1181,7 +1181,7 @@ const wasm::WasmObjectHeader &WasmObjectFile::getHeader() const {
   return Header;
 }
 
-void WasmObjectFile::moveSymbolNext(DataRefImpl &Symb) const { Symb.d.a++; }
+void WasmObjectFile::moveSymbolNext(DataRefImpl &Symb) const { Symb.d.b++; }
 
 uint32_t WasmObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   uint32_t Result = SymbolRef::SF_None;
@@ -1203,18 +1203,20 @@ uint32_t WasmObjectFile::getSymbolFlags(DataRefImpl Symb) const {
 
 basic_symbol_iterator WasmObjectFile::symbol_begin() const {
   DataRefImpl Ref;
-  Ref.d.a = 0;
+  Ref.d.a = 1; // Arbitrary non-zero value so that Ref.p is non-null
+  Ref.d.b = 0; // Symbol index
   return BasicSymbolRef(Ref, this);
 }
 
 basic_symbol_iterator WasmObjectFile::symbol_end() const {
   DataRefImpl Ref;
-  Ref.d.a = Symbols.size();
+  Ref.d.a = 1; // Arbitrary non-zero value so that Ref.p is non-null
+  Ref.d.b = Symbols.size(); // Symbol index
   return BasicSymbolRef(Ref, this);
 }
 
 const WasmSymbol &WasmObjectFile::getWasmSymbol(const DataRefImpl &Symb) const {
-  return Symbols[Symb.d.a];
+  return Symbols[Symb.d.b];
 }
 
 const WasmSymbol &WasmObjectFile::getWasmSymbol(const SymbolRef &Symb) const {

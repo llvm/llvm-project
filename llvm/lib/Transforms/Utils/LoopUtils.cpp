@@ -216,7 +216,10 @@ static Optional<bool> getOptionalBoolLoopAttribute(const Loop *TheLoop,
     // When the value is absent it is interpreted as 'attribute set'.
     return true;
   case 2:
-    return mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get());
+    if (ConstantInt *IntMD =
+            mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
+      return IntMD->getZExtValue();
+    return true;
   }
   llvm_unreachable("unexpected number of options");
 }

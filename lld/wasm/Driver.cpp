@@ -297,22 +297,31 @@ static const uint8_t UnreachableFn[] = {
 // the call instruction that passes Wasm validation.
 static void handleWeakUndefines() {
   for (Symbol *Sym : Symtab->getSymbols()) {
-    if (!Sym->isUndefined() || !Sym->isWeak())
-      continue;
-    auto *FuncSym = dyn_cast<FunctionSymbol>(Sym);
-    if (!FuncSym)
+    if (!Sym->isUndefWeak())
       continue;
 
-    // It is possible for undefined functions not to have a signature (eg. if
-    // added via "--undefined"), but weak undefined ones do have a signature.
-    assert(FuncSym->Signature);
-    const WasmSignature &Sig = *FuncSym->Signature;
+    const WasmSignature *Sig = nullptr;
+
+    if (auto *FuncSym = dyn_cast<FunctionSymbol>(Sym)) {
+      // It is possible for undefined functions not to have a signature (eg. if
+      // added via "--undefined"), but weak undefined ones do have a signature.
+      assert(FuncSym->Signature);
+      Sig = FuncSym->Signature;
+    } else if (auto *LazySym = dyn_cast<LazySymbol>(Sym)) {
+      // Lazy symbols may not be functions and therefore can have a null
+      // signature.
+      Sig = LazySym->Signature;
+    }
+
+    if (!Sig)
+      continue;
+
 
     // Add a synthetic dummy for weak undefined functions.  These dummies will
     // be GC'd if not used as the target of any "call" instructions.
     std::string SymName = toString(*Sym);
     StringRef DebugName = Saver.save("undefined function " + SymName);
-    auto *Func = make<SyntheticFunction>(Sig, Sym->getName(), DebugName);
+    auto *Func = make<SyntheticFunction>(*Sig, Sym->getName(), DebugName);
     Func->setBody(UnreachableFn);
     // Ensure it compares equal to the null pointer, and so that table relocs
     // don't pull in the stub body (only call-operand relocs should do that).
