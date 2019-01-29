@@ -2184,7 +2184,7 @@ operations relative to non-volatile operations. This is not Java's
 A volatile load or store may have additional target-specific semantics.
 Any volatile operation can have side effects, and any volatile operation
 can read and/or modify state which is not accessible via a regular load
-or store in this module. Volatile operations may use adresses which do
+or store in this module. Volatile operations may use addresses which do
 not point to memory (like MMIO registers). This means the compiler may
 not use a volatile operation to prove a non-volatile access to that
 address has defined behavior.

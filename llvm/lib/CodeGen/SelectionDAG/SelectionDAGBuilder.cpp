@@ -5320,6 +5320,21 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       return nullptr;
     }
 
+    // If the Value is a frame index, we can create a FrameIndex debug value
+    // without relying on the DAG at all.
+    if (const AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
+      auto SI = FuncInfo.StaticAllocaMap.find(AI);
+      if (SI != FuncInfo.StaticAllocaMap.end()) {
+        auto SDV =
+            DAG.getFrameIndexDbgValue(Variable, Expression, SI->second,
+                                      /*IsIndirect*/ false, dl, SDNodeOrder);
+        // Do not attach the SDNodeDbgValue to an SDNode: this variable location
+        // is still available even if the SDNode gets optimized out.
+        DAG.AddDbgValue(SDV, nullptr, false);
+        return nullptr;
+      }
+    }
+
     // Do not use getValue() in here; we don't want to generate code at
     // this point if it hasn't been done yet.
     SDValue N = NodeMap[V];
@@ -7831,15 +7846,11 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
   SmallVector<SDValue, 8> OutChains;
 
   llvm::Type *CSResultType = CS.getType();
-  unsigned NumReturns = 0;
   ArrayRef<Type *> ResultTypes;
-  if (StructType *StructResult = dyn_cast<StructType>(CSResultType)) {
-    NumReturns = StructResult->getNumElements();
+  if (StructType *StructResult = dyn_cast<StructType>(CSResultType))
     ResultTypes = StructResult->elements();
-  } else if (!CSResultType->isVoidTy()) {
-    NumReturns = 1;
+  else if (!CSResultType->isVoidTy())
     ResultTypes = makeArrayRef(CSResultType);
-  }
 
   auto CurResultType = ResultTypes.begin();
   auto handleRegAssign = [&](SDValue V) {
@@ -7904,7 +7915,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
   if (!ResultValues.empty()) {
     assert(CurResultType == ResultTypes.end() &&
            "Mismatch in number of ResultTypes");
-    assert(ResultValues.size() == NumReturns &&
+    assert(ResultValues.size() == ResultTypes.size() &&
            "Mismatch in number of output operands in asm result");
 
     SDValue V = DAG.getNode(ISD::MERGE_VALUES, getCurSDLoc(),

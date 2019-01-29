@@ -141,6 +141,16 @@ Position sourceLocToPosition(const SourceManager &SM, SourceLocation Loc) {
   return P;
 }
 
+llvm::Expected<SourceLocation> sourceLocationInMainFile(const SourceManager &SM,
+                                                        Position P) {
+  llvm::StringRef Code = SM.getBuffer(SM.getMainFileID())->getBuffer();
+  auto Offset =
+      positionToOffset(Code, P, /*AllowColumnBeyondLineLength=*/false);
+  if (!Offset)
+    return Offset.takeError();
+  return SM.getLocForStartOfFile(SM.getMainFileID()).getLocWithOffset(*Offset);
+}
+
 Range halfOpenToRange(const SourceManager &SM, CharSourceRange R) {
   // Clang is 1-based, LSP uses 0-based indexes.
   Position Begin = sourceLocToPosition(SM, R.getBegin());

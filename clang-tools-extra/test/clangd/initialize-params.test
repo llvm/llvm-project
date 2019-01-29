@@ -25,7 +25,8 @@
 # CHECK-NEXT:      "documentSymbolProvider": true,
 # CHECK-NEXT:      "executeCommandProvider": {
 # CHECK-NEXT:        "commands": [
-# CHECK-NEXT:          "clangd.applyFix"
+# CHECK-NEXT:          "clangd.applyFix",
+# CHECK-NEXT:          "clangd.applyTweak"
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
 # CHECK-NEXT:      "hoverProvider": true,

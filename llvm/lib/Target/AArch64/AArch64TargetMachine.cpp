@@ -208,8 +208,8 @@ static std::string computeDataLayout(const Triple &TT,
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            Optional<Reloc::Model> RM) {
-  // AArch64 Darwin is always PIC.
-  if (TT.isOSDarwin())
+  // AArch64 Darwin and Windows are always PIC.
+  if (TT.isOSDarwin() || TT.isOSWindows())
     return Reloc::PIC_;
   // On ELF platforms the default static relocation model has a smart enough
   // linker to cope with referencing external symbols defined in a shared

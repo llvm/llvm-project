@@ -70,6 +70,17 @@ static bool onlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
   return !isDWOSection(Sec);
 }
 
+static uint64_t setSectionFlagsPreserveMask(uint64_t OldFlags,
+                                            uint64_t NewFlags) {
+  // Preserve some flags which should not be dropped when setting flags.
+  // Also, preserve anything OS/processor dependant.
+  const uint64_t PreserveMask = ELF::SHF_COMPRESSED | ELF::SHF_EXCLUDE |
+                                ELF::SHF_GROUP | ELF::SHF_LINK_ORDER |
+                                ELF::SHF_MASKOS | ELF::SHF_MASKPROC |
+                                ELF::SHF_TLS | ELF::SHF_INFO_LINK;
+  return (OldFlags & PreserveMask) | (NewFlags & ~PreserveMask);
+}
+
 static ElfType getOutputElfType(const Binary &Bin) {
   // Infer output ELF type from the input ELF object
   if (isa<ELFObjectFile<ELF32LE>>(Bin))
@@ -484,16 +495,19 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
       if (Iter != Config.SectionsToRename.end()) {
         const SectionRename &SR = Iter->second;
         Sec.Name = SR.NewName;
-        if (SR.NewFlags.hasValue()) {
-          // Preserve some flags which should not be dropped when setting flags.
-          // Also, preserve anything OS/processor dependant.
-          const uint64_t PreserveMask = ELF::SHF_COMPRESSED | ELF::SHF_EXCLUDE |
-                                        ELF::SHF_GROUP | ELF::SHF_LINK_ORDER |
-                                        ELF::SHF_MASKOS | ELF::SHF_MASKPROC |
-                                        ELF::SHF_TLS | ELF::SHF_INFO_LINK;
-          Sec.Flags = (Sec.Flags & PreserveMask) |
-                      (SR.NewFlags.getValue() & ~PreserveMask);
-        }
+        if (SR.NewFlags.hasValue())
+          Sec.Flags =
+              setSectionFlagsPreserveMask(Sec.Flags, SR.NewFlags.getValue());
+      }
+    }
+  }
+
+  if (!Config.SetSectionFlags.empty()) {
+    for (auto &Sec : Obj.sections()) {
+      const auto Iter = Config.SetSectionFlags.find(Sec.Name);
+      if (Iter != Config.SetSectionFlags.end()) {
+        const SectionFlagsUpdate &SFU = Iter->second;
+        Sec.Flags = setSectionFlagsPreserveMask(Sec.Flags, SFU.NewFlags);
       }
     }
   }

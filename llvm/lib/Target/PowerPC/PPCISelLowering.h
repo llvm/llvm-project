@@ -1136,8 +1136,6 @@ namespace llvm {
                              int &RefinementSteps) const override;
     unsigned combineRepeatedFPDivisors() const override;
 
-    CCAssignFn *useFastISelCCs(unsigned Flag) const;
-
     SDValue
     combineElementTruncationToVectorTruncation(SDNode *N,
                                                DAGCombinerInfo &DCI) const;
@@ -1167,30 +1165,6 @@ namespace llvm {
                              const TargetLibraryInfo *LibInfo);
 
   } // end namespace PPC
-
-  bool CC_PPC32_SVR4_Custom_Dummy(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
-                                  CCValAssign::LocInfo &LocInfo,
-                                  ISD::ArgFlagsTy &ArgFlags,
-                                  CCState &State);
-
-  bool CC_PPC32_SVR4_Custom_AlignArgRegs(unsigned &ValNo, MVT &ValVT,
-                                         MVT &LocVT,
-                                         CCValAssign::LocInfo &LocInfo,
-                                         ISD::ArgFlagsTy &ArgFlags,
-                                         CCState &State);
-
-  bool
-  CC_PPC32_SVR4_Custom_SkipLastArgRegsPPCF128(unsigned &ValNo, MVT &ValVT,
-                                                 MVT &LocVT,
-                                                 CCValAssign::LocInfo &LocInfo,
-                                                 ISD::ArgFlagsTy &ArgFlags,
-                                                 CCState &State);
-
-  bool CC_PPC32_SVR4_Custom_AlignFPArgRegs(unsigned &ValNo, MVT &ValVT,
-                                           MVT &LocVT,
-                                           CCValAssign::LocInfo &LocInfo,
-                                           ISD::ArgFlagsTy &ArgFlags,
-                                           CCState &State);
 
   bool isIntS16Immediate(SDNode *N, int16_t &Imm);
   bool isIntS16Immediate(SDValue Op, int16_t &Imm);

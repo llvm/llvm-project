@@ -74,6 +74,21 @@ inline bool operator==(const InfoRecord &L, const InfoRecord &R) {
 }
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const InfoRecord &R);
 
+class FileRecord : public Record {
+public:
+  static llvm::Optional<FileRecord> parse(llvm::StringRef Line);
+  FileRecord(size_t Number, llvm::StringRef Name)
+      : Record(File), Number(Number), Name(Name) {}
+
+  size_t Number;
+  llvm::StringRef Name;
+};
+
+inline bool operator==(const FileRecord &L, const FileRecord &R) {
+  return L.Number == R.Number && L.Name == R.Name;
+}
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FileRecord &R);
+
 class FuncRecord : public Record {
 public:
   static llvm::Optional<FuncRecord> parse(llvm::StringRef Line);
@@ -91,6 +106,23 @@ public:
 
 bool operator==(const FuncRecord &L, const FuncRecord &R);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FuncRecord &R);
+
+class LineRecord : public Record {
+public:
+  static llvm::Optional<LineRecord> parse(llvm::StringRef Line);
+  LineRecord(lldb::addr_t Address, lldb::addr_t Size, uint32_t LineNum,
+             size_t FileNum)
+      : Record(Line), Address(Address), Size(Size), LineNum(LineNum),
+        FileNum(FileNum) {}
+
+  lldb::addr_t Address;
+  lldb::addr_t Size;
+  uint32_t LineNum;
+  size_t FileNum;
+};
+
+bool operator==(const LineRecord &L, const LineRecord &R);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const LineRecord &R);
 
 class PublicRecord : public Record {
 public:

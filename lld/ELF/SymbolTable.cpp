@@ -326,7 +326,7 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
 
     // We don't report backward references to weak symbols as they can be
     // overridden later.
-    if (Backref && S->Binding != STB_WEAK)
+    if (Backref && !S->isWeak())
       warn("backward reference detected: " + Name + " in " + toString(File) +
            " refers to " + toString(S->File));
   }

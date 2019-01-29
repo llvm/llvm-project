@@ -177,10 +177,10 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       !Config.SymbolsToGlobalize.empty() || !Config.SymbolsToKeep.empty() ||
       !Config.SymbolsToLocalize.empty() || !Config.SymbolsToWeaken.empty() ||
       !Config.SymbolsToKeepGlobal.empty() || !Config.SectionsToRename.empty() ||
-      !Config.SymbolsToRename.empty() || Config.ExtractDWO ||
-      Config.KeepFileSymbols || Config.LocalizeHidden || Config.PreserveDates ||
-      Config.StripDWO || Config.StripNonAlloc || Config.StripSections ||
-      Config.Weaken || Config.DecompressDebugSections) {
+      !Config.SetSectionFlags.empty() || !Config.SymbolsToRename.empty() ||
+      Config.ExtractDWO || Config.KeepFileSymbols || Config.LocalizeHidden ||
+      Config.PreserveDates || Config.StripDWO || Config.StripNonAlloc ||
+      Config.StripSections || Config.Weaken || Config.DecompressDebugSections) {
     return createStringError(llvm::errc::invalid_argument,
                              "Option not supported by llvm-objcopy for COFF");
   }

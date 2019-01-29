@@ -65,6 +65,22 @@ clang::QualType UdtRecordCompleter::AddBaseClassForTypeIndex(
   return qt;
 }
 
+void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
+                                   MemberAccess access, MethodOptions options,
+                                   MemberAttributes attrs) {
+  clang::QualType method_qt =
+      m_ast_builder.GetOrCreateType(PdbTypeSymId(type_idx));
+  m_ast_builder.CompleteType(method_qt);
+
+  lldb::AccessType access_type = TranslateMemberAccess(access);
+  bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
+                       MethodOptions::CompilerGenerated;
+  m_ast_builder.clang().AddMethodToCXXRecordType(
+      m_derived_ct.GetOpaqueQualType(), name.data(), nullptr,
+      m_ast_builder.ToCompilerType(method_qt), access_type, attrs.isVirtual(),
+      attrs.isStatic(), false, false, false, is_artificial);
+}
+
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
                                            BaseClassRecord &base) {
   clang::QualType base_qt =
@@ -158,11 +174,27 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
                                            OneMethodRecord &one_method) {
+  AddMethod(one_method.Name, one_method.Type, one_method.getAccess(),
+            one_method.getOptions(), one_method.Attrs);
+
   return Error::success();
 }
 
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
                                            OverloadedMethodRecord &overloaded) {
+  TypeIndex method_list_idx = overloaded.MethodList;
+
+  CVType method_list_type = m_tpi.getType(method_list_idx);
+  assert(method_list_type.Type == LF_METHODLIST);
+
+  MethodOverloadListRecord method_list;
+  llvm::cantFail(TypeDeserializer::deserializeAs<MethodOverloadListRecord>(
+      method_list_type, method_list));
+
+  for (const OneMethodRecord &method : method_list.Methods)
+    AddMethod(overloaded.Name, method.Type, method.getAccess(),
+              method.getOptions(), method.Attrs);
+
   return Error::success();
 }
 

@@ -75,7 +75,7 @@ choose the checks to be performed in the Clang Code Model Warnings menu.
 .. _ReSharper C++: https://www.jetbrains.com/help/resharper/Clang_Tidy_Integration.html
 .. _Visual Assist: https://docs.wholetomato.com/default.asp?W761
 .. _Clang Power Tools: https://marketplace.visualstudio.com/items?itemName=caphyon.ClangPowerTools
-.. _clang-tidy-vs: https://github.com/llvm-mirror/clang-tools-extra/tree/master/clang-tidy-vs
+.. _clang-tidy-vs: https://github.com/llvm/llvm-project/tree/master/clang-tools-extra/clang-tidy-vs
 
 `MS Visual Studio`_ has a native clang-tidy-vs_ plugin and also can integrate
 :program:`clang-tidy` by means of three other tools. The `ReSharper C++`_

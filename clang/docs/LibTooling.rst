@@ -196,6 +196,6 @@ with ``-v`` and look at the search paths it looks through.
 Linking
 ^^^^^^^
 
-For a list of libraries to link, look at one of the tools' Makefiles (for
-example `clang-check/Makefile
-<https://llvm.org/viewvc/llvm-project/cfe/trunk/tools/clang-check/Makefile?view=markup>`_).
+For a list of libraries to link, look at one of the tools' CMake files (for
+example `clang-check/CMakeList.txt
+<https://github.com/llvm/llvm-project/blob/master/clang/tools/clang-check/CMakeLists.txt>`_).

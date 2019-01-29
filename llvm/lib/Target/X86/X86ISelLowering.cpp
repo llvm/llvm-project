@@ -14178,7 +14178,7 @@ static SDValue lowerShuffleByMerging128BitLanes(
   int NumLanes = VT.getSizeInBits() / 128;
   int LaneSize = 128 / VT.getScalarSizeInBits();
   SmallVector<int, 16> RepeatMask(LaneSize, -1);
-  SmallVector<std::array<int, 2>, 2> LaneSrcs(NumLanes, {-1, -1});
+  SmallVector<std::array<int, 2>, 2> LaneSrcs(NumLanes, {{-1, -1}});
 
   // First pass will try to fill in the RepeatMask from lanes that need two
   // sources.
