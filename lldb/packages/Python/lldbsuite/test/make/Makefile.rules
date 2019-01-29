@@ -528,7 +528,7 @@ endif
 # Set up variables to run the Swift frontend directly.
 #----------------------------------------------------------------------
 SWIFT=$(shell dirname $(SWIFTC))/swift
-SWIFT_FEFLAGS = $(shell echo $(patsubst -Xfrontend,,$(SWIFTFLAGS)) | sed -e 's/-Xlinker [^ ]*//g')
+SWIFT_FEFLAGS = $(shell echo $(patsubst -Xfrontend,,$(SWIFTFLAGS)) | sed -e 's/-Xlinker [^ ]*//g') -enable-anonymous-context-mangled-names
 SWIFT_FE=$(SWIFT) -frontend
 
 #----------------------------------------------------------------------
