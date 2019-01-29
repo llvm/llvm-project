@@ -223,7 +223,8 @@ public:
   ConstString GetTypeName() { return m_type_name; }
 
   virtual ElementInfo *
-  GetElementFromData(const lldb_private::DataExtractor &data) = 0;
+  GetElementFromData(const lldb_private::DataExtractor &data,
+                     bool no_payload) = 0;
 
   virtual size_t GetNumElements() {
     return GetNumElementsWithPayload() + GetNumCStyleElements();
@@ -270,7 +271,7 @@ public:
                             SwiftEnumDescriptor::Kind::Empty) {}
 
   virtual ElementInfo *
-  GetElementFromData(const lldb_private::DataExtractor &data) {
+  GetElementFromData(const lldb_private::DataExtractor &data, bool no_payload) {
     return nullptr;
   }
 
@@ -382,7 +383,7 @@ public:
   }
 
   virtual ElementInfo *
-  GetElementFromData(const lldb_private::DataExtractor &data) {
+  GetElementFromData(const lldb_private::DataExtractor &data, bool no_payload) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
     if (log)
@@ -410,7 +411,27 @@ public:
       return nullptr;
     }
 
+    // A C-Like Enum  is laid out as an integer tag with the minimal number of
+    // bits to contain all of the cases. The cases are assigned tag values in
+    // declaration order. e.g.
+    // enum Patatino { // => LLVM i1
+    // case X         // => i1 0
+    // case Y         // => i1 1
+    // }
+    // From this we can find out the number of bits really used for the payload.
     current_payload &= m_nopayload_elems_bitmask;
+    auto elem_mask =
+        swift::ClusteredBitVector::getConstant(current_payload.size(), false);
+    int64_t bit_count = m_elements.size() - 1;
+    if (bit_count > 0 && no_payload) {
+      uint64_t bit_set = 0;
+      while (bit_count > 0) {
+        elem_mask.setBit(bit_set);
+        bit_set += 1;
+        bit_count /= 2;
+      }
+      current_payload &= elem_mask;
+    }
 
     if (log)
       log->Printf("masked current_payload           = %s",
@@ -510,7 +531,7 @@ public:
   }
 
   virtual ElementInfo *
-  GetElementFromData(const lldb_private::DataExtractor &data) {
+  GetElementFromData(const lldb_private::DataExtractor &data, bool no_payload) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
     if (log)
@@ -618,9 +639,11 @@ public:
         m_payload_cases(ast, swift_can_type, enum_decl) {}
 
   virtual ElementInfo *
-  GetElementFromData(const lldb_private::DataExtractor &data) {
-    ElementInfo *elem_info = m_non_payload_cases.GetElementFromData(data);
-    return elem_info ? elem_info : m_payload_cases.GetElementFromData(data);
+  GetElementFromData(const lldb_private::DataExtractor &data, bool no_payload) {
+    ElementInfo *elem_info =
+        m_non_payload_cases.GetElementFromData(data, false);
+    return elem_info ? elem_info
+                     : m_payload_cases.GetElementFromData(data, false);
   }
 
   static bool classof(const SwiftEnumDescriptor *S) {
@@ -7350,7 +7373,7 @@ bool SwiftASTContext::GetSelectedEnumCase(const CompilerType &type,
       SwiftEnumDescriptor *cached_enum_info =
           ast->GetCachedEnumInfo(swift_can_type.getPointer());
       if (cached_enum_info) {
-        auto enum_elem_info = cached_enum_info->GetElementFromData(data);
+        auto enum_elem_info = cached_enum_info->GetElementFromData(data, true);
         if (enum_elem_info) {
           if (name)
             *name = enum_elem_info->name;
@@ -7611,7 +7634,7 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::BoundGenericEnum: {
     SwiftEnumDescriptor *cached_enum_info = GetCachedEnumInfo(type);
     if (cached_enum_info) {
-      auto enum_elem_info = cached_enum_info->GetElementFromData(data);
+      auto enum_elem_info = cached_enum_info->GetElementFromData(data, true);
       if (enum_elem_info)
         s->Printf("%s", enum_elem_info->name.GetCString());
       else {
