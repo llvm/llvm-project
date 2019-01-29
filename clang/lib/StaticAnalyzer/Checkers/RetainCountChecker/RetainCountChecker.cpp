@@ -348,7 +348,7 @@ const static RetainSummary *getSummary(RetainSummaryManager &Summaries,
   const Expr *CE = Call.getOriginExpr();
   AnyCall C =
       CE ? *AnyCall::forExpr(CE)
-         : AnyCall::forDestructorCall(cast<CXXDestructorDecl>(Call.getDecl()));
+         : AnyCall(cast<CXXDestructorDecl>(Call.getDecl()));
   return Summaries.getSummary(C, Call.hasNonZeroCallbackArg(),
                               isReceiverUnconsumedSelf(Call), ReceiverType);
 }
