@@ -93,7 +93,6 @@ private:
   SortSectionPolicy readSortKind();
   SymbolAssignment *readProvideHidden(bool Provide, bool Hidden);
   SymbolAssignment *readAssignment(StringRef Tok);
-  std::tuple<ELFKind, uint16_t, bool> readBfdName();
   void readSort();
   Expr readAssert();
   Expr readConstant();
