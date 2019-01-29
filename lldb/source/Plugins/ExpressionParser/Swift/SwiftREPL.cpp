@@ -572,20 +572,6 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
         matches.AppendString(root.data(), root.size());
         return 1;
       }
-      //                    llvm::StringRef prev_stem =
-      //                    completions.getPreviousStem();
-      //                    llvm::StringRef next_stem =
-      //                    completions.getNextStem();
-      //                    printf ("\nroot: '%*s'", (int)root.size(),
-      //                    root.data());
-      //                    printf ("\nprev_stem: '%*s'", (int)prev_stem.size(),
-      //                    prev_stem.data());
-      //                    printf ("\nnext_stem: '%*s'", (int)next_stem.size(),
-      //                    next_stem.data());
-      //                    printf ("\nvalid: %i", completions.isValid());
-      //                    printf ("\nempty: %i", completions.isEmpty());
-      //                    printf ("\nunique: %i", completions.isUnique());
-
       // Otherwise, advance through the completion state machine.
       const swift::CompletionState completion_state = completions.getState();
       switch (completion_state) {
