@@ -1263,7 +1263,7 @@ void GDBRemoteCommunication::DumpHistory(Stream &strm) { m_history.Dump(strm); }
 
 void GDBRemoteCommunication::SetHistoryStream(llvm::raw_ostream *strm) {
   m_history.SetStream(strm);
-};
+}
 
 llvm::Error
 GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,

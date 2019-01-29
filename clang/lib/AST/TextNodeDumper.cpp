@@ -312,6 +312,19 @@ void TextNodeDumper::Visit(const OMPClause *C) {
     OS << " <implicit>";
 }
 
+void TextNodeDumper::Visit(const GenericSelectionExpr::ConstAssociation &A) {
+  const TypeSourceInfo *TSI = A.getTypeSourceInfo();
+  if (TSI) {
+    OS << "case ";
+    dumpType(TSI->getType());
+  } else {
+    OS << "default";
+  }
+
+  if (A.isSelected())
+    OS << " selected";
+}
+
 void TextNodeDumper::dumpPointer(const void *Ptr) {
   ColorScope Color(OS, ShowColors, AddressColor);
   OS << ' ' << Ptr;
@@ -761,6 +774,11 @@ void TextNodeDumper::VisitInitListExpr(const InitListExpr *ILE) {
     OS << " field ";
     dumpBareDeclRef(Field);
   }
+}
+
+void TextNodeDumper::VisitGenericSelectionExpr(const GenericSelectionExpr *E) {
+  if (E->isResultDependent())
+    OS << " result_dependent";
 }
 
 void TextNodeDumper::VisitUnaryOperator(const UnaryOperator *Node) {

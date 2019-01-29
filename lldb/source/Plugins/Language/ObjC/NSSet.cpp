@@ -154,28 +154,18 @@ namespace Foundation1437 {
     uint32_t _cow;
     // __table storage
     uint32_t _objs_addr;
-    union {
-      uint32_t _mutations;
-      struct {
-        uint32_t _muts;
-        uint32_t _used : 26;
-        uint32_t _szidx : 6;
-      };
-    };
+    uint32_t _muts;
+    uint32_t _used : 26;
+    uint32_t _szidx : 6;
   };
   
   struct DataDescriptor_64 {
     uint64_t _cow;
     // __Table storage
     uint64_t _objs_addr;
-    union {
-      uint64_t _mutations;
-      struct {
-        uint32_t _muts;
-        uint32_t _used : 26;
-        uint32_t _szidx : 6;
-      };
-    };
+    uint32_t _muts;
+    uint32_t _used : 26;
+    uint32_t _szidx : 6;
   };
   
   using NSSetMSyntheticFrontEnd =
