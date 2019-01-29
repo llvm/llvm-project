@@ -71,6 +71,8 @@ add_clang_library(clangDaemon
   index/dex/PostingList.cpp
   index/dex/Trigram.cpp
 
+  refactor/Tweak.cpp
+
   LINK_LIBS
   clangAST
   clangASTMatchers
@@ -108,6 +110,7 @@ add_clang_library(clangDaemon
   ${CLANGD_ATOMIC_LIB}
   )
 
+add_subdirectory(refactor/tweaks)
 if( LLVM_LIB_FUZZING_ENGINE OR LLVM_USE_SANITIZE_COVERAGE )
   add_subdirectory(fuzzer)
 endif()
