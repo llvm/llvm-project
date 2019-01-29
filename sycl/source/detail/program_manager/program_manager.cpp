@@ -73,8 +73,8 @@ static cl_program createBinaryProgram(const cl_context Context,
   return Program;
 }
 
-cl_program createSpirvProgram(const cl_context Context,
-                              const vector_class<char> &SpirvProg) {
+static cl_program createSpirvProgram(const cl_context Context,
+                                     const vector_class<char> &SpirvProg) {
   cl_int Err = CL_SUCCESS;
   cl_program ClProgram = clCreateProgramWithIL(Context, SpirvProg.data(),
                                                SpirvProg.size(), &Err);
