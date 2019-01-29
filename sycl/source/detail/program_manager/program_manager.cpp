@@ -82,7 +82,8 @@ static cl_program createSpirvProgram(const cl_context Context,
   return ClProgram;
 }
 
-static cl_program createProgram(cl_context Context,
+static cl_program createProgram(const platform &Platform,
+                                cl_context Context,
                                 const vector_class<char> &DeviceProg) {
   cl_program Program = nullptr;
   int32_t SpirvMagic = 0;
@@ -93,7 +94,13 @@ static cl_program createProgram(cl_context Context,
               (char*)&SpirvMagic);
 
     if (SpirvMagic == ValidSpirvMagic) {
-      Program = createSpirvProgram(Context, DeviceProg);
+      if (Platform.has_extension("cl_khr_il_program") ||
+          Platform.get_info<info::platform::version>().find(" 2.1") !=
+              string_class::npos) {
+        Program = createSpirvProgram(Context, DeviceProg);
+      } else {
+        return nullptr;
+      }
     }
   }
 
@@ -111,7 +118,8 @@ cl_program ProgramManager::getBuiltOpenCLProgram(const context &Context) {
     vector_class<char> DeviceProg = getSpirvSource();
 
     cl_context ClContext = Context.get();
-    ClProgram = createProgram(ClContext, DeviceProg);
+    const platform &Platform = Context.get_platform();
+    ClProgram = createProgram(Platform, ClContext, DeviceProg);
     clReleaseContext(ClContext);
 
     build(ClProgram);
