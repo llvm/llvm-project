@@ -1032,11 +1032,11 @@ ExplodedNode * RetainCountChecker::processReturn(const ReturnStmt *S,
 
   // FIXME: What is the convention for blocks? Is there one?
   if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(CD)) {
-    const RetainSummary *Summ = Summaries.getMethodSummary(MD);
+    const RetainSummary *Summ = Summaries.getSummary(AnyCall(MD));
     RE = Summ->getRetEffect();
   } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CD)) {
     if (!isa<CXXMethodDecl>(FD)) {
-      const RetainSummary *Summ = Summaries.getFunctionSummary(FD);
+      const RetainSummary *Summ = Summaries.getSummary(AnyCall(FD));
       RE = Summ->getRetEffect();
     }
   }
@@ -1325,7 +1325,7 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
     return;
 
   ProgramStateRef state = Ctx.getState();
-  const RetainSummary *FunctionSummary = SmrMgr.getFunctionSummary(FD);
+  const RetainSummary *FunctionSummary = SmrMgr.getSummary(AnyCall(FD));
   ArgEffects CalleeSideArgEffects = FunctionSummary->getArgEffects();
 
   for (unsigned idx = 0, e = FD->getNumParams(); idx != e; ++idx) {

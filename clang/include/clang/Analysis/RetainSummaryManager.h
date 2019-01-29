@@ -204,40 +204,6 @@ public:
   }
 };
 
-/// Encapsulates the retain count semantics on the arguments, return value,
-/// and receiver (if any) of a function/method call.
-///
-/// Note that construction of these objects is not highly efficient.  That
-/// is okay for clients where creating these objects isn't really a bottleneck.
-/// The purpose of the API is to provide something simple.  The actual
-/// static analyzer checker that implements retain/release typestate
-/// tracking uses something more efficient.
-class CallEffects {
-  llvm::SmallVector<ArgEffect, 10> Args;
-  RetEffect Ret;
-  ArgEffect Receiver;
-
-  CallEffects(const RetEffect &R,
-              ArgEffect Receiver = ArgEffect(DoNothing, ObjKind::AnyObj))
-      : Ret(R), Receiver(Receiver) {}
-
-public:
-  /// Returns the argument effects for a call.
-  ArrayRef<ArgEffect> getArgs() const { return Args; }
-
-  /// Returns the effects on the receiver.
-  ArgEffect getReceiver() const { return Receiver; }
-
-  /// Returns the effect on the return value.
-  RetEffect getReturnValue() const { return Ret; }
-
-  /// Return the CallEfect for a given Objective-C method.
-  static CallEffects getEffect(const ObjCMethodDecl *MD);
-
-  /// Return the CallEfect for a given C/C++ function.
-  static CallEffects getEffect(const FunctionDecl *FD);
-};
-
 /// A key identifying a summary.
 class ObjCSummaryKey {
   IdentifierInfo* II;
@@ -691,9 +657,13 @@ public:
   bool isTrustedReferenceCountImplementation(const FunctionDecl *FD);
 
   const RetainSummary *getSummary(AnyCall C,
-                                  bool HasNonZeroCallbackArg,
-                                  bool IsReceiverUnconsumedSelf,
-                                  QualType ReceiverType=QualType());
+                                  bool HasNonZeroCallbackArg=false,
+                                  bool IsReceiverUnconsumedSelf=false,
+                                  QualType ReceiverType={});
+
+  RetEffect getObjAllocRetEffect() const { return ObjCAllocRetE; }
+
+private:
 
   /// getMethodSummary - This version of getMethodSummary is used to query
   ///  the summary for the current method being analyzed.
@@ -701,9 +671,6 @@ public:
 
   const RetainSummary *getFunctionSummary(const FunctionDecl *FD);
 
-  RetEffect getObjAllocRetEffect() const { return ObjCAllocRetE; }
-
-private:
   const RetainSummary *getMethodSummary(Selector S, const ObjCInterfaceDecl *ID,
                                         const ObjCMethodDecl *MD,
                                         QualType RetTy,

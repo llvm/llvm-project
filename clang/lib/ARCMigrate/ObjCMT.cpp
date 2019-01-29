@@ -65,9 +65,11 @@ class ObjCMigrateASTConsumer : public ASTConsumer {
                             ObjCInstanceTypeFamily OIT_Family = OIT_None);
 
   void migrateCFAnnotation(ASTContext &Ctx, const Decl *Decl);
-  void AddCFAnnotations(ASTContext &Ctx, const CallEffects &CE,
+  void AddCFAnnotations(ASTContext &Ctx,
+                        const RetainSummary *RS,
                         const FunctionDecl *FuncDecl, bool ResultAnnotated);
-  void AddCFAnnotations(ASTContext &Ctx, const CallEffects &CE,
+  void AddCFAnnotations(ASTContext &Ctx,
+                        const RetainSummary *RS,
                         const ObjCMethodDecl *MethodDecl, bool ResultAnnotated);
 
   void AnnotateImplicitBridging(ASTContext &Ctx);
@@ -84,6 +86,8 @@ class ObjCMigrateASTConsumer : public ASTConsumer {
                                    const ObjCImplementationDecl *ImplD);
 
   bool InsertFoundation(ASTContext &Ctx, SourceLocation Loc);
+
+  std::unique_ptr<RetainSummaryManager> Summaries;
 
 public:
   std::string MigrateDir;
@@ -102,6 +106,14 @@ public:
   llvm::SmallPtrSet<ObjCProtocolDecl *, 32> ObjCProtocolDecls;
   llvm::SmallVector<const Decl *, 8> CFFunctionIBCandidates;
   llvm::StringSet<> WhiteListFilenames;
+
+  RetainSummaryManager &getSummaryManager(ASTContext &Ctx) {
+    if (!Summaries)
+      Summaries.reset(new RetainSummaryManager(Ctx,
+                                               /*TrackNSCFObjects=*/true,
+                                               /*TrackOSObjects=*/false));
+    return *Summaries;
+  }
 
   ObjCMigrateASTConsumer(StringRef migrateDir,
                          unsigned astMigrateActions,
@@ -1453,12 +1465,12 @@ void ObjCMigrateASTConsumer::migrateCFAnnotation(ASTContext &Ctx, const Decl *De
 }
 
 void ObjCMigrateASTConsumer::AddCFAnnotations(ASTContext &Ctx,
-                                              const CallEffects &CE,
+                                              const RetainSummary *RS,
                                               const FunctionDecl *FuncDecl,
                                               bool ResultAnnotated) {
   // Annotate function.
   if (!ResultAnnotated) {
-    RetEffect Ret = CE.getReturnValue();
+    RetEffect Ret = RS->getRetEffect();
     const char *AnnotationString = nullptr;
     if (Ret.getObjKind() == ObjKind::CF) {
       if (Ret.isOwned() && NSAPIObj->isMacroDefined("CF_RETURNS_RETAINED"))
@@ -1478,12 +1490,11 @@ void ObjCMigrateASTConsumer::AddCFAnnotations(ASTContext &Ctx,
       Editor->commit(commit);
     }
   }
-  ArrayRef<ArgEffect> AEArgs = CE.getArgs();
   unsigned i = 0;
   for (FunctionDecl::param_const_iterator pi = FuncDecl->param_begin(),
        pe = FuncDecl->param_end(); pi != pe; ++pi, ++i) {
     const ParmVarDecl *pd = *pi;
-    ArgEffect AE = AEArgs[i];
+    ArgEffect AE = RS->getArg(i);
     if (AE.getKind() == DecRef && AE.getObjKind() == ObjKind::CF &&
         !pd->hasAttr<CFConsumedAttr>() &&
         NSAPIObj->isMacroDefined("CF_CONSUMED")) {
@@ -1507,7 +1518,8 @@ ObjCMigrateASTConsumer::CF_BRIDGING_KIND
   if (FuncDecl->hasBody())
     return CF_BRIDGING_NONE;
 
-  CallEffects CE  = CallEffects::getEffect(FuncDecl);
+  const RetainSummary *RS =
+      getSummaryManager(Ctx).getSummary(AnyCall(FuncDecl));
   bool FuncIsReturnAnnotated = (FuncDecl->hasAttr<CFReturnsRetainedAttr>() ||
                                 FuncDecl->hasAttr<CFReturnsNotRetainedAttr>() ||
                                 FuncDecl->hasAttr<NSReturnsRetainedAttr>() ||
@@ -1520,7 +1532,7 @@ ObjCMigrateASTConsumer::CF_BRIDGING_KIND
 
   bool ReturnCFAudited = false;
   if (!FuncIsReturnAnnotated) {
-    RetEffect Ret = CE.getReturnValue();
+    RetEffect Ret = RS->getRetEffect();
     if (Ret.getObjKind() == ObjKind::CF &&
         (Ret.isOwned() || Ret.notOwned()))
       ReturnCFAudited = true;
@@ -1529,14 +1541,12 @@ ObjCMigrateASTConsumer::CF_BRIDGING_KIND
   }
 
   // At this point result type is audited for potential inclusion.
-  // Now, how about argument types.
-  ArrayRef<ArgEffect> AEArgs = CE.getArgs();
   unsigned i = 0;
   bool ArgCFAudited = false;
   for (FunctionDecl::param_const_iterator pi = FuncDecl->param_begin(),
        pe = FuncDecl->param_end(); pi != pe; ++pi, ++i) {
     const ParmVarDecl *pd = *pi;
-    ArgEffect AE = AEArgs[i];
+    ArgEffect AE = RS->getArg(i);
     if ((AE.getKind() == DecRef /*CFConsumed annotated*/ ||
          AE.getKind() == IncRef) && AE.getObjKind() == ObjKind::CF) {
       if (AE.getKind() == DecRef && !pd->hasAttr<CFConsumedAttr>())
@@ -1546,7 +1556,7 @@ ObjCMigrateASTConsumer::CF_BRIDGING_KIND
     } else {
       QualType AT = pd->getType();
       if (!AuditedType(AT)) {
-        AddCFAnnotations(Ctx, CE, FuncDecl, FuncIsReturnAnnotated);
+        AddCFAnnotations(Ctx, RS, FuncDecl, FuncIsReturnAnnotated);
         return CF_BRIDGING_NONE;
       }
     }
@@ -1568,12 +1578,12 @@ void ObjCMigrateASTConsumer::migrateARCSafeAnnotation(ASTContext &Ctx,
 }
 
 void ObjCMigrateASTConsumer::AddCFAnnotations(ASTContext &Ctx,
-                                              const CallEffects &CE,
+                                              const RetainSummary *RS,
                                               const ObjCMethodDecl *MethodDecl,
                                               bool ResultAnnotated) {
   // Annotate function.
   if (!ResultAnnotated) {
-    RetEffect Ret = CE.getReturnValue();
+    RetEffect Ret = RS->getRetEffect();
     const char *AnnotationString = nullptr;
     if (Ret.getObjKind() == ObjKind::CF) {
       if (Ret.isOwned() && NSAPIObj->isMacroDefined("CF_RETURNS_RETAINED"))
@@ -1605,12 +1615,11 @@ void ObjCMigrateASTConsumer::AddCFAnnotations(ASTContext &Ctx,
       Editor->commit(commit);
     }
   }
-  ArrayRef<ArgEffect> AEArgs = CE.getArgs();
   unsigned i = 0;
   for (ObjCMethodDecl::param_const_iterator pi = MethodDecl->param_begin(),
        pe = MethodDecl->param_end(); pi != pe; ++pi, ++i) {
     const ParmVarDecl *pd = *pi;
-    ArgEffect AE = AEArgs[i];
+    ArgEffect AE = RS->getArg(i);
     if (AE.getKind() == DecRef
         && AE.getObjKind() == ObjKind::CF
         && !pd->hasAttr<CFConsumedAttr>() &&
@@ -1628,7 +1637,9 @@ void ObjCMigrateASTConsumer::migrateAddMethodAnnotation(
   if (MethodDecl->hasBody() || MethodDecl->isImplicit())
     return;
 
-  CallEffects CE  = CallEffects::getEffect(MethodDecl);
+  const RetainSummary *RS =
+      getSummaryManager(Ctx).getSummary(AnyCall(MethodDecl));
+
   bool MethodIsReturnAnnotated =
       (MethodDecl->hasAttr<CFReturnsRetainedAttr>() ||
        MethodDecl->hasAttr<CFReturnsNotRetainedAttr>() ||
@@ -1636,7 +1647,7 @@ void ObjCMigrateASTConsumer::migrateAddMethodAnnotation(
        MethodDecl->hasAttr<NSReturnsNotRetainedAttr>() ||
        MethodDecl->hasAttr<NSReturnsAutoreleasedAttr>());
 
-  if (CE.getReceiver().getKind() == DecRef &&
+  if (RS->getReceiverEffect().getKind() == DecRef &&
       !MethodDecl->hasAttr<NSConsumesSelfAttr>() &&
       MethodDecl->getMethodFamily() != OMF_init &&
       MethodDecl->getMethodFamily() != OMF_release &&
@@ -1652,27 +1663,25 @@ void ObjCMigrateASTConsumer::migrateAddMethodAnnotation(
     return;
 
   if (!MethodIsReturnAnnotated) {
-    RetEffect Ret = CE.getReturnValue();
+    RetEffect Ret = RS->getRetEffect();
     if ((Ret.getObjKind() == ObjKind::CF ||
          Ret.getObjKind() == ObjKind::ObjC) &&
         (Ret.isOwned() || Ret.notOwned())) {
-      AddCFAnnotations(Ctx, CE, MethodDecl, false);
+      AddCFAnnotations(Ctx, RS, MethodDecl, false);
       return;
     } else if (!AuditedType(MethodDecl->getReturnType()))
       return;
   }
 
   // At this point result type is either annotated or audited.
-  // Now, how about argument types.
-  ArrayRef<ArgEffect> AEArgs = CE.getArgs();
   unsigned i = 0;
   for (ObjCMethodDecl::param_const_iterator pi = MethodDecl->param_begin(),
        pe = MethodDecl->param_end(); pi != pe; ++pi, ++i) {
     const ParmVarDecl *pd = *pi;
-    ArgEffect AE = AEArgs[i];
+    ArgEffect AE = RS->getArg(i);
     if ((AE.getKind() == DecRef && !pd->hasAttr<CFConsumedAttr>()) ||
         AE.getKind() == IncRef || !AuditedType(pd->getType())) {
-      AddCFAnnotations(Ctx, CE, MethodDecl, MethodIsReturnAnnotated);
+      AddCFAnnotations(Ctx, RS, MethodDecl, MethodIsReturnAnnotated);
       return;
     }
   }
