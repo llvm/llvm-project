@@ -4866,10 +4866,7 @@ static bool checkOpenMPIterationSpace(
       // lastprivate (for simd directives with several collapsed or ordered
       // loops).
       if (DVar.CKind == OMPC_unknown)
-        DVar = DSA.hasDSA(LCDecl, isOpenMPPrivate,
-                          [](OpenMPDirectiveKind) -> bool { return true; },
-                          /*FromParent=*/false);
-      DSA.addDSA(LCDecl, LoopDeclRefExpr, PredeterminedCKind);
+        DSA.addDSA(LCDecl, LoopDeclRefExpr, PredeterminedCKind);
     }
 
     assert(isOpenMPLoopDirective(DKind) && "DSA for non-loop vars");

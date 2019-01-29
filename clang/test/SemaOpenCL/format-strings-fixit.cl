@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -cl-std=CL1.2 -fsyntax-only -pedantic -Wall -Werror %t
 // RUN: %clang_cc1 -cl-std=CL1.2 -E -o - %t | FileCheck %s
 
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+
 typedef __attribute__((ext_vector_type(4))) char char4;
 typedef __attribute__((ext_vector_type(4))) short short4;
 typedef __attribute__((ext_vector_type(4))) int int4;
