@@ -16,11 +16,13 @@
 #include "XRefs.h"
 #include "index/FileIndex.h"
 #include "index/Merge.h"
+#include "refactor/Tweak.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -28,10 +30,12 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <future>
+#include <memory>
 #include <mutex>
 
 namespace clang {
@@ -323,6 +327,56 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
 
   WorkScheduler.runWithAST(
       "Rename", File, Bind(Action, File.str(), NewName.str(), std::move(CB)));
+}
+
+void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
+                                   Callback<std::vector<TweakRef>> CB) {
+  auto Action = [Sel](decltype(CB) CB, std::string File,
+                      Expected<InputsAndAST> InpAST) {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+
+    auto &AST = InpAST->AST;
+    auto CursorLoc = sourceLocationInMainFile(
+        AST.getASTContext().getSourceManager(), Sel.start);
+    if (!CursorLoc)
+      return CB(CursorLoc.takeError());
+    Tweak::Selection Inputs = {InpAST->Inputs.Contents, InpAST->AST,
+                               *CursorLoc};
+
+    std::vector<TweakRef> Res;
+    for (auto &T : prepareTweaks(Inputs))
+      Res.push_back({T->id(), T->title()});
+    CB(std::move(Res));
+  };
+
+  WorkScheduler.runWithAST("EnumerateTweaks", File,
+                           Bind(Action, std::move(CB), File.str()));
+}
+
+void ClangdServer::applyTweak(PathRef File, Range Sel, TweakID ID,
+                              Callback<tooling::Replacements> CB) {
+  auto Action = [ID, Sel](decltype(CB) CB, std::string File,
+                          Expected<InputsAndAST> InpAST) {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+
+    auto &AST = InpAST->AST;
+    auto CursorLoc = sourceLocationInMainFile(
+        AST.getASTContext().getSourceManager(), Sel.start);
+    if (!CursorLoc)
+      return CB(CursorLoc.takeError());
+    Tweak::Selection Inputs = {InpAST->Inputs.Contents, InpAST->AST,
+                               *CursorLoc};
+
+    auto A = prepareTweak(ID, Inputs);
+    if (!A)
+      return CB(A.takeError());
+    // FIXME: run formatter on top of resulting replacements.
+    return CB((*A)->apply(Inputs));
+  };
+  WorkScheduler.runWithAST("ApplyTweak", File,
+                           Bind(Action, std::move(CB), File.str()));
 }
 
 void ClangdServer::dumpAST(PathRef File,

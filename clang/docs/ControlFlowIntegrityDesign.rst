@@ -196,7 +196,7 @@ those sub-hierarchies need to be (see "Stripping Leading/Trailing Zeros in Bit
 Vectors" above). The `GlobalLayoutBuilder`_ class is responsible for laying
 out the globals efficiently to minimize the sizes of the underlying bitsets.
 
-.. _GlobalLayoutBuilder: https://llvm.org/viewvc/llvm-project/llvm/trunk/include/llvm/Transforms/IPO/LowerTypeTests.h?view=markup
+.. _GlobalLayoutBuilder: https://github.com/llvm/llvm-project/blob/master/llvm/include/llvm/Transforms/IPO/LowerTypeTests.h
 
 Alignment
 ~~~~~~~~~
@@ -300,7 +300,7 @@ The interleaving scheme, however, can only work with individual virtual tables s
 In comparison, the old scheme does not require the splitting but it is more efficient when the combined virtual tables have been split.
 The `GlobalSplit`_ pass is responsible for splitting combined virtual tables into individual ones. 
 
-.. _GlobalSplit: https://llvm.org/viewvc/llvm-project/llvm/trunk/lib/Transforms/IPO/GlobalSplit.cpp?view=markup
+.. _GlobalSplit: https://github.com/llvm/llvm-project/blob/master/llvm/lib/Transforms/IPO/GlobalSplit.cpp
 
 Order virtual tables by a pre-order traversal of the class hierarchy 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

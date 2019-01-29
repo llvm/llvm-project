@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "Annotations.h"
 #include "SourceCode.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_os_ostream.h"
@@ -15,6 +16,9 @@
 namespace clang {
 namespace clangd {
 namespace {
+
+using llvm::Failed;
+using llvm::HasValue;
 
 MATCHER_P2(Pos, Line, Col, "") {
   return arg.line == Line && arg.character == Col;
@@ -138,6 +142,38 @@ TEST(SourceCodeTests, IsRangeConsecutive) {
       isRangeConsecutive(range({0, 2}, {0, 3}), range({2, 3}, {2, 4})));
   EXPECT_FALSE(
       isRangeConsecutive(range({2, 2}, {2, 3}), range({2, 4}, {2, 5})));
+}
+
+TEST(SourceCodeTests, SourceLocationInMainFile) {
+  Annotations Source(R"cpp(
+    ^in^t ^foo
+    ^bar
+    ^baz ^() {}  {} {} {} { }^
+)cpp");
+
+  SourceManagerForFile Owner("foo.cpp", Source.code());
+  SourceManager &SM = Owner.get();
+
+  SourceLocation StartOfFile = SM.getLocForStartOfFile(SM.getMainFileID());
+  EXPECT_THAT_EXPECTED(sourceLocationInMainFile(SM, position(0, 0)),
+                       HasValue(StartOfFile));
+  // End of file.
+  EXPECT_THAT_EXPECTED(
+      sourceLocationInMainFile(SM, position(4, 0)),
+      HasValue(StartOfFile.getLocWithOffset(Source.code().size())));
+  // Column number is too large.
+  EXPECT_THAT_EXPECTED(sourceLocationInMainFile(SM, position(0, 1)), Failed());
+  EXPECT_THAT_EXPECTED(sourceLocationInMainFile(SM, position(0, 100)),
+                       Failed());
+  EXPECT_THAT_EXPECTED(sourceLocationInMainFile(SM, position(4, 1)), Failed());
+  // Line number is too large.
+  EXPECT_THAT_EXPECTED(sourceLocationInMainFile(SM, position(5, 0)), Failed());
+  // Check all positions mentioned in the test return valid results.
+  for (auto P : Source.points()) {
+    size_t Offset = llvm::cantFail(positionToOffset(Source.code(), P));
+    EXPECT_THAT_EXPECTED(sourceLocationInMainFile(SM, P),
+                         HasValue(StartOfFile.getLocWithOffset(Offset)));
+  }
 }
 
 } // namespace

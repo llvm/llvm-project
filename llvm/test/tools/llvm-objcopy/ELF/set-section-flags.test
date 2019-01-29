@@ -1,0 +1,68 @@
+# RUN: yaml2obj %s > %t
+
+# Single flags on a section with no flags:
+# RUN: llvm-objcopy --set-section-flags=.foo=alloc %t %t.alloc
+# RUN: llvm-readobj --sections %t.alloc | FileCheck %s --check-prefixes=CHECK,ALLOC,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=load %t %t.load
+# RUN: llvm-readobj --sections %t.load | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=noload %t %t.noload
+# RUN: llvm-readobj --sections %t.noload | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=readonly %t %t.readonly
+# RUN: llvm-readobj --sections %t.readonly | FileCheck %s --check-prefixes=CHECK
+# RUN: llvm-objcopy --set-section-flags=.foo=debug %t %t.debug
+# RUN: llvm-readobj --sections %t.debug | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=code %t %t.code
+# RUN: llvm-readobj --sections %t.code | FileCheck %s --check-prefixes=CHECK,EXEC,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=data %t %t.data
+# RUN: llvm-readobj --sections %t.data | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=rom %t %t.rom
+# RUN: llvm-readobj --sections %t.rom | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=contents %t %t.contents
+# RUN: llvm-readobj --sections %t.contents | FileCheck %s --check-prefixes=CHECK,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=merge %t %t.merge
+# RUN: llvm-readobj --sections %t.merge | FileCheck %s --check-prefixes=CHECK,MERGE,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=strings %t %t.strings
+# RUN: llvm-readobj --sections %t.strings | FileCheck %s --check-prefixes=CHECK,STRINGS,WRITE
+# RUN: llvm-objcopy --set-section-flags=.foo=share %t %t.share
+# RUN: llvm-readobj --sections %t.share | FileCheck %s --check-prefixes=CHECK,WRITE
+
+# Multiple flags:
+# RUN: llvm-objcopy --set-section-flags=.foo=alloc,readonly,strings %t %t.alloc_ro_strings
+# RUN: llvm-readobj --sections %t.alloc_ro_strings | FileCheck %s --check-prefixes=CHECK,ALLOC,STRINGS
+# RUN: llvm-objcopy --set-section-flags=.foo=alloc,code %t %t.alloc_code
+# RUN: llvm-readobj --sections %t.alloc_code | FileCheck %s --check-prefixes=CHECK,ALLOC,EXEC,WRITE
+
+# Invalid flags:
+# RUN: not llvm-objcopy --set-section-flags=.foo=xyzzy %t %t.xyzzy 2>&1 | FileCheck %s --check-prefix=BAD-FLAG
+
+# Bad flag format:
+# RUN: not llvm-objcopy --set-section-flags=.foo %t %t2 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
+
+# Setting flags for the same section multiple times:
+# RUN: not llvm-objcopy --set-section-flags=.foo=alloc --set-section-flags=.foo=load %t %t2 2>&1 | FileCheck %s --check-prefix=MULTIPLE-SETS
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .foo
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+
+# CHECK:        Name: .foo
+# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Flags [
+# ALLOC-NEXT:     SHF_ALLOC (0x2)
+# EXEC-NEXT:      SHF_EXECINSTR (0x4)
+# MERGE-NEXT:     SHF_MERGE (0x10)
+# STRINGS-NEXT:   SHF_STRINGS (0x20)
+# WRITE-NEXT:     SHF_WRITE (0x1)
+# CHECK-NEXT:   ]
+
+# BAD-FORMAT: Bad format for --set-section-flags: missing '='
+# MULTIPLE-SETS: --set-section-flags set multiple times for section .foo
+
+# BAD-FLAG: Unrecognized section flag 'xyzzy'. Flags supported for GNU compatibility: alloc, load, noload, readonly, debug, code, data, rom, share, contents, merge, strings.

@@ -231,6 +231,7 @@ void testUnion() {
 
   int sock = socket(AF_INET, SOCK_STREAM, 0);
   read(sock, &tainted.y, sizeof(tainted.y));
+  tainted.x = 0;
   // FIXME: overlapping regions aren't detected by isTainted yet
   __builtin_memcpy(buffer, tainted.y, tainted.x);
 }

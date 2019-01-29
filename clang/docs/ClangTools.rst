@@ -9,22 +9,9 @@ functionality such as fast syntax checking, automatic formatting,
 refactoring, etc.
 
 Only a couple of the most basic and fundamental tools are kept in the
-primary Clang Subversion project. The rest of the tools are kept in a
-side-project so that developers who don't want or need to build them
-don't. If you want to get access to the extra Clang Tools repository,
-simply check it out into the tools tree of your Clang checkout and
-follow the usual process for building and working with a combined
-LLVM/Clang checkout:
-
--  With Subversion:
-
-   -  ``cd llvm/tools/clang/tools``
-   -  ``svn co https://llvm.org/svn/llvm-project/clang-tools-extra/trunk extra``
-
--  Or with Git:
-
-   -  ``cd llvm/tools/clang/tools``
-   -  ``git clone https://llvm.org/git/clang-tools-extra.git extra``
+primary Clang tree. The rest of the tools are kept in a separate
+directory tree, ``clang-tools-extra
+<https://github.com/llvm/llvm-project/tree/master/clang-tools-extra>``_.
 
 This document describes a high-level overview of the organization of
 Clang Tools within the project as well as giving an introduction to some

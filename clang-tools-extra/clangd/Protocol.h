@@ -631,6 +631,21 @@ struct WorkspaceEdit {
 bool fromJSON(const llvm::json::Value &, WorkspaceEdit &);
 llvm::json::Value toJSON(const WorkspaceEdit &WE);
 
+/// Arguments for the 'applyTweak' command. The server sends these commands as a
+/// response to the textDocument/codeAction request. The client can later send a
+/// command back to the server if the user requests to execute a particular code
+/// tweak.
+struct TweakArgs {
+  /// A file provided by the client on a textDocument/codeAction request.
+  URIForFile file;
+  /// A selection provided by the client on a textDocument/codeAction request.
+  Range selection;
+  /// ID of the tweak that should be executed. Corresponds to Tweak::id().
+  std::string tweakID;
+};
+bool fromJSON(const llvm::json::Value &, TweakArgs &);
+llvm::json::Value toJSON(const TweakArgs &A);
+
 /// Exact commands are not specified in the protocol so we define the
 /// ones supported by Clangd here. The protocol specifies the command arguments
 /// to be "any[]" but to make this safer and more manageable, each command we
@@ -642,12 +657,15 @@ llvm::json::Value toJSON(const WorkspaceEdit &WE);
 struct ExecuteCommandParams {
   // Command to apply fix-its. Uses WorkspaceEdit as argument.
   const static llvm::StringLiteral CLANGD_APPLY_FIX_COMMAND;
+  // Command to apply the code action. Uses TweakArgs as argument.
+  const static llvm::StringLiteral CLANGD_APPLY_TWEAK;
 
   /// The command identifier, e.g. CLANGD_APPLY_FIX_COMMAND
   std::string command;
 
   // Arguments
   llvm::Optional<WorkspaceEdit> workspaceEdit;
+  llvm::Optional<TweakArgs> tweakArgs;
 };
 bool fromJSON(const llvm::json::Value &, ExecuteCommandParams &);
 
@@ -669,6 +687,7 @@ struct CodeAction {
   /// Used to filter code actions.
   llvm::Optional<std::string> kind;
   const static llvm::StringLiteral QUICKFIX_KIND;
+  const static llvm::StringLiteral REFACTOR_KIND;
 
   /// The diagnostics that this code action resolves.
   llvm::Optional<std::vector<Diagnostic>> diagnostics;

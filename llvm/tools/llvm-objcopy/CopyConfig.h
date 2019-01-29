@@ -37,6 +37,11 @@ struct SectionRename {
   Optional<uint64_t> NewFlags;
 };
 
+struct SectionFlagsUpdate {
+  StringRef Name;
+  uint64_t NewFlags;
+};
+
 // Configuration for copying/stripping a single file.
 struct CopyConfig {
   // Main input/output options
@@ -73,6 +78,7 @@ struct CopyConfig {
 
   // Map options
   StringMap<SectionRename> SectionsToRename;
+  StringMap<SectionFlagsUpdate> SetSectionFlags;
   StringMap<StringRef> SymbolsToRename;
 
   // Boolean options

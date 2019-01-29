@@ -1289,7 +1289,7 @@ private:
     using EdgeExitInfo = std::pair<BasicBlock *, ExitLimit>;
 
     /// Initialize BackedgeTakenInfo from a list of exact exit counts.
-    BackedgeTakenInfo(SmallVectorImpl<EdgeExitInfo> &&ExitCounts, bool Complete,
+    BackedgeTakenInfo(ArrayRef<EdgeExitInfo> ExitCounts, bool Complete,
                       const SCEV *MaxCount, bool MaxOrZero);
 
     /// Test whether this BackedgeTakenInfo contains any computed information,
@@ -1842,15 +1842,15 @@ private:
                           bool NoWrap);
 
   /// Get add expr already created or create a new one.
-  const SCEV *getOrCreateAddExpr(SmallVectorImpl<const SCEV *> &Ops,
+  const SCEV *getOrCreateAddExpr(ArrayRef<const SCEV *> Ops,
                                  SCEV::NoWrapFlags Flags);
 
   /// Get mul expr already created or create a new one.
-  const SCEV *getOrCreateMulExpr(SmallVectorImpl<const SCEV *> &Ops,
+  const SCEV *getOrCreateMulExpr(ArrayRef<const SCEV *> Ops,
                                  SCEV::NoWrapFlags Flags);
 
   // Get addrec expr already created or create a new one.
-  const SCEV *getOrCreateAddRecExpr(SmallVectorImpl<const SCEV *> &Ops,
+  const SCEV *getOrCreateAddRecExpr(ArrayRef<const SCEV *> Ops,
                                     const Loop *L, SCEV::NoWrapFlags Flags);
 
   /// Return x if \p Val is f(x) where f is a 1-1 function.
