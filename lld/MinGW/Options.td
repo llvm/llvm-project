@@ -78,3 +78,9 @@ def version: F<"version">, HelpText<"Display the version number and exit">;
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_strip_s: Flag<["-"], "s">, Alias<strip_all>;
 def alias_strip_S: Flag<["-"], "S">, Alias<strip_debug>;
+
+// Ignored options
+def: S<"plugin">;
+def: J<"plugin=">;
+def: S<"plugin-opt">;
+def: J<"plugin-opt=">;

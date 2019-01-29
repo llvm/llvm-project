@@ -229,14 +229,8 @@ of other runtimes.
 libunwind (LLVM)
 ^^^^^^^^^^^^^^^^
 
-LLVM's unwinder library can be obtained from subversion:
-
-.. code-block:: console
-
-  llvm-src$ svn co https://llvm.org/svn/llvm-project/libunwind/trunk projects/libunwind
-
-When checked out into projects/libunwind within an LLVM checkout,
-it should be automatically picked up by the LLVM build system.
+LLVM's unwinder library is part of the llvm-project git repository. To
+build it, pass ``-DLLVM_ENABLE_PROJECTS=libunwind`` to the cmake invocation.
 
 If using libc++abi, you may need to configure it to use libunwind
 rather than libgcc_s by passing ``-DLIBCXXABI_USE_LLVM_UNWINDER=YES``

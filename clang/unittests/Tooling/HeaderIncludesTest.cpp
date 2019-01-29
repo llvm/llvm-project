@@ -14,9 +14,6 @@
 
 #include "gtest/gtest.h"
 
-using clang::tooling::ReplacementTest;
-using clang::tooling::toReplacements;
-
 namespace clang {
 namespace tooling {
 namespace {
@@ -312,6 +309,17 @@ TEST_F(HeaderIncludesTest, RealHeaderGuardAfterComments) {
                          "#include <vector>\n"
                          "int x;\n"
                          "#define Y 1\n";
+  EXPECT_EQ(Expected, insert(Code, "<vector>"));
+}
+
+TEST_F(HeaderIncludesTest, PragmaOnce) {
+  std::string Code = "// comment \n"
+                     "#pragma once\n"
+                     "int x;\n";
+  std::string Expected = "// comment \n"
+                         "#pragma once\n"
+                         "#include <vector>\n"
+                         "int x;\n";
   EXPECT_EQ(Expected, insert(Code, "<vector>"));
 }
 

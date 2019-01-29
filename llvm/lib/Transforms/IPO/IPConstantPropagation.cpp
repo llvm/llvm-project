@@ -66,6 +66,13 @@ static bool PropagateConstantsIntoArguments(Function &F) {
     if (!ACS)
       return false;
 
+    // Mismatched argument count is undefined behavior. Simply bail out to avoid
+    // handling of such situations below (avoiding asserts/crashes).
+    unsigned NumActualArgs = ACS.getNumArgOperands();
+    if (F.isVarArg() ? ArgumentConstants.size() > NumActualArgs
+                     : ArgumentConstants.size() != NumActualArgs)
+      return false;
+
     // Check out all of the potentially constant arguments.  Note that we don't
     // inspect varargs here.
     Function::arg_iterator Arg = F.arg_begin();
@@ -77,6 +84,11 @@ static bool PropagateConstantsIntoArguments(Function &F) {
 
       Value *V = ACS.getCallArgOperand(i);
       Constant *C = dyn_cast_or_null<Constant>(V);
+
+      // Mismatched argument type is undefined behavior. Simply bail out to avoid
+      // handling of such situations below (avoiding asserts/crashes).
+      if (C && Arg->getType() != C->getType())
+        return false;
 
       // We can only propagate thread independent values through callbacks.
       // This is different to direct/indirect call sites because for them we

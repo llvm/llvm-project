@@ -211,14 +211,14 @@ public:
 
   const char* getTargetNodeName(unsigned Opcode) const override;
 
-  // FIXME: Turn off MergeConsecutiveStores() before Instruction Selection
-  // for AMDGPU.
-  // A commit ( git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@319036
-  // 91177308-0d34-0410-b5e6-96231b3b80d8 ) turned on
-  // MergeConsecutiveStores() before Instruction Selection for all targets.
-  // Enough AMDGPU compiles go into an infinite loop ( MergeConsecutiveStores()
-  // merges two stores; LegalizeStoreOps() un-merges; MergeConsecutiveStores()
-  // re-merges, etc. ) to warrant turning it off for now.
+  // FIXME: Turn off MergeConsecutiveStores() before Instruction Selection for
+  // AMDGPU.  Commit r319036,
+  // (https://github.com/llvm/llvm-project/commit/db77e57ea86d941a4262ef60261692f4cb6893e6)
+  // turned on MergeConsecutiveStores() before Instruction Selection for all
+  // targets.  Enough AMDGPU compiles go into an infinite loop (
+  // MergeConsecutiveStores() merges two stores; LegalizeStoreOps() un-merges;
+  // MergeConsecutiveStores() re-merges, etc. ) to warrant turning it off for
+  // now.
   bool mergeStoresAfterLegalization() const override { return false; }
 
   bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override {

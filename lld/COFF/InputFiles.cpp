@@ -250,16 +250,12 @@ void ObjFile::readAssociativeDefinition(COFFSymbolRef Sym,
   // Check whether the parent is prevailing. If it is, so are we, and we read
   // the section; otherwise mark it as discarded.
   if (Parent) {
-    if (Parent->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
-      Diag();
-      return;
-    }
-
     SectionChunk *C = readSection(SectionNumber, Def, "");
-    C->Selection = IMAGE_COMDAT_SELECT_ASSOCIATIVE;
     SparseChunks[SectionNumber] = C;
-    if (SparseChunks[SectionNumber])
-      Parent->addAssociative(SparseChunks[SectionNumber]);
+    if (C) {
+      C->Selection = IMAGE_COMDAT_SELECT_ASSOCIATIVE;
+      Parent->addAssociative(C);
+    }
   } else {
     SparseChunks[SectionNumber] = nullptr;
   }

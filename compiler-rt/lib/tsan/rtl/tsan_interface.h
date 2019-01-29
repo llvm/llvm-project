@@ -199,7 +199,7 @@ __extension__ typedef __int128 a128;
 #endif
 
 // Part of ABI, do not change.
-// http://llvm.org/viewvc/llvm-project/libcxx/trunk/include/atomic?view=markup
+// https://github.com/llvm/llvm-project/blob/master/libcxx/include/atomic
 typedef enum {
   mo_relaxed,
   mo_consume,

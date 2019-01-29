@@ -149,7 +149,13 @@ TEST(SymbolInfoTests, All) {
           #define MACRO 5\nint i = MAC^RO;
         )cpp",
               {CreateExpectedSymbolDetails("MACRO", "",
-                                           "c:TestTU.cpp@55@macro@MACRO")}},
+                                           "c:TestTU.cpp@38@macro@MACRO")}},
+          {
+              R"cpp( // Macro reference
+          #define MACRO 5\nint i = MACRO^;
+        )cpp",
+              {CreateExpectedSymbolDetails("MACRO", "",
+                                           "c:TestTU.cpp@38@macro@MACRO")}},
           {
               R"cpp( // Multiple symbols returned - using overloaded function name
           void foo() {}

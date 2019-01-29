@@ -50,6 +50,13 @@ TEST(InfoRecord, parse) {
   EXPECT_EQ(llvm::None, InfoRecord::parse("INFO CODE_ID"));
 }
 
+TEST(FileRecord, parse) {
+  EXPECT_EQ(FileRecord(47, "foo"), FileRecord::parse("FILE 47 foo"));
+  EXPECT_EQ(llvm::None, FileRecord::parse("FILE 47"));
+  EXPECT_EQ(llvm::None, FileRecord::parse("FILE"));
+  EXPECT_EQ(llvm::None, FileRecord::parse(""));
+}
+
 TEST(FuncRecord, parse) {
   EXPECT_EQ(FuncRecord(true, 0x47, 0x7, 0x8, "foo"),
             FuncRecord::parse("FUNC m 47 7 8 foo"));
@@ -62,6 +69,15 @@ TEST(FuncRecord, parse) {
   EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC 47"));
   EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC m"));
   EXPECT_EQ(llvm::None, FuncRecord::parse("FUNC"));
+}
+
+TEST(LineRecord, parse) {
+  EXPECT_EQ(LineRecord(0x47, 0x74, 47, 74), LineRecord::parse("47 74 47 74"));
+  EXPECT_EQ(llvm::None, LineRecord::parse("47 74 47"));
+  EXPECT_EQ(llvm::None, LineRecord::parse("47 74"));
+  EXPECT_EQ(llvm::None, LineRecord::parse("47"));
+  EXPECT_EQ(llvm::None, LineRecord::parse(""));
+  EXPECT_EQ(llvm::None, LineRecord::parse("FUNC"));
 }
 
 TEST(PublicRecord, parse) {

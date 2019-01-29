@@ -616,8 +616,11 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
       if (isHalf || isFloat || isLong || isFloat128)
         break; // HF, FF, LF, QF invalid.
 
-      if (PP.getTargetInfo().hasFloat16Type() && s + 2 < ThisTokEnd &&
-          s[1] == '1' && s[2] == '6') {
+      // CUDA host and device may have different _Float16 support, therefore
+      // allows f16 literals to avoid false alarm.
+      // ToDo: more precise check for CUDA.
+      if ((PP.getTargetInfo().hasFloat16Type() || PP.getLangOpts().CUDA) &&
+          s + 2 < ThisTokEnd && s[1] == '1' && s[2] == '6') {
         s += 2; // success, eat up 2 characters.
         isFloat16 = true;
         continue;

@@ -22,23 +22,9 @@
         <div class="postcontent">
           <p>Refer to the <a href="http://llvm.org/docs/GettingStarted.html#getting-started-with-llvm">LLVM Getting Started Guide</a>
              for general instructions on how to check out source.  Note that LLDB depends on having a working checkout of LLVM
-             and Clang, so the first step is to download LLVM and Clang sources as described at the above URL.  Then you can
-             additionally download the LLDB sources from the following repository URLs.</p>
-          <p><b>SVN Repository</b>: http://llvm.org/svn/llvm-project/lldb/trunk </p>
-          <p><b>Git Clone</b>: http://llvm.org/git/lldb.git </p>
-          <p>
-            For non-Mac platforms, and for MacOSX building with CMake (not Xcode), you should check out your sources to adhere to
-            the following directory structure:
-            <pre><tt>  
-                  llvm
-                  |
-                  `-- tools
-                      |
-                      +-- clang
-                      |
-                      `-- lldb
-                </tt></pre>
-          </p>
+             and Clang, so the first step is to download and build as described at the above URL. The same repository also
+             contains LLDB.</p>
+          <p><b>Git browser</b>: https://github.com/llvm/llvm-project/tree/master/lldb </p>
           <p>
             For MacOSX building from Xcode, simply checkout LLDB and then build from Xcode.  The Xcode project will
             automatically detect that it is a fresh checkout, and checkout LLVM and clang automatically.  Unlike other

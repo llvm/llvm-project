@@ -537,6 +537,18 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       return UnableToLegalize;
 
     const auto &MMO = **MI.memoperands_begin();
+    unsigned DstReg = MI.getOperand(0).getReg();
+    LLT DstTy = MRI.getType(DstReg);
+
+    if (8 * MMO.getSize() != DstTy.getSizeInBits()) {
+      unsigned TmpReg = MRI.createGenericVirtualRegister(NarrowTy);
+      auto &MMO = **MI.memoperands_begin();
+      MIRBuilder.buildLoad(TmpReg, MI.getOperand(1).getReg(), MMO);
+      MIRBuilder.buildAnyExt(DstReg, TmpReg);
+      MI.eraseFromParent();
+      return Legalized;
+    }
+
     // This implementation doesn't work for atomics. Give up instead of doing
     // something invalid.
     if (MMO.getOrdering() != AtomicOrdering::NotAtomic ||
@@ -566,8 +578,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
       DstRegs.push_back(DstReg);
     }
-    unsigned DstReg = MI.getOperand(0).getReg();
-    if(MRI.getType(DstReg).isVector())
+
+    if (DstTy.isVector())
       MIRBuilder.buildBuildVector(DstReg, DstRegs);
     else
       MIRBuilder.buildMerge(DstReg, DstRegs);
@@ -608,6 +620,19 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       return UnableToLegalize;
 
     const auto &MMO = **MI.memoperands_begin();
+
+    unsigned SrcReg = MI.getOperand(0).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+
+    if (8 * MMO.getSize() != SrcTy.getSizeInBits()) {
+      unsigned TmpReg = MRI.createGenericVirtualRegister(NarrowTy);
+      auto &MMO = **MI.memoperands_begin();
+      MIRBuilder.buildTrunc(TmpReg, SrcReg);
+      MIRBuilder.buildStore(TmpReg, MI.getOperand(1).getReg(), MMO);
+      MI.eraseFromParent();
+      return Legalized;
+    }
+
     // This implementation doesn't work for atomics. Give up instead of doing
     // something invalid.
     if (MMO.getOrdering() != AtomicOrdering::NotAtomic ||

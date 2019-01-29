@@ -4332,14 +4332,16 @@ Expr *Sema::stripARCUnbridgedCast(Expr *e) {
     assert(!gse->isResultDependent());
 
     unsigned n = gse->getNumAssocs();
-    SmallVector<Expr*, 4> subExprs(n);
-    SmallVector<TypeSourceInfo*, 4> subTypes(n);
-    for (unsigned i = 0; i != n; ++i) {
-      subTypes[i] = gse->getAssocTypeSourceInfo(i);
-      Expr *sub = gse->getAssocExpr(i);
-      if (i == gse->getResultIndex())
+    SmallVector<Expr *, 4> subExprs;
+    SmallVector<TypeSourceInfo *, 4> subTypes;
+    subExprs.reserve(n);
+    subTypes.reserve(n);
+    for (const GenericSelectionExpr::Association &assoc : gse->associations()) {
+      subTypes.push_back(assoc.getTypeSourceInfo());
+      Expr *sub = assoc.getAssociationExpr();
+      if (assoc.isSelected())
         sub = stripARCUnbridgedCast(sub);
-      subExprs[i] = sub;
+      subExprs.push_back(sub);
     }
 
     return GenericSelectionExpr::Create(

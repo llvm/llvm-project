@@ -203,9 +203,9 @@ static llvm::cl::opt<bool> EnableFunctionArgSnippets(
 
 static llvm::cl::opt<std::string> ClangTidyChecks(
     "clang-tidy-checks",
-    llvm::cl::desc("List of clang-tidy checks to run (this will overrides "
+    llvm::cl::desc("List of clang-tidy checks to run (this will override "
                    ".clang-tidy files)"),
-    llvm::cl::init(""), llvm::cl::Hidden);
+    llvm::cl::init(""));
 
 static llvm::cl::opt<bool> SuggestMissingIncludes(
     "suggest-missing-includes",

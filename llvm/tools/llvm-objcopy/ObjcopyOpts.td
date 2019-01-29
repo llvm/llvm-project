@@ -86,6 +86,13 @@ defm add_section
          "Make a section named <section> with the contents of <file>.">,
       MetaVarName<"section=file">;
 
+defm set_section_flags
+    : Eq<"set-section-flags",
+         "Set section flags for a given section. Flags supported for GNU "
+         "compatibility: alloc, load, noload, readonly, debug, code, data, "
+         "rom, share, contents, merge, strings.">,
+      MetaVarName<"section=flag1[,flag2,...]">;
+
 def strip_all
     : Flag<["-", "--"], "strip-all">,
       HelpText<
