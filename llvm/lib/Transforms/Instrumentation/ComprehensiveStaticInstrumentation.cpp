@@ -836,20 +836,6 @@ void CSIImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
   else if (InvokeInst *II = dyn_cast<InvokeInst>(I))
     Called = II->getCalledFunction();
 
-  // Should we interpose this call?
-  bool shouldInterpose =
-      Config->DoesFunctionRequireInterposition(Called->getName());
-
-  if (shouldInterpose) {
-    if (CallInst *CI = dyn_cast<CallInst>(I)) {
-      CI->setCalledFunction(getInterpositionFunction(Called));
-    } else if (InvokeInst *II = dyn_cast<InvokeInst>(I)) {
-      II->setCalledFunction(getInterpositionFunction(Called));
-    }
-
-    return;
-  }
-
   // Does this call require instrumentation before or after?
   bool shouldInstrumentBefore =
       Config->DoesFunctionRequireInstrumentationForPoint(
@@ -896,10 +882,12 @@ void CSIImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
       // exception block.
       InvokeInst *II = cast<InvokeInst>(I);
       insertHookCallInSuccessorBB(II->getNormalDest(), II->getParent(),
-                                  CsiAfterCallsite, {CallsiteId, FuncId, PropVal},
+                                  CsiAfterCallsite,
+                                  {CallsiteId, FuncId, PropVal},
                                   {DefaultID, DefaultID, DefaultPropVal});
       insertHookCallInSuccessorBB(II->getUnwindDest(), II->getParent(),
-                                  CsiAfterCallsite, {CallsiteId, FuncId, PropVal},
+                                  CsiAfterCallsite,
+                                  {CallsiteId, FuncId, PropVal},
                                   {DefaultID, DefaultID, DefaultPropVal});
     } else {
       // Simple call instruction; there is only one "after" position.
@@ -907,6 +895,27 @@ void CSIImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
       IRB.SetInsertPoint(&*Iter);
       PropVal = Prop.getValue(IRB);
       insertHookCall(&*Iter, CsiAfterCallsite, {CallsiteId, FuncId, PropVal});
+    }
+  }
+}
+
+void CSIImpl::interposeCall(Instruction *I) {
+
+  Function *Called = nullptr;
+  if (CallInst *CI = dyn_cast<CallInst>(I))
+    Called = CI->getCalledFunction();
+  else if (InvokeInst *II = dyn_cast<InvokeInst>(I))
+    Called = II->getCalledFunction();
+
+  // Should we interpose this call?
+  bool shouldInterpose =
+      Config->DoesFunctionRequireInterposition(Called->getName());
+
+  if (shouldInterpose) {
+    if (CallInst *CI = dyn_cast<CallInst>(I)) {
+      CI->setCalledFunction(getInterpositionFunction(Called));
+    } else if (InvokeInst *II = dyn_cast<InvokeInst>(I)) {
+      II->setCalledFunction(getInterpositionFunction(Called));
     }
   }
 }
@@ -950,8 +959,7 @@ static void getTaskExits(DetachInst *DI,
   }
 }
 
-void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT,
-                               TaskInfo &TI,
+void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
                                const DenseMap<Value *, Value *> &TrackVars) {
   // Instrument the detach instruction itself
   Value *DetachID;
@@ -961,8 +969,8 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT,
     DetachID = DetachFED.localToGlobalId(LocalID, IRB);
     Value *TrackVar = TrackVars.lookup(DI->getSyncRegion());
     IRB.CreateStore(
-        Constant::getIntegerValue(
-            IntegerType::getInt32Ty(DI->getContext()), APInt(32, 1)),
+        Constant::getIntegerValue(IntegerType::getInt32Ty(DI->getContext()),
+                                  APInt(32, 1)),
         TrackVar);
     insertHookCall(DI, CsiDetach, {DetachID, TrackVar});
   }
@@ -1035,8 +1043,8 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT,
   }
 }
 
-void CSIImpl::instrumentSync(
-    SyncInst *SI, const DenseMap<Value *, Value *> &TrackVars) {
+void CSIImpl::instrumentSync(SyncInst *SI,
+                             const DenseMap<Value *, Value *> &TrackVars) {
   IRBuilder<> IRB(SI);
   Value *DefaultID = getDefaultID(IRB);
   // Get the ID of this sync.
@@ -1047,12 +1055,17 @@ void CSIImpl::instrumentSync(
 
   // Insert instrumentation before the sync.
   insertHookCall(SI, CsiBeforeSync, {SyncID, TrackVar});
-  insertHookCallInSuccessorBB(SI->getSuccessor(0), SI->getParent(),
-                              CsiAfterSync, {SyncID, TrackVar},
-                              {DefaultID,
-                               Constant::getIntegerValue(
-                                   IntegerType::getInt32Ty(SI->getContext()),
-                                   APInt(32, 0))});
+  CallInst *call = insertHookCallInSuccessorBB(
+      SI->getSuccessor(0), SI->getParent(), CsiAfterSync, {SyncID, TrackVar},
+      {DefaultID,
+       Constant::getIntegerValue(IntegerType::getInt32Ty(SI->getContext()),
+                                 APInt(32, 0))});
+
+  // Reset the tracking variable to 0.
+  IRB.SetInsertPoint(call->getNextNode());
+  IRB.CreateStore(Constant::getIntegerValue(
+                      IntegerType::getInt32Ty(SI->getContext()), APInt(32, 0)),
+                  TrackVar);
 }
 
 void CSIImpl::instrumentAlloca(Instruction *I) {
@@ -1266,11 +1279,12 @@ void CSIImpl::instrumentFree(Instruction *I) {
   insertHookCall(&*Iter, CsiAfterFree, {FreeId, Addr, Prop.getValue(IRB)});
 }
 
-void CSIImpl::insertHookCall(Instruction *I, Function *HookFunction,
-                             ArrayRef<Value *> HookArgs) {
+CallInst *CSIImpl::insertHookCall(Instruction *I, Function *HookFunction,
+                                  ArrayRef<Value *> HookArgs) {
   IRBuilder<> IRB(I);
-  Instruction *Call = IRB.CreateCall(HookFunction, HookArgs);
-  setInstrumentationDebugLoc(I, Call);
+  CallInst *Call = IRB.CreateCall(HookFunction, HookArgs);
+  setInstrumentationDebugLoc(I, (Instruction *)Call);
+  return Call;
 }
 
 bool CSIImpl::updateArgPHIs(BasicBlock *Succ, BasicBlock *BB,
@@ -1305,22 +1319,22 @@ bool CSIImpl::updateArgPHIs(BasicBlock *Succ, BasicBlock *BB,
   return false;
 }
 
-void CSIImpl::insertHookCallInSuccessorBB(BasicBlock *Succ, BasicBlock *BB,
-                                          Function *HookFunction,
-                                          ArrayRef<Value *> HookArgs,
-                                          ArrayRef<Value *> DefaultArgs) {
+CallInst *CSIImpl::insertHookCallInSuccessorBB(BasicBlock *Succ, BasicBlock *BB,
+                                               Function *HookFunction,
+                                               ArrayRef<Value *> HookArgs,
+                                               ArrayRef<Value *> DefaultArgs) {
   assert(HookFunction && "No hook function given.");
   // If this successor block has a unique predecessor, just insert the hook call
   // as normal.
   if (Succ->getUniquePredecessor()) {
     assert(Succ->getUniquePredecessor() == BB &&
            "BB is not unique predecessor of successor block");
-    insertHookCall(&*Succ->getFirstInsertionPt(), HookFunction, HookArgs);
-    return;
+    return insertHookCall(&*Succ->getFirstInsertionPt(), HookFunction,
+                          HookArgs);
   }
 
   if (updateArgPHIs(Succ, BB, HookArgs, DefaultArgs))
-    return;
+    return nullptr;
 
   SmallVector<Value *, 2> SuccessorHookArgs;
   for (PHINode *ArgPHI : ArgPHIs[Succ])
@@ -1328,8 +1342,10 @@ void CSIImpl::insertHookCallInSuccessorBB(BasicBlock *Succ, BasicBlock *BB,
 
   IRBuilder<> IRB(&*Succ->getFirstInsertionPt());
   // Insert the hook call, using the PHI as the CSI ID.
-  Instruction *Call = IRB.CreateCall(HookFunction, SuccessorHookArgs);
-  setInstrumentationDebugLoc(*Succ, Call);
+  CallInst *Call = IRB.CreateCall(HookFunction, SuccessorHookArgs);
+  setInstrumentationDebugLoc(*Succ, (Instruction *)Call);
+
+  return Call;
 }
 
 void CSIImpl::insertHookCallAtSharedEHSpindleExits(
@@ -1882,6 +1898,7 @@ void CSIImpl::instrumentFunction(Function &F) {
   SmallVector<DetachInst *, 8> Detaches;
   SmallVector<SyncInst *, 8> Syncs;
   SmallVector<Instruction *, 8> Allocas;
+  SmallVector<Instruction *, 8> AllCalls;
   bool MaySpawn = false;
 
   DominatorTree *DT = &GetDomTree(F);
@@ -1913,6 +1930,8 @@ void CSIImpl::instrumentFunction(Function &F) {
           MemIntrinsics.push_back(&I);
         else
           Callsites.push_back(&I);
+
+        AllCalls.push_back(&I);
 
         computeLoadAndStoreProperties(LoadAndStoreProperties, BBLoadsAndStores,
                                       DL);
@@ -1984,6 +2003,11 @@ void CSIImpl::instrumentFunction(Function &F) {
       instrumentFree(I);
   }
 
+  if (Options.Interpose) {
+    for (Instruction *I : AllCalls)
+      interposeCall(I);
+  }
+
   // Instrument function entry/exit points.
   if (Options.InstrumentFuncEntryExit) {
     IRBuilder<> IRB(&*F.getEntryBlock().getFirstInsertionPt());
@@ -2016,9 +2040,10 @@ void CSIImpl::instrumentFunction(Function &F) {
   updateInstrumentedFnAttrs(F);
 }
 
-DenseMap<Value *, Value *> llvm::CSIImpl::keepTrackOfSpawns(
-    Function &F, const SmallVectorImpl<DetachInst *> &Detaches,
-    const SmallVectorImpl<SyncInst *> &Syncs) {
+DenseMap<Value *, Value *>
+llvm::CSIImpl::keepTrackOfSpawns(Function &F,
+                                 const SmallVectorImpl<DetachInst *> &Detaches,
+                                 const SmallVectorImpl<SyncInst *> &Syncs) {
 
   DenseMap<Value *, Value *> TrackVars;
 
@@ -2040,9 +2065,9 @@ DenseMap<Value *, Value *> llvm::CSIImpl::keepTrackOfSpawns(
     Value *TrackVar = Builder.CreateAlloca(IntegerType::getInt32Ty(C), nullptr,
                                            "has_spawned_region_" +
                                                std::to_string(RegionIndex));
-    Builder.CreateStore(Constant::getIntegerValue(
-                            IntegerType::getInt32Ty(C), APInt(32, 0)),
-                        TrackVar);
+    Builder.CreateStore(
+        Constant::getIntegerValue(IntegerType::getInt32Ty(C), APInt(32, 0)),
+        TrackVar);
 
     TrackVars.insert({Region, TrackVar});
     RegionIndex++;
@@ -2059,8 +2084,8 @@ Function *llvm::CSIImpl::getInterpositionFunction(Function *F) {
   std::string InterposedName =
       (std::string) "__csi_interpose_" + F->getName().str();
 
-  Function *InterpositionFunction = (Function *)M.getOrInsertFunction(
-      InterposedName, F->getFunctionType());
+  Function *InterpositionFunction =
+      (Function *)M.getOrInsertFunction(InterposedName, F->getFunctionType());
 
   InterpositionFunctions.insert({F, InterpositionFunction});
 
@@ -2088,6 +2113,13 @@ bool ComprehensiveStaticInstrumentationLegacyPass::runOnModule(Module &M) {
   auto GetTaskInfo = [this](Function &F) -> TaskInfo & {
     return this->getAnalysis<TaskInfoWrapperPass>(F).getTaskInfo();
   };
+
+  Options.InstrumentAtomics = false;
+  Options.InstrumentBasicBlocks = false;
+  Options.InstrumentMemIntrinsics = false;
+  Options.InstrumentMemoryAccesses = false;
+  Options.InstrumentAllocas = false;
+  Options.InstrumentAllocFns = false;
 
   bool res = CSIImpl(M, CG, GetDomTree, GetTaskInfo, TLI, Options).run();
   verifyModule(M, &llvm::errs());

@@ -785,6 +785,8 @@ protected:
   void instrumentAllocFn(Instruction *I, DominatorTree *DT);
   void instrumentFree(Instruction *I);
 
+  void interposeCall(Instruction *I);
+
   void instrumentFunction(Function &F);
   /// @}
 
@@ -798,12 +800,12 @@ protected:
   Function *getInterpositionFunction(Function *F);
 
   /// Insert a call to the given hook function before the given instruction.
-  void insertHookCall(Instruction *I, Function *HookFunction,
+  CallInst* insertHookCall(Instruction *I, Function *HookFunction,
                       ArrayRef<Value *> HookArgs);
   bool updateArgPHIs(BasicBlock *Succ, BasicBlock *BB,
                      ArrayRef<Value *> HookArgs,
                      ArrayRef<Value *> DefaultHookArgs);
-  void insertHookCallInSuccessorBB(BasicBlock *Succ, BasicBlock *BB,
+  CallInst *insertHookCallInSuccessorBB(BasicBlock *Succ, BasicBlock *BB,
                                    Function *HookFunction,
                                    ArrayRef<Value *> HookArgs,
                                    ArrayRef<Value *> DefaultHookArgs);
