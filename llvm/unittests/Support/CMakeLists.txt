@@ -90,7 +90,7 @@ if(NOT MSVC)
   set_source_files_properties(AlignOfTest.cpp PROPERTIES COMPILE_FLAGS -w)
 endif()
 if(MSVC)
-  if( CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.15 )
+  if( CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 19.14 )
     # Since VS2017 15.8, the following snippet: Failed<CustomSubError>()
     # generates a warning:
     # \svn\llvm\utils\unittest\googlemock\include\gmock\gmock-matchers.h(186):

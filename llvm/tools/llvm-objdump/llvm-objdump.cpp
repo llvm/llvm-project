@@ -1547,6 +1547,9 @@ void llvm::printSectionHeaders(const ObjectFile *Obj) {
     StringRef Name;
     error(Section.getName(Name));
     uint64_t VMA = Section.getAddress();
+    if (shouldAdjustVA(Section))
+      VMA += AdjustVMA;
+
     uint64_t Size = Section.getSize();
     bool Text = Section.isText();
     bool Data = Section.isData();

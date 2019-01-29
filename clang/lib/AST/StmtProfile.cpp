@@ -412,6 +412,7 @@ public:
   OMPClauseProfiler(StmtProfiler *P) : Profiler(P) { }
 #define OPENMP_CLAUSE(Name, Class)                                             \
   void Visit##Class(const Class *C);
+  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   void VistOMPClauseWithPreInit(const OMPClauseWithPreInit *C);
   void VistOMPClauseWithPostUpdate(const OMPClauseWithPostUpdate *C);
@@ -1259,14 +1260,13 @@ void StmtProfiler::VisitBlockExpr(const BlockExpr *S) {
 
 void StmtProfiler::VisitGenericSelectionExpr(const GenericSelectionExpr *S) {
   VisitExpr(S);
-  for (const GenericSelectionExpr::ConstAssociation &Assoc :
-       S->associations()) {
-    QualType T = Assoc.getType();
+  for (unsigned i = 0; i != S->getNumAssocs(); ++i) {
+    QualType T = S->getAssocType(i);
     if (T.isNull())
       ID.AddPointer(nullptr);
     else
       VisitType(T);
-    VisitExpr(Assoc.getAssociationExpr());
+    VisitExpr(S->getAssocExpr(i));
   }
 }
 

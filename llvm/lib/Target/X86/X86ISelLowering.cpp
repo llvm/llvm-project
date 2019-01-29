@@ -14166,8 +14166,6 @@ static SDValue lowerV2X128Shuffle(const SDLoc &DL, MVT VT, SDValue V1,
 /// or two of the lanes of the inputs. The lanes of the input vectors are
 /// shuffled in one or two independent shuffles to get the lanes into the
 /// position needed by the final shuffle.
-///
-/// FIXME: This should be generalized to 512-bit shuffles.
 static SDValue lowerShuffleByMerging128BitLanes(
     const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
     const X86Subtarget &Subtarget, SelectionDAG &DAG) {
@@ -14177,12 +14175,10 @@ static SDValue lowerShuffleByMerging128BitLanes(
     return SDValue();
 
   int Size = Mask.size();
+  int NumLanes = VT.getSizeInBits() / 128;
   int LaneSize = 128 / VT.getScalarSizeInBits();
-  int NumLanes = Size / LaneSize;
-  assert(NumLanes == 2 && "Only handles 256-bit shuffles.");
-
   SmallVector<int, 16> RepeatMask(LaneSize, -1);
-  int LaneSrcs[2][2] = { { -1, -1 }, { -1 , -1 } };
+  SmallVector<std::array<int, 2>, 2> LaneSrcs(NumLanes, {-1, -1});
 
   // First pass will try to fill in the RepeatMask from lanes that need two
   // sources.
@@ -14193,7 +14189,7 @@ static SDValue lowerShuffleByMerging128BitLanes(
       int M = Mask[(Lane * LaneSize) + i];
       if (M < 0)
         continue;
-      // Determine which of the 4 possible input lanes (2 from each source)
+      // Determine which of the possible input lanes (NumLanes from each source)
       // this element comes from. Assign that as one of the sources for this
       // lane. We can assign up to 2 sources for this lane. If we run out
       // sources we can't do anything.
@@ -14487,8 +14483,10 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
     if (NumUpperHalves == 1) {
       // AVX2 has efficient 32/64-bit element cross-lane shuffles.
       if (Subtarget.hasAVX2()) {
+        // extract128 + vunpckhps, is better than vblend + vpermps.
         // TODO: Refine to account for unary shuffle, splat, and other masks?
-        if (EltWidth == 32 && NumLowerHalves == 1)
+        if (EltWidth == 32 && NumLowerHalves &&
+            HalfVT.is128BitVector() && !is128BitUnpackShuffleMask(HalfMask))
           return SDValue();
         if (EltWidth == 64)
           return SDValue();
@@ -15863,6 +15861,13 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue Blend = lowerShuffleAsBlend(DL, MVT::v64i8, V1, V2, Mask,
                                           Zeroable, Subtarget, DAG))
     return Blend;
+
+  // Try to simplify this by merging 128-bit lanes to enable a lane-based
+  // shuffle.
+  if (!V2.isUndef())
+    if (SDValue Result = lowerShuffleByMerging128BitLanes(
+            DL, MVT::v64i8, V1, V2, Mask, Subtarget, DAG))
+      return Result;
 
   // FIXME: Implement direct support for this type!
   return splitAndLowerShuffle(DL, MVT::v64i8, V1, V2, Mask, DAG);
@@ -37689,7 +37694,7 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
         return Blend;
   }
 
-  if (Mld->getExtensionType() != ISD::SEXTLOAD)
+  if (Mld->getExtensionType() != ISD::EXTLOAD)
     return SDValue();
 
   // Resolve extending loads.
@@ -37759,8 +37764,20 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
                                      Mld->getBasePtr(), NewMask, WidePassThru,
                                      Mld->getMemoryVT(), Mld->getMemOperand(),
                                      ISD::NON_EXTLOAD);
-  SDValue NewVec = getExtendInVec(/*Signed*/true, dl, VT, WideLd, DAG);
-  return DCI.CombineTo(N, NewVec, WideLd.getValue(1), true);
+
+  SDValue SlicedVec = DAG.getBitcast(WideVecVT, WideLd);
+  SmallVector<int, 16> ShuffleVec(NumElems * SizeRatio, -1);
+  for (unsigned i = 0; i != NumElems; ++i)
+    ShuffleVec[i * SizeRatio] = i;
+
+  // Can't shuffle using an illegal type.
+  assert(DAG.getTargetLoweringInfo().isTypeLegal(WideVecVT) &&
+         "WideVecVT should be legal");
+  SlicedVec = DAG.getVectorShuffle(WideVecVT, dl, SlicedVec,
+                                   DAG.getUNDEF(WideVecVT), ShuffleVec);
+  SlicedVec = DAG.getBitcast(VT, SlicedVec);
+
+  return DCI.CombineTo(N, SlicedVec, WideLd.getValue(1), true);
 }
 
 /// If exactly one element of the mask is set for a non-truncating masked store,

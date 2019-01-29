@@ -961,11 +961,18 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
   CallInst *call = nullptr;
 
   // Add inputs as params, or to be filled into the struct
-  for (Value *input : inputs)
+  unsigned ArgNo = 0;
+  SmallVector<unsigned, 1> SwiftErrorArgs;
+  for (Value *input : inputs) {
     if (AggregateArgs)
       StructValues.push_back(input);
-    else
+    else {
       params.push_back(input);
+      if (input->isSwiftError())
+        SwiftErrorArgs.push_back(ArgNo);
+    }
+    ++ArgNo;
+  }
 
   // Create allocas for the outputs
   for (Value *output : outputs) {
@@ -1020,6 +1027,12 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       call->setDebugLoc(DL);
   }
   codeReplacer->getInstList().push_back(call);
+
+  // Set swifterror parameter attributes.
+  for (unsigned SwiftErrArgNo : SwiftErrorArgs) {
+    call->addParamAttr(SwiftErrArgNo, Attribute::SwiftError);
+    newFunction->addParamAttr(SwiftErrArgNo, Attribute::SwiftError);
+  }
 
   Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
   unsigned FirstOut = inputs.size();

@@ -381,6 +381,25 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       Checker->registerStubMap(Obj.getFileName(), SectionID, Stubs);
   }
 
+  // Process remaining sections
+  if (ProcessAllSections) {
+    LLVM_DEBUG(dbgs() << "Process remaining sections:\n");
+    for (section_iterator SI = Obj.section_begin(), SE = Obj.section_end();
+         SI != SE; ++SI) {
+
+      /* Ignore already loaded sections */
+      if (LocalSections.find(*SI) != LocalSections.end())
+        continue;
+
+      bool IsCode = SI->isText();
+      if (auto SectionIDOrErr =
+              findOrEmitSection(Obj, *SI, IsCode, LocalSections))
+        LLVM_DEBUG(dbgs() << "\tSectionID: " << (*SectionIDOrErr) << "\n");
+      else
+        return SectionIDOrErr.takeError();
+    }
+  }
+
   // Give the subclasses a chance to tie-up any loose ends.
   if (auto Err = finalizeLoad(Obj, LocalSections))
     return std::move(Err);
