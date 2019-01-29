@@ -186,7 +186,6 @@ class PPCFastISel final : public FastISel {
                          unsigned &NumBytes,
                          bool IsVarArg);
     bool finishCall(MVT RetVT, CallLoweringInfo &CLI, unsigned &NumBytes);
-    LLVM_ATTRIBUTE_UNUSED CCAssignFn *usePPC32CCs(unsigned Flag);
 
   private:
   #include "PPCGenFastISel.inc"
@@ -194,23 +193,6 @@ class PPCFastISel final : public FastISel {
 };
 
 } // end anonymous namespace
-
-#include "PPCGenCallingConv.inc"
-
-// Function whose sole purpose is to kill compiler warnings
-// stemming from unused functions included from PPCGenCallingConv.inc.
-CCAssignFn *PPCFastISel::usePPC32CCs(unsigned Flag) {
-  if (Flag == 1)
-    return CC_PPC32_SVR4;
-  else if (Flag == 2)
-    return CC_PPC32_SVR4_ByVal;
-  else if (Flag == 3)
-    return CC_PPC32_SVR4_VarArg;
-  else if (Flag == 4)
-    return RetCC_PPC_Cold;
-  else
-    return RetCC_PPC;
-}
 
 static Optional<PPC::Predicate> getComparePred(CmpInst::Predicate Pred) {
   switch (Pred) {

@@ -406,8 +406,19 @@ class AMDGPUDSOrderedIntrinsic : Intrinsic<
   [NoCapture<0>]
 >;
 
+class AMDGPUDSAppendConsumedIntrinsic : Intrinsic<
+  [llvm_i32_ty],
+  [llvm_anyptr_ty, // LDS or GDS ptr
+   llvm_i1_ty], // isVolatile
+   [IntrConvergent, IntrArgMemOnly, NoCapture<0>]
+>;
+
 def int_amdgcn_ds_ordered_add : AMDGPUDSOrderedIntrinsic;
 def int_amdgcn_ds_ordered_swap : AMDGPUDSOrderedIntrinsic;
+
+// The pointer argument is assumed to be dynamically uniform if a VGPR.
+def int_amdgcn_ds_append : AMDGPUDSAppendConsumedIntrinsic;
+def int_amdgcn_ds_consume : AMDGPUDSAppendConsumedIntrinsic;
 
 def int_amdgcn_ds_fadd : AMDGPULDSF32Intrin<"__builtin_amdgcn_ds_faddf">;
 def int_amdgcn_ds_fmin : AMDGPULDSF32Intrin<"__builtin_amdgcn_ds_fminf">;

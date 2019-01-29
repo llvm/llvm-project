@@ -225,6 +225,7 @@ void ObjFile::readAssociativeDefinition(COFFSymbolRef Sym,
                                         const coff_aux_section_definition *Def,
                                         uint32_t ParentIndex) {
   SectionChunk *Parent = SparseChunks[ParentIndex];
+  int32_t SectionNumber = Sym.getSectionNumber();
 
   auto Diag = [&]() {
     StringRef Name, ParentName;
@@ -233,8 +234,9 @@ void ObjFile::readAssociativeDefinition(COFFSymbolRef Sym,
     const coff_section *ParentSec;
     COFFObj->getSection(ParentIndex, ParentSec);
     COFFObj->getSectionName(ParentSec, ParentName);
-    error(toString(this) + ": associative comdat " + Name +
-          " has invalid reference to section " + ParentName);
+    error(toString(this) + ": associative comdat " + Name + " (sec " +
+          Twine(SectionNumber) + ") has invalid reference to section " +
+          ParentName + " (sec " + Twine(ParentIndex) + ")");
   };
 
   if (Parent == PendingComdat) {
@@ -247,7 +249,6 @@ void ObjFile::readAssociativeDefinition(COFFSymbolRef Sym,
 
   // Check whether the parent is prevailing. If it is, so are we, and we read
   // the section; otherwise mark it as discarded.
-  int32_t SectionNumber = Sym.getSectionNumber();
   if (Parent) {
     if (Parent->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
       Diag();

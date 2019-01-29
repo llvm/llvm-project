@@ -18,8 +18,9 @@ import subprocess
 
 
 def sync_source_lists():
-    gn_files = subprocess.check_output(
-            ['git', 'ls-files', '*BUILD.gn']).splitlines()
+    # Use shell=True on Windows in case git is a bat file.
+    gn_files = subprocess.check_output(['git', 'ls-files', '*BUILD.gn'],
+                                       shell=os.name == 'nt').splitlines()
 
     # Matches e.g. |   "foo.cpp",|, captures |foo| in group 1.
     gn_cpp_re = re.compile(r'^\s*"([^"]+\.(?:cpp|h))",$', re.MULTILINE)

@@ -520,6 +520,12 @@ HANDLE_TARGET_OPCODE(G_BSWAP)
 /// Floating point ceil.
 HANDLE_TARGET_OPCODE(G_FCEIL)
 
+/// Floating point cosine.
+HANDLE_TARGET_OPCODE(G_FCOS)
+
+/// Floating point sine.
+HANDLE_TARGET_OPCODE(G_FSIN)
+
 /// Generic AddressSpaceCast.
 HANDLE_TARGET_OPCODE(G_ADDRSPACE_CAST)
 

@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -aarch64-enable-atomic-cfg-tidy=0 -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+; RUN: llc -O3 -aarch64-enable-atomic-cfg-tidy=0 -stop-after=irtranslator -global-isel -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefix=O3
 
 ; This file checks that the translation from llvm IR to generic MachineInstr
 ; is correct.
@@ -1481,6 +1482,11 @@ declare void @llvm.lifetime.end.p0i8(i64, i8*)
 define void @test_lifetime_intrin() {
 ; CHECK-LABEL: name: test_lifetime_intrin
 ; CHECK: RET_ReallyLR
+; O3-LABEL: name: test_lifetime_intrin
+; O3: {{%[0-9]+}}:_(p0) = G_FRAME_INDEX %stack.0.slot
+; O3-NEXT: LIFETIME_START %stack.0.slot
+; O3-NEXT: LIFETIME_END %stack.0.slot
+; O3-NEXT: RET_ReallyLR
   %slot = alloca i8, i32 4
   call void @llvm.lifetime.start.p0i8(i64 0, i8* %slot)
   call void @llvm.lifetime.end.p0i8(i64 0, i8* %slot)
@@ -2292,4 +2298,20 @@ define <2 x double> @test_ceil_v2f64(<2 x double> %x) {
   ; CHECK: %{{[0-9]+}}:_(<2 x s64>) = G_FCEIL %{{[0-9]+}}
   %y = call <2 x double> @llvm.ceil.v2f64(<2 x double> %x)
   ret <2 x double> %y
+}
+
+declare float @llvm.cos.f32(float)
+define float @test_cos_f32(float %x) {
+  ; CHECK-LABEL: name:            test_cos_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FCOS %{{[0-9]+}}
+  %y = call float @llvm.cos.f32(float %x)
+  ret float %y
+}
+
+declare float @llvm.sin.f32(float)
+define float @test_sin_f32(float %x) {
+  ; CHECK-LABEL: name:            test_sin_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FSIN %{{[0-9]+}}
+  %y = call float @llvm.sin.f32(float %x)
+  ret float %y
 }

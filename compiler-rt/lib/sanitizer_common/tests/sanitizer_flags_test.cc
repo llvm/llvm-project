@@ -33,6 +33,9 @@ static void TestFlag(T start_value, const char *env, T final_value) {
   parser.ParseString(env);
 
   EXPECT_EQ(final_value, flag);
+
+  // Reporting unrecognized flags is needed to reset them.
+  ReportUnrecognizedFlags();
 }
 
 template <>

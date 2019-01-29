@@ -1462,21 +1462,21 @@ void ASTDumper::VisitGenericSelectionExpr(const GenericSelectionExpr *E) {
   dumpStmt(E->getControllingExpr());
   dumpTypeAsChild(E->getControllingExpr()->getType()); // FIXME: remove
 
-  for (const auto &Assoc : E->associations()) {
+  for (unsigned I = 0, N = E->getNumAssocs(); I != N; ++I) {
     dumpChild([=] {
-      if (const TypeSourceInfo *TSI = Assoc.getTypeSourceInfo()) {
+      if (const TypeSourceInfo *TSI = E->getAssocTypeSourceInfo(I)) {
         OS << "case ";
         NodeDumper.dumpType(TSI->getType());
       } else {
         OS << "default";
       }
 
-      if (Assoc.isSelected())
+      if (!E->isResultDependent() && E->getResultIndex() == I)
         OS << " selected";
 
-      if (const TypeSourceInfo *TSI = Assoc.getTypeSourceInfo())
+      if (const TypeSourceInfo *TSI = E->getAssocTypeSourceInfo(I))
         dumpTypeAsChild(TSI->getType());
-      dumpStmt(Assoc.getAssociationExpr());
+      dumpStmt(E->getAssocExpr(I));
     });
   }
 }

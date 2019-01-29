@@ -275,6 +275,11 @@ bool SIInstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
     if (OffsetImm) {
       // Normal, single offset LDS instruction.
       BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::addr);
+      // TODO: ds_consume/ds_append use M0 for the base address. Is it safe to
+      // report that here?
+      if (!BaseOp)
+        return false;
+
       Offset = OffsetImm->getImm();
       assert(BaseOp->isReg() && "getMemOperandWithOffset only supports base "
                                 "operands of type register.");
