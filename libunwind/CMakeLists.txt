@@ -168,6 +168,9 @@ elseif(LIBUNWIND_BUILD_32_BITS)
   message(FATAL_ERROR "LIBUNWIND_BUILD_32_BITS=ON is not supported on this platform.")
 endif()
 
+option(LIBUNWIND_HERMETIC_STATIC_LIBRARY
+  "Do not export any symbols from the static library." OFF)
+
 #===============================================================================
 # Configure System
 #===============================================================================
