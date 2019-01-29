@@ -649,7 +649,9 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     assert(array_type);
     uint32_t num_elements = array_type->getCount();
     uint32_t element_uid = array_type->getElementTypeId();
-    uint32_t bytes = array_type->getLength();
+    llvm::Optional<uint64_t> bytes;
+    if (uint64_t size = array_type->getLength())
+      bytes = size;
 
     // If array rank > 0, PDB gives the element type at N=0. So element type
     // will parsed in the order N=0, N=1,..., N=rank sequentially.
@@ -685,7 +687,9 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (builtin_kind == PDB_BuiltinType::None)
       return nullptr;
 
-    llvm::Optional<uint64_t> bytes = builtin_type->getLength();
+    llvm::Optional<uint64_t> bytes;
+    if (uint64_t size = builtin_type->getLength())
+      bytes = size;
     Encoding encoding = TranslateBuiltinEncoding(builtin_kind);
     CompilerType builtin_ast_type = GetBuiltinTypeForPDBEncodingAndBitSize(
         m_ast, *builtin_type, encoding, bytes.getValueOr(0) * 8);
