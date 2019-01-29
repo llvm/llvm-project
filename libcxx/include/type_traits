@@ -4360,28 +4360,31 @@ _LIBCPP_INVOKE_RETURN(_VSTD::forward<_Fp>(__f)(_VSTD::forward<_Args>(__args)...)
 #undef _LIBCPP_INVOKE_RETURN
 
 // __invokable
-
 template <class _Ret, class _Fp, class ..._Args>
 struct __invokable_r
 {
-    // FIXME: Check that _Ret, _Fp, and _Args... are all complete types, cv void,
-    // or incomplete array types as required by the standard.
-    using _Result = decltype(
-        _VSTD::__invoke(_VSTD::declval<_Fp>(), _VSTD::declval<_Args>()...));
+  template <class _XFp, class ..._XArgs>
+  static auto __try_call(int) -> decltype(
+    _VSTD::__invoke(_VSTD::declval<_XFp>(), _VSTD::declval<_XArgs>()...));
+  template <class _XFp, class ..._XArgs>
+  static __nat __try_call(...);
 
-    using type =
-        typename conditional<
-            !is_same<_Result, __nat>::value,
-            typename conditional<
-                is_void<_Ret>::value,
-                true_type,
-                is_convertible<_Result, _Ret>
-            >::type,
-            false_type
-        >::type;
-    static const bool value = type::value;
+  // FIXME: Check that _Ret, _Fp, and _Args... are all complete types, cv void,
+  // or incomplete array types as required by the standard.
+  using _Result = decltype(__try_call<_Fp, _Args...>(0));
+
+  using type =
+  typename conditional<
+      !is_same<_Result, __nat>::value,
+      typename conditional<
+          is_void<_Ret>::value,
+          true_type,
+          is_convertible<_Result, _Ret>
+      >::type,
+      false_type
+  >::type;
+  static const bool value = type::value;
 };
-
 template <class _Fp, class ..._Args>
 using __invokable = __invokable_r<void, _Fp, _Args...>;
 

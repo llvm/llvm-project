@@ -537,7 +537,8 @@ public:
                 "size of variable %s (%" PRIu64
                 ") is larger than the ValueObject's size (%" PRIu64 ")",
                 m_variable_sp->GetName().AsCString(),
-                m_variable_sp->GetType()->GetByteSize(), data.GetByteSize());
+                m_variable_sp->GetType()->GetByteSize().getValueOr(0),
+                data.GetByteSize());
           }
           return;
         }
