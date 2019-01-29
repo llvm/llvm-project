@@ -102,7 +102,8 @@ private:
   clang::QualType CreateEnumType(PdbTypeSymId id,
                                  const llvm::codeview::EnumRecord &record);
   clang::QualType
-  CreateProcedureType(const llvm::codeview::ProcedureRecord &proc);
+  CreateFunctionType(TypeIndex args_type_idx, TypeIndex return_type_idx,
+                     llvm::codeview::CallingConvention calling_convention);
   clang::QualType CreateType(PdbTypeSymId type);
 
   void CreateFunctionParameters(PdbCompilandSymId func_id,
