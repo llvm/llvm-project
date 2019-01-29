@@ -243,10 +243,10 @@ RetainSummaryManager::getSummaryForOSObject(const FunctionDecl *FD,
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
     const CXXRecordDecl *Parent = MD->getParent();
     if (TrackOSObjects && Parent && isOSObjectSubclass(Parent)) {
-      if (FName == "release")
+      if (FName == "release" || FName == "taggedRelease")
         return getOSSummaryReleaseRule(FD);
 
-      if (FName == "retain")
+      if (FName == "retain" || FName == "taggedRetain")
         return getOSSummaryRetainRule(FD);
 
       if (FName == "free")
