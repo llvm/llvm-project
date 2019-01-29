@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
@@ -793,13 +794,33 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   default:
     break;
   case Intrinsic::lifetime_start:
-  case Intrinsic::lifetime_end:
-    // Stack coloring is not enabled in O0 (which we care about now) so we can
-    // drop these. Make sure someone notices when we start compiling at higher
-    // opts though.
-    if (MF->getTarget().getOptLevel() != CodeGenOpt::None)
-      return false;
+  case Intrinsic::lifetime_end: {
+    // No stack colouring in O0, discard region information.
+    if (MF->getTarget().getOptLevel() == CodeGenOpt::None)
+      return true;
+
+    unsigned Op = ID == Intrinsic::lifetime_start ? TargetOpcode::LIFETIME_START
+                                                  : TargetOpcode::LIFETIME_END;
+
+    // Get the underlying objects for the location passed on the lifetime
+    // marker.
+    SmallVector<Value *, 4> Allocas;
+    GetUnderlyingObjects(CI.getArgOperand(1), Allocas, *DL);
+
+    // Iterate over each underlying object, creating lifetime markers for each
+    // static alloca. Quit if we find a non-static alloca.
+    for (Value *V : Allocas) {
+      AllocaInst *AI = dyn_cast<AllocaInst>(V);
+      if (!AI)
+        continue;
+
+      if (!AI->isStaticAlloca())
+        return true;
+
+      MIRBuilder.buildInstr(Op).addFrameIndex(getOrCreateFrameIndex(*AI));
+    }
     return true;
+  }
   case Intrinsic::dbg_declare: {
     const DbgDeclareInst &DI = cast<DbgDeclareInst>(CI);
     assert(DI.getVariable() && "Missing variable");
@@ -1052,6 +1073,16 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   case Intrinsic::ceil:
     MIRBuilder.buildInstr(TargetOpcode::G_FCEIL)
+        .addDef(getOrCreateVReg(CI))
+        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
+  case Intrinsic::cos:
+    MIRBuilder.buildInstr(TargetOpcode::G_FCOS)
+        .addDef(getOrCreateVReg(CI))
+        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
+  case Intrinsic::sin:
+    MIRBuilder.buildInstr(TargetOpcode::G_FSIN)
         .addDef(getOrCreateVReg(CI))
         .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
     return true;

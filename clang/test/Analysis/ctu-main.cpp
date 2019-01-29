@@ -78,6 +78,6 @@ int main() {
   clang_analyzer_eval(fun_using_anon_struct(8) == 8); // expected-warning{{TRUE}}
 
   clang_analyzer_eval(other_macro_diag(1) == 1); // expected-warning{{TRUE}}
-  // expected-warning@Inputs/ctu-other.cpp:75{{REACHABLE}}
+  // expected-warning@Inputs/ctu-other.cpp:80{{REACHABLE}}
   MACRODIAG(); // expected-warning{{REACHABLE}}
 }

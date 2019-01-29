@@ -1261,15 +1261,15 @@ void StmtPrinter::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node){
 void StmtPrinter::VisitGenericSelectionExpr(GenericSelectionExpr *Node) {
   OS << "_Generic(";
   PrintExpr(Node->getControllingExpr());
-  for (const GenericSelectionExpr::Association &Assoc : Node->associations()) {
+  for (unsigned i = 0; i != Node->getNumAssocs(); ++i) {
     OS << ", ";
-    QualType T = Assoc.getType();
+    QualType T = Node->getAssocType(i);
     if (T.isNull())
       OS << "default";
     else
       T.print(OS, Policy);
     OS << ": ";
-    PrintExpr(Assoc.getAssociationExpr());
+    PrintExpr(Node->getAssocExpr(i));
   }
   OS << ")";
 }

@@ -42,7 +42,11 @@ Quick start
 
 GN only works in the monorepo layout.
 
-#. Obtain a `gn binary <https://gn.googlesource.com/gn/#getting-started>`_.
+#. Obtain a gn binary. If gn is not already on your PATH, run
+   `llvm/utils/gn/get.py` to download a prebuilt gn binary if you're on a 64-bit
+   X86 system running Linux, macOS, or Windows, or `build gn yourself
+   <https://gn.googlesource.com/gn/#getting-started>`_ if you're on a different
+   platform or don't want to trust prebuilt binaries.
 
 #. In the root of the monorepo, run `llvm/utils/gn/gn.py gen out/gn`.
    `out/gn` is the build directory, it can have any name, and you can have as

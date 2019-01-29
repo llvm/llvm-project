@@ -143,6 +143,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
           [=](const LegalityQuery &Query) { return std::make_pair(0, s32); })
       .legalFor({s16, s32, s64, v2s32, v4s32, v2s64, v2s16, v4s16, v8s16});
 
+  getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FLOG10, G_FLOG})
+      // We need a call for these, so we always need to scalarize.
+      .scalarize(0)
+      // Regardless of FP16 support, widen 16-bit elements to 32-bits.
+      .minScalar(0, s32)
+      .libcallFor({s32, s64, v2s32, v4s32, v2s64});
+
   getActionDefinitionsBuilder(G_INSERT)
       .unsupportedIf([=](const LegalityQuery &Query) {
         return Query.Types[0].getSizeInBits() <= Query.Types[1].getSizeInBits();
@@ -432,7 +439,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       });
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
-      .legalFor({{v4s16, s16}, {v8s16, s16}, {v4s32, s32}, {v2s64, s64}})
+      .legalFor({{v4s16, s16},
+                 {v8s16, s16},
+                 {v2s32, s32},
+                 {v4s32, s32},
+                 {v2s64, s64}})
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
 
