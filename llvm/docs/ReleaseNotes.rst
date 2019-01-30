@@ -30,9 +30,6 @@ Non-comprehensive list of changes in this release
   is available on the Visual Studio Marketplace. The new integration
   supports Visual Studio 2017.
 
-* Libraries have been renamed from 7.0 to 7. This change also impacts
-  downstream libraries like lldb.
-
 * The LoopInstSimplify pass (``-loop-instsimplify``) has been removed.
 
 * Symbols starting with ``?`` are no longer mangled by LLVM when using the
