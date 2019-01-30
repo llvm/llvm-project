@@ -34,7 +34,7 @@ namespace std
 {
 
 #ifndef __GLIBCXX__
-const nothrow_t nothrow = {};
+const nothrow_t nothrow{};
 #endif
 
 #ifndef LIBSTDCXX
