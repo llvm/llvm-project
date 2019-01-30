@@ -125,12 +125,12 @@ const void *Scalar::GetBytes() const {
         bytes += 8 - byte_size;
     }
     return bytes;
+  // getRawData always returns a pointer to an array of uint64_t values,
+  // where the least-significant word always comes first.  On big-endian
+  // systems we need to swap the words.
   case e_sint128:
   case e_uint128:
     apint_words = m_integer.getRawData();
-    // getRawData always returns a pointer to an array of two uint64_t values,
-    // where the least-significant word always comes first.  On big-endian
-    // systems we need to swap the two words.
     if (endian::InlHostByteOrder() == eByteOrderBig) {
       swapped_words[0] = apint_words[1];
       swapped_words[1] = apint_words[0];
@@ -140,9 +140,6 @@ const void *Scalar::GetBytes() const {
   case e_sint256:
   case e_uint256:
     apint_words = m_integer.getRawData();
-    // getRawData always returns a pointer to an array of four uint64_t values,
-    // where the least-significant word always comes first.  On big-endian
-    // systems we need to swap the four words.
     if (endian::InlHostByteOrder() == eByteOrderBig) {
       swapped_words[0] = apint_words[3];
       swapped_words[1] = apint_words[2];
@@ -154,9 +151,6 @@ const void *Scalar::GetBytes() const {
   case e_sint512:
   case e_uint512:
     apint_words = m_integer.getRawData();
-    // getRawData always returns a pointer to an array of four uint64_t values,
-    // where the least-significant word always comes first.  On big-endian
-    // systems we need to swap the four words.
     if (endian::InlHostByteOrder() == eByteOrderBig) {
       swapped_words[0] = apint_words[7];
       swapped_words[1] = apint_words[6];
