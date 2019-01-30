@@ -618,14 +618,12 @@ OCKL_MANGLE_T(image_sample_grad,3D)(TSHARP i, SSHARP s, float4 c, float4 dx, flo
 RATTR float4
 OCKL_MANGLE_T(image_sample_lod,1D)(TSHARP i, SSHARP s, float c, float l)
 {
-    ADJUST_X(c, i, s);
     return __llvm_amdgcn_image_sample_l_1d_v4f32_f32(0xf, c, l, LOAD_TSHARP(i), LOAD_SSHARP(s), false, 0, 0);
 }
 
 RATTR float4
 OCKL_MANGLE_T(image_sample_lod,1Da)(TSHARP i, SSHARP s, float2 c, float l)
 {
-    ADJUST_X(c.x, i, s);
     c.y = __builtin_rintf(c.y);
     return __llvm_amdgcn_image_sample_l_1darray_v4f32_f32(0xf, c.x, c.y, l, LOAD_TSHARP(i), LOAD_SSHARP(s), false, 0, 0);
 }
@@ -633,14 +631,12 @@ OCKL_MANGLE_T(image_sample_lod,1Da)(TSHARP i, SSHARP s, float2 c, float l)
 RATTR float4
 OCKL_MANGLE_T(image_sample_lod,2D)(TSHARP i, SSHARP s, float2 c, float l)
 {
-    ADJUST_XY(c, i, s);
     return __llvm_amdgcn_image_sample_l_2d_v4f32_f32(0xf, c.x, c.y, l, LOAD_TSHARP(i), LOAD_SSHARP(s), false, 0, 0);
 }
 
 RATTR float4
 OCKL_MANGLE_T(image_sample_lod,2Da)(TSHARP i, SSHARP s, float4 c, float l)
 {
-    ADJUST_XY(c, i, s);
     c.z = __builtin_rintf(c.z);
     return __llvm_amdgcn_image_sample_l_2darray_v4f32_f32(0xf, c.x, c.y, c.z, l, LOAD_TSHARP(i), LOAD_SSHARP(s), false, 0, 0);
 }
@@ -648,7 +644,6 @@ OCKL_MANGLE_T(image_sample_lod,2Da)(TSHARP i, SSHARP s, float4 c, float l)
 RATTR float
 OCKL_MANGLE_T(image_sample_lod,2Dad)(TSHARP i, SSHARP s, float4 c, float l)
 {
-    ADJUST_XY(c, i, s);
     c.z = __builtin_rintf(c.z);
     return __llvm_amdgcn_image_sample_l_2darray_f32_f32(0x1, c.x, c.y, c.z, l, LOAD_TSHARP(i), LOAD_SSHARP(s), false, 0, 0);
 }
@@ -656,14 +651,12 @@ OCKL_MANGLE_T(image_sample_lod,2Dad)(TSHARP i, SSHARP s, float4 c, float l)
 RATTR float
 OCKL_MANGLE_T(image_sample_lod,2Dd)(TSHARP i, SSHARP s, float2 c, float l)
 {
-    ADJUST_XY(c, i, s);
     return __llvm_amdgcn_image_sample_l_2d_f32_f32(0x1, c.x, c.y, l, LOAD_TSHARP(i), LOAD_SSHARP(s), false, 0, 0);
 }
 
 RATTR float4
 OCKL_MANGLE_T(image_sample_lod,3D)(TSHARP i, SSHARP s, float4 c, float l)
 {
-    ADJUST_XYZ(c, i, s);
     return __llvm_amdgcn_image_sample_l_3d_v4f32_f32(0xf, c.x, c.y, c.z, l, LOAD_TSHARP(i), LOAD_SSHARP(s), false, 0, 0);
 }
 
@@ -774,14 +767,12 @@ OCKL_MANGLE_T(image_sampleh_grad,3D)(TSHARP i, SSHARP s, float4 c, float4 dx, fl
 RATTR half4
 OCKL_MANGLE_T(image_sampleh_lod,1D)(TSHARP i, SSHARP s, float c, float l)
 {
-    ADJUST_X(c, i, s);
     return __llvm_amdgcn_image_sample_l_1d_v4f16_f32(0xf, c, l, LOAD_TSHARP(i), LOAD_SSHARP(s), false, 0, 0);
 }
 
 RATTR half4
 OCKL_MANGLE_T(image_sampleh_lod,1Da)(TSHARP i, SSHARP s, float2 c, float l)
 {
-    ADJUST_X(c.x, i, s);
     c.y = __builtin_rintf(c.y);
     return __llvm_amdgcn_image_sample_l_1darray_v4f16_f32(0xf, c.x, c.y, l, LOAD_TSHARP(i), LOAD_SSHARP(s), false, 0, 0);
 }
@@ -789,14 +780,12 @@ OCKL_MANGLE_T(image_sampleh_lod,1Da)(TSHARP i, SSHARP s, float2 c, float l)
 RATTR half4
 OCKL_MANGLE_T(image_sampleh_lod,2D)(TSHARP i, SSHARP s, float2 c, float l)
 {
-    ADJUST_XY(c, i, s);
     return __llvm_amdgcn_image_sample_l_2d_v4f16_f32(0xf, c.x, c.y, l, LOAD_TSHARP(i), LOAD_SSHARP(s), false, 0, 0);
 }
 
 RATTR half4
 OCKL_MANGLE_T(image_sampleh_lod,2Da)(TSHARP i, SSHARP s, float4 c, float l)
 {
-    ADJUST_XY(c, i, s);
     c.z = __builtin_rintf(c.z);
     return __llvm_amdgcn_image_sample_l_2darray_v4f16_f32(0xf, c.x, c.y, c.z, l, LOAD_TSHARP(i), LOAD_SSHARP(s), false, 0, 0);
 }
@@ -804,7 +793,6 @@ OCKL_MANGLE_T(image_sampleh_lod,2Da)(TSHARP i, SSHARP s, float4 c, float l)
 RATTR half4
 OCKL_MANGLE_T(image_sampleh_lod,3D)(TSHARP i, SSHARP s, float4 c, float l)
 {
-    ADJUST_XYZ(c, i, s);
     return __llvm_amdgcn_image_sample_l_3d_v4f16_f32(0xf, c.x, c.y, c.z, l, LOAD_TSHARP(i), LOAD_SSHARP(s), false, 0, 0);
 }
 
@@ -919,4 +907,3 @@ GATTR int OCKL_MANGLE_T(image_width,CM)(TSHARP i)   { return WORD(i, 10); }
 GATTR int OCKL_MANGLE_T(image_width,CMa)(TSHARP i)  { return WORD(i, 10); }
 // This would be a bit trickier since we actually have a V# here and need to look at const_num_records and const_stride
 GATTR int OCKL_MANGLE_T(image_width,1Db)(TSHARP i)  { return WORD(i, 10); }
-
