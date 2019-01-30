@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "Symbols.h"
+#include "lld/Common/Args.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
@@ -61,6 +62,7 @@ static std::unique_ptr<lto::LTO> createLTO() {
   C.OptLevel = Config->LTOO;
   C.CPU = GetCPUStr();
   C.MAttrs = GetMAttrs();
+  C.CGOptLevel = args::getCGOptLevel(Config->LTOO);
 
   if (Config->SaveTemps)
     checkError(C.addSaveTemps(std::string(Config->OutputFile) + ".",
