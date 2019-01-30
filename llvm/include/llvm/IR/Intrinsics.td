@@ -547,7 +547,8 @@ def int_siglongjmp : Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty], [IntrNoReturn]>;
 
 // Internal interface for object size checking
 def int_objectsize : Intrinsic<[llvm_anyint_ty],
-                               [llvm_anyptr_ty, llvm_i1_ty, llvm_i1_ty],
+                               [llvm_anyptr_ty, llvm_i1_ty,
+                                llvm_i1_ty, llvm_i1_ty],
                                [IntrNoMem, IntrSpeculatable]>,
                                GCCBuiltin<"__builtin_object_size">;
 
