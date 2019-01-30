@@ -241,7 +241,7 @@ if (LIBCXX_ENABLE_SHARED)
   if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(cxx_shared)
   endif()
-  target_link_libraries(cxx_shared ${LIBCXX_LIBRARIES})
+  target_link_libraries(cxx_shared PRIVATE ${LIBCXX_LIBRARIES})
   set_target_properties(cxx_shared
     PROPERTIES
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
@@ -265,7 +265,7 @@ endif()
 # Build the static library.
 if (LIBCXX_ENABLE_STATIC)
   add_library(cxx_static STATIC ${cxx_static_sources})
-  target_link_libraries(cxx_static ${LIBCXX_LIBRARIES})
+  target_link_libraries(cxx_static PRIVATE ${LIBCXX_LIBRARIES})
   set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
   set_target_properties(cxx_static
     PROPERTIES

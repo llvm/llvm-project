@@ -146,7 +146,7 @@ if (LIBUNWIND_ENABLE_SHARED)
   if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(unwind_shared)
   endif()
-  target_link_libraries(unwind_shared ${libraries})
+  target_link_libraries(unwind_shared PRIVATE ${libraries})
   set_target_properties(unwind_shared
                         PROPERTIES
                           LINK_FLAGS    "${LIBUNWIND_LINK_FLAGS}"
@@ -162,7 +162,7 @@ endif()
 # Build the static library.
 if (LIBUNWIND_ENABLE_STATIC)
   add_library(unwind_static STATIC ${unwind_static_sources})
-  target_link_libraries(unwind_static ${libraries})
+  target_link_libraries(unwind_static PRIVATE ${libraries})
   set_target_properties(unwind_static
                         PROPERTIES
                           LINK_FLAGS    "${LIBUNWIND_LINK_FLAGS}"
