@@ -231,6 +231,7 @@ def NullPassedToNonnullChecker : Checker<"NullPassedToNonnull">,
 def NullReturnedFromNonnullChecker : Checker<"NullReturnedFromNonnull">,
   HelpText<"Warns when a null pointer is returned from a function that has "
            "_Nonnull return type.">,
+  Dependencies<[NullabilityBase]>,
   Documentation<HasDocumentation>;
 
 def NullableDereferencedChecker : Checker<"NullableDereferenced">,
