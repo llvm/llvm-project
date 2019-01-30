@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// included to types.hppp twice, once for vec<> and once for SwizzleOp<>.
+// Included by types.hpp twice, once for vec<> and once for SwizzleOp<>.
 
 // TODO: exclude L-Value swizzle like vec.xxxx()
 #ifdef __SYCL_ACCESS

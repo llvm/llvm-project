@@ -58,7 +58,7 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   // NOTE: The following block of code is copied from CLANG-3.6 with
   // support of OpenCLCPlusPlus. It is rather the temporary solution
   // that is going to be used until the general solution is ported/developed
-  // in the latest llvm trunc.
+  // in the latest llvm trunk.
   //
   // For SYCL, the mangled type name is attached, so it can be
   // reflown to proper name later.

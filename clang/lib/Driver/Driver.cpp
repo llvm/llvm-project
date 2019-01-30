@@ -3204,9 +3204,9 @@ class OffloadingActionBuilder final {
         for (StringRef Val : SYCLAddTargets->getValues()) {
           // Parse out the Triple and Input (triple:binary) and create a
           // ToolChain for each entry.  Each of these will be wrapped and fed
-          // into the final binary
+          // into the final binary.
           // Populate the pairs, expects format of 'triple:file', any other
-          // format will not be accepted
+          // format will not be accepted.
           std::pair<StringRef, StringRef> I = Val.split(':');
           llvm::Triple TT;
           const char * TF;

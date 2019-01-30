@@ -712,7 +712,7 @@ void Sema::ConstructSYCLKernel(FunctionDecl *KernelCallerFunc) {
   const TemplateArgumentList *TemplateArgs =
       KernelCallerFunc->getTemplateSpecializationArgs();
   assert(TemplateArgs && "No template argument info");
-  // The first teamplate argument always describes the kernel name - whether
+  // The first template argument always describes the kernel name - whether
   // it is lambda or functor.
   QualType KernelNameType = TypeName::getFullyQualifiedType(
       TemplateArgs->get(0).getAsType(), getASTContext(), true);

@@ -18,9 +18,9 @@ set(SYCL_TEST_DEPS
   FileCheck
   ${SYCLLibrary}
   )
-add_lit_testsuite(check-sycl "Running the Sycl regression tests"
+add_lit_testsuite(check-sycl "Running the SYCL regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   ARGS ${RT_TEST_ARGS}
   DEPENDS ${SYCL_TEST_DEPS}
   )
-set_target_properties(check-sycl PROPERTIES FOLDER "Sycl tests")
+set_target_properties(check-sycl PROPERTIES FOLDER "SYCL tests")

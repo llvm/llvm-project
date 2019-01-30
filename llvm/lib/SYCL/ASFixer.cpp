@@ -554,7 +554,7 @@ struct ASFixer : public ModulePass {
     // into structure so we need to check structures with
     // pointers and replace it if needed.
     // As described in SYCL spec structures with pointers
-    // can't be passes as kernel argument so we check
+    // can't be passed as kernel argument so we check
     // allocas of structures with pointers.
     std::vector<std::pair<Value *, Value *>> BadAllocas;
     TypeToTypeMap TMap;

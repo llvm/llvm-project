@@ -223,7 +223,7 @@ def warn_drv_omp_offload_target_duplicate : Warning<
   "The OpenMP offloading target '%0' is similar to target '%1' already specified - will be ignored.">,
   InGroup<OpenMPTarget>;
 def warn_drv_sycl_offload_target_duplicate : Warning<
-  "The SYCL offloading target '%0' is similar to target '%1' already specified - will be ignored.">, 
+  "The SYCL offloading target '%0' is similar to target '%1' already specified - will be ignored.">,
   InGroup<SyclTarget>;
 def warn_drv_omp_offload_target_missingbcruntime : Warning<
   "No library '%0' found in the default clang lib directory or in LIBRARY_PATH. Expect degraded performance due to no inlining of runtime functions on target devices.">,

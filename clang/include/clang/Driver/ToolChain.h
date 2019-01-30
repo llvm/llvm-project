@@ -276,7 +276,7 @@ public:
   }
 
   /// TranslateOffloadTargetArgs - Create a new derived argument list for
-  /// that contains the Offloat target specific flags passed via
+  /// that contains the Offload target specific flags passed via
   /// -Xopenmp-target -opt=val OR -Xopenmp-target=<triple> -opt=val
   /// Also handles -Xsycl-target OR -Xsycl-target=<triple>
   virtual llvm::opt::DerivedArgList *TranslateOffloadTargetArgs(

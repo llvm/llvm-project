@@ -280,7 +280,7 @@ public:
 // mechanism should be developed to enforce that.
 
 // TODO FIXME SYCL Support for SYCL in FE should be refactored:
-// - kernel indentification and generation should be made a separate pass over
+// - kernel identification and generation should be made a separate pass over
 // AST. RecursiveASTVisitor + VisitFunctionTemplateDecl +
 // FunctionTemplateDecl::getSpecializations() mechanism could be used for that.
 // - All SYCL stuff on Sema level should be encapsulated into a single Sema
@@ -10957,7 +10957,7 @@ private:
   // We store SYCL Kernels here and handle separately -- which is a hack.
   // FIXME: It would be best to refactor this.
   SmallVector<Decl*, 4> SyclKernel;
-  // SYCL integratrion header instance for current compilation unit this Sema
+  // SYCL integration header instance for current compilation unit this Sema
   // is associated with.
   std::unique_ptr<SYCLIntegrationHeader> SyclIntHeader;
 
@@ -10965,7 +10965,7 @@ public:
   void AddSyclKernel(Decl * d) { SyclKernel.push_back(d); }
   SmallVector<Decl*, 4> &SyclKernels() { return SyclKernel; }
 
-  /// Lazily creates and returns SYCL integratrion header instance.
+  /// Lazily creates and returns SYCL integration header instance.
   SYCLIntegrationHeader &getSyclIntegrationHeader() {
     if (SyclIntHeader == nullptr)
       SyclIntHeader = llvm::make_unique<SYCLIntegrationHeader>(
