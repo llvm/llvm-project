@@ -27,6 +27,8 @@ class Stream;
 #define BITWIDTH_INT128 128
 #define NUM_OF_WORDS_INT256 4
 #define BITWIDTH_INT256 256
+#define NUM_OF_WORDS_INT512 8
+#define BITWIDTH_INT512 512
 
 namespace lldb_private {
 
@@ -50,6 +52,8 @@ public:
     e_uint128,
     e_sint256,
     e_uint256,
+    e_sint512,
+    e_uint512,
     e_float,
     e_double,
     e_long_double
@@ -108,6 +112,9 @@ public:
       return;
     case 256:
       m_type = e_sint256;
+      return;
+    case 512:
+      m_type = e_sint512;
       return;
     }
     lldbassert(false && "unsupported bitwidth");
@@ -244,10 +251,6 @@ public:
   llvm::APInt SInt128(llvm::APInt &fail_value) const;
 
   llvm::APInt UInt128(const llvm::APInt &fail_value) const;
-
-  llvm::APInt SInt256(llvm::APInt &fail_value) const;
-
-  llvm::APInt UInt256(const llvm::APInt &fail_value) const;
 
   float Float(float fail_value = 0.0f) const;
 
