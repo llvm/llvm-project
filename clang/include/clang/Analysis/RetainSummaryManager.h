@@ -656,7 +656,7 @@ public:
   /// implementation (that is, everything about it is inlineable).
   static bool isKnownSmartPointer(QualType QT);
 
-  bool isTrustedReferenceCountImplementation(const FunctionDecl *FD);
+  bool isTrustedReferenceCountImplementation(const Decl *FD);
 
   const RetainSummary *getSummary(AnyCall C,
                                   bool HasNonZeroCallbackArg=false,

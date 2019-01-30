@@ -440,8 +440,7 @@ annotateStartParameter(const ExplodedNode *N, SymbolRef Sym,
 
   std::string s;
   llvm::raw_string_ostream os(s);
-  os << "Parameter '" << PVD->getNameAsString()
-    << "' starts at +";
+  os << "Parameter '" << PVD->getNameAsString() << "' starts at +";
   if (CurrT->getCount() == 1) {
     os << "1, as it is marked as consuming";
   } else {

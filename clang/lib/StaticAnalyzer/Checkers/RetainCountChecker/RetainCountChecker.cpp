@@ -1315,17 +1315,18 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
 
   RetainSummaryManager &SmrMgr = getSummaryManager(Ctx);
   const LocationContext *LCtx = Ctx.getLocationContext();
-  const FunctionDecl *FD = dyn_cast<FunctionDecl>(LCtx->getDecl());
+  const Decl *D = LCtx->getDecl();
+  Optional<AnyCall> C = AnyCall::forDecl(D);
 
-  if (!FD || SmrMgr.isTrustedReferenceCountImplementation(FD))
+  if (!C || SmrMgr.isTrustedReferenceCountImplementation(D))
     return;
 
   ProgramStateRef state = Ctx.getState();
-  const RetainSummary *FunctionSummary = SmrMgr.getSummary(AnyCall(FD));
+  const RetainSummary *FunctionSummary = SmrMgr.getSummary(*C);
   ArgEffects CalleeSideArgEffects = FunctionSummary->getArgEffects();
 
-  for (unsigned idx = 0, e = FD->getNumParams(); idx != e; ++idx) {
-    const ParmVarDecl *Param = FD->getParamDecl(idx);
+  for (unsigned idx = 0, e = C->param_size(); idx != e; ++idx) {
+    const ParmVarDecl *Param = C->parameters()[idx];
     SymbolRef Sym = state->getSVal(state->getRegion(Param, LCtx)).getAsSymbol();
 
     QualType Ty = Param->getType();
