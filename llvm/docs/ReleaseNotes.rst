@@ -52,6 +52,8 @@ Non-comprehensive list of changes in this release
   from a dll are accessed via a stub, to allow the linker to convert it to
   a dllimport if needed.
 
+* Added support for labels as offsets in ``.reloc`` directive.
+
 .. NOTE
    If you would like to document a larger change, then you can add a
    subsection about it right here. You can copy the following boilerplate
@@ -82,8 +84,23 @@ Changes to the ARM Backend
 Changes to the MIPS Target
 --------------------------
 
- During this release ...
+* Improved support of GlobalISel instruction selection framework.
 
+* Implemented emission of ``R_MIPS_JALR`` and ``R_MICROMIPS_JALR``
+  relocations. These relocations provide hints to a linker for optimization
+  of jumps to protected symbols.
+
+* ORC JIT has been supported for MIPS and MIPS64 architectures.
+
+* Assembler now suggests alternative MIPS instruction mnemonics when
+  an invalid one is specified.
+
+* Improved support for MIPS N32 ABI.
+
+* Added new instructions (``pll.ps``, ``plu.ps``, ``cvt.s.pu``,
+  ``cvt.s.pl``, ``cvt.ps``, ``sigrie``).
+
+* Numerous bug fixes and code cleanups.
 
 Changes to the PowerPC Target
 -----------------------------
