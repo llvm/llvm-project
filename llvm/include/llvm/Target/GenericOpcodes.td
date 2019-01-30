@@ -569,6 +569,16 @@ def G_FSIN : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+// Floating point square root of a value.
+// This returns NaN for negative nonzero values.
+// NOTE: Unlike libm sqrt(), this never sets errno. In all other respects it's
+// libm-conformant.
+def G_FSQRT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Opcodes for LLVM Intrinsics
 //------------------------------------------------------------------------------

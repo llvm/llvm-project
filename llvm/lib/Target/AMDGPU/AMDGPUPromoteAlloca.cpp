@@ -918,7 +918,8 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
       );
 
       CallInst *NewCall = Builder.CreateCall(
-          ObjectSize, {Src, Intr->getOperand(1), Intr->getOperand(2)});
+          ObjectSize,
+          {Src, Intr->getOperand(1), Intr->getOperand(2), Intr->getOperand(3)});
       Intr->replaceAllUsesWith(NewCall);
       Intr->eraseFromParent();
       continue;

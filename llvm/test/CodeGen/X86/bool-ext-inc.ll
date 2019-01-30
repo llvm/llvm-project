@@ -127,3 +127,37 @@ define <4 x i32> @zextbool_sub_vector(<4 x i32> %cmp1, <4 x i32> %cmp2, <4 x i32
   ret <4 x i32> %s
 }
 
+define i32 @assertsext_sub_1(i1 signext %cond, i32 %y) {
+; CHECK-LABEL: assertsext_sub_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    retq
+  %e = zext i1 %cond to i32
+  %r = sub i32 %y, %e
+  ret i32 %r
+}
+
+define i32 @assertsext_add_1(i1 signext %cond, i32 %y) {
+; CHECK-LABEL: assertsext_add_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    retq
+  %e = zext i1 %cond to i32
+  %r = add i32 %e, %y
+  ret i32 %r
+}
+
+define i32 @assertsext_add_1_commute(i1 signext %cond, i32 %y) {
+; CHECK-LABEL: assertsext_add_1_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    retq
+  %e = zext i1 %cond to i32
+  %r = add i32 %y, %e
+  ret i32 %r
+}
+

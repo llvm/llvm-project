@@ -124,7 +124,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
 
   getActionDefinitionsBuilder({G_FREM, G_FPOW}).libcallFor({s32, s64});
 
-  getActionDefinitionsBuilder(G_FCEIL)
+  getActionDefinitionsBuilder({G_FCEIL, G_FSQRT})
       // If we don't have full FP16 support, then scalarize the elements of
       // vectors containing fp16 types.
       .fewerElementsIf(
@@ -143,7 +143,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
           [=](const LegalityQuery &Query) { return std::make_pair(0, s32); })
       .legalFor({s16, s32, s64, v2s32, v4s32, v2s64, v2s16, v4s16, v8s16});
 
-  getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FLOG10, G_FLOG})
+  getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FLOG10, G_FLOG, G_FLOG2})
       // We need a call for these, so we always need to scalarize.
       .scalarize(0)
       // Regardless of FP16 support, widen 16-bit elements to 32-bits.

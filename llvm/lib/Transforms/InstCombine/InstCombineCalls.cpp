@@ -1894,9 +1894,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   switch (II->getIntrinsicID()) {
   default: break;
   case Intrinsic::objectsize:
-    if (ConstantInt *N =
-            lowerObjectSizeCall(II, DL, &TLI, /*MustSucceed=*/false))
-      return replaceInstUsesWith(CI, N);
+    if (Value *V = lowerObjectSizeCall(II, DL, &TLI, /*MustSucceed=*/false))
+      return replaceInstUsesWith(CI, V);
     return nullptr;
   case Intrinsic::bswap: {
     Value *IIOperand = II->getArgOperand(0);

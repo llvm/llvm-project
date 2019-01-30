@@ -142,8 +142,9 @@ static void insertBoundsCheck(Value *Or, BuilderTy IRB, GetTrapBBT GetTrapBB) {
 static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
                               ScalarEvolution &SE) {
   const DataLayout &DL = F.getParent()->getDataLayout();
-  ObjectSizeOffsetEvaluator ObjSizeEval(DL, &TLI, F.getContext(),
-                                           /*RoundToAlign=*/true);
+  ObjectSizeOpts EvalOpts;
+  EvalOpts.RoundToAlign = true;
+  ObjectSizeOffsetEvaluator ObjSizeEval(DL, &TLI, F.getContext(), EvalOpts);
 
   // check HANDLE_MEMORY_INST in include/llvm/Instruction.def for memory
   // touching instructions

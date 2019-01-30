@@ -754,25 +754,46 @@ static bool emitComments(const MachineInstr &MI, raw_ostream &CommentOS,
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
   // Check for spills and reloads
+  int FI;
+
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
   bool Commented = false;
+
+  auto getSize =
+      [&MFI](const SmallVectorImpl<const MachineMemOperand *> &Accesses) {
+        unsigned Size = 0;
+        for (auto A : Accesses)
+          if (MFI.isSpillSlotObjectIndex(
+                  cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
+                      ->getFrameIndex()))
+            Size += A->getSize();
+        return Size;
+      };
 
   // We assume a single instruction only has a spill or reload, not
   // both.
-  Optional<unsigned> Size;
-  if ((Size = MI.getRestoreSize(TII))) {
-    CommentOS << *Size << "-byte Reload";
-    Commented = true;
-  } else if ((Size = MI.getFoldedRestoreSize(TII))) {
-    if (*Size) {
-      CommentOS << *Size << "-byte Folded Reload";
+  const MachineMemOperand *MMO;
+  SmallVector<const MachineMemOperand *, 2> Accesses;
+  if (TII->isLoadFromStackSlotPostFE(MI, FI)) {
+    if (MFI.isSpillSlotObjectIndex(FI)) {
+      MMO = *MI.memoperands_begin();
+      CommentOS << MMO->getSize() << "-byte Reload";
       Commented = true;
     }
-  } else if ((Size = MI.getSpillSize(TII))) {
-    CommentOS << *Size << "-byte Spill";
-    Commented = true;
-  } else if ((Size = MI.getFoldedSpillSize(TII))) {
-    if (*Size) {
-      CommentOS << *Size << "-byte Folded Spill";
+  } else if (TII->hasLoadFromStackSlot(MI, Accesses)) {
+    if (auto Size = getSize(Accesses)) {
+      CommentOS << Size << "-byte Folded Reload";
+      Commented = true;
+    }
+  } else if (TII->isStoreToStackSlotPostFE(MI, FI)) {
+    if (MFI.isSpillSlotObjectIndex(FI)) {
+      MMO = *MI.memoperands_begin();
+      CommentOS << MMO->getSize() << "-byte Spill";
+      Commented = true;
+    }
+  } else if (TII->hasStoreToStackSlot(MI, Accesses)) {
+    if (auto Size = getSize(Accesses)) {
+      CommentOS << Size << "-byte Folded Spill";
       Commented = true;
     }
   }
