@@ -1844,13 +1844,16 @@ SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
     if (target_swift_type->hasArchetype())
       target_swift_type = target_swift_type->mapTypeOutOfContext().getPointer();
 
-    target_swift_type = target_swift_type.transform(
+    // FIXME: This is wrong, but it doesn't actually matter right now since
+    // all conformances are always visible
+    auto *module_decl = scratch_ctx->GetASTContext()->getStdlibModule();
+
+    target_swift_type = target_swift_type.subst(
         [this, &stack_frame,
-         &scratch_ctx](swift::Type candidate_type) -> swift::Type {
-          swift::TypeBase *type = candidate_type.getPointer();
+         &scratch_ctx](swift::SubstitutableType *type) -> swift::Type {
           StreamString type_name;
           if (!GetAbstractTypeName(type_name, type))
-            return candidate_type;
+            return type;
           CompilerType concrete_type = this->GetConcreteType(
               &stack_frame, ConstString(type_name.GetString()));
           Status import_error;
@@ -1860,8 +1863,11 @@ SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
           if (target_concrete_type.IsValid())
             return swift::Type(GetSwiftType(target_concrete_type));
 
-          return candidate_type;
-        });
+          return type;
+        },
+        swift::LookUpConformanceInModule(module_decl),
+        swift::SubstFlags::DesugarMemberTypes);
+    assert(target_swift_type);
 
     return {target_swift_type.getPointer()};
   }
@@ -1870,22 +1876,12 @@ SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
 
 bool SwiftLanguageRuntime::GetAbstractTypeName(StreamString &name,
                                                swift::Type swift_type) {
-  StreamString assoc;
-  auto *dependent_member =
-         llvm::dyn_cast<swift::DependentMemberType>(swift_type.getPointer());
-  swift::TypeBase *base = swift_type.getPointer();
-  while (dependent_member) {
-    base = dependent_member->getBase().getPointer();
-    assoc.Printf(".%s", dependent_member->getName().get());
-    dependent_member = llvm::dyn_cast<swift::DependentMemberType>(base);
-  }
-
-  auto *generic_type_param = llvm::dyn_cast<swift::GenericTypeParamType>(base);
+  auto *generic_type_param = swift_type->getAs<swift::GenericTypeParamType>();
   if (!generic_type_param)
     return false;
 
-  name.Printf(u8"\u03C4_%d_%d%s", generic_type_param->getDepth(),
-              generic_type_param->getIndex(), assoc.GetString().data());
+  name.Printf(u8"\u03C4_%d_%d", generic_type_param->getDepth(),
+              generic_type_param->getIndex());
   return true;
 }
 
