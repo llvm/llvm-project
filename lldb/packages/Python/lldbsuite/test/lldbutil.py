@@ -1277,6 +1277,16 @@ class RecursiveDecentFormatter(BasicFormatter):
         return output.getvalue()
 
 
+def check_expression(test, frame, expression, expected_result, use_summary=True):
+    """Asserts that the result of evaluating the given expression gives the passed expected result"""
+    value = frame.EvaluateExpression(expression)
+    test.assertTrue(value.IsValid(), expression + "returned a valid value")
+    answer = value.GetSummary() if use_summary else value.GetValue()
+    report_str = "%s expected: %s got: %s" % (
+        expression, expected_result, answer)
+    test.assertTrue(answer == expected_result, report_str)
+
+
 def check_variable(
         test,
         valobj,
