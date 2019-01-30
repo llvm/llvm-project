@@ -156,6 +156,8 @@ public:
   llvm::Optional<uint32_t> PCHSignature;
 
 private:
+  const coff_section* getSection(uint32_t I);
+
   void initializeChunks();
   void initializeSymbols();
 

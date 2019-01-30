@@ -21,7 +21,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 using namespace clang;
@@ -1051,7 +1050,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
 
     // FIXME: We shouldn't need to get the function info here, the
     // runtime already should have computed it to build the function.
-    llvm::Instruction *CallInstruction;
+    llvm::CallBase *CallInstruction;
     RValue RV = EmitCall(
         getTypes().arrangeBuiltinFunctionCall(propType, args),
         callee, ReturnValueSlot(), args, &CallInstruction);

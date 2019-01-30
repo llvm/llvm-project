@@ -27,6 +27,7 @@ class Chunk;
 class CommonChunk;
 class Defined;
 class DefinedAbsolute;
+class DefinedRegular;
 class DefinedRelative;
 class Lazy;
 class SectionChunk;
@@ -88,7 +89,7 @@ public:
   Symbol *addRegular(InputFile *F, StringRef N,
                      const llvm::object::coff_symbol_generic *S = nullptr,
                      SectionChunk *C = nullptr);
-  std::pair<Symbol *, bool>
+  std::pair<DefinedRegular *, bool>
   addComdat(InputFile *F, StringRef N,
             const llvm::object::coff_symbol_generic *S = nullptr);
   Symbol *addCommon(InputFile *F, StringRef N, uint64_t Size,

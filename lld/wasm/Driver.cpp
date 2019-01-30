@@ -587,9 +587,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   Symbol *EntrySym = nullptr;
   if (!Config->Relocatable) {
-    // Add synthetic dummies for weak undefined functions.
-    handleWeakUndefines();
-
     if (!Config->Shared && !Config->Entry.empty()) {
       EntrySym = handleUndefined(Config->Entry);
       if (EntrySym && EntrySym->isDefined())
@@ -612,6 +609,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Symtab->addCombinedLTOObject();
   if (errorCount())
     return;
+
+  // Add synthetic dummies for weak undefined functions.  Must happen
+  // after LTO otherwise functions may not yet have signatures.
+  if (!Config->Relocatable)
+    handleWeakUndefines();
 
   if (EntrySym)
     EntrySym->setHidden(false);

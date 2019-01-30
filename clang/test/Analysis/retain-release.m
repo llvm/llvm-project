@@ -627,6 +627,19 @@ void f16(int x, CFTypeRef p) {
   }
 }
 
+#ifdef TRACK_START_PARAM
+@interface TestParam : NSObject
+- (void) f:(id) object;
+@end
+
+@implementation TestParam
+- (void) f:(id) object { // expected-warning{{Potential leak of an object of type 'id'}}
+  [object retain];
+  [object retain];
+}
+@end
+#endif
+
 // Test that an object is non-null after CFRetain/CFRelease/CFMakeCollectable/CFAutorelease.
 void f17(int x, CFTypeRef p) {
 #ifdef TRACK_START_PARAM

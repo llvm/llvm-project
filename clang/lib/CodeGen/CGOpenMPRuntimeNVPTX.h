@@ -17,7 +17,6 @@
 #include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
 #include "clang/AST/StmtOpenMP.h"
-#include "llvm/IR/CallSite.h"
 
 namespace clang {
 namespace CodeGen {

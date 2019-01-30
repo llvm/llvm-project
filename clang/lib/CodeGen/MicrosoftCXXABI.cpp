@@ -26,7 +26,6 @@
 #include "clang/AST/VTableBuilder.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Intrinsics.h"
 
 using namespace clang;
@@ -926,8 +925,8 @@ bool MicrosoftCXXABI::shouldTypeidBeNullChecked(bool IsDeref,
          !getContext().getASTRecordLayout(SrcDecl).hasExtendableVFPtr();
 }
 
-static llvm::CallSite emitRTtypeidCall(CodeGenFunction &CGF,
-                                       llvm::Value *Argument) {
+static llvm::CallBase *emitRTtypeidCall(CodeGenFunction &CGF,
+                                        llvm::Value *Argument) {
   llvm::Type *ArgTypes[] = {CGF.Int8PtrTy};
   llvm::FunctionType *FTy =
       llvm::FunctionType::get(CGF.Int8PtrTy, ArgTypes, false);
@@ -937,9 +936,9 @@ static llvm::CallSite emitRTtypeidCall(CodeGenFunction &CGF,
 }
 
 void MicrosoftCXXABI::EmitBadTypeidCall(CodeGenFunction &CGF) {
-  llvm::CallSite Call =
+  llvm::CallBase *Call =
       emitRTtypeidCall(CGF, llvm::Constant::getNullValue(CGM.VoidPtrTy));
-  Call.setDoesNotReturn();
+  Call->setDoesNotReturn();
   CGF.Builder.CreateUnreachable();
 }
 
@@ -949,7 +948,7 @@ llvm::Value *MicrosoftCXXABI::EmitTypeid(CodeGenFunction &CGF,
                                          llvm::Type *StdTypeInfoPtrTy) {
   std::tie(ThisPtr, std::ignore, std::ignore) =
       performBaseAdjustment(CGF, ThisPtr, SrcRecordTy);
-  auto Typeid = emitRTtypeidCall(CGF, ThisPtr.getPointer()).getInstruction();
+  llvm::CallBase *Typeid = emitRTtypeidCall(CGF, ThisPtr.getPointer());
   return CGF.Builder.CreateBitCast(Typeid, StdTypeInfoPtrTy);
 }
 
@@ -990,7 +989,7 @@ llvm::Value *MicrosoftCXXABI::EmitDynamicCastCall(
   llvm::Value *Args[] = {
       ThisPtr, Offset, SrcRTTI, DestRTTI,
       llvm::ConstantInt::get(CGF.Int32Ty, DestTy->isReferenceType())};
-  ThisPtr = CGF.EmitRuntimeCallOrInvoke(Function, Args).getInstruction();
+  ThisPtr = CGF.EmitRuntimeCallOrInvoke(Function, Args);
   return CGF.Builder.CreateBitCast(ThisPtr, DestLTy);
 }
 

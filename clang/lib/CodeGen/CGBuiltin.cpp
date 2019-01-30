@@ -26,7 +26,6 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
@@ -799,9 +798,9 @@ static RValue EmitMSVCRTSetJmp(CodeGenFunction &CGF, MSVCSetJmpKind SJKind,
   llvm::Value *Buf = CGF.Builder.CreateBitOrPointerCast(
       CGF.EmitScalarExpr(E->getArg(0)), CGF.Int8PtrTy);
   llvm::Value *Args[] = {Buf, Arg1};
-  llvm::CallSite CS = CGF.EmitRuntimeCallOrInvoke(SetJmpFn, Args);
-  CS.setAttributes(ReturnsTwiceAttr);
-  return RValue::get(CS.getInstruction());
+  llvm::CallBase *CB = CGF.EmitRuntimeCallOrInvoke(SetJmpFn, Args);
+  CB->setAttributes(ReturnsTwiceAttr);
+  return RValue::get(CB);
 }
 
 // Many of MSVC builtins are on x64, ARM and AArch64; to avoid repeating code,
@@ -1002,9 +1001,9 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
     llvm::AttributeList NoReturnAttr = llvm::AttributeList::get(
         getLLVMContext(), llvm::AttributeList::FunctionIndex,
         llvm::Attribute::NoReturn);
-    CallSite CS = Builder.CreateCall(IA, EmitScalarExpr(E->getArg(0)));
-    CS.setAttributes(NoReturnAttr);
-    return CS.getInstruction();
+    llvm::CallInst *CI = Builder.CreateCall(IA, EmitScalarExpr(E->getArg(0)));
+    CI->setAttributes(NoReturnAttr);
+    return CI;
   }
   }
   llvm_unreachable("Incorrect MSVC intrinsic!");
@@ -11851,9 +11850,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     llvm::AttributeList NoReturnAttr = llvm::AttributeList::get(
         getLLVMContext(), llvm::AttributeList::FunctionIndex,
         llvm::Attribute::NoReturn);
-    CallSite CS = Builder.CreateCall(IA);
-    CS.setAttributes(NoReturnAttr);
-    return CS.getInstruction();
+    llvm::CallInst *CI = Builder.CreateCall(IA);
+    CI->setAttributes(NoReturnAttr);
+    return CI;
   }
   case X86::BI__readfsbyte:
   case X86::BI__readfsword:
