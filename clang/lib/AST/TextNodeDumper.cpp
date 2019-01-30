@@ -266,6 +266,8 @@ void TextNodeDumper::Visit(const Decl *D) {
       }
     }
   }
+
+  ConstDeclVisitor<TextNodeDumper>::Visit(D);
 }
 
 void TextNodeDumper::Visit(const CXXCtorInitializer *Init) {
@@ -1195,4 +1197,706 @@ void TextNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *T) {
 void TextNodeDumper::VisitPackExpansionType(const PackExpansionType *T) {
   if (auto N = T->getNumExpansions())
     OS << " expansions " << *N;
+}
+
+void TextNodeDumper::VisitLabelDecl(const LabelDecl *D) { dumpName(D); }
+
+void TextNodeDumper::VisitTypedefDecl(const TypedefDecl *D) {
+  dumpName(D);
+  dumpType(D->getUnderlyingType());
+  if (D->isModulePrivate())
+    OS << " __module_private__";
+}
+
+void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
+  if (D->isScoped()) {
+    if (D->isScopedUsingClassTag())
+      OS << " class";
+    else
+      OS << " struct";
+  }
+  dumpName(D);
+  if (D->isModulePrivate())
+    OS << " __module_private__";
+  if (D->isFixed())
+    dumpType(D->getIntegerType());
+}
+
+void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
+  OS << ' ' << D->getKindName();
+  dumpName(D);
+  if (D->isModulePrivate())
+    OS << " __module_private__";
+  if (D->isCompleteDefinition())
+    OS << " definition";
+}
+
+void TextNodeDumper::VisitEnumConstantDecl(const EnumConstantDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+}
+
+void TextNodeDumper::VisitIndirectFieldDecl(const IndirectFieldDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+
+  for (const auto *Child : D->chain())
+    dumpDeclRef(Child);
+}
+
+void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+
+  StorageClass SC = D->getStorageClass();
+  if (SC != SC_None)
+    OS << ' ' << VarDecl::getStorageClassSpecifierString(SC);
+  if (D->isInlineSpecified())
+    OS << " inline";
+  if (D->isVirtualAsWritten())
+    OS << " virtual";
+  if (D->isModulePrivate())
+    OS << " __module_private__";
+
+  if (D->isPure())
+    OS << " pure";
+  if (D->isDefaulted()) {
+    OS << " default";
+    if (D->isDeleted())
+      OS << "_delete";
+  }
+  if (D->isDeletedAsWritten())
+    OS << " delete";
+  if (D->isTrivial())
+    OS << " trivial";
+
+  if (const auto *FPT = D->getType()->getAs<FunctionProtoType>()) {
+    FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+    switch (EPI.ExceptionSpec.Type) {
+    default:
+      break;
+    case EST_Unevaluated:
+      OS << " noexcept-unevaluated " << EPI.ExceptionSpec.SourceDecl;
+      break;
+    case EST_Uninstantiated:
+      OS << " noexcept-uninstantiated " << EPI.ExceptionSpec.SourceTemplate;
+      break;
+    }
+  }
+
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
+    if (MD->size_overridden_methods() != 0) {
+      auto dumpOverride = [=](const CXXMethodDecl *D) {
+        SplitQualType T_split = D->getType().split();
+        OS << D << " " << D->getParent()->getName()
+           << "::" << D->getNameAsString() << " '"
+           << QualType::getAsString(T_split, PrintPolicy) << "'";
+      };
+
+      AddChild([=] {
+        auto Overrides = MD->overridden_methods();
+        OS << "Overrides: [ ";
+        dumpOverride(*Overrides.begin());
+        for (const auto *Override :
+             llvm::make_range(Overrides.begin() + 1, Overrides.end())) {
+          OS << ", ";
+          dumpOverride(Override);
+        }
+        OS << " ]";
+      });
+    }
+  }
+
+  // Since NumParams comes from the FunctionProtoType of the FunctionDecl and
+  // the Params are set later, it is possible for a dump during debugging to
+  // encounter a FunctionDecl that has been created but hasn't been assigned
+  // ParmVarDecls yet.
+  if (!D->param_empty() && !D->param_begin())
+    OS << " <<<NULL params x " << D->getNumParams() << ">>>";
+}
+
+void TextNodeDumper::VisitFieldDecl(const FieldDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+  if (D->isMutable())
+    OS << " mutable";
+  if (D->isModulePrivate())
+    OS << " __module_private__";
+}
+
+void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+  StorageClass SC = D->getStorageClass();
+  if (SC != SC_None)
+    OS << ' ' << VarDecl::getStorageClassSpecifierString(SC);
+  switch (D->getTLSKind()) {
+  case VarDecl::TLS_None:
+    break;
+  case VarDecl::TLS_Static:
+    OS << " tls";
+    break;
+  case VarDecl::TLS_Dynamic:
+    OS << " tls_dynamic";
+    break;
+  }
+  if (D->isModulePrivate())
+    OS << " __module_private__";
+  if (D->isNRVOVariable())
+    OS << " nrvo";
+  if (D->isInline())
+    OS << " inline";
+  if (D->isConstexpr())
+    OS << " constexpr";
+  if (D->hasInit()) {
+    switch (D->getInitStyle()) {
+    case VarDecl::CInit:
+      OS << " cinit";
+      break;
+    case VarDecl::CallInit:
+      OS << " callinit";
+      break;
+    case VarDecl::ListInit:
+      OS << " listinit";
+      break;
+    }
+  }
+}
+
+void TextNodeDumper::VisitBindingDecl(const BindingDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+}
+
+void TextNodeDumper::VisitCapturedDecl(const CapturedDecl *D) {
+  if (D->isNothrow())
+    OS << " nothrow";
+}
+
+void TextNodeDumper::VisitImportDecl(const ImportDecl *D) {
+  OS << ' ' << D->getImportedModule()->getFullModuleName();
+}
+
+void TextNodeDumper::VisitPragmaCommentDecl(const PragmaCommentDecl *D) {
+  OS << ' ';
+  switch (D->getCommentKind()) {
+  case PCK_Unknown:
+    llvm_unreachable("unexpected pragma comment kind");
+  case PCK_Compiler:
+    OS << "compiler";
+    break;
+  case PCK_ExeStr:
+    OS << "exestr";
+    break;
+  case PCK_Lib:
+    OS << "lib";
+    break;
+  case PCK_Linker:
+    OS << "linker";
+    break;
+  case PCK_User:
+    OS << "user";
+    break;
+  }
+  StringRef Arg = D->getArg();
+  if (!Arg.empty())
+    OS << " \"" << Arg << "\"";
+}
+
+void TextNodeDumper::VisitPragmaDetectMismatchDecl(
+    const PragmaDetectMismatchDecl *D) {
+  OS << " \"" << D->getName() << "\" \"" << D->getValue() << "\"";
+}
+
+void TextNodeDumper::VisitOMPDeclareReductionDecl(
+    const OMPDeclareReductionDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+  OS << " combiner";
+  dumpPointer(D->getCombiner());
+  if (const auto *Initializer = D->getInitializer()) {
+    OS << " initializer";
+    dumpPointer(Initializer);
+    switch (D->getInitializerKind()) {
+    case OMPDeclareReductionDecl::DirectInit:
+      OS << " omp_priv = ";
+      break;
+    case OMPDeclareReductionDecl::CopyInit:
+      OS << " omp_priv ()";
+      break;
+    case OMPDeclareReductionDecl::CallInit:
+      break;
+    }
+  }
+}
+
+void TextNodeDumper::VisitOMPRequiresDecl(const OMPRequiresDecl *D) {
+  for (const auto *C : D->clauselists()) {
+    AddChild([=] {
+      if (!C) {
+        ColorScope Color(OS, ShowColors, NullColor);
+        OS << "<<<NULL>>> OMPClause";
+        return;
+      }
+      {
+        ColorScope Color(OS, ShowColors, AttrColor);
+        StringRef ClauseName(getOpenMPClauseName(C->getClauseKind()));
+        OS << "OMP" << ClauseName.substr(/*Start=*/0, /*N=*/1).upper()
+           << ClauseName.drop_front() << "Clause";
+      }
+      dumpPointer(C);
+      dumpSourceRange(SourceRange(C->getBeginLoc(), C->getEndLoc()));
+    });
+  }
+}
+
+void TextNodeDumper::VisitOMPCapturedExprDecl(const OMPCapturedExprDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+}
+
+void TextNodeDumper::VisitNamespaceDecl(const NamespaceDecl *D) {
+  dumpName(D);
+  if (D->isInline())
+    OS << " inline";
+  if (!D->isOriginalNamespace())
+    dumpDeclRef(D->getOriginalNamespace(), "original");
+}
+
+void TextNodeDumper::VisitUsingDirectiveDecl(const UsingDirectiveDecl *D) {
+  OS << ' ';
+  dumpBareDeclRef(D->getNominatedNamespace());
+}
+
+void TextNodeDumper::VisitNamespaceAliasDecl(const NamespaceAliasDecl *D) {
+  dumpName(D);
+  dumpDeclRef(D->getAliasedNamespace());
+}
+
+void TextNodeDumper::VisitTypeAliasDecl(const TypeAliasDecl *D) {
+  dumpName(D);
+  dumpType(D->getUnderlyingType());
+}
+
+void TextNodeDumper::VisitTypeAliasTemplateDecl(
+    const TypeAliasTemplateDecl *D) {
+  dumpName(D);
+}
+
+void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
+  VisitRecordDecl(D);
+  if (!D->isCompleteDefinition())
+    return;
+
+  AddChild([=] {
+    {
+      ColorScope Color(OS, ShowColors, DeclKindNameColor);
+      OS << "DefinitionData";
+    }
+#define FLAG(fn, name)                                                         \
+  if (D->fn())                                                                 \
+    OS << " " #name;
+    FLAG(isParsingBaseSpecifiers, parsing_base_specifiers);
+
+    FLAG(isGenericLambda, generic);
+    FLAG(isLambda, lambda);
+
+    FLAG(canPassInRegisters, pass_in_registers);
+    FLAG(isEmpty, empty);
+    FLAG(isAggregate, aggregate);
+    FLAG(isStandardLayout, standard_layout);
+    FLAG(isTriviallyCopyable, trivially_copyable);
+    FLAG(isPOD, pod);
+    FLAG(isTrivial, trivial);
+    FLAG(isPolymorphic, polymorphic);
+    FLAG(isAbstract, abstract);
+    FLAG(isLiteral, literal);
+
+    FLAG(hasUserDeclaredConstructor, has_user_declared_ctor);
+    FLAG(hasConstexprNonCopyMoveConstructor, has_constexpr_non_copy_move_ctor);
+    FLAG(hasMutableFields, has_mutable_fields);
+    FLAG(hasVariantMembers, has_variant_members);
+    FLAG(allowConstDefaultInit, can_const_default_init);
+
+    AddChild([=] {
+      {
+        ColorScope Color(OS, ShowColors, DeclKindNameColor);
+        OS << "DefaultConstructor";
+      }
+      FLAG(hasDefaultConstructor, exists);
+      FLAG(hasTrivialDefaultConstructor, trivial);
+      FLAG(hasNonTrivialDefaultConstructor, non_trivial);
+      FLAG(hasUserProvidedDefaultConstructor, user_provided);
+      FLAG(hasConstexprDefaultConstructor, constexpr);
+      FLAG(needsImplicitDefaultConstructor, needs_implicit);
+      FLAG(defaultedDefaultConstructorIsConstexpr, defaulted_is_constexpr);
+    });
+
+    AddChild([=] {
+      {
+        ColorScope Color(OS, ShowColors, DeclKindNameColor);
+        OS << "CopyConstructor";
+      }
+      FLAG(hasSimpleCopyConstructor, simple);
+      FLAG(hasTrivialCopyConstructor, trivial);
+      FLAG(hasNonTrivialCopyConstructor, non_trivial);
+      FLAG(hasUserDeclaredCopyConstructor, user_declared);
+      FLAG(hasCopyConstructorWithConstParam, has_const_param);
+      FLAG(needsImplicitCopyConstructor, needs_implicit);
+      FLAG(needsOverloadResolutionForCopyConstructor,
+           needs_overload_resolution);
+      if (!D->needsOverloadResolutionForCopyConstructor())
+        FLAG(defaultedCopyConstructorIsDeleted, defaulted_is_deleted);
+      FLAG(implicitCopyConstructorHasConstParam, implicit_has_const_param);
+    });
+
+    AddChild([=] {
+      {
+        ColorScope Color(OS, ShowColors, DeclKindNameColor);
+        OS << "MoveConstructor";
+      }
+      FLAG(hasMoveConstructor, exists);
+      FLAG(hasSimpleMoveConstructor, simple);
+      FLAG(hasTrivialMoveConstructor, trivial);
+      FLAG(hasNonTrivialMoveConstructor, non_trivial);
+      FLAG(hasUserDeclaredMoveConstructor, user_declared);
+      FLAG(needsImplicitMoveConstructor, needs_implicit);
+      FLAG(needsOverloadResolutionForMoveConstructor,
+           needs_overload_resolution);
+      if (!D->needsOverloadResolutionForMoveConstructor())
+        FLAG(defaultedMoveConstructorIsDeleted, defaulted_is_deleted);
+    });
+
+    AddChild([=] {
+      {
+        ColorScope Color(OS, ShowColors, DeclKindNameColor);
+        OS << "CopyAssignment";
+      }
+      FLAG(hasTrivialCopyAssignment, trivial);
+      FLAG(hasNonTrivialCopyAssignment, non_trivial);
+      FLAG(hasCopyAssignmentWithConstParam, has_const_param);
+      FLAG(hasUserDeclaredCopyAssignment, user_declared);
+      FLAG(needsImplicitCopyAssignment, needs_implicit);
+      FLAG(needsOverloadResolutionForCopyAssignment, needs_overload_resolution);
+      FLAG(implicitCopyAssignmentHasConstParam, implicit_has_const_param);
+    });
+
+    AddChild([=] {
+      {
+        ColorScope Color(OS, ShowColors, DeclKindNameColor);
+        OS << "MoveAssignment";
+      }
+      FLAG(hasMoveAssignment, exists);
+      FLAG(hasSimpleMoveAssignment, simple);
+      FLAG(hasTrivialMoveAssignment, trivial);
+      FLAG(hasNonTrivialMoveAssignment, non_trivial);
+      FLAG(hasUserDeclaredMoveAssignment, user_declared);
+      FLAG(needsImplicitMoveAssignment, needs_implicit);
+      FLAG(needsOverloadResolutionForMoveAssignment, needs_overload_resolution);
+    });
+
+    AddChild([=] {
+      {
+        ColorScope Color(OS, ShowColors, DeclKindNameColor);
+        OS << "Destructor";
+      }
+      FLAG(hasSimpleDestructor, simple);
+      FLAG(hasIrrelevantDestructor, irrelevant);
+      FLAG(hasTrivialDestructor, trivial);
+      FLAG(hasNonTrivialDestructor, non_trivial);
+      FLAG(hasUserDeclaredDestructor, user_declared);
+      FLAG(needsImplicitDestructor, needs_implicit);
+      FLAG(needsOverloadResolutionForDestructor, needs_overload_resolution);
+      if (!D->needsOverloadResolutionForDestructor())
+        FLAG(defaultedDestructorIsDeleted, defaulted_is_deleted);
+    });
+  });
+
+  for (const auto &I : D->bases()) {
+    AddChild([=] {
+      if (I.isVirtual())
+        OS << "virtual ";
+      dumpAccessSpecifier(I.getAccessSpecifier());
+      dumpType(I.getType());
+      if (I.isPackExpansion())
+        OS << "...";
+    });
+  }
+}
+
+void TextNodeDumper::VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
+  dumpName(D);
+}
+
+void TextNodeDumper::VisitClassTemplateDecl(const ClassTemplateDecl *D) {
+  dumpName(D);
+}
+
+void TextNodeDumper::VisitVarTemplateDecl(const VarTemplateDecl *D) {
+  dumpName(D);
+}
+
+void TextNodeDumper::VisitBuiltinTemplateDecl(const BuiltinTemplateDecl *D) {
+  dumpName(D);
+}
+
+void TextNodeDumper::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
+  if (D->wasDeclaredWithTypename())
+    OS << " typename";
+  else
+    OS << " class";
+  OS << " depth " << D->getDepth() << " index " << D->getIndex();
+  if (D->isParameterPack())
+    OS << " ...";
+  dumpName(D);
+}
+
+void TextNodeDumper::VisitNonTypeTemplateParmDecl(
+    const NonTypeTemplateParmDecl *D) {
+  dumpType(D->getType());
+  OS << " depth " << D->getDepth() << " index " << D->getIndex();
+  if (D->isParameterPack())
+    OS << " ...";
+  dumpName(D);
+}
+
+void TextNodeDumper::VisitTemplateTemplateParmDecl(
+    const TemplateTemplateParmDecl *D) {
+  OS << " depth " << D->getDepth() << " index " << D->getIndex();
+  if (D->isParameterPack())
+    OS << " ...";
+  dumpName(D);
+}
+
+void TextNodeDumper::VisitUsingDecl(const UsingDecl *D) {
+  OS << ' ';
+  if (D->getQualifier())
+    D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
+  OS << D->getNameAsString();
+}
+
+void TextNodeDumper::VisitUnresolvedUsingTypenameDecl(
+    const UnresolvedUsingTypenameDecl *D) {
+  OS << ' ';
+  if (D->getQualifier())
+    D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
+  OS << D->getNameAsString();
+}
+
+void TextNodeDumper::VisitUnresolvedUsingValueDecl(
+    const UnresolvedUsingValueDecl *D) {
+  OS << ' ';
+  if (D->getQualifier())
+    D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
+  OS << D->getNameAsString();
+  dumpType(D->getType());
+}
+
+void TextNodeDumper::VisitUsingShadowDecl(const UsingShadowDecl *D) {
+  OS << ' ';
+  dumpBareDeclRef(D->getTargetDecl());
+}
+
+void TextNodeDumper::VisitConstructorUsingShadowDecl(
+    const ConstructorUsingShadowDecl *D) {
+  if (D->constructsVirtualBase())
+    OS << " virtual";
+
+  AddChild([=] {
+    OS << "target ";
+    dumpBareDeclRef(D->getTargetDecl());
+  });
+
+  AddChild([=] {
+    OS << "nominated ";
+    dumpBareDeclRef(D->getNominatedBaseClass());
+    OS << ' ';
+    dumpBareDeclRef(D->getNominatedBaseClassShadowDecl());
+  });
+
+  AddChild([=] {
+    OS << "constructed ";
+    dumpBareDeclRef(D->getConstructedBaseClass());
+    OS << ' ';
+    dumpBareDeclRef(D->getConstructedBaseClassShadowDecl());
+  });
+}
+
+void TextNodeDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *D) {
+  switch (D->getLanguage()) {
+  case LinkageSpecDecl::lang_c:
+    OS << " C";
+    break;
+  case LinkageSpecDecl::lang_cxx:
+    OS << " C++";
+    break;
+  }
+}
+
+void TextNodeDumper::VisitAccessSpecDecl(const AccessSpecDecl *D) {
+  OS << ' ';
+  dumpAccessSpecifier(D->getAccess());
+}
+
+void TextNodeDumper::VisitFriendDecl(const FriendDecl *D) {
+  if (TypeSourceInfo *T = D->getFriendType())
+    dumpType(T->getType());
+}
+
+void TextNodeDumper::VisitObjCIvarDecl(const ObjCIvarDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+  if (D->getSynthesize())
+    OS << " synthesize";
+
+  switch (D->getAccessControl()) {
+  case ObjCIvarDecl::None:
+    OS << " none";
+    break;
+  case ObjCIvarDecl::Private:
+    OS << " private";
+    break;
+  case ObjCIvarDecl::Protected:
+    OS << " protected";
+    break;
+  case ObjCIvarDecl::Public:
+    OS << " public";
+    break;
+  case ObjCIvarDecl::Package:
+    OS << " package";
+    break;
+  }
+}
+
+void TextNodeDumper::VisitObjCMethodDecl(const ObjCMethodDecl *D) {
+  if (D->isInstanceMethod())
+    OS << " -";
+  else
+    OS << " +";
+  dumpName(D);
+  dumpType(D->getReturnType());
+
+  if (D->isVariadic())
+    OS << " variadic";
+}
+
+void TextNodeDumper::VisitObjCTypeParamDecl(const ObjCTypeParamDecl *D) {
+  dumpName(D);
+  switch (D->getVariance()) {
+  case ObjCTypeParamVariance::Invariant:
+    break;
+
+  case ObjCTypeParamVariance::Covariant:
+    OS << " covariant";
+    break;
+
+  case ObjCTypeParamVariance::Contravariant:
+    OS << " contravariant";
+    break;
+  }
+
+  if (D->hasExplicitBound())
+    OS << " bounded";
+  dumpType(D->getUnderlyingType());
+}
+
+void TextNodeDumper::VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
+  dumpName(D);
+  dumpDeclRef(D->getClassInterface());
+  dumpDeclRef(D->getImplementation());
+  for (const auto *P : D->protocols())
+    dumpDeclRef(P);
+}
+
+void TextNodeDumper::VisitObjCCategoryImplDecl(const ObjCCategoryImplDecl *D) {
+  dumpName(D);
+  dumpDeclRef(D->getClassInterface());
+  dumpDeclRef(D->getCategoryDecl());
+}
+
+void TextNodeDumper::VisitObjCProtocolDecl(const ObjCProtocolDecl *D) {
+  dumpName(D);
+
+  for (const auto *Child : D->protocols())
+    dumpDeclRef(Child);
+}
+
+void TextNodeDumper::VisitObjCInterfaceDecl(const ObjCInterfaceDecl *D) {
+  dumpName(D);
+  dumpDeclRef(D->getSuperClass(), "super");
+
+  dumpDeclRef(D->getImplementation());
+  for (const auto *Child : D->protocols())
+    dumpDeclRef(Child);
+}
+
+void TextNodeDumper::VisitObjCImplementationDecl(
+    const ObjCImplementationDecl *D) {
+  dumpName(D);
+  dumpDeclRef(D->getSuperClass(), "super");
+  dumpDeclRef(D->getClassInterface());
+}
+
+void TextNodeDumper::VisitObjCCompatibleAliasDecl(
+    const ObjCCompatibleAliasDecl *D) {
+  dumpName(D);
+  dumpDeclRef(D->getClassInterface());
+}
+
+void TextNodeDumper::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+
+  if (D->getPropertyImplementation() == ObjCPropertyDecl::Required)
+    OS << " required";
+  else if (D->getPropertyImplementation() == ObjCPropertyDecl::Optional)
+    OS << " optional";
+
+  ObjCPropertyDecl::PropertyAttributeKind Attrs = D->getPropertyAttributes();
+  if (Attrs != ObjCPropertyDecl::OBJC_PR_noattr) {
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_readonly)
+      OS << " readonly";
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_assign)
+      OS << " assign";
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_readwrite)
+      OS << " readwrite";
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_retain)
+      OS << " retain";
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_copy)
+      OS << " copy";
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_nonatomic)
+      OS << " nonatomic";
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_atomic)
+      OS << " atomic";
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_weak)
+      OS << " weak";
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_strong)
+      OS << " strong";
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_unsafe_unretained)
+      OS << " unsafe_unretained";
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_class)
+      OS << " class";
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_getter)
+      dumpDeclRef(D->getGetterMethodDecl(), "getter");
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_setter)
+      dumpDeclRef(D->getSetterMethodDecl(), "setter");
+  }
+}
+
+void TextNodeDumper::VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D) {
+  dumpName(D->getPropertyDecl());
+  if (D->getPropertyImplementation() == ObjCPropertyImplDecl::Synthesize)
+    OS << " synthesize";
+  else
+    OS << " dynamic";
+  dumpDeclRef(D->getPropertyDecl());
+  dumpDeclRef(D->getPropertyIvarDecl());
+}
+
+void TextNodeDumper::VisitBlockDecl(const BlockDecl *D) {
+  if (D->isVariadic())
+    OS << " variadic";
+
+  if (D->capturesCXXThis())
+    OS << " captures_this";
 }

@@ -1,12 +1,19 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s
+// RUN: %clang_cc1           -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -DDYNAMIC -triple x86_64-apple-darwin -emit-llvm %s -o - 2>&1 | FileCheck %s
+
+#ifndef DYNAMIC
+#define OBJECT_SIZE_BUILTIN __builtin_object_size
+#else
+#define OBJECT_SIZE_BUILTIN __builtin_dynamic_object_size
+#endif
 
 #define strcpy(dest, src) \
-  ((__builtin_object_size(dest, 0) != -1ULL) \
-   ? __builtin___strcpy_chk (dest, src, __builtin_object_size(dest, 1)) \
+  ((OBJECT_SIZE_BUILTIN(dest, 0) != -1ULL) \
+   ? __builtin___strcpy_chk (dest, src, OBJECT_SIZE_BUILTIN(dest, 1)) \
    : __inline_strcpy_chk(dest, src))
 
 static char *__inline_strcpy_chk (char *dest, const char *src) {
-  return __builtin___strcpy_chk(dest, src, __builtin_object_size(dest, 1));
+  return __builtin___strcpy_chk(dest, src, OBJECT_SIZE_BUILTIN(dest, 1));
 }
 
 char gbuf[63];
@@ -40,7 +47,7 @@ void test4() {
 // CHECK-LABEL: define void @test5
 void test5() {
   // CHECK:     = load i8*, i8** @gp
-  // CHECK-NEXT:= call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
+  // CHECK-NEXT:= call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
   strcpy(gp, "Hi there");
 }
 
@@ -130,13 +137,13 @@ void test16() {
 // CHECK-LABEL: @test17
 void test17() {
   // CHECK: store i32 -1
-  gi = __builtin_object_size(gp++, 0);
+  gi = OBJECT_SIZE_BUILTIN(gp++, 0);
   // CHECK: store i32 -1
-  gi = __builtin_object_size(gp++, 1);
+  gi = OBJECT_SIZE_BUILTIN(gp++, 1);
   // CHECK: store i32 0
-  gi = __builtin_object_size(gp++, 2);
+  gi = OBJECT_SIZE_BUILTIN(gp++, 2);
   // CHECK: store i32 0
-  gi = __builtin_object_size(gp++, 3);
+  gi = OBJECT_SIZE_BUILTIN(gp++, 3);
 }
 
 // CHECK-LABEL: @test18
@@ -144,7 +151,7 @@ unsigned test18(int cond) {
   int a[4], b[4];
   // CHECK: phi i32*
   // CHECK: call i64 @llvm.objectsize.i64
-  return __builtin_object_size(cond ? a : b, 0);
+  return OBJECT_SIZE_BUILTIN(cond ? a : b, 0);
 }
 
 // CHECK-LABEL: @test19
@@ -154,22 +161,22 @@ void test19() {
   } foo;
 
   // CHECK: store i32 8
-  gi = __builtin_object_size(&foo.a, 0);
+  gi = OBJECT_SIZE_BUILTIN(&foo.a, 0);
   // CHECK: store i32 4
-  gi = __builtin_object_size(&foo.a, 1);
+  gi = OBJECT_SIZE_BUILTIN(&foo.a, 1);
   // CHECK: store i32 8
-  gi = __builtin_object_size(&foo.a, 2);
+  gi = OBJECT_SIZE_BUILTIN(&foo.a, 2);
   // CHECK: store i32 4
-  gi = __builtin_object_size(&foo.a, 3);
+  gi = OBJECT_SIZE_BUILTIN(&foo.a, 3);
 
   // CHECK: store i32 4
-  gi = __builtin_object_size(&foo.b, 0);
+  gi = OBJECT_SIZE_BUILTIN(&foo.b, 0);
   // CHECK: store i32 4
-  gi = __builtin_object_size(&foo.b, 1);
+  gi = OBJECT_SIZE_BUILTIN(&foo.b, 1);
   // CHECK: store i32 4
-  gi = __builtin_object_size(&foo.b, 2);
+  gi = OBJECT_SIZE_BUILTIN(&foo.b, 2);
   // CHECK: store i32 4
-  gi = __builtin_object_size(&foo.b, 3);
+  gi = OBJECT_SIZE_BUILTIN(&foo.b, 3);
 }
 
 // CHECK-LABEL: @test20
@@ -177,13 +184,13 @@ void test20() {
   struct { int t[10]; } t[10];
 
   // CHECK: store i32 380
-  gi = __builtin_object_size(&t[0].t[5], 0);
+  gi = OBJECT_SIZE_BUILTIN(&t[0].t[5], 0);
   // CHECK: store i32 20
-  gi = __builtin_object_size(&t[0].t[5], 1);
+  gi = OBJECT_SIZE_BUILTIN(&t[0].t[5], 1);
   // CHECK: store i32 380
-  gi = __builtin_object_size(&t[0].t[5], 2);
+  gi = OBJECT_SIZE_BUILTIN(&t[0].t[5], 2);
   // CHECK: store i32 20
-  gi = __builtin_object_size(&t[0].t[5], 3);
+  gi = OBJECT_SIZE_BUILTIN(&t[0].t[5], 3);
 }
 
 // CHECK-LABEL: @test21
@@ -191,22 +198,22 @@ void test21() {
   struct { int t; } t;
 
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t + 1, 0);
+  gi = OBJECT_SIZE_BUILTIN(&t + 1, 0);
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t + 1, 1);
+  gi = OBJECT_SIZE_BUILTIN(&t + 1, 1);
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t + 1, 2);
+  gi = OBJECT_SIZE_BUILTIN(&t + 1, 2);
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t + 1, 3);
+  gi = OBJECT_SIZE_BUILTIN(&t + 1, 3);
 
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t.t + 1, 0);
+  gi = OBJECT_SIZE_BUILTIN(&t.t + 1, 0);
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t.t + 1, 1);
+  gi = OBJECT_SIZE_BUILTIN(&t.t + 1, 1);
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t.t + 1, 2);
+  gi = OBJECT_SIZE_BUILTIN(&t.t + 1, 2);
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t.t + 1, 3);
+  gi = OBJECT_SIZE_BUILTIN(&t.t + 1, 3);
 }
 
 // CHECK-LABEL: @test22
@@ -214,114 +221,114 @@ void test22() {
   struct { int t[10]; } t[10];
 
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t[10], 0);
+  gi = OBJECT_SIZE_BUILTIN(&t[10], 0);
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t[10], 1);
+  gi = OBJECT_SIZE_BUILTIN(&t[10], 1);
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t[10], 2);
+  gi = OBJECT_SIZE_BUILTIN(&t[10], 2);
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t[10], 3);
+  gi = OBJECT_SIZE_BUILTIN(&t[10], 3);
 
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t[9].t[10], 0);
+  gi = OBJECT_SIZE_BUILTIN(&t[9].t[10], 0);
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t[9].t[10], 1);
+  gi = OBJECT_SIZE_BUILTIN(&t[9].t[10], 1);
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t[9].t[10], 2);
+  gi = OBJECT_SIZE_BUILTIN(&t[9].t[10], 2);
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t[9].t[10], 3);
+  gi = OBJECT_SIZE_BUILTIN(&t[9].t[10], 3);
 
   // CHECK: store i32 0
-  gi = __builtin_object_size((char*)&t[0] + sizeof(t), 0);
+  gi = OBJECT_SIZE_BUILTIN((char*)&t[0] + sizeof(t), 0);
   // CHECK: store i32 0
-  gi = __builtin_object_size((char*)&t[0] + sizeof(t), 1);
+  gi = OBJECT_SIZE_BUILTIN((char*)&t[0] + sizeof(t), 1);
   // CHECK: store i32 0
-  gi = __builtin_object_size((char*)&t[0] + sizeof(t), 2);
+  gi = OBJECT_SIZE_BUILTIN((char*)&t[0] + sizeof(t), 2);
   // CHECK: store i32 0
-  gi = __builtin_object_size((char*)&t[0] + sizeof(t), 3);
+  gi = OBJECT_SIZE_BUILTIN((char*)&t[0] + sizeof(t), 3);
 
   // CHECK: store i32 0
-  gi = __builtin_object_size((char*)&t[9].t[0] + 10*sizeof(t[0].t), 0);
+  gi = OBJECT_SIZE_BUILTIN((char*)&t[9].t[0] + 10*sizeof(t[0].t), 0);
   // CHECK: store i32 0
-  gi = __builtin_object_size((char*)&t[9].t[0] + 10*sizeof(t[0].t), 1);
+  gi = OBJECT_SIZE_BUILTIN((char*)&t[9].t[0] + 10*sizeof(t[0].t), 1);
   // CHECK: store i32 0
-  gi = __builtin_object_size((char*)&t[9].t[0] + 10*sizeof(t[0].t), 2);
+  gi = OBJECT_SIZE_BUILTIN((char*)&t[9].t[0] + 10*sizeof(t[0].t), 2);
   // CHECK: store i32 0
-  gi = __builtin_object_size((char*)&t[9].t[0] + 10*sizeof(t[0].t), 3);
+  gi = OBJECT_SIZE_BUILTIN((char*)&t[9].t[0] + 10*sizeof(t[0].t), 3);
 }
 
 struct Test23Ty { int a; int t[10]; };
 
 // CHECK-LABEL: @test23
 void test23(struct Test23Ty *p) {
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(p, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(p, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size(p, 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(p, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(p, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(p, 2);
   // Note: this is currently fixed at 0 because LLVM doesn't have sufficient
   // data to correctly handle type=3
   // CHECK: store i32 0
-  gi = __builtin_object_size(p, 3);
+  gi = OBJECT_SIZE_BUILTIN(p, 3);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(&p->a, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(&p->a, 0);
   // CHECK: store i32 4
-  gi = __builtin_object_size(&p->a, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size(&p->a, 2);
+  gi = OBJECT_SIZE_BUILTIN(&p->a, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(&p->a, 2);
   // CHECK: store i32 4
-  gi = __builtin_object_size(&p->a, 3);
+  gi = OBJECT_SIZE_BUILTIN(&p->a, 3);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(&p->t[5], 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(&p->t[5], 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size(&p->t[5], 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(&p->t[5], 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(&p->t[5], 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(&p->t[5], 2);
   // CHECK: store i32 20
-  gi = __builtin_object_size(&p->t[5], 3);
+  gi = OBJECT_SIZE_BUILTIN(&p->t[5], 3);
 }
 
-// PR24493 -- ICE if __builtin_object_size called with NULL and (Type & 1) != 0
+// PR24493 -- ICE if OBJECT_SIZE_BUILTIN called with NULL and (Type & 1) != 0
 // CHECK-LABEL: @test24
 void test24() {
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size((void*)0, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size((void*)0, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size((void*)0, 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN((void*)0, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN((void*)0, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN((void*)0, 2);
   // Note: Currently fixed at zero because LLVM can't handle type=3 correctly.
   // Hopefully will be lowered properly in the future.
   // CHECK: store i32 0
-  gi = __builtin_object_size((void*)0, 3);
+  gi = OBJECT_SIZE_BUILTIN((void*)0, 3);
 }
 
 // CHECK-LABEL: @test25
 void test25() {
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size((void*)0x1000, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size((void*)0x1000, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size((void*)0x1000, 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN((void*)0x1000, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN((void*)0x1000, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN((void*)0x1000, 2);
   // Note: Currently fixed at zero because LLVM can't handle type=3 correctly.
   // Hopefully will be lowered properly in the future.
   // CHECK: store i32 0
-  gi = __builtin_object_size((void*)0x1000, 3);
+  gi = OBJECT_SIZE_BUILTIN((void*)0x1000, 3);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size((void*)0 + 0x1000, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size((void*)0 + 0x1000, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size((void*)0 + 0x1000, 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN((void*)0 + 0x1000, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN((void*)0 + 0x1000, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN((void*)0 + 0x1000, 2);
   // Note: Currently fixed at zero because LLVM can't handle type=3 correctly.
   // Hopefully will be lowered properly in the future.
   // CHECK: store i32 0
-  gi = __builtin_object_size((void*)0 + 0x1000, 3);
+  gi = OBJECT_SIZE_BUILTIN((void*)0 + 0x1000, 3);
 }
 
 // CHECK-LABEL: @test26
@@ -329,43 +336,43 @@ void test26() {
   struct { int v[10]; } t[10];
 
   // CHECK: store i32 316
-  gi = __builtin_object_size(&t[1].v[11], 0);
+  gi = OBJECT_SIZE_BUILTIN(&t[1].v[11], 0);
   // CHECK: store i32 312
-  gi = __builtin_object_size(&t[1].v[12], 1);
+  gi = OBJECT_SIZE_BUILTIN(&t[1].v[12], 1);
   // CHECK: store i32 308
-  gi = __builtin_object_size(&t[1].v[13], 2);
+  gi = OBJECT_SIZE_BUILTIN(&t[1].v[13], 2);
   // CHECK: store i32 0
-  gi = __builtin_object_size(&t[1].v[14], 3);
+  gi = OBJECT_SIZE_BUILTIN(&t[1].v[14], 3);
 }
 
 struct Test27IncompleteTy;
 
 // CHECK-LABEL: @test27
 void test27(struct Test27IncompleteTy *t) {
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(t, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(t, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size(t, 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(t, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(t, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(t, 2);
   // Note: this is currently fixed at 0 because LLVM doesn't have sufficient
   // data to correctly handle type=3
   // CHECK: store i32 0
-  gi = __builtin_object_size(t, 3);
+  gi = OBJECT_SIZE_BUILTIN(t, 3);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(&test27, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(&test27, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size(&test27, 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(&test27, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(&test27, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(&test27, 2);
   // Note: this is currently fixed at 0 because LLVM doesn't have sufficient
   // data to correctly handle type=3
   // CHECK: store i32 0
-  gi = __builtin_object_size(&test27, 3);
+  gi = OBJECT_SIZE_BUILTIN(&test27, 3);
 }
 
-// The intent of this test is to ensure that __builtin_object_size treats `&foo`
+// The intent of this test is to ensure that OBJECT_SIZE_BUILTIN treats `&foo`
 // and `(T*)&foo` identically, when used as the pointer argument.
 // CHECK-LABEL: @test28
 void test28() {
@@ -373,22 +380,22 @@ void test28() {
 
 #define addCasts(s) ((char*)((short*)(s)))
   // CHECK: store i32 360
-  gi = __builtin_object_size(addCasts(&t[1]), 0);
+  gi = OBJECT_SIZE_BUILTIN(addCasts(&t[1]), 0);
   // CHECK: store i32 360
-  gi = __builtin_object_size(addCasts(&t[1]), 1);
+  gi = OBJECT_SIZE_BUILTIN(addCasts(&t[1]), 1);
   // CHECK: store i32 360
-  gi = __builtin_object_size(addCasts(&t[1]), 2);
+  gi = OBJECT_SIZE_BUILTIN(addCasts(&t[1]), 2);
   // CHECK: store i32 360
-  gi = __builtin_object_size(addCasts(&t[1]), 3);
+  gi = OBJECT_SIZE_BUILTIN(addCasts(&t[1]), 3);
 
   // CHECK: store i32 356
-  gi = __builtin_object_size(addCasts(&t[1].v[1]), 0);
+  gi = OBJECT_SIZE_BUILTIN(addCasts(&t[1].v[1]), 0);
   // CHECK: store i32 36
-  gi = __builtin_object_size(addCasts(&t[1].v[1]), 1);
+  gi = OBJECT_SIZE_BUILTIN(addCasts(&t[1].v[1]), 1);
   // CHECK: store i32 356
-  gi = __builtin_object_size(addCasts(&t[1].v[1]), 2);
+  gi = OBJECT_SIZE_BUILTIN(addCasts(&t[1].v[1]), 2);
   // CHECK: store i32 36
-  gi = __builtin_object_size(addCasts(&t[1].v[1]), 3);
+  gi = OBJECT_SIZE_BUILTIN(addCasts(&t[1].v[1]), 3);
 #undef addCasts
 }
 
@@ -415,83 +422,83 @@ struct StaticStruct {
 // CHECK-LABEL: @test29
 void test29(struct DynStructVar *dv, struct DynStruct0 *d0,
             struct DynStruct1 *d1, struct StaticStruct *ss) {
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(dv->snd, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(dv->snd, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size(dv->snd, 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(dv->snd, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(dv->snd, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(dv->snd, 2);
   // CHECK: store i32 0
-  gi = __builtin_object_size(dv->snd, 3);
+  gi = OBJECT_SIZE_BUILTIN(dv->snd, 3);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(d0->snd, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(d0->snd, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size(d0->snd, 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(d0->snd, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(d0->snd, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(d0->snd, 2);
   // CHECK: store i32 0
-  gi = __builtin_object_size(d0->snd, 3);
+  gi = OBJECT_SIZE_BUILTIN(d0->snd, 3);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(d1->snd, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(d1->snd, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size(d1->snd, 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(d1->snd, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(d1->snd, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(d1->snd, 2);
   // CHECK: store i32 1
-  gi = __builtin_object_size(d1->snd, 3);
+  gi = OBJECT_SIZE_BUILTIN(d1->snd, 3);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(ss->snd, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(ss->snd, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size(ss->snd, 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(ss->snd, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(ss->snd, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(ss->snd, 2);
   // CHECK: store i32 2
-  gi = __builtin_object_size(ss->snd, 3);
+  gi = OBJECT_SIZE_BUILTIN(ss->snd, 3);
 }
 
 // CHECK-LABEL: @test30
 void test30() {
   struct { struct DynStruct1 fst, snd; } *nested;
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(nested->fst.snd, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(nested->fst.snd, 0);
   // CHECK: store i32 1
-  gi = __builtin_object_size(nested->fst.snd, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size(nested->fst.snd, 2);
+  gi = OBJECT_SIZE_BUILTIN(nested->fst.snd, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(nested->fst.snd, 2);
   // CHECK: store i32 1
-  gi = __builtin_object_size(nested->fst.snd, 3);
+  gi = OBJECT_SIZE_BUILTIN(nested->fst.snd, 3);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(nested->snd.snd, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(nested->snd.snd, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size(nested->snd.snd, 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(nested->snd.snd, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(nested->snd.snd, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(nested->snd.snd, 2);
   // CHECK: store i32 1
-  gi = __builtin_object_size(nested->snd.snd, 3);
+  gi = OBJECT_SIZE_BUILTIN(nested->snd.snd, 3);
 
   union { struct DynStruct1 d1; char c[1]; } *u;
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(u->c, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(u->c, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size(u->c, 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(u->c, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(u->c, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(u->c, 2);
   // CHECK: store i32 1
-  gi = __builtin_object_size(u->c, 3);
+  gi = OBJECT_SIZE_BUILTIN(u->c, 3);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(u->d1.snd, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(u->d1.snd, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size(u->d1.snd, 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(u->d1.snd, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(u->d1.snd, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(u->d1.snd, 2);
   // CHECK: store i32 1
-  gi = __builtin_object_size(u->d1.snd, 3);
+  gi = OBJECT_SIZE_BUILTIN(u->d1.snd, 3);
 }
 
 // CHECK-LABEL: @test31
@@ -502,20 +509,20 @@ void test31() {
   struct DynStruct1 *ds1;
   struct StaticStruct *ss;
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(ds1[9].snd, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(ds1[9].snd, 1);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(&ss[9].snd[0], 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(&ss[9].snd[0], 1);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(&ds1[9].snd[0], 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(&ds1[9].snd[0], 1);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(&ds0[9].snd[0], 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(&ds0[9].snd[0], 1);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(&dsv[9].snd[0], 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(&dsv[9].snd[0], 1);
 }
 
 // CHECK-LABEL: @PR30346
@@ -527,27 +534,27 @@ void PR30346() {
   };
 
   struct sockaddr *sa;
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(sa->sa_data, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true)
-  gi = __builtin_object_size(sa->sa_data, 1);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true)
-  gi = __builtin_object_size(sa->sa_data, 2);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(sa->sa_data, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(sa->sa_data, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1
+  gi = OBJECT_SIZE_BUILTIN(sa->sa_data, 2);
   // CHECK: store i32 14
-  gi = __builtin_object_size(sa->sa_data, 3);
+  gi = OBJECT_SIZE_BUILTIN(sa->sa_data, 3);
 }
 
 extern char incomplete_char_array[];
 // CHECK-LABEL: @incomplete_and_function_types
 int incomplete_and_function_types() {
   // CHECK: call i64 @llvm.objectsize.i64.p0i8
-  gi = __builtin_object_size(incomplete_char_array, 0);
+  gi = OBJECT_SIZE_BUILTIN(incomplete_char_array, 0);
   // CHECK: call i64 @llvm.objectsize.i64.p0i8
-  gi = __builtin_object_size(incomplete_char_array, 1);
+  gi = OBJECT_SIZE_BUILTIN(incomplete_char_array, 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0i8
-  gi = __builtin_object_size(incomplete_char_array, 2);
+  gi = OBJECT_SIZE_BUILTIN(incomplete_char_array, 2);
   // CHECK: store i32 0
-  gi = __builtin_object_size(incomplete_char_array, 3);
+  gi = OBJECT_SIZE_BUILTIN(incomplete_char_array, 3);
 }
 
 // Flips between the pointer and lvalue evaluator a lot.
@@ -564,7 +571,7 @@ void deeply_nested() {
   } *a;
 
   // CHECK: store i32 4
-  gi = __builtin_object_size(&a->b[1].c[1].d[1].e[1], 1);
+  gi = OBJECT_SIZE_BUILTIN(&a->b[1].c[1].d[1].e[1], 1);
   // CHECK: store i32 4
-  gi = __builtin_object_size(&a->b[1].c[1].d[1].e[1], 3);
+  gi = OBJECT_SIZE_BUILTIN(&a->b[1].c[1].d[1].e[1], 3);
 }
