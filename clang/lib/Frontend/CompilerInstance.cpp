@@ -928,6 +928,9 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   // Adjust target options based on codegen options.
   getTarget().adjustTargetOptions(getCodeGenOpts(), getTargetOpts());
 
+  if (auto *Aux = getAuxTarget())
+    getTarget().setAuxTarget(Aux);
+
   // rewriter project will change target built-in bool type from its default.
   if (getFrontendOpts().ProgramAction == frontend::RewriteObjC)
     getTarget().noSignedCharForObjCBool();

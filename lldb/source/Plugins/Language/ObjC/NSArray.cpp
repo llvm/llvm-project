@@ -171,13 +171,8 @@ namespace Foundation1437 {
     PtrType _data;
     uint32_t _offset;
     uint32_t _size;
-    union {
-      PtrType _mutations;
-      struct {
-        uint32_t _muts;
-        uint32_t _used;
-      };
-    };
+    uint32_t _muts;
+    uint32_t _used;
   };
     
   using NSArrayMSyntheticFrontEnd =

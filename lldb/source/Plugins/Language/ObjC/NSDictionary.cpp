@@ -281,18 +281,11 @@ namespace Foundation1437 {
   
   struct DataDescriptor_32 {
     uint32_t _buffer;
-    union {
-      struct {
-        uint32_t _mutations;
-      };
-      struct {
-        uint32_t _muts;
-        uint32_t _used:25;
-        uint32_t _kvo:1;
-        uint32_t _szidx:6;
-      };
-    };
-    
+    uint32_t _muts;
+    uint32_t _used : 25;
+    uint32_t _kvo : 1;
+    uint32_t _szidx : 6;
+
     uint64_t GetSize() {
       return (_szidx) >= NSDictionaryNumSizeBuckets ?
           0 : NSDictionaryCapacities[_szidx];
@@ -301,18 +294,11 @@ namespace Foundation1437 {
   
   struct DataDescriptor_64 {
     uint64_t _buffer;
-    union {
-      struct {
-        uint64_t _mutations;
-      };
-      struct {
-        uint32_t _muts;
-        uint32_t _used:25;
-        uint32_t _kvo:1;
-        uint32_t _szidx:6;
-      };
-    };
-    
+    uint32_t _muts;
+    uint32_t _used : 25;
+    uint32_t _kvo : 1;
+    uint32_t _szidx : 6;
+
     uint64_t GetSize() {
       return (_szidx) >= NSDictionaryNumSizeBuckets ?
           0 : NSDictionaryCapacities[_szidx];

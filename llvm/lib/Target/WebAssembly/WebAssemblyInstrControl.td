@@ -141,23 +141,11 @@ let Predicates = [HasExceptionHandling] in {
 
 // Throwing an exception: throw / rethrow
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
-defm THROW_I32 : I<(outs), (ins event_op:$tag, I32:$val),
-                   (outs), (ins event_op:$tag),
-                   [(WebAssemblythrow (WebAssemblywrapper texternalsym:$tag),
-                                      I32:$val)],
-                   "throw   \t$tag, $val", "throw   \t$tag",
-                   0x08>;
-defm THROW_I64 : I<(outs), (ins event_op:$tag, I64:$val),
-                   (outs), (ins event_op:$tag),
-                   [(WebAssemblythrow (WebAssemblywrapper texternalsym:$tag),
-                                      I64:$val)],
-                   "throw   \t$tag, $val", "throw   \t$tag",
-                   0x08>;
-defm RETHROW : NRI<(outs), (ins bb_op:$dst), [], "rethrow \t$dst", 0x09>;
-let isCodeGenOnly = 1 in
-// This is used when the destination for rethrow is the caller function. This
-// will be converted to a rethrow in CFGStackify.
-defm RETHROW_TO_CALLER : NRI<(outs), (ins), [], "rethrow">;
+defm THROW : I<(outs), (ins event_op:$tag, variable_ops),
+               (outs), (ins event_op:$tag),
+               [(WebAssemblythrow (WebAssemblywrapper texternalsym:$tag))],
+               "throw   \t$tag", "throw   \t$tag", 0x08>;
+defm RETHROW : NRI<(outs), (ins), [(int_wasm_rethrow)], "rethrow", 0x09>;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
 
 // Region within which an exception is caught: try / end_try
@@ -166,24 +154,33 @@ defm TRY     : NRI<(outs), (ins Signature:$sig), [], "try     \t$sig", 0x06>;
 defm END_TRY : NRI<(outs), (ins), [], "end_try", 0x0b>;
 } // Uses = [VALUE_STACK], Defs = [VALUE_STACK]
 
-// Catching an exception: catch / catch_all
-let hasCtrlDep = 1, hasSideEffects = 1 in {
-defm CATCH_I32 : I<(outs I32:$dst), (ins i32imm:$tag),
-                   (outs), (ins i32imm:$tag),
-                   [(set I32:$dst, (int_wasm_catch imm:$tag))],
-                   "i32.catch   \t$dst, $tag", "i32.catch   \t$tag", 0x07>;
-defm CATCH_I64 : I<(outs I64:$dst), (ins i32imm:$tag),
-                   (outs), (ins i32imm:$tag),
-                   [(set I64:$dst, (int_wasm_catch imm:$tag))],
-                   "i64.catch   \t$dst, $tag", "i64.catch   \t$tag", 0x07>;
-defm CATCH_ALL : NRI<(outs), (ins), [], "catch_all", 0x05>;
-}
+// Catching an exception: catch / extract_exception
+let hasCtrlDep = 1, hasSideEffects = 1 in
+defm CATCH : I<(outs EXCEPT_REF:$dst), (ins), (outs), (ins), [],
+               "catch   \t$dst", "catch", 0x07>;
+
+// Querying / extracing exception: br_on_exn
+// br_on_exn queries an except_ref to see if it matches the corresponding
+// exception tag index. If true it branches to the given label and pushes the
+// corresponding argument values of the exception onto the stack.
+let isBranch = 1, isTerminator = 1, hasCtrlDep = 1 in
+defm BR_ON_EXN : I<(outs), (ins bb_op:$dst, event_op:$tag, EXCEPT_REF:$exn),
+                   (outs), (ins bb_op:$dst, event_op:$tag), [],
+                   "br_on_exn \t$dst, $tag, $exn", "br_on_exn \t$dst, $tag",
+                   0x0a>;
+// This is a pseudo instruction that simulates popping a value from stack, which
+// has been pushed by br_on_exn
+let isCodeGenOnly = 1, hasSideEffects = 1 in
+defm EXTRACT_EXCEPTION_I32 : NRI<(outs I32:$dst), (ins),
+                                 [(set I32:$dst, (int_wasm_extract_exception))],
+                                 "extract_exception\t$dst">;
 
 // Pseudo instructions: cleanupret / catchret
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
-    isCodeGenOnly = 1, isEHScopeReturn = 1 in {
-  defm CLEANUPRET : NRI<(outs), (ins), [(cleanupret)], "", 0>;
+    isPseudo = 1, isEHScopeReturn = 1 in {
+  defm CLEANUPRET : NRI<(outs), (ins), [(cleanupret)], "cleanupret", 0>;
   defm CATCHRET : NRI<(outs), (ins bb_op:$dst, bb_op:$from),
-                   [(catchret bb:$dst, bb:$from)], "", 0>;
-}
+                      [(catchret bb:$dst, bb:$from)], "catchret", 0>;
+} // isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
+  // isPseudo = 1, isEHScopeReturn = 1
 }

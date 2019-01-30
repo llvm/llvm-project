@@ -19,7 +19,9 @@
 
 namespace clang {
 
-/// An instance of this class corresponds to a 'callable' call.
+/// An instance of this class corresponds to a call.
+/// It might be a syntactically-concrete call, done as a part of evaluating an
+/// expression, or it may be an abstract callee with no associated expression.
 class AnyCall {
 public:
   enum Kind {
@@ -48,15 +50,17 @@ public:
   };
 
 private:
-  /// Call expression, remains null iff the call is an implicit destructor call.
+  /// Either expression or declaration (but not both at the same time)
+  /// can be null.
+
+  /// Call expression, is null when is not known (then declaration is non-null),
+  /// or for implicit destructor calls (when no expression exists.)
   const Expr *E = nullptr;
 
   /// Corresponds to a statically known declaration of the called function,
   /// or null if it is not known (e.g. for a function pointer).
   const Decl *D = nullptr;
   Kind K;
-
-  AnyCall(const Expr *E, const Decl *D, Kind K) : E(E), D(D), K(K) {}
 
 public:
   AnyCall(const CallExpr *CE) : E(CE) {
@@ -80,6 +84,23 @@ public:
   AnyCall(const CXXConstructExpr *NE)
       : E(NE), D(NE->getConstructor()), K(Constructor) {}
 
+  AnyCall(const CXXDestructorDecl *D) : E(nullptr), D(D), K(Destructor) {}
+
+  AnyCall(const CXXConstructorDecl *D) : E(nullptr), D(D), K(Constructor) {}
+
+  AnyCall(const ObjCMethodDecl *D) : E(nullptr), D(D), K(ObjCMethod) {}
+
+  AnyCall(const FunctionDecl *D) : E(nullptr), D(D) {
+    if (isa<CXXConstructorDecl>(D)) {
+      K = Constructor;
+    } else if (isa <CXXDestructorDecl>(D)) {
+      K = Destructor;
+    } else {
+      K = Function;
+    }
+
+  }
+
   /// If {@code E} is a generic call (to ObjC method /function/block/etc),
   /// return a constructed {@code AnyCall} object. Return None otherwise.
   static Optional<AnyCall> forExpr(const Expr *E) {
@@ -98,8 +119,16 @@ public:
     }
   }
 
-  static AnyCall forDestructorCall(const CXXDestructorDecl *D) {
-    return AnyCall(/*E=*/nullptr, D, Destructor);
+  /// If {@code D} is a callable (Objective-C method or a function), return
+  /// a constructed {@code AnyCall} object. Return None otherwise.
+  // FIXME: block support.
+  static Optional<AnyCall> forDecl(const Decl *D) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+      return AnyCall(FD);
+    } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+      return AnyCall(MD);
+    }
+    return None;
   }
 
   /// \returns formal parameters for direct calls (including virtual calls)
@@ -111,8 +140,6 @@ public:
       return FD->parameters();
     } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
       return MD->parameters();
-    } else if (const auto *CD = dyn_cast<CXXConstructorDecl>(D)) {
-      return CD->parameters();
     } else if (const auto *BD = dyn_cast<BlockDecl>(D)) {
       return BD->parameters();
     } else {
@@ -129,10 +156,17 @@ public:
   QualType getReturnType(ASTContext &Ctx) const {
     switch (K) {
     case Function:
-    case Block:
-      return cast<CallExpr>(E)->getCallReturnType(Ctx);
+      if (E)
+        return cast<CallExpr>(E)->getCallReturnType(Ctx);
+      return cast<FunctionDecl>(D)->getReturnType();
     case ObjCMethod:
-      return cast<ObjCMessageExpr>(E)->getCallReturnType(Ctx);
+      if (E)
+        return cast<ObjCMessageExpr>(E)->getCallReturnType(Ctx);
+      return cast<ObjCMethodDecl>(D)->getReturnType();
+    case Block:
+      // FIXME: BlockDecl does not know its return type,
+      // hence the asymmetry with the function and method cases above.
+      return cast<CallExpr>(E)->getCallReturnType(Ctx);
     case Destructor:
     case Constructor:
     case Allocator:

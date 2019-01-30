@@ -17079,6 +17079,19 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode* N) {
     if (SDValue NarrowLoad = narrowExtractedVectorLoad(N, DAG))
       return NarrowLoad;
 
+  // Combine an extract of an extract into a single extract_subvector.
+  // ext (ext X, C), 0 --> ext X, C
+  if (isNullConstant(N->getOperand(1)) &&
+      V.getOpcode() == ISD::EXTRACT_SUBVECTOR && V.hasOneUse() &&
+      isa<ConstantSDNode>(V.getOperand(1))) {
+    if (TLI.isExtractSubvectorCheap(NVT, V.getOperand(0).getValueType(),
+                                    V.getConstantOperandVal(1)) &&
+        TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NVT)) {
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), NVT, V.getOperand(0),
+                         V.getOperand(1));
+    }
+  }
+
   // Combine:
   //    (extract_subvec (concat V1, V2, ...), i)
   // Into:

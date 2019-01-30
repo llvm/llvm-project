@@ -50,10 +50,6 @@ void WebAssemblyExceptionInfo::recalculate(
     MachineBasicBlock *EHPad = DomNode->getBlock();
     if (!EHPad->isEHPad())
       continue;
-    // We group catch & catch-all terminate pads together, so skip the second
-    // one
-    if (WebAssembly::isCatchAllTerminatePad(*EHPad))
-      continue;
     auto *WE = new WebAssemblyException(EHPad);
     discoverAndMapException(WE, MDT, MDF);
     Exceptions.push_back(WE);
@@ -104,16 +100,6 @@ void WebAssemblyExceptionInfo::discoverAndMapException(
 
   // Map blocks that belong to a catchpad / cleanuppad
   MachineBasicBlock *EHPad = WE->getEHPad();
-
-  // We group catch & catch-all terminate pads together within an exception
-  if (WebAssembly::isCatchTerminatePad(*EHPad)) {
-    assert(EHPad->succ_size() == 1 &&
-           "Catch terminate pad has more than one successors");
-    changeExceptionFor(EHPad, WE);
-    changeExceptionFor(*(EHPad->succ_begin()), WE);
-    return;
-  }
-
   SmallVector<MachineBasicBlock *, 8> WL;
   WL.push_back(EHPad);
   while (!WL.empty()) {

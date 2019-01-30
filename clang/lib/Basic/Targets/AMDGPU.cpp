@@ -305,3 +305,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (hasFastFMA())
     Builder.defineMacro("FP_FAST_FMA");
 }
+
+void AMDGPUTargetInfo::setAuxTarget(const TargetInfo *Aux) {
+  copyAuxTarget(Aux);
+}

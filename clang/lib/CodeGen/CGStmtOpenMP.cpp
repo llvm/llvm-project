@@ -18,7 +18,6 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/DeclOpenMP.h"
-#include "llvm/IR/CallSite.h"
 using namespace clang;
 using namespace CodeGen;
 
@@ -5076,4 +5075,3 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
                                                   : D.getDirectiveKind(),
       CodeGen);
 }
-

@@ -116,7 +116,7 @@ static cl::opt<bool> AllowUnsignedLatchCondition("irce-allow-unsigned-latch",
                                                  cl::Hidden, cl::init(true));
 
 static cl::opt<bool> AllowNarrowLatchCondition(
-    "irce-allow-narrow-latch", cl::Hidden, cl::init(false),
+    "irce-allow-narrow-latch", cl::Hidden, cl::init(true),
     cl::desc("If set to true, IRCE may eliminate wide range checks in loops "
              "with narrow latch condition."));
 

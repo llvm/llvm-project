@@ -1638,17 +1638,6 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     return ONS;
   }
 
-  // Helper functions
-  void warnLockMismatch(unsigned DiagID, StringRef Kind, Name LockName,
-                        SourceLocation Loc) {
-    // Gracefully handle rare cases when the analysis can't get a more
-    // precise source location.
-    if (!Loc.isValid())
-      Loc = FunLocation;
-    PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID) << Kind << LockName);
-    Warnings.emplace_back(std::move(Warning), getNotes());
-  }
-
  public:
   ThreadSafetyReporter(Sema &S, SourceLocation FL, SourceLocation FEL)
     : S(S), FunLocation(FL), FunEndLocation(FEL),
@@ -1677,7 +1666,11 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
 
   void handleUnmatchedUnlock(StringRef Kind, Name LockName,
                              SourceLocation Loc) override {
-    warnLockMismatch(diag::warn_unlock_but_no_lock, Kind, LockName, Loc);
+    if (Loc.isInvalid())
+      Loc = FunLocation;
+    PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_unlock_but_no_lock)
+                                         << Kind << LockName);
+    Warnings.emplace_back(std::move(Warning), getNotes());
   }
 
   void handleIncorrectUnlockKind(StringRef Kind, Name LockName,
@@ -1691,8 +1684,18 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     Warnings.emplace_back(std::move(Warning), getNotes());
   }
 
-  void handleDoubleLock(StringRef Kind, Name LockName, SourceLocation Loc) override {
-    warnLockMismatch(diag::warn_double_lock, Kind, LockName, Loc);
+  void handleDoubleLock(StringRef Kind, Name LockName, SourceLocation LocLocked,
+                        SourceLocation Loc) override {
+    if (Loc.isInvalid())
+      Loc = FunLocation;
+    PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_double_lock)
+                                         << Kind << LockName);
+    OptionalNotes Notes =
+        LocLocked.isValid()
+            ? getNotes(PartialDiagnosticAt(
+                  LocLocked, S.PDiag(diag::note_locked_here) << Kind))
+            : getNotes();
+    Warnings.emplace_back(std::move(Warning), std::move(Notes));
   }
 
   void handleMutexHeldEndOfScope(StringRef Kind, Name LockName,

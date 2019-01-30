@@ -15,9 +15,9 @@
 # and fix the mistake: check that type index 0 is p0 and type index 1
 # is s64 (in that order).
 
-# CHECK:      LLVM ERROR: unable to legalize instruction:
-# CHECK-SAME: %{{[0-9]+}}:_(s64) = G_INTTOPTR %{{[0-9]+}}:_(p0)
-# CHECK-SAME: (in function: broken)
+# CHECK:  Bad machine code: inttoptr result type must be a pointer
+# CHECK: Bad machine code: inttoptr source type must not be a pointer
+# CHECK: LLVM ERROR: Found 2 machine code errors.
 
 ---
 name:            broken
