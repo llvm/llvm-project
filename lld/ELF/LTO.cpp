@@ -12,6 +12,7 @@
 #include "LinkerScript.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "lld/Common/Args.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "llvm/ADT/STLExtras.h"
@@ -88,6 +89,7 @@ static lto::Config createConfig() {
   C.OptLevel = Config->LTOO;
   C.CPU = GetCPUStr();
   C.MAttrs = GetMAttrs();
+  C.CGOptLevel = args::getCGOptLevel(Config->LTOO);
 
   // Set up a custom pipeline if we've been asked to.
   C.OptPipeline = Config->LTONewPmPasses;
