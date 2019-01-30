@@ -697,8 +697,8 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
       };
 
   Server->enumerateTweaks(File.file(), Params.range,
-                          Bind(ConsumeActions, std::move(Reply),
-                               std::move(File), std::move(*Code), Params.range,
+                          Bind(ConsumeActions, std::move(Reply), File,
+                               std::move(*Code), Params.range,
                                std::move(FixIts)));
 }
 
