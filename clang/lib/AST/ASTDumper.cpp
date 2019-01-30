@@ -727,6 +727,8 @@ void ASTDumper::VisitPragmaDetectMismatchDecl(
 }
 
 void ASTDumper::VisitCapturedDecl(const CapturedDecl *D) {
+  if (D->isNothrow())
+    OS << " nothrow";
   dumpStmt(D->getBody());
 }
 

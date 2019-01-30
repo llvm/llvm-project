@@ -11816,13 +11816,12 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
     return nullptr;
 
   QualType ArgType = Context.getTypeDeclType(ClassDecl);
+  if (Context.getLangOpts().OpenCLCPlusPlus)
+    ArgType = Context.getAddrSpaceQualType(ArgType, LangAS::opencl_generic);
   QualType RetType = Context.getLValueReferenceType(ArgType);
   bool Const = ClassDecl->implicitCopyAssignmentHasConstParam();
   if (Const)
     ArgType = ArgType.withConst();
-
-  if (Context.getLangOpts().OpenCLCPlusPlus)
-    ArgType = Context.getAddrSpaceQualType(ArgType, LangAS::opencl_generic);
 
   ArgType = Context.getLValueReferenceType(ArgType);
 
@@ -12141,6 +12140,8 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
   // constructor rules.
 
   QualType ArgType = Context.getTypeDeclType(ClassDecl);
+  if (Context.getLangOpts().OpenCLCPlusPlus)
+    ArgType = Context.getAddrSpaceQualType(ArgType, LangAS::opencl_generic);
   QualType RetType = Context.getLValueReferenceType(ArgType);
   ArgType = Context.getRValueReferenceType(ArgType);
 
