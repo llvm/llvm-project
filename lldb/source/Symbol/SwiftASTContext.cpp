@@ -5110,21 +5110,6 @@ bool SwiftASTContext::IsGenericType(const CompilerType &compiler_type) {
   return false;
 }
 
-bool SwiftASTContext::IsSelfArchetypeType(const CompilerType &compiler_type) {
-  if (!compiler_type.IsValid())
-    return false;
-
-  if (llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
-    if (swift::isa<swift::GenericTypeParamType>(
-            GetSwiftType(compiler_type).getPointer())) {
-      // Hack: Just assume if we have an generic parameter as the type of
-      //       'self', it's going to be a protocol 'Self' type.
-      return true;
-    }
-  }
-  return false;
-}
-
 static CompilerType BindAllArchetypes(CompilerType type,
                                       ExecutionContextScope *exe_scope) {
   if (!exe_scope)

@@ -543,6 +543,13 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   if (!imported_self_type.IsValid())
     return;
 
+  SwiftLanguageRuntime *swift_runtime =
+      stack_frame_sp->GetThread()->GetProcess()->GetSwiftLanguageRuntime();
+  auto *stack_frame = stack_frame_sp.get();
+  imported_self_type =
+      swift_runtime->DoArchetypeBindingForType(*stack_frame,
+                                               imported_self_type);
+
   // This might be a referenced type, in which case we really want to
   // extend the referent:
   imported_self_type =
@@ -556,36 +563,6 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
           ->GetInstanceType(imported_self_type.GetOpaqueQualType());
 
   Flags imported_self_type_flags(imported_self_type.GetTypeInfo());
-
-  // If 'self' is the Self archetype, resolve it to the actual
-  // metatype it is.
-  if (SwiftASTContext::IsSelfArchetypeType(imported_self_type)) {
-    SwiftLanguageRuntime *swift_runtime =
-        stack_frame_sp->GetThread()->GetProcess()->GetSwiftLanguageRuntime();
-    // Assume self is always the first type parameter.
-    if (CompilerType concrete_self_type = swift_runtime->GetConcreteType(
-            stack_frame_sp.get(), ConstString(u8"\u03C4_0_0"))) {
-      if (SwiftASTContext *concrete_self_type_ast_ctx =
-              llvm::dyn_cast_or_null<SwiftASTContext>(
-                  concrete_self_type.GetTypeSystem())) {
-        imported_self_type =
-            concrete_self_type_ast_ctx->CreateMetatypeType(concrete_self_type);
-        imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
-        imported_self_type = ImportType(swift_ast_context, imported_self_type);
-        if (imported_self_type_flags.AllSet(lldb::eTypeIsSwift |
-                                            lldb::eTypeIsMetatype)) {
-          imported_self_type = imported_self_type.GetInstanceType();
-        }
-      }
-    }
-  }
-
-  // Get the instance type.
-  if (imported_self_type_flags.AllSet(lldb::eTypeIsSwift |
-                                      lldb::eTypeIsMetatype)) {
-    imported_self_type = imported_self_type.GetInstanceType();
-    imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
-  }
 
   swift::Type object_type =
       GetSwiftType(imported_self_type)->getWithoutSpecifierType();
