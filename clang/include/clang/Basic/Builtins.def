@@ -510,6 +510,7 @@ BUILTIN(__builtin_extend_pointer, "ULLiv*", "n") // _Unwind_Word == uint64_t
 
 // GCC Object size checking builtins
 BUILTIN(__builtin_object_size, "zvC*i", "nu")
+BUILTIN(__builtin_dynamic_object_size, "zvC*i", "nu") // Clang only.
 BUILTIN(__builtin___memcpy_chk, "v*v*vC*zz", "nF")
 BUILTIN(__builtin___memccpy_chk, "v*v*vC*izz", "nF")
 BUILTIN(__builtin___memmove_chk, "v*v*vC*zz", "nF")

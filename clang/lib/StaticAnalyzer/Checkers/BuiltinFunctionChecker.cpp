@@ -96,6 +96,7 @@ bool BuiltinFunctionChecker::evalCall(const CallExpr *CE,
     return true;
   }
 
+  case Builtin::BI__builtin_dynamic_object_size:
   case Builtin::BI__builtin_object_size:
   case Builtin::BI__builtin_constant_p: {
     // This must be resolvable at compile time, so we defer to the constant
