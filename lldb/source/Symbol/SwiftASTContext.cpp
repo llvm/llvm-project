@@ -20,6 +20,7 @@
 
 #include "swift/ABI/MetadataValues.h"
 #include "swift/AST/ASTContext.h"
+#include "swift/AST/ASTDemangler.h"
 #include "swift/AST/ASTMangler.h"
 #include "swift/AST/DebuggerClient.h"
 #include "swift/AST/Decl.h"
@@ -3947,9 +3948,7 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
                 "not cached, searching",
                 this, mangled_typename);
 
-  std::string swift_error;
-  found_type = swift::ide::getTypeFromMangledSymbolname(
-                   *ast_ctx, mangled_typename, swift_error)
+  found_type = swift::Demangle::getTypeForMangling(*ast_ctx, mangled_typename)
                    .getPointer();
 
   if (found_type) {
@@ -3964,9 +3963,8 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
     return result_type;
   }
   if (log)
-    log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
-                "-- error: %s",
-                this, mangled_typename, swift_error.c_str());
+    log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s')",
+                this, mangled_typename);
 
   error.SetErrorStringWithFormat("type for typename '%s' was not found",
                                  mangled_typename);
