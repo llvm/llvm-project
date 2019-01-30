@@ -35,6 +35,38 @@
 # PPC64-NEXT:   StringTableSectionIndex:
 # PPC64-NEXT: }
 
+# RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-freebsd %s -o %tppc64fbsd
+# RUN: echo 'OUTPUT_FORMAT(elf64-powerpc-freebsd)' > %tppc64fbsd.script
+# RUN: ld.lld %tppc64fbsd.script  %tppc64fbsd -o %t2ppc64fbsd
+# RUN: llvm-readobj -file-headers %t2ppc64fbsd | FileCheck --check-prefix=PPC64-FBSD %s
+
+# PPC64-FBSD:      ElfHeader {
+# PPC64-FBSD-NEXT:   Ident {
+# PPC64-FBSD-NEXT:     Magic: (7F 45 4C 46)
+# PPC64-FBSD-NEXT:     Class: 64-bit (0x2)
+# PPC64-FBSD-NEXT:     DataEncoding: BigEndian (0x2)
+# PPC64-FBSD-NEXT:     FileVersion: 1
+# PPC64-FBSD-NEXT:     OS/ABI: FreeBSD (0x9)
+# PPC64-FBSD-NEXT:     ABIVersion: 0
+# PPC64-FBSD-NEXT:     Unused: (00 00 00 00 00 00 00)
+# PPC64-FBSD-NEXT:   }
+# PPC64-FBSD-NEXT:   Type: Executable (0x2)
+# PPC64-FBSD-NEXT:   Machine: EM_PPC64 (0x15)
+# PPC64-FBSD-NEXT:   Version: 1
+# PPC64-FBSD-NEXT:   Entry:
+# PPC64-FBSD-NEXT:   ProgramHeaderOffset: 0x40
+# PPC64-FBSD-NEXT:   SectionHeaderOffset:
+# PPC64-FBSD-NEXT:   Flags [ (0x2)
+# PPC64-FBSD-NEXT:     0x2
+# PPC64-FBSD-NEXT:   ]
+# PPC64-FBSD-NEXT:   HeaderSize: 64
+# PPC64-FBSD-NEXT:   ProgramHeaderEntrySize: 56
+# PPC64-FBSD-NEXT:   ProgramHeaderCount:
+# PPC64-FBSD-NEXT:   SectionHeaderEntrySize: 64
+# PPC64-FBSD-NEXT:   SectionHeaderCount:
+# PPC64-FBSD-NEXT:   StringTableSectionIndex:
+# PPC64-FBSD-NEXT: }
+
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %tppc64le
 # RUN: ld.lld -m elf64lppc %tppc64le -o %t2ppc64le
 # RUN: llvm-readobj -file-headers %t2ppc64le | FileCheck --check-prefix=PPC64LE %s
