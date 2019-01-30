@@ -1868,6 +1868,19 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (Changed) return II;
   }
 
+  // For vector result intrinsics, use the generic demanded vector support to
+  // simplify any operands before moving on to the per-intrinsic rules.    
+  if (II->getType()->isVectorTy()) {
+    auto VWidth = II->getType()->getVectorNumElements();
+    APInt UndefElts(VWidth, 0);
+    APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
+    if (Value *V = SimplifyDemandedVectorElts(II, AllOnesEltMask, UndefElts)) {
+      if (V != II)
+        return replaceInstUsesWith(*II, V);
+      return II;
+    }
+  }
+
   if (Instruction *I = SimplifyNVVMIntrinsic(II, *this))
     return I;
 
@@ -2666,41 +2679,11 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         return replaceInstUsesWith(*II, V);
       }
     }
-    LLVM_FALLTHROUGH;
+    break;
 
-  // X86 scalar intrinsics simplified with SimplifyDemandedVectorElts.
-  case Intrinsic::x86_avx512_mask_max_ss_round:
-  case Intrinsic::x86_avx512_mask_min_ss_round:
-  case Intrinsic::x86_avx512_mask_max_sd_round:
-  case Intrinsic::x86_avx512_mask_min_sd_round:
-  case Intrinsic::x86_sse_cmp_ss:
-  case Intrinsic::x86_sse_min_ss:
-  case Intrinsic::x86_sse_max_ss:
-  case Intrinsic::x86_sse2_cmp_sd:
-  case Intrinsic::x86_sse2_min_sd:
-  case Intrinsic::x86_sse2_max_sd:
-  case Intrinsic::x86_xop_vfrcz_ss:
-  case Intrinsic::x86_xop_vfrcz_sd: {
-   unsigned VWidth = II->getType()->getVectorNumElements();
-   APInt UndefElts(VWidth, 0);
-   APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
-   if (Value *V = SimplifyDemandedVectorElts(II, AllOnesEltMask, UndefElts)) {
-     if (V != II)
-       return replaceInstUsesWith(*II, V);
-     return II;
-   }
-   break;
-  }
   case Intrinsic::x86_sse41_round_ss:
   case Intrinsic::x86_sse41_round_sd: {
-    unsigned VWidth = II->getType()->getVectorNumElements();
-    APInt UndefElts(VWidth, 0);
-    APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
-    if (Value *V = SimplifyDemandedVectorElts(II, AllOnesEltMask, UndefElts)) {
-      if (V != II)
-        return replaceInstUsesWith(*II, V);
-      return II;
-    } else if (Value *V = simplifyX86round(*II, Builder))
+    if (Value *V = simplifyX86round(*II, Builder))
       return replaceInstUsesWith(*II, V);
     break;
   }

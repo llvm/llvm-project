@@ -42,6 +42,12 @@ struct SectionFlagsUpdate {
   uint64_t NewFlags;
 };
 
+enum class DiscardType {
+  None,   // Default
+  All,    // --discard-all (-x)
+  Locals, // --discard-locals (-X)
+};
+
 // Configuration for copying/stripping a single file.
 struct CopyConfig {
   // Main input/output options
@@ -62,6 +68,7 @@ struct CopyConfig {
   Optional<StringRef> BuildIdLinkOutput;
   StringRef SplitDWO;
   StringRef SymbolsPrefix;
+  DiscardType DiscardMode = DiscardType::None;
 
   // Repeated options
   std::vector<StringRef> AddSection;
@@ -83,7 +90,6 @@ struct CopyConfig {
 
   // Boolean options
   bool DeterministicArchives = true;
-  bool DiscardAll = false;
   bool ExtractDWO = false;
   bool KeepFileSymbols = false;
   bool LocalizeHidden = false;

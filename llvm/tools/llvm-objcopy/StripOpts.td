@@ -57,6 +57,11 @@ defm keep_symbol : Eq<"keep-symbol", "Do not remove symbol <symbol>">,
                    MetaVarName<"symbol">;
 def K : JoinedOrSeparate<["-"], "K">, Alias<keep_symbol>;
 
+def discard_locals : Flag<["-", "--"], "discard-locals">,
+                     HelpText<"Remove compiler-generated local symbols, (e.g. "
+                              "symbols starting with .L)">;
+def X : Flag<["-"], "X">, Alias<discard_locals>;
+
 def discard_all
     : Flag<["-", "--"], "discard-all">,
       HelpText<"Remove all local symbols except file and section symbols">;

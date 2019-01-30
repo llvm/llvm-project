@@ -380,7 +380,7 @@ endfunction(set_windows_version_resource_properties)
 function(llvm_add_library name)
   cmake_parse_arguments(ARG
     "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH"
-    "OUTPUT_NAME;PLUGIN_TOOL"
+    "OUTPUT_NAME;PLUGIN_TOOL;ENTITLEMENTS"
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
     ${ARGN})
   list(APPEND LLVM_COMMON_DEPENDS ${ARG_DEPENDS})
@@ -584,7 +584,7 @@ function(llvm_add_library name)
 
   if(ARG_SHARED OR ARG_MODULE)
     llvm_externalize_debuginfo(${name})
-    llvm_codesign(${name})
+    llvm_codesign(${name} ENTITLEMENTS ${ARG_ENTITLEMENTS})
   endif()
 endfunction()
 

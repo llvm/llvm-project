@@ -32,8 +32,8 @@ public:
 
 class LatencyBenchmarkRunner : public BenchmarkRunner {
 public:
-  LatencyBenchmarkRunner(const LLVMState &State)
-      : BenchmarkRunner(State, InstructionBenchmark::Latency) {}
+  LatencyBenchmarkRunner(const LLVMState &State,
+                         InstructionBenchmark::ModeE Mode);
   ~LatencyBenchmarkRunner() override;
 
 private:

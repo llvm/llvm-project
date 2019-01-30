@@ -149,6 +149,12 @@ defm weaken_symbol : Eq<"weaken-symbol", "Mark <symbol> as weak">,
 def W : JoinedOrSeparate<["-"], "W">, Alias<weaken_symbol>;
 def weaken : Flag<["-", "--"], "weaken">,
              HelpText<"Mark all global symbols as weak">;
+
+def discard_locals : Flag<["-", "--"], "discard-locals">,
+                     HelpText<"Remove compiler-generated local symbols, (e.g. "
+                              "symbols starting with .L)">;
+def X : Flag<["-"], "X">, Alias<discard_locals>;
+
 def discard_all
     : Flag<["-", "--"], "discard-all">,
       HelpText<"Remove all local symbols except file and section symbols">;

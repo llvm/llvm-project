@@ -130,7 +130,7 @@ private:
   std::unique_ptr<SnippetGenerator> virtual createUopsSnippetGenerator(
       const LLVMState &State) const;
   std::unique_ptr<BenchmarkRunner> virtual createLatencyBenchmarkRunner(
-      const LLVMState &State) const;
+      const LLVMState &State, InstructionBenchmark::ModeE Mode) const;
   std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(
       const LLVMState &State) const;
 

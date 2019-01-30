@@ -209,6 +209,8 @@ struct ScalarEnumerationTraits<exegesis::InstructionBenchmark::ModeE> {
     Io.enumCase(Value, "", exegesis::InstructionBenchmark::Unknown);
     Io.enumCase(Value, "latency", exegesis::InstructionBenchmark::Latency);
     Io.enumCase(Value, "uops", exegesis::InstructionBenchmark::Uops);
+    Io.enumCase(Value, "inverse_throughput",
+                exegesis::InstructionBenchmark::InverseThroughput);
   }
 };
 

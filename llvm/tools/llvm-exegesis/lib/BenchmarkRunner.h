@@ -75,6 +75,7 @@ public:
 
 protected:
   const LLVMState &State;
+  const InstructionBenchmark::ModeE Mode;
 
 private:
   virtual llvm::Expected<std::vector<BenchmarkMeasure>>
@@ -84,7 +85,6 @@ private:
   writeObjectFile(const BenchmarkCode &Configuration,
                   llvm::ArrayRef<llvm::MCInst> Code) const;
 
-  const InstructionBenchmark::ModeE Mode;
 
   const std::unique_ptr<ScratchSpace> Scratch;
 };
