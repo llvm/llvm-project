@@ -796,3 +796,9 @@ void TargetInfo::CheckFixedPointBits() const {
   assert(getAccumIBits() >= getUnsignedAccumIBits());
   assert(getLongAccumIBits() >= getUnsignedLongAccumIBits());
 }
+
+void TargetInfo::copyAuxTarget(const TargetInfo *Aux) {
+  auto *Target = static_cast<TransferrableTargetInfo*>(this);
+  auto *Src = static_cast<const TransferrableTargetInfo*>(Aux);
+  *Target = *Src;
+}

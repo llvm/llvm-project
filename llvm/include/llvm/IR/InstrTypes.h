@@ -1232,6 +1232,9 @@ public:
                                (ID << 2));
   }
 
+  /// Check if this call is an inline asm statement.
+  bool isInlineAsm() const { return isa<InlineAsm>(getCalledOperand()); }
+
   /// \name Attribute API
   ///
   /// These methods access and modify attributes on this call (including

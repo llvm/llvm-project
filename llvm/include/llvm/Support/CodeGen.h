@@ -49,10 +49,10 @@ namespace llvm {
   // Code generation optimization level.
   namespace CodeGenOpt {
     enum Level {
-      None,        // -O0
-      Less,        // -O1
-      Default,     // -O2, -Os
-      Aggressive   // -O3
+      None = 0,      // -O0
+      Less = 1,      // -O1
+      Default = 2,   // -O2, -Os
+      Aggressive = 3 // -O3
     };
   }
 

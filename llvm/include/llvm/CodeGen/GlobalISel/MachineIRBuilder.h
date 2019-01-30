@@ -229,6 +229,11 @@ public:
     return *State.MF;
   }
 
+  const MachineFunction &getMF() const {
+    assert(State.MF && "MachineFunction is not set");
+    return *State.MF;
+  }
+
   /// Getter for DebugLoc
   const DebugLoc &getDL() { return State.DL; }
 
@@ -456,6 +461,15 @@ public:
   ///
   /// \return The newly created instruction.
   MachineInstrBuilder buildSExt(const DstOp &Res, const SrcOp &Op);
+
+  /// \return The opcode of the extension the target wants to use for boolean
+  /// values.
+  unsigned getBoolExtOp(bool IsVec, bool IsFP) const;
+
+  // Build and insert \p Res = G_ANYEXT \p Op, \p Res = G_SEXT \p Op, or \p Res
+  // = G_ZEXT \p Op depending on how the target wants to extend boolean values.
+  MachineInstrBuilder buildBoolExt(const DstOp &Res, const SrcOp &Op,
+                                   bool IsFP);
 
   /// Build and insert \p Res = G_ZEXT \p Op
   ///

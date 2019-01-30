@@ -11,10 +11,6 @@
 
 #include <libunwind.h>
 
-#ifndef NDEBUG
-#include <cstdlib> // getenv
-#endif
-
 #include "libunwind_ext.h"
 #include "config.h"
 
@@ -26,6 +22,10 @@
 #include "UnwindCursor.hpp"
 
 using namespace libunwind;
+
+// libunwind does not and should not depend on C++ library which means that we
+// need our own declaration of global placement new.
+void *operator new(size_t, void*);
 
 /// internal object to represent this processes address space
 LocalAddressSpace LocalAddressSpace::sThisAddressSpace;

@@ -11,7 +11,9 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
 
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -45,6 +47,26 @@ FileSystem &FileSystem::Instance() { return *InstanceImpl(); }
 void FileSystem::Initialize() {
   lldbassert(!InstanceImpl() && "Already initialized.");
   InstanceImpl().emplace();
+}
+
+void FileSystem::Initialize(FileCollector &collector) {
+  lldbassert(!InstanceImpl() && "Already initialized.");
+  InstanceImpl().emplace(collector);
+}
+
+llvm::Error FileSystem::Initialize(const FileSpec &mapping) {
+  lldbassert(!InstanceImpl() && "Already initialized.");
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buffer =
+      llvm::vfs::getRealFileSystem()->getBufferForFile(mapping.GetPath());
+
+  if (!buffer)
+    return llvm::errorCodeToError(buffer.getError());
+
+  InstanceImpl().emplace(
+      llvm::vfs::getVFSFromYAML(std::move(buffer.get()), nullptr, ""), true);
+
+  return llvm::Error::success();
 }
 
 void FileSystem::Initialize(IntrusiveRefCntPtr<vfs::FileSystem> fs) {
@@ -249,18 +271,25 @@ void FileSystem::Resolve(FileSpec &file_spec) {
 std::shared_ptr<DataBufferLLVM>
 FileSystem::CreateDataBuffer(const llvm::Twine &path, uint64_t size,
                              uint64_t offset) {
+  if (m_collector)
+    m_collector->AddFile(path);
+
   const bool is_volatile = !IsLocal(path);
+  const ErrorOr<std::string> external_path = GetExternalPath(path);
+
+  if (!external_path)
+    return nullptr;
 
   std::unique_ptr<llvm::WritableMemoryBuffer> buffer;
   if (size == 0) {
     auto buffer_or_error =
-        llvm::WritableMemoryBuffer::getFile(path, -1, is_volatile);
+        llvm::WritableMemoryBuffer::getFile(*external_path, -1, is_volatile);
     if (!buffer_or_error)
       return nullptr;
     buffer = std::move(*buffer_or_error);
   } else {
     auto buffer_or_error = llvm::WritableMemoryBuffer::getFileSlice(
-        path, size, offset, is_volatile);
+        *external_path, size, offset, is_volatile);
     if (!buffer_or_error)
       return nullptr;
     buffer = std::move(*buffer_or_error);
@@ -380,16 +409,22 @@ static mode_t GetOpenMode(uint32_t permissions) {
 
 Status FileSystem::Open(File &File, const FileSpec &file_spec, uint32_t options,
                         uint32_t permissions) {
+  if (m_collector)
+    m_collector->AddFile(file_spec);
+
   if (File.IsValid())
     File.Close();
 
   const int open_flags = GetOpenFlags(options);
   const mode_t open_mode =
       (open_flags & O_CREAT) ? GetOpenMode(permissions) : 0;
-  const std::string path = file_spec.GetPath();
+
+  auto path = GetExternalPath(file_spec);
+  if (!path)
+    return Status(path.getError());
 
   int descriptor = llvm::sys::RetryAfterSignal(
-      -1, OpenWithFS, *this, path.c_str(), open_flags, open_mode);
+      -1, OpenWithFS, *this, path->c_str(), open_flags, open_mode);
 
   Status error;
   if (!File::DescriptorIsValid(descriptor)) {
@@ -400,4 +435,29 @@ Status FileSystem::Open(File &File, const FileSpec &file_spec, uint32_t options,
     File.SetOptions(options);
   }
   return error;
+}
+
+ErrorOr<std::string> FileSystem::GetExternalPath(const llvm::Twine &path) {
+  if (!m_mapped)
+    return path.str();
+
+  // If VFS mapped we know the underlying FS is a RedirectingFileSystem.
+  ErrorOr<vfs::RedirectingFileSystem::Entry *> E =
+      static_cast<vfs::RedirectingFileSystem &>(*m_fs).lookupPath(path);
+  if (!E) {
+    if (E.getError() == llvm::errc::no_such_file_or_directory) {
+      return path.str();
+    }
+    return E.getError();
+  }
+
+  auto *F = dyn_cast<vfs::RedirectingFileSystem::RedirectingFileEntry>(*E);
+  if (!F)
+    return make_error_code(llvm::errc::not_supported);
+
+  return F->getExternalContentsPath().str();
+}
+
+ErrorOr<std::string> FileSystem::GetExternalPath(const FileSpec &file_spec) {
+  return GetExternalPath(file_spec.GetPath());
 }

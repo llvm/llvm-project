@@ -102,3 +102,28 @@ define <4 x i32> @bool_logic_and_math_vec(<4 x i32> %a, <4 x i32> %b, <4 x i32> 
   ret <4 x i32> %add
 }
 
+define <4 x i32> @sextbool_add_vector(<4 x i32> %cmp1, <4 x i32> %cmp2, <4 x i32> %x) {
+; CHECK-LABEL: sextbool_add_vector:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %c = icmp eq <4 x i32> %cmp1, %cmp2
+  %b = sext <4 x i1> %c to <4 x i32>
+  %s = add <4 x i32> %x, %b
+  ret <4 x i32> %s
+}
+
+define <4 x i32> @zextbool_sub_vector(<4 x i32> %cmp1, <4 x i32> %cmp2, <4 x i32> %x) {
+; CHECK-LABEL: zextbool_sub_vector:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %c = icmp eq <4 x i32> %cmp1, %cmp2
+  %b = zext <4 x i1> %c to <4 x i32>
+  %s = sub <4 x i32> %x, %b
+  ret <4 x i32> %s
+}
+

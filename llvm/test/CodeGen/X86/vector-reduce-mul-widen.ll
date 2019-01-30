@@ -440,7 +440,7 @@ define i64 @test_v8i64(<8 x i64> %a0) {
 ; AVX512DQVL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512DQVL-NEXT:    vpmullq %zmm1, %zmm0, %zmm0
 ; AVX512DQVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512DQVL-NEXT:    vpmullq %zmm1, %zmm0, %zmm0
+; AVX512DQVL-NEXT:    vpmullq %xmm1, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX512DQVL-NEXT:    vpmullq %xmm1, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    vmovq %xmm0, %rax
@@ -761,7 +761,7 @@ define i64 @test_v16i64(<16 x i64> %a0) {
 ; AVX512DQVL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512DQVL-NEXT:    vpmullq %zmm1, %zmm0, %zmm0
 ; AVX512DQVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512DQVL-NEXT:    vpmullq %zmm1, %zmm0, %zmm0
+; AVX512DQVL-NEXT:    vpmullq %xmm1, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX512DQVL-NEXT:    vpmullq %xmm1, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    vmovq %xmm0, %rax
@@ -997,9 +997,9 @@ define i32 @test_v16i32(<16 x i32> %a0) {
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512-NEXT:    vpmulld %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpmulld %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512-NEXT:    vpmulld %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX512-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
@@ -1107,9 +1107,9 @@ define i32 @test_v32i32(<32 x i32> %a0) {
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512-NEXT:    vpmulld %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpmulld %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512-NEXT:    vpmulld %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
 ; AVX512-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
@@ -1347,11 +1347,11 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 ; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512BW-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BW-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512BW-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX512BW-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
@@ -1364,11 +1364,11 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 ; AVX512BWVL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512BWVL-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
 ; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512BWVL-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX512BWVL-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX512BWVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vmovd %xmm0, %eax
@@ -1480,11 +1480,11 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 ; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512BW-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BW-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512BW-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX512BW-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX512BW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
@@ -1498,11 +1498,11 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 ; AVX512BWVL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512BWVL-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
 ; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512BWVL-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX512BWVL-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX512BWVL-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vmovd %xmm0, %eax
@@ -3107,58 +3107,58 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm2 = zmm1[8],zmm0[8],zmm1[9],zmm0[9],zmm1[10],zmm0[10],zmm1[11],zmm0[11],zmm1[12],zmm0[12],zmm1[13],zmm0[13],zmm1[14],zmm0[14],zmm1[15],zmm0[15],zmm1[24],zmm0[24],zmm1[25],zmm0[25],zmm1[26],zmm0[26],zmm1[27],zmm0[27],zmm1[28],zmm0[28],zmm1[29],zmm0[29],zmm1[30],zmm0[30],zmm1[31],zmm0[31],zmm1[40],zmm0[40],zmm1[41],zmm0[41],zmm1[42],zmm0[42],zmm1[43],zmm0[43],zmm1[44],zmm0[44],zmm1[45],zmm0[45],zmm1[46],zmm0[46],zmm1[47],zmm0[47],zmm1[56],zmm0[56],zmm1[57],zmm0[57],zmm1[58],zmm0[58],zmm1[59],zmm0[59],zmm1[60],zmm0[60],zmm1[61],zmm0[61],zmm1[62],zmm0[62],zmm1[63],zmm0[63]
 ; AVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm3 = zmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
-; AVX512BW-NEXT:    vpmullw %zmm2, %zmm3, %zmm3
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX512BW-NEXT:    vpandq %zmm2, %zmm3, %zmm3
+; AVX512BW-NEXT:    vpmullw %zmm2, %zmm3, %zmm2
+; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX512BW-NEXT:    vpandq %zmm3, %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm1 = zmm1[0],zmm0[0],zmm1[1],zmm0[1],zmm1[2],zmm0[2],zmm1[3],zmm0[3],zmm1[4],zmm0[4],zmm1[5],zmm0[5],zmm1[6],zmm0[6],zmm1[7],zmm0[7],zmm1[16],zmm0[16],zmm1[17],zmm0[17],zmm1[18],zmm0[18],zmm1[19],zmm0[19],zmm1[20],zmm0[20],zmm1[21],zmm0[21],zmm1[22],zmm0[22],zmm1[23],zmm0[23],zmm1[32],zmm0[32],zmm1[33],zmm0[33],zmm1[34],zmm0[34],zmm1[35],zmm0[35],zmm1[36],zmm0[36],zmm1[37],zmm0[37],zmm1[38],zmm0[38],zmm1[39],zmm0[39],zmm1[48],zmm0[48],zmm1[49],zmm0[49],zmm1[50],zmm0[50],zmm1[51],zmm0[51],zmm1[52],zmm0[52],zmm1[53],zmm0[53],zmm1[54],zmm0[54],zmm1[55],zmm0[55]
 ; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
 ; AVX512BW-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpandq %zmm2, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpackuswb %zmm3, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpandq %zmm3, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpackuswb %zmm2, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm3 = zmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
+; AVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm2 = zmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
 ; AVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm4 = zmm1[8],zmm0[8],zmm1[9],zmm0[9],zmm1[10],zmm0[10],zmm1[11],zmm0[11],zmm1[12],zmm0[12],zmm1[13],zmm0[13],zmm1[14],zmm0[14],zmm1[15],zmm0[15],zmm1[24],zmm0[24],zmm1[25],zmm0[25],zmm1[26],zmm0[26],zmm1[27],zmm0[27],zmm1[28],zmm0[28],zmm1[29],zmm0[29],zmm1[30],zmm0[30],zmm1[31],zmm0[31],zmm1[40],zmm0[40],zmm1[41],zmm0[41],zmm1[42],zmm0[42],zmm1[43],zmm0[43],zmm1[44],zmm0[44],zmm1[45],zmm0[45],zmm1[46],zmm0[46],zmm1[47],zmm0[47],zmm1[56],zmm0[56],zmm1[57],zmm0[57],zmm1[58],zmm0[58],zmm1[59],zmm0[59],zmm1[60],zmm0[60],zmm1[61],zmm0[61],zmm1[62],zmm0[62],zmm1[63],zmm0[63]
-; AVX512BW-NEXT:    vpmullw %zmm4, %zmm3, %zmm3
-; AVX512BW-NEXT:    vpandq %zmm2, %zmm3, %zmm3
+; AVX512BW-NEXT:    vpmullw %zmm4, %zmm2, %zmm2
+; AVX512BW-NEXT:    vpandq %zmm3, %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
 ; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm1 = zmm1[0],zmm0[0],zmm1[1],zmm0[1],zmm1[2],zmm0[2],zmm1[3],zmm0[3],zmm1[4],zmm0[4],zmm1[5],zmm0[5],zmm1[6],zmm0[6],zmm1[7],zmm0[7],zmm1[16],zmm0[16],zmm1[17],zmm0[17],zmm1[18],zmm0[18],zmm1[19],zmm0[19],zmm1[20],zmm0[20],zmm1[21],zmm0[21],zmm1[22],zmm0[22],zmm1[23],zmm0[23],zmm1[32],zmm0[32],zmm1[33],zmm0[33],zmm1[34],zmm0[34],zmm1[35],zmm0[35],zmm1[36],zmm0[36],zmm1[37],zmm0[37],zmm1[38],zmm0[38],zmm1[39],zmm0[39],zmm1[48],zmm0[48],zmm1[49],zmm0[49],zmm1[50],zmm0[50],zmm1[51],zmm0[51],zmm1[52],zmm0[52],zmm1[53],zmm0[53],zmm1[54],zmm0[54],zmm1[55],zmm0[55]
 ; AVX512BW-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpandq %zmm2, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpackuswb %zmm3, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpandq %zmm3, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpackuswb %zmm2, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm3 = zmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
+; AVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm2 = zmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
 ; AVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm4 = zmm1[8],zmm0[8],zmm1[9],zmm0[9],zmm1[10],zmm0[10],zmm1[11],zmm0[11],zmm1[12],zmm0[12],zmm1[13],zmm0[13],zmm1[14],zmm0[14],zmm1[15],zmm0[15],zmm1[24],zmm0[24],zmm1[25],zmm0[25],zmm1[26],zmm0[26],zmm1[27],zmm0[27],zmm1[28],zmm0[28],zmm1[29],zmm0[29],zmm1[30],zmm0[30],zmm1[31],zmm0[31],zmm1[40],zmm0[40],zmm1[41],zmm0[41],zmm1[42],zmm0[42],zmm1[43],zmm0[43],zmm1[44],zmm0[44],zmm1[45],zmm0[45],zmm1[46],zmm0[46],zmm1[47],zmm0[47],zmm1[56],zmm0[56],zmm1[57],zmm0[57],zmm1[58],zmm0[58],zmm1[59],zmm0[59],zmm1[60],zmm0[60],zmm1[61],zmm0[61],zmm1[62],zmm0[62],zmm1[63],zmm0[63]
-; AVX512BW-NEXT:    vpmullw %zmm4, %zmm3, %zmm3
-; AVX512BW-NEXT:    vpandq %zmm2, %zmm3, %zmm3
+; AVX512BW-NEXT:    vpmullw %zmm4, %zmm2, %zmm2
+; AVX512BW-NEXT:    vpandq %zmm3, %zmm2, %zmm2
 ; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
 ; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm1 = zmm1[0],zmm0[0],zmm1[1],zmm0[1],zmm1[2],zmm0[2],zmm1[3],zmm0[3],zmm1[4],zmm0[4],zmm1[5],zmm0[5],zmm1[6],zmm0[6],zmm1[7],zmm0[7],zmm1[16],zmm0[16],zmm1[17],zmm0[17],zmm1[18],zmm0[18],zmm1[19],zmm0[19],zmm1[20],zmm0[20],zmm1[21],zmm0[21],zmm1[22],zmm0[22],zmm1[23],zmm0[23],zmm1[32],zmm0[32],zmm1[33],zmm0[33],zmm1[34],zmm0[34],zmm1[35],zmm0[35],zmm1[36],zmm0[36],zmm1[37],zmm0[37],zmm1[38],zmm0[38],zmm1[39],zmm0[39],zmm1[48],zmm0[48],zmm1[49],zmm0[49],zmm1[50],zmm0[50],zmm1[51],zmm0[51],zmm1[52],zmm0[52],zmm1[53],zmm0[53],zmm1[54],zmm0[54],zmm1[55],zmm0[55]
 ; AVX512BW-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpandq %zmm2, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpackuswb %zmm3, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpandq %zmm3, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpackuswb %zmm2, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
 ; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm1 = zmm1[0],zmm0[0],zmm1[1],zmm0[1],zmm1[2],zmm0[2],zmm1[3],zmm0[3],zmm1[4],zmm0[4],zmm1[5],zmm0[5],zmm1[6],zmm0[6],zmm1[7],zmm0[7],zmm1[16],zmm0[16],zmm1[17],zmm0[17],zmm1[18],zmm0[18],zmm1[19],zmm0[19],zmm1[20],zmm0[20],zmm1[21],zmm0[21],zmm1[22],zmm0[22],zmm1[23],zmm0[23],zmm1[32],zmm0[32],zmm1[33],zmm0[33],zmm1[34],zmm0[34],zmm1[35],zmm0[35],zmm1[36],zmm0[36],zmm1[37],zmm0[37],zmm1[38],zmm0[38],zmm1[39],zmm0[39],zmm1[48],zmm0[48],zmm1[49],zmm0[49],zmm1[50],zmm0[50],zmm1[51],zmm0[51],zmm1[52],zmm0[52],zmm1[53],zmm0[53],zmm1[54],zmm0[54],zmm1[55],zmm0[55]
 ; AVX512BW-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpandq %zmm2, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpandq %zmm3, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpackuswb %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,2,3]
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,2,3]
 ; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
-; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm3 = zmm3[0],zmm0[0],zmm3[1],zmm0[1],zmm3[2],zmm0[2],zmm3[3],zmm0[3],zmm3[4],zmm0[4],zmm3[5],zmm0[5],zmm3[6],zmm0[6],zmm3[7],zmm0[7],zmm3[16],zmm0[16],zmm3[17],zmm0[17],zmm3[18],zmm0[18],zmm3[19],zmm0[19],zmm3[20],zmm0[20],zmm3[21],zmm0[21],zmm3[22],zmm0[22],zmm3[23],zmm0[23],zmm3[32],zmm0[32],zmm3[33],zmm0[33],zmm3[34],zmm0[34],zmm3[35],zmm0[35],zmm3[36],zmm0[36],zmm3[37],zmm0[37],zmm3[38],zmm0[38],zmm3[39],zmm0[39],zmm3[48],zmm0[48],zmm3[49],zmm0[49],zmm3[50],zmm0[50],zmm3[51],zmm0[51],zmm3[52],zmm0[52],zmm3[53],zmm0[53],zmm3[54],zmm0[54],zmm3[55],zmm0[55]
-; AVX512BW-NEXT:    vpmullw %zmm3, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpandq %zmm2, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm2 = zmm2[0],zmm0[0],zmm2[1],zmm0[1],zmm2[2],zmm0[2],zmm2[3],zmm0[3],zmm2[4],zmm0[4],zmm2[5],zmm0[5],zmm2[6],zmm0[6],zmm2[7],zmm0[7],zmm2[16],zmm0[16],zmm2[17],zmm0[17],zmm2[18],zmm0[18],zmm2[19],zmm0[19],zmm2[20],zmm0[20],zmm2[21],zmm0[21],zmm2[22],zmm0[22],zmm2[23],zmm0[23],zmm2[32],zmm0[32],zmm2[33],zmm0[33],zmm2[34],zmm0[34],zmm2[35],zmm0[35],zmm2[36],zmm0[36],zmm2[37],zmm0[37],zmm2[38],zmm0[38],zmm2[39],zmm0[39],zmm2[48],zmm0[48],zmm2[49],zmm0[49],zmm2[50],zmm0[50],zmm2[51],zmm0[51],zmm2[52],zmm0[52],zmm2[53],zmm0[53],zmm2[54],zmm0[54],zmm2[55],zmm0[55]
+; AVX512BW-NEXT:    vpmullw %zmm2, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpandq %zmm3, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpackuswb %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpsrld $16, %xmm0, %xmm3
+; AVX512BW-NEXT:    vpsrld $16, %xmm0, %xmm2
 ; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
-; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm3 = zmm3[0],zmm0[0],zmm3[1],zmm0[1],zmm3[2],zmm0[2],zmm3[3],zmm0[3],zmm3[4],zmm0[4],zmm3[5],zmm0[5],zmm3[6],zmm0[6],zmm3[7],zmm0[7],zmm3[16],zmm0[16],zmm3[17],zmm0[17],zmm3[18],zmm0[18],zmm3[19],zmm0[19],zmm3[20],zmm0[20],zmm3[21],zmm0[21],zmm3[22],zmm0[22],zmm3[23],zmm0[23],zmm3[32],zmm0[32],zmm3[33],zmm0[33],zmm3[34],zmm0[34],zmm3[35],zmm0[35],zmm3[36],zmm0[36],zmm3[37],zmm0[37],zmm3[38],zmm0[38],zmm3[39],zmm0[39],zmm3[48],zmm0[48],zmm3[49],zmm0[49],zmm3[50],zmm0[50],zmm3[51],zmm0[51],zmm3[52],zmm0[52],zmm3[53],zmm0[53],zmm3[54],zmm0[54],zmm3[55],zmm0[55]
-; AVX512BW-NEXT:    vpmullw %zmm3, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpandq %zmm2, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm2 = zmm2[0],zmm0[0],zmm2[1],zmm0[1],zmm2[2],zmm0[2],zmm2[3],zmm0[3],zmm2[4],zmm0[4],zmm2[5],zmm0[5],zmm2[6],zmm0[6],zmm2[7],zmm0[7],zmm2[16],zmm0[16],zmm2[17],zmm0[17],zmm2[18],zmm0[18],zmm2[19],zmm0[19],zmm2[20],zmm0[20],zmm2[21],zmm0[21],zmm2[22],zmm0[22],zmm2[23],zmm0[23],zmm2[32],zmm0[32],zmm2[33],zmm0[33],zmm2[34],zmm0[34],zmm2[35],zmm0[35],zmm2[36],zmm0[36],zmm2[37],zmm0[37],zmm2[38],zmm0[38],zmm2[39],zmm0[39],zmm2[48],zmm0[48],zmm2[49],zmm0[49],zmm2[50],zmm0[50],zmm2[51],zmm0[51],zmm2[52],zmm0[52],zmm2[53],zmm0[53],zmm2[54],zmm0[54],zmm2[55],zmm0[55]
+; AVX512BW-NEXT:    vpmullw %zmm2, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpandq %zmm3, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpackuswb %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpsrlw $8, %xmm0, %xmm3
+; AVX512BW-NEXT:    vpsrlw $8, %xmm0, %xmm2
 ; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
-; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm3 = zmm3[0],zmm0[0],zmm3[1],zmm0[1],zmm3[2],zmm0[2],zmm3[3],zmm0[3],zmm3[4],zmm0[4],zmm3[5],zmm0[5],zmm3[6],zmm0[6],zmm3[7],zmm0[7],zmm3[16],zmm0[16],zmm3[17],zmm0[17],zmm3[18],zmm0[18],zmm3[19],zmm0[19],zmm3[20],zmm0[20],zmm3[21],zmm0[21],zmm3[22],zmm0[22],zmm3[23],zmm0[23],zmm3[32],zmm0[32],zmm3[33],zmm0[33],zmm3[34],zmm0[34],zmm3[35],zmm0[35],zmm3[36],zmm0[36],zmm3[37],zmm0[37],zmm3[38],zmm0[38],zmm3[39],zmm0[39],zmm3[48],zmm0[48],zmm3[49],zmm0[49],zmm3[50],zmm0[50],zmm3[51],zmm0[51],zmm3[52],zmm0[52],zmm3[53],zmm0[53],zmm3[54],zmm0[54],zmm3[55],zmm0[55]
-; AVX512BW-NEXT:    vpmullw %zmm3, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpandq %zmm2, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpunpcklbw {{.*#+}} zmm2 = zmm2[0],zmm0[0],zmm2[1],zmm0[1],zmm2[2],zmm0[2],zmm2[3],zmm0[3],zmm2[4],zmm0[4],zmm2[5],zmm0[5],zmm2[6],zmm0[6],zmm2[7],zmm0[7],zmm2[16],zmm0[16],zmm2[17],zmm0[17],zmm2[18],zmm0[18],zmm2[19],zmm0[19],zmm2[20],zmm0[20],zmm2[21],zmm0[21],zmm2[22],zmm0[22],zmm2[23],zmm0[23],zmm2[32],zmm0[32],zmm2[33],zmm0[33],zmm2[34],zmm0[34],zmm2[35],zmm0[35],zmm2[36],zmm0[36],zmm2[37],zmm0[37],zmm2[38],zmm0[38],zmm2[39],zmm0[39],zmm2[48],zmm0[48],zmm2[49],zmm0[49],zmm2[50],zmm0[50],zmm2[51],zmm0[51],zmm2[52],zmm0[52],zmm2[53],zmm0[53],zmm2[54],zmm0[54],zmm2[55],zmm0[55]
+; AVX512BW-NEXT:    vpmullw %zmm2, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpandq %zmm3, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpackuswb %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
@@ -3169,58 +3169,58 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vpunpckhbw {{.*#+}} zmm2 = zmm1[8],zmm0[8],zmm1[9],zmm0[9],zmm1[10],zmm0[10],zmm1[11],zmm0[11],zmm1[12],zmm0[12],zmm1[13],zmm0[13],zmm1[14],zmm0[14],zmm1[15],zmm0[15],zmm1[24],zmm0[24],zmm1[25],zmm0[25],zmm1[26],zmm0[26],zmm1[27],zmm0[27],zmm1[28],zmm0[28],zmm1[29],zmm0[29],zmm1[30],zmm0[30],zmm1[31],zmm0[31],zmm1[40],zmm0[40],zmm1[41],zmm0[41],zmm1[42],zmm0[42],zmm1[43],zmm0[43],zmm1[44],zmm0[44],zmm1[45],zmm0[45],zmm1[46],zmm0[46],zmm1[47],zmm0[47],zmm1[56],zmm0[56],zmm1[57],zmm0[57],zmm1[58],zmm0[58],zmm1[59],zmm0[59],zmm1[60],zmm0[60],zmm1[61],zmm0[61],zmm1[62],zmm0[62],zmm1[63],zmm0[63]
 ; AVX512BWVL-NEXT:    vpunpckhbw {{.*#+}} zmm3 = zmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
-; AVX512BWVL-NEXT:    vpmullw %zmm2, %zmm3, %zmm3
-; AVX512BWVL-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX512BWVL-NEXT:    vpandq %zmm2, %zmm3, %zmm3
+; AVX512BWVL-NEXT:    vpmullw %zmm2, %zmm3, %zmm2
+; AVX512BWVL-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX512BWVL-NEXT:    vpandq %zmm3, %zmm2, %zmm2
 ; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm1 = zmm1[0],zmm0[0],zmm1[1],zmm0[1],zmm1[2],zmm0[2],zmm1[3],zmm0[3],zmm1[4],zmm0[4],zmm1[5],zmm0[5],zmm1[6],zmm0[6],zmm1[7],zmm0[7],zmm1[16],zmm0[16],zmm1[17],zmm0[17],zmm1[18],zmm0[18],zmm1[19],zmm0[19],zmm1[20],zmm0[20],zmm1[21],zmm0[21],zmm1[22],zmm0[22],zmm1[23],zmm0[23],zmm1[32],zmm0[32],zmm1[33],zmm0[33],zmm1[34],zmm0[34],zmm1[35],zmm0[35],zmm1[36],zmm0[36],zmm1[37],zmm0[37],zmm1[38],zmm0[38],zmm1[39],zmm0[39],zmm1[48],zmm0[48],zmm1[49],zmm0[49],zmm1[50],zmm0[50],zmm1[51],zmm0[51],zmm1[52],zmm0[52],zmm1[53],zmm0[53],zmm1[54],zmm0[54],zmm1[55],zmm0[55]
 ; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
 ; AVX512BWVL-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpandq %zmm2, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpackuswb %zmm3, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpandq %zmm3, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpackuswb %zmm2, %zmm0, %zmm0
 ; AVX512BWVL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512BWVL-NEXT:    vpunpckhbw {{.*#+}} zmm3 = zmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
+; AVX512BWVL-NEXT:    vpunpckhbw {{.*#+}} zmm2 = zmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
 ; AVX512BWVL-NEXT:    vpunpckhbw {{.*#+}} zmm4 = zmm1[8],zmm0[8],zmm1[9],zmm0[9],zmm1[10],zmm0[10],zmm1[11],zmm0[11],zmm1[12],zmm0[12],zmm1[13],zmm0[13],zmm1[14],zmm0[14],zmm1[15],zmm0[15],zmm1[24],zmm0[24],zmm1[25],zmm0[25],zmm1[26],zmm0[26],zmm1[27],zmm0[27],zmm1[28],zmm0[28],zmm1[29],zmm0[29],zmm1[30],zmm0[30],zmm1[31],zmm0[31],zmm1[40],zmm0[40],zmm1[41],zmm0[41],zmm1[42],zmm0[42],zmm1[43],zmm0[43],zmm1[44],zmm0[44],zmm1[45],zmm0[45],zmm1[46],zmm0[46],zmm1[47],zmm0[47],zmm1[56],zmm0[56],zmm1[57],zmm0[57],zmm1[58],zmm0[58],zmm1[59],zmm0[59],zmm1[60],zmm0[60],zmm1[61],zmm0[61],zmm1[62],zmm0[62],zmm1[63],zmm0[63]
-; AVX512BWVL-NEXT:    vpmullw %zmm4, %zmm3, %zmm3
-; AVX512BWVL-NEXT:    vpandq %zmm2, %zmm3, %zmm3
+; AVX512BWVL-NEXT:    vpmullw %zmm4, %zmm2, %zmm2
+; AVX512BWVL-NEXT:    vpandq %zmm3, %zmm2, %zmm2
 ; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
 ; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm1 = zmm1[0],zmm0[0],zmm1[1],zmm0[1],zmm1[2],zmm0[2],zmm1[3],zmm0[3],zmm1[4],zmm0[4],zmm1[5],zmm0[5],zmm1[6],zmm0[6],zmm1[7],zmm0[7],zmm1[16],zmm0[16],zmm1[17],zmm0[17],zmm1[18],zmm0[18],zmm1[19],zmm0[19],zmm1[20],zmm0[20],zmm1[21],zmm0[21],zmm1[22],zmm0[22],zmm1[23],zmm0[23],zmm1[32],zmm0[32],zmm1[33],zmm0[33],zmm1[34],zmm0[34],zmm1[35],zmm0[35],zmm1[36],zmm0[36],zmm1[37],zmm0[37],zmm1[38],zmm0[38],zmm1[39],zmm0[39],zmm1[48],zmm0[48],zmm1[49],zmm0[49],zmm1[50],zmm0[50],zmm1[51],zmm0[51],zmm1[52],zmm0[52],zmm1[53],zmm0[53],zmm1[54],zmm0[54],zmm1[55],zmm0[55]
 ; AVX512BWVL-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpandq %zmm2, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpackuswb %zmm3, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpandq %zmm3, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpackuswb %zmm2, %zmm0, %zmm0
 ; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpunpckhbw {{.*#+}} zmm3 = zmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
+; AVX512BWVL-NEXT:    vpunpckhbw {{.*#+}} zmm2 = zmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31,40,40,41,41,42,42,43,43,44,44,45,45,46,46,47,47,56,56,57,57,58,58,59,59,60,60,61,61,62,62,63,63]
 ; AVX512BWVL-NEXT:    vpunpckhbw {{.*#+}} zmm4 = zmm1[8],zmm0[8],zmm1[9],zmm0[9],zmm1[10],zmm0[10],zmm1[11],zmm0[11],zmm1[12],zmm0[12],zmm1[13],zmm0[13],zmm1[14],zmm0[14],zmm1[15],zmm0[15],zmm1[24],zmm0[24],zmm1[25],zmm0[25],zmm1[26],zmm0[26],zmm1[27],zmm0[27],zmm1[28],zmm0[28],zmm1[29],zmm0[29],zmm1[30],zmm0[30],zmm1[31],zmm0[31],zmm1[40],zmm0[40],zmm1[41],zmm0[41],zmm1[42],zmm0[42],zmm1[43],zmm0[43],zmm1[44],zmm0[44],zmm1[45],zmm0[45],zmm1[46],zmm0[46],zmm1[47],zmm0[47],zmm1[56],zmm0[56],zmm1[57],zmm0[57],zmm1[58],zmm0[58],zmm1[59],zmm0[59],zmm1[60],zmm0[60],zmm1[61],zmm0[61],zmm1[62],zmm0[62],zmm1[63],zmm0[63]
-; AVX512BWVL-NEXT:    vpmullw %zmm4, %zmm3, %zmm3
-; AVX512BWVL-NEXT:    vpandq %zmm2, %zmm3, %zmm3
+; AVX512BWVL-NEXT:    vpmullw %zmm4, %zmm2, %zmm2
+; AVX512BWVL-NEXT:    vpandq %zmm3, %zmm2, %zmm2
 ; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
 ; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm1 = zmm1[0],zmm0[0],zmm1[1],zmm0[1],zmm1[2],zmm0[2],zmm1[3],zmm0[3],zmm1[4],zmm0[4],zmm1[5],zmm0[5],zmm1[6],zmm0[6],zmm1[7],zmm0[7],zmm1[16],zmm0[16],zmm1[17],zmm0[17],zmm1[18],zmm0[18],zmm1[19],zmm0[19],zmm1[20],zmm0[20],zmm1[21],zmm0[21],zmm1[22],zmm0[22],zmm1[23],zmm0[23],zmm1[32],zmm0[32],zmm1[33],zmm0[33],zmm1[34],zmm0[34],zmm1[35],zmm0[35],zmm1[36],zmm0[36],zmm1[37],zmm0[37],zmm1[38],zmm0[38],zmm1[39],zmm0[39],zmm1[48],zmm0[48],zmm1[49],zmm0[49],zmm1[50],zmm0[50],zmm1[51],zmm0[51],zmm1[52],zmm0[52],zmm1[53],zmm0[53],zmm1[54],zmm0[54],zmm1[55],zmm0[55]
 ; AVX512BWVL-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpandq %zmm2, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpackuswb %zmm3, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpandq %zmm3, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpackuswb %zmm2, %zmm0, %zmm0
 ; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
 ; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm1 = zmm1[0],zmm0[0],zmm1[1],zmm0[1],zmm1[2],zmm0[2],zmm1[3],zmm0[3],zmm1[4],zmm0[4],zmm1[5],zmm0[5],zmm1[6],zmm0[6],zmm1[7],zmm0[7],zmm1[16],zmm0[16],zmm1[17],zmm0[17],zmm1[18],zmm0[18],zmm1[19],zmm0[19],zmm1[20],zmm0[20],zmm1[21],zmm0[21],zmm1[22],zmm0[22],zmm1[23],zmm0[23],zmm1[32],zmm0[32],zmm1[33],zmm0[33],zmm1[34],zmm0[34],zmm1[35],zmm0[35],zmm1[36],zmm0[36],zmm1[37],zmm0[37],zmm1[38],zmm0[38],zmm1[39],zmm0[39],zmm1[48],zmm0[48],zmm1[49],zmm0[49],zmm1[50],zmm0[50],zmm1[51],zmm0[51],zmm1[52],zmm0[52],zmm1[53],zmm0[53],zmm1[54],zmm0[54],zmm1[55],zmm0[55]
 ; AVX512BWVL-NEXT:    vpmullw %zmm1, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpandq %zmm2, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpandq %zmm3, %zmm0, %zmm0
 ; AVX512BWVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BWVL-NEXT:    vpackuswb %zmm1, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,2,3]
+; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,2,3]
 ; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
-; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm3 = zmm3[0],zmm0[0],zmm3[1],zmm0[1],zmm3[2],zmm0[2],zmm3[3],zmm0[3],zmm3[4],zmm0[4],zmm3[5],zmm0[5],zmm3[6],zmm0[6],zmm3[7],zmm0[7],zmm3[16],zmm0[16],zmm3[17],zmm0[17],zmm3[18],zmm0[18],zmm3[19],zmm0[19],zmm3[20],zmm0[20],zmm3[21],zmm0[21],zmm3[22],zmm0[22],zmm3[23],zmm0[23],zmm3[32],zmm0[32],zmm3[33],zmm0[33],zmm3[34],zmm0[34],zmm3[35],zmm0[35],zmm3[36],zmm0[36],zmm3[37],zmm0[37],zmm3[38],zmm0[38],zmm3[39],zmm0[39],zmm3[48],zmm0[48],zmm3[49],zmm0[49],zmm3[50],zmm0[50],zmm3[51],zmm0[51],zmm3[52],zmm0[52],zmm3[53],zmm0[53],zmm3[54],zmm0[54],zmm3[55],zmm0[55]
-; AVX512BWVL-NEXT:    vpmullw %zmm3, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpandq %zmm2, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm2 = zmm2[0],zmm0[0],zmm2[1],zmm0[1],zmm2[2],zmm0[2],zmm2[3],zmm0[3],zmm2[4],zmm0[4],zmm2[5],zmm0[5],zmm2[6],zmm0[6],zmm2[7],zmm0[7],zmm2[16],zmm0[16],zmm2[17],zmm0[17],zmm2[18],zmm0[18],zmm2[19],zmm0[19],zmm2[20],zmm0[20],zmm2[21],zmm0[21],zmm2[22],zmm0[22],zmm2[23],zmm0[23],zmm2[32],zmm0[32],zmm2[33],zmm0[33],zmm2[34],zmm0[34],zmm2[35],zmm0[35],zmm2[36],zmm0[36],zmm2[37],zmm0[37],zmm2[38],zmm0[38],zmm2[39],zmm0[39],zmm2[48],zmm0[48],zmm2[49],zmm0[49],zmm2[50],zmm0[50],zmm2[51],zmm0[51],zmm2[52],zmm0[52],zmm2[53],zmm0[53],zmm2[54],zmm0[54],zmm2[55],zmm0[55]
+; AVX512BWVL-NEXT:    vpmullw %zmm2, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpandq %zmm3, %zmm0, %zmm0
 ; AVX512BWVL-NEXT:    vpackuswb %zmm1, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpsrld $16, %xmm0, %xmm3
+; AVX512BWVL-NEXT:    vpsrld $16, %xmm0, %xmm2
 ; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
-; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm3 = zmm3[0],zmm0[0],zmm3[1],zmm0[1],zmm3[2],zmm0[2],zmm3[3],zmm0[3],zmm3[4],zmm0[4],zmm3[5],zmm0[5],zmm3[6],zmm0[6],zmm3[7],zmm0[7],zmm3[16],zmm0[16],zmm3[17],zmm0[17],zmm3[18],zmm0[18],zmm3[19],zmm0[19],zmm3[20],zmm0[20],zmm3[21],zmm0[21],zmm3[22],zmm0[22],zmm3[23],zmm0[23],zmm3[32],zmm0[32],zmm3[33],zmm0[33],zmm3[34],zmm0[34],zmm3[35],zmm0[35],zmm3[36],zmm0[36],zmm3[37],zmm0[37],zmm3[38],zmm0[38],zmm3[39],zmm0[39],zmm3[48],zmm0[48],zmm3[49],zmm0[49],zmm3[50],zmm0[50],zmm3[51],zmm0[51],zmm3[52],zmm0[52],zmm3[53],zmm0[53],zmm3[54],zmm0[54],zmm3[55],zmm0[55]
-; AVX512BWVL-NEXT:    vpmullw %zmm3, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpandq %zmm2, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm2 = zmm2[0],zmm0[0],zmm2[1],zmm0[1],zmm2[2],zmm0[2],zmm2[3],zmm0[3],zmm2[4],zmm0[4],zmm2[5],zmm0[5],zmm2[6],zmm0[6],zmm2[7],zmm0[7],zmm2[16],zmm0[16],zmm2[17],zmm0[17],zmm2[18],zmm0[18],zmm2[19],zmm0[19],zmm2[20],zmm0[20],zmm2[21],zmm0[21],zmm2[22],zmm0[22],zmm2[23],zmm0[23],zmm2[32],zmm0[32],zmm2[33],zmm0[33],zmm2[34],zmm0[34],zmm2[35],zmm0[35],zmm2[36],zmm0[36],zmm2[37],zmm0[37],zmm2[38],zmm0[38],zmm2[39],zmm0[39],zmm2[48],zmm0[48],zmm2[49],zmm0[49],zmm2[50],zmm0[50],zmm2[51],zmm0[51],zmm2[52],zmm0[52],zmm2[53],zmm0[53],zmm2[54],zmm0[54],zmm2[55],zmm0[55]
+; AVX512BWVL-NEXT:    vpmullw %zmm2, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpandq %zmm3, %zmm0, %zmm0
 ; AVX512BWVL-NEXT:    vpackuswb %zmm1, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpsrlw $8, %xmm0, %xmm3
+; AVX512BWVL-NEXT:    vpsrlw $8, %xmm0, %xmm2
 ; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm0 = zmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,32,32,33,33,34,34,35,35,36,36,37,37,38,38,39,39,48,48,49,49,50,50,51,51,52,52,53,53,54,54,55,55]
-; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm3 = zmm3[0],zmm0[0],zmm3[1],zmm0[1],zmm3[2],zmm0[2],zmm3[3],zmm0[3],zmm3[4],zmm0[4],zmm3[5],zmm0[5],zmm3[6],zmm0[6],zmm3[7],zmm0[7],zmm3[16],zmm0[16],zmm3[17],zmm0[17],zmm3[18],zmm0[18],zmm3[19],zmm0[19],zmm3[20],zmm0[20],zmm3[21],zmm0[21],zmm3[22],zmm0[22],zmm3[23],zmm0[23],zmm3[32],zmm0[32],zmm3[33],zmm0[33],zmm3[34],zmm0[34],zmm3[35],zmm0[35],zmm3[36],zmm0[36],zmm3[37],zmm0[37],zmm3[38],zmm0[38],zmm3[39],zmm0[39],zmm3[48],zmm0[48],zmm3[49],zmm0[49],zmm3[50],zmm0[50],zmm3[51],zmm0[51],zmm3[52],zmm0[52],zmm3[53],zmm0[53],zmm3[54],zmm0[54],zmm3[55],zmm0[55]
-; AVX512BWVL-NEXT:    vpmullw %zmm3, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpandq %zmm2, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpunpcklbw {{.*#+}} zmm2 = zmm2[0],zmm0[0],zmm2[1],zmm0[1],zmm2[2],zmm0[2],zmm2[3],zmm0[3],zmm2[4],zmm0[4],zmm2[5],zmm0[5],zmm2[6],zmm0[6],zmm2[7],zmm0[7],zmm2[16],zmm0[16],zmm2[17],zmm0[17],zmm2[18],zmm0[18],zmm2[19],zmm0[19],zmm2[20],zmm0[20],zmm2[21],zmm0[21],zmm2[22],zmm0[22],zmm2[23],zmm0[23],zmm2[32],zmm0[32],zmm2[33],zmm0[33],zmm2[34],zmm0[34],zmm2[35],zmm0[35],zmm2[36],zmm0[36],zmm2[37],zmm0[37],zmm2[38],zmm0[38],zmm2[39],zmm0[39],zmm2[48],zmm0[48],zmm2[49],zmm0[49],zmm2[50],zmm0[50],zmm2[51],zmm0[51],zmm2[52],zmm0[52],zmm2[53],zmm0[53],zmm2[54],zmm0[54],zmm2[55],zmm0[55]
+; AVX512BWVL-NEXT:    vpmullw %zmm2, %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpandq %zmm3, %zmm0, %zmm0
 ; AVX512BWVL-NEXT:    vpackuswb %zmm1, %zmm0, %zmm0
 ; AVX512BWVL-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX512BWVL-NEXT:    # kill: def $al killed $al killed $eax

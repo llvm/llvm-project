@@ -1347,7 +1347,6 @@ public:
     return __storage_->__what_.c_str();
   }
 
-  _LIBCPP_FUNC_VIS
   void __create_what(int __num_paths);
 
 private:

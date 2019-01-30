@@ -672,14 +672,8 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
       [this](decltype(Reply) Reply, URIForFile File, std::string Code,
              Range Selection, std::vector<CodeAction> FixIts,
              llvm::Expected<std::vector<ClangdServer::TweakRef>> Tweaks) {
-        if (!Tweaks) {
-          auto Err = Tweaks.takeError();
-          if (Err.isA<CancelledError>())
-            return Reply(std::move(Err)); // do no logging, this is expected.
-          elog("error while getting semantic code actions: {0}",
-               std::move(Err));
-          return Reply(llvm::json::Array(FixIts));
-        }
+        if (!Tweaks)
+          return Reply(Tweaks.takeError());
 
         std::vector<CodeAction> Actions = std::move(FixIts);
         Actions.reserve(Actions.size() + Tweaks->size());
@@ -697,8 +691,8 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
       };
 
   Server->enumerateTweaks(File.file(), Params.range,
-                          Bind(ConsumeActions, std::move(Reply),
-                               std::move(File), std::move(*Code), Params.range,
+                          Bind(ConsumeActions, std::move(Reply), File,
+                               std::move(*Code), Params.range,
                                std::move(FixIts)));
 }
 

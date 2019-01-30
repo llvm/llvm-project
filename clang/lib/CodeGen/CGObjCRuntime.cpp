@@ -21,7 +21,6 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;

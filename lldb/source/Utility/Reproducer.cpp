@@ -220,3 +220,6 @@ bool Loader::HasFile(StringRef file) {
 
 void ProviderBase::anchor() {}
 char ProviderBase::ID = 0;
+char FileProvider::ID = 0;
+const char *FileInfo::name = "files";
+const char *FileInfo::file = "files.yaml";

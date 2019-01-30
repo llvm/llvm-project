@@ -7508,7 +7508,7 @@ multiclass avx512_vcvtsi<bits<8> opc, SDNode OpNode, X86FoldableSchedWrite sched
     def rr : SI<opc, MRMSrcReg, (outs DstVT.FRC:$dst),
               (ins DstVT.FRC:$src1, SrcRC:$src),
               !strconcat(asm,"\t{$src, $src1, $dst|$dst, $src1, $src}"), []>,
-              EVEX_4V, Sched<[sched]>;
+              EVEX_4V, Sched<[sched, ReadDefault, ReadInt2Fpu]>;
     let mayLoad = 1 in
       def rm : SI<opc, MRMSrcMem, (outs DstVT.FRC:$dst),
               (ins DstVT.FRC:$src1, x86memop:$src),
@@ -7523,7 +7523,7 @@ multiclass avx512_vcvtsi<bits<8> opc, SDNode OpNode, X86FoldableSchedWrite sched
                         (OpNode (DstVT.VT DstVT.RC:$src1),
                                  SrcRC:$src2,
                                  (i32 FROUND_CURRENT)))]>,
-                 EVEX_4V, Sched<[sched]>;
+                 EVEX_4V, Sched<[sched, ReadDefault, ReadInt2Fpu]>;
 
     def rm_Int : SI<opc, MRMSrcMem, (outs DstVT.RC:$dst),
                   (ins DstVT.RC:$src1, x86memop:$src2),
@@ -7547,7 +7547,7 @@ multiclass avx512_vcvtsi_round<bits<8> opc, SDNode OpNode,
                     (OpNode (DstVT.VT DstVT.RC:$src1),
                              SrcRC:$src2,
                              (i32 imm:$rc)))]>,
-              EVEX_4V, EVEX_B, EVEX_RC, Sched<[sched]>;
+              EVEX_4V, EVEX_B, EVEX_RC, Sched<[sched, ReadDefault, ReadInt2Fpu]>;
 }
 
 multiclass avx512_vcvtsi_common<bits<8> opc, SDNode OpNode,

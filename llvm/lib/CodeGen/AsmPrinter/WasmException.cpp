@@ -18,10 +18,10 @@
 using namespace llvm;
 
 void WasmException::endModule() {
-  // This is the symbol used in 'throw' and 'if_except' instruction to denote
+  // This is the symbol used in 'throw' and 'br_on_exn' instruction to denote
   // this is a C++ exception. This symbol has to be emitted somewhere once in
   // the module.  Check if the symbol has already been created, i.e., we have at
-  // least one 'throw' or 'if_except' instruction in the module, and emit the
+  // least one 'throw' or 'br_on_exn' instruction in the module, and emit the
   // symbol only if so.
   SmallString<60> NameStr;
   Mangler::getNameWithPrefix(NameStr, "__cpp_exception", Asm->getDataLayout());

@@ -77,7 +77,7 @@ bool WebAssemblyEHRestoreStackPointer::runOnMachineFunction(
     // function uses the red zone, but that only happens with leaf functions,
     // and we don't restore __stack_pointer in leaf functions anyway.
     auto InsertPos = MBB.begin();
-    if (WebAssembly::isCatch(*MBB.begin()))
+    if (MBB.begin()->getOpcode() == WebAssembly::CATCH)
       InsertPos++;
     FrameLowering->writeSPToGlobal(WebAssembly::SP32, MF, MBB, InsertPos,
                                    MBB.begin()->getDebugLoc());

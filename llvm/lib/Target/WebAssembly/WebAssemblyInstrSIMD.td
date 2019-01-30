@@ -230,6 +230,19 @@ defm "" : Splat<v2i64, "i64x2", I64, splat2, 15>;
 defm "" : Splat<v4f32, "f32x4", F32, splat4, 18>;
 defm "" : Splat<v2f64, "f64x2", F64, splat2, 21>;
 
+// scalar_to_vector leaves high lanes undefined, so can be a splat
+class ScalarSplatPat<ValueType vec_t, ValueType lane_t,
+                     WebAssemblyRegClass reg_t> :
+  Pat<(vec_t (scalar_to_vector (lane_t reg_t:$x))),
+      (!cast<Instruction>("SPLAT_"#vec_t) reg_t:$x)>;
+
+def : ScalarSplatPat<v16i8, i32, I32>;
+def : ScalarSplatPat<v8i16, i32, I32>;
+def : ScalarSplatPat<v4i32, i32, I32>;
+def : ScalarSplatPat<v2i64, i64, I64>;
+def : ScalarSplatPat<v4f32, f32, F32>;
+def : ScalarSplatPat<v2f64, f64, F64>;
+
 //===----------------------------------------------------------------------===//
 // Accessing lanes
 //===----------------------------------------------------------------------===//
@@ -345,118 +358,6 @@ def : Pat<(vector_insert (v4f32 V128:$vec), F32:$x, undef),
           (REPLACE_LANE_v4f32 V128:$vec, 0, F32:$x)>;
 def : Pat<(vector_insert (v2f64 V128:$vec), F64:$x, undef),
           (REPLACE_LANE_v2f64 V128:$vec, 0, F64:$x)>;
-
-// Arbitrary other BUILD_VECTOR patterns
-def : Pat<(v16i8 (build_vector
-            (i32 I32:$x0), (i32 I32:$x1), (i32 I32:$x2), (i32 I32:$x3),
-            (i32 I32:$x4), (i32 I32:$x5), (i32 I32:$x6), (i32 I32:$x7),
-            (i32 I32:$x8), (i32 I32:$x9), (i32 I32:$x10), (i32 I32:$x11),
-            (i32 I32:$x12), (i32 I32:$x13), (i32 I32:$x14), (i32 I32:$x15)
-          )),
-          (v16i8 (REPLACE_LANE_v16i8
-            (v16i8 (REPLACE_LANE_v16i8
-              (v16i8 (REPLACE_LANE_v16i8
-                (v16i8 (REPLACE_LANE_v16i8
-                  (v16i8 (REPLACE_LANE_v16i8
-                    (v16i8 (REPLACE_LANE_v16i8
-                      (v16i8 (REPLACE_LANE_v16i8
-                        (v16i8 (REPLACE_LANE_v16i8
-                          (v16i8 (REPLACE_LANE_v16i8
-                            (v16i8 (REPLACE_LANE_v16i8
-                              (v16i8 (REPLACE_LANE_v16i8
-                                (v16i8 (REPLACE_LANE_v16i8
-                                  (v16i8 (REPLACE_LANE_v16i8
-                                    (v16i8 (REPLACE_LANE_v16i8
-                                      (v16i8 (REPLACE_LANE_v16i8
-                                        (v16i8 (SPLAT_v16i8 (i32 I32:$x0))),
-                                        1, I32:$x1
-                                      )),
-                                      2, I32:$x2
-                                    )),
-                                    3, I32:$x3
-                                  )),
-                                  4, I32:$x4
-                                )),
-                                5, I32:$x5
-                              )),
-                              6, I32:$x6
-                            )),
-                            7, I32:$x7
-                          )),
-                          8, I32:$x8
-                        )),
-                        9, I32:$x9
-                      )),
-                      10, I32:$x10
-                    )),
-                    11, I32:$x11
-                  )),
-                  12, I32:$x12
-                )),
-                13, I32:$x13
-              )),
-              14, I32:$x14
-            )),
-            15, I32:$x15
-          ))>;
-def : Pat<(v8i16 (build_vector
-            (i32 I32:$x0), (i32 I32:$x1), (i32 I32:$x2), (i32 I32:$x3),
-            (i32 I32:$x4), (i32 I32:$x5), (i32 I32:$x6), (i32 I32:$x7)
-          )),
-          (v8i16 (REPLACE_LANE_v8i16
-            (v8i16 (REPLACE_LANE_v8i16
-              (v8i16 (REPLACE_LANE_v8i16
-                (v8i16 (REPLACE_LANE_v8i16
-                  (v8i16 (REPLACE_LANE_v8i16
-                    (v8i16 (REPLACE_LANE_v8i16
-                      (v8i16 (REPLACE_LANE_v8i16
-                        (v8i16 (SPLAT_v8i16 (i32 I32:$x0))),
-                        1, I32:$x1
-                      )),
-                      2, I32:$x2
-                    )),
-                    3, I32:$x3
-                  )),
-                  4, I32:$x4
-                )),
-                5, I32:$x5
-              )),
-              6, I32:$x6
-            )),
-            7, I32:$x7
-          ))>;
-def : Pat<(v4i32 (build_vector
-            (i32 I32:$x0), (i32 I32:$x1), (i32 I32:$x2), (i32 I32:$x3)
-          )),
-          (v4i32 (REPLACE_LANE_v4i32
-            (v4i32 (REPLACE_LANE_v4i32
-              (v4i32 (REPLACE_LANE_v4i32
-                (v4i32 (SPLAT_v4i32 (i32 I32:$x0))),
-                1, I32:$x1
-              )),
-              2, I32:$x2
-            )),
-            3, I32:$x3
-          ))>;
-def : Pat<(v2i64 (build_vector (i64 I64:$x0), (i64 I64:$x1))),
-          (v2i64 (REPLACE_LANE_v2i64
-            (v2i64 (SPLAT_v2i64 (i64 I64:$x0))), 1, I64:$x1))>;
-def : Pat<(v4f32 (build_vector
-            (f32 F32:$x0), (f32 F32:$x1), (f32 F32:$x2), (f32 F32:$x3)
-          )),
-          (v4f32 (REPLACE_LANE_v4f32
-            (v4f32 (REPLACE_LANE_v4f32
-              (v4f32 (REPLACE_LANE_v4f32
-                (v4f32 (SPLAT_v4f32 (f32 F32:$x0))),
-                1, F32:$x1
-              )),
-              2, F32:$x2
-            )),
-            3, F32:$x3
-          ))>;
-def : Pat<(v2f64 (build_vector (f64 F64:$x0), (f64 F64:$x1))),
-          (v2f64 (REPLACE_LANE_v2f64
-            (v2f64 (SPLAT_v2f64 (f64 F64:$x0))), 1, F64:$x1))>;
 
 //===----------------------------------------------------------------------===//
 // Comparisons

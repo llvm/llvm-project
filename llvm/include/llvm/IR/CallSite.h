@@ -243,11 +243,11 @@ public:
 
   IterTy data_operands_begin() const {
     assert(getInstruction() && "Not a call or invoke instruction!");
-    return (*this)->op_begin();
+    return cast<CallBase>(getInstruction())->data_operands_begin();
   }
   IterTy data_operands_end() const {
     assert(getInstruction() && "Not a call or invoke instruction!");
-    return (*this)->op_end() - (isCall() ? 1 : 3);
+    return cast<CallBase>(getInstruction())->data_operands_end();
   }
   iterator_range<IterTy> data_ops() const {
     return make_range(data_operands_begin(), data_operands_end());
@@ -579,13 +579,9 @@ public:
 #undef CALLSITE_DELEGATE_SETTER
 
   void getOperandBundlesAsDefs(SmallVectorImpl<OperandBundleDef> &Defs) const {
-    const Instruction *II = getInstruction();
     // Since this is actually a getter that "looks like" a setter, don't use the
     // above macros to avoid confusion.
-    if (isCall())
-      cast<CallInst>(II)->getOperandBundlesAsDefs(Defs);
-    else
-      cast<InvokeInst>(II)->getOperandBundlesAsDefs(Defs);
+    cast<CallBase>(getInstruction())->getOperandBundlesAsDefs(Defs);
   }
 
   /// Determine whether this data operand is not captured.

@@ -84,8 +84,8 @@ Compile-time optimization bugs
 ------------------------------
 
 If you find that a bug crashes in the optimizer, compile your test-case to a
-``.bc`` file by passing "``-emit-llvm -O0 -c -o foo.bc``".
-Then run:
+``.bc`` file by passing "``-emit-llvm -O1 -Xclang -disable-llvm-passes -c -o
+foo.bc``".  Then run:
 
 .. code-block:: bash
 

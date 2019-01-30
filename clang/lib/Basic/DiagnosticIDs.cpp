@@ -456,12 +456,17 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
   if (Result == diag::Severity::Ignored)
     return Result;
 
-  // Honor -w, which is lower in priority than pedantic-errors, but higher than
-  // -Werror.
-  // FIXME: Under GCC, this also suppresses warnings that have been mapped to
-  // errors by -W flags and #pragma diagnostic.
-  if (Result == diag::Severity::Warning && State->IgnoreAllWarnings)
-    return diag::Severity::Ignored;
+  // Honor -w: this disables all messages which which are not Error/Fatal by
+  // default (disregarding attempts to upgrade severity from Warning to Error),
+  // as well as disabling all messages which are currently mapped to Warning
+  // (whether by default or downgraded from Error via e.g. -Wno-error or #pragma
+  // diagnostic.)
+  if (State->IgnoreAllWarnings) {
+    if (Result == diag::Severity::Warning ||
+        (Result >= diag::Severity::Error &&
+         !isDefaultMappingAsError((diag::kind)DiagID)))
+      return diag::Severity::Ignored;
+  }
 
   // If -Werror is enabled, map warnings to errors unless explicitly disabled.
   if (Result == diag::Severity::Warning) {
