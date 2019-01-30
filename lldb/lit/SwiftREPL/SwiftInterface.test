@@ -1,0 +1,16 @@
+// Test that .swiftinterface files can be loaded via the repl.
+
+// RUN: mkdir -p %t
+// RUN: %target-swiftc -module-name A -emit-parseable-module-interface-path %t/A.swiftinterface -emit-library -o %t/libA.dylib %S/Inputs/A.swift
+// RUN: %lldb --repl="-I%t -L%t -lA" < %s | FileCheck %s
+
+import A
+
+Foo.foo()
+// CHECK: ${{R0}}: String = "A"
+
+let y = MyPoint(x: 2, y: 2)
+// CHECK: {{^}}y: A.MyPoint = {
+
+y.magnitudeSquared
+// CHECK: {{^}}${{R1}}: Int = 8

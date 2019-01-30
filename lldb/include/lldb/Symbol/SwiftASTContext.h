@@ -833,6 +833,7 @@ protected:
   std::unique_ptr<swift::SILModule> m_sil_module_ap;
   /// Owned by the AST.
   swift::SerializedModuleLoader *m_serialized_module_loader = nullptr;
+  swift::ParseableInterfaceModuleLoader *m_parseable_module_loader = nullptr;
   swift::ClangImporter *m_clang_importer = nullptr;
   swift::DWARFImporter *m_dwarf_importer = nullptr;
   SwiftModuleMap m_swift_module_cache;

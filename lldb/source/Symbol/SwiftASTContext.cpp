@@ -2995,6 +2995,21 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
       m_ast_context_ap->addModuleLoader(std::move(serialized_module_loader_ap));
     }
 
+    // Install the parseable interface module loader
+    std::string ModuleCachePath = GetClangImporterOptions().ModuleCachePath;
+    StringRef PrebuiltModuleCachePath =
+      GetCompilerInvocation().getFrontendOptions().PrebuiltModuleCachePath;
+    std::unique_ptr<swift::ModuleLoader> parseable_module_loader_ap(
+      swift::ParseableInterfaceModuleLoader::create(
+        *m_ast_context_ap, ModuleCachePath, PrebuiltModuleCachePath,
+        /*tracker=*/nullptr, swift::ModuleLoadingMode::PreferSerialized));
+
+    if (parseable_module_loader_ap) {
+      m_parseable_module_loader =
+      (swift::ParseableInterfaceModuleLoader *)parseable_module_loader_ap.get();
+      m_ast_context_ap->addModuleLoader(std::move(parseable_module_loader_ap));
+    }
+
     // Set up the required state for the evaluator in the TypeChecker.
     registerTypeCheckerRequestFunctions(m_ast_context_ap->evaluator);
 

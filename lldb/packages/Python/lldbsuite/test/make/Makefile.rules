@@ -687,6 +687,7 @@ $(MODULENAME).swiftmodule: $(OBJECTS) $(DYLIB_OBJECTS)
 	@echo "### Merging swift modules for $(MODULENAME)"
 	$(SWIFT_FE) $(SWIFT_FEFLAGS) -merge-modules \
 	  -emit-module $(patsubst %.swift,%.partial.swiftmodule,$(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)) \
+	  -emit-parseable-module-interface-path $(BUILDDIR)/$(MODULENAME).swiftinterface \
 	  -parse-as-library -sil-merge-partial-modules \
 	  -disable-diagnostic-passes -disable-sil-perf-optzns \
 	  -module-name $(MODULENAME) \
@@ -732,6 +733,7 @@ endif
 ifneq "$(ARCHIVE_NAME)" ""
 ifeq "$(OS)" "Darwin"
 $(ARCHIVE_NAME) : $(ARCHIVE_OBJECTS)
+	@echo "### Creating archive $(ARCHIVE_NAME)"
 	$(AR) $(ARFLAGS) $(ARCHIVE_NAME) $(ARCHIVE_OBJECTS)
 	$(RM) $(ARCHIVE_OBJECTS)
 else
@@ -743,11 +745,13 @@ endif
 # Make the dylib
 #----------------------------------------------------------------------
 ifeq "$(USESWIFTDRIVER)" "1"
+ifeq "$(OS)" "Darwin"
+LD_SWIFT_FLAGS=-Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule \
+	  -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@)
+endif
 $(DYLIB_FILENAME) : $(DYLIB_OBJECTS)
 	@echo "### Linking dynamic library $(DYLIB_NAME)"
-	$(SWIFTC) $(LD_EXTRAS) -o $@ $^ -Xlinker -dylib \
-	  -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule \
-	  -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@)
+	$(SWIFTC) -emit-library $(LD_SWIFT_FLAGS) $(LD_EXTRAS) -o $@ $^
 else
 $(DYLIB_OBJECTS) : CFLAGS += -DCOMPILING_LLDB_TEST_DLL
 

@@ -50,6 +50,7 @@ class NominalTypeDecl;
 class ProtocolDecl;
 class SearchPathOptions;
 class SerializedModuleLoader;
+class ParseableInterfaceModuleLoader;
 class SILModule;
 class SILOptions;
 class SourceFile;
