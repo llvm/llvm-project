@@ -28,7 +28,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
@@ -690,9 +689,9 @@ protected:
     llvm::Value *args[] = {
             EnforceType(Builder, Receiver, IdTy),
             EnforceType(Builder, cmd, SelectorTy) };
-    llvm::CallSite imp = CGF.EmitRuntimeCallOrInvoke(MsgLookupFn, args);
+    llvm::CallBase *imp = CGF.EmitRuntimeCallOrInvoke(MsgLookupFn, args);
     imp->setMetadata(msgSendMDKind, node);
-    return imp.getInstruction();
+    return imp;
   }
 
   llvm::Value *LookupIMPSuper(CodeGenFunction &CGF, Address ObjCSuper,
@@ -771,14 +770,13 @@ class CGObjCGNUstep : public CGObjCGNU {
               EnforceType(Builder, ReceiverPtr.getPointer(), PtrToIdTy),
               EnforceType(Builder, cmd, SelectorTy),
               EnforceType(Builder, self, IdTy) };
-      llvm::CallSite slot = CGF.EmitRuntimeCallOrInvoke(LookupFn, args);
-      slot.setOnlyReadsMemory();
+      llvm::CallBase *slot = CGF.EmitRuntimeCallOrInvoke(LookupFn, args);
+      slot->setOnlyReadsMemory();
       slot->setMetadata(msgSendMDKind, node);
 
       // Load the imp from the slot
       llvm::Value *imp = Builder.CreateAlignedLoad(
-          Builder.CreateStructGEP(nullptr, slot.getInstruction(), 4),
-          CGF.getPointerAlign());
+          Builder.CreateStructGEP(nullptr, slot, 4), CGF.getPointerAlign());
 
       // The lookup function may have changed the receiver, so make sure we use
       // the new one.
@@ -1937,14 +1935,14 @@ protected:
             EnforceType(Builder, Receiver, IdTy),
             EnforceType(Builder, cmd, SelectorTy) };
 
-    llvm::CallSite imp;
+    llvm::CallBase *imp;
     if (CGM.ReturnTypeUsesSRet(MSI.CallInfo))
       imp = CGF.EmitRuntimeCallOrInvoke(MsgLookupFnSRet, args);
     else
       imp = CGF.EmitRuntimeCallOrInvoke(MsgLookupFn, args);
 
     imp->setMetadata(msgSendMDKind, node);
-    return imp.getInstruction();
+    return imp;
   }
 
   llvm::Value *LookupIMPSuper(CodeGenFunction &CGF, Address ObjCSuper,
@@ -2500,7 +2498,7 @@ CGObjCGNU::GenerateMessageSendSuper(CodeGenFunction &CGF,
 
   CGCallee callee(CGCalleeInfo(), imp);
 
-  llvm::Instruction *call;
+  llvm::CallBase *call;
   RValue msgRet = CGF.EmitCall(MSI.CallInfo, callee, Return, ActualArgs, &call);
   call->setMetadata(msgSendMDKind, node);
   return msgRet;
@@ -2612,7 +2610,7 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
 
   imp = EnforceType(Builder, imp, MSI.MessengerType);
 
-  llvm::Instruction *call;
+  llvm::CallBase *call;
   CGCallee callee(CGCalleeInfo(), imp);
   RValue msgRet = CGF.EmitCall(MSI.CallInfo, callee, Return, ActualArgs, &call);
   call->setMetadata(msgSendMDKind, node);
@@ -3843,13 +3841,14 @@ void CGObjCGNU::EmitThrowStmt(CodeGenFunction &CGF,
     // that was passed into the `@catch` block, then this code path is not
     // reached and we will instead call `objc_exception_throw` with an explicit
     // argument.
-    CGF.EmitRuntimeCallOrInvoke(ExceptionReThrowFn).setDoesNotReturn();
+    llvm::CallBase *Throw = CGF.EmitRuntimeCallOrInvoke(ExceptionReThrowFn);
+    Throw->setDoesNotReturn();
   }
   else {
     ExceptionAsObject = CGF.Builder.CreateBitCast(ExceptionAsObject, IdTy);
-    llvm::CallSite Throw =
+    llvm::CallBase *Throw =
         CGF.EmitRuntimeCallOrInvoke(ExceptionThrowFn, ExceptionAsObject);
-    Throw.setDoesNotReturn();
+    Throw->setDoesNotReturn();
   }
   CGF.Builder.CreateUnreachable();
   if (ClearInsertionPoint)

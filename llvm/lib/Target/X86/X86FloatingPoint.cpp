@@ -1368,8 +1368,6 @@ void FPS::handleTwoArgFP(MachineBasicBlock::iterator &I) {
 /// register arguments and no explicit destinations.
 ///
 void FPS::handleCompareFP(MachineBasicBlock::iterator &I) {
-  ASSERT_SORTED(ForwardST0Table); ASSERT_SORTED(ReverseST0Table);
-  ASSERT_SORTED(ForwardSTiTable); ASSERT_SORTED(ReverseSTiTable);
   MachineInstr &MI = *I;
 
   unsigned NumOperands = MI.getDesc().getNumOperands();

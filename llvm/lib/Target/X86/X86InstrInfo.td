@@ -3245,7 +3245,7 @@ multiclass FpUnaryAlias<string Mnemonic, Instruction Inst, bit EmitAlias = 1> {
 }
 
 defm : FpUnaryAlias<"fadd",   ADD_FST0r>;
-defm : FpUnaryAlias<"faddp",  ADD_FPrST0, 0>;
+defm : FpUnaryAlias<"faddp",  ADD_FPrST0>;
 defm : FpUnaryAlias<"fsub",   SUB_FST0r>;
 defm : FpUnaryAlias<"fsub{|r}p",  SUBR_FPrST0>;
 defm : FpUnaryAlias<"fsubr",  SUBR_FST0r>;
@@ -3256,8 +3256,8 @@ defm : FpUnaryAlias<"fdiv",   DIV_FST0r>;
 defm : FpUnaryAlias<"fdiv{|r}p",  DIVR_FPrST0>;
 defm : FpUnaryAlias<"fdivr",  DIVR_FST0r>;
 defm : FpUnaryAlias<"fdiv{r|}p", DIV_FPrST0>;
-defm : FpUnaryAlias<"fcomi",   COM_FIr, 0>;
-defm : FpUnaryAlias<"fucomi",  UCOM_FIr, 0>;
+defm : FpUnaryAlias<"fcomi",   COM_FIr>;
+defm : FpUnaryAlias<"fucomi",  UCOM_FIr>;
 defm : FpUnaryAlias<"fcompi",   COM_FIPr>;
 defm : FpUnaryAlias<"fucompi",  UCOM_FIPr>;
 
@@ -3265,7 +3265,7 @@ defm : FpUnaryAlias<"fucompi",  UCOM_FIPr>;
 // Handle "f{mulp,addp} st(0), $op" the same as "f{mulp,addp} $op", since they
 // commute.  We also allow fdiv[r]p/fsubrp even though they don't commute,
 // solely because gas supports it.
-def : InstAlias<"faddp\t{%st(0), $op|$op, st(0)}", (ADD_FPrST0 RST:$op), 0>;
+def : InstAlias<"faddp\t{%st(0), $op|$op, st(0)}", (ADD_FPrST0 RST:$op)>;
 def : InstAlias<"fmulp\t{%st(0), $op|$op, st(0)}", (MUL_FPrST0 RST:$op)>;
 def : InstAlias<"fsub{|r}p\t{%st(0), $op|$op, st(0)}", (SUBR_FPrST0 RST:$op)>;
 def : InstAlias<"fsub{r|}p\t{%st(0), $op|$op, st(0)}", (SUB_FPrST0 RST:$op)>;

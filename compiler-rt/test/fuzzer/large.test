@@ -1,0 +1,2 @@
+RUN: %cpp_compiler %S/LargeTest.cpp -o %t-LargeTest
+RUN: %run %t-LargeTest -runs=10000

@@ -266,7 +266,7 @@ class FPrST0PInst<Format fp, string asm>
 // NOTE: GAS and apparently all other AT&T style assemblers have a broken notion
 // of some of the 'reverse' forms of the fsub and fdiv instructions.  As such,
 // we have to put some 'r's in and take them out of weird places.
-let SchedRW = [WriteFAdd] in {
+let SchedRW = [WriteFAdd], Defs = [FPSW] in {
 def ADD_FST0r   : FPST0rInst <MRM0r, "fadd\t$op">;
 def ADD_FrST0   : FPrST0Inst <MRM0r, "fadd\t{%st(0), $op|$op, st(0)}">;
 def ADD_FPrST0  : FPrST0PInst<MRM0r, "faddp\t$op">;
@@ -277,16 +277,16 @@ def SUB_FST0r   : FPST0rInst <MRM4r, "fsub\t$op">;
 def SUBR_FrST0  : FPrST0Inst <MRM4r, "fsub{|r}\t{%st(0), $op|$op, st(0)}">;
 def SUBR_FPrST0 : FPrST0PInst<MRM4r, "fsub{|r}p\t$op">;
 } // SchedRW
-let SchedRW = [WriteFCom] in {
+let SchedRW = [WriteFCom], Defs = [FPSW] in {
 def COM_FST0r   : FPST0rInst <MRM2r, "fcom\t$op">;
 def COMP_FST0r  : FPST0rInst <MRM3r, "fcomp\t$op">;
 } // SchedRW
-let SchedRW = [WriteFMul] in {
+let SchedRW = [WriteFMul], Defs = [FPSW] in {
 def MUL_FST0r   : FPST0rInst <MRM1r, "fmul\t$op">;
 def MUL_FrST0   : FPrST0Inst <MRM1r, "fmul\t{%st(0), $op|$op, st(0)}">;
 def MUL_FPrST0  : FPrST0PInst<MRM1r, "fmulp\t$op">;
 } // SchedRW
-let SchedRW = [WriteFDiv] in {
+let SchedRW = [WriteFDiv], Defs = [FPSW] in {
 def DIVR_FST0r  : FPST0rInst <MRM7r, "fdivr\t$op">;
 def DIV_FrST0   : FPrST0Inst <MRM7r, "fdiv{r}\t{%st(0), $op|$op, st(0)}">;
 def DIV_FPrST0  : FPrST0PInst<MRM7r, "fdiv{r}p\t$op">;
@@ -334,7 +334,7 @@ def TST_F  : FPI<0xD9, MRM_E4, (outs), (ins), "ftst">;
 
 // Versions of FP instructions that take a single memory operand.  Added for the
 //   disassembler; remove as they are included with patterns elsewhere.
-let SchedRW = [WriteFComLd] in {
+let SchedRW = [WriteFComLd], Defs = [FPSW] in {
 def FCOM32m  : FPI<0xD8, MRM2m, (outs), (ins f32mem:$src), "fcom{s}\t$src">;
 def FCOMP32m : FPI<0xD8, MRM3m, (outs), (ins f32mem:$src), "fcomp{s}\t$src">;
 

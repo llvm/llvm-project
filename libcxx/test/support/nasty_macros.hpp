@@ -54,6 +54,7 @@
 // Test that libc++ doesn't use names reserved by WIN32 API Macros.
 // NOTE: Obviously we can only define these on non-windows platforms.
 #ifndef _WIN32
+#define __allocator NASTY_MACRO
 #define __deallocate NASTY_MACRO
 #define __out NASTY_MACRO
 #endif

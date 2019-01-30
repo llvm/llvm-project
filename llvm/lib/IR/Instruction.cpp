@@ -515,9 +515,8 @@ bool Instruction::mayReadFromMemory() const {
   case Instruction::CatchRet:
     return true;
   case Instruction::Call:
-    return !cast<CallInst>(this)->doesNotAccessMemory();
   case Instruction::Invoke:
-    return !cast<InvokeInst>(this)->doesNotAccessMemory();
+    return !cast<CallBase>(this)->doesNotAccessMemory();
   case Instruction::Store:
     return !cast<StoreInst>(this)->isUnordered();
   }
@@ -535,9 +534,8 @@ bool Instruction::mayWriteToMemory() const {
   case Instruction::CatchRet:
     return true;
   case Instruction::Call:
-    return !cast<CallInst>(this)->onlyReadsMemory();
   case Instruction::Invoke:
-    return !cast<InvokeInst>(this)->onlyReadsMemory();
+    return !cast<CallBase>(this)->onlyReadsMemory();
   case Instruction::Load:
     return !cast<LoadInst>(this)->isUnordered();
   }

@@ -51,7 +51,6 @@ struct smart_ptr {
   }
 
   T * operator->() const {
-    OSPTR_LOG("Dereference smart_ptr with %p\n", pointer);
     return pointer;
   }
 
@@ -84,6 +83,6 @@ struct smart_ptr {
 
   T *pointer;
 };
-}
+} // namespace os
 
 #endif /* _OS_SMART_POINTER_H */

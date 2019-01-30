@@ -675,6 +675,23 @@ static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
   return IsNegative ? Builder.CreateSub(B, Max) : Builder.CreateSub(Max, B);
 }
 
+static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
+                                       InstCombiner::BuilderTy &Builder) {
+  // Match an unsigned saturated add with constant.
+  Value *X = Cmp->getOperand(0);
+  const APInt *CmpC, *AddC;
+  if (!Cmp->hasOneUse() || Cmp->getPredicate() != ICmpInst::ICMP_ULT ||
+      !match(Cmp->getOperand(1), m_APInt(CmpC)) || !match(FVal, m_AllOnes()) ||
+      !match(TVal, m_Add(m_Specific(X), m_APInt(AddC))) || ~(*AddC) != *CmpC)
+    return nullptr;
+
+  // Commute compare and select operands:
+  // select (icmp ult X, C), (add X, ~C), -1 -->
+  // select (icmp ugt X, C), -1, (add X, ~C)
+  Value *NewCmp = Builder.CreateICmp(ICmpInst::ICMP_UGT, X, Cmp->getOperand(1));
+  return Builder.CreateSelect(NewCmp, FVal, TVal);
+}
+
 /// Attempt to fold a cttz/ctlz followed by a icmp plus select into a single
 /// call to cttz/ctlz with flag 'is_zero_undef' cleared.
 ///
@@ -1046,6 +1063,9 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = canonicalizeSaturatedSubtract(ICI, TrueVal, FalseVal, Builder))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = canonicalizeSaturatedAdd(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
   return Changed ? &SI : nullptr;

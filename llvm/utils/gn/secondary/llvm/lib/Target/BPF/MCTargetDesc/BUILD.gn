@@ -1,0 +1,60 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("BPFGenInstrInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-instr-info" ]
+  td_file = "../BPF.td"
+}
+
+tablegen("BPFGenMCCodeEmitter") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-emitter" ]
+  td_file = "../BPF.td"
+}
+
+tablegen("BPFGenRegisterInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-register-info" ]
+  td_file = "../BPF.td"
+}
+
+tablegen("BPFGenSubtargetInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-subtarget" ]
+  td_file = "../BPF.td"
+}
+
+group("tablegen") {
+  visibility = [
+    ":MCTargetDesc",
+    "../InstPrinter",
+    "../TargetInfo",
+  ]
+  public_deps = [
+    ":BPFGenInstrInfo",
+    ":BPFGenMCCodeEmitter",
+    ":BPFGenRegisterInfo",
+    ":BPFGenSubtargetInfo",
+  ]
+}
+
+static_library("MCTargetDesc") {
+  output_name = "LLVMBPFDesc"
+  public_deps = [
+    ":tablegen",
+  ]
+  deps = [
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCDisassembler",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/BPF/InstPrinter",
+    "//llvm/lib/Target/BPF/TargetInfo",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "BPFAsmBackend.cpp",
+    "BPFELFObjectWriter.cpp",
+    "BPFMCCodeEmitter.cpp",
+    "BPFMCTargetDesc.cpp",
+  ]
+}

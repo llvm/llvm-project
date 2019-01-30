@@ -186,7 +186,7 @@ def main():
       print('Writing %d lines to %s...' % (len(output_lines), test), file=sys.stderr)
 
     with open(test, 'wb') as f:
-      f.writelines([l + '\n' for l in output_lines])
+      f.writelines(['{}\n'.format(l).encode('utf-8') for l in output_lines])
 
 
 if __name__ == '__main__':

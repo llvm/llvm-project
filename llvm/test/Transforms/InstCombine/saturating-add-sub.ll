@@ -655,9 +655,9 @@ define i32 @uadd_sat_constant(i32 %x) {
 define i32 @uadd_sat_constant_commute(i32 %x) {
 ; CHECK-LABEL: @uadd_sat_constant_commute(
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 42
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], -43
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[A]], i32 -1
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[X]], -43
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %a = add i32 %x, 42
   %c = icmp ult i32 %x, -43
@@ -681,9 +681,9 @@ define <4 x i32> @uadd_sat_constant_vec(<4 x i32> %x) {
 define <4 x i32> @uadd_sat_constant_vec_commute(<4 x i32> %x) {
 ; CHECK-LABEL: @uadd_sat_constant_vec_commute(
 ; CHECK-NEXT:    [[A:%.*]] = add <4 x i32> [[X:%.*]], <i32 42, i32 42, i32 42, i32 42>
-; CHECK-NEXT:    [[C:%.*]] = icmp ult <4 x i32> [[X]], <i32 -43, i32 -43, i32 -43, i32 -43>
-; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[C]], <4 x i32> [[A]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i32> [[X]], <i32 -43, i32 -43, i32 -43, i32 -43>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> [[A]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42>
   %c = icmp ult <4 x i32> %x, <i32 -43, i32 -43, i32 -43, i32 -43>

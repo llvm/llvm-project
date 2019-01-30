@@ -49,11 +49,12 @@ def int_wasm_get_exception : Intrinsic<[llvm_ptr_ty], [llvm_token_ty],
                                        [IntrHasSideEffects]>;
 def int_wasm_get_ehselector : Intrinsic<[llvm_i32_ty], [llvm_token_ty],
                                         [IntrHasSideEffects]>;
-
-// wasm.catch returns the pointer to the exception object caught by wasm 'catch'
-// instruction.
-def int_wasm_catch : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty],
-                               [IntrHasSideEffects]>;
+// This is the same as llvm.wasm.get.exception except that it does not take a
+// token operand. This is only for instruction selection purpose.
+// TODO Remove this redundant intrinsic and do custom lowering on
+// int_wasm_get_exception instead
+def int_wasm_extract_exception : Intrinsic<[llvm_ptr_ty], [],
+                                           [IntrHasSideEffects]>;
 
 // WebAssembly EH must maintain the landingpads in the order assigned to them
 // by WasmEHPrepare pass to generate landingpad table in EHStreamer. This is

@@ -95,6 +95,8 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_CALL;
   case RISCV::fixup_riscv_relax:
     return ELF::R_RISCV_RELAX;
+  case RISCV::fixup_riscv_align:
+    return ELF::R_RISCV_ALIGN;
   }
 }
 

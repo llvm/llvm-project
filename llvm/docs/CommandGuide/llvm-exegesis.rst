@@ -10,13 +10,13 @@ DESCRIPTION
 -----------
 
 :program:`llvm-exegesis` is a benchmarking tool that uses information available
-in LLVM to measure host machine instruction characteristics like latency or port
-decomposition.
+in LLVM to measure host machine instruction characteristics like latency,
+throughput, or port decomposition.
 
 Given an LLVM opcode name and a benchmarking mode, :program:`llvm-exegesis`
 generates a code snippet that makes execution as serial (resp. as parallel) as
-possible so that we can measure the latency (resp. uop decomposition) of the
-instruction.
+possible so that we can measure the latency (resp. inverse throughput/uop decomposition)
+of the instruction.
 The code snippet is jitted and executed on the host subtarget. The time taken
 (resp. resource usage) is measured using hardware performance counters. The
 result is printed out as YAML to the standard output.
@@ -37,11 +37,13 @@ instruction, run:
 
     $ llvm-exegesis -mode=latency -opcode-name=ADD64rr
 
-Measuring the uop decomposition of an instruction works similarly:
+Measuring the uop decomposition or inverse throughput of an instruction works similarly:
 
 .. code-block:: bash
 
     $ llvm-exegesis -mode=uops -opcode-name=ADD64rr
+    $ llvm-exegesis -mode=inverse_throughput -opcode-name=ADD64rr
+
 
 The output is a YAML document (the default is to write to stdout, but you can
 redirect the output to a file using `-benchmarks-file`):
@@ -186,7 +188,7 @@ OPTIONS
   Specify the custom code snippet to measure. See example 2 for details.
   Either `opcode-index`, `opcode-name` or `snippets-file` must be set.
 
-.. option:: -mode=[latency|uops|analysis]
+.. option:: -mode=[latency|uops|inverse_throughput|analysis]
 
  Specify the run mode.
 
@@ -197,8 +199,8 @@ OPTIONS
 
 .. option:: -benchmarks-file=</path/to/file>
 
- File to read (`analysis` mode) or write (`latency`/`uops` modes) benchmark
- results. "-" uses stdin/stdout.
+ File to read (`analysis` mode) or write (`latency`/`uops`/`inverse_throughput`
+ modes) benchmark results. "-" uses stdin/stdout.
 
 .. option:: -analysis-clusters-output-file=</path/to/file>
 

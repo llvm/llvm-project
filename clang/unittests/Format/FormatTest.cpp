@@ -11725,6 +11725,8 @@ TEST_F(FormatTest, FormatsWithWebKitStyle) {
 
 TEST_F(FormatTest, FormatsLambdas) {
   verifyFormat("int c = [b]() mutable { return [&b] { return b++; }(); }();\n");
+  verifyFormat(
+      "int c = [b]() mutable noexcept { return [&b] { return b++; }(); }();\n");
   verifyFormat("int c = [&] { [=] { return b++; }(); }();\n");
   verifyFormat("int c = [&, &a, a] { [=, c, &d] { return b++; }(); }();\n");
   verifyFormat("int c = [&a, &a, a] { [=, a, b, &c] { return b++; }(); }();\n");

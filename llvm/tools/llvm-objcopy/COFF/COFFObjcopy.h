@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_OBJCOPY_COFFOBJCOPY_H
 
 namespace llvm {
+class Error;
 
 namespace object {
 class COFFObjectFile;
@@ -20,8 +21,8 @@ struct CopyConfig;
 class Buffer;
 
 namespace coff {
-void executeObjcopyOnBinary(const CopyConfig &Config,
-                            object::COFFObjectFile &In, Buffer &Out);
+Error executeObjcopyOnBinary(const CopyConfig &Config,
+                             object::COFFObjectFile &In, Buffer &Out);
 
 } // end namespace coff
 } // end namespace objcopy

@@ -30503,7 +30503,7 @@ static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
   // instructions are no slower than UNPCKLPD but has the option to
   // fold the input operand into even an unaligned memory load.
   if (MaskVT.is128BitVector() && Subtarget.hasSSE3() && AllowFloatDomain) {
-    if (!Subtarget.hasAVX2() && isTargetShuffleEquivalent(Mask, {0, 0})) {
+    if (isTargetShuffleEquivalent(Mask, {0, 0})) {
       Shuffle = X86ISD::MOVDDUP;
       SrcVT = DstVT = MVT::v2f64;
       return true;
@@ -30557,16 +30557,6 @@ static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
             Mask, {1, 1, 3, 3, 5, 5, 7, 7, 9, 9, 11, 11, 13, 13, 15, 15})) {
       Shuffle = X86ISD::MOVSHDUP;
       SrcVT = DstVT = MVT::v16f32;
-      return true;
-    }
-  }
-
-  // Attempt to match against broadcast-from-vector.
-  if (Subtarget.hasAVX2()) {
-    SmallVector<int, 64> BroadcastMask(NumMaskElts, 0);
-    if (isTargetShuffleEquivalent(Mask, BroadcastMask)) {
-      SrcVT = DstVT = MaskVT;
-      Shuffle = X86ISD::VBROADCAST;
       return true;
     }
   }
@@ -31047,6 +31037,19 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       if (isSequentialOrUndefInRange(Mask, 0, Scale, 0) &&
           isUndefOrZeroOrInRange(HiMask, Scale, NumMaskElts)) {
         return DAG.getBitcast(RootVT, V1);
+      }
+    }
+
+    // Attempt to match against broadcast-from-vector.
+    // TODO: Add (partial) AVX1 support.
+    if (Subtarget.hasAVX2() && (!IsEVEXShuffle || NumRootElts == NumMaskElts)) {
+      SmallVector<int, 64> BroadcastMask(NumMaskElts, 0);
+      if (isTargetShuffleEquivalent(Mask, BroadcastMask)) {
+        if (Depth == 1 && Root.getOpcode() == X86ISD::VBROADCAST)
+          return SDValue(); // Nothing to do!
+        Res = DAG.getBitcast(MaskVT, V1);
+        Res = DAG.getNode(X86ISD::VBROADCAST, DL, MaskVT, Res);
+        return DAG.getBitcast(RootVT, Res);
       }
     }
 

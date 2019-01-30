@@ -930,7 +930,7 @@ void ValueHandleBase::ValueIsRAUWd(Value *Old, Value *New) {
                << Old->getName() << " to " << *New->getType() << " %"
                << New->getName() << "\n";
         llvm_unreachable(
-            "A weak tracking value handle still pointed to the  old value!\n");
+            "A weak tracking value handle still pointed to the old value!\n");
       default:
         break;
       }

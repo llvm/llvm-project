@@ -310,6 +310,8 @@
 		2689006E13353E1A00698AC0 /* File.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C6EA213011581005E16B0 /* File.cpp */; };
 		3FDFDDBD199C3A06009756A7 /* FileAction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFDDBC199C3A06009756A7 /* FileAction.cpp */; };
 		3FDFDDBF199D345E009756A7 /* FileCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3FDFDDBE199D345E009756A7 /* FileCache.cpp */; };
+		DD8F277F22011CD8004ED75B /* FileCollector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD8F277D22011CC9004ED75B /* FileCollector.cpp */; };
+		DD8F278222011D15004ED75B /* FileCollectorTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD8F278022011D0F004ED75B /* FileCollectorTest.cpp */; };
 		26BD407F135D2AE000237D80 /* FileLineResolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BD407E135D2ADF00237D80 /* FileLineResolver.cpp */; };
 		2689006F13353E1A00698AC0 /* FileSpec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26FA43171301048600E71120 /* FileSpec.cpp */; };
 		2689003E13353E0400698AC0 /* FileSpecList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E7B10F1B85900F91463 /* FileSpecList.cpp */; };
@@ -1875,6 +1877,8 @@
 		3FDFD6C3199C396E009756A7 /* FileAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FileAction.h; path = include/lldb/Target/FileAction.h; sourceTree = "<group>"; };
 		3FDFDDBE199D345E009756A7 /* FileCache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FileCache.cpp; path = source/Host/common/FileCache.cpp; sourceTree = "<group>"; };
 		3FDFDDC0199D34E2009756A7 /* FileCache.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = FileCache.h; path = include/lldb/Host/FileCache.h; sourceTree = "<group>"; };
+		DD8F277D22011CC9004ED75B /* FileCollector.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FileCollector.cpp; path = source/Utility/FileCollector.cpp; sourceTree = "<group>"; };
+		DD8F278022011D0F004ED75B /* FileCollectorTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FileCollectorTest.cpp; sourceTree = "<group>"; };
 		26BD407E135D2ADF00237D80 /* FileLineResolver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FileLineResolver.cpp; path = source/Core/FileLineResolver.cpp; sourceTree = "<group>"; };
 		26BD407D135D2AC400237D80 /* FileLineResolver.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = FileLineResolver.h; path = include/lldb/Core/FileLineResolver.h; sourceTree = "<group>"; };
 		26FA43171301048600E71120 /* FileSpec.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FileSpec.cpp; path = source/Utility/FileSpec.cpp; sourceTree = "<group>"; };
@@ -3639,6 +3643,7 @@
 				4C639EBF21FA684700A7B957 /* StreamTest.cpp */,
 				58EAC73D2106A0740029571E /* StreamTeeTest.cpp */,
 				2321F9441BDD346100BA9A93 /* StringExtractorTest.cpp */,
+				DD8F278022011D0F004ED75B /* FileCollectorTest.cpp */,
 				4C639EC621FA684800A7B957 /* StringLexerTest.cpp */,
 				4C639EBE21FA684600A7B957 /* StringListTest.cpp */,
 				9A3D43CA1F3150D200EB767C /* StructuredDataTest.cpp */,
@@ -4638,6 +4643,7 @@
 				26BC7E6F10F1B85900F91463 /* Connection.cpp */,
 				26FA4315130103F400E71120 /* FileSpec.h */,
 				26FA43171301048600E71120 /* FileSpec.cpp */,
+				DD8F277D22011CC9004ED75B /* FileCollector.cpp */,
 				26CF992414428766001E4138 /* AnsiTerminal.h */,
 				26F996A7119B79C300412154 /* ARM_DWARF_Registers.h */,
 				264A12FF137252C700875C42 /* ARM64_DWARF_Registers.h */,
@@ -7702,6 +7708,7 @@
 				9A3D43ED1F3237F900EB767C /* StateTest.cpp in Sources */,
 				23CB153A1D66DA9300EDDDE1 /* GDBRemoteClientBaseTest.cpp in Sources */,
 				23CB153B1D66DA9300EDDDE1 /* SocketTest.cpp in Sources */,
+				DD8F278222011D15004ED75B /* FileCollectorTest.cpp in Sources */,
 				23CB153C1D66DA9300EDDDE1 /* ArgsTest.cpp in Sources */,
 				9A3D43DB1F3151C400EB767C /* TildeExpressionResolverTest.cpp in Sources */,
 				4C639ED021FA684900A7B957 /* UUIDTest.cpp in Sources */,
@@ -8293,6 +8300,7 @@
 				94A5B3971AB9FE8D00A5EE7F /* EmulateInstructionMIPS64.cpp in Sources */,
 				256CBDC01ADD11C000BC6CDC /* RegisterContextPOSIX_arm.cpp in Sources */,
 				26CA97A1172B1FD5005DC71B /* RegisterContextThreadMemory.cpp in Sources */,
+				DD8F277F22011CD8004ED75B /* FileCollector.cpp in Sources */,
 				2689010B13353E6F00698AC0 /* ThreadSpec.cpp in Sources */,
 				2689010C13353E6F00698AC0 /* UnixSignals.cpp in Sources */,
 				2689011013353E8200698AC0 /* SharingPtr.cpp in Sources */,

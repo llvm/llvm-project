@@ -13,9 +13,6 @@ set(LIBFUZZER_SOURCES
   FuzzerMerge.cpp
   FuzzerMutate.cpp
   FuzzerSHA1.cpp
-  FuzzerShmemFuchsia.cpp
-  FuzzerShmemPosix.cpp
-  FuzzerShmemWindows.cpp
   FuzzerTracePC.cpp
   FuzzerUtil.cpp
   FuzzerUtilDarwin.cpp
@@ -43,7 +40,6 @@ set(LIBFUZZER_HEADERS
   FuzzerOptions.h
   FuzzerRandom.h
   FuzzerSHA1.h
-  FuzzerShmem.h
   FuzzerTracePC.h
   FuzzerUtil.h
   FuzzerValueBitMap.h)

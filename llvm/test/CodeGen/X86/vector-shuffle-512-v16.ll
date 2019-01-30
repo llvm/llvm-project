@@ -338,7 +338,7 @@ define <8 x float> @shuffle_v16f32_extract_256(float* %RET, float* %a) {
 define <8 x float> @test_v16f32_0_1_2_3_4_6_7_10 (<16 x float> %v) {
 ; ALL-LABEL: test_v16f32_0_1_2_3_4_6_7_10:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
+; ALL-NEXT:    vextractf32x4 $2, %zmm0, %xmm1
 ; ALL-NEXT:    vmovsldup {{.*#+}} xmm1 = xmm1[0,0,2,2]
 ; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,6,7,u]

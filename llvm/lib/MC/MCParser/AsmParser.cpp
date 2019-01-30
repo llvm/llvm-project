@@ -900,6 +900,9 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
       eatToEndOfStatement();
   }
 
+  // Make sure we get proper DWARF even for empty files.
+  (void)enabledGenDwarfForAssembly();
+
   getTargetParser().onEndOfFile();
   printPendingErrors();
 

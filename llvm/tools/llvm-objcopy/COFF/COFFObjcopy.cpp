@@ -97,7 +97,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       return true;
 
     if (Config.StripDebug || Config.StripAll || Config.StripAllGNU ||
-        Config.DiscardAll || Config.StripUnneeded) {
+        Config.DiscardMode == DiscardType::All || Config.StripUnneeded) {
       if (isDebugSection(Sec) &&
           (Sec.Header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE) != 0)
         return true;
@@ -125,7 +125,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       Sec.Relocs.clear();
 
   // If we need to do per-symbol removals, initialize the Referenced field.
-  if (Config.StripUnneeded || Config.DiscardAll ||
+  if (Config.StripUnneeded || Config.DiscardMode == DiscardType::All ||
       !Config.SymbolsToRemove.empty())
     if (Error E = Obj.markSymbols())
       return E;
@@ -159,7 +159,8 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       // GNU objcopy keeps referenced local symbols and external symbols
       // if --discard-all is set, similar to what --strip-unneeded does,
       // but undefined local symbols are kept when --discard-all is set.
-      if (Config.DiscardAll && Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC &&
+      if (Config.DiscardMode == DiscardType::All &&
+          Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC &&
           Sym.Sym.SectionNumber != 0)
         return true;
     }
@@ -180,7 +181,8 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       !Config.SetSectionFlags.empty() || !Config.SymbolsToRename.empty() ||
       Config.ExtractDWO || Config.KeepFileSymbols || Config.LocalizeHidden ||
       Config.PreserveDates || Config.StripDWO || Config.StripNonAlloc ||
-      Config.StripSections || Config.Weaken || Config.DecompressDebugSections) {
+      Config.StripSections || Config.Weaken || Config.DecompressDebugSections ||
+      Config.DiscardMode == DiscardType::Locals) {
     return createStringError(llvm::errc::invalid_argument,
                              "Option not supported by llvm-objcopy for COFF");
   }
@@ -188,19 +190,20 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
   return Error::success();
 }
 
-void executeObjcopyOnBinary(const CopyConfig &Config,
-                            COFFObjectFile &In, Buffer &Out) {
+Error executeObjcopyOnBinary(const CopyConfig &Config, COFFObjectFile &In,
+                             Buffer &Out) {
   COFFReader Reader(In);
   Expected<std::unique_ptr<Object>> ObjOrErr = Reader.create();
   if (!ObjOrErr)
-    reportError(Config.InputFilename, ObjOrErr.takeError());
+    return createFileError(Config.InputFilename, ObjOrErr.takeError());
   Object *Obj = ObjOrErr->get();
   assert(Obj && "Unable to deserialize COFF object");
   if (Error E = handleArgs(Config, *Obj))
-    reportError(Config.InputFilename, std::move(E));
+    return createFileError(Config.InputFilename, std::move(E));
   COFFWriter Writer(*Obj, Out);
   if (Error E = Writer.write())
-    reportError(Config.OutputFilename, std::move(E));
+    return createFileError(Config.OutputFilename, std::move(E));
+  return Error::success();
 }
 
 } // end namespace coff

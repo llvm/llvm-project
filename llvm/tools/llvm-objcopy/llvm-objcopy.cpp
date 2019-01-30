@@ -122,8 +122,8 @@ static Error deepWriteArchive(StringRef ArcName,
 
 /// The function executeObjcopyOnRawBinary does the dispatch based on the format
 /// of the output specified by the command line options.
-static void executeObjcopyOnRawBinary(const CopyConfig &Config,
-                                      MemoryBuffer &In, Buffer &Out) {
+static Error executeObjcopyOnRawBinary(const CopyConfig &Config,
+                                       MemoryBuffer &In, Buffer &Out) {
   // TODO: llvm-objcopy should parse CopyConfig.OutputFormat to recognize
   // formats other than ELF / "binary" and invoke
   // elf::executeObjcopyOnRawBinary, macho::executeObjcopyOnRawBinary or
@@ -133,18 +133,19 @@ static void executeObjcopyOnRawBinary(const CopyConfig &Config,
 
 /// The function executeObjcopyOnBinary does the dispatch based on the format
 /// of the input binary (ELF, MachO or COFF).
-static void executeObjcopyOnBinary(const CopyConfig &Config, object::Binary &In,
-                                   Buffer &Out) {
+static Error executeObjcopyOnBinary(const CopyConfig &Config,
+                                    object::Binary &In, Buffer &Out) {
   if (auto *ELFBinary = dyn_cast<object::ELFObjectFileBase>(&In))
     return elf::executeObjcopyOnBinary(Config, *ELFBinary, Out);
   else if (auto *COFFBinary = dyn_cast<object::COFFObjectFile>(&In))
     return coff::executeObjcopyOnBinary(Config, *COFFBinary, Out);
   else
-    error("Unsupported object file format");
+    return createStringError(object_error::invalid_file_type,
+                             "Unsupported object file format");
 }
 
-static void executeObjcopyOnArchive(const CopyConfig &Config,
-                                    const Archive &Ar) {
+static Error executeObjcopyOnArchive(const CopyConfig &Config,
+                                     const Archive &Ar) {
   std::vector<NewArchiveMember> NewArchiveMembers;
   Error Err = Error::success();
   for (const Archive::Child &Child : Ar.children(Err)) {
@@ -158,7 +159,8 @@ static void executeObjcopyOnArchive(const CopyConfig &Config,
       reportError(Ar.getFileName(), ChildNameOrErr.takeError());
 
     MemBuffer MB(ChildNameOrErr.get());
-    executeObjcopyOnBinary(Config, *Bin, MB);
+    if (Error E = executeObjcopyOnBinary(Config, *Bin, MB))
+      return E;
 
     Expected<NewArchiveMember> Member =
         NewArchiveMember::getOldMember(Child, Config.DeterministicArchives);
@@ -175,6 +177,7 @@ static void executeObjcopyOnArchive(const CopyConfig &Config,
                                  Ar.hasSymbolTable(), Ar.kind(),
                                  Config.DeterministicArchives, Ar.isThin()))
     reportError(Config.OutputFilename, std::move(E));
+  return Error::success();
 }
 
 static void restoreDateOnFile(StringRef Filename,
@@ -207,7 +210,8 @@ static void executeObjcopy(const CopyConfig &Config) {
     if (!BufOrErr)
       reportError(Config.InputFilename, BufOrErr.getError());
     FileBuffer FB(Config.OutputFilename);
-    executeObjcopyOnRawBinary(Config, *BufOrErr->get(), FB);
+    if (Error E = executeObjcopyOnRawBinary(Config, *BufOrErr->get(), FB))
+      error(std::move(E));
   } else {
     Expected<OwningBinary<llvm::object::Binary>> BinaryOrErr =
         createBinary(Config.InputFilename);
@@ -215,10 +219,13 @@ static void executeObjcopy(const CopyConfig &Config) {
       reportError(Config.InputFilename, BinaryOrErr.takeError());
 
     if (Archive *Ar = dyn_cast<Archive>(BinaryOrErr.get().getBinary())) {
-      executeObjcopyOnArchive(Config, *Ar);
+      if (Error E = executeObjcopyOnArchive(Config, *Ar))
+        error(std::move(E));
     } else {
       FileBuffer FB(Config.OutputFilename);
-      executeObjcopyOnBinary(Config, *BinaryOrErr.get().getBinary(), FB);
+      if (Error E = executeObjcopyOnBinary(Config,
+                                           *BinaryOrErr.get().getBinary(), FB))
+        error(std::move(E));
     }
   }
 

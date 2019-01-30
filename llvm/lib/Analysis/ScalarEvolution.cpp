@@ -3891,7 +3891,7 @@ void ScalarEvolution::eraseValueFromMap(Value *V) {
 }
 
 /// Check whether value has nuw/nsw/exact set but SCEV does not.
-/// TODO: In reality it is better to check the poison recursevely
+/// TODO: In reality it is better to check the poison recursively
 /// but this is better than nothing.
 static bool SCEVLostPoisonFlags(const SCEV *S, const Value *V) {
   if (auto *I = dyn_cast<Instruction>(V)) {

@@ -317,6 +317,18 @@ static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
                          AliasAnalysis &AA, const MachineRegisterInfo &MRI) {
   assert(Def->getParent() == Insert->getParent());
 
+  // 'catch' and 'extract_exception' should be the first instruction of a BB and
+  // cannot move.
+  if (Def->getOpcode() == WebAssembly::CATCH ||
+      Def->getOpcode() == WebAssembly::EXTRACT_EXCEPTION_I32) {
+    const MachineBasicBlock *MBB = Def->getParent();
+    auto NextI = std::next(MachineBasicBlock::const_iterator(Def));
+    for (auto E = MBB->end(); NextI != E && NextI->isDebugInstr(); ++NextI)
+      ;
+    if (NextI != Insert)
+      return false;
+  }
+
   // Check for register dependencies.
   SmallVector<unsigned, 4> MutableRegisters;
   for (const MachineOperand &MO : Def->operands()) {
@@ -817,6 +829,24 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         // Argument instructions represent live-in registers and not real
         // instructions.
         if (WebAssembly::isArgument(*Def))
+          continue;
+
+        // Currently catch's return value register cannot be stackified, because
+        // the wasm LLVM backend currently does not support live-in values
+        // entering blocks, which is a part of multi-value proposal.
+        //
+        // Once we support live-in values of wasm blocks, this can be:
+        // catch                           ; push except_ref value onto stack
+        // block except_ref -> i32
+        // br_on_exn $__cpp_exception      ; pop the except_ref value
+        // end_block
+        //
+        // But because we don't support it yet, the catch instruction's dst
+        // register should be assigned to a local to be propagated across
+        // 'block' boundary now.
+        //
+        // TODO Fix this once we support the multi-value proposal.
+        if (Def->getOpcode() == WebAssembly::CATCH)
           continue;
 
         // Decide which strategy to take. Prefer to move a single-use value

@@ -3,7 +3,7 @@ function(add_lldb_library name)
   # MODULE;SHARED;STATIC library type and source files
   cmake_parse_arguments(PARAM
     "MODULE;SHARED;STATIC;OBJECT;PLUGIN"
-    ""
+    "ENTITLEMENTS"
     "EXTRA_CXXFLAGS;DEPENDS;LINK_LIBS;LINK_COMPONENTS"
     ${ARGN})
   llvm_process_sources(srcs ${PARAM_UNPARSED_ARGUMENTS})
@@ -44,6 +44,10 @@ function(add_lldb_library name)
   if (PARAM_OBJECT)
     add_library(${name} ${libkind} ${srcs})
   else()
+    if(PARAM_ENTITLEMENTS)
+      set(pass_ENTITLEMENTS ENTITLEMENTS ${PARAM_ENTITLEMENTS})
+    endif()
+
     if(LLDB_NO_INSTALL_DEFAULT_RPATH)
       set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
     endif()
@@ -51,6 +55,7 @@ function(add_lldb_library name)
     llvm_add_library(${name} ${libkind} ${srcs}
       LINK_LIBS ${PARAM_LINK_LIBS}
       DEPENDS ${PARAM_DEPENDS}
+      ${pass_ENTITLEMENTS}
       ${pass_NO_INSTALL_RPATH}
     )
 
@@ -106,14 +111,19 @@ function(add_lldb_executable name)
     ${ARGN}
     )
 
+  if(ARG_ENTITLEMENTS)
+    set(pass_ENTITLEMENTS ENTITLEMENTS ${ARG_ENTITLEMENTS})
+  endif()
+
   if(LLDB_NO_INSTALL_DEFAULT_RPATH)
     set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
   endif()
 
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
-  add_llvm_executable(${name} ${ARG_UNPARSED_ARGUMENTS}
-    ENTITLEMENTS ${ARG_ENTITLEMENTS}
+  add_llvm_executable(${name}
+    ${pass_ENTITLEMENTS}
     ${pass_NO_INSTALL_RPATH}
+    ${ARG_UNPARSED_ARGUMENTS}
   )
 
   target_link_libraries(${name} PRIVATE ${ARG_LINK_LIBS})
