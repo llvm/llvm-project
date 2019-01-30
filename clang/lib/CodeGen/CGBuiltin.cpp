@@ -551,7 +551,8 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   Value *Min = Builder.getInt1((Type & 2) != 0);
   // For GCC compatibility, __builtin_object_size treat NULL as unknown size.
   Value *NullIsUnknown = Builder.getTrue();
-  return Builder.CreateCall(F, {Ptr, Min, NullIsUnknown});
+  Value *Dynamic = Builder.getFalse();
+  return Builder.CreateCall(F, {Ptr, Min, NullIsUnknown, Dynamic});
 }
 
 namespace {
