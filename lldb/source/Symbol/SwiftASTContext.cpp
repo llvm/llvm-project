@@ -5620,18 +5620,10 @@ CompilerType SwiftASTContext::GetInstanceType(void *type) {
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   assert((&swift_can_type->getASTContext() == GetASTContext()) &&
          "input type belongs to different SwiftASTContext");
-  switch (swift_can_type->getKind()) {
-  case swift::TypeKind::ExistentialMetatype:
-  case swift::TypeKind::Metatype: {
-    auto metatype_type =
-        swift::dyn_cast<swift::AnyMetatypeType>(swift_can_type);
-    if (metatype_type)
-      return {metatype_type.getInstanceType().getPointer()};
-    return {};
-  }
-  default:
-    break;
-  }
+  auto metatype_type =
+      swift::dyn_cast<swift::AnyMetatypeType>(swift_can_type);
+  if (metatype_type)
+    return {metatype_type.getInstanceType().getPointer()};
 
   return {GetSwiftType(type)};
 }
