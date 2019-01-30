@@ -23,7 +23,6 @@
 #include <sys/utsname.h>
 #endif
 
-#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -269,24 +268,6 @@ COMPILER_RT_VISIBILITY const char *lprofFindLastDirSeparator(const char *Path) {
     Sep = Sep2;
 #endif
   return Sep;
-}
-
-COMPILER_RT_VISIBILITY void lprofInstallSignalHandler(int sig,
-                                                      void (*handler)(int)) {
-#ifdef _WIN32
-  void (*err)(int) = signal(sig, handler);
-  if (err == SIG_ERR)
-    PROF_WARN("Unable to install an exit signal handler for %d (errno = %d).\n",
-              sig, errno);
-#else
-  struct sigaction sigact;
-  memset(&sigact, 0, sizeof(sigact));
-  sigact.sa_handler = handler;
-  int err = sigaction(sig, &sigact, NULL);
-  if (err)
-    PROF_WARN("Unable to install an exit signal handler for %d (errno = %d).\n",
-              sig, err);
-#endif
 }
 
 COMPILER_RT_VISIBILITY int lprofSuspendSigKill() {
