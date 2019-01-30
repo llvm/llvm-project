@@ -40,6 +40,9 @@ ELF Improvements
 
 * The following flags have been added: ``-z interpose``, ``-z global``
 
+* lld now uses the ``sigrie`` instruction as a trap instruction for
+  MIPS targets.
+
 COFF Improvements
 -----------------
 
