@@ -144,23 +144,9 @@
 #define BUILTIN_RINT_F16 __llvm_rint_f16
 #define BUILTIN_RINT_2F16 __llvm_rint_2f16
 
-#define BUILTIN_SQRT_F32(X) ({ \
-    float _bsqrt_x = X; \
-    float _bsqrt_ret = _bsqrt_x < 0.0 ? __builtin_nanf("") : __builtin_sqrtf(_bsqrt_x); \
-    _bsqrt_ret; \
-})
-
-#define BUILTIN_SQRT_F64(X) ({ \
-    double _bsqrt_x = X; \
-    double _bsqrt_ret = _bsqrt_x < 0.0 ? __builtin_nan("") : __builtin_sqrt(_bsqrt_x); \
-    _bsqrt_ret; \
-})
-
-#define BUILTIN_SQRT_F16(X) ({ \
-    float _bsqrt_x = X; \
-    float _bsqrt_ret = _bsqrt_x < 0.0 ? (half)__builtin_nanf("") : __llvm_sqrt_f16(_bsqrt_x); \
-    _bsqrt_ret; \
-})
+#define BUILTIN_SQRT_F32(X) __builtin_sqrtf(X)
+#define BUILTIN_SQRT_F64(X) __builtin_sqrt(X)
+#define BUILTIN_SQRT_F16(X) __llvm_sqrt_f16(X)
 
 #define BUILTIN_TRUNC_F32 __builtin_truncf
 #define BUILTIN_TRUNC_F64 __builtin_trunc
