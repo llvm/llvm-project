@@ -127,6 +127,10 @@ Non-comprehensive list of changes in this release
   manually and rely on the old behaviour you will need to add appropriate
   compiler flags for finding the corresponding libc++ include directory.
 
+- The integrated assembler is used now by default for all MIPS targets.
+
+- Improved support for MIPS N32 ABI and MIPS R6 target triples.
+
 New Compiler Flags
 ------------------
 
@@ -138,6 +142,10 @@ New Compiler Flags
 
 - When using a custom stack alignment, the ``stackrealign`` attribute is now
   implicitly set on the main function.
+
+- Emission of ``R_MIPS_JALR`` and ``R_MICROMIPS_JALR`` relocations can now
+  be controlled by the ``-mrelax-pic-calls`` and ``-mno-relax-pic-calls``
+  options.
 
 - ...
 
