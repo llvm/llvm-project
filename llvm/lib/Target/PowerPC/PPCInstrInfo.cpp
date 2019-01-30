@@ -3205,9 +3205,9 @@ bool PPCInstrInfo::isRegElgibleForForwarding(const MachineOperand &RegMO,
   }
   assert((&*It) == &DefMI && "DefMI is missing");
 
-  // If DefMI also uses the register to be forwarded, we can only forward it
+  // If DefMI also defines the register to be forwarded, we can only forward it
   // if DefMI is being erased.
-  if (DefMI.readsRegister(Reg, &getRegisterInfo()))
+  if (DefMI.modifiesRegister(Reg, &getRegisterInfo()))
     return KillDefMI;
 
   return true;

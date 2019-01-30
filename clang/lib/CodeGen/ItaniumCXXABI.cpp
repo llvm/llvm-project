@@ -28,7 +28,6 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/StmtCXX.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
@@ -1314,7 +1313,8 @@ bool ItaniumCXXABI::shouldTypeidBeNullChecked(bool IsDeref,
 
 void ItaniumCXXABI::EmitBadTypeidCall(CodeGenFunction &CGF) {
   llvm::Value *Fn = getBadTypeidFn(CGF);
-  CGF.EmitRuntimeCallOrInvoke(Fn).setDoesNotReturn();
+  llvm::CallBase *Call = CGF.EmitRuntimeCallOrInvoke(Fn);
+  Call->setDoesNotReturn();
   CGF.Builder.CreateUnreachable();
 }
 
@@ -1411,7 +1411,8 @@ llvm::Value *ItaniumCXXABI::EmitDynamicCastToVoid(CodeGenFunction &CGF,
 
 bool ItaniumCXXABI::EmitBadCastCall(CodeGenFunction &CGF) {
   llvm::Value *Fn = getBadCastFn(CGF);
-  CGF.EmitRuntimeCallOrInvoke(Fn).setDoesNotReturn();
+  llvm::CallBase *Call = CGF.EmitRuntimeCallOrInvoke(Fn);
+  Call->setDoesNotReturn();
   CGF.Builder.CreateUnreachable();
   return true;
 }

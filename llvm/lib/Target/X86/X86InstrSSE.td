@@ -846,10 +846,11 @@ let Constraints = "$src1 = $dst" in {
 
 multiclass sse12_cvt_s<bits<8> opc, RegisterClass SrcRC, RegisterClass DstRC,
                      SDNode OpNode, X86MemOperand x86memop, PatFrag ld_frag,
-                     string asm, X86FoldableSchedWrite sched> {
+                     string asm, X86FoldableSchedWrite sched,
+                     SchedRead Int2Fpu = ReadDefault> {
   def rr : SI<opc, MRMSrcReg, (outs DstRC:$dst), (ins SrcRC:$src), asm,
                         [(set DstRC:$dst, (OpNode SrcRC:$src))]>,
-                        Sched<[sched]>;
+                        Sched<[sched, Int2Fpu]>;
   def rm : SI<opc, MRMSrcMem, (outs DstRC:$dst), (ins x86memop:$src), asm,
                         [(set DstRC:$dst, (OpNode (ld_frag addr:$src)))]>,
                         Sched<[sched.Folded]>;
@@ -876,7 +877,7 @@ multiclass sse12_vcvt_avx<bits<8> opc, RegisterClass SrcRC, RegisterClass DstRC,
 let hasSideEffects = 0, Predicates = [UseAVX] in {
   def rr : SI<opc, MRMSrcReg, (outs DstRC:$dst), (ins DstRC:$src1, SrcRC:$src),
               !strconcat(asm,"\t{$src, $src1, $dst|$dst, $src1, $src}"), []>,
-              Sched<[sched]>;
+              Sched<[sched, ReadDefault, ReadInt2Fpu]>;
   let mayLoad = 1 in
   def rm : SI<opc, MRMSrcMem, (outs DstRC:$dst),
               (ins DstRC:$src1, x86memop:$src),
@@ -972,16 +973,16 @@ defm CVTTSD2SI64 : sse12_cvt_s<0x2C, FR64, GR64, fp_to_sint, f64mem, loadf64,
                       WriteCvtSD2I>, XD, REX_W;
 defm CVTSI2SS  : sse12_cvt_s<0x2A, GR32, FR32, sint_to_fp, i32mem, loadi32,
                       "cvtsi2ss{l}\t{$src, $dst|$dst, $src}",
-                      WriteCvtI2SS>, XS;
+                      WriteCvtI2SS, ReadInt2Fpu>, XS;
 defm CVTSI642SS : sse12_cvt_s<0x2A, GR64, FR32, sint_to_fp, i64mem, loadi64,
                       "cvtsi2ss{q}\t{$src, $dst|$dst, $src}",
-                      WriteCvtI2SS>, XS, REX_W;
+                      WriteCvtI2SS, ReadInt2Fpu>, XS, REX_W;
 defm CVTSI2SD  : sse12_cvt_s<0x2A, GR32, FR64, sint_to_fp, i32mem, loadi32,
                       "cvtsi2sd{l}\t{$src, $dst|$dst, $src}",
-                      WriteCvtI2SD>, XD;
+                      WriteCvtI2SD, ReadInt2Fpu>, XD;
 defm CVTSI642SD : sse12_cvt_s<0x2A, GR64, FR64, sint_to_fp, i64mem, loadi64,
                       "cvtsi2sd{q}\t{$src, $dst|$dst, $src}",
-                      WriteCvtI2SD>, XD, REX_W;
+                      WriteCvtI2SD, ReadInt2Fpu>, XD, REX_W;
 
 def : InstAlias<"cvttss2si{l}\t{$src, $dst|$dst, $src}",
                 (CVTTSS2SIrr GR32:$dst, FR32:$src), 0, "att">;
@@ -1031,7 +1032,7 @@ let hasSideEffects = 0 in {
                   !if(Is2Addr,
                       !strconcat(asm, "\t{$src2, $dst|$dst, $src2}"),
                       !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
-                  []>, Sched<[sched]>;
+                  []>, Sched<[sched, ReadDefault, ReadInt2Fpu]>;
   let mayLoad = 1 in
   def rm_Int : SI<opc, MRMSrcMem, (outs DstRC:$dst),
                   (ins DstRC:$src1, x86memop:$src2),

@@ -134,6 +134,17 @@ bool WebAssemblyInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       else
         FBB = MI.getOperand(0).getMBB();
       break;
+    case WebAssembly::BR_ON_EXN:
+      if (HaveCond)
+        return true;
+      // If we're running after CFGStackify, we can't optimize further.
+      if (!MI.getOperand(0).isMBB())
+        return true;
+      Cond.push_back(MachineOperand::CreateImm(true));
+      Cond.push_back(MI.getOperand(2));
+      TBB = MI.getOperand(0).getMBB();
+      HaveCond = true;
+      break;
     }
     if (MI.isBarrier())
       break;
@@ -179,9 +190,22 @@ unsigned WebAssemblyInstrInfo::insertBranch(
 
   assert(Cond.size() == 2 && "Expected a flag and a successor block");
 
+  MachineFunction &MF = *MBB.getParent();
+  auto &MRI = MF.getRegInfo();
+  bool IsBrOnExn = Cond[1].isReg() && MRI.getRegClass(Cond[1].getReg()) ==
+                                          &WebAssembly::EXCEPT_REFRegClass;
+
   if (Cond[0].getImm()) {
-    BuildMI(&MBB, DL, get(WebAssembly::BR_IF)).addMBB(TBB).add(Cond[1]);
+    if (IsBrOnExn) {
+      const char *CPPExnSymbol = MF.createExternalSymbolName("__cpp_exception");
+      BuildMI(&MBB, DL, get(WebAssembly::BR_ON_EXN))
+          .addMBB(TBB)
+          .addExternalSymbol(CPPExnSymbol, WebAssemblyII::MO_SYMBOL_EVENT)
+          .add(Cond[1]);
+    } else
+      BuildMI(&MBB, DL, get(WebAssembly::BR_IF)).addMBB(TBB).add(Cond[1]);
   } else {
+    assert(!IsBrOnExn && "br_on_exn does not have a reversed condition");
     BuildMI(&MBB, DL, get(WebAssembly::BR_UNLESS)).addMBB(TBB).add(Cond[1]);
   }
   if (!FBB)
@@ -193,7 +217,15 @@ unsigned WebAssemblyInstrInfo::insertBranch(
 
 bool WebAssemblyInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
-  assert(Cond.size() == 2 && "Expected a flag and a successor block");
+  assert(Cond.size() == 2 && "Expected a flag and a condition expression");
+
+  // br_on_exn's condition cannot be reversed
+  MachineFunction &MF = *Cond[1].getParent()->getParent()->getParent();
+  auto &MRI = MF.getRegInfo();
+  if (Cond[1].isReg() &&
+      MRI.getRegClass(Cond[1].getReg()) == &WebAssembly::EXCEPT_REFRegClass)
+    return true;
+
   Cond.front() = MachineOperand::CreateImm(!Cond.front().getImm());
   return false;
 }

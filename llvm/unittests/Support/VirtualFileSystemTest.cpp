@@ -776,7 +776,7 @@ TEST(ProxyFileSystemTest, Basic) {
 
   bool Local = true;
   ASSERT_FALSE(PFS.isLocal("/a", Local));
-  ASSERT_EQ(false, Local);
+  EXPECT_FALSE(Local);
 }
 
 class InMemoryFileSystemTest : public ::testing::Test {

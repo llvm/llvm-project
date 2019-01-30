@@ -1456,6 +1456,36 @@ void SelectionDAGBuilder::visitCleanupPad(const CleanupPadInst &CPI) {
   }
 }
 
+// For wasm, there's alwyas a single catch pad attached to a catchswitch, and
+// the control flow always stops at the single catch pad, as it does for a
+// cleanup pad. In case the exception caught is not of the types the catch pad
+// catches, it will be rethrown by a rethrow.
+static void findWasmUnwindDestinations(
+    FunctionLoweringInfo &FuncInfo, const BasicBlock *EHPadBB,
+    BranchProbability Prob,
+    SmallVectorImpl<std::pair<MachineBasicBlock *, BranchProbability>>
+        &UnwindDests) {
+  while (EHPadBB) {
+    const Instruction *Pad = EHPadBB->getFirstNonPHI();
+    if (isa<CleanupPadInst>(Pad)) {
+      // Stop on cleanup pads.
+      UnwindDests.emplace_back(FuncInfo.MBBMap[EHPadBB], Prob);
+      UnwindDests.back().first->setIsEHScopeEntry();
+      break;
+    } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Pad)) {
+      // Add the catchpad handlers to the possible destinations. We don't
+      // continue to the unwind destination of the catchswitch for wasm.
+      for (const BasicBlock *CatchPadBB : CatchSwitch->handlers()) {
+        UnwindDests.emplace_back(FuncInfo.MBBMap[CatchPadBB], Prob);
+        UnwindDests.back().first->setIsEHScopeEntry();
+      }
+      break;
+    } else {
+      continue;
+    }
+  }
+}
+
 /// When an invoke or a cleanupret unwinds to the next EH pad, there are
 /// many places it could ultimately go. In the IR, we have a single unwind
 /// destination, but in the machine CFG, we enumerate all the possible blocks.
@@ -1476,6 +1506,11 @@ static void findUnwindDestinations(
   bool IsWasmCXX = Personality == EHPersonality::Wasm_CXX;
   bool IsSEH = isAsynchronousEHPersonality(Personality);
 
+  if (IsWasmCXX) {
+    findWasmUnwindDestinations(FuncInfo, EHPadBB, Prob, UnwindDests);
+    return;
+  }
+
   while (EHPadBB) {
     const Instruction *Pad = EHPadBB->getFirstNonPHI();
     BasicBlock *NewEHPadBB = nullptr;
@@ -1488,8 +1523,7 @@ static void findUnwindDestinations(
       // personalities.
       UnwindDests.emplace_back(FuncInfo.MBBMap[EHPadBB], Prob);
       UnwindDests.back().first->setIsEHScopeEntry();
-      if (!IsWasmCXX)
-        UnwindDests.back().first->setIsEHFuncletEntry();
+      UnwindDests.back().first->setIsEHFuncletEntry();
       break;
     } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Pad)) {
       // Add the catchpad handlers to the possible destinations.

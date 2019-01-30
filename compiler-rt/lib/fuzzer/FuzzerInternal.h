@@ -89,7 +89,6 @@ public:
                                bool DuringInitialCorpusExecution);
 
   void HandleMalloc(size_t Size);
-  void AnnounceOutput(const uint8_t *Data, size_t Size);
 
 private:
   void AlarmCallback();

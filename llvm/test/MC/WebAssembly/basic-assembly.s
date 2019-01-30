@@ -71,11 +71,18 @@ test0:
     i32.trunc_f32_s
     try         except_ref
 .LBB0_3:
-    i32.catch   0
+    catch
+    local.set 0
+    block       i32
+    local.get 0
+    br_on_exn 0, __cpp_exception@EVENT
+    rethrow
 .LBB0_4:
-    catch_all
-.LBB0_5:
+    end_block
     end_try
+    i32.const 0
+    throw 0
+.LBB0_5:
     #i32.trunc_sat_f32_s
     global.get  __stack_pointer@GLOBAL
     end_function
@@ -143,11 +150,18 @@ test0:
 # CHECK-NEXT:      i32.trunc_f32_s
 # CHECK-NEXT:      try         except_ref
 # CHECK-NEXT:  .LBB0_3:
-# CHECK-NEXT:      i32.catch   0
+# CHECK-NEXT:      catch
+# CHECK-NEXT:      local.set 0
+# CHECK-NEXT:      block       i32
+# CHECK-NEXT:      local.get 0
+# CHECK-NEXT:      br_on_exn 0, __cpp_exception@EVENT
+# CHECK-NEXT:      rethrow
 # CHECK-NEXT:  .LBB0_4:
-# CHECK-NEXT:      catch_all
-# CHECK-NEXT:  .LBB0_5:
+# CHECK-NEXT:      end_block
 # CHECK-NEXT:      end_try
+# CHECK-NEXT:      i32.const 0
+# CHECK-NEXT:      throw 0
+# CHECK-NEXT:  .LBB0_5:
 # CHECK-NEXT:      global.get  __stack_pointer@GLOBAL
 # CHECK-NEXT:      end_function
 

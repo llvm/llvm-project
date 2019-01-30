@@ -567,9 +567,12 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       ast_typedef = ast_typedef.AddVolatileModifier();
 
     GetDeclarationForSymbol(type, decl);
+    llvm::Optional<uint64_t> size;
+    if (type_def->getLength())
+      size = type_def->getLength();
     return std::make_shared<lldb_private::Type>(
         type_def->getSymIndexId(), m_ast.GetSymbolFile(), ConstString(name),
-        type_def->getLength(), nullptr, target_type->GetID(),
+        size, nullptr, target_type->GetID(),
         lldb_private::Type::eEncodingIsTypedefUID, decl, ast_typedef,
         lldb_private::Type::eResolveStateFull);
   } break;
@@ -636,16 +639,19 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
 
     GetDeclarationForSymbol(type, decl);
     return std::make_shared<lldb_private::Type>(
-        type.getSymIndexId(), m_ast.GetSymbolFile(), ConstString(name), 0,
-        nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
-        func_sig_ast_type, lldb_private::Type::eResolveStateFull);
+        type.getSymIndexId(), m_ast.GetSymbolFile(), ConstString(name),
+        llvm::None, nullptr, LLDB_INVALID_UID,
+        lldb_private::Type::eEncodingIsUID, decl, func_sig_ast_type,
+        lldb_private::Type::eResolveStateFull);
   } break;
   case PDB_SymType::ArrayType: {
     auto array_type = llvm::dyn_cast<PDBSymbolTypeArray>(&type);
     assert(array_type);
     uint32_t num_elements = array_type->getCount();
     uint32_t element_uid = array_type->getElementTypeId();
-    uint32_t bytes = array_type->getLength();
+    llvm::Optional<uint64_t> bytes;
+    if (uint64_t size = array_type->getLength())
+      bytes = size;
 
     // If array rank > 0, PDB gives the element type at N=0. So element type
     // will parsed in the order N=0, N=1,..., N=rank sequentially.
@@ -681,10 +687,12 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (builtin_kind == PDB_BuiltinType::None)
       return nullptr;
 
-    uint64_t bytes = builtin_type->getLength();
+    llvm::Optional<uint64_t> bytes;
+    if (uint64_t size = builtin_type->getLength())
+      bytes = size;
     Encoding encoding = TranslateBuiltinEncoding(builtin_kind);
     CompilerType builtin_ast_type = GetBuiltinTypeForPDBEncodingAndBitSize(
-        m_ast, *builtin_type, encoding, bytes * 8);
+        m_ast, *builtin_type, encoding, bytes.getValueOr(0) * 8);
 
     if (builtin_type->isConstType())
       builtin_ast_type = builtin_ast_type.AddConstModifier();

@@ -203,40 +203,6 @@ public:
   }
 };
 
-/// Encapsulates the retain count semantics on the arguments, return value,
-/// and receiver (if any) of a function/method call.
-///
-/// Note that construction of these objects is not highly efficient.  That
-/// is okay for clients where creating these objects isn't really a bottleneck.
-/// The purpose of the API is to provide something simple.  The actual
-/// static analyzer checker that implements retain/release typestate
-/// tracking uses something more efficient.
-class CallEffects {
-  llvm::SmallVector<ArgEffect, 10> Args;
-  RetEffect Ret;
-  ArgEffect Receiver;
-
-  CallEffects(const RetEffect &R,
-              ArgEffect Receiver = ArgEffect(DoNothing, ObjKind::AnyObj))
-      : Ret(R), Receiver(Receiver) {}
-
-public:
-  /// Returns the argument effects for a call.
-  ArrayRef<ArgEffect> getArgs() const { return Args; }
-
-  /// Returns the effects on the receiver.
-  ArgEffect getReceiver() const { return Receiver; }
-
-  /// Returns the effect on the return value.
-  RetEffect getReturnValue() const { return Ret; }
-
-  /// Return the CallEfect for a given Objective-C method.
-  static CallEffects getEffect(const ObjCMethodDecl *MD);
-
-  /// Return the CallEfect for a given C/C++ function.
-  static CallEffects getEffect(const FunctionDecl *FD);
-};
-
 /// A key identifying a summary.
 class ObjCSummaryKey {
   IdentifierInfo* II;
@@ -378,6 +344,8 @@ public:
   /// \return the effect on the "this" receiver of the method call.
   /// This is only meaningful if the summary applies to CXXMethodDecl*.
   ArgEffect getThisEffect() const { return This; }
+
+  ArgEffect getDefaultEffect() const { return DefaultArgEffect; }
 
   /// Set the effect of the method on "this".
   void setThisEffect(ArgEffect e) { This = e; }
@@ -687,12 +655,16 @@ public:
   /// implementation (that is, everything about it is inlineable).
   static bool isKnownSmartPointer(QualType QT);
 
-  bool isTrustedReferenceCountImplementation(const FunctionDecl *FD);
+  bool isTrustedReferenceCountImplementation(const Decl *FD);
 
   const RetainSummary *getSummary(AnyCall C,
-                                  bool HasNonZeroCallbackArg,
-                                  bool IsReceiverUnconsumedSelf,
-                                  QualType ReceiverType=QualType());
+                                  bool HasNonZeroCallbackArg=false,
+                                  bool IsReceiverUnconsumedSelf=false,
+                                  QualType ReceiverType={});
+
+  RetEffect getObjAllocRetEffect() const { return ObjCAllocRetE; }
+
+private:
 
   /// getMethodSummary - This version of getMethodSummary is used to query
   ///  the summary for the current method being analyzed.
@@ -700,9 +672,6 @@ public:
 
   const RetainSummary *getFunctionSummary(const FunctionDecl *FD);
 
-  RetEffect getObjAllocRetEffect() const { return ObjCAllocRetE; }
-
-private:
   const RetainSummary *getMethodSummary(Selector S, const ObjCInterfaceDecl *ID,
                                         const ObjCMethodDecl *MD,
                                         QualType RetTy,
@@ -726,10 +695,25 @@ private:
   void updateSummaryFromAnnotations(const RetainSummary *&Summ,
                                     const FunctionDecl *FD);
 
-  void updateSummaryForCall(const RetainSummary *&Summ,
-                            AnyCall C,
-                            bool HasNonZeroCallbackArg,
-                            bool IsReceiverUnconsumedSelf);
+  const RetainSummary *updateSummaryForNonZeroCallbackArg(const RetainSummary *S,
+                                                          AnyCall &C);
+
+  /// Special case '[super init];' and '[self init];'
+  ///
+  /// Even though calling '[super init]' without assigning the result to self
+  /// and checking if the parent returns 'nil' is a bad pattern, it is common.
+  /// Additionally, our Self Init checker already warns about it. To avoid
+  /// overwhelming the user with messages from both checkers, we model the case
+  /// of '[super init]' in cases when it is not consumed by another expression
+  /// as if the call preserves the value of 'self'; essentially, assuming it can
+  /// never fail and return 'nil'.
+  /// Note, we don't want to just stop tracking the value since we want the
+  /// RetainCount checker to report leaks and use-after-free if SelfInit checker
+  /// is turned off.
+  void updateSummaryForReceiverUnconsumedSelf(const RetainSummary *&S);
+
+  /// Set argument types for arguments which are not doing anything.
+  void updateSummaryForArgumentTypes(const AnyCall &C, const RetainSummary *&RS);
 
   /// Determine whether a declaration {@code D} of correspondent type (return
   /// type for functions/methods) {@code QT} has any of the given attributes,

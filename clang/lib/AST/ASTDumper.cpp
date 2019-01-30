@@ -297,6 +297,7 @@ namespace  {
     void VisitInitListExpr(const InitListExpr *ILE);
     void VisitBlockExpr(const BlockExpr *Node);
     void VisitOpaqueValueExpr(const OpaqueValueExpr *Node);
+    void Visit(const GenericSelectionExpr::ConstAssociation &A);
     void VisitGenericSelectionExpr(const GenericSelectionExpr *E);
 
     // C++
@@ -1456,28 +1457,21 @@ void ASTDumper::VisitOpaqueValueExpr(const OpaqueValueExpr *Node) {
     dumpStmt(Source);
 }
 
+void ASTDumper::Visit(const GenericSelectionExpr::ConstAssociation &A) {
+  dumpChild([=] {
+    NodeDumper.Visit(A);
+    if (const TypeSourceInfo *TSI = A.getTypeSourceInfo())
+      dumpTypeAsChild(TSI->getType());
+    dumpStmt(A.getAssociationExpr());
+  });
+}
+
 void ASTDumper::VisitGenericSelectionExpr(const GenericSelectionExpr *E) {
-  if (E->isResultDependent())
-    OS << " result_dependent";
   dumpStmt(E->getControllingExpr());
   dumpTypeAsChild(E->getControllingExpr()->getType()); // FIXME: remove
 
   for (const auto &Assoc : E->associations()) {
-    dumpChild([=] {
-      if (const TypeSourceInfo *TSI = Assoc.getTypeSourceInfo()) {
-        OS << "case ";
-        NodeDumper.dumpType(TSI->getType());
-      } else {
-        OS << "default";
-      }
-
-      if (Assoc.isSelected())
-        OS << " selected";
-
-      if (const TypeSourceInfo *TSI = Assoc.getTypeSourceInfo())
-        dumpTypeAsChild(TSI->getType());
-      dumpStmt(Assoc.getAssociationExpr());
-    });
+    Visit(Assoc);
   }
 }
 

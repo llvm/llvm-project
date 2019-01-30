@@ -389,6 +389,7 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef S) {
       .Case("elf32-iamcu", {ELF32LEKind, EM_IAMCU})
       .Case("elf32-littlearm", {ELF32LEKind, EM_ARM})
       .Case("elf32-x86-64", {ELF32LEKind, EM_X86_64})
+      .Case("elf64-aarch64", {ELF64LEKind, EM_AARCH64})
       .Case("elf64-littleaarch64", {ELF64LEKind, EM_AARCH64})
       .Case("elf64-powerpc", {ELF64BEKind, EM_PPC64})
       .Case("elf64-powerpcle", {ELF64LEKind, EM_PPC64})
@@ -407,11 +408,14 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef S) {
 void ScriptParser::readOutputFormat() {
   expect("(");
 
-  StringRef S = unquote(next());
+  StringRef Name = unquote(next());
+  StringRef S = Name;
+  if (S.consume_back("-freebsd"))
+    Config->OSABI = ELFOSABI_FREEBSD;
 
   std::tie(Config->EKind, Config->EMachine) = parseBfdName(S);
   if (Config->EMachine == EM_NONE)
-    setError("unknown output format name: " + S);
+    setError("unknown output format name: " + Name);
   if (S == "elf32-ntradlittlemips" || S == "elf32-ntradbigmips")
     Config->MipsN32Abi = true;
 

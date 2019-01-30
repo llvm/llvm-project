@@ -27,6 +27,10 @@ struct OSMetaClassBase {
 
   virtual void retain() const;
   virtual void release() const;
+
+  virtual void taggedRetain(const void * tag = nullptr) const;
+  virtual void taggedRelease(const void * tag = nullptr) const;
+
   virtual void free();
   virtual ~OSMetaClassBase(){};
 };

@@ -43,8 +43,6 @@ EXT_FUNC(__sanitizer_get_module_and_offset_for_pc, int,
          size_t module_path_len,void **pc_offset), false);
 EXT_FUNC(__sanitizer_set_death_callback, void, (void (*)(void)), true);
 EXT_FUNC(__sanitizer_set_report_fd, void, (void*), false);
-EXT_FUNC(__sanitizer_dump_coverage, void, (const uintptr_t *, uintptr_t),
-         false);
 EXT_FUNC(__msan_scoped_disable_interceptor_checks, void, (), false);
 EXT_FUNC(__msan_scoped_enable_interceptor_checks, void, (), false);
 EXT_FUNC(__msan_unpoison, void, (const volatile void *, size_t size), false);

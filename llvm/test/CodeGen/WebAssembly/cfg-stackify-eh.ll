@@ -7,21 +7,25 @@ target triple = "wasm32-unknown-unknown"
 @_ZTId = external constant i8*
 
 ; Simple test case with two catch clauses
+; void test0() {
+;   try {
+;     foo();
+;   } catch (int n) {
+;     bar();
+;   } catch (double d) {
+;   }
+; }
 
 ; CHECK-LABEL: test0
+; CHECK:   try
 ; CHECK:   call      foo@FUNCTION
-; CHECK: .LBB0_1:
-; CHECK:   i32.catch
+; CHECK:   catch     $[[EXCEPT_REF:[0-9]+]]=
+; CHECK:   block i32
+; CHECK:   br_on_exn 0, __cpp_exception@EVENT, $[[EXCEPT_REF]]
+; CHECK:   rethrow
+; CHECK:   end_block
 ; CHECK:   i32.call  $drop=, _Unwind_CallPersonality@FUNCTION
-; CHECK:   i32.call  $drop=, __cxa_begin_catch@FUNCTION
-; CHECK:   call      bar@FUNCTION
-; CHECK:   call      __cxa_end_catch@FUNCTION
-; CHECK: .LBB0_3:
-; CHECK:   i32.call  $drop=, __cxa_begin_catch@FUNCTION
-; CHECK:   call      __cxa_end_catch@FUNCTION
-; CHECK: .LBB0_5:
-; CHECK:   call      __cxa_rethrow@FUNCTION
-; CHECK: .LBB0_6:
+; CHECK:   end_try
 ; CHECK:   return
 define void @test0() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
@@ -68,39 +72,45 @@ try.cont:                                         ; preds = %entry, %catch, %cat
 }
 
 ; Nested try-catches within a catch
+; void test1() {
+;   try {
+;     foo();
+;   } catch (int n) {
+;     try {
+;       foo();
+;     } catch (int n) {
+;       foo();
+;     }
+;   }
+; }
 
 ; CHECK-LABEL: test1
+; CHECK:   try
 ; CHECK:   call      foo@FUNCTION
-; CHECK: .LBB1_1:
-; CHECK:   i32.catch     $0=, 0
-; CHECK:   i32.call  $drop=, _Unwind_CallPersonality@FUNCTION, $0
-; CHECK:   i32.call  $drop=, __cxa_begin_catch@FUNCTION, $0
+; CHECK:   catch
+; CHECK:   br_on_exn 0, __cpp_exception@EVENT
+; CHECK:   rethrow
+; CHECK:   i32.call  $drop=, _Unwind_CallPersonality@FUNCTION
+; CHECK:   try
 ; CHECK:   call      foo@FUNCTION
-; CHECK: .LBB1_3:
-; CHECK:   i32.catch     $0=, 0
-; CHECK:   i32.call  $drop=, _Unwind_CallPersonality@FUNCTION, $0
-; CHECK:   i32.call  $drop=, __cxa_begin_catch@FUNCTION, $0
+; CHECK:   catch
+; CHECK:   br_on_exn   0, __cpp_exception@EVENT
+; CHECK:   rethrow
+; CHECK:   i32.call  $drop=, _Unwind_CallPersonality@FUNCTION
+; CHECK:   try
+; CHECK:   i32.call  $drop=, __cxa_begin_catch@FUNCTION
+; CHECK:   try
 ; CHECK:   call      foo@FUNCTION
-; CHECK: .LBB1_5:
-; CHECK:   catch_all
-; CHECK:   call      __cxa_end_catch@FUNCTION
+; CHECK:   catch     $drop=
 ; CHECK:   rethrow
-; CHECK: .LBB1_6:
-; CHECK:   call      __cxa_rethrow@FUNCTION
+; CHECK:   end_try
+; CHECK:   catch     $drop=
 ; CHECK:   rethrow
-; CHECK: .LBB1_7:
-; CHECK:   call      __cxa_end_catch@FUNCTION
-; CHECK: .LBB1_8:
-; CHECK:   catch_all
-; CHECK:   call      __cxa_end_catch@FUNCTION
-; CHECK: .LBB1_9:
-; CHECK:   call      __cxa_rethrow@FUNCTION
-; CHECK:   rethrow
-; CHECK: .LBB1_10:
-; CHECK:   call      __cxa_end_catch@FUNCTION
-; CHECK: .LBB1_11:
+; CHECK:   end_try
+; CHECK:   end_try
+; CHECK:   end_try
 ; CHECK:   return
-define hidden void @test1() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test1() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   invoke void @foo()
           to label %try.cont11 unwind label %catch.dispatch
@@ -175,30 +185,38 @@ unreachable:                                      ; preds = %rethrow5
 }
 
 ; Nested loop within a catch clause
+; void test2() {
+;   try {
+;     foo();
+;   } catch (...) {
+;     for (int i = 0; i < 50; i++)
+;       foo();
+;   }
+; }
 
 ; CHECK-LABEL: test2
+; CHECK:   try
 ; CHECK:   call      foo@FUNCTION
-; CHECK: .LBB2_1:
-; CHECK:   i32.catch
-; CHECK:   i32.call  $drop=, __cxa_begin_catch@FUNCTION
-; CHECK: .LBB2_2:
+; CHECK:   catch
+; CHECK:   br_on_exn   0, __cpp_exception@EVENT
+; CHECK:   rethrow
+; CHECK:   loop
+; CHECK:   try
 ; CHECK:   call      foo@FUNCTION
-; CHECK: .LBB2_4:
-; CHECK:   catch_all
+; CHECK:   catch     $drop=
+; CHECK:   try
 ; CHECK:   call      __cxa_end_catch@FUNCTION
-; CHECK: .LBB2_5:
-; CHECK:   i32.catch
+; CHECK:   catch
+; CHECK:   br_on_exn   0, __cpp_exception@EVENT
+; CHECK:   call      __clang_call_terminate@FUNCTION, 0
+; CHECK:   unreachable
 ; CHECK:   call      __clang_call_terminate@FUNCTION
 ; CHECK:   unreachable
-; CHECK: .LBB2_6:
-; CHECK:   catch_all
-; CHECK:   call      _ZSt9terminatev@FUNCTION
-; CHECK:   unreachable
-; CHECK: .LBB2_7:
+; CHECK:   end_try
 ; CHECK:   rethrow
-; CHECK: .LBB2_8:
-; CHECK:   call      __cxa_end_catch@FUNCTION
-; CHECK: .LBB2_10:
+; CHECK:   end_try
+; CHECK:   end_loop
+; CHECK:   end_try
 ; CHECK:   return
 define void @test2() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:

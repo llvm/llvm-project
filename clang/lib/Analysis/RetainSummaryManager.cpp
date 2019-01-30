@@ -145,7 +145,7 @@ static bool isSubclass(const Decl *D,
 }
 
 static bool isOSObjectSubclass(const Decl *D) {
-  return isSubclass(D, "OSMetaClassBase");
+  return D && isSubclass(D, "OSMetaClassBase");
 }
 
 static bool isOSObjectDynamicCast(StringRef S) {
@@ -154,6 +154,15 @@ static bool isOSObjectDynamicCast(StringRef S) {
 
 static bool isOSObjectThisCast(StringRef S) {
   return S == "metaCast";
+}
+
+
+static bool isOSObjectPtr(QualType QT) {
+  return isOSObjectSubclass(QT->getPointeeCXXRecordDecl());
+}
+
+static bool isISLObjectRef(QualType Ty) {
+  return StringRef(Ty.getAsString()).startswith("isl_");
 }
 
 static bool isOSIteratorSubclass(const Decl *D) {
@@ -242,10 +251,10 @@ RetainSummaryManager::getSummaryForOSObject(const FunctionDecl *FD,
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
     const CXXRecordDecl *Parent = MD->getParent();
     if (TrackOSObjects && Parent && isOSObjectSubclass(Parent)) {
-      if (FName == "release")
+      if (FName == "release" || FName == "taggedRelease")
         return getOSSummaryReleaseRule(FD);
 
-      if (FName == "retain")
+      if (FName == "retain" || FName == "taggedRetain")
         return getOSSummaryRetainRule(FD);
 
       if (FName == "free")
@@ -557,63 +566,78 @@ static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {
   llvm_unreachable("Unknown ArgEffect kind");
 }
 
-void RetainSummaryManager::updateSummaryForCall(const RetainSummary *&S,
-                                                AnyCall C,
-                                                bool HasNonZeroCallbackArg,
-                                                bool IsReceiverUnconsumedSelf) {
+const RetainSummary *
+RetainSummaryManager::updateSummaryForNonZeroCallbackArg(const RetainSummary *S,
+                                                         AnyCall &C) {
+  ArgEffect RecEffect = getStopTrackingHardEquivalent(S->getReceiverEffect());
+  ArgEffect DefEffect = getStopTrackingHardEquivalent(S->getDefaultArgEffect());
 
-  if (HasNonZeroCallbackArg) {
-    ArgEffect RecEffect =
-      getStopTrackingHardEquivalent(S->getReceiverEffect());
-    ArgEffect DefEffect =
-      getStopTrackingHardEquivalent(S->getDefaultArgEffect());
-
-    ArgEffects ScratchArgs(AF.getEmptyMap());
-    ArgEffects CustomArgEffects = S->getArgEffects();
-    for (ArgEffects::iterator I = CustomArgEffects.begin(),
-                              E = CustomArgEffects.end();
-         I != E; ++I) {
-      ArgEffect Translated = getStopTrackingHardEquivalent(I->second);
-      if (Translated.getKind() != DefEffect.getKind())
-        ScratchArgs = AF.add(ScratchArgs, I->first, Translated);
-    }
-
-    RetEffect RE = RetEffect::MakeNoRetHard();
-
-    // Special cases where the callback argument CANNOT free the return value.
-    // This can generally only happen if we know that the callback will only be
-    // called when the return value is already being deallocated.
-    if (C.getKind() == AnyCall::Function) {
-      if (const IdentifierInfo *Name = C.getIdentifier()) {
-        // When the CGBitmapContext is deallocated, the callback here will free
-        // the associated data buffer.
-        // The callback in dispatch_data_create frees the buffer, but not
-        // the data object.
-        if (Name->isStr("CGBitmapContextCreateWithData") ||
-            Name->isStr("dispatch_data_create"))
-          RE = S->getRetEffect();
-      }
-    }
-
-    S = getPersistentSummary(RE, ScratchArgs, RecEffect, DefEffect);
+  ArgEffects ScratchArgs(AF.getEmptyMap());
+  ArgEffects CustomArgEffects = S->getArgEffects();
+  for (ArgEffects::iterator I = CustomArgEffects.begin(),
+                            E = CustomArgEffects.end();
+       I != E; ++I) {
+    ArgEffect Translated = getStopTrackingHardEquivalent(I->second);
+    if (Translated.getKind() != DefEffect.getKind())
+      ScratchArgs = AF.add(ScratchArgs, I->first, Translated);
   }
 
-  // Special case '[super init];' and '[self init];'
-  //
-  // Even though calling '[super init]' without assigning the result to self
-  // and checking if the parent returns 'nil' is a bad pattern, it is common.
-  // Additionally, our Self Init checker already warns about it. To avoid
-  // overwhelming the user with messages from both checkers, we model the case
-  // of '[super init]' in cases when it is not consumed by another expression
-  // as if the call preserves the value of 'self'; essentially, assuming it can
-  // never fail and return 'nil'.
-  // Note, we don't want to just stop tracking the value since we want the
-  // RetainCount checker to report leaks and use-after-free if SelfInit checker
-  // is turned off.
-  if (IsReceiverUnconsumedSelf) {
-    RetainSummaryTemplate ModifiableSummaryTemplate(S, *this);
-    ModifiableSummaryTemplate->setReceiverEffect(ArgEffect(DoNothing));
-    ModifiableSummaryTemplate->setRetEffect(RetEffect::MakeNoRet());
+  RetEffect RE = RetEffect::MakeNoRetHard();
+
+  // Special cases where the callback argument CANNOT free the return value.
+  // This can generally only happen if we know that the callback will only be
+  // called when the return value is already being deallocated.
+  if (const IdentifierInfo *Name = C.getIdentifier()) {
+    // When the CGBitmapContext is deallocated, the callback here will free
+    // the associated data buffer.
+    // The callback in dispatch_data_create frees the buffer, but not
+    // the data object.
+    if (Name->isStr("CGBitmapContextCreateWithData") ||
+        Name->isStr("dispatch_data_create"))
+      RE = S->getRetEffect();
+  }
+
+  return getPersistentSummary(RE, ScratchArgs, RecEffect, DefEffect);
+}
+
+void RetainSummaryManager::updateSummaryForReceiverUnconsumedSelf(
+    const RetainSummary *&S) {
+
+  RetainSummaryTemplate Template(S, *this);
+
+  Template->setReceiverEffect(ArgEffect(DoNothing));
+  Template->setRetEffect(RetEffect::MakeNoRet());
+}
+
+
+void RetainSummaryManager::updateSummaryForArgumentTypes(
+  const AnyCall &C, const RetainSummary *&RS) {
+  RetainSummaryTemplate Template(RS, *this);
+
+  unsigned parm_idx = 0;
+  for (auto pi = C.param_begin(), pe = C.param_end(); pi != pe;
+       ++pi, ++parm_idx) {
+    QualType QT = (*pi)->getType();
+
+    // Skip already created values.
+    if (RS->getArgEffects().contains(parm_idx))
+      continue;
+
+    ObjKind K = ObjKind::AnyObj;
+
+    if (isISLObjectRef(QT)) {
+      K = ObjKind::Generalized;
+    } else if (isOSObjectPtr(QT)) {
+      K = ObjKind::OS;
+    } else if (cocoa::isCocoaObjectRef(QT)) {
+      K = ObjKind::ObjC;
+    } else if (coreFoundation::isCFObjectRef(QT)) {
+      K = ObjKind::CF;
+    }
+
+    if (K != ObjKind::AnyObj)
+      Template->addArg(AF, parm_idx,
+                       ArgEffect(RS->getDefaultArgEffect().getKind(), K));
   }
 }
 
@@ -635,17 +659,25 @@ RetainSummaryManager::getSummary(AnyCall C,
     // FIXME: These calls are currently unsupported.
     return getPersistentStopSummary();
   case AnyCall::ObjCMethod: {
-    const auto *ME = cast<ObjCMessageExpr>(C.getExpr());
-    if (ME->isInstanceMessage())
+    const auto *ME = cast_or_null<ObjCMessageExpr>(C.getExpr());
+    if (!ME) {
+      Summ = getMethodSummary(cast<ObjCMethodDecl>(C.getDecl()));
+    } else if (ME->isInstanceMessage()) {
       Summ = getInstanceMethodSummary(ME, ReceiverType);
-    else
+    } else {
       Summ = getClassMethodSummary(ME);
+    }
     break;
   }
   }
 
-  updateSummaryForCall(Summ, C, HasNonZeroCallbackArg,
-                       IsReceiverUnconsumedSelf);
+  if (HasNonZeroCallbackArg)
+    Summ = updateSummaryForNonZeroCallbackArg(Summ, C);
+
+  if (IsReceiverUnconsumedSelf)
+    updateSummaryForReceiverUnconsumedSelf(Summ);
+
+  updateSummaryForArgumentTypes(C, Summ);
 
   assert(Summ && "Unknown call type?");
   return Summ;
@@ -661,7 +693,7 @@ RetainSummaryManager::getCFCreateGetRuleSummary(const FunctionDecl *FD) {
 }
 
 bool RetainSummaryManager::isTrustedReferenceCountImplementation(
-    const FunctionDecl *FD) {
+    const Decl *FD) {
   return hasRCAnnotation(FD, "rc_ownership_trusted_implementation");
 }
 
@@ -1237,32 +1269,4 @@ RetainSummaryManager::getMethodSummary(const ObjCMethodDecl *MD) {
     CachedSummaries = &ObjCClassMethodSummaries;
 
   return getMethodSummary(S, ID, MD, ResultTy, *CachedSummaries);
-}
-
-CallEffects CallEffects::getEffect(const ObjCMethodDecl *MD) {
-  ASTContext &Ctx = MD->getASTContext();
-  RetainSummaryManager M(Ctx,
-                         /*TrackNSAndCFObjects=*/true,
-                         /*TrackOSObjects=*/false);
-  const RetainSummary *S = M.getMethodSummary(MD);
-  CallEffects CE(S->getRetEffect(), S->getReceiverEffect());
-  unsigned N = MD->param_size();
-  for (unsigned i = 0; i < N; ++i) {
-    CE.Args.push_back(S->getArg(i));
-  }
-  return CE;
-}
-
-CallEffects CallEffects::getEffect(const FunctionDecl *FD) {
-  ASTContext &Ctx = FD->getASTContext();
-  RetainSummaryManager M(Ctx,
-                         /*TrackNSAndCFObjects=*/true,
-                         /*TrackOSObjects=*/false);
-  const RetainSummary *S = M.getFunctionSummary(FD);
-  CallEffects CE(S->getRetEffect());
-  unsigned N = FD->param_size();
-  for (unsigned i = 0; i < N; ++i) {
-    CE.Args.push_back(S->getArg(i));
-  }
-  return CE;
 }

@@ -3509,7 +3509,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   // to either Separable or Coupled).
   //
   // Next, we consider 1 and 2. The intersection of the GroupLoops is empty.
-  // Next, 1 and 3. The intersectionof their GroupLoops = {2}, not empty,
+  // Next, 1 and 3. The intersection of their GroupLoops = {2}, not empty,
   // so Pair[3].Group = {0, 1, 3} and Done = false.
   //
   // Next, we compare 2 against 3. The intersection of the GroupLoops is empty.
