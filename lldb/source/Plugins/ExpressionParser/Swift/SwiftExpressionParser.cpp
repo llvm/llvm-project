@@ -1056,35 +1056,24 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
                                                     ->GetProcess()
                                                     ->GetSwiftLanguageRuntime();
           if (swift_runtime) {
-            StreamString type_name;
-            if (SwiftLanguageRuntime::GetAbstractTypeName(type_name, swift_type))
-              actual_type = swift_runtime->GetConcreteType(
-                  stack_frame_sp.get(), ConstString(type_name.GetString()));
-            if (actual_type.IsValid())
-              variable.SetType(actual_type);
-            else
-              actual_type = variable.GetType();
+            actual_type = swift_runtime->DoArchetypeBindingForType(
+                *stack_frame_sp, actual_type);
           }
         }
       }
 
-      if (stack_frame_sp) {
-        auto *ctx = llvm::cast<SwiftASTContext>(actual_type.GetTypeSystem());
-        actual_type = ctx->MapIntoContext(stack_frame_sp,
-                                          actual_type.GetOpaqueQualType());
-      }
-      swift::Type actual_swift_type = GetSwiftType(actual_type);
-      if (actual_swift_type->hasTypeParameter())
-        actual_swift_type = orig_swift_type;
-
-      swift::Type fixed_type = manipulator.FixupResultType(
-          actual_swift_type, user_expression.GetLanguageFlags());
-
-      if (!fixed_type.isNull()) {
-        actual_type =
-            CompilerType(actual_type.GetTypeSystem(), fixed_type.getPointer());
-        variable.SetType(actual_type);
-      }
+      // Desugar '$lldb_context', etc.
+      auto transformed_type = GetSwiftType(actual_type).transform(
+        [](swift::Type t) -> swift::Type {
+          if (auto *aliasTy = swift::dyn_cast<swift::TypeAliasType>(t.getPointer())) {
+            if (aliasTy && aliasTy->getDecl()->isDebuggerAlias()) {
+              return aliasTy->getSinglyDesugaredType();
+            }
+          }
+          return t;
+      });
+      actual_type.SetCompilerType(actual_type.GetTypeSystem(),
+                                  transformed_type.getPointer());
 
       if (is_result)
         offset = materializer.AddResultVariable(
