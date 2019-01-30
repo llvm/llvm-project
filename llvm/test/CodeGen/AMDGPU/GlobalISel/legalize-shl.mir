@@ -265,3 +265,18 @@ body: |
     %5:_(s32) = G_ANYEXT %4
     $vgpr0 = COPY %5
 ...
+
+---
+name: test_shl_i8_i8
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s8) = G_TRUNC %0
+    %3:_(s8) = G_TRUNC %1
+    %4:_(s8) = G_SHL %2, %3
+    %5:_(s32) = G_ANYEXT %4
+    $vgpr0 = COPY %5
+...

@@ -1703,9 +1703,6 @@ public:
     addAttribute(AttributeList::FunctionIndex, Attribute::ReturnsTwice);
   }
 
-  /// Check if this call is an inline asm statement.
-  bool isInlineAsm() const { return isa<InlineAsm>(getCalledOperand()); }
-
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Call;

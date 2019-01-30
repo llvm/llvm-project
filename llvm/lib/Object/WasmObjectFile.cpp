@@ -1422,8 +1422,8 @@ symbol_iterator WasmObjectFile::getRelocationSymbol(DataRefImpl Ref) const {
   if (Rel.Type == wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB)
     return symbol_end();
   DataRefImpl Sym;
-  Sym.d.a = Rel.Index;
-  Sym.d.b = 0;
+  Sym.d.a = 1;
+  Sym.d.b = Rel.Index;
   return symbol_iterator(SymbolRef(Sym, this));
 }
 

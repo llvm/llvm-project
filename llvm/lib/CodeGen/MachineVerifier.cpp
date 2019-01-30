@@ -1004,6 +1004,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   case TargetOpcode::G_STORE:
   case TargetOpcode::G_ZEXTLOAD:
   case TargetOpcode::G_SEXTLOAD: {
+    LLT ValTy = MRI->getType(MI->getOperand(0).getReg());
     LLT PtrTy = MRI->getType(MI->getOperand(1).getReg());
     if (!PtrTy.isPointer())
       report("Generic memory instruction must access a pointer", MI);
@@ -1014,13 +1015,17 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       report("Generic instruction accessing memory must have one mem operand",
              MI);
     } else {
+      const MachineMemOperand &MMO = **MI->memoperands_begin();
       if (MI->getOpcode() == TargetOpcode::G_ZEXTLOAD ||
           MI->getOpcode() == TargetOpcode::G_SEXTLOAD) {
-        const MachineMemOperand &MMO = **MI->memoperands_begin();
-        LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
-        if (MMO.getSize() * 8 >= DstTy.getSizeInBits()) {
+        if (MMO.getSize() * 8 >= ValTy.getSizeInBits())
           report("Generic extload must have a narrower memory type", MI);
-        }
+      } else if (MI->getOpcode() == TargetOpcode::G_LOAD) {
+        if (MMO.getSize() > (ValTy.getSizeInBits() + 7) / 8)
+          report("load memory size cannot exceed result size", MI);
+      } else if (MI->getOpcode() == TargetOpcode::G_STORE) {
+        if ((ValTy.getSizeInBits() + 7) / 8 < MMO.getSize())
+          report("store memory size cannot exceed value size", MI);
       }
     }
 
@@ -1054,6 +1059,50 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
 
     if (SrcTy.getSizeInBits() != DstTy.getSizeInBits())
       report("bitcast sizes must match", MI);
+    break;
+  }
+  case TargetOpcode::G_INTTOPTR:
+  case TargetOpcode::G_PTRTOINT:
+  case TargetOpcode::G_ADDRSPACE_CAST: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    if (!DstTy.isValid() || !SrcTy.isValid())
+      break;
+
+    if (DstTy.isVector() != SrcTy.isVector())
+      report("pointer casts must be all-vector or all-scalar", MI);
+    else {
+      if (DstTy.isVector() ) {
+        if (DstTy.getNumElements() != SrcTy.getNumElements()) {
+          report("pointer casts must preserve number of elements", MI);
+          break;
+        }
+      }
+    }
+
+    DstTy = DstTy.getScalarType();
+    SrcTy = SrcTy.getScalarType();
+
+    if (MI->getOpcode() == TargetOpcode::G_INTTOPTR) {
+      if (!DstTy.isPointer())
+        report("inttoptr result type must be a pointer", MI);
+      if (SrcTy.isPointer())
+        report("inttoptr source type must not be a pointer", MI);
+    } else if (MI->getOpcode() == TargetOpcode::G_PTRTOINT) {
+      if (!SrcTy.isPointer())
+        report("ptrtoint source type must be a pointer", MI);
+      if (DstTy.isPointer())
+        report("ptrtoint result type must not be a pointer", MI);
+    } else {
+      assert(MI->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST);
+      if (!SrcTy.isPointer() || !DstTy.isPointer())
+        report("addrspacecast types must be pointers", MI);
+      else {
+        if (SrcTy.getAddressSpace() == DstTy.getAddressSpace())
+          report("addrspacecast must convert different address spaces", MI);
+      }
+    }
+
     break;
   }
   case TargetOpcode::G_SEXT:

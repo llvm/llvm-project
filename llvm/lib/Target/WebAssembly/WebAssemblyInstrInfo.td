@@ -66,7 +66,7 @@ def SDT_WebAssemblyArgument : SDTypeProfile<1, 1, [SDTCisVT<1, i32>]>;
 def SDT_WebAssemblyReturn   : SDTypeProfile<0, -1, []>;
 def SDT_WebAssemblyWrapper  : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                    SDTCisPtrTy<0>]>;
-def SDT_WebAssemblyThrow    : SDTypeProfile<0, 2, [SDTCisPtrTy<0>]>;
+def SDT_WebAssemblyThrow    : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Nodes.
@@ -94,7 +94,7 @@ def WebAssemblyreturn   : SDNode<"WebAssemblyISD::RETURN",
 def WebAssemblywrapper  : SDNode<"WebAssemblyISD::Wrapper",
                                  SDT_WebAssemblyWrapper>;
 def WebAssemblythrow : SDNode<"WebAssemblyISD::THROW", SDT_WebAssemblyThrow,
-                              [SDNPHasChain]>;
+                              [SDNPHasChain, SDNPVariadic]>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific Operands.
