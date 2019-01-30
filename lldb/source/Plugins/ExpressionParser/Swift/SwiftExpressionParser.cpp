@@ -1031,7 +1031,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
 
     if (repl) {
       if (swift::Type swift_type = GetSwiftType(variable.GetType())) {
-        if (!swift_type->getCanonicalType()->isVoid()) {
+        if (!swift_type->isVoid()) {
           auto &repl_mat = *llvm::cast<SwiftREPLMaterializer>(&materializer);
           if (is_result)
             offset = repl_mat.AddREPLResultVariable(
