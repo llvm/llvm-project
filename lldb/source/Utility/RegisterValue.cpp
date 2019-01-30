@@ -156,6 +156,7 @@ bool RegisterValue::GetScalarValue(Scalar &scalar) const {
       return true;
     case 16:
     case 32:
+    case 64:
       if (buffer.length % sizeof(uint64_t) == 0) {
         const auto length_in_bits = buffer.length * 8;
         const auto length_in_uint64 = buffer.length / sizeof(uint64_t);
