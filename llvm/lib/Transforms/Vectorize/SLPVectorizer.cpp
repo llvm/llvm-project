@@ -3109,14 +3109,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         }
         if (NeedToShuffleReuses) {
           // TODO: Merge this shuffle with the ReorderShuffleMask.
-          if (!E->ReorderIndices.empty())
+          if (E->ReorderIndices.empty())
             Builder.SetInsertPoint(VL0);
-          else if (auto *I = dyn_cast<Instruction>(V))
-            Builder.SetInsertPoint(I->getParent(),
-                                   std::next(I->getIterator()));
-          else
-            Builder.SetInsertPoint(&F->getEntryBlock(),
-                                   F->getEntryBlock().getFirstInsertionPt());
           V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
                                           E->ReuseShuffleIndices, "shuffle");
         }
