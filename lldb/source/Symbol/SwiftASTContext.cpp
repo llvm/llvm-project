@@ -20,6 +20,7 @@
 
 #include "swift/ABI/MetadataValues.h"
 #include "swift/AST/ASTContext.h"
+#include "swift/AST/ASTDemangler.h"
 #include "swift/AST/ASTMangler.h"
 #include "swift/AST/DebuggerClient.h"
 #include "swift/AST/Decl.h"
@@ -3889,6 +3890,24 @@ void SwiftASTContext::CacheDemangledTypeFailure(const char *name) {
   m_negative_type_cache.Insert(name);
 }
 
+/// The old TypeReconstruction implementation would reconstruct SILFunctionTypes
+/// with one argument T and one result U as an AST FunctionType (T) -> U; anything
+/// with multiple arguments or results was reconstructed as () -> ().
+///
+/// Since this is non-sensical, let's just reconstruct all SILFunctionTypes as
+/// () -> () for now.
+///
+/// What we should really do is only mangle AST types in DebugInfo, but that
+/// requires some more plumbing on the Swift side to properly handle generic
+/// specializations.
+swift::Type convertSILFunctionTypesToASTFunctionTypes(swift::Type t) {
+  return t.transform([](swift::Type t) -> swift::Type {
+    if (auto *silFn = t->getAs<swift::SILFunctionType>())
+      return swift::FunctionType::get({}, t->getASTContext().TheEmptyTupleType);
+    return t;
+  });
+}
+
 CompilerType
 SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
                                             Status &error) {
@@ -3947,12 +3966,12 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
                 "not cached, searching",
                 this, mangled_typename);
 
-  std::string swift_error;
-  found_type = swift::ide::getTypeFromMangledSymbolname(
-                   *ast_ctx, mangled_typename, swift_error)
+  found_type = swift::Demangle::getTypeForMangling(*ast_ctx, mangled_typename)
                    .getPointer();
 
   if (found_type) {
+    found_type = convertSILFunctionTypesToASTFunctionTypes(found_type)
+      .getPointer();
     CacheDemangledType(mangled_name.GetCString(), found_type);
     CompilerType result_type(found_type);
     assert(&found_type->getASTContext() == ast_ctx);
@@ -3964,9 +3983,8 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
     return result_type;
   }
   if (log)
-    log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
-                "-- error: %s",
-                this, mangled_typename, swift_error.c_str());
+    log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s')",
+                this, mangled_typename);
 
   error.SetErrorStringWithFormat("type for typename '%s' was not found",
                                  mangled_typename);
