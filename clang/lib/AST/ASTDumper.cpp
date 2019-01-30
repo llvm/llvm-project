@@ -840,14 +840,6 @@ void ASTDumper::VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D) {
   NodeDumper.dumpDeclRef(D->getPropertyIvarDecl());
 }
 
-void ASTDumper::Visit(const BlockDecl::Capture &C) {
-  dumpChild([=] {
-    NodeDumper.Visit(C);
-    if (C.hasCopyExpr())
-      Visit(C.getCopyExpr());
-  });
-}
-
 void ASTDumper::VisitBlockDecl(const BlockDecl *D) {
   for (const auto &I : D->parameters())
     Visit(I);
