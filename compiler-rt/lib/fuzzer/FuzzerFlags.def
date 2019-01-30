@@ -106,9 +106,7 @@ FUZZER_FLAG_INT(print_corpus_stats, 0,
   "If 1, print statistics on corpus elements at exit.")
 FUZZER_FLAG_INT(print_coverage, 0, "If 1, print coverage information as text"
                                    " at exit.")
-FUZZER_FLAG_INT(dump_coverage, 0, "Deprecated."
-                                  " If 1, dump coverage information as a"
-                                  " .sancov file at exit.")
+FUZZER_FLAG_INT(dump_coverage, 0, "Deprecated.")
 FUZZER_FLAG_INT(handle_segv, 1, "If 1, try to intercept SIGSEGV.")
 FUZZER_FLAG_INT(handle_bus, 1, "If 1, try to intercept SIGBUS.")
 FUZZER_FLAG_INT(handle_abrt, 1, "If 1, try to intercept SIGABRT.")
@@ -147,8 +145,6 @@ FUZZER_FLAG_INT(ignore_remaining_args, 0, "If 1, ignore all arguments passed "
 FUZZER_FLAG_STRING(focus_function, "Experimental. "
      "Fuzzing will focus on inputs that trigger calls to this function")
 
-FUZZER_DEPRECATED_FLAG(run_equivalence_server)
-FUZZER_DEPRECATED_FLAG(use_equivalence_server)
 FUZZER_FLAG_INT(analyze_dict, 0, "Experimental")
 FUZZER_DEPRECATED_FLAG(use_clang_coverage)
 FUZZER_FLAG_STRING(data_flow_trace, "Experimental: use the data flow trace")

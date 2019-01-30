@@ -46,6 +46,8 @@ if config.enable_per_target_runtime_dir:
 else:
   set_default("target_suffix", "-%s" % config.target_arch)
 
+set_default("have_zlib", "@HAVE_LIBZ@")
+
 # LLVM tools dir can be passed in lit parameters, so try to
 # apply substitution.
 try:

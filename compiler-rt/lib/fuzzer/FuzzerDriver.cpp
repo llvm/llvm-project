@@ -15,7 +15,6 @@
 #include "FuzzerInternal.h"
 #include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
-#include "FuzzerShmem.h"
 #include "FuzzerTracePC.h"
 #include <algorithm>
 #include <atomic>
@@ -621,7 +620,6 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.PrintFinalStats = Flags.print_final_stats;
   Options.PrintCorpusStats = Flags.print_corpus_stats;
   Options.PrintCoverage = Flags.print_coverage;
-  Options.DumpCoverage = Flags.dump_coverage;
   if (Flags.exit_on_src_pos)
     Options.ExitOnSrcPos = Flags.exit_on_src_pos;
   if (Flags.exit_on_item)
@@ -672,34 +670,6 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
 
   if (Flags.cleanse_crash)
     return CleanseCrashInput(Args, Options);
-
-#if 0  // deprecated, to be removed.
-  if (auto Name = Flags.run_equivalence_server) {
-    SMR.Destroy(Name);
-    if (!SMR.Create(Name)) {
-       Printf("ERROR: can't create shared memory region\n");
-      return 1;
-    }
-    Printf("INFO: EQUIVALENCE SERVER UP\n");
-    while (true) {
-      SMR.WaitClient();
-      size_t Size = SMR.ReadByteArraySize();
-      SMR.WriteByteArray(nullptr, 0);
-      const Unit tmp(SMR.GetByteArray(), SMR.GetByteArray() + Size);
-      F->ExecuteCallback(tmp.data(), tmp.size());
-      SMR.PostServer();
-    }
-    return 0;
-  }
-
-  if (auto Name = Flags.use_equivalence_server) {
-    if (!SMR.Open(Name)) {
-      Printf("ERROR: can't open shared memory region\n");
-      return 1;
-    }
-    Printf("INFO: EQUIVALENCE CLIENT UP\n");
-  }
-#endif
 
   if (DoPlainRun) {
     Options.SaveArtifacts = false;
