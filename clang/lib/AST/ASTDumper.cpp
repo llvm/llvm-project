@@ -500,6 +500,10 @@ namespace  {
         Visit(I);
     }
 
+    void VisitObjCCompatibleAliasDecl(const ObjCCompatibleAliasDecl *D);
+    void VisitObjCPropertyDecl(const ObjCPropertyDecl *D);
+    void VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D);
+
     void VisitBlockDecl(const BlockDecl *D) {
       for (const auto &I : D->parameters())
         Visit(I);

@@ -1256,7 +1256,7 @@ namespace {
     void writeDump(raw_ostream &OS) const override {}
   
     void writeDumpChildren(raw_ostream &OS) const override {
-      OS << "    dumpAttr(SA->get" << getUpperName() << "());\n";
+      OS << "    Visit(SA->get" << getUpperName() << "());\n";
     }
 
     void writeHasChildren(raw_ostream &OS) const override { OS << "true"; }
