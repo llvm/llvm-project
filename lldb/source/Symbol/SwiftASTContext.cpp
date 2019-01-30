@@ -3890,6 +3890,24 @@ void SwiftASTContext::CacheDemangledTypeFailure(const char *name) {
   m_negative_type_cache.Insert(name);
 }
 
+/// The old TypeReconstruction implementation would reconstruct SILFunctionTypes
+/// with one argument T and one result U as an AST FunctionType (T) -> U; anything
+/// with multiple arguments or results was reconstructed as () -> ().
+///
+/// Since this is non-sensical, let's just reconstruct all SILFunctionTypes as
+/// () -> () for now.
+///
+/// What we should really do is only mangle AST types in DebugInfo, but that
+/// requires some more plumbing on the Swift side to properly handle generic
+/// specializations.
+swift::Type convertSILFunctionTypesToASTFunctionTypes(swift::Type t) {
+  return t.transform([](swift::Type t) -> swift::Type {
+    if (auto *silFn = t->getAs<swift::SILFunctionType>())
+      return swift::FunctionType::get({}, t->getASTContext().TheEmptyTupleType);
+    return t;
+  });
+}
+
 CompilerType
 SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
                                             Status &error) {
@@ -3952,6 +3970,8 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
                    .getPointer();
 
   if (found_type) {
+    found_type = convertSILFunctionTypesToASTFunctionTypes(found_type)
+      .getPointer();
     CacheDemangledType(mangled_name.GetCString(), found_type);
     CompilerType result_type(found_type);
     assert(&found_type->getASTContext() == ast_ctx);
