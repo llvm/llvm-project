@@ -20,6 +20,7 @@
 
 #include "swift/ABI/MetadataValues.h"
 #include "swift/AST/ASTContext.h"
+#include "swift/AST/ASTDemangler.h"
 #include "swift/AST/ASTMangler.h"
 #include "swift/AST/DebuggerClient.h"
 #include "swift/AST/Decl.h"
@@ -516,7 +517,7 @@ public:
                 .getPointer()};
       }
 
-      const bool is_indirect = case_decl->isIndirect() 
+      const bool is_indirect = case_decl->isIndirect()
           || case_decl->getParentEnum()->isIndirect();
 
       if (log)
@@ -1690,7 +1691,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   swift_ast_sp->AddExtraClangArgs(DeserializedArgs);
   // Apply source path remappings found in the module's dSYM.
   swift_ast_sp->RemapClangImporterOptions(module.GetSourceMappingList());
-  
+
   if (!swift_ast_sp->GetClangImporter()) {
     if (log) {
       log->Printf("((Module*)%p) [%s]->GetSwiftASTContext() returning NULL "
@@ -2240,7 +2241,7 @@ struct SDKEnumeratorInfo {
 };
 
 } // anonymous namespace
-  
+
 static bool SDKSupportsSwift(const FileSpec &sdk_path, SDKType desired_type) {
   ConstString last_path_component = sdk_path.GetLastPathComponent();
 
@@ -2698,8 +2699,8 @@ public:
     llvm::SmallString<256> text;
     {
       llvm::raw_svector_ostream out(text);
-      swift::DiagnosticEngine::formatDiagnosticText(out, 
-                                                    formatString, 
+      swift::DiagnosticEngine::formatDiagnosticText(out,
+                                                    formatString,
                                                     formatArgs);
     }
 
@@ -3525,7 +3526,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
       // And then in the various framework search paths.
       std::unordered_set<std::string> seen_paths;
       std::vector<std::string> uniqued_paths;
-      
+
       for (const auto &framework_search_dir :
            swift_module->getASTContext().SearchPathOpts.FrameworkSearchPaths) {
         // The framework search dir as it comes from the AST context
@@ -3542,19 +3543,19 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
           uniqued_paths.push_back(framework_path);
         }
       }
-        
+
       uint32_t token = LLDB_INVALID_IMAGE_TOKEN;
       PlatformSP platform_sp = process.GetTarget().GetPlatform();
-      
+
       Status error;
       FileSpec library_spec(library_name);
       FileSpec found_path;
-      
+
       if (platform_sp)
         token = platform_sp->LoadImageUsingPaths(&process, library_spec,
                                                  uniqued_paths, error,
                                                  &found_path);
-                                                  
+
       if (token != LLDB_INVALID_IMAGE_TOKEN) {
         if (log)
           log->Printf("Found framework at: %s.", framework_path.c_str());
@@ -3678,7 +3679,7 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
   std::unordered_set<std::string> seen_paths;
   Status load_image_error;
   std::vector<std::string> uniqued_paths;
-  
+
   for (const std::string &library_search_dir : search_paths) {
     // The library search dir as it comes from the AST context often
     // has duplicate entries, so lets unique the path list before we
@@ -3694,7 +3695,7 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
   uint32_t token = LLDB_INVALID_IMAGE_TOKEN;
   Status error;
   if (platform_sp)
-    token = platform_sp->LoadImageUsingPaths(&process, library_spec, 
+    token = platform_sp->LoadImageUsingPaths(&process, library_spec,
                                              uniqued_paths,
                                              error,
                                              &found_library);
@@ -3899,6 +3900,24 @@ void SwiftASTContext::CacheDemangledTypeFailure(const char *name) {
   m_negative_type_cache.Insert(name);
 }
 
+/// The old TypeReconstruction implementation would reconstruct SILFunctionTypes
+/// with one argument T and one result U as an AST FunctionType (T) -> U; anything
+/// with multiple arguments or results was reconstructed as () -> ().
+///
+/// Since this is non-sensical, let's just reconstruct all SILFunctionTypes as
+/// () -> () for now.
+///
+/// What we should really do is only mangle AST types in DebugInfo, but that
+/// requires some more plumbing on the Swift side to properly handle generic
+/// specializations.
+swift::Type convertSILFunctionTypesToASTFunctionTypes(swift::Type t) {
+  return t.transform([](swift::Type t) -> swift::Type {
+    if (auto *silFn = t->getAs<swift::SILFunctionType>())
+      return swift::FunctionType::get({}, t->getASTContext().TheEmptyTupleType);
+    return t;
+  });
+}
+
 CompilerType
 SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
                                             Status &error) {
@@ -3957,12 +3976,12 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
                 "not cached, searching",
                 static_cast<void *>(this), mangled_typename);
 
-  std::string swift_error;
-  found_type = swift::ide::getTypeFromMangledSymbolname(
-                   *ast_ctx, mangled_typename, swift_error)
+  found_type = swift::Demangle::getTypeForMangling(*ast_ctx, mangled_typename)
                    .getPointer();
 
   if (found_type) {
+    found_type = convertSILFunctionTypesToASTFunctionTypes(found_type)
+      .getPointer();
     CacheDemangledType(mangled_name.GetCString(), found_type);
     CompilerType result_type(found_type);
     assert(&found_type->getASTContext() == ast_ctx);
@@ -3974,10 +3993,8 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
     return result_type;
   }
   if (log)
-    log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s') "
-                "-- error: %s",
-                static_cast<void *>(this), mangled_typename,
-                swift_error.c_str());
+    log->Printf("((SwiftASTContext*)%p)->GetTypeFromMangledTypename('%s')",
+                this, mangled_typename);
 
   error.SetErrorStringWithFormat("type for typename '%s' was not found",
                                  mangled_typename);
@@ -4626,7 +4643,7 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
   if (!m_ast_context_ap.get()) {
     SymbolFile *sym_file = GetSymbolFile();
     if (sym_file) {
-      ConstString name 
+      ConstString name
               = sym_file->GetObjectFile()->GetModule()->GetObjectName();
       m_fatal_errors.SetErrorStringWithFormat(
                   "Null context for %s.", name.AsCString());
@@ -6512,7 +6529,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
     return {};
 
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-  
+
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {

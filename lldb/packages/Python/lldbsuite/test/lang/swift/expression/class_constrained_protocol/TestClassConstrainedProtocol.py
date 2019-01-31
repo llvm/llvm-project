@@ -17,22 +17,27 @@ class TestClassConstrainedProtocol(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @decorators.swiftTest
     @expectedFailureAll(bugnumber="rdar://31822623")
     def test_extension_weak_self (self):
         """Test that we can reconstruct weak self captured in a class constrained protocol."""
         self.build()
         self.do_self_test("Break here for weak self")
 
+    @decorators.swiftTest
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://31822722")
     def test_extension_self (self):
         """Test that we can reconstruct self in method of a class constrained protocol."""
         self.build()
         self.do_self_test("Break here in class protocol")
 
+    @decorators.swiftTest
     def test_method_weak_self (self):
         """Test that we can reconstruct weak self capture in method of a class conforming to a class constrained protocol."""
         self.build()
         self.do_self_test("Break here for method weak self")
 
+    @decorators.swiftTest
     def test_method_self (self):
         """Test that we can reconstruct self in method of a class conforming to a class constrained protocol."""
         self.build()
