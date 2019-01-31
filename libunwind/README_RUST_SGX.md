@@ -15,7 +15,7 @@ Initial Fork has been made from 5.0 release of llvm (commit: 6a075b6de4)
 * `mkdir build`
 * `cd build`
 * `cmake -DCMAKE_BUILD_TYPE="RELEASE" -DRUST_SGX=1 -G "Unix Makefiles" -DLLVM_ENABLE_WARNINGS=1 -DLIBUNWIND_ENABLE_WERROR=1 -DLIBUNWIND_ENABLE_PEDANTIC=0 -DLLVM_PATH=<path/to/llvm> <path/to/libunwind>`
-* `-DCMAKE_BUILD_TYPE="RELEASE"` could be removed to enable debug logs of libunwind.
+* `"DEBUG"` could be used instead of `"RELEASE"` to enable debug logs of libunwind.
 
 ### Build:
 * `make unwind_static`
