@@ -2096,7 +2096,18 @@ static bool needsLFTR(Loop *L, BasicBlock *ExitingBB) {
 
   // Do LFTR if the exit condition's IV is *not* a simple counter.
   Value *IncV = Phi->getIncomingValue(Idx);
-  return Phi != getLoopPhiForCounter(IncV, L);
+  if (Phi != getLoopPhiForCounter(IncV, L))
+    return true;
+
+  // Tapir loops are particularly picky about having canonical induction
+  // variables that start at 0, so check if LFTR needs to create one.
+  if (getTaskIfTapirLoop(L, TI))
+    if (BasicBlock *Preheader = L->getLoopPreheader())
+      if (Constant *Start =
+          dyn_cast<Constant>(Phi->getIncomingValueForBlock(Preheader)))
+        return !(Start->isZeroValue());
+
+  return false;
 }
 
 /// Return true if undefined behavior would provable be executed on the path to
@@ -2451,6 +2462,16 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
       BO->setHasNoUnsignedWrap(AR->hasNoUnsignedWrap());
     if (BO->hasNoSignedWrap())
       BO->setHasNoSignedWrap(AR->hasNoSignedWrap());
+
+    // See if we need to create a canonical IV that starts at 0.  Right now we
+    // only check for a Tapir loop, but this check might be generalized.
+    if (getTaskIfTapirLoop(L, TI) && !AR->getStart()->isZero()) {
+      // Rewriter is not in canonical mode, which we need.  Get a new
+      // SCEVExpander that is in canonical mode.
+      SCEVExpander ARRewriter(*SE, DL, "indvars");
+      CmpIndVar = ARRewriter.expandCodeFor(AR, AR->getType(),
+                                           &L->getHeader()->front());
+    }
   }
 
   Value *ExitCnt = genLoopLimit(
