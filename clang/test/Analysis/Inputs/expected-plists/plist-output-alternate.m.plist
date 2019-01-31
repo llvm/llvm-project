@@ -1484,7 +1484,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;value&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->

@@ -311,7 +311,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;date&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -842,7 +842,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;obj5&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -988,7 +988,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;obj6&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -1422,7 +1422,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;date&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -1733,7 +1733,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object of type &apos;CFStringRef&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
@@ -1927,7 +1927,7 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;o&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>
    <!-- This hash is experimental and going to change! -->
