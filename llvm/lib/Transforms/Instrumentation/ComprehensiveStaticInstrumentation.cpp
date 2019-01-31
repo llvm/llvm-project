@@ -911,14 +911,16 @@ void CSIImpl::interposeCall(Instruction *I) {
     Called = II->getCalledFunction();
 
   // Should we interpose this call?
-  bool shouldInterpose =
-      Config->DoesFunctionRequireInterposition(Called->getName());
+  if (Called) {
+    bool shouldInterpose =
+        Config->DoesFunctionRequireInterposition(Called->getName());
 
-  if (shouldInterpose) {
-    if (CallInst *CI = dyn_cast<CallInst>(I)) {
-      CI->setCalledFunction(getInterpositionFunction(Called));
-    } else if (InvokeInst *II = dyn_cast<InvokeInst>(I)) {
-      II->setCalledFunction(getInterpositionFunction(Called));
+    if (shouldInterpose) {
+      if (CallInst *CI = dyn_cast<CallInst>(I)) {
+        CI->setCalledFunction(getInterpositionFunction(Called));
+      } else if (InvokeInst *II = dyn_cast<InvokeInst>(I)) {
+        II->setCalledFunction(getInterpositionFunction(Called));
+      }
     }
   }
 }
