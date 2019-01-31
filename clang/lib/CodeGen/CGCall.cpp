@@ -3459,7 +3459,8 @@ void CodeGenFunction::EmitCallArgs(
     auto T = Builder.getIntNTy(Context.getTypeSize(SizeTy));
     assert(EmittedArg.getScalarVal() && "We emitted nothing for the arg?");
     llvm::Value *V = evaluateOrEmitBuiltinObjectSize(Arg, PS->getType(), T,
-                                                     EmittedArg.getScalarVal());
+                                                     EmittedArg.getScalarVal(),
+                                                     /*IsDynamic=*/false);
     Args.add(RValue::get(V), SizeTy);
     // If we're emitting args in reverse, be sure to do so with
     // pass_object_size, as well.
@@ -4397,10 +4398,23 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
     // Strip away the noreturn attribute to better diagnose unreachable UB.
     if (SanOpts.has(SanitizerKind::Unreachable)) {
+      // Also remove from function since CI->hasFnAttr(..) also checks attributes
+      // of the called function.
       if (auto *F = CI->getCalledFunction())
         F->removeFnAttr(llvm::Attribute::NoReturn);
       CI->removeAttribute(llvm::AttributeList::FunctionIndex,
                           llvm::Attribute::NoReturn);
+
+      // Avoid incompatibility with ASan which relies on the `noreturn`
+      // attribute to insert handler calls.
+      if (SanOpts.has(SanitizerKind::Address)) {
+        SanitizerScope SanScope(this);
+        Builder.SetInsertPoint(CI);
+        auto *FnType = llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
+        auto *Fn = CGM.CreateRuntimeFunction(FnType, "__asan_handle_no_return");
+        EmitNounwindRuntimeCall(Fn);
+        Builder.SetInsertPoint(CI->getParent());
+      }
     }
 
     EmitUnreachable(Loc);

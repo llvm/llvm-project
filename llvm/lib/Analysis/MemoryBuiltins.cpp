@@ -441,10 +441,10 @@ bool llvm::getObjectSize(const Value *Ptr, uint64_t &Size, const DataLayout &DL,
   return true;
 }
 
-ConstantInt *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
-                                       const DataLayout &DL,
-                                       const TargetLibraryInfo *TLI,
-                                       bool MustSucceed) {
+Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
+                                 const DataLayout &DL,
+                                 const TargetLibraryInfo *TLI,
+                                 bool MustSucceed) {
   assert(ObjectSize->getIntrinsicID() == Intrinsic::objectsize &&
          "ObjectSize must be a call to llvm.objectsize!");
 
@@ -461,13 +461,35 @@ ConstantInt *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
   EvalOptions.NullIsUnknownSize =
       cast<ConstantInt>(ObjectSize->getArgOperand(2))->isOne();
 
-  // FIXME: Does it make sense to just return a failure value if the size won't
-  // fit in the output and `!MustSucceed`?
-  uint64_t Size;
   auto *ResultType = cast<IntegerType>(ObjectSize->getType());
-  if (getObjectSize(ObjectSize->getArgOperand(0), Size, DL, TLI, EvalOptions) &&
-      isUIntN(ResultType->getBitWidth(), Size))
-    return ConstantInt::get(ResultType, Size);
+  bool StaticOnly = cast<ConstantInt>(ObjectSize->getArgOperand(3))->isZero();
+  if (StaticOnly) {
+    // FIXME: Does it make sense to just return a failure value if the size won't
+    // fit in the output and `!MustSucceed`?
+    uint64_t Size;
+    if (getObjectSize(ObjectSize->getArgOperand(0), Size, DL, TLI, EvalOptions) &&
+        isUIntN(ResultType->getBitWidth(), Size))
+      return ConstantInt::get(ResultType, Size);
+  } else {
+    LLVMContext &Ctx = ObjectSize->getFunction()->getContext();
+    ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, EvalOptions);
+    SizeOffsetEvalType SizeOffsetPair =
+        Eval.compute(ObjectSize->getArgOperand(0));
+
+    if (SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown()) {
+      IRBuilder<TargetFolder> Builder(Ctx, TargetFolder(DL));
+      Builder.SetInsertPoint(ObjectSize);
+
+      // If we've outside the end of the object, then we can always access
+      // exactly 0 bytes.
+      Value *ResultSize =
+          Builder.CreateSub(SizeOffsetPair.first, SizeOffsetPair.second);
+      Value *UseZero =
+          Builder.CreateICmpULT(SizeOffsetPair.first, SizeOffsetPair.second);
+      return Builder.CreateSelect(UseZero, ConstantInt::get(ResultType, 0),
+                                  ResultSize);
+    }
+  }
 
   if (!MustSucceed)
     return nullptr;
@@ -742,9 +764,9 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitInstruction(Instruction &I) {
 
 ObjectSizeOffsetEvaluator::ObjectSizeOffsetEvaluator(
     const DataLayout &DL, const TargetLibraryInfo *TLI, LLVMContext &Context,
-    bool RoundToAlign)
+    ObjectSizeOpts EvalOpts)
     : DL(DL), TLI(TLI), Context(Context), Builder(Context, TargetFolder(DL)),
-      RoundToAlign(RoundToAlign) {
+      EvalOpts(EvalOpts) {
   // IntTy and Zero must be set for each compute() since the address space may
   // be different for later objects.
 }
@@ -773,10 +795,7 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::compute(Value *V) {
 }
 
 SizeOffsetEvalType ObjectSizeOffsetEvaluator::compute_(Value *V) {
-  ObjectSizeOpts ObjSizeOptions;
-  ObjSizeOptions.RoundToAlign = RoundToAlign;
-
-  ObjectSizeOffsetVisitor Visitor(DL, TLI, Context, ObjSizeOptions);
+  ObjectSizeOffsetVisitor Visitor(DL, TLI, Context, EvalOpts);
   SizeOffsetType Const = Visitor.compute(V);
   if (Visitor.bothKnown(Const))
     return std::make_pair(ConstantInt::get(Context, Const.first),

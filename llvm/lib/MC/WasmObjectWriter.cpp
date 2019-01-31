@@ -194,6 +194,33 @@ raw_ostream &operator<<(raw_ostream &OS, const WasmRelocationEntry &Rel) {
 }
 #endif
 
+// Write X as an (unsigned) LEB value at offset Offset in Stream, padded
+// to allow patching.
+static void WritePatchableLEB(raw_pwrite_stream &Stream, uint32_t X,
+                              uint64_t Offset) {
+  uint8_t Buffer[5];
+  unsigned SizeLen = encodeULEB128(X, Buffer, 5);
+  assert(SizeLen == 5);
+  Stream.pwrite((char *)Buffer, SizeLen, Offset);
+}
+
+// Write X as an signed LEB value at offset Offset in Stream, padded
+// to allow patching.
+static void WritePatchableSLEB(raw_pwrite_stream &Stream, int32_t X,
+                               uint64_t Offset) {
+  uint8_t Buffer[5];
+  unsigned SizeLen = encodeSLEB128(X, Buffer, 5);
+  assert(SizeLen == 5);
+  Stream.pwrite((char *)Buffer, SizeLen, Offset);
+}
+
+// Write X as a plain integer value at offset Offset in Stream.
+static void WriteI32(raw_pwrite_stream &Stream, uint32_t X, uint64_t Offset) {
+  uint8_t Buffer[4];
+  support::endian::write32le(Buffer, X);
+  Stream.pwrite((char *)Buffer, sizeof(Buffer), Offset);
+}
+
 class WasmObjectWriter : public MCObjectWriter {
   support::endian::Writer W;
 
@@ -345,7 +372,7 @@ void WasmObjectWriter::startSection(SectionBookkeeping &Section,
 
   // The section size. We don't know the size yet, so reserve enough space
   // for any 32-bit value; we'll patch it later.
-  encodeULEB128(UINT32_MAX, W.OS);
+  encodeULEB128(0, W.OS, 5);
 
   // The position where the section starts, for measuring its size.
   Section.ContentsOffset = W.OS.tell();
@@ -379,11 +406,8 @@ void WasmObjectWriter::endSection(SectionBookkeeping &Section) {
 
   // Write the final section size to the payload_len field, which follows
   // the section id byte.
-  uint8_t Buffer[16];
-  unsigned SizeLen = encodeULEB128(Size, Buffer, 5);
-  assert(SizeLen == 5);
-  static_cast<raw_pwrite_stream &>(W.OS).pwrite((char *)Buffer, SizeLen,
-                                                Section.SizeOffset);
+  WritePatchableLEB(static_cast<raw_pwrite_stream &>(W.OS), Size,
+                    Section.SizeOffset);
 }
 
 // Emit the Wasm header.
@@ -530,33 +554,6 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   } else {
     llvm_unreachable("unexpected section type");
   }
-}
-
-// Write X as an (unsigned) LEB value at offset Offset in Stream, padded
-// to allow patching.
-static void WritePatchableLEB(raw_pwrite_stream &Stream, uint32_t X,
-                              uint64_t Offset) {
-  uint8_t Buffer[5];
-  unsigned SizeLen = encodeULEB128(X, Buffer, 5);
-  assert(SizeLen == 5);
-  Stream.pwrite((char *)Buffer, SizeLen, Offset);
-}
-
-// Write X as an signed LEB value at offset Offset in Stream, padded
-// to allow patching.
-static void WritePatchableSLEB(raw_pwrite_stream &Stream, int32_t X,
-                               uint64_t Offset) {
-  uint8_t Buffer[5];
-  unsigned SizeLen = encodeSLEB128(X, Buffer, 5);
-  assert(SizeLen == 5);
-  Stream.pwrite((char *)Buffer, SizeLen, Offset);
-}
-
-// Write X as a plain integer value at offset Offset in Stream.
-static void WriteI32(raw_pwrite_stream &Stream, uint32_t X, uint64_t Offset) {
-  uint8_t Buffer[4];
-  support::endian::write32le(Buffer, X);
-  Stream.pwrite((char *)Buffer, sizeof(Buffer), Offset);
 }
 
 static const MCSymbolWasm *ResolveSymbol(const MCSymbolWasm &Symbol) {

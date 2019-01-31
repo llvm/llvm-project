@@ -115,6 +115,9 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
   case TargetOpcode::G_FDIV:
     assert((Size == 32 || Size == 64) && "Unsupported size");
     return Size == 64 ? RTLIB::DIV_F64 : RTLIB::DIV_F32;
+  case TargetOpcode::G_FEXP:
+    assert((Size == 32 || Size == 64) && "Unsupported size");
+    return Size == 64 ? RTLIB::EXP_F64 : RTLIB::EXP_F32;
   case TargetOpcode::G_FREM:
     return Size == 64 ? RTLIB::REM_F64 : RTLIB::REM_F32;
   case TargetOpcode::G_FPOW:
@@ -138,6 +141,10 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     assert((Size == 32 || Size == 64 || Size == 128) && "Unsupported size");
     return Size == 128 ? RTLIB::LOG_F128
                        : Size == 64 ? RTLIB::LOG_F64 : RTLIB::LOG_F32;
+  case TargetOpcode::G_FLOG2:
+    assert((Size == 32 || Size == 64 || Size == 128) && "Unsupported size");
+    return Size == 128 ? RTLIB::LOG2_F128
+                       : Size == 64 ? RTLIB::LOG2_F64 : RTLIB::LOG2_F32;
   }
   llvm_unreachable("Unknown libcall function");
 }
@@ -233,7 +240,9 @@ LegalizerHelper::libcall(MachineInstr &MI) {
   case TargetOpcode::G_FCOS:
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FLOG10:
-  case TargetOpcode::G_FLOG: {
+  case TargetOpcode::G_FLOG:
+  case TargetOpcode::G_FLOG2:
+  case TargetOpcode::G_FEXP: {
     if (Size > 64) {
       LLVM_DEBUG(dbgs() << "Size " << Size << " too large to legalize.\n");
       return UnableToLegalize;
@@ -774,9 +783,11 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_LSHR:
   case TargetOpcode::G_ASHR: {
+    Observer.changingInstr(MI);
     if (TypeIdx != 1)
       return UnableToLegalize; // TODO
     narrowScalarSrc(MI, NarrowTy, 2);
+    Observer.changedInstr(MI);
     return Legalized;
   }
   }
@@ -1197,6 +1208,9 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FLOG10:
   case TargetOpcode::G_FLOG:
+  case TargetOpcode::G_FLOG2:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FEXP:
     assert(TypeIdx == 0);
     Observer.changingInstr(MI);
 
@@ -1842,6 +1856,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_INTRINSIC_TRUNC:
   case G_FCOS:
   case G_FSIN:
+  case G_FSQRT:
     return fewerElementsVectorBasic(MI, TypeIdx, NarrowTy);
   case G_ZEXT:
   case G_SEXT:

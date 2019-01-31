@@ -2315,3 +2315,11 @@ define float @test_sin_f32(float %x) {
   %y = call float @llvm.sin.f32(float %x)
   ret float %y
 }
+
+declare float @llvm.sqrt.f32(float)
+define float @test_sqrt_f32(float %x) {
+  ; CHECK-LABEL: name:            test_sqrt_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FSQRT %{{[0-9]+}}
+  %y = call float @llvm.sqrt.f32(float %x)
+  ret float %y
+}

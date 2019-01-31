@@ -56,16 +56,19 @@ static cl::opt<std::string> SnippetsFile("snippets-file",
 static cl::opt<std::string> BenchmarkFile("benchmarks-file", cl::desc(""),
                                           cl::init(""));
 
-static cl::opt<exegesis::InstructionBenchmark::ModeE>
-    BenchmarkMode("mode", cl::desc("the mode to run"),
-                  cl::values(clEnumValN(exegesis::InstructionBenchmark::Latency,
-                                        "latency", "Instruction Latency"),
-                             clEnumValN(exegesis::InstructionBenchmark::Uops,
-                                        "uops", "Uop Decomposition"),
-                             // When not asking for a specific benchmark mode,
-                             // we'll analyse the results.
-                             clEnumValN(exegesis::InstructionBenchmark::Unknown,
-                                        "analysis", "Analysis")));
+static cl::opt<exegesis::InstructionBenchmark::ModeE> BenchmarkMode(
+    "mode", cl::desc("the mode to run"),
+    cl::values(clEnumValN(exegesis::InstructionBenchmark::Latency, "latency",
+                          "Instruction Latency"),
+               clEnumValN(exegesis::InstructionBenchmark::InverseThroughput,
+                          "inverse_throughput",
+                          "Instruction Inverse Throughput"),
+               clEnumValN(exegesis::InstructionBenchmark::Uops, "uops",
+                          "Uop Decomposition"),
+               // When not asking for a specific benchmark mode,
+               // we'll analyse the results.
+               clEnumValN(exegesis::InstructionBenchmark::Unknown, "analysis",
+                          "Analysis")));
 
 static cl::opt<unsigned>
     NumRepetitions("num-repetitions",

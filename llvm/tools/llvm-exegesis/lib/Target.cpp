@@ -45,6 +45,7 @@ ExegesisTarget::createSnippetGenerator(InstructionBenchmark::ModeE Mode,
   case InstructionBenchmark::Latency:
     return createLatencySnippetGenerator(State);
   case InstructionBenchmark::Uops:
+  case InstructionBenchmark::InverseThroughput:
     return createUopsSnippetGenerator(State);
   }
   return nullptr;
@@ -57,7 +58,8 @@ ExegesisTarget::createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
   case InstructionBenchmark::Unknown:
     return nullptr;
   case InstructionBenchmark::Latency:
-    return createLatencyBenchmarkRunner(State);
+  case InstructionBenchmark::InverseThroughput:
+    return createLatencyBenchmarkRunner(State, Mode);
   case InstructionBenchmark::Uops:
     return createUopsBenchmarkRunner(State);
   }
@@ -74,9 +76,9 @@ ExegesisTarget::createUopsSnippetGenerator(const LLVMState &State) const {
   return llvm::make_unique<UopsSnippetGenerator>(State);
 }
 
-std::unique_ptr<BenchmarkRunner>
-ExegesisTarget::createLatencyBenchmarkRunner(const LLVMState &State) const {
-  return llvm::make_unique<LatencyBenchmarkRunner>(State);
+std::unique_ptr<BenchmarkRunner> ExegesisTarget::createLatencyBenchmarkRunner(
+    const LLVMState &State, InstructionBenchmark::ModeE Mode) const {
+  return llvm::make_unique<LatencyBenchmarkRunner>(State, Mode);
 }
 
 std::unique_ptr<BenchmarkRunner>

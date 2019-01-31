@@ -157,13 +157,15 @@ findBuildID(const object::ELFObjectFileBase &In) {
   llvm_unreachable("Bad file format");
 }
 
-static void linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
-                             StringRef Suffix, ArrayRef<uint8_t> BuildIdBytes) {
+static Error linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
+                              StringRef Suffix,
+                              ArrayRef<uint8_t> BuildIdBytes) {
   SmallString<128> Path = Config.BuildIdLinkDir;
   sys::path::append(Path, llvm::toHex(BuildIdBytes[0], /*LowerCase*/ true));
   if (auto EC = sys::fs::create_directories(Path))
-    error("cannot create build ID link directory " + Path + ": " +
-          EC.message());
+    return createFileError(
+        Path.str(),
+        createStringError(EC, "cannot create build ID link directory"));
 
   sys::path::append(Path,
                     llvm::toHex(BuildIdBytes.slice(1), /*LowerCase*/ true));
@@ -174,8 +176,10 @@ static void linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
       sys::fs::remove(Path);
     EC = sys::fs::create_hard_link(ToLink, Path);
     if (EC)
-      error("cannot link " + ToLink + " to " + Path + ": " + EC.message());
+      return createStringError(EC, "cannot link %s to %s", ToLink.data(),
+                               Path.data());
   }
+  return Error::success();
 }
 
 static Error splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
@@ -588,10 +592,12 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
                             "build ID is smaller than two bytes."));
   }
 
-  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkInput) {
-    linkToBuildIdDir(Config, Config.InputFilename,
-                     Config.BuildIdLinkInput.getValue(), BuildIdBytes);
-  }
+  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkInput)
+    if (Error E =
+            linkToBuildIdDir(Config, Config.InputFilename,
+                             Config.BuildIdLinkInput.getValue(), BuildIdBytes))
+      return E;
+
   if (Error E = handleArgs(Config, *Obj, Reader, OutputElfType))
     return E;
   std::unique_ptr<Writer> Writer =
@@ -600,10 +606,12 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
     return E;
   if (Error E = Writer->write())
     return E;
-  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkOutput) {
-    linkToBuildIdDir(Config, Config.OutputFilename,
-                     Config.BuildIdLinkOutput.getValue(), BuildIdBytes);
-  }
+  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkOutput)
+    if (Error E =
+            linkToBuildIdDir(Config, Config.OutputFilename,
+                             Config.BuildIdLinkOutput.getValue(), BuildIdBytes))
+      return E;
+
   return Error::success();
 }
 

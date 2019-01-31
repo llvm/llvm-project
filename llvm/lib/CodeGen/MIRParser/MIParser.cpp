@@ -2324,6 +2324,10 @@ bool MIParser::parseAlignment(unsigned &Alignment) {
   if (getUnsigned(Alignment))
     return true;
   lex();
+
+  if (!isPowerOf2_32(Alignment))
+    return error("expected a power-of-2 literal after 'align'");
+
   return false;
 }
 

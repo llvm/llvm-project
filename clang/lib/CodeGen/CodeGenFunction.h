@@ -4084,8 +4084,8 @@ public:
   /// passing to a runtime sanitizer handler.
   llvm::Constant *EmitCheckSourceLocation(SourceLocation Loc);
 
-  /// Create a basic block that will call a handler function in a
-  /// sanitizer runtime with the provided arguments, and create a conditional
+  /// Create a basic block that will either trap or call a handler function in
+  /// the UBSan runtime with the provided arguments, and create a conditional
   /// branch to it.
   void EmitCheck(ArrayRef<std::pair<llvm::Value *, SanitizerMask>> Checked,
                  SanitizerHandler Check, ArrayRef<llvm::Constant *> StaticArgs,
@@ -4177,14 +4177,16 @@ private:
   /// If EmittedExpr is non-null, this will use that instead of re-emitting E.
   llvm::Value *evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
                                                llvm::IntegerType *ResType,
-                                               llvm::Value *EmittedE);
+                                               llvm::Value *EmittedE,
+                                               bool IsDynamic);
 
   /// Emits the size of E, as required by __builtin_object_size. This
   /// function is aware of pass_object_size parameters, and will act accordingly
   /// if E is a parameter with the pass_object_size attribute.
   llvm::Value *emitBuiltinObjectSize(const Expr *E, unsigned Type,
                                      llvm::IntegerType *ResType,
-                                     llvm::Value *EmittedE);
+                                     llvm::Value *EmittedE,
+                                     bool IsDynamic);
 
 public:
 #ifndef NDEBUG
