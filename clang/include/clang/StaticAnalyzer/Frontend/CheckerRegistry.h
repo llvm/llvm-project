@@ -91,11 +91,25 @@ public:
   using ShouldRegisterFunction = bool (*)(const LangOptions &);
 
   struct CheckerInfo {
+    enum class StateFromCmdLine {
+      // This checker wasn't explicitly enabled or disabled.
+      State_Unspecified,
+      // This checker was explicitly disabled.
+      State_Disabled,
+      // This checker was explicitly enabled.
+      State_Enabled
+    };
+
     InitializationFunction Initialize;
     ShouldRegisterFunction ShouldRegister;
     StringRef FullName;
     StringRef Desc;
     StringRef DocumentationUri;
+    StateFromCmdLine State = StateFromCmdLine::State_Unspecified;
+
+    bool isEnabled(const LangOptions &LO) const {
+      return State == StateFromCmdLine::State_Enabled && ShouldRegister(LO);
+    }
 
     CheckerInfo(InitializationFunction Fn, ShouldRegisterFunction sfn,
                 StringRef Name, StringRef Desc, StringRef DocsUri)
@@ -103,7 +117,9 @@ public:
           DocumentationUri(DocsUri) {}
   };
 
+  using StateFromCmdLine = CheckerInfo::StateFromCmdLine;
   using CheckerInfoList = std::vector<CheckerInfo>;
+  using CheckerInfoListRange = llvm::iterator_range<CheckerInfoList::iterator>;
   using CheckerInfoSet = llvm::SetVector<const CheckerRegistry::CheckerInfo *>;
 
 private:
@@ -134,6 +150,7 @@ public:
                &CheckerRegistry::returnTrue<T>, FullName, Desc, DocsUri);
   }
 
+  // FIXME: This *really* should be added to the frontend flag descriptions.
   /// Initializes a CheckerManager by calling the initialization functions for
   /// all checkers specified by the given CheckerOptInfo list. The order of this
   /// list is significant; later options can be used to reverse earlier ones.
@@ -151,8 +168,13 @@ public:
 private:
   CheckerInfoSet getEnabledCheckers() const;
 
-  mutable CheckerInfoList Checkers;
-  mutable llvm::StringMap<size_t> Packages;
+  /// Return an iterator range of mutable CheckerInfos \p CmdLineArg applies to.
+  /// For example, it'll return the checkers for the core package, if
+  /// \p CmdLineArg is "core".
+  CheckerInfoListRange getMutableCheckersForCmdLineArg(StringRef CmdLineArg);
+
+  CheckerInfoList Checkers;
+  llvm::StringMap<size_t> Packages;
 
   DiagnosticsEngine &Diags;
   AnalyzerOptions &AnOpts;

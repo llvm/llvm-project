@@ -39,12 +39,66 @@ static bool isCompatibleAPIVersion(const char *versionString) {
   return strcmp(versionString, CLANG_ANALYZER_API_VERSION_STRING) == 0;
 }
 
+static bool checkerNameLT(const CheckerRegistry::CheckerInfo &a,
+                          const CheckerRegistry::CheckerInfo &b) {
+  return a.FullName < b.FullName;
+}
+
+static constexpr char PackageSeparator = '.';
+
+static bool isInPackage(const CheckerRegistry::CheckerInfo &checker,
+                        StringRef packageName) {
+  // Does the checker's full name have the package as a prefix?
+  if (!checker.FullName.startswith(packageName))
+    return false;
+
+  // Is the package actually just the name of a specific checker?
+  if (checker.FullName.size() == packageName.size())
+    return true;
+
+  // Is the checker in the package (or a subpackage)?
+  if (checker.FullName[packageName.size()] == PackageSeparator)
+    return true;
+
+  return false;
+}
+
+CheckerRegistry::CheckerInfoListRange
+CheckerRegistry::getMutableCheckersForCmdLineArg(StringRef CmdLineArg) {
+
+  assert(std::is_sorted(Checkers.begin(), Checkers.end(), checkerNameLT) &&
+         "In order to efficiently gather checkers, this function expects them "
+         "to be already sorted!");
+
+  // Use a binary search to find the possible start of the package.
+  CheckerRegistry::CheckerInfo
+      packageInfo(nullptr, nullptr, CmdLineArg, "", "");
+  auto it = std::lower_bound(Checkers.begin(), Checkers.end(),
+                             packageInfo, checkerNameLT);
+
+  if (!isInPackage(*it, CmdLineArg))
+    return { Checkers.end(), Checkers.end() };
+
+  // See how large the package is.
+  // If the package doesn't exist, assume the option refers to a single
+  // checker.
+  size_t size = 1;
+  llvm::StringMap<size_t>::const_iterator packageSize =
+      Packages.find(CmdLineArg);
+
+  if (packageSize != Packages.end())
+    size = packageSize->getValue();
+
+  return { it, it + size };
+}
+
 CheckerRegistry::CheckerRegistry(ArrayRef<std::string> plugins,
                                  DiagnosticsEngine &diags,
                                  AnalyzerOptions &AnOpts,
                                  const LangOptions &LangOpts)
   : Diags(diags), AnOpts(AnOpts), LangOpts(LangOpts) {
 
+  // Register builtin checkers.
 #define GET_CHECKERS
 #define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI)                            \
   addChecker(register##CLASS, shouldRegister##CLASS, FULLNAME, HELPTEXT,       \
@@ -53,6 +107,7 @@ CheckerRegistry::CheckerRegistry(ArrayRef<std::string> plugins,
 #undef CHECKER
 #undef GET_CHECKERS
 
+  // Register checkers from plugins.
   for (ArrayRef<std::string>::iterator i = plugins.begin(), e = plugins.end();
        i != e; ++i) {
     // Get access to the plugin.
@@ -82,73 +137,38 @@ CheckerRegistry::CheckerRegistry(ArrayRef<std::string> plugins,
     if (registerPluginCheckers)
       registerPluginCheckers(*this);
   }
-}
 
-static constexpr char PackageSeparator = '.';
+  // Sort checkers for efficient collection.
+  // FIXME: Alphabetical sort puts 'experimental' in the middle.
+  // Would it be better to name it '~experimental' or something else
+  // that's ASCIIbetically last?
+  llvm::sort(Checkers, checkerNameLT);
 
-static bool checkerNameLT(const CheckerRegistry::CheckerInfo &a,
-                          const CheckerRegistry::CheckerInfo &b) {
-  return a.FullName < b.FullName;
-}
+  // Parse '-analyzer-checker' and '-analyzer-disable-checker' options from the
+  // command line.
+  for (const std::pair<std::string, bool> &opt : AnOpts.CheckersControlList) {
+    CheckerInfoListRange checkersForCmdLineArg =
+                                     getMutableCheckersForCmdLineArg(opt.first);
 
-static bool isInPackage(const CheckerRegistry::CheckerInfo &checker,
-                        StringRef packageName) {
-  // Does the checker's full name have the package as a prefix?
-  if (!checker.FullName.startswith(packageName))
-    return false;
+    if (checkersForCmdLineArg.begin() == checkersForCmdLineArg.end()) {
+      Diags.Report(diag::err_unknown_analyzer_checker) << opt.first;
+      Diags.Report(diag::note_suggest_disabling_all_checkers);
+    }
 
-  // Is the package actually just the name of a specific checker?
-  if (checker.FullName.size() == packageName.size())
-    return true;
-
-  // Is the checker in the package (or a subpackage)?
-  if (checker.FullName[packageName.size()] == PackageSeparator)
-    return true;
-
-  return false;
+    for (CheckerInfo &checker : checkersForCmdLineArg) {
+      checker.State = opt.second ? StateFromCmdLine::State_Enabled :
+                                   StateFromCmdLine::State_Disabled;
+    }
+  }
 }
 
 CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers() const {
 
-  assert(std::is_sorted(Checkers.begin(), Checkers.end(), checkerNameLT) &&
-         "In order to efficiently gather checkers, this function expects them "
-         "to be already sorted!");
-
   CheckerInfoSet enabledCheckers;
-  const auto end = Checkers.cend();
 
-  for (const std::pair<std::string, bool> &opt : AnOpts.CheckersControlList) {
-    // Use a binary search to find the possible start of the package.
-    CheckerRegistry::CheckerInfo
-        packageInfo(nullptr, nullptr, opt.first, "", "");
-    auto firstRelatedChecker =
-      std::lower_bound(Checkers.cbegin(), end, packageInfo, checkerNameLT);
-
-    if (firstRelatedChecker == end ||
-        !isInPackage(*firstRelatedChecker, opt.first)) {
-      Diags.Report(diag::err_unknown_analyzer_checker) << opt.first;
-      Diags.Report(diag::note_suggest_disabling_all_checkers);
-      return {};
-    }
-
-    // See how large the package is.
-    // If the package doesn't exist, assume the option refers to a single
-    // checker.
-    size_t size = 1;
-    llvm::StringMap<size_t>::const_iterator packageSize =
-      Packages.find(opt.first);
-    if (packageSize != Packages.end())
-      size = packageSize->getValue();
-
-    // Step through all the checkers in the package.
-    for (auto lastRelatedChecker = firstRelatedChecker+size;
-         firstRelatedChecker != lastRelatedChecker; ++firstRelatedChecker)
-      if (opt.second) {
-        if (firstRelatedChecker->ShouldRegister(LangOpts))
-          enabledCheckers.insert(&*firstRelatedChecker);
-      } else {
-        enabledCheckers.remove(&*firstRelatedChecker);
-      }
+  for (const CheckerInfo &checker : Checkers) {
+    if (checker.isEnabled(LangOpts))
+      enabledCheckers.insert(&checker);
   }
 
   return enabledCheckers;
@@ -169,8 +189,6 @@ void CheckerRegistry::addChecker(InitializationFunction Rfn,
 }
 
 void CheckerRegistry::initializeManager(CheckerManager &checkerMgr) const {
-  // Sort checkers for efficient collection.
-  llvm::sort(Checkers, checkerNameLT);
 
   // Collect checkers enabled by the options.
   CheckerInfoSet enabledCheckers = getEnabledCheckers();
@@ -204,11 +222,6 @@ void CheckerRegistry::validateCheckerOptions() const {
 
 void CheckerRegistry::printHelp(raw_ostream &out,
                                 size_t maxNameChars) const {
-  // FIXME: Alphabetical sort puts 'experimental' in the middle.
-  // Would it be better to name it '~experimental' or something else
-  // that's ASCIIbetically last?
-  llvm::sort(Checkers, checkerNameLT);
-
   // FIXME: Print available packages.
 
   out << "CHECKERS:\n";
@@ -241,9 +254,6 @@ void CheckerRegistry::printHelp(raw_ostream &out,
 }
 
 void CheckerRegistry::printList(raw_ostream &out) const {
-  // Sort checkers for efficient collection.
-  llvm::sort(Checkers, checkerNameLT);
-
   // Collect checkers enabled by the options.
   CheckerInfoSet enabledCheckers = getEnabledCheckers();
 
