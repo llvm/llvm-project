@@ -1,4 +1,4 @@
-//===--- ExceptionEscapeCheck.h - clang-tidy---------------------*- C++ -*-===//
+//===--- ExceptionEscapeCheck.h - clang-tidy --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTION_ESCAPE_H
 
 #include "../ClangTidy.h"
-
+#include "../utils/ExceptionAnalyzer.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace clang {
@@ -36,7 +36,7 @@ private:
   std::string RawIgnoredExceptions;
 
   llvm::StringSet<> FunctionsThatShouldNotThrow;
-  llvm::StringSet<> IgnoredExceptions;
+  utils::ExceptionAnalyzer Tracer;
 };
 
 } // namespace bugprone

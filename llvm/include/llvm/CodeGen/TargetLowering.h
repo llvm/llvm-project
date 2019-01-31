@@ -642,6 +642,13 @@ public:
     return RepRegClassCostForVT[VT.SimpleTy];
   }
 
+  /// Return true if SHIFT instructions should be expanded to SHIFT_PARTS
+  /// instructions, and false if a library call is preferred (e.g for code-size
+  /// reasons).
+  virtual bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const {
+    return true;
+  }
+
   /// Return true if the target has native support for the specified value type.
   /// This means that it has a register that directly holds it without
   /// promotions or expansions.

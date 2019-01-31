@@ -287,6 +287,10 @@ void CrashHandler(zx_handle_t *Event) {
 
 } // namespace
 
+bool Mprotect(void *Ptr, size_t Size, bool AllowReadWrite) {
+  return false;  // UNIMPLEMENTED
+}
+
 // Platform specific functions.
 void SetSignalHandler(const FuzzingOptions &Options) {
   // Set up alarm handler if needed.

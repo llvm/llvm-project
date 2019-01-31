@@ -21,11 +21,11 @@ define double @exp_a_exp_b(double %a, double %b) {
 ; exp(a) * exp(b) reassoc, multiple uses
 define double @exp_a_exp_b_multiple_uses(double %a, double %b) {
 ; CHECK-LABEL: @exp_a_exp_b_multiple_uses(
-; CHECK-NEXT:    [[TMP:%.*]] = call double @llvm.exp.f64(double [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.exp.f64(double [[B:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[TMP]], [[TMP1]]
+; CHECK-NEXT:    [[TMP:%.*]] = fadd reassoc double [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc double @llvm.exp.f64(double [[TMP]])
 ; CHECK-NEXT:    call void @use(double [[TMP1]])
-; CHECK-NEXT:    ret double [[MUL]]
+; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %tmp = call double @llvm.exp.f64(double %a)
   %tmp1 = call double @llvm.exp.f64(double %b)
@@ -55,10 +55,9 @@ define double @exp_a_exp_b_multiple_uses_both(double %a, double %b) {
 ; exp(a) * exp(b) => exp(a+b) with reassoc
 define double @exp_a_exp_b_reassoc(double %a, double %b) {
 ; CHECK-LABEL: @exp_a_exp_b_reassoc(
-; CHECK-NEXT:    [[TMP:%.*]] = call double @llvm.exp.f64(double [[A:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.exp.f64(double [[B:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[TMP]], [[TMP1]]
-; CHECK-NEXT:    ret double [[MUL]]
+; CHECK-NEXT:    [[TMP:%.*]] = fadd reassoc double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc double @llvm.exp.f64(double [[TMP]])
+; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %tmp = call double @llvm.exp.f64(double %a)
   %tmp1 = call double @llvm.exp.f64(double %b)
@@ -69,14 +68,11 @@ define double @exp_a_exp_b_reassoc(double %a, double %b) {
 ; exp(a) * exp(b) * exp(c) * exp(d) => exp(a+b+c+d) with reassoc
 define double @exp_a_exp_b_exp_c_exp_d_fast(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: @exp_a_exp_b_exp_c_exp_d_fast(
-; CHECK-NEXT:    [[TMP:%.*]] = call double @llvm.exp.f64(double [[A:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.exp.f64(double [[B:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[TMP]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.exp.f64(double [[C:%.*]])
-; CHECK-NEXT:    [[MUL1:%.*]] = fmul reassoc double [[MUL]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @llvm.exp.f64(double [[D:%.*]])
-; CHECK-NEXT:    [[MUL2:%.*]] = fmul reassoc double [[MUL1]], [[TMP3]]
-; CHECK-NEXT:    ret double [[MUL2]]
+; CHECK-NEXT:    [[TMP:%.*]] = fadd reassoc double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc double [[TMP]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc double [[TMP1]], [[D:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc double @llvm.exp.f64(double [[TMP2]])
+; CHECK-NEXT:    ret double [[TMP3]]
 ;
   %tmp = call double @llvm.exp.f64(double %a)
   %tmp1 = call double @llvm.exp.f64(double %b)

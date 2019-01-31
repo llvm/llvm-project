@@ -1266,8 +1266,7 @@ define <2 x i64> @insert_dup_mem_v2i64(i64* %ptr) {
 ;
 ; AVX1-LABEL: insert_dup_mem_v2i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: insert_dup_mem_v2i64:

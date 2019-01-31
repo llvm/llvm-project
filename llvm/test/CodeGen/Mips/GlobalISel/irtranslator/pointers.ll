@@ -24,7 +24,7 @@ define i32 @ptr_arg_on_stack(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i32* %p) {
   ; MIPS32:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
   ; MIPS32:   [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
   ; MIPS32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; MIPS32:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %fixed-stack.0, align 0)
+  ; MIPS32:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %fixed-stack.0, align 8)
   ; MIPS32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p0) :: (load 4 from %ir.p)
   ; MIPS32:   $v0 = COPY [[LOAD1]](s32)
   ; MIPS32:   RetRA implicit $v0

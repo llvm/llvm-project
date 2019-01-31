@@ -180,8 +180,7 @@ define <2 x i64> @load64_ins_eltc_v2i64(i64* %p) nounwind {
 ;
 ; AVX1-LABEL: load64_ins_eltc_v2i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load64_ins_eltc_v2i64:

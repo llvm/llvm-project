@@ -38,7 +38,7 @@ ClUseSymbolTable("use-symbol-table", cl::init(true),
 
 static cl::opt<FunctionNameKind> ClPrintFunctions(
     "functions", cl::init(FunctionNameKind::LinkageName),
-    cl::desc("Print function name for a given address:"), cl::ValueOptional,
+    cl::desc("Print function name for a given address"), cl::ValueOptional,
     cl::values(clEnumValN(FunctionNameKind::None, "none", "omit function name"),
                clEnumValN(FunctionNameKind::ShortName, "short",
                           "print short function name"),

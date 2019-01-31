@@ -211,12 +211,21 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .legalFor({S32})
     .scalarize(0);
 
-  setAction({G_CTLZ, S32}, Legal);
-  setAction({G_CTLZ_ZERO_UNDEF, S32}, Legal);
-  setAction({G_CTTZ, S32}, Legal);
-  setAction({G_CTTZ_ZERO_UNDEF, S32}, Legal);
-  setAction({G_BSWAP, S32}, Legal);
-  setAction({G_CTPOP, S32}, Legal);
+  // The 64-bit versions produce 32-bit results, but only on the SALU.
+  getActionDefinitionsBuilder({G_CTLZ, G_CTLZ_ZERO_UNDEF,
+                               G_CTTZ, G_CTTZ_ZERO_UNDEF,
+                               G_CTPOP})
+    .legalFor({{S32, S32}, {S32, S64}})
+    .clampScalar(0, S32, S32)
+    .clampScalar(1, S32, S64);
+  // TODO: Scalarize
+
+  // TODO: Expand for > s32
+  getActionDefinitionsBuilder(G_BSWAP)
+    .legalFor({S32})
+    .clampScalar(0, S32, S32)
+    .scalarize(0);
+
 
   getActionDefinitionsBuilder(G_INTTOPTR)
     .legalIf([](const LegalityQuery &Query) {
@@ -239,7 +248,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
       })
     .fewerElementsIf([=, &ST](const LegalityQuery &Query) {
         unsigned MemSize = Query.MMODescrs[0].SizeInBits;
-        return Query.Types[0].isVector() && (MemSize == 96) &&
+        return (MemSize == 96) &&
+               Query.Types[0].isVector() &&
                ST.getGeneration() < AMDGPUSubtarget::SEA_ISLANDS;
       },
       [=](const LegalityQuery &Query) {

@@ -146,15 +146,18 @@ void IncomingValueHandler::assignValueToReg(unsigned ValVReg,
 
 unsigned IncomingValueHandler::getStackAddress(const CCValAssign &VA,
                                                MachineMemOperand *&MMO) {
+  MachineFunction &MF = MIRBuilder.getMF();
   unsigned Size = alignTo(VA.getValVT().getSizeInBits(), 8) / 8;
   unsigned Offset = VA.getLocMemOffset();
-  MachineFrameInfo &MFI = MIRBuilder.getMF().getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
 
   int FI = MFI.CreateFixedObject(Size, Offset, true);
   MachinePointerInfo MPO =
       MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
-  MMO = MIRBuilder.getMF().getMachineMemOperand(MPO, MachineMemOperand::MOLoad,
-                                                Size, /* Alignment */ 0);
+
+  const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
+  unsigned Align = MinAlign(TFL->getStackAlignment(), Offset);
+  MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, Size, Align);
 
   unsigned AddrReg = MRI.createGenericVirtualRegister(LLT::pointer(0, 32));
   MIRBuilder.buildFrameIndex(AddrReg, FI);
@@ -220,6 +223,9 @@ void OutgoingValueHandler::assignValueToReg(unsigned ValVReg,
 
 unsigned OutgoingValueHandler::getStackAddress(const CCValAssign &VA,
                                                MachineMemOperand *&MMO) {
+  MachineFunction &MF = MIRBuilder.getMF();
+  const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
+
   LLT p0 = LLT::pointer(0, 32);
   LLT s32 = LLT::scalar(32);
   unsigned SPReg = MRI.createGenericVirtualRegister(p0);
@@ -235,8 +241,8 @@ unsigned OutgoingValueHandler::getStackAddress(const CCValAssign &VA,
   MachinePointerInfo MPO =
       MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
   unsigned Size = alignTo(VA.getValVT().getSizeInBits(), 8) / 8;
-  MMO = MIRBuilder.getMF().getMachineMemOperand(MPO, MachineMemOperand::MOStore,
-                                                Size, /* Alignment */ 0);
+  unsigned Align = MinAlign(TFL->getStackAlignment(), Offset);
+  MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, Size, Align);
 
   return AddrReg;
 }

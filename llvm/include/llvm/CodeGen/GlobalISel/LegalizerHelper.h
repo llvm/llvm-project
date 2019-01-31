@@ -114,11 +114,36 @@ private:
   void widenScalarDst(MachineInstr &MI, LLT WideTy, unsigned OpIdx = 0,
                       unsigned TruncOpcode = TargetOpcode::G_TRUNC);
 
+  // Legalize a single operand \p OpIdx of the machine instruction \p MI as a
+  // Def by truncating the operand's type to \p NarrowTy, replacing in place and
+  // extending back with \p ExtOpcode.
+  void narrowScalarDst(MachineInstr &MI, LLT NarrowTy, unsigned OpIdx,
+                       unsigned ExtOpcode);
+
   /// Helper function to split a wide generic register into bitwise blocks with
   /// the given Type (which implies the number of blocks needed). The generic
   /// registers created are appended to Ops, starting at bit 0 of Reg.
   void extractParts(unsigned Reg, LLT Ty, int NumParts,
                     SmallVectorImpl<unsigned> &VRegs);
+
+  /// Version which handles irregular splits.
+  bool extractParts(unsigned Reg, LLT RegTy, LLT MainTy,
+                    LLT &LeftoverTy,
+                    SmallVectorImpl<unsigned> &VRegs,
+                    SmallVectorImpl<unsigned> &LeftoverVRegs);
+
+  /// Helper function to build a wide generic register \p DstReg of type \p
+  /// RegTy from smaller parts. This will produce a G_MERGE_VALUES,
+  /// G_BUILD_VECTOR, G_CONCAT_VECTORS, or sequence of G_INSERT as appropriate
+  /// for the types.
+  ///
+  /// \p PartRegs must be registers of type \p PartTy.
+  ///
+  /// If \p ResultTy does not evenly break into \p PartTy sized pieces, the
+  /// remainder must be specified with \p LeftoverRegs of type \p LeftoverTy.
+  void insertParts(unsigned DstReg, LLT ResultTy,
+                   LLT PartTy, ArrayRef<unsigned> PartRegs,
+                   LLT LeftoverTy = LLT(), ArrayRef<unsigned> LeftoverRegs = {});
 
   LegalizeResult fewerElementsVectorImplicitDef(MachineInstr &MI,
                                                 unsigned TypeIdx, LLT NarrowTy);

@@ -11,6 +11,7 @@
 #if LIBFUZZER_POSIX
 #include "FuzzerIO.h"
 #include "FuzzerInternal.h"
+#include "FuzzerTracePC.h"
 #include <cassert>
 #include <chrono>
 #include <cstring>
@@ -18,6 +19,7 @@
 #include <iomanip>
 #include <signal.h>
 #include <stdio.h>
+#include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
@@ -29,6 +31,16 @@ namespace fuzzer {
 
 static void AlarmHandler(int, siginfo_t *, void *) {
   Fuzzer::StaticAlarmCallback();
+}
+
+static void (*upstream_segv_handler)(int, siginfo_t *, void *);
+
+static void SegvHandler(int sig, siginfo_t *si, void *ucontext) {
+  assert(si->si_signo == SIGSEGV);
+  if (TPC.UnprotectLazyCounters(si->si_addr)) return;
+  if (upstream_segv_handler)
+    return upstream_segv_handler(sig, si, ucontext);
+  Fuzzer::StaticCrashSignalCallback();
 }
 
 static void CrashHandler(int, siginfo_t *, void *) {
@@ -55,8 +67,11 @@ static void SetSigaction(int signum,
     exit(1);
   }
   if (sigact.sa_flags & SA_SIGINFO) {
-    if (sigact.sa_sigaction)
-      return;
+    if (sigact.sa_sigaction) {
+      if (signum != SIGSEGV)
+        return;
+      upstream_segv_handler = sigact.sa_sigaction;
+    }
   } else {
     if (sigact.sa_handler != SIG_DFL && sigact.sa_handler != SIG_IGN &&
         sigact.sa_handler != SIG_ERR)
@@ -64,6 +79,7 @@ static void SetSigaction(int signum,
   }
 
   sigact = {};
+  sigact.sa_flags = SA_SIGINFO;
   sigact.sa_sigaction = callback;
   if (sigaction(signum, &sigact, 0)) {
     Printf("libFuzzer: sigaction failed with %d\n", errno);
@@ -82,6 +98,11 @@ void SetTimer(int Seconds) {
   SetSigaction(SIGALRM, AlarmHandler);
 }
 
+bool Mprotect(void *Ptr, size_t Size, bool AllowReadWrite) {
+  return 0 == mprotect(Ptr, Size,
+                       AllowReadWrite ? (PROT_READ | PROT_WRITE) : PROT_NONE);
+}
+
 void SetSignalHandler(const FuzzingOptions& Options) {
   if (Options.UnitTimeoutSec > 0)
     SetTimer(Options.UnitTimeoutSec / 2 + 1);
@@ -90,7 +111,7 @@ void SetSignalHandler(const FuzzingOptions& Options) {
   if (Options.HandleTerm)
     SetSigaction(SIGTERM, InterruptHandler);
   if (Options.HandleSegv)
-    SetSigaction(SIGSEGV, CrashHandler);
+    SetSigaction(SIGSEGV, SegvHandler);
   if (Options.HandleBus)
     SetSigaction(SIGBUS, CrashHandler);
   if (Options.HandleAbrt)
