@@ -410,7 +410,7 @@ public:
     if (LHS[1] != Minor)
       return LHS[1] < Minor;
     if (LHS[2] != Micro)
-      return LHS[1] < Micro;
+      return LHS[2] < Micro;
 
     return false;
   }
