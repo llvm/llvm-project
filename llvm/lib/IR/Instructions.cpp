@@ -266,6 +266,21 @@ bool CallBase::isIndirectCall() const {
   return true;
 }
 
+/// Tests if this call site must be tail call optimized. Only a CallInst can
+/// be tail call optimized.
+bool CallBase::isMustTailCall() const {
+  if (auto *CI = dyn_cast<CallInst>(this))
+    return CI->isMustTailCall();
+  return false;
+}
+
+/// Tests if this call site is marked as a tail call.
+bool CallBase::isTailCall() const {
+  if (auto *CI = dyn_cast<CallInst>(this))
+    return CI->isTailCall();
+  return false;
+}
+
 Intrinsic::ID CallBase::getIntrinsicID() const {
   if (auto *F = getCalledFunction())
     return F->getIntrinsicID();

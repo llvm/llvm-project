@@ -2077,7 +2077,8 @@ bool llvm::isInlineViable(Function &F) {
   for (Function::iterator BI = F.begin(), BE = F.end(); BI != BE; ++BI) {
     // Disallow inlining of functions which contain indirect branches or
     // blockaddresses.
-    if (isa<IndirectBrInst>(BI->getTerminator()) || BI->hasAddressTaken())
+    if (isa<IndirectBrInst>(BI->getTerminator()) ||
+        BI->hasAddressTaken())
       return false;
 
     for (auto &II : *BI) {
