@@ -3330,6 +3330,20 @@ StmtResult Sema::LiftCilkForLoopLimit(SourceLocation CilkForLoc,
   return NewInit;
 }
 
+// Borrowed from SemaDeclCXX.cpp and modified.
+static void SearchForReturnInStmt(Sema &Self, Stmt *S) {
+  if (isa<ReturnStmt>(S))
+    Self.Diag(S->getLocStart(),
+              diag::err_cilk_for_cannot_return);
+
+  for (Stmt *SubStmt : S->children()) {
+    if (!SubStmt)
+      continue;
+    if (!isa<Expr>(SubStmt))
+      SearchForReturnInStmt(Self, SubStmt);
+  }
+}
+
 StmtResult
 Sema::ActOnCilkForStmt(SourceLocation CilkForLoc, SourceLocation LParenLoc,
                        Stmt *First, ConditionResult Second, FullExprArg Third,
@@ -3384,6 +3398,8 @@ Sema::ActOnCilkForStmt(SourceLocation CilkForLoc, SourceLocation LParenLoc,
     Diag(CilkForLoc, diag::warn_empty_cilk_for_body);
     getCurCompoundScope().setHasEmptyLoopBodies();
   }
+
+  SearchForReturnInStmt(*this, Body);
 
   if (LoopVar)
     return new (Context) CilkForStmt(Context, First, Condition, Increment,
