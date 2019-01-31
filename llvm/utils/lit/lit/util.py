@@ -197,7 +197,7 @@ def which(command, paths=None):
 
     # Check for absolute match first.
     if os.path.isabs(command) and os.path.isfile(command):
-        return os.path.normpath(command)
+        return os.path.normcase(os.path.normpath(command))
 
     # Would be nice if Python had a lib function for this.
     if not paths:
@@ -215,7 +215,7 @@ def which(command, paths=None):
         for ext in pathext:
             p = os.path.join(path, command + ext)
             if os.path.exists(p) and not os.path.isdir(p):
-                return os.path.normpath(p)
+                return os.path.normcase(os.path.normpath(p))
 
     return None
 

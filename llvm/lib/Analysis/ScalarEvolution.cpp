@@ -211,6 +211,11 @@ static cl::opt<unsigned>
                   cl::desc("Max coefficients in AddRec during evolving"),
                   cl::init(8));
 
+static cl::opt<unsigned>
+    HugeExprThreshold("scalar-evolution-huge-expr-threshold", cl::Hidden,
+                  cl::desc("Size of the expression which is considered huge"),
+                  cl::init(4096));
+
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions
 //===----------------------------------------------------------------------===//
@@ -843,6 +848,17 @@ static inline int sizeOfSCEV(const SCEV *S) {
   SCEVTraversal<FindSCEVSize> ST(F);
   ST.visitAll(S);
   return F.Size;
+}
+
+/// Returns true if the subtree of \p S contains at least HugeExprThreshold
+/// nodes.
+static bool isHugeExpression(const SCEV *S) {
+  return S->getExpressionSize() >= HugeExprThreshold;
+}
+
+/// Returns true of \p Ops contains a huge SCEV (see definition above).
+static bool hasHugeExpression(ArrayRef<const SCEV *> Ops) {
+  return any_of(Ops, isHugeExpression);
 }
 
 namespace {
@@ -2404,7 +2420,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
   }
 
   // Limit recursion calls depth.
-  if (Depth > MaxArithDepth)
+  if (Depth > MaxArithDepth || hasHugeExpression(Ops))
     return getOrCreateAddExpr(Ops, Flags);
 
   // Okay, check to see if the same value occurs in the operand list more than
@@ -2883,7 +2899,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
   Flags = StrengthenNoWrapFlags(this, scMulExpr, Ops, Flags);
 
   // Limit recursion calls depth.
-  if (Depth > MaxArithDepth)
+  if (Depth > MaxArithDepth || hasHugeExpression(Ops))
     return getOrCreateMulExpr(Ops, Flags);
 
   // If there are any constants, fold them together.
@@ -3056,7 +3072,8 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
       // Limit max number of arguments to avoid creation of unreasonably big
       // SCEVAddRecs with very complex operands.
       if (AddRec->getNumOperands() + OtherAddRec->getNumOperands() - 1 >
-          MaxAddRecSize)
+          MaxAddRecSize || isHugeExpression(AddRec) ||
+          isHugeExpression(OtherAddRec))
         continue;
 
       bool Overflow = false;

@@ -2357,13 +2357,6 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
         MachineBasicBlock::reverse_iterator E = MI.getParent()->rend(), It = MI;
         It++;
         unsigned Reg = MI.getOperand(i).getReg();
-        // MachineInstr::readsRegister only returns true if the machine
-        // instruction reads the exact register or its super-register. It
-        // does not consider uses of sub-registers which seems like strange
-        // behaviour. Nonetheless, if we end up with a 64-bit register here,
-        // get the corresponding 32-bit register to check.
-        if (PPC::G8RCRegClass.contains(Reg))
-          Reg = Reg - PPC::X0 + PPC::R0;
 
         // Is this register defined by some form of add-immediate (including
         // load-immediate) within this basic block?
@@ -3183,14 +3176,7 @@ bool PPCInstrInfo::isRegElgibleForForwarding(const MachineOperand &RegMO,
   if (MRI.isSSA())
     return false;
 
-  // MachineInstr::readsRegister only returns true if the machine
-  // instruction reads the exact register or its super-register. It
-  // does not consider uses of sub-registers which seems like strange
-  // behaviour. Nonetheless, if we end up with a 64-bit register here,
-  // get the corresponding 32-bit register to check.
   unsigned Reg = RegMO.getReg();
-  if (PPC::G8RCRegClass.contains(Reg))
-    Reg = Reg - PPC::X0 + PPC::R0;
 
   // Walking the inst in reverse(MI-->DefMI) to get the last DEF of the Reg.
   MachineBasicBlock::const_reverse_iterator It = MI;

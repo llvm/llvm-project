@@ -469,6 +469,12 @@ public:
     return VT.getSizeInBits() >= 64; // vector 'bic'
   }
 
+  bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override {
+    if (DAG.getMachineFunction().getFunction().optForMinSize())
+      return false;
+    return true;
+  }
+
   bool shouldTransformSignedTruncationCheck(EVT XVT,
                                             unsigned KeptBits) const override {
     // For vectors, we don't have a preference..

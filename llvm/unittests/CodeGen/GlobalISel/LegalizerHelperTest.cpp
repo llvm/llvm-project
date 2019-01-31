@@ -26,8 +26,9 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ0) {
     return;
 
   // Declare your legalization info
-  DefineLegalizerInfo(
-      A, { getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).legalFor({s64}); });
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).legalFor({{s64, s64}});
+  });
   // Build Instr
   auto MIBCTTZ =
       B.buildInstr(TargetOpcode::G_CTTZ, {LLT::scalar(64)}, {Copies[0]});
@@ -56,8 +57,9 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ1) {
     return;
 
   // Declare your legalization info
-  DefineLegalizerInfo(A,
-                      { getActionDefinitionsBuilder(G_CTLZ).legalFor({s64}); });
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_CTLZ).legalFor({{s64, s64}});
+  });
   // Build Instr
   auto MIBCTTZ =
       B.buildInstr(TargetOpcode::G_CTTZ, {LLT::scalar(64)}, {Copies[0]});
@@ -88,8 +90,9 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ2) {
     return;
 
   // Declare your legalization info
-  DefineLegalizerInfo(
-      A, { getActionDefinitionsBuilder(G_CTPOP).legalFor({s64}); });
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_CTPOP).legalFor({{s64, s64}});
+  });
   // Build
   auto MIBCTTZ =
       B.buildInstr(TargetOpcode::G_CTTZ, {LLT::scalar(64)}, {Copies[0]});
@@ -117,8 +120,9 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ3) {
     return;
 
   // Declare your legalization info
-  DefineLegalizerInfo(A,
-                      { getActionDefinitionsBuilder(G_CTTZ).legalFor({s64}); });
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_CTTZ).legalFor({{s64, s64}});
+  });
   // Build
   auto MIBCTTZ = B.buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF,
                               {LLT::scalar(64)}, {Copies[0]});
@@ -142,8 +146,9 @@ TEST_F(GISelMITest, LowerBitCountingCTLZ0) {
     return;
 
   // Declare your legalization info
-  DefineLegalizerInfo(
-      A, { getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).legalFor({s64}); });
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).legalFor({{s64, s64}});
+  });
   // Build
   auto MIBCTLZ =
       B.buildInstr(TargetOpcode::G_CTLZ, {LLT::scalar(64)}, {Copies[0]});
@@ -171,8 +176,9 @@ TEST_F(GISelMITest, LowerBitCountingCTLZLibcall) {
     return;
 
   // Declare your legalization info
-  DefineLegalizerInfo(
-      A, { getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).libcallFor({s64}); });
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).libcallFor({{s64, s64}});
+  });
   // Build
   auto MIBCTLZ =
       B.buildInstr(TargetOpcode::G_CTLZ, {LLT::scalar(64)}, {Copies[0]});
@@ -200,8 +206,9 @@ TEST_F(GISelMITest, LowerBitCountingCTLZ1) {
     return;
 
   // Declare your legalization info
-  DefineLegalizerInfo(A,
-                      { getActionDefinitionsBuilder(G_CTPOP).legalFor({s8}); });
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_CTPOP).legalFor({{s8, s8}});
+  });
   // Build
   // Trunc it to s8.
   LLT s8{LLT::scalar(8)};
@@ -239,8 +246,9 @@ TEST_F(GISelMITest, WidenBitCountingCTLZ) {
     return;
 
   // Declare your legalization info
-  DefineLegalizerInfo(A,
-                      { getActionDefinitionsBuilder(G_CTLZ).legalFor({s16}); });
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_CTLZ).legalFor({{s16, s16}});
+  });
   // Build
   // Trunc it to s8.
   LLT s8{LLT::scalar(8)};
@@ -250,7 +258,7 @@ TEST_F(GISelMITest, WidenBitCountingCTLZ) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.widenScalar(*MIBCTLZ, 0, s16) ==
+  ASSERT_TRUE(Helper.widenScalar(*MIBCTLZ, 1, s16) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -272,8 +280,9 @@ TEST_F(GISelMITest, WidenBitCountingCTLZZeroUndef) {
     return;
 
   // Declare your legalization info
-  DefineLegalizerInfo(
-      A, { getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).legalFor({s16}); });
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).legalFor({{s16, s16}});
+  });
   // Build
   // Trunc it to s8.
   LLT s8{LLT::scalar(8)};
@@ -284,7 +293,7 @@ TEST_F(GISelMITest, WidenBitCountingCTLZZeroUndef) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.widenScalar(*MIBCTLZ_ZU, 0, s16) ==
+  ASSERT_TRUE(Helper.widenScalar(*MIBCTLZ_ZU, 1, s16) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -306,8 +315,9 @@ TEST_F(GISelMITest, WidenBitCountingCTPOP) {
     return;
 
   // Declare your legalization info
-  DefineLegalizerInfo(
-      A, { getActionDefinitionsBuilder(G_CTPOP).legalFor({s16}); });
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_CTPOP).legalFor({{s16, s16}});
+  });
   // Build
   // Trunc it to s8.
   LLT s8{LLT::scalar(8)};
@@ -317,7 +327,7 @@ TEST_F(GISelMITest, WidenBitCountingCTPOP) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.widenScalar(*MIBCTPOP, 0, s16) ==
+  ASSERT_TRUE(Helper.widenScalar(*MIBCTPOP, 1, s16) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -337,8 +347,9 @@ TEST_F(GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
     return;
 
   // Declare your legalization info
-  DefineLegalizerInfo(
-      A, { getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).legalFor({s16}); });
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).legalFor({{s16, s16}});
+  });
   // Build
   // Trunc it to s8.
   LLT s8{LLT::scalar(8)};
@@ -349,7 +360,7 @@ TEST_F(GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.widenScalar(*MIBCTTZ_ZERO_UNDEF, 0, s16) ==
+  ASSERT_TRUE(Helper.widenScalar(*MIBCTTZ_ZERO_UNDEF, 1, s16) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -369,8 +380,9 @@ TEST_F(GISelMITest, WidenBitCountingCTTZ) {
     return;
 
   // Declare your legalization info
-  DefineLegalizerInfo(A,
-                      { getActionDefinitionsBuilder(G_CTTZ).legalFor({s16}); });
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_CTTZ).legalFor({{s16, s16}});
+  });
   // Build
   // Trunc it to s8.
   LLT s8{LLT::scalar(8)};
@@ -380,7 +392,7 @@ TEST_F(GISelMITest, WidenBitCountingCTTZ) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.widenScalar(*MIBCTTZ, 0, s16) ==
+  ASSERT_TRUE(Helper.widenScalar(*MIBCTTZ, 1, s16) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -401,8 +413,9 @@ TEST_F(GISelMITest, WidenUADDO) {
     return;
 
   // Declare your legalization info
-  DefineLegalizerInfo(A,
-                      { getActionDefinitionsBuilder(G_ADD).legalFor({s16}); });
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_ADD).legalFor({{s16, s16}});
+  });
   // Build
   // Trunc it to s8.
   LLT s8{LLT::scalar(8)};
@@ -438,8 +451,9 @@ TEST_F(GISelMITest, WidenUSUBO) {
     return;
 
   // Declare your legalization info
-  DefineLegalizerInfo(A,
-                      { getActionDefinitionsBuilder(G_SUB).legalFor({s16}); });
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_SUB).legalFor({{s16, s16}});
+  });
   // Build
   // Trunc it to s8.
   LLT s8{LLT::scalar(8)};

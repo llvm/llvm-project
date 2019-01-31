@@ -52,8 +52,8 @@ body:             |
     ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
-    ; MIPS32: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY4]], [[C]]
-    ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]]
+    ; MIPS32: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY4]], [[C]](s32)
+    ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; MIPS32: $v0 = COPY [[ASHR]](s32)
     ; MIPS32: RetRA implicit $v0
     %2:_(s32) = COPY $a0
@@ -141,8 +141,8 @@ body:             |
     ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
-    ; MIPS32: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY4]], [[C]]
-    ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]]
+    ; MIPS32: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY4]], [[C]](s32)
+    ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; MIPS32: $v0 = COPY [[ASHR]](s32)
     ; MIPS32: RetRA implicit $v0
     %2:_(s32) = COPY $a0
@@ -275,13 +275,13 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
     ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %fixed-stack.0, align 0)
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %fixed-stack.0)
     ; MIPS32: [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-    ; MIPS32: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load 4 from %fixed-stack.1, align 0)
+    ; MIPS32: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load 4 from %fixed-stack.1)
     ; MIPS32: [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-    ; MIPS32: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (load 4 from %fixed-stack.2, align 0)
+    ; MIPS32: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (load 4 from %fixed-stack.2)
     ; MIPS32: [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-    ; MIPS32: [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p0) :: (load 4 from %fixed-stack.3, align 0)
+    ; MIPS32: [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p0) :: (load 4 from %fixed-stack.3)
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[COPY]]
     ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
@@ -317,13 +317,13 @@ body:             |
     %5:_(s32) = COPY $a3
     %0:_(s128) = G_MERGE_VALUES %2(s32), %3(s32), %4(s32), %5(s32)
     %10:_(p0) = G_FRAME_INDEX %fixed-stack.3
-    %6:_(s32) = G_LOAD %10(p0) :: (load 4 from %fixed-stack.3, align 0)
+    %6:_(s32) = G_LOAD %10(p0) :: (load 4 from %fixed-stack.3, align 4)
     %11:_(p0) = G_FRAME_INDEX %fixed-stack.2
-    %7:_(s32) = G_LOAD %11(p0) :: (load 4 from %fixed-stack.2, align 0)
+    %7:_(s32) = G_LOAD %11(p0) :: (load 4 from %fixed-stack.2, align 4)
     %12:_(p0) = G_FRAME_INDEX %fixed-stack.1
-    %8:_(s32) = G_LOAD %12(p0) :: (load 4 from %fixed-stack.1, align 0)
+    %8:_(s32) = G_LOAD %12(p0) :: (load 4 from %fixed-stack.1, align 4)
     %13:_(p0) = G_FRAME_INDEX %fixed-stack.0
-    %9:_(s32) = G_LOAD %13(p0) :: (load 4 from %fixed-stack.0, align 0)
+    %9:_(s32) = G_LOAD %13(p0) :: (load 4 from %fixed-stack.0, align 4)
     %1:_(s128) = G_MERGE_VALUES %6(s32), %7(s32), %8(s32), %9(s32)
     %14:_(s128) = G_ADD %1, %0
     %15:_(s32), %16:_(s32), %17:_(s32), %18:_(s32) = G_UNMERGE_VALUES %14(s128)

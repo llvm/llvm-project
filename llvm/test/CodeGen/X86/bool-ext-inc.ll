@@ -118,8 +118,7 @@ define <4 x i32> @zextbool_sub_vector(<4 x i32> %cmp1, <4 x i32> %cmp2, <4 x i32
 ; CHECK-LABEL: zextbool_sub_vector:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrld $31, %xmm0, %xmm0
-; CHECK-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %c = icmp eq <4 x i32> %cmp1, %cmp2
   %b = zext <4 x i1> %c to <4 x i32>
@@ -130,9 +129,9 @@ define <4 x i32> @zextbool_sub_vector(<4 x i32> %cmp1, <4 x i32> %cmp2, <4 x i32
 define i32 @assertsext_sub_1(i1 signext %cond, i32 %y) {
 ; CHECK-LABEL: assertsext_sub_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
 ; CHECK-NEXT:    retq
   %e = zext i1 %cond to i32
   %r = sub i32 %y, %e
