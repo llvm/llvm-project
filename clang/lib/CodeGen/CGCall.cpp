@@ -4398,10 +4398,23 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
     // Strip away the noreturn attribute to better diagnose unreachable UB.
     if (SanOpts.has(SanitizerKind::Unreachable)) {
+      // Also remove from function since CI->hasFnAttr(..) also checks attributes
+      // of the called function.
       if (auto *F = CI->getCalledFunction())
         F->removeFnAttr(llvm::Attribute::NoReturn);
       CI->removeAttribute(llvm::AttributeList::FunctionIndex,
                           llvm::Attribute::NoReturn);
+
+      // Avoid incompatibility with ASan which relies on the `noreturn`
+      // attribute to insert handler calls.
+      if (SanOpts.has(SanitizerKind::Address)) {
+        SanitizerScope SanScope(this);
+        Builder.SetInsertPoint(CI);
+        auto *FnType = llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
+        auto *Fn = CGM.CreateRuntimeFunction(FnType, "__asan_handle_no_return");
+        EmitNounwindRuntimeCall(Fn);
+        Builder.SetInsertPoint(CI->getParent());
+      }
     }
 
     EmitUnreachable(Loc);
