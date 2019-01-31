@@ -678,6 +678,9 @@ public:
     // Function returns the first argument.
     Identity,
 
+    // Function returns "this" argument.
+    IdentityThis,
+
     // Function either returns zero, or the input parameter.
     IdentityOrZero
   };

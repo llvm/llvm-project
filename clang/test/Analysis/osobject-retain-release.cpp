@@ -54,6 +54,9 @@ struct OtherStruct {
   OtherStruct(OSArray *arr);
 };
 
+bool test_meta_cast_no_leak(OSMetaClassBase *arg) {
+  return arg && arg->metaCast("blah") != nullptr;
+}
 
 void escape(void *);
 void escape_with_source(void *p) {}
