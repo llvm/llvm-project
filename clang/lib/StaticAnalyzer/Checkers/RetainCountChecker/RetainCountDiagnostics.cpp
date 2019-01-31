@@ -156,23 +156,25 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
     }
   }
 
+   os << " returns ";
+
   if (CurrV.getObjKind() == ObjKind::CF) {
-    os << " a Core Foundation object of type '"
+    os << "a Core Foundation object of type '"
        << Sym->getType().getAsString() << "' with a ";
   } else if (CurrV.getObjKind() == ObjKind::OS) {
-    os << " an OSObject of type '" << getPrettyTypeName(Sym->getType())
+    os << "an OSObject of type '" << getPrettyTypeName(Sym->getType())
        << "' with a ";
   } else if (CurrV.getObjKind() == ObjKind::Generalized) {
-    os << " an object of type '" << Sym->getType().getAsString()
+    os << "an object of type '" << Sym->getType().getAsString()
        << "' with a ";
   } else {
     assert(CurrV.getObjKind() == ObjKind::ObjC);
     QualType T = Sym->getType();
     if (!isa<ObjCObjectPointerType>(T)) {
-      os << " returns an Objective-C object with a ";
+      os << "an Objective-C object with a ";
     } else {
       const ObjCObjectPointerType *PT = cast<ObjCObjectPointerType>(T);
-      os << " returns an instance of " << PT->getPointeeType().getAsString()
+      os << "an instance of " << PT->getPointeeType().getAsString()
          << " with a ";
     }
   }
