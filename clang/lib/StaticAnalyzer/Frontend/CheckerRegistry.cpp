@@ -41,8 +41,9 @@ static bool isCompatibleAPIVersion(const char *versionString) {
 
 CheckerRegistry::CheckerRegistry(ArrayRef<std::string> plugins,
                                  DiagnosticsEngine &diags,
+                                 AnalyzerOptions &AnOpts,
                                  const LangOptions &LangOpts)
-  : Diags(diags), LangOpts(LangOpts) {
+  : Diags(diags), AnOpts(AnOpts), LangOpts(LangOpts) {
 
 #define GET_CHECKERS
 #define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI)                            \
@@ -107,8 +108,7 @@ static bool isInPackage(const CheckerRegistry::CheckerInfo &checker,
   return false;
 }
 
-CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers(
-                                            const AnalyzerOptions &Opts) const {
+CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers() const {
 
   assert(std::is_sorted(Checkers.begin(), Checkers.end(), checkerNameLT) &&
          "In order to efficiently gather checkers, this function expects them "
@@ -117,7 +117,7 @@ CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers(
   CheckerInfoSet enabledCheckers;
   const auto end = Checkers.cend();
 
-  for (const std::pair<std::string, bool> &opt : Opts.CheckersControlList) {
+  for (const std::pair<std::string, bool> &opt : AnOpts.CheckersControlList) {
     // Use a binary search to find the possible start of the package.
     CheckerRegistry::CheckerInfo
         packageInfo(nullptr, nullptr, opt.first, "", "");
@@ -168,13 +168,12 @@ void CheckerRegistry::addChecker(InitializationFunction Rfn,
   }
 }
 
-void CheckerRegistry::initializeManager(CheckerManager &checkerMgr,
-                                        const AnalyzerOptions &Opts) const {
+void CheckerRegistry::initializeManager(CheckerManager &checkerMgr) const {
   // Sort checkers for efficient collection.
   llvm::sort(Checkers, checkerNameLT);
 
   // Collect checkers enabled by the options.
-  CheckerInfoSet enabledCheckers = getEnabledCheckers(Opts);
+  CheckerInfoSet enabledCheckers = getEnabledCheckers();
 
   // Initialize the CheckerManager with all enabled checkers.
   for (const auto *i : enabledCheckers) {
@@ -183,9 +182,8 @@ void CheckerRegistry::initializeManager(CheckerManager &checkerMgr,
   }
 }
 
-void CheckerRegistry::validateCheckerOptions(
-                                            const AnalyzerOptions &opts) const {
-  for (const auto &config : opts.Config) {
+void CheckerRegistry::validateCheckerOptions() const {
+  for (const auto &config : AnOpts.Config) {
     size_t pos = config.getKey().find(':');
     if (pos == StringRef::npos)
       continue;
@@ -242,13 +240,12 @@ void CheckerRegistry::printHelp(raw_ostream &out,
   }
 }
 
-void CheckerRegistry::printList(raw_ostream &out,
-                                const AnalyzerOptions &opts) const {
+void CheckerRegistry::printList(raw_ostream &out) const {
   // Sort checkers for efficient collection.
   llvm::sort(Checkers, checkerNameLT);
 
   // Collect checkers enabled by the options.
-  CheckerInfoSet enabledCheckers = getEnabledCheckers(opts);
+  CheckerInfoSet enabledCheckers = getEnabledCheckers();
 
   for (const auto *i : enabledCheckers)
     out << i->FullName << '\n';
