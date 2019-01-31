@@ -457,7 +457,6 @@ static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {
   case Autorelease:
   case DecRefBridgedTransferred:
   case IncRef:
-  case IncRefMsg:
   case MakeCollectable:
   case UnretainedOutParameter:
   case RetainedOutParameter:
@@ -468,9 +467,6 @@ static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {
   case DecRef:
   case DecRefAndStopTrackingHard:
     return E.withKind(DecRefAndStopTrackingHard);
-  case DecRefMsg:
-  case DecRefMsgAndStopTrackingHard:
-    return E.withKind(DecRefMsgAndStopTrackingHard);
   case Dealloc:
     return E.withKind(Dealloc);
   }
@@ -649,6 +645,8 @@ RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
   return None;
 }
 
+// TODO: UnaryFuncKind is a very funny enum, it really should not exist:
+// just pass the needed effect directly!
 const RetainSummary *
 RetainSummaryManager::getUnarySummary(const FunctionType* FT,
                                       UnaryFuncKind func) {
@@ -662,7 +660,7 @@ RetainSummaryManager::getUnarySummary(const FunctionType* FT,
   if (!FTP || FTP->getNumParams() != 1)
     return getPersistentStopSummary();
 
-  ArgEffect Effect;
+  ArgEffect Effect(DoNothing, ObjKind::CF);
   switch (func) {
   case cfretain: Effect = Effect.withKind(IncRef); break;
   case cfrelease: Effect = Effect.withKind(DecRef); break;
@@ -778,7 +776,7 @@ bool RetainSummaryManager::applyFunctionParamAnnotationEffect(
     const ParmVarDecl *pd, unsigned parm_idx, const FunctionDecl *FD,
     RetainSummaryTemplate &Template) {
   if (hasEnabledAttr<NSConsumedAttr>(pd)) {
-    Template->addArg(AF, parm_idx, ArgEffect(DecRefMsg, ObjKind::ObjC));
+    Template->addArg(AF, parm_idx, ArgEffect(DecRef, ObjKind::ObjC));
     return true;
   } else if (hasEnabledAttr<CFConsumedAttr>(pd)) {
     Template->addArg(AF, parm_idx, ArgEffect(DecRef, ObjKind::CF));
@@ -857,7 +855,7 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
 
   // Effects on the receiver.
   if (MD->hasAttr<NSConsumesSelfAttr>())
-    Template->setReceiverEffect(ArgEffect(DecRefMsg, ObjKind::ObjC));
+    Template->setReceiverEffect(ArgEffect(DecRef, ObjKind::ObjC));
 
   // Effects on the parameters.
   unsigned parm_idx = 0;
@@ -865,7 +863,7 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
        pi != pe; ++pi, ++parm_idx) {
     const ParmVarDecl *pd = *pi;
     if (pd->hasAttr<NSConsumedAttr>()) {
-      Template->addArg(AF, parm_idx, ArgEffect(DecRefMsg, ObjKind::ObjC));
+      Template->addArg(AF, parm_idx, ArgEffect(DecRef, ObjKind::ObjC));
     } else if (pd->hasAttr<CFConsumedAttr>()) {
       Template->addArg(AF, parm_idx, ArgEffect(DecRef, ObjKind::CF));
     } else if (pd->hasAttr<OSConsumedAttr>()) {
@@ -931,7 +929,7 @@ RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
       break;
     case OMF_init:
       ResultEff = ObjCInitRetE;
-      ReceiverEff = ArgEffect(DecRefMsg, ObjKind::ObjC);
+      ReceiverEff = ArgEffect(DecRef, ObjKind::ObjC);
       break;
     case OMF_alloc:
     case OMF_new:
@@ -946,10 +944,10 @@ RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
       ReceiverEff = ArgEffect(Autorelease, ObjKind::ObjC);
       break;
     case OMF_retain:
-      ReceiverEff = ArgEffect(IncRefMsg, ObjKind::ObjC);
+      ReceiverEff = ArgEffect(IncRef, ObjKind::ObjC);
       break;
     case OMF_release:
-      ReceiverEff = ArgEffect(DecRefMsg, ObjKind::ObjC);
+      ReceiverEff = ArgEffect(DecRef, ObjKind::ObjC);
       break;
     case OMF_dealloc:
       ReceiverEff = ArgEffect(Dealloc, ObjKind::ObjC);
@@ -1062,9 +1060,8 @@ void RetainSummaryManager::InitializeMethodSummaries() {
   ArgEffects ScratchArgs = AF.getEmptyMap();
   // Create the "init" selector.  It just acts as a pass-through for the
   // receiver.
-  const RetainSummary *InitSumm = getPersistentSummary(ObjCInitRetE,
-                                                       ScratchArgs,
-                                                       ArgEffect(DecRefMsg));
+  const RetainSummary *InitSumm = getPersistentSummary(
+      ObjCInitRetE, ScratchArgs, ArgEffect(DecRef, ObjKind::ObjC));
   addNSObjectMethSummary(GetNullarySelector("init", Ctx), InitSumm);
 
   // awakeAfterUsingCoder: behaves basically like an 'init' method.  It
@@ -1080,20 +1077,23 @@ void RetainSummaryManager::InitializeMethodSummaries() {
 
   // Create the "retain" selector.
   RetEffect NoRet = RetEffect::MakeNoRet();
-  const RetainSummary *Summ =
-      getPersistentSummary(NoRet, ScratchArgs, ArgEffect(IncRefMsg));
+  const RetainSummary *Summ = getPersistentSummary(
+      NoRet, ScratchArgs, ArgEffect(IncRef, ObjKind::ObjC));
   addNSObjectMethSummary(GetNullarySelector("retain", Ctx), Summ);
 
   // Create the "release" selector.
-  Summ = getPersistentSummary(NoRet, ScratchArgs, ArgEffect(DecRefMsg));
+  Summ = getPersistentSummary(NoRet, ScratchArgs,
+                              ArgEffect(DecRef, ObjKind::ObjC));
   addNSObjectMethSummary(GetNullarySelector("release", Ctx), Summ);
 
   // Create the -dealloc summary.
-  Summ = getPersistentSummary(NoRet, ScratchArgs, ArgEffect(Dealloc));
+  Summ = getPersistentSummary(NoRet, ScratchArgs, ArgEffect(Dealloc,
+                                                            ObjKind::ObjC));
   addNSObjectMethSummary(GetNullarySelector("dealloc", Ctx), Summ);
 
   // Create the "autorelease" selector.
-  Summ = getPersistentSummary(NoRet, ScratchArgs, ArgEffect(Autorelease));
+  Summ = getPersistentSummary(NoRet, ScratchArgs, ArgEffect(Autorelease,
+                                                            ObjKind::ObjC));
   addNSObjectMethSummary(GetNullarySelector("autorelease", Ctx), Summ);
 
   // For NSWindow, allocated objects are (initially) self-owned.

@@ -347,7 +347,7 @@ public:
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
 
   ProgramStateRef updateSymbol(ProgramStateRef state, SymbolRef sym,
-                               RefVal V, ArgEffectKind E, RefVal::Kind &hasErr,
+                               RefVal V, ArgEffect E, RefVal::Kind &hasErr,
                                CheckerContext &C) const;
 
   void processNonLeakError(ProgramStateRef St, SourceRange ErrorRange,

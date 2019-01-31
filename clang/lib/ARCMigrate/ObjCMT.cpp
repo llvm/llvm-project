@@ -1484,14 +1484,15 @@ void ObjCMigrateASTConsumer::AddCFAnnotations(ASTContext &Ctx,
        pe = FuncDecl->param_end(); pi != pe; ++pi, ++i) {
     const ParmVarDecl *pd = *pi;
     ArgEffect AE = AEArgs[i];
-    if (AE.getKind() == DecRef && !pd->hasAttr<CFConsumedAttr>() &&
+    if (AE.getKind() == DecRef && AE.getObjKind() == ObjKind::CF &&
+        !pd->hasAttr<CFConsumedAttr>() &&
         NSAPIObj->isMacroDefined("CF_CONSUMED")) {
       edit::Commit commit(*Editor);
       commit.insertBefore(pd->getLocation(), "CF_CONSUMED ");
       Editor->commit(commit);
-    }
-    else if (AE.getKind() == DecRefMsg && !pd->hasAttr<NSConsumedAttr>() &&
-             NSAPIObj->isMacroDefined("NS_CONSUMED")) {
+    } else if (AE.getKind() == DecRef && AE.getObjKind() == ObjKind::ObjC &&
+               !pd->hasAttr<NSConsumedAttr>() &&
+               NSAPIObj->isMacroDefined("NS_CONSUMED")) {
       edit::Commit commit(*Editor);
       commit.insertBefore(pd->getLocation(), "NS_CONSUMED ");
       Editor->commit(commit);
@@ -1536,8 +1537,8 @@ ObjCMigrateASTConsumer::CF_BRIDGING_KIND
        pe = FuncDecl->param_end(); pi != pe; ++pi, ++i) {
     const ParmVarDecl *pd = *pi;
     ArgEffect AE = AEArgs[i];
-    if (AE.getKind() == DecRef /*CFConsumed annotated*/ ||
-        AE.getKind() == IncRef) {
+    if ((AE.getKind() == DecRef /*CFConsumed annotated*/ ||
+         AE.getKind() == IncRef) && AE.getObjKind() == ObjKind::CF) {
       if (AE.getKind() == DecRef && !pd->hasAttr<CFConsumedAttr>())
         ArgCFAudited = true;
       else if (AE.getKind() == IncRef)
@@ -1610,7 +1611,9 @@ void ObjCMigrateASTConsumer::AddCFAnnotations(ASTContext &Ctx,
        pe = MethodDecl->param_end(); pi != pe; ++pi, ++i) {
     const ParmVarDecl *pd = *pi;
     ArgEffect AE = AEArgs[i];
-    if (AE.getKind() == DecRef && !pd->hasAttr<CFConsumedAttr>() &&
+    if (AE.getKind() == DecRef
+        && AE.getObjKind() == ObjKind::CF
+        && !pd->hasAttr<CFConsumedAttr>() &&
         NSAPIObj->isMacroDefined("CF_CONSUMED")) {
       edit::Commit commit(*Editor);
       commit.insertBefore(pd->getLocation(), "CF_CONSUMED ");
@@ -1633,7 +1636,7 @@ void ObjCMigrateASTConsumer::migrateAddMethodAnnotation(
        MethodDecl->hasAttr<NSReturnsNotRetainedAttr>() ||
        MethodDecl->hasAttr<NSReturnsAutoreleasedAttr>());
 
-  if (CE.getReceiver().getKind() == DecRefMsg &&
+  if (CE.getReceiver().getKind() == DecRef &&
       !MethodDecl->hasAttr<NSConsumesSelfAttr>() &&
       MethodDecl->getMethodFamily() != OMF_init &&
       MethodDecl->getMethodFamily() != OMF_release &&
