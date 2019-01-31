@@ -3087,44 +3087,27 @@ markReleased(ProgramStateRef State, SymbolRef Sym, const Expr *Origin) {
 } // end namespace ento
 } // end namespace clang
 
-void ento::registerNewDeleteLeaksChecker(CheckerManager &mgr) {
-  registerCStringCheckerBasic(mgr);
-  MallocChecker *checker = mgr.registerChecker<MallocChecker>();
-  checker->IsOptimistic = mgr.getAnalyzerOptions().getCheckerBooleanOption(
-      "Optimistic", false, checker);
-  checker->ChecksEnabled[MallocChecker::CK_NewDeleteLeaksChecker] = true;
-  checker->CheckNames[MallocChecker::CK_NewDeleteLeaksChecker] =
-      mgr.getCurrentCheckName();
-  // We currently treat NewDeleteLeaks checker as a subchecker of NewDelete
-  // checker.
-  if (!checker->ChecksEnabled[MallocChecker::CK_NewDeleteChecker]) {
-    checker->ChecksEnabled[MallocChecker::CK_NewDeleteChecker] = true;
-    // FIXME: This does not set the correct name, but without this workaround
-    //        no name will be set at all.
-    checker->CheckNames[MallocChecker::CK_NewDeleteChecker] =
-        mgr.getCurrentCheckName();
-  }
-}
-
-bool ento::shouldRegisterNewDeleteLeaksChecker(const LangOptions &LO) {
-  return true;
-}
-
 // Intended to be used in InnerPointerChecker to register the part of
 // MallocChecker connected to it.
 void ento::registerInnerPointerCheckerAux(CheckerManager &mgr) {
-    registerCStringCheckerBasic(mgr);
     MallocChecker *checker = mgr.registerChecker<MallocChecker>();
     checker->IsOptimistic = mgr.getAnalyzerOptions().getCheckerBooleanOption(
-        "Optimistic", false, checker);
+                                                  "Optimistic", false, checker);
     checker->ChecksEnabled[MallocChecker::CK_InnerPointerChecker] = true;
     checker->CheckNames[MallocChecker::CK_InnerPointerChecker] =
         mgr.getCurrentCheckName();
 }
 
+void ento::registerDynamicMemoryModeling(CheckerManager &mgr) {
+  mgr.registerChecker<MallocChecker>();
+}
+
+bool ento::shouldRegisterDynamicMemoryModeling(const LangOptions &LO) {
+  return true;
+}
+
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &mgr) {                             \
-    registerCStringCheckerBasic(mgr);                                          \
     MallocChecker *checker = mgr.registerChecker<MallocChecker>();             \
     checker->IsOptimistic = mgr.getAnalyzerOptions().getCheckerBooleanOption(  \
         "Optimistic", false, checker);                                         \
@@ -3138,4 +3121,5 @@ void ento::registerInnerPointerCheckerAux(CheckerManager &mgr) {
 
 REGISTER_CHECKER(MallocChecker)
 REGISTER_CHECKER(NewDeleteChecker)
+REGISTER_CHECKER(NewDeleteLeaksChecker)
 REGISTER_CHECKER(MismatchedDeallocatorChecker)

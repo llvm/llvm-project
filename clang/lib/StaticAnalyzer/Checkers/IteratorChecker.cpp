@@ -2394,6 +2394,14 @@ bool compare(ProgramStateRef State, NonLoc NL1, NonLoc NL2,
 
 } // namespace
 
+void ento::registerIteratorModeling(CheckerManager &mgr) {
+  mgr.registerChecker<IteratorChecker>();
+}
+
+bool ento::shouldRegisterIteratorModeling(const LangOptions &LO) {
+  return true;
+}
+
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &Mgr) {                             \
     auto *checker = Mgr.registerChecker<IteratorChecker>();                    \
