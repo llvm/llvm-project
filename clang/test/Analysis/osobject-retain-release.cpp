@@ -117,14 +117,14 @@ void os_consume_ok(OS_CONSUME OSObject *obj) {
 }
 
 void use_os_consume_violation() {
-  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type OSObject with a +1 retain count}}
+  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}
   os_consume_violation(obj); // expected-note{{Calling 'os_consume_violation'}}
                              // expected-note@-1{{Returning from 'os_consume_violation'}}
 } // expected-note{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
   // expected-warning@-1{{Potential leak of an object stored into 'obj'}}
 
 void use_os_consume_violation_two_args() {
-  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type OSObject with a +1 retain count}}
+  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}
   os_consume_violation_two_args(obj, coin()); // expected-note{{Calling 'os_consume_violation_two_args'}}
                              // expected-note@-1{{Returning from 'os_consume_violation_two_args'}}
 } // expected-note{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
@@ -195,7 +195,7 @@ void check_free_no_error() {
 }
 
 void check_free_use_after_free() {
-  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
   arr->retain(); // expected-note{{Reference count incremented. The object now has a +2 retain count}}
   arr->free(); // expected-note{{Object released}}
   arr->retain(); // expected-warning{{Reference-counted object is used after it is released}}
@@ -203,13 +203,13 @@ void check_free_use_after_free() {
 }
 
 unsigned int check_leak_explicit_new() {
-  OSArray *arr = new OSArray; // expected-note{{Operator 'new' returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = new OSArray; // expected-note{{Operator 'new' returns an OSObject of type 'OSArray' with a +1 retain count}}
   return arr->getCount(); // expected-note{{Object leaked: object allocated and stored into 'arr' is not referenced later in this execution path and has a retain count of +1}}
                           // expected-warning@-1{{Potential leak of an object stored into 'arr'}}
 }
 
 unsigned int check_leak_factory() {
-  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
   return arr->getCount(); // expected-note{{Object leaked: object allocated and stored into 'arr' is not referenced later in this execution path and has a retain count of +1}}
                           // expected-warning@-1{{Potential leak of an object stored into 'arr'}}
 }
@@ -228,18 +228,18 @@ void check_custom_iterator_rule(OSArray *arr) {
 }
 
 void check_iterator_leak(OSArray *arr) {
-  arr->getIterator(); // expected-note{{Call to method 'OSArray::getIterator' returns an OSObject of type OSIterator with a +1 retain count}}
-} // expected-note{{Object leaked: allocated object of type OSIterator is not referenced later}}
-  // expected-warning@-1{{Potential leak of an object of type OSIterator}}
+  arr->getIterator(); // expected-note{{Call to method 'OSArray::getIterator' returns an OSObject of type 'OSIterator' with a +1 retain count}}
+} // expected-note{{Object leaked: allocated object of type 'OSIterator' is not referenced later}}
+  // expected-warning@-1{{Potential leak of an object of type 'OSIterator}}'
 
 void check_no_invalidation() {
-  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
   OtherStruct::doNothingToArray(arr);
 } // expected-warning{{Potential leak of an object stored into 'arr'}}
   // expected-note@-1{{Object leaked}}
 
 void check_no_invalidation_other_struct() {
-  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
   OtherStruct other(arr); // expected-warning{{Potential leak}}
                           // expected-note@-1{{Object leaked}}
 }
@@ -266,8 +266,8 @@ struct ArrayOwner : public OSObject {
 };
 
 OSArray *generateArray() {
-  return OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
-                                    // expected-note@-1{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
+  return OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
+                                    // expected-note@-1{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
 }
 
 unsigned int check_leak_good_error_message() {
@@ -285,7 +285,7 @@ unsigned int check_leak_msg_temporary() {
   return generateArray()->getCount(); // expected-warning{{Potential leak of an object}}
                                       // expected-note@-1{{Calling 'generateArray'}}
                                       // expected-note@-2{{Returning from 'generateArray'}}
-                                      // expected-note@-3{{Object leaked: allocated object of type OSArray is not referenced later in this execution path and has a retain count of +1}}
+                                      // expected-note@-3{{Object leaked: allocated object of type 'OSArray' is not referenced later in this execution path and has a retain count of +1}}
 }
 
 void check_confusing_getters() {
@@ -354,14 +354,14 @@ void check_dynamic_cast_null_check() {
 }
 
 void use_after_release() {
-  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
   arr->release(); // expected-note{{Object released}}
   arr->getCount(); // expected-warning{{Reference-counted object is used after it is released}}
                    // expected-note@-1{{Reference-counted object is used after it is released}}
 }
 
 void potential_leak() {
-  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
   arr->retain(); // expected-note{{Reference count incremented. The object now has a +2 retain count}}
   arr->release(); // expected-note{{Reference count decremented. The object now has a +1 retain count}}
   arr->getCount();
@@ -412,7 +412,7 @@ unsigned int no_warn_ok_release(ArrayOwner *owner) {
 }
 
 unsigned int warn_on_overrelease_with_unknown_source(ArrayOwner *owner) {
-  OSArray *arr = owner->getArraySourceUnknown(); // expected-note{{Call to method 'ArrayOwner::getArraySourceUnknown' returns an OSObject of type OSArray with a +0 retain count}}
+  OSArray *arr = owner->getArraySourceUnknown(); // expected-note{{Call to method 'ArrayOwner::getArraySourceUnknown' returns an OSObject of type 'OSArray' with a +0 retain count}}
   arr->release(); // expected-warning{{Incorrect decrement of the reference count of an object that is not owned at this point by the caller}}
                   // expected-note@-1{{Incorrect decrement of the reference count of an object that is not owned at this point by the caller}}
   return arr->getCount();
