@@ -3351,8 +3351,10 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     Value *NullIsUnknownSize = CI->getNumArgOperands() == 2
                                    ? Builder.getFalse()
                                    : CI->getArgOperand(2);
+    Value *Dynamic =
+        CI->getNumArgOperands() < 3 ? Builder.getFalse() : CI->getArgOperand(3);
     NewCall = Builder.CreateCall(
-        NewFn, {CI->getArgOperand(0), CI->getArgOperand(1), NullIsUnknownSize});
+        NewFn, {CI->getArgOperand(0), CI->getArgOperand(1), NullIsUnknownSize, Dynamic});
     break;
   }
 

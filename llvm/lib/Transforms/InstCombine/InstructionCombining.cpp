@@ -2296,8 +2296,8 @@ Instruction *InstCombiner::visitAllocSite(Instruction &MI) {
 
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
         if (II->getIntrinsicID() == Intrinsic::objectsize) {
-          ConstantInt *Result = lowerObjectSizeCall(II, DL, &TLI,
-                                                    /*MustSucceed=*/true);
+          Value *Result =
+              lowerObjectSizeCall(II, DL, &TLI, /*MustSucceed=*/true);
           replaceInstUsesWith(*I, Result);
           eraseInstFromFunction(*I);
           Users[i] = nullptr; // Skip examining in the next loop.
