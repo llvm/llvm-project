@@ -2114,13 +2114,6 @@ bool ComprehensiveStaticInstrumentationLegacyPass::runOnModule(Module &M) {
     return this->getAnalysis<TaskInfoWrapperPass>(F).getTaskInfo();
   };
 
-  Options.InstrumentAtomics = false;
-  Options.InstrumentBasicBlocks = false;
-  Options.InstrumentMemIntrinsics = false;
-  Options.InstrumentMemoryAccesses = false;
-  Options.InstrumentAllocas = false;
-  Options.InstrumentAllocFns = false;
-
   bool res = CSIImpl(M, CG, GetDomTree, GetTaskInfo, TLI, Options).run();
   verifyModule(M, &llvm::errs());
 
