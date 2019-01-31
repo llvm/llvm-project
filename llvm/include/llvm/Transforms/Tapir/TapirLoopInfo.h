@@ -61,6 +61,12 @@ public:
       UnwindDest = DI->getUnwindDest();
   }
 
+  /// Constructor that automatically reads the metadata for the loop.
+  TapirLoopInfo(Loop *L, Task *T, OptimizationRemarkEmitter &ORE)
+      : TapirLoopInfo(L, T) {
+    readTapirLoopMetadata(ORE);
+  }
+
   ~TapirLoopInfo() {
     if (StartIterArg)
       delete StartIterArg;

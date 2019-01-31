@@ -196,7 +196,7 @@ public:
 private:
   // Record a Tapir loop defined by loop \p L and task \p T.
   TapirLoopInfo *createTapirLoop(Loop *L, Task *T) {
-    TapirLoops.push_back(new TapirLoopInfo(L, T));
+    TapirLoops.push_back(new TapirLoopInfo(L, T, ORE));
     TaskToTapirLoop[T] = TapirLoops.back();
     LoopToTapirLoop[L] = TapirLoops.back();
     ++TapirLoopsFound;
