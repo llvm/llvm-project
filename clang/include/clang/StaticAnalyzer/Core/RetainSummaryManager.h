@@ -641,10 +641,9 @@ class RetainSummaryManager {
   /// Apply the annotation of {@code pd} in function {@code FD}
   /// to the resulting summary stored in out-parameter {@code Template}.
   /// \return whether an annotation was applied.
-  bool applyFunctionParamAnnotationEffect(const ParmVarDecl *pd,
-                                        unsigned parm_idx,
-                                        const FunctionDecl *FD,
-                                        RetainSummaryTemplate &Template);
+  bool applyParamAnnotationEffect(const ParmVarDecl *pd, unsigned parm_idx,
+                                  const NamedDecl *FD,
+                                  RetainSummaryTemplate &Template);
 
 public:
   RetainSummaryManager(ASTContext &ctx,
