@@ -52,7 +52,7 @@ WEAK void __csi_after_call(csi_id_t callsite_id, csi_id_t func_id,
                            const call_prop_t prop) {}
 
 __attribute__((always_inline))
-WEAK void __csi_detach(const csi_id_t detach_id) {}
+WEAK void __csi_detach(const csi_id_t detach_id, const int32_t *has_spawned) {}
 
 __attribute__((always_inline))
 WEAK void __csi_task(const csi_id_t task_id, const csi_id_t detach_id)
@@ -68,10 +68,12 @@ WEAK void __csi_detach_continue(const csi_id_t detach_continue_id,
                                 const csi_id_t detach_id) {}
 
 __attribute__((always_inline))
-WEAK void __csi_before_sync(const csi_id_t sync_id) {}
+WEAK void __csi_before_sync(const csi_id_t sync_id, const int32_t *has_spawned)
+{}
 
 __attribute__((always_inline))
-WEAK void __csi_after_sync(const csi_id_t sync_id) {}
+WEAK void __csi_after_sync(const csi_id_t sync_id, const int32_t *has_spawned)
+{}
 
 __attribute__((always_inline))
 WEAK void __csi_before_alloca(const csi_id_t alloca_id,
