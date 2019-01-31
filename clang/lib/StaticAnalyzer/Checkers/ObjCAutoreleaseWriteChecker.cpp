@@ -207,3 +207,7 @@ void ObjCAutoreleaseWriteChecker::checkASTCodeBody(const Decl *D,
 void ento::registerAutoreleaseWriteChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ObjCAutoreleaseWriteChecker>();
 }
+
+bool ento::shouldRegisterAutoreleaseWriteChecker(const LangOptions &LO) {
+  return true;
+}

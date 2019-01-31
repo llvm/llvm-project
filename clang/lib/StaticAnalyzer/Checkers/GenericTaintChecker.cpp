@@ -746,3 +746,7 @@ bool GenericTaintChecker::checkTaintedBufferSize(const CallExpr *CE,
 void ento::registerGenericTaintChecker(CheckerManager &mgr) {
   mgr.registerChecker<GenericTaintChecker>();
 }
+
+bool ento::shouldRegisterGenericTaintChecker(const LangOptions &LO) {
+  return true;
+}

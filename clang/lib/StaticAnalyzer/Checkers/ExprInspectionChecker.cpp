@@ -409,3 +409,7 @@ void ExprInspectionChecker::analyzerExpress(const CallExpr *CE,
 void ento::registerExprInspectionChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ExprInspectionChecker>();
 }
+
+bool ento::shouldRegisterExprInspectionChecker(const LangOptions &LO) {
+  return true;
+}

@@ -614,6 +614,10 @@ void CallAndMessageChecker::HandleNilReceiver(CheckerContext &C,
         mgr.registerChecker<CallAndMessageChecker>();                          \
     Checker->Filter.Check_##name = true;                                       \
     Checker->Filter.CheckName_##name = mgr.getCurrentCheckName();              \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
+    return true;                                                               \
   }
 
 REGISTER_CHECKER(CallAndMessageUnInitRefArg)

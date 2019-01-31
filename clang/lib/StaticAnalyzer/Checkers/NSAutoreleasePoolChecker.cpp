@@ -76,6 +76,9 @@ void NSAutoreleasePoolChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
 }
 
 void ento::registerNSAutoreleasePoolChecker(CheckerManager &mgr) {
-  if (mgr.getLangOpts().getGC() != LangOptions::NonGC)
-    mgr.registerChecker<NSAutoreleasePoolChecker>();
+  mgr.registerChecker<NSAutoreleasePoolChecker>();
+}
+
+bool ento::shouldRegisterNSAutoreleasePoolChecker(const LangOptions &LO) {
+  return LO.getGC() != LangOptions::NonGC;
 }

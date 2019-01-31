@@ -206,12 +206,6 @@ void DirectIvarAssignment::MethodCrawler::VisitBinaryOperator(
 }
 }
 
-// Register the checker that checks for direct accesses in all functions,
-// except for the initialization and copy routines.
-void ento::registerDirectIvarAssignment(CheckerManager &mgr) {
-  mgr.registerChecker<DirectIvarAssignment>();
-}
-
 // Register the checker that checks for direct accesses in functions annotated
 // with __attribute__((annotate("objc_no_direct_instance_variable_assignment"))).
 static bool AttrFilter(const ObjCMethodDecl *M) {
@@ -221,7 +215,22 @@ static bool AttrFilter(const ObjCMethodDecl *M) {
   return true;
 }
 
+// Register the checker that checks for direct accesses in all functions,
+// except for the initialization and copy routines.
+void ento::registerDirectIvarAssignment(CheckerManager &mgr) {
+  mgr.registerChecker<DirectIvarAssignment>();
+}
+
+bool ento::shouldRegisterDirectIvarAssignment(const LangOptions &LO) {
+  return true;
+}
+
 void ento::registerDirectIvarAssignmentForAnnotatedFunctions(
     CheckerManager &mgr) {
   mgr.registerChecker<DirectIvarAssignment>()->ShouldSkipMethod = &AttrFilter;
+}
+
+bool ento::shouldRegisterDirectIvarAssignmentForAnnotatedFunctions(
+                                                        const LangOptions &LO) {
+  return true;
 }

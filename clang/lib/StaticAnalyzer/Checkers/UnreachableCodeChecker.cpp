@@ -257,3 +257,7 @@ bool UnreachableCodeChecker::isEmptyCFGBlock(const CFGBlock *CB) {
 void ento::registerUnreachableCodeChecker(CheckerManager &mgr) {
   mgr.registerChecker<UnreachableCodeChecker>();
 }
+
+bool ento::shouldRegisterUnreachableCodeChecker(const LangOptions &LO) {
+  return true;
+}

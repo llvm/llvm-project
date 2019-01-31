@@ -249,7 +249,10 @@ private:
 
 } // end empty namespace
 
-
 void ento::registerTrustNonnullChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<TrustNonnullChecker>(Mgr.getASTContext());
+}
+
+bool ento::shouldRegisterTrustNonnullChecker(const LangOptions &LO) {
+  return true;
 }

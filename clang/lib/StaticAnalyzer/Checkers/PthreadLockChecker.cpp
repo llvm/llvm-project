@@ -481,3 +481,7 @@ void PthreadLockChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 void ento::registerPthreadLockChecker(CheckerManager &mgr) {
   mgr.registerChecker<PthreadLockChecker>();
 }
+
+bool ento::shouldRegisterPthreadLockChecker(const LangOptions &LO) {
+  return true;
+}

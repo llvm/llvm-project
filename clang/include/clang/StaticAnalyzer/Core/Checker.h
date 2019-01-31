@@ -15,6 +15,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_CHECKER_H
 
 #include "clang/Analysis/ProgramPoint.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/Support/Casting.h"

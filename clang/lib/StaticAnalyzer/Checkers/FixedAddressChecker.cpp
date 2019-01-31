@@ -65,3 +65,7 @@ void FixedAddressChecker::checkPreStmt(const BinaryOperator *B,
 void ento::registerFixedAddressChecker(CheckerManager &mgr) {
   mgr.registerChecker<FixedAddressChecker>();
 }
+
+bool ento::shouldRegisterFixedAddressChecker(const LangOptions &LO) {
+  return true;
+}

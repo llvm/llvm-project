@@ -202,3 +202,7 @@ void CloneChecker::reportSuspiciousClones(
 void ento::registerCloneChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<CloneChecker>();
 }
+
+bool ento::shouldRegisterCloneChecker(const LangOptions &LO) {
+  return true;
+}

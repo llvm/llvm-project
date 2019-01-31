@@ -405,6 +405,10 @@ std::shared_ptr<PathDiagnosticPiece> ValistChecker::ValistBugVisitor::VisitNode(
     ValistChecker *checker = mgr.registerChecker<ValistChecker>();             \
     checker->ChecksEnabled[ValistChecker::CK_##name] = true;                   \
     checker->CheckNames[ValistChecker::CK_##name] = mgr.getCurrentCheckName(); \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name##Checker(const LangOptions &LO) {            \
+    return true;                                                               \
   }
 
 REGISTER_CHECKER(Uninitialized)

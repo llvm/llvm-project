@@ -99,3 +99,7 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
 void ento::registerDivZeroChecker(CheckerManager &mgr) {
   mgr.registerChecker<DivZeroChecker>();
 }
+
+bool ento::shouldRegisterDivZeroChecker(const LangOptions &LO) {
+  return true;
+}

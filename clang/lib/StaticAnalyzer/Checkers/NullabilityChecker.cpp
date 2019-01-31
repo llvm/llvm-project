@@ -1200,8 +1200,12 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
     checker->NeedTracking = checker->NeedTracking || trackingRequired;         \
     checker->NoDiagnoseCallsToSystemHeaders =                                  \
         checker->NoDiagnoseCallsToSystemHeaders ||                             \
-        mgr.getAnalyzerOptions().getCheckerBooleanOption(                             \
+        mgr.getAnalyzerOptions().getCheckerBooleanOption(                      \
                       "NoDiagnoseCallsToSystemHeaders", false, checker, true); \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name##Checker(const LangOptions &LO) {            \
+    return true;                                                               \
   }
 
 // The checks are likely to be turned on by default and it is possible to do

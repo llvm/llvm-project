@@ -89,6 +89,9 @@ void ObjCAtSyncChecker::checkPreStmt(const ObjCAtSynchronizedStmt *S,
 }
 
 void ento::registerObjCAtSyncChecker(CheckerManager &mgr) {
-  if (mgr.getLangOpts().ObjC)
-    mgr.registerChecker<ObjCAtSyncChecker>();
+  mgr.registerChecker<ObjCAtSyncChecker>();
+}
+
+bool ento::shouldRegisterObjCAtSyncChecker(const LangOptions &LO) {
+  return LO.ObjC;
 }

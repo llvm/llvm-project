@@ -73,3 +73,7 @@ void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
 void ento::registerPointerSubChecker(CheckerManager &mgr) {
   mgr.registerChecker<PointerSubChecker>();
 }
+
+bool ento::shouldRegisterPointerSubChecker(const LangOptions &LO) {
+  return true;
+}

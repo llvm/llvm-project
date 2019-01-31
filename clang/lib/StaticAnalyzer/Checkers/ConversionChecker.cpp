@@ -196,3 +196,7 @@ bool ConversionChecker::isLossOfSign(const ImplicitCastExpr *Cast,
 void ento::registerConversionChecker(CheckerManager &mgr) {
   mgr.registerChecker<ConversionChecker>();
 }
+
+bool ento::shouldRegisterConversionChecker(const LangOptions &LO) {
+  return true;
+}

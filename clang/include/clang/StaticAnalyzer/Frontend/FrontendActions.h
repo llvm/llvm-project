@@ -53,10 +53,11 @@ private:
 };
 
 void printCheckerHelp(raw_ostream &OS, ArrayRef<std::string> plugins,
-                      DiagnosticsEngine &diags);
+                      DiagnosticsEngine &diags, const LangOptions &LangOpts);
 void printEnabledCheckerList(raw_ostream &OS, ArrayRef<std::string> plugins,
                              const AnalyzerOptions &opts,
-                             DiagnosticsEngine &diags);
+                             DiagnosticsEngine &diags,
+                             const LangOptions &LangOpts);
 void printAnalyzerConfigList(raw_ostream &OS);
 
 } // end GR namespace

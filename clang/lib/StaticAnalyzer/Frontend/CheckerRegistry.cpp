@@ -40,10 +40,14 @@ static bool isCompatibleAPIVersion(const char *versionString) {
 }
 
 CheckerRegistry::CheckerRegistry(ArrayRef<std::string> plugins,
-                                 DiagnosticsEngine &diags) : Diags(diags) {
+                                 DiagnosticsEngine &diags,
+                                 const LangOptions &LangOpts)
+  : Diags(diags), LangOpts(LangOpts) {
+
 #define GET_CHECKERS
 #define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI)                            \
-  addChecker(register##CLASS, FULLNAME, HELPTEXT, DOC_URI);
+  addChecker(register##CLASS, shouldRegister##CLASS, FULLNAME, HELPTEXT,       \
+             DOC_URI);
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER
 #undef GET_CHECKERS
@@ -115,7 +119,8 @@ CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers(
 
   for (const std::pair<std::string, bool> &opt : Opts.CheckersControlList) {
     // Use a binary search to find the possible start of the package.
-    CheckerRegistry::CheckerInfo packageInfo(nullptr, opt.first, "", "");
+    CheckerRegistry::CheckerInfo
+        packageInfo(nullptr, nullptr, opt.first, "", "");
     auto firstRelatedChecker =
       std::lower_bound(Checkers.cbegin(), end, packageInfo, checkerNameLT);
 
@@ -138,18 +143,21 @@ CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers(
     // Step through all the checkers in the package.
     for (auto lastRelatedChecker = firstRelatedChecker+size;
          firstRelatedChecker != lastRelatedChecker; ++firstRelatedChecker)
-      if (opt.second)
-        enabledCheckers.insert(&*firstRelatedChecker);
-      else
+      if (opt.second) {
+        if (firstRelatedChecker->ShouldRegister(LangOpts))
+          enabledCheckers.insert(&*firstRelatedChecker);
+      } else {
         enabledCheckers.remove(&*firstRelatedChecker);
+      }
   }
 
   return enabledCheckers;
 }
 
-void CheckerRegistry::addChecker(InitializationFunction Fn, StringRef Name,
+void CheckerRegistry::addChecker(InitializationFunction Rfn,
+                                 ShouldRegisterFunction Sfn, StringRef Name,
                                  StringRef Desc, StringRef DocsUri) {
-  Checkers.emplace_back(Fn, Name, Desc, DocsUri);
+  Checkers.emplace_back(Rfn, Sfn, Name, Desc, DocsUri);
 
   // Record the presence of the checker in its packages.
   StringRef packageName, leafName;

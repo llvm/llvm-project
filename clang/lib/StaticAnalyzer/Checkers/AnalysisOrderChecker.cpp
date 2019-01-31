@@ -176,3 +176,7 @@ public:
 void ento::registerAnalysisOrderChecker(CheckerManager &mgr) {
   mgr.registerChecker<AnalysisOrderChecker>();
 }
+
+bool ento::shouldRegisterAnalysisOrderChecker(const LangOptions &LO) {
+  return true;
+}

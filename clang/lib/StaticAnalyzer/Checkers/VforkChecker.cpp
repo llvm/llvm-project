@@ -216,3 +216,7 @@ void VforkChecker::checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const {
 void ento::registerVforkChecker(CheckerManager &mgr) {
   mgr.registerChecker<VforkChecker>();
 }
+
+bool ento::shouldRegisterVforkChecker(const LangOptions &LO) {
+  return true;
+}

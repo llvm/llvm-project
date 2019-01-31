@@ -217,3 +217,7 @@ std::unique_ptr<BugReport> NonNullParamChecker::genReportReferenceToNullPointer(
 void ento::registerNonNullParamChecker(CheckerManager &mgr) {
   mgr.registerChecker<NonNullParamChecker>();
 }
+
+bool ento::shouldRegisterNonNullParamChecker(const LangOptions &LO) {
+  return true;
+}

@@ -738,3 +738,7 @@ void ento::registerMoveChecker(CheckerManager &mgr) {
   chk->setAggressiveness(
       mgr.getAnalyzerOptions().getCheckerStringOption("WarnOn", "", chk));
 }
+
+bool ento::shouldRegisterMoveChecker(const LangOptions &LO) {
+  return true;
+}

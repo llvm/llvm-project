@@ -993,6 +993,14 @@ void ento::registerObjCGenericsChecker(CheckerManager &mgr) {
   checker->CheckGenerics = true;
 }
 
+bool ento::shouldRegisterObjCGenericsChecker(const LangOptions &LO) {
+  return true;
+}
+
 void ento::registerDynamicTypePropagation(CheckerManager &mgr) {
   mgr.registerChecker<DynamicTypePropagation>();
+}
+
+bool ento::shouldRegisterDynamicTypePropagation(const LangOptions &LO) {
+  return true;
 }

@@ -282,8 +282,9 @@ SuperDeallocBRVisitor::VisitNode(const ExplodedNode *Succ,
 //===----------------------------------------------------------------------===//
 
 void ento::registerObjCSuperDeallocChecker(CheckerManager &Mgr) {
-  const LangOptions &LangOpts = Mgr.getLangOpts();
-  if (LangOpts.getGC() == LangOptions::GCOnly || LangOpts.ObjCAutoRefCount)
-    return;
   Mgr.registerChecker<ObjCSuperDeallocChecker>();
+}
+
+bool ento::shouldRegisterObjCSuperDeallocChecker(const LangOptions &LO) {
+  return true;
 }

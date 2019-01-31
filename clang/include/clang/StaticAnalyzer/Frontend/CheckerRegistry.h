@@ -70,6 +70,7 @@ namespace clang {
 
 class AnalyzerOptions;
 class DiagnosticsEngine;
+class LangOptions;
 
 namespace ento {
 
@@ -81,21 +82,24 @@ namespace ento {
 /// "core.builtin", or the full name "core.builtin.NoReturnFunctionChecker".
 class CheckerRegistry {
 public:
-  CheckerRegistry(ArrayRef<std::string> plugins, DiagnosticsEngine &diags);
+  CheckerRegistry(ArrayRef<std::string> plugins, DiagnosticsEngine &diags,
+                  const LangOptions &LangOpts);
 
   /// Initialization functions perform any necessary setup for a checker.
   /// They should include a call to CheckerManager::registerChecker.
   using InitializationFunction = void (*)(CheckerManager &);
+  using ShouldRegisterFunction = bool (*)(const LangOptions &);
 
   struct CheckerInfo {
     InitializationFunction Initialize;
+    ShouldRegisterFunction ShouldRegister;
     StringRef FullName;
     StringRef Desc;
     StringRef DocumentationUri;
 
-    CheckerInfo(InitializationFunction Fn, StringRef Name, StringRef Desc,
-                StringRef DocsUri)
-        : Initialize(Fn), FullName(Name), Desc(Desc),
+    CheckerInfo(InitializationFunction Fn, ShouldRegisterFunction sfn,
+                StringRef Name, StringRef Desc, StringRef DocsUri)
+        : Initialize(Fn), ShouldRegister(sfn), FullName(Name), Desc(Desc),
           DocumentationUri(DocsUri) {}
   };
 
@@ -108,11 +112,17 @@ private:
     mgr.registerChecker<T>();
   }
 
+
+  template <typename T>
+  static bool returnTrue(const LangOptions &LO) {
+    return true;
+  }
+
 public:
   /// Adds a checker to the registry. Use this non-templated overload when your
   /// checker requires custom initialization.
-  void addChecker(InitializationFunction Fn, StringRef FullName, StringRef Desc,
-                  StringRef DocsUri);
+  void addChecker(InitializationFunction Fn, ShouldRegisterFunction sfn,
+                  StringRef FullName, StringRef Desc, StringRef DocsUri);
 
   /// Adds a checker to the registry. Use this templated overload when your
   /// checker does not require any custom initialization.
@@ -120,7 +130,8 @@ public:
   void addChecker(StringRef FullName, StringRef Desc, StringRef DocsUri) {
     // Avoid MSVC's Compiler Error C2276:
     // http://msdn.microsoft.com/en-us/library/850cstw1(v=VS.80).aspx
-    addChecker(&CheckerRegistry::initializeManager<T>, FullName, Desc, DocsUri);
+    addChecker(&CheckerRegistry::initializeManager<T>,
+               &CheckerRegistry::returnTrue<T>, FullName, Desc, DocsUri);
   }
 
   /// Initializes a CheckerManager by calling the initialization functions for
@@ -143,7 +154,9 @@ private:
 
   mutable CheckerInfoList Checkers;
   mutable llvm::StringMap<size_t> Packages;
+
   DiagnosticsEngine &Diags;
+  const LangOptions &LangOpts;
 };
 
 } // namespace ento

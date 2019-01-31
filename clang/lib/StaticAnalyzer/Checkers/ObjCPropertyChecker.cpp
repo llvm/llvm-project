@@ -79,3 +79,7 @@ void ObjCPropertyChecker::checkCopyMutable(const ObjCPropertyDecl *D,
 void ento::registerObjCPropertyChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ObjCPropertyChecker>();
 }
+
+bool ento::shouldRegisterObjCPropertyChecker(const LangOptions &LO) {
+  return true;
+}

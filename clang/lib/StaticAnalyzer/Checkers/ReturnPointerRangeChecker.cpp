@@ -90,3 +90,7 @@ void ReturnPointerRangeChecker::checkPreStmt(const ReturnStmt *RS,
 void ento::registerReturnPointerRangeChecker(CheckerManager &mgr) {
   mgr.registerChecker<ReturnPointerRangeChecker>();
 }
+
+bool ento::shouldRegisterReturnPointerRangeChecker(const LangOptions &LO) {
+  return true;
+}

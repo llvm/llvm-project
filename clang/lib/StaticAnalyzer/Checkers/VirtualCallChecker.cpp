@@ -283,3 +283,7 @@ void ento::registerVirtualCallChecker(CheckerManager &mgr) {
       mgr.getAnalyzerOptions().getCheckerBooleanOption("PureOnly", false,
                                                        checker);
 }
+
+bool ento::shouldRegisterVirtualCallChecker(const LangOptions &LO) {
+  return true;
+}

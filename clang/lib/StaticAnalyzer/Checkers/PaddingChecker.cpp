@@ -351,3 +351,7 @@ public:
 void ento::registerPaddingChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<PaddingChecker>();
 }
+
+bool ento::shouldRegisterPaddingChecker(const LangOptions &LO) {
+  return true;
+}

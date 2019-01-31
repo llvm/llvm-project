@@ -1056,3 +1056,7 @@ void ento::registerStdCLibraryFunctionsChecker(CheckerManager &mgr) {
   // class, turning on different function summaries.
   mgr.registerChecker<StdLibraryFunctionsChecker>();
 }
+
+bool ento::shouldRegisterStdCLibraryFunctionsChecker(const LangOptions &LO) {
+  return true;
+}

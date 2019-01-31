@@ -343,3 +343,7 @@ void PointerArithChecker::checkPreStmt(const BinaryOperator *BOp,
 void ento::registerPointerArithChecker(CheckerManager &mgr) {
   mgr.registerChecker<PointerArithChecker>();
 }
+
+bool ento::shouldRegisterPointerArithChecker(const LangOptions &LO) {
+  return true;
+}

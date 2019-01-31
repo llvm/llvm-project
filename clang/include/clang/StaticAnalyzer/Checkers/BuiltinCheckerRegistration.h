@@ -19,13 +19,17 @@
 
 namespace clang {
 
+class LangOptions;
+
 namespace ento {
+
 class CheckerManager;
 class CheckerRegistry;
 
 #define GET_CHECKERS
 #define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI)                            \
-  void register##CLASS(CheckerManager &mgr);
+  void register##CLASS(CheckerManager &mgr);                                   \
+  bool shouldRegister##CLASS(const LangOptions &LO);
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER
 #undef GET_CHECKERS

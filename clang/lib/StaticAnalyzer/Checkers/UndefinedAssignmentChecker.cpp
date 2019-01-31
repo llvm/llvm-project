@@ -120,3 +120,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
 void ento::registerUndefinedAssignmentChecker(CheckerManager &mgr) {
   mgr.registerChecker<UndefinedAssignmentChecker>();
 }
+
+bool ento::shouldRegisterUndefinedAssignmentChecker(const LangOptions &LO) {
+  return true;
+}
