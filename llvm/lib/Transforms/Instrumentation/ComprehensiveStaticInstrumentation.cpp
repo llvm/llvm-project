@@ -836,20 +836,23 @@ void CSIImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
   else if (InvokeInst *II = dyn_cast<InvokeInst>(I))
     Called = II->getCalledFunction();
 
+  bool shouldInstrumentBefore = true;
+  bool shouldInstrumentAfter = true;
+
   // Does this call require instrumentation before or after?
-  bool shouldInstrumentBefore =
-      Config->DoesFunctionRequireInstrumentationForPoint(
-          Called->getName(), InstrumentationPoint::INSTR_BEFORE_CALL);
-  bool shouldInstrumentAfter =
-      Config->DoesFunctionRequireInstrumentationForPoint(
-          Called->getName(), InstrumentationPoint::INSTR_AFTER_CALL);
+  if (Called) {
+    shouldInstrumentBefore = Config->DoesFunctionRequireInstrumentationForPoint(
+        Called->getName(), InstrumentationPoint::INSTR_BEFORE_CALL);
+    shouldInstrumentAfter = Config->DoesFunctionRequireInstrumentationForPoint(
+        Called->getName(), InstrumentationPoint::INSTR_AFTER_CALL);
+  }
 
   if (!shouldInstrumentAfter && !shouldInstrumentBefore)
     return;
 
   IRBuilder<> IRB(I);
   Value *DefaultID = getDefaultID(IRB);
-  uint64_t LocalId = CallsiteFED.add(*I, Called->getName());
+  uint64_t LocalId = CallsiteFED.add(*I, Called ? Called->getName() : "");
   Value *CallsiteId = CallsiteFED.localToGlobalId(LocalId, IRB);
   Value *FuncId = nullptr;
   GlobalVariable *FuncIdGV = nullptr;
