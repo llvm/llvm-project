@@ -288,13 +288,13 @@ TEST(ScalarTest, Scalar_512) {
   ASSERT_TRUE(Z.IsZero());
 
   Scalar S(APInt(512, 2000));
-  EXPECT_EQ(S.GetTypeAsCString(), "int512_t");
-  EXPECT_EQ(S.GetValueTypeAsCString(Scalar::e_sint512), "int512_t");
+  ASSERT_STREQ(S.GetTypeAsCString(), "int512_t");
+  ASSERT_STREQ(S.GetValueTypeAsCString(Scalar::e_sint512), "int512_t");
 
   ASSERT_TRUE(S.MakeUnsigned());
   EXPECT_EQ(S.GetType(), Scalar::e_uint512);
-  EXPECT_EQ(S.GetTypeAsCString(), "unsigned int512_t");
-  EXPECT_EQ(S.GetValueTypeAsCString(Scalar::e_uint512), "uint512_t");
+  ASSERT_STREQ(S.GetTypeAsCString(), "unsigned int512_t");
+  ASSERT_STREQ(S.GetValueTypeAsCString(Scalar::e_uint512), "uint512_t");
   EXPECT_EQ(S.GetByteSize(), 64U);
 
   ASSERT_TRUE(S.MakeSigned());
