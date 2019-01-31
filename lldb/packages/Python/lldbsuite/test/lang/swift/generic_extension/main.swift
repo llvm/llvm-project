@@ -11,6 +11,7 @@
 // -----------------------------------------------------------------------------
 extension Array {
     func test() {
+        print("PATPAT") //% self.expect("p self", substrs=['[0] = 1', '[1] = 2', '[2] = 3'])
         return //% self.expect("frame variable -d run -- self", substrs=['[0] = 1', '[1] = 2', '[2] = 3'])
     }
 }
