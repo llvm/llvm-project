@@ -10,6 +10,13 @@
 // RUN:     -analyzer-checker=debug.ExprInspection -fblocks -verify %s\
 // RUN:     -Wno-objc-root-class -analyzer-output=plist -o %t.objcpp.plist\
 // RUN:     -x objective-c++ -std=gnu++98
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10\
+// RUN:     -analyzer-checker=core,osx.coreFoundation.CFRetainRelease\
+// RUN:     -analyzer-checker=osx.cocoa.ClassRelease,osx.cocoa.RetainCount\
+// RUN:     -analyzer-checker=debug.ExprInspection -fblocks -verify %s\
+// RUN:     -Wno-objc-root-class -x objective-c++ -std=gnu++98\
+// RUN:     -analyzer-config osx.cocoa.RetainCount:TrackNSCFStartParam=true\
+// RUN:     -DTRACK_START_PARAM
 // RUN: cat %t.objcpp.plist | %diff_plist %S/Inputs/expected-plists/retain-release.m.objcpp.plist -
 // RUN: cat %t.objc.plist | %diff_plist %S/Inputs/expected-plists/retain-release.m.objc.plist -
 
@@ -622,9 +629,15 @@ void f16(int x, CFTypeRef p) {
 
 // Test that an object is non-null after CFRetain/CFRelease/CFMakeCollectable/CFAutorelease.
 void f17(int x, CFTypeRef p) {
+#ifdef TRACK_START_PARAM
+  // expected-warning@-2{{Potential leak of an object of type 'CFTypeRef'}}
+#endif
   switch (x) {
   case 0:
     CFRelease(p);
+#ifdef TRACK_START_PARAM
+  // expected-warning@-2{{Incorrect decrement of the reference count of an object that is not owned at this point by the caller}}
+#endif
     if (!p)
       CFRelease(0); // no-warning
     break;
@@ -647,6 +660,9 @@ void f17(int x, CFTypeRef p) {
     break;
   }
 }
+#ifdef TRACK_START_PARAM
+  // expected-warning@-2{{Object autoreleased too many times}}
+#endif
 
 __attribute__((annotate("rc_ownership_returns_retained"))) isl_basic_map *isl_basic_map_cow(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap);
 

@@ -273,6 +273,9 @@ public:
   /// Track sublcasses of OSObject.
   bool TrackOSObjects = false;
 
+  /// Track initial parameters (for the entry point) for NS/CF objects.
+  bool TrackNSCFStartParam = false;
+
   RetainCountChecker() {};
 
   RetainSummaryManager &getSummaryManager(ASTContext &Ctx) const {

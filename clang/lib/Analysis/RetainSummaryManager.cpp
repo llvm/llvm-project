@@ -146,7 +146,7 @@ static bool isSubclass(const Decl *D,
 }
 
 static bool isOSObjectSubclass(const Decl *D) {
-  return isSubclass(D, "OSMetaClassBase");
+  return D && isSubclass(D, "OSMetaClassBase");
 }
 
 static bool isOSObjectDynamicCast(StringRef S) {
@@ -155,6 +155,15 @@ static bool isOSObjectDynamicCast(StringRef S) {
 
 static bool isOSObjectThisCast(StringRef S) {
   return S == "metaCast";
+}
+
+
+static bool isOSObjectPtr(QualType QT) {
+  return isOSObjectSubclass(QT->getPointeeCXXRecordDecl());
+}
+
+static bool isISLObjectRef(QualType Ty) {
+  return StringRef(Ty.getAsString()).startswith("isl_");
 }
 
 static bool isOSIteratorSubclass(const Decl *D) {
@@ -601,6 +610,38 @@ void RetainSummaryManager::updateSummaryForReceiverUnconsumedSelf(
   Template->setRetEffect(RetEffect::MakeNoRet());
 }
 
+
+void RetainSummaryManager::updateSummaryForArgumentTypes(
+  const AnyCall &C, const RetainSummary *&RS) {
+  RetainSummaryTemplate Template(RS, *this);
+
+  unsigned parm_idx = 0;
+  for (auto pi = C.param_begin(), pe = C.param_end(); pi != pe;
+       ++pi, ++parm_idx) {
+    QualType QT = (*pi)->getType();
+
+    // Skip already created values.
+    if (RS->getArgEffects().contains(parm_idx))
+      continue;
+
+    ObjKind K = ObjKind::AnyObj;
+
+    if (isISLObjectRef(QT)) {
+      K = ObjKind::Generalized;
+    } else if (isOSObjectPtr(QT)) {
+      K = ObjKind::OS;
+    } else if (cocoa::isCocoaObjectRef(QT)) {
+      K = ObjKind::ObjC;
+    } else if (coreFoundation::isCFObjectRef(QT)) {
+      K = ObjKind::CF;
+    }
+
+    if (K != ObjKind::AnyObj)
+      Template->addArg(AF, parm_idx,
+                       ArgEffect(RS->getDefaultArgEffect().getKind(), K));
+  }
+}
+
 const RetainSummary *
 RetainSummaryManager::getSummary(AnyCall C,
                                  bool HasNonZeroCallbackArg,
@@ -636,6 +677,8 @@ RetainSummaryManager::getSummary(AnyCall C,
 
   if (IsReceiverUnconsumedSelf)
     updateSummaryForReceiverUnconsumedSelf(Summ);
+
+  updateSummaryForArgumentTypes(C, Summ);
 
   assert(Summ && "Unknown call type?");
   return Summ;
