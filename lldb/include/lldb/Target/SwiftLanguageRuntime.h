@@ -412,17 +412,11 @@ protected:
                                       TypeAndOrName &class_type_or_name,
                                       Address &address);
 
-  bool GetDynamicTypeAndAddress_Struct(ValueObject &in_value,
+  bool GetDynamicTypeAndAddress_Value(ValueObject &in_value,
                                        CompilerType &bound_type,
                                        lldb::DynamicValueType use_dynamic,
                                        TypeAndOrName &class_type_or_name,
                                        Address &address);
-
-  bool GetDynamicTypeAndAddress_Enum(ValueObject &in_value,
-                                     CompilerType &bound_type,
-                                     lldb::DynamicValueType use_dynamic,
-                                     TypeAndOrName &class_type_or_name,
-                                     Address &address);
 
   bool GetDynamicTypeAndAddress_IndirectEnumCase(
       ValueObject &in_value, lldb::DynamicValueType use_dynamic,
