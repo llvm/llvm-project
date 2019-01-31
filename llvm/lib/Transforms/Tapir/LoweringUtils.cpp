@@ -315,13 +315,13 @@ Instruction *llvm::fixupHelperInputs(
   return StorePt;
 }
 
-/// Returns true if BasicBlock \p B is the immediate successor of a
-/// detached-rethrow instruction.
+/// Returns true if BasicBlock \p B is the immediate successor of only
+/// detached-rethrow instructions.
 bool llvm::isSuccessorOfDetachedRethrow(const BasicBlock *B) {
   for (const BasicBlock *Pred : predecessors(B))
-    if (isDetachedRethrow(Pred->getTerminator()))
-      return true;
-  return false;
+    if (!isDetachedRethrow(Pred->getTerminator()))
+      return false;
+  return true;
 }
 
 /// Collect the set of blocks in task \p T.  All blocks enclosed by \p T will be
@@ -345,6 +345,7 @@ void llvm::getTaskBlocks(Task *T, std::vector<BasicBlock *> &TaskBlocks,
       if (isSuccessorOfDetachedRethrow(B))
         continue;
 
+      DEBUG(dbgs() << "Adding task block " << B->getName() << "\n");
       TaskBlocks.push_back(B);
 
       // Record the blocks terminated by reattaches and detached rethrows.
