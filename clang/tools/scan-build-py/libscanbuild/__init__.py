@@ -20,7 +20,7 @@ ENVIRONMENT_KEY = 'INTERCEPT_BUILD'
 Execution = collections.namedtuple('Execution', ['pid', 'cwd', 'cmd'])
 
 CtuConfig = collections.namedtuple('CtuConfig', ['collect', 'analyze', 'dir',
-                                                 'func_map_cmd'])
+                                                 'extdef_map_cmd'])
 
 
 def duplicate_check(method):
