@@ -454,14 +454,7 @@ static bool GetObjectDescription_ObjectReference(Process *process, Stream &str,
   }
 }
 
-static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
-  return (valobj.GetPreferredDisplayLanguage() == eLanguageTypeSwift)
-             ? &valobj.GetExecutionContextRef()
-             : nullptr;
-}
-
-static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntime *runtime,
-                                            Process *process, Stream &str,
+static bool GetObjectDescription_ObjectCopy(Process *process, Stream &str,
                                             ValueObject &object) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
 
@@ -481,10 +474,10 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntime *runtime,
       process->GetThreadList().GetSelectedThread()->GetSelectedFrame();
   auto *swift_ast_ctx =
       llvm::dyn_cast_or_null<SwiftASTContext>(static_type.GetTypeSystem());
-  if (swift_ast_ctx) {
-    SwiftASTContextLock lock(GetSwiftExeCtx(object));
-    static_type = runtime->DoArchetypeBindingForType(*frame_sp, static_type);
-  }
+  if (swift_ast_ctx)
+    static_type =
+        swift_ast_ctx->MapIntoContext(frame_sp,
+                                      static_type.GetOpaqueQualType());
 
   lldb::addr_t copy_location = process->AllocateMemory(
       static_type.GetByteStride(), ePermissionsReadable | ePermissionsWritable,
@@ -670,7 +663,7 @@ bool SwiftLanguageRuntime::GetObjectDescription(Stream &str,
 
   // in general, don't try to use the name of the ValueObject as it might end up
   // referring to the wrong thing
-  return GetObjectDescription_ObjectCopy(this, m_process, str, object);
+  return GetObjectDescription_ObjectCopy(m_process, str, object);
 }
 
 bool SwiftLanguageRuntime::GetObjectDescription(
