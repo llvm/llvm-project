@@ -156,17 +156,17 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
     }
   }
 
-  if (CurrV.getObjKind() == RetEffect::CF) {
+  if (CurrV.getObjKind() == ObjKind::CF) {
     os << " returns a Core Foundation object of type "
        << Sym->getType().getAsString() << " with a ";
-  } else if (CurrV.getObjKind() == RetEffect::OS) {
+  } else if (CurrV.getObjKind() == ObjKind::OS) {
     os << " returns an OSObject of type " << getPrettyTypeName(Sym->getType())
        << " with a ";
-  } else if (CurrV.getObjKind() == RetEffect::Generalized) {
+  } else if (CurrV.getObjKind() == ObjKind::Generalized) {
     os << " returns an object of type " << Sym->getType().getAsString()
        << " with a ";
   } else {
-    assert(CurrV.getObjKind() == RetEffect::ObjC);
+    assert(CurrV.getObjKind() == ObjKind::ObjC);
     QualType T = Sym->getType();
     if (!isa<ObjCObjectPointerType>(T)) {
       os << " returns an Objective-C object with a ";

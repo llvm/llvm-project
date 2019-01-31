@@ -1460,14 +1460,14 @@ void ObjCMigrateASTConsumer::AddCFAnnotations(ASTContext &Ctx,
   if (!ResultAnnotated) {
     RetEffect Ret = CE.getReturnValue();
     const char *AnnotationString = nullptr;
-    if (Ret.getObjKind() == RetEffect::CF) {
+    if (Ret.getObjKind() == ObjKind::CF) {
       if (Ret.isOwned() && NSAPIObj->isMacroDefined("CF_RETURNS_RETAINED"))
         AnnotationString = " CF_RETURNS_RETAINED";
       else if (Ret.notOwned() &&
                NSAPIObj->isMacroDefined("CF_RETURNS_NOT_RETAINED"))
         AnnotationString = " CF_RETURNS_NOT_RETAINED";
     }
-    else if (Ret.getObjKind() == RetEffect::ObjC) {
+    else if (Ret.getObjKind() == ObjKind::ObjC) {
       if (Ret.isOwned() && NSAPIObj->isMacroDefined("NS_RETURNS_RETAINED"))
         AnnotationString = " NS_RETURNS_RETAINED";
     }
@@ -1520,7 +1520,7 @@ ObjCMigrateASTConsumer::CF_BRIDGING_KIND
   bool ReturnCFAudited = false;
   if (!FuncIsReturnAnnotated) {
     RetEffect Ret = CE.getReturnValue();
-    if (Ret.getObjKind() == RetEffect::CF &&
+    if (Ret.getObjKind() == ObjKind::CF &&
         (Ret.isOwned() || Ret.notOwned()))
       ReturnCFAudited = true;
     else if (!AuditedType(FuncDecl->getReturnType()))
@@ -1574,14 +1574,14 @@ void ObjCMigrateASTConsumer::AddCFAnnotations(ASTContext &Ctx,
   if (!ResultAnnotated) {
     RetEffect Ret = CE.getReturnValue();
     const char *AnnotationString = nullptr;
-    if (Ret.getObjKind() == RetEffect::CF) {
+    if (Ret.getObjKind() == ObjKind::CF) {
       if (Ret.isOwned() && NSAPIObj->isMacroDefined("CF_RETURNS_RETAINED"))
         AnnotationString = " CF_RETURNS_RETAINED";
       else if (Ret.notOwned() &&
                NSAPIObj->isMacroDefined("CF_RETURNS_NOT_RETAINED"))
         AnnotationString = " CF_RETURNS_NOT_RETAINED";
     }
-    else if (Ret.getObjKind() == RetEffect::ObjC) {
+    else if (Ret.getObjKind() == ObjKind::ObjC) {
       ObjCMethodFamily OMF = MethodDecl->getMethodFamily();
       switch (OMF) {
         case clang::OMF_alloc:
@@ -1649,8 +1649,8 @@ void ObjCMigrateASTConsumer::migrateAddMethodAnnotation(
 
   if (!MethodIsReturnAnnotated) {
     RetEffect Ret = CE.getReturnValue();
-    if ((Ret.getObjKind() == RetEffect::CF ||
-         Ret.getObjKind() == RetEffect::ObjC) &&
+    if ((Ret.getObjKind() == ObjKind::CF ||
+         Ret.getObjKind() == ObjKind::ObjC) &&
         (Ret.isOwned() || Ret.notOwned())) {
       AddCFAnnotations(Ctx, CE, MethodDecl, false);
       return;

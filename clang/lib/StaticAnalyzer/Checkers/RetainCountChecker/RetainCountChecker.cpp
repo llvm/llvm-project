@@ -299,12 +299,12 @@ void RetainCountChecker::processObjCLiterals(CheckerContext &C,
   }
 
   // Return the object as autoreleased.
-  //  RetEffect RE = RetEffect::MakeNotOwned(RetEffect::ObjC);
+  //  RetEffect RE = RetEffect::MakeNotOwned(ObjKind::ObjC);
   if (SymbolRef sym =
         state->getSVal(Ex, pred->getLocationContext()).getAsSymbol()) {
     QualType ResultTy = Ex->getType();
     state = setRefBinding(state, sym,
-                          RefVal::makeNotOwned(RetEffect::ObjC, ResultTy));
+                          RefVal::makeNotOwned(ObjKind::ObjC, ResultTy));
   }
 
   C.addTransition(state);
@@ -330,7 +330,7 @@ void RetainCountChecker::checkPostStmt(const ObjCBoxedExpr *Ex,
   if (SymbolRef Sym = Pred->getSVal(Ex).getAsSymbol()) {
     QualType ResultTy = Ex->getType();
     State = setRefBinding(State, Sym,
-                          RefVal::makeNotOwned(RetEffect::ObjC, ResultTy));
+                          RefVal::makeNotOwned(ObjKind::ObjC, ResultTy));
   }
 
   C.addTransition(State);
@@ -351,11 +351,11 @@ void RetainCountChecker::checkPostStmt(const ObjCIvarRefExpr *IRE,
   // forgiving about what the surrounding code is allowed to do.
 
   QualType Ty = Sym->getType();
-  RetEffect::ObjKind Kind;
+  ObjKind Kind;
   if (Ty->isObjCRetainableType())
-    Kind = RetEffect::ObjC;
+    Kind = ObjKind::ObjC;
   else if (coreFoundation::isCFObjectRef(Ty))
-    Kind = RetEffect::CF;
+    Kind = ObjKind::CF;
   else
     return;
 
@@ -514,7 +514,7 @@ static bool isPointerToObject(QualType QT) {
 /// OSObjects are escaped when passed to void * / etc.
 static bool shouldEscapeArgumentOnCall(const CallEvent &CE, unsigned ArgIdx,
                                        const RefVal *TrackedValue) {
-  if (TrackedValue->getObjKind() != RetEffect::OS)
+  if (TrackedValue->getObjKind() != ObjKind::OS)
     return false;
   if (ArgIdx >= CE.parameters().size())
     return false;
@@ -583,7 +583,7 @@ static ProgramStateRef updateOutParameter(ProgramStateRef State,
   switch (Effect) {
   case UnretainedOutParameter:
     State = setRefBinding(State, Pointee,
-                          RefVal::makeNotOwned(RetEffect::CF, PointeeTy));
+                          RefVal::makeNotOwned(ObjKind::CF, PointeeTy));
     break;
   case RetainedOutParameter:
     // Do nothing. Retained out parameters will either point to a +1 reference
@@ -1407,11 +1407,11 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
     const ArgEffect *AE = CalleeSideArgEffects.lookup(idx);
     if (AE && *AE == DecRef && isISLObjectRef(Ty)) {
       state = setRefBinding(
-          state, Sym, RefVal::makeOwned(RetEffect::ObjKind::Generalized, Ty));
+          state, Sym, RefVal::makeOwned(ObjKind::Generalized, Ty));
     } else if (isISLObjectRef(Ty)) {
       state = setRefBinding(
           state, Sym,
-          RefVal::makeNotOwned(RetEffect::ObjKind::Generalized, Ty));
+          RefVal::makeNotOwned(ObjKind::Generalized, Ty));
     }
   }
 

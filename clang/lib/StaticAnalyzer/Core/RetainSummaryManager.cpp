@@ -199,7 +199,7 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
   } else if (FName == "CMBufferQueueDequeueAndRetain" ||
              FName == "CMBufferQueueDequeueIfDataReadyAndRetain") {
     // Part of: <rdar://problem/39390714>.
-    return getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF),
+    return getPersistentSummary(RetEffect::MakeOwned(ObjKind::CF),
                                 ScratchArgs,
                                 DoNothing,
                                 DoNothing);
@@ -213,7 +213,7 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
                FName == "IOOpenFirmwarePathMatching"))) {
     // Part of <rdar://problem/6961230>. (IOKit)
     // This should be addressed using a API table.
-    return getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF),
+    return getPersistentSummary(RetEffect::MakeOwned(ObjKind::CF),
                                 ScratchArgs, DoNothing, DoNothing);
   } else if (FName == "IOServiceGetMatchingService" ||
              FName == "IOServiceGetMatchingServices") {
@@ -249,7 +249,7 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
     // passed to CGBitmapContextCreateWithData is released via
     // a callback and doing full IPA to make sure this is done correctly.
     ScratchArgs = AF.add(ScratchArgs, 8, StopTracking);
-    return getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF),
+    return getPersistentSummary(RetEffect::MakeOwned(ObjKind::CF),
                                 ScratchArgs, DoNothing, DoNothing);
   } else if (FName == "CVPixelBufferCreateWithPlanarBytes") {
     // FIXES: <rdar://problem/7283567>
@@ -702,25 +702,25 @@ RetainSummaryManager::getOSSummaryFreeRule(const FunctionDecl *FD) {
 
 const RetainSummary *
 RetainSummaryManager::getOSSummaryCreateRule(const FunctionDecl *FD) {
-  return getPersistentSummary(RetEffect::MakeOwned(RetEffect::OS),
+  return getPersistentSummary(RetEffect::MakeOwned(ObjKind::OS),
                               AF.getEmptyMap());
 }
 
 const RetainSummary *
 RetainSummaryManager::getOSSummaryGetRule(const FunctionDecl *FD) {
-  return getPersistentSummary(RetEffect::MakeNotOwned(RetEffect::OS),
+  return getPersistentSummary(RetEffect::MakeNotOwned(ObjKind::OS),
                               AF.getEmptyMap());
 }
 
 const RetainSummary *
 RetainSummaryManager::getCFSummaryCreateRule(const FunctionDecl *FD) {
-  return getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF),
+  return getPersistentSummary(RetEffect::MakeOwned(ObjKind::CF),
                               ArgEffects(AF.getEmptyMap()));
 }
 
 const RetainSummary *
 RetainSummaryManager::getCFSummaryGetRule(const FunctionDecl *FD) {
-  return getPersistentSummary(RetEffect::MakeNotOwned(RetEffect::CF),
+  return getPersistentSummary(RetEffect::MakeNotOwned(ObjKind::CF),
                               ArgEffects(AF.getEmptyMap()),
                               DoNothing, DoNothing);
 }
@@ -741,26 +741,26 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
 
     if (D->hasAttr<NSReturnsNotRetainedAttr>() ||
         D->hasAttr<NSReturnsAutoreleasedAttr>())
-      return RetEffect::MakeNotOwned(RetEffect::ObjC);
+      return RetEffect::MakeNotOwned(ObjKind::ObjC);
 
   } else if (!RetTy->isPointerType()) {
     return None;
   }
 
   if (hasEnabledAttr<CFReturnsRetainedAttr>(D)) {
-    return RetEffect::MakeOwned(RetEffect::CF);
+    return RetEffect::MakeOwned(ObjKind::CF);
   } else if (hasEnabledAttr<OSReturnsRetainedAttr>(D)) {
-    return RetEffect::MakeOwned(RetEffect::OS);
+    return RetEffect::MakeOwned(ObjKind::OS);
   } else if (hasRCAnnotation(D, "rc_ownership_returns_retained")) {
-    return RetEffect::MakeOwned(RetEffect::Generalized);
+    return RetEffect::MakeOwned(ObjKind::Generalized);
   }
 
   if (hasEnabledAttr<CFReturnsNotRetainedAttr>(D)) {
-    return RetEffect::MakeNotOwned(RetEffect::CF);
+    return RetEffect::MakeNotOwned(ObjKind::CF);
   } else if (hasEnabledAttr<OSReturnsNotRetainedAttr>(D)) {
-    return RetEffect::MakeNotOwned(RetEffect::OS);
+    return RetEffect::MakeNotOwned(ObjKind::OS);
   } else if (hasRCAnnotation(D, "rc_ownership_returns_not_retained")) {
-    return RetEffect::MakeNotOwned(RetEffect::Generalized);
+    return RetEffect::MakeNotOwned(ObjKind::Generalized);
   }
 
   if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
@@ -893,7 +893,7 @@ RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
       // FIXME: Does the non-threaded performSelector family really belong here?
       // The selector could be, say, @selector(copy).
       if (cocoa::isCocoaObjectRef(RetTy))
-        ResultEff = RetEffect::MakeNotOwned(RetEffect::ObjC);
+        ResultEff = RetEffect::MakeNotOwned(ObjKind::ObjC);
       else if (coreFoundation::isCFObjectRef(RetTy)) {
         // ObjCMethodDecl currently doesn't consider CF objects as valid return
         // values for alloc, new, copy, or mutableCopy, so we have to
@@ -905,14 +905,14 @@ RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
           case OMF_new:
           case OMF_copy:
           case OMF_mutableCopy:
-            ResultEff = RetEffect::MakeOwned(RetEffect::CF);
+            ResultEff = RetEffect::MakeOwned(ObjKind::CF);
             break;
           default:
-            ResultEff = RetEffect::MakeNotOwned(RetEffect::CF);
+            ResultEff = RetEffect::MakeNotOwned(ObjKind::CF);
             break;
           }
         } else {
-          ResultEff = RetEffect::MakeNotOwned(RetEffect::CF);
+          ResultEff = RetEffect::MakeNotOwned(ObjKind::CF);
         }
       }
       break;
@@ -927,7 +927,7 @@ RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
       if (cocoa::isCocoaObjectRef(RetTy))
         ResultEff = ObjCAllocRetE;
       else if (coreFoundation::isCFObjectRef(RetTy))
-        ResultEff = RetEffect::MakeOwned(RetEffect::CF);
+        ResultEff = RetEffect::MakeOwned(ObjKind::CF);
       break;
     case OMF_autorelease:
       ReceiverEff = Autorelease;
@@ -1033,7 +1033,7 @@ void RetainSummaryManager::InitializeClassMethodSummaries() {
 
   // Create the [NSAssertionHandler currentHander] summary.
   addClassMethSummary("NSAssertionHandler", "currentHandler",
-                getPersistentSummary(RetEffect::MakeNotOwned(RetEffect::ObjC),
+                getPersistentSummary(RetEffect::MakeNotOwned(ObjKind::ObjC),
                                      ScratchArgs));
 
   // Create the [NSAutoreleasePool addObject:] summary.
@@ -1063,7 +1063,7 @@ void RetainSummaryManager::InitializeMethodSummaries() {
   const RetainSummary *AllocSumm = getPersistentSummary(ObjCAllocRetE,
                                                         ScratchArgs);
   const RetainSummary *CFAllocSumm =
-    getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF), ScratchArgs);
+    getPersistentSummary(RetEffect::MakeOwned(ObjKind::CF), ScratchArgs);
 
   // Create the "retain" selector.
   RetEffect NoRet = RetEffect::MakeNoRet();

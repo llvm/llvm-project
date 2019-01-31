@@ -36,6 +36,22 @@ using namespace ento;
 namespace clang {
 namespace ento {
 
+/// Determines the object kind of a tracked object.
+enum class ObjKind {
+  /// Indicates that the tracked object is a CF object.  This is
+  /// important between GC and non-GC code.
+  CF,
+  /// Indicates that the tracked object is an Objective-C object.
+  ObjC,
+  /// Indicates that the tracked object could be a CF or Objective-C object.
+  AnyObj,
+  /// Indicates that the tracked object is a generalized object.
+  Generalized,
+
+  /// A descendant of OSObject.
+  OS
+};
+
 /// An ArgEffect summarizes the retain count behavior on an argument or receiver
 /// to a function or method.
 enum ArgEffect {
@@ -144,27 +160,12 @@ public:
     NoRetHard
   };
 
-  /// Determines the object kind of a tracked object.
-  enum ObjKind {
-    /// Indicates that the tracked object is a CF object.  This is
-    /// important between GC and non-GC code.
-    CF,
-    /// Indicates that the tracked object is an Objective-C object.
-    ObjC,
-    /// Indicates that the tracked object could be a CF or Objective-C object.
-    AnyObj,
-    /// Indicates that the tracked object is a generalized object.
-    Generalized,
-
-    /// A descendant of OSObject.
-    OS
-  };
 
 private:
   Kind K;
   ObjKind O;
 
-  RetEffect(Kind k, ObjKind o = AnyObj) : K(k), O(o) {}
+  RetEffect(Kind k, ObjKind o = ObjKind::AnyObj) : K(k), O(o) {}
 
 public:
   Kind getKind() const { return K; }
@@ -184,7 +185,7 @@ public:
   }
 
   static RetEffect MakeOwnedWhenTrackedReceiver() {
-    return RetEffect(OwnedWhenTrackedReceiver, ObjC);
+    return RetEffect(OwnedWhenTrackedReceiver, ObjKind::ObjC);
   }
 
   static RetEffect MakeOwned(ObjKind o) {
@@ -194,7 +195,7 @@ public:
     return RetEffect(NotOwnedSymbol, o);
   }
   static RetEffect MakeGCNotOwned() {
-    return RetEffect(GCNotOwnedSymbol, ObjC);
+    return RetEffect(GCNotOwnedSymbol, ObjKind::ObjC);
   }
   static RetEffect MakeNoRet() {
     return RetEffect(NoRet);
@@ -659,9 +660,9 @@ public:
      TrackObjCAndCFObjects(trackObjCAndCFObjects),
      TrackOSObjects(trackOSObjects),
      AF(BPAlloc),
-     ObjCAllocRetE(usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
-                               : RetEffect::MakeOwned(RetEffect::ObjC)),
-     ObjCInitRetE(usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
+     ObjCAllocRetE(usesARC ? RetEffect::MakeNotOwned(ObjKind::ObjC)
+                               : RetEffect::MakeOwned(ObjKind::ObjC)),
+     ObjCInitRetE(usesARC ? RetEffect::MakeNotOwned(ObjKind::ObjC)
                                : RetEffect::MakeOwnedWhenTrackedReceiver()) {
     InitializeClassMethodSummaries();
     InitializeMethodSummaries();
