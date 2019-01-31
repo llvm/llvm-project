@@ -162,9 +162,6 @@ public:
                                         CompilerType &type,
                                         bool make_private = true);
 
-  swift::Type FixupResultType(swift::Type &result_type,
-                              uint32_t language_flags);
-
   bool FixupResultAfterTypeChecking(Status &error);
 
   static const char *GetArgumentName() { return "$__lldb_arg"; }
@@ -214,14 +211,6 @@ private:
                     ResultLocationInfo &result_info);
 
   void InsertError(swift::VarDecl *error_var, swift::Type &error_type);
-
-  struct TypesForResultFixup {
-    swift::ArchetypeType *Wrapper_archetype = nullptr;
-    swift::TypeAliasType *context_alias = nullptr;
-    swift::TypeBase *context_real = nullptr;
-  };
-
-  TypesForResultFixup GetTypesForResultFixup(uint32_t language_flags);
 
   std::vector<ResultLocationInfo> m_result_info;
 };

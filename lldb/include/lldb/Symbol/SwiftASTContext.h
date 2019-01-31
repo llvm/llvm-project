@@ -474,8 +474,6 @@ public:
 
   static bool IsGenericType(const CompilerType &compiler_type);
 
-  static bool IsSelfArchetypeType(const CompilerType &compiler_type);
-
   bool IsTrivialOptionSetType(const CompilerType &compiler_type);
 
   bool IsErrorType(const CompilerType &compiler_type);
