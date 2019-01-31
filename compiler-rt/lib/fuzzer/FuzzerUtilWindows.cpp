@@ -111,6 +111,10 @@ static TimerQ Timer;
 
 static void CrashHandler(int) { Fuzzer::StaticCrashSignalCallback(); }
 
+bool Mprotect(void *Ptr, size_t Size, bool AllowReadWrite) {
+  return false;  // UNIMPLEMENTED
+}
+
 void SetSignalHandler(const FuzzingOptions& Options) {
   HandlerOpt = &Options;
 

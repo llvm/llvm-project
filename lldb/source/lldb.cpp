@@ -11,11 +11,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+#include "VCSRevision.h"
 #include "clang/Basic/Version.h"
-
-#ifdef HAVE_SVN_VERSION_INC
-#include "SVNVersion.inc"
-#endif
 
 #ifdef HAVE_APPLE_VERSION_INC
 #include "AppleVersion.inc"
