@@ -167,7 +167,7 @@ static size_t DoWriteMemory(lldb::pid_t pid, lldb::addr_t vm_addr,
 
   pi_desc.piod_op = PIOD_WRITE_D;
   pi_desc.piod_offs = (void *)vm_addr;
-  pi_desc.piod_addr = (void *)buf;
+  pi_desc.piod_addr = const_cast<void *>(buf);
   pi_desc.piod_len = size;
 
   if (PTRACE(PT_IO, pid, (caddr_t)&pi_desc, 0) < 0) {
