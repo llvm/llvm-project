@@ -34,10 +34,8 @@ std::unique_ptr<CheckerManager> ento::createCheckerManager(
     DiagnosticsEngine &diags) {
   auto checkerMgr = llvm::make_unique<CheckerManager>(context, opts);
 
-  CheckerRegistry allCheckers(plugins, diags, opts, context.getLangOpts());
-
-  for (const auto &Fn : checkerRegistrationFns)
-    Fn(allCheckers);
+  CheckerRegistry allCheckers(plugins, diags, opts, context.getLangOpts(),
+                              checkerRegistrationFns);
 
   allCheckers.initializeManager(*checkerMgr);
   allCheckers.validateCheckerOptions();
