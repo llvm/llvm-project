@@ -27,6 +27,8 @@ StringRef RefCountBug::bugTypeToName(RefCountBug::RefCountBugType BT) {
     return "Bad release";
   case DeallocNotOwned:
     return "-dealloc sent to non-exclusively owned object";
+  case FreeNotOwned:
+    return "freeing non-exclusively owned object";
   case OverAutorelease:
     return "Object autoreleased too many times";
   case ReturnNotOwnedForOwned:
@@ -47,6 +49,8 @@ StringRef RefCountBug::getDescription() const {
            "not owned at this point by the caller";
   case DeallocNotOwned:
     return "-dealloc sent to object that may be referenced elsewhere";
+  case FreeNotOwned:
+    return  "'free' called on an object that may be referenced elsewhere";
   case OverAutorelease:
     return "Object autoreleased too many times";
   case ReturnNotOwnedForOwned:
@@ -86,7 +90,8 @@ static std::string getPrettyTypeName(QualType QT) {
 /// Write information about the type state change to {@code os},
 /// return whether the note should be generated.
 static bool shouldGenerateNote(llvm::raw_string_ostream &os,
-                               const RefVal *PrevT, const RefVal &CurrV,
+                               const RefVal *PrevT,
+                               const RefVal &CurrV,
                                bool DeallocSent) {
   // Get the previous type state.
   RefVal PrevV = *PrevT;
@@ -416,6 +421,11 @@ std::shared_ptr<PathDiagnosticPiece>
 RefCountReportVisitor::VisitNode(const ExplodedNode *N,
                               BugReporterContext &BRC, BugReport &BR) {
 
+  const auto &BT = static_cast<const RefCountBug&>(BR.getBugType());
+
+  bool IsFreeUnowned = BT.getBugType() == RefCountBug::FreeNotOwned ||
+                       BT.getBugType() == RefCountBug::DeallocNotOwned;
+
   const SourceManager &SM = BRC.getSourceManager();
   CallEventManager &CEMgr = BRC.getStateManager().getCallEventManager();
   if (auto CE = N->getLocationAs<CallExitBegin>())
@@ -434,7 +444,8 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N,
   const LocationContext *LCtx = N->getLocationContext();
 
   const RefVal* CurrT = getRefBinding(CurrSt, Sym);
-  if (!CurrT) return nullptr;
+  if (!CurrT)
+    return nullptr;
 
   const RefVal &CurrV = *CurrT;
   const RefVal *PrevT = getRefBinding(PrevSt, Sym);
@@ -443,6 +454,12 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N,
   // to tell the user.
   std::string sbuf;
   llvm::raw_string_ostream os(sbuf);
+
+  if (PrevT && IsFreeUnowned && CurrV.isNotOwned() && PrevT->isOwned()) {
+    os << "Object is now not exclusively owned";
+    auto Pos = PathDiagnosticLocation::create(N->getLocation(), SM);
+    return std::make_shared<PathDiagnosticEventPiece>(Pos, os.str());
+  }
 
   // This is the allocation site since the previous node had no bindings
   // for this symbol.
@@ -490,9 +507,9 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N,
   // program point
   bool DeallocSent = false;
 
-  if (N->getLocation().getTag() &&
-      N->getLocation().getTag()->getTagDescription().contains(
-          RetainCountChecker::DeallocTagDescription)) {
+  const ProgramPointTag *Tag = N->getLocation().getTag();
+  if (Tag && Tag->getTagDescription().contains(
+                 RetainCountChecker::DeallocTagDescription)) {
     // We only have summaries attached to nodes after evaluating CallExpr and
     // ObjCMessageExprs.
     const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();
