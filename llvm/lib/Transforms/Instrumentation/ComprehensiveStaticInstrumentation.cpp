@@ -106,15 +106,15 @@ static cl::opt<InstrumentationConfigMode> ClConfigurationMode(
 namespace {
 
 static CSIOptions OverrideFromCL(CSIOptions Options) {
-  Options.InstrumentFuncEntryExit |= ClInstrumentFuncEntryExit;
-  Options.InstrumentBasicBlocks |= ClInstrumentBasicBlocks;
-  Options.InstrumentMemoryAccesses |= ClInstrumentMemoryAccesses;
-  Options.InstrumentCalls |= ClInstrumentCalls;
-  Options.InstrumentAtomics |= ClInstrumentAtomics;
-  Options.InstrumentMemIntrinsics |= ClInstrumentMemIntrinsics;
-  Options.InstrumentTapir |= ClInstrumentTapir;
-  Options.InstrumentAllocas |= ClInstrumentAllocas;
-  Options.InstrumentAllocFns |= ClInstrumentAllocFns;
+  Options.InstrumentFuncEntryExit = ClInstrumentFuncEntryExit;
+  Options.InstrumentBasicBlocks = ClInstrumentBasicBlocks;
+  Options.InstrumentMemoryAccesses = ClInstrumentMemoryAccesses;
+  Options.InstrumentCalls = ClInstrumentCalls;
+  Options.InstrumentAtomics = ClInstrumentAtomics;
+  Options.InstrumentMemIntrinsics = ClInstrumentMemIntrinsics;
+  Options.InstrumentTapir = ClInstrumentTapir;
+  Options.InstrumentAllocas = ClInstrumentAllocas;
+  Options.InstrumentAllocFns = ClInstrumentAllocFns;
   return Options;
 }
 
