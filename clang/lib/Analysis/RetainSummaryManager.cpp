@@ -636,11 +636,14 @@ RetainSummaryManager::getSummary(AnyCall C,
     // FIXME: These calls are currently unsupported.
     return getPersistentStopSummary();
   case AnyCall::ObjCMethod: {
-    const auto *ME = cast<ObjCMessageExpr>(C.getExpr());
-    if (ME->isInstanceMessage())
+    const auto *ME = cast_or_null<ObjCMessageExpr>(C.getExpr());
+    if (!ME) {
+      return getMethodSummary(cast<ObjCMethodDecl>(C.getDecl()));
+    } else if (ME->isInstanceMessage()) {
       Summ = getInstanceMethodSummary(ME, ReceiverType);
-    else
+    } else {
       Summ = getClassMethodSummary(ME);
+    }
     break;
   }
   }
@@ -1238,32 +1241,4 @@ RetainSummaryManager::getMethodSummary(const ObjCMethodDecl *MD) {
     CachedSummaries = &ObjCClassMethodSummaries;
 
   return getMethodSummary(S, ID, MD, ResultTy, *CachedSummaries);
-}
-
-CallEffects CallEffects::getEffect(const ObjCMethodDecl *MD) {
-  ASTContext &Ctx = MD->getASTContext();
-  RetainSummaryManager M(Ctx,
-                         /*TrackNSAndCFObjects=*/true,
-                         /*TrackOSObjects=*/false);
-  const RetainSummary *S = M.getMethodSummary(MD);
-  CallEffects CE(S->getRetEffect(), S->getReceiverEffect());
-  unsigned N = MD->param_size();
-  for (unsigned i = 0; i < N; ++i) {
-    CE.Args.push_back(S->getArg(i));
-  }
-  return CE;
-}
-
-CallEffects CallEffects::getEffect(const FunctionDecl *FD) {
-  ASTContext &Ctx = FD->getASTContext();
-  RetainSummaryManager M(Ctx,
-                         /*TrackNSAndCFObjects=*/true,
-                         /*TrackOSObjects=*/false);
-  const RetainSummary *S = M.getFunctionSummary(FD);
-  CallEffects CE(S->getRetEffect());
-  unsigned N = FD->param_size();
-  for (unsigned i = 0; i < N; ++i) {
-    CE.Args.push_back(S->getArg(i));
-  }
-  return CE;
 }
