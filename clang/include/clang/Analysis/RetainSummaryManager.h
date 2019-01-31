@@ -694,10 +694,22 @@ private:
   void updateSummaryFromAnnotations(const RetainSummary *&Summ,
                                     const FunctionDecl *FD);
 
-  void updateSummaryForCall(const RetainSummary *&Summ,
-                            AnyCall C,
-                            bool HasNonZeroCallbackArg,
-                            bool IsReceiverUnconsumedSelf);
+  const RetainSummary *updateSummaryForNonZeroCallbackArg(const RetainSummary *S,
+                                                          AnyCall &C);
+
+  /// Special case '[super init];' and '[self init];'
+  ///
+  /// Even though calling '[super init]' without assigning the result to self
+  /// and checking if the parent returns 'nil' is a bad pattern, it is common.
+  /// Additionally, our Self Init checker already warns about it. To avoid
+  /// overwhelming the user with messages from both checkers, we model the case
+  /// of '[super init]' in cases when it is not consumed by another expression
+  /// as if the call preserves the value of 'self'; essentially, assuming it can
+  /// never fail and return 'nil'.
+  /// Note, we don't want to just stop tracking the value since we want the
+  /// RetainCount checker to report leaks and use-after-free if SelfInit checker
+  /// is turned off.
+  void updateSummaryForReceiverUnconsumedSelf(const RetainSummary *&S);
 
   /// Determine whether a declaration {@code D} of correspondent type (return
   /// type for functions/methods) {@code QT} has any of the given attributes,

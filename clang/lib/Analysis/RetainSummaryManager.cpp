@@ -558,64 +558,47 @@ static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {
   llvm_unreachable("Unknown ArgEffect kind");
 }
 
-void RetainSummaryManager::updateSummaryForCall(const RetainSummary *&S,
-                                                AnyCall C,
-                                                bool HasNonZeroCallbackArg,
-                                                bool IsReceiverUnconsumedSelf) {
+const RetainSummary *
+RetainSummaryManager::updateSummaryForNonZeroCallbackArg(const RetainSummary *S,
+                                                         AnyCall &C) {
+  ArgEffect RecEffect = getStopTrackingHardEquivalent(S->getReceiverEffect());
+  ArgEffect DefEffect = getStopTrackingHardEquivalent(S->getDefaultArgEffect());
 
-  if (HasNonZeroCallbackArg) {
-    ArgEffect RecEffect =
-      getStopTrackingHardEquivalent(S->getReceiverEffect());
-    ArgEffect DefEffect =
-      getStopTrackingHardEquivalent(S->getDefaultArgEffect());
-
-    ArgEffects ScratchArgs(AF.getEmptyMap());
-    ArgEffects CustomArgEffects = S->getArgEffects();
-    for (ArgEffects::iterator I = CustomArgEffects.begin(),
-                              E = CustomArgEffects.end();
-         I != E; ++I) {
-      ArgEffect Translated = getStopTrackingHardEquivalent(I->second);
-      if (Translated.getKind() != DefEffect.getKind())
-        ScratchArgs = AF.add(ScratchArgs, I->first, Translated);
-    }
-
-    RetEffect RE = RetEffect::MakeNoRetHard();
-
-    // Special cases where the callback argument CANNOT free the return value.
-    // This can generally only happen if we know that the callback will only be
-    // called when the return value is already being deallocated.
-    if (C.getKind() == AnyCall::Function) {
-      if (const IdentifierInfo *Name = C.getIdentifier()) {
-        // When the CGBitmapContext is deallocated, the callback here will free
-        // the associated data buffer.
-        // The callback in dispatch_data_create frees the buffer, but not
-        // the data object.
-        if (Name->isStr("CGBitmapContextCreateWithData") ||
-            Name->isStr("dispatch_data_create"))
-          RE = S->getRetEffect();
-      }
-    }
-
-    S = getPersistentSummary(RE, ScratchArgs, RecEffect, DefEffect);
+  ArgEffects ScratchArgs(AF.getEmptyMap());
+  ArgEffects CustomArgEffects = S->getArgEffects();
+  for (ArgEffects::iterator I = CustomArgEffects.begin(),
+                            E = CustomArgEffects.end();
+       I != E; ++I) {
+    ArgEffect Translated = getStopTrackingHardEquivalent(I->second);
+    if (Translated.getKind() != DefEffect.getKind())
+      ScratchArgs = AF.add(ScratchArgs, I->first, Translated);
   }
 
-  // Special case '[super init];' and '[self init];'
-  //
-  // Even though calling '[super init]' without assigning the result to self
-  // and checking if the parent returns 'nil' is a bad pattern, it is common.
-  // Additionally, our Self Init checker already warns about it. To avoid
-  // overwhelming the user with messages from both checkers, we model the case
-  // of '[super init]' in cases when it is not consumed by another expression
-  // as if the call preserves the value of 'self'; essentially, assuming it can
-  // never fail and return 'nil'.
-  // Note, we don't want to just stop tracking the value since we want the
-  // RetainCount checker to report leaks and use-after-free if SelfInit checker
-  // is turned off.
-  if (IsReceiverUnconsumedSelf) {
-    RetainSummaryTemplate ModifiableSummaryTemplate(S, *this);
-    ModifiableSummaryTemplate->setReceiverEffect(ArgEffect(DoNothing));
-    ModifiableSummaryTemplate->setRetEffect(RetEffect::MakeNoRet());
+  RetEffect RE = RetEffect::MakeNoRetHard();
+
+  // Special cases where the callback argument CANNOT free the return value.
+  // This can generally only happen if we know that the callback will only be
+  // called when the return value is already being deallocated.
+  if (const IdentifierInfo *Name = C.getIdentifier()) {
+    // When the CGBitmapContext is deallocated, the callback here will free
+    // the associated data buffer.
+    // The callback in dispatch_data_create frees the buffer, but not
+    // the data object.
+    if (Name->isStr("CGBitmapContextCreateWithData") ||
+        Name->isStr("dispatch_data_create"))
+      RE = S->getRetEffect();
   }
+
+  return getPersistentSummary(RE, ScratchArgs, RecEffect, DefEffect);
+}
+
+void RetainSummaryManager::updateSummaryForReceiverUnconsumedSelf(
+    const RetainSummary *&S) {
+
+  RetainSummaryTemplate Template(S, *this);
+
+  Template->setReceiverEffect(ArgEffect(DoNothing));
+  Template->setRetEffect(RetEffect::MakeNoRet());
 }
 
 const RetainSummary *
@@ -648,8 +631,11 @@ RetainSummaryManager::getSummary(AnyCall C,
   }
   }
 
-  updateSummaryForCall(Summ, C, HasNonZeroCallbackArg,
-                       IsReceiverUnconsumedSelf);
+  if (HasNonZeroCallbackArg)
+    Summ = updateSummaryForNonZeroCallbackArg(Summ, C);
+
+  if (IsReceiverUnconsumedSelf)
+    updateSummaryForReceiverUnconsumedSelf(Summ);
 
   assert(Summ && "Unknown call type?");
   return Summ;
