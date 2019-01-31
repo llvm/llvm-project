@@ -132,6 +132,32 @@ static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
   return None;
 }
 
+Optional<std::string> findMetaClassAlloc(const Expr *Callee) {
+  if (const auto *ME = dyn_cast<MemberExpr>(Callee)) {
+    if (ME->getMemberDecl()->getNameAsString() != "alloc")
+      return None;
+    const Expr *This = ME->getBase()->IgnoreParenImpCasts();
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(This)) {
+      const ValueDecl *VD = DRE->getDecl();
+      if (VD->getNameAsString() != "metaClass")
+        return None;
+
+      if (const auto *RD = dyn_cast<CXXRecordDecl>(VD->getDeclContext()))
+        return RD->getNameAsString();
+
+    }
+  }
+  return None;
+}
+
+std::string findAllocatedObjectName(const Stmt *S,
+                                    QualType QT) {
+  if (const auto *CE = dyn_cast<CallExpr>(S))
+    if (auto Out = findMetaClassAlloc(CE->getCallee()))
+      return *Out;
+  return getPrettyTypeName(QT);
+}
+
 static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
                                            const LocationContext *LCtx,
                                            const RefVal &CurrV, SymbolRef &Sym,
@@ -189,7 +215,7 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
     os << "a Core Foundation object of type '"
        << Sym->getType().getAsString() << "' with a ";
   } else if (CurrV.getObjKind() == ObjKind::OS) {
-    os << "an OSObject of type '" << getPrettyTypeName(Sym->getType())
+    os << "an OSObject of type '" << findAllocatedObjectName(S, Sym->getType())
        << "' with a ";
   } else if (CurrV.getObjKind() == ObjKind::Generalized) {
     os << "an object of type '" << Sym->getType().getAsString()
