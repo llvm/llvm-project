@@ -1202,7 +1202,7 @@ bool ento::shouldRegisterNullabilityBase(const LangOptions &LO) {
 
 #define REGISTER_CHECKER(name, trackingRequired)                               \
   void ento::register##name##Checker(CheckerManager &mgr) {                    \
-    NullabilityChecker *checker = mgr.registerChecker<NullabilityChecker>();   \
+    NullabilityChecker *checker = mgr.getChecker<NullabilityChecker>();        \
     checker->Filter.Check##name = true;                                        \
     checker->Filter.CheckName##name = mgr.getCurrentCheckName();               \
     checker->NeedTracking = checker->NeedTracking || trackingRequired;         \

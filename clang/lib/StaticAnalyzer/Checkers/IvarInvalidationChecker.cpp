@@ -747,7 +747,7 @@ bool ento::shouldRegisterIvarInvalidationModeling(const LangOptions &LO) {
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &mgr) {                             \
     IvarInvalidationChecker *checker =                                         \
-        mgr.registerChecker<IvarInvalidationChecker>();                        \
+        mgr.getChecker<IvarInvalidationChecker>();                             \
     checker->Filter.check_##name = true;                                       \
     checker->Filter.checkName_##name = mgr.getCurrentCheckName();              \
   }                                                                            \

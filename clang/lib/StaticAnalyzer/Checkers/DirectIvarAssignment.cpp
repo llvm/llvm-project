@@ -227,7 +227,7 @@ bool ento::shouldRegisterDirectIvarAssignment(const LangOptions &LO) {
 
 void ento::registerDirectIvarAssignmentForAnnotatedFunctions(
     CheckerManager &mgr) {
-  mgr.registerChecker<DirectIvarAssignment>()->ShouldSkipMethod = &AttrFilter;
+  mgr.getChecker<DirectIvarAssignment>()->ShouldSkipMethod = &AttrFilter;
 }
 
 bool ento::shouldRegisterDirectIvarAssignmentForAnnotatedFunctions(

@@ -2404,7 +2404,7 @@ bool ento::shouldRegisterIteratorModeling(const LangOptions &LO) {
 
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &Mgr) {                             \
-    auto *checker = Mgr.registerChecker<IteratorChecker>();                    \
+    auto *checker = Mgr.getChecker<IteratorChecker>();                         \
     checker->ChecksEnabled[IteratorChecker::CK_##name] = true;                 \
     checker->CheckNames[IteratorChecker::CK_##name] =                          \
         Mgr.getCurrentCheckName();                                             \
