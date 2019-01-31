@@ -194,7 +194,7 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
   } else if(FName == "NSMakeCollectable") {
     // Handle: id NSMakeCollectable(CFTypeRef)
     AllowAnnotations = false;
-    return RetTy->isObjCIdType() ? getUnarySummary(FT, cfmakecollectable)
+    return RetTy->isObjCIdType() ? getUnarySummary(FT, DoNothing)
                                  : getPersistentStopSummary();
   } else if (FName == "CMBufferQueueDequeueAndRetain" ||
              FName == "CMBufferQueueDequeueIfDataReadyAndRetain") {
@@ -307,16 +307,16 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
         // We want to ignore such annotation.
         AllowAnnotations = false;
 
-        return getUnarySummary(FT, cfretain);
+        return getUnarySummary(FT, IncRef);
       } else if (isAutorelease(FD, FName)) {
         // The headers use cf_consumed, but we can fully model CFAutorelease
         // ourselves.
         AllowAnnotations = false;
 
-        return getUnarySummary(FT, cfautorelease);
+        return getUnarySummary(FT, Autorelease);
       } else if (isMakeCollectable(FName)) {
         AllowAnnotations = false;
-        return getUnarySummary(FT, cfmakecollectable);
+        return getUnarySummary(FT, DoNothing);
       } else {
         return getCFCreateGetRuleSummary(FD);
       }
@@ -326,7 +326,7 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
     if (cocoa::isRefType(RetTy, "CG", FName) ||
         cocoa::isRefType(RetTy, "CV", FName)) {
       if (isRetain(FD, FName))
-        return getUnarySummary(FT, cfretain);
+        return getUnarySummary(FT, IncRef);
       else
         return getCFCreateGetRuleSummary(FD);
     }
@@ -350,7 +350,7 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
     FName = FName.substr(FName.startswith("CGCF") ? 4 : 2);
 
     if (isRelease(FD, FName))
-      return getUnarySummary(FT, cfrelease);
+      return getUnarySummary(FT, DecRef);
     else {
       assert(ScratchArgs.isEmpty());
       // Remaining CoreFoundation and CoreGraphics functions.
@@ -644,11 +644,9 @@ RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
   return None;
 }
 
-// TODO: UnaryFuncKind is a very funny enum, it really should not exist:
-// just pass the needed effect directly!
 const RetainSummary *
 RetainSummaryManager::getUnarySummary(const FunctionType* FT,
-                                      UnaryFuncKind func) {
+                                      ArgEffectKind AE) {
 
   // Unary functions have no arg effects by definition.
   ArgEffects ScratchArgs(AF.getEmptyMap());
@@ -659,13 +657,7 @@ RetainSummaryManager::getUnarySummary(const FunctionType* FT,
   if (!FTP || FTP->getNumParams() != 1)
     return getPersistentStopSummary();
 
-  ArgEffect Effect(DoNothing, ObjKind::CF);
-  switch (func) {
-  case cfretain: Effect = Effect.withKind(IncRef); break;
-  case cfrelease: Effect = Effect.withKind(DecRef); break;
-  case cfautorelease: Effect = Effect.withKind(Autorelease); break;
-  case cfmakecollectable: Effect = Effect.withKind(DoNothing); break;
-  }
+  ArgEffect Effect(AE, ObjKind::CF);
 
   ScratchArgs = AF.add(ScratchArgs, 0, Effect);
   return getPersistentSummary(RetEffect::MakeNoRet(),
