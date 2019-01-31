@@ -72,7 +72,7 @@ public:
     DescendantTasks.clear();
     Inductions.clear();
   }
-      
+
   Loop *getLoop() const { return TheLoop; }
   Task *getTask() const { return TheTask; }
 

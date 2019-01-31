@@ -149,7 +149,7 @@ bool AnalyzeTapir::runOnFunction(Function &F) {
 
     // Count number of discriminating syncs in this task.
     unsigned NumDiscrimSyncs = 0;
-    
+
     for (const Spindle *S : T->spindles()) {
       // Only conider spindles that might have tasks in parallel.
       if (MPTasks.TaskList[S].empty()) continue;
@@ -199,7 +199,7 @@ bool AnalyzeTapir::runOnFunction(Function &F) {
   //     Walker->getClobberingMemoryAccess(MemAcc, MemoryLocation::get(Acc));
   //   dbgs() << "\tClobbering access " << *Clobber << "\n";
   // }
-  
+
   return false;
 }
 
