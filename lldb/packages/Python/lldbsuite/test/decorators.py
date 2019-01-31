@@ -364,7 +364,7 @@ def apple_simulator_test(platform):
             return "simulator tests are run only on darwin hosts"
         try:
             DEVNULL = open(os.devnull, 'w')
-            output = subprocess.check_output(["xcodebuild", "-showsdks"], stderr=DEVNULL)
+            output = subprocess.check_output(["xcodebuild", "-showsdks"], stderr=DEVNULL).decode("utf-8")
             if re.search('%ssimulator' % platform, output):
                 return None
             else:
