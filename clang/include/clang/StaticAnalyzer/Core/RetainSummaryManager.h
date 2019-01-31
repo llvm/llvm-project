@@ -38,17 +38,20 @@ namespace ento {
 
 /// Determines the object kind of a tracked object.
 enum class ObjKind {
-  /// Indicates that the tracked object is a CF object.  This is
-  /// important between GC and non-GC code.
+  /// Indicates that the tracked object is a CF object.
   CF,
+
   /// Indicates that the tracked object is an Objective-C object.
   ObjC,
+
   /// Indicates that the tracked object could be a CF or Objective-C object.
   AnyObj,
+
   /// Indicates that the tracked object is a generalized object.
   Generalized,
 
-  /// A descendant of OSObject.
+  /// Indicates that the tracking object is a descendant of a
+  /// referenced-counted OSObject, used in the Darwin kernel.
   OS
 };
 
@@ -60,20 +63,17 @@ enum ArgEffectKind {
   /// the referenced object.
   Autorelease,
 
-  /// The argument is treated as if an -dealloc message had been sent to
-  /// the referenced object.
+  /// The argument is treated as if the referenced object was deallocated.
   Dealloc,
 
-  /// The argument has its reference count decreased by 1.  This is as
-  /// if CFRelease has been called on the argument.
+  /// The argument has its reference count decreased by 1.
   DecRef,
 
   /// The argument has its reference count decreased by 1 to model
   /// a transferred bridge cast under ARC.
   DecRefBridgedTransferred,
 
-  /// The argument has its reference count increased by 1.  This is as
-  /// if CFRetain has been called on the argument.
+  /// The argument has its reference count increased by 1.
   IncRef,
 
   /// The argument is a pointer to a retain-counted object; on exit, the new
@@ -139,25 +139,25 @@ public:
     /// Indicates that no retain count information is tracked for
     /// the return value.
     NoRet,
+
     /// Indicates that the returned value is an owned (+1) symbol.
     OwnedSymbol,
+
     /// Indicates that the returned value is an object with retain count
     /// semantics but that it is not owned (+0).  This is the default
     /// for getters, etc.
     NotOwnedSymbol,
-    /// Indicates that the object is not owned and controlled by the
-    /// Garbage collector.
-    GCNotOwnedSymbol,
+
     /// Indicates that the return value is an owned object when the
     /// receiver is also a tracked object.
     OwnedWhenTrackedReceiver,
+
     // Treat this function as returning a non-tracked symbol even if
     // the function has been inlined. This is used where the call
     // site summary is more precise than the summary indirectly produced
     // by inlining the function
     NoRetHard
   };
-
 
 private:
   Kind K;
@@ -191,9 +191,6 @@ public:
   }
   static RetEffect MakeNotOwned(ObjKind o) {
     return RetEffect(NotOwnedSymbol, o);
-  }
-  static RetEffect MakeGCNotOwned() {
-    return RetEffect(GCNotOwnedSymbol, ObjKind::ObjC);
   }
   static RetEffect MakeNoRet() {
     return RetEffect(NoRet);
@@ -372,6 +369,7 @@ public:
   ArgEffect getReceiverEffect() const { return Receiver; }
 
   /// \return the effect on the "this" receiver of the method call.
+  /// This is only meaningful if the summary applies to CXXMethodDecl*.
   ArgEffect getThisEffect() const { return This; }
 
   /// Set the effect of the method on "this".

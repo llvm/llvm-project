@@ -38,6 +38,7 @@ constexpr static bool isOneOf() {
 
 namespace {
 
+/// Fake attribute class for RC* attributes.
 struct GeneralizedReturnsRetainedAttr {
   static bool classof(const Attr *A) {
     if (auto AA = dyn_cast<AnnotateAttr>(A))
