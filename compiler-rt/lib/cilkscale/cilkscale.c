@@ -242,7 +242,7 @@ void __csi_after_free(const csi_id_t free_id, const void *ptr,
 }
 
 CILKTOOL_API
-void __csi_detach(const csi_id_t detach_id) {
+void __csi_detach(const csi_id_t detach_id, const int32_t *has_spawned) {
   context_stack_t *stack;
 
 #if SERIAL_TOOL
@@ -334,7 +334,7 @@ void __csi_detach_continue(const csi_id_t detach_continue_id,
 }
 
 CILKTOOL_API
-void __csi_before_sync(const csi_id_t sync_id) {
+void __csi_before_sync(const csi_id_t sync_id, const int32_t *has_spawned) {
   context_stack_t *stack;
 #if SERIAL_TOOL
   stack = &(ctx_stack);
@@ -357,7 +357,7 @@ void __csi_before_sync(const csi_id_t sync_id) {
 }
 
 CILKTOOL_API
-void __csi_after_sync(const csi_id_t sync_id) {
+void __csi_after_sync(const csi_id_t sync_id, const int32_t *has_spawned) {
   context_stack_t *stack;
 #if SERIAL_TOOL
   stack = &(ctx_stack);
