@@ -1919,7 +1919,6 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
 
   if (isa<ConstantSDNode>(Idx)) {
     uint64_t IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
-    assert(IdxVal < VecVT.getVectorNumElements() && "Invalid vector index!");
 
     SDValue Lo, Hi;
     GetSplitVector(Vec, Lo, Hi);

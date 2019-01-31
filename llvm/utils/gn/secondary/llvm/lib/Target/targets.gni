@@ -22,6 +22,7 @@ if (llvm_targets_to_build == "host") {
   llvm_targets_to_build = [
     "AArch64",
     "ARM",
+    "BPF",
     "PowerPC",
     "WebAssembly",
     "X86",
@@ -32,6 +33,7 @@ if (llvm_targets_to_build == "host") {
 # and remember which targets are built.
 llvm_build_AArch64 = false
 llvm_build_ARM = false
+llvm_build_BPF = false
 llvm_build_PowerPC = false
 llvm_build_WebAssembly = false
 llvm_build_X86 = false
@@ -40,6 +42,8 @@ foreach(target, llvm_targets_to_build) {
     llvm_build_AArch64 = true
   } else if (target == "ARM") {
     llvm_build_ARM = true
+  } else if (target == "BPF") {
+    llvm_build_BPF = true
   } else if (target == "PowerPC") {
     llvm_build_PowerPC = true
   } else if (target == "WebAssembly") {

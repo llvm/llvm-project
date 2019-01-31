@@ -88,8 +88,9 @@ public:
   void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const {
     auto UnaryOp = dyn_cast<UnaryOperator>(S);
-    if (UnaryOp && !IsLoad)
+    if (UnaryOp && !IsLoad) {
       EXPECT_FALSE(UnaryOp->isIncrementOp());
+    }
   }
 };
 

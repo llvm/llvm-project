@@ -227,8 +227,9 @@ void Fuzzer::StaticFileSizeExceedCallback() {
 }
 
 void Fuzzer::CrashCallback() {
-  if (EF->__sanitizer_acquire_crash_state)
-    EF->__sanitizer_acquire_crash_state();
+  if (EF->__sanitizer_acquire_crash_state &&
+      !EF->__sanitizer_acquire_crash_state())
+    return;
   Printf("==%lu== ERROR: libFuzzer: deadly signal\n", GetPid());
   PrintStackTrace();
   Printf("NOTE: libFuzzer has rudimentary signal handlers.\n"
@@ -713,6 +714,10 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
   // Test the callback with empty input and never try it again.
   uint8_t dummy = 0;
   ExecuteCallback(&dummy, 0);
+
+  // Protect lazy counters here, after the once-init code has been executed.
+  if (Options.LazyCounters)
+    TPC.ProtectLazyCounters();
 
   if (SizedFiles.empty()) {
     Printf("INFO: A corpus is not provided, starting from an empty corpus\n");

@@ -1,0 +1,24 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("BPFGenAsmWriter") {
+  visibility = [ ":InstPrinter" ]
+  args = [ "-gen-asm-writer" ]
+  td_file = "../BPF.td"
+}
+
+static_library("InstPrinter") {
+  output_name = "LLVMBPFAsmPrinter"
+  deps = [
+    ":BPFGenAsmWriter",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+
+    # MCTargetDesc depends on InstPrinter, so we can't depend on the full
+    # MCTargetDesc target here: it would form a cycle.
+    "//llvm/lib/Target/BPF/MCTargetDesc:tablegen",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "BPFInstPrinter.cpp",
+  ]
+}

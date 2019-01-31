@@ -51,8 +51,6 @@ def int_wasm_get_ehselector : Intrinsic<[llvm_i32_ty], [llvm_token_ty],
                                         [IntrHasSideEffects]>;
 // This is the same as llvm.wasm.get.exception except that it does not take a
 // token operand. This is only for instruction selection purpose.
-// TODO Remove this redundant intrinsic and do custom lowering on
-// int_wasm_get_exception instead
 def int_wasm_extract_exception : Intrinsic<[llvm_ptr_ty], [],
                                            [IntrHasSideEffects]>;
 

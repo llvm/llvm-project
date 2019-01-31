@@ -67,7 +67,6 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyCFGStackify.cpp",
     "WebAssemblyCallIndirectFixup.cpp",
     "WebAssemblyDebugValueManager.cpp",
-    "WebAssemblyEHRestoreStackPointer.cpp",
     "WebAssemblyExceptionInfo.cpp",
     "WebAssemblyExplicitLocals.cpp",
     "WebAssemblyFastISel.cpp",

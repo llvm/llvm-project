@@ -582,8 +582,7 @@ define <4 x i32> @load_splat_4i32_2i32_0101(<2 x i32>* %vp) {
 ;
 ; AVX1-LABEL: load_splat_4i32_2i32_0101:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_splat_4i32_2i32_0101:
@@ -610,8 +609,7 @@ define <8 x i32> @load_splat_8i32_2i32_0101(<2 x i32>* %vp) {
 ;
 ; AVX1-LABEL: load_splat_8i32_2i32_0101:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -641,8 +639,7 @@ define <16 x i32> @load_splat_16i32_2i32_0101(<2 x i32>* %vp) {
 ;
 ; AVX1-LABEL: load_splat_16i32_2i32_0101:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; AVX1-NEXT:    retq

@@ -743,6 +743,11 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
   bool IsReadOnly = isReadOnlyData(Section);
   uint64_t DataSize = Section.getSize();
 
+  // An alignment of 0 (at least with ELF) is identical to an alignment of 1,
+  // while being more "polite".  Other formats do not support 0-aligned sections
+  // anyway, so we should guarantee that the alignment is always at least 1.
+  Alignment = std::max(1u, Alignment);
+
   StringRef Name;
   if (auto EC = Section.getName(Name))
     return errorCodeToError(EC);

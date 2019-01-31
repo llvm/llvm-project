@@ -34,6 +34,7 @@ class WebAssemblyLateEHPrepare final : public MachineFunctionPass {
   bool replaceFuncletReturns(MachineFunction &MF);
   bool addCatches(MachineFunction &MF);
   bool addExceptionExtraction(MachineFunction &MF);
+  bool restoreStackPointer(MachineFunction &MF);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -113,6 +114,7 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
   Changed |= replaceFuncletReturns(MF);
   Changed |= addCatches(MF);
   Changed |= addExceptionExtraction(MF);
+  Changed |= restoreStackPointer(MF);
   return Changed;
 }
 
@@ -329,4 +331,34 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
   }
 
   return true;
+}
+
+// After the stack is unwound due to a thrown exception, the __stack_pointer
+// global can point to an invalid address. This inserts instructions that
+// restore __stack_pointer global.
+bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
+  const auto *FrameLowering = static_cast<const WebAssemblyFrameLowering *>(
+      MF.getSubtarget().getFrameLowering());
+  if (!FrameLowering->needsPrologForEH(MF))
+    return false;
+  bool Changed = false;
+
+  for (auto &MBB : MF) {
+    if (!MBB.isEHPad())
+      continue;
+    Changed = true;
+
+    // Insert __stack_pointer restoring instructions at the beginning of each EH
+    // pad, after the catch instruction. Here it is safe to assume that SP32
+    // holds the latest value of __stack_pointer, because the only exception for
+    // this case is when a function uses the red zone, but that only happens
+    // with leaf functions, and we don't restore __stack_pointer in leaf
+    // functions anyway.
+    auto InsertPos = MBB.begin();
+    if (MBB.begin()->getOpcode() == WebAssembly::CATCH)
+      InsertPos++;
+    FrameLowering->writeSPToGlobal(WebAssembly::SP32, MF, MBB, InsertPos,
+                                   MBB.begin()->getDebugLoc());
+  }
+  return Changed;
 }

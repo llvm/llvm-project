@@ -1,6 +1,7 @@
 import("//compiler-rt/target.gni")
 import("//compiler-rt/test/test.gni")
 import("//llvm/triples.gni")
+import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
@@ -75,5 +76,11 @@ write_cmake_config("lit_common_configured") {
     values += [ "ANDROID_PYBOOL=True" ]
   } else {
     values += [ "ANDROID_PYBOOL=False" ]
+  }
+
+  if (llvm_enable_zlib) {
+    values += [ "HAVE_LIBZ=1" ]
+  } else {
+    values += [ "HAVE_LIBZ=0" ]
   }
 }

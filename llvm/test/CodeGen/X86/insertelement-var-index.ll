@@ -205,8 +205,7 @@ define <2 x i64> @load_i64_v2i64(i64* %p, i32 %y) nounwind {
 ;
 ; AVX1-LABEL: load_i64_v2i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: load_i64_v2i64:

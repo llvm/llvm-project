@@ -4078,8 +4078,9 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
                                               /*IsSigned=*/false);
     return NumIterations;
   };
-  CGM.getOpenMPRuntime().emitTargetNumIterationsCall(CGF, S, Device,
-                                                     SizeEmitter);
+  if (IsOffloadEntry)
+    CGM.getOpenMPRuntime().emitTargetNumIterationsCall(CGF, S, Device,
+                                                       SizeEmitter);
   CGM.getOpenMPRuntime().emitTargetCall(CGF, S, Fn, FnID, IfCond, Device);
 }
 

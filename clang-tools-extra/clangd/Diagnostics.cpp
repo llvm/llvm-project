@@ -165,6 +165,8 @@ std::string mainMessage(const Diag &D) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << D.Message;
+  if (!D.Fixes.empty())
+    OS << " (" << (D.Fixes.size() > 1 ? "fixes" : "fix") << " available)";
   for (auto &Note : D.Notes) {
     OS << "\n\n";
     printDiag(OS, Note);

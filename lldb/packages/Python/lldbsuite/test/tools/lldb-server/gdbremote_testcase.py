@@ -589,7 +589,7 @@ class GdbRemoteTestCaseBase(TestBase):
             if can_read and sock in can_read:
                 recv_bytes = sock.recv(4096)
                 if recv_bytes:
-                    response += recv_bytes
+                    response += recv_bytes.decode("utf-8")
 
         self.assertTrue(expected_content_regex.match(response))
 
@@ -600,7 +600,7 @@ class GdbRemoteTestCaseBase(TestBase):
         while len(request_bytes_remaining) > 0 and time.time() < timeout_time:
             _, can_write, _ = select.select([], [sock], [], timeout_seconds)
             if can_write and sock in can_write:
-                written_byte_count = sock.send(request_bytes_remaining)
+                written_byte_count = sock.send(request_bytes_remaining.encode())
                 request_bytes_remaining = request_bytes_remaining[
                     written_byte_count:]
         self.assertEqual(len(request_bytes_remaining), 0)
@@ -611,7 +611,7 @@ class GdbRemoteTestCaseBase(TestBase):
 
         # Send the start no ack mode packet.
         NO_ACK_MODE_REQUEST = "$QStartNoAckMode#b0"
-        bytes_sent = stub_socket.send(NO_ACK_MODE_REQUEST)
+        bytes_sent = stub_socket.send(NO_ACK_MODE_REQUEST.encode())
         self.assertEqual(bytes_sent, len(NO_ACK_MODE_REQUEST))
 
         # Receive the ack and "OK"
