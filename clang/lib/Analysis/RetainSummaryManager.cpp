@@ -662,7 +662,7 @@ RetainSummaryManager::getSummary(AnyCall C,
   case AnyCall::ObjCMethod: {
     const auto *ME = cast_or_null<ObjCMessageExpr>(C.getExpr());
     if (!ME) {
-      return getMethodSummary(cast<ObjCMethodDecl>(C.getDecl()));
+      Summ = getMethodSummary(cast<ObjCMethodDecl>(C.getDecl()));
     } else if (ME->isInstanceMessage()) {
       Summ = getInstanceMethodSummary(ME, ReceiverType);
     } else {
@@ -694,7 +694,7 @@ RetainSummaryManager::getCFCreateGetRuleSummary(const FunctionDecl *FD) {
 }
 
 bool RetainSummaryManager::isTrustedReferenceCountImplementation(
-    const FunctionDecl *FD) {
+    const Decl *FD) {
   return hasRCAnnotation(FD, "rc_ownership_trusted_implementation");
 }
 
