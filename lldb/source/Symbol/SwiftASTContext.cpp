@@ -5110,21 +5110,6 @@ bool SwiftASTContext::IsGenericType(const CompilerType &compiler_type) {
   return false;
 }
 
-bool SwiftASTContext::IsSelfArchetypeType(const CompilerType &compiler_type) {
-  if (!compiler_type.IsValid())
-    return false;
-
-  if (llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
-    if (swift::isa<swift::GenericTypeParamType>(
-            GetSwiftType(compiler_type).getPointer())) {
-      // Hack: Just assume if we have an generic parameter as the type of
-      //       'self', it's going to be a protocol 'Self' type.
-      return true;
-    }
-  }
-  return false;
-}
-
 static CompilerType BindAllArchetypes(CompilerType type,
                                       ExecutionContextScope *exe_scope) {
   if (!exe_scope)
@@ -5635,18 +5620,10 @@ CompilerType SwiftASTContext::GetInstanceType(void *type) {
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   assert((&swift_can_type->getASTContext() == GetASTContext()) &&
          "input type belongs to different SwiftASTContext");
-  switch (swift_can_type->getKind()) {
-  case swift::TypeKind::ExistentialMetatype:
-  case swift::TypeKind::Metatype: {
-    auto metatype_type =
-        swift::dyn_cast<swift::AnyMetatypeType>(swift_can_type);
-    if (metatype_type)
-      return {metatype_type.getInstanceType().getPointer()};
-    return {};
-  }
-  default:
-    break;
-  }
+  auto metatype_type =
+      swift::dyn_cast<swift::AnyMetatypeType>(swift_can_type);
+  if (metatype_type)
+    return {metatype_type.getInstanceType().getPointer()};
 
   return {GetSwiftType(type)};
 }
