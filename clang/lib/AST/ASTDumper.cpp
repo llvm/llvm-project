@@ -500,10 +500,6 @@ namespace  {
         Visit(I);
     }
 
-    void VisitObjCCompatibleAliasDecl(const ObjCCompatibleAliasDecl *D);
-    void VisitObjCPropertyDecl(const ObjCPropertyDecl *D);
-    void VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D);
-
     void VisitBlockDecl(const BlockDecl *D) {
       for (const auto &I : D->parameters())
         Visit(I);
@@ -719,63 +715,6 @@ void ASTDumper::VisitClassTemplateDecl(const ClassTemplateDecl *D) {
 
 void ASTDumper::VisitVarTemplateDecl(const VarTemplateDecl *D) {
   dumpTemplateDecl(D, false);
-}
-
-void ASTDumper::VisitObjCCompatibleAliasDecl(const ObjCCompatibleAliasDecl *D) {
-  NodeDumper.dumpName(D);
-  NodeDumper.dumpDeclRef(D->getClassInterface());
-  OS << " ";
-  NodeDumper.dumpLocation(D->getClassInterfaceLoc());
-}
-
-void ASTDumper::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
-  NodeDumper.dumpName(D);
-  NodeDumper.dumpType(D->getType());
-
-  if (D->getPropertyImplementation() == ObjCPropertyDecl::Required)
-    OS << " required";
-  else if (D->getPropertyImplementation() == ObjCPropertyDecl::Optional)
-    OS << " optional";
-
-  ObjCPropertyDecl::PropertyAttributeKind Attrs = D->getPropertyAttributes();
-  if (Attrs != ObjCPropertyDecl::OBJC_PR_noattr) {
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_readonly)
-      OS << " readonly";
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_assign)
-      OS << " assign";
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_readwrite)
-      OS << " readwrite";
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_retain)
-      OS << " retain";
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_copy)
-      OS << " copy";
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_nonatomic)
-      OS << " nonatomic";
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_atomic)
-      OS << " atomic";
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_weak)
-      OS << " weak";
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_strong)
-      OS << " strong";
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_unsafe_unretained)
-      OS << " unsafe_unretained";
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_class)
-      OS << " class";
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_getter)
-      NodeDumper.dumpDeclRef(D->getGetterMethodDecl(), "getter");
-    if (Attrs & ObjCPropertyDecl::OBJC_PR_setter)
-      NodeDumper.dumpDeclRef(D->getSetterMethodDecl(), "setter");
-  }
-}
-
-void ASTDumper::VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D) {
-  NodeDumper.dumpName(D->getPropertyDecl());
-  if (D->getPropertyImplementation() == ObjCPropertyImplDecl::Synthesize)
-    OS << " synthesize";
-  else
-    OS << " dynamic";
-  NodeDumper.dumpDeclRef(D->getPropertyDecl());
-  NodeDumper.dumpDeclRef(D->getPropertyIvarDecl());
 }
 
 //===----------------------------------------------------------------------===//
