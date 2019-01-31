@@ -92,10 +92,10 @@ public:
 
 class Leak : public RefCountBug {
 public:
-  Leak(const CheckerBase *checker, StringRef name) : RefCountBug(checker, name) {
-    // Leaks should not be reported if they are post-dominated by a sink.
-    setSuppressOnSink(true);
-  }
+  // Leaks should not be reported if they are post-dominated by a sink.
+  Leak(const CheckerBase *checker, StringRef name)
+      : RefCountBug(checker, name,
+                    /*SuppressOnSink=*/true) {}
 
   const char *getDescription() const override { return ""; }
 
