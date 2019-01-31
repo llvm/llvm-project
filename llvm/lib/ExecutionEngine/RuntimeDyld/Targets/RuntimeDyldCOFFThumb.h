@@ -21,9 +21,10 @@
 
 namespace llvm {
 
-static bool isThumbFunc(symbol_iterator Symbol, const ObjectFile &Obj,
-                        section_iterator Section) {
-  Expected<SymbolRef::Type> SymTypeOrErr = Symbol->getType();
+static bool isThumbFunc(object::symbol_iterator Symbol,
+                        const object::ObjectFile &Obj,
+                        object::section_iterator Section) {
+  Expected<object::SymbolRef::Type> SymTypeOrErr = Symbol->getType();
   if (!SymTypeOrErr) {
     std::string Buf;
     raw_string_ostream OS(Buf);
@@ -32,12 +33,14 @@ static bool isThumbFunc(symbol_iterator Symbol, const ObjectFile &Obj,
     report_fatal_error(Buf);
   }
 
-  if (*SymTypeOrErr != SymbolRef::ST_Function)
+  if (*SymTypeOrErr != object::SymbolRef::ST_Function)
     return false;
 
   // We check the IMAGE_SCN_MEM_16BIT flag in the section of the symbol to tell
   // if it's thumb or not
-  return cast<COFFObjectFile>(Obj).getCOFFSection(*Section)->Characteristics &
+  return cast<object::COFFObjectFile>(Obj)
+             .getCOFFSection(*Section)
+             ->Characteristics &
          COFF::IMAGE_SCN_MEM_16BIT;
 }
 
@@ -53,10 +56,10 @@ public:
 
   unsigned getStubAlignment() override { return 1; }
 
-  Expected<relocation_iterator>
+  Expected<object::relocation_iterator>
   processRelocationRef(unsigned SectionID,
-                       relocation_iterator RelI,
-                       const ObjectFile &Obj,
+                       object::relocation_iterator RelI,
+                       const object::ObjectFile &Obj,
                        ObjSectionToIDMap &ObjSectionToID,
                        StubMap &Stubs) override {
     auto Symbol = RelI->getSymbol();

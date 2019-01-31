@@ -186,21 +186,21 @@ public:
     return std::make_tuple(Offset, RelType, Addend);
   }
 
-  Expected<relocation_iterator>
+  Expected<object::relocation_iterator>
   processRelocationRef(unsigned SectionID,
-                       relocation_iterator RelI,
-                       const ObjectFile &Obj,
+                       object::relocation_iterator RelI,
+                       const object::ObjectFile &Obj,
                        ObjSectionToIDMap &ObjSectionToID,
                        StubMap &Stubs) override {
     // If possible, find the symbol referred to in the relocation,
     // and the section that contains it.
-    symbol_iterator Symbol = RelI->getSymbol();
+    object::symbol_iterator Symbol = RelI->getSymbol();
     if (Symbol == Obj.symbol_end())
       report_fatal_error("Unknown symbol in relocation");
     auto SectionOrError = Symbol->getSection();
     if (!SectionOrError)
       return SectionOrError.takeError();
-    section_iterator SecI = *SectionOrError;
+    object::section_iterator SecI = *SectionOrError;
     // If there is no section, this must be an external reference.
     const bool IsExtern = SecI == Obj.section_end();
 
@@ -279,11 +279,11 @@ public:
     UnregisteredEHFrameSections.clear();
   }
 
-  Error finalizeLoad(const ObjectFile &Obj,
+  Error finalizeLoad(const object::ObjectFile &Obj,
                      ObjSectionToIDMap &SectionMap) override {
     // Look for and record the EH frame section IDs.
     for (const auto &SectionPair : SectionMap) {
-      const SectionRef &Section = SectionPair.first;
+      const object::SectionRef &Section = SectionPair.first;
       StringRef Name;
       if (auto EC = Section.getName(Name))
         return errorCodeToError(EC);

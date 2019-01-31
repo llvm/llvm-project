@@ -993,7 +993,7 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
   assert((PtrInfo.V.isNull() || PtrInfo.V.is<const PseudoSourceValue *>() ||
           isa<PointerType>(PtrInfo.V.get<const Value *>()->getType())) &&
          "invalid pointer value");
-  assert(getBaseAlignment() == a && "Alignment is not a power of 2!");
+  assert(getBaseAlignment() == a && a != 0 && "Alignment is not a power of 2!");
   assert((isLoad() || isStore()) && "Not a load/store!");
 
   AtomicInfo.SSID = static_cast<unsigned>(SSID);

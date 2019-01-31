@@ -15,3 +15,21 @@ body: |
     ; CHECK: STD killed $x3, killed $x5, 100
     BLR8 implicit $lr8, implicit $rm
 ...
+---
+# No workaround needed for 64-bit register when calling readsRegister()
+name: testReadsSubRegADDI
+# CHECK: name: testReadsSubRegADDI
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $f1, $x5
+    $x3 = ADDI8 $x5, 100
+    ; Following instruction $r3 also reads $x3, ADDI8 can not be erased
+    ; CHECK: $x3 = ADDI8 $x5, 100, implicit-def $r3
+    STW $r3, $x5, 100
+    ; CHECK: STW $r3, $x5, 100
+    STFSX killed $f1, $zero8, $x3
+    ; CHECK: STFS killed $f1, 100, $x5
+    STD $x5, $x5, 100
+    BLR8 implicit $lr8, implicit $rm
+...

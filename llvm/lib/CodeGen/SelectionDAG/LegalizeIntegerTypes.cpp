@@ -1498,7 +1498,8 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
     dbgs() << "ExpandIntegerResult #" << ResNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
 #endif
-    llvm_unreachable("Do not know how to expand the result of this operator!");
+    report_fatal_error("Do not know how to expand the result of this "
+                       "operator!");
 
   case ISD::MERGE_VALUES: SplitRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
   case ISD::SELECT:       SplitRes_SELECT(N, Lo, Hi); break;
@@ -3166,7 +3167,7 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
     dbgs() << "ExpandIntegerOperand Op #" << OpNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
   #endif
-    llvm_unreachable("Do not know how to expand this operator's operand!");
+    report_fatal_error("Do not know how to expand this operator's operand!");
 
   case ISD::BITCAST:           Res = ExpandOp_BITCAST(N); break;
   case ISD::BR_CC:             Res = ExpandIntOp_BR_CC(N); break;

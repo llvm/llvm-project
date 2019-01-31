@@ -148,7 +148,7 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
     unsigned ExtReg = extendRegister(ValVReg, VA);
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
         MPO, MachineMemOperand::MOStore, VA.getLocVT().getStoreSize(),
-        /* Alignment */ 0);
+        /* Alignment */ 1);
     MIRBuilder.buildStore(ExtReg, Addr, *MMO);
   }
 
@@ -244,7 +244,7 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, Size,
-        0);
+        1);
     MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
   }
 

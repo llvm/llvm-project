@@ -15,7 +15,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare i1 @llvm.is.constant.i32(i32 %a) nounwind readnone
 declare i1 @llvm.is.constant.i64(i64 %a) nounwind readnone
-declare i64 @llvm.objectsize.i64.p0i8(i8*, i1, i1) nounwind readnone
+declare i64 @llvm.objectsize.i64.p0i8(i8*, i1, i1, i1) nounwind readnone
 
 declare i32 @subfun_1()
 declare i32 @subfun_2()
@@ -44,7 +44,7 @@ define i1 @test_objectsize(i8* %obj) nounwind {
 ; CHECK-O2:       %bb.0:
 ; CHECK-O2:       movb $1, %al
 ; CHECK-O2-NEXT:  retq
-  %os = call i64 @llvm.objectsize.i64.p0i8(i8* %obj, i1 false, i1 false)
+  %os = call i64 @llvm.objectsize.i64.p0i8(i8* %obj, i1 false, i1 false, i1 false)
   %v = call i1 @llvm.is.constant.i64(i64 %os)
   ret i1 %v
 }

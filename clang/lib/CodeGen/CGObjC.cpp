@@ -2022,7 +2022,8 @@ static llvm::Value *emitObjCValueOperation(CodeGenFunction &CGF,
                                            llvm::Value *value,
                                            llvm::Type *returnType,
                                            llvm::Constant *&fn,
-                                           StringRef fnName) {
+                                           StringRef fnName,
+                                           bool MayThrow) {
   if (isa<llvm::ConstantPointerNull>(value))
     return value;
 
@@ -2042,10 +2043,14 @@ static llvm::Value *emitObjCValueOperation(CodeGenFunction &CGF,
   value = CGF.Builder.CreateBitCast(value, CGF.Int8PtrTy);
 
   // Call the function.
-  llvm::CallInst *call = CGF.EmitNounwindRuntimeCall(fn, value);
+  llvm::CallBase *Inst = nullptr;
+  if (MayThrow)
+    Inst = CGF.EmitCallOrInvoke(fn, value);
+  else
+    Inst = CGF.EmitNounwindRuntimeCall(fn, value);
 
   // Cast the result back to the original type.
-  return CGF.Builder.CreateBitCast(call, origType);
+  return CGF.Builder.CreateBitCast(Inst, origType);
 }
 
 /// Produce the code to do a retain.  Based on the type, calls one of:
@@ -2493,7 +2498,7 @@ llvm::Value *CodeGenFunction::EmitObjCAlloc(llvm::Value *value,
                                             llvm::Type *resultType) {
   return emitObjCValueOperation(*this, value, resultType,
                                 CGM.getObjCEntrypoints().objc_alloc,
-                                "objc_alloc");
+                                "objc_alloc", /*MayThrow=*/true);
 }
 
 /// Allocate the given objc object.
@@ -2502,7 +2507,7 @@ llvm::Value *CodeGenFunction::EmitObjCAllocWithZone(llvm::Value *value,
                                                     llvm::Type *resultType) {
   return emitObjCValueOperation(*this, value, resultType,
                                 CGM.getObjCEntrypoints().objc_allocWithZone,
-                                "objc_allocWithZone");
+                                "objc_allocWithZone", /*MayThrow=*/true);
 }
 
 /// Produce the code to do a primitive release.
@@ -2543,18 +2548,20 @@ void CodeGenFunction::emitARCIntrinsicUse(CodeGenFunction &CGF, Address addr,
 ///   call i8* \@objc_autorelease(i8* %value)
 llvm::Value *CodeGenFunction::EmitObjCAutorelease(llvm::Value *value,
                                                   llvm::Type *returnType) {
-  return emitObjCValueOperation(*this, value, returnType,
-                      CGM.getObjCEntrypoints().objc_autoreleaseRuntimeFunction,
-                                "objc_autorelease");
+  return emitObjCValueOperation(
+      *this, value, returnType,
+      CGM.getObjCEntrypoints().objc_autoreleaseRuntimeFunction,
+      "objc_autorelease", /*MayThrow=*/false);
 }
 
 /// Retain the given object, with normal retain semantics.
 ///   call i8* \@objc_retain(i8* %value)
 llvm::Value *CodeGenFunction::EmitObjCRetainNonBlock(llvm::Value *value,
                                                      llvm::Type *returnType) {
-  return emitObjCValueOperation(*this, value, returnType,
-                          CGM.getObjCEntrypoints().objc_retainRuntimeFunction,
-                                "objc_retain");
+  return emitObjCValueOperation(
+      *this, value, returnType,
+      CGM.getObjCEntrypoints().objc_retainRuntimeFunction, "objc_retain",
+      /*MayThrow=*/false);
 }
 
 /// Release the given object.
