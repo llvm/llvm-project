@@ -543,6 +543,13 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   if (!imported_self_type.IsValid())
     return;
 
+  SwiftLanguageRuntime *swift_runtime =
+      stack_frame_sp->GetThread()->GetProcess()->GetSwiftLanguageRuntime();
+  auto *stack_frame = stack_frame_sp.get();
+  imported_self_type =
+      swift_runtime->DoArchetypeBindingForType(*stack_frame,
+                                               imported_self_type);
+
   // This might be a referenced type, in which case we really want to
   // extend the referent:
   imported_self_type =
@@ -556,36 +563,6 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
           ->GetInstanceType(imported_self_type.GetOpaqueQualType());
 
   Flags imported_self_type_flags(imported_self_type.GetTypeInfo());
-
-  // If 'self' is the Self archetype, resolve it to the actual
-  // metatype it is.
-  if (SwiftASTContext::IsSelfArchetypeType(imported_self_type)) {
-    SwiftLanguageRuntime *swift_runtime =
-        stack_frame_sp->GetThread()->GetProcess()->GetSwiftLanguageRuntime();
-    // Assume self is always the first type parameter.
-    if (CompilerType concrete_self_type = swift_runtime->GetConcreteType(
-            stack_frame_sp.get(), ConstString(u8"\u03C4_0_0"))) {
-      if (SwiftASTContext *concrete_self_type_ast_ctx =
-              llvm::dyn_cast_or_null<SwiftASTContext>(
-                  concrete_self_type.GetTypeSystem())) {
-        imported_self_type =
-            concrete_self_type_ast_ctx->CreateMetatypeType(concrete_self_type);
-        imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
-        imported_self_type = ImportType(swift_ast_context, imported_self_type);
-        if (imported_self_type_flags.AllSet(lldb::eTypeIsSwift |
-                                            lldb::eTypeIsMetatype)) {
-          imported_self_type = imported_self_type.GetInstanceType();
-        }
-      }
-    }
-  }
-
-  // Get the instance type.
-  if (imported_self_type_flags.AllSet(lldb::eTypeIsSwift |
-                                      lldb::eTypeIsMetatype)) {
-    imported_self_type = imported_self_type.GetInstanceType();
-    imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
-  }
 
   swift::Type object_type =
       GetSwiftType(imported_self_type)->getWithoutSpecifierType();
@@ -1056,7 +1033,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
 
     if (repl) {
       if (swift::Type swift_type = GetSwiftType(variable.GetType())) {
-        if (!swift_type->getCanonicalType()->isVoid()) {
+        if (!swift_type->isVoid()) {
           auto &repl_mat = *llvm::cast<SwiftREPLMaterializer>(&materializer);
           if (is_result)
             offset = repl_mat.AddREPLResultVariable(
@@ -1081,35 +1058,24 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
                                                     ->GetProcess()
                                                     ->GetSwiftLanguageRuntime();
           if (swift_runtime) {
-            StreamString type_name;
-            if (SwiftLanguageRuntime::GetAbstractTypeName(type_name, swift_type))
-              actual_type = swift_runtime->GetConcreteType(
-                  stack_frame_sp.get(), ConstString(type_name.GetString()));
-            if (actual_type.IsValid())
-              variable.SetType(actual_type);
-            else
-              actual_type = variable.GetType();
+            actual_type = swift_runtime->DoArchetypeBindingForType(
+                *stack_frame_sp, actual_type);
           }
         }
       }
 
-      if (stack_frame_sp) {
-        auto *ctx = llvm::cast<SwiftASTContext>(actual_type.GetTypeSystem());
-        actual_type = ctx->MapIntoContext(stack_frame_sp,
-                                          actual_type.GetOpaqueQualType());
-      }
-      swift::Type actual_swift_type = GetSwiftType(actual_type);
-      if (actual_swift_type->hasTypeParameter())
-        actual_swift_type = orig_swift_type;
-
-      swift::Type fixed_type = manipulator.FixupResultType(
-          actual_swift_type, user_expression.GetLanguageFlags());
-
-      if (!fixed_type.isNull()) {
-        actual_type =
-            CompilerType(actual_type.GetTypeSystem(), fixed_type.getPointer());
-        variable.SetType(actual_type);
-      }
+      // Desugar '$lldb_context', etc.
+      auto transformed_type = GetSwiftType(actual_type).transform(
+        [](swift::Type t) -> swift::Type {
+          if (auto *aliasTy = swift::dyn_cast<swift::TypeAliasType>(t.getPointer())) {
+            if (aliasTy && aliasTy->getDecl()->isDebuggerAlias()) {
+              return aliasTy->getSinglyDesugaredType();
+            }
+          }
+          return t;
+      });
+      actual_type.SetCompilerType(actual_type.GetTypeSystem(),
+                                  transformed_type.getPointer());
 
       if (is_result)
         offset = materializer.AddResultVariable(
