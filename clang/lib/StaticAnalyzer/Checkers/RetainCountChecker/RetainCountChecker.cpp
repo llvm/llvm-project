@@ -730,8 +730,6 @@ ProgramStateRef RetainCountChecker::updateSymbol(ProgramStateRef state,
       break;
     }
   }
-  if (AE.getKind() == MakeCollectable)
-    AE = AE.withKind(DoNothing);
 
   // Handle all use-after-releases.
   if (V.getKind() == RefVal::Released) {
@@ -741,9 +739,6 @@ ProgramStateRef RetainCountChecker::updateSymbol(ProgramStateRef state,
   }
 
   switch (AE.getKind()) {
-    case MakeCollectable:
-      llvm_unreachable("MakeCollectable already converted");
-
     case UnretainedOutParameter:
     case RetainedOutParameter:
       llvm_unreachable("Applies to pointer-to-pointer parameters, which should "
