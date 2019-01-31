@@ -8090,6 +8090,7 @@
 				"$(SRCROOT)/docs/index.rst",
 				"$(SRCROOT)/docs/resources/build.rst",
 				"$(SRCROOT)/docs/resources/download.rst",
+				"$(SRCROOT)/docs/resources/external.rst",
 				"$(SRCROOT)/docs/resources/sbapi.rst",
 				"$(SRCROOT)/docs/resources/test.rst",
 				"$(SRCROOT)/docs/status/about.rst",
@@ -8106,11 +8107,32 @@
 				"$(SRCROOT)/docs/use/symbols.rst",
 				"$(SRCROOT)/docs/use/troubleshooting.rst",
 				"$(SRCROOT)/docs/use/tutorial.rst",
-				"$(SRCROOT)/docs/use/variables.rst",
+				"$(SRCROOT)/docs/use/variable.rst",
 			);
 			outputFileListPaths = (
 			);
 			outputPaths = (
+				$BUILT_PRODUCTS_DIR/docs/html/index.html,
+				$BUILT_PRODUCTS_DIR/docs/html/resources/build.html,
+				$BUILT_PRODUCTS_DIR/docs/html/resources/download.html,
+				$BUILT_PRODUCTS_DIR/docs/html/resources/external.html,
+				$BUILT_PRODUCTS_DIR/docs/html/resources/sbapi.html,
+				$BUILT_PRODUCTS_DIR/docs/html/resources/test.html,
+				$BUILT_PRODUCTS_DIR/docs/html/status/about.html,
+				$BUILT_PRODUCTS_DIR/docs/html/status/features.html,
+				$BUILT_PRODUCTS_DIR/docs/html/status/goals.html,
+				$BUILT_PRODUCTS_DIR/docs/html/status/projects.html,
+				$BUILT_PRODUCTS_DIR/docs/html/status/status.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/architecture.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/formatting.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/map.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/python.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/remote.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/symbolication.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/symbols.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/troubleshooting.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/tutorial.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/variable.html,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
