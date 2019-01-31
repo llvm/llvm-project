@@ -260,7 +260,7 @@ class CrashLog(symbolication.Symbolicator):
             if not self.resolved_path:
                 self.unavailable = True
                 print("error\n    error: unable to locate '%s' with UUID %s"
-                      % (self.path, uuid_str))
+                      % (self.path, self.get_normalized_uuid_string()))
                 return False
 
         def locate_module_and_debug_symbols(self):
