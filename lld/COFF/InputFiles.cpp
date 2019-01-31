@@ -481,15 +481,23 @@ Optional<Symbol *> ObjFile::createDefined(
         Selection = LeaderSelection;
       }
 
-      // Requiring selections to match exactly is a bit more strict than
-      // link.exe which allows merging "any" and "largest" if "any" is the first
-      // symbol the linker sees, and it allows merging "largest" with everything
-      // (!) if "largest" is the first symbol the linker sees. Making this
-      // symmetric independent of which selection is seen first seems better
-      // though, and if we can get away with not allowing merging "any" and
-      // "largest" that keeps things more regular too.
-      // (ModuleLinker::getComdatResult() also does comdat type merging in a
-      // different way and it's also a bit more permissive.)
+      if ((Selection == IMAGE_COMDAT_SELECT_ANY &&
+           LeaderSelection == IMAGE_COMDAT_SELECT_LARGEST) ||
+          (Selection == IMAGE_COMDAT_SELECT_LARGEST &&
+           LeaderSelection == IMAGE_COMDAT_SELECT_ANY)) {
+        // cl.exe picks "any" for vftables when building with /GR- and
+        // "largest" when building with /GR. To be able to link object files
+        // compiled with each flag, "any" and "largest" are merged as "largest".
+        LeaderSelection = Selection = IMAGE_COMDAT_SELECT_LARGEST;
+      }
+
+      // Other than that, comdat selections must match.  This is a bit more
+      // strict than link.exe which allows merging "any" and "largest" if "any"
+      // is the first symbol the linker sees, and it allows merging "largest"
+      // with everything (!) if "largest" is the first symbol the linker sees.
+      // Making this symmetric independent of which selection is seen first
+      // seems better though.
+      // (This behavior matches ModuleLinker::getComdatResult().)
       if (Selection != LeaderSelection) {
         std::string Msg = ("conflicting comdat type for " + toString(*Leader) +
                            ": " + Twine((int)LeaderSelection) + " in " +
