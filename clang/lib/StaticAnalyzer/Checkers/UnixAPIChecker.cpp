@@ -21,10 +21,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
-#include <fcntl.h>
 
 using namespace clang;
 using namespace ento;
@@ -40,8 +37,9 @@ enum class OpenVariant {
 };
 
 namespace {
-class UnixAPIChecker : public Checker< check::PreStmt<CallExpr> > {
-  mutable std::unique_ptr<BugType> BT_open, BT_pthreadOnce, BT_mallocZero;
+
+class UnixAPIMisuseChecker : public Checker< check::PreStmt<CallExpr> > {
+  mutable std::unique_ptr<BugType> BT_open, BT_pthreadOnce;
   mutable Optional<uint64_t> Val_O_CREAT;
 
 public:
@@ -51,8 +49,25 @@ public:
 
   void CheckOpen(CheckerContext &C, const CallExpr *CE) const;
   void CheckOpenAt(CheckerContext &C, const CallExpr *CE) const;
-
   void CheckPthreadOnce(CheckerContext &C, const CallExpr *CE) const;
+
+  void CheckOpenVariant(CheckerContext &C,
+                        const CallExpr *CE, OpenVariant Variant) const;
+
+  void ReportOpenBug(CheckerContext &C,
+                     ProgramStateRef State,
+                     const char *Msg,
+                     SourceRange SR) const;
+
+};
+
+class UnixAPIPortabilityChecker : public Checker< check::PreStmt<CallExpr> > {
+public:
+  void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
+
+private:
+  mutable std::unique_ptr<BugType> BT_mallocZero;
+
   void CheckCallocZero(CheckerContext &C, const CallExpr *CE) const;
   void CheckMallocZero(CheckerContext &C, const CallExpr *CE) const;
   void CheckReallocZero(CheckerContext &C, const CallExpr *CE) const;
@@ -60,13 +75,6 @@ public:
   void CheckAllocaZero(CheckerContext &C, const CallExpr *CE) const;
   void CheckAllocaWithAlignZero(CheckerContext &C, const CallExpr *CE) const;
   void CheckVallocZero(CheckerContext &C, const CallExpr *CE) const;
-
-  typedef void (UnixAPIChecker::*SubChecker)(CheckerContext &,
-                                             const CallExpr *) const;
-private:
-
-  void CheckOpenVariant(CheckerContext &C,
-                        const CallExpr *CE, OpenVariant Variant) const;
 
   bool ReportZeroByteAllocation(CheckerContext &C,
                                 ProgramStateRef falseState,
@@ -77,48 +85,75 @@ private:
                             const unsigned numArgs,
                             const unsigned sizeArg,
                             const char *fn) const;
-  void LazyInitialize(std::unique_ptr<BugType> &BT, const char *name) const {
-    if (BT)
-      return;
-    BT.reset(new BugType(this, name, categories::UnixAPI));
-  }
-  void ReportOpenBug(CheckerContext &C,
-                     ProgramStateRef State,
-                     const char *Msg,
-                     SourceRange SR) const;
 };
+
 } //end anonymous namespace
+
+static void LazyInitialize(const CheckerBase *Checker,
+                           std::unique_ptr<BugType> &BT,
+                           const char *name) {
+  if (BT)
+    return;
+  BT.reset(new BugType(Checker, name, categories::UnixAPI));
+}
 
 //===----------------------------------------------------------------------===//
 // "open" (man 2 open)
-//===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===/
 
-void UnixAPIChecker::ReportOpenBug(CheckerContext &C,
-                                   ProgramStateRef State,
-                                   const char *Msg,
-                                   SourceRange SR) const {
+void UnixAPIMisuseChecker::checkPreStmt(const CallExpr *CE,
+                                        CheckerContext &C) const {
+  const FunctionDecl *FD = C.getCalleeDecl(CE);
+  if (!FD || FD->getKind() != Decl::Function)
+    return;
+
+  // Don't treat functions in namespaces with the same name a Unix function
+  // as a call to the Unix function.
+  const DeclContext *NamespaceCtx = FD->getEnclosingNamespaceContext();
+  if (NamespaceCtx && isa<NamespaceDecl>(NamespaceCtx))
+    return;
+
+  StringRef FName = C.getCalleeName(FD);
+  if (FName.empty())
+    return;
+
+  if (FName == "open")
+    CheckOpen(C, CE);
+
+  else if (FName == "openat")
+    CheckOpenAt(C, CE);
+
+  else if (FName == "pthread_once")
+    CheckPthreadOnce(C, CE);
+}
+void UnixAPIMisuseChecker::ReportOpenBug(CheckerContext &C,
+                                         ProgramStateRef State,
+                                         const char *Msg,
+                                         SourceRange SR) const {
   ExplodedNode *N = C.generateErrorNode(State);
   if (!N)
     return;
 
-  LazyInitialize(BT_open, "Improper use of 'open'");
+  LazyInitialize(this, BT_open, "Improper use of 'open'");
 
   auto Report = llvm::make_unique<BugReport>(*BT_open, Msg, N);
   Report->addRange(SR);
   C.emitReport(std::move(Report));
 }
 
-void UnixAPIChecker::CheckOpen(CheckerContext &C, const CallExpr *CE) const {
+void UnixAPIMisuseChecker::CheckOpen(CheckerContext &C,
+                                     const CallExpr *CE) const {
   CheckOpenVariant(C, CE, OpenVariant::Open);
 }
 
-void UnixAPIChecker::CheckOpenAt(CheckerContext &C, const CallExpr *CE) const {
+void UnixAPIMisuseChecker::CheckOpenAt(CheckerContext &C,
+                                       const CallExpr *CE) const {
   CheckOpenVariant(C, CE, OpenVariant::OpenAt);
 }
 
-void UnixAPIChecker::CheckOpenVariant(CheckerContext &C,
-                                      const CallExpr *CE,
-                                      OpenVariant Variant) const {
+void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
+                                            const CallExpr *CE,
+                                            OpenVariant Variant) const {
   // The index of the argument taking the flags open flags (O_RDONLY,
   // O_WRONLY, O_CREAT, etc.),
   unsigned int FlagsArgIndex;
@@ -236,7 +271,7 @@ void UnixAPIChecker::CheckOpenVariant(CheckerContext &C,
 // pthread_once
 //===----------------------------------------------------------------------===//
 
-void UnixAPIChecker::CheckPthreadOnce(CheckerContext &C,
+void UnixAPIMisuseChecker::CheckPthreadOnce(CheckerContext &C,
                                       const CallExpr *CE) const {
 
   // This is similar to 'CheckDispatchOnce' in the MacOSXAPIChecker.
@@ -268,7 +303,7 @@ void UnixAPIChecker::CheckPthreadOnce(CheckerContext &C,
   if (isa<VarRegion>(R) && isa<StackLocalsSpaceRegion>(R->getMemorySpace()))
     os << "  Perhaps you intended to declare the variable as 'static'?";
 
-  LazyInitialize(BT_pthreadOnce, "Improper use of 'pthread_once'");
+  LazyInitialize(this, BT_pthreadOnce, "Improper use of 'pthread_once'");
 
   auto report = llvm::make_unique<BugReport>(*BT_pthreadOnce, os.str(), N);
   report->addRange(CE->getArg(0)->getSourceRange());
@@ -279,15 +314,16 @@ void UnixAPIChecker::CheckPthreadOnce(CheckerContext &C,
 // "calloc", "malloc", "realloc", "reallocf", "alloca" and "valloc"
 // with allocation size 0
 //===----------------------------------------------------------------------===//
+
 // FIXME: Eventually these should be rolled into the MallocChecker, but right now
 // they're more basic and valuable for widespread use.
 
 // Returns true if we try to do a zero byte allocation, false otherwise.
 // Fills in trueState and falseState.
 static bool IsZeroByteAllocation(ProgramStateRef state,
-                                const SVal argVal,
-                                ProgramStateRef *trueState,
-                                ProgramStateRef *falseState) {
+                                 const SVal argVal,
+                                 ProgramStateRef *trueState,
+                                 ProgramStateRef *falseState) {
   std::tie(*trueState, *falseState) =
     state->assume(argVal.castAs<DefinedSVal>());
 
@@ -297,15 +333,16 @@ static bool IsZeroByteAllocation(ProgramStateRef state,
 // Generates an error report, indicating that the function whose name is given
 // will perform a zero byte allocation.
 // Returns false if an error occurred, true otherwise.
-bool UnixAPIChecker::ReportZeroByteAllocation(CheckerContext &C,
-                                              ProgramStateRef falseState,
-                                              const Expr *arg,
-                                              const char *fn_name) const {
+bool UnixAPIPortabilityChecker::ReportZeroByteAllocation(
+                                                    CheckerContext &C,
+                                                    ProgramStateRef falseState,
+                                                    const Expr *arg,
+                                                    const char *fn_name) const {
   ExplodedNode *N = C.generateErrorNode(falseState);
   if (!N)
     return false;
 
-  LazyInitialize(BT_mallocZero,
+  LazyInitialize(this, BT_mallocZero,
                  "Undefined allocation of 0 bytes (CERT MEM04-C; CWE-131)");
 
   SmallString<256> S;
@@ -322,11 +359,11 @@ bool UnixAPIChecker::ReportZeroByteAllocation(CheckerContext &C,
 
 // Does a basic check for 0-sized allocations suitable for most of the below
 // functions (modulo "calloc")
-void UnixAPIChecker::BasicAllocationCheck(CheckerContext &C,
-                                          const CallExpr *CE,
-                                          const unsigned numArgs,
-                                          const unsigned sizeArg,
-                                          const char *fn) const {
+void UnixAPIPortabilityChecker::BasicAllocationCheck(CheckerContext &C,
+                                                     const CallExpr *CE,
+                                                     const unsigned numArgs,
+                                                     const unsigned sizeArg,
+                                                     const char *fn) const {
   // Sanity check for the correct number of arguments
   if (CE->getNumArgs() != numArgs)
     return;
@@ -351,8 +388,8 @@ void UnixAPIChecker::BasicAllocationCheck(CheckerContext &C,
     C.addTransition(trueState);
 }
 
-void UnixAPIChecker::CheckCallocZero(CheckerContext &C,
-                                     const CallExpr *CE) const {
+void UnixAPIPortabilityChecker::CheckCallocZero(CheckerContext &C,
+                                                const CallExpr *CE) const {
   unsigned int nArgs = CE->getNumArgs();
   if (nArgs != 2)
     return;
@@ -387,43 +424,39 @@ void UnixAPIChecker::CheckCallocZero(CheckerContext &C,
     C.addTransition(trueState);
 }
 
-void UnixAPIChecker::CheckMallocZero(CheckerContext &C,
-                                     const CallExpr *CE) const {
+void UnixAPIPortabilityChecker::CheckMallocZero(CheckerContext &C,
+                                                const CallExpr *CE) const {
   BasicAllocationCheck(C, CE, 1, 0, "malloc");
 }
 
-void UnixAPIChecker::CheckReallocZero(CheckerContext &C,
-                                      const CallExpr *CE) const {
+void UnixAPIPortabilityChecker::CheckReallocZero(CheckerContext &C,
+                                                 const CallExpr *CE) const {
   BasicAllocationCheck(C, CE, 2, 1, "realloc");
 }
 
-void UnixAPIChecker::CheckReallocfZero(CheckerContext &C,
-                                       const CallExpr *CE) const {
+void UnixAPIPortabilityChecker::CheckReallocfZero(CheckerContext &C,
+                                                  const CallExpr *CE) const {
   BasicAllocationCheck(C, CE, 2, 1, "reallocf");
 }
 
-void UnixAPIChecker::CheckAllocaZero(CheckerContext &C,
-                                     const CallExpr *CE) const {
+void UnixAPIPortabilityChecker::CheckAllocaZero(CheckerContext &C,
+                                                const CallExpr *CE) const {
   BasicAllocationCheck(C, CE, 1, 0, "alloca");
 }
 
-void UnixAPIChecker::CheckAllocaWithAlignZero(CheckerContext &C,
-                                              const CallExpr *CE) const {
+void UnixAPIPortabilityChecker::CheckAllocaWithAlignZero(
+                                                     CheckerContext &C,
+                                                     const CallExpr *CE) const {
   BasicAllocationCheck(C, CE, 2, 0, "__builtin_alloca_with_align");
 }
 
-void UnixAPIChecker::CheckVallocZero(CheckerContext &C,
-                                     const CallExpr *CE) const {
+void UnixAPIPortabilityChecker::CheckVallocZero(CheckerContext &C,
+                                                const CallExpr *CE) const {
   BasicAllocationCheck(C, CE, 1, 0, "valloc");
 }
 
-
-//===----------------------------------------------------------------------===//
-// Central dispatch function.
-//===----------------------------------------------------------------------===//
-
-void UnixAPIChecker::checkPreStmt(const CallExpr *CE,
-                                  CheckerContext &C) const {
+void UnixAPIPortabilityChecker::checkPreStmt(const CallExpr *CE,
+                                             CheckerContext &C) const {
   const FunctionDecl *FD = C.getCalleeDecl(CE);
   if (!FD || FD->getKind() != Decl::Function)
     return;
@@ -438,46 +471,40 @@ void UnixAPIChecker::checkPreStmt(const CallExpr *CE,
   if (FName.empty())
     return;
 
-  if (CheckMisuse) {
-    if (SubChecker SC =
-            llvm::StringSwitch<SubChecker>(FName)
-                .Case("open", &UnixAPIChecker::CheckOpen)
-                .Case("openat", &UnixAPIChecker::CheckOpenAt)
-                .Case("pthread_once", &UnixAPIChecker::CheckPthreadOnce)
-                .Default(nullptr)) {
-      (this->*SC)(C, CE);
-    }
-  }
-  if (CheckPortability) {
-    if (SubChecker SC =
-            llvm::StringSwitch<SubChecker>(FName)
-                .Case("calloc", &UnixAPIChecker::CheckCallocZero)
-                .Case("malloc", &UnixAPIChecker::CheckMallocZero)
-                .Case("realloc", &UnixAPIChecker::CheckReallocZero)
-                .Case("reallocf", &UnixAPIChecker::CheckReallocfZero)
-                .Cases("alloca", "__builtin_alloca",
-                       &UnixAPIChecker::CheckAllocaZero)
-                .Case("__builtin_alloca_with_align",
-                      &UnixAPIChecker::CheckAllocaWithAlignZero)
-                .Case("valloc", &UnixAPIChecker::CheckVallocZero)
-                .Default(nullptr)) {
-      (this->*SC)(C, CE);
-    }
-  }
+  if (FName == "calloc")
+    CheckCallocZero(C, CE);
+
+  else if (FName == "malloc")
+    CheckMallocZero(C, CE);
+
+  else if (FName == "realloc")
+    CheckReallocZero(C, CE);
+
+  else if (FName == "reallocf")
+    CheckReallocfZero(C, CE);
+
+  else if (FName == "alloca" || FName ==  "__builtin_alloca")
+    CheckAllocaZero(C, CE);
+
+  else if (FName == "__builtin_alloca_with_align")
+    CheckAllocaWithAlignZero(C, CE);
+
+  else if (FName == "valloc")
+    CheckVallocZero(C, CE);
 }
 
 //===----------------------------------------------------------------------===//
 // Registration.
 //===----------------------------------------------------------------------===//
 
-#define REGISTER_CHECKER(Name)                                                 \
-  void ento::registerUnixAPI##Name##Checker(CheckerManager &mgr) {             \
-    mgr.registerChecker<UnixAPIChecker>()->Check##Name = true;                 \
+#define REGISTER_CHECKER(CHECKERNAME)                                          \
+  void ento::register##CHECKERNAME(CheckerManager &mgr) {                      \
+    mgr.registerChecker<CHECKERNAME>();                                        \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegisterUnixAPI##Name##Checker(const LangOptions &LO) {     \
+  bool ento::shouldRegister##CHECKERNAME(const LangOptions &LO) {              \
     return true;                                                               \
   }
 
-REGISTER_CHECKER(Misuse)
-REGISTER_CHECKER(Portability)
+REGISTER_CHECKER(UnixAPIMisuseChecker)
+REGISTER_CHECKER(UnixAPIPortabilityChecker)
