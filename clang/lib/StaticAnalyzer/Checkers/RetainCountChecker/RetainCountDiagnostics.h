@@ -25,44 +25,32 @@ namespace ento {
 namespace retaincountchecker {
 
 class RefCountBug : public BugType {
-public:
-  enum RefCountBugType {
-    UseAfterRelease,
-    ReleaseNotOwned,
-    DeallocNotOwned,
-    FreeNotOwned,
-    OverAutorelease,
-    ReturnNotOwnedForOwned,
-    LeakWithinFunction,
-    LeakAtReturn,
-  };
-  RefCountBug(const CheckerBase *checker, RefCountBugType BT);
-  StringRef getDescription() const;
-  RefCountBugType getBugType() const {
-    return BT;
-  }
+protected:
+  RefCountBug(const CheckerBase *checker, StringRef name)
+      : BugType(checker, name, categories::MemoryRefCount) {}
 
-private:
-  RefCountBugType BT;
-  static StringRef bugTypeToName(RefCountBugType BT);
+public:
+  virtual const char *getDescription() const = 0;
+
+  virtual bool isLeak() const { return false; }
 };
 
 class RefCountReport : public BugReport {
 protected:
   SymbolRef Sym;
-  bool isLeak;
 
 public:
-  RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
+  RefCountReport(RefCountBug &D, const LangOptions &LOpts,
               ExplodedNode *n, SymbolRef sym,
-              bool isLeak=false);
+              bool registerVisitor = true);
 
-  RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
+  RefCountReport(RefCountBug &D, const LangOptions &LOpts,
               ExplodedNode *n, SymbolRef sym,
               StringRef endText);
 
   llvm::iterator_range<ranges_iterator> getRanges() override {
-    if (!isLeak)
+    const RefCountBug& BugTy = static_cast<RefCountBug&>(getBugType());
+    if (!BugTy.isLeak())
       return BugReport::getRanges();
     return llvm::make_range(ranges_iterator(), ranges_iterator());
   }
@@ -81,7 +69,7 @@ class RefLeakReport : public RefCountReport {
   void createDescription(CheckerContext &Ctx);
 
 public:
-  RefLeakReport(const RefCountBug &D, const LangOptions &LOpts, ExplodedNode *n,
+  RefLeakReport(RefCountBug &D, const LangOptions &LOpts, ExplodedNode *n,
                 SymbolRef sym, CheckerContext &Ctx);
 
   PathDiagnosticLocation getLocation(const SourceManager &SM) const override {

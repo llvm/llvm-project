@@ -146,7 +146,7 @@ static bool isSubclass(const Decl *D,
 }
 
 static bool isOSObjectSubclass(const Decl *D) {
-  return isSubclass(D, "OSMetaClassBase");
+  return isSubclass(D, "OSObject");
 }
 
 static bool isOSObjectDynamicCast(StringRef S) {
@@ -196,20 +196,6 @@ static bool isOSObjectRelated(const CXXMethodDecl *MD) {
           return true;
   }
 
-  return false;
-}
-
-bool
-RetainSummaryManager::isKnownSmartPointer(QualType QT) {
-  QT = QT.getCanonicalType();
-  const auto *RD = QT->getAsCXXRecordDecl();
-  if (!RD)
-    return false;
-  const IdentifierInfo *II = RD->getIdentifier();
-  if (II && II->getName() == "smart_ptr")
-    if (const auto *ND = dyn_cast<NamespaceDecl>(RD->getDeclContext()))
-      if (ND->getNameAsString() == "os")
-        return true;
   return false;
 }
 
