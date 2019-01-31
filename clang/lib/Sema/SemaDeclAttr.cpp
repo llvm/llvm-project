@@ -425,23 +425,33 @@ appendDiagnostics(const Sema::SemaDiagnosticBuilder &Bldr, T &&ExtraArg,
                            std::forward<DiagnosticArgs>(ExtraArgs)...);
 }
 
-/// Add an attribute {@code AttrType} to declaration {@code D},
-/// provided the given {@code Check} function returns {@code true}
-/// on type of {@code D}.
-/// If check does not pass, emit diagnostic {@code DiagID},
-/// passing in all parameters specified in {@code ExtraArgs}.
+/// Add an attribute {@code AttrType} to declaration {@code D}, provided that
+/// {@code PassesCheck} is true.
+/// Otherwise, emit diagnostic {@code DiagID}, passing in all parameters
+/// specified in {@code ExtraArgs}.
 template <typename AttrType, typename... DiagnosticArgs>
 static void
-handleSimpleAttributeWithCheck(Sema &S, ValueDecl *D, SourceRange SR,
+handleSimpleAttributeOrDiagnose(Sema &S, Decl *D, SourceRange SR,
                                unsigned SpellingIndex,
-                               llvm::function_ref<bool(QualType)> Check,
-                               unsigned DiagID, DiagnosticArgs... ExtraArgs) {
-  if (!Check(D->getType())) {
+                               bool PassesCheck,
+                               unsigned DiagID, DiagnosticArgs&&... ExtraArgs) {
+  if (!PassesCheck) {
     Sema::SemaDiagnosticBuilder DB = S.Diag(D->getBeginLoc(), DiagID);
     appendDiagnostics(DB, std::forward<DiagnosticArgs>(ExtraArgs)...);
     return;
   }
   handleSimpleAttribute<AttrType>(S, D, SR, SpellingIndex);
+}
+
+template <typename AttrType, typename... DiagnosticArgs>
+static void
+handleSimpleAttributeOrDiagnose(Sema &S, Decl *D, const ParsedAttr &AL,
+                               bool PassesCheck,
+                               unsigned DiagID,
+                               DiagnosticArgs&&... ExtraArgs) {
+  return handleSimpleAttributeOrDiagnose<AttrType>(
+      S, D, AL.getRange(), AL.getAttributeSpellingListIndex(), PassesCheck,
+      DiagID, std::forward<DiagnosticArgs>(ExtraArgs)...);
 }
 
 template <typename AttrType>
@@ -4769,7 +4779,10 @@ static bool isValidSubjectOfCFAttribute(QualType QT) {
 }
 
 static bool isValidSubjectOfOSAttribute(QualType QT) {
-  return QT->isDependentType() || QT->isPointerType();
+  if (QT->isDependentType())
+    return true;
+  QualType PT = QT->getPointeeType();
+  return !PT.isNull() && PT->getAsCXXRecordDecl() != nullptr;
 }
 
 void Sema::AddXConsumedAttr(Decl *D, SourceRange SR, unsigned SpellingIndex,
@@ -4778,14 +4791,14 @@ void Sema::AddXConsumedAttr(Decl *D, SourceRange SR, unsigned SpellingIndex,
   ValueDecl *VD = cast<ValueDecl>(D);
   switch (K) {
   case RetainOwnershipKind::OS:
-    handleSimpleAttributeWithCheck<OSConsumedAttr>(
-        *this, VD, SR, SpellingIndex, &isValidSubjectOfOSAttribute,
+    handleSimpleAttributeOrDiagnose<OSConsumedAttr>(
+        *this, VD, SR, SpellingIndex, isValidSubjectOfOSAttribute(VD->getType()),
         diag::warn_ns_attribute_wrong_parameter_type,
         /*ExtraArgs=*/SR, "os_consumed", /*pointers*/ 1);
     return;
   case RetainOwnershipKind::NS:
-    handleSimpleAttributeWithCheck<NSConsumedAttr>(
-        *this, VD, SR, SpellingIndex, &isValidSubjectOfNSAttribute,
+    handleSimpleAttributeOrDiagnose<NSConsumedAttr>(
+        *this, VD, SR, SpellingIndex, isValidSubjectOfNSAttribute(VD->getType()),
 
         // These attributes are normally just advisory, but in ARC, ns_consumed
         // is significant.  Allow non-dependent code to contain inappropriate
@@ -4797,9 +4810,9 @@ void Sema::AddXConsumedAttr(Decl *D, SourceRange SR, unsigned SpellingIndex,
         /*ExtraArgs=*/SR, "ns_consumed", /*objc pointers*/ 0);
     return;
   case RetainOwnershipKind::CF:
-    handleSimpleAttributeWithCheck<CFConsumedAttr>(
+    handleSimpleAttributeOrDiagnose<CFConsumedAttr>(
         *this, VD, SR, SpellingIndex,
-        &isValidSubjectOfCFAttribute,
+        isValidSubjectOfCFAttribute(VD->getType()),
         diag::warn_ns_attribute_wrong_parameter_type,
         /*ExtraArgs=*/SR, "cf_consumed", /*pointers*/1);
     return;
@@ -4810,10 +4823,21 @@ static Sema::RetainOwnershipKind
 parsedAttrToRetainOwnershipKind(const ParsedAttr &AL) {
   switch (AL.getKind()) {
   case ParsedAttr::AT_CFConsumed:
+  case ParsedAttr::AT_CFReturnsRetained:
+  case ParsedAttr::AT_CFReturnsNotRetained:
     return Sema::RetainOwnershipKind::CF;
+  case ParsedAttr::AT_OSConsumesThis:
   case ParsedAttr::AT_OSConsumed:
+  case ParsedAttr::AT_OSReturnsRetained:
+  case ParsedAttr::AT_OSReturnsNotRetained:
+  case ParsedAttr::AT_OSReturnsRetainedOnZero:
+  case ParsedAttr::AT_OSReturnsRetainedOnNonZero:
     return Sema::RetainOwnershipKind::OS;
+  case ParsedAttr::AT_NSConsumesSelf:
   case ParsedAttr::AT_NSConsumed:
+  case ParsedAttr::AT_NSReturnsRetained:
+  case ParsedAttr::AT_NSReturnsNotRetained:
+  case ParsedAttr::AT_NSReturnsAutoreleased:
     return Sema::RetainOwnershipKind::NS;
   default:
     llvm_unreachable("Wrong argument supplied");
@@ -4829,9 +4853,20 @@ bool Sema::checkNSReturnsRetainedReturnType(SourceLocation Loc, QualType QT) {
   return true;
 }
 
+/// \return whether the parameter is a pointer to OSObject pointer.
+static bool isValidOSObjectOutParameter(const Decl *D) {
+  const auto *PVD = dyn_cast<ParmVarDecl>(D);
+  if (!PVD)
+    return false;
+  QualType QT = PVD->getType();
+  QualType PT = QT->getPointeeType();
+  return !PT.isNull() && isValidSubjectOfOSAttribute(PT);
+}
+
 static void handleXReturnsXRetainedAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
   QualType ReturnType;
+  Sema::RetainOwnershipKind K = parsedAttrToRetainOwnershipKind(AL);
 
   if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     ReturnType = MD->getReturnType();
@@ -4845,10 +4880,13 @@ static void handleXReturnsXRetainedAttr(Sema &S, Decl *D,
   } else if (const auto *Param = dyn_cast<ParmVarDecl>(D)) {
     // Attributes on parameters are used for out-parameters,
     // passed as pointers-to-pointers.
+    unsigned DiagID = K == Sema::RetainOwnershipKind::CF
+            ? /*pointer-to-CF-pointer*/2
+            : /*pointer-to-OSObject-pointer*/3;
     ReturnType = Param->getType()->getPointeeType();
     if (ReturnType.isNull()) {
       S.Diag(D->getBeginLoc(), diag::warn_ns_attribute_wrong_parameter_type)
-          << AL << /*pointer-to-CF-pointer*/ 2 << AL.getRange();
+          << AL << DiagID << AL.getRange();
       return;
     }
   } else if (AL.isUsedAsTypeAttr()) {
@@ -4860,11 +4898,11 @@ static void handleXReturnsXRetainedAttr(Sema &S, Decl *D,
     case ParsedAttr::AT_NSReturnsRetained:
     case ParsedAttr::AT_NSReturnsAutoreleased:
     case ParsedAttr::AT_NSReturnsNotRetained:
-    case ParsedAttr::AT_OSReturnsRetained:
-    case ParsedAttr::AT_OSReturnsNotRetained:
       ExpectedDeclKind = ExpectedFunctionOrMethod;
       break;
 
+    case ParsedAttr::AT_OSReturnsRetained:
+    case ParsedAttr::AT_OSReturnsNotRetained:
     case ParsedAttr::AT_CFReturnsRetained:
     case ParsedAttr::AT_CFReturnsNotRetained:
       ExpectedDeclKind = ExpectedFunctionMethodOrParameter;
@@ -4877,6 +4915,7 @@ static void handleXReturnsXRetainedAttr(Sema &S, Decl *D,
 
   bool TypeOK;
   bool Cf;
+  unsigned ParmDiagID = 2; // Pointer-to-CF-pointer
   switch (AL.getKind()) {
   default: llvm_unreachable("invalid ownership attribute");
   case ParsedAttr::AT_NSReturnsRetained:
@@ -4900,6 +4939,7 @@ static void handleXReturnsXRetainedAttr(Sema &S, Decl *D,
   case ParsedAttr::AT_OSReturnsNotRetained:
     TypeOK = isValidSubjectOfOSAttribute(ReturnType);
     Cf = true;
+    ParmDiagID = 3; // Pointer-to-OSObject-pointer
     break;
   }
 
@@ -4909,7 +4949,7 @@ static void handleXReturnsXRetainedAttr(Sema &S, Decl *D,
 
     if (isa<ParmVarDecl>(D)) {
       S.Diag(D->getBeginLoc(), diag::warn_ns_attribute_wrong_parameter_type)
-          << AL << /*pointer-to-CF*/ 2 << AL.getRange();
+          << AL << ParmDiagID << AL.getRange();
     } else {
       // Needs to be kept in sync with warn_ns_attribute_wrong_return_type.
       enum : unsigned {
@@ -6952,6 +6992,18 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case ParsedAttr::AT_OSConsumesThis:
     handleSimpleAttribute<OSConsumesThisAttr>(S, D, AL);
+    break;
+  case ParsedAttr::AT_OSReturnsRetainedOnZero:
+    handleSimpleAttributeOrDiagnose<OSReturnsRetainedOnZeroAttr>(
+        S, D, AL, isValidOSObjectOutParameter(D),
+        diag::warn_ns_attribute_wrong_parameter_type,
+        /*Extra Args=*/AL, /*pointer-to-OSObject-pointer*/ 3, AL.getRange());
+    break;
+  case ParsedAttr::AT_OSReturnsRetainedOnNonZero:
+    handleSimpleAttributeOrDiagnose<OSReturnsRetainedOnNonZeroAttr>(
+        S, D, AL, isValidOSObjectOutParameter(D),
+        diag::warn_ns_attribute_wrong_parameter_type,
+        /*Extra Args=*/AL, /*pointer-to-OSObject-poointer*/ 3, AL.getRange());
     break;
   case ParsedAttr::AT_NSReturnsAutoreleased:
   case ParsedAttr::AT_NSReturnsNotRetained:

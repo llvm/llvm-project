@@ -849,13 +849,25 @@ def OSConsumed : InheritableParamAttr {
 
 def OSReturnsRetained : InheritableAttr {
   let Spellings = [Clang<"os_returns_retained">];
-  let Subjects = SubjectList<[Function, ObjCMethod, ObjCProperty]>;
+  let Subjects = SubjectList<[Function, ObjCMethod, ObjCProperty, ParmVar]>;
   let Documentation = [RetainBehaviorDocs];
 }
 
 def OSReturnsNotRetained : InheritableAttr {
   let Spellings = [Clang<"os_returns_not_retained">];
-  let Subjects = SubjectList<[Function, ObjCMethod, ObjCProperty]>;
+  let Subjects = SubjectList<[Function, ObjCMethod, ObjCProperty, ParmVar]>;
+  let Documentation = [RetainBehaviorDocs];
+}
+
+def OSReturnsRetainedOnZero : InheritableAttr {
+  let Spellings = [Clang<"os_returns_retained_on_zero">];
+  let Subjects = SubjectList<[ParmVar]>;
+  let Documentation = [RetainBehaviorDocs];
+}
+
+def OSReturnsRetainedOnNonZero : InheritableAttr {
+  let Spellings = [Clang<"os_returns_retained_on_non_zero">];
+  let Subjects = SubjectList<[ParmVar]>;
   let Documentation = [RetainBehaviorDocs];
 }
 
