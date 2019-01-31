@@ -304,11 +304,23 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   for (unsigned Idx = 0, Count = getNumArgs(); Idx != Count; ++Idx) {
     // Mark this region for invalidation.  We batch invalidate regions
     // below for efficiency.
-    if (PreserveArgs.count(Idx))
-      if (const MemRegion *MR = getArgSVal(Idx).getAsRegion())
-        ETraits.setTrait(MR->getBaseRegion(),
-                        RegionAndSymbolInvalidationTraits::TK_PreserveContents);
-        // TODO: Factor this out + handle the lower level const pointers.
+    if (const MemRegion *MR = getArgSVal(Idx).getAsRegion()) {
+      bool UseBaseRegion = true;
+      if (const auto *FR = MR->getAs<FieldRegion>()) {
+        if (const auto *TVR = FR->getSuperRegion()->getAs<TypedValueRegion>()) {
+          if (!TVR->getValueType()->isUnionType()) {
+            ETraits.setTrait(MR, RegionAndSymbolInvalidationTraits::
+                                     TK_DoNotInvalidateSuperRegion);
+            UseBaseRegion = false;
+          }
+        }
+      }
+      // todo: factor this out + handle the lower level const pointers.
+      if (PreserveArgs.count(Idx))
+        ETraits.setTrait(
+            UseBaseRegion ? MR->getBaseRegion() : MR,
+            RegionAndSymbolInvalidationTraits::TK_PreserveContents);
+    }
 
     ValuesToInvalidate.push_back(getArgSVal(Idx));
 

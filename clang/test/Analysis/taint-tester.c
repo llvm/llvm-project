@@ -51,7 +51,7 @@ void taintTracking(int x) {
   scanf("%d", &xy.y);
   scanf("%d", &xy.x);
   int tx = xy.x; // expected-warning + {{tainted}}
-  int ty = xy.y; // FIXME: This should be tainted as well.
+  int ty = xy.y; // expected-warning + {{tainted}}
   char ntz = xy.z;// no warning
   // Now, scanf scans both.
   scanf("%d %d", &xy.y, &xy.x);
