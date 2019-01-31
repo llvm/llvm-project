@@ -8,7 +8,7 @@ declare void @llvm.memmove.p1i8.p0i8.i32(i8 addrspace(1)* nocapture, i8* nocaptu
 
 declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) #0
 
-declare i32 @llvm.objectsize.i32.p0i8(i8*, i1, i1) #1
+declare i32 @llvm.objectsize.i32.p0i8(i8*, i1, i1, i1) #1
 
 ; CHECK-LABEL: @promote_with_memcpy(
 ; CHECK: getelementptr inbounds [64 x [17 x i32]], [64 x [17 x i32]] addrspace(3)* @promote_with_memcpy.alloca, i32 0, i32 %{{[0-9]+}}
@@ -52,11 +52,11 @@ define amdgpu_kernel void @promote_with_memset(i32 addrspace(1)* %out, i32 addrs
 
 ; CHECK-LABEL: @promote_with_objectsize(
 ; CHECK: [[PTR:%[0-9]+]] = getelementptr inbounds [64 x [17 x i32]], [64 x [17 x i32]] addrspace(3)* @promote_with_objectsize.alloca, i32 0, i32 %{{[0-9]+}}
-; CHECK: call i32 @llvm.objectsize.i32.p3i8(i8 addrspace(3)* %alloca.bc, i1 false, i1 false)
+; CHECK: call i32 @llvm.objectsize.i32.p3i8(i8 addrspace(3)* %alloca.bc, i1 false, i1 false, i1 false)
 define amdgpu_kernel void @promote_with_objectsize(i32 addrspace(1)* %out) #0 {
   %alloca = alloca [17 x i32], align 4
   %alloca.bc = bitcast [17 x i32]* %alloca to i8*
-  %size = call i32 @llvm.objectsize.i32.p0i8(i8* %alloca.bc, i1 false, i1 false)
+  %size = call i32 @llvm.objectsize.i32.p0i8(i8* %alloca.bc, i1 false, i1 false, i1 false)
   store i32 %size, i32 addrspace(1)* %out
   ret void
 }

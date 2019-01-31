@@ -52,6 +52,10 @@ enum Fixups {
   // fixup_riscv_relax - Used to generate an R_RISCV_RELAX relocation type,
   // which indicates the linker may relax the instruction pair.
   fixup_riscv_relax,
+  // fixup_riscv_align - Used to generate an R_RISCV_ALIGN relocation type,
+  // which indicates the linker should fixup the alignment after linker
+  // relaxation.
+  fixup_riscv_align,
 
   // fixup_riscv_invalid - used as a sentinel and a marker, must be last fixup
   fixup_riscv_invalid,

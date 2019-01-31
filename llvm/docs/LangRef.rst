@@ -15575,40 +15575,40 @@ Syntax:
 
 ::
 
-      declare i32 @llvm.objectsize.i32(i8* <object>, i1 <min>, i1 <nullunknown>)
-      declare i64 @llvm.objectsize.i64(i8* <object>, i1 <min>, i1 <nullunknown>)
+      declare i32 @llvm.objectsize.i32(i8* <object>, i1 <min>, i1 <nullunknown>, i1 <dynamic>)
+      declare i64 @llvm.objectsize.i64(i8* <object>, i1 <min>, i1 <nullunknown>, i1 <dynamic>)
 
 Overview:
 """""""""
 
-The ``llvm.objectsize`` intrinsic is designed to provide information to
-the optimizers to determine at compile time whether a) an operation
-(like memcpy) will overflow a buffer that corresponds to an object, or
-b) that a runtime check for overflow isn't necessary. An object in this
-context means an allocation of a specific class, structure, array, or
-other object.
+The ``llvm.objectsize`` intrinsic is designed to provide information to the
+optimizer to determine whether a) an operation (like memcpy) will overflow a
+buffer that corresponds to an object, or b) that a runtime check for overflow
+isn't necessary. An object in this context means an allocation of a specific
+class, structure, array, or other object.
 
 Arguments:
 """"""""""
 
-The ``llvm.objectsize`` intrinsic takes three arguments. The first argument is
-a pointer to or into the ``object``. The second argument determines whether
-``llvm.objectsize`` returns 0 (if true) or -1 (if false) when the object size
-is unknown. The third argument controls how ``llvm.objectsize`` acts when
-``null`` in address space 0 is used as its pointer argument. If it's ``false``,
+The ``llvm.objectsize`` intrinsic takes four arguments. The first argument is a
+pointer to or into the ``object``. The second argument determines whether
+``llvm.objectsize`` returns 0 (if true) or -1 (if false) when the object size is
+unknown. The third argument controls how ``llvm.objectsize`` acts when ``null``
+in address space 0 is used as its pointer argument. If it's ``false``,
 ``llvm.objectsize`` reports 0 bytes available when given ``null``. Otherwise, if
 the ``null`` is in a non-zero address space or if ``true`` is given for the
-third argument of ``llvm.objectsize``, we assume its size is unknown.
+third argument of ``llvm.objectsize``, we assume its size is unknown. The fourth
+argument to ``llvm.objectsize`` determines if the value should be evaluated at
+runtime.
 
-The second and third arguments only accept constants.
+The second, third, and fourth arguments only accept constants.
 
 Semantics:
 """"""""""
 
-The ``llvm.objectsize`` intrinsic is lowered to a constant representing
-the size of the object concerned. If the size cannot be determined at
-compile time, ``llvm.objectsize`` returns ``i32/i64 -1 or 0`` (depending
-on the ``min`` argument).
+The ``llvm.objectsize`` intrinsic is lowered to a value representing the size of
+the object concerned. If the size cannot be determined, ``llvm.objectsize``
+returns ``i32/i64 -1 or 0`` (depending on the ``min`` argument).
 
 '``llvm.expect``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

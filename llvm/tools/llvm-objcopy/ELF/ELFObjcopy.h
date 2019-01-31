@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_OBJCOPY_ELFOBJCOPY_H
 
 namespace llvm {
+class Error;
 class MemoryBuffer;
 
 namespace object {
@@ -21,10 +22,10 @@ struct CopyConfig;
 class Buffer;
 
 namespace elf {
-void executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
-                               Buffer &Out);
-void executeObjcopyOnBinary(const CopyConfig &Config,
-                            object::ELFObjectFileBase &In, Buffer &Out);
+Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
+                                Buffer &Out);
+Error executeObjcopyOnBinary(const CopyConfig &Config,
+                             object::ELFObjectFileBase &In, Buffer &Out);
 
 } // end namespace elf
 } // end namespace objcopy

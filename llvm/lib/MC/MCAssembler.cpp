@@ -322,6 +322,13 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
     const MCAlignFragment &AF = cast<MCAlignFragment>(F);
     unsigned Offset = Layout.getFragmentOffset(&AF);
     unsigned Size = OffsetToAlignment(Offset, AF.getAlignment());
+
+    // Insert extra Nops for code alignment if the target define
+    // shouldInsertExtraNopBytesForCodeAlign target hook.
+    if (AF.getParent()->UseCodeAlign() && AF.hasEmitNops() &&
+        getBackend().shouldInsertExtraNopBytesForCodeAlign(AF, Size))
+      return Size;
+
     // If we are padding with nops, force the padding to be larger than the
     // minimum nop size.
     if (Size > 0 && AF.hasEmitNops()) {
@@ -804,7 +811,8 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
       if (isa<MCEncodedFragment>(&Frag) &&
           isa<MCCompactEncodedInstFragment>(&Frag))
         continue;
-      if (!isa<MCEncodedFragment>(&Frag) && !isa<MCCVDefRangeFragment>(&Frag))
+      if (!isa<MCEncodedFragment>(&Frag) && !isa<MCCVDefRangeFragment>(&Frag) &&
+          !isa<MCAlignFragment>(&Frag))
         continue;
       ArrayRef<MCFixup> Fixups;
       MutableArrayRef<char> Contents;
@@ -825,6 +833,13 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
       } else if (auto *FragWithFixups = dyn_cast<MCDwarfLineAddrFragment>(&Frag)) {
         Fixups = FragWithFixups->getFixups();
         Contents = FragWithFixups->getContents();
+      } else if (auto *AF = dyn_cast<MCAlignFragment>(&Frag)) {
+        // Insert fixup type for code alignment if the target define
+        // shouldInsertFixupForCodeAlign target hook.
+        if (Sec.UseCodeAlign() && AF->hasEmitNops()) {
+          getBackend().shouldInsertFixupForCodeAlign(*this, Layout, *AF);
+        }
+        continue;
       } else
         llvm_unreachable("Unknown fragment with fixups!");
       for (const MCFixup &Fixup : Fixups) {

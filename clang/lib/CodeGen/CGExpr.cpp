@@ -727,9 +727,10 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
       llvm::Value *F = CGM.getIntrinsic(llvm::Intrinsic::objectsize, Tys);
       llvm::Value *Min = Builder.getFalse();
       llvm::Value *NullIsUnknown = Builder.getFalse();
+      llvm::Value *Dynamic = Builder.getFalse();
       llvm::Value *CastAddr = Builder.CreateBitCast(Ptr, Int8PtrTy);
       llvm::Value *LargeEnough = Builder.CreateICmpUGE(
-          Builder.CreateCall(F, {CastAddr, Min, NullIsUnknown}), Size);
+          Builder.CreateCall(F, {CastAddr, Min, NullIsUnknown, Dynamic}), Size);
       Checks.push_back(std::make_pair(LargeEnough, SanitizerKind::ObjectSize));
     }
   }

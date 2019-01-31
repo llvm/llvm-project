@@ -1,7 +1,7 @@
 // RUN: cp %s %t
-// RUN: %clang_cc1 -cl-std=CL1.2 -pedantic -Wall -fixit %t
-// RUN: %clang_cc1 -cl-std=CL1.2 -fsyntax-only -pedantic -Wall -Werror %t
-// RUN: %clang_cc1 -cl-std=CL1.2 -E -o - %t | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL1.2 -pedantic -Wall -fixit %t -triple x86_64-unknown-linux-gnu
+// RUN: %clang_cc1 -cl-std=CL1.2 -fsyntax-only -pedantic -Wall -Werror %t -triple x86_64-unknown-linux-gnu
+// RUN: %clang_cc1 -cl-std=CL1.2 -E -o - %t -triple x86_64-unknown-linux-gnu | FileCheck %s
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 

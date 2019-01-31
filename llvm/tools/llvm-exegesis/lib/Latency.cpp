@@ -165,6 +165,14 @@ LatencySnippetGenerator::generateCodeTemplates(const Instruction &Instr) const {
   return std::move(Results);
 }
 
+LatencyBenchmarkRunner::LatencyBenchmarkRunner(const LLVMState &State,
+                                               InstructionBenchmark::ModeE Mode)
+    : BenchmarkRunner(State, Mode) {
+  assert((Mode == InstructionBenchmark::Latency ||
+          Mode == InstructionBenchmark::InverseThroughput) &&
+         "invalid mode");
+}
+
 LatencyBenchmarkRunner::~LatencyBenchmarkRunner() = default;
 
 llvm::Expected<std::vector<BenchmarkMeasure>>
@@ -184,8 +192,17 @@ LatencyBenchmarkRunner::runMeasurements(
     if (*ExpectedCounterValue < MinValue)
       MinValue = *ExpectedCounterValue;
   }
-  std::vector<BenchmarkMeasure> Result = {
-      BenchmarkMeasure::Create("latency", MinValue)};
+  std::vector<BenchmarkMeasure> Result;
+  switch (Mode) {
+  case InstructionBenchmark::Latency:
+    Result = {BenchmarkMeasure::Create("latency", MinValue)};
+    break;
+  case InstructionBenchmark::InverseThroughput:
+    Result = {BenchmarkMeasure::Create("inverse_throughput", MinValue)};
+    break;
+  default:
+    break;
+  }
   return std::move(Result);
 }
 

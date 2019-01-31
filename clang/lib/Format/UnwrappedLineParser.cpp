@@ -1422,6 +1422,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::numeric_constant:
     case tok::coloncolon:
     case tok::kw_mutable:
+    case tok::kw_noexcept:
       nextToken();
       break;
     case tok::arrow:

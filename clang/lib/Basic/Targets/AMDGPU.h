@@ -351,6 +351,8 @@ public:
   uint64_t getNullPointerValue(LangAS AS) const override {
     return AS == LangAS::opencl_local ? ~0 : 0;
   }
+
+  void setAuxTarget(const TargetInfo *Aux) override;
 };
 
 } // namespace targets

@@ -255,6 +255,13 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
+  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs();
+  if (SanArgs.needsSharedRt()) {
+    CmdArgs.push_back("-rpath");
+    CmdArgs.push_back(Args.MakeArgString(
+        ToolChain.getCompilerRTPath().c_str()));
+  }
+
   unsigned Major, Minor, Micro;
   ToolChain.getTriple().getOSVersion(Major, Minor, Micro);
   bool useLibgcc = true;

@@ -606,6 +606,11 @@ public:
     return actionForCartesianProduct(LegalizeAction::Custom, Types0, Types1);
   }
 
+  /// Unconditionally custom lower.
+  LegalizeRuleSet &custom() {
+    return customIf(always);
+  }
+
   /// Widen the scalar to the next power of two that is at least MinSize.
   /// No effect if the type is not a scalar or is a power of two.
   LegalizeRuleSet &widenScalarToNextPow2(unsigned TypeIdx,
