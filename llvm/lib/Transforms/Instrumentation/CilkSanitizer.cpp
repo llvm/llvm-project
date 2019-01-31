@@ -1114,17 +1114,25 @@ static bool DependenceMightRace(
       DT.findNearestCommonDominator(Src->getParent(), Dst->getParent()));
   // Find the loop depth of that spindle.
   unsigned MaxLoopDepthToCheck = LI.getLoopDepth(DomSpindle->getEntry());
+  // It's possible that Src or Dst appears to have a smaller loop depth than the
+  // entry of DomSpindle.  For example, LoopInfo might not consider Src or Dst
+  // part of a loop if they belong to blocks terminated by unreachable.
+  if (MaxLoopDepthToCheck > LI.getLoopDepth(Src->getParent()))
+    MaxLoopDepthToCheck = LI.getLoopDepth(Src->getParent());
+  if (MaxLoopDepthToCheck > LI.getLoopDepth(Dst->getParent()))
+    MaxLoopDepthToCheck = LI.getLoopDepth(Dst->getParent());
+
+  // Check if dependence does not depend on looping.
+  if (0 == MaxLoopDepthToCheck)
+    // If there's no loop to worry about, then the existence of the dependence
+    // implies the potential for a race.
+    return true;
+
   assert(MinObjDepth <= MaxLoopDepthToCheck &&
          "Minimum loop depth of underlying object cannot be greater "
          "than maximum loop depth of dependence.");
 
   if (MaxLoopDepthToCheck == MinObjDepth) {
-    // Dependence does not depend on looping.
-    if (!MaxLoopDepthToCheck)
-      // If there's no loop to worry about, then the existence of the dependence
-      // implies the potential for a race.
-      return true;
-
     if (TI.getTaskFor(Src->getParent()) == TI.getTaskFor(Dst->getParent()))
       return false;
 
