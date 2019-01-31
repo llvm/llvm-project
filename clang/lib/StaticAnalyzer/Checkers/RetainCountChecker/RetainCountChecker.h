@@ -261,9 +261,11 @@ class RetainCountChecker
   RefCountBug leakWithinFunction{this, RefCountBug::LeakWithinFunction};
   RefCountBug leakAtReturn{this, RefCountBug::LeakAtReturn};
 
+  CheckerProgramPointTag DeallocSentTag{this, "DeallocSent"};
+  CheckerProgramPointTag CastFailTag{this, "DynamicCastFail"};
+
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
 public:
-  static constexpr const char *DeallocTagDescription = "DeallocSent";
 
   /// Track Objective-C and CoreFoundation objects.
   bool TrackObjCAndCFObjects = false;
@@ -361,6 +363,14 @@ public:
                              SmallVectorImpl<SymbolRef> &Leaked,
                              CheckerContext &Ctx,
                              ExplodedNode *Pred = nullptr) const;
+
+  const CheckerProgramPointTag &getDeallocSentTag() const {
+    return DeallocSentTag;
+  }
+
+  const CheckerProgramPointTag &getCastFailTag() const {
+    return CastFailTag;
+  }
 
 private:
   /// Perform the necessary checks and state adjustments at the end of the
