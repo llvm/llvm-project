@@ -241,7 +241,7 @@ if (LIBCXX_ENABLE_SHARED)
   if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(cxx_shared)
   endif()
-  target_link_libraries(cxx_shared ${LIBCXX_LIBRARIES})
+  target_link_libraries(cxx_shared PRIVATE ${LIBCXX_LIBRARIES})
   set_target_properties(cxx_shared
     PROPERTIES
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
@@ -265,7 +265,7 @@ endif()
 # Build the static library.
 if (LIBCXX_ENABLE_STATIC)
   add_library(cxx_static STATIC ${cxx_static_sources})
-  target_link_libraries(cxx_static ${LIBCXX_LIBRARIES})
+  target_link_libraries(cxx_static PRIVATE ${LIBCXX_LIBRARIES})
   set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
   set_target_properties(cxx_static
     PROPERTIES
@@ -461,3 +461,8 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND (LIBCXX_INSTALL_LIBRARY OR
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
     add_custom_target(install-libcxx DEPENDS install-cxx)
 endif()
+
+# TODO: This is needed by cxx-benchmarks but this variable isn't
+# available outside of the scope of this file so we need to export
+# it. This is not necessarily the cleanest solution.
+set(LIBCXX_LIBRARIES ${LIBCXX_LIBRARIES} PARENT_SCOPE)

@@ -143,17 +143,21 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
   if (ST.hasV5TOps()) {
     getActionDefinitionsBuilder(G_CTLZ)
-        .legalFor({s32})
+        .legalFor({s32, s32})
+        .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
     getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
-        .lowerFor({s32})
+        .lowerFor({s32, s32})
+        .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
   } else {
     getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
-        .libcallFor({s32})
+        .libcallFor({s32, s32})
+        .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
     getActionDefinitionsBuilder(G_CTLZ)
-        .lowerFor({s32})
+        .lowerFor({s32, s32})
+        .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
   }
 

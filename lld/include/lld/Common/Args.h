@@ -10,6 +10,7 @@
 #define LLD_ARGS_H
 
 #include "lld/Common/LLVM.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <vector>
 
@@ -21,7 +22,11 @@ class InputArgList;
 
 namespace lld {
 namespace args {
+
+llvm::CodeGenOpt::Level getCGOptLevel(int OptLevelLTO);
+
 int getInteger(llvm::opt::InputArgList &Args, unsigned Key, int Default);
+
 std::vector<StringRef> getStrings(llvm::opt::InputArgList &Args, int Id);
 
 uint64_t getZOptionValue(llvm::opt::InputArgList &Args, int Id, StringRef Key,

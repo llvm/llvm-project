@@ -17,6 +17,15 @@
 using namespace llvm;
 using namespace lld;
 
+// TODO(sbc): Remove this once CGOptLevel can be set completely based on bitcode
+// function metadata.
+CodeGenOpt::Level lld::args::getCGOptLevel(int OptLevelLTO) {
+  if (OptLevelLTO == 3)
+    return CodeGenOpt::Aggressive;
+  assert(OptLevelLTO < 3);
+  return CodeGenOpt::Default;
+}
+
 int lld::args::getInteger(opt::InputArgList &Args, unsigned Key, int Default) {
   auto *A = Args.getLastArg(Key);
   if (!A)

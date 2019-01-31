@@ -125,12 +125,12 @@ const void *Scalar::GetBytes() const {
         bytes += 8 - byte_size;
     }
     return bytes;
+  // getRawData always returns a pointer to an array of uint64_t values,
+  // where the least-significant word always comes first.  On big-endian
+  // systems we need to swap the words.
   case e_sint128:
   case e_uint128:
     apint_words = m_integer.getRawData();
-    // getRawData always returns a pointer to an array of two uint64_t values,
-    // where the least-significant word always comes first.  On big-endian
-    // systems we need to swap the two words.
     if (endian::InlHostByteOrder() == eByteOrderBig) {
       swapped_words[0] = apint_words[1];
       swapped_words[1] = apint_words[0];
@@ -140,9 +140,6 @@ const void *Scalar::GetBytes() const {
   case e_sint256:
   case e_uint256:
     apint_words = m_integer.getRawData();
-    // getRawData always returns a pointer to an array of four uint64_t values,
-    // where the least-significant word always comes first.  On big-endian
-    // systems we need to swap the four words.
     if (endian::InlHostByteOrder() == eByteOrderBig) {
       swapped_words[0] = apint_words[3];
       swapped_words[1] = apint_words[2];
@@ -154,9 +151,6 @@ const void *Scalar::GetBytes() const {
   case e_sint512:
   case e_uint512:
     apint_words = m_integer.getRawData();
-    // getRawData always returns a pointer to an array of four uint64_t values,
-    // where the least-significant word always comes first.  On big-endian
-    // systems we need to swap the four words.
     if (endian::InlHostByteOrder() == eByteOrderBig) {
       swapped_words[0] = apint_words[7];
       swapped_words[1] = apint_words[6];
@@ -1631,56 +1625,6 @@ llvm::APInt Scalar::SInt128(llvm::APInt &fail_value) const {
 }
 
 llvm::APInt Scalar::UInt128(const llvm::APInt &fail_value) const {
-  switch (m_type) {
-  case e_void:
-    break;
-  case e_sint:
-  case e_uint:
-  case e_slong:
-  case e_ulong:
-  case e_slonglong:
-  case e_ulonglong:
-  case e_sint128:
-  case e_uint128:
-  case e_sint256:
-  case e_uint256:
-  case e_sint512:
-  case e_uint512:
-    return m_integer;
-  case e_float:
-  case e_double:
-  case e_long_double:
-    return m_float.bitcastToAPInt();
-  }
-  return fail_value;
-}
-
-llvm::APInt Scalar::SInt256(llvm::APInt &fail_value) const {
-  switch (m_type) {
-  case e_void:
-    break;
-  case e_sint:
-  case e_uint:
-  case e_slong:
-  case e_ulong:
-  case e_slonglong:
-  case e_ulonglong:
-  case e_sint128:
-  case e_uint128:
-  case e_sint256:
-  case e_uint256:
-  case e_uint512:
-  case e_sint512:
-    return m_integer;
-  case e_float:
-  case e_double:
-  case e_long_double:
-    return m_float.bitcastToAPInt();
-  }
-  return fail_value;
-}
-
-llvm::APInt Scalar::UInt256(const llvm::APInt &fail_value) const {
   switch (m_type) {
   case e_void:
     break;

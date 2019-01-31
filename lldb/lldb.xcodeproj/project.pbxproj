@@ -62,6 +62,17 @@
 			name = "ios-mini";
 			productName = ios;
 		};
+		DD8DC26B22026E2C00EB6F9E /* lldb-docs */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = DD8DC27022026E2C00EB6F9E /* Build configuration list for PBXAggregateTarget "lldb-docs" */;
+			buildPhases = (
+				DD8DC27122026E4400EB6F9E /* ShellScript */,
+			);
+			dependencies = (
+			);
+			name = "lldb-docs";
+			productName = "lldb-docs";
+		};
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
@@ -7355,6 +7366,10 @@
 					942829BF1A89835300521B30 = {
 						CreatedOnToolsVersion = 7.0;
 					};
+					DD8DC26B22026E2C00EB6F9E = {
+						CreatedOnToolsVersion = 11.0;
+						ProvisioningStyle = Automatic;
+					};
 				};
 			};
 			buildConfigurationList = 1DEB91EF08733DB70010E9CD /* Build configuration list for PBXProject "lldb" */;
@@ -7390,6 +7405,7 @@
 				2690CD161A6DC0D000E717C8 /* lldb-mi */,
 				942829BF1A89835300521B30 /* lldb-argdumper */,
 				2679260B211CA3AC00EE1D10 /* lldb-vscode */,
+				DD8DC26B22026E2C00EB6F9E /* lldb-docs */,
 			);
 		};
 /* End PBXProject section */
@@ -7662,6 +7678,65 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "mkdir -p $BUILT_PRODUCTS_DIR/include\n$LLVM_BUILD_DIR/x86_64/bin/llvm-tblgen -I$LLVM_SOURCE_DIR/include -gen-opt-parser-defs $SRCROOT/tools/driver/Options.td -o $BUILT_PRODUCTS_DIR/include/Options.inc\n";
+		};
+		DD8DC27122026E4400EB6F9E /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/docs/index.rst",
+				"$(SRCROOT)/docs/resources/build.rst",
+				"$(SRCROOT)/docs/resources/download.rst",
+				"$(SRCROOT)/docs/resources/external.rst",
+				"$(SRCROOT)/docs/resources/sbapi.rst",
+				"$(SRCROOT)/docs/resources/test.rst",
+				"$(SRCROOT)/docs/status/about.rst",
+				"$(SRCROOT)/docs/status/features.rst",
+				"$(SRCROOT)/docs/status/goals.rst",
+				"$(SRCROOT)/docs/status/projects.rst",
+				"$(SRCROOT)/docs/status/status.rst",
+				"$(SRCROOT)/docs/use/architecture.rst",
+				"$(SRCROOT)/docs/use/formatting.rst",
+				"$(SRCROOT)/docs/use/map.rst",
+				"$(SRCROOT)/docs/use/python.rst",
+				"$(SRCROOT)/docs/use/remote.rst",
+				"$(SRCROOT)/docs/use/symbolication.rst",
+				"$(SRCROOT)/docs/use/symbols.rst",
+				"$(SRCROOT)/docs/use/troubleshooting.rst",
+				"$(SRCROOT)/docs/use/tutorial.rst",
+				"$(SRCROOT)/docs/use/variable.rst",
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				$BUILT_PRODUCTS_DIR/docs/html/index.html,
+				$BUILT_PRODUCTS_DIR/docs/html/resources/build.html,
+				$BUILT_PRODUCTS_DIR/docs/html/resources/download.html,
+				$BUILT_PRODUCTS_DIR/docs/html/resources/external.html,
+				$BUILT_PRODUCTS_DIR/docs/html/resources/sbapi.html,
+				$BUILT_PRODUCTS_DIR/docs/html/resources/test.html,
+				$BUILT_PRODUCTS_DIR/docs/html/status/about.html,
+				$BUILT_PRODUCTS_DIR/docs/html/status/features.html,
+				$BUILT_PRODUCTS_DIR/docs/html/status/goals.html,
+				$BUILT_PRODUCTS_DIR/docs/html/status/projects.html,
+				$BUILT_PRODUCTS_DIR/docs/html/status/status.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/architecture.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/formatting.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/map.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/python.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/remote.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/symbolication.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/symbols.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/troubleshooting.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/tutorial.html,
+				$BUILT_PRODUCTS_DIR/docs/html/use/variable.html,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p $BUILT_PRODUCTS_DIR/docs\ncd $SRCROOT/docs\nsphinx-build -b html -d $BUILT_PRODUCTS_DIR/docs/_doctrees-lldb-html -q -W $SRCROOT/docs $BUILT_PRODUCTS_DIR/docs/html\necho \"Docs written to $BUILT_PRODUCTS_DIR/docs/html\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -11341,6 +11416,38 @@
 			};
 			name = BuildAndIntegration;
 		};
+		DD8DC26C22026E2C00EB6F9E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		DD8DC26D22026E2C00EB6F9E /* DebugClang */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = DebugClang;
+		};
+		DD8DC26E22026E2C00EB6F9E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		DD8DC26F22026E2C00EB6F9E /* BuildAndIntegration */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = BuildAndIntegration;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -11527,6 +11634,17 @@
 				AFA9B72120606A13008E86C6 /* DebugClang */,
 				AFA9B72220606A13008E86C6 /* Release */,
 				AFA9B72320606A13008E86C6 /* BuildAndIntegration */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = BuildAndIntegration;
+		};
+		DD8DC27022026E2C00EB6F9E /* Build configuration list for PBXAggregateTarget "lldb-docs" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD8DC26C22026E2C00EB6F9E /* Debug */,
+				DD8DC26D22026E2C00EB6F9E /* DebugClang */,
+				DD8DC26E22026E2C00EB6F9E /* Release */,
+				DD8DC26F22026E2C00EB6F9E /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = BuildAndIntegration;

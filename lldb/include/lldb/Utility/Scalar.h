@@ -252,10 +252,6 @@ public:
 
   llvm::APInt UInt128(const llvm::APInt &fail_value) const;
 
-  llvm::APInt SInt256(llvm::APInt &fail_value) const;
-
-  llvm::APInt UInt256(const llvm::APInt &fail_value) const;
-
   float Float(float fail_value = 0.0f) const;
 
   double Double(double fail_value = 0.0) const;

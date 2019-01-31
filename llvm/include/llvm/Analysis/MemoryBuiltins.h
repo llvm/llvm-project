@@ -177,14 +177,13 @@ bool getObjectSize(const Value *Ptr, uint64_t &Size, const DataLayout &DL,
                    const TargetLibraryInfo *TLI, ObjectSizeOpts Opts = {});
 
 /// Try to turn a call to \@llvm.objectsize into an integer value of the given
-/// Type. Returns null on failure.
-/// If MustSucceed is true, this function will not return null, and may return
-/// conservative values governed by the second argument of the call to
-/// objectsize.
-ConstantInt *lowerObjectSizeCall(IntrinsicInst *ObjectSize,
-                                 const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI,
-                                 bool MustSucceed);
+/// Type. Returns null on failure. If MustSucceed is true, this function will
+/// not return null, and may return conservative values governed by the second
+/// argument of the call to objectsize.
+Value *lowerObjectSizeCall(IntrinsicInst *ObjectSize, const DataLayout &DL,
+                           const TargetLibraryInfo *TLI, bool MustSucceed);
+
+
 
 using SizeOffsetType = std::pair<APInt, APInt>;
 
@@ -264,17 +263,17 @@ class ObjectSizeOffsetEvaluator
   Value *Zero;
   CacheMapTy CacheMap;
   PtrSetTy SeenVals;
-  bool RoundToAlign;
-
-  SizeOffsetEvalType unknown() {
-    return std::make_pair(nullptr, nullptr);
-  }
+  ObjectSizeOpts EvalOpts;
 
   SizeOffsetEvalType compute_(Value *V);
 
 public:
+  static SizeOffsetEvalType unknown() {
+    return std::make_pair(nullptr, nullptr);
+  }
+
   ObjectSizeOffsetEvaluator(const DataLayout &DL, const TargetLibraryInfo *TLI,
-                            LLVMContext &Context, bool RoundToAlign = false);
+                            LLVMContext &Context, ObjectSizeOpts EvalOpts = {});
 
   SizeOffsetEvalType compute(Value *V);
 

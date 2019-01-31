@@ -83,7 +83,7 @@ int main() {
 // CHECK: call void @__kmpc_push_target_tripcount(i64 -1, i64 100)
 // CHECK: call i{{[0-9]+}} @__tgt_target_teams(
 // CHECK: call void [[OFFLOADING_FUN_0:@.+]](
-// CHECK: call void @__kmpc_push_target_tripcount(i64 -1, i64 100)
+// CHECK-NOT: call void @__kmpc_push_target_tripcount(i64 -1, i64 100)
 // CHECK: call void [[OFFLOADING_FUN_1:@.+]](
 // CHECK: call void @__kmpc_push_target_tripcount(i64 -1, i64 100)
 // CHECK: call i{{[0-9]+}} @__tgt_target_teams(

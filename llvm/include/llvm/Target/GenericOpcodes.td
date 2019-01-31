@@ -123,31 +123,31 @@ def G_VAARG : GenericInstruction {
 
 def G_CTLZ : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
+  let InOperandList = (ins type1:$src);
   let hasSideEffects = 0;
 }
 
 def G_CTLZ_ZERO_UNDEF : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
+  let InOperandList = (ins type1:$src);
   let hasSideEffects = 0;
 }
 
 def G_CTTZ : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
+  let InOperandList = (ins type1:$src);
   let hasSideEffects = 0;
 }
 
 def G_CTTZ_ZERO_UNDEF : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
+  let InOperandList = (ins type1:$src);
   let hasSideEffects = 0;
 }
 
 def G_CTPOP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
+  let InOperandList = (ins type1:$src);
   let hasSideEffects = 0;
 }
 
@@ -564,6 +564,16 @@ def G_FCOS : GenericInstruction {
 
 // Floating point sine of a value.
 def G_FSIN : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
+// Floating point square root of a value.
+// This returns NaN for negative nonzero values.
+// NOTE: Unlike libm sqrt(), this never sets errno. In all other respects it's
+// libm-conformant.
+def G_FSQRT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
   let hasSideEffects = 0;

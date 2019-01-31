@@ -57,7 +57,6 @@ extern "C" void LLVMInitializeWebAssemblyTarget() {
   initializeOptimizeReturnedPass(PR);
   initializeWebAssemblyArgumentMovePass(PR);
   initializeWebAssemblySetP2AlignOperandsPass(PR);
-  initializeWebAssemblyEHRestoreStackPointerPass(PR);
   initializeWebAssemblyReplacePhysRegsPass(PR);
   initializeWebAssemblyPrepareForLiveIntervalsPass(PR);
   initializeWebAssemblyOptimizeLiveIntervalsPass(PR);
@@ -284,14 +283,6 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
 void WebAssemblyPassConfig::addPreEmitPass() {
   TargetPassConfig::addPreEmitPass();
 
-  // Restore __stack_pointer global after an exception is thrown.
-  addPass(createWebAssemblyEHRestoreStackPointer());
-
-  // Now that we have a prologue and epilogue and all frame indices are
-  // rewritten, eliminate SP and FP. This allows them to be stackified,
-  // colored, and numbered with the rest of the registers.
-  addPass(createWebAssemblyReplacePhysRegs());
-
   // Rewrite pseudo call_indirect instructions as real instructions.
   // This needs to run before register stackification, because we change the
   // order of the arguments.
@@ -303,6 +294,11 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
   addPass(createWebAssemblyLateEHPrepare());
+
+  // Now that we have a prologue and epilogue and all frame indices are
+  // rewritten, eliminate SP and FP. This allows them to be stackified,
+  // colored, and numbered with the rest of the registers.
+  addPass(createWebAssemblyReplacePhysRegs());
 
   // Preparations and optimizations related to register stackification.
   if (getOptLevel() != CodeGenOpt::None) {

@@ -57,12 +57,12 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_load_i8
-    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.0, align 0)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.0, align 16)
     ; ALL: [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm [[MOV32rm]], 1, $noreg, 0, $noreg :: (load 1 from %ir.p1)
     ; ALL: $al = COPY [[MOV8rm]]
     ; ALL: RET 0, implicit $al
     %1(p0) = G_FRAME_INDEX %fixed-stack.0
-    %0(p0) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    %0(p0) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.0, align 16)
     %2(s8) = G_LOAD %0(p0) :: (load 1 from %ir.p1)
     $al = COPY %2(s8)
     RET 0, implicit $al
@@ -82,12 +82,12 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_load_i16
-    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.0, align 0)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.0, align 16)
     ; ALL: [[MOV16rm:%[0-9]+]]:gr16 = MOV16rm [[MOV32rm]], 1, $noreg, 0, $noreg :: (load 2 from %ir.p1)
     ; ALL: $ax = COPY [[MOV16rm]]
     ; ALL: RET 0, implicit $ax
     %1(p0) = G_FRAME_INDEX %fixed-stack.0
-    %0(p0) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    %0(p0) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.0, align 16)
     %2(s16) = G_LOAD %0(p0) :: (load 2 from %ir.p1)
     $ax = COPY %2(s16)
     RET 0, implicit $ax
@@ -107,12 +107,12 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_load_i32
-    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.0, align 0)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.0, align 16)
     ; ALL: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm [[MOV32rm]], 1, $noreg, 0, $noreg :: (load 4 from %ir.p1)
     ; ALL: $eax = COPY [[MOV32rm1]]
     ; ALL: RET 0, implicit $eax
     %1(p0) = G_FRAME_INDEX %fixed-stack.0
-    %0(p0) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    %0(p0) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.0, align 16)
     %2(s32) = G_LOAD %0(p0) :: (load 4 from %ir.p1)
     $eax = COPY %2(s32)
     RET 0, implicit $eax
@@ -134,15 +134,15 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_store_i8
-    ; ALL: [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 1 from %fixed-stack.0, align 0)
-    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.1, align 0)
+    ; ALL: [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 1 from %fixed-stack.0, align 16)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.1)
     ; ALL: MOV8mr [[MOV32rm]], 1, $noreg, 0, $noreg, [[MOV8rm]] :: (store 1 into %ir.p1)
     ; ALL: $eax = COPY [[MOV32rm]]
     ; ALL: RET 0, implicit $eax
     %2(p0) = G_FRAME_INDEX %fixed-stack.1
-    %0(s8) = G_LOAD %2(p0) :: (invariant load 1 from %fixed-stack.1, align 0)
+    %0(s8) = G_LOAD %2(p0) :: (invariant load 1 from %fixed-stack.1, align 16)
     %3(p0) = G_FRAME_INDEX %fixed-stack.0
-    %1(p0) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    %1(p0) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 4)
     G_STORE %0(s8), %1(p0) :: (store 1 into %ir.p1)
     $eax = COPY %1(p0)
     RET 0, implicit $eax
@@ -164,15 +164,15 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_store_i16
-    ; ALL: [[MOV16rm:%[0-9]+]]:gr16 = MOV16rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 2 from %fixed-stack.0, align 0)
-    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.1, align 0)
+    ; ALL: [[MOV16rm:%[0-9]+]]:gr16 = MOV16rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 2 from %fixed-stack.0, align 16)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.1)
     ; ALL: MOV16mr [[MOV32rm]], 1, $noreg, 0, $noreg, [[MOV16rm]] :: (store 2 into %ir.p1)
     ; ALL: $eax = COPY [[MOV32rm]]
     ; ALL: RET 0, implicit $eax
     %2(p0) = G_FRAME_INDEX %fixed-stack.1
-    %0(s16) = G_LOAD %2(p0) :: (invariant load 2 from %fixed-stack.1, align 0)
+    %0(s16) = G_LOAD %2(p0) :: (invariant load 2 from %fixed-stack.1, align 16)
     %3(p0) = G_FRAME_INDEX %fixed-stack.0
-    %1(p0) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    %1(p0) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 4)
     G_STORE %0(s16), %1(p0) :: (store 2 into %ir.p1)
     $eax = COPY %1(p0)
     RET 0, implicit $eax
@@ -194,15 +194,15 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_store_i32
-    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.0, align 0)
-    ; ALL: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.1, align 0)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.0, align 16)
+    ; ALL: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.1)
     ; ALL: MOV32mr [[MOV32rm1]], 1, $noreg, 0, $noreg, [[MOV32rm]] :: (store 4 into %ir.p1)
     ; ALL: $eax = COPY [[MOV32rm1]]
     ; ALL: RET 0, implicit $eax
     %2(p0) = G_FRAME_INDEX %fixed-stack.1
-    %0(s32) = G_LOAD %2(p0) :: (invariant load 4 from %fixed-stack.1, align 0)
+    %0(s32) = G_LOAD %2(p0) :: (invariant load 4 from %fixed-stack.1, align 16)
     %3(p0) = G_FRAME_INDEX %fixed-stack.0
-    %1(p0) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    %1(p0) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 4)
     G_STORE %0(s32), %1(p0) :: (store 4 into %ir.p1)
     $eax = COPY %1(p0)
     RET 0, implicit $eax
@@ -222,12 +222,12 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_load_ptr
-    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.0, align 0)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.0, align 16)
     ; ALL: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm [[MOV32rm]], 1, $noreg, 0, $noreg :: (load 4 from %ir.ptr1)
     ; ALL: $eax = COPY [[MOV32rm1]]
     ; ALL: RET 0, implicit $eax
     %1(p0) = G_FRAME_INDEX %fixed-stack.0
-    %0(p0) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    %0(p0) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.0, align 16)
     %2(p0) = G_LOAD %0(p0) :: (load 4 from %ir.ptr1)
     $eax = COPY %2(p0)
     RET 0, implicit $eax
@@ -249,14 +249,14 @@ fixedStack:
 body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test_store_ptr
-    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.0, align 0)
-    ; ALL: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.1, align 0)
+    ; ALL: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.0, align 16)
+    ; ALL: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.1)
     ; ALL: MOV32mr [[MOV32rm]], 1, $noreg, 0, $noreg, [[MOV32rm1]] :: (store 4 into %ir.ptr1)
     ; ALL: RET 0
     %2(p0) = G_FRAME_INDEX %fixed-stack.1
-    %0(p0) = G_LOAD %2(p0) :: (invariant load 4 from %fixed-stack.1, align 0)
+    %0(p0) = G_LOAD %2(p0) :: (invariant load 4 from %fixed-stack.1, align 16)
     %3(p0) = G_FRAME_INDEX %fixed-stack.0
-    %1(p0) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 0)
+    %1(p0) = G_LOAD %3(p0) :: (invariant load 4 from %fixed-stack.0, align 4)
     G_STORE %1(p0), %0(p0) :: (store 4 into %ir.ptr1)
     RET 0
 

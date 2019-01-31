@@ -414,8 +414,8 @@ A simple function that does something interesting if it receives the input
     return 0;
   }
   EOF
-  # Build test_fuzzer.cc with asan and link against libFuzzer.a
-  clang++ -fsanitize=address -fsanitize-coverage=trace-pc-guard test_fuzzer.cc libFuzzer.a
+  # Build test_fuzzer.cc with asan and link against libFuzzer.
+  clang++ -fsanitize=address,fuzzer test_fuzzer.cc
   # Run the fuzzer with no corpus.
   ./a.out
 
@@ -483,7 +483,7 @@ the fuzzing but is very likely to improve the results.
 Value Profile
 -------------
 
-With  ``-fsanitize-coverage=trace-cmp``
+With  ``-fsanitize-coverage=trace-cmp`` (default with ``-fsanitize=fuzzer``)
 and extra run-time flag ``-use_value_profile=1`` the fuzzer will
 collect value profiles for the parameters of compare instructions
 and treat some new values as new coverage.
@@ -562,8 +562,9 @@ to visualize and study your code coverage
 User-supplied mutators
 ----------------------
 
-LibFuzzer allows to use custom (user-supplied) mutators,
-see FuzzerInterface.h_
+LibFuzzer allows to use custom (user-supplied) mutators, see
+`Structure-Aware Fuzzing <https://github.com/google/fuzzer-test-suite/blob/master/tutorial/structure-aware-fuzzing.md>`_
+for more details.
 
 Startup initialization
 ----------------------

@@ -33,10 +33,10 @@ public:
 
   unsigned getStubAlignment() override { return 1; }
 
-  Expected<relocation_iterator>
+  Expected<object::relocation_iterator>
   processRelocationRef(unsigned SectionID,
-                       relocation_iterator RelI,
-                       const ObjectFile &Obj,
+                       object::relocation_iterator RelI,
+                       const object::ObjectFile &Obj,
                        ObjSectionToIDMap &ObjSectionToID,
                        StubMap &Stubs) override {
 

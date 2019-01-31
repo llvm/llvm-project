@@ -30,12 +30,12 @@ define void @test_rethrow(i8* %p) {
 ; CHECK:   try
 ; CHECK:   call      foo@FUNCTION
 ; CHECK:   catch     $[[EXCEPT_REF:[0-9]+]]=
+; CHECK:   global.set  __stack_pointer@GLOBAL
 ; CHECK:   block i32
 ; CHECK:   br_on_exn 0, __cpp_exception@EVENT, $[[EXCEPT_REF]]
 ; CHECK:   rethrow
 ; CHECK:   end_block
 ; CHECK:   extract_exception $[[EXN:[0-9]+]]=
-; CHECK:   global.set  __stack_pointer@GLOBAL
 ; CHECK-DAG:   i32.store  __wasm_lpad_context
 ; CHECK-DAG:   i32.store  __wasm_lpad_context+4
 ; CHECK:   i32.call  $drop=, _Unwind_CallPersonality@FUNCTION, $[[EXN]]

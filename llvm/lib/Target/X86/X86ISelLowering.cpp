@@ -1787,7 +1787,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
   if (!Subtarget.is64Bit()) {
     setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i64, Custom);
-    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
   }
 
   // Only custom-lower 64-bit SADDO and friends on 64-bit because we don't
@@ -26922,11 +26921,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::x86_xgetbv:
       return getExtendedControlRegister(N, dl, DAG, Subtarget, Results);
     }
-  }
-  case ISD::INTRINSIC_WO_CHAIN: {
-    if (SDValue V = LowerINTRINSIC_WO_CHAIN(SDValue(N, 0), DAG))
-      Results.push_back(V);
-    return;
   }
   case ISD::READCYCLECOUNTER: {
     return getReadTimeStampCounter(N, dl, X86ISD::RDTSC_DAG, DAG, Subtarget,

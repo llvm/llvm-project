@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -fobjc-runtime=macosx-10.10.0 -emit-llvm -o - %s -fno-objc-convert-messages-to-runtime-calls | FileCheck %s --check-prefix=MSGS
-// RUN: %clang_cc1 -fobjc-runtime=macosx-10.10.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=CALLS
-// RUN: %clang_cc1 -fobjc-runtime=macosx-10.9.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=MSGS
-// RUN: %clang_cc1 -fobjc-runtime=macosx-fragile-10.10.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=MSGS
-// RUN: %clang_cc1 -fobjc-runtime=ios-8.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=CALLS
-// RUN: %clang_cc1 -fobjc-runtime=ios-7.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=MSGS
+// RUN: %clang_cc1 -fobjc-runtime=macosx-10.10.0 -emit-llvm -o - %s -fno-objc-convert-messages-to-runtime-calls -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
+// RUN: %clang_cc1 -fobjc-runtime=macosx-10.10.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
+// RUN: %clang_cc1 -fobjc-runtime=macosx-10.9.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
+// RUN: %clang_cc1 -fobjc-runtime=macosx-fragile-10.10.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
+// RUN: %clang_cc1 -fobjc-runtime=ios-8.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
+// RUN: %clang_cc1 -fobjc-runtime=ios-7.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
 // Note: This line below is for tvos for which the driver passes through to use the ios9.0 runtime.
-// RUN: %clang_cc1 -fobjc-runtime=ios-9.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=CALLS
-// RUN: %clang_cc1 -fobjc-runtime=watchos-2.0 -emit-llvm -o - %s | FileCheck %s --check-prefix=CALLS
+// RUN: %clang_cc1 -fobjc-runtime=ios-9.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
+// RUN: %clang_cc1 -fobjc-runtime=watchos-2.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
 
 #define nil (id)0
 
@@ -36,6 +36,19 @@ void test1(id x) {
   [x retain];
   [x release];
   [x autorelease];
+}
+
+// CHECK-LABEL: define {{.*}}void @check_invoke
+void check_invoke() {
+  // MSGS: {{invoke.*@objc_msgSend}}
+  // MSGS: {{invoke.*@objc_msgSend}}
+  // CALLS: {{invoke.*@objc_alloc}}
+  // CALLS: {{invoke.*@objc_allocWithZone}}
+  @try {
+    [NSObject alloc];
+    [NSObject allocWithZone:nil];
+  } @catch (...) {
+  }
 }
 
 // CHECK-LABEL: define {{.*}}void @test2
