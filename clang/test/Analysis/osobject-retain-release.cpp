@@ -593,12 +593,12 @@ void test_smart_ptr_uaf() {
    // expected-note@-1{{Returning from constructor for 'smart_ptr<OSObject>'}}
     // expected-note@os_smart_ptr.h:13{{Taking true branch}}
     // expected-note@os_smart_ptr.h:14{{Calling 'smart_ptr::_retain'}}
-    // expected-note@os_smart_ptr.h:72{{Reference count incremented. The object now has a +2 retain count}}
+    // expected-note@os_smart_ptr.h:71{{Reference count incremented. The object now has a +2 retain count}}
     // expected-note@os_smart_ptr.h:14{{Returning from 'smart_ptr::_retain'}}
   } // expected-note{{Calling '~smart_ptr'}}
   // expected-note@os_smart_ptr.h:35{{Taking true branch}}
   // expected-note@os_smart_ptr.h:36{{Calling 'smart_ptr::_release'}}
-  // expected-note@os_smart_ptr.h:77{{Reference count decremented. The object now has a +1 retain count}}
+  // expected-note@os_smart_ptr.h:76{{Reference count decremented. The object now has a +1 retain count}}
   // expected-note@os_smart_ptr.h:36{{Returning from 'smart_ptr::_release'}}
  // expected-note@-5{{Returning from '~smart_ptr'}}
   obj->release(); // expected-note{{Object released}}
@@ -613,12 +613,12 @@ void test_smart_ptr_leak() {
    // expected-note@-1{{Returning from constructor for 'smart_ptr<OSObject>'}}
     // expected-note@os_smart_ptr.h:13{{Taking true branch}}
     // expected-note@os_smart_ptr.h:14{{Calling 'smart_ptr::_retain'}}
-    // expected-note@os_smart_ptr.h:72{{Reference count incremented. The object now has a +2 retain count}}
+    // expected-note@os_smart_ptr.h:71{{Reference count incremented. The object now has a +2 retain count}}
     // expected-note@os_smart_ptr.h:14{{Returning from 'smart_ptr::_retain'}}
   } // expected-note{{Calling '~smart_ptr'}}
   // expected-note@os_smart_ptr.h:35{{Taking true branch}}
   // expected-note@os_smart_ptr.h:36{{Calling 'smart_ptr::_release'}}
-  // expected-note@os_smart_ptr.h:77{{Reference count decremented. The object now has a +1 retain count}}
+  // expected-note@os_smart_ptr.h:76{{Reference count decremented. The object now has a +1 retain count}}
   // expected-note@os_smart_ptr.h:36{{Returning from 'smart_ptr::_release'}}
  // expected-note@-5{{Returning from '~smart_ptr'}}
 } // expected-warning{{Potential leak of an object stored into 'obj'}}
@@ -646,5 +646,17 @@ void test_free_on_escaped_object_diagnostics() {
   escape_elsewhere(obj); // expected-note{{Object is now not exclusively owned}}
   obj->free(); // expected-note{{'free' called on an object that may be referenced elsewhere}}
   // expected-warning@-1{{'free' called on an object that may be referenced elsewhere}}
+}
+
+void test_tagged_retain_no_leak() {
+  OSObject *obj = new OSObject;
+  obj->taggedRelease();
+}
+
+void test_tagged_retain_no_uaf() {
+  OSObject *obj = new OSObject;
+  obj->taggedRetain();
+  obj->release();
+  obj->release();
 }
 
