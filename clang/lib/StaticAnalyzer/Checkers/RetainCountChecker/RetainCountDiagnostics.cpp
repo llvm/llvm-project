@@ -19,6 +19,50 @@ using namespace clang;
 using namespace ento;
 using namespace retaincountchecker;
 
+StringRef RefCountBug::bugTypeToName(RefCountBug::RefCountBugType BT) {
+  switch (BT) {
+  case UseAfterRelease:
+    return "Use-after-release";
+  case ReleaseNotOwned:
+    return "Bad release";
+  case DeallocNotOwned:
+    return "-dealloc sent to non-exclusively owned object";
+  case OverAutorelease:
+    return "Object autoreleased too many times";
+  case ReturnNotOwnedForOwned:
+    return "Method should return an owned object";
+  case LeakWithinFunction:
+    return "Leak";
+  case LeakAtReturn:
+    return "Leak of returned object";
+  }
+}
+
+StringRef RefCountBug::getDescription() const {
+  switch (BT) {
+  case UseAfterRelease:
+    return "Reference-counted object is used after it is released";
+  case ReleaseNotOwned:
+    return "Incorrect decrement of the reference count of an object that is "
+           "not owned at this point by the caller";
+  case DeallocNotOwned:
+    return "-dealloc sent to object that may be referenced elsewhere";
+  case OverAutorelease:
+    return "Object autoreleased too many times";
+  case ReturnNotOwnedForOwned:
+    return "Object with a +0 retain count returned to caller where a +1 "
+           "(owning) retain count is expected";
+  case LeakWithinFunction:
+  case LeakAtReturn:
+    return "";
+  }
+}
+
+RefCountBug::RefCountBug(const CheckerBase *Checker, RefCountBugType BT)
+    : BugType(Checker, bugTypeToName(BT), categories::MemoryRefCount,
+              /*SupressOnSink=*/BT == LeakWithinFunction || BT == LeakAtReturn),
+      BT(BT) {}
+
 static bool isNumericLiteralExpression(const Expr *E) {
   // FIXME: This set of cases was copied from SemaExprObjC.
   return isa<IntegerLiteral>(E) ||
@@ -711,15 +755,15 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
 }
 
-RefCountReport::RefCountReport(RefCountBug &D, const LangOptions &LOpts,
+RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
                                ExplodedNode *n, SymbolRef sym,
-                               bool registerVisitor)
-    : BugReport(D, D.getDescription(), n), Sym(sym) {
-  if (registerVisitor)
+                               bool isLeak)
+    : BugReport(D, D.getDescription(), n), Sym(sym), isLeak(isLeak) {
+  if (!isLeak)
     addVisitor(llvm::make_unique<RefCountReportVisitor>(sym));
 }
 
-RefCountReport::RefCountReport(RefCountBug &D, const LangOptions &LOpts,
+RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
                                ExplodedNode *n, SymbolRef sym,
                                StringRef endText)
     : BugReport(D, D.getDescription(), endText, n) {
@@ -805,10 +849,10 @@ void RefLeakReport::createDescription(CheckerContext &Ctx) {
   }
 }
 
-RefLeakReport::RefLeakReport(RefCountBug &D, const LangOptions &LOpts,
+RefLeakReport::RefLeakReport(const RefCountBug &D, const LangOptions &LOpts,
                              ExplodedNode *n, SymbolRef sym,
                              CheckerContext &Ctx)
-    : RefCountReport(D, LOpts, n, sym, false) {
+    : RefCountReport(D, LOpts, n, sym, /*isLeak=*/true) {
 
   deriveAllocLocation(Ctx, sym);
   if (!AllocBinding)
