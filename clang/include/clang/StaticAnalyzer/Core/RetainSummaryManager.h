@@ -741,16 +741,18 @@ public:
 
   RetEffect getObjAllocRetEffect() const { return ObjCAllocRetE; }
 
-  /// \return True if the declaration has an attribute {@code T},
-  /// AND we are tracking that attribute. False otherwise.
+  /// Determine whether a declaration {@code D} of correspondent type (return
+  /// type for functions/methods) {@code QT} has any of the given attributes,
+  /// provided they pass necessary validation checks AND tracking the given
+  /// attribute is enabled.
+  /// Returns the object kind corresponding to the present attribute, or None,
+  /// if none of the specified attributes are present.
+  /// Crashes if passed an attribute which is not explicitly handled.
   template <class T>
-  bool hasEnabledAttr(const Decl *D) {
-    return isAttrEnabled<T>() && D->hasAttr<T>();
-  }
+  Optional<ObjKind> hasAnyEnabledAttrOf(const Decl *D, QualType QT);
 
-  /// Check whether we are tracking properties specified by the attributes.
-  template <class T>
-  bool isAttrEnabled();
+  template <class T1, class T2, class... Others>
+  Optional<ObjKind> hasAnyEnabledAttrOf(const Decl *D, QualType QT);
 
   friend class RetainSummaryTemplate;
 };
