@@ -29,13 +29,13 @@ const RefVal *getRefBinding(ProgramStateRef State, SymbolRef Sym) {
   return State->get<RefBindings>(Sym);
 }
 
-ProgramStateRef setRefBinding(ProgramStateRef State, SymbolRef Sym,
+static ProgramStateRef setRefBinding(ProgramStateRef State, SymbolRef Sym,
                                      RefVal Val) {
   assert(Sym != nullptr);
   return State->set<RefBindings>(Sym, Val);
 }
 
-ProgramStateRef removeRefBinding(ProgramStateRef State, SymbolRef Sym) {
+static ProgramStateRef removeRefBinding(ProgramStateRef State, SymbolRef Sym) {
   return State->remove<RefBindings>(Sym);
 }
 
@@ -196,7 +196,7 @@ public:
   ProgramStateRef getState() const { return state; }
 
   bool VisitSymbol(SymbolRef sym) override {
-    state = state->remove<RefBindings>(sym);
+    state = removeRefBinding(state, sym);
     return true;
   }
 };
@@ -1213,25 +1213,21 @@ ProgramStateRef RetainCountChecker::evalAssume(ProgramStateRef state,
   return state;
 }
 
-ProgramStateRef
-RetainCountChecker::checkRegionChanges(ProgramStateRef state,
-                                       const InvalidatedSymbols *invalidated,
-                                       ArrayRef<const MemRegion *> ExplicitRegions,
-                                       ArrayRef<const MemRegion *> Regions,
-                                       const LocationContext *LCtx,
-                                       const CallEvent *Call) const {
+ProgramStateRef RetainCountChecker::checkRegionChanges(
+    ProgramStateRef state, const InvalidatedSymbols *invalidated,
+    ArrayRef<const MemRegion *> ExplicitRegions,
+    ArrayRef<const MemRegion *> Regions, const LocationContext *LCtx,
+    const CallEvent *Call) const {
   if (!invalidated)
     return state;
 
   llvm::SmallPtrSet<SymbolRef, 8> WhitelistedSymbols;
-  for (ArrayRef<const MemRegion *>::iterator I = ExplicitRegions.begin(),
-       E = ExplicitRegions.end(); I != E; ++I) {
-    if (const SymbolicRegion *SR = (*I)->StripCasts()->getAs<SymbolicRegion>())
-      WhitelistedSymbols.insert(SR->getSymbol());
-  }
 
-  for (SymbolRef sym :
-       llvm::make_range(invalidated->begin(), invalidated->end())) {
+  for (const MemRegion *I : ExplicitRegions)
+    if (const SymbolicRegion *SR = I->StripCasts()->getAs<SymbolicRegion>())
+      WhitelistedSymbols.insert(SR->getSymbol());
+
+  for (SymbolRef sym : *invalidated) {
     if (WhitelistedSymbols.count(sym))
       continue;
     // Remove any existing reference-count binding.
@@ -1356,18 +1352,15 @@ RetainCountChecker::processLeaks(ProgramStateRef state,
                                  ExplodedNode *Pred) const {
   // Generate an intermediate node representing the leak point.
   ExplodedNode *N = Ctx.addTransition(state, Pred);
+  const LangOptions &LOpts = Ctx.getASTContext().getLangOpts();
 
   if (N) {
-    for (SmallVectorImpl<SymbolRef>::iterator
-         I = Leaked.begin(), E = Leaked.end(); I != E; ++I) {
-
-      const LangOptions &LOpts = Ctx.getASTContext().getLangOpts();
+    for (SymbolRef L : Leaked) {
       RefCountBug *BT = Pred ? getLeakWithinFunctionBug(LOpts)
                           : getLeakAtReturnBug(LOpts);
       assert(BT && "BugType not initialized.");
 
-      Ctx.emitReport(
-          llvm::make_unique<RefLeakReport>(*BT, LOpts, N, *I, Ctx));
+      Ctx.emitReport(llvm::make_unique<RefLeakReport>(*BT, LOpts, N, L, Ctx));
     }
   }
 
@@ -1459,7 +1452,6 @@ void RetainCountChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   ExplodedNode *Pred = C.getPredecessor();
 
   ProgramStateRef state = C.getState();
-  RefBindingsTy B = state->get<RefBindings>();
   SmallVector<SymbolRef, 10> Leaked;
 
   // Update counts from autorelease pools
@@ -1492,12 +1484,10 @@ void RetainCountChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   // Now generate a new node that nukes the old bindings.
   // The only bindings left at this point are the leaked symbols.
   RefBindingsTy::Factory &F = state->get_context<RefBindings>();
-  B = state->get<RefBindings>();
+  RefBindingsTy B = state->get<RefBindings>();
 
-  for (SmallVectorImpl<SymbolRef>::iterator I = Leaked.begin(),
-                                            E = Leaked.end();
-       I != E; ++I)
-    B = F.remove(B, *I);
+  for (SymbolRef L : Leaked)
+    B = F.remove(B, L);
 
   state = state->set<RefBindings>(B);
   C.addTransition(state, Pred);
