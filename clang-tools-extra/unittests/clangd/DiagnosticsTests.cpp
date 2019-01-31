@@ -246,7 +246,8 @@ TEST(DiagnosticsTest, ToLSP) {
   };
 
   // Diagnostics should turn into these:
-  clangd::Diagnostic MainLSP = MatchingLSP(D, R"(Something terrible happened
+  clangd::Diagnostic MainLSP =
+      MatchingLSP(D, R"(Something terrible happened (fix available)
 
 main.cpp:6:7: remark: declared somewhere in the main file
 

@@ -43,6 +43,11 @@ class FunctionImportGlobalProcessing {
   /// to promote any non-renamable values.
   SmallPtrSet<GlobalValue *, 8> Used;
 
+  /// Keep track of any COMDATs that require renaming (because COMDAT
+  /// leader was promoted and renamed). Maps from original COMDAT to one
+  /// with new name.
+  DenseMap<const Comdat *, Comdat *> RenamedComdats;
+
   /// Check if we should promote the given local value to global scope.
   bool shouldPromoteLocalToGlobal(const GlobalValue *SGV);
 

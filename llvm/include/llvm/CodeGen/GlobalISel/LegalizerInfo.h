@@ -712,7 +712,7 @@ public:
         [=](const LegalityQuery &Query) {
           LLT VecTy = Query.Types[TypeIdx];
           return std::make_pair(
-              TypeIdx, LLT::vector(MinElements, VecTy.getScalarSizeInBits()));
+              TypeIdx, LLT::vector(MinElements, VecTy.getElementType()));
         });
   }
   /// Limit the number of elements in EltTy vectors to at most MaxElements.
@@ -729,10 +729,8 @@ public:
         },
         [=](const LegalityQuery &Query) {
           LLT VecTy = Query.Types[TypeIdx];
-          if (MaxElements == 1)
-            return std::make_pair(TypeIdx, VecTy.getElementType());
-          return std::make_pair(
-              TypeIdx, LLT::vector(MaxElements, VecTy.getScalarSizeInBits()));
+          LLT NewTy = LLT::scalarOrVector(MaxElements, VecTy.getElementType());
+          return std::make_pair(TypeIdx, NewTy);
         });
   }
   /// Limit the number of elements for the given vectors to at least MinTy's

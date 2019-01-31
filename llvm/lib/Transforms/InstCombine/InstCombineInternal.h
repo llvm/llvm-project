@@ -52,7 +52,6 @@ namespace llvm {
 
 class APInt;
 class AssumptionCache;
-class CallSite;
 class DataLayout;
 class DominatorTree;
 class GEPOperator;
@@ -467,11 +466,11 @@ private:
                              Instruction &CtxI, Value *&OperationResult,
                              Constant *&OverflowResult);
 
-  Instruction *visitCallSite(CallSite CS);
+  Instruction *visitCallBase(CallBase &Call);
   Instruction *tryOptimizeCall(CallInst *CI);
-  bool transformConstExprCastCall(CallSite CS);
-  Instruction *transformCallThroughTrampoline(CallSite CS,
-                                              IntrinsicInst *Tramp);
+  bool transformConstExprCastCall(CallBase &Call);
+  Instruction *transformCallThroughTrampoline(CallBase &Call,
+                                              IntrinsicInst &Tramp);
 
   /// Transform (zext icmp) to bitwise / integer operations in order to
   /// eliminate it.

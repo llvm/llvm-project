@@ -2765,11 +2765,15 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
   }
 
   // Next check to see if the target supports this SHL_PARTS operation or if it
-  // will custom expand it.
+  // will custom expand it. Don't lower this to SHL_PARTS when we optimise for
+  // size, but create a libcall instead.
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   TargetLowering::LegalizeAction Action = TLI.getOperationAction(PartsOpc, NVT);
-  if ((Action == TargetLowering::Legal && TLI.isTypeLegal(NVT)) ||
-      Action == TargetLowering::Custom) {
+  const bool LegalOrCustom =
+    (Action == TargetLowering::Legal && TLI.isTypeLegal(NVT)) ||
+    Action == TargetLowering::Custom;
+
+  if (LegalOrCustom && TLI.shouldExpandShift(DAG, N)) {
     // Expand the subcomponents.
     SDValue LHSL, LHSH;
     GetExpandedInteger(N->getOperand(0), LHSL, LHSH);

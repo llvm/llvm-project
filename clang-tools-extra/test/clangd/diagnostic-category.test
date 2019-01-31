@@ -7,7 +7,7 @@
 # CHECK-NEXT:     "diagnostics": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "category": "Semantic Issue",
-# CHECK-NEXT:        "message": "Use of 'Point' with tag type that does not match previous declaration\n\nfoo.c:1:8: note: previous use is here",
+# CHECK-NEXT:        "message": "Use of 'Point' with tag type that does not match previous declaration (fix available)\n\nfoo.c:1:8: note: previous use is here",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
 # CHECK-NEXT:            "character": 22,
