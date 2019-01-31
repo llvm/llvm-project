@@ -12,6 +12,9 @@ int Cilk_for_tests(int n) {
   _Cilk_for (int i = 0; i < m; ++i); // expected-warning {{Cilk for loop has empty body}}
   _Cilk_for (int i = 0, __end = m; i < __end; ++i); // expected-warning {{Cilk for loop has empty body}}
   _Cilk_for (int i = 0; i < n; ++i) return 7; // expected-error{{cannot return}}
+  _Cilk_for (int i = 0; i < n; ++i) // expected-error{{cannot break}}
+    if (i % 2)
+      break;
   return 0;
 }
 

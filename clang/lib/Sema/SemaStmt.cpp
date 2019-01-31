@@ -1722,6 +1722,13 @@ namespace {
         Visit(Collection);
     }
 
+    void VisitCilkForStmt(const CilkForStmt *S) {
+      // Only visit the init statement of a _Cilk_for loop; the body
+      // has a different break/continue scope.
+      if (const Stmt *Init = S->getInit())
+        Visit(Init);
+    }
+
     bool ContinueFound() { return ContinueLoc.isValid(); }
     bool BreakFound() { return BreakLoc.isValid(); }
     SourceLocation GetContinueLoc() { return ContinueLoc; }
@@ -3400,6 +3407,11 @@ Sema::ActOnCilkForStmt(SourceLocation CilkForLoc, SourceLocation LParenLoc,
   }
 
   SearchForReturnInStmt(*this, Body);
+
+  if (BreakContinueFinder(*this, Body).BreakFound())
+    Diag(CilkForLoc, diag::err_cilk_for_cannot_break);
+  // TODO: Check for other illegal statements in the _Cilk_for body, such as
+  // goto statements that leave the _Cilk_for body.
 
   if (LoopVar)
     return new (Context) CilkForStmt(Context, First, Condition, Increment,
