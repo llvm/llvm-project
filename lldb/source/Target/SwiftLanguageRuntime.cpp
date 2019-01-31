@@ -2350,7 +2350,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Tuple(
   return true;
 }
 
-bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct(
+bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Value(
     ValueObject &in_value, CompilerType &bound_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
     Address &address) {
@@ -2360,29 +2360,11 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct(
       in_value.GetExecutionContextRef().GetFrameSP().get());
   if (!size)
     return false;
-  lldb::addr_t struct_address = in_value.GetAddressOf(true, nullptr);
-  if (*size && (!struct_address || struct_address == LLDB_INVALID_ADDRESS))
+  lldb::addr_t val_address = in_value.GetAddressOf(true, nullptr);
+  if (*size && (!val_address || val_address == LLDB_INVALID_ADDRESS))
     return false;
 
-  address.SetLoadAddress(struct_address, in_value.GetTargetSP().get());
-  return true;
-}
-
-bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Enum(
-    ValueObject &in_value, CompilerType &bound_type,
-    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
-    Address &address) {
-  class_type_or_name.SetCompilerType(bound_type);
-
-  llvm::Optional<uint64_t> size = bound_type.GetByteSize(
-      in_value.GetExecutionContextRef().GetFrameSP().get());
-  if (!size)
-    return false;
-  lldb::addr_t enum_address = in_value.GetAddressOf(true, nullptr);
-  if (*size && (!enum_address || LLDB_INVALID_ADDRESS == enum_address))
-    return false;
-
-  address.SetLoadAddress(enum_address, in_value.GetTargetSP().get());
+  address.SetLoadAddress(val_address, in_value.GetTargetSP().get());
   return true;
 }
 
@@ -2634,12 +2616,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
     if (!bound_type)
       return false;
 
-    else if (type_info.AnySet(eTypeIsEnumeration))
-      success = GetDynamicTypeAndAddress_Enum(in_value, bound_type, use_dynamic,
-                                              class_type_or_name, address);
-    else if (type_info.AnySet(eTypeIsStructUnion))
-      success = GetDynamicTypeAndAddress_Struct(
-          in_value, bound_type, use_dynamic, class_type_or_name, address);
+    success = GetDynamicTypeAndAddress_Value(in_value, bound_type, use_dynamic,
+                                             class_type_or_name, address);
   }
 
   if (success)
