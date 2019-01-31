@@ -230,7 +230,7 @@ __builtin_logger_initialize()
 
     const char *optional_extension =
         (language_flags & SwiftUserExpression::eLanguageFlagIsWeakSelf)
-            ? "Swift.Optional where Wrapped: "
+            ? "Swift.Optional where Wrapped == "
             : "";
 
     if (generic_info.class_bindings.size()) {
@@ -1446,8 +1446,7 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
                            nullptr, &m_source_file);
   swift::Type underlying_type = GetSwiftType(type);
   type_alias_decl->setUnderlyingType(underlying_type);
-  if (underlying_type->hasArchetype())
-    type_alias_decl->markAsDebuggerAlias(true);
+  type_alias_decl->markAsDebuggerAlias(true);
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
   if (log) {
@@ -1470,88 +1469,4 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
   }
 
   return type_alias_decl;
-}
-
-SwiftASTManipulator::TypesForResultFixup
-SwiftASTManipulator::GetTypesForResultFixup(uint32_t language_flags) {
-  TypesForResultFixup ret;
-
-  for (swift::Decl *decl : m_source_file.Decls) {
-    if (auto extension_decl = llvm::dyn_cast<swift::ExtensionDecl>(decl)) {
-      if (language_flags & SwiftUserExpression::eLanguageFlagIsWeakSelf) {
-        if (extension_decl->getGenericParams() &&
-            extension_decl->getGenericParams()->getParams().size() == 1) {
-          swift::GenericTypeParamDecl *type_parameter =
-              extension_decl->getGenericParams()->getParams()[0];
-          swift::TypeAliasType *name_alias_type =
-              llvm::dyn_cast_or_null<swift::TypeAliasType>(
-                  type_parameter->getSuperclass().getPointer());
-
-          if (name_alias_type) {
-            // FIXME: What if the generic parameter is concrete?
-            ret.Wrapper_archetype = extension_decl->mapTypeIntoContext(
-                type_parameter->getDeclaredInterfaceType())
-                    ->castTo<swift::ArchetypeType>();
-            ret.context_alias = name_alias_type;
-            ret.context_real = name_alias_type->getSinglyDesugaredType();
-          } else {
-            ret.Wrapper_archetype = extension_decl->mapTypeIntoContext(
-                type_parameter->getDeclaredInterfaceType())
-                    ->castTo<swift::ArchetypeType>();
-            ret.context_real =
-                (swift::TypeBase *)type_parameter->getSuperclass().getPointer();
-          }
-        }
-      } else if (!ret.context_alias) {
-        swift::TypeAliasType *name_alias_type =
-            llvm::dyn_cast<swift::TypeAliasType>(
-                extension_decl->getExtendedType().getPointer());
-
-        if (name_alias_type) {
-          ret.context_alias = name_alias_type;
-          ret.context_real = name_alias_type->getSinglyDesugaredType();
-        }
-      }
-    }
-  }
-
-  return ret;
-}
-
-static swift::Type ReplaceInType(swift::Type orig, swift::TypeBase *from,
-                                 swift::TypeBase *to) {
-  std::function<swift::Type(swift::Type)> Replacer =
-      [from, to](swift::Type orig_type) {
-        if (orig_type.getPointer() == from) {
-          return swift::Type(to);
-        } else {
-          return orig_type;
-        }
-      };
-
-  return orig.transform(Replacer);
-}
-
-swift::Type SwiftASTManipulator::FixupResultType(swift::Type &result_type,
-                                                 uint32_t language_flags) {
-  TypesForResultFixup result_fixup_types =
-      GetTypesForResultFixup(language_flags);
-
-  if (result_fixup_types.Wrapper_archetype && result_fixup_types.context_real) {
-    result_type =
-        ReplaceInType(result_type, result_fixup_types.Wrapper_archetype,
-                      result_fixup_types.context_real);
-  }
-
-  if (result_fixup_types.context_alias && result_fixup_types.context_real) {
-    // This is what we ought to do, but the printing logic doesn't handle the
-    // resulting types properly yet.
-    // result_type = ReplaceInType(result_type,
-    // result_fixup_types.context_alias, result_fixup_types.context_real);
-    if (result_type.getPointer() == result_fixup_types.context_alias) {
-      result_type = result_fixup_types.context_alias->getSinglyDesugaredType();
-    }
-  }
-
-  return result_type;
 }
