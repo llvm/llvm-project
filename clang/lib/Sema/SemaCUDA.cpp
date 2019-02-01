@@ -13,6 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/Cuda.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
@@ -41,9 +42,8 @@ ExprResult Sema::ActOnCUDAExecConfigExpr(Scope *S, SourceLocation LLLLoc,
                                          SourceLocation GGGLoc) {
   FunctionDecl *ConfigDecl = Context.getcudaConfigureCallDecl();
   if (!ConfigDecl)
-    return ExprError(
-        Diag(LLLLoc, diag::err_undeclared_var_use)
-        << (getLangOpts().HIP ? "hipConfigureCall" : "cudaConfigureCall"));
+    return ExprError(Diag(LLLLoc, diag::err_undeclared_var_use)
+                     << getCudaConfigureFuncName());
   QualType ConfigQTy = ConfigDecl->getType();
 
   DeclRefExpr *ConfigDR = new (Context)
@@ -956,4 +956,17 @@ void Sema::inheritCUDATargetAttrs(FunctionDecl *FD,
   copyAttrIfPresent<CUDAGlobalAttr>(*this, FD, TemplateFD);
   copyAttrIfPresent<CUDAHostAttr>(*this, FD, TemplateFD);
   copyAttrIfPresent<CUDADeviceAttr>(*this, FD, TemplateFD);
+}
+
+std::string Sema::getCudaConfigureFuncName() const {
+  if (getLangOpts().HIP)
+    return "hipConfigureCall";
+
+  // New CUDA kernel launch sequence.
+  if (CudaFeatureEnabled(Context.getTargetInfo().getSDKVersion(),
+                         CudaFeature::CUDA_USES_NEW_LAUNCH))
+    return "__cudaPushCallConfiguration";
+
+  // Legacy CUDA kernel configuration call
+  return "cudaConfigureCall";
 }

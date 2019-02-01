@@ -1663,35 +1663,13 @@ size_t generic_parser_base::getOptionWidth(const Option &O) const {
 void generic_parser_base::printOptionInfo(const Option &O,
                                           size_t GlobalWidth) const {
   if (O.hasArgStr()) {
-    // When the value is optional, first print a line just describing the option
-    // without values.
-    if (O.getValueExpectedFlag() == ValueOptional) {
-      for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {
-        if (getOption(i).empty()) {
-          outs() << "  -" << O.ArgStr;
-          Option::printHelpStr(O.HelpStr, GlobalWidth, O.ArgStr.size() + 6);
-          break;
-        }
-      }
-    }
+    outs() << "  -" << O.ArgStr;
+    Option::printHelpStr(O.HelpStr, GlobalWidth, O.ArgStr.size() + 6);
 
-    outs() << "  -" << O.ArgStr << "=<value>";
-    Option::printHelpStr(O.HelpStr, GlobalWidth, O.ArgStr.size() + 14);
     for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {
-      StringRef ValueName = getOption(i);
-      StringRef Description = getDescription(i);
-      if (O.getValueExpectedFlag() == ValueOptional && ValueName.empty() &&
-          Description.empty())
-        continue;
-      size_t NumSpaces = GlobalWidth - ValueName.size() - 8;
-      outs() << "    =" << ValueName;
-      if (ValueName.empty()) {
-        outs() << "<empty>";
-        NumSpaces -= 7;
-      }
-      if (!Description.empty())
-        outs().indent(NumSpaces) << " -   " << Description;
-      outs() << '\n';
+      size_t NumSpaces = GlobalWidth - getOption(i).size() - 8;
+      outs() << "    =" << getOption(i);
+      outs().indent(NumSpaces) << " -   " << getDescription(i) << '\n';
     }
   } else {
     if (!O.HelpStr.empty())

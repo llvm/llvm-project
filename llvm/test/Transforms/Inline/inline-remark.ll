@@ -46,6 +46,16 @@ define void @test2(i8*) {
   ret void
 }
 
+;; Test 3 - InlineResult messages come from llvm::isInlineViable()
+define void @test3() {
+; CHECK-LABEL: @test3
+; CHECK-NEXT: call void @test3() [[ATTR4:#[0-9]+]]
+; CHECK-NEXT: ret void
+  call void @test3() alwaysinline
+  ret void
+}
+
 ; CHECK: attributes [[ATTR1]] = { "inline-remark"="(cost=25, threshold=0)" }
 ; CHECK: attributes [[ATTR2]] = { "inline-remark"="(cost=never): recursive" }
 ; CHECK: attributes [[ATTR3]] = { "inline-remark"="unsupported operand bundle; (cost={{.*}}, threshold={{.*}})" }
+; CHECK: attributes [[ATTR4]] = { alwaysinline "inline-remark"="(cost=never): recursive call" }

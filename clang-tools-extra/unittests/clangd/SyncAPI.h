@@ -32,8 +32,8 @@ runCodeComplete(ClangdServer &Server, PathRef File, Position Pos,
 llvm::Expected<SignatureHelp> runSignatureHelp(ClangdServer &Server,
                                                PathRef File, Position Pos);
 
-llvm::Expected<std::vector<Location>>
-runFindDefinitions(ClangdServer &Server, PathRef File, Position Pos);
+llvm::Expected<std::vector<LocatedSymbol>>
+runLocateSymbolAt(ClangdServer &Server, PathRef File, Position Pos);
 
 llvm::Expected<std::vector<DocumentHighlight>>
 runFindDocumentHighlights(ClangdServer &Server, PathRef File, Position Pos);

@@ -1232,6 +1232,11 @@ public:
         Fn);
   }
 
+  /// Sets the function called, including updating the function type.
+  void setCalledFunction(FunctionCallee Fn) {
+    setCalledFunction(Fn.getFunctionType(), Fn.getCallee());
+  }
+
   /// Sets the function called, including updating to the specified function
   /// type.
   void setCalledFunction(FunctionType *FTy, Value *Fn) {

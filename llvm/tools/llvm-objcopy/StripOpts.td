@@ -59,6 +59,9 @@ defm keep_section : Eq<"keep-section", "Keep <section>">,
                     MetaVarName<"section">;
 defm keep_symbol : Eq<"keep-symbol", "Do not remove symbol <symbol>">,
                    MetaVarName<"symbol">;
+def keep_file_symbols : Flag<["-", "--"], "keep-file-symbols">,
+                        HelpText<"Do not remove file symbols">;
+
 def K : JoinedOrSeparate<["-"], "K">, Alias<keep_symbol>;
 
 def discard_locals : Flag<["-", "--"], "discard-locals">,

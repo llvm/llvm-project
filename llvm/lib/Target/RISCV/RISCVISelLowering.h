@@ -41,7 +41,14 @@ enum NodeType : unsigned {
   // at instruction selection time.
   DIVW,
   DIVUW,
-  REMUW
+  REMUW,
+  // FPR32<->GPR transfer operations for RV64. Needed as an i32<->f32 bitcast
+  // is not legal on RV64. FMV_W_X_RV64 matches the semantics of the FMV.W.X.
+  // FMV_X_ANYEXTW_RV64 is similar to FMV.X.W but has an any-extended result.
+  // This is a more convenient semantic for producing dagcombines that remove
+  // unnecessary GPR->FPR->GPR moves.
+  FMV_W_X_RV64,
+  FMV_X_ANYEXTW_RV64
 };
 }
 

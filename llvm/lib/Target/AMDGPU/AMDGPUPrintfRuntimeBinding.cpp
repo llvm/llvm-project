@@ -402,11 +402,12 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
       Type *I8Ptr = PointerType::get( Type::getInt8Ty(Ctx), 1);
       FunctionType *FTy_alloc
         = FunctionType::get( I8Ptr, Tys_alloc, false);
-      Constant *PrintfAllocFn
+      FunctionCallee PrintfAllocFn
         = M.getOrInsertFunction(StringRef("__printf_alloc"), FTy_alloc, Attr);
-      Function *Afn = dyn_cast<Function>(PrintfAllocFn);
-      LLVM_DEBUG(dbgs() << "inserting printf_alloc decl, an extern @ pre-link:");
-      LLVM_DEBUG(dbgs() << *Afn);
+
+      // TODO(kzhuravl): Re-enable this debug prints.
+      // LLVM_DEBUG(dbgs() << "inserting printf_alloc decl, an extern @ pre-link:");
+      // LLVM_DEBUG(dbgs() << *Afn);
 
       LLVM_DEBUG(dbgs() << "Printf metadata = " << Sizes.str() << '\n');
       std::string fmtstr = itostr(++UniqID) + ":" + Sizes.str().c_str();
@@ -428,7 +429,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
       Value *sumC = ConstantInt::get( SizetTy, Sum, false);
       SmallVector<Value*,1> alloc_args;
       alloc_args.push_back(sumC);
-      CallInst *pcall = CallInst::Create( Afn, alloc_args,
+      CallInst *pcall = CallInst::Create(PrintfAllocFn, alloc_args,
                                          "printf_alloc_fn", CI);
 
       //

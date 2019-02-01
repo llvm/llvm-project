@@ -4,6 +4,11 @@
 # RUN: llvm-objcopy --keep-file-symbols --strip-symbol foo %t %t2
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefix=STRIP
 
+# RUN: llvm-strip --keep-file-symbols %t -o %t3
+# RUN: llvm-readobj --symbols %t3 | FileCheck %s --check-prefix=STRIPALL
+# RUN: llvm-strip --keep-file-symbols --strip-symbol foo %t -o %t4
+# RUN: llvm-readobj --symbols %t4 | FileCheck %s --check-prefix=STRIP
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64

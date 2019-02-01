@@ -751,6 +751,33 @@ static Value *simplifyX86movmsk(const IntrinsicInst &II,
   return nullptr;
 }
 
+static Value *simplifyX86addcarry(const IntrinsicInst &II,
+                                  InstCombiner::BuilderTy &Builder) {
+  Value *CarryIn = II.getArgOperand(0);
+  Value *Op1 = II.getArgOperand(1);
+  Value *Op2 = II.getArgOperand(2);
+  Type *RetTy = II.getType();
+  Type *OpTy = Op1->getType();
+  assert(RetTy->getStructElementType(0)->isIntegerTy(8) &&
+         RetTy->getStructElementType(1) == OpTy && OpTy == Op2->getType() &&
+         "Unexpected types for x86 addcarry");
+
+  // If carry-in is zero, this is just an unsigned add with overflow.
+  if (match(CarryIn, m_ZeroInt())) {
+    Value *UAdd = Builder.CreateIntrinsic(Intrinsic::uadd_with_overflow, OpTy,
+                                          { Op1, Op2 });
+    // The types have to be adjusted to match the x86 call types.
+    Value *UAddResult = Builder.CreateExtractValue(UAdd, 0);
+    Value *UAddOV = Builder.CreateZExt(Builder.CreateExtractValue(UAdd, 1),
+                                       Builder.getInt8Ty());
+    Value *Res = UndefValue::get(RetTy);
+    Res = Builder.CreateInsertValue(Res, UAddOV, 0);
+    return Builder.CreateInsertValue(Res, UAddResult, 1);
+  }
+
+  return nullptr;
+}
+
 static Value *simplifyX86insertps(const IntrinsicInst &II,
                                   InstCombiner::BuilderTy &Builder) {
   auto *CInt = dyn_cast<ConstantInt>(II.getArgOperand(2));
@@ -3107,6 +3134,12 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx2_maskstore_q_256:
     if (simplifyX86MaskedStore(*II, *this))
       return nullptr;
+    break;
+
+  case Intrinsic::x86_addcarry_32:
+  case Intrinsic::x86_addcarry_64:
+    if (Value *V = simplifyX86addcarry(*II, Builder))
+      return replaceInstUsesWith(*II, V);
     break;
 
   case Intrinsic::ppc_altivec_vperm:

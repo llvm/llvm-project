@@ -30,7 +30,7 @@ defm "" : ARGUMENT<V128, v2f64>;
 // Constrained immediate argument types
 foreach SIZE = [8, 16] in
 def ImmI#SIZE : ImmLeaf<i32,
-  "return ((uint64_t)Imm & ((1UL << "#SIZE#") - 1)) == (uint64_t)Imm;"
+  "return -(1 << ("#SIZE#" - 1)) <= Imm && Imm < (1 << ("#SIZE#" - 1));"
 >;
 foreach SIZE = [2, 4, 8, 16, 32] in
 def LaneIdx#SIZE : ImmLeaf<i32, "return 0 <= Imm && Imm < "#SIZE#";">;

@@ -125,13 +125,15 @@ void LiveRegUnits::addPristines(const MachineFunction &MF) {
 
 void LiveRegUnits::addLiveOuts(const MachineBasicBlock &MBB) {
   const MachineFunction &MF = *MBB.getParent();
-  if (!MBB.succ_empty()) {
-    addPristines(MF);
-    // To get the live-outs we simply merge the live-ins of all successors.
-    for (const MachineBasicBlock *Succ : MBB.successors())
-      addBlockLiveIns(*this, *Succ);
-  } else if (MBB.isReturnBlock()) {
-    // For the return block: Add all callee saved registers.
+
+  addPristines(MF);
+
+  // To get the live-outs we simply merge the live-ins of all successors.
+  for (const MachineBasicBlock *Succ : MBB.successors())
+    addBlockLiveIns(*this, *Succ);
+
+  // For the return block: Add all callee saved registers.
+  if (MBB.isReturnBlock()) {
     const MachineFrameInfo &MFI = MF.getFrameInfo();
     if (MFI.isCalleeSavedInfoValid())
       addCalleeSavedRegs(*this, MF);

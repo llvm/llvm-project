@@ -12,6 +12,8 @@ __attribute__((noinline))
 void f(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
   if (a == b + 1 && c == d + 2)
     sink++;
+  if (a == d + 1 && c == b + 2)
+    sink++;
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {

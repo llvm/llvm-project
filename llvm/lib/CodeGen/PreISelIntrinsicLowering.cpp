@@ -64,9 +64,9 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
   // If we haven't already looked up this function, check to see if the
   // program already contains a function with this name.
   Module *M = F.getParent();
-  Constant* FCache = M->getOrInsertFunction(NewFn, F.getFunctionType());
+  FunctionCallee FCache = M->getOrInsertFunction(NewFn, F.getFunctionType());
 
-  if (Function* Fn = dyn_cast<Function>(FCache)) {
+  if (Function *Fn = dyn_cast<Function>(FCache.getCallee())) {
     Fn->setLinkage(F.getLinkage());
     if (setNonLazyBind && !Fn->isWeakForLinker()) {
       // If we have Native ARC, set nonlazybind attribute for these APIs for

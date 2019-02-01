@@ -151,7 +151,12 @@ static Function *getNewOCL20BuiltinFuncDecl(Function *OldFunc) {
   FunctionType *NewFuncType = FunctionType::get(
       OldFunc->getReturnType(), NewFuncArgs, OldFunc->isVarArg());
   Module *M = OldFunc->getParent();
-  Value *NewFunc = M->getOrInsertFunction(NewFuncName, NewFuncType);
+
+  GlobalValue *NewFunc = M->getNamedValue(NewFuncName);
+  if (!NewFunc)
+    NewFunc = Function::Create(NewFuncType, Function::ExternalLinkage,
+                               NewFuncName, M);
+
   if (Function *Fn = dyn_cast<Function>(NewFunc->stripPointerCasts())) {
     Fn->setCallingConv(OldFunc->getCallingConv());
     return Fn;

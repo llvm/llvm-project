@@ -307,5 +307,16 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
 }
 
 void AMDGPUTargetInfo::setAuxTarget(const TargetInfo *Aux) {
+  assert(HalfFormat == Aux->HalfFormat);
+  assert(FloatFormat == Aux->FloatFormat);
+  assert(DoubleFormat == Aux->DoubleFormat);
+
+  // On x86_64 long double is 80-bit extended precision format, which is
+  // not supported by AMDGPU. 128-bit floating point format is also not
+  // supported by AMDGPU. Therefore keep its own format for these two types.
+  auto SaveLongDoubleFormat = LongDoubleFormat;
+  auto SaveFloat128Format = Float128Format;
   copyAuxTarget(Aux);
+  LongDoubleFormat = SaveLongDoubleFormat;
+  Float128Format = SaveFloat128Format;
 }

@@ -63,6 +63,10 @@ defm allow_multiple_definition: B<"allow-multiple-definition",
     "Allow multiple definitions",
     "Do not allow multiple definitions (default)">;
 
+defm allow_shlib_undefined: B<"allow-shlib-undefined",
+    "Allow unresolved references in shared libraries (default)",
+    "Do not allow unresolved references in shared libraries">;
+
 defm apply_dynamic_relocs: B<"apply-dynamic-relocs",
     "Apply link-time values for dynamic relocations",
     "Do not apply link-time values for dynamic relocations (default)">;
@@ -492,12 +496,10 @@ def plugin_opt_thinlto: J<"plugin-opt=thinlto">;
 def plugin_opt_slash: J<"plugin-opt=/">;
 
 // Options listed below are silently ignored for now for compatibility.
-def: F<"allow-shlib-undefined">;
 def: F<"detect-odr-violations">;
 def: Flag<["-"], "g">;
 def: F<"long-plt">;
 def: F<"no-add-needed">;
-def: F<"no-allow-shlib-undefined">;
 def: F<"no-copy-dt-needed-entries">;
 def: F<"no-ctors-in-init-array">;
 def: F<"no-keep-memory">;

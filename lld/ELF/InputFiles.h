@@ -332,6 +332,7 @@ template <class ELFT> class SharedFile : public ELFFileBase<ELFT> {
 
 public:
   std::vector<const Elf_Verdef *> Verdefs;
+  std::vector<StringRef> DtNeeded;
   std::string SoName;
 
   static bool classof(const InputFile *F) {
@@ -340,7 +341,7 @@ public:
 
   SharedFile(MemoryBufferRef M, StringRef DefaultSoName);
 
-  void parseSoName();
+  void parseDynamic();
   void parseRest();
   uint32_t getAlignment(ArrayRef<Elf_Shdr> Sections, const Elf_Sym &Sym);
   std::vector<const Elf_Verdef *> parseVerdefs();
@@ -357,6 +358,9 @@ public:
   // Mapping from Elf_Verdef data structures to information about Elf_Vernaux
   // data structures in the output file.
   std::map<const Elf_Verdef *, NeededVer> VerdefMap;
+
+  // Used for --no-allow-shlib-undefined.
+  bool AllNeededIsKnown;
 
   // Used for --as-needed
   bool IsNeeded;

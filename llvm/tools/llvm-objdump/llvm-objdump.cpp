@@ -941,8 +941,11 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       report_error(Obj->getFileName(), SectionOrErr.takeError());
 
     uint8_t SymbolType = ELF::STT_NOTYPE;
-    if (Obj->isELF())
+    if (Obj->isELF()) {
       SymbolType = getElfSymbolType(Obj, Symbol);
+      if (SymbolType == ELF::STT_SECTION)
+        continue;
+    }
 
     section_iterator SecI = *SectionOrErr;
     if (SecI != Obj->section_end())

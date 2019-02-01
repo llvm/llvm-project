@@ -74,8 +74,9 @@ static void setNameForBody(Function *FBody, const Function &FKernel) {
 static Function *cloneKernel(Function &F) {
   ValueToValueMapTy ignored;
   Function *NewF = F.empty()
-                       ? cast<Function>(F.getParent()->getOrInsertFunction(
-                             "", F.getFunctionType(), F.getAttributes()))
+                       ? Function::Create(
+                             F.getFunctionType(), Function::ExternalLinkage, "",
+                             F.getParent())
                        : CloneFunction(&F, ignored);
   NewF->setCallingConv(CallingConv::C);
   // If we are copying a definition, we know there are no external references

@@ -141,7 +141,7 @@ LookThroughModifierRecord(llvm::codeview::CVType modifier);
 llvm::StringRef DropNameScope(llvm::StringRef name);
 
 VariableInfo GetVariableNameInfo(llvm::codeview::CVSymbol symbol);
-VariableInfo GetVariableLocationInfo(PdbIndex &index, PdbCompilandSymId var_id,
+VariableInfo GetVariableLocationInfo(PdbIndex &index, PdbCompilandSymId var_id, Block& block,
                                      lldb::ModuleSP module);
 
 size_t GetTypeSizeForSimpleKind(llvm::codeview::SimpleTypeKind kind);

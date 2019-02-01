@@ -508,13 +508,16 @@ bool InstrProfiling::run(Module &M, const TargetLibraryInfo &TLI) {
   return true;
 }
 
-static Constant *getOrInsertValueProfilingCall(Module &M,
-                                               const TargetLibraryInfo &TLI,
-                                               bool IsRange = false) {
+static FunctionCallee
+getOrInsertValueProfilingCall(Module &M, const TargetLibraryInfo &TLI,
+                              bool IsRange = false) {
   LLVMContext &Ctx = M.getContext();
   auto *ReturnTy = Type::getVoidTy(M.getContext());
 
-  Constant *Res;
+  AttributeList AL;
+  if (auto AK = TLI.getExtAttrForI32Param(false))
+    AL = AL.addParamAttribute(M.getContext(), 2, AK);
+
   if (!IsRange) {
     Type *ParamTypes[] = {
 #define VALUE_PROF_FUNC_PARAM(ParamType, ParamName, ParamLLVMType) ParamLLVMType
@@ -522,8 +525,8 @@ static Constant *getOrInsertValueProfilingCall(Module &M,
     };
     auto *ValueProfilingCallTy =
         FunctionType::get(ReturnTy, makeArrayRef(ParamTypes), false);
-    Res = M.getOrInsertFunction(getInstrProfValueProfFuncName(),
-                                ValueProfilingCallTy);
+    return M.getOrInsertFunction(getInstrProfValueProfFuncName(),
+                                 ValueProfilingCallTy, AL);
   } else {
     Type *RangeParamTypes[] = {
 #define VALUE_RANGE_PROF 1
@@ -533,15 +536,9 @@ static Constant *getOrInsertValueProfilingCall(Module &M,
     };
     auto *ValueRangeProfilingCallTy =
         FunctionType::get(ReturnTy, makeArrayRef(RangeParamTypes), false);
-    Res = M.getOrInsertFunction(getInstrProfValueRangeProfFuncName(),
-                                ValueRangeProfilingCallTy);
+    return M.getOrInsertFunction(getInstrProfValueRangeProfFuncName(),
+                                 ValueRangeProfilingCallTy, AL);
   }
-
-  if (Function *FunRes = dyn_cast<Function>(Res)) {
-    if (auto AK = TLI.getExtAttrForI32Param(false))
-      FunRes->addParamAttr(2, AK);
-  }
-  return Res;
 }
 
 void InstrProfiling::computeNumValueSiteCounts(InstrProfValueProfileInst *Ind) {

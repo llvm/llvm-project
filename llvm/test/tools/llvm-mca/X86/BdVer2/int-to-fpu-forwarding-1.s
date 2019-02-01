@@ -42,8 +42,8 @@ vpinsrq $1, %rax, %xmm0, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      2     0.50                        vpinsrb	$0, %eax, %xmm0, %xmm0
-# CHECK-NEXT:  2      2     0.50                        vpinsrb	$1, %eax, %xmm0, %xmm0
+# CHECK-NEXT:  2      12    0.50                        vpinsrb	$0, %eax, %xmm0, %xmm0
+# CHECK-NEXT:  2      12    0.50                        vpinsrb	$1, %eax, %xmm0, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -100,8 +100,8 @@ vpinsrq $1, %rax, %xmm0, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      2     0.50                        vpinsrw	$0, %eax, %xmm0, %xmm0
-# CHECK-NEXT:  2      2     0.50                        vpinsrw	$1, %eax, %xmm0, %xmm0
+# CHECK-NEXT:  2      12    0.50                        vpinsrw	$0, %eax, %xmm0, %xmm0
+# CHECK-NEXT:  2      12    0.50                        vpinsrw	$1, %eax, %xmm0, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -158,8 +158,8 @@ vpinsrq $1, %rax, %xmm0, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      2     0.50                        vpinsrd	$0, %eax, %xmm0, %xmm0
-# CHECK-NEXT:  2      2     0.50                        vpinsrd	$1, %eax, %xmm0, %xmm0
+# CHECK-NEXT:  2      12    0.50                        vpinsrd	$0, %eax, %xmm0, %xmm0
+# CHECK-NEXT:  2      12    0.50                        vpinsrd	$1, %eax, %xmm0, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -216,8 +216,8 @@ vpinsrq $1, %rax, %xmm0, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      2     0.50                        vpinsrq	$0, %rax, %xmm0, %xmm0
-# CHECK-NEXT:  2      2     0.50                        vpinsrq	$1, %rax, %xmm0, %xmm0
+# CHECK-NEXT:  2      12    0.50                        vpinsrq	$0, %rax, %xmm0, %xmm0
+# CHECK-NEXT:  2      12    0.50                        vpinsrq	$1, %rax, %xmm0, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01

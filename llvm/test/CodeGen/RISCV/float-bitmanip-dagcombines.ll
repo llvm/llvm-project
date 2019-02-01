@@ -5,6 +5,8 @@
 ; RUN:   | FileCheck -check-prefix=RV32IF %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
+; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV64IF %s
 
 ; This file tests cases where simple floating point operations can be
 ; profitably handled though bit manipulation if a soft-float ABI is being used
@@ -30,6 +32,12 @@ define float @fneg(float %a) nounwind {
 ; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    ret
+;
+; RV64IF-LABEL: fneg:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    lui a1, 524288
+; RV64IF-NEXT:    xor a0, a0, a1
+; RV64IF-NEXT:    ret
   %1 = fneg float %a
   ret float %1
 }
@@ -57,6 +65,13 @@ define float @fabs(float %a) nounwind {
 ; RV64I-NEXT:    addiw a1, a1, -1
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret
+;
+; RV64IF-LABEL: fabs:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    lui a1, 524288
+; RV64IF-NEXT:    addiw a1, a1, -1
+; RV64IF-NEXT:    and a0, a0, a1
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.fabs.f32(float %a)
   ret float %1
 }
@@ -97,6 +112,14 @@ define float @fcopysign_fneg(float %a, float %b) nounwind {
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
+;
+; RV64IF-LABEL: fcopysign_fneg:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x ft0, a1
+; RV64IF-NEXT:    fmv.w.x ft1, a0
+; RV64IF-NEXT:    fsgnjn.s ft0, ft1, ft0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
   %1 = fneg float %b
   %2 = call float @llvm.copysign.f32(float %a, float %1)
   ret float %2

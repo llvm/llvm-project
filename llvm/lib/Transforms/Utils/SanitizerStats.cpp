@@ -56,8 +56,8 @@ void SanitizerStatReport::create(IRBuilder<> &B, SanitizerStatKind SK) {
 
   FunctionType *StatReportTy =
       FunctionType::get(B.getVoidTy(), Int8PtrTy, false);
-  Constant *StatReport = M->getOrInsertFunction(
-      "__sanitizer_stat_report", StatReportTy);
+  FunctionCallee StatReport =
+      M->getOrInsertFunction("__sanitizer_stat_report", StatReportTy);
 
   auto InitAddr = ConstantExpr::getGetElementPtr(
       EmptyModuleStatsTy, ModuleStatsGV,
@@ -97,8 +97,8 @@ void SanitizerStatReport::finish() {
   IRBuilder<> B(BB);
 
   FunctionType *StatInitTy = FunctionType::get(VoidTy, Int8PtrTy, false);
-  Constant *StatInit = M->getOrInsertFunction(
-      "__sanitizer_stat_init", StatInitTy);
+  FunctionCallee StatInit =
+      M->getOrInsertFunction("__sanitizer_stat_init", StatInitTy);
 
   B.CreateCall(StatInit, ConstantExpr::getBitCast(NewModuleStatsGV, Int8PtrTy));
   B.CreateRetVoid();

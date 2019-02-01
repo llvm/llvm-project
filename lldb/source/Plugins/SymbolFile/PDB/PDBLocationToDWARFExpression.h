@@ -10,6 +10,7 @@
 #define lldb_Plugins_SymbolFile_PDB_PDBLocationToDWARFExpression_h_
 
 #include "lldb/Core/Module.h"
+#include "lldb/Symbol/Variable.h"
 
 namespace lldb_private {
 class DWARFExpression;
@@ -30,6 +31,9 @@ class PDBSymbolData;
 /// @param[in] symbol
 ///     The symbol with a location information to convert.
 ///
+/// @param[in] ranges
+///     Ranges where this variable is valid.
+///
 /// @param[out] is_constant
 ///     Set to \b true if the result expression is a constant value data,
 ///     and \b false if it is a DWARF bytecode.
@@ -40,5 +44,6 @@ class PDBSymbolData;
 lldb_private::DWARFExpression
 ConvertPDBLocationToDWARFExpression(lldb::ModuleSP module,
                                     const llvm::pdb::PDBSymbolData &symbol,
+                                    const lldb_private::Variable::RangeList &ranges,
                                     bool &is_constant);
 #endif

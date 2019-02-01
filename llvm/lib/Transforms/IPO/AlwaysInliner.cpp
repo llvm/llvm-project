@@ -145,11 +145,20 @@ InlineCost AlwaysInlinerLegacyPass::getInlineCost(CallSite CS) {
   Function *Callee = CS.getCalledFunction();
 
   // Only inline direct calls to functions with always-inline attributes
-  // that are viable for inlining. FIXME: We shouldn't even get here for
-  // declarations.
-  if (Callee && !Callee->isDeclaration() &&
-      CS.hasFnAttr(Attribute::AlwaysInline) && isInlineViable(*Callee))
-    return InlineCost::getAlways("always inliner");
+  // that are viable for inlining.
+  if (!Callee)
+    return InlineCost::getNever("indirect call");
 
-  return InlineCost::getNever("always inliner");
+  // FIXME: We shouldn't even get here for declarations.
+  if (Callee->isDeclaration())
+    return InlineCost::getNever("no definition");
+
+  if (!CS.hasFnAttr(Attribute::AlwaysInline))
+    return InlineCost::getNever("no alwaysinline attribute");
+
+  auto IsViable = isInlineViable(*Callee);
+  if (!IsViable)
+    return InlineCost::getNever(IsViable.message);
+
+  return InlineCost::getAlways("always inliner");
 }

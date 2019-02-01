@@ -46,7 +46,7 @@ movq %rcx, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      4     1.00                        vcvtsi2ssl	%ecx, %xmm0, %xmm0
+# CHECK-NEXT:  2      14    1.00                        vcvtsi2ssl	%ecx, %xmm0, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -102,7 +102,7 @@ movq %rcx, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      4     1.00                        vcvtsi2sdl	%ecx, %xmm0, %xmm0
+# CHECK-NEXT:  2      14    1.00                        vcvtsi2sdl	%ecx, %xmm0, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -158,7 +158,7 @@ movq %rcx, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      4     1.00                        cvtsi2ssl	%ecx, %xmm0
+# CHECK-NEXT:  2      14    1.00                        cvtsi2ssl	%ecx, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -214,7 +214,7 @@ movq %rcx, %xmm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      4     1.00                        cvtsi2sdl	%ecx, %xmm0
+# CHECK-NEXT:  2      14    1.00                        cvtsi2sdl	%ecx, %xmm0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01

@@ -111,7 +111,8 @@ class WasmEHPrepare : public FunctionPass {
   Function *GetExnF = nullptr;          // wasm.get.exception() intrinsic
   Function *ExtractExnF = nullptr;      // wasm.extract.exception() intrinsic
   Function *GetSelectorF = nullptr;     // wasm.get.ehselector() intrinsic
-  Function *CallPersonalityF = nullptr; // _Unwind_CallPersonality() wrapper
+  FunctionCallee CallPersonalityF =
+      nullptr;                          // _Unwind_CallPersonality() wrapper
 
   bool prepareEHPads(Function &F);
   bool prepareThrows(Function &F);
@@ -252,9 +253,10 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
       Intrinsic::getDeclaration(&M, Intrinsic::wasm_extract_exception);
 
   // _Unwind_CallPersonality() wrapper function, which calls the personality
-  CallPersonalityF = cast<Function>(M.getOrInsertFunction(
-      "_Unwind_CallPersonality", IRB.getInt32Ty(), IRB.getInt8PtrTy()));
-  CallPersonalityF->setDoesNotThrow();
+  CallPersonalityF = M.getOrInsertFunction(
+      "_Unwind_CallPersonality", IRB.getInt32Ty(), IRB.getInt8PtrTy());
+  if (Function *F = dyn_cast<Function>(CallPersonalityF.getCallee()))
+    F->setDoesNotThrow();
 
   unsigned Index = 0;
   for (auto *BB : CatchPads) {

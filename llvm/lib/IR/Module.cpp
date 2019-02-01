@@ -140,8 +140,8 @@ void Module::getOperandBundleTags(SmallVectorImpl<StringRef> &Result) const {
 // it.  This is nice because it allows most passes to get away with not handling
 // the symbol table directly for this common task.
 //
-Constant *Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
-                                      AttributeList AttributeList) {
+FunctionCallee Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
+                                           AttributeList AttributeList) {
   // See if we have a definition for the specified function already.
   GlobalValue *F = getNamedValue(Name);
   if (!F) {
@@ -151,21 +151,20 @@ Constant *Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
     if (!New->isIntrinsic())       // Intrinsics get attrs set on construction
       New->setAttributes(AttributeList);
     FunctionList.push_back(New);
-    return New;                    // Return the new prototype.
+    return {Ty, New}; // Return the new prototype.
   }
 
   // If the function exists but has the wrong type, return a bitcast to the
   // right type.
   auto *PTy = PointerType::get(Ty, F->getAddressSpace());
   if (F->getType() != PTy)
-    return ConstantExpr::getBitCast(F, PTy);
+    return {Ty, ConstantExpr::getBitCast(F, PTy)};
 
   // Otherwise, we just found the existing function or a prototype.
-  return F;
+  return {Ty, F};
 }
 
-Constant *Module::getOrInsertFunction(StringRef Name,
-                                      FunctionType *Ty) {
+FunctionCallee Module::getOrInsertFunction(StringRef Name, FunctionType *Ty) {
   return getOrInsertFunction(Name, Ty, AttributeList());
 }
 

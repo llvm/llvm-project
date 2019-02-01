@@ -24,6 +24,6 @@ entry:
 ; CHECK:   store i32 2, i32 addrspace(1)* %p, align 4
 ; CHECK:   ret void
 
-; CHECK: declare void @__amdgpu_test_kernel_to_call_decl_kernel_body(i32 addrspace(1)*) #0
+; CHECK: declare void @__amdgpu_test_kernel_to_call_decl_kernel_body(i32 addrspace(1)*)
 
 attributes #0 = { nounwind }
