@@ -239,8 +239,23 @@ extern const CFAllocatorRef kCFAllocatorDefault;
 extern CFTypeRef CFRetain(CFTypeRef cf);
 extern void CFRelease(CFTypeRef cf);
 
+
 void check_bridge_retained_cast() {
     NSString *nsStr = [[NSString alloc] init];
     CFStringRef cfStr = (__bridge_retained CFStringRef)nsStr;
     CFRelease(cfStr); // no-warning
+}
+
+@interface A;
+@end
+
+void check_bridge_to_non_cocoa(CFStringRef s) {
+  A *a = (__bridge_transfer A *) s; // no-crash
+}
+
+struct B;
+
+struct B * check_bridge_to_non_cf() {
+  NSString *s = [[NSString alloc] init];
+  return (__bridge struct B*) s;
 }

@@ -335,16 +335,31 @@ void OutputSection::writeHeaderTo(uint8_t *Buf) {
 // Check whether the target address S is in range from a relocation
 // of type RelType at address P.
 static bool isInRange(uint16_t RelType, uint64_t S, uint64_t P, int Margin) {
-  assert(Config->Machine == ARMNT);
-  int64_t Diff = AbsoluteDifference(S, P + 4) + Margin;
-  switch (RelType) {
-  case IMAGE_REL_ARM_BRANCH20T:
-    return isInt<21>(Diff);
-  case IMAGE_REL_ARM_BRANCH24T:
-  case IMAGE_REL_ARM_BLX23T:
-    return isInt<25>(Diff);
-  default:
-    return true;
+  if (Config->Machine == ARMNT) {
+    int64_t Diff = AbsoluteDifference(S, P + 4) + Margin;
+    switch (RelType) {
+    case IMAGE_REL_ARM_BRANCH20T:
+      return isInt<21>(Diff);
+    case IMAGE_REL_ARM_BRANCH24T:
+    case IMAGE_REL_ARM_BLX23T:
+      return isInt<25>(Diff);
+    default:
+      return true;
+    }
+  } else if (Config->Machine == ARM64) {
+    int64_t Diff = AbsoluteDifference(S, P) + Margin;
+    switch (RelType) {
+    case IMAGE_REL_ARM64_BRANCH26:
+      return isInt<28>(Diff);
+    case IMAGE_REL_ARM64_BRANCH19:
+      return isInt<21>(Diff);
+    case IMAGE_REL_ARM64_BRANCH14:
+      return isInt<16>(Diff);
+    default:
+      return true;
+    }
+  } else {
+    llvm_unreachable("Unexpected architecture");
   }
 }
 
@@ -356,7 +371,17 @@ getThunk(DenseMap<uint64_t, Defined *> &LastThunks, Defined *Target, uint64_t P,
   Defined *&LastThunk = LastThunks[Target->getRVA()];
   if (LastThunk && isInRange(Type, LastThunk->getRVA(), P, Margin))
     return {LastThunk, false};
-  RangeExtensionThunk *C = make<RangeExtensionThunk>(Target);
+  Chunk *C;
+  switch (Config->Machine) {
+  case ARMNT:
+    C = make<RangeExtensionThunkARM>(Target);
+    break;
+  case ARM64:
+    C = make<RangeExtensionThunkARM64>(Target);
+    break;
+  default:
+    llvm_unreachable("Unexpected architecture");
+  }
   Defined *D = make<DefinedSynthetic>("", C);
   LastThunk = D;
   return {D, true};
@@ -373,14 +398,14 @@ getThunk(DenseMap<uint64_t, Defined *> &LastThunks, Defined *Target, uint64_t P,
 // After adding thunks, we verify that all relocations are in range (with
 // no extra margin requirements). If this failed, we restart (throwing away
 // the previously created thunks) and retry with a wider margin.
-static bool createThunks(std::vector<Chunk *> &Chunks, int Margin) {
+static bool createThunks(OutputSection *OS, int Margin) {
   bool AddressesChanged = false;
   DenseMap<uint64_t, Defined *> LastThunks;
   size_t ThunksSize = 0;
   // Recheck Chunks.size() each iteration, since we can insert more
   // elements into it.
-  for (size_t I = 0; I != Chunks.size(); ++I) {
-    SectionChunk *SC = dyn_cast_or_null<SectionChunk>(Chunks[I]);
+  for (size_t I = 0; I != OS->Chunks.size(); ++I) {
+    SectionChunk *SC = dyn_cast_or_null<SectionChunk>(OS->Chunks[I]);
     if (!SC)
       continue;
     size_t ThunkInsertionSpot = I + 1;
@@ -417,7 +442,8 @@ static bool createThunks(std::vector<Chunk *> &Chunks, int Margin) {
         Chunk *ThunkChunk = Thunk->getChunk();
         ThunkChunk->setRVA(
             ThunkInsertionRVA); // Estimate of where it will be located.
-        Chunks.insert(Chunks.begin() + ThunkInsertionSpot, ThunkChunk);
+        ThunkChunk->setOutputSection(OS);
+        OS->Chunks.insert(OS->Chunks.begin() + ThunkInsertionSpot, ThunkChunk);
         ThunkInsertionSpot++;
         ThunksSize += ThunkChunk->getSize();
         ThunkInsertionRVA += ThunkChunk->getSize();
@@ -457,7 +483,7 @@ static bool verifyRanges(const std::vector<Chunk *> Chunks) {
 // Assign addresses and add thunks if necessary.
 void Writer::finalizeAddresses() {
   assignAddresses();
-  if (Config->Machine != ARMNT)
+  if (Config->Machine != ARMNT && Config->Machine != ARM64)
     return;
 
   size_t OrigNumChunks = 0;
@@ -506,7 +532,7 @@ void Writer::finalizeAddresses() {
     // to avoid things going out of range due to the added thunks.
     bool AddressesChanged = false;
     for (OutputSection *Sec : OutputSections)
-      AddressesChanged |= createThunks(Sec->Chunks, Margin);
+      AddressesChanged |= createThunks(Sec, Margin);
     // If the verification above thought we needed thunks, we should have
     // added some.
     assert(AddressesChanged);

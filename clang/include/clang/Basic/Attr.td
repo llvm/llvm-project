@@ -1521,8 +1521,16 @@ def AMDGPUNumVGPR : InheritableAttr {
 def WebAssemblyImportModule : InheritableAttr,
                               TargetSpecificAttr<TargetWebAssembly> {
   let Spellings = [Clang<"import_module">];
-  let Args = [StringArgument<"ImportModuleName">];
+  let Args = [StringArgument<"ImportModule">];
   let Documentation = [WebAssemblyImportModuleDocs];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+}
+
+def WebAssemblyImportName : InheritableAttr,
+                            TargetSpecificAttr<TargetWebAssembly> {
+  let Spellings = [Clang<"import_name">];
+  let Args = [StringArgument<"ImportName">];
+  let Documentation = [WebAssemblyImportNameDocs];
   let Subjects = SubjectList<[Function], ErrorDiag>;
 }
 

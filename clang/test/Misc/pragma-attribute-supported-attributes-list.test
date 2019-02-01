@@ -144,6 +144,7 @@
 // CHECK-NEXT: Weak (SubjectMatchRule_variable, SubjectMatchRule_function, SubjectMatchRule_record)
 // CHECK-NEXT: WeakRef (SubjectMatchRule_variable, SubjectMatchRule_function)
 // CHECK-NEXT: WebAssemblyImportModule (SubjectMatchRule_function)
+// CHECK-NEXT: WebAssemblyImportName (SubjectMatchRule_function)
 // CHECK-NEXT: WorkGroupSizeHint (SubjectMatchRule_function)
 // CHECK-NEXT: XRayInstrument (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: XRayLogArgs (SubjectMatchRule_function, SubjectMatchRule_objc_method)

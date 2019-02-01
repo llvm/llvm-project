@@ -289,14 +289,8 @@ public:
 
   /// Get reference to previous declare mapper construct in the same
   /// scope with the same name.
-  OMPDeclareMapperDecl *getPrevDeclInScope() {
-    return cast_or_null<OMPDeclareMapperDecl>(
-        PrevDeclInScope.get(getASTContext().getExternalSource()));
-  }
-  const OMPDeclareMapperDecl *getPrevDeclInScope() const {
-    return cast_or_null<OMPDeclareMapperDecl>(
-        PrevDeclInScope.get(getASTContext().getExternalSource()));
-  }
+  OMPDeclareMapperDecl *getPrevDeclInScope();
+  const OMPDeclareMapperDecl *getPrevDeclInScope() const;
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == OMPDeclareMapper; }

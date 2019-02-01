@@ -172,6 +172,16 @@ void OMPDeclareMapperDecl::setClauses(ArrayRef<OMPClause *> CL) {
   std::uninitialized_copy(CL.begin(), CL.end(), Clauses.data());
 }
 
+OMPDeclareMapperDecl *OMPDeclareMapperDecl::getPrevDeclInScope() {
+  return cast_or_null<OMPDeclareMapperDecl>(
+      PrevDeclInScope.get(getASTContext().getExternalSource()));
+}
+
+const OMPDeclareMapperDecl *OMPDeclareMapperDecl::getPrevDeclInScope() const {
+  return cast_or_null<OMPDeclareMapperDecl>(
+      PrevDeclInScope.get(getASTContext().getExternalSource()));
+}
+
 //===----------------------------------------------------------------------===//
 // OMPCapturedExprDecl Implementation.
 //===----------------------------------------------------------------------===//

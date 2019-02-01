@@ -1834,8 +1834,9 @@ def err_reference_bind_drops_quals : Error<
   "'volatile'|'const' and 'volatile'|'restrict' and 'volatile'|"
   "'const', 'restrict', and 'volatile'}2 qualifier%plural{1:|2:|4:|:s}2">;
 def err_reference_bind_failed : Error<
-  "reference %diff{to type $ could not bind to an %select{rvalue|lvalue}1 of "
-  "type $|could not bind to %select{rvalue|lvalue}1 of incompatible type}0,2">;
+  "reference %diff{to %select{type|incomplete type}1 $ could not bind to an "
+  "%select{rvalue|lvalue}2 of type $|could not bind to %select{rvalue|lvalue}2 of "
+  "incompatible type}0,3">;
 def err_reference_bind_init_list : Error<
   "reference to type %0 cannot bind to an initializer list">;
 def err_init_list_bad_dest_type : Error<

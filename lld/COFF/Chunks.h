@@ -357,9 +357,18 @@ private:
   Defined *ImpSymbol;
 };
 
-class RangeExtensionThunk : public Chunk {
+class RangeExtensionThunkARM : public Chunk {
 public:
-  explicit RangeExtensionThunk(Defined *T) : Target(T) {}
+  explicit RangeExtensionThunkARM(Defined *T) : Target(T) {}
+  size_t getSize() const override;
+  void writeTo(uint8_t *Buf) const override;
+
+  Defined *Target;
+};
+
+class RangeExtensionThunkARM64 : public Chunk {
+public:
+  explicit RangeExtensionThunkARM64(Defined *T) : Target(T) {}
   size_t getSize() const override;
   void writeTo(uint8_t *Buf) const override;
 
