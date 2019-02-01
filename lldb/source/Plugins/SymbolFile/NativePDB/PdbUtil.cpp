@@ -508,7 +508,7 @@ VariableInfo lldb_private::npdb::GetVariableNameInfo(CVSymbol sym) {
   return {};
 }
 
-static auto
+static llvm::FixedStreamArray<FrameData>::Iterator
 GetCorrespondingFrameData(lldb::addr_t load_addr,
                           const DebugFrameDataSubsectionRef &fpo_data,
                           const Variable::RangeList &ranges) {
