@@ -3,56 +3,56 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-scalarize-global-loads=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,VI,MESA %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global -amdgpu-scalarize-global-loads=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,HSA %s
 
-declare void @external_void_func_i1(i1) #0
-declare void @external_void_func_i1_signext(i1 signext) #0
-declare void @external_void_func_i1_zeroext(i1 zeroext) #0
+declare hidden void @external_void_func_i1(i1) #0
+declare hidden void @external_void_func_i1_signext(i1 signext) #0
+declare hidden void @external_void_func_i1_zeroext(i1 zeroext) #0
 
-declare void @external_void_func_i8(i8) #0
-declare void @external_void_func_i8_signext(i8 signext) #0
-declare void @external_void_func_i8_zeroext(i8 zeroext) #0
+declare hidden void @external_void_func_i8(i8) #0
+declare hidden void @external_void_func_i8_signext(i8 signext) #0
+declare hidden void @external_void_func_i8_zeroext(i8 zeroext) #0
 
-declare void @external_void_func_i16(i16) #0
-declare void @external_void_func_i16_signext(i16 signext) #0
-declare void @external_void_func_i16_zeroext(i16 zeroext) #0
+declare hidden void @external_void_func_i16(i16) #0
+declare hidden void @external_void_func_i16_signext(i16 signext) #0
+declare hidden void @external_void_func_i16_zeroext(i16 zeroext) #0
 
-declare void @external_void_func_i32(i32) #0
-declare void @external_void_func_i64(i64) #0
-declare void @external_void_func_v2i64(<2 x i64>) #0
-declare void @external_void_func_v3i64(<3 x i64>) #0
-declare void @external_void_func_v4i64(<4 x i64>) #0
+declare hidden void @external_void_func_i32(i32) #0
+declare hidden void @external_void_func_i64(i64) #0
+declare hidden void @external_void_func_v2i64(<2 x i64>) #0
+declare hidden void @external_void_func_v3i64(<3 x i64>) #0
+declare hidden void @external_void_func_v4i64(<4 x i64>) #0
 
-declare void @external_void_func_f16(half) #0
-declare void @external_void_func_f32(float) #0
-declare void @external_void_func_f64(double) #0
-declare void @external_void_func_v2f32(<2 x float>) #0
-declare void @external_void_func_v2f64(<2 x double>) #0
-declare void @external_void_func_v3f64(<3 x double>) #0
+declare hidden void @external_void_func_f16(half) #0
+declare hidden void @external_void_func_f32(float) #0
+declare hidden void @external_void_func_f64(double) #0
+declare hidden void @external_void_func_v2f32(<2 x float>) #0
+declare hidden void @external_void_func_v2f64(<2 x double>) #0
+declare hidden void @external_void_func_v3f64(<3 x double>) #0
 
-declare void @external_void_func_v2i16(<2 x i16>) #0
-declare void @external_void_func_v2f16(<2 x half>) #0
-declare void @external_void_func_v3i16(<3 x i16>) #0
-declare void @external_void_func_v3f16(<3 x half>) #0
-declare void @external_void_func_v4i16(<4 x i16>) #0
-declare void @external_void_func_v4f16(<4 x half>) #0
+declare hidden void @external_void_func_v2i16(<2 x i16>) #0
+declare hidden void @external_void_func_v2f16(<2 x half>) #0
+declare hidden void @external_void_func_v3i16(<3 x i16>) #0
+declare hidden void @external_void_func_v3f16(<3 x half>) #0
+declare hidden void @external_void_func_v4i16(<4 x i16>) #0
+declare hidden void @external_void_func_v4f16(<4 x half>) #0
 
-declare void @external_void_func_v2i32(<2 x i32>) #0
-declare void @external_void_func_v3i32(<3 x i32>) #0
-declare void @external_void_func_v3i32_i32(<3 x i32>, i32) #0
-declare void @external_void_func_v4i32(<4 x i32>) #0
-declare void @external_void_func_v8i32(<8 x i32>) #0
-declare void @external_void_func_v16i32(<16 x i32>) #0
-declare void @external_void_func_v32i32(<32 x i32>) #0
-declare void @external_void_func_v32i32_i32(<32 x i32>, i32) #0
+declare hidden void @external_void_func_v2i32(<2 x i32>) #0
+declare hidden void @external_void_func_v3i32(<3 x i32>) #0
+declare hidden void @external_void_func_v3i32_i32(<3 x i32>, i32) #0
+declare hidden void @external_void_func_v4i32(<4 x i32>) #0
+declare hidden void @external_void_func_v8i32(<8 x i32>) #0
+declare hidden void @external_void_func_v16i32(<16 x i32>) #0
+declare hidden void @external_void_func_v32i32(<32 x i32>) #0
+declare hidden void @external_void_func_v32i32_i32(<32 x i32>, i32) #0
 
 ; return value and argument
-declare i32 @external_i32_func_i32(i32) #0
+declare hidden i32 @external_i32_func_i32(i32) #0
 
 ; Structs
-declare void @external_void_func_struct_i8_i32({ i8, i32 }) #0
-declare void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval) #0
-declare void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* sret, { i8, i32 } addrspace(5)* byval) #0
+declare hidden void @external_void_func_struct_i8_i32({ i8, i32 }) #0
+declare hidden void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval) #0
+declare hidden void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* sret, { i8, i32 } addrspace(5)* byval) #0
 
-declare void @external_void_func_v16i8(<16 x i8>) #0
+declare hidden void @external_void_func_v16i8(<16 x i8>) #0
 
 
 ; FIXME: Should be passing -1
@@ -764,8 +764,8 @@ entry:
   ret void
 }
 
-declare void @byval_align16_f64_arg(<32 x i32>, double addrspace(5)* byval align 16) #0
-declare void @stack_passed_f64_arg(<32 x i32>, double) #0
+declare hidden void @byval_align16_f64_arg(<32 x i32>, double addrspace(5)* byval align 16) #0
+declare hidden void @stack_passed_f64_arg(<32 x i32>, double) #0
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

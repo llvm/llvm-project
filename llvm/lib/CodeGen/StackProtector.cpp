@@ -322,7 +322,7 @@ static Value *getStackGuard(const TargetLoweringBase *TLI, Module *M,
                             IRBuilder<> &B,
                             bool *SupportsSelectionDAGSP = nullptr) {
   if (Value *Guard = TLI->getIRStackGuard(B))
-    return B.CreateLoad(Guard, true, "StackGuard");
+    return B.CreateLoad(B.getInt8PtrTy(), Guard, true, "StackGuard");
 
   // Use SelectionDAG SSP handling, since there isn't an IR guard.
   //
@@ -417,7 +417,7 @@ bool StackProtector::InsertStackProtectors() {
       // Generate the function-based epilogue instrumentation.
       // The target provides a guard check function, generate a call to it.
       IRBuilder<> B(RI);
-      LoadInst *Guard = B.CreateLoad(AI, true, "Guard");
+      LoadInst *Guard = B.CreateLoad(B.getInt8PtrTy(), AI, true, "Guard");
       CallInst *Call = B.CreateCall(GuardCheck, {Guard});
       Call->setAttributes(GuardCheck->getAttributes());
       Call->setCallingConv(GuardCheck->getCallingConv());
@@ -472,7 +472,7 @@ bool StackProtector::InsertStackProtectors() {
       // Generate the stack protector instructions in the old basic block.
       IRBuilder<> B(BB);
       Value *Guard = getStackGuard(TLI, M, B);
-      LoadInst *LI2 = B.CreateLoad(AI, true);
+      LoadInst *LI2 = B.CreateLoad(B.getInt8PtrTy(), AI, true);
       Value *Cmp = B.CreateICmpEQ(Guard, LI2);
       auto SuccessProb =
           BranchProbabilityInfo::getBranchProbStackProtector(true);

@@ -44,13 +44,13 @@ TEST(OrderedInstructionsTest, DominanceTest) {
   BasicBlock *BBX = BasicBlock::Create(Ctx, "bbx", F);
   B.SetInsertPoint(BBX);
   Argument *PointerArg = &*F->arg_begin();
-  LoadInst *LoadInstX = B.CreateLoad(PointerArg);
-  LoadInst *LoadInstY = B.CreateLoad(PointerArg);
+  LoadInst *LoadInstX = B.CreateLoad(B.getInt8Ty(), PointerArg);
+  LoadInst *LoadInstY = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
   // Create BBY with 1 load.
   BasicBlock *BBY = BasicBlock::Create(Ctx, "bby", F);
   B.SetInsertPoint(BBY);
-  LoadInst *LoadInstZ = B.CreateLoad(PointerArg);
+  LoadInst *LoadInstZ = B.CreateLoad(B.getInt8Ty(), PointerArg);
   B.CreateRet(LoadInstZ);
   std::unique_ptr<DominatorTree> DT(new DominatorTree(*F));
   OrderedInstructions OI(&*DT);

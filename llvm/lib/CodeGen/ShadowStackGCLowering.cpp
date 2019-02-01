@@ -312,7 +312,8 @@ bool ShadowStackGCLowering::runOnFunction(Function &F) {
   AtEntry.SetInsertPoint(IP->getParent(), IP);
 
   // Initialize the map pointer and load the current head of the shadow stack.
-  Instruction *CurrentHead = AtEntry.CreateLoad(Head, "gc_currhead");
+  Instruction *CurrentHead =
+      AtEntry.CreateLoad(StackEntryTy->getPointerTo(), Head, "gc_currhead");
   Instruction *EntryMapPtr = CreateGEP(Context, AtEntry, ConcreteStackEntryTy,
                                        StackEntry, 0, 1, "gc_frame.map");
   AtEntry.CreateStore(FrameMap, EntryMapPtr);
@@ -353,7 +354,8 @@ bool ShadowStackGCLowering::runOnFunction(Function &F) {
     Instruction *EntryNextPtr2 =
         CreateGEP(Context, *AtExit, ConcreteStackEntryTy, StackEntry, 0, 0,
                   "gc_frame.next");
-    Value *SavedHead = AtExit->CreateLoad(EntryNextPtr2, "gc_savedhead");
+    Value *SavedHead = AtExit->CreateLoad(StackEntryTy->getPointerTo(),
+                                          EntryNextPtr2, "gc_savedhead");
     AtExit->CreateStore(SavedHead, Head);
   }
 

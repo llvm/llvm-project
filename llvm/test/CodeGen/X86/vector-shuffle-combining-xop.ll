@@ -234,7 +234,7 @@ define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; X86-AVX2-NEXT:    vmovapd %xmm0, (%eax)
+; X86-AVX2-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-AVX2-NEXT:    retl
 ;
 ; X64-AVX-LABEL: buildvector_v4f32_0404:
@@ -247,7 +247,7 @@ define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64-AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; X64-AVX2-NEXT:    vmovapd %xmm0, (%rdi)
+; X64-AVX2-NEXT:    vmovaps %xmm0, (%rdi)
 ; X64-AVX2-NEXT:    retq
   %v0 = insertelement <4 x float> undef, float %a, i32 0
   %v1 = insertelement <4 x float> %v0,   float %b, i32 1

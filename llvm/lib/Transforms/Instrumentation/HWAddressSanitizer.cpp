@@ -428,7 +428,7 @@ Value *HWAddressSanitizer::getDynamicShadowNonTls(IRBuilder<> &IRB) {
     Value *GlobalDynamicAddress =
         IRB.GetInsertBlock()->getParent()->getParent()->getOrInsertGlobal(
             kHwasanShadowMemoryDynamicAddress, Int8PtrTy);
-    return IRB.CreateLoad(GlobalDynamicAddress);
+    return IRB.CreateLoad(Int8PtrTy, GlobalDynamicAddress);
   }
 }
 
@@ -557,7 +557,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
                                   IRB.getInt8Ty());
   Value *AddrLong = untagPointer(IRB, PtrLong);
   Value *Shadow = memToShadow(AddrLong, IRB);
-  Value *MemTag = IRB.CreateLoad(Shadow);
+  Value *MemTag = IRB.CreateLoad(Int8Ty, Shadow);
   Value *TagMismatch = IRB.CreateICmpNE(PtrTag, MemTag);
 
   int matchAllTag = ClMatchAllTag.getNumOccurrences() > 0 ?
@@ -789,7 +789,8 @@ Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty) {
     Function *ThreadPointerFunc =
         Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
     Value *SlotPtr = IRB.CreatePointerCast(
-        IRB.CreateConstGEP1_32(IRB.CreateCall(ThreadPointerFunc), 0x30),
+        IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
+                               IRB.CreateCall(ThreadPointerFunc), 0x30),
         Ty->getPointerTo(0));
     return SlotPtr;
   }
@@ -841,7 +842,7 @@ Value *HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB,
   Value *SlotPtr = getHwasanThreadSlotPtr(IRB, IntptrTy);
   assert(SlotPtr);
 
-  Instruction *ThreadLong = IRB.CreateLoad(SlotPtr);
+  Instruction *ThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
 
   Function *F = IRB.GetInsertBlock()->getParent();
   if (F->getFnAttribute("hwasan-abi").getValueAsString() == "interceptor") {
@@ -855,7 +856,7 @@ Value *HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB,
     // FIXME: This should call a new runtime function with a custom calling
     // convention to avoid needing to spill all arguments here.
     IRB.CreateCall(HwasanThreadEnterFunc);
-    LoadInst *ReloadThreadLong = IRB.CreateLoad(SlotPtr);
+    LoadInst *ReloadThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
 
     IRB.SetInsertPoint(&*Br->getSuccessor(0)->begin());
     PHINode *ThreadLongPhi = IRB.CreatePHI(IntptrTy, 2);

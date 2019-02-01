@@ -118,6 +118,7 @@ bool MCWasmStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
     break;
 
   case MCSA_ELF_TypeObject:
+  case MCSA_Cold:
     break;
 
   default:

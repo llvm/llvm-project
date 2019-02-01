@@ -279,9 +279,9 @@ static void createResumeEntryBlock(Function &F, coro::Shape &Shape) {
   IRBuilder<> Builder(NewEntry);
   auto *FramePtr = Shape.FramePtr;
   auto *FrameTy = Shape.FrameTy;
-  auto *GepIndex = Builder.CreateStructGEP(
-      FrameTy, FramePtr, coro::Shape::SwitchFieldIndex::Index, "index.addr");
-  auto *Index = Builder.CreateLoad(GepIndex, "index");
+  auto *GepIndex = Builder.CreateConstInBoundsGEP2_32(
+      FrameTy, FramePtr, 0, coro::Shape::SwitchFieldIndex::Index, "index.addr");
+  auto *Index = Builder.CreateLoad(Shape.getIndexType(), GepIndex, "index");
   auto *Switch =
       Builder.CreateSwitch(Index, UnreachBB, Shape.CoroSuspends.size());
   Shape.SwitchLowering.ResumeSwitch = Switch;
@@ -378,11 +378,13 @@ void CoroCloner::handleFinalSuspend() {
     BasicBlock *OldSwitchBB = Switch->getParent();
     auto *NewSwitchBB = OldSwitchBB->splitBasicBlock(Switch, "Switch");
     Builder.SetInsertPoint(OldSwitchBB->getTerminator());
-    auto *GepIndex = Builder.CreateStructGEP(Shape.FrameTy, NewFramePtr,
-                                       coro::Shape::SwitchFieldIndex::Resume,
-                                             "ResumeFn.addr");
-    auto *Load = Builder.CreateLoad(GepIndex);
-    auto *Cond = Builder.CreateIsNull(Load);
+    auto *GepIndex = Builder.CreateConstInBoundsGEP2_32(Shape.FrameTy, FramePtr,
+                    0, coro::Shape::SwitchFieldIndex::Resume,, "ResumeFn.addr");
+    auto *Load = Builder.CreateLoad(
+        Shape.FrameTy->getElementType(coro::Shape::SwiftFieldIndex::Resume), GepIndex);
+    auto *NullPtr =
+        ConstantPointerNull::get(cast<PointerType>(Load->getType()));
+    auto *Cond = Builder.CreateICmpEQ(Load, NullPtr);
     Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
     OldSwitchBB->getTerminator()->eraseFromParent();
   }

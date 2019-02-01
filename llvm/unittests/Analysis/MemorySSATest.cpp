@@ -92,7 +92,7 @@ TEST_F(MemorySSATest, CreateALoad) {
   MemorySSAUpdater Updater(&MSSA);
   // Add the load
   B.SetInsertPoint(Merge);
-  LoadInst *LoadInst = B.CreateLoad(PointerArg);
+  LoadInst *LoadInst = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
   // MemoryPHI should already exist.
   MemoryPhi *MP = MSSA.getMemoryAccess(Merge);
@@ -138,7 +138,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
 
   // Add the load
   B.SetInsertPoint(Merge, Merge->begin());
-  LoadInst *FirstLoad = B.CreateLoad(PointerArg);
+  LoadInst *FirstLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
   // MemoryPHI should not already exist.
   MemoryPhi *MP = MSSA.getMemoryAccess(Merge);
@@ -162,7 +162,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   // We don't touch existing loads, so we need to create a new one to get a phi
   // Add the second load
   B.SetInsertPoint(Merge, Merge->begin());
-  LoadInst *SecondLoad = B.CreateLoad(PointerArg);
+  LoadInst *SecondLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
   // MemoryPHI should not already exist.
   MP = MSSA.getMemoryAccess(Merge);
@@ -228,7 +228,7 @@ TEST_F(MemorySSATest, CreateALoadUpdater) {
 
   // Add the load
   B.SetInsertPoint(Merge, Merge->begin());
-  LoadInst *LoadInst = B.CreateLoad(PointerArg);
+  LoadInst *LoadInst = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
   // MemoryPHI should not already exist.
   MemoryPhi *MP = MSSA.getMemoryAccess(Merge);
@@ -262,7 +262,7 @@ TEST_F(MemorySSATest, SinkLoad) {
 
   // Load in left block
   B.SetInsertPoint(Left, Left->begin());
-  LoadInst *LoadInst1 = B.CreateLoad(PointerArg);
+  LoadInst *LoadInst1 = B.CreateLoad(B.getInt8Ty(), PointerArg);
   // Store in merge block
   B.SetInsertPoint(Merge, Merge->begin());
   B.CreateStore(B.getInt8(16), PointerArg);
@@ -310,7 +310,7 @@ TEST_F(MemorySSATest, MoveAStore) {
   BranchInst::Create(Merge, Left);
   BranchInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
-  B.CreateLoad(PointerArg);
+  B.CreateLoad(B.getInt8Ty(), PointerArg);
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAUpdater Updater(&MSSA);
@@ -346,7 +346,7 @@ TEST_F(MemorySSATest, MoveAStoreUpdater) {
   BranchInst::Create(Merge, Left);
   BranchInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
-  auto *MergeLoad = B.CreateLoad(PointerArg);
+  auto *MergeLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAUpdater Updater(&MSSA);
@@ -392,7 +392,7 @@ TEST_F(MemorySSATest, MoveAStoreUpdaterMove) {
   BranchInst::Create(Merge, Left);
   BranchInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
-  auto *MergeLoad = B.CreateLoad(PointerArg);
+  auto *MergeLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAUpdater Updater(&MSSA);
@@ -436,7 +436,7 @@ TEST_F(MemorySSATest, MoveAStoreAllAround) {
   BranchInst::Create(Merge, Left);
   BranchInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
-  auto *MergeLoad = B.CreateLoad(PointerArg);
+  auto *MergeLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAUpdater Updater(&MSSA);
@@ -490,7 +490,7 @@ TEST_F(MemorySSATest, RemoveAPhi) {
   BranchInst::Create(Merge, Left);
   BranchInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
-  LoadInst *LoadInst = B.CreateLoad(PointerArg);
+  LoadInst *LoadInst = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -535,7 +535,7 @@ TEST_F(MemorySSATest, RemoveMemoryAccess) {
   BranchInst::Create(Merge, Left);
   BranchInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
-  LoadInst *LoadInst = B.CreateLoad(PointerArg);
+  LoadInst *LoadInst = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -631,7 +631,7 @@ TEST_F(MemorySSATest, TestStoreAndLoad) {
   Type *Int8 = Type::getInt8Ty(C);
   Value *Alloca = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "A");
   Instruction *SI = B.CreateStore(ConstantInt::get(Int8, 0), Alloca);
-  Instruction *LI = B.CreateLoad(Alloca);
+  Instruction *LI = B.CreateLoad(Int8, Alloca);
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -715,12 +715,12 @@ TEST_F(MemorySSATest, PartialWalkerCacheWithPhis) {
   B.SetInsertPoint(IfThen);
   Instruction *FirstStore = B.CreateStore(Zero, AllocA);
   B.CreateStore(Zero, AllocB);
-  Instruction *ALoad0 = B.CreateLoad(AllocA, "");
+  Instruction *ALoad0 = B.CreateLoad(Int8, AllocA, "");
   Instruction *BStore = B.CreateStore(Zero, AllocB);
   // Due to use optimization/etc. we make a store to A, which is removed after
   // we build MSSA. This helps keep the test case simple-ish.
   Instruction *KillStore = B.CreateStore(Zero, AllocA);
-  Instruction *ALoad = B.CreateLoad(AllocA, "");
+  Instruction *ALoad = B.CreateLoad(Int8, AllocA, "");
   B.CreateBr(IfEnd);
 
   B.SetInsertPoint(IfEnd);
@@ -771,7 +771,7 @@ TEST_F(MemorySSATest, WalkerInvariantLoadOpt) {
   Value *AllocA = B.CreateAlloca(Int8, One, "");
 
   Instruction *Store = B.CreateStore(One, AllocA);
-  Instruction *Load = B.CreateLoad(AllocA);
+  Instruction *Load = B.CreateLoad(Int8, AllocA);
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -800,7 +800,7 @@ TEST_F(MemorySSATest, WalkerReopt) {
   Instruction *SIA = B.CreateStore(ConstantInt::get(Int8, 0), AllocaA);
   Value *AllocaB = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "B");
   Instruction *SIB = B.CreateStore(ConstantInt::get(Int8, 0), AllocaB);
-  Instruction *LIA = B.CreateLoad(AllocaA);
+  Instruction *LIA = B.CreateLoad(Int8, AllocaA);
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -834,11 +834,11 @@ TEST_F(MemorySSATest, MoveAboveMemoryDef) {
 
   StoreInst *StoreA0 = B.CreateStore(ConstantInt::get(Int8, 0), A);
   StoreInst *StoreB = B.CreateStore(ConstantInt::get(Int8, 0), B_);
-  LoadInst *LoadB = B.CreateLoad(B_);
+  LoadInst *LoadB = B.CreateLoad(Int8, B_);
   StoreInst *StoreA1 = B.CreateStore(ConstantInt::get(Int8, 4), A);
   StoreInst *StoreC = B.CreateStore(ConstantInt::get(Int8, 4), C);
   StoreInst *StoreA2 = B.CreateStore(ConstantInt::get(Int8, 4), A);
-  LoadInst *LoadC = B.CreateLoad(C);
+  LoadInst *LoadC = B.CreateLoad(Int8, C);
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -902,7 +902,7 @@ TEST_F(MemorySSATest, Irreducible) {
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAUpdater Updater(&MSSA);
   // Create the load memory acccess
-  LoadInst *LoadInst = B.CreateLoad(FirstArg);
+  LoadInst *LoadInst = B.CreateLoad(B.getInt8Ty(), FirstArg);
   MemoryUse *LoadAccess = cast<MemoryUse>(Updater.createMemoryAccessInBB(
       LoadInst, nullptr, AfterLoopBB, MemorySSA::Beginning));
   Updater.insertUse(LoadAccess);
@@ -1010,15 +1010,15 @@ TEST_F(MemorySSATest, TestLoadMustAlias) {
 
   B.CreateStore(ConstantInt::get(Int8, 1), AllocaB);
   // Check load from LOE
-  LoadInst *LA1 = B.CreateLoad(AllocaA, "");
+  LoadInst *LA1 = B.CreateLoad(Int8, AllocaA, "");
   // Check load alias cached for second load
-  LoadInst *LA2 = B.CreateLoad(AllocaA, "");
+  LoadInst *LA2 = B.CreateLoad(Int8, AllocaA, "");
 
   B.CreateStore(ConstantInt::get(Int8, 1), AllocaA);
   // Check load from store/def
-  LoadInst *LA3 = B.CreateLoad(AllocaA, "");
+  LoadInst *LA3 = B.CreateLoad(Int8, AllocaA, "");
   // Check load alias cached for second load
-  LoadInst *LA4 = B.CreateLoad(AllocaA, "");
+  LoadInst *LA4 = B.CreateLoad(Int8, AllocaA, "");
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -1103,13 +1103,13 @@ TEST_F(MemorySSATest, TestLoadMayAlias) {
   Argument *PointerA = &*ArgIt;
   Argument *PointerB = &*(++ArgIt);
   B.CreateStore(ConstantInt::get(Int8, 1), PointerB);
-  LoadInst *LA1 = B.CreateLoad(PointerA, "");
+  LoadInst *LA1 = B.CreateLoad(Int8, PointerA, "");
   B.CreateStore(ConstantInt::get(Int8, 0), PointerA);
-  LoadInst *LB1 = B.CreateLoad(PointerB, "");
+  LoadInst *LB1 = B.CreateLoad(Int8, PointerB, "");
   B.CreateStore(ConstantInt::get(Int8, 0), PointerA);
-  LoadInst *LA2 = B.CreateLoad(PointerA, "");
+  LoadInst *LA2 = B.CreateLoad(Int8, PointerA, "");
   B.CreateStore(ConstantInt::get(Int8, 0), PointerB);
-  LoadInst *LB2 = B.CreateLoad(PointerB, "");
+  LoadInst *LB2 = B.CreateLoad(Int8, PointerB, "");
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -1227,7 +1227,7 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   B.SetInsertPoint(Entry);
   Value *Foo = &*F->arg_begin();
 
-  Value *Bar = B.CreateGEP(Foo, B.getInt64(1), "bar");
+  Value *Bar = B.CreateGEP(B.getInt8Ty(), Foo, B.getInt64(1), "bar");
 
   B.CreateStore(B.getInt8(0), Foo);
   B.CreateStore(B.getInt8(0), Bar);

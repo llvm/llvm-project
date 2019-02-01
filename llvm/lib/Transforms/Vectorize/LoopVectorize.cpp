@@ -2058,7 +2058,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr,
     //       A[i]   = b;     // Member of index 0
     //       A[i+2] = c;     // Member of index 2 (Current instruction)
     // Current pointer is pointed to A[i+2], adjust it to A[i].
-    NewPtr = Builder.CreateGEP(NewPtr, Builder.getInt32(-Index));
+    NewPtr = Builder.CreateGEP(ScalarTy, NewPtr, Builder.getInt32(-Index));
     if (InBounds)
       cast<GetElementPtrInst>(NewPtr)->setIsInBounds(true);
 
@@ -2100,8 +2100,8 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr,
                                      GroupMask, UndefVec, "wide.masked.vec");
       }
       else
-        NewLoad = Builder.CreateAlignedLoad(NewPtrs[Part], 
-          Group->getAlignment(), "wide.vec");
+        NewLoad = Builder.CreateAlignedLoad(VecTy, NewPtrs[Part],
+                                            Group->getAlignment(), "wide.vec");
       Group->addMetadata(NewLoad);
       NewLoads.push_back(NewLoad);
     }
@@ -2246,16 +2246,16 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
       // If the address is consecutive but reversed, then the
       // wide store needs to start at the last vector element.
       PartPtr = cast<GetElementPtrInst>(
-          Builder.CreateGEP(Ptr, Builder.getInt32(-Part * VF)));
+          Builder.CreateGEP(ScalarDataTy, Ptr, Builder.getInt32(-Part * VF)));
       PartPtr->setIsInBounds(InBounds);
       PartPtr = cast<GetElementPtrInst>(
-          Builder.CreateGEP(PartPtr, Builder.getInt32(1 - VF)));
+          Builder.CreateGEP(ScalarDataTy, PartPtr, Builder.getInt32(1 - VF)));
       PartPtr->setIsInBounds(InBounds);
       if (isMaskRequired) // Reverse of a null all-one mask is a null mask.
         Mask[Part] = reverseVector(Mask[Part]);
     } else {
       PartPtr = cast<GetElementPtrInst>(
-          Builder.CreateGEP(Ptr, Builder.getInt32(Part * VF)));
+          Builder.CreateGEP(ScalarDataTy, Ptr, Builder.getInt32(Part * VF)));
       PartPtr->setIsInBounds(InBounds);
     }
 
@@ -2312,7 +2312,8 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
                                          UndefValue::get(DataTy),
                                          "wide.masked.load");
       else
-        NewLI = Builder.CreateAlignedLoad(VecPtr, Alignment, "wide.load");
+        NewLI =
+            Builder.CreateAlignedLoad(DataTy, VecPtr, Alignment, "wide.load");
 
       // Add metadata to the load, but setVectorValue to the reverse shuffle.
       addMetadata(NewLI, LI);
@@ -2672,7 +2673,7 @@ Value *InnerLoopVectorizer::emitTransformedIndex(
     assert(isa<SCEVConstant>(Step) &&
            "Expected constant step for pointer induction");
     return B.CreateGEP(
-        nullptr, StartValue,
+        StartValue->getType()->getPointerElementType(), StartValue,
         CreateMul(Index, Exp.expandCodeFor(Step, Index->getType(),
                                            &*B.GetInsertPoint())));
   }
@@ -3942,9 +3943,11 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
 
         // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
         // but it should be a vector, otherwise.
-        auto *NewGEP = GEP->isInBounds()
-                           ? Builder.CreateInBoundsGEP(Ptr, Indices)
-                           : Builder.CreateGEP(Ptr, Indices);
+        auto *NewGEP =
+            GEP->isInBounds()
+                ? Builder.CreateInBoundsGEP(GEP->getSourceElementType(), Ptr,
+                                            Indices)
+                : Builder.CreateGEP(GEP->getSourceElementType(), Ptr, Indices);
         assert((VF == 1 || NewGEP->getType()->isVectorTy()) &&
                "NewGEP is not a pointer vector");
         VectorLoopValueMap.setVectorValue(&I, Part, NewGEP);

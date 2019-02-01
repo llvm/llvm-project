@@ -244,11 +244,11 @@ AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
   // We could do a single 64-bit load here, but it's likely that the basic
   // 32-bit and extract sequence is already present, and it is probably easier
   // to CSE this. The loads should be mergable later anyway.
-  Value *GEPXY = Builder.CreateConstInBoundsGEP1_64(CastDispatchPtr, 1);
-  LoadInst *LoadXY = Builder.CreateAlignedLoad(GEPXY, 4);
+  Value *GEPXY = Builder.CreateConstInBoundsGEP1_64(I32Ty, CastDispatchPtr, 1);
+  LoadInst *LoadXY = Builder.CreateAlignedLoad(I32Ty, GEPXY, 4);
 
-  Value *GEPZU = Builder.CreateConstInBoundsGEP1_64(CastDispatchPtr, 2);
-  LoadInst *LoadZU = Builder.CreateAlignedLoad(GEPZU, 4);
+  Value *GEPZU = Builder.CreateConstInBoundsGEP1_64(I32Ty, CastDispatchPtr, 2);
+  LoadInst *LoadZU = Builder.CreateAlignedLoad(I32Ty, GEPZU, 4);
 
   MDNode *MD = MDNode::get(Mod->getContext(), None);
   LoadXY->setMetadata(LLVMContext::MD_invariant_load, MD);
@@ -426,7 +426,7 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
 
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
-      Value *VecValue = Builder.CreateLoad(BitCast);
+      Value *VecValue = Builder.CreateLoad(VectorTy, BitCast);
       Value *ExtractElement = Builder.CreateExtractElement(VecValue, Index);
       Inst->replaceAllUsesWith(ExtractElement);
       Inst->eraseFromParent();
@@ -441,7 +441,7 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
       Value *Ptr = SI->getPointerOperand();
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
-      Value *VecValue = Builder.CreateLoad(BitCast);
+      Value *VecValue = Builder.CreateLoad(VectorTy, BitCast);
       Value *NewVecValue = Builder.CreateInsertElement(VecValue,
                                                        SI->getValueOperand(),
                                                        Index);

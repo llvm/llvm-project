@@ -641,7 +641,7 @@ ObjCARCOpt::OptimizeRetainRVCall(Function &F, Instruction *RetainRV) {
                        "Old = "
                     << *RetainRV << "\n");
 
-  Constant *NewDecl = EP.get(ARCRuntimeEntryPointKind::Retain);
+  Function *NewDecl = EP.get(ARCRuntimeEntryPointKind::Retain);
   cast<CallInst>(RetainRV)->setCalledFunction(NewDecl);
 
   LLVM_DEBUG(dbgs() << "New = " << *RetainRV << "\n");
@@ -690,7 +690,7 @@ void ObjCARCOpt::OptimizeAutoreleaseRVCall(Function &F,
              << *AutoreleaseRV << "\n");
 
   CallInst *AutoreleaseRVCI = cast<CallInst>(AutoreleaseRV);
-  Constant *NewDecl = EP.get(ARCRuntimeEntryPointKind::Autorelease);
+  Function *NewDecl = EP.get(ARCRuntimeEntryPointKind::Autorelease);
   AutoreleaseRVCI->setCalledFunction(NewDecl);
   AutoreleaseRVCI->setTailCall(false); // Never tail call objc_autorelease.
   Class = ARCInstKind::Autorelease;

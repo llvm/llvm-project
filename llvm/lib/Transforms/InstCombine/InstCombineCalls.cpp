@@ -171,7 +171,7 @@ Instruction *InstCombiner::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
 
   Value *Src = Builder.CreateBitCast(MI->getArgOperand(1), NewSrcPtrTy);
   Value *Dest = Builder.CreateBitCast(MI->getArgOperand(0), NewDstPtrTy);
-  LoadInst *L = Builder.CreateLoad(Src);
+  LoadInst *L = Builder.CreateLoad(IntType, Src);
   // Alignment from the mem intrinsic will be better, so use it.
   L->setAlignment(CopySrcAlign);
   if (CopyMD)
@@ -1182,7 +1182,8 @@ static Value *simplifyMaskedLoad(const IntrinsicInst &II,
   if (maskIsAllOneOrUndef(II.getArgOperand(2))) {
     Value *LoadPtr = II.getArgOperand(0);
     unsigned Alignment = cast<ConstantInt>(II.getArgOperand(1))->getZExtValue();
-    return Builder.CreateAlignedLoad(LoadPtr, Alignment, "unmaskedload");
+    return Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
+                                     "unmaskedload");
   }
 
   return nullptr;
@@ -1499,7 +1500,7 @@ static Value *simplifyNeonVld1(const IntrinsicInst &II,
 
   auto *BCastInst = Builder.CreateBitCast(II.getArgOperand(0),
                                           PointerType::get(II.getType(), 0));
-  return Builder.CreateAlignedLoad(BCastInst, Alignment);
+  return Builder.CreateAlignedLoad(II.getType(), BCastInst, Alignment);
 }
 
 // Returns true iff the 2 intrinsics have the same operands, limiting the
@@ -2300,7 +2301,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
                                    &DT) >= 16) {
       Value *Ptr = Builder.CreateBitCast(II->getArgOperand(0),
                                          PointerType::getUnqual(II->getType()));
-      return new LoadInst(Ptr);
+      return new LoadInst(II->getType(), Ptr);
     }
     break;
   case Intrinsic::ppc_vsx_lxvw4x:
@@ -2308,7 +2309,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Turn PPC VSX loads into normal loads.
     Value *Ptr = Builder.CreateBitCast(II->getArgOperand(0),
                                        PointerType::getUnqual(II->getType()));
-    return new LoadInst(Ptr, Twine(""), false, 1);
+    return new LoadInst(II->getType(), Ptr, Twine(""), false, 1);
   }
   case Intrinsic::ppc_altivec_stvx:
   case Intrinsic::ppc_altivec_stvxl:
@@ -2336,7 +2337,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
                                   II->getType()->getVectorNumElements());
       Value *Ptr = Builder.CreateBitCast(II->getArgOperand(0),
                                          PointerType::getUnqual(VTy));
-      Value *Load = Builder.CreateLoad(Ptr);
+      Value *Load = Builder.CreateLoad(VTy, Ptr);
       return new FPExtInst(Load, II->getType());
     }
     break;
@@ -2346,7 +2347,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
                                    &DT) >= 32) {
       Value *Ptr = Builder.CreateBitCast(II->getArgOperand(0),
                                          PointerType::getUnqual(II->getType()));
-      return new LoadInst(Ptr);
+      return new LoadInst(II->getType(), Ptr);
     }
     break;
   case Intrinsic::ppc_qpx_qvstfs:
@@ -4213,7 +4214,8 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
       // We cannot remove an invoke, because it would change the CFG, just
       // change the callee to a null pointer.
       cast<InvokeInst>(OldCall)->setCalledFunction(
-                                    Constant::getNullValue(CalleeF->getType()));
+          CalleeF->getFunctionType(),
+          Constant::getNullValue(CalleeF->getType()));
       return nullptr;
     }
   }
@@ -4554,8 +4556,8 @@ Instruction *
 InstCombiner::transformCallThroughTrampoline(CallBase &Call,
                                              IntrinsicInst &Tramp) {
   Value *Callee = Call.getCalledValue();
-  PointerType *PTy = cast<PointerType>(Callee->getType());
-  FunctionType *FTy = cast<FunctionType>(PTy->getElementType());
+  Type *CalleeTy = Callee->getType();
+  FunctionType *FTy = Call.getFunctionType();
   AttributeList Attrs = Call.getAttributes();
 
   // If the call already has the 'nest' attribute somewhere then give up -
@@ -4564,7 +4566,7 @@ InstCombiner::transformCallThroughTrampoline(CallBase &Call,
     return nullptr;
 
   Function *NestF = cast<Function>(Tramp.getArgOperand(1)->stripPointerCasts());
-  FunctionType *NestFTy = cast<FunctionType>(NestF->getValueType());
+  FunctionType *NestFTy = NestF->getFunctionType();
 
   AttributeList NestAttrs = NestF->getAttributes();
   if (!NestAttrs.isEmpty()) {
@@ -4688,9 +4690,7 @@ InstCombiner::transformCallThroughTrampoline(CallBase &Call,
   // Replace the trampoline call with a direct call.  Since there is no 'nest'
   // parameter, there is no need to adjust the argument list.  Let the generic
   // code sort out any function type mismatches.
-  Constant *NewCallee =
-    NestF->getType() == PTy ? NestF :
-                              ConstantExpr::getBitCast(NestF, PTy);
-  Call.setCalledFunction(NewCallee);
+  Constant *NewCallee = ConstantExpr::getBitCast(NestF, CalleeTy);
+  Call.setCalledFunction(FTy, NewCallee);
   return &Call;
 }

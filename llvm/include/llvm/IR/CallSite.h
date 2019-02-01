@@ -121,9 +121,13 @@ public:
     return true;
   }
 
-  /// Set the callee to the specified value.
+  /// Set the callee to the specified value.  Unlike the function of the same
+  /// name on CallBase, does not modify the type!
   void setCalledFunction(Value *V) {
     assert(getInstruction() && "Not a call or invoke instruction!");
+    assert(cast<PointerType>(V->getType())->getElementType() ==
+               cast<CallBase>(getInstruction())->getFunctionType() &&
+           "New callee type does not match FunctionType on call");
     *getCallee() = V;
   }
 

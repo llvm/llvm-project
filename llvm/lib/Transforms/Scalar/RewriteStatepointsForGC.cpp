@@ -1636,7 +1636,7 @@ makeStatepointExplicit(DominatorTree &DT, CallSite CS,
 // for sanity checking.
 static void
 insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
-                       DenseMap<Value *, Value *> &AllocaMap,
+                       DenseMap<Value *, AllocaInst *> &AllocaMap,
                        DenseSet<Value *> &VisitedLiveValues) {
   for (User *U : GCRelocs) {
     GCRelocateInst *Relocate = dyn_cast<GCRelocateInst>(U);
@@ -1671,7 +1671,7 @@ insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
 // "insertRelocationStores" but works for rematerialized values.
 static void insertRematerializationStores(
     const RematerializedValueMapTy &RematerializedValues,
-    DenseMap<Value *, Value *> &AllocaMap,
+    DenseMap<Value *, AllocaInst *> &AllocaMap,
     DenseSet<Value *> &VisitedLiveValues) {
   for (auto RematerializedValuePair: RematerializedValues) {
     Instruction *RematerializedValue = RematerializedValuePair.first;
@@ -1704,7 +1704,7 @@ static void relocationViaAlloca(
 #endif
 
   // TODO-PERF: change data structures, reserve
-  DenseMap<Value *, Value *> AllocaMap;
+  DenseMap<Value *, AllocaInst *> AllocaMap;
   SmallVector<AllocaInst *, 200> PromotableAllocas;
   // Used later to chack that we have enough allocas to store all values
   std::size_t NumRematerializedValues = 0;
@@ -1774,7 +1774,7 @@ static void relocationViaAlloca(
       SmallVector<AllocaInst *, 64> ToClobber;
       for (auto Pair : AllocaMap) {
         Value *Def = Pair.first;
-        AllocaInst *Alloca = cast<AllocaInst>(Pair.second);
+        AllocaInst *Alloca = Pair.second;
 
         // This value was relocated
         if (VisitedLiveValues.count(Def)) {
@@ -1806,7 +1806,7 @@ static void relocationViaAlloca(
   // Update use with load allocas and add store for gc_relocated.
   for (auto Pair : AllocaMap) {
     Value *Def = Pair.first;
-    Value *Alloca = Pair.second;
+    AllocaInst *Alloca = Pair.second;
 
     // We pre-record the uses of allocas so that we dont have to worry about
     // later update that changes the user information..
@@ -1834,13 +1834,15 @@ static void relocationViaAlloca(
         PHINode *Phi = cast<PHINode>(Use);
         for (unsigned i = 0; i < Phi->getNumIncomingValues(); i++) {
           if (Def == Phi->getIncomingValue(i)) {
-            LoadInst *Load = new LoadInst(
-                Alloca, "", Phi->getIncomingBlock(i)->getTerminator());
+            LoadInst *Load =
+                new LoadInst(Alloca->getAllocatedType(), Alloca, "",
+                             Phi->getIncomingBlock(i)->getTerminator());
             Phi->setIncomingValue(i, Load);
           }
         }
       } else {
-        LoadInst *Load = new LoadInst(Alloca, "", Use);
+        LoadInst *Load =
+            new LoadInst(Alloca->getAllocatedType(), Alloca, "", Use);
         Use->replaceUsesOfWith(Def, Load);
       }
     }

@@ -426,8 +426,8 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     RHS = Builder.CreateMul(
         RHS, ConstantInt::get(IntPtrTy, IndexedSize / ElementSize));
   }
-  GetElementPtrInst *NewGEP =
-      cast<GetElementPtrInst>(Builder.CreateGEP(Candidate, RHS));
+  GetElementPtrInst *NewGEP = cast<GetElementPtrInst>(
+      Builder.CreateGEP(GEP->getResultElementType(), Candidate, RHS));
   NewGEP->setIsInBounds(GEP->isInBounds());
   NewGEP->takeName(GEP);
   return NewGEP;

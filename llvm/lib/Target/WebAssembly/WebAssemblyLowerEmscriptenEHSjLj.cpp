@@ -445,7 +445,8 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallOrInvoke *CI) {
 
   // Post-invoke
   // %__THREW__.val = __THREW__; __THREW__ = 0;
-  Value *Threw = IRB.CreateLoad(ThrewGV, ThrewGV->getName() + ".val");
+  Value *Threw =
+      IRB.CreateLoad(IRB.getInt32Ty(), ThrewGV, ThrewGV->getName() + ".val");
   IRB.CreateStore(IRB.getInt32(0), ThrewGV);
   return Threw;
 }
@@ -548,8 +549,8 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
   BasicBlock *ElseBB1 = BasicBlock::Create(C, "if.else1", F);
   BasicBlock *EndBB1 = BasicBlock::Create(C, "if.end", F);
   Value *ThrewCmp = IRB.CreateICmpNE(Threw, IRB.getInt32(0));
-  Value *ThrewValue =
-      IRB.CreateLoad(ThrewValueGV, ThrewValueGV->getName() + ".val");
+  Value *ThrewValue = IRB.CreateLoad(IRB.getInt32Ty(), ThrewValueGV,
+                                     ThrewValueGV->getName() + ".val");
   Value *ThrewValueCmp = IRB.CreateICmpNE(ThrewValue, IRB.getInt32(0));
   Value *Cmp1 = IRB.CreateAnd(ThrewCmp, ThrewValueCmp, "cmp1");
   IRB.CreateCondBr(Cmp1, ThenBB1, ElseBB1);
@@ -561,8 +562,8 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
   BasicBlock *EndBB2 = BasicBlock::Create(C, "if.end2", F);
   Value *ThrewInt = IRB.CreateIntToPtr(Threw, Type::getInt32PtrTy(C),
                                        Threw->getName() + ".i32p");
-  Value *LoadedThrew =
-      IRB.CreateLoad(ThrewInt, ThrewInt->getName() + ".loaded");
+  Value *LoadedThrew = IRB.CreateLoad(IRB.getInt32Ty(), ThrewInt,
+                                      ThrewInt->getName() + ".loaded");
   Value *ThenLabel = IRB.CreateCall(
       TestSetjmpF, {LoadedThrew, SetjmpTable, SetjmpTableSize}, "label");
   Value *Cmp2 = IRB.CreateICmpEQ(ThenLabel, IRB.getInt32(0));

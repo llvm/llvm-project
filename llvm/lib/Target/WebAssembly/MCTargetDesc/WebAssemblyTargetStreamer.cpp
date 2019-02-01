@@ -112,8 +112,15 @@ void WebAssemblyTargetAsmStreamer::emitEventType(const MCSymbolWasm *Sym) {
 }
 
 void WebAssemblyTargetAsmStreamer::emitImportModule(const MCSymbolWasm *Sym,
-                                                    StringRef ModuleName) {
-  OS << "\t.import_module\t" << Sym->getName() << ", " << ModuleName << '\n';
+                                                    StringRef ImportModule) {
+  OS << "\t.import_module\t" << Sym->getName() << ", "
+                             << ImportModule << '\n';
+}
+
+void WebAssemblyTargetAsmStreamer::emitImportName(const MCSymbolWasm *Sym,
+                                                  StringRef ImportName) {
+  OS << "\t.import_name\t" << Sym->getName() << ", "
+                           << ImportName << '\n';
 }
 
 void WebAssemblyTargetAsmStreamer::emitIndIdx(const MCExpr *Value) {

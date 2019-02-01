@@ -945,6 +945,7 @@ static bool tryToShorten(Instruction *EarlierWrite, int64_t &EarlierOffset,
     Value *Indices[1] = {
         ConstantInt::get(EarlierWriteLength->getType(), OffsetMoved)};
     GetElementPtrInst *NewDestGEP = GetElementPtrInst::CreateInBounds(
+        EarlierIntrinsic->getRawDest()->getType()->getPointerElementType(),
         EarlierIntrinsic->getRawDest(), Indices, "", EarlierWrite);
     EarlierIntrinsic->setDest(NewDestGEP);
     EarlierOffset = EarlierOffset + OffsetMoved;

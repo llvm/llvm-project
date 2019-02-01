@@ -2424,15 +2424,17 @@ Error BitcodeReader::parseConstants() {
         Elts.push_back(ValueList.getConstantFwdRef(Record[OpNum++], ElTy));
       }
 
-      if (PointeeType &&
-          PointeeType !=
-              cast<PointerType>(Elts[0]->getType()->getScalarType())
-                  ->getElementType())
-        return error("Explicit gep operator type does not match pointee type "
-                     "of pointer operand");
-
       if (Elts.size() < 1)
         return error("Invalid gep with no operands");
+
+      Type *ImplicitPointeeType =
+          cast<PointerType>(Elts[0]->getType()->getScalarType())
+              ->getElementType();
+      if (!PointeeType)
+        PointeeType = ImplicitPointeeType;
+      else if (PointeeType != ImplicitPointeeType)
+        return error("Explicit gep operator type does not match pointee type "
+                     "of pointer operand");
 
       ArrayRef<Constant *> Indices(Elts.begin() + 1, Elts.end());
       V = ConstantExpr::getGetElementPtr(PointeeType, Elts[0], Indices,
@@ -4404,7 +4406,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       unsigned Align;
       if (Error Err = parseAlignmentValue(Record[OpNum], Align))
         return Err;
-      I = new LoadInst(Op, "", Record[OpNum+1], Align, Ordering, SSID);
+      I = new LoadInst(Ty, Op, "", Record[OpNum + 1], Align, Ordering, SSID);
 
       InstructionList.push_back(I);
       break;

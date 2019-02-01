@@ -6,7 +6,7 @@
 define <4 x i32> @test_2xi32_to_4xi32(<4 x i32> %vec) {
 ; CHECK-LABEL: test_2xi32_to_4xi32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastq %xmm0, %xmm0
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; CHECK-NEXT:    retq
   %res = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   ret <4 x i32> %res
@@ -318,7 +318,7 @@ define <16 x i32> @test_masked_z_2xi32_to_16xi32_mask3(<16 x i32> %vec, <16 x i3
 define <4 x i32> @test_2xi32_to_4xi32_mem(<2 x i32>* %vp) {
 ; CHECK-LABEL: test_2xi32_to_4xi32_mem:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastq (%rdi), %xmm0
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; CHECK-NEXT:    retq
   %vec = load <2 x i32>, <2 x i32>* %vp
   %res = shufflevector <2 x i32> %vec, <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>

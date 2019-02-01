@@ -217,7 +217,7 @@ define <8 x i32> @combine_permd_as_vpbroadcastd256(<4 x i32> %a) {
 define <16 x i8> @combine_pshufb_as_vpbroadcastq128(<16 x i8> %a) {
 ; CHECK-LABEL: combine_pshufb_as_vpbroadcastq128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastq %xmm0, %xmm0
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>)
   ret <16 x i8> %1
@@ -648,7 +648,7 @@ define <32 x i8> @combine_pshufb_as_packuswb(<16 x i16> %a0, <16 x i16> %a1) nou
 define <16 x i8> @combine_pshufb_insertion_as_broadcast_v2i64(i64 %a0) {
 ; X86-LABEL: combine_pshufb_insertion_as_broadcast_v2i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpbroadcastq {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_pshufb_insertion_as_broadcast_v2i64:

@@ -72,7 +72,7 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
     // Loop Body
     Value *SrcGEP =
         LoopBuilder.CreateInBoundsGEP(LoopOpType, SrcAddr, LoopIndex);
-    Value *Load = LoopBuilder.CreateLoad(SrcGEP, SrcIsVolatile);
+    Value *Load = LoopBuilder.CreateLoad(LoopOpType, SrcGEP, SrcIsVolatile);
     Value *DstGEP =
         LoopBuilder.CreateInBoundsGEP(LoopOpType, DstAddr, LoopIndex);
     LoopBuilder.CreateStore(Load, DstGEP, DstIsVolatile);
@@ -114,7 +114,7 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
                              : RBuilder.CreateBitCast(SrcAddr, SrcPtrType);
       Value *SrcGEP = RBuilder.CreateInBoundsGEP(
           OpTy, CastedSrc, ConstantInt::get(TypeOfCopyLen, GepIndex));
-      Value *Load = RBuilder.CreateLoad(SrcGEP, SrcIsVolatile);
+      Value *Load = RBuilder.CreateLoad(OpTy, SrcGEP, SrcIsVolatile);
 
       // Cast destination to operand type and store.
       PointerType *DstPtrType = PointerType::get(OpTy, DstAS);
@@ -181,7 +181,7 @@ void llvm::createMemCpyLoopUnknownSize(Instruction *InsertBefore,
   LoopIndex->addIncoming(ConstantInt::get(CopyLenType, 0U), PreLoopBB);
 
   Value *SrcGEP = LoopBuilder.CreateInBoundsGEP(LoopOpType, SrcAddr, LoopIndex);
-  Value *Load = LoopBuilder.CreateLoad(SrcGEP, SrcIsVolatile);
+  Value *Load = LoopBuilder.CreateLoad(LoopOpType, SrcGEP, SrcIsVolatile);
   Value *DstGEP = LoopBuilder.CreateInBoundsGEP(LoopOpType, DstAddr, LoopIndex);
   LoopBuilder.CreateStore(Load, DstGEP, DstIsVolatile);
 
@@ -234,7 +234,7 @@ void llvm::createMemCpyLoopUnknownSize(Instruction *InsertBefore,
     Value *FullOffset = ResBuilder.CreateAdd(RuntimeBytesCopied, ResidualIndex);
     Value *SrcGEP =
         ResBuilder.CreateInBoundsGEP(Int8Type, SrcAsInt8, FullOffset);
-    Value *Load = ResBuilder.CreateLoad(SrcGEP, SrcIsVolatile);
+    Value *Load = ResBuilder.CreateLoad(Int8Type, SrcGEP, SrcIsVolatile);
     Value *DstGEP =
         ResBuilder.CreateInBoundsGEP(Int8Type, DstAsInt8, FullOffset);
     ResBuilder.CreateStore(Load, DstGEP, DstIsVolatile);
@@ -292,6 +292,8 @@ static void createMemMoveLoop(Instruction *InsertBefore,
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
 
+  Type *EltTy = cast<PointerType>(SrcAddr->getType())->getElementType();
+
   // Create the a comparison of src and dst, based on which we jump to either
   // the forward-copy part of the function (if src >= dst) or the backwards-copy
   // part (if src < dst).
@@ -330,9 +332,10 @@ static void createMemMoveLoop(Instruction *InsertBefore,
   Value *IndexPtr = LoopBuilder.CreateSub(
       LoopPhi, ConstantInt::get(TypeOfCopyLen, 1), "index_ptr");
   Value *Element = LoopBuilder.CreateLoad(
-      LoopBuilder.CreateInBoundsGEP(SrcAddr, IndexPtr), "element");
-  LoopBuilder.CreateStore(Element,
-                          LoopBuilder.CreateInBoundsGEP(DstAddr, IndexPtr));
+      EltTy, LoopBuilder.CreateInBoundsGEP(EltTy, SrcAddr, IndexPtr),
+      "element");
+  LoopBuilder.CreateStore(
+      Element, LoopBuilder.CreateInBoundsGEP(EltTy, DstAddr, IndexPtr));
   LoopBuilder.CreateCondBr(
       LoopBuilder.CreateICmpEQ(IndexPtr, ConstantInt::get(TypeOfCopyLen, 0)),
       ExitBB, LoopBB);
@@ -347,9 +350,10 @@ static void createMemMoveLoop(Instruction *InsertBefore,
   IRBuilder<> FwdLoopBuilder(FwdLoopBB);
   PHINode *FwdCopyPhi = FwdLoopBuilder.CreatePHI(TypeOfCopyLen, 0, "index_ptr");
   Value *FwdElement = FwdLoopBuilder.CreateLoad(
-      FwdLoopBuilder.CreateInBoundsGEP(SrcAddr, FwdCopyPhi), "element");
+      EltTy, FwdLoopBuilder.CreateInBoundsGEP(EltTy, SrcAddr, FwdCopyPhi),
+      "element");
   FwdLoopBuilder.CreateStore(
-      FwdElement, FwdLoopBuilder.CreateInBoundsGEP(DstAddr, FwdCopyPhi));
+      FwdElement, FwdLoopBuilder.CreateInBoundsGEP(EltTy, DstAddr, FwdCopyPhi));
   Value *FwdIndexPtr = FwdLoopBuilder.CreateAdd(
       FwdCopyPhi, ConstantInt::get(TypeOfCopyLen, 1), "index_increment");
   FwdLoopBuilder.CreateCondBr(FwdLoopBuilder.CreateICmpEQ(FwdIndexPtr, CopyLen),

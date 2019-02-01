@@ -72,7 +72,8 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
           Value *&V = Loads[PN->getIncomingBlock(i)];
           if (!V) {
             // Insert the load into the predecessor block
-            V = new LoadInst(Slot, I.getName()+".reload", VolatileLoads,
+            V = new LoadInst(I.getType(), Slot, I.getName() + ".reload",
+                             VolatileLoads,
                              PN->getIncomingBlock(i)->getTerminator());
           }
           PN->setIncomingValue(i, V);
@@ -80,7 +81,8 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
 
     } else {
       // If this is a normal instruction, just insert a load.
-      Value *V = new LoadInst(Slot, I.getName()+".reload", VolatileLoads, U);
+      Value *V = new LoadInst(I.getType(), Slot, I.getName() + ".reload",
+                              VolatileLoads, U);
       U->replaceUsesOfWith(&I, V);
     }
   }
@@ -141,7 +143,8 @@ AllocaInst *llvm::DemotePHIToStack(PHINode *P, Instruction *AllocaPoint) {
   for (; isa<PHINode>(InsertPt) || InsertPt->isEHPad(); ++InsertPt)
     /* empty */;   // Don't insert before PHI nodes or landingpad instrs.
 
-  Value *V = new LoadInst(Slot, P->getName() + ".reload", &*InsertPt);
+  Value *V =
+      new LoadInst(P->getType(), Slot, P->getName() + ".reload", &*InsertPt);
   P->replaceAllUsesWith(V);
 
   // Delete PHI.

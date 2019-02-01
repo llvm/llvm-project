@@ -1947,7 +1947,8 @@ bool llvm::promoteLoopAccessesToScalars(
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
   LoadInst *PreheaderLoad = new LoadInst(
-      SomePtr, SomePtr->getName() + ".promoted", Preheader->getTerminator());
+      SomePtr->getType()->getPointerElementType(), SomePtr,
+      SomePtr->getName() + ".promoted", Preheader->getTerminator());
   if (SawUnorderedAtomic)
     PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
   PreheaderLoad->setAlignment(Alignment);

@@ -522,10 +522,10 @@ static Instruction *splitBeforeCatchSwitch(CatchSwitchInst *CatchSwitch) {
 static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
   auto *CB = Shape.CoroBegin;
   IRBuilder<> Builder(CB->getNextNode());
-  PointerType *FramePtrTy = Shape.FrameTy->getPointerTo();
+  StructType *FrameTy = Shape.FrameTy;
+  PointerType *FramePtrTy = FrameTy->getPointerTo();
   auto *FramePtr =
       cast<Instruction>(Builder.CreateBitCast(CB, FramePtrTy, "FramePtr"));
-  Type *FrameTy = FramePtrTy->getElementType();
 
   Value *CurrentValue = nullptr;
   BasicBlock *CurrentBlock = nullptr;
@@ -554,7 +554,7 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
                                                      Twine(".reload.addr"));
     return isa<AllocaInst>(CurrentValue)
                ? G
-               : Builder.CreateLoad(G,
+               : Builder.CreateLoad(FrameTy->getElementType(Index), G,
                                     CurrentValue->getName() + Twine(".reload"));
   };
 

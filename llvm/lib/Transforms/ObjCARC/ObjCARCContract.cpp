@@ -139,7 +139,7 @@ bool ObjCARCContract::optimizeRetainCall(Function &F, Instruction *Retain) {
 
   // We do not have to worry about tail calls/does not throw since
   // retain/retainRV have the same properties.
-  Constant *Decl = EP.get(ARCRuntimeEntryPointKind::RetainRV);
+  Function *Decl = EP.get(ARCRuntimeEntryPointKind::RetainRV);
   cast<CallInst>(Retain)->setCalledFunction(Decl);
 
   LLVM_DEBUG(dbgs() << "New: " << *Retain << "\n");
@@ -188,7 +188,7 @@ bool ObjCARCContract::contractAutorelease(
                        "        Retain: "
                     << *Retain << "\n");
 
-  Constant *Decl = EP.get(Class == ARCInstKind::AutoreleaseRV
+  Function *Decl = EP.get(Class == ARCInstKind::AutoreleaseRV
                               ? ARCRuntimeEntryPointKind::RetainAutoreleaseRV
                               : ARCRuntimeEntryPointKind::RetainAutorelease);
   Retain->setCalledFunction(Decl);

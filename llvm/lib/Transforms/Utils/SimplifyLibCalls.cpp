@@ -333,11 +333,12 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilder<> &B) {
     return ConstantInt::get(CI->getType(), Str1.compare(Str2));
 
   if (HasStr1 && Str1.empty()) // strcmp("", x) -> -*x
-    return B.CreateNeg(
-        B.CreateZExt(B.CreateLoad(Str2P, "strcmpload"), CI->getType()));
+    return B.CreateNeg(B.CreateZExt(
+        B.CreateLoad(B.getInt8Ty(), Str2P, "strcmpload"), CI->getType()));
 
   if (HasStr2 && Str2.empty()) // strcmp(x,"") -> *x
-    return B.CreateZExt(B.CreateLoad(Str1P, "strcmpload"), CI->getType());
+    return B.CreateZExt(B.CreateLoad(B.getInt8Ty(), Str1P, "strcmpload"),
+                        CI->getType());
 
   // strcmp(P, "x") -> memcmp(P, "x", 2)
   uint64_t Len1 = GetStringLength(Str1P);
@@ -397,11 +398,12 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilder<> &B) {
   }
 
   if (HasStr1 && Str1.empty()) // strncmp("", x, n) -> -*x
-    return B.CreateNeg(
-        B.CreateZExt(B.CreateLoad(Str2P, "strcmpload"), CI->getType()));
+    return B.CreateNeg(B.CreateZExt(
+        B.CreateLoad(B.getInt8Ty(), Str2P, "strcmpload"), CI->getType()));
 
   if (HasStr2 && Str2.empty()) // strncmp(x, "", n) -> *x
-    return B.CreateZExt(B.CreateLoad(Str1P, "strcmpload"), CI->getType());
+    return B.CreateZExt(B.CreateLoad(B.getInt8Ty(), Str1P, "strcmpload"),
+                        CI->getType());
 
   uint64_t Len1 = GetStringLength(Str1P);
   uint64_t Len2 = GetStringLength(Str2P);
@@ -590,7 +592,8 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilder<> &B,
   // strlen(x) != 0 --> *x != 0
   // strlen(x) == 0 --> *x == 0
   if (isOnlyUsedInZeroEqualityComparison(CI))
-    return B.CreateZExt(B.CreateLoad(Src, "strlenfirst"), CI->getType());
+    return B.CreateZExt(B.CreateLoad(B.getIntNTy(CharSize), Src, "strlenfirst"),
+                        CI->getType());
 
   return nullptr;
 }
@@ -734,7 +737,8 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilder<> &B) {
 
     // strstr("abcd", "bc") -> gep((char*)"abcd", 1)
     Value *Result = castToCStr(CI->getArgOperand(0), B);
-    Result = B.CreateConstInBoundsGEP1_64(Result, Offset, "strstr");
+    Result =
+        B.CreateConstInBoundsGEP1_64(B.getInt8Ty(), Result, Offset, "strstr");
     return B.CreateBitCast(Result, CI->getType());
   }
 
@@ -844,10 +848,12 @@ Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
 
   // memcmp(S1,S2,1) -> *(unsigned char*)LHS - *(unsigned char*)RHS
   if (Len == 1) {
-    Value *LHSV = B.CreateZExt(B.CreateLoad(castToCStr(LHS, B), "lhsc"),
-                               CI->getType(), "lhsv");
-    Value *RHSV = B.CreateZExt(B.CreateLoad(castToCStr(RHS, B), "rhsc"),
-                               CI->getType(), "rhsv");
+    Value *LHSV =
+        B.CreateZExt(B.CreateLoad(B.getInt8Ty(), castToCStr(LHS, B), "lhsc"),
+                     CI->getType(), "lhsv");
+    Value *RHSV =
+        B.CreateZExt(B.CreateLoad(B.getInt8Ty(), castToCStr(RHS, B), "rhsc"),
+                     CI->getType(), "rhsv");
     return B.CreateSub(LHSV, RHSV, "chardiff");
   }
 
@@ -877,12 +883,12 @@ Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
       if (!LHSV) {
         Type *LHSPtrTy =
             IntType->getPointerTo(LHS->getType()->getPointerAddressSpace());
-        LHSV = B.CreateLoad(B.CreateBitCast(LHS, LHSPtrTy), "lhsv");
+        LHSV = B.CreateLoad(IntType, B.CreateBitCast(LHS, LHSPtrTy), "lhsv");
       }
       if (!RHSV) {
         Type *RHSPtrTy =
             IntType->getPointerTo(RHS->getType()->getPointerAddressSpace());
-        RHSV = B.CreateLoad(B.CreateBitCast(RHS, RHSPtrTy), "rhsv");
+        RHSV = B.CreateLoad(IntType, B.CreateBitCast(RHS, RHSPtrTy), "rhsv");
       }
       return B.CreateZExt(B.CreateICmpNE(LHSV, RHSV), CI->getType(), "memcmp");
     }
@@ -2286,7 +2292,8 @@ Value *LibCallSimplifier::optimizeFWrite(CallInst *CI, IRBuilder<> &B) {
     // If this is writing one byte, turn it into fputc.
     // This optimisation is only valid, if the return value is unused.
     if (Bytes == 1 && CI->use_empty()) { // fwrite(S,1,1,F) -> fputc(S[0],F)
-      Value *Char = B.CreateLoad(castToCStr(CI->getArgOperand(0), B), "char");
+      Value *Char = B.CreateLoad(B.getInt8Ty(),
+                                 castToCStr(CI->getArgOperand(0), B), "char");
       Value *NewCI = emitFPutC(Char, CI->getArgOperand(3), B, TLI);
       return NewCI ? ConstantInt::get(CI->getType(), 1) : nullptr;
     }

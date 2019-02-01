@@ -2071,7 +2071,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
   if (Idxs.empty()) return C;
 
   Type *GEPTy = GetElementPtrInst::getGEPReturnType(
-      C, makeArrayRef((Value *const *)Idxs.data(), Idxs.size()));
+      PointeeTy, C, makeArrayRef((Value *const *)Idxs.data(), Idxs.size()));
 
   if (isa<UndefValue>(C))
     return UndefValue::get(GEPTy);

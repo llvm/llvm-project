@@ -227,10 +227,6 @@ bool AArch64FrameLowering::hasFP(const MachineFunction &MF) const {
       MFI.getMaxCallFrameSize() > DefaultSafeSPDisplacement)
     return true;
 
-  // Win64 SEH requires frame pointer if funclets are present.
-  if (MF.hasLocalEscape())
-    return true;
-
   return false;
 }
 
@@ -1469,19 +1465,44 @@ int AArch64FrameLowering::getFrameIndexReference(const MachineFunction &MF,
   return resolveFrameIndexReference(MF, FI, FrameReg);
 }
 
-int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
-                                                     int FI, unsigned &FrameReg,
-                                                     bool PreferFP) const {
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const AArch64RegisterInfo *RegInfo = static_cast<const AArch64RegisterInfo *>(
-      MF.getSubtarget().getRegisterInfo());
-  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+int AArch64FrameLowering::getNonLocalFrameIndexReference(
+  const MachineFunction &MF, int FI) const {
+  return getSEHFrameIndexOffset(MF, FI);
+}
+
+static int getFPOffset(const MachineFunction &MF, int FI) {
+  const auto &MFI = MF.getFrameInfo();
+  const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   bool IsWin64 =
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
   unsigned FixedObject = IsWin64 ? alignTo(AFI->getVarArgsGPRSize(), 16) : 0;
-  int FPOffset = MFI.getObjectOffset(FI) + FixedObject + 16;
-  int Offset = MFI.getObjectOffset(FI) + MFI.getStackSize();
+  return MFI.getObjectOffset(FI) + FixedObject + 16;
+}
+
+static int getStackOffset(const MachineFunction &MF, int FI) {
+  const auto &MFI = MF.getFrameInfo();
+  return MFI.getObjectOffset(FI) + MFI.getStackSize();
+}
+
+int AArch64FrameLowering::getSEHFrameIndexOffset(const MachineFunction &MF,
+                                                 int FI) const {
+  const auto *RegInfo = static_cast<const AArch64RegisterInfo *>(
+      MF.getSubtarget().getRegisterInfo());
+  return RegInfo->getLocalAddressRegister(MF) == AArch64::FP ?
+         getFPOffset(MF, FI) : getStackOffset(MF, FI);
+}
+
+int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
+                                                     int FI, unsigned &FrameReg,
+                                                     bool PreferFP) const {
+  const auto &MFI = MF.getFrameInfo();
+  const auto *RegInfo = static_cast<const AArch64RegisterInfo *>(
+      MF.getSubtarget().getRegisterInfo());
+  const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  int FPOffset = getFPOffset(MF, FI);
+  int Offset = getStackOffset(MF, FI);
   bool isFixed = MFI.isFixedObjectIndex(FI);
   bool isCSR = !isFixed && MFI.getObjectOffset(FI) >=
                                -((int)AFI->getCalleeSavedStackSize());

@@ -212,8 +212,8 @@ static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
       Type *IdxTy = IC.getDataLayout().getIntPtrType(AI.getType());
       Value *NullIdx = Constant::getNullValue(IdxTy);
       Value *Idx[2] = {NullIdx, NullIdx};
-      Instruction *GEP =
-          GetElementPtrInst::CreateInBounds(New, Idx, New->getName() + ".sub");
+      Instruction *GEP = GetElementPtrInst::CreateInBounds(
+          NewTy, New, Idx, New->getName() + ".sub");
       IC.InsertNewInstBefore(GEP, *It);
 
       // Now make everything use the getelementptr instead of the original
@@ -298,7 +298,7 @@ void PointerReplacer::replace(Instruction *I) {
   if (auto *LT = dyn_cast<LoadInst>(I)) {
     auto *V = getReplacement(LT->getPointerOperand());
     assert(V && "Operand not replaced");
-    auto *NewI = new LoadInst(V);
+    auto *NewI = new LoadInst(I->getType(), V);
     NewI->takeName(LT);
     IC.InsertNewInstWith(NewI, *LT);
     IC.replaceInstUsesWith(*LT, NewI);
@@ -465,7 +465,7 @@ static LoadInst *combineLoadToNewType(InstCombiner &IC, LoadInst &LI, Type *NewT
     NewPtr = IC.Builder.CreateBitCast(Ptr, NewTy->getPointerTo(AS));
 
   LoadInst *NewLoad = IC.Builder.CreateAlignedLoad(
-      NewPtr, LI.getAlignment(), LI.isVolatile(), LI.getName() + Suffix);
+      NewTy, NewPtr, LI.getAlignment(), LI.isVolatile(), LI.getName() + Suffix);
   NewLoad->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
   MDBuilder MDB(NewLoad->getContext());
   for (const auto &MDPair : MD) {
@@ -724,7 +724,8 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
       auto *Ptr = IC.Builder.CreateInBoundsGEP(ST, Addr, makeArrayRef(Indices),
                                                Name + ".elt");
       auto EltAlign = MinAlign(Align, SL->getElementOffset(i));
-      auto *L = IC.Builder.CreateAlignedLoad(Ptr, EltAlign, Name + ".unpack");
+      auto *L = IC.Builder.CreateAlignedLoad(ST->getElementType(i), Ptr,
+                                             EltAlign, Name + ".unpack");
       // Propagate AA metadata. It'll still be valid on the narrowed load.
       AAMDNodes AAMD;
       LI.getAAMetadata(AAMD);
@@ -774,8 +775,8 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
       };
       auto *Ptr = IC.Builder.CreateInBoundsGEP(AT, Addr, makeArrayRef(Indices),
                                                Name + ".elt");
-      auto *L = IC.Builder.CreateAlignedLoad(Ptr, MinAlign(Align, Offset),
-                                             Name + ".unpack");
+      auto *L = IC.Builder.CreateAlignedLoad(
+          AT->getElementType(), Ptr, MinAlign(Align, Offset), Name + ".unpack");
       AAMDNodes AAMD;
       LI.getAAMetadata(AAMD);
       L->setAAMetadata(AAMD);
@@ -1065,10 +1066,12 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
       unsigned Align = LI.getAlignment();
       if (isSafeToLoadUnconditionally(SI->getOperand(1), Align, DL, SI) &&
           isSafeToLoadUnconditionally(SI->getOperand(2), Align, DL, SI)) {
-        LoadInst *V1 = Builder.CreateLoad(SI->getOperand(1),
-                                          SI->getOperand(1)->getName()+".val");
-        LoadInst *V2 = Builder.CreateLoad(SI->getOperand(2),
-                                          SI->getOperand(2)->getName()+".val");
+        LoadInst *V1 =
+            Builder.CreateLoad(LI.getType(), SI->getOperand(1),
+                               SI->getOperand(1)->getName() + ".val");
+        LoadInst *V2 =
+            Builder.CreateLoad(LI.getType(), SI->getOperand(2),
+                               SI->getOperand(2)->getName() + ".val");
         assert(LI.isUnordered() && "implied by above");
         V1->setAlignment(Align);
         V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());

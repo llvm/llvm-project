@@ -677,7 +677,7 @@ define <4 x i32> @combine_nested_undef_test4(<4 x i32> %A, <4 x i32> %B) {
 ;
 ; AVX2-LABEL: combine_nested_undef_test4:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX2-NEXT:    retq
   %1 = shufflevector <4 x i32> %A, <4 x i32> %B, <4 x i32> <i32 0, i32 4, i32 7, i32 1>
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 4, i32 4, i32 0, i32 3>
@@ -1044,8 +1044,8 @@ define <4 x i32> @combine_nested_undef_test21(<4 x i32> %A, <4 x i32> %B) {
 ;
 ; AVX2-LABEL: combine_nested_undef_test21:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
-; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX2-NEXT:    retq
   %1 = shufflevector <4 x i32> %A, <4 x i32> %B, <4 x i32> <i32 4, i32 1, i32 3, i32 1>
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 3>
@@ -1114,7 +1114,7 @@ define <4 x i32> @combine_nested_undef_test25(<4 x i32> %A, <4 x i32> %B) {
 ;
 ; AVX2-LABEL: combine_nested_undef_test25:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX2-NEXT:    retq
   %1 = shufflevector <4 x i32> %B, <4 x i32> %A, <4 x i32> <i32 1, i32 5, i32 2, i32 4>
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 3, i32 1, i32 3, i32 1>
@@ -1149,7 +1149,7 @@ define <4 x i32> @combine_nested_undef_test27(<4 x i32> %A, <4 x i32> %B) {
 ;
 ; AVX2-LABEL: combine_nested_undef_test27:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX2-NEXT:    retq
   %1 = shufflevector <4 x i32> %B, <4 x i32> %A, <4 x i32> <i32 2, i32 1, i32 5, i32 4>
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 3, i32 2>
