@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
@@ -1362,7 +1361,13 @@ void ItaniumRecordLayoutBuilder::LayoutFields(const RecordDecl *D) {
   // the future, this will need to be tweakable by targets.
   bool InsertExtraPadding = D->mayInsertExtraPadding(/*EmitRemark=*/true);
   bool HasFlexibleArrayMember = D->hasFlexibleArrayMember();
-  for (auto I = D->field_begin(), End = D->field_end(); I != End; ++I) {
+
+  bool ShouldBeRandomized = D->getAttr<RandomizedAttr>() != nullptr;
+  if (ShouldBeRandomized) {
+      llvm::outs() << D->getNameAsString() << "\n";
+  }
+
+  for (auto I = fields.begin(), End = fields.end(); I != End; ++I) {
     auto Next(I);
     ++Next;
     LayoutField(*I,
