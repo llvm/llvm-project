@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++17 -fcxx-exceptions -fexceptions -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++17 -fcxx-exceptions -fexceptions -fclang-abi-compat=4.0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++11 -fcxx-exceptions -fexceptions -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -std=c++11 -fcxx-exceptions -fexceptions -fclang-abi-compat=4.0 -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: %[[STRUCT_SMALL:.*]] = type { i32* }
 // CHECK: %[[STRUCT_LARGE:.*]] = type { i32*, [128 x i32] }
@@ -41,13 +41,6 @@ struct HasTrivial {
 struct HasNonTrivial {
   Small s;
   NonTrivial m;
-};
-
-struct __attribute__((trivial_abi)) CopyMoveDeleted {
-  CopyMoveDeleted(int);
-  CopyMoveDeleted(const CopyMoveDeleted &) = delete;
-  CopyMoveDeleted(CopyMoveDeleted &&) = delete;
-  int a;
 };
 
 // CHECK: define void @_Z14testParamSmall5Small(i64 %[[A_COERCE:.*]])
@@ -243,12 +236,4 @@ void calleeExceptionLarge(Large, Large);
 
 void testExceptionLarge() {
   calleeExceptionLarge(Large(), Large());
-}
-
-// A class with deleted copy and move constructors can still be passed or
-// returned in registers if the class is annotated with trivial_abi.
-
-// CHECK: define i64 @_Z19testCopyMoveDeletedi(i32 %
-CopyMoveDeleted testCopyMoveDeleted(int a) {
-  return a;
 }
