@@ -385,8 +385,8 @@ void ScriptParser::readOutputArch() {
     skip();
 }
 
-static std::tuple<ELFKind, uint16_t> parseBfdName(StringRef S) {
-  return StringSwitch<std::tuple<ELFKind, uint16_t>>(S)
+static std::pair<ELFKind, uint16_t> parseBfdName(StringRef S) {
+  return StringSwitch<std::pair<ELFKind, uint16_t>>(S)
       .Case("elf32-i386", {ELF32LEKind, EM_386})
       .Case("elf32-iamcu", {ELF32LEKind, EM_IAMCU})
       .Case("elf32-littlearm", {ELF32LEKind, EM_ARM})
