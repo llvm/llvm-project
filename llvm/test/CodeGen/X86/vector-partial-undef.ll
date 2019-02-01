@@ -51,10 +51,6 @@ define <8 x i32> @add_undef_elts(<4 x i32> %x) {
 ;
 ; AVX-LABEL: add_undef_elts:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
-; AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [6,0,5,4,3,2,1,7]
-; AVX-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
   %extend = shufflevector <4 x i32> %x, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %bogus_bo = add <8 x i32> %extend, <i32 undef, i32 undef, i32 undef, i32 undef, i32 42, i32 43, i32 44, i32 12>
@@ -71,11 +67,6 @@ define <8 x i32> @sub_undef_elts(<4 x i32> %x) {
 ;
 ; AVX-LABEL: sub_undef_elts:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = <u,u,u,u,42,43,44,12>
-; AVX-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
-; AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,0,5,4,3,2,6,7]
-; AVX-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
   %extend = shufflevector <4 x i32> %x, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %bogus_bo = sub <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 42, i32 43, i32 44, i32 12>, %extend
@@ -130,24 +121,10 @@ define <4 x i64> @or_undef_elts(<2 x i64> %x) {
 define <8 x i32> @xor_undef_elts(<4 x i32> %x) {
 ; SSE-LABEL: xor_undef_elts:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,1,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,2,2,3]
-; SSE-NEXT:    pxor {{.*}}(%rip), %xmm2
-; SSE-NEXT:    pxor {{.*}}(%rip), %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm2[2,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm2[1,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,0],xmm1[0,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,2],xmm2[2,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: xor_undef_elts:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,3,0,2]
-; AVX-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
-; AVX-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
-; AVX-NEXT:    vmovaps {{.*#+}} ymm1 = [6,1,5,4,3,2,0,7]
-; AVX-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
   %extend = shufflevector <4 x i32> %x, <4 x i32> undef, <8 x i32> <i32 undef, i32 undef, i32 1, i32 3, i32 0, i32 2, i32 undef, i32 undef>
   %bogus_bo = xor <8 x i32> %extend, <i32 42, i32 43, i32 undef, i32 undef, i32 undef, i32 undef, i32 44, i32 12>

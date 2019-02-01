@@ -6,25 +6,24 @@ RUN: echo "%p/Inputs/dwarfdump-test2.elf-x86-64 0x4004e8" >> %t.input
 RUN: echo "%p/Inputs/dwarfdump-test2.elf-x86-64 0x4004f4" >> %t.input
 RUN: echo "%p/Inputs/dwarfdump-test4.elf-x86-64 0x62c" >> %t.input
 
-RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
-RUN:    < %t.input | FileCheck --check-prefix=CHECK --check-prefix=SPLIT --check-prefix=DWO %s
+RUN: llvm-symbolizer < %t.input | FileCheck %s
 
 CHECK:       main
 CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test.cc:16
 
 CHECK:      _start
 
-CHECK: _Z1fii
+CHECK:      f(int, int)
 CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test.cc:11
 
-CHECK: DummyClass
+CHECK:      DummyClass
 CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test.cc:4
 
-CHECK: a
+CHECK:      a
 CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test2-helper.cc:2
 
-CHECK: main
+CHECK:      main
 CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test2-main.cc:4
 
-CHECK:      _Z1cv
+CHECK:      c()
 CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test4-part1.cc:2

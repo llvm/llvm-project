@@ -23,12 +23,12 @@ define <8 x i16> @same_const_one_replaced_i8x16(i16 %x) {
 
 ; CHECK-LABEL: different_const_one_replaced_i8x16:
 ; CHECK-NEXT:  .functype       different_const_one_replaced_i8x16 (i32) -> (v128)
-; CHECK-NEXT:  v128.const      $push[[L0:[0-9]+]]=, 1, 2, 3, 4, 5, 0, 7, 8
+; CHECK-NEXT:  v128.const      $push[[L0:[0-9]+]]=, 1, -2, 3, -4, 5, 0, 7, -8
 ; CHECK-NEXT:  i16x8.replace_lane      $push[[L1:[0-9]+]]=, $pop[[L0]], 5, $0
 ; CHECK-NEXT:  return          $pop[[L1]]
 define <8 x i16> @different_const_one_replaced_i8x16(i16 %x) {
   %v = insertelement
-    <8 x i16> <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>,
+    <8 x i16> <i16 1, i16 -2, i16 3, i16 -4, i16 5, i16 -6, i16 7, i16 -8>,
     i16 %x,
     i32 5
   ret <8 x i16> %v

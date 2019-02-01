@@ -25,10 +25,13 @@ static u32 RandomSeed() {
   return seed;
 }
 
+void Thread::InitRandomState() {
+  random_state_ = flags()->random_tags ? RandomSeed() : unique_id_;
+}
+
 void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size) {
   static u64 unique_id;
   unique_id_ = unique_id++;
-  random_state_ = flags()->random_tags ? RandomSeed() : unique_id_;
   if (auto sz = flags()->heap_history_size)
     heap_allocations_ = HeapAllocationsRingBuffer::New(sz);
 

@@ -607,21 +607,10 @@ define <8 x i32> @load_splat_8i32_2i32_0101(<2 x i32>* %vp) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: load_splat_8i32_2i32_0101:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load_splat_8i32_2i32_0101:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: load_splat_8i32_2i32_0101:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vbroadcastsd (%rdi), %ymm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: load_splat_8i32_2i32_0101:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastsd (%rdi), %ymm0
+; AVX-NEXT:    retq
   %vec = load <2 x i32>, <2 x i32>* %vp
   %res = shufflevector <2 x i32> %vec, <2 x i32> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
   ret <8 x i32> %res
@@ -639,8 +628,7 @@ define <16 x i32> @load_splat_16i32_2i32_0101(<2 x i32>* %vp) {
 ;
 ; AVX1-LABEL: load_splat_16i32_2i32_0101:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    vbroadcastsd (%rdi), %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, %ymm1
 ; AVX1-NEXT:    retq
 ;

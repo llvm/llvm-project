@@ -4640,6 +4640,8 @@ parameter, and it will be included in the ``variables:`` field of its
                           type: !3)
     !2 = !DILocalVariable(name: "y", scope: !5, file: !2, line: 7, type: !3)
 
+.. _DIExpression:
+
 DIExpression
 """"""""""""
 

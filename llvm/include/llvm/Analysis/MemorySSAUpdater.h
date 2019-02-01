@@ -221,14 +221,14 @@ public:
   /// associated with it is erased from the program.  For example, if a store or
   /// load is simply erased (not replaced), removeMemoryAccess should be called
   /// on the MemoryAccess for that store/load.
-  void removeMemoryAccess(MemoryAccess *);
+  void removeMemoryAccess(MemoryAccess *, bool OptimizePhis = false);
 
   /// Remove MemoryAccess for a given instruction, if a MemoryAccess exists.
   /// This should be called when an instruction (load/store) is deleted from
   /// the program.
-  void removeMemoryAccess(const Instruction *I) {
+  void removeMemoryAccess(const Instruction *I, bool OptimizePhis = false) {
     if (MemoryAccess *MA = MSSA->getMemoryAccess(I))
-      removeMemoryAccess(MA);
+      removeMemoryAccess(MA, OptimizePhis);
   }
 
   /// Remove all MemoryAcceses in a set of BasicBlocks about to be deleted.

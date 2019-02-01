@@ -39,15 +39,15 @@ class SjLjEHPrepare : public FunctionPass {
   Type *doubleUnderDataTy;
   Type *doubleUnderJBufTy;
   Type *FunctionContextTy;
-  Constant *RegisterFn;
-  Constant *UnregisterFn;
-  Constant *BuiltinSetupDispatchFn;
-  Constant *FrameAddrFn;
-  Constant *StackAddrFn;
-  Constant *StackRestoreFn;
-  Constant *LSDAAddrFn;
-  Constant *CallSiteFn;
-  Constant *FuncCtxFn;
+  FunctionCallee RegisterFn;
+  FunctionCallee UnregisterFn;
+  Function *BuiltinSetupDispatchFn;
+  Function *FrameAddrFn;
+  Function *StackAddrFn;
+  Function *StackRestoreFn;
+  Function *LSDAAddrFn;
+  Function *CallSiteFn;
+  Function *FuncCtxFn;
   AllocaInst *FuncCtx;
 
 public:

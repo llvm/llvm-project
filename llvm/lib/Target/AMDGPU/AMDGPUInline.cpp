@@ -181,9 +181,10 @@ InlineCost AMDGPUInliner::getInlineCost(CallSite CS) {
     return llvm::InlineCost::getNever("incompatible");
 
   if (CS.hasFnAttr(Attribute::AlwaysInline)) {
-    if (isInlineViable(*Callee))
+    auto IsViable = isInlineViable(*Callee);
+    if (IsViable)
       return llvm::InlineCost::getAlways("alwaysinline viable");
-    return llvm::InlineCost::getNever("alwaysinline unviable");
+    return llvm::InlineCost::getNever(IsViable.message);
   }
 
   if (isWrapperOnlyCall(CS))

@@ -185,8 +185,11 @@ static Error linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
 static Error splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
                             StringRef File, ElfType OutputElfType) {
   auto DWOFile = Reader.create();
-  DWOFile->removeSections(
-      [&](const SectionBase &Sec) { return onlyKeepDWOPred(*DWOFile, Sec); });
+  auto OnlyKeepDWOPred = [&DWOFile](const SectionBase &Sec) {
+    return onlyKeepDWOPred(*DWOFile, Sec);
+  };
+  if (Error E = DWOFile->removeSections(OnlyKeepDWOPred))
+    return E;
   if (Config.OutputArch)
     DWOFile->Machine = Config.OutputArch.getValue().EMachine;
   FileBuffer FB(File);
@@ -287,7 +290,9 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
   // them.
   if (Obj.SymbolTable) {
     Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
-      if (!Sym.isCommon() &&
+      // Common and undefined symbols don't make sense as local symbols, and can
+      // even cause crashes if we localize those, so skip them.
+      if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
           ((Config.LocalizeHidden &&
             (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
            is_contained(Config.SymbolsToLocalize, Sym.Name)))
@@ -336,7 +341,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
         Section.markSymbols();
     }
 
-    Obj.removeSymbols([&](const Symbol &Sym) {
+    auto RemoveSymbolsPred = [&](const Symbol &Sym) {
       if (is_contained(Config.SymbolsToKeep, Sym.Name) ||
           (Config.KeepFileSymbols && Sym.Type == STT_FILE))
         return false;
@@ -360,7 +365,9 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
         return true;
 
       return false;
-    });
+    };
+    if (Error E = Obj.removeSymbols(RemoveSymbolsPred))
+      return E;
   }
 
   SectionPred RemovePred = [](const SectionBase &) { return false; };
@@ -494,7 +501,8 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
           return &Obj.addSection<DecompressedSection>(*CS);
         });
 
-  Obj.removeSections(RemovePred);
+  if (Error E = Obj.removeSections(RemovePred))
+    return E;
 
   if (!Config.SectionsToRename.empty()) {
     for (auto &Sec : Obj.sections()) {

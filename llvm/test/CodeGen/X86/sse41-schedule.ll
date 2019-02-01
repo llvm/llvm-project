@@ -2425,13 +2425,13 @@ define <16 x i8> @test_pinsrb(<16 x i8> %a0, i8 %a1, i8 *%a2) {
 ;
 ; BDVER2-SSE-LABEL: test_pinsrb:
 ; BDVER2-SSE:       # %bb.0:
-; BDVER2-SSE-NEXT:    pinsrb $1, %edi, %xmm0 # sched: [2:0.50]
+; BDVER2-SSE-NEXT:    pinsrb $1, %edi, %xmm0 # sched: [12:0.50]
 ; BDVER2-SSE-NEXT:    pinsrb $3, (%rsi), %xmm0 # sched: [6:0.50]
 ; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
 ;
 ; BDVER2-LABEL: test_pinsrb:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vpinsrb $1, %edi, %xmm0, %xmm0 # sched: [2:0.50]
+; BDVER2-NEXT:    vpinsrb $1, %edi, %xmm0, %xmm0 # sched: [12:0.50]
 ; BDVER2-NEXT:    vpinsrb $3, (%rsi), %xmm0, %xmm0 # sched: [6:0.50]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
@@ -2539,13 +2539,13 @@ define <4 x i32> @test_pinsrd(<4 x i32> %a0, i32 %a1, i32 *%a2) {
 ;
 ; BDVER2-SSE-LABEL: test_pinsrd:
 ; BDVER2-SSE:       # %bb.0:
-; BDVER2-SSE-NEXT:    pinsrd $1, %edi, %xmm0 # sched: [2:0.50]
+; BDVER2-SSE-NEXT:    pinsrd $1, %edi, %xmm0 # sched: [12:0.50]
 ; BDVER2-SSE-NEXT:    pinsrd $3, (%rsi), %xmm0 # sched: [6:0.50]
 ; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
 ;
 ; BDVER2-LABEL: test_pinsrd:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vpinsrd $1, %edi, %xmm0, %xmm0 # sched: [2:0.50]
+; BDVER2-NEXT:    vpinsrd $1, %edi, %xmm0, %xmm0 # sched: [12:0.50]
 ; BDVER2-NEXT:    vpinsrd $3, (%rsi), %xmm0, %xmm0 # sched: [6:0.50]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
@@ -2666,14 +2666,14 @@ define <2 x i64> @test_pinsrq(<2 x i64> %a0, <2 x i64> %a1, i64 %a2, i64 *%a3) {
 ; BDVER2-SSE-LABEL: test_pinsrq:
 ; BDVER2-SSE:       # %bb.0:
 ; BDVER2-SSE-NEXT:    pinsrq $1, (%rsi), %xmm1 # sched: [6:0.50]
-; BDVER2-SSE-NEXT:    pinsrq $1, %rdi, %xmm0 # sched: [2:0.50]
+; BDVER2-SSE-NEXT:    pinsrq $1, %rdi, %xmm0 # sched: [12:0.50]
 ; BDVER2-SSE-NEXT:    paddq %xmm1, %xmm0 # sched: [2:0.50]
 ; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
 ;
 ; BDVER2-LABEL: test_pinsrq:
 ; BDVER2:       # %bb.0:
 ; BDVER2-NEXT:    vpinsrq $1, (%rsi), %xmm1, %xmm1 # sched: [6:0.50]
-; BDVER2-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0 # sched: [2:0.50]
+; BDVER2-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm0 # sched: [12:0.50]
 ; BDVER2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0 # sched: [2:0.50]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;

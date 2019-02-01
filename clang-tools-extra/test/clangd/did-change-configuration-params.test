@@ -24,7 +24,7 @@
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [
 # CHECK-NEXT:      {
-# CHECK-NEXT:        "message": "Variable 'i' is uninitialized when used here",
+# CHECK-NEXT:        "message": "Variable 'i' is uninitialized when used here (fix available)",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
 # CHECK-NEXT:            "character": 28,

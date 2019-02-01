@@ -250,7 +250,10 @@ def : ReadAdvance<ReadAfterVecLd, 5>;
 def : ReadAdvance<ReadAfterVecXLd, 5>;
 def : ReadAdvance<ReadAfterVecYLd, 5>;
 
-def : ReadAdvance<ReadInt2Fpu, 0>;
+// Transfer from int domain to ivec domain incurs additional latency of 8..10cy
+// Reference: Agner, Microarchitecture, "AMD Bulldozer, Piledriver, Steamroller
+// and Excavator pipeline", "Data delay between different execution domains"
+def : ReadAdvance<ReadInt2Fpu, -10>;
 
 // A folded store needs a cycle on the PdStore for the store data.
 def : WriteRes<WriteRMW, [PdStore]>;

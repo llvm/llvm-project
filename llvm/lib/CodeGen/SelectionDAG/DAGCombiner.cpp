@@ -8402,6 +8402,9 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
 SDValue DAGCombiner::CombineZExtLogicopShiftLoad(SDNode *N) {
   assert(N->getOpcode() == ISD::ZERO_EXTEND);
   EVT VT = N->getValueType(0);
+  EVT OrigVT = N->getOperand(0).getValueType();
+  if (TLI.isZExtFree(OrigVT, VT))
+    return SDValue();
 
   // and/or/xor
   SDValue N0 = N->getOperand(0);
@@ -8465,6 +8468,10 @@ SDValue DAGCombiner::CombineZExtLogicopShiftLoad(SDNode *N) {
                                 Load->getValueType(0), ExtLoad);
     CombineTo(Load, Trunc, ExtLoad.getValue(1));
   }
+
+  // N0 is dead at this point.
+  recursivelyDeleteUnusedNodes(N0.getNode());
+
   return SDValue(N,0); // Return N so it doesn't get rechecked!
 }
 

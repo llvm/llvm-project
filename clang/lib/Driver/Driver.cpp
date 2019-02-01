@@ -89,6 +89,33 @@ using namespace clang::driver;
 using namespace clang;
 using namespace llvm::opt;
 
+// static
+std::string Driver::GetResourcesPath(StringRef BinaryPath,
+                                     StringRef CustomResourceDir) {
+  // Since the resource directory is embedded in the module hash, it's important
+  // that all places that need it call this function, so that they get the
+  // exact same string ("a/../b/" and "b/" get different hashes, for example).
+
+  // Dir is bin/ or lib/, depending on where BinaryPath is.
+  std::string Dir = llvm::sys::path::parent_path(BinaryPath);
+
+  SmallString<128> P(Dir);
+  if (CustomResourceDir != "") {
+    llvm::sys::path::append(P, CustomResourceDir);
+  } else {
+    // On Windows, libclang.dll is in bin/.
+    // On non-Windows, libclang.so/.dylib is in lib/.
+    // With a static-library build of libclang, LibClangPath will contain the
+    // path of the embedding binary, which for LLVM binaries will be in bin/.
+    // ../lib gets us to lib/ in both cases.
+    P = llvm::sys::path::parent_path(Dir);
+    llvm::sys::path::append(P, Twine("lib") + CLANG_LIBDIR_SUFFIX, "clang",
+                            CLANG_VERSION_STRING);
+  }
+
+  return P.str();
+}
+
 Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
                DiagnosticsEngine &Diags,
                IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
@@ -119,17 +146,7 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
 #endif
 
   // Compute the path to the resource directory.
-  StringRef ClangResourceDir(CLANG_RESOURCE_DIR);
-  SmallString<128> P(Dir);
-  if (ClangResourceDir != "") {
-    llvm::sys::path::append(P, ClangResourceDir);
-  } else {
-    StringRef ClangLibdirSuffix(CLANG_LIBDIR_SUFFIX);
-    P = llvm::sys::path::parent_path(Dir);
-    llvm::sys::path::append(P, Twine("lib") + ClangLibdirSuffix, "clang",
-                            CLANG_VERSION_STRING);
-  }
-  ResourceDir = P.str();
+  ResourceDir = GetResourcesPath(ClangExecutable, CLANG_RESOURCE_DIR);
 }
 
 void Driver::ParseDriverMode(StringRef ProgramName,

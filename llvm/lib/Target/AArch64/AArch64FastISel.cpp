@@ -405,10 +405,9 @@ unsigned AArch64FastISel::materializeFP(const ConstantFP *CFP, MVT VT) {
   bool Is64Bit = (VT == MVT::f64);
   // This checks to see if we can use FMOV instructions to materialize
   // a constant, otherwise we have to materialize via the constant pool.
-  if (TLI.isFPImmLegal(Val, VT)) {
-    int Imm =
-        Is64Bit ? AArch64_AM::getFP64Imm(Val) : AArch64_AM::getFP32Imm(Val);
-    assert((Imm != -1) && "Cannot encode floating-point constant.");
+  int Imm =
+      Is64Bit ? AArch64_AM::getFP64Imm(Val) : AArch64_AM::getFP32Imm(Val);
+  if (Imm != -1) {
     unsigned Opc = Is64Bit ? AArch64::FMOVDi : AArch64::FMOVSi;
     return fastEmitInst_i(Opc, TLI.getRegClassFor(VT), Imm);
   }

@@ -21,18 +21,20 @@
 
 #include <regex>
 #include <cassert>
+#include "test_macros.h"
 
 int main() {
   for (std::regex_constants::syntax_option_type op :
        {std::regex::ECMAScript, std::regex::extended, std::regex::egrep,
         std::regex::awk}) {
     try {
-      std::regex_match(
+      bool b = std::regex_match(
           "aaaaaaaaaaaaaaaaaaaa",
           std::regex(
               "a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?aaaaaaaaaaaaaaaaaaaa",
               op));
-      assert(false);
+      LIBCPP_ASSERT(false);
+      assert(b);
     } catch (const std::regex_error &e) {
       assert(e.code() == std::regex_constants::error_complexity);
     }

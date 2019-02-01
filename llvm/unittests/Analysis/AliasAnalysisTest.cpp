@@ -166,7 +166,7 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   // Setup function.
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(C), std::vector<Type *>(), false);
-  auto *F = cast<Function>(M.getOrInsertFunction("f", FTy));
+  auto *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
   auto *BB = BasicBlock::Create(C, "entry", F);
   auto IntType = Type::getInt32Ty(C);
   auto PtrType = Type::getInt32PtrTy(C);

@@ -15,6 +15,8 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/Cuda.h"
+#include "clang/CodeGen/CodeGenABITypes.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -102,7 +104,8 @@ private:
     return DummyFunc;
   }
 
-  void emitDeviceStubBody(CodeGenFunction &CGF, FunctionArgList &Args);
+  void emitDeviceStubBodyLegacy(CodeGenFunction &CGF, FunctionArgList &Args);
+  void emitDeviceStubBodyNew(CodeGenFunction &CGF, FunctionArgList &Args);
 
 public:
   CGNVCUDARuntime(CodeGenModule &CGM);
@@ -187,11 +190,110 @@ llvm::FunctionType *CGNVCUDARuntime::getRegisterLinkedBinaryFnTy() const {
 void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
                                      FunctionArgList &Args) {
   EmittedKernels.push_back(CGF.CurFn);
-  emitDeviceStubBody(CGF, Args);
+  if (CudaFeatureEnabled(CGM.getTarget().getSDKVersion(),
+                         CudaFeature::CUDA_USES_NEW_LAUNCH))
+    emitDeviceStubBodyNew(CGF, Args);
+  else
+    emitDeviceStubBodyLegacy(CGF, Args);
 }
 
-void CGNVCUDARuntime::emitDeviceStubBody(CodeGenFunction &CGF,
-                                         FunctionArgList &Args) {
+// CUDA 9.0+ uses new way to launch kernels. Parameters are packed in a local
+// array and kernels are launched using cudaLaunchKernel().
+void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
+                                            FunctionArgList &Args) {
+  // Build the shadow stack entry at the very start of the function.
+
+  // Calculate amount of space we will need for all arguments.  If we have no
+  // args, allocate a single pointer so we still have a valid pointer to the
+  // argument array that we can pass to runtime, even if it will be unused.
+  Address KernelArgs = CGF.CreateTempAlloca(
+      VoidPtrTy, CharUnits::fromQuantity(16), "kernel_args",
+      llvm::ConstantInt::get(SizeTy, std::max<size_t>(1, Args.size())));
+  // Store pointers to the arguments in a locally allocated launch_args.
+  for (unsigned i = 0; i < Args.size(); ++i) {
+    llvm::Value* VarPtr = CGF.GetAddrOfLocalVar(Args[i]).getPointer();
+    llvm::Value *VoidVarPtr = CGF.Builder.CreatePointerCast(VarPtr, VoidPtrTy);
+    CGF.Builder.CreateDefaultAlignedStore(
+        VoidVarPtr, CGF.Builder.CreateConstGEP1_32(KernelArgs.getPointer(), i));
+  }
+
+  llvm::BasicBlock *EndBlock = CGF.createBasicBlock("setup.end");
+
+  // Lookup cudaLaunchKernel function.
+  // cudaError_t cudaLaunchKernel(const void *func, dim3 gridDim, dim3 blockDim,
+  //                              void **args, size_t sharedMem,
+  //                              cudaStream_t stream);
+  TranslationUnitDecl *TUDecl = CGM.getContext().getTranslationUnitDecl();
+  DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
+  IdentifierInfo &cudaLaunchKernelII =
+      CGM.getContext().Idents.get("cudaLaunchKernel");
+  FunctionDecl *cudaLaunchKernelFD = nullptr;
+  for (const auto &Result : DC->lookup(&cudaLaunchKernelII)) {
+    if (FunctionDecl *FD = dyn_cast<FunctionDecl>(Result))
+      cudaLaunchKernelFD = FD;
+  }
+
+  if (cudaLaunchKernelFD == nullptr) {
+    CGM.Error(CGF.CurFuncDecl->getLocation(),
+              "Can't find declaration for cudaLaunchKernel()");
+    return;
+  }
+  // Create temporary dim3 grid_dim, block_dim.
+  ParmVarDecl *GridDimParam = cudaLaunchKernelFD->getParamDecl(1);
+  QualType Dim3Ty = GridDimParam->getType();
+  Address GridDim =
+      CGF.CreateMemTemp(Dim3Ty, CharUnits::fromQuantity(8), "grid_dim");
+  Address BlockDim =
+      CGF.CreateMemTemp(Dim3Ty, CharUnits::fromQuantity(8), "block_dim");
+  Address ShmemSize =
+      CGF.CreateTempAlloca(SizeTy, CGM.getSizeAlign(), "shmem_size");
+  Address Stream =
+      CGF.CreateTempAlloca(VoidPtrTy, CGM.getPointerAlign(), "stream");
+  llvm::Constant *cudaPopConfigFn = CGM.CreateRuntimeFunction(
+      llvm::FunctionType::get(IntTy,
+                              {/*gridDim=*/GridDim.getType(),
+                               /*blockDim=*/BlockDim.getType(),
+                               /*ShmemSize=*/ShmemSize.getType(),
+                               /*Stream=*/Stream.getType()},
+                              /*isVarArg=*/false),
+      "__cudaPopCallConfiguration");
+
+  CGF.EmitRuntimeCallOrInvoke(cudaPopConfigFn,
+                              {GridDim.getPointer(), BlockDim.getPointer(),
+                               ShmemSize.getPointer(), Stream.getPointer()});
+
+  // Emit the call to cudaLaunch
+  llvm::Value *Kernel = CGF.Builder.CreatePointerCast(CGF.CurFn, VoidPtrTy);
+  CallArgList LaunchKernelArgs;
+  LaunchKernelArgs.add(RValue::get(Kernel),
+                       cudaLaunchKernelFD->getParamDecl(0)->getType());
+  LaunchKernelArgs.add(RValue::getAggregate(GridDim), Dim3Ty);
+  LaunchKernelArgs.add(RValue::getAggregate(BlockDim), Dim3Ty);
+  LaunchKernelArgs.add(RValue::get(KernelArgs.getPointer()),
+                       cudaLaunchKernelFD->getParamDecl(3)->getType());
+  LaunchKernelArgs.add(RValue::get(CGF.Builder.CreateLoad(ShmemSize)),
+                       cudaLaunchKernelFD->getParamDecl(4)->getType());
+  LaunchKernelArgs.add(RValue::get(CGF.Builder.CreateLoad(Stream)),
+                       cudaLaunchKernelFD->getParamDecl(5)->getType());
+
+  QualType QT = cudaLaunchKernelFD->getType();
+  QualType CQT = QT.getCanonicalType();
+  llvm::Type *Ty = CGM.getTypes().ConvertFunctionType(CQT, cudaLaunchKernelFD);
+  llvm::FunctionType *FTy = dyn_cast<llvm::FunctionType>(Ty);
+
+  const CGFunctionInfo &FI =
+      CGM.getTypes().arrangeFunctionDeclaration(cudaLaunchKernelFD);
+  llvm::Constant *cudaLaunchKernelFn =
+      CGM.CreateRuntimeFunction(FTy, "cudaLaunchKernel");
+  CGF.EmitCall(FI, CGCallee::forDirect(cudaLaunchKernelFn), ReturnValueSlot(),
+               LaunchKernelArgs);
+  CGF.EmitBranch(EndBlock);
+
+  CGF.EmitBlock(EndBlock);
+}
+
+void CGNVCUDARuntime::emitDeviceStubBodyLegacy(CodeGenFunction &CGF,
+                                               FunctionArgList &Args) {
   // Emit a call to cudaSetupArgument for each arg in Args.
   llvm::Constant *cudaSetupArgFn = getSetupArgumentFn();
   llvm::BasicBlock *EndBlock = CGF.createBasicBlock("setup.end");

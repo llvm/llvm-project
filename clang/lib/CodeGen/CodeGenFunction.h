@@ -4084,8 +4084,8 @@ public:
   /// passing to a runtime sanitizer handler.
   llvm::Constant *EmitCheckSourceLocation(SourceLocation Loc);
 
-  /// Create a basic block that will call a handler function in a
-  /// sanitizer runtime with the provided arguments, and create a conditional
+  /// Create a basic block that will either trap or call a handler function in
+  /// the UBSan runtime with the provided arguments, and create a conditional
   /// branch to it.
   void EmitCheck(ArrayRef<std::pair<llvm::Value *, SanitizerMask>> Checked,
                  SanitizerHandler Check, ArrayRef<llvm::Constant *> StaticArgs,

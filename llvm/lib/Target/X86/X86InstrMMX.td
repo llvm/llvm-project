@@ -152,9 +152,7 @@ multiclass sse12_cvt_pint_3addr<bits<8> opc, RegisterClass SrcRC,
 // MMX EMMS Instruction
 //===----------------------------------------------------------------------===//
 
-let SchedRW = [WriteEMMS],
-    Defs = [MM0, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
-            ST0, ST1, ST2, ST3, ST4, ST5, ST6, ST7] in
+let SchedRW = [WriteEMMS] in
 def MMX_EMMS  : MMXI<0x77, RawFrm, (outs), (ins), "emms", [(int_x86_mmx_emms)]>;
 
 //===----------------------------------------------------------------------===//

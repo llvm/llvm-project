@@ -102,11 +102,11 @@ private:
                                       std::vector<Regex> &Regexes);
 
   // Get pointers to the functions in the runtime library.
-  Constant *getStartFileFunc();
-  Constant *getEmitFunctionFunc();
-  Constant *getEmitArcsFunc();
-  Constant *getSummaryInfoFunc();
-  Constant *getEndFileFunc();
+  FunctionCallee getStartFileFunc();
+  FunctionCallee getEmitFunctionFunc();
+  FunctionCallee getEmitArcsFunc();
+  FunctionCallee getSummaryInfoFunc();
+  FunctionCallee getEndFileFunc();
 
   // Add the function to write out all our counters to the global destructor
   // list.
@@ -647,7 +647,7 @@ void GCOVProfiler::AddFlushBeforeForkAndExec() {
   for (auto I : ForkAndExecs) {
     IRBuilder<> Builder(I);
     FunctionType *FTy = FunctionType::get(Builder.getVoidTy(), {}, false);
-    Constant *GCOVFlush = M->getOrInsertFunction("__gcov_flush", FTy);
+    FunctionCallee GCOVFlush = M->getOrInsertFunction("__gcov_flush", FTy);
     Builder.CreateCall(GCOVFlush);
     I->getParent()->splitBasicBlock(I);
   }
@@ -863,7 +863,7 @@ bool GCOVProfiler::emitProfileArcs() {
 
     // Initialize the environment and register the local writeout and flush
     // functions.
-    Constant *GCOVInit = M->getOrInsertFunction("llvm_gcov_init", FTy);
+    FunctionCallee GCOVInit = M->getOrInsertFunction("llvm_gcov_init", FTy);
     Builder.CreateCall(GCOVInit, {WriteoutF, FlushF});
     Builder.CreateRetVoid();
 
@@ -873,22 +873,21 @@ bool GCOVProfiler::emitProfileArcs() {
   return Result;
 }
 
-Constant *GCOVProfiler::getStartFileFunc() {
+FunctionCallee GCOVProfiler::getStartFileFunc() {
   Type *Args[] = {
     Type::getInt8PtrTy(*Ctx),  // const char *orig_filename
     Type::getInt8PtrTy(*Ctx),  // const char version[4]
     Type::getInt32Ty(*Ctx),    // uint32_t checksum
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
-  auto *Res = M->getOrInsertFunction("llvm_gcda_start_file", FTy);
-  if (Function *FunRes = dyn_cast<Function>(Res))
-    if (auto AK = TLI->getExtAttrForI32Param(false))
-      FunRes->addParamAttr(2, AK);
+  AttributeList AL;
+  if (auto AK = TLI->getExtAttrForI32Param(false))
+    AL = AL.addParamAttribute(*Ctx, 2, AK);
+  FunctionCallee Res = M->getOrInsertFunction("llvm_gcda_start_file", FTy, AL);
   return Res;
-
 }
 
-Constant *GCOVProfiler::getEmitFunctionFunc() {
+FunctionCallee GCOVProfiler::getEmitFunctionFunc() {
   Type *Args[] = {
     Type::getInt32Ty(*Ctx),    // uint32_t ident
     Type::getInt8PtrTy(*Ctx),  // const char *function_name
@@ -897,36 +896,34 @@ Constant *GCOVProfiler::getEmitFunctionFunc() {
     Type::getInt32Ty(*Ctx),    // uint32_t cfg_checksum
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
-  auto *Res = M->getOrInsertFunction("llvm_gcda_emit_function", FTy);
-  if (Function *FunRes = dyn_cast<Function>(Res))
-    if (auto AK = TLI->getExtAttrForI32Param(false)) {
-      FunRes->addParamAttr(0, AK);
-      FunRes->addParamAttr(2, AK);
-      FunRes->addParamAttr(3, AK);
-      FunRes->addParamAttr(4, AK);
-    }
-  return Res;
+  AttributeList AL;
+  if (auto AK = TLI->getExtAttrForI32Param(false)) {
+    AL = AL.addParamAttribute(*Ctx, 0, AK);
+    AL = AL.addParamAttribute(*Ctx, 2, AK);
+    AL = AL.addParamAttribute(*Ctx, 3, AK);
+    AL = AL.addParamAttribute(*Ctx, 4, AK);
+  }
+  return M->getOrInsertFunction("llvm_gcda_emit_function", FTy);
 }
 
-Constant *GCOVProfiler::getEmitArcsFunc() {
+FunctionCallee GCOVProfiler::getEmitArcsFunc() {
   Type *Args[] = {
     Type::getInt32Ty(*Ctx),     // uint32_t num_counters
     Type::getInt64PtrTy(*Ctx),  // uint64_t *counters
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
-  auto *Res = M->getOrInsertFunction("llvm_gcda_emit_arcs", FTy);
-  if (Function *FunRes = dyn_cast<Function>(Res))
-    if (auto AK = TLI->getExtAttrForI32Param(false))
-      FunRes->addParamAttr(0, AK);
-  return Res;
+  AttributeList AL;
+  if (auto AK = TLI->getExtAttrForI32Param(false))
+    AL = AL.addParamAttribute(*Ctx, 0, AK);
+  return M->getOrInsertFunction("llvm_gcda_emit_arcs", FTy, AL);
 }
 
-Constant *GCOVProfiler::getSummaryInfoFunc() {
+FunctionCallee GCOVProfiler::getSummaryInfoFunc() {
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
   return M->getOrInsertFunction("llvm_gcda_summary_info", FTy);
 }
 
-Constant *GCOVProfiler::getEndFileFunc() {
+FunctionCallee GCOVProfiler::getEndFileFunc() {
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
   return M->getOrInsertFunction("llvm_gcda_end_file", FTy);
 }
@@ -946,11 +943,11 @@ Function *GCOVProfiler::insertCounterWriteout(
   BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", WriteoutF);
   IRBuilder<> Builder(BB);
 
-  Constant *StartFile = getStartFileFunc();
-  Constant *EmitFunction = getEmitFunctionFunc();
-  Constant *EmitArcs = getEmitArcsFunc();
-  Constant *SummaryInfo = getSummaryInfoFunc();
-  Constant *EndFile = getEndFileFunc();
+  FunctionCallee StartFile = getStartFileFunc();
+  FunctionCallee EmitFunction = getEmitFunctionFunc();
+  FunctionCallee EmitArcs = getEmitArcsFunc();
+  FunctionCallee SummaryInfo = getSummaryInfoFunc();
+  FunctionCallee EndFile = getEndFileFunc();
 
   NamedMDNode *CUNodes = M->getNamedMetadata("llvm.dbg.cu");
   if (!CUNodes) {

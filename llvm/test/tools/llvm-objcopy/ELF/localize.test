@@ -1,6 +1,7 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objcopy \
 # RUN:     --localize-symbol Global \
+# RUN:     -L GlobalUndef \
 # RUN:     -L Local \
 # RUN:     -L Weak \
 # RUN:     -L GlobalCommon \
@@ -45,6 +46,8 @@ Symbols:
       Size:     8
       Section:  .text
       Value:    0x1010
+    - Name:     GlobalUndef
+      Type:     STT_FUNC
     - Name:     GlobalCommon
       Type:     STT_OBJECT
       Index:    SHN_COMMON
@@ -87,6 +90,15 @@ Symbols:
 #CHECK-NEXT:    Type: Function
 #CHECK-NEXT:    Other: 0
 #CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: GlobalUndef
+#CHECK-NEXT:    Value:
+#CHECK-NEXT:    Size:
+#CHECK-NEXT:    Binding: Global
+#CHECK-NEXT:    Type: Function
+#CHECK-NEXT:    Other:
+#CHECK-NEXT:    Section: Undefined
 #CHECK-NEXT:  }
 #CHECK-NEXT:  Symbol {
 #CHECK-NEXT:    Name: GlobalCommon

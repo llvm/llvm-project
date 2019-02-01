@@ -88,29 +88,29 @@ isOnlyCopiedFromConstantGlobal(Value *V, MemTransferInst *&TheCopy,
         continue;
       }
 
-      if (auto CS = CallSite(I)) {
+      if (auto *Call = dyn_cast<CallBase>(I)) {
         // If this is the function being called then we treat it like a load and
         // ignore it.
-        if (CS.isCallee(&U))
+        if (Call->isCallee(&U))
           continue;
 
-        unsigned DataOpNo = CS.getDataOperandNo(&U);
-        bool IsArgOperand = CS.isArgOperand(&U);
+        unsigned DataOpNo = Call->getDataOperandNo(&U);
+        bool IsArgOperand = Call->isArgOperand(&U);
 
         // Inalloca arguments are clobbered by the call.
-        if (IsArgOperand && CS.isInAllocaArgument(DataOpNo))
+        if (IsArgOperand && Call->isInAllocaArgument(DataOpNo))
           return false;
 
         // If this is a readonly/readnone call site, then we know it is just a
         // load (but one that potentially returns the value itself), so we can
         // ignore it if we know that the value isn't captured.
-        if (CS.onlyReadsMemory() &&
-            (CS.getInstruction()->use_empty() || CS.doesNotCapture(DataOpNo)))
+        if (Call->onlyReadsMemory() &&
+            (Call->use_empty() || Call->doesNotCapture(DataOpNo)))
           continue;
 
         // If this is being passed as a byval argument, the caller is making a
         // copy, so it is only a read of the alloca.
-        if (IsArgOperand && CS.isByValArgument(DataOpNo))
+        if (IsArgOperand && Call->isByValArgument(DataOpNo))
           continue;
       }
 

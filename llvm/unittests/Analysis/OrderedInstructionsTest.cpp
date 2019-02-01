@@ -25,7 +25,7 @@ TEST(OrderedInstructionsTest, DominanceTest) {
   IRBuilder<> B(Ctx);
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Ctx), {B.getInt8PtrTy()}, false);
-  Function *F = cast<Function>(M.getOrInsertFunction("f", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
 
   // Create the function as follow and check for dominance relation.
   //

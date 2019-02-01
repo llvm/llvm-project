@@ -607,36 +607,11 @@ private:
       MSSA->verifyMemorySSA();
     // Removing a store here can leave MemorySSA in an unoptimized state by
     // creating MemoryPhis that have identical arguments and by creating
-    // MemoryUses whose defining access is not an actual clobber.  We handle the
-    // phi case eagerly here.  The non-optimized MemoryUse case is lazily
-    // updated by MemorySSA getClobberingMemoryAccess.
-    if (MemoryAccess *MA = MSSA->getMemoryAccess(Inst)) {
-      // Optimize MemoryPhi nodes that may become redundant by having all the
-      // same input values once MA is removed.
-      SmallSetVector<MemoryPhi *, 4> PhisToCheck;
-      SmallVector<MemoryAccess *, 8> WorkQueue;
-      WorkQueue.push_back(MA);
-      // Process MemoryPhi nodes in FIFO order using a ever-growing vector since
-      // we shouldn't be processing that many phis and this will avoid an
-      // allocation in almost all cases.
-      for (unsigned I = 0; I < WorkQueue.size(); ++I) {
-        MemoryAccess *WI = WorkQueue[I];
-
-        for (auto *U : WI->users())
-          if (MemoryPhi *MP = dyn_cast<MemoryPhi>(U))
-            PhisToCheck.insert(MP);
-
-        MSSAUpdater->removeMemoryAccess(WI);
-
-        for (MemoryPhi *MP : PhisToCheck) {
-          MemoryAccess *FirstIn = MP->getIncomingValue(0);
-          if (llvm::all_of(MP->incoming_values(),
-                           [=](Use &In) { return In == FirstIn; }))
-            WorkQueue.push_back(MP);
-        }
-        PhisToCheck.clear();
-      }
-    }
+    // MemoryUses whose defining access is not an actual clobber. The phi case
+    // is handled by MemorySSA when passing OptimizePhis = true to
+    // removeMemoryAccess.  The non-optimized MemoryUse case is lazily updated
+    // by MemorySSA's getClobberingMemoryAccess.
+    MSSAUpdater->removeMemoryAccess(Inst, true);
   }
 };
 

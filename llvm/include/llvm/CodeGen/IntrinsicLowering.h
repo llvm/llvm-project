@@ -30,10 +30,6 @@ class IntrinsicLowering {
 public:
   explicit IntrinsicLowering(const DataLayout &DL) : DL(DL), Warned(false) {}
 
-  /// Add all of the prototypes that might be needed by an intrinsic lowering
-  /// implementation to be inserted into the module specified.
-  void AddPrototypes(Module &M);
-
   /// Replace a call to the specified intrinsic function.
   /// If an intrinsic function must be implemented by the code generator
   /// (such as va_start), this function should print a message and abort.

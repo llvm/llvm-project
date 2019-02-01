@@ -3880,8 +3880,8 @@ define i64 @test_pinsrw(x86_mmx %a0, i32 %a1, i16* %a2) optsize {
 ; BDVER2-LABEL: test_pinsrw:
 ; BDVER2:       # %bb.0:
 ; BDVER2-NEXT:    movswl (%rsi), %eax # sched: [5:0.50]
-; BDVER2-NEXT:    pinsrw $0, %edi, %mm0 # sched: [2:0.50]
-; BDVER2-NEXT:    pinsrw $1, %eax, %mm0 # sched: [2:0.50]
+; BDVER2-NEXT:    pinsrw $0, %edi, %mm0 # sched: [12:0.50]
+; BDVER2-NEXT:    pinsrw $1, %eax, %mm0 # sched: [12:0.50]
 ; BDVER2-NEXT:    movq %mm0, %rax # sched: [10:1.00]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;

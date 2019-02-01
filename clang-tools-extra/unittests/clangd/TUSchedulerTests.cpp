@@ -687,10 +687,10 @@ TEST_F(TUSchedulerTests, TUStatus) {
   // We schedule the following tasks in the queue:
   //   [Update] [GoToDefinition]
   Server.addDocument(testPath("foo.cpp"), Code.code(), WantDiagnostics::Yes);
-  Server.findDefinitions(testPath("foo.cpp"), Code.point(),
-                         [](Expected<std::vector<Location>> Result) {
-                           ASSERT_TRUE((bool)Result);
-                         });
+  Server.locateSymbolAt(testPath("foo.cpp"), Code.point(),
+                        [](Expected<std::vector<LocatedSymbol>> Result) {
+                          ASSERT_TRUE((bool)Result);
+                        });
 
   ASSERT_TRUE(Server.blockUntilIdleForTest());
 
