@@ -3186,6 +3186,8 @@ public:
     LookupObjCImplicitSelfParam,
     /// Look up the name of an OpenMP user-defined reduction operation.
     LookupOMPReductionName,
+    /// Look up the name of an OpenMP user-defined mapper.
+    LookupOMPMapperName,
     /// Look up any declaration with any name.
     LookupAnyName
   };
@@ -8935,6 +8937,27 @@ public:
   /// Called at the end of '#pragma omp declare reduction'.
   DeclGroupPtrTy ActOnOpenMPDeclareReductionDirectiveEnd(
       Scope *S, DeclGroupPtrTy DeclReductions, bool IsValid);
+
+  /// Check variable declaration in 'omp declare mapper' construct.
+  TypeResult ActOnOpenMPDeclareMapperVarDecl(Scope *S, Declarator &D);
+  /// Check if the specified type is allowed to be used in 'omp declare
+  /// mapper' construct.
+  QualType ActOnOpenMPDeclareMapperType(SourceLocation TyLoc,
+                                        TypeResult ParsedType);
+  /// Called on start of '#pragma omp declare mapper'.
+  OMPDeclareMapperDecl *ActOnOpenMPDeclareMapperDirectiveStart(
+      Scope *S, DeclContext *DC, DeclarationName Name, QualType MapperType,
+      SourceLocation StartLoc, DeclarationName VN, AccessSpecifier AS,
+      Decl *PrevDeclInScope = nullptr);
+  /// Build the mapper variable of '#pragma omp declare mapper'.
+  void ActOnOpenMPDeclareMapperDirectiveVarDecl(OMPDeclareMapperDecl *DMD,
+                                                Scope *S, QualType MapperType,
+                                                SourceLocation StartLoc,
+                                                DeclarationName VN);
+  /// Called at the end of '#pragma omp declare mapper'.
+  DeclGroupPtrTy
+  ActOnOpenMPDeclareMapperDirectiveEnd(OMPDeclareMapperDecl *D, Scope *S,
+                                       ArrayRef<OMPClause *> ClauseList);
 
   /// Called on the start of target region i.e. '#pragma omp declare target'.
   bool ActOnStartOpenMPDeclareTargetDirective(SourceLocation Loc);

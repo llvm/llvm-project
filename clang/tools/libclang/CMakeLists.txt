@@ -38,6 +38,7 @@ set(LIBS
   clangAST
   clangAPINotes
   clangBasic
+  clangDriver
   clangFrontend
   clangIndex
   clangLex

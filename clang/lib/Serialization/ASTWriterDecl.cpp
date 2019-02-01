@@ -146,6 +146,7 @@ namespace clang {
     void VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D);
     void VisitOMPRequiresDecl(OMPRequiresDecl *D);
     void VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D);
+    void VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D);
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
 
     /// Add an Objective-C type parameter list to the given record.
@@ -1765,6 +1766,19 @@ void ASTDeclWriter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
   Record.push_back(D->getInitializerKind());
   Record.AddDeclRef(D->getPrevDeclInScope());
   Code = serialization::DECL_OMP_DECLARE_REDUCTION;
+}
+
+void ASTDeclWriter::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
+  Record.push_back(D->clauselist_size());
+  VisitValueDecl(D);
+  Record.AddSourceLocation(D->getBeginLoc());
+  Record.AddStmt(D->getMapperVarRef());
+  Record.AddDeclarationName(D->getVarName());
+  Record.AddDeclRef(D->getPrevDeclInScope());
+  OMPClauseWriter ClauseWriter(Record);
+  for (OMPClause *C : D->clauselists())
+    ClauseWriter.writeClause(C);
+  Code = serialization::DECL_OMP_DECLARE_MAPPER;
 }
 
 void ASTDeclWriter::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {

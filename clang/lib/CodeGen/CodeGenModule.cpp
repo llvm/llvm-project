@@ -2191,6 +2191,10 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
       if (MustBeEmitted(Global))
         EmitOMPDeclareReduction(DRD);
       return;
+    } else if (auto *DMD = dyn_cast<OMPDeclareMapperDecl>(Global)) {
+      if (MustBeEmitted(Global))
+        EmitOMPDeclareMapper(DMD);
+      return;
     }
   }
 
@@ -5051,6 +5055,10 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
 
   case Decl::OMPDeclareReduction:
     EmitOMPDeclareReduction(cast<OMPDeclareReductionDecl>(D));
+    break;
+
+  case Decl::OMPDeclareMapper:
+    EmitOMPDeclareMapper(cast<OMPDeclareMapperDecl>(D));
     break;
 
   case Decl::OMPRequires:

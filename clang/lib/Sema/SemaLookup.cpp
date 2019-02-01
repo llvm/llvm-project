@@ -278,6 +278,10 @@ static inline unsigned getIDNS(Sema::LookupNameKind NameKind,
     IDNS = Decl::IDNS_OMPReduction;
     break;
 
+  case Sema::LookupOMPMapperName:
+    IDNS = Decl::IDNS_OMPMapper;
+    break;
+
   case Sema::LookupAnyName:
     IDNS = Decl::IDNS_Ordinary | Decl::IDNS_Tag | Decl::IDNS_Member
       | Decl::IDNS_Using | Decl::IDNS_Namespace | Decl::IDNS_ObjCProtocol
@@ -2101,6 +2105,10 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
 
     case LookupOMPReductionName:
       BaseCallback = &CXXRecordDecl::FindOMPReductionMember;
+      break;
+
+    case LookupOMPMapperName:
+      BaseCallback = &CXXRecordDecl::FindOMPMapperMember;
       break;
 
     case LookupUsingDeclName:

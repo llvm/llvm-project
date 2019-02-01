@@ -123,6 +123,56 @@ OMPDeclareReductionDecl::getPrevDeclInScope() const {
 }
 
 //===----------------------------------------------------------------------===//
+// OMPDeclareMapperDecl Implementation.
+//===----------------------------------------------------------------------===//
+
+void OMPDeclareMapperDecl::anchor() {}
+
+OMPDeclareMapperDecl *
+OMPDeclareMapperDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
+                             DeclarationName Name, QualType T,
+                             DeclarationName VarName,
+                             OMPDeclareMapperDecl *PrevDeclInScope) {
+  return new (C, DC) OMPDeclareMapperDecl(OMPDeclareMapper, DC, L, Name, T,
+                                          VarName, PrevDeclInScope);
+}
+
+OMPDeclareMapperDecl *OMPDeclareMapperDecl::CreateDeserialized(ASTContext &C,
+                                                               unsigned ID,
+                                                               unsigned N) {
+  auto *D = new (C, ID)
+      OMPDeclareMapperDecl(OMPDeclareMapper, /*DC=*/nullptr, SourceLocation(),
+                           DeclarationName(), QualType(), DeclarationName(),
+                           /*PrevDeclInScope=*/nullptr);
+  if (N) {
+    auto **ClauseStorage = C.Allocate<OMPClause *>(N);
+    D->Clauses = llvm::makeMutableArrayRef<OMPClause *>(ClauseStorage, N);
+  }
+  return D;
+}
+
+/// Creates an array of clauses to this mapper declaration and intializes
+/// them. The space used to store clause pointers is dynamically allocated,
+/// because we do not know the number of clauses when creating
+/// OMPDeclareMapperDecl
+void OMPDeclareMapperDecl::CreateClauses(ASTContext &C,
+                                         ArrayRef<OMPClause *> CL) {
+  assert(Clauses.empty() && "Number of clauses should be 0 on initialization");
+  size_t NumClauses = CL.size();
+  if (NumClauses) {
+    auto **ClauseStorage = C.Allocate<OMPClause *>(NumClauses);
+    Clauses = llvm::makeMutableArrayRef<OMPClause *>(ClauseStorage, NumClauses);
+    setClauses(CL);
+  }
+}
+
+void OMPDeclareMapperDecl::setClauses(ArrayRef<OMPClause *> CL) {
+  assert(CL.size() == Clauses.size() &&
+         "Number of clauses is not the same as the preallocated buffer");
+  std::uninitialized_copy(CL.begin(), CL.end(), Clauses.data());
+}
+
+//===----------------------------------------------------------------------===//
 // OMPCapturedExprDecl Implementation.
 //===----------------------------------------------------------------------===//
 

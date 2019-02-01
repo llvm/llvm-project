@@ -2808,6 +2808,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_cancel:
   case OMPD_flush:
   case OMPD_declare_reduction:
+  case OMPD_declare_mapper:
   case OMPD_declare_simd:
   case OMPD_declare_target:
   case OMPD_end_declare_target:
@@ -3656,6 +3657,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   case OMPD_end_declare_target:
   case OMPD_threadprivate:
   case OMPD_declare_reduction:
+  case OMPD_declare_mapper:
   case OMPD_declare_simd:
   case OMPD_requires:
     llvm_unreachable("OpenMP Directive is not allowed");
@@ -5969,6 +5971,13 @@ StmtResult Sema::ActOnOpenMPSectionsDirective(ArrayRef<OMPClause *> Clauses,
     return StmtError();
   }
 
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  cast<CapturedStmt>(AStmt)->getCapturedDecl()->setNothrow();
+
   setFunctionHasBranchProtectedScope();
 
   return OMPSectionsDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt,
@@ -5982,6 +5991,13 @@ StmtResult Sema::ActOnOpenMPSectionDirective(Stmt *AStmt,
     return StmtError();
 
   assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
+
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  cast<CapturedStmt>(AStmt)->getCapturedDecl()->setNothrow();
 
   setFunctionHasBranchProtectedScope();
   DSAStack->setParentCancelRegion(DSAStack->isCancelRegion());
@@ -8421,6 +8437,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_declare_reduction:
+    case OMPD_declare_mapper:
     case OMPD_declare_simd:
     case OMPD_declare_target:
     case OMPD_end_declare_target:
@@ -8487,6 +8504,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_declare_reduction:
+    case OMPD_declare_mapper:
     case OMPD_declare_simd:
     case OMPD_declare_target:
     case OMPD_end_declare_target:
@@ -8554,6 +8572,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_declare_reduction:
+    case OMPD_declare_mapper:
     case OMPD_declare_simd:
     case OMPD_declare_target:
     case OMPD_end_declare_target:
@@ -8618,6 +8637,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_declare_reduction:
+    case OMPD_declare_mapper:
     case OMPD_declare_simd:
     case OMPD_declare_target:
     case OMPD_end_declare_target:
@@ -8683,6 +8703,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_declare_reduction:
+    case OMPD_declare_mapper:
     case OMPD_declare_simd:
     case OMPD_declare_target:
     case OMPD_end_declare_target:
@@ -8747,6 +8768,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_declare_reduction:
+    case OMPD_declare_mapper:
     case OMPD_declare_simd:
     case OMPD_declare_target:
     case OMPD_end_declare_target:
@@ -8810,6 +8832,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_declare_reduction:
+    case OMPD_declare_mapper:
     case OMPD_declare_simd:
     case OMPD_declare_target:
     case OMPD_end_declare_target:
@@ -13448,6 +13471,143 @@ Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareReductionDirectiveEnd(
     }
   }
   return DeclReductions;
+}
+
+TypeResult Sema::ActOnOpenMPDeclareMapperVarDecl(Scope *S, Declarator &D) {
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  QualType T = TInfo->getType();
+  if (D.isInvalidType())
+    return true;
+
+  if (getLangOpts().CPlusPlus) {
+    // Check that there are no default arguments (C++ only).
+    CheckExtraCXXDefaultArguments(D);
+  }
+
+  return CreateParsedType(T, TInfo);
+}
+
+QualType Sema::ActOnOpenMPDeclareMapperType(SourceLocation TyLoc,
+                                            TypeResult ParsedType) {
+  assert(ParsedType.isUsable() && "Expect usable parsed mapper type");
+
+  QualType MapperType = GetTypeFromParser(ParsedType.get());
+  assert(!MapperType.isNull() && "Expect valid mapper type");
+
+  // [OpenMP 5.0], 2.19.7.3 declare mapper Directive, Restrictions
+  //  The type must be of struct, union or class type in C and C++
+  if (!MapperType->isStructureOrClassType() && !MapperType->isUnionType()) {
+    Diag(TyLoc, diag::err_omp_mapper_wrong_type);
+    return QualType();
+  }
+  return MapperType;
+}
+
+OMPDeclareMapperDecl *Sema::ActOnOpenMPDeclareMapperDirectiveStart(
+    Scope *S, DeclContext *DC, DeclarationName Name, QualType MapperType,
+    SourceLocation StartLoc, DeclarationName VN, AccessSpecifier AS,
+    Decl *PrevDeclInScope) {
+  LookupResult Lookup(*this, Name, SourceLocation(), LookupOMPMapperName,
+                      forRedeclarationInCurContext());
+  // [OpenMP 5.0], 2.19.7.3 declare mapper Directive, Restrictions
+  //  A mapper-identifier may not be redeclared in the current scope for the
+  //  same type or for a type that is compatible according to the base language
+  //  rules.
+  llvm::DenseMap<QualType, SourceLocation> PreviousRedeclTypes;
+  OMPDeclareMapperDecl *PrevDMD = nullptr;
+  bool InCompoundScope = true;
+  if (S != nullptr) {
+    // Find previous declaration with the same name not referenced in other
+    // declarations.
+    FunctionScopeInfo *ParentFn = getEnclosingFunction();
+    InCompoundScope =
+        (ParentFn != nullptr) && !ParentFn->CompoundScopes.empty();
+    LookupName(Lookup, S);
+    FilterLookupForScope(Lookup, DC, S, /*ConsiderLinkage=*/false,
+                         /*AllowInlineNamespace=*/false);
+    llvm::DenseMap<OMPDeclareMapperDecl *, bool> UsedAsPrevious;
+    LookupResult::Filter Filter = Lookup.makeFilter();
+    while (Filter.hasNext()) {
+      auto *PrevDecl = cast<OMPDeclareMapperDecl>(Filter.next());
+      if (InCompoundScope) {
+        auto I = UsedAsPrevious.find(PrevDecl);
+        if (I == UsedAsPrevious.end())
+          UsedAsPrevious[PrevDecl] = false;
+        if (OMPDeclareMapperDecl *D = PrevDecl->getPrevDeclInScope())
+          UsedAsPrevious[D] = true;
+      }
+      PreviousRedeclTypes[PrevDecl->getType().getCanonicalType()] =
+          PrevDecl->getLocation();
+    }
+    Filter.done();
+    if (InCompoundScope) {
+      for (const auto &PrevData : UsedAsPrevious) {
+        if (!PrevData.second) {
+          PrevDMD = PrevData.first;
+          break;
+        }
+      }
+    }
+  } else if (PrevDeclInScope) {
+    auto *PrevDMDInScope = PrevDMD =
+        cast<OMPDeclareMapperDecl>(PrevDeclInScope);
+    do {
+      PreviousRedeclTypes[PrevDMDInScope->getType().getCanonicalType()] =
+          PrevDMDInScope->getLocation();
+      PrevDMDInScope = PrevDMDInScope->getPrevDeclInScope();
+    } while (PrevDMDInScope != nullptr);
+  }
+  const auto I = PreviousRedeclTypes.find(MapperType.getCanonicalType());
+  bool Invalid = false;
+  if (I != PreviousRedeclTypes.end()) {
+    Diag(StartLoc, diag::err_omp_declare_mapper_redefinition)
+        << MapperType << Name;
+    Diag(I->second, diag::note_previous_definition);
+    Invalid = true;
+  }
+  auto *DMD = OMPDeclareMapperDecl::Create(Context, DC, StartLoc, Name,
+                                           MapperType, VN, PrevDMD);
+  DC->addDecl(DMD);
+  DMD->setAccess(AS);
+  if (Invalid)
+    DMD->setInvalidDecl();
+
+  // Enter new function scope.
+  PushFunctionScope();
+  setFunctionHasBranchProtectedScope();
+
+  CurContext = DMD;
+
+  return DMD;
+}
+
+void Sema::ActOnOpenMPDeclareMapperDirectiveVarDecl(OMPDeclareMapperDecl *DMD,
+                                                    Scope *S,
+                                                    QualType MapperType,
+                                                    SourceLocation StartLoc,
+                                                    DeclarationName VN) {
+  VarDecl *VD = buildVarDecl(*this, StartLoc, MapperType, VN.getAsString());
+  if (S)
+    PushOnScopeChains(VD, S);
+  else
+    DMD->addDecl(VD);
+  Expr *MapperVarRefExpr = buildDeclRefExpr(*this, VD, MapperType, StartLoc);
+  DMD->setMapperVarRef(MapperVarRefExpr);
+}
+
+Sema::DeclGroupPtrTy
+Sema::ActOnOpenMPDeclareMapperDirectiveEnd(OMPDeclareMapperDecl *D, Scope *S,
+                                           ArrayRef<OMPClause *> ClauseList) {
+  PopDeclContext();
+  PopFunctionScopeInfo();
+
+  if (D) {
+    if (S)
+      PushOnScopeChains(D, S, /*AddToContext=*/false);
+    D->CreateClauses(Context, ClauseList);
+  }
+
+  return DeclGroupPtrTy::make(DeclGroupRef(D));
 }
 
 OMPClause *Sema::ActOnOpenMPNumTeamsClause(Expr *NumTeams,

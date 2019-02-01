@@ -178,14 +178,14 @@
 // CHECK-CXXINCLUDE-SAME: {{.*}}"-internal-isystem" "{{.+}}/include/c++/4.8"
 // CHECK-CXXINCLUDE: ld{{.*}}"
 
-// CUDA80: clang{{.*}} "-cc1" "-triple" "nvptx64-nvidia-cuda"
+// CUDA80: "-cc1" "-triple" "nvptx64-nvidia-cuda"
 // CUDA80-SAME: -target-sdk-version=8.0
-// CUDA80: clang{{.*}} "-cc1" "-triple" "x86_64-unknown-linux-gnu"
+// CUDA80: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CUDA80-SAME: -target-sdk-version=8.0
 // CUDA80: ld{{.*}}"
 
-// CUDA70: clang{{.*}} "-cc1" "-triple" "nvptx64-nvidia-cuda"
+// CUDA70: "-cc1" "-triple" "nvptx64-nvidia-cuda"
 // CUDA70-SAME: -target-sdk-version=7.0
-// CUDA70: clang{{.*}} "-cc1" "-triple" "x86_64-unknown-linux-gnu"
+// CUDA70: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CUDA70-SAME: -target-sdk-version=7.0
 // CUDA70: ld{{.*}}"
