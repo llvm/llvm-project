@@ -52,14 +52,18 @@ SwiftUserExpression::SwiftUserExpression(
       m_type_system_helper(*m_target_wp.lock().get()),
       m_result_delegate(exe_scope.CalculateTarget(), *this, false),
       m_error_delegate(exe_scope.CalculateTarget(), *this, true),
-      m_persistent_variable_delegate(*this) {}
+      m_persistent_variable_delegate(*this) {
+  m_runs_in_playground_or_repl =
+      options.GetREPLEnabled() || options.GetPlaygroundTransformEnabled();
+}
 
 SwiftUserExpression::~SwiftUserExpression() {}
 
 void SwiftUserExpression::WillStartExecuting() {
   if (auto process = m_jit_process_wp.lock()) {
     if (auto *swift_runtime = process->GetSwiftLanguageRuntime())
-      swift_runtime->WillStartExecutingUserExpression();
+      swift_runtime->WillStartExecutingUserExpression(
+          m_runs_in_playground_or_repl);
     else
       llvm_unreachable("Can't execute a swift expression without a runtime");
   } else
@@ -69,7 +73,8 @@ void SwiftUserExpression::WillStartExecuting() {
 void SwiftUserExpression::DidFinishExecuting() {
   if (auto process = m_jit_process_wp.lock()) {
     if (auto swift_runtime = process->GetSwiftLanguageRuntime())
-      swift_runtime->DidFinishExecutingUserExpression();
+      swift_runtime->DidFinishExecutingUserExpression(
+          m_runs_in_playground_or_repl);
     else
       llvm_unreachable("Can't execute a swift expression without a runtime");
   }
