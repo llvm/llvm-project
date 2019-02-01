@@ -3187,7 +3187,7 @@ def ObjCExternallyRetained : InheritableAttr {
   let Documentation = [ObjCExternallyRetainedDocs];
 }
 
-def Randomized : InheritableAttr {
+def RandomizeLayout : InheritableAttr {
   let Spellings = [GCC<"randomize_layout">, Declspec<"randomize_layout">,
     Keyword<"randomize_layout">];
   let Subjects = SubjectList<[Record]>;

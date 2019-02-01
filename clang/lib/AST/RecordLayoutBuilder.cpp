@@ -1362,7 +1362,7 @@ void ItaniumRecordLayoutBuilder::LayoutFields(const RecordDecl *D) {
   bool InsertExtraPadding = D->mayInsertExtraPadding(/*EmitRemark=*/true);
   bool HasFlexibleArrayMember = D->hasFlexibleArrayMember();
 
-  bool ShouldBeRandomized = D->getAttr<RandomizedAttr>() != nullptr;
+  bool ShouldBeRandomized = D->getAttr<RandomizeLayoutAttr>() != nullptr;
   if (ShouldBeRandomized) {
       llvm::outs() << D->getNameAsString() << "\n";
   }

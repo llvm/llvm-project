@@ -6788,8 +6788,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleSimpleAttributeWithExclusions<NoSpeculativeLoadHardeningAttr,
                                         SpeculativeLoadHardeningAttr>(S, D, AL);
     break;
-  case ParsedAttr::AT_Randomized:
-    handleSimpleAttribute<RandomizedAttr>(S, D, AL);
+  case ParsedAttr::AT_RandomizeLayout:
+    handleSimpleAttribute<RandomizeLayoutAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_CodeSeg:
     handleCodeSegAttr(S, D, AL);
