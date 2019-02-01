@@ -186,7 +186,16 @@ void RetainCountChecker::checkPostStmt(const CastExpr *CE,
   if (!BE)
     return;
 
-  ArgEffect AE = ArgEffect(IncRef, ObjKind::ObjC);
+  QualType QT = CE->getType();
+  ObjKind K;
+  if (coreFoundation::isCFObjectRef(QT)) {
+    K = ObjKind::CF;
+  } else {
+    assert(cocoa::isCocoaObjectRef(QT));
+    K = ObjKind::ObjC;
+  }
+
+  ArgEffect AE = ArgEffect(IncRef, K);
 
   switch (BE->getBridgeKind()) {
     case OBC_Bridge:
