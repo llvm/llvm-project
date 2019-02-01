@@ -248,6 +248,9 @@ and with  ``-fsanitize-coverage=trace-gep`` --
 the `LLVM GEP instructions <https://llvm.org/docs/GetElementPtr.html>`_
 (to capture array indices).
 
+Unless ``no-prune`` option is provided, some of the comparison instructions
+will not be instrumented.
+
 .. code-block:: c++
 
   // Called before a comparison instruction.

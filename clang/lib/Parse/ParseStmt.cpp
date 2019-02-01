@@ -1970,9 +1970,12 @@ StmtResult Parser::ParseReturnStatement() {
 
   ExprResult R;
   if (Tok.isNot(tok::semi)) {
+    if (!IsCoreturn)
+      PreferredType.enterReturn(Actions, Tok.getLocation());
     // FIXME: Code completion for co_return.
     if (Tok.is(tok::code_completion) && !IsCoreturn) {
-      Actions.CodeCompleteReturn(getCurScope());
+      Actions.CodeCompleteExpression(getCurScope(),
+                                     PreferredType.get(Tok.getLocation()));
       cutOffParsing();
       return StmtError();
     }

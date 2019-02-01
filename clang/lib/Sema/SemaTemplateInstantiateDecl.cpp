@@ -2175,20 +2175,6 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
     Owner->addDecl(Method);
   }
 
-  // PR17480: Honor the used attribute to instantiate member function
-  // definitions
-  if (Method->hasAttr<UsedAttr>()) {
-    if (const auto *A = dyn_cast<CXXRecordDecl>(Owner)) {
-      SourceLocation Loc;
-      if (const MemberSpecializationInfo *MSInfo =
-              A->getMemberSpecializationInfo())
-        Loc = MSInfo->getPointOfInstantiation();
-      else if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(A))
-        Loc = Spec->getPointOfInstantiation();
-      SemaRef.MarkFunctionReferenced(Loc, Method);
-    }
-  }
-
   return Method;
 }
 

@@ -7213,7 +7213,7 @@ def err_kern_type_not_void_return : Error<
 def err_kern_is_nonstatic_method : Error<
   "kernel function %0 must be a free function or static member function">;
 def err_config_scalar_return : Error<
-  "CUDA special function 'cudaConfigureCall' must have scalar return type">;
+  "CUDA special function '%0' must have scalar return type">;
 def err_kern_call_not_global_function : Error<
   "kernel call to non-global function %0">;
 def err_global_call_not_config : Error<

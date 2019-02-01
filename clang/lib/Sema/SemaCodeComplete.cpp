@@ -347,6 +347,182 @@ public:
 };
 } // namespace
 
+void PreferredTypeBuilder::enterReturn(Sema &S, SourceLocation Tok) {
+  if (isa<BlockDecl>(S.CurContext)) {
+    if (sema::BlockScopeInfo *BSI = S.getCurBlock()) {
+      Type = BSI->ReturnType;
+      ExpectedLoc = Tok;
+    }
+  } else if (const auto *Function = dyn_cast<FunctionDecl>(S.CurContext)) {
+    Type = Function->getReturnType();
+    ExpectedLoc = Tok;
+  } else if (const auto *Method = dyn_cast<ObjCMethodDecl>(S.CurContext)) {
+    Type = Method->getReturnType();
+    ExpectedLoc = Tok;
+  }
+}
+
+void PreferredTypeBuilder::enterVariableInit(SourceLocation Tok, Decl *D) {
+  auto *VD = llvm::dyn_cast_or_null<ValueDecl>(D);
+  Type = VD ? VD->getType() : QualType();
+  ExpectedLoc = Tok;
+}
+
+void PreferredTypeBuilder::enterParenExpr(SourceLocation Tok,
+                                          SourceLocation LParLoc) {
+  // expected type for parenthesized expression does not change.
+  if (ExpectedLoc == LParLoc)
+    ExpectedLoc = Tok;
+}
+
+static QualType getPreferredTypeOfBinaryRHS(Sema &S, Expr *LHS,
+                                            tok::TokenKind Op) {
+  if (!LHS)
+    return QualType();
+
+  QualType LHSType = LHS->getType();
+  if (LHSType->isPointerType()) {
+    if (Op == tok::plus || Op == tok::plusequal || Op == tok::minusequal)
+      return S.getASTContext().getPointerDiffType();
+    // Pointer difference is more common than subtracting an int from a pointer.
+    if (Op == tok::minus)
+      return LHSType;
+  }
+
+  switch (Op) {
+  // No way to infer the type of RHS from LHS.
+  case tok::comma:
+    return QualType();
+  // Prefer the type of the left operand for all of these.
+  // Arithmetic operations.
+  case tok::plus:
+  case tok::plusequal:
+  case tok::minus:
+  case tok::minusequal:
+  case tok::percent:
+  case tok::percentequal:
+  case tok::slash:
+  case tok::slashequal:
+  case tok::star:
+  case tok::starequal:
+  // Assignment.
+  case tok::equal:
+  // Comparison operators.
+  case tok::equalequal:
+  case tok::exclaimequal:
+  case tok::less:
+  case tok::lessequal:
+  case tok::greater:
+  case tok::greaterequal:
+  case tok::spaceship:
+    return LHS->getType();
+  // Binary shifts are often overloaded, so don't try to guess those.
+  case tok::greatergreater:
+  case tok::greatergreaterequal:
+  case tok::lessless:
+  case tok::lesslessequal:
+    if (LHSType->isIntegralOrEnumerationType())
+      return S.getASTContext().IntTy;
+    return QualType();
+  // Logical operators, assume we want bool.
+  case tok::ampamp:
+  case tok::pipepipe:
+  case tok::caretcaret:
+    return S.getASTContext().BoolTy;
+  // Operators often used for bit manipulation are typically used with the type
+  // of the left argument.
+  case tok::pipe:
+  case tok::pipeequal:
+  case tok::caret:
+  case tok::caretequal:
+  case tok::amp:
+  case tok::ampequal:
+    if (LHSType->isIntegralOrEnumerationType())
+      return LHSType;
+    return QualType();
+  // RHS should be a pointer to a member of the 'LHS' type, but we can't give
+  // any particular type here.
+  case tok::periodstar:
+  case tok::arrowstar:
+    return QualType();
+  default:
+    // FIXME(ibiryukov): handle the missing op, re-add the assertion.
+    // assert(false && "unhandled binary op");
+    return QualType();
+  }
+}
+
+/// Get preferred type for an argument of an unary expression. \p ContextType is
+/// preferred type of the whole unary expression.
+static QualType getPreferredTypeOfUnaryArg(Sema &S, QualType ContextType,
+                                           tok::TokenKind Op) {
+  switch (Op) {
+  case tok::exclaim:
+    return S.getASTContext().BoolTy;
+  case tok::amp:
+    if (!ContextType.isNull() && ContextType->isPointerType())
+      return ContextType->getPointeeType();
+    return QualType();
+  case tok::star:
+    if (ContextType.isNull())
+      return QualType();
+    return S.getASTContext().getPointerType(ContextType.getNonReferenceType());
+  case tok::plus:
+  case tok::minus:
+  case tok::tilde:
+  case tok::minusminus:
+  case tok::plusplus:
+    if (ContextType.isNull())
+      return S.getASTContext().IntTy;
+    // leave as is, these operators typically return the same type.
+    return ContextType;
+  case tok::kw___real:
+  case tok::kw___imag:
+    return QualType();
+  default:
+    assert(false && "unhnalded unary op");
+    return QualType();
+  }
+}
+
+void PreferredTypeBuilder::enterBinary(Sema &S, SourceLocation Tok, Expr *LHS,
+                                       tok::TokenKind Op) {
+  Type = getPreferredTypeOfBinaryRHS(S, LHS, Op);
+  ExpectedLoc = Tok;
+}
+
+void PreferredTypeBuilder::enterMemAccess(Sema &S, SourceLocation Tok,
+                                          Expr *Base) {
+  if (!Base)
+    return;
+  Type = this->get(Base->getBeginLoc());
+  ExpectedLoc = Tok;
+}
+
+void PreferredTypeBuilder::enterUnary(Sema &S, SourceLocation Tok,
+                                      tok::TokenKind OpKind,
+                                      SourceLocation OpLoc) {
+  Type = getPreferredTypeOfUnaryArg(S, this->get(OpLoc), OpKind);
+  ExpectedLoc = Tok;
+}
+
+void PreferredTypeBuilder::enterSubscript(Sema &S, SourceLocation Tok,
+                                          Expr *LHS) {
+  Type = S.getASTContext().IntTy;
+  ExpectedLoc = Tok;
+}
+
+void PreferredTypeBuilder::enterTypeCast(SourceLocation Tok,
+                                         QualType CastType) {
+  Type = !CastType.isNull() ? CastType.getCanonicalType() : QualType();
+  ExpectedLoc = Tok;
+}
+
+void PreferredTypeBuilder::enterCondition(Sema &S, SourceLocation Tok) {
+  Type = S.getASTContext().BoolTy;
+  ExpectedLoc = Tok;
+}
+
 class ResultBuilder::ShadowMapEntry::iterator {
   llvm::PointerUnion<const NamedDecl *, const DeclIndexPair *> DeclOrIterator;
   unsigned SingleDeclIndex;
@@ -3813,13 +3989,15 @@ void Sema::CodeCompleteDeclSpec(Scope *S, DeclSpec &DS,
 }
 
 struct Sema::CodeCompleteExpressionData {
-  CodeCompleteExpressionData(QualType PreferredType = QualType())
+  CodeCompleteExpressionData(QualType PreferredType = QualType(),
+                             bool IsParenthesized = false)
       : PreferredType(PreferredType), IntegralConstantExpression(false),
-        ObjCCollection(false) {}
+        ObjCCollection(false), IsParenthesized(IsParenthesized) {}
 
   QualType PreferredType;
   bool IntegralConstantExpression;
   bool ObjCCollection;
+  bool IsParenthesized;
   SmallVector<Decl *, 4> IgnoreDecls;
 };
 
@@ -3830,13 +4008,18 @@ void Sema::CodeCompleteExpression(Scope *S,
   ResultBuilder Results(
       *this, CodeCompleter->getAllocator(),
       CodeCompleter->getCodeCompletionTUInfo(),
-      CodeCompletionContext(CodeCompletionContext::CCC_Expression,
-                            Data.PreferredType));
+      CodeCompletionContext(
+          Data.IsParenthesized
+              ? CodeCompletionContext::CCC_ParenthesizedExpression
+              : CodeCompletionContext::CCC_Expression,
+          Data.PreferredType));
+  auto PCC =
+      Data.IsParenthesized ? PCC_ParenthesizedExpression : PCC_Expression;
   if (Data.ObjCCollection)
     Results.setFilter(&ResultBuilder::IsObjCCollection);
   else if (Data.IntegralConstantExpression)
     Results.setFilter(&ResultBuilder::IsIntegralConstantValue);
-  else if (WantTypesInContext(PCC_Expression, getLangOpts()))
+  else if (WantTypesInContext(PCC, getLangOpts()))
     Results.setFilter(&ResultBuilder::IsOrdinaryName);
   else
     Results.setFilter(&ResultBuilder::IsOrdinaryNonTypeName);
@@ -3854,7 +4037,7 @@ void Sema::CodeCompleteExpression(Scope *S,
                      CodeCompleter->loadExternal());
 
   Results.EnterNewScope();
-  AddOrdinaryNameResults(PCC_Expression, S, *this, Results);
+  AddOrdinaryNameResults(PCC, S, *this, Results);
   Results.ExitScope();
 
   bool PreferredTypeIsPointer = false;
@@ -3874,13 +4057,16 @@ void Sema::CodeCompleteExpression(Scope *S,
                             Results.data(), Results.size());
 }
 
-void Sema::CodeCompleteExpression(Scope *S, QualType PreferredType) {
-  return CodeCompleteExpression(S, CodeCompleteExpressionData(PreferredType));
+void Sema::CodeCompleteExpression(Scope *S, QualType PreferredType,
+                                  bool IsParenthesized) {
+  return CodeCompleteExpression(
+      S, CodeCompleteExpressionData(PreferredType, IsParenthesized));
 }
 
-void Sema::CodeCompletePostfixExpression(Scope *S, ExprResult E) {
+void Sema::CodeCompletePostfixExpression(Scope *S, ExprResult E,
+                                         QualType PreferredType) {
   if (E.isInvalid())
-    CodeCompleteOrdinaryName(S, PCC_RecoveryInFunction);
+    CodeCompleteExpression(S, PreferredType);
   else if (getLangOpts().ObjC)
     CodeCompleteObjCInstanceMessage(S, E.get(), None, false);
 }
@@ -4168,7 +4354,8 @@ AddRecordMembersCompletionResults(Sema &SemaRef, ResultBuilder &Results,
 void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
                                            Expr *OtherOpBase,
                                            SourceLocation OpLoc, bool IsArrow,
-                                           bool IsBaseExprStatement) {
+                                           bool IsBaseExprStatement,
+                                           QualType PreferredType) {
   if (!Base || !CodeCompleter)
     return;
 
@@ -4196,6 +4383,7 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
   }
 
   CodeCompletionContext CCContext(contextKind, ConvertedBaseType);
+  CCContext.setPreferredType(PreferredType);
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(), CCContext,
                         &ResultBuilder::IsMember);
@@ -4758,22 +4946,6 @@ void Sema::CodeCompleteInitializer(Scope *S, Decl *D) {
   CodeCompleteExpression(S, Data);
 }
 
-void Sema::CodeCompleteReturn(Scope *S) {
-  QualType ResultType;
-  if (isa<BlockDecl>(CurContext)) {
-    if (BlockScopeInfo *BSI = getCurBlock())
-      ResultType = BSI->ReturnType;
-  } else if (const auto *Function = dyn_cast<FunctionDecl>(CurContext))
-    ResultType = Function->getReturnType();
-  else if (const auto *Method = dyn_cast<ObjCMethodDecl>(CurContext))
-    ResultType = Method->getReturnType();
-
-  if (ResultType.isNull())
-    CodeCompleteOrdinaryName(S, PCC_Expression);
-  else
-    CodeCompleteExpression(S, ResultType);
-}
-
 void Sema::CodeCompleteAfterIf(Scope *S) {
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
@@ -4833,91 +5005,6 @@ void Sema::CodeCompleteAfterIf(Scope *S) {
 
   HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
                             Results.data(), Results.size());
-}
-
-static QualType getPreferredTypeOfBinaryRHS(Sema &S, Expr *LHS,
-                                            tok::TokenKind Op) {
-  if (!LHS)
-    return QualType();
-
-  QualType LHSType = LHS->getType();
-  if (LHSType->isPointerType()) {
-    if (Op == tok::plus || Op == tok::plusequal || Op == tok::minusequal)
-      return S.getASTContext().getPointerDiffType();
-    // Pointer difference is more common than subtracting an int from a pointer.
-    if (Op == tok::minus)
-      return LHSType;
-  }
-
-  switch (Op) {
-  // No way to infer the type of RHS from LHS.
-  case tok::comma:
-    return QualType();
-  // Prefer the type of the left operand for all of these.
-  // Arithmetic operations.
-  case tok::plus:
-  case tok::plusequal:
-  case tok::minus:
-  case tok::minusequal:
-  case tok::percent:
-  case tok::percentequal:
-  case tok::slash:
-  case tok::slashequal:
-  case tok::star:
-  case tok::starequal:
-  // Assignment.
-  case tok::equal:
-  // Comparison operators.
-  case tok::equalequal:
-  case tok::exclaimequal:
-  case tok::less:
-  case tok::lessequal:
-  case tok::greater:
-  case tok::greaterequal:
-  case tok::spaceship:
-    return LHS->getType();
-  // Binary shifts are often overloaded, so don't try to guess those.
-  case tok::greatergreater:
-  case tok::greatergreaterequal:
-  case tok::lessless:
-  case tok::lesslessequal:
-    if (LHSType->isIntegralOrEnumerationType())
-      return S.getASTContext().IntTy;
-    return QualType();
-  // Logical operators, assume we want bool.
-  case tok::ampamp:
-  case tok::pipepipe:
-  case tok::caretcaret:
-    return S.getASTContext().BoolTy;
-  // Operators often used for bit manipulation are typically used with the type
-  // of the left argument.
-  case tok::pipe:
-  case tok::pipeequal:
-  case tok::caret:
-  case tok::caretequal:
-  case tok::amp:
-  case tok::ampequal:
-    if (LHSType->isIntegralOrEnumerationType())
-      return LHSType;
-    return QualType();
-  // RHS should be a pointer to a member of the 'LHS' type, but we can't give
-  // any particular type here.
-  case tok::periodstar:
-  case tok::arrowstar:
-    return QualType();
-  default:
-    // FIXME(ibiryukov): handle the missing op, re-add the assertion.
-    // assert(false && "unhandled binary op");
-    return QualType();
-  }
-}
-
-void Sema::CodeCompleteBinaryRHS(Scope *S, Expr *LHS, tok::TokenKind Op) {
-  auto PreferredType = getPreferredTypeOfBinaryRHS(*this, LHS, Op);
-  if (!PreferredType.isNull())
-    CodeCompleteExpression(S, PreferredType);
-  else
-    CodeCompleteOrdinaryName(S, PCC_Expression);
 }
 
 void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,

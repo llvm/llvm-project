@@ -275,6 +275,41 @@ public:
   }
 };
 
+/// Keeps track of expected type during expression parsing. The type is tied to
+/// a particular token, all functions that update or consume the type take a
+/// start location of the token they are looking at as a parameter. This allows
+/// to avoid updating the type on hot paths in the parser.
+class PreferredTypeBuilder {
+public:
+  PreferredTypeBuilder() = default;
+  explicit PreferredTypeBuilder(QualType Type) : Type(Type) {}
+
+  void enterCondition(Sema &S, SourceLocation Tok);
+  void enterReturn(Sema &S, SourceLocation Tok);
+  void enterVariableInit(SourceLocation Tok, Decl *D);
+
+  void enterParenExpr(SourceLocation Tok, SourceLocation LParLoc);
+  void enterUnary(Sema &S, SourceLocation Tok, tok::TokenKind OpKind,
+                  SourceLocation OpLoc);
+  void enterBinary(Sema &S, SourceLocation Tok, Expr *LHS, tok::TokenKind Op);
+  void enterMemAccess(Sema &S, SourceLocation Tok, Expr *Base);
+  void enterSubscript(Sema &S, SourceLocation Tok, Expr *LHS);
+  /// Handles all type casts, including C-style cast, C++ casts, etc.
+  void enterTypeCast(SourceLocation Tok, QualType CastType);
+
+  QualType get(SourceLocation Tok) const {
+    if (Tok == ExpectedLoc)
+      return Type;
+    return QualType();
+  }
+
+private:
+  /// Start position of a token for which we store expected type.
+  SourceLocation ExpectedLoc;
+  /// Expected type for a token starting at ExpectedLoc.
+  QualType Type;
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 class Sema {
   Sema(const Sema &) = delete;
@@ -10379,6 +10414,11 @@ public:
   /// Copies target attributes from the template TD to the function FD.
   void inheritCUDATargetAttrs(FunctionDecl *FD, const FunctionTemplateDecl &TD);
 
+  /// Returns the name of the launch configuration function.  This is the name
+  /// of the function that will be called to configure kernel call, with the
+  /// parameters specified via <<<>>>.
+  std::string getCudaConfigureFuncName() const;
+
   /// \name Code completion
   //@{
   /// Describes the context in which code completion occurs.
@@ -10437,11 +10477,14 @@ public:
   struct CodeCompleteExpressionData;
   void CodeCompleteExpression(Scope *S,
                               const CodeCompleteExpressionData &Data);
-  void CodeCompleteExpression(Scope *S, QualType PreferredType);
+  void CodeCompleteExpression(Scope *S, QualType PreferredType,
+                              bool IsParenthesized = false);
   void CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base, Expr *OtherOpBase,
                                        SourceLocation OpLoc, bool IsArrow,
-                                       bool IsBaseExprStatement);
-  void CodeCompletePostfixExpression(Scope *S, ExprResult LHS);
+                                       bool IsBaseExprStatement,
+                                       QualType PreferredType);
+  void CodeCompletePostfixExpression(Scope *S, ExprResult LHS,
+                                     QualType PreferredType);
   void CodeCompleteTag(Scope *S, unsigned TagSpec);
   void CodeCompleteTypeQualifiers(DeclSpec &DS);
   void CodeCompleteFunctionQualifiers(DeclSpec &DS, Declarator &D,
@@ -10463,9 +10506,7 @@ public:
                                               IdentifierInfo *II,
                                               SourceLocation OpenParLoc);
   void CodeCompleteInitializer(Scope *S, Decl *D);
-  void CodeCompleteReturn(Scope *S);
   void CodeCompleteAfterIf(Scope *S);
-  void CodeCompleteBinaryRHS(Scope *S, Expr *LHS, tok::TokenKind Op);
 
   void CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
                                bool EnteringContext, QualType BaseType);

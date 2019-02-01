@@ -4583,7 +4583,7 @@ Expr *OpenMPIterationSpaceChecker::buildPreCond(
           /*AllowExplicit=*/true);
   }
   SemaRef.getDiagnostics().setSuppressAllDiagnostics(Suppress);
-  // Otherwise use original loop conditon and evaluate it in runtime.
+  // Otherwise use original loop condition and evaluate it in runtime.
   return CondExpr.isUsable() ? CondExpr.get() : Cond;
 }
 

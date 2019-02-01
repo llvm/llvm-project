@@ -4409,11 +4409,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // attribute to insert handler calls.
       if (SanOpts.has(SanitizerKind::Address)) {
         SanitizerScope SanScope(this);
+        llvm::IRBuilder<>::InsertPointGuard IPGuard(Builder);
         Builder.SetInsertPoint(CI);
         auto *FnType = llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
         auto *Fn = CGM.CreateRuntimeFunction(FnType, "__asan_handle_no_return");
         EmitNounwindRuntimeCall(Fn);
-        Builder.SetInsertPoint(CI->getParent());
       }
     }
 
