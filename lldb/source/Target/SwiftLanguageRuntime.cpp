@@ -2675,6 +2675,9 @@ bool SwiftLanguageRuntime::FixupReference(lldb::addr_t &addr,
     case llvm::Triple::ArchType::x86_64:
       addr &= ~SWIFT_ABI_X86_64_SWIFT_SPARE_BITS_MASK;
       break;
+    case llvm::Triple::ArchType::systemz:
+      addr &= ~SWIFT_ABI_S390X_SWIFT_SPARE_BITS_MASK;
+      break;
     default:
       break;
     }
@@ -3512,6 +3515,7 @@ SwiftLanguageRuntime::MaskMaybeBridgedPointer(lldb::addr_t addr,
   ArchSpec::Core core_kind = arch_spec.GetCore();
   bool is_arm = false;
   bool is_intel = false;
+  bool is_s390x = false;
   bool is_32 = false;
   bool is_64 = false;
   if (core_kind == ArchSpec::Core::eCore_arm_arm64) {
@@ -3525,6 +3529,8 @@ SwiftLanguageRuntime::MaskMaybeBridgedPointer(lldb::addr_t addr,
   } else if (core_kind >= ArchSpec::Core::kCore_x86_32_first &&
              core_kind <= ArchSpec::Core::kCore_x86_32_last) {
     is_intel = true;
+  } else if (core_kind == ArchSpec::Core::eCore_s390x_generic) {
+    is_s390x = true;
   } else {
     // this is a really random CPU core to be running on - just get out fast
     return addr;
@@ -3555,6 +3561,9 @@ SwiftLanguageRuntime::MaskMaybeBridgedPointer(lldb::addr_t addr,
 
   if (is_intel && is_32)
     mask = SWIFT_ABI_I386_SWIFT_SPARE_BITS_MASK;
+
+  if (is_s390x && is_64)
+    mask = SWIFT_ABI_S390X_SWIFT_SPARE_BITS_MASK;
 
   if (masked_bits)
     *masked_bits = addr & mask;
