@@ -155,13 +155,17 @@ public:
 
 class UndefinedFunction : public FunctionSymbol {
 public:
-  UndefinedFunction(StringRef Name, uint32_t Flags, InputFile *File = nullptr,
+  UndefinedFunction(StringRef Name, StringRef Module, uint32_t Flags,
+                    InputFile *File = nullptr,
                     const WasmSignature *Type = nullptr)
-      : FunctionSymbol(Name, UndefinedFunctionKind, Flags, File, Type) {}
+      : FunctionSymbol(Name, UndefinedFunctionKind, Flags, File, Type),
+        Module(Module) {}
 
   static bool classof(const Symbol *S) {
     return S->kind() == UndefinedFunctionKind;
   }
+
+  StringRef Module;
 };
 
 class SectionSymbol : public Symbol {

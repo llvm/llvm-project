@@ -1,5 +1,9 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../..)
 
+set(LLVM_LINK_COMPONENTS
+  support
+  )
+
 # A target containing all code tweaks (i.e. mini-refactorings) provided by
 # clangd.
 # Built as an object library to make sure linker does not remove global
@@ -8,6 +12,10 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../..)
 # $<TARGET_OBJECTS:obj.clangDaemonTweaks> to a list of sources, see
 # clangd/tool/CMakeLists.txt for an example.
 add_clang_library(clangDaemonTweaks OBJECT
-  Dummy.cpp # FIXME: to avoid CMake errors due to empty inputs, remove when a
-            #        first tweak lands.
+  SwapIfBranches.cpp
+
+  LINK_LIBS
+  clangAST
+  clangDaemon
+  clangToolingCore
   )

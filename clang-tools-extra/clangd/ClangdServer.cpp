@@ -354,10 +354,10 @@ void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
                            Bind(Action, std::move(CB), File.str()));
 }
 
-void ClangdServer::applyTweak(PathRef File, Range Sel, TweakID ID,
+void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
                               Callback<tooling::Replacements> CB) {
-  auto Action = [ID, Sel](decltype(CB) CB, std::string File,
-                          Expected<InputsAndAST> InpAST) {
+  auto Action = [Sel](decltype(CB) CB, std::string File, std::string TweakID,
+                      Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
 
@@ -369,14 +369,15 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, TweakID ID,
     Tweak::Selection Inputs = {InpAST->Inputs.Contents, InpAST->AST,
                                *CursorLoc};
 
-    auto A = prepareTweak(ID, Inputs);
+    auto A = prepareTweak(TweakID, Inputs);
     if (!A)
       return CB(A.takeError());
     // FIXME: run formatter on top of resulting replacements.
     return CB((*A)->apply(Inputs));
   };
-  WorkScheduler.runWithAST("ApplyTweak", File,
-                           Bind(Action, std::move(CB), File.str()));
+  WorkScheduler.runWithAST(
+      "ApplyTweak", File,
+      Bind(Action, std::move(CB), File.str(), TweakID.str()));
 }
 
 void ClangdServer::dumpAST(PathRef File,

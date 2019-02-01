@@ -17,6 +17,7 @@ endif()
 
 target_link_libraries(clangd
   PRIVATE
+  clangAST
   clangBasic
   clangTidy
   clangDaemon

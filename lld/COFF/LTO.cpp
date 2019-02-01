@@ -43,7 +43,7 @@ using namespace lld::coff;
 
 static std::unique_ptr<lto::LTO> createLTO() {
   lto::Config C;
-  C.Options = InitTargetOptionsFromCodeGenFlags();
+  C.Options = initTargetOptionsFromCodeGenFlags();
 
   // Always emit a section per function/datum with LTO. LLVM LTO should get most
   // of the benefit of linker GC, but there are still opportunities for ICF.
@@ -60,8 +60,8 @@ static std::unique_ptr<lto::LTO> createLTO() {
   C.DisableVerify = true;
   C.DiagHandler = diagnosticHandler;
   C.OptLevel = Config->LTOO;
-  C.CPU = GetCPUStr();
-  C.MAttrs = GetMAttrs();
+  C.CPU = getCPUStr();
+  C.MAttrs = getMAttrs();
   C.CGOptLevel = args::getCGOptLevel(Config->LTOO);
 
   if (Config->SaveTemps)

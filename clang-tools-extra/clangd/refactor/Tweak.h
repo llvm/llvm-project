@@ -27,14 +27,11 @@
 namespace clang {
 namespace clangd {
 
-using TweakID = llvm::StringRef;
-
 /// An interface base for small context-sensitive refactoring actions.
 /// To implement a new tweak use the following pattern in a .cpp file:
 ///   class MyTweak : public Tweak {
 ///   public:
-///     TweakID id() const override final; // definition provided by
-///                                        // REGISTER_TWEAK.
+///     const char* id() const override final; // defined by REGISTER_TWEAK.
 ///     // implement other methods here.
 ///   };
 ///   REGISTER_TWEAK(MyTweak);
@@ -57,7 +54,7 @@ public:
   /// A unique id of the action, it is always equal to the name of the class
   /// defining the Tweak. Definition is provided automatically by
   /// REGISTER_TWEAK.
-  virtual TweakID id() const = 0;
+  virtual const char *id() const = 0;
   /// Run the first stage of the action. The non-None result indicates that the
   /// action is available and should be shown to the user. Returns None if the
   /// action is not available.
@@ -78,9 +75,7 @@ public:
 #define REGISTER_TWEAK(Subclass)                                               \
   ::llvm::Registry<::clang::clangd::Tweak>::Add<Subclass>                      \
       TweakRegistrationFor##Subclass(#Subclass, /*Description=*/"");           \
-  ::clang::clangd::TweakID Subclass::id() const {                              \
-    return llvm::StringLiteral(#Subclass);                                     \
-  }
+  const char *Subclass::id() const { return #Subclass; }
 
 /// Calls prepare() on all tweaks, returning those that can run on the
 /// selection.
@@ -89,7 +84,7 @@ std::vector<std::unique_ptr<Tweak>> prepareTweaks(const Tweak::Selection &S);
 // Calls prepare() on the tweak with a given ID.
 // If prepare() returns false, returns an error.
 // If prepare() returns true, returns the corresponding tweak.
-llvm::Expected<std::unique_ptr<Tweak>> prepareTweak(TweakID ID,
+llvm::Expected<std::unique_ptr<Tweak>> prepareTweak(StringRef TweakID,
                                                     const Tweak::Selection &S);
 
 } // namespace clangd

@@ -11,6 +11,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
@@ -141,6 +143,69 @@ Position sourceLocToPosition(const SourceManager &SM, SourceLocation Loc) {
   return P;
 }
 
+bool isValidFileRange(const SourceManager &Mgr, SourceRange R) {
+  if (!R.getBegin().isValid() || !R.getEnd().isValid())
+    return false;
+
+  FileID BeginFID;
+  size_t BeginOffset = 0;
+  std::tie(BeginFID, BeginOffset) = Mgr.getDecomposedLoc(R.getBegin());
+
+  FileID EndFID;
+  size_t EndOffset = 0;
+  std::tie(EndFID, EndOffset) = Mgr.getDecomposedLoc(R.getEnd());
+
+  return BeginFID.isValid() && BeginFID == EndFID && BeginOffset <= EndOffset;
+}
+
+bool halfOpenRangeContains(const SourceManager &Mgr, SourceRange R,
+                           SourceLocation L) {
+  assert(isValidFileRange(Mgr, R));
+
+  FileID BeginFID;
+  size_t BeginOffset = 0;
+  std::tie(BeginFID, BeginOffset) = Mgr.getDecomposedLoc(R.getBegin());
+  size_t EndOffset = Mgr.getFileOffset(R.getEnd());
+
+  FileID LFid;
+  size_t LOffset;
+  std::tie(LFid, LOffset) = Mgr.getDecomposedLoc(L);
+  return BeginFID == LFid && BeginOffset <= LOffset && LOffset < EndOffset;
+}
+
+bool halfOpenRangeTouches(const SourceManager &Mgr, SourceRange R,
+                          SourceLocation L) {
+  return L == R.getEnd() || halfOpenRangeContains(Mgr, R, L);
+}
+
+llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &Mgr,
+                                                const LangOptions &LangOpts,
+                                                SourceRange R) {
+  auto Begin = Mgr.getFileLoc(R.getBegin());
+  if (Begin.isInvalid())
+    return llvm::None;
+  auto End = Mgr.getFileLoc(R.getEnd());
+  if (End.isInvalid())
+    return llvm::None;
+  End = Lexer::getLocForEndOfToken(End, 0, Mgr, LangOpts);
+
+  SourceRange Result(Begin, End);
+  if (!isValidFileRange(Mgr, Result))
+    return llvm::None;
+  return Result;
+}
+
+llvm::StringRef toSourceCode(const SourceManager &SM, SourceRange R) {
+  assert(isValidFileRange(SM, R));
+  bool Invalid = false;
+  auto *Buf = SM.getBuffer(SM.getFileID(R.getBegin()), &Invalid);
+  assert(!Invalid);
+
+  size_t BeginOffset = SM.getFileOffset(R.getBegin());
+  size_t EndOffset = SM.getFileOffset(R.getEnd());
+  return Buf->getBuffer().substr(BeginOffset, EndOffset - BeginOffset);
+}
+
 llvm::Expected<SourceLocation> sourceLocationInMainFile(const SourceManager &SM,
                                                         Position P) {
   llvm::StringRef Code = SM.getBuffer(SM.getMainFileID())->getBuffer();
@@ -169,8 +234,7 @@ std::pair<size_t, size_t> offsetToClangLineColumn(llvm::StringRef Code,
   return {Lines + 1, Offset - StartOfLine + 1};
 }
 
-std::pair<llvm::StringRef, llvm::StringRef>
-splitQualifiedName(llvm::StringRef QName) {
+std::pair<StringRef, StringRef> splitQualifiedName(StringRef QName) {
   size_t Pos = QName.rfind("::");
   if (Pos == llvm::StringRef::npos)
     return {llvm::StringRef(), QName};

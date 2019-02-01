@@ -214,7 +214,7 @@ public:
               Callback<std::vector<tooling::Replacement>> CB);
 
   struct TweakRef {
-    TweakID ID;        /// ID to pass for applyTweak.
+    std::string ID;    /// ID to pass for applyTweak.
     std::string Title; /// A single-line message to show in the UI.
   };
   /// Enumerate the code tweaks available to the user at a specified point.
@@ -222,7 +222,7 @@ public:
                        Callback<std::vector<TweakRef>> CB);
 
   /// Apply the code tweak with a specified \p ID.
-  void applyTweak(PathRef File, Range Sel, TweakID ID,
+  void applyTweak(PathRef File, Range Sel, StringRef ID,
                   Callback<tooling::Replacements> CB);
 
   /// Only for testing purposes.

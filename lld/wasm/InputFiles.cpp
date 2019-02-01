@@ -378,7 +378,8 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &Sym) {
 
   switch (Sym.Info.Kind) {
   case WASM_SYMBOL_TYPE_FUNCTION:
-    return Symtab->addUndefinedFunction(Name, Flags, this, Sym.Signature);
+    return Symtab->addUndefinedFunction(Name, Sym.Info.Module, Flags, this,
+                                        Sym.Signature);
   case WASM_SYMBOL_TYPE_DATA:
     return Symtab->addUndefinedData(Name, Flags, this);
   case WASM_SYMBOL_TYPE_GLOBAL:
@@ -446,7 +447,7 @@ static Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &ObjSym,
 
   if (ObjSym.isUndefined()) {
     if (ObjSym.isExecutable())
-      return Symtab->addUndefinedFunction(Name, Flags, &F, nullptr);
+      return Symtab->addUndefinedFunction(Name, kDefaultModule, Flags, &F, nullptr);
     return Symtab->addUndefinedData(Name, Flags, &F);
   }
 

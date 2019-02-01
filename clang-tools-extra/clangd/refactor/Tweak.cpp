@@ -55,7 +55,7 @@ std::vector<std::unique_ptr<Tweak>> prepareTweaks(const Tweak::Selection &S) {
   return Available;
 }
 
-llvm::Expected<std::unique_ptr<Tweak>> prepareTweak(TweakID ID,
+llvm::Expected<std::unique_ptr<Tweak>> prepareTweak(StringRef ID,
                                                     const Tweak::Selection &S) {
   auto It = llvm::find_if(
       TweakRegistry::entries(),
