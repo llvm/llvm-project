@@ -18,8 +18,10 @@ define void @check_float() {
 
   %newval2 = fadd float %val, 128.0
   store volatile float %newval2, float* @varf32
-; CHECK-DAG: ldr {{s[0-9]+}}, [{{x[0-9]+}}, {{#?}}:lo12:.LCPI0_0
-; TINY-DAG: ldr {{s[0-9]+}}, .LCPI0_0
+; CHECK-DAG: mov [[W128:w[0-9]+]], #1124073472
+; CHECK-DAG: fmov {{s[0-9]+}}, [[W128]]
+; TINY-DAG: mov [[W128:w[0-9]+]], #1124073472
+; TINY-DAG: fmov {{s[0-9]+}}, [[W128]]
 
 ; CHECK: ret
 ; TINY: ret
@@ -38,8 +40,10 @@ define void @check_double() {
 
   %newval2 = fadd double %val, 128.0
   store volatile double %newval2, double* @varf64
-; CHECK-DAG: ldr {{d[0-9]+}}, [{{x[0-9]+}}, {{#?}}:lo12:.LCPI1_0
-; TINY-DAG: ldr {{d[0-9]+}}, .LCPI1_0
+; CHECK-DAG: mov [[X128:x[0-9]+]], #4638707616191610880
+; CHECK-DAG: fmov {{d[0-9]+}}, [[X128]]
+; TINY-DAG: mov [[X128:x[0-9]+]], #4638707616191610880
+; TINY-DAG: fmov {{d[0-9]+}}, [[X128]]
 
 ; CHECK: ret
 ; TINY: ret

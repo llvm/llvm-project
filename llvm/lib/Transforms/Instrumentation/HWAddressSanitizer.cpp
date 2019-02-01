@@ -221,7 +221,7 @@ private:
   LLVMContext *C;
   std::string CurModuleUniqueId;
   Triple TargetTriple;
-  Function *HWAsanMemmove, *HWAsanMemcpy, *HWAsanMemset;
+  FunctionCallee HWAsanMemmove, HWAsanMemcpy, HWAsanMemset;
 
   // Frame description is a way to pass names/sizes of local variables
   // to the run-time w/o adding extra executable code in every function.
@@ -270,12 +270,12 @@ private:
 
   Function *HwasanCtorFunction;
 
-  Function *HwasanMemoryAccessCallback[2][kNumberOfAccessSizes];
-  Function *HwasanMemoryAccessCallbackSized[2];
+  FunctionCallee HwasanMemoryAccessCallback[2][kNumberOfAccessSizes];
+  FunctionCallee HwasanMemoryAccessCallbackSized[2];
 
-  Function *HwasanTagMemoryFunc;
-  Function *HwasanGenerateTagFunc;
-  Function *HwasanThreadEnterFunc;
+  FunctionCallee HwasanTagMemoryFunc;
+  FunctionCallee HwasanGenerateTagFunc;
+  FunctionCallee HwasanThreadEnterFunc;
 
   Constant *ShadowGlobal;
 
@@ -369,43 +369,42 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
     const std::string EndingStr = Recover ? "_noabort" : "";
 
-    HwasanMemoryAccessCallbackSized[AccessIsWrite] =
-        checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-            ClMemoryAccessCallbackPrefix + TypeStr + "N" + EndingStr,
-            FunctionType::get(IRB.getVoidTy(), {IntptrTy, IntptrTy}, false)));
+    HwasanMemoryAccessCallbackSized[AccessIsWrite] = M.getOrInsertFunction(
+        ClMemoryAccessCallbackPrefix + TypeStr + "N" + EndingStr,
+        FunctionType::get(IRB.getVoidTy(), {IntptrTy, IntptrTy}, false));
 
     for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;
          AccessSizeIndex++) {
       HwasanMemoryAccessCallback[AccessIsWrite][AccessSizeIndex] =
-          checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+          M.getOrInsertFunction(
               ClMemoryAccessCallbackPrefix + TypeStr +
                   itostr(1ULL << AccessSizeIndex) + EndingStr,
-              FunctionType::get(IRB.getVoidTy(), {IntptrTy}, false)));
+              FunctionType::get(IRB.getVoidTy(), {IntptrTy}, false));
     }
   }
 
-  HwasanTagMemoryFunc = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-      "__hwasan_tag_memory", IRB.getVoidTy(), Int8PtrTy, Int8Ty, IntptrTy));
-  HwasanGenerateTagFunc = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction("__hwasan_generate_tag", Int8Ty));
+  HwasanTagMemoryFunc = M.getOrInsertFunction(
+      "__hwasan_tag_memory", IRB.getVoidTy(), Int8PtrTy, Int8Ty, IntptrTy);
+  HwasanGenerateTagFunc =
+      M.getOrInsertFunction("__hwasan_generate_tag", Int8Ty);
 
   ShadowGlobal = M.getOrInsertGlobal("__hwasan_shadow",
                                      ArrayType::get(IRB.getInt8Ty(), 0));
 
   const std::string MemIntrinCallbackPrefix =
       CompileKernel ? std::string("") : ClMemoryAccessCallbackPrefix;
-  HWAsanMemmove = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-      MemIntrinCallbackPrefix + "memmove", IRB.getInt8PtrTy(),
-      IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy));
-  HWAsanMemcpy = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-      MemIntrinCallbackPrefix + "memcpy", IRB.getInt8PtrTy(),
-      IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy));
-  HWAsanMemset = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-      MemIntrinCallbackPrefix + "memset", IRB.getInt8PtrTy(),
-      IRB.getInt8PtrTy(), IRB.getInt32Ty(), IntptrTy));
+  HWAsanMemmove = M.getOrInsertFunction(MemIntrinCallbackPrefix + "memmove",
+                                        IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
+                                        IRB.getInt8PtrTy(), IntptrTy);
+  HWAsanMemcpy = M.getOrInsertFunction(MemIntrinCallbackPrefix + "memcpy",
+                                       IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
+                                       IRB.getInt8PtrTy(), IntptrTy);
+  HWAsanMemset = M.getOrInsertFunction(MemIntrinCallbackPrefix + "memset",
+                                       IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
+                                       IRB.getInt32Ty(), IntptrTy);
 
-  HwasanThreadEnterFunc = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction("__hwasan_thread_enter", IRB.getVoidTy()));
+  HwasanThreadEnterFunc =
+      M.getOrInsertFunction("__hwasan_thread_enter", IRB.getVoidTy());
 }
 
 Value *HWAddressSanitizer::getDynamicShadowIfunc(IRBuilder<> &IRB) {

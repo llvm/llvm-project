@@ -126,36 +126,24 @@ void llvm::appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values) {
   appendToUsedList(M, "llvm.compiler.used", Values);
 }
 
-Function *llvm::checkSanitizerInterfaceFunction(Constant *FuncOrBitcast) {
-  if (isa<Function>(FuncOrBitcast))
-    return cast<Function>(FuncOrBitcast);
-  FuncOrBitcast->print(errs());
-  errs() << '\n';
-  std::string Err;
-  raw_string_ostream Stream(Err);
-  Stream << "Sanitizer interface function redefined: " << *FuncOrBitcast;
-  report_fatal_error(Err);
-}
-
-Function *llvm::declareSanitizerInitFunction(Module &M, StringRef InitName,
-                                             ArrayRef<Type *> InitArgTypes) {
+FunctionCallee
+llvm::declareSanitizerInitFunction(Module &M, StringRef InitName,
+                                   ArrayRef<Type *> InitArgTypes) {
   assert(!InitName.empty() && "Expected init function name");
-  Function *F = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+  return M.getOrInsertFunction(
       InitName,
       FunctionType::get(Type::getVoidTy(M.getContext()), InitArgTypes, false),
-      AttributeList()));
-  F->setLinkage(Function::ExternalLinkage);
-  return F;
+      AttributeList());
 }
 
-std::pair<Function *, Function *> llvm::createSanitizerCtorAndInitFunctions(
+std::pair<Function *, FunctionCallee> llvm::createSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
     StringRef VersionCheckName) {
   assert(!InitName.empty() && "Expected init function name");
   assert(InitArgs.size() == InitArgTypes.size() &&
          "Sanitizer's init function expects different number of arguments");
-  Function *InitFunction =
+  FunctionCallee InitFunction =
       declareSanitizerInitFunction(M, InitName, InitArgTypes);
   Function *Ctor = Function::Create(
       FunctionType::get(Type::getVoidTy(M.getContext()), false),
@@ -164,20 +152,19 @@ std::pair<Function *, Function *> llvm::createSanitizerCtorAndInitFunctions(
   IRBuilder<> IRB(ReturnInst::Create(M.getContext(), CtorBB));
   IRB.CreateCall(InitFunction, InitArgs);
   if (!VersionCheckName.empty()) {
-    Function *VersionCheckFunction =
-        checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-            VersionCheckName, FunctionType::get(IRB.getVoidTy(), {}, false),
-            AttributeList()));
+    FunctionCallee VersionCheckFunction = M.getOrInsertFunction(
+        VersionCheckName, FunctionType::get(IRB.getVoidTy(), {}, false),
+        AttributeList());
     IRB.CreateCall(VersionCheckFunction, {});
   }
   return std::make_pair(Ctor, InitFunction);
 }
 
-std::pair<Function *, Function *>
+std::pair<Function *, FunctionCallee>
 llvm::getOrCreateSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
-    function_ref<void(Function *, Function *)> FunctionsCreatedCallback,
+    function_ref<void(Function *, FunctionCallee)> FunctionsCreatedCallback,
     StringRef VersionCheckName) {
   assert(!CtorName.empty() && "Expected ctor function name");
 
@@ -188,7 +175,8 @@ llvm::getOrCreateSanitizerCtorAndInitFunctions(
         Ctor->getReturnType() == Type::getVoidTy(M.getContext()))
       return {Ctor, declareSanitizerInitFunction(M, InitName, InitArgTypes)};
 
-  Function *Ctor, *InitFunction;
+  Function *Ctor;
+  FunctionCallee InitFunction;
   std::tie(Ctor, InitFunction) = llvm::createSanitizerCtorAndInitFunctions(
       M, CtorName, InitName, InitArgTypes, InitArgs, VersionCheckName);
   FunctionsCreatedCallback(Ctor, InitFunction);
@@ -207,9 +195,10 @@ Function *llvm::getOrCreateInitFunction(Module &M, StringRef Name) {
     }
     return F;
   }
-  Function *F = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-      Name, AttributeList(), Type::getVoidTy(M.getContext())));
-  F->setLinkage(Function::ExternalLinkage);
+  Function *F =
+      cast<Function>(M.getOrInsertFunction(Name, AttributeList(),
+                                           Type::getVoidTy(M.getContext()))
+                         .getCallee());
 
   appendToGlobalCtors(M, F, 0);
 

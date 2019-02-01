@@ -1158,13 +1158,13 @@ define float @test_cvtsi2ss(i32 %a0, i32 *%a1) {
 ; BDVER2-SSE-LABEL: test_cvtsi2ss:
 ; BDVER2-SSE:       # %bb.0:
 ; BDVER2-SSE-NEXT:    cvtsi2ssl (%rsi), %xmm0 # sched: [9:1.00]
-; BDVER2-SSE-NEXT:    cvtsi2ssl %edi, %xmm1 # sched: [4:1.00]
+; BDVER2-SSE-NEXT:    cvtsi2ssl %edi, %xmm1 # sched: [14:1.00]
 ; BDVER2-SSE-NEXT:    addss %xmm1, %xmm0 # sched: [5:1.00]
 ; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
 ;
 ; BDVER2-LABEL: test_cvtsi2ss:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vcvtsi2ssl %edi, %xmm0, %xmm0 # sched: [4:1.00]
+; BDVER2-NEXT:    vcvtsi2ssl %edi, %xmm0, %xmm0 # sched: [14:1.00]
 ; BDVER2-NEXT:    vcvtsi2ssl (%rsi), %xmm1, %xmm1 # sched: [9:1.00]
 ; BDVER2-NEXT:    vaddss %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
@@ -1304,7 +1304,7 @@ define float @test_cvtsi2ssq(i64 %a0, i64 *%a1) {
 ;
 ; BDVER2-LABEL: test_cvtsi2ssq:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vcvtsi2ssq %rdi, %xmm0, %xmm0 # sched: [4:1.00]
+; BDVER2-NEXT:    vcvtsi2ssq %rdi, %xmm0, %xmm0 # sched: [14:1.00]
 ; BDVER2-NEXT:    vcvtsi2ssq (%rsi), %xmm1, %xmm1 # sched: [9:1.00]
 ; BDVER2-NEXT:    vaddss %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]

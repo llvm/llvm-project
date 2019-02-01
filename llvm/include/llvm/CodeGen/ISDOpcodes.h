@@ -579,7 +579,9 @@ namespace ISD {
     /// is often a storage-only type but has native conversions.
     FP16_TO_FP, FP_TO_FP16,
 
-    /// Perform various unary floating-point operations inspired by libm.
+    /// Perform various unary floating-point operations inspired by libm. For
+    /// FPOWI, the result is undefined if if the integer operand doesn't fit
+    /// into 32 bits.
     FNEG, FABS, FSQRT, FCBRT, FSIN, FCOS, FPOWI, FPOW,
     FLOG, FLOG2, FLOG10, FEXP, FEXP2,
     FCEIL, FTRUNC, FRINT, FNEARBYINT, FROUND, FFLOOR,

@@ -315,8 +315,8 @@ Symbol *SymbolTable::addDefinedEvent(StringRef Name, uint32_t Flags,
   return S;
 }
 
-Symbol *SymbolTable::addUndefinedFunction(StringRef Name, uint32_t Flags,
-                                          InputFile *File,
+Symbol *SymbolTable::addUndefinedFunction(StringRef Name, StringRef Module,
+                                          uint32_t Flags, InputFile *File,
                                           const WasmSignature *Sig) {
   LLVM_DEBUG(dbgs() << "addUndefinedFunction: " << Name <<
              " [" << (Sig ? toString(*Sig) : "none") << "]\n");
@@ -326,7 +326,7 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef Name, uint32_t Flags,
   std::tie(S, WasInserted) = insert(Name, File);
 
   if (WasInserted)
-    replaceSymbol<UndefinedFunction>(S, Name, Flags, File, Sig);
+    replaceSymbol<UndefinedFunction>(S, Name, Module, Flags, File, Sig);
   else if (auto *Lazy = dyn_cast<LazySymbol>(S))
     Lazy->fetch();
   else

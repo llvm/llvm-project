@@ -20,6 +20,7 @@
 namespace __hwasan {
 
 uptr FindDynamicShadowStart(uptr shadow_size_bytes);
+void InitShadowGOT();
 
 }  // namespace __hwasan
 

@@ -236,7 +236,7 @@ void InstallAtExitHandler() {
 // ---------------------- TSD ---------------- {{{1
 
 extern "C" void __hwasan_thread_enter() {
-  hwasanThreadList().CreateCurrentThread();
+  hwasanThreadList().CreateCurrentThread()->InitRandomState();
 }
 
 extern "C" void __hwasan_thread_exit() {
@@ -289,7 +289,9 @@ uptr *GetCurrentThreadLongPtr() {
 #if SANITIZER_ANDROID
 void AndroidTestTlsSlot() {
   uptr kMagicValue = 0x010203040A0B0C0D;
-  *(uptr *)get_android_tls_ptr() = kMagicValue;
+  uptr *tls_ptr = GetCurrentThreadLongPtr();
+  uptr old_value = *tls_ptr;
+  *tls_ptr = kMagicValue;
   dlerror();
   if (*(uptr *)get_android_tls_ptr() != kMagicValue) {
     Printf(
@@ -297,6 +299,7 @@ void AndroidTestTlsSlot() {
         "for dlerror().\n");
     Die();
   }
+  *tls_ptr = old_value;
 }
 #else
 void AndroidTestTlsSlot() {}

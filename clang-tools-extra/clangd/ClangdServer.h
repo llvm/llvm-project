@@ -18,6 +18,7 @@
 #include "GlobalCompilationDatabase.h"
 #include "Protocol.h"
 #include "TUScheduler.h"
+#include "XRefs.h"
 #include "index/Background.h"
 #include "index/FileIndex.h"
 #include "index/Index.h"
@@ -167,9 +168,9 @@ public:
   /// called for tracked files.
   void signatureHelp(PathRef File, Position Pos, Callback<SignatureHelp> CB);
 
-  /// Get definition of symbol at a specified \p Line and \p Column in \p File.
-  void findDefinitions(PathRef File, Position Pos,
-                       Callback<std::vector<Location>> CB);
+  /// Find declaration/definition locations of symbol at a specified position.
+  void locateSymbolAt(PathRef File, Position Pos,
+                      Callback<std::vector<LocatedSymbol>> CB);
 
   /// Helper function that returns a path to the corresponding source file when
   /// given a header file and vice versa.
@@ -214,7 +215,7 @@ public:
               Callback<std::vector<tooling::Replacement>> CB);
 
   struct TweakRef {
-    TweakID ID;        /// ID to pass for applyTweak.
+    std::string ID;    /// ID to pass for applyTweak.
     std::string Title; /// A single-line message to show in the UI.
   };
   /// Enumerate the code tweaks available to the user at a specified point.
@@ -222,7 +223,7 @@ public:
                        Callback<std::vector<TweakRef>> CB);
 
   /// Apply the code tweak with a specified \p ID.
-  void applyTweak(PathRef File, Range Sel, TweakID ID,
+  void applyTweak(PathRef File, Range Sel, StringRef ID,
                   Callback<tooling::Replacements> CB);
 
   /// Only for testing purposes.

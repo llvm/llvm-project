@@ -11,6 +11,7 @@
 
 namespace llvm {
 class StringRef;
+class VersionTuple;
 } // namespace llvm
 
 namespace clang {
@@ -27,9 +28,8 @@ enum class CudaVersion {
   LATEST = CUDA_100,
 };
 const char *CudaVersionToString(CudaVersion V);
-
-// No string -> CudaVersion conversion function because there's no canonical
-// spelling of the various CUDA versions.
+// Input is "Major.Minor"
+CudaVersion CudaStringToVersion(llvm::StringRef S);
 
 enum class CudaArch {
   UNKNOWN,
@@ -102,6 +102,15 @@ CudaVersion MinVersionForCudaArch(CudaArch A);
 
 /// Get the latest CudaVersion that supports the given CudaArch.
 CudaVersion MaxVersionForCudaArch(CudaArch A);
+
+//  Various SDK-dependent features that affect CUDA compilation
+enum class CudaFeature {
+  // CUDA-9.2+ uses a new API for launching kernels.
+  CUDA_USES_NEW_LAUNCH,
+};
+
+bool CudaFeatureEnabled(llvm::VersionTuple, CudaFeature);
+bool CudaFeatureEnabled(CudaVersion, CudaFeature);
 
 } // namespace clang
 

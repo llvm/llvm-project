@@ -1433,6 +1433,53 @@ bool TargetLowering::SimplifyDemandedVectorElts(SDValue Op,
   return Simplified;
 }
 
+/// Given a vector binary operation and known undefined elements for each input
+/// operand, compute whether each element of the output is undefined.
+static APInt getKnownUndefForVectorBinop(SDValue BO, SelectionDAG &DAG,
+                                         const APInt &UndefOp0,
+                                         const APInt &UndefOp1) {
+  EVT VT = BO.getValueType();
+  assert(ISD::isBinaryOp(BO.getNode()) && VT.isVector() && "Vector binop only");
+
+  EVT EltVT = VT.getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
+  assert(UndefOp0.getBitWidth() == NumElts &&
+         UndefOp1.getBitWidth() == NumElts && "Bad type for undef analysis");
+
+  auto getUndefOrConstantElt = [&](SDValue V, unsigned Index,
+                                   const APInt &UndefVals) {
+    if (UndefVals[Index])
+      return DAG.getUNDEF(EltVT);
+
+    if (auto *BV = dyn_cast<BuildVectorSDNode>(V)) {
+      // Try hard to make sure that the getNode() call is not creating temporary
+      // nodes. Ignore opaque integers because they do not constant fold.
+      SDValue Elt = BV->getOperand(Index);
+      auto *C = dyn_cast<ConstantSDNode>(Elt);
+      if (isa<ConstantFPSDNode>(Elt) || Elt.isUndef() || (C && !C->isOpaque()))
+        return Elt;
+    }
+
+    return SDValue();
+  };
+
+  APInt KnownUndef = APInt::getNullValue(NumElts);
+  for (unsigned i = 0; i != NumElts; ++i) {
+    // If both inputs for this element are either constant or undef and match
+    // the element type, compute the constant/undef result for this element of
+    // the vector.
+    // TODO: Ideally we would use FoldConstantArithmetic() here, but that does
+    // not handle FP constants. The code within getNode() should be refactored
+    // to avoid the danger of creating a bogus temporary node here.
+    SDValue C0 = getUndefOrConstantElt(BO.getOperand(0), i, UndefOp0);
+    SDValue C1 = getUndefOrConstantElt(BO.getOperand(1), i, UndefOp1);
+    if (C0 && C1 && C0.getValueType() == EltVT && C1.getValueType() == EltVT)
+      if (DAG.getNode(BO.getOpcode(), SDLoc(BO), EltVT, C0, C1).isUndef())
+        KnownUndef.setBit(i);
+  }
+  return KnownUndef;
+}
+
 bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue Op, const APInt &DemandedEltMask, APInt &KnownUndef,
     APInt &KnownZero, TargetLoweringOpt &TLO, unsigned Depth,
@@ -1805,6 +1852,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     }
     break;
   }
+
+  // TODO: There are more binop opcodes that could be handled here - MUL, MIN,
+  // MAX, saturated math, etc.
   case ISD::OR:
   case ISD::XOR:
   case ISD::ADD:
@@ -1814,15 +1864,17 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::FMUL:
   case ISD::FDIV:
   case ISD::FREM: {
-    APInt SrcUndef, SrcZero;
-    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, SrcUndef,
-                                   SrcZero, TLO, Depth + 1))
+    APInt UndefRHS, ZeroRHS;
+    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, UndefRHS,
+                                   ZeroRHS, TLO, Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, KnownUndef,
-                                   KnownZero, TLO, Depth + 1))
+    APInt UndefLHS, ZeroLHS;
+    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, UndefLHS,
+                                   ZeroLHS, TLO, Depth + 1))
       return true;
-    KnownZero &= SrcZero;
-    KnownUndef &= SrcUndef;
+
+    KnownZero = ZeroLHS & ZeroRHS;
+    KnownUndef = getKnownUndefForVectorBinop(Op, TLO.DAG, UndefLHS, UndefRHS);
     break;
   }
   case ISD::AND: {
@@ -1836,6 +1888,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
     // If either side has a zero element, then the result element is zero, even
     // if the other is an UNDEF.
+    // TODO: Extend getKnownUndefForVectorBinop to also deal with known zeros
+    // and then handle 'and' nodes with the rest of the binop opcodes.
     KnownZero |= SrcZero;
     KnownUndef &= SrcUndef;
     KnownUndef &= ~KnownZero;
@@ -5362,28 +5416,24 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
 SDValue
 TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   assert(Node->getOpcode() == ISD::SMULFIX && "Expected opcode to be SMULFIX.");
-  assert(Node->getNumOperands() == 3 &&
-         "Expected signed fixed point multiplication to have 3 operands.");
 
   SDLoc dl(Node);
   SDValue LHS = Node->getOperand(0);
   SDValue RHS = Node->getOperand(1);
-  assert(LHS.getValueType().isScalarInteger() &&
-         "Expected operands to be integers. Vector of int arguments should "
-         "already be unrolled.");
-  assert(RHS.getValueType().isScalarInteger() &&
-         "Expected operands to be integers. Vector of int arguments should "
-         "already be unrolled.");
+  EVT VT = LHS.getValueType();
+  unsigned Scale = Node->getConstantOperandVal(2);
+
+  // [us]mul.fix(a, b, 0) -> mul(a, b)
+  if (!Scale) {
+    if (VT.isVector() && !isOperationLegalOrCustom(ISD::MUL, VT))
+      return SDValue();
+    return DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
+  }
+
   assert(LHS.getValueType() == RHS.getValueType() &&
          "Expected both operands to be the same type");
-
-  unsigned Scale = Node->getConstantOperandVal(2);
-  EVT VT = LHS.getValueType();
   assert(Scale < VT.getScalarSizeInBits() &&
          "Expected scale to be less than the number of bits.");
-
-  if (!Scale)
-    return DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
 
   // Get the upper and lower bits of the result.
   SDValue Lo, Hi;
@@ -5395,6 +5445,8 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   } else if (isOperationLegalOrCustom(ISD::MULHS, VT)) {
     Lo = DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
     Hi = DAG.getNode(ISD::MULHS, dl, VT, LHS, RHS);
+  } else if (VT.isVector()) {
+    return SDValue();
   } else {
     report_fatal_error("Unable to expand signed fixed point multiplication.");
   }

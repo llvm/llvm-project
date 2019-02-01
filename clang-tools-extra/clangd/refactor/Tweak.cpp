@@ -38,6 +38,14 @@ void validateRegistry() {
 }
 } // namespace
 
+Tweak::Selection::Selection(ParsedAST &AST, unsigned RangeBegin,
+                            unsigned RangeEnd)
+    : AST(AST), ASTSelection(AST.getASTContext(), RangeBegin, RangeEnd) {
+  auto &SM = AST.getASTContext().getSourceManager();
+  Code = SM.getBufferData(SM.getMainFileID());
+  Cursor = SM.getComposedLoc(SM.getMainFileID(), RangeBegin);
+}
+
 std::vector<std::unique_ptr<Tweak>> prepareTweaks(const Tweak::Selection &S) {
   validateRegistry();
 
@@ -55,7 +63,7 @@ std::vector<std::unique_ptr<Tweak>> prepareTweaks(const Tweak::Selection &S) {
   return Available;
 }
 
-llvm::Expected<std::unique_ptr<Tweak>> prepareTweak(TweakID ID,
+llvm::Expected<std::unique_ptr<Tweak>> prepareTweak(StringRef ID,
                                                     const Tweak::Selection &S) {
   auto It = llvm::find_if(
       TweakRegistry::entries(),

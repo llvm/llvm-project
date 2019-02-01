@@ -491,7 +491,7 @@ public:
   StringRef getPrivateLabelPrefix() const { return PrivateLabelPrefix; }
 
   bool hasLinkerPrivateGlobalPrefix() const {
-    return LinkerPrivateGlobalPrefix[0] != '\0';
+    return !LinkerPrivateGlobalPrefix.empty();
   }
 
   StringRef getLinkerPrivateGlobalPrefix() const {

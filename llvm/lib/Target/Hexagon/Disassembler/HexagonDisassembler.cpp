@@ -148,7 +148,7 @@ static DecodeStatus s32_0ImmDecoder(MCInst &MI, unsigned tmp,
                                     uint64_t /*Address*/, const void *Decoder);
 static DecodeStatus brtargetDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                     const void *Decoder);
-#include "HexagonDepDecoders.h"
+#include "HexagonDepDecoders.inc"
 #include "HexagonGenDisassemblerTables.inc"
 
 static MCDisassembler *createHexagonDisassembler(const Target &T,

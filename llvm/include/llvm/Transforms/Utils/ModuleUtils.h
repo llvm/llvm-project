@@ -21,6 +21,7 @@ namespace llvm {
 template <typename T> class ArrayRef;
 class Module;
 class Function;
+class FunctionCallee;
 class GlobalValue;
 class GlobalVariable;
 class Constant;
@@ -39,20 +40,14 @@ void appendToGlobalCtors(Module &M, Function *F, int Priority,
 void appendToGlobalDtors(Module &M, Function *F, int Priority,
                          Constant *Data = nullptr);
 
-// Validate the result of Module::getOrInsertFunction called for an interface
-// function of given sanitizer. If the instrumented module defines a function
-// with the same name, their prototypes must match, otherwise
-// getOrInsertFunction returns a bitcast.
-Function *checkSanitizerInterfaceFunction(Constant *FuncOrBitcast);
-
-Function *declareSanitizerInitFunction(Module &M, StringRef InitName,
-                                       ArrayRef<Type *> InitArgTypes);
+FunctionCallee declareSanitizerInitFunction(Module &M, StringRef InitName,
+                                            ArrayRef<Type *> InitArgTypes);
 
 /// Creates sanitizer constructor function, and calls sanitizer's init
 /// function from it.
 /// \return Returns pair of pointers to constructor, and init functions
 /// respectively.
-std::pair<Function *, Function *> createSanitizerCtorAndInitFunctions(
+std::pair<Function *, FunctionCallee> createSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
     StringRef VersionCheckName = StringRef());
@@ -64,10 +59,10 @@ std::pair<Function *, Function *> createSanitizerCtorAndInitFunctions(
 ///
 /// \return Returns pair of pointers to constructor, and init functions
 /// respectively.
-std::pair<Function *, Function *> getOrCreateSanitizerCtorAndInitFunctions(
+std::pair<Function *, FunctionCallee> getOrCreateSanitizerCtorAndInitFunctions(
     Module &M, StringRef CtorName, StringRef InitName,
     ArrayRef<Type *> InitArgTypes, ArrayRef<Value *> InitArgs,
-    function_ref<void(Function *, Function *)> FunctionsCreatedCallback,
+    function_ref<void(Function *, FunctionCallee)> FunctionsCreatedCallback,
     StringRef VersionCheckName = StringRef());
 
 // Creates and returns a sanitizer init function without argument if it doesn't

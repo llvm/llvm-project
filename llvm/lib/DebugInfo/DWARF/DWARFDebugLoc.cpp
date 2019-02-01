@@ -183,7 +183,8 @@ DWARFDebugLoclists::parseOneLocationList(DataExtractor Data, unsigned *Offset,
     }
 
     if (Kind != dwarf::DW_LLE_base_address) {
-      unsigned Bytes = Data.getU16(Offset);
+      unsigned Bytes =
+          Version >= 5 ? Data.getULEB128(Offset) : Data.getU16(Offset);
       // A single location description describing the location of the object...
       StringRef str = Data.getData().substr(*Offset, Bytes);
       *Offset += Bytes;

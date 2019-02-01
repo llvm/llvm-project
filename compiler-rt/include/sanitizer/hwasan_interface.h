@@ -18,11 +18,15 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-  // Initialize shadow but not the rest of the runtime.
+  // Libc hook for program startup in statically linked executables.
+  // Initializes enough of the runtime to run instrumented code. This function
+  // should only be called in statically linked executables because it modifies
+  // the GOT, which won't work in regular binaries because RELRO will already
+  // have been applied by the time the function is called. This also means that
+  // the function should be called before libc applies RELRO.
   // Does not call libc unless there is an error.
-  // Can be called multiple times, or not at all (in which case shadow will
-  // be initialized in compiler-inserted __hwasan_init() call).
-  void __hwasan_shadow_init(void);
+  // Can be called multiple times.
+  void __hwasan_init_static(void);
 
   // This function may be optionally provided by user and should return
   // a string containing HWASan runtime options. See asan_flags.h for details.

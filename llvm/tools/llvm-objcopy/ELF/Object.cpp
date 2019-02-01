@@ -17,6 +17,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Path.h"
@@ -48,8 +49,14 @@ template <class ELFT> void ELFWriter<ELFT>::writePhdr(const Segment &Seg) {
   Phdr.p_align = Seg.Align;
 }
 
-void SectionBase::removeSectionReferences(const SectionBase *Sec) {}
-void SectionBase::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {}
+Error SectionBase::removeSectionReferences(const SectionBase *Sec) {
+  return Error::success();
+}
+
+Error SectionBase::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
+  return Error::success();
+}
+
 void SectionBase::initialize(SectionTableRef SecTable) {}
 void SectionBase::finalize() {}
 void SectionBase::markSymbols() {}
@@ -425,15 +432,17 @@ void SymbolTableSection::addSymbol(Twine Name, uint8_t Bind, uint8_t Type,
   Size += this->EntrySize;
 }
 
-void SymbolTableSection::removeSectionReferences(const SectionBase *Sec) {
+Error SymbolTableSection::removeSectionReferences(const SectionBase *Sec) {
   if (SectionIndexTable == Sec)
     SectionIndexTable = nullptr;
   if (SymbolNames == Sec) {
-    error("String table " + SymbolNames->Name +
-          " cannot be removed because it is referenced by the symbol table " +
-          this->Name);
+    return createStringError(llvm::errc::invalid_argument,
+                             "String table %s cannot be removed because it is "
+                             "referenced by the symbol table %s",
+                             SymbolNames->Name.data(), this->Name.data());
   }
-  removeSymbols([Sec](const Symbol &Sym) { return Sym.DefinedIn == Sec; });
+  return removeSymbols(
+      [Sec](const Symbol &Sym) { return Sym.DefinedIn == Sec; });
 }
 
 void SymbolTableSection::updateSymbols(function_ref<void(Symbol &)> Callable) {
@@ -445,7 +454,7 @@ void SymbolTableSection::updateSymbols(function_ref<void(Symbol &)> Callable) {
   assignIndices();
 }
 
-void SymbolTableSection::removeSymbols(
+Error SymbolTableSection::removeSymbols(
     function_ref<bool(const Symbol &)> ToRemove) {
   Symbols.erase(
       std::remove_if(std::begin(Symbols) + 1, std::end(Symbols),
@@ -453,6 +462,7 @@ void SymbolTableSection::removeSymbols(
       std::end(Symbols));
   Size = Symbols.size() * EntrySize;
   assignIndices();
+  return Error::success();
 }
 
 void SymbolTableSection::initialize(SectionTableRef SecTable) {
@@ -535,15 +545,14 @@ void SymbolTableSection::accept(MutableSectionVisitor &Visitor) {
 }
 
 template <class SymTabType>
-void RelocSectionWithSymtabBase<SymTabType>::removeSectionReferences(
+Error RelocSectionWithSymtabBase<SymTabType>::removeSectionReferences(
     const SectionBase *Sec) {
-  if (Symbols == Sec) {
-    error("Symbol table " + Symbols->Name +
-          " cannot be removed because it is "
-          "referenced by the relocation "
-          "section " +
-          this->Name);
-  }
+  if (Symbols == Sec)
+    return createStringError(llvm::errc::invalid_argument,
+                             "Symbol table %s cannot be removed because it is "
+                             "referenced by the relocation section %s.",
+                             Symbols->Name.data(), this->Name.data());
+  return Error::success();
 }
 
 template <class SymTabType>
@@ -608,12 +617,15 @@ void RelocationSection::accept(MutableSectionVisitor &Visitor) {
   Visitor.visit(*this);
 }
 
-void RelocationSection::removeSymbols(
+Error RelocationSection::removeSymbols(
     function_ref<bool(const Symbol &)> ToRemove) {
   for (const Relocation &Reloc : Relocations)
     if (ToRemove(*Reloc.RelocSymbol))
-      error("not stripping symbol '" + Reloc.RelocSymbol->Name +
-            "' because it is named in a relocation");
+      return createStringError(
+          llvm::errc::invalid_argument,
+          "not stripping symbol '%s' because it is named in a relocation.",
+          Reloc.RelocSymbol->Name.data());
+  return Error::success();
 }
 
 void RelocationSection::markSymbols() {
@@ -634,13 +646,13 @@ void DynamicRelocationSection::accept(MutableSectionVisitor &Visitor) {
   Visitor.visit(*this);
 }
 
-void Section::removeSectionReferences(const SectionBase *Sec) {
-  if (LinkSection == Sec) {
-    error("Section " + LinkSection->Name +
-          " cannot be removed because it is "
-          "referenced by the section " +
-          this->Name);
-  }
+Error Section::removeSectionReferences(const SectionBase *Sec) {
+  if (LinkSection == Sec)
+    return createStringError(llvm::errc::invalid_argument,
+                             "Section %s cannot be removed because it is "
+                             "referenced by the section %s",
+                             LinkSection->Name.data(), this->Name.data());
+  return Error::success();
 }
 
 void GroupSection::finalize() {
@@ -648,13 +660,13 @@ void GroupSection::finalize() {
   this->Link = SymTab->Index;
 }
 
-void GroupSection::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
-  if (ToRemove(*Sym)) {
-    error("Symbol " + Sym->Name +
-          " cannot be removed because it is "
-          "referenced by the section " +
-          this->Name + "[" + Twine(this->Index) + "]");
-  }
+Error GroupSection::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
+  if (ToRemove(*Sym))
+    return createStringError(llvm::errc::invalid_argument,
+                             "Symbol %s cannot be removed because it is "
+                             "referenced by the section %s[%d].",
+                             Sym->Name.data(), this->Name.data(), this->Index);
+  return Error::success();
 }
 
 void GroupSection::markSymbols() {
@@ -1317,7 +1329,8 @@ template <class ELFT> void ELFWriter<ELFT>::writeSectionData() {
     Sec.accept(*SecWriter);
 }
 
-void Object::removeSections(std::function<bool(const SectionBase &)> ToRemove) {
+Error Object::removeSections(
+    std::function<bool(const SectionBase &)> ToRemove) {
 
   auto Iter = std::stable_partition(
       std::begin(Sections), std::end(Sections), [=](const SecPtr &Sec) {
@@ -1342,18 +1355,20 @@ void Object::removeSections(std::function<bool(const SectionBase &)> ToRemove) {
     for (auto &Segment : Segments)
       Segment->removeSection(RemoveSec.get());
     for (auto &KeepSec : make_range(std::begin(Sections), Iter))
-      KeepSec->removeSectionReferences(RemoveSec.get());
+      if (Error E = KeepSec->removeSectionReferences(RemoveSec.get()))
+        return E;
   }
   // Now finally get rid of them all togethor.
   Sections.erase(Iter, std::end(Sections));
+  return Error::success();
 }
 
-void Object::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
-  if (!SymbolTable)
-    return;
-
-  for (const SecPtr &Sec : Sections)
-    Sec->removeSymbols(ToRemove);
+Error Object::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
+  if (SymbolTable)
+    for (const SecPtr &Sec : Sections)
+      if (Error E = Sec->removeSymbols(ToRemove))
+        return E;
+  return Error::success();
 }
 
 void Object::sortSections() {
@@ -1502,8 +1517,9 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
   // a section header table output. We need to throw an error if a user tries
   // to do that.
   if (Obj.SectionNames == nullptr && WriteSectionHeaders)
-    error("Cannot write section header table because section header string "
-          "table was removed.");
+    return createStringError(llvm::errc::invalid_argument,
+                             "Cannot write section header table because "
+                             "section header string table was removed.");
 
   Obj.sortSections();
 
@@ -1534,9 +1550,10 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
     // Since we don't need SectionIndexTable we should remove it and all
     // references to it.
     if (Obj.SectionIndexTable != nullptr) {
-      Obj.removeSections([this](const SectionBase &Sec) {
-        return &Sec == Obj.SectionIndexTable;
-      });
+      if (Error E = Obj.removeSections([this](const SectionBase &Sec) {
+            return &Sec == Obj.SectionIndexTable;
+          }))
+        return E;
     }
   }
 

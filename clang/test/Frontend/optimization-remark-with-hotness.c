@@ -66,7 +66,7 @@ void bar(int x) {
 
 int main(int argc, const char *argv[]) {
   for (int i = 0; i < 30; i++)
-    // expected-remark@+1 {{bar not inlined into main because it should never be inlined (cost=never): always inliner (hotness:}}
+    // expected-remark@+1 {{bar not inlined into main because it should never be inlined (cost=never): no alwaysinline attribute (hotness:}}
     bar(argc);
   return sum;
 }

@@ -222,13 +222,13 @@ private:
   std::string getSectionName(const std::string &Section) const;
   std::string getSectionStart(const std::string &Section) const;
   std::string getSectionEnd(const std::string &Section) const;
-  Function *SanCovTracePCIndir;
-  Function *SanCovTracePC, *SanCovTracePCGuard;
-  Function *SanCovTraceCmpFunction[4];
-  Function *SanCovTraceConstCmpFunction[4];
-  Function *SanCovTraceDivFunction[2];
-  Function *SanCovTraceGepFunction;
-  Function *SanCovTraceSwitchFunction;
+  FunctionCallee SanCovTracePCIndir;
+  FunctionCallee SanCovTracePC, SanCovTracePCGuard;
+  FunctionCallee SanCovTraceCmpFunction[4];
+  FunctionCallee SanCovTraceConstCmpFunction[4];
+  FunctionCallee SanCovTraceDivFunction[2];
+  FunctionCallee SanCovTraceGepFunction;
+  FunctionCallee SanCovTraceSwitchFunction;
   GlobalVariable *SanCovLowestStack;
   InlineAsm *EmptyAsm;
   Type *IntptrTy, *IntptrPtrTy, *Int64Ty, *Int64PtrTy, *Int32Ty, *Int32PtrTy,
@@ -328,46 +328,52 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   Int16Ty = IRB.getInt16Ty();
   Int8Ty = IRB.getInt8Ty();
 
-  SanCovTracePCIndir = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction(SanCovTracePCIndirName, VoidTy, IntptrTy));
+  SanCovTracePCIndir =
+      M.getOrInsertFunction(SanCovTracePCIndirName, VoidTy, IntptrTy);
+  // Make sure smaller parameters are zero-extended to i64 as required by the
+  // x86_64 ABI.
+  AttributeList SanCovTraceCmpZeroExtAL;
+  if (TargetTriple.getArch() == Triple::x86_64) {
+    SanCovTraceCmpZeroExtAL =
+        SanCovTraceCmpZeroExtAL.addParamAttribute(*C, 0, Attribute::ZExt);
+    SanCovTraceCmpZeroExtAL =
+        SanCovTraceCmpZeroExtAL.addParamAttribute(*C, 1, Attribute::ZExt);
+  }
+
   SanCovTraceCmpFunction[0] =
-      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-          SanCovTraceCmp1, VoidTy, IRB.getInt8Ty(), IRB.getInt8Ty()));
-  SanCovTraceCmpFunction[1] = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction(SanCovTraceCmp2, VoidTy, IRB.getInt16Ty(),
-                            IRB.getInt16Ty()));
-  SanCovTraceCmpFunction[2] = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction(SanCovTraceCmp4, VoidTy, IRB.getInt32Ty(),
-                            IRB.getInt32Ty()));
+      M.getOrInsertFunction(SanCovTraceCmp1, SanCovTraceCmpZeroExtAL, VoidTy,
+                            IRB.getInt8Ty(), IRB.getInt8Ty());
+  SanCovTraceCmpFunction[1] =
+      M.getOrInsertFunction(SanCovTraceCmp2, SanCovTraceCmpZeroExtAL, VoidTy,
+                            IRB.getInt16Ty(), IRB.getInt16Ty());
+  SanCovTraceCmpFunction[2] =
+      M.getOrInsertFunction(SanCovTraceCmp4, SanCovTraceCmpZeroExtAL, VoidTy,
+                            IRB.getInt32Ty(), IRB.getInt32Ty());
   SanCovTraceCmpFunction[3] =
-      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-          SanCovTraceCmp8, VoidTy, Int64Ty, Int64Ty));
+      M.getOrInsertFunction(SanCovTraceCmp8, VoidTy, Int64Ty, Int64Ty);
 
-  SanCovTraceConstCmpFunction[0] =
-      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-          SanCovTraceConstCmp1, VoidTy, Int8Ty, Int8Ty));
-  SanCovTraceConstCmpFunction[1] =
-      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-          SanCovTraceConstCmp2, VoidTy, Int16Ty, Int16Ty));
-  SanCovTraceConstCmpFunction[2] =
-      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-          SanCovTraceConstCmp4, VoidTy, Int32Ty, Int32Ty));
+  SanCovTraceConstCmpFunction[0] = M.getOrInsertFunction(
+      SanCovTraceConstCmp1, SanCovTraceCmpZeroExtAL, VoidTy, Int8Ty, Int8Ty);
+  SanCovTraceConstCmpFunction[1] = M.getOrInsertFunction(
+      SanCovTraceConstCmp2, SanCovTraceCmpZeroExtAL, VoidTy, Int16Ty, Int16Ty);
+  SanCovTraceConstCmpFunction[2] = M.getOrInsertFunction(
+      SanCovTraceConstCmp4, SanCovTraceCmpZeroExtAL, VoidTy, Int32Ty, Int32Ty);
   SanCovTraceConstCmpFunction[3] =
-      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-          SanCovTraceConstCmp8, VoidTy, Int64Ty, Int64Ty));
+      M.getOrInsertFunction(SanCovTraceConstCmp8, VoidTy, Int64Ty, Int64Ty);
 
-  SanCovTraceDivFunction[0] =
-      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-          SanCovTraceDiv4, VoidTy, IRB.getInt32Ty()));
+  {
+    AttributeList AL;
+    if (TargetTriple.getArch() == Triple::x86_64)
+      AL = AL.addParamAttribute(*C, 0, Attribute::ZExt);
+    SanCovTraceDivFunction[0] =
+        M.getOrInsertFunction(SanCovTraceDiv4, AL, VoidTy, IRB.getInt32Ty());
+  }
   SanCovTraceDivFunction[1] =
-      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-          SanCovTraceDiv8, VoidTy, Int64Ty));
+      M.getOrInsertFunction(SanCovTraceDiv8, VoidTy, Int64Ty);
   SanCovTraceGepFunction =
-      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-          SanCovTraceGep, VoidTy, IntptrTy));
+      M.getOrInsertFunction(SanCovTraceGep, VoidTy, IntptrTy);
   SanCovTraceSwitchFunction =
-      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-          SanCovTraceSwitchName, VoidTy, Int64Ty, Int64PtrTy));
+      M.getOrInsertFunction(SanCovTraceSwitchName, VoidTy, Int64Ty, Int64PtrTy);
 
   Constant *SanCovLowestStackConstant =
       M.getOrInsertGlobal(SanCovLowestStackName, IntptrTy);
@@ -377,28 +383,14 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   if (Options.StackDepth && !SanCovLowestStack->isDeclaration())
     SanCovLowestStack->setInitializer(Constant::getAllOnesValue(IntptrTy));
 
-  // Make sure smaller parameters are zero-extended to i64 as required by the
-  // x86_64 ABI.
-  if (TargetTriple.getArch() == Triple::x86_64) {
-    for (int i = 0; i < 3; i++) {
-      SanCovTraceCmpFunction[i]->addParamAttr(0, Attribute::ZExt);
-      SanCovTraceCmpFunction[i]->addParamAttr(1, Attribute::ZExt);
-      SanCovTraceConstCmpFunction[i]->addParamAttr(0, Attribute::ZExt);
-      SanCovTraceConstCmpFunction[i]->addParamAttr(1, Attribute::ZExt);
-    }
-    SanCovTraceDivFunction[0]->addParamAttr(0, Attribute::ZExt);
-  }
-
-
   // We insert an empty inline asm after cov callbacks to avoid callback merge.
   EmptyAsm = InlineAsm::get(FunctionType::get(IRB.getVoidTy(), false),
                             StringRef(""), StringRef(""),
                             /*hasSideEffects=*/true);
 
-  SanCovTracePC = checkSanitizerInterfaceFunction(
-      M.getOrInsertFunction(SanCovTracePCName, VoidTy));
-  SanCovTracePCGuard = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-      SanCovTracePCGuardName, VoidTy, Int32PtrTy));
+  SanCovTracePC = M.getOrInsertFunction(SanCovTracePCName, VoidTy);
+  SanCovTracePCGuard =
+      M.getOrInsertFunction(SanCovTracePCGuardName, VoidTy, Int32PtrTy);
 
   for (auto &F : M)
     runOnFunction(F);
@@ -413,7 +405,7 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
                                       SanCovCountersSectionName);
   if (Ctor && Options.PCTable) {
     auto SecStartEnd = CreateSecStartEnd(M, SanCovPCsSectionName, IntptrPtrTy);
-    Function *InitFunction = declareSanitizerInitFunction(
+    FunctionCallee InitFunction = declareSanitizerInitFunction(
         M, SanCovPCsInitName, {IntptrPtrTy, IntptrPtrTy});
     IRBuilder<> IRBCtor(Ctor->getEntryBlock().getTerminator());
     IRBCtor.CreateCall(InitFunction, {SecStartEnd.first, SecStartEnd.second});
@@ -483,6 +475,37 @@ static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
     && !(isFullPostDominator(BB, PDT) && !BB->getSinglePredecessor());
 }
 
+
+// Returns true iff From->To is a backedge.
+// A twist here is that we treat From->To as a backedge if
+//   * To dominates From or
+//   * To->UniqueSuccessor dominates From
+static bool IsBackEdge(BasicBlock *From, BasicBlock *To,
+                       const DominatorTree *DT) {
+  if (DT->dominates(To, From))
+    return true;
+  if (auto Next = To->getUniqueSuccessor())
+    if (DT->dominates(Next, From))
+      return true;
+  return false;
+}
+
+// Prunes uninteresting Cmp instrumentation:
+//   * CMP instructions that feed into loop backedge branch.
+//
+// Note that Cmp pruning is controlled by the same flag as the
+// BB pruning.
+static bool IsInterestingCmp(ICmpInst *CMP, const DominatorTree *DT,
+                             const SanitizerCoverageOptions &Options) {
+  if (!Options.NoPrune)
+    if (CMP->hasOneUse())
+      if (auto BR = dyn_cast<BranchInst>(CMP->user_back()))
+        for (BasicBlock *B : BR->successors())
+          if (IsBackEdge(BR->getParent(), B, DT))
+            return false;
+  return true;
+}
+
 bool SanitizerCoverageModule::runOnFunction(Function &F) {
   if (F.empty())
     return false;
@@ -531,8 +554,9 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
           IndirCalls.push_back(&Inst);
       }
       if (Options.TraceCmp) {
-        if (isa<ICmpInst>(&Inst))
-          CmpTraceTargets.push_back(&Inst);
+        if (ICmpInst *CMP = dyn_cast<ICmpInst>(&Inst))
+          if (IsInterestingCmp(CMP, DT, Options))
+            CmpTraceTargets.push_back(&Inst);
         if (isa<SwitchInst>(&Inst))
           SwitchTraceTargets.push_back(&Inst);
       }

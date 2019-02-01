@@ -144,6 +144,11 @@ PC-Table
 
 **Experimental, may change or disappear in future**
 
+**Note:** this instrumentation might be incompatible with dead code stripping
+(``-Wl,-gc-sections``) for linkers other than LLD, thus resulting in a
+significant binary size overhead. For more information, see
+`Bug 34636 <https://bugs.llvm.org/show_bug.cgi?id=34636>`_.
+
 With ``-fsanitize-coverage=pc-table`` the compiler will create a table of
 instrumented PCs. Requires either ``-fsanitize-coverage=inline-8bit-counters`` or
 ``-fsanitize-coverage=trace-pc-guard``.
@@ -247,6 +252,9 @@ integer division instructions (to capture the right argument of division)
 and with  ``-fsanitize-coverage=trace-gep`` --
 the `LLVM GEP instructions <https://llvm.org/docs/GetElementPtr.html>`_
 (to capture array indices).
+
+Unless ``no-prune`` option is provided, some of the comparison instructions
+will not be instrumented.
 
 .. code-block:: c++
 
