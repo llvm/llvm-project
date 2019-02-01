@@ -5362,28 +5362,24 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
 SDValue
 TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   assert(Node->getOpcode() == ISD::SMULFIX && "Expected opcode to be SMULFIX.");
-  assert(Node->getNumOperands() == 3 &&
-         "Expected signed fixed point multiplication to have 3 operands.");
 
   SDLoc dl(Node);
   SDValue LHS = Node->getOperand(0);
   SDValue RHS = Node->getOperand(1);
-  assert(LHS.getValueType().isScalarInteger() &&
-         "Expected operands to be integers. Vector of int arguments should "
-         "already be unrolled.");
-  assert(RHS.getValueType().isScalarInteger() &&
-         "Expected operands to be integers. Vector of int arguments should "
-         "already be unrolled.");
+  EVT VT = LHS.getValueType();
+  unsigned Scale = Node->getConstantOperandVal(2);
+
+  // [us]mul.fix(a, b, 0) -> mul(a, b)
+  if (!Scale) {
+    if (VT.isVector() && !isOperationLegalOrCustom(ISD::MUL, VT))
+      return SDValue();
+    return DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
+  }
+
   assert(LHS.getValueType() == RHS.getValueType() &&
          "Expected both operands to be the same type");
-
-  unsigned Scale = Node->getConstantOperandVal(2);
-  EVT VT = LHS.getValueType();
   assert(Scale < VT.getScalarSizeInBits() &&
          "Expected scale to be less than the number of bits.");
-
-  if (!Scale)
-    return DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
 
   // Get the upper and lower bits of the result.
   SDValue Lo, Hi;
@@ -5395,6 +5391,8 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   } else if (isOperationLegalOrCustom(ISD::MULHS, VT)) {
     Lo = DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
     Hi = DAG.getNode(ISD::MULHS, dl, VT, LHS, RHS);
+  } else if (VT.isVector()) {
+    return SDValue();
   } else {
     report_fatal_error("Unable to expand signed fixed point multiplication.");
   }

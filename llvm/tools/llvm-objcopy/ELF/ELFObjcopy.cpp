@@ -287,7 +287,9 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
   // them.
   if (Obj.SymbolTable) {
     Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
-      if (!Sym.isCommon() &&
+      // Common and undefined symbols don't make sense as local symbols, and can
+      // even cause crashes if we localize those, so skip them.
+      if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
           ((Config.LocalizeHidden &&
             (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
            is_contained(Config.SymbolsToLocalize, Sym.Name)))

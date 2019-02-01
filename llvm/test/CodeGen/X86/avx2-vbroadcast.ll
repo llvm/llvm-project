@@ -244,8 +244,7 @@ define <16 x i16> @broadcast_mem_v4i16_v16i16(<4 x i16>* %ptr) {
 ; X32-LABEL: broadcast_mem_v4i16_v16i16:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vbroadcastsd %xmm0, %ymm0
+; X32-NEXT:    vbroadcastsd (%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: broadcast_mem_v4i16_v16i16:

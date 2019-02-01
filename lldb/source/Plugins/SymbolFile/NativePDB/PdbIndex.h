@@ -114,6 +114,7 @@ public:
       create(std::unique_ptr<llvm::pdb::PDBFile>);
 
   void SetLoadAddress(lldb::addr_t addr) { m_load_address = addr; }
+  lldb::addr_t GetLoadAddress() const { return m_load_address; }
   void ParseSectionContribs();
 
   llvm::pdb::PDBFile &pdb() { return *m_file; }

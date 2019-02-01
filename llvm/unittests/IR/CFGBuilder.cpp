@@ -23,7 +23,7 @@ CFGHolder::CFGHolder(StringRef ModuleName, StringRef FunctionName)
     : Context(llvm::make_unique<LLVMContext>()),
       M(llvm::make_unique<Module>(ModuleName, *Context)) {
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Context), {}, false);
-  F = cast<Function>(M->getOrInsertFunction(FunctionName, FTy));
+  F = Function::Create(FTy, Function::ExternalLinkage, FunctionName, M.get());
 }
 CFGHolder::~CFGHolder() = default;
 

@@ -499,14 +499,13 @@ BasicBlock *StackProtector::CreateFailBB() {
   IRBuilder<> B(FailBB);
   B.SetCurrentDebugLocation(DebugLoc::get(0, 0, F->getSubprogram()));
   if (Trip.isOSOpenBSD()) {
-    Constant *StackChkFail =
-        M->getOrInsertFunction("__stack_smash_handler",
-                               Type::getVoidTy(Context),
-                               Type::getInt8PtrTy(Context));
+    FunctionCallee StackChkFail = M->getOrInsertFunction(
+        "__stack_smash_handler", Type::getVoidTy(Context),
+        Type::getInt8PtrTy(Context));
 
     B.CreateCall(StackChkFail, B.CreateGlobalStringPtr(F->getName(), "SSH"));
   } else {
-    Constant *StackChkFail =
+    FunctionCallee StackChkFail =
         M->getOrInsertFunction("__stack_chk_fail", Type::getVoidTy(Context));
 
     B.CreateCall(StackChkFail, {});

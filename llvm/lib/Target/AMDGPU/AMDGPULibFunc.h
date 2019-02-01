@@ -393,8 +393,8 @@ public:
   }
   static Function *getFunction(llvm::Module *M, const AMDGPULibFunc &fInfo);
 
-  static Function *getOrInsertFunction(llvm::Module *M,
-                                       const AMDGPULibFunc &fInfo);
+  static FunctionCallee getOrInsertFunction(llvm::Module *M,
+                                            const AMDGPULibFunc &fInfo);
   static bool parse(StringRef MangledName, AMDGPULibFunc &Ptr);
 
 private:

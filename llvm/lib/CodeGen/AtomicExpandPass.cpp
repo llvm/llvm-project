@@ -1754,7 +1754,7 @@ bool AtomicExpand::expandAtomicOpToLibcall(
   for (Value *Arg : Args)
     ArgTys.push_back(Arg->getType());
   FunctionType *FnType = FunctionType::get(ResultTy, ArgTys, false);
-  Constant *LibcallFn =
+  FunctionCallee LibcallFn =
       M->getOrInsertFunction(TLI->getLibcallName(RTLibType), FnType, Attr);
   CallInst *Call = Builder.CreateCall(LibcallFn, Args);
   Call->setAttributes(Attr);

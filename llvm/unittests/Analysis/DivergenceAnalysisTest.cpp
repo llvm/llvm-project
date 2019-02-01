@@ -78,7 +78,7 @@ TEST_F(DivergenceAnalysisTest, DAInitialState) {
   IntegerType *IntTy = IntegerType::getInt32Ty(Context);
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {IntTy}, false);
-  Function *F = cast<Function>(M.getOrInsertFunction("f", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
   BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
   ReturnInst::Create(Context, nullptr, BB);
 

@@ -18,6 +18,8 @@ RUN: llvm-nm %p/Inputs/weak.elf-x86-64 \
 RUN:         | FileCheck %s -check-prefix WEAK-ELF64
 RUN: llvm-nm %p/Inputs/absolute.elf-x86-64 \
 RUN:         | FileCheck %s -check-prefix ABSOLUTE-ELF64
+RUN: llvm-nm -a %p/Inputs/IsNAN.o \
+RUN:         | FileCheck %s -check-prefix ELF64-DEBUG-SYMS
 RUN: llvm-nm %p/Inputs/trivial-object-test.macho-i386 \
 RUN:         | FileCheck %s -check-prefix macho
 RUN: llvm-nm -U %p/Inputs/trivial-object-test.macho-i386 \
@@ -112,6 +114,22 @@ WEAK-ELF64: 0000000000000000 V x2
 
 ABSOLUTE-ELF64: 0000000000000123 a a1
 ABSOLUTE-ELF64: 0000000000000123 A a2
+
+ELF64-DEBUG-SYMS: 00000000 b .bss
+ELF64-DEBUG-SYMS: 00000000 d .data
+ELF64-DEBUG-SYMS: 00000000 N .debug_abbrev
+ELF64-DEBUG-SYMS: 00000000 N .debug_aranges
+ELF64-DEBUG-SYMS: 00000000 N .debug_frame
+ELF64-DEBUG-SYMS: 00000000 N .debug_info
+ELF64-DEBUG-SYMS: 00000000 N .debug_line
+ELF64-DEBUG-SYMS: 00000000 N .debug_pubnames
+ELF64-DEBUG-SYMS: 00000000 n .note.GNU-stack
+ELF64-DEBUG-SYMS: 00000000 t .text
+ELF64-DEBUG-SYMS: 00000000 a IsNAN.cpp
+ELF64-DEBUG-SYMS: 00000014 T _ZN4llvm5IsNANEd
+ELF64-DEBUG-SYMS: 00000000 T _ZN4llvm5IsNANEf
+ELF64-DEBUG-SYMS:          U __isnan
+ELF64-DEBUG-SYMS:          U __isnanf
 
 macho:          U _SomeOtherFunction
 macho: 00000000 T _main

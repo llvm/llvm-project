@@ -86,15 +86,15 @@ private:
   StructType *EHLinkRegistrationTy = nullptr;
   StructType *CXXEHRegistrationTy = nullptr;
   StructType *SEHRegistrationTy = nullptr;
-  Constant *SetJmp3 = nullptr;
-  Constant *CxxLongjmpUnwind = nullptr;
+  FunctionCallee SetJmp3 = nullptr;
+  FunctionCallee CxxLongjmpUnwind = nullptr;
 
   // Per-function state
   EHPersonality Personality = EHPersonality::Unknown;
   Function *PersonalityFn = nullptr;
   bool UseStackGuard = false;
   int ParentBaseState;
-  Constant *SehLongjmpUnwind = nullptr;
+  FunctionCallee SehLongjmpUnwind = nullptr;
   Constant *Cookie = nullptr;
 
   /// The stack allocation containing all EH data, including the link in the
@@ -303,7 +303,7 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
     CxxLongjmpUnwind = TheModule->getOrInsertFunction(
         "__CxxLongjmpUnwind",
         FunctionType::get(VoidTy, Int8PtrType, /*isVarArg=*/false));
-    cast<Function>(CxxLongjmpUnwind->stripPointerCasts())
+    cast<Function>(CxxLongjmpUnwind.getCallee()->stripPointerCasts())
         ->setCallingConv(CallingConv::X86_StdCall);
   } else if (Personality == EHPersonality::MSVC_X86SEH) {
     // If _except_handler4 is in use, some additional guard checks and prologue
@@ -356,7 +356,7 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
         UseStackGuard ? "_seh_longjmp_unwind4" : "_seh_longjmp_unwind",
         FunctionType::get(Type::getVoidTy(TheModule->getContext()), Int8PtrType,
                           /*isVarArg=*/false));
-    cast<Function>(SehLongjmpUnwind->stripPointerCasts())
+    cast<Function>(SehLongjmpUnwind.getCallee()->stripPointerCasts())
         ->setCallingConv(CallingConv::X86_StdCall);
   } else {
     llvm_unreachable("unexpected personality function");
@@ -471,11 +471,11 @@ void WinEHStatePass::rewriteSetJmpCallSite(IRBuilder<> &Builder, Function &F,
 
   SmallVector<Value *, 3> OptionalArgs;
   if (Personality == EHPersonality::MSVC_CXX) {
-    OptionalArgs.push_back(CxxLongjmpUnwind);
+    OptionalArgs.push_back(CxxLongjmpUnwind.getCallee());
     OptionalArgs.push_back(State);
     OptionalArgs.push_back(emitEHLSDA(Builder, &F));
   } else if (Personality == EHPersonality::MSVC_X86SEH) {
-    OptionalArgs.push_back(SehLongjmpUnwind);
+    OptionalArgs.push_back(SehLongjmpUnwind.getCallee());
     OptionalArgs.push_back(State);
     if (UseStackGuard)
       OptionalArgs.push_back(Cookie);
@@ -766,7 +766,7 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
       if (!CS)
         continue;
       if (CS.getCalledValue()->stripPointerCasts() !=
-          SetJmp3->stripPointerCasts())
+          SetJmp3.getCallee()->stripPointerCasts())
         continue;
 
       SetJmp3CallSites.push_back(CS);

@@ -678,6 +678,9 @@ will only be done through the following process:
 
   * Start using the new features in LLVM's codebase.
 
+Here's a `sample RFC
+<http://lists.llvm.org/pipermail/llvm-dev/2019-January/129452.html>`_ and the
+`corresponding change <https://reviews.llvm.org/D57264>`_.
 
 .. _copyright-license-patents:
 

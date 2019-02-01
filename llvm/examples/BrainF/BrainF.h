@@ -79,8 +79,8 @@ class BrainF {
     std::istream *in;
     Module *module;
     Function *brainf_func;
-    Function *getchar_func;
-    Function *putchar_func;
+    FunctionCallee getchar_func;
+    FunctionCallee putchar_func;
     Value *ptr_arr;
     Value *ptr_arrmax;
     BasicBlock *endbb;

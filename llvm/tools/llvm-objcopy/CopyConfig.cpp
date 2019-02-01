@@ -480,18 +480,21 @@ DriverConfig parseStripOptions(ArrayRef<const char *> ArgsArr) {
   Config.StripAll = InputArgs.hasArg(STRIP_strip_all);
   Config.StripAllGNU = InputArgs.hasArg(STRIP_strip_all_gnu);
 
-  if (!Config.StripDebug && !Config.StripUnneeded &&
-      Config.DiscardMode == DiscardType::None && !Config.StripAllGNU)
-    Config.StripAll = true;
-
   for (auto Arg : InputArgs.filtered(STRIP_keep_section))
     Config.KeepSection.push_back(Arg->getValue());
 
   for (auto Arg : InputArgs.filtered(STRIP_remove_section))
     Config.ToRemove.push_back(Arg->getValue());
 
+  for (auto Arg : InputArgs.filtered(STRIP_strip_symbol))
+    Config.SymbolsToRemove.push_back(Arg->getValue());
+
   for (auto Arg : InputArgs.filtered(STRIP_keep_symbol))
     Config.SymbolsToKeep.push_back(Arg->getValue());
+
+  if (!Config.StripDebug && !Config.StripUnneeded &&
+      Config.DiscardMode == DiscardType::None && !Config.StripAllGNU && Config.SymbolsToRemove.empty())
+    Config.StripAll = true;
 
   Config.DeterministicArchives =
       InputArgs.hasFlag(STRIP_enable_deterministic_archives,

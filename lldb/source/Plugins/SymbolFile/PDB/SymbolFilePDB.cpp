@@ -933,12 +933,25 @@ VariableSP SymbolFilePDB::ParseVariableForPDBData(
 
   Variable::RangeList ranges;
   SymbolContextScope *context_scope = sc.comp_unit;
-  if (scope == eValueTypeVariableLocal) {
+  if (scope == eValueTypeVariableLocal || scope == eValueTypeVariableArgument) {
     if (sc.function) {
-      context_scope = sc.function->GetBlock(true).FindBlockByID(
-          pdb_data.getLexicalParentId());
-      if (context_scope == nullptr)
-        context_scope = sc.function;
+      Block &function_block = sc.function->GetBlock(true);
+      Block *block =
+          function_block.FindBlockByID(pdb_data.getLexicalParentId());
+      if (!block)
+        block = &function_block;
+
+      context_scope = block;
+
+      for (size_t i = 0, num_ranges = block->GetNumRanges(); i < num_ranges;
+           ++i) {
+        AddressRange range;
+        if (!block->GetRangeAtIndex(i, range))
+          continue;
+
+        ranges.Append(range.GetBaseAddress().GetFileAddress(),
+                      range.GetByteSize());
+      }
     }
   }
 
@@ -951,7 +964,7 @@ VariableSP SymbolFilePDB::ParseVariableForPDBData(
 
   bool is_constant;
   DWARFExpression location = ConvertPDBLocationToDWARFExpression(
-      GetObjectFile()->GetModule(), pdb_data, is_constant);
+      GetObjectFile()->GetModule(), pdb_data, ranges, is_constant);
 
   var_sp = std::make_shared<Variable>(
       var_uid, var_name.c_str(), mangled_cstr, type_sp, scope, context_scope,

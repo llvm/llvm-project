@@ -5775,6 +5775,12 @@ SDValue SystemZTargetLowering::combineIntDIVREM(
   return SDValue();
 }
 
+SDValue SystemZTargetLowering::unwrapAddress(SDValue N) const {
+  if (N->getOpcode() == SystemZISD::PCREL_WRAPPER)
+    return N->getOperand(0);
+  return N;
+}
+
 SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   switch(N->getOpcode()) {

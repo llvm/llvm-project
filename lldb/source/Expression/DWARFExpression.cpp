@@ -3203,7 +3203,7 @@ static bool print_dwarf_exp_op(Stream &s, const DataExtractor &data,
     break;
   default:
     s.Printf("UNKNOWN ONE-OPERAND OPCODE, #%u", opcode);
-    return true;
+    return false;
   }
 
   switch (size) {
@@ -3249,7 +3249,7 @@ static bool print_dwarf_exp_op(Stream &s, const DataExtractor &data,
     break;
   }
 
-  return false;
+  return true;
 }
 
 bool DWARFExpression::PrintDWARFExpression(Stream &s, const DataExtractor &data,

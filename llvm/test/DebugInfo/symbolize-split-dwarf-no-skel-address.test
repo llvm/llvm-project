@@ -1,10 +1,10 @@
+Copy the DWO and then cd into the output directory, so that the symbolizer would
+find the DWO if it attempted to.
 RUN: rm -rf %t && mkdir -p %t
 RUN: cd %t
 RUN: cp %p/Inputs/split-dwarf-no-skel-address.dwo %t
-RUN: echo "%p/Inputs/split-dwarf-no-skel-address.o 0x4" > %t.input
-
-RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
-RUN:    --default-arch=i386 < %t.input | FileCheck %s
+RUN: llvm-symbolizer --inlining --no-demangle \
+RUN:    --obj=%p/Inputs/split-dwarf-no-skel-address.o 0x4 | FileCheck %s
 
 Built from the following source:
 void f1();

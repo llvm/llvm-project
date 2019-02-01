@@ -341,13 +341,13 @@ class DataFlowSanitizer : public ModulePass {
   FunctionType *DFSanSetLabelFnTy;
   FunctionType *DFSanNonzeroLabelFnTy;
   FunctionType *DFSanVarargWrapperFnTy;
-  Constant *DFSanUnionFn;
-  Constant *DFSanCheckedUnionFn;
-  Constant *DFSanUnionLoadFn;
-  Constant *DFSanUnimplementedFn;
-  Constant *DFSanSetLabelFn;
-  Constant *DFSanNonzeroLabelFn;
-  Constant *DFSanVarargWrapperFn;
+  FunctionCallee DFSanUnionFn;
+  FunctionCallee DFSanCheckedUnionFn;
+  FunctionCallee DFSanUnionLoadFn;
+  FunctionCallee DFSanUnimplementedFn;
+  FunctionCallee DFSanSetLabelFn;
+  FunctionCallee DFSanNonzeroLabelFn;
+  FunctionCallee DFSanVarargWrapperFn;
   MDNode *ColdCallWeights;
   DFSanABIList ABIList;
   DenseMap<Value *, Function *> UnwrappedFnMap;
@@ -677,8 +677,8 @@ DataFlowSanitizer::buildWrapperFunction(Function *F, StringRef NewFName,
 Constant *DataFlowSanitizer::getOrBuildTrampolineFunction(FunctionType *FT,
                                                           StringRef FName) {
   FunctionType *FTT = getTrampolineFunctionType(FT);
-  Constant *C = Mod->getOrInsertFunction(FName, FTT);
-  Function *F = dyn_cast<Function>(C);
+  FunctionCallee C = Mod->getOrInsertFunction(FName, FTT);
+  Function *F = dyn_cast<Function>(C.getCallee());
   if (F && F->isDeclaration()) {
     F->setLinkage(GlobalValue::LinkOnceODRLinkage);
     BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", F);
@@ -703,7 +703,7 @@ Constant *DataFlowSanitizer::getOrBuildTrampolineFunction(FunctionType *FT,
                     &*std::prev(F->arg_end()), RI);
   }
 
-  return C;
+  return cast<Constant>(C.getCallee());
 }
 
 bool DataFlowSanitizer::runOnModule(Module &M) {
@@ -725,35 +725,51 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
   ExternalShadowMask =
       Mod->getOrInsertGlobal(kDFSanExternShadowPtrMask, IntptrTy);
 
-  DFSanUnionFn = Mod->getOrInsertFunction("__dfsan_union", DFSanUnionFnTy);
-  if (Function *F = dyn_cast<Function>(DFSanUnionFn)) {
-    F->addAttribute(AttributeList::FunctionIndex, Attribute::NoUnwind);
-    F->addAttribute(AttributeList::FunctionIndex, Attribute::ReadNone);
-    F->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
-    F->addParamAttr(0, Attribute::ZExt);
-    F->addParamAttr(1, Attribute::ZExt);
+  {
+    AttributeList AL;
+    AL = AL.addAttribute(M.getContext(), AttributeList::FunctionIndex,
+                         Attribute::NoUnwind);
+    AL = AL.addAttribute(M.getContext(), AttributeList::FunctionIndex,
+                         Attribute::ReadNone);
+    AL = AL.addAttribute(M.getContext(), AttributeList::ReturnIndex,
+                         Attribute::ZExt);
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    AL = AL.addParamAttribute(M.getContext(), 1, Attribute::ZExt);
+    DFSanUnionFn =
+        Mod->getOrInsertFunction("__dfsan_union", DFSanUnionFnTy, AL);
   }
-  DFSanCheckedUnionFn = Mod->getOrInsertFunction("dfsan_union", DFSanUnionFnTy);
-  if (Function *F = dyn_cast<Function>(DFSanCheckedUnionFn)) {
-    F->addAttribute(AttributeList::FunctionIndex, Attribute::NoUnwind);
-    F->addAttribute(AttributeList::FunctionIndex, Attribute::ReadNone);
-    F->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
-    F->addParamAttr(0, Attribute::ZExt);
-    F->addParamAttr(1, Attribute::ZExt);
+
+  {
+    AttributeList AL;
+    AL = AL.addAttribute(M.getContext(), AttributeList::FunctionIndex,
+                         Attribute::NoUnwind);
+    AL = AL.addAttribute(M.getContext(), AttributeList::FunctionIndex,
+                         Attribute::ReadNone);
+    AL = AL.addAttribute(M.getContext(), AttributeList::ReturnIndex,
+                         Attribute::ZExt);
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    AL = AL.addParamAttribute(M.getContext(), 1, Attribute::ZExt);
+    DFSanCheckedUnionFn =
+        Mod->getOrInsertFunction("dfsan_union", DFSanUnionFnTy, AL);
   }
-  DFSanUnionLoadFn =
-      Mod->getOrInsertFunction("__dfsan_union_load", DFSanUnionLoadFnTy);
-  if (Function *F = dyn_cast<Function>(DFSanUnionLoadFn)) {
-    F->addAttribute(AttributeList::FunctionIndex, Attribute::NoUnwind);
-    F->addAttribute(AttributeList::FunctionIndex, Attribute::ReadOnly);
-    F->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
+  {
+    AttributeList AL;
+    AL = AL.addAttribute(M.getContext(), AttributeList::FunctionIndex,
+                         Attribute::NoUnwind);
+    AL = AL.addAttribute(M.getContext(), AttributeList::FunctionIndex,
+                         Attribute::ReadOnly);
+    AL = AL.addAttribute(M.getContext(), AttributeList::ReturnIndex,
+                         Attribute::ZExt);
+    DFSanUnionLoadFn =
+        Mod->getOrInsertFunction("__dfsan_union_load", DFSanUnionLoadFnTy, AL);
   }
   DFSanUnimplementedFn =
       Mod->getOrInsertFunction("__dfsan_unimplemented", DFSanUnimplementedFnTy);
-  DFSanSetLabelFn =
-      Mod->getOrInsertFunction("__dfsan_set_label", DFSanSetLabelFnTy);
-  if (Function *F = dyn_cast<Function>(DFSanSetLabelFn)) {
-    F->addParamAttr(0, Attribute::ZExt);
+  {
+    AttributeList AL;
+    AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
+    DFSanSetLabelFn =
+        Mod->getOrInsertFunction("__dfsan_set_label", DFSanSetLabelFnTy, AL);
   }
   DFSanNonzeroLabelFn =
       Mod->getOrInsertFunction("__dfsan_nonzero_label", DFSanNonzeroLabelFnTy);
@@ -764,13 +780,13 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
   SmallPtrSet<Function *, 2> FnsWithNativeABI;
   for (Function &i : M) {
     if (!i.isIntrinsic() &&
-        &i != DFSanUnionFn &&
-        &i != DFSanCheckedUnionFn &&
-        &i != DFSanUnionLoadFn &&
-        &i != DFSanUnimplementedFn &&
-        &i != DFSanSetLabelFn &&
-        &i != DFSanNonzeroLabelFn &&
-        &i != DFSanVarargWrapperFn)
+        &i != DFSanUnionFn.getCallee()->stripPointerCasts() &&
+        &i != DFSanCheckedUnionFn.getCallee()->stripPointerCasts() &&
+        &i != DFSanUnionLoadFn.getCallee()->stripPointerCasts() &&
+        &i != DFSanUnimplementedFn.getCallee()->stripPointerCasts() &&
+        &i != DFSanSetLabelFn.getCallee()->stripPointerCasts() &&
+        &i != DFSanNonzeroLabelFn.getCallee()->stripPointerCasts() &&
+        &i != DFSanVarargWrapperFn.getCallee()->stripPointerCasts())
       FnsToInstrument.push_back(&i);
   }
 
@@ -1512,7 +1528,7 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
 
   // Calls to this function are synthesized in wrappers, and we shouldn't
   // instrument them.
-  if (F == DFSF.DFS.DFSanVarargWrapperFn)
+  if (F == DFSF.DFS.DFSanVarargWrapperFn.getCallee()->stripPointerCasts())
     return;
 
   IRBuilder<> IRB(CS.getInstruction());
@@ -1545,9 +1561,9 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
         TransformedFunction CustomFn = DFSF.DFS.getCustomFunctionType(FT);
         std::string CustomFName = "__dfsw_";
         CustomFName += F->getName();
-        Constant *CustomF = DFSF.DFS.Mod->getOrInsertFunction(
+        FunctionCallee CustomF = DFSF.DFS.Mod->getOrInsertFunction(
             CustomFName, CustomFn.TransformedType);
-        if (Function *CustomFn = dyn_cast<Function>(CustomF)) {
+        if (Function *CustomFn = dyn_cast<Function>(CustomF.getCallee())) {
           CustomFn->copyAttributesFrom(F);
 
           // Custom functions returning non-void will write to the return label.

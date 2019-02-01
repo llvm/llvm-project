@@ -488,8 +488,10 @@ void PredicateInfo::buildPredicateInfo() {
 // tricky (FIXME).
 static Function *getCopyDeclaration(Module *M, Type *Ty) {
   std::string Name = "llvm.ssa.copy." + utostr((uintptr_t) Ty);
-  return cast<Function>(M->getOrInsertFunction(
-      Name, getType(M->getContext(), Intrinsic::ssa_copy, Ty)));
+  return cast<Function>(
+      M->getOrInsertFunction(Name,
+                             getType(M->getContext(), Intrinsic::ssa_copy, Ty))
+          .getCallee());
 }
 
 // Given the renaming stack, make all the operands currently on the stack real
