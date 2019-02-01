@@ -1367,7 +1367,7 @@ void ItaniumRecordLayoutBuilder::LayoutFields(const RecordDecl *D) {
       llvm::outs() << D->getNameAsString() << "\n";
   }
 
-  for (auto I = fields.begin(), End = fields.end(); I != End; ++I) {
+  for (auto I = D->field.begin(), End = D->field.end(); I != End; ++I) {
     auto Next(I);
     ++Next;
     LayoutField(*I,
