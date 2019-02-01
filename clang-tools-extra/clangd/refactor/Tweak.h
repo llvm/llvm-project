@@ -21,6 +21,7 @@
 
 #include "ClangdUnit.h"
 #include "Protocol.h"
+#include "Selection.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -39,16 +40,16 @@ class Tweak {
 public:
   /// Input to prepare and apply tweaks.
   struct Selection {
+    Selection(ParsedAST &AST, unsigned RangeBegin, unsigned RangeEnd);
     /// The text of the active document.
     llvm::StringRef Code;
     /// Parsed AST of the active file.
     ParsedAST &AST;
     /// A location of the cursor in the editor.
     SourceLocation Cursor;
-    // FIXME: add selection when there are checks relying on it.
+    // The AST nodes that were selected.
+    SelectionTree ASTSelection;
     // FIXME: provide a way to get sources and ASTs for other files.
-    // FIXME: cache some commonly required information (e.g. AST nodes under
-    //        cursor) to avoid redundant AST visit in every action.
   };
   virtual ~Tweak() = default;
   /// A unique id of the action, it is always equal to the name of the class

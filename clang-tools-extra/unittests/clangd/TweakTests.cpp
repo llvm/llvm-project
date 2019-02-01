@@ -52,9 +52,9 @@ void checkAvailable(StringRef ID, llvm::StringRef Input, bool Available) {
   ParsedAST AST = TU.build();
 
   auto CheckOver = [&](Range Selection) {
-    auto CursorLoc = llvm::cantFail(sourceLocationInMainFile(
-        AST.getASTContext().getSourceManager(), Selection.start));
-    auto T = prepareTweak(ID, Tweak::Selection{Code.code(), AST, CursorLoc});
+    unsigned Begin = cantFail(positionToOffset(Code.code(), Selection.start));
+    unsigned End = cantFail(positionToOffset(Code.code(), Selection.end));
+    auto T = prepareTweak(ID, Tweak::Selection(AST, Begin, End));
     if (Available)
       EXPECT_THAT_EXPECTED(T, Succeeded())
           << "code is " << markRange(Code.code(), Selection);
@@ -92,9 +92,9 @@ llvm::Expected<std::string> apply(StringRef ID, llvm::StringRef Input) {
   TU.Code = Code.code();
 
   ParsedAST AST = TU.build();
-  auto CursorLoc = llvm::cantFail(sourceLocationInMainFile(
-      AST.getASTContext().getSourceManager(), SelectionRng.start));
-  Tweak::Selection S = {Code.code(), AST, CursorLoc};
+  unsigned Begin = cantFail(positionToOffset(Code.code(), SelectionRng.start));
+  unsigned End = cantFail(positionToOffset(Code.code(), SelectionRng.end));
+  Tweak::Selection S(AST, Begin, End);
 
   auto T = prepareTweak(ID, S);
   if (!T)
@@ -149,6 +149,41 @@ TEST(TweakTest, SwapIfBranches) {
     }
   )cpp";
   checkTransform(ID, Input, Output);
+
+  // Available in subexpressions of the condition.
+  checkAvailable(ID, R"cpp(
+    void test() {
+      if(2 + [[2]] + 2) { return 2 + 2 + 2; } else { continue; }
+    }
+  )cpp");
+  // But not as part of the branches.
+  checkNotAvailable(ID, R"cpp(
+    void test() {
+      if(2 + 2 + 2) { return 2 + [[2]] + 2; } else { continue; }
+    }
+  )cpp");
+  // Range covers the "else" token, so available.
+  checkAvailable(ID, R"cpp(
+    void test() {
+      if(2 + 2 + 2) { return 2 + [[2 + 2; } else { continue;]] }
+    }
+  )cpp");
+  // Not available in compound statements in condition.
+  checkNotAvailable(ID, R"cpp(
+    void test() {
+      if([]{return [[true]];}()) { return 2 + 2 + 2; } else { continue; }
+    }
+  )cpp");
+  // Not available if both sides aren't braced.
+  checkNotAvailable(ID, R"cpp(
+    void test() {
+      ^if (1) return; else { return; }
+    }
+  )cpp");
+  // Only one if statement is supported!
+  checkNotAvailable(ID, R"cpp(
+    [[if(1){}else{}if(2){}else{}]]
+  )cpp");
 }
 
 } // namespace

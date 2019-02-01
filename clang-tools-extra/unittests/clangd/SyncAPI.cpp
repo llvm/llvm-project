@@ -84,10 +84,10 @@ llvm::Expected<SignatureHelp> runSignatureHelp(ClangdServer &Server,
   return std::move(*Result);
 }
 
-llvm::Expected<std::vector<Location>>
-runFindDefinitions(ClangdServer &Server, PathRef File, Position Pos) {
-  llvm::Optional<llvm::Expected<std::vector<Location>>> Result;
-  Server.findDefinitions(File, Pos, capture(Result));
+llvm::Expected<std::vector<LocatedSymbol>>
+runLocateSymbolAt(ClangdServer &Server, PathRef File, Position Pos) {
+  llvm::Optional<llvm::Expected<std::vector<LocatedSymbol>>> Result;
+  Server.locateSymbolAt(File, Pos, capture(Result));
   return std::move(*Result);
 }
 

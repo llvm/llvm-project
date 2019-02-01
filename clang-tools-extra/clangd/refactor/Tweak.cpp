@@ -38,6 +38,14 @@ void validateRegistry() {
 }
 } // namespace
 
+Tweak::Selection::Selection(ParsedAST &AST, unsigned RangeBegin,
+                            unsigned RangeEnd)
+    : AST(AST), ASTSelection(AST.getASTContext(), RangeBegin, RangeEnd) {
+  auto &SM = AST.getASTContext().getSourceManager();
+  Code = SM.getBufferData(SM.getMainFileID());
+  Cursor = SM.getComposedLoc(SM.getMainFileID(), RangeBegin);
+}
+
 std::vector<std::unique_ptr<Tweak>> prepareTweaks(const Tweak::Selection &S) {
   validateRegistry();
 

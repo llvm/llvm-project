@@ -354,6 +354,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
              llvm::json::Object{
                  {"triggerCharacters", {"(", ","}},
              }},
+            {"declarationProvider", true},
             {"definitionProvider", true},
             {"documentHighlightProvider", true},
             {"hoverProvider", true},
@@ -727,8 +728,37 @@ void ClangdLSPServer::onSignatureHelp(const TextDocumentPositionParams &Params,
 
 void ClangdLSPServer::onGoToDefinition(const TextDocumentPositionParams &Params,
                                        Callback<std::vector<Location>> Reply) {
-  Server->findDefinitions(Params.textDocument.uri.file(), Params.position,
-                          std::move(Reply));
+  Server->locateSymbolAt(
+      Params.textDocument.uri.file(), Params.position,
+      Bind(
+          [&](decltype(Reply) Reply,
+              llvm::Expected<std::vector<LocatedSymbol>> Symbols) {
+            if (!Symbols)
+              return Reply(Symbols.takeError());
+            std::vector<Location> Defs;
+            for (const auto &S : *Symbols)
+              Defs.push_back(S.Definition.getValueOr(S.PreferredDeclaration));
+            Reply(std::move(Defs));
+          },
+          std::move(Reply)));
+}
+
+void ClangdLSPServer::onGoToDeclaration(
+    const TextDocumentPositionParams &Params,
+    Callback<std::vector<Location>> Reply) {
+  Server->locateSymbolAt(
+      Params.textDocument.uri.file(), Params.position,
+      Bind(
+          [&](decltype(Reply) Reply,
+              llvm::Expected<std::vector<LocatedSymbol>> Symbols) {
+            if (!Symbols)
+              return Reply(Symbols.takeError());
+            std::vector<Location> Decls;
+            for (const auto &S : *Symbols)
+              Decls.push_back(S.PreferredDeclaration);
+            Reply(std::move(Decls));
+          },
+          std::move(Reply)));
 }
 
 void ClangdLSPServer::onSwitchSourceHeader(const TextDocumentIdentifier &Params,
@@ -814,6 +844,7 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
   MsgHandler->bind("textDocument/completion", &ClangdLSPServer::onCompletion);
   MsgHandler->bind("textDocument/signatureHelp", &ClangdLSPServer::onSignatureHelp);
   MsgHandler->bind("textDocument/definition", &ClangdLSPServer::onGoToDefinition);
+  MsgHandler->bind("textDocument/declaration", &ClangdLSPServer::onGoToDeclaration);
   MsgHandler->bind("textDocument/references", &ClangdLSPServer::onReference);
   MsgHandler->bind("textDocument/switchSourceHeader", &ClangdLSPServer::onSwitchSourceHeader);
   MsgHandler->bind("textDocument/rename", &ClangdLSPServer::onRename);

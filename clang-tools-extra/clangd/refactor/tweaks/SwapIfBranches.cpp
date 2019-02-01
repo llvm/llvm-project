@@ -41,58 +41,23 @@ public:
   std::string title() const override;
 
 private:
-  IfStmt *If = nullptr;
+  const IfStmt *If = nullptr;
 };
 
 REGISTER_TWEAK(SwapIfBranches);
 
-class FindIfUnderCursor : public RecursiveASTVisitor<FindIfUnderCursor> {
-public:
-  FindIfUnderCursor(ASTContext &Ctx, SourceLocation CursorLoc, IfStmt *&Result)
-      : Ctx(Ctx), CursorLoc(CursorLoc), Result(Result) {}
-
-  bool VisitIfStmt(IfStmt *If) {
-    // Check if the cursor is in the range of 'if (cond)'.
-    // FIXME: this does not contain the closing paren, add it too.
-    auto R = toHalfOpenFileRange(
-        Ctx.getSourceManager(), Ctx.getLangOpts(),
-        SourceRange(If->getIfLoc(), If->getCond()->getEndLoc().isValid()
-                                        ? If->getCond()->getEndLoc()
-                                        : If->getIfLoc()));
-    if (R && halfOpenRangeTouches(Ctx.getSourceManager(), *R, CursorLoc)) {
-      Result = If;
-      return false;
-    }
-    // Check the range of 'else'.
-    R = toHalfOpenFileRange(Ctx.getSourceManager(), Ctx.getLangOpts(),
-                            SourceRange(If->getElseLoc()));
-    if (R && halfOpenRangeTouches(Ctx.getSourceManager(), *R, CursorLoc)) {
-      Result = If;
-      return false;
-    }
-
-    return true;
-  }
-
-private:
-  ASTContext &Ctx;
-  SourceLocation CursorLoc;
-  IfStmt *&Result;
-};
-} // namespace
-
 bool SwapIfBranches::prepare(const Selection &Inputs) {
-  auto &Ctx = Inputs.AST.getASTContext();
-  FindIfUnderCursor(Ctx, Inputs.Cursor, If).TraverseAST(Ctx);
-  if (!If)
-    return false;
-
+  for (const SelectionTree::Node *N = Inputs.ASTSelection.commonAncestor();
+       N && !If; N = N->Parent) {
+    // Stop once we hit a block, e.g. a lambda in the if condition.
+    if (dyn_cast_or_null<CompoundStmt>(N->ASTNode.get<Stmt>()))
+      return false;
+    If = dyn_cast_or_null<IfStmt>(N->ASTNode.get<Stmt>());
+  }
   // avoid dealing with single-statement brances, they require careful handling
   // to avoid changing semantics of the code (i.e. dangling else).
-  if (!If->getThen() || !llvm::isa<CompoundStmt>(If->getThen()) ||
-      !If->getElse() || !llvm::isa<CompoundStmt>(If->getElse()))
-    return false;
-  return true;
+  return If && dyn_cast_or_null<CompoundStmt>(If->getThen()) &&
+         dyn_cast_or_null<CompoundStmt>(If->getElse());
 }
 
 Expected<tooling::Replacements> SwapIfBranches::apply(const Selection &Inputs) {
@@ -128,5 +93,7 @@ Expected<tooling::Replacements> SwapIfBranches::apply(const Selection &Inputs) {
 }
 
 std::string SwapIfBranches::title() const { return "Swap if branches"; }
+
+} // namespace
 } // namespace clangd
 } // namespace clang

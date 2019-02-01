@@ -21,18 +21,26 @@ namespace clang {
 namespace clangd {
 namespace {
 
-// Get the definition from a given declaration `D`.
-// Return nullptr if no definition is found, or the declaration type of `D` is
-// not supported.
+// Returns the single definition of the entity declared by D, if visible.
+// In particular:
+// - for non-redeclarable kinds (e.g. local vars), return D
+// - for kinds that allow multiple definitions (e.g. namespaces), return nullptr
+// Kinds of nodes that always return nullptr here will not have definitions
+// reported by locateSymbolAt().
 const Decl *getDefinition(const Decl *D) {
   assert(D);
+  // Decl has one definition that we can find.
   if (const auto *TD = dyn_cast<TagDecl>(D))
     return TD->getDefinition();
-  else if (const auto *VD = dyn_cast<VarDecl>(D))
+  if (const auto *VD = dyn_cast<VarDecl>(D))
     return VD->getDefinition();
-  else if (const auto *FD = dyn_cast<FunctionDecl>(D))
+  if (const auto *FD = dyn_cast<FunctionDecl>(D))
     return FD->getDefinition();
-  return nullptr;
+  // Only a single declaration is allowed.
+  if (isa<ValueDecl>(D)) // except cases above
+    return D;
+  // Multiple definitions are allowed.
+  return nullptr; // except cases above
 }
 
 void logIfOverflow(const SymbolLocation &Loc) {
@@ -240,8 +248,8 @@ llvm::Optional<Location> makeLocation(ParsedAST &AST, SourceLocation TokLoc,
 
 } // namespace
 
-std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
-                                      const SymbolIndex *Index) {
+std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
+                                          const SymbolIndex *Index) {
   const auto &SM = AST.getASTContext().getSourceManager();
   auto MainFilePath =
       getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
@@ -250,114 +258,83 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
     return {};
   }
 
-  std::vector<Location> Result;
-  // Handle goto definition for #include.
+  // Treat #included files as symbols, to enable go-to-definition on them.
   for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
-    if (!Inc.Resolved.empty() && Inc.R.start.line == Pos.line)
-      Result.push_back(
-          Location{URIForFile::canonicalize(Inc.Resolved, *MainFilePath), {}});
+    if (!Inc.Resolved.empty() && Inc.R.start.line == Pos.line) {
+      LocatedSymbol File;
+      File.Name = llvm::sys::path::filename(Inc.Resolved);
+      File.PreferredDeclaration = {
+          URIForFile::canonicalize(Inc.Resolved, *MainFilePath), Range{}};
+      File.Definition = File.PreferredDeclaration;
+      // We're not going to find any further symbols on #include lines.
+      return {std::move(File)};
+    }
   }
-  if (!Result.empty())
-    return Result;
 
-  // Identified symbols at a specific position.
   SourceLocation SourceLocationBeg =
       getBeginningOfIdentifier(AST, Pos, SM.getMainFileID());
   auto Symbols = getSymbolAtPosition(AST, SourceLocationBeg);
 
-  for (auto Item : Symbols.Macros) {
-    auto Loc = Item.Info->getDefinitionLoc();
-    auto L = makeLocation(AST, Loc, *MainFilePath);
-    if (L)
-      Result.push_back(*L);
+  // Macros are simple: there's no declaration/definition distinction.
+  // As a consequence, there's no need to look them up in the index either.
+  std::vector<LocatedSymbol> Result;
+  for (auto M : Symbols.Macros) {
+    if (auto Loc =
+            makeLocation(AST, M.Info->getDefinitionLoc(), *MainFilePath)) {
+      LocatedSymbol Macro;
+      Macro.Name = M.Name;
+      Macro.PreferredDeclaration = *Loc;
+      Macro.Definition = Loc;
+      Result.push_back(std::move(Macro));
+    }
   }
 
-  // Declaration and definition are different terms in C-family languages, and
-  // LSP only defines the "GoToDefinition" specification, so we try to perform
-  // the "most sensible" GoTo operation:
-  //
-  //  - We use the location from AST and index (if available) to provide the
-  //    final results. When there are duplicate results, we prefer AST over
-  //    index because AST is more up-to-date.
-  //
-  //  - For each symbol, we will return a location of the canonical declaration
-  //    (e.g. function declaration in header), and a location of definition if
-  //    they are available.
-  //
-  // So the work flow:
-  //
-  //   1. Identify the symbols being search for by traversing the AST.
-  //   2. Populate one of the locations with the AST location.
-  //   3. Use the AST information to query the index, and populate the index
-  //      location (if available).
-  //   4. Return all populated locations for all symbols, definition first (
-  //      which  we think is the users wants most often).
-  struct CandidateLocation {
-    llvm::Optional<Location> Def;
-    llvm::Optional<Location> Decl;
-  };
-  // We respect the order in Symbols.Decls.
-  llvm::SmallVector<CandidateLocation, 8> ResultCandidates;
-  llvm::DenseMap<SymbolID, size_t> CandidatesIndex;
+  // Decls are more complicated.
+  // The AST contains at least a declaration, maybe a definition.
+  // These are up-to-date, and so generally preferred over index results.
+  // We perform a single batch index lookup to find additional definitions.
+
+  // Results follow the order of Symbols.Decls.
+  // Keep track of SymbolID -> index mapping, to fill in index data later.
+  llvm::DenseMap<SymbolID, size_t> ResultIndex;
 
   // Emit all symbol locations (declaration or definition) from AST.
   for (const DeclInfo &DI : Symbols.Decls) {
     const Decl *D = DI.D;
-    // Fake key for symbols don't have USR (no SymbolID).
-    // Ideally, there should be a USR for each identified symbols. Symbols
-    // without USR are rare and unimportant cases, we use the a fake holder to
-    // minimize the invasiveness of these cases.
-    SymbolID Key("");
+    auto Loc = makeLocation(AST, findNameLoc(D), *MainFilePath);
+    if (!Loc)
+      continue;
+
+    Result.emplace_back();
+    if (auto *ND = dyn_cast<NamedDecl>(D))
+      Result.back().Name = printName(AST.getASTContext(), *ND);
+    Result.back().PreferredDeclaration = *Loc;
+    // DeclInfo.D is always a definition if possible, so this check works.
+    if (getDefinition(D) == D)
+      Result.back().Definition = *Loc;
+
+    // Record SymbolID for index lookup later.
     if (auto ID = getSymbolID(D))
-      Key = *ID;
-
-    auto R = CandidatesIndex.try_emplace(Key, ResultCandidates.size());
-    if (R.second) // new entry
-      ResultCandidates.emplace_back();
-    auto &Candidate = ResultCandidates[R.first->second];
-
-    auto Loc = findNameLoc(D);
-    auto L = makeLocation(AST, Loc, *MainFilePath);
-    // The declaration in the identified symbols is a definition if possible
-    // otherwise it is declaration.
-    bool IsDef = getDefinition(D) == D;
-    // Populate one of the slots with location for the AST.
-    if (!IsDef)
-      Candidate.Decl = L;
-    else
-      Candidate.Def = L;
+      ResultIndex[*ID] = Result.size() - 1;
   }
 
-  if (Index) {
+  // Now query the index for all Symbol IDs we found in the AST.
+  if (Index && !ResultIndex.empty()) {
     LookupRequest QueryRequest;
-    // Build request for index query, using SymbolID.
-    for (auto It : CandidatesIndex)
+    for (auto It : ResultIndex)
       QueryRequest.IDs.insert(It.first);
-    std::string TUPath;
-    const FileEntry *FE = SM.getFileEntryForID(SM.getMainFileID());
-    if (auto Path = getCanonicalPath(FE, SM))
-      TUPath = *Path;
-    // Query the index and populate the empty slot.
-    Index->lookup(QueryRequest, [&TUPath, &ResultCandidates,
-                                 &CandidatesIndex](const Symbol &Sym) {
-      auto It = CandidatesIndex.find(Sym.ID);
-      assert(It != CandidatesIndex.end());
-      auto &Value = ResultCandidates[It->second];
+    Index->lookup(QueryRequest, [&](const Symbol &Sym) {
+      auto &R = Result[ResultIndex.lookup(Sym.ID)];
 
-      if (!Value.Def)
-        Value.Def = toLSPLocation(Sym.Definition, TUPath);
-      if (!Value.Decl)
-        Value.Decl = toLSPLocation(Sym.CanonicalDeclaration, TUPath);
+      // Special case: if the AST yielded a definition, then it may not be
+      // the right *declaration*. Prefer the one from the index.
+      if (R.Definition) // from AST
+        if (auto Loc = toLSPLocation(Sym.CanonicalDeclaration, *MainFilePath))
+          R.PreferredDeclaration = *Loc;
+
+      if (!R.Definition)
+        R.Definition = toLSPLocation(Sym.Definition, *MainFilePath);
     });
-  }
-
-  // Populate the results, definition first.
-  for (const auto &Candidate : ResultCandidates) {
-    if (Candidate.Def)
-      Result.push_back(*Candidate.Def);
-    if (Candidate.Decl &&
-        Candidate.Decl != Candidate.Def) // Decl and Def might be the same
-      Result.push_back(*Candidate.Decl);
   }
 
   return Result;
@@ -803,6 +780,13 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
   }
 
   return Results;
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const LocatedSymbol &S) {
+  OS << S.Name << ": " << S.PreferredDeclaration;
+  if (S.Definition)
+    OS << " def=" << *S.Definition;
+  return OS;
 }
 
 } // namespace clangd

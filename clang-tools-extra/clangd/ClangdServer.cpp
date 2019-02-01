@@ -13,7 +13,6 @@
 #include "Headers.h"
 #include "SourceCode.h"
 #include "Trace.h"
-#include "XRefs.h"
 #include "index/FileIndex.h"
 #include "index/Merge.h"
 #include "refactor/Tweak.h"
@@ -329,23 +328,28 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
       "Rename", File, Bind(Action, File.str(), NewName.str(), std::move(CB)));
 }
 
+static llvm::Expected<Tweak::Selection>
+tweakSelection(const Range &Sel, const InputsAndAST &AST) {
+  auto Begin = positionToOffset(AST.Inputs.Contents, Sel.start);
+  if (!Begin)
+    return Begin.takeError();
+  auto End = positionToOffset(AST.Inputs.Contents, Sel.end);
+  if (!End)
+    return End.takeError();
+  return Tweak::Selection(AST.AST, *Begin, *End);
+}
+
 void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
                                    Callback<std::vector<TweakRef>> CB) {
   auto Action = [Sel](decltype(CB) CB, std::string File,
                       Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
-
-    auto &AST = InpAST->AST;
-    auto CursorLoc = sourceLocationInMainFile(
-        AST.getASTContext().getSourceManager(), Sel.start);
-    if (!CursorLoc)
-      return CB(CursorLoc.takeError());
-    Tweak::Selection Inputs = {InpAST->Inputs.Contents, InpAST->AST,
-                               *CursorLoc};
-
+    auto Selection = tweakSelection(Sel, *InpAST);
+    if (!Selection)
+      return CB(Selection.takeError());
     std::vector<TweakRef> Res;
-    for (auto &T : prepareTweaks(Inputs))
+    for (auto &T : prepareTweaks(*Selection))
       Res.push_back({T->id(), T->title()});
     CB(std::move(Res));
   };
@@ -360,20 +364,14 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
                       Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
-
-    auto &AST = InpAST->AST;
-    auto CursorLoc = sourceLocationInMainFile(
-        AST.getASTContext().getSourceManager(), Sel.start);
-    if (!CursorLoc)
-      return CB(CursorLoc.takeError());
-    Tweak::Selection Inputs = {InpAST->Inputs.Contents, InpAST->AST,
-                               *CursorLoc};
-
-    auto A = prepareTweak(TweakID, Inputs);
+    auto Selection = tweakSelection(Sel, *InpAST);
+    if (!Selection)
+      return CB(Selection.takeError());
+    auto A = prepareTweak(TweakID, *Selection);
     if (!A)
       return CB(A.takeError());
     // FIXME: run formatter on top of resulting replacements.
-    return CB((*A)->apply(Inputs));
+    return CB((*A)->apply(*Selection));
   };
   WorkScheduler.runWithAST(
       "ApplyTweak", File,
@@ -400,13 +398,13 @@ void ClangdServer::dumpAST(PathRef File,
   WorkScheduler.runWithAST("DumpAST", File, Bind(Action, std::move(Callback)));
 }
 
-void ClangdServer::findDefinitions(PathRef File, Position Pos,
-                                   Callback<std::vector<Location>> CB) {
-  auto Action = [Pos, this](Callback<std::vector<Location>> CB,
+void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
+                                  Callback<std::vector<LocatedSymbol>> CB) {
+  auto Action = [Pos, this](decltype(CB) CB,
                             llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::findDefinitions(InpAST->AST, Pos, Index));
+    CB(clangd::locateSymbolAt(InpAST->AST, Pos, Index));
   };
 
   WorkScheduler.runWithAST("Definitions", File, Bind(Action, std::move(CB)));

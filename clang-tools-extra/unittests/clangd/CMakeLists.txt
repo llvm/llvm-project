@@ -34,6 +34,7 @@ add_extra_unittest(ClangdTests
   JSONTransportTests.cpp
   QualityTests.cpp
   RIFFTests.cpp
+  SelectionTests.cpp
   SerializationTests.cpp
   SourceCodeTests.cpp
   SymbolCollectorTests.cpp
