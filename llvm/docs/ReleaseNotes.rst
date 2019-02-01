@@ -81,6 +81,11 @@ Changes to the ARM Backend
  During this release ...
 
 
+Changes to the Hexagon Target
+--------------------------
+
+* Added support for Hexagon/HVX V66 ISA.
+
 Changes to the MIPS Target
 --------------------------
 
