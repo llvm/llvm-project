@@ -221,6 +221,7 @@ class LoadUnloadTestCase(TestBase):
         triple='.*-android')
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    @expectedFailureAll(bugnumber="rdar://38484268")
     def test_lldb_process_load_and_unload_commands(self):
         """Test that lldb process load/unload command work correctly."""
         self.copy_shlibs_to_remote()
