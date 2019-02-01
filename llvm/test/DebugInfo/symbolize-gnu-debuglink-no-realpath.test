@@ -5,7 +5,7 @@
 # filenames just being symlinks to the copies. Real files go in the "real" dir,
 # symlinks (with original names) go in "syms".
 RUN: rm -rf %t/real %t/syms
-RUN: mkdir %t/real %t/syms
+RUN: mkdir -p %t/real %t/syms
 RUN: cp %p/Inputs/dwarfdump-test.elf-x86-64 %t/real/prog
 RUN: cp %p/Inputs/dwarfdump-test.elf-x86-64.debuglink %t/real/link
 RUN: ln -s %t/real/prog %t/syms/dwarfdump-test.elf-x86-64
