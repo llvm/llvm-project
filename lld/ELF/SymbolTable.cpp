@@ -92,7 +92,7 @@ template <class ELFT> void SymbolTable::addFile(InputFile *File) {
   // .so file
   if (auto *F = dyn_cast<SharedFile<ELFT>>(File)) {
     // DSOs are uniquified not by filename but by soname.
-    F->parseSoName();
+    F->parseDynamic();
     if (errorCount())
       return;
 
