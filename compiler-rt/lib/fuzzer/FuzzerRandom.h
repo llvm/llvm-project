@@ -14,10 +14,10 @@
 #include <random>
 
 namespace fuzzer {
-class Random : public std::minstd_rand {
+class Random : public std::mt19937 {
  public:
-  Random(unsigned int seed) : std::minstd_rand(seed) {}
-  result_type operator()() { return this->std::minstd_rand::operator()(); }
+  Random(unsigned int seed) : std::mt19937(seed) {}
+  result_type operator()() { return this->std::mt19937::operator()(); }
   size_t Rand() { return this->operator()(); }
   size_t RandBool() { return Rand() % 2; }
   size_t operator()(size_t n) { return n ? Rand() % n : 0; }

@@ -24,6 +24,7 @@ typedef __sanitizer::CompactRingBuffer<uptr> StackAllocationsRingBuffer;
 class Thread {
  public:
   void Init(uptr stack_buffer_start, uptr stack_buffer_size);  // Must be called from the thread itself.
+  void InitRandomState();
   void Destroy();
 
   uptr stack_top() { return stack_top_; }
