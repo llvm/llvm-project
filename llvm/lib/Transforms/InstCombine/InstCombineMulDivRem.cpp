@@ -1180,7 +1180,8 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
       IRBuilder<> B(&I);
       IRBuilder<>::FastMathFlagGuard FMFGuard(B);
       B.setFastMathFlags(I.getFastMathFlags());
-      AttributeList Attrs = CallSite(Op0).getCalledFunction()->getAttributes();
+      AttributeList Attrs =
+          cast<CallBase>(Op0)->getCalledFunction()->getAttributes();
       Value *Res = emitUnaryFloatFnCall(X, &TLI, LibFunc_tan, LibFunc_tanf,
                                         LibFunc_tanl, B, Attrs);
       if (IsCot)

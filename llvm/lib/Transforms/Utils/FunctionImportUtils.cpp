@@ -248,7 +248,8 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
   bool DoPromote = false;
   if (GV.hasLocalLinkage() &&
       ((DoPromote = shouldPromoteLocalToGlobal(&GV)) || isPerformingImport())) {
-    auto Name = GV.getName();
+    // Save the original name string before we rename GV below.
+    auto Name = GV.getName().str();
     // Once we change the name or linkage it is difficult to determine
     // again whether we should promote since shouldPromoteLocalToGlobal needs
     // to locate the summary (based on GUID from name and linkage). Therefore,

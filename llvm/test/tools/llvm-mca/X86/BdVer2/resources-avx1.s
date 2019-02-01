@@ -1144,12 +1144,12 @@ vzeroupper
 # CHECK-NEXT:  2      18    1.00    *                   vcvtsd2si	(%rax), %rcx
 # CHECK-NEXT:  1      4     1.00                        vcvtsd2ss	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      9     1.00    *                   vcvtsd2ss	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  2      4     1.00                        vcvtsi2sdl	%ecx, %xmm0, %xmm2
-# CHECK-NEXT:  2      4     1.00                        vcvtsi2sdq	%rcx, %xmm0, %xmm2
+# CHECK-NEXT:  2      14    1.00                        vcvtsi2sdl	%ecx, %xmm0, %xmm2
+# CHECK-NEXT:  2      14    1.00                        vcvtsi2sdq	%rcx, %xmm0, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   vcvtsi2sdl	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   vcvtsi2sdq	(%rax), %xmm0, %xmm2
-# CHECK-NEXT:  2      4     1.00                        vcvtsi2ssl	%ecx, %xmm0, %xmm2
-# CHECK-NEXT:  2      4     1.00                        vcvtsi2ssq	%rcx, %xmm0, %xmm2
+# CHECK-NEXT:  2      14    1.00                        vcvtsi2ssl	%ecx, %xmm0, %xmm2
+# CHECK-NEXT:  2      14    1.00                        vcvtsi2ssq	%rcx, %xmm0, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   vcvtsi2ssl	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   vcvtsi2ssq	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  1      4     1.00                        vcvtss2sd	%xmm0, %xmm1, %xmm2
@@ -1469,13 +1469,13 @@ vzeroupper
 # CHECK-NEXT:  4      10    0.50    *                   vphsubsw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  3      5     0.50                        vphsubw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  4      10    0.50    *                   vphsubw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  2      2     0.50                        vpinsrb	$1, %eax, %xmm1, %xmm2
+# CHECK-NEXT:  2      12    0.50                        vpinsrb	$1, %eax, %xmm1, %xmm2
 # CHECK-NEXT:  2      6     0.50    *                   vpinsrb	$1, (%rax), %xmm1, %xmm2
-# CHECK-NEXT:  2      2     0.50                        vpinsrd	$1, %eax, %xmm1, %xmm2
+# CHECK-NEXT:  2      12    0.50                        vpinsrd	$1, %eax, %xmm1, %xmm2
 # CHECK-NEXT:  2      6     0.50    *                   vpinsrd	$1, (%rax), %xmm1, %xmm2
-# CHECK-NEXT:  2      2     0.50                        vpinsrq	$1, %rax, %xmm1, %xmm2
+# CHECK-NEXT:  2      12    0.50                        vpinsrq	$1, %rax, %xmm1, %xmm2
 # CHECK-NEXT:  2      6     0.50    *                   vpinsrq	$1, (%rax), %xmm1, %xmm2
-# CHECK-NEXT:  2      2     0.50                        vpinsrw	$1, %eax, %xmm1, %xmm2
+# CHECK-NEXT:  2      12    0.50                        vpinsrw	$1, %eax, %xmm1, %xmm2
 # CHECK-NEXT:  2      6     0.50    *                   vpinsrw	$1, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      4     1.00                        vpmaddubsw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      9     1.00    *                   vpmaddubsw	(%rax), %xmm1, %xmm2

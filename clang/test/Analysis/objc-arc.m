@@ -123,7 +123,7 @@ void rdar9424882() {
 typedef const void *CFTypeRef;
 typedef const struct __CFString *CFStringRef;
 
-@interface NSString
+@interface NSString : NSObject
 - (id) self;
 @end
 
@@ -231,3 +231,16 @@ id rdar14061675() {
   return result;
 }
 
+typedef const void * CFTypeRef;
+typedef const struct __CFString * CFStringRef;
+typedef const struct __CFAllocator * CFAllocatorRef;
+extern const CFAllocatorRef kCFAllocatorDefault;
+
+extern CFTypeRef CFRetain(CFTypeRef cf);
+extern void CFRelease(CFTypeRef cf);
+
+void check_bridge_retained_cast() {
+    NSString *nsStr = [[NSString alloc] init];
+    CFStringRef cfStr = (__bridge_retained CFStringRef)nsStr;
+    CFRelease(cfStr); // no-warning
+}

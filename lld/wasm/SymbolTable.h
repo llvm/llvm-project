@@ -58,8 +58,8 @@ public:
   Symbol *addDefinedEvent(StringRef Name, uint32_t Flags, InputFile *File,
                           InputEvent *E);
 
-  Symbol *addUndefinedFunction(StringRef Name, uint32_t Flags, InputFile *File,
-                               const WasmSignature *Signature);
+  Symbol *addUndefinedFunction(StringRef Name, StringRef Module, uint32_t Flags,
+                               InputFile *File, const WasmSignature *Signature);
   Symbol *addUndefinedData(StringRef Name, uint32_t Flags, InputFile *File);
   Symbol *addUndefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,
                              const WasmGlobalType *Type);

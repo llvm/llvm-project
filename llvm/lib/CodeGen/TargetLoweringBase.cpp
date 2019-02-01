@@ -1587,8 +1587,8 @@ Value *TargetLoweringBase::getSafeStackPointerLocation(IRBuilder<> &IRB) const {
   // thread's unsafe stack pointer.
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   Type *StackPtrTy = Type::getInt8PtrTy(M->getContext());
-  Value *Fn = M->getOrInsertFunction("__safestack_pointer_address",
-                                     StackPtrTy->getPointerTo(0));
+  FunctionCallee Fn = M->getOrInsertFunction("__safestack_pointer_address",
+                                             StackPtrTy->getPointerTo(0));
   return IRB.CreateCall(Fn);
 }
 

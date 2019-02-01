@@ -117,8 +117,9 @@ protected:
         32, 32, 0, DINode::FlagZero, nullptr, 0, nullptr, nullptr, "");
   }
   Function *getFunction(StringRef Name) {
-    return cast<Function>(M.getOrInsertFunction(
-        Name, FunctionType::get(Type::getVoidTy(Context), None, false)));
+    return Function::Create(
+        FunctionType::get(Type::getVoidTy(Context), None, false),
+        Function::ExternalLinkage, Name, M);
   }
 };
 typedef MetadataTest MDStringTest;

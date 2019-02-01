@@ -1543,25 +1543,44 @@ public:
         CallInst(Ty, Func, Args, Bundles, NameStr, InsertAtEnd);
   }
 
-  static CallInst *Create(Function *Func, const Twine &NameStr = "",
+  static CallInst *Create(FunctionCallee Func, const Twine &NameStr = "",
                           Instruction *InsertBefore = nullptr) {
-    return Create(Func->getFunctionType(), Func, NameStr, InsertBefore);
+    return Create(Func.getFunctionType(), Func.getCallee(), NameStr,
+                  InsertBefore);
   }
 
-  static CallInst *Create(Function *Func, ArrayRef<Value *> Args,
+  static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
+                          ArrayRef<OperandBundleDef> Bundles = None,
                           const Twine &NameStr = "",
                           Instruction *InsertBefore = nullptr) {
-    return Create(Func->getFunctionType(), Func, Args, NameStr, InsertBefore);
+    return Create(Func.getFunctionType(), Func.getCallee(), Args, Bundles,
+                  NameStr, InsertBefore);
   }
 
-  static CallInst *Create(Function *Func, const Twine &NameStr,
+  static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
+                          const Twine &NameStr,
+                          Instruction *InsertBefore = nullptr) {
+    return Create(Func.getFunctionType(), Func.getCallee(), Args, NameStr,
+                  InsertBefore);
+  }
+
+  static CallInst *Create(FunctionCallee Func, const Twine &NameStr,
                           BasicBlock *InsertAtEnd) {
-    return Create(Func->getFunctionType(), Func, NameStr, InsertAtEnd);
+    return Create(Func.getFunctionType(), Func.getCallee(), NameStr,
+                  InsertAtEnd);
   }
 
-  static CallInst *Create(Function *Func, ArrayRef<Value *> Args,
+  static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
                           const Twine &NameStr, BasicBlock *InsertAtEnd) {
-    return Create(Func->getFunctionType(), Func, Args, NameStr, InsertAtEnd);
+    return Create(Func.getFunctionType(), Func.getCallee(), Args, NameStr,
+                  InsertAtEnd);
+  }
+
+  static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
+                          ArrayRef<OperandBundleDef> Bundles,
+                          const Twine &NameStr, BasicBlock *InsertAtEnd) {
+    return Create(Func.getFunctionType(), Func.getCallee(), Args, Bundles,
+                  NameStr, InsertAtEnd);
   }
 
   // Deprecated [opaque pointer types]
@@ -3704,36 +3723,36 @@ public:
                    NameStr, InsertAtEnd);
   }
 
-  static InvokeInst *Create(Function *Func, BasicBlock *IfNormal,
+  static InvokeInst *Create(FunctionCallee Func, BasicBlock *IfNormal,
                             BasicBlock *IfException, ArrayRef<Value *> Args,
                             const Twine &NameStr,
                             Instruction *InsertBefore = nullptr) {
-    return Create(Func->getFunctionType(), Func, IfNormal, IfException, Args,
-                  None, NameStr, InsertBefore);
+    return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
+                  IfException, Args, None, NameStr, InsertBefore);
   }
 
-  static InvokeInst *Create(Function *Func, BasicBlock *IfNormal,
+  static InvokeInst *Create(FunctionCallee Func, BasicBlock *IfNormal,
                             BasicBlock *IfException, ArrayRef<Value *> Args,
                             ArrayRef<OperandBundleDef> Bundles = None,
                             const Twine &NameStr = "",
                             Instruction *InsertBefore = nullptr) {
-    return Create(Func->getFunctionType(), Func, IfNormal, IfException, Args,
-                  Bundles, NameStr, InsertBefore);
+    return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
+                  IfException, Args, Bundles, NameStr, InsertBefore);
   }
 
-  static InvokeInst *Create(Function *Func, BasicBlock *IfNormal,
+  static InvokeInst *Create(FunctionCallee Func, BasicBlock *IfNormal,
                             BasicBlock *IfException, ArrayRef<Value *> Args,
                             const Twine &NameStr, BasicBlock *InsertAtEnd) {
-    return Create(Func->getFunctionType(), Func, IfNormal, IfException, Args,
-                  NameStr, InsertAtEnd);
+    return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
+                  IfException, Args, NameStr, InsertAtEnd);
   }
 
-  static InvokeInst *Create(Function *Func, BasicBlock *IfNormal,
+  static InvokeInst *Create(FunctionCallee Func, BasicBlock *IfNormal,
                             BasicBlock *IfException, ArrayRef<Value *> Args,
                             ArrayRef<OperandBundleDef> Bundles,
                             const Twine &NameStr, BasicBlock *InsertAtEnd) {
-    return Create(Func->getFunctionType(), Func, IfNormal, IfException, Args,
-                  Bundles, NameStr, InsertAtEnd);
+    return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
+                  IfException, Args, Bundles, NameStr, InsertAtEnd);
   }
 
   // Deprecated [opaque pointer types]

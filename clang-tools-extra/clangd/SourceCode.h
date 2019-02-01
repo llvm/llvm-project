@@ -14,6 +14,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SOURCECODE_H
 #include "Protocol.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
@@ -60,6 +61,46 @@ Position sourceLocToPosition(const SourceManager &SM, SourceLocation Loc);
 /// care to avoid comparing the result with expansion locations.
 llvm::Expected<SourceLocation> sourceLocationInMainFile(const SourceManager &SM,
                                                         Position P);
+
+/// Turns a token range into a half-open range and checks its correctness.
+/// The resulting range will have only valid source location on both sides, both
+/// of which are file locations.
+///
+/// File locations always point to a particular offset in a file, i.e. they
+/// never refer to a location inside a macro expansion. Turning locations from
+/// macro expansions into file locations is ambiguous - one can use
+/// SourceManager::{getExpansion|getFile|getSpelling}Loc. This function
+/// calls SourceManager::getFileLoc on both ends of \p R to do the conversion.
+///
+/// User input (e.g. cursor position) is expressed as a file location, so this
+/// function can be viewed as a way to normalize the ranges used in the clang
+/// AST so that they are comparable with ranges coming from the user input.
+llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &Mgr,
+                                                const LangOptions &LangOpts,
+                                                SourceRange R);
+
+/// Returns true iff all of the following conditions hold:
+///   - start and end locations are valid,
+///   - start and end locations are file locations from the same file
+///     (i.e. expansion locations are not taken into account).
+///   - start offset <= end offset.
+/// FIXME: introduce a type for source range with this invariant.
+bool isValidFileRange(const SourceManager &Mgr, SourceRange R);
+
+/// Returns true iff \p L is contained in \p R.
+/// EXPECTS: isValidFileRange(R) == true, L is a file location.
+bool halfOpenRangeContains(const SourceManager &Mgr, SourceRange R,
+                           SourceLocation L);
+
+/// Returns true iff \p L is contained in \p R or \p L is equal to the end point
+/// of \p R.
+/// EXPECTS: isValidFileRange(R) == true, L is a file location.
+bool halfOpenRangeTouches(const SourceManager &Mgr, SourceRange R,
+                          SourceLocation L);
+
+/// Returns the source code covered by the source range.
+/// EXPECTS: isValidFileRange(R) == true.
+llvm::StringRef toSourceCode(const SourceManager &SM, SourceRange R);
 
 // Converts a half-open clang source range to an LSP range.
 // Note that clang also uses closed source ranges, which this can't handle!

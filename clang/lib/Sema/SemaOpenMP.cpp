@@ -4583,7 +4583,7 @@ Expr *OpenMPIterationSpaceChecker::buildPreCond(
           /*AllowExplicit=*/true);
   }
   SemaRef.getDiagnostics().setSuppressAllDiagnostics(Suppress);
-  // Otherwise use original loop conditon and evaluate it in runtime.
+  // Otherwise use original loop condition and evaluate it in runtime.
   return CondExpr.isUsable() ? CondExpr.get() : Cond;
 }
 
@@ -5969,6 +5969,13 @@ StmtResult Sema::ActOnOpenMPSectionsDirective(ArrayRef<OMPClause *> Clauses,
     return StmtError();
   }
 
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  cast<CapturedStmt>(AStmt)->getCapturedDecl()->setNothrow();
+
   setFunctionHasBranchProtectedScope();
 
   return OMPSectionsDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt,
@@ -5982,6 +5989,13 @@ StmtResult Sema::ActOnOpenMPSectionDirective(Stmt *AStmt,
     return StmtError();
 
   assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
+
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  cast<CapturedStmt>(AStmt)->getCapturedDecl()->setNothrow();
 
   setFunctionHasBranchProtectedScope();
   DSAStack->setParentCancelRegion(DSAStack->isCancelRegion());

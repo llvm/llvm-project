@@ -1440,6 +1440,12 @@ public:
     return Filename.equals("<command line>");
   }
 
+  /// Returns whether \p Loc is located in a <scratch space> file.
+  bool isWrittenInScratchSpace(SourceLocation Loc) const {
+    StringRef Filename(getPresumedLoc(Loc).getFilename());
+    return Filename.equals("<scratch space>");
+  }
+
   /// Returns if a SourceLocation is in a system header.
   bool isInSystemHeader(SourceLocation Loc) const {
     return isSystem(getFileCharacteristic(Loc));
@@ -1452,7 +1458,17 @@ public:
 
   /// Returns whether \p Loc is expanded from a macro in a system header.
   bool isInSystemMacro(SourceLocation loc) const {
-    return loc.isMacroID() && isInSystemHeader(getSpellingLoc(loc));
+    if(!loc.isMacroID())
+      return false;
+
+    // This happens when the macro is the result of a paste, in that case
+    // its spelling is the scratch memory, so we take the parent context.
+    if (isWrittenInScratchSpace(getSpellingLoc(loc))) {
+      return isInSystemHeader(getSpellingLoc(getImmediateMacroCallerLoc(loc)));
+    }
+    else {
+      return isInSystemHeader(getSpellingLoc(loc));
+    }
   }
 
   /// The size of the SLocEntry that \p FID represents.

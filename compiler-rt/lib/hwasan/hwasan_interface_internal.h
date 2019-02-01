@@ -20,7 +20,7 @@
 extern "C" {
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __hwasan_shadow_init();
+void __hwasan_init_static();
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_init();

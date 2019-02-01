@@ -4369,12 +4369,12 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   MVT IntVT = MVT::getIntegerVT(VecSize);
 
   // Avoid stack access for dynamic indexing.
-  SDValue Val = InsVal;
-  if (InsVal.getValueType() == MVT::f16)
-      Val = DAG.getNode(ISD::BITCAST, SL, MVT::i16, InsVal);
-
   // v_bfi_b32 (v_bfm_b32 16, (shl idx, 16)), val, vec
-  SDValue ExtVal = DAG.getNode(ISD::ZERO_EXTEND, SL, IntVT, Val);
+
+  // Create a congruent vector with the target value in each element so that
+  // the required element can be masked and ORed into the target vector.
+  SDValue ExtVal = DAG.getNode(ISD::BITCAST, SL, IntVT,
+                               DAG.getSplatBuildVector(VecVT, SL, InsVal));
 
   assert(isPowerOf2_32(EltSize));
   SDValue ScaleFactor = DAG.getConstant(Log2_32(EltSize), SL, MVT::i32);

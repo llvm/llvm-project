@@ -109,10 +109,11 @@ bool LowerGlobalDtors::runOnModule(Module &M) {
       FunctionType::get(Type::getVoidTy(C), AtExitFuncArgs,
                         /*isVarArg=*/false);
 
-  Type *AtExitArgs[] = {PointerType::get(AtExitFuncTy, 0), VoidStar, VoidStar};
-  FunctionType *AtExitTy = FunctionType::get(Type::getInt32Ty(C), AtExitArgs,
-                                             /*isVarArg=*/false);
-  Constant *AtExit = M.getOrInsertFunction("__cxa_atexit", AtExitTy);
+  FunctionCallee AtExit = M.getOrInsertFunction(
+      "__cxa_atexit",
+      FunctionType::get(Type::getInt32Ty(C),
+                        {PointerType::get(AtExitFuncTy, 0), VoidStar, VoidStar},
+                        /*isVarArg=*/false));
 
   // Declare __dso_local.
   Constant *DsoHandle = M.getNamedValue("__dso_handle");

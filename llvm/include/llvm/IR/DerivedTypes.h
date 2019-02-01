@@ -157,6 +157,38 @@ unsigned Type::getFunctionNumParams() const {
   return cast<FunctionType>(this)->getNumParams();
 }
 
+/// A handy container for a FunctionType+Callee-pointer pair, which can be
+/// passed around as a single entity. This assists in replacing the use of
+/// PointerType::getElementType() to access the function's type, since that's
+/// slated for removal as part of the [opaque pointer types] project.
+class FunctionCallee {
+public:
+  // Allow implicit conversion from types which have a getFunctionType member
+  // (e.g. Function and InlineAsm).
+  template <typename T, typename U = decltype(&T::getFunctionType)>
+  FunctionCallee(T *Fn)
+      : FnTy(Fn ? Fn->getFunctionType() : nullptr), Callee(Fn) {}
+
+  FunctionCallee(FunctionType *FnTy, Value *Callee)
+      : FnTy(FnTy), Callee(Callee) {
+    assert((FnTy == nullptr) == (Callee == nullptr));
+  }
+
+  FunctionCallee(std::nullptr_t) {}
+
+  FunctionCallee() = default;
+
+  FunctionType *getFunctionType() { return FnTy; }
+
+  Value *getCallee() { return Callee; }
+
+  explicit operator bool() { return Callee; }
+
+private:
+  FunctionType *FnTy = nullptr;
+  Value *Callee = nullptr;
+};
+
 /// Common super class of ArrayType, StructType and VectorType.
 class CompositeType : public Type {
 protected:

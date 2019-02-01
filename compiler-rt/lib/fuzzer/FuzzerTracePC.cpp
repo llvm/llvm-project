@@ -403,9 +403,13 @@ uintptr_t TracePC::GetMaxStackOffset() const {
 }
 
 void WarnAboutDeprecatedInstrumentation(const char *flag) {
-  Printf("libFuzzer does not support %s any more.\n"
-         "Please either migrate to a compiler that supports -fsanitize=fuzzer\n"
-         "or use an older version of libFuzzer\n", flag);
+  // Use RawPrint because Printf cannot be used on Windows before OutputFile is
+  // initialized.
+  RawPrint(flag);
+  RawPrint(
+      " is no longer supported by libFuzzer.\n"
+      "Please either migrate to a compiler that supports -fsanitize=fuzzer\n"
+      "or use an older version of libFuzzer\n");
   exit(1);
 }
 
@@ -415,7 +419,8 @@ extern "C" {
 ATTRIBUTE_INTERFACE
 ATTRIBUTE_NO_SANITIZE_ALL
 void __sanitizer_cov_trace_pc_guard(uint32_t *Guard) {
-  fuzzer::WarnAboutDeprecatedInstrumentation("-fsanitize-coverage=trace-pc");
+  fuzzer::WarnAboutDeprecatedInstrumentation(
+      "-fsanitize-coverage=trace-pc-guard");
 }
 
 // Best-effort support for -fsanitize-coverage=trace-pc, which is available
@@ -423,8 +428,7 @@ void __sanitizer_cov_trace_pc_guard(uint32_t *Guard) {
 ATTRIBUTE_INTERFACE
 ATTRIBUTE_NO_SANITIZE_ALL
 void __sanitizer_cov_trace_pc() {
-  fuzzer::WarnAboutDeprecatedInstrumentation(
-      "-fsanitize-coverage=trace-pc-guard");
+  fuzzer::WarnAboutDeprecatedInstrumentation("-fsanitize-coverage=trace-pc");
 }
 
 ATTRIBUTE_INTERFACE

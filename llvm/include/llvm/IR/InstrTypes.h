@@ -1095,6 +1095,19 @@ public:
     return isDataOperand(&UI.getUse());
   }
 
+  /// Given a value use iterator, return the data operand corresponding to it.
+  /// Iterator must actually correspond to a data operand.
+  unsigned getDataOperandNo(Value::const_user_iterator UI) const {
+    return getDataOperandNo(&UI.getUse());
+  }
+
+  /// Given a use for a data operand, get the data operand number that
+  /// corresponds to it.
+  unsigned getDataOperandNo(const Use *U) const {
+    assert(isDataOperand(U) && "Data operand # out of range!");
+    return U - data_operands_begin();
+  }
+
   /// Return the iterator pointing to the beginning of the argument list.
   User::op_iterator arg_begin() { return op_begin(); }
   User::const_op_iterator arg_begin() const {
@@ -1198,6 +1211,13 @@ public:
     return const_cast<CallBase *>(this)->getCaller();
   }
 
+  /// Tests if this call site must be tail call optimized. Only a CallInst can
+  /// be tail call optimized.
+  bool isMustTailCall() const;
+
+  /// Tests if this call site is marked as a tail call.
+  bool isTailCall() const;
+
   /// Returns the intrinsic ID of the intrinsic called or
   /// Intrinsic::not_intrinsic if the called function is not an intrinsic, or if
   /// this is an indirect call.
@@ -1210,6 +1230,11 @@ public:
     setCalledFunction(
         cast<FunctionType>(cast<PointerType>(Fn->getType())->getElementType()),
         Fn);
+  }
+
+  /// Sets the function called, including updating the function type.
+  void setCalledFunction(FunctionCallee Fn) {
+    setCalledFunction(Fn.getFunctionType(), Fn.getCallee());
   }
 
   /// Sets the function called, including updating to the specified function

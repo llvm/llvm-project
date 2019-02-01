@@ -183,7 +183,9 @@ testing::AssertionResult matchesConditionallyWithCuda(
       "typedef struct cudaStream *cudaStream_t;"
       "int cudaConfigureCall(dim3 gridSize, dim3 blockSize,"
       "                      size_t sharedSize = 0,"
-      "                      cudaStream_t stream = 0);";
+      "                      cudaStream_t stream = 0);"
+      "extern \"C\" unsigned __cudaPushCallConfiguration("
+      "    dim3 gridDim, dim3 blockDim, size_t sharedMem = 0, void *stream = 0);";
 
   bool Found = false, DynamicFound = false;
   MatchFinder Finder;

@@ -2595,13 +2595,13 @@ define double @test_cvtsi2sd(i32 %a0, i32 *%a1) {
 ; BDVER2-SSE-LABEL: test_cvtsi2sd:
 ; BDVER2-SSE:       # %bb.0:
 ; BDVER2-SSE-NEXT:    cvtsi2sdl (%rsi), %xmm0 # sched: [9:1.00]
-; BDVER2-SSE-NEXT:    cvtsi2sdl %edi, %xmm1 # sched: [4:1.00]
+; BDVER2-SSE-NEXT:    cvtsi2sdl %edi, %xmm1 # sched: [14:1.00]
 ; BDVER2-SSE-NEXT:    addsd %xmm1, %xmm0 # sched: [5:1.00]
 ; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
 ;
 ; BDVER2-LABEL: test_cvtsi2sd:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vcvtsi2sdl %edi, %xmm0, %xmm0 # sched: [4:1.00]
+; BDVER2-NEXT:    vcvtsi2sdl %edi, %xmm0, %xmm0 # sched: [14:1.00]
 ; BDVER2-NEXT:    vcvtsi2sdl (%rsi), %xmm1, %xmm1 # sched: [9:1.00]
 ; BDVER2-NEXT:    vaddsd %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
@@ -2741,7 +2741,7 @@ define double @test_cvtsi2sdq(i64 %a0, i64 *%a1) {
 ;
 ; BDVER2-LABEL: test_cvtsi2sdq:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vcvtsi2sdq %rdi, %xmm0, %xmm0 # sched: [4:1.00]
+; BDVER2-NEXT:    vcvtsi2sdq %rdi, %xmm0, %xmm0 # sched: [14:1.00]
 ; BDVER2-NEXT:    vcvtsi2sdq (%rsi), %xmm1, %xmm1 # sched: [9:1.00]
 ; BDVER2-NEXT:    vaddsd %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
@@ -10100,13 +10100,13 @@ define <8 x i16> @test_pinsrw(<8 x i16> %a0, i16 %a1, i16 *%a2) {
 ;
 ; BDVER2-SSE-LABEL: test_pinsrw:
 ; BDVER2-SSE:       # %bb.0:
-; BDVER2-SSE-NEXT:    pinsrw $1, %edi, %xmm0 # sched: [2:0.50]
+; BDVER2-SSE-NEXT:    pinsrw $1, %edi, %xmm0 # sched: [12:0.50]
 ; BDVER2-SSE-NEXT:    pinsrw $3, (%rsi), %xmm0 # sched: [6:0.50]
 ; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
 ;
 ; BDVER2-LABEL: test_pinsrw:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vpinsrw $1, %edi, %xmm0, %xmm0 # sched: [2:0.50]
+; BDVER2-NEXT:    vpinsrw $1, %edi, %xmm0, %xmm0 # sched: [12:0.50]
 ; BDVER2-NEXT:    vpinsrw $3, (%rsi), %xmm0, %xmm0 # sched: [6:0.50]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;

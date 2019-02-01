@@ -79,6 +79,9 @@ public:
 
   void handleDynamicList();
 
+  // Set of .so files to not link the same shared object file more than once.
+  llvm::DenseMap<StringRef, InputFile *> SoNames;
+
 private:
   std::pair<Symbol *, bool> insertName(StringRef Name);
 
@@ -105,9 +108,6 @@ private:
   // same name, only one of them is linked, and the other is ignored. This set
   // is used to uniquify them.
   llvm::DenseSet<llvm::CachedHashStringRef> ComdatGroups;
-
-  // Set of .so files to not link the same shared object file more than once.
-  llvm::DenseMap<StringRef, InputFile *> SoNames;
 
   // A map from demangled symbol names to their symbol objects.
   // This mapping is 1:N because two symbols with different versions

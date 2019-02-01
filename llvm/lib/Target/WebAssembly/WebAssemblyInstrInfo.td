@@ -16,40 +16,48 @@
 //===----------------------------------------------------------------------===//
 
 def HasAddr32 : Predicate<"!Subtarget->hasAddr64()">;
+
 def HasAddr64 : Predicate<"Subtarget->hasAddr64()">;
-def HasSIMD128 : Predicate<"Subtarget->hasSIMD128()">,
-                           AssemblerPredicate<"FeatureSIMD128", "simd128">;
+
+def HasSIMD128 :
+    Predicate<"Subtarget->hasSIMD128()">,
+    AssemblerPredicate<"FeatureSIMD128", "simd128">;
+
 def HasUnimplementedSIMD128 :
     Predicate<"Subtarget->hasUnimplementedSIMD128()">,
     AssemblerPredicate<"FeatureUnimplementedSIMD128", "unimplemented-simd128">;
-def HasAtomics : Predicate<"Subtarget->hasAtomics()">,
-                           AssemblerPredicate<"FeatureAtomics", "atomics">;
+
+def HasAtomics :
+    Predicate<"Subtarget->hasAtomics()">,
+    AssemblerPredicate<"FeatureAtomics", "atomics">;
+
 def HasNontrappingFPToInt :
     Predicate<"Subtarget->hasNontrappingFPToInt()">,
-              AssemblerPredicate<"FeatureNontrappingFPToInt",
-                                 "nontrapping-fptoint">;
+    AssemblerPredicate<"FeatureNontrappingFPToInt", "nontrapping-fptoint">;
+
 def NotHasNontrappingFPToInt :
     Predicate<"!Subtarget->hasNontrappingFPToInt()">,
-              AssemblerPredicate<"!FeatureNontrappingFPToInt",
-                                 "nontrapping-fptoint">;
+    AssemblerPredicate<"!FeatureNontrappingFPToInt", "nontrapping-fptoint">;
+
 def HasSignExt :
     Predicate<"Subtarget->hasSignExt()">,
-              AssemblerPredicate<"FeatureSignExt",
-                                 "sign-ext">;
+    AssemblerPredicate<"FeatureSignExt", "sign-ext">;
+
 def NotHasSignExt :
     Predicate<"!Subtarget->hasSignExt()">,
-              AssemblerPredicate<"!FeatureSignExt",
-                                 "sign-ext">;
+    AssemblerPredicate<"!FeatureSignExt", "sign-ext">;
 
 def HasExceptionHandling :
     Predicate<"Subtarget->hasExceptionHandling()">,
-              AssemblerPredicate<"FeatureExceptionHandling",
-                                 "exception-handling">;
+    AssemblerPredicate<"FeatureExceptionHandling", "exception-handling">;
 
 def NotHasExceptionHandling :
     Predicate<"!Subtarget->hasExceptionHandling()">,
-              AssemblerPredicate<"!FeatureExceptionHandling",
-                                 "exception-handling">;
+    AssemblerPredicate<"!FeatureExceptionHandling", "exception-handling">;
+
+def HasBulkMemory :
+    Predicate<"Subtarget->hasBulkMemory()">,
+    AssemblerPredicate<"FeatureBulkMemory", "bulk-memory">;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.

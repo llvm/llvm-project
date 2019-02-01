@@ -46,6 +46,7 @@ add_clang_library(clangDaemon
   Protocol.cpp
   Quality.cpp
   RIFF.cpp
+  Selection.cpp
   SourceCode.cpp
   Threading.cpp
   Trace.cpp

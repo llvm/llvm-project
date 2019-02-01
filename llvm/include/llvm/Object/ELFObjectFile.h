@@ -440,7 +440,16 @@ Expected<StringRef> ELFObjectFile<ELFT>::getSymbolName(DataRefImpl Sym) const {
   auto SymStrTabOrErr = EF.getStringTable(StringTableSec);
   if (!SymStrTabOrErr)
     return SymStrTabOrErr.takeError();
-  return ESym->getName(*SymStrTabOrErr);
+  Expected<StringRef> Name = ESym->getName(*SymStrTabOrErr);
+
+  // If the symbol name is empty use the section name.
+  if ((!Name || Name->empty()) && ESym->getType() == ELF::STT_SECTION) {
+    StringRef SecName;
+    Expected<section_iterator> Sec = getSymbolSection(Sym);
+    if (Sec && !(*Sec)->getName(SecName))
+      return SecName;
+  }
+  return Name;
 }
 
 template <class ELFT>

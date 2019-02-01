@@ -1185,8 +1185,7 @@ define <8 x i32> @combine_vec_sdiv_by_pow2b_v8i32(<8 x i32> %x) {
 ; AVX1-NEXT:    vpsrad $4, %xmm1, %xmm2
 ; AVX1-NEXT:    vpsrad $2, %xmm1, %xmm3
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
-; AVX1-NEXT:    vpsrad $3, %xmm1, %xmm3
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm3[4,5,6,7]
+; AVX1-NEXT:    vpsrad $3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm2
 ; AVX1-NEXT:    vpsrld $28, %xmm2, %xmm3
@@ -1198,8 +1197,7 @@ define <8 x i32> @combine_vec_sdiv_by_pow2b_v8i32(<8 x i32> %x) {
 ; AVX1-NEXT:    vpsrad $4, %xmm2, %xmm3
 ; AVX1-NEXT:    vpsrad $2, %xmm2, %xmm4
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm4[0,1,2,3],xmm3[4,5,6,7]
-; AVX1-NEXT:    vpsrad $3, %xmm2, %xmm4
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm4[4,5,6,7]
+; AVX1-NEXT:    vpsrad $3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7]
@@ -1406,8 +1404,7 @@ define <16 x i32> @combine_vec_sdiv_by_pow2b_v16i32(<16 x i32> %x) {
 ; AVX1-NEXT:    vpsrad $4, %xmm2, %xmm3
 ; AVX1-NEXT:    vpsrad $2, %xmm2, %xmm4
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm4[0,1,2,3],xmm3[4,5,6,7]
-; AVX1-NEXT:    vpsrad $3, %xmm2, %xmm4
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm4[4,5,6,7]
+; AVX1-NEXT:    vpsrad $3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
 ; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm3
 ; AVX1-NEXT:    vpsrld $28, %xmm3, %xmm4
@@ -1419,8 +1416,7 @@ define <16 x i32> @combine_vec_sdiv_by_pow2b_v16i32(<16 x i32> %x) {
 ; AVX1-NEXT:    vpsrad $4, %xmm3, %xmm4
 ; AVX1-NEXT:    vpsrad $2, %xmm3, %xmm5
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm5[0,1,2,3],xmm4[4,5,6,7]
-; AVX1-NEXT:    vpsrad $3, %xmm3, %xmm5
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm5[4,5,6,7]
+; AVX1-NEXT:    vpsrad $3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1],xmm4[2,3],xmm3[4,5],xmm4[6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3],ymm0[4],ymm2[5,6,7]
@@ -1435,8 +1431,7 @@ define <16 x i32> @combine_vec_sdiv_by_pow2b_v16i32(<16 x i32> %x) {
 ; AVX1-NEXT:    vpsrad $4, %xmm2, %xmm3
 ; AVX1-NEXT:    vpsrad $2, %xmm2, %xmm4
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm4[0,1,2,3],xmm3[4,5,6,7]
-; AVX1-NEXT:    vpsrad $3, %xmm2, %xmm4
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm4[4,5,6,7]
+; AVX1-NEXT:    vpsrad $3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
 ; AVX1-NEXT:    vpsrad $31, %xmm1, %xmm3
 ; AVX1-NEXT:    vpsrld $28, %xmm3, %xmm4
@@ -1448,8 +1443,7 @@ define <16 x i32> @combine_vec_sdiv_by_pow2b_v16i32(<16 x i32> %x) {
 ; AVX1-NEXT:    vpsrad $4, %xmm3, %xmm4
 ; AVX1-NEXT:    vpsrad $2, %xmm3, %xmm5
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm5[0,1,2,3],xmm4[4,5,6,7]
-; AVX1-NEXT:    vpsrad $3, %xmm3, %xmm5
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm5[4,5,6,7]
+; AVX1-NEXT:    vpsrad $3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1],xmm4[2,3],xmm3[4,5],xmm4[6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm2[1,2,3],ymm1[4],ymm2[5,6,7]

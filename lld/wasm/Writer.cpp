@@ -41,6 +41,7 @@ using namespace lld::wasm;
 
 static constexpr int kStackAlignment = 16;
 static constexpr const char *kFunctionTableName = "__indirect_function_table";
+const char *lld::wasm::kDefaultModule = "env";
 
 namespace {
 
@@ -156,7 +157,7 @@ void Writer::createImportSection() {
 
   if (Config->ImportMemory) {
     WasmImport Import;
-    Import.Module = "env";
+    Import.Module = kDefaultModule;
     Import.Field = "memory";
     Import.Kind = WASM_EXTERNAL_MEMORY;
     Import.Memory.Flags = 0;
@@ -173,7 +174,7 @@ void Writer::createImportSection() {
   if (Config->ImportTable) {
     uint32_t TableSize = TableBase + IndirectFunctions.size();
     WasmImport Import;
-    Import.Module = "env";
+    Import.Module = kDefaultModule;
     Import.Field = kFunctionTableName;
     Import.Kind = WASM_EXTERNAL_TABLE;
     Import.Table.ElemType = WASM_TYPE_FUNCREF;
@@ -183,7 +184,11 @@ void Writer::createImportSection() {
 
   for (const Symbol *Sym : ImportedSymbols) {
     WasmImport Import;
-    Import.Module = "env";
+    if (auto *F = dyn_cast<UndefinedFunction>(Sym))
+      Import.Module = F->Module;
+    else
+      Import.Module = kDefaultModule;
+
     Import.Field = Sym->getName();
     if (auto *FunctionSym = dyn_cast<FunctionSymbol>(Sym)) {
       Import.Kind = WASM_EXTERNAL_FUNCTION;

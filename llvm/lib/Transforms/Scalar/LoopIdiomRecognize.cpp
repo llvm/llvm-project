@@ -930,9 +930,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
     Module *M = TheStore->getModule();
     StringRef FuncName = "memset_pattern16";
-    Value *MSP =
-        M->getOrInsertFunction(FuncName, Builder.getVoidTy(),
-                               Int8PtrTy, Int8PtrTy, IntPtr);
+    FunctionCallee MSP = M->getOrInsertFunction(FuncName, Builder.getVoidTy(),
+                                                Int8PtrTy, Int8PtrTy, IntPtr);
     inferLibFuncAttributes(M, FuncName, *TLI);
 
     // Otherwise we should form a memset_pattern16.  PatternValue is known to be

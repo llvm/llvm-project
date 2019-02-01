@@ -598,6 +598,8 @@ private:
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineIntDIVREM(SDNode *N, DAGCombinerInfo &DCI) const;
 
+  SDValue unwrapAddress(SDValue N) const override;
+
   // If the last instruction before MBBI in MBB was some form of COMPARE,
   // try to replace it with a COMPARE AND BRANCH just before MBBI.
   // CCMask and Target are the BRC-like operands for the branch.

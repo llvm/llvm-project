@@ -1,0 +1,47 @@
+# RUN: llc -o - %s -run-pass=prologepilog | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "armv7--none-eabi"
+
+  define hidden void @_Z3foov(i32 %P0, ...) {
+  entry:
+    %V1 = alloca [4075 x i8], align 8
+    %tmp3 = alloca i8, i32 undef, align 8
+    unreachable
+  }
+
+  declare dso_local void @_Z3barv() noreturn
+
+...
+---
+# Check that the register scavenger does pick r5 (not preserved in prolog) for
+# materialising a stack frame address when the function ends in throwing an
+# exception.
+# CHECK: $sp = frame-setup STMDB_UPD $sp, 14, $noreg, killed $r4, killed $r10, killed $r11, killed $lr
+# CHECK-NOT: $r5
+name:            _Z3foov
+stack:
+  - { id: 0, name: V1, type: default, offset: 0, size: 5000, alignment: 8,
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4080, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: tmp3, type: variable-sized, offset: 0, alignment: 1,
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4112, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0.entry:
+
+    $r0 = MOVi 0, 14, $noreg, $noreg
+    $r1 = MOVi 0, 14, $noreg, $noreg
+    $r2 = MOVi 0, 14, $noreg, $noreg
+    $r3 = MOVi 0, 14, $noreg, $noreg
+    $r4 = MOVi 0, 14, $noreg, $noreg
+    STRi12 killed $lr, %stack.2, 0, 14, $noreg :: (store 4 into %stack.2)
+    BL @_Z3barv, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r1, implicit killed $r2, implicit killed $r3, implicit killed $r4, implicit-def $sp
+
+...

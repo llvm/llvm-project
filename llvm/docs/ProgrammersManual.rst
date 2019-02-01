@@ -656,19 +656,21 @@ taken is to report them to the user so that the user can attempt to fix the
 environment. In this case representing the error as a string makes perfect
 sense. LLVM provides the ``StringError`` class for this purpose. It takes two
 arguments: A string error message, and an equivalent ``std::error_code`` for
-interoperability:
+interoperability. It also provides a ``createStringError`` function to simplify
+common usage of this class:
 
 .. code-block:: c++
 
-  make_error<StringError>("Bad executable",
-                          make_error_code(errc::executable_format_error"));
+  // These two lines of code are equivalent:
+  make_error<StringError>("Bad executable", errc::executable_format_error);
+  createStringError(errc::executable_format_error, "Bad executable");
 
 If you're certain that the error you're building will never need to be converted
 to a ``std::error_code`` you can use the ``inconvertibleErrorCode()`` function:
 
 .. code-block:: c++
 
-  make_error<StringError>("Bad executable", inconvertibleErrorCode());
+  createStringError(inconvertibleErrorCode(), "Bad executable");
 
 This should be done only after careful consideration. If any attempt is made to
 convert this error to a ``std::error_code`` it will trigger immediate program
@@ -676,6 +678,14 @@ termination. Unless you are certain that your errors will not need
 interoperability you should look for an existing ``std::error_code`` that you
 can convert to, and even (as painful as it is) consider introducing a new one as
 a stopgap measure.
+
+``createStringError`` can take ``printf`` style format specifiers to provide a
+formatted message:
+
+.. code-block:: c++
+
+  createStringError(errc::executable_format_error,
+                    "Bad executable: %s", FileName);
 
 Interoperability with std::error_code and ErrorOr
 """""""""""""""""""""""""""""""""""""""""""""""""
@@ -3491,11 +3501,17 @@ Important Public Members of the ``Module`` class
   Look up the specified function in the ``Module`` SymbolTable_.  If it does not
   exist, return ``null``.
 
-* ``Function *getOrInsertFunction(const std::string &Name, const FunctionType
-  *T)``
+* ``FunctionCallee getOrInsertFunction(const std::string &Name,
+  const FunctionType *T)``
 
-  Look up the specified function in the ``Module`` SymbolTable_.  If it does not
-  exist, add an external declaration for the function and return it.
+  Look up the specified function in the ``Module`` SymbolTable_.  If
+  it does not exist, add an external declaration for the function and
+  return it. Note that the function signature already present may not
+  match the requested signature. Thus, in order to enable the common
+  usage of passing the result directly to EmitCall, the return type is
+  a struct of ``{FunctionType *T, Constant *FunctionPtr}``, rather
+  than simply the ``Function*`` with potentially an unexpected
+  signature.
 
 * ``std::string getTypeName(const Type *Ty)``
 

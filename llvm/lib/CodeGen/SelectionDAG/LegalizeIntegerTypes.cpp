@@ -1091,6 +1091,8 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::PREFETCH: Res = PromoteIntOp_PREFETCH(N, OpNo); break;
 
   case ISD::SMULFIX: Res = PromoteIntOp_SMULFIX(N); break;
+
+  case ISD::FPOWI: Res = PromoteIntOp_FPOWI(N); break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -1472,6 +1474,11 @@ SDValue DAGTypeLegalizer::PromoteIntOp_PREFETCH(SDNode *N, unsigned OpNo) {
   return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), N->getOperand(1),
                                         Op2, Op3, Op4),
                  0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_FPOWI(SDNode *N) {
+  SDValue Op = SExtPromotedInteger(N->getOperand(1));
+  return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Op), 0);
 }
 
 //===----------------------------------------------------------------------===//
