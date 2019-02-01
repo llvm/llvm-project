@@ -862,7 +862,7 @@ SharedFile<ELFT>::SharedFile(MemoryBufferRef M, StringRef DefaultSoName)
 
 // Partially parse the shared object file so that we can call
 // getSoName on this object.
-template <class ELFT> void SharedFile<ELFT>::parseSoName() {
+template <class ELFT> void SharedFile<ELFT>::parseDynamic() {
   const Elf_Shdr *DynamicSec = nullptr;
   const ELFFile<ELFT> Obj = this->getObj();
   ArrayRef<Elf_Shdr> Sections = CHECK(Obj.sections(), this);
@@ -899,12 +899,16 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
   ArrayRef<Elf_Dyn> Arr =
       CHECK(Obj.template getSectionContentsAsArray<Elf_Dyn>(DynamicSec), this);
   for (const Elf_Dyn &Dyn : Arr) {
-    if (Dyn.d_tag == DT_SONAME) {
+    if (Dyn.d_tag == DT_NEEDED) {
+      uint64_t Val = Dyn.getVal();
+      if (Val >= this->StringTable.size())
+        fatal(toString(this) + ": invalid DT_NEEDED entry");
+      DtNeeded.push_back(this->StringTable.data() + Val);
+    } else if (Dyn.d_tag == DT_SONAME) {
       uint64_t Val = Dyn.getVal();
       if (Val >= this->StringTable.size())
         fatal(toString(this) + ": invalid DT_SONAME entry");
       SoName = this->StringTable.data() + Val;
-      return;
     }
   }
 }
@@ -972,7 +976,7 @@ uint32_t SharedFile<ELFT>::getAlignment(ArrayRef<Elf_Shdr> Sections,
   return (Ret > UINT32_MAX) ? 0 : Ret;
 }
 
-// Fully parse the shared object file. This must be called after parseSoName().
+// Fully parse the shared object file. This must be called after parseDynamic().
 //
 // This function parses symbol versions. If a DSO has version information,
 // the file has a ".gnu.version_d" section which contains symbol version

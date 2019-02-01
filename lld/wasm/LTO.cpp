@@ -41,7 +41,7 @@ using namespace lld::wasm;
 
 static std::unique_ptr<lto::LTO> createLTO() {
   lto::Config C;
-  C.Options = InitTargetOptionsFromCodeGenFlags();
+  C.Options = initTargetOptionsFromCodeGenFlags();
 
   // Always emit a section per function/data with LTO.
   C.Options.FunctionSections = true;
@@ -53,7 +53,7 @@ static std::unique_ptr<lto::LTO> createLTO() {
   C.DisableVerify = Config->DisableVerify;
   C.DiagHandler = diagnosticHandler;
   C.OptLevel = Config->LTOO;
-  C.MAttrs = GetMAttrs();
+  C.MAttrs = getMAttrs();
   C.CGOptLevel = args::getCGOptLevel(Config->LTOO);
 
   if (Config->Relocatable)
@@ -80,8 +80,8 @@ BitcodeCompiler::~BitcodeCompiler() = default;
 
 static void undefine(Symbol *S) {
   if (auto F = dyn_cast<DefinedFunction>(S))
-    replaceSymbol<UndefinedFunction>(F, F->getName(), 0, F->getFile(),
-                                     F->Signature);
+    replaceSymbol<UndefinedFunction>(F, F->getName(), kDefaultModule, 0,
+                                     F->getFile(), F->Signature);
   else if (isa<DefinedData>(S))
     replaceSymbol<UndefinedData>(S, S->getName(), 0, S->getFile());
   else
