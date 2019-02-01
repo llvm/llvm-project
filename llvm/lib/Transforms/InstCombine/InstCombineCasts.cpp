@@ -1656,8 +1656,8 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
                                                      II->getIntrinsicID(), Ty);
       SmallVector<OperandBundleDef, 1> OpBundles;
       II->getOperandBundlesAsDefs(OpBundles);
-      CallInst *NewCI = CallInst::Create(Overload, { InnerTrunc }, OpBundles,
-                                         II->getName());
+      CallInst *NewCI =
+          CallInst::Create(Overload, {InnerTrunc}, OpBundles, II->getName());
       NewCI->copyFastMathFlags(II);
       return NewCI;
     }

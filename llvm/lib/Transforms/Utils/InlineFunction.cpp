@@ -1864,10 +1864,8 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
           // Add VarArgs to existing parameters.
           SmallVector<Value *, 6> Params(CI->arg_operands());
           Params.append(VarArgsToForward.begin(), VarArgsToForward.end());
-          CallInst *NewCI =
-              CallInst::Create(CI->getCalledFunction() ? CI->getCalledFunction()
-                                                       : CI->getCalledValue(),
-                               Params, "", CI);
+          CallInst *NewCI = CallInst::Create(
+              CI->getFunctionType(), CI->getCalledOperand(), Params, "", CI);
           NewCI->setDebugLoc(CI->getDebugLoc());
           NewCI->setAttributes(Attrs);
           NewCI->setCallingConv(CI->getCallingConv());

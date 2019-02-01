@@ -881,7 +881,7 @@ void DevirtModule::tryICallBranchFunnel(
   }
 
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "", JT, nullptr);
-  Constant *Intr =
+  Function *Intr =
       Intrinsic::getDeclaration(&M, llvm::Intrinsic::icall_branch_funnel, {});
 
   auto *CI = CallInst::Create(Intr, JTArgs, "", BB);
@@ -920,9 +920,10 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
       NewArgs.push_back(Int8PtrTy);
       for (Type *T : CS.getFunctionType()->params())
         NewArgs.push_back(T);
-      PointerType *NewFT = PointerType::getUnqual(
+      FunctionType *NewFT =
           FunctionType::get(CS.getFunctionType()->getReturnType(), NewArgs,
-                            CS.getFunctionType()->isVarArg()));
+                            CS.getFunctionType()->isVarArg());
+      PointerType *NewFTPtr = PointerType::getUnqual(NewFT);
 
       IRBuilder<> IRB(CS.getInstruction());
       std::vector<Value *> Args;
@@ -932,10 +933,10 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
 
       CallSite NewCS;
       if (CS.isCall())
-        NewCS = IRB.CreateCall(IRB.CreateBitCast(JT, NewFT), Args);
+        NewCS = IRB.CreateCall(NewFT, IRB.CreateBitCast(JT, NewFTPtr), Args);
       else
         NewCS = IRB.CreateInvoke(
-            IRB.CreateBitCast(JT, NewFT),
+            NewFT, IRB.CreateBitCast(JT, NewFTPtr),
             cast<InvokeInst>(CS.getInstruction())->getNormalDest(),
             cast<InvokeInst>(CS.getInstruction())->getUnwindDest(), Args);
       NewCS.setCallingConv(CS.getCallingConv());

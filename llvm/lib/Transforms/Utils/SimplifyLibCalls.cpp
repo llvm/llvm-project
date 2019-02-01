@@ -1652,13 +1652,13 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilder<> &B) {
   // replace it with the fabs of that factor.
   Module *M = Callee->getParent();
   Type *ArgType = I->getType();
-  Value *Fabs = Intrinsic::getDeclaration(M, Intrinsic::fabs, ArgType);
+  Function *Fabs = Intrinsic::getDeclaration(M, Intrinsic::fabs, ArgType);
   Value *FabsCall = B.CreateCall(Fabs, RepeatOp, "fabs");
   if (OtherOp) {
     // If we found a non-repeated factor, we still need to get its square
     // root. We then multiply that by the value that was simplified out
     // of the square root calculation.
-    Value *Sqrt = Intrinsic::getDeclaration(M, Intrinsic::sqrt, ArgType);
+    Function *Sqrt = Intrinsic::getDeclaration(M, Intrinsic::sqrt, ArgType);
     Value *SqrtCall = B.CreateCall(Sqrt, OtherOp, "sqrt");
     return B.CreateFMul(FabsCall, SqrtCall);
   }
@@ -1838,8 +1838,8 @@ Value *LibCallSimplifier::optimizeFFS(CallInst *CI, IRBuilder<> &B) {
   // ffs(x) -> x != 0 ? (i32)llvm.cttz(x)+1 : 0
   Value *Op = CI->getArgOperand(0);
   Type *ArgType = Op->getType();
-  Value *F = Intrinsic::getDeclaration(CI->getCalledFunction()->getParent(),
-                                       Intrinsic::cttz, ArgType);
+  Function *F = Intrinsic::getDeclaration(CI->getCalledFunction()->getParent(),
+                                          Intrinsic::cttz, ArgType);
   Value *V = B.CreateCall(F, {Op, B.getTrue()}, "cttz");
   V = B.CreateAdd(V, ConstantInt::get(V->getType(), 1));
   V = B.CreateIntCast(V, B.getInt32Ty(), false);
@@ -1852,8 +1852,8 @@ Value *LibCallSimplifier::optimizeFls(CallInst *CI, IRBuilder<> &B) {
   // fls(x) -> (i32)(sizeInBits(x) - llvm.ctlz(x, false))
   Value *Op = CI->getArgOperand(0);
   Type *ArgType = Op->getType();
-  Value *F = Intrinsic::getDeclaration(CI->getCalledFunction()->getParent(),
-                                       Intrinsic::ctlz, ArgType);
+  Function *F = Intrinsic::getDeclaration(CI->getCalledFunction()->getParent(),
+                                          Intrinsic::ctlz, ArgType);
   Value *V = B.CreateCall(F, {Op, B.getFalse()}, "ctlz");
   V = B.CreateSub(ConstantInt::get(V->getType(), ArgType->getIntegerBitWidth()),
                   V);

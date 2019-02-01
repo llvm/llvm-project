@@ -4211,7 +4211,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         }
       }
 
-      I = InvokeInst::Create(Callee, NormalBB, UnwindBB, Ops, OperandBundles);
+      I = InvokeInst::Create(FTy, Callee, NormalBB, UnwindBB, Ops,
+                             OperandBundles);
       OperandBundles.clear();
       InstructionList.push_back(I);
       cast<InvokeInst>(I)->setCallingConv(

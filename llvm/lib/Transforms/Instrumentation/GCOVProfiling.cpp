@@ -1168,7 +1168,7 @@ insertFlush(ArrayRef<std::pair<GlobalVariable*, MDNode*> > CountersBySP) {
   BasicBlock *Entry = BasicBlock::Create(*Ctx, "entry", FlushF);
 
   // Write out the current counters.
-  Constant *WriteoutF = M->getFunction("__llvm_gcov_writeout");
+  Function *WriteoutF = M->getFunction("__llvm_gcov_writeout");
   assert(WriteoutF && "Need to create the writeout function first!");
 
   IRBuilder<> Builder(Entry);

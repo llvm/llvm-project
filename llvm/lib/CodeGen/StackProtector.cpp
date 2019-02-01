@@ -413,15 +413,14 @@ bool StackProtector::InsertStackProtectors() {
     // Generate epilogue instrumentation. The epilogue intrumentation can be
     // function-based or inlined depending on which mechanism the target is
     // providing.
-    if (Value* GuardCheck = TLI->getSSPStackGuardCheck(*M)) {
+    if (Function *GuardCheck = TLI->getSSPStackGuardCheck(*M)) {
       // Generate the function-based epilogue instrumentation.
       // The target provides a guard check function, generate a call to it.
       IRBuilder<> B(RI);
       LoadInst *Guard = B.CreateLoad(AI, true, "Guard");
       CallInst *Call = B.CreateCall(GuardCheck, {Guard});
-      llvm::Function *Function = cast<llvm::Function>(GuardCheck);
-      Call->setAttributes(Function->getAttributes());
-      Call->setCallingConv(Function->getCallingConv());
+      Call->setAttributes(GuardCheck->getAttributes());
+      Call->setCallingConv(GuardCheck->getCallingConv());
     } else {
       // Generate the epilogue with inline instrumentation.
       // If we do not support SelectionDAG based tail calls, generate IR level

@@ -980,7 +980,7 @@ void InstrProfiling::emitInitialization() {
     }
   }
 
-  Constant *RegisterF = M->getFunction(getInstrProfRegFuncsName());
+  Function *RegisterF = M->getFunction(getInstrProfRegFuncsName());
   if (!RegisterF)
     return;
 
@@ -996,8 +996,7 @@ void InstrProfiling::emitInitialization() {
 
   // Add the basic block and the necessary calls.
   IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", F));
-  if (RegisterF)
-    IRB.CreateCall(RegisterF, {});
+  IRB.CreateCall(RegisterF, {});
   IRB.CreateRetVoid();
 
   appendToGlobalCtors(*M, F, 0);

@@ -911,11 +911,11 @@ CleanupAndPrepareModules(BugDriver &BD, std::unique_ptr<Module> Test,
 
           // Pass on the arguments to the real function, return its result
           if (F->getReturnType()->isVoidTy()) {
-            CallInst::Create(FuncPtr, Args, "", DoCallBB);
+            CallInst::Create(FuncTy, FuncPtr, Args, "", DoCallBB);
             ReturnInst::Create(F->getContext(), DoCallBB);
           } else {
             CallInst *Call =
-                CallInst::Create(FuncPtr, Args, "retval", DoCallBB);
+                CallInst::Create(FuncTy, FuncPtr, Args, "retval", DoCallBB);
             ReturnInst::Create(F->getContext(), Call, DoCallBB);
           }
 

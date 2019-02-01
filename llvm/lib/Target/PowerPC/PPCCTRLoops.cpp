@@ -660,13 +660,13 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
 
   IRBuilder<> CountBuilder(Preheader->getTerminator());
   Module *M = Preheader->getParent()->getParent();
-  Value *MTCTRFunc = Intrinsic::getDeclaration(M, Intrinsic::ppc_mtctr,
-                                               CountType);
+  Function *MTCTRFunc =
+      Intrinsic::getDeclaration(M, Intrinsic::ppc_mtctr, CountType);
   CountBuilder.CreateCall(MTCTRFunc, ECValue);
 
   IRBuilder<> CondBuilder(CountedExitBranch);
-  Value *DecFunc =
-    Intrinsic::getDeclaration(M, Intrinsic::ppc_is_decremented_ctr_nonzero);
+  Function *DecFunc =
+      Intrinsic::getDeclaration(M, Intrinsic::ppc_is_decremented_ctr_nonzero);
   Value *NewCond = CondBuilder.CreateCall(DecFunc, {});
   Value *OldCond = CountedExitBranch->getCondition();
   CountedExitBranch->setCondition(NewCond);

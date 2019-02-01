@@ -332,6 +332,8 @@ class DataFlowSanitizer : public ModulePass {
   Constant *RetvalTLS;
   void *(*GetArgTLSPtr)();
   void *(*GetRetvalTLSPtr)();
+  FunctionType *GetArgTLSTy;
+  FunctionType *GetRetvalTLSTy;
   Constant *GetArgTLS;
   Constant *GetRetvalTLS;
   Constant *ExternalShadowMask;
@@ -580,17 +582,17 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
   if (GetArgTLSPtr) {
     Type *ArgTLSTy = ArrayType::get(ShadowTy, 64);
     ArgTLS = nullptr;
+    GetArgTLSTy = FunctionType::get(PointerType::getUnqual(ArgTLSTy), false);
     GetArgTLS = ConstantExpr::getIntToPtr(
         ConstantInt::get(IntptrTy, uintptr_t(GetArgTLSPtr)),
-        PointerType::getUnqual(
-            FunctionType::get(PointerType::getUnqual(ArgTLSTy), false)));
+        PointerType::getUnqual(GetArgTLSTy));
   }
   if (GetRetvalTLSPtr) {
     RetvalTLS = nullptr;
+    GetRetvalTLSTy = FunctionType::get(PointerType::getUnqual(ShadowTy), false);
     GetRetvalTLS = ConstantExpr::getIntToPtr(
         ConstantInt::get(IntptrTy, uintptr_t(GetRetvalTLSPtr)),
-        PointerType::getUnqual(
-            FunctionType::get(PointerType::getUnqual(ShadowTy), false)));
+        PointerType::getUnqual(GetRetvalTLSTy));
   }
 
   ColdCallWeights = MDBuilder(*Ctx).createBranchWeights(1, 1000);
@@ -686,7 +688,7 @@ Constant *DataFlowSanitizer::getOrBuildTrampolineFunction(FunctionType *FT,
     Function::arg_iterator AI = F->arg_begin(); ++AI;
     for (unsigned N = FT->getNumParams(); N != 0; ++AI, --N)
       Args.push_back(&*AI);
-    CallInst *CI = CallInst::Create(&*F->arg_begin(), Args, "", BB);
+    CallInst *CI = CallInst::Create(FT, &*F->arg_begin(), Args, "", BB);
     ReturnInst *RI;
     if (FT->getReturnType()->isVoidTy())
       RI = ReturnInst::Create(*Ctx, BB);
@@ -997,7 +999,7 @@ Value *DFSanFunction::getArgTLSPtr() {
     return ArgTLSPtr = DFS.ArgTLS;
 
   IRBuilder<> IRB(&F->getEntryBlock().front());
-  return ArgTLSPtr = IRB.CreateCall(DFS.GetArgTLS, {});
+  return ArgTLSPtr = IRB.CreateCall(DFS.GetArgTLSTy, DFS.GetArgTLS, {});
 }
 
 Value *DFSanFunction::getRetvalTLS() {
@@ -1007,7 +1009,8 @@ Value *DFSanFunction::getRetvalTLS() {
     return RetvalTLSPtr = DFS.RetvalTLS;
 
   IRBuilder<> IRB(&F->getEntryBlock().front());
-  return RetvalTLSPtr = IRB.CreateCall(DFS.GetRetvalTLS, {});
+  return RetvalTLSPtr =
+             IRB.CreateCall(DFS.GetRetvalTLSTy, DFS.GetRetvalTLS, {});
 }
 
 Value *DFSanFunction::getArgTLS(unsigned Idx, Instruction *Pos) {
@@ -1485,7 +1488,7 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   DestShadow = IRB.CreateBitCast(DestShadow, Int8Ptr);
   SrcShadow = IRB.CreateBitCast(SrcShadow, Int8Ptr);
   auto *MTI = cast<MemTransferInst>(
-      IRB.CreateCall(I.getCalledValue(),
+      IRB.CreateCall(I.getFunctionType(), I.getCalledValue(),
                      {DestShadow, SrcShadow, LenShadow, I.getVolatileCst()}));
   if (ClPreserveAlignment) {
     MTI->setDestAlignment(I.getDestAlignment() * (DFSF.DFS.ShadowWidth / 8));
@@ -1721,10 +1724,10 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
 
     CallSite NewCS;
     if (InvokeInst *II = dyn_cast<InvokeInst>(CS.getInstruction())) {
-      NewCS = IRB.CreateInvoke(Func, II->getNormalDest(), II->getUnwindDest(),
-                               Args);
+      NewCS = IRB.CreateInvoke(NewFT, Func, II->getNormalDest(),
+                               II->getUnwindDest(), Args);
     } else {
-      NewCS = IRB.CreateCall(Func, Args);
+      NewCS = IRB.CreateCall(NewFT, Func, Args);
     }
     NewCS.setCallingConv(CS.getCallingConv());
     NewCS.setAttributes(CS.getAttributes().removeAttributes(

@@ -411,7 +411,7 @@ Function *WinEHStatePass::generateLSDAInEAXThunk(Function *ParentFunc) {
       Builder.CreateBitCast(PersonalityFn, TargetFuncTy->getPointerTo());
   auto AI = Trampoline->arg_begin();
   Value *Args[5] = {LSDA, &*AI++, &*AI++, &*AI++, &*AI++};
-  CallInst *Call = Builder.CreateCall(CastPersonality, Args);
+  CallInst *Call = Builder.CreateCall(TargetFuncTy, CastPersonality, Args);
   // Can't use musttail due to prototype mismatch, but we can use tail.
   Call->setTailCall(true);
   // Set inreg so we pass it in EAX.

@@ -975,12 +975,11 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
     return nullptr;
 
   // Need to change to new instruction format
-  ConstantInt *TFC = nullptr;
   bool TFELWEEnabled = false;
   if (TFCIdx > 0) {
-    TFC = dyn_cast<ConstantInt>(II->getArgOperand(TFCIdx));
-    TFELWEEnabled =    TFC->getZExtValue() & 0x1  // TFE
-                    || TFC->getZExtValue() & 0x2; // LWE
+    if (ConstantInt *TFC = dyn_cast<ConstantInt>(II->getArgOperand(TFCIdx)))
+      TFELWEEnabled =    TFC->getZExtValue() & 0x1  // TFE
+                      || TFC->getZExtValue() & 0x2; // LWE
   }
 
   if (TFELWEEnabled)

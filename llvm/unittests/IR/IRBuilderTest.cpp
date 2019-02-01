@@ -353,7 +353,7 @@ TEST_F(IRBuilderTest, FastMathFlags) {
   FCall = Builder.CreateCall(Callee, None);
   EXPECT_FALSE(FCall->hasNoNaNs());
 
-  Value *V = 
+  Function *V =
       Function::Create(CalleeTy, Function::ExternalLinkage, "", M.get());
   FCall = Builder.CreateCall(V, None);
   EXPECT_FALSE(FCall->hasNoNaNs());

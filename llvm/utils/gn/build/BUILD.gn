@@ -136,6 +136,14 @@ config("no_rtti") {
   }
 }
 
+# To make an archive that can be distributed, you need to remove this config and
+# set complete_static_lib.
+config("thin_archive") {
+  if (current_os != "win" && current_os != "mac") {
+    arflags = [ "-T" ]
+  }
+}
+
 config("llvm_code") {
   include_dirs = [
     "//llvm/include",

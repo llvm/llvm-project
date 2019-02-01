@@ -1306,7 +1306,7 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
   // Lazily populated map from input types to the canonicalized form mentioned
   // in the comment above.  This should probably be cached somewhere more
   // broadly.
-  DenseMap<Type*, Value*> TypeToDeclMap;
+  DenseMap<Type *, Function *> TypeToDeclMap;
 
   for (unsigned i = 0; i < LiveVariables.size(); i++) {
     // Generate the gc.relocate call and save the result
@@ -1317,7 +1317,7 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     Type *Ty = LiveVariables[i]->getType();
     if (!TypeToDeclMap.count(Ty))
       TypeToDeclMap[Ty] = getGCRelocateDecl(Ty);
-    Value *GCRelocateDecl = TypeToDeclMap[Ty];
+    Function *GCRelocateDecl = TypeToDeclMap[Ty];
 
     // only specify a debug name if we can give a useful one
     CallInst *Reloc = Builder.CreateCall(

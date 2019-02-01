@@ -751,6 +751,33 @@ static Value *simplifyX86movmsk(const IntrinsicInst &II,
   return nullptr;
 }
 
+static Value *simplifyX86addcarry(const IntrinsicInst &II,
+                                  InstCombiner::BuilderTy &Builder) {
+  Value *CarryIn = II.getArgOperand(0);
+  Value *Op1 = II.getArgOperand(1);
+  Value *Op2 = II.getArgOperand(2);
+  Type *RetTy = II.getType();
+  Type *OpTy = Op1->getType();
+  assert(RetTy->getStructElementType(0)->isIntegerTy(8) &&
+         RetTy->getStructElementType(1) == OpTy && OpTy == Op2->getType() &&
+         "Unexpected types for x86 addcarry");
+
+  // If carry-in is zero, this is just an unsigned add with overflow.
+  if (match(CarryIn, m_ZeroInt())) {
+    Value *UAdd = Builder.CreateIntrinsic(Intrinsic::uadd_with_overflow, OpTy,
+                                          { Op1, Op2 });
+    // The types have to be adjusted to match the x86 call types.
+    Value *UAddResult = Builder.CreateExtractValue(UAdd, 0);
+    Value *UAddOV = Builder.CreateZExt(Builder.CreateExtractValue(UAdd, 1),
+                                       Builder.getInt8Ty());
+    Value *Res = UndefValue::get(RetTy);
+    Res = Builder.CreateInsertValue(Res, UAddOV, 0);
+    return Builder.CreateInsertValue(Res, UAddResult, 1);
+  }
+
+  return nullptr;
+}
+
 static Value *simplifyX86insertps(const IntrinsicInst &II,
                                   InstCombiner::BuilderTy &Builder) {
   auto *CInt = dyn_cast<ConstantInt>(II.getArgOperand(2));
@@ -890,7 +917,7 @@ static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
     if (II.getIntrinsicID() == Intrinsic::x86_sse4a_extrq) {
       Value *Args[] = {Op0, CILength, CIIndex};
       Module *M = II.getModule();
-      Value *F = Intrinsic::getDeclaration(M, Intrinsic::x86_sse4a_extrqi);
+      Function *F = Intrinsic::getDeclaration(M, Intrinsic::x86_sse4a_extrqi);
       return Builder.CreateCall(F, Args);
     }
   }
@@ -991,7 +1018,7 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
 
     Value *Args[] = {Op0, Op1, CILength, CIIndex};
     Module *M = II.getModule();
-    Value *F = Intrinsic::getDeclaration(M, Intrinsic::x86_sse4a_insertqi);
+    Function *F = Intrinsic::getDeclaration(M, Intrinsic::x86_sse4a_insertqi);
     return Builder.CreateCall(F, Args);
   }
 
@@ -3109,6 +3136,12 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return nullptr;
     break;
 
+  case Intrinsic::x86_addcarry_32:
+  case Intrinsic::x86_addcarry_64:
+    if (Value *V = simplifyX86addcarry(*II, Builder))
+      return replaceInstUsesWith(*II, V);
+    break;
+
   case Intrinsic::ppc_altivec_vperm:
     // Turn vperm(V1,V2,mask) -> shuffle(V1,V2,mask) if mask is a constant.
     // Note that ppc_altivec_vperm has a big-endian bias, so when creating
@@ -3634,7 +3667,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         // register (which contains the bitmask of live threads). So a
         // comparison that always returns true is the same as a read of the
         // EXEC register.
-        Value *NewF = Intrinsic::getDeclaration(
+        Function *NewF = Intrinsic::getDeclaration(
             II->getModule(), Intrinsic::read_register, II->getType());
         Metadata *MDArgs[] = {MDString::get(II->getContext(), "exec")};
         MDNode *MD = MDNode::get(II->getContext(), MDArgs);
@@ -3729,8 +3762,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       } else if (!Ty->isFloatTy() && !Ty->isDoubleTy() && !Ty->isHalfTy())
         break;
 
-      Value *NewF = Intrinsic::getDeclaration(II->getModule(), NewIID,
-                                              SrcLHS->getType());
+      Function *NewF =
+          Intrinsic::getDeclaration(II->getModule(), NewIID, SrcLHS->getType());
       Value *Args[] = { SrcLHS, SrcRHS,
                         ConstantInt::get(CC->getType(), SrcPred) };
       CallInst *NewCall = Builder.CreateCall(NewF, Args);
@@ -3845,16 +3878,20 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Canonicalize assume(a && b) -> assume(a); assume(b);
     // Note: New assumption intrinsics created here are registered by
     // the InstCombineIRInserter object.
-    Value *AssumeIntrinsic = II->getCalledValue(), *A, *B;
+    FunctionType *AssumeIntrinsicTy = II->getFunctionType();
+    Value *AssumeIntrinsic = II->getCalledValue();
+    Value *A, *B;
     if (match(IIOperand, m_And(m_Value(A), m_Value(B)))) {
-      Builder.CreateCall(AssumeIntrinsic, A, II->getName());
-      Builder.CreateCall(AssumeIntrinsic, B, II->getName());
+      Builder.CreateCall(AssumeIntrinsicTy, AssumeIntrinsic, A, II->getName());
+      Builder.CreateCall(AssumeIntrinsicTy, AssumeIntrinsic, B, II->getName());
       return eraseInstFromFunction(*II);
     }
     // assume(!(a || b)) -> assume(!a); assume(!b);
     if (match(IIOperand, m_Not(m_Or(m_Value(A), m_Value(B))))) {
-      Builder.CreateCall(AssumeIntrinsic, Builder.CreateNot(A), II->getName());
-      Builder.CreateCall(AssumeIntrinsic, Builder.CreateNot(B), II->getName());
+      Builder.CreateCall(AssumeIntrinsicTy, AssumeIntrinsic,
+                         Builder.CreateNot(A), II->getName());
+      Builder.CreateCall(AssumeIntrinsicTy, AssumeIntrinsic,
+                         Builder.CreateNot(B), II->getName());
       return eraseInstFromFunction(*II);
     }
 
@@ -4629,13 +4666,13 @@ InstCombiner::transformCallThroughTrampoline(CallBase &Call,
 
       Instruction *NewCaller;
       if (InvokeInst *II = dyn_cast<InvokeInst>(&Call)) {
-        NewCaller = InvokeInst::Create(NewCallee,
+        NewCaller = InvokeInst::Create(NewFTy, NewCallee,
                                        II->getNormalDest(), II->getUnwindDest(),
                                        NewArgs, OpBundles);
         cast<InvokeInst>(NewCaller)->setCallingConv(II->getCallingConv());
         cast<InvokeInst>(NewCaller)->setAttributes(NewPAL);
       } else {
-        NewCaller = CallInst::Create(NewCallee, NewArgs, OpBundles);
+        NewCaller = CallInst::Create(NewFTy, NewCallee, NewArgs, OpBundles);
         cast<CallInst>(NewCaller)->setTailCallKind(
             cast<CallInst>(Call).getTailCallKind());
         cast<CallInst>(NewCaller)->setCallingConv(

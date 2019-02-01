@@ -4512,13 +4512,13 @@ static std::pair<APInt, bool> FoldValue(unsigned Opcode, const APInt &C1,
 }
 
 SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
-                                             EVT VT, const ConstantSDNode *Cst1,
-                                             const ConstantSDNode *Cst2) {
-  if (Cst1->isOpaque() || Cst2->isOpaque())
+                                             EVT VT, const ConstantSDNode *C1,
+                                             const ConstantSDNode *C2) {
+  if (C1->isOpaque() || C2->isOpaque())
     return SDValue();
 
-  std::pair<APInt, bool> Folded = FoldValue(Opcode, Cst1->getAPIntValue(),
-                                            Cst2->getAPIntValue());
+  std::pair<APInt, bool> Folded = FoldValue(Opcode, C1->getAPIntValue(),
+                                            C2->getAPIntValue());
   if (!Folded.second)
     return SDValue();
   return getConstant(Folded.first, DL, VT);
@@ -4531,16 +4531,16 @@ SDValue SelectionDAG::FoldSymbolOffset(unsigned Opcode, EVT VT,
     return SDValue();
   if (!TLI->isOffsetFoldingLegal(GA))
     return SDValue();
-  const ConstantSDNode *Cst2 = dyn_cast<ConstantSDNode>(N2);
-  if (!Cst2)
+  auto *C2 = dyn_cast<ConstantSDNode>(N2);
+  if (!C2)
     return SDValue();
-  int64_t Offset = Cst2->getSExtValue();
+  int64_t Offset = C2->getSExtValue();
   switch (Opcode) {
   case ISD::ADD: break;
   case ISD::SUB: Offset = -uint64_t(Offset); break;
   default: return SDValue();
   }
-  return getGlobalAddress(GA->getGlobal(), SDLoc(Cst2), VT,
+  return getGlobalAddress(GA->getGlobal(), SDLoc(C2), VT,
                           GA->getOffset() + uint64_t(Offset));
 }
 
@@ -4570,21 +4570,20 @@ bool SelectionDAG::isUndef(unsigned Opcode, ArrayRef<SDValue> Ops) {
 }
 
 SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
-                                             EVT VT, SDNode *Cst1,
-                                             SDNode *Cst2) {
+                                             EVT VT, SDNode *N1, SDNode *N2) {
   // If the opcode is a target-specific ISD node, there's nothing we can
   // do here and the operand rules may not line up with the below, so
   // bail early.
   if (Opcode >= ISD::BUILTIN_OP_END)
     return SDValue();
 
-  if (isUndef(Opcode, {SDValue(Cst1, 0), SDValue(Cst2, 0)}))
+  if (isUndef(Opcode, {SDValue(N1, 0), SDValue(N2, 0)}))
     return getUNDEF(VT);
 
   // Handle the case of two scalars.
-  if (const ConstantSDNode *Scalar1 = dyn_cast<ConstantSDNode>(Cst1)) {
-    if (const ConstantSDNode *Scalar2 = dyn_cast<ConstantSDNode>(Cst2)) {
-      SDValue Folded = FoldConstantArithmetic(Opcode, DL, VT, Scalar1, Scalar2);
+  if (auto *C1 = dyn_cast<ConstantSDNode>(N1)) {
+    if (auto *C2 = dyn_cast<ConstantSDNode>(N2)) {
+      SDValue Folded = FoldConstantArithmetic(Opcode, DL, VT, C1, C2);
       assert((!Folded || !VT.isVector()) &&
              "Can't fold vectors ops with scalar operands");
       return Folded;
@@ -4592,19 +4591,19 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   }
 
   // fold (add Sym, c) -> Sym+c
-  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Cst1))
-    return FoldSymbolOffset(Opcode, VT, GA, Cst2);
+  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N1))
+    return FoldSymbolOffset(Opcode, VT, GA, N2);
   if (TLI->isCommutativeBinOp(Opcode))
-    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Cst2))
-      return FoldSymbolOffset(Opcode, VT, GA, Cst1);
+    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N2))
+      return FoldSymbolOffset(Opcode, VT, GA, N1);
 
   // For vectors, extract each constant element and fold them individually.
   // Either input may be an undef value.
-  auto *BV1 = dyn_cast<BuildVectorSDNode>(Cst1);
-  if (!BV1 && !Cst1->isUndef())
+  auto *BV1 = dyn_cast<BuildVectorSDNode>(N1);
+  if (!BV1 && !N1->isUndef())
     return SDValue();
-  auto *BV2 = dyn_cast<BuildVectorSDNode>(Cst2);
-  if (!BV2 && !Cst2->isUndef())
+  auto *BV2 = dyn_cast<BuildVectorSDNode>(N2);
+  if (!BV2 && !N2->isUndef())
     return SDValue();
   // If both operands are undef, that's handled the same way as scalars.
   if (!BV1 && !BV2)

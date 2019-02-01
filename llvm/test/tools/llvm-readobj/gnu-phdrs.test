@@ -12,8 +12,22 @@
 
 RUN: llvm-readobj -program-headers %p/Inputs/phdrs-elf.exe-i386 --elf-output-style=GNU \
 RUN:   | FileCheck %s -check-prefix ELF32
-RUN: llvm-readobj -program-headers %p/Inputs/phdrs-elf.exe-x86_64 \
-RUN:  --elf-output-style=GNU | FileCheck %s -check-prefix ELF64
+RUN: llvm-readobj -program-headers %p/Inputs/phdrs-elf.exe-x86_64 --elf-output-style=GNU \
+RUN:   | FileCheck %s -check-prefixes ELF64-PHDRS,ELF64-MAPPING
+RUN: llvm-readelf -program-headers %p/Inputs/phdrs-elf.exe-x86_64 \
+RUN:   | FileCheck %s -check-prefixes ELF64-PHDRS,ELF64-MAPPING
+
+# Check that -section-mapping produces a mapping and not the program headers.
+RUN: llvm-readelf -section-mapping %p/Inputs/phdrs-elf.exe-x86_64 \
+RUN:   | FileCheck %s -check-prefix ELF64-MAPPING -implicit-check-not="Program Headers:"
+
+# Check that -section-mapping=false -program-headers produces just program headers.
+RUN: llvm-readelf -section-mapping=false -program-headers %p/Inputs/phdrs-elf.exe-x86_64 \
+RUN:   | FileCheck %s -check-prefix ELF64-PHDRS -implicit-check-not="Section to Segment mapping:"
+
+# Check that only one copy of the section/segment mapping table is produced.
+RUN: llvm-readelf -section-mapping -program-headers %p/Inputs/phdrs-elf.exe-x86_64 \
+RUN:   | FileCheck %s -check-prefix ELF64-ONEMAPPING
 
 ELF32: Elf file type is EXEC (Executable file)
 ELF32-NEXT: Entry point 0x8048460
@@ -46,33 +60,36 @@ ELF32-NEXT:    07     .eh_frame_hdr
 ELF32-NEXT:    08
 ELF32-NEXT:    09     .tdata .ctors .dtors .jcr .dynamic .got
 
-ELF64: Elf file type is EXEC (Executable file)
-ELF64-NEXT: Entry point 0x400610
-ELF64-NEXT: There are 10 program headers, starting at offset 64
+ELF64-PHDRS: Elf file type is EXEC (Executable file)
+ELF64-PHDRS-NEXT: Entry point 0x400610
+ELF64-PHDRS-NEXT: There are 10 program headers, starting at offset 64
 
-ELF64: Program Headers:
-ELF64-NEXT:   Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
-ELF64-NEXT:   PHDR           0x000040 0x0000000000400040 0x0000000000400040 0x000230 0x000230 R E 0x8
-ELF64-NEXT:   INTERP         0x000270 0x0000000000400270 0x0000000000400270 0x00001c 0x00001c R   0x1
-ELF64-NEXT:       [Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]
-ELF64-NEXT:   LOAD           0x000000 0x0000000000400000 0x0000000000400000 0x000924 0x000924 R E 0x200000
-ELF64-NEXT:   LOAD           0x000db4 0x0000000000600db4 0x0000000000600db4 0x000274 0x0002a4 RW  0x200000
-ELF64-NEXT:   DYNAMIC        0x000dd0 0x0000000000600dd0 0x0000000000600dd0 0x000210 0x000210 RW  0x8
-ELF64-NEXT:   NOTE           0x00028c 0x000000000040028c 0x000000000040028c 0x000044 0x000044 R   0x4
-ELF64-NEXT:   TLS            0x000db4 0x0000000000600db4 0x0000000000600db4 0x000004 0x000008 R   0x4
-ELF64-NEXT:   GNU_EH_FRAME   0x00083c 0x000000000040083c 0x000000000040083c 0x00002c 0x00002c R   0x4
-ELF64-NEXT:   GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0x8
-ELF64-NEXT:   GNU_RELRO      0x000db4 0x0000000000600db4 0x0000000000600db4 0x00024c 0x00024c R   0x1
+ELF64-PHDRS: Program Headers:
+ELF64-PHDRS-NEXT:   Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+ELF64-PHDRS-NEXT:   PHDR           0x000040 0x0000000000400040 0x0000000000400040 0x000230 0x000230 R E 0x8
+ELF64-PHDRS-NEXT:   INTERP         0x000270 0x0000000000400270 0x0000000000400270 0x00001c 0x00001c R   0x1
+ELF64-PHDRS-NEXT:       [Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]
+ELF64-PHDRS-NEXT:   LOAD           0x000000 0x0000000000400000 0x0000000000400000 0x000924 0x000924 R E 0x200000
+ELF64-PHDRS-NEXT:   LOAD           0x000db4 0x0000000000600db4 0x0000000000600db4 0x000274 0x0002a4 RW  0x200000
+ELF64-PHDRS-NEXT:   DYNAMIC        0x000dd0 0x0000000000600dd0 0x0000000000600dd0 0x000210 0x000210 RW  0x8
+ELF64-PHDRS-NEXT:   NOTE           0x00028c 0x000000000040028c 0x000000000040028c 0x000044 0x000044 R   0x4
+ELF64-PHDRS-NEXT:   TLS            0x000db4 0x0000000000600db4 0x0000000000600db4 0x000004 0x000008 R   0x4
+ELF64-PHDRS-NEXT:   GNU_EH_FRAME   0x00083c 0x000000000040083c 0x000000000040083c 0x00002c 0x00002c R   0x4
+ELF64-PHDRS-NEXT:   GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0x8
+ELF64-PHDRS-NEXT:   GNU_RELRO      0x000db4 0x0000000000600db4 0x0000000000600db4 0x00024c 0x00024c R   0x1
 
-ELF64:  Section to Segment mapping:
-ELF64-NEXT:   Segment Sections...
-ELF64-NEXT:    00
-ELF64-NEXT:    01     .interp
-ELF64-NEXT:    02     .interp .note.ABI-tag .note.gnu.build-id .hash .gnu.hash .dynsym .dynstr .gnu.version .gnu.version_r .rela.dyn .rela.plt .init .plt .text .fini .rodata .eh_frame_hdr .eh_frame
-ELF64-NEXT:    03     .tdata .init_array .fini_array .jcr .dynamic .got .got.plt .data .bss
-ELF64-NEXT:    04     .dynamic
-ELF64-NEXT:    05     .note.ABI-tag .note.gnu.build-id
-ELF64-NEXT:    06     .tdata .tbss
-ELF64-NEXT:    07     .eh_frame_hdr
-ELF64-NEXT:    08
-ELF64-NEXT:    09     .tdata .init_array .fini_array .jcr .dynamic .got
+ELF64-MAPPING:  Section to Segment mapping:
+ELF64-MAPPING-NEXT:   Segment Sections...
+ELF64-MAPPING-NEXT:    00
+ELF64-MAPPING-NEXT:    01     .interp
+ELF64-MAPPING-NEXT:    02     .interp .note.ABI-tag .note.gnu.build-id .hash .gnu.hash .dynsym .dynstr .gnu.version .gnu.version_r .rela.dyn .rela.plt .init .plt .text .fini .rodata .eh_frame_hdr .eh_frame
+ELF64-MAPPING-NEXT:    03     .tdata .init_array .fini_array .jcr .dynamic .got .got.plt .data .bss
+ELF64-MAPPING-NEXT:    04     .dynamic
+ELF64-MAPPING-NEXT:    05     .note.ABI-tag .note.gnu.build-id
+ELF64-MAPPING-NEXT:    06     .tdata .tbss
+ELF64-MAPPING-NEXT:    07     .eh_frame_hdr
+ELF64-MAPPING-NEXT:    08
+ELF64-MAPPING-NEXT:    09     .tdata .init_array .fini_array .jcr .dynamic .got
+
+ELF64-ONEMAPPING: Section to Segment mapping:
+ELF64-ONEMAPPING-NOT: Section to Segment mapping:

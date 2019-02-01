@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 namespace object {
@@ -40,13 +41,20 @@ public:
     if (PrintDynamicSymbols)
       printDynamicSymbols();
   }
+  virtual void printProgramHeaders(bool PrintProgramHeaders,
+                                   cl::boolOrDefault PrintSectionMapping) {
+    if (PrintProgramHeaders)
+      printProgramHeaders();
+    if (PrintSectionMapping == cl::BOU_TRUE)
+      printSectionMapping();
+  }
+
   virtual void printUnwindInfo() = 0;
 
   // Only implemented for ELF at this time.
   virtual void printDynamicRelocations() { }
   virtual void printDynamicTable() { }
   virtual void printNeededLibraries() { }
-  virtual void printProgramHeaders() { }
   virtual void printSectionAsHex(StringRef SectionName) {}
   virtual void printHashTable() { }
   virtual void printGnuHashTable() { }
@@ -99,8 +107,10 @@ protected:
   ScopedPrinter &W;
 
 private:
-  virtual void printSymbols() {};
-  virtual void printDynamicSymbols() {};
+  virtual void printSymbols() {}
+  virtual void printDynamicSymbols() {}
+  virtual void printProgramHeaders() {}
+  virtual void printSectionMapping() {}
 };
 
 std::error_code createCOFFDumper(const object::ObjectFile *Obj,

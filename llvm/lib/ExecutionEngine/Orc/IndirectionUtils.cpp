@@ -235,13 +235,14 @@ void makeStub(Function &F, Value &ImplPointer) {
   assert(F.isDeclaration() && "Can't turn a definition into a stub.");
   assert(F.getParent() && "Function isn't in a module.");
   Module &M = *F.getParent();
+  FunctionType *FTy = F.getFunctionType();
   BasicBlock *EntryBlock = BasicBlock::Create(M.getContext(), "entry", &F);
   IRBuilder<> Builder(EntryBlock);
   LoadInst *ImplAddr = Builder.CreateLoad(&ImplPointer);
   std::vector<Value*> CallArgs;
   for (auto &A : F.args())
     CallArgs.push_back(&A);
-  CallInst *Call = Builder.CreateCall(ImplAddr, CallArgs);
+  CallInst *Call = Builder.CreateCall(FTy, ImplAddr, CallArgs);
   Call->setTailCall();
   Call->setAttributes(F.getAttributes());
   if (F.getReturnType()->isVoidTy())

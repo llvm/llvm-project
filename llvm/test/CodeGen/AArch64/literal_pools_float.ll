@@ -13,18 +13,16 @@ define void @floating_lits() {
 
   %floatval = load float, float* @varfloat
   %newfloat = fadd float %floatval, 128.0
-; CHECK: adrp x[[LITBASE:[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
-; CHECK: ldr [[LIT128:s[0-9]+]], [x[[LITBASE]], {{#?}}:lo12:[[CURLIT]]]
+; CHECK: mov [[W128:w[0-9]+]], #1124073472
+; CHECK: fmov [[LIT128:s[0-9]+]], [[W128]]
 ; CHECK-NOFP-NOT: ldr {{s[0-9]+}},
 
-; CHECK-TINY: ldr [[LIT128:s[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
+; CHECK-TINY: mov [[W128:w[0-9]+]], #1124073472
+; CHECK-TINE: fmov [[LIT128:s[0-9]+]], [[W128]]
 ; CHECK-NOFP-TINY-NOT: ldr {{s[0-9]+}},
 
-; CHECK-LARGE: movz x[[LITADDR:[0-9]+]], #:abs_g0_nc:[[CURLIT:.LCPI[0-9]+_[0-9]+]]
-; CHECK-LARGE: movk x[[LITADDR]], #:abs_g1_nc:[[CURLIT]]
-; CHECK-LARGE: movk x[[LITADDR]], #:abs_g2_nc:[[CURLIT]]
-; CHECK-LARGE: movk x[[LITADDR]], #:abs_g3:[[CURLIT]]
-; CHECK-LARGE: ldr {{s[0-9]+}}, [x[[LITADDR]]]
+; CHECK-LARGE: mov [[W128:w[0-9]+]], #1124073472
+; CHECK-LARGE: fmov [[LIT128:s[0-9]+]], [[W128]]
 ; CHECK-LARGE: fadd
 ; CHECK-NOFP-LARGE-NOT: ldr {{s[0-9]+}},
 ; CHECK-NOFP-LARGE-NOT: fadd

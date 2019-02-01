@@ -935,6 +935,7 @@ static char getSymbolNMTypeChar(ELFObjectFileBase &Obj,
     return StringSwitch<char>(*Name)
         .StartsWith(".debug", 'N')
         .StartsWith(".note", 'n')
+        .StartsWith(".comment", 'n')
         .Default('?');
   }
 

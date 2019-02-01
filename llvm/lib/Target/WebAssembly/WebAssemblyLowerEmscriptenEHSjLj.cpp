@@ -768,7 +768,8 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
       // This can't throw, and we don't need this invoke, just replace it with a
       // call+branch
       SmallVector<Value *, 16> Args(II->arg_begin(), II->arg_end());
-      CallInst *NewCall = IRB.CreateCall(II->getCalledValue(), Args);
+      CallInst *NewCall =
+          IRB.CreateCall(II->getFunctionType(), II->getCalledValue(), Args);
       NewCall->takeName(II);
       NewCall->setCallingConv(II->getCallingConv());
       NewCall->setDebugLoc(II->getDebugLoc());
