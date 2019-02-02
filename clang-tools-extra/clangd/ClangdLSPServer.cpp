@@ -726,18 +726,41 @@ void ClangdLSPServer::onSignatureHelp(const TextDocumentPositionParams &Params,
                         std::move(Reply));
 }
 
+// Go to definition has a toggle function: if def and decl are distinct, then
+// the first press gives you the def, the second gives you the matching def.
+// getToggle() returns the counterpart location that under the cursor.
+//
+// We return the toggled location alone (ignoring other symbols) to encourage
+// editors to "bounce" quickly between locations, without showing a menu.
+static Location *getToggle(const TextDocumentPositionParams &Point,
+                           LocatedSymbol &Sym) {
+  // Toggle only makes sense with two distinct locations.
+  if (!Sym.Definition || *Sym.Definition == Sym.PreferredDeclaration)
+    return nullptr;
+  if (Sym.Definition->uri.file() == Point.textDocument.uri.file() &&
+      Sym.Definition->range.contains(Point.position))
+    return &Sym.PreferredDeclaration;
+  if (Sym.PreferredDeclaration.uri.file() == Point.textDocument.uri.file() &&
+      Sym.PreferredDeclaration.range.contains(Point.position))
+    return &*Sym.Definition;
+  return nullptr;
+}
+
 void ClangdLSPServer::onGoToDefinition(const TextDocumentPositionParams &Params,
                                        Callback<std::vector<Location>> Reply) {
   Server->locateSymbolAt(
       Params.textDocument.uri.file(), Params.position,
       Bind(
-          [&](decltype(Reply) Reply,
-              llvm::Expected<std::vector<LocatedSymbol>> Symbols) {
+          [&, Params](decltype(Reply) Reply,
+                      llvm::Expected<std::vector<LocatedSymbol>> Symbols) {
             if (!Symbols)
               return Reply(Symbols.takeError());
             std::vector<Location> Defs;
-            for (const auto &S : *Symbols)
+            for (auto &S : *Symbols) {
+              if (Location *Toggle = getToggle(Params, S))
+                return Reply(std::vector<Location>{std::move(*Toggle)});
               Defs.push_back(S.Definition.getValueOr(S.PreferredDeclaration));
+            }
             Reply(std::move(Defs));
           },
           std::move(Reply)));
@@ -749,13 +772,16 @@ void ClangdLSPServer::onGoToDeclaration(
   Server->locateSymbolAt(
       Params.textDocument.uri.file(), Params.position,
       Bind(
-          [&](decltype(Reply) Reply,
-              llvm::Expected<std::vector<LocatedSymbol>> Symbols) {
+          [&, Params](decltype(Reply) Reply,
+                      llvm::Expected<std::vector<LocatedSymbol>> Symbols) {
             if (!Symbols)
               return Reply(Symbols.takeError());
             std::vector<Location> Decls;
-            for (const auto &S : *Symbols)
-              Decls.push_back(S.PreferredDeclaration);
+            for (auto &S : *Symbols) {
+              if (Location *Toggle = getToggle(Params, S))
+                return Reply(std::vector<Location>{std::move(*Toggle)});
+              Decls.push_back(std::move(S.PreferredDeclaration));
+            }
             Reply(std::move(Decls));
           },
           std::move(Reply)));
