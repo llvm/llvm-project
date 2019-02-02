@@ -756,8 +756,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Args.hasFlag(OPT_allow_multiple_definition,
                    OPT_no_allow_multiple_definition, false) ||
       hasZOption(Args, "muldefs");
-  Config->AllowShlibUndefined = Args.hasFlag(
-      OPT_allow_shlib_undefined, OPT_no_allow_shlib_undefined, true);
+  Config->AllowShlibUndefined =
+      Args.hasFlag(OPT_allow_shlib_undefined, OPT_no_allow_shlib_undefined,
+                   Args.hasArg(OPT_shared));
   Config->AuxiliaryList = args::getStrings(Args, OPT_auxiliary);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);

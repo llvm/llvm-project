@@ -2554,7 +2554,8 @@ bool AddressSanitizer::runOnFunction(Function &F) {
         if (CS) {
           // A call inside BB.
           TempsToInstrument.clear();
-          if (CS.doesNotReturn()) NoReturnCalls.push_back(CS.getInstruction());
+          if (CS.doesNotReturn() && !CS->getMetadata("nosanitize"))
+            NoReturnCalls.push_back(CS.getInstruction());
         }
         if (CallInst *CI = dyn_cast<CallInst>(&Inst))
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, TLI);
@@ -2591,7 +2592,7 @@ bool AddressSanitizer::runOnFunction(Function &F) {
   FunctionStackPoisoner FSP(F, *this);
   bool ChangedStack = FSP.runOnFunction();
 
-  // We must unpoison the stack before every NoReturn call (throw, _exit, etc).
+  // We must unpoison the stack before NoReturn calls (throw, _exit, etc).
   // See e.g. https://github.com/google/sanitizers/issues/37
   for (auto CI : NoReturnCalls) {
     IRBuilder<> IRB(CI);

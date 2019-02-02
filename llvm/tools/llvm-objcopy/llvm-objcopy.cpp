@@ -11,6 +11,7 @@
 #include "COFF/COFFObjcopy.h"
 #include "CopyConfig.h"
 #include "ELF/ELFObjcopy.h"
+#include "MachO/MachOObjcopy.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -23,6 +24,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Object/MachO.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -142,6 +144,8 @@ static Error executeObjcopyOnBinary(const CopyConfig &Config,
     return elf::executeObjcopyOnBinary(Config, *ELFBinary, Out);
   else if (auto *COFFBinary = dyn_cast<object::COFFObjectFile>(&In))
     return coff::executeObjcopyOnBinary(Config, *COFFBinary, Out);
+  else if (auto *MachOBinary = dyn_cast<object::MachOObjectFile>(&In))
+    return macho::executeObjcopyOnBinary(Config, *MachOBinary, Out);
   else
     return createStringError(object_error::invalid_file_type,
                              "Unsupported object file format");
