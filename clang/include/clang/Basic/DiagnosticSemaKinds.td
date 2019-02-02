@@ -4719,13 +4719,15 @@ def note_deleted_special_member_class_subobject : Note<
   "copy assignment operator of|move assignment operator of|destructor of|"
   "constructor inherited by}0 "
   "%1 is implicitly deleted because "
-  "%select{base class %3|%select{||||variant }4field %3}2 has "
+  "%select{base class %3|%select{||||variant }4field %3}2 "
+  "%select{has "
   "%select{no|a deleted|multiple|an inaccessible|a non-trivial}4 "
   "%select{%select{default constructor|copy constructor|move constructor|copy "
   "assignment operator|move assignment operator|destructor|"
   "%select{default|corresponding|default|default|default}4 constructor}0|"
   "destructor}5"
-  "%select{||s||}4">;
+  "%select{||s||}4"
+  "|is an ObjC pointer}6">;
 def note_deleted_default_ctor_uninit_field : Note<
   "%select{default constructor of|constructor inherited by}0 "
   "%1 is implicitly deleted because field %2 of "

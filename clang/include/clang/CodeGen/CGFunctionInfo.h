@@ -440,31 +440,30 @@ public:
   ///
   /// If FD is not null, this will consider pass_object_size params in FD.
   static RequiredArgs forPrototypePlus(const FunctionProtoType *prototype,
-                                       unsigned additional,
-                                       const FunctionDecl *FD) {
+                                       unsigned additional) {
     if (!prototype->isVariadic()) return All;
-    if (FD)
-      additional +=
-          llvm::count_if(FD->parameters(), [](const ParmVarDecl *PVD) {
-            return PVD->hasAttr<PassObjectSizeAttr>();
+
+    if (prototype->hasExtParameterInfos())
+      additional += llvm::count_if(
+          prototype->getExtParameterInfos(),
+          [](const FunctionProtoType::ExtParameterInfo &ExtInfo) {
+            return ExtInfo.hasPassObjectSize();
           });
+
     return RequiredArgs(prototype->getNumParams() + additional);
   }
 
-  static RequiredArgs forPrototype(const FunctionProtoType *prototype,
-                                   const FunctionDecl *FD) {
-    return forPrototypePlus(prototype, 0, FD);
-  }
-
-  static RequiredArgs forPrototype(CanQual<FunctionProtoType> prototype,
-                                   const FunctionDecl *FD) {
-    return forPrototype(prototype.getTypePtr(), FD);
-  }
-
   static RequiredArgs forPrototypePlus(CanQual<FunctionProtoType> prototype,
-                                       unsigned additional,
-                                       const FunctionDecl *FD) {
-    return forPrototypePlus(prototype.getTypePtr(), additional, FD);
+                                       unsigned additional) {
+    return forPrototypePlus(prototype.getTypePtr(), additional);
+  }
+
+  static RequiredArgs forPrototype(const FunctionProtoType *prototype) {
+    return forPrototypePlus(prototype, 0);
+  }
+
+  static RequiredArgs forPrototype(CanQual<FunctionProtoType> prototype) {
+    return forPrototypePlus(prototype.getTypePtr(), 0);
   }
 
   bool allowsOptionalArgs() const { return NumRequired != ~0U; }
