@@ -114,8 +114,15 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
           F.hasFnAttribute("wasm-import-module")) {
         StringRef Name =
             F.getFnAttribute("wasm-import-module").getValueAsString();
-        Sym->setModuleName(Name);
+        Sym->setImportModule(Name);
         getTargetStreamer()->emitImportModule(Sym, Name);
+      }
+      if (TM.getTargetTriple().isOSBinFormatWasm() &&
+          F.hasFnAttribute("wasm-import-name")) {
+        StringRef Name =
+            F.getFnAttribute("wasm-import-name").getValueAsString();
+        Sym->setImportName(Name);
+        getTargetStreamer()->emitImportName(Sym, Name);
       }
     }
   }

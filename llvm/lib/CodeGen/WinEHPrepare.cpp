@@ -1079,7 +1079,8 @@ AllocaInst *WinEHPrepare::insertPHILoads(PHINode *PN, Function &F) {
     SpillSlot = new AllocaInst(PN->getType(), DL->getAllocaAddrSpace(), nullptr,
                                Twine(PN->getName(), ".wineh.spillslot"),
                                &F.getEntryBlock().front());
-    Value *V = new LoadInst(SpillSlot, Twine(PN->getName(), ".wineh.reload"),
+    Value *V = new LoadInst(PN->getType(), SpillSlot,
+                            Twine(PN->getName(), ".wineh.reload"),
                             &*PHIBlock->getFirstInsertionPt());
     PN->replaceAllUsesWith(V);
     return SpillSlot;
@@ -1221,13 +1222,15 @@ void WinEHPrepare::replaceUseWithLoad(Value *V, Use &U, AllocaInst *&SpillSlot,
     Value *&Load = Loads[IncomingBlock];
     // Insert the load into the predecessor block
     if (!Load)
-      Load = new LoadInst(SpillSlot, Twine(V->getName(), ".wineh.reload"),
+      Load = new LoadInst(V->getType(), SpillSlot,
+                          Twine(V->getName(), ".wineh.reload"),
                           /*Volatile=*/false, IncomingBlock->getTerminator());
 
     U.set(Load);
   } else {
     // Reload right before the old use.
-    auto *Load = new LoadInst(SpillSlot, Twine(V->getName(), ".wineh.reload"),
+    auto *Load = new LoadInst(V->getType(), SpillSlot,
+                              Twine(V->getName(), ".wineh.reload"),
                               /*Volatile=*/false, UsingInst);
     U.set(Load);
   }

@@ -1445,11 +1445,11 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   if (UnavailablePred) {
     assert(UnavailablePred->getTerminator()->getNumSuccessors() == 1 &&
            "Can't handle critical edge here!");
-    LoadInst *NewVal =
-        new LoadInst(LoadedPtr->DoPHITranslation(LoadBB, UnavailablePred),
-                     LoadI->getName() + ".pr", false, LoadI->getAlignment(),
-                     LoadI->getOrdering(), LoadI->getSyncScopeID(),
-                     UnavailablePred->getTerminator());
+    LoadInst *NewVal = new LoadInst(
+        LoadI->getType(), LoadedPtr->DoPHITranslation(LoadBB, UnavailablePred),
+        LoadI->getName() + ".pr", false, LoadI->getAlignment(),
+        LoadI->getOrdering(), LoadI->getSyncScopeID(),
+        UnavailablePred->getTerminator());
     NewVal->setDebugLoc(LoadI->getDebugLoc());
     if (AATags)
       NewVal->setAAMetadata(AATags);

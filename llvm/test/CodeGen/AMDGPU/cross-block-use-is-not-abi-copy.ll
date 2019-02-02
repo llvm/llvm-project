@@ -166,11 +166,11 @@ bb1:
 }
 
 
-declare <2 x float> @func_v2f32() #0
-declare <3 x float> @func_v3f32() #0
-declare <4 x float> @func_v4f32() #0
-declare <4 x half> @func_v4f16() #0
+declare hidden <2 x float> @func_v2f32() #0
+declare hidden <3 x float> @func_v3f32() #0
+declare hidden <4 x float> @func_v4f32() #0
+declare hidden <4 x half> @func_v4f16() #0
 
-declare { <4 x i32>, <4 x half> } @func_struct() #0
+declare hidden { <4 x i32>, <4 x half> } @func_struct() #0
 
 attributes #0 = { nounwind}

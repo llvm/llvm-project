@@ -1162,16 +1162,16 @@ static Value *UpgradeMaskedStore(IRBuilder<> &Builder,
 static Value *UpgradeMaskedLoad(IRBuilder<> &Builder,
                                 Value *Ptr, Value *Passthru, Value *Mask,
                                 bool Aligned) {
+  Type *ValTy = Passthru->getType();
   // Cast the pointer to the right type.
-  Ptr = Builder.CreateBitCast(Ptr,
-                             llvm::PointerType::getUnqual(Passthru->getType()));
+  Ptr = Builder.CreateBitCast(Ptr, llvm::PointerType::getUnqual(ValTy));
   unsigned Align =
     Aligned ? cast<VectorType>(Passthru->getType())->getBitWidth() / 8 : 1;
 
   // If the mask is all ones just emit a regular store.
   if (const auto *C = dyn_cast<Constant>(Mask))
     if (C->isAllOnesValue())
-      return Builder.CreateAlignedLoad(Ptr, Align);
+      return Builder.CreateAlignedLoad(ValTy, Ptr, Align);
 
   // Convert the mask from an integer type to a vector of i1.
   unsigned NumElts = Passthru->getType()->getVectorNumElements();
@@ -2199,7 +2199,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Type *VT = VectorType::get(EltTy, NumSrcElts);
       Value *Op = Builder.CreatePointerCast(CI->getArgOperand(0),
                                             PointerType::getUnqual(VT));
-      Value *Load = Builder.CreateAlignedLoad(Op, 1);
+      Value *Load = Builder.CreateAlignedLoad(VT, Op, 1);
       if (NumSrcElts == 2)
         Rep = Builder.CreateShuffleVector(Load, UndefValue::get(Load->getType()),
                                           { 0, 1, 0, 1 });
@@ -2945,7 +2945,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       // Convert the type of the pointer to a pointer to the stored type.
       Value *BC =
           Builder.CreateBitCast(Ptr, PointerType::getUnqual(VTy), "cast");
-      LoadInst *LI = Builder.CreateAlignedLoad(BC, VTy->getBitWidth() / 8);
+      LoadInst *LI = Builder.CreateAlignedLoad(VTy, BC, VTy->getBitWidth() / 8);
       LI->setMetadata(M->getMDKindID("nontemporal"), Node);
       Rep = LI;
     } else if (IsX86 &&

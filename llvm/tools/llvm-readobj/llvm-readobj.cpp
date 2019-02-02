@@ -106,6 +106,11 @@ namespace opts {
   cl::opt<bool> SectionData("section-data",
     cl::desc("Display section data for each section shown."));
 
+  // -section-mapping
+  cl::opt<cl::boolOrDefault>
+      SectionMapping("section-mapping",
+                     cl::desc("Display the section to segment mapping."));
+
   // -relocations, -relocs, -r
   cl::opt<bool> Relocations("relocations",
     cl::desc("Display the relocation entries in the file"));
@@ -474,8 +479,8 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
     Dumper->printDynamicTable();
   if (opts::NeededLibraries)
     Dumper->printNeededLibraries();
-  if (opts::ProgramHeaders)
-    Dumper->printProgramHeaders();
+  if (opts::ProgramHeaders || opts::SectionMapping == cl::BOU_TRUE)
+    Dumper->printProgramHeaders(opts::ProgramHeaders, opts::SectionMapping);
   if (!opts::StringDump.empty())
     llvm::for_each(opts::StringDump, [&Dumper, Obj](StringRef SectionName) {
       Dumper->printSectionAsString(Obj, SectionName);

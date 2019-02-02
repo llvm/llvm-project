@@ -443,8 +443,8 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
                            Instruction *InsertPt) {
   std::vector<Value *> Args(CI->arg_begin(), CI->arg_end());
 
-  auto *NewCI = CallInst::Create(CI->getCalledValue(), Args, OpB, CI->getName(),
-                                 InsertPt);
+  auto *NewCI = CallInst::Create(CI->getFunctionType(), CI->getCalledValue(),
+                                 Args, OpB, CI->getName(), InsertPt);
   NewCI->setTailCallKind(CI->getTailCallKind());
   NewCI->setCallingConv(CI->getCallingConv());
   NewCI->SubclassOptionalData = CI->SubclassOptionalData;
@@ -711,9 +711,9 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
                                Instruction *InsertPt) {
   std::vector<Value *> Args(II->arg_begin(), II->arg_end());
 
-  auto *NewII = InvokeInst::Create(II->getCalledValue(), II->getNormalDest(),
-                                   II->getUnwindDest(), Args, OpB,
-                                   II->getName(), InsertPt);
+  auto *NewII = InvokeInst::Create(II->getFunctionType(), II->getCalledValue(),
+                                   II->getNormalDest(), II->getUnwindDest(),
+                                   Args, OpB, II->getName(), InsertPt);
   NewII->setCallingConv(II->getCallingConv());
   NewII->SubclassOptionalData = II->SubclassOptionalData;
   NewII->setAttributes(II->getAttributes());

@@ -498,7 +498,7 @@ bool IntrinsicLowering::LowerToByteSwap(CallInst *CI) {
 
   // Okay, we can do this xform, do so now.
   Module *M = CI->getModule();
-  Constant *Int = Intrinsic::getDeclaration(M, Intrinsic::bswap, Ty);
+  Function *Int = Intrinsic::getDeclaration(M, Intrinsic::bswap, Ty);
 
   Value *Op = CI->getArgOperand(0);
   Op = CallInst::Create(Int, Op, CI->getName(), CI);

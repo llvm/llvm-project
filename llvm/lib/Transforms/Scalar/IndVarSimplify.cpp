@@ -2288,7 +2288,8 @@ static Value *genLoopLimit(PHINode *IndVar, const SCEV *IVCount, Loop *L,
            "unit stride pointer IV must be i8*");
 
     IRBuilder<> Builder(L->getLoopPreheader()->getTerminator());
-    return Builder.CreateGEP(nullptr, GEPBase, GEPOffset, "lftr.limit");
+    return Builder.CreateGEP(GEPBase->getType()->getPointerElementType(),
+                             GEPBase, GEPOffset, "lftr.limit");
   } else {
     // In any other case, convert both IVInit and IVCount to integers before
     // comparing. This may result in SCEV expansion of pointers, but in practice

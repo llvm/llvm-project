@@ -1978,8 +1978,10 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
 void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry) {
   // Emit the size.
   Asm->OutStreamer->AddComment("Loc expr size");
-  Asm->emitInt16(DebugLocs.getBytes(Entry).size());
-
+  if (getDwarfVersion() >= 5)
+    Asm->EmitULEB128(DebugLocs.getBytes(Entry).size());
+  else
+    Asm->emitInt16(DebugLocs.getBytes(Entry).size());
   // Emit the entry.
   APByteStreamer Streamer(*Asm);
   emitDebugLocEntry(Streamer, Entry);

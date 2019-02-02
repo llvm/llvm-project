@@ -210,7 +210,7 @@ bool HexagonGenExtract::convert(Instruction *In) {
   Intrinsic::ID IntId = (BW == 32) ? Intrinsic::hexagon_S2_extractu
                                    : Intrinsic::hexagon_S2_extractup;
   Module *Mod = BB->getParent()->getParent();
-  Value *ExtF = Intrinsic::getDeclaration(Mod, IntId);
+  Function *ExtF = Intrinsic::getDeclaration(Mod, IntId);
   Value *NewIn = IRB.CreateCall(ExtF, {BF, IRB.getInt32(W), IRB.getInt32(SR)});
   if (SL != 0)
     NewIn = IRB.CreateShl(NewIn, SL, CSL->getName());

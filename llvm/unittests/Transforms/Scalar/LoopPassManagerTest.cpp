@@ -908,7 +908,8 @@ TEST_F(LoopPassManagerTest, LoopChildInsertion) {
   ASSERT_THAT(BBI, F.end());
   auto CreateCondBr = [&](BasicBlock *TrueBB, BasicBlock *FalseBB,
                           const char *Name, BasicBlock *BB) {
-    auto *Cond = new LoadInst(&Ptr, Name, /*isVolatile*/ true, BB);
+    auto *Cond = new LoadInst(Type::getInt1Ty(Context), &Ptr, Name,
+                              /*isVolatile*/ true, BB);
     BranchInst::Create(TrueBB, FalseBB, Cond, BB);
   };
 
@@ -1110,7 +1111,8 @@ TEST_F(LoopPassManagerTest, LoopPeerInsertion) {
   ASSERT_THAT(BBI, F.end());
   auto CreateCondBr = [&](BasicBlock *TrueBB, BasicBlock *FalseBB,
                           const char *Name, BasicBlock *BB) {
-    auto *Cond = new LoadInst(&Ptr, Name, /*isVolatile*/ true, BB);
+    auto *Cond = new LoadInst(Type::getInt1Ty(Context), &Ptr, Name,
+                              /*isVolatile*/ true, BB);
     BranchInst::Create(TrueBB, FalseBB, Cond, BB);
   };
 
@@ -1503,8 +1505,9 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
             auto *NewLoop03BB =
                 BasicBlock::Create(Context, "loop.0.3", &F, &Loop0LatchBB);
             BranchInst::Create(NewLoop03BB, NewLoop03PHBB);
-            auto *Cond = new LoadInst(&Ptr, "cond.0.3", /*isVolatile*/ true,
-                                      NewLoop03BB);
+            auto *Cond =
+                new LoadInst(Type::getInt1Ty(Context), &Ptr, "cond.0.3",
+                             /*isVolatile*/ true, NewLoop03BB);
             BranchInst::Create(&Loop0LatchBB, NewLoop03BB, Cond, NewLoop03BB);
             Loop02PHBB.getTerminator()->replaceUsesOfWith(&Loop0LatchBB,
                                                           NewLoop03PHBB);

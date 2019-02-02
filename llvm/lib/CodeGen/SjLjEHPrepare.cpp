@@ -189,14 +189,16 @@ Value *SjLjEHPrepare::setupFunctionContext(Function &F,
         Builder.CreateConstGEP2_32(FunctionContextTy, FuncCtx, 0, 2, "__data");
 
     // The exception values come back in context->__data[0].
+    Type *Int32Ty = Type::getInt32Ty(F.getContext());
     Value *ExceptionAddr = Builder.CreateConstGEP2_32(doubleUnderDataTy, FCData,
                                                       0, 0, "exception_gep");
-    Value *ExnVal = Builder.CreateLoad(ExceptionAddr, true, "exn_val");
+    Value *ExnVal = Builder.CreateLoad(Int32Ty, ExceptionAddr, true, "exn_val");
     ExnVal = Builder.CreateIntToPtr(ExnVal, Builder.getInt8PtrTy());
 
     Value *SelectorAddr = Builder.CreateConstGEP2_32(doubleUnderDataTy, FCData,
                                                      0, 1, "exn_selector_gep");
-    Value *SelVal = Builder.CreateLoad(SelectorAddr, true, "exn_selector_val");
+    Value *SelVal =
+        Builder.CreateLoad(Int32Ty, SelectorAddr, true, "exn_selector_val");
 
     substituteLPadValues(LPI, ExnVal, SelVal);
   }

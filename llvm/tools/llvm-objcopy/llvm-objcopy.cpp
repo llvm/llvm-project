@@ -96,10 +96,13 @@ static Error deepWriteArchive(StringRef ArcName,
                               ArrayRef<NewArchiveMember> NewMembers,
                               bool WriteSymtab, object::Archive::Kind Kind,
                               bool Deterministic, bool Thin) {
-  Error E =
-      writeArchive(ArcName, NewMembers, WriteSymtab, Kind, Deterministic, Thin);
-  if (!Thin || E)
-    return E;
+  if (Error E = writeArchive(ArcName, NewMembers, WriteSymtab, Kind,
+                             Deterministic, Thin))
+    return createFileError(ArcName, std::move(E));
+
+  if (!Thin)
+    return Error::success();
+
   for (const NewArchiveMember &Member : NewMembers) {
     // Internally, FileBuffer will use the buffer created by
     // FileOutputBuffer::create, for regular files (that is the case for
@@ -149,14 +152,17 @@ static Error executeObjcopyOnArchive(const CopyConfig &Config,
   std::vector<NewArchiveMember> NewArchiveMembers;
   Error Err = Error::success();
   for (const Archive::Child &Child : Ar.children(Err)) {
+    // FIXME: Archive::child_iterator requires that Err be checked *during* loop
+    // iteration, and hence does not allow early returns.
+    cantFail(std::move(Err));
     Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
     if (!ChildOrErr)
-      reportError(Ar.getFileName(), ChildOrErr.takeError());
+      return createFileError(Ar.getFileName(), ChildOrErr.takeError());
     Binary *Bin = ChildOrErr->get();
 
     Expected<StringRef> ChildNameOrErr = Child.getName();
     if (!ChildNameOrErr)
-      reportError(Ar.getFileName(), ChildNameOrErr.takeError());
+      return createFileError(Ar.getFileName(), ChildNameOrErr.takeError());
 
     MemBuffer MB(ChildNameOrErr.get());
     if (Error E = executeObjcopyOnBinary(Config, *Bin, MB))
@@ -165,19 +171,17 @@ static Error executeObjcopyOnArchive(const CopyConfig &Config,
     Expected<NewArchiveMember> Member =
         NewArchiveMember::getOldMember(Child, Config.DeterministicArchives);
     if (!Member)
-      reportError(Ar.getFileName(), Member.takeError());
+      return createFileError(Ar.getFileName(), Member.takeError());
     Member->Buf = MB.releaseMemoryBuffer();
     Member->MemberName = Member->Buf->getBufferIdentifier();
     NewArchiveMembers.push_back(std::move(*Member));
   }
-
   if (Err)
-    reportError(Config.InputFilename, std::move(Err));
-  if (Error E = deepWriteArchive(Config.OutputFilename, NewArchiveMembers,
-                                 Ar.hasSymbolTable(), Ar.kind(),
-                                 Config.DeterministicArchives, Ar.isThin()))
-    reportError(Config.OutputFilename, std::move(E));
-  return Error::success();
+    return createFileError(Config.InputFilename, std::move(Err));
+
+  return deepWriteArchive(Config.OutputFilename, NewArchiveMembers,
+                          Ar.hasSymbolTable(), Ar.kind(),
+                          Config.DeterministicArchives, Ar.isThin());
 }
 
 static void restoreDateOnFile(StringRef Filename,

@@ -344,7 +344,8 @@ void WasmEHPrepare::prepareEHPad(BasicBlock *BB, bool NeedLSDA,
   PersCI->setDoesNotThrow();
 
   // Pseudocode: int selector = __wasm.landingpad_context.selector;
-  Instruction *Selector = IRB.CreateLoad(SelectorField, "selector");
+  Instruction *Selector =
+      IRB.CreateLoad(IRB.getInt32Ty(), SelectorField, "selector");
 
   // Replace the return value from wasm.get.ehselector() with the selector value
   // loaded from __wasm_lpad_context.selector.

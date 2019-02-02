@@ -949,8 +949,9 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
                                      DynamicAreaOffset);
     }
 
-    IRB.CreateCall(AsanAllocasUnpoisonFunc,
-                   {IRB.CreateLoad(DynamicAllocaLayout), DynamicAreaPtr});
+    IRB.CreateCall(
+        AsanAllocasUnpoisonFunc,
+        {IRB.CreateLoad(IntptrTy, DynamicAllocaLayout), DynamicAreaPtr});
   }
 
   // Unpoison dynamic allocas redzones.
@@ -1391,7 +1392,7 @@ static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
 
     IRBuilder<> IRB(InsertBefore);
     InstrumentedAddress =
-        IRB.CreateGEP(Addr, {Zero, ConstantInt::get(IntptrTy, Idx)});
+        IRB.CreateGEP(VTy, Addr, {Zero, ConstantInt::get(IntptrTy, Idx)});
     doInstrumentAddress(Pass, I, InsertBefore, InstrumentedAddress, Alignment,
                         Granularity, ElemTypeSize, IsWrite, SizeArgument,
                         UseCalls, Exp);
@@ -1552,7 +1553,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
   Value *CmpVal = Constant::getNullValue(ShadowTy);
   Value *ShadowValue =
-      IRB.CreateLoad(IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy));
+      IRB.CreateLoad(ShadowTy, IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy));
 
   Value *Cmp = IRB.CreateICmpNE(ShadowValue, CmpVal);
   size_t Granularity = 1ULL << Mapping.Scale;
@@ -2444,7 +2445,7 @@ void AddressSanitizer::maybeInsertDynamicShadowAtFunctionEntry(Function &F) {
   } else {
     Value *GlobalDynamicAddress = F.getParent()->getOrInsertGlobal(
         kAsanShadowMemoryDynamicAddress, IntptrTy);
-    LocalDynamicShadow = IRB.CreateLoad(GlobalDynamicAddress);
+    LocalDynamicShadow = IRB.CreateLoad(IntptrTy, GlobalDynamicAddress);
   }
 }
 
@@ -2948,9 +2949,9 @@ void FunctionStackPoisoner::processStaticAllocas() {
     // void *LocalStackBase = (FakeStack) ? FakeStack : alloca(LocalStackSize);
     Constant *OptionDetectUseAfterReturn = F.getParent()->getOrInsertGlobal(
         kAsanOptionDetectUseAfterReturn, IRB.getInt32Ty());
-    Value *UseAfterReturnIsEnabled =
-        IRB.CreateICmpNE(IRB.CreateLoad(OptionDetectUseAfterReturn),
-                         Constant::getNullValue(IRB.getInt32Ty()));
+    Value *UseAfterReturnIsEnabled = IRB.CreateICmpNE(
+        IRB.CreateLoad(IRB.getInt32Ty(), OptionDetectUseAfterReturn),
+        Constant::getNullValue(IRB.getInt32Ty()));
     Instruction *Term =
         SplitBlockAndInsertIfThen(UseAfterReturnIsEnabled, InsBefore, false);
     IRBuilder<> IRBIf(Term);
@@ -3084,7 +3085,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
             FakeStack,
             ConstantInt::get(IntptrTy, ClassSize - ASan.LongSize / 8));
         Value *SavedFlagPtr = IRBPoison.CreateLoad(
-            IRBPoison.CreateIntToPtr(SavedFlagPtrPtr, IntptrPtrTy));
+            IntptrTy, IRBPoison.CreateIntToPtr(SavedFlagPtrPtr, IntptrPtrTy));
         IRBPoison.CreateStore(
             Constant::getNullValue(IRBPoison.getInt8Ty()),
             IRBPoison.CreateIntToPtr(SavedFlagPtr, IRBPoison.getInt8PtrTy()));

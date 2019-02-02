@@ -31,7 +31,7 @@ struct TestFunction {
     BB = BasicBlock::Create(Ctx, "", F);
     B.SetInsertPoint(BB);
     Argument *PointerArg = &*F->arg_begin();
-    LoadInst *LoadInst = B.CreateLoad(PointerArg);
+    LoadInst *LoadInst = B.CreateLoad(T, PointerArg);
     C = B.getInt8(addVal);
     I = cast<Instruction>(B.CreateAdd(LoadInst, C));
     B.CreateRet(I);

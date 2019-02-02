@@ -49,7 +49,7 @@ static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
   Builder.SetInsertPoint(SubFn);
   auto *FramePtr = Builder.CreateBitCast(FrameRaw, FramePtrTy);
   auto *Gep = Builder.CreateConstInBoundsGEP2_32(FrameTy, FramePtr, 0, Index);
-  auto *Load = Builder.CreateLoad(Gep);
+  auto *Load = Builder.CreateLoad(FrameTy->getElementType(Index), Gep);
 
   SubFn->replaceAllUsesWith(Load);
 }

@@ -58,4 +58,9 @@ int main()
         ss << i << ' ' << 321;
         assert(ss.str() == L"89 3219 ");
     }
+    {
+        std::stringstream ss;
+        ss.write("\xd1", 1);
+        assert(ss.str().length() == 1);
+    }
 }

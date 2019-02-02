@@ -3116,12 +3116,12 @@ Value *HexagonTargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
   assert((SZ == 32 || SZ == 64) && "Only 32/64-bit atomic loads supported");
   Intrinsic::ID IntID = (SZ == 32) ? Intrinsic::hexagon_L2_loadw_locked
                                    : Intrinsic::hexagon_L4_loadd_locked;
+  Function *Fn = Intrinsic::getDeclaration(M, IntID);
 
   PointerType *NewPtrTy
     = Builder.getIntNTy(SZ)->getPointerTo(PT->getAddressSpace());
   Addr = Builder.CreateBitCast(Addr, NewPtrTy);
 
-  Value *Fn = Intrinsic::getDeclaration(M, IntID);
   Value *Call = Builder.CreateCall(Fn, Addr, "larx");
 
   return Builder.CreateBitCast(Call, Ty);
@@ -3140,7 +3140,7 @@ Value *HexagonTargetLowering::emitStoreConditional(IRBuilder<> &Builder,
   assert((SZ == 32 || SZ == 64) && "Only 32/64-bit atomic stores supported");
   Intrinsic::ID IntID = (SZ == 32) ? Intrinsic::hexagon_S2_storew_locked
                                    : Intrinsic::hexagon_S4_stored_locked;
-  Value *Fn = Intrinsic::getDeclaration(M, IntID);
+  Function *Fn = Intrinsic::getDeclaration(M, IntID);
 
   unsigned AS = Addr->getType()->getPointerAddressSpace();
   Addr = Builder.CreateBitCast(Addr, CastTy->getPointerTo(AS));

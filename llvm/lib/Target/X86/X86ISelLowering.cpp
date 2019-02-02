@@ -2303,7 +2303,7 @@ Value *X86TargetLowering::getSDagStackGuard(const Module &M) const {
   return TargetLowering::getSDagStackGuard(M);
 }
 
-Value *X86TargetLowering::getSSPStackGuardCheck(const Module &M) const {
+Function *X86TargetLowering::getSSPStackGuardCheck(const Module &M) const {
   // MSVC CRT has a function to validate security cookie.
   if (Subtarget.getTargetTriple().isWindowsMSVCEnvironment() ||
       Subtarget.getTargetTriple().isWindowsItaniumEnvironment()) {
@@ -25362,7 +25362,6 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   // We must restrict the ordering to avoid generating loads with Release or
   // ReleaseAcquire orderings.
   auto Order = AtomicCmpXchgInst::getStrongestFailureOrdering(AI->getOrdering());
-  auto Ptr = AI->getPointerOperand();
 
   // Before the load we need a fence. Here is an example lifted from
   // http://www.hpl.hp.com/techreports/2012/HPL-2012-68.pdf showing why a fence
@@ -25397,8 +25396,9 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   Builder.CreateCall(MFence, {});
 
   // Finally we can emit the atomic load.
-  LoadInst *Loaded = Builder.CreateAlignedLoad(Ptr,
-          AI->getType()->getPrimitiveSizeInBits());
+  LoadInst *Loaded =
+      Builder.CreateAlignedLoad(AI->getType(), AI->getPointerOperand(),
+                                AI->getType()->getPrimitiveSizeInBits());
   Loaded->setAtomic(Order, SSID);
   AI->replaceAllUsesWith(Loaded);
   AI->eraseFromParent();

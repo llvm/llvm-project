@@ -1160,9 +1160,9 @@ define <4 x i32> @test_masked_z_8xi32_to_4xi32_perm_mem_mask2(<8 x i32>* %vp, <4
 define <4 x i32> @test_8xi32_to_4xi32_perm_mem_mask3(<8 x i32>* %vp) {
 ; CHECK-LABEL: test_8xi32_to_4xi32_perm_mem_mask3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,1,2,3]
-; CHECK-NEXT:    vpbroadcastq 8(%rdi), %xmm1
-; CHECK-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3]
+; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = mem[1,1,2,3]
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3]
 ; CHECK-NEXT:    retq
   %vec = load <8 x i32>, <8 x i32>* %vp
   %res = shufflevector <8 x i32> %vec, <8 x i32> undef, <4 x i32> <i32 5, i32 3, i32 2, i32 7>

@@ -5090,7 +5090,9 @@ Value *SwitchLookupTable::BuildLookup(Value *Index, IRBuilder<> &Builder) {
     Value *GEPIndices[] = {Builder.getInt32(0), Index};
     Value *GEP = Builder.CreateInBoundsGEP(Array->getValueType(), Array,
                                            GEPIndices, "switch.gep");
-    return Builder.CreateLoad(GEP, "switch.load");
+    return Builder.CreateLoad(
+        cast<ArrayType>(Array->getValueType())->getElementType(), GEP,
+        "switch.load");
   }
   }
   llvm_unreachable("Unknown lookup table kind!");

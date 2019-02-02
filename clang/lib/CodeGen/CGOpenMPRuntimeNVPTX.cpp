@@ -858,6 +858,7 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     case OMPD_declare_target:
     case OMPD_end_declare_target:
     case OMPD_declare_reduction:
+    case OMPD_declare_mapper:
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_requires:
@@ -926,6 +927,7 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_declare_target:
   case OMPD_end_declare_target:
   case OMPD_declare_reduction:
+  case OMPD_declare_mapper:
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
   case OMPD_requires:
@@ -1076,6 +1078,7 @@ static bool hasNestedLightweightDirective(ASTContext &Ctx,
     case OMPD_declare_target:
     case OMPD_end_declare_target:
     case OMPD_declare_reduction:
+    case OMPD_declare_mapper:
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_requires:
@@ -1149,6 +1152,7 @@ static bool supportsLightweightRuntime(ASTContext &Ctx,
   case OMPD_declare_target:
   case OMPD_end_declare_target:
   case OMPD_declare_reduction:
+  case OMPD_declare_mapper:
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
   case OMPD_requires:

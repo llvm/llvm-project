@@ -101,12 +101,12 @@ define <4 x i32> @load_splat_4i32_4i32_0101(<4 x i32>* %ptr) nounwind uwtable re
 ;
 ; AVX2-LABEL: load_splat_4i32_4i32_0101:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpbroadcastq (%rdi), %xmm0
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_splat_4i32_4i32_0101:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vpbroadcastq (%rdi), %xmm0
+; AVX512-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX512-NEXT:    retq
 entry:
   %ld = load <4 x i32>, <4 x i32>* %ptr
@@ -198,12 +198,12 @@ define <8 x i16> @load_splat_8i16_8i16_01230123(<8 x i16>* %ptr) nounwind uwtabl
 ;
 ; AVX2-LABEL: load_splat_8i16_8i16_01230123:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpbroadcastq (%rdi), %xmm0
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_splat_8i16_8i16_01230123:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vpbroadcastq (%rdi), %xmm0
+; AVX512-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX512-NEXT:    retq
 entry:
   %ld = load <8 x i16>, <8 x i16>* %ptr
@@ -368,12 +368,12 @@ define <16 x i8> @load_splat_16i8_16i8_0123456701234567(<16 x i8>* %ptr) nounwin
 ;
 ; AVX2-LABEL: load_splat_16i8_16i8_0123456701234567:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpbroadcastq (%rdi), %xmm0
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_splat_16i8_16i8_0123456701234567:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vpbroadcastq (%rdi), %xmm0
+; AVX512-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX512-NEXT:    retq
 entry:
   %ld = load <16 x i8>, <16 x i8>* %ptr
@@ -580,20 +580,10 @@ define <4 x i32> @load_splat_4i32_2i32_0101(<2 x i32>* %vp) {
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: load_splat_4i32_2i32_0101:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load_splat_4i32_2i32_0101:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq (%rdi), %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: load_splat_4i32_2i32_0101:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq (%rdi), %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: load_splat_4i32_2i32_0101:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; AVX-NEXT:    retq
   %vec = load <2 x i32>, <2 x i32>* %vp
   %res = shufflevector <2 x i32> %vec, <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   ret <4 x i32> %res

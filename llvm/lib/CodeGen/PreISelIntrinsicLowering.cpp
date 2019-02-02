@@ -44,7 +44,7 @@ static bool lowerLoadRelative(Function &F) {
     Value *OffsetPtr =
         B.CreateGEP(Int8Ty, CI->getArgOperand(0), CI->getArgOperand(1));
     Value *OffsetPtrI32 = B.CreateBitCast(OffsetPtr, Int32PtrTy);
-    Value *OffsetI32 = B.CreateAlignedLoad(OffsetPtrI32, 4);
+    Value *OffsetI32 = B.CreateAlignedLoad(Int32Ty, OffsetPtrI32, 4);
 
     Value *ResultPtr = B.CreateGEP(Int8Ty, CI->getArgOperand(0), OffsetI32);
 
