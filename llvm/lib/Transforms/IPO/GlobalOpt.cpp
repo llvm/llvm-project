@@ -729,7 +729,8 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
           break;
       if (Idxs.size() == GEPI->getNumOperands()-1)
         Changed |= OptimizeAwayTrappingUsesOfValue(
-            GEPI, ConstantExpr::getGetElementPtr(nullptr, NewV, Idxs));
+            GEPI, ConstantExpr::getGetElementPtr(GEPI->getSourceElementType(),
+                                                 NewV, Idxs));
       if (GEPI->use_empty()) {
         Changed = true;
         GEPI->eraseFromParent();
@@ -905,9 +906,10 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
 
       // Replace the cmp X, 0 with a use of the bool value.
       // Sink the load to where the compare was, if atomic rules allow us to.
-      Value *LV = new LoadInst(InitBool, InitBool->getName()+".val", false, 0,
+      Value *LV = new LoadInst(InitBool->getValueType(), InitBool,
+                               InitBool->getName() + ".val", false, 0,
                                LI->getOrdering(), LI->getSyncScopeID(),
-                               LI->isUnordered() ? (Instruction*)ICI : LI);
+                               LI->isUnordered() ? (Instruction *)ICI : LI);
       InitBoolUsed = true;
       switch (ICI->getPredicate()) {
       default: llvm_unreachable("Unknown ICmp Predicate!");
@@ -1040,7 +1042,8 @@ static void ReplaceUsesOfMallocWithGlobal(Instruction *Alloc,
     }
 
     // Insert a load from the global, and use it instead of the malloc.
-    Value *NL = new LoadInst(GV, GV->getName()+".val", InsertPt);
+    Value *NL =
+        new LoadInst(GV->getValueType(), GV, GV->getName() + ".val", InsertPt);
     U->replaceUsesOfWith(Alloc, NL);
   }
 }
@@ -1163,10 +1166,10 @@ static Value *GetHeapSROAValue(Value *V, unsigned FieldNo,
   if (LoadInst *LI = dyn_cast<LoadInst>(V)) {
     // This is a scalarized version of the load from the global.  Just create
     // a new Load of the scalarized global.
-    Result = new LoadInst(GetHeapSROAValue(LI->getOperand(0), FieldNo,
-                                           InsertedScalarizedValues,
-                                           PHIsToRewrite),
-                          LI->getName()+".f"+Twine(FieldNo), LI);
+    Value *V = GetHeapSROAValue(LI->getOperand(0), FieldNo,
+                                InsertedScalarizedValues, PHIsToRewrite);
+    Result = new LoadInst(V->getType()->getPointerElementType(), V,
+                          LI->getName() + ".f" + Twine(FieldNo), LI);
   } else {
     PHINode *PN = cast<PHINode>(V);
     // PN's type is pointer to struct.  Make a new PHI of pointer to struct
@@ -1356,7 +1359,9 @@ static GlobalVariable *PerformHeapAllocSRoA(GlobalVariable *GV, CallInst *CI,
   // Within the NullPtrBlock, we need to emit a comparison and branch for each
   // pointer, because some may be null while others are not.
   for (unsigned i = 0, e = FieldGlobals.size(); i != e; ++i) {
-    Value *GVVal = new LoadInst(FieldGlobals[i], "tmp", NullPtrBlock);
+    Value *GVVal =
+        new LoadInst(cast<GlobalVariable>(FieldGlobals[i])->getValueType(),
+                     FieldGlobals[i], "tmp", NullPtrBlock);
     Value *Cmp = new ICmpInst(*NullPtrBlock, ICmpInst::ICMP_NE, GVVal,
                               Constant::getNullValue(GVVal->getType()));
     BasicBlock *FreeBlock = BasicBlock::Create(Cmp->getContext(), "free_it",
@@ -1700,7 +1705,8 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
         if (LoadInst *LI = dyn_cast<LoadInst>(StoredVal)) {
           assert(LI->getOperand(0) == GV && "Not a copy!");
           // Insert a new load, to preserve the saved value.
-          StoreVal = new LoadInst(NewGV, LI->getName()+".b", false, 0,
+          StoreVal = new LoadInst(NewGV->getValueType(), NewGV,
+                                  LI->getName() + ".b", false, 0,
                                   LI->getOrdering(), LI->getSyncScopeID(), LI);
         } else {
           assert((isa<CastInst>(StoredVal) || isa<SelectInst>(StoredVal)) &&
@@ -1716,8 +1722,9 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
     } else {
       // Change the load into a load of bool then a select.
       LoadInst *LI = cast<LoadInst>(UI);
-      LoadInst *NLI = new LoadInst(NewGV, LI->getName()+".b", false, 0,
-                                   LI->getOrdering(), LI->getSyncScopeID(), LI);
+      LoadInst *NLI =
+          new LoadInst(NewGV->getValueType(), NewGV, LI->getName() + ".b",
+                       false, 0, LI->getOrdering(), LI->getSyncScopeID(), LI);
       Instruction *NSI;
       if (IsOneZero)
         NSI = new ZExtInst(NLI, LI->getType(), "", LI);

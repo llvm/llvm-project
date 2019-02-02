@@ -53,7 +53,8 @@ Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
       IP = ++I->getIterator();
       assert(IP != BB.end() && "guaranteed by the findPointer");
     }
-    auto *NewLoad = new LoadInst(Ptr, "L", &*IP);
+    auto *NewLoad = new LoadInst(
+        cast<PointerType>(Ptr->getType())->getElementType(), Ptr, "L", &*IP);
 
     // Only sample this load if it really matches the descriptor
     if (Pred.matches(Srcs, NewLoad))

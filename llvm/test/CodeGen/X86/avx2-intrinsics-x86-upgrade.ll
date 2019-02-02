@@ -234,7 +234,7 @@ declare <8 x i32> @llvm.x86.avx2.pbroadcastd.256(<4 x i32>) nounwind readonly
 define <2 x i64> @test_x86_avx2_pbroadcastq_128(<2 x i64> %a0) {
 ; CHECK-LABEL: test_x86_avx2_pbroadcastq_128:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpbroadcastq %xmm0, %xmm0
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <2 x i64> @llvm.x86.avx2.pbroadcastq.128(<2 x i64> %a0)
   ret <2 x i64> %res

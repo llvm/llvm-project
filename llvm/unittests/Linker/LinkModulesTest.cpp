@@ -83,7 +83,7 @@ TEST_F(LinkModuleTest, BlockAddress) {
   GEPIndices.push_back(&*F->arg_begin());
 
   Value *GEP = Builder.CreateGEP(AT, GV, GEPIndices, "switch.gep");
-  Value *Load = Builder.CreateLoad(GEP, "switch.load");
+  Value *Load = Builder.CreateLoad(AT->getElementType(), GEP, "switch.load");
 
   Builder.CreateRet(Load);
 

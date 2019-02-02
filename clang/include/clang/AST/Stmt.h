@@ -986,37 +986,30 @@ public:
   struct EmptyShell {};
 
 protected:
-  /// Iterator for iterating over Stmt * arrays that contain only Expr *
+  /// Iterator for iterating over Stmt * arrays that contain only T *.
   ///
   /// This is needed because AST nodes use Stmt* arrays to store
   /// references to children (to be compatible with StmtIterator).
-  struct ExprIterator
-      : llvm::iterator_adaptor_base<ExprIterator, Stmt **,
-                                    std::random_access_iterator_tag, Expr *> {
-    ExprIterator() : iterator_adaptor_base(nullptr) {}
-    ExprIterator(Stmt **I) : iterator_adaptor_base(I) {}
+  template<typename T, typename TPtr = T *, typename StmtPtr = Stmt *>
+  struct CastIterator
+      : llvm::iterator_adaptor_base<CastIterator<T, TPtr, StmtPtr>, StmtPtr *,
+                                    std::random_access_iterator_tag, TPtr> {
+    using Base = typename CastIterator::iterator_adaptor_base;
 
-    reference operator*() const {
-      assert((*I)->getStmtClass() >= firstExprConstant &&
-             (*I)->getStmtClass() <= lastExprConstant);
-      return *reinterpret_cast<Expr **>(I);
+    CastIterator() : Base(nullptr) {}
+    CastIterator(StmtPtr *I) : Base(I) {}
+
+    typename Base::value_type operator*() const {
+      return cast<T>(*this->I);
     }
   };
 
-  /// Const iterator for iterating over Stmt * arrays that contain only Expr *
-  struct ConstExprIterator
-      : llvm::iterator_adaptor_base<ConstExprIterator, const Stmt *const *,
-                                    std::random_access_iterator_tag,
-                                    const Expr *const> {
-    ConstExprIterator() : iterator_adaptor_base(nullptr) {}
-    ConstExprIterator(const Stmt *const *I) : iterator_adaptor_base(I) {}
+  /// Const iterator for iterating over Stmt * arrays that contain only T *.
+  template <typename T>
+  using ConstCastIterator = CastIterator<T, const T *const, const Stmt *const>;
 
-    reference operator*() const {
-      assert((*I)->getStmtClass() >= firstExprConstant &&
-             (*I)->getStmtClass() <= lastExprConstant);
-      return *reinterpret_cast<const Expr *const *>(I);
-    }
-  };
+  using ExprIterator = CastIterator<Expr>;
+  using ConstExprIterator = ConstCastIterator<Expr>;
 
 private:
   /// Whether statistic collection is enabled.

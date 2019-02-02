@@ -50,7 +50,7 @@ template("unix_toolchain") {
         # Remove the output file first so that ar doesn't try to modify the
         # existing file.
         command =
-            "rm -f {{output}} && $ar rcsDT {{arflags}} {{output}} {{inputs}}"
+            "rm -f {{output}} && $ar rcsD {{arflags}} {{output}} {{inputs}}"
       }
       description = "AR {{output}}"
       outputs = [

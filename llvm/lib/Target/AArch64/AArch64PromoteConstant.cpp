@@ -493,7 +493,8 @@ void AArch64PromoteConstant::insertDefinitions(Function &F,
   for (const auto &IPI : InsertPts) {
     // Create the load of the global variable.
     IRBuilder<> Builder(IPI.first);
-    LoadInst *LoadedCst = Builder.CreateLoad(&PromotedGV);
+    LoadInst *LoadedCst =
+        Builder.CreateLoad(PromotedGV.getValueType(), &PromotedGV);
     LLVM_DEBUG(dbgs() << "**********\n");
     LLVM_DEBUG(dbgs() << "New def: ");
     LLVM_DEBUG(LoadedCst->print(dbgs()));

@@ -261,6 +261,17 @@ public:
     return getFrameIndexReference(MF, FI, FrameReg);
   }
 
+  /// getNonLocalFrameIndexReference - This method returns the offset used to
+  /// reference a frame index location. The offset can be from either FP/BP/SP
+  /// based on which base register is returned by llvm.localaddress.
+  virtual int getNonLocalFrameIndexReference(const MachineFunction &MF,
+                                       int FI) const {
+    // By default, dispatch to getFrameIndexReference. Interested targets can
+    // override this.
+    unsigned FrameReg;
+    return getFrameIndexReference(MF, FI, FrameReg);
+  }
+
   /// This method determines which of the registers reported by
   /// TargetRegisterInfo::getCalleeSavedRegs() should actually get saved.
   /// The default implementation checks populates the \p SavedRegs bitset with

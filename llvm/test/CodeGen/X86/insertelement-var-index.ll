@@ -203,15 +203,10 @@ define <2 x i64> @load_i64_v2i64(i64* %p, i32 %y) nounwind {
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: load_i64_v2i64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load_i64_v2i64:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq (%rdi), %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: load_i64_v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; AVX-NEXT:    retq
   %x = load i64, i64* %p
   %ins = insertelement <2 x i64> undef, i64 %x, i32 %y
   ret <2 x i64> %ins

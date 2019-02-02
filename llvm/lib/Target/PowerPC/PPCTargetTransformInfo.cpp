@@ -336,6 +336,7 @@ int PPCTTIImpl::vectorCostAdjustment(int Cost, unsigned Opcode, Type *Ty1,
   // double the cost at every step - only the last step.
   if (LT1.first != 1 || !LT1.second.isVector())
     return Cost;
+
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   if (TLI->isOperationExpand(ISD, LT1.second))
     return Cost;

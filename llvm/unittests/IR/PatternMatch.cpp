@@ -397,7 +397,7 @@ TEST_F(PatternMatchTest, LoadStoreOps) {
   //  store i32 42, i32* %0
 
   Value *Alloca = IRB.CreateAlloca(IRB.getInt32Ty());
-  Value *LoadInst = IRB.CreateLoad(Alloca);
+  Value *LoadInst = IRB.CreateLoad(IRB.getInt32Ty(), Alloca);
   Value *FourtyTwo = IRB.getInt32(42);
   Value *StoreInst = IRB.CreateStore(FourtyTwo, Alloca);
   Value *MatchLoad, *MatchStoreVal, *MatchStorePointer;

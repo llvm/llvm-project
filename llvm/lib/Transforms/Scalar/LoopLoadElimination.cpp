@@ -427,9 +427,9 @@ public:
     auto *PH = L->getLoopPreheader();
     Value *InitialPtr = SEE.expandCodeFor(PtrSCEV->getStart(), Ptr->getType(),
                                           PH->getTerminator());
-    Value *Initial =
-        new LoadInst(InitialPtr, "load_initial", /* isVolatile */ false,
-                     Cand.Load->getAlignment(), PH->getTerminator());
+    Value *Initial = new LoadInst(
+        Cand.Load->getType(), InitialPtr, "load_initial",
+        /* isVolatile */ false, Cand.Load->getAlignment(), PH->getTerminator());
 
     PHINode *PHI = PHINode::Create(Initial->getType(), 2, "store_forwarded",
                                    &L->getHeader()->front());

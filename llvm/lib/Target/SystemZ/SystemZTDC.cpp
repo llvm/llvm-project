@@ -355,8 +355,8 @@ bool SystemZTDCPass::runOnFunction(Function &F) {
       if (!Worthy)
         continue;
       // Call the intrinsic, compare result with 0.
-      Value *TDCFunc = Intrinsic::getDeclaration(&M, Intrinsic::s390_tdc,
-                                                 V->getType());
+      Function *TDCFunc =
+          Intrinsic::getDeclaration(&M, Intrinsic::s390_tdc, V->getType());
       IRBuilder<> IRB(I);
       Value *MaskVal = ConstantInt::get(Type::getInt64Ty(Ctx), Mask);
       Instruction *TDC = IRB.CreateCall(TDCFunc, {V, MaskVal});

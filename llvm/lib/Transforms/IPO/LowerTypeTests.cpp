@@ -618,7 +618,7 @@ Value *LowerTypeTestsModule::createBitSetTest(IRBuilder<> &B,
     }
 
     Value *ByteAddr = B.CreateGEP(Int8Ty, ByteArray, BitOffset);
-    Value *Byte = B.CreateLoad(ByteAddr);
+    Value *Byte = B.CreateLoad(Int8Ty, ByteAddr);
 
     Value *ByteAndMask =
         B.CreateAnd(Byte, ConstantExpr::getPtrToInt(TIL.BitMask, Int8Ty));

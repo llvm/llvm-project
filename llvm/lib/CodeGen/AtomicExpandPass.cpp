@@ -381,7 +381,7 @@ LoadInst *AtomicExpand::convertAtomicLoadToIntegerType(LoadInst *LI) {
                               Addr->getType()->getPointerAddressSpace());
   Value *NewAddr = Builder.CreateBitCast(Addr, PT);
 
-  auto *NewLI = Builder.CreateLoad(NewAddr);
+  auto *NewLI = Builder.CreateLoad(NewTy, NewAddr);
   NewLI->setAlignment(LI->getAlignment());
   NewLI->setVolatile(LI->isVolatile());
   NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
@@ -1769,8 +1769,8 @@ bool AtomicExpand::expandAtomicOpToLibcall(
     // from call}
     Type *FinalResultTy = I->getType();
     Value *V = UndefValue::get(FinalResultTy);
-    Value *ExpectedOut =
-        Builder.CreateAlignedLoad(AllocaCASExpected, AllocaAlignment);
+    Value *ExpectedOut = Builder.CreateAlignedLoad(
+        CASExpected->getType(), AllocaCASExpected, AllocaAlignment);
     Builder.CreateLifetimeEnd(AllocaCASExpected_i8, SizeVal64);
     V = Builder.CreateInsertValue(V, ExpectedOut, 0);
     V = Builder.CreateInsertValue(V, Result, 1);
@@ -1780,7 +1780,8 @@ bool AtomicExpand::expandAtomicOpToLibcall(
     if (UseSizedLibcall)
       V = Builder.CreateBitOrPointerCast(Result, I->getType());
     else {
-      V = Builder.CreateAlignedLoad(AllocaResult, AllocaAlignment);
+      V = Builder.CreateAlignedLoad(I->getType(), AllocaResult,
+                                    AllocaAlignment);
       Builder.CreateLifetimeEnd(AllocaResult_i8, SizeVal64);
     }
     I->replaceAllUsesWith(V);

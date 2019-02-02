@@ -322,7 +322,7 @@ static Value *getStackGuard(const TargetLoweringBase *TLI, Module *M,
                             IRBuilder<> &B,
                             bool *SupportsSelectionDAGSP = nullptr) {
   if (Value *Guard = TLI->getIRStackGuard(B))
-    return B.CreateLoad(Guard, true, "StackGuard");
+    return B.CreateLoad(B.getInt8PtrTy(), Guard, true, "StackGuard");
 
   // Use SelectionDAG SSP handling, since there isn't an IR guard.
   //
@@ -413,15 +413,14 @@ bool StackProtector::InsertStackProtectors() {
     // Generate epilogue instrumentation. The epilogue intrumentation can be
     // function-based or inlined depending on which mechanism the target is
     // providing.
-    if (Value* GuardCheck = TLI->getSSPStackGuardCheck(*M)) {
+    if (Function *GuardCheck = TLI->getSSPStackGuardCheck(*M)) {
       // Generate the function-based epilogue instrumentation.
       // The target provides a guard check function, generate a call to it.
       IRBuilder<> B(RI);
-      LoadInst *Guard = B.CreateLoad(AI, true, "Guard");
+      LoadInst *Guard = B.CreateLoad(B.getInt8PtrTy(), AI, true, "Guard");
       CallInst *Call = B.CreateCall(GuardCheck, {Guard});
-      llvm::Function *Function = cast<llvm::Function>(GuardCheck);
-      Call->setAttributes(Function->getAttributes());
-      Call->setCallingConv(Function->getCallingConv());
+      Call->setAttributes(GuardCheck->getAttributes());
+      Call->setCallingConv(GuardCheck->getCallingConv());
     } else {
       // Generate the epilogue with inline instrumentation.
       // If we do not support SelectionDAG based tail calls, generate IR level
@@ -473,7 +472,7 @@ bool StackProtector::InsertStackProtectors() {
       // Generate the stack protector instructions in the old basic block.
       IRBuilder<> B(BB);
       Value *Guard = getStackGuard(TLI, M, B);
-      LoadInst *LI2 = B.CreateLoad(AI, true);
+      LoadInst *LI2 = B.CreateLoad(B.getInt8PtrTy(), AI, true);
       Value *Cmp = B.CreateICmpEQ(Guard, LI2);
       auto SuccessProb =
           BranchProbabilityInfo::getBranchProbStackProtector(true);

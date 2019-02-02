@@ -938,7 +938,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
       NewCS = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
                                  Args, OpBundles, "", Call->getParent());
     } else {
-      NewCS = CallInst::Create(NF, Args, OpBundles, "", Call);
+      NewCS = CallInst::Create(NFTy, NF, Args, OpBundles, "", Call);
       cast<CallInst>(NewCS.getInstruction())
           ->setTailCallKind(cast<CallInst>(Call)->getTailCallKind());
     }

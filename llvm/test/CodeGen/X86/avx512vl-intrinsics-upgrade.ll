@@ -3910,8 +3910,9 @@ define <2 x i64> @test_mask_andnot_epi64_rmb_128(<2 x i64> %a, i64* %ptr_b) {
 ; X86-LABEL: test_mask_andnot_epi64_rmb_128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    vpbroadcastq (%eax), %xmm1 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x59,0x08]
-; X86-NEXT:    vpandn %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdf,0xc1]
+; X86-NEXT:    vmovddup (%eax), %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x12,0x08]
+; X86-NEXT:    # xmm1 = mem[0,0]
+; X86-NEXT:    vandnps %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xf8,0x55,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_mask_andnot_epi64_rmb_128:

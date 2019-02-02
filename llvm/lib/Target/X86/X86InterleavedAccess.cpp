@@ -193,7 +193,7 @@ void X86InterleavedAccessGroup::decompose(
 
   // Decompose the load instruction.
   LoadInst *LI = cast<LoadInst>(VecInst);
-  Type *VecBasePtrTy = SubVecTy->getPointerTo(LI->getPointerAddressSpace());
+  Type *VecBaseTy, *VecBasePtrTy;
   Value *VecBasePtr;
   unsigned int NumLoads = NumSubVectors;
   // In the case of stride 3 with a vector of 32 elements load the information
@@ -201,18 +201,22 @@ void X86InterleavedAccessGroup::decompose(
   // [0,1...,VF/2-1,VF/2+VF,VF/2+VF+1,...,2VF-1]
   unsigned VecLength = DL.getTypeSizeInBits(VecWidth);
   if (VecLength == 768 || VecLength == 1536) {
-    Type *VecTran =
-        VectorType::get(Type::getInt8Ty(LI->getContext()), 16)->getPointerTo();
-    VecBasePtr = Builder.CreateBitCast(LI->getPointerOperand(), VecTran);
-    NumLoads = NumSubVectors * (VecLength / 384);
-  } else
+    VecBaseTy = VectorType::get(Type::getInt8Ty(LI->getContext()), 16);
+    VecBasePtrTy = VecBaseTy->getPointerTo(LI->getPointerAddressSpace());
     VecBasePtr = Builder.CreateBitCast(LI->getPointerOperand(), VecBasePtrTy);
+    NumLoads = NumSubVectors * (VecLength / 384);
+  } else {
+    VecBaseTy = SubVecTy;
+    VecBasePtrTy = VecBaseTy->getPointerTo(LI->getPointerAddressSpace());
+    VecBasePtr = Builder.CreateBitCast(LI->getPointerOperand(), VecBasePtrTy);
+  }
   // Generate N loads of T type.
   for (unsigned i = 0; i < NumLoads; i++) {
     // TODO: Support inbounds GEP.
-    Value *NewBasePtr = Builder.CreateGEP(VecBasePtr, Builder.getInt32(i));
+    Value *NewBasePtr =
+        Builder.CreateGEP(VecBaseTy, VecBasePtr, Builder.getInt32(i));
     Instruction *NewLoad =
-        Builder.CreateAlignedLoad(NewBasePtr, LI->getAlignment());
+        Builder.CreateAlignedLoad(VecBaseTy, NewBasePtr, LI->getAlignment());
     DecomposedVectors.push_back(NewLoad);
   }
 }

@@ -937,11 +937,7 @@ void WinException::emitEHRegistrationOffsetLabel(const WinEHFuncInfo &FuncInfo,
   int FI = FuncInfo.EHRegNodeFrameIndex;
   if (FI != INT_MAX) {
     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
-    unsigned UnusedReg;
-    // FIXME: getFrameIndexReference needs to match the behavior of
-    // AArch64RegisterInfo::hasBasePointer in which one of the scenarios where
-    // SP is used is if frame size >= 256.
-    Offset = TFI->getFrameIndexReference(*Asm->MF, FI, UnusedReg);
+    Offset = TFI->getNonLocalFrameIndexReference(*Asm->MF, FI);
   }
 
   MCContext &Ctx = Asm->OutContext;

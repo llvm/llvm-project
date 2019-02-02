@@ -237,11 +237,11 @@ void makeStub(Function &F, Value &ImplPointer) {
   Module &M = *F.getParent();
   BasicBlock *EntryBlock = BasicBlock::Create(M.getContext(), "entry", &F);
   IRBuilder<> Builder(EntryBlock);
-  LoadInst *ImplAddr = Builder.CreateLoad(&ImplPointer);
+  LoadInst *ImplAddr = Builder.CreateLoad(F.getType(), &ImplPointer);
   std::vector<Value*> CallArgs;
   for (auto &A : F.args())
     CallArgs.push_back(&A);
-  CallInst *Call = Builder.CreateCall(ImplAddr, CallArgs);
+  CallInst *Call = Builder.CreateCall(F.getFunctionType(), ImplAddr, CallArgs);
   Call->setTailCall();
   Call->setAttributes(F.getAttributes());
   if (F.getReturnType()->isVoidTy())

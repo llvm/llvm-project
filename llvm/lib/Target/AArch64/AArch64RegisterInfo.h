@@ -121,6 +121,8 @@ public:
   bool trackLivenessAfterRegAlloc(const MachineFunction&) const override {
     return true;
   }
+
+  unsigned getLocalAddressRegister(const MachineFunction &MF) const;
 };
 
 } // end namespace llvm

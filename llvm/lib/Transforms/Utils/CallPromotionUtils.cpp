@@ -366,8 +366,9 @@ Instruction *llvm::promoteCall(CallSite CS, Function *Callee,
                                CastInst **RetBitCast) {
   assert(!CS.getCalledFunction() && "Only indirect call sites can be promoted");
 
-  // Set the called function of the call site to be the given callee.
-  CS.setCalledFunction(Callee);
+  // Set the called function of the call site to be the given callee (but don't
+  // change the type).
+  cast<CallBase>(CS.getInstruction())->setCalledOperand(Callee);
 
   // Since the call site will no longer be direct, we must clear metadata that
   // is only appropriate for indirect calls. This includes !prof and !callees

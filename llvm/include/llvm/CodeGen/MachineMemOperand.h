@@ -266,13 +266,13 @@ public:
   bool isAtomic() const { return getOrdering() != AtomicOrdering::NotAtomic; }
 
   /// Returns true if this memory operation doesn't have any ordering
-  /// constraints other than normal aliasing. Volatile and atomic memory
-  /// operations can't be reordered.
-  ///
-  /// Currently, we don't model the difference between volatile and atomic
-  /// operations. They should retain their ordering relative to all memory
-  /// operations.
-  bool isUnordered() const { return !isVolatile(); }
+  /// constraints other than normal aliasing. Volatile and (ordered) atomic
+  /// memory operations can't be reordered. 
+  bool isUnordered() const {
+    return (getOrdering() == AtomicOrdering::NotAtomic ||
+            getOrdering() == AtomicOrdering::Unordered) &&
+           !isVolatile();
+  }
 
   /// Update this MachineMemOperand to reflect the alignment of MMO, if it has a
   /// greater alignment. This must only be used when the new alignment applies

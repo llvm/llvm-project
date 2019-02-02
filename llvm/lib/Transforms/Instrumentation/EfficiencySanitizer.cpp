@@ -790,7 +790,7 @@ bool EfficiencySanitizer::insertCounterUpdate(Instruction *I,
     ConstantExpr::getGetElementPtr(
         ArrayType::get(IRB.getInt64Ty(), getStructCounterSize(StructTy)),
         CounterArray, Indices);
-  Value *Load = IRB.CreateLoad(Counter);
+  Value *Load = IRB.CreateLoad(IRB.getInt64Ty(), Counter);
   IRB.CreateStore(IRB.CreateAdd(Load, ConstantInt::get(IRB.getInt64Ty(), 1)),
                   Counter);
   return true;
@@ -875,7 +875,8 @@ bool EfficiencySanitizer::instrumentFastpathWorkingSet(
   // memory access, if they are not already set.
   Value *ValueMask = ConstantInt::get(ShadowTy, 0x81); // 10000001B
 
-  Value *OldValue = IRB.CreateLoad(IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy));
+  Value *OldValue =
+      IRB.CreateLoad(ShadowTy, IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy));
   // The AND and CMP will be turned into a TEST instruction by the compiler.
   Value *Cmp = IRB.CreateICmpNE(IRB.CreateAnd(OldValue, ValueMask), ValueMask);
   Instruction *CmpTerm = SplitBlockAndInsertIfThen(Cmp, I, false);

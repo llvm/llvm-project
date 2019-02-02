@@ -52,7 +52,8 @@ static bool runImpl(Function &F) {
       II->getOperandBundlesAsDefs(OpBundles);
       // Insert a normal call instruction...
       CallInst *NewCall =
-          CallInst::Create(II->getCalledValue(), CallArgs, OpBundles, "", II);
+          CallInst::Create(II->getFunctionType(), II->getCalledValue(),
+                           CallArgs, OpBundles, "", II);
       NewCall->takeName(II);
       NewCall->setCallingConv(II->getCallingConv());
       NewCall->setAttributes(II->getAttributes());

@@ -308,8 +308,7 @@ static llvm::Type *getTypeForFormat(llvm::LLVMContext &VMContext,
   llvm_unreachable("Unknown float format!");
 }
 
-llvm::Type *CodeGenTypes::ConvertFunctionType(QualType QFT,
-                                              const FunctionDecl *FD) {
+llvm::Type *CodeGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
   assert(QFT.isCanonical());
   const Type *Ty = QFT.getTypePtr();
   const FunctionType *FT = cast<FunctionType>(QFT.getTypePtr());
@@ -347,7 +346,7 @@ llvm::Type *CodeGenTypes::ConvertFunctionType(QualType QFT,
   const CGFunctionInfo *FI;
   if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(FT)) {
     FI = &arrangeFreeFunctionType(
-        CanQual<FunctionProtoType>::CreateUnsafe(QualType(FPT, 0)), FD);
+        CanQual<FunctionProtoType>::CreateUnsafe(QualType(FPT, 0)));
   } else {
     const FunctionNoProtoType *FNPT = cast<FunctionNoProtoType>(FT);
     FI = &arrangeFreeFunctionType(
@@ -596,7 +595,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   }
   case Type::FunctionNoProto:
   case Type::FunctionProto:
-    ResultType = ConvertFunctionType(T);
+    ResultType = ConvertFunctionTypeInternal(T);
     break;
   case Type::ObjCObject:
     ResultType = ConvertType(cast<ObjCObjectType>(Ty)->getBaseType());

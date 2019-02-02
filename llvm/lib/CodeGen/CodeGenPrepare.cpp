@@ -1177,7 +1177,7 @@ static bool CombineUAddWithOverflow(CmpInst *CI) {
 #endif
 
   Module *M = CI->getModule();
-  Value *F = Intrinsic::getDeclaration(M, Intrinsic::uadd_with_overflow, Ty);
+  Function *F = Intrinsic::getDeclaration(M, Intrinsic::uadd_with_overflow, Ty);
 
   auto *InsertPt = AddI->hasOneUse() ? CI : AddI;
 
