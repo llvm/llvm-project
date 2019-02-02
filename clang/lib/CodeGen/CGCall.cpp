@@ -167,11 +167,9 @@ static void appendParameterTypes(const CodeGenTypes &CGT,
 static const CGFunctionInfo &
 arrangeLLVMFunctionInfo(CodeGenTypes &CGT, bool instanceMethod,
                         SmallVectorImpl<CanQualType> &prefix,
-                        CanQual<FunctionProtoType> FTP,
-                        const FunctionDecl *FD) {
+                        CanQual<FunctionProtoType> FTP) {
   SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
-  RequiredArgs Required =
-      RequiredArgs::forPrototypePlus(FTP, prefix.size(), FD);
+  RequiredArgs Required = RequiredArgs::forPrototypePlus(FTP, prefix.size());
   // FIXME: Kill copy.
   appendParameterTypes(CGT, prefix, paramInfos, FTP);
   CanQualType resultType = FTP->getReturnType().getUnqualifiedType();
@@ -185,11 +183,10 @@ arrangeLLVMFunctionInfo(CodeGenTypes &CGT, bool instanceMethod,
 /// Arrange the argument and result information for a value of the
 /// given freestanding function type.
 const CGFunctionInfo &
-CodeGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP,
-                                      const FunctionDecl *FD) {
+CodeGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
   SmallVector<CanQualType, 16> argTypes;
   return ::arrangeLLVMFunctionInfo(*this, /*instanceMethod=*/false, argTypes,
-                                   FTP, FD);
+                                   FTP);
 }
 
 static CallingConv getCallingConventionForDecl(const Decl *D, bool IsWindows) {
@@ -256,7 +253,7 @@ CodeGenTypes::arrangeCXXMethodType(const CXXRecordDecl *RD,
 
   return ::arrangeLLVMFunctionInfo(
       *this, true, argTypes,
-      FTP->getCanonicalTypeUnqualified().getAs<FunctionProtoType>(), MD);
+      FTP->getCanonicalTypeUnqualified().getAs<FunctionProtoType>());
 }
 
 /// Set calling convention for CUDA/HIP kernel.
@@ -288,7 +285,7 @@ CodeGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *MD) {
     return arrangeCXXMethodType(ThisType, prototype.getTypePtr(), MD);
   }
 
-  return arrangeFreeFunctionType(prototype, MD);
+  return arrangeFreeFunctionType(prototype);
 }
 
 bool CodeGenTypes::inheritingCtorHasParams(
@@ -407,7 +404,7 @@ CodeGenTypes::arrangeCXXConstructorCall(const CallArgList &args,
 
   CanQual<FunctionProtoType> FPT = GetFormalType(D);
   RequiredArgs Required =
-      RequiredArgs::forPrototypePlus(FPT, TotalPrefixArgs + ExtraSuffixArgs, D);
+      RequiredArgs::forPrototypePlus(FPT, TotalPrefixArgs + ExtraSuffixArgs);
   GlobalDecl GD(D, CtorKind);
   CanQualType ResultType = TheCXXABI.HasThisReturn(GD)
                                ? ArgTypes.front()
@@ -450,7 +447,7 @@ CodeGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
         /*chainCall=*/false, None, noProto->getExtInfo(), {},RequiredArgs::All);
   }
 
-  return arrangeFreeFunctionType(FTy.castAs<FunctionProtoType>(), FD);
+  return arrangeFreeFunctionType(FTy.castAs<FunctionProtoType>());
 }
 
 /// Arrange the argument and result information for the declaration or
@@ -633,11 +630,10 @@ CodeGenTypes::arrangeBlockFunctionDeclaration(const FunctionProtoType *proto,
   auto paramInfos = getExtParameterInfosForCall(proto, 1, params.size());
   auto argTypes = getArgTypesForDeclaration(Context, params);
 
-  return arrangeLLVMFunctionInfo(
-      GetReturnType(proto->getReturnType()),
-      /*instanceMethod*/ false, /*chainCall*/ false, argTypes,
-      proto->getExtInfo(), paramInfos,
-      RequiredArgs::forPrototypePlus(proto, 1, nullptr));
+  return arrangeLLVMFunctionInfo(GetReturnType(proto->getReturnType()),
+                                 /*instanceMethod*/ false, /*chainCall*/ false,
+                                 argTypes, proto->getExtInfo(), paramInfos,
+                                 RequiredArgs::forPrototypePlus(proto, 1));
 }
 
 const CGFunctionInfo &
@@ -4398,8 +4394,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
     // Strip away the noreturn attribute to better diagnose unreachable UB.
     if (SanOpts.has(SanitizerKind::Unreachable)) {
-      // Also remove from function since CI->hasFnAttr(..) also checks attributes
-      // of the called function.
+      // Also remove from function since CallBase::hasFnAttr additionally checks
+      // attributes of the called function.
       if (auto *F = CI->getCalledFunction())
         F->removeFnAttr(llvm::Attribute::NoReturn);
       CI->removeAttribute(llvm::AttributeList::FunctionIndex,

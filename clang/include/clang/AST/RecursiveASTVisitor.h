@@ -1590,7 +1590,7 @@ DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
     TRY_TO(TraverseStmt(I));
   }
  })
- 
+
 DEF_TRAVERSE_DECL(OMPRequiresDecl, {
   for (auto *C : D->clauselists()) {
     TRY_TO(TraverseOMPClause(C));
@@ -1601,6 +1601,13 @@ DEF_TRAVERSE_DECL(OMPDeclareReductionDecl, {
   TRY_TO(TraverseStmt(D->getCombiner()));
   if (auto *Initializer = D->getInitializer())
     TRY_TO(TraverseStmt(Initializer));
+  TRY_TO(TraverseType(D->getType()));
+  return true;
+})
+
+DEF_TRAVERSE_DECL(OMPDeclareMapperDecl, {
+  for (auto *C : D->clauselists())
+    TRY_TO(TraverseOMPClause(C));
   TRY_TO(TraverseType(D->getType()));
   return true;
 })

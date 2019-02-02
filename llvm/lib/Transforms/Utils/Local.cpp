@@ -1936,8 +1936,8 @@ static void changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr) {
   SmallVector<Value*, 8> Args(II->arg_begin(), II->arg_end());
   SmallVector<OperandBundleDef, 1> OpBundles;
   II->getOperandBundlesAsDefs(OpBundles);
-  CallInst *NewCall = CallInst::Create(II->getCalledValue(), Args, OpBundles,
-                                       "", II);
+  CallInst *NewCall = CallInst::Create(
+      II->getFunctionType(), II->getCalledValue(), Args, OpBundles, "", II);
   NewCall->takeName(II);
   NewCall->setCallingConv(II->getCallingConv());
   NewCall->setAttributes(II->getAttributes());
@@ -1980,8 +1980,9 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
   // can potentially be avoided with a cleverer API design that we do not have
   // as of this time.
 
-  InvokeInst *II = InvokeInst::Create(CI->getCalledValue(), Split, UnwindEdge,
-                                      InvokeArgs, OpBundles, CI->getName(), BB);
+  InvokeInst *II =
+      InvokeInst::Create(CI->getFunctionType(), CI->getCalledValue(), Split,
+                         UnwindEdge, InvokeArgs, OpBundles, CI->getName(), BB);
   II->setDebugLoc(CI->getDebugLoc());
   II->setCallingConv(CI->getCallingConv());
   II->setAttributes(CI->getAttributes());

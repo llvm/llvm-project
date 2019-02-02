@@ -93,7 +93,7 @@ static BasicBlock *createResumeEntryBlock(Function &F, coro::Shape &Shape) {
   auto *FrameTy = Shape.FrameTy;
   auto *GepIndex = Builder.CreateConstInBoundsGEP2_32(
       FrameTy, FramePtr, 0, coro::Shape::IndexField, "index.addr");
-  auto *Index = Builder.CreateLoad(GepIndex, "index");
+  auto *Index = Builder.CreateLoad(Shape.getIndexType(), GepIndex, "index");
   auto *Switch =
       Builder.CreateSwitch(Index, UnreachBB, Shape.CoroSuspends.size());
   Shape.ResumeSwitch = Switch;
@@ -229,7 +229,8 @@ static void handleFinalSuspend(IRBuilder<> &Builder, Value *FramePtr,
     Builder.SetInsertPoint(OldSwitchBB->getTerminator());
     auto *GepIndex = Builder.CreateConstInBoundsGEP2_32(Shape.FrameTy, FramePtr,
                                                         0, 0, "ResumeFn.addr");
-    auto *Load = Builder.CreateLoad(GepIndex);
+    auto *Load = Builder.CreateLoad(
+        Shape.FrameTy->getElementType(coro::Shape::ResumeField), GepIndex);
     auto *NullPtr =
         ConstantPointerNull::get(cast<PointerType>(Load->getType()));
     auto *Cond = Builder.CreateICmpEQ(Load, NullPtr);
@@ -827,6 +828,7 @@ static void splitCoroutine(Function &F, CallGraph &CG, CallGraphSCC &SCC) {
 // split.
 static void prepareForSplit(Function &F, CallGraph &CG) {
   Module &M = *F.getParent();
+  LLVMContext &Context = F.getContext();
 #ifndef NDEBUG
   Function *DevirtFn = M.getFunction(CORO_DEVIRT_TRIGGER_FN);
   assert(DevirtFn && "coro.devirt.trigger function not found");
@@ -841,10 +843,12 @@ static void prepareForSplit(Function &F, CallGraph &CG) {
   //    call void %1(i8* null)
   coro::LowererBase Lowerer(M);
   Instruction *InsertPt = F.getEntryBlock().getTerminator();
-  auto *Null = ConstantPointerNull::get(Type::getInt8PtrTy(F.getContext()));
+  auto *Null = ConstantPointerNull::get(Type::getInt8PtrTy(Context));
   auto *DevirtFnAddr =
       Lowerer.makeSubFnCall(Null, CoroSubFnInst::RestartTrigger, InsertPt);
-  auto *IndirectCall = CallInst::Create(DevirtFnAddr, Null, "", InsertPt);
+  FunctionType *FnTy = FunctionType::get(Type::getVoidTy(Context),
+                                         {Type::getInt8PtrTy(Context)}, false);
+  auto *IndirectCall = CallInst::Create(FnTy, DevirtFnAddr, Null, "", InsertPt);
 
   // Update CG graph with an indirect call we just added.
   CG[&F]->addCalledFunction(IndirectCall, CG.getCallsExternalNode());

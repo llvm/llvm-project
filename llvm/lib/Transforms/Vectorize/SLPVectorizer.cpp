@@ -3136,7 +3136,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Builder.SetInsertPoint(LI);
         PointerType *PtrTy = PointerType::get(VecTy, LI->getPointerAddressSpace());
         Value *Ptr = Builder.CreateBitCast(LI->getOperand(0), PtrTy);
-        LoadInst *V = Builder.CreateAlignedLoad(Ptr, LI->getAlignment());
+        LoadInst *V = Builder.CreateAlignedLoad(VecTy, Ptr, LI->getAlignment());
         Value *NewV = propagateMetadata(V, E->Scalars);
         if (!E->ReorderIndices.empty()) {
           OrdersType Mask;
@@ -3341,7 +3341,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         ExternalUses.push_back(ExternalUser(PO, cast<User>(VecPtr), 0));
 
       unsigned Alignment = LI->getAlignment();
-      LI = Builder.CreateLoad(VecPtr);
+      LI = Builder.CreateLoad(VecTy, VecPtr);
       if (!Alignment) {
         Alignment = DL->getABITypeAlignment(ScalarLoadTy);
       }

@@ -463,14 +463,15 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     return;
   }
 
-  // Modify MI as necessary to handle as much of 'Offset' as possible
-  Offset = TFI->resolveFrameIndexReference(MF, FrameIndex, FrameReg);
-
   if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE) {
     MachineOperand &FI = MI.getOperand(FIOperandNum);
+    Offset = TFI->getNonLocalFrameIndexReference(MF, FrameIndex);
     FI.ChangeToImmediate(Offset);
     return;
   }
+
+  // Modify MI as necessary to handle as much of 'Offset' as possible
+  Offset = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg);
 
   if (rewriteAArch64FrameIndex(MI, FIOperandNum, FrameReg, Offset, TII))
     return;
@@ -524,4 +525,14 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   case AArch64::FPR128_loRegClassID:
     return 16;
   }
+}
+
+unsigned AArch64RegisterInfo::getLocalAddressRegister(
+  const MachineFunction &MF) const {
+  const auto &MFI = MF.getFrameInfo();
+  if (!MF.hasEHFunclets() && !MFI.hasVarSizedObjects())
+    return AArch64::SP;
+  else if (needsStackRealignment(MF))
+    return getBaseRegister();
+  return getFrameRegister(MF);
 }

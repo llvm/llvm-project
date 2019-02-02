@@ -100,10 +100,9 @@ TEST(BasicBlockTest, TestInstructionsWithoutDebug) {
   Argument *V = new Argument(Type::getInt32Ty(Ctx));
   Function *F = Function::Create(FT, Function::ExternalLinkage, "", M);
 
-  Value *DbgAddr = Intrinsic::getDeclaration(M, Intrinsic::dbg_addr);
-  Value *DbgDeclare =
-      Intrinsic::getDeclaration(M, Intrinsic::dbg_declare);
-  Value *DbgValue = Intrinsic::getDeclaration(M, Intrinsic::dbg_value);
+  Function *DbgAddr = Intrinsic::getDeclaration(M, Intrinsic::dbg_addr);
+  Function *DbgDeclare = Intrinsic::getDeclaration(M, Intrinsic::dbg_declare);
+  Function *DbgValue = Intrinsic::getDeclaration(M, Intrinsic::dbg_value);
   Value *DIV = MetadataAsValue::get(Ctx, (Metadata *)nullptr);
   SmallVector<Value *, 3> Args = {DIV, DIV, DIV};
 

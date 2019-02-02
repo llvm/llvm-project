@@ -174,7 +174,7 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   auto *Addr = ConstantPointerNull::get(PtrType);
 
   auto *Store1 = new StoreInst(Value, Addr, BB);
-  auto *Load1 = new LoadInst(Addr, "load", BB);
+  auto *Load1 = new LoadInst(IntType, Addr, "load", BB);
   auto *Add1 = BinaryOperator::CreateAdd(Value, Value, "add", BB);
   auto *VAArg1 = new VAArgInst(Addr, PtrType, "vaarg", BB);
   auto *CmpXChg1 = new AtomicCmpXchgInst(

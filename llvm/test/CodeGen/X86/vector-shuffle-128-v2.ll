@@ -20,12 +20,12 @@ define <2 x i64> @shuffle_v2i64_00(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX2-LABEL: shuffle_v2i64_00:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: shuffle_v2i64_00:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX512VL-NEXT:    retq
   %shuffle = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 0, i32 0>
   ret <2 x i64> %shuffle
@@ -69,12 +69,12 @@ define <2 x i64> @shuffle_v2i64_22(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; AVX2-LABEL: shuffle_v2i64_22:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq %xmm1, %xmm0
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = xmm1[0,0]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: shuffle_v2i64_22:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpbroadcastq %xmm1, %xmm0
+; AVX512VL-NEXT:    vmovddup {{.*#+}} xmm0 = xmm1[0,0]
 ; AVX512VL-NEXT:    retq
   %shuffle = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 2, i32 2>
   ret <2 x i64> %shuffle
@@ -1264,20 +1264,10 @@ define <2 x i64> @insert_dup_mem_v2i64(i64* %ptr) {
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: insert_dup_mem_v2i64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: insert_dup_mem_v2i64:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq (%rdi), %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: insert_dup_mem_v2i64:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpbroadcastq (%rdi), %xmm0
-; AVX512VL-NEXT:    retq
+; AVX-LABEL: insert_dup_mem_v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; AVX-NEXT:    retq
   %tmp = load i64, i64* %ptr, align 1
   %tmp1 = insertelement <2 x i64> undef, i64 %tmp, i32 0
   %tmp2 = shufflevector <2 x i64> %tmp1, <2 x i64> undef, <2 x i32> zeroinitializer

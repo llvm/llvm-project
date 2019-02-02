@@ -189,12 +189,12 @@ define <2 x i64> @Q64(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: Q64:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vpbroadcastq (%eax), %xmm0
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: Q64:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vpbroadcastq (%rdi), %xmm0
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
   %q = load i64, i64* %ptr, align 4
@@ -233,7 +233,7 @@ define <8 x i16> @broadcast_mem_v4i16_v8i16(<4 x i16>* %ptr) {
 ;
 ; X64-LABEL: broadcast_mem_v4i16_v8i16:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vpbroadcastq (%rdi), %xmm0
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
   %load = load <4 x i16>, <4 x i16>* %ptr
   %shuf = shufflevector <4 x i16> %load, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -471,7 +471,7 @@ define <2 x i64> @load_splat_2i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable re
 ;
 ; X64-LABEL: load_splat_2i64_2i64_1111:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vpbroadcastq 8(%rdi), %xmm0
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
   %ld = load <2 x i64>, <2 x i64>* %ptr
@@ -865,12 +865,12 @@ define   <4 x i64> @_inreg4xi64(<4 x i64> %a) {
 define   <2 x i64> @_inreg2xi64(<2 x i64> %a) {
 ; X32-LABEL: _inreg2xi64:
 ; X32:       ## %bb.0:
-; X32-NEXT:    vpbroadcastq %xmm0, %xmm0
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: _inreg2xi64:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vpbroadcastq %xmm0, %xmm0
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; X64-NEXT:    retq
   %b = shufflevector <2 x i64> %a, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %b
@@ -1327,9 +1327,9 @@ define void @isel_crash_2q(i64* %cV_R.addr) {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    vmovaps %xmm0, (%esp)
-; X32-NEXT:    vpbroadcastq (%eax), %xmm1
+; X32-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
 ; X32-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%esp)
-; X32-NEXT:    vmovdqa %xmm1, {{[0-9]+}}(%esp)
+; X32-NEXT:    vmovaps %xmm1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    addl $60, %esp
 ; X32-NEXT:    retl
 ;
@@ -1337,9 +1337,9 @@ define void @isel_crash_2q(i64* %cV_R.addr) {
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    vpbroadcastq (%rdi), %xmm1
+; X64-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    vmovdqa %xmm1, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
 entry:
   %__a.addr.i = alloca <2 x i64>, align 16

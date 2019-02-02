@@ -1357,12 +1357,12 @@ bool AMDGPULibCalls::fold_sincos(CallInst *CI, IRBuilder<> &B,
   if (!isSin) { // CI->cos, UI->sin
     B.SetInsertPoint(&*ItOld);
     UI->replaceAllUsesWith(&*Call);
-    Instruction *Reload = B.CreateLoad(Alloc);
+    Instruction *Reload = B.CreateLoad(Alloc->getAllocatedType(), Alloc);
     CI->replaceAllUsesWith(Reload);
     UI->eraseFromParent();
     CI->eraseFromParent();
   } else { // CI->sin, UI->cos
-    Instruction *Reload = B.CreateLoad(Alloc);
+    Instruction *Reload = B.CreateLoad(Alloc->getAllocatedType(), Alloc);
     UI->replaceAllUsesWith(Reload);
     CI->replaceAllUsesWith(Call);
     UI->eraseFromParent();

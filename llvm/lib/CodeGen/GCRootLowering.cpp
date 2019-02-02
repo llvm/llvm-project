@@ -213,7 +213,7 @@ bool LowerIntrinsics::DoLowering(Function &F, GCStrategy &S) {
       }
       case Intrinsic::gcread: {
         // Replace a read barrier with a simple load.
-        Value *Ld = new LoadInst(CI->getArgOperand(1), "", CI);
+        Value *Ld = new LoadInst(CI->getType(), CI->getArgOperand(1), "", CI);
         Ld->takeName(CI);
         CI->replaceAllUsesWith(Ld);
         CI->eraseFromParent();

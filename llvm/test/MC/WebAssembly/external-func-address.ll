@@ -8,7 +8,7 @@ target triple = "wasm32-unknown-unknown"
 declare void @f0(i32) #0
 @ptr_to_f0 = hidden global void (i32)* @f0, align 4
 
-attributes #0 = { "wasm-import-module"="somewhere" }
+attributes #0 = { "wasm-import-module"="somewhere" "wasm-import-name"="something" }
 
 declare void @f1(i32) #1
 @ptr_to_f1 = hidden global void (i32)* @f1, align 4
@@ -47,7 +47,7 @@ define void @call(i32) {
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         SigIndex:        1
 ; CHECK:            - Module:          somewhere
-; CHECK-NEXT:         Field:           f0
+; CHECK-NEXT:         Field:           something
 ; CHECK:            - Module:          env
 ; CHECK-NEXT:         Field:           f1
 ; CHECK-NEXT:         Kind:            FUNCTION

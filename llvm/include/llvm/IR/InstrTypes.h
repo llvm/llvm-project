@@ -27,6 +27,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/OperandTraits.h"
@@ -1226,10 +1227,8 @@ public:
   void setCalledOperand(Value *V) { Op<CalledOperandOpEndIdx>() = V; }
 
   /// Sets the function called, including updating the function type.
-  void setCalledFunction(Value *Fn) {
-    setCalledFunction(
-        cast<FunctionType>(cast<PointerType>(Fn->getType())->getElementType()),
-        Fn);
+  void setCalledFunction(Function *Fn) {
+    setCalledFunction(Fn->getFunctionType(), Fn);
   }
 
   /// Sets the function called, including updating the function type.
@@ -1243,6 +1242,9 @@ public:
     this->FTy = FTy;
     assert(FTy == cast<FunctionType>(
                       cast<PointerType>(Fn->getType())->getElementType()));
+    // This function doesn't mutate the return type, only the function
+    // type. Seems broken, but I'm just gonna stick an assert in for now.
+    assert(getType() == FTy->getReturnType());
     setCalledOperand(Fn);
   }
 

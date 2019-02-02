@@ -211,10 +211,10 @@ TEST_F(MCJITMultipleModuleTest, two_module_global_variables_case) {
   GVB = insertGlobalInt32(B.get(), "GVB", initialNum);
   FA = startFunction(A.get(),
                      FunctionType::get(Builder.getInt32Ty(), {}, false), "FA");
-  endFunctionWithRet(FA, Builder.CreateLoad(GVA));
+  endFunctionWithRet(FA, Builder.CreateLoad(Builder.getInt32Ty(), GVA));
   FB = startFunction(B.get(),
                      FunctionType::get(Builder.getInt32Ty(), {}, false), "FB");
-  endFunctionWithRet(FB, Builder.CreateLoad(GVB));
+  endFunctionWithRet(FB, Builder.CreateLoad(Builder.getInt32Ty(), GVB));
 
   GVC = insertGlobalInt32(B.get(), "GVC", initialNum);
   GVC->setLinkage(GlobalValue::InternalLinkage);

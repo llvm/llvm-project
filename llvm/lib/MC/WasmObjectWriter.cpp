@@ -1167,8 +1167,8 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
   MCSymbolWasm *MemorySym =
       cast<MCSymbolWasm>(Ctx.getOrCreateSymbol("__linear_memory"));
   wasm::WasmImport MemImport;
-  MemImport.Module = MemorySym->getModuleName();
-  MemImport.Field = MemorySym->getName();
+  MemImport.Module = MemorySym->getImportModule();
+  MemImport.Field = MemorySym->getImportName();
   MemImport.Kind = wasm::WASM_EXTERNAL_MEMORY;
   Imports.push_back(MemImport);
 
@@ -1178,8 +1178,8 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
   MCSymbolWasm *TableSym =
       cast<MCSymbolWasm>(Ctx.getOrCreateSymbol("__indirect_function_table"));
   wasm::WasmImport TableImport;
-  TableImport.Module = TableSym->getModuleName();
-  TableImport.Field = TableSym->getName();
+  TableImport.Module = TableSym->getImportModule();
+  TableImport.Field = TableSym->getImportName();
   TableImport.Kind = wasm::WASM_EXTERNAL_TABLE;
   TableImport.Table.ElemType = wasm::WASM_TYPE_FUNCREF;
   Imports.push_back(TableImport);
@@ -1205,8 +1205,8 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
     if (!WS.isDefined() && !WS.isComdat()) {
       if (WS.isFunction()) {
         wasm::WasmImport Import;
-        Import.Module = WS.getModuleName();
-        Import.Field = WS.getName();
+        Import.Module = WS.getImportModule();
+        Import.Field = WS.getImportName();
         Import.Kind = wasm::WASM_EXTERNAL_FUNCTION;
         Import.SigIndex = getFunctionType(WS);
         Imports.push_back(Import);
@@ -1216,8 +1216,8 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
           report_fatal_error("undefined global symbol cannot be weak");
 
         wasm::WasmImport Import;
-        Import.Module = WS.getModuleName();
-        Import.Field = WS.getName();
+        Import.Module = WS.getImportModule();
+        Import.Field = WS.getImportName();
         Import.Kind = wasm::WASM_EXTERNAL_GLOBAL;
         Import.Global = WS.getGlobalType();
         Imports.push_back(Import);
@@ -1227,8 +1227,8 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
           report_fatal_error("undefined event symbol cannot be weak");
 
         wasm::WasmImport Import;
-        Import.Module = WS.getModuleName();
-        Import.Field = WS.getName();
+        Import.Module = WS.getImportModule();
+        Import.Field = WS.getImportName();
         Import.Kind = wasm::WASM_EXTERNAL_EVENT;
         Import.Event.Attribute = wasm::WASM_EVENT_ATTRIBUTE_EXCEPTION;
         Import.Event.SigIndex = getEventType(WS);

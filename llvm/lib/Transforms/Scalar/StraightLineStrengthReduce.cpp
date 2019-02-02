@@ -682,9 +682,13 @@ void StraightLineStrengthReduce::rewriteCandidateWithBasis(
         // Canonicalize bump to pointer size.
         Bump = Builder.CreateSExtOrTrunc(Bump, IntPtrTy);
         if (InBounds)
-          Reduced = Builder.CreateInBoundsGEP(nullptr, Basis.Ins, Bump);
+          Reduced = Builder.CreateInBoundsGEP(
+              cast<GetElementPtrInst>(Basis.Ins)->getResultElementType(),
+              Basis.Ins, Bump);
         else
-          Reduced = Builder.CreateGEP(nullptr, Basis.Ins, Bump);
+          Reduced = Builder.CreateGEP(
+              cast<GetElementPtrInst>(Basis.Ins)->getResultElementType(),
+              Basis.Ins, Bump);
       }
       break;
     }

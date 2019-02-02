@@ -278,7 +278,7 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
 
   QualType QT = cudaLaunchKernelFD->getType();
   QualType CQT = QT.getCanonicalType();
-  llvm::Type *Ty = CGM.getTypes().ConvertFunctionType(CQT, cudaLaunchKernelFD);
+  llvm::Type *Ty = CGM.getTypes().ConvertType(CQT);
   llvm::FunctionType *FTy = dyn_cast<llvm::FunctionType>(Ty);
 
   const CGFunctionInfo &FI =

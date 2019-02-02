@@ -688,12 +688,12 @@ bool ARMParallelDSP::MatchSMLAD(Function &F) {
 }
 
 static LoadInst *CreateLoadIns(IRBuilder<NoFolder> &IRB, LoadInst &BaseLoad,
-                               const Type *LoadTy) {
+                               Type *LoadTy) {
   const unsigned AddrSpace = BaseLoad.getPointerAddressSpace();
 
   Value *VecPtr = IRB.CreateBitCast(BaseLoad.getPointerOperand(),
                                     LoadTy->getPointerTo(AddrSpace));
-  return IRB.CreateAlignedLoad(VecPtr, BaseLoad.getAlignment());
+  return IRB.CreateAlignedLoad(LoadTy, VecPtr, BaseLoad.getAlignment());
 }
 
 Instruction *ARMParallelDSP::CreateSMLADCall(LoadInst *VecLd0, LoadInst *VecLd1,
@@ -709,7 +709,7 @@ Instruction *ARMParallelDSP::CreateSMLADCall(LoadInst *VecLd0, LoadInst *VecLd1,
                               ++BasicBlock::iterator(InsertAfter));
 
   // Replace the reduction chain with an intrinsic call
-  const Type *Ty = IntegerType::get(M->getContext(), 32);
+  Type *Ty = IntegerType::get(M->getContext(), 32);
   LoadInst *NewLd0 = CreateLoadIns(Builder, VecLd0[0], Ty);
   LoadInst *NewLd1 = CreateLoadIns(Builder, VecLd1[0], Ty);
   Value* Args[] = { NewLd0, NewLd1, Acc };

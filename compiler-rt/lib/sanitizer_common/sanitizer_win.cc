@@ -486,8 +486,14 @@ bool IsPathSeparator(const char c) {
   return c == '\\' || c == '/';
 }
 
+static bool IsAlpha(char c) {
+  c = ToLower(c);
+  return c >= 'a' && c <= 'z';
+}
+
 bool IsAbsolutePath(const char *path) {
-  UNIMPLEMENTED();
+  return path != nullptr && IsAlpha(path[0]) && path[1] == ':' &&
+         IsPathSeparator(path[2]);
 }
 
 void SleepForSeconds(int seconds) {
