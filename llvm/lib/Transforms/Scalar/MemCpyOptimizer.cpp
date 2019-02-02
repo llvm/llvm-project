@@ -1134,8 +1134,10 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   Value *SizeDiff = Builder.CreateSub(DestSize, SrcSize);
   Value *MemsetLen = Builder.CreateSelect(
       Ule, ConstantInt::getNullValue(DestSize->getType()), SizeDiff);
-  Builder.CreateMemSet(Builder.CreateGEP(Dest, SrcSize), MemSet->getOperand(1),
-                       MemsetLen, Align);
+  Builder.CreateMemSet(
+      Builder.CreateGEP(Dest->getType()->getPointerElementType(), Dest,
+                        SrcSize),
+      MemSet->getOperand(1), MemsetLen, Align);
 
   MD->removeInstruction(MemSet);
   MemSet->eraseFromParent();

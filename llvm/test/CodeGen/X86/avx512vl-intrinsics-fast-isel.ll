@@ -2104,7 +2104,7 @@ define <4 x i64> @test_mm256_maskz_broadcastd_epi32(i8 %a0, <2 x i64> %a1) {
 define <2 x i64> @test_mm_broadcastq_epi64(<2 x i64> %a0) {
 ; CHECK-LABEL: test_mm_broadcastq_epi64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastq %xmm0, %xmm0
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = shufflevector <2 x i64> %a0, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %res

@@ -1305,6 +1305,8 @@ bool MachineInstr::isDereferenceableInvariantLoad(AliasAnalysis *AA) const {
 
   for (MachineMemOperand *MMO : memoperands()) {
     if (MMO->isVolatile()) return false;
+    // TODO: Figure out whether isAtomic is really necessary (see D57601).
+    if (MMO->isAtomic()) return false;
     if (MMO->isStore()) return false;
     if (MMO->isInvariant() && MMO->isDereferenceable())
       continue;

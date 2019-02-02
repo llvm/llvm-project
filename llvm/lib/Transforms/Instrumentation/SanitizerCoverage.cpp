@@ -269,7 +269,7 @@ SanitizerCoverageModule::CreateSecStartEnd(Module &M, const char *Section,
   // Account for the fact that on windows-msvc __start_* symbols actually
   // point to a uint64_t before the start of the array.
   auto SecStartI8Ptr = IRB.CreatePointerCast(SecStart, Int8PtrTy);
-  auto GEP = IRB.CreateGEP(SecStartI8Ptr,
+  auto GEP = IRB.CreateGEP(Int8Ty, SecStartI8Ptr,
                            ConstantInt::get(IntptrTy, sizeof(uint64_t)));
   return std::make_pair(IRB.CreatePointerCast(GEP, Ty), SecEndPtr);
 }
@@ -820,9 +820,9 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
   }
   if (Options.Inline8bitCounters) {
     auto CounterPtr = IRB.CreateGEP(
-        Function8bitCounterArray,
+        Function8bitCounterArray->getValueType(), Function8bitCounterArray,
         {ConstantInt::get(IntptrTy, 0), ConstantInt::get(IntptrTy, Idx)});
-    auto Load = IRB.CreateLoad(CounterPtr);
+    auto Load = IRB.CreateLoad(Int8Ty, CounterPtr);
     auto Inc = IRB.CreateAdd(Load, ConstantInt::get(Int8Ty, 1));
     auto Store = IRB.CreateStore(Inc, CounterPtr);
     SetNoSanitizeMetadata(Load);
@@ -835,7 +835,7 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     auto FrameAddrPtr =
         IRB.CreateCall(GetFrameAddr, {Constant::getNullValue(Int32Ty)});
     auto FrameAddrInt = IRB.CreatePtrToInt(FrameAddrPtr, IntptrTy);
-    auto LowestStack = IRB.CreateLoad(SanCovLowestStack);
+    auto LowestStack = IRB.CreateLoad(IntptrTy, SanCovLowestStack);
     auto IsStackLower = IRB.CreateICmpULT(FrameAddrInt, LowestStack);
     auto ThenTerm = SplitBlockAndInsertIfThen(IsStackLower, &*IP, false);
     IRBuilder<> ThenIRB(ThenTerm);

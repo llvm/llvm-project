@@ -1663,7 +1663,7 @@ Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
   return M.getNamedValue("__stack_chk_guard");
 }
 
-Value *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {
+Function *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {
   return nullptr;
 }
 

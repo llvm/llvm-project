@@ -143,13 +143,13 @@ bool LowerGlobalDtors::runOnModule(Module &M) {
                                           : Twine()),
           &M);
       BasicBlock *BB = BasicBlock::Create(C, "body", CallDtors);
-
-      for (auto Dtor : AssociatedAndMore.second)
-        CallInst::Create(Dtor, "", BB);
-      ReturnInst::Create(C, BB);
-
       FunctionType *VoidVoid = FunctionType::get(Type::getVoidTy(C),
                                                  /*isVarArg=*/false);
+
+      for (auto Dtor : AssociatedAndMore.second)
+        CallInst::Create(VoidVoid, Dtor, "", BB);
+      ReturnInst::Create(C, BB);
+
       Function *RegisterCallDtors = Function::Create(
           VoidVoid, Function::PrivateLinkage,
           "register_call_dtors" +

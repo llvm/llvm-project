@@ -169,7 +169,8 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
   Value *ArgInParam = new AddrSpaceCastInst(
       Arg, PointerType::get(StructType, ADDRESS_SPACE_PARAM), Arg->getName(),
       FirstInst);
-  LoadInst *LI = new LoadInst(ArgInParam, Arg->getName(), FirstInst);
+  LoadInst *LI =
+      new LoadInst(StructType, ArgInParam, Arg->getName(), FirstInst);
   new StoreInst(LI, AllocA, FirstInst);
 }
 

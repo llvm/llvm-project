@@ -101,7 +101,7 @@ TEST_F(MCJITTest, return_global) {
   Function *ReturnGlobal =
       startFunction(M.get(), FunctionType::get(Builder.getInt32Ty(), {}, false),
                     "ReturnGlobal");
-  Value *ReadGlobal = Builder.CreateLoad(GV);
+  Value *ReadGlobal = Builder.CreateLoad(Builder.getInt32Ty(), GV);
   endFunctionWithRet(ReturnGlobal, ReadGlobal);
 
   createJIT(std::move(M));

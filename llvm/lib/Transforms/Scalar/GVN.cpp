@@ -1234,10 +1234,10 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
     BasicBlock *UnavailablePred = PredLoad.first;
     Value *LoadPtr = PredLoad.second;
 
-    auto *NewLoad = new LoadInst(LoadPtr, LI->getName()+".pre",
-                                 LI->isVolatile(), LI->getAlignment(),
-                                 LI->getOrdering(), LI->getSyncScopeID(),
-                                 UnavailablePred->getTerminator());
+    auto *NewLoad =
+        new LoadInst(LI->getType(), LoadPtr, LI->getName() + ".pre",
+                     LI->isVolatile(), LI->getAlignment(), LI->getOrdering(),
+                     LI->getSyncScopeID(), UnavailablePred->getTerminator());
     NewLoad->setDebugLoc(LI->getDebugLoc());
 
     // Transfer the old load's AA tags to the new load.

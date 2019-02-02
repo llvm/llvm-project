@@ -24,6 +24,8 @@ namespace detail {
 namespace {
 
 #if !defined(_LIBCPP_WIN32API)
+
+#if defined(DT_BLK)
 template <class DirEntT, class = decltype(DirEntT::d_type)>
 static file_type get_file_type(DirEntT* ent, int) {
   switch (ent->d_type) {
@@ -49,6 +51,7 @@ static file_type get_file_type(DirEntT* ent, int) {
   }
   return file_type::none;
 }
+#endif // defined(DT_BLK)
 
 template <class DirEntT>
 static file_type get_file_type(DirEntT* ent, long) {

@@ -2924,6 +2924,87 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
   return NewDRD;
 }
 
+Decl *
+TemplateDeclInstantiator::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
+  // Instantiate type and check if it is allowed.
+  const bool RequiresInstantiation =
+      D->getType()->isDependentType() ||
+      D->getType()->isInstantiationDependentType() ||
+      D->getType()->containsUnexpandedParameterPack();
+  QualType SubstMapperTy;
+  DeclarationName VN = D->getVarName();
+  if (RequiresInstantiation) {
+    SubstMapperTy = SemaRef.ActOnOpenMPDeclareMapperType(
+        D->getLocation(),
+        ParsedType::make(SemaRef.SubstType(D->getType(), TemplateArgs,
+                                           D->getLocation(), VN)));
+  } else {
+    SubstMapperTy = D->getType();
+  }
+  if (SubstMapperTy.isNull())
+    return nullptr;
+  // Create an instantiated copy of mapper.
+  auto *PrevDeclInScope = D->getPrevDeclInScope();
+  if (PrevDeclInScope && !PrevDeclInScope->isInvalidDecl()) {
+    PrevDeclInScope = cast<OMPDeclareMapperDecl>(
+        SemaRef.CurrentInstantiationScope->findInstantiationOf(PrevDeclInScope)
+            ->get<Decl *>());
+  }
+  OMPDeclareMapperDecl *NewDMD = SemaRef.ActOnOpenMPDeclareMapperDirectiveStart(
+      /*S=*/nullptr, Owner, D->getDeclName(), SubstMapperTy, D->getLocation(),
+      VN, D->getAccess(), PrevDeclInScope);
+  SemaRef.CurrentInstantiationScope->InstantiatedLocal(D, NewDMD);
+  SmallVector<OMPClause *, 6> Clauses;
+  bool IsCorrect = true;
+  if (!RequiresInstantiation) {
+    // Copy the mapper variable.
+    NewDMD->setMapperVarRef(D->getMapperVarRef());
+    // Copy map clauses from the original mapper.
+    for (OMPClause *C : D->clauselists())
+      Clauses.push_back(C);
+  } else {
+    // Instantiate the mapper variable.
+    DeclarationNameInfo DirName;
+    SemaRef.StartOpenMPDSABlock(OMPD_declare_mapper, DirName, /*S=*/nullptr,
+                                (*D->clauselist_begin())->getBeginLoc());
+    SemaRef.ActOnOpenMPDeclareMapperDirectiveVarDecl(
+        NewDMD, /*S=*/nullptr, SubstMapperTy, D->getLocation(), VN);
+    SemaRef.CurrentInstantiationScope->InstantiatedLocal(
+        cast<DeclRefExpr>(D->getMapperVarRef())->getDecl(),
+        cast<DeclRefExpr>(NewDMD->getMapperVarRef())->getDecl());
+    auto *ThisContext = dyn_cast_or_null<CXXRecordDecl>(Owner);
+    Sema::CXXThisScopeRAII ThisScope(SemaRef, ThisContext, Qualifiers(),
+                                     ThisContext);
+    // Instantiate map clauses.
+    for (OMPClause *C : D->clauselists()) {
+      auto *OldC = cast<OMPMapClause>(C);
+      SmallVector<Expr *, 4> NewVars;
+      for (Expr *OE : OldC->varlists()) {
+        Expr *NE = SemaRef.SubstExpr(OE, TemplateArgs).get();
+        if (!NE) {
+          IsCorrect = false;
+          break;
+        }
+        NewVars.push_back(NE);
+      }
+      if (!IsCorrect)
+        break;
+      OMPClause *NewC = SemaRef.ActOnOpenMPMapClause(
+          OldC->getMapTypeModifiers(), OldC->getMapTypeModifiersLoc(),
+          OldC->getMapType(), OldC->isImplicitMapType(), OldC->getMapLoc(),
+          OldC->getColonLoc(), NewVars, OldC->getBeginLoc(),
+          OldC->getLParenLoc(), OldC->getEndLoc());
+      Clauses.push_back(NewC);
+    }
+    SemaRef.EndOpenMPDSABlock(nullptr);
+  }
+  (void)SemaRef.ActOnOpenMPDeclareMapperDirectiveEnd(NewDMD, /*S=*/nullptr,
+                                                     Clauses);
+  if (!IsCorrect)
+    return nullptr;
+  return NewDMD;
+}
+
 Decl *TemplateDeclInstantiator::VisitOMPCapturedExprDecl(
     OMPCapturedExprDecl * /*D*/) {
   llvm_unreachable("Should not be met in templates");
@@ -5005,7 +5086,8 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
   if (isa<ParmVarDecl>(D) || isa<NonTypeTemplateParmDecl>(D) ||
       isa<TemplateTypeParmDecl>(D) || isa<TemplateTemplateParmDecl>(D) ||
       ((ParentDC->isFunctionOrMethod() ||
-        isa<OMPDeclareReductionDecl>(ParentDC)) &&
+        isa<OMPDeclareReductionDecl>(ParentDC) ||
+        isa<OMPDeclareMapperDecl>(ParentDC)) &&
        ParentDC->isDependentContext()) ||
       (isa<CXXRecordDecl>(D) && cast<CXXRecordDecl>(D)->isLambda())) {
     // D is a local of some kind. Look into the map of local

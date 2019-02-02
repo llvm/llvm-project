@@ -78,6 +78,9 @@ public:
   int getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,
                                      unsigned &FrameReg,
                                      bool IgnoreSPUpdates) const override;
+  int getNonLocalFrameIndexReference(const MachineFunction &MF,
+                               int FI) const override;
+  int getSEHFrameIndexOffset(const MachineFunction &MF, int FI) const;
 
 private:
   bool shouldCombineCSRLocalStackBump(MachineFunction &MF,

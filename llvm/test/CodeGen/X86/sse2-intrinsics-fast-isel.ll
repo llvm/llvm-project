@@ -5363,7 +5363,7 @@ define void @test_mm_store_pd1(double *%a0, <2 x double> %a1) {
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX1-NEXT:    vmovddup %xmm0, %xmm0 # encoding: [0xc5,0xfb,0x12,0xc0]
 ; X86-AVX1-NEXT:    # xmm0 = xmm0[0,0]
-; X86-AVX1-NEXT:    vmovapd %xmm0, (%eax) # encoding: [0xc5,0xf9,0x29,0x00]
+; X86-AVX1-NEXT:    vmovaps %xmm0, (%eax) # encoding: [0xc5,0xf8,0x29,0x00]
 ; X86-AVX1-NEXT:    retl # encoding: [0xc3]
 ;
 ; X86-AVX512-LABEL: test_mm_store_pd1:
@@ -5371,7 +5371,7 @@ define void @test_mm_store_pd1(double *%a0, <2 x double> %a1) {
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX512-NEXT:    vmovddup %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x12,0xc0]
 ; X86-AVX512-NEXT:    # xmm0 = xmm0[0,0]
-; X86-AVX512-NEXT:    vmovapd %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x29,0x00]
+; X86-AVX512-NEXT:    vmovaps %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x29,0x00]
 ; X86-AVX512-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: test_mm_store_pd1:
@@ -5385,14 +5385,14 @@ define void @test_mm_store_pd1(double *%a0, <2 x double> %a1) {
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vmovddup %xmm0, %xmm0 # encoding: [0xc5,0xfb,0x12,0xc0]
 ; X64-AVX1-NEXT:    # xmm0 = xmm0[0,0]
-; X64-AVX1-NEXT:    vmovapd %xmm0, (%rdi) # encoding: [0xc5,0xf9,0x29,0x07]
+; X64-AVX1-NEXT:    vmovaps %xmm0, (%rdi) # encoding: [0xc5,0xf8,0x29,0x07]
 ; X64-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: test_mm_store_pd1:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovddup %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x12,0xc0]
 ; X64-AVX512-NEXT:    # xmm0 = xmm0[0,0]
-; X64-AVX512-NEXT:    vmovapd %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x29,0x07]
+; X64-AVX512-NEXT:    vmovaps %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x29,0x07]
 ; X64-AVX512-NEXT:    retq # encoding: [0xc3]
   %arg0 = bitcast double * %a0 to <2 x double>*
   %shuf = shufflevector <2 x double> %a1, <2 x double> undef, <2 x i32> zeroinitializer
@@ -5489,7 +5489,7 @@ define void @test_mm_store1_pd(double *%a0, <2 x double> %a1) {
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX1-NEXT:    vmovddup %xmm0, %xmm0 # encoding: [0xc5,0xfb,0x12,0xc0]
 ; X86-AVX1-NEXT:    # xmm0 = xmm0[0,0]
-; X86-AVX1-NEXT:    vmovapd %xmm0, (%eax) # encoding: [0xc5,0xf9,0x29,0x00]
+; X86-AVX1-NEXT:    vmovaps %xmm0, (%eax) # encoding: [0xc5,0xf8,0x29,0x00]
 ; X86-AVX1-NEXT:    retl # encoding: [0xc3]
 ;
 ; X86-AVX512-LABEL: test_mm_store1_pd:
@@ -5497,7 +5497,7 @@ define void @test_mm_store1_pd(double *%a0, <2 x double> %a1) {
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX512-NEXT:    vmovddup %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x12,0xc0]
 ; X86-AVX512-NEXT:    # xmm0 = xmm0[0,0]
-; X86-AVX512-NEXT:    vmovapd %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x29,0x00]
+; X86-AVX512-NEXT:    vmovaps %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x29,0x00]
 ; X86-AVX512-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: test_mm_store1_pd:
@@ -5511,14 +5511,14 @@ define void @test_mm_store1_pd(double *%a0, <2 x double> %a1) {
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vmovddup %xmm0, %xmm0 # encoding: [0xc5,0xfb,0x12,0xc0]
 ; X64-AVX1-NEXT:    # xmm0 = xmm0[0,0]
-; X64-AVX1-NEXT:    vmovapd %xmm0, (%rdi) # encoding: [0xc5,0xf9,0x29,0x07]
+; X64-AVX1-NEXT:    vmovaps %xmm0, (%rdi) # encoding: [0xc5,0xf8,0x29,0x07]
 ; X64-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: test_mm_store1_pd:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovddup %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x12,0xc0]
 ; X64-AVX512-NEXT:    # xmm0 = xmm0[0,0]
-; X64-AVX512-NEXT:    vmovapd %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x29,0x07]
+; X64-AVX512-NEXT:    vmovaps %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x29,0x07]
 ; X64-AVX512-NEXT:    retq # encoding: [0xc3]
   %arg0 = bitcast double * %a0 to <2 x double>*
   %shuf = shufflevector <2 x double> %a1, <2 x double> undef, <2 x i32> zeroinitializer

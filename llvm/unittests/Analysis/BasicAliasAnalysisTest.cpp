@@ -108,7 +108,7 @@ TEST_F(BasicAATest, AliasInstWithFullObjectOfImpreciseSize) {
   Value *ArbitraryI32 = F->arg_begin();
   AllocaInst *I8 = B.CreateAlloca(B.getInt8Ty(), B.getInt32(2));
   auto *I8AtUncertainOffset =
-      cast<GetElementPtrInst>(B.CreateGEP(I8, ArbitraryI32));
+      cast<GetElementPtrInst>(B.CreateGEP(B.getInt8Ty(), I8, ArbitraryI32));
 
   BasicAAResult &BasicAA = setupAnalyses();
   ASSERT_EQ(BasicAA.alias(

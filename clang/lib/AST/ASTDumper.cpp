@@ -381,6 +381,11 @@ namespace  {
         Visit(Initializer);
     }
 
+    void VisitOMPDeclareMapperDecl(const OMPDeclareMapperDecl *D) {
+      for (const auto *C : D->clauselists())
+        Visit(C);
+    }
+
     void VisitOMPCapturedExprDecl(const OMPCapturedExprDecl *D) {
       Visit(D->getInit());
     }

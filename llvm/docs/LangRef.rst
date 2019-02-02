@@ -5152,7 +5152,11 @@ identifies the callback function as the second argument of the broker (``i64
 2``) and the sole argument of the callback function as the third one of the
 broker function (``i64 3``).
 
-.. code-block:: llvm
+.. FIXME why does the llvm-sphinx-docs builder give a highlighting
+   error if the below is set to highlight as 'llvm', despite that we
+   have misc.highlighting_failure set?
+
+.. code-block:: text
 
     declare !callback !1 dso_local i32 @pthread_create(i64*, %union.pthread_attr_t*, i8* (i8*)*, i8*)
 
@@ -5166,7 +5170,11 @@ values (each identified by a ``i64 -1``) and afterwards all
 variadic arguments that are passed to the ``__kmpc_fork_call`` call (due to the
 final ``i1 true``).
 
-.. code-block:: llvm
+.. FIXME why does the llvm-sphinx-docs builder give a highlighting
+   error if the below is set to highlight as 'llvm', despite that we
+   have misc.highlighting_failure set?
+
+.. code-block:: text
 
     declare !callback !0 dso_local void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
 

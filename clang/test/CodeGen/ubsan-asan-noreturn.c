@@ -9,8 +9,7 @@ void calls_noreturn() {
   my_longjmp();
   // CHECK:      @__asan_handle_no_return{{.*}} !nosanitize
   // CHECK-NEXT: @my_longjmp(){{[^#]*}}
-  // CHECK:      @__asan_handle_no_return()
-  // CHECK-NEXT: @__ubsan_handle_builtin_unreachable{{.*}} !nosanitize
+  // CHECK:      @__ubsan_handle_builtin_unreachable{{.*}} !nosanitize
   // CHECK-NEXT: unreachable
 }
 
