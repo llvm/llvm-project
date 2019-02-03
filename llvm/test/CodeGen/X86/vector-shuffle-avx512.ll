@@ -541,8 +541,9 @@ define <8 x float> @expand14(<4 x float> %a) {
 define <8 x float> @expand15(<4 x float> %a) {
 ; SKX64-LABEL: expand15:
 ; SKX64:       # %bb.0:
-; SKX64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; SKX64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
+; SKX64-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; SKX64-NEXT:    vmovaps {{.*#+}} ymm1 = <0,1,0,1,1,3,u,u>
+; SKX64-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; SKX64-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
 ; SKX64-NEXT:    retq
 ;
@@ -555,8 +556,9 @@ define <8 x float> @expand15(<4 x float> %a) {
 ;
 ; SKX32-LABEL: expand15:
 ; SKX32:       # %bb.0:
-; SKX32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; SKX32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
+; SKX32-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; SKX32-NEXT:    vmovaps {{.*#+}} ymm1 = <0,1,0,1,1,3,u,u>
+; SKX32-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; SKX32-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
 ; SKX32-NEXT:    retl
 ;

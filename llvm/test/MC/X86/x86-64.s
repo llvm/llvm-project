@@ -183,11 +183,11 @@ smovq // CHECK: movsq
 // CHECK: movb (%eax), %al
         gs;movb 0(%eax), %al
 
-// CHECK: fadd %st(0)
+// CHECK: fadd %st
 // CHECK: fadd %st(1)
 // CHECK: fadd %st(7)
 
-fadd %st(0)
+fadd %st
 fadd %st(1)
 fadd %st(7)
 
@@ -308,7 +308,7 @@ insl	(%dx), %es:(%rdi)
 // CHECK: fucom %st(1)
 // CHECK: fucomp %st(1)
 // CHECK: faddp %st(1)
-// CHECK: faddp	%st(0)
+// CHECK: faddp	%st
 // CHECK: fsubp %st(1)
 // CHECK: fsubrp %st(1)
 // CHECK: fmulp %st(1)
@@ -416,21 +416,21 @@ enter $0x7ace,$0x7f
 mov %cs, %ax
 
 // rdar://8456391
-fcmovb %st(1), %st(0)   // CHECK: fcmovb	%st(1), %st(0)
-fcmove %st(1), %st(0)   // CHECK: fcmove	%st(1), %st(0)
-fcmovbe %st(1), %st(0)  // CHECK: fcmovbe	%st(1), %st(0)
-fcmovu %st(1), %st(0)   // CHECK: fcmovu	 %st(1), %st(0)
+fcmovb %st(1), %st   // CHECK: fcmovb	%st(1), %st
+fcmove %st(1), %st   // CHECK: fcmove	%st(1), %st
+fcmovbe %st(1), %st  // CHECK: fcmovbe	%st(1), %st
+fcmovu %st(1), %st   // CHECK: fcmovu	 %st(1), %st
 
-fcmovnb %st(1), %st(0)  // CHECK: fcmovnb	%st(1), %st(0)
-fcmovne %st(1), %st(0)  // CHECK: fcmovne	%st(1), %st(0)
-fcmovnbe %st(1), %st(0) // CHECK: fcmovnbe	%st(1), %st(0)
-fcmovnu %st(1), %st(0)  // CHECK: fcmovnu	%st(1), %st(0)
+fcmovnb %st(1), %st  // CHECK: fcmovnb	%st(1), %st
+fcmovne %st(1), %st  // CHECK: fcmovne	%st(1), %st
+fcmovnbe %st(1), %st // CHECK: fcmovnbe	%st(1), %st
+fcmovnu %st(1), %st  // CHECK: fcmovnu	%st(1), %st
 
-fcmovnae %st(1), %st(0) // CHECK: fcmovb	%st(1), %st(0)
-fcmovna %st(1), %st(0)  // CHECK: fcmovbe	%st(1), %st(0)
+fcmovnae %st(1), %st // CHECK: fcmovb	%st(1), %st
+fcmovna %st(1), %st  // CHECK: fcmovbe	%st(1), %st
 
-fcmovae %st(1), %st(0)  // CHECK: fcmovnb	%st(1), %st(0)
-fcmova %st(1), %st(0)   // CHECK: fcmovnbe	%st(1), %st(0)
+fcmovae %st(1), %st  // CHECK: fcmovnb	%st(1), %st
+fcmova %st(1), %st   // CHECK: fcmovnbe	%st(1), %st
 
 // rdar://8456417
 .byte (88 + 1) & 15  // CHECK: .byte	9
@@ -462,14 +462,14 @@ faddp %st, %st(1)
 fmulp %st, %st(2)
 
 // rdar://8468087 - Encode these accurately, they are not synonyms.
-// CHECK: fmul	%st(0), %st(1)
+// CHECK: fmul	%st, %st(1)
 // CHECK: encoding: [0xdc,0xc9]
 // CHECK: fmul	%st(1)
 // CHECK: encoding: [0xd8,0xc9]
 fmul %st, %st(1)
 fmul %st(1), %st
 
-// CHECK: fadd	%st(0), %st(1)
+// CHECK: fadd	%st, %st(1)
 // CHECK: encoding: [0xdc,0xc1]
 // CHECK: fadd	%st(1)
 // CHECK: encoding: [0xd8,0xc1]
@@ -582,15 +582,15 @@ movmskpd	%xmm6, %eax
 // CHECK: encoding: [0x66,0x0f,0x50,0xc6]
 
 // rdar://8491845 - Gas supports commuted forms of non-commutable instructions.
-fdivrp %st(0), %st(1) // CHECK: encoding: [0xde,0xf9]
-fdivrp %st(1), %st(0) // CHECK: encoding: [0xde,0xf9]
+fdivrp %st, %st(1) // CHECK: encoding: [0xde,0xf9]
+fdivrp %st(1), %st // CHECK: encoding: [0xde,0xf9]
 
-fsubrp %st(0), %st(1) // CHECK: encoding: [0xde,0xe9]
-fsubrp %st(1), %st(0) // CHECK: encoding: [0xde,0xe9]
+fsubrp %st, %st(1) // CHECK: encoding: [0xde,0xe9]
+fsubrp %st(1), %st // CHECK: encoding: [0xde,0xe9]
 
 // also PR8861
-fdivp %st(0), %st(1) // CHECK: encoding: [0xde,0xf1]
-fdivp %st(1), %st(0) // CHECK: encoding: [0xde,0xf1]
+fdivp %st, %st(1) // CHECK: encoding: [0xde,0xf1]
+fdivp %st(1), %st // CHECK: encoding: [0xde,0xf1]
 
 
 movl	foo(%rip), %eax
@@ -1397,12 +1397,12 @@ stac
 // CHECK: fsubrp %st(1)
 // CHECK: fdivp %st(1)
 // CHECK: fdivrp %st(1)
-faddp %st(0), %st(1)
-fmulp %st(0), %st(1)
-fsubp %st(0), %st(1)
-fsubrp %st(0), %st(1)
-fdivp %st(0), %st(1)
-fdivrp %st(0), %st(1)
+faddp %st, %st(1)
+fmulp %st, %st(1)
+fsubp %st, %st(1)
+fsubrp %st, %st(1)
+fdivp %st, %st(1)
+fdivrp %st, %st(1)
 
 // CHECK: faddp %st(1)
 // CHECK: fmulp %st(1)
@@ -1410,12 +1410,12 @@ fdivrp %st(0), %st(1)
 // CHECK: fsubrp %st(1)
 // CHECK: fdivp %st(1)
 // CHECK: fdivrp %st(1)
-faddp %st(1), %st(0)
-fmulp %st(1), %st(0)
-fsubp %st(1), %st(0)
-fsubrp %st(1), %st(0)
-fdivp %st(1), %st(0)
-fdivrp %st(1), %st(0)
+faddp %st(1), %st
+fmulp %st(1), %st
+fsubp %st(1), %st
+fsubrp %st(1), %st
+fdivp %st(1), %st
+fdivrp %st(1), %st
 
 // CHECK: faddp %st(1)
 // CHECK: fmulp %st(1)
@@ -1449,25 +1449,25 @@ fdivrp
 // CHECK: fsubr %st(1)
 // CHECK: fdiv %st(1)
 // CHECK: fdivr %st(1)
-fadd %st(1), %st(0)
-fmul %st(1), %st(0)
-fsub %st(1), %st(0)
-fsubr %st(1), %st(0)
-fdiv %st(1), %st(0)
-fdivr %st(1), %st(0)
+fadd %st(1), %st
+fmul %st(1), %st
+fsub %st(1), %st
+fsubr %st(1), %st
+fdiv %st(1), %st
+fdivr %st(1), %st
 
-// CHECK: fadd %st(0), %st(1)
-// CHECK: fmul %st(0), %st(1)
-// CHECK: fsub %st(0), %st(1)
-// CHECK: fsubr %st(0), %st(1)
-// CHECK: fdiv %st(0), %st(1)
-// CHECK: fdivr %st(0), %st(1)
-fadd %st(0), %st(1)
-fmul %st(0), %st(1)
-fsub %st(0), %st(1)
-fsubr %st(0), %st(1)
-fdiv %st(0), %st(1)
-fdivr %st(0), %st(1)
+// CHECK: fadd %st, %st(1)
+// CHECK: fmul %st, %st(1)
+// CHECK: fsub %st, %st(1)
+// CHECK: fsubr %st, %st(1)
+// CHECK: fdiv %st, %st(1)
+// CHECK: fdivr %st, %st(1)
+fadd %st, %st(1)
+fmul %st, %st(1)
+fsub %st, %st(1)
+fsubr %st, %st(1)
+fdiv %st, %st(1)
+fdivr %st, %st(1)
 
 // CHECK: fadd %st(1)
 // CHECK: fmul %st(1)

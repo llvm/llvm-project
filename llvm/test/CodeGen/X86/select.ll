@@ -192,7 +192,7 @@ define signext i8 @test4(i8* nocapture %P, double %F) nounwind readonly {
 ; ATHLON-NEXT:    flds LCPI3_0
 ; ATHLON-NEXT:    xorl %ecx, %ecx
 ; ATHLON-NEXT:    fucompi %st(1)
-; ATHLON-NEXT:    fstp %st(0)
+; ATHLON-NEXT:    fstp %st
 ; ATHLON-NEXT:    seta %cl
 ; ATHLON-NEXT:    movsbl (%eax,%ecx,4), %eax
 ; ATHLON-NEXT:    retl
@@ -293,25 +293,25 @@ define void @test6(i32 %C, <4 x float>* %A, <4 x float>* %B) nounwind {
 ; ATHLON-NEXT:    flds 4(%ecx)
 ; ATHLON-NEXT:    flds (%ecx)
 ; ATHLON-NEXT:    flds (%eax)
-; ATHLON-NEXT:    fmul %st(0), %st(0)
+; ATHLON-NEXT:    fmul %st, %st
 ; ATHLON-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    fxch %st(1)
-; ATHLON-NEXT:    fcmove %st(1), %st(0)
+; ATHLON-NEXT:    fcmove %st(1), %st
 ; ATHLON-NEXT:    fstp %st(1)
 ; ATHLON-NEXT:    flds 4(%eax)
-; ATHLON-NEXT:    fmul %st(0), %st(0)
+; ATHLON-NEXT:    fmul %st, %st
 ; ATHLON-NEXT:    fxch %st(2)
-; ATHLON-NEXT:    fcmove %st(2), %st(0)
+; ATHLON-NEXT:    fcmove %st(2), %st
 ; ATHLON-NEXT:    fstp %st(2)
 ; ATHLON-NEXT:    flds 8(%eax)
-; ATHLON-NEXT:    fmul %st(0), %st(0)
+; ATHLON-NEXT:    fmul %st, %st
 ; ATHLON-NEXT:    fxch %st(3)
-; ATHLON-NEXT:    fcmove %st(3), %st(0)
+; ATHLON-NEXT:    fcmove %st(3), %st
 ; ATHLON-NEXT:    fstp %st(3)
 ; ATHLON-NEXT:    flds 12(%eax)
-; ATHLON-NEXT:    fmul %st(0), %st(0)
+; ATHLON-NEXT:    fmul %st, %st
 ; ATHLON-NEXT:    fxch %st(4)
-; ATHLON-NEXT:    fcmove %st(4), %st(0)
+; ATHLON-NEXT:    fcmove %st(4), %st
 ; ATHLON-NEXT:    fstp %st(4)
 ; ATHLON-NEXT:    fxch %st(3)
 ; ATHLON-NEXT:    fstps 12(%ecx)
@@ -332,13 +332,13 @@ define void @test6(i32 %C, <4 x float>* %A, <4 x float>* %B) nounwind {
 ; MCU-NEXT:    flds 4(%ecx)
 ; MCU-NEXT:    flds 8(%ecx)
 ; MCU-NEXT:    flds 12(%ecx)
-; MCU-NEXT:    fmul %st(0), %st(0)
+; MCU-NEXT:    fmul %st, %st
 ; MCU-NEXT:    fxch %st(1)
-; MCU-NEXT:    fmul %st(0), %st(0)
+; MCU-NEXT:    fmul %st, %st
 ; MCU-NEXT:    fxch %st(2)
-; MCU-NEXT:    fmul %st(0), %st(0)
+; MCU-NEXT:    fmul %st, %st
 ; MCU-NEXT:    fxch %st(3)
-; MCU-NEXT:    fmul %st(0), %st(0)
+; MCU-NEXT:    fmul %st, %st
 ; MCU-NEXT:    testl %eax, %eax
 ; MCU-NEXT:    flds (%edx)
 ; MCU-NEXT:    je .LBB5_2
@@ -346,7 +346,7 @@ define void @test6(i32 %C, <4 x float>* %A, <4 x float>* %B) nounwind {
 ; MCU-NEXT:    fstp %st(1)
 ; MCU-NEXT:    fstp %st(3)
 ; MCU-NEXT:    fstp %st(1)
-; MCU-NEXT:    fstp %st(0)
+; MCU-NEXT:    fstp %st
 ; MCU-NEXT:    flds (%esp) # 4-byte Folded Reload
 ; MCU-NEXT:    fldz
 ; MCU-NEXT:    fldz
@@ -360,7 +360,7 @@ define void @test6(i32 %C, <4 x float>* %A, <4 x float>* %B) nounwind {
 ; MCU-NEXT:    fxch %st(3)
 ; MCU-NEXT:    fxch %st(2)
 ; MCU-NEXT:  .LBB5_2:
-; MCU-NEXT:    fstp %st(0)
+; MCU-NEXT:    fstp %st
 ; MCU-NEXT:    fstp %st(5)
 ; MCU-NEXT:    fstp %st(3)
 ; MCU-NEXT:    fxch %st(2)
@@ -1294,10 +1294,10 @@ define void @test19() {
 ; ATHLON-NEXT:    .p2align 4, 0x90
 ; ATHLON-NEXT:  LBB23_4: ## %CF242
 ; ATHLON-NEXT:    ## =>This Inner Loop Header: Depth=1
-; ATHLON-NEXT:    fucomi %st(0)
+; ATHLON-NEXT:    fucomi %st
 ; ATHLON-NEXT:    jp LBB23_4
 ; ATHLON-NEXT:  ## %bb.5: ## %CF244
-; ATHLON-NEXT:    fstp %st(0)
+; ATHLON-NEXT:    fstp %st
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: test19:
@@ -1318,13 +1318,13 @@ define void @test19() {
 ; MCU-NEXT:  .LBB23_4: # %CF242
 ; MCU-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MCU-NEXT:    cmpl %eax, %ecx
-; MCU-NEXT:    fucom %st(0)
+; MCU-NEXT:    fucom %st
 ; MCU-NEXT:    fnstsw %ax
 ; MCU-NEXT:    # kill: def $ah killed $ah killed $ax
 ; MCU-NEXT:    sahf
 ; MCU-NEXT:    jp .LBB23_4
 ; MCU-NEXT:  # %bb.5: # %CF244
-; MCU-NEXT:    fstp %st(0)
+; MCU-NEXT:    fstp %st
 ; MCU-NEXT:    retl
 BB:
   br label %CF

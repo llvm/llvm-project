@@ -1114,8 +1114,7 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
   }
 
   // Parse "%st" as "%st(0)" and "%st(1)", which is multiple tokens.
-  if (RegNo == 0 && (Tok.getString() == "st" || Tok.getString() == "ST")) {
-    RegNo = X86::ST0;
+  if (RegNo == X86::ST0) {
     Parser.Lex(); // Eat 'st'
 
     // Check to see if we have '(4)' after %st.

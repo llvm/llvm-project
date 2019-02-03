@@ -42,9 +42,7 @@ define void @test_0(i64*, i64*) {
 define void @test_1(i64*, i64*) {
 ; CHECK-LABEL: test_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    incq (%rdi)
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    addb $-1, %al
+; CHECK-NEXT:    addq $1, (%rdi)
 ; CHECK-NEXT:    adcq $0, (%rsi)
 ; CHECK-NEXT:    retq
   %3 = load i64, i64* %0, align 8
