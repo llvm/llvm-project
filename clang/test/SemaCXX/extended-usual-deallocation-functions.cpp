@@ -33,7 +33,7 @@ struct B {
 void BTest(B *b) { delete b; }// expected-error {{deleted}}
 
 
-struct alignas(32) C {
+struct alignas(128) C {
 #ifndef HAS_ALIGN
   // expected-note@+2 {{deleted}}
 #endif
@@ -54,7 +54,7 @@ struct D {
 };
 void DTest(D *d) { delete d; } // expected-error {{deleted}}
 
-struct alignas(64) E {
+struct alignas(128) E {
   void operator delete(void*) = delete;
   void operator delete(E*, std::destroying_delete_t) = delete;
   void operator delete(E*, std::destroying_delete_t, std::size_t) = delete;

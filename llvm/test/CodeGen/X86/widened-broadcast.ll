@@ -630,8 +630,7 @@ define <16 x i32> @load_splat_16i32_2i32_0101(<2 x i32>* %vp) {
 ;
 ; AVX512-LABEL: load_splat_16i32_2i32_0101:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vbroadcastsd %xmm0, %zmm0
+; AVX512-NEXT:    vbroadcastsd (%rdi), %zmm0
 ; AVX512-NEXT:    retq
   %vec = load <2 x i32>, <2 x i32>* %vp
   %res = shufflevector <2 x i32> %vec, <2 x i32> undef, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>

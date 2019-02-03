@@ -21,7 +21,7 @@ entry:
 	ret x86_fp80 %tmp2
 ; CHECK-LABEL: bar:
 ; CHECK: fldt 4(%esp)
-; CHECK-NEXT: fld	%st(0)
+; CHECK-NEXT: fld	%st
 ; CHECK-NEXT: fmul	%st(1)
 ; CHECK-NEXT: fmulp
 ; CHECK-NEXT: ret

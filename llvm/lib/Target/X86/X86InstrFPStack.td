@@ -268,13 +268,13 @@ class FPrST0PInst<Format fp, string asm>
 // we have to put some 'r's in and take them out of weird places.
 let SchedRW = [WriteFAdd], Defs = [FPSW] in {
 def ADD_FST0r   : FPST0rInst <MRM0r, "fadd\t$op">;
-def ADD_FrST0   : FPrST0Inst <MRM0r, "fadd\t{%st(0), $op|$op, st(0)}">;
+def ADD_FrST0   : FPrST0Inst <MRM0r, "fadd\t{%st, $op|$op, st}">;
 def ADD_FPrST0  : FPrST0PInst<MRM0r, "faddp\t$op">;
 def SUBR_FST0r  : FPST0rInst <MRM5r, "fsubr\t$op">;
-def SUB_FrST0   : FPrST0Inst <MRM5r, "fsub{r}\t{%st(0), $op|$op, st(0)}">;
+def SUB_FrST0   : FPrST0Inst <MRM5r, "fsub{r}\t{%st, $op|$op, st}">;
 def SUB_FPrST0  : FPrST0PInst<MRM5r, "fsub{r}p\t$op">;
 def SUB_FST0r   : FPST0rInst <MRM4r, "fsub\t$op">;
-def SUBR_FrST0  : FPrST0Inst <MRM4r, "fsub{|r}\t{%st(0), $op|$op, st(0)}">;
+def SUBR_FrST0  : FPrST0Inst <MRM4r, "fsub{|r}\t{%st, $op|$op, st}">;
 def SUBR_FPrST0 : FPrST0PInst<MRM4r, "fsub{|r}p\t$op">;
 } // SchedRW
 let SchedRW = [WriteFCom], Defs = [FPSW] in {
@@ -283,15 +283,15 @@ def COMP_FST0r  : FPST0rInst <MRM3r, "fcomp\t$op">;
 } // SchedRW
 let SchedRW = [WriteFMul], Defs = [FPSW] in {
 def MUL_FST0r   : FPST0rInst <MRM1r, "fmul\t$op">;
-def MUL_FrST0   : FPrST0Inst <MRM1r, "fmul\t{%st(0), $op|$op, st(0)}">;
+def MUL_FrST0   : FPrST0Inst <MRM1r, "fmul\t{%st, $op|$op, st}">;
 def MUL_FPrST0  : FPrST0PInst<MRM1r, "fmulp\t$op">;
 } // SchedRW
 let SchedRW = [WriteFDiv], Defs = [FPSW] in {
 def DIVR_FST0r  : FPST0rInst <MRM7r, "fdivr\t$op">;
-def DIV_FrST0   : FPrST0Inst <MRM7r, "fdiv{r}\t{%st(0), $op|$op, st(0)}">;
+def DIV_FrST0   : FPrST0Inst <MRM7r, "fdiv{r}\t{%st, $op|$op, st}">;
 def DIV_FPrST0  : FPrST0PInst<MRM7r, "fdiv{r}p\t$op">;
 def DIV_FST0r   : FPST0rInst <MRM6r, "fdiv\t$op">;
-def DIVR_FrST0  : FPrST0Inst <MRM6r, "fdiv{|r}\t{%st(0), $op|$op, st(0)}">;
+def DIVR_FrST0  : FPrST0Inst <MRM6r, "fdiv{|r}\t{%st, $op|$op, st}">;
 def DIVR_FPrST0 : FPrST0PInst<MRM6r, "fdiv{|r}p\t$op">;
 } // SchedRW
 
@@ -398,21 +398,21 @@ defm CMOVNP : FPCMov<X86_COND_NP>;
 let Predicates = [HasCMov] in {
 // These are not factored because there's no clean way to pass DA/DB.
 def CMOVB_F  : FPI<0xDA, MRM0r, (outs), (ins RST:$op),
-                  "fcmovb\t{$op, %st(0)|st(0), $op}">;
+                  "fcmovb\t{$op, %st|st, $op}">;
 def CMOVBE_F : FPI<0xDA, MRM2r, (outs), (ins RST:$op),
-                  "fcmovbe\t{$op, %st(0)|st(0), $op}">;
+                  "fcmovbe\t{$op, %st|st, $op}">;
 def CMOVE_F  : FPI<0xDA, MRM1r, (outs), (ins RST:$op),
-                  "fcmove\t{$op, %st(0)|st(0), $op}">;
+                  "fcmove\t{$op, %st|st, $op}">;
 def CMOVP_F  : FPI<0xDA, MRM3r, (outs), (ins RST:$op),
-                  "fcmovu\t{$op, %st(0)|st(0), $op}">;
+                  "fcmovu\t{$op, %st|st, $op}">;
 def CMOVNB_F : FPI<0xDB, MRM0r, (outs), (ins RST:$op),
-                  "fcmovnb\t{$op, %st(0)|st(0), $op}">;
+                  "fcmovnb\t{$op, %st|st, $op}">;
 def CMOVNBE_F: FPI<0xDB, MRM2r, (outs), (ins RST:$op),
-                  "fcmovnbe\t{$op, %st(0)|st(0), $op}">;
+                  "fcmovnbe\t{$op, %st|st, $op}">;
 def CMOVNE_F : FPI<0xDB, MRM1r, (outs), (ins RST:$op),
-                  "fcmovne\t{$op, %st(0)|st(0), $op}">;
+                  "fcmovne\t{$op, %st|st, $op}">;
 def CMOVNP_F : FPI<0xDB, MRM3r, (outs), (ins RST:$op),
-                  "fcmovnu\t{$op, %st(0)|st(0), $op}">;
+                  "fcmovnu\t{$op, %st|st, $op}">;
 } // Predicates = [HasCMov]
 } // SchedRW
 
