@@ -1462,9 +1462,15 @@ bool LoopIdiomRecognize::recognizeAndInsertFFS() {
   const Value *Args[] =
       {InitX, ZeroCheck ? ConstantInt::getTrue(InitX->getContext())
                         : ConstantInt::getFalse(InitX->getContext())};
-  if (CurLoop->getHeader()->size() != IdiomCanonicalSize &&
+
+  // @llvm.dbg doesn't count as they have no semantic effect.
+  auto InstWithoutDebugIt = CurLoop->getHeader()->instructionsWithoutDebug();
+  uint32_t HeaderSize =
+      std::distance(InstWithoutDebugIt.begin(), InstWithoutDebugIt.end());
+
+  if (HeaderSize != IdiomCanonicalSize &&
       TTI->getIntrinsicCost(IntrinID, InitX->getType(), Args) >
-        TargetTransformInfo::TCC_Basic)
+          TargetTransformInfo::TCC_Basic)
     return false;
 
   transformLoopToCountable(IntrinID, PH, CntInst, CntPhi, InitX, DefX,
