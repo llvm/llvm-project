@@ -34,6 +34,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   };
 
   const LLT S1 = LLT::scalar(1);
+  const LLT S8 = LLT::scalar(8);
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
@@ -134,11 +135,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   // FIXME: i1 operands to intrinsics should always be legal, but other i1
   // values may not be legal.  We need to figure out how to distinguish
   // between these two scenarios.
-  // FIXME: Pointer types
   getActionDefinitionsBuilder(G_CONSTANT)
-    .legalFor({S1, S32, S64})
+    .legalFor({S1, S32, S64, GlobalPtr,
+               LocalPtr, ConstantPtr, PrivatePtr, FlatPtr })
     .clampScalar(0, S32, S64)
-    .widenScalarToNextPow2(0);
+    .widenScalarToNextPow2(0)
+    .legalIf(isPointer(0));
 
   setAction({G_FRAME_INDEX, PrivatePtr}, Legal);
 
@@ -168,7 +170,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .legalFor({{S64, S32}, {S32, S16}, {S64, S16},
                {S32, S1}, {S64, S1}, {S16, S1},
                // FIXME: Hack
-               {S128, S32}, {S128, S64}, {S32, LLT::scalar(24)}})
+               {S32, S8}, {S128, S32}, {S128, S64}, {S32, LLT::scalar(24)}})
     .scalarize(0);
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
@@ -199,7 +201,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
   setAction({G_BLOCK_ADDR, CodePtr}, Legal);
 
-  getActionDefinitionsBuilder({G_ICMP, G_FCMP})
+  getActionDefinitionsBuilder(G_ICMP)
+    .legalForCartesianProduct(
+      {S1}, {S32, S64, GlobalPtr, LocalPtr, ConstantPtr, PrivatePtr, FlatPtr})
+    .legalFor({{S1, S32}, {S1, S64}})
+    .widenScalarToNextPow2(1)
+    .clampScalar(1, S32, S64)
+    .scalarize(0)
+    .legalIf(all(typeIs(0, S1), isPointer(1)));
+
+  getActionDefinitionsBuilder(G_FCMP)
     .legalFor({{S1, S32}, {S1, S64}})
     .widenScalarToNextPow2(1)
     .clampScalar(1, S32, S64)
@@ -227,15 +238,52 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .scalarize(0);
 
 
+  auto smallerThan = [](unsigned TypeIdx0, unsigned TypeIdx1) {
+    return [=](const LegalityQuery &Query) {
+      return Query.Types[TypeIdx0].getSizeInBits() <
+             Query.Types[TypeIdx1].getSizeInBits();
+    };
+  };
+
+  auto greaterThan = [](unsigned TypeIdx0, unsigned TypeIdx1) {
+    return [=](const LegalityQuery &Query) {
+      return Query.Types[TypeIdx0].getSizeInBits() >
+             Query.Types[TypeIdx1].getSizeInBits();
+    };
+  };
+
   getActionDefinitionsBuilder(G_INTTOPTR)
-    .legalIf([](const LegalityQuery &Query) {
-      return true;
-    });
+    // List the common cases
+    .legalForCartesianProduct({GlobalPtr, ConstantPtr, FlatPtr}, {S64})
+    .legalForCartesianProduct({LocalPtr, PrivatePtr}, {S32})
+    .scalarize(0)
+    // Accept any address space as long as the size matches
+    .legalIf(sameSize(0, 1))
+    .widenScalarIf(smallerThan(1, 0),
+      [](const LegalityQuery &Query) {
+        return std::make_pair(1, LLT::scalar(Query.Types[0].getSizeInBits()));
+      })
+    .narrowScalarIf(greaterThan(1, 0),
+      [](const LegalityQuery &Query) {
+        return std::make_pair(1, LLT::scalar(Query.Types[0].getSizeInBits()));
+      });
 
   getActionDefinitionsBuilder(G_PTRTOINT)
-    .legalIf([](const LegalityQuery &Query) {
-      return true;
-    });
+    // List the common cases
+    .legalForCartesianProduct({GlobalPtr, ConstantPtr, FlatPtr}, {S64})
+    .legalForCartesianProduct({LocalPtr, PrivatePtr}, {S32})
+    .scalarize(0)
+    // Accept any address space as long as the size matches
+    .legalIf(sameSize(0, 1))
+    .widenScalarIf(smallerThan(0, 1),
+      [](const LegalityQuery &Query) {
+        return std::make_pair(0, LLT::scalar(Query.Types[1].getSizeInBits()));
+      })
+    .narrowScalarIf(
+      greaterThan(0, 1),
+      [](const LegalityQuery &Query) {
+        return std::make_pair(0, LLT::scalar(Query.Types[1].getSizeInBits()));
+      });
 
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
     .narrowScalarIf([](const LegalityQuery &Query) {
@@ -260,7 +308,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
         unsigned Size = Ty0.getSizeInBits();
         unsigned MemSize = Query.MMODescrs[0].SizeInBits;
-        if (Size > 32 && MemSize < Size)
+        if (Size < 32 || (Size > 32 && MemSize < Size))
           return false;
 
         if (Ty0.isVector() && Size != MemSize)
@@ -322,7 +370,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
   // TODO: Pointer types, any 32-bit or 64-bit vector
   getActionDefinitionsBuilder(G_SELECT)
-    .legalFor({{S32, S1}, {S64, S1}, {V2S32, S1}, {V2S16, S1}})
+    .legalForCartesianProduct({S32, S64, V2S32, V2S16, GlobalPtr, LocalPtr,
+          FlatPtr, PrivatePtr, LLT::vector(2, LocalPtr),
+          LLT::vector(2, PrivatePtr)}, {S1})
     .clampScalar(0, S32, S64)
     .fewerElementsIf(
       [=](const LegalityQuery &Query) {
@@ -343,7 +393,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
                Query.Types[0].getElementType().getSizeInBits() < 32;},
       scalarize(0))
     .scalarize(1)
-    .clampMaxNumElements(0, S32, 2);
+    .clampMaxNumElements(0, S32, 2)
+    .clampMaxNumElements(0, LocalPtr, 2)
+    .clampMaxNumElements(0, PrivatePtr, 2)
+    .legalIf(all(isPointer(0), typeIs(1, S1)));
 
   // TODO: Only the low 4/5/6 bits of the shift amount are observed, so we can
   // be more flexible with the shift amount type.
@@ -387,8 +440,26 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
         const LLT &Ty1 = Query.Types[1];
         return (Ty0.getSizeInBits() % 16 == 0) &&
                (Ty1.getSizeInBits() % 16 == 0);
+      })
+    .widenScalarIf(
+      [=](const LegalityQuery &Query) {
+        const LLT &Ty1 = Query.Types[1];
+        return (Ty1.getScalarSizeInBits() < 16);
+      },
+      // TODO Use generic LegalizeMutation
+      [](const LegalityQuery &Query) {
+        LLT Ty1 = Query.Types[1];
+        unsigned NewEltSizeInBits =
+          std::max(1 << Log2_32_Ceil(Ty1.getScalarSizeInBits()), 16);
+        if (Ty1.isVector()) {
+          return std::make_pair(1, LLT::vector(Ty1.getNumElements(),
+                                               NewEltSizeInBits));
+        }
+
+        return std::make_pair(1, LLT::scalar(NewEltSizeInBits));
       });
 
+  // TODO: vectors of pointers
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .legalForCartesianProduct(AllS32Vectors, {S32})
       .legalForCartesianProduct(AllS64Vectors, {S64})
@@ -397,7 +468,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
       .minScalarSameAs(1, 0)
       // FIXME: Sort of a hack to make progress on other legalizations.
       .legalIf([=](const LegalityQuery &Query) {
-        return Query.Types[0].getScalarSizeInBits() < 32;
+        return Query.Types[0].getScalarSizeInBits() <= 32 ||
+               Query.Types[0].getScalarSizeInBits() == 64;
       });
 
   // TODO: Support any combination of v2s32
@@ -408,7 +480,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
                {V4S64, V2S64},
                {V4S16, V2S16},
                {V8S16, V2S16},
-               {V8S16, V4S16}});
+               {V8S16, V4S16},
+               {LLT::vector(4, LocalPtr), LLT::vector(2, LocalPtr)},
+               {LLT::vector(4, PrivatePtr), LLT::vector(2, PrivatePtr)}});
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {

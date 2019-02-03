@@ -49,10 +49,6 @@ using namespace libunwind;
 /// Class of foreign exceptions based on unrecognized SEH exceptions.
 static const uint64_t kSEHExceptionClass = 0x434C4E4753454800; // CLNGSEH\0
 
-// libunwind does not and should not depend on C++ library which means that we
-// need our own declaration of global placement new.
-void *operator new(size_t, void*);
-
 /// Exception cleanup routine used by \c _GCC_specific_handler to
 /// free foreign exceptions.
 static void seh_exc_cleanup(_Unwind_Reason_Code urc, _Unwind_Exception *exc) {
@@ -452,20 +448,23 @@ _Unwind_GetRegionStart(struct _Unwind_Context *context) {
 static int
 _unw_init_seh(unw_cursor_t *cursor, CONTEXT *context) {
 #ifdef _LIBUNWIND_TARGET_X86_64
-  new ((void *)cursor) UnwindCursor<LocalAddressSpace, Registers_x86_64>(
-      context, LocalAddressSpace::sThisAddressSpace);
+  new (reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_x86_64> *>(cursor))
+      UnwindCursor<LocalAddressSpace, Registers_x86_64>(
+          context, LocalAddressSpace::sThisAddressSpace);
   auto *co = reinterpret_cast<AbstractUnwindCursor *>(cursor);
   co->setInfoBasedOnIPRegister();
   return UNW_ESUCCESS;
 #elif defined(_LIBUNWIND_TARGET_ARM)
-  new ((void *)cursor) UnwindCursor<LocalAddressSpace, Registers_arm>(
-      context, LocalAddressSpace::sThisAddressSpace);
+  new (reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_arm> *>(cursor))
+      UnwindCursor<LocalAddressSpace, Registers_arm>(
+          context, LocalAddressSpace::sThisAddressSpace);
   auto *co = reinterpret_cast<AbstractUnwindCursor *>(cursor);
   co->setInfoBasedOnIPRegister();
   return UNW_ESUCCESS;
 #elif defined(_LIBUNWIND_TARGET_AARCH64)
-  new ((void *)cursor) UnwindCursor<LocalAddressSpace, Registers_arm64>(
-      context, LocalAddressSpace::sThisAddressSpace);
+  new (reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_arm64> *>(cursor))
+      UnwindCursor<LocalAddressSpace, Registers_arm64>(
+          context, LocalAddressSpace::sThisAddressSpace);
   auto *co = reinterpret_cast<AbstractUnwindCursor *>(cursor);
   co->setInfoBasedOnIPRegister();
   return UNW_ESUCCESS;

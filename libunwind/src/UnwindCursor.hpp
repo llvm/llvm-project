@@ -894,6 +894,10 @@ public:
   virtual void        saveVFPAsX();
 #endif
 
+  // libunwind does not and should not depend on C++ library which means that we
+  // need our own defition of inline placement new.
+  static void *operator new(size_t, UnwindCursor<A, R> *p) { return p; }
+
 private:
 
 #if defined(_LIBUNWIND_ARM_EHABI)

@@ -92,3 +92,87 @@ body: |
     %0:_(s128) = G_CONSTANT i128 5
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %0
 ...
+
+---
+name: test_constant_p0
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_constant_p0
+    ; CHECK: [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+    ; CHECK: $vgpr0_vgpr1 = COPY [[C]](p0)
+    %0:_(p0) = G_CONSTANT i64 0
+    $vgpr0_vgpr1 = COPY %0
+...
+
+---
+name: test_constant_p1
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_constant_p1
+    ; CHECK: [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
+    ; CHECK: $vgpr0_vgpr1 = COPY [[C]](p1)
+    %0:_(p1) = G_CONSTANT i64 0
+    $vgpr0_vgpr1 = COPY %0
+...
+
+---
+name: test_constant_p2
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_constant_p2
+    ; CHECK: [[C:%[0-9]+]]:_(p2) = G_CONSTANT i32 0
+    ; CHECK: $vgpr0 = COPY [[C]](p2)
+    %0:_(p2) = G_CONSTANT i32 0
+    $vgpr0 = COPY %0
+...
+
+---
+name: test_constant_p3
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_constant_p3
+    ; CHECK: [[C:%[0-9]+]]:_(p2) = G_CONSTANT i32 0
+    ; CHECK: $vgpr0 = COPY [[C]](p2)
+    %0:_(p2) = G_CONSTANT i32 0
+    $vgpr0 = COPY %0
+...
+
+---
+name: test_constant_p4
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_constant_p4
+    ; CHECK: [[C:%[0-9]+]]:_(p4) = G_CONSTANT i64 0
+    ; CHECK: $vgpr0_vgpr1 = COPY [[C]](p4)
+    %0:_(p4) = G_CONSTANT i64 0
+    $vgpr0_vgpr1 = COPY %0
+...
+
+---
+name: test_constant_p5
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_constant_p5
+    ; CHECK: [[C:%[0-9]+]]:_(p5) = G_CONSTANT i32 0
+    ; CHECK: $vgpr0 = COPY [[C]](p5)
+    %0:_(p5) = G_CONSTANT i32 0
+    $vgpr0 = COPY %0
+...
+
+---
+name: test_constant_p999
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_constant_p999
+    ; CHECK: [[C:%[0-9]+]]:_(p999) = G_CONSTANT i64 0
+    ; CHECK: $vgpr0_vgpr1 = COPY [[C]](p999)
+    %0:_(p999) = G_CONSTANT i64 0
+    $vgpr0_vgpr1 = COPY %0
+...

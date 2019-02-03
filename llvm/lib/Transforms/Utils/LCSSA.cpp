@@ -197,6 +197,17 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
         continue;
       }
 
+      // If we added a single PHI, it must dominate all uses and we can directly
+      // rename it.
+      if (AddedPHIs.size() == 1) {
+        // Tell the VHs that the uses changed. This updates SCEV's caches.
+        // We might call ValueIsRAUWd multiple times for the same value.
+        if (UseToRewrite->get()->hasValueHandle())
+          ValueHandleBase::ValueIsRAUWd(*UseToRewrite, AddedPHIs[0]);
+        UseToRewrite->set(AddedPHIs[0]);
+        continue;
+      }
+
       // Otherwise, do full PHI insertion.
       SSAUpdate.RewriteUse(*UseToRewrite);
     }
@@ -210,9 +221,12 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
       BasicBlock *UserBB = DVI->getParent();
       if (InstBB == UserBB || L->contains(UserBB))
         continue;
-      // We currently only handle debug values residing in blocks where we have
-      // inserted a PHI instruction.
-      if (Value *V = SSAUpdate.FindValueForBlock(UserBB))
+      // We currently only handle debug values residing in blocks that were
+      // traversed while rewriting the uses. If we inserted just a single PHI,
+      // we will handle all relevant debug values.
+      Value *V = AddedPHIs.size() == 1 ? AddedPHIs[0]
+                                       : SSAUpdate.FindValueForBlock(UserBB);
+      if (V)
         DVI->setOperand(0, MetadataAsValue::get(Ctx, ValueAsMetadata::get(V)));
     }
 
