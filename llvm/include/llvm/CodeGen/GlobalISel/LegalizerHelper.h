@@ -119,6 +119,10 @@ private:
   // extending back with \p ExtOpcode.
   void narrowScalarDst(MachineInstr &MI, LLT NarrowTy, unsigned OpIdx,
                        unsigned ExtOpcode);
+  LegalizeResult
+  widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
+  LegalizeResult
+  widenScalarUnmergeValues(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
 
   /// Helper function to split a wide generic register into bitwise blocks with
   /// the given Type (which implies the number of blocks needed). The generic

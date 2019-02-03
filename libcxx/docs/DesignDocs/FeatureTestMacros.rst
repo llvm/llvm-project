@@ -9,7 +9,9 @@ Overview
 ========
 
 Libc++ implements the C++ feature test macros as specified in the C++2a standard,
-and before that in non-normative guiding documents (`See cppreference <https://en.cppreference.com/w/User:D41D8CD98F/feature_testing_macros>`)
+and before that in non-normative guiding documents
+(`See cppreference <https://en.cppreference.com/w/User:D41D8CD98F/feature_testing_macros>`_)
+
 
 Design
 ======
@@ -23,8 +25,7 @@ lives in, and whether or not is is implemented by libc++. From this SSoA we
 have enough information to automatically generate the `<version>` header,
 the tests, and the documentation.
 
-Therefore we maintain a SSoA in
-`libcxx/test/std/language.support/support.limits/support.limits.general/generate_feature_test_macro_components.py`
+Therefore we maintain a SSoA in `libcxx/utils/generate_feature_test_macro_components.py`
 which doubles as a script to generate the following components:
 
 * The `<version>` header.

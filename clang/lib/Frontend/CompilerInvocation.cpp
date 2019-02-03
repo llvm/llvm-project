@@ -1322,6 +1322,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.DefaultFunctionAttrs = Args.getAllArgValues(OPT_default_function_attr);
 
+  Opts.PassPlugins = Args.getAllArgValues(OPT_fpass_plugin_EQ);
+
   return Success;
 }
 
