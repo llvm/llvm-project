@@ -42,9 +42,7 @@ define void @test_0(i64*, i64*) {
 define void @test_1(i64*, i64*) {
 ; CHECK-LABEL: test_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    incq (%rdi)
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    addb $-1, %al
+; CHECK-NEXT:    addq $1, (%rdi)
 ; CHECK-NEXT:    adcq $0, (%rsi)
 ; CHECK-NEXT:    retq
   %3 = load i64, i64* %0, align 8
@@ -249,6 +247,25 @@ define void @test_18446744073709551615(i64*, i64*) {
   %9 = extractvalue { i8, i64 } %8, 1
   store i64 %9, i64* %1, align 8
   ret void
+}
+
+define i1 @illegal_type(i17 %x, i17* %p) {
+; CHECK-LABEL: illegal_type:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl $131071, %edi # imm = 0x1FFFF
+; CHECK-NEXT:    addl $29, %edi
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    andl $131071, %ecx # imm = 0x1FFFF
+; CHECK-NEXT:    cmpl %edi, %ecx
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    movw %di, (%rsi)
+; CHECK-NEXT:    shrl $16, %ecx
+; CHECK-NEXT:    movb %cl, 2(%rsi)
+; CHECK-NEXT:    retq
+  %a = add i17 %x, 29
+  store i17 %a, i17* %p
+  %ov = icmp ult i17 %a, 29
+  ret i1 %ov
 }
 
 declare { i8, i64 } @llvm.x86.addcarry.64(i8, i64, i64)

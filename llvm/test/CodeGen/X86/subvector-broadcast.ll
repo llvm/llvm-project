@@ -1598,8 +1598,7 @@ define <16 x i32> @test_2xi32_to_16xi32_mem(<2 x i32>* %vp) {
 ; X32-AVX512-LABEL: test_2xi32_to_16xi32_mem:
 ; X32-AVX512:       # %bb.0:
 ; X32-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-AVX512-NEXT:    vbroadcastsd %xmm0, %zmm0
+; X32-AVX512-NEXT:    vbroadcastsd (%eax), %zmm0
 ; X32-AVX512-NEXT:    retl
 ;
 ; X64-AVX-LABEL: test_2xi32_to_16xi32_mem:
@@ -1610,8 +1609,7 @@ define <16 x i32> @test_2xi32_to_16xi32_mem(<2 x i32>* %vp) {
 ;
 ; X64-AVX512-LABEL: test_2xi32_to_16xi32_mem:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X64-AVX512-NEXT:    vbroadcastsd %xmm0, %zmm0
+; X64-AVX512-NEXT:    vbroadcastsd (%rdi), %zmm0
 ; X64-AVX512-NEXT:    retq
   %vec = load <2 x i32>, <2 x i32>* %vp
   %res = shufflevector <2 x i32> %vec, <2 x i32> undef, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>

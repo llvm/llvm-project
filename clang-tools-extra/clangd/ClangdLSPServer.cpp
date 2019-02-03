@@ -53,7 +53,7 @@ CodeAction toCodeAction(const ClangdServer::TweakRef &T, const URIForFile &File,
   CA.command->tweakArgs->tweakID = T.ID;
   CA.command->tweakArgs->selection = Selection;
   return CA;
-};
+}
 
 void adjustSymbolKinds(llvm::MutableArrayRef<DocumentSymbol> Syms,
                        SymbolKindBitset Kinds) {

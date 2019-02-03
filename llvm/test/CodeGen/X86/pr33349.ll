@@ -18,19 +18,19 @@ target triple = "x86_64-unknown-linux-gnu"
 ; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fld1
 ; KNL-NEXT:    fldz
-; KNL-NEXT:    fld %st(0)
-; KNL-NEXT:    fcmovne %st(2), %st(0)
+; KNL-NEXT:    fld %st
+; KNL-NEXT:    fcmovne %st(2), %st
 ; KNL-NEXT:    testb $1, %cl
 ; KNL-NEXT:    fld %st(1)
-; KNL-NEXT:    fcmovne %st(3), %st(0)
+; KNL-NEXT:    fcmovne %st(3), %st
 ; KNL-NEXT:    kmovw %k2, %eax
 ; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fld %st(2)
-; KNL-NEXT:    fcmovne %st(4), %st(0)
+; KNL-NEXT:    fcmovne %st(4), %st
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fxch %st(3)
-; KNL-NEXT:    fcmovne %st(4), %st(0)
+; KNL-NEXT:    fcmovne %st(4), %st
 ; KNL-NEXT:    fstp %st(4)
 ; KNL-NEXT:    fxch %st(3)
 ; KNL-NEXT:    fstpt (%rdi)
@@ -54,19 +54,19 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld1
 ; SKX-NEXT:    fldz
-; SKX-NEXT:    fld %st(0)
-; SKX-NEXT:    fcmovne %st(2), %st(0)
+; SKX-NEXT:    fld %st
+; SKX-NEXT:    fcmovne %st(2), %st
 ; SKX-NEXT:    testb $1, %cl
 ; SKX-NEXT:    fld %st(1)
-; SKX-NEXT:    fcmovne %st(3), %st(0)
+; SKX-NEXT:    fcmovne %st(3), %st
 ; SKX-NEXT:    kmovd %k2, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld %st(2)
-; SKX-NEXT:    fcmovne %st(4), %st(0)
+; SKX-NEXT:    fcmovne %st(4), %st
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fxch %st(3)
-; SKX-NEXT:    fcmovne %st(4), %st(0)
+; SKX-NEXT:    fcmovne %st(4), %st
 ; SKX-NEXT:    fstp %st(4)
 ; SKX-NEXT:    fxch %st(3)
 ; SKX-NEXT:    fstpt (%rdi)
