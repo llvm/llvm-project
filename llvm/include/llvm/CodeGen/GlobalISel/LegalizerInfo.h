@@ -221,6 +221,8 @@ LegalityPredicate widerThan(unsigned TypeIdx, unsigned Size);
 /// True iff the specified type index is a scalar whose size is not a power of
 /// 2.
 LegalityPredicate sizeNotPow2(unsigned TypeIdx);
+/// True iff the specified type indices are both the same bit size.
+LegalityPredicate sameSize(unsigned TypeIdx0, unsigned TypeIdx1);
 /// True iff the specified MMO index has a size that is not a power of 2
 LegalityPredicate memSizeInBytesNotPow2(unsigned MMOIdx);
 /// True iff the specified type index is a vector whose element count is not a

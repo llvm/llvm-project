@@ -23,10 +23,6 @@
 
 using namespace libunwind;
 
-// libunwind does not and should not depend on C++ library which means that we
-// need our own declaration of global placement new.
-void *operator new(size_t, void*);
-
 /// internal object to represent this processes address space
 LocalAddressSpace LocalAddressSpace::sThisAddressSpace;
 
@@ -70,101 +66,15 @@ _LIBUNWIND_EXPORT int unw_init_local(unw_cursor_t *cursor,
 # error Architecture not supported
 #endif
   // Use "placement new" to allocate UnwindCursor in the cursor buffer.
-  new ((void *)cursor) UnwindCursor<LocalAddressSpace, REGISTER_KIND>(
-                                 context, LocalAddressSpace::sThisAddressSpace);
+  new (reinterpret_cast<UnwindCursor<LocalAddressSpace, REGISTER_KIND> *>(cursor))
+      UnwindCursor<LocalAddressSpace, REGISTER_KIND>(
+          context, LocalAddressSpace::sThisAddressSpace);
 #undef REGISTER_KIND
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   co->setInfoBasedOnIPRegister();
 
   return UNW_ESUCCESS;
 }
-
-#ifdef UNW_REMOTE
-/// Create a cursor into a thread in another process.
-_LIBUNWIND_EXPORT int unw_init_remote_thread(unw_cursor_t *cursor,
-                                             unw_addr_space_t as,
-                                             void *arg) {
-  // special case: unw_init_remote(xx, unw_local_addr_space, xx)
-  if (as == (unw_addr_space_t)&LocalAddressSpace::sThisAddressSpace)
-    return unw_init_local(cursor, NULL); //FIXME
-
-  // use "placement new" to allocate UnwindCursor in the cursor buffer
-  switch (as->cpuType) {
-  case CPU_TYPE_I386:
-    new ((void *)cursor)
-        UnwindCursor<RemoteAddressSpace<Pointer32<LittleEndian>>,
-                     Registers_x86>(((unw_addr_space_i386 *)as)->oas, arg);
-    break;
-  case CPU_TYPE_X86_64:
-    new ((void *)cursor)
-        UnwindCursor<RemoteAddressSpace<Pointer64<LittleEndian>>,
-                     Registers_x86_64>(((unw_addr_space_x86_64 *)as)->oas, arg);
-    break;
-  case CPU_TYPE_POWERPC:
-    new ((void *)cursor)
-        UnwindCursor<RemoteAddressSpace<Pointer32<BigEndian>>,
-                     Registers_ppc>(((unw_addr_space_ppc *)as)->oas, arg);
-    break;
-  default:
-    return UNW_EUNSPEC;
-  }
-  return UNW_ESUCCESS;
-}
-
-
-static bool is64bit(task_t task) {
-  return false; // FIXME
-}
-
-/// Create an address_space object for use in examining another task.
-_LIBUNWIND_EXPORT unw_addr_space_t unw_create_addr_space_for_task(task_t task) {
-#if __i386__
-  if (is64bit(task)) {
-    unw_addr_space_x86_64 *as = malloc(sizeof(unw_addr_space_x86_64));
-    new (as) unw_addr_space_x86_64(task);
-    as->taskPort = task;
-    as->cpuType = CPU_TYPE_X86_64;
-    //as->oas
-  } else {
-    unw_addr_space_i386 *as = malloc(sizeof(unw_addr_space_i386));
-    new (as) unw_addr_space_i386(task);
-    as->taskPort = task;
-    as->cpuType = CPU_TYPE_I386;
-    //as->oas
-  }
-#else
-// FIXME
-#endif
-}
-
-
-/// Delete an address_space object.
-_LIBUNWIND_EXPORT void unw_destroy_addr_space(unw_addr_space_t asp) {
-  switch (asp->cpuType) {
-#if __i386__ || __x86_64__
-  case CPU_TYPE_I386: {
-    unw_addr_space_i386 *as = (unw_addr_space_i386 *)asp;
-    as->~unw_addr_space_i386();
-    free(as);
-  }
-  break;
-  case CPU_TYPE_X86_64: {
-    unw_addr_space_x86_64 *as = (unw_addr_space_x86_64 *)asp;
-    as->~unw_addr_space_x86_64();
-    free(as);
-  }
-  break;
-#endif
-  case CPU_TYPE_POWERPC: {
-    unw_addr_space_ppc *as = (unw_addr_space_ppc *)asp;
-    as->~unw_addr_space_ppc();
-    free(as);
-  }
-  break;
-  }
-}
-#endif // UNW_REMOTE
-
 
 /// Get value of specified register at cursor position in stack frame.
 _LIBUNWIND_EXPORT int unw_get_reg(unw_cursor_t *cursor, unw_regnum_t regNum,

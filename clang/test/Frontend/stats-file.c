@@ -4,5 +4,5 @@
 //  ... here come some json values ...
 // CHECK: }
 
-// RUN: %clang_cc1 -emit-llvm -o %t -stats-file=%T/doesnotexist/bla %s 2>&1 | FileCheck -check-prefix=OUTPUTFAIL %s
+// RUN: %clang_cc1 -emit-llvm -o %t -stats-file=%t/doesnotexist/bla %s 2>&1 | FileCheck -check-prefix=OUTPUTFAIL %s
 // OUTPUTFAIL: warning: unable to open statistics output file '{{.*}}doesnotexist{{.}}bla': '{{[Nn]}}o such file or directory'
