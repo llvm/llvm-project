@@ -141,7 +141,6 @@ define <16 x i8> @combine_pshufb_as_vpbroadcastb128(<16 x i8> %a) {
 define <32 x i8> @combine_pshufb_as_vpbroadcastb256(<2 x i64> %a) {
 ; CHECK-LABEL: combine_pshufb_as_vpbroadcastb256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vpbroadcastb %xmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <2 x i64> %a, <2 x i64> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
@@ -165,7 +164,6 @@ define <16 x i8> @combine_pshufb_as_vpbroadcastw128(<16 x i8> %a) {
 define <32 x i8> @combine_pshufb_as_vpbroadcastw256(<2 x i64> %a) {
 ; CHECK-LABEL: combine_pshufb_as_vpbroadcastw256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vpbroadcastw %xmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <2 x i64> %a, <2 x i64> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
@@ -197,14 +195,12 @@ define <16 x i8> @combine_pshufb_as_vpbroadcastd128(<16 x i8> %a) {
 define <8 x i32> @combine_permd_as_vpbroadcastd256(<4 x i32> %a) {
 ; X86-LABEL: combine_permd_as_vpbroadcastd256:
 ; X86:       # %bb.0:
-; X86-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; X86-NEXT:    vpbroadcastd %xmm0, %ymm0
 ; X86-NEXT:    vpaddd {{\.LCPI.*}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_permd_as_vpbroadcastd256:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; X64-NEXT:    vpbroadcastd %xmm0, %ymm0
 ; X64-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
@@ -226,14 +222,12 @@ define <16 x i8> @combine_pshufb_as_vpbroadcastq128(<16 x i8> %a) {
 define <8 x i32> @combine_permd_as_vpbroadcastq256(<4 x i32> %a) {
 ; X86-LABEL: combine_permd_as_vpbroadcastq256:
 ; X86:       # %bb.0:
-; X86-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; X86-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; X86-NEXT:    vpaddd {{\.LCPI.*}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_permd_as_vpbroadcastq256:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; X64-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; X64-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
@@ -257,7 +251,6 @@ define <4 x float> @combine_pshufb_as_vpbroadcastss128(<4 x float> %a) {
 define <8 x float> @combine_permps_as_vpbroadcastss256(<4 x float> %a) {
 ; CHECK-LABEL: combine_permps_as_vpbroadcastss256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vbroadcastss %xmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <4 x float> %a, <4 x float> undef, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -268,7 +261,6 @@ define <8 x float> @combine_permps_as_vpbroadcastss256(<4 x float> %a) {
 define <4 x double> @combine_permps_as_vpbroadcastsd256(<2 x double> %a) {
 ; CHECK-LABEL: combine_permps_as_vpbroadcastsd256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <2 x double> %a, <2 x double> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
@@ -313,7 +305,6 @@ define <4 x float> @combine_vpbroadcast_pshufb_as_vpbroadcastss128(<4 x float> %
 define <8 x float> @combine_vpbroadcast_permd_as_vpbroadcastss256(<4 x float> %a) {
 ; CHECK-LABEL: combine_vpbroadcast_permd_as_vpbroadcastss256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vbroadcastss %xmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <4 x float> %a, <4 x float> undef, <8 x i32> zeroinitializer
@@ -324,7 +315,6 @@ define <8 x float> @combine_vpbroadcast_permd_as_vpbroadcastss256(<4 x float> %a
 define <4 x double> @combine_vpbroadcast_permd_as_vpbroadcastsd256(<2 x double> %a) {
 ; CHECK-LABEL: combine_vpbroadcast_permd_as_vpbroadcastsd256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <2 x double> %a, <2 x double> undef, <4 x i32> zeroinitializer
@@ -665,7 +655,8 @@ define <16 x i8> @combine_pshufb_insertion_as_broadcast_v2i64(i64 %a0) {
 define <8 x i32> @combine_permd_insertion_as_broadcast_v4i64(i64 %a0) {
 ; X86-LABEL: combine_permd_insertion_as_broadcast_v4i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    vbroadcastsd {{[0-9]+}}(%esp), %ymm0
+; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_permd_insertion_as_broadcast_v4i64:

@@ -1463,6 +1463,20 @@ struct UAddWithOverflow_match {
       if (AddExpr.match(ICmpRHS) && (ICmpLHS == AddLHS || ICmpLHS == AddRHS))
         return L.match(AddLHS) && R.match(AddRHS) && S.match(ICmpRHS);
 
+    // Match special-case for increment-by-1.
+    if (Pred == ICmpInst::ICMP_EQ) {
+      // (a + 1) == 0
+      // (1 + a) == 0
+      if (AddExpr.match(ICmpLHS) && m_ZeroInt().match(ICmpRHS) &&
+          (m_One().match(AddLHS) || m_One().match(AddRHS)))
+        return L.match(AddLHS) && R.match(AddRHS) && S.match(ICmpLHS);
+      // 0 == (a + 1)
+      // 0 == (1 + a)
+      if (m_ZeroInt().match(ICmpLHS) && AddExpr.match(ICmpRHS) &&
+          (m_One().match(AddLHS) || m_One().match(AddRHS)))
+        return L.match(AddLHS) && R.match(AddRHS) && S.match(ICmpRHS);
+    }
+
     return false;
   }
 };

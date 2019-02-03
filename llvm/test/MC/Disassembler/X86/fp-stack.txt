@@ -1,7 +1,7 @@
 # RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s
 # RUN: llvm-mc --disassemble %s -triple=i686-apple-darwin9 | FileCheck %s
 
-# CHECK: fadd %st(0)
+# CHECK: fadd %st
 0xd8,0xc0
 
 # CHECK: fadd %st(1)
@@ -25,7 +25,7 @@
 # CHECK: fadd %st(7)
 0xd8,0xc7
 
-# CHECK: fmul %st(0)
+# CHECK: fmul %st
 0xd8,0xc8
 
 # CHECK: fmul %st(1)
@@ -49,7 +49,7 @@
 # CHECK: fmul %st(7)
 0xd8,0xcf
 
-# CHECK: fcom %st(0)
+# CHECK: fcom %st
 0xd8,0xd0
 
 # CHECK: fcom %st(1)
@@ -73,7 +73,7 @@
 # CHECK: fcom %st(7)
 0xd8,0xd7
 
-# CHECK: fcomp %st(0)
+# CHECK: fcomp %st
 0xd8,0xd8
 
 # CHECK: fcomp %st(1)
@@ -97,7 +97,7 @@
 # CHECK: fcomp %st(7)
 0xd8,0xdf
 
-# CHECK: fsub %st(0)
+# CHECK: fsub %st
 0xd8,0xe0
 
 # CHECK: fsub %st(1)
@@ -121,7 +121,7 @@
 # CHECK: fsub %st(7)
 0xd8,0xe7
 
-# CHECK: fsubr %st(0)
+# CHECK: fsubr %st
 0xd8,0xe8
 
 # CHECK: fsubr %st(1)
@@ -145,7 +145,7 @@
 # CHECK: fsubr %st(7)
 0xd8,0xef
 
-# CHECK: fdiv %st(0)
+# CHECK: fdiv %st
 0xd8,0xf0
 
 # CHECK: fdiv %st(1)
@@ -169,7 +169,7 @@
 # CHECK: fdiv %st(7)
 0xd8,0xf7
 
-# CHECK: fdivr %st(0)
+# CHECK: fdivr %st
 0xd8,0xf8
 
 # CHECK: fdivr %st(1)
@@ -193,7 +193,7 @@
 # CHECK: fdivr %st(7)
 0xd8,0xff
 
-# CHECK: fld %st(0)
+# CHECK: fld %st
 0xd9,0xc0
 
 # CHECK: fld %st(1)
@@ -217,7 +217,7 @@
 # CHECK: fld %st(7)
 0xd9,0xc7
 
-# CHECK: fxch %st(0)
+# CHECK: fxch %st
 0xd9,0xc8
 
 # CHECK: fxch %st(1)
@@ -325,199 +325,199 @@
 # CHECK: fcos
 0xd9,0xff
 
-# CHECK: fcmovb %st(0), %st(0)
+# CHECK: fcmovb %st, %st
 0xda,0xc0
 
-# CHECK: fcmovb %st(1), %st(0)
+# CHECK: fcmovb %st(1), %st
 0xda,0xc1
 
-# CHECK: fcmovb %st(2), %st(0)
+# CHECK: fcmovb %st(2), %st
 0xda,0xc2
 
-# CHECK: fcmovb %st(3), %st(0)
+# CHECK: fcmovb %st(3), %st
 0xda,0xc3
 
-# CHECK: fcmovb %st(4), %st(0)
+# CHECK: fcmovb %st(4), %st
 0xda,0xc4
 
-# CHECK: fcmovb %st(5), %st(0)
+# CHECK: fcmovb %st(5), %st
 0xda,0xc5
 
-# CHECK: fcmovb %st(6), %st(0)
+# CHECK: fcmovb %st(6), %st
 0xda,0xc6
 
-# CHECK: fcmovb %st(7), %st(0)
+# CHECK: fcmovb %st(7), %st
 0xda,0xc7
 
-# CHECK: fcmove %st(0), %st(0)
+# CHECK: fcmove %st, %st
 0xda,0xc8
 
-# CHECK: fcmove %st(1), %st(0)
+# CHECK: fcmove %st(1), %st
 0xda,0xc9
 
-# CHECK: fcmove %st(2), %st(0)
+# CHECK: fcmove %st(2), %st
 0xda,0xca
 
-# CHECK: fcmove %st(3), %st(0)
+# CHECK: fcmove %st(3), %st
 0xda,0xcb
 
-# CHECK: fcmove %st(4), %st(0)
+# CHECK: fcmove %st(4), %st
 0xda,0xcc
 
-# CHECK: fcmove %st(5), %st(0)
+# CHECK: fcmove %st(5), %st
 0xda,0xcd
 
-# CHECK: fcmove %st(6), %st(0)
+# CHECK: fcmove %st(6), %st
 0xda,0xce
 
-# CHECK: fcmove %st(7), %st(0)
+# CHECK: fcmove %st(7), %st
 0xda,0xcf
 
-# CHECK: fcmovbe %st(0), %st(0)
+# CHECK: fcmovbe %st, %st
 0xda,0xd0
 
-# CHECK: fcmovbe %st(1), %st(0)
+# CHECK: fcmovbe %st(1), %st
 0xda,0xd1
 
-# CHECK: fcmovbe %st(2), %st(0)
+# CHECK: fcmovbe %st(2), %st
 0xda,0xd2
 
-# CHECK: fcmovbe %st(3), %st(0)
+# CHECK: fcmovbe %st(3), %st
 0xda,0xd3
 
-# CHECK: fcmovbe %st(4), %st(0)
+# CHECK: fcmovbe %st(4), %st
 0xda,0xd4
 
-# CHECK: fcmovbe %st(5), %st(0)
+# CHECK: fcmovbe %st(5), %st
 0xda,0xd5
 
-# CHECK: fcmovbe %st(6), %st(0)
+# CHECK: fcmovbe %st(6), %st
 0xda,0xd6
 
-# CHECK: fcmovbe %st(7), %st(0)
+# CHECK: fcmovbe %st(7), %st
 0xda,0xd7
 
-# CHECK: fcmovu %st(0), %st(0)
+# CHECK: fcmovu %st, %st
 0xda,0xd8
 
-# CHECK: fcmovu %st(1), %st(0)
+# CHECK: fcmovu %st(1), %st
 0xda,0xd9
 
-# CHECK: fcmovu %st(2), %st(0)
+# CHECK: fcmovu %st(2), %st
 0xda,0xda
 
-# CHECK: fcmovu %st(3), %st(0)
+# CHECK: fcmovu %st(3), %st
 0xda,0xdb
 
-# CHECK: fcmovu %st(4), %st(0)
+# CHECK: fcmovu %st(4), %st
 0xda,0xdc
 
-# CHECK: fcmovu %st(5), %st(0)
+# CHECK: fcmovu %st(5), %st
 0xda,0xdd
 
-# CHECK: fcmovu %st(6), %st(0)
+# CHECK: fcmovu %st(6), %st
 0xda,0xde
 
-# CHECK: fcmovu %st(7), %st(0)
+# CHECK: fcmovu %st(7), %st
 0xda,0xdf
 
 # CHECK: fucompp
 0xda,0xe9
 
-# CHECK: fcmovnb %st(0), %st(0)
+# CHECK: fcmovnb %st, %st
 0xdb,0xc0
 
-# CHECK: fcmovnb %st(1), %st(0)
+# CHECK: fcmovnb %st(1), %st
 0xdb,0xc1
 
-# CHECK: fcmovnb %st(2), %st(0)
+# CHECK: fcmovnb %st(2), %st
 0xdb,0xc2
 
-# CHECK: fcmovnb %st(3), %st(0)
+# CHECK: fcmovnb %st(3), %st
 0xdb,0xc3
 
-# CHECK: fcmovnb %st(4), %st(0)
+# CHECK: fcmovnb %st(4), %st
 0xdb,0xc4
 
-# CHECK: fcmovnb %st(5), %st(0)
+# CHECK: fcmovnb %st(5), %st
 0xdb,0xc5
 
-# CHECK: fcmovnb %st(6), %st(0)
+# CHECK: fcmovnb %st(6), %st
 0xdb,0xc6
 
-# CHECK: fcmovnb %st(7), %st(0)
+# CHECK: fcmovnb %st(7), %st
 0xdb,0xc7
 
-# CHECK: fcmovne %st(0), %st(0)
+# CHECK: fcmovne %st, %st
 0xdb,0xc8
 
-# CHECK: fcmovne %st(1), %st(0)
+# CHECK: fcmovne %st(1), %st
 0xdb,0xc9
 
-# CHECK: fcmovne %st(2), %st(0)
+# CHECK: fcmovne %st(2), %st
 0xdb,0xca
 
-# CHECK: fcmovne %st(3), %st(0)
+# CHECK: fcmovne %st(3), %st
 0xdb,0xcb
 
-# CHECK: fcmovne %st(4), %st(0)
+# CHECK: fcmovne %st(4), %st
 0xdb,0xcc
 
-# CHECK: fcmovne %st(5), %st(0)
+# CHECK: fcmovne %st(5), %st
 0xdb,0xcd
 
-# CHECK: fcmovne %st(6), %st(0)
+# CHECK: fcmovne %st(6), %st
 0xdb,0xce
 
-# CHECK: fcmovne %st(7), %st(0)
+# CHECK: fcmovne %st(7), %st
 0xdb,0xcf
 
-# CHECK: fcmovnbe %st(0), %st(0)
+# CHECK: fcmovnbe %st, %st
 0xdb,0xd0
 
-# CHECK: fcmovnbe %st(1), %st(0)
+# CHECK: fcmovnbe %st(1), %st
 0xdb,0xd1
 
-# CHECK: fcmovnbe %st(2), %st(0)
+# CHECK: fcmovnbe %st(2), %st
 0xdb,0xd2
 
-# CHECK: fcmovnbe %st(3), %st(0)
+# CHECK: fcmovnbe %st(3), %st
 0xdb,0xd3
 
-# CHECK: fcmovnbe %st(4), %st(0)
+# CHECK: fcmovnbe %st(4), %st
 0xdb,0xd4
 
-# CHECK: fcmovnbe %st(5), %st(0)
+# CHECK: fcmovnbe %st(5), %st
 0xdb,0xd5
 
-# CHECK: fcmovnbe %st(6), %st(0)
+# CHECK: fcmovnbe %st(6), %st
 0xdb,0xd6
 
-# CHECK: fcmovnbe %st(7), %st(0)
+# CHECK: fcmovnbe %st(7), %st
 0xdb,0xd7
 
-# CHECK: fcmovnu %st(0), %st(0)
+# CHECK: fcmovnu %st, %st
 0xdb,0xd8
 
-# CHECK: fcmovnu %st(1), %st(0)
+# CHECK: fcmovnu %st(1), %st
 0xdb,0xd9
 
-# CHECK: fcmovnu %st(2), %st(0)
+# CHECK: fcmovnu %st(2), %st
 0xdb,0xda
 
-# CHECK: fcmovnu %st(3), %st(0)
+# CHECK: fcmovnu %st(3), %st
 0xdb,0xdb
 
-# CHECK: fcmovnu %st(4), %st(0)
+# CHECK: fcmovnu %st(4), %st
 0xdb,0xdc
 
-# CHECK: fcmovnu %st(5), %st(0)
+# CHECK: fcmovnu %st(5), %st
 0xdb,0xdd
 
-# CHECK: fcmovnu %st(6), %st(0)
+# CHECK: fcmovnu %st(6), %st
 0xdb,0xde
 
-# CHECK: fcmovnu %st(7), %st(0)
+# CHECK: fcmovnu %st(7), %st
 0xdb,0xdf
 
 # CHECK: fnclex
@@ -526,7 +526,7 @@
 # CHECK: fninit
 0xdb,0xe3
 
-# CHECK: fucomi %st(0)
+# CHECK: fucomi %st
 0xdb,0xe8
 
 # CHECK: fucomi %st(1)
@@ -550,7 +550,7 @@
 # CHECK: fucomi %st(7)
 0xdb,0xef
 
-# CHECK: fcomi %st(0)
+# CHECK: fcomi %st
 0xdb,0xf0
 
 # CHECK: fcomi %st(1)
@@ -574,151 +574,151 @@
 # CHECK: fcomi %st(7)
 0xdb,0xf7
 
-# CHECK: fadd %st(0), %st(0)
+# CHECK: fadd %st, %st
 0xdc,0xc0
 
-# CHECK: fadd %st(0), %st(1)
+# CHECK: fadd %st, %st(1)
 0xdc,0xc1
 
-# CHECK: fadd %st(0), %st(2)
+# CHECK: fadd %st, %st(2)
 0xdc,0xc2
 
-# CHECK: fadd %st(0), %st(3)
+# CHECK: fadd %st, %st(3)
 0xdc,0xc3
 
-# CHECK: fadd %st(0), %st(4)
+# CHECK: fadd %st, %st(4)
 0xdc,0xc4
 
-# CHECK: fadd %st(0), %st(5)
+# CHECK: fadd %st, %st(5)
 0xdc,0xc5
 
-# CHECK: fadd %st(0), %st(6)
+# CHECK: fadd %st, %st(6)
 0xdc,0xc6
 
-# CHECK: fadd %st(0), %st(7)
+# CHECK: fadd %st, %st(7)
 0xdc,0xc7
 
-# CHECK: fmul %st(0), %st(0)
+# CHECK: fmul %st, %st
 0xdc,0xc8
 
-# CHECK: fmul %st(0), %st(1)
+# CHECK: fmul %st, %st(1)
 0xdc,0xc9
 
-# CHECK: fmul %st(0), %st(2)
+# CHECK: fmul %st, %st(2)
 0xdc,0xca
 
-# CHECK: fmul %st(0), %st(3)
+# CHECK: fmul %st, %st(3)
 0xdc,0xcb
 
-# CHECK: fmul %st(0), %st(4)
+# CHECK: fmul %st, %st(4)
 0xdc,0xcc
 
-# CHECK: fmul %st(0), %st(5)
+# CHECK: fmul %st, %st(5)
 0xdc,0xcd
 
-# CHECK: fmul %st(0), %st(6)
+# CHECK: fmul %st, %st(6)
 0xdc,0xce
 
-# CHECK: fmul %st(0), %st(7)
+# CHECK: fmul %st, %st(7)
 0xdc,0xcf
 
-# CHECK: fsub %st(0), %st(0)
+# CHECK: fsub %st, %st
 0xdc,0xe0
 
-# CHECK: fsub %st(0), %st(1)
+# CHECK: fsub %st, %st(1)
 0xdc,0xe1
 
-# CHECK: fsub %st(0), %st(2)
+# CHECK: fsub %st, %st(2)
 0xdc,0xe2
 
-# CHECK: fsub %st(0), %st(3)
+# CHECK: fsub %st, %st(3)
 0xdc,0xe3
 
-# CHECK: fsub %st(0), %st(4)
+# CHECK: fsub %st, %st(4)
 0xdc,0xe4
 
-# CHECK: fsub %st(0), %st(5)
+# CHECK: fsub %st, %st(5)
 0xdc,0xe5
 
-# CHECK: fsub %st(0), %st(6)
+# CHECK: fsub %st, %st(6)
 0xdc,0xe6
 
-# CHECK: fsub %st(0), %st(7)
+# CHECK: fsub %st, %st(7)
 0xdc,0xe7
 
-# CHECK: fsubr %st(0), %st(0)
+# CHECK: fsubr %st, %st
 0xdc,0xe8
 
-# CHECK: fsubr %st(0), %st(1)
+# CHECK: fsubr %st, %st(1)
 0xdc,0xe9
 
-# CHECK: fsubr %st(0), %st(2)
+# CHECK: fsubr %st, %st(2)
 0xdc,0xea
 
-# CHECK: fsubr %st(0), %st(3)
+# CHECK: fsubr %st, %st(3)
 0xdc,0xeb
 
-# CHECK: fsubr %st(0), %st(4)
+# CHECK: fsubr %st, %st(4)
 0xdc,0xec
 
-# CHECK: fsubr %st(0), %st(5)
+# CHECK: fsubr %st, %st(5)
 0xdc,0xed
 
-# CHECK: fsubr %st(0), %st(6)
+# CHECK: fsubr %st, %st(6)
 0xdc,0xee
 
-# CHECK: fsubr %st(0), %st(7)
+# CHECK: fsubr %st, %st(7)
 0xdc,0xef
 
-# CHECK: fdiv %st(0), %st(0)
+# CHECK: fdiv %st, %st
 0xdc,0xf0
 
-# CHECK: fdiv %st(0), %st(1)
+# CHECK: fdiv %st, %st(1)
 0xdc,0xf1
 
-# CHECK: fdiv %st(0), %st(2)
+# CHECK: fdiv %st, %st(2)
 0xdc,0xf2
 
-# CHECK: fdiv %st(0), %st(3)
+# CHECK: fdiv %st, %st(3)
 0xdc,0xf3
 
-# CHECK: fdiv %st(0), %st(4)
+# CHECK: fdiv %st, %st(4)
 0xdc,0xf4
 
-# CHECK: fdiv %st(0), %st(5)
+# CHECK: fdiv %st, %st(5)
 0xdc,0xf5
 
-# CHECK: fdiv %st(0), %st(6)
+# CHECK: fdiv %st, %st(6)
 0xdc,0xf6
 
-# CHECK: fdiv %st(0), %st(7)
+# CHECK: fdiv %st, %st(7)
 0xdc,0xf7
 
-# CHECK: fdivr %st(0), %st(0)
+# CHECK: fdivr %st, %st
 0xdc,0xf8
 
-# CHECK: fdivr %st(0), %st(1)
+# CHECK: fdivr %st, %st(1)
 0xdc,0xf9
 
-# CHECK: fdivr %st(0), %st(2)
+# CHECK: fdivr %st, %st(2)
 0xdc,0xfa
 
-# CHECK: fdivr %st(0), %st(3)
+# CHECK: fdivr %st, %st(3)
 0xdc,0xfb
 
-# CHECK: fdivr %st(0), %st(4)
+# CHECK: fdivr %st, %st(4)
 0xdc,0xfc
 
-# CHECK: fdivr %st(0), %st(5)
+# CHECK: fdivr %st, %st(5)
 0xdc,0xfd
 
-# CHECK: fdivr %st(0), %st(6)
+# CHECK: fdivr %st, %st(6)
 0xdc,0xfe
 
-# CHECK: fdivr %st(0), %st(7)
+# CHECK: fdivr %st, %st(7)
 0xdc,0xff
 
-# CHECK: ffree %st(0)
+# CHECK: ffree %st
 0xdd,0xc0
 
 # CHECK: ffree %st(1)
@@ -742,7 +742,7 @@
 # CHECK: ffree %st(7)
 0xdd,0xc7
 
-# CHECK: fst %st(0)
+# CHECK: fst %st
 0xdd,0xd0
 
 # CHECK: fst %st(1)
@@ -766,7 +766,7 @@
 # CHECK: fst %st(7)
 0xdd,0xd7
 
-# CHECK: fstp %st(0)
+# CHECK: fstp %st
 0xdd,0xd8
 
 # CHECK: fstp %st(1)
@@ -790,7 +790,7 @@
 # CHECK: fstp %st(7)
 0xdd,0xdf
 
-# CHECK: fucom %st(0)
+# CHECK: fucom %st
 0xdd,0xe0
 
 # CHECK: fucom %st(1)
@@ -814,7 +814,7 @@
 # CHECK: fucom %st(7)
 0xdd,0xe7
 
-# CHECK: fucomp %st(0)
+# CHECK: fucomp %st
 0xdd,0xe8
 
 # CHECK: fucomp %st(1)
@@ -838,7 +838,7 @@
 # CHECK: fucomp %st(7)
 0xdd,0xef
 
-# CHECK: faddp %st(0)
+# CHECK: faddp %st
 0xde,0xc0
 
 # CHECK: faddp %st(1)
@@ -862,7 +862,7 @@
 # CHECK: faddp %st(7)
 0xde,0xc7
 
-# CHECK: fmulp %st(0)
+# CHECK: fmulp %st
 0xde,0xc8
 
 # CHECK: fmulp %st(1)
@@ -889,7 +889,7 @@
 # CHECK: fcompp
 0xde,0xd9
 
-# CHECK: fsubp %st(0)
+# CHECK: fsubp %st
 0xde,0xe0
 
 # CHECK: fsubp %st(1)
@@ -913,7 +913,7 @@
 # CHECK: fsubp %st(7)
 0xde,0xe7
 
-# CHECK: fsubrp %st(0)
+# CHECK: fsubrp %st
 0xde,0xe8
 
 # CHECK: fsubrp %st(1)
@@ -937,7 +937,7 @@
 # CHECK: fsubrp %st(7)
 0xde,0xef
 
-# CHECK: fdivp %st(0)
+# CHECK: fdivp %st
 0xde,0xf0
 
 # CHECK: fdivp %st(1)
@@ -961,7 +961,7 @@
 # CHECK: fdivp %st(7)
 0xde,0xf7
 
-# CHECK: fdivrp %st(0)
+# CHECK: fdivrp %st
 0xde,0xf8
 
 # CHECK: fdivrp %st(1)
@@ -985,7 +985,7 @@
 # CHECK: fdivrp %st(7)
 0xde,0xff
 
-# CHECK: ffreep %st(0)
+# CHECK: ffreep %st
 0xdf,0xc0
 
 # CHECK: ffreep %st(1)
@@ -1012,7 +1012,7 @@
 # CHECK: fnstsw %ax
 0xdf,0xe0
 
-# CHECK: fucompi %st(0)
+# CHECK: fucompi %st
 0xdf,0xe8
 
 # CHECK: fucompi %st(1)
@@ -1036,7 +1036,7 @@
 # CHECK: fucompi %st(7)
 0xdf,0xef
 
-# CHECK: fcompi %st(0)
+# CHECK: fcompi %st
 0xdf,0xf0
 
 # CHECK: fcompi %st(1)

@@ -6773,15 +6773,43 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     }
     return true;
   }
-  case ISD::ZERO_EXTEND_VECTOR_INREG:
-  case ISD::ZERO_EXTEND: {
-    // TODO - add support for VPMOVZX with smaller input vector types.
+  case X86ISD::VBROADCAST: {
     SDValue Src = N.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
-    if (NumSizeInBits != SrcVT.getSizeInBits())
-      break;
-    DecodeZeroExtendMask(SrcVT.getScalarSizeInBits(), NumBitsPerElt, NumElts,
-                         Mask);
+    if (!SrcVT.isVector())
+      return false;
+
+    if (NumSizeInBits != SrcVT.getSizeInBits()) {
+      assert((NumSizeInBits % SrcVT.getSizeInBits()) == 0 &&
+             "Illegal broadcast type");
+      SrcVT = MVT::getVectorVT(SrcVT.getScalarType(),
+                               NumSizeInBits / SrcVT.getScalarSizeInBits());
+      Src = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), SrcVT,
+                        DAG.getUNDEF(SrcVT), Src,
+                        DAG.getIntPtrConstant(0, SDLoc(N)));
+    }
+
+    Ops.push_back(Src);
+    Mask.append(NumElts, 0);
+    return true;
+  }
+  case ISD::ZERO_EXTEND_VECTOR_INREG:
+  case ISD::ZERO_EXTEND: {
+    SDValue Src = N.getOperand(0);
+    MVT SrcVT = Src.getSimpleValueType();
+    unsigned NumSrcBitsPerElt = SrcVT.getScalarSizeInBits();
+    DecodeZeroExtendMask(NumSrcBitsPerElt, NumBitsPerElt, NumElts, Mask);
+
+    if (NumSizeInBits != SrcVT.getSizeInBits()) {
+      assert((NumSizeInBits % SrcVT.getSizeInBits()) == 0 &&
+             "Illegal zero-extension type");
+      SrcVT = MVT::getVectorVT(SrcVT.getScalarType(),
+                               NumSizeInBits / NumSrcBitsPerElt);
+      Src = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), SrcVT,
+                        DAG.getUNDEF(SrcVT), Src,
+                        DAG.getIntPtrConstant(0, SDLoc(N)));
+    }
+
     Ops.push_back(Src);
     return true;
   }
@@ -20030,7 +20058,7 @@ getX86XALUOOp(X86::CondCode &Cond, SDValue Op, SelectionDAG &DAG) {
     break;
   case ISD::UADDO:
     BaseOp = X86ISD::ADD;
-    Cond = X86::COND_B;
+    Cond = isOneConstant(RHS) ? X86::COND_E : X86::COND_B;
     break;
   case ISD::SSUBO:
     BaseOp = X86ISD::SUB;
@@ -32004,12 +32032,13 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
 
   switch (Opcode) {
   case X86ISD::VBROADCAST: {
-    // If broadcasting from another shuffle, attempt to simplify it.
-    // TODO - we really need a general SimplifyDemandedVectorElts mechanism.
     SDValue Src = N.getOperand(0);
     SDValue BC = peekThroughBitcasts(Src);
     EVT SrcVT = Src.getValueType();
     EVT BCVT = BC.getValueType();
+
+    // If broadcasting from another shuffle, attempt to simplify it.
+    // TODO - we really need a general SimplifyDemandedVectorElts mechanism.
     if (isTargetShuffle(BC.getOpcode()) &&
         VT.getScalarSizeInBits() % BCVT.getScalarSizeInBits() == 0) {
       unsigned Scale = VT.getScalarSizeInBits() / BCVT.getScalarSizeInBits();
@@ -32023,6 +32052,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
         return DAG.getNode(X86ISD::VBROADCAST, DL, VT,
                            DAG.getBitcast(SrcVT, Res));
     }
+
     // broadcast(bitcast(src)) -> bitcast(broadcast(src))
     // 32-bit targets have to bitcast i64 to f64, so better to bitcast upward.
     if (Src.getOpcode() == ISD::BITCAST &&
@@ -32031,6 +32061,16 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
                                    VT.getVectorNumElements());
       return DAG.getBitcast(VT, DAG.getNode(X86ISD::VBROADCAST, DL, NewVT, BC));
     }
+
+    // Reduce broadcast source vector to lowest 128-bits.
+    if (SrcVT.getSizeInBits() > 128)
+      return DAG.getNode(X86ISD::VBROADCAST, DL, VT,
+                         extract128BitVector(Src, 0, DAG, DL));
+
+    // broadcast(scalar_to_vector(x)) -> broadcast(x).
+    if (Src.getOpcode() == ISD::SCALAR_TO_VECTOR)
+      return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Src.getOperand(0));
+
     return SDValue();
   }
   case X86ISD::PSHUFD:
@@ -35058,6 +35098,12 @@ static SDValue combineCarryThroughADD(SDValue EFLAGS, SelectionDAG &DAG) {
             return SDValue(SubCommute.getNode(), CarryOp1.getResNo());
           }
         }
+        // If this is a check of the z flag of an add with 1, switch to the
+        // C flag.
+        if (CarryCC == X86::COND_E &&
+            CarryOp1.getOpcode() == X86ISD::ADD &&
+            isOneConstant(CarryOp1.getOperand(1)))
+          return CarryOp1;
       }
     }
   }

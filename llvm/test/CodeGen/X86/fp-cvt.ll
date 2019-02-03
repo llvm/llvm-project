@@ -460,7 +460,7 @@ define i64 @fptoui_i64_fp80(x86_fp80 %a0) nounwind {
 ; X86-NEXT:    fstp %st(1)
 ; X86-NEXT:    fldz
 ; X86-NEXT:  .LBB10_2:
-; X86-NEXT:    fstp %st(0)
+; X86-NEXT:    fstp %st
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
@@ -486,7 +486,7 @@ define i64 @fptoui_i64_fp80(x86_fp80 %a0) nounwind {
 ; X64-X87-NEXT:    xorl %eax, %eax
 ; X64-X87-NEXT:    fxch %st(1)
 ; X64-X87-NEXT:    fucompi %st(2)
-; X64-X87-NEXT:    fcmovnbe %st(1), %st(0)
+; X64-X87-NEXT:    fcmovnbe %st(1), %st
 ; X64-X87-NEXT:    fstp %st(1)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
@@ -509,7 +509,7 @@ define i64 @fptoui_i64_fp80(x86_fp80 %a0) nounwind {
 ; X64-SSSE3-NEXT:    xorl %eax, %eax
 ; X64-SSSE3-NEXT:    fxch %st(1)
 ; X64-SSSE3-NEXT:    fucompi %st(2)
-; X64-SSSE3-NEXT:    fcmovnbe %st(1), %st(0)
+; X64-SSSE3-NEXT:    fcmovnbe %st(1), %st
 ; X64-SSSE3-NEXT:    fstp %st(1)
 ; X64-SSSE3-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
 ; X64-SSSE3-NEXT:    setbe %al
@@ -542,7 +542,7 @@ define i64 @fptoui_i64_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X86-NEXT:    fstp %st(1)
 ; X86-NEXT:    fldz
 ; X86-NEXT:  .LBB11_2:
-; X86-NEXT:    fstp %st(0)
+; X86-NEXT:    fstp %st
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
@@ -568,7 +568,7 @@ define i64 @fptoui_i64_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-X87-NEXT:    xorl %eax, %eax
 ; X64-X87-NEXT:    fxch %st(1)
 ; X64-X87-NEXT:    fucompi %st(2)
-; X64-X87-NEXT:    fcmovnbe %st(1), %st(0)
+; X64-X87-NEXT:    fcmovnbe %st(1), %st
 ; X64-X87-NEXT:    fstp %st(1)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
@@ -591,7 +591,7 @@ define i64 @fptoui_i64_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-SSSE3-NEXT:    xorl %eax, %eax
 ; X64-SSSE3-NEXT:    fxch %st(1)
 ; X64-SSSE3-NEXT:    fucompi %st(2)
-; X64-SSSE3-NEXT:    fcmovnbe %st(1), %st(0)
+; X64-SSSE3-NEXT:    fcmovnbe %st(1), %st
 ; X64-SSSE3-NEXT:    fstp %st(1)
 ; X64-SSSE3-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
 ; X64-SSSE3-NEXT:    setbe %al

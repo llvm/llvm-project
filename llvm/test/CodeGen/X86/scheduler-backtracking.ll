@@ -691,8 +691,8 @@ define i64 @test4(i64 %a, i64 %b) nounwind {
 ; ILP:       # %bb.0:
 ; ILP-NEXT:    xorl %ecx, %ecx
 ; ILP-NEXT:    xorl %edx, %edx
-; ILP-NEXT:    addq $1, %rsi
-; ILP-NEXT:    setb %dl
+; ILP-NEXT:    incq %rsi
+; ILP-NEXT:    sete %dl
 ; ILP-NEXT:    movl $2, %eax
 ; ILP-NEXT:    cmpq %rdi, %rsi
 ; ILP-NEXT:    sbbq $0, %rdx
@@ -708,8 +708,8 @@ define i64 @test4(i64 %a, i64 %b) nounwind {
 ; HYBRID:       # %bb.0:
 ; HYBRID-NEXT:    xorl %eax, %eax
 ; HYBRID-NEXT:    xorl %ecx, %ecx
-; HYBRID-NEXT:    addq $1, %rsi
-; HYBRID-NEXT:    setb %cl
+; HYBRID-NEXT:    incq %rsi
+; HYBRID-NEXT:    sete %cl
 ; HYBRID-NEXT:    cmpq %rdi, %rsi
 ; HYBRID-NEXT:    sbbq $0, %rcx
 ; HYBRID-NEXT:    movl $0, %ecx
@@ -725,8 +725,8 @@ define i64 @test4(i64 %a, i64 %b) nounwind {
 ; BURR:       # %bb.0:
 ; BURR-NEXT:    xorl %eax, %eax
 ; BURR-NEXT:    xorl %ecx, %ecx
-; BURR-NEXT:    addq $1, %rsi
-; BURR-NEXT:    setb %cl
+; BURR-NEXT:    incq %rsi
+; BURR-NEXT:    sete %cl
 ; BURR-NEXT:    cmpq %rdi, %rsi
 ; BURR-NEXT:    sbbq $0, %rcx
 ; BURR-NEXT:    movl $0, %ecx
@@ -741,8 +741,8 @@ define i64 @test4(i64 %a, i64 %b) nounwind {
 ; SRC-LABEL: test4:
 ; SRC:       # %bb.0:
 ; SRC-NEXT:    xorl %eax, %eax
-; SRC-NEXT:    addq $1, %rsi
-; SRC-NEXT:    setb %al
+; SRC-NEXT:    incq %rsi
+; SRC-NEXT:    sete %al
 ; SRC-NEXT:    xorl %ecx, %ecx
 ; SRC-NEXT:    cmpq %rdi, %rsi
 ; SRC-NEXT:    sbbq $0, %rax
@@ -760,8 +760,8 @@ define i64 @test4(i64 %a, i64 %b) nounwind {
 ; LIN-NEXT:    movl $2, %eax
 ; LIN-NEXT:    xorl %ecx, %ecx
 ; LIN-NEXT:    xorl %edx, %edx
-; LIN-NEXT:    addq $1, %rsi
-; LIN-NEXT:    setb %dl
+; LIN-NEXT:    incq %rsi
+; LIN-NEXT:    sete %dl
 ; LIN-NEXT:    cmpq %rdi, %rsi
 ; LIN-NEXT:    sbbq $0, %rdx
 ; LIN-NEXT:    movl $0, %edx
