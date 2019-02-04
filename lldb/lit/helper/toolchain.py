@@ -98,6 +98,9 @@ def use_support_substitutions(config):
     elif platform.system() in ['OpenBSD', 'Linux']:
         flags = ['-pthread']
 
+    config.target_shared_library_suffix = '.dylib' if platform.system() in ['Darwin'] else '.so'
+    config.substitutions.append(('%target-shared-library-suffix', config.target_shared_library_suffix))
+
     # Swift support
     swift_sdk = [' -sdk ', sdk_path] if platform.system() in ['Darwin'] else []
     tools = [

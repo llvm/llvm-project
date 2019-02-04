@@ -9,6 +9,9 @@ DYLIB_SWIFT_SOURCES := libs/$(BASENAME).swift
 # this test
 SWIFTFLAGS=-Onone -Xfrontend -serialize-debugging-options -enable-parseable-module-interface -parse-as-library
 
+# don't include the wrapped .swiftmodule on linux
+EXCLUDE_WRAPPED_SWIFTMODULE=1
+
 # activates the rules for generating a static lib based on the .o files
 # corresponding to the dylib swift sources above
 ARCHIVE_NAME := lib$(BASENAME).a
@@ -27,4 +30,4 @@ endif
 static_only: $(ARCHIVE_NAME)
 
 clean::
-	rm -rf $(BASENAME).swiftinterface
+	rm -f $(BASENAME).swiftinterface
